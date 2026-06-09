@@ -80,3 +80,16 @@ claude-sonnet-4-5
 
 **Modified Files:**
 - `api/server.js` — import + rate-limit + route registration (3 surgical edits)
+
+## Review Findings
+
+> Batch code review 2026-06-09 (Blind Hunter, verified). Facebook tests 113/113 pass. 23 x402 failures are pre-existing (server-down, per CLAUDE.md), unrelated.
+
+### Patch
+- [x] [Review][Patch][HIGH] `/scrape` passed key `target` but the dispatcher reads `url`/`query` → target silently dropped → every scrape action threw 500 (endpoint fully broken). VERIFIED against src/scrapers/index.js:234. FIXED: pass `{ url }` / `{ query }` per action.
+- [x] [Review][Patch][HIGH] `/automate` dry-run still launched browser + real loginWithCookie (account risk) — FIXED: dry-run dispatches with page=null, no browser/login (mirrors MCP 3.2 fix).
+- [x] [Review][Patch][MEDIUM] Numeric `c_user` crashed `.trim()` → 500 instead of clean 400 — FIXED: `String(...).trim()` in requireFacebookCookie.
+- [x] [Review][Patch][LOW→noted] Raw `error.message` returned to HTTP client — kept (internal tool, authMiddleware-gated); flagged for hardening pass.
+
+### Deferred
+- [x] [Review][Defer][LOW-MED] `new PrismaClient()` per route module — connection-pool fragmentation; move to a shared singleton.

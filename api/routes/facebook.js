@@ -16,7 +16,11 @@ router.use(authMiddleware);
  */
 function requireFacebookCookie(body) {
   const { authCookie } = body ?? {};
-  if (!authCookie?.c_user?.trim() || !authCookie?.xs?.trim()) {
+  // Coerce to string first — c_user is a numeric Facebook UID and may arrive as a
+  // JSON number, which would crash on .trim() instead of giving a clean 400.
+  const cUser = String(authCookie?.c_user ?? '').trim();
+  const xs = String(authCookie?.xs ?? '').trim();
+  if (!cUser || !xs) {
     return '❌ authCookie { c_user, xs } is required for this operation. Provide a valid Facebook session cookie.';
   }
   return null;
@@ -63,8 +67,13 @@ router.post('/scrape', async (req, res) => {
         : {}),
     };
 
-    const target = action === 'search' ? query.trim() : url.trim();
-    const result = await scrape('facebook', action, { target, ...options });
+    // Dispatcher resolves target from options.url / options.query (NOT options.target).
+    // Pass the keys it actually reads, else the target is silently dropped → scrape fails.
+    const scrapeArgs = {
+      ...options,
+      ...(action === 'search' ? { query: query.trim() } : { url: url.trim() }),
+    };
+    const result = await scrape('facebook', action, scrapeArgs);
 
     res.json({ ok: true, action, result });
   } catch (error) {
@@ -126,79 +135,65 @@ router.post('/automate', async (req, res) => {
       createFacebookPost,
     } = await import('../services/facebookAutomation.js');
 
-    // Create Operation record for real (non-dry-run) runs — Story 3.4
-    // config intentionally excludes authCookie — never persist cookie values (NFR3)
-    let operation = null;
-    if (!resolvedDryRun) {
-      operation = await prisma.operation.create({
-        data: {
-          userId: req.user.id,
-          type: `facebook_${action}`,
-          status: 'running',
-          startedAt: new Date(),
-          config: JSON.stringify({ action, urls, text, maxBatch: maxBatch ?? null }),
-        },
-      });
-      global.io?.emit('facebook:operation', {
-        event: 'start',
-        operationId: operation.id,
-        userId: req.user.id,
-        type: operation.type,
-        status: 'running',
-      });
+    const options = {
+      dryRun: resolvedDryRun,
+      ...(maxBatch != null && { maxBatch: Number(maxBatch) }),
+    };
+
+    const dispatch = async (page) => {
+      if (action === 'like') return await likeFacebookPosts(page, urls, options);
+      if (action === 'comment') return await commentOnFacebookPosts(page, urls, text, options);
+      return await createFacebookPost(page, text, options);
+    };
+
+    // Per-user Socket.IO room — never broadcast operation events to all clients (NFR3 / privacy)
+    const emit = (payload) => global.io?.to(`user:${req.user.id}`).emit('facebook:operation', payload);
+
+    // Dry-run never touches the DOM (runGuardedBatch skips actionFn) — no browser,
+    // no real Facebook login, no Operation record. Avoids account risk for a preview.
+    if (resolvedDryRun) {
+      const result = await dispatch(null);
+      return res.json({ ok: true, action, dryRun: true, userId: req.user.id, operationId: null, ...result });
     }
 
-    const browser = await createBrowser({ headless: true });
+    // Real run — create Operation record (config excludes authCookie; never persist cookie values, NFR3)
+    const operation = await prisma.operation.create({
+      data: {
+        userId: req.user.id,
+        type: `facebook_${action}`,
+        status: 'running',
+        startedAt: new Date(),
+        config: JSON.stringify({ action, urls, text, maxBatch: maxBatch ?? null }),
+      },
+    });
+    emit({ event: 'start', operationId: operation.id, userId: req.user.id, type: operation.type, status: 'running' });
+
     let result;
+    let browser;
     try {
+      // createBrowser INSIDE try — else a launch failure orphans the Operation as 'running' forever
+      browser = await createBrowser({ headless: true });
       const page = await createPage(browser);
       // Cookie values are never logged (NFR3)
       await loginWithCookie(page, { c_user: authCookie.c_user, xs: authCookie.xs });
 
-      const options = {
-        dryRun: resolvedDryRun,
-        ...(maxBatch != null && { maxBatch: Number(maxBatch) }),
-      };
+      result = await dispatch(page);
 
-      if (action === 'like') {
-        result = await likeFacebookPosts(page, urls, options);
-      } else if (action === 'comment') {
-        result = await commentOnFacebookPosts(page, urls, text, options);
-      } else {
-        result = await createFacebookPost(page, text, options);
-      }
-
-      // Persist result + emit completion event
-      if (operation) {
-        await prisma.operation.update({
-          where: { id: operation.id },
-          data: { status: 'completed', completedAt: new Date(), result: JSON.stringify(result) },
-        });
-        global.io?.emit('facebook:operation', {
-          event: 'complete',
-          operationId: operation.id,
-          userId: req.user.id,
-          status: 'completed',
-        });
-      }
+      await prisma.operation.update({
+        where: { id: operation.id },
+        data: { status: 'completed', completedAt: new Date(), result: JSON.stringify(result) },
+      });
+      emit({ event: 'complete', operationId: operation.id, userId: req.user.id, status: 'completed' });
     } catch (browserError) {
-      // Persist failure + emit error event, then re-throw for outer catch
-      if (operation) {
-        await prisma.operation.update({
-          where: { id: operation.id },
-          data: { status: 'failed', completedAt: new Date(), error: browserError.message },
-        });
-        global.io?.emit('facebook:operation', {
-          event: 'error',
-          operationId: operation.id,
-          userId: req.user.id,
-          status: 'failed',
-          error: browserError.message,
-        });
-      }
+      await prisma.operation.update({
+        where: { id: operation.id },
+        data: { status: 'failed', completedAt: new Date(), error: browserError.message },
+      });
+      emit({ event: 'error', operationId: operation.id, userId: req.user.id, status: 'failed', error: browserError.message });
       throw browserError;
     } finally {
-      await browser.close();
+      // Swallow close errors so they never mask the original failure
+      if (browser) await browser.close().catch(() => {});
     }
 
     res.json({
@@ -206,7 +201,7 @@ router.post('/automate', async (req, res) => {
       action,
       dryRun: resolvedDryRun,
       userId: req.user.id,
-      operationId: operation?.id ?? null,
+      operationId: operation.id,
       ...result,
     });
   } catch (error) {

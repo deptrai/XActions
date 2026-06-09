@@ -64,3 +64,12 @@
 - **MCP automate `maxBatch` validated downstream** [src/mcp/server.js:executeFacebookAutomateTool] — runGuardedBatch throws on bad maxBatch, but only in the real-run path after browser launch. Fold a numeric check into the fail-fast block. Low.
 - **MCP automate `urls` entries not validated** [src/mcp/server.js:executeFacebookAutomateTool] — array non-empty checked, but individual entries aren't validated as FB post URLs. Add a format check; tie to live verify. Low.
 - **`tests/mcp/server.test.js` fails under Vitest** [tests/mcp/server.test.js] — PRE-EXISTING (uses node:test imports, not Vitest). Not a Facebook regression; flagged for separate cleanup (convert to Vitest or exclude).
+
+## Deferred from: batch code review of stories 3.3 / 3.4 (2026-06-09)
+
+> 6 patches fixed inline (scrape target key, dry-run skips browser/login, numeric c_user coercion, orphaned-Operation guard, per-user io room, browser.close catch). Below deferred:
+
+- **Raw `error.message` in HTTP 500 responses** [api/routes/facebook.js] — leaks Prisma/Puppeteer internals to client. Sanitize to a generic message + server-side log. authMiddleware-gated so low exposure.
+- **`new PrismaClient()` per route module** [api/routes/facebook.js:7] — connection-pool fragmentation under load. Move to a shared singleton imported across routes.
+- **No size bound on `urls`/`text` persisted to Operation.config** [api/routes/facebook.js] — large input bloats the row. Add length caps before JSON.stringify.
+- **VERIFY Socket.IO room join** — the per-user emit `io.to('user:<id>')` (3.4 fix) requires the connection handler to join `user:${userId}` on connect. If it doesn't, dashboard live updates silently stop. Confirm the realtime layer joins that room.

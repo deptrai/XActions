@@ -79,3 +79,18 @@ claude-sonnet-4-5
 
 **Modified Files:**
 - `api/routes/facebook.js` — Prisma import + Operation lifecycle in automate handler
+
+## Review Findings
+
+> Batch code review 2026-06-09 (Blind Hunter, verified). Facebook tests 113/113 pass.
+
+### Patch
+- [x] [Review][Patch][HIGH] Orphaned Operation — `createBrowser` was OUTSIDE the try, so a launch failure left the Operation stuck at status:'running' forever — FIXED: createBrowser moved inside try; any failure now updates status:'failed'.
+- [x] [Review][Patch][HIGH] `global.io.emit` broadcast operation events (operationId, userId, type, error) to ALL connected clients — cross-user info leak — FIXED: emit to per-user room `io.to(\`user:${req.user.id}\`)`.
+- [x] [Review][Patch][MEDIUM] `browser.close()` in finally could mask the original error — FIXED: `.close().catch(() => {})`.
+
+### Deferred
+- [x] [Review][Defer][LOW] No size bound on `urls`/`text` persisted to Operation.config — add length caps before JSON.stringify. Low risk; cleanup pass.
+
+### Note (depends on Socket.IO room join)
+- The per-user emit `io.to('user:<id>')` requires clients to JOIN that room on connect. If the realtime layer does not yet join `user:<id>`, dashboard updates will silently stop. VERIFY the socket connection handler joins `user:${userId}` — tie to a follow-up check.
