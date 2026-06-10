@@ -51,31 +51,28 @@ Nguyên tắc port:
 - `AutoUpdater.NET`, WebView2, Selenium refs — không liên quan.
 - TikTok: **không có code TikTok trong project này** (tên repo gây hiểu nhầm).
 
-## 3. Lộ trình triển khai (phased, theo story)
+## 3. Lộ trình triển khai (4 story — gộp theo epic)
 
-Gom 10 feature cần port thành 4 epic, mỗi story đi qua chu trình create-story → dev → 3-layer review (như Facebook Extension đã làm).
+10 feature cần port gom thành **4 story** (mỗi story = 1 epic), đi qua chu trình create-story → dev → 3-layer review.
 
-### Epic P1 — Facebook GraphQL/HTTP layer (nền tảng cho share)
-> Tái dùng pattern HTTP của XActions; thay xNet bằng fetch/undici. Tất cả là đọc/token, rủi ro thấp.
+### Story P1 — Facebook GraphQL/HTTP layer
+> Nền tảng cho share. Tái dùng `axios`/fetch + pattern `src/scrapers/twitter/http/`. Rủi ro thấp, browser-free test được.
+Gồm: token scraper (P3 — fb_dtsg/lsd/jazoest/hsi/spin_r/spin_t), page list via Graph API (P5 — ad account → facebook_pages), Messenger Business CTA check (P4 — GraphQL doc_id). Đặt ở `src/scrapers/facebook/graphql.js`. Anchored regex thay split chain.
 
-- **Story P1.1 — Token scraper** (P3): `getFacebookTokens(page|cookie)` trả `{ fb_dtsg, lsd, jazoest, hsi, spin_r, spin_t }`. Đặt ở `src/scrapers/facebook/graphql.js`. Test: parse từ HTML fixture (browser-free).
-- **Story P1.2 — Page list via Graph API** (P5): `getPagesFromCookie(cookie)` → ad account ID → `facebook_pages` list. Wire vào dispatcher action `pages`. Test: mock HTTP fixture.
-- **Story P1.3 — Messenger Business CTA check** (P4): `checkMessengerCTA(pageId, actorId, tokens)` GraphQL doc_id. Test: response-shape parse.
+### Story P2 — Messenger share automation (CORE — khó nhất)
+> Tính năng chính C# có mà XActions chưa. Mọi write route qua `runGuardedBatch`, dry-run mặc định.
+Gồm: share post → page qua Messenger (P1 — share button + "via Messenger" fallback chain), compose & send message (P2 — random `**`, line-by-line Shift+Enter, emoji strip, detect "Couldn't send"), batch campaign entry point (P1+P9+P10 — `messengerShareCampaign` qua `runGuardedBatch`, FIFO queue). Selectors UNVERIFIED → `selectors-facebook.md`, cần live verify.
 
-### Epic P2 — Messenger share automation (CORE — phần khó nhất)
-> Đây là tính năng chính C# có mà XActions chưa có. Mọi write route qua `runGuardedBatch`, dry-run mặc định.
+### Story P3 — Auth modes & proxy
+> Độc lập với P2, làm song song được.
+Gồm: uid/pass login mode (P7 — bait-cookie + fill form + Continue), 2FA TOTP (P8 — 32-char seed qua `otplib`), proxy rotation 3 providers (P6 — proxyfb/tmproxy/shoplike, wire vào `browserOptions.proxy`).
 
-- **Story P2.1 — Share post → page via Messenger** (P1): `shareToMessenger(page, postUrl, targetPageId)` — tìm share button (selector fallback chain), click "via Messenger". Selectors UNVERIFIED → ghi vào `selectors-facebook.md` mục Messenger, cần live verify (Q-Messenger).
-- **Story P2.2 — Compose & send message** (P2): random `**` split, type line-by-line Shift+Enter, strip emoji `\p{Cs}`, detect "Couldn't send" → blocked. Injectable `delay` seam.
-- **Story P2.3 — Batch share entry point** (P1+P9+P10): `messengerShareCampaign(accounts, { postUrls, messages, targetPages, dryRun })` route qua `runGuardedBatch`. FIFO queue cho targetPages (thay uid.txt). Expose qua CLI/MCP/API.
+### Story P4 — Input/queue & surfaces
+> Khâu cuối — nối campaign vào người dùng.
+Gồm: file/queue inputs (P10 — target pages/contents/links, FIFO, random segment), expose qua CLI/MCP/API (`automate --action messenger-share`, MCP action `messenger`, REST). Dry-run mặc định, additive không phá surface cũ.
 
-### Epic P3 — Auth modes & proxy
-- **Story P3.1 — uid/pass login mode** (P7): bait-cookie + fill form + "Continue" handling. Bổ sung vào `loginWithCookie` hoặc thêm `loginWithPassword(page, { uid, pass })`.
-- **Story P3.2 — 2FA TOTP** (P8): 32-char seed → TOTP code (thư viện `otplib`). Inject khi login challenge.
-- **Story P3.3 — Proxy rotation providers** (P6): `src/scrapers/facebook/proxy/{proxyfb,tmproxy,shoplike}.js`, mỗi cái `rotate(key)`/`current(key)`. Wire vào `browserOptions.proxy`. Test: HTTP fixture.
+<!-- Chi tiết feature P1-P10 ở §2. Thứ tự đề xuất: P1 → P3 → P2 → P4. -->
 
-### Epic P4 — Input/queue & surfaces polish
-- **Story P4.1 — File/queue inputs** (P10): đọc danh sách target pages / contents / links từ file hoặc API body; FIFO thread-safe (thay uid.txt/txtnoidung.txt/txtlinkss.txt). Random content segment.
 - **Story P4.2 — CLI/MCP/API expose** cho messenger campaign: `xactions automate --action messenger-share`, MCP `x_facebook_automate` action `messenger`, REST `POST /api/facebook/automate` action `messenger`. Dry-run mặc định toàn bộ.
 
 ## 4. Rủi ro & điểm cần lưu ý
@@ -105,10 +102,10 @@ Gom 10 feature cần port thành 4 epic, mỗi story đi qua chu trình create-s
 4. **Epic P3.1/P3.2** (auth nâng cao).
 5. **Epic P4** (queue + surfaces).
 
-Mỗi story: tạo bằng `bmad-create-story`, review bằng `bmad-code-review`. Selector-dependent stories (P2.x) sẽ có phần UNVERIFIED tie vào verify checklist như Epic 1.
+Mỗi story: tạo bằng `bmad-create-story`, review bằng `bmad-code-review`. Story P2 (Messenger DOM) sẽ có phần UNVERIFIED tie vào verify checklist như Epic 1.
 
 ## 7. Ước lượng quy mô
 
-- ~10 story (so với 14 story của Facebook Extension gốc).
-- Phần lớn HTTP/parse/proxy tái dùng pattern → nhanh.
-- Phần khó tập trung ở Epic P2 (Messenger DOM) — cần account Facebook thật để verify, giống các deferred Q3 hiện tại.
+- **4 story** (mỗi epic = 1 story; gộp từ 10 feature ở §2).
+- Phần lớn HTTP/parse/proxy tái dùng pattern → nhanh (P1, P3).
+- Phần khó tập trung ở **Story P2** (Messenger DOM) — cần account Facebook thật để verify, giống các deferred Q3 hiện tại.
