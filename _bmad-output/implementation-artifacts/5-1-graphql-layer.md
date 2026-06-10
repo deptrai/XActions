@@ -37,8 +37,9 @@ Tokens are sent as `fb_dtsg`/`lsd`/`x-fb-lsd` in GraphQL bodies/headers (Main.cs
 
 **AC2 — Fetcher (live, thin wrapper)**
 5. `getFacebookTokens(cookie, options)` fetches `https://www.facebook.com/` with the cookie, then returns `parseFacebookTokens(html)`. HTTP via the already-present `axios` (or Node global `fetch`) — do NOT add a new HTTP dependency.
-6. Cookie accepted as a string (`"c_user=...; xs=...; ..."`) — same shape the rest of the adapter uses. Build the `Cookie` header from it.
-7. Includes realistic browser headers (User-Agent at minimum) so Facebook returns the authenticated HTML shape, mirroring the C# xNet header mimicry.
+6. Cookie accepted as a **full cookie string** (`"c_user=12345; xs=abc; datr=...; ..."`). Also export a utility `buildCookieString({ c_user, xs })` that converts the adapter's object convention into the string form — so callers (and Story 5.2) don't need manual conversion. `uid` is parsed from `c_user` field (it IS the numeric UID).
+7. Includes realistic browser headers (User-Agent, sec-ch-ua, viewport-width) mirroring C# xNet headers. Copy pattern from `src/scrapers/twitter/http/client.js`.
+8. `fetchImpl` signature: `(url: string, init: { method?, headers?, body? }) => Promise<{ status: number, text(): Promise<string> }>` — fetch-API-compatible shape. Default wraps `axios`; tests pass a stub returning fixture HTML.
 
 **AC3 — Security + robustness (NFR3)**
 8. Cookie value NEVER logged or echoed in errors/return (NFR3 — same as loginWithCookie).
@@ -49,14 +50,27 @@ Tokens are sent as `fb_dtsg`/`lsd`/`x-fb-lsd` in GraphQL bodies/headers (Main.cs
 11. No real network call in tests — `getFacebookTokens` HTTP is mocked/injected (accept an `options.fetchImpl` seam defaulting to the real fetcher, so tests pass a stub returning fixture HTML).
 
 **AC5 — Page list (b)**
-12. `getPagesFromCookie(cookie, options)` exported from the same file. Ports C# `getPage.cs`: scrape ad-account id from adsmanager/billing HTML, extract `EAAG…` token, then `GET graph.facebook.com/v19.0/{uid}?fields=facebook_pages.limit(2000){access_token,additional_profile_id,name}`.
-13. Returns normalized array `[{ pageId, name, accessToken }]`; empty array (not throw) when no pages / not eligible. `fetchImpl` seam reused for tests (fixture JSON).
-14. Page `accessToken` values treated as sensitive — not logged.
+12. `getPagesFromCookie(cookie, options)` exported. `uid` is extracted from the `c_user` value in the cookie string (same numeric UID). Flow (3 sequential requests, each may fail independently):
+    - Step 1: GET `adsmanager.facebook.com/adsmanager/manage/all` → scrape `act=` param for ad-account ID. If 403/redirect → fallback Step 1b.
+    - Step 1b: GET `business.facebook.com/billing_hub/payment_activity` → scrape ad-account ID from there.
+    - Step 2: GET billing page for that account → extract `EAAG...` token from HTML.
+    - Step 3: GET `graph.facebook.com/${GRAPH_API_VERSION}/${uid}?fields=facebook_pages.limit(2000){access_token,additional_profile_id,name}&access_token=${eaagToken}`.
+    - `GRAPH_API_VERSION` = named constant (default `'v19.0'`), overridable via `options.graphVersion` (Facebook depreciates versions ~2 years).
+13. Returns normalized array `[{ pageId, name, accessToken }]`; empty array (not throw) on: no pages, not eligible, adsmanager 403, billing redirect, EAAG not found, Graph API error response. Log generic warning (no secrets) on unexpected response shape.
+14. Page `accessToken` values treated as sensitive — not logged. `fetchImpl` seam reused for tests (multi-step fixture: stub returns different HTML per URL).
 
 **AC6 — Messenger CTA check (c)**
-15. `checkMessengerCTA(pageId, actorId, tokens, options)` exported. Ports C# Main.cs:558-581: POST `facebook.com/api/graphql/` with `doc_id=29460155383630960` + tokens. Returns `{ eligible: boolean }` based on presence of `messenger_business_ads_sender` in response.
-16. doc_id is hardcoded but isolated as a named constant with a comment that Facebook may rotate it; on unexpected response shape → `{ eligible: false }` (no throw) + a one-line `console.warn` (no token/cookie values).
-17. `fetchImpl` seam reused; test with eligible + non-eligible fixture responses.
+15. `checkMessengerCTA(pageId, actorId, tokens, options)` exported. POST body is **URL-encoded form** (not JSON), matching C# Main.cs:558-581:
+    ```
+    fb_dtsg={tokens.fb_dtsg}&lsd={tokens.lsd}&jazoest={tokens.jazoest}
+    &doc_id={MESSENGER_CTA_DOC_ID}
+    &variables={"page_id":"{pageId}","actor_id":"{actorId}"}
+    &fb_api_caller_class=RelayModern&fb_api_req_friendly_name=MWChatBusinessCTAAdsSenderMutation
+    ```
+    Returns `{ eligible: boolean }` based on presence of `messenger_business_ads_sender` in response.
+16. `MESSENGER_CTA_DOC_ID = '29460155383630960'` — named constant with comment: `// ⚠️ Facebook may rotate this doc_id without notice. If response shape is unexpected, this is the first suspect.`
+    On unexpected shape → `{ eligible: false }` + `console.warn('⚠️ Messenger CTA doc_id may be rotated — response shape unexpected for page ${pageId}')` (no token/cookie values in message).
+17. `fetchImpl` seam reused; test with eligible + non-eligible + malformed fixture responses.
 
 ## Tasks / Subtasks
 
@@ -112,16 +126,33 @@ Verify against a real fixture; Facebook markup shifts, so keep them anchored and
 
 ### Project Structure Notes
 
-- NEW: `src/scrapers/facebook/graphql.js` (parser + fetcher).
-- NEW: `tests/scrapers/facebook-graphql.test.js`.
-- No change to dispatcher/login/automation this story — pure additive helper. Later stories (P1.2 page-list, P1.3 CTA, P2 share) consume `getFacebookTokens`.
-- Do NOT wire into `scrape()` dispatcher yet (no user-facing action in P1.1).
+- NEW: `src/scrapers/facebook/graphql.js` (parser + fetcher + page-list + CTA check + `buildCookieString` utility).
+- NEW: `tests/scrapers/facebook-graphql.test.js` + `tests/scrapers/fixtures/` (HTML + JSON fixtures).
+- No change to dispatcher/login/automation this story — pure additive helper. Story 5.2 (Messenger share) will consume `getFacebookTokens` + `getPagesFromCookie` + `checkMessengerCTA`.
+- Do NOT wire into `scrape()` dispatcher in this story — no user-facing action yet (per port-plan, surfaces land in Story 5.4).
 
 ### Critical context
 
 - Node.js, ESM. Browser-free tests (fixture + fetchImpl stub).
 - Tokens are session-scoped secrets adjacent to cookies — treat the whole return as sensitive; do not persist.
 - Facebook HTML shape differs logged-in vs logged-out — fixture should represent logged-in; add a logged-out fixture for the null case.
+
+### How to create test fixtures (#2 review finding)
+
+Dev MUST create fixtures in `tests/scrapers/fixtures/`:
+- `facebook-home-loggedin.html` — curl `https://www.facebook.com/` with a real session cookie, save the HTML. Extract only the relevant 50-100 lines containing the token markers (fb_dtsg, LSD, jazoest, hsi, __spin_t, __spin_r). Do NOT commit the full page (too large + contains PII).
+- `facebook-home-loggedout.html` — curl without cookie; should lack all 6 markers.
+- `facebook-pages-response.json` — a synthetic Graph API response with 2-3 pages.
+- `facebook-cta-eligible.json` / `facebook-cta-ineligible.json` — synthetic graphql responses.
+
+If no real session available: write synthetic HTML containing the marker patterns from the Regex hints section. Clearly comment it as synthetic.
+
+### Integration between (a), (b), (c) (#12 review finding)
+
+The 3 functions share a data flow. Verify shapes match:
+- `getFacebookTokens(cookie)` → returns `{ fb_dtsg, lsd, jazoest, hsi, spin_r, spin_t }` — this exact object is the `tokens` param for `checkMessengerCTA`.
+- `getPagesFromCookie(cookie)` → returns `[{ pageId, name, accessToken }]` — `pageId` is the `pageId` param for `checkMessengerCTA`; `uid` (from `c_user` in cookie) is the `actorId` param.
+- Add ONE integration test that chains: `getFacebookTokens` → take `.fb_dtsg`/`.lsd` → `checkMessengerCTA(pageId, uid, tokens)` — verify the shapes wire together without runtime TypeError. Browser-free (all via fetchImpl stubs).
 
 ### Testing standards
 
