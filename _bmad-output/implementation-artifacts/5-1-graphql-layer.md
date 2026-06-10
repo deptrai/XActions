@@ -4,7 +4,7 @@ baseline_commit: 67751889ce84cff64cf452be4628de419cf5026c
 
 # Story 5.1: Facebook GraphQL/HTTP layer
 
-Status: review
+Status: done
 
 <!-- Port from SST_TOOL_FB (C# WinForms) → XActions. Plan: facebook-messenger-port-plan.md (Epic 5, Story 5.1). -->
 
