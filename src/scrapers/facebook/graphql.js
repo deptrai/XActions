@@ -111,7 +111,13 @@ export function buildCookieString(cookies = {}, extra = {}) {
   const merged = { ...cookies, ...extra };
   return Object.entries(merged)
     .filter(([, v]) => v != null && v !== '')
-    .map(([k, v]) => `${k}=${v}`)
+    // Encode values that contain cookie-delimiter chars (`;`, `=`) to prevent
+    // injection of fake cookie pairs via untrusted input. Keys are developer-
+    // controlled constants so left unencoded for readability.
+    .map(([k, v]) => {
+      const safe = /[;=]/.test(String(v)) ? encodeURIComponent(v) : v;
+      return `${k}=${safe}`;
+    })
     .join('; ');
 }
 
@@ -219,7 +225,8 @@ function scrapeAdAccountId(html) {
 /** Scrape the long-lived EAAG... Graph token from a billing page. */
 function scrapeEaagToken(html) {
   if (!html) return null;
-  const m = html.match(/(EAAG[A-Za-z0-9]+)/);
+  // EAAG tokens may contain alphanumeric + base64 chars (`-`, `_`, `+`, `/`, `=`)
+  const m = html.match(/(EAAG[A-Za-z0-9\-_+/=]+)/);
   return m ? m[1] : null;
 }
 
@@ -279,7 +286,7 @@ export async function getPagesFromCookie(cookie, options = {}) {
   const graphUrl =
     `https://graph.facebook.com/${graphVersion}/${uid}` +
     `?fields=facebook_pages.limit(2000)%7Baccess_token%2Cadditional_profile_id%2Cname%7D` +
-    `&access_token=${eaagToken}`;
+    `&access_token=${encodeURIComponent(eaagToken)}`;
   const graph = await safeGet(graphUrl);
   if (graph.status !== 200 || !graph.html) return [];
 
@@ -297,7 +304,10 @@ export async function getPagesFromCookie(cookie, options = {}) {
   }
 
   const data = parsed?.facebook_pages?.data;
-  if (!Array.isArray(data)) return [];
+  if (!Array.isArray(data)) {
+    console.warn('⚠️ Facebook page list: unexpected response shape (no facebook_pages.data array) — returning empty list');
+    return [];
+  }
 
   return data
     .filter((p) => p && (p.additional_profile_id || p.id))
@@ -361,19 +371,28 @@ export async function checkMessengerCTA(pageId, actorId, tokens = {}, options = 
   }
 
   const text = await res.text();
-  if (text.includes('messenger_business_ads_sender')) {
+
+  // Parse JSON and check the specific key path — NOT a raw substring search.
+  // text.includes('messenger_business_ads_sender') would false-positive on error
+  // messages like "Field messenger_business_ads_sender does not exist".
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    // Non-JSON response (HTML redirect, bot wall) — doc_id rotation suspect.
+    console.warn(
+      `⚠️ Messenger CTA doc_id may be rotated — response shape unexpected for page ${pageId}`
+    );
+    return { eligible: false };
+  }
+
+  // Valid JSON — check for the eligibility key in the data tree.
+  if (parsed?.data && JSON.stringify(parsed.data).includes('"messenger_business_ads_sender"')) {
     return { eligible: true };
   }
 
-  // Distinguish a legitimate "not eligible" from a rotated-doc_id/garbled shape.
-  // A valid GraphQL response is JSON with a `data` key; anything else is suspect.
-  let looksValid = false;
-  try {
-    const parsed = JSON.parse(text);
-    looksValid = parsed != null && typeof parsed === 'object' && 'data' in parsed;
-  } catch {
-    looksValid = false;
-  }
+  // Distinguish "not eligible" from "garbled/rotated doc_id" shape.
+  const looksValid = parsed != null && typeof parsed === 'object' && 'data' in parsed;
   if (!looksValid) {
     console.warn(
       `⚠️ Messenger CTA doc_id may be rotated — response shape unexpected for page ${pageId}`
