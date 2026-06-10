@@ -642,3 +642,97 @@ So that I can build a normal behavioral fingerprint before running heavier autom
 **When** the function runs
 **Then** the value is clamped to 600s/session
 **And** a mandatory warning notes warming does not guarantee avoiding checkpoint (NFR9)
+
+## Epic 5: Facebook Messenger Port (from SST_TOOL_FB C#)
+
+Port các tính năng từ SST_TOOL_FB (C# WinForms) vào XActions theo nguyên tắc REUSE-FIRST: chỉ viết mới phần C# có mà XActions chưa có; tái dùng guardrail, login, dispatcher, surfaces đã build ở Epic 1-3. Nguồn: `auto-crawl-tiktok-post-fb/automation-facebook/SST_TOOL_FB`. Plan chi tiết: `facebook-messenger-port-plan.md`.
+
+**Features ported:** P1 (token scraper) · P2 (Messenger compose/send) · P3 (token scraper used downstream) · P4 (Messenger CTA check) · P5 (page list) · P6 (proxy rotation) · P7 (uid/pass login) · P8 (2FA TOTP) · P9 (multi-account concurrency — via runGuardedBatch) · P10 (file queues).
+
+### Story 5.1: Facebook GraphQL/HTTP layer
+
+As a developer building Facebook Messenger automation in XActions,
+I want a GraphQL/HTTP helper layer (token scraper + page list + Messenger CTA check),
+So that the Messenger share campaign (Story P2) has tokens, pages, and eligibility data.
+
+**Acceptance Criteria:**
+
+**Given** a valid Facebook session cookie string
+**When** `getFacebookTokens(cookie)` is called
+**Then** it returns `{ fb_dtsg, lsd, jazoest, hsi, spin_r, spin_t }` parsed from facebook.com HTML via anchored regex (null if logged-out, never throws)
+
+**Given** the cookie
+**When** `getPagesFromCookie(cookie)` is called
+**Then** it returns an array of `{ pageId, name, accessToken }` via Graph API (empty array if none)
+
+**Given** a page ID + actor ID + tokens
+**When** `checkMessengerCTA(pageId, actorId, tokens)` is called
+**Then** it returns `{ eligible: boolean }` based on GraphQL doc_id response (false on unexpected shape)
+
+**Given** any function
+**When** called
+**Then** cookie/accessToken values are never logged (NFR3); injectable `fetchImpl` seam keeps tests browser-free
+
+### Story 5.2: Messenger share automation (CORE)
+
+As a multi-account operator using XActions,
+I want to share a Facebook post to target Pages via Messenger with a dry-run preview,
+So that I can run share campaigns at scale with safety guardrails.
+
+**Acceptance Criteria:**
+
+**Given** an authenticated page + post URL + target page ID
+**When** `shareToMessenger(page, postUrl, targetPageId)` is called with dryRun=false
+**Then** it finds share button + "via Messenger" via fallback selector chain, selects target, composes + sends, returns success/failure
+
+**Given** dryRun=true (default)
+**When** `messengerShareCampaign(accounts, options)` is called
+**Then** no DOM write occurs; returns preview of targets that WOULD be messaged
+
+**Given** message content
+**When** composing
+**Then** it supports `**`-delimited random segments, types line-by-line with Shift+Enter, strips emoji surrogates, detects "Couldn't send" → marks blocked
+
+**Given** the batch
+**When** running
+**Then** it routes through `runGuardedBatch` (dry-run default, delay seam, bounded batch, account-risk warning) — NO custom loop
+
+### Story 5.3: Auth modes & proxy rotation
+
+As a multi-account operator using XActions,
+I want uid/password login + 2FA TOTP + proxy rotation from 3 providers,
+So that I can run campaigns across many accounts with different IPs.
+
+**Acceptance Criteria:**
+
+**Given** uid + password (no cookie available)
+**When** `loginWithPassword(page, { uid, pass, baitCookie? })` is called
+**Then** it injects bait cookie, fills login form, handles "Continue" prompt, returns authenticated page
+
+**Given** a 32-char 2FA seed
+**When** login triggers 2FA challenge
+**Then** TOTP code is generated via `otplib` and injected
+
+**Given** a proxy provider key (proxyfb / tmproxy / shoplike)
+**When** `rotateProxy(provider, key)` is called
+**Then** it calls the provider's rotate API and returns a fresh proxy string, ready to wire into `browserOptions.proxy`
+
+### Story 5.4: Input queue & surface exposure
+
+As a CLI/MCP/API user of XActions,
+I want to run Messenger share campaigns from any surface with file-based target queues,
+So that I can operate campaigns from terminal, AI agent, or web dashboard.
+
+**Acceptance Criteria:**
+
+**Given** a file with target page IDs (one per line) + a content file + a links file
+**When** the campaign runs
+**Then** targets are consumed FIFO (thread-safe), content picked randomly from `**`-segments, links picked randomly
+
+**Given** the CLI surface
+**When** `xactions automate --action messenger-share --targets file.txt --content content.txt --links links.txt`
+**Then** it runs the campaign with dry-run default, outputs JSON result
+
+**Given** MCP + REST API
+**When** called with action `messenger` + targets/content/links in body
+**Then** same behavior as CLI, additive (no existing surface contract broken)
