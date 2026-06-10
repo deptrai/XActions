@@ -533,3 +533,82 @@ Consequences:
 
 Điểm quyết định trước Phase 4: chuẩn bị account Facebook thử nghiệm (không phải account chính) để dò selector ghi mà không mạo hiểm account thật.
 
+---
+
+# Addendum B — Facebook Growth Automation (Epic 4)
+
+> Bổ sung ngày 2026-06-10. Mở rộng Addendum A với các tính năng tăng trưởng Facebook: scheduling, group automation, friend management, account warming. Triển khai sau khi Epic 1-3 hoàn tất, tái dùng hoàn toàn `runGuardedBatch` và service pattern từ Epic 2.
+
+## B.1. Phạm Vi
+
+Epic 4 thêm 9 FR (FR-15..FR-23) chia 3 cluster rủi ro tăng dần. Mọi thao tác ghi đi qua `runGuardedBatch` (ADR-007). Không tạo vòng lặp mutate mới.
+
+## B.2. Ranh Giới Code Mới
+
+| Năng lực | Vùng code | Ghi chú |
+|---|---|---|
+| Post scheduling | `api/services/facebookScheduler.js` | Prisma `Schedule` model + worker |
+| Share / View boost | `api/services/facebookAutomation.js` (extend) | Thêm `shareFacebookPosts`, `warmupScrollFeed` |
+| Group automation | `api/services/facebookGroups.js` (NEW) | `joinFacebookGroups`, `postToFacebookGroups`, `scrapeGroupMembers` |
+| Friend management | `api/services/facebookFriends.js` (NEW) | `sendFriendRequests`, `cancelPendingFriendRequests` |
+| Account warming | `api/services/facebookAutomation.js` (extend) | Thêm `warmupAccount` |
+
+Nguyên tắc:
+- Service mới vẫn import và dùng `runGuardedBatch` từ `facebookAutomation.js`.
+- Selector mới tập trung ở `docs/agents/selectors-facebook.md` (section Group, Friend, Newsfeed).
+- Không tạo `src/automation/facebook/` scripts mới cho Epic 4 — tất cả server-side.
+
+## B.3. Architecture Decisions
+
+### ADR-008: Scheduler worker cho scheduled posts
+
+Status: Proposed.
+
+Reasoning: Prisma `Schedule` model + Bull worker pattern đã tồn tại (Section 6). Tái dùng model/queue hiện có, thêm `type: 'facebook_post'`. Không build scheduler riêng.
+
+Consequences:
+- `Schedule` record scope theo `userId`, chứa `content`, `scheduledAt`, `status`.
+- Worker poll mỗi phút; thực thi bằng `createFacebookPost` (Epic 2).
+- Throughput cap ≤5 posts/giờ/user (NFR-9) enforce ở worker, không ở service.
+- Failed execution → `status = 'failed'` + reason, không retry mù.
+
+### ADR-009: Group service tách riêng file
+
+Status: Proposed.
+
+Reasoning: Group automation (join, batch post, scrape members) là domain riêng biệt với post/like/comment. Gộp vào `facebookAutomation.js` (đã 600+ lines) sẽ quá lớn. Tách thành `facebookGroups.js` giữ ranh giới rõ ràng, vẫn import `runGuardedBatch`.
+
+Consequences:
+- `facebookGroups.js` export: `joinFacebookGroups`, `postToFacebookGroups`, `scrapeGroupMembers`.
+- Import `runGuardedBatch`, `randomDelay` từ `facebookAutomation.js`.
+- MCP/CLI/API dispatch qua service layer — không nhân bản logic.
+
+### ADR-010: Friend management delay cực kỳ bảo thủ
+
+Status: Proposed.
+
+Reasoning: Friend request spam là trigger anti-bot mạnh nhất trên Facebook. Batch ≤ 20/session, delay 60-180s giữa mỗi request. Không thể giảm dưới floor kể cả qua config.
+
+Consequences:
+- `facebookFriends.js` hardcode `MIN_DELAY = 60000`, `MAX_DELAY = 180000`.
+- `batchLimit` default 20, hardcoded max 50 (không thể vượt bằng `force`).
+- Cảnh báo account risk không tắt được (hiển thị trước batch + trong Operation notes).
+
+## B.4. Selector Strategy Epic 4
+
+Mọi selector mới thêm vào `docs/agents/selectors-facebook.md` dưới 3 section mới:
+
+- **Group selectors**: Join button, post composer trong group, member list container.
+- **Friend selectors**: Add Friend button, Cancel Request button, Sent Requests page.
+- **Newsfeed selectors**: Reaction buttons (for warmup), scroll container detection.
+
+Status ban đầu: **UNVERIFIED** — cần live test trên account thử nghiệm trước khi triển khai.
+
+## B.5. Lộ Trình Triển Khai (tiếp từ A.7)
+
+6. **Phase 6 — Cluster 3** (rủi ro thấp): `facebookScheduler.js` + extend `facebookAutomation.js` (share, warmup scroll). Unit tests + scheduler integration test.
+7. **Phase 7 — Cluster 1** (rủi ro trung bình): `facebookGroups.js` (join, batch post, scrape members). Cần verify selector trên account test.
+8. **Phase 8 — Cluster 2** (rủi ro cao): `facebookFriends.js` + `warmupAccount`. Account test bắt buộc trước khi ship. Dò selector ghi trên account phụ.
+
+Điểm quyết định trước Phase 7-8: có sẵn account Facebook thử nghiệm để dò selector group join, friend request, newsfeed reaction.
+

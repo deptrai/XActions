@@ -2,6 +2,7 @@
 stepsCompleted: [1, 2, 3, 4]
 inputDocuments:
   - _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md
+  - _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md
   - _bmad-output/planning-artifacts/architecture.md
 ---
 
@@ -43,6 +44,24 @@ FR13: REST API + Dashboard hỗ trợ Facebook; route validate/authorize theo `u
 
 FR14: Job automation Facebook được lưu vào PostgreSQL qua Prisma; Operation record có progress, Socket.IO update cho job dài; snapshot chỉ thêm khi story/future phase có retention rõ.
 
+FR15: Người dùng lên lịch post Facebook tại datetime cụ thể; `dryRun` mặc định `true`; khi thật tạo Prisma `Schedule` record; scheduler worker thực thi trong ±2 phút.
+
+FR16: Người dùng auto-share một post URL lên timeline; `dryRun` mặc định `true`; khi thật trả về URL post share trong Operation result.
+
+FR17: Hệ thống scroll tự nhiên (view boost) trên trang/post; không click action; `durationSeconds` cap 300s; `dryRun` validate URL không mở browser.
+
+FR18: Người dùng tham gia nhóm Facebook tự động (URL/keyword); `dryRun` mặc định; thực thi qua `runGuardedBatch` delay 30-90s; cảnh báo account risk bắt buộc.
+
+FR19: Người dùng đăng bài hàng loạt vào nhiều nhóm; `batchLimit=10`; `dryRun` mặc định; qua `runGuardedBatch`; nhóm thất bại không abort batch; cảnh báo account risk.
+
+FR20: Người dùng scrape thành viên nhóm; trả về mảng `{ name, username?, profileUrl, platform }`; nhóm không cho xem → object có `note`; không thu thập SĐT/email.
+
+FR21: Người dùng gửi kết bạn tự động (uid_list/suggestions/location); `dryRun` mặc định; `runGuardedBatch` delay 60-180s, batch ≤ 20; cảnh báo không tắt được; không scrape SĐT.
+
+FR22: Người dùng bulk cancel lời mời kết bạn pending; `dryRun` mặc định; `runGuardedBatch` delay 2-5s; trả về `{ cancelled, failed, remaining }`.
+
+FR23: Newsfeed farming / account warming (scroll + react xác suất thấp); `reactProbability` default 0.05 cap 0.2; `durationSeconds` cap 600s; `dryRun` không mở browser; cảnh báo bắt buộc.
+
 ### NonFunctional Requirements
 
 NFR1: Rate-limit safety — mọi vòng lặp action (scrape scroll + automate) có delay 1-3s, bounded retry, stop condition; automate dùng batch nhỏ hơn scrape do account risk cao hơn.
@@ -56,6 +75,16 @@ NFR4: Selector resilience — ưu tiên anchor theo `role`/`aria-label`/text, b�
 NFR5: Consistency — output khớp normalized shape của các nền tảng khác; entrypoint chỉ orchestrate/validate/format, không nhân bản logic scraper.
 
 NFR6: Testability — unit test cho parser/normalizer, smoke test gated bởi session/env availability, contract test khi public surface (MCP/API/CLI) đổi.
+
+NFR7: Delay sàn cho write action Epic 4 — Group actions delay 30-90s; friend requests delay 60-180s. Không giảm dưới ngưỡng sàn dù người dùng cấu hình.
+
+NFR8: `runGuardedBatch` bắt buộc — Mọi vòng lặp ghi hàng loạt FR-18..FR-22 phải dùng hoặc extend `runGuardedBatch`. Không tự viết vòng lặp mutate mới.
+
+NFR9: Cảnh báo account risk không thể tắt — FR-18, FR-19, FR-21, FR-22, FR-23 bắt buộc hiển thị cảnh báo trước thực thi thật. Người dùng không suppress được.
+
+NFR10: Giới hạn throughput scheduling — Scheduler worker ≤ 5 scheduled posts/giờ/user. Vượt: enqueue với jitter.
+
+NFR11: Không thu thập PII nhạy cảm — Mọi scraper Epic 4 không thu thập SĐT, email, địa chỉ kể cả khi DOM hiển thị. Filter ở tầng normalizer.
 
 ### Additional Requirements
 
@@ -89,6 +118,15 @@ FR11: Epic 3 - MCP tool/option for Facebook
 FR12: Epic 3 - CLI `--platform facebook`
 FR13: Epic 3 - REST API + Dashboard for Facebook
 FR14: Epic 3 - Operation persistence via Prisma
+FR15: Epic 4 - Lên lịch post Facebook (scheduler worker)
+FR16: Epic 4 - Auto-share post lên timeline
+FR17: Epic 4 - View boost qua scroll simulation
+FR18: Epic 4 - Tham gia nhóm Facebook tự động
+FR19: Epic 4 - Đăng bài hàng loạt vào nhiều groups
+FR20: Epic 4 - Scrape thành viên nhóm
+FR21: Epic 4 - Gửi kết bạn tự động
+FR22: Epic 4 - Hủy lời mời kết bạn pending
+FR23: Epic 4 - Newsfeed farming / account warming
 
 ## Epic List
 
@@ -103,6 +141,10 @@ Người dùng có thể tự động hóa hành động ghi (like, comment, pos
 ### Epic 3: Facebook Multi-Surface & Persistence
 Người dùng truy cập mọi tính năng Facebook (scrape + automate) qua CLI, MCP, REST API/Dashboard, với Operation persistence qua Prisma và Socket.IO updates cho job dài. Surface exposure dùng lại pattern hiện có thay vì tạo chiến lược riêng cho Facebook.
 **FRs covered:** FR11, FR12, FR13, FR14
+
+### Epic 4: Facebook Growth Automation
+Người dùng có các tính năng tăng trưởng tài khoản Facebook nâng cao: lên lịch post, share post, view boost (Cluster 3 — rủi ro thấp), tham gia/đăng bài nhóm hàng loạt và scrape member (Cluster 1 — rủi ro trung bình), gửi/hủy kết bạn tự động và account warming (Cluster 2 — rủi ro trung-cao). Mọi tính năng ghi kế thừa `runGuardedBatch` từ Epic 2, `dryRun` mặc định, cảnh báo account risk không tắt được.
+**FRs covered:** FR15, FR16, FR17, FR18, FR19, FR20, FR21, FR22, FR23
 
 ## Epic 1: Facebook Data Reading
 
@@ -399,3 +441,204 @@ So that I can monitor long-running jobs and review their history.
 **Given** records belonging to a user
 **When** read or written
 **Then** access is always scoped by `userId` — no cross-user read/write
+
+## Epic 4: Facebook Growth Automation
+
+Người dùng có các tính năng tăng trưởng tài khoản Facebook nâng cao, nhóm theo 3 cluster rủi ro tăng dần (cũng là thứ tự triển khai đề xuất). Mọi tính năng ghi kế thừa `runGuardedBatch` từ Epic 2, `dryRun` mặc định `true`, cảnh báo account risk không thể tắt. Nguồn: PRD `prd-XActions-2026-06-10-epic4`.
+
+### Story 4.1: Schedule Facebook post (dry-run default)
+
+As a growth marketer using XActions,
+I want to schedule a Facebook post to publish at a specific datetime,
+So that I can maintain consistent content without being online at peak hours.
+
+**Acceptance Criteria:**
+
+**Given** the Facebook automation service and a valid session
+**When** `scheduleFacebookPost(page, { content, mediaUrls?, scheduledAt }, options)` is called with default `dryRun=true`
+**Then** the system returns a preview of the content and scheduled time WITHOUT creating a `Schedule` record
+
+**Given** `dryRun=false` is explicitly set
+**When** the schedule is created
+**Then** a Prisma `Schedule` record is created scoped by `userId` and a `scheduleId` is returned
+**And** the scheduler worker executes the post within ±2 minutes of `scheduledAt`
+**And** scheduler throughput is capped at ≤5 scheduled posts/hour/user (NFR10)
+
+**Given** a scheduled post that fails (expired session, checkpoint)
+**When** the execution time arrives
+**Then** `Schedule.status = 'failed'` is set with a clear reason and no blind retry occurs
+
+### Story 4.2: Auto-share Facebook post (dry-run default)
+
+As a growth marketer using XActions,
+I want to auto-share one or more post URLs to my timeline,
+So that I can amplify content reach with batch control.
+
+**Acceptance Criteria:**
+
+**Given** the automation service routing through `runGuardedBatch`
+**When** `shareFacebookPosts(page, postUrls, options)` is called with default `dryRun=true`
+**Then** the system returns the list of URLs that would be shared WITHOUT any DOM interaction
+
+**Given** `dryRun=false`
+**When** the share executes
+**Then** there is a 1-3s delay between shares with bounded batch (default max 10)
+**And** each result entry has `{ target, ok, alreadyShared?, error? }`
+**And** an account-risk warning is surfaced before the first real share
+
+**Given** an invalid or deleted `postUrl`
+**When** validation runs
+**Then** a clear error is returned before opening the browser
+
+### Story 4.3: View boost via scroll simulation
+
+As a growth marketer using XActions,
+I want to simulate natural scrolling on a page/post,
+So that I can increase organic engagement signals without explicit actions.
+
+**Acceptance Criteria:**
+
+**Given** the automation service
+**When** `warmupScrollFeed(page, targetUrl, { durationSeconds })` is called
+**Then** the system scrolls with randomized speed and pauses, performing NO click/like/comment actions
+
+**Given** a `durationSeconds` value exceeding 300
+**When** the function runs
+**Then** the value is clamped to 300s (not rejected)
+
+**Given** `dryRun=true`
+**When** the function is invoked
+**Then** the URL is validated and parameters computed but the browser is NOT opened
+**And** no Operation record is created in dry-run (only on real execution)
+
+### Story 4.4: Join Facebook groups (dry-run default)
+
+As a multi-group operator using XActions,
+I want to join Facebook groups automatically by URL or keyword search,
+So that I can expand my group reach with safety controls.
+
+**Acceptance Criteria:**
+
+**Given** URL mode with `{ groupUrls: string[] }` or search mode with `{ keyword, limit }`
+**When** `joinFacebookGroups(page, ..., options)` is called with default `dryRun=true`
+**Then** the system lists the groups that would be joined WITHOUT sending any join request
+
+**Given** `dryRun=false`
+**When** the join executes
+**Then** requests go through `runGuardedBatch` with 30-90s delay between groups (NFR7)
+**And** an account-risk warning is mandatorily surfaced before the first batch (NFR9)
+
+**Given** a group requiring admin approval
+**When** the join request is sent
+**Then** the Operation result records `pending` status — this is NOT treated as an error
+
+### Story 4.5: Batch post to multiple groups (dry-run default)
+
+As a multi-group operator using XActions,
+I want to post one content to multiple Facebook groups in a batch,
+So that I can distribute content efficiently with spam-safe delays.
+
+**Acceptance Criteria:**
+
+**Given** `{ groupUrls: string[], content, mediaUrls?, batchLimit=10 }`
+**When** `postToFacebookGroups(page, ..., options)` is called with default `dryRun=true`
+**Then** the preview lists the target groups and content WITHOUT opening the browser
+
+**Given** `groupUrls.length` exceeds `batchLimit`
+**When** the function runs without `force=true`
+**Then** it requires an explicit `force=true` parameter to proceed
+
+**Given** `dryRun=false`
+**When** the batch executes through `runGuardedBatch`
+**Then** there is a 30-90s delay between groups and a single aggregated Operation with per-group progress
+**And** a failed group (not a member, posting restricted) does NOT abort the batch
+**And** an account-risk warning is surfaced before the batch (NFR9)
+
+### Story 4.6: Scrape Facebook group members
+
+As a growth marketer using XActions,
+I want to scrape the member list of a Facebook group,
+So that I can understand group composition for targeting.
+
+**Acceptance Criteria:**
+
+**Given** a group URL and a valid session
+**When** `scrapeGroupMembers(page, groupUrl, { limit })` is called
+**Then** the system returns an array of `{ name, username?, profileUrl, platform: 'facebook' }`
+
+**Given** a group that does NOT expose its member list (or the account is not a member)
+**When** scrape members is called
+**Then** the system returns an object with a `note` field explaining the limitation — it does NOT throw
+
+**Given** the member scraping logic
+**When** extracting member data
+**Then** phone numbers and emails are NEVER collected even if visible in the DOM (NFR11)
+**And** scroll has 1-3s delay with bounded retry
+
+### Story 4.7: Send friend requests automatically (dry-run default)
+
+As a growth hacker using XActions,
+I want to send friend requests by UID list, suggestions, or location filter,
+So that I can build a targeted network with conservative rate limits.
+
+**Acceptance Criteria:**
+
+**Given** `{ mode: 'uid_list'|'suggestions'|'location', targets?, location?, limit }`
+**When** `sendFriendRequests(page, options)` is called with default `dryRun=true`
+**Then** the system lists the profiles that would receive requests WITHOUT sending any
+
+**Given** `dryRun=false`
+**When** requests execute through `runGuardedBatch`
+**Then** there is a 60-180s delay between requests and `batchLimit` ≤ 20/session (NFR7)
+**And** a non-suppressible warning is shown: friend-request spam is the top cause of checkpoint (NFR9)
+
+**Given** a profile already a friend, with a pending request, or not found
+**When** the request is processed
+**Then** it is skipped and logged in the Operation — the batch does NOT fail
+
+**Given** any mode of operation
+**When** profile data is read
+**Then** phone numbers are NEVER scraped; `location` filter uses only publicly self-declared location (NFR11)
+
+### Story 4.8: Cancel pending friend requests (dry-run default)
+
+As a growth hacker using XActions,
+I want to bulk-cancel pending friend requests,
+So that I can free up my friend-request quota without manual clicking.
+
+**Acceptance Criteria:**
+
+**Given** `{ limit, olderThanDays? }`
+**When** `cancelPendingFriendRequests(page, options)` is called with default `dryRun=true`
+**Then** the system returns the list of requests that would be cancelled `[{ name, profileUrl, dateSent }]`
+
+**Given** `dryRun=false`
+**When** the cancellation executes through `runGuardedBatch`
+**Then** there is a 2-5s delay between cancels and the result returns `{ cancelled, failed, remaining }`
+
+**Given** an `olderThanDays` filter
+**When** selecting requests to cancel
+**Then** only pending requests older than N days are cancelled
+
+### Story 4.9: Newsfeed farming / account warming (dry-run default)
+
+As a new-account operator using XActions,
+I want to warm up an account with natural newsfeed scrolling and light reactions,
+So that I can build a normal behavioral fingerprint before running heavier automation.
+
+**Acceptance Criteria:**
+
+**Given** `{ durationSeconds, reactProbability=0.05 }`
+**When** `warmupAccount(page, options)` is called with default `dryRun=true`
+**Then** the system describes the behavior sequence WITHOUT opening the browser or performing actions
+
+**Given** `dryRun=false`
+**When** the warmup runs
+**Then** it scrolls with randomized pauses (≥5s pause at least once per 3 screens of scroll)
+**And** reactions occur only if `allowReactions=true` (default false) and `reactProbability` is capped at 0.2
+**And** NO follow/friend/comment actions occur in warmup mode
+
+**Given** a `durationSeconds` value exceeding 600
+**When** the function runs
+**Then** the value is clamped to 600s/session
+**And** a mandatory warning notes warming does not guarantee avoiding checkpoint (NFR9)
