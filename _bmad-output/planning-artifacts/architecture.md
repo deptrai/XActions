@@ -652,8 +652,8 @@ Consequences:
 
 | Risk | Mức | Mitigation |
 |---|---|---|
-| `doc_id` GraphQL hardcoded đổi → chết im lặng | Cao | Named constant + fallback + warn (ADR-008) |
-| Mass-share ~ spam → ban account | Cao | Delay bảo thủ + ToS warning đa surface + dry-run (ADR-009) |
+| `doc_id` GraphQL hardcoded đổi → chết im lặng | Cao | Named constant + fallback + warn (ADR-011) |
+| Mass-share ~ spam → ban account | Cao | Delay bảo thủ + ToS warning đa surface + dry-run (ADR-012) |
 | Selectors Messenger share UNVERIFIED | Cao | Fallback chain; live verify; tie selectors-facebook.md |
 | Hai đường auth (HTTP vs Playwright) drift | Trung | Tài liệu hóa; cookie-string vs `{c_user,xs}` rõ |
 | `otplib` (2FA) dependency mới | Thấp | Pin version chính xác (crypto, không range mở) |

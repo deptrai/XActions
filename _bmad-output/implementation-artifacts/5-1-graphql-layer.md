@@ -1,14 +1,14 @@
-# Story P1: Facebook GraphQL/HTTP layer
+# Story 5.1: Facebook GraphQL/HTTP layer
 
 Status: ready-for-dev
 
-<!-- Port from SST_TOOL_FB (C# WinForms) → XActions. Plan: facebook-messenger-port-plan.md (Story P1, consolidated). -->
+<!-- Port from SST_TOOL_FB (C# WinForms) → XActions. Plan: facebook-messenger-port-plan.md (Epic 5, Story 5.1). -->
 
 ## Story
 
 As a developer building Facebook GraphQL features in XActions,
 I want a GraphQL/HTTP helper layer (token scraper + page-list + Messenger CTA check) in `src/scrapers/facebook/graphql.js`,
-so that the Messenger share campaign (Story P2) has the tokens, page list, and CTA-eligibility checks it depends on.
+so that the Messenger share campaign (Story 5.2) has the tokens, page list, and CTA-eligibility checks it depends on.
 
 This story consolidates 3 HTTP/parse-only port features (browser-free, low risk):
 - **(a) Token scraper** — fb_dtsg, lsd, jazoest, hsi, __spin_r, __spin_t (C# Main.cs:217-249)
@@ -129,7 +129,7 @@ Verify against a real fixture; Facebook markup shifts, so keep them anchored and
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/facebook-messenger-port-plan.md#Epic P1, Story P1.1]
+- [Source: _bmad-output/planning-artifacts/facebook-messenger-port-plan.md#Epic 5, Story 5.1]
 - [Source: SST_TOOL_FB/Main.cs:217-249 — token scrape markers (C# split chain)]
 - [Source: SST_TOOL_FB/Main.cs:576 — x-fb-lsd header usage downstream]
 - [Source: src/scrapers/twitter/http/client.js, auth.js — existing cookie-string HTTP pattern to mirror]

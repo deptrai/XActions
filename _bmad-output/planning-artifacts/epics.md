@@ -653,7 +653,7 @@ Port các tính năng từ SST_TOOL_FB (C# WinForms) vào XActions theo nguyên 
 
 As a developer building Facebook Messenger automation in XActions,
 I want a GraphQL/HTTP helper layer (token scraper + page list + Messenger CTA check),
-So that the Messenger share campaign (Story P2) has tokens, pages, and eligibility data.
+So that the Messenger share campaign (Story 5.2) has tokens, pages, and eligibility data.
 
 **Acceptance Criteria:**
 
