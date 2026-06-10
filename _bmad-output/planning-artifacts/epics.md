@@ -62,6 +62,26 @@ FR22: Người dùng bulk cancel lời mời kết bạn pending; `dryRun` mặc
 
 FR23: Newsfeed farming / account warming (scroll + react xác suất thấp); `reactProbability` default 0.05 cap 0.2; `durationSeconds` cap 600s; `dryRun` không mở browser; cảnh báo bắt buộc.
 
+FR24: Scrape internal Facebook tokens (fb_dtsg, lsd, jazoest, hsi, __spin_r, __spin_t) từ HTML facebook.com qua HTTP; anchored regex; trả `null` khi logged-out; không log cookie (NFR3).
+
+FR25: Lấy danh sách Facebook Pages qua Graph API (ad account → EAAG token → facebook_pages); trả mảng `{ pageId, name, accessToken }`; empty array khi không có; không log accessToken.
+
+FR26: Kiểm tra Messenger Business CTA eligibility cho một page qua GraphQL doc_id; trả `{ eligible: boolean }`; fallback `false` khi response shape bất thường; doc_id là named constant có cảnh báo rotation.
+
+FR27: Share một Facebook post tới một Page qua Messenger (DOM automation: share button → "via Messenger" → chọn target); selector fallback chain; `dryRun` mặc định `true`; route qua `runGuardedBatch`.
+
+FR28: Compose & gửi message trong Messenger dialog; hỗ trợ random segment (`**` delimiter), type line-by-line Shift+Enter, strip emoji surrogates `\p{Cs}`, detect "Couldn't send" → mark blocked.
+
+FR29: Batch messenger share campaign chạy đa tài khoản qua `runGuardedBatch`; delay bảo thủ hơn like/comment (ADR-012); FIFO target queue; dry-run mặc định; cảnh báo ToS bắt buộc mọi surface.
+
+FR30: Login Facebook bằng uid/password (bait-cookie → fill form → handle "Continue" prompt); bổ sung cho `loginWithCookie` khi không có cookie sẵn.
+
+FR31: 2FA TOTP injection khi login trigger challenge; nhận 32-char seed, sinh code qua `otplib`; pin version chính xác (crypto dependency).
+
+FR32: Proxy rotation qua 3 provider (proxyfb.com, tmproxy.com, shoplike.vn); mỗi provider `rotate(key)` / `current(key)` trả proxy string; wire vào `browserOptions.proxy`.
+
+FR33: File-queue inputs (target pages / contents / links) đọc từ file hoặc API body; FIFO thread-safe; random content segment; expose qua CLI/MCP/API action `messenger` — additive, dry-run mặc định.
+
 ### NonFunctional Requirements
 
 NFR1: Rate-limit safety — mọi vòng lặp action (scrape scroll + automate) có delay 1-3s, bounded retry, stop condition; automate dùng batch nhỏ hơn scrape do account risk cao hơn.
@@ -127,6 +147,16 @@ FR20: Epic 4 - Scrape thành viên nhóm
 FR21: Epic 4 - Gửi kết bạn tự động
 FR22: Epic 4 - Hủy lời mời kết bạn pending
 FR23: Epic 4 - Newsfeed farming / account warming
+FR24: Epic 5 - Token scraping (fb_dtsg/lsd/jazoest/hsi/spin)
+FR25: Epic 5 - Page list via Graph API
+FR26: Epic 5 - Messenger CTA check (GraphQL doc_id)
+FR27: Epic 5 - Share post → Page qua Messenger
+FR28: Epic 5 - Messenger message compose & send
+FR29: Epic 5 - Batch messenger share campaign (runGuardedBatch)
+FR30: Epic 5 - uid/pass login mode (bait cookie)
+FR31: Epic 5 - 2FA TOTP injection
+FR32: Epic 5 - Proxy rotation (3 providers)
+FR33: Epic 5 - File-queue inputs + surface exposure
 
 ## Epic List
 
@@ -647,7 +677,7 @@ So that I can build a normal behavioral fingerprint before running heavier autom
 
 Port các tính năng từ SST_TOOL_FB (C# WinForms) vào XActions theo nguyên tắc REUSE-FIRST: chỉ viết mới phần C# có mà XActions chưa có; tái dùng guardrail, login, dispatcher, surfaces đã build ở Epic 1-3. Nguồn: `auto-crawl-tiktok-post-fb/automation-facebook/SST_TOOL_FB`. Plan chi tiết: `facebook-messenger-port-plan.md`.
 
-**Features ported:** P1 (token scraper) · P2 (Messenger compose/send) · P3 (token scraper used downstream) · P4 (Messenger CTA check) · P5 (page list) · P6 (proxy rotation) · P7 (uid/pass login) · P8 (2FA TOTP) · P9 (multi-account concurrency — via runGuardedBatch) · P10 (file queues).
+**FRs covered:** FR24, FR25, FR26, FR27, FR28, FR29, FR30, FR31, FR32, FR33
 
 ### Story 5.1: Facebook GraphQL/HTTP layer
 
