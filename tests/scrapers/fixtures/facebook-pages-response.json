@@ -1,0 +1,18 @@
+{
+  "_comment": "SYNTHETIC Graph API facebook_pages response — no real tokens/PII.",
+  "facebook_pages": {
+    "data": [
+      {
+        "access_token": "SYNTH_PAGE_TOKEN_AAA",
+        "additional_profile_id": "200000000000001",
+        "name": "Demo Coffee Shop"
+      },
+      {
+        "access_token": "SYNTH_PAGE_TOKEN_BBB",
+        "additional_profile_id": "200000000000002",
+        "name": "Demo Bookstore"
+      }
+    ]
+  },
+  "id": "100012345678901"
+}

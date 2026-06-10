@@ -1,0 +1,9 @@
+{
+  "_comment": "SYNTHETIC eligible CTA GraphQL response — no real data.",
+  "data": {
+    "page": {
+      "id": "200000000000001",
+      "messenger_business_ads_sender": { "eligible": true }
+    }
+  }
+}

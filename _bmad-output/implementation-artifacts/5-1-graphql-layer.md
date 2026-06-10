@@ -1,6 +1,10 @@
+---
+baseline_commit: 67751889ce84cff64cf452be4628de419cf5026c
+---
+
 # Story 5.1: Facebook GraphQL/HTTP layer
 
-Status: ready-for-dev
+Status: review
 
 <!-- Port from SST_TOOL_FB (C# WinForms) → XActions. Plan: facebook-messenger-port-plan.md (Epic 5, Story 5.1). -->
 
@@ -74,28 +78,28 @@ Tokens are sent as `fb_dtsg`/`lsd`/`x-fb-lsd` in GraphQL bodies/headers (Main.cs
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Pure parser** (AC1)
-  - [ ] Create `src/scrapers/facebook/graphql.js`
-  - [ ] `export function parseFacebookTokens(html)` — 6 anchored regexes, return object, `null` for misses
-  - [ ] fb_dtsg regex captures the `NAf...` token; keep prefix
-- [ ] **Task 2: Fetcher with seam** (AC2, AC3)
-  - [ ] `export async function getFacebookTokens(cookie, options = {})` — `const { fetchImpl = defaultFetch } = options`
-  - [ ] Build `Cookie` header from cookie string; set User-Agent + sec-ch-ua headers (copy from C# / existing adapter UA)
-  - [ ] Fetch facebook.com, pass body to `parseFacebookTokens`; never log cookie
-  - [ ] Logged-out page → null-field object (no throw); network error → throw generic message
-- [ ] **Task 3: Token tests** (AC4)
-  - [ ] `tests/scrapers/facebook-graphql.test.js`: parser fixture tests + getFacebookTokens with `fetchImpl` stub returning fixture
-  - [ ] Run `npx vitest run tests/scrapers/facebook-graphql.test.js`
-- [ ] **Task 4: Page list (b)** (AC5)
-  - [ ] `export async function getPagesFromCookie(cookie, options = {})` — same `fetchImpl` seam
-  - [ ] Scrape ad-account id (adsmanager → billing fallback), extract EAAG token, GET graph.facebook.com facebook_pages
-  - [ ] Normalize to `[{ pageId, name, accessToken }]`; empty array when none; never log accessToken/cookie
-  - [ ] Tests: fixture JSON via `fetchImpl` stub
-- [ ] **Task 5: Messenger CTA check (c)** (AC6)
-  - [ ] `export async function checkMessengerCTA(pageId, actorId, tokens, options = {})` — `fetchImpl` seam
-  - [ ] `const MESSENGER_CTA_DOC_ID = '29460155383630960'` with rotation-warning comment
-  - [ ] POST graphql, return `{ eligible }`; unexpected shape → `{ eligible: false }` + console.warn (no secrets)
-  - [ ] Tests: eligible + non-eligible fixture responses
+- [x] **Task 1: Pure parser** (AC1)
+  - [x] Create `src/scrapers/facebook/graphql.js`
+  - [x] `export function parseFacebookTokens(html)` — 6 anchored regexes, return object, `null` for misses
+  - [x] fb_dtsg regex captures the `NAf...` token; keep prefix
+- [x] **Task 2: Fetcher with seam** (AC2, AC3)
+  - [x] `export async function getFacebookTokens(cookie, options = {})` — `const { fetchImpl = defaultFetch } = options`
+  - [x] Build `Cookie` header from cookie string; set User-Agent + sec-ch-ua headers (copy from C# / existing adapter UA)
+  - [x] Fetch facebook.com, pass body to `parseFacebookTokens`; never log cookie
+  - [x] Logged-out page → null-field object (no throw); network error → throw generic message
+- [x] **Task 3: Token tests** (AC4)
+  - [x] `tests/scrapers/facebook-graphql.test.js`: parser fixture tests + getFacebookTokens with `fetchImpl` stub returning fixture
+  - [x] Run `npx vitest run tests/scrapers/facebook-graphql.test.js`
+- [x] **Task 4: Page list (b)** (AC5)
+  - [x] `export async function getPagesFromCookie(cookie, options = {})` — same `fetchImpl` seam
+  - [x] Scrape ad-account id (adsmanager → billing fallback), extract EAAG token, GET graph.facebook.com facebook_pages
+  - [x] Normalize to `[{ pageId, name, accessToken }]`; empty array when none; never log accessToken/cookie
+  - [x] Tests: fixture JSON via `fetchImpl` stub
+- [x] **Task 5: Messenger CTA check (c)** (AC6)
+  - [x] `export async function checkMessengerCTA(pageId, actorId, tokens, options = {})` — `fetchImpl` seam
+  - [x] `const MESSENGER_CTA_DOC_ID = '29460155383630960'` with rotation-warning comment
+  - [x] POST graphql, return `{ eligible }`; unexpected shape → `{ eligible: false }` + console.warn (no secrets)
+  - [x] Tests: eligible + non-eligible fixture responses
 
 ## Dev Notes
 
@@ -170,10 +174,34 @@ The 3 functions share a data flow. Verify shapes match:
 
 ### Agent Model Used
 
-(to be filled by dev agent)
+Amelia (dev agent) — Claude Opus 4.8
 
 ### Debug Log References
 
+- `npx vitest run tests/scrapers/facebook-graphql.test.js` → 26 passed (parser, fetcher, page-list, CTA, integration).
+- Full suite `npx vitest run` → 1164 passed, 8 skipped; 23 failures ALL in `tests/x402-integration.test.js` (pre-existing, unrelated): they `connect` to `http://localhost:3001` (ECONNREFUSED — no live server in this environment). Not touched by this story (additive helper only).
+
 ### Completion Notes List
 
+- Implemented `src/scrapers/facebook/graphql.js` (browser-free, ESM, additive — NOT wired into `scrape()` dispatcher, per port-plan; surfaces land in Story 5.4).
+- **AC1/AC4** `parseFacebookTokens(html)` — 6 anchored regexes (not C# `.split()`), `null` for misses, `NAf` prefix kept on fb_dtsg, null-safe on non-string input.
+- **AC2/AC3** `getFacebookTokens(cookie, { fetchImpl })` — axios-backed default fetch wrapped to fetch-API shape `(url, init) => { status, text() }`; browser headers (UA + sec-ch-ua + viewport-width) mirroring C# xNet; logged-out → null-field object (no throw); network/5xx → generic throw. **NFR3**: cookie never logged/echoed (asserted by tests). `buildCookieString({ c_user, xs }, extra)` utility exported for Story 5.2.
+- **AC5** `getPagesFromCookie(cookie, { fetchImpl, graphVersion })` — 4-step flow (adsmanager → billing fallback → EAAG token → Graph API), `GRAPH_API_VERSION='v19.0'` constant (overridable), normalizes to `[{ pageId, name, accessToken }]`, returns `[]` (never throws) on any failed step; access tokens never logged.
+- **AC6** `checkMessengerCTA(pageId, actorId, tokens, { fetchImpl, docId })` — URL-encoded form POST (not JSON), `MESSENGER_CTA_DOC_ID='29460155383630960'` with rotation-warning comment; `{ eligible }` from `messenger_business_ads_sender` presence; malformed/rotated shape → `{ eligible:false }` + generic `console.warn` (no secrets); network error fails closed.
+- **Integration (#12)**: one test chains tokens → pages → CTA verifying object shapes wire together without TypeError.
+- Fixtures (synthetic, no real PII/tokens) in `tests/scrapers/fixtures/`: logged-in/out HTML, pages JSON, CTA eligible/ineligible JSON.
+
 ### File List
+
+- `src/scrapers/facebook/graphql.js` (NEW — parser + fetcher + page-list + CTA + buildCookieString)
+- `tests/scrapers/facebook-graphql.test.js` (NEW — 26 tests)
+- `tests/scrapers/fixtures/facebook-home-loggedin.html` (NEW)
+- `tests/scrapers/fixtures/facebook-home-loggedout.html` (NEW)
+- `tests/scrapers/fixtures/facebook-pages-response.json` (NEW)
+- `tests/scrapers/fixtures/facebook-cta-eligible.json` (NEW)
+- `tests/scrapers/fixtures/facebook-cta-ineligible.json` (NEW)
+- `_bmad-output/implementation-artifacts/5-1-graphql-layer.md` (MODIFIED — frontmatter, checkboxes, Dev Agent Record, Change Log, Status)
+
+## Change Log
+
+- 2026-06-11: Implemented Story 5.1 Facebook GraphQL/HTTP layer (parser + fetcher + page-list + Messenger CTA check). 26 tests added, all passing. Status → review. (Amelia)

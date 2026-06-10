@@ -1,0 +1,26 @@
+<!--
+  SYNTHETIC fixture — NOT a real Facebook page. Hand-authored to contain the
+  6 token markers parseFacebookTokens() looks for, in the same JSON shapes the
+  real facebook.com homepage embeds them. Contains no real PII or session data.
+  Marker shapes mirror SST_TOOL_FB/Main.cs:217-249.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head><title>Facebook</title></head>
+<body>
+<script>
+  requireLazy(["bootstrap"], function() {
+    __d("DTSGInitialData", [], {"token":"NAf-1aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789:9876543210"});
+    require("ServerJSDefine").handleDefines([
+      ["LSD",[],{"token":"AVqr_synthLSDtoken_xZ"},258]
+    ]);
+  });
+  // jazoest is emitted both as a form field marker and inline
+  var formMarkup = '<input type="hidden" name="jazoest" value="2-&jazoest=25813"';
+  define("CurrentUserInitialData", [], {"USER_ID":"100012345678901","NAME":"Test User"});
+  require("RequireDeferredReference").ref("__inst").__setRef("InitialData",{"hsi":"7412345678901234567"});
+  __spinValues = {"__spin_r":1011223344,"__spin_b":"trunk_stable","__spin_t":1749580000};
+</script>
+<div id="content">Welcome back</div>
+</body>
+</html>

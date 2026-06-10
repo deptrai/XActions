@@ -1,0 +1,8 @@
+{
+  "_comment": "SYNTHETIC ineligible CTA GraphQL response — valid shape, no sender field.",
+  "data": {
+    "page": {
+      "id": "200000000000002"
+    }
+  }
+}

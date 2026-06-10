@@ -1,0 +1,22 @@
+<!--
+  SYNTHETIC fixture — represents a logged-OUT facebook.com homepage. Deliberately
+  contains NONE of the 6 token markers, so parseFacebookTokens() returns all-null.
+  No real PII or session data.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head><title>Facebook - log in or sign up</title></head>
+<body>
+<div id="login">
+  <form method="post">
+    <input type="text" name="email" placeholder="Email or phone number" />
+    <input type="password" name="pass" placeholder="Password" />
+    <button type="submit">Log In</button>
+  </form>
+</div>
+<script>
+  // Public bootstrap only — no DTSG, no LSD, no spin values for a guest visitor.
+  __d("PolarisLoggedOutRoot", [], function(){ return null; });
+</script>
+</body>
+</html>
