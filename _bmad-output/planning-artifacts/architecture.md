@@ -612,3 +612,50 @@ Status ban đầu: **UNVERIFIED** — cần live test trên account thử nghi�
 
 Điểm quyết định trước Phase 7-8: có sẵn account Facebook thử nghiệm để dò selector group join, friend request, newsfeed reaction.
 
+---
+
+# Addendum C — Messenger Port (SST_TOOL_FB)
+
+> Bổ sung 2026-06-10. Port tính năng từ tool C# `SST_TOOL_FB`. Chi tiết: `facebook-messenger-port-plan.md`, Epic 4. Phần này chỉ ghi các quyết định kiến trúc MỚI mà port làm phát sinh.
+
+## B.1. Bối cảnh
+
+Port đưa vào: (a) một tính năng — share post → Pages qua Messenger; (b) một lớp kỹ thuật — internal GraphQL HTTP. Cả hai vượt khỏi ADR-001/006/007 nên cần ADR riêng.
+
+## B.2. Architecture Decisions
+
+### ADR-011: Internal GraphQL HTTP layer là cơ chế phụ, tách biệt browser automation
+
+Status: Accepted with guardrails.
+
+Reasoning: SST_TOOL_FB dùng raw HTTP gọi GraphQL nội bộ (token `fb_dtsg`/`lsd`/`jazoest`, `doc_id`) để check Messenger CTA + lấy page list — nhanh và ổn định hơn dò DOM cho các tác vụ đọc/kiểm tra này. Đây là ngoại lệ CÓ CHỦ ĐÍCH với ADR-001.
+
+Consequences:
+- Lớp HTTP đặt riêng tại `src/scrapers/facebook/graphql.js`, KHÔNG trộn vào adapter DOM. Mỗi hàm thuần, có `fetchImpl` seam để test browser-free.
+- `doc_id` hardcoded là **điểm vỡ vận hành cấp cao**: Facebook xoay doc_id bất kỳ lúc nào → response shape lạ. Bắt buộc: named constant + comment cảnh báo + fallback graceful (`{ eligible: false }`, không throw) + `console.warn` không lộ token/cookie.
+- Hai đường auth cùng tồn tại: HTTP nhận cookie-string đầy đủ, Playwright nhận `{ c_user, xs }`. Tài liệu hóa rõ, không để drift. Token nội bộ + accessToken là dữ liệu nhạy cảm, không log (NFR3).
+- Reuse: dùng `axios` đã có hoặc Node fetch; cấm thêm HTTP dependency mới.
+
+### ADR-012: Messenger mass-share là write rủi ro cao nhất — guardrail chặt hơn mặc định
+
+Status: Accepted.
+
+Reasoning: Share hàng loạt một post tới nhiều Page qua Messenger là **spam pattern** rõ rệt, rủi ro ToS + ban account cao hơn hẳn like/comment/post đơn lẻ. Guardrail chung (dry-run mặc định) cần nhưng chưa đủ.
+
+Consequences:
+- Messenger-share dùng **delay bảo thủ hơn** default like/comment (min cao hơn, jitter rộng hơn) — không tái dùng nguyên default 1-3s.
+- Cảnh báo ToS/account-risk hiển thị ở MỌI surface (CLI/MCP/API) trước real batch, không chỉ ở service layer.
+- Vẫn route qua `runGuardedBatch` (không loop riêng); messenger chỉ là `actionFn` + cấu hình delay riêng.
+- Dry-run tuyệt đối (ADR-007 nguyên); real-run cần bật tường minh.
+
+## B.3. Known Risks (Messenger Port)
+
+| Risk | Mức | Mitigation |
+|---|---|---|
+| `doc_id` GraphQL hardcoded đổi → chết im lặng | Cao | Named constant + fallback + warn (ADR-008) |
+| Mass-share ~ spam → ban account | Cao | Delay bảo thủ + ToS warning đa surface + dry-run (ADR-009) |
+| Selectors Messenger share UNVERIFIED | Cao | Fallback chain; live verify; tie selectors-facebook.md |
+| Hai đường auth (HTTP vs Playwright) drift | Trung | Tài liệu hóa; cookie-string vs `{c_user,xs}` rõ |
+| `otplib` (2FA) dependency mới | Thấp | Pin version chính xác (crypto, không range mở) |
+| Proxy shape lệch dispatcher | Thấp | Xác nhận `browserOptions.proxy` khớp trước khi code P3 (bài học `target` key 3.3) |
+
