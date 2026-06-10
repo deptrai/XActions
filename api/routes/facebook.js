@@ -77,8 +77,10 @@ router.post('/scrape', async (req, res) => {
 
     res.json({ ok: true, action, result });
   } catch (error) {
-    console.error('❌ Facebook scrape error:', error.message);
-    res.status(500).json({ ok: false, error: error.message });
+    // Log full detail server-side; return a generic message so Prisma/Puppeteer
+    // internals (paths, SQL, selectors) are not leaked to the HTTP client.
+    console.error('❌ Facebook scrape error:', error);
+    res.status(500).json({ ok: false, error: 'Facebook scrape failed. See server logs.' });
   }
 });
 
@@ -157,13 +159,18 @@ router.post('/automate', async (req, res) => {
     }
 
     // Real run — create Operation record (config excludes authCookie; never persist cookie values, NFR3)
+    // Bound persisted sizes so a huge urls[]/text can't bloat the Operation row.
+    const MAX_URLS = 100;
+    const MAX_TEXT = 5000;
+    const configUrls = Array.isArray(urls) ? urls.slice(0, MAX_URLS) : [];
+    const configText = String(text ?? '').slice(0, MAX_TEXT);
     const operation = await prisma.operation.create({
       data: {
         userId: req.user.id,
         type: `facebook_${action}`,
         status: 'running',
         startedAt: new Date(),
-        config: JSON.stringify({ action, urls, text, maxBatch: maxBatch ?? null }),
+        config: JSON.stringify({ action, urls: configUrls, text: configText, maxBatch: maxBatch ?? null }),
       },
     });
     emit({ event: 'start', operationId: operation.id, userId: req.user.id, type: operation.type, status: 'running' });
@@ -205,8 +212,9 @@ router.post('/automate', async (req, res) => {
       ...result,
     });
   } catch (error) {
-    console.error('❌ Facebook automate error:', error.message);
-    res.status(500).json({ ok: false, error: error.message });
+    // Log full detail server-side; return a generic message (no internal leak).
+    console.error('❌ Facebook automate error:', error);
+    res.status(500).json({ ok: false, error: 'Facebook automate failed. See server logs.' });
   }
 });
 

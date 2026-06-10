@@ -73,3 +73,37 @@
 - **`new PrismaClient()` per route module** [api/routes/facebook.js:7] — connection-pool fragmentation under load. Move to a shared singleton imported across routes.
 - **No size bound on `urls`/`text` persisted to Operation.config** [api/routes/facebook.js] — large input bloats the row. Add length caps before JSON.stringify.
 - **VERIFY Socket.IO room join** — the per-user emit `io.to('user:<id>')` (3.4 fix) requires the connection handler to join `user:${userId}` on connect. If it doesn't, dashboard live updates silently stop. Confirm the realtime layer joins that room.
+
+---
+
+## RESOLVED — deferred-cleanup pass (2026-06-10)
+
+Code-only deferred items fixed in branch `worktree-facebook-deferred`:
+
+- ✅ **Browser leak on login throw** [src/scrapers/index.js] — browser ref stored BEFORE login; login wrapped in try/catch that closes browser on throw.
+- ✅ **Browser leak on fn/goto throw** [src/scrapers/index.js] — fn-call + auto-close wrapped in try/finally; `.close().catch()`.
+- ✅ **`xs`/`c_user` no sameSite** [src/scrapers/facebook/index.js] — added `sameSite: 'Strict'` to both cookies.
+- ✅ **Socket.IO per-user room not joined** [api/realtime/socketHandler.js] — connection handler now `socket.join('user:'+id)`. CRITICAL: this is what makes the 3.4 per-user `io.to(...)` emit actually reach the dashboard (would have been a silent regression otherwise).
+- ✅ **Raw error.message in HTTP 500** [api/routes/facebook.js] — both scrape + automate catch now log full error server-side, return generic message.
+- ✅ **No size bound on Operation.config** [api/routes/facebook.js] — urls capped at 100, text at 5000 chars before persist.
+- ✅ **MCP maxBatch validated downstream** [src/mcp/server.js] — fail-fast numeric check before browser launch.
+- ✅ **MCP urls entries not validated** [src/mcp/server.js] — each url must be a facebook.com string; checked before launch.
+- ✅ **findCommentInput 4×5s sequential timeout** [api/services/facebookAutomation.js] — combined single waitForSelector (5s total).
+- ✅ **shouldStop received mutable results array** [api/services/facebookAutomation.js] — now passes immutable summary { attempted, succeeded, failed, lastResult }. Test updated.
+
+### NOT fixed — deliberately left
+
+- **`new PrismaClient()` per route module** — project-wide convention (auth/bookmarks/creator/discovery all do this). A facebook-only change would be inconsistent; needs a cross-cutting refactor to a shared singleton. Out of scope for this pass.
+- **`tests/mcp/server.test.js` fails under Vitest** — pre-existing (node:test imports), not Facebook. Separate cleanup.
+
+### BLOCKED on live Facebook session (Open Question Q3 — cannot fix without a real authenticated account)
+
+These are DOM-accuracy items; fixing blind risks making selectors worse. They require dDOM inspection on a real logged-in Facebook session and belong to the selectors-facebook.md verify checklist:
+
+- 1.3: `texts[0]` author-vs-body, `id=text.slice(0,60)` collisions, engagement regex over full textContent, image filter avatar leak.
+- 1.4: follower name selector (first span/strong), `id=url||name` collision.
+- 2.2: Like selector ambiguity (post vs comment Like button).
+- 2.4: postUrl detection after XHR submit.
+- 2.2/2.3: locale coverage beyond en/vi.
+
+**Action for these:** keep in checklist; verify + fix when a test Facebook account is available.

@@ -503,11 +503,11 @@ describe('runGuardedBatch', () => {
       expect(result.succeeded).toBe(2);
     });
 
-    it('shouldStop receives current results array', async () => {
+    it('shouldStop receives an immutable summary (attempted/succeeded/failed/lastResult)', async () => {
       const actionFn = vi.fn().mockResolvedValue(undefined);
-      const capturedResults = [];
-      const shouldStop = vi.fn().mockImplementation((results) => {
-        capturedResults.push([...results]);
+      const captured = [];
+      const shouldStop = vi.fn().mockImplementation((summary) => {
+        captured.push(summary);
         return false;
       });
 
@@ -517,8 +517,9 @@ describe('runGuardedBatch', () => {
         shouldStop,
       });
 
-      expect(capturedResults[0]).toHaveLength(1);
-      expect(capturedResults[1]).toHaveLength(2);
+      expect(captured[0]).toMatchObject({ attempted: 1, succeeded: 1, failed: 0 });
+      expect(captured[0].lastResult).toMatchObject({ target: 'a', ok: true });
+      expect(captured[1]).toMatchObject({ attempted: 2, succeeded: 2, failed: 0 });
     });
 
     it('does not call shouldStop in dry-run', async () => {

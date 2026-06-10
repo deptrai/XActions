@@ -193,6 +193,7 @@ export async function loginWithCookie(page, { c_user, xs }) {
       domain: '.facebook.com',
       httpOnly: true,
       secure: true,
+      sameSite: 'Strict',
     },
     {
       name: 'xs',
@@ -200,6 +201,7 @@ export async function loginWithCookie(page, { c_user, xs }) {
       domain: '.facebook.com',
       httpOnly: true,
       secure: true,
+      sameSite: 'Strict',
     }
   );
 

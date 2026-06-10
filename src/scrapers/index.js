@@ -218,16 +218,23 @@ export async function scrape(platform, action, options = {}) {
       const browser = await mod.createBrowser(options.browserOptions || {});
       page = await mod.createPage(browser);
 
-      // Login if auth token provided (Twitter string path — unchanged)
-      if (options.authToken && mod.loginWithCookie) {
-        await mod.loginWithCookie(page, options.authToken);
-      } else if (options.authCookie && mod.loginWithCookie) {
-        // Cookie-object path for Facebook ({ c_user, xs }) — additive, does not affect Twitter
-        await mod.loginWithCookie(page, options.authCookie);
-      }
-
-      // Store browser ref for cleanup
+      // Store browser ref BEFORE login so a login/goto throw still allows cleanup
+      // (previously set after login → a login failure leaked the Chromium process).
       page.__xactions_browser = browser;
+
+      try {
+        // Login if auth token provided (Twitter string path — unchanged)
+        if (options.authToken && mod.loginWithCookie) {
+          await mod.loginWithCookie(page, options.authToken);
+        } else if (options.authCookie && mod.loginWithCookie) {
+          // Cookie-object path for Facebook ({ c_user, xs }) — additive, does not affect Twitter
+          await mod.loginWithCookie(page, options.authCookie);
+        }
+      } catch (loginErr) {
+        // Close the browser we created before re-throwing, else it leaks
+        await browser.close().catch(() => {});
+        throw loginErr;
+      }
     }
 
     // Determine the second argument based on action
@@ -237,15 +244,18 @@ export async function scrape(platform, action, options = {}) {
     const noTargetActions = ['scrapeBookmarks', 'scrapeNotifications', 'scrapeTrending'];
     
     let result;
-    if (noTargetActions.includes(fnName)) {
-      result = await fn(page, options);
-    } else {
-      result = await fn(page, target, options);
-    }
-
-    // Auto-close browser if we created it
-    if (page.__xactions_browser && options.autoClose !== false) {
-      await page.__xactions_browser.close();
+    try {
+      if (noTargetActions.includes(fnName)) {
+        result = await fn(page, options);
+      } else {
+        result = await fn(page, target, options);
+      }
+    } finally {
+      // Auto-close browser if we created it — runs even if fn throws (goto timeout,
+      // selector error), preventing a leaked Chromium process. Swallow close errors.
+      if (page.__xactions_browser && options.autoClose !== false) {
+        await page.__xactions_browser.close().catch(() => {});
+      }
     }
 
     return result;

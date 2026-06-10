@@ -149,9 +149,16 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
       }
     }
 
-    // shouldStop — caller can abort remaining items
-    if (typeof shouldStop === 'function' && shouldStop(results)) {
-      break;
+    // shouldStop — caller can abort remaining items. Receives an immutable summary
+    // (not the live results accumulator) so a predicate can't mutate batch state.
+    if (typeof shouldStop === 'function') {
+      const stop = shouldStop({
+        attempted: results.length,
+        succeeded,
+        failed,
+        lastResult: results[results.length - 1] ?? null,
+      });
+      if (stop) break;
     }
 
     // Delay between actions except after the last item
@@ -344,21 +351,20 @@ async function findCommentInput(page) {
     '[placeholder*="Viết bình luận"]',      // vi fallback
   ];
 
-  for (const selector of commentSelectors) {
-    try {
-      const element = await page.waitForSelector(selector, { timeout: 5000 });
-      if (element) {
-        return element;
-      }
-    } catch (_) {
-      // Continue to next selector
-    }
+  // Combined wait: block until ANY locale selector renders (one 5s wait total,
+  // not 5s × N sequential timeouts on unsupported locales — same fix as findLikeButton).
+  try {
+    await page.waitForSelector(commentSelectors.join(', '), { timeout: 5000 });
+  } catch (_) {
+    throw new Error(`❌ Comment input not found; locale unsupported or post unreachable`);
   }
 
-  // Input not found in any locale
-  throw new Error(
-    `❌ Comment input not found; locale unsupported or post unreachable`
-  );
+  for (const selector of commentSelectors) {
+    const element = await page.$(selector);
+    if (element) return element;
+  }
+
+  throw new Error(`❌ Comment input not found; locale unsupported or post unreachable`);
 }
 
 /**

@@ -2402,8 +2402,17 @@ async function executeFacebookAutomateTool(args) {
   if ((action === 'like' || action === 'comment') && (!Array.isArray(urls) || urls.length === 0)) {
     throw new Error(`❌ action "${action}" requires at least one URL in the urls array.`);
   }
+  // Every url entry must be a Facebook post/permalink URL (string)
+  if ((action === 'like' || action === 'comment') &&
+      !urls.every((u) => typeof u === 'string' && /facebook\.com\//i.test(u))) {
+    throw new Error('❌ each url must be a facebook.com post URL (string).');
+  }
   if ((action === 'comment' || action === 'post') && !String(text ?? '').trim()) {
     throw new Error(`❌ action "${action}" requires non-empty text.`);
+  }
+  // maxBatch (if provided) must be a positive finite number — validate before browser launch
+  if (maxBatch != null && (!Number.isFinite(Number(maxBatch)) || Number(maxBatch) < 1)) {
+    throw new Error(`❌ maxBatch must be a positive number, got ${maxBatch}`);
   }
 
   // Strict dryRun gate — only explicit false enables real writes (ADR-007, SM-2)

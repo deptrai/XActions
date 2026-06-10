@@ -65,6 +65,13 @@ export function initializeSocketIO(httpServer) {
   io.on('connection', (socket) => {
     console.log(`🔌 Socket connected: ${socket.id} (${socket.role})`);
 
+    // Join a per-user room so server can target events to one user's sockets
+    // (e.g. facebook:operation events from api/routes/facebook.js use io.to(`user:${id}`)).
+    // Without this join, those per-user emits would reach no one.
+    if (socket.user?.id) {
+      socket.join(`user:${socket.user.id}`);
+    }
+
     // Handle different connection types
     if (socket.role === 'agent') {
       handleAgentConnection(io, socket);
