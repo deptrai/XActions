@@ -3,11 +3,13 @@
   "facebook_pages": {
     "data": [
       {
+        "id": "100000000000001",
         "access_token": "SYNTH_PAGE_TOKEN_AAA",
         "additional_profile_id": "200000000000001",
         "name": "Demo Coffee Shop"
       },
       {
+        "id": "100000000000002",
         "access_token": "SYNTH_PAGE_TOKEN_BBB",
         "additional_profile_id": "200000000000002",
         "name": "Demo Bookstore"
