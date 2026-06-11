@@ -37,7 +37,7 @@ const BILLING_HUB_URL = 'https://business.facebook.com/billing_hub/payment_activ
  * Graph API version. Facebook deprecates versions roughly every ~2 years, so this
  * is a named constant overridable via options.graphVersion.
  */
-const GRAPH_API_VERSION = 'v19.0';
+const GRAPH_API_VERSION = 'v21.0';
 
 /**
  * doc_id for the Messenger business-CTA eligibility GraphQL query.
@@ -87,7 +87,7 @@ async function defaultFetch(url, init = {}) {
     data: init.body,
     responseType: 'text',
     transformResponse: [(d) => d], // keep raw text; do not auto-JSON.parse
-    maxRedirects: 0, // we detect redirects ourselves (adsmanager 403 / billing)
+    maxRedirects: 5, // follow redirects (adsmanager/billing may 30x)
     validateStatus: () => true,
   });
   const text = typeof res.data === 'string' ? res.data : String(res.data ?? '');
@@ -111,7 +111,7 @@ export function buildCookieString(cookies = {}, extra = {}) {
   const merged = { ...cookies, ...extra };
   return Object.entries(merged)
     .filter(([, v]) => v != null && v !== '')
-    .map(([k, v]) => `${k}=${v}`)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
     .join('; ');
 }
 
@@ -223,7 +223,7 @@ function scrapeAdAccountId(html) {
 /** Scrape the long-lived EAAG... Graph token from a billing page. */
 function scrapeEaagToken(html) {
   if (!html) return null;
-  const m = html.match(/(EAAG[A-Za-z0-9]+)/);
+  const m = html.match(/(EAAG[A-Za-z0-9_-]+)/);
   return m ? m[1] : null;
 }
 

@@ -34,8 +34,14 @@ import { runGuardedBatch } from '../../../api/services/facebookAutomation.js';
 export const SELECTORS = {
   // Share button on a post
   shareButton: '[aria-label="Send this to friends or post it on your timeline."], [aria-label="Share"], [data-testid="share_button"]',
-  // "Send in Messenger" option in share menu
-  sendInMessenger: '[role="menuitem"]:has-text("Send in Messenger"), [role="menuitem"]:has-text("Gửi trong Messenger")',
+  // "Send in Messenger" option in share menu.
+  // NOTE: `:has-text()` is a Playwright-only pseudo-class and is NOT valid CSS —
+  // Puppeteer's `page.$()` would throw on it. Use a plain role selector here and
+  // filter by visible text via `findByText` (see below).
+  sendInMessenger: '[role="menuitem"]',
+  // Visible-text labels used to disambiguate the "Send in Messenger" menu item
+  // across locales (EN + VI).
+  sendInMessengerText: ['Send in Messenger', 'Gửi trong Messenger'],
   // Messenger dialog search input for recipient
   recipientSearch: 'input[aria-label="Search"], input[placeholder*="Search"], input[placeholder*="Tìm kiếm"]',
   // Recipient suggestion row in Messenger dialog
@@ -98,6 +104,11 @@ export function pickRandomSegment(text) {
 export function composeMessage(rawContent, options = {}) {
   const { stripEmoji = true, segmentPicker = pickRandomSegment } = options;
   let message = segmentPicker(rawContent);
+  // Guard against non-string segment-picker output (null/undefined/number/etc.)
+  // so the downstream `.replace()` calls cannot throw on a non-string value.
+  if (typeof message !== 'string') {
+    message = message == null ? '' : String(message);
+  }
   if (stripEmoji) {
     message = stripEmojiSurrogates(message);
   }
@@ -160,6 +171,35 @@ async function waitForAny(page, selectorChain, timeout = 5000) {
   return null;
 }
 
+/**
+ * Wait for the first element matching `selector` whose visible text contains
+ * one of the given `texts` (case-insensitive, trimmed). This replaces
+ * Playwright's `:has-text()` pseudo-class, which is invalid CSS under
+ * Puppeteer's `page.$$()`.
+ *
+ * @param {Page} page - Puppeteer page
+ * @param {string} selector - Plain CSS selector (e.g. '[role="menuitem"]')
+ * @param {string[]} texts - Visible-text needles to match (any one matches)
+ * @param {number} [timeout=5000] - Max wait in ms
+ * @returns {Promise<ElementHandle|null>}
+ */
+async function findByText(page, selector, texts, timeout = 5000) {
+  const needles = texts.map((t) => t.trim().toLowerCase());
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    try {
+      const handles = await page.$$(selector);
+      for (const handle of handles) {
+        const txt = await page.evaluate((el) => (el.textContent || '').trim().toLowerCase(), handle);
+        if (needles.some((n) => txt.includes(n))) return handle;
+        await handle.dispose();
+      }
+    } catch { /* selector parse error — skip */ }
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  return null;
+}
+
 // ============================================================================
 // Core Share Function (single target — actionFn for runGuardedBatch)
 // ============================================================================
@@ -211,8 +251,14 @@ export async function shareToMessenger(page, target, options = {}) {
     await shareBtn.click();
     await delay(1000, 2000);
 
-    // 3. Click "Send in Messenger" option
-    const messengerOpt = await waitForAny(page, SELECTORS.sendInMessenger, selectorTimeout);
+    // 3. Click "Send in Messenger" option.
+    // `:has-text()` is Playwright-only, so match the menu item by visible text.
+    const messengerOpt = await findByText(
+      page,
+      SELECTORS.sendInMessenger,
+      SELECTORS.sendInMessengerText,
+      selectorTimeout
+    );
     if (!messengerOpt) {
       // Fallback: some post types open Messenger dialog directly from share click
       // Check if recipient search is already visible
