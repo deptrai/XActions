@@ -58,8 +58,8 @@ development_status:
 
   # Epic 5: Facebook Messenger Port (from SST_TOOL_FB C#)
   epic-5: in-progress
-  5-1-graphql-layer: review
-  5-2-messenger-share: ready-for-dev
-  5-3-auth-proxy: review
+  5-1-graphql-layer: done
+  5-2-messenger-share: done
+  5-3-auth-proxy: done
   5-4-input-queue-surfaces: ready-for-dev
   epic-5-retrospective: optional
