@@ -130,3 +130,64 @@ Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi veri
 - Cookie: `docs/agents/facebook-session-cookie.md`.
 - Architecture: Addendum A.6 (selector obfuscation risk).
 - PRD: FR-1..FR-4, NFR4, Open Question Q3.
+
+## Password Login & 2FA (Story 5.3 — FR30, FR31)
+
+> ⚠️ **UNVERIFIED** — tất cả selector dưới đây chưa được test trên session thật.
+> Chạy [Verify Checklist — Auth](#verify-checklist--auth-story-53) trên account phụ trước khi dùng.
+> NFR3: uid, pass, bait-cookie value, TOTP seed KHÔNG BAO GIỜ được log.
+
+### Login form (`/login`)
+
+| Element | Selector chain (UNVERIFIED) | Ghi chú |
+|---|---|---|
+| Email / uid field | `#email` → `input[name="email"]` → `input[type="email"]` | Thử lần lượt theo thứ tự; `#email` là primary theo C# ref |
+| Password field | `#pass` → `input[name="pass"]` → `input[type="password"]` | `#pass` là primary theo C# ref |
+| Login button | `button[name="login"]` → `[data-testid="royal_login_button"]` → `button[type="submit"]` | `data-testid` ổn định hơn nếu còn tồn tại |
+| Bait cookie | `page.setCookie({ name, value, domain: '.facebook.com' })` | Cookie phụ, giúp form render đúng — tên/giá trị phụ thuộc provider |
+
+### "Continue" / device-save interstitial
+
+| Element | Selector (UNVERIFIED) | Ghi chú |
+|---|---|---|
+| "Continue" button (en) | `[value="Continue"]` | Xuất hiện sau login đầu tiên trên device mới |
+| "Tiếp tục" button (vi) | `[value="Tiếp tục"]` | Locale tiếng Việt |
+| Save-device button | `[data-testid="save-device-button"]` | Nếu `data-testid` còn tồn tại |
+
+> Interstitial này **không phải 2FA** — chỉ là prompt "save this device". Click qua để tiếp tục.
+
+### 2FA checkpoint (`/checkpoint/`)
+
+| Element | Selector (UNVERIFIED) | Ghi chú |
+|---|---|---|
+| TOTP code input | `input[name="approvals_code"]` → `input[id*="approvals_code"]` → `input[autocomplete="one-time-code"]` | Facebook dùng `approvals_code` theo C# MNST_DT1.cs ref |
+| Submit button | `#checkpointSubmitButton` → `button[type="submit"]` | `#checkpointSubmitButton` là stable id theo C# ref |
+
+> **Seed format:** 32-char base32 string (không có dấu cách). `generateTotp(seed)` dùng `otplib` `authenticator.generate` với default period=30s, digits=6, SHA1.
+> Nếu seed rỗng hoặc không hợp lệ, `generateTotp` trả `null` (không throw).
+
+### Proxy auth (`page.authenticate`)
+
+```js
+// Sau createBrowser + createPage, nếu proxy có creds:
+const descriptor = await rotateProxy('proxyfb', apiKey);
+const browser = await createBrowser({ proxy: descriptor.server }); // --proxy-server=http://host:port
+const page = await createPage(browser);
+if (descriptor.username) {
+  await page.authenticate({ username: descriptor.username, password: descriptor.password });
+}
+```
+
+> `page.authenticate` phải gọi **trước** `page.goto` đầu tiên.
+> `descriptor.server` = `http://host:port` từ `rotateProxy`.
+
+### Verify Checklist — Auth (Story 5.3)
+
+- [ ] **Email field**: xác nhận `#email` bắt được field trên `/login`.
+- [ ] **Password field**: xác nhận `#pass` bắt được field.
+- [ ] **Login button**: xác nhận `button[name="login"]` hoặc `[data-testid="royal_login_button"]` click được.
+- [ ] **Continue interstitial**: xác nhận prompt xuất hiện và `[value="Continue"]` / `[value="Tiếp tục"]` click được.
+- [ ] **2FA checkpoint**: xác nhận trang checkpoint render `input[name="approvals_code"]` và `#checkpointSubmitButton`.
+- [ ] **Proxy**: xác nhận session chạy đúng IP khi dùng `--proxy-server=` arg.
+- [ ] **Bait cookie**: xác nhận inject trước navigate không bị reject.
+

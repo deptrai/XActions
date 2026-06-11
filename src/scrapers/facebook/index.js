@@ -14,6 +14,7 @@
 
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { generateSync as totpGenerateSync } from 'otplib';
 
 puppeteer.use(StealthPlugin());
 
@@ -40,17 +41,24 @@ const NON_PROFILE_SEGMENTS = [
  * @returns {Promise<Browser>} Puppeteer browser instance
  */
 export async function createBrowser(options = {}) {
-  const { args: extraArgs = [], headless, ...rest } = options;
+  const { args: extraArgs = [], headless, proxy, launchImpl, ...rest } = options;
   const stealthArgs = [
     '--no-sandbox',
     '--disable-setuid-sandbox',
     '--disable-blink-features=AutomationControlled',
     '--disable-web-security',
   ];
-  return puppeteer.launch({
+  // Wire proxy as a Chromium launch arg — the only browser-level way to apply it.
+  // Proxy creds (username/password) are NOT handled here; callers must invoke
+  // page.authenticate({ username, password }) after createPage, using the fields
+  // from rotateProxy's descriptor (see docs/agents/selectors-facebook.md AC4 notes).
+  const proxyArgs = proxy ? [`--proxy-server=${proxy}`] : [];
+  // launchImpl seam: tests inject a fake launcher so no real browser spawns.
+  const launch = launchImpl ?? puppeteer.launch.bind(puppeteer);
+  return launch({
     headless: headless !== undefined ? headless : 'new',
-    // Merge caller args with stealth defaults instead of clobbering them
-    args: [...stealthArgs, ...extraArgs],
+    // Merge stealth + proxy + caller args; order ensures proxy is visible to Chromium
+    args: [...stealthArgs, ...proxyArgs, ...extraArgs],
     ...rest,
   });
 }
@@ -207,6 +215,186 @@ export async function loginWithCookie(page, { c_user, xs }) {
 
   await page.goto(FACEBOOK_BASE, { waitUntil: 'networkidle2', timeout: 30000 });
   await randomDelay(2000, 4000);
+}
+
+// ============================================================================
+// TOTP Helper (Story 5.3 — 2FA injection, AC2)
+// ============================================================================
+
+/**
+ * Generate a 6-digit TOTP code from a base32 seed using otplib authenticator.
+ * Returns null (never throws) for an empty, missing, or invalid seed.
+ * NFR3: seed value is never logged.
+ *
+ * @param {string|null|undefined} seed  32-char base32 TOTP seed
+ * @returns {string|null}  6-digit code string, or null on invalid input
+ */
+export function generateTotp(seed, options = {}) {
+  if (!seed || typeof seed !== 'string' || !seed.trim()) return null;
+  // C# MNST_DT1.cs lines 78-81: 2FA seed is valid iff length==32 AND not "@" AND not "user="
+  if (seed.length !== 32 || seed.includes('@') || seed.includes('user=')) return null;
+  try {
+    return totpGenerateSync({ secret: seed, ...options });
+  } catch {
+    // Invalid base32, too-short secret, or other otplib error → null; do not throw, do not log seed
+    return null;
+  }
+}
+
+// ============================================================================
+// Password Login (Story 5.3 — AC1, AC2 integration)
+// ============================================================================
+
+/**
+ * Login to Facebook using uid + password (alternative auth path to loginWithCookie).
+ *
+ * Flow (ported from SST_TOOL_FB/Main.cs:Post() ~294-490):
+ *   1. Inject bait cookie if provided, stripping "c_user" from name (C# line 325)
+ *   2. Navigate to /?locale=en_US (NOT /login — C# navigates to root, lets cookie decide UI)
+ *   3. Branch A (password field present): fill email + pass, click [aria-label='Log In']
+ *      Branch B (no password field — Continue interstitial): click Continue, re-fill pass,
+ *      click [aria-label='Log in'] — POST-CONTINUE PASSWORD RE-FILL is critical (C# line 407)
+ *   4. Dismiss "Allow all cookies" dialog (3 fallbacks per C# lines 426-453)
+ *   5. Post-login dead-session check: if page still shows type="password" → failure signal
+ *   6. Detect 2FA challenge; if seed provided → generateTotp → type + submit
+ *
+ * Returns the authenticated page on apparent success.
+ * Returns { page, requires2fa: true } if 2FA required but no seed supplied.
+ * Throws a clear emoji-prefixed error on hard failure — no blind retry.
+ * NFR3: uid, pass, baitCookie value, and seed are NEVER logged.
+ *
+ * ⚠️  ALL selectors UNVERIFIED — see docs/agents/selectors-facebook.md "Password Login & 2FA".
+ *     C# port references: aria-label='Log In' (capital I, Branch A), aria-label='Log in'
+ *     (lowercase i, Branch B), aria-label='Continue' — all from Main.cs Post().
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {object} [creds]
+ * @param {string} creds.uid
+ * @param {string} creds.pass
+ * @param {{ name: string, value: string, domain?: string }|null} [creds.baitCookie]
+ * @param {string|null} [creds.seed]  32-char base32 TOTP seed (optional)
+ * @returns {Promise<import('puppeteer').Page | { page: import('puppeteer').Page, requires2fa: true }>}
+ */
+export async function loginWithPassword(page, { uid, pass, baitCookie = null, seed = null } = {}) {
+  if (!uid?.trim()) throw new Error('❌ loginWithPassword: uid is required');
+  if (!pass?.trim()) throw new Error('❌ loginWithPassword: pass is required');
+
+  // 1. Inject bait cookie.
+  //    C# Main.cs line 325 strips "c_user" substring from the cookie string before injecting,
+  //    preventing session recognition so Facebook renders the correct UI branch.
+  if (baitCookie?.name && baitCookie?.value) {
+    await page.setCookie({
+      name:     baitCookie.name.replace('c_user', ''),
+      value:    baitCookie.value,
+      domain:   baitCookie.domain ?? '.facebook.com',
+      httpOnly: false,
+      secure:   true,
+    });
+  }
+
+  // 2. Navigate to root with en_US locale — C# navigates here, NOT /login directly.
+  //    The bait cookie (c_user stripped) determines which UI branch renders.
+  await page.goto(`${FACEBOOK_BASE}/?locale=en_US`, { waitUntil: 'networkidle2', timeout: 30000 });
+  await randomDelay(1300, 2000);
+
+  const pageSource = await page.content();
+
+  if (pageSource.includes('type="password"')) {
+    // Branch A — standard login form: fill email + pass, click 'Log In' (capital I).
+    // C# Main.cs lines 358-374. Selectors UNVERIFIED — see docs/agents/selectors-facebook.md.
+    const emailEl = await page.$('input[name="email"]');
+    if (!emailEl) throw new Error('❌ loginWithPassword: email/uid field not found — update selectors-facebook.md');
+    await emailEl.type(uid, { delay: 80 + Math.floor(Math.random() * 40) });
+    await randomDelay(500, 1200);
+
+    const passEl = await page.$('input[name="pass"]');
+    if (!passEl) throw new Error('❌ loginWithPassword: password field not found — update selectors-facebook.md');
+    await passEl.type(pass, { delay: 80 + Math.floor(Math.random() * 40) });
+    await randomDelay(2300, 2800);
+
+    // C# port: aria-label='Log In' (capital I) — Main.cs line 369. UNVERIFIED.
+    try { await page.click("[aria-label='Log In']"); }
+    catch { await page.keyboard.press('Enter'); }
+
+  } else {
+    // Branch B — bait cookie advanced the state (Continue interstitial / partial session).
+    // C# Main.cs lines 378-420. Selectors UNVERIFIED — see docs/agents/selectors-facebook.md.
+    await randomDelay(1300, 1800);
+
+    // Click Continue — 3 fallbacks matching C# lines 381-405.
+    // Port refs: 'Continue', 'Continue Meta Maneger', aria-label*='Continue' + JS click.
+    try { await page.click("[aria-label='Continue']"); }
+    catch {
+      try { await page.click("[aria-label='Continue Meta Maneger']"); }
+      catch {
+        const btn = await page.$("[aria-label*='Continue']");
+        if (btn) await page.evaluate((el) => el.click(), btn);
+      }
+    }
+
+    // C# line 406: await Task.Delay(2300) after Continue click.
+    await randomDelay(2300, 2600);
+
+    // C# line 407: RE-FILL PASSWORD after Continue — this step was missing before.
+    // UNVERIFIED selector — see docs/agents/selectors-facebook.md.
+    const passEl = await page.$('input[name="pass"]');
+    if (passEl) await passEl.type(pass, { delay: 80 + Math.floor(Math.random() * 40) });
+
+    await randomDelay(2300, 2600);
+
+    // C# port: aria-label='Log in' (lowercase i) — Main.cs line 414. UNVERIFIED.
+    try { await page.click("[aria-label='Log in']"); }
+    catch { await page.keyboard.press('Enter'); }
+  }
+
+  // C# line 422: await Task.Delay(8300) — wait for post-login page load.
+  await randomDelay(4000, 8500);
+
+  // 3. Dismiss "Allow all cookies" dialog — C# Main.cs lines 426-453 (3 fallbacks).
+  //    All selectors UNVERIFIED — see docs/agents/selectors-facebook.md.
+  try { await page.click('::-p-text(Allow all cookies)'); }
+  catch {
+    try { await page.click('text=Allow all cookies'); }
+    catch {
+      try {
+        await page.click('xpath=/html/body/div[4]/div[1]/div/div[2]/div/div/div/div/div[2]/div/div[2]/div[1]/div');
+      } catch { /* dialog not present or already dismissed */ }
+    }
+  }
+
+  // 4. Post-login dead-session check — C# Main.cs lines 454-490.
+  //    Password form still visible = login failed. Do NOT silently return page as success.
+  const postSource = await page.content();
+  if (postSource.includes('type="password"')) {
+    // Re-inject bait cookie + reload matching C# lines 458-476, then throw failure.
+    if (baitCookie?.name && baitCookie?.value) {
+      await page.setCookie({
+        name:     baitCookie.name.replace('c_user', ''),
+        value:    baitCookie.value,
+        domain:   baitCookie.domain ?? '.facebook.com',
+        httpOnly: false,
+        secure:   true,
+      });
+      await page.reload({ waitUntil: 'networkidle2', timeout: 30000 });
+    }
+    throw new Error('❌ loginWithPassword: login failed — password form still present after submit (dead session or wrong credentials)');
+  }
+
+  // 5. Detect 2FA challenge. Selectors UNVERIFIED — see docs/agents/selectors-facebook.md.
+  const tfaField = await page.$(
+    'input[name="approvals_code"], input[id*="approvals_code"], input[autocomplete="one-time-code"]'
+  );
+  if (tfaField) {
+    if (!seed) return { page, requires2fa: true };
+    const code = generateTotp(seed);
+    if (!code) throw new Error('❌ loginWithPassword: 2FA code generation failed — seed must be exactly 32 chars, no @ or user= (see MNST_DT1.cs)');
+    await tfaField.type(code, { delay: 80 + Math.floor(Math.random() * 40) });
+    await randomDelay(500, 1000);
+    const tfaSubmit = await page.$('#checkpointSubmitButton, button[type="submit"]');
+    if (tfaSubmit) { await tfaSubmit.click(); await randomDelay(2000, 3000); }
+  }
+
+  return page;
 }
 
 // ============================================================================
@@ -593,6 +781,8 @@ export default {
   createBrowser,
   createPage,
   loginWithCookie,
+  generateTotp,
+  loginWithPassword,
   scrapeProfile,
   scrapeFollowers,
   scrapeTweets,
