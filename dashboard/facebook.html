@@ -118,6 +118,7 @@
     details summary { cursor: pointer; font-size: 0.85rem; color: var(--text-secondary); }
     details summary:hover { color: var(--text-primary); }
   </style>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
@@ -245,6 +246,81 @@
     <pre class="result" id="auto-result"></pre>
   </div>
 
+  <!-- ===== ACCOUNT SESSION MANAGEMENT (Story 5.5) ===== -->
+  <div class="card" id="accounts-card">
+    <h2>🔑 Facebook Accounts <span class="badge">SESSION MANAGER</span></h2>
+    <p class="hint" style="margin-bottom:16px">Import Facebook session cookies. Encrypted server-side — cookie values are <strong>never</strong> stored in plaintext or returned to the browser after save.</p>
+
+    <details id="acc-import-details" style="margin-bottom:16px">
+      <summary>➕ Import New Account</summary>
+      <div style="margin-top:12px">
+        <div class="field">
+          <label for="acc-label">Label <span style="color:var(--text-secondary);font-weight:400">(max 50 chars)</span></label>
+          <input type="text" id="acc-label" placeholder="e.g. Main account" maxlength="50" autocomplete="off">
+        </div>
+        <div class="cookie-grid">
+          <div class="field">
+            <label for="acc-cuser">c_user</label>
+            <input type="password" id="acc-cuser" placeholder="numeric user ID" autocomplete="off">
+            <p class="hint">Must be 10–20 digits</p>
+          </div>
+          <div class="field">
+            <label for="acc-xs">xs</label>
+            <input type="password" id="acc-xs" placeholder="xs cookie value" autocomplete="off">
+          </div>
+        </div>
+        <div id="acc-error" style="color:var(--error);font-size:0.82rem;margin-bottom:10px;display:none"></div>
+        <button class="btn" id="acc-save-btn" onclick="importAccount()">💾 Save Account</button>
+      </div>
+    </details>
+
+    <div id="acc-empty" style="color:var(--text-secondary);font-size:0.88rem;display:none">No accounts saved yet. Import one above.</div>
+    <div id="acc-list" style="display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+
+  <!-- ===== CAMPAIGN MANAGER (Story 5.5) ===== -->
+  <div class="card" id="campaign-card">
+    <h2>📢 Messenger Campaign <span class="badge" style="background:var(--warning);color:#000">DRY-RUN DEFAULT</span></h2>
+
+    <div id="camp-accounts-note" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:0.83rem;color:var(--text-secondary);margin-bottom:16px">
+      No accounts selected — select accounts in the Session Manager above.
+    </div>
+
+    <div class="field">
+      <label for="camp-recipients">Recipients <span style="color:var(--text-secondary);font-weight:400">(one Page name/ID per line)</span></label>
+      <textarea id="camp-recipients" placeholder="PageName1&#10;PageName2&#10;..." oninput="updatePreview()"></textarea>
+    </div>
+
+    <div class="field">
+      <label for="camp-content">Message Content</label>
+      <textarea id="camp-content" placeholder="Hello! Check this out **Alternative message variant" oninput="updatePreview()"></textarea>
+      <p class="hint">Use ** to separate random message variants (one is picked per send)</p>
+    </div>
+
+    <div class="field">
+      <label for="camp-links">Post Links <span style="color:var(--text-secondary);font-weight:400">(one facebook.com URL per line)</span></label>
+      <textarea id="camp-links" placeholder="https://www.facebook.com/..." oninput="updatePreview()"></textarea>
+    </div>
+
+    <div id="camp-preview" style="display:none;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;font-size:0.83rem">
+      <div id="camp-preview-content" style="white-space:pre-wrap;word-break:break-word"></div>
+    </div>
+
+    <div id="camp-mode-badge" style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px"></div>
+
+    <div class="dryrun-notice" id="camp-dryrun-notice">
+      🛡️ <strong>Dry-run is ON.</strong> Preview only — no Messenger messages will be sent.
+    </div>
+
+    <label class="check-row" style="margin-bottom:16px">
+      <input type="checkbox" id="camp-dryrun" checked onchange="updateDryRunBtn()">
+      <span>🛡️ Dry-run (default: ON)</span>
+    </label>
+
+    <button class="btn" id="camp-run-btn" onclick="runCampaign()" disabled>▶ Preview Campaign</button>
+    <pre class="result" id="camp-result"></pre>
+  </div>
+
 </div><!-- /.container -->
 
 <script>
@@ -318,6 +394,262 @@
       showResult('auto-result', { error: err.message }, true);
     } finally { btn.disabled = false; btn.textContent = '▶ Run Automate'; }
   }
+  // ===== ACCOUNT MANAGEMENT (Story 5.5) =====
+  function getToken() { return localStorage.getItem('xactions_token') || ''; }
+
+  async function loadAccounts() {
+    try {
+      const res = await fetch('/api/facebook/accounts', {
+        headers: { 'Authorization': 'Bearer ' + getToken() }
+      });
+      const data = await res.json();
+      renderAccounts(res.ok ? (data.accounts || []) : []);
+    } catch { renderAccounts([]); }
+  }
+
+  function renderAccounts(accounts) {
+    const list = document.getElementById('acc-list');
+    const empty = document.getElementById('acc-empty');
+    list.innerHTML = '';
+    if (!accounts.length) { empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    accounts.forEach(acc => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;';
+      row.innerHTML = `
+        <input type="checkbox" id="acc-chk-${acc.id}" value="${acc.id}" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" onchange="updateCampaignAccounts()">
+        <label for="acc-chk-${acc.id}" style="flex:1;cursor:pointer;font-size:0.9rem">${acc.label}</label>
+        <button onclick="removeAccount('${acc.id}', this)" style="background:none;border:1px solid var(--error);color:var(--error);border-radius:6px;padding:4px 10px;font-size:0.78rem;cursor:pointer">Remove</button>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  async function importAccount() {
+    const label = document.getElementById('acc-label').value.trim();
+    const c_user = document.getElementById('acc-cuser').value.trim();
+    const xs = document.getElementById('acc-xs').value.trim();
+    const errEl = document.getElementById('acc-error');
+    const btn = document.getElementById('acc-save-btn');
+
+    errEl.style.display = 'none';
+    const showErr = msg => { errEl.textContent = msg; errEl.style.display = ''; };
+
+    if (!label) return showErr('Label is required');
+    if (label.length > 50) return showErr('Label must be 50 characters or fewer');
+    if (!/^\d{10,20}$/.test(c_user)) return showErr('c_user must be 10–20 digits');
+    if (!xs) return showErr('xs is required');
+
+    // Duplicate check (client-side: scan rendered labels)
+    const labels = [...document.querySelectorAll('#acc-list label')].map(l => l.textContent.trim());
+    if (labels.includes(label)) return showErr(`An account named "${label}" already exists`);
+
+    btn.disabled = true; btn.textContent = '⏳ Saving…';
+    try {
+      const res = await fetch('/api/facebook/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+        body: JSON.stringify({ label, c_user, xs }),
+      });
+      const data = await res.json();
+      if (!res.ok) return showErr(data.error || 'Save failed');
+      // Clear fields + close details
+      document.getElementById('acc-label').value = '';
+      document.getElementById('acc-cuser').value = '';
+      document.getElementById('acc-xs').value = '';
+      document.getElementById('acc-import-details').removeAttribute('open');
+      await loadAccounts();
+    } catch (err) {
+      showErr('Network error: ' + err.message);
+    } finally { btn.disabled = false; btn.textContent = '💾 Save Account'; }
+  }
+
+  async function removeAccount(id, btn) {
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/facebook/accounts/' + id, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + getToken() }
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        alert(d.error || 'Remove failed');
+      }
+      await loadAccounts();
+    } catch { btn.disabled = false; }
+  }
+
+  // Stub — wired up in Campaign Manager section
+  function updateCampaignAccounts() {}
+
+  // ===== CAMPAIGN MANAGER JS (Story 5.5 Tasks 3+4) =====
+
+  // Parse lines: trim, drop blanks + # comments, dedup FIFO
+  function parseLines(text) {
+    const seen = new Set(), out = [];
+    for (const raw of (text || '').split(/\r?\n/)) {
+      const l = raw.trim();
+      if (!l || l.startsWith('#') || seen.has(l)) continue;
+      seen.add(l); out.push(l);
+    }
+    return out;
+  }
+
+  // Pick random segment split by **
+  function pickSegment(text) {
+    const segs = (text || '').split('**').map(s => s.trim()).filter(Boolean);
+    return segs.length ? segs[Math.floor(Math.random() * segs.length)] : '';
+  }
+
+  function getSelectedAccounts() {
+    return [...document.querySelectorAll('#acc-list input[type=checkbox]:checked')]
+      .map(c => ({ id: c.value, label: c.closest('div').querySelector('label').textContent.trim() }));
+  }
+
+  function updateCampaignAccounts() {
+    const sel = getSelectedAccounts();
+    const note = document.getElementById('camp-accounts-note');
+    note.textContent = sel.length ? `${sel.length} account(s) selected: ${sel.map(a=>a.label).join(', ')}` : 'No accounts selected — select accounts in the Session Manager above.';
+    note.style.color = sel.length ? 'var(--text-primary)' : 'var(--text-secondary)';
+    updatePreview();
+  }
+
+  function updatePreview() {
+    const recipients = parseLines(document.getElementById('camp-recipients').value);
+    const links = parseLines(document.getElementById('camp-links').value).filter(l => /facebook\.com\//i.test(l));
+    const content = document.getElementById('camp-content').value.trim();
+    const selAccounts = getSelectedAccounts();
+
+    const preview = document.getElementById('camp-preview');
+    const previewContent = document.getElementById('camp-preview-content');
+    const modeEl = document.getElementById('camp-mode-badge');
+    const runBtn = document.getElementById('camp-run-btn');
+
+    const ready = recipients.length && links.length && content && selAccounts.length;
+    runBtn.disabled = !ready;
+
+    if (!ready) { preview.style.display = 'none'; modeEl.textContent = ''; return; }
+
+    // Mode detection: batch if >1 link or >1 account
+    const isBatch = links.length > 1 || selAccounts.length > 1;
+    modeEl.textContent = isBatch ? '⚡ Batch mode — recipients distributed across accounts' : '▶ Single-run mode';
+
+    // Segment pool + sample message
+    const segments = (content.split('**').map(s => s.trim()).filter(Boolean));
+    const sample = pickSegment(content);
+    previewContent.textContent =
+      `Recipients: ${recipients.length}
+Links: ${links.length}
+Accounts: ${selAccounts.length}
+
+` +
+      `Segment pool (${segments.length}):
+${segments.map((s,i) => `  [${i+1}] ${s}`).join('\n')}
+
+` +
+      `Sample message (first recipient):
+  ${sample}
+
+` +
+      `Links:
+${links.map(l => '  ' + l).join('\n')}`;
+    preview.style.display = '';
+  }
+
+  function updateDryRunBtn() {
+    const dry = document.getElementById('camp-dryrun').checked;
+    const btn = document.getElementById('camp-run-btn');
+    const notice = document.getElementById('camp-dryrun-notice');
+    notice.style.display = dry ? '' : 'none';
+    if (!btn.disabled) btn.textContent = dry ? '▶ Preview Campaign' : '⚠️ Send for real — click again to confirm';
+    btn.style.background = dry ? '' : 'var(--error)';
+    btn._confirmPending = false;
+  }
+
+  let _campRunning = false;
+  async function runCampaign() {
+    const btn = document.getElementById('camp-run-btn');
+    const dry = document.getElementById('camp-dryrun').checked;
+    // Two-step confirm for real send
+    if (!dry && !btn._confirmPending) {
+      btn._confirmPending = true;
+      btn.textContent = '🔴 Confirm — click again to SEND REAL messages';
+      setTimeout(() => { if (btn._confirmPending) { btn._confirmPending = false; updateDryRunBtn(); } }, 5000);
+      return;
+    }
+    btn._confirmPending = false;
+    if (_campRunning) return;
+
+    const recipients = parseLines(document.getElementById('camp-recipients').value);
+    const links = parseLines(document.getElementById('camp-links').value).filter(l => /facebook\.com\//i.test(l));
+    const content = document.getElementById('camp-content').value.trim();
+    const selAccounts = getSelectedAccounts();
+    if (!selAccounts.length || !recipients.length || !links.length || !content) return;
+
+    _campRunning = true;
+    btn.disabled = true; btn.textContent = dry ? '⏳ Previewing…' : '⏳ Sending…';
+    const resultEl = document.getElementById('camp-result');
+    resultEl.style.display = 'none';
+
+    try {
+      const body = { action: 'messenger-share', dryRun: dry, authCookie: { accountId: selAccounts[0].id },
+        postUrl: links[0], recipients, content };
+      if (links.length > 1) { body.postUrls = links; delete body.postUrl; }
+      const res = await fetch('/api/facebook/automate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.operationId) localStorage.setItem('fb_last_op', data.operationId);
+      showResult('camp-result', data, !res.ok);
+      if (dry) {
+        resultEl.style.borderColor = 'var(--warning)';
+        resultEl.insertAdjacentText('afterbegin', '🛡️ Dry-run preview — no messages sent
+
+');
+      }
+    } catch (err) {
+      showResult('camp-result', { error: err.message }, true);
+    } finally {
+      _campRunning = false; btn.disabled = false; updateDryRunBtn();
+    }
+  }
+
+  async function restoreLastOperation() {
+    const opId = localStorage.getItem('fb_last_op');
+    if (!opId) return;
+    try {
+      const res = await fetch('/api/facebook/operations/' + opId, {
+        headers: { 'Authorization': 'Bearer ' + getToken() }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      showResult('camp-result', data.operation || data, false);
+    } catch { /* ignore */ }
+  }
+
+  restoreLastOperation();
+  loadAccounts();
+
+  // Socket.IO live progress (Story 5.5 AC6)
+  if (typeof io !== 'undefined') {
+    const _sock = io({ auth: { token: getToken() } });
+    _sock.on('facebook:operation', (ev) => {
+      const btn = document.getElementById('camp-run-btn');
+      if (ev.event === 'start') {
+        _campRunning = true;
+        btn.textContent = 'Run in progress…';
+        btn.disabled = true;
+      } else if (ev.event === 'complete' || ev.event === 'error') {
+        _campRunning = false;
+        btn.disabled = false;
+        updateDryRunBtn();
+        showResult('camp-result', ev, ev.event === 'error');
+      }
+    });
+  }
+
   updateScrapeFields();
   updateAutoFields();
 </script>

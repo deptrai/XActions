@@ -9,28 +9,29 @@ datasource db {
 }
 
 model User {
-  id                  String          @id @default(cuid())
-  email               String?         @unique
-  username            String          @unique
+  id                  String            @id @default(cuid())
+  email               String?           @unique
+  username            String            @unique
   password            String?
-  credits             Int             @default(0)
-  isGuest             Boolean         @default(false)
-  emailVerified       Boolean         @default(false)
-  isAdmin             Boolean         @default(false)
-  followBonusClaimed  Boolean         @default(false)
-  twitterId           String?         @unique
+  credits             Int               @default(0)
+  isGuest             Boolean           @default(false)
+  emailVerified       Boolean           @default(false)
+  isAdmin             Boolean           @default(false)
+  followBonusClaimed  Boolean           @default(false)
+  twitterId           String?           @unique
   twitterUsername     String?
   twitterAccessToken  String?
   twitterRefreshToken String?
   twitterTokenExpiry  DateTime?
   sessionCookie       String?
   authMethod          String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
   cryptoPayments      CryptoPayment[]
   operations          Operation[]
   payments            Payment[]
   subscription        Subscription?
+  facebookAccounts    FacebookAccount[]
 
   @@index([email])
   @@index([username])
@@ -216,4 +217,16 @@ model UnfollowerSchedule {
   updatedAt  DateTime  @updatedAt
 
   @@index([active, nextRunAt])
+}
+
+model FacebookAccount {
+  id              String   @id @default(cuid())
+  userId          String
+  label           String
+  encryptedCookie String
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, label])
+  @@index([userId])
 }

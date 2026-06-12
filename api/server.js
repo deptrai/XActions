@@ -80,6 +80,7 @@ import { x402Middleware, x402HealthCheck, x402Pricing } from './middleware/x402.
 import scriptsRoutes from './routes/scripts.js';
 import a2aRoutes from './routes/a2a.js';
 import facebookRoutes from './routes/facebook.js';
+import facebookAccountsRoutes from './routes/facebookAccounts.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
@@ -293,6 +294,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/operations', operationRoutes);
 app.use('/api/twitter', twitterRoutes);
+app.use('/api/facebook/accounts', facebookAccountsRoutes);
 app.use('/api/facebook', facebookRoutes);
 app.use('/api/session', sessionAuthRoutes);
 app.use('/api/license', licenseRoutes);
