@@ -1262,8 +1262,8 @@ const TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['like', 'comment', 'post'],
-          description: 'Action: like posts, comment on posts, or create a new post',
+          enum: ['like', 'comment', 'post', 'messenger'],
+          description: 'Action: like posts, comment on posts, create a new post, or messenger-share a post to recipient Pages',
         },
         urls: {
           type: 'array',
@@ -1273,6 +1273,19 @@ const TOOLS = [
         text: {
           type: 'string',
           description: 'Comment text or post content (required for comment and post actions)',
+        },
+        recipients: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Recipient Page ids/names to share to (required for messenger action). PII — never logged (NFR3).',
+        },
+        content: {
+          type: 'string',
+          description: 'Message body for messenger action; may contain ** segments (a random one is picked per send).',
+        },
+        postUrl: {
+          type: 'string',
+          description: 'Single facebook.com post URL to share via Messenger (required for messenger action).',
         },
         dryRun: {
           type: 'boolean',
@@ -2380,13 +2393,14 @@ async function executeTool(name, args) {
  * Dispatches to likeFacebookPosts / commentOnFacebookPosts / createFacebookPost.
  */
 async function executeFacebookAutomateTool(args) {
-  const { action, urls = [], text = '', dryRun, authCookie, maxBatch } = args;
+  const { action, urls = [], text = '', dryRun, authCookie, maxBatch,
+          recipients = [], content = '', postUrl = '' } = args;
 
   // Action allowlist BEFORE browser launch (fail-fast — was previously thrown
   // only after createBrowser+login, wasting a full session on a bad action).
-  const VALID_ACTIONS = ['like', 'comment', 'post'];
+  const VALID_ACTIONS = ['like', 'comment', 'post', 'messenger'];
   if (!VALID_ACTIONS.includes(action)) {
-    throw new Error(`❌ x_facebook_automate: unknown action "${action}". Valid values: like, comment, post.`);
+    throw new Error(`❌ x_facebook_automate: unknown action "${action}". Valid values: like, comment, post, messenger.`);
   }
 
   // Hard auth guard (AC3.7, mirrors CLI 3.1). Coerce to string first — c_user is a
@@ -2410,6 +2424,18 @@ async function executeFacebookAutomateTool(args) {
   if ((action === 'comment' || action === 'post') && !String(text ?? '').trim()) {
     throw new Error(`❌ action "${action}" requires non-empty text.`);
   }
+  // messenger: requires a facebook.com postUrl, ≥1 recipient, non-empty content
+  if (action === 'messenger') {
+    if (typeof postUrl !== 'string' || !/facebook\.com\//i.test(postUrl)) {
+      throw new Error('❌ action "messenger" requires a facebook.com postUrl (string).');
+    }
+    if (!Array.isArray(recipients) || recipients.length === 0) {
+      throw new Error('❌ action "messenger" requires a non-empty recipients array.');
+    }
+    if (!String(content ?? '').trim()) {
+      throw new Error('❌ action "messenger" requires non-empty content.');
+    }
+  }
   // maxBatch (if provided) must be a positive finite number — validate before browser launch
   if (maxBatch != null && (!Number.isFinite(Number(maxBatch)) || Number(maxBatch) < 1)) {
     throw new Error(`❌ maxBatch must be a positive number, got ${maxBatch}`);
@@ -2421,9 +2447,21 @@ async function executeFacebookAutomateTool(args) {
   const { likeFacebookPosts, commentOnFacebookPosts, createFacebookPost } = await import('../../api/services/facebookAutomation.js');
   const options = { dryRun: resolvedDryRun, ...(maxBatch != null && { maxBatch }) };
 
+  // messenger campaign shape (Story 5.2) + ADR-012 delay floor (5–15s jitter, NOT
+  // the 1–3s like/comment default). Dry-run passes a no-op delay (never sleeps).
+  const messengerCampaign = { postUrl, recipients, content };
+  const messengerDelay = resolvedDryRun
+    ? () => {}
+    : (min = 5000, max = 15000) =>
+        new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
+
   const dispatch = async (page) => {
     if (action === 'like') return await likeFacebookPosts(page, urls, options);
     if (action === 'comment') return await commentOnFacebookPosts(page, urls, text, options);
+    if (action === 'messenger') {
+      const { messengerShareCampaign } = await import('../scrapers/facebook/messengerShare.js');
+      return await messengerShareCampaign(page, messengerCampaign, { ...options, delay: messengerDelay });
+    }
     return await createFacebookPost(page, text, options);
   };
 

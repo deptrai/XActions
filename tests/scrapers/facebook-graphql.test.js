@@ -165,7 +165,8 @@ describe('getPagesFromCookie', () => {
     const pages = await getPagesFromCookie(COOKIE, { fetchImpl });
     expect(pages).toHaveLength(2);
     expect(pages[0]).toEqual({
-      pageId: '200000000000001',
+      pageId: '100000000000001',
+      additionalProfileId: '200000000000001',
       name: 'Demo Coffee Shop',
       accessToken: 'SYNTH_PAGE_TOKEN_AAA',
     });

@@ -37,7 +37,7 @@ const BILLING_HUB_URL = 'https://business.facebook.com/billing_hub/payment_activ
  * Graph API version. Facebook deprecates versions roughly every ~2 years, so this
  * is a named constant overridable via options.graphVersion.
  */
-const GRAPH_API_VERSION = 'v19.0';
+const GRAPH_API_VERSION = 'v21.0';
 
 /**
  * doc_id for the Messenger business-CTA eligibility GraphQL query.
@@ -87,7 +87,7 @@ async function defaultFetch(url, init = {}) {
     data: init.body,
     responseType: 'text',
     transformResponse: [(d) => d], // keep raw text; do not auto-JSON.parse
-    maxRedirects: 0, // we detect redirects ourselves (adsmanager 403 / billing)
+    maxRedirects: 5, // follow redirects (adsmanager/billing may 30x)
     validateStatus: () => true,
   });
   const text = typeof res.data === 'string' ? res.data : String(res.data ?? '');
@@ -214,12 +214,16 @@ export async function getFacebookTokens(cookie, options = {}) {
 // (b) Page list — AC5
 // ============================================================================
 
-/** Scrape an ad-account id (the `act=` / `act_<digits>` param) from HTML. */
+/** Scrape an ad-account id from HTML. Tries asset_id= first (billing hub
+ *  fallback per C# getPage.cs:44-45), then act= / act_ (adsmanager). */
 function scrapeAdAccountId(html) {
   if (!html) return null;
-  // matches act=1234567890 or act_1234567890 in URLs/JSON
-  const m = html.match(/act[=_](\d{6,})/);
-  return m ? m[1] : null;
+  // billing hub embeds asset_id=<digits> (C# fallback extraction key)
+  const assetMatch = html.match(/asset_id=(\d{6,})/);
+  if (assetMatch) return assetMatch[1];
+  // adsmanager uses act= or act_ in URLs/JSON
+  const actMatch = html.match(/act[=_](\d{6,})/);
+  return actMatch ? actMatch[1] : null;
 }
 
 /** Scrape the long-lived EAAG... Graph token from a billing page. */
@@ -270,14 +274,16 @@ export async function getPagesFromCookie(cookie, options = {}) {
   const ads = await safeGet(ADSMANAGER_URL);
   if (ads.status === 200) adAccountId = scrapeAdAccountId(ads.html);
   if (!adAccountId) {
-    const billing = await safeGet(BILLING_HUB_URL);
+    // Fallback: billing hub with asset_id= & placement= params (per C# getPage.cs:44)
+    const billing = await safeGet(`${BILLING_HUB_URL}?asset_id=&placement=ads_manager`);
     adAccountId = scrapeAdAccountId(billing.html);
   }
   if (!adAccountId) return [];
 
   // --- Step 2: billing page for that account → EAAG token --------------------
+  // C# uses asset_id=<id>&placement=ads_manager (NOT act=<id>)
   const acctPage = await safeGet(
-    `${BILLING_HUB_URL}?act=${adAccountId}`
+    `${BILLING_HUB_URL}?asset_id=${adAccountId}&placement=ads_manager`
   );
   const eaagToken = scrapeEaagToken(acctPage.html);
   if (!eaagToken) return [];
@@ -310,11 +316,14 @@ export async function getPagesFromCookie(cookie, options = {}) {
   }
 
   return data
-    .filter((p) => p && (p.additional_profile_id || p.id))
+    // C# getPage.cs:64 — only include pages with a non-empty access_token
+    .filter((p) => p && p.access_token)
     .map((p) => ({
-      pageId: String(p.additional_profile_id ?? p.id),
+      // C# returns p["id"] as primary; additional_profile_id stored separately
+      pageId: String(p.id),
+      additionalProfileId: p.additional_profile_id ? String(p.additional_profile_id) : null,
       name: p.name ?? '',
-      accessToken: p.access_token ?? '',
+      accessToken: p.access_token,
     }));
 }
 
@@ -332,7 +341,8 @@ export async function getPagesFromCookie(cookie, options = {}) {
  *
  * @param {string} pageId
  * @param {string} actorId - the session uid (c_user)
- * @param {{ fb_dtsg: string|null, lsd: string|null, jazoest: string|null }} tokens
+ * @param {{ fb_dtsg: string|null, lsd: string|null, jazoest: string|null,
+ *           hsi: string|null, spin_r: string|null, spin_t: string|null }} tokens
  * @param {object} [options]
  * @param {Function} [options.fetchImpl=defaultFetch]
  * @param {string}   [options.docId=MESSENGER_CTA_DOC_ID]
@@ -341,11 +351,39 @@ export async function getPagesFromCookie(cookie, options = {}) {
 export async function checkMessengerCTA(pageId, actorId, tokens = {}, options = {}) {
   const { fetchImpl = defaultFetch, docId = MESSENGER_CTA_DOC_ID } = options;
 
-  const variables = JSON.stringify({ page_id: String(pageId), actor_id: String(actorId) });
+  // BLOCKER-1 fix: variables must wrap in {"input":{...}} with all required fields
+  // per C# Main.cs:579
+  const variables = JSON.stringify({
+    input: {
+      ad_id: null,
+      ad_impression_client_token: null,
+      page_id: String(pageId),
+      post_id: null,
+      actor_id: String(actorId),
+      client_mutation_id: '1',
+    },
+  });
+
+  // BLOCKER-3 fix: include session-state params Facebook requires for GraphQL
+  // per C# Main.cs:579 — av, __user, __a, __rev, __spin_r, __spin_t, etc.
   const form = new URLSearchParams({
+    av: String(actorId),
+    __user: String(actorId),
+    __a: '1',
+    __req: '1a',
+    __comet_req: '15',
+    __rev: tokens.spin_r ?? '',
+    __spin_r: tokens.spin_r ?? '',
+    __spin_b: 'trunk',
+    __spin_t: tokens.spin_t ?? '',
+    __hsi: tokens.hsi ?? '',
+    dpr: '1',
+    __ccg: 'EXCELLENT',
     fb_dtsg: tokens.fb_dtsg ?? '',
-    lsd: tokens.lsd ?? '',
     jazoest: tokens.jazoest ?? '',
+    lsd: tokens.lsd ?? '',
+    __aaid: '0',
+    server_timestamps: 'true',
     doc_id: docId,
     variables,
     fb_api_caller_class: 'RelayModern',
@@ -360,6 +398,8 @@ export async function checkMessengerCTA(pageId, actorId, tokens = {}, options = 
         ...BROWSER_HEADERS,
         'content-type': 'application/x-www-form-urlencoded',
         'x-fb-lsd': tokens.lsd ?? '',
+        'x-fb-friendly-name': 'MWChatBusinessCTAAdsSenderMutation',
+        origin: 'https://www.facebook.com',
       },
       body: form,
     });

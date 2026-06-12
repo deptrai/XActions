@@ -99,17 +99,21 @@ router.post('/scrape', async (req, res) => {
  */
 router.post('/automate', async (req, res) => {
   try {
-    const { action, urls = [], text = '', dryRun, authCookie, maxBatch } = req.body ?? {};
+    const { action: rawAction, urls = [], text = '', dryRun, authCookie, maxBatch,
+            recipients = [], content = '', postUrl = '' } = req.body ?? {};
 
     // Hard auth guard — must come before any browser launch
     const cookieError = requireFacebookCookie(req.body);
     if (cookieError) return res.status(400).json({ ok: false, error: cookieError });
 
-    const VALID_ACTIONS = ['like', 'comment', 'post'];
+    // Normalize the messenger alias to the canonical token.
+    const action = rawAction === 'messenger' ? 'messenger-share' : rawAction;
+
+    const VALID_ACTIONS = ['like', 'comment', 'post', 'messenger-share'];
     if (!action || !VALID_ACTIONS.includes(action)) {
       return res.status(400).json({
         ok: false,
-        error: `action must be one of: ${VALID_ACTIONS.join(', ')}`,
+        error: `action must be one of: like, comment, post, messenger-share (alias: messenger)`,
       });
     }
 
@@ -125,6 +129,18 @@ router.post('/automate', async (req, res) => {
         ok: false,
         error: `action "${action}" requires non-empty text`,
       });
+    }
+    // messenger-share: facebook.com postUrl + ≥1 recipient + non-empty content
+    if (action === 'messenger-share') {
+      if (typeof postUrl !== 'string' || !/facebook\.com\//i.test(postUrl)) {
+        return res.status(400).json({ ok: false, error: 'action "messenger-share" requires a facebook.com postUrl' });
+      }
+      if (!Array.isArray(recipients) || recipients.length === 0) {
+        return res.status(400).json({ ok: false, error: 'action "messenger-share" requires a non-empty recipients array' });
+      }
+      if (!String(content ?? '').trim()) {
+        return res.status(400).json({ ok: false, error: 'action "messenger-share" requires non-empty content' });
+      }
     }
 
     // Strict dryRun gate — only explicit false enables real writes
@@ -142,9 +158,24 @@ router.post('/automate', async (req, res) => {
       ...(maxBatch != null && { maxBatch: Number(maxBatch) }),
     };
 
+    // ADR-012: messenger-share uses a HIGHER delay floor (5–15s jitter), NOT the
+    // 1–3s like/comment default. Dry-run passes a no-op delay (never sleeps).
+    const messengerDelay = resolvedDryRun
+      ? () => {}
+      : (min = 5000, max = 15000) =>
+          new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
+
     const dispatch = async (page) => {
       if (action === 'like') return await likeFacebookPosts(page, urls, options);
       if (action === 'comment') return await commentOnFacebookPosts(page, urls, text, options);
+      if (action === 'messenger-share') {
+        const { messengerShareCampaign } = await import('../../src/scrapers/facebook/messengerShare.js');
+        return await messengerShareCampaign(
+          page,
+          { postUrl, recipients, content },
+          { ...options, delay: messengerDelay }
+        );
+      }
       return await createFacebookPost(page, text, options);
     };
 
@@ -164,13 +195,19 @@ router.post('/automate', async (req, res) => {
     const MAX_TEXT = 5000;
     const configUrls = Array.isArray(urls) ? urls.slice(0, MAX_URLS) : [];
     const configText = String(text ?? '').slice(0, MAX_TEXT);
+    // messenger-share config is PII-free: recipients are Page/person identifiers
+    // (PII) and content may be large — persist counts/lengths only, never raw
+    // recipients/content/cookie (NFR3, AC4 #17/#21).
+    const operationConfig = action === 'messenger-share'
+      ? { action, postUrl, recipientsCount: recipients.length, contentLength: String(content ?? '').length, maxBatch: maxBatch ?? null }
+      : { action, urls: configUrls, text: configText, maxBatch: maxBatch ?? null };
     const operation = await prisma.operation.create({
       data: {
         userId: req.user.id,
-        type: `facebook_${action}`,
+        type: `facebook_${action === 'messenger-share' ? 'messenger_share' : action}`,
         status: 'running',
         startedAt: new Date(),
-        config: JSON.stringify({ action, urls: configUrls, text: configText, maxBatch: maxBatch ?? null }),
+        config: JSON.stringify(operationConfig),
       },
     });
     emit({ event: 'start', operationId: operation.id, userId: req.user.id, type: operation.type, status: 'running' });
