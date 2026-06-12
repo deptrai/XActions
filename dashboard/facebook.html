@@ -416,12 +416,37 @@
     accounts.forEach(acc => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;';
-      row.innerHTML = `
-        <input type="checkbox" id="acc-chk-${acc.id}" value="${acc.id}" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" onchange="updateCampaignAccounts()">
-        <label for="acc-chk-${acc.id}" style="flex:1;cursor:pointer;font-size:0.9rem">${acc.label}</label>
-        <button onclick="removeAccount('${acc.id}', this)" style="background:none;border:1px solid var(--error);color:var(--error);border-radius:6px;padding:4px 10px;font-size:0.78rem;cursor:pointer">Remove</button>
-      `;
+
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.id = `acc-chk-${acc.id}`;
+      chk.value = acc.id;
+      chk.style.cssText = 'width:18px;height:18px;accent-color:var(--accent);cursor:pointer';
+      chk.addEventListener('change', updateCampaignAccounts);
+
+      const lbl = document.createElement('label');
+      lbl.htmlFor = `acc-chk-${acc.id}`;
+      lbl.style.cssText = 'flex:1;cursor:pointer;font-size:0.9rem';
+      lbl.textContent = acc.label;  // textContent — never innerHTML (stored-XSS guard)
+
+      const rm = document.createElement('button');
+      rm.textContent = 'Remove';
+      rm.dataset.accRemove = acc.id;  // marker so we can disable all remove buttons during a run
+      rm.style.cssText = 'background:none;border:1px solid var(--error);color:var(--error);border-radius:6px;padding:4px 10px;font-size:0.78rem;cursor:pointer';
+      rm.addEventListener('click', () => removeAccount(acc.id, rm));
+
+      row.append(chk, lbl, rm);
       list.appendChild(row);
+    });
+    syncRemoveButtons();
+  }
+
+  // Disable all Remove buttons while a campaign run is in progress (AC3 #10).
+  function syncRemoveButtons() {
+    document.querySelectorAll('[data-acc-remove]').forEach(b => {
+      b.disabled = _campRunning;
+      b.style.opacity = _campRunning ? '0.5' : '';
+      b.style.cursor = _campRunning ? 'not-allowed' : 'pointer';
     });
   }
 
@@ -527,6 +552,16 @@
 
     const ready = recipients.length && links.length && content && selAccounts.length;
     runBtn.disabled = !ready;
+    // Tooltip explains why the button is disabled — "Account session missing" when
+    // no account is selected (AC8 #24), otherwise the missing field.
+    if (!ready) {
+      runBtn.title = !selAccounts.length ? 'Account session missing'
+        : !recipients.length ? 'Add at least one recipient'
+        : !links.length ? 'Add at least one facebook.com post link'
+        : 'Add message content';
+    } else {
+      runBtn.title = '';
+    }
 
     if (!ready) { preview.style.display = 'none'; modeEl.textContent = ''; return; }
 
@@ -588,31 +623,43 @@ ${links.map(l => '  ' + l).join('\n')}`;
 
     _campRunning = true;
     btn.disabled = true; btn.textContent = dry ? '⏳ Previewing…' : '⏳ Sending…';
+    syncRemoveButtons();
     const resultEl = document.getElementById('camp-result');
     resultEl.style.display = 'none';
 
     try {
-      const body = { action: 'messenger-share', dryRun: dry, authCookie: { accountId: selAccounts[0].id },
-        postUrl: links[0], recipients, content };
-      if (links.length > 1) { body.postUrls = links; delete body.postUrl; }
+      // Send ALL selected accounts as accountIds[] — backend resolves each cookie
+      // server-side and round-robins recipients across them (Story 5.5 D1+D2).
+      const body = {
+        action: 'messenger-share', dryRun: dry,
+        accountIds: selAccounts.map(a => a.id),
+        recipients, content,
+        ...(links.length > 1 ? { postUrls: links } : { postUrl: links[0] }),
+      };
       const res = await fetch('/api/facebook/automate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
         body: JSON.stringify(body),
       });
       const data = await res.json();
+      // Session expired / account unusable — inline auth error, halt, no retry (AC8 #23).
+      if (data.sessionExpired) {
+        showResult('camp-result', { error: '🔑 Account session expired — re-import this account in the Session Manager.' }, true);
+        return;
+      }
       if (data.operationId) localStorage.setItem('fb_last_op', data.operationId);
       showResult('camp-result', data, !res.ok);
       if (dry) {
         resultEl.style.borderColor = 'var(--warning)';
-        resultEl.insertAdjacentText('afterbegin', '🛡️ Dry-run preview — no messages sent
-
-');
+        resultEl.insertAdjacentText('afterbegin', '🛡️ Dry-run preview — no messages sent\n\n');
       }
     } catch (err) {
       showResult('camp-result', { error: err.message }, true);
     } finally {
-      _campRunning = false; btn.disabled = false; updateDryRunBtn();
+      _campRunning = false;
+      syncRemoveButtons();
+      updatePreview();   // re-derive button disabled state from current form validity
+      updateDryRunBtn(); // restore button label/colour
     }
   }
 
@@ -620,7 +667,8 @@ ${links.map(l => '  ' + l).join('\n')}`;
     const opId = localStorage.getItem('fb_last_op');
     if (!opId) return;
     try {
-      const res = await fetch('/api/facebook/operations/' + opId, {
+      // Reuse the existing generic operation-status endpoint (Story 5.5 D3).
+      const res = await fetch('/api/operations/status/' + opId, {
         headers: { 'Authorization': 'Bearer ' + getToken() }
       });
       if (!res.ok) return;
@@ -641,11 +689,25 @@ ${links.map(l => '  ' + l).join('\n')}`;
         _campRunning = true;
         btn.textContent = 'Run in progress…';
         btn.disabled = true;
+        syncRemoveButtons();
+        // Persist operationId at run start (AC7 #21) — survives a refresh mid-run.
+        if (ev.operationId) localStorage.setItem('fb_last_op', ev.operationId);
       } else if (ev.event === 'complete' || ev.event === 'error') {
         _campRunning = false;
         btn.disabled = false;
+        syncRemoveButtons();
         updateDryRunBtn();
         showResult('camp-result', ev, ev.event === 'error');
+      }
+    });
+    // Socket drop mid-run must not leave the run button permanently locked.
+    _sock.on('disconnect', () => {
+      if (_campRunning) {
+        _campRunning = false;
+        syncRemoveButtons();
+        const btn = document.getElementById('camp-run-btn');
+        if (btn) { btn.disabled = false; }
+        updateDryRunBtn();
       }
     });
   }

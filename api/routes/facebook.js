@@ -3,6 +3,7 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { PrismaClient } from '@prisma/client';
+import { resolveAccountCookie } from './facebookAccounts.js';
 
 const prisma = new PrismaClient();
 
@@ -10,20 +11,97 @@ const router = express.Router();
 router.use(authMiddleware);
 
 /**
- * Validate Facebook session cookie presence.
- * Returns an error string if invalid, null if OK.
+ * Validate Facebook auth presence: EITHER a stored account reference
+ * (authCookie.accountId / accountIds[]) OR a raw session cookie ({ c_user, xs }).
+ * Returns an error string if neither is present, null if OK.
  * Cookie values are never logged (NFR3).
  */
 function requireFacebookCookie(body) {
-  const { authCookie } = body ?? {};
-  // Coerce to string first — c_user is a numeric Facebook UID and may arrive as a
+  const { authCookie, accountIds } = body ?? {};
+  // Stored-account path (Story 5.5 D1): accountId is an opaque id, resolved + decrypted server-side.
+  if (authCookie?.accountId || (Array.isArray(accountIds) && accountIds.length > 0)) {
+    return null;
+  }
+  // Raw-cookie path. Coerce to string first — c_user is a numeric Facebook UID and may arrive as a
   // JSON number, which would crash on .trim() instead of giving a clean 400.
   const cUser = String(authCookie?.c_user ?? '').trim();
   const xs = String(authCookie?.xs ?? '').trim();
   if (!cUser || !xs) {
-    return '❌ authCookie { c_user, xs } is required for this operation. Provide a valid Facebook session cookie.';
+    return '❌ A Facebook session is required: provide authCookie { c_user, xs }, authCookie.accountId, or accountIds[].';
   }
   return null;
+}
+
+/**
+ * Resolve the set of accounts a messenger-share run executes under (Story 5.5 D1+D2).
+ * Accepts accountIds[] (multi), authCookie.accountId (single stored), or raw authCookie.
+ * Stored accounts are decrypted server-side — raw cookie never required from the client.
+ * @returns {Promise<Array<{label: string, cookie: {c_user, xs}}>>}
+ */
+async function resolveRunAccounts(userId, body) {
+  const { authCookie, accountIds } = body ?? {};
+  if (Array.isArray(accountIds) && accountIds.length > 0) {
+    const out = [];
+    for (const aid of accountIds) {
+      out.push({ label: String(aid), cookie: await resolveAccountCookie(userId, aid) });
+    }
+    return out;
+  }
+  if (authCookie?.accountId) {
+    return [{ label: String(authCookie.accountId), cookie: await resolveAccountCookie(userId, authCookie.accountId) }];
+  }
+  return [{ label: 'raw', cookie: { c_user: authCookie.c_user, xs: authCookie.xs } }];
+}
+
+/**
+ * Execute a messenger-share campaign across N accounts and M links (Story 5.5 D2).
+ * Recipients are distributed round-robin across accounts; each account opens its own
+ * browser session and runs messengerShareCampaign per link (FIFO). Dry-run launches
+ * no browser. Per-account/​per-link results are aggregated.
+ */
+async function runMessengerCampaign({ accounts, links, recipients, content, dryRun, maxBatch, delay, deps }) {
+  // Round-robin recipient distribution: recipient i → accounts[i % N]
+  const buckets = accounts.map(() => []);
+  recipients.forEach((r, i) => buckets[i % accounts.length].push(r));
+
+  const { createBrowser, createPage, loginWithCookie, messengerShareCampaign } = deps;
+  const perRun = [];
+
+  for (let a = 0; a < accounts.length; a++) {
+    const mine = buckets[a];
+    if (mine.length === 0) continue; // more accounts than recipients — skip idle account
+
+    const campaignOpts = { dryRun, delay, ...(maxBatch != null && { maxBatch: Number(maxBatch) }) };
+
+    if (dryRun) {
+      for (const link of links) {
+        const r = await messengerShareCampaign(null, { postUrl: link, recipients: mine, content }, campaignOpts);
+        perRun.push({ account: accounts[a].label, postUrl: link, ...r });
+      }
+      continue;
+    }
+
+    let browser;
+    try {
+      browser = await createBrowser({ headless: true });
+      const page = await createPage(browser);
+      await loginWithCookie(page, { c_user: accounts[a].cookie.c_user, xs: accounts[a].cookie.xs });
+      for (const link of links) {
+        const r = await messengerShareCampaign(page, { postUrl: link, recipients: mine, content }, campaignOpts);
+        perRun.push({ account: accounts[a].label, postUrl: link, ...r });
+      }
+    } finally {
+      if (browser) await browser.close().catch(() => {});
+    }
+  }
+
+  return {
+    dryRun,
+    accounts: accounts.length,
+    links: links.length,
+    recipients: recipients.length,
+    runs: perRun,
+  };
 }
 
 /**
@@ -100,7 +178,7 @@ router.post('/scrape', async (req, res) => {
 router.post('/automate', async (req, res) => {
   try {
     const { action: rawAction, urls = [], text = '', dryRun, authCookie, maxBatch,
-            recipients = [], content = '', postUrl = '' } = req.body ?? {};
+            recipients = [], content = '', postUrl = '', postUrls = [] } = req.body ?? {};
 
     // Hard auth guard — must come before any browser launch
     const cookieError = requireFacebookCookie(req.body);
@@ -130,10 +208,15 @@ router.post('/automate', async (req, res) => {
         error: `action "${action}" requires non-empty text`,
       });
     }
-    // messenger-share: facebook.com postUrl + ≥1 recipient + non-empty content
+    // messenger-share: ≥1 facebook.com link (postUrl or postUrls[]) + ≥1 recipient + non-empty content
+    // Normalize single postUrl and postUrls[] into one link list (Story 5.5 D2).
+    const allLinks = [
+      ...(typeof postUrl === 'string' && postUrl.trim() ? [postUrl.trim()] : []),
+      ...(Array.isArray(postUrls) ? postUrls.filter((u) => typeof u === 'string' && u.trim()).map((u) => u.trim()) : []),
+    ];
     if (action === 'messenger-share') {
-      if (typeof postUrl !== 'string' || !/facebook\.com\//i.test(postUrl)) {
-        return res.status(400).json({ ok: false, error: 'action "messenger-share" requires a facebook.com postUrl' });
+      if (allLinks.length === 0 || !allLinks.every((u) => /facebook\.com\//i.test(u))) {
+        return res.status(400).json({ ok: false, error: 'action "messenger-share" requires at least one facebook.com postUrl (or postUrls[])' });
       }
       if (!Array.isArray(recipients) || recipients.length === 0) {
         return res.status(400).json({ ok: false, error: 'action "messenger-share" requires a non-empty recipients array' });
@@ -145,6 +228,81 @@ router.post('/automate', async (req, res) => {
 
     // Strict dryRun gate — only explicit false enables real writes
     const resolvedDryRun = dryRun === false ? false : true;
+
+    // Per-user Socket.IO room — never broadcast operation events to all clients (NFR3 / privacy)
+    const emit = (payload) => global.io?.to(`user:${req.user.id}`).emit('facebook:operation', payload);
+
+    // ========================================================================
+    // messenger-share — dedicated path (Story 5.5 D1+D2): multi-account
+    // round-robin, multi-link, server-side cookie resolution. Each account needs
+    // its own browser session, so this does NOT use the single-page dispatch()
+    // model used by like/comment/post below.
+    // ========================================================================
+    if (action === 'messenger-share') {
+      // ADR-012 delay floor: 5–15s jitter for messenger; no-op under dry-run.
+      const messengerDelay = resolvedDryRun
+        ? () => {}
+        : (min = 5000, max = 15000) => new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
+
+      let accounts;
+      try {
+        accounts = await resolveRunAccounts(req.user.id, req.body);
+      } catch (e) {
+        // accountId not found / decrypt failed — 400, never leak detail (NFR3)
+        const sessionExpired = e?.code === 'ACCOUNT_DECRYPT_FAILED';
+        const msg = e?.code === 'ACCOUNT_NOT_FOUND'
+          ? 'Selected Facebook account not found'
+          : 'Failed to load the selected Facebook account session';
+        return res.status(400).json({ ok: false, error: msg, sessionExpired });
+      }
+
+      const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
+      const { messengerShareCampaign } = await import('../../src/scrapers/facebook/messengerShare.js');
+      const runArgs = {
+        accounts, links: allLinks, recipients, content,
+        dryRun: resolvedDryRun, maxBatch, delay: messengerDelay,
+        deps: { createBrowser, createPage, loginWithCookie, messengerShareCampaign },
+      };
+
+      // Dry-run: no browser, no Operation row (mirrors generic dry-run short-circuit).
+      if (resolvedDryRun) {
+        const result = await runMessengerCampaign(runArgs);
+        return res.json({ ok: true, action, dryRun: true, userId: req.user.id, operationId: null, ...result });
+      }
+
+      // Real run — PII-free Operation config (counts/lengths only, NFR3).
+      const operation = await prisma.operation.create({
+        data: {
+          userId: req.user.id,
+          type: 'facebook_messenger_share',
+          status: 'running',
+          startedAt: new Date(),
+          config: JSON.stringify({
+            action, linksCount: allLinks.length, recipientsCount: recipients.length,
+            accountsCount: accounts.length, contentLength: String(content ?? '').length,
+            maxBatch: maxBatch ?? null,
+          }),
+        },
+      });
+      emit({ event: 'start', operationId: operation.id, userId: req.user.id, type: operation.type, status: 'running' });
+
+      try {
+        const result = await runMessengerCampaign(runArgs);
+        await prisma.operation.update({
+          where: { id: operation.id },
+          data: { status: 'completed', completedAt: new Date(), result: JSON.stringify(result) },
+        });
+        emit({ event: 'complete', operationId: operation.id, userId: req.user.id, status: 'completed' });
+        return res.json({ ok: true, action, dryRun: false, userId: req.user.id, operationId: operation.id, ...result });
+      } catch (runError) {
+        await prisma.operation.update({
+          where: { id: operation.id },
+          data: { status: 'failed', completedAt: new Date(), error: runError.message },
+        });
+        emit({ event: 'error', operationId: operation.id, userId: req.user.id, status: 'failed', error: runError.message });
+        return res.status(500).json({ ok: false, error: 'Messenger campaign failed. See server logs.' });
+      }
+    }
 
     const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
     const {
@@ -158,29 +316,11 @@ router.post('/automate', async (req, res) => {
       ...(maxBatch != null && { maxBatch: Number(maxBatch) }),
     };
 
-    // ADR-012: messenger-share uses a HIGHER delay floor (5–15s jitter), NOT the
-    // 1–3s like/comment default. Dry-run passes a no-op delay (never sleeps).
-    const messengerDelay = resolvedDryRun
-      ? () => {}
-      : (min = 5000, max = 15000) =>
-          new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
-
     const dispatch = async (page) => {
       if (action === 'like') return await likeFacebookPosts(page, urls, options);
       if (action === 'comment') return await commentOnFacebookPosts(page, urls, text, options);
-      if (action === 'messenger-share') {
-        const { messengerShareCampaign } = await import('../../src/scrapers/facebook/messengerShare.js');
-        return await messengerShareCampaign(
-          page,
-          { postUrl, recipients, content },
-          { ...options, delay: messengerDelay }
-        );
-      }
       return await createFacebookPost(page, text, options);
     };
-
-    // Per-user Socket.IO room — never broadcast operation events to all clients (NFR3 / privacy)
-    const emit = (payload) => global.io?.to(`user:${req.user.id}`).emit('facebook:operation', payload);
 
     // Dry-run never touches the DOM (runGuardedBatch skips actionFn) — no browser,
     // no real Facebook login, no Operation record. Avoids account risk for a preview.
@@ -195,16 +335,12 @@ router.post('/automate', async (req, res) => {
     const MAX_TEXT = 5000;
     const configUrls = Array.isArray(urls) ? urls.slice(0, MAX_URLS) : [];
     const configText = String(text ?? '').slice(0, MAX_TEXT);
-    // messenger-share config is PII-free: recipients are Page/person identifiers
-    // (PII) and content may be large — persist counts/lengths only, never raw
-    // recipients/content/cookie (NFR3, AC4 #17/#21).
-    const operationConfig = action === 'messenger-share'
-      ? { action, postUrl, recipientsCount: recipients.length, contentLength: String(content ?? '').length, maxBatch: maxBatch ?? null }
-      : { action, urls: configUrls, text: configText, maxBatch: maxBatch ?? null };
+    // messenger-share is handled in its own path above; only like/comment/post reach here.
+    const operationConfig = { action, urls: configUrls, text: configText, maxBatch: maxBatch ?? null };
     const operation = await prisma.operation.create({
       data: {
         userId: req.user.id,
-        type: `facebook_${action === 'messenger-share' ? 'messenger_share' : action}`,
+        type: `facebook_${action}`,
         status: 'running',
         startedAt: new Date(),
         config: JSON.stringify(operationConfig),

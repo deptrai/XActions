@@ -4,7 +4,7 @@ baseline_commit: 5bd38af3aa0a5793dd2d1547fae1c8de25e41fa8
 
 # Story 5.5: Facebook Session & Campaign Manager UI
 
-Status: review
+Status: done
 
 <!-- Extends dashboard/facebook.html with server-side encrypted account storage and
      a Messenger-share campaign manager card. Closes the WinForms UX parity gap
@@ -157,3 +157,42 @@ claude-sonnet-4-6 (Claude Code)
 - `tests/api/facebook-accounts.test.js` (NEW) — 18 pure unit tests (validation, encrypt/decrypt, NFR3)
 - `_bmad-output/implementation-artifacts/5-5-session-campaign-ui.md` (UPDATED) — tasks ticked, status → review
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (UPDATED) — 5-5 → review
+
+## Review Findings
+
+Post-implementation review of commit `d08d265` (3× opus 4.8 adversarial layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor — 2026-06-12). All structural findings verified against real code before triage.
+
+### Decision Needed — RESOLVED (Luisphan, 2026-06-12) → now patches
+
+- [x] [Review][Patch] D1 RESOLVED (option C — support both): mở rộng `/api/facebook/automate` nhận CẢ `authCookie.accountId` (resolve → decrypt cookie server-side qua facebookAccounts store) LẪN raw `{c_user,xs}`. Khi có accountId: load row theo `userId+id`, decrypt, dùng `{c_user,xs}` đó; raw cookie vẫn hỗ trợ như cũ. NFR3: cookie không rời server khi dùng accountId. [api/routes/facebook.js:17-26,100-150]
+- [x] [Review][Patch] D2 RESOLVED (option A — full batch in 5.5): backend `/automate` đọc `postUrls[]` (loop per-URL); UI round-robin recipients across `selAccounts`; route qua `runGuardedBatch` với delay guardrails (5-15s floor ADR-012), FIFO. Hoàn thành AC5 #17. [api/routes/facebook.js:103,168-180 + dashboard/facebook.html:587-610]
+- [x] [Review][Patch] D3 RESOLVED (option B — repoint UI): đổi `restoreLastOperation()` gọi `/api/operations/status/:operationId` (operations.js:142, có sẵn) thay vì `/api/facebook/operations/:id`. [dashboard/facebook.html:623]
+
+### Patch (unambiguous fixes)
+
+- [x] [Review][Patch] Migration cho `FacebookAccount` chưa tạo — chỉ có `0_init`, không migration nào chứa `FacebookAccount` [prisma/migrations/]
+- [x] [Review][Patch] Stored XSS qua `acc.label` chèn vào `innerHTML` — dùng `textContent`/`createElement` [dashboard/facebook.html:~321]
+- [x] [Review][Patch] DELETE bỏ ownership guard ở DB op — `delete({ where: { id, userId: req.user.id } })` [api/routes/facebookAccounts.js:168]
+- [x] [Review][Patch] Duplicate-label race trả 500 thay vì 409 — catch Prisma P2002 → 409 [api/routes/facebookAccounts.js:101-122]
+- [x] [Review][Patch] DELETE active-run guard quá rộng (chặn mọi op `running`, không chỉ Facebook) — scope theo type/accountId [api/routes/facebookAccounts.js:160-166]
+- [x] [Review][Patch] Silent fallback `'dev-only-key'` khi thiếu secret — fail-fast ở startup nếu key vắng [api/routes/facebookAccounts.js:35-40]
+- [x] [Review][Patch] `_campRunning` khóa nút vĩnh viễn khi socket disconnect mid-run — thêm `disconnect` handler reset [dashboard/facebook.html:~468,543]
+- [x] [Review][Patch] `xs` không giới hạn độ dài → storage abuse — thêm upper bound trong `validateAccountBody` [api/routes/facebookAccounts.js:82]
+- [x] [Review][Patch] Thiếu tooltip "Account session missing" (AC8 #24) — set `title` khi nút disabled [dashboard/facebook.html]
+- [x] [Review][Patch] Thiếu xử lý `sessionExpired` inline + halt (AC8 #23) — check `data.sessionExpired` riêng [dashboard/facebook.html:~600]
+- [x] [Review][Patch] Remove button không disable trong UI khi `_campRunning` (AC3 #10) — disable khi render lúc đang chạy [dashboard/facebook.html]
+- [x] [Review][Patch] `operationId` lưu lúc có response, không phải lúc run start (AC7 #21) [dashboard/facebook.html:604]
+- [x] [Review][Patch] GET /accounts trả thừa `createdAt` (AC2 #5: chỉ label + id) — bỏ khỏi `select` [api/routes/facebookAccounts.js]
+- [x] [Review][Patch] `runCampaign() finally` bật lại nút vô điều kiện, bỏ qua form-validity — gọi `updatePreview()` trong finally [dashboard/facebook.html:~514]
+- [x] [Review][Patch] `console.error` log `err.message` (rò constraint/field) — log code/type thay vì raw message [api/routes/facebookAccounts.js:120,140,172]
+
+### Deferred (pre-existing, not caused by this change)
+
+- [x] [Review][Defer] Mỗi route file tạo `new PrismaClient()` riêng → connection pool [api/routes/facebookAccounts.js:29] — deferred, pre-existing project pattern
+- [x] [Review][Defer] `crypto.scryptSync` block event loop mỗi import [api/routes/facebookAccounts.js:40] — deferred, pre-existing (session-auth.js cùng pattern)
+- [x] [Review][Defer] Link filter `facebook.com/` là substring, bypassable (`evil.com/facebook.com/`) [facebook.js:135] — deferred, pre-existing trong /automate từ Story 5.4
+
+### Dismissed (2)
+
+- `decrypt(null)` chỉ hoạt động qua exception path — functionally fine, noise.
+- Socket.IO `user:{id}` room "unverifiable" — false positive: backend emit `user:${req.user.id}` đã xác nhận tại facebook.js:183.
