@@ -29,9 +29,21 @@ const prisma = new PrismaClient();
 const ENCRYPTION_KEY = process.env.SESSION_SECRET || process.env.JWT_SECRET;
 const ALGORITHM = 'aes-256-gcm';
 
+// Fail-fast in production: refuse to silently encrypt with the public 'dev-only-key'.
+// Dev/test may run without a secret (uses the dev fallback below) so unit tests of
+// encrypt/decrypt still work without env setup.
+if (process.env.NODE_ENV === 'production' && !ENCRYPTION_KEY) {
+  throw new Error(
+    '❌ SESSION_SECRET or JWT_SECRET is required in production to encrypt Facebook session cookies. Refusing to start with an insecure default key.',
+  );
+}
+
+// Single derivation source — falls back to a clearly-marked dev key only outside production.
+const KEY_MATERIAL = ENCRYPTION_KEY || 'dev-only-key';
+
 export function encrypt(text) {
   const salt = crypto.randomBytes(16);
-  const key = crypto.scryptSync(ENCRYPTION_KEY || 'dev-only-key', salt, 32);
+  const key = crypto.scryptSync(KEY_MATERIAL, salt, 32);
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -64,6 +76,7 @@ export function decrypt(encryptedData) {
 // ============================================================================
 
 const LABEL_MAX = 50;
+const XS_MAX = 4096; // upper bound — guards against storage-amplification abuse
 const C_USER_RE = /^\d{10,20}$/;
 
 export function validateAccountBody(body) {
@@ -76,6 +89,8 @@ export function validateAccountBody(body) {
     return 'c_user must be 10–20 digits';
   if (!xs || typeof xs !== 'string' || xs.trim().length === 0)
     return 'xs is required';
+  if (xs.trim().length > XS_MAX)
+    return `xs must be ${XS_MAX} characters or fewer`;
   return null;
 }
 
@@ -112,7 +127,13 @@ router.post('/', authenticate, async (req, res) => {
 
     return res.status(201).json({ ok: true, id: account.id, label: account.label });
   } catch (err) {
-    console.error('❌ POST /api/facebook/accounts error:', err.message);
+    // Prisma unique-constraint (userId+label) race: two concurrent POSTs both pass
+    // the findFirst check, the second create hits @@unique → P2002. Return 409, not 500.
+    if (err?.code === 'P2002') {
+      return res.status(409).json({ ok: false, error: 'An account with that label already exists' });
+    }
+    // Log a code/type only — Prisma messages can echo field values (NFR3).
+    console.error('❌ POST /api/facebook/accounts error:', err?.code || err?.name || 'unknown');
     return res.status(500).json({ ok: false, error: 'Failed to save account' });
   }
 });
@@ -125,13 +146,13 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const accounts = await prisma.facebookAccount.findMany({
       where: { userId: req.user.id },
-      select: { id: true, label: true, createdAt: true },
+      select: { id: true, label: true },  // AC2 #5 / AC9 #26: label + opaque id only
       orderBy: { createdAt: 'asc' },
     });
     // NFR3: encryptedCookie never selected or returned
     return res.json({ ok: true, accounts });
   } catch (err) {
-    console.error('❌ GET /api/facebook/accounts error:', err.message);
+    console.error('❌ GET /api/facebook/accounts error:', err?.code || err?.name || 'unknown');
     return res.status(500).json({ ok: false, error: 'Failed to list accounts' });
   }
 });
@@ -151,21 +172,61 @@ router.delete('/:id', authenticate, async (req, res) => {
     });
     if (!account) return res.status(404).json({ ok: false, error: 'Account not found' });
 
-    // Block delete if a run is in progress for this user (conservative guard)
+    // Block delete only if a Facebook run referencing THIS account is in progress.
+    // Scope by type prefix + accountId so an unrelated op (e.g. Twitter unfollow)
+    // never blocks Facebook account removal.
     const activeRun = await prisma.operation.findFirst({
-      where: { userId: req.user.id, status: 'running' },
+      where: {
+        userId: req.user.id,
+        status: 'running',
+        type: { startsWith: 'facebook_' },
+        config: { contains: id },
+      },
       select: { id: true },
     });
     if (activeRun) {
       return res.status(409).json({ ok: false, error: 'Cannot remove account while a run is in progress' });
     }
 
-    await prisma.facebookAccount.delete({ where: { id } });
+    // Ownership enforced atomically at the DB layer (userId in the where clause).
+    await prisma.facebookAccount.delete({ where: { id, userId: req.user.id } });
     return res.json({ ok: true });
   } catch (err) {
-    console.error('❌ DELETE /api/facebook/accounts error:', err.message);
+    console.error('❌ DELETE /api/facebook/accounts error:', err?.code || err?.name || 'unknown');
     return res.status(500).json({ ok: false, error: 'Failed to remove account' });
   }
 });
+
+// ============================================================================
+// Cookie resolution helper — accountId → decrypted { c_user, xs } (Story 5.5 D1)
+// Used by /api/facebook/automate to bridge a saved account into the run pipeline
+// without the raw cookie ever leaving the server (NFR3).
+// ============================================================================
+
+/**
+ * Resolve a stored Facebook account to its decrypted cookie pair.
+ * Enforces ownership (userId) at the query layer.
+ * @returns {Promise<{c_user: string, xs: string}>} decrypted cookie
+ * @throws {Error} if not found, not owned, or decryption fails
+ */
+export async function resolveAccountCookie(userId, accountId) {
+  const account = await prisma.facebookAccount.findFirst({
+    where: { id: accountId, userId },
+    select: { encryptedCookie: true },
+  });
+  if (!account) {
+    const err = new Error('Facebook account not found');
+    err.code = 'ACCOUNT_NOT_FOUND';
+    throw err;
+  }
+  const decrypted = decrypt(account.encryptedCookie);
+  if (!decrypted) {
+    const err = new Error('Failed to decrypt stored account cookie');
+    err.code = 'ACCOUNT_DECRYPT_FAILED';
+    throw err;
+  }
+  const { c_user, xs } = JSON.parse(decrypted);
+  return { c_user, xs };
+}
 
 export default router;
