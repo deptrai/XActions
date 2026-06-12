@@ -81,6 +81,8 @@ FR31: 2FA TOTP injection khi login trigger challenge; nhận 32-char seed, sinh 
 FR32: Proxy rotation qua 3 provider (proxyfb.com, tmproxy.com, shoplike.vn); mỗi provider `rotate(key)` / `current(key)` trả proxy string; wire vào `browserOptions.proxy`.
 
 FR33: File-queue inputs (target pages / contents / links) đọc từ file hoặc API body; FIFO thread-safe; random content segment; expose qua CLI/MCP/API action `messenger` — additive, dry-run mặc định.
+FR34: Dashboard có thể import/lưu Facebook session cookie, chọn account đã lưu, import content/links/recipients, và chạy single/batch campaign qua UI giống flow WinForms của C# port; cookie không bị log hay persist raw ngoài phạm vi session/profile rõ ràng.
+FR35: Dashboard hiển thị progress/history cho Messenger jobs và cho phép operator xem preview trước khi chạy thật.
 
 ### NonFunctional Requirements
 
@@ -677,7 +679,7 @@ So that I can build a normal behavioral fingerprint before running heavier autom
 
 Port các tính năng từ SST_TOOL_FB (C# WinForms) vào XActions theo nguyên tắc REUSE-FIRST: chỉ viết mới phần C# có mà XActions chưa có; tái dùng guardrail, login, dispatcher, surfaces đã build ở Epic 1-3. Nguồn: `auto-crawl-tiktok-post-fb/automation-facebook/SST_TOOL_FB`. Plan chi tiết: `facebook-messenger-port-plan.md`.
 
-**FRs covered:** FR24, FR25, FR26, FR27, FR28, FR29, FR30, FR31, FR32, FR33
+**FRs covered:** FR24, FR25, FR26, FR27, FR28, FR29, FR30, FR31, FR32, FR33, FR34, FR35
 
 ### Story 5.1: Facebook GraphQL/HTTP layer
 
@@ -766,3 +768,113 @@ So that I can operate campaigns from terminal, AI agent, or web dashboard.
 **Given** MCP + REST API
 **When** called with action `messenger` + targets/content/links in body
 **Then** same behavior as CLI, additive (no existing surface contract broken)
+
+### Story 5.5: Facebook Session & Campaign Manager UI
+
+As a multi-account operator using XActions,
+I want to manage Facebook sessions, accounts, and Messenger share campaigns from the existing dashboard,
+So that I can run campaigns using the WinForms flow (import → select → preview → run) without leaving the dashboard or adding a new UI surface.
+
+**Acceptance Criteria:**
+
+**Given** the user opens `dashboard/facebook.html` and enters a label (max 50 chars), `c_user` (must match `/^\d{10,20}$/`), and `xs` (non-empty) cookie values
+**When** they click save/import
+**Then** the session is sent to `POST /api/facebook/accounts` for server-side encrypted storage
+**And** the UI stores only the returned opaque account ID — never the raw cookie values
+**And** cookie values are never echoed in logs or rendered in the UI after save
+**And** a duplicate label is rejected with an inline error before the API call is made
+
+**Given** the user enters an invalid `c_user` (not matching `/^\d{10,20}$/`) or an empty `xs`
+**When** they click save/import
+**Then** an inline validation error is shown and the save is blocked
+
+**Given** one or more saved Facebook accounts exist
+**When** the user opens the Facebook dashboard page
+**Then** `GET /api/facebook/accounts` is called and a list of saved accounts (label + opaque ID) is shown
+**And** accounts can be selected via checkbox (single or multiple) as the active session(s)
+**And** the selection can be changed without leaving the page
+
+**Given** a saved account entry exists
+**When** the user clicks the remove button on that entry
+**Then** the account is deleted from server-side storage
+**And** the remove button is disabled for accounts with an active run in progress
+
+**Given** one or more accounts are selected and content inputs are filled
+**When** the user views the preview panel
+**Then** the dashboard shows parsed recipients, the full segment pool, and a sample composed message for the first recipient
+**And** all post link(s) are listed before execution
+
+**Given** one post link and one or more selected accounts
+**When** the user clicks run (single-run mode, auto-detected: link count = 1)
+**Then** the system calls `POST /api/facebook/automate` with the active session and inputs
+**And** the result is shown in the existing result/progress area on the same page
+
+**Given** multiple post links (>1) or multiple selected accounts
+**When** the user clicks run (batch mode, auto-detected: link count > 1 or multiple accounts)
+**Then** `POST /api/facebook/automate` is called with a `postUrls[]` array
+**And** recipients are distributed round-robin across selected accounts
+**And** the batch is routed via `runGuardedBatch` with account rotation and delay guardrails
+**And** the queue is consumed FIFO
+
+**Given** a run is in progress
+**When** the backend emits `facebook:operation` Socket.IO events
+**Then** the dashboard shows live progress and final completion/failure state
+**And** the run button is disabled and labelled "Run in progress…" until the job completes
+
+**Given** the page is refreshed while or after a job has run
+**When** the page loads
+**Then** the UI reads the last `operationId` from localStorage and calls `GET /api/facebook/operations/:id`
+**And** the progress panel is restored to the last known job state
+
+**Given** no valid account session exists for the selected account
+**When** the user attempts to run
+**Then** the run button is disabled with an "Account session missing" tooltip
+
+**Given** the API returns a `sessionExpired` error during a run
+**When** the error is received
+**Then** the UI shows an inline auth error and halts the run without retrying
+
+**Given** dry-run is enabled (default on)
+**When** the user clicks run
+**Then** the result area shows the dry-run preview (targets, content, links) without sending any Messenger message
+**And** the result area has a yellow/warning border and displays "🛡️ Dry-run preview — no messages sent"
+
+**Given** the user toggles dry-run off
+**When** dry-run is disabled
+**Then** the run button changes to a red "⚠️ Send for real — click again to confirm" label
+**And** a second click fires the real send
+**And** if dry-run is re-enabled before the second click the button reverts to its normal state
+
+**Given** any run completes (dry-run or real)
+**When** results are returned
+**Then** server logs must not contain `c_user` or `xs` values
+**And** the account-list API response contains label and opaque ID only — no cookie data
+
+**Dev Notes:**
+- Extend `dashboard/facebook.html` — add up to 3 new `.card` blocks; no new nav links; no new `.html` file; no new top-level route
+- Reuse existing form / button / result-panel patterns from other dashboard pages
+- Cookie storage: `POST /api/facebook/accounts` saves encrypted cookie server-side; `GET /api/facebook/accounts` returns label + opaque ID only (NFR3)
+- Socket.IO: load `socket.io-client`, authenticate with JWT, join user room, listen on `facebook:operation` events for progress updates
+- Messenger-share campaign form: implement as a **separate `.card`** — do NOT add it as a 4th option in the existing like/comment/post select
+- `POST /api/facebook/automate` accepts `postUrls: string[]`; backend iterates per URL and emits per-URL progress via `facebook:operation` Socket.IO events
+
+**Review Findings (pre-code, opus adversarial, 2026-06-12):**
+
+- [x] F-01 ✓ server-side encrypted storage, POST/GET /api/facebook/accounts
+- [x] F-02 ✓ preview AC updated to segment pool + sample message
+- [x] F-03 ✓ mode auto-detected by link count
+- [x] F-04 ✓ multi-account ACs added (checkbox selector, round-robin, runGuardedBatch)
+- [x] F-05 ✓ cookie error split into client-side guard + server-side sessionExpired AC
+- [x] F-06 ✓ Socket.IO dev note added
+- [x] F-07 ✓ GET /api/facebook/operations/:id added, refresh-restore AC added
+- [x] F-08 ✓ label field spec added (50 chars, no duplicates)
+- [x] F-09 ✓ postUrls[] backend extension specified
+- [x] F-10 ✓ dev note: separate card, not 4th select option
+- [x] F-11 ✓ account delete AC added
+- [x] F-12 ✓ concurrency guard AC added (run button disabled while in progress)
+- [x] F-13 ✓ dry-run visual specified (yellow border + banner text)
+- [x] F-14 ✓ two-step inline confirmation AC added
+- [x] F-15 ✓ cookie validation regex added
+- [x] F-16 ✓ Dev Notes constraints tightened (card count + no new files)
+- [x] F-17 dismissed (WinForms reference — noise)
+- [x] F-18 ✓ NFR3 promoted to formal AC (logs + API response constraints)
