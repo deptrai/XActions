@@ -1,6 +1,6 @@
 # Story 5.4: Input/queue inputs & surface exposure for Messenger share
 
-Status: review
+Status: done
 
 <!-- Port from SST_TOOL_FB Main.cs:Post() file-queue (P10) → XActions surfaces. Plan: facebook-messenger-port-plan.md (Epic 5, Story 5.4). Final story of the Messenger Port — wires Story 5.2 campaign into CLI/MCP/REST + file/queue inputs. -->
 
