@@ -136,6 +136,38 @@ describe('shareFacebookPosts', () => {
     expect(result.preview).toHaveLength(1);
   });
 
+  it('duplicate postUrls → throws before navigation (Map-collision guard)', async () => {
+    const page = makeFakePage();
+    await expect(
+      shareFacebookPosts(page, ['https://facebook.com/p/1', 'https://facebook.com/p/1'], { dryRun: false }),
+    ).rejects.toThrow('must not contain duplicates');
+    expect(page.calls.goto).toHaveLength(0);
+  });
+
+  it('non-http(s) scheme (SSRF) → throws before navigation', async () => {
+    const page = makeFakePage();
+    await expect(
+      shareFacebookPosts(page, ['file:///etc/passwd'], { dryRun: false }),
+    ).rejects.toThrow(/valid URL|http\(s\) URL|facebook\.com URL/);
+    expect(page.calls.goto).toHaveLength(0);
+  });
+
+  it('non-facebook host → throws before navigation', async () => {
+    const page = makeFakePage();
+    await expect(
+      shareFacebookPosts(page, ['https://169.254.169.254/latest/meta-data/'], { dryRun: false }),
+    ).rejects.toThrow('must be a facebook.com URL');
+    expect(page.calls.goto).toHaveLength(0);
+  });
+
+  it('malformed URL string → throws before navigation', async () => {
+    const page = makeFakePage();
+    await expect(
+      shareFacebookPosts(page, ['not-a-url'], { dryRun: false }),
+    ).rejects.toThrow('must be a valid URL');
+    expect(page.calls.goto).toHaveLength(0);
+  });
+
   it('batch over maxBatch is bounded (inherited guardrail)', async () => {
     const page = makeFakePage();
     const urls = Array.from({ length: 21 }, (_, i) => `https://facebook.com/p/${i}`);

@@ -737,16 +737,16 @@ async function shareSinglePost(page, postUrl) {
   await sleep(500);
 
   // --- Locate + click the Share button ---
-  // VERIFIED selector from messengerShare.js (Story 5.2) + aria-label fallbacks.
+  // VERIFIED selector from messengerShare.js (Story 5.2). The aria-label *substring*
+  // fallbacks were removed: `[aria-label*="Share"]` / `[aria-label*="Chia sẻ"]` also
+  // match "Share to Story", "Share to Reel", header-nav Share, "Chia sẻ lên Tin", etc.,
+  // and waitForSelector resolving on the first match could click the wrong button
+  // (silent no-op share). The data-attr selectors are precise and sufficient.
   const shareButtonSelectors = [
     'div[data-ad-rendering-role="share_button"]', // verified
     '[data-ad-renderingrole="share_button"]',     // verified (alt attribute spelling)
-    '[aria-label*="Share"]',                       // en fallback
-    '[aria-label*="Chia sẻ"]',                     // vi fallback
   ];
 
-  // Combined single wait: block until ANY share-button selector renders
-  // (one 5s wait for the joined list, never 5s×N — findLikeButton lesson).
   try {
     await page.waitForSelector(shareButtonSelectors.join(', '), { timeout: 5000 });
   } catch (_) {
@@ -765,8 +765,11 @@ async function shareSinglePost(page, postUrl) {
   await sleep(500); // let the share dialog/menu render
 
   // --- Locate + click the "Share now" (share-to-Feed) action ---
-  // UNVERIFIED: the share-now menu item. Try aria-label/role selectors first,
-  // then fall back to matching a menuitem/button by visible text (EN/VI).
+  // ⚠️ UNVERIFIED FLOW: messengerShare.js (live-verified 2026-06) shows the share_button
+  // opens a Messenger recipient dialog; the share-to-Feed entry point + "Share now" item
+  // are NOT yet confirmed on a live session. Selectors below are best-effort scaffold —
+  // see docs/agents/selectors-facebook.md verify-checklist. The real path may throw until
+  // verified; that is expected and recorded by runGuardedBatch as a per-item failure.
   const shareNowSelectors = [
     '[aria-label="Share now"]',     // en
     '[aria-label="Chia sẻ ngay"]',  // vi
@@ -781,29 +784,26 @@ async function shareSinglePost(page, postUrl) {
       shareNowEl = await page.$(selector);
       if (shareNowEl) break;
     }
-  } catch (_) {
-    // Selector lookup failed — fall through to text-based lookup below
+  } catch (err) {
+    // Only a selector TIMEOUT means "not present yet" → fall through to text lookup.
+    // A detached frame / destroyed context (e.g. a redirect) is a real error — re-throw
+    // it instead of masking it behind the generic "Share now not found" below.
+    if (!/timeout|waiting for selector/i.test(err?.message ?? '')) throw err;
   }
 
-  // Text/role fallback: find a clickable menuitem/button whose text is the
-  // share-now label (handles locale strings the aria selectors miss).
+  // Text/role fallback: find a clickable menuitem/button whose text EXACTLY equals the
+  // share-now label. Strict equality (not includes) + interactive roles only — `includes`
+  // over-matched container nodes ("Don't Share now") and non-interactive inner spans.
   if (!shareNowEl) {
     const SHARE_NOW_TEXT = ['Share now', 'Chia sẻ ngay'];
-    shareNowEl = await page.evaluateHandle((labels) => {
-      const nodes = Array.from(
-        document.querySelectorAll('[role="menuitem"], [role="button"], div[role="none"] span'),
-      );
-      const hit = nodes.find((n) => {
-        const t = (n.textContent || '').trim();
-        return labels.some((l) => t === l || t.includes(l));
-      });
+    const handle = await page.evaluateHandle((labels) => {
+      const nodes = Array.from(document.querySelectorAll('[role="menuitem"], [role="button"]'));
+      const hit = nodes.find((n) => labels.includes((n.textContent || '').trim()));
       return hit || null;
     }, SHARE_NOW_TEXT);
-    // evaluateHandle returns a JSHandle wrapping null when nothing matched
-    if (shareNowEl) {
-      const isNull = await shareNowEl.evaluate((n) => n === null).catch(() => true);
-      if (isNull) shareNowEl = null;
-    }
+    // evaluateHandle always returns a JSHandle (truthy even when it wraps null);
+    // asElement() returns the ElementHandle, or null when the wrapped value is null.
+    shareNowEl = handle.asElement();
   }
 
   if (!shareNowEl) {
@@ -812,6 +812,13 @@ async function shareSinglePost(page, postUrl) {
 
   await shareNowEl.click();
   await sleep(500); // let the share submit
+
+  // Best-effort outcome check: a real success/error indicator selector is UNVERIFIED
+  // (needs a live session). We cannot confirm the share actually succeeded, so surface
+  // that uncertainty rather than asserting success silently (story 4.1 P2 lesson). The
+  // result is still reported ok by runGuardedBatch; a verify pass must replace this warn
+  // with a real success/error check.
+  console.warn(`⚠️ shareSinglePost: share click fired but success is UNVERIFIED (no confirmed indicator selector yet)`);
 
   return { shared: true };
 }
@@ -839,6 +846,28 @@ export async function shareFacebookPosts(page, postUrls, options = {}) {
   if (postUrls.some((u) => typeof u !== 'string' || !u.trim())) {
     throw new Error('❌ shareFacebookPosts: every postUrl must be a non-empty string');
   }
+  // Reject duplicate URLs up front — capturedResults is keyed by URL, so duplicates
+  // would collide (last-write-wins) and corrupt per-URL result merging.
+  if (new Set(postUrls).size !== postUrls.length) {
+    throw new Error('❌ shareFacebookPosts: postUrls must not contain duplicates');
+  }
+  // Validate scheme + host before navigation (AC4.10 + SSRF guard): only https
+  // facebook.com URLs may be navigated — never file:/ javascript:/ internal hosts.
+  for (const u of postUrls) {
+    let parsed;
+    try {
+      parsed = new URL(u);
+    } catch (_) {
+      throw new Error('❌ shareFacebookPosts: every postUrl must be a valid URL');
+    }
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      throw new Error('❌ shareFacebookPosts: postUrl must be an http(s) URL');
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
+      throw new Error('❌ shareFacebookPosts: postUrl must be a facebook.com URL');
+    }
+  }
 
   // Nullish-coalesce so an explicit `shareFn: null` falls back to the default
   // (destructuring defaults only catch `undefined`) — same guard as likeFn/commentFn.
@@ -858,6 +887,10 @@ export async function shareFacebookPosts(page, postUrls, options = {}) {
   const batchResult = await runGuardedBatch(postUrls, actionFn, guardedOptions);
 
   // Post-process real-run results to surface alreadyShared (AC3.9).
+  // NOTE: the real shareSinglePost does not yet detect already-shared state (that
+  // needs a live-verified "Remove Share"/shared indicator selector — deferred). This
+  // merge is forward-compatible: it activates automatically once shareSinglePost
+  // returns `alreadyShared`. Tests exercise it via an injected shareFn seam.
   if (!batchResult.dryRun && batchResult.results.length > 0) {
     batchResult.results = batchResult.results.map((r) => {
       const captured = capturedResults.get(r.target);
