@@ -4,7 +4,7 @@ baseline_commit: f776adf9e01a1819135e7e3417fb10e66a47d54a
 
 # Story 4.2: Auto-share Facebook post (dry-run default)
 
-Status: ready-for-dev
+Status: review
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 3 — low risk). Source: epics.md#Story 4.2 + PRD prd-XActions-2026-06-10-epic4 FR-16. -->
 
@@ -91,20 +91,20 @@ The one genuinely new piece is the **share DOM flow + its selectors**. Story 5.2
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: `shareSinglePost` helper** (AC2, AC4)
-  - [ ] Navigate to postUrl, locate Share button (reuse `messengerShare.js` verified selector + aria-label fallbacks), click
-  - [ ] Locate + click "Share now"/"Chia sẻ ngay" (UNVERIFIED — fallback chain by text+role), return `{ shared, alreadyShared? }`
-  - [ ] Combined single `waitForSelector`; clear throw if not found
-- [ ] **Task 2: `shareFacebookPosts` entry** (AC1, AC3)
-  - [ ] Export + add to default export; `shareFn` nullish-coalesce seam; route through `runGuardedBatch`
-  - [ ] Capture-Map for `alreadyShared` → merge into real-run results (copy `likeFacebookPosts` post-process block)
-- [ ] **Task 3: Input validation** (AC4)
-  - [ ] Reject non-array/empty `postUrls` and non-string entries before the batch
-- [ ] **Task 4: Selector docs** (AC6)
-  - [ ] Add Share section to `docs/agents/selectors-facebook.md` (VERIFIED vs UNVERIFIED + verify-checklist)
-- [ ] **Task 5: Tests** (AC7)
-  - [ ] Browser-free unit tests (fake page + `shareFn` seam) covering all AC7 cases
-  - [ ] `npx vitest run <new test file>` green
+- [x] **Task 1: `shareSinglePost` helper** (AC2, AC4)
+  - [x] Navigate to postUrl, locate Share button (reuse `messengerShare.js` verified selector + aria-label fallbacks), click
+  - [x] Locate + click "Share now"/"Chia sẻ ngay" (UNVERIFIED — fallback chain by text+role), return `{ shared, alreadyShared? }`
+  - [x] Combined single `waitForSelector`; clear throw if not found
+- [x] **Task 2: `shareFacebookPosts` entry** (AC1, AC3)
+  - [x] Export + add to default export; `shareFn` nullish-coalesce seam; route through `runGuardedBatch`
+  - [x] Capture-Map for `alreadyShared` → merge into real-run results (copy `likeFacebookPosts` post-process block)
+- [x] **Task 3: Input validation** (AC4)
+  - [x] Reject non-array/empty `postUrls` and non-string entries before the batch
+- [x] **Task 4: Selector docs** (AC6)
+  - [x] Add Share section to `docs/agents/selectors-facebook.md` (VERIFIED vs UNVERIFIED + verify-checklist)
+- [x] **Task 5: Tests** (AC7)
+  - [x] Browser-free unit tests (fake page + `shareFn` seam) covering all AC7 cases
+  - [x] `npx vitest run <new test file>` green
 
 ## Dev Notes
 
@@ -148,12 +148,29 @@ The one genuinely new piece is the **share DOM flow + its selectors**. Story 5.2
 
 ### Agent Model Used
 
+claude-opus-4-8 (BMAD dev-story workflow)
+
 ### Debug Log References
+
+- Test ban đầu giả định bad URL chỉ gọi `shareFn` 1 lần → fail (`maxRetry` mặc định của `runGuardedBatch` = 1 nên bad item được retry → 4 calls cho 3 URL). Sửa test: pass `maxRetry: 0` để khẳng định "một call/URL, batch không abort". Đây là hành vi guardrail ĐÚNG, không phải bug code.
+- Module `facebookAutomation.js` import PrismaClient ở top-level (từ Story 4.1) → test cần `DATABASE_URL` để instantiate dù share test thuần browser-free; inject từ `.env` repo gốc khi chạy vitest.
 
 ### Completion Notes List
 
+- **AC1–AC3 (`shareFacebookPosts`)**: clone gần như verbatim `likeFacebookPosts` — route `postUrls[]` qua `runGuardedBatch` (single chokepoint, KHÔNG custom loop). `shareFn` seam nullish-coalesce (`shareFn: null` vẫn fallback default — bài học story 2.4 HIGH). Capture-Map merge `alreadyShared` vào real-run results (copy pattern `alreadyLiked`). Dry-run default true → preview `{target, action:'pending'}`, không chạm browser.
+- **AC2 (`shareSinglePost`)**: navigate → combined `waitForSelector` cho Share button (VERIFIED `div[data-ad-rendering-role="share_button"]` reuse từ messengerShare.js + aria fallbacks) → click → chờ dialog → "Share now"/"Chia sẻ ngay" (UNVERIFIED: aria selectors trước, rồi text-match fallback qua `evaluateHandle`). Throw rõ ràng PII-free nếu không thấy button hoặc action.
+- **AC4 (validation)**: reject non-array/empty `postUrls` + non-string/blank entries TRƯỚC khi mở browser. Malformed URL trong batch → recorded as failed item (runGuardedBatch per-item try), không crash.
+- **AC5 (safety)**: dry-run không goto/click (test khẳng định); account-risk warning + maxBatch 20 + delay seam đều inherit từ `runGuardedBatch`, không reimplement.
+- **AC6 (docs)**: thêm section "Share / Auto-share (FR-16) — Epic 4" vào `selectors-facebook.md` (VERIFIED share button vs UNVERIFIED share-now) + verify-checklist item "Automate / Growth".
+- **AC7 (tests)**: 10/10 pass (`tests/services/facebook-share.test.js`), no-mock (plain recording fns + injected shareFn). Full suite: 1321 pass, chỉ 9 fail pre-existing trong `x402-integration.test.js` (ECONNREFUSED — không liên quan).
+
 ### File List
+
+- MODIFIED: `api/services/facebookAutomation.js` — thêm `shareSinglePost` + `shareFacebookPosts` + default-export entry
+- MODIFIED: `docs/agents/selectors-facebook.md` — section Share/Auto-share + verify-checklist
+- NEW: `tests/services/facebook-share.test.js` — 10 browser-free unit tests (AC7)
 
 ## Change Log
 
 - 2026-06-15: Story 4.2 created (context engine). Status → ready-for-dev. (Luisphan)
+- 2026-06-15: Story 4.2 implemented — `shareFacebookPosts` + `shareSinglePost` (clone của likeFacebookPosts, share-to-Feed DOM flow), input validation, selector docs, 10 browser-free tests. Status → review. (dev-story / claude-opus-4-8)

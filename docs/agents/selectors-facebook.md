@@ -105,6 +105,21 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 | Post submit (en) | `[aria-label="Post"]` | Story 2.4 |
 | Post submit (vi) | `[aria-label="Đăng"]` | Story 2.4; Vietnamese locale |
 
+## Share / Auto-share (FR-16) — Epic 4
+
+> ⚠️ Story 4.2. Dò trên **account phụ** (thao tác ghi → rủi ro khóa, ADR-007).
+> Share *button* đã VERIFIED (tái dùng từ Story 5.2); action "Share now → Feed" UNVERIFIED — cần confirm live.
+
+| Element | Selector chain | Ghi chú |
+|---|---|---|
+| Share button | `div[data-ad-rendering-role="share_button"]`, `[data-ad-renderingrole="share_button"]` | **VERIFIED** (Story 5.2 `messengerShare.js` live test); reuse — KHÔNG tự chế selector mới |
+| Share button (fallback) | `[aria-label*="Share"]` / `[aria-label*="Chia sẻ"]` | UNVERIFIED aria fallback nếu data-attr đổi |
+| "Share now" action (en) | `[aria-label="Share now"]`, `div[role="menuitem"][aria-label*="Share now"]` | **UNVERIFIED** — share-to-Feed menu item; cần confirm live |
+| "Share now" action (vi) | `[aria-label="Chia sẻ ngay"]`, `div[role="menuitem"][aria-label*="Chia sẻ ngay"]` | **UNVERIFIED** — Vietnamese locale |
+| "Share now" text fallback | menuitem/button có text === `Share now` / `Chia sẻ ngay` | UNVERIFIED — `page.evaluateHandle` text-match khi aria selectors trượt |
+
+⚠️ Flow: navigate postUrl → click Share button → chờ dialog → click "Share now". Combined `waitForSelector` (một wait cho cả list, không 5s×N). Throw rõ ràng + PII-free nếu không tìm thấy; `runGuardedBatch` ghi nhận lỗi per-item, KHÔNG abort batch.
+
 ## Verify Checklist
 
 Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi verify:
@@ -117,6 +132,10 @@ Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi veri
 - [ ] **Followers — Page**: mở 1 Page có tab Followers, xác nhận lấy được list. Ghi selector.
 - [ ] **Followers — Personal**: mở 1 personal profile, xác nhận KHÔNG lấy được → adapter trả `note` đúng (không crash).
 - [ ] **Search**: chạy `facebook.com/search/posts?q=<query>`, xác nhận bắt được results + author.
+
+### Automate / Growth (Epic 2 + Epic 4)
+- [ ] **Share button**: mở 1 post, xác nhận `div[data-ad-rendering-role="share_button"]` click mở được Share dialog.
+- [ ] **Share now → Feed**: trong dialog, xác nhận selector/text "Share now"/"Chia sẻ ngay" click được và repost lên timeline. Ghi selector thật. (Story 4.2 — hiện UNVERIFIED)
 
 ### Cập nhật sau verify
 - [ ] Thay mọi selector "UNVERIFIED" bằng selector thật đã test.
