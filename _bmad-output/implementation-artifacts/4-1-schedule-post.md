@@ -4,7 +4,7 @@ baseline_commit: 44ca121b63b4e05844193e6bb8aee904285c77ae
 
 # Story 4.1: Schedule Facebook post (dry-run default)
 
-Status: ready-for-dev
+Status: review
 
 <!-- First story of Epic 4 (Facebook Growth Automation, Cluster 3 — low risk). Source: epics.md#Story 4.1 + PRD prd-XActions-2026-06-10-epic4 FR-15. -->
 
@@ -90,28 +90,28 @@ The actual DOM posting is already solved: reuse `createFacebookPost(page, conten
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Prisma `Schedule` model + migration** (AC2)
-  - [ ] Add `Schedule` model to `prisma/schema.prisma` with fields + 2 indexes (AC6 list)
-  - [ ] Add `schedules Schedule[]` back-relation to the `User` model
-  - [ ] `npx prisma migrate dev --name add_schedule_model` + regenerate client; confirm `prisma.schedule` exists
-- [ ] **Task 2: `scheduleFacebookPost` service fn** (AC1, AC3, AC4)
-  - [ ] Export from `api/services/facebookAutomation.js` + add to default export
-  - [ ] Validate: non-empty `content`, ISO `scheduledAt` not in past, `options.userId` present when `dryRun:false`
-  - [ ] dryRun branch → preview object, no DB write; real branch → `prisma.schedule.create` + return `scheduleId`
-  - [ ] Do NOT touch `page` (accept + ignore; may be null)
-- [ ] **Task 3: Scheduler worker** (AC5, AC6, AC7)
-  - [ ] New `api/services/facebookScheduler.js`: `startFacebookScheduler()` (node-cron `* * * * *`) + `runDueSchedules(now, deps)`
-  - [ ] Query due `pending` schedules; per-schedule acquire session (FacebookAccount decrypt → loginWithCookie) → `createFacebookPost(page, content, { dryRun:false })` → update status; close browser in `finally`
-  - [ ] Throughput cap: count completed-in-last-hour; if ≥5 defer with jitter (no hard reject)
-  - [ ] Failure → `status:'failed'` + PII-free `error`, no retry
-  - [ ] Wire `startFacebookScheduler()` into the worker entry only; guard against double-start
-- [ ] **Task 4: Operation + Socket.IO + security** (AC8)
-  - [ ] At execution, create/update `Operation` (`type:'facebook_schedule'`, scoped userId), link `Schedule.operationId`
-  - [ ] Emit `facebook:operation` start/complete/error to `user:${userId}` room (copy pattern from `api/routes/facebook.js`)
-  - [ ] Audit every log/persist/return path for cookie leakage (NFR3)
-- [ ] **Task 5: Tests** (AC9)
-  - [ ] Browser-free unit tests (inject fake page + post executor seam); cover all AC9 cases
-  - [ ] `npx vitest run <new test file>` green; then `npx vitest run` (expect only the pre-existing `x402-integration.test.js` ECONNREFUSED failures — unrelated)
+- [x] **Task 1: Prisma `Schedule` model + migration** (AC2)
+  - [x] Add `Schedule` model to `prisma/schema.prisma` with fields + 2 indexes (AC6 list)
+  - [x] Add `schedules Schedule[]` back-relation to the `User` model
+  - [x] `npx prisma migrate dev --name add_schedule_model` + regenerate client; confirm `prisma.schedule` exists
+- [x] **Task 2: `scheduleFacebookPost` service fn** (AC1, AC3, AC4)
+  - [x] Export from `api/services/facebookAutomation.js` + add to default export
+  - [x] Validate: non-empty `content`, ISO `scheduledAt` not in past, `options.userId` present when `dryRun:false`
+  - [x] dryRun branch → preview object, no DB write; real branch → `prisma.schedule.create` + return `scheduleId`
+  - [x] Do NOT touch `page` (accept + ignore; may be null)
+- [x] **Task 3: Scheduler worker** (AC5, AC6, AC7)
+  - [x] New `api/services/facebookScheduler.js`: `startFacebookScheduler()` (node-cron `* * * * *`) + `runDueSchedules(now, deps)`
+  - [x] Query due `pending` schedules; per-schedule acquire session (FacebookAccount decrypt → loginWithCookie) → `createFacebookPost(page, content, { dryRun:false })` → update status; close browser in `finally`
+  - [x] Throughput cap: count completed-in-last-hour; if ≥5 defer with jitter (no hard reject)
+  - [x] Failure → `status:'failed'` + PII-free `error`, no retry
+  - [x] Wire `startFacebookScheduler()` into the worker entry only; guard against double-start
+- [x] **Task 4: Operation + Socket.IO + security** (AC8)
+  - [x] At execution, create/update `Operation` (`type:'facebook_schedule'`, scoped userId), link `Schedule.operationId`
+  - [x] Emit `facebook:operation` start/complete/error to `user:${userId}` room (copy pattern from `api/routes/facebook.js`)
+  - [x] Audit every log/persist/return path for cookie leakage (NFR3)
+- [x] **Task 5: Tests** (AC9)
+  - [x] Browser-free unit tests (inject fake page + post executor seam); cover all AC9 cases
+  - [x] `npx vitest run <new test file>` green; then `npx vitest run` (expect only the pre-existing `x402-integration.test.js` ECONNREFUSED failures — unrelated)
 
 ## Dev Notes
 
@@ -173,12 +173,32 @@ epics.md calls the throughput cap "NFR10"; PRD calls it "NFR-9". Same requiremen
 
 ### Agent Model Used
 
+claude-opus-4-8 (BMAD dev-story workflow)
+
 ### Debug Log References
+
+- `npx prisma migrate dev` không chạy được trong môi trường non-interactive (worktree) → đã dùng `npx prisma db push` để sync schema + regenerate client, rồi tạo migration SQL thủ công (`prisma/migrations/20260615153800_add_schedule_model/migration.sql`) và `prisma migrate resolve --applied` để ghi vào lịch sử migration. Kết quả tương đương `migrate dev`: `prisma.schedule` đã tồn tại trong client.
+- Tests yêu cầu `DATABASE_URL` (worktree không có `.env`) → inject từ `.env` của repo gốc khi chạy vitest.
 
 ### Completion Notes List
 
+- **AC1–AC4 (`scheduleFacebookPost`)**: thêm vào `api/services/facebookAutomation.js` + default export. `dryRun` mặc định `true` (chỉ `dryRun:false` mới ghi DB). Guard: `content` non-empty, `scheduledAt` ISO-8601 và phải ≥ now+60s, `options.userId` bắt buộc khi real-run (không tạo record unscoped). `page` được nhận nhưng KHÔNG dùng (có thể null).
+- **AC2 (Prisma)**: model `Schedule` (user-scoped, cascade) + back-relation `User.schedules`, 2 index `[status, scheduledAt]` và `[userId]`. Migration + client regenerated.
+- **AC5–AC7 (worker)**: `api/services/facebookScheduler.js` export `startFacebookScheduler()` (node-cron `* * * * *`) + `runDueSchedules(now, deps)` thuần (injectable `postExecutor`/`sessionFactory`/`prismaClient` để test browser-free). Session lấy qua `resolveAccountCookie` (tái dùng decrypt path của `/api/facebook/accounts`), post qua `createFacebookPost(page, content, {dryRun:false})` (REUSE-FIRST), browser luôn đóng trong `finally`. Throughput cap ≤5/h/user → defer với jitter 5–15 phút (không hard-reject). Fail → `status:'failed'` + error PII-free, không retry (query `pending` loại trừ nó).
+- **AC8 (Operation + Socket.IO + NFR3)**: mỗi lần execute tạo `Operation` (`type:'facebook_schedule'`, scoped userId, config PII-free) + link `Schedule.operationId`; emit `facebook:operation` start/complete/error tới room `user:${userId}`. Cookie không bao giờ vào log/error/config/result/return — có test NFR3 khẳng định.
+- **Wiring**: `startFacebookScheduler()` chỉ chạy khi `jobQueue.js` là worker entry (`import.meta.url === process.argv[1]`) + env guard `ENABLE_FB_SCHEDULER !== 'false'` → server.js import module không double-fire cron.
+- **Tests**: 13/13 pass (`tests/services/facebook-schedule.test.js`). Full suite: 1309 pass, chỉ 9 fail pre-existing trong `tests/x402-integration.test.js` (ECONNREFUSED localhost:3001 — server tắt, không liên quan story).
+
 ### File List
+
+- MODIFIED: `prisma/schema.prisma` — thêm model `Schedule` + back-relation `User.schedules`
+- NEW: `prisma/migrations/20260615153800_add_schedule_model/migration.sql`
+- MODIFIED: `api/services/facebookAutomation.js` — import PrismaClient + `scheduleFacebookPost` + default export entry
+- NEW: `api/services/facebookScheduler.js` — `startFacebookScheduler` + `runDueSchedules`
+- MODIFIED: `api/services/jobQueue.js` — wire `startFacebookScheduler()` vào worker entry (guard kép)
+- NEW: `tests/services/facebook-schedule.test.js` — unit tests browser-free (AC9)
 
 ## Change Log
 
 - 2026-06-15: Story 4.1 created (context engine). Status → ready-for-dev. (Luisphan)
+- 2026-06-15: Story 4.1 implemented — `Schedule` model + migration, `scheduleFacebookPost` service, `facebookScheduler` worker (node-cron tick, throughput cap, jitter-defer, no-retry), Operation+Socket.IO+NFR3, 13 browser-free tests. Status → review. (dev-story / claude-opus-4-8)
