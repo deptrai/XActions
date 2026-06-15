@@ -238,6 +238,8 @@ model Schedule {
   content           String
   mediaUrls         String?
   scheduledAt       DateTime
+  // pending → running (claimed by a tick) → completed | failed.
+  // `cancelled` reserved for a future manual-cancel surface.
   status            String    @default("pending")
   facebookAccountId String?
   operationId       String?

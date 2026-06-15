@@ -19,6 +19,47 @@ const JITTER_MIN_MS = 5 * 60 * 1000;  // 5 min
 const JITTER_MAX_MS = 15 * 60 * 1000; // 15 min
 
 /**
+ * Did the post executor actually publish?
+ *
+ * `createFacebookPost` resolves with a runGuardedBatch result
+ * (`{ succeeded, failed, results, ... }`) and does NOT throw on a failed post.
+ * Treat as success only when at least one item succeeded and none failed.
+ * A bare truthy/`{ ok:true }` (injected test executors) is also accepted.
+ */
+function isPostSuccess(result) {
+  if (!result) return false;
+  if (result.ok === true) return true;
+  if (typeof result.failed === 'number' || typeof result.succeeded === 'number') {
+    return (result.failed ?? 0) === 0 && (result.succeeded ?? 0) > 0;
+  }
+  // Unknown shape from a custom executor → assume success only if explicitly not failed
+  return result.ok !== false;
+}
+
+/** Extract a PII-free failure reason from a batch result (no cookie/URL data). */
+function postFailureReason(result) {
+  const first = Array.isArray(result?.results)
+    ? result.results.find((r) => r && r.ok === false)
+    : null;
+  const reason = first?.error || result?.error;
+  // Only surface short, structured reasons; never echo a raw message that could carry secrets.
+  return `post failed (succeeded=${result?.succeeded ?? 0}, failed=${result?.failed ?? 0})${
+    typeof reason === 'string' && reason.length <= 80 ? `: ${reason}` : ''
+  }`;
+}
+
+/**
+ * Build a PII-free error string for persistence/logging.
+ * Allowlist err.code / err.name ONLY — never persist raw err.message, which for
+ * Puppeteer/login errors can embed cookie or URL values (NFR3).
+ */
+function safeErrorString(err) {
+  if (typeof err?.code === 'string' && err.code) return err.code;
+  if (typeof err?.name === 'string' && err.name && err.name !== 'Error') return err.name;
+  return 'execution error';
+}
+
+/**
  * Execute all due scheduled posts for the current tick.
  *
  * Pure-ish — injectable `deps` for browser-free tests (no vi.mock needed).
@@ -45,132 +86,158 @@ export async function runDueSchedules(now, deps = {}) {
   });
 
   for (const schedule of dueSchedules) {
-    // --- Throughput cap (NFR-9): ≤5 completed/hour/user ---
-    const recentCount = await prismaClient.schedule.count({
-      where: {
-        userId: schedule.userId,
-        status: 'completed',
-        executedAt: { gte: new Date(now.getTime() - THROUGHPUT_WINDOW_MS) },
-      },
-    });
-
-    if (recentCount >= THROUGHPUT_CAP) {
-      // Defer with jitter — never hard-reject (PRD NFR-9: "enqueue với jitter thay vì từ chối hard")
-      const jitter = JITTER_MIN_MS + Math.random() * (JITTER_MAX_MS - JITTER_MIN_MS);
-      await prismaClient.schedule.update({
-        where: { id: schedule.id },
-        data: { scheduledAt: new Date(schedule.scheduledAt.getTime() + jitter) },
-      });
-      console.warn(`⚠️ Throughput cap hit for user ${schedule.userId} — deferred schedule ${schedule.id}`);
-      continue;
-    }
-
-    // --- Operation record (AC8): scoped by userId, PII-free config ---
-    const emit = (payload) =>
-      global.io?.to(`user:${schedule.userId}`).emit('facebook:operation', payload);
-
-    const operation = await prismaClient.operation.create({
-      data: {
-        userId: schedule.userId,
-        type: 'facebook_schedule',
-        status: 'running',
-        startedAt: now,
-        // Cookie values NEVER appear here (NFR3)
-        config: JSON.stringify({
-          scheduleId: schedule.id,
-          contentLength: schedule.content.length,
-          facebookAccountId: schedule.facebookAccountId ?? null,
-        }),
-      },
-    });
-
-    emit({
-      event: 'start',
-      operationId: operation.id,
-      userId: schedule.userId,
-      type: 'facebook_schedule',
-      status: 'running',
-    });
-
-    let browser = null;
+    // P4: per-row isolation — one bad row must never abort the whole tick.
     try {
-      // --- Acquire session (injectable for tests) ---
-      let page;
-      if (sessionFactory) {
-        const session = await sessionFactory(schedule);
-        page = session.page;
-        browser = session.browser ?? null;
-      } else {
-        // Resolve FacebookAccount — reuse SAME decrypt path as /api/facebook/accounts (NFR3)
-        let cookie;
-        if (schedule.facebookAccountId) {
-          cookie = await resolveAccountCookie(schedule.userId, schedule.facebookAccountId);
-        } else {
-          const account = await prismaClient.facebookAccount.findFirst({
-            where: { userId: schedule.userId },
-            select: { id: true },
-            orderBy: { createdAt: 'desc' },
-          });
-          if (!account) throw new Error('No Facebook account found for user');
-          cookie = await resolveAccountCookie(schedule.userId, account.id);
-        }
-
-        // Cookie values never logged (NFR3)
-        browser = await createBrowser({ headless: true });
-        page = await createPage(browser);
-        await loginWithCookie(page, { c_user: cookie.c_user, xs: cookie.xs });
-      }
-
-      // --- Execute post: reuse createFacebookPost — do NOT reinvent (REUSE-FIRST mandate) ---
-      const executor =
-        postExecutor ??
-        ((p, content) => createFacebookPost(p, content, { dryRun: false }));
-
-      await executor(page, schedule.content);
-
-      const executedAt = new Date();
-      await prismaClient.schedule.update({
-        where: { id: schedule.id },
-        data: { status: 'completed', executedAt, operationId: operation.id },
-      });
-      await prismaClient.operation.update({
-        where: { id: operation.id },
-        data: {
+      // --- Throughput cap (NFR-9): ≤5 completed/hour/user ---
+      const recentCount = await prismaClient.schedule.count({
+        where: {
+          userId: schedule.userId,
           status: 'completed',
-          completedAt: executedAt,
-          result: JSON.stringify({ scheduleId: schedule.id }),
+          executedAt: { gte: new Date(now.getTime() - THROUGHPUT_WINDOW_MS) },
         },
       });
 
-      emit({ event: 'complete', operationId: operation.id, userId: schedule.userId, status: 'completed' });
-      console.log(`✅ Schedule ${schedule.id} executed for user ${schedule.userId}`);
-    } catch (err) {
-      // PII-free error string — cookie values must never appear here (NFR3 / AC7)
-      const safeError =
-        err?.code || err?.name || (err?.message ?? 'unknown error').slice(0, 200);
-      const executedAt = new Date();
+      if (recentCount >= THROUGHPUT_CAP) {
+        // Defer with jitter — never hard-reject (PRD NFR-9: "enqueue với jitter thay vì từ chối hard").
+        // P3: base the new time on `now`, not the (possibly long-past) original scheduledAt —
+        // otherwise an overdue capped post stays in the past and re-defers every tick (busy-loop).
+        const jitter = JITTER_MIN_MS + Math.random() * (JITTER_MAX_MS - JITTER_MIN_MS);
+        await prismaClient.schedule.update({
+          where: { id: schedule.id },
+          data: { scheduledAt: new Date(now.getTime() + jitter) },
+        });
+        console.warn(`⚠️ Throughput cap hit for user ${schedule.userId} — deferred schedule ${schedule.id}`);
+        continue;
+      }
 
-      // status:failed + no retry — next tick's pending filter excludes this schedule (AC7)
-      await prismaClient.schedule.update({
-        where: { id: schedule.id },
-        data: { status: 'failed', executedAt, error: safeError, operationId: operation.id },
+      // --- P1: atomically claim the row (pending → running) to prevent double execution ---
+      // node-cron fires every minute, but a browser post session can exceed 1 minute. Without a
+      // claim, the next tick re-reads the same pending row and posts twice. updateMany returns the
+      // affected count; if another tick already claimed it, count===0 and we skip.
+      const claim = await prismaClient.schedule.updateMany({
+        where: { id: schedule.id, status: 'pending' },
+        data: { status: 'running' },
       });
-      await prismaClient.operation.update({
-        where: { id: operation.id },
-        data: { status: 'failed', completedAt: executedAt, error: safeError },
+      if (claim.count === 0) {
+        continue; // lost the race to another tick/process
+      }
+
+      // --- Operation record (AC8): scoped by userId, PII-free config ---
+      const emit = (payload) =>
+        global.io?.to(`user:${schedule.userId}`).emit('facebook:operation', payload);
+
+      const operation = await prismaClient.operation.create({
+        data: {
+          userId: schedule.userId,
+          type: 'facebook_schedule',
+          status: 'running',
+          startedAt: now,
+          // Cookie values NEVER appear here (NFR3)
+          config: JSON.stringify({
+            scheduleId: schedule.id,
+            contentLength: schedule.content.length,
+            facebookAccountId: schedule.facebookAccountId ?? null,
+          }),
+        },
       });
 
       emit({
-        event: 'error',
+        event: 'start',
         operationId: operation.id,
         userId: schedule.userId,
-        status: 'failed',
-        error: safeError,
+        type: 'facebook_schedule',
+        status: 'running',
       });
-      console.error(`❌ Schedule ${schedule.id} failed for user ${schedule.userId}: ${safeError}`);
-    } finally {
-      // Always close browser regardless of success/failure (AC5)
-      if (browser) await browser.close().catch(() => {});
+
+      let browser = null;
+      try {
+        // --- Acquire session (injectable for tests) ---
+        let page;
+        if (sessionFactory) {
+          const session = await sessionFactory(schedule);
+          page = session.page;
+          browser = session.browser ?? null;
+        } else {
+          // Resolve FacebookAccount — reuse SAME decrypt path as /api/facebook/accounts (NFR3)
+          let cookie;
+          if (schedule.facebookAccountId) {
+            cookie = await resolveAccountCookie(schedule.userId, schedule.facebookAccountId);
+          } else {
+            const account = await prismaClient.facebookAccount.findFirst({
+              where: { userId: schedule.userId },
+              select: { id: true },
+              orderBy: { createdAt: 'desc' },
+            });
+            if (!account) throw new Error('No Facebook account found for user');
+            cookie = await resolveAccountCookie(schedule.userId, account.id);
+          }
+
+          // Cookie values never logged (NFR3)
+          browser = await createBrowser({ headless: true });
+          page = await createPage(browser);
+          await loginWithCookie(page, { c_user: cookie.c_user, xs: cookie.xs });
+        }
+
+        // --- Execute post: reuse createFacebookPost — do NOT reinvent (REUSE-FIRST mandate) ---
+        const executor =
+          postExecutor ??
+          ((p, content) => createFacebookPost(p, content, { dryRun: false }));
+
+        // P2: createFacebookPost returns a batchResult and does NOT throw on a failed post
+        // (runGuardedBatch records results[].ok:false / failed>0). Inspect the result and throw
+        // so the catch block marks the schedule failed instead of silently "completed".
+        const result = await executor(page, schedule.content);
+        if (!isPostSuccess(result)) {
+          throw new Error(postFailureReason(result));
+        }
+
+        const executedAt = new Date();
+        await prismaClient.schedule.update({
+          where: { id: schedule.id },
+          data: { status: 'completed', executedAt, operationId: operation.id },
+        });
+        await prismaClient.operation.update({
+          where: { id: operation.id },
+          data: {
+            status: 'completed',
+            completedAt: executedAt,
+            result: JSON.stringify({ scheduleId: schedule.id }),
+          },
+        });
+
+        emit({ event: 'complete', operationId: operation.id, userId: schedule.userId, status: 'completed' });
+        console.log(`✅ Schedule ${schedule.id} executed for user ${schedule.userId}`);
+      } catch (err) {
+        // P6: PII-free error string — allowlist err.code/err.name ONLY; never persist raw
+        // err.message (Puppeteer/login errors can embed cookie/URL values → NFR3 leak).
+        const safeError = safeErrorString(err);
+        const executedAt = new Date();
+
+        // status:failed + no retry — next tick's pending filter excludes this schedule (AC7)
+        await prismaClient.schedule.update({
+          where: { id: schedule.id },
+          data: { status: 'failed', executedAt, error: safeError, operationId: operation.id },
+        });
+        await prismaClient.operation.update({
+          where: { id: operation.id },
+          data: { status: 'failed', completedAt: executedAt, error: safeError },
+        });
+
+        emit({
+          event: 'error',
+          operationId: operation.id,
+          userId: schedule.userId,
+          status: 'failed',
+          error: safeError,
+        });
+        console.error(`❌ Schedule ${schedule.id} failed for user ${schedule.userId}: ${safeError}`);
+      } finally {
+        // Always close browser regardless of success/failure (AC5)
+        if (browser) await browser.close().catch(() => {});
+      }
+    } catch (rowErr) {
+      // P4: a failure in claim / count / operation.create must not abort remaining due rows.
+      console.error(`❌ Scheduler row ${schedule.id} aborted:`, safeErrorString(rowErr));
     }
   }
 }
@@ -179,11 +246,30 @@ export async function runDueSchedules(now, deps = {}) {
 let schedulerStarted = false;
 
 /**
+ * Recover schedules left in `running` by a crashed/killed process.
+ * A fresh scheduler owns no in-flight rows, so any pre-existing `running`
+ * row is stale → mark it failed (no blind retry, AC7).
+ */
+export async function sweepStaleRunning(prismaClient = prisma) {
+  const swept = await prismaClient.schedule.updateMany({
+    where: { status: 'running' },
+    data: { status: 'failed', error: 'interrupted' },
+  });
+  if (swept.count > 0) {
+    console.warn(`⚠️ Facebook scheduler: swept ${swept.count} stale running schedule(s) → failed`);
+  }
+  return swept.count;
+}
+
+/**
  * Register a node-cron tick (every minute) to execute due scheduled posts.
  *
- * IMPORTANT: Call this from the worker entry (`npm run worker` / jobQueue.js) ONLY —
- * NOT from api/server.js — to avoid double-firing. Guard with ENABLE_FB_SCHEDULER
- * env flag if there is any risk of both processes starting this.
+ * Start this from the API server process (api/server.js, after `global.io` is set)
+ * so that `facebook:operation` Socket.IO events reach connected clients — the same
+ * process where Bull `.process()` handlers run and emit. The `schedulerStarted`
+ * guard makes it safe to call once; a single server instance owns the tick.
+ * For multi-instance deployments, gate by env or move to a dedicated scheduler
+ * process with a socket.io Redis adapter (out of scope here).
  */
 export function startFacebookScheduler() {
   if (schedulerStarted) {
@@ -192,12 +278,17 @@ export function startFacebookScheduler() {
   }
   schedulerStarted = true;
 
+  // Crash recovery: clear stale `running` rows from a prior process before ticking.
+  sweepStaleRunning().catch((err) =>
+    console.error('❌ Facebook scheduler startup sweep failed:', safeErrorString(err)),
+  );
+
   cron.schedule('* * * * *', async () => {
     try {
       await runDueSchedules(new Date());
     } catch (err) {
       // Never crash the cron process on a tick error
-      console.error('❌ Facebook scheduler tick error:', err?.code || err?.name || 'unknown');
+      console.error('❌ Facebook scheduler tick error:', safeErrorString(err));
     }
   });
 

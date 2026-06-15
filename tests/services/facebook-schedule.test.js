@@ -37,12 +37,35 @@ const fakePage = { _fake: true };
 const fakeSessionFactory = async () => ({ page: fakePage, browser: null });
 
 // Injectable postExecutor: records calls, simulates success
-function makePostExecutor(shouldThrow = false) {
+// Injectable postExecutor that mirrors createFacebookPost's REAL return shape
+// (runGuardedBatch batchResult), not a bare { ok:true }. This lets us exercise
+// the worker's success-detection logic (P2: a failed post must not be "completed").
+//   mode 'success' → { succeeded:1, failed:0, results:[{ ok:true }] }
+//   mode 'fail'    → { succeeded:0, failed:1, results:[{ ok:false, error }] }  (NO throw — like real createFacebookPost)
+//   mode 'throw'   → throws (session/login style error)
+function makePostExecutor(mode = 'success', { error } = {}) {
   const calls = [];
   const executor = async (page, content) => {
     calls.push({ page, content });
-    if (shouldThrow) throw new Error('Simulated post failure');
-    return { ok: true };
+    if (mode === 'throw') throw new Error('Simulated post failure');
+    if (mode === 'fail') {
+      return {
+        dryRun: false,
+        platform: 'facebook',
+        attempted: 1,
+        succeeded: 0,
+        failed: 1,
+        results: [{ target: content, ok: false, error: error ?? 'composer not found' }],
+      };
+    }
+    return {
+      dryRun: false,
+      platform: 'facebook',
+      attempted: 1,
+      succeeded: 1,
+      failed: 0,
+      results: [{ target: content, ok: true }],
+    };
   };
   executor.calls = calls;
   return executor;
@@ -196,9 +219,9 @@ describe('runDueSchedules', () => {
     expect(executor.calls[0].content).toBe('Test post content');
   });
 
-  it('failing executor transitions schedule to failed, not retried on next tick', async () => {
+  it('throwing executor transitions schedule to failed, not retried on next tick', async () => {
     const schedule = await createDueSchedule();
-    const failingExecutor = makePostExecutor(true);
+    const failingExecutor = makePostExecutor('throw');
 
     await runDueSchedules(new Date(), {
       prismaClient: prisma,
@@ -219,6 +242,27 @@ describe('runDueSchedules', () => {
       postExecutor: executor2,
     });
     expect(executor2.calls).toHaveLength(0);
+  });
+
+  it('post that returns a failure result (no throw) is marked failed, not completed', async () => {
+    // createFacebookPost resolves with { failed:1 } instead of throwing; the worker
+    // must inspect the result and NOT record the schedule as completed (P2).
+    const schedule = await createDueSchedule();
+    const failResultExecutor = makePostExecutor('fail');
+
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma,
+      sessionFactory: fakeSessionFactory,
+      postExecutor: failResultExecutor,
+    });
+
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(failResultExecutor.calls).toHaveLength(1);
+    expect(updated.status).toBe('failed');
+    expect(updated.executedAt).toBeTruthy();
+
+    const op = await prisma.operation.findUnique({ where: { id: updated.operationId } });
+    expect(op.status).toBe('failed');
   });
 
   it('throughput cap: 6th due schedule is deferred (not executed, not failed)', async () => {
@@ -271,24 +315,26 @@ describe('runDueSchedules', () => {
     expect(op.userId).toBe(TEST_USER.id);
   });
 
-  it('NFR3: no cookie value appears in any Schedule or Operation field', async () => {
+  it('NFR3: a cookie value carried in an error message never reaches a persisted field', async () => {
+    // Real risk: Puppeteer/login errors embed cookie/URL data in err.message. Put the
+    // secret into the execution scope via a throwing executor, then assert safeErrorString
+    // scrubbed it from every persisted field (Schedule.error / Operation.error/config/result).
     const FAKE_COOKIE_VALUE = 'FAKE_XS_TOKEN_DO_NOT_PERSIST_abc123xyz';
     const schedule = await createDueSchedule({ content: 'Cookie audit test' });
 
-    // sessionFactory that simulates a "cookie was in scope" scenario
-    const suspiciousSessionFactory = async () => {
-      // Intentionally do NOT leak FAKE_COOKIE_VALUE into any return value
-      return { page: fakePage, browser: null };
+    const leakyExecutor = async () => {
+      // A plain Error whose message embeds the secret — code/name are the only safe fields.
+      throw new Error(`Protocol error Network.setCookie failed for xs=${FAKE_COOKIE_VALUE}`);
     };
 
-    const executor = makePostExecutor();
     await runDueSchedules(new Date(), {
       prismaClient: prisma,
-      sessionFactory: suspiciousSessionFactory,
-      postExecutor: executor,
+      sessionFactory: fakeSessionFactory,
+      postExecutor: leakyExecutor,
     });
 
     const updatedSchedule = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updatedSchedule.status).toBe('failed'); // confirms the error path actually ran
     const op = updatedSchedule.operationId
       ? await prisma.operation.findUnique({ where: { id: updatedSchedule.operationId } })
       : null;
@@ -303,5 +349,21 @@ describe('runDueSchedules', () => {
     ].join('\n');
 
     expect(allPersistedStrings).not.toContain(FAKE_COOKIE_VALUE);
+  });
+
+  it('claims the row atomically — a concurrent tick does not double-execute', async () => {
+    // P1: two overlapping ticks reading the same due row must result in exactly one execution.
+    const schedule = await createDueSchedule({ content: 'Double-exec guard' });
+    const executor = makePostExecutor();
+
+    await Promise.all([
+      runDueSchedules(new Date(), { prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: executor }),
+      runDueSchedules(new Date(), { prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: executor }),
+    ]);
+
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('completed');
+    // The pending→running claim must let only ONE tick execute the post.
+    expect(executor.calls).toHaveLength(1);
   });
 });

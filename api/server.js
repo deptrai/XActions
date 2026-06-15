@@ -81,6 +81,7 @@ import scriptsRoutes from './routes/scripts.js';
 import a2aRoutes from './routes/a2a.js';
 import facebookRoutes from './routes/facebook.js';
 import facebookAccountsRoutes from './routes/facebookAccounts.js';
+import { startFacebookScheduler } from './services/facebookScheduler.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
@@ -599,6 +600,14 @@ httpServer.listen(PORT, async () => {
 
   // Start unfollower auto-scan scheduler
   startScheduler(io);
+
+  // Start Facebook scheduled-post ticker (Story 4.1) — runs in this server process
+  // so global.io is live and facebook:operation events reach connected clients.
+  // schedulerStarted guard keeps it single-fire. ENABLE_FB_SCHEDULER=false disables
+  // it (tests / a dedicated-scheduler deployment).
+  if (process.env.ENABLE_FB_SCHEDULER !== 'false') {
+    startFacebookScheduler();
+  }
 });
 
 export default app;
