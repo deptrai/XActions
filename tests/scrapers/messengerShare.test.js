@@ -117,6 +117,10 @@ function createMockPage() {
     keyboard,
     goto: vi.fn(),
     $: vi.fn().mockResolvedValue(mockElement),
+    $x: vi.fn().mockResolvedValue([]),
+    $$eval: vi.fn().mockResolvedValue(0),
+    evaluate: vi.fn().mockResolvedValue(undefined),
+    url: vi.fn().mockReturnValue('https://www.facebook.com/post/1'),
     mockElement,
   };
 }
@@ -177,17 +181,30 @@ describe('shareToMessenger', () => {
 
   it('succeeds when all selectors resolve', async () => {
     const page = createMockPage();
-    // Return null for error/close selectors so waitForAny times out on them
     const mockElement = { click: vi.fn() };
-    const errorSelectors = ["Couldn't send", 'Không thể gửi', 'Close', 'Đóng'];
-    page.$.mockImplementation(async (sel) => {
-      if (errorSelectors.some((s) => sel.includes(s))) return null;
-      return mockElement;
+    // Share button resolves via page.$ (waitForAny); dialog-close also resolves.
+    page.$.mockResolvedValue(mockElement);
+    // The new flow drives recipient detection + click through page.evaluate:
+    //  - share button click → evaluate(fn, el)         → undefined
+    //  - waitForRecipientButtons → evaluate(fn, ...)    → count (>0)
+    //  - clickRecipientByName → evaluate(fn, ...)       → matched aria-label
+    page.evaluate.mockImplementation(async (fn) => {
+      const src = typeof fn === 'function' ? fn.toString() : '';
+      if (src.includes('.length')) return 1; // recipient button count
+      if (src.includes('target.click')) return 'Send TestPage via Messenger';
+      return undefined; // share button click
     });
+    // No "couldn't send" error spans.
+    page.$$eval.mockResolvedValue(0);
     const result = await shareToMessenger(
       page,
       { recipientName: 'TestPage', postUrl: 'https://fb.com/post/1', message: 'Hello' },
-      { delay: () => Promise.resolve(), selectorTimeout: 100 },
+      {
+        delay: () => Promise.resolve(),
+        selectorTimeout: 100,
+        // Inject DM sender so the test does not drive the full inbox flow.
+        sendMessageFn: vi.fn().mockResolvedValue({ ok: true }),
+      },
     );
     expect(result.ok).toBe(true);
     expect(result.recipientName).toBe('TestPage');
@@ -280,12 +297,15 @@ describe('messengerShareCampaign', () => {
 describe('SELECTORS', () => {
   it('exports all required selector keys', () => {
     const keys = Object.keys(SELECTORS);
+    // Verified against the live Facebook share dialog (2026-06). The legacy
+    // recipientSearch / messageInput / sendButton keys were removed — the real
+    // dialog is one-click quick-send with a separate-DM delivery path.
     expect(keys).toContain('shareButton');
-    expect(keys).toContain('sendInMessenger');
-    expect(keys).toContain('recipientSearch');
-    expect(keys).toContain('recipientRow');
-    expect(keys).toContain('messageInput');
-    expect(keys).toContain('sendButton');
+    expect(keys).toContain('shareButtonXPath');
+    expect(keys).toContain('recipientButton');
+    expect(keys).toContain('recipientButtonLabelRe');
+    expect(keys).toContain('threadComposeBox');
+    expect(keys).toContain('sendButtonLabelNeedles');
     expect(keys).toContain('sendError');
     expect(keys).toContain('dialogClose');
   });

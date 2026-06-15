@@ -132,3 +132,7 @@ e2e/reports
 .vercel
 
 audit-report.json
+
+# Facebook session cookies — never commit
+cookie.json
+cookies.json

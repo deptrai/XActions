@@ -23,36 +23,66 @@
 import { runGuardedBatch } from '../../../api/services/facebookAutomation.js';
 
 // ============================================================================
-// Constants & Selectors (UNVERIFIED — need live Facebook session to confirm)
+// Constants & Selectors (VERIFIED against live Facebook share dialog)
 // ============================================================================
 
 /**
- * Selectors for Messenger share dialog elements.
- * These mirror the C# source's element targeting but are UNVERIFIED against
- * current Facebook DOM. Facebook changes these frequently.
+ * Selectors VERIFIED against the live Facebook share dialog (2026-06).
+ *
+ * Real-DOM flow (differs from the original C# port):
+ *   1. Click the post's Share button → an in-page share dialog opens.
+ *   2. The dialog renders a row of recipient avatars under "Gửi bằng Messenger".
+ *      Each recipient is a `div[role="button"]` whose aria-label is:
+ *        VI: "Gửi cho <Name> qua Messenger"
+ *        EN: "Send <Name> via Messenger"
+ *   3. Clicking that avatar SENDS the post immediately (one-click). There is
+ *      NO separate recipient search box and NO Messenger compose box in this
+ *      dialog — the only editable field is an optional caption at the top.
+ *
+ * The previous selectors (recipientSearch / messageInput@font-size:15px /
+ * css-img send button) did NOT exist in this dialog and produced false matches
+ * (e.g. the header nav "Messenger" button, the post comment box), which made
+ * the action report success without sending anything.
+ *
+ * Caption note: the share dialog DOES expose an editable caption box, and text
+ * can be typed into it — but the recipient avatar is a one-click QUICK-SEND
+ * button that fires immediately and DISCARDS the typed caption. Verified live:
+ * the caption never reaches the conversation. Therefore the message is delivered
+ * as a SEPARATE Messenger DM to the recipient's thread after the share (see
+ * `sendMessageToThread`), rather than as a share caption.
  */
 export const SELECTORS = {
-  // Share button on a post
-  shareButton: '[aria-label="Send this to friends or post it on your timeline."], [aria-label="Share"], [data-testid="share_button"]',
-  // "Send in Messenger" option in share menu.
-  // NOTE: `:has-text()` is a Playwright-only pseudo-class and is NOT valid CSS —
-  // Puppeteer's `page.$()` would throw on it. Use a plain role selector here and
-  // filter by visible text via `findByText` (see below).
-  sendInMessenger: '[role="menuitem"]',
-  // Visible-text labels used to disambiguate the "Send in Messenger" menu item
-  // across locales (EN + VI).
-  sendInMessengerText: ['Send in Messenger', 'Gửi trong Messenger'],
-  // Messenger dialog search input for recipient
-  recipientSearch: 'input[aria-label="Search"], input[placeholder*="Search"], input[placeholder*="Tìm kiếm"]',
-  // Recipient suggestion row in Messenger dialog
-  recipientRow: '[role="option"], [role="listbox"] [role="row"]',
-  // Message compose input in Messenger share dialog
-  messageInput: '[aria-label="Message"], [aria-label="Tin nhắn"], [role="textbox"][contenteditable="true"]',
-  // Send button in Messenger dialog
-  sendButton: '[aria-label="Send"], [aria-label="Gửi"], [data-testid="messenger_send_button"]',
-  // Error state — "Couldn't send" indicator
-  sendError: '[aria-label="Couldn\'t send"], [aria-label="Không thể gửi"]',
-  // Dialog close / dismiss
+  // Share button on a post — opens the share dialog.
+  shareButton: 'div[data-ad-rendering-role="share_button"], [data-ad-renderingrole="share_button"]',
+  // XPath fallback for share button (absolute — brittle).
+  shareButtonXPath: '//div[@data-ad-rendering-role="share_button"]/..',
+
+  // Recipient avatar buttons inside the share dialog. We scan all role=button
+  // elements and match the aria-label against `recipientButtonLabelRe` + name.
+  recipientButton: 'div[role="button"][aria-label], [role="button"][aria-label]',
+  // aria-label patterns that mark a "send to X via Messenger" recipient button.
+  recipientButtonLabelRe: /qua Messenger|via Messenger/i,
+
+  // ---- Separate-DM delivery (message text) ----
+  // Messenger inbox URL. We open the inbox, click the recipient's thread row by
+  // name, then type into the thread compose box.
+  messagesUrl: 'https://www.facebook.com/messages/t/',
+  // Sidebar thread link rows (match by visible name).
+  threadLink: 'a[href*="/messages/t/"], a[href*="/messages/e2ee/t/"]',
+  // Thread compose box. aria-label is "Viết cho <Name>" (VI) / "Message <Name>"
+  // (EN); placeholder "Aa". Matching by role+contenteditable+placeholder is the
+  // most stable across locales.
+  threadComposeBox: 'div[role="textbox"][contenteditable="true"][aria-placeholder="Aa"], div[role="textbox"][contenteditable="true"]',
+  // Send button that appears once the compose box has content. The e2ee (Lexical)
+  // box does NOT send on Enter via Puppeteer; this button must be clicked.
+  // aria-label "Nhấn Enter để gửi" (VI) / "Press Enter to send" (EN).
+  sendButtonLabelNeedles: ['nhấn enter để gửi', 'press enter to send'],
+
+  // Error — a "couldn't send" style toast/span after sending.
+  sendErrorText: ["Couldn't send", 'Không thể gửi', 'Đã xảy ra lỗi'],
+  sendError: 'span',
+
+  // Dialog close.
   dialogClose: '[aria-label="Close"], [aria-label="Đóng"]',
 };
 
@@ -205,32 +235,193 @@ async function findByText(page, selector, texts, timeout = 5000) {
 // ============================================================================
 
 /**
+ * Find and click the recipient avatar in the share dialog whose aria-label
+ * marks it as a "send to <name> via Messenger" button AND contains `name`.
+ *
+ * Clicking this button SENDS the post immediately (one-click). Matching is done
+ * inside a single page.evaluate so we operate on the live DOM snapshot and click
+ * the exact node — avoiding stale ElementHandles.
+ *
+ * @param {Page} page - Puppeteer page
+ * @param {string} name - Recipient display name (e.g. "Sang Sang")
+ * @param {RegExp} labelRe - Pattern that marks a Messenger-recipient button
+ * @returns {Promise<string|null>} The clicked aria-label, or null if not found
+ */
+async function clickRecipientByName(page, name, labelRe) {
+  return page.evaluate((needle, reSource, reFlags) => {
+    const re = new RegExp(reSource, reFlags);
+    const needleLc = (needle || '').trim().toLowerCase();
+    const buttons = [...document.querySelectorAll('[role="button"][aria-label]')];
+    const target = buttons.find((b) => {
+      const label = b.getAttribute('aria-label') || '';
+      return re.test(label) && label.toLowerCase().includes(needleLc);
+    });
+    if (!target) return null;
+    target.click();
+    return target.getAttribute('aria-label');
+  }, name, labelRe.source, labelRe.flags);
+}
+
+/**
+ * Poll until at least one Messenger-recipient button is present in the dialog.
+ * Matches on aria-label (NOT visible text — the visible text is just the name,
+ * the "via Messenger" marker lives only in the aria-label).
+ *
+ * @param {Page} page - Puppeteer page
+ * @param {RegExp} labelRe - Pattern that marks a Messenger-recipient button
+ * @param {number} timeout - Max wait in ms
+ * @returns {Promise<number>} Count of matching recipient buttons (0 if none)
+ */
+async function waitForRecipientButtons(page, labelRe, timeout = 8000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const count = await page.evaluate((reSource, reFlags) => {
+      const re = new RegExp(reSource, reFlags);
+      return [...document.querySelectorAll('[role="button"][aria-label]')]
+        .filter((b) => re.test(b.getAttribute('aria-label') || '')).length;
+    }, labelRe.source, labelRe.flags);
+    if (count > 0) return count;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  return 0;
+}
+
+/**
+ * Send a plain-text message as a SEPARATE Messenger DM to a recipient's thread.
+ *
+ * Used because the share dialog's recipient avatar is a one-click quick-send
+ * button that discards any typed caption (verified live). To attach a message
+ * to a share, we share the post first, then open the recipient's Messenger
+ * thread and send the text as its own message.
+ *
+ * Flow:
+ * 1. Open the Messenger inbox.
+ * 2. Click the sidebar thread row matching `recipientName`.
+ * 3. Type `message` into the thread compose box and press Enter to send.
+ *
+ * @param {Page} page - Puppeteer page instance (logged in)
+ * @param {string} recipientName - Display name of the thread to open
+ * @param {string} message - Plain-text message to send
+ * @param {Object} [options]
+ * @param {Function} [options.delay] - Injectable delay seam
+ * @param {number} [options.selectorTimeout=10000] - Timeout for selector waits
+ * @returns {Promise<{ok: boolean, error?: string}>}
+ */
+export async function sendMessageToThread(page, recipientName, message, options = {}) {
+  const {
+    delay = (min = 1000, max = 3000) => new Promise((r) => setTimeout(r, min + Math.random() * (max - min))),
+    selectorTimeout = 10000,
+  } = options;
+
+  if (!message) return { ok: true }; // nothing to send
+
+  try {
+    // 1. Open the inbox (full Messenger surface, not the lightweight overlay).
+    if (!page.url().includes('/messages/')) {
+      await page.goto(SELECTORS.messagesUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+      await delay(2000, 4000);
+    }
+
+    // 2. Click the sidebar thread row whose visible text contains the name.
+    const opened = await page.evaluate((needle) => {
+      const needleLc = (needle || '').trim().toLowerCase();
+      const links = [...document.querySelectorAll('a[href*="/messages/t/"], a[href*="/messages/e2ee/t/"]')];
+      const target = links.find((a) => (a.innerText || '').toLowerCase().includes(needleLc));
+      if (!target) return false;
+      target.click();
+      return true;
+    }, recipientName);
+    if (!opened) {
+      return { ok: false, error: `Thread for "${recipientName}" not found in inbox` };
+    }
+    await delay(2000, 4000);
+
+    // 3. Type into the thread compose box, then send with Enter.
+    // IMPORTANT: the e2ee compose box does NOT reliably receive input via
+    // page.keyboard after a click() — verified live, the keystrokes land
+    // "nowhere". ElementHandle.type() focuses + types directly into the node and
+    // works. Type line-by-line, inserting Shift+Enter between lines (the handle
+    // keeps focus, so page.keyboard works between handle.type() calls).
+    const composeBox = await waitForAny(page, SELECTORS.threadComposeBox, selectorTimeout);
+    if (!composeBox) {
+      return { ok: false, error: 'Thread compose box not found' };
+    }
+    const lines = message.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (i > 0) {
+        await page.keyboard.down('Shift');
+        await page.keyboard.press('Enter');
+        await page.keyboard.up('Shift');
+        await delay(50, 150);
+      }
+      if (lines[i]) {
+        await composeBox.type(lines[i], { delay: 20 + Math.random() * 30 });
+        await delay(50, 150);
+      }
+    }
+    await delay(400, 800);
+
+    // 4. Send. The e2ee (Lexical) compose box does NOT send on
+    // page.keyboard.press('Enter') or composeBox.press('Enter') — verified live,
+    // the text stays in the box. A dedicated send button appears once the box has
+    // content, with aria-label "Nhấn Enter để gửi" (VI) / "Press Enter to send"
+    // (EN). Click it. Fall back to Enter for non-e2ee threads where it works.
+    const sent = await page.evaluate((labelNeedles) => {
+      const btns = [...document.querySelectorAll('[role="button"][aria-label]')];
+      const target = btns.find((b) => {
+        const label = (b.getAttribute('aria-label') || '').toLowerCase();
+        return labelNeedles.some((n) => label.includes(n));
+      });
+      if (!target) return null;
+      target.click();
+      return target.getAttribute('aria-label');
+    }, SELECTORS.sendButtonLabelNeedles);
+
+    if (!sent) {
+      // Fallback: classic Enter-to-send (works on non-e2ee threads).
+      await page.keyboard.press('Enter');
+    }
+    await delay(1500, 3000);
+
+    return { ok: true, sentVia: sent || 'enter-fallback' };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+/**
  * Share a post to a single recipient via Messenger.
  * This is the `actionFn` passed to `runGuardedBatch`.
  *
- * Flow (mirrors C# Main.cs:Post() lines 582–799):
- * 1. Navigate to the post URL
- * 2. Click Share button → "Send in Messenger"
- * 3. Search for recipient (page name) in Messenger dialog
- * 4. Select recipient
- * 5. Compose & type message
- * 6. Click Send
- * 7. Detect success or "Couldn't send" error
+ * Flow (VERIFIED against the live share dialog — see SELECTORS doc above):
+ * 1. Navigate to the post URL.
+ * 2. Click the post's Share button → in-page share dialog opens.
+ * 3. Click the recipient avatar matching `recipientName` → post is sent (one-click).
+ * 4. Check for a "couldn't send" error toast.
+ * 5. If `message` is provided, deliver it as a SEPARATE Messenger DM to the
+ *    recipient's thread (the share dialog discards typed captions on quick-send).
+ *
+ * The legacy GraphQL `MWChatBusinessCTAAdsSenderMutation` step was removed: it
+ * consistently returned `messenger_business_ads_sender: null` and was not
+ * required for recipients with an existing conversation. `pageId` is now
+ * ignored (kept in the signature for backward compatibility).
  *
  * @param {Page} page - Puppeteer page instance (logged in)
  * @param {Object} target - Share target
- * @param {string} target.recipientName - Name of the Page/person to share to
+ * @param {string} target.recipientName - Display name of the recipient to match
  * @param {string} target.postUrl - URL of the post to share
- * @param {string} target.message - Composed message to send with the share
+ * @param {string} [target.message] - Message delivered as a separate DM after the share
  * @param {Object} [options]
  * @param {Function} [options.delay] - Injectable delay seam
  * @param {number} [options.selectorTimeout=8000] - Timeout for selector waits
+ * @param {Function} [options.sendMessageFn=sendMessageToThread] - DM sender (injectable for tests)
  * @returns {Promise<{ok: boolean, recipientName: string, error?: string}>}
  */
 export async function shareToMessenger(page, target, options = {}) {
   const {
     delay = (min = 1000, max = 3000) => new Promise((r) => setTimeout(r, min + Math.random() * (max - min))),
     selectorTimeout = 8000,
+    sendMessageFn = sendMessageToThread,
   } = options;
   const { recipientName, postUrl, message } = target;
 
@@ -243,86 +434,69 @@ export async function shareToMessenger(page, target, options = {}) {
     await page.goto(postUrl, { waitUntil: 'networkidle2', timeout: 30000 });
     await delay(2000, 4000);
 
-    // 2. Click Share button
-    const shareBtn = await waitForAny(page, SELECTORS.shareButton, selectorTimeout);
+    // 2. Click Share button → opens the in-page share dialog.
+    // Use a JS click: the button is sometimes covered by overlays that swallow
+    // a synthetic mouse click but not element.click().
+    let shareBtn = await waitForAny(page, SELECTORS.shareButton, selectorTimeout);
     if (!shareBtn) {
-      return { ok: false, recipientName, error: 'Share button not found (selector unverified)' };
+      const byXPath = await page.$x(SELECTORS.shareButtonXPath);
+      if (byXPath.length > 0) shareBtn = byXPath[0];
+      else return { ok: false, recipientName, error: 'Share button not found' };
     }
-    await shareBtn.click();
-    await delay(1000, 2000);
-
-    // 3. Click "Send in Messenger" option.
-    // `:has-text()` is Playwright-only, so match the menu item by visible text.
-    const messengerOpt = await findByText(
-      page,
-      SELECTORS.sendInMessenger,
-      SELECTORS.sendInMessengerText,
-      selectorTimeout
-    );
-    if (!messengerOpt) {
-      // Fallback: some post types open Messenger dialog directly from share click
-      // Check if recipient search is already visible
-      const directSearch = await waitForAny(page, SELECTORS.recipientSearch, 3000);
-      if (!directSearch) {
-        return { ok: false, recipientName, error: '"Send in Messenger" option not found' };
-      }
-    } else {
-      await messengerOpt.click();
-      await delay(1000, 2000);
-    }
-
-    // 4. Search for recipient
-    const searchInput = await waitForAny(page, SELECTORS.recipientSearch, selectorTimeout);
-    if (!searchInput) {
-      return { ok: false, recipientName, error: 'Recipient search input not found' };
-    }
-    await searchInput.click();
-    await delay(500, 1000);
-    await page.keyboard.type(recipientName, { delay: 30 + Math.random() * 50 });
+    await page.evaluate((el) => el.click(), shareBtn);
     await delay(1500, 3000);
 
-    // 5. Select first matching recipient row
-    const recipientRow = await waitForAny(page, SELECTORS.recipientRow, selectorTimeout);
-    if (!recipientRow) {
-      return { ok: false, recipientName, error: `Recipient "${recipientName}" not found in search results` };
-    }
-    await recipientRow.click();
-    await delay(1000, 2000);
-
-    // 6. Compose message (if provided)
-    if (message) {
-      const msgInput = await waitForAny(page, SELECTORS.messageInput, selectorTimeout);
-      if (msgInput) {
-        await msgInput.click();
-        await delay(300, 600);
-        await typeMessage(page, message, { delay: () => delay(50, 150) });
-        await delay(500, 1000);
-      }
-      // If no message input found, proceed without message — share still works
+    // 3. Wait for at least one Messenger recipient button to render in the dialog.
+    // Match on aria-label (the "via Messenger" marker is in the aria-label, NOT
+    // the visible text — the visible text is only the recipient's name).
+    const recipientCount = await waitForRecipientButtons(
+      page,
+      SELECTORS.recipientButtonLabelRe,
+      selectorTimeout
+    );
+    if (recipientCount === 0) {
+      return { ok: false, recipientName, error: 'Share dialog / Messenger recipients did not render' };
     }
 
-    // 7. Click Send
-    const sendBtn = await waitForAny(page, SELECTORS.sendButton, selectorTimeout);
-    if (!sendBtn) {
-      return { ok: false, recipientName, error: 'Send button not found' };
+    // 4. Click the recipient avatar → SENDS the post immediately (one-click).
+    const clickedLabel = await clickRecipientByName(
+      page,
+      recipientName,
+      SELECTORS.recipientButtonLabelRe
+    );
+    if (!clickedLabel) {
+      return { ok: false, recipientName, error: `Recipient "${recipientName}" not found in share dialog` };
     }
-    await sendBtn.click();
     await delay(2000, 4000);
 
-    // 8. Check for send error
-    const sendErr = await waitForAny(page, SELECTORS.sendError, 3000);
-    if (sendErr) {
-      return { ok: false, recipientName, error: "Couldn't send — Messenger blocked or recipient unavailable" };
+    // 5. Check for a "couldn't send" error toast.
+    const errSpans = await page.$$eval(SELECTORS.sendError, (spans, texts) => {
+      return spans.filter((s) => texts.some((t) => s.textContent.includes(t))).length;
+    }, SELECTORS.sendErrorText);
+    if (errSpans > 0) {
+      return { ok: false, recipientName, error: "Couldn't send — blocked or unavailable" };
     }
 
-    // 9. Dismiss dialog if still open
+    // 6. Dismiss the dialog if still open.
     const closeBtn = await waitForAny(page, SELECTORS.dialogClose, 2000);
     if (closeBtn) {
-      await closeBtn.click();
+      await page.evaluate((el) => el.click(), closeBtn);
       await delay(500, 1000);
     }
 
-    return { ok: true, recipientName };
+    // 7. Deliver the message as a SEPARATE DM (the share dialog discards captions
+    // on quick-send). The share itself already succeeded above, so a DM failure is
+    // reported but does not undo the share.
+    let messageDelivered;
+    if (message) {
+      const dm = await sendMessageFn(page, recipientName, message, { delay, selectorTimeout });
+      messageDelivered = dm.ok;
+      if (!dm.ok) {
+        return { ok: true, recipientName, clickedLabel, messageDelivered: false, messageError: dm.error };
+      }
+    }
+
+    return { ok: true, recipientName, clickedLabel, ...(message ? { messageDelivered } : {}) };
   } catch (err) {
     return { ok: false, recipientName, error: err.message };
   }
@@ -409,6 +583,7 @@ export default {
   typeMessage,
   // DOM interaction
   shareToMessenger,
+  sendMessageToThread,
   // Campaign entry point
   messengerShareCampaign,
   // Constants

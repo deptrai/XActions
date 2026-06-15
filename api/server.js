@@ -172,9 +172,24 @@ const heavyLimiter = rateLimit({
   message: { error: 'Too many requests for this resource, please try again later' }
 });
 app.use('/api/graph', heavyLimiter);
-app.use('/api/operations', heavyLimiter);
 app.use('/api/crm', heavyLimiter);
-app.use('/api/facebook/automate', heavyLimiter);
+
+// Operations status polling: higher limit so campaign UI can poll freely
+const operationsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  message: { error: 'Too many operations requests, please try again later' }
+});
+app.use('/api/operations', operationsLimiter);
+
+// Facebook automate: dedicated, higher limit. This middleware runs BEFORE the
+// JSON body parser, so we cannot inspect dryRun here — just allow more headroom.
+const fbAutomateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { error: 'Too many Facebook automation requests, please try again later' }
+});
+app.use('/api/facebook/automate', fbAutomateLimiter);
 
 const analyticsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

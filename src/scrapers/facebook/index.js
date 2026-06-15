@@ -715,20 +715,21 @@ export async function searchTweets(page, query, options = {}) {
       const NON_PROFILE = new Set(nonProfile);
       const articles = document.querySelectorAll('[role="article"]');
       return Array.from(articles).map((article) => {
-        // Text content — first substantial [dir="auto"] element
+        // Text content — longest [dir="auto"] element (avoids picking up short name labels)
         const textEls = article.querySelectorAll('[dir="auto"]');
         const texts = Array.from(textEls)
           .map((el) => el.textContent?.trim())
-          .filter((t) => t && t.length > 5);
-        const text = texts[0] || null;
+          .filter((t) => t && t.length > 10);
+        const text = texts.reduce((longest, t) => (t.length > longest.length ? t : longest), '') || null;
 
-        // Author — first real profile link in article (skip permalinks + non-profile segments)
+        // Author — first real profile link in article (skip permalinks, non-profile segments, l.php redirects)
         const allLinks = Array.from(article.querySelectorAll('a[href]'));
         let author = null;
         for (const a of allLinks) {
           const href = a.getAttribute('href') || '';
           if (!href.includes('facebook.com/') && !href.startsWith('/')) continue;
           if (href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid') || href.includes('/search/')) continue;
+          if (href.includes('l.php') || href.includes('/l/')) continue;
           const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
           // profile.php?id=N → preserve the canonical numeric identifier
           const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
@@ -737,9 +738,14 @@ export async function searchTweets(page, query, options = {}) {
           if (segMatch && !NON_PROFILE.has(segMatch[1].toLowerCase())) { author = segMatch[1]; break; }
         }
 
-        // Timestamp
-        const timeEl = article.querySelector('abbr, time');
-        const timestamp = timeEl?.getAttribute('data-utime') || timeEl?.getAttribute('datetime') || timeEl?.textContent?.trim() || null;
+        // Timestamp — try abbr/time first, then aria-label on links (Facebook 2025+ uses relative spans)
+        const timeEl = article.querySelector('abbr[data-utime], time[datetime]');
+        let timestamp = timeEl?.getAttribute('data-utime') || timeEl?.getAttribute('datetime') || null;
+        if (!timestamp) {
+          const timeLink = allLinks.find((a) => a.querySelector('span') && /\d/.test(a.textContent));
+          const ariaLabel = timeLink?.getAttribute('aria-label') || timeLink?.querySelector('[aria-label]')?.getAttribute('aria-label');
+          timestamp = ariaLabel || timeLink?.textContent?.trim() || null;
+        }
 
         // Post URL — prefer permalink
         const postLinkEl = allLinks.find((a) => {

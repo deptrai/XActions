@@ -346,7 +346,7 @@
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   async function apiCall(path, body) {
-    const token = localStorage.getItem('xactions_token') || '';
+    const token = localStorage.getItem('authToken') || '';
     const res = await fetch(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -395,7 +395,7 @@
     } finally { btn.disabled = false; btn.textContent = '▶ Run Automate'; }
   }
   // ===== ACCOUNT MANAGEMENT (Story 5.5) =====
-  function getToken() { return localStorage.getItem('xactions_token') || ''; }
+  function getToken() { return localStorage.getItem('authToken') || ''; }
 
   async function loadAccounts() {
     try {
@@ -712,175 +712,6 @@ ${links.map(l => '  ' + l).join('\n')}`;
     });
   }
 
-  updateScrapeFields();
-  updateAutoFields();
-</script>
-</body>
-</html>
-
-  <!-- ===== AUTOMATE SECTION ===== -->
-  <div class="card">
-    <h2>Automate <span class="badge" style="background:var(--warning);color:#000">DRY-RUN DEFAULT</span></h2>
-
-    <div class="dryrun-notice">
-      🛡️ <strong>Dry-run is ON by default.</strong> No real writes happen unless you uncheck the box below.
-      Always preview first before executing real actions.
-    </div>
-
-    <div class="field">
-      <label for="auto-action">Action</label>
-      <select id="auto-action" onchange="updateAutoFields()">
-        <option value="like">Like posts</option>
-        <option value="comment">Comment on posts</option>
-        <option value="post">Create post</option>
-      </select>
-    </div>
-
-    <div class="field" id="auto-urls-field">
-      <label for="auto-urls">Post URLs (one per line)</label>
-      <textarea id="auto-urls" placeholder="https://www.facebook.com/permalink/...&#10;https://www.facebook.com/permalink/..."></textarea>
-      <p class="hint">One Facebook post URL per line for like and comment actions.</p>
-    </div>
-
-    <div class="field" id="auto-text-field" style="display:none">
-      <label for="auto-text">Text (comment or post content)</label>
-      <textarea id="auto-text" placeholder="Write your comment or post content here..."></textarea>
-    </div>
-
-    <div class="field">
-      <label for="auto-maxbatch">Max Batch (default: 20)</label>
-      <input type="number" id="auto-maxbatch" placeholder="20" min="1" max="100" style="max-width:120px">
-    </div>
-
-    <label class="check-row">
-      <input type="checkbox" id="auto-dryrun" checked onchange="updateDryRunNotice()">
-      <span>🛡️ Dry-run (preview only — no real writes)</span>
-    </label>
-
-    <details>
-      <summary>🔑 Facebook Session Cookie (required for real writes)</summary>
-      <div class="cookie-grid">
-        <div class="field">
-          <label for="auto-cuser">c_user</label>
-          <input type="password" id="auto-cuser" placeholder="c_user value" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="auto-xs">xs</label>
-          <input type="password" id="auto-xs" placeholder="xs value" autocomplete="off">
-        </div>
-      </div>
-      <p class="hint" style="margin-top:8px">Required for automate actions. Never logged or stored (NFR3).</p>
-    </details>
-
-    <br>
-    <button class="btn" id="auto-btn" onclick="runAutomate()">▶ Run Automate</button>
-    <pre class="result" id="auto-result"></pre>
-  </div>
-
-</div><!-- /.container -->
-
-<script>
-  // -- UI helpers --
-
-  function updateScrapeFields() {
-    const action = document.getElementById('scrape-action').value;
-    document.getElementById('scrape-url-field').style.display = action !== 'search' ? '' : 'none';
-    document.getElementById('scrape-query-field').style.display = action === 'search' ? '' : 'none';
-  }
-
-  function updateAutoFields() {
-    const action = document.getElementById('auto-action').value;
-    document.getElementById('auto-urls-field').style.display = ['like','comment'].includes(action) ? '' : 'none';
-    document.getElementById('auto-text-field').style.display = ['comment','post'].includes(action) ? '' : 'none';
-  }
-
-  function updateDryRunNotice() {
-    const isDry = document.getElementById('auto-dryrun').checked;
-    document.querySelector('.dryrun-notice').style.display = isDry ? '' : 'none';
-  }
-
-  function showResult(id, data, isError) {
-    const el = document.getElementById(id);
-    el.textContent = JSON.stringify(data, null, 2);
-    el.className = 'result ' + (isError ? 'err' : 'ok');
-    el.style.display = 'block';
-  }
-
-  // -- API calls --
-
-  async function runScrape() {
-    const btn = document.getElementById('scrape-btn');
-    const action = document.getElementById('scrape-action').value;
-    const url = document.getElementById('scrape-url').value.trim();
-    const query = document.getElementById('scrape-query').value.trim();
-    const cuser = document.getElementById('scrape-cuser').value.trim();
-    const xs = document.getElementById('scrape-xs').value.trim();
-
-    const body = { action };
-    if (url) body.url = url;
-    if (query) body.query = query;
-    if (cuser && xs) body.authCookie = { c_user: cuser, xs };
-
-    btn.disabled = true;
-    btn.textContent = '⏳ Running…';
-    try {
-      const token = localStorage.getItem('xactions_token') || '';
-      const res = await fetch('/api/facebook/scrape', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      showResult('scrape-result', data, !res.ok);
-    } catch (err) {
-      showResult('scrape-result', { error: err.message }, true);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '▶ Run Scrape';
-    }
-  }
-
-  async function runAutomate() {
-    const btn = document.getElementById('auto-btn');
-    const action = document.getElementById('auto-action').value;
-    const urlsRaw = document.getElementById('auto-urls').value;
-    const text = document.getElementById('auto-text').value.trim();
-    const maxBatch = document.getElementById('auto-maxbatch').value;
-    const dryRun = document.getElementById('auto-dryrun').checked;
-    const cuser = document.getElementById('auto-cuser').value.trim();
-    const xs = document.getElementById('auto-xs').value.trim();
-
-    const urls = urlsRaw.split('\n').map(s => s.trim()).filter(Boolean);
-
-    const body = {
-      action,
-      dryRun,
-      authCookie: { c_user: cuser, xs },
-    };
-    if (urls.length) body.urls = urls;
-    if (text) body.text = text;
-    if (maxBatch) body.maxBatch = Number(maxBatch);
-
-    btn.disabled = true;
-    btn.textContent = dryRun ? '⏳ Previewing…' : '⏳ Running…';
-    try {
-      const token = localStorage.getItem('xactions_token') || '';
-      const res = await fetch('/api/facebook/automate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      showResult('auto-result', data, !res.ok);
-    } catch (err) {
-      showResult('auto-result', { error: err.message }, true);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '▶ Run Automate';
-    }
-  }
-
-  // Init
   updateScrapeFields();
   updateAutoFields();
 </script>
