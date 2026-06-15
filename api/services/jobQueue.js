@@ -1,6 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 import Queue from 'bull';
+import { pathToFileURL } from 'url';
 import { PrismaClient } from '@prisma/client';
+import { startFacebookScheduler } from './facebookScheduler.js';
 import { processUnfollowNonFollowers } from './operations/unfollowNonFollowers.js';
 import { processUnfollowEveryone } from './operations/unfollowEveryone.js';
 import { processDetectUnfollowers } from './operations/detectUnfollowers.js';
@@ -473,6 +475,18 @@ process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
 // Periodic cleanup of cancelled job markers
 setInterval(cleanupCancelledJobs, 3600000); // Every hour
+
+// ── Facebook scheduler (Story 4.1) ──────────────────────────────────────────
+// Start the per-user scheduled-post ticker ONLY when this file is run directly
+// as the worker entry (`npm run worker` → `node api/services/jobQueue.js`).
+// When api/server.js *imports* this module (for addJob/getJob/etc.) the guard
+// below is false, so the cron tick never double-fires. ENABLE_FB_SCHEDULER=false
+// disables it entirely (e.g. in tests or a dedicated-scheduler deployment).
+const isWorkerEntry =
+  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isWorkerEntry && process.env.ENABLE_FB_SCHEDULER !== 'false') {
+  startFacebookScheduler();
+}
 
 export {
   addJob,
