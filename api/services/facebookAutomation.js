@@ -6,6 +6,9 @@ import {
   createBrowser,
   createPage,
 } from '../../src/scrapers/facebook/index.js';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 // ============================================================================
 // Delay seam — injectable in tests via options.delay
@@ -622,6 +625,94 @@ export async function createFacebookPost(page, content, options = {}) {
   return batchResult;
 }
 
+// ============================================================================
+// Facebook Scheduled Post (Story 4.1)
+// ============================================================================
+
+/**
+ * Schedule a Facebook post to publish at a specific datetime.
+ *
+ * The `page` param is accepted for signature consistency with the other automate
+ * functions but is NOT used at schedule time — the worker acquires its own
+ * session at execution (see facebookScheduler.js). It MAY be null.
+ *
+ * @param {Object|null} page - Accepted but NOT used (may be null)
+ * @param {Object} params
+ * @param {string} params.content - Post content (non-empty)
+ * @param {string[]} [params.mediaUrls] - Media URLs (JSON-serialised; reserved for future use)
+ * @param {string} params.scheduledAt - ISO-8601 future datetime (>= now + 60s)
+ * @param {string} [params.facebookAccountId] - Saved FacebookAccount id to post from
+ * @param {Object} [options]
+ * @param {boolean} [options.dryRun=true] - Default true; only explicit false creates a DB record
+ * @param {string} [options.userId] - Required when dryRun:false; MUST come from the authenticated caller
+ * @returns {Promise<Object>} Preview (dry-run) or { scheduleId, scheduledAt, status } (real)
+ */
+export async function scheduleFacebookPost(
+  page,
+  { content, mediaUrls, scheduledAt, facebookAccountId } = {},
+  options = {},
+) {
+  const { dryRun = true, userId } = options;
+
+  // Non-empty content guard — story 2.4 HIGH review finding (empty content = blank post)
+  if (typeof content !== 'string' || !content.trim()) {
+    throw new Error('❌ scheduleFacebookPost: content must be a non-empty string');
+  }
+
+  // Parse and validate scheduledAt as ISO-8601
+  const scheduledDate = new Date(scheduledAt);
+  if (isNaN(scheduledDate.getTime())) {
+    throw new Error('❌ scheduleFacebookPost: scheduledAt must be a valid ISO-8601 datetime');
+  }
+
+  // Reject past or within-next-tick (< now + 60s) — a schedule that can never fire is a bug
+  if (scheduledDate.getTime() < Date.now() + 60_000) {
+    throw new Error('❌ scheduleFacebookPost: scheduledAt must be at least 60 seconds in the future');
+  }
+
+  // Strict dry-run gate: anything except explicit `false` stays in dry-run (mirrors runGuardedBatch)
+  const isRealRun = dryRun === false;
+
+  // userId is mandatory for real runs — never create an unscoped record (AC4 #10)
+  if (isRealRun && !userId) {
+    throw new Error('❌ scheduleFacebookPost: options.userId is required for dryRun:false');
+  }
+
+  // --- dry-run branch: preview only, NO DB write (AC3) ---
+  if (!isRealRun) {
+    return {
+      dryRun: true,
+      platform: 'facebook',
+      preview: {
+        content,
+        mediaUrls: mediaUrls ?? null,
+        scheduledAt: scheduledDate.toISOString(),
+        willFireAt: scheduledDate.toLocaleString(),
+      },
+    };
+  }
+
+  // --- real run: persist one Schedule row scoped by userId (AC4) ---
+  const schedule = await prisma.schedule.create({
+    data: {
+      userId,
+      content,
+      mediaUrls: mediaUrls ? JSON.stringify(mediaUrls) : null,
+      scheduledAt: scheduledDate,
+      status: 'pending',
+      facebookAccountId: facebookAccountId ?? null,
+    },
+  });
+
+  return {
+    dryRun: false,
+    platform: 'facebook',
+    scheduleId: schedule.id,
+    scheduledAt: schedule.scheduledAt.toISOString(),
+    status: schedule.status,
+  };
+}
+
 export default {
   runGuardedBatch,
   randomDelay,
@@ -632,4 +723,5 @@ export default {
   likeFacebookPosts,
   commentOnFacebookPosts,
   createFacebookPost,
+  scheduleFacebookPost,
 };

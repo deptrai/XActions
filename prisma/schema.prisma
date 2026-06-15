@@ -32,6 +32,7 @@ model User {
   payments            Payment[]
   subscription        Subscription?
   facebookAccounts    FacebookAccount[]
+  schedules           Schedule[]
 
   @@index([email])
   @@index([username])
@@ -228,5 +229,24 @@ model FacebookAccount {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, label])
+  @@index([userId])
+}
+
+model Schedule {
+  id                String    @id @default(cuid())
+  userId            String
+  content           String
+  mediaUrls         String?
+  scheduledAt       DateTime
+  status            String    @default("pending")
+  facebookAccountId String?
+  operationId       String?
+  error             String?
+  executedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledAt])
   @@index([userId])
 }
