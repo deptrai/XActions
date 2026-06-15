@@ -713,6 +713,164 @@ export async function scheduleFacebookPost(
   };
 }
 
+// ============================================================================
+// Facebook Share Automation (Story 4.2 — FR-16)
+// ============================================================================
+
+/**
+ * Share a single Facebook post to the operator's own timeline (AC2).
+ * Internal helper for shareFacebookPosts.
+ *
+ * DOM flow: navigate → open Share dialog → click "Share now"/"Chia sẻ ngay"
+ * (share-to-Feed). The Share *button* selector is VERIFIED (reused from
+ * messengerShare.js); the "Share now" action is UNVERIFIED — wrapped in a
+ * fallback chain with a clear throw if none resolve.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} postUrl - Full URL to Facebook post
+ * @returns {Promise<{shared: boolean, alreadyShared?: boolean}>}
+ * @throws {Error} If Share button or "Share now" action not found (PII-free)
+ */
+async function shareSinglePost(page, postUrl) {
+  // Navigate to post (mirror likeSinglePost)
+  await page.goto(postUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await sleep(500);
+
+  // --- Locate + click the Share button ---
+  // VERIFIED selector from messengerShare.js (Story 5.2) + aria-label fallbacks.
+  const shareButtonSelectors = [
+    'div[data-ad-rendering-role="share_button"]', // verified
+    '[data-ad-renderingrole="share_button"]',     // verified (alt attribute spelling)
+    '[aria-label*="Share"]',                       // en fallback
+    '[aria-label*="Chia sẻ"]',                     // vi fallback
+  ];
+
+  // Combined single wait: block until ANY share-button selector renders
+  // (one 5s wait for the joined list, never 5s×N — findLikeButton lesson).
+  try {
+    await page.waitForSelector(shareButtonSelectors.join(', '), { timeout: 5000 });
+  } catch (_) {
+    throw new Error('❌ Share button not found; locale unsupported or post unreachable');
+  }
+
+  let shareButton = null;
+  for (const selector of shareButtonSelectors) {
+    shareButton = await page.$(selector);
+    if (shareButton) break;
+  }
+  if (!shareButton) {
+    throw new Error('❌ Share button not found; locale unsupported or post unreachable');
+  }
+  await shareButton.click();
+  await sleep(500); // let the share dialog/menu render
+
+  // --- Locate + click the "Share now" (share-to-Feed) action ---
+  // UNVERIFIED: the share-now menu item. Try aria-label/role selectors first,
+  // then fall back to matching a menuitem/button by visible text (EN/VI).
+  const shareNowSelectors = [
+    '[aria-label="Share now"]',     // en
+    '[aria-label="Chia sẻ ngay"]',  // vi
+    'div[role="menuitem"][aria-label*="Share now"]',
+    'div[role="menuitem"][aria-label*="Chia sẻ ngay"]',
+  ];
+
+  let shareNowEl = null;
+  try {
+    await page.waitForSelector(shareNowSelectors.join(', '), { timeout: 5000 });
+    for (const selector of shareNowSelectors) {
+      shareNowEl = await page.$(selector);
+      if (shareNowEl) break;
+    }
+  } catch (_) {
+    // Selector lookup failed — fall through to text-based lookup below
+  }
+
+  // Text/role fallback: find a clickable menuitem/button whose text is the
+  // share-now label (handles locale strings the aria selectors miss).
+  if (!shareNowEl) {
+    const SHARE_NOW_TEXT = ['Share now', 'Chia sẻ ngay'];
+    shareNowEl = await page.evaluateHandle((labels) => {
+      const nodes = Array.from(
+        document.querySelectorAll('[role="menuitem"], [role="button"], div[role="none"] span'),
+      );
+      const hit = nodes.find((n) => {
+        const t = (n.textContent || '').trim();
+        return labels.some((l) => t === l || t.includes(l));
+      });
+      return hit || null;
+    }, SHARE_NOW_TEXT);
+    // evaluateHandle returns a JSHandle wrapping null when nothing matched
+    if (shareNowEl) {
+      const isNull = await shareNowEl.evaluate((n) => n === null).catch(() => true);
+      if (isNull) shareNowEl = null;
+    }
+  }
+
+  if (!shareNowEl) {
+    throw new Error('❌ "Share now" action not found; share dialog layout changed or share unavailable');
+  }
+
+  await shareNowEl.click();
+  await sleep(500); // let the share submit
+
+  return { shared: true };
+}
+
+/**
+ * Auto-share one or more Facebook posts to the operator's timeline with
+ * dry-run preview (Story 4.2). Clones the likeFacebookPosts shape — routes
+ * postUrls through runGuardedBatch; the only difference is the per-URL action.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string[]} postUrls - Array of Facebook post URLs to share
+ * @param {Object} options - Configuration options
+ * @param {boolean} [options.dryRun=true] - Preview mode (default); set false for real shares
+ * @param {Function} [options.delay] - Injectable delay between actions
+ * @param {number} [options.maxBatch=20] - Max posts per batch
+ * @param {number} [options.maxRetry=1] - Retry attempts per post on failure
+ * @param {Function} [options.shareFn] - Injectable share function (for testing); defaults to shareSinglePost
+ * @returns {Promise<Object>} Result with dryRun, preview, results, attempted, succeeded, failed
+ */
+export async function shareFacebookPosts(page, postUrls, options = {}) {
+  // Validate postUrls before opening anything (AC4) — fail before browser.
+  if (!Array.isArray(postUrls) || postUrls.length === 0) {
+    throw new Error('❌ shareFacebookPosts: postUrls must be a non-empty array of strings');
+  }
+  if (postUrls.some((u) => typeof u !== 'string' || !u.trim())) {
+    throw new Error('❌ shareFacebookPosts: every postUrl must be a non-empty string');
+  }
+
+  // Nullish-coalesce so an explicit `shareFn: null` falls back to the default
+  // (destructuring defaults only catch `undefined`) — same guard as likeFn/commentFn.
+  const { shareFn: shareFnOpt, ...guardedOptions } = options;
+  const shareFn = shareFnOpt ?? shareSinglePost;
+
+  // Capture per-URL return values (e.g. alreadyShared) via closure Map (AC3.9).
+  const capturedResults = new Map();
+
+  const actionFn = async (postUrl) => {
+    const result = await shareFn(page, postUrl);
+    capturedResults.set(postUrl, result);
+    return result;
+  };
+
+  // Route through runGuardedBatch — single chokepoint (AC1.2).
+  const batchResult = await runGuardedBatch(postUrls, actionFn, guardedOptions);
+
+  // Post-process real-run results to surface alreadyShared (AC3.9).
+  if (!batchResult.dryRun && batchResult.results.length > 0) {
+    batchResult.results = batchResult.results.map((r) => {
+      const captured = capturedResults.get(r.target);
+      if (captured && r.ok && captured.alreadyShared !== undefined) {
+        return { ...r, alreadyShared: captured.alreadyShared };
+      }
+      return r;
+    });
+  }
+
+  return batchResult;
+}
+
 export default {
   runGuardedBatch,
   randomDelay,
@@ -724,4 +882,5 @@ export default {
   commentOnFacebookPosts,
   createFacebookPost,
   scheduleFacebookPost,
+  shareFacebookPosts,
 };
