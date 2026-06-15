@@ -4,7 +4,7 @@ baseline_commit: b08e6038dfe769c8adfe994f86750819c38747e8
 
 # Story 4.3: View boost via scroll simulation (dry-run default)
 
-Status: ready-for-dev
+Status: review
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 3 — low risk). Source: epics.md#Story 4.3 + PRD prd-XActions-2026-06-10-epic4 FR-17. -->
 
@@ -58,20 +58,20 @@ The lowest-risk feature in Epic 4: no DOM writes at all, only scrolling.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: `warmupScrollFeed` + clamp + URL validation** (AC1, AC2, AC4)
-  - [ ] Export from `api/services/facebookAutomation.js` + add to default export
-  - [ ] `MAX_DURATION_SECONDS = 300`; clamp (not reject) over-limit; default ~60; throw on `<=0`/non-finite
-  - [ ] Validate `targetUrl` (reuse 4.2's facebook.com/scheme guard — extract `assertFacebookUrl` shared helper)
-- [ ] **Task 2: dry-run branch** (AC3)
-  - [ ] Strict `dryRun === false` gate; dry-run returns preview, touches no `page.*`, creates no Operation; `page` may be null
-- [ ] **Task 3: real scroll loop** (AC1, AC6)
-  - [ ] Navigate `targetUrl`; loop: random `scrollBy` + random pause via `delay` seam; terminate when `now()` elapsed >= clamped duration
-  - [ ] NO click/like/comment/share — scroll only; injectable `now` + `delay` seams for deterministic tests
-- [ ] **Task 4: Operation persistence (real run, optional userId)** (AC5)
-  - [ ] Injectable `createOperation` seam (default real Prisma path); create `facebook_view_boost` scoped by userId on real run; skip if no userId; PII-free config
-- [ ] **Task 5: Tests** (AC6)
-  - [ ] Browser-free + DB-free unit tests (fake page + injected `delay`/`now`/`createOperation`) covering all AC6 cases
-  - [ ] `npx vitest run <new test file>` green
+- [x] **Task 1: `warmupScrollFeed` + clamp + URL validation** (AC1, AC2, AC4)
+  - [x] Export from `api/services/facebookAutomation.js` + add to default export
+  - [x] `MAX_DURATION_SECONDS = 300`; clamp (not reject) over-limit; default ~60; throw on `<=0`/non-finite
+  - [x] Validate `targetUrl` (reuse 4.2's facebook.com/scheme guard — extract `assertFacebookUrl` shared helper)
+- [x] **Task 2: dry-run branch** (AC3)
+  - [x] Strict `dryRun === false` gate; dry-run returns preview, touches no `page.*`, creates no Operation; `page` may be null
+- [x] **Task 3: real scroll loop** (AC1, AC6)
+  - [x] Navigate `targetUrl`; loop: random `scrollBy` + random pause via `delay` seam; terminate when `now()` elapsed >= clamped duration
+  - [x] NO click/like/comment/share — scroll only; injectable `now` + `delay` seams for deterministic tests
+- [x] **Task 4: Operation persistence (real run, optional userId)** (AC5)
+  - [x] Injectable `createOperation` seam (default real Prisma path); create `facebook_view_boost` scoped by userId on real run; skip if no userId; PII-free config
+- [x] **Task 5: Tests** (AC6)
+  - [x] Browser-free + DB-free unit tests (fake page + injected `delay`/`now`/`createOperation`) covering all AC6 cases
+  - [x] `npx vitest run <new test file>` green
 
 ## Dev Notes
 
@@ -118,12 +118,29 @@ The lowest-risk feature in Epic 4: no DOM writes at all, only scrolling.
 
 ### Agent Model Used
 
+claude-opus-4-8 (BMAD dev-story workflow)
+
 ### Debug Log References
+
+- Lần chạy test userId đầu tiên mất 46ms vì `prisma.operation.update` (success/failure path) gọi trực tiếp DB với id giả → throw bị `.catch` nuốt. AC5 yêu cầu persistence injectable + test DB-free → thêm seam thứ hai `updateOperation` (default `defaultUpdateOperation` real Prisma). Sau đó test userId chạy 0ms, hoàn toàn DB-free.
+- Báo cáo full-suite ban đầu gây nhiễu: grep "fail" bắt nhầm tên test chứa chữ "failed" (vd "failing executor transitions schedule to failed"). Xác nhận bằng cách lọc theo FAIL marker trên output đã strip ANSI → chỉ `tests/x402-integration.test.js` thực sự fail (ECONNREFUSED pre-existing). Services suite chạy riêng = 127/127 pass.
 
 ### Completion Notes List
 
+- **AC1–AC2 (`warmupScrollFeed` + clamp)**: export + default export. `MAX_DURATION_SECONDS = 300` (named const, exported). `durationSeconds` > 300 → clamp xuống 300 (`clamped: true`), KHÔNG reject (FR-17). Missing → default 60. `<= 0`/non-finite/non-number → throw rõ ràng.
+- **KHÔNG dùng `runGuardedBatch`** (quyết định thiết kế trong story): FR-17 vắng mặt trong NFR-7/NFR-8 → không phải batch write, không cần account-risk warning. Scroll-only dwell loop là shape khác.
+- **AC3 (dry-run)**: strict `dryRun === false` gate (`null`/`undefined` ở lại dry-run). Dry-run trả preview `{targetUrl, durationSeconds(clamped), clamped}`, KHÔNG gọi `page.*`, KHÔNG tạo Operation; `page` có thể null.
+- **AC4 (URL guard, SSRF)**: extract `assertFacebookUrl(url, label)` shared helper (http(s) + facebook.com host check) và refactor 4.2 `shareFacebookPosts` để gọi nó (giữ message tương thích test 4.2 hiện có). Chặn `file:///`, `javascript:`, internal hosts, look-alike host (`notfacebook.com`). Validate TRƯỚC mọi `page.*`.
+- **AC1/AC6 (scroll loop)**: navigate → loop random `scrollBy` (300–800px) qua `page.evaluate` + random pause qua `delay` seam, dừng khi `now() - start >= durationMs`. ZERO click/like/comment/share (test khẳng định `page.click` không bao giờ gọi). Seam `now` + `delay` để test deterministic, không chờ 300s thật.
+- **AC5 (Operation)**: chỉ tạo Operation khi có `userId` trên real run (`type: 'facebook_view_boost'`, config PII-free `{targetUrl, durationSeconds}`). Hai seam injectable `createOperation` + `updateOperation` (default real Prisma) → test DB-free. Không userId → skip, không throw, vẫn scroll.
+- **AC6 (tests)**: 15/15 pass (`tests/services/facebook-view-boost.test.js`), browser-free + DB-free, no-mock (fake page + injected seams). Full suite: 1331 pass, chỉ `x402-integration.test.js` fail (ECONNREFUSED pre-existing). Services suite riêng 127/127 pass (refactor 4.2 không hồi quy).
+
 ### File List
+
+- MODIFIED: `api/services/facebookAutomation.js` — thêm `assertFacebookUrl` shared helper + refactor `shareFacebookPosts` URL guard + `warmupScrollFeed` + `MAX_DURATION_SECONDS` + `defaultCreateOperation`/`defaultUpdateOperation` + default-export entries
+- NEW: `tests/services/facebook-view-boost.test.js` — 15 browser-free + DB-free unit tests (AC6)
 
 ## Change Log
 
 - 2026-06-15: Story 4.3 created (context engine). Status → ready-for-dev. (Luisphan)
+- 2026-06-15: Story 4.3 implemented — `warmupScrollFeed` scroll-only view boost (clamp ≤300s, no runGuardedBatch), shared `assertFacebookUrl` SSRF guard (refactored 4.2 to reuse), injectable now/delay/createOperation/updateOperation seams, 15 browser-free + DB-free tests. Status → review. (dev-story / claude-opus-4-8)
