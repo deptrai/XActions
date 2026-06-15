@@ -21,6 +21,37 @@ export const randomDelay = (min = 1000, max = 3000) => {
 };
 
 // ============================================================================
+// Shared URL guard (SSRF-safe) — used by shareFacebookPosts (4.2) + warmupScrollFeed (4.3)
+// ============================================================================
+
+/**
+ * Assert that `url` is a navigable facebook.com http(s) URL — reject before any
+ * page navigation. Blocks SSRF vectors (file:/, javascript:, internal hosts).
+ *
+ * @param {string} url - URL to validate
+ * @param {string} [label='URL'] - Prefix for the thrown error (caller context)
+ * @throws {Error} If url is not a valid http(s) facebook.com URL
+ */
+export function assertFacebookUrl(url, label = 'URL') {
+  if (typeof url !== 'string' || !url.trim()) {
+    throw new Error(`❌ ${label} must be a non-empty string`);
+  }
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch (_) {
+    throw new Error(`❌ ${label} must be a valid URL`);
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error(`❌ ${label} must be an http(s) URL`);
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
+    throw new Error(`❌ ${label} must be a facebook.com URL`);
+  }
+}
+
+// ============================================================================
 // Account-risk warning (surfaced before every real write batch)
 // ============================================================================
 
@@ -851,22 +882,11 @@ export async function shareFacebookPosts(page, postUrls, options = {}) {
   if (new Set(postUrls).size !== postUrls.length) {
     throw new Error('❌ shareFacebookPosts: postUrls must not contain duplicates');
   }
-  // Validate scheme + host before navigation (AC4.10 + SSRF guard): only https
+  // Validate scheme + host before navigation (AC4.10 + SSRF guard): only http(s)
   // facebook.com URLs may be navigated — never file:/ javascript:/ internal hosts.
+  // Shared helper (Story 4.3) — single SSRF-safe guard for 4.2 + 4.3.
   for (const u of postUrls) {
-    let parsed;
-    try {
-      parsed = new URL(u);
-    } catch (_) {
-      throw new Error('❌ shareFacebookPosts: every postUrl must be a valid URL');
-    }
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-      throw new Error('❌ shareFacebookPosts: postUrl must be an http(s) URL');
-    }
-    const host = parsed.hostname.toLowerCase();
-    if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
-      throw new Error('❌ shareFacebookPosts: postUrl must be a facebook.com URL');
-    }
+    assertFacebookUrl(u, 'shareFacebookPosts: postUrl');
   }
 
   // Nullish-coalesce so an explicit `shareFn: null` falls back to the default
@@ -904,9 +924,152 @@ export async function shareFacebookPosts(page, postUrls, options = {}) {
   return batchResult;
 }
 
+// ============================================================================
+// Facebook View Boost — scroll simulation (Story 4.3 — FR-17)
+// ============================================================================
+
+// Max dwell duration: a single view-boost session is clamped to 5 minutes.
+export const MAX_DURATION_SECONDS = 300;
+const DEFAULT_DURATION_SECONDS = 60;
+
+/**
+ * Default Operation persistence seam (real Prisma path). Injectable in tests via
+ * options.createOperation so the unit tests stay DB-free.
+ * @returns {Promise<{id: string}>}
+ */
+async function defaultCreateOperation({ userId, targetUrl, durationSeconds }) {
+  const op = await prisma.operation.create({
+    data: {
+      userId,
+      type: 'facebook_view_boost',
+      status: 'running',
+      startedAt: new Date(),
+      // PII-free config — targetUrl is not a secret; no cookie/session here (NFR3)
+      config: JSON.stringify({ targetUrl, durationSeconds }),
+    },
+  });
+  return op;
+}
+
+/**
+ * Default Operation update seam (real Prisma path). Injectable in tests via
+ * options.updateOperation so the success/failure update stays DB-free.
+ */
+async function defaultUpdateOperation(id, data) {
+  await prisma.operation.update({ where: { id }, data });
+}
+
+/**
+ * Simulate natural scrolling on a Facebook page/post to generate passive
+ * view/dwell signals (FR-17). Performs ZERO social actions (no click/like/
+ * comment/share) — scroll only. NOT a runGuardedBatch case (no item list, no
+ * write action — explicitly excluded from NFR-7/NFR-8).
+ *
+ * @param {Object|null} page - Puppeteer page (authenticated); MAY be null in dry-run
+ * @param {string} targetUrl - facebook.com page/post URL to scroll
+ * @param {Object} [options]
+ * @param {boolean} [options.dryRun=true] - Default true; only explicit false drives the browser
+ * @param {number} [options.durationSeconds=60] - Dwell time; clamped to MAX_DURATION_SECONDS (300)
+ * @param {string} [options.userId] - If provided on a real run, an Operation is recorded
+ * @param {Function} [options.delay=randomDelay] - Injectable pause seam (tests pass () => {})
+ * @param {Function} [options.now] - Injectable clock (default () => Date.now())
+ * @param {Function} [options.createOperation] - Injectable Operation persistence seam
+ * @returns {Promise<Object>} Preview (dry-run) or run summary (real)
+ */
+export async function warmupScrollFeed(page, targetUrl, options = {}) {
+  const {
+    dryRun = true,
+    durationSeconds,
+    userId,
+    delay = randomDelay,
+    now = () => Date.now(),
+    createOperation = defaultCreateOperation,
+    updateOperation = defaultUpdateOperation,
+  } = options;
+
+  // Validate targetUrl BEFORE touching the browser (AC4, SSRF-safe shared guard).
+  assertFacebookUrl(targetUrl, 'warmupScrollFeed: targetUrl');
+
+  // Resolve duration: default when missing, reject <=0/non-finite, clamp over-limit.
+  let requested = durationSeconds;
+  if (requested === undefined || requested === null) {
+    requested = DEFAULT_DURATION_SECONDS;
+  }
+  if (typeof requested !== 'number' || !Number.isFinite(requested) || requested <= 0) {
+    throw new Error('❌ warmupScrollFeed: durationSeconds must be a positive finite number');
+  }
+  const clamped = requested > MAX_DURATION_SECONDS;
+  const effectiveDuration = clamped ? MAX_DURATION_SECONDS : requested;
+
+  // Strict dry-run gate: anything except explicit `false` stays dry-run (mirror runGuardedBatch).
+  const isRealRun = dryRun === false;
+
+  // --- dry-run branch: validate + compute only, NO page.* call, NO Operation (AC3) ---
+  if (!isRealRun) {
+    return {
+      dryRun: true,
+      platform: 'facebook',
+      preview: {
+        targetUrl,
+        durationSeconds: effectiveDuration,
+        clamped,
+      },
+    };
+  }
+
+  // --- real run ---
+  const durationMs = effectiveDuration * 1000;
+
+  // Operation record only when a userId is supplied (AC5) — skip silently otherwise.
+  let operation = null;
+  if (userId) {
+    operation = await createOperation({ userId, targetUrl, durationSeconds: effectiveDuration });
+  }
+
+  let scrolls = 0;
+  try {
+    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+    const start = now();
+    // Loop until elapsed wall-clock reaches the clamped duration. NO social action.
+    while (now() - start < durationMs) {
+      // Randomized scroll amount — passive view signal, scroll only.
+      const amount = 300 + Math.floor(Math.random() * 500); // 300–800px
+      await page.evaluate((y) => window.scrollBy(0, y), amount);
+      scrolls++;
+      // Randomized pause between scrolls via injectable delay seam.
+      await delay(800, 2500);
+    }
+
+    if (operation) {
+      await updateOperation(operation.id, {
+        status: 'completed', completedAt: new Date(), result: JSON.stringify({ scrolls }),
+      });
+    }
+
+    return {
+      dryRun: false,
+      platform: 'facebook',
+      targetUrl,
+      durationSeconds: effectiveDuration,
+      scrolls,
+      operationId: operation?.id ?? null,
+    };
+  } catch (err) {
+    const safeError = err?.code || err?.name || (err?.message ?? 'unknown error').slice(0, 200);
+    if (operation) {
+      await updateOperation(operation.id, {
+        status: 'failed', completedAt: new Date(), error: safeError,
+      }).catch(() => {});
+    }
+    throw err;
+  }
+}
+
 export default {
   runGuardedBatch,
   randomDelay,
+  assertFacebookUrl,
   ACCOUNT_RISK_WARNING,
   loginWithCookie,
   createBrowser,
@@ -916,4 +1079,6 @@ export default {
   createFacebookPost,
   scheduleFacebookPost,
   shareFacebookPosts,
+  warmupScrollFeed,
+  MAX_DURATION_SECONDS,
 };
