@@ -113,6 +113,42 @@ The actual DOM posting is already solved: reuse `createFacebookPost(page, conten
   - [ ] Browser-free unit tests (inject fake page + post executor seam); cover all AC9 cases
   - [ ] `npx vitest run <new test file>` green; then `npx vitest run` (expect only the pre-existing `x402-integration.test.js` ECONNREFUSED failures — unrelated)
 
+## Review Findings
+
+> Code review 2026-06-15 (3-layer adversarial: blind / edge-case / acceptance-auditor). Implementation = commit df94176. Findings verified against diff before triage.
+
+### Decision needed
+
+- [ ] [Review][Decision][RESOLVED → Patch P0] Realtime `facebook:operation` emit is dead in the worker process — `global.io` is set in `api/server.js` but the scheduler was wired to start in `node api/services/jobQueue.js` (separate process), so `global.io?.to(...)` silently no-ops. **Resolved (best-practice for current single-server topology): start `startFacebookScheduler()` in `api/server.js` where `global.io` is live — same place Bull `.process()` handlers run and emit successfully (server.js imports jobQueue.js, so processors execute in-process). Keep the `schedulerStarted` double-start guard. Remove/relax the `isWorkerEntry` gate accordingly.** Migration path when scaling to multiple server instances: add a socket.io Redis adapter (`@socket.io/redis-adapter`) — but that is cross-cutting (the existing Bull worker emits would need it too) and out of scope for this story. See Patch P0. [api/services/facebookScheduler.js:191; api/services/jobQueue.js:350-354; api/server.js:98]
+
+### Patch
+
+- [ ] [Review][Patch][P0/HIGH] Start scheduler in the server process — move the `startFacebookScheduler()` invocation out of the `isWorkerEntry` guard in `jobQueue.js` and into `api/server.js` (after `global.io = io`), keeping the `schedulerStarted` guard. This makes `facebook:operation` emits actually reach connected clients. Document that a single server instance owns the tick; for multi-instance, gate by an env flag or move to a dedicated scheduler process + Redis adapter. [api/server.js:98; api/services/jobQueue.js:350-354]
+
+- [ ] [Review][Patch][HIGH] Duplicate execution on overlapping ticks — `runDueSchedules` does `findMany(pending, lte now)` then marks `completed` only AFTER the browser session; node-cron `* * * * *` fires every minute but a post session easily exceeds 1 min, so the next tick re-reads the same pending row and posts twice. No atomic claim, no `running` state, no crash-recovery. Fix: add a `running` status; claim each row via `updateMany({ where:{ id, status:'pending' }, data:{ status:'running' } })` and skip if `count !== 1`; on worker startup sweep stale `running` → `failed`. [api/services/facebookScheduler.js:160-166,253]
+- [ ] [Review][Patch][HIGH] Silent post failure marked `completed` — `await executor(page, content)` discards the return value; `createFacebookPost` returns a `batchResult` and does NOT throw on a failed post (runGuardedBatch records `results[].ok:false` / `failed>0`). A failed post is recorded as `completed` (silent data loss). The injected test executor returns `{ ok:true }` (wrong shape), so this is untested. Fix: inspect `result.failed`/`result.succeeded`, throw on failure; align the test executor to the real `batchResult` shape and add a `failed:1` → `status:failed` test. [api/services/facebookScheduler.js:250; tests/services/facebook-schedule.test.js:471-480]
+- [ ] [Review][Patch][MEDIUM] Jitter-defer uses the original (past) `scheduledAt` as base — `new Date(schedule.scheduledAt.getTime() + jitter)`. For an overdue, capped post this stays in the past, so it is re-read and re-deferred every single tick (DB-write busy-loop) and ignores the intended 5–15 min delay. Fix: base on `now`: `new Date(now.getTime() + jitter)`. [api/services/facebookScheduler.js:182-184]
+- [ ] [Review][Patch][MEDIUM] One bad row aborts the whole tick — the per-schedule count query, `operation.create`, and the catch-block DB updates sit inside the `for` loop but OUTSIDE the inner try/catch. If any throws (DB blip, operation.create failure), the loop throws and all remaining due schedules in that tick are skipped. Fix: wrap each iteration body in its own try/catch so one row can't starve the others. [api/services/facebookScheduler.js:168-296]
+- [ ] [Review][Patch][MEDIUM] NFR3 cookie-leak test is vacuous — it defines `FAKE_COOKIE_VALUE` but never puts it in scope, so the `not.toContain` assertion always passes even if there were a real leak. Fix: route the fake cookie through a failing executor's error message (or a session error), then assert it is scrubbed from `Schedule.error` / `Operation.error`. [tests/services/facebook-schedule.test.js:705-737]
+- [ ] [Review][Patch][MEDIUM] `safeError` can fall through to raw `err.message` — `err?.code || err?.name || err.message.slice(0,200)`; a thrown string/plain-object (no `.name`) would persist the raw message, which for Puppeteer/login errors may embed cookie/URL data (NFR3 risk). Fix: allowlist `err.code`/`err.name` only; never persist raw `message`. [api/services/facebookScheduler.js:270-271]
+- [ ] [Review][Patch][MEDIUM] `isWorkerEntry` is symlink-fragile — `import.meta.url === pathToFileURL(process.argv[1]).href` fails to match under symlinked launch (Docker ENTRYPOINT, `bin/` wrapper), so the scheduler silently never starts in prod with no log. Fix: normalize with `fs.realpathSync(process.argv[1])` and log when the start is skipped. [api/services/jobQueue.js:350-351]
+- [ ] [Review][Patch][LOW] `ENABLE_FB_SCHEDULER` is undocumented — add it to `.env.example` (with comment) and the CLAUDE.md env-vars section so operators know the toggle exists. [api/services/jobQueue.js:352]
+
+### Deferred
+
+- [x] [Review][Defer][MEDIUM] Deleted `FacebookAccount` orphans its pending schedules — `Schedule.facebookAccountId` has no FK/cascade; deleting the account makes the worker `resolveAccountCookie` throw `ACCOUNT_NOT_FOUND` → schedule `failed` at execution with no upfront warning and no fallback to the user's default account. Failure is graceful (status:failed + reason), so deferred. Enhancement: FK `onDelete:SetNull` + fallback to most-recent account, or block account delete when pending schedules reference it. [prisma/schema.prisma#Schedule; api/routes/facebookAccounts.js] — deferred, enhancement (graceful failure already exists)
+
+### Dismissed (verified false-positive / within tolerance)
+
+- `Operation.startedAt`/`completedAt` "missing" → they exist in the model (verified).
+- Cap bypass within a single tick → sequential `for...await` increments the completed-count each iteration; cap holds.
+- `operation` undefined in catch → `operation.create` is outside the try; catch never runs with it undefined (real adjacent concern captured in Patch: one-bad-row).
+- `Schedule.operationId` no FK → intentional soft link per spec.
+- throughput window `now` vs wall-clock `executedAt` → immaterial seconds of drift on a 1-hour window.
+- cron sub-second miss of `scheduledAt==now` → within the documented ±2-minute window.
+- `willFireAt` `toLocaleString()` → dry-run preview only, cosmetic.
+- test cleanup crash-safety → self-heals via `beforeEach`.
+
 ## Dev Notes
 
 ### REUSE-FIRST mandate (do NOT reinvent)

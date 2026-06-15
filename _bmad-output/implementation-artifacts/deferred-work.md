@@ -107,3 +107,7 @@ These are DOM-accuracy items; fixing blind risks making selectors worse. They re
 - 2.2/2.3: locale coverage beyond en/vi.
 
 **Action for these:** keep in checklist; verify + fix when a test Facebook account is available.
+
+## Deferred from: code review of story-4.1 (2026-06-15)
+
+- **Deleted FacebookAccount orphans its pending schedules** [prisma/schema.prisma#Schedule; api/routes/facebookAccounts.js] — `Schedule.facebookAccountId` has no FK/cascade. Deleting the source account makes the worker's `resolveAccountCookie` throw `ACCOUNT_NOT_FOUND`, so the schedule fails at execution time (status:failed + reason) with no upfront warning and no fallback to the user's default account. Failure is graceful, so deferred. Enhancement: add FK `onDelete:SetNull` + fall back to most-recent account, or block account deletion when pending schedules reference it (mirror the existing activeRun guard).
