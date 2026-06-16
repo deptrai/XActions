@@ -1380,13 +1380,17 @@ async function postToSingleGroup(page, groupUrl, content) {
     '[aria-label*="What\'s on your mind"]', // en — fallback (home-feed style)
     '[aria-label*="Bạn đang nghĩ gì"]',  // vi — fallback (home-feed style)
     '[data-testid="status-attachment-mentions-input"]',
-    'div[role="textbox"][contenteditable="true"]',
+    // Removed: div[role="textbox"][contenteditable="true"] — too broad, matches comment
+    // boxes and Messenger compose. The aria + data-testid selectors above are sufficient.
   ];
 
   let composer = null;
   try {
     await page.waitForSelector(composerSelectors.join(', '), { timeout: 8000 });
-  } catch (_) {
+  } catch (err) {
+    // Only swallow selector timeout — a detached frame / destroyed context is a real
+    // error that should propagate, not be masked behind a generic "not found" throw.
+    if (!/timeout|waiting for selector/i.test(err?.message ?? '')) throw err;
     throw new Error('❌ Group post composer not found; group unreachable or locale unsupported');
   }
 

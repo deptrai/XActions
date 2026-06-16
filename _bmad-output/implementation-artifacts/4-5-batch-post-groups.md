@@ -4,7 +4,9 @@ baseline_commit: 049741e4de072e6afd9610df6d3a326447c51722
 
 # Story 4.5: Batch post to multiple groups (dry-run default)
 
-Status: review
+Status: in-progress
+
+<!-- Code-review patches applied (2 fixed + 2 defer). Held at in-progress — NOT done — pending live-DOM verification of group-composer selectors (see Review Findings + selectors-facebook.md verify-checklist). -->
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.5 + PRD prd-XActions-2026-06-10-epic4 FR-19. Realizes UJ-6. -->
 
@@ -79,6 +81,25 @@ Almost everything is reuse. The only genuinely new pieces are the group-composer
 - [x] **Task 4: Tests** (AC7)
   - [x] All AC7 cases with injected postFn + delay spy; one-failing-group no-abort test
   - [x] `npx vitest run` new file + regression on 4.2/4.3/4.4 + Epic 2
+
+## Review Findings
+
+> Code review 2026-06-16 (focused review — 4.5 is a near-clone of 4.4 already reviewed+patched). 48/48 tests pass (base + edge). 267/269 full suite (2 fail = pre-existing test-interference in schedule tests, pass in isolation 28/28). No regression from additive code.
+
+### Patch
+
+- [x] [Review][Patch][MEDIUM] FIXED — `catch (_)` swallowed ALL errors on composer `waitForSelector`. Now only swallows timeout; frame-destroyed/context-destroyed errors propagate (same fix as 4.2 review). [api/services/facebookAutomation.js#postToSingleGroup]
+- [x] [Review][Patch][MEDIUM] FIXED — removed overly-broad `div[role="textbox"][contenteditable="true"]` fallback from composer selectors. This matched ANY contenteditable on the page (comment boxes, Messenger) and could type into the wrong element. The aria + data-testid selectors are sufficient. [api/services/facebookAutomation.js#postToSingleGroup]
+
+### Deferred
+
+- [x] [Review][Defer][LOW] Silent success — `postToSingleGroup` returns `{posted:true}` without post-success verification (same class as 4.2 share + 2.4 createFacebookPost). Known, tracked in deferred-work.md; live-verify item couples with group-composer selector verification. — deferred, pre-existing class
+- [x] [Review][Defer][LOW] Test-interference (2/269 full-suite fail) — schedule tests collide on shared DB user when run in parallel with schedule-edge tests. Both pass in isolation. Pre-existing from 4.1 edge expansion (L4 finding). — deferred, pre-existing
+
+### Dismissed
+
+- UNVERIFIED selectors → documented, same posture as 4.2/4.4 (live-verify item on selectors-facebook.md checklist).
+- No capture-Map merge → correct; FR-19 has no "already-posted" state to surface.
 
 ## Dev Notes
 
