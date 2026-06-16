@@ -1,12 +1,17 @@
 ---
 stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-write-tests', 'step-04-verify-tests']
-lastStep: 'step-03b-subagent-backend-tea-round2'
-lastSaved: '2026-06-09'
+lastStep: 'step-04-execute-and-report'
+lastSaved: '2026-06-16'
 inputDocuments:
   - '/Users/luisphan/Documents/GitHub/XActions/_bmad/tea/config.yaml'
   - '/Users/luisphan/Documents/GitHub/XActions/.claude/worktrees/linear-stirring-reef/package.json'
   - '/Users/luisphan/Documents/GitHub/XActions/.claude/worktrees/linear-stirring-reef/tests/services/facebook-automation.test.js'
   - '/Users/luisphan/Documents/GitHub/XActions/.claude/worktrees/linear-stirring-reef/api/services/facebookAutomation.js'
+  - '_bmad-output/implementation-artifacts/4-1-schedule-post.md'
+  - '_bmad-output/implementation-artifacts/4-2-auto-share-post.md'
+  - '_bmad-output/implementation-artifacts/4-3-view-boost.md'
+  - '_bmad-output/implementation-artifacts/4-4-join-groups.md'
+  - 'api/services/facebookScheduler.js'
 ---
 
 # Coverage Plan
@@ -189,3 +194,50 @@ inputDocuments:
 - **Total MCP tests:** 58 (21 behavior + 30 contract + 7 server structure)
 - **Full suite:** 1,138 pass, 23 fail (x402 server-required, pre-existing), 0 regressions
 - Commit: `e977482`
+
+---
+
+## TEA Round — Epic 4 Growth Automation (2026-06-16)
+
+**Mode:** Create / BMad-Integrated · **Stack:** backend (Vitest 4.x, API-only profile) · browser-free, no-mock
+
+### Scope
+
+Epic 4 has 4 implemented stories (4-1…4-4); 4-5 is `ready-for-dev` (no code) and 4-6…4-9 are
+`backlog`. Expansion targeted the **implemented** surface only. Gap analysis (read-only sub-agent)
+surfaced ~64 candidate uncovered branches; P0/P1 selected = validation branches, safety invariants
+(dryRun strict-`=== false` gate, NFR3 cookie-scrubbing, NFR-6 30s delay floor, NFR-8 account-risk
+warning, SSRF guard), retry/seam semantics, capture-Map merge edges. All tests unit/service-level
+(no E2E — selectors UNVERIFIED, live-DOM out of scope).
+
+### Coverage Gaps Addressed
+
+| Target | Priority | Resolution |
+|---|---|---|
+| `runGuardedBatch` + `assertFacebookUrl` (shared chokepoint) | P0 | 25 tests |
+| `scheduleFacebookPost` + `runDueSchedules` + `sweepStaleRunning` (4.1) | P0/P1 | 13 tests |
+| `shareFacebookPosts` (4.2) | P1 | 12 tests |
+| `warmupScrollFeed` (4.3) | P1 | 15 tests |
+| `joinFacebookGroups` (4.4) | P0/P1 | 12 tests |
+
+### New Test Files
+
+- `tests/services/facebook-guarded-batch.test.js` (25) — dryRun:null gate, items-not-array, maxBatch/maxRetry invalid, retry count (1+maxRetry), null-item skip, onProgress shape + error-swallow, shouldStop abort, throwing-delay continue, delayMin:null normalize, actionFn-not-fn, ACCOUNT_RISK_WARNING; assertFacebookUrl http/subdomain accept + non-string/whitespace/scheme/host/lookalike reject
+- `tests/services/facebook-share-edge.test.js` (12) — dryRun:null, non-string/duplicate/non-fb URL reject, ACCOUNT_RISK_WARNING, single-item no-delay, default (1000,3000) range, alreadyShared true/false merge, failed-item-not-mutated, default-retry, maxBatch boundary
+- `tests/services/facebook-view-boost-edge.test.js` (15) — duration ==300/301/null/string/<=0 boundaries, missing URL, http+subdomain, dryRun:null, delay args (800,2500), run-summary shape, Operation complete, goto-throws→failed+200char+rethrow, err.code preserved, throwing-updateOperation-doesn't-mask, createOperation-throws-before-goto
+- `tests/services/facebook-join-groups-edge.test.js` (12) — input non-object, groupUrls-not-array, keyword whitespace, default limit 10, limit 0/-/non-int, searchFn non-array/non-fb-URL, delayMin NaN/Inf→floor, delayMax-below-floor clamp, no-status merge, ACCOUNT_RISK_WARNING, keyword dry-run no-browser
+- `tests/services/facebook-schedule-edge.test.js` (13) — content non-string, scheduledAt missing/unparseable, dryRun:null, mediaUrls preview+persist, facebookAccountId persist, sweepStaleRunning, empty queue, throughput boundary (4 under cap → runs), jitter 5–15min window, two-due-in-tick, NFR3 named-error + err.code scrubbing
+
+### Final Results
+
+- **New tests:** +77 (25 + 13 + 12 + 15 + 12)
+- **Services suite:** 221 pass, 0 fail (144 prior + 77 new) — **0 regressions**
+- **Full project suite:** 1434 pass, 22 skipped, 9 fail — all `tests/x402-integration.test.js` (pre-existing ECONNREFUSED, server-required, documented in CLAUDE.md). Not caused by this expansion.
+
+### Residual risk
+
+- **No live-DOM coverage.** 4.2 "Share now", 4.4 Join/pending + all group/share selectors remain UNVERIFIED (`docs/agents/selectors-facebook.md` verify-checklist). These tests cover control flow (validation, batching, capture-Map, safety floors) via injected seams — they do NOT prove real selectors click the right element. Live verify on a test account still required before `dryRun:false`.
+- **4.1 is DB-backed** (real Prisma, isolated test-user `test-user-sched-4-1-edge`). Requires `DATABASE_URL`.
+- **Deferred (low-priority):** `startFacebookScheduler` idempotency (sets a process-global cron guard — unsafe in-suite without a teardown seam); internal `isPostSuccess` unknown-shape + `postFailureReason` 80-char truncation (non-exported — covered indirectly).
+
+## Status: COMPLETE
