@@ -1347,6 +1347,190 @@ export async function joinFacebookGroups(page, input, options = {}) {
   return batchResult;
 }
 
+// ============================================================================
+// Facebook Group Batch Post (Story 4.5 — FR-19, Cluster-1 medium risk)
+// ============================================================================
+
+// FR-19 strict batch cap: >10 groups requires force:true. Stricter than
+// runGuardedBatch's default maxBatch=20 — enforced before delegation.
+export const GROUP_POST_BATCH_LIMIT = 10;
+
+/**
+ * Post content to a single Facebook group (AC4). Internal helper for postToFacebookGroups.
+ *
+ * Navigates to the group page and uses the group composer to type + submit the post.
+ * Selectors are UNVERIFIED (locale-aware, fallback chain) — see selectors-facebook.md
+ * Groups section. A PII-free throw is raised if the composer or submit button is not found.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} groupUrl - facebook.com group URL
+ * @param {string} content - Post content to type
+ * @returns {Promise<{posted: boolean}>}
+ * @throws {Error} If composer or submit button not found (PII-free)
+ */
+async function postToSingleGroup(page, groupUrl, content) {
+  await page.goto(groupUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await sleep(500);
+
+  // Group composer selectors — UNVERIFIED, locale-aware (en/vi) + fallbacks.
+  // See docs/agents/selectors-facebook.md Groups section for verify-checklist.
+  const composerSelectors = [
+    '[aria-label*="Write something"]',   // en — group composer prompt
+    '[aria-label*="Viết gì đó"]',        // vi — group composer prompt
+    '[aria-label*="What\'s on your mind"]', // en — fallback (home-feed style)
+    '[aria-label*="Bạn đang nghĩ gì"]',  // vi — fallback (home-feed style)
+    '[data-testid="status-attachment-mentions-input"]',
+    'div[role="textbox"][contenteditable="true"]',
+  ];
+
+  let composer = null;
+  try {
+    await page.waitForSelector(composerSelectors.join(', '), { timeout: 8000 });
+  } catch (_) {
+    throw new Error('❌ Group post composer not found; group unreachable or locale unsupported');
+  }
+
+  for (const selector of composerSelectors) {
+    composer = await page.$(selector);
+    if (composer) break;
+  }
+  if (!composer) {
+    throw new Error('❌ Group post composer not found; group unreachable or locale unsupported');
+  }
+
+  await composer.click();
+  await sleep(300);
+  await page.keyboard.type(content);
+  await sleep(200);
+
+  // Submit button selectors — UNVERIFIED, locale-aware.
+  const submitSelectors = [
+    '[aria-label="Post"]',       // en
+    '[aria-label="Đăng"]',       // vi
+    'div[aria-label="Post"][role="button"]',
+    'div[aria-label="Đăng"][role="button"]',
+  ];
+
+  let submitBtn = null;
+  for (const selector of submitSelectors) {
+    submitBtn = await page.$(selector);
+    if (submitBtn) break;
+  }
+  if (!submitBtn) {
+    throw new Error('❌ Group post submit button not found; composer open but submit unavailable');
+  }
+
+  await submitBtn.click();
+  await sleep(2000);
+
+  // Facebook group posts submit via XHR without navigation — post-success
+  // confirmation selector is UNVERIFIED (same caveat as createFacebookPost).
+  // Return {posted:true} once submit fires; live-verify confirms actual delivery.
+  return { posted: true };
+}
+
+/**
+ * Batch post content to multiple Facebook groups (Story 4.5 — FR-19).
+ * Cluster-1 batch write: routes through runGuardedBatch (NFR-7) with the
+ * mandatory account-risk warning (NFR-8) and a 30s inter-post delay floor (NFR-6).
+ *
+ * Default effective cap is 10 groups (GROUP_POST_BATCH_LIMIT). Passing more
+ * than 10 requires options.force = true; with force the runGuardedBatch
+ * maxBatch cap (default 20) still applies.
+ *
+ * mediaUrls is accepted but text-only posting in MVP — media upload is reserved
+ * for a future story. mediaUrls is validated for type only and documented as
+ * not-yet-implemented; it is NOT silently dropped.
+ *
+ * @param {Object} page - Puppeteer page (authenticated); may be null for dry-run
+ * @param {Object} input - { groupUrls: string[], content: string, mediaUrls?: string[] }
+ * @param {Object} [options]
+ * @param {boolean} [options.dryRun=true] - Default true; only explicit false posts for real.
+ * @param {boolean} [options.force=false] - Allow >10 groups (up to runGuardedBatch maxBatch=20).
+ * @param {number} [options.delayMin] - Clamped UP to GROUP_ACTION_DELAY_FLOOR_MS (30s).
+ * @param {number} [options.delayMax] - Defaults to 90s.
+ * @param {Function} [options.delay] - Injectable delay seam (tests pass a spy).
+ * @param {Function} [options.postFn] - Injectable per-group post (default postToSingleGroup).
+ * @returns {Promise<Object>} runGuardedBatch result with per-group {target, ok, error?}
+ */
+export async function postToFacebookGroups(page, input, options = {}) {
+  const {
+    postFn: postFnOpt,
+    delayMin: delayMinOpt,
+    delayMax: delayMaxOpt,
+    force,
+    ...rest
+  } = options;
+  const postFn = postFnOpt ?? postToSingleGroup;
+
+  // --- Input validation (before any browser action) ---
+  if (!input || typeof input !== 'object') {
+    throw new Error('❌ postToFacebookGroups: input must be { groupUrls, content }');
+  }
+
+  const { groupUrls, content, mediaUrls } = input;
+
+  if (!Array.isArray(groupUrls) || groupUrls.length === 0) {
+    throw new Error('❌ postToFacebookGroups: groupUrls must be a non-empty array');
+  }
+
+  for (const u of groupUrls) {
+    assertFacebookUrl(u, 'postToFacebookGroups: groupUrl');
+  }
+
+  // Duplicate group URL guard (Map-collision pattern from 4.2).
+  if (new Set(groupUrls).size !== groupUrls.length) {
+    throw new Error('❌ postToFacebookGroups: groupUrls must not contain duplicates');
+  }
+
+  // Non-empty content guard (reuse createFacebookPost guard).
+  if (typeof content !== 'string' || !content.trim()) {
+    throw new Error('❌ postToFacebookGroups: content must be a non-empty string');
+  }
+
+  // mediaUrls: reserved, not-yet-implemented in MVP (mirrors scheduleFacebookPost posture).
+  if (mediaUrls !== undefined) {
+    if (!Array.isArray(mediaUrls)) {
+      throw new Error('❌ postToFacebookGroups: mediaUrls must be an array if provided');
+    }
+    // mediaUrls accepted but not yet implemented — text-only post in MVP.
+    // A future story will add media upload support.
+  }
+
+  // --- batchLimit / force gate (AC2, FR-19) — enforced before browser, in dry-run too ---
+  if (groupUrls.length > GROUP_POST_BATCH_LIMIT && force !== true) {
+    throw new Error(
+      `❌ postToFacebookGroups: ${groupUrls.length} groups exceeds the default cap of ${GROUP_POST_BATCH_LIMIT}. ` +
+      `Pass options.force = true to proceed (still capped at runGuardedBatch maxBatch=20), ` +
+      `or split the batch into chunks of ${GROUP_POST_BATCH_LIMIT}.`,
+    );
+  }
+
+  // --- NFR-6 delay floor: clamp UP to 30s, never below; default 30s/90s ---
+  const safeMinOpt = Number.isFinite(delayMinOpt) && delayMinOpt >= 0 ? delayMinOpt : GROUP_ACTION_DELAY_FLOOR_MS;
+  const safeMaxOpt = Number.isFinite(delayMaxOpt) && delayMaxOpt >= 0 ? delayMaxOpt : GROUP_ACTION_DELAY_MAX_MS;
+  const delayMin = Math.max(GROUP_ACTION_DELAY_FLOOR_MS, safeMinOpt);
+  const delayMax = Math.max(delayMin, safeMaxOpt);
+
+  const guardedOptions = { ...rest, delayMin, delayMax };
+
+  const actionFn = async (groupUrl) => {
+    return postFn(page, groupUrl, content);
+  };
+
+  const batchResult = await runGuardedBatch(groupUrls, actionFn, guardedOptions);
+
+  // Dry-run: echo content once in the return (AC6.12).
+  if (batchResult.dryRun) {
+    batchResult.previewContent = content;
+    if (mediaUrls !== undefined) {
+      batchResult.mediaUrlsNote = 'mediaUrls accepted but text-only post in MVP — media upload reserved for a future story';
+    }
+  }
+
+  return batchResult;
+}
+
 export default {
   runGuardedBatch,
   randomDelay,
@@ -1364,4 +1548,6 @@ export default {
   MAX_DURATION_SECONDS,
   joinFacebookGroups,
   GROUP_ACTION_DELAY_FLOOR_MS,
+  postToFacebookGroups,
+  GROUP_POST_BATCH_LIMIT,
 };

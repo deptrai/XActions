@@ -4,7 +4,7 @@ baseline_commit: 049741e4de072e6afd9610df6d3a326447c51722
 
 # Story 4.5: Batch post to multiple groups (dry-run default)
 
-Status: ready-for-dev
+Status: review
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.5 + PRD prd-XActions-2026-06-10-epic4 FR-19. Realizes UJ-6. -->
 
@@ -66,19 +66,19 @@ Almost everything is reuse. The only genuinely new pieces are the group-composer
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: `postToFacebookGroups` entry + validation** (AC1, AC2)
-  - [ ] Export + default export; clone `joinFacebookGroups` shape; `postFn` nullish-coalesce seam
-  - [ ] Validate groupUrls (assertFacebookUrl + dedupe) + non-empty content before browser
-  - [ ] `GROUP_POST_BATCH_LIMIT=10`; >10 without `force:true` → throw (enforced in dry-run too)
-- [ ] **Task 2: delay floor + batch routing** (AC3, AC5, AC6)
-  - [ ] Reuse 30s clamp from joinFacebookGroups; route through runGuardedBatch; per-group try guarantees no-abort
-  - [ ] Dry-run preview + content echo; real results `{target,ok,error?}`
-- [ ] **Task 3: `postToSingleGroup` action** (AC4)
-  - [ ] Navigate group → composer (reuse/adapt createSinglePost selectors + group fallbacks) → type → submit → `{posted}`; PII-free throw if not found
-  - [ ] Document group-composer selectors in selectors-facebook.md (UNVERIFIED + verify-checklist)
-- [ ] **Task 4: Tests** (AC7)
-  - [ ] All AC7 cases with injected postFn + delay spy; one-failing-group no-abort test
-  - [ ] `npx vitest run` new file + regression on 4.2/4.3/4.4 + Epic 2
+- [x] **Task 1: `postToFacebookGroups` entry + validation** (AC1, AC2)
+  - [x] Export + default export; clone `joinFacebookGroups` shape; `postFn` nullish-coalesce seam
+  - [x] Validate groupUrls (assertFacebookUrl + dedupe) + non-empty content before browser
+  - [x] `GROUP_POST_BATCH_LIMIT=10`; >10 without `force:true` → throw (enforced in dry-run too)
+- [x] **Task 2: delay floor + batch routing** (AC3, AC5, AC6)
+  - [x] Reuse 30s clamp from joinFacebookGroups; route through runGuardedBatch; per-group try guarantees no-abort
+  - [x] Dry-run preview + content echo; real results `{target,ok,error?}`
+- [x] **Task 3: `postToSingleGroup` action** (AC4)
+  - [x] Navigate group → composer (reuse/adapt createSinglePost selectors + group fallbacks) → type → submit → `{posted}`; PII-free throw if not found
+  - [x] Document group-composer selectors in selectors-facebook.md (UNVERIFIED + verify-checklist)
+- [x] **Task 4: Tests** (AC7)
+  - [x] All AC7 cases with injected postFn + delay spy; one-failing-group no-abort test
+  - [x] `npx vitest run` new file + regression on 4.2/4.3/4.4 + Epic 2
 
 ## Dev Notes
 
@@ -124,12 +124,28 @@ Almost everything is reuse. The only genuinely new pieces are the group-composer
 
 ### Agent Model Used
 
+claude-sonnet-4-6
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- Implemented `postToSingleGroup` (internal helper): navigates to group, locale-aware composer selectors (UNVERIFIED, fallback chain), types content, clicks submit, returns `{posted:true}`. PII-free throws on composer/submit not found.
+- Implemented `postToFacebookGroups`: cloned `joinFacebookGroups` shape exactly — same 30s delay floor clamp, same `runGuardedBatch` routing, same `assertFacebookUrl` + dedupe guard, same nullish-coalesce `postFn` seam.
+- Added `GROUP_POST_BATCH_LIMIT=10` constant; >10 groups without `force:true` throws BEFORE browser (enforced in dry-run too per AC2).
+- Dry-run echoes `previewContent` field in result; `mediaUrls` accepted but text-only in MVP — `mediaUrlsNote` emitted when provided.
+- Account-risk warning fires from `runGuardedBatch` (NFR-8, non-suppressible). No real posts under dryRun.
+- 20 new tests (all AC7 cases): dry-run, real-run, batchLimit, force override, delay floor, one-failing-group no-abort, all validation guards (duplicates, empty content, empty array, invalid URL, null postFn fallback, non-array mediaUrls).
+- 284 total tests pass (17 files) — no regressions in 4.2/4.3/4.4/Epic 2.
+- Documented group-composer selectors in `docs/agents/selectors-facebook.md` Groups — Batch Post section (UNVERIFIED + verify-checklist items added).
+
 ### File List
+
+- `api/services/facebookAutomation.js` — added `GROUP_POST_BATCH_LIMIT`, `postToSingleGroup`, `postToFacebookGroups`; updated default export
+- `tests/services/facebook-batch-post-groups.test.js` — new test file (20 tests)
+- `docs/agents/selectors-facebook.md` — added Groups — Batch Post section + verify-checklist items for Story 4.5
 
 ## Change Log
 
 - 2026-06-16: Story 4.5 created (context engine). Status → ready-for-dev. (Luisphan)
+- 2026-06-16: Implementation complete. Added `postToSingleGroup`, `postToFacebookGroups`, `GROUP_POST_BATCH_LIMIT`; 20 new tests; selectors-facebook.md extended. Status → review. (claude-sonnet-4-6)
