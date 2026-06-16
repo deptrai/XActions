@@ -52,7 +52,7 @@ development_status:
   4-5-batch-post-groups: in-progress
   4-6-scrape-group-members: done
   4-7-send-friend-requests: ready-for-dev
-  4-8-cancel-friend-requests: backlog
+  4-8-cancel-friend-requests: ready-for-dev
   4-9-newsfeed-farming: backlog
   epic-4-retrospective: optional
 
