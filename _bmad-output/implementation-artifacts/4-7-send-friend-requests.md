@@ -4,7 +4,9 @@ baseline_commit: 81a7efcf2a44e9c7ecfcb7f80ac8ac1c33436b9d
 
 # Story 4.7: Send friend requests automatically (dry-run default)
 
-Status: review
+Status: in-progress
+
+<!-- Code review CLEAN — no actionable patches. Held at in-progress pending live-DOM verification of Add Friend / pending / already-friend selectors. -->
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 2 — MEDIUM-HIGH risk). Source: epics.md#Story 4.7 + PRD prd-XActions-2026-06-10-epic4 FR-21. HIGHEST account-risk story in Epic 4. -->
 

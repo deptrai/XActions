@@ -51,7 +51,7 @@ development_status:
   4-4-join-groups: in-progress
   4-5-batch-post-groups: in-progress
   4-6-scrape-group-members: done
-  4-7-send-friend-requests: review
+  4-7-send-friend-requests: in-progress
   4-8-cancel-friend-requests: ready-for-dev
   4-9-newsfeed-farming: ready-for-dev
   epic-4-retrospective: optional
