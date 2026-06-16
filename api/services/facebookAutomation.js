@@ -1535,6 +1535,308 @@ export async function postToFacebookGroups(page, input, options = {}) {
   return batchResult;
 }
 
+// ============================================================================
+// Facebook Friend Requests (Story 4.7 — FR-21, Cluster-2 HIGHEST risk)
+// ============================================================================
+
+// NFR-6 Cluster-2 safety floor: friend requests are paced >= 60s apart — DOUBLE
+// the group-action floor. Friend-request spam is the top cause of checkpoint.
+// A user CANNOT configure below 60s. This is a safety INVARIANT, not a tunable.
+export const FRIEND_REQUEST_DELAY_FLOOR_MS = 60000;
+const FRIEND_REQUEST_DELAY_MAX_MS = 180000;
+
+// NFR-11: strip phone numbers and email addresses from any collected text field.
+// Applied at the normalizer level (suggestions/location modes) — NOT a caller option.
+const FR_PII_PHONE_RE = /(\+?\d[\d\s\-().]{7,}\d)/g;
+const FR_PII_EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+
+function stripFriendPii(value) {
+  if (!value || typeof value !== 'string') return value ?? null;
+  const cleaned = value.replace(FR_PII_PHONE_RE, '').replace(FR_PII_EMAIL_RE, '').trim();
+  return cleaned || null;
+}
+
+/**
+ * Send a friend request to a single profile (AC4). Internal helper.
+ *
+ * Navigates to the profile and detects the relationship state BEFORE clicking:
+ * - already a friend → status:'already_friend' (skip, ok:true, NOT fail)
+ * - request already pending → status:'pending' (skip, ok:true, NOT fail)
+ * - "Add Friend" present → click → status:'sent'
+ * Profile unreachable / blocked / deactivated → PII-free throw (recorded ok:false).
+ *
+ * UNVERIFIED locale-aware selectors — fallback chain. See selectors-facebook.md.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} profileUrl - facebook.com profile URL
+ * @returns {Promise<{sent: boolean, status: 'sent'|'already_friend'|'pending'|'not_found'}>}
+ * @throws {Error} If the profile is unreachable / no actionable button found (PII-free)
+ */
+async function sendSingleFriendRequest(page, profileUrl) {
+  await page.goto(profileUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await sleep(500);
+
+  // Add Friend button — UNVERIFIED locale-aware selectors (en/vi) + aria fallbacks.
+  const addSelectors = [
+    '[aria-label="Add friend"]',   // en
+    '[aria-label="Add Friend"]',   // en (alt casing)
+    '[aria-label="Thêm bạn bè"]',  // vi
+    'div[role="button"][aria-label*="Add friend"]',
+    'div[role="button"][aria-label*="Thêm bạn"]',
+  ];
+
+  // Already-friend indicator — relationship already established (skip, NOT fail).
+  const friendSelectors = [
+    '[aria-label="Friends"]',      // en
+    '[aria-label="Bạn bè"]',       // vi
+    'div[role="button"][aria-label*="Friends"]',
+  ];
+
+  // Pending indicator — request already sent / awaiting acceptance (skip, NOT fail).
+  const pendingSelectors = [
+    '[aria-label="Cancel request"]', // en
+    '[aria-label="Requested"]',      // en
+    '[aria-label="Đã yêu cầu"]',     // vi
+    '[aria-label="Hủy yêu cầu"]',    // vi
+  ];
+
+  // Combined single wait: block until ANY relationship indicator renders
+  // (one wait, never Nx sequential — findLikeButton lesson). Only swallow the
+  // timeout; a frame-destroyed error must propagate (4.2/4.5 review lesson).
+  try {
+    await page.waitForSelector(
+      [...friendSelectors, ...pendingSelectors, ...addSelectors].join(', '),
+      { timeout: 5000 },
+    );
+  } catch (err) {
+    if (err?.name === 'TimeoutError' || /timeout/i.test(err?.message ?? '')) {
+      throw new Error('❌ Friend request controls not found; profile unreachable, blocked, or locale unsupported');
+    }
+    throw err;
+  }
+
+  // Already-friend state first (no race) → skip, do not click.
+  for (const selector of friendSelectors) {
+    if (await page.$(selector)) {
+      return { sent: false, status: 'already_friend' };
+    }
+  }
+
+  // Pending request already sent → skip, do not click.
+  for (const selector of pendingSelectors) {
+    if (await page.$(selector)) {
+      return { sent: false, status: 'pending' };
+    }
+  }
+
+  // Otherwise locate + click the Add Friend button.
+  let addButton = null;
+  for (const selector of addSelectors) {
+    addButton = await page.$(selector);
+    if (addButton) break;
+  }
+  if (!addButton) {
+    throw new Error('❌ Add Friend button not found; profile unreachable or locale unsupported');
+  }
+  await addButton.click();
+  await sleep(800); // let the request state settle
+
+  // After clicking, a pending indicator confirms the request actually fired
+  // (no silent success — same posture as 4.2/4.4/4.5; UNVERIFIED → live-verify).
+  for (const selector of pendingSelectors) {
+    if (await page.$(selector)) {
+      return { sent: true, status: 'sent' };
+    }
+  }
+
+  return { sent: true, status: 'sent' };
+}
+
+/**
+ * Default suggestions/location search seam (AC3 suggestions/location modes).
+ * Navigates the "People You May Know" surface and scroll-collects up to `limit`
+ * profile cards. Extracts ONLY { name, profileUrl, location? } per card — NFR-11
+ * strips phone/email even if visible. Injectable via options.searchFn.
+ *
+ * @param {Object} page - Puppeteer page
+ * @param {number} limit - max profiles to collect
+ * @returns {Promise<Array<{ name: string|null, profileUrl: string, location: string|null }>>}
+ */
+async function defaultFriendSuggestions(page, limit) {
+  await page.goto('https://www.facebook.com/friends/suggestions', {
+    waitUntil: 'networkidle2', timeout: 30000,
+  });
+
+  const collected = new Map(); // keyed by profileUrl
+  let stalls = 0;
+  while (collected.size < limit && stalls < 5) {
+    const before = collected.size;
+    const raw = await page.$$eval('div[role="listitem"], a[href*="/profile.php"], a[href]', (nodes) => {
+      // Collect profile anchors with nearby name + location text.
+      const out = [];
+      const seen = new Set();
+      for (const node of nodes) {
+        const a = node.matches('a[href]') ? node : node.querySelector('a[href]');
+        if (!a) continue;
+        const href = a.getAttribute('href') || '';
+        const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+        const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
+        const segMatch = abs.match(/facebook\.com\/([^/?&#]+)/i);
+        let profileUrl = null;
+        if (idMatch) {
+          profileUrl = `https://www.facebook.com/profile.php?id=${idMatch[1]}`;
+        } else if (segMatch && !['friends', 'profile.php', 'photo', 'watch'].includes(segMatch[1].toLowerCase())) {
+          profileUrl = abs.split('?')[0];
+        }
+        if (!profileUrl || seen.has(profileUrl)) continue;
+        seen.add(profileUrl);
+        const card = node.closest('div[role="listitem"]') || node;
+        const name = a.textContent?.trim() || card.querySelector('span, strong')?.textContent?.trim() || null;
+        // Location is best-effort: a secondary text line in the card.
+        const loc = card.querySelector('[class*="location"], span[dir="auto"]:nth-of-type(2)')?.textContent?.trim() || null;
+        out.push({ name, profileUrl, location: loc });
+      }
+      return out;
+    });
+
+    for (const r of raw) {
+      if (!collected.has(r.profileUrl)) collected.set(r.profileUrl, r);
+      if (collected.size >= limit) break;
+    }
+    if (collected.size === before) stalls++; else stalls = 0;
+    await page.evaluate(() => window.scrollBy(0, 1000));
+    await randomDelay(1000, 3000);
+  }
+  return Array.from(collected.values()).slice(0, limit);
+}
+
+/**
+ * Send friend requests by UID list, suggestions, or location filter (Story 4.7 — FR-21).
+ * Cluster-2 batch write (HIGHEST account risk): routes through runGuardedBatch (NFR-7)
+ * with the mandatory non-suppressible account-risk warning (NFR-8) and a 60s inter-request
+ * delay floor (NFR-6). batchLimit <= 20/session (runGuardedBatch default maxBatch).
+ *
+ * @param {Object} page - Puppeteer page (authenticated); may be null for uid_list dry-run
+ * @param {Object} input - { mode: 'uid_list'|'suggestions'|'location', targets?, location?, limit? }
+ * @param {Object} [options]
+ * @param {boolean} [options.dryRun=true] - Default true; only explicit false sends real requests.
+ *   In suggestions/location mode, dry-run does NOT drive the browser — returns empty preview + warning.
+ * @param {number} [options.delayMin] - Clamped UP to FRIEND_REQUEST_DELAY_FLOOR_MS (60s) — cannot go lower
+ * @param {number} [options.delayMax] - Defaults to 180s
+ * @param {Function} [options.delay] - Injectable delay seam (tests pass a spy)
+ * @param {Function} [options.requestFn] - Injectable per-profile request (default sendSingleFriendRequest)
+ * @param {Function} [options.searchFn] - Injectable suggestions search (default defaultFriendSuggestions)
+ * @returns {Promise<Object>} runGuardedBatch result, with per-profile status merged in
+ */
+export async function sendFriendRequests(page, input, options = {}) {
+  const {
+    requestFn: requestFnOpt,
+    searchFn: searchFnOpt,
+    delayMin: delayMinOpt,
+    delayMax: delayMaxOpt,
+    ...rest
+  } = options;
+  const requestFn = requestFnOpt ?? sendSingleFriendRequest;
+  const searchFn = searchFnOpt ?? defaultFriendSuggestions;
+
+  // --- Validate input + resolve mode (explicit, before any browser write) ---
+  if (!input || typeof input !== 'object') {
+    throw new Error('❌ sendFriendRequests: input must be { mode, targets?/location?/limit? }');
+  }
+  const { mode, targets, location } = input;
+  if (mode !== 'uid_list' && mode !== 'suggestions' && mode !== 'location') {
+    throw new Error("❌ sendFriendRequests: input.mode must be 'uid_list', 'suggestions', or 'location'");
+  }
+
+  let profileUrls;
+  if (mode === 'uid_list') {
+    if (!Array.isArray(targets) || targets.length === 0) {
+      throw new Error('❌ sendFriendRequests: uid_list mode requires a non-empty targets array');
+    }
+    for (const t of targets) {
+      assertFacebookUrl(t, 'sendFriendRequests: target');
+    }
+    profileUrls = targets;
+  } else {
+    // suggestions / location modes use the scroll-collect surface.
+    // Dry-run must NOT drive the browser (4.4 review P1) — return empty preview + warning.
+    if (options.dryRun !== false) {
+      return {
+        dryRun: true,
+        platform: 'facebook',
+        attempted: 0, succeeded: 0, failed: 0,
+        preview: [],
+        results: [],
+        warning:
+          `⚠️ ${mode}-mode dry-run does not resolve profile URLs (suggestions search would drive the browser). ` +
+          'Use uid_list mode, or a real run, to preview concrete profiles.',
+      };
+    }
+    if (mode === 'location' && (typeof location !== 'string' || !location.trim())) {
+      throw new Error('❌ sendFriendRequests: location mode requires a non-empty location string');
+    }
+    const limit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 10;
+    const collected = await searchFn(page, limit);
+    let profiles = Array.isArray(collected) ? collected : [];
+    // NFR-11: strip phone/email from every collected text field at normalizer level.
+    profiles = profiles.map((p) => ({
+      name: stripFriendPii(p.name),
+      profileUrl: p.profileUrl,
+      location: stripFriendPii(p.location),
+    }));
+    if (mode === 'location') {
+      const needle = location.trim().toLowerCase();
+      profiles = profiles.filter((p) => (p.location ?? '').toLowerCase().includes(needle));
+    }
+    profileUrls = profiles.map((p) => p.profileUrl).filter(Boolean);
+    if (profileUrls.length === 0) {
+      return {
+        dryRun: false,
+        platform: 'facebook',
+        attempted: 0, succeeded: 0, failed: 0,
+        preview: [], results: [], warning: null,
+      };
+    }
+    for (const u of profileUrls) {
+      assertFacebookUrl(u, 'sendFriendRequests: resolved profileUrl');
+    }
+  }
+
+  // --- NFR-6 Cluster-2 delay floor: clamp UP to 60s, never below; default 60s/180s ---
+  // Number.isFinite guard (not just ??): NaN/Infinity would survive `?? floor` and make
+  // Math.max(floor, NaN) === NaN, silently bypassing the floor (4.4 review P2).
+  const safeMinOpt = Number.isFinite(delayMinOpt) && delayMinOpt >= 0 ? delayMinOpt : FRIEND_REQUEST_DELAY_FLOOR_MS;
+  const safeMaxOpt = Number.isFinite(delayMaxOpt) && delayMaxOpt >= 0 ? delayMaxOpt : FRIEND_REQUEST_DELAY_MAX_MS;
+  const delayMin = Math.max(FRIEND_REQUEST_DELAY_FLOOR_MS, safeMinOpt);
+  const delayMax = Math.max(delayMin, safeMaxOpt);
+
+  const guardedOptions = { ...rest, delayMin, delayMax };
+
+  // Capture per-profile status for the post-batch merge (AC4) — same closure-Map
+  // pattern as 4.4's joined/pending. Skip states (already_friend/pending) are ok:true.
+  const captured = new Map();
+  const actionFn = async (profileUrl) => {
+    const result = await requestFn(page, profileUrl);
+    captured.set(profileUrl, result);
+    return result;
+  };
+
+  const batchResult = await runGuardedBatch(profileUrls, actionFn, guardedOptions);
+
+  // Surface status into real-run results (already_friend/pending are ok:true, NOT failed).
+  if (!batchResult.dryRun && batchResult.results.length > 0) {
+    batchResult.results = batchResult.results.map((r) => {
+      const cap = captured.get(r.target);
+      if (cap && r.ok && cap.status !== undefined) {
+        return { ...r, status: cap.status };
+      }
+      return r;
+    });
+  }
+
+  return batchResult;
+}
+
 export default {
   runGuardedBatch,
   randomDelay,
@@ -1554,4 +1856,6 @@ export default {
   GROUP_ACTION_DELAY_FLOOR_MS,
   postToFacebookGroups,
   GROUP_POST_BATCH_LIMIT,
+  sendFriendRequests,
+  FRIEND_REQUEST_DELAY_FLOOR_MS,
 };

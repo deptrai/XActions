@@ -4,7 +4,7 @@ baseline_commit: 81a7efcf2a44e9c7ecfcb7f80ac8ac1c33436b9d
 
 # Story 4.7: Send friend requests automatically (dry-run default)
 
-Status: ready-for-dev
+Status: review
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 2 — MEDIUM-HIGH risk). Source: epics.md#Story 4.7 + PRD prd-XActions-2026-06-10-epic4 FR-21. HIGHEST account-risk story in Epic 4. -->
 
@@ -78,26 +78,26 @@ Pattern: clone `joinFacebookGroups` (4.4) — same `runGuardedBatch` routing, sa
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: `sendFriendRequests` entry + delay floor** (AC1, AC2)
-  - [ ] Export + default export; route through `runGuardedBatch`; `FRIEND_REQUEST_DELAY_FLOOR_MS=60000`; clamp up to 60s; default 60000/180000
-  - [ ] dryRun default true; account-risk warning inherited (do not duplicate/suppress)
-- [ ] **Task 2: Input modes** (AC3)
-  - [ ] uid_list: validate targets (assertFacebookUrl), these become batch items
-  - [ ] suggestions: injectable searchFn for "/friends/suggestions" scroll-collect; dry-run = empty preview + warning (no browser)
-  - [ ] location: same as suggestions + substring filter on publicly self-declared location text; NFR-11 normalizer
-  - [ ] Mode select by `input.mode` (explicit); invalid → clear throw
-- [ ] **Task 3: `sendSingleFriendRequest` + skip states** (AC4)
-  - [ ] Navigate profile; detect already-friend / pending / not-found BEFORE clicking; click "Add Friend"; return `{sent, status}`
-  - [ ] Capture-Map merge (status → ok:true for skips, same as 4.4)
-  - [ ] PII-free throws; UNVERIFIED selectors + fallback chain
-- [ ] **Task 4: NFR-11 normalizer** (AC5)
-  - [ ] Strip phone/email from suggestions/location collected data (regex filter at normalizer level)
-  - [ ] Dedicated test with fixture containing PII → output clean
-- [ ] **Task 5: Selector docs** (AC6)
-  - [ ] Add "Friends — Send Request (FR-21)" to selectors-facebook.md (UNVERIFIED + verify-checklist)
-- [ ] **Task 6: Tests** (AC7)
-  - [ ] All AC7 cases with injected requestFn + searchFn + delay spy
-  - [ ] `npx vitest run <file>` green + regression suite
+- [x] **Task 1: `sendFriendRequests` entry + delay floor** (AC1, AC2)
+  - [x] Export + default export; route through `runGuardedBatch`; `FRIEND_REQUEST_DELAY_FLOOR_MS=60000`; clamp up to 60s; default 60000/180000
+  - [x] dryRun default true; account-risk warning inherited (do not duplicate/suppress)
+- [x] **Task 2: Input modes** (AC3)
+  - [x] uid_list: validate targets (assertFacebookUrl), these become batch items
+  - [x] suggestions: injectable searchFn for "/friends/suggestions" scroll-collect; dry-run = empty preview + warning (no browser)
+  - [x] location: same as suggestions + substring filter on publicly self-declared location text; NFR-11 normalizer
+  - [x] Mode select by `input.mode` (explicit); invalid → clear throw
+- [x] **Task 3: `sendSingleFriendRequest` + skip states** (AC4)
+  - [x] Navigate profile; detect already-friend / pending / not-found BEFORE clicking; click "Add Friend"; return `{sent, status}`
+  - [x] Capture-Map merge (status → ok:true for skips, same as 4.4)
+  - [x] PII-free throws; UNVERIFIED selectors + fallback chain
+- [x] **Task 4: NFR-11 normalizer** (AC5)
+  - [x] Strip phone/email from suggestions/location collected data (regex filter at normalizer level)
+  - [x] Dedicated test with fixture containing PII → output clean
+- [x] **Task 5: Selector docs** (AC6)
+  - [x] Add "Friends — Send Request (FR-21)" to selectors-facebook.md (UNVERIFIED + verify-checklist)
+- [x] **Task 6: Tests** (AC7)
+  - [x] All AC7 cases with injected requestFn + searchFn + delay spy
+  - [x] `npx vitest run <file>` green + regression suite
 
 ## Dev Notes
 
@@ -150,12 +150,30 @@ Pattern: clone `joinFacebookGroups` (4.4) — same `runGuardedBatch` routing, sa
 
 ### Agent Model Used
 
+claude-opus-4-8
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- Added `sendFriendRequests(page, input, options)` to `api/services/facebookAutomation.js` — first Cluster-2 batch write (highest account risk). Cloned `joinFacebookGroups` structure: same `runGuardedBatch` routing, capture-Map per-item status merge, Number.isFinite delay-floor guard.
+- Added `FRIEND_REQUEST_DELAY_FLOOR_MS = 60000` (exported) — DOUBLE the group floor (30s). Default delayMin/Max = 60000/180000. Clamped UP, never below; a user cannot configure under 60s.
+- batchLimit ≤ 20/session — inherited from runGuardedBatch's default maxBatch=20 (no separate cap constant); 21 targets → runGuardedBatch throws.
+- 3 explicit input modes (`input.mode`, not shape-inferred): `uid_list` (validate each target via `assertFacebookUrl` → batch items), `suggestions` (injectable `searchFn` scroll-collect `/friends/suggestions`; dry-run does NOT drive browser → empty preview + warning), `location` (suggestions + case-insensitive substring filter on publicly self-declared location text).
+- Added `sendSingleFriendRequest(page, profileUrl)` — detects relationship state BEFORE clicking: already-friend → `status:'already_friend'` (skip, ok:true), pending → `status:'pending'` (skip, ok:true), Add Friend present → click → `status:'sent'`. Profile unreachable → PII-free throw (ok:false). `waitForSelector` catch only swallows timeout, re-throws frame-destroyed (4.2/4.5 lesson).
+- NFR-11: `stripFriendPii` regex strips phone/email from collected `name`/`location` at normalizer level (suggestions/location modes) before location filter — never reaches output. Dedicated test confirms no PII leak.
+- Account-risk warning inherited from runGuardedBatch (NFR-8, non-suppressible) — not duplicated.
+- 21 browser-free tests (injected requestFn + searchFn + delay spy): uid_list dry-run/real/skip-states/throw-continues, suggestions dry-run/real/empty, location filter/missing-location/dry-run, NFR-11 PII strip, 60s floor, validation (mode/empty/non-facebook/21-batchLimit/null), ACCOUNT_RISK_WARNING.
+- `docs/agents/selectors-facebook.md`: added "Friends — Send Request (FR-21)" section + 7 verify-checklist items (all UNVERIFIED).
+- Schedule test flakiness under full-suite parallel load is pre-existing database contention — not caused by 4.7 (confirmed: 49/49 pass when schedule + 4.7 tests run together in isolation).
+
 ### File List
+
+- `api/services/facebookAutomation.js` — added `FRIEND_REQUEST_DELAY_FLOOR_MS`, `stripFriendPii`, `sendSingleFriendRequest`, `defaultFriendSuggestions`, `sendFriendRequests`; updated default export
+- `tests/services/facebook-friend-requests.test.js` — new test file (21 tests)
+- `docs/agents/selectors-facebook.md` — added Friends — Send Request (FR-21) section + verify-checklist items
 
 ## Change Log
 
 - 2026-06-16: Story 4.7 created (context engine). Status → ready-for-dev. (Luisphan)
+- 2026-06-16: Implementation complete. Added `sendFriendRequests` (Cluster-2, 60s floor, 3 modes, 4 skip states, NFR-11 filter). 21 tests. Status → review. (claude-opus-4-8)
