@@ -120,6 +120,21 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 
 ⚠️ Flow: navigate postUrl → click Share button → chờ dialog → click "Share now". Combined `waitForSelector` (một wait cho cả list, không 5s×N). Throw rõ ràng + PII-free nếu không tìm thấy; `runGuardedBatch` ghi nhận lỗi per-item, KHÔNG abort batch.
 
+## Groups — Join (FR-18) — Epic 4
+
+> ⚠️ Story 4.4. Cluster-1 medium risk. Dò trên **account phụ** — join-spam là top checkpoint trigger.
+> TẤT CẢ selector dưới đây **UNVERIFIED** — cần confirm live. Sàn delay 30s/join là invariant (NFR-6).
+
+| Element | Selector chain (UNVERIFIED) | Ghi chú |
+|---|---|---|
+| Join button (en) | `[aria-label="Join group"]`, `[aria-label="Join Group"]`, `div[role="button"][aria-label*="Join"]` | UNVERIFIED — cần confirm trên group page |
+| Join button (vi) | `[aria-label="Tham gia nhóm"]`, `div[role="button"][aria-label*="Tham gia"]` | UNVERIFIED — Vietnamese locale |
+| Pending / requested (en) | `[aria-label="Cancel request"]`, `[aria-label="Requested"]` | UNVERIFIED — admin-approval state → `status:'pending'` (KHÔNG phải lỗi, FR-18) |
+| Pending / requested (vi) | `[aria-label="Đã yêu cầu"]`, `[aria-label="Hủy yêu cầu"]` | UNVERIFIED — Vietnamese locale |
+| Keyword search surface | `https://www.facebook.com/search/groups/?q=<keyword>`; group links `a[href*="/groups/"]` matching `/groups/<id>/?$` | UNVERIFIED — bounded scroll-collect up to `limit`, dedupe |
+
+⚠️ Flow: navigate group → combined `waitForSelector` (pending + join list). Pending indicator trước → `status:'pending'` không click. Else click Join → check pending lại (admin-approval) → `joined`/`pending`. PII-free throw nếu không thấy. Keyword mode: search seam (injectable) scroll-collect URL rồi mỗi URL thành batch item.
+
 ## Verify Checklist
 
 Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi verify:
@@ -136,6 +151,9 @@ Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi veri
 ### Automate / Growth (Epic 2 + Epic 4)
 - [ ] **Share button**: mở 1 post, xác nhận `div[data-ad-rendering-role="share_button"]` click mở được Share dialog.
 - [ ] **Share now → Feed**: trong dialog, xác nhận selector/text "Share now"/"Chia sẻ ngay" click được và repost lên timeline. Ghi selector thật. (Story 4.2 — hiện UNVERIFIED)
+- [ ] **Join group button**: mở 1 group chưa join, xác nhận selector Join click được + chuyển sang joined/pending. Ghi selector thật. (Story 4.4 — UNVERIFIED)
+- [ ] **Group pending state**: mở 1 group đã request, xác nhận pending indicator (`Requested`/`Đã yêu cầu`) detect đúng → `status:'pending'`. (Story 4.4 — UNVERIFIED)
+- [ ] **Keyword group search**: chạy `/search/groups/?q=<kw>`, xác nhận `a[href*="/groups/"]` collect được group URLs qua scroll. (Story 4.4 — UNVERIFIED)
 
 ### Cập nhật sau verify
 - [ ] Thay mọi selector "UNVERIFIED" bằng selector thật đã test.

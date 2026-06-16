@@ -71,6 +71,8 @@ export const ACCOUNT_RISK_WARNING =
  * @param {Object} options
  * @param {boolean} [options.dryRun=true] - Default true; no real write unless explicitly false
  * @param {Function} [options.delay=randomDelay] - Injectable delay seam; pass () => {} in tests
+ * @param {number}  [options.delayMin=1000] - Min ms for inter-item delay (Story 4.4); default preserves prior behavior
+ * @param {number}  [options.delayMax=3000] - Max ms for inter-item delay (Story 4.4); must be >= delayMin
  * @param {number}  [options.maxBatch=20] - Hard cap on batch size (enforced in both dry-run and real)
  * @param {number}  [options.maxRetry=1] - Max retries per item on failure (0 = no retry)
  * @param {Function} [options.shouldStop] - (results: Array) => boolean — called after each item; return true to abort
@@ -85,6 +87,8 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
   const {
     dryRun = true,
     delay = randomDelay,
+    delayMin = 1000,
+    delayMax = 3000,
     maxBatch = 20,
     maxRetry = 1,
     shouldStop,
@@ -98,6 +102,16 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
   // maxRetry must be finite & non-negative — Infinity would hang the loop on persistent failures
   if (typeof maxRetry !== 'number' || !Number.isFinite(maxRetry) || maxRetry < 0) {
     throw new Error(`❌ runGuardedBatch: maxRetry must be a finite number >= 0, got ${maxRetry}`);
+  }
+
+  // delayMin/delayMax: configurable inter-item delay range (Story 4.4 / PRD Open Question #1).
+  // Defaults 1000/3000 preserve every existing caller's behavior byte-for-byte. The helper
+  // stays generic (any min/max); per-cluster floors (e.g. group 30s) are enforced by the CALLER.
+  if (typeof delayMin !== 'number' || !Number.isFinite(delayMin) || delayMin < 0) {
+    throw new Error(`❌ runGuardedBatch: delayMin must be a finite number >= 0, got ${delayMin}`);
+  }
+  if (typeof delayMax !== 'number' || !Number.isFinite(delayMax) || delayMax < delayMin) {
+    throw new Error(`❌ runGuardedBatch: delayMax must be a finite number >= delayMin (${delayMin}), got ${delayMax}`);
   }
 
   // maxBatch enforced in both dry-run and real — preview must reflect real constraints
@@ -195,10 +209,10 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
       if (stop) break;
     }
 
-    // Delay between actions except after the last item
+    // Delay between actions except after the last item (range from options; default 1000/3000)
     if (i < items.length - 1) {
       try {
-        await delay(1000, 3000);
+        await delay(delayMin, delayMax);
       } catch (err) {
         // delay errors must not abort batch; log and continue
         console.warn(`⚠️ runGuardedBatch: delay threw — ${err?.message ?? err}. Continuing.`);
@@ -1066,6 +1080,212 @@ export async function warmupScrollFeed(page, targetUrl, options = {}) {
   }
 }
 
+// ============================================================================
+// Facebook Group Join (Story 4.4 — FR-18, Cluster-1 medium risk)
+// ============================================================================
+
+// NFR-6 safety floor: group actions are paced >= 30s apart. A user CANNOT
+// configure a shorter delay — join-spam is a top checkpoint trigger.
+export const GROUP_ACTION_DELAY_FLOOR_MS = 30000;
+const GROUP_ACTION_DELAY_MAX_MS = 90000;
+
+/**
+ * Join a single Facebook group (AC4). Internal helper for joinFacebookGroups.
+ *
+ * Navigates to the group and clicks the Join button (locale-aware, UNVERIFIED
+ * selectors — fallback chain + clear PII-free throw). A group requiring admin
+ * approval returns status:'pending' (NOT a failure — FR-18).
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} groupUrl - facebook.com group URL
+ * @returns {Promise<{joined: boolean, status: 'joined'|'pending'}>}
+ * @throws {Error} If the Join button is not found (PII-free)
+ */
+async function joinSingleGroup(page, groupUrl) {
+  await page.goto(groupUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await sleep(500);
+
+  // Join button — UNVERIFIED locale-aware selectors (en/vi) + aria fallbacks.
+  const joinSelectors = [
+    '[aria-label="Join group"]',   // en
+    '[aria-label="Join Group"]',   // en (alt casing)
+    '[aria-label="Tham gia nhóm"]',// vi
+    'div[role="button"][aria-label*="Join"]',
+    'div[role="button"][aria-label*="Tham gia"]',
+  ];
+
+  // Pending indicator — already requested / awaiting approval (NOT a failure).
+  const pendingSelectors = [
+    '[aria-label="Cancel request"]', // en
+    '[aria-label="Requested"]',      // en
+    '[aria-label="Đã yêu cầu"]',     // vi
+    '[aria-label="Hủy yêu cầu"]',    // vi
+  ];
+
+  // Combined single wait: block until ANY join/pending indicator renders
+  // (one wait for the joined list, never Nx sequential — findLikeButton lesson).
+  try {
+    await page.waitForSelector([...pendingSelectors, ...joinSelectors].join(', '), { timeout: 5000 });
+  } catch (_) {
+    throw new Error('❌ Join button not found; locale unsupported or group unreachable');
+  }
+
+  // Already-requested state first (no race) → pending, do not click.
+  for (const selector of pendingSelectors) {
+    if (await page.$(selector)) {
+      return { joined: false, status: 'pending' };
+    }
+  }
+
+  // Otherwise locate + click the Join button.
+  let joinButton = null;
+  for (const selector of joinSelectors) {
+    joinButton = await page.$(selector);
+    if (joinButton) break;
+  }
+  if (!joinButton) {
+    throw new Error('❌ Join button not found; locale unsupported or group unreachable');
+  }
+  await joinButton.click();
+  await sleep(800); // let the join/approval state settle
+
+  // After clicking, a pending indicator means admin-approval is required.
+  for (const selector of pendingSelectors) {
+    if (await page.$(selector)) {
+      return { joined: true, status: 'pending' };
+    }
+  }
+
+  return { joined: true, status: 'joined' };
+}
+
+/**
+ * Default keyword-search seam (AC3 keyword mode). Navigates the group-search
+ * surface and scroll-collects up to `limit` group URLs. Injectable via
+ * options.searchFn so tests never hit the network.
+ *
+ * @param {Object} page - Puppeteer page
+ * @param {string} keyword - search term
+ * @param {number} limit - max group URLs to collect
+ * @returns {Promise<string[]>}
+ */
+async function defaultGroupSearch(page, keyword, limit) {
+  const url = `https://www.facebook.com/search/groups/?q=${encodeURIComponent(keyword)}`;
+  await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+
+  const collected = new Set();
+  let stalls = 0;
+  // Bounded scroll-collect: dedupe group links until limit or exhausted.
+  while (collected.size < limit && stalls < 5) {
+    const before = collected.size;
+    const links = await page.$$eval('a[href*="/groups/"]', (as) =>
+      as.map((a) => a.href).filter((h) => /\/groups\/[^/]+\/?$/.test(h)),
+    );
+    for (const href of links) {
+      collected.add(href.split('?')[0]);
+      if (collected.size >= limit) break;
+    }
+    if (collected.size === before) stalls++; else stalls = 0;
+    await page.evaluate(() => window.scrollBy(0, 1000));
+    await randomDelay(1000, 3000);
+  }
+  return Array.from(collected).slice(0, limit);
+}
+
+/**
+ * Join Facebook groups by URL or keyword search (Story 4.4 — FR-18).
+ * Cluster-1 batch write: routes through runGuardedBatch (NFR-7) with the
+ * mandatory account-risk warning (NFR-8) and a 30s inter-join delay floor (NFR-6).
+ *
+ * @param {Object} page - Puppeteer page (authenticated); may be null for URL-mode dry-run
+ * @param {Object} input - `{ groupUrls: string[] }` (URL mode) or `{ keyword, limit }` (keyword mode)
+ * @param {Object} [options]
+ * @param {boolean} [options.dryRun=true] - Default true; only explicit false sends real joins
+ * @param {number} [options.delayMin] - Clamped UP to GROUP_ACTION_DELAY_FLOOR_MS (30s) — cannot go lower
+ * @param {number} [options.delayMax] - Defaults to 90s
+ * @param {Function} [options.delay] - Injectable delay seam (tests pass a spy)
+ * @param {Function} [options.joinFn] - Injectable per-group join (default joinSingleGroup)
+ * @param {Function} [options.searchFn] - Injectable keyword search (default defaultGroupSearch)
+ * @param {number} [options.maxBatch] - Inherited from runGuardedBatch (default 20)
+ * @returns {Promise<Object>} runGuardedBatch result, with per-URL status merged in
+ */
+export async function joinFacebookGroups(page, input, options = {}) {
+  const {
+    joinFn: joinFnOpt,
+    searchFn: searchFnOpt,
+    delayMin: delayMinOpt,
+    delayMax: delayMaxOpt,
+    ...rest
+  } = options;
+  const joinFn = joinFnOpt ?? joinSingleGroup;
+  const searchFn = searchFnOpt ?? defaultGroupSearch;
+
+  // --- Resolve mode + batch items (validate before any browser write) ---
+  if (!input || typeof input !== 'object') {
+    throw new Error('❌ joinFacebookGroups: input must be { groupUrls } or { keyword, limit }');
+  }
+
+  let groupUrls;
+  if (Array.isArray(input.groupUrls)) {
+    // URL mode
+    if (input.groupUrls.length === 0) {
+      throw new Error('❌ joinFacebookGroups: groupUrls must be a non-empty array');
+    }
+    for (const u of input.groupUrls) {
+      assertFacebookUrl(u, 'joinFacebookGroups: groupUrl');
+    }
+    groupUrls = input.groupUrls;
+  } else if (typeof input.keyword === 'string' && input.keyword.trim()) {
+    // Keyword mode: resolve URLs via the (injectable) search seam, then validate.
+    const limit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 10;
+    groupUrls = await searchFn(page, input.keyword.trim(), limit);
+    if (!Array.isArray(groupUrls) || groupUrls.length === 0) {
+      // Empty search results → return an empty dry-run-style result, do NOT throw (AC3).
+      return {
+        dryRun: options.dryRun === false ? false : true,
+        platform: 'facebook',
+        attempted: 0, succeeded: 0, failed: 0,
+        preview: [], results: [], warning: null,
+      };
+    }
+    for (const u of groupUrls) {
+      assertFacebookUrl(u, 'joinFacebookGroups: resolved groupUrl');
+    }
+  } else {
+    throw new Error('❌ joinFacebookGroups: provide either { groupUrls } or { keyword, limit }');
+  }
+
+  // --- NFR-6 delay floor: clamp UP to 30s, never below; default 30s/90s ---
+  const delayMin = Math.max(GROUP_ACTION_DELAY_FLOOR_MS, delayMinOpt ?? GROUP_ACTION_DELAY_FLOOR_MS);
+  const delayMax = Math.max(delayMin, delayMaxOpt ?? GROUP_ACTION_DELAY_MAX_MS);
+
+  const guardedOptions = { ...rest, delayMin, delayMax };
+
+  // Capture per-URL status (joined/pending) for the post-batch merge (AC4) —
+  // same closure-Map pattern as 4.2's alreadyShared.
+  const captured = new Map();
+  const actionFn = async (groupUrl) => {
+    const result = await joinFn(page, groupUrl);
+    captured.set(groupUrl, result);
+    return result;
+  };
+
+  const batchResult = await runGuardedBatch(groupUrls, actionFn, guardedOptions);
+
+  // Surface status into real-run results (pending is ok:true, NOT failed).
+  if (!batchResult.dryRun && batchResult.results.length > 0) {
+    batchResult.results = batchResult.results.map((r) => {
+      const cap = captured.get(r.target);
+      if (cap && r.ok && cap.status !== undefined) {
+        return { ...r, status: cap.status };
+      }
+      return r;
+    });
+  }
+
+  return batchResult;
+}
+
 export default {
   runGuardedBatch,
   randomDelay,
@@ -1081,4 +1301,6 @@ export default {
   shareFacebookPosts,
   warmupScrollFeed,
   MAX_DURATION_SECONDS,
+  joinFacebookGroups,
+  GROUP_ACTION_DELAY_FLOOR_MS,
 };
