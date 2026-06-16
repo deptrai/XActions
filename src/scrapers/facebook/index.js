@@ -800,6 +800,8 @@ function assertFacebookUrlLocal(url, label = 'URL') {
     throw new Error(`❌ ${label} must be an http(s) URL`);
   }
   const host = parsed.hostname.toLowerCase();
+  // Faux-suffix guard: 'notfacebook.com'.endsWith('facebook.com') is true, so an
+  // exact-match-OR-dot-prefixed check is required to block look-alike hosts (SSRF).
   if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
     throw new Error(`❌ ${label} must be a facebook.com URL`);
   }

@@ -157,13 +157,20 @@ claude-sonnet-4-6
 - `docs/agents/selectors-facebook.md` extended: Groups — Members (FR-20) section + 5 verify-checklist items (UNVERIFIED).
 - Schedule test flakiness in full-suite runs is pre-existing database contention — not caused by 4.6 changes (confirmed: passes in isolation and with 4.6 tests together).
 
+**TEA automate (coverage expansion) — 2026-06-16:**
+- Added `tests/scrapers/facebook-group-members-edge.test.js` (22 edge tests): default-export identity, URL-validation edges (http://, faux-suffix host, m.facebook.com subdomain, null/number input, query-string URL), normalizer edges (null name, undefined username, plain-text preserved, phone-only/email-only → null), onProgress callback, scroll/limit/dedup edges, restricted-group no-scroll.
+- **SECURITY FIX (HIGH)**: edge test caught a faux-suffix SSRF bypass in `assertFacebookUrlLocal`. The duplicated guard used `host.endsWith('facebook.com')`, which accepts `notfacebook.com`. Synced to the original `assertFacebookUrl` logic: `host !== 'facebook.com' && !host.endsWith('.facebook.com')`. This divergence had been introduced when the guard was duplicated to avoid the circular dependency.
+- Full scrapers suite green (285 passed) after the fix.
+
 ### File List
 
-- `src/scrapers/facebook/index.js` — added `assertFacebookUrlLocal`, `stripPii`, `normalizeGroupMember`, `scrapeGroupMembers`; updated default export
+- `src/scrapers/facebook/index.js` — added `assertFacebookUrlLocal`, `stripPii`, `normalizeGroupMember`, `scrapeGroupMembers`; updated default export; **fixed faux-suffix SSRF bypass in `assertFacebookUrlLocal`**
 - `tests/scrapers/facebook-group-members.test.js` — new test file (28 tests)
+- `tests/scrapers/facebook-group-members-edge.test.js` — new edge test file (22 tests, TEA automate)
 - `docs/agents/selectors-facebook.md` — added Groups — Members (FR-20) section + verify-checklist items
 
 ## Change Log
 
 - 2026-06-16: Story 4.6 created (context engine). Status → ready-for-dev. (Luisphan)
 - 2026-06-16: Implementation complete. Added `scrapeGroupMembers` with NFR-11 PII filter, restricted-group fallback, bounded scroll, SSRF guard. 28 tests. Status → review. (claude-sonnet-4-6)
+- 2026-06-16: TEA automate coverage expansion — +22 edge tests (50 total for 4.6). Caught + fixed faux-suffix SSRF bypass in `assertFacebookUrlLocal`. Scrapers suite green (285 passed). (claude-opus-4-8)
