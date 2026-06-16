@@ -53,7 +53,7 @@ development_status:
   4-6-scrape-group-members: done
   4-7-send-friend-requests: ready-for-dev
   4-8-cancel-friend-requests: ready-for-dev
-  4-9-newsfeed-farming: backlog
+  4-9-newsfeed-farming: ready-for-dev
   epic-4-retrospective: optional
 
   # Epic 5: Facebook Messenger Port (from SST_TOOL_FB C#)
