@@ -135,6 +135,24 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 
 ⚠️ Flow: navigate group → combined `waitForSelector` (pending + join list). Pending indicator trước → `status:'pending'` không click. Else click Join → check pending lại (admin-approval) → `joined`/`pending`. PII-free throw nếu không thấy. Keyword mode: search seam (injectable) scroll-collect URL rồi mỗi URL thành batch item.
 
+## Groups — Batch Post (FR-19) — Epic 4
+
+> ⚠️ Story 4.5. Cluster-1 medium risk. Dò trên **account phụ** — mass group posting là top spam-detection trigger.
+> TẤT CẢ selector dưới đây **UNVERIFIED** — cần confirm live. Sàn delay 30s/post là invariant (NFR-6). Cap 10 groups mặc định.
+
+| Element | Selector chain (UNVERIFIED) | Ghi chú |
+|---|---|---|
+| Group composer (en) | `[aria-label*="Write something"]` | UNVERIFIED — group page composer prompt |
+| Group composer (vi) | `[aria-label*="Viết gì đó"]` | UNVERIFIED — Vietnamese locale |
+| Group composer fallback (en) | `[aria-label*="What's on your mind"]` | UNVERIFIED — home-feed style fallback |
+| Group composer fallback (vi) | `[aria-label*="Bạn đang nghĩ gì"]` | UNVERIFIED — home-feed style fallback |
+| Group composer fallback (testid) | `[data-testid="status-attachment-mentions-input"]` | UNVERIFIED — stable testid fallback |
+| Group composer fallback (role) | `div[role="textbox"][contenteditable="true"]` | UNVERIFIED — generic contenteditable |
+| Submit / Post button (en) | `[aria-label="Post"]`, `div[aria-label="Post"][role="button"]` | UNVERIFIED — submit after typing |
+| Submit / Post button (vi) | `[aria-label="Đăng"]`, `div[aria-label="Đăng"][role="button"]` | UNVERIFIED — Vietnamese locale |
+
+⚠️ Flow: navigate groupUrl → `waitForSelector` (composer list, 8s timeout) → click composer → `keyboard.type(content)` → find + click submit → `{posted:true}`. PII-free throw nếu composer hoặc submit không tìm thấy. Facebook posts submit via XHR (không navigate) — post-success confirm selector là UNVERIFIED live-verify item. Tests dùng injected `postFn` seam, không phụ thuộc selector thật.
+
 ## Verify Checklist
 
 Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi verify:
@@ -154,6 +172,9 @@ Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi veri
 - [ ] **Join group button**: mở 1 group chưa join, xác nhận selector Join click được + chuyển sang joined/pending. Ghi selector thật. (Story 4.4 — UNVERIFIED)
 - [ ] **Group pending state**: mở 1 group đã request, xác nhận pending indicator (`Requested`/`Đã yêu cầu`) detect đúng → `status:'pending'`. (Story 4.4 — UNVERIFIED)
 - [ ] **Keyword group search**: chạy `/search/groups/?q=<kw>`, xác nhận `a[href*="/groups/"]` collect được group URLs qua scroll. (Story 4.4 — UNVERIFIED)
+- [ ] **Group post composer**: mở 1 group page là thành viên, xác nhận selector `[aria-label*="Write something"]`/`[aria-label*="Viết gì đó"]` click được + `keyboard.type` hoạt động. Ghi selector thật. (Story 4.5 — UNVERIFIED)
+- [ ] **Group post submit**: sau khi type content, xác nhận `[aria-label="Post"]`/`[aria-label="Đăng"]` click được và post xuất hiện trong group. (Story 4.5 — UNVERIFIED)
+- [ ] **Group post XHR confirm**: xác nhận post thực sự được tạo (không chỉ submit button click) — tìm post-success indicator nếu có. (Story 4.5 — UNVERIFIED live-verify item)
 
 ### Cập nhật sau verify
 - [ ] Thay mọi selector "UNVERIFIED" bằng selector thật đã test.
