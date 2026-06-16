@@ -184,4 +184,19 @@ describe('warmupScrollFeed', () => {
     expect(result.dryRun).toBe(true);
     expect(page.calls.goto).toHaveLength(0);
   });
+
+  it('busy-spin backstop: no-op delay with default (real) clock terminates at the iteration cap, not infinitely', async () => {
+    // Misuse: caller overrides delay to a no-op but forgets to override `now`.
+    // The real Date.now() barely advances per iteration, so the wall-clock loop would
+    // busy-spin — the iteration backstop must bound it. maxScrolls = ceil(durationMs/800)+1.
+    const page = makeFakePage();
+    const result = await warmupScrollFeed(page, URL_OK, {
+      dryRun: false,
+      durationSeconds: 2, // durationMs 2000 → cap = ceil(2000/800)+1 = 4
+      delay: async () => {}, // no-op: does NOT advance any clock
+      // now intentionally NOT overridden → default Date.now()
+    });
+    expect(result.scrolls).toBeLessThanOrEqual(4);
+    expect(page.calls.click).toHaveLength(0);
+  });
 });

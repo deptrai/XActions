@@ -4,7 +4,7 @@ baseline_commit: b08e6038dfe769c8adfe994f86750819c38747e8
 
 # Story 4.3: View boost via scroll simulation (dry-run default)
 
-Status: review
+Status: done
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 3 — low risk). Source: epics.md#Story 4.3 + PRD prd-XActions-2026-06-10-epic4 FR-17. -->
 
@@ -72,6 +72,28 @@ The lowest-risk feature in Epic 4: no DOM writes at all, only scrolling.
 - [x] **Task 5: Tests** (AC6)
   - [x] Browser-free + DB-free unit tests (fake page + injected `delay`/`now`/`createOperation`) covering all AC6 cases
   - [x] `npx vitest run <new test file>` green
+
+## Review Findings
+
+> Code review 2026-06-16 (3-layer adversarial: blind / edge-case / acceptance-auditor). Implementation = commit 2ce2a8d. Verified against diff + ran 4.2+4.3 suites (29/29 pass — no regression from the assertFacebookUrl extraction). Acceptance audit: all 13 AC sub-items MET (the one PARTIAL flag — "every" dropped from a 4.2 error message — was DISMISSED after running the suite: 4.2 tests use substring matches that still pass).
+
+### Patch
+
+- [x] [Review][Patch][HIGH] FIXED — busy-spin footgun. Added an iteration backstop `maxScrolls = ceil(durationMs / SCROLL_PAUSE_MIN_MS) + 1` (upper bound on legitimate scrolls at the minimum pause) to the loop condition; a no-op `delay` without a fake `now` now terminates at the cap instead of spinning ~150k+ calls. JSDoc documents the delay↔now coupling contract. New test "busy-spin backstop" verifies termination. [api/services/facebookAutomation.js#warmupScrollFeed]
+- [x] [Review][Patch][MEDIUM] FIXED — `safeError` now preserves `code: <truncated message>` (150 chars) when a code exists, falling back to name/message; Puppeteer nav errors stay debuggable while remaining PII-bounded. [api/services/facebookAutomation.js#warmupScrollFeed catch]
+- [x] [Review][Patch][LOW] FIXED — both `updateOperation` calls (success + failure) wrapped in `Promise.resolve(...)` so a synchronously-throwing injected seam can't bypass `.catch()` / mask the original error. [api/services/facebookAutomation.js#warmupScrollFeed]
+
+### Deferred
+
+- [x] [Review][Defer][LOW] `assertFacebookUrl` allows `http:` (not just `https:`) — a `http://facebook.com` navigation downgrades the first request (MITM-interceptable on a hostile proxy). This is PRE-EXISTING behavior inherited from Story 4.2's original guard (4.3 only moved it into a shared helper, faithfully). Tightening to `https:`-only is a cross-cutting change affecting both 4.2 and 4.3 callers. — deferred, pre-existing; decide https-only as a family change.
+
+### Dismissed (verified)
+
+- F1 "every" dropped from 4.2 parse-fail message → ran 4.2 suite: tests use substring `'must be a valid URL'` (still matches) and the `every` assertion at test L127 is a different check (non-empty-string, unchanged). 29/29 pass. Not a regression.
+- assertFacebookUrl edge cases (userinfo `@evil.com`, `facebook.com.evil.com` faux-suffix, IPv6, uppercase, port) → all correctly rejected/accepted by `new URL().hostname` + the `=== 'facebook.com' || endsWith('.facebook.com')` check. Verified by reasoning + the look-alike test in the suite.
+- durationSeconds boundary 300/300.5/huge → clamp logic correct.
+- No surface wiring (CLI/MCP/REST) → expected; FR-17 is service-only this story.
+- Operation Prisma fields (startedAt/completedAt/result/error/config) → all exist (confirmed against schema; same set Story 4.1 uses).
 
 ## Dev Notes
 

@@ -971,8 +971,12 @@ async function defaultUpdateOperation(id, data) {
  * @param {boolean} [options.dryRun=true] - Default true; only explicit false drives the browser
  * @param {number} [options.durationSeconds=60] - Dwell time; clamped to MAX_DURATION_SECONDS (300)
  * @param {string} [options.userId] - If provided on a real run, an Operation is recorded
- * @param {Function} [options.delay=randomDelay] - Injectable pause seam (tests pass () => {})
- * @param {Function} [options.now] - Injectable clock (default () => Date.now())
+ * @param {Function} [options.delay=randomDelay] - Injectable pause seam between scrolls.
+ *   ⚠️ COUPLED WITH `now`: if you override `delay` with a non-sleeping fn (e.g. tests pass
+ *   `() => {}`), you MUST also override `now` with a fake clock that advances — otherwise the
+ *   wall-clock loop would busy-spin. An iteration backstop bounds the damage, but the contract
+ *   is: override both together or neither.
+ * @param {Function} [options.now] - Injectable clock (default () => Date.now()); see `delay`.
  * @param {Function} [options.createOperation] - Injectable Operation persistence seam
  * @returns {Promise<Object>} Preview (dry-run) or run summary (real)
  */
@@ -1020,6 +1024,18 @@ export async function warmupScrollFeed(page, targetUrl, options = {}) {
   // --- real run ---
   const durationMs = effectiveDuration * 1000;
 
+  // Randomized inter-scroll pause bounds (named so the iteration cap below stays in sync).
+  const SCROLL_PAUSE_MIN_MS = 800;
+  const SCROLL_PAUSE_MAX_MS = 2500;
+
+  // Iteration backstop (review HIGH): the loop terminates by wall-clock, but if a caller
+  // injects a no-op `delay` WITHOUT also overriding `now` (the clock would then barely
+  // advance per iteration), the time loop would busy-spin hundreds of thousands of
+  // page.evaluate calls and starve the event loop. The most scrolls a legitimate run can
+  // do is durationMs / minPause, so cap there (+1 slack). This never cuts a real run short
+  // (real randomDelay/now), but bounds the misuse to a sane number.
+  const maxScrolls = Math.ceil(durationMs / SCROLL_PAUSE_MIN_MS) + 1;
+
   // Operation record only when a userId is supplied (AC5) — skip silently otherwise.
   let operation = null;
   if (userId) {
@@ -1032,19 +1048,21 @@ export async function warmupScrollFeed(page, targetUrl, options = {}) {
 
     const start = now();
     // Loop until elapsed wall-clock reaches the clamped duration. NO social action.
-    while (now() - start < durationMs) {
+    while (now() - start < durationMs && scrolls < maxScrolls) {
       // Randomized scroll amount — passive view signal, scroll only.
       const amount = 300 + Math.floor(Math.random() * 500); // 300–800px
       await page.evaluate((y) => window.scrollBy(0, y), amount);
       scrolls++;
       // Randomized pause between scrolls via injectable delay seam.
-      await delay(800, 2500);
+      await delay(SCROLL_PAUSE_MIN_MS, SCROLL_PAUSE_MAX_MS);
     }
 
     if (operation) {
-      await updateOperation(operation.id, {
-        status: 'completed', completedAt: new Date(), result: JSON.stringify({ scrolls }),
-      });
+      await Promise.resolve(
+        updateOperation(operation.id, {
+          status: 'completed', completedAt: new Date(), result: JSON.stringify({ scrolls }),
+        }),
+      );
     }
 
     return {
@@ -1056,11 +1074,20 @@ export async function warmupScrollFeed(page, targetUrl, options = {}) {
       operationId: operation?.id ?? null,
     };
   } catch (err) {
-    const safeError = err?.code || err?.name || (err?.message ?? 'unknown error').slice(0, 200);
+    // PII-bounded error: preserve both code AND a truncated message (Puppeteer nav errors
+    // carry the actionable detail in message). targetUrl is not a secret (AC5.10); no cookie
+    // is in scope here. Truncated so it can never grow unbounded.
+    const safeError = err?.code
+      ? `${err.code}: ${(err?.message ?? '').slice(0, 150)}`
+      : (err?.name && err.name !== 'Error' ? err.name : (err?.message ?? 'unknown error').slice(0, 200));
     if (operation) {
-      await updateOperation(operation.id, {
-        status: 'failed', completedAt: new Date(), error: safeError,
-      }).catch(() => {});
+      // Promise.resolve() so a synchronously-throwing injected updateOperation can't bypass
+      // the catch and mask the original err.
+      await Promise.resolve(
+        updateOperation(operation.id, {
+          status: 'failed', completedAt: new Date(), error: safeError,
+        }),
+      ).catch(() => {});
     }
     throw err;
   }
