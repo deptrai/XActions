@@ -4,7 +4,7 @@ baseline_commit: dfe17ad902d871423d6951d09f1b9834e2c7b3da
 
 # Story 4.4: Join Facebook groups (dry-run default)
 
-Status: ready-for-dev
+Status: review
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.4 + PRD prd-XActions-2026-06-10-epic4 FR-18. FIRST Cluster-1 write story. -->
 
@@ -72,20 +72,20 @@ This is the highest-risk story so far: it both touches a shared chokepoint (regr
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Extend `runGuardedBatch` (delay range)** (AC1, AC7.20-21)
-  - [ ] Add `delayMin=1000`/`delayMax=3000` options + finite/0<=min<=max validation; replace hard-coded `delay(1000,3000)` with `delay(delayMin, delayMax)`
-  - [ ] Confirm all existing callers unchanged; run Epic 2 + 4.2 suites green (regression gate)
-- [ ] **Task 2: `joinFacebookGroups` entry + delay floor** (AC2, AC6)
-  - [ ] Export + default export; route through `runGuardedBatch`; `GROUP_ACTION_DELAY_FLOOR_MS=30000`; clamp caller delay up to floor; default 30000/90000
-  - [ ] dryRun default true; account-risk warning inherited (not suppressed)
-- [ ] **Task 3: Input modes** (AC3)
-  - [ ] URL mode: validate group URLs (reuse 4.2/4.3 facebook.com guard); keyword mode: search + bounded-scroll collect up to `limit` URLs via injectable search seam; mode select by shape; clear throw if neither
-- [ ] **Task 4: `joinSingleGroup` + pending** (AC4)
-  - [ ] Navigate + locale-aware Join button (fallback chain, UNVERIFIED, PII-free throw); detect pending-approval → `status:'pending'` ok (capture-Map merge like 4.2 alreadyShared)
-  - [ ] Document Groups selectors in `docs/agents/selectors-facebook.md` (UNVERIFIED + verify-checklist)
-- [ ] **Task 5: Tests** (AC7)
-  - [ ] runGuardedBatch delay-range + regression; joinFacebookGroups URL/keyword/pending/floor/invalid cases; injected `joinFn`/`searchFn`/`delay` seams
-  - [ ] `npx vitest run` for the new file + the existing automate suites green
+- [x] **Task 1: Extend `runGuardedBatch` (delay range)** (AC1, AC7.20-21)
+  - [x] Add `delayMin=1000`/`delayMax=3000` options + finite/0<=min<=max validation; replace hard-coded `delay(1000,3000)` with `delay(delayMin, delayMax)`
+  - [x] Confirm all existing callers unchanged; run Epic 2 + 4.2 suites green (regression gate)
+- [x] **Task 2: `joinFacebookGroups` entry + delay floor** (AC2, AC6)
+  - [x] Export + default export; route through `runGuardedBatch`; `GROUP_ACTION_DELAY_FLOOR_MS=30000`; clamp caller delay up to floor; default 30000/90000
+  - [x] dryRun default true; account-risk warning inherited (not suppressed)
+- [x] **Task 3: Input modes** (AC3)
+  - [x] URL mode: validate group URLs (reuse 4.2/4.3 facebook.com guard); keyword mode: search + bounded-scroll collect up to `limit` URLs via injectable search seam; mode select by shape; clear throw if neither
+- [x] **Task 4: `joinSingleGroup` + pending** (AC4)
+  - [x] Navigate + locale-aware Join button (fallback chain, UNVERIFIED, PII-free throw); detect pending-approval → `status:'pending'` ok (capture-Map merge like 4.2 alreadyShared)
+  - [x] Document Groups selectors in `docs/agents/selectors-facebook.md` (UNVERIFIED + verify-checklist)
+- [x] **Task 5: Tests** (AC7)
+  - [x] runGuardedBatch delay-range + regression; joinFacebookGroups URL/keyword/pending/floor/invalid cases; injected `joinFn`/`searchFn`/`delay` seams
+  - [x] `npx vitest run` for the new file + the existing automate suites green
 
 ## Dev Notes
 
@@ -132,12 +132,28 @@ This is the highest-risk story so far: it both touches a shared chokepoint (regr
 
 ### Agent Model Used
 
+claude-opus-4-8 (BMAD dev-story workflow)
+
 ### Debug Log References
+
+- Regression gate (AC7.21) chạy NGAY sau khi extend `runGuardedBatch` delay range, TRƯỚC khi viết `joinFacebookGroups`: services suite 127/127 pass → xác nhận default `delayMin=1000`/`delayMax=3000` giữ backward-compat byte-for-byte cho mọi caller (like/comment/post/share). Full suite cuối: services+mcp 216/216, tổng 1355 pass, chỉ `x402-integration.test.js` fail (ECONNREFUSED pre-existing).
 
 ### Completion Notes List
 
+- **AC1 (extend `runGuardedBatch`)**: thêm `delayMin`/`delayMax` options (default 1000/3000 → backward-compat tuyệt đối), validation finite + `0 <= delayMin <= delayMax` (mirror style maxBatch/maxRetry), thay hard-coded `delay(1000,3000)` → `delay(delayMin, delayMax)`. Helper VẪN generic — KHÔNG nhúng floor 30s vào đây (floor là policy của caller).
+- **AC2 (`joinFacebookGroups` + floor)**: route qua `runGuardedBatch` (NFR-7), `GROUP_ACTION_DELAY_FLOOR_MS = 30000` (exported const). Clamp UP: `delayMin = max(30000, opt ?? 30000)` — user KHÔNG thể đặt dưới 30s (NFR-6). Default 30000/90000. dryRun default true; account-risk warning inherit từ runGuardedBatch (không suppress, NFR-8).
+- **AC3 (2 mode)**: URL mode validate mỗi URL qua `assertFacebookUrl` (shared helper từ 4.3) trước browser. Keyword mode: `searchFn` seam (default `defaultGroupSearch` — `/search/groups/?q=`, bounded scroll-collect `a[href*="/groups/"]` dedupe tới `limit`), URL resolved cũng validate. Mode select theo shape; empty search → empty result KHÔNG throw; neither → throw rõ ràng.
+- **AC4 (`joinSingleGroup` + pending)**: combined `waitForSelector` (pending + join list, UNVERIFIED locale-aware en/vi). Pending indicator trước → `status:'pending'` không click. Else click Join → check pending lại (admin-approval) → `joined`/`pending`. PII-free throw nếu không thấy. Pending là `ok:true` (KHÔNG failed) qua capture-Map merge (giống 4.2 alreadyShared). Groups selectors + verify-checklist đã ghi vào `selectors-facebook.md` (UNVERIFIED).
+- **AC5–AC6 (result + safety)**: dry-run preview `{target, action:'pending'}` (URL mode không mở browser); real results `{target, ok, error?, status?}`. maxBatch 20 inherit. dryRun không join (test khẳng định).
+- **AC7 (tests)**: 15/15 pass (`tests/services/facebook-join-groups.test.js`), browser-free, no-mock (delay-spy ghi `(min,max)` không sleep thật; injected `joinFn`/`searchFn`). Bao gồm delay-range default/explicit/invalid, floor enforcement (delayMin 5000 → spy nhận ≥30000), pending≠failed, keyword empty, URL guard SSRF, batch-continue-on-throw.
+
 ### File List
+
+- MODIFIED: `api/services/facebookAutomation.js` — extend `runGuardedBatch` (delayMin/delayMax + validation) + `joinFacebookGroups` + `joinSingleGroup` + `defaultGroupSearch` + `GROUP_ACTION_DELAY_FLOOR_MS` + default-export entries
+- MODIFIED: `docs/agents/selectors-facebook.md` — Groups/Join section (UNVERIFIED) + verify-checklist items
+- NEW: `tests/services/facebook-join-groups.test.js` — 15 browser-free unit tests (AC7)
 
 ## Change Log
 
 - 2026-06-15: Story 4.4 created (context engine). Status → ready-for-dev. (Luisphan)
+- 2026-06-16: Story 4.4 implemented — extend runGuardedBatch with configurable delayMin/delayMax (default 1000/3000, backward-compat verified), joinFacebookGroups (URL + keyword modes, 30s delay floor, pending≠failure), Groups selector docs, 15 browser-free tests. Status → review. (dev-story / claude-opus-4-8)
