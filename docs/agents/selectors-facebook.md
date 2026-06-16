@@ -171,6 +171,26 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 
 ⚠️ Flow: navigate `{groupUrl}/members` → `waitForSelector` (container list, 8s timeout). Nếu không thấy → return `{ note, platform }` (restricted/private). Nếu thấy → bounded scroll loop (`window.scrollTo(0, document.body.scrollHeight)` + 1-3s delay + stall detection). Extract member rows → `normalizeGroupMember` → NFR-11 strip phone/email. Return array. Tests dùng fake page + DOM fixture + injected `delay` seam, không phụ thuộc selector thật.
 
+## Friends — Send Request (FR-21) — Epic 4
+
+> ⚠️ Story 4.7. **Cluster-2 — HIGHEST account-risk action trong Epic 4.** Friend-request spam = top cause of checkpoint.
+> Delay floor **60s** (DOUBLE group floor), batchLimit ≤ 20/session. Non-suppressible warning. TẤT CẢ selector **UNVERIFIED** — confirm live trên account phụ.
+> NFR-11: phone/email KHÔNG BAO GIỜ được collect ở suggestions/location mode dù có trong DOM.
+
+| Element | Selector chain (UNVERIFIED) | Ghi chú |
+|---|---|---|
+| Add Friend button (en) | `[aria-label="Add friend"]`, `[aria-label="Add Friend"]`, `div[role="button"][aria-label*="Add friend"]` | UNVERIFIED — click để gửi request |
+| Add Friend button (vi) | `[aria-label="Thêm bạn bè"]`, `div[role="button"][aria-label*="Thêm bạn"]` | UNVERIFIED — Vietnamese locale |
+| Already-friend indicator (en) | `[aria-label="Friends"]`, `div[role="button"][aria-label*="Friends"]` | UNVERIFIED — đã là bạn → skip (`already_friend`, ok:true, KHÔNG fail) |
+| Already-friend indicator (vi) | `[aria-label="Bạn bè"]` | UNVERIFIED — Vietnamese locale |
+| Pending indicator (en) | `[aria-label="Cancel request"]`, `[aria-label="Requested"]` | UNVERIFIED — request đã gửi → skip (`pending`, ok:true, KHÔNG fail) |
+| Pending indicator (vi) | `[aria-label="Đã yêu cầu"]`, `[aria-label="Hủy yêu cầu"]` | UNVERIFIED — Vietnamese locale |
+| People You May Know surface | `https://www.facebook.com/friends/suggestions`; profile links `a[href*="/profile.php"]`, `a[href]` matching profile pattern | UNVERIFIED — bounded scroll-collect, dedupe by profileUrl |
+| Suggestion card name | `a` textContent, `span`, `strong` trong `div[role="listitem"]` | UNVERIFIED — chỉ collect name (NFR-11: KHÔNG phone/email) |
+| Suggestion card location | `[class*="location"]`, `span[dir="auto"]:nth-of-type(2)` | UNVERIFIED — publicly self-declared location, dùng cho location-mode substring filter |
+
+⚠️ Flow: **uid_list mode** — `targets` array → `assertFacebookUrl` mỗi URL → batch items trực tiếp. **suggestions mode** — navigate `/friends/suggestions` → scroll-collect profile URLs (injectable `searchFn`); dry-run KHÔNG drive browser (empty preview + warning). **location mode** — như suggestions + filter theo substring trên publicly self-declared location text. Per-profile: navigate → detect already-friend/pending TRƯỚC khi click → click Add Friend → `{sent, status}`. Skip states (`already_friend`/`pending`) là ok:true KHÔNG fail. PII-free throw nếu profile unreachable. Tests dùng injected `requestFn`/`searchFn`/`delay` seam, không phụ thuộc selector thật.
+
 ## Verify Checklist
 
 Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi verify:
@@ -197,6 +217,12 @@ Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi veri
 - [ ] **Group member rows**: xác nhận `[role="listitem"]` bên trong container bắt được member rows; verify lấy được name + profileUrl. (Story 4.6 — UNVERIFIED)
 - [ ] **Group members restricted**: mở 1 private group KHÔNG phải thành viên, xác nhận `waitForSelector` timeout → function trả `{ note, platform }` không throw. (Story 4.6 — UNVERIFIED)
 - [ ] **Group members URL pattern**: xác nhận `{groupUrl}/members` là URL đúng cho tab members (có thể khác với group type). Ghi URL pattern thực tế. (Story 4.6 — UNVERIFIED)
+- [ ] **Add Friend button**: mở 1 profile chưa kết bạn, xác nhận `[aria-label="Add friend"]`/`[aria-label="Thêm bạn bè"]` click được + đổi sang pending. Ghi selector thật. (Story 4.7 — UNVERIFIED)
+- [ ] **Already-friend detect**: mở 1 profile đã là bạn, xác nhận `[aria-label="Friends"]`/`[aria-label="Bạn bè"]` detect đúng → `status:'already_friend'` (skip, KHÔNG click). (Story 4.7 — UNVERIFIED)
+- [ ] **Pending detect**: mở 1 profile đã gửi request, xác nhận `Requested`/`Đã yêu cầu` detect đúng → `status:'pending'` (skip). (Story 4.7 — UNVERIFIED)
+- [ ] **Friend request XHR confirm**: sau khi click Add Friend, xác nhận button đổi sang pending (confirm request thực sự fired, không silent success). (Story 4.7 — UNVERIFIED live-verify item)
+- [ ] **People You May Know surface**: navigate `/friends/suggestions`, xác nhận scroll-collect được profile URLs + name + location. (Story 4.7 — UNVERIFIED)
+- [ ] **Suggestion location field**: xác nhận selector lấy được publicly self-declared location text cho location-mode filter (NFR-11: KHÔNG lấy phone/email). (Story 4.7 — UNVERIFIED)
 
 ### Cập nhật sau verify
 - [ ] Thay mọi selector "UNVERIFIED" bằng selector thật đã test.
