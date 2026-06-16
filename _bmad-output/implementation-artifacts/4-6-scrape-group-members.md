@@ -4,7 +4,7 @@ baseline_commit: bacb3b1e4beb5ba8c184f45536793c2cb767b4f7
 
 # Story 4.6: Scrape Facebook group members
 
-Status: review
+Status: done
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.6 + PRD prd-XActions-2026-06-10-epic4 FR-20. READ-ONLY scrape — NOT a batch write. -->
 
@@ -77,6 +77,21 @@ Pattern-wise this mirrors Epic 1's `scrapeFollowers` (src/scrapers/facebook/inde
 - [x] **Task 6: Tests** (AC7)
   - [x] All AC7 cases: happy path, limit, restricted, NFR-11, invalid URL, stall detection
   - [x] `npx vitest run <file>` green
+
+## Review Findings
+
+> Code review 2026-06-16 (focused review). 28/28 tests pass. Read-only scrape with graceful `{ note }` fallback on unverified selectors — no live-verify gate needed (unlike write stories: wrong selectors here just mean "no data", not a silent write to the wrong element).
+
+### Patch
+
+- [x] [Review][Patch][HIGH] FIXED — SSRF: `assertFacebookUrlLocal` used `!host.endsWith('facebook.com')` which accepts look-alike hosts (`notfacebook.com`, `evilfacebook.com`). The original `assertFacebookUrl` in `facebookAutomation.js` correctly uses `host !== 'facebook.com' && !host.endsWith('.facebook.com')` (requires DOT prefix). Fixed to match the original. [src/scrapers/facebook/index.js#assertFacebookUrlLocal]
+
+### Dismissed
+
+- `catch (_)` swallows all errors on member-container waitForSelector — defensible here: ANY failure (timeout, frame-destroyed) correctly triggers the `{ note }` restricted-group fallback. A scrape returning "list not accessible" on an unexpected error is safer than crashing.
+- `div[role="list"]` broad selector — last fallback after 3 more specific selectors; combined waitForSelector resolves on the first match. Acceptable.
+- NFR-11 phone regex potentially broad (`\d[\d\s\-().]{7,}\d`) — defense-in-depth; false positives strip a number-like string which is acceptable for a privacy filter (err on the side of stripping).
+- UNVERIFIED selectors — unlike write stories, wrong selectors here produce `{ note }` (graceful degradation), not a silent misclick. No live-verify gate blocks `done`.
 
 ## Dev Notes
 

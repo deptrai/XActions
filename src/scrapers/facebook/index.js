@@ -800,7 +800,7 @@ function assertFacebookUrlLocal(url, label = 'URL') {
     throw new Error(`❌ ${label} must be an http(s) URL`);
   }
   const host = parsed.hostname.toLowerCase();
-  if (!host.endsWith('facebook.com')) {
+  if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
     throw new Error(`❌ ${label} must be a facebook.com URL`);
   }
 }
