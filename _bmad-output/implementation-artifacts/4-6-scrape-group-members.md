@@ -4,7 +4,7 @@ baseline_commit: bacb3b1e4beb5ba8c184f45536793c2cb767b4f7
 
 # Story 4.6: Scrape Facebook group members
 
-Status: ready-for-dev
+Status: review
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.6 + PRD prd-XActions-2026-06-10-epic4 FR-20. READ-ONLY scrape — NOT a batch write. -->
 
@@ -62,21 +62,21 @@ Pattern-wise this mirrors Epic 1's `scrapeFollowers` (src/scrapers/facebook/inde
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: `scrapeGroupMembers` function** (AC1, AC4)
-  - [ ] Export from `src/scrapers/facebook/index.js`; navigate to group members page; bounded scroll loop with 1-3s delay + stall detection; collect up to `limit` members
-  - [ ] Injectable `delay` seam (default `randomDelay` or local sleep+random)
-- [ ] **Task 2: NFR-11 normalizer filter** (AC3)
-  - [ ] Strip phone/email from extracted fields (regex pattern match); apply at normalizer level (before adding to return array); dedicated test
-- [ ] **Task 3: Restricted-group fallback** (AC2)
-  - [ ] Detect restricted list (member container absent after wait) → `{ note, platform }` not throw
-  - [ ] Distinguish empty-group ([] array) from restricted ({ note })
-- [ ] **Task 4: URL validation** (AC5)
-  - [ ] `assertFacebookUrl` guard before navigation; resolve import direction (no circular dep)
-- [ ] **Task 5: Selectors doc** (AC6)
-  - [ ] Add "Groups — Members (FR-20)" to selectors-facebook.md, UNVERIFIED + verify-checklist
-- [ ] **Task 6: Tests** (AC7)
-  - [ ] All AC7 cases: happy path, limit, restricted, NFR-11, invalid URL, stall detection
-  - [ ] `npx vitest run <file>` green
+- [x] **Task 1: `scrapeGroupMembers` function** (AC1, AC4)
+  - [x] Export from `src/scrapers/facebook/index.js`; navigate to group members page; bounded scroll loop with 1-3s delay + stall detection; collect up to `limit` members
+  - [x] Injectable `delay` seam (default `randomDelay` or local sleep+random)
+- [x] **Task 2: NFR-11 normalizer filter** (AC3)
+  - [x] Strip phone/email from extracted fields (regex pattern match); apply at normalizer level (before adding to return array); dedicated test
+- [x] **Task 3: Restricted-group fallback** (AC2)
+  - [x] Detect restricted list (member container absent after wait) → `{ note, platform }` not throw
+  - [x] Distinguish empty-group ([] array) from restricted ({ note })
+- [x] **Task 4: URL validation** (AC5)
+  - [x] `assertFacebookUrl` guard before navigation; resolve import direction (no circular dep)
+- [x] **Task 5: Selectors doc** (AC6)
+  - [x] Add "Groups — Members (FR-20)" to selectors-facebook.md, UNVERIFIED + verify-checklist
+- [x] **Task 6: Tests** (AC7)
+  - [x] All AC7 cases: happy path, limit, restricted, NFR-11, invalid URL, stall detection
+  - [x] `npx vitest run <file>` green
 
 ## Dev Notes
 
@@ -125,12 +125,30 @@ Pattern-wise this mirrors Epic 1's `scrapeFollowers` (src/scrapers/facebook/inde
 
 ### Agent Model Used
 
+claude-sonnet-4-6
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- Added `scrapeGroupMembers(page, groupUrl, options)` exported from `src/scrapers/facebook/index.js` — read-only scrape, NOT via runGuardedBatch (FR-20 is a read; NFR-7/8 apply only to writes).
+- Added `assertFacebookUrlLocal` — duplicate of `assertFacebookUrl` from `api/services/facebookAutomation.js` to avoid circular dependency (automate.js already imports from this file). Comment marks sync source.
+- Added `normalizeGroupMember` with NFR-11 PII filter (`stripPii`): strips phone numbers and email addresses from all text fields at normalizer level before returning to caller.
+- Navigate to `{groupUrl}/members`, `waitForSelector` (8s) for member container. Restricted/private group → `waitForSelector` throws → returns `{ note, platform }` (NOT throw). Empty group returns `[]` — distinct from restricted.
+- Bounded scroll loop: `window.scrollTo(0, document.body.scrollHeight)` + injectable `delay` seam (default `randomDelay` 1-3s) + stall detection (N consecutive scrolls with no new members → stop, default maxStalls=5). Dedupes by profileUrl via Map.
+- Default export updated to include `scrapeGroupMembers`.
+- Dispatcher wiring (`scrape('facebook', 'group-members', ...)`) deferred to a surface story — no REST/CLI/MCP surface this story.
+- 28 browser-free tests (fake page + DOM fixtures + injectable delay seam): happy path, limit, restricted, NFR-11 PII, URL validation (SSRF guard), stall detection.
+- `docs/agents/selectors-facebook.md` extended: Groups — Members (FR-20) section + 5 verify-checklist items (UNVERIFIED).
+- Schedule test flakiness in full-suite runs is pre-existing database contention — not caused by 4.6 changes (confirmed: passes in isolation and with 4.6 tests together).
+
 ### File List
+
+- `src/scrapers/facebook/index.js` — added `assertFacebookUrlLocal`, `stripPii`, `normalizeGroupMember`, `scrapeGroupMembers`; updated default export
+- `tests/scrapers/facebook-group-members.test.js` — new test file (28 tests)
+- `docs/agents/selectors-facebook.md` — added Groups — Members (FR-20) section + verify-checklist items
 
 ## Change Log
 
 - 2026-06-16: Story 4.6 created (context engine). Status → ready-for-dev. (Luisphan)
+- 2026-06-16: Implementation complete. Added `scrapeGroupMembers` with NFR-11 PII filter, restricted-group fallback, bounded scroll, SSRF guard. 28 tests. Status → review. (claude-sonnet-4-6)

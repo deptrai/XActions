@@ -780,6 +780,185 @@ export async function searchTweets(page, query, options = {}) {
 }
 
 // ============================================================================
+// Group Members Scraper (Story 4.6 — FR-20, read-only)
+// ============================================================================
+
+// assertFacebookUrl duplicated here to avoid a circular dependency:
+// api/services/facebookAutomation.js already imports from this file.
+// Keep in sync with api/services/facebookAutomation.js#assertFacebookUrl.
+function assertFacebookUrlLocal(url, label = 'URL') {
+  if (typeof url !== 'string' || !url.trim()) {
+    throw new Error(`❌ ${label} must be a non-empty string`);
+  }
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch (_) {
+    throw new Error(`❌ ${label} must be a valid URL`);
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error(`❌ ${label} must be an http(s) URL`);
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (!host.endsWith('facebook.com')) {
+    throw new Error(`❌ ${label} must be a facebook.com URL`);
+  }
+}
+
+// NFR-11: strip phone numbers and email addresses from any text field.
+// Applied at normalizer level — NOT a caller option.
+const PII_PHONE_RE = /(\+?\d[\d\s\-().]{7,}\d)/g;
+const PII_EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+
+function stripPii(value) {
+  if (!value || typeof value !== 'string') return value ?? null;
+  const cleaned = value.replace(PII_PHONE_RE, '').replace(PII_EMAIL_RE, '').trim();
+  return cleaned || null;
+}
+
+/**
+ * Normalize a raw group member row into the standard member shape.
+ * NFR-11: phone/email stripped at this layer before returning to caller.
+ *
+ * @param {{ name: string|null, username: string|null, profileUrl: string }} raw
+ * @returns {{ name: string|null, username?: string, profileUrl: string, platform: 'facebook' }}
+ */
+function normalizeGroupMember(raw) {
+  const name = stripPii(raw.name);
+  const username = raw.username ? stripPii(raw.username) : undefined;
+  const result = { name, profileUrl: raw.profileUrl, platform: 'facebook' };
+  if (username !== undefined) result.username = username;
+  return result;
+}
+
+/**
+ * Scrape the member list of a Facebook group (Story 4.6 — FR-20).
+ * READ-ONLY scrape — NOT routed through runGuardedBatch (NFR-7 lists only writes).
+ * No account-risk warning (NFR-8 lists only writes). Standard 1-3s scroll delay (NFR1).
+ *
+ * Returns an array of normalized members when the list is accessible,
+ * or a { note, platform } object when the list is restricted/unavailable.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} groupUrl - facebook.com group URL
+ * @param {Object} [options]
+ * @param {number} [options.limit=100] - Max members to collect
+ * @param {number} [options.maxStalls=5] - Stop after N consecutive scrolls with no new members
+ * @param {Function} [options.delay] - Injectable delay seam (default: randomDelay 1-3s)
+ * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
+ * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ */
+export async function scrapeGroupMembers(page, groupUrl, options = {}) {
+  const {
+    limit = 100,
+    maxStalls = 5,
+    delay = randomDelay,
+    onProgress,
+  } = options;
+
+  // AC5: URL validation before any navigation (SSRF guard).
+  assertFacebookUrlLocal(groupUrl, 'scrapeGroupMembers: groupUrl');
+
+  // Navigate to the group members tab (UNVERIFIED URL pattern — see selectors-facebook.md).
+  const membersUrl = groupUrl.replace(/\/$/, '') + '/members';
+  await page.goto(membersUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await delay(1000, 3000);
+
+  // AC2/AC3: Detect member-list container. UNVERIFIED selectors — locale-aware fallback chain.
+  // See docs/agents/selectors-facebook.md Groups — Members (FR-20) section.
+  const memberContainerSelectors = [
+    '[aria-label="Group members"]',          // en
+    '[aria-label="Thành viên nhóm"]',        // vi
+    'div[data-pagelet="GroupMembersList"]',  // testid
+    'div[role="list"]',                      // generic fallback
+  ];
+
+  let containerFound = false;
+  try {
+    await page.waitForSelector(memberContainerSelectors.join(', '), { timeout: 8000 });
+    containerFound = true;
+  } catch (_) {
+    // Member list not accessible → restricted group (AC2).
+  }
+
+  if (!containerFound) {
+    return {
+      note: 'Facebook group member list is not accessible. The group may be private, membership may be required, or the admin has disabled the member list.',
+      platform: 'facebook',
+    };
+  }
+
+  // AC4: Bounded scroll loop — stall detection + limit cap.
+  const members = new Map(); // keyed by profileUrl for deduplication
+  let stalls = 0;
+
+  while (members.size < limit && stalls < maxStalls) {
+    const prevSize = members.size;
+
+    // Extract member rows from DOM (UNVERIFIED selectors — see selectors-facebook.md).
+    const rawMembers = await page.evaluate((nonProfileSegs) => {
+      // Member rows: list items under the members container.
+      const items = document.querySelectorAll(
+        '[aria-label="Group members"] [role="listitem"], ' +
+        '[data-pagelet="GroupMembersList"] [role="listitem"], ' +
+        '[role="list"] [role="listitem"]',
+      );
+      const NON_PROFILE = new Set(nonProfileSegs);
+
+      return Array.from(items).map((item) => {
+        const anchors = Array.from(item.querySelectorAll('a[href]'));
+        let profileUrl = null;
+        let username = null;
+
+        for (const a of anchors) {
+          const href = a.getAttribute('href') || '';
+          const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+          // profile.php?id=N — numeric canonical identifier
+          const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
+          if (idMatch) {
+            profileUrl = `https://www.facebook.com/profile.php?id=${idMatch[1]}`;
+            username = `profile.php?id=${idMatch[1]}`;
+            break;
+          }
+          // vanity handle — first non-reserved path segment
+          const segMatch = abs.match(/facebook\.com\/([^/?&#]+)/i);
+          if (segMatch && !NON_PROFILE.has(segMatch[1].toLowerCase())) {
+            profileUrl = abs.split('?')[0];
+            username = segMatch[1];
+            break;
+          }
+        }
+
+        const nameEl = item.querySelector('span[dir="auto"], strong, span');
+        const name = nameEl?.textContent?.trim() || null;
+
+        return { name, username, profileUrl };
+      }).filter((m) => m.profileUrl);
+    }, NON_PROFILE_SEGMENTS);
+
+    for (const raw of rawMembers) {
+      if (!members.has(raw.profileUrl)) {
+        members.set(raw.profileUrl, normalizeGroupMember(raw));
+      }
+      if (members.size >= limit) break;
+    }
+
+    if (onProgress) onProgress({ scraped: members.size, limit });
+
+    if (members.size === prevSize) {
+      stalls++;
+    } else {
+      stalls = 0;
+    }
+
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await delay(1000, 3000);
+  }
+
+  return Array.from(members.values()).slice(0, limit);
+}
+
+// ============================================================================
 // Default Export
 // ============================================================================
 
@@ -793,4 +972,5 @@ export default {
   scrapeFollowers,
   scrapeTweets,
   searchTweets,
+  scrapeGroupMembers,
 };
