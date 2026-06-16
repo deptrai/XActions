@@ -124,22 +124,38 @@ describe('joinFacebookGroups', () => {
     expect(result.failed).toBe(0);
   });
 
-  it('keyword-mode: injected searchFn returns N URLs → those become batch items (dry-run lists them)', async () => {
+  it('keyword-mode dry-run: returns empty preview + warning (does NOT drive browser to resolve URLs)', async () => {
     const page = makeFakePage();
     const searchFn = async () => [URL_A, URL_B];
     const result = await joinFacebookGroups(page, { keyword: 'crypto', limit: 5 }, {
       searchFn, joinFn: makeJoinFn(), delay: noDelay,
     });
 
+    // Keyword dry-run does NOT call searchFn (would drive browser) — returns warning instead.
     expect(result.dryRun).toBe(true);
-    expect(result.preview.map((p) => p.target)).toEqual([URL_A, URL_B]);
+    expect(result.preview).toEqual([]);
+    expect(result.warning).toContain('keyword-mode dry-run');
+    expect(page.calls.goto).toHaveLength(0);
   });
 
-  it('keyword-mode empty results → empty result, no throw', async () => {
+  it('keyword-mode real: searchFn resolves URLs → those become batch items joined', async () => {
+    const page = makeFakePage();
+    const searchFn = async () => [URL_A, URL_B];
+    const joinFn = makeJoinFn();
+    const result = await joinFacebookGroups(page, { keyword: 'crypto', limit: 5 }, {
+      dryRun: false, searchFn, joinFn, delay: makeDelaySpy(), maxRetry: 0,
+    });
+
+    expect(result.dryRun).toBe(false);
+    expect(joinFn.calls.map((c) => c.groupUrl)).toEqual([URL_A, URL_B]);
+    expect(result.results.every((r) => r.ok)).toBe(true);
+  });
+
+  it('keyword-mode empty results (real run) → empty result, no throw', async () => {
     const page = makeFakePage();
     const searchFn = async () => [];
     const result = await joinFacebookGroups(page, { keyword: 'nothing', limit: 5 }, {
-      searchFn, delay: noDelay,
+      dryRun: false, searchFn, delay: noDelay,
     });
     expect(result.preview).toEqual([]);
     expect(result.results).toEqual([]);

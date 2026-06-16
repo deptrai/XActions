@@ -4,7 +4,9 @@ baseline_commit: dfe17ad902d871423d6951d09f1b9834e2c7b3da
 
 # Story 4.4: Join Facebook groups (dry-run default)
 
-Status: review
+Status: in-progress
+
+<!-- Code-review patches applied (5 fixed + 1 defer). Held at in-progress — NOT done — pending live-DOM verification of join/pending selectors (see Review Findings → Deferred + selectors-facebook.md verify-checklist). -->
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.4 + PRD prd-XActions-2026-06-10-epic4 FR-18. FIRST Cluster-1 write story. -->
 
@@ -86,6 +88,30 @@ This is the highest-risk story so far: it both touches a shared chokepoint (regr
 - [x] **Task 5: Tests** (AC7)
   - [x] runGuardedBatch delay-range + regression; joinFacebookGroups URL/keyword/pending/floor/invalid cases; injected `joinFn`/`searchFn`/`delay` seams
   - [x] `npx vitest run` for the new file + the existing automate suites green
+
+## Review Findings
+
+> Code review 2026-06-16 (3-layer adversarial: blind / edge-case / acceptance-auditor). Implementation = commit 0764f7f. Edge-case layer RAN the full services suite: **100/100 pass — NO shared-chokepoint regression** from the runGuardedBatch delay-range extension (the #1 risk). Acceptance audit: 19 MET, 4 PARTIAL (3 are doc-only gaps + 1 runtime-evidence note), 0 MISSING/VIOLATED.
+
+### Patch
+
+- [x] [Review][Patch][MEDIUM] FIXED — Keyword-mode dry-run no longer drives the browser. Option A applied: if `dryRun !== false` return an empty preview + warning "keyword-mode dry-run does not resolve group URLs (search would drive the browser)". Search only runs on explicit real run. Tests updated: keyword dry-run asserts empty preview + warning; keyword real-run asserts resolved URLs become batch items. [api/services/facebookAutomation.js#joinFacebookGroups]
+- [x] [Review][Patch][MEDIUM] FIXED — NaN floor bypass. `Number.isFinite` + `>= 0` guard wraps both `delayMinOpt` and `delayMaxOpt` before `Math.max` — NaN/Infinity/negative fallback to the floor/max constant instead of propagating and throwing from the wrong layer. [api/services/facebookAutomation.js#joinFacebookGroups]
+- [x] [Review][Patch][MEDIUM] FIXED — Query-string group URLs. Regex now tests `h.split('?')[0]` (strip query first) so `?ref=search_result` links match correctly. [api/services/facebookAutomation.js#defaultGroupSearch]
+- [x] [Review][Patch][LOW] FIXED — `delayMin: null` in spread. `runGuardedBatch` now destructures as `delayMinRaw`/`delayMaxRaw` then applies `?? 1000`/`?? 3000` — null falls back to default (not throw). Genuinely invalid values (NaN, string, negative) still throw. [api/services/facebookAutomation.js#runGuardedBatch]
+- [x] [Review][Patch][LOW] FIXED — Doc: `joinFacebookGroups` JSDoc updated with keyword-mode dry-run note + `@param maxBatch=20` bound + limit/maxBatch interaction warning. [api/services/facebookAutomation.js#joinFacebookGroups JSDoc]
+
+### Deferred
+
+- [x] [Review][Defer][MEDIUM] Post-click pending detection uses `sleep(800)` + point-in-time `page.$()` rather than `waitForSelector` — on a slow/throttled render a group requiring admin-approval can be mis-reported as `status:'joined'` instead of `'pending'`. Fix is a second short `waitForSelector` for the pending/joined indicators after the click. DEFERRED because the join + pending selectors are themselves UNVERIFIED (need a live Facebook session) — couple this timing fix with the live-DOM verify pass; fixing the wait against unverified selectors is premature. [api/services/facebookAutomation.js#joinSingleGroup ~L124-131] — deferred, needs live session (same posture as 4.2 share-to-Feed)
+
+### Dismissed (verified)
+
+- Shared-chokepoint regression → edge layer ran 100/100 services tests green; no existing caller passes delayMin/delayMax; defaults 1000/3000 are byte-identical to the old hard-coded delay. NOT a regression.
+- delay-floor math producing an invalid min>max pair → every combination yields delayMin>=30000, delayMax>=delayMin; the runGuardedBatch min>max throw is unreachable from joinFacebookGroups (except via the NaN path, captured as a patch above).
+- SSRF in keyword search → keyword is `encodeURIComponent`'d into a fixed facebook.com search URL; resolved URLs are `assertFacebookUrl`-validated post-fetch. Safe.
+- delayMin/delayMax validation order (before maxBatch) → harmless; no current caller hits both.
+- AC7.21 "regression evidence only in dev record" → edge layer independently re-ran the suite (100/100). Resolved.
 
 ## Dev Notes
 

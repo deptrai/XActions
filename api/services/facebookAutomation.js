@@ -87,13 +87,20 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
   const {
     dryRun = true,
     delay = randomDelay,
-    delayMin = 1000,
-    delayMax = 3000,
+    delayMin: delayMinRaw,
+    delayMax: delayMaxRaw,
     maxBatch = 20,
     maxRetry = 1,
     shouldStop,
     onProgress,
   } = options;
+
+  // Normalize delayMin/delayMax: treat null/undefined as "use default" (a spread
+  // options object carrying delayMin:null should fall back, not throw — destructure
+  // defaults only catch `undefined`). Genuinely invalid values (NaN, string, negative)
+  // still throw below.
+  const delayMin = delayMinRaw ?? 1000;
+  const delayMax = delayMaxRaw ?? 3000;
 
   if (typeof maxBatch !== 'number' || !Number.isFinite(maxBatch) || maxBatch < 1) {
     throw new Error(`❌ runGuardedBatch: maxBatch must be a finite number >= 1, got ${maxBatch}`);
@@ -1206,7 +1213,7 @@ async function defaultGroupSearch(page, keyword, limit) {
   while (collected.size < limit && stalls < 5) {
     const before = collected.size;
     const links = await page.$$eval('a[href*="/groups/"]', (as) =>
-      as.map((a) => a.href).filter((h) => /\/groups\/[^/]+\/?$/.test(h)),
+      as.map((a) => a.href).filter((h) => /\/groups\/[^/]+\/?$/.test(h.split('?')[0])),
     );
     for (const href of links) {
       collected.add(href.split('?')[0]);
@@ -1227,13 +1234,17 @@ async function defaultGroupSearch(page, keyword, limit) {
  * @param {Object} page - Puppeteer page (authenticated); may be null for URL-mode dry-run
  * @param {Object} input - `{ groupUrls: string[] }` (URL mode) or `{ keyword, limit }` (keyword mode)
  * @param {Object} [options]
- * @param {boolean} [options.dryRun=true] - Default true; only explicit false sends real joins
+ * @param {boolean} [options.dryRun=true] - Default true; only explicit false sends real joins.
+ *   NOTE: in keyword mode, dry-run does NOT resolve URLs (search would drive the browser) —
+ *   it returns an empty preview + a warning. Use URL mode (or a real run) to preview groups.
  * @param {number} [options.delayMin] - Clamped UP to GROUP_ACTION_DELAY_FLOOR_MS (30s) — cannot go lower
  * @param {number} [options.delayMax] - Defaults to 90s
  * @param {Function} [options.delay] - Injectable delay seam (tests pass a spy)
  * @param {Function} [options.joinFn] - Injectable per-group join (default joinSingleGroup)
  * @param {Function} [options.searchFn] - Injectable keyword search (default defaultGroupSearch)
- * @param {number} [options.maxBatch] - Inherited from runGuardedBatch (default 20)
+ * @param {number} [options.maxBatch=20] - Inherited from runGuardedBatch; BOUNDS the number of
+ *   groups joined per call. In keyword mode, `limit` should be <= maxBatch — a resolved set
+ *   larger than maxBatch makes runGuardedBatch throw an "exceeds maxBatch" error.
  * @returns {Promise<Object>} runGuardedBatch result, with per-URL status merged in
  */
 export async function joinFacebookGroups(page, input, options = {}) {
@@ -1263,13 +1274,30 @@ export async function joinFacebookGroups(page, input, options = {}) {
     }
     groupUrls = input.groupUrls;
   } else if (typeof input.keyword === 'string' && input.keyword.trim()) {
-    // Keyword mode: resolve URLs via the (injectable) search seam, then validate.
+    // Keyword mode. Resolving URLs requires driving the browser (navigate + scroll),
+    // which would violate the dry-run "no browser side-effects" contract that every
+    // other automate fn upholds. So in DRY-RUN we do NOT search — return an empty
+    // preview + a warning telling the caller to use a real run (or URL mode) to
+    // preview concrete groups. The search only runs on an explicit real run.
+    if (options.dryRun !== false) {
+      return {
+        dryRun: true,
+        platform: 'facebook',
+        attempted: 0, succeeded: 0, failed: 0,
+        preview: [],
+        results: [],
+        warning:
+          '⚠️ keyword-mode dry-run does not resolve group URLs (search would drive the browser). ' +
+          'Use a real run, or URL mode, to preview concrete groups.',
+      };
+    }
+    // Real run: resolve URLs via the (injectable) search seam, then validate.
     const limit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 10;
     groupUrls = await searchFn(page, input.keyword.trim(), limit);
     if (!Array.isArray(groupUrls) || groupUrls.length === 0) {
-      // Empty search results → return an empty dry-run-style result, do NOT throw (AC3).
+      // Empty search results → return an empty result, do NOT throw (AC3).
       return {
-        dryRun: options.dryRun === false ? false : true,
+        dryRun: false,
         platform: 'facebook',
         attempted: 0, succeeded: 0, failed: 0,
         preview: [], results: [], warning: null,
@@ -1283,8 +1311,14 @@ export async function joinFacebookGroups(page, input, options = {}) {
   }
 
   // --- NFR-6 delay floor: clamp UP to 30s, never below; default 30s/90s ---
-  const delayMin = Math.max(GROUP_ACTION_DELAY_FLOOR_MS, delayMinOpt ?? GROUP_ACTION_DELAY_FLOOR_MS);
-  const delayMax = Math.max(delayMin, delayMaxOpt ?? GROUP_ACTION_DELAY_MAX_MS);
+  // --- NFR-6 delay floor: clamp UP to 30s, never below; default 30s/90s ---
+  // Guard with Number.isFinite (not just ??): NaN/Infinity (e.g. from parseFloat('x'))
+  // would survive `?? floor` and make Math.max(floor, NaN) === NaN, silently bypassing
+  // the floor and surfacing a confusing error from runGuardedBatch's own validation.
+  const safeMinOpt = Number.isFinite(delayMinOpt) && delayMinOpt >= 0 ? delayMinOpt : GROUP_ACTION_DELAY_FLOOR_MS;
+  const safeMaxOpt = Number.isFinite(delayMaxOpt) && delayMaxOpt >= 0 ? delayMaxOpt : GROUP_ACTION_DELAY_MAX_MS;
+  const delayMin = Math.max(GROUP_ACTION_DELAY_FLOOR_MS, safeMinOpt);
+  const delayMax = Math.max(delayMin, safeMaxOpt);
 
   const guardedOptions = { ...rest, delayMin, delayMax };
 
