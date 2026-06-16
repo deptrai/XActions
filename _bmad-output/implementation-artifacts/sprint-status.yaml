@@ -11,7 +11,7 @@
 # Retrospective: optional | done
 
 generated: 06-12-2026 02:18
-last_updated: 06-16-2026 09:31
+last_updated: 06-16-2026 09:44
 project: XActions
 project_key: NOKEY
 tracking_system: file-system
@@ -49,7 +49,7 @@ development_status:
   4-2-auto-share-post: in-progress
   4-3-view-boost: done
   4-4-join-groups: review
-  4-5-batch-post-groups: backlog
+  4-5-batch-post-groups: ready-for-dev
   4-6-scrape-group-members: backlog
   4-7-send-friend-requests: backlog
   4-8-cancel-friend-requests: backlog
