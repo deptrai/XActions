@@ -153,6 +153,24 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 
 ⚠️ Flow: navigate groupUrl → `waitForSelector` (composer list, 8s timeout) → click composer → `keyboard.type(content)` → find + click submit → `{posted:true}`. PII-free throw nếu composer hoặc submit không tìm thấy. Facebook posts submit via XHR (không navigate) — post-success confirm selector là UNVERIFIED live-verify item. Tests dùng injected `postFn` seam, không phụ thuộc selector thật.
 
+## Groups — Members (FR-20) — Epic 4
+
+> ⚠️ Story 4.6. READ-ONLY scrape. KHÔNG phải batch write — không dùng runGuardedBatch, không có account-risk warning, không có 30s delay floor.
+> TẤT CẢ selector dưới đây **UNVERIFIED** — cần confirm live. NFR-11: phone/email KHÔNG BAO GIỜ được collect dù có trong DOM.
+
+| Element | Selector chain (UNVERIFIED) | Ghi chú |
+|---|---|---|
+| Member list container (en) | `[aria-label="Group members"]` | UNVERIFIED — outer container của member list |
+| Member list container (vi) | `[aria-label="Thành viên nhóm"]` | UNVERIFIED — Vietnamese locale |
+| Member list container (testid) | `div[data-pagelet="GroupMembersList"]` | UNVERIFIED — stable pagelet fallback |
+| Member list container (generic) | `div[role="list"]` | UNVERIFIED — generic fallback |
+| Member row | `[role="listitem"]` | UNVERIFIED — bên trong container |
+| Member name | `span[dir="auto"]`, `strong`, `span` | UNVERIFIED — first text node trong listitem |
+| Member profile link | `a[href*="/profile.php"]`, `a[href*="facebook.com/"]` | UNVERIFIED — link đến profile của member |
+| Members tab URL | `{groupUrl}/members` | UNVERIFIED — cần confirm URL pattern cho group type |
+
+⚠️ Flow: navigate `{groupUrl}/members` → `waitForSelector` (container list, 8s timeout). Nếu không thấy → return `{ note, platform }` (restricted/private). Nếu thấy → bounded scroll loop (`window.scrollTo(0, document.body.scrollHeight)` + 1-3s delay + stall detection). Extract member rows → `normalizeGroupMember` → NFR-11 strip phone/email. Return array. Tests dùng fake page + DOM fixture + injected `delay` seam, không phụ thuộc selector thật.
+
 ## Verify Checklist
 
 Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi verify:
@@ -175,6 +193,10 @@ Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi veri
 - [ ] **Group post composer**: mở 1 group page là thành viên, xác nhận selector `[aria-label*="Write something"]`/`[aria-label*="Viết gì đó"]` click được + `keyboard.type` hoạt động. Ghi selector thật. (Story 4.5 — UNVERIFIED)
 - [ ] **Group post submit**: sau khi type content, xác nhận `[aria-label="Post"]`/`[aria-label="Đăng"]` click được và post xuất hiện trong group. (Story 4.5 — UNVERIFIED)
 - [ ] **Group post XHR confirm**: xác nhận post thực sự được tạo (không chỉ submit button click) — tìm post-success indicator nếu có. (Story 4.5 — UNVERIFIED live-verify item)
+- [ ] **Group members container**: mở 1 public group là thành viên, navigate `{groupUrl}/members`, xác nhận `[aria-label="Group members"]` hoặc `[data-pagelet="GroupMembersList"]` render được. Ghi selector thật. (Story 4.6 — UNVERIFIED)
+- [ ] **Group member rows**: xác nhận `[role="listitem"]` bên trong container bắt được member rows; verify lấy được name + profileUrl. (Story 4.6 — UNVERIFIED)
+- [ ] **Group members restricted**: mở 1 private group KHÔNG phải thành viên, xác nhận `waitForSelector` timeout → function trả `{ note, platform }` không throw. (Story 4.6 — UNVERIFIED)
+- [ ] **Group members URL pattern**: xác nhận `{groupUrl}/members` là URL đúng cho tab members (có thể khác với group type). Ghi URL pattern thực tế. (Story 4.6 — UNVERIFIED)
 
 ### Cập nhật sau verify
 - [ ] Thay mọi selector "UNVERIFIED" bằng selector thật đã test.

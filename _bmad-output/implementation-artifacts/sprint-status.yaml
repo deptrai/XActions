@@ -50,7 +50,7 @@ development_status:
   4-3-view-boost: done
   4-4-join-groups: in-progress
   4-5-batch-post-groups: in-progress
-  4-6-scrape-group-members: ready-for-dev
+  4-6-scrape-group-members: review
   4-7-send-friend-requests: ready-for-dev
   4-8-cancel-friend-requests: backlog
   4-9-newsfeed-farming: backlog
