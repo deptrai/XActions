@@ -191,6 +191,23 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 
 ⚠️ Flow: **uid_list mode** — `targets` array → `assertFacebookUrl` mỗi URL → batch items trực tiếp. **suggestions mode** — navigate `/friends/suggestions` → scroll-collect profile URLs (injectable `searchFn`); dry-run KHÔNG drive browser (empty preview + warning). **location mode** — như suggestions + filter theo substring trên publicly self-declared location text. Per-profile: navigate → detect already-friend/pending TRƯỚC khi click → click Add Friend → `{sent, status}`. Skip states (`already_friend`/`pending`) là ok:true KHÔNG fail. PII-free throw nếu profile unreachable. Tests dùng injected `requestFn`/`searchFn`/`delay` seam, không phụ thuộc selector thật.
 
+## Friends — Cancel Pending (FR-22) — Epic 4
+
+> ⚠️ Story 4.8. Cluster-2, two-phase (collect → batch-cancel). Delay **2-5s** (thấp nhất Cluster-2; KHÔNG phải floor invariant — là spec value). Non-suppressible warning.
+> Dry-run CHẠY Phase 1 (read) để show preview — KHÁC với 4.7 suggestions-mode (không drive browser). TẤT CẢ selector **UNVERIFIED**.
+
+| Element | Selector chain (UNVERIFIED) | Ghi chú |
+|---|---|---|
+| Sent-requests surface | `https://www.facebook.com/friends/requests/sent` | UNVERIFIED — Phase 1 collect URL |
+| Request row | `div[role="listitem"]` | UNVERIFIED — mỗi pending request |
+| Request profile link | `a[href*="/profile.php"]`, `a[href]` matching profile pattern | UNVERIFIED — profileUrl của người nhận |
+| Request name | `a` textContent, `span`, `strong` | UNVERIFIED — tên người nhận (NFR: không PII) |
+| Date sent | `span[dir="auto"]:last-of-type`, `abbr` | UNVERIFIED — "Sent X days ago"/"Đã gửi X ngày trước" → parse age |
+| Cancel button (en) | `[aria-label="Cancel request"]`, `[aria-label="Requested"]`, `div[role="button"][aria-label*="Cancel request"]` | UNVERIFIED — click để hủy |
+| Cancel button (vi) | `[aria-label="Hủy yêu cầu"]`, `[aria-label="Đã yêu cầu"]`, `div[role="button"][aria-label*="Hủy yêu cầu"]` | UNVERIFIED — Vietnamese locale |
+
+⚠️ Flow: **Phase 1 (read)** — navigate `/friends/requests/sent` → bounded scroll (`window.scrollTo` + 1-3s delay + stall detection) → extract `{name, profileUrl, dateSent}` → filter `olderThanDays` (unparseable date → INCLUDE) → cap `limit`. **Dry-run dừng tại đây**, trả `{pending, count}`. **Phase 2 (write)** — mỗi profileUrl → `runGuardedBatch` (delay 2-5s) → `cancelSingleRequest`: navigate profile → click Cancel → `{cancelled}`. PII-free throw nếu button không thấy. Transform result → `{cancelled, failed, remaining}`. Tests dùng injected `collectFn`/`cancelFn`/`delay` seam.
+
 ## Verify Checklist
 
 Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi verify:
@@ -223,6 +240,9 @@ Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi veri
 - [ ] **Friend request XHR confirm**: sau khi click Add Friend, xác nhận button đổi sang pending (confirm request thực sự fired, không silent success). (Story 4.7 — UNVERIFIED live-verify item)
 - [ ] **People You May Know surface**: navigate `/friends/suggestions`, xác nhận scroll-collect được profile URLs + name + location. (Story 4.7 — UNVERIFIED)
 - [ ] **Suggestion location field**: xác nhận selector lấy được publicly self-declared location text cho location-mode filter (NFR-11: KHÔNG lấy phone/email). (Story 4.7 — UNVERIFIED)
+- [ ] **Sent-requests surface**: navigate `/friends/requests/sent`, xác nhận `div[role="listitem"]` bắt được pending request rows + profileUrl + name. (Story 4.8 — UNVERIFIED)
+- [ ] **Date sent parse**: xác nhận text "Sent X days ago"/"Đã gửi X ngày trước" lấy được + parse ra age days đúng. (Story 4.8 — UNVERIFIED)
+- [ ] **Cancel request button**: mở 1 profile đã gửi request, xác nhận `[aria-label="Cancel request"]`/`[aria-label="Hủy yêu cầu"]` click được + request bị hủy. (Story 4.8 — UNVERIFIED)
 
 ### Cập nhật sau verify
 - [ ] Thay mọi selector "UNVERIFIED" bằng selector thật đã test.

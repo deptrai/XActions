@@ -4,7 +4,7 @@ baseline_commit: e2deee0
 
 # Story 4.8: Cancel pending friend requests (dry-run default)
 
-Status: ready-for-dev
+Status: review
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 2 — medium-high risk). Source: epics.md#Story 4.8 + PRD prd-XActions-2026-06-10-epic4 FR-22. Realizes UJ-8. -->
 
@@ -71,21 +71,21 @@ Key design:
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: `cancelPendingFriendRequests` entry** (AC1, AC6)
-  - [ ] Export + default export; strict dryRun gate; validate `limit`
-- [ ] **Task 2: Phase 1 — collect pending requests** (AC2)
-  - [ ] Navigate `/friends/requests/sent`; bounded scroll + stall detect + delay seam
-  - [ ] Extract `{ name, profileUrl, dateSent }`; filter by `olderThanDays`; cap at `limit`
-  - [ ] Injectable `collectFn` seam (default real scrape)
-- [ ] **Task 3: Dry-run preview** (AC3)
-  - [ ] Phase 1 runs, returns pending list; Phase 2 skipped
-- [ ] **Task 4: Phase 2 — batch cancel** (AC4, AC5)
-  - [ ] Route through `runGuardedBatch` with `delayMin:2000, delayMax:5000`; `cancelSingleRequest` per item
-  - [ ] Transform result to `{ cancelled, failed, remaining }`
-- [ ] **Task 5: Selectors doc** 
-  - [ ] Add "Friends — Cancel Pending (FR-22)" to selectors-facebook.md (UNVERIFIED + verify-checklist)
-- [ ] **Task 6: Tests** (AC7)
-  - [ ] All AC7 cases; `npx vitest run <file>` green
+- [x] **Task 1: `cancelPendingFriendRequests` entry** (AC1, AC6)
+  - [x] Export + default export; strict dryRun gate; validate `limit`
+- [x] **Task 2: Phase 1 — collect pending requests** (AC2)
+  - [x] Navigate `/friends/requests/sent`; bounded scroll + stall detect + delay seam
+  - [x] Extract `{ name, profileUrl, dateSent }`; filter by `olderThanDays`; cap at `limit`
+  - [x] Injectable `collectFn` seam (default real scrape)
+- [x] **Task 3: Dry-run preview** (AC3)
+  - [x] Phase 1 runs, returns pending list; Phase 2 skipped
+- [x] **Task 4: Phase 2 — batch cancel** (AC4, AC5)
+  - [x] Route through `runGuardedBatch` with `delayMin:2000, delayMax:5000`; `cancelSingleRequest` per item
+  - [x] Transform result to `{ cancelled, failed, remaining }`
+- [x] **Task 5: Selectors doc** 
+  - [x] Add "Friends — Cancel Pending (FR-22)" to selectors-facebook.md (UNVERIFIED + verify-checklist)
+- [x] **Task 6: Tests** (AC7)
+  - [x] All AC7 cases; `npx vitest run <file>` green
 
 ## Dev Notes
 
@@ -128,12 +128,31 @@ Key design:
 
 ### Agent Model Used
 
+claude-opus-4-8
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- Added `cancelPendingFriendRequests(page, options)` to `api/services/facebookAutomation.js` — two-phase Cluster-2 cleanup action (FR-22).
+- **Phase 1 (read)** — `defaultCollectSentRequests`: navigate `/friends/requests/sent`, bounded scroll + stall detection + injectable delay seam, extract `{ name, profileUrl, dateSent }`. Runs in dry-run too (preview needs it — opposite posture to 4.7 suggestions-mode).
+- **Phase 2 (write)** — collected profileUrls → `runGuardedBatch` with `delayMin:2000, delayMax:5000` (FR-22 2-5s, lowest Cluster-2 delay; spec value not a floor invariant). `cancelSingleRequest` clicks Cancel-request button per profile; PII-free throw if not found; waitForSelector catch swallows only timeout.
+- `parseRequestAgeDays` — best-effort parse of "Sent X days/weeks/months/years ago" (en/vi); unparseable → null. `olderThanDays` filter INCLUDES unparseable dates (err toward cleanup, AC2.7).
+- Result transform: runGuardedBatch `{ succeeded, failed }` → `{ cancelled, failed, remaining }` where `remaining = totalPending - cancelled - failed`.
+- Dry-run returns `{ dryRun:true, platform, pending:[...], count }`; empty list → count:0 (no throw). Real-run empty → `{ cancelled:0, failed:0, remaining:0 }`.
+- `limit` validated as positive finite integer (rejects 0/negative/NaN/Infinity/non-integer/missing).
+- Account-risk warning inherited from runGuardedBatch (NFR-8, non-suppressible).
+- 17 browser-free tests (injected collectFn + cancelFn + delay spy): dry-run preview/empty/cap, real-run cancel/throw-continues/empty, olderThanDays filter (incl. unparseable→included), 2-5s delay, limit validation (5 cases), dry-run no-click safety, strict dryRun:null gate.
+- `docs/agents/selectors-facebook.md`: added "Friends — Cancel Pending (FR-22)" section + 3 verify-checklist items (UNVERIFIED).
+- Related batch-write regression suite green (145 tests across friend-requests/cancel/join/batch-post/automation). Pre-existing schedule flakiness under full parallel load is database contention, unrelated.
+
 ### File List
+
+- `api/services/facebookAutomation.js` — added `CANCEL_DELAY_MIN_MS`/`CANCEL_DELAY_MAX_MS`, `parseRequestAgeDays`, `defaultCollectSentRequests`, `cancelSingleRequest`, `cancelPendingFriendRequests`; updated default export
+- `tests/services/facebook-cancel-friend-requests.test.js` — new test file (17 tests)
+- `docs/agents/selectors-facebook.md` — added Friends — Cancel Pending (FR-22) section + verify-checklist items
 
 ## Change Log
 
 - 2026-06-16: Story 4.8 created (context engine). Status → ready-for-dev. (Luisphan)
+- 2026-06-18: Implementation complete. Added `cancelPendingFriendRequests` (two-phase: collect → batch-cancel 2-5s, olderThanDays filter, result transform). 17 tests. Status → review. (claude-opus-4-8)
