@@ -1837,6 +1837,223 @@ export async function sendFriendRequests(page, input, options = {}) {
   return batchResult;
 }
 
+// ============================================================================
+// Facebook Cancel Pending Friend Requests (Story 4.8 — FR-22, Cluster-2)
+// ============================================================================
+
+// FR-22: cancel pacing is 2-5s — the lowest delay of any Cluster-2 write. Unlike
+// 4.4's 30s or 4.7's 60s floors (safety INVARIANTS), 2-5s is a spec value passed
+// directly to runGuardedBatch — not a non-negotiable floor constant.
+const CANCEL_DELAY_MIN_MS = 2000;
+const CANCEL_DELAY_MAX_MS = 5000;
+
+/**
+ * Parse a "Sent X days ago" / "Đã gửi X ngày trước" string into an age in days.
+ * Best-effort: returns null if unparseable (caller errs on the side of including).
+ *
+ * @param {string|null} dateSentText
+ * @returns {number|null} age in days, or null if unparseable
+ */
+function parseRequestAgeDays(dateSentText) {
+  if (typeof dateSentText !== 'string' || !dateSentText.trim()) return null;
+  const t = dateSentText.toLowerCase();
+  // "X day(s)" / "X ngày" → days; "X week(s)"/"X tuần" → *7; "X month(s)"/"X tháng" → *30
+  const num = t.match(/(\d+)/);
+  if (!num) return null;
+  const n = parseInt(num[1], 10);
+  if (!Number.isFinite(n)) return null;
+  if (/week|tuần/.test(t)) return n * 7;
+  if (/month|tháng/.test(t)) return n * 30;
+  if (/year|năm/.test(t)) return n * 365;
+  if (/hour|giờ|minute|phút|just now|vừa xong/.test(t)) return 0;
+  if (/day|ngày/.test(t)) return n;
+  return null;
+}
+
+/**
+ * Default Phase-1 collect seam — scrape the sent-requests list.
+ * Navigates `/friends/requests/sent`, bounded scroll-collects pending requests
+ * with `{ name, profileUrl, dateSent }`. UNVERIFIED selectors — see selectors-facebook.md.
+ * Injectable via options.collectFn so tests skip the real browser.
+ *
+ * @param {Object} page - Puppeteer page
+ * @param {number} limit - max requests to collect
+ * @param {Function} delay - injectable delay seam
+ * @returns {Promise<Array<{ name: string|null, profileUrl: string, dateSent: string|null }>>}
+ */
+async function defaultCollectSentRequests(page, limit, delay) {
+  await page.goto('https://www.facebook.com/friends/requests/sent', {
+    waitUntil: 'networkidle2', timeout: 30000,
+  });
+  await delay(1000, 3000);
+
+  const collected = new Map(); // keyed by profileUrl
+  let stalls = 0;
+  while (collected.size < limit && stalls < 5) {
+    const before = collected.size;
+    const raw = await page.$$eval('div[role="listitem"]', (items) =>
+      items.map((item) => {
+        const a = item.querySelector('a[href]');
+        const href = a?.getAttribute('href') || '';
+        const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+        const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
+        const segMatch = abs.match(/facebook\.com\/([^/?&#]+)/i);
+        let profileUrl = null;
+        if (idMatch) {
+          profileUrl = `https://www.facebook.com/profile.php?id=${idMatch[1]}`;
+        } else if (segMatch && !['friends', 'profile.php', 'photo', 'watch'].includes(segMatch[1].toLowerCase())) {
+          profileUrl = abs.split('?')[0];
+        }
+        const name = a?.textContent?.trim() || item.querySelector('span, strong')?.textContent?.trim() || null;
+        // "Sent X days ago" line — best-effort secondary text.
+        const dateSent = item.querySelector('span[dir="auto"]:last-of-type, abbr')?.textContent?.trim() || null;
+        return { name, profileUrl, dateSent };
+      }).filter((r) => r.profileUrl),
+    );
+
+    for (const r of raw) {
+      if (!collected.has(r.profileUrl)) collected.set(r.profileUrl, r);
+      if (collected.size >= limit) break;
+    }
+    if (collected.size === before) stalls++; else stalls = 0;
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await delay(1000, 3000);
+  }
+  return Array.from(collected.values()).slice(0, limit);
+}
+
+/**
+ * Cancel a single pending friend request (AC4). Internal helper.
+ * Navigates to the profile and clicks "Cancel request" / "Hủy yêu cầu".
+ * UNVERIFIED locale-aware selectors — fallback chain + PII-free throw.
+ *
+ * @param {Object} page - Puppeteer page
+ * @param {string} profileUrl - facebook.com profile URL
+ * @returns {Promise<{cancelled: boolean}>}
+ * @throws {Error} If the Cancel-request button is not found (PII-free)
+ */
+async function cancelSingleRequest(page, profileUrl) {
+  await page.goto(profileUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await sleep(500);
+
+  const cancelSelectors = [
+    '[aria-label="Cancel request"]', // en
+    '[aria-label="Requested"]',      // en (click → menu → cancel)
+    '[aria-label="Hủy yêu cầu"]',    // vi
+    '[aria-label="Đã yêu cầu"]',     // vi
+    'div[role="button"][aria-label*="Cancel request"]',
+    'div[role="button"][aria-label*="Hủy yêu cầu"]',
+  ];
+
+  try {
+    await page.waitForSelector(cancelSelectors.join(', '), { timeout: 5000 });
+  } catch (err) {
+    if (err?.name === 'TimeoutError' || /timeout/i.test(err?.message ?? '')) {
+      throw new Error('❌ Cancel-request button not found; request already resolved or profile unreachable');
+    }
+    throw err;
+  }
+
+  let cancelBtn = null;
+  for (const selector of cancelSelectors) {
+    cancelBtn = await page.$(selector);
+    if (cancelBtn) break;
+  }
+  if (!cancelBtn) {
+    throw new Error('❌ Cancel-request button not found; request already resolved or profile unreachable');
+  }
+  await cancelBtn.click();
+  await sleep(800);
+
+  return { cancelled: true };
+}
+
+/**
+ * Bulk-cancel pending friend requests (Story 4.8 — FR-22).
+ * Two-phase: (1) collect the sent-requests list (read; runs in dry-run too for
+ * the preview), then (2) batch-cancel via runGuardedBatch with a 2-5s delay.
+ *
+ * Dry-run runs Phase 1 (read navigation) but NOT Phase 2 (no Cancel click).
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {Object} [options]
+ * @param {number} options.limit - Max cancellations (required, positive integer)
+ * @param {number} [options.olderThanDays] - Only cancel requests older than N days
+ * @param {boolean} [options.dryRun=true] - Default true; only explicit false cancels
+ * @param {Function} [options.delay] - Injectable delay seam (tests pass a spy)
+ * @param {Function} [options.collectFn] - Injectable Phase-1 collect (default scrape)
+ * @param {Function} [options.cancelFn] - Injectable per-request cancel (default cancelSingleRequest)
+ * @returns {Promise<Object>} dry-run: { dryRun, platform, pending, count };
+ *   real: { dryRun, platform, cancelled, failed, remaining }
+ */
+export async function cancelPendingFriendRequests(page, options = {}) {
+  const {
+    limit,
+    olderThanDays,
+    delay = randomDelay,
+    collectFn: collectFnOpt,
+    cancelFn: cancelFnOpt,
+    ...rest
+  } = options;
+  const collectFn = collectFnOpt ?? defaultCollectSentRequests;
+  const cancelFn = cancelFnOpt ?? cancelSingleRequest;
+
+  // AC6: validate limit — positive finite integer.
+  if (!Number.isFinite(limit) || limit <= 0 || Math.floor(limit) !== limit) {
+    throw new Error('❌ cancelPendingFriendRequests: limit must be a positive integer');
+  }
+
+  // --- Phase 1: collect pending requests (runs in dry-run too — preview needs it) ---
+  let pending = await collectFn(page, limit, delay);
+  if (!Array.isArray(pending)) pending = [];
+
+  // olderThanDays filter: include unparseable dates (err toward cleanup, AC2.7).
+  if (Number.isFinite(olderThanDays) && olderThanDays > 0) {
+    pending = pending.filter((r) => {
+      const age = parseRequestAgeDays(r.dateSent);
+      return age === null || age >= olderThanDays;
+    });
+  }
+
+  // Cap at limit.
+  pending = pending.slice(0, limit);
+
+  // --- AC3: dry-run returns the preview; Phase 2 does NOT run ---
+  if (options.dryRun !== false) {
+    return {
+      dryRun: true,
+      platform: 'facebook',
+      pending: pending.map((r) => ({ name: r.name, profileUrl: r.profileUrl, dateSent: r.dateSent })),
+      count: pending.length,
+    };
+  }
+
+  // --- AC5: empty list → zero result, no throw ---
+  const totalPending = pending.length;
+  if (totalPending === 0) {
+    return { dryRun: false, platform: 'facebook', cancelled: 0, failed: 0, remaining: 0 };
+  }
+
+  // --- Phase 2: batch-cancel via runGuardedBatch (2-5s delay, NFR-7/8) ---
+  const targets = pending.map((r) => r.profileUrl);
+  const guardedOptions = { ...rest, delay, delayMin: CANCEL_DELAY_MIN_MS, delayMax: CANCEL_DELAY_MAX_MS };
+
+  const actionFn = async (profileUrl) => cancelFn(page, profileUrl);
+  const batchResult = await runGuardedBatch(targets, actionFn, guardedOptions);
+
+  // --- Transform runGuardedBatch result into { cancelled, failed, remaining } ---
+  const cancelled = batchResult.succeeded;
+  const failed = batchResult.failed;
+  const remaining = totalPending - cancelled - failed;
+  return {
+    dryRun: false,
+    platform: 'facebook',
+    cancelled,
+    failed,
+    remaining,
+  };
+}
+
 export default {
   runGuardedBatch,
   randomDelay,
@@ -1858,4 +2075,5 @@ export default {
   GROUP_POST_BATCH_LIMIT,
   sendFriendRequests,
   FRIEND_REQUEST_DELAY_FLOOR_MS,
+  cancelPendingFriendRequests,
 };
