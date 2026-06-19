@@ -704,7 +704,7 @@ export async function scheduleFacebookPost(
   { content, mediaUrls, scheduledAt, facebookAccountId } = {},
   options = {},
 ) {
-  const { dryRun = true, userId } = options;
+  const { dryRun = true, userId, now = () => Date.now() } = options;
 
   // Non-empty content guard — story 2.4 HIGH review finding (empty content = blank post)
   if (typeof content !== 'string' || !content.trim()) {
@@ -718,7 +718,7 @@ export async function scheduleFacebookPost(
   }
 
   // Reject past or within-next-tick (< now + 60s) — a schedule that can never fire is a bug
-  if (scheduledDate.getTime() < Date.now() + 60_000) {
+  if (scheduledDate.getTime() < now() + 60_000) {
     throw new Error('❌ scheduleFacebookPost: scheduledAt must be at least 60 seconds in the future');
   }
 
