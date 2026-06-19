@@ -601,11 +601,11 @@ describe('Rate limit strategy classes', () => {
   });
 
   it('WaitingRateLimitStrategy waits (at least 1 second)', async () => {
-    const strategy = new WaitingRateLimitStrategy();
-    const start = Date.now();
-    await strategy.onRateLimit({ resetAt: Date.now() + 100 }); // resetAt is in the past-ish
-    const elapsed = Date.now() - start;
-    // Minimum wait is 1000ms
-    expect(elapsed).toBeGreaterThanOrEqual(950); // small tolerance
+    const sleepCalls = [];
+    const fakeSleep = async (ms) => { sleepCalls.push(ms); };
+    const strategy = new WaitingRateLimitStrategy({ sleepFn: fakeSleep });
+    await strategy.onRateLimit({ resetAt: Date.now() + 100 });
+    expect(sleepCalls).toHaveLength(1);
+    expect(sleepCalls[0]).toBeGreaterThanOrEqual(1000);
   });
 });

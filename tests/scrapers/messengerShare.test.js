@@ -212,12 +212,11 @@ describe('shareToMessenger', () => {
 });
 
 // ============================================================================
-// Campaign (integration with runGuardedBatch mock)
+// Campaign (integration with injectable batchFn seam — no vi.mock)
 // ============================================================================
 
-// Mock runGuardedBatch to avoid importing the full module
-vi.mock('../../api/services/facebookAutomation.js', () => ({
-  runGuardedBatch: vi.fn(async (items, actionFn, options) => {
+function makeFakeBatchFn() {
+  return async (items, actionFn, options) => {
     if (options.dryRun !== false) {
       return {
         dryRun: true,
@@ -231,8 +230,8 @@ vi.mock('../../api/services/facebookAutomation.js', () => ({
       results.push({ target: item.toString(), ...r });
     }
     return { dryRun: false, total: items.length, results };
-  }),
-}));
+  };
+}
 
 describe('messengerShareCampaign', () => {
   it('throws when postUrl is missing', async () => {
@@ -255,7 +254,7 @@ describe('messengerShareCampaign', () => {
       postUrl: 'https://fb.com/post/1',
       recipients: ['Page1', 'Page2'],
       content: 'Hello**World',
-    });
+    }, { batchFn: makeFakeBatchFn() });
     expect(result.dryRun).toBe(true);
     expect(result.total).toBe(2);
   });
@@ -266,7 +265,7 @@ describe('messengerShareCampaign', () => {
     const result = await messengerShareCampaign(
       page,
       { postUrl: 'https://fb.com/post/1', recipients: ['Page1'], content: 'Hi' },
-      { dryRun: false, shareFn, delay: () => Promise.resolve(), selectorTimeout: 100 },
+      { dryRun: false, shareFn, delay: () => Promise.resolve(), selectorTimeout: 100, batchFn: makeFakeBatchFn() },
     );
     expect(result.dryRun).toBe(false);
     expect(shareFn).toHaveBeenCalledTimes(1);
@@ -282,7 +281,7 @@ describe('messengerShareCampaign', () => {
     await messengerShareCampaign(
       page,
       { postUrl: 'https://fb.com/post/1', recipients: ['A', 'B', 'C'], content: 'Seg1**Seg2**Seg3' },
-      { dryRun: false, shareFn, delay: () => Promise.resolve() },
+      { dryRun: false, shareFn, delay: () => Promise.resolve(), batchFn: makeFakeBatchFn() },
     );
     // Each recipient gets a message (may be same or different due to randomness)
     expect(messages).toHaveLength(3);

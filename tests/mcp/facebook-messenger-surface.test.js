@@ -149,17 +149,13 @@ describe('executeFacebookAutomateTool — messenger privacy in errors', () => {
   it('postUrl error message does not leak recipients or content', async () => {
     const SECRET_RECIPIENT = 'SuperSecretPage12345';
     const SECRET_CONTENT = 'TopSecretMessageBody';
-    try {
-      await executeFacebookAutomateTool({
-        action: 'messenger', authCookie: VALID_AUTH,
-        postUrl: 'https://twitter.com/not-fb',
-        recipients: [SECRET_RECIPIENT], content: SECRET_CONTENT,
-      });
-      throw new Error('expected validation to throw');
-    } catch (err) {
-      expect(err.message).not.toContain(SECRET_RECIPIENT);
-      expect(err.message).not.toContain(SECRET_CONTENT);
-    }
+    const err = await executeFacebookAutomateTool({
+      action: 'messenger', authCookie: VALID_AUTH,
+      postUrl: 'https://twitter.com/not-fb',
+      recipients: [SECRET_RECIPIENT], content: SECRET_CONTENT,
+    }).catch((e) => e);
+    expect(err.message).not.toContain(SECRET_RECIPIENT);
+    expect(err.message).not.toContain(SECRET_CONTENT);
   });
 });
 
