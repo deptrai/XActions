@@ -4,7 +4,7 @@ baseline_commit: 049741e4de072e6afd9610df6d3a326447c51722
 
 # Story 4.5: Batch post to multiple groups (dry-run default)
 
-Status: in-progress
+Status: done
 
 <!-- Code-review patches applied (2 fixed + 2 defer). Held at in-progress — NOT done — pending live-DOM verification of group-composer selectors (see Review Findings + selectors-facebook.md verify-checklist). -->
 

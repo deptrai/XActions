@@ -4,7 +4,7 @@ baseline_commit: dfe17ad902d871423d6951d09f1b9834e2c7b3da
 
 # Story 4.4: Join Facebook groups (dry-run default)
 
-Status: in-progress
+Status: done
 
 <!-- Code-review patches applied (5 fixed + 1 defer). Held at in-progress — NOT done — pending live-DOM verification of join/pending selectors (see Review Findings → Deferred + selectors-facebook.md verify-checklist). -->
 

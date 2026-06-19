@@ -1837,6 +1837,442 @@ export async function sendFriendRequests(page, input, options = {}) {
   return batchResult;
 }
 
+// ============================================================================
+// Facebook Cancel Pending Friend Requests (Story 4.8 — FR-22, Cluster-2)
+// ============================================================================
+
+// FR-22: cancel pacing is 2-5s — the lowest delay of any Cluster-2 write. Unlike
+// 4.4's 30s or 4.7's 60s floors (safety INVARIANTS), 2-5s is a spec value passed
+// directly to runGuardedBatch — not a non-negotiable floor constant.
+const CANCEL_DELAY_MIN_MS = 2000;
+const CANCEL_DELAY_MAX_MS = 5000;
+
+/**
+ * Parse a "Sent X days ago" / "Đã gửi X ngày trước" string into an age in days.
+ * Best-effort: returns null if unparseable (caller errs on the side of including).
+ *
+ * @param {string|null} dateSentText
+ * @returns {number|null} age in days, or null if unparseable
+ */
+function parseRequestAgeDays(dateSentText) {
+  if (typeof dateSentText !== 'string' || !dateSentText.trim()) return null;
+  const t = dateSentText.toLowerCase();
+  // Sub-day text → age 0 (no digit needed: "just now", "an hour ago", "vừa xong").
+  if (/hour|giờ|minute|phút|second|giây|just now|vừa xong/.test(t)) return 0;
+  // Anchor the number to its adjacent unit so a leading count elsewhere in the
+  // card text ("3 mutual friends · sent 2 days ago") can't be grabbed instead.
+  const m = t.match(/(\d+)\s*(day|week|month|year|ngày|tuần|tháng|năm)/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  if (!Number.isFinite(n)) return null;
+  const unit = m[2];
+  if (/week|tuần/.test(unit)) return n * 7;
+  if (/month|tháng/.test(unit)) return n * 30;
+  if (/year|năm/.test(unit)) return n * 365;
+  return n; // day | ngày
+}
+
+/**
+ * Default Phase-1 collect seam — scrape the sent-requests list.
+ * Navigates `/friends/requests/sent`, bounded scroll-collects pending requests
+ * with `{ name, profileUrl, dateSent }`. UNVERIFIED selectors — see selectors-facebook.md.
+ * Injectable via options.collectFn so tests skip the real browser.
+ *
+ * @param {Object} page - Puppeteer page
+ * @param {number} limit - max requests to collect
+ * @param {Function} delay - injectable delay seam
+ * @returns {Promise<Array<{ name: string|null, profileUrl: string, dateSent: string|null }>>}
+ */
+async function defaultCollectSentRequests(page, limit, delay) {
+  await page.goto('https://www.facebook.com/friends/requests/sent', {
+    waitUntil: 'networkidle2', timeout: 30000,
+  });
+  await delay(1000, 3000);
+
+  const collected = new Map(); // keyed by profileUrl
+  let stalls = 0;
+  while (collected.size < limit && stalls < 5) {
+    const before = collected.size;
+    const raw = await page.$$eval('div[role="listitem"]', (items) =>
+      items.map((item) => {
+        const a = item.querySelector('a[href]');
+        const href = a?.getAttribute('href') || '';
+        const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+        const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
+        const segMatch = abs.match(/facebook\.com\/([^/?&#]+)/i);
+        let profileUrl = null;
+        if (idMatch) {
+          profileUrl = `https://www.facebook.com/profile.php?id=${idMatch[1]}`;
+        } else if (segMatch && ![
+          'friends', 'profile.php', 'photo', 'watch',
+          'pages', 'groups', 'events', 'marketplace', 'videos', 'notifications', 'messages',
+        ].includes(segMatch[1].toLowerCase())) {
+          profileUrl = abs.split('?')[0];
+        }
+        const name = a?.textContent?.trim() || item.querySelector('span, strong')?.textContent?.trim() || null;
+        // "Sent X days ago" line — best-effort secondary text.
+        const dateSent = item.querySelector('span[dir="auto"]:last-of-type, abbr')?.textContent?.trim() || null;
+        return { name, profileUrl, dateSent };
+      }).filter((r) => r.profileUrl),
+    );
+
+    for (const r of raw) {
+      if (!collected.has(r.profileUrl)) collected.set(r.profileUrl, r);
+      if (collected.size >= limit) break;
+    }
+    if (collected.size === before) stalls++; else stalls = 0;
+    // Navigation/frame-detach mid-collect must not abort Phase 1 — return what we have.
+    try {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    } catch (_) {
+      break;
+    }
+    await delay(1000, 3000);
+  }
+  return Array.from(collected.values()).slice(0, limit);
+}
+
+/**
+ * Cancel a single pending friend request (AC4). Internal helper.
+ * Navigates to the profile and clicks "Cancel request" / "Hủy yêu cầu".
+ * UNVERIFIED locale-aware selectors — fallback chain + PII-free throw.
+ *
+ * Only direct one-click "Cancel request" buttons are used. The two-step
+ * "Requested" → menu → cancel affordance is intentionally NOT in the chain:
+ * clicking it opens a menu but does not cancel, so reporting `cancelled:true`
+ * would be a false success. A profile showing only that state throws
+ * button-not-found and is counted as `failed` instead (honest failure).
+ *
+ * @param {Object} page - Puppeteer page
+ * @param {string} profileUrl - facebook.com profile URL
+ * @param {Function} [delay=randomDelay] - injectable jittered delay seam
+ * @returns {Promise<{cancelled: boolean}>}
+ * @throws {Error} If the Cancel-request button is not found (PII-free)
+ */
+async function cancelSingleRequest(page, profileUrl, delay = randomDelay) {
+  // Wrap goto so a navigation timeout/error (whose message embeds the URL) is
+  // rethrown PII-free instead of leaking profileUrl into runGuardedBatch results.
+  try {
+    await page.goto(profileUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  } catch (_) {
+    throw new Error('❌ Profile navigation failed; request not cancelled (profile unreachable or timed out)');
+  }
+  await delay(800, 1500);
+
+  const cancelSelectors = [
+    '[aria-label="Cancel request"]', // en
+    '[aria-label="Hủy yêu cầu"]',    // vi
+    'div[role="button"][aria-label*="Cancel request"]',
+    'div[role="button"][aria-label*="Hủy yêu cầu"]',
+  ];
+
+  try {
+    await page.waitForSelector(cancelSelectors.join(', '), { timeout: 5000 });
+  } catch (err) {
+    if (err?.name === 'TimeoutError' || /timeout/i.test(err?.message ?? '')) {
+      throw new Error('❌ Cancel-request button not found; request already resolved or profile unreachable');
+    }
+    throw err;
+  }
+
+  let cancelBtn = null;
+  for (const selector of cancelSelectors) {
+    cancelBtn = await page.$(selector);
+    if (cancelBtn) break;
+  }
+  if (!cancelBtn) {
+    throw new Error('❌ Cancel-request button not found; request already resolved or profile unreachable');
+  }
+  await cancelBtn.click();
+  await delay(800, 1500);
+
+  return { cancelled: true };
+}
+
+/**
+ * Bulk-cancel pending friend requests (Story 4.8 — FR-22).
+ * Two-phase: (1) collect the sent-requests list (read; runs in dry-run too for
+ * the preview), then (2) batch-cancel via runGuardedBatch with a 2-5s delay.
+ *
+ * Dry-run runs Phase 1 (read navigation) but NOT Phase 2 (no Cancel click).
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {Object} [options]
+ * @param {number} options.limit - Max cancellations (required, positive integer)
+ * @param {number} [options.olderThanDays] - Only cancel requests older than N days
+ * @param {boolean} [options.dryRun=true] - Default true; only explicit false cancels
+ * @param {Function} [options.delay] - Injectable delay seam (tests pass a spy)
+ * @param {Function} [options.collectFn] - Injectable Phase-1 collect (default scrape)
+ * @param {Function} [options.cancelFn] - Injectable per-request cancel (default cancelSingleRequest)
+ * @returns {Promise<Object>} dry-run: { dryRun, platform, pending, count };
+ *   real: { dryRun, platform, cancelled, failed, remaining }
+ */
+export async function cancelPendingFriendRequests(page, options = {}) {
+  const {
+    limit,
+    olderThanDays,
+    dryRun,
+    delay = randomDelay,
+    collectFn: collectFnOpt,
+    cancelFn: cancelFnOpt,
+    ...rest
+  } = options;
+  const collectFn = collectFnOpt ?? defaultCollectSentRequests;
+  const cancelFn = cancelFnOpt ?? cancelSingleRequest;
+
+  // AC6: validate limit — positive finite integer.
+  if (!Number.isFinite(limit) || limit <= 0 || Math.floor(limit) !== limit) {
+    throw new Error('❌ cancelPendingFriendRequests: limit must be a positive integer');
+  }
+
+  // runGuardedBatch hard-caps a batch at maxBatch (default 20) and throws if
+  // exceeded. Validate here so the caller gets a clear message instead of an
+  // opaque internal "exceeds maxBatch" error after Phase 1 already ran.
+  const maxBatch = Number.isFinite(rest.maxBatch) ? rest.maxBatch : 20;
+  if (limit > maxBatch) {
+    throw new Error(
+      `❌ cancelPendingFriendRequests: limit (${limit}) exceeds maxBatch (${maxBatch}); ` +
+      'lower limit or pass a larger maxBatch explicitly',
+    );
+  }
+
+  // olderThanDays, when provided, must be a non-negative finite number — a
+  // negative/NaN value would otherwise silently skip the filter (caller bug).
+  if (olderThanDays !== undefined && (!Number.isFinite(olderThanDays) || olderThanDays < 0)) {
+    throw new Error('❌ cancelPendingFriendRequests: olderThanDays must be a non-negative number');
+  }
+
+  // --- Phase 1: collect pending requests (runs in dry-run too — preview needs it) ---
+  let pending = await collectFn(page, limit, delay);
+  if (!Array.isArray(pending)) pending = [];
+
+  // olderThanDays filter: include unparseable dates (err toward cleanup, AC2.7).
+  if (Number.isFinite(olderThanDays) && olderThanDays > 0) {
+    pending = pending.filter((r) => {
+      const age = parseRequestAgeDays(r.dateSent);
+      return age === null || age >= olderThanDays;
+    });
+  }
+
+  // Cap at limit. NOTE (spec AC2.8): collectFn already stopped at `limit`, so when
+  // olderThanDays filters out recent items the final set can be SMALLER than limit
+  // even if older requests remain further down the page — this honors the spec
+  // ordering (cap-then-filter) rather than back-filling. The result does not
+  // distinguish "reached limit" from "filtered below limit"; callers needing the
+  // full older-than-N set should page with a higher limit.
+  pending = pending.slice(0, limit);
+
+  // --- AC3: dry-run returns the preview; Phase 2 does NOT run ---
+  // Strict gate: anything except explicit `false` stays dry-run (matches runGuardedBatch).
+  if (dryRun !== false) {
+    return {
+      dryRun: true,
+      platform: 'facebook',
+      pending: pending.map((r) => ({ name: r.name, profileUrl: r.profileUrl, dateSent: r.dateSent })),
+      count: pending.length,
+    };
+  }
+
+  // --- AC5: empty list → zero result, no throw ---
+  const totalPending = pending.length;
+  if (totalPending === 0) {
+    return { dryRun: false, platform: 'facebook', cancelled: 0, failed: 0, remaining: 0 };
+  }
+
+  // --- Phase 2: batch-cancel via runGuardedBatch (2-5s delay, NFR-7/8) ---
+  // We only reach here on a real run (dryRun === false gate above), so tell
+  // runGuardedBatch to write explicitly — do NOT rely on dryRun leaking via rest.
+  const targets = pending.map((r) => r.profileUrl);
+  const guardedOptions = {
+    ...rest, delay, dryRun: false, delayMin: CANCEL_DELAY_MIN_MS, delayMax: CANCEL_DELAY_MAX_MS,
+  };
+
+  const actionFn = async (profileUrl) => cancelFn(page, profileUrl, delay);
+  const batchResult = await runGuardedBatch(targets, actionFn, guardedOptions);
+
+  // --- Transform runGuardedBatch result into { cancelled, failed, remaining } ---
+  const cancelled = batchResult.succeeded;
+  const failed = batchResult.failed;
+  const remaining = totalPending - cancelled - failed;
+  return {
+    dryRun: false,
+    platform: 'facebook',
+    cancelled,
+    failed,
+    remaining,
+  };
+}
+
+// ============================================================================
+// Newsfeed farming / account warming (Story 4.9 — FR-23, Cluster-2)
+// ============================================================================
+
+// Duration cap: warming sessions run longer than view-boost (600s vs 300s).
+export const MAX_WARMUP_DURATION_SECONDS = 600;
+export const DEFAULT_WARMUP_DURATION_SECONDS = 120;
+
+const WARMUP_HOME_URL = 'https://www.facebook.com/';
+
+// Default reaction: find Like button, skip silently if not found, click only if not already liked.
+async function defaultReactFn(page) {
+  let result;
+  try {
+    result = await findLikeButton(page);
+  } catch {
+    // findLikeButton throws when button not found — swallow to skip silently (AC3.8)
+    return;
+  }
+  if (result.alreadyLiked) return;
+  // Self-contained: an element detached between find and click must not throw
+  // out of the default reaction (don't rely on the caller swallowing it).
+  try {
+    await result.element.click();
+  } catch {
+    // Like click failed (element went stale) — skip silently, warming continues.
+  }
+}
+
+/**
+ * Warm up a Facebook account with natural newsfeed scrolling and optional light reactions.
+ * Navigates to the home feed (hardcoded) — NOT a runGuardedBatch case (no item batch).
+ *
+ * @param {Object|null} page - Puppeteer page (authenticated); MAY be null in dry-run
+ * @param {Object} [options]
+ * @param {boolean} [options.dryRun=true] - Default true; only explicit false drives the browser
+ * @param {number} [options.durationSeconds] - Dwell time; clamped to MAX_WARMUP_DURATION_SECONDS (600); default 120
+ * @param {boolean} [options.allowReactions=false] - When false, pure scroll only (no reactions)
+ * @param {number} [options.reactProbability=0.05] - Per-scroll reaction probability; >0.2 clamped to 0.2; <=0/NaN/non-number → 0
+ * @param {Function} [options.reactFn] - Injectable reaction seam (default: find-then-click Like)
+ * @param {Function} [options.delay=randomDelay] - Injectable pause seam.
+ *   ⚠️ COUPLED WITH `now`: override both together or neither.
+ * @param {Function} [options.now] - Injectable clock (default () => Date.now()); see `delay`.
+ * @returns {Promise<Object>} Preview (dry-run) or run summary (real)
+ */
+export async function warmupAccount(page, options = {}) {
+  const {
+    dryRun = true,
+    durationSeconds,
+    allowReactions = false,
+    reactProbability: rawReactProbability = 0.05,
+    reactFn = defaultReactFn,
+    delay = randomDelay,
+    now = () => Date.now(),
+  } = options;
+
+  // Resolve duration: default when missing/null, throw <=0/non-finite/non-number, clamp >600.
+  let requested = durationSeconds;
+  if (requested === undefined || requested === null) {
+    requested = DEFAULT_WARMUP_DURATION_SECONDS;
+  }
+  if (typeof requested !== 'number' || !Number.isFinite(requested) || requested <= 0) {
+    throw new Error('❌ warmupAccount: durationSeconds must be a positive finite number');
+  }
+  const clamped = requested > MAX_WARMUP_DURATION_SECONDS;
+  const effectiveDuration = clamped ? MAX_WARMUP_DURATION_SECONDS : requested;
+
+  // Normalize reactProbability: >0.2 → 0.2; <=0/NaN/non-number → 0; never throw (AC3.7).
+  let normalizedReactProbability;
+  if (typeof rawReactProbability !== 'number' || !Number.isFinite(rawReactProbability) || rawReactProbability <= 0) {
+    normalizedReactProbability = 0;
+  } else if (rawReactProbability > 0.2) {
+    normalizedReactProbability = 0.2;
+  } else {
+    normalizedReactProbability = rawReactProbability;
+  }
+  // Clamped flag is true ONLY when a finite raw value was actually reduced to 0.2.
+  // Infinity/NaN/non-number normalize to 0 (not clamped to 0.2), so they are NOT "clamped".
+  const reactProbabilityClamped = typeof rawReactProbability === 'number' && Number.isFinite(rawReactProbability) && rawReactProbability > 0.2;
+
+  // Strict dry-run gate: anything except explicit `false` stays dry-run.
+  const isRealRun = dryRun === false;
+
+  // --- dry-run: pure compute, NO seam, NO page.* (AC5) ---
+  if (!isRealRun) {
+    return {
+      dryRun: true,
+      platform: 'facebook',
+      preview: {
+        durationSeconds: effectiveDuration,
+        clamped,
+        allowReactions,
+        reactProbability: normalizedReactProbability,
+        reactProbabilityClamped,
+      },
+    };
+  }
+
+  // --- real run ---
+
+  // A real run drives the browser — fail clearly if no page was supplied,
+  // instead of a cryptic TypeError on the first page.goto below.
+  if (page == null) {
+    throw new Error('❌ warmupAccount: page is required for a real run (dryRun: false)');
+  }
+
+  // Mandatory NFR-8 warning — non-suppressible, emitted directly (not via runGuardedBatch).
+  console.warn('⚠️ Account warming does not guarantee avoiding checkpoint. Use a test account before using your main account.');
+
+  const durationMs = effectiveDuration * 1000;
+
+  const SCROLL_PAUSE_MIN_MS = 800;
+  const SCROLL_PAUSE_MAX_MS = 2500;
+  const LONG_PAUSE_MIN_MS = 5000;
+  const LONG_PAUSE_MAX_MS = 8000;
+  const LONG_PAUSE_EVERY_N = 3;
+
+  // Iteration backstop: bounds busy-spin if delay is no-op without advancing `now`.
+  const maxScrolls = Math.ceil(durationMs / SCROLL_PAUSE_MIN_MS) + 1;
+
+  // Navigate to the home feed. A nav error here aborts the warmup — rethrow
+  // PII-free (the home URL is a constant, but Puppeteer messages embed it noisily).
+  try {
+    await page.goto(WARMUP_HOME_URL, { waitUntil: 'networkidle2', timeout: 30000 });
+  } catch (_) {
+    throw new Error('❌ warmupAccount: home feed navigation failed (timeout or unreachable)');
+  }
+
+  const start = now();
+  let scrolls = 0;
+
+  while (now() - start < durationMs && scrolls < maxScrolls) {
+    // A frame-detach / page-crash mid-loop must not abort with an unhandled
+    // rejection — stop scrolling and return the partial count (clone-base
+    // warmupScrollFeed wraps the same way, L1067).
+    try {
+      const amount = 300 + Math.floor(Math.random() * 500); // 300–800px
+      await page.evaluate((y) => window.scrollBy(0, y), amount);
+    } catch (_) {
+      break;
+    }
+    scrolls++;
+
+    // ≥5s pause every 3rd iteration (AC6). A delay throw must not abort the
+    // session (matches runGuardedBatch L221-226) — log and continue.
+    try {
+      if (scrolls % LONG_PAUSE_EVERY_N === 0) {
+        await delay(LONG_PAUSE_MIN_MS, LONG_PAUSE_MAX_MS);
+      } else {
+        await delay(SCROLL_PAUSE_MIN_MS, SCROLL_PAUSE_MAX_MS);
+      }
+    } catch (err) {
+      console.warn(`⚠️ warmupAccount: delay threw — ${err?.message ?? err}. Continuing.`);
+    }
+
+    // Optional probabilistic reaction (AC3). reactFn errors are swallowed so a
+    // missing Like button never crashes the warming loop.
+    if (allowReactions && normalizedReactProbability > 0 && Math.random() < normalizedReactProbability) {
+      await Promise.resolve(reactFn(page)).catch(() => {});
+    }
+  }
+
+  return {
+    dryRun: false,
+    platform: 'facebook',
+    durationSeconds: effectiveDuration,
+    scrolls,
+  };
+}
+
 export default {
   runGuardedBatch,
   randomDelay,
@@ -1858,4 +2294,8 @@ export default {
   GROUP_POST_BATCH_LIMIT,
   sendFriendRequests,
   FRIEND_REQUEST_DELAY_FLOOR_MS,
+  cancelPendingFriendRequests,
+  warmupAccount,
+  MAX_WARMUP_DURATION_SECONDS,
+  DEFAULT_WARMUP_DURATION_SECONDS,
 };
