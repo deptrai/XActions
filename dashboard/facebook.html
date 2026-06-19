@@ -13,23 +13,23 @@
       --warning: #f9ab00;
       --error: #ea4335;
       --dryrun: #4285f4;
-      --surface: #ffffff;
-      --surface-alt: #f8f9fa;
-      --border: #e0e0e0;
-      --text: #202124;
-      --text-secondary: #5f6368;
+      --surface: #000000;
+      --surface-alt: #16181c;
+      --border: #2f3336;
+      --text: #e7e9ea;
+      --text-secondary: #8b8f94;
       --radius: 10px;
       --spacing: 24px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--surface-alt); color: var(--text); font-size: 0.875rem; line-height: 1.5; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #000; color: var(--text); font-size: 0.875rem; line-height: 1.5; }
     .layout { display: flex; min-height: 100vh; }
-    .sidebar-left { width: 260px; flex-shrink: 0; }
+    .sidebar-left { width: 275px; flex-shrink: 0; border-right: 1px solid var(--border); }
     .fb-main { flex: 1; max-width: 960px; margin: 0 auto; padding: var(--spacing); }
     .fb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--spacing); }
     .fb-header h1 { font-size: 1.5rem; font-weight: 600; }
-    .account-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
-    .account-bar select { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.875rem; min-width: 200px; }
+    .account-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #16181c; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+    .account-bar select { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.875rem; min-width: 200px; background: #202327; color: var(--text); }
     .account-bar .status { font-size: 0.75rem; color: var(--text-secondary); }
     .dryrun-pill { background: var(--dryrun); color: #fff; padding: 2px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: 600; }
     .tab-bar { display: flex; border-bottom: 2px solid var(--border); margin-bottom: var(--spacing); gap: 0; }
@@ -39,13 +39,13 @@
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
     .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 16px; }
-    .action-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--spacing); transition: box-shadow 0.2s; }
+    .action-card { background: #16181c; border: 1px solid var(--border); border-radius: var(--radius); padding: var(--spacing); transition: box-shadow 0.2s; }
     .action-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
     .card-title { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
     .card-desc { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 12px; }
     .card-field { margin-bottom: 10px; }
     .card-field label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; }
-    .card-field textarea, .card-field input, .card-field select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem; font-family: inherit; resize: vertical; }
+    .card-field textarea, .card-field input, .card-field select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem; font-family: inherit; resize: vertical; background: #202327; color: var(--text); }
     .card-field textarea { min-height: 60px; }
     .card-field input[type="number"] { max-width: 120px; }
     .card-footer { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
@@ -54,7 +54,7 @@
     .btn-run.preview { background: var(--dryrun); color: #fff; }
     .btn-run.live { background: #e65100; color: #fff; }
     .btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
-    .result-panel { margin-top: 12px; padding: 10px 14px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; display: none; border-left: 4px solid transparent; }
+    .result-panel { margin-top: 12px; padding: 10px 14px; border-radius: 6px; font-family: "JetBrains Mono", monospace; font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; display: none; border-left: 4px solid transparent; background: #202327; color: var(--text); }
     .result-panel.show { display: block; }
     .result-panel.dryrun { background: #e3f2fd; border-left-color: var(--dryrun); }
     .result-panel.success { background: #e8f5e9; border-left-color: var(--success); }
@@ -300,8 +300,8 @@
   </main>
 </div>
 
-<script src="/js/config.js"></script>
-<script src="/js/sidebar.js"></script>
+<script src="/js/config.js?v=2"></script>
+<script src="/js/sidebar.js?v=3"></script>
 <script>
 // ── State ──────────────────────────────────────────────────────
 const state = { accountId: null };
@@ -319,7 +319,7 @@ function switchTab(name) {
 // ── Account selector ───────────────────────────────────────────
 async function loadAccounts() {
   try {
-    const data = await apiRequest('/api/facebook/accounts');
+    const data = await apiRequest('/facebook/accounts');
     const sel = document.getElementById('fb-account');
     sel.innerHTML = '<option value="">— Select account —</option>';
     (data.accounts || []).forEach(a => {
@@ -348,7 +348,7 @@ async function importAccount() {
   const xs = document.getElementById('imp-xs').value.trim();
   if (!label || !c_user || !xs) return alert('All fields required');
   try {
-    await apiRequest('/api/facebook/accounts', { method: 'POST', body: JSON.stringify({ label, c_user, xs }), headers: { 'Content-Type': 'application/json' } });
+    await apiRequest('/facebook/accounts', { method: 'POST', body: JSON.stringify({ label, c_user, xs }), headers: { 'Content-Type': 'application/json' } });
     showToast('Account saved!', 'success');
     document.getElementById('imp-label').value = '';
     document.getElementById('imp-cuser').value = '';
@@ -385,7 +385,7 @@ async function runAction(action) {
   resultEl.textContent = 'Processing...';
 
   try {
-    const data = await apiRequest('/api/facebook/automate', {
+    const data = await apiRequest('/facebook/automate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -443,7 +443,7 @@ async function runScrape(action) {
   else body.url = fieldVal;
 
   try {
-    const data = await apiRequest('/api/facebook/scrape', {
+    const data = await apiRequest('/facebook/scrape', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -460,7 +460,7 @@ async function runScrape(action) {
 async function loadMonitor() {
   const el = document.getElementById('monitor-list');
   try {
-    const data = await apiRequest('/api/operations?limit=20');
+    const data = await apiRequest('/operations?limit=20');
     const ops = (data.operations || data || []).filter(o => o.type?.startsWith('facebook'));
     if (!ops.length) { el.textContent = 'No operations yet.'; return; }
     el.innerHTML = ops.map(o => `<div style="padding:6px 0;border-bottom:1px solid var(--border)">
