@@ -51,6 +51,7 @@
     { href: '/', label: 'Dashboard', icon: icons.home },
     { href: '/facebook.html', label: 'Facebook', icon: icons.facebook },
     { href: '/automations', label: 'X / Twitter', icon: icons.automations },
+    { href: '/thread-composer', label: 'Threads', icon: icons.threadComposer },
     { href: '/analytics-dashboard', label: 'Analytics', icon: icons.analytics },
     { href: '/monitor', label: 'Monitor', icon: icons.monitor },
     { href: '/mcp', label: 'AI Tools', icon: icons.ai },
