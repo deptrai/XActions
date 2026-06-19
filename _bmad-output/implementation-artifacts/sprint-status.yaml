@@ -11,7 +11,7 @@
 # Retrospective: optional | done
 
 generated: 06-12-2026 02:18
-last_updated: 06-19-2026 15:28
+last_updated: 06-19-2026 16:19
 project: XActions
 project_key: NOKEY
 tracking_system: file-system
@@ -53,7 +53,7 @@ development_status:
   4-6-scrape-group-members: done
   4-7-send-friend-requests: in-progress
   4-8-cancel-friend-requests: done
-  4-9-newsfeed-farming: ready-for-dev
+  4-9-newsfeed-farming: review
   epic-4-retrospective: optional
 
   # Epic 5: Facebook Messenger Port (from SST_TOOL_FB C#)

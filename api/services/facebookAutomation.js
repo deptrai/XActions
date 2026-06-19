@@ -2103,6 +2103,143 @@ export async function cancelPendingFriendRequests(page, options = {}) {
   };
 }
 
+// ============================================================================
+// Newsfeed farming / account warming (Story 4.9 — FR-23, Cluster-2)
+// ============================================================================
+
+// Duration cap: warming sessions run longer than view-boost (600s vs 300s).
+export const MAX_WARMUP_DURATION_SECONDS = 600;
+export const DEFAULT_WARMUP_DURATION_SECONDS = 120;
+
+const WARMUP_HOME_URL = 'https://www.facebook.com/';
+
+// Default reaction: find Like button, skip silently if not found, click only if not already liked.
+async function defaultReactFn(page) {
+  let result;
+  try {
+    result = await findLikeButton(page);
+  } catch {
+    // findLikeButton throws when button not found — swallow to skip silently (AC3.8)
+    return;
+  }
+  if (result.alreadyLiked) return;
+  await result.element.click();
+}
+
+/**
+ * Warm up a Facebook account with natural newsfeed scrolling and optional light reactions.
+ * Navigates to the home feed (hardcoded) — NOT a runGuardedBatch case (no item batch).
+ *
+ * @param {Object|null} page - Puppeteer page (authenticated); MAY be null in dry-run
+ * @param {Object} [options]
+ * @param {boolean} [options.dryRun=true] - Default true; only explicit false drives the browser
+ * @param {number} [options.durationSeconds] - Dwell time; clamped to MAX_WARMUP_DURATION_SECONDS (600); default 120
+ * @param {boolean} [options.allowReactions=false] - When false, pure scroll only (no reactions)
+ * @param {number} [options.reactProbability=0.05] - Per-scroll reaction probability; >0.2 clamped to 0.2; <=0/NaN/non-number → 0
+ * @param {Function} [options.reactFn] - Injectable reaction seam (default: find-then-click Like)
+ * @param {Function} [options.delay=randomDelay] - Injectable pause seam.
+ *   ⚠️ COUPLED WITH `now`: override both together or neither.
+ * @param {Function} [options.now] - Injectable clock (default () => Date.now()); see `delay`.
+ * @returns {Promise<Object>} Preview (dry-run) or run summary (real)
+ */
+export async function warmupAccount(page, options = {}) {
+  const {
+    dryRun = true,
+    durationSeconds,
+    allowReactions = false,
+    reactProbability: rawReactProbability = 0.05,
+    reactFn = defaultReactFn,
+    delay = randomDelay,
+    now = () => Date.now(),
+  } = options;
+
+  // Resolve duration: default when missing/null, throw <=0/non-finite/non-number, clamp >600.
+  let requested = durationSeconds;
+  if (requested === undefined || requested === null) {
+    requested = DEFAULT_WARMUP_DURATION_SECONDS;
+  }
+  if (typeof requested !== 'number' || !Number.isFinite(requested) || requested <= 0) {
+    throw new Error('❌ warmupAccount: durationSeconds must be a positive finite number');
+  }
+  const clamped = requested > MAX_WARMUP_DURATION_SECONDS;
+  const effectiveDuration = clamped ? MAX_WARMUP_DURATION_SECONDS : requested;
+
+  // Normalize reactProbability: >0.2 → 0.2; <=0/NaN/non-number → 0; never throw (AC3.7).
+  let normalizedReactProbability;
+  if (typeof rawReactProbability !== 'number' || !Number.isFinite(rawReactProbability) || rawReactProbability <= 0) {
+    normalizedReactProbability = 0;
+  } else if (rawReactProbability > 0.2) {
+    normalizedReactProbability = 0.2;
+  } else {
+    normalizedReactProbability = rawReactProbability;
+  }
+  const reactProbabilityClamped = typeof rawReactProbability === 'number' && rawReactProbability > 0.2;
+
+  // Strict dry-run gate: anything except explicit `false` stays dry-run.
+  const isRealRun = dryRun === false;
+
+  // --- dry-run: pure compute, NO seam, NO page.* (AC5) ---
+  if (!isRealRun) {
+    return {
+      dryRun: true,
+      platform: 'facebook',
+      preview: {
+        durationSeconds: effectiveDuration,
+        clamped,
+        allowReactions,
+        reactProbability: normalizedReactProbability,
+        reactProbabilityClamped,
+      },
+    };
+  }
+
+  // --- real run ---
+
+  // Mandatory NFR-8 warning — non-suppressible, emitted directly (not via runGuardedBatch).
+  console.warn('⚠️ Account warming does not guarantee avoiding checkpoint. Use a test account before using your main account.');
+
+  const durationMs = effectiveDuration * 1000;
+
+  const SCROLL_PAUSE_MIN_MS = 800;
+  const SCROLL_PAUSE_MAX_MS = 2500;
+  const LONG_PAUSE_MIN_MS = 5000;
+  const LONG_PAUSE_MAX_MS = 8000;
+  const LONG_PAUSE_EVERY_N = 3;
+
+  // Iteration backstop: bounds busy-spin if delay is no-op without advancing `now`.
+  const maxScrolls = Math.ceil(durationMs / SCROLL_PAUSE_MIN_MS) + 1;
+
+  await page.goto(WARMUP_HOME_URL, { waitUntil: 'networkidle2', timeout: 30000 });
+
+  const start = now();
+  let scrolls = 0;
+
+  while (now() - start < durationMs && scrolls < maxScrolls) {
+    const amount = 300 + Math.floor(Math.random() * 500); // 300–800px
+    await page.evaluate((y) => window.scrollBy(0, y), amount);
+    scrolls++;
+
+    // ≥5s pause every 3rd iteration (AC6).
+    if (scrolls % LONG_PAUSE_EVERY_N === 0) {
+      await delay(LONG_PAUSE_MIN_MS, LONG_PAUSE_MAX_MS);
+    } else {
+      await delay(SCROLL_PAUSE_MIN_MS, SCROLL_PAUSE_MAX_MS);
+    }
+
+    // Optional probabilistic reaction (AC3).
+    if (allowReactions && normalizedReactProbability > 0 && Math.random() < normalizedReactProbability) {
+      await Promise.resolve(reactFn(page)).catch(() => {});
+    }
+  }
+
+  return {
+    dryRun: false,
+    platform: 'facebook',
+    durationSeconds: effectiveDuration,
+    scrolls,
+  };
+}
+
 export default {
   runGuardedBatch,
   randomDelay,
@@ -2125,4 +2262,7 @@ export default {
   sendFriendRequests,
   FRIEND_REQUEST_DELAY_FLOOR_MS,
   cancelPendingFriendRequests,
+  warmupAccount,
+  MAX_WARMUP_DURATION_SECONDS,
+  DEFAULT_WARMUP_DURATION_SECONDS,
 };
