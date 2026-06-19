@@ -4,7 +4,7 @@ baseline_commit: e2deee0
 
 # Story 4.9: Newsfeed farming / account warming (dry-run default)
 
-Status: ready-for-dev
+Status: review
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 2 — medium-high risk). Source: epics.md#Story 4.9 + PRD prd-XActions-2026-06-10-epic4 FR-23. Realizes UJ-7. -->
 
@@ -69,20 +69,20 @@ Pattern: clone `warmupScrollFeed` (4.3) and add: longer cap, reaction probabilit
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: `warmupAccount` entry + duration clamp** (AC1, AC2, AC5)
-  - [ ] Export + default export; `MAX_WARMUP_DURATION_SECONDS=600`; clamp not reject; default 120; throw ≤0
-  - [ ] Strict dryRun gate; dry-run returns preview; page may be null
-- [ ] **Task 2: Scroll loop with ≥5s pause every 3 screens** (AC1, AC6)
-  - [ ] Clone 4.3's `warmupScrollFeed` loop structure (injectable delay + now seams, maxScrolls backstop)
-  - [ ] Counter: every 3rd scroll → longer pause (5-8s)
-- [ ] **Task 3: Reactions (gated + capped)** (AC3)
-  - [ ] `allowReactions` gate (default false); `reactProbability` default 0.05 cap 0.2
-  - [ ] When enabled: Math.random() < reactProbability → call `reactFn(page)` (default: findLikeButton + click if not already liked; skip silently on failure)
-  - [ ] Injectable `reactFn` seam
-- [ ] **Task 4: Mandatory warning** (AC4)
-  - [ ] `console.warn(...)` before real run; non-suppressible; NOT from runGuardedBatch (direct emit)
-- [ ] **Task 5: Tests** (AC7)
-  - [ ] All AC7 cases; `npx vitest run <file>` green
+- [x] **Task 1: `warmupAccount` entry + duration clamp** (AC1, AC2, AC5)
+  - [x] Export + default export; `MAX_WARMUP_DURATION_SECONDS=600`; clamp not reject; default 120; throw ≤0
+  - [x] Strict dryRun gate; dry-run returns preview; page may be null
+- [x] **Task 2: Scroll loop with ≥5s pause every 3 screens** (AC1, AC6)
+  - [x] Clone 4.3's `warmupScrollFeed` loop structure (injectable delay + now seams, maxScrolls backstop)
+  - [x] Counter: every 3rd scroll → longer pause (5-8s)
+- [x] **Task 3: Reactions (gated + capped)** (AC3)
+  - [x] `allowReactions` gate (default false); `reactProbability` default 0.05 cap 0.2
+  - [x] When enabled: Math.random() < reactProbability → call `reactFn(page)` (default: findLikeButton + click if not already liked; skip silently on failure)
+  - [x] Injectable `reactFn` seam
+- [x] **Task 4: Mandatory warning** (AC4)
+  - [x] `console.warn(...)` before real run; non-suppressible; NOT from runGuardedBatch (direct emit)
+- [x] **Task 5: Tests** (AC7)
+  - [x] All AC7 cases; `npx vitest run <file>` green
 
 ## Dev Notes
 
@@ -126,12 +126,30 @@ Pattern: clone `warmupScrollFeed` (4.3) and add: longer cap, reaction probabilit
 
 ### Agent Model Used
 
+claude-sonnet-4-6
+
 ### Debug Log References
+
+- Clock step bug: `makeFakeClock` initial value caused loop to exit before first scroll — fixed by starting at `-step` so first call returns 0.
+- `reactProbability: 1.0` test assertion: raw 1.0 is clamped to 0.2 per AC3.7, so `reactFn.calls === scrolls` is impossible — corrected to `toBeGreaterThan(0)`.
 
 ### Completion Notes List
 
+- Implemented `warmupAccount(page, options)` as clone of `warmupScrollFeed` (4.3) with: longer cap (600s vs 300s), no `targetUrl`/`assertFacebookUrl`, ≥5s pause every 3rd iteration, probabilistic reaction gate, mandatory NFR-8 warning.
+- `MAX_WARMUP_DURATION_SECONDS=600`, `DEFAULT_WARMUP_DURATION_SECONDS=120` exported as named constants.
+- `reactProbability` normalization: >0.2→0.2 (clamped), ≤0/NaN/non-number→0 (never throw). Duration validation: ≤0/NaN/non-number→throw; >600→clamp.
+- Default `reactFn` wraps `findLikeButton` in try/catch (it throws on not-found), clicks only when `alreadyLiked===false`.
+- Mandatory `console.warn` emitted directly before real run (non-suppressible, not via runGuardedBatch).
+- Operation persistence intentionally omitted per Dev Notes (FR-23 ACs do not require it).
+- 27/27 tests green. Pre-existing failures (x402-integration, facebook-schedule Prisma) are server/DB-dependent and unrelated to this story.
+
 ### File List
+
+- `api/services/facebookAutomation.js` — added `warmupAccount`, `MAX_WARMUP_DURATION_SECONDS`, `DEFAULT_WARMUP_DURATION_SECONDS`, `defaultReactFn`; updated default export
+- `tests/services/facebook-warmup-account.test.js` — new test file (27 tests)
 
 ## Change Log
 
 - 2026-06-16: Story 4.9 created (context engine). Status → ready-for-dev. (Luisphan)
+- 2026-06-19: Pre-dev spec review (adversarial, claude-opus-4-8). Fixed 15 findings. Status unchanged. (claude-opus-4-8)
+- 2026-06-19: Implementation complete (claude-sonnet-4-6). warmupAccount + 27 tests green. Status → review.
