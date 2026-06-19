@@ -54,7 +54,9 @@ const URL_A = 'https://www.facebook.com/profile.php?id=2001';
 const URL_B = 'https://www.facebook.com/profile.php?id=2002';
 const URL_C = 'https://www.facebook.com/profile.php?id=2003';
 
-const noDelay = makeDelaySpy();
+// Per-call factory (NOT a shared module-level spy) — each test gets a fresh
+// spy so accumulated `.calls` can never leak across tests.
+const noDelay = () => makeDelaySpy();
 
 function mkReq(url, dateSent = null, name = 'Person') {
   return { name, profileUrl: url, dateSent };
@@ -67,7 +69,7 @@ describe('cancelPendingFriendRequests — dry-run', () => {
     const collectFn = makeCollectFn([mkReq(URL_A), mkReq(URL_B)]);
     const cancelFn = makeCancelFn();
     const result = await cancelPendingFriendRequests(makeFakePage(), {
-      limit: 10, collectFn, cancelFn, delay: noDelay,
+      limit: 10, collectFn, cancelFn, delay: noDelay(),
     });
     expect(result.dryRun).toBe(true);
     expect(result.count).toBe(2);
@@ -81,7 +83,7 @@ describe('cancelPendingFriendRequests — dry-run', () => {
 
   it('empty pending list → { dryRun:true, pending:[], count:0 } (no throw)', async () => {
     const result = await cancelPendingFriendRequests(makeFakePage(), {
-      limit: 10, collectFn: makeCollectFn([]), delay: noDelay,
+      limit: 10, collectFn: makeCollectFn([]), delay: noDelay(),
     });
     expect(result.dryRun).toBe(true);
     expect(result.pending).toEqual([]);
@@ -91,7 +93,7 @@ describe('cancelPendingFriendRequests — dry-run', () => {
   it('caps preview at limit', async () => {
     const items = Array.from({ length: 8 }, (_, i) => mkReq(`https://www.facebook.com/profile.php?id=${i}`));
     const result = await cancelPendingFriendRequests(makeFakePage(), {
-      limit: 3, collectFn: makeCollectFn(items), delay: noDelay,
+      limit: 3, collectFn: makeCollectFn(items), delay: noDelay(),
     });
     expect(result.count).toBe(3);
   });
@@ -127,7 +129,7 @@ describe('cancelPendingFriendRequests — real run', () => {
 
   it('empty pending list (real) → { cancelled:0, failed:0, remaining:0 } (no throw)', async () => {
     const result = await cancelPendingFriendRequests(makeFakePage(), {
-      limit: 10, dryRun: false, collectFn: makeCollectFn([]), cancelFn: makeCancelFn(), delay: noDelay,
+      limit: 10, dryRun: false, collectFn: makeCollectFn([]), cancelFn: makeCancelFn(), delay: noDelay(),
     });
     expect(result).toEqual({
       dryRun: false, platform: 'facebook', cancelled: 0, failed: 0, remaining: 0,
@@ -173,7 +175,7 @@ describe('cancelPendingFriendRequests — olderThanDays filter', () => {
       mkReq(URL_B, 'Sent 2 months ago'),
     ];
     const result = await cancelPendingFriendRequests(makeFakePage(), {
-      limit: 10, olderThanDays: 7, collectFn: makeCollectFn(items), delay: noDelay,
+      limit: 10, olderThanDays: 7, collectFn: makeCollectFn(items), delay: noDelay(),
     });
     expect(result.count).toBe(1);
     expect(result.pending[0].profileUrl).toBe(URL_B);
@@ -189,11 +191,11 @@ describe('cancelPendingFriendRequests — 2-5s delay', () => {
       limit: 10, dryRun: false, collectFn: makeCollectFn([mkReq(URL_A), mkReq(URL_B)]),
       cancelFn: makeCancelFn(), delay, maxRetry: 0,
     });
-    // Phase-1 collect uses delay too (1000/3000 via the seam in real collect), but the
-    // injected collectFn here does NOT call delay — so only Phase-2 batch delays are recorded.
-    const batchDelays = delay.calls.filter(([min]) => min === 2000);
-    expect(batchDelays.length).toBeGreaterThan(0);
-    for (const [min, max] of batchDelays) {
+    // Injected collectFn + cancelFn do NOT call delay, so EVERY recorded delay
+    // is a Phase-2 inter-item batch delay. 2 items → exactly 1 inter-item delay.
+    // Assert the full set (not a filtered subset) so a wrong value can't hide.
+    expect(delay.calls).toHaveLength(1);
+    for (const [min, max] of delay.calls) {
       expect(min).toBe(2000);
       expect(max).toBe(5000);
     }
@@ -235,6 +237,47 @@ describe('cancelPendingFriendRequests — limit validation', () => {
       cancelPendingFriendRequests(makeFakePage(), { collectFn: makeCollectFn([]) }),
     ).rejects.toThrow('positive integer');
   });
+
+  it('limit > maxBatch (default 20) → throws before Phase 1', async () => {
+    const collectFn = makeCollectFn([]);
+    await expect(
+      cancelPendingFriendRequests(makeFakePage(), { limit: 21, collectFn }),
+    ).rejects.toThrow('exceeds maxBatch');
+    expect(collectFn.calls).toHaveLength(0); // validated before collect ran
+  });
+
+  it('limit > 20 allowed when maxBatch passed explicitly', async () => {
+    const result = await cancelPendingFriendRequests(makeFakePage(), {
+      limit: 50, maxBatch: 50, collectFn: makeCollectFn([]), delay: noDelay(),
+    });
+    expect(result.dryRun).toBe(true);
+    expect(result.count).toBe(0);
+  });
+});
+
+describe('cancelPendingFriendRequests — olderThanDays validation', () => {
+  it('negative olderThanDays → throws', async () => {
+    await expect(
+      cancelPendingFriendRequests(makeFakePage(), {
+        limit: 10, olderThanDays: -5, collectFn: makeCollectFn([]),
+      }),
+    ).rejects.toThrow('non-negative');
+  });
+
+  it('non-finite olderThanDays (NaN) → throws', async () => {
+    await expect(
+      cancelPendingFriendRequests(makeFakePage(), {
+        limit: 10, olderThanDays: NaN, collectFn: makeCollectFn([]),
+      }),
+    ).rejects.toThrow('non-negative');
+  });
+
+  it('olderThanDays omitted → no filter, no throw', async () => {
+    const result = await cancelPendingFriendRequests(makeFakePage(), {
+      limit: 10, collectFn: makeCollectFn([mkReq(URL_A)]), delay: noDelay(),
+    });
+    expect(result.count).toBe(1);
+  });
 });
 
 // ── safety: no cancel under dry-run ──────────────────────────────────────────
@@ -243,7 +286,7 @@ describe('cancelPendingFriendRequests — safety', () => {
   it('dry-run: NO cancelFn click even with a populated pending list', async () => {
     const cancelFn = makeCancelFn();
     await cancelPendingFriendRequests(makeFakePage(), {
-      limit: 10, collectFn: makeCollectFn([mkReq(URL_A), mkReq(URL_B)]), cancelFn, delay: noDelay,
+      limit: 10, collectFn: makeCollectFn([mkReq(URL_A), mkReq(URL_B)]), cancelFn, delay: noDelay(),
     });
     expect(cancelFn.calls).toHaveLength(0);
   });
@@ -251,7 +294,7 @@ describe('cancelPendingFriendRequests — safety', () => {
   it('dryRun:null stays dry-run (strict === false gate)', async () => {
     const cancelFn = makeCancelFn();
     const result = await cancelPendingFriendRequests(makeFakePage(), {
-      limit: 10, dryRun: null, collectFn: makeCollectFn([mkReq(URL_A)]), cancelFn, delay: noDelay,
+      limit: 10, dryRun: null, collectFn: makeCollectFn([mkReq(URL_A)]), cancelFn, delay: noDelay(),
     });
     expect(result.dryRun).toBe(true);
     expect(cancelFn.calls).toHaveLength(0);

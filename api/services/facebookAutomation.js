@@ -1857,17 +1857,19 @@ const CANCEL_DELAY_MAX_MS = 5000;
 function parseRequestAgeDays(dateSentText) {
   if (typeof dateSentText !== 'string' || !dateSentText.trim()) return null;
   const t = dateSentText.toLowerCase();
-  // "X day(s)" / "X ngày" → days; "X week(s)"/"X tuần" → *7; "X month(s)"/"X tháng" → *30
-  const num = t.match(/(\d+)/);
-  if (!num) return null;
-  const n = parseInt(num[1], 10);
+  // Sub-day text → age 0 (no digit needed: "just now", "an hour ago", "vừa xong").
+  if (/hour|giờ|minute|phút|second|giây|just now|vừa xong/.test(t)) return 0;
+  // Anchor the number to its adjacent unit so a leading count elsewhere in the
+  // card text ("3 mutual friends · sent 2 days ago") can't be grabbed instead.
+  const m = t.match(/(\d+)\s*(day|week|month|year|ngày|tuần|tháng|năm)/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
   if (!Number.isFinite(n)) return null;
-  if (/week|tuần/.test(t)) return n * 7;
-  if (/month|tháng/.test(t)) return n * 30;
-  if (/year|năm/.test(t)) return n * 365;
-  if (/hour|giờ|minute|phút|just now|vừa xong/.test(t)) return 0;
-  if (/day|ngày/.test(t)) return n;
-  return null;
+  const unit = m[2];
+  if (/week|tuần/.test(unit)) return n * 7;
+  if (/month|tháng/.test(unit)) return n * 30;
+  if (/year|năm/.test(unit)) return n * 365;
+  return n; // day | ngày
 }
 
 /**
@@ -1901,7 +1903,10 @@ async function defaultCollectSentRequests(page, limit, delay) {
         let profileUrl = null;
         if (idMatch) {
           profileUrl = `https://www.facebook.com/profile.php?id=${idMatch[1]}`;
-        } else if (segMatch && !['friends', 'profile.php', 'photo', 'watch'].includes(segMatch[1].toLowerCase())) {
+        } else if (segMatch && ![
+          'friends', 'profile.php', 'photo', 'watch',
+          'pages', 'groups', 'events', 'marketplace', 'videos', 'notifications', 'messages',
+        ].includes(segMatch[1].toLowerCase())) {
           profileUrl = abs.split('?')[0];
         }
         const name = a?.textContent?.trim() || item.querySelector('span, strong')?.textContent?.trim() || null;
@@ -1916,7 +1921,12 @@ async function defaultCollectSentRequests(page, limit, delay) {
       if (collected.size >= limit) break;
     }
     if (collected.size === before) stalls++; else stalls = 0;
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    // Navigation/frame-detach mid-collect must not abort Phase 1 — return what we have.
+    try {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    } catch (_) {
+      break;
+    }
     await delay(1000, 3000);
   }
   return Array.from(collected.values()).slice(0, limit);
@@ -1927,20 +1937,31 @@ async function defaultCollectSentRequests(page, limit, delay) {
  * Navigates to the profile and clicks "Cancel request" / "Hủy yêu cầu".
  * UNVERIFIED locale-aware selectors — fallback chain + PII-free throw.
  *
+ * Only direct one-click "Cancel request" buttons are used. The two-step
+ * "Requested" → menu → cancel affordance is intentionally NOT in the chain:
+ * clicking it opens a menu but does not cancel, so reporting `cancelled:true`
+ * would be a false success. A profile showing only that state throws
+ * button-not-found and is counted as `failed` instead (honest failure).
+ *
  * @param {Object} page - Puppeteer page
  * @param {string} profileUrl - facebook.com profile URL
+ * @param {Function} [delay=randomDelay] - injectable jittered delay seam
  * @returns {Promise<{cancelled: boolean}>}
  * @throws {Error} If the Cancel-request button is not found (PII-free)
  */
-async function cancelSingleRequest(page, profileUrl) {
-  await page.goto(profileUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-  await sleep(500);
+async function cancelSingleRequest(page, profileUrl, delay = randomDelay) {
+  // Wrap goto so a navigation timeout/error (whose message embeds the URL) is
+  // rethrown PII-free instead of leaking profileUrl into runGuardedBatch results.
+  try {
+    await page.goto(profileUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  } catch (_) {
+    throw new Error('❌ Profile navigation failed; request not cancelled (profile unreachable or timed out)');
+  }
+  await delay(800, 1500);
 
   const cancelSelectors = [
     '[aria-label="Cancel request"]', // en
-    '[aria-label="Requested"]',      // en (click → menu → cancel)
     '[aria-label="Hủy yêu cầu"]',    // vi
-    '[aria-label="Đã yêu cầu"]',     // vi
     'div[role="button"][aria-label*="Cancel request"]',
     'div[role="button"][aria-label*="Hủy yêu cầu"]',
   ];
@@ -1963,7 +1984,7 @@ async function cancelSingleRequest(page, profileUrl) {
     throw new Error('❌ Cancel-request button not found; request already resolved or profile unreachable');
   }
   await cancelBtn.click();
-  await sleep(800);
+  await delay(800, 1500);
 
   return { cancelled: true };
 }
@@ -1990,6 +2011,7 @@ export async function cancelPendingFriendRequests(page, options = {}) {
   const {
     limit,
     olderThanDays,
+    dryRun,
     delay = randomDelay,
     collectFn: collectFnOpt,
     cancelFn: cancelFnOpt,
@@ -2001,6 +2023,23 @@ export async function cancelPendingFriendRequests(page, options = {}) {
   // AC6: validate limit — positive finite integer.
   if (!Number.isFinite(limit) || limit <= 0 || Math.floor(limit) !== limit) {
     throw new Error('❌ cancelPendingFriendRequests: limit must be a positive integer');
+  }
+
+  // runGuardedBatch hard-caps a batch at maxBatch (default 20) and throws if
+  // exceeded. Validate here so the caller gets a clear message instead of an
+  // opaque internal "exceeds maxBatch" error after Phase 1 already ran.
+  const maxBatch = Number.isFinite(rest.maxBatch) ? rest.maxBatch : 20;
+  if (limit > maxBatch) {
+    throw new Error(
+      `❌ cancelPendingFriendRequests: limit (${limit}) exceeds maxBatch (${maxBatch}); ` +
+      'lower limit or pass a larger maxBatch explicitly',
+    );
+  }
+
+  // olderThanDays, when provided, must be a non-negative finite number — a
+  // negative/NaN value would otherwise silently skip the filter (caller bug).
+  if (olderThanDays !== undefined && (!Number.isFinite(olderThanDays) || olderThanDays < 0)) {
+    throw new Error('❌ cancelPendingFriendRequests: olderThanDays must be a non-negative number');
   }
 
   // --- Phase 1: collect pending requests (runs in dry-run too — preview needs it) ---
@@ -2015,11 +2054,17 @@ export async function cancelPendingFriendRequests(page, options = {}) {
     });
   }
 
-  // Cap at limit.
+  // Cap at limit. NOTE (spec AC2.8): collectFn already stopped at `limit`, so when
+  // olderThanDays filters out recent items the final set can be SMALLER than limit
+  // even if older requests remain further down the page — this honors the spec
+  // ordering (cap-then-filter) rather than back-filling. The result does not
+  // distinguish "reached limit" from "filtered below limit"; callers needing the
+  // full older-than-N set should page with a higher limit.
   pending = pending.slice(0, limit);
 
   // --- AC3: dry-run returns the preview; Phase 2 does NOT run ---
-  if (options.dryRun !== false) {
+  // Strict gate: anything except explicit `false` stays dry-run (matches runGuardedBatch).
+  if (dryRun !== false) {
     return {
       dryRun: true,
       platform: 'facebook',
@@ -2035,10 +2080,14 @@ export async function cancelPendingFriendRequests(page, options = {}) {
   }
 
   // --- Phase 2: batch-cancel via runGuardedBatch (2-5s delay, NFR-7/8) ---
+  // We only reach here on a real run (dryRun === false gate above), so tell
+  // runGuardedBatch to write explicitly — do NOT rely on dryRun leaking via rest.
   const targets = pending.map((r) => r.profileUrl);
-  const guardedOptions = { ...rest, delay, delayMin: CANCEL_DELAY_MIN_MS, delayMax: CANCEL_DELAY_MAX_MS };
+  const guardedOptions = {
+    ...rest, delay, dryRun: false, delayMin: CANCEL_DELAY_MIN_MS, delayMax: CANCEL_DELAY_MAX_MS,
+  };
 
-  const actionFn = async (profileUrl) => cancelFn(page, profileUrl);
+  const actionFn = async (profileUrl) => cancelFn(page, profileUrl, delay);
   const batchResult = await runGuardedBatch(targets, actionFn, guardedOptions);
 
   // --- Transform runGuardedBatch result into { cancelled, failed, remaining } ---

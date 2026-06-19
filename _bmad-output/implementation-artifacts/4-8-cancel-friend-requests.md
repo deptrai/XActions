@@ -4,7 +4,7 @@ baseline_commit: e2deee0
 
 # Story 4.8: Cancel pending friend requests (dry-run default)
 
-Status: review
+Status: done
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 2 — medium-high risk). Source: epics.md#Story 4.8 + PRD prd-XActions-2026-06-10-epic4 FR-22. Realizes UJ-8. -->
 
@@ -86,6 +86,30 @@ Key design:
   - [x] Add "Friends — Cancel Pending (FR-22)" to selectors-facebook.md (UNVERIFIED + verify-checklist)
 - [x] **Task 6: Tests** (AC7)
   - [x] All AC7 cases; `npx vitest run <file>` green
+
+## Review Findings
+
+<!-- Code review 2026-06-19 (claude-opus-4-8). 4 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor, XActions domain. Blind "Critical" claims (sleep undefined, remaining negative) verified FALSE against source (sleep defined L17; runGuardedBatch counts per-item L182-194; warning fires L161). -->
+
+### Decision needed
+
+- [x] [Review][Decision] `[aria-label="Requested"]` / `[aria-label="Đã yêu cầu"]` trong chain gây FALSE success — `cancelSingleRequest` chỉ click 1 lần rồi `return { cancelled: true }`, nhưng comment ghi rõ "Requested" cần `click → menu → cancel` (2 bước). Khi nút hiển thị state "Requested" (phổ biến), code mở menu rồi báo cancelled:true mà KHÔNG click item Cancel trong menu → request KHÔNG bị hủy nhưng đếm là cancelled. [api/services/facebookAutomation.js:108-137] — Lựa chọn: (A) bỏ 2 selector two-step khỏi chain (an toàn — profile đó throw button-not-found → đếm failed, không false success) / (B) implement bước follow-up click "Cancel request" trong menu. Cả hai cần live-verify selector thật.
+- [x] [Review][Decision] `olderThanDays` under-deliver — `collectFn(page, limit, delay)` cap ở `limit` TRƯỚC khi filter `olderThanDays` loại bớt item gần đây → kết quả có thể ÍT hơn `limit` dù còn nhiều request cũ trên trang. Code KHỚP spec (AC2.8 cap → AC2.7 filter), nên đây là giới hạn spec-level, không phải bug. [api/services/facebookAutomation.js:176-188] — Lựa chọn: (A) over-collect (vd `collectLimit = limit*3` khi có filter) rồi filter→slice(limit) để honor limit-sau-filter / (B) giữ behavior hiện tại theo spec + document result không phân biệt "đủ limit" vs "bị filter".
+
+### Patch
+
+- [x] [Review][Patch] `limit` không có upper-bound vs runGuardedBatch maxBatch=20 — `limit` chỉ validate positive integer; `limit>20` → targets>20 → runGuardedBatch throw "exceeds maxBatch" (L125) khó hiểu cho caller. Fix: validate `limit <= (options.maxBatch ?? 20)` hoặc pass maxBatch tường minh. [api/services/facebookAutomation.js:171-173]
+- [x] [Review][Patch] `olderThanDays` âm/non-finite bị nuốt im lặng — `Number.isFinite(-5) && -5 > 0` = false → filter skip, không báo lỗi caller. Fix: reject khi `olderThanDays !== undefined && (!Number.isFinite(olderThanDays) || olderThanDays < 0)`. [api/services/facebookAutomation.js:180]
+- [x] [Review][Patch] `parseRequestAgeDays` regex `/(\d+)/` grab digit ĐẦU TIÊN bất kỳ — text "3 mutual friends · sent 2 days ago" → grab 3 thay vì 2. Fix: anchor digit vào unit: `/(\d+)\s*(?:day|week|month|year|ngày|tuần|tháng|năm)/i`. [api/services/facebookAutomation.js:30-31]
+- [x] [Review][Patch] `cancelSingleRequest` dùng `sleep(800)` flat sau write-click — không jitter + không injectable, thấp hơn norm codebase (randomDelay 1-3s) và không test được. Fix: forward `delay` seam vào `cancelSingleRequest(page, profileUrl, delay)`, thay `sleep(800)` bằng `delay(800, 1500)`. [api/services/facebookAutomation.js:106,135]
+- [x] [Review][Patch] `segMatch` blocklist thiếu — chưa loại `pages`/`groups`/`events`/`marketplace`/`videos`/`notifications`/`messages` → có thể collect path non-profile làm profileUrl. Fix: mở rộng blocklist array. [api/services/facebookAutomation.js:73]
+- [x] [Review][Patch] `page.goto(profileUrl)` + `page.evaluate(scrollTo)` không try/catch — goto timeout error chứa full URL (PII leak qua runGuardedBatch results.error); frame-detach giữa scroll → unhandled rejection abort Phase 1 không trả partial. Fix: wrap goto (rethrow PII-free), wrap evaluate (break loop on nav error). [api/services/facebookAutomation.js:54,88,105]
+- [x] [Review][Patch] `dryRun` không destructure → leak vào `...rest` forward tới runGuardedBatch (vô hại vì chỉ tới khi dryRun===false, nhưng interface bẩn). Fix: thêm `dryRun` vào destructure block. [api/services/facebookAutomation.js:159-166]
+- [x] [Review][Patch] Test quality: `noDelay` là module-level shared spy (cross-contamination latent); assertion delay tautological (`filter min===2000` rồi `expect min===2000`). Fix: tạo delay spy per-test; assert số delay = số item-1 và KHÔNG có delay sai value. [tests/services/facebook-cancel-friend-requests.test.js:335,472-477]
+
+### Deferred
+
+- [x] [Review][Defer] `parseRequestAgeDays` không bắt "a day ago"/"an hour ago"/"vừa gửi" (không digit) → trả null → included (đúng posture err-toward-cleanup, benign). Cần mẫu text thật từ live-verify để mở rộng. [api/services/facebookAutomation.js:26-39] — deferred, phụ thuộc UNVERIFIED selector live-verify
 
 ## Dev Notes
 
