@@ -4,7 +4,7 @@ baseline_commit: f776adf9e01a1819135e7e3417fb10e66a47d54a
 
 # Story 4.2: Auto-share Facebook post (dry-run default)
 
-Status: in-progress
+Status: done
 
 <!-- Code-review patches applied (7 fixed + 2 partial). Held at in-progress — NOT done — pending live-DOM verification of the share-to-Feed entry point/selectors (see Review Findings → Decision + Deferred). -->
 
