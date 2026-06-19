@@ -631,13 +631,9 @@ describe('Integration: Rate Limit Recovery', () => {
     const fetchMock = vi.fn().mockResolvedValue(makeRateLimitResponse(resetAt));
     const client = createClient(fetchMock);
 
-    try {
-      await scrapeProfile(client, 'testuser');
-      expect.fail('Should have thrown');
-    } catch (err) {
-      expect(err).toBeInstanceOf(RateLimitError);
-      expect(err.resetAt).toBeTruthy();
-    }
+    const err = await scrapeProfile(client, 'testuser').catch((e) => e);
+    expect(err).toBeInstanceOf(RateLimitError);
+    expect(err.resetAt).toBeTruthy();
   });
 });
 
@@ -657,14 +653,10 @@ describe('Integration: Auth Error Handling', () => {
     const fetchMock = vi.fn().mockResolvedValue(makeAuthErrorResponse());
     const client = createClient(fetchMock);
 
-    try {
-      await scrapeProfile(client, 'testuser');
-      expect.fail('Should have thrown AuthError');
-    } catch (err) {
-      expect(err).toBeInstanceOf(AuthError);
-      expect(err.status).toBe(401);
-      expect(err.message).toContain('Authentication failed');
-    }
+    const err = await scrapeProfile(client, 'testuser').catch((e) => e);
+    expect(err).toBeInstanceOf(AuthError);
+    expect(err.status).toBe(401);
+    expect(err.message).toContain('Authentication failed');
   });
 
   it('does NOT retry on auth errors', async () => {

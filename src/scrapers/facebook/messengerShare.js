@@ -534,6 +534,7 @@ export async function messengerShareCampaign(page, campaign, options = {}) {
     selectorTimeout = 8000,
     composeFn = composeMessage,
     shareFn = shareToMessenger,
+    batchFn = runGuardedBatch,
     ...guardedOptions
   } = options;
 
@@ -566,7 +567,7 @@ export async function messengerShareCampaign(page, campaign, options = {}) {
   };
 
   // Route through runGuardedBatch — dry-run default, delay seam, bounded batch
-  const batchResult = await runGuardedBatch(items, actionFn, guardedOptions);
+  const batchResult = await batchFn(items, actionFn, guardedOptions);
 
   return batchResult;
 }
