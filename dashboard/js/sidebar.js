@@ -47,55 +47,22 @@
   };
 
   const navItems = [
-    // Core
-    { href: '/', label: 'Home', icon: icons.home },
-    { href: '/run', label: 'Run', icon: icons.run },
-    { href: '/scripts', label: 'Scripts', icon: icons.scripts },
-    { href: '/features', label: 'Features', icon: icons.scripts },
-    // Automation & Growth
-    { href: '/automations', label: 'Automations', icon: icons.automations },
-    { href: '/facebook', label: 'Facebook', icon: icons.facebook },
-    { href: '/workflows', label: 'Workflows', icon: icons.workflows },
-    { href: '/agent', label: 'AI Agent', icon: icons.agent },
-    { href: '/monitor', label: 'Monitor', icon: icons.monitor },
-    { href: '/unfollowers', label: 'Unfollowers', icon: icons.unfollowers },
-    // Content & Media
-    { href: '/video', label: 'Video', icon: icons.video },
-    { href: '/thread', label: 'Thread Reader', icon: icons.threads },
-    { href: '/thread-composer', label: 'Threads', icon: icons.threadComposer },
-    { href: '/calendar', label: 'Calendar', icon: icons.calendar },
-    // Intelligence & AI
-    { href: '/mcp', label: 'AI / MCP', icon: icons.ai },
-    { href: '/a2a', label: 'A2A Protocol', icon: icons.a2a },
-    { href: '/ai', label: 'AI Tools', icon: icons.aiTools },
-    { href: '/ai-api', label: 'AI API', icon: icons.aiApi },
+    // Primary (always visible)
+    { href: '/', label: 'Dashboard', icon: icons.home },
+    { href: '/facebook.html', label: 'Facebook', icon: icons.facebook },
+    { href: '/automations', label: 'X / Twitter', icon: icons.automations },
     { href: '/analytics-dashboard', label: 'Analytics', icon: icons.analytics },
-    { href: '/analytics', label: 'Engagement', icon: icons.analytics },
-    { href: '/price-correlation', label: 'Price Charts', icon: icons.priceCharts },
-    { href: '/graph', label: 'Social Graph', icon: icons.graph },
-    // Platform
-    { href: '/integrations', label: 'Integrations', icon: icons.integrations },
-    { href: '/team', label: 'Team', icon: icons.team },
-    { href: '/admin', label: 'Admin', icon: icons.admin },
-    { href: '/login', label: 'Login', icon: icons.login },
-    // Resources
+    { href: '/monitor', label: 'Monitor', icon: icons.monitor },
+    { href: '/mcp', label: 'AI Tools', icon: icons.ai },
+    // Secondary
     { href: '/docs', label: 'Docs', icon: icons.docs },
-    { href: '/tutorials', label: 'Tutorials', icon: icons.tutorials },
-    { href: '/blog', label: 'Blog', icon: icons.blog },
-    { href: '/use-cases', label: 'Use Cases', icon: icons.useCases },
-    { href: '/compare', label: 'Compare', icon: icons.compare },
-    { href: '/pricing', label: 'Pricing', icon: icons.pricing },
-    { href: '/faq', label: 'FAQ', icon: icons.faq },
-    { href: '/changelog', label: 'Changelog', icon: icons.changelog },
-    { href: '/contact', label: 'Contact', icon: icons.contact },
-    { href: '/status', label: 'Status', icon: icons.status },
-    { href: '/about', label: 'About', icon: icons.about },
     { href: 'https://github.com/nirholas/XActions', label: 'GitHub', icon: icons.github, external: true }
   ];
 
   function isActive(href) {
     if (href === '/') return path === '/' || path === '' || path === '/index';
-    return path === href || path.startsWith(href + '/');
+    const normalized = href.replace(/\.html$/, '').replace(/\/+$/, '');
+    return path === normalized || path.startsWith(normalized + '/');
   }
 
   const nav = navItems.map(item => {
