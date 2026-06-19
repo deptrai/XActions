@@ -2123,7 +2123,13 @@ async function defaultReactFn(page) {
     return;
   }
   if (result.alreadyLiked) return;
-  await result.element.click();
+  // Self-contained: an element detached between find and click must not throw
+  // out of the default reaction (don't rely on the caller swallowing it).
+  try {
+    await result.element.click();
+  } catch {
+    // Like click failed (element went stale) — skip silently, warming continues.
+  }
 }
 
 /**
@@ -2173,7 +2179,9 @@ export async function warmupAccount(page, options = {}) {
   } else {
     normalizedReactProbability = rawReactProbability;
   }
-  const reactProbabilityClamped = typeof rawReactProbability === 'number' && rawReactProbability > 0.2;
+  // Clamped flag is true ONLY when a finite raw value was actually reduced to 0.2.
+  // Infinity/NaN/non-number normalize to 0 (not clamped to 0.2), so they are NOT "clamped".
+  const reactProbabilityClamped = typeof rawReactProbability === 'number' && Number.isFinite(rawReactProbability) && rawReactProbability > 0.2;
 
   // Strict dry-run gate: anything except explicit `false` stays dry-run.
   const isRealRun = dryRun === false;
@@ -2195,6 +2203,12 @@ export async function warmupAccount(page, options = {}) {
 
   // --- real run ---
 
+  // A real run drives the browser — fail clearly if no page was supplied,
+  // instead of a cryptic TypeError on the first page.goto below.
+  if (page == null) {
+    throw new Error('❌ warmupAccount: page is required for a real run (dryRun: false)');
+  }
+
   // Mandatory NFR-8 warning — non-suppressible, emitted directly (not via runGuardedBatch).
   console.warn('⚠️ Account warming does not guarantee avoiding checkpoint. Use a test account before using your main account.');
 
@@ -2209,24 +2223,43 @@ export async function warmupAccount(page, options = {}) {
   // Iteration backstop: bounds busy-spin if delay is no-op without advancing `now`.
   const maxScrolls = Math.ceil(durationMs / SCROLL_PAUSE_MIN_MS) + 1;
 
-  await page.goto(WARMUP_HOME_URL, { waitUntil: 'networkidle2', timeout: 30000 });
+  // Navigate to the home feed. A nav error here aborts the warmup — rethrow
+  // PII-free (the home URL is a constant, but Puppeteer messages embed it noisily).
+  try {
+    await page.goto(WARMUP_HOME_URL, { waitUntil: 'networkidle2', timeout: 30000 });
+  } catch (_) {
+    throw new Error('❌ warmupAccount: home feed navigation failed (timeout or unreachable)');
+  }
 
   const start = now();
   let scrolls = 0;
 
   while (now() - start < durationMs && scrolls < maxScrolls) {
-    const amount = 300 + Math.floor(Math.random() * 500); // 300–800px
-    await page.evaluate((y) => window.scrollBy(0, y), amount);
+    // A frame-detach / page-crash mid-loop must not abort with an unhandled
+    // rejection — stop scrolling and return the partial count (clone-base
+    // warmupScrollFeed wraps the same way, L1067).
+    try {
+      const amount = 300 + Math.floor(Math.random() * 500); // 300–800px
+      await page.evaluate((y) => window.scrollBy(0, y), amount);
+    } catch (_) {
+      break;
+    }
     scrolls++;
 
-    // ≥5s pause every 3rd iteration (AC6).
-    if (scrolls % LONG_PAUSE_EVERY_N === 0) {
-      await delay(LONG_PAUSE_MIN_MS, LONG_PAUSE_MAX_MS);
-    } else {
-      await delay(SCROLL_PAUSE_MIN_MS, SCROLL_PAUSE_MAX_MS);
+    // ≥5s pause every 3rd iteration (AC6). A delay throw must not abort the
+    // session (matches runGuardedBatch L221-226) — log and continue.
+    try {
+      if (scrolls % LONG_PAUSE_EVERY_N === 0) {
+        await delay(LONG_PAUSE_MIN_MS, LONG_PAUSE_MAX_MS);
+      } else {
+        await delay(SCROLL_PAUSE_MIN_MS, SCROLL_PAUSE_MAX_MS);
+      }
+    } catch (err) {
+      console.warn(`⚠️ warmupAccount: delay threw — ${err?.message ?? err}. Continuing.`);
     }
 
-    // Optional probabilistic reaction (AC3).
+    // Optional probabilistic reaction (AC3). reactFn errors are swallowed so a
+    // missing Like button never crashes the warming loop.
     if (allowReactions && normalizedReactProbability > 0 && Math.random() < normalizedReactProbability) {
       await Promise.resolve(reactFn(page)).catch(() => {});
     }

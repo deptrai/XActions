@@ -67,6 +67,25 @@ describe('warmupAccount — dry-run (default)', () => {
     expect(result.dryRun).toBe(true);
     expect(delay.calls).toHaveLength(0);
   });
+
+  it('does NOT emit the mandatory warning on dry-run', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await warmupAccount(null, {});
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+});
+
+describe('warmupAccount — real run requires a page', () => {
+  let warnSpy;
+  beforeEach(() => { warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {}); });
+  afterEach(() => { warnSpy.mockRestore(); });
+
+  it('throws a clear error when page is null on a real run', async () => {
+    await expect(
+      warmupAccount(null, { dryRun: false, durationSeconds: 60, now: makeFakeClock(30000) }),
+    ).rejects.toThrow('page is required');
+  });
 });
 
 describe('warmupAccount — duration clamp', () => {
@@ -142,6 +161,18 @@ describe('warmupAccount — reactProbability normalization (dry-run)', () => {
     const result = await warmupAccount(null, { reactProbability: 'high' });
     expect(result.preview.reactProbability).toBe(0);
   });
+
+  it('Infinity → normalized to 0 AND reactProbabilityClamped false (not "clamped to 0.2")', async () => {
+    const result = await warmupAccount(null, { reactProbability: Infinity });
+    expect(result.preview.reactProbability).toBe(0);
+    expect(result.preview.reactProbabilityClamped).toBe(false);
+  });
+
+  it('exactly 0.2 → unchanged, not clamped', async () => {
+    const result = await warmupAccount(null, { reactProbability: 0.2 });
+    expect(result.preview.reactProbability).toBe(0.2);
+    expect(result.preview.reactProbabilityClamped).toBe(false);
+  });
 });
 
 describe('warmupAccount — real run: scroll-only (allowReactions false, default)', () => {
@@ -171,21 +202,31 @@ describe('warmupAccount — real run: scroll-only (allowReactions false, default
     expect(page.calls.click).toHaveLength(0);
   });
 
-  it('emits mandatory warning before first scroll', async () => {
-    const page = makeFakePage();
+  it('emits mandatory warning BEFORE the first scroll (ordering guard)', async () => {
+    const events = [];
+    const warnLocalSpy = vi.spyOn(console, 'warn').mockImplementation(() => { events.push('warn'); });
+    // Page that records goto/evaluate into the shared ordered event log.
+    const page = {
+      goto: async () => { events.push('goto'); },
+      evaluate: async () => { events.push('scroll'); },
+    };
     const delay = makeDelaySpy();
     const now = makeFakeClock(30000);
 
     await warmupAccount(page, { dryRun: false, durationSeconds: 60, delay, now });
 
-    expect(warnSpy).toHaveBeenCalledWith(
+    // Presence:
+    expect(warnLocalSpy).toHaveBeenCalledWith(
       expect.stringMatching(/Account warming does not guarantee avoiding checkpoint/),
     );
-  });
-
-  it('does NOT emit warning on dry-run', async () => {
-    await warmupAccount(null, {});
-    expect(warnSpy).not.toHaveBeenCalled();
+    // Ordering: warn fires before goto, and before any scroll. A code reorder
+    // that moved the warning after the first scroll would fail here.
+    const warnIdx = events.indexOf('warn');
+    const firstScrollIdx = events.indexOf('scroll');
+    expect(warnIdx).toBeGreaterThanOrEqual(0);
+    expect(warnIdx).toBeLessThan(events.indexOf('goto'));
+    expect(warnIdx).toBeLessThan(firstScrollIdx);
+    warnLocalSpy.mockRestore();
   });
 });
 
@@ -194,7 +235,7 @@ describe('warmupAccount — real run: reactions enabled (allowReactions true)', 
   beforeEach(() => { warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {}); });
   afterEach(() => { warnSpy.mockRestore(); });
 
-  it('reactProbability 1.0: reactFn called on every scroll iteration', async () => {
+  it('reactProbability 1.0 (clamped to 0.2): reactFn fires probabilistically across iterations', async () => {
     const page = makeFakePage();
     const delay = makeDelaySpy();
     const reactFn = makeReactSpy();
@@ -210,12 +251,13 @@ describe('warmupAccount — real run: reactions enabled (allowReactions true)', 
       now,
     });
 
-    // reactProbability 1.0 > 0.2, so it is clamped to 0.2 (AC3.7).
-    // Math.random() < 0.2 is not deterministic, but with enough scrolls (>10),
-    // at least one reaction is statistically certain. Assert > 0, not === scrolls.
+    // 1.0 > 0.2, so it is clamped to 0.2 (AC3.7). Math.random() < 0.2 is NOT
+    // deterministic, so "every iteration" is impossible to assert. Over ~60
+    // iterations, P(zero reactions) = 0.8^60 ≈ 1.5e-6 — so "at least one fires"
+    // is effectively certain. We assert the gate is REACHED (reactFn called when
+    // allowReactions+probability>0), not an exact count.
     expect(result.scrolls).toBeGreaterThan(0);
     expect(reactFn.calls.length).toBeGreaterThan(0);
-    expect(reactFn.calls.length).toBeLessThanOrEqual(result.scrolls);
   });
 
   it('reactProbability 0: reactFn NEVER called even with allowReactions true', async () => {

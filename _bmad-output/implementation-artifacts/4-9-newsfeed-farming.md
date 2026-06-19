@@ -4,7 +4,7 @@ baseline_commit: e2deee0
 
 # Story 4.9: Newsfeed farming / account warming (dry-run default)
 
-Status: review
+Status: done
 
 <!-- Epic 4 (Facebook Growth Automation, Cluster 2 — medium-high risk). Source: epics.md#Story 4.9 + PRD prd-XActions-2026-06-10-epic4 FR-23. Realizes UJ-7. -->
 
@@ -96,6 +96,24 @@ Pattern: clone `warmupScrollFeed` (4.3) and add: longer cap, reaction probabilit
   - [x] `console.warn(...)` before real run; non-suppressible; NOT from runGuardedBatch (direct emit)
 - [x] **Task 5: Tests** (AC7)
   - [x] All AC7 cases; `npx vitest run <file>` green
+
+## Review Findings
+
+<!-- Code review 2026-06-19 (claude-opus-4-8). 4 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor, XActions domain. Verified vs source: findLikeButton ALWAYS throws on not-found (never returns {element:null}) → "null .click()" finding dismissed. warmupScrollFeed clone-base HAS try/catch (L1067); warmupAccount does NOT → missing-guard finding confirmed real. -->
+
+### Patch
+
+- [x] [Review][Patch] Test "reactProbability 1.0: reactFn called on every scroll iteration" nói dối — 1.0 bị clamp xuống 0.2, `Math.random() < 0.2` KHÔNG deterministic, nhưng assertion chỉ là `toBeGreaterThan(0)`. Test title hứa "every iteration" mà chỉ verify "ít nhất 1". Code gọi `reactFn` đúng once-per-iteration đã được path khác cover. Fix: đổi tên test phản ánh đúng ("at least one reaction fires"), HOẶC test determinism bằng injected `reactFn` + `now` step nhỏ và assert `reactFn.calls.length` vs số iteration mong đợi với một probability gate có thể kiểm soát. Vấn đề gốc: AC7.14 dùng "1.0 → every iteration" nhưng AC3.7 clamp 0.2 — mâu thuẫn spec; chọn cách test reaction-fires-when-gate-true tách khỏi xác suất. [tests/services/facebook-warmup-account.test.js:359-381]
+- [x] [Review][Patch] `reactProbabilityClamped` sai khi raw là Infinity/quá lớn — `normalizedReactProbability` về 0 (nhánh `!Number.isFinite`), nhưng `reactProbabilityClamped = rawReactProbability > 0.2` = true → cờ báo "đã clamp xuống 0.2" trong khi giá trị thực là 0. Caller đọc preview hiểu sai. Fix: `reactProbabilityClamped` chỉ true khi value thực sự bị cắt về 0.2 (raw hữu hạn, >0.2): `Number.isFinite(raw) && raw > 0.2`. [api/services/facebookAutomation.js:79]
+- [x] [Review][Patch] Không try/catch quanh `page.goto`/`page.evaluate`/`delay` — regression vs clone-base `warmupScrollFeed` (có try/catch L1067 + safeError). goto timeout / frame-detach / delay-throw → unhandled rejection, mất số scrolls đã làm. Fix: wrap real-run loop trong try/catch; goto fail rethrow PII-free; evaluate-throw mid-loop → break trả partial; delay-throw → log+continue (giống runGuardedBatch L221-226). [api/services/facebookAutomation.js:115-136]
+- [x] [Review][Patch] Không guard `page == null` trên real run — `dryRun:false` + `page:null` → `page.goto` ném TypeError khó hiểu thay vì lỗi domain rõ ràng. Fix: `if (isRealRun && page == null) throw new Error('❌ warmupAccount: page required for real run')` trước khi vào loop. [api/services/facebookAutomation.js:99-115]
+- [x] [Review][Patch] `defaultReactFn` không tự bảo vệ `element.click()` — dù `findLikeButton` luôn trả element non-null (verified, nên null-click không xảy ra), `element.click()` vẫn có thể throw nếu element detach giữa find và click. Hiện outer `Promise.resolve(reactFn).catch(()=>{})` nuốt được, nhưng `defaultReactFn` nên tự `try/catch` quanh click để self-contained (không phụ thuộc caller nuốt lỗi). [api/services/facebookAutomation.js:28-29]
+- [x] [Review][Patch] Test quality: (a) assertion tautological `reactFn.calls.length ≤ result.scrolls` (cấu trúc bất khả vượt — vô nghĩa); (b) test mandatory-warning chỉ assert presence, KHÔNG assert thứ tự "trước first scroll" như AC4.10 yêu cầu (reorder code vẫn pass); (c) test "does NOT emit warning on dry-run" đặt nhầm trong describe block `real run: scroll-only`. Fix: bỏ assertion (a); thêm sequence guard (record thứ tự warn vs evaluate); chuyển (c) về describe dry-run. [tests/services/facebook-warmup-account.test.js:380,336-351]
+
+### Deferred
+
+- [x] [Review][Defer] Reaction-timing signature — reaction fire ngay sau pause của cùng iteration (scroll→pause→react), mỗi like cách scroll đúng một khoảng pause cố định → có thể bị Facebook detector nhận pattern. Hành vi người thật: đọc bài vài giây rồi mới like. Đề xuất thêm micro-delay (500-1500ms) giữa pause và reactFn. [api/services/facebookAutomation.js:133] — deferred, cải tiến anti-detection, không phải lỗi correctness; gom vào live-verify/anti-detection pass cùng các UNVERIFIED selector khác.
+- [x] [Review][Defer] Return value không phân biệt "hoàn thành theo duration" vs "chạm maxScrolls backstop" — caller không biết session bị cắt sớm bởi backstop. Chỉ xảy ra khi delay no-op + now không tiến (test injection), không xảy ra real run. [api/services/facebookAutomation.js:138-143] — deferred, chỉ ảnh hưởng observability trong điều kiện test-injection, không ảnh hưởng real run.
 
 ## Dev Notes
 
