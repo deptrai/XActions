@@ -43,7 +43,11 @@ function makePostExecutor(mode = 'success') {
   return executor;
 }
 
-const futureDate = (offsetMs = 120_000) => new Date(Date.now() + offsetMs).toISOString();
+// Fixed reference time for deterministic tests (injectable clock)
+const FIXED_NOW = new Date('2026-06-01T12:00:00.000Z').getTime();
+const fixedNow = () => FIXED_NOW;
+
+const futureDate = (offsetMs = 120_000) => new Date(FIXED_NOW + offsetMs).toISOString();
 
 // ── scheduleFacebookPost: validation + persistence edges ─────────────────────
 
@@ -53,26 +57,26 @@ describe('scheduleFacebookPost — validation edges', () => {
 
   it('content non-string (number) → throws before any DB write', async () => {
     await expect(
-      scheduleFacebookPost(null, { content: 42, scheduledAt: futureDate() }, { dryRun: false, userId: TEST_USER.id }),
+      scheduleFacebookPost(null, { content: 42, scheduledAt: futureDate() }, { dryRun: false, userId: TEST_USER.id, now: fixedNow }),
     ).rejects.toThrow('content must be a non-empty string');
     expect(await prisma.schedule.count({ where: { userId: TEST_USER.id } })).toBe(0);
   });
 
   it('scheduledAt missing/undefined → throws (invalid ISO-8601)', async () => {
     await expect(
-      scheduleFacebookPost(null, { content: 'hi' }, { dryRun: false, userId: TEST_USER.id }),
+      scheduleFacebookPost(null, { content: 'hi' }, { dryRun: false, userId: TEST_USER.id, now: fixedNow }),
     ).rejects.toThrow('valid ISO-8601 datetime');
   });
 
   it('scheduledAt unparseable string → throws', async () => {
     await expect(
-      scheduleFacebookPost(null, { content: 'hi', scheduledAt: 'not-a-date' }, { dryRun: false, userId: TEST_USER.id }),
+      scheduleFacebookPost(null, { content: 'hi', scheduledAt: 'not-a-date' }, { dryRun: false, userId: TEST_USER.id, now: fixedNow }),
     ).rejects.toThrow('valid ISO-8601 datetime');
   });
 
   it('dryRun:null stays dry-run (no DB row)', async () => {
     const result = await scheduleFacebookPost(
-      null, { content: 'null gate', scheduledAt: futureDate() }, { dryRun: null, userId: TEST_USER.id },
+      null, { content: 'null gate', scheduledAt: futureDate() }, { dryRun: null, userId: TEST_USER.id, now: fixedNow },
     );
     expect(result.dryRun).toBe(true);
     expect(await prisma.schedule.count({ where: { userId: TEST_USER.id } })).toBe(0);
@@ -80,7 +84,7 @@ describe('scheduleFacebookPost — validation edges', () => {
 
   it('dry-run echoes mediaUrls in the preview', async () => {
     const media = ['https://example.com/a.jpg', 'https://example.com/b.jpg'];
-    const result = await scheduleFacebookPost(null, { content: 'with media', scheduledAt: futureDate(), mediaUrls: media });
+    const result = await scheduleFacebookPost(null, { content: 'with media', scheduledAt: futureDate(), mediaUrls: media }, { now: fixedNow });
     expect(result.preview.mediaUrls).toEqual(media);
   });
 
@@ -89,7 +93,7 @@ describe('scheduleFacebookPost — validation edges', () => {
     const result = await scheduleFacebookPost(
       null,
       { content: 'persist test', scheduledAt: futureDate(), mediaUrls: media, facebookAccountId: 'acct-123' },
-      { dryRun: false, userId: TEST_USER.id },
+      { dryRun: false, userId: TEST_USER.id, now: fixedNow },
     );
     const row = await prisma.schedule.findUnique({ where: { id: result.scheduleId } });
     expect(JSON.parse(row.mediaUrls)).toEqual(media);
