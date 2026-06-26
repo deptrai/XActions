@@ -41,9 +41,13 @@ function pickUserAgent(agents) {
 // ---------------------------------------------------------------------------
 
 export class WaitingRateLimitStrategy {
+  constructor({ sleepFn = sleep } = {}) {
+    this._sleep = sleepFn;
+  }
+
   async onRateLimit({ resetAt }) {
     const waitMs = Math.max((resetAt || Date.now() + 60_000) - Date.now(), 1000);
-    await sleep(waitMs);
+    await this._sleep(waitMs);
   }
 }
 

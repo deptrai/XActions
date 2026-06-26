@@ -6,9 +6,15 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 30000,
     hookTimeout: 30000,
+    pool: 'forks',
+    fileParallelism: false,
+    retry: 0,
     include: ['tests/**/*.test.js'],
     exclude: ['node_modules', 'dist', 'archive'],
     reporters: ['verbose'],
+    sequence: {
+      shuffle: true,
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

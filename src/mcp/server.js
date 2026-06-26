@@ -1308,6 +1308,172 @@ const TOOLS = [
       required: ['action', 'authCookie'],
     },
   },
+  // ====== Facebook Epic 4 — Growth Automation Tools ======
+  {
+    name: 'x_facebook_schedule_post',
+    description: 'Schedule a Facebook post for future publishing. DB-only — no browser launched. Dry-run (default) previews without persisting; set dryRun:false to create the schedule record.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'Post text content (required, non-empty)' },
+        scheduledAt: { type: 'string', description: 'ISO-8601 datetime at least 60 seconds in the future' },
+        mediaUrls: { type: 'array', items: { type: 'string' }, description: 'Optional media attachment URLs' },
+        facebookAccountId: { type: 'string', description: 'Optional Facebook account/page ID to post from' },
+        userId: { type: 'string', description: 'Required when dryRun:false — scopes the schedule row to this user' },
+        dryRun: { type: 'boolean', description: 'Preview without persisting (default: true)' },
+        authCookie: {
+          type: 'object',
+          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
+          required: ['c_user', 'xs'],
+          description: 'Facebook session cookie. Values are never logged (NFR3).',
+        },
+      },
+      required: ['content', 'scheduledAt', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_share_posts',
+    description: 'Share one or more Facebook posts to your own timeline. Guarded batch with jitter delays. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        postUrls: { type: 'array', items: { type: 'string' }, description: 'Non-empty array of unique facebook.com post URLs to share' },
+        dryRun: { type: 'boolean', description: 'Preview without sharing (default: true)' },
+        maxBatch: { type: 'number', description: 'Max posts per batch run (default: 20)' },
+        authCookie: {
+          type: 'object',
+          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
+          required: ['c_user', 'xs'],
+          description: 'Facebook session cookie. Values are never logged (NFR3).',
+        },
+      },
+      required: ['postUrls', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_warmup_scroll',
+    description: 'Simulate human scrolling on a Facebook feed URL for a bounded duration. Used for view-boost warmup. Capped at 300 seconds. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        targetUrl: { type: 'string', description: 'facebook.com URL of the feed or page to scroll' },
+        durationSeconds: { type: 'number', description: 'Scroll session length in seconds (default: 60, max: 300)' },
+        dryRun: { type: 'boolean', description: 'Preview without scrolling (default: true)' },
+        authCookie: {
+          type: 'object',
+          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
+          required: ['c_user', 'xs'],
+          description: 'Facebook session cookie. Values are never logged (NFR3).',
+        },
+      },
+      required: ['targetUrl', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_join_groups',
+    description: 'Join Facebook groups by URL list or keyword search. Keyword mode requires dryRun:false. Enforces 30-second minimum delay between joins (NFR-6, Cluster-1).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        groupUrls: { type: 'array', items: { type: 'string' }, description: 'Array of facebook.com group URLs (URL mode). Use this OR keyword.' },
+        keyword: { type: 'string', description: 'Search keyword to find groups (keyword mode). Requires dryRun:false.' },
+        limit: { type: 'number', description: 'Max groups to find in keyword mode (default: 10)' },
+        dryRun: { type: 'boolean', description: 'Preview without joining (default: true)' },
+        maxBatch: { type: 'number', description: 'Max groups per batch (default: 20)' },
+        authCookie: {
+          type: 'object',
+          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
+          required: ['c_user', 'xs'],
+          description: 'Facebook session cookie. Values are never logged (NFR3).',
+        },
+      },
+      required: ['authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_post_to_groups',
+    description: 'Post content to multiple Facebook groups. Default batch cap is 10 — pass force:true to allow up to 20. Enforces 30-second minimum delay between posts (NFR-6). Dry-run (default) previews.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        groupUrls: { type: 'array', items: { type: 'string' }, description: 'Non-empty array of facebook.com group URLs to post to' },
+        content: { type: 'string', description: 'Post text content (required, non-empty)' },
+        mediaUrls: { type: 'array', items: { type: 'string' }, description: 'Optional media URLs (text-only in current version)' },
+        force: { type: 'boolean', description: 'Allow more than 10 groups per batch (still capped at 20). Default: false.' },
+        dryRun: { type: 'boolean', description: 'Preview without posting (default: true)' },
+        maxBatch: { type: 'number', description: 'Max groups per batch (default: 20)' },
+        authCookie: {
+          type: 'object',
+          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
+          required: ['c_user', 'xs'],
+          description: 'Facebook session cookie. Values are never logged (NFR3).',
+        },
+      },
+      required: ['groupUrls', 'content', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_send_friend_requests',
+    description: 'Send Facebook friend requests. Modes: uid_list (explicit profile URLs), suggestions (Facebook suggestions), location (filter by location). Enforces 60-second minimum delay (NFR-6, Cluster-2). suggestions/location require dryRun:false.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        mode: { type: 'string', enum: ['uid_list', 'suggestions', 'location'], description: 'uid_list: explicit URLs. suggestions: Facebook suggested friends. location: filter by location.' },
+        targets: { type: 'array', items: { type: 'string' }, description: 'Array of facebook.com profile URLs (required for uid_list mode)' },
+        location: { type: 'string', description: 'Location string to filter suggestions (required for location mode)' },
+        limit: { type: 'number', description: 'Max profiles in suggestions/location mode (default: 10)' },
+        dryRun: { type: 'boolean', description: 'Preview without sending (default: true). suggestions/location require dryRun:false.' },
+        maxBatch: { type: 'number', description: 'Max requests per batch (default: 20)' },
+        authCookie: {
+          type: 'object',
+          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
+          required: ['c_user', 'xs'],
+          description: 'Facebook session cookie. Values are never logged (NFR3).',
+        },
+      },
+      required: ['mode', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_cancel_friend_requests',
+    description: 'Cancel pending outgoing Facebook friend requests. Phase 1 collects pending requests (runs even in dry-run for preview), Phase 2 cancels. Dry-run (default) shows what would be cancelled; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Max pending requests to collect and cancel (required, positive integer, max equals maxBatch)' },
+        olderThanDays: { type: 'number', description: 'Only cancel requests older than this many days (optional, non-negative)' },
+        dryRun: { type: 'boolean', description: 'Preview without cancelling (default: true)' },
+        maxBatch: { type: 'number', description: 'Max cancellations per batch (default: 20). limit must not exceed this.' },
+        authCookie: {
+          type: 'object',
+          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
+          required: ['c_user', 'xs'],
+          description: 'Facebook session cookie. Values are never logged (NFR3).',
+        },
+      },
+      required: ['limit', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_warmup_account',
+    description: 'Warm up a Facebook account with natural home-feed scrolling and optional probabilistic Like reactions. Capped at 600 seconds. Dry-run (default) does NOT open browser; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        durationSeconds: { type: 'number', description: 'Warmup session length in seconds (default: 120, max: 600)' },
+        allowReactions: { type: 'boolean', description: 'Enable probabilistic Like reactions during scroll (default: false)' },
+        reactProbability: { type: 'number', description: 'Per-scroll reaction probability (0–0.2, values above 0.2 clamped). Default: 0.05.' },
+        dryRun: { type: 'boolean', description: 'Preview without scrolling (default: true). Browser not launched in dry-run.' },
+        authCookie: {
+          type: 'object',
+          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
+          required: ['c_user', 'xs'],
+          description: 'Facebook session cookie. Values are never logged (NFR3).',
+        },
+      },
+      required: ['authCookie'],
+    },
+  },
   // ====== Social Graph ======
   {
     name: 'x_graph_build',
@@ -2363,6 +2529,11 @@ async function executeTool(name, args) {
     return await executeFacebookAutomateTool(args);
   }
 
+  // Handle Facebook Epic 4 growth automation tools
+  if (name.startsWith('x_facebook_') && name !== 'x_facebook_automate') {
+    return await executeFacebookEpic4Tool(name, args);
+  }
+
   if (MODE === 'remote') {
     return await remoteClient.execute(name, args);
   } else {
@@ -2483,6 +2654,139 @@ async function executeFacebookAutomateTool(args) {
     // Swallow close errors so they never mask the original failure
     await browser.close().catch(() => {});
   }
+}
+
+// by nichxbt
+async function runWithFacebookBrowser(authCookie, fn) {
+  const { createBrowser, createPage, loginWithCookie } =
+    await import('../scrapers/facebook/index.js');
+  const browser = await createBrowser({ headless: true });
+  try {
+    const page = await createPage(browser);
+    await loginWithCookie(page, {
+      c_user: String(authCookie.c_user).trim(),
+      xs: String(authCookie.xs).trim(),
+    });
+    return await fn(page);
+  } finally {
+    await browser.close().catch(() => {});
+  }
+}
+
+// by nichxbt
+async function executeFacebookEpic4Tool(name, args) {
+  const { authCookie, dryRun, ...rest } = args;
+
+  const cUser = String(authCookie?.c_user ?? '').trim();
+  const xs = String(authCookie?.xs ?? '').trim();
+  if (!cUser || !xs) {
+    throw new Error(
+      `❌ ${name} requires authCookie { c_user, xs }. Provide a valid Facebook session cookie.`,
+    );
+  }
+
+  const resolvedDryRun = dryRun === false ? false : true;
+
+  const {
+    scheduleFacebookPost,
+    shareFacebookPosts,
+    warmupScrollFeed,
+    joinFacebookGroups,
+    postToFacebookGroups,
+    sendFriendRequests,
+    cancelPendingFriendRequests,
+    warmupAccount,
+  } = await import('../../api/services/facebookAutomation.js');
+
+  if (name === 'x_facebook_schedule_post') {
+    const { content, scheduledAt, mediaUrls, facebookAccountId, userId } = rest;
+    return await scheduleFacebookPost(
+      null,
+      { content, scheduledAt, mediaUrls, facebookAccountId },
+      { dryRun: resolvedDryRun, userId },
+    );
+  }
+
+  if (name === 'x_facebook_share_posts') {
+    const { postUrls, maxBatch } = rest;
+    const options = { dryRun: resolvedDryRun, ...(maxBatch != null && { maxBatch }) };
+    if (resolvedDryRun) return await shareFacebookPosts(null, postUrls, options);
+    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
+      shareFacebookPosts(page, postUrls, options),
+    );
+  }
+
+  if (name === 'x_facebook_warmup_scroll') {
+    const { targetUrl, durationSeconds } = rest;
+    const options = { dryRun: resolvedDryRun, ...(durationSeconds != null && { durationSeconds }) };
+    if (resolvedDryRun) return await warmupScrollFeed(null, targetUrl, options);
+    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
+      warmupScrollFeed(page, targetUrl, options),
+    );
+  }
+
+  if (name === 'x_facebook_join_groups') {
+    const { groupUrls, keyword, limit, maxBatch } = rest;
+    const input = groupUrls ? { groupUrls } : { keyword, limit };
+    const options = { dryRun: resolvedDryRun, ...(maxBatch != null && { maxBatch }) };
+    if (resolvedDryRun) return await joinFacebookGroups(null, input, options);
+    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
+      joinFacebookGroups(page, input, options),
+    );
+  }
+
+  if (name === 'x_facebook_post_to_groups') {
+    const { groupUrls, content, mediaUrls, force, maxBatch } = rest;
+    const input = { groupUrls, content, ...(mediaUrls && { mediaUrls }) };
+    const options = {
+      dryRun: resolvedDryRun,
+      ...(force != null && { force }),
+      ...(maxBatch != null && { maxBatch }),
+    };
+    if (resolvedDryRun) return await postToFacebookGroups(null, input, options);
+    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
+      postToFacebookGroups(page, input, options),
+    );
+  }
+
+  if (name === 'x_facebook_send_friend_requests') {
+    const { mode, targets, location, limit, maxBatch } = rest;
+    const input = { mode, ...(targets && { targets }), ...(location && { location }), ...(limit != null && { limit }) };
+    const options = { dryRun: resolvedDryRun, ...(maxBatch != null && { maxBatch }) };
+    if (resolvedDryRun) return await sendFriendRequests(null, input, options);
+    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
+      sendFriendRequests(page, input, options),
+    );
+  }
+
+  if (name === 'x_facebook_cancel_friend_requests') {
+    const { limit, olderThanDays, maxBatch } = rest;
+    const options = {
+      dryRun: resolvedDryRun,
+      limit,
+      ...(olderThanDays != null && { olderThanDays }),
+      ...(maxBatch != null && { maxBatch }),
+    };
+    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
+      cancelPendingFriendRequests(page, options),
+    );
+  }
+
+  if (name === 'x_facebook_warmup_account') {
+    const { durationSeconds, allowReactions, reactProbability } = rest;
+    const options = {
+      dryRun: resolvedDryRun,
+      ...(durationSeconds != null && { durationSeconds }),
+      ...(allowReactions != null && { allowReactions }),
+      ...(reactProbability != null && { reactProbability }),
+    };
+    if (resolvedDryRun) return await warmupAccount(null, options);
+    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
+      warmupAccount(page, options),
+    );
+  }
+
+  throw new Error(`❌ executeFacebookEpic4Tool: unhandled tool name "${name}"`);
 }
 
 /**
@@ -4255,4 +4559,4 @@ main().catch((error) => {
 });
 
 // Export for testing without starting the stdio transport
-export { TOOLS, executeFacebookAutomateTool };
+export { TOOLS, executeFacebookAutomateTool, executeFacebookEpic4Tool };

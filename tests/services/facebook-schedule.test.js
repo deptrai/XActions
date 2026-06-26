@@ -71,8 +71,12 @@ function makePostExecutor(mode = 'success', { error } = {}) {
   return executor;
 }
 
-// Future datetime helper — at least 120s ahead so tests don't flap near the 60s boundary
-const futureDate = (offsetMs = 120_000) => new Date(Date.now() + offsetMs).toISOString();
+// Fixed reference time for deterministic tests (injectable clock)
+const FIXED_NOW = new Date('2026-06-01T12:00:00.000Z').getTime();
+const fixedNow = () => FIXED_NOW;
+
+// Future datetime helper — at least 120s ahead of FIXED_NOW so tests don't flap
+const futureDate = (offsetMs = 120_000) => new Date(FIXED_NOW + offsetMs).toISOString();
 
 // ── scheduleFacebookPost ─────────────────────────────────────────────────────
 
@@ -91,7 +95,7 @@ describe('scheduleFacebookPost', () => {
     const result = await scheduleFacebookPost(
       null,
       { content: 'Hello world', scheduledAt },
-      { dryRun: true },
+      { dryRun: true, now: fixedNow },
     );
 
     expect(result.dryRun).toBe(true);
@@ -109,6 +113,7 @@ describe('scheduleFacebookPost', () => {
     const result = await scheduleFacebookPost(
       null,
       { content: 'No explicit dryRun', scheduledAt: futureDate() },
+      { now: fixedNow },
     );
     expect(result.dryRun).toBe(true);
     const count = await prisma.schedule.count({ where: { userId: TEST_USER.id } });
@@ -120,7 +125,7 @@ describe('scheduleFacebookPost', () => {
     const result = await scheduleFacebookPost(
       null,
       { content: 'Real schedule', scheduledAt },
-      { dryRun: false, userId: TEST_USER.id },
+      { dryRun: false, userId: TEST_USER.id, now: fixedNow },
     );
 
     expect(result.dryRun).toBe(false);
@@ -137,7 +142,7 @@ describe('scheduleFacebookPost', () => {
 
   it('empty content throws before any DB write', async () => {
     await expect(
-      scheduleFacebookPost(null, { content: '   ', scheduledAt: futureDate() }, { dryRun: false, userId: TEST_USER.id }),
+      scheduleFacebookPost(null, { content: '   ', scheduledAt: futureDate() }, { dryRun: false, userId: TEST_USER.id, now: fixedNow }),
     ).rejects.toThrow('content must be a non-empty string');
 
     const count = await prisma.schedule.count({ where: { userId: TEST_USER.id } });
@@ -145,22 +150,22 @@ describe('scheduleFacebookPost', () => {
   });
 
   it('past scheduledAt throws', async () => {
-    const past = new Date(Date.now() - 10_000).toISOString();
+    const past = new Date(FIXED_NOW - 10_000).toISOString();
     await expect(
-      scheduleFacebookPost(null, { content: 'Late post', scheduledAt: past }, { dryRun: false, userId: TEST_USER.id }),
+      scheduleFacebookPost(null, { content: 'Late post', scheduledAt: past }, { dryRun: false, userId: TEST_USER.id, now: fixedNow }),
     ).rejects.toThrow('scheduledAt must be at least 60 seconds in the future');
   });
 
   it('scheduledAt within 60s throws', async () => {
-    const soon = new Date(Date.now() + 30_000).toISOString();
+    const soon = new Date(FIXED_NOW + 30_000).toISOString();
     await expect(
-      scheduleFacebookPost(null, { content: 'Too soon', scheduledAt: soon }, { dryRun: false, userId: TEST_USER.id }),
+      scheduleFacebookPost(null, { content: 'Too soon', scheduledAt: soon }, { dryRun: false, userId: TEST_USER.id, now: fixedNow }),
     ).rejects.toThrow('scheduledAt must be at least 60 seconds in the future');
   });
 
   it('missing userId on dryRun:false throws without creating a row', async () => {
     await expect(
-      scheduleFacebookPost(null, { content: 'Unscoped', scheduledAt: futureDate() }, { dryRun: false }),
+      scheduleFacebookPost(null, { content: 'Unscoped', scheduledAt: futureDate() }, { dryRun: false, now: fixedNow }),
     ).rejects.toThrow('options.userId is required');
 
     const count = await prisma.schedule.count({ where: { userId: TEST_USER.id } });
@@ -171,7 +176,7 @@ describe('scheduleFacebookPost', () => {
     const result = await scheduleFacebookPost(
       null,
       { content: 'Null page test', scheduledAt: futureDate() },
-      { dryRun: true },
+      { dryRun: true, now: fixedNow },
     );
     expect(result.dryRun).toBe(true);
   });
@@ -194,7 +199,7 @@ describe('runDueSchedules', () => {
       data: {
         userId: TEST_USER.id,
         content: 'Test post content',
-        scheduledAt: new Date(Date.now() - 5000), // 5s in past = due
+        scheduledAt: new Date(Date.now() - 5000), // 5s in past = due (must use real clock for DB query)
         status: 'pending',
         ...overrides,
       },
@@ -266,7 +271,7 @@ describe('runDueSchedules', () => {
   });
 
   it('throughput cap: 6th due schedule is deferred (not executed, not failed)', async () => {
-    const oneHourAgo = new Date(Date.now() - 3_600_000 + 60_000); // within the 1h window
+    const oneHourAgo = new Date(Date.now() - 3_600_000 + 60_000); // within the 1h window (real clock for DB query)
 
     // Seed 5 completed schedules in the last hour
     for (let i = 0; i < 5; i++) {

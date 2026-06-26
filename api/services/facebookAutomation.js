@@ -522,28 +522,68 @@ export async function commentOnFacebookPosts(page, postUrls, commentText, option
  */
 async function findPostComposer(page) {
   // Supported locales: en, vi (from docs/agents/selectors-facebook.md)
+  // Step 1: Click the composer TRIGGER (the placeholder button on the feed)
+  const triggerSelectors = [
+    '[aria-label*="What\'s on your mind"]',      // en (aria-label on trigger)
+    '[aria-label*="Bạn đang nghĩ gì"]',          // vi (aria-label on trigger)
+  ];
+
+  let triggerClicked = false;
+  for (const selector of triggerSelectors) {
+    try {
+      const trigger = await page.waitForSelector(selector, { timeout: 3000 });
+      if (trigger) {
+        await trigger.click();
+        triggerClicked = true;
+        break;
+      }
+    } catch (_) {}
+  }
+
+  // Fallback: find trigger by text content (Facebook often omits aria-label)
+  if (!triggerClicked) {
+    try {
+      const clicked = await page.evaluate(() => {
+        const spans = document.querySelectorAll('span');
+        for (const span of spans) {
+          const text = span.innerText?.trim() || '';
+          if (text.includes('đang nghĩ gì') || text.includes("What's on your mind")) {
+            const trigger = span.closest('[role="button"]');
+            if (trigger) { trigger.click(); return true; }
+          }
+        }
+        return false;
+      });
+      if (clicked) triggerClicked = true;
+    } catch (_) {}
+  }
+
+  if (!triggerClicked) {
+    throw new Error('❌ Post composer not found; locale unsupported or page unreachable');
+  }
+
+  await sleep(1500);
+
+  // Step 2: Find the actual textbox inside the composer dialog
   const composerSelectors = [
-    '[aria-label*="What\'s on your mind"]',      // en
-    '[role="textbox"][data-text*="What\'s on your mind"]',  // en fallback
-    '[aria-label*="Bạn đang nghĩ gì"]',          // vi
-    '[role="textbox"][data-text*="Bạn đang nghĩ gì"]',      // vi fallback
+    '[role="textbox"][aria-placeholder*="What\'s on your mind"]',   // en
+    '[role="textbox"][aria-placeholder*="đang nghĩ gì"]',           // vi
+    '[role="textbox"][aria-label*="What\'s on your mind"]',          // en fallback
+    '[role="textbox"][aria-label*="Bạn đang nghĩ gì"]',             // vi fallback
+    '[role="textbox"][data-text*="What\'s on your mind"]',           // en data-text
+    '[role="textbox"][data-text*="Bạn đang nghĩ gì"]',              // vi data-text
   ];
 
   for (const selector of composerSelectors) {
     try {
-      const element = await page.waitForSelector(selector, { timeout: 5000 });
+      const element = await page.waitForSelector(selector, { timeout: 3000 });
       if (element) {
         return element;
       }
-    } catch (_) {
-      // Continue to next selector
-    }
+    } catch (_) {}
   }
 
-  // Composer not found in any locale
-  throw new Error(
-    `❌ Post composer not found; locale unsupported or page unreachable`
-  );
+  throw new Error('❌ Post composer not found; locale unsupported or page unreachable');
 }
 
 /**
@@ -557,20 +597,38 @@ async function findPostSubmitButton(page) {
   const submitSelectors = [
     '[aria-label="Post"]',     // en
     '[aria-label="Đăng"]',     // vi
+    '[aria-label="Next"]',     // en (Professional/Page accounts use 2-step flow)
+    '[aria-label="Tiếp"]',     // vi (Professional/Page accounts)
   ];
 
   for (const selector of submitSelectors) {
     try {
-      const element = await page.waitForSelector(selector, { timeout: 3000 });
+      const element = await page.waitForSelector(`${selector}:not([aria-disabled="true"])`, { timeout: 3000 });
       if (element) {
         return element;
       }
-    } catch (_) {
-      // Continue to next selector
-    }
+    } catch (_) {}
   }
 
-  throw new Error(`❌ Post submit button not found`);
+  // Fallback: find by text content for enabled buttons
+  try {
+    const element = await page.evaluateHandle(() => {
+      const buttons = document.querySelectorAll('[role="button"]');
+      for (const btn of buttons) {
+        const text = btn.innerText?.trim();
+        const disabled = btn.getAttribute('aria-disabled');
+        if ((text === 'Đăng' || text === 'Post' || text === 'Tiếp' || text === 'Next') && disabled !== 'true') {
+          return btn;
+        }
+      }
+      return null;
+    });
+    if (element && element.asElement()) {
+      return element.asElement();
+    }
+  } catch (_) {}
+
+  throw new Error('❌ Post submit button not found');
 }
 
 /**
@@ -704,7 +762,7 @@ export async function scheduleFacebookPost(
   { content, mediaUrls, scheduledAt, facebookAccountId } = {},
   options = {},
 ) {
-  const { dryRun = true, userId } = options;
+  const { dryRun = true, userId, now = () => Date.now() } = options;
 
   // Non-empty content guard — story 2.4 HIGH review finding (empty content = blank post)
   if (typeof content !== 'string' || !content.trim()) {
@@ -718,7 +776,7 @@ export async function scheduleFacebookPost(
   }
 
   // Reject past or within-next-tick (< now + 60s) — a schedule that can never fire is a bug
-  if (scheduledDate.getTime() < Date.now() + 60_000) {
+  if (scheduledDate.getTime() < now() + 60_000) {
     throw new Error('❌ scheduleFacebookPost: scheduledAt must be at least 60 seconds in the future');
   }
 

@@ -99,12 +99,9 @@ describe('getFacebookTokens', () => {
   it('throws a generic message on network error — no cookie value leaked', async () => {
     const secret = 'xs=SUPER_SECRET_SESSION_TOKEN';
     const fetchImpl = vi.fn(async () => { throw new Error(`connect failed for ${secret}`); });
-    let msg = '';
-    try {
-      await getFacebookTokens(`c_user=1; ${secret}`, { fetchImpl });
-    } catch (e) { msg = e.message; }
-    expect(msg).toMatch(/network error/i);
-    expect(msg).not.toContain('SUPER_SECRET_SESSION_TOKEN');
+    const err = await getFacebookTokens(`c_user=1; ${secret}`, { fetchImpl }).catch((e) => e);
+    expect(err.message).toMatch(/network error/i);
+    expect(err.message).not.toContain('SUPER_SECRET_SESSION_TOKEN');
   });
 
   it('throws on HTTP 5xx', async () => {

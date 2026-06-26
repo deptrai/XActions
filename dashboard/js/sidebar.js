@@ -42,58 +42,29 @@
     changelog: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     faq: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
     contact: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
-    compare: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><polyline points="6 9 12 3 18 9"/><polyline points="6 15 12 21 18 15"/></svg>'
+    compare: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><polyline points="6 9 12 3 18 9"/><polyline points="6 15 12 21 18 15"/></svg>',
+    facebook: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>'
   };
 
   const navItems = [
-    // Core
-    { href: '/', label: 'Home', icon: icons.home },
-    { href: '/run', label: 'Run', icon: icons.run },
-    { href: '/scripts', label: 'Scripts', icon: icons.scripts },
-    { href: '/features', label: 'Features', icon: icons.scripts },
-    // Automation & Growth
-    { href: '/automations', label: 'Automations', icon: icons.automations },
-    { href: '/workflows', label: 'Workflows', icon: icons.workflows },
-    { href: '/agent', label: 'AI Agent', icon: icons.agent },
-    { href: '/monitor', label: 'Monitor', icon: icons.monitor },
-    { href: '/unfollowers', label: 'Unfollowers', icon: icons.unfollowers },
-    // Content & Media
-    { href: '/video', label: 'Video', icon: icons.video },
-    { href: '/thread', label: 'Thread Reader', icon: icons.threads },
+    // Primary platforms
+    { href: '/', label: 'Dashboard', icon: icons.home },
+    { href: '/facebook.html', label: 'Facebook', icon: icons.facebook },
+    { href: '/automations', label: 'X / Twitter', icon: icons.automations },
     { href: '/thread-composer', label: 'Threads', icon: icons.threadComposer },
-    { href: '/calendar', label: 'Calendar', icon: icons.calendar },
-    // Intelligence & AI
-    { href: '/mcp', label: 'AI / MCP', icon: icons.ai },
-    { href: '/a2a', label: 'A2A Protocol', icon: icons.a2a },
-    { href: '/ai', label: 'AI Tools', icon: icons.aiTools },
-    { href: '/ai-api', label: 'AI API', icon: icons.aiApi },
+    // Tools
     { href: '/analytics-dashboard', label: 'Analytics', icon: icons.analytics },
-    { href: '/analytics', label: 'Engagement', icon: icons.analytics },
-    { href: '/price-correlation', label: 'Price Charts', icon: icons.priceCharts },
-    { href: '/graph', label: 'Social Graph', icon: icons.graph },
-    // Platform
-    { href: '/integrations', label: 'Integrations', icon: icons.integrations },
-    { href: '/team', label: 'Team', icon: icons.team },
-    { href: '/admin', label: 'Admin', icon: icons.admin },
-    { href: '/login', label: 'Login', icon: icons.login },
-    // Resources
+    { href: '/monitor', label: 'Monitor', icon: icons.monitor },
+    { href: '/mcp', label: 'AI Tools', icon: icons.ai },
+    // Secondary
     { href: '/docs', label: 'Docs', icon: icons.docs },
-    { href: '/tutorials', label: 'Tutorials', icon: icons.tutorials },
-    { href: '/blog', label: 'Blog', icon: icons.blog },
-    { href: '/use-cases', label: 'Use Cases', icon: icons.useCases },
-    { href: '/compare', label: 'Compare', icon: icons.compare },
-    { href: '/pricing', label: 'Pricing', icon: icons.pricing },
-    { href: '/faq', label: 'FAQ', icon: icons.faq },
-    { href: '/changelog', label: 'Changelog', icon: icons.changelog },
-    { href: '/contact', label: 'Contact', icon: icons.contact },
-    { href: '/status', label: 'Status', icon: icons.status },
-    { href: '/about', label: 'About', icon: icons.about },
     { href: 'https://github.com/nirholas/XActions', label: 'GitHub', icon: icons.github, external: true }
   ];
 
   function isActive(href) {
     if (href === '/') return path === '/' || path === '' || path === '/index';
-    return path === href || path.startsWith(href + '/');
+    const normalized = href.replace(/\.html$/, '').replace(/\/+$/, '');
+    return path === normalized || path.startsWith(normalized + '/');
   }
 
   const nav = navItems.map(item => {

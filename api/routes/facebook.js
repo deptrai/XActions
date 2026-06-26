@@ -119,7 +119,7 @@ router.post('/scrape', async (req, res) => {
   try {
     const { action, url, query, authCookie } = req.body ?? {};
 
-    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search'];
+    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members'];
     if (!action || !VALID_ACTIONS.includes(action)) {
       return res.status(400).json({
         ok: false,
@@ -127,7 +127,7 @@ router.post('/scrape', async (req, res) => {
       });
     }
 
-    if (['profile', 'posts', 'followers'].includes(action) && !url?.trim()) {
+    if (['profile', 'posts', 'followers', 'group-members'].includes(action) && !url?.trim()) {
       return res.status(400).json({ ok: false, error: `action "${action}" requires url` });
     }
     if (action === 'search' && !query?.trim()) {
@@ -187,11 +187,17 @@ router.post('/automate', async (req, res) => {
     // Normalize the messenger alias to the canonical token.
     const action = rawAction === 'messenger' ? 'messenger-share' : rawAction;
 
-    const VALID_ACTIONS = ['like', 'comment', 'post', 'messenger-share'];
+    const VALID_ACTIONS = [
+      'like', 'comment', 'post', 'messenger-share',
+      'share', 'schedule',
+      'join-groups', 'batch-post-groups',
+      'send-friend-requests', 'cancel-friend-requests',
+      'warmup-account', 'warmup-scroll-feed',
+    ];
     if (!action || !VALID_ACTIONS.includes(action)) {
       return res.status(400).json({
         ok: false,
-        error: `action must be one of: like, comment, post, messenger-share (alias: messenger)`,
+        error: `action must be one of: ${VALID_ACTIONS.join(', ')} (alias: messenger)`,
       });
     }
 
@@ -225,6 +231,50 @@ router.post('/automate', async (req, res) => {
         return res.status(400).json({ ok: false, error: 'action "messenger-share" requires non-empty content' });
       }
     }
+
+    // --- New action validation guards (Story 4.x growth features) ---
+    if (action === 'share') {
+      if (!Array.isArray(urls) || urls.length === 0) {
+        return res.status(400).json({ ok: false, error: 'action "share" requires at least one URL in urls' });
+      }
+    }
+    if (action === 'schedule') {
+      if (!String(text ?? '').trim()) {
+        return res.status(400).json({ ok: false, error: 'action "schedule" requires non-empty text (content)' });
+      }
+      const { scheduledAt } = req.body ?? {};
+      if (!scheduledAt || isNaN(new Date(scheduledAt).getTime())) {
+        return res.status(400).json({ ok: false, error: 'action "schedule" requires a valid scheduledAt (ISO-8601)' });
+      }
+    }
+    if (action === 'join-groups') {
+      const { groupUrls = [] } = req.body ?? {};
+      if (!Array.isArray(groupUrls) || groupUrls.length === 0) {
+        return res.status(400).json({ ok: false, error: 'action "join-groups" requires at least one URL in groupUrls' });
+      }
+    }
+    if (action === 'batch-post-groups') {
+      const { groupUrls = [] } = req.body ?? {};
+      if (!Array.isArray(groupUrls) || groupUrls.length === 0) {
+        return res.status(400).json({ ok: false, error: 'action "batch-post-groups" requires at least one URL in groupUrls' });
+      }
+      if (!String(text ?? '').trim()) {
+        return res.status(400).json({ ok: false, error: 'action "batch-post-groups" requires non-empty text (content)' });
+      }
+    }
+    if (action === 'send-friend-requests') {
+      const { targets = [] } = req.body ?? {};
+      if (!Array.isArray(targets) || targets.length === 0) {
+        return res.status(400).json({ ok: false, error: 'action "send-friend-requests" requires at least one URL in targets' });
+      }
+    }
+    if (action === 'warmup-scroll-feed') {
+      const { targetUrl } = req.body ?? {};
+      if (!targetUrl || typeof targetUrl !== 'string' || !targetUrl.trim()) {
+        return res.status(400).json({ ok: false, error: 'action "warmup-scroll-feed" requires a non-empty targetUrl' });
+      }
+    }
+    // cancel-friend-requests and warmup-account: no required fields (all optional)
 
     // Strict dryRun gate — only explicit false enables real writes
     const resolvedDryRun = dryRun === false ? false : true;
@@ -309,6 +359,14 @@ router.post('/automate', async (req, res) => {
       likeFacebookPosts,
       commentOnFacebookPosts,
       createFacebookPost,
+      shareFacebookPosts,
+      scheduleFacebookPost,
+      joinFacebookGroups,
+      postToFacebookGroups,
+      sendFriendRequests,
+      cancelPendingFriendRequests,
+      warmupAccount,
+      warmupScrollFeed,
     } = await import('../services/facebookAutomation.js');
 
     const options = {
@@ -319,6 +377,48 @@ router.post('/automate', async (req, res) => {
     const dispatch = async (page) => {
       if (action === 'like') return await likeFacebookPosts(page, urls, options);
       if (action === 'comment') return await commentOnFacebookPosts(page, urls, text, options);
+      if (action === 'post') return await createFacebookPost(page, text, options);
+      if (action === 'share') return await shareFacebookPosts(page, urls, options);
+      if (action === 'schedule') {
+        const { scheduledAt, facebookAccountId } = req.body ?? {};
+        return await scheduleFacebookPost(page, { content: text, scheduledAt, facebookAccountId }, { ...options, userId: req.user.id });
+      }
+      if (action === 'join-groups') {
+        const { groupUrls = [] } = req.body ?? {};
+        return await joinFacebookGroups(page, groupUrls, options);
+      }
+      if (action === 'batch-post-groups') {
+        const { groupUrls = [] } = req.body ?? {};
+        return await postToFacebookGroups(page, groupUrls, text, options);
+      }
+      if (action === 'send-friend-requests') {
+        const { targets = [] } = req.body ?? {};
+        return await sendFriendRequests(page, targets, options);
+      }
+      if (action === 'cancel-friend-requests') {
+        const { olderThanDays, limit } = req.body ?? {};
+        return await cancelPendingFriendRequests(page, {
+          ...options,
+          ...(olderThanDays != null && { olderThanDays: Number(olderThanDays) }),
+          ...(limit != null && { limit: Number(limit) }),
+        });
+      }
+      if (action === 'warmup-account') {
+        const { durationSeconds, allowReactions, reactProbability } = req.body ?? {};
+        return await warmupAccount(page, {
+          ...options,
+          ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
+          ...(allowReactions != null && { allowReactions }),
+          ...(reactProbability != null && { reactProbability: Number(reactProbability) }),
+        });
+      }
+      if (action === 'warmup-scroll-feed') {
+        const { targetUrl, durationSeconds } = req.body ?? {};
+        return await warmupScrollFeed(page, targetUrl, {
+          ...options,
+          ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
+        });
+      }
       return await createFacebookPost(page, text, options);
     };
 
