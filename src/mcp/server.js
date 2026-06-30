@@ -385,7 +385,7 @@ const TOOLS = [
   },
   {
     name: 'x_schedule_post',
-    description: 'Schedule a tweet for future posting (requires Premium).',
+    description: 'Schedule a tweet for future posting (requires Premium). DEPRECATED — prefer x_schedule (DB-backed, dry-run default, supports threads/timezones/recurrence).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -393,6 +393,29 @@ const TOOLS = [
         scheduledAt: { type: 'string', description: 'ISO 8601 datetime for posting' },
       },
       required: ['text', 'scheduledAt'],
+    },
+  },
+  {
+    name: 'x_schedule',
+    description: 'Schedule a tweet or thread for future publishing (EPS-2). DB-only — no browser launched at create time. Dry-run (default) previews without persisting; set dryRun:false to create the schedule record. The scheduler worker executes it within ±2min SLA, reusing postTweet/postThread browser automation. Supports threads, IANA timezones, and node-cron recurrence.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'Tweet text (non-empty). First tweet of a thread.' },
+        scheduledAt: { type: 'string', description: 'ISO-8601 datetime ≥60 seconds in the future. Wall-clock strings without offset are interpreted in `timezone` (default UTC).' },
+        thread: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional follow-up tweet texts (length 1–24). When present, `content` is the first tweet and these are the replies.',
+        },
+        mediaUrls: { type: 'array', items: { type: 'string' }, description: 'Optional media attachment URLs (stored; execution-time upload deferred).' },
+        timezone: { type: 'string', description: 'Optional IANA timezone name (e.g. Europe/London) to interpret a wall-clock scheduledAt.' },
+        recurrenceCron: { type: 'string', description: 'Optional node-cron expression; re-arms the schedule after a successful execution.' },
+        queueOrder: { type: 'number', description: 'Queue priority (0 = highest); defaults to 0.' },
+        userId: { type: 'string', description: 'Required when dryRun:false — scopes the schedule row to this user.' },
+        dryRun: { type: 'boolean', description: 'Preview without persisting (default: true).' },
+      },
+      required: ['content', 'scheduledAt'],
     },
   },
   {
@@ -1242,6 +1265,65 @@ const TOOLS = [
         },
       },
       required: ['url'],
+    },
+  },
+  {
+    name: 'x_ai_write',
+    description: 'AI Tweet Writer (Epic 4). Generate viral tweets, threads (from topic or long text), or bios with a tone selector (funny, professional, controversial). Supports OpenRouter, OpenAI, and Grok/xAI providers. Requires an LLM API key (OPENROUTER_API_KEY / OPENAI_API_KEY / XAI_API_KEY).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        topic: {
+          type: 'string',
+          description: 'Topic or prompt, e.g. "why shipping fast beats perfection"',
+        },
+        username: {
+          type: 'string',
+          description: 'Username whose voice to mimic (without @). Optional — omit for generic generation.',
+        },
+        type: {
+          type: 'string',
+          enum: ['tweet', 'thread', 'thread-from-text', 'bio'],
+          description: 'What to generate (default: tweet). thread-from-text requires text.',
+        },
+        text: {
+          type: 'string',
+          description: 'Long-form text to auto-split into a thread (required when type=thread-from-text).',
+        },
+        tone: {
+          type: 'string',
+          enum: ['funny', 'professional', 'controversial', 'casual', 'inspirational', 'educational'],
+          description: 'Tone selector (default: none / voice-matched).',
+        },
+        style: {
+          type: 'string',
+          enum: ['hot-take', 'educational', 'personal', 'promotional'],
+          description: 'Style override (only for type=tweet).',
+        },
+        count: {
+          type: 'number',
+          description: 'Number of variations (tweets: 1-5, bios: 1-10). Default 5.',
+        },
+        threadLength: {
+          type: 'number',
+          description: 'Thread length: 3-15 (default 8).',
+        },
+        keywords: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Keywords to include (bio only).',
+        },
+        provider: {
+          type: 'string',
+          enum: ['openrouter', 'openai', 'grok'],
+          description: 'LLM provider (default: auto-detect from env keys, fallback openrouter).',
+        },
+        model: {
+          type: 'string',
+          description: 'Model override (e.g. gpt-4o-mini, grok-3-mini, google/gemini-flash-2.0).',
+        },
+      },
+      required: ['topic'],
     },
   },
   // ====== Cross-Platform ======
@@ -2467,8 +2549,8 @@ async function executeTool(name, args) {
     return await executeAnalyticsTool(name, args);
   }
 
-  // Handle AI tools (voice, generation, rewrite, summarization)
-  if (name === 'x_analyze_voice' || name === 'x_generate_tweet' || name === 'x_rewrite_tweet' || name === 'x_summarize_thread') {
+  // Handle AI tools (voice, generation, rewrite, summarization, Epic 4 writer)
+  if (name === 'x_analyze_voice' || name === 'x_generate_tweet' || name === 'x_rewrite_tweet' || name === 'x_summarize_thread' || name === 'x_ai_write') {
     return await executeAITool(name, args);
   }
 
@@ -2511,7 +2593,7 @@ async function executeTool(name, args) {
     return await executeCompetitiveTool(name, args);
   }
   if (name === 'x_audience_overlap' || name.startsWith('x_crm_') || name.startsWith('x_bulk_') ||
-      name.startsWith('x_schedule_') || name.startsWith('x_evergreen_') || name.startsWith('x_rss_') ||
+      name.startsWith('x_schedule_') || name === 'x_schedule' || name.startsWith('x_evergreen_') || name.startsWith('x_rss_') ||
       name.startsWith('x_optimize_') || name === 'x_suggest_hashtags' || name === 'x_predict_performance' ||
       name === 'x_generate_variations' || name.startsWith('x_notify_') || name.startsWith('x_dataset_') ||
       name.startsWith('x_team_') || name === 'x_import_data' || name === 'x_convert_format') {
@@ -3833,6 +3915,26 @@ async function executeCompetitiveTool(name, args) {
       return { status: 'removed', name: args.name };
     }
 
+    // ── EPS-2: DB-backed tweet scheduling (dry-run default) ──
+    case 'x_schedule': {
+      const { scheduleTweet } = await import('../../api/services/tweetScheduling.js');
+      const { content, scheduledAt, thread, mediaUrls, timezone, recurrenceCron, queueOrder, userId } = args;
+      // Strict dry-run gate: anything except explicit `false` stays in dry-run (mirrors ADR-007).
+      const dryRun = args.dryRun === false ? false : true;
+      return await scheduleTweet(
+        { content, scheduledAt, thread, mediaUrls, timezone, recurrenceCron, queueOrder },
+        { dryRun, userId },
+      );
+    }
+    // Deprecated browser-only scheduler — kept for backward compatibility (AC8).
+    case 'x_schedule_post': {
+      return {
+        deprecated: true,
+        message: 'x_schedule_post is deprecated. Use x_schedule (DB-backed, dry-run default, supports threads/timezones/recurrence).',
+        received: { text: args.text, scheduledAt: args.scheduledAt },
+      };
+    }
+
     // ── 09-H: Evergreen ──
     case 'x_evergreen_analyze': {
       const { analyzeEvergreenCandidates } = await import('../automation/evergreenRecycler.js');
@@ -4239,6 +4341,85 @@ async function executeAITool(name, args) {
       }
     }
 
+    case 'x_ai_write': {
+      // Epic 4 AI Tweet Writer — supports tweet, thread, thread-from-text, bio.
+      // Provider auto-detection: OpenAI / Grok / OpenRouter (via env keys).
+      const hasOpenAI = process.env.OPENAI_API_KEY;
+      const hasGrok = process.env.XAI_API_KEY || process.env.GROK_API_KEY;
+      if (!OPENROUTER_API_KEY && !hasOpenAI && !hasGrok) {
+        return { error: 'An LLM API key is required. Set OPENROUTER_API_KEY, OPENAI_API_KEY, or XAI_API_KEY (Grok). Get a free OpenRouter key at https://openrouter.ai' };
+      }
+
+      const ai = await import('../ai/index.js');
+      const type = args.type || 'tweet';
+      const llmOpts = {
+        topic: args.topic,
+        tone: args.tone,
+        style: args.style,
+        count: args.count || 5,
+        model: args.model,
+        provider: args.provider,
+      };
+
+      // Resolve a voice profile if a username is given (scrapes + analyzes).
+      let voiceProfile = null;
+      if (args.username) {
+        const scrapersMod = await import('../scrapers/index.js');
+        const scrapers = scrapersMod.default || scrapersMod;
+        const browser = await scrapers.createBrowser();
+        const page = await scrapers.createPage(browser);
+        if (SESSION_COOKIE) await scrapers.loginWithCookie(page, SESSION_COOKIE);
+        try {
+          const tweets = await scrapers.scrapeTweets(page, args.username, { limit: 100 });
+          if (!tweets || tweets.length === 0) return { error: `No tweets found for @${args.username}` };
+          voiceProfile = ai.analyzeVoice(args.username, tweets);
+        } finally {
+          await browser.close();
+        }
+      }
+
+      if (type === 'thread') {
+        if (!voiceProfile) return { error: 'username is required for thread generation (to match a voice).' };
+        const result = await ai.generateThread(voiceProfile, { ...llmOpts, length: args.threadLength || 8 });
+        return { topic: args.topic, ...result };
+      }
+
+      if (type === 'thread-from-text') {
+        if (!args.text) return { error: 'text is required for type=thread-from-text.' };
+        if (!voiceProfile) return { error: 'username is required for thread-from-text (to match a voice).' };
+        const result = await ai.generateThreadFromText(voiceProfile, {
+          text: args.text,
+          maxLength: args.threadLength || 10,
+          tone: args.tone,
+          model: args.model,
+          provider: args.provider,
+        });
+        return { topic: args.topic, ...result };
+      }
+
+      if (type === 'bio') {
+        const result = await ai.generateBio(voiceProfile, {
+          topic: args.topic,
+          keywords: args.keywords,
+          tone: args.tone,
+          count: args.count || 5,
+          model: args.model,
+          provider: args.provider,
+        });
+        return { topic: args.topic, ...result };
+      }
+
+      // Default: single tweet(s). Works with or without a voice profile.
+      const profile = voiceProfile || {
+        username: args.username || 'you',
+        contentPillars: [{ topic: args.topic }],
+        bestPerforming: { commonTraits: [], examples: [] },
+        tone: { formality: 0.5, humor: 0.5, controversy: 0.5, technicality: 0.5 },
+      };
+      const result = await ai.generateTweet(profile, llmOpts);
+      return { topic: args.topic, ...result };
+    }
+
     default:
       throw new Error(`Unknown AI tool: ${name}`);
   }
@@ -4393,7 +4574,7 @@ function printBanner(pluginCount, pluginToolCount) {
   // ── AI Tools Status ──
   if (OPENROUTER_API_KEY) {
     console.error('✅ AI tools enabled (OPENROUTER_API_KEY set)');
-    console.error('   x_analyze_voice, x_generate_tweet, x_summarize_thread');
+    console.error('   x_analyze_voice, x_generate_tweet, x_ai_write, x_summarize_thread');
   } else {
     console.error('ℹ️  AI tools disabled. Set OPENROUTER_API_KEY for voice analysis & tweet generation.');
     console.error('   Get a free key at https://openrouter.ai');
@@ -4412,7 +4593,7 @@ function printBanner(pluginCount, pluginToolCount) {
     'Scraping':  ['x_get_profile', 'x_get_followers', 'x_get_following', 'x_get_tweets', 'x_search_tweets', 'x_get_thread', 'x_download_video'],
     'Analysis':  ['x_detect_unfollowers', 'x_analyze_sentiment', 'x_best_time_to_post', 'x_competitor_analysis', 'x_brand_monitor'],
     'Actions':   ['x_follow', 'x_unfollow', 'x_like', 'x_post_tweet', 'x_post_thread', 'x_reply'],
-    'AI':        ['x_analyze_voice', 'x_generate_tweet', 'x_summarize_thread'],
+    'AI':        ['x_analyze_voice', 'x_generate_tweet', 'x_ai_write', 'x_rewrite_tweet', 'x_summarize_thread'],
   };
 
   for (const [cat, tools] of Object.entries(categories)) {

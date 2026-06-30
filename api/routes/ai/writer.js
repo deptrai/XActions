@@ -120,9 +120,9 @@ router.post('/analyze-voice', generationLimiter, async (req, res) => {
 router.post('/generate', generationLimiter, async (req, res) => {
   try {
     const {
-      username, topic, style, count = 3,
+      username, topic, style, tone, count = 3,
       type = 'tweet', threadLength = 5,
-      model, apiKey,
+      model, apiKey, provider, openaiApiKey, grokApiKey,
       // Allow passing a voice profile directly
       voiceProfile: directProfile,
     } = req.body;
@@ -152,14 +152,14 @@ router.post('/generate', generationLimiter, async (req, res) => {
 
     let result;
     if (type === 'thread') {
-      result = await generateThread(voiceProfile, { topic, length: threadLength, model, apiKey });
+      result = await generateThread(voiceProfile, { topic, length: threadLength, model, apiKey, provider, openaiApiKey, grokApiKey });
       res.json({
         success: true,
         data: result,
         operation: 'ai:generate-thread',
       });
     } else {
-      result = await generateTweet(voiceProfile, { topic, style, count, model, apiKey });
+      result = await generateTweet(voiceProfile, { topic, style, tone, count, model, apiKey, provider, openaiApiKey, grokApiKey });
       res.json({
         success: true,
         data: result,
@@ -169,6 +169,100 @@ router.post('/generate', generationLimiter, async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: 'Generation failed',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * Generate a thread from long-form text (auto-split)
+ * POST /api/ai/writer/thread-from-text
+ *
+ * Body: { username, text, maxLength?, hooks?, tone?, model?, apiKey?, provider?, voiceProfile? }
+ */
+router.post('/thread-from-text', generationLimiter, async (req, res) => {
+  try {
+    const {
+      username, text, maxLength = 10, hooks = true, tone,
+      model, apiKey, provider, openaiApiKey, grokApiKey,
+      voiceProfile: directProfile,
+    } = req.body;
+
+    if (!text) {
+      return res.status(400).json({ error: 'text is required — the long-form text to split into a thread' });
+    }
+
+    let voiceProfile = directProfile;
+    if (!voiceProfile && username) {
+      const saved = voiceProfiles.get(username.toLowerCase().replace(/^@/, ''));
+      if (saved) voiceProfile = saved.profile;
+    }
+
+    if (!voiceProfile) {
+      return res.status(400).json({
+        error: 'Voice profile required',
+        message: 'Either pass voiceProfile directly or analyze a username first via POST /api/ai/writer/analyze-voice',
+      });
+    }
+
+    const { generateThreadFromText } = await import('../../src/ai/tweetGenerator.js');
+    const result = await generateThreadFromText(voiceProfile, {
+      text, maxLength, hooks, tone, model, apiKey, provider, openaiApiKey, grokApiKey,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      operation: 'ai:thread-from-text',
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Thread generation failed',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * Generate bio options
+ * POST /api/ai/writer/bio
+ *
+ * Body: { username?, topic?, keywords?, tone?, count?, maxLength?, model?, apiKey?, provider?, voiceProfile? }
+ */
+router.post('/bio', generationLimiter, async (req, res) => {
+  try {
+    const {
+      username, topic, keywords, tone, count = 5, maxLength = 160,
+      model, apiKey, provider, openaiApiKey, grokApiKey,
+      voiceProfile: directProfile,
+    } = req.body;
+
+    let voiceProfile = directProfile;
+    if (!voiceProfile && username) {
+      const saved = voiceProfiles.get(username.toLowerCase().replace(/^@/, ''));
+      if (saved) voiceProfile = saved.profile;
+    }
+
+    if (!voiceProfile && !topic) {
+      return res.status(400).json({
+        error: 'topic or voiceProfile required',
+        message: 'Provide a topic, or analyze a username first and pass username/voiceProfile.',
+      });
+    }
+
+    const { generateBio } = await import('../../src/ai/tweetGenerator.js');
+    const result = await generateBio(voiceProfile, {
+      topic, keywords, tone, count, maxLength, model, apiKey, provider, openaiApiKey, grokApiKey,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      operation: 'ai:generate-bio',
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Bio generation failed',
       message: error.message,
     });
   }

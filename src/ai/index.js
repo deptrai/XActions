@@ -13,9 +13,11 @@ export { analyzeVoice, summarizeVoiceProfile, buildVoicePrompt } from './voiceAn
 export {
   generateTweet,
   generateThread,
+  generateThreadFromText,
   rewriteTweet,
   generateWeek,
   generateReply,
+  generateBio,
   analyzeCompetitorAndGenerate,
 } from './tweetGenerator.js';
 

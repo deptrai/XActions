@@ -2725,7 +2725,7 @@ program
 // 09-F: Scheduler
 // ============================================================================
 
-const schedCmd = program.command('schedule').description('Cron-based task scheduler');
+const schedCmd = program.command('schedule').description('Cron-based task scheduler + tweet scheduling (EPS-2)');
 
 schedCmd.command('add <name> <cron>').description('Add scheduled job').option('-c, --command <cmd>', 'Command to run').action(async (name, cron, options) => {
   try {
@@ -2736,8 +2736,32 @@ schedCmd.command('add <name> <cron>').description('Add scheduled job').option('-
   } catch (error) { console.error(chalk.red(`❌ ${error.message}`)); }
 });
 
-schedCmd.command('list').description('List all jobs').action(async () => {
+schedCmd.command('list').description('List scheduled jobs, or tweet schedules when --status is given (EPS-2)').option('--status <status>', 'Filter tweet schedules by status (pending|running|completed|failed|cancelled)').action(async (options) => {
   try {
+    // EPS-2: `schedule list --status [status]` lists DB-backed tweet schedules.
+    if (options.status !== undefined) {
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+      try {
+        const where = { platform: 'twitter' };
+        if (options.status) where.status = String(options.status);
+        const schedules = await prisma.schedule.findMany({
+          where,
+          orderBy: [{ queueOrder: 'asc' }, { scheduledAt: 'asc' }],
+          take: 100,
+        });
+        if (schedules.length === 0) { console.log(chalk.dim('No tweet schedules')); return; }
+        for (const s of schedules) {
+          const when = s.scheduledAt.toISOString().replace('T', ' ').slice(0, 16);
+          const tag = s.thread ? 'thread' : 'tweet';
+          const recur = s.recurrenceCron ? chalk.dim(` recur="${s.recurrenceCron}"`) : '';
+          console.log(`  ${chalk.cyan(s.id)}  ${when}  ${chalk.yellow(s.status.padEnd(9))}  ${tag}${recur}  ${chalk.dim(s.content.slice(0, 50))}`);
+        }
+      } finally {
+        await prisma.$disconnect();
+      }
+      return;
+    }
     const { getScheduler } = await import('../scheduler/scheduler.js');
     const scheduler = getScheduler();
     const jobs = scheduler.listJobs();
@@ -2759,6 +2783,88 @@ schedCmd.command('run <name>').description('Run a job immediately').action(async
     const { getScheduler } = await import('../scheduler/scheduler.js');
     await getScheduler().runJobNow(name);
     console.log(chalk.green(`✅ Job "${name}" executed`));
+  } catch (error) { console.error(chalk.red(`❌ ${error.message}`)); }
+});
+
+// ── EPS-2 Tweet Scheduling ───────────────────────────────────────────────────
+// `schedule create` / `schedule cancel` operate on DB-backed tweet schedules.
+// `schedule list --status [status]` (above) lists them. The CLI resolves the
+// caller's userId from the stored session cookie (auth_token): an existing User
+// row with that cookie is reused; otherwise a CLI-local user is provisioned so
+// dryRun:false can persist a Schedule row without the dashboard signup flow.
+async function resolveCliUserId() {
+  const config = await loadConfig();
+  const sessionCookie = config.sessionCookie || process.env.XACTIONS_SESSION_COOKIE;
+  if (!sessionCookie) {
+    throw new Error('No Twitter session cookie found — run `xactions login` or set XACTIONS_SESSION_COOKIE');
+  }
+  const { PrismaClient } = await import('@prisma/client');
+  const prisma = new PrismaClient();
+  try {
+    const existing = await prisma.user.findFirst({ where: { sessionCookie } });
+    if (existing) return existing.id;
+    // Provision a CLI-local user so scheduled tweets have a stable owner.
+    const username = `cli_${sessionCookie.slice(0, 8)}`;
+    const user = await prisma.user.upsert({
+      where: { username },
+      update: { sessionCookie },
+      create: { username, sessionCookie, isGuest: true, authMethod: 'cli' },
+    });
+    return user.id;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+schedCmd.command('create').description('Schedule a tweet or thread for future publishing (EPS-2). Dry-run by default.')
+  .requiredOption('-c, --content <text>', 'Tweet text (first tweet of a thread)')
+  .requiredOption('-a, --at <iso>', 'ISO-8601 datetime ≥60s in the future')
+  .option('--thread <t2,t3,...>', 'Comma-separated follow-up tweet texts (thread)')
+  .option('--tz <timezone>', 'IANA timezone to interpret a wall-clock --at (e.g. Europe/London)')
+  .option('--recur <cron>', 'node-cron expression; re-arms the schedule after execution')
+  .option('--dry-run <bool>', 'Preview without persisting (default: true; set false to create)', (v) => v === 'false' ? false : true, true)
+  .action(async (options) => {
+    try {
+      const { scheduleTweet } = await import('../../api/services/tweetScheduling.js');
+      const thread = options.thread ? options.thread.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
+      const userId = options.dryRun === false ? await resolveCliUserId() : undefined;
+      const result = await scheduleTweet(
+        { content: options.content, scheduledAt: options.at, thread, timezone: options.tz, recurrenceCron: options.recur },
+        { dryRun: options.dryRun, userId },
+      );
+      if (result.dryRun) {
+        console.log(chalk.cyan('🔍 Dry-run preview (no row persisted):'));
+        console.log(`  content:    ${result.preview.content.slice(0, 60)}`);
+        console.log(`  scheduledAt:${result.preview.scheduledAt}`);
+        if (result.preview.timezone) console.log(`  timezone:   ${result.preview.timezone}`);
+        if (result.preview.recurrenceCron) console.log(`  recurrence: ${result.preview.recurrenceCron}`);
+        if (result.preview.thread) console.log(`  thread:     ${result.preview.thread.length} follow-up tweet(s)`);
+        console.log(chalk.dim(`  set --dry-run false to persist`));
+      } else {
+        console.log(chalk.green(`✅ Tweet scheduled: ${result.scheduleId} at ${result.scheduledAt} (status: ${result.status})`));
+      }
+    } catch (error) { console.error(chalk.red(`❌ ${error.message}`)); }
+  });
+
+schedCmd.command('cancel <id>').description('Cancel a pending tweet schedule (EPS-2)').action(async (id) => {
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    try {
+      const claim = await prisma.schedule.updateMany({
+        where: { id, platform: 'twitter', status: 'pending' },
+        data: { status: 'cancelled' },
+      });
+      if (claim.count === 0) {
+        const existing = await prisma.schedule.findFirst({ where: { id, platform: 'twitter' }, select: { status: true } });
+        if (!existing) { console.error(chalk.red(`❌ Schedule ${id} not found`)); return; }
+        console.error(chalk.red(`❌ Cannot cancel schedule in status "${existing.status}" (only pending can be cancelled)`));
+        return;
+      }
+      console.log(chalk.green(`✅ Schedule ${id} cancelled`));
+    } finally {
+      await prisma.$disconnect();
+    }
   } catch (error) { console.error(chalk.red(`❌ ${error.message}`)); }
 });
 
@@ -3437,6 +3543,158 @@ clientCmd
       console.log('');
     } catch (error) {
       spinner.fail(chalk.red(`Failed: ${error.message}`));
+    }
+  });
+
+// ============================================================================
+// AI Commands (Epic 4 — AI Tweet Writer)
+// ============================================================================
+
+const aiCommand = program.command('ai').description('AI-powered tweet writing tools (Epic 4)');
+
+aiCommand
+  .command('write')
+  .description('Generate tweets with AI — "Write a viral tweet about [topic]"')
+  .requiredOption('-t, --topic <topic>', 'Topic or prompt for the tweet(s)')
+  .option('-u, --username <username>', 'Twitter username to analyze voice from (uses saved auth token)')
+  .option('--tone <tone>', 'Tone: funny, professional, controversial, casual, inspirational, educational')
+  .option('--style <style>', 'Style: hot-take, educational, personal, promotional')
+  .option('-n, --count <number>', 'Number of variations (1-5)', '5')
+  .option('--type <type>', 'Output type: tweet, thread, thread-from-text, bio', 'tweet')
+  .option('--text <text>', 'Long-form text (for thread-from-text) or existing tweet (for rewrite)')
+  .option('--thread-length <number>', 'Thread length (3-15)', '8')
+  .option('--keywords <keywords>', 'Comma-separated keywords (for bio)')
+  .option('--provider <provider>', 'LLM provider: openrouter, openai, grok')
+  .option('--model <model>', 'Model override (e.g. gpt-4o-mini, grok-3-mini)')
+  .option('--api-key <key>', 'API key (defaults to env: OPENROUTER_API_KEY / OPENAI_API_KEY / XAI_API_KEY)')
+  .option('-o, --output <file>', 'Output file (.json)')
+  .action(async (options) => {
+    const spinner = ora('✨ Generating with AI...').start();
+
+    try {
+      const { generateTweet, generateThread, generateThreadFromText, generateBio } = await import('../ai/index.js');
+      const { analyzeVoice } = await import('../ai/voiceAnalyzer.js');
+
+      const llmOpts = {
+        topic: options.topic,
+        tone: options.tone,
+        style: options.style,
+        count: parseInt(options.count, 10) || 5,
+        model: options.model,
+        apiKey: options.apiKey,
+        provider: options.provider,
+      };
+
+      // Resolve a voice profile if a username is given (scrapes + analyzes)
+      let voiceProfile = null;
+      if (options.username) {
+        spinner.text = `🔍 Analyzing @${options.username}'s voice...`;
+        const config = await loadConfig();
+        const authToken = config.authToken;
+        if (!authToken) {
+          spinner.fail('No auth token saved. Run `xactions login` first, or pass --topic without --username for generic generation.');
+          process.exit(1);
+        }
+        const browser = await scrapers.createBrowser();
+        const page = await scrapers.createPage(browser);
+        await scrapers.loginWithCookie(page, authToken);
+        try {
+          const tweets = await scrapers.scrapeTweets(page, options.username, { limit: 100 });
+          if (!tweets || tweets.length === 0) {
+            spinner.fail(`No tweets found for @${options.username}`);
+            process.exit(1);
+          }
+          voiceProfile = analyzeVoice(options.username, tweets);
+        } finally {
+          await browser.close();
+        }
+      }
+
+      spinner.text = '✨ Generating with AI...';
+
+      let result;
+      const type = options.type;
+
+      if (type === 'thread') {
+        if (!voiceProfile) {
+          spinner.fail('Voice profile required for thread generation. Pass --username.');
+          process.exit(1);
+        }
+        result = await generateThread(voiceProfile, {
+          topic: options.topic,
+          length: parseInt(options.threadLength, 10) || 8,
+          ...llmOpts,
+        });
+      } else if (type === 'thread-from-text') {
+        if (!options.text) {
+          spinner.fail('--text required for thread-from-text. Pass the long-form text to split.');
+          process.exit(1);
+        }
+        if (!voiceProfile) {
+          spinner.fail('Voice profile required for thread-from-text. Pass --username.');
+          process.exit(1);
+        }
+        result = await generateThreadFromText(voiceProfile, {
+          text: options.text,
+          maxLength: parseInt(options.threadLength, 10) || 10,
+          tone: options.tone,
+          model: options.model,
+          apiKey: options.apiKey,
+          provider: options.provider,
+        });
+      } else if (type === 'bio') {
+        const keywords = options.keywords ? options.keywords.split(',').map(k => k.trim()).filter(Boolean) : undefined;
+        result = await generateBio(voiceProfile, {
+          topic: options.topic,
+          keywords,
+          tone: options.tone,
+          count: parseInt(options.count, 10) || 5,
+          model: options.model,
+          apiKey: options.apiKey,
+          provider: options.provider,
+        });
+      } else {
+        // Single tweet (default) — works with or without a voice profile.
+        // Without a voice profile, use a minimal generic profile so the API stays consistent.
+        const profile = voiceProfile || { username: 'you', contentPillars: [{ topic: options.topic }], bestPerforming: { commonTraits: [], examples: [] }, tone: { formality: 0.5, humor: 0.5, controversy: 0.5, technicality: 0.5 } };
+        result = await generateTweet(profile, llmOpts);
+      }
+
+      spinner.succeed('✨ AI generation complete');
+
+      if (options.output) {
+        await scrapers.exportToJSON(result, options.output);
+        console.log(chalk.green(`✓ Saved to ${options.output}`));
+      } else {
+        // Pretty-print results
+        if (result.tweets) {
+          console.log(chalk.bold(`\n✨ ${result.tweets.length} tweet variation(s)${result.model ? chalk.gray(` (${result.model})`) : ''}\n`));
+          for (const t of result.tweets) {
+            console.log(chalk.white(`  ${t.text}`));
+            if (t.estimatedEngagement) console.log(chalk.gray(`    → ${t.estimatedEngagement} engagement — ${t.reasoning || ''}`));
+            console.log();
+          }
+        } else if (result.thread) {
+          console.log(chalk.bold(`\n🧵 ${result.thread.length}-tweet thread${result.model ? chalk.gray(` (${result.model})`) : ''}\n`));
+          for (const t of result.thread) {
+            console.log(chalk.white(`  ${t.text}`));
+            if (t.purpose) console.log(chalk.gray(`    → ${t.purpose}`));
+            console.log();
+          }
+        } else if (result.bios) {
+          console.log(chalk.bold(`\n📝 ${result.bios.length} bio option(s)${result.model ? chalk.gray(` (${result.model})`) : ''}\n`));
+          for (const b of result.bios) {
+            console.log(chalk.white(`  ${b.text}`));
+            console.log(chalk.gray(`    → ${b.characterCount} chars — ${b.style}`));
+            console.log();
+          }
+        } else {
+          console.log(JSON.stringify(result, null, 2));
+        }
+      }
+    } catch (err) {
+      spinner.fail(`Failed: ${err.message}`);
+      process.exit(1);
     }
   });
 

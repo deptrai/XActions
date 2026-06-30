@@ -263,7 +263,9 @@ router.get('/', (req, res) => {
       },
       writer: {
         'POST /api/ai/writer/analyze-voice': 'Analyze writing voice',
-        'POST /api/ai/writer/generate': 'Generate tweets in voice',
+        'POST /api/ai/writer/generate': 'Generate tweets in voice (tone selector)',
+        'POST /api/ai/writer/thread-from-text': 'Auto-split long text into a thread',
+        'POST /api/ai/writer/bio': 'Generate bio options',
         'POST /api/ai/writer/rewrite': 'Rewrite tweet',
         'POST /api/ai/writer/calendar': 'Content calendar',
         'POST /api/ai/writer/reply': 'Generate reply',
