@@ -106,7 +106,10 @@ function parseScheduledAt(scheduledAt, timezone) {
   // The difference between the probe (UTC wall-clock) and the tz wall-clock is the offset.
   const probeMs = new Date(`${wallClock}Z`).getTime();
   const tzWallMs = new Date(`${tzWall}Z`).getTime();
-  const offsetMs = probeMs - tzWallMs; // positive when tz is behind UTC
+  // Standard tz offset (east positive): how far ahead the tz is from UTC at this instant.
+  // London in July (BST, +01:00) → tzWall is 1h ahead of probe → offsetMs = +3_600_000.
+  const offsetMs = tzWallMs - probeMs; // positive when tz is east of / ahead of UTC
+  // Wall-clock "09:00 London" = 09:00 UTC − (+1h offset) = 08:00 UTC.
   return new Date(probeMs - offsetMs);
 }
 

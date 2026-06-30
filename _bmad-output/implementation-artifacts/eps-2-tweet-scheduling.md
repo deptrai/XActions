@@ -5,7 +5,20 @@ epic: EPS-2
 
 # Story EPS-2: Tweet Scheduling (Q1 HIGH)
 
-Status: in_progress
+Status: done
+
+## Implementation log
+
+- **Schema + migration**: `Schedule` extended with `platform`, `thread`, `timezone`, `recurrenceCron`, `queueOrder` + `@@index([platform, status, scheduledAt])`. Migration `20260630160000_add_schedule_platform_fields` backfills existing rows to `platform: 'facebook'`. Applied (`prisma migrate status` → up to date).
+- **`scheduleTweet`** (`api/services/tweetScheduling.js`): dry-run default, content/soon/past guards, thread (1–24 follow-ups) validation, IANA timezone validation + wall-clock→UTC parsing, `node-cron.validate` recurrence, `queueOrder`. Real run persists one `platform: 'twitter'` pending row scoped by `userId`.
+- **Worker** (`api/services/tweetScheduler.js`): `runDueTweets` + `startTweetScheduler` + `sweepStaleRunningTweets`. 1-min node-cron tick, per-user ≤5 completed/hour cap (twitter-only count) with 5–15min jitter deferral off `now`, atomic `pending→running` claim via `updateMany` count, reuses `postTweet`/`postThread` from `src/postComposer.js`, PII-free `safeErrorString`, Operation linkage (`type: 'tweet_schedule'`), recurring re-arm via `nextRecurrenceAt`, stale-running sweep on startup.
+- **REST API** (`api/routes/tweetSchedule.js`): `POST/GET/DELETE /api/tweet-schedule` + `PATCH /reorder`, all auth-scoped to `req.user.id` (body `userId` never trusted).
+- **Server wiring** (`api/server.js`): route mounted + `startTweetScheduler()` started behind `ENABLE_TWEET_SCHEDULER` env guard.
+- **CLI** (`src/cli/index.js`): `schedule create --content --at [--thread] [--tz] [--recur] [--dry-run]`, `schedule list [--status]`, `schedule cancel <id>`.
+- **MCP** (`src/mcp/server.js`): `x_schedule` tool (DB-backed, dry-run default) added; `x_schedule_post` kept but marked deprecated.
+- **Dashboard** (`dashboard/calendar.html`): API-backed calendar + drag & drop queue view (`PATCH /reorder`), localStorage fallback when unauthenticated.
+- **Tests** (`tests/services/tweet-schedule.test.js`): 29 tests, all green. Covers dry-run default, real-run persistence, empty/past/soon guards, thread/timezone/recurrence/queueOrder validation, throughput cap deferral, platform isolation (facebook rows don't count/invoke), atomic claim (concurrent ticks → 1 exec), failed-result-not-completed, throwing executor → failed, Operation linkage, PII-free error path, recurrence re-arm, queueOrder ordering, stale-running sweep. No mocks/stubs/fakes — injects `postExecutor` + `sessionFactory` deps.
+- **Bug fixed during testing**: `parseScheduledAt` tz offset sign was inverted (returned 10:00 UTC for "09:00 Europe/London" instead of 08:00 UTC). Corrected to standard east-positive offset (`tzWallMs - probeMs`) and `probeMs - offsetMs`.
 
 ## Story
 
