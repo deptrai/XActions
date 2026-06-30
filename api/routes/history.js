@@ -7,6 +7,14 @@
 
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import {
+  getDashboard,
+  getRatioSeries,
+  getEngagementSeries,
+  getTopTweets,
+  getStats,
+  getFullDashboard,
+} from '../services/analyticsDashboard.js';
 
 const router = Router();
 
@@ -76,6 +84,119 @@ router.get('/overlap', async (req, res) => {
     const data = await analyzeOverlap(username1, username2);
     res.json(data);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// EPS-3 Analytics Dashboard — Prisma-backed endpoints
+// ============================================================================
+
+/**
+ * GET /api/analytics/dashboard/:username — composite dashboard payload.
+ * Query: ?days=30&limit=10
+ */
+router.get('/dashboard/:username', async (req, res) => {
+  try {
+    const username = req.params.username.replace(/^@/, '').trim();
+    if (!username) return res.status(400).json({ error: 'username is required' });
+    const data = await getFullDashboard(username, {
+      days: parseInt(req.query.days, 10) || 30,
+      limit: parseInt(req.query.limit, 10) || 10,
+    });
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Dashboard error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/analytics/follower-growth/:username — follower growth time-series.
+ * Query: ?days=30
+ */
+router.get('/follower-growth/:username', async (req, res) => {
+  try {
+    const username = req.params.username.replace(/^@/, '').trim();
+    if (!username) return res.status(400).json({ error: 'username is required' });
+    const data = await getDashboard(username, { days: parseInt(req.query.days, 10) || 30 });
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Follower growth error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/analytics/ratio/:username — following/followers ratio over time.
+ * Query: ?days=30
+ */
+router.get('/ratio/:username', async (req, res) => {
+  try {
+    const username = req.params.username.replace(/^@/, '').trim();
+    if (!username) return res.status(400).json({ error: 'username is required' });
+    const data = await getRatioSeries(username, { days: parseInt(req.query.days, 10) || 30 });
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Ratio series error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/analytics/engagement/:username — engagement rate over time.
+ * Query: ?days=30
+ */
+router.get('/engagement/:username', async (req, res) => {
+  try {
+    const username = req.params.username.replace(/^@/, '').trim();
+    if (!username) return res.status(400).json({ error: 'username is required' });
+    const data = await getEngagementSeries(username, { days: parseInt(req.query.days, 10) || 30 });
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Engagement series error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/analytics/top-tweets/:username — best performing tweets.
+ * Query: ?limit=10&days=90
+ */
+router.get('/top-tweets/:username', async (req, res) => {
+  try {
+    const username = req.params.username.replace(/^@/, '').trim();
+    if (!username) return res.status(400).json({ error: 'username is required' });
+    const data = await getTopTweets(username, {
+      limit: parseInt(req.query.limit, 10) || 10,
+      days: parseInt(req.query.days, 10) || 90,
+    });
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Top tweets error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/analytics/stats/:username — daily/weekly/monthly aggregation.
+ * Query: ?interval=day|week|month&days=30
+ */
+router.get('/stats/:username', async (req, res) => {
+  try {
+    const username = req.params.username.replace(/^@/, '').trim();
+    if (!username) return res.status(400).json({ error: 'username is required' });
+    const interval = req.query.interval;
+    if (interval && !['day', 'week', 'month'].includes(interval)) {
+      return res.status(400).json({ error: 'interval must be one of: day, week, month' });
+    }
+    const data = await getStats(username, {
+      days: parseInt(req.query.days, 10) || 30,
+      interval: interval || 'day',
+    });
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Stats aggregation error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });

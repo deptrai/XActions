@@ -264,3 +264,41 @@ model Schedule {
   @@index([platform, status, scheduledAt])
   @@index([userId])
 }
+
+// EPS-3 Analytics Dashboard — per-tweet metrics captured at a point in time.
+// One row per (tweetId, snapshotAt); the dashboard ranks the latest snapshot per tweet.
+model TweetSnapshot {
+  id            String   @id @default(cuid())
+  username      String
+  tweetId       String
+  text          String?
+  likes         Int      @default(0)
+  retweets      Int      @default(0)
+  replies       Int      @default(0)
+  quotes        Int      @default(0)
+  views         Int      @default(0)
+  bookmarkCount Int      @default(0)
+  tweetedAt     DateTime?
+  snapshotAt    DateTime @default(now())
+
+  @@index([username, snapshotAt])
+  @@index([username, tweetId])
+  @@index([tweetId, snapshotAt])
+}
+
+// EPS-3 Analytics Dashboard — daily engagement roll-up per username.
+// Upserted on (username, date) so re-runs replace the day's aggregate.
+model EngagementDaily {
+  id                 String   @id @default(cuid())
+  username           String
+  date               String
+  avgEngagementRate  Float    @default(0)
+  totalImpressions   Int      @default(0)
+  totalEngagements   Int      @default(0)
+  topTweetId         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([username, date])
+  @@index([username, date])
+}
