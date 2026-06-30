@@ -119,11 +119,13 @@ describe('createBrowser proxy arg (launchImpl seam)', () => {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled',
-      '--disable-web-security',
     ];
     for (const arg of stealth) {
       expect(capturedOpts.args).toContain(arg);
     }
+    // --disable-web-security was removed (defence-in-depth: scrapers navigate
+    // same-origin and extract DOM; SOP not needed). Callers can re-add via extraArgs.
+    expect(capturedOpts.args).not.toContain('--disable-web-security');
   });
 
   it('does not leak proxy or launchImpl into the launcher options object', async () => {

@@ -56,7 +56,6 @@ export async function createBrowser(options = {}) {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled',
-      '--disable-web-security',
     ],
     ...options,
   });

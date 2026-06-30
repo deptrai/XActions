@@ -354,7 +354,6 @@ async function scrapeMedia(username, options = {}) {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled',
-      '--disable-web-security',
     ],
   });
 

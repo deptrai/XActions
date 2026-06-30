@@ -46,7 +46,6 @@ export async function createBrowser(options = {}) {
     '--no-sandbox',
     '--disable-setuid-sandbox',
     '--disable-blink-features=AutomationControlled',
-    '--disable-web-security',
   ];
   // Wire proxy as a Chromium launch arg — the only browser-level way to apply it.
   // Proxy creds (username/password) are NOT handled here; callers must invoke

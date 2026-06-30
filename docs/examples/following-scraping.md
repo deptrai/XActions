@@ -290,7 +290,6 @@ async function scrapeFollowing(username, options = {}) {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled',
-      '--disable-web-security',
       '--disable-features=IsolateOrigins,site-per-process',
     ],
   });

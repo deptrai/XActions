@@ -80,7 +80,6 @@ export class SeleniumAdapter extends BaseAdapter {
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-blink-features=AutomationControlled',
-          '--disable-web-security',
           ...(options.args || []),
         );
         

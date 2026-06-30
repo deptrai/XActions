@@ -50,7 +50,6 @@ export class PuppeteerAdapter extends BaseAdapter {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-blink-features=AutomationControlled',
-        '--disable-web-security',
         ...(options.args || []),
       ],
       ...(options.proxy ? { args: [...(options.args || []), `--proxy-server=${options.proxy.server}`] } : {}),
