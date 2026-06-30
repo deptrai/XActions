@@ -245,10 +245,22 @@ model Schedule {
   operationId       String?
   error             String?
   executedAt        DateTime?
+  // EPS-2 Tweet Scheduling — platform discriminator + tweet-specific fields.
+  // `platform` defaults to "twitter"; existing Facebook rows backfilled to "facebook".
+  // `thread` is a JSON-stringified array of follow-up tweet texts (null for single tweets).
+  // `timezone` is an IANA tz name used to interpret scheduledAt at create time (stored as UTC).
+  // `recurrenceCron` re-arms the schedule after execution (node-cron expression).
+  // `queueOrder` drives drag & drop reorder in the dashboard queue view (0 = highest priority).
+  platform          String    @default("twitter")
+  thread            String?
+  timezone          String?
+  recurrenceCron    String?
+  queueOrder        Int       @default(0)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status, scheduledAt])
+  @@index([platform, status, scheduledAt])
   @@index([userId])
 }
