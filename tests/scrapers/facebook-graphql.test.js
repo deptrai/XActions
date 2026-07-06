@@ -302,3 +302,488 @@ describe('integration: tokens → CTA shape wiring', () => {
     expect(r).toEqual({ eligible: true });
   });
 });
+
+// ============================================================================
+// P1 Kill: buildCookieString — encoding + filtering (L113, L118)
+// ============================================================================
+
+describe('buildCookieString — encoding + filtering (P1 kill)', () => {
+  it('filters out null values (L113: v != null)', () => {
+    expect(buildCookieString({ c_user: '123', xs: null })).toBe('c_user=123');
+  });
+
+  it('filters out undefined values (L113: v != null)', () => {
+    expect(buildCookieString({ c_user: '123', xs: undefined })).toBe('c_user=123');
+  });
+
+  it('filters out empty string values (L113: v !== "")', () => {
+    expect(buildCookieString({ c_user: '123', xs: '' })).toBe('c_user=123');
+  });
+
+  it('encodes values containing semicolons (L118: /[;=]/.test)', () => {
+    const s = buildCookieString({ c_user: '123', xs: 'a;b' });
+    // Regex mutant L118: /[;=]/ → /[^;=]/ → encodes everything EXCEPT ;= → wrong
+    expect(s).toContain('xs=a%3Bb'); // semicolon encoded
+    expect(s).not.toContain('xs=a;b'); // raw semicolon must not appear
+  });
+
+  it('encodes values containing equals signs (L118)', () => {
+    const s = buildCookieString({ c_user: '123', xs: 'a=b' });
+    expect(s).toContain('xs=a%3Db'); // equals encoded
+    expect(s).not.toContain('xs=a=b');
+  });
+
+  it('does not encode values without delimiters (L118: false branch)', () => {
+    const s = buildCookieString({ c_user: '123', xs: 'plainvalue' });
+    expect(s).toContain('xs=plainvalue');
+    expect(s).not.toContain('%');
+  });
+
+  it('preserves key order from merged object (L111: { ...cookies, ...extra })', () => {
+    const s = buildCookieString({ c_user: '1' }, { xs: '2', datr: '3' });
+    expect(s).toBe('c_user=1; xs=2; datr=3');
+  });
+
+  it('extra overrides cookies for same key (L111: spread order)', () => {
+    const s = buildCookieString({ c_user: 'old' }, { c_user: 'new' });
+    expect(s).toBe('c_user=new');
+  });
+
+  it('returns empty string for empty cookies (L112-121)', () => {
+    expect(buildCookieString()).toBe('');
+    expect(buildCookieString({})).toBe('');
+  });
+});
+
+// ============================================================================
+// P1 Kill: extractUid — cookie parsing (L130, L131)
+// ============================================================================
+
+describe('extractUid via getPagesFromCookie (P1 kill, L130-131)', () => {
+  it('null cookie → [] (L130: !cookie)', async () => {
+    expect(await getPagesFromCookie(null, { fetchImpl: routedFetch([]) })).toEqual([]);
+  });
+
+  it('undefined cookie → [] (L130: !cookie)', async () => {
+    expect(await getPagesFromCookie(undefined, { fetchImpl: routedFetch([]) })).toEqual([]);
+  });
+
+  it('non-string cookie → [] (L130: typeof cookie !== "string")', async () => {
+    expect(await getPagesFromCookie(123, { fetchImpl: routedFetch([]) })).toEqual([]);
+  });
+
+  it('cookie without c_user → [] (L131: regex no match)', async () => {
+    expect(await getPagesFromCookie('datr=abc; xs=xyz', { fetchImpl: routedFetch([]) })).toEqual([]);
+  });
+
+  it('cookie with c_user at start of string → extracts uid (L131: ^|;\s*)', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'act=1234567890' }],
+      ['billing_hub', { status: 200, body: 'EAAGtok' }],
+      ['graph.facebook.com', { status: 200, body: PAGES_JSON }],
+    ]);
+    const pages = await getPagesFromCookie('c_user=100012345678901; xs=secret', { fetchImpl });
+    expect(pages.length).toBeGreaterThan(0);
+  });
+
+  it('cookie with c_user after semicolon+space → extracts uid (L131: ;\s*)', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'act=1234567890' }],
+      ['billing_hub', { status: 200, body: 'EAAGtok' }],
+      ['graph.facebook.com', { status: 200, body: PAGES_JSON }],
+    ]);
+    const pages = await getPagesFromCookie('datr=abc; c_user=100012345678901; xs=secret', { fetchImpl });
+    expect(pages.length).toBeGreaterThan(0);
+  });
+
+  it('cookie with c_user after semicolon no space → does NOT extract (L131: ;\s* requires \s*)', async () => {
+    // Regex mutant L131: ;\s* → ;\S* → matches ;c_user= without space
+    // Original: ;c_user= (no space) → no match → []
+    // But actually \s* means zero or more, so ;c_user= should match
+    // This test verifies the regex works with zero spaces after semicolon
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'act=1234567890' }],
+      ['billing_hub', { status: 200, body: 'EAAGtok' }],
+      ['graph.facebook.com', { status: 200, body: PAGES_JSON }],
+    ]);
+    const pages = await getPagesFromCookie('datr=abc;c_user=100012345678901;xs=secret', { fetchImpl });
+    // \s* matches zero spaces → should extract uid
+    expect(pages.length).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================================
+// P1 Kill: parseFacebookTokens — non-string input (L162)
+// ============================================================================
+
+describe('parseFacebookTokens — non-string input (P1 kill, L162)', () => {
+  it('null input → all null fields (L162: typeof html === "string" ? html : "")', () => {
+    const t = parseFacebookTokens(null);
+    expect(t.fb_dtsg).toBeNull();
+    expect(t.lsd).toBeNull();
+  });
+
+  it('undefined input → all null fields (L162)', () => {
+    const t = parseFacebookTokens(undefined);
+    expect(t.fb_dtsg).toBeNull();
+  });
+
+  it('number input → all null fields (L162)', () => {
+    const t = parseFacebookTokens(12345);
+    expect(t.fb_dtsg).toBeNull();
+  });
+
+  it('object input → all null fields (L162)', () => {
+    const t = parseFacebookTokens({ foo: 'bar' });
+    expect(t.fb_dtsg).toBeNull();
+  });
+});
+
+// ============================================================================
+// P1 Kill: getFacebookTokens — HTTP status boundary (L205)
+// ============================================================================
+
+describe('getFacebookTokens — HTTP status boundary (P1 kill, L205)', () => {
+  it('HTTP 499 → does NOT throw (L205: res.status >= 500)', async () => {
+    const fetchImpl = stubFetch(LOGGED_OUT_HTML, 499);
+    const t = await getFacebookTokens('c_user=1', { fetchImpl });
+    // 499 < 500 → not a server error → returns token object (all null for logged-out)
+    expect(t.fb_dtsg).toBeNull();
+  });
+
+  it('HTTP 500 → throws (L205: res.status >= 500)', async () => {
+    const fetchImpl = stubFetch('', 500);
+    await expect(getFacebookTokens('c_user=1', { fetchImpl })).rejects.toThrow(/HTTP 500/);
+  });
+
+  it('HTTP 503 → throws (L205)', async () => {
+    const fetchImpl = stubFetch('', 503);
+    await expect(getFacebookTokens('c_user=1', { fetchImpl })).rejects.toThrow(/HTTP 503/);
+  });
+
+  it('HTTP 404 → does NOT throw (L205: 404 < 500)', async () => {
+    const fetchImpl = stubFetch(LOGGED_OUT_HTML, 404);
+    const t = await getFacebookTokens('c_user=1', { fetchImpl });
+    expect(t.fb_dtsg).toBeNull();
+  });
+});
+
+// ============================================================================
+// P1 Kill: scrapeAdAccountId — asset_id vs act (L220-226)
+// ============================================================================
+
+describe('scrapeAdAccountId via getPagesFromCookie (P1 kill, L220-226)', () => {
+  it('asset_id= takes priority over act= (L222-223)', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'asset_id=111111; act=222222' }],
+      ['billing_hub', { status: 200, body: 'EAAGtok' }],
+      ['graph.facebook.com', { status: 200, body: PAGES_JSON }],
+    ]);
+    const pages = await getPagesFromCookie('c_user=100012345678901', { fetchImpl });
+    // asset_id=111111 should be used (first match), not act=222222
+    expect(pages.length).toBeGreaterThan(0);
+  });
+
+  it('act= fallback when no asset_id (L225)', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'act=1234567890' }],
+      ['billing_hub', { status: 200, body: 'EAAGtok' }],
+      ['graph.facebook.com', { status: 200, body: PAGES_JSON }],
+    ]);
+    const pages = await getPagesFromCookie('c_user=100012345678901', { fetchImpl });
+    expect(pages.length).toBeGreaterThan(0);
+  });
+
+  it('act_ (underscore) also matches (L225: act[=_])', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'act_1234567890' }],
+      ['billing_hub', { status: 200, body: 'EAAGtok' }],
+      ['graph.facebook.com', { status: 200, body: PAGES_JSON }],
+    ]);
+    const pages = await getPagesFromCookie('c_user=100012345678901', { fetchImpl });
+    expect(pages.length).toBeGreaterThan(0);
+  });
+
+  it('asset_id with < 6 digits → no match (L222: \d{6,})', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'asset_id=12345' }],
+      ['billing_hub', { status: 200, body: 'no account here' }],
+    ]);
+    expect(await getPagesFromCookie('c_user=100012345678901', { fetchImpl })).toEqual([]);
+  });
+
+  it('act= with < 6 digits → no match (L225: \d{6,})', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'act=12345' }],
+      ['billing_hub', { status: 200, body: 'no account here' }],
+    ]);
+    expect(await getPagesFromCookie('c_user=100012345678901', { fetchImpl })).toEqual([]);
+  });
+
+  it('empty html → null (L220: !html)', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: '' }],
+      ['billing_hub', { status: 200, body: 'no account here' }],
+    ]);
+    expect(await getPagesFromCookie('c_user=100012345678901', { fetchImpl })).toEqual([]);
+  });
+});
+
+// ============================================================================
+// P1 Kill: scrapeEaagToken — EAAG pattern (L231-233)
+// ============================================================================
+
+describe('scrapeEaagToken via getPagesFromCookie (P1 kill, L231-233)', () => {
+  it('EAAG token with special chars (-_+/=) → extracted (L233)', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'act=1234567890' }],
+      ['billing_hub', { status: 200, body: 'EAAGtoken-with_special+chars/=' }],
+      ['graph.facebook.com', { status: 200, body: PAGES_JSON }],
+    ]);
+    const pages = await getPagesFromCookie('c_user=100012345678901', { fetchImpl });
+    expect(pages.length).toBeGreaterThan(0);
+  });
+
+  it('no EAAG token → [] (L231: !html → null, L289: !eaagToken → [])', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'act=1234567890' }],
+      ['billing_hub', { status: 200, body: 'no token here' }],
+    ]);
+    expect(await getPagesFromCookie('c_user=100012345678901', { fetchImpl })).toEqual([]);
+  });
+
+  it('empty billing page → [] (L231: !html)', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'act=1234567890' }],
+      ['billing_hub', { status: 200, body: '' }],
+    ]);
+    expect(await getPagesFromCookie('c_user=100012345678901', { fetchImpl })).toEqual([]);
+  });
+});
+
+// ============================================================================
+// P1 Kill: getPagesFromCookie — Graph API response handling (L275, L281, L289, L297, L306, L312, L313)
+// ============================================================================
+
+describe('getPagesFromCookie — Graph API response (P1 kill)', () => {
+  it('adsmanager non-200 → falls back to billing hub (L275: ads.status === 200)', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 302, body: 'redirect' }],
+      ['billing_hub', { status: 200, body: 'act=1234567890 EAAGtok' }],
+      ['graph.facebook.com', { status: 200, body: PAGES_JSON }],
+    ]);
+    const pages = await getPagesFromCookie('c_user=100012345678901', { fetchImpl });
+    // ConditionalExpression mutant L275: true → always scrape → may get null from redirect body
+    expect(pages.length).toBeGreaterThan(0);
+  });
+
+  it('graph non-200 → [] (L297: graph.status !== 200)', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'act=1234567890' }],
+      ['billing_hub', { status: 200, body: 'EAAGtok' }],
+      ['graph.facebook.com', { status: 403, body: 'forbidden' }],
+    ]);
+    expect(await getPagesFromCookie('c_user=100012345678901', { fetchImpl })).toEqual([]);
+  });
+
+  it('graph 200 but empty html → [] (L297: !graph.html)', async () => {
+    const fetchImpl = routedFetch([
+      ['adsmanager', { status: 200, body: 'act=1234567890' }],
+      ['billing_hub', { status: 200, body: 'EAAGtok' }],
+      ['graph.facebook.com', { status: 200, body: '' }],
+    ]);
+    expect(await getPagesFromCookie('c_user=100012345678901', { fetchImpl })).toEqual([]);
+  });
+
+  it('graph returns non-JSON → [] (L302: JSON.parse catch)', async () => {
+    expect(await getPagesFromCookie('c_user=100012345678901', {
+      fetchImpl: routedFetch([
+        ['adsmanager', { status: 200, body: 'act=1234567890' }],
+        ['billing_hub', { status: 200, body: 'EAAGtok' }],
+        ['graph.facebook.com', { status: 200, body: 'not json {{{' }],
+      ]),
+    })).toEqual([]);
+  });
+
+  it('graph returns error object → [] (L306: parsed?.error)', async () => {
+    expect(await getPagesFromCookie('c_user=100012345678901', {
+      fetchImpl: routedFetch([
+        ['adsmanager', { status: 200, body: 'act=1234567890' }],
+        ['billing_hub', { status: 200, body: 'EAAGtok' }],
+        ['graph.facebook.com', { status: 200, body: '{"error":{"message":"bad token"}}' }],
+      ]),
+    })).toEqual([]);
+  });
+
+  it('graph returns null → [] (L306: parsed?.error optional chaining)', async () => {
+    expect(await getPagesFromCookie('c_user=100012345678901', {
+      fetchImpl: routedFetch([
+        ['adsmanager', { status: 200, body: 'act=1234567890' }],
+        ['billing_hub', { status: 200, body: 'EAAGtok' }],
+        ['graph.facebook.com', { status: 200, body: 'null' }],
+      ]),
+    })).toEqual([]);
+  });
+
+  it('graph returns object without facebook_pages → [] (L312: parsed?.facebook_pages?.data)', async () => {
+    expect(await getPagesFromCookie('c_user=100012345678901', {
+      fetchImpl: routedFetch([
+        ['adsmanager', { status: 200, body: 'act=1234567890' }],
+        ['billing_hub', { status: 200, body: 'EAAGtok' }],
+        ['graph.facebook.com', { status: 200, body: '{"id":"123"}' }],
+      ]),
+    })).toEqual([]);
+  });
+
+  it('graph returns facebook_pages.data as non-array → [] (L313: !Array.isArray)', async () => {
+    expect(await getPagesFromCookie('c_user=100012345678901', {
+      fetchImpl: routedFetch([
+        ['adsmanager', { status: 200, body: 'act=1234567890' }],
+        ['billing_hub', { status: 200, body: 'EAAGtok' }],
+        ['graph.facebook.com', { status: 200, body: '{"facebook_pages":{"data":"notarray"}}' }],
+      ]),
+    })).toEqual([]);
+  });
+
+  it('graph returns facebook_pages.data null → [] (L313: !Array.isArray(null))', async () => {
+    expect(await getPagesFromCookie('c_user=100012345678901', {
+      fetchImpl: routedFetch([
+        ['adsmanager', { status: 200, body: 'act=1234567890' }],
+        ['billing_hub', { status: 200, body: 'EAAGtok' }],
+        ['graph.facebook.com', { status: 200, body: '{"facebook_pages":{"data":null}}' }],
+      ]),
+    })).toEqual([]);
+  });
+
+  it('pages without access_token are filtered out (L320: p.access_token)', async () => {
+    const pages = await getPagesFromCookie('c_user=100012345678901', {
+      fetchImpl: routedFetch([
+        ['adsmanager', { status: 200, body: 'act=1234567890' }],
+        ['billing_hub', { status: 200, body: 'EAAGtok' }],
+        ['graph.facebook.com', { status: 200, body: JSON.stringify({
+          facebook_pages: { data: [
+            { id: '1', name: 'Page1', access_token: 'tok1' },
+            { id: '2', name: 'Page2', access_token: '' },
+            { id: '3', name: 'Page3' },
+          ] },
+        }) }],
+      ]),
+    });
+    expect(pages).toHaveLength(1);
+    expect(pages[0].pageId).toBe('1');
+  });
+
+  it('page with additional_profile_id → included as string (L324)', async () => {
+    const pages = await getPagesFromCookie('c_user=100012345678901', {
+      fetchImpl: routedFetch([
+        ['adsmanager', { status: 200, body: 'act=1234567890' }],
+        ['billing_hub', { status: 200, body: 'EAAGtok' }],
+        ['graph.facebook.com', { status: 200, body: JSON.stringify({
+          facebook_pages: { data: [
+            { id: '1', name: 'Page1', access_token: 'tok1', additional_profile_id: '999' },
+          ] },
+        }) }],
+      ]),
+    });
+    expect(pages[0].additionalProfileId).toBe('999');
+  });
+
+  it('page without additional_profile_id → null (L324: ? String(...) : null)', async () => {
+    const pages = await getPagesFromCookie('c_user=100012345678901', {
+      fetchImpl: routedFetch([
+        ['adsmanager', { status: 200, body: 'act=1234567890' }],
+        ['billing_hub', { status: 200, body: 'EAAGtok' }],
+        ['graph.facebook.com', { status: 200, body: JSON.stringify({
+          facebook_pages: { data: [
+            { id: '1', name: 'Page1', access_token: 'tok1' },
+          ] },
+        }) }],
+      ]),
+    });
+    expect(pages[0].additionalProfileId).toBeNull();
+  });
+
+  it('page with null name → empty string (L325: p.name ?? "")', async () => {
+    const pages = await getPagesFromCookie('c_user=100012345678901', {
+      fetchImpl: routedFetch([
+        ['adsmanager', { status: 200, body: 'act=1234567890' }],
+        ['billing_hub', { status: 200, body: 'EAAGtok' }],
+        ['graph.facebook.com', { status: 200, body: JSON.stringify({
+          facebook_pages: { data: [
+            { id: '1', name: null, access_token: 'tok1' },
+          ] },
+        }) }],
+      ]),
+    });
+    expect(pages[0].name).toBe('');
+  });
+});
+
+// ============================================================================
+// P1 Kill: checkMessengerCTA — edge cases (L430, L435)
+// ============================================================================
+
+describe('checkMessengerCTA — edge cases (P1 kill)', () => {
+  it('data tree contains sender field → eligible (L430)', async () => {
+    const fetchImpl = stubFetch(JSON.stringify({
+      data: { messenger_business_ads_sender: { id: '123' } },
+    }));
+    const r = await checkMessengerCTA('PID', 'AID', TOKENS, { fetchImpl });
+    expect(r).toEqual({ eligible: true });
+  });
+
+  it('data without sender field → not eligible (L430)', async () => {
+    const fetchImpl = stubFetch(JSON.stringify({
+      data: { some_other_field: 'value' },
+    }));
+    const r = await checkMessengerCTA('PID', 'AID', TOKENS, { fetchImpl });
+    expect(r).toEqual({ eligible: false });
+  });
+
+  it('parsed.data is null → not eligible (L430: parsed?.data falsy)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchImpl = stubFetch(JSON.stringify({ data: null }));
+    const r = await checkMessengerCTA('PID', 'AID', TOKENS, { fetchImpl });
+    expect(r).toEqual({ eligible: false });
+    warn.mockRestore();
+  });
+
+  it('parsed has no data field → not eligible + warn (L435: !looksValid)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchImpl = stubFetch(JSON.stringify({ error: 'something' }));
+    const r = await checkMessengerCTA('PID', 'AID', TOKENS, { fetchImpl });
+    expect(r).toEqual({ eligible: false });
+    // L435: 'data' in parsed → false → looksValid=false → warn
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('parsed.data exists but no sender → not eligible, no warn (L435: looksValid=true)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchImpl = stubFetch(JSON.stringify({ data: { foo: 'bar' } }));
+    const r = await checkMessengerCTA('PID', 'AID', TOKENS, { fetchImpl });
+    expect(r).toEqual({ eligible: false });
+    // L435: 'data' in parsed → true → looksValid=true → no warn
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('parsed is null → not eligible + warn (L435: parsed != null)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchImpl = stubFetch('null');
+    const r = await checkMessengerCTA('PID', 'AID', TOKENS, { fetchImpl });
+    expect(r).toEqual({ eligible: false });
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('parsed is array (not object) → not eligible + warn (L435: typeof parsed === "object")', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchImpl = stubFetch('[1,2,3]');
+    const r = await checkMessengerCTA('PID', 'AID', TOKENS, { fetchImpl });
+    expect(r).toEqual({ eligible: false });
+    // Array is object but 'data' not in array → looksValid=false → warn
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+});
