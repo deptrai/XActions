@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   runGuardedBatch,
   randomDelay,
+  assertFacebookUrl,
   ACCOUNT_RISK_WARNING,
 } from '../../api/services/facebookAutomation.js';
 
@@ -51,6 +52,31 @@ describe('runGuardedBatch', () => {
       ).rejects.toThrow(/maxBatch/i);
     });
 
+    // L105: maxBatch < 1 → maxBatch <= 1 mutant — maxBatch=1 must be ACCEPTED
+    it('accepts maxBatch=1 (boundary: < 1 must reject, <= 1 must NOT)', async () => {
+      const actionFn = vi.fn().mockResolvedValue(undefined);
+      const result = await runGuardedBatch(['only-item'], actionFn, {
+        dryRun: false,
+        delay: noDelay,
+        maxBatch: 1,
+      });
+      expect(actionFn).toHaveBeenCalledTimes(1);
+      expect(result.succeeded).toBe(1);
+    });
+
+    // L105: typeof maxBatch !== 'number' branch — non-number must throw
+    it('throws when maxBatch is a string', async () => {
+      await expect(
+        runGuardedBatch(['x'], vi.fn(), { dryRun: false, maxBatch: '20' })
+      ).rejects.toThrow(/maxBatch/i);
+    });
+
+    it('throws when maxBatch is null', async () => {
+      await expect(
+        runGuardedBatch(['x'], vi.fn(), { dryRun: false, maxBatch: null })
+      ).rejects.toThrow(/maxBatch/i);
+    });
+
     // Patch: maxRetry must be finite (Infinity would hang the loop on persistent failures)
     it('throws when maxRetry is Infinity', async () => {
       await expect(
@@ -68,6 +94,30 @@ describe('runGuardedBatch', () => {
       await expect(
         runGuardedBatch(['x'], vi.fn(), { dryRun: false, maxRetry: -1 })
       ).rejects.toThrow(/maxRetry/i);
+    });
+
+    // L110: typeof maxRetry !== 'number' branch — non-number must throw
+    it('throws when maxRetry is a string', async () => {
+      await expect(
+        runGuardedBatch(['x'], vi.fn(), { dryRun: false, maxRetry: '1' })
+      ).rejects.toThrow(/maxRetry/i);
+    });
+
+    it('throws when maxRetry is null', async () => {
+      await expect(
+        runGuardedBatch(['x'], vi.fn(), { dryRun: false, maxRetry: null })
+      ).rejects.toThrow(/maxRetry/i);
+    });
+
+    // L110: maxRetry=0 is valid (boundary — < 0 rejects, 0 accepted)
+    it('accepts maxRetry=0 (boundary: < 0 rejects, 0 accepted)', async () => {
+      const actionFn = vi.fn().mockResolvedValue(undefined);
+      const result = await runGuardedBatch(['x'], actionFn, {
+        dryRun: false,
+        delay: noDelay,
+        maxRetry: 0,
+      });
+      expect(result.succeeded).toBe(1);
     });
 
     // Patch: actionFn must be a function for real writes (else silent per-item TypeError)
@@ -94,6 +144,72 @@ describe('runGuardedBatch', () => {
       const result = await runGuardedBatch(['x'], null);
       expect(result.dryRun).toBe(true);
       expect(result.preview).toHaveLength(1);
+    });
+
+    // L117: delayMin validation — negative / non-number must throw
+    it('throws when delayMin is negative', async () => {
+      await expect(
+        runGuardedBatch(['x'], vi.fn(), { dryRun: false, delayMin: -1 })
+      ).rejects.toThrow(/delayMin/i);
+    });
+
+    it('throws when delayMin is a string', async () => {
+      await expect(
+        runGuardedBatch(['x'], vi.fn(), { dryRun: false, delayMin: '1000' })
+      ).rejects.toThrow(/delayMin/i);
+    });
+
+    // L117: delayMin < 0 → delayMin <= 0 mutant — delayMin=0 must be ACCEPTED
+    it('accepts delayMin=0 (boundary: < 0 rejects, <= 0 must NOT)', async () => {
+      const actionFn = vi.fn().mockResolvedValue(undefined);
+      const result = await runGuardedBatch(['a', 'b'], actionFn, {
+        dryRun: false,
+        delay: noDelay,
+        delayMin: 0,
+        delayMax: 100,
+      });
+      expect(result.succeeded).toBe(2);
+    });
+
+    // L117: null delayMin falls back to default (1000) — must NOT throw
+    it('null delayMin falls back to default (does not throw)', async () => {
+      const actionFn = vi.fn().mockResolvedValue(undefined);
+      const result = await runGuardedBatch(['x'], actionFn, {
+        dryRun: false,
+        delay: noDelay,
+        delayMin: null,
+      });
+      expect(result.succeeded).toBe(1);
+    });
+
+    // L120: delayMax validation — negative / non-number / < delayMin must throw
+    it('throws when delayMax is negative', async () => {
+      await expect(
+        runGuardedBatch(['x'], vi.fn(), { dryRun: false, delayMax: -1 })
+      ).rejects.toThrow(/delayMax/i);
+    });
+
+    it('throws when delayMax is a string', async () => {
+      await expect(
+        runGuardedBatch(['x'], vi.fn(), { dryRun: false, delayMax: '3000' })
+      ).rejects.toThrow(/delayMax/i);
+    });
+
+    it('throws when delayMax < delayMin', async () => {
+      await expect(
+        runGuardedBatch(['x'], vi.fn(), { dryRun: false, delayMin: 5000, delayMax: 1000 })
+      ).rejects.toThrow(/delayMax/i);
+    });
+
+    // L120: null delayMax falls back to default (3000) — must NOT throw
+    it('null delayMax falls back to default (does not throw)', async () => {
+      const actionFn = vi.fn().mockResolvedValue(undefined);
+      const result = await runGuardedBatch(['x'], actionFn, {
+        dryRun: false,
+        delay: noDelay,
+        delayMax: null,
+      });
+      expect(result.succeeded).toBe(1);
     });
   });
 
@@ -277,6 +393,33 @@ describe('runGuardedBatch', () => {
       expect(result.failed).toBe(2);
       expect(result.succeeded).toBe(1);
     });
+
+    // L193: lastErr?.message → lastErr.message mutant — throwing a non-Error
+    // (undefined) must NOT crash; optional chaining yields undefined, then ?? falls
+    // back to String(lastErr). Without optional chaining, undefined.message throws.
+    it('records String(err) when actionFn rejects with undefined (L193 OptionalChaining)', async () => {
+      const actionFn = vi.fn().mockRejectedValue(undefined);
+      const result = await runGuardedBatch(['x'], actionFn, {
+        dryRun: false,
+        delay: noDelay,
+        maxRetry: 0,
+      });
+      expect(result.failed).toBe(1);
+      expect(result.results[0].ok).toBe(false);
+      expect(result.results[0].error).toBe('undefined');
+    });
+
+    // L193: error with empty .message — ?? must fall back to String(err)
+    it('records String(err) when error has no message property (L193)', async () => {
+      const actionFn = vi.fn().mockRejectedValue({ code: 'NO_MSG' });
+      const result = await runGuardedBatch(['x'], actionFn, {
+        dryRun: false,
+        delay: noDelay,
+        maxRetry: 0,
+      });
+      expect(result.failed).toBe(1);
+      expect(result.results[0].error).toBe('[object Object]');
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -312,6 +455,14 @@ describe('runGuardedBatch', () => {
       await expect(
         runGuardedBatch(items, vi.fn(), { dryRun: false, delay: noDelay, maxBatch: 5 })
       ).rejects.toThrow(/maxBatch/i);
+    });
+
+    // L128: error message must contain guidance text 'Split' / 'raise maxBatch'
+    it('oversized-batch error message contains split guidance (L128 StringLiteral)', async () => {
+      const items = Array.from({ length: 21 }, (_, i) => `post-${i}`);
+      await expect(
+        runGuardedBatch(items, vi.fn(), { dryRun: false, delay: noDelay })
+      ).rejects.toThrow(/Split into smaller batches/i);
     });
   });
 
@@ -425,6 +576,46 @@ describe('runGuardedBatch', () => {
 
       expect(actionFn).toHaveBeenCalledTimes(3);
       expect(result.succeeded).toBe(3);
+    });
+
+    // L223-225: catch block must log to console.warn with the delay error message.
+    // L223 BlockStatement → empty mutant: console.warn would NOT be called.
+    // L225 StringLiteral → '' mutant: message would be empty/missing 'delay threw'.
+    it('logs delay error to console.warn with "delay threw" text (L223/L225)', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const delayThatThrows = vi.fn().mockRejectedValue(new Error('delay failed'));
+
+      await runGuardedBatch(['a', 'b'], vi.fn().mockResolvedValue(undefined), {
+        dryRun: false,
+        delay: delayThatThrows,
+      });
+
+      const delayWarn = warnSpy.mock.calls.find(
+        (c) => typeof c[0] === 'string' && c[0].includes('delay threw')
+      );
+      expect(delayWarn).toBeDefined();
+      expect(delayWarn[0]).toContain('delay failed');
+    });
+
+    // L225: err?.message ?? err → err?.message && err mutant.
+    // When delay rejects with a non-Error (string), err?.message is undefined.
+    // With ??: undefined ?? 'boom' → 'boom'. With &&: undefined && 'boom' → undefined.
+    // The warn message must contain the thrown string 'boom'.
+    it('warns String(err) when delay rejects with a non-Error string (L225 LogicalOperator)', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const delayThatThrows = vi.fn().mockRejectedValue('boom-string');
+
+      await runGuardedBatch(['a', 'b'], vi.fn().mockResolvedValue(undefined), {
+        dryRun: false,
+        delay: delayThatThrows,
+      });
+
+      const delayWarn = warnSpy.mock.calls.find(
+        (c) => typeof c[0] === 'string' && c[0].includes('delay threw')
+      );
+      expect(delayWarn).toBeDefined();
+      // ?? fallback: 'boom-string' appears in message; && mutant: undefined → 'undefined'
+      expect(delayWarn[0]).toContain('boom-string');
     });
   });
 
@@ -554,6 +745,39 @@ describe('runGuardedBatch', () => {
       ).resolves.not.toThrow();
     });
 
+    // L199: typeof onProgress === 'function' → true mutant — non-function values
+    // must NOT be invoked. If the guard is removed (always true), calling a
+    // non-function throws TypeError, crashing the batch.
+    it('null onProgress is not invoked (L199 ConditionalExpression)', async () => {
+      await expect(
+        runGuardedBatch(['a', 'b'], vi.fn().mockResolvedValue(undefined), {
+          dryRun: false,
+          delay: noDelay,
+          onProgress: null,
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it('string onProgress is not invoked (L199)', async () => {
+      await expect(
+        runGuardedBatch(['a'], vi.fn().mockResolvedValue(undefined), {
+          dryRun: false,
+          delay: noDelay,
+          onProgress: 'not a function',
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it('object onProgress is not invoked (L199)', async () => {
+      await expect(
+        runGuardedBatch(['a'], vi.fn().mockResolvedValue(undefined), {
+          dryRun: false,
+          delay: noDelay,
+          onProgress: { foo: 'bar' },
+        })
+      ).resolves.not.toThrow();
+    });
+
     it('throwing onProgress does not corrupt batch state', async () => {
       const actionFn = vi.fn().mockResolvedValue(undefined);
       const onProgress = vi.fn().mockImplementation(() => { throw new Error('progress error'); });
@@ -656,5 +880,76 @@ describe('runGuardedBatch', () => {
         Math.random = originalRandom;
       }
     });
+
+    it('delay with random=1.0 → exactly max (L20: ArithmeticOperator boundary)', async () => {
+      const originalRandom = Math.random;
+      Math.random = () => 1.0;
+      try {
+        const durations = [];
+        const originalSetTimeout = global.setTimeout;
+        global.setTimeout = (fn, ms) => {
+          durations.push(ms);
+          return originalSetTimeout(fn, 0);
+        };
+        try {
+          await randomDelay(1000, 3000);
+          // Original: 1000 + 1.0 * (3000 - 1000) = 3000 (exactly max)
+          // Mutant -: 1000 - 1.0 * 2000 = -1000
+          // Mutant /: 1000 + 1.0 / 2000 ≈ 1000.0005
+          // Mutant max+min: 1000 + 1.0 * (3000 + 1000) = 5000
+          expect(durations[0]).toBe(3000);
+        } finally {
+          global.setTimeout = originalSetTimeout;
+        }
+      } finally {
+        Math.random = originalRandom;
+      }
+    });
+  });
+});
+
+// =============================================================================
+// assertFacebookUrl — default label 'URL' must appear in error messages (L35)
+// =============================================================================
+
+describe('assertFacebookUrl', () => {
+  // L35: StringLiteral label='URL' → '' mutant.
+  // The default label 'URL' must appear in every error message when no custom
+  // label is supplied. If the default becomes '', the prefix vanishes.
+  it('default error message contains the "URL" label (L35 StringLiteral)', () => {
+    expect(() => assertFacebookUrl('   ')).toThrow('URL');
+  });
+
+  it('default error for non-facebook host contains "URL" label (L35)', () => {
+    expect(() => assertFacebookUrl('https://evil.com/x')).toThrow('URL');
+  });
+
+  it('default error for non-http scheme contains "URL" label (L35)', () => {
+    expect(() => assertFacebookUrl('file:///etc/passwd')).toThrow('URL');
+  });
+
+  it('default error for unparseable URL contains "URL" label (L35)', () => {
+    expect(() => assertFacebookUrl('not a url')).toThrow('URL');
+  });
+
+  it('custom label appears in error message instead of "URL"', () => {
+    expect(() => assertFacebookUrl('https://evil.com', 'shareUrl')).toThrow('shareUrl');
+  });
+
+  it('accepts a valid https facebook.com URL without throwing', () => {
+    expect(() => assertFacebookUrl('https://www.facebook.com/groups/x')).not.toThrow();
+  });
+
+  it('accepts an http facebook.com URL without throwing', () => {
+    expect(() => assertFacebookUrl('http://facebook.com/post/1')).not.toThrow();
+  });
+
+  it('rejects non-string input', () => {
+    expect(() => assertFacebookUrl(undefined)).toThrow('non-empty string');
+    expect(() => assertFacebookUrl(42)).toThrow('non-empty string');
+  });
+
+  it('rejects non-facebook host', () => {
+    expect(() => assertFacebookUrl('https://notfacebook.com/x')).toThrow('facebook.com');
   });
 });
