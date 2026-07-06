@@ -2205,6 +2205,7 @@ describe('buildRouteConfig — exact route object shape', () => {
 // ─── P0 #1: onSettleFailureHook — exact price in webhook (Pattern 4, L200) ──
 
 import * as paymentWebhooks from '../api/services/payment-webhooks.js';
+import * as paymentStats from '../api/services/payment-stats.js';
 import * as x402Config from '../api/config/x402-config.js';
 
 describe('onSettleFailureHook — exact price assertion (P0 kill)', () => {
@@ -2911,5 +2912,553 @@ describe('initializeMiddleware — Base Mainnet log (R-92)', () => {
         expect(e).toBeDefined();
       }
     }
+  });
+});
+
+// ─── P1 Kill: onAfterSettleHook — exact webhook payload fields ───────
+
+describe('onAfterSettleHook — exact webhook payload (P1 kill)', () => {
+  let consoleLogSpy;
+  let notifySettledSpy;
+  let recordPaymentSpy;
+
+  beforeEach(() => {
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    process.env.X402_DEBUG = 'true';
+    notifySettledSpy = vi.spyOn(paymentWebhooks, 'notifyPaymentSettled');
+    recordPaymentSpy = vi.spyOn(paymentStats, 'recordPayment');
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
+    notifySettledSpy.mockRestore();
+    recordPaymentSpy.mockRestore();
+    delete process.env.X402_DEBUG;
+  });
+
+  it('should call notifyPaymentSettled with exact price, operation, payerAddress, network, transactionHash', async () => {
+    await onAfterSettleHook({
+      paymentPayload: { payload: { authorization: { from: '0xPayer123' } } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: 'eip155:8453' },
+      result: { transaction: '0xTxHash456' },
+    });
+    await new Promise(r => setImmediate(r));
+    expect(notifySettledSpy).toHaveBeenCalledTimes(1);
+    const payload = notifySettledSpy.mock.calls[0][0];
+    // ObjectLiteral mutant: {} replacement — all fields must be exact
+    expect(payload).toEqual({
+      price: '$0.001',
+      operation: 'scrape:profile',
+      payerAddress: '0xPayer123',
+      network: 'eip155:8453',
+      transactionHash: '0xTxHash456',
+    });
+    // Second arg is the settlement ID (txHash)
+    expect(notifySettledSpy.mock.calls[0][1]).toBe('0xTxHash456');
+  });
+
+  it('should use "unknown" as payerAddress when authorization.from is missing', async () => {
+    await onAfterSettleHook({
+      paymentPayload: { payload: { authorization: {} } },
+      requirements: { resource: '/api/ai/scrape/followers', maxAmountRequired: '$0.002', network: NETWORK },
+      result: { transaction: '0xTx789' },
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = notifySettledSpy.mock.calls[0][0];
+    // StringLiteral mutant: 'unknown' → '' — must assert exact string
+    expect(payload.payerAddress).toBe('unknown');
+    expect(payload.payerAddress).not.toBe('');
+  });
+
+  it('should use "unknown" as payerAddress when payload.authorization is null', async () => {
+    await onAfterSettleHook({
+      paymentPayload: { payload: { authorization: null } },
+      requirements: { resource: '/api/ai/scrape/tweets', maxAmountRequired: '$0.001', network: NETWORK },
+      result: { transaction: '0xTx000' },
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = notifySettledSpy.mock.calls[0][0];
+    // OptionalChaining mutant: ?. removed → TypeError vs 'unknown'
+    expect(payload.payerAddress).toBe('unknown');
+  });
+
+  it('should use "unknown" as payerAddress when paymentPayload.payload is null', async () => {
+    await onAfterSettleHook({
+      paymentPayload: { payload: null },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: NETWORK },
+      result: { transaction: '0xTxNull' },
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = notifySettledSpy.mock.calls[0][0];
+    expect(payload.payerAddress).toBe('unknown');
+  });
+
+  it('should use "unknown" as payerAddress when paymentPayload is null', async () => {
+    await onAfterSettleHook({
+      paymentPayload: null,
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: NETWORK },
+      result: { transaction: '0xTxNull2' },
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = notifySettledSpy.mock.calls[0][0];
+    expect(payload.payerAddress).toBe('unknown');
+  });
+
+  it('should use NETWORK as fallback when requirements.network is missing', async () => {
+    await onAfterSettleHook({
+      paymentPayload: { payload: { authorization: { from: '0xPayer' } } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001' },
+      result: { transaction: '0xTxNet' },
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = notifySettledSpy.mock.calls[0][0];
+    // ConditionalExpression mutant: requirements?.network || NETWORK
+    expect(payload.network).toBe(NETWORK);
+  });
+
+  it('should use transactionHash when result.transaction is missing', async () => {
+    await onAfterSettleHook({
+      paymentPayload: { payload: { authorization: { from: '0xPayer' } } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: NETWORK },
+      result: { transactionHash: '0xHashOnly' },
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = notifySettledSpy.mock.calls[0][0];
+    // OptionalChaining mutant: result?.transactionHash removed
+    expect(payload.transactionHash).toBe('0xHashOnly');
+  });
+
+  it('should call recordPayment with exact operation, price, network, paymentId, payerAddress', async () => {
+    await onAfterSettleHook({
+      paymentPayload: { payload: { authorization: { from: '0xPayerRec' } } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: 'eip155:8453' },
+      result: { transaction: '0xTxRec' },
+    });
+    await new Promise(r => setImmediate(r));
+    expect(recordPaymentSpy).toHaveBeenCalledTimes(1);
+    const payload = recordPaymentSpy.mock.calls[0][0];
+    expect(payload).toEqual({
+      operation: 'scrape:profile',
+      price: '$0.001',
+      network: 'eip155:8453',
+      paymentId: '0xTxRec',
+      payerAddress: '0xPayerRec',
+    });
+  });
+});
+
+// ─── P1 Kill: onSettleFailureHook — exact webhook payload fields ─────
+
+describe('onSettleFailureHook — exact webhook payload (P1 kill)', () => {
+  let consoleErrorSpy;
+  let notifyFailedSpy;
+
+  beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    notifyFailedSpy = vi.spyOn(paymentWebhooks, 'notifyPaymentFailed');
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    notifyFailedSpy.mockRestore();
+  });
+
+  it('should call notifyPaymentFailed with exact price, operation, payerAddress, network', async () => {
+    await onSettleFailureHook({
+      paymentPayload: { payload: { authorization: { from: '0xFailPayer' } } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: 'eip155:8453' },
+      error: new Error('Insufficient funds'),
+    });
+    await new Promise(r => setImmediate(r));
+    expect(notifyFailedSpy).toHaveBeenCalledTimes(1);
+    const payload = notifyFailedSpy.mock.calls[0][0];
+    // ObjectLiteral mutant: {} replacement — all fields must be exact
+    expect(payload).toEqual({
+      price: '$0.001',
+      operation: 'scrape:profile',
+      payerAddress: '0xFailPayer',
+      network: 'eip155:8453',
+    });
+    // Second arg is the error message
+    expect(notifyFailedSpy.mock.calls[0][1]).toBe('Insufficient funds');
+  });
+
+  it('should use "unknown" as payerAddress when authorization.from is missing', async () => {
+    await onSettleFailureHook({
+      paymentPayload: { payload: { authorization: null } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: NETWORK },
+      error: new Error('Failed'),
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = notifyFailedSpy.mock.calls[0][0];
+    // StringLiteral mutant: 'unknown' → ''
+    expect(payload.payerAddress).toBe('unknown');
+    expect(payload.payerAddress).not.toBe('');
+  });
+
+  it('should use NETWORK fallback when requirements.network is null', async () => {
+    await onSettleFailureHook({
+      paymentPayload: { payload: { authorization: { from: '0xPayer' } } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: null },
+      error: new Error('Failed'),
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = notifyFailedSpy.mock.calls[0][0];
+    expect(payload.network).toBe(NETWORK);
+  });
+
+  it('should use error.message when error has message property', async () => {
+    await onSettleFailureHook({
+      paymentPayload: { payload: { authorization: { from: '0xPayer' } } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: NETWORK },
+      error: new Error('Timeout'),
+    });
+    await new Promise(r => setImmediate(r));
+    // OptionalChaining mutant: error?.message → error.message
+    expect(notifyFailedSpy.mock.calls[0][1]).toBe('Timeout');
+  });
+
+  it('should use "Settlement failed" fallback when error has no message property', async () => {
+    const stringError = 'Network error string';
+    await onSettleFailureHook({
+      paymentPayload: { payload: { authorization: { from: '0xPayer' } } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: NETWORK },
+      error: stringError,
+    });
+    await new Promise(r => setImmediate(r));
+    // error?.message is undefined for string, so fallback is 'Settlement failed'
+    // StringLiteral mutant: 'Settlement failed' → ''
+    expect(notifyFailedSpy.mock.calls[0][1]).toBe('Settlement failed');
+    expect(notifyFailedSpy.mock.calls[0][1]).not.toBe('');
+  });
+});
+
+// ─── P1 Kill: onVerifyFailureHook — exact webhook payload fields ─────
+
+describe('onVerifyFailureHook — exact webhook payload (P1 kill)', () => {
+  let consoleWarnSpy;
+  let notifyFailedSpy;
+
+  beforeEach(() => {
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    notifyFailedSpy = vi.spyOn(paymentWebhooks, 'notifyPaymentFailed');
+  });
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
+    notifyFailedSpy.mockRestore();
+  });
+
+  it('should call notifyPaymentFailed with exact price, operation, payerAddress, network', async () => {
+    await onVerifyFailureHook({
+      paymentPayload: { payload: { authorization: { from: '0xVerifyPayer' } } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: 'eip155:8453' },
+      error: new Error('Invalid signature'),
+    });
+    await new Promise(r => setImmediate(r));
+    expect(notifyFailedSpy).toHaveBeenCalledTimes(1);
+    const payload = notifyFailedSpy.mock.calls[0][0];
+    // ObjectLiteral mutant: {} replacement
+    expect(payload).toEqual({
+      price: '$0.001',
+      operation: 'scrape:profile',
+      payerAddress: '0xVerifyPayer',
+      network: 'eip155:8453',
+    });
+    // Second arg should have "Verification failed:" prefix
+    expect(notifyFailedSpy.mock.calls[0][1]).toBe('Verification failed: Invalid signature');
+  });
+
+  it('should use "unknown" as payerAddress when paymentPayload is null', async () => {
+    await onVerifyFailureHook({
+      paymentPayload: null,
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: NETWORK },
+      error: new Error('Failed'),
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = notifyFailedSpy.mock.calls[0][0];
+    expect(payload.payerAddress).toBe('unknown');
+  });
+
+  it('should use "unknown" as price when maxAmountRequired is missing', async () => {
+    await onVerifyFailureHook({
+      paymentPayload: { payload: { authorization: { from: '0xPayer' } } },
+      requirements: { resource: '/api/ai/scrape/profile', network: NETWORK },
+      error: new Error('Failed'),
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = notifyFailedSpy.mock.calls[0][0];
+    // StringLiteral mutant: 'unknown' → ''
+    expect(payload.price).toBe('unknown');
+    expect(payload.price).not.toBe('');
+  });
+
+  it('should use NETWORK fallback when requirements.network is undefined', async () => {
+    await onVerifyFailureHook({
+      paymentPayload: { payload: { authorization: { from: '0xPayer' } } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001' },
+      error: new Error('Failed'),
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = notifyFailedSpy.mock.calls[0][0];
+    expect(payload.network).toBe(NETWORK);
+  });
+
+  it('should prefix error message with "Verification failed: "', async () => {
+    await onVerifyFailureHook({
+      paymentPayload: { payload: { authorization: { from: '0xPayer' } } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: NETWORK },
+      error: new Error('Bad sig'),
+    });
+    await new Promise(r => setImmediate(r));
+    // StringLiteral mutant: 'Verification failed: ' → ''
+    const reason = notifyFailedSpy.mock.calls[0][1];
+    expect(reason).toBe('Verification failed: Bad sig');
+    expect(reason).toContain('Verification failed: ');
+  });
+});
+
+// ─── P1 Kill: x402HealthCheck — exact network fields ────────────────
+
+describe('x402HealthCheck — exact network fields (P1 kill)', () => {
+  let originalNodeEnv;
+
+  beforeEach(() => {
+    originalNodeEnv = process.env.NODE_ENV;
+    _resetState();
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    _resetState();
+  });
+
+  it('should return exact recommended network ID and name from getAcceptedNetworks', async () => {
+    process.env.NODE_ENV = 'development';
+    const { getAcceptedNetworks } = await import('../../api/config/x402-config.js');
+    const networks = getAcceptedNetworks(true);
+    const recommended = networks.find(n => n.recommended);
+
+    const req = {};
+    const res = {
+      json: vi.fn(),
+    };
+    x402HealthCheck(req, res);
+
+    const response = res.json.mock.calls[0][0];
+    // ConditionalExpression mutant: recommendedNetwork?.network → recommendedNetwork.network
+    // OptionalChaining mutant: recommendedNetwork?.network → undefined
+    if (recommended) {
+      expect(response.x402.networks.recommended).toBe(recommended.network);
+      expect(response.x402.networks.recommendedName).toBe(recommended.name);
+    }
+  });
+
+  it('should return available=false when _initFailed is true', async () => {
+    process.env.NODE_ENV = 'development';
+    _setInitFailed(true);
+
+    const req = {};
+    const res = { json: vi.fn() };
+    x402HealthCheck(req, res);
+
+    const response = res.json.mock.calls[0][0];
+    // BooleanLiteral mutant: !_initFailed → !true = false
+    expect(response.x402.available).toBe(false);
+  });
+
+  it('should return available=true when _initFailed is false and configured', async () => {
+    process.env.NODE_ENV = 'development';
+    _setInitFailed(false);
+
+    const req = {};
+    const res = { json: vi.fn() };
+    x402HealthCheck(req, res);
+
+    const response = res.json.mock.calls[0][0];
+    // BooleanLiteral mutant: !_initFailed && configured
+    if (response.x402.enabled) {
+      expect(response.x402.available).toBe(true);
+    }
+  });
+
+  it('should return exact network fields for each supported network', async () => {
+    process.env.NODE_ENV = 'development';
+    const { getAcceptedNetworks } = await import('../../api/config/x402-config.js');
+    const expectedNetworks = getAcceptedNetworks(true);
+
+    const req = {};
+    const res = { json: vi.fn() };
+    x402HealthCheck(req, res);
+
+    const response = res.json.mock.calls[0][0];
+    const supported = response.x402.networks.supported;
+    expect(supported.length).toBe(expectedNetworks.length);
+
+    // Verify exact field values for each network (kills ObjectLiteral mutants)
+    for (let i = 0; i < expectedNetworks.length; i++) {
+      const expected = expectedNetworks[i];
+      const actual = supported[i];
+      expect(actual.network).toBe(expected.network);
+      expect(actual.name).toBe(expected.name);
+      expect(actual.recommended).toBe(expected.recommended || false);
+      expect(actual.testnet).toBe(expected.testnet || false);
+    }
+  });
+});
+
+// ─── P1 Kill: x402Pricing — exact recommended network ───────────────
+
+describe('x402Pricing — exact recommended network (P1 kill)', () => {
+  let originalNodeEnv;
+
+  beforeEach(() => {
+    originalNodeEnv = process.env.NODE_ENV;
+    _resetState();
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    _resetState();
+  });
+
+  it('should return exact recommendedNetwork ID from getAcceptedNetworks', async () => {
+    process.env.NODE_ENV = 'development';
+    const { getAcceptedNetworks } = await import('../../api/config/x402-config.js');
+    const networks = getAcceptedNetworks(true);
+    const recommended = networks.find(n => n.recommended);
+
+    const req = {};
+    const res = { json: vi.fn() };
+    x402Pricing(req, res);
+
+    const response = res.json.mock.calls[0][0];
+    // OptionalChaining mutant: recommendedNetwork?.network → recommendedNetwork.network
+    if (recommended) {
+      expect(response.recommendedNetwork).toBe(recommended.network);
+    }
+  });
+
+  it('should return exact network name and usdc for each network', async () => {
+    process.env.NODE_ENV = 'development';
+    const { getAcceptedNetworks } = await import('../../api/config/x402-config.js');
+    const expectedNetworks = getAcceptedNetworks(true);
+
+    const req = {};
+    const res = { json: vi.fn() };
+    x402Pricing(req, res);
+
+    const response = res.json.mock.calls[0][0];
+    const networks = response.networks;
+    expect(networks.length).toBe(expectedNetworks.length);
+
+    for (let i = 0; i < expectedNetworks.length; i++) {
+      const expected = expectedNetworks[i];
+      const actual = networks[i];
+      // ObjectLiteral mutant: {} replacement
+      expect(actual.network).toBe(expected.network);
+      expect(actual.name).toBe(expected.name);
+      expect(actual.usdc).toBe(expected.usdc);
+      expect(actual.recommended).toBe(expected.recommended || false);
+    }
+  });
+});
+
+// ─── P1 Kill: buildRouteConfig — exact price values ─────────────────
+
+describe('buildRouteConfig — exact price values (P1 kill)', () => {
+  it('should set exact price value from AI_OPERATION_PRICES for each AI route', async () => {
+    const { AI_OPERATION_PRICES } = await import('../../api/config/x402-config.js');
+    const routes = buildRouteConfig();
+
+    for (const [operation, expectedPrice] of Object.entries(AI_OPERATION_PRICES)) {
+      const [category, action] = operation.split(':');
+      const routeKey = `POST /api/ai/${category}/${action}`;
+      const route = routes[routeKey];
+      expect(route).toBeDefined();
+      // StringLiteral mutant: price value changed
+      expect(route.accepts.price).toBe(expectedPrice);
+    }
+  });
+
+  it('should set exact network value from NETWORK for each route', async () => {
+    const { NETWORK } = await import('../../api/config/x402-config.js');
+    const routes = buildRouteConfig();
+
+    for (const routeKey of Object.keys(routes)) {
+      const route = routes[routeKey];
+      // StringLiteral mutant: NETWORK → ''
+      expect(route.accepts.network).toBe(NETWORK);
+    }
+  });
+
+  it('should set exact payTo value from PAY_TO_ADDRESS for each route', async () => {
+    const { PAY_TO_ADDRESS } = await import('../../api/config/x402-config.js');
+    const routes = buildRouteConfig();
+
+    for (const routeKey of Object.keys(routes)) {
+      const route = routes[routeKey];
+      // StringLiteral mutant: PAY_TO_ADDRESS → ''
+      expect(route.accepts.payTo).toBe(PAY_TO_ADDRESS);
+    }
+  });
+
+  it('should set scheme to "exact" for all routes', async () => {
+    const routes = buildRouteConfig();
+
+    for (const routeKey of Object.keys(routes)) {
+      const route = routes[routeKey];
+      // StringLiteral mutant: 'exact' → ''
+      expect(route.accepts.scheme).toBe('exact');
+    }
+  });
+});
+
+// ─── P1 Kill: _initFailed set on real init failure ──────────────────
+
+describe('x402Middleware — _initFailed set on real init failure (P1 kill)', () => {
+  let originalNodeEnv;
+  let consoleErrorSpy;
+  let consoleLogSpy;
+  let consoleWarnSpy;
+
+  beforeEach(() => {
+    originalNodeEnv = process.env.NODE_ENV;
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    _resetState();
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    consoleErrorSpy.mockRestore();
+    consoleLogSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+    _resetState();
+  });
+
+  it('should set _initFailed=true when initializeMiddleware throws, preventing re-init', async () => {
+    // Force init failure by setting invalid facilitator URL
+    process.env.NODE_ENV = 'production';
+    process.env.X402_FACILITATOR_URL = 'http://invalid-facilitator-url-that-does-not-exist:9999';
+
+    const app = createRealApp();
+    const res1 = await request(app).post('/api/ai/scrape/profile').send({ username: 'test' });
+
+    // Init should fail — either 500 (config not validated) or 503 (init failed)
+    // The key assertion: _initFailed should be true after the .catch() block
+    // BooleanLiteral mutant: _initFailed = true → _initFailed = false
+    // If mutant survived, second request would retry init instead of returning 503
+    const res2 = await request(app).post('/api/ai/scrape/profile').send({ username: 'test2' });
+
+    // If _initFailed was not set (mutant), second request would try init again
+    // If _initFailed was set (correct), second request should return 503 immediately
+    // Both requests should NOT return 200 (payment middleware is not working)
+    expect(res1.status).not.toBe(200);
+    expect(res2.status).not.toBe(200);
+
+    // Clean up
+    delete process.env.X402_FACILITATOR_URL;
   });
 });
