@@ -581,5 +581,80 @@ describe('runGuardedBatch', () => {
     it('accepts equal min and max', async () => {
       await expect(randomDelay(0, 0)).resolves.toBeUndefined();
     });
+
+    it('computes min + random * (max - min) correctly (L20: ArithmeticOperator)', async () => {
+      // Override Math.random to control delay value
+      const originalRandom = Math.random;
+      Math.random = () => 0.5;
+      try {
+        // Original: 1000 + 0.5 * (3000 - 1000) = 1000 + 1000 = 2000
+        // Mutant -: 1000 - 0.5 * 2000 = 0 → sleep(0)
+        // Mutant /: 1000 + 0.5 / 2000 ≈ 1000 → sleep(1000)
+        // Mutant max+min: 3000 + 1000 = 4000 → sleep(4000 + random*...)
+        // To kill: verify sleep duration is exactly 2000
+        // But randomDelay returns a Promise from sleep() — we can't directly inspect the duration
+        // Instead, mock setTimeout to capture the duration
+        const durations = [];
+        const originalSetTimeout = global.setTimeout;
+        global.setTimeout = (fn, ms) => {
+          durations.push(ms);
+          return originalSetTimeout(fn, 0); // resolve immediately
+        };
+        try {
+          await randomDelay(1000, 3000);
+          expect(durations).toHaveLength(1);
+          expect(durations[0]).toBe(2000); // exactly min + 0.5*(max-min)
+        } finally {
+          global.setTimeout = originalSetTimeout;
+        }
+      } finally {
+        Math.random = originalRandom;
+      }
+    });
+
+    it('delay with random=0 → exactly min (L20: ArithmeticOperator)', async () => {
+      const originalRandom = Math.random;
+      Math.random = () => 0.0;
+      try {
+        const durations = [];
+        const originalSetTimeout = global.setTimeout;
+        global.setTimeout = (fn, ms) => {
+          durations.push(ms);
+          return originalSetTimeout(fn, 0);
+        };
+        try {
+          await randomDelay(1000, 3000);
+          expect(durations[0]).toBe(1000); // min + 0*(max-min) = min
+        } finally {
+          global.setTimeout = originalSetTimeout;
+        }
+      } finally {
+        Math.random = originalRandom;
+      }
+    });
+
+    it('delay with random=1 → exactly max (L20: ArithmeticOperator)', async () => {
+      const originalRandom = Math.random;
+      Math.random = () => 0.9999; // close to 1
+      try {
+        const durations = [];
+        const originalSetTimeout = global.setTimeout;
+        global.setTimeout = (fn, ms) => {
+          durations.push(ms);
+          return originalSetTimeout(fn, 0);
+        };
+        try {
+          await randomDelay(1000, 3000);
+          // min + 0.9999*(max-min) ≈ 2999.8 → Math.floor not applied, so ~2999.8
+          // Mutant max+min: 3000+1000 = 4000 + 0.9999*... → way more
+          expect(durations[0]).toBeGreaterThan(2900);
+          expect(durations[0]).toBeLessThan(3000);
+        } finally {
+          global.setTimeout = originalSetTimeout;
+        }
+      } finally {
+        Math.random = originalRandom;
+      }
+    });
   });
 });
