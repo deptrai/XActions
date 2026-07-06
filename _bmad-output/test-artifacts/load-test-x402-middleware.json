@@ -1,0 +1,102 @@
+{
+  "timestamp": "2026-07-06T03:41:36.562Z",
+  "config": {
+    "duration_sec": 10,
+    "connections": 50,
+    "workers": 4
+  },
+  "results": [
+    {
+      "label": "Free endpoint (health)",
+      "duration_sec": 10.08,
+      "connections": 50,
+      "workers": 4,
+      "total_requests": 10257,
+      "errors": 0,
+      "timeouts": 0,
+      "req_sec": 1025.7,
+      "req_sec_max": 1496,
+      "latency_avg_ms": 46.31,
+      "latency_p50_ms": 35,
+      "latency_p90_ms": 75,
+      "latency_p99_ms": 180,
+      "latency_max_ms": 1776,
+      "throughput_avg_mb": 45015040,
+      "status_codes": {
+        "200": {
+          "count": 10257
+        }
+      },
+      "non2xx": 0
+    },
+    {
+      "label": "Paid endpoint (402)",
+      "duration_sec": 10.04,
+      "connections": 50,
+      "workers": 4,
+      "total_requests": 25264,
+      "errors": 0,
+      "timeouts": 0,
+      "req_sec": 2526.81,
+      "req_sec_max": 3789,
+      "latency_avg_ms": 18.51,
+      "latency_p50_ms": 13,
+      "latency_p90_ms": 32,
+      "latency_p99_ms": 82,
+      "latency_max_ms": 828,
+      "throughput_avg_mb": 1963430.4,
+      "status_codes": {
+        "402": {
+          "count": 25264
+        }
+      },
+      "non2xx": 25264
+    },
+    {
+      "label": "Non-AI pass-through",
+      "duration_sec": 10.05,
+      "connections": 50,
+      "workers": 4,
+      "total_requests": 43893,
+      "errors": 0,
+      "timeouts": 0,
+      "req_sec": 4389.8,
+      "req_sec_max": 6374,
+      "latency_avg_ms": 10.45,
+      "latency_p50_ms": 8,
+      "latency_p90_ms": 19,
+      "latency_p99_ms": 51,
+      "latency_max_ms": 135,
+      "throughput_avg_mb": 1092864,
+      "status_codes": {
+        "200": {
+          "count": 43893
+        }
+      },
+      "non2xx": 0
+    },
+    {
+      "label": "High concurrency (200 conn)",
+      "duration_sec": 10.05,
+      "connections": 200,
+      "workers": 4,
+      "total_requests": 11451,
+      "errors": 46,
+      "timeouts": 46,
+      "req_sec": 1145.1,
+      "req_sec_max": 1389,
+      "latency_avg_ms": 133.79,
+      "latency_p50_ms": 88,
+      "latency_p90_ms": 157,
+      "latency_p99_ms": 392,
+      "latency_max_ms": 9887,
+      "throughput_avg_mb": 50250547.2,
+      "status_codes": {
+        "200": {
+          "count": 11451
+        }
+      },
+      "non2xx": 0
+    }
+  ]
+}
