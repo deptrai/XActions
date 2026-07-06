@@ -178,6 +178,30 @@ describe('normalizeProfile (P1 kill)', () => {
     expect(result.name).toBe('Mark Zuckerberg');
   });
 
+  it('strips Facebook suffix with multiple spaces before separator (L151: \\s* not \\s)', () => {
+    // Regex mutant L151: \s* → \s (requires exactly 1 space, not 0+)
+    // "Mark  - Facebook" has 2 spaces before dash → \s matches but \s* matches more
+    const result = normalizeProfile({
+      ogTitle: 'Mark  - Facebook',
+    }, 'zuck');
+    expect(result.name).toBe('Mark');
+  });
+
+  it('strips Facebook suffix with no space before separator (L151: \\s* matches 0)', () => {
+    // "Mark-Facebook" — no space before dash
+    const result = normalizeProfile({
+      ogTitle: 'Mark-Facebook',
+    }, 'zuck');
+    expect(result.name).toBe('Mark');
+  });
+
+  it('strips Facebook suffix with trailing text after Facebook (L151: .*$)', () => {
+    const result = normalizeProfile({
+      ogTitle: 'Mark Zuckerberg | Facebook - Public figure',
+    }, 'zuck');
+    expect(result.name).toBe('Mark Zuckerberg');
+  });
+
   it('name without Facebook suffix → unchanged (L151)', () => {
     const result = normalizeProfile({
       ogTitle: 'Mark Zuckerberg',
@@ -207,6 +231,40 @@ describe('normalizeProfile (P1 kill)', () => {
       ogDescription: '5,000 people follow this',
     }, 'test');
     expect(result.followers).toBe('5,000');
+  });
+
+  it('extracts "follower" singular (L159: followers? — ? makes s optional)', () => {
+    // Regex mutant L159: followers? → followers (no ?) → "1 follower" won't match
+    const result = normalizeProfile({
+      ogTitle: 'Test | Facebook',
+      ogDescription: '1 follower',
+    }, 'test');
+    expect(result.followers).toBe('1');
+  });
+
+  it('extracts followers with no space before word (L159: \\s* matches 0)', () => {
+    // Regex mutant L159: \s* → \s (requires 1 space) → "123followers" won't match
+    const result = normalizeProfile({
+      ogTitle: 'Test | Facebook',
+      ogDescription: '123followers',
+    }, 'test');
+    expect(result.followers).toBe('123');
+  });
+
+  it('extracts followers case insensitive (L159: /i flag)', () => {
+    const result = normalizeProfile({
+      ogTitle: 'Test | Facebook',
+      ogDescription: '1,234 Followers',
+    }, 'test');
+    expect(result.followers).toBe('1,234');
+  });
+
+  it('extracts followers with lowercase k suffix (L159: [KkMmBb])', () => {
+    const result = normalizeProfile({
+      ogTitle: 'Test | Facebook',
+      ogDescription: '5k followers',
+    }, 'test');
+    expect(result.followers).toBe('5k');
   });
 
   it('falls back to domFollowers when ogDescription has no count (L162: !followers && domFollowers)', () => {
@@ -455,6 +513,38 @@ describe('scrapeProfile (P1 kill, fake page)', () => {
   it('throws for "Log in to Facebook" title (L444)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Log in to Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+  });
+
+  it('throws for "FACEBOOK" uppercase (L443: /^facebook$/i)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => ({ ogTitle: 'FACEBOOK', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+  });
+
+  it('throws for "Log  in  to Facebook" multiple spaces (L444: \\s+)', async () => {
+    // Regex mutant L444: \s+ → \s (1 space only) → "Log  in" won't match
+    const page = makeFakePage();
+    page.evaluate = async () => ({ ogTitle: 'Log  in  to Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+  });
+
+  it('throws for "Loginto Facebook" no space (L445: \\s* matches 0)', async () => {
+    // Regex mutant L445: \s* → \s (requires 1 space) → "Loginto" won't match
+    const page = makeFakePage();
+    page.evaluate = async () => ({ ogTitle: 'Loginto Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+  });
+
+  it('throws for "Facebook - Log in" (L446: facebook[\\s–—-]+log)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => ({ ogTitle: 'Facebook - Log in', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+  });
+
+  it('throws for "Facebook—Log in" em dash (L446)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => ({ ogTitle: 'Facebook—Log in', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
     await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
   });
 
