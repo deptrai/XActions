@@ -6,8 +6,12 @@ import {
   pickRandomSegment,
   composeMessage,
   typeMessage,
+  sendMessageToThread,
+  shareToMessenger,
+  messengerShareCampaign,
   SELECTORS,
 } from '../../src/scrapers/facebook/messengerShare.js';
+import { makeFakePage } from '../helpers/fake-page.js';
 
 // ============================================================================
 // stripEmojiSurrogates (L101-106)
@@ -394,5 +398,226 @@ describe('typeMessage — empty lines + delay (P1 kill, L173-174)', () => {
     expect(page.keyboard.type).toHaveBeenNthCalledWith(1, 'line1', expect.any(Object));
     expect(page.keyboard.type).toHaveBeenNthCalledWith(2, 'line2', expect.any(Object));
     expect(page.keyboard.type).toHaveBeenNthCalledWith(3, 'line3', expect.any(Object));
+  });
+});
+
+// ============================================================================
+// sendMessageToThread (L310-390) — fake page with DOM state
+// ============================================================================
+
+describe('sendMessageToThread (P1 kill, fake page)', () => {
+  const delay = vi.fn(async () => {});
+
+  it('returns ok:true when message is empty (L316: !message)', async () => {
+    const page = makeFakePage();
+    const result = await sendMessageToThread(page, 'Alice', '', { delay });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('navigates to messages URL when not on /messages/ (L320-321)', async () => {
+    const page = makeFakePage({ currentUrl: 'https://www.facebook.com/home' });
+    // Set up eval to return true for thread click
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('needleLc') && fnStr.includes('links')) {
+        return true; // opened thread
+      }
+      if (fnStr.includes('btns') && fnStr.includes('aria-label')) {
+        return 'Press Enter to send'; // sent button
+      }
+      return null;
+    };
+    page.$ = async (sel) => {
+      if (sel.includes('contenteditable')) {
+        return { type: async () => {} };
+      }
+      return null;
+    };
+    const result = await sendMessageToThread(page, 'Alice', 'hello', { delay });
+    expect(page.calls.goto.length).toBeGreaterThanOrEqual(1);
+    expect(result.ok).toBe(true);
+  });
+
+  it('does NOT navigate when already on /messages/ (L320)', async () => {
+    const page = makeFakePage({ currentUrl: 'https://www.facebook.com/messages/t/alice' });
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('needleLc') && fnStr.includes('links')) return true;
+      if (fnStr.includes('btns') && fnStr.includes('aria-label')) return 'Press Enter to send';
+      return null;
+    };
+    page.$ = async (sel) => {
+      if (sel.includes('contenteditable')) return { type: async () => {} };
+      return null;
+    };
+    await sendMessageToThread(page, 'Alice', 'hello', { delay });
+    expect(page.calls.goto).toHaveLength(0);
+  });
+
+  it('returns ok:false when thread not found (L334-335)', async () => {
+    const page = makeFakePage({ currentUrl: 'https://www.facebook.com/messages/t/' });
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('needleLc') && fnStr.includes('links')) return false; // not found
+      return null;
+    };
+    const result = await sendMessageToThread(page, 'Ghost', 'hello', { delay });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('not found');
+  });
+
+  it('returns ok:false when compose box not found (L346-347)', async () => {
+    const page = makeFakePage({ currentUrl: 'https://www.facebook.com/messages/t/' });
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('needleLc') && fnStr.includes('links')) return true;
+      return null;
+    };
+    page.$ = async () => null; // no compose box
+    const result = await sendMessageToThread(page, 'Alice', 'hello', { delay, selectorTimeout: 100 });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('compose box');
+  });
+
+  it('types message into compose box and sends (L349-386)', async () => {
+    const page = makeFakePage({ currentUrl: 'https://www.facebook.com/messages/t/' });
+    const typedTexts = [];
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('needleLc') && fnStr.includes('links')) return true;
+      if (fnStr.includes('btns') && fnStr.includes('aria-label')) return 'Press Enter to send';
+      return null;
+    };
+    page.$ = async (sel) => {
+      if (sel.includes('contenteditable')) {
+        return { type: async (text, opts) => { typedTexts.push(text); } };
+      }
+      return null;
+    };
+    const result = await sendMessageToThread(page, 'Alice', 'hello world', { delay });
+    expect(result.ok).toBe(true);
+    expect(result.sentVia).toBe('Press Enter to send');
+    expect(typedTexts).toContain('hello world');
+  });
+
+  it('falls back to Enter when send button not found (L380-383)', async () => {
+    const page = makeFakePage({ currentUrl: 'https://www.facebook.com/messages/t/' });
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('needleLc') && fnStr.includes('links')) return true;
+      if (fnStr.includes('btns') && fnStr.includes('aria-label')) return null; // no send button
+      return null;
+    };
+    page.$ = async (sel) => {
+      if (sel.includes('contenteditable')) return { type: async () => {} };
+      return null;
+    };
+    const result = await sendMessageToThread(page, 'Alice', 'hello', { delay });
+    expect(result.ok).toBe(true);
+    expect(result.sentVia).toBe('enter-fallback');
+    expect(page.calls.keyboard.press).toContain('Enter');
+  });
+
+  it('multi-line message uses Shift+Enter (L351-355)', async () => {
+    const page = makeFakePage({ currentUrl: 'https://www.facebook.com/messages/t/' });
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('needleLc') && fnStr.includes('links')) return true;
+      if (fnStr.includes('btns') && fnStr.includes('aria-label')) return 'Press Enter to send';
+      return null;
+    };
+    page.$ = async (sel) => {
+      if (sel.includes('contenteditable')) return { type: async () => {} };
+      return null;
+    };
+    await sendMessageToThread(page, 'Alice', 'line1\nline2', { delay });
+    expect(page.calls.keyboard.down).toContain('Shift');
+    expect(page.calls.keyboard.up).toContain('Shift');
+    expect(page.calls.keyboard.press).toContain('Enter');
+  });
+
+  it('catch block returns ok:false with error message (L387-388)', async () => {
+    const page = makeFakePage({ currentUrl: 'https://www.facebook.com/home' });
+    page.goto = async () => { throw new Error('Network error'); };
+    const result = await sendMessageToThread(page, 'Alice', 'hello', { delay });
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('Network error');
+  });
+});
+
+// ============================================================================
+// shareToMessenger (L420-503) — fake page with DOM state
+// ============================================================================
+
+describe('shareToMessenger (P1 kill, fake page)', () => {
+  const delay = vi.fn(async () => {});
+
+  it('returns ok:false when missing recipientName or postUrl (L428-429)', async () => {
+    const page = makeFakePage();
+    const result = await shareToMessenger(page, { postUrl: 'https://facebook.com/post/1' }, { delay });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/Missing/);
+  });
+
+  it('returns ok:false when recipientName missing (L428-429)', async () => {
+    const page = makeFakePage();
+    const result = await shareToMessenger(page, { recipientName: 'Alice' }, { delay });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/Missing/);
+  });
+
+  it('returns ok:false when share button not found (L440-444)', async () => {
+    const page = makeFakePage();
+    page.$ = async () => null;
+    page.$x = async () => [];
+    const result = await shareToMessenger(
+      page,
+      { recipientName: 'Alice', postUrl: 'https://facebook.com/post/1', message: 'hi' },
+      { delay, selectorTimeout: 100 },
+    );
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/share|button/i);
+  });
+});
+
+// ============================================================================
+// messengerShareCampaign (L530-573) — batch orchestration
+// ============================================================================
+
+describe('messengerShareCampaign (P1 kill)', () => {
+  it('throws when postUrl is missing (L543-544)', async () => {
+    const page = makeFakePage();
+    await expect(messengerShareCampaign(page, { recipients: ['Alice'] })).rejects.toThrow(/postUrl/);
+  });
+
+  it('throws when recipients is empty or not array (L546-547)', async () => {
+    const page = makeFakePage();
+    await expect(messengerShareCampaign(page, { postUrl: 'https://fb.com/p/1', recipients: [] })).rejects.toThrow(/recipients/);
+    await expect(messengerShareCampaign(page, { postUrl: 'https://fb.com/p/1', recipients: null })).rejects.toThrow(/recipients/);
+  });
+
+  it('dryRun=true returns preview without executing (L570)', async () => {
+    const page = makeFakePage();
+    const result = await messengerShareCampaign(
+      page,
+      { postUrl: 'https://facebook.com/post/1', recipients: ['Alice', 'Bob'], content: 'hello' },
+      { dryRun: true },
+    );
+    expect(result.dryRun).toBe(true);
+    expect(result.preview).toHaveLength(2);
+    // preview items are { target: item, action: 'pending' } — target is the item object
+    expect(result.preview[0].target.recipientName).toBe('Alice');
+    expect(result.preview[1].target.recipientName).toBe('Bob');
+  });
+
+  it('dryRun=true with no content → empty message (L553: content ? composeFn : "")', async () => {
+    const page = makeFakePage();
+    const result = await messengerShareCampaign(
+      page,
+      { postUrl: 'https://facebook.com/post/1', recipients: ['Alice'], content: '' },
+      { dryRun: true },
+    );
+    expect(result.preview).toHaveLength(1);
+    expect(result.preview[0].target.message).toBe('');
   });
 });

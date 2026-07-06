@@ -1,6 +1,6 @@
 // tests/scrapers/facebook-index.test.js
-// P1 Kill: mutation tests for index.js pure functions.
-import { describe, it, expect } from 'vitest';
+// P1 Kill: mutation tests for index.js pure functions + browser seams.
+import { describe, it, expect, vi } from 'vitest';
 import {
   normalizeHandle,
   normalizePost,
@@ -8,7 +8,10 @@ import {
   normalizeFollower,
   normalizeSearchResult,
   generateTotp,
+  loginWithCookie,
+  scrapeProfile,
 } from '../../src/scrapers/facebook/index.js';
+import { makeFakePage } from '../helpers/fake-page.js';
 
 // ============================================================================
 // normalizeHandle (L94-111)
@@ -377,5 +380,133 @@ describe('generateTotp (P1 kill)', () => {
     // Mutant (&&): length!==32 is false → false && ... → false → skip guard → tries TOTP
     const seed = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@1';
     expect(generateTotp(seed)).toBeNull();
+  });
+});
+
+// ============================================================================
+// loginWithCookie (L191-217) — fake page
+// ============================================================================
+
+describe('loginWithCookie (P1 kill, fake page)', () => {
+  it('throws when c_user is missing or empty (L192: !c_user?.trim())', async () => {
+    const page = makeFakePage();
+    await expect(loginWithCookie(page, { c_user: '', xs: 'test-xs' })).rejects.toThrow(/c_user.*xs/);
+    await expect(loginWithCookie(page, { c_user: null, xs: 'test-xs' })).rejects.toThrow(/c_user.*xs/);
+    await expect(loginWithCookie(page, { c_user: '  ', xs: 'test-xs' })).rejects.toThrow(/c_user.*xs/);
+  });
+
+  it('throws when xs is missing or empty (L192: !xs?.trim())', async () => {
+    const page = makeFakePage();
+    await expect(loginWithCookie(page, { c_user: '123', xs: '' })).rejects.toThrow(/c_user.*xs/);
+    await expect(loginWithCookie(page, { c_user: '123', xs: null })).rejects.toThrow(/c_user.*xs/);
+    await expect(loginWithCookie(page, { c_user: '123', xs: '  ' })).rejects.toThrow(/c_user.*xs/);
+  });
+
+  it('sets c_user and xs cookies with correct attributes (L196-213)', async () => {
+    const page = makeFakePage();
+    await loginWithCookie(page, { c_user: '100001', xs: 'xs-token' });
+    expect(page.calls.setCookie).toHaveLength(1);
+    const cookies = page.calls.setCookie[0]; // [cookie1, cookie2]
+    expect(cookies).toHaveLength(2);
+    // c_user cookie
+    expect(cookies[0]).toMatchObject({
+      name: 'c_user', value: '100001',
+      domain: '.facebook.com', httpOnly: true, secure: true, sameSite: 'Strict',
+    });
+    // xs cookie
+    expect(cookies[1]).toMatchObject({
+      name: 'xs', value: 'xs-token',
+      domain: '.facebook.com', httpOnly: true, secure: true, sameSite: 'Strict',
+    });
+  });
+
+  it('navigates to Facebook base URL (L215)', async () => {
+    const page = makeFakePage();
+    await loginWithCookie(page, { c_user: '100001', xs: 'xs-token' });
+    expect(page.calls.goto).toHaveLength(1);
+    expect(page.calls.goto[0].url).toContain('facebook.com');
+    expect(page.calls.goto[0].opts.waitUntil).toBe('networkidle2');
+  });
+});
+
+// ============================================================================
+// scrapeProfile (L409-452) — fake page
+// ============================================================================
+
+describe('scrapeProfile (P1 kill, fake page)', () => {
+  it('throws for blocked profile (ogTitle missing → login wall, L442-448)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => ({ ogTitle: null, ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+  });
+
+  it('throws for generic "Facebook" title (L443: /^facebook$/i)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => ({ ogTitle: 'Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+  });
+
+  it('throws for "Log into Facebook" title (L444)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => ({ ogTitle: 'Log into Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+  });
+
+  it('throws for "Log in to Facebook" title (L444)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => ({ ogTitle: 'Log in to Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+  });
+
+  it('returns normalized profile for valid page (L451)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => ({
+      ogTitle: 'Mark Zuckerberg | Facebook',
+      ogDescription: '1,234 followers · Public figure',
+      ogImage: 'https://fb.com/img.jpg',
+      domFollowers: null,
+      pageUrl: 'https://facebook.com/zuck',
+    });
+    const result = await scrapeProfile(page, 'zuck');
+    expect(result.username).toBe('zuck');
+    expect(result.name).toBe('Mark Zuckerberg');
+    expect(result.followers).toBe('1,234');
+  });
+
+  it('navigates to correct profile URL (L412-413)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => ({
+      ogTitle: 'Test | Facebook',
+      ogDescription: '100 followers',
+      domFollowers: null,
+      pageUrl: 'https://facebook.com/test',
+    });
+    await scrapeProfile(page, 'test');
+    expect(page.calls.goto).toHaveLength(1);
+    expect(page.calls.goto[0].url).toBe('https://www.facebook.com/test');
+  });
+
+  it('normalizes handle before building URL (L410)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => ({
+      ogTitle: 'Test | Facebook',
+      ogDescription: '100 followers',
+      domFollowers: null,
+      pageUrl: 'https://facebook.com/test',
+    });
+    await scrapeProfile(page, '@test');
+    expect(page.calls.goto[0].url).toBe('https://www.facebook.com/test');
+  });
+
+  it('accepts full URL as handle (L410: normalizeHandle)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => ({
+      ogTitle: 'Test | Facebook',
+      ogDescription: '100 followers',
+      domFollowers: null,
+      pageUrl: 'https://facebook.com/test',
+    });
+    await scrapeProfile(page, 'https://facebook.com/test');
+    expect(page.calls.goto[0].url).toBe('https://www.facebook.com/test');
   });
 });
