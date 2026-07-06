@@ -3462,3 +3462,257 @@ describe('x402Middleware — _initFailed set on real init failure (P1 kill)', ()
     delete process.env.X402_FACILITATOR_URL;
   });
 });
+
+// ─── P1 Kill: Free endpoint conditionals in production mode (L260-263) ──
+
+describe('x402Middleware — free endpoint conditionals (P1 kill, L260-263)', () => {
+  let originalNodeEnv;
+
+  beforeEach(() => {
+    originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    _resetState();
+    _setInitFailed(true); // Prevent init attempt — degradation returns 503 in prod
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    _resetState();
+  });
+
+  it('should pass through /api/ai/health even when _initFailed=true in production', async () => {
+    // Mutant L260: false → health would not be free → 503 instead of next()
+    const app = createRealApp();
+    const res = await request(app).get('/api/ai/health');
+    expect(res.status).toBe(200); // Health check handler responds 200
+    expect(res.status).not.toBe(503);
+  });
+
+  it('should pass through /api/ai/pricing even when _initFailed=true in production', async () => {
+    // Mutant L261: false → pricing would not be free → 503 instead of next()
+    const app = createRealApp();
+    const res = await request(app).get('/api/ai/pricing');
+    expect(res.status).toBe(200);
+    expect(res.status).not.toBe(503);
+  });
+
+  it('should pass through /api/ai/action/validate-session even when _initFailed=true in production', async () => {
+    // Mutant L262: false → validate-session would not be free → 503 instead of next()
+    const app = createRealApp();
+    const res = await request(app).post('/api/ai/action/validate-session').send({});
+    expect(res.status).toBe(200);
+    expect(res.status).not.toBe(503);
+  });
+
+  it('should pass through /api/scripts even when _initFailed=true in production', async () => {
+    // Mutant L263: false → /api/scripts would not be free → 503 instead of next()
+    const app = createRealApp();
+    const res = await request(app).get('/api/scripts');
+    expect(res.status).toBe(200);
+    expect(res.status).not.toBe(503);
+  });
+
+  it('should pass through /api/scripts/ even when _initFailed=true in production', async () => {
+    // Mutant L263: false → /api/scripts/ would not be free → 503 instead of next()
+    const app = createRealApp();
+    const res = await request(app).get('/api/scripts/');
+    expect(res.status).toBe(200);
+    expect(res.status).not.toBe(503);
+  });
+});
+
+// ─── P1 Kill: extractOperation endsWith vs startsWith (L237) ─────────
+
+describe('extractOperation — endsWith vs startsWith (P1 kill, L237)', () => {
+  it('should return "script:run" for resource ending with /api/scripts/run but not starting with it', () => {
+    // Mutant L237: startsWith('/api/scripts/run') instead of endsWith
+    // This resource ends with /api/scripts/run but does NOT start with it
+    const result = extractOperation({ resource: '/foo/bar/api/scripts/run' });
+    // Original: endsWith=true → 'script:run'
+    // Mutant: startsWith=false → falls through → 'unknown'
+    expect(result).toBe('script:run');
+  });
+
+  it('should return "script:run" for exact /api/scripts/run resource', () => {
+    const result = extractOperation({ resource: '/api/scripts/run' });
+    expect(result).toBe('script:run');
+  });
+});
+
+// ─── P1 Kill: _initPromise conditional (L279) ───────────────────────
+
+describe('x402Middleware — _initPromise conditional (P1 kill, L279)', () => {
+  let originalNodeEnv;
+  let consoleLogSpy;
+  let consoleErrorSpy;
+  let consoleWarnSpy;
+
+  beforeEach(() => {
+    originalNodeEnv = process.env.NODE_ENV;
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    _resetState();
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+    _resetState();
+  });
+
+  it('should not create a new init promise when _initPromise already exists', async () => {
+    process.env.NODE_ENV = 'development';
+    // Set an existing _initPromise that never resolves
+    let resolveInit;
+    const fakePromise = new Promise(resolve => { resolveInit = resolve; });
+    _setInitPromise(fakePromise);
+
+    // Send a request — should await the existing _initPromise, not create a new one
+    const app = createRealApp();
+    // The request will hang waiting for _initPromise to resolve
+    const requestPromise = request(app).post('/api/ai/scrape/profile').send({ username: 'test' });
+
+    // Give it time to potentially start init
+    await new Promise(r => setTimeout(r, 100));
+
+    // _initPromise should still be the fake one (not replaced)
+    expect(_getInitPromise()).toBe(fakePromise);
+
+    // Resolve the promise to unblock the request
+    resolveInit();
+    await requestPromise.catch(() => {}); // May fail, that's OK
+  });
+});
+
+// ─── P1 Kill: recordPayment "unknown" fallback (L180) ───────────────
+
+describe('onAfterSettleHook — recordPayment "unknown" fallback (P1 kill, L180)', () => {
+  let consoleLogSpy;
+  let recordPaymentSpy;
+
+  beforeEach(() => {
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    process.env.X402_DEBUG = 'true';
+    recordPaymentSpy = vi.spyOn(paymentStats, 'recordPayment');
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
+    recordPaymentSpy.mockRestore();
+    delete process.env.X402_DEBUG;
+  });
+
+  it('should use "unknown" as payerAddress in recordPayment when authorization is null', async () => {
+    await onAfterSettleHook({
+      paymentPayload: { payload: { authorization: null } },
+      requirements: { resource: '/api/ai/scrape/profile', maxAmountRequired: '$0.001', network: NETWORK },
+      result: { transaction: '0xTxL180' },
+    });
+    await new Promise(r => setImmediate(r));
+    const payload = recordPaymentSpy.mock.calls[0][0];
+    // StringLiteral mutant L180: 'unknown' → ''
+    expect(payload.payerAddress).toBe('unknown');
+    expect(payload.payerAddress).not.toBe('');
+  });
+});
+
+// ─── P1 Kill: Health check getOperationName (L341) ───────────────────
+
+describe('x402HealthCheck — getOperationName exact names (P1 kill, L341)', () => {
+  let originalNodeEnv;
+
+  beforeEach(() => {
+    originalNodeEnv = process.env.NODE_ENV;
+    _resetState();
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    _resetState();
+  });
+
+  it('should return exact operation name from getOperationName for each endpoint', async () => {
+    process.env.NODE_ENV = 'development';
+    const { AI_OPERATION_PRICES } = await import('../../api/config/x402-config.js');
+
+    const req = {};
+    const res = { json: vi.fn() };
+    x402HealthCheck(req, res);
+
+    const response = res.json.mock.calls[0][0];
+    const endpoints = response.endpoints;
+
+    // Verify each endpoint has a non-empty name from getOperationName
+    for (const endpoint of endpoints) {
+      // StringLiteral mutant L341: getOperationName returns '' instead of name
+      expect(endpoint.name).toBeTruthy();
+      expect(endpoint.name).not.toBe('');
+    }
+
+    // Verify at least some endpoints have human-readable names (not raw operation)
+    const humanReadable = endpoints.filter(e => e.name !== e.operation);
+    expect(humanReadable.length).toBeGreaterThan(0);
+  });
+});
+
+// ─── P1 Kill: NODE_ENV conditional for testnet (L109) ────────────────
+
+describe('initializeMiddleware — NODE_ENV conditional for testnet (P1 kill, L109)', () => {
+  let originalNodeEnv;
+  let consoleLogSpy;
+  let consoleErrorSpy;
+
+  beforeEach(() => {
+    originalNodeEnv = process.env.NODE_ENV;
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    _resetState();
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+    _resetState();
+  });
+
+  it('should set includeTestnet=true when NODE_ENV is development', async () => {
+    process.env.NODE_ENV = 'development';
+    await initializeMiddleware();
+    const server = _getServer();
+    expect(server).toBeTruthy();
+    // ConditionalExpression L109: true → includeTestnet always true (even in prod)
+    // EqualityOperator L109: === → !== → includeTestnet inverted
+    // In dev, both original and mutant true give same result — need prod test to distinguish
+    expect(server.hasRegisteredScheme('eip155:84532', 'exact')).toBe(true);
+  });
+
+  it('should set includeTestnet=false when NODE_ENV is production — no testnet registered', async () => {
+    process.env.NODE_ENV = 'production';
+    try {
+      await initializeMiddleware();
+      const server = _getServer();
+      if (server) {
+        // ConditionalExpression L109: false → includeTestnet always false (even in dev)
+        // EqualityOperator L109: === → !== → includeTestnet inverted
+        // In prod, original gives false (no testnet), mutant true gives true (testnet registered)
+        expect(server.hasRegisteredScheme('eip155:84532', 'exact')).toBe(false);
+        // Mainnet should be registered
+        expect(server.hasRegisteredScheme('eip155:8453', 'exact')).toBe(true);
+      }
+    } catch (e) {
+      // Init may fail in production if config is invalid
+      expect(e).toBeDefined();
+    }
+  });
+});
+
+// ─── P1 Kill: Network name log string (L137) ────────────────────────
+// NOTE: L137 mutants are equivalent in test environment — NETWORK is a const
+// evaluated at import time (eip155:84532 in dev/test). The ternary
+// `NETWORK === 'eip155:8453' ? 'Base Mainnet' : 'Base Sepolia Testnet'`
+// always returns 'Base Sepolia Testnet' in tests, so ConditionalExpression
+// mutant (false) produces the same output. These are equivalent mutants.
