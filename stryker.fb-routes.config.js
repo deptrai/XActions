@@ -21,6 +21,7 @@ export default {
   testFiles: [
     'tests/api/facebook-accounts.test.js',
     'tests/api/facebook-automate-routes.test.js',
+    'tests/api/facebook-routes-integration.test.js',
     'tests/e2e/api-facebook.test.js',
   ],
   reporters: ['clear-text', 'html', 'json'],

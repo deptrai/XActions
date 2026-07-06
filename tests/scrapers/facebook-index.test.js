@@ -10,6 +10,10 @@ import {
   generateTotp,
   loginWithCookie,
   scrapeProfile,
+  scrapeFollowers,
+  scrapeTweets,
+  searchTweets,
+  scrapeGroupMembers,
 } from '../../src/scrapers/facebook/index.js';
 import { makeFakePage } from '../helpers/fake-page.js';
 
@@ -78,6 +82,45 @@ describe('normalizeHandle (P1 kill)', () => {
 
   it('profile.php case insensitive (L103: /i flag)', () => {
     expect(normalizeHandle('PROFILE.PHP?id=123')).toBe('PROFILE.PHP?id=123');
+  });
+
+  it('strips ALL @ when regex mutant removes anchor (L102: /^@/ vs /@/)', () => {
+    // Regex mutant L102: /^@/ → /@/ (no anchor) → strips ALL @ signs
+    // Original: only strips leading @ → '@zuck'
+    // Mutant: strips all @ → 'zuck'
+    expect(normalizeHandle('@@zuck')).toBe('@zuck');
+  });
+
+  it('profile.php with multi-digit id — regex \\d+ not \\d (L103, L105)', () => {
+    // Regex mutant L103/L105: \d+ → \d (1 digit only)
+    // Original: match 'profile.php?id=123456' → handle = 'profile.php?id=123456'
+    // Mutant: match 'profile.php?id=1' → handle = 'profile.php?id=1'
+    expect(normalizeHandle('profile.php?id=123456')).toBe('profile.php?id=123456');
+  });
+
+  it('https URL with www — regex (www\\.)? optional (L100)', () => {
+    // Regex mutant L100: (www\\.)? removed → 'www.' not stripped
+    expect(normalizeHandle('https://www.facebook.com/zuck')).toBe('zuck');
+  });
+
+  it('https URL without www — regex (www\\.)? matches 0 (L100)', () => {
+    expect(normalizeHandle('https://facebook.com/zuck')).toBe('zuck');
+  });
+
+  it('http URL with www — regex protocol + www (L100)', () => {
+    expect(normalizeHandle('http://www.facebook.com/zuck')).toBe('zuck');
+  });
+
+  it('URL with subpath after handle — split on / (L108)', () => {
+    expect(normalizeHandle('https://facebook.com/zuck/photos/all')).toBe('zuck');
+  });
+
+  it('URL with query params — split on ? (L108)', () => {
+    expect(normalizeHandle('https://facebook.com/zuck?ref=foo&bar=baz')).toBe('zuck');
+  });
+
+  it('profile.php with trailing params — match only id (L105-106)', () => {
+    expect(normalizeHandle('profile.php?id=999&ref=foo')).toBe('profile.php?id=999');
   });
 });
 
@@ -600,3 +643,506 @@ describe('scrapeProfile (P1 kill, fake page)', () => {
     expect(page.calls.goto[0].url).toBe('https://www.facebook.com/test');
   });
 });
+
+// ============================================================================
+// scrapeFollowers (L491-570) — fake page with scroll loop
+// ============================================================================
+
+describe('scrapeFollowers (P1 kill, fake page)', () => {
+  const delay = vi.fn(async () => {});
+
+  it('returns note when follower list not publicly exposed (L511-517)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem')) return 0; // exposedCount = 0
+      return [];
+    };
+    const result = await scrapeFollowers(page, 'testuser', { delay });
+    expect(result.note).toMatch(/not publicly exposed/);
+    expect(result.platform).toBe('facebook');
+    expect(result.username).toBe('testuser');
+  });
+
+  it('navigates to /followers URL for vanity handle (L498)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem') && fnStr.includes('length')) return 0;
+      return [];
+    };
+    await scrapeFollowers(page, 'testuser', { delay });
+    expect(page.calls.goto[0].url).toBe('https://www.facebook.com/testuser/followers');
+  });
+
+  it('navigates to &sk=followers URL for profile.php (L496-497)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem') && fnStr.includes('length')) return 0;
+      return [];
+    };
+    await scrapeFollowers(page, 'profile.php?id=123', { delay });
+    expect(page.calls.goto[0].url).toBe('https://www.facebook.com/profile.php?id=123&sk=followers');
+  });
+
+  it('scrapes followers from listitem rows (L522-553)', async () => {
+    const fakeFollowers = [
+      { id: 'https://facebook.com/alice', name: 'Alice', username: 'alice', url: 'https://facebook.com/alice' },
+      { id: 'https://facebook.com/bob', name: 'Bob', username: 'bob', url: 'https://facebook.com/bob' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem') && fnStr.includes('length') && callCount === 0) {
+        callCount++;
+        return 2; // exposedCount > 0
+      }
+      // Subsequent calls: return follower rows, then empty (to stop scroll loop)
+      if (callCount === 1) { callCount++; return fakeFollowers; }
+      return []; // no more new followers → retries increment → stop
+    };
+    const result = await scrapeFollowers(page, 'testuser', { delay, limit: 10, maxRetries: 2 });
+    expect(result).toHaveLength(2);
+    expect(result[0].name).toBe('Alice');
+    expect(result[1].name).toBe('Bob');
+    expect(result[0].platform).toBe('facebook');
+  });
+
+  it('deduplicates followers by id (L555-560)', async () => {
+    const dupFollowers = [
+      { id: 'https://facebook.com/alice', name: 'Alice', username: 'alice', url: 'https://facebook.com/alice' },
+      { id: 'https://facebook.com/alice', name: 'Alice 2', username: 'alice', url: 'https://facebook.com/alice' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem') && fnStr.includes('length') && callCount === 0) {
+        callCount++;
+        return 2;
+      }
+      if (callCount === 1) { callCount++; return dupFollowers; }
+      return [];
+    };
+    const result = await scrapeFollowers(page, 'testuser', { delay, limit: 10, maxRetries: 2 });
+    expect(result).toHaveLength(1); // deduped
+    expect(result[0].name).toBe('Alice');
+  });
+
+  it('calls onProgress with scraped count and limit (L562)', async () => {
+    const onProgress = vi.fn();
+    const fakeFollowers = [
+      { id: 'https://facebook.com/alice', name: 'Alice', username: 'alice', url: 'https://facebook.com/alice' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem') && fnStr.includes('length') && callCount === 0) {
+        callCount++;
+        return 1;
+      }
+      if (callCount === 1) { callCount++; return fakeFollowers; }
+      return [];
+    };
+    await scrapeFollowers(page, 'testuser', { delay, limit: 10, maxRetries: 2, onProgress });
+    expect(onProgress).toHaveBeenCalled();
+    expect(onProgress.mock.calls[0][0]).toMatchObject({ scraped: 1, limit: 10 });
+  });
+
+  it('stops at limit (L522: followers.size < limit)', async () => {
+    const fakeFollowers = [
+      { id: 'https://facebook.com/alice', name: 'Alice', username: 'alice', url: 'https://facebook.com/alice' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem') && fnStr.includes('length') && callCount === 0) {
+        callCount++;
+        return 1;
+      }
+      return fakeFollowers;
+    };
+    const result = await scrapeFollowers(page, 'testuser', { delay, limit: 1, maxRetries: 5 });
+    expect(result).toHaveLength(1);
+  });
+});
+
+// ============================================================================
+// scrapeTweets (L585-664) — fake page with scroll loop
+// ============================================================================
+
+describe('scrapeTweets (P1 kill, fake page)', () => {
+  const delay = vi.fn(async () => {});
+
+  it('navigates to profile URL (L595-597)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => [];
+    await scrapeTweets(page, 'testuser', { delay, maxRetries: 1 });
+    expect(page.calls.goto[0].url).toBe('https://www.facebook.com/testuser');
+  });
+
+  it('scrapes posts from [role=article] elements (L604-642)', async () => {
+    const fakePosts = [
+      {
+        id: 'https://facebook.com/post/1',
+        text: 'Hello world this is a test post',
+        timestamp: '2026-01-01',
+        likes: '5',
+        comments: '2',
+        postUrl: 'https://facebook.com/post/1',
+        images: [],
+        hasVideo: false,
+      },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('article') && callCount === 0) {
+        callCount++;
+        return fakePosts;
+      }
+      return []; // no more → retries increment
+    };
+    const result = await scrapeTweets(page, 'testuser', { delay, limit: 10, maxRetries: 2 });
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toBe('Hello world this is a test post');
+    expect(result[0].platform).toBe('facebook');
+  });
+
+  it('deduplicates posts by id (L644-649)', async () => {
+    const dupPosts = [
+      { id: 'https://facebook.com/post/1', text: 'Post 1 text here', timestamp: null, likes: '0', comments: '0', postUrl: 'https://facebook.com/post/1', images: [], hasVideo: false },
+      { id: 'https://facebook.com/post/1', text: 'Post 1 text here', timestamp: null, likes: '0', comments: '0', postUrl: 'https://facebook.com/post/1', images: [], hasVideo: false },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('article') && callCount === 0) {
+        callCount++;
+        return dupPosts;
+      }
+      return [];
+    };
+    const result = await scrapeTweets(page, 'testuser', { delay, limit: 10, maxRetries: 2 });
+    expect(result).toHaveLength(1);
+  });
+
+  it('calls onProgress (L651)', async () => {
+    const onProgress = vi.fn();
+    const fakePosts = [
+      { id: 'https://facebook.com/post/1', text: 'Post text here for testing', timestamp: null, likes: '0', comments: '0', postUrl: 'https://facebook.com/post/1', images: [], hasVideo: false },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('article') && callCount === 0) {
+        callCount++;
+        return fakePosts;
+      }
+      return [];
+    };
+    await scrapeTweets(page, 'testuser', { delay, limit: 10, maxRetries: 2, onProgress });
+    expect(onProgress).toHaveBeenCalled();
+  });
+
+  it('stops at limit (L603: posts.size < limit)', async () => {
+    const fakePosts = [
+      { id: 'https://facebook.com/post/1', text: 'Post text here for testing', timestamp: null, likes: '0', comments: '0', postUrl: 'https://facebook.com/post/1', images: [], hasVideo: false },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('article') && callCount === 0) {
+        callCount++;
+        return fakePosts;
+      }
+      return fakePosts;
+    };
+    const result = await scrapeTweets(page, 'testuser', { delay, limit: 1, maxRetries: 5 });
+    expect(result).toHaveLength(1);
+  });
+
+  it('increments retries when no new posts (L653-657)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => []; // always empty
+    const result = await scrapeTweets(page, 'testuser', { delay, limit: 10, maxRetries: 2 });
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ============================================================================
+// searchTweets (L702-779) — fake page with scroll loop
+// ============================================================================
+
+describe('searchTweets (P1 kill, fake page)', () => {
+  const delay = vi.fn(async () => {});
+
+  it('navigates to search URL with encoded query (L704-706)', async () => {
+    const page = makeFakePage();
+    page.evaluate = async () => [];
+    await searchTweets(page, 'test query', { delay, maxRetries: 1 });
+    expect(page.calls.goto[0].url).toContain('/search/posts');
+    expect(page.calls.goto[0].url).toContain('q=test%20query');
+  });
+
+  it('scrapes search results from [role=article] (L713-762)', async () => {
+    const fakeResults = [
+      {
+        id: 'https://facebook.com/post/1',
+        text: 'This is a search result about testing',
+        author: 'testuser',
+        timestamp: '2026-01-01',
+        url: 'https://facebook.com/post/1',
+      },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('article') && callCount === 0) {
+        callCount++;
+        return fakeResults;
+      }
+      return [];
+    };
+    const result = await searchTweets(page, 'testing', { delay, limit: 10, maxRetries: 2 });
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toBe('This is a search result about testing');
+    expect(result[0].platform).toBe('facebook');
+  });
+
+  it('deduplicates results by id (L764-769)', async () => {
+    const dupResults = [
+      { id: 'https://facebook.com/post/1', text: 'Search result text here', author: 'user1', timestamp: null, url: 'https://facebook.com/post/1' },
+      { id: 'https://facebook.com/post/1', text: 'Search result text here', author: 'user1', timestamp: null, url: 'https://facebook.com/post/1' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('article') && callCount === 0) {
+        callCount++;
+        return dupResults;
+      }
+      return [];
+    };
+    const result = await searchTweets(page, 'test', { delay, limit: 10, maxRetries: 2 });
+    expect(result).toHaveLength(1);
+  });
+
+  it('calls onProgress (L771)', async () => {
+    const onProgress = vi.fn();
+    const fakeResults = [
+      { id: 'https://facebook.com/post/1', text: 'Search result text here', author: 'user1', timestamp: null, url: 'https://facebook.com/post/1' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('article') && callCount === 0) {
+        callCount++;
+        return fakeResults;
+      }
+      return [];
+    };
+    await searchTweets(page, 'test', { delay, limit: 10, maxRetries: 2, onProgress });
+    expect(onProgress).toHaveBeenCalled();
+  });
+
+  it('stops at limit (L712: results.size < limit)', async () => {
+    const fakeResults = [
+      { id: 'https://facebook.com/post/1', text: 'Search result text here', author: 'user1', timestamp: null, url: 'https://facebook.com/post/1' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('article') && callCount === 0) {
+        callCount++;
+        return fakeResults;
+      }
+      return fakeResults;
+    };
+    const result = await searchTweets(page, 'test', { delay, limit: 1, maxRetries: 5 });
+    expect(result).toHaveLength(1);
+  });
+});
+
+// ============================================================================
+// scrapeGroupMembers (L852-960) — fake page with scroll loop
+// ============================================================================
+
+describe('scrapeGroupMembers (P1 kill, fake page)', () => {
+  const delay = vi.fn(async () => {});
+
+  it('throws for invalid URL (L861: assertFacebookUrlLocal)', async () => {
+    const page = makeFakePage();
+    await expect(scrapeGroupMembers(page, 'not-a-url', { delay })).rejects.toThrow(/valid URL/);
+  });
+
+  it('throws for non-facebook URL (L804-806)', async () => {
+    const page = makeFakePage();
+    await expect(scrapeGroupMembers(page, 'https://evil.com/group', { delay })).rejects.toThrow(/facebook\.com/);
+  });
+
+  it('throws for empty URL (L789-790)', async () => {
+    const page = makeFakePage();
+    await expect(scrapeGroupMembers(page, '', { delay })).rejects.toThrow(/non-empty string/);
+  });
+
+  it('returns note when member list not accessible (L885-890)', async () => {
+    const page = makeFakePage();
+    page.waitForSelector = async () => { throw new Error('timeout'); };
+    const result = await scrapeGroupMembers(page, 'https://facebook.com/groups/123', { delay });
+    expect(result.note).toMatch(/not accessible/);
+    expect(result.platform).toBe('facebook');
+  });
+
+  it('navigates to /members URL (L864-865)', async () => {
+    const page = makeFakePage();
+    page.waitForSelector = async () => { throw new Error('timeout'); };
+    await scrapeGroupMembers(page, 'https://facebook.com/groups/123', { delay });
+    expect(page.calls.goto[0].url).toBe('https://facebook.com/groups/123/members');
+  });
+
+  it('strips trailing slash before appending /members (L864)', async () => {
+    const page = makeFakePage();
+    page.waitForSelector = async () => { throw new Error('timeout'); };
+    await scrapeGroupMembers(page, 'https://facebook.com/groups/123/', { delay });
+    expect(page.calls.goto[0].url).toBe('https://facebook.com/groups/123/members');
+  });
+
+  it('scrapes members from listitem rows (L900-938)', async () => {
+    const fakeMembers = [
+      { name: 'Alice', username: 'alice', profileUrl: 'https://facebook.com/alice' },
+      { name: 'Bob', username: 'bob', profileUrl: 'https://facebook.com/bob' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.waitForSelector = async () => makeElementHandleStub();
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem') && callCount === 0) {
+        callCount++;
+        return fakeMembers;
+      }
+      return [];
+    };
+    const result = await scrapeGroupMembers(page, 'https://facebook.com/groups/123', {
+      delay, limit: 10, maxStalls: 2,
+    });
+    expect(result).toHaveLength(2);
+    expect(result[0].name).toBe('Alice');
+    expect(result[0].platform).toBe('facebook');
+  });
+
+  it('deduplicates members by profileUrl (L940-944)', async () => {
+    const dupMembers = [
+      { name: 'Alice', username: 'alice', profileUrl: 'https://facebook.com/alice' },
+      { name: 'Alice 2', username: 'alice', profileUrl: 'https://facebook.com/alice' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.waitForSelector = async () => makeElementHandleStub();
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem') && callCount === 0) {
+        callCount++;
+        return dupMembers;
+      }
+      return [];
+    };
+    const result = await scrapeGroupMembers(page, 'https://facebook.com/groups/123', {
+      delay, limit: 10, maxStalls: 2,
+    });
+    expect(result).toHaveLength(1);
+  });
+
+  it('stops at limit (L944: members.size >= limit)', async () => {
+    const fakeMembers = [
+      { name: 'Alice', username: 'alice', profileUrl: 'https://facebook.com/alice' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.waitForSelector = async () => makeElementHandleStub();
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem') && callCount === 0) {
+        callCount++;
+        return fakeMembers;
+      }
+      return fakeMembers;
+    };
+    const result = await scrapeGroupMembers(page, 'https://facebook.com/groups/123', {
+      delay, limit: 1, maxStalls: 5,
+    });
+    expect(result).toHaveLength(1);
+  });
+
+  it('increments stalls when no new members (L949-953)', async () => {
+    const page = makeFakePage();
+    page.waitForSelector = async () => makeElementHandleStub();
+    page.evaluate = async () => [];
+    const result = await scrapeGroupMembers(page, 'https://facebook.com/groups/123', {
+      delay, limit: 10, maxStalls: 2,
+    });
+    expect(result).toHaveLength(0);
+  });
+
+  it('calls onProgress (L947)', async () => {
+    const onProgress = vi.fn();
+    const fakeMembers = [
+      { name: 'Alice', username: 'alice', profileUrl: 'https://facebook.com/alice' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.waitForSelector = async () => makeElementHandleStub();
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem') && callCount === 0) {
+        callCount++;
+        return fakeMembers;
+      }
+      return [];
+    };
+    await scrapeGroupMembers(page, 'https://facebook.com/groups/123', {
+      delay, limit: 10, maxStalls: 2, onProgress,
+    });
+    expect(onProgress).toHaveBeenCalled();
+  });
+
+  it('strips PII (phone/email) from member names (L814-818, L828)', async () => {
+    const fakeMembers = [
+      { name: 'Alice call +1-555-123-4567', username: 'alice', profileUrl: 'https://facebook.com/alice' },
+    ];
+    const page = makeFakePage();
+    let callCount = 0;
+    page.waitForSelector = async () => makeElementHandleStub();
+    page.evaluate = async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('listitem') && callCount === 0) {
+        callCount++;
+        return fakeMembers;
+      }
+      return [];
+    };
+    const result = await scrapeGroupMembers(page, 'https://facebook.com/groups/123', {
+      delay, limit: 10, maxStalls: 2,
+    });
+    expect(result[0].name).not.toContain('555');
+    expect(result[0].name).not.toContain('+1');
+  });
+});
+
+// Helper for scrapeGroupMembers tests
+function makeElementHandleStub() {
+  return { click: async () => {}, type: async () => {}, getAttribute: () => null, textContent: '' };
+}
