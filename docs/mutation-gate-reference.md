@@ -68,26 +68,28 @@ Add to CI (e.g., `.github/workflows/quality.yml`):
   # Stryker exits non-zero if score < break threshold (60)
 ```
 
-## Facebook Modules Mutation Scores (Round 2 — 2026-07-06)
+## Facebook Modules Mutation Scores (Round 3 — 2026-07-06)
 
-| Module | Config | Total % | Covered % | Survived | NoCoverage | Notes |
-|--------|--------|---------|-----------|----------|------------|-------|
-| `facebookScheduler.js` | `stryker.fb-scheduler.config.js` | 75.34% | 91.67% | 15 | 39 | Pass threshold |
-| `facebookAccounts.js` | `stryker.fb-routes.config.js` | 32.54% | 97.14% | 2 | 139 | 3 equivalent disabled |
-| `facebook.js` | `stryker.fb-routes.config.js` | 0.00% | 0.00% | 0 | 650 | Auth middleware blocks tests |
-| `graphql.js` | `stryker.fb-scrapers.config.js` | 62.88% | 70.94% | 59 | 26 | Pass threshold |
-| `index.js` | `stryker.fb-scrapers.config.js` | 39.75% | 78.12% | 107 | 472 | Browser functions NoCov |
-| `messengerQueue.js` | `stryker.fb-scrapers.config.js` | 98.15% | 98.15% | 1 | 0 | 1 equivalent |
-| `messengerShare.js` | `stryker.fb-scrapers.config.js` | 41.50% | 76.80% | 45 | 165 | Browser functions NoCov |
-| `proxy.js` | `stryker.fb-scrapers.config.js` | 65.22% | 73.94% | 37 | 19 | Pass threshold |
-| `facebookAutomation.js` | `stryker.fb-automation.config.js` | 46.73% | 78.19% | 227 | 701 | Browser functions NoCov |
+| Module | Config | Total % | Covered % | Survived | NoCoverage | Δ from R1 | Notes |
+|--------|--------|---------|-----------|----------|------------|-----------|-------|
+| `facebookScheduler.js` | `stryker.fb-scheduler.config.js` | 71.74% | 85.71% | 22 | 30 | +22% | Pass threshold |
+| `facebookAccounts.js` | `stryker.fb-routes.config.js` | 32.54% | 97.14% | 2 | 139 | +6% | 3 equivalent disabled |
+| `facebook.js` | `stryker.fb-routes.config.js` | 24.39% | 86.88% | 21 | 410 | +24% | Integration tests bypass auth |
+| `graphql.js` | `stryker.fb-scrapers.config.js` | **82.10%** | 90.82% | 19 | 22 | +41% | Pass threshold 🎉 |
+| `index.js` | `stryker.fb-scrapers.config.js` | 40.79% | 80.16% | 97 | 472 | +3% | Browser functions NoCov |
+| `messengerQueue.js` | `stryker.fb-scrapers.config.js` | **98.15%** | 98.15% | 1 | 0 | +4% | 1 equivalent |
+| `messengerShare.js` | `stryker.fb-scrapers.config.js` | 41.50% | 76.80% | 45 | 165 | +11% | Browser functions NoCov |
+| `proxy.js` | `stryker.fb-scrapers.config.js` | **75.16%** | 85.21% | 21 | 19 | +35% | Pass threshold 🎉 |
+| `facebookAutomation.js` | `stryker.fb-automation.config.js` | 47.47% | 79.44% | 214 | 701 | +1% | Browser functions NoCov |
 
 ### Key findings
-- **Covered score** (killed / (killed + survived)) is high across all modules (73-98%)
+- **Covered score** (killed / (killed + survived)) is high across all modules (76-98%)
+- **3 modules pass threshold 60%**: graphql.js (82%), messengerQueue.js (98%), proxy.js (75%), facebookScheduler.js (72%)
 - **NoCoverage** is the primary score drag — browser automation functions (page.evaluate, page.keyboard, page.goto) require Puppeteer page objects
 - **Equivalent mutants** marked with `// Stryker disable next-line MutatorName: reason` comments
 - **Fake page helper** at `tests/helpers/fake-page.js` provides configurable DI for browser functions
 - **Integration tests** at `tests/api/facebook-routes-integration.test.js` bypass auth with real DB user + JWT
+- **Test counts**: graphql 118, proxy 99, messengerShare 66, index 111, automation-batch 88, scheduler 43
 
 ## Common Stryker Failures & Fixes
 
