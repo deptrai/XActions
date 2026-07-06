@@ -1,0 +1,116 @@
+{
+  "schema_version": "0.1.0",
+  "snapshot_at": "2026-07-06T03:20:00Z",
+  "repo": "XActions",
+  "collection_mode": "formal_requirements",
+  "collection_status": "COLLECTED",
+  "inventory_basis": "acceptance_criteria",
+  "gate_basis": "priority_thresholds",
+  "source_sha": "",
+  "target": {
+    "type": "module",
+    "id": "x402-middleware",
+    "label": "x402 Payment Middleware"
+  },
+  "decision_mode": "automated",
+  "evaluator": "Luisphan",
+  "confidence": "high",
+  "oracle": {
+    "resolution_mode": "formal_requirements",
+    "confidence": "high",
+    "sources": [
+      "_bmad-output/test-artifacts/atdd-checklist-x402-middleware.md",
+      "api/middleware/x402.js",
+      "api/config/x402-config.js",
+      "_bmad-output/test-artifacts/mutation-x402-middleware-20260706T021434Z.json"
+    ],
+    "external_pointer_status": "not_used",
+    "synthetic": false
+  },
+  "gate_status": "PASS",
+  "gate_criteria": {
+    "p0_coverage_required": "100%",
+    "p0_coverage_actual": "100%",
+    "p0_status": "MET",
+    "p1_coverage_target": "90%",
+    "p1_coverage_minimum": "80%",
+    "p1_coverage_actual": "96%",
+    "p1_status": "MET",
+    "overall_coverage_minimum": "80%",
+    "overall_coverage_actual": "97%",
+    "overall_status": "MET"
+  },
+  "rationale": "P0 coverage is 100%, P1 coverage is 96%, overall coverage is 97%. All P0 requirements now have FULL coverage after adding tests for R-25 (concurrent requests during init) and R-26 (_initPromise cleanup). Mutation gate passed with 0 P0 survived.",
+  "coverage": {
+    "inventory": {
+      "covered": 99,
+      "total": 102,
+      "pct": 97
+    },
+    "priority_breakdown": {
+      "P0": { "total": 48, "covered": 48, "pct": 100 },
+      "P1": { "total": 48, "covered": 46, "pct": 96 },
+      "P2": { "total": 6, "covered": 5, "pct": 83 },
+      "P3": { "total": 0, "covered": 0, "pct": 100 }
+    },
+    "by_level": {
+      "unit": { "tests": 147, "criteria_covered": 65 },
+      "integration": { "tests": 81, "criteria_covered": 37 },
+      "e2e": { "tests": 0, "criteria_covered": 0 },
+      "api": { "tests": 0, "criteria_covered": 0 },
+      "component": { "tests": 0, "criteria_covered": 0 },
+      "other": { "tests": 0, "criteria_covered": 0 }
+    }
+  },
+  "tests": {
+    "files": 1,
+    "cases": 228,
+    "skipped_cases": 0,
+    "fixme_cases": 0,
+    "pending_cases": 0
+  },
+  "risk_summary": {
+    "critical_open": 0,
+    "high_open": 0,
+    "medium_open": 0,
+    "low_open": 0
+  },
+  "heuristics": {
+    "endpoint_gaps": 0,
+    "auth_negative_path_status": "present",
+    "error_path_status": "present",
+    "ui_journey_status": "not_applicable",
+    "ui_state_status": "not_applicable"
+  },
+  "mutation_testing": {
+    "verdict": "PASS_WITH_WARNINGS",
+    "mutation_score": 72.82,
+    "p0_survived": 0,
+    "p1_survived": 78,
+    "production_bug_found": true
+  },
+  "blockers": [],
+  "recommendations": [
+    {
+      "priority": "MEDIUM",
+      "action": "Complete coverage for 3 partially covered P1/P2 requirements (R-71, R-72, R-92)",
+      "requirements": ["R-71", "R-72", "R-92"]
+    },
+    {
+      "priority": "LOW",
+      "action": "Run bmad-testarch-test-review to assess test quality",
+      "requirements": []
+    },
+    {
+      "priority": "LOW",
+      "action": "Address 78 P1 mutation survived mutants as tech debt (OptionalChaining, ObjectLiteral, StringLiteral)",
+      "requirements": []
+    }
+  ],
+  "links": {
+    "trace_report_path": "_bmad-output/test-artifacts/traceability/traceability-matrix.md",
+    "trace_report_url": "",
+    "artifact_url": "",
+    "journey_evidence_url": ""
+  }
+}

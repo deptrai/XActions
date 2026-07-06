@@ -52,6 +52,9 @@
     "test:x402:all": "vitest run tests/x402*.test.js",
     "verify:x402": "node scripts/verify-x402.js",
     "test:payment": "node scripts/test-x402-payment.js",
+    "mutation": "stryker run",
+    "mutation:unfollowback": "stryker run stryker.unfollowback.config.js",
+    "mutation:x402": "stryker run stryker.x402-middleware.config.js",
     "audit": "node scripts/audit-console-errors.js",
     "audit:verbose": "node scripts/audit-console-errors.js --verbose",
     "deploy": "bash scripts/deploy.sh",
@@ -120,6 +123,8 @@
     "xspace-agent": "^0.1.0"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
     "jsdom": "^28.1.0",
     "marked": "^17.0.3",
     "nodemon": "^3.0.2",

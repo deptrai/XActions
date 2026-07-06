@@ -40,12 +40,16 @@ import {
 let _middleware = null;
 let _initPromise = null;
 let _initFailed = false;
+let _server = null; // Test access to x402 resource server (for hook testing)
 
 /**
  * Build route configuration for the official x402 middleware.
  * Maps each AI operation to its price, network, and payTo address.
+ *
+ * Route config format (per @x402/express SDK):
+ *   { "METHOD /path": { accepts: { scheme, price, network, payTo } } }
  */
-function buildRouteConfig() {
+export function buildRouteConfig() {
   const routes = {};
 
   for (const [operation, price] of Object.entries(AI_OPERATION_PRICES)) {
@@ -53,26 +57,35 @@ function buildRouteConfig() {
     const routePath = `POST /api/ai/${category}/${action}`;
 
     routes[routePath] = {
-      price,
-      network: NETWORK,
-      payTo: PAY_TO_ADDRESS,
+      accepts: {
+        scheme: 'exact',
+        price,
+        network: NETWORK,
+        payTo: PAY_TO_ADDRESS,
+      },
     };
   }
 
   // Script download routes
   for (const [scriptPath, price] of Object.entries(SCRIPT_PRICES)) {
     routes[`GET /api/scripts/${scriptPath}`] = {
-      price,
-      network: NETWORK,
-      payTo: PAY_TO_ADDRESS,
+      accepts: {
+        scheme: 'exact',
+        price,
+        network: NETWORK,
+        payTo: PAY_TO_ADDRESS,
+      },
     };
   }
 
   // Script run route — single endpoint, priced higher than download
   routes['POST /api/scripts/run'] = {
-    price: SCRIPT_RUN_PRICE,
-    network: NETWORK,
-    payTo: PAY_TO_ADDRESS,
+    accepts: {
+      scheme: 'exact',
+      price: SCRIPT_RUN_PRICE,
+      network: NETWORK,
+      payTo: PAY_TO_ADDRESS,
+    },
   };
 
   return routes;
@@ -82,7 +95,7 @@ function buildRouteConfig() {
  * Initialize the official @x402/express middleware with hooks for
  * XActions analytics, webhooks, and audit logging.
  */
-async function initializeMiddleware() {
+export async function initializeMiddleware() {
   const { paymentMiddleware } = await import('@x402/express');
   const { x402ResourceServer, HTTPFacilitatorClient } = await import('@x402/core/server');
   const { ExactEvmScheme } = await import('@x402/evm/exact/server');
@@ -92,6 +105,7 @@ async function initializeMiddleware() {
 
   // Create resource server and register the EVM scheme for the configured network
   const server = new x402ResourceServer(facilitator);
+  _server = server; // Store for test access
   const includeTestnet = process.env.NODE_ENV !== 'production';
   const networksToRegister = new Set([
     NETWORK,
@@ -107,81 +121,13 @@ async function initializeMiddleware() {
   }
 
   // Hook: after successful settlement — record analytics and send webhooks
-  server.onAfterSettle(async (context) => {
-    const { paymentPayload, requirements, result } = context;
-    const operation = extractOperation(requirements);
-    const price = requirements?.maxAmountRequired || requirements?.price || 'unknown';
-    const txHash = result?.transaction || result?.transactionHash || null;
-
-    const auditLog = {
-      timestamp: new Date().toISOString(),
-      operation,
-      price,
-      network: requirements?.network || NETWORK,
-      payTo: PAY_TO_ADDRESS,
-      settled: true,
-      txHash,
-    };
-
-    console.log(`💰 x402: Settled ${price} for ${operation}`);
-    if (process.env.X402_DEBUG === 'true') {
-      console.log(`   📝 Audit: ${JSON.stringify(auditLog)}`);
-    }
-
-    // Emit realtime event
-    if (global.io) {
-      global.io.emit('x402:payment', auditLog);
-    }
-
-    // Record for analytics
-    recordPayment({
-      operation,
-      price,
-      network: requirements?.network || NETWORK,
-      paymentId: txHash,
-      payerAddress: paymentPayload?.payload?.authorization?.from || 'unknown',
-    });
-
-    // Send webhook (non-blocking)
-    notifyPaymentSettled({
-      price,
-      operation,
-      payerAddress: paymentPayload?.payload?.authorization?.from || 'unknown',
-      network: requirements?.network || NETWORK,
-      transactionHash: txHash,
-    }, txHash).catch(() => {});
-  });
+  server.onAfterSettle(onAfterSettleHook);
 
   // Hook: settlement failure — log and notify
-  server.onSettleFailure(async (context) => {
-    const { paymentPayload, requirements, error } = context;
-    const operation = extractOperation(requirements);
-    const price = requirements?.maxAmountRequired || requirements?.price || 'unknown';
-
-    console.error(`🚨 x402: Settlement FAILED for ${operation}: ${error?.message || error}`);
-
-    notifyPaymentFailed({
-      price,
-      operation,
-      payerAddress: paymentPayload?.payload?.authorization?.from || 'unknown',
-      network: requirements?.network || NETWORK,
-    }, error?.message || 'Settlement failed').catch(() => {});
-  });
+  server.onSettleFailure(onSettleFailureHook);
 
   // Hook: verification failure — log for monitoring
-  server.onVerifyFailure(async (context) => {
-    const { paymentPayload, requirements, error } = context;
-    const operation = extractOperation(requirements);
-
-    console.warn(`⚠️  x402: Verification failed for ${operation}: ${error?.message || error}`);
-
-    notifyPaymentFailed({
-      price: requirements?.maxAmountRequired || 'unknown',
-      operation,
-      payerAddress: paymentPayload?.payload?.authorization?.from || 'unknown',
-      network: requirements?.network || NETWORK,
-    }, `Verification failed: ${error?.message || error}`).catch(() => {});
-  });
+  server.onVerifyFailure(onVerifyFailureHook);
 
   // Build routes and create the official middleware
   const routes = buildRouteConfig();
@@ -196,9 +142,95 @@ async function initializeMiddleware() {
 }
 
 /**
+ * Hook: after successful settlement — record analytics and send webhooks.
+ * Exported for direct testing.
+ */
+export async function onAfterSettleHook(context) {
+  const { paymentPayload, requirements, result } = context;
+  const operation = extractOperation(requirements);
+  const price = requirements?.maxAmountRequired || requirements?.price || 'unknown';
+  const txHash = result?.transaction || result?.transactionHash || null;
+
+  const auditLog = {
+    timestamp: new Date().toISOString(),
+    operation,
+    price,
+    network: requirements?.network || NETWORK,
+    payTo: PAY_TO_ADDRESS,
+    settled: true,
+    txHash,
+  };
+
+  console.log(`💰 x402: Settled ${price} for ${operation}`);
+  if (process.env.X402_DEBUG === 'true') {
+    console.log(`   📝 Audit: ${JSON.stringify(auditLog)}`);
+  }
+
+  // Emit realtime event
+  if (global.io) {
+    global.io.emit('x402:payment', auditLog);
+  }
+
+  // Record for analytics
+  recordPayment({
+    operation,
+    price,
+    network: requirements?.network || NETWORK,
+    paymentId: txHash,
+    payerAddress: paymentPayload?.payload?.authorization?.from || 'unknown',
+  });
+
+  // Send webhook (non-blocking)
+  notifyPaymentSettled({
+    price,
+    operation,
+    payerAddress: paymentPayload?.payload?.authorization?.from || 'unknown',
+    network: requirements?.network || NETWORK,
+    transactionHash: txHash,
+  }, txHash).catch(() => {});
+}
+
+/**
+ * Hook: settlement failure — log and notify.
+ * Exported for direct testing.
+ */
+export async function onSettleFailureHook(context) {
+  const { paymentPayload, requirements, error } = context;
+  const operation = extractOperation(requirements);
+  const price = requirements?.maxAmountRequired || requirements?.price || 'unknown';
+
+  console.error(`🚨 x402: Settlement FAILED for ${operation}: ${error?.message || error}`);
+
+  notifyPaymentFailed({
+    price,
+    operation,
+    payerAddress: paymentPayload?.payload?.authorization?.from || 'unknown',
+    network: requirements?.network || NETWORK,
+  }, error?.message || 'Settlement failed').catch(() => {});
+}
+
+/**
+ * Hook: verification failure — log for monitoring.
+ * Exported for direct testing.
+ */
+export async function onVerifyFailureHook(context) {
+  const { paymentPayload, requirements, error } = context;
+  const operation = extractOperation(requirements);
+
+  console.warn(`⚠️  x402: Verification failed for ${operation}: ${error?.message || error}`);
+
+  notifyPaymentFailed({
+    price: requirements?.maxAmountRequired || 'unknown',
+    operation,
+    payerAddress: paymentPayload?.payload?.authorization?.from || 'unknown',
+    network: requirements?.network || NETWORK,
+  }, `Verification failed: ${error?.message || error}`).catch(() => {});
+}
+
+/**
  * Extract operation name from payment requirements
  */
-function extractOperation(requirements) {
+export function extractOperation(requirements) {
   if (!requirements?.resource) return 'unknown';
   const aiMatch = requirements.resource.match(/\/api\/ai\/([^/]+)\/([^/?]+)/);
   if (aiMatch) return `${aiMatch[1]}:${aiMatch[2]}`;
@@ -340,3 +372,52 @@ export function x402Pricing(req, res) {
 }
 
 export default x402Middleware;
+
+/**
+ * Reset module-level state (for testing only).
+ * Clears _middleware, _initPromise, _initFailed.
+ */
+export function _resetState() {
+  _middleware = null;
+  _initPromise = null;
+  _initFailed = false;
+  _server = null;
+}
+
+/**
+ * Set the init-failed flag directly (for testing degradation paths).
+ * When true, the middleware will skip initialization and return 503 (prod)
+ * or pass through with a warning (dev).
+ */
+export function _setInitFailed(failed) {
+  _initFailed = failed;
+}
+
+/**
+ * Set the middleware directly (for testing delegation vs degradation).
+ */
+export function _setMiddleware(mw) {
+  _middleware = mw;
+}
+
+/**
+ * Get the current _initPromise (for testing concurrency and promise lifecycle).
+ */
+export function _getInitPromise() {
+  return _initPromise;
+}
+
+/**
+ * Set the _initPromise directly (for testing concurrency without real init).
+ */
+export function _setInitPromise(promise) {
+  _initPromise = promise;
+}
+
+/**
+ * Get the x402 resource server (for testing hooks).
+ * Available after initializeMiddleware() has been called.
+ */
+export function _getServer() {
+  return _server;
+}

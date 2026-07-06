@@ -1,0 +1,242 @@
+{
+  "dimension": "mutation-effectiveness",
+  "module": "x402-middleware",
+  "targetFile": "api/middleware/x402.js",
+  "testFile": "tests/x402-middleware-real.test.js",
+  "strykerConfig": "stryker.x402-middleware.config.js",
+  "timestamp": "2026-07-06T01:22:25Z",
+  "mutationScore": {
+    "total": 60.47,
+    "covered": 65.47,
+    "killed": 182,
+    "survived": 96,
+    "noCoverage": 23,
+    "timeout": 0,
+    "errors": 0,
+    "ignored": 1,
+    "totalMutants": 302
+  },
+  "triage": {
+    "p0": [
+      {
+        "id": "L188:17-LogicalOperator",
+        "location": "api/middleware/x402.js:188:17",
+        "mutator": "LogicalOperator",
+        "replacement": "requirements?.maxAmountRequired && requirements?.price && 'unknown'",
+        "original": "requirements?.maxAmountRequired || requirements?.price || 'unknown'",
+        "function": "onSettleFailureHook",
+        "pattern": 4,
+        "patternName": "Arithmetic Not Asserted",
+        "realBugIfLapsed": "Price sent to payment-failed webhook would be undefined/null instead of actual price. Billing analytics and webhook consumers would receive wrong price data for settlement failures.",
+        "criticalModule": true,
+        "whySurvived": "Test 'should use requirements.price when maxAmountRequired is missing' for onSettleFailureHook only asserts consoleErrorSpy.toHaveBeenCalled() — does not assert the price value appears in the error log or webhook payload.",
+        "recommendedTest": "should include actual price value in settlement failure error log and webhook payload when maxAmountRequired is set"
+      },
+      {
+        "id": "L211:12-LogicalOperator",
+        "location": "api/middleware/x402.js:211:12",
+        "mutator": "LogicalOperator",
+        "replacement": "requirements?.maxAmountRequired && 'unknown'",
+        "original": "requirements?.maxAmountRequired || 'unknown'",
+        "function": "onVerifyFailureHook",
+        "pattern": 4,
+        "patternName": "Arithmetic Not Asserted",
+        "realBugIfLapsed": "Price in verify-failed webhook payload would be 'unknown' instead of the actual maxAmountRequired. Billing system would lose price data for verification failures.",
+        "criticalModule": true,
+        "whySurvived": "No test asserts the price value in onVerifyFailureHook's webhook payload or log output.",
+        "recommendedTest": "should include actual maxAmountRequired price in verification failure webhook payload"
+      },
+      {
+        "id": "L239:25-MethodExpression",
+        "location": "api/middleware/x402.js:239:25",
+        "mutator": "MethodExpression",
+        "replacement": "req.path.endsWith('/api/scripts/run')",
+        "original": "req.path.startsWith('/api/scripts/')",
+        "function": "x402Middleware",
+        "pattern": 3,
+        "patternName": "Happy Path Only / Security Bypass",
+        "realBugIfLapsed": "Script endpoint paths like /api/scripts/foo would not be detected as paid paths, bypassing payment enforcement. Users could access paid script endpoints without paying.",
+        "criticalModule": true,
+        "whySurvived": "Test 'should NOT treat /api/scripts/foo as free' asserts next.mock.calls.length + res.status.mock.calls.length > 0, but next() is called as free pass-through when isScriptsPath is false, so the assertion passes either way.",
+        "recommendedTest": "should NOT call next() as free pass-through for /api/scripts/foo — must enter payment processing path, not skip as non-scripts path"
+      },
+      {
+        "id": "L266:7-ConditionalExpression-false",
+        "location": "api/middleware/x402.js:266:7",
+        "mutator": "ConditionalExpression",
+        "replacement": "false",
+        "original": "!_middleware && !_initFailed",
+        "function": "x402Middleware",
+        "pattern": 6,
+        "patternName": "Real-Service Not Executed",
+        "realBugIfLapsed": "Middleware would never initialize on first paid request. All paid requests would bypass payment or return 503.",
+        "criticalModule": true,
+        "whySurvived": "The @x402/express SDK throws TypeError during validateRouteConfiguration, so the middleware initialization path never succeeds in tests. The init promise rejects, _middleware stays null, and tests only verify the error/degradation paths.",
+        "recommendedTest": "should initialize x402 middleware on first paid request and delegate to @x402/express SDK for payment enforcement"
+      },
+      {
+        "id": "L269:21-BlockStatement",
+        "location": "api/middleware/x402.js:269:21",
+        "mutator": "BlockStatement",
+        "replacement": "{}",
+        "original": "_middleware = mw",
+        "function": "x402Middleware",
+        "pattern": 6,
+        "patternName": "Real-Service Not Executed",
+        "realBugIfLapsed": "Initialized middleware would not be stored. Every request would re-init or degrade, never delegating to the real payment processor.",
+        "criticalModule": true,
+        "whySurvived": "SDK init fails in test environment, so the .then(mw => { _middleware = mw }) callback is never reached.",
+        "recommendedTest": "should store initialized middleware in _middleware and reuse it for subsequent paid requests without re-initializing"
+      },
+      {
+        "id": "L280:7-BooleanLiteral",
+        "location": "api/middleware/x402.js:280:7",
+        "mutator": "BooleanLiteral",
+        "replacement": "false",
+        "original": "_middleware",
+        "function": "x402Middleware",
+        "pattern": 6,
+        "patternName": "Real-Service Not Executed",
+        "realBugIfLapsed": "if (!_middleware) becomes if (!false) = if (true) — always enters degradation path, never delegates to real middleware. All paid requests would return 503 or pass through without payment.",
+        "criticalModule": true,
+        "whySurvived": "SDK init fails in test environment, _middleware is always null, so the truthy-_middleware path is never tested.",
+        "recommendedTest": "should delegate to @x402/express middleware when _middleware is initialized, not return 503 or pass through"
+      },
+      {
+        "id": "L280:7-ConditionalExpression-true",
+        "location": "api/middleware/x402.js:280:7",
+        "mutator": "ConditionalExpression",
+        "replacement": "true",
+        "original": "!_middleware",
+        "function": "x402Middleware",
+        "pattern": 6,
+        "patternName": "Real-Service Not Executed",
+        "realBugIfLapsed": "if (!true) = if (false) — never enters degradation path. Would call _middleware(req,res,next) even when _middleware is null, causing a TypeError crash on every paid request after init failure.",
+        "criticalModule": true,
+        "whySurvived": "The null-_middleware path is tested but the assertion doesn't distinguish between 'next called' and 'res.status called' clearly enough to kill this mutant in all code paths.",
+        "recommendedTest": "should return 503 in production when _middleware is null after init failure, not crash with TypeError"
+      }
+    ],
+    "p1": [
+      {
+        "category": "buildRouteConfig ObjectLiteral/StringLiteral (6 mutants)",
+        "lines": [56, 64, 65, 73],
+        "pattern": 1,
+        "patternName": "Mirror Test",
+        "description": "Route object literals and string keys survived — tests check keys exist but don't verify values come from AI_OPERATION_PRICES/SCRIPT_PRICES with exact equality.",
+        "recommendedTest": "should set exact price value from AI_OPERATION_PRICES for each AI route (not just key existence)"
+      },
+      {
+        "category": "initializeMiddleware config ConditionalExpression (4 mutants)",
+        "lines": [97, 100, 125],
+        "pattern": 3,
+        "patternName": "Happy Path Only",
+        "description": "NODE_ENV !== 'production' conditional and network name log string survived — testnet/mainnet inclusion logic not asserted with both env values.",
+        "recommendedTest": "should register testnet networks only when NODE_ENV is development, and mainnet-only when production"
+      },
+      {
+        "category": "hooks OptionalChaining/ConditionalExpression (40+ mutants)",
+        "lines": [166, 168, 175, 176, 195, 196, 213, 214],
+        "pattern": 1,
+        "patternName": "Mirror Test",
+        "description": "Optional chaining operators (?.) survived because tests pass null/undefined but the assertion doesn't distinguish between ?. and . behavior when the value IS present.",
+        "recommendedTest": "should throw TypeError when paymentPayload.payload.authorization is null and optional chaining is removed (distinguishes ?. from .)"
+      },
+      {
+        "category": "hooks StringLiteral 'unknown' → '' (8 mutants)",
+        "lines": [168, 175, 188, 195, 211, 213],
+        "pattern": 5,
+        "patternName": "Error Msg Not Asserted",
+        "description": "Fallback string 'unknown' mutated to '' — tests don't assert the exact fallback value in log/webhook output.",
+        "recommendedTest": "should log 'unknown' as payerAddress when authorization.from is missing (exact string match)"
+      },
+      {
+        "category": "hooks ObjectLiteral webhook payload (3 mutants)",
+        "lines": [172, 192, 210],
+        "pattern": 1,
+        "patternName": "Mirror Test",
+        "description": "notifyPaymentFailed/notifyPaymentSettled payload object replaced with {} — tests don't assert webhook payload contents.",
+        "recommendedTest": "should call notifyPaymentSettled with payload containing exact price, operation, payerAddress, network, transactionHash"
+      },
+      {
+        "category": "x402HealthCheck/x402Pricing ConditionalExpression/OptionalChaining (15 mutants)",
+        "lines": [301, 309, 319, 320, 322, 323, 329, 346, 355, 357],
+        "pattern": 1,
+        "patternName": "Mirror Test",
+        "description": "Recommended network fallback, available flag, and network field optional chaining survived.",
+        "recommendedTest": "should return exact recommended network ID and name from getAcceptedNetworks, not a fallback"
+      },
+      {
+        "category": "extractOperation MethodExpression (1 mutant)",
+        "line": 225,
+        "pattern": 1,
+        "patternName": "Mirror Test",
+        "description": "startsWith('/api/scripts/run') → endsWith — operation extraction for script:run not asserted with exact string.",
+        "recommendedTest": "should return 'script:run' exactly when requirements.resource is '/api/scripts/run'"
+      },
+      {
+        "category": "x402Middleware free-endpoint StringLiteral (8 mutants)",
+        "lines": [248, 249, 250, 251],
+        "pattern": 1,
+        "patternName": "Mirror Test",
+        "description": "Free endpoint path strings mutated to '' — tests check next() is called but don't verify the specific path match.",
+        "recommendedTest": "should NOT call next() for /api/ai/health when path string is mutated to empty (verify exact path match)"
+      }
+    ],
+    "p2": [
+      {
+        "category": "Log message StringLiteral (3 mutants)",
+        "lines": [125, 215, 273],
+        "pattern": 5,
+        "patternName": "Error Msg Not Asserted",
+        "description": "Cosmetic log strings (network name in init log, error message in verify failure). No user-facing impact.",
+        "action": "ACCEPT — note as tech debt"
+      }
+    ]
+  },
+  "p0Count": 7,
+  "p1Count": 89,
+  "p2Count": 3,
+  "effectivenessScore": "FAIL",
+  "verdict": "FAIL",
+  "verdictReason": "Mutation score 60.47% is above 60% break threshold, BUT p0SurvivedCount=7 > 0. Per skill rules: 'A high mutation score with P0 survived is still FAIL — raw score is necessary but not sufficient.' The @x402/express SDK throws TypeError during validateRouteConfiguration in test environment, causing Pattern 6 (Real-Service Not Executed) for the entire middleware delegation path. Additionally, 2 Pattern 4 (Arithmetic Not Asserted) mutants survive in billing webhook price fields, and 1 Pattern 3 (Security Bypass) mutant survives in script path detection.",
+  "rootCauseAnalysis": {
+    "primary": "Pattern 6 — @x402/express SDK validateRouteConfiguration throws TypeError (Cannot read properties of undefined reading 'network') during initialization in test environment. This prevents the middleware from ever successfully initializing, so the delegation path (_middleware(req,res,next)) is never exercised. 4 P0 mutants are directly caused by this.",
+    "secondary": "Pattern 4 — onSettleFailureHook and onVerifyFailureHook tests assert that console.error/warn was called but do not assert the price value in the log message or webhook payload. 2 P0 mutants.",
+    "tertiary": "Pattern 3 — isScriptsPath detection test uses weak assertion (next.calls + res.status.calls > 0) that passes whether next() is called as free pass-through or after payment processing. 1 P0 mutant."
+  },
+  "recommendations": [
+    {
+      "priority": "P0",
+      "action": "Fix @x402/express SDK route config issue or mock the SDK initialization to return a working middleware function. Then write test: 'should delegate to @x402/express middleware when initialized, returning 402 for unpaid requests'. This kills 4 P0 mutants (L266, L269, L280 BooleanLiteral, L280 ConditionalExpression).",
+      "skill": "bmad-xactions-integration-test",
+      "reason": "Pattern 6 — real-service not executed. Integration test needed with working SDK or controlled SDK initialization."
+    },
+    {
+      "priority": "P0",
+      "action": "Add assertion to onSettleFailureHook test: 'should include actual price value in settlement failure error log' — assert console.error output contains '$0.001' when maxAmountRequired is set. This kills L188 LogicalOperator mutant.",
+      "skill": "bmad-xactions-test-first-atdd",
+      "reason": "Pattern 4 — arithmetic not asserted. Test description targets the exact price value in failure webhook."
+    },
+    {
+      "priority": "P0",
+      "action": "Add assertion to onVerifyFailureHook test: 'should include actual maxAmountRequired in verification failure webhook payload' — assert price field in notifyPaymentFailed call. This kills L211 LogicalOperator mutant.",
+      "skill": "bmad-xactions-test-first-atdd",
+      "reason": "Pattern 4 — arithmetic not asserted."
+    },
+    {
+      "priority": "P0",
+      "action": "Strengthen isScriptsPath test: 'should NOT call next() as free pass-through for /api/scripts/foo' — assert next() was NOT called before payment processing, or assert res.status was called with 402/500/503. This kills L239 MethodExpression mutant.",
+      "skill": "bmad-xactions-test-first-atdd",
+      "reason": "Pattern 3 — security bypass. Script path detection must be exact."
+    },
+    {
+      "priority": "P1",
+      "action": "89 P1 mutants — log as tech debt. Primary categories: OptionalChaining (40+), ObjectLiteral/StringLiteral in route config (6), webhook payload (3), free-endpoint paths (8). These are Pattern 1/5 — mirror test and error-msg-not-asserted. Recommend addressing in next sprint.",
+      "skill": "bmad-testarch-trace",
+      "reason": "Log P1 as tech debt, proceed to traceability."
+    }
+  ],
+  "nextSkill": "bmad-xactions-integration-test",
+  "nextSkillReason": "FAIL verdict with Pattern 6 survived — the @x402/express SDK real-service path is not executed. Integration tests with controlled SDK initialization are needed to kill the 4 P0 Pattern 6 mutants."
+}

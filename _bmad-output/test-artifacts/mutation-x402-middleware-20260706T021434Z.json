@@ -1,0 +1,149 @@
+{
+  "dimension": "mutation-effectiveness",
+  "module": "x402-middleware",
+  "targetFile": "api/middleware/x402.js",
+  "testFile": "tests/x402-middleware-real.test.js",
+  "strykerConfig": "stryker.x402-middleware.config.js",
+  "timestamp": "2026-07-06T02:14:34Z",
+  "mutationScore": {
+    "total": 72.82,
+    "covered": 74.26,
+    "killed": 225,
+    "survived": 78,
+    "noCoverage": 6,
+    "timeout": 0,
+    "errors": 0,
+    "ignored": 1,
+    "totalMutants": 310
+  },
+  "triage": {
+    "p0": [],
+    "p0Count": 0,
+    "p1": [
+      {
+        "id": "L283:25-BooleanLiteral",
+        "location": "api/middleware/x402.js:283:25",
+        "mutator": "BooleanLiteral",
+        "replacement": "false",
+        "original": "_initFailed = true",
+        "function": "x402Middleware (init .catch block)",
+        "pattern": 2,
+        "patternName": "Over-Mocking / Under-Testing (error branch NoCoverage)",
+        "realBugIfLapsed": "Init failure would not set _initFailed, so subsequent requests would keep retrying init instead of degrading gracefully. Performance issue, not security.",
+        "criticalModule": true,
+        "whyNoCoverage": "After fixing the route config format (adding `accepts` wrapper), the SDK init now succeeds. The .catch() block is never reached because initializeMiddleware() no longer throws.",
+        "recommendedTest": "should set _initFailed=true when initializeMiddleware throws, preventing re-init on subsequent requests",
+        "priority": "P1"
+      },
+      {
+        "category": "hooks OptionalChaining/ConditionalExpression (40+ mutants)",
+        "lines": [166, 168, 175, 176, 195, 196, 213, 214],
+        "pattern": 1,
+        "patternName": "Mirror Test",
+        "description": "Optional chaining operators (?.) survived because tests pass null/undefined but the assertion doesn't distinguish between ?. and . behavior when the value IS present.",
+        "recommendedTest": "should throw TypeError when paymentPayload.payload.authorization is null and optional chaining is removed (distinguishes ?. from .)"
+      },
+      {
+        "category": "hooks StringLiteral 'unknown' → '' (8 mutants)",
+        "lines": [168, 175, 200, 223],
+        "pattern": 5,
+        "patternName": "Error Msg Not Asserted",
+        "description": "Fallback string 'unknown' mutated to '' — tests don't assert the exact fallback value in all code paths.",
+        "recommendedTest": "should log 'unknown' as payerAddress when authorization.from is missing (exact string match in webhook payload)"
+      },
+      {
+        "category": "hooks ObjectLiteral webhook payload (3 mutants)",
+        "lines": [172, 192, 210],
+        "pattern": 1,
+        "patternName": "Mirror Test",
+        "description": "notifyPaymentFailed/notifyPaymentSettled payload object replaced with {} — tests don't assert all webhook payload fields.",
+        "recommendedTest": "should call notifyPaymentSettled with payload containing exact price, operation, payerAddress, network, transactionHash"
+      },
+      {
+        "category": "x402HealthCheck/x402Pricing ConditionalExpression/OptionalChaining (10+ mutants)",
+        "lines": [301, 309, 319, 320, 322, 323, 329, 346, 355, 357],
+        "pattern": 1,
+        "patternName": "Mirror Test",
+        "description": "Recommended network fallback, available flag, and network field optional chaining survived.",
+        "recommendedTest": "should return exact recommended network ID and name from getAcceptedNetworks, not a fallback"
+      },
+      {
+        "category": "initializeMiddleware config ConditionalExpression (4 mutants)",
+        "lines": [97, 100, 125],
+        "pattern": 3,
+        "patternName": "Happy Path Only",
+        "description": "NODE_ENV !== 'production' conditional and network name log string survived — testnet/mainnet inclusion logic not asserted with both env values.",
+        "recommendedTest": "should register testnet networks only when NODE_ENV is development, and mainnet-only when production"
+      },
+      {
+        "category": "buildRouteConfig ObjectLiteral/StringLiteral (6 mutants)",
+        "lines": [56, 64, 65, 73],
+        "pattern": 1,
+        "patternName": "Mirror Test",
+        "description": "Route object literals and string keys survived — tests check keys exist but don't verify all values with exact equality.",
+        "recommendedTest": "should set exact price value from AI_OPERATION_PRICES for each AI route (not just key existence)"
+      }
+    ],
+    "p2": [
+      {
+        "category": "Log message StringLiteral (3 mutants)",
+        "lines": [125, 215, 273],
+        "pattern": 5,
+        "patternName": "Error Msg Not Asserted",
+        "description": "Cosmetic log strings (network name in init log, error message in verify failure). No user-facing impact.",
+        "action": "ACCEPT — note as tech debt"
+      }
+    ]
+  },
+  "p0Count": 0,
+  "p1Count": 78,
+  "p2Count": 3,
+  "effectivenessScore": "PASS_WITH_WARNINGS",
+  "verdict": "PASS_WITH_WARNINGS",
+  "verdictReason": "Mutation score 72.82% is between 60% and 80%, AND p0SurvivedCount = 0. All 7 original P0 mutants have been killed. The remaining 78 survived + 6 NoCoverage are P1 (Pattern 1 Mirror Test, Pattern 2 error branch, Pattern 5 error msg) and P2 (cosmetic log strings). No security bypasses, no arithmetic-not-asserted, no real-service-not-executed mutants remain on this critical billing module.",
+  "productionBugFix": {
+    "description": "Route config format was wrong — SDK expects { accepts: { scheme, price, network, payTo } } but code was passing { price, network, payTo } directly. This caused TypeError during validateRouteConfiguration in ALL environments (not just tests). The middleware would always fail to initialize and fall back to graceful degradation, meaning NO payment enforcement was ever active.",
+    "fix": "Updated buildRouteConfig() to wrap payment options in `accepts` field with `scheme: 'exact'`.",
+    "impact": "This was a production bug — x402 payment middleware was non-functional. All paid endpoints were either passing through without payment (dev) or returning 503 (production)."
+  },
+  "improvement": {
+    "before": {
+      "mutationScore": 1.34,
+      "killed": 4,
+      "survived": 295,
+      "noCoverage": 0,
+      "p0Count": 7,
+      "verdict": "FAIL"
+    },
+    "after": {
+      "mutationScore": 72.82,
+      "killed": 225,
+      "survived": 78,
+      "noCoverage": 6,
+      "p0Count": 0,
+      "verdict": "PASS_WITH_WARNINGS"
+    },
+    "delta": {
+      "mutationScore": "+71.48 percentage points",
+      "killed": "+221",
+      "survived": "-217",
+      "tests": "4 → 223"
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "P1",
+      "action": "78 P1 mutants — log as tech debt. Primary categories: OptionalChaining (40+), ObjectLiteral/StringLiteral in route config (6), webhook payload (3), health/pricing details (10+). These are Pattern 1/5 — mirror test and error-msg-not-asserted. Recommend addressing in next sprint.",
+      "skill": "bmad-testarch-trace",
+      "reason": "PASS_WITH_WARNINGS — log P1 as tech debt, proceed to traceability."
+    },
+    {
+      "priority": "Production",
+      "action": "Deploy the route config format fix immediately. The x402 payment middleware was non-functional in production due to the missing `accepts` wrapper. All paid endpoints were bypassing payment.",
+      "skill": "N/A",
+      "reason": "Critical production bug discovered during mutation testing."
+    }
+  ],
+  "nextSkill": "bmad-testarch-trace",
+  "nextSkillReason": "PASS_WITH_WARNINGS verdict — log P1 as tech debt, proceed to traceability matrix (AC ↔ unit test ↔ integration test ↔ code)."
+}
