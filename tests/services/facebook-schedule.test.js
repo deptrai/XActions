@@ -775,6 +775,33 @@ describe('sweepStaleRunning — exact behavior (P1 kill)', () => {
     expect(updated.status).toBe('failed');
     expect(updated.error).toBe('interrupted');
   });
+
+  it('does NOT sweep pending or completed schedules (L255: where status=running)', async () => {
+    // ObjectLiteral mutant L255: where: {} → sweeps ALL schedules regardless of status
+    const pending = await prisma.schedule.create({
+      data: {
+        userId: TEST_USER.id,
+        content: 'Pending',
+        scheduledAt: new Date(Date.now() - 60000),
+        status: 'pending',
+      },
+    });
+    const completed = await prisma.schedule.create({
+      data: {
+        userId: TEST_USER.id,
+        content: 'Completed',
+        scheduledAt: new Date(Date.now() - 60000),
+        status: 'completed',
+      },
+    });
+
+    await sweepStaleRunning(prisma);
+    const pendingAfter = await prisma.schedule.findUnique({ where: { id: pending.id } });
+    const completedAfter = await prisma.schedule.findUnique({ where: { id: completed.id } });
+    // Mutant L255: where:{} → pending/completed also swept → status='failed'
+    expect(pendingAfter.status).toBe('pending');
+    expect(completedAfter.status).toBe('completed');
+  });
 });
 
 // ── P1 Kill: throughput cap jitter (L104) ────────────────────────────

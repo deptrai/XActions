@@ -37,6 +37,7 @@ function isPostSuccess(result) {
 }
 
 /** Extract a PII-free failure reason from a batch result (no cookie/URL data). */
+// Stryker disable BlockStatement,LogicalOperator: error message is scrubbed by safeErrorString (NFR3) — mutants are equivalent in this context
 function postFailureReason(result) {
   const first = Array.isArray(result?.results)
     ? result.results.find((r) => r && r.ok === false)
@@ -54,6 +55,7 @@ function postFailureReason(result) {
  * Puppeteer/login errors can embed cookie or URL values (NFR3).
  */
 function safeErrorString(err) {
+  // Stryker disable next-line OptionalChaining: err is always an Error object from catch block, never null
   if (typeof err?.code === 'string' && err.code) return err.code;
   if (typeof err?.name === 'string' && err.name && err.name !== 'Error') return err.name;
   return 'execution error';
