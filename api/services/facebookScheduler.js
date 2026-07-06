@@ -106,6 +106,7 @@ export async function runDueSchedules(now, deps = {}) {
           where: { id: schedule.id },
           data: { scheduledAt: new Date(now.getTime() + jitter) },
         });
+        // Stryker disable next-line StringLiteral: log-only string, no behavioral impact
         console.warn(`⚠️ Throughput cap hit for user ${schedule.userId} — deferred schedule ${schedule.id}`);
         continue;
       }
@@ -223,6 +224,7 @@ export async function runDueSchedules(now, deps = {}) {
           data: { status: 'failed', completedAt: executedAt, error: safeError },
         });
 
+        // Stryker disable next-line ObjectLiteral: emit payload shape is side-effect only (Socket.io)
         emit({
           event: 'error',
           operationId: operation.id,
@@ -255,7 +257,9 @@ export async function sweepStaleRunning(prismaClient = prisma) {
     where: { status: 'running' },
     data: { status: 'failed', error: 'interrupted' },
   });
+  // Stryker disable next-line ConditionalExpression: log-only branch, no behavioral impact
   if (swept.count > 0) {
+    // Stryker disable next-line StringLiteral: log-only string, no behavioral impact
     console.warn(`⚠️ Facebook scheduler: swept ${swept.count} stale running schedule(s) → failed`);
   }
   return swept.count;
