@@ -256,3 +256,143 @@ describe('SELECTORS (P1 kill)', () => {
     expect(SELECTORS.messagesUrl).toContain('facebook.com');
   });
 });
+
+// ============================================================================
+// P1 Kill: pickRandomSegment — random distribution (L120, L121)
+// ============================================================================
+
+describe('pickRandomSegment — random distribution (P1 kill, L120-121)', () => {
+  // Override Math.random to control segment selection
+  const originalRandom = Math.random;
+
+  afterEach(() => {
+    Math.random = originalRandom;
+  });
+
+  it('with 2 segments and random=0.5 → picks segment[1] (not always first)', () => {
+    Math.random = () => 0.5;
+    // Math.floor(0.5 * 2) = 1 → segments[1]
+    expect(pickRandomSegment('first**second')).toBe('second');
+  });
+
+  it('with 2 segments and random=0.0 → picks segment[0]', () => {
+    Math.random = () => 0.0;
+    // Math.floor(0.0 * 2) = 0 → segments[0]
+    expect(pickRandomSegment('first**second')).toBe('first');
+  });
+
+  it('with 3 segments and random=0.9 → picks segment[2]', () => {
+    Math.random = () => 0.9;
+    // Math.floor(0.9 * 3) = 2 → segments[2]
+    expect(pickRandomSegment('a**b**c')).toBe('c');
+  });
+
+  it('with 3 segments and random=0.3 → picks segment[0]', () => {
+    Math.random = () => 0.3;
+    // Math.floor(0.3 * 3) = 0 → segments[0]
+    expect(pickRandomSegment('a**b**c')).toBe('a');
+  });
+
+  it('ArithmeticOperator mutant: / instead of * → always segment[0] (L121)', () => {
+    // Math.floor(0.5 / 2) = 0 → always segment[0]
+    // Original: Math.floor(0.5 * 2) = 1 → segment[1]
+    Math.random = () => 0.5;
+    expect(pickRandomSegment('first**second')).toBe('second');
+  });
+
+  it('ConditionalExpression mutant L120: true → always returns segments[0]', () => {
+    Math.random = () => 0.99;
+    // Original: segments.length=2, idx=1 → 'second'
+    // Mutant (true): always return segments[0] → 'first'
+    expect(pickRandomSegment('first**second')).toBe('second');
+  });
+});
+
+// ============================================================================
+// P1 Kill: composeMessage — default stripEmoji (L135)
+// ============================================================================
+
+describe('composeMessage — default stripEmoji (P1 kill, L135)', () => {
+  it('default options strip emoji (L135: stripEmoji = true)', () => {
+    // BooleanLiteral mutant L135: true → false → emoji NOT stripped by default
+    const result = composeMessage('hello 😀 world');
+    expect(result).not.toContain('😀');
+  });
+
+  it('whitespace normalization (L146: /[ \\t]+/g → " ")', () => {
+    // MethodExpression mutant L146: no replace → spaces preserved
+    const result = composeMessage('hello     world', { stripEmoji: false });
+    expect(result).toBe('hello world');
+    expect(result).not.toContain('  ');
+  });
+
+  it('newline collapse (L146: /\\n{3,}/g → "\\n\\n")', () => {
+    // MethodExpression mutant L146: no replace → 3+ newlines preserved
+    const result = composeMessage('a\n\n\n\nb', { stripEmoji: false });
+    expect(result).toBe('a\n\nb');
+  });
+
+  it('typeof guard with non-string from picker (L139: typeof message !== "string")', () => {
+    // ConditionalExpression mutant L139: false → skip guard → .replace() throws
+    const numPicker = () => 42;
+    expect(() => composeMessage('test', { segmentPicker: numPicker, stripEmoji: false })).not.toThrow();
+  });
+
+  it('typeof guard with null from picker → empty string (L139-140)', () => {
+    const nullPicker = () => null;
+    expect(composeMessage('test', { segmentPicker: nullPicker, stripEmoji: false })).toBe('');
+  });
+});
+
+// ============================================================================
+// P1 Kill: typeMessage — empty lines + delay (L173, L174)
+// ============================================================================
+
+describe('typeMessage — empty lines + delay (P1 kill, L173-174)', () => {
+  function makeFakePage() {
+    const keyboard = {
+      down: vi.fn(async () => {}),
+      up: vi.fn(async () => {}),
+      press: vi.fn(async () => {}),
+      type: vi.fn(async () => {}),
+    };
+    return { keyboard };
+  }
+
+  it('skips empty lines (L173: if (lines[i]))', () => {
+    // ConditionalExpression mutant L173: true → always type, even empty lines
+    const page = makeFakePage();
+    const delay = vi.fn(async () => {});
+    // 'a\n\nb' → lines = ['a', '', 'b']
+    // Original: skip '' → type called 2 times
+    // Mutant (true): type '' too → type called 3 times
+    return typeMessage(page, 'a\n\nb', { delay }).then(() => {
+      expect(page.keyboard.type).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('type delay is in range [20, 50] (L174: 20 + random * 30)', () => {
+    // ArithmeticOperator mutant L174: / instead of * → delay ≈ 20 (always)
+    // Original: delay = 20 + random * 30 → [20, 50]
+    const page = makeFakePage();
+    const delay = vi.fn(async () => {});
+    return typeMessage(page, 'hello', { delay }).then(() => {
+      const opts = page.keyboard.type.mock.calls[0][1];
+      // Mutant /: 20 + 0.5/30 ≈ 20.017 → always ~20
+      // Original: 20 + 0.5*30 = 35
+      // To kill: assert delay > 20 (not just >= 20)
+      expect(opts.delay).toBeGreaterThan(20);
+      expect(opts.delay).toBeLessThanOrEqual(50);
+    });
+  });
+
+  it('types all non-empty lines in multi-line message', async () => {
+    const page = makeFakePage();
+    const delay = vi.fn(async () => {});
+    await typeMessage(page, 'line1\nline2\nline3', { delay });
+    expect(page.keyboard.type).toHaveBeenCalledTimes(3);
+    expect(page.keyboard.type).toHaveBeenNthCalledWith(1, 'line1', expect.any(Object));
+    expect(page.keyboard.type).toHaveBeenNthCalledWith(2, 'line2', expect.any(Object));
+    expect(page.keyboard.type).toHaveBeenNthCalledWith(3, 'line3', expect.any(Object));
+  });
+});
