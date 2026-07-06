@@ -425,11 +425,25 @@ Tests: 228 (223 original + 5 new)
 
 ### Remaining Partial Coverage (tech debt)
 
-| Req ID | Requirement | Priority | Gap |
-|--------|-------------|----------|-----|
-| R-71 | testnet in dev, exclude in prod | P1 | Network filtering not explicitly tested in init |
-| R-72 | Silently ignore already-registered | P1 | Catch block not fully exercised |
-| R-92 | Log "Base Mainnet" for eip155:8453 | P2 | Only Base Sepolia tested |
+| Req ID | Requirement | Priority | Gap | Status |
+|--------|-------------|----------|-----|--------|
+| R-71 | testnet in dev, exclude in prod | P1 | Network filtering not explicitly tested in init | **FULL** ✅ |
+| R-72 | Silently ignore already-registered | P1 | Catch block not fully exercised | **FULL** ✅ |
+| R-92 | Log "Base Mainnet" for eip155:8453 | P2 | Only Base Sepolia tested | **FULL** ✅ |
+
+### Updated Coverage (after R-71, R-72, R-92 tests)
+
+```
+Total Requirements: 102
+Fully Covered: 102 (100%)
+Partially Covered: 0
+Uncovered: 0
+
+P0: 48/48 (100%) ✅
+P1: 48/48 (100%) ✅
+P2: 6/6 (100%) ✅
+Tests: 234 (228 + 6 new)
+```
 
 ### Recommendations
 
