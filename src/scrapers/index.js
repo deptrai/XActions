@@ -183,6 +183,7 @@ export async function scrape(platform, action, options = {}) {
     communityMembers: 'scrapeCommunityMembers',
     spaces: 'scrapeSpaces',
     feed: 'scrapeFeed',
+    'group-members': 'scrapeGroupMembers',
   };
 
   const fnName = actionMap[action] || action;
