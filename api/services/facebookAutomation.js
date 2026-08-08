@@ -317,10 +317,10 @@ export async function findLikeButton(page) {
  */
 async function likeSinglePost(page, postUrl) {
   // Navigate to post (AC2.4)
-  await page.goto(postUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await page.goto(postUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
   // Small delay for stability (AC2.4 mentions delay seam if available)
-  await sleep(500);
+  await sleep(1000);
 
   // Find Like button with locale-aware lookup (AC2.5)
   const { element, alreadyLiked } = await findLikeButton(page);
@@ -330,13 +330,23 @@ async function likeSinglePost(page, postUrl) {
     return { liked: false, alreadyLiked: true };
   }
 
+  // Scroll element into view before clicking
+  await page.evaluate((el) => el.scrollIntoView({ behavior: 'instant', block: 'center' }), element);
+  await sleep(500);
+
   // Click to like (AC2.4)
   await element.click();
 
-  // Brief wait for click to register
-  await sleep(300);
+  // Wait for click to register and UI to update
+  await sleep(2000);
 
-  return { liked: true, alreadyLiked: false };
+  // Verify Like was applied by checking for Unlike button
+  const verified = await page.evaluate(() => {
+    const unlike = document.querySelector('[aria-label*="Unlike"], [aria-label*="Remove Like"]');
+    return !!unlike;
+  });
+
+  return { liked: verified, alreadyLiked: false };
 }
 
 /**
