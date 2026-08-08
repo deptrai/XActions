@@ -193,32 +193,54 @@ export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st,
     throw new Error('❌ Facebook login requires both c_user and xs cookies');
   }
 
-  // Set all Facebook cookies for full authentication
-  // Build cookies one at a time to avoid ProtocolError from invalid fields
+  // Step 1: Navigate to Facebook first so browser is on the correct domain.
+  // This is required — setCookie before navigation can fail silently for some
+  // cookie combinations because the browser has no origin context.
+  await page.goto(FACEBOOK_BASE, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await randomDelay(1000, 2000);
+
+  // Step 2: Build cookie list with all fields needed for full authentication.
   const fbCookies = [
     { name: 'c_user', value: c_user, domain: '.facebook.com', path: '/', httpOnly: true, secure: true },
     { name: 'xs', value: xs, domain: '.facebook.com', path: '/', httpOnly: true, secure: true },
   ];
 
-  // Optional but important cookies for full session
+  // Optional but important cookies for full session.
   if (sb?.trim()) fbCookies.push({ name: 'sb', value: sb, domain: '.facebook.com', path: '/', httpOnly: true, secure: true });
   if (datar?.trim()) fbCookies.push({ name: 'datr', value: datar, domain: '.facebook.com', path: '/', httpOnly: true, secure: true });
   if (fr?.trim()) fbCookies.push({ name: 'fr', value: fr, domain: '.facebook.com', path: '/', secure: true });
   if (fbl_st?.trim()) fbCookies.push({ name: 'fbl_st', value: fbl_st, domain: '.facebook.com', path: '/', secure: true });
   if (locale?.trim()) fbCookies.push({ name: 'locale', value: locale, domain: '.facebook.com', path: '/', secure: true });
 
-  // Set cookies one at a time to avoid ProtocolError
+  // Step 3: Set cookies one at a time to avoid ProtocolError from invalid fields.
+  let setCount = 0;
   for (const cookie of fbCookies) {
     try {
       await page.setCookie(cookie);
+      setCount++;
     } catch (e) {
-      // Skip invalid cookies but continue with others
-      console.warn(`⚠️ Skipped invalid cookie ${cookie.name}: ${e.message?.substring(0, 50)}`);
+      // Skip invalid cookies but continue with others.
+      console.warn(`⚠️ Skipped invalid cookie ${cookie.name}: ${e.message?.substring(0, 80)}`);
     }
   }
 
+  // Step 4: Navigate again — this sends the cookies to Facebook's server,
+  // which responds with an authenticated session.
   await page.goto(FACEBOOK_BASE, { waitUntil: 'networkidle2', timeout: 30000 });
   await randomDelay(2000, 4000);
+
+  // Step 5: Verify authentication succeeded by checking for login indicators.
+  const isAuthenticated = await page.evaluate(() => {
+    // If we see a "Log in" button or login form, auth failed.
+    const bodyText = document.body.innerText;
+    const hasLoginForm = !!document.querySelector('form[action*="login"], [data-testid="royal_login_form"]');
+    const hasLoginButton = bodyText.includes('Log in') && bodyText.includes('password');
+    return !hasLoginForm && !hasLoginButton;
+  });
+
+  if (!isAuthenticated) {
+    throw new Error('❌ Facebook cookie authentication failed — session expired or invalid cookies');
+  }
 }
 
 // ============================================================================
