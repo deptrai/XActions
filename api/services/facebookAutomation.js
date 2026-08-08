@@ -320,7 +320,7 @@ async function likeSinglePost(page, postUrl) {
   await page.goto(postUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
   // Small delay for stability (AC2.4 mentions delay seam if available)
-  await sleep(1000);
+  await sleep(1500);
 
   // Find Like button with locale-aware lookup (AC2.5)
   const { element, alreadyLiked } = await findLikeButton(page);
@@ -330,15 +330,31 @@ async function likeSinglePost(page, postUrl) {
     return { liked: false, alreadyLiked: true };
   }
 
-  // Scroll element into view before clicking
-  await page.evaluate((el) => el.scrollIntoView({ behavior: 'instant', block: 'center' }), element);
+  // Scroll element into view and click using mouse coordinates
+  const box = await element.boundingBox();
+  if (!box) {
+    throw new Error('❌ Like button bounding box not available');
+  }
+
+  // Scroll to make button visible
+  await page.evaluate((y) => window.scrollTo(0, Math.max(0, y - 400)), box.y);
   await sleep(500);
 
-  // Click to like (AC2.4)
-  await element.click();
+  // Get updated coordinates after scroll
+  const updatedBox = await element.boundingBox();
+  if (!updatedBox) {
+    throw new Error('❌ Like button disappeared after scroll');
+  }
+
+  // Click using mouse at button center
+  const clickX = updatedBox.x + updatedBox.width / 2;
+  const clickY = updatedBox.y + updatedBox.height / 2;
+  await page.mouse.move(clickX, clickY);
+  await sleep(100);
+  await page.mouse.click(clickX, clickY);
 
   // Wait for click to register and UI to update
-  await sleep(2000);
+  await sleep(3000);
 
   // Verify Like was applied by checking for Unlike button
   const verified = await page.evaluate(() => {
@@ -1250,8 +1266,26 @@ async function joinSingleGroup(page, groupUrl) {
   if (!joinButton) {
     throw new Error('❌ Join button not found; locale unsupported or group unreachable');
   }
-  await joinButton.click();
-  await sleep(800); // let the join/approval state settle
+
+  // Scroll button into view and click using mouse coordinates
+  const box = await joinButton.boundingBox();
+  if (box) {
+    await page.evaluate((y) => window.scrollTo(0, Math.max(0, y - 300)), box.y);
+    await sleep(300);
+    const updatedBox = await joinButton.boundingBox();
+    if (updatedBox) {
+      const clickX = updatedBox.x + updatedBox.width / 2;
+      const clickY = updatedBox.y + updatedBox.height / 2;
+      await page.mouse.move(clickX, clickY);
+      await sleep(100);
+      await page.mouse.click(clickX, clickY);
+    } else {
+      await joinButton.click(); // fallback
+    }
+  } else {
+    await joinButton.click(); // fallback
+  }
+  await sleep(1500); // let the join/approval state settle
 
   // After clicking, a pending indicator means admin-approval is required.
   for (const selector of pendingSelectors) {
