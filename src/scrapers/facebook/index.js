@@ -906,21 +906,15 @@ export async function scrapeGroupMembers(page, groupUrl, options = {}) {
   await page.goto(membersUrl, { waitUntil: 'networkidle2', timeout: 30000 });
   await delay(1000, 3000);
 
-  // AC2/AC3: Detect member-list container. UNVERIFIED selectors — locale-aware fallback chain.
-  // See docs/agents/selectors-facebook.md Groups — Members (FR-20) section.
-  const memberContainerSelectors = [
-    '[aria-label="Group members"]',          // en
-    '[aria-label="Thành viên nhóm"]',        // vi
-    'div[data-pagelet="GroupMembersList"]',  // testid
-    'div[role="list"]',                      // generic fallback
-  ];
-
+  // Detect member list — look for member links pattern: /groups/{groupId}/user/{userId}/
+  // This is the actual Facebook DOM structure (verified August 2026).
   let containerFound = false;
   try {
-    await page.waitForSelector(memberContainerSelectors.join(', '), { timeout: 8000 });
+    // Wait for any member link to appear
+    await page.waitForSelector('a[href*="/groups/"][href*="/user/"]', { timeout: 8000 });
     containerFound = true;
   } catch (_) {
-    // Member list not accessible → restricted group (AC2).
+    // Member list not accessible → restricted group
   }
 
   if (!containerFound) {
@@ -937,46 +931,24 @@ export async function scrapeGroupMembers(page, groupUrl, options = {}) {
   while (members.size < limit && stalls < maxStalls) {
     const prevSize = members.size;
 
-    // Extract member rows from DOM (UNVERIFIED selectors — see selectors-facebook.md).
-    const rawMembers = await page.evaluate((nonProfileSegs) => {
-      // Member rows: list items under the members container.
-      const items = document.querySelectorAll(
-        '[aria-label="Group members"] [role="listitem"], ' +
-        '[data-pagelet="GroupMembersList"] [role="listitem"], ' +
-        '[role="list"] [role="listitem"]',
-      );
-      const NON_PROFILE = new Set(nonProfileSegs);
-
-      return Array.from(items).map((item) => {
-        const anchors = Array.from(item.querySelectorAll('a[href]'));
-        let profileUrl = null;
-        let username = null;
-
-        for (const a of anchors) {
-          const href = a.getAttribute('href') || '';
-          const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
-          // profile.php?id=N — numeric canonical identifier
-          const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
-          if (idMatch) {
-            profileUrl = `https://www.facebook.com/profile.php?id=${idMatch[1]}`;
-            username = `profile.php?id=${idMatch[1]}`;
-            break;
-          }
-          // vanity handle — first non-reserved path segment
-          const segMatch = abs.match(/facebook\.com\/([^/?&#]+)/i);
-          if (segMatch && !NON_PROFILE.has(segMatch[1].toLowerCase())) {
-            profileUrl = abs.split('?')[0];
-            username = segMatch[1];
-            break;
-          }
+    // Extract member links directly from DOM.
+    // Facebook renders members as links: /groups/{groupId}/user/{userId}/
+    const rawMembers = await page.evaluate(() => {
+      const results = [];
+      document.querySelectorAll('a[href*="/groups/"][href*="/user/"]').forEach(a => {
+        const href = a.getAttribute('href') || '';
+        const name = a.textContent.trim();
+        if (name && href && name.length > 1 && name.length < 100) {
+          const fullUrl = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+          results.push({
+            name,
+            profileUrl: fullUrl.split('?')[0],
+            username: href.split('/').filter(Boolean).pop() || null,
+          });
         }
-
-        const nameEl = item.querySelector('span[dir="auto"], strong, span');
-        const name = nameEl?.textContent?.trim() || null;
-
-        return { name, username, profileUrl };
-      }).filter((m) => m.profileUrl);
-    }, NON_PROFILE_SEGMENTS);
+      });
+      return results;
+    });
 
     for (const raw of rawMembers) {
       if (!members.has(raw.profileUrl)) {
