@@ -188,29 +188,34 @@ export function normalizeProfile(raw, inputHandle) {
  * @param {string} cookies.xs - Facebook session token cookie
  * @throws {Error} If either cookie is missing or empty
  */
-export async function loginWithCookie(page, { c_user, xs }) {
+export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st, locale } = {}) {
   if (!c_user?.trim() || !xs?.trim()) {
     throw new Error('❌ Facebook login requires both c_user and xs cookies');
   }
 
-  await page.setCookie(
-    {
-      name: 'c_user',
-      value: c_user,
-      domain: '.facebook.com',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'Strict',
-    },
-    {
-      name: 'xs',
-      value: xs,
-      domain: '.facebook.com',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'Strict',
+  // Set all Facebook cookies for full authentication
+  // Build cookies one at a time to avoid ProtocolError from invalid fields
+  const fbCookies = [
+    { name: 'c_user', value: c_user, domain: '.facebook.com', path: '/', httpOnly: true, secure: true },
+    { name: 'xs', value: xs, domain: '.facebook.com', path: '/', httpOnly: true, secure: true },
+  ];
+
+  // Optional but important cookies for full session
+  if (sb?.trim()) fbCookies.push({ name: 'sb', value: sb, domain: '.facebook.com', path: '/', httpOnly: true, secure: true });
+  if (datar?.trim()) fbCookies.push({ name: 'datr', value: datar, domain: '.facebook.com', path: '/', httpOnly: true, secure: true });
+  if (fr?.trim()) fbCookies.push({ name: 'fr', value: fr, domain: '.facebook.com', path: '/', secure: true });
+  if (fbl_st?.trim()) fbCookies.push({ name: 'fbl_st', value: fbl_st, domain: '.facebook.com', path: '/', secure: true });
+  if (locale?.trim()) fbCookies.push({ name: 'locale', value: locale, domain: '.facebook.com', path: '/', secure: true });
+
+  // Set cookies one at a time to avoid ProtocolError
+  for (const cookie of fbCookies) {
+    try {
+      await page.setCookie(cookie);
+    } catch (e) {
+      // Skip invalid cookies but continue with others
+      console.warn(`⚠️ Skipped invalid cookie ${cookie.name}: ${e.message?.substring(0, 50)}`);
     }
-  );
+  }
 
   await page.goto(FACEBOOK_BASE, { waitUntil: 'networkidle2', timeout: 30000 });
   await randomDelay(2000, 4000);

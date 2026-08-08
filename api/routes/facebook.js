@@ -139,9 +139,17 @@ router.post('/scrape', async (req, res) => {
 
     const options = {
       userId: req.user.id,
-      // Only pass authCookie when both fields are present (never log values)
+      // Pass all cookie fields for full session auth (never log values)
       ...(authCookie?.c_user?.trim() && authCookie?.xs?.trim()
-        ? { authCookie: { c_user: authCookie.c_user, xs: authCookie.xs } }
+        ? { authCookie: {
+            c_user: authCookie.c_user,
+            xs: authCookie.xs,
+            sb: authCookie.sb,
+            datar: authCookie.datatar || authCookie.datar,
+            fr: authCookie.fr,
+            fbl_st: authCookie.fbl_st,
+            locale: authCookie.locale,
+          } }
         : {}),
     };
 
@@ -455,7 +463,15 @@ router.post('/automate', async (req, res) => {
       browser = await createBrowser({ headless: true });
       const page = await createPage(browser);
       // Cookie values are never logged (NFR3)
-      await loginWithCookie(page, { c_user: authCookie.c_user, xs: authCookie.xs });
+      await loginWithCookie(page, {
+        c_user: authCookie.c_user,
+        xs: authCookie.xs,
+        sb: authCookie.sb,
+        datar: authCookie.datatar || authCookie.datar,
+        fr: authCookie.fr,
+        fbl_st: authCookie.fbl_st,
+        locale: authCookie.locale,
+      });
 
       result = await dispatch(page);
 

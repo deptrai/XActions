@@ -259,14 +259,16 @@ export { loginWithCookie, createBrowser, createPage };
  */
 export async function findLikeButton(page) {
   // Supported locales: en, vi (from docs/agents/selectors-facebook.md)
+  // Use *= (contains) matcher — Facebook appends reaction counts (e.g. "Like: 65K people")
   const likeSelectors = [
-    '[aria-label="Like"]',      // en
-    '[aria-label="Thích"]',     // vi
+    '[aria-label*="Like"]',      // en
+    '[aria-label*="Thích"]',     // vi
   ];
 
   const unlikeSelectors = [
-    '[aria-label="Remove Like"]', // en
-    '[aria-label="Bỏ thích"]',    // vi
+    '[aria-label*="Remove Like"]', // en
+    '[aria-label*="Unlike"]',      // en alt
+    '[aria-label*="Bỏ thích"]',    // vi
   ];
 
   // Single combined wait: block until ANY like/unlike button renders.
