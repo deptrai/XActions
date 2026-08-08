@@ -237,11 +237,14 @@ export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st,
     const bodyText = document.body.innerText;
     const hasLoginForm = !!document.querySelector('form[action*="login"], [data-testid="royal_login_form"]');
     const hasLoginButton = bodyText.includes('Log in') && bodyText.includes('password');
-    // Facebook security check / CAPTCHA indicators (multi-language)
+    // Facebook security check / CAPTCHA indicators (multi-language, various phrasings)
     const hasSecurityCheck = bodyText.includes('confirmez que vous êtes une personne') ||
       bodyText.includes('confirm that you are a real person') ||
+      bodyText.includes('confirm that you') && bodyText.includes('human') ||
       bodyText.includes('security check') ||
-      bodyText.includes('vérification de sécurité');
+      bodyText.includes('vérification de sécurité') ||
+      bodyText.includes('Enter the text from the image') ||
+      bodyText.includes('hear this code');
     return { hasLoginForm, hasLoginButton, hasSecurityCheck };
   });
 
