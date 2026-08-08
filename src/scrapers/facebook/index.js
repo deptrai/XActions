@@ -200,17 +200,19 @@ export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st,
   await randomDelay(1000, 2000);
 
   // Step 2: Build cookie list with all fields needed for full authentication.
+  // Facebook requires sameSite: "None" for cross-site cookies to work.
+  // httpOnly: false allows JS to read cookies (needed for FB features).
   const fbCookies = [
-    { name: 'c_user', value: c_user, domain: '.facebook.com', path: '/', httpOnly: true, secure: true },
-    { name: 'xs', value: xs, domain: '.facebook.com', path: '/', httpOnly: true, secure: true },
+    { name: 'c_user', value: c_user, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' },
+    { name: 'xs', value: xs, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' },
   ];
 
   // Optional but important cookies for full session.
-  if (sb?.trim()) fbCookies.push({ name: 'sb', value: sb, domain: '.facebook.com', path: '/', httpOnly: true, secure: true });
-  if (datar?.trim()) fbCookies.push({ name: 'datr', value: datar, domain: '.facebook.com', path: '/', httpOnly: true, secure: true });
-  if (fr?.trim()) fbCookies.push({ name: 'fr', value: fr, domain: '.facebook.com', path: '/', secure: true });
-  if (fbl_st?.trim()) fbCookies.push({ name: 'fbl_st', value: fbl_st, domain: '.facebook.com', path: '/', secure: true });
-  if (locale?.trim()) fbCookies.push({ name: 'locale', value: locale, domain: '.facebook.com', path: '/', secure: true });
+  if (sb?.trim()) fbCookies.push({ name: 'sb', value: sb, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' });
+  if (datar?.trim()) fbCookies.push({ name: 'datr', value: datar, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' });
+  if (fr?.trim()) fbCookies.push({ name: 'fr', value: fr, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' });
+  if (fbl_st?.trim()) fbCookies.push({ name: 'fbl_st', value: fbl_st, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' });
+  if (locale?.trim()) fbCookies.push({ name: 'locale', value: locale, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' });
 
   // Step 3: Set cookies one at a time to avoid ProtocolError from invalid fields.
   let setCount = 0;
@@ -229,17 +231,26 @@ export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st,
   await page.goto(FACEBOOK_BASE, { waitUntil: 'networkidle2', timeout: 30000 });
   await randomDelay(2000, 4000);
 
-  // Step 5: Verify authentication succeeded by checking for login indicators.
-  const isAuthenticated = await page.evaluate(() => {
-    // If we see a "Log in" button or login form, auth failed.
+  // Step 5: Verify authentication succeeded.
+  // Check for: login form (bad cookies) OR security check (anti-bot detection).
+  const authCheck = await page.evaluate(() => {
     const bodyText = document.body.innerText;
     const hasLoginForm = !!document.querySelector('form[action*="login"], [data-testid="royal_login_form"]');
     const hasLoginButton = bodyText.includes('Log in') && bodyText.includes('password');
-    return !hasLoginForm && !hasLoginButton;
+    // Facebook security check / CAPTCHA indicators (multi-language)
+    const hasSecurityCheck = bodyText.includes('confirmez que vous êtes une personne') ||
+      bodyText.includes('confirm that you are a real person') ||
+      bodyText.includes('security check') ||
+      bodyText.includes('vérification de sécurité');
+    return { hasLoginForm, hasLoginButton, hasSecurityCheck };
   });
 
-  if (!isAuthenticated) {
+  if (authCheck.hasLoginForm || authCheck.hasLoginButton) {
     throw new Error('❌ Facebook cookie authentication failed — session expired or invalid cookies');
+  }
+
+  if (authCheck.hasSecurityCheck) {
+    throw new Error('❌ Facebook security check detected — manual verification required (CAPTCHA/anti-bot)');
   }
 }
 
