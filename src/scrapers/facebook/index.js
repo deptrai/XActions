@@ -635,8 +635,24 @@ export async function scrapeTweets(page, username, options = {}) {
   const handle = normalizeHandle(username);
   const profileUrl = `${FACEBOOK_BASE}/${handle}`;
 
-  await page.goto(profileUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-  await delay(2000, 4000);
+  await page.goto(profileUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await delay(1000, 2000);
+
+  // Wait for actual post content to load (skip loading skeletons)
+  try {
+    await page.waitForFunction(() => {
+      const articles = document.querySelectorAll('[role="article"]');
+      for (const a of articles) {
+        // Check if article has real text content (not loading state)
+        if (a.innerText && a.innerText.length > 20 && !a.querySelector('[aria-label="Loading"]')) {
+          return true;
+        }
+      }
+      return articles.length === 0; // No articles = no content expected
+    }, { timeout: 15000 });
+  } catch (_) {
+    // Timeout - proceed anyway, might be slow network
+  }
 
   const posts = new Map();
   let retries = 0;
@@ -645,16 +661,23 @@ export async function scrapeTweets(page, username, options = {}) {
     const rawPosts = await page.evaluate(() => {
       const articles = document.querySelectorAll('[role="article"]');
       return Array.from(articles).map((article) => {
-        // Text content
+        // Skip loading skeletons
+        if (article.querySelector('[aria-label="Loading"]')) return null;
+
+        // Get full text content - this is the most reliable for groups
+        const fullText = article.innerText?.trim() || '';
+        if (fullText.length < 5) return null;
+
+        // Extract post text (skip author name and timestamp)
         const textEls = article.querySelectorAll('[dir="auto"]');
         const texts = Array.from(textEls)
           .map((el) => el.textContent?.trim())
-          .filter((t) => t && t.length > 5);
-        const text = texts[0] || null;
+          .filter((t) => t && t.length > 3);
+        const text = fullText.substring(0, 1000); // Use full text for groups
 
-        // Timestamp
-        const timeEl = article.querySelector('abbr, time');
-        const timestamp = timeEl?.getAttribute('data-utime') || timeEl?.getAttribute('datetime') || timeEl?.textContent?.trim() || null;
+        // Timestamp - look for aria-label with time info
+        const timeEl = article.querySelector('[aria-label*="ago"], [aria-label*="at"], abbr, time');
+        const timestamp = timeEl?.getAttribute('aria-label') || timeEl?.textContent?.trim() || null;
 
         // Post URL
         const linkEls = article.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]');
@@ -673,21 +696,23 @@ export async function scrapeTweets(page, username, options = {}) {
         // Media
         const images = Array.from(article.querySelectorAll('img'))
           .map((img) => img.src)
-          .filter((src) => src && !src.includes('static') && !src.includes('emoji') && src.startsWith('http'));
+          .filter((src) => src && !src.includes('static') && !src.includes('emoji') && !src.includes('sprite') && src.startsWith('http'));
         const hasVideo = !!article.querySelector('video');
 
-        const id = postUrl || text?.slice(0, 60) || null;
+        const id = postUrl || text?.slice(0, 80) || null;
 
         return { id, text, timestamp, likes, comments, postUrl, images, hasVideo };
-      }).filter((p) => p.id);
+      }).filter((p) => p && p.id);
     });
 
     const prevSize = posts.size;
-    rawPosts.forEach((raw) => {
-      if (!posts.has(raw.id)) {
-        posts.set(raw.id, normalizePost(raw));
-      }
-    });
+    if (rawPosts) {
+      rawPosts.forEach((raw) => {
+        if (!posts.has(raw.id)) {
+          posts.set(raw.id, normalizePost(raw));
+        }
+      });
+    }
 
     if (onProgress) onProgress({ scraped: posts.size, limit });
 
