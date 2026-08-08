@@ -392,16 +392,16 @@ router.post('/automate', async (req, res) => {
         return await scheduleFacebookPost(page, { content: text, scheduledAt, facebookAccountId }, { ...options, userId: req.user.id });
       }
       if (action === 'join-groups') {
-        const { groupUrls = [] } = req.body ?? {};
-        return await joinFacebookGroups(page, groupUrls, options);
+        const { groupUrls = [], keyword, limit } = req.body ?? {};
+        return await joinFacebookGroups(page, { groupUrls, keyword, limit }, options);
       }
       if (action === 'batch-post-groups') {
         const { groupUrls = [] } = req.body ?? {};
-        return await postToFacebookGroups(page, groupUrls, text, options);
+        return await postToFacebookGroups(page, { groupUrls, text }, options);
       }
       if (action === 'send-friend-requests') {
         const { targets = [] } = req.body ?? {};
-        return await sendFriendRequests(page, targets, options);
+        return await sendFriendRequests(page, { targets }, options);
       }
       if (action === 'cancel-friend-requests') {
         const { olderThanDays, limit } = req.body ?? {};
