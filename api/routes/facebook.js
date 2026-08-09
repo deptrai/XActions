@@ -397,18 +397,18 @@ router.post('/automate', async (req, res) => {
       }
       if (action === 'batch-post-groups') {
         const { groupUrls = [] } = req.body ?? {};
-        return await postToFacebookGroups(page, { groupUrls, text }, options);
+        return await postToFacebookGroups(page, { groupUrls, content: text }, options);
       }
       if (action === 'send-friend-requests') {
         const { targets = [] } = req.body ?? {};
-        return await sendFriendRequests(page, { targets }, options);
+        return await sendFriendRequests(page, { mode: 'uid_list', targets }, options);
       }
       if (action === 'cancel-friend-requests') {
-        const { olderThanDays, limit } = req.body ?? {};
+        const { olderThanDays, limit = 10 } = req.body ?? {};
         return await cancelPendingFriendRequests(page, {
           ...options,
           ...(olderThanDays != null && { olderThanDays: Number(olderThanDays) }),
-          ...(limit != null && { limit: Number(limit) }),
+          limit: Number(limit),
         });
       }
       if (action === 'warmup-account') {
@@ -432,7 +432,8 @@ router.post('/automate', async (req, res) => {
 
     // Dry-run never touches the DOM (runGuardedBatch skips actionFn) — no browser,
     // no real Facebook login, no Operation record. Avoids account risk for a preview.
-    if (resolvedDryRun) {
+    // Exception: cancel-friend-requests needs page access even in dryRun to collect pending requests.
+    if (resolvedDryRun && action !== 'cancel-friend-requests') {
       const result = await dispatch(null);
       return res.json({ ok: true, action, dryRun: true, userId: req.user.id, operationId: null, ...result });
     }
