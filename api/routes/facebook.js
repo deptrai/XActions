@@ -366,18 +366,19 @@ router.post('/automate', async (req, res) => {
     // share-link-uid — send link to user by UID (Story 5.x)
     // ========================================================================
     if (action === 'share-link-uid') {
-      const { uids = [], link = '', message = '' } = req.body ?? {};
+      const { uids = [], postUrl = '', postUrls = [], content = '', message = '' } = req.body ?? {};
       if (!Array.isArray(uids) || uids.length === 0) {
         return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires non-empty uids array' });
       }
-      if (!link.trim()) {
-        return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires non-empty link' });
+      const url = postUrl || postUrls[0] || '';
+      if (!url.trim()) {
+        return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires postUrl or postUrls[]' });
       }
 
       const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
       const { shareLinkByUidCampaign } = await import('../../src/scrapers/facebook/shareLinkByUid.js');
 
-      const messengerDelay = resolvedDryRun
+      const shareDelay = resolvedDryRun
         ? () => {}
         : (min = 3000, max = 8000) => new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
 
@@ -394,9 +395,9 @@ router.post('/automate', async (req, res) => {
       });
 
       try {
-        const result = await shareLinkByUidCampaign(page, { uids, link, message }, {
+        const result = await shareLinkByUidCampaign(page, { uids, postUrl: url, message: content || message }, {
           dryRun: resolvedDryRun,
-          delay: messengerDelay,
+          delay: shareDelay,
         });
         await browser.close().catch(() => {});
         return res.json({ ok: true, action, dryRun: resolvedDryRun, userId: req.user.id, ...result });

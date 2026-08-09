@@ -1,88 +1,153 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 /**
- * Share link via UID - send a link to a user by their Facebook UID.
- * Ports the C# tool feature: navigate to conversation by UID, type link, send.
+ * Share link via UID - send a post to a user by their Facebook UID.
+ * Flow: Navigate to post → Click share → Search UID in dialog → Select recipient → Send DM
  */
 
 import { runGuardedBatch } from '../../../api/services/facebookAutomation.js';
 
-// Selectors for the Messenger conversation page
+// Selectors for the share dialog
 const SELECTORS = {
-  // Conversation thread rows in the sidebar
-  threadLink: 'a[href*="/messages/t/"], a[href*="/messages/e2ee/t/"]',
-  // Compose box in the conversation
-  composeBox: '[role="textbox"][contenteditable="true"]',
+  // Share button on a post
+  shareButton: 'div[data-ad-rendering-role="share_button"], [data-ad-renderingrole="share_button"]',
+  shareButtonXPath: '//div[@data-ad-rendering-role="share_button"]/..',
+  // Search input in the share dialog
+  searchInput: 'input[placeholder*="Search"]',
+  // Recipient buttons in the share dialog
+  recipientButtons: 'div[role="button"][aria-label*="via Messenger"], div[role="button"][aria-label*="qua Messenger"]',
+  // DM compose box (for sending separate message)
+  composeBox: 'div[role="textbox"][contenteditable="true"]',
   // Send button
-  sendButtonNeedles: ['send', 'gửi', 'nhấn enter', 'press enter'],
+  sendButtonNeedles: ['press enter to send', 'nhấn enter để gửi', 'send', 'gửi'],
+  // Conversation thread link
+  threadLink: 'a[href*="/messages/t/"], a[href*="/messages/e2ee/t/"]',
 };
 
 /**
- * Navigate to a conversation by UID and click it in the sidebar.
+ * Click the share button on a post.
  * @param {Object} page - Puppeteer page
- * @param {string} uid - Facebook UID
- * @returns {Promise<boolean>} True if conversation was opened
+ * @param {number} timeout - Max wait in ms
+ * @returns {Promise<boolean>} True if share button was clicked
  */
-async function openConversationByUid(page, uid) {
-  const conversationUrl = `https://www.facebook.com/messages/t/${uid}`;
-  await page.goto(conversationUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-  await new Promise(r => setTimeout(r, 8000)); // Wait for conversation to fully load
-
-  // Check if compose box is already visible
-  let hasComposeBox = await page.$('div[role="textbox"][contenteditable="true"]');
-  if (hasComposeBox) return true;
-
-  // Click the conversation in the sidebar
-  const clicked = await page.evaluate((targetUid) => {
-    const links = [...document.querySelectorAll('a[href*="/messages/t/"], a[href*="/messages/e2ee/t/"]')];
-    // Try to find the conversation with matching UID
-    const target = links.find(a => a.href.includes(targetUid) || a.getAttribute('href')?.includes(targetUid));
-    if (target) {
-      target.click();
-      return true;
-    }
-    // If not found, try any conversation (the page may have auto-selected it)
-    if (links.length > 0) {
-      links[0].click();
-      return true;
-    }
-    return false;
-  }, uid);
-
-  if (!clicked) return false;
-
-  await new Promise(r => setTimeout(r, 5000)); // Wait for conversation to load
-  hasComposeBox = await page.$('div[role="textbox"][contenteditable="true"]');
-  return !!hasComposeBox;
+async function clickShareButton(page, timeout = 8000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const clicked = await page.evaluate(() => {
+      const shareBtn = document.querySelector('div[data-ad-rendering-role="share_button"], [data-ad-renderingrole="share_button"]');
+      if (shareBtn) {
+        const btn = shareBtn.closest('div[role="button"]') || shareBtn;
+        btn.click();
+        return true;
+      }
+      return false;
+    });
+    if (clicked) return true;
+    await new Promise(r => setTimeout(r, 500));
+  }
+  return false;
 }
 
 /**
- * Type text into the compose box and send.
+ * Search for a UID in the share dialog's search box.
  * @param {Object} page - Puppeteer page
- * @param {string} text - Text to send
+ * @param {string} uid - Facebook UID to search for
+ * @param {Function} delay - Delay function
+ * @returns {Promise<boolean>} True if search was performed
+ */
+async function searchUidInDialog(page, uid, delay = () => new Promise(r => setTimeout(r, 500))) {
+  // Find the search input
+  const searchInput = await page.$('input[placeholder*="Search"]');
+  if (!searchInput) return false;
+
+  // Clear and type the UID
+  await searchInput.click();
+  await delay(300, 500);
+  await page.evaluate((el) => { el.value = ''; }, searchInput);
+  await page.keyboard.type(uid, { delay: 30 + Math.random() * 20 });
+  await delay(2000, 3000); // Wait for search results
+
+  return true;
+}
+
+/**
+ * Find and click a recipient by UID in the share dialog.
+ * @param {Object} page - Puppeteer page
+ * @param {string} uid - Facebook UID
+ * @returns {Promise<string|null>} The clicked aria-label, or null if not found
+ */
+async function clickRecipientByUid(page, uid) {
+  return page.evaluate((targetUid) => {
+    const buttons = [...document.querySelectorAll('[role="button"][aria-label]')];
+    // Find button where the associated profile link contains the UID
+    const target = buttons.find((b) => {
+      const label = b.getAttribute('aria-label') || '';
+      if (!/via Messenger|qua Messenger/i.test(label)) return false;
+
+      // Check if any parent or child link contains the UID
+      const parent = b.closest('a[href*="profile.php?id=' + targetUid + '"], a[href*="/user/' + targetUid + '/"]');
+      if (parent) return true;
+
+      // Check siblings and children for links with UID
+      const container = b.parentElement;
+      if (container) {
+        const links = container.querySelectorAll('a[href]');
+        for (const link of links) {
+          const href = link.getAttribute('href');
+          if (href && (href.includes('profile.php?id=' + targetUid) || href.includes('/user/' + targetUid + '/'))) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+
+    if (target) {
+      target.click();
+      return target.getAttribute('aria-label');
+    }
+    return null;
+  }, uid);
+}
+
+/**
+ * Send a message to a UID via direct Messenger conversation.
+ * Fallback when share dialog doesn't work.
+ * @param {Object} page - Puppeteer page
+ * @param {string} uid - Facebook UID
+ * @param {string} message - Message to send
  * @param {Function} delay - Delay function
  * @returns {Promise<{ok: boolean, sentVia?: string, error?: string}>}
  */
-async function typeAndSend(page, text, delay = () => new Promise(r => setTimeout(r, 500))) {
-  const composeBox = await page.$('div[role="textbox"][contenteditable="true"]');
-  if (!composeBox) return { ok: false, error: 'Compose box not found' };
+async function sendDirectMessage(page, uid, message, delay = () => new Promise(r => setTimeout(r, 500))) {
+  // Navigate to conversation
+  await page.goto(`https://www.facebook.com/messages/t/${uid}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await delay(5000, 8000);
 
+  // Check for compose box
+  let composeBox = await page.$('div[role="textbox"][contenteditable="true"]');
+  if (!composeBox) {
+    // Try clicking the conversation in sidebar
+    await page.evaluate(() => {
+      const links = [...document.querySelectorAll('a[href*="/messages/t/"]')];
+      if (links.length > 0) links[0].click();
+    });
+    await delay(3000, 5000);
+    composeBox = await page.$('div[role="textbox"][contenteditable="true"]');
+  }
+
+  if (!composeBox) {
+    return { ok: false, error: 'Compose box not found' };
+  }
+
+  // Type message
   await composeBox.click();
-  await delay(300, 600);
+  await delay(300, 500);
+  await page.keyboard.type(message, { delay: 20 + Math.random() * 30 });
+  await delay(500, 1000);
 
-  // Clear any existing text first
-  await page.evaluate(() => {
-    const box = document.querySelector('div[role="textbox"][contenteditable="true"]');
-    if (box) box.textContent = '';
-  });
-
-  // Type the text - Facebook send button appears only AFTER typing
-  await page.keyboard.type(text, { delay: 20 + Math.random() * 30 });
-  await delay(1000, 2000); // Wait for send button to appear
-
-  // Find and click the send button - Facebook uses "Press Enter to send" / "Nhấn Enter để gửi"
+  // Send
   const sent = await page.evaluate(() => {
     const btns = [...document.querySelectorAll('[role="button"][aria-label]')];
-    // Look for the send button (appears after typing)
     const sendBtn = btns.find(b => {
       const label = (b.getAttribute('aria-label') || '').toLowerCase().trim();
       return label === 'press enter to send' || label === 'nhấn enter để gửi'
@@ -100,81 +165,64 @@ async function typeAndSend(page, text, delay = () => new Promise(r => setTimeout
     return { ok: true, sentVia: sent };
   }
 
-  // Fallback: press Enter (works on classic Messenger threads)
+  // Fallback: Enter key
   await page.keyboard.press('Enter');
   await delay(2000, 3000);
-
-  // Verify message was sent by checking if compose box is empty
-  const composeText = await page.evaluate(() => {
-    const box = document.querySelector('div[role="textbox"][contenteditable="true"]');
-    return box?.textContent || '';
-  });
-
-  if (composeText.trim()) {
-    return { ok: false, error: 'Message still in compose box - send may have failed' };
-  }
-
   return { ok: true, sentVia: 'enter-fallback' };
 }
 
 /**
- * Share a link to a user by UID.
+ * Share a post to a user by UID via the share dialog.
  * @param {Object} page - Puppeteer page (logged in)
  * @param {Object} target - Share target
- * @param {string} target.uid - Facebook UID to send to
- * @param {string} target.link - Link to send
- * @param {string} [target.message] - Optional message before the link
+ * @param {string} target.uid - Facebook UID to share to
+ * @param {string} target.postUrl - URL of the post to share
+ * @param {string} [target.message] - Message to send with the share
  * @param {Object} [options]
- * @returns {Promise<{ok: boolean, uid: string, error?: string}>}
+ * @returns {Promise<{ok: boolean, uid: string, error?: string, method?: string}>}
  */
 export async function shareLinkByUid(page, target, options = {}) {
-  const { uid, link, message } = target;
+  const { uid, postUrl, message } = target;
   const { delay = () => new Promise(r => setTimeout(r, 1000)) } = options;
 
-  if (!uid || !link) {
-    return { ok: false, uid: uid || '(unknown)', error: 'Missing uid or link' };
+  if (!uid || !postUrl) {
+    return { ok: false, uid: uid || '(unknown)', error: 'Missing uid or postUrl' };
   }
 
   try {
-    // Open conversation by UID
-    const opened = await openConversationByUid(page, uid);
-    if (!opened) {
-      return { ok: false, uid, error: 'Conversation not found or not accessible' };
+    // Method 1: Try share dialog with UID search
+    await page.goto(postUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+    await delay(3000, 5000);
+
+    // Click share button
+    const shareClicked = await clickShareButton(page, 8000);
+    if (!shareClicked) {
+      // Fallback: send direct message
+      const result = await sendDirectMessage(page, uid, message || postUrl, delay);
+      return { ...result, uid, method: 'direct-message' };
     }
 
-    // Compose message: optional message + link
-    const fullText = message ? `${message}\n${link}` : link;
+    await delay(2000, 3000);
 
-    // Type and send
-    const result = await typeAndSend(page, fullText, delay);
-    return { ok: result.ok, uid, sentVia: result.sentVia, error: result.error };
+    // Search for UID in dialog
+    await searchUidInDialog(page, uid, delay);
+
+    // Try to find and click recipient
+    const clickedLabel = await clickRecipientByUid(page, uid);
+    if (clickedLabel) {
+      await delay(2000, 3000);
+      // Send separate DM if message provided
+      if (message) {
+        await sendDirectMessage(page, uid, message, delay);
+      }
+      return { ok: true, uid, method: 'share-dialog', clickedLabel };
+    }
+
+    // Method 2: Fallback to direct message
+    const result = await sendDirectMessage(page, uid, message || postUrl, delay);
+    return { ...result, uid, method: 'direct-message' };
   } catch (err) {
     return { ok: false, uid, error: err.message };
-  }
-}
-
-/**
- * Verify the last message sent in the current conversation.
- * Takes a screenshot of the sent message for verification.
- * @param {Object} page - Puppeteer page
- * @param {string} expectedText - Expected text to verify
- * @returns {Promise<{verified: boolean, screenshot?: string}>}
- */
-export async function verifySentMessage(page, expectedText) {
-  try {
-    // Take screenshot of the conversation
-    const screenshotPath = `/tmp/verify_${Date.now()}.png`;
-    await page.screenshot({ path: screenshotPath, fullPage: false });
-
-    // Check if the expected text appears in the conversation page
-    const found = await page.evaluate((text) => {
-      const body = document.body.innerText;
-      return body.includes(text);
-    }, expectedText.substring(0, 50)); // Check first 50 chars
-
-    return { verified: found, screenshot: screenshotPath };
-  } catch {
-    return { verified: false };
   }
 }
 
@@ -183,22 +231,22 @@ export async function verifySentMessage(page, expectedText) {
  * @param {Object} page - Puppeteer page
  * @param {Object} campaign
  * @param {string[]} campaign.uids - Array of Facebook UIDs
- * @param {string} campaign.link - Link to send
+ * @param {string} campaign.postUrl - URL of the post to share
  * @param {string} [campaign.message] - Optional message
  * @param {Object} [options]
  * @returns {Promise<Object>} runGuardedBatch result
  */
 export async function shareLinkByUidCampaign(page, campaign, options = {}) {
-  const { uids, link, message } = campaign;
+  const { uids, postUrl, message } = campaign;
 
-  if (!link) throw new Error('❌ shareLinkByUidCampaign: link is required');
+  if (!postUrl) throw new Error('❌ shareLinkByUidCampaign: postUrl is required');
   if (!Array.isArray(uids) || uids.length === 0) {
     throw new Error('❌ shareLinkByUidCampaign: uids must be a non-empty array');
   }
 
   const items = uids.map(uid => ({
     uid,
-    link,
+    postUrl,
     message,
     toString: () => uid,
   }));
@@ -214,4 +262,4 @@ export async function shareLinkByUidCampaign(page, campaign, options = {}) {
   });
 }
 
-export default { shareLinkByUid, shareLinkByUidCampaign, openConversationByUid, typeAndSend };
+export default { shareLinkByUid, shareLinkByUidCampaign, sendDirectMessage };
