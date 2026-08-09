@@ -427,11 +427,14 @@ export async function likeFacebookPosts(page, postUrls, options = {}) {
  */
 async function findCommentInput(page) {
   // Supported locales: en, vi (from docs/agents/selectors-facebook.md)
+  // Facebook updated aria-label from "Write a comment" to "Write a public comment…" (2026)
   const commentSelectors = [
-    '[aria-label*="Write a comment"]',      // en
-    '[placeholder*="Write a comment"]',     // en fallback
-    '[aria-label*="Viết bình luận"]',       // vi
-    '[placeholder*="Viết bình luận"]',      // vi fallback
+    '[aria-label*="Write a public comment"]',  // en (current)
+    '[aria-label*="Write a comment"]',         // en (legacy)
+    '[placeholder*="Write a comment"]',        // en fallback
+    '[aria-label*="Viết bình luận"]',          // vi
+    '[placeholder*="Viết bình luận"]',         // vi fallback
+    '[role="textbox"][contenteditable="true"]', // generic fallback
   ];
 
   // Combined wait: block until ANY locale selector renders (one 5s wait total,

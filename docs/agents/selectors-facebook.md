@@ -94,8 +94,9 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 |---|---|---|
 | Like button (not liked) | `[aria-label="Like"]` / `[aria-label="Thích"]` | **VERIFIED en** 2026-06-09 (Story 2.2 live test); vi UNVERIFIED |
 | Like button (already liked) | `[aria-label="Remove Like"]` / `[aria-label="Bỏ thích"]` | en logic verified via `alreadyLiked` path; click-path UNVERIFIED live |
-| Comment input (en) | `[aria-label*="Write a comment"]`, `[placeholder*="Write a comment"]` | Story 2.3; substring match for flexibility |
+| Comment input (en) | `[aria-label*="Write a public comment"]`, `[aria-label*="Write a comment"]`, `[placeholder*="Write a comment"]` | Story 2.3; substring match. FB updated label to "Write a public comment…" (2026) |
 | Comment input (vi) | `[aria-label*="Viết bình luận"]`, `[placeholder*="Viết bình luận"]` | Story 2.3; Vietnamese locale |
+| Comment input (fallback) | `[role="textbox"][contenteditable="true"]` | Generic fallback for any locale |
 | Comment submit | Enter key (`page.keyboard.press('Enter')`) | Story 2.3; most reliable method |
 | Post submit | `[aria-label="Post"]` / `[aria-label="Đăng"]` | |
 

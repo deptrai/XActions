@@ -148,3 +148,10 @@ Issue EPS-5 (Deferred work cleanup) triaged all 6 priority items. Items 1, 2, 3,
 - ✅ **Item 6 — xs cookie sameSite:Strict hardening** [src/scrapers/facebook/index.js] — resolved in `38a1b9b`: `sameSite: 'Strict'` on both `xs` and `c_user` cookies.
 
 **Acceptance status:** vitest green (2111 passed; only `tests/x402-integration.test.js` fails — ECONNREFUSED port 3001, expected when server is down per CLAUDE.md). No mocks/stubs/fakes introduced. Committed & pushed as `nirholas`.
+
+## Deferred from: Facebook API test session (2026-08-10)
+
+- **Comment selector outdated** [api/services/facebookAutomation.js#findCommentInput] — "Comment input not found; locale unsupported or post unreachable". Selector needs update for current Facebook DOM.
+- **Posts scraping returns 0 results** [src/scrapers/facebook/index.js#scrapeTweets] — Desktop site doesn't load posts in headless mode. Need mobile URL fallback for groups.
+- **Profile scraping blocked** [src/scrapers/facebook/index.js#scrapeProfile] — "Facebook profile not found or blocked" on headless. Need graceful handling.
+- **Search text garbled** [src/scrapers/facebook/index.js#searchTweets] — Returns results but text encoding is garbled.

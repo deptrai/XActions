@@ -476,17 +476,26 @@ export async function scrapeProfile(page, username) {
   });
 
   // Detect blocked/non-existent profile — og:title missing or a Facebook login wall.
-  // NOTE: login-wall detection is English-biased ("Facebook", "Log into Facebook").
-  // Non-English login walls may not be caught here — see deferred-work.md. Prefer
-  // running authenticated (authCookie) so profile pages render fully.
   const title = raw.ogTitle?.trim() || '';
   const isLoginWall = !title
     || /^facebook$/i.test(title)
     || /^log\s+in\s+(to\s+)?facebook/i.test(title)
     || /^log\s*into\s+facebook/i.test(title)
     || /^facebook[\s–—-]+log/i.test(title);
+
+  // Return partial data instead of throwing if we have some info
   if (isLoginWall) {
-    throw new Error(`❌ Facebook profile not found or blocked: "${handle}"`);
+    return {
+      name: handle,
+      username: handle,
+      bio: null,
+      followers: raw.domFollowers || null,
+      following: null,
+      posts: null,
+      profileUrl: url,
+      platform: 'facebook',
+      error: 'Profile requires authentication or is blocked',
+    };
   }
 
   return normalizeProfile(raw, handle);
@@ -635,23 +644,36 @@ export async function scrapeTweets(page, username, options = {}) {
 
   // Determine target URL: full URLs (groups, permalinks) go directly,
   // handles get normalized to profile URL.
+  // Groups use mobile site - desktop doesn't load posts in headless mode.
   const isFullUrl = username?.startsWith('http://') || username?.startsWith('https://');
-  const targetUrl = isFullUrl ? username : `${FACEBOOK_BASE}/${normalizeHandle(username)}`;
+  const isGroup = isFullUrl && /\/groups\//.test(username);
+  let targetUrl;
+  if (isGroup) {
+    const cleanUrl = username.replace(/^https?:\/\/(www\.)?facebook\.com/, 'https://m.facebook.com');
+    targetUrl = cleanUrl.startsWith('http') ? cleanUrl : `https://m.facebook.com${cleanUrl}`;
+    // Set mobile user agent for groups - desktop UA gets desktop version even on mobile URL
+    await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1');
+    await page.setViewport({ width: 390, height: 844 });
+  } else {
+    targetUrl = isFullUrl ? username : `${FACEBOOK_BASE}/${normalizeHandle(username)}`;
+  }
 
   await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await delay(1000, 2000);
+  await delay(2000, 4000);
 
   // Wait for actual post content to load (skip loading skeletons)
+  const isMobile = isGroup;
+  const postSelector = isMobile ? 'div.m.displayed' : '[role="article"]';
   try {
-    await page.waitForFunction(() => {
-      const articles = document.querySelectorAll('[role="article"]');
-      for (const a of articles) {
-        if (a.innerText && a.innerText.length > 20 && !a.querySelector('[aria-label="Loading"]')) {
+    await page.waitForFunction((selector) => {
+      const posts = document.querySelectorAll(selector);
+      for (const p of posts) {
+        if (p.innerText && p.innerText.length > 20 && !p.querySelector('[aria-label="Loading"]')) {
           return true;
         }
       }
-      return articles.length === 0;
-    }, { timeout: 15000 });
+      return posts.length === 0;
+    }, { timeout: 15000 }, postSelector);
   } catch (_) {
     // Timeout - proceed anyway
   }
@@ -660,50 +682,61 @@ export async function scrapeTweets(page, username, options = {}) {
   let retries = 0;
 
   while (posts.size < limit && retries < maxRetries) {
-    const rawPosts = await page.evaluate(() => {
-      const articles = document.querySelectorAll('[role="article"]');
-      return Array.from(articles).map((article) => {
-        if (article.querySelector('[aria-label="Loading"]')) return null;
+    const rawPosts = await page.evaluate((useMobile) => {
+      // Mobile groups use div.m.displayed, desktop uses [role="article"]
+      const allElements = document.querySelectorAll(useMobile ? 'div.m.displayed' : '[role="article"]');
+      return Array.from(allElements).map((post) => {
+        if (post.querySelector('[aria-label="Loading"]')) return null;
 
-        const fullText = article.innerText?.trim() || '';
-        if (fullText.length < 5) return null;
+        const fullText = post.innerText?.trim() || '';
+        if (fullText.length < 20) return null;
 
-        // Clean up text: remove trailing action buttons (Like, Comment, Share, etc.)
+        // Mobile: filter for real posts (have date patterns like "Jul 16", "2h", "3d")
+        if (useMobile && !/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+|\d+\s*(min|h|hour|day|week)s?\s*ago/i.test(fullText)) {
+          return null;
+        }
+
+        // Clean up text: remove trailing action buttons
         let text = fullText
-          .replace(/\n(Like|Comment|Share|Send|Follow)\s*$/i, '')
-          .replace(/\n(Like|Comment|Share|Send|Follow)\n.*$/i, '')
+          .replace(/\n(Like|Comment|Share|Send|Follow|See more|See translation|Write a public comment…)\s*$/i, '')
+          .replace(/\n(Like|Comment|Share|Send|Follow|See more|See translation|Write a public comment…)\n.*$/i, '')
           .trim();
         text = text.substring(0, 1000);
 
-        // Timestamp
-        const timeEl = article.querySelector('[aria-label*="ago"], [aria-label*="at"], abbr, time');
-        const timestamp = timeEl?.getAttribute('aria-label') || timeEl?.textContent?.trim() || null;
+        // Timestamp - mobile uses abbr with text like "Jul 16"
+        const timeEl = post.querySelector('abbr, [aria-label*="ago"], [aria-label*="at"], time');
+        const timestamp = timeEl?.textContent?.trim() || timeEl?.getAttribute('aria-label') || null;
 
-        // Post URL
-        const linkEls = article.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]');
+        // Post URL - look in parent/sibling for mobile since links may be outside the div
+        let linkEls = post.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]');
+        if (useMobile && linkEls.length === 0) {
+          // Try parent element for mobile
+          const parent = post.parentElement;
+          if (parent) linkEls = parent.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]');
+        }
         const postLink = linkEls[0]?.getAttribute('href') || null;
         const postUrl = postLink
           ? postLink.startsWith('http') ? postLink : `https://www.facebook.com${postLink}`
           : null;
 
         // Engagement
-        const allText = article.textContent || '';
+        const allText = post.textContent || '';
         const likesMatch = allText.match(/([\d,.]+[KkMm]?)\s*(like|reaction)/i);
         const commentsMatch = allText.match(/([\d,.]+[KkMm]?)\s*comment/i);
         const likes = likesMatch ? likesMatch[1] : '0';
         const comments = commentsMatch ? commentsMatch[1] : '0';
 
         // Media
-        const images = Array.from(article.querySelectorAll('img'))
+        const images = Array.from(post.querySelectorAll('img'))
           .map((img) => img.src)
           .filter((src) => src && !src.includes('static') && !src.includes('emoji') && !src.includes('sprite') && src.startsWith('http'));
-        const hasVideo = !!article.querySelector('video');
+        const hasVideo = !!post.querySelector('video');
 
         const id = postUrl || text?.slice(0, 80) || null;
 
         return { id, text, timestamp, likes, comments, postUrl, images, hasVideo };
       }).filter((p) => p && p.id);
-    });
+    }, isMobile);
 
     const prevSize = posts.size;
     if (rawPosts) {
@@ -783,7 +816,12 @@ export async function searchTweets(page, query, options = {}) {
         // Text content — longest [dir="auto"] element (avoids picking up short name labels)
         const textEls = article.querySelectorAll('[dir="auto"]');
         const texts = Array.from(textEls)
-          .map((el) => el.textContent?.trim())
+          .map((el) => {
+            let t = el.textContent?.trim() || '';
+            // Remove Facebook anti-scraping characters: U+034F (CGJ) inserted between chars
+            t = t.replace(/\u034F/g, '');
+            return t;
+          })
           .filter((t) => t && t.length > 10);
         const text = texts.reduce((longest, t) => (t.length > longest.length ? t : longest), '') || null;
 
