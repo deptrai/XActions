@@ -632,10 +632,13 @@ export async function scrapeTweets(page, username, options = {}) {
     // in tests to keep the scroll loop fast and browser-free.
     delay = randomDelay,
   } = options;
-  const handle = normalizeHandle(username);
-  const profileUrl = `${FACEBOOK_BASE}/${handle}`;
 
-  await page.goto(profileUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  // Determine target URL: full URLs (groups, permalinks) go directly,
+  // handles get normalized to profile URL.
+  const isFullUrl = username?.startsWith('http://') || username?.startsWith('https://');
+  const targetUrl = isFullUrl ? username : `${FACEBOOK_BASE}/${normalizeHandle(username)}`;
+
+  await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await delay(1000, 2000);
 
   // Wait for actual post content to load (skip loading skeletons)
@@ -643,15 +646,14 @@ export async function scrapeTweets(page, username, options = {}) {
     await page.waitForFunction(() => {
       const articles = document.querySelectorAll('[role="article"]');
       for (const a of articles) {
-        // Check if article has real text content (not loading state)
         if (a.innerText && a.innerText.length > 20 && !a.querySelector('[aria-label="Loading"]')) {
           return true;
         }
       }
-      return articles.length === 0; // No articles = no content expected
+      return articles.length === 0;
     }, { timeout: 15000 });
   } catch (_) {
-    // Timeout - proceed anyway, might be slow network
+    // Timeout - proceed anyway
   }
 
   const posts = new Map();
@@ -661,21 +663,19 @@ export async function scrapeTweets(page, username, options = {}) {
     const rawPosts = await page.evaluate(() => {
       const articles = document.querySelectorAll('[role="article"]');
       return Array.from(articles).map((article) => {
-        // Skip loading skeletons
         if (article.querySelector('[aria-label="Loading"]')) return null;
 
-        // Get full text content - this is the most reliable for groups
         const fullText = article.innerText?.trim() || '';
         if (fullText.length < 5) return null;
 
-        // Extract post text (skip author name and timestamp)
-        const textEls = article.querySelectorAll('[dir="auto"]');
-        const texts = Array.from(textEls)
-          .map((el) => el.textContent?.trim())
-          .filter((t) => t && t.length > 3);
-        const text = fullText.substring(0, 1000); // Use full text for groups
+        // Clean up text: remove trailing action buttons (Like, Comment, Share, etc.)
+        let text = fullText
+          .replace(/\n(Like|Comment|Share|Send|Follow)\s*$/i, '')
+          .replace(/\n(Like|Comment|Share|Send|Follow)\n.*$/i, '')
+          .trim();
+        text = text.substring(0, 1000);
 
-        // Timestamp - look for aria-label with time info
+        // Timestamp
         const timeEl = article.querySelector('[aria-label*="ago"], [aria-label*="at"], abbr, time');
         const timestamp = timeEl?.getAttribute('aria-label') || timeEl?.textContent?.trim() || null;
 
@@ -686,7 +686,7 @@ export async function scrapeTweets(page, username, options = {}) {
           ? postLink.startsWith('http') ? postLink : `https://www.facebook.com${postLink}`
           : null;
 
-        // Engagement — prefer aria-label on reaction/comment buttons
+        // Engagement
         const allText = article.textContent || '';
         const likesMatch = allText.match(/([\d,.]+[KkMm]?)\s*(like|reaction)/i);
         const commentsMatch = allText.match(/([\d,.]+[KkMm]?)\s*comment/i);
