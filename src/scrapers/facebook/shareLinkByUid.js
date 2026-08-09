@@ -59,11 +59,17 @@ async function openConversationByUid(page, uid) {
  * @param {Object} page - Puppeteer page
  * @param {string} text - Text to send
  * @param {Function} delay - Delay function
- * @returns {Promise<{ok: boolean, sentVia?: string}>}
+ * @returns {Promise<{ok: boolean, sentVia?: string, error?: string}>}
  */
 async function typeAndSend(page, text, delay = () => new Promise(r => setTimeout(r, 500))) {
   const composeBox = await page.$('div[role="textbox"][contenteditable="true"]');
   if (!composeBox) return { ok: false, error: 'Compose box not found' };
+
+  // Get initial message count for verification
+  const initialCount = await page.evaluate(() => {
+    return document.querySelectorAll('[role="main"] [data-pagelet="Messages"]').length
+      || document.querySelectorAll('[role="main"] .x1yztbdb').length;
+  });
 
   await composeBox.click();
   await delay(300, 600);
@@ -72,27 +78,39 @@ async function typeAndSend(page, text, delay = () => new Promise(r => setTimeout
   await page.keyboard.type(text, { delay: 20 + Math.random() * 30 });
   await delay(500, 1000);
 
-  // Find and click the send button
-  const sent = await page.evaluate((needles) => {
+  // Find and click the send button - match exact labels to avoid "Send a voice clip"
+  const sent = await page.evaluate(() => {
     const btns = [...document.querySelectorAll('[role="button"][aria-label]')];
+    // Exact match for send button (not "Send a voice clip", "Send a sticker", etc.)
     const sendBtn = btns.find(b => {
-      const label = (b.getAttribute('aria-label') || '').toLowerCase();
-      return needles.some(n => label.includes(n));
+      const label = (b.getAttribute('aria-label') || '').toLowerCase().trim();
+      return label === 'send' || label === 'gửi' || label === 'press enter to send' || label === 'nhấn enter để gửi';
     });
     if (sendBtn) {
       sendBtn.click();
       return sendBtn.getAttribute('aria-label');
     }
     return null;
-  }, ['send', 'gửi', 'nhấn enter', 'press enter']);
+  });
 
-  if (sent) {
-    return { ok: true, sentVia: sent };
+  if (!sent) {
+    // Fallback: press Enter
+    await page.keyboard.press('Enter');
   }
 
-  // Fallback: press Enter
-  await page.keyboard.press('Enter');
-  return { ok: true, sentVia: 'enter-fallback' };
+  await delay(2000, 3000);
+
+  // Verify message was sent by checking if compose box is empty
+  const composeText = await page.evaluate(() => {
+    const box = document.querySelector('div[role="textbox"][contenteditable="true"]');
+    return box?.textContent || '';
+  });
+
+  if (composeText.trim()) {
+    return { ok: false, error: 'Message still in compose box - send may have failed' };
+  }
+
+  return { ok: true, sentVia: sent || 'enter-fallback' };
 }
 
 /**
