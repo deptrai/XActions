@@ -813,17 +813,25 @@ export async function searchTweets(page, query, options = {}) {
       const NON_PROFILE = new Set(nonProfile);
       const articles = document.querySelectorAll('[role="article"]');
       return Array.from(articles).map((article) => {
-        // Text content — longest [dir="auto"] element (avoids picking up short name labels)
+        // Text content — pick the [dir="auto"] element with real text (not FB anti-scraping garbled text)
         const textEls = article.querySelectorAll('[dir="auto"]');
         const texts = Array.from(textEls)
           .map((el) => {
             let t = el.textContent?.trim() || '';
             // Remove Facebook anti-scraping characters: U+034F (CGJ) inserted between chars
             t = t.replace(/\u034F/g, '');
+            // Remove zero-width spaces and other invisible chars
+            t = t.replace(/[\u200B-\u200D\uFEFF\u2060]/g, '').trim();
             return t;
           })
           .filter((t) => t && t.length > 10);
-        const text = texts.reduce((longest, t) => (t.length > longest.length ? t : longest), '') || null;
+        // Pick text with most spaces (real text has words separated by spaces)
+        const text = texts.reduce((best, t) => {
+          if (!best) return t;
+          const bestSpaces = (best.match(/\s+/g) || []).length;
+          const tSpaces = (t.match(/\s+/g) || []).length;
+          return tSpaces > bestSpaces ? t : best;
+        }, '') || null;
 
         // Author — first real profile link in article (skip permalinks, non-profile segments, l.php redirects)
         const allLinks = Array.from(article.querySelectorAll('a[href]'));
