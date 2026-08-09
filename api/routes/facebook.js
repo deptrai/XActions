@@ -398,6 +398,13 @@ router.post('/automate', async (req, res) => {
         const result = await shareLinkByUidCampaign(page, { uids, postUrl: url, message: content || message }, {
           dryRun: resolvedDryRun,
           delay: shareDelay,
+          authCookie: {
+            c_user: authCookie.c_user,
+            xs: authCookie.xs,
+            sb: authCookie.sb,
+            datar: authCookie.datatar || authCookie.datar,
+            fr: authCookie.fr,
+          },
         });
         await browser.close().catch(() => {});
         return res.json({ ok: true, action, dryRun: resolvedDryRun, userId: req.user.id, ...result });
