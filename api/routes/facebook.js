@@ -196,7 +196,7 @@ router.post('/automate', async (req, res) => {
     const action = rawAction === 'messenger' ? 'messenger-share' : rawAction;
 
     const VALID_ACTIONS = [
-      'like', 'comment', 'post', 'messenger-share',
+      'like', 'comment', 'post', 'messenger-share', 'share-link-uid',
       'share', 'schedule',
       'join-groups', 'batch-post-groups',
       'send-friend-requests', 'cancel-friend-requests',
@@ -359,6 +359,50 @@ router.post('/automate', async (req, res) => {
         });
         emit({ event: 'error', operationId: operation.id, userId: req.user.id, status: 'failed', error: runError.message });
         return res.status(500).json({ ok: false, error: 'Messenger campaign failed. See server logs.' });
+      }
+    }
+
+    // ========================================================================
+    // share-link-uid — send link to user by UID (Story 5.x)
+    // ========================================================================
+    if (action === 'share-link-uid') {
+      const { uids = [], link = '', message = '' } = req.body ?? {};
+      if (!Array.isArray(uids) || uids.length === 0) {
+        return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires non-empty uids array' });
+      }
+      if (!link.trim()) {
+        return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires non-empty link' });
+      }
+
+      const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
+      const { shareLinkByUidCampaign } = await import('../../src/scrapers/facebook/shareLinkByUid.js');
+
+      const messengerDelay = resolvedDryRun
+        ? () => {}
+        : (min = 3000, max = 8000) => new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
+
+      const browser = await createBrowser({ headless: true });
+      const page = await createPage(browser);
+      await loginWithCookie(page, {
+        c_user: authCookie.c_user,
+        xs: authCookie.xs,
+        sb: authCookie.sb,
+        datar: authCookie.datatar || authCookie.datar,
+        fr: authCookie.fr,
+        fbl_st: authCookie.fbl_st,
+        locale: authCookie.locale,
+      });
+
+      try {
+        const result = await shareLinkByUidCampaign(page, { uids, link, message }, {
+          dryRun: resolvedDryRun,
+          delay: messengerDelay,
+        });
+        await browser.close().catch(() => {});
+        return res.json({ ok: true, action, dryRun: resolvedDryRun, userId: req.user.id, ...result });
+      } catch (runError) {
+        await browser.close().catch(() => {});
+        return res.status(500).json({ ok: false, error: 'Share link by UID failed. See server logs.' });
       }
     }
 
