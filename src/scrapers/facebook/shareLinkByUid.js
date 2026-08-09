@@ -25,10 +25,10 @@ const SELECTORS = {
 async function openConversationByUid(page, uid) {
   const conversationUrl = `https://www.facebook.com/messages/t/${uid}`;
   await page.goto(conversationUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-  await new Promise(r => setTimeout(r, 5000));
+  await new Promise(r => setTimeout(r, 8000)); // Wait for conversation to fully load
 
   // Check if compose box is already visible
-  const hasComposeBox = await page.$('div[role="textbox"][contenteditable="true"]');
+  let hasComposeBox = await page.$('div[role="textbox"][contenteditable="true"]');
   if (hasComposeBox) return true;
 
   // Click the conversation in the sidebar
@@ -50,8 +50,9 @@ async function openConversationByUid(page, uid) {
 
   if (!clicked) return false;
 
-  await new Promise(r => setTimeout(r, 3000));
-  return !!(await page.$('div[role="textbox"][contenteditable="true"]'));
+  await new Promise(r => setTimeout(r, 5000)); // Wait for conversation to load
+  hasComposeBox = await page.$('div[role="textbox"][contenteditable="true"]');
+  return !!hasComposeBox;
 }
 
 /**
@@ -65,26 +66,27 @@ async function typeAndSend(page, text, delay = () => new Promise(r => setTimeout
   const composeBox = await page.$('div[role="textbox"][contenteditable="true"]');
   if (!composeBox) return { ok: false, error: 'Compose box not found' };
 
-  // Get initial message count for verification
-  const initialCount = await page.evaluate(() => {
-    return document.querySelectorAll('[role="main"] [data-pagelet="Messages"]').length
-      || document.querySelectorAll('[role="main"] .x1yztbdb').length;
-  });
-
   await composeBox.click();
   await delay(300, 600);
 
-  // Type the text
-  await page.keyboard.type(text, { delay: 20 + Math.random() * 30 });
-  await delay(500, 1000);
+  // Clear any existing text first
+  await page.evaluate(() => {
+    const box = document.querySelector('div[role="textbox"][contenteditable="true"]');
+    if (box) box.textContent = '';
+  });
 
-  // Find and click the send button - match exact labels to avoid "Send a voice clip"
+  // Type the text - Facebook send button appears only AFTER typing
+  await page.keyboard.type(text, { delay: 20 + Math.random() * 30 });
+  await delay(1000, 2000); // Wait for send button to appear
+
+  // Find and click the send button - Facebook uses "Press Enter to send" / "Nhấn Enter để gửi"
   const sent = await page.evaluate(() => {
     const btns = [...document.querySelectorAll('[role="button"][aria-label]')];
-    // Exact match for send button (not "Send a voice clip", "Send a sticker", etc.)
+    // Look for the send button (appears after typing)
     const sendBtn = btns.find(b => {
       const label = (b.getAttribute('aria-label') || '').toLowerCase().trim();
-      return label === 'send' || label === 'gửi' || label === 'press enter to send' || label === 'nhấn enter để gửi';
+      return label === 'press enter to send' || label === 'nhấn enter để gửi'
+        || label === 'send' || label === 'gửi';
     });
     if (sendBtn) {
       sendBtn.click();
@@ -93,11 +95,13 @@ async function typeAndSend(page, text, delay = () => new Promise(r => setTimeout
     return null;
   });
 
-  if (!sent) {
-    // Fallback: press Enter
-    await page.keyboard.press('Enter');
+  if (sent) {
+    await delay(2000, 3000);
+    return { ok: true, sentVia: sent };
   }
 
+  // Fallback: press Enter (works on classic Messenger threads)
+  await page.keyboard.press('Enter');
   await delay(2000, 3000);
 
   // Verify message was sent by checking if compose box is empty
@@ -110,7 +114,7 @@ async function typeAndSend(page, text, delay = () => new Promise(r => setTimeout
     return { ok: false, error: 'Message still in compose box - send may have failed' };
   }
 
-  return { ok: true, sentVia: sent || 'enter-fallback' };
+  return { ok: true, sentVia: 'enter-fallback' };
 }
 
 /**
@@ -146,6 +150,31 @@ export async function shareLinkByUid(page, target, options = {}) {
     return { ok: result.ok, uid, sentVia: result.sentVia, error: result.error };
   } catch (err) {
     return { ok: false, uid, error: err.message };
+  }
+}
+
+/**
+ * Verify the last message sent in the current conversation.
+ * Takes a screenshot of the sent message for verification.
+ * @param {Object} page - Puppeteer page
+ * @param {string} expectedText - Expected text to verify
+ * @returns {Promise<{verified: boolean, screenshot?: string}>}
+ */
+export async function verifySentMessage(page, expectedText) {
+  try {
+    // Take screenshot of the conversation
+    const screenshotPath = `/tmp/verify_${Date.now()}.png`;
+    await page.screenshot({ path: screenshotPath, fullPage: false });
+
+    // Check if the expected text appears in the conversation page
+    const found = await page.evaluate((text) => {
+      const body = document.body.innerText;
+      return body.includes(text);
+    }, expectedText.substring(0, 50)); // Check first 50 chars
+
+    return { verified: found, screenshot: screenshotPath };
+  } catch {
+    return { verified: false };
   }
 }
 
