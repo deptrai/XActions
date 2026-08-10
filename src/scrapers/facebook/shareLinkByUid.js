@@ -1,13 +1,15 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 /**
  * Share link via UID - send a post to a user by their Facebook UID.
- * Flow: Navigate to profile by UID → Click Message → Send post link with message
+ * Uses GraphQL MWChatBusinessCTAAdsSenderMutation (C# Main.cs:579-580).
+ * This does NOT require an existing conversation.
  */
 
 import { runGuardedBatch } from '../../../api/services/facebookAutomation.js';
+import { sendMessageToUid } from './graphql.js';
 
 /**
- * Share a post to a user by UID via profile page.
+ * Share a post to a user by UID via GraphQL API.
  * @param {Object} page - Puppeteer page (logged in)
  * @param {Object} target - Share target
  * @param {string} target.uid - Facebook UID to share to
@@ -18,35 +20,52 @@ import { runGuardedBatch } from '../../../api/services/facebookAutomation.js';
  */
 export async function shareLinkByUid(page, target, options = {}) {
   const { uid, postUrl, message } = target;
-  const { delay = () => new Promise(r => setTimeout(r, 1000)) } = options;
+  const { delay = () => new Promise(r => setTimeout(r, 1000)), cookie } = options;
 
   if (!uid || !postUrl) {
     return { ok: false, uid: uid || '(unknown)', error: 'Missing uid or postUrl' };
   }
 
   try {
-    // Navigate to profile by UID
-    const profileUrl = `https://www.facebook.com/profile.php?id=${uid}`;
-    await page.goto(profileUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await delay(5000, 8000);
+    // Method 1: GraphQL API (C# Main.cs:579-581) - no conversation needed
+    // Navigate to Facebook to ensure we have tokens
+    await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await delay(3000, 5000);
 
-    // Check if profile exists
-    const profileExists = await page.evaluate(() => {
-      const hasLogin = !!document.querySelector('#email');
-      const hasContent = document.body?.innerText?.length > 200;
-      return !hasLogin && hasContent;
+    // Handle Facebook anti-bot "Continue" page
+    const needsContinue = await page.evaluate(() => {
+      const btns = [...document.querySelectorAll('[role="button"], button')];
+      const continueBtn = btns.find(b => b.textContent.trim() === 'Continue');
+      if (continueBtn) {
+        continueBtn.click();
+        return true;
+      }
+      return false;
     });
 
-    if (!profileExists) {
-      return { ok: false, uid, error: 'Profile not found or not accessible' };
+    if (needsContinue) {
+      await delay(3000, 5000);
     }
 
-    // Find and click "Message" button on profile
+    const result = await sendMessageToUid(page, uid, message || postUrl);
+
+    if (result.ok) {
+      return { ok: true, uid, method: 'graphql-api', response: result.response };
+    }
+
+    // If GraphQL failed, fall through to profile method
+    console.log(`⚠️ GraphQL failed: ${result.error}. Trying profile method...`);
+
+    // Method 2: Profile page + Messenger (fallback)
+    await page.goto(`https://www.facebook.com/profile.php?id=${uid}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await delay(5000, 8000);
+
+    // Find and click "Message" button
     const messageClicked = await page.evaluate(() => {
-      const buttons = [...document.querySelectorAll('[role="button"], button, a')];
+      const buttons = [...document.querySelectorAll('[role="button"], button')];
       const messageBtn = buttons.find(b => {
         const text = (b.textContent || '').toLowerCase().trim();
-        return text === 'message' || text === 'nhắn tin' || text === 'send message';
+        return text === 'message' || text === 'nhắn tin';
       });
       if (messageBtn) {
         messageBtn.click();
@@ -56,18 +75,17 @@ export async function shareLinkByUid(page, target, options = {}) {
     });
 
     if (!messageClicked) {
-      // Fallback: navigate directly to conversation
+      // Navigate directly to conversation
       await page.goto(`https://www.facebook.com/messages/t/${uid}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await delay(3000, 5000);
+    } else {
+      await delay(2000, 3000);
     }
-
-    await delay(2000, 3000);
 
     // Find compose box
     let composeBox = await page.$('div[role="textbox"][contenteditable="true"]');
 
     if (!composeBox) {
-      // Try clicking conversation in sidebar
       await page.evaluate(() => {
         const links = [...document.querySelectorAll('a[href*="/messages/t/"]')];
         if (links.length > 0) links[0].click();
@@ -79,9 +97,6 @@ export async function shareLinkByUid(page, target, options = {}) {
     if (!composeBox) {
       return { ok: false, uid, error: 'Compose box not found' };
     }
-
-    // Compose message with post link
-    const fullMessage = message ? `${message}\n${postUrl}` : postUrl;
 
     // Type message
     await composeBox.click();
@@ -106,13 +121,12 @@ export async function shareLinkByUid(page, target, options = {}) {
 
     if (sent) {
       await delay(2000, 3000);
-      return { ok: true, uid, sentVia: sent, method: 'profile-message' };
+      return { ok: true, uid, sentVia: sent, method: 'profile-messenger' };
     }
 
-    // Fallback: Enter key
     await page.keyboard.press('Enter');
     await delay(2000, 3000);
-    return { ok: true, uid, sentVia: 'enter-fallback', method: 'profile-message' };
+    return { ok: true, uid, sentVia: 'enter-fallback', method: 'profile-messenger' };
   } catch (err) {
     return { ok: false, uid, error: err.message };
   }
