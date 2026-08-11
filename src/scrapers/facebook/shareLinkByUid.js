@@ -1,160 +1,141 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 /**
- * Share link via UID - send a post to a user by their Facebook UID.
- * Uses GraphQL MWChatBusinessCTAAdsSenderMutation (C# Main.cs:579-580).
- * This does NOT require an existing conversation.
+ * Share link via UID - Share dialog approach.
+ * Navigate to post → Click share → Click ALL "via Messenger" buttons.
+ * This sends to all recent conversations.
  */
 
 import { runGuardedBatch } from '../../../api/services/facebookAutomation.js';
-import { sendMessageToUid } from './graphql.js';
 
 /**
- * Share a post to a user by UID via GraphQL API.
+ * Click all "via Messenger" buttons in the share dialog.
+ * @param {Object} page - Puppeteer page
+ * @param {Function} delay - Delay function
+ * @returns {Promise<{clicked: number, labels: string[]}>}
+ */
+async function clickAllMessengerButtons(page, delay = () => new Promise(r => setTimeout(r, 500))) {
+  const clickedLabels = [];
+  let totalClicked = 0;
+
+  const result = await page.evaluate(() => {
+    const buttons = [...document.querySelectorAll('[role="button"][aria-label]')];
+    const messengerBtns = buttons.filter(b => /via Messenger|qua Messenger/i.test(b.getAttribute('aria-label') || ''));
+    return {
+      count: messengerBtns.length,
+      labels: messengerBtns.map(b => b.getAttribute('aria-label'))
+    };
+  });
+
+  for (const label of result.labels) {
+    if (clickedLabels.includes(label)) continue; // Skip duplicates
+
+    const clicked = await page.evaluate((targetLabel) => {
+      const buttons = [...document.querySelectorAll('[role="button"][aria-label]')];
+      const target = buttons.find(b => b.getAttribute('aria-label') === targetLabel);
+      if (target) {
+        target.click();
+        return true;
+      }
+      return false;
+    }, label);
+
+    if (clicked) {
+      clickedLabels.push(label);
+      totalClicked++;
+      await delay(500, 1000);
+    }
+  }
+
+  return { clicked: totalClicked, labels: clickedLabels };
+}
+
+/**
+ * Share a post via Messenger share dialog.
  * @param {Object} page - Puppeteer page (logged in)
  * @param {Object} target - Share target
- * @param {string} target.uid - Facebook UID to share to
  * @param {string} target.postUrl - URL of the post to share
- * @param {string} [target.message] - Message to send with the share
+ * @param {string} [target.message] - Optional message
  * @param {Object} [options]
- * @returns {Promise<{ok: boolean, uid: string, error?: string, method?: string}>}
+ * @returns {Promise<{ok: boolean, postUrl: string, sharesClicked: number, error?: string, method?: string}>}
  */
 export async function shareLinkByUid(page, target, options = {}) {
-  const { uid, postUrl, message } = target;
-  const { delay = () => new Promise(r => setTimeout(r, 1000)), cookie } = options;
+  const { postUrl, message } = target;
+  const { delay = () => new Promise(r => setTimeout(r, 1000)) } = options;
 
-  if (!uid || !postUrl) {
-    return { ok: false, uid: uid || '(unknown)', error: 'Missing uid or postUrl' };
+  if (!postUrl) {
+    return { ok: false, postUrl: '', error: 'Missing postUrl' };
   }
 
   try {
-    // Method 1: GraphQL API (C# Main.cs:579-581) - no conversation needed
-    // Navigate to Facebook to ensure we have tokens
-    await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    // Navigate to post
+    await page.goto(postUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await delay(3000, 5000);
 
-    // Handle Facebook anti-bot "Continue" page
-    const needsContinue = await page.evaluate(() => {
-      const btns = [...document.querySelectorAll('[role="button"], button')];
-      const continueBtn = btns.find(b => b.textContent.trim() === 'Continue');
-      if (continueBtn) {
-        continueBtn.click();
+    // Click share button
+    const shareClicked = await page.evaluate(() => {
+      const shareBtn = document.querySelector('div[data-ad-rendering-role="share_button"], [data-ad-renderingrole="share_button"]');
+      if (shareBtn) {
+        const btn = shareBtn.closest('div[role="button"]') || shareBtn;
+        btn.click();
+        return true;
+      }
+      // XPath fallback
+      const xpathResult = document.evaluate(
+        '//div[@data-ad-rendering-role="share_button"]/ancestor::div[@role="button"]',
+        document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
+      );
+      if (xpathResult.singleNodeValue) {
+        xpathResult.singleNodeValue.click();
         return true;
       }
       return false;
     });
 
-    if (needsContinue) {
-      await delay(3000, 5000);
+    if (!shareClicked) {
+      return { ok: false, postUrl, error: 'Share button not found' };
     }
 
-    const result = await sendMessageToUid(page, uid, message || postUrl);
-
-    if (result.ok) {
-      return { ok: true, uid, method: 'graphql-api', response: result.response };
-    }
-
-    // If GraphQL failed, fall through to profile method
-    console.log(`⚠️ GraphQL failed: ${result.error}. Trying profile method...`);
-
-    // Method 2: Profile page + Messenger (fallback)
-    await page.goto(`https://www.facebook.com/profile.php?id=${uid}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await delay(5000, 8000);
-
-    // Find and click "Message" button
-    const messageClicked = await page.evaluate(() => {
-      const buttons = [...document.querySelectorAll('[role="button"], button')];
-      const messageBtn = buttons.find(b => {
-        const text = (b.textContent || '').toLowerCase().trim();
-        return text === 'message' || text === 'nhắn tin';
-      });
-      if (messageBtn) {
-        messageBtn.click();
-        return true;
-      }
-      return false;
-    });
-
-    if (!messageClicked) {
-      // Navigate directly to conversation
-      await page.goto(`https://www.facebook.com/messages/t/${uid}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await delay(3000, 5000);
-    } else {
-      await delay(2000, 3000);
-    }
-
-    // Find compose box
-    let composeBox = await page.$('div[role="textbox"][contenteditable="true"]');
-
-    if (!composeBox) {
-      await page.evaluate(() => {
-        const links = [...document.querySelectorAll('a[href*="/messages/t/"]')];
-        if (links.length > 0) links[0].click();
-      });
-      await delay(3000, 5000);
-      composeBox = await page.$('div[role="textbox"][contenteditable="true"]');
-    }
-
-    if (!composeBox) {
-      return { ok: false, uid, error: 'Compose box not found' };
-    }
-
-    // Type message
-    await composeBox.click();
-    await delay(300, 500);
-    await page.keyboard.type(fullMessage, { delay: 20 + Math.random() * 30 });
-    await delay(500, 1000);
-
-    // Send
-    const sent = await page.evaluate(() => {
-      const btns = [...document.querySelectorAll('[role="button"][aria-label]')];
-      const sendBtn = btns.find(b => {
-        const label = (b.getAttribute('aria-label') || '').toLowerCase().trim();
-        return label === 'press enter to send' || label === 'nhấn enter để gửi'
-          || label === 'send' || label === 'gửi';
-      });
-      if (sendBtn) {
-        sendBtn.click();
-        return sendBtn.getAttribute('aria-label');
-      }
-      return null;
-    });
-
-    if (sent) {
-      await delay(2000, 3000);
-      return { ok: true, uid, sentVia: sent, method: 'profile-messenger' };
-    }
-
-    await page.keyboard.press('Enter');
     await delay(2000, 3000);
-    return { ok: true, uid, sentVia: 'enter-fallback', method: 'profile-messenger' };
+
+    // Click all "via Messenger" buttons
+    const { clicked, labels } = await clickAllMessengerButtons(page, delay);
+
+    if (clicked === 0) {
+      return { ok: false, postUrl, error: 'No Messenger buttons found in share dialog' };
+    }
+
+    return {
+      ok: true,
+      postUrl,
+      sharesClicked: clicked,
+      labels,
+      method: 'share-dialog',
+    };
   } catch (err) {
-    return { ok: false, uid, error: err.message };
+    return { ok: false, postUrl, error: err.message };
   }
 }
 
 /**
- * Batch share links to multiple UIDs.
+ * Batch share links to multiple posts.
  * @param {Object} page - Puppeteer page
  * @param {Object} campaign
- * @param {string[]} campaign.uids - Array of Facebook UIDs
- * @param {string} campaign.postUrl - URL of the post to share
+ * @param {string[]} campaign.postUrls - Array of post URLs to share
  * @param {string} [campaign.message] - Optional message
  * @param {Object} [options]
  * @returns {Promise<Object>} runGuardedBatch result
  */
 export async function shareLinkByUidCampaign(page, campaign, options = {}) {
-  const { uids, postUrl, message } = campaign;
+  const { postUrls, message } = campaign;
 
-  if (!postUrl) throw new Error('❌ shareLinkByUidCampaign: postUrl is required');
-  if (!Array.isArray(uids) || uids.length === 0) {
-    throw new Error('❌ shareLinkByUidCampaign: uids must be a non-empty array');
+  if (!Array.isArray(postUrls) || postUrls.length === 0) {
+    throw new Error('❌ shareLinkByUidCampaign: postUrls must be a non-empty array');
   }
 
-  const items = uids.map(uid => ({
-    uid,
-    postUrl,
+  const items = postUrls.map(url => ({
+    postUrl: url,
     message,
-    toString: () => uid,
+    toString: () => url,
   }));
 
   const actionFn = async (target) => {
@@ -168,4 +149,4 @@ export async function shareLinkByUidCampaign(page, campaign, options = {}) {
   });
 }
 
-export default { shareLinkByUid, shareLinkByUidCampaign };
+export default { shareLinkByUid, shareLinkByUidCampaign, clickAllMessengerButtons };
