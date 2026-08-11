@@ -363,24 +363,17 @@ router.post('/automate', async (req, res) => {
     }
 
     // ========================================================================
-    // share-link-uid — send link to user by UID (Story 5.x)
+    // share-link-uid — share post via Messenger dialog
     // ========================================================================
     if (action === 'share-link-uid') {
-      const { uids = [], postUrl = '', postUrls = [], content = '', message = '' } = req.body ?? {};
-      if (!Array.isArray(uids) || uids.length === 0) {
-        return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires non-empty uids array' });
-      }
+      const { postUrl = '', postUrls = [], content = '', message = '' } = req.body ?? {};
       const url = postUrl || postUrls[0] || '';
       if (!url.trim()) {
         return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires postUrl or postUrls[]' });
       }
 
       const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
-      const { shareLinkByUidCampaign } = await import('../../src/scrapers/facebook/shareLinkByUid.js');
-
-      const shareDelay = resolvedDryRun
-        ? () => {}
-        : (min = 3000, max = 8000) => new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
+      const { shareLinkByUid } = await import('../../src/scrapers/facebook/shareLinkByUid.js');
 
       const browser = await createBrowser({ headless: true });
       const page = await createPage(browser);
@@ -395,16 +388,8 @@ router.post('/automate', async (req, res) => {
       });
 
       try {
-        const result = await shareLinkByUidCampaign(page, { uids, postUrl: url, message: content || message }, {
+        const result = await shareLinkByUid(page, { postUrl: url, message: content || message }, {
           dryRun: resolvedDryRun,
-          delay: shareDelay,
-          authCookie: {
-            c_user: authCookie.c_user,
-            xs: authCookie.xs,
-            sb: authCookie.sb,
-            datar: authCookie.datatar || authCookie.datar,
-            fr: authCookie.fr,
-          },
         });
         await browser.close().catch(() => {});
         return res.json({ ok: true, action, dryRun: resolvedDryRun, userId: req.user.id, ...result });

@@ -23,6 +23,7 @@ program
   .option('--message <text>', 'Tin nhắn kèm theo', '')
   .option('--recipients <uids>', 'Danh sách UID (phân cách dấu phẩy)')
   .option('--cdpPort <port>', 'CDP port', '9222')
+  .option('--cookies <json>', 'Facebook cookies as JSON string', '')
   .parse();
 
 const opts = program.opts();
@@ -31,7 +32,7 @@ function delay(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-async function sharePost({ postUrl, message, recipients, cdpPort }) {
+async function sharePost({ postUrl, message, recipients, cdpPort, cookies }) {
   console.log('=== Facebook Local Share Tool (CDP) ===\n');
 
   // Connect to existing Chrome
@@ -41,8 +42,34 @@ async function sharePost({ postUrl, message, recipients, cdpPort }) {
   const page = context.pages()[0] || await context.newPage();
   console.log('    ✅ Đã kết nối');
 
+  // Add cookies if provided
+  if (cookies) {
+    console.log('\n[2] Thêm cookies...');
+    let cookieData;
+    try {
+      cookieData = JSON.parse(cookies);
+    } catch (e) {
+      console.log('    ❌ Cookies JSON không hợp lệ');
+      await browser.close();
+      return { ok: false, error: 'Invalid cookies JSON' };
+    }
+
+    const cookieObjects = Object.entries(cookieData).map(([name, value]) => ({
+      name,
+      value: String(value),
+      domain: '.facebook.com',
+      path: '/',
+      httpOnly: false,
+      secure: true,
+      sameSite: 'None'
+    }));
+
+    await context.addCookies(cookieObjects);
+    console.log(`    ✅ Đã thêm ${cookieObjects.length} cookies`);
+  }
+
   // Check login
-  console.log('\n[2] Kiểm tra login...');
+  console.log('\n[3] Kiểm tra login...');
   await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
   await delay(3000);
 
