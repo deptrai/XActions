@@ -110,6 +110,8 @@
     "nodemailer": "^6.9.16",
     "ora": "^8.0.0",
     "otplib": "^13.4.1",
+    "playwright": "^1.62.1",
+    "playwright-extra": "^4.3.6",
     "prisma": "^5.7.1",
     "puppeteer": "^24.34.0",
     "puppeteer-extra": "^3.3.6",
