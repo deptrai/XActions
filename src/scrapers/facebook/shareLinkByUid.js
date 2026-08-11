@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 /**
- * Share link via UID - Share dialog approach.
- * Navigate to post → Click share → Click ALL "via Messenger" buttons.
- * This sends to all recent conversations.
+ * Share link via UID - Share dialog approach (like C# tool).
+ * Flow: Click share → Click "via Messenger" → Click recipient avatars
+ * Note: Message is NOT typed - clicking avatar sends post immediately.
  */
 
 import { runGuardedBatch } from '../../../api/services/facebookAutomation.js';
@@ -17,12 +17,12 @@ async function clickAllMessengerButtons(page, delay = () => new Promise(r => set
   const clickedLabels = [];
   let totalClicked = 0;
 
+  // Get all Messenger recipient buttons
   const result = await page.evaluate(() => {
-    const buttons = [...document.querySelectorAll('[role="button"][aria-label]')];
-    const messengerBtns = buttons.filter(b => /via Messenger|qua Messenger/i.test(b.getAttribute('aria-label') || ''));
+    const btns = [...document.querySelectorAll('[role="button"][aria-label*="Messenger"]')];
     return {
-      count: messengerBtns.length,
-      labels: messengerBtns.map(b => b.getAttribute('aria-label'))
+      count: btns.length,
+      labels: btns.map(b => b.getAttribute('aria-label'))
     };
   });
 
@@ -30,8 +30,8 @@ async function clickAllMessengerButtons(page, delay = () => new Promise(r => set
     if (clickedLabels.includes(label)) continue; // Skip duplicates
 
     const clicked = await page.evaluate((targetLabel) => {
-      const buttons = [...document.querySelectorAll('[role="button"][aria-label]')];
-      const target = buttons.find(b => b.getAttribute('aria-label') === targetLabel);
+      const btns = [...document.querySelectorAll('[role="button"][aria-label*="Messenger"]')];
+      const target = btns.find(b => b.getAttribute('aria-label') === targetLabel);
       if (target) {
         target.click();
         return true;
@@ -51,11 +51,10 @@ async function clickAllMessengerButtons(page, delay = () => new Promise(r => set
 
 /**
  * Share a post via Messenger share dialog.
- * Flow: Click share → Click "via Messenger" → Type message → Click Send
  * @param {Object} page - Puppeteer page (logged in)
  * @param {Object} target - Share target
  * @param {string} target.postUrl - URL of the post to share
- * @param {string} [target.message] - Optional message to include
+ * @param {string} [target.message] - Message (NOT used - avatar click sends immediately)
  * @param {Object} [options]
  * @returns {Promise<{ok: boolean, postUrl: string, sharesSent: number, error?: string, method?: string}>}
  */
@@ -76,7 +75,7 @@ export async function shareLinkByUid(page, target, options = {}) {
     const shareClicked = await page.evaluate(() => {
       const shareBtn = document.querySelector('div[data-ad-rendering-role="share_button"], [data-ad-renderingrole="share_button"]');
       if (shareBtn) {
-        const btn = shareBtn.closest('div[role="button"]') || shareBtn;
+        const btn = shareBtn.closest('[role="button"]') || shareBtn;
         btn.click();
         return true;
       }
@@ -89,7 +88,7 @@ export async function shareLinkByUid(page, target, options = {}) {
 
     await delay(2000, 3000);
 
-    // Click first "via Messenger" button
+    // Click "via Messenger" button
     const messengerClicked = await page.evaluate(() => {
       const btns = [...document.querySelectorAll('[role="button"][aria-label]')];
       const messengerBtn = btns.find(b => /via Messenger|qua Messenger/i.test(b.getAttribute('aria-label') || ''));
@@ -101,59 +100,42 @@ export async function shareLinkByUid(page, target, options = {}) {
     });
 
     if (!messengerClicked) {
-      return { ok: false, postUrl, error: 'No Messenger button found' };
+      return { ok: false, postUrl, error: 'Messenger button not found' };
     }
 
     await delay(2000, 3000);
 
-    // Type message into composer (if provided)
-    if (message) {
-      const typed = await page.evaluate(async (msg) => {
-        // Find contenteditable composer
-        const composer = document.querySelector('[contenteditable="true"][role="textbox"], [contenteditable="true"]');
-        if (composer) {
-          composer.focus();
-          composer.textContent = msg;
-          composer.dispatchEvent(new Event('input', { bubbles: true }));
-          return true;
-        }
-        return false;
-      }, message);
+    // Click all recipient avatars in the share dialog
+    const { clicked, labels } = await clickAllMessengerButtons(page, delay);
 
-      if (!typed) {
-        console.log('    ⚠️ Composer not found, post link will be sent without message');
-      }
-
-      await delay(1000, 2000);
+    if (clicked === 0) {
+      return { ok: false, postUrl, error: 'No Messenger recipients found' };
     }
 
-    // Click Send button
-    const sent = await page.evaluate(() => {
-      const btns = [...document.querySelectorAll('[role="button"], button, div[aria-label], span[aria-label]')];
-      const sendBtn = btns.find(b => {
-        const text = (b.textContent || '').trim().toLowerCase();
-        const ariaLabel = (b.getAttribute('aria-label') || '').toLowerCase();
-        return (text === 'send' || text === 'gửi' || ariaLabel === 'send' || ariaLabel === 'gửi') &&
-               !text.includes('messenger') && !ariaLabel.includes('messenger');
-      });
-      if (sendBtn) {
-        sendBtn.click();
+    // Check for "More share options" and click more recipients
+    const moreClicked = await page.evaluate(() => {
+      const moreBtn = [...document.querySelectorAll('*')].find(el =>
+        el.textContent.trim() === 'More share options' ||
+        el.textContent.trim() === 'Thêm tùy chọn chia sẻ'
+      );
+      if (moreBtn) {
+        moreBtn.click();
         return true;
       }
       return false;
     });
 
-    if (!sent) {
-      return { ok: false, postUrl, error: 'Send button not found' };
+    if (moreClicked) {
+      await delay(2000, 3000);
+      await clickAllMessengerButtons(page, delay);
     }
-
-    await delay(2000, 3000);
 
     return {
       ok: true,
       postUrl,
-      sharesSent: 1,
-      method: 'share-dialog-send',
+      sharesSent: clicked,
+      labels,
+      method: 'share-dialog',
     };
   } catch (err) {
     return { ok: false, postUrl, error: err.message };
@@ -165,7 +147,7 @@ export async function shareLinkByUid(page, target, options = {}) {
  * @param {Object} page - Puppeteer page
  * @param {Object} campaign
  * @param {string[]} campaign.postUrls - Array of post URLs to share
- * @param {string} [campaign.message] - Optional message
+ * @param {string} [campaign.message] - Optional message (NOT used)
  * @param {Object} [options]
  * @returns {Promise<Object>} runGuardedBatch result
  */
