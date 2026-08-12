@@ -39,12 +39,18 @@ const defaultRng = Math.random;
  * Human-scaled action limits for Facebook automation.
  * These are hard floors — callers may not safely exceed them.
  */
-export const LIMITS = {
+const LIMITS_RAW = {
   like: { perHour: 30 },
   comment: { perHour: 10 },
   friendRequest: { perDay: 20 },
   message: { perHour: 20 },
 };
+
+// Deep-freeze to enforce ADR-015 "hard floors không override được".
+for (const action of Object.keys(LIMITS_RAW)) {
+  Object.freeze(LIMITS_RAW[action]);
+}
+export const LIMITS = Object.freeze(LIMITS_RAW);
 
 // ============================================================================
 // Account age tiers (Story 6.14 — used by getActionLimit)
@@ -54,15 +60,38 @@ export const LIMITS = {
  * Account-age scaling factors. Tiers are ordered from most-restrictive to least.
  * `maxDays: Infinity` is the catch-all mature tier.
  */
-export const ACCOUNT_AGE_TIERS = [
+const ACCOUNT_AGE_TIERS_RAW = [
   { maxDays: 7, factor: 0.50, label: 'new' },
   { maxDays: 28, factor: 0.80, label: 'young' },
   { maxDays: Infinity, factor: 1.00, label: 'mature' },
 ];
 
+// Deep-freeze so age-tier factors cannot be tampered with at runtime.
+for (const tier of ACCOUNT_AGE_TIERS_RAW) {
+  Object.freeze(tier);
+}
+export const ACCOUNT_AGE_TIERS = Object.freeze(ACCOUNT_AGE_TIERS_RAW);
+
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/**
+ * Normalize account age in days.
+ * - null/undefined/NaN → Infinity (mature, fail-safe default)
+ * - negative values → 0 (most restrictive, safe for invalid ages)
+ * - strings are coerced to numbers (e.g. "5" → 5)
+ *
+ * @param {number} [accountAgeDays=Infinity]
+ * @returns {number}
+ */
+function normalizeAgeDays(accountAgeDays = Infinity) {
+  if (accountAgeDays == null || Number.isNaN(accountAgeDays)) {
+    return Infinity;
+  }
+  const n = Number(accountAgeDays);
+  return n < 0 ? 0 : n;
+}
 
 /**
  * Return the age-tier factor for a given account age in days.
@@ -72,8 +101,9 @@ export const ACCOUNT_AGE_TIERS = [
  * @returns {number}
  */
 function getAgeFactor(accountAgeDays = Infinity) {
+  const age = normalizeAgeDays(accountAgeDays);
   for (const tier of ACCOUNT_AGE_TIERS) {
-    if (accountAgeDays <= tier.maxDays) {
+    if (age <= tier.maxDays) {
       return tier.factor;
     }
   }
@@ -133,6 +163,8 @@ export function getActionLimit(action, accountAgeDays = Infinity) {
  */
 export async function enforceDelay(action, accountAgeDays = Infinity, options = {}) {
   const { delayFn = defaultDelayFn, rng = defaultRng } = options;
-  const ms = 5000 + rng() * 10000; // 5-15s
+  // Clamp rng to [0, 1] so the 5-15s hard floor cannot be bypassed (AC6).
+  const r = Math.max(0, Math.min(1, rng()));
+  const ms = 5000 + r * 10000; // 5-15s
   return delayFn(ms);
 }

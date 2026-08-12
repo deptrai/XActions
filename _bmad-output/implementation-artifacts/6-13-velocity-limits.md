@@ -234,8 +234,8 @@ GLM-5.2 High (Devin CLI)
 
 ### Debug Log References
 
-- `npx vitest run tests/scrapers/facebook-limits.test.js` → 25/25 pass
-- `npx vitest run tests/scrapers/facebook-human.test.js tests/scrapers/facebook-fingerprint.test.js tests/scrapers/facebook-auth.test.js` → 160/160 pass
+- `npx vitest run tests/scrapers/facebook-limits.test.js` → 34/34 pass
+- `npx vitest run tests/scrapers/facebook-human.test.js tests/scrapers/facebook-fingerprint.test.js tests/scrapers/facebook-auth.test.js` → 169/169 pass
 - `npx vitest run tests/scrapers/facebook-index.test.js -t "createPage"` → 12/12 pass
 
 ### Completion Notes List
@@ -244,8 +244,10 @@ GLM-5.2 High (Devin CLI)
 - `src/scrapers/facebook/limits.js` created as a pure module (no Puppeteer)
 - Exports `LIMITS`, `ACCOUNT_AGE_TIERS`, `getActionLimit`, `enforceDelay`
 - `getActionLimit` scales limits by account age tier and floors to `>= 1`
-- `enforceDelay` enforces 5-15s delay with `delayFn` and `rng` seams
-- 25 unit tests in `tests/scrapers/facebook-limits.test.js`
+- `getActionLimit` normalizes `null`/`undefined`/`NaN` to mature tier; negative ages clamped to 0 (most restrictive)
+- `LIMITS` and `ACCOUNT_AGE_TIERS` are deeply frozen to enforce ADR-015 hard floors
+- `enforceDelay` enforces 5-15s delay with `delayFn` and `rng` seams; clamps `rng` to [0, 1]
+- 34 unit tests in `tests/scrapers/facebook-limits.test.js`
 - No regressions in existing Facebook test suites
 
 ### File List

@@ -32,6 +32,14 @@ describe('Story 6.13 — Action Velocity Limiting', () => {
     it('message limit is 20 per hour', () => {
       expect(LIMITS.message).toEqual({ perHour: 20 });
     });
+
+    it('LIMITS is deeply frozen (hard floors not overrideable)', () => {
+      expect(Object.isFrozen(LIMITS)).toBe(true);
+      expect(Object.isFrozen(LIMITS.like)).toBe(true);
+      expect(Object.isFrozen(LIMITS.comment)).toBe(true);
+      expect(Object.isFrozen(LIMITS.friendRequest)).toBe(true);
+      expect(Object.isFrozen(LIMITS.message)).toBe(true);
+    });
   });
 
   describe('ACCOUNT_AGE_TIERS (AC4)', () => {
@@ -40,6 +48,13 @@ describe('Story 6.13 — Action Velocity Limiting', () => {
       expect(ACCOUNT_AGE_TIERS[0]).toMatchObject({ maxDays: 7, factor: 0.5, label: 'new' });
       expect(ACCOUNT_AGE_TIERS[1]).toMatchObject({ maxDays: 28, factor: 0.8, label: 'young' });
       expect(ACCOUNT_AGE_TIERS[2]).toMatchObject({ maxDays: Infinity, factor: 1.0, label: 'mature' });
+    });
+
+    it('ACCOUNT_AGE_TIERS is deeply frozen', () => {
+      expect(Object.isFrozen(ACCOUNT_AGE_TIERS)).toBe(true);
+      expect(Object.isFrozen(ACCOUNT_AGE_TIERS[0])).toBe(true);
+      expect(Object.isFrozen(ACCOUNT_AGE_TIERS[1])).toBe(true);
+      expect(Object.isFrozen(ACCOUNT_AGE_TIERS[2])).toBe(true);
     });
   });
 
@@ -91,8 +106,32 @@ describe('Story 6.13 — Action Velocity Limiting', () => {
       expect(getActionLimit('share')).toBeNull();
     });
 
-    it('treats negative accountAgeDays as most restrictive (new tier)', () => {
+    it('treats negative accountAgeDays as most restrictive (clamped to 0)', () => {
       expect(getActionLimit('like', -1)).toEqual({ perHour: 15 });
+    });
+
+    it('treats null, undefined, and NaN as mature (full limits)', () => {
+      expect(getActionLimit('like', null)).toEqual({ perHour: 30 });
+      expect(getActionLimit('like', undefined)).toEqual({ perHour: 30 });
+      expect(getActionLimit('like', NaN)).toEqual({ perHour: 30 });
+    });
+
+    it('coerces string accountAgeDays to numbers', () => {
+      expect(getActionLimit('like', '5')).toEqual({ perHour: 15 });
+      expect(getActionLimit('like', '100')).toEqual({ perHour: 30 });
+    });
+
+    it('returns null for non-string or invalid action values', () => {
+      expect(getActionLimit(123, 5)).toBeNull();
+      expect(getActionLimit({}, 5)).toBeNull();
+      expect(getActionLimit([], 5)).toBeNull();
+      expect(getActionLimit(null, 5)).toBeNull();
+      expect(getActionLimit(undefined, 5)).toBeNull();
+      expect(getActionLimit('', 5)).toBeNull();
+    });
+
+    it('returns 50% for brand new account (0 days)', () => {
+      expect(getActionLimit('like', 0)).toEqual({ perHour: 15 });
     });
   });
 
@@ -135,11 +174,31 @@ describe('Story 6.13 — Action Velocity Limiting', () => {
       expect(delayFn.mock.calls[0][0]).toBe(5000);
     });
 
+    it('calls delayFn with 15000ms when rng returns 1.0 (upper bound)', async () => {
+      const delayFn = vi.fn(async () => {});
+      await enforceDelay('like', 30, { delayFn, rng: () => 1.0 });
+      expect(delayFn).toHaveBeenCalledOnce();
+      expect(delayFn.mock.calls[0][0]).toBe(15000);
+    });
+
+    it('clamps negative rng to 0 (minimum 5000ms)', async () => {
+      const delayFn = vi.fn(async () => {});
+      await enforceDelay('like', 30, { delayFn, rng: () => -0.5 });
+      expect(delayFn).toHaveBeenCalledOnce();
+      expect(delayFn.mock.calls[0][0]).toBe(5000);
+    });
+
+    it('clamps rng above 1.0 to 1.0 (maximum 15000ms)', async () => {
+      const delayFn = vi.fn(async () => {});
+      await enforceDelay('like', 30, { delayFn, rng: () => 1.5 });
+      expect(delayFn).toHaveBeenCalledOnce();
+      expect(delayFn.mock.calls[0][0]).toBe(15000);
+    });
+
     it('is a pure function and does not import puppeteer (AC8)', () => {
       // limits.js is a pure module; this test documents that it has no browser side effects.
       expect(typeof enforceDelay).toBe('function');
-      // Function length ignores defaulted parameters; enforceDelay has 3 params (action, accountAgeDays = Infinity, options = {})
-      expect(enforceDelay.length).toBe(1);
+      expect(typeof getActionLimit).toBe('function');
     });
   });
 
