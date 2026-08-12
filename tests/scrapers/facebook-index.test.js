@@ -1149,10 +1149,10 @@ function makeElementHandleStub() {
 }
 
 // ============================================================================
-// createPage — fingerprint integration (Story 6.2 + 6.4, AC4-AC8, AC11)
+// createPage — fingerprint integration (Story 6.2 + 6.4 + 6.5, AC4-AC8, AC11)
 // ============================================================================
 
-describe('createPage — fingerprint integration (Story 6.2 + 6.4)', () => {
+describe('createPage — fingerprint integration (Story 6.2 + 6.4 + 6.5)', () => {
   it('calls setUserAgent and setViewport (AC4)', async () => {
     const browser = makeFakeBrowser();
     const page = await createPage(browser);
@@ -1207,20 +1207,33 @@ describe('createPage — fingerprint integration (Story 6.2 + 6.4)', () => {
     expect(page._fingerprint).toBeDefined();
   });
 
-  it('calls evaluateOnNewDocument at least once (Story 6.4 AC7)', async () => {
+  it('calls evaluateOnNewDocument at least twice (navigator + WebRTC — Story 6.4 + 6.5 AC7)', async () => {
     const browser = makeFakeBrowser();
     const page = await createPage(browser);
-    expect(page.calls.evaluateOnNewDocument.length).toBeGreaterThanOrEqual(1);
+    // 2 calls: one for navigator overrides (6.4), one for WebRTC override (6.5)
+    expect(page.calls.evaluateOnNewDocument.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('calls applyFingerprint before applyNavigatorOverrides — setUserAgent before evaluateOnNewDocument (AC7)', async () => {
+  it('calls applyFingerprint before applyNavigatorOverrides before applyWebRTCOverride (AC7)', async () => {
     const browser = makeFakeBrowser();
     const page = await createPage(browser);
-    // Both should have been called
+    // All three should have been called
     expect(page.calls.setUserAgent).toHaveLength(1);
-    expect(page.calls.evaluateOnNewDocument).toHaveLength(1);
-    // The order is enforced by the createPage implementation (applyFingerprint first, then applyNavigatorOverrides)
-    // We verify both ran — the fake page doesn't track call order, but the implementation guarantees order
+    expect(page.calls.evaluateOnNewDocument.length).toBeGreaterThanOrEqual(2);
+    // The order is enforced by the createPage implementation:
+    // applyFingerprint (setUserAgent) → applyNavigatorOverrides (evaluateOnNewDocument #1) → applyWebRTCOverride (evaluateOnNewDocument #2)
+  });
+
+  it('second evaluateOnNewDocument call is WebRTC override (no args — Story 6.5 AC4)', async () => {
+    const browser = makeFakeBrowser();
+    const page = await createPage(browser);
+    expect(page.calls.evaluateOnNewDocument).toHaveLength(2);
+    // First call: navigator overrides (has fingerprint as arg)
+    expect(page.calls.evaluateOnNewDocument[0].args).toHaveLength(1);
+    // Second call: WebRTC override (no args — global, not session-specific)
+    expect(page.calls.evaluateOnNewDocument[1].args).toHaveLength(0);
+    // Verify the second call's script contains RTCPeerConnection
+    expect(page.calls.evaluateOnNewDocument[1].fn).toContain('RTCPeerConnection');
   });
 
   it('session reuse — navigator overrides use the SAME fingerprint (AC8)', async () => {
@@ -1234,12 +1247,15 @@ describe('createPage — fingerprint integration (Story 6.2 + 6.4)', () => {
       platform: 'MacIntel',
     };
     const page = await createPage(browser, { fingerprint: explicitFp });
-    // evaluateOnNewDocument should have been called with the fingerprint as arg
-    expect(page.calls.evaluateOnNewDocument).toHaveLength(1);
+    // 2 calls: navigator overrides (with fingerprint arg) + WebRTC override (no args)
+    expect(page.calls.evaluateOnNewDocument).toHaveLength(2);
+    // First call: navigator overrides — uses the SAME fingerprint as arg
     expect(page.calls.evaluateOnNewDocument[0].args[0]).toEqual(explicitFp);
     expect(page.calls.evaluateOnNewDocument[0].args[0].hardwareConcurrency).toBe(6);
     expect(page.calls.evaluateOnNewDocument[0].args[0].deviceMemory).toBe(4);
     expect(page.calls.evaluateOnNewDocument[0].args[0].platform).toBe('MacIntel');
+    // Second call: WebRTC override — no args (global, not session-specific)
+    expect(page.calls.evaluateOnNewDocument[1].args).toHaveLength(0);
   });
 
   it('closes page on applyFingerprint failure — no resource leak (review patch)', async () => {
@@ -1270,6 +1286,26 @@ describe('createPage — fingerprint integration (Story 6.2 + 6.4)', () => {
       return page;
     };
     await expect(createPage(browser)).rejects.toThrow(/Failed to apply navigator overrides/);
+    // Verify the page was closed to prevent resource leak
+    expect(pages[0]._closed).toBe(true);
+  });
+
+  it('closes page on applyWebRTCOverride failure — no resource leak (Story 6.5 AC8)', async () => {
+    const browser = makeFakeBrowser();
+    const pages = [];
+    let eondCallCount = 0;
+    browser.newPage = async () => {
+      const page = makeFakePage();
+      // First evaluateOnNewDocument (navigator overrides) succeeds, second (WebRTC) fails
+      page.evaluateOnNewDocument = async () => {
+        eondCallCount++;
+        if (eondCallCount === 2) throw new Error('WebRTC eOND boom');
+      };
+      page.close = async () => { page._closed = true; };
+      pages.push(page);
+      return page;
+    };
+    await expect(createPage(browser)).rejects.toThrow(/Failed to apply WebRTC override/);
     // Verify the page was closed to prevent resource leak
     expect(pages[0]._closed).toBe(true);
   });

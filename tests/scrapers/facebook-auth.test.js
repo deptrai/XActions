@@ -119,6 +119,7 @@ describe('createBrowser proxy arg (launchImpl seam)', () => {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled',
+      '--disable-webrtc', // Story 6.5 — WebRTC leak prevention
     ];
     for (const arg of stealth) {
       expect(capturedOpts.args).toContain(arg);
@@ -126,6 +127,27 @@ describe('createBrowser proxy arg (launchImpl seam)', () => {
     // --disable-web-security was removed (defence-in-depth: scrapers navigate
     // same-origin and extract DOM; SOP not needed). Callers can re-add via extraArgs.
     expect(capturedOpts.args).not.toContain('--disable-web-security');
+  });
+
+  it('includes --disable-webrtc in launch args (Story 6.5 AC3, AC9)', async () => {
+    let capturedOpts;
+    const launchImpl = async (opts) => { capturedOpts = opts; return {}; };
+
+    await createBrowser({ launchImpl });
+
+    expect(capturedOpts.args).toContain('--disable-webrtc');
+  });
+
+  it('--disable-webrtc is present alongside existing stealth args (Story 6.5 AC9)', async () => {
+    let capturedOpts;
+    const launchImpl = async (opts) => { capturedOpts = opts; return {}; };
+
+    await createBrowser({ proxy: 'http://203.0.113.10:8080', launchImpl });
+
+    expect(capturedOpts.args).toContain('--disable-webrtc');
+    expect(capturedOpts.args).toContain('--no-sandbox');
+    expect(capturedOpts.args).toContain('--disable-setuid-sandbox');
+    expect(capturedOpts.args).toContain('--disable-blink-features=AutomationControlled');
   });
 
   it('does not leak proxy or launchImpl into the launcher options object', async () => {

@@ -79,7 +79,7 @@ development_status:
   6-2-consistent-fingerprint: done
   6-3-ua-pool-viewport: done
   6-4-navigator-override: done
-  6-5-webrtc-leak-prevention: backlog
+  6-5-webrtc-leak-prevention: done
   6-6-headless-mode: done
   6-7-headless-aware-timeouts: done
   6-8-behavioral-delays-share: done

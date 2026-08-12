@@ -15,7 +15,7 @@
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { generateSync as totpGenerateSync } from 'otplib';
-import { generateFingerprint, applyFingerprint, applyNavigatorOverrides } from './fingerprint.js';
+import { generateFingerprint, applyFingerprint, applyNavigatorOverrides, applyWebRTCOverride } from './fingerprint.js';
 
 puppeteer.use(StealthPlugin());
 
@@ -47,6 +47,7 @@ export async function createBrowser(options = {}) {
     '--no-sandbox',
     '--disable-setuid-sandbox',
     '--disable-blink-features=AutomationControlled',
+    '--disable-webrtc', // Story 6.5 — prevent real IP leak via STUN (defense-in-depth with JS override)
   ];
   // Wire proxy as a Chromium launch arg — the only browser-level way to apply it.
   // Proxy creds (username/password) are NOT handled here; callers must invoke
@@ -74,10 +75,10 @@ export async function createBrowser(options = {}) {
  * Create a page with a consistent session fingerprint (ADR-013).
  *
  * A fingerprint (UA + viewport + hardware config) is generated once and applied
- * via `applyFingerprint` (UA + viewport) then `applyNavigatorOverrides` (navigator
- * properties via evaluateOnNewDocument). The fingerprint is attached as
- * `page._fingerprint` so callers can reuse it across tabs via
- * `createPage(browser, { fingerprint })`.
+ * via `applyFingerprint` (UA + viewport), then `applyNavigatorOverrides` (navigator
+ * properties via evaluateOnNewDocument), then `applyWebRTCOverride` (WebRTC leak
+ * prevention). The fingerprint is attached as `page._fingerprint` so callers can
+ * reuse it across tabs via `createPage(browser, { fingerprint })`.
  *
  * @param {Browser} browser - Puppeteer browser instance
  * @param {Object} [options]
@@ -90,6 +91,7 @@ export async function createPage(browser, options = {}) {
   try {
     await applyFingerprint(page, fingerprint);
     await applyNavigatorOverrides(page, fingerprint);
+    await applyWebRTCOverride(page);
   } catch (err) {
     // Clean up the page on failure — avoid resource leak and partial-fingerprint state.
     await page.close().catch(() => {});

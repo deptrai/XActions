@@ -12,6 +12,7 @@
  *   7. Story 6.3: deviceScaleFactor is platform-aware (macOS=2, Win/Linux=1)
  *   8. Story 6.3: viewport is from the expanded list (includes 2560x1440)
  *   9. Story 6.4: navigator overrides (webdriver, hardwareConcurrency, deviceMemory, platform, plugins)
+ *  10. Story 6.5: WebRTC override (RTCPeerConnection disabled, getUserMedia nullified)
  *
  * Usage:
  *   node test-fingerprint-real.mjs
@@ -61,7 +62,7 @@ const derivePlatformFromUa = (ua) => {
 const expectedDsf = (platform) => platform === 'MacIntel' ? 2 : 1;
 
 async function main() {
-  console.log('=== Story 6.2 + 6.3 + 6.4 Real-Cookie Fingerprint Test ===\n');
+  console.log('=== Story 6.2 + 6.3 + 6.4 + 6.5 Real-Cookie Fingerprint Test ===\n');
 
   // ── Test 1: createPage applies fingerprint ──────────────────────────────
   console.log('[1] createPage() applies fingerprint (UA + viewport)');
@@ -136,6 +137,30 @@ async function main() {
     log(navProps.pluginsLength > 0,
       `navigator.plugins.length ${navProps.pluginsLength} > 0 (stealth plugin active)`);
 
+    // ── Test 10: Story 6.5 — WebRTC override via evaluateOnNewDocument ──
+    console.log('\n[10] Story 6.5: WebRTC override (RTCPeerConnection disabled, getUserMedia nullified)');
+    const webrtcProps = await page.evaluate(() => ({
+      rtcType: typeof window.RTCPeerConnection,
+      webkitRtcType: typeof window.webkitRTCPeerConnection,
+      getUserMediaType: typeof navigator.mediaDevices?.getUserMedia,
+    }));
+    // RTCPeerConnection should be a function (our override) that throws when called
+    log(webrtcProps.rtcType === 'function',
+      `window.RTCPeerConnection is a function (type: ${webrtcProps.rtcType}) — overridden, not native`);
+    // Verify it throws when called (our override throws "WebRTC is disabled")
+    const webrtcThrows = await page.evaluate(() => {
+      try { new window.RTCPeerConnection(); return false; }
+      catch (e) { return /WebRTC is disabled/.test(e.message); }
+    });
+    log(webrtcThrows,
+      `new RTCPeerConnection() throws "WebRTC is disabled" — STUN/TURN blocked`);
+    // webkitRTCPeerConnection should also be overridden
+    log(webrtcProps.webkitRtcType === 'function',
+      `window.webkitRTCPeerConnection is a function (type: ${webrtcProps.webkitRtcType}) — overridden`);
+    // getUserMedia should be undefined (nullified)
+    log(webrtcProps.getUserMediaType === 'undefined',
+      `navigator.mediaDevices.getUserMedia is undefined (nullified, type: ${webrtcProps.getUserMediaType})`);
+
     // ── Test 2: loginWithCookie succeeds with fingerprint ────────────────
     console.log('\n[2] loginWithCookie() succeeds with applied fingerprint');
     let loginOk = false;
@@ -206,7 +231,7 @@ async function main() {
   const total = results.length;
   console.log(`\n=== Results: ${passed}/${total} passed ===`);
   if (passed === total) {
-    console.log('✅ Story 6.2 + 6.3 + 6.4 fingerprint works with real Facebook cookies!');
+    console.log('✅ Story 6.2 + 6.3 + 6.4 + 6.5 fingerprint works with real Facebook cookies!');
     process.exit(0);
   } else {
     console.log('❌ Some checks failed — see above.');

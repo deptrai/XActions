@@ -1,10 +1,10 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 /**
- * Facebook session fingerprint module (Story 6.2 + 6.4 — ADR-013).
+ * Facebook session fingerprint module (Story 6.2 + 6.4 + 6.5 — ADR-013).
  *
  * Pure module — does NOT import puppeteer or any browser library.
- * Receives `page` as a parameter to `applyFingerprint` and `applyNavigatorOverrides`.
- * This makes it unit-testable without a real browser (NFR2: centralized config).
+ * Receives `page` as a parameter to `applyFingerprint`, `applyNavigatorOverrides`,
+ * and `applyWebRTCOverride`. This makes it unit-testable without a real browser (NFR2).
  *
  * Exports:
  *   - UA_POOL         : array of real Chrome User-Agent strings
@@ -12,12 +12,13 @@
  *   - generateFingerprint() : returns one fingerprint object per session
  *   - applyFingerprint(page, fp) : applies UA + viewport to a Puppeteer page
  *   - applyNavigatorOverrides(page, fp) : overrides navigator props via evaluateOnNewDocument
+ *   - applyWebRTCOverride(page) : disables WebRTC to prevent real IP leak via STUN
  *
  * Scope:
  *   - Story 6.2: generateFingerprint + applyFingerprint (UA + viewport)
  *   - Story 6.3: UA_POOL expanded to 21, VIEWPORT_LIST to 6, platform-aware deviceScaleFactor
  *   - Story 6.4: applyNavigatorOverrides (webdriver, hardwareConcurrency, deviceMemory, platform)
- *   - Story 6.5 (future): WebRTC leak prevention — separate function, same fingerprint object
+ *   - Story 6.5: applyWebRTCOverride (RTCPeerConnection, webkitRTCPeerConnection, getUserMedia)
  *
  * NFR4: fingerprint seed/UA/viewport must NEVER be logged in errors or responses.
  *
@@ -216,6 +217,50 @@ export async function applyNavigatorOverrides(page, fingerprint) {
     // NFR4: do not echo fingerprint fields in the error message.
     // Preserve original error via `cause` for debugging without leaking fingerprint data.
     throw new Error('❌ Failed to apply navigator overrides', { cause: err });
+  }
+}
+
+/**
+ * Disable WebRTC to prevent real IP leak via STUN servers (Story 6.5 — ADR-013).
+ *
+ * Overrides `RTCPeerConnection`, `webkitRTCPeerConnection`, and
+ * `navigator.mediaDevices.getUserMedia` via `evaluateOnNewDocument`.
+ * This prevents any JS library (including Facebook's) from creating
+ * RTCPeerConnection objects that would send STUN requests outside the proxy.
+ *
+ * Defense-in-depth: `--disable-webrtc` launch arg (added in createBrowser) +
+ * this JS override. If either layer fails, the other still protects.
+ *
+ * Unlike `applyNavigatorOverrides`, this function takes NO fingerprint parameter —
+ * the WebRTC override is global (disable for all sessions), not session-specific.
+ *
+ * NFR4: error messages must NOT include fingerprint fields.
+ *
+ * @param {import('puppeteer').Page} page
+ * @returns {Promise<void>}
+ */
+export async function applyWebRTCOverride(page) {
+  try {
+    await page.evaluateOnNewDocument(() => {
+      // Override RTCPeerConnection — prevents STUN/TURN requests that leak real IP.
+      // Using a function that throws ensures any attempt to use WebRTC fails loudly.
+      window.RTCPeerConnection = function () {
+        throw new Error('WebRTC is disabled');
+      };
+      // Chrome-prefixed version (older Chrome builds).
+      window.webkitRTCPeerConnection = function () {
+        throw new Error('WebRTC is disabled');
+      };
+      // Nullify getUserMedia — prevents media device enumeration that can leak
+      // device info and potentially IP via ICE candidates.
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia = undefined;
+      }
+    });
+  } catch (err) {
+    // NFR4: do not echo fingerprint fields in the error message.
+    // Preserve original error via `cause` for debugging without leaking fingerprint data.
+    throw new Error('❌ Failed to apply WebRTC override', { cause: err });
   }
 }
 

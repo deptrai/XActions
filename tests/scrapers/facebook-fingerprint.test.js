@@ -1,5 +1,5 @@
 // tests/scrapers/facebook-fingerprint.test.js
-// Story 6.2 + 6.3 + 6.4 — Consistent Session Fingerprint (ADR-013)
+// Story 6.2 + 6.3 + 6.4 + 6.5 — Consistent Session Fingerprint (ADR-013)
 // Pure-module tests for src/scrapers/facebook/fingerprint.js
 // No Puppeteer required — fingerprint.js is a pure module.
 import { describe, it, expect } from 'vitest';
@@ -9,6 +9,7 @@ import {
   generateFingerprint,
   applyFingerprint,
   applyNavigatorOverrides,
+  applyWebRTCOverride,
 } from '../../src/scrapers/facebook/fingerprint.js';
 import { makeFakePage } from '../helpers/fake-page.js';
 
@@ -492,6 +493,98 @@ describe('applyNavigatorOverrides (AC1-AC5, AC10 — Story 6.4)', () => {
       await applyNavigatorOverrides(page, fp);
     } catch (err) {
       expect(err.message).toBe('❌ Failed to apply navigator overrides');
+      expect(err.cause).toBe(originalErr);
+    }
+  });
+});
+
+// ============================================================================
+// applyWebRTCOverride (AC1, AC2, AC7 — Story 6.5)
+// ============================================================================
+
+describe('applyWebRTCOverride (AC1, AC2, AC7 — Story 6.5)', () => {
+  it('is an async function (AC1)', () => {
+    expect(typeof applyWebRTCOverride).toBe('function');
+    const page = makeFakePage();
+    expect(applyWebRTCOverride(page)).toBeInstanceOf(Promise);
+  });
+
+  it('calls page.evaluateOnNewDocument exactly once (AC1)', async () => {
+    const page = makeFakePage();
+    await applyWebRTCOverride(page);
+    expect(page.calls.evaluateOnNewDocument).toHaveLength(1);
+  });
+
+  it('takes only page parameter — no fingerprint needed (AC1)', async () => {
+    const page = makeFakePage();
+    // Should work with just page — no fingerprint argument
+    await applyWebRTCOverride(page);
+    const { args } = page.calls.evaluateOnNewDocument[0];
+    // No arguments passed (WebRTC override is global, not session-specific)
+    expect(args).toHaveLength(0);
+  });
+
+  it('injected script overrides window.RTCPeerConnection (AC2)', async () => {
+    const page = makeFakePage();
+    await applyWebRTCOverride(page);
+    const { fn } = page.calls.evaluateOnNewDocument[0];
+    expect(fn).toContain('RTCPeerConnection');
+    expect(fn).toContain('window.RTCPeerConnection');
+  });
+
+  it('injected script overrides window.webkitRTCPeerConnection (AC2)', async () => {
+    const page = makeFakePage();
+    await applyWebRTCOverride(page);
+    const { fn } = page.calls.evaluateOnNewDocument[0];
+    expect(fn).toContain('webkitRTCPeerConnection');
+    expect(fn).toContain('window.webkitRTCPeerConnection');
+  });
+
+  it('injected script nullifies navigator.mediaDevices.getUserMedia (AC2)', async () => {
+    const page = makeFakePage();
+    await applyWebRTCOverride(page);
+    const { fn } = page.calls.evaluateOnNewDocument[0];
+    expect(fn).toContain('getUserMedia');
+    expect(fn).toContain('navigator.mediaDevices');
+  });
+
+  it('injected script throws error when RTCPeerConnection is called (AC2)', async () => {
+    const page = makeFakePage();
+    await applyWebRTCOverride(page);
+    const { fn } = page.calls.evaluateOnNewDocument[0];
+    // The override function should throw to prevent usage
+    expect(fn).toContain('throw');
+    expect(fn).toContain('WebRTC is disabled');
+  });
+
+  it('does NOT call page.setUserAgent or page.setViewport (not its scope)', async () => {
+    const page = makeFakePage();
+    await applyWebRTCOverride(page);
+    expect(page.calls.setUserAgent).toHaveLength(0);
+    expect(page.calls.setViewport).toHaveLength(0);
+  });
+
+  it('does NOT call page.emulateTimezone or page.setGeolocation (out of scope)', async () => {
+    const page = makeFakePage();
+    await applyWebRTCOverride(page);
+    expect(page.calls.emulateTimezone).toHaveLength(0);
+    expect(page.calls.setGeolocation).toHaveLength(0);
+  });
+
+  it('throws generic error when evaluateOnNewDocument fails (AC7)', async () => {
+    const page = makeFakePage();
+    page.evaluateOnNewDocument = async () => { throw new Error('boom'); };
+    await expect(applyWebRTCOverride(page)).rejects.toThrow(/Failed to apply WebRTC override/);
+  });
+
+  it('preserves original error via cause for debugging (AC7)', async () => {
+    const page = makeFakePage();
+    const originalErr = new Error('evaluateOnNewDocument failed');
+    page.evaluateOnNewDocument = async () => { throw originalErr; };
+    try {
+      await applyWebRTCOverride(page);
+    } catch (err) {
+      expect(err.message).toBe('❌ Failed to apply WebRTC override');
       expect(err.cause).toBe(originalErr);
     }
   });
