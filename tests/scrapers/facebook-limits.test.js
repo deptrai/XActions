@@ -6,6 +6,7 @@ import {
   ACCOUNT_AGE_TIERS,
   getActionLimit,
   enforceDelay,
+  getAccountAgeDays,
 } from '../../src/scrapers/facebook/limits.js';
 
 describe('Story 6.13 — Action Velocity Limiting', () => {
@@ -202,11 +203,127 @@ describe('Story 6.13 — Action Velocity Limiting', () => {
     });
   });
 
+  describe('getAccountAgeDays (Story 6.14 — AC1, AC2, AC3, AC4)', () => {
+    const fixedNow = new Date('2026-08-13T12:00:00Z').getTime();
+    const nowFn = () => fixedNow;
+
+    it('calculates correct account age in days from db.getAccountCreatedAt (AC2)', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async (c_user) => new Date('2026-08-03T12:00:00Z')),
+      };
+      const age = await getAccountAgeDays('123456', { db, nowFn });
+      expect(db.getAccountCreatedAt).toHaveBeenCalledWith('123456');
+      expect(age).toBe(10); // 10 days difference
+    });
+
+    it('returns 0 when account was created today (AC2)', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async () => new Date(fixedNow)),
+      };
+      const age = await getAccountAgeDays('123456', { db, nowFn });
+      expect(age).toBe(0);
+    });
+
+    it('clamps negative age to 0 if createdAt is in the future (AC2)', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async () => new Date('2026-08-14T12:00:00Z')),
+      };
+      const age = await getAccountAgeDays('123456', { db, nowFn });
+      expect(age).toBe(0);
+    });
+
+    it('returns 0 when db.getAccountCreatedAt returns null/undefined (fail-safe)', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async () => null),
+      };
+      const age = await getAccountAgeDays('unknown', { db, nowFn });
+      expect(age).toBe(0);
+    });
+
+    it('returns 0 when db is not provided (fail-safe)', async () => {
+      const age = await getAccountAgeDays('123456');
+      expect(age).toBe(0);
+    });
+
+    it('returns 0 when db is empty object without getAccountCreatedAt method', async () => {
+      const age = await getAccountAgeDays('123456', { db: {} });
+      expect(age).toBe(0);
+    });
+
+    it('returns 0 when c_user is null/undefined/empty', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async () => new Date('2026-08-03T12:00:00Z')),
+      };
+      expect(await getAccountAgeDays(null, { db, nowFn })).toBe(0);
+      expect(await getAccountAgeDays('', { db, nowFn })).toBe(0);
+    });
+
+    it('handles createdAt returning string ISO date', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async () => '2026-08-03T12:00:00Z'),
+      };
+      const age = await getAccountAgeDays('123456', { db, nowFn });
+      expect(age).toBe(10);
+    });
+
+    it('handles createdAt returning number (ms)', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async () => fixedNow - 86400000 * 10),
+      };
+      const age = await getAccountAgeDays('123456', { db, nowFn });
+      expect(age).toBe(10);
+    });
+
+    it('returns 0 when createdAt is an invalid string', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async () => 'not-a-date'),
+      };
+      const age = await getAccountAgeDays('123456', { db, nowFn });
+      expect(age).toBe(0);
+    });
+
+    it('returns 0 when db.getAccountCreatedAt throws', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async () => { throw new Error('db down'); }),
+      };
+      const age = await getAccountAgeDays('123456', { db, nowFn });
+      expect(age).toBe(0);
+    });
+
+    it('returns 0 when nowFn returns an invalid value', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async () => new Date('2026-08-03T12:00:00Z')),
+      };
+      const age = await getAccountAgeDays('123456', { db, nowFn: () => 'invalid' });
+      expect(age).toBe(0);
+    });
+
+    it('uses defaultNowFn when nowFn is not provided and returns a stable age', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async () => new Date(Date.now() - 86400000 * 5 - 1000)),
+      };
+      const age = await getAccountAgeDays('123456', { db });
+      // should be 5 (off-by-one acceptable)
+      expect(age).toBeGreaterThanOrEqual(4);
+      expect(age).toBeLessThanOrEqual(6);
+    });
+
+    it('integration: getAccountAgeDays result passed to getActionLimit', async () => {
+      const db = {
+        getAccountCreatedAt: vi.fn(async () => new Date('2026-08-08T12:00:00Z')), // 5 days -> new tier
+      };
+      const accountAgeDays = await getAccountAgeDays('123456', { db, nowFn });
+      const limit = getActionLimit('like', accountAgeDays);
+      expect(limit).toEqual({ perHour: 15 }); // 50% for <7-day account
+    });
+  });
+
   describe('No regression (AC9)', () => {
     it('module does not export puppeteer imports or browser objects', () => {
-      // The module only exports LIMITS, ACCOUNT_AGE_TIERS, getActionLimit, enforceDelay
+      // The module only exports LIMITS, ACCOUNT_AGE_TIERS, getActionLimit, enforceDelay, getAccountAgeDays
       expect(getActionLimit).toBeDefined();
       expect(enforceDelay).toBeDefined();
+      expect(getAccountAgeDays).toBeDefined();
       expect(LIMITS).toBeDefined();
       expect(ACCOUNT_AGE_TIERS).toBeDefined();
     });

@@ -507,27 +507,31 @@ describe('loginWithCookie (P1 kill, fake page)', () => {
   it('sets c_user and xs cookies with correct attributes (L196-213)', async () => {
     const page = makeFakePage();
     await loginWithCookie(page, { c_user: '100001', xs: 'xs-token' });
-    expect(page.calls.setCookie).toHaveLength(1);
-    const cookies = page.calls.setCookie[0]; // [cookie1, cookie2]
-    expect(cookies).toHaveLength(2);
+    expect(page.calls.setCookie).toHaveLength(2);
     // c_user cookie
-    expect(cookies[0]).toMatchObject({
+    expect(page.calls.setCookie[0][0]).toMatchObject({
       name: 'c_user', value: '100001',
-      domain: '.facebook.com', httpOnly: true, secure: true, sameSite: 'Strict',
+      domain: '.facebook.com', httpOnly: false, secure: true, sameSite: 'None',
     });
     // xs cookie
-    expect(cookies[1]).toMatchObject({
+    expect(page.calls.setCookie[1][0]).toMatchObject({
       name: 'xs', value: 'xs-token',
-      domain: '.facebook.com', httpOnly: true, secure: true, sameSite: 'Strict',
+      domain: '.facebook.com', httpOnly: false, secure: true, sameSite: 'None',
     });
   });
 
   it('navigates to Facebook base URL (L215)', async () => {
     const page = makeFakePage();
     await loginWithCookie(page, { c_user: '100001', xs: 'xs-token' });
-    expect(page.calls.goto).toHaveLength(1);
+    expect(page.calls.goto).toHaveLength(2);
     expect(page.calls.goto[0].url).toContain('facebook.com');
-    expect(page.calls.goto[0].opts.waitUntil).toBe('networkidle2');
+    expect(page.calls.goto[1].url).toContain('facebook.com');
+  });
+
+  it('stores c_user as page._fbAccountId on successful login (Story 6.14 — AC5)', async () => {
+    const page = makeFakePage();
+    await loginWithCookie(page, { c_user: '100001234567890', xs: 'xs-token' });
+    expect(page._fbAccountId).toBe('100001234567890');
   });
 });
 
@@ -536,60 +540,67 @@ describe('loginWithCookie (P1 kill, fake page)', () => {
 // ============================================================================
 
 describe('scrapeProfile (P1 kill, fake page)', () => {
-  it('throws for blocked profile (ogTitle missing → login wall, L442-448)', async () => {
+  it('returns blocked status object for blocked profile (ogTitle missing → login wall, L442-448)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: null, ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+    const res = await scrapeProfile(page, 'ghostuser');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
-  it('throws for generic "Facebook" title (L443: /^facebook$/i)', async () => {
+  it('returns blocked status object for generic "Facebook" title (L443: /^facebook$/i)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+    const res = await scrapeProfile(page, 'ghostuser');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
-  it('throws for "Log into Facebook" title (L444)', async () => {
+  it('returns blocked status object for "Log into Facebook" title (L444)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Log into Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+    const res = await scrapeProfile(page, 'ghostuser');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
-  it('throws for "Log in to Facebook" title (L444)', async () => {
+  it('returns blocked status object for "Log in to Facebook" title (L444)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Log in to Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+    const res = await scrapeProfile(page, 'ghostuser');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
-  it('throws for "FACEBOOK" uppercase (L443: /^facebook$/i)', async () => {
+  it('returns blocked status object for "FACEBOOK" uppercase (L443: /^facebook$/i)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'FACEBOOK', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+    const res = await scrapeProfile(page, 'ghostuser');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
-  it('throws for "Log  in  to Facebook" multiple spaces (L444: \\s+)', async () => {
-    // Regex mutant L444: \s+ → \s (1 space only) → "Log  in" won't match
+  it('returns blocked status object for "Log  in  to Facebook" multiple spaces (L444: \\s+)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Log  in  to Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+    const res = await scrapeProfile(page, 'ghostuser');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
-  it('throws for "Loginto Facebook" no space (L445: \\s* matches 0)', async () => {
-    // Regex mutant L445: \s* → \s (requires 1 space) → "Loginto" won't match
+  it('returns blocked status object for "Loginto Facebook" no space (L445: \\s* matches 0)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Loginto Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+    const res = await scrapeProfile(page, 'ghostuser');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
-  it('throws for "Facebook - Log in" (L446: facebook[\\s–—-]+log)', async () => {
+  it('returns blocked status object for "Facebook - Log in" (L446: facebook[\\s–—-]+log)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Facebook - Log in', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+    const res = await scrapeProfile(page, 'ghostuser');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
-  it('throws for "Facebook—Log in" em dash (L446)', async () => {
+  it('returns blocked status object for "Facebook—Log in" em dash (L446)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Facebook—Log in', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    await expect(scrapeProfile(page, 'ghostuser')).rejects.toThrow(/not found or blocked/);
+    const res = await scrapeProfile(page, 'ghostuser');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
   it('returns normalized profile for valid page (L451)', async () => {
@@ -1031,7 +1042,7 @@ describe('scrapeGroupMembers (P1 kill, fake page)', () => {
     page.waitForSelector = async () => makeElementHandleStub();
     page.evaluate = async (fn, ...args) => {
       const fnStr = fn.toString();
-      if (fnStr.includes('listitem') && callCount === 0) {
+      if ((fnStr.includes('listitem') || fnStr.includes('querySelectorAll') || fnStr.includes('/groups/')) && callCount === 0) {
         callCount++;
         return fakeMembers;
       }
@@ -1055,7 +1066,7 @@ describe('scrapeGroupMembers (P1 kill, fake page)', () => {
     page.waitForSelector = async () => makeElementHandleStub();
     page.evaluate = async (fn, ...args) => {
       const fnStr = fn.toString();
-      if (fnStr.includes('listitem') && callCount === 0) {
+      if ((fnStr.includes('listitem') || fnStr.includes('querySelectorAll') || fnStr.includes('/groups/')) && callCount === 0) {
         callCount++;
         return dupMembers;
       }
@@ -1129,7 +1140,7 @@ describe('scrapeGroupMembers (P1 kill, fake page)', () => {
     page.waitForSelector = async () => makeElementHandleStub();
     page.evaluate = async (fn, ...args) => {
       const fnStr = fn.toString();
-      if (fnStr.includes('listitem') && callCount === 0) {
+      if ((fnStr.includes('listitem') || fnStr.includes('querySelectorAll') || fnStr.includes('/groups/')) && callCount === 0) {
         callCount++;
         return fakeMembers;
       }

@@ -6,6 +6,10 @@ import {
   createBrowser,
   createPage,
 } from '../../src/scrapers/facebook/index.js';
+import {
+  getActionLimit,
+  enforceDelay,
+} from '../../src/scrapers/facebook/limits.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -93,7 +97,24 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
     maxRetry = 1,
     shouldStop,
     onProgress,
+    accountAgeDays = Infinity,
+    action,
+    delayFn,
   } = options;
+
+  // Handle age-scaled action velocity limit (Story 6.14 — AC6, AC7)
+  let effectiveItems = items;
+  if (action) {
+    const limitObj = getActionLimit(action, accountAgeDays);
+    if (limitObj) {
+      const limitVal = Object.values(limitObj)[0];
+      const maxAllowed = Math.min(maxBatch, limitVal);
+      if (items.length > maxAllowed) {
+        console.warn(`[limits] Batch truncated: ${action} limit ${maxAllowed} for account age ${accountAgeDays} days`);
+        effectiveItems = items.slice(0, maxAllowed);
+      }
+    }
+  }
 
   // Normalize delayMin/delayMax: treat null/undefined as "use default" (a spread
   // options object carrying delayMin:null should fall back, not throw — destructure
@@ -122,9 +143,9 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
   }
 
   // maxBatch enforced in both dry-run and real — preview must reflect real constraints
-  if (items.length > maxBatch) {
+  if (effectiveItems.length > maxBatch) {
     throw new Error(
-      `❌ Batch size ${items.length} exceeds maxBatch limit of ${maxBatch}. ` +
+      `❌ Batch size ${effectiveItems.length} exceeds maxBatch limit of ${maxBatch}. ` +
       `Split into smaller batches or raise maxBatch explicitly.`
     );
   }
@@ -136,7 +157,7 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
 
   // --- dry-run branch ---
   if (!isRealRun) {
-    const preview = items.map((item) => ({ target: item, action: 'pending' }));
+    const preview = effectiveItems.map((item) => ({ target: item, action: 'pending' }));
     return {
       dryRun: true,
       platform: 'facebook',
@@ -164,8 +185,8 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
   let succeeded = 0;
   let failed = 0;
 
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
+  for (let i = 0; i < effectiveItems.length; i++) {
+    const item = effectiveItems[i];
 
     // Skip null/undefined items rather than passing them to actionFn
     if (item == null) {
@@ -198,7 +219,7 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
     // onProgress — guarded against non-function and throwing callbacks
     if (typeof onProgress === 'function') {
       try {
-        onProgress({ attempted: i + 1, total: items.length });
+        onProgress({ attempted: i + 1, total: effectiveItems.length });
       } catch (_) {
         // onProgress errors must not corrupt batch state
       }
@@ -216,10 +237,16 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
       if (stop) break;
     }
 
-    // Delay between actions except after the last item (range from options; default 1000/3000)
-    if (i < items.length - 1) {
+    // Delay between actions except after the last item (Story 6.14 — AC6)
+    if (i < effectiveItems.length - 1) {
       try {
-        await delay(delayMin, delayMax);
+        if (action) {
+          // enforceDelay computes the 5000-15000ms hard floor and calls delayFn(ms).
+          // If delayFn is not provided, enforceDelay's default setTimeout is used.
+          await enforceDelay(action, accountAgeDays, { delayFn });
+        } else {
+          await delay(delayMin, delayMax);
+        }
       } catch (err) {
         // delay errors must not abort batch; log and continue
         console.warn(`⚠️ runGuardedBatch: delay threw — ${err?.message ?? err}. Continuing.`);

@@ -11,6 +11,7 @@
  *   - ACCOUNT_AGE_TIERS : { maxDays, factor, label }[] — age-based scaling
  *   - getActionLimit(action, accountAgeDays) : scaled limit object
  *   - enforceDelay(action, accountAgeDays, { delayFn, rng }) : 5-15s delay
+ *   - getAccountAgeDays(c_user, { db, nowFn }) : calculate account age in days
  *
  * Scope:
  *   - Story 6.13: velocity limits and delay floor
@@ -30,6 +31,30 @@
 
 const defaultDelayFn = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const defaultRng = Math.random;
+const defaultNowFn = () => Date.now();
+
+// ============================================================================
+// Timestamp normalization (Story 6.14)
+// ============================================================================
+
+/**
+ * Normalize a timestamp-like value to milliseconds since epoch.
+ * Accepts Date, number (ms), or ISO/parseable string.
+ * Returns NaN for null, undefined, or unparseable values.
+ *
+ * @param {Date|number|string|null|undefined} value
+ * @returns {number}
+ */
+function normalizeTimestamp(value) {
+  if (value == null) return NaN;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
+  if (typeof value === 'string') {
+    const n = new Date(value).getTime();
+    return n;
+  }
+  return NaN;
+}
 
 // ============================================================================
 // Velocity limits (hard floors, not overrideable)
@@ -167,4 +192,42 @@ export async function enforceDelay(action, accountAgeDays = Infinity, options = 
   const r = Math.max(0, Math.min(1, rng()));
   const ms = 5000 + r * 10000; // 5-15s
   return delayFn(ms);
+}
+
+// ============================================================================
+// getAccountAgeDays — Story 6.14
+// ============================================================================
+
+/**
+ * Calculate the age of a Facebook account in days given its account ID (`c_user`).
+ *
+ * Pure function — uses injectable seams for data access (`db`) and time (`nowFn`).
+ * Falls back to `0` (most restrictive / "new" tier) when `db` is missing,
+ * `c_user` is null/empty, no creation record exists, or any value is unparseable.
+ * This is fail-safe for anti-detection: unknown age = assume new account.
+ *
+ * @param {string} c_user - Facebook user ID string
+ * @param {Object} [options]
+ * @param {Object} [options.db] - database adapter with `getAccountCreatedAt(c_user)` method
+ * @param {Function} [options.nowFn] - returns current timestamp in ms (default: Date.now)
+ * @returns {Promise<number>} account age in days (integer >= 0)
+ */
+export async function getAccountAgeDays(c_user, options = {}) {
+  const { db, nowFn = defaultNowFn } = options;
+  if (!c_user || typeof c_user !== 'string' || !db || typeof db.getAccountCreatedAt !== 'function') {
+    return 0;
+  }
+
+  try {
+    const createdAt = await db.getAccountCreatedAt(c_user);
+    const createdTime = normalizeTimestamp(createdAt);
+    if (!Number.isFinite(createdTime)) return 0;
+
+    const now = normalizeTimestamp(nowFn());
+    if (!Number.isFinite(now)) return 0;
+    const diffMs = now - createdTime;
+    return Math.max(0, Math.floor(diffMs / 86400000));
+  } catch (_err) {
+    return 0;
+  }
 }

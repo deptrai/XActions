@@ -262,20 +262,20 @@ export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st,
 
   // Step 5: Verify authentication succeeded.
   // Check for: login form (bad cookies) OR security check (anti-bot detection).
-  const authCheck = await page.evaluate(() => {
-    const bodyText = document.body.innerText;
-    const hasLoginForm = !!document.querySelector('form[action*="login"], [data-testid="royal_login_form"]');
+  const authCheck = (await page.evaluate(() => {
+    const bodyText = document.body?.innerText || '';
+    const hasLoginForm = !!document.querySelector?.('form[action*="login"], [data-testid="royal_login_form"]');
     const hasLoginButton = bodyText.includes('Log in') && bodyText.includes('password');
     // Facebook security check / CAPTCHA indicators (multi-language, various phrasings)
     const hasSecurityCheck = bodyText.includes('confirmez que vous êtes une personne') ||
       bodyText.includes('confirm that you are a real person') ||
-      bodyText.includes('confirm that you') && bodyText.includes('human') ||
+      (bodyText.includes('confirm that you') && bodyText.includes('human')) ||
       bodyText.includes('security check') ||
       bodyText.includes('vérification de sécurité') ||
       bodyText.includes('Enter the text from the image') ||
       bodyText.includes('hear this code');
     return { hasLoginForm, hasLoginButton, hasSecurityCheck };
-  });
+  })) || {};
 
   if (authCheck.hasLoginForm || authCheck.hasLoginButton) {
     throw new Error('❌ Facebook cookie authentication failed — session expired or invalid cookies');
@@ -284,6 +284,9 @@ export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st,
   if (authCheck.hasSecurityCheck) {
     throw new Error('❌ Facebook security check detected — manual verification required (CAPTCHA/anti-bot)');
   }
+
+  // Store account ID on page context for downstream age/velocity lookup (Story 6.14 — AC5)
+  page._fbAccountId = c_user;
 }
 
 // ============================================================================

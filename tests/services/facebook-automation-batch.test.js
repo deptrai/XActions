@@ -952,4 +952,114 @@ describe('assertFacebookUrl', () => {
   it('rejects non-facebook host', () => {
     expect(() => assertFacebookUrl('https://notfacebook.com/x')).toThrow('facebook.com');
   });
+
+  // -------------------------------------------------------------------------
+  // Account Age & Velocity Integration (Story 6.14 — AC6, AC7, AC8, AC9, AC10)
+  // -------------------------------------------------------------------------
+
+  describe('account age & velocity limits integration (Story 6.14)', () => {
+    it('truncates 20 items to 15 for likes with accountAgeDays=3 (<7 days, 50% limit) (AC7, AC8)', async () => {
+      const items = Array.from({ length: 20 }, (_, i) => `post-${i}`);
+      const actionFn = vi.fn().mockResolvedValue(undefined);
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const res = await runGuardedBatch(items, actionFn, {
+        dryRun: false,
+        action: 'like',
+        accountAgeDays: 3,
+        delayFn: vi.fn(),
+      });
+
+      expect(res.attempted).toBe(15);
+      expect(actionFn).toHaveBeenCalledTimes(15);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Batch truncated: like limit 15 for account age 3 days'));
+      warnSpy.mockRestore();
+    });
+
+    it('truncates 30 items to 24 for likes with accountAgeDays=14 (1-4 weeks, 80% limit) (AC7, AC9)', async () => {
+      // Note: maxBatch defaults to 20, so pass maxBatch: 30 to test 24 truncation
+      const items = Array.from({ length: 30 }, (_, i) => `post-${i}`);
+      const actionFn = vi.fn().mockResolvedValue(undefined);
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const res = await runGuardedBatch(items, actionFn, {
+        dryRun: false,
+        action: 'like',
+        accountAgeDays: 14,
+        maxBatch: 30,
+        delayFn: vi.fn(),
+      });
+
+      expect(res.attempted).toBe(24);
+      expect(actionFn).toHaveBeenCalledTimes(24);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Batch truncated: like limit 24 for account age 14 days'));
+      warnSpy.mockRestore();
+    });
+
+    it('allows up to full limit (30) for likes with accountAgeDays=100 (>3 months, 100% limit) (AC7, AC10)', async () => {
+      const items = Array.from({ length: 30 }, (_, i) => `post-${i}`);
+      const actionFn = vi.fn().mockResolvedValue(undefined);
+
+      const res = await runGuardedBatch(items, actionFn, {
+        dryRun: false,
+        action: 'like',
+        accountAgeDays: 100,
+        maxBatch: 30,
+        delayFn: vi.fn(),
+      });
+
+      expect(res.attempted).toBe(30);
+      expect(actionFn).toHaveBeenCalledTimes(30);
+    });
+
+    it('uses enforceDelay when action is provided (AC6)', async () => {
+      const items = ['post-1', 'post-2'];
+      const actionFn = vi.fn().mockResolvedValue(undefined);
+      const delayFn = vi.fn(async () => {});
+
+      await runGuardedBatch(items, actionFn, {
+        dryRun: false,
+        action: 'like',
+        accountAgeDays: 5,
+        delayFn,
+      });
+
+      expect(delayFn).toHaveBeenCalledOnce();
+      const delayMs = delayFn.mock.calls[0][0];
+      expect(delayMs).toBeGreaterThanOrEqual(5000);
+      expect(delayMs).toBeLessThanOrEqual(15000);
+    });
+
+    it('preserves existing 1-3s delay when action is NOT provided (backward compat)', async () => {
+      const items = ['post-1', 'post-2'];
+      const actionFn = vi.fn().mockResolvedValue(undefined);
+      const delayFn = vi.fn(async () => {});
+
+      await runGuardedBatch(items, actionFn, {
+        dryRun: false,
+        delay: delayFn,
+      });
+
+      expect(delayFn).toHaveBeenCalledOnce();
+      const delayMin = delayFn.mock.calls[0][0];
+      const delayMax = delayFn.mock.calls[0][1];
+      expect(delayMin).toBe(1000);
+      expect(delayMax).toBe(3000);
+    });
+
+    it('preserves dry-run gate: dryRun=true skips real actions even with action and age options', async () => {
+      const items = Array.from({ length: 20 }, (_, i) => `post-${i}`);
+      const actionFn = vi.fn();
+
+      const res = await runGuardedBatch(items, actionFn, {
+        dryRun: true,
+        action: 'like',
+        accountAgeDays: 3,
+      });
+
+      expect(res.dryRun).toBe(true);
+      expect(actionFn).not.toHaveBeenCalled();
+      expect(res.preview).toHaveLength(15); // preview truncated to 15
+    });
+  });
 });
