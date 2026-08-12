@@ -3,7 +3,7 @@
 // Pure-module tests for src/scrapers/facebook/human.js
 // No Puppeteer required — human.js is a pure module.
 import { describe, it, expect, vi } from 'vitest';
-import { humanMoveMouse, humanClick } from '../../src/scrapers/facebook/human.js';
+import { humanMoveMouse, humanClick, humanType } from '../../src/scrapers/facebook/human.js';
 import { makeFakePage, makeElementHandle } from '../helpers/fake-page.js';
 
 // ============================================================================
@@ -322,5 +322,159 @@ describe('humanClick (AC1-AC9 — Story 6.10)', () => {
     const page = makeFakePage();
     await humanMoveMouse(page, 200, 200, { delayFn: async () => {}, rng: () => 0.5 });
     expect(page.calls.mouse.move.length).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================================
+// humanType (AC1-AC9 — Story 6.11)
+// ============================================================================
+
+describe('humanType (AC1-AC9 — Story 6.11)', () => {
+  it('is an async function (AC1)', () => {
+    expect(typeof humanType).toBe('function');
+    const page = makeFakePage();
+    expect(humanType(page, 'hello', { delayFn: async () => {}, rng: () => 0.5 })).toBeInstanceOf(Promise);
+  });
+
+  it('calls page.keyboard.type for each character (AC2)', async () => {
+    const page = makeFakePage();
+    await humanType(page, 'hello', { delayFn: async () => {}, rng: () => 0.5 });
+    // 5 chars, no typos with rng=0.5 (0.5 > 0.015 typo threshold)
+    expect(page.calls.keyboard.type.length).toBe(5);
+    const typedChars = page.calls.keyboard.type.map(t => t.text);
+    expect(typedChars.join('')).toBe('hello');
+  });
+
+  it('delay 80-120ms after each normal character (AC2)', async () => {
+    const page = makeFakePage();
+    const delayFn = vi.fn(async () => {});
+    await humanType(page, 'abc', { delayFn, rng: () => 0.5 });
+    // Each char has 80 + 0.5*40 = 100ms delay
+    const normalDelays = delayFn.mock.calls.filter(c => c[0] >= 80 && c[0] <= 120);
+    expect(normalDelays.length).toBe(3);
+    expect(normalDelays.every(c => c[0] === 100)).toBe(true);
+  });
+
+  it('typo rate triggers at expected 1.5% threshold (AC3)', async () => {
+    // rng() returns 0.0 then 0.5 repeatedly: 0.0 < 0.015 → typo, 0.5 > 0.015 → no typo for following calls
+    const page = makeFakePage();
+    const rng = vi.fn();
+    let call = 0;
+    rng.mockImplementation(() => {
+      const values = [0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
+      return values[call++ % values.length];
+    });
+    const delayFn = async () => {};
+    await humanType(page, 'a', { delayFn, rng });
+
+    // 'a' triggered typo: type wrong -> backspace -> type correct (2 type calls + 1 press)
+    expect(page.calls.keyboard.type.length).toBe(2);
+    expect(page.calls.keyboard.press.length).toBe(1);
+    expect(page.calls.keyboard.press[0]).toBe('Backspace');
+  });
+
+  it('typos only apply to alphabet characters, not digits or punctuation (AC3)', async () => {
+    const page = makeFakePage();
+    const rng = vi.fn(() => 0.0); // force typo every time
+    const delayFn = async () => {};
+    await humanType(page, '1!', { delayFn, rng });
+    // digits and punctuation never get typos
+    expect(page.calls.keyboard.type.length).toBe(2);
+    expect(page.calls.keyboard.press.length).toBe(0);
+  });
+
+  it('typo sequence: type wrong → pause → backspace → retype (AC4)', async () => {
+    const page = makeFakePage();
+    const delayFn = vi.fn(async () => {});
+    // Force typo on 'a'. rng 0.0 triggers typo; then need neighbors for getTypoChar.
+    // 'a' has ['q','w','s','z'] — with rng=0.0 the first (q) is chosen.
+    const rng = vi.fn(() => 0.0);
+    await humanType(page, 'a', { delayFn, rng });
+
+    const typeCalls = page.calls.keyboard.type.map(t => t.text);
+    expect(typeCalls.length).toBe(2);
+    expect(typeCalls[0]).toBe('q'); // wrong char
+    expect(typeCalls[1]).toBe('a'); // correct char (after backspace)
+    expect(page.calls.keyboard.press[0]).toBe('Backspace');
+
+    // Should be a 100-300ms delay between wrong char and backspace (realization pause)
+    const typoPause = delayFn.mock.calls.find(c => c[0] >= 100 && c[0] <= 300);
+    expect(typoPause).toBeDefined();
+  });
+
+  it('typo pause is 100-300ms (AC4)', async () => {
+    const page = makeFakePage();
+    const delayFn = vi.fn(async () => {});
+    const rng = vi.fn(() => 0.0); // 0.0 typo trigger, then 0.0 for pause = 100 + 0*200 = 100ms
+    await humanType(page, 'a', { delayFn, rng });
+    const typoPause = delayFn.mock.calls.find(c => c[0] === 100);
+    expect(typoPause).toBeDefined();
+  });
+
+  it('word pause 100-300ms after space character (AC5)', async () => {
+    const page = makeFakePage();
+    const delayFn = vi.fn(async () => {});
+    await humanType(page, 'a b', { delayFn, rng: () => 0.5 });
+    // delay after 'a' and after ' ' and after 'b': word pause for ' ' = 100 + 0.5*200 = 200ms
+    const wordPause = delayFn.mock.calls.find(c => c[0] === 200);
+    expect(wordPause).toBeDefined();
+    // other two are normal: 80 + 0.5*40 = 100ms
+    const normalDelays = delayFn.mock.calls.filter(c => c[0] === 100);
+    expect(normalDelays.length).toBe(2);
+  });
+
+  it('punctuation pause 200-500ms after punctuation (AC5)', async () => {
+    const page = makeFakePage();
+    const delayFn = vi.fn(async () => {});
+    await humanType(page, 'a.b', { delayFn, rng: () => 0.5 });
+    // '.' should have 200 + 0.5*300 = 350ms pause
+    const punctPause = delayFn.mock.calls.find(c => c[0] === 350);
+    expect(punctPause).toBeDefined();
+  });
+
+  it('delayFn seam is used for all delays (AC6)', async () => {
+    const page = makeFakePage();
+    const delayFn = vi.fn(async () => {});
+    await humanType(page, 'hi', { delayFn, rng: () => 0.5 });
+    expect(delayFn).toHaveBeenCalled();
+    expect(delayFn.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('rng seam is used for all random decisions (AC7)', async () => {
+    const page = makeFakePage();
+    const rng = vi.fn(() => 0.5);
+    await humanType(page, 'hi', { delayFn: async () => {}, rng });
+    expect(rng).toHaveBeenCalled();
+    expect(rng.mock.calls.length).toBeGreaterThanOrEqual(4); // per-char delay + typo check + word pause
+  });
+
+  it('empty string — no keyboard.type calls (edge case)', async () => {
+    const page = makeFakePage();
+    const delayFn = vi.fn(async () => {});
+    await humanType(page, '', { delayFn, rng: () => 0.5 });
+    expect(page.calls.keyboard.type.length).toBe(0);
+    expect(page.calls.keyboard.press.length).toBe(0);
+    expect(delayFn.mock.calls.length).toBe(0);
+  });
+
+  it('single character — one keyboard.type call', async () => {
+    const page = makeFakePage();
+    const delayFn = vi.fn(async () => {});
+    await humanType(page, 'x', { delayFn, rng: () => 0.5 });
+    expect(page.calls.keyboard.type.length).toBe(1);
+    expect(page.calls.keyboard.type[0].text).toBe('x');
+    expect(delayFn.mock.calls.length).toBe(1);
+  });
+
+  it('humanMoveMouse and humanClick still work (AC9 — no regression)', async () => {
+    const page = makeFakePage();
+    await humanMoveMouse(page, 100, 200, { delayFn: async () => {}, rng: () => 0.5 });
+    expect(page.calls.mouse.move.length).toBeGreaterThan(0);
+
+    const el = makeElementHandle({ boundingBox: { x: 100, y: 200, width: 50, height: 30 } });
+    const page2 = makeFakePage();
+    await humanClick(page2, el, { delayFn: async () => {}, rng: () => 0.5 });
+    expect(page2.calls.mouse.down.length).toBe(1);
+    expect(page2.calls.mouse.up.length).toBe(1);
   });
 });

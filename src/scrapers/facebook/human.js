@@ -9,11 +9,12 @@
  * Exports:
  *   - humanMoveMouse(page, x, y, { delayFn, rng }) : Bezier curve mouse movement
  *   - humanClick(page, element, { delayFn, rng }) : Human-like click with hover + down/up
+ *   - humanType(page, text, { delayFn, rng }) : Human-like typing with variable speed and typos
  *
  * Scope:
  *   - Story 6.9: humanMoveMouse (cubic Bezier, 20-35 steps, jitter, overshoot)
  *   - Story 6.10: humanClick (hover pause, mouse down/up)
- *   - Story 6.11 (future): humanType (variable speed, typos)
+ *   - Story 6.11: humanType (variable speed, typos)
  *   - Story 6.12 (future): humanScroll (sin curve, chunks)
  *
  * NFR1: total movement time <2s.
@@ -211,4 +212,114 @@ export async function humanClick(page, element, options = {}) {
   await page.mouse.down();
   await delayFn(30 + rng() * 90);
   await page.mouse.up();
+}
+
+// ============================================================================
+// QWERTY adjacent-key map for plausibly wrong typo characters
+// ============================================================================
+
+const QWERTY_ADJACENT = {
+  a: ['q', 'w', 's', 'z'],
+  b: ['v', 'g', 'h', 'n'],
+  c: ['x', 'd', 'f', 'v'],
+  d: ['s', 'e', 'r', 'f', 'c', 'x'],
+  e: ['w', 'r', 'd', 's'],
+  f: ['d', 'r', 'g', 'v', 'c'],
+  g: ['f', 't', 'h', 'b', 'v'],
+  h: ['g', 'y', 'j', 'n', 'b'],
+  i: ['u', 'o', 'k', 'j'],
+  j: ['h', 'u', 'k', 'm', 'n'],
+  k: ['j', 'i', 'l', ',', 'm'],
+  l: ['k', 'o', 'p', ';', '.'],
+  m: ['n', 'j', 'k', ','],
+  n: ['b', 'h', 'j', 'm'],
+  o: ['i', 'p', 'l', 'k'],
+  p: ['o', 'l', ';'],
+  q: ['w', 'a'],
+  r: ['e', 't', 'f', 'd'],
+  s: ['a', 'w', 'e', 'd', 'z', 'x'],
+  t: ['r', 'y', 'g', 'f'],
+  u: ['y', 'i', 'j', 'h'],
+  v: ['c', 'f', 'g', 'b'],
+  w: ['q', 'e', 's', 'a'],
+  x: ['z', 's', 'd', 'c'],
+  y: ['t', 'u', 'h', 'g'],
+  z: ['a', 's', 'x'],
+};
+
+const PUNCTUATION_CHARS = new Set(['.', ',', '!', '?', ';', ':']);
+
+/**
+ * Pick a plausible typo for an alphabet character: a random adjacent QWERTY key.
+ * Preserves the original case.
+ */
+function getTypoChar(char, rng) {
+  const lower = char.toLowerCase();
+  const adjacent = QWERTY_ADJACENT[lower];
+  if (!adjacent || adjacent.length === 0) return char;
+  const wrongChar = adjacent[Math.floor(rng() * adjacent.length)];
+  return char === char.toUpperCase() ? wrongChar.toUpperCase() : wrongChar;
+}
+
+// ============================================================================
+// humanType — Human-like typing with variable speed and typos (Story 6.11)
+// ============================================================================
+
+/**
+ * Type text with human-like behavior: variable per-character delays, occasional
+ * QWERTY-adjacent typos with correction, and natural pauses between words and
+ * after punctuation.
+ *
+ * Behavior:
+ *   - Each character is typed via `page.keyboard.type(char)` one at a time
+ *   - Normal delay 80-120ms after each character (randomized)
+ *   - Typos (1.5% chance) only for alphabet characters [a-zA-Z]:
+ *     - Type wrong adjacent QWERTY key
+ *     - Pause 100-300ms (realization)
+ *     - Press Backspace
+ *     - Type correct character
+ *   - Word pause 100-300ms after a space (replaces normal delay)
+ *   - Punctuation pause 200-500ms after [.,!?;:] (replaces normal delay)
+ *   - Total time is proportional to text length (NFR1)
+ *
+ * @param {import('puppeteer').Page} page - Puppeteer page with `page.keyboard`
+ * @param {string} text - Text to type
+ * @param {Object} [options]
+ * @param {Function} [options.delayFn] - delay function (default: setTimeout-based)
+ * @param {Function} [options.rng] - random number generator (default: Math.random)
+ * @returns {Promise<void>}
+ */
+export async function humanType(page, text, options = {}) {
+  const {
+    delayFn = defaultDelayFn,
+    rng = defaultRng,
+  } = options;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const isLetter = /[a-zA-Z]/.test(char);
+
+    // 1.5% typo chance, only for alphabet characters
+    if (isLetter && rng() < 0.015) {
+      const wrongChar = getTypoChar(char, rng);
+      await page.keyboard.type(wrongChar);
+      // Realization pause: 100-300ms
+      await delayFn(100 + rng() * 200);
+      // Backspace to delete wrong char
+      await page.keyboard.press('Backspace');
+      // Type correct char
+      await page.keyboard.type(char);
+    } else {
+      await page.keyboard.type(char);
+    }
+
+    // Delay after character based on what this character is
+    if (char === ' ') {
+      await delayFn(100 + rng() * 200); // 100-300ms word pause
+    } else if (PUNCTUATION_CHARS.has(char)) {
+      await delayFn(200 + rng() * 300); // 200-500ms punctuation pause
+    } else {
+      await delayFn(80 + rng() * 40); // 80-120ms normal char delay
+    }
+  }
 }
