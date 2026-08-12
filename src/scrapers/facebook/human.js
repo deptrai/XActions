@@ -10,12 +10,13 @@
  *   - humanMoveMouse(page, x, y, { delayFn, rng }) : Bezier curve mouse movement
  *   - humanClick(page, element, { delayFn, rng }) : Human-like click with hover + down/up
  *   - humanType(page, text, { delayFn, rng }) : Human-like typing with variable speed and typos
+ *   - humanScroll(page, distance, { delayFn, rng }) : Human-like scroll with sin-curve chunks
  *
  * Scope:
  *   - Story 6.9: humanMoveMouse (cubic Bezier, 20-35 steps, jitter, overshoot)
  *   - Story 6.10: humanClick (hover pause, mouse down/up)
  *   - Story 6.11: humanType (variable speed, typos)
- *   - Story 6.12 (future): humanScroll (sin curve, chunks)
+ *   - Story 6.12: humanScroll (sin curve, chunks)
  *
  * NFR1: total movement time <2s.
  * NFR3: delayFn seam for testing (default setTimeout, inject vi.fn()).
@@ -321,5 +322,89 @@ export async function humanType(page, text, options = {}) {
     } else {
       await delayFn(80 + rng() * 40); // 80-120ms normal char delay
     }
+  }
+}
+
+// ============================================================================
+// humanScroll — Human-like scroll with sin-curve chunks (Story 6.12)
+// ============================================================================
+
+/**
+ * Scroll by `distance` pixels with human-like behavior: the scroll is split into
+ * 5-10 chunks whose sizes follow a sine curve (slow → fast → slow), with a 20%
+ * chance of overshoot + correction and 100-400ms delays between chunks.
+ *
+ * Behavior:
+ *   - Chunk count 5-10 (randomized)
+ *   - Per-chunk distance follows sin curve over chunk index
+ *   - 20% chance overshoot: scroll 5-15% past target, then correct back
+ *   - 100-400ms delay between chunks
+ *   - Calls `page.mouse.wheel({ deltaY: chunkDistance })` for each chunk
+ *   - Total time reasonable (NFR1)
+ *
+ * @param {import('puppeteer').Page} page - Puppeteer page with `page.mouse.wheel`
+ * @param {number} distance - scroll distance in pixels (positive = down, negative = up)
+ * @param {Object} [options]
+ * @param {Function} [options.delayFn] - delay function (default: setTimeout-based)
+ * @param {Function} [options.rng] - random number generator (default: Math.random)
+ * @returns {Promise<void>}
+ */
+export async function humanScroll(page, distance, options = {}) {
+  const {
+    delayFn = defaultDelayFn,
+    rng = defaultRng,
+  } = options;
+
+  if (distance === 0) return;
+
+  // 5-10 chunks
+  const chunkCount = 5 + Math.floor(rng() * 6);
+
+  // Compute sin-curve weights: slow start, fast middle, slow end
+  const weights = [];
+  for (let i = 0; i < chunkCount; i++) {
+    const t = (i + 0.5) / chunkCount;
+    const w = 0.5 + 0.5 * Math.sin(t * Math.PI);
+    weights.push(w);
+  }
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+  // Raw chunk distances (proportional to weight, preserving sign)
+  const rawDistances = weights.map(w => (w / totalWeight) * distance);
+
+  // Round to integers and adjust last chunk so sum exactly equals distance
+  const chunks = rawDistances.map(d => Math.round(d));
+  const currentSum = chunks.reduce((a, b) => a + b, 0);
+  const adjustment = distance - currentSum;
+  if (chunks.length > 0) {
+    chunks[chunks.length - 1] += adjustment;
+  }
+
+  // 20% chance overshoot: scroll 5-15% past target, then correct back
+  const willOvershoot = rng() < 0.20;
+  let overshootDistance = 0;
+  if (willOvershoot) {
+    const overshootPercent = 0.05 + rng() * 0.10; // 5-15%
+    overshootDistance = Math.round(distance * overshootPercent);
+    // If overshoot rounds to 0 but distance is non-zero, use at least 1px
+    if (overshootDistance === 0 && distance !== 0) {
+      overshootDistance = distance > 0 ? 1 : -1;
+    }
+  }
+
+  // Execute base chunks
+  for (let i = 0; i < chunks.length; i++) {
+    await page.mouse.wheel({ deltaY: chunks[i] });
+    // Delay between chunks (not after final chunk unless overshoot follows)
+    if (i < chunks.length - 1 || willOvershoot) {
+      await delayFn(100 + rng() * 300);
+    }
+  }
+
+  // Overshoot and correction
+  if (willOvershoot && overshootDistance !== 0) {
+    await page.mouse.wheel({ deltaY: overshootDistance });
+    await delayFn(100 + rng() * 300);
+    await page.mouse.wheel({ deltaY: -overshootDistance });
   }
 }

@@ -44,7 +44,7 @@ export function makeFakePage(opts = {}) {
     emulateTimezone: [],
     setGeolocation: [],
     keyboard: { down: [], up: [], press: [], type: [] },
-    mouse: { move: [], click: [], down: [], up: [] },
+    mouse: { move: [], click: [], down: [], up: [], wheel: [] },
   };
 
   const cookieJar = [...cookies];
@@ -69,12 +69,13 @@ export function makeFakePage(opts = {}) {
     type: async (text, typeOpts = {}) => { calls.keyboard.type.push({ text, opts: typeOpts }); },
   };
 
-  // Mouse object — records all mouse actions for behavioral simulation tests (Story 6.9)
+  // Mouse object — records all mouse actions for behavioral simulation tests (Story 6.9/6.12)
   const mouse = {
     move: async (mx, my, moveOpts = {}) => { calls.mouse.move.push({ x: mx, y: my, opts: moveOpts }); },
     click: async (cx, cy, clickOpts = {}) => { calls.mouse.click.push({ x: cx, y: cy, opts: clickOpts }); },
     down: async (downOpts = {}) => { calls.mouse.down.push(downOpts); },
     up: async (upOpts = {}) => { calls.mouse.up.push(upOpts); },
+    wheel: async (wheelOpts = {}) => { calls.mouse.wheel.push(wheelOpts); },
   };
 
   const page = {

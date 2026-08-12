@@ -3,7 +3,7 @@
 // Pure-module tests for src/scrapers/facebook/human.js
 // No Puppeteer required — human.js is a pure module.
 import { describe, it, expect, vi } from 'vitest';
-import { humanMoveMouse, humanClick, humanType } from '../../src/scrapers/facebook/human.js';
+import { humanMoveMouse, humanClick, humanType, humanScroll } from '../../src/scrapers/facebook/human.js';
 import { makeFakePage, makeElementHandle } from '../helpers/fake-page.js';
 
 // ============================================================================
@@ -476,5 +476,144 @@ describe('humanType (AC1-AC9 — Story 6.11)', () => {
     await humanClick(page2, el, { delayFn: async () => {}, rng: () => 0.5 });
     expect(page2.calls.mouse.down.length).toBe(1);
     expect(page2.calls.mouse.up.length).toBe(1);
+  });
+});
+
+// ============================================================================
+// humanScroll (AC1-AC9 — Story 6.12)
+// ============================================================================
+
+describe('humanScroll (AC1-AC9 — Story 6.12)', () => {
+  it('is an async function (AC1)', () => {
+    expect(typeof humanScroll).toBe('function');
+    const page = makeFakePage();
+    expect(humanScroll(page, 1000, { delayFn: async () => {}, rng: () => 0.5 })).toBeInstanceOf(Promise);
+  });
+
+  it('calls page.mouse.wheel 5-10 times (AC2)', async () => {
+    const page = makeFakePage();
+    await humanScroll(page, 1000, { delayFn: async () => {}, rng: () => 0.5 });
+    const wheelCount = page.calls.mouse.wheel.length;
+    expect(wheelCount).toBeGreaterThanOrEqual(5);
+    expect(wheelCount).toBeLessThanOrEqual(10);
+  });
+
+  it('sum of all deltaY values equals input distance (AC2, AC3)', async () => {
+    const page = makeFakePage();
+    await humanScroll(page, 1000, { delayFn: async () => {}, rng: () => 0.5 });
+    const totalDelta = page.calls.mouse.wheel.reduce((sum, w) => sum + w.deltaY, 0);
+    expect(totalDelta).toBe(1000);
+  });
+
+  it('middle chunk is largest (sin curve slow-fast-slow) (AC3)', async () => {
+    const page = makeFakePage();
+    // Force 10 chunks with rng=0.0 for chunkCount, then other rng calls use 0.5
+    let call = 0;
+    const rng = () => {
+      call++;
+      // chunkCount: 5 + Math.floor(rng()*6) → first call should return 0 for 5 chunks, but let's use 5 chunks
+      if (call === 1) return 0.0; // 5 chunks
+      return 0.5;
+    };
+    await humanScroll(page, 1000, { delayFn: async () => {}, rng });
+    const deltas = page.calls.mouse.wheel.map(w => w.deltaY);
+    // With 5 chunks and sin curve, the middle chunk (index 2) should be largest
+    const middleDelta = deltas[2];
+    const firstDelta = deltas[0];
+    const lastDelta = deltas[deltas.length - 1];
+    expect(middleDelta).toBeGreaterThan(firstDelta);
+    expect(middleDelta).toBeGreaterThan(lastDelta);
+  });
+
+  it('first and last chunks are smaller than middle (AC3)', async () => {
+    const page = makeFakePage();
+    let call = 0;
+    const rng = () => {
+      call++;
+      if (call === 1) return 0.0; // 5 chunks
+      return 0.5;
+    };
+    await humanScroll(page, 1000, { delayFn: async () => {}, rng });
+    const deltas = page.calls.mouse.wheel.map(w => w.deltaY);
+    const middleDelta = deltas[Math.floor(deltas.length / 2)];
+    expect(deltas[0]).toBeLessThan(middleDelta);
+    expect(deltas[deltas.length - 1]).toBeLessThan(middleDelta);
+  });
+
+  it('20% overshoot triggers with rng=0.0 and adds correction (AC4)', async () => {
+    const page = makeFakePage();
+    // rng=0.0 forces overshoot (0.0 < 0.2) and overshootPercent=0.05 (5%)
+    // For distance 1000, overshoot = 50, correction = -50
+    const delayFn = async () => {};
+    await humanScroll(page, 1000, { delayFn, rng: () => 0.0 });
+    const deltas = page.calls.mouse.wheel.map(w => w.deltaY);
+    // Last two should be overshoot + correction
+    expect(deltas.length).toBeGreaterThanOrEqual(7); // 5 base + 2 overshoot
+    const overshoot = deltas[deltas.length - 2];
+    const correction = deltas[deltas.length - 1];
+    expect(overshoot).toBe(50);
+    expect(correction).toBe(-50);
+    // Total still equals 1000 (50 - 50 cancels)
+    expect(deltas.reduce((s, d) => s + d, 0)).toBe(1000);
+  });
+
+  it('delay 100-400ms between chunks (AC5)', async () => {
+    const page = makeFakePage();
+    const delayFn = vi.fn(async () => {});
+    let call = 0;
+    const rng = () => {
+      call++;
+      if (call === 1) return 0.0; // 5 chunks
+      return 0.5;
+    };
+    await humanScroll(page, 1000, { delayFn, rng });
+    // 5 chunks with no overshoot → 4 inter-chunk delays
+    const interChunkDelays = delayFn.mock.calls.filter(c => c[0] >= 100 && c[0] <= 400);
+    expect(interChunkDelays.length).toBeGreaterThanOrEqual(4);
+    expect(interChunkDelays.every(c => c[0] === 250)).toBe(true); // 100 + 0.5*300 = 250
+  });
+
+  it('delayFn seam is used for all inter-chunk delays (AC6)', async () => {
+    const page = makeFakePage();
+    const delayFn = vi.fn(async () => {});
+    await humanScroll(page, 1000, { delayFn, rng: () => 0.5 });
+    expect(delayFn).toHaveBeenCalled();
+    expect(delayFn.mock.calls.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('rng seam is used for all random decisions (AC7)', async () => {
+    const page = makeFakePage();
+    const rng = vi.fn(() => 0.5);
+    await humanScroll(page, 1000, { delayFn: async () => {}, rng });
+    expect(rng).toHaveBeenCalled();
+    expect(rng.mock.calls.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('zero distance — no wheel calls (edge case)', async () => {
+    const page = makeFakePage();
+    await humanScroll(page, 0, { delayFn: async () => {}, rng: () => 0.5 });
+    expect(page.calls.mouse.wheel.length).toBe(0);
+  });
+
+  it('negative distance works (scrolls up, chunks are negative)', async () => {
+    const page = makeFakePage();
+    await humanScroll(page, -1000, { delayFn: async () => {}, rng: () => 0.5 });
+    const totalDelta = page.calls.mouse.wheel.reduce((sum, w) => sum + w.deltaY, 0);
+    expect(totalDelta).toBe(-1000);
+  });
+
+  it('humanMoveMouse, humanClick, humanType still work (AC9 — no regression)', async () => {
+    const page = makeFakePage();
+    await humanMoveMouse(page, 100, 200, { delayFn: async () => {}, rng: () => 0.5 });
+    expect(page.calls.mouse.move.length).toBeGreaterThan(0);
+
+    const el = makeElementHandle({ boundingBox: { x: 100, y: 200, width: 50, height: 30 } });
+    const page2 = makeFakePage();
+    await humanClick(page2, el, { delayFn: async () => {}, rng: () => 0.5 });
+    expect(page2.calls.mouse.down.length).toBe(1);
+
+    const page3 = makeFakePage();
+    await humanType(page3, 'hi', { delayFn: async () => {}, rng: () => 0.5 });
+    expect(page3.calls.keyboard.type.length).toBe(2);
   });
 });
