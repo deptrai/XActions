@@ -38,6 +38,11 @@ export function makeFakePage(opts = {}) {
     reload: [],
     content: [],
     url: [],
+    setUserAgent: [],
+    setViewport: [],
+    evaluateOnNewDocument: [],
+    emulateTimezone: [],
+    setGeolocation: [],
     keyboard: { down: [], up: [], press: [], type: [] },
   };
 
@@ -87,6 +92,26 @@ export function makeFakePage(opts = {}) {
     },
 
     cookies: () => cookieJar,
+
+    setUserAgent: async (ua) => {
+      calls.setUserAgent.push(ua);
+    },
+
+    setViewport: async (vp) => {
+      calls.setViewport.push(vp);
+    },
+
+    evaluateOnNewDocument: async (fn, ...args) => {
+      calls.evaluateOnNewDocument.push({ fn: fn.toString(), args });
+    },
+
+    emulateTimezone: async (tz) => {
+      calls.emulateTimezone.push(tz);
+    },
+
+    setGeolocation: async (geo) => {
+      calls.setGeolocation.push(geo);
+    },
 
     $: async (selector) => {
       calls.$.push(selector);

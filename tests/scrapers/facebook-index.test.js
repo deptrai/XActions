@@ -14,8 +14,9 @@ import {
   scrapeTweets,
   searchTweets,
   scrapeGroupMembers,
+  createPage,
 } from '../../src/scrapers/facebook/index.js';
-import { makeFakePage } from '../helpers/fake-page.js';
+import { makeFakePage, makeFakeBrowser } from '../helpers/fake-page.js';
 
 // ============================================================================
 // normalizeHandle (L94-111)
@@ -1146,3 +1147,86 @@ describe('scrapeGroupMembers (P1 kill, fake page)', () => {
 function makeElementHandleStub() {
   return { click: async () => {}, type: async () => {}, getAttribute: () => null, textContent: '' };
 }
+
+// ============================================================================
+// createPage — fingerprint integration (Story 6.2, AC4-AC7)
+// ============================================================================
+
+describe('createPage — fingerprint integration (Story 6.2)', () => {
+  it('calls setUserAgent and setViewport (AC4)', async () => {
+    const browser = makeFakeBrowser();
+    const page = await createPage(browser);
+    expect(page.calls.setUserAgent).toHaveLength(1);
+    expect(page.calls.setViewport).toHaveLength(1);
+    expect(typeof page.calls.setUserAgent[0]).toBe('string');
+    expect(page.calls.setViewport[0]).toEqual(
+      expect.objectContaining({ width: expect.any(Number), height: expect.any(Number) })
+    );
+  });
+
+  it('sets page._fingerprint matching the applied UA (AC6)', async () => {
+    const browser = makeFakeBrowser();
+    const page = await createPage(browser);
+    expect(page._fingerprint).toBeDefined();
+    expect(page._fingerprint.ua).toBe(page.calls.setUserAgent[0]);
+    expect(page._fingerprint.viewport.width).toBe(page.calls.setViewport[0].width);
+    expect(page._fingerprint.viewport.height).toBe(page.calls.setViewport[0].height);
+  });
+
+  it('reuses provided fingerprint — does not call generateFingerprint (AC5)', async () => {
+    const browser = makeFakeBrowser();
+    const explicitFp = {
+      ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36',
+      viewport: { width: 1920, height: 1080 },
+      deviceScaleFactor: 1,
+      hardwareConcurrency: 8,
+      deviceMemory: 8,
+      platform: 'Win32',
+    };
+    const page = await createPage(browser, { fingerprint: explicitFp });
+    expect(page.calls.setUserAgent[0]).toBe(explicitFp.ua);
+    expect(page.calls.setViewport[0].width).toBe(1920);
+    expect(page.calls.setViewport[0].height).toBe(1080);
+    expect(page._fingerprint).toBe(explicitFp);
+  });
+
+  it('two pages with same fingerprint reuse have identical UA (AC5, AC6)', async () => {
+    const browser = makeFakeBrowser();
+    const page1 = await createPage(browser);
+    const page2 = await createPage(browser, { fingerprint: page1._fingerprint });
+    expect(page2.calls.setUserAgent[0]).toBe(page1.calls.setUserAgent[0]);
+    expect(page2.calls.setViewport[0].width).toBe(page1.calls.setViewport[0].width);
+    expect(page2.calls.setViewport[0].height).toBe(page1.calls.setViewport[0].height);
+  });
+
+  it('backward compat — createPage(browser) with no options still works (AC7)', async () => {
+    const browser = makeFakeBrowser();
+    const page = await createPage(browser);
+    expect(page).toBeDefined();
+    expect(page.calls.setUserAgent).toHaveLength(1);
+    expect(page._fingerprint).toBeDefined();
+  });
+
+  it('does NOT call evaluateOnNewDocument (scope boundary — Story 6.4)', async () => {
+    const browser = makeFakeBrowser();
+    const page = await createPage(browser);
+    expect(page.calls.evaluateOnNewDocument).toHaveLength(0);
+  });
+
+  it('closes page on applyFingerprint failure — no resource leak (review patch)', async () => {
+    const browser = makeFakeBrowser();
+    // Override newPage to return a page that fails on setUserAgent
+    const pages = [];
+    browser.newPage = async () => {
+      const page = makeFakePage();
+      page.setUserAgent = async () => { throw new Error('boom'); };
+      page.close = async () => { page._closed = true; };
+      pages.push(page);
+      return page;
+    };
+    await expect(createPage(browser)).rejects.toThrow(/Failed to apply fingerprint/);
+    // Verify the page was closed to prevent resource leak
+    expect(pages[0]._closed).toBe(true);
+  });
+});
+

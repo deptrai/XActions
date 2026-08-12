@@ -1,5 +1,5 @@
 # generated: 06-12-2026 02:18
-# last_updated: 06-15-2026 14:55
+# last_updated: 2026-08-12 (story 6-3 → done)
 # project: XActions
 # project_key: NOKEY
 # tracking_system: file-system
@@ -11,7 +11,7 @@
 # Retrospective: optional | done
 
 generated: 06-12-2026 02:18
-last_updated: 06-19-2026 17:45
+last_updated: 2026-08-12
 project: XActions
 project_key: NOKEY
 tracking_system: file-system
@@ -56,7 +56,7 @@ development_status:
   4-9-newsfeed-farming: done
   epic-4-retrospective: optional
 
-  # Epic 5: Facebook Messenger Port (from SST_TOOL_FB C#)
+  # Epic 5: Facebook Messenger Port
   epic-5: done
   5-1-graphql-layer: done
   5-2-messenger-share: done
@@ -64,3 +64,32 @@ development_status:
   5-4-input-queue-surfaces: done
   5-5-session-campaign-ui: done
   epic-5-retrospective: optional
+
+  # Epic 5b: Marketplace & Infrastructure Enhancements (retroactive)
+  epic-5b: done
+  5b-1-marketplace-scraper: done
+  5b-2-share-link-uid-v2: done
+  5b-3-headless-mode: done
+  5b-4-chrome-executable-path: done
+  epic-5b-retrospective: optional
+
+  # Epic 6: Facebook Anti-Detection & Bot Countermeasures
+  epic-6: in-progress
+  6-1-chrome-executable-path: done
+  6-2-consistent-fingerprint: done
+  6-3-ua-pool-viewport: done
+  6-4-navigator-override: backlog
+  6-5-webrtc-leak-prevention: backlog
+  6-6-headless-mode: done
+  6-7-headless-aware-timeouts: done
+  6-8-behavioral-delays-share: done
+  6-9-bezier-mouse: backlog
+  6-10-human-click: backlog
+  6-11-typing-typos: backlog
+  6-12-natural-scrolling: backlog
+  6-13-velocity-limits: backlog
+  6-14-account-age: backlog
+  6-15-session-warming: backlog
+  6-16-timezone-geolocation: backlog
+  6-17-persistent-profiles: backlog
+  epic-6-retrospective: optional

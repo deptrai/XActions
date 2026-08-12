@@ -15,6 +15,7 @@
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { generateSync as totpGenerateSync } from 'otplib';
+import { generateFingerprint, applyFingerprint } from './fingerprint.js';
 
 puppeteer.use(StealthPlugin());
 
@@ -41,7 +42,7 @@ const NON_PROFILE_SEGMENTS = [
  * @returns {Promise<Browser>} Puppeteer browser instance
  */
 export async function createBrowser(options = {}) {
-  const { args: extraArgs = [], headless, proxy, launchImpl, ...rest } = options;
+  const { args: extraArgs = [], headless, proxy, launchImpl, executablePath, ...rest } = options;
   const stealthArgs = [
     '--no-sandbox',
     '--disable-setuid-sandbox',
@@ -54,25 +55,44 @@ export async function createBrowser(options = {}) {
   const proxyArgs = proxy ? [`--proxy-server=${proxy}`] : [];
   // launchImpl seam: tests inject a fake launcher so no real browser spawns.
   const launch = launchImpl ?? puppeteer.launch.bind(puppeteer);
+
+  // Resolve executablePath: explicit option → env var → system Chrome → puppeteer default
+  const resolvedExecutablePath = executablePath
+    || process.env.PUPPETEER_EXECUTABLE_PATH
+    || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+
   return launch({
     headless: headless !== undefined ? headless : 'new',
     // Merge stealth + proxy + caller args; order ensures proxy is visible to Chromium
     args: [...stealthArgs, ...proxyArgs, ...extraArgs],
+    executablePath: resolvedExecutablePath,
     ...rest,
   });
 }
 
 /**
- * Create a page with realistic settings
+ * Create a page with a consistent session fingerprint (ADR-013).
+ *
+ * A fingerprint (UA + viewport + hardware config) is generated once and applied
+ * via `applyFingerprint`. The fingerprint is attached as `page._fingerprint` so
+ * callers can reuse it across tabs via `createPage(browser, { fingerprint })`.
+ *
  * @param {Browser} browser - Puppeteer browser instance
- * @returns {Promise<Page>} Puppeteer page instance
+ * @param {Object} [options]
+ * @param {Object} [options.fingerprint] - explicit fingerprint for session reuse
+ * @returns {Promise<Page>} Puppeteer page instance with `page._fingerprint` set
  */
-export async function createPage(browser) {
+export async function createPage(browser, options = {}) {
   const page = await browser.newPage();
-  await page.setViewport({ width: 1280 + Math.floor(Math.random() * 100), height: 800 });
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-  );
+  const fingerprint = options.fingerprint ?? generateFingerprint();
+  try {
+    await applyFingerprint(page, fingerprint);
+  } catch (err) {
+    // Clean up the page on failure — avoid resource leak and partial-fingerprint state.
+    await page.close().catch(() => {});
+    throw err;
+  }
+  page._fingerprint = fingerprint;
   return page;
 }
 
@@ -188,15 +208,19 @@ export function normalizeProfile(raw, inputHandle) {
  * @param {string} cookies.xs - Facebook session token cookie
  * @throws {Error} If either cookie is missing or empty
  */
-export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st, locale } = {}) {
+export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st, locale, headless = true } = {}) {
   if (!c_user?.trim() || !xs?.trim()) {
     throw new Error('❌ Facebook login requires both c_user and xs cookies');
   }
 
+  // When browser is visible, use longer timeouts and domcontentloaded (faster than networkidle2)
+  const navTimeout = headless ? 30000 : 60000;
+  const navWaitUntil = headless ? 'networkidle2' : 'domcontentloaded';
+
   // Step 1: Navigate to Facebook first so browser is on the correct domain.
   // This is required — setCookie before navigation can fail silently for some
   // cookie combinations because the browser has no origin context.
-  await page.goto(FACEBOOK_BASE, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.goto(FACEBOOK_BASE, { waitUntil: 'domcontentloaded', timeout: navTimeout });
   await randomDelay(1000, 2000);
 
   // Step 2: Build cookie list with all fields needed for full authentication.
@@ -228,7 +252,7 @@ export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st,
 
   // Step 4: Navigate again — this sends the cookies to Facebook's server,
   // which responds with an authenticated session.
-  await page.goto(FACEBOOK_BASE, { waitUntil: 'networkidle2', timeout: 30000 });
+  await page.goto(FACEBOOK_BASE, { waitUntil: navWaitUntil, timeout: navTimeout });
   await randomDelay(2000, 4000);
 
   // Step 5: Verify authentication succeeded.
@@ -1044,6 +1068,200 @@ export async function scrapeGroupMembers(page, groupUrl, options = {}) {
 }
 
 // ============================================================================
+// Marketplace Scraper
+// ============================================================================
+
+/**
+ * Normalize a raw marketplace listing into the standard shape.
+ * NFR-11: phone/email stripped at this layer before returning to caller.
+ *
+ * @param {Object} raw - Raw listing fields from page.evaluate
+ * @returns {Object} Normalized marketplace listing
+ */
+function normalizeMarketplaceListing(raw) {
+  const { id, title, price, location, image, listingUrl, seller, sellerUrl, category } = raw;
+  return {
+    id: id || null,
+    title: title || null,
+    price: price || null,
+    location: location || null,
+    image: image || null,
+    listingUrl: listingUrl || null,
+    seller: stripPii(seller) || null,
+    sellerUrl: sellerUrl || null,
+    category: category || null,
+    platform: 'facebook',
+    source: 'marketplace',
+  };
+}
+
+/**
+ * Scrape Facebook Marketplace listings by search query or category.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} query - Search query (e.g. "iphone 15") or category path
+ * @param {Object} [options]
+ * @param {number} [options.limit=50] - Max listings to return
+ * @param {string} [options.location] - Location filter (city name or "near me")
+ * @param {number} [options.minPrice] - Minimum price filter
+ * @param {number} [options.maxPrice] - Maximum price filter
+ * @param {string} [options.category] - Category slug (e.g. "phones", "vehicles", "furniture")
+ * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
+ * @param {Function} [options.delay=randomDelay] - Injectable delay seam
+ * @returns {Promise<Array>} Array of normalized marketplace listings
+ */
+export async function scrapeMarketplace(page, query, options = {}) {
+  const {
+    limit = 50,
+    location,
+    minPrice,
+    maxPrice,
+    category,
+    onProgress,
+    delay = randomDelay,
+  } = options;
+
+  if (!query || typeof query !== 'string' || !query.trim()) {
+    throw new Error('❌ Marketplace search requires a non-empty query string');
+  }
+
+  // Build search URL
+  let searchUrl = `${FACEBOOK_BASE}/marketplace/search/?query=${encodeURIComponent(query.trim())}`;
+  if (category) {
+    searchUrl = `${FACEBOOK_BASE}/marketplace/category/${encodeURIComponent(category)}/?query=${encodeURIComponent(query.trim())}`;
+  }
+  if (location) {
+    searchUrl += `&location=${encodeURIComponent(location)}`;
+  }
+  if (minPrice) {
+    searchUrl += `&minPrice=${minPrice}`;
+  }
+  if (maxPrice) {
+    searchUrl += `&maxPrice=${maxPrice}`;
+  }
+
+  await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await delay(2000, 4000);
+
+  // Wait for listings to load
+  try {
+    await page.waitForSelector('[role="main"], [data-testid="marketplace_search_results"], div[style*="grid"]', { timeout: 10000 });
+  } catch (_) {
+    // Proceed anyway - selectors may differ
+  }
+
+  const listings = new Map();
+  let stalls = 0;
+  const maxStalls = 5;
+
+  while (listings.size < limit && stalls < maxStalls) {
+    const prevSize = listings.size;
+
+    // Extract listings from the current viewport
+    const rawListings = await page.evaluate(() => {
+      const results = [];
+
+      // Marketplace listings are anchor links to /marketplace/item/{id}/
+      const cards = [...document.querySelectorAll('a[href*="/marketplace/item/"], a[href*="/marketplace/listing/"]')];
+
+      for (const card of cards) {
+        const href = card.getAttribute('href') || '';
+        if (!href.includes('marketplace/')) continue;
+
+        const listingUrl = href.startsWith('http') ? href.split('?')[0] : `https://www.facebook.com${href.split('?')[0]}`;
+        const id = listingUrl.split('/').filter(Boolean).pop() || listingUrl;
+
+      // Facebook Marketplace card text format (verified 2026-08):
+      // "{Price}{Title}{Location}" all concatenated without separators.
+      // Examples: "$115,000Iphone+15+ProMaxJijiga", "CA$50,000LoveHarar"
+      // Price is always first, title follows, location is trailing city/region name.
+      const allText = card.textContent?.trim() || '';
+
+      // Extract price — matches currency symbols + digits (e.g. $115,000 | CA$50,000 | ETB28,000)
+      let price = null;
+      const priceMatch = allText.match(/^([\$€£¥₹A-Z]*\s*[\d,]+(?:\.\d{2})?(?:\s*(?:USD|EUR|VND|ETB))?)/i);
+      if (priceMatch) {
+        price = priceMatch[1].trim();
+      }
+
+      // Extract title and location from remaining text
+      let title = null;
+      let location = null;
+      if (price) {
+        const afterPrice = allText.substring(price.length).trim().replace(/\+/g, ' ');
+
+        // Split camelCase boundaries: "Iphone 15 ProMaxJijiga" → "Iphone 15 Pro Max Jijiga"
+        // Insert space before uppercase letters that follow lowercase letters/digits
+        const expanded = afterPrice.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+
+        // Location is typically the last 1-2 words that look like a place name
+        // (capitalized, not part of product name). Split and analyze.
+        const words = expanded.split(/\s+/).filter(Boolean);
+
+        if (words.length >= 2) {
+          // Check if last word looks like a location (capitalized, short, common city pattern)
+          const lastWord = words[words.length - 1];
+          const secondLast = words.length >= 2 ? words[words.length - 2] : null;
+
+          // Location patterns: capitalized word at end, possibly preceded by another capitalized word
+          // Common patterns: "Jijiga", "Harar", "Dire Dawa", "Addis Ababa"
+          const looksLikeLocation = (w) =>
+            /^[A-Z][a-z]+$/.test(w) &&
+            !/^(Iphone|Ipad|Macbook|Samsung|Sony|Nike|Adidas|Pro|Max|Plus|Mini|Air|Ultra)/i.test(w);
+
+          if (looksLikeLocation(lastWord)) {
+            // Check if second-to-last is also a location word (e.g. "Dire Dawa")
+            if (secondLast && looksLikeLocation(secondLast)) {
+              location = `${secondLast} ${lastWord}`;
+              title = words.slice(0, -2).join(' ');
+            } else {
+              location = lastWord;
+              title = words.slice(0, -1).join(' ');
+            }
+          } else {
+            title = expanded;
+          }
+        } else if (words.length === 1) {
+          title = expanded;
+        }
+      }
+
+        // Extract image
+        const imgEl = card.querySelector('img');
+        const image = imgEl?.getAttribute('src') || imgEl?.getAttribute('data-src') || null;
+
+        if (id && (title || price)) {
+          results.push({ id, title, price, location, image, listingUrl });
+        }
+      }
+
+      return results;
+    });
+
+    for (const raw of rawListings) {
+      if (!listings.has(raw.id)) {
+        listings.set(raw.id, normalizeMarketplaceListing(raw));
+      }
+      if (listings.size >= limit) break;
+    }
+
+    if (onProgress) onProgress({ scraped: listings.size, limit });
+
+    if (listings.size === prevSize) {
+      stalls++;
+    } else {
+      stalls = 0;
+    }
+
+    // Scroll to load more listings
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await delay(1500, 3000);
+  }
+
+  return Array.from(listings.values()).slice(0, limit);
+}
+
+// ============================================================================
 // Default Export
 // ============================================================================
 
@@ -1058,4 +1276,5 @@ export default {
   scrapeTweets,
   searchTweets,
   scrapeGroupMembers,
+  scrapeMarketplace,
 };
