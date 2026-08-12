@@ -217,4 +217,10 @@ GLM-5.2 High (Devin CLI)
 - `tests/helpers/fake-page.js` — Added `mouse` object (move, click, down, up)
 - `tests/scrapers/facebook-human.test.js` — NEW test file, 14 tests
 
+### Review Findings
+
+- [x] [Review][Decision] Jitter ±1px in correction loop vs AC3's ±2px — `human.js:155-156` used `(rng() - 0.5) * 2` (±1px). **Patched** to `(rng() - 0.5) * 4` (±2px) to strictly comply with AC3.
+
+- [x] [Review][Defer] Overshoot disproportionate on tiny movements [human.js:124] — deferred, pre-existing — Fixed 5-15px overshoot regardless of movement distance. For 1px movements, overshoot is 5-15x the distance. Not actionable until integration with real call sites provides realistic coordinate ranges.
+
 ## Change Log

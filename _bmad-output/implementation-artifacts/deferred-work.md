@@ -155,3 +155,7 @@ Issue EPS-5 (Deferred work cleanup) triaged all 6 priority items. Items 1, 2, 3,
 - **Posts scraping returns 0 results** [src/scrapers/facebook/index.js#scrapeTweets] — Desktop site doesn't load posts in headless mode. Need mobile URL fallback for groups.
 - **Profile scraping blocked** [src/scrapers/facebook/index.js#scrapeProfile] — "Facebook profile not found or blocked" on headless. Need graceful handling.
 - **Search text garbled** [src/scrapers/facebook/index.js#searchTweets] — Returns results but text encoding is garbled.
+
+## Deferred from: code review of 6-9-bezier-mouse (2026-08-12)
+
+- **Overshoot disproportionate on tiny movements** [src/scrapers/facebook/human.js:124] — Fixed 5-15px overshoot regardless of movement distance. For 1px movements, overshoot is 5-15x the distance, looking unnatural. Not actionable until integration with real call sites provides realistic coordinate ranges. Revisit when humanMoveMouse is integrated into automation flows (Story 6.10+).

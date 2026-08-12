@@ -151,9 +151,9 @@ export async function humanMoveMouse(page, x, y, options = {}) {
       const t = i / correctionSteps;
       const cx = overshootX + (x - overshootX) * t;
       const cy = overshootY + (y - overshootY) * t;
-      // Small jitter on correction too
-      const jx = cx + (rng() - 0.5) * 2;
-      const jy = cy + (rng() - 0.5) * 2;
+      // Micro-jitter ±2px (AC3 — same as main Bezier loop)
+      const jx = cx + (rng() - 0.5) * 4;
+      const jy = cy + (rng() - 0.5) * 4;
       await page.mouse.move(jx, jy, { steps: 1 });
       await delayFn(15 + rng() * 25);
     }
