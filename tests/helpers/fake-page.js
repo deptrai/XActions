@@ -224,10 +224,10 @@ export function makeFakePage(opts = {}) {
 
 /**
  * Create a fake ElementHandle from a spec.
- * @param {Object} spec - { textContent, ariaLabel, click, type, getAttribute, ... }
- * @param {Object} calls - shared calls recorder
+ * @param {Object} spec - { textContent, ariaLabel, click, type, getAttribute, boundingBox, ... }
+ * @param {Object} [calls] - shared calls recorder (optional for standalone handles)
  */
-function makeElementHandle(spec, calls) {
+export function makeElementHandle(spec, calls = { keyboard: { down: [], up: [], press: [], type: [] }, click: [], mouse: { move: [], click: [], down: [], up: [] } }) {
   const clicked = { count: 0 };
   const typed = [];
 
@@ -253,6 +253,10 @@ function makeElementHandle(spec, calls) {
       if (typeof fn === 'function') return fn(handle);
       return null;
     },
+
+    // boundingBox — for humanClick (Story 6.10). Defaults to a reasonable box.
+    // Use 'in' check so spec.boundingBox = null is respected (null = not visible).
+    boundingBox: async () => ('boundingBox' in spec ? spec.boundingBox : { x: 100, y: 200, width: 50, height: 30 }),
   };
 
   // Copy any extra properties from spec

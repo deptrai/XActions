@@ -8,10 +8,11 @@
  *
  * Exports:
  *   - humanMoveMouse(page, x, y, { delayFn, rng }) : Bezier curve mouse movement
+ *   - humanClick(page, element, { delayFn, rng }) : Human-like click with hover + down/up
  *
  * Scope:
  *   - Story 6.9: humanMoveMouse (cubic Bezier, 20-35 steps, jitter, overshoot)
- *   - Story 6.10 (future): humanClick (hover pause, mouse down/up)
+ *   - Story 6.10: humanClick (hover pause, mouse down/up)
  *   - Story 6.11 (future): humanType (variable speed, typos)
  *   - Story 6.12 (future): humanScroll (sin curve, chunks)
  *
@@ -158,4 +159,56 @@ export async function humanMoveMouse(page, x, y, options = {}) {
       await delayFn(15 + rng() * 25);
     }
   }
+}
+
+// ============================================================================
+// humanClick — Human-like click with hover pause (Story 6.10, ADR-014)
+// ============================================================================
+
+/**
+ * Click an element with human-like behavior: Bezier mouse movement to element
+ * center, hover pause, then separate mouse down → hold → mouse up.
+ *
+ * Behavior:
+ *   - Gets element bounding box and calculates center coordinates
+ *   - Moves mouse to center via `humanMoveMouse` (Bezier curve, Story 6.9)
+ *   - Hover pause 100-400ms (randomized) before clicking
+ *   - Mouse down → hold 30-120ms (randomized) → mouse up
+ *   - Does NOT use `page.mouse.click()` — separate down/up with hold delay
+ *   - Total click time (hover + hold) <1s (NFR1)
+ *
+ * @param {import('puppeteer').Page} page - Puppeteer page with `page.mouse`
+ * @param {import('puppeteer').ElementHandle} element - Element handle to click
+ * @param {Object} [options]
+ * @param {Function} [options.delayFn] - delay function (default: setTimeout-based)
+ * @param {Function} [options.rng] - random number generator (default: Math.random)
+ * @returns {Promise<void>}
+ * @throws {Error} if element has no bounding box (not visible or detached)
+ */
+export async function humanClick(page, element, options = {}) {
+  const {
+    delayFn = defaultDelayFn,
+    rng = defaultRng,
+  } = options;
+
+  // Get element bounding box — returns null if element is not visible or detached
+  const box = await element.boundingBox();
+  if (!box) {
+    throw new Error('humanClick: element has no bounding box (not visible or detached)');
+  }
+
+  // Calculate element center
+  const centerX = box.x + box.width / 2;
+  const centerY = box.y + box.height / 2;
+
+  // Move mouse to element center via Bezier curve (reuse Story 6.9)
+  await humanMoveMouse(page, centerX, centerY, { delayFn, rng });
+
+  // Hover pause 100-400ms before click
+  await delayFn(100 + rng() * 300);
+
+  // Mouse down → hold 30-120ms → mouse up (NOT page.mouse.click())
+  await page.mouse.down();
+  await delayFn(30 + rng() * 90);
+  await page.mouse.up();
 }
