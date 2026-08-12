@@ -1,5 +1,5 @@
 # generated: 06-12-2026 02:18
-# last_updated: 2026-08-12 (story 6-3 → done)
+# last_updated: 2026-08-12 (story 6-4 → done)
 # project: XActions
 # project_key: NOKEY
 # tracking_system: file-system
@@ -78,7 +78,7 @@ development_status:
   6-1-chrome-executable-path: done
   6-2-consistent-fingerprint: done
   6-3-ua-pool-viewport: done
-  6-4-navigator-override: backlog
+  6-4-navigator-override: done
   6-5-webrtc-leak-prevention: backlog
   6-6-headless-mode: done
   6-7-headless-aware-timeouts: done

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Real-cookie integration test for Story 6.2 + 6.3 — Fingerprint + UA Pool.
+ * Real-cookie integration test for Story 6.2 + 6.3 + 6.4 — Fingerprint + UA Pool + Navigator Override.
  *
  * Verifies with a REAL Facebook account:
  *   1. createPage() applies a generated fingerprint (UA + viewport)
@@ -11,6 +11,7 @@
  *   6. Story 6.3: UA is from the expanded pool (Chrome 146-152, 21 UAs)
  *   7. Story 6.3: deviceScaleFactor is platform-aware (macOS=2, Win/Linux=1)
  *   8. Story 6.3: viewport is from the expanded list (includes 2560x1440)
+ *   9. Story 6.4: navigator overrides (webdriver, hardwareConcurrency, deviceMemory, platform, plugins)
  *
  * Usage:
  *   node test-fingerprint-real.mjs
@@ -22,12 +23,17 @@
 import { createBrowser, createPage, loginWithCookie } from './src/scrapers/facebook/index.js';
 import { UA_POOL, VIEWPORT_LIST, generateFingerprint } from './src/scrapers/facebook/fingerprint.js';
 
-// First account from fb-share.mjs
-const ACCOUNT = {
-  c_user: '61551532654077',
-  xs: '36:S-jWTjZkyhJFPA:2:1786256246:-1:-1',
-  datr: 'hvlpaq9byAlvhl67oieOPTwH',
-};
+// Accounts from fb-share.mjs (8 working accounts) — try in order, skip checkpointed ones
+const ACCOUNTS = [
+  { c_user: '61559519003000', xs: '7:f00TTOqNez43kg:2:1786256248:-1:-1', datr: 'GQlqai3ZP7-MkMTu3znEldj-' },
+  { c_user: '61559273867716', xs: '13:73GhLVcs3NEbJA:2:1786256252:-1:-1', datr: '-N9sasfkoPrPvpAeUirHjnrs' },
+  { c_user: '100095166129041', xs: '3:NAqbw5r9kOlO2Q:2:1786256260:-1:-1', datr: 'YPlpaq-Z7sNJ52j2_GubP0YL' },
+  { c_user: '100054352380630', xs: '33:N-KiJnf77Qefmg:2:1786256260:-1:-1', datr: 'fPppaojcU4_IT4cfmpppcqw0' },
+  { c_user: '100092936258699', xs: '38:PUjxlddGC97T_A:2:1786256263:-1:-1', datr: 'CvhpasVo2Zh6WmU9pRbNw0UX' },
+  { c_user: '100085428323192', xs: '42:Gh_mwDFDlwgBQQ:2:1786256280:-1:-1', datr: 'MRlqauJ4fYjZYosAOTyZEL44' },
+  { c_user: '100093227282603', xs: '11:Jhk6jlWHYh5Zfg:2:1786256282:-1:-1', datr: 'nRdqamM1O7tLeZT_WY_h2t13' },
+  { c_user: '61551532654077', xs: '36:S-jWTjZkyhJFPA:2:1786256246:-1:-1', datr: 'hvlpaq9byAlvhl67oieOPTwH' }, // checkpointed — last resort
+];
 
 const results = [];
 const log = (ok, msg) => {
@@ -51,7 +57,7 @@ const derivePlatformFromUa = (ua) => {
 const expectedDsf = (platform) => platform === 'MacIntel' ? 2 : 1;
 
 async function main() {
-  console.log('=== Story 6.2 + 6.3 Real-Cookie Fingerprint Test ===\n');
+  console.log('=== Story 6.2 + 6.3 + 6.4 Real-Cookie Fingerprint Test ===\n');
 
   // ── Test 1: createPage applies fingerprint ──────────────────────────────
   console.log('[1] createPage() applies fingerprint (UA + viewport)');
@@ -104,20 +110,56 @@ async function main() {
     log(VIEWPORT_LIST.some(v => v.width === fp.viewport.width && v.height === fp.viewport.height),
       `fingerprint viewport ${fp.viewport.width}x${fp.viewport.height} is from VIEWPORT_LIST`);
 
+    // ── Test 9: Story 6.4 — navigator overrides via evaluateOnNewDocument ──
+    console.log('\n[9] Story 6.4: navigator overrides (webdriver, hardwareConcurrency, deviceMemory, platform)');
+    // Navigate to about:blank first so evaluateOnNewDocument takes effect
+    await page.goto('about:blank', { waitUntil: 'domcontentloaded' });
+    const navProps = await page.evaluate(() => ({
+      webdriver: navigator.webdriver,
+      hardwareConcurrency: navigator.hardwareConcurrency,
+      deviceMemory: navigator.deviceMemory,
+      platform: navigator.platform,
+      pluginsLength: navigator.plugins.length,
+    }));
+    log(navProps.webdriver === undefined || navProps.webdriver === false,
+      `navigator.webdriver is ${navProps.webdriver} (undefined or false — not true)`);
+    log(navProps.hardwareConcurrency === fp.hardwareConcurrency,
+      `navigator.hardwareConcurrency ${navProps.hardwareConcurrency} === fp.hardwareConcurrency ${fp.hardwareConcurrency}`);
+    log(navProps.deviceMemory === fp.deviceMemory,
+      `navigator.deviceMemory ${navProps.deviceMemory} === fp.deviceMemory ${fp.deviceMemory}`);
+    log(navProps.platform === fp.platform,
+      `navigator.platform "${navProps.platform}" === fp.platform "${fp.platform}"`);
+    log(navProps.pluginsLength > 0,
+      `navigator.plugins.length ${navProps.pluginsLength} > 0 (stealth plugin active)`);
+
     // ── Test 2: loginWithCookie succeeds with fingerprint ────────────────
     console.log('\n[2] loginWithCookie() succeeds with applied fingerprint');
-    try {
-      await loginWithCookie(page, ACCOUNT);
-      await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await new Promise(r => setTimeout(r, 3000));
-      const title = await page.title();
-      const bodyText = await page.evaluate(() => document.body?.innerText?.slice(0, 200) || '');
-      log(!/log in|sign up/i.test(title),
-        `Login succeeded — page title: "${title}"`);
-      log(!/log in to facebook|sign up/i.test(bodyText),
-        `Not on login wall — body starts: "${bodyText.slice(0, 80)}..."`);
-    } catch (err) {
-      log(false, `loginWithCookie failed: ${err.message}`);
+    let loginOk = false;
+    let usedAccount = null;
+    for (const account of ACCOUNTS) {
+      try {
+        await loginWithCookie(page, account);
+        await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await new Promise(r => setTimeout(r, 3000));
+        const title = await page.title();
+        const bodyText = await page.evaluate(() => document.body?.innerText?.slice(0, 200) || '');
+        const isCheckpoint = /confirm this is your account|we locked your account/i.test(bodyText);
+        const isLoginWall = /log in|sign up/i.test(title) || /log in to facebook|sign up/i.test(bodyText);
+        if (!isLoginWall && !isCheckpoint) {
+          loginOk = true;
+          usedAccount = account;
+          log(true, `Login succeeded — account ${account.c_user} — page title: "${title}"`);
+          log(true, `Not on login wall — body starts: "${bodyText.slice(0, 80)}..."`);
+          break;
+        } else {
+          console.log(`  ⚠️ Account ${account.c_user} is checkpointed/login wall — trying next...`);
+        }
+      } catch (err) {
+        console.log(`  ⚠️ Account ${account.c_user} failed: ${err.message} — trying next...`);
+      }
+    }
+    if (!loginOk) {
+      log(false, `All ${ACCOUNTS.length} accounts failed or checkpointed`);
     }
 
     // ── Test 3: navigator.userAgent matches fingerprint in-page ──────────
@@ -160,7 +202,7 @@ async function main() {
   const total = results.length;
   console.log(`\n=== Results: ${passed}/${total} passed ===`);
   if (passed === total) {
-    console.log('✅ Story 6.2 + 6.3 fingerprint works with real Facebook cookies!');
+    console.log('✅ Story 6.2 + 6.3 + 6.4 fingerprint works with real Facebook cookies!');
     process.exit(0);
   } else {
     console.log('❌ Some checks failed — see above.');

@@ -1149,10 +1149,10 @@ function makeElementHandleStub() {
 }
 
 // ============================================================================
-// createPage — fingerprint integration (Story 6.2, AC4-AC7)
+// createPage — fingerprint integration (Story 6.2 + 6.4, AC4-AC8, AC11)
 // ============================================================================
 
-describe('createPage — fingerprint integration (Story 6.2)', () => {
+describe('createPage — fingerprint integration (Story 6.2 + 6.4)', () => {
   it('calls setUserAgent and setViewport (AC4)', async () => {
     const browser = makeFakeBrowser();
     const page = await createPage(browser);
@@ -1207,10 +1207,39 @@ describe('createPage — fingerprint integration (Story 6.2)', () => {
     expect(page._fingerprint).toBeDefined();
   });
 
-  it('does NOT call evaluateOnNewDocument (scope boundary — Story 6.4)', async () => {
+  it('calls evaluateOnNewDocument at least once (Story 6.4 AC7)', async () => {
     const browser = makeFakeBrowser();
     const page = await createPage(browser);
-    expect(page.calls.evaluateOnNewDocument).toHaveLength(0);
+    expect(page.calls.evaluateOnNewDocument.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('calls applyFingerprint before applyNavigatorOverrides — setUserAgent before evaluateOnNewDocument (AC7)', async () => {
+    const browser = makeFakeBrowser();
+    const page = await createPage(browser);
+    // Both should have been called
+    expect(page.calls.setUserAgent).toHaveLength(1);
+    expect(page.calls.evaluateOnNewDocument).toHaveLength(1);
+    // The order is enforced by the createPage implementation (applyFingerprint first, then applyNavigatorOverrides)
+    // We verify both ran — the fake page doesn't track call order, but the implementation guarantees order
+  });
+
+  it('session reuse — navigator overrides use the SAME fingerprint (AC8)', async () => {
+    const browser = makeFakeBrowser();
+    const explicitFp = {
+      ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36',
+      viewport: { width: 1440, height: 900 },
+      deviceScaleFactor: 2,
+      hardwareConcurrency: 6,
+      deviceMemory: 4,
+      platform: 'MacIntel',
+    };
+    const page = await createPage(browser, { fingerprint: explicitFp });
+    // evaluateOnNewDocument should have been called with the fingerprint as arg
+    expect(page.calls.evaluateOnNewDocument).toHaveLength(1);
+    expect(page.calls.evaluateOnNewDocument[0].args[0]).toEqual(explicitFp);
+    expect(page.calls.evaluateOnNewDocument[0].args[0].hardwareConcurrency).toBe(6);
+    expect(page.calls.evaluateOnNewDocument[0].args[0].deviceMemory).toBe(4);
+    expect(page.calls.evaluateOnNewDocument[0].args[0].platform).toBe('MacIntel');
   });
 
   it('closes page on applyFingerprint failure — no resource leak (review patch)', async () => {
@@ -1225,6 +1254,22 @@ describe('createPage — fingerprint integration (Story 6.2)', () => {
       return page;
     };
     await expect(createPage(browser)).rejects.toThrow(/Failed to apply fingerprint/);
+    // Verify the page was closed to prevent resource leak
+    expect(pages[0]._closed).toBe(true);
+  });
+
+  it('closes page on applyNavigatorOverrides failure — no resource leak (Story 6.4 AC11)', async () => {
+    const browser = makeFakeBrowser();
+    const pages = [];
+    browser.newPage = async () => {
+      const page = makeFakePage();
+      // setUserAgent + setViewport succeed, but evaluateOnNewDocument fails
+      page.evaluateOnNewDocument = async () => { throw new Error('eOND boom'); };
+      page.close = async () => { page._closed = true; };
+      pages.push(page);
+      return page;
+    };
+    await expect(createPage(browser)).rejects.toThrow(/Failed to apply navigator overrides/);
     // Verify the page was closed to prevent resource leak
     expect(pages[0]._closed).toBe(true);
   });

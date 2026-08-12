@@ -15,7 +15,7 @@
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { generateSync as totpGenerateSync } from 'otplib';
-import { generateFingerprint, applyFingerprint } from './fingerprint.js';
+import { generateFingerprint, applyFingerprint, applyNavigatorOverrides } from './fingerprint.js';
 
 puppeteer.use(StealthPlugin());
 
@@ -74,8 +74,10 @@ export async function createBrowser(options = {}) {
  * Create a page with a consistent session fingerprint (ADR-013).
  *
  * A fingerprint (UA + viewport + hardware config) is generated once and applied
- * via `applyFingerprint`. The fingerprint is attached as `page._fingerprint` so
- * callers can reuse it across tabs via `createPage(browser, { fingerprint })`.
+ * via `applyFingerprint` (UA + viewport) then `applyNavigatorOverrides` (navigator
+ * properties via evaluateOnNewDocument). The fingerprint is attached as
+ * `page._fingerprint` so callers can reuse it across tabs via
+ * `createPage(browser, { fingerprint })`.
  *
  * @param {Browser} browser - Puppeteer browser instance
  * @param {Object} [options]
@@ -87,6 +89,7 @@ export async function createPage(browser, options = {}) {
   const fingerprint = options.fingerprint ?? generateFingerprint();
   try {
     await applyFingerprint(page, fingerprint);
+    await applyNavigatorOverrides(page, fingerprint);
   } catch (err) {
     // Clean up the page on failure — avoid resource leak and partial-fingerprint state.
     await page.close().catch(() => {});

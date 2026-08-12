@@ -1,22 +1,23 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 /**
- * Facebook session fingerprint module (Story 6.2 — ADR-013).
+ * Facebook session fingerprint module (Story 6.2 + 6.4 — ADR-013).
  *
  * Pure module — does NOT import puppeteer or any browser library.
- * Receives `page` as a parameter to `applyFingerprint`. This makes it
- * unit-testable without a real browser (NFR2: centralized config).
+ * Receives `page` as a parameter to `applyFingerprint` and `applyNavigatorOverrides`.
+ * This makes it unit-testable without a real browser (NFR2: centralized config).
  *
  * Exports:
  *   - UA_POOL         : array of real Chrome User-Agent strings
  *   - VIEWPORT_LIST   : array of { width, height } desktop viewports
  *   - generateFingerprint() : returns one fingerprint object per session
  *   - applyFingerprint(page, fp) : applies UA + viewport to a Puppeteer page
+ *   - applyNavigatorOverrides(page, fp) : overrides navigator props via evaluateOnNewDocument
  *
- * Scope (Story 6.2):
- *   - generateFingerprint returns the full object shape, but applyFingerprint
- *     only applies UA + viewport. Navigator overrides (Story 6.4) and WebRTC
- *     leak prevention (Story 6.5) consume the same fingerprint object but apply
- *     their own page.evaluateOnNewDocument logic — do NOT add them here.
+ * Scope:
+ *   - Story 6.2: generateFingerprint + applyFingerprint (UA + viewport)
+ *   - Story 6.3: UA_POOL expanded to 21, VIEWPORT_LIST to 6, platform-aware deviceScaleFactor
+ *   - Story 6.4: applyNavigatorOverrides (webdriver, hardwareConcurrency, deviceMemory, platform)
+ *   - Story 6.5 (future): WebRTC leak prevention — separate function, same fingerprint object
  *
  * NFR4: fingerprint seed/UA/viewport must NEVER be logged in errors or responses.
  *
@@ -140,7 +141,8 @@ export function generateFingerprint() {
 /**
  * Apply UA + viewport to a Puppeteer page.
  * Scope: ONLY setUserAgent + setViewport. Navigator overrides (Story 6.4)
- * and WebRTC prevention (Story 6.5) are handled by their own modules.
+ * are handled by `applyNavigatorOverrides`. WebRTC prevention (Story 6.5)
+ * will be handled by its own function.
  *
  * NFR4: error messages must NOT include fingerprint fields.
  *
@@ -161,6 +163,59 @@ export async function applyFingerprint(page, fingerprint) {
     // NFR4: do not echo fingerprint fields in the error message.
     // Preserve original error via `cause` for debugging without leaking fingerprint data.
     throw new Error('❌ Failed to apply fingerprint', { cause: err });
+  }
+}
+
+/**
+ * Override navigator automation indicators via `page.evaluateOnNewDocument`.
+ *
+ * Uses `Object.defineProperty` with `get` accessors — modern Chrome (v90+)
+ * silently ignores direct assignment to navigator properties.
+ *
+ * Overrides applied (Story 6.4 — ADR-013):
+ *   - navigator.webdriver → undefined (defense-in-depth; stealth plugin also handles)
+ *   - navigator.hardwareConcurrency → fingerprint.hardwareConcurrency (session-specific)
+ *   - navigator.deviceMemory → fingerprint.deviceMemory (session-specific)
+ *   - navigator.platform → fingerprint.platform (must match UA)
+ *
+ * The fingerprint object is passed as an argument to evaluateOnNewDocument
+ * (serialized to page context) — NOT string interpolation (avoids injection).
+ *
+ * NFR4: error messages must NOT include fingerprint fields.
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {{ hardwareConcurrency: number, deviceMemory: number, platform: string }} fingerprint
+ * @returns {Promise<void>}
+ */
+export async function applyNavigatorOverrides(page, fingerprint) {
+  try {
+    await page.evaluateOnNewDocument((fp) => {
+      // navigator.webdriver — defense-in-depth (stealth plugin also handles this).
+      // Setting to undefined when already undefined is a no-op.
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+        configurable: true,
+      });
+      // navigator.hardwareConcurrency — session-specific (stealth doesn't randomize).
+      Object.defineProperty(navigator, 'hardwareConcurrency', {
+        get: () => fp.hardwareConcurrency,
+        configurable: true,
+      });
+      // navigator.deviceMemory — session-specific (stealth doesn't randomize).
+      Object.defineProperty(navigator, 'deviceMemory', {
+        get: () => fp.deviceMemory,
+        configurable: true,
+      });
+      // navigator.platform — must match UA (stealth doesn't sync with custom UA).
+      Object.defineProperty(navigator, 'platform', {
+        get: () => fp.platform,
+        configurable: true,
+      });
+    }, fingerprint);
+  } catch (err) {
+    // NFR4: do not echo fingerprint fields in the error message.
+    // Preserve original error via `cause` for debugging without leaking fingerprint data.
+    throw new Error('❌ Failed to apply navigator overrides', { cause: err });
   }
 }
 
