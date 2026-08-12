@@ -83,7 +83,7 @@ development_status:
   6-6-headless-mode: done
   6-7-headless-aware-timeouts: done
   6-8-behavioral-delays-share: done
-  6-9-bezier-mouse: backlog
+  6-9-bezier-mouse: done
   6-10-human-click: backlog
   6-11-typing-typos: backlog
   6-12-natural-scrolling: backlog
