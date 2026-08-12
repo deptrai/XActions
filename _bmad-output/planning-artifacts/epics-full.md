@@ -1,0 +1,908 @@
+---
+stepsCompleted: [1, 2, 3, 4]
+inputDocuments:
+  - _bmad-output/planning-artifacts/architecture.md
+  - _bmad-output/planning-artifacts/research/technical-facebook-bot-detection-countermeasures-research-2026-08-12.md
+  - _bmad-output/implementation-artifacts/sprint-status.yaml
+  - _bmad-output/implementation-artifacts/1-1-facebook-adapter-scaffold.md
+  - _bmad-output/implementation-artifacts/5-6-marketplace-headless-share-v2.md
+  - src/scrapers/facebook/index.js
+  - src/scrapers/facebook/shareLinkByUid.js
+  - api/services/facebookAutomation.js
+  - api/routes/facebook.js
+project_name: XActions
+date: 2026-08-12
+status: comprehensive
+---
+
+# XActions — Facebook Platform Complete Epic & Story Catalog
+
+## Overview
+
+Comprehensive epic and story breakdown for ALL Facebook features in XActions — covering 7 epics and 48 stories. Epics 1-5 were implemented first and spec'd retroactively from code + story files. Epic 5b covers features added without formal spec (marketplace, share-link-uid v2, headless, Chrome path). Epic 6 covers anti-detection countermeasures planned from research report.
+
+## Requirements Inventory
+
+### Functional Requirements
+
+#### Epic 1-3: Facebook Data Reading & Multi-Surface
+
+**FR1:** Hệ thống phải có Facebook adapter module (`src/scrapers/facebook/index.js`) với exports: `createBrowser`, `createPage`, `loginWithCookie`, `default` export object.
+
+**FR2:** `loginWithCookie(page, { c_user, xs })` phải nhận object (không phải string), set cả 2 cookies trên `.facebook.com` domain với `httpOnly`/`secure` flags.
+
+**FR3:** Module phải được đăng ký trong dispatcher `src/scrapers/index.js` với `facebook` + alias `fb` trong `platforms` object và `needsPuppeteer` array.
+
+**FR4:** `scrapeProfile(page, username)` phải trả normalized shape: `{ name, username, bio, avatar, followers, url, platform: 'facebook' }`.
+
+**FR5:** `scrapeTweets`/`scrapePosts(page, username, options)` phải trả post array: `{ id, text, timestamp, likes, comments, url, media, platform }`.
+
+**FR6:** `scrapeFollowers(page, username, options)` phải scroll-load followers, trả array of normalized follower objects.
+
+**FR7:** `searchTweets(page, query, options)` phải search Facebook posts by keyword, trả normalized results.
+
+**FR8:** CLI phải hỗ trợ `--platform facebook` cho scrape commands.
+
+**FR9:** MCP server phải expose Facebook tools (scrape profile/posts/followers/search).
+
+**FR10:** REST API phải có `POST /api/facebook/scrape` endpoint accepting `action` + `query`/`username`.
+
+**FR11:** Operations phải persist vào Prisma `Operation` model, scoped by `userId`.
+
+#### Epic 4: Facebook Growth Automation
+
+**FR12:** `createFacebookPost(page, content)` phải post status update, dry-run mặc định (ADR-007).
+
+**FR13:** `likeFacebookPosts(page, postUrls)` phải like posts qua `runGuardedBatch`, delay 1-3s.
+
+**FR14:** `commentOnFacebookPosts(page, postUrls, commentText)` phải comment trên posts.
+
+**FR15:** `scheduleFacebookPost` phải tạo `Schedule` record + worker execute tại `scheduledAt`.
+
+**FR16:** `shareFacebookPosts(page, postUrls)` phải share posts qua `runGuardedBatch`.
+
+**FR17:** `warmupScrollFeed(page, targetUrl)` phải scroll newsfeed để warm account.
+
+**FR18:** `joinFacebookGroups` phải join groups, batch ≤20, delay 60-180s (ADR-010).
+
+**FR19:** `postToFacebookGroups` phải batch post to multiple groups.
+
+**FR20:** `scrapeGroupMembers(page, groupUrl)` phải scrape member list from groups.
+
+**FR21:** `sendFriendRequests` phải send requests, batch ≤20, delay bảo thủ (ADR-010).
+
+**FR22:** `cancelPendingFriendRequests` phải cancel sent requests.
+
+#### Epic 5: Messenger Port
+
+**FR23:** GraphQL HTTP layer (`src/scrapers/facebook/graphql.js`) phải check Messenger CTA + page list via internal GraphQL.
+
+**FR24:** `shareLinkByUid` (v1) phải share post via Messenger share dialog.
+
+**FR25:** Auth proxy phải hỗ trợ `--proxy-server=` launch arg + `page.authenticate()`.
+
+**FR26:** Input queue surfaces (CLI/MCP/API) phải accept share campaign params.
+
+**FR27:** Session/campaign UI phải manage share campaigns.
+
+#### Epic 5b: Marketplace, Share-Link-UID V2, Headless, Chrome Path
+
+**FR28:** `scrapeMarketplace(page, query, options)` phải scrape Marketplace listings, trả `{ id, title, price, location, image, listingUrl, platform, source }`.
+
+**FR29:** Marketplace phải parse giá đa tiền tệ: `$`, `CA$`, `ETB`, `₹`.
+
+**FR30:** Marketplace phải extract title từ concatenated text (camelCase splitting).
+
+**FR31:** Marketplace phải extract location (trailing capitalized word heuristics).
+
+**FR32:** `shareLinkByUid` v2 phải navigate `messages/t/{uid}` → paste URL via clipboard → Enter.
+
+**FR33:** Share-link-uid v2 phải accept `recipientUid` hoặc `recipientUids[]`.
+
+**FR34:** Share-link-uid v2 phải trả per-recipient results: `{ uid, ok, sharesSent, method }`.
+
+**FR35:** Tất cả Facebook endpoints phải accept `headless` boolean parameter.
+
+**FR36:** `headless: true` (default) — invisible browser, `networkidle2`, 30s timeout.
+
+**FR37:** `headless: false` — visible browser, `domcontentloaded`, 60s timeout, longer delays.
+
+**FR38:** Response phải include `headless: true/false` confirming mode used.
+
+**FR39:** `createBrowser()` phải auto-resolve Chrome executablePath: explicit option → `PUPPETEER_EXECUTABLE_PATH` env → system Chrome path.
+
+#### Epic 6: Anti-Detection & Bot Countermeasures
+
+**FR40:** Hệ thống phải có User-Agent pool 20+ real Chrome UAs, random per session, consistent within session.
+
+**FR41:** Hệ thống phải randomize viewport match UA platform.
+
+**FR42:** Hệ thống phải prevent WebRTC leak (disable/override RTCPeerConnection).
+
+**FR43:** Hệ thống phải override `navigator.webdriver`, `hardwareConcurrency`, `deviceMemory`, `platform`.
+
+**FR44:** Hệ thống phải có Bezier curve mouse movement với micro-jitter và overshoot+correction.
+
+**FR45:** Hệ thống phải có human click simulation với hover pause 100-400ms.
+
+**FR46:** Hệ thống phải có typing simulation với typo rate 1-2%, variable speed.
+
+**FR47:** Hệ thống phải có natural scrolling với variable speed, momentum, overshoot.
+
+**FR48:** Hệ thống phải có session warming: homepage → scroll → mouse → actions.
+
+**FR49:** Hệ thống phải hỗ trợ timezone override khớp proxy location.
+
+**FR50:** Hệ thống phải hỗ trợ geolocation override khớp proxy location.
+
+**FR51:** Hệ thống phải support persistent browser profiles (`userDataDir`).
+
+**FR52:** Fingerprint phải consistent per session, không change mid-session.
+
+**FR53:** Hệ thống phải có velocity limits: likes ≤30/hr, comments ≤10/hr, friend requests ≤20/day.
+
+**FR54:** Hệ thống phải có account age awareness: <7 days = 50% limits, 1-4 weeks = 80%.
+
+### Non-Functional Requirements
+
+**NFR1:** Bezel mouse movement phải hoàn thành trong <2s.
+
+**NFR2:** Fingerprint config phải centralized trong một module, dễ update.
+
+**NFR3:** Behavioral functions phải có injectable delay seam để test không chờ thật.
+
+**NFR4:** Không log cookie values trong error messages hoặc API responses.
+
+**NFR5:** Facebook automation phải có delay floor cao hơn Twitter (ADR-012).
+
+**NFR6:** Mọi mutate action phải có dry-run default (ADR-007).
+
+**NFR7:** `doc_id` GraphQL hardcoded phải có fallback graceful, không throw.
+
+**NFR8:** Messenger mass-share phải dùng delay bảo thủ hơn default like/comment.
+
+**NFR9:** Scheduler throughput cap ≤5 posts/giờ/user.
+
+**NFR10:** Friend request delay hardcode 60-180s, không override được.
+
+### Additional Requirements (from Architecture)
+
+- **AR1:** Stealth plugin (puppeteer-extra-plugin-stealth) tái dùng cho Facebook.
+- **AR2:** Facebook cần delay rộng hơn Twitter cho mutating actions.
+- **AR3:** Batch size ≤ 20/session cho friend requests.
+- **AR4:** Proxy rotation infrastructure đã có (proxyfb, tmproxy, shoplike).
+- **AR5:** `createBrowser()` phải support proxy via `--proxy-server=` launch arg.
+- **AR6:** `page.authenticate()` phải được gọi trước `page.goto` đầu tiên.
+- **AR7:** Checkpoint detection: `bodyText.includes('confirm that you') && bodyText.includes('human')`.
+- **AR8:** Facebook scraper phải clone structure từ `threads/index.js`.
+- **AR9:** GraphQL layer đặt riêng tại `graphql.js`, không trộn vào adapter DOM.
+- **AR10:** Fingerprint module tại `fingerprint.js`, behavioral tại `human.js`, limits tại `limits.js`.
+
+### UX Design Requirements
+
+N/A — Technical infrastructure, no UX spec needed.
+
+### FR Coverage Map
+
+| FR | Epic 1 | Epic 2 | Epic 3 | Epic 4 | Epic 5 | Epic 5b | Epic 6 |
+|---|---|---|---|---|---|---|---|
+| FR1-3 | ✅ | | | | | | |
+| FR4-7 | ✅ | | | | | | |
+| FR8 | | | ✅ | | | | |
+| FR9-11 | | | ✅ | | | | |
+| FR12-14 | | ✅ | | | | | |
+| FR15-22 | | | | ✅ | | | |
+| FR23-27 | | | | | ✅ | | |
+| FR28-39 | | | | | | ✅ | |
+| FR40-54 | | | | | | | ✅ |
+
+## Epic List
+
+### Epic 1: Facebook Data Reading
+**Goal:** Scrape Facebook profiles, posts, followers, search — rủi ro thấp, đọc-only.
+**FRs:** FR1-FR7
+**Status:** ✅ Done (5 stories)
+
+### Epic 2: Facebook Automation
+**Goal:** Post, like, comment trên Facebook — mutating actions với dry-run mặc định.
+**FRs:** FR12-FR14
+**Status:** ✅ Done (4 stories)
+
+### Epic 3: Facebook Multi-Surface & Persistence
+**Goal:** Expose Facebook qua CLI, MCP, REST API + persist operations.
+**FRs:** FR8-FR11
+**Status:** ✅ Done (4 stories)
+
+### Epic 4: Facebook Growth Automation
+**Goal:** Scheduling, group automation, friend management, account warming.
+**FRs:** FR15-FR22
+**Status:** ✅ Done (9 stories)
+
+### Epic 5: Facebook Messenger Port
+**Goal:** Port SST_TOOL_FB C# — GraphQL layer, Messenger share, auth proxy, campaign UI.
+**FRs:** FR23-FR27
+**Status:** ✅ Done (5 stories)
+
+### Epic 5b: Marketplace & Infrastructure Enhancements
+**Goal:** Marketplace scraper, share-link-uid v2 (direct Messenger URL), headless mode, Chrome path auto-resolution.
+**FRs:** FR28-FR39
+**Status:** ✅ Done (4 stories, retroactive spec)
+
+### Epic 6: Facebook Anti-Detection & Bot Countermeasures
+**Goal:** Fingerprint randomization, behavioral simulation, session hygiene, velocity controls.
+**FRs:** FR40-FR54
+**Status:** 🔄 4 done (Chrome path, headless, timeouts, share delays), 13 backlog
+
+---
+
+## Epic 1: Facebook Data Reading
+
+**Status:** ✅ Done
+
+### Story 1.1: Facebook Adapter Scaffold + Login + Dispatcher Registration
+
+As a developer using XActions,
+I want a Facebook adapter module registered in the platform dispatcher with login support,
+So that I have a working foundation to build scrape functions on.
+
+**Acceptance Criteria:**
+
+**Given** `src/scrapers/facebook/index.js` is created
+**When** module is imported
+**Then** exports: `createBrowser`, `createPage`, `loginWithCookie`, `default` export object
+**And** module follows Puppeteer + Stealth pattern from `threads/index.js`
+**And** `loginWithCookie(page, { c_user, xs })` accepts object, sets both cookies on `.facebook.com`
+**And** missing `c_user` or `xs` throws clear error without retrying
+**And** cookie values never appear in logs (NFR4)
+**And** `src/scrapers/index.js` registers `facebook` + `fb` in `platforms` and `needsPuppeteer`
+
+### Story 1.2: Scrape Profile
+
+As a developer,
+I want to scrape a Facebook user's profile,
+So that I can get name, bio, avatar, follower count.
+
+**Acceptance Criteria:**
+
+**Given** a logged-in page and a username
+**When** `scrapeProfile(page, username)` is called
+**Then** returns `{ name, username, bio, avatar, followers, url, platform: 'facebook' }`
+**And** handles private/restricted profiles with `note` field instead of throwing
+
+### Story 1.3: Scrape Posts
+
+As a developer,
+I want to scrape a Facebook user's posts,
+So that I can analyze their content.
+
+**Acceptance Criteria:**
+
+**Given** a logged-in page and username
+**When** `scrapeTweets(page, username, options)` is called
+**Then** returns array of `{ id, text, timestamp, likes, comments, url, media, platform }`
+**And** supports pagination via scroll
+**And** `scrapePosts` alias exists
+
+### Story 1.4: Scrape Followers
+
+As a developer,
+I want to scrape a Facebook user's followers,
+So that I can build follower lists.
+
+**Acceptance Criteria:**
+
+**Given** a logged-in page and username
+**When** `scrapeFollowers(page, username, options)` is called
+**Then** returns array of normalized follower objects
+**And** scroll-loads additional followers
+**And** handles restricted follower lists with `note` field
+
+### Story 1.5: Search Posts
+
+As a developer,
+I want to search Facebook posts by keyword,
+So that I can find relevant content.
+
+**Acceptance Criteria:**
+
+**Given** a logged-in page and query
+**When** `searchTweets(page, query, options)` is called
+**Then** returns array of normalized search results
+**And** supports pagination
+
+---
+
+## Epic 2: Facebook Automation
+
+**Status:** ✅ Done
+
+### Story 2.1: Automation Scaffold
+
+As a developer,
+I want `api/services/facebookAutomation.js` with `runGuardedBatch`,
+So that all mutating actions go through guarded batch with dry-run, delays, bounded retries.
+
+**Acceptance Criteria:**
+
+**Given** `facebookAutomation.js` is created
+**When** `runGuardedBatch(items, actionFn, options)` is called
+**Then** dry-run is default (`dryRun: true`)
+**And** delay 1-3s between actions
+**And** bounded batch size, bounded retries, stop condition
+**And** all actions logged via `Operation` model scoped by `userId`
+
+### Story 2.2: Auto-Like
+
+As a growth marketer,
+I want to auto-like Facebook posts,
+So that I can increase engagement.
+
+**Acceptance Criteria:**
+
+**Given** a list of post URLs
+**When** `likeFacebookPosts(page, postUrls, options)` is called
+**Then** likes each post via `runGuardedBatch`
+**And** delay 1-3s between likes
+**And** dry-run default returns preview without executing
+
+### Story 2.3: Auto-Comment
+
+As a growth marketer,
+I want to auto-comment on Facebook posts,
+So that I can drive conversation.
+
+**Acceptance Criteria:**
+
+**Given** a list of post URLs and comment text
+**When** `commentOnFacebookPosts(page, postUrls, commentText, options)` is called
+**Then** comments on each post via `runGuardedBatch`
+**And** delay 1-3s between comments
+**And** dry-run default
+
+### Story 2.4: Create Post
+
+As a growth marketer,
+I want to create a Facebook post,
+So that I can publish content.
+
+**Acceptance Criteria:**
+
+**Given** content text
+**When** `createFacebookPost(page, content, options)` is called
+**Then** posts status update
+**And** dry-run default returns preview
+**And** handles post composer selector detection
+
+---
+
+## Epic 3: Facebook Multi-Surface & Persistence
+
+**Status:** ✅ Done
+
+### Story 3.1: CLI Platform Support
+
+As a CLI user,
+I want `--platform facebook` for scrape commands,
+So that I can scrape Facebook from terminal.
+
+**Acceptance Criteria:**
+
+**Given** CLI command with `--platform facebook`
+**When** executed
+**Then** dispatcher routes to Facebook adapter
+**And** output formatted via `smartOutput` (JSON/CSV/XLSX)
+
+### Story 3.2: MCP Facebook Tools
+
+As an AI agent,
+I want MCP tools for Facebook,
+So that I can call Facebook operations via MCP.
+
+**Acceptance Criteria:**
+
+**Given** MCP server is running
+**When** Facebook tools are registered
+**Then** tools for scrape profile/posts/followers/search are available
+**And** tool schemas are public contracts (additive only)
+
+### Story 3.3: REST API
+
+As an API consumer,
+I want `POST /api/facebook/scrape` and `POST /api/facebook/automate`,
+So that I can trigger Facebook operations via HTTP.
+
+**Acceptance Criteria:**
+
+**Given** API server running
+**When** `POST /api/facebook/scrape` with `action` + `query`
+**Then** returns scraped data
+**And** `POST /api/facebook/automate` with `action` + params
+**Then** executes automation with dry-run default
+**And** rate-limited, auth-required
+
+### Story 3.4: Operation Persistence
+
+As a developer,
+I want Facebook operations persisted to Prisma,
+So that I can track long-running actions.
+
+**Acceptance Criteria:**
+
+**Given** an automation operation starts
+**When** `Operation` record is created
+**Then** scoped by `userId`
+**And** progress updated via `updateOperation`
+**And** Socket.IO emits updates for dashboard
+
+---
+
+## Epic 4: Facebook Growth Automation
+
+**Status:** ✅ Done
+
+### Story 4.1: Schedule Post
+
+As a growth marketer,
+I want to schedule Facebook posts,
+So that content publishes at optimal times.
+
+**Acceptance Criteria:**
+
+**Given** content + `scheduledAt`
+**When** `scheduleFacebookPost` is called
+**Then** `Schedule` record created with `type: 'facebook_post'`
+**And** worker executes at `scheduledAt` via `createFacebookPost`
+**And** throughput cap ≤5 posts/giờ/user (NFR9)
+
+### Story 4.2: Auto-Share Post
+
+As a growth marketer,
+I want to auto-share posts,
+So that I can amplify content reach.
+
+**Acceptance Criteria:**
+
+**Given** list of post URLs
+**When** `shareFacebookPosts(page, postUrls, options)` is called
+**Then** shares each post via `runGuardedBatch`
+**And** delay bảo thủ hơn like/comment (NFR8)
+
+### Story 4.3: View Boost
+
+As a growth marketer,
+I want to warmup scroll feed,
+So that account appears active.
+
+**Acceptance Criteria:**
+
+**Given** a logged-in page
+**When** `warmupScrollFeed(page, targetUrl, options)` is called
+**Then** scrolls newsfeed naturally
+**And** random delays between scrolls
+
+### Story 4.4: Join Groups
+
+As a growth marketer,
+I want to join Facebook groups,
+So that I can participate in communities.
+
+**Acceptance Criteria:**
+
+**Given** list of group URLs
+**When** `joinFacebookGroups` is called
+**Then** joins each group via `runGuardedBatch`
+**And** batch ≤20, delay 60-180s (AR3, NFR10)
+
+### Story 4.5: Batch Post to Groups
+
+As a growth marketer,
+I want to batch post to multiple groups,
+So that I can distribute content efficiently.
+
+**Acceptance Criteria:**
+
+**Given** content + list of group URLs
+**When** `postToFacebookGroups` is called
+**Then** posts to each group via `runGuardedBatch`
+**And** dry-run default
+
+### Story 4.6: Scrape Group Members
+
+As a growth marketer,
+I want to scrape group member lists,
+So that I can identify potential connections.
+
+**Acceptance Criteria:**
+
+**Given** a group URL
+**When** `scrapeGroupMembers(page, groupUrl, options)` is called
+**Then** returns array of member objects
+**And** scroll-loads additional members
+
+### Story 4.7: Send Friend Requests
+
+As a growth marketer,
+I want to send friend requests,
+So that I can grow my network.
+
+**Acceptance Criteria:**
+
+**Given** list of user IDs/URLs
+**When** `sendFriendRequests` is called
+**Then** sends requests via `runGuardedBatch`
+**And** batch ≤20, delay 60-180s hardcoded (NFR10)
+**And** `force` flag cannot exceed hard floor
+
+### Story 4.8: Cancel Friend Requests
+
+As a growth marketer,
+I want to cancel pending friend requests,
+So that I can clean up unanswered requests.
+
+**Acceptance Criteria:**
+
+**Given** list of pending requests
+**When** `cancelPendingFriendRequests` is called
+**Then** cancels each via `runGuardedBatch`
+
+### Story 4.9: Newsfeed Farming
+
+As a growth marketer,
+I want to farm newsfeed,
+So that my account appears organic.
+
+**Acceptance Criteria:**
+
+**Given** a logged-in page
+**When** newsfeed farming runs
+**Then** scrolls, reacts, interacts naturally
+**And** delay 5-15s between interactions
+
+---
+
+## Epic 5: Facebook Messenger Port
+
+**Status:** ✅ Done
+
+### Story 5.1: GraphQL Layer
+
+As a developer,
+I want internal GraphQL HTTP layer,
+So that I can check Messenger CTA + page list without DOM scraping.
+
+**Acceptance Criteria:**
+
+**Given** `src/scrapers/facebook/graphql.js` is created
+**When** GraphQL functions are called
+**Then** uses `fb_dtsg`/`lsd`/`jazoest`/`doc_id` tokens
+**And** `doc_id` is named constant with fallback graceful (NFR7)
+**And** `fetchImpl` seam for testing
+**And** no new HTTP dependency (reuse axios/fetch)
+
+### Story 5.2: Messenger Share (v1)
+
+As a growth marketer,
+I want to share posts via Messenger,
+So that I can distribute content to contacts.
+
+**Acceptance Criteria:**
+
+**Given** a post URL + recipient
+**When** `shareLinkByUid` (v1) is called
+**Then** shares via Messenger share dialog
+**And** delay bảo thủ (NFR8)
+**And** dry-run default
+
+### Story 5.3: Auth Proxy
+
+As a developer,
+I want proxy support for Facebook automation,
+So that I can rotate IPs.
+
+**Acceptance Criteria:**
+
+**Given** proxy config
+**When** `createBrowser({ proxy })` is called
+**Then** `--proxy-server=` launch arg added
+**And** `page.authenticate()` called before first `page.goto` (AR6)
+
+### Story 5.4: Input Queue Surfaces
+
+As a user,
+I want to submit share campaigns via CLI/MCP/API,
+So that I can trigger mass-share from any surface.
+
+**Acceptance Criteria:**
+
+**Given** campaign params
+**When** submitted via CLI/MCP/API
+**Then** campaign queued and executed via `runGuardedBatch`
+
+### Story 5.5: Session/Campaign UI
+
+As a user,
+I want to manage share campaigns,
+So that I can track progress and results.
+
+**Acceptance Criteria:**
+
+**Given** campaign dashboard
+**When** user views campaigns
+**Then** shows status, progress, results
+**And** Socket.IO real-time updates
+
+---
+
+## Epic 5b: Marketplace & Infrastructure Enhancements
+
+**Status:** ✅ Done (retroactive spec)
+
+### Story 5b.1: Marketplace Scraper
+
+As a growth marketer,
+I want to scrape Facebook Marketplace listings,
+So that I can research products and prices.
+
+**Acceptance Criteria:**
+
+**Given** a logged-in page and search query
+**When** `scrapeMarketplace(page, query, options)` is called
+**Then** returns array of `{ id, title, price, location, image, listingUrl, platform, source }`
+**And** parses multi-currency prices: `$`, `CA$`, `ETB`, `₹`
+**And** extracts title from concatenated text (camelCase splitting)
+**And** extracts location (trailing capitalized word heuristics)
+**And** supports pagination via scroll with stall detection
+**And** `marketplace` registered in action map + valid actions in API route
+
+### Story 5b.2: Share-Link-UID V2 (Direct Messenger URL)
+
+As a growth marketer,
+I want to share posts via direct Messenger URL,
+So that I can send to recipients by UID without display names.
+
+**Acceptance Criteria:**
+
+**Given** a post URL + `recipientUid` or `recipientUids[]`
+**When** `shareLinkByUid(page, target, options)` is called (v2)
+**Then** navigates to `messages/t/{uid}` → paste URL via clipboard → Enter
+**And** works without display names (UID-based)
+**And** doesn't require recipients in share dialog's friend list
+**And** returns per-recipient results: `{ uid, ok, sharesSent, method }`
+**And** `shareLinkByUidCampaign` supports multiple recipients
+
+### Story 5b.3: Headless Mode Parameter
+
+As a developer,
+I want `headless` parameter for all Facebook endpoints,
+So that I can debug with visible browser or run production headless.
+
+**Acceptance Criteria:**
+
+**Given** `headless: false`
+**When** browser launches
+**Then** browser window visible, `domcontentloaded` wait, 60s timeout, longer delays (8-12s)
+**And** response includes `headless: false`
+
+**Given** `headless: true` (default)
+**When** browser launches
+**Then** browser invisible, `networkidle2` wait, 30s timeout, shorter delays (5-8s)
+**And** response includes `headless: true`
+
+### Story 5b.4: Chrome executablePath Auto-Resolution
+
+As a developer,
+I want `createBrowser()` to auto-resolve Chrome path,
+So that automation works without puppeteer bundled Chrome.
+
+**Acceptance Criteria:**
+
+**Given** Chrome installed at system path
+**When** `createBrowser()` called without `executablePath`
+**Then** resolves: explicit option → `PUPPETEER_EXECUTABLE_PATH` env → system Chrome
+**And** no "Could not find Chrome" error
+
+---
+
+## Epic 6: Facebook Anti-Detection & Bot Countermeasures
+
+**Status:** 🔄 In Progress (4 done, 13 backlog)
+
+### Story 6.1: Chrome executablePath Auto-Resolution
+**Status:** ✅ Done (implemented in Story 5b.4)
+
+### Story 6.2: Consistent Session Fingerprint
+
+As a developer,
+I want each session to generate ONE fingerprint and reuse throughout,
+So that Facebook doesn't detect fingerprint changes mid-session.
+
+**Acceptance Criteria:**
+
+**Given** a new automation session
+**When** `createBrowser()` + `createPage()` are called
+**Then** a fingerprint object is generated (UA + viewport + hardware config)
+**And** fingerprint stored in session context
+**And** all navigation uses same fingerprint
+**And** fingerprint does NOT change mid-session
+
+### Story 6.3: User-Agent Pool & Viewport Randomization
+
+As a developer,
+I want UA pool with 20+ real Chrome UAs and viewport randomization,
+So that each session has unique but realistic fingerprint.
+
+**Acceptance Criteria:**
+
+**Given** a new session with fingerprint
+**When** `createPage()` is called
+**Then** UA set via `page.setUserAgent()` from pool
+**And** viewport set via `page.setViewport()` from predefined list
+**And** deviceScaleFactor matches UA platform
+
+### Story 6.4: Navigator Properties Override
+
+As a developer,
+I want to override navigator automation indicators,
+So that Facebook doesn't detect `navigator.webdriver` inconsistencies.
+
+**Acceptance Criteria:**
+
+**Given** browser launched with stealth plugin
+**When** `createPage()` runs
+**Then** `navigator.webdriver` returns `undefined`
+**And** `navigator.hardwareConcurrency` random [4, 6, 8]
+**And** `navigator.deviceMemory` random [2, 4, 8]
+**And** `navigator.platform` matches UA platform
+**And** `navigator.plugins.length` > 0
+
+### Story 6.5: WebRTC Leak Prevention
+
+As a developer,
+I want WebRTC disabled or overridden,
+So that real IP doesn't leak via STUN servers.
+
+**Acceptance Criteria:**
+
+**Given** browser with proxy configured
+**When** a Facebook page loads
+**Then** `RTCPeerConnection` overridden or disabled
+**And** `--disable-webrtc` launch arg added
+**And** no STUN requests outside proxy
+
+### Story 6.6: Headless Mode Parameter
+**Status:** ✅ Done (implemented in Story 5b.3)
+
+### Story 6.7: Headless-Aware Timeouts
+**Status:** ✅ Done (implemented in Story 5b.3)
+
+### Story 6.8: Behavioral Delays in Share-Link-UID
+**Status:** ✅ Done (implemented in Story 5b.2)
+
+### Story 6.9: Bezier Mouse Movement
+
+As a developer,
+I want mouse movement via Bezier curve with micro-jitter,
+So that Facebook doesn't detect straight-line bot movement.
+
+**Acceptance Criteria:**
+
+**Given** need to click at (x, y)
+**When** `humanMoveMouse(page, x, y)` is called
+**Then** mouse moves via cubic Bezier curve (20-35 steps)
+**And** micro-jitter ±2px per step
+**And** 15% chance overshoot + correction
+**And** completes in <2s (NFR1)
+
+### Story 6.10: Human Click with Hover
+
+As a developer,
+I want click simulation with hover pause,
+So that Facebook doesn't detect instant clicks.
+
+**Acceptance Criteria:**
+
+**Given** moved to target position
+**When** `humanClick(page, element)` is called
+**Then** hover pause 100-400ms before click
+**And** mouse down → hold 30-120ms → mouse up
+**And** uses element handle, not coordinates
+
+### Story 6.11: Typing with Typos
+
+As a developer,
+I want typing simulation with variable speed and typos,
+So that Facebook doesn't detect mechanical typing.
+
+**Acceptance Criteria:**
+
+**Given** need to type text into input
+**When** `humanType(page, text)` is called
+**Then** each character has variable delay 80-120ms
+**And** typo rate 1-2% for alphabet characters
+**And** typo: type wrong → pause → backspace → retype
+**And** pause 100-300ms between words, 200-500ms after punctuation
+
+### Story 6.12: Natural Scrolling
+
+As a developer,
+I want scrolling with variable speed and momentum,
+So that Facebook doesn't detect fixed-distance scrolls.
+
+**Acceptance Criteria:**
+
+**Given** need to scroll distance pixels
+**When** `humanScroll(page, distance)` is called
+**Then** scroll divided into 5-10 chunks with variable speed
+**And** speed follows sin curve (slow → fast → slow)
+**And** 20% chance overshoot + correction
+**And** delay 100-400ms between chunks
+
+### Story 6.13: Action Velocity Limiting
+
+As a developer,
+I want built-in rate limiting for Facebook actions,
+So that automation doesn't exceed human-possible speeds.
+
+**Acceptance Criteria:**
+
+**Given** automation session running
+**When** actions execute continuously
+**Then** likes ≤ 30/hour, comments ≤ 10/hour, friend requests ≤ 20/day, messages ≤ 20/hour
+**And** delay floor 5-15s between actions (NFR5)
+
+### Story 6.14: Account Age Awareness
+
+As a developer,
+I want account age to limit activity,
+So that new accounts don't get flagged.
+
+**Acceptance Criteria:**
+
+**Given** account with creationDate
+**When** automation starts
+**Then** accounts <7 days limited to 50% action limits
+**And** accounts 1-4 weeks limited to 80%
+**And** accounts >3 months get full limits
+
+### Story 6.15: Session Warming Sequence
+
+As a developer,
+I want automatic warm-up before actions,
+So that Facebook doesn't detect cold-session-immediate-action.
+
+**Acceptance Criteria:**
+
+**Given** logged in successfully
+**When** session warming triggers
+**Then** visit homepage → wait 3-8s → scroll 300-800px → wait 2-6s → scroll 200-500px → wait 1-4s → random mouse 3x → wait 0.5-2s each
+**And** only then safe to perform actions
+
+### Story 6.16: Timezone & Geolocation Override
+
+As a developer,
+I want timezone and geolocation matching proxy location,
+So that Facebook doesn't detect IP-timezone-geo mismatch.
+
+**Acceptance Criteria:**
+
+**Given** proxy in US-East
+**When** session initializes
+**Then** `page.emulateTimezone('America/New_York')` called
+**And** `page.setGeolocation({ lat, lng })` matches proxy
+**And** permissions granted for geolocation API
+**And** skip if proxy doesn't return location (no guessing)
+
+### Story 6.17: Persistent Browser Profiles
+
+As a developer,
+I want persistent browser profiles via userDataDir,
+So that browser retains history, cookies, localStorage across sessions.
+
+**Acceptance Criteria:**
+
+**Given** profile directory specified
+**When** `createBrowser({ userDataDir })` is called
+**Then** browser retains cookies and localStorage after close
+**And** next session restores previous state
+**And** profile directory auto-created if not exists
+**And** profile path format: `./profiles/fb-{c_user}/`

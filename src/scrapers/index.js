@@ -184,6 +184,7 @@ export async function scrape(platform, action, options = {}) {
     spaces: 'scrapeSpaces',
     feed: 'scrapeFeed',
     'group-members': 'scrapeGroupMembers',
+    marketplace: 'scrapeMarketplace',
   };
 
   const fnName = actionMap[action] || action;

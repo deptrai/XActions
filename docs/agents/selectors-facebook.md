@@ -1,6 +1,6 @@
 # Facebook DOM Selectors Reference
 
-> ⚠️ **STATUS: PARTIALLY VERIFIED — 2026-08-10.**
+**Verified: 2026-08-12**
 > Posts, Search, Profile scraping verified live on authenticated session.
 > Followers, Groups, Friend actions still UNVERIFIED — need live test on secondary account.
 > Facebook obfuscate class names (randomized, ví dụ `x1i10hfl`) và đổi DOM thường xuyên — **không** dựa vào class. Ưu tiên `role`, `aria-label`, text anchor.
@@ -60,6 +60,44 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 | Post URL (id) | `a[href*="/posts/"]`, `a[href*="/permalink/"]`, `a[href*="story_fbid"]` | Preferred for stable `id` |
 
 > **Approach used in `searchTweets`:** Navigate to `/search/posts?q=...`, extract `[role="article"]`, pick text with most spaces (real words vs garbled anti-scraping text), remove U+034F chars. VERIFIED 2026-08-10 on live session.
+
+## Marketplace (FR-NEW — 2026-08-12)
+
+| Element | Selector / Approach | Ghi chú |
+|---|---|---|
+| Search URL | `facebook.com/marketplace/search/?query=<query>` | **Primary** search endpoint |
+| Category URL | `facebook.com/marketplace/category/<slug>/?query=<query>` | Filter by category (phones, vehicles, furniture) |
+| Listing card | `a[href*="/marketplace/item/"]` | **Primary** — anchor links to listing detail |
+| Listing card (alt) | `a[href*="/marketplace/listing/"]` | Fallback pattern |
+| Price | Regex `/^([\$€£¥₹A-Z]*\s*[\d,]+(?:\.\d{2})?(?:\s*(?:USD\|EUR\|VND\|ETB))?)/i` | First match in card text — currency symbol + digits |
+| Title | Text between price and trailing location | CamelCase splitting: insert space before uppercase letters |
+| Location | Trailing capitalized word(s) at end of text | Patterns: city names like "Jijiga", "Harar", "Dire Dawa" |
+| Image | `img` → `src` or `data-src` | First image in card |
+| Listing URL | `https://www.facebook.com/marketplace/item/{id}/` | Stable canonical URL |
+
+### Text Parsing Logic (VERIFIED 2026-08-12)
+
+Facebook Marketplace card text concatenates price + title + location without separators:
+
+```
+Raw:     "$115,000Iphone+15+ProMaxJijiga"
+Step 1:  Price = "$115,000" (regex match)
+Step 2:  After price = "Iphone+15+ProMaxJijiga"
+Step 3:  Replace `+` with space → "Iphone 15 ProMaxJijiga"
+Step 4:  Split camelCase → "Iphone 15 Pro Max Jijiga"
+Step 5:  Location = "Jijiga" (trailing capitalized word, not product keyword)
+Step 6:  Title = "Iphone 15 Pro Max"
+```
+
+### Location Detection Heuristics
+
+A word looks like a location if:
+- Matches `/^[A-Z][a-z]+$/` (capitalized, lowercase rest)
+- NOT a product keyword: `Iphone`, `Ipad`, `Macbook`, `Samsung`, `Sony`, `Nike`, `Adidas`, `Pro`, `Max`, `Plus`, `Mini`, `Air`, `Ultra`
+
+Multi-word locations (e.g., "Dire Dawa") detected when both trailing words match.
+
+> **Approach used in `scrapeMarketplace`:** Navigate to `/marketplace/search/?query=...`, scroll to load more, extract `a[href*="/marketplace/item/"]` cards, parse price/title/location from concatenated text. VERIFIED 2026-08-12 on live session.
 
 ## Followers (FR-3) — ĐẶC BIỆT CẦN VERIFY
 

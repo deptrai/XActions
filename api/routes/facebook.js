@@ -119,7 +119,7 @@ router.post('/scrape', async (req, res) => {
   try {
     const { action, url, query, authCookie } = req.body ?? {};
 
-    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members'];
+    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace'];
     if (!action || !VALID_ACTIONS.includes(action)) {
       return res.status(400).json({
         ok: false,
@@ -130,8 +130,8 @@ router.post('/scrape', async (req, res) => {
     if (['profile', 'posts', 'followers', 'group-members'].includes(action) && !url?.trim()) {
       return res.status(400).json({ ok: false, error: `action "${action}" requires url` });
     }
-    if (action === 'search' && !query?.trim()) {
-      return res.status(400).json({ ok: false, error: 'action "search" requires query' });
+    if (['search', 'marketplace'].includes(action) && !query?.trim()) {
+      return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
     }
 
     // Dynamic import — avoids loading Puppeteer until needed
@@ -157,7 +157,9 @@ router.post('/scrape', async (req, res) => {
     // Pass the keys it actually reads, else the target is silently dropped → scrape fails.
     const scrapeArgs = {
       ...options,
-      ...(action === 'search' ? { query: query.trim() } : { url: url.trim() }),
+      ...(action === 'search' || action === 'marketplace'
+        ? { query: query.trim() }
+        : { url: url.trim() }),
     };
     const result = await scrape('facebook', action, scrapeArgs);
 
@@ -287,6 +289,9 @@ router.post('/automate', async (req, res) => {
     // Strict dryRun gate — only explicit false enables real writes
     const resolvedDryRun = dryRun === false ? false : true;
 
+    // headless mode: default true (invisible browser). Set false to show browser window.
+    const isHeadless = req.body?.headless !== false;
+
     // Per-user Socket.IO room — never broadcast operation events to all clients (NFR3 / privacy)
     const emit = (payload) => global.io?.to(`user:${req.user.id}`).emit('facebook:operation', payload);
 
@@ -316,10 +321,12 @@ router.post('/automate', async (req, res) => {
 
       const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
       const { messengerShareCampaign } = await import('../../src/scrapers/facebook/messengerShare.js');
+      // Wrap createBrowser to pass headless option
+      const createBrowserWithHeadless = (opts) => createBrowser({ ...opts, headless: isHeadless });
       const runArgs = {
         accounts, links: allLinks, recipients, content,
         dryRun: resolvedDryRun, maxBatch, delay: messengerDelay,
-        deps: { createBrowser, createPage, loginWithCookie, messengerShareCampaign },
+        deps: { createBrowser: createBrowserWithHeadless, createPage, loginWithCookie, messengerShareCampaign },
       };
 
       // Dry-run: no browser, no Operation row (mirrors generic dry-run short-circuit).
@@ -363,19 +370,48 @@ router.post('/automate', async (req, res) => {
     }
 
     // ========================================================================
-    // share-link-uid — share post via Messenger dialog
+    // share-link-uid — share post via direct Messenger URL (UID-based)
     // ========================================================================
     if (action === 'share-link-uid') {
-      const { postUrl = '', postUrls = [], content = '', message = '' } = req.body ?? {};
+      const { postUrl = '', postUrls = [], content = '', message = '', recipientUid = '', recipientUids = [], headless: headlessParam } = req.body ?? {};
       const url = postUrl || postUrls[0] || '';
       if (!url.trim()) {
         return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires postUrl or postUrls[]' });
       }
 
+      // Normalize recipients: single uid or array
+      const allRecipients = [
+        ...(recipientUid ? [recipientUid] : []),
+        ...(Array.isArray(recipientUids) ? recipientUids : []),
+      ];
+      if (allRecipients.length === 0) {
+        return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires recipientUid or recipientUids[]' });
+      }
+
+      // headless mode: default true (invisible browser). Set false to show browser window.
+      const isHeadless = headlessParam !== false;
+
+      // Dry-run: validate inputs, return preview without launching browser
+      if (resolvedDryRun) {
+        return res.json({
+          ok: true,
+          action,
+          dryRun: true,
+          userId: req.user.id,
+          operationId: null,
+          postUrl: url,
+          recipients: allRecipients,
+          recipientsCount: allRecipients.length,
+          content: content || message || '',
+          headless: isHeadless,
+          method: 'direct-messenger-url',
+        });
+      }
+
       const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
       const { shareLinkByUid } = await import('../../src/scrapers/facebook/shareLinkByUid.js');
 
-      const browser = await createBrowser({ headless: true });
+      const browser = await createBrowser({ headless: isHeadless });
       const page = await createPage(browser);
       await loginWithCookie(page, {
         c_user: authCookie.c_user,
@@ -385,14 +421,36 @@ router.post('/automate', async (req, res) => {
         fr: authCookie.fr,
         fbl_st: authCookie.fbl_st,
         locale: authCookie.locale,
+        headless: isHeadless,
       });
 
+      const results = [];
       try {
-        const result = await shareLinkByUid(page, { postUrl: url, message: content || message }, {
-          dryRun: resolvedDryRun,
-        });
+        for (const uid of allRecipients) {
+          const result = await shareLinkByUid(page, {
+            postUrl: url,
+            recipientUid: uid,
+            message: content || message,
+          }, {
+            dryRun: false,
+            headless: isHeadless,
+          });
+          results.push({ uid, ...result });
+        }
         await browser.close().catch(() => {});
-        return res.json({ ok: true, action, dryRun: resolvedDryRun, userId: req.user.id, ...result });
+        const successCount = results.filter((r) => r.ok).length;
+        return res.json({
+          ok: true,
+          action,
+          dryRun: false,
+          userId: req.user.id,
+          postUrl: url,
+          results,
+          successCount,
+          totalCount: allRecipients.length,
+          headless: isHeadless,
+          method: 'direct-messenger-url',
+        });
       } catch (runError) {
         await browser.close().catch(() => {});
         return res.status(500).json({ ok: false, error: 'Share link by UID failed. See server logs.' });
@@ -498,7 +556,7 @@ router.post('/automate', async (req, res) => {
     let browser;
     try {
       // createBrowser INSIDE try — else a launch failure orphans the Operation as 'running' forever
-      browser = await createBrowser({ headless: true });
+      browser = await createBrowser({ headless: isHeadless });
       const page = await createPage(browser);
       // Cookie values are never logged (NFR3)
       await loginWithCookie(page, {

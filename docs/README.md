@@ -23,6 +23,9 @@
 | [AI Features](ai-api.md) | AI tweet writer, voice analysis, Grok |
 | [Skills Reference](skills.md) | 31 agent skills for AI assistants |
 | [DOM Selectors](dom-selectors.md) | X/Twitter DOM selector reference |
+| [Facebook API](agents/facebook-api.md) | Facebook REST API (scrape, automate, marketplace) |
+| [Facebook Selectors](agents/selectors-facebook.md) | Facebook DOM selector reference |
+| [Facebook Session Cookie](agents/facebook-session-cookie.md) | Extract c_user + xs cookies |
 | [Troubleshooting](troubleshooting.md) | Common issues and fixes |
 
 ## Interfaces
@@ -51,6 +54,7 @@ XActions provides **5 interfaces** to the same underlying toolkit:
 | Platform | Scraping | Posting | Following | Export |
 |----------|----------|---------|-----------|--------|
 | X/Twitter | ✅ | ✅ | ✅ | ✅ |
+| Facebook | ✅ | ✅ | ✅ | ✅ |
 | Bluesky | ✅ | ✅ | ✅ | ✅ |
 | Mastodon | ✅ | ✅ | ✅ | ✅ |
 | Threads | ✅ | — | — | ✅ |

@@ -659,3 +659,164 @@ Consequences:
 | `otplib` (2FA) dependency mới | Thấp | Pin version chính xác (crypto, không range mở) |
 | Proxy shape lệch dispatcher | Thấp | Xác nhận `browserOptions.proxy` khớp trước khi code P3 (bài học `target` key 3.3) |
 
+
+---
+
+# Addendum D — Facebook Anti-Detection Infrastructure (Epic 5.6+)
+
+> Bổ sung ngày 2026-08-12. Mở rộng kiến trúc as-built để hỗ trợ anti-detection countermeasures cho Facebook automation. Phát sinh từ research report `technical-facebook-bot-detection-countermeasures-research-2026-08-12.md` và epic `Facebook Anti-Detection & Bot Countermeasures` (17 stories). Tuân theo Section 15 (Continuation Notes): bổ sung, không viết lại system map gốc.
+
+## D.1. Phạm Vi
+
+Epic anti-detection thêm 4 lớp kỹ thuật mới lên trên infrastructure hiện có (`createBrowser`, `createPage`, `loginWithCookie`, `shareLinkByUid`):
+
+1. **Fingerprint randomization** — UA pool, viewport, navigator, WebRTC leak prevention, session consistency.
+2. **Behavioral simulation** — Bezier mouse, human click, typing with typos, natural scrolling.
+3. **Velocity & account-age controls** — rate limiting config, account age awareness.
+4. **Session lifecycle** — warming sequence, timezone/geo override, persistent profiles.
+
+Tất cả chạm cùng file core (`src/scrapers/facebook/index.js`) nên gộp thành 1 epic với 17 stories có thứ tự development logic.
+
+## D.2. Ranh Giới Code Mới
+
+| Năng lực | Vùng code | Ghi chú |
+|---|---|---|
+| Fingerprint config | `src/scrapers/facebook/fingerprint.js` (NEW) | UA pool, viewport list, navigator config, WebRTC override — centralized (NFR2) |
+| Behavioral utilities | `src/scrapers/facebook/human.js` (NEW) | `humanMoveMouse`, `humanClick`, `humanType`, `humanScroll` — injectable delay seam (NFR3) |
+| Velocity config | `src/scrapers/facebook/limits.js` (NEW) | Rate limit config, account age tiers, delay floor — hard floors không override được |
+| Session lifecycle | `src/scrapers/facebook/index.js` (extend) | Warming sequence, timezone/geo, userDataDir — extend `createBrowser`/`createPage`/`loginWithCookie` |
+
+Nguyên tắc:
+- `fingerprint.js`, `human.js`, `limits.js` là **pure modules** — không import Puppeteer, nhận `page`/`browser` làm tham số.
+- `index.js` import và orchestrate; không duplicate logic config.
+- Behavioral functions có `delayFn` seam (default `setTimeout`) để test không chờ thật (NFR3).
+- Không log cookie values, fingerprint seed, hay token trong error/response (NFR4).
+
+## D.3. Architecture Decisions
+
+### ADR-013: Fingerprint randomization layer — centralized module, session-consistent
+
+Status: Accepted.
+
+Reasoning: Facebook fingerprinting (Canvas, WebGL, AudioContext, navigator) đạt 80-90% detection rate. Randomize mỗi page load là anti-pattern — Facebook detect fingerprint changes mid-session. Cần generate ONE fingerprint per session và giữ consistent. NFR2 yêu cầu centralized config để dễ update UA pool.
+
+Consequences:
+
+- `src/scrapers/facebook/fingerprint.js` export: `generateFingerprint()`, `applyFingerprint(page, fingerprint)`, `UA_POOL`, `VIEWPORT_LIST`.
+- `generateFingerprint()` trả object: `{ ua, viewport, deviceScaleFactor, hardwareConcurrency, deviceMemory, platform }`.
+- `createPage()` gọi `generateFingerprint()` → `applyFingerprint(page, fp)` — fingerprint lưu trong session context, reuse cho tất cả tabs.
+- UA pool 20+ real Chrome UAs (verify current versions trên web trước khi bind).
+- WebRTC override: `page.evaluateOnNewDocument` disable `RTCPeerConnection` + `--disable-webrtc` launch arg.
+- Navigator override qua `page.evaluateOnNewDocument`: `webdriver=undefined`, `hardwareConcurrency`, `deviceMemory`, `platform`, `plugins`.
+- Stealth plugin (puppeteer-extra-plugin-stealth) đã có (AR1) — tái dùng, không cài thêm.
+- Fingerprint seed KHÔNG log trong API response hay error (NFR4).
+
+### ADR-014: Behavioral simulation utilities — shared module, injectable delays
+
+Status: Accepted.
+
+Reasoning: Facebook behavioral biometrics đạt 90-99.5% detection rate. Straight-line mouse, instant click, mechanical typing, fixed-distance scroll là bot signals mạnh. Cần shared utilities dùng được cho mọi Facebook automation (share, like, comment, post, friend request).
+
+Consequences:
+
+- `src/scrapers/facebook/human.js` export: `humanMoveMouse(page, x, y, { delayFn })`, `humanClick(page, element, { delayFn })`, `humanType(page, text, { delayFn })`, `humanScroll(page, distance, { delayFn })`.
+- `delayFn` default `setTimeout`; test inject `jest.fn()` hoặc `vi.fn()` để không chờ thật (NFR3).
+- Bezier mouse: cubic Bezier curve 20-35 steps, micro-jitter ±2px, 15% overshoot + correction, <2s (NFR1).
+- Human click: hover 100-400ms, mouse down → hold 30-120ms → mouse up, dùng element handle (không coordinate).
+- Typing: 80-120ms/ký tự, typo rate 1-2% (gõ sai → backspace → type lại), pause 100-300ms giữa words, 200-500ms sau punctuation.
+- Scrolling: 5-10 chunks, sin curve speed, 20% overshoot + correction, 100-400ms giữa chunks.
+- `shareLinkByUid.js` và `facebookAutomation.js` import từ `human.js` — không tự implement behavioral logic.
+
+### ADR-015: Velocity & account-age config — hard floors, centralized
+
+Status: Accepted.
+
+Reasoning: ADR-007/012 thiết lập dry-run mặc định và delay bảo thủ, nhưng chưa có centralized config cho velocity limits hay account age tiers. Story 1.13-1.14 cần module riêng để enforce hard floors không override được qua `force` flag.
+
+Consequences:
+
+- `src/scrapers/facebook/limits.js` export: `getActionLimit(action, accountAge)`, `LIMITS`, `ACCOUNT_AGE_TIERS`, `enforceDelay(action, accountAge)`.
+- Hard floors (không override):
+  - likes ≤ 30/hour
+  - comments ≤ 10/hour
+  - friend requests ≤ 20/day (ADR-010)
+  - messages ≤ 20/hour
+  - delay floor 5-15s giữa actions (NFR5, AR2)
+- Account age tiers:
+  - < 7 days: 50% limits
+  - 1-4 weeks: 80% limits
+  - > 3 months: 100% limits
+- `runGuardedBatch` (ADR-007) import `getActionLimit` để enforce — không hardcode trong service.
+- `force` flag không vượt hard floor; chỉ vượt soft cap (80% → 100% cho accounts đủ tuổi).
+
+### ADR-016: Session lifecycle — warming, timezone/geo, persistent profiles
+
+Status: Accepted.
+
+Reasoning: Cold-session-immediate-action là detection signal mạnh. IP-timezone-geo mismatch là check cơ bản. Persistent profiles giảm friction (Facebook thấy browser "quen"). Cần extend `createBrowser`/`createPage`/`loginWithCookie` để hỗ trợ.
+
+Consequences:
+
+- **Session warming**: `loginWithCookie()` sau khi login thành công → gọi `warmSession(page)` trước khi return page.
+  - `warmSession`: visit homepage → wait 3-8s → scroll 300-800px → wait 2-6s → scroll 200-500px → wait 1-4s → random mouse 3 lần → wait 0.5-2s/lần.
+  - Warming skip khi `headless: false` và `skipWarmup: true` (debug mode).
+- **Timezone/geo**: `createPage()` nhận `proxyLocation` từ options → `page.emulateTimezone(tz)` + `page.setGeolocation({ lat, lng })` + grant permissions.
+  - Proxy provider trả location info; nếu thiếu, skip timezone/geo (không guess).
+- **Persistent profiles**: `createBrowser({ userDataDir })` → Puppeteer launch với `--user-data-dir=${userDataDir}`.
+  - Profile directory tự tạo nếu chưa tồn tại (`fs.mkdirSync(dir, { recursive: true })`).
+  - Profile path format: `./profiles/fb-{c_user}/` — scoped per account.
+  - Persistent profiles tắt `--incognito` và tắt stealth plugin's iframe cleanup (conflict).
+
+## D.4. Module Dependency Graph
+
+```mermaid
+flowchart TB
+  subgraph "New modules"
+    FP["fingerprint.js"]
+    HU["human.js"]
+    LI["limits.js"]
+  end
+
+  subgraph "Existing (extend)"
+    IDX["index.js<br/>createBrowser/createPage/<br/>loginWithCookie"]
+    SHARE["shareLinkByUid.js"]
+    AUTO["facebookAutomation.js<br/>runGuardedBatch"]
+  end
+
+  subgraph "External"
+    STEALTH["puppeteer-extra-plugin-stealth"]
+    PUP["Puppeteer"]
+  end
+
+  IDX --> FP
+  IDX --> HU
+  IDX --> LI
+  SHARE --> HU
+  AUTO --> HU
+  AUTO --> LI
+  IDX --> STEALTH
+  IDX --> PUP
+```
+
+## D.5. Known Risks (Anti-Detection)
+
+| Risk | Mức | Mitigation |
+|---|---|---|
+| UA pool outdated → Facebook flag uncommon UA | Trung | Verify UA versions trên web trước khi bind; update quarterly |
+| Behavioral simulation too slow → throughput thấp | Thấp | NFR1: <2s mouse; delayFn seam để tune |
+| Persistent profile corruption → browser crash | Trung | Auto-create dir; graceful fallback to non-persistent |
+| WebRTC override incomplete → leak trên newer Chrome | Trung | Test trên Chrome 151+; monitor WebRTC API changes |
+| Timezone/geo mismatch với proxy → detection | Trung | Skip nếu proxy không trả location; không guess |
+| Fingerprint consistency vs. rotation trade-off | Trung | One fingerprint per session; rotate giữa sessions |
+
+## D.6. Lộ Trình Triển Khai
+
+Stories theo thứ tự development (Epic 1, Story 1.1-1.17):
+
+1. **Story 1.1-1.5** (Fingerprint): `fingerprint.js` + extend `createBrowser`/`createPage`. Foundation — không depend trên stories sau.
+2. **Story 1.6-1.8** (Headless): extend `loginWithCookie` + `shareLinkByUid`. Đã implement partial, formalize.
+3. **Story 1.9-1.12** (Behavioral): `human.js` — pure utilities, không depend trên fingerprint.
+4. **Story 1.13-1.14** (Velocity): `limits.js` — pure config, không depend trên behavioral.
+5. **Story 1.15-1.17** (Session): extend `createBrowser`/`createPage`/`loginWithCookie` — integrate warming, timezone/geo, profiles.
+
+Mỗi story completable bởi single dev agent. Không forward dependencies.

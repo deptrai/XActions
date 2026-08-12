@@ -10,6 +10,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 2 * * *'
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -110,6 +112,147 @@ jobs:
 
       - name: Syntax check (MCP)
         run: node -c src/mcp/server.js
+
+  nightly-mutation:
+    name: Nightly Mutation Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name == 'schedule'
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: xactions
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: xactions_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://xactions:test_password@localhost:5432/xactions_test?schema=public
+      JWT_SECRET: ci-test-jwt-secret-not-for-production
+      SESSION_SECRET: ci-test-session-secret
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+        continue-on-error: true
+
+      - name: Push schema (fallback)
+        run: npx prisma db push --skip-generate
+        if: failure()
+
+      - name: Mutation — x402 middleware
+        run: npm run mutation:x402
+        continue-on-error: true
+
+      - name: Mutation — FB Automation
+        run: npm run mutation:fb-automation
+        continue-on-error: true
+
+      - name: Mutation — FB Scrapers
+        run: npm run mutation:fb-scrapers
+        continue-on-error: true
+
+      - name: Mutation — FB Scheduler
+        run: npm run mutation:fb-scheduler
+        continue-on-error: true
+
+      - name: Mutation — FB Routes
+        run: npm run mutation:fb-routes
+        continue-on-error: true
+
+      - name: Upload mutation reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutation-reports
+          path: reports/mutation/**
+          retention-days: 30
+
+  coverage-report:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'pull_request'
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: xactions
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: xactions_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://xactions:test_password@localhost:5432/xactions_test?schema=public
+      JWT_SECRET: ci-test-jwt-secret-not-for-production
+      SESSION_SECRET: ci-test-session-secret
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+        continue-on-error: true
+
+      - name: Push schema (fallback)
+        run: npx prisma db push --skip-generate
+        if: failure()
+
+      - name: Run tests with coverage
+        run: npx vitest run --coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
 
   docker:
     name: Docker Build
