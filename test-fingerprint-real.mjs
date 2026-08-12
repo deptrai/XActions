@@ -23,16 +23,20 @@
 import { createBrowser, createPage, loginWithCookie } from './src/scrapers/facebook/index.js';
 import { UA_POOL, VIEWPORT_LIST, generateFingerprint } from './src/scrapers/facebook/fingerprint.js';
 
-// Accounts from fb-share.mjs (8 working accounts) — try in order, skip checkpointed ones
+// Live accounts from miniku.txt (checked 2026-08-12, 37/46 live)
+// First account is live and not checkpointed
 const ACCOUNTS = [
+  { c_user: '61590575447989', xs: '46:r9uvnqprx7fcPw:2:1786466771:-1:-1', datr: 'ENIyav8qTIpgCAlKvrH90i-H' },
+  { c_user: '61590556597397', xs: '20:HdmjbzYZRVO2ZA:2:1786453467:-1:-1', datr: 'ercoaosL5SmmYxHwLUjYBCmP' },
+  { c_user: '61590557227260', xs: '49:tZBA0I2Cgxbz3w:2:1786475971:-1:-1', datr: 'jLcoak3SSuSHUXgVfZjBy236' },
+  { c_user: '61590586566607', xs: '33:GecSQdbofARUDQ:2:1786466827:-1:-1', datr: 'oLEpapFcvsUXmfLR11AiYJUG' },
+  { c_user: '61590564257168', xs: '18:APrxgZMyM-1UwA:2:1786466773:-1:-1', datr: 'xVMyasK_vMKsw5VVQKYQhKDe' },
+  { c_user: '61590577116318', xs: '10:59pMl_22dx8P1g:2:1786466772:-1:-1', datr: 'Y0QoanJ71XdGKTvfyt5gbuJz' },
+  { c_user: '61590511331025', xs: '1:7VoDI7R0ZAhAfg:2:1786453502:-1:-1', datr: 'OrArasJaCxyKVR7Ef_72XAf0' },
+  { c_user: '61590453042697', xs: '10:rrcecaQXRr7hXA:2:1786475969:-1:-1', datr: 'GIcpartXTMbTaJVZuFlyMAKt' },
+  // Old accounts from fb-share.mjs (most checkpointed — last resort)
   { c_user: '61559519003000', xs: '7:f00TTOqNez43kg:2:1786256248:-1:-1', datr: 'GQlqai3ZP7-MkMTu3znEldj-' },
-  { c_user: '61559273867716', xs: '13:73GhLVcs3NEbJA:2:1786256252:-1:-1', datr: '-N9sasfkoPrPvpAeUirHjnrs' },
-  { c_user: '100095166129041', xs: '3:NAqbw5r9kOlO2Q:2:1786256260:-1:-1', datr: 'YPlpaq-Z7sNJ52j2_GubP0YL' },
-  { c_user: '100054352380630', xs: '33:N-KiJnf77Qefmg:2:1786256260:-1:-1', datr: 'fPppaojcU4_IT4cfmpppcqw0' },
-  { c_user: '100092936258699', xs: '38:PUjxlddGC97T_A:2:1786256263:-1:-1', datr: 'CvhpasVo2Zh6WmU9pRbNw0UX' },
-  { c_user: '100085428323192', xs: '42:Gh_mwDFDlwgBQQ:2:1786256280:-1:-1', datr: 'MRlqauJ4fYjZYosAOTyZEL44' },
-  { c_user: '100093227282603', xs: '11:Jhk6jlWHYh5Zfg:2:1786256282:-1:-1', datr: 'nRdqamM1O7tLeZT_WY_h2t13' },
-  { c_user: '61551532654077', xs: '36:S-jWTjZkyhJFPA:2:1786256246:-1:-1', datr: 'hvlpaq9byAlvhl67oieOPTwH' }, // checkpointed — last resort
+  { c_user: '61551532654077', xs: '36:S-jWTjZkyhJFPA:2:1786256246:-1:-1', datr: 'hvlpaq9byAlvhl67oieOPTwH' },
 ];
 
 const results = [];
