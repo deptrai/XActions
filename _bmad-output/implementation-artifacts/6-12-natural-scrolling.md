@@ -107,10 +107,20 @@ So that Facebook doesn't detect fixed-distance scrolls (per ADR-014).
   - [x] 3.12 Test: `humanMoveMouse`, `humanClick`, `humanType` still work (AC9 — no regression)
 
 - [x] **Task 4: Run full test suite + verify no regressions** (AC: #9)
-  - [x] 4.1 Run `vitest run tests/scrapers/facebook-human.test.js` — all pass (54/54: 42 existing + 12 new)
+  - [x] 4.1 Run `vitest run tests/scrapers/facebook-human.test.js` — all pass (57/57: 42 existing + 15 new)
   - [x] 4.2 Run `vitest run tests/scrapers/facebook-fingerprint.test.js` — all pass
   - [x] 4.3 Run `vitest run tests/scrapers/facebook-auth.test.js` — all pass
   - [x] 4.4 Run `vitest run tests/scrapers/facebook-index.test.js -t "createPage"` — all pass (12/12)
+
+### Review Findings
+
+- [x] **[Review][Patch] Small-distance scroll behavior clamped** `[src/scrapers/facebook/human.js:360-364]`
+  - Resolved by clamping chunk count to `Math.max(1, Math.min(Math.abs(distance), desiredChunkCount))`.
+  - For `distance = ±1`, only one 1-px wheel call; for `distance = 3`, at most 3 non-zero chunks. Added 3 regression tests.
+  - Overshoot for `distance = 1` still falls back to `±1px`; this is the unavoidable minimum pixel overshoot and is acceptable for sub-20px distances.
+
+- [x] **[Review][Defer] No input validation for `page`, `distance`, `delayFn`, `rng`** `[src/scrapers/facebook/human.js:352-356]`
+  - Same pattern as `humanMoveMouse`, `humanClick`, and `humanType` (pre-existing). No production call sites for `humanScroll` currently exist. Defer to a cross-cutting validation/refactor story for all `human.*` functions.
 
 ## Dev Notes
 
@@ -278,6 +288,7 @@ GLM-5.2 High (Devin CLI)
 - Unit tests: `npx vitest run tests/scrapers/facebook-human.test.js` → 54/54 pass (42 existing + 12 new)
 - No-regression: `npx vitest run tests/scrapers/facebook-fingerprint.test.js tests/scrapers/facebook-auth.test.js` → 92/92 pass
 - createPage tests: `npx vitest run tests/scrapers/facebook-index.test.js -t "createPage"` → 12/12 pass
+- Post-review patch tests: `npx vitest run tests/scrapers/facebook-human.test.js` → 57/57 pass
 
 ### Completion Notes List
 

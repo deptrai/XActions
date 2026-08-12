@@ -159,3 +159,7 @@ Issue EPS-5 (Deferred work cleanup) triaged all 6 priority items. Items 1, 2, 3,
 ## Deferred from: code review of 6-9-bezier-mouse (2026-08-12)
 
 - **Overshoot disproportionate on tiny movements** [src/scrapers/facebook/human.js:124] — Fixed 5-15px overshoot regardless of movement distance. For 1px movements, overshoot is 5-15x the distance, looking unnatural. Not actionable until integration with real call sites provides realistic coordinate ranges. Revisit when humanMoveMouse is integrated into automation flows (Story 6.10+).
+
+## Deferred from: code review of 6-12-natural-scrolling (2026-08-13)
+
+- **No input validation for `page`, `distance`, `delayFn`, `rng`** `[src/scrapers/facebook/human.js:352-356]` — Same pattern as `humanMoveMouse`, `humanClick`, and `humanType` (pre-existing). No production call sites for `humanScroll` currently exist. Defer to a cross-cutting validation/refactor story for all `human.*` functions.

@@ -357,8 +357,11 @@ export async function humanScroll(page, distance, options = {}) {
 
   if (distance === 0) return;
 
-  // 5-10 chunks
-  const chunkCount = 5 + Math.floor(rng() * 6);
+  // 5-10 chunks, but never more than the absolute distance so that no
+  // chunk rounds to 0 for tiny scrolls (e.g. distance = 1 should not produce
+  // four 0-px no-op chunks). [Story 6.12 review]
+  const desiredChunkCount = 5 + Math.floor(rng() * 6);
+  const chunkCount = Math.max(1, Math.min(Math.abs(distance), desiredChunkCount));
 
   // Compute sin-curve weights: slow start, fast middle, slow end
   const weights = [];

@@ -595,6 +595,32 @@ describe('humanScroll (AC1-AC9 — Story 6.12)', () => {
     expect(page.calls.mouse.wheel.length).toBe(0);
   });
 
+  it('small distance 1px produces a single non-zero chunk (no 0-px no-ops)', async () => {
+    const page = makeFakePage();
+    // desiredChunkCount = 8 with rng=0.5, clamped to 1 because |distance| = 1; no overshoot
+    await humanScroll(page, 1, { delayFn: async () => {}, rng: () => 0.5 });
+    expect(page.calls.mouse.wheel.length).toBe(1);
+    expect(page.calls.mouse.wheel[0].deltaY).toBe(1);
+  });
+
+  it('small distance negative -1px produces a single non-zero chunk', async () => {
+    const page = makeFakePage();
+    await humanScroll(page, -1, { delayFn: async () => {}, rng: () => 0.5 });
+    expect(page.calls.mouse.wheel.length).toBe(1);
+    expect(page.calls.mouse.wheel[0].deltaY).toBe(-1);
+  });
+
+  it('small distance 3px clamped to at most 3 chunks (no 0-px no-ops)', async () => {
+    const page = makeFakePage();
+    // desiredChunkCount = 8 with rng=0.5, clamped to min(3, 8) = 3; no overshoot
+    await humanScroll(page, 3, { delayFn: async () => {}, rng: () => 0.5 });
+    expect(page.calls.mouse.wheel.length).toBeLessThanOrEqual(3);
+    expect(page.calls.mouse.wheel.length).toBeGreaterThanOrEqual(1);
+    expect(page.calls.mouse.wheel.every(w => w.deltaY !== 0)).toBe(true);
+    const total = page.calls.mouse.wheel.reduce((s, w) => s + w.deltaY, 0);
+    expect(total).toBe(3);
+  });
+
   it('negative distance works (scrolls up, chunks are negative)', async () => {
     const page = makeFakePage();
     await humanScroll(page, -1000, { delayFn: async () => {}, rng: () => 0.5 });
