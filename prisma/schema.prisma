@@ -225,8 +225,11 @@ model FacebookAccount {
   userId          String
   label           String
   encryptedCookie String
+  encryptedProxy  String?
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  health          FacebookAccountHealth?
 
   @@unique([userId, label])
   @@index([userId])
@@ -301,4 +304,23 @@ model EngagementDaily {
 
   @@unique([username, date])
   @@index([username, date])
+}
+
+enum FacebookAccountHealthStatus {
+  active
+  checkpoint
+  dead
+}
+
+model FacebookAccountHealth {
+  id          String   @id @default(cuid())
+  accountId   String   @unique
+  status      FacebookAccountHealthStatus
+  reason      String?
+  lastCheckAt DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  account     FacebookAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
 }

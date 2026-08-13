@@ -129,7 +129,7 @@ function buildDescriptor(host, port, username, password) {
  * @param {string|null|undefined} raw
  * @returns {{ proxy, server, username?, password? }|null}
  */
-function parseFlatProxy(raw) {
+export function parseFlatProxy(raw) {
   if (typeof raw !== 'string' || !raw.includes(':')) return null;
   const parts = raw.split(':');
   if (parts.length < 2) return null;

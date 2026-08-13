@@ -18,6 +18,7 @@ import express from 'express';
 import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth.js';
+import { parseFlatProxy } from '../../src/scrapers/facebook/proxy.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -83,7 +84,7 @@ const XS_MAX = 4096; // upper bound — guards against storage-amplification abu
 const C_USER_RE = /^\d{10,20}$/;
 
 export function validateAccountBody(body) {
-  const { label, c_user, xs } = body ?? {};
+  const { label, c_user, xs, proxy } = body ?? {};
   if (!label || typeof label !== 'string' || label.trim().length === 0)
     return 'label is required';
   if (label.trim().length > LABEL_MAX)
@@ -94,6 +95,12 @@ export function validateAccountBody(body) {
     return 'xs is required';
   if (xs.trim().length > XS_MAX)
     return `xs must be ${XS_MAX} characters or fewer`;
+  if (proxy !== undefined && proxy !== null) {
+    if (typeof proxy !== 'string' || !proxy.trim())
+      return 'proxy must be a non-empty string';
+    if (!parseFlatProxy(proxy.trim()))
+      return 'proxy must be in "host:port" or "host:port:user:pass" format';
+  }
   return null;
 }
 
@@ -122,9 +129,10 @@ router.post('/', authenticate, async (req, res) => {
     // Encrypt cookie pair as JSON — c_user and xs never stored in plaintext
     const cookiePayload = JSON.stringify({ c_user, xs });
     const encryptedCookie = encrypt(cookiePayload);
+    const encryptedProxy = req.body.proxy ? encrypt(req.body.proxy.trim()) : null;
 
     const account = await prisma.facebookAccount.create({
-      data: { userId: req.user.id, label, encryptedCookie },
+      data: { userId: req.user.id, label, encryptedCookie, encryptedProxy },
       select: { id: true, label: true },  // NFR3: never return encrypted blob
     });
 
@@ -200,8 +208,7 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
-// ============================================================================
-// Cookie resolution helper — accountId → decrypted { c_user, xs } (Story 5.5 D1)
+// ============================================================================\n// PATCH /api/facebook/accounts/:id — update proxy (Story 7.1 AC4)\n// ============================================================================\n\nrouter.patch('/:id', authenticate, async (req, res) => {\n  try {\n    const { id } = req.params;\n    const { proxy } = req.body ?? {};\n\n    const account = await prisma.facebookAccount.findFirst({\n      where: { id, userId: req.user.id },\n      select: { id: true },\n    });\n    if (!account) return res.status(404).json({ ok: false, error: 'Account not found' });\n\n    if (proxy === undefined || proxy === null) {\n      return res.status(400).json({ ok: false, error: 'proxy is required' });\n    }\n    if (typeof proxy !== 'string' || !proxy.trim()) {\n      return res.status(400).json({ ok: false, error: 'proxy must be a non-empty string' });\n    }\n    if (!parseFlatProxy(proxy.trim())) {\n      return res.status(400).json({ ok: false, error: 'proxy must be in "host:port" or "host:port:user:pass" format' });\n    }\n\n    const encryptedProxy = encrypt(proxy.trim());\n    await prisma.facebookAccount.update({\n      where: { id },\n      data: { encryptedProxy },\n    });\n    return res.json({ ok: true });\n  } catch (err) {\n    if (err?.code === 'P2025') {\n      return res.status(404).json({ ok: false, error: 'Account not found' });\n    }\n    console.error('❌ PATCH /api/facebook/accounts/:id error:', err?.code || err?.name || 'unknown');\n    return res.status(500).json({ ok: false, error: 'Failed to update account proxy' });\n  }\n});\n\n// ============================================================================\n// Cookie resolution helper — accountId → decrypted { c_user, xs } (Story 5.5 D1)
 // Used by /api/facebook/automate to bridge a saved account into the run pipeline
 // without the raw cookie ever leaving the server (NFR3).
 // ============================================================================

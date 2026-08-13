@@ -509,6 +509,7 @@ describe('[TEA-R3] loginWithCookie — edge cases', () => {
     const fakePage = {
       setCookie: async (...cookies) => { cookiesSet.push(...cookies); },
       goto: async () => {},
+      url: () => 'https://www.facebook.com/',
       evaluate: async () => ({ hasLoginForm: false, hasLoginButton: false, hasSecurityCheck: false }),
     };
     // Skip warming for this cookie-flags test; cookie attributes are independent of warming.

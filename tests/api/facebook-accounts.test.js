@@ -293,4 +293,22 @@ describe('validateAccountBody — boundary + type (P1 kill)', () => {
     expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: '   ' }))
       .toMatch(/xs.*required/i);
   });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] accepts a valid proxy string`, () => {
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 'xs', proxy: '127.0.0.1:8080' })).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] accepts a proxy with credentials`, () => {
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 'xs', proxy: '127.0.0.1:8080:user:pass' })).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] rejects an invalid proxy format`, () => {
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 'xs', proxy: 'localhost' }))
+      .toMatch(/proxy.*format/i);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] rejects an empty proxy string`, () => {
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 'xs', proxy: '   ' }))
+      .toMatch(/proxy/i);
+  });
 });
