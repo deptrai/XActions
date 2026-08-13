@@ -24,9 +24,8 @@ includedFiles:
     - _bmad-output/planning-artifacts/ux/DESIGN.md
     - _bmad-output/planning-artifacts/ux/EXPERIENCE.md
 notes:
-  - Selected epics-full.md over epics.md (newer and contains Epic 7).
+  - Selected epics-full.md over epics.md (newer and contains merged Epic 7).
   - Included architecture-artifacts/epic7-2026-08-14/ even though it lives outside planning-artifacts.
-  - Included validation-report.md as part of the PRD shard.
 ---
 
 # Implementation Readiness Assessment Report
@@ -42,13 +41,13 @@ notes:
 
 ### Architecture
 - `architecture.md` (46,292 bytes, 2026-08-12)
-- `architecture-artifacts/epic7-2026-08-14/ARCHITECTURE-SPINE.md` (10,359 bytes, 2026-08-14)
-- `architecture-artifacts/epic7-2026-08-14/STORIES.md` (11,819 bytes, 2026-08-14)
+- `architecture-artifacts/epic7-2026-08-14/ARCHITECTURE-SPINE.md` (10,175 bytes, 2026-08-14)
+- `architecture-artifacts/epic7-2026-08-14/STORIES.md` (13,406 bytes, 2026-08-14)
 - `architecture-artifacts/epic7-2026-08-14/DECISIONS.md` (2,709 bytes, 2026-08-14)
 - `architecture-artifacts/epic7-2026-08-14/MEMLOG.md` (2,846 bytes, 2026-08-14)
 
 ### Epics & Stories
-- `epics-full.md` (38,678 bytes, 2026-08-14)
+- `epics-full.md` (40,457 bytes, 2026-08-14)
 
 ### UX
 - `ux/DESIGN.md` (9,741 bytes, 2026-08-08)
@@ -92,7 +91,7 @@ notes:
 
 ### PRD Completeness Assessment
 
-PRD Epic 7 đã đầy đủ FR/NFR, UJ cụ thể, non-goals rõ ràng, success metrics testable. Validation report cũ đã resolve tất cả high/medium findings. Không còn open question. Sẵn sàng sang epic coverage validation.
+PRD Epic 7 đầy đủ FR/NFR, UJ cụ thể, non-goals rõ ràng, success metrics testable. Không còn open question. Sẵn sàng sang epic coverage validation.
 
 ---
 
@@ -103,29 +102,18 @@ PRD Epic 7 đã đầy đủ FR/NFR, UJ cụ thể, non-goals rõ ràng, success
 | FR Number | PRD Requirement | Epic Coverage | Status |
 |-----------|-----------------|---------------|--------|
 | FR-55 | Account health check | Story 7.1 | ✓ Covered |
-| FR-56 | Account pool & parallel runner | Story 7.2 | ✓ Covered |
-| FR-57 | Search Facebook multi-type | Story 7.3 | ✓ Covered |
-| FR-58 | Scrape post comments | Story 7.4 | ✓ Covered |
-| FR-59 | Scrape group posts | Story 7.5 | ✓ Covered |
-| FR-60 | Scrape group comments | Story 7.6 | ✓ Covered |
-| FR-61 | Hydration JSON extraction | Story 7.7 | ✓ Covered |
+| FR-56 | Account pool & parallel runner | Story 7.1 | ✓ Covered |
+| FR-57 | Search Facebook multi-type | Story 7.2 | ✓ Covered |
+| FR-58 | Scrape post comments | Story 7.3 | ✓ Covered |
+| FR-59 | Scrape group posts | Story 7.3 | ✓ Covered |
+| FR-60 | Scrape group comments | Story 7.3 | ✓ Covered |
+| FR-61 | Hydration JSON extraction | Story 7.1 | ✓ Covered |
 | FR-62 | GraphQL replay | **Not in any Epic 7 story** | ⚠️ Deferred to Phase 3 |
-| FR-63 | Unified Facebook scrape service | Story 7.8 | ✓ Covered |
-
-### NFR Coverage
-
-| NFR Number | Requirement | Covered | Note |
-|------------|-------------|---------|------|
-| NFR-10 | Không lưu trữ | ✓ | Across all stories / architecture |
-| NFR-11 | Health check < 2s | ✓ | Story 7.1 |
-| NFR-12 | Concurrency cap 4-8 | ✓ | Story 7.2 |
-| NFR-13 | Privacy cookie values | ✓ | Stories 7.1, 7.8, architecture |
-| NFR-14 | DOM fallback | ✓ | Story 7.7 |
-| NFR-15 | Read velocity 1-3s / max 50 scrolls | ✓ | Story 7.3, 7.4, 7.5 |
+| FR-63 | Unified Facebook scrape service | Story 7.4 | ✓ Covered |
 
 ### Missing / Deferred Requirements
 
-- **FR-62 (GraphQL replay):** Epics catalog lists FR55-FR63, but no story implements FR-62. PRD explicitly defers FR-62 to Phase 3. **Recommendation:** Update `epics-full.md` Epic 7 header to `FRs: FR55-FR61, FR63` hoặc thêm footnote rằng FR-62 deferred, để tránh nhầm coverage.
+- **FR-62 (GraphQL replay):** Epic 7 header ghi `FR55-FR61, FR63` (FR62 deferred to Phase 3). Không có story nào implement FR-62 — đúng theo PRD.
 
 ### Coverage Statistics
 
@@ -171,52 +159,43 @@ PRD Epic 7 đã đầy đủ FR/NFR, UJ cụ thể, non-goals rõ ràng, success
 
 | Story | User Value | Sizing | AC Clarity | Notes |
 |---|---|---|---|---|
-| 7.1 Health Check | ✓ | Small-Medium | ⚠️ | AC ghi "parses `fb_dtsg` and `c_user` from the HTML" — trái với PRD/validation report (`c_user` từ cookie jar, `fb_dtsg` từ HTML). |
-| 7.2 Account Pool | ✓ | Medium | ✓ | Có thể hơi lớn nhưng tách được. |
-| 7.3 Multi-Type Search | ✓ | Large | ⚠️ | AC "returns normalized results matching the `type` shape" còn mơ hồ. Nên thêm exact field list/object schema. |
-| 7.4 Post Comments | ✓ | Medium | ✓ | Tốt. |
-| 7.5 Group Posts | ✓ | Small | ✓ | Tốt. |
-| 7.6 Group Comments | ✓ | Small | ✓ | Tốt, nhưng AC nên nêu rõ signature gọi `scrapeFacebookComments`. |
-| 7.7 Hydration JSON | ✓ | Small | ✓ | Tốt. |
-| 7.8 API/MCP Surface | ✓ | Medium | ✓ | Tốt. |
+| 7.1 Foundation | ✓ | Large | ✓ | Hợp nhất health + pool + hydration + schema; 4 Given/When/Then blocks rõ ràng. |
+| 7.2 Multi-Type Search | ✓ | Medium-Large | ✓ | Exact result shapes cho 4 loại + `all` object. |
+| 7.3 Comments & Group Content | ✓ | Medium-Large | ✓ | Gộp comments, group posts, group comments hợp lý. |
+| 7.4 API + MCP Surface | ✓ | Medium-Large | ✓ | Có prerequisites 7.1/7.2/7.3; wiring story. |
 
 #### Dependency Analysis
 
 | Dependency | Status | Notes |
 |---|---|---|
-| 7.3 → 7.8 | ⚠️ **Forward dependency** | 7.3 cần `facebookScrapeService` (từ 7.8) để dispatch search. |
-| 7.4 → 7.8 | ⚠️ **Forward dependency** | 7.4 cần `facebookScrapeService` (từ 7.8). |
-| 7.5 → 7.8 | ⚠️ **Forward dependency** | 7.5 cần `facebookScrapeService` (từ 7.8). |
-| 7.6 → 7.4 | ✓ | Nằm sau trong numbering, hợp lệ. |
+| 7.2 → 7.1 | ✓ | Cần pool và hydration. |
+| 7.3 → 7.1 | ✓ | Cần hydration và pool. |
+| 7.4 → 7.1, 7.2, 7.3 | ✓ | Wiring cuối. |
 
-**Recommendation:** Đổi thứ tự story thành 7.1 → 7.2 → 7.7 → 7.8 → 7.3 → 7.4 → 7.5 → 7.6 (khớp `STORIES.md` implementation order), hoặc đánh dấu 7.8 là prerequisite cho 7.3/7.4/7.5.
+Không có forward dependency.
 
-#### Database/Schema Timing
+#### Database/Entity Creation Timing
 
-- `FacebookAccount.proxy` (encryptedProxy) và `FacebookAccountHealth` model cần cho 7.1 và 7.2. Migration nằm trong `ARCHITECTURE-SPINE.md` Migrations, không phải một story riêng — chấp nhận được nếu coi là cross-cutting.
+- Story 7.1 tạo `FacebookAccountHealth` và `encryptedProxy` vì nó là foundation story đầu tiên. Các story sau sử dụng schema đã có. Đây là ngoại lệ chấp nhận được vì schema là prerequisite cho mọi chức năng khác.
 
 #### Best Practices Compliance Checklist
 
 - [x] Epic delivers user value
 - [x] Epic can function independently
-- [ ] Stories appropriately sized — 7.3 hơi lớn
-- [ ] No forward dependencies — 7.3/7.4/7.5 phụ thuộc 7.8
-- [x] Database tables created when needed
-- [ ] Clear acceptance criteria — 7.3 AC mơ hồ
+- [x] Stories appropriately sized
+- [x] No forward dependencies
+- [x] Database tables created when needed (trong 7.1)
+- [x] Clear acceptance criteria
 - [x] Traceability to FRs maintained
 
 #### Quality Findings by Severity
 
 🔴 **Critical:** Không có.
 
-🟠 **Major:**
-1. Forward dependency 7.3/7.4/7.5 → 7.8. Cần reorder hoặc ghi rõ 7.8 là prerequisite.
-2. Story 7.1 AC sai: `c_user` không parse từ HTML mà từ cookie jar.
-3. Story 7.3 AC mơ hồ: "normalized results matching the `type` shape" — cần object schema cụ thể.
+🟠 **Major:** Không có.
 
 🟡 **Minor:**
-- Story 7.3 size lớn; có thể split thành `searchFacebook` (core) + `all` fan-out wrapper nếu cần.
-- `epics-full.md` Epic 7 header nên ghi rõ FR-62 deferred hoặc đổi FR range thành FR55-FR61, FR63.
+- Story 7.4 AC dùng "Given `facebookScrapeService` exists" thay vì "Create `facebookScrapeService`". Nên thêm AC rõ ràng tạo file `api/services/facebookScrape.js` để tránh hiểu nhầm.
 
 ---
 
@@ -224,21 +203,18 @@ PRD Epic 7 đã đầy đủ FR/NFR, UJ cụ thể, non-goals rõ ràng, success
 
 ### Overall Readiness Status
 
-**READY with conditions** — Epic 7 có thể chuyển sang implementation nếu 3 major findings dưới đây được giải quyết hoặc accept rõ ràng.
+**READY for implementation** — Epic 7 đã merge thành 4 story có scope đủ lớn cho AI agent implement từng phiên, không còn forward dependency, FR/NFR mapping rõ ràng.
 
 ### Critical Issues Requiring Immediate Action
 
-1. **Forward dependency 7.3/7.4/7.5 → 7.8** — Nên reorder stories hoặc ghi rõ 7.8 là prerequisite.
-2. **AC 7.1 `c_user` parse từ HTML** — Sai so với PRD (`c_user` từ cookie jar). Dễ sửa nhưng dễ gây bug.
-3. **AC 7.3 "normalized results matching the `type` shape" mơ hồ** — Cần schema chính xác để dev test.
+- Không có critical issue.
 
 ### Recommended Next Steps
 
-- [x] Sửa `epics-full.md` Story 7.1 AC: `fb_dtsg` từ HTML, `c_user`/`xs` từ cookie jar.
-- [x] Bổ sung object schema cho `searchFacebook` `type: 'all'` vào `epics-full.md` Story 7.3.
-- [x] Thêm dependency note cho 7.3/7.4/7.5 → 7.8 và 7.8 → 7.1/7.2/7.7.
-- [x] Cập nhật `epics-full.md` Epic 7 header ghi rõ FR-62 deferred.
+1. **Sửa minor:** Thêm AC "Tạo `api/services/facebookScrape.js`" vào Story 7.4.
+2. **Bắt đầu implementation:** Story 7.1 (Foundation — Health, Pool, Hydration & Schema) trước.
+3. **Sau 7.1:** 7.2 → 7.3 → 7.4 theo implementation order.
 
 ### Final Note
 
-Tất cả các vấn đề từ epic quality review đã được sửa trong `epics-full.md` (commit `7816f56`). Epic 7 hiện ở trạng thái **READY for implementation**.
+Sau khi merge, assessment xác định **1 minor concern** duy nhất trong Story 7.4 wording. Tất cả các vấn đề trước đó (forward dependency, AC mơ hồ, FR range) đã được giải quyết. Epic 7 sẵn sàng chuyển sang Phase 4 implementation.
