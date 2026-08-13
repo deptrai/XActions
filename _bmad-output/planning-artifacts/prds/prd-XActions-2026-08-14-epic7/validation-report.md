@@ -90,11 +90,11 @@ Người dùng approved proposed defaults; artifacts đã cập nhật:
 - **Low-3:** `epics-full.md` ghi chú ADR-011 chỉ áp dụng khi Phase 3 (GraphQL replay) lên lịch.
 - **Low-4:** Story 7.3 signature đồng bộ với PRD (`location`, `authCookie`, `parallel`).
 
-### Remaining open
+### Additional defaults decided (post-review)
 
-- `p-limit` vs custom concurrency pool (Open Question 1).
-- TLS/JA3 impersonation cho GraphQL replay (Open Question 2).
+- **Open Question 1 (p-limit):** Dùng `p-limit@7.2.0` (pin exact) cho concurrency cap; tự implement wrapper cho delay và proxy affinity.
+- **Open Question 2 (TLS/JA3):** Không cần cho Epic 7. GraphQL replay (FR-62, deferred) dùng `axios` + cookie + headers + proxy, tương tự `graphqlSend.js`. Chỉ cân nhắc `node-libcurl-ja3` nếu `axios` bị block ở Phase 3.
 
 ### Updated grade
 
-**Good** — now with all high findings resolved.
+**Good** — all high findings resolved, remaining open questions decided.

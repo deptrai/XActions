@@ -93,6 +93,7 @@ Hệ thống phân bổ nhiều task scrape cho nhiều account live với concu
 - Gán task cho account theo round-robin / least-recently-used trong số account active.
 - Mỗi task mở browser riêng với `userDataDir: buildUserDataDir(c_user)`.
 - `delayBetweenLaunches` mặc định 3-8 giây giữa các lần mở browser để tránh burst.
+- Dùng `p-limit@7.2.0` (pin exact) để giới hạn concurrency; tự implement wrapper cho delay giữa launches và proxy affinity.
 - Giới hạn `maxConcurrency` mặc định 4, tối đa 8.
 - Retry task sang account khác nếu account bị checkpoint giữa chừng.
 - Trả về `results[]` kèm `accountUsage` report.
@@ -259,11 +260,12 @@ API và MCP cùng gọi `facebookScrapeService`. Realizes UJ-7.1..UJ-7.4.
 1. ✅ `FacebookAccountHealth` — dùng Prisma model, cache TTL 5 phút. `[DECIDED]`
 2. ✅ `x_facebook_search type: 'all'` — mặc định sequential trên 1 account; `parallel: true` để fan-out. `[DECIDED]`
 3. ✅ `FacebookAccount.proxy` — có field `proxy`, `AccountPool` enforce proxy affinity. `[DECIDED]`
+4. ✅ Concurrency pool — dùng `p-limit@7.2.0` (pin exact, không dùng `^`) để giới hạn concurrency; tự implement wrapper cho delay giữa launches và proxy affinity. `[DECIDED]`
+5. ✅ TLS/JA3 impersonation — **không cần** cho Epic 7. GraphQL replay (FR-62, defer Phase 3) dùng `axios` với cookie + headers thật + proxy, giống `graphqlSend.js`. Chỉ cân nhắc `node-libcurl-ja3` nếu `axios` bị block khi triển khai Phase 3. `[DECIDED]`
 
 ### Remaining
 
-1. Có nên thêm `p-limit` vào `package.json` hay tự implement concurrency pool?
-2. Có cần TLS/JA3 impersonation (ví dụ `curl_cffi`) cho GraphQL replay không, hay axios + headers thật đã đủ?
+_Không còn câu hỏi mở._
 
 ## 10. Assumptions Index
 
