@@ -184,8 +184,8 @@ N/A — Technical infrastructure, no UX spec needed.
 
 ### FR Coverage Map
 
-| FR | Epic 1 | Epic 2 | Epic 3 | Epic 4 | Epic 5 | Epic 5b | Epic 6 |
-|---|---|---|---|---|---|---|---|
+| FR | Epic 1 | Epic 2 | Epic 3 | Epic 4 | Epic 5 | Epic 5b | Epic 6 | Epic 7 |
+|---|---|---|---|---|---|---|---|---|
 | FR1-3 | ✅ | | | | | | |
 | FR4-7 | ✅ | | | | | | |
 | FR8 | | | ✅ | | | | |
@@ -194,7 +194,8 @@ N/A — Technical infrastructure, no UX spec needed.
 | FR15-22 | | | | ✅ | | | |
 | FR23-27 | | | | | ✅ | | |
 | FR28-39 | | | | | | ✅ | |
-| FR40-54 | | | | | | | ✅ |
+| FR40-54 | | | | | | | ✅ | |
+| FR55-63 | | | | | | | | ✅ |
 
 ## Epic List
 
@@ -232,6 +233,11 @@ N/A — Technical infrastructure, no UX spec needed.
 **Goal:** Fingerprint randomization, behavioral simulation, session hygiene, velocity controls.
 **FRs:** FR40-FR54
 **Status:** 🔄 4 done (Chrome path, headless, timeouts, share delays), 13 backlog
+
+### Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
+**Goal:** Multi-type search, post/group comments, account health filtering, and parallel execution using account pool.
+**FRs:** FR55-FR63
+**Status:** 🆕 backlog
 
 ---
 
@@ -947,3 +953,141 @@ So that I can reach all Facebook capabilities already implemented in the codebas
 **Then** it returns `{ id, label, userId }` for each `FacebookAccount`
 **And** never returns `c_user`, `xs`, or `encryptedCookie`
 **And** no cookie or session data is logged
+
+---
+
+## Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
+
+**Status:** 🆕 backlog
+
+**Goal:** Expand Facebook scraping to support multi-type search, post/group comments scraping, account health filtering, and parallel execution using a pool of live Facebook accounts.
+
+**FRs:** FR55-FR63
+
+**NFRs:** NFR10-NFR14
+
+**Additional Requirements relevant:** ADR-006 (adapter pattern), ADR-011 (GraphQL HTTP layer), Epic 6 anti-detection infrastructure.
+
+### Story 7.1: Account Health Check & Live Filter
+
+As a user running multi-account scrape,
+I want the system to check which accounts are live before using them,
+So that checkpointed or dead accounts are not selected.
+
+**Acceptance Criteria:**
+
+**Given** a `FacebookAccount` with encrypted cookie
+**When** `checkAccountHealth(account)` is called
+**Then** it fetches `https://www.facebook.com/` via HTTP
+**And** parses `fb_dtsg` and `c_user` from the HTML
+**And** returns `{ status: 'active' | 'checkpoint' | 'dead', reason?, lastCheckAt }`
+**And** status is `checkpoint` if body contains `/checkpoint/` or `confirm you're human`
+**And** status is `dead` if `fb_dtsg` or `c_user` is missing
+**And** cookie values are never logged
+
+### Story 7.2: Account Pool & Parallel Runner
+
+As a user with many Facebook accounts,
+I want to run multiple scrape tasks in parallel,
+So that total scrape time decreases.
+
+**Acceptance Criteria:**
+
+**Given** an array of `tasks` and `accountIds`
+**When** `facebookScrapeService.runBatch(tasks, { maxConcurrency: 4 })` is called
+**Then** it filters only `active` accounts from health cache
+**And** assigns each task to a live account (round-robin / LRU)
+**And** launches up to `maxConcurrency` browsers at a time
+**And** uses `buildUserDataDir(c_user)` for each browser
+**And** retries a task on another live account if the current one hits checkpoint
+**And** returns `results[]` and an `accountUsage` report
+
+### Story 7.3: Multi-Type Facebook Search
+
+As a market researcher,
+I want to search Facebook by posts, people, pages, or groups,
+So that I can find leads across all public surfaces.
+
+**Acceptance Criteria:**
+
+**Given** a `query` and `type` (`posts`, `people`, `pages`, `groups`, `all`)
+**When** `searchFacebook(page, query, { type, limit })` is called
+**Then** it navigates to the correct `/search/{type}?q=...` URL
+**And** returns normalized results matching the `type` shape
+**And** `type: 'all'` returns an object with `posts`, `people`, `pages`, `groups` arrays
+**And** supports pagination via scroll
+**And** `platform: 'facebook'` on every result
+
+### Story 7.4: Scrape Post Comments
+
+As a growth marketer,
+I want to scrape comments of a Facebook post,
+So that I can understand audience sentiment and engagement.
+
+**Acceptance Criteria:**
+
+**Given** a `postUrl` and `limit`
+**When** `scrapeFacebookComments(page, postUrl, { limit, includeReplies })` is called
+**Then** it opens the post permalink
+**And** switches sort from "Most relevant" to "All comments" if possible
+**And** scrolls to load more comments
+**And** returns `{ id, authorName, authorUrl, text, timestamp, likes, replies[], parentId }`
+**And** `replies[]` only present when `includeReplies: true`
+
+### Story 7.5: Scrape Group Posts
+
+As a community analyst,
+I want to scrape posts inside a Facebook group,
+So that I can monitor group activity.
+
+**Acceptance Criteria:**
+
+**Given** a `groupUrl` and `limit`
+**When** `scrapeFacebookGroupPosts(page, groupUrl, { limit })` is called
+**Then** it uses mobile UA (390x844)
+**And** returns posts with the standard post shape
+**And** returns a `note` if group is private and account is not a member
+
+### Story 7.6: Scrape Group Comments
+
+As a community analyst,
+I want to scrape comments of a post inside a Facebook group,
+So that I can analyze group discussions.
+
+**Acceptance Criteria:**
+
+**Given** a group `postUrl` and `limit`
+**When** `scrapeFacebookGroupComments(page, postUrl, { limit, includeReplies })` is called
+**Then** it reuses `scrapeFacebookComments` logic
+**And** returns the same comment shape
+**And** returns a `note` if comments are restricted
+
+### Story 7.7: Hydration JSON Extraction Fallback
+
+As a scraper developer,
+I want to extract structured data from Facebook's embedded JSON,
+So that I am less dependent on brittle CSS class selectors.
+
+**Acceptance Criteria:**
+
+**Given** a loaded Facebook page
+**When** `extractHydrationJson(page, typenames)` is called
+**Then** it collects all `<script type="application/json" data-content-len>` tags
+**And** recursively walks JSON for objects with matching `__typename`
+**And** supports `Story`, `Comment`, `User`, `Page`, `Group`, `MarketplaceListing`
+**And** falls back to DOM extraction if hydration data is insufficient
+
+### Story 7.8: API + MCP Surface Unification
+
+As an AI agent,
+I want new Facebook scrape tools exposed via MCP that call the same service as the REST API,
+So that the surface is consistent and maintainable.
+
+**Acceptance Criteria:**
+
+**Given** `facebookScrapeService` exists
+**When** new tools `x_facebook_search`, `x_facebook_posts`, `x_facebook_post_comments`, `x_facebook_group_posts`, `x_facebook_group_comments` are exposed
+**Then** they all route through `facebookScrapeService`
+**And** `POST /api/facebook/scrape` uses the same service
+**And** no scraper logic is duplicated in `src/mcp/server.js`
+**And** each new tool has contract tests in `tests/mcp/`

@@ -11,7 +11,7 @@
 # Retrospective: optional | done
 
 generated: 06-12-2026 02:18
-last_updated: 2026-08-13T19:00:00
+last_updated: 2026-08-14T00:00:00
 project: XActions
 project_key: NOKEY
 tracking_system: file-system
@@ -95,3 +95,15 @@ development_status:
   6-17-persistent-profiles: done
   6-18-human-behavior-hardening: done
   epic-6-retrospective: optional
+
+  # Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
+  epic-7: backlog
+  7-1-account-health-check: backlog
+  7-2-account-pool-parallel-runner: backlog
+  7-3-facebook-search-multi-type: backlog
+  7-4-facebook-post-comments: backlog
+  7-5-facebook-group-posts: backlog
+  7-6-facebook-group-comments: backlog
+  7-7-hydration-json-extraction: backlog
+  7-8-api-mcp-unification: backlog
+  epic-7-retrospective: optional
