@@ -52,14 +52,10 @@ describe('Health & Discovery', () => {
 
   it('/api/* endpoints have rate-limit headers after a request', async () => {
     const res = await request(app).get('/api/health');
-    // express-rate-limit v6+ sets RateLimit-Limit or x-ratelimit-limit
-    const hasRateLimit =
-      res.headers['ratelimit-limit'] !== undefined ||
-      res.headers['x-ratelimit-limit'] !== undefined ||
-      res.headers['retry-after'] !== undefined;
-    // Just assert we got a successful response — header presence depends on
-    // the limiter version; no assertion failure on absence to keep tests robust
     expect(res.status).toBe(200);
-    void hasRateLimit; // documented intent without flaky assertion
+    const rateLimitHeaders = Object.keys(res.headers).filter((h) =>
+      /^(x-)?ratelimit|retry-after/i.test(h)
+    );
+    expect(rateLimitHeaders.length).toBeGreaterThan(0);
   });
 });

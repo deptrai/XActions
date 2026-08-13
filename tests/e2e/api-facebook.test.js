@@ -1,7 +1,30 @@
+// tests/e2e/api-facebook.test.js
+// Facebook automation endpoint guards with a real DB user.
 // by nichxbt
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import app from '../../api/server.js';
+import {
+  seedTestUser,
+  cleanupTestUser,
+  makeTestToken,
+  makeTestUserId,
+  makeValidFacebookCookie,
+} from '../api/fixtures/test-user.js';
+
+const TEST_USER_ID = makeTestUserId('fb-e2e');
+const VALID_COOKIE = makeValidFacebookCookie();
+
+let token;
+
+beforeAll(async () => {
+  const result = await seedTestUser(TEST_USER_ID, 'fb_e2e_user');
+  token = result.token;
+});
+
+afterAll(async () => {
+  await cleanupTestUser(TEST_USER_ID);
+});
 
 describe('Facebook automation endpoints', () => {
   // ─── Auth guard ──────────────────────────────────────────────────────────
@@ -22,103 +45,73 @@ describe('Facebook automation endpoints', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  // ─── Body schema validation (auth bypass via invalid JWT → 401 first) ─────
-  // The auth middleware runs before body validation, so without a valid token
-  // we always get 401. These tests confirm the auth layer is hit correctly
-  // and that a structurally broken request doesn't accidentally pass through.
-
   it('POST /api/facebook/automate with invalid Bearer token → 401', async () => {
     const res = await request(app)
       .post('/api/facebook/automate')
       .set('Authorization', 'Bearer invalid.jwt.token')
-      .send({ action: 'like', urls: ['https://facebook.com/post/1'],
-               authCookie: { c_user: '123', xs: 'abc' } });
+      .send({ action: 'like', urls: ['https://facebook.com/post/1'], authCookie: VALID_COOKIE });
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error');
   });
 
-  // ─── Validation layer (reachable only with a structurally valid JWT that
-  //     passes signature check but points to a non-existent user — the auth
-  //     middleware returns 401 "User not found" before DB is needed for
-  //     business logic. We test the layer just below auth by issuing a
-  //     well-formed JWT signed with the test secret.)
-  //
-  //     If JWT_SECRET is not set in test env the middleware will throw a
-  //     500 "Authentication error" — still not 200, so assertions hold.
+  // ─── Validation layer (reachable with a real DB user) ─────────────────────
 
-  it('POST /api/facebook/automate with valid token but missing action → 401 or 400', async () => {
-    // A JWT that looks valid but references a non-existent userId
-    const jwt = await import('jsonwebtoken');
-    const secret = process.env.JWT_SECRET || 'test-secret';
-    const fakeToken = jwt.default.sign({ userId: 'fake-id-000', username: 'ghost' }, secret, { expiresIn: '1h' });
-
+  it('POST /api/facebook/automate with valid token but missing action → 400', async () => {
     const res = await request(app)
       .post('/api/facebook/automate')
-      .set('Authorization', `Bearer ${fakeToken}`)
-      .send({ authCookie: { c_user: '123', xs: 'abc' } }); // missing action
-
-    // Auth middleware hits DB → 401 "User not found" when no DB,
-    // or 400 from body validation when DB is available and user exists.
-    expect([400, 401, 500]).toContain(res.status);
+      .set('Authorization', `Bearer ${token}`)
+      .send({ authCookie: VALID_COOKIE });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('ok', false);
   });
 
-  it('POST /api/facebook/automate with valid token but invalid action → 401 or 400', async () => {
-    const jwt = await import('jsonwebtoken');
-    const secret = process.env.JWT_SECRET || 'test-secret';
-    const fakeToken = jwt.default.sign({ userId: 'fake-id-001', username: 'ghost' }, secret, { expiresIn: '1h' });
-
+  it('POST /api/facebook/automate with valid token but invalid action → 400', async () => {
     const res = await request(app)
       .post('/api/facebook/automate')
-      .set('Authorization', `Bearer ${fakeToken}`)
-      .send({ action: 'INVALID_ACTION', authCookie: { c_user: '123', xs: 'abc' } });
-
-    expect([400, 401, 500]).toContain(res.status);
+      .set('Authorization', `Bearer ${token}`)
+      .send({ action: 'INVALID_ACTION', authCookie: VALID_COOKIE });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/action must be one of/);
   });
 
   // ─── Scrape action validation ─────────────────────────────────────────────
 
-  it('POST /api/facebook/scrape with valid token but missing action → 401 or 400', async () => {
-    const jwt = await import('jsonwebtoken');
-    const secret = process.env.JWT_SECRET || 'test-secret';
-    const fakeToken = jwt.default.sign({ userId: 'fake-id-002', username: 'ghost' }, secret, { expiresIn: '1h' });
-
+  it('POST /api/facebook/scrape with valid token but missing action → 400', async () => {
     const res = await request(app)
       .post('/api/facebook/scrape')
-      .set('Authorization', `Bearer ${fakeToken}`)
-      .send({ url: 'https://facebook.com/somepage' }); // missing action
-
-    expect([400, 401, 500]).toContain(res.status);
+      .set('Authorization', `Bearer ${token}`)
+      .send({ url: 'https://facebook.com/somepage' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/action must be one of/);
   });
 
-  it('POST /api/facebook/scrape with valid token but invalid action → 401 or 400', async () => {
-    const jwt = await import('jsonwebtoken');
-    const secret = process.env.JWT_SECRET || 'test-secret';
-    const fakeToken = jwt.default.sign({ userId: 'fake-id-003', username: 'ghost' }, secret, { expiresIn: '1h' });
-
+  it('POST /api/facebook/scrape with valid token but invalid action → 400', async () => {
     const res = await request(app)
       .post('/api/facebook/scrape')
-      .set('Authorization', `Bearer ${fakeToken}`)
+      .set('Authorization', `Bearer ${token}`)
       .send({ action: 'UNKNOWN', url: 'https://facebook.com/somepage' });
-
-    expect([400, 401, 500]).toContain(res.status);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/action must be one of/);
   });
 
-  // ─── Auth cookie guard (body validation, runs after auth) ─────────────────
-  // When the auth middleware blocks with 401, the cookie guard is never reached.
-  // This test documents the expected contract: no cookie → 400 (if auth passes).
+  // ─── Auth cookie guard ────────────────────────────────────────────────────
 
-  it('POST /api/facebook/automate with valid token but missing authCookie → 400 or 401', async () => {
-    const jwt = await import('jsonwebtoken');
-    const secret = process.env.JWT_SECRET || 'test-secret';
-    const fakeToken = jwt.default.sign({ userId: 'fake-id-004', username: 'ghost' }, secret, { expiresIn: '1h' });
+  it('POST /api/facebook/automate with valid token but missing authCookie → 400', async () => {
+    const res = await request(app)
+      .post('/api/facebook/automate')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ action: 'like', urls: ['https://facebook.com/post/1'] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/session is required/);
+  });
 
+  it('POST /api/facebook/automate with non-existent user token → 401', async () => {
+    const fakeToken = makeTestToken('nonexistent-user-000', 'ghost');
     const res = await request(app)
       .post('/api/facebook/automate')
       .set('Authorization', `Bearer ${fakeToken}`)
-      .send({ action: 'like', urls: ['https://facebook.com/post/1'] }); // no authCookie
-
-    // 401 = auth middleware blocked (no DB / user not found)
-    // 400 = cookie guard fired (auth passed, validation layer reached)
-    expect([400, 401, 500]).toContain(res.status);
+      .send({ action: 'like', urls: ['https://facebook.com/post/1'], authCookie: VALID_COOKIE });
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error');
   });
 });
