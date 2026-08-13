@@ -142,7 +142,7 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
  */
 router.post('/scrape', async (req, res) => {
   try {
-    const { action, url, query, authCookie } = req.body ?? {};
+    const { action, url, query, type, parallel, location, limit, authCookie } = req.body ?? {};
 
     const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace'];
     if (!action || !VALID_ACTIONS.includes(action)) {
@@ -157,6 +157,16 @@ router.post('/scrape', async (req, res) => {
     }
     if (['search', 'marketplace'].includes(action) && !query?.trim()) {
       return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
+    }
+
+    if (action === 'search' && type !== undefined && type !== null) {
+      const VALID_TYPES = ['posts', 'people', 'pages', 'groups', 'all'];
+      if (!VALID_TYPES.includes(type)) {
+        return res.status(400).json({
+          ok: false,
+          error: `search type must be one of: ${VALID_TYPES.join(', ')}`,
+        });
+      }
     }
 
     // Fail fast on malformed session cookie before launching a browser / hitting the network.
@@ -192,7 +202,13 @@ router.post('/scrape', async (req, res) => {
     const scrapeArgs = {
       ...options,
       ...(action === 'search' || action === 'marketplace'
-        ? { query: query.trim() }
+        ? {
+            query: query.trim(),
+            ...(type && { type }),
+            ...(parallel !== undefined && { parallel }),
+            ...(location && { location: location.trim() }),
+            ...(limit !== undefined && { limit: Number(limit) }),
+          }
         : { url: url.trim() }),
     };
     const result = await scrape('facebook', action, scrapeArgs);

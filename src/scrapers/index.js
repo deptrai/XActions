@@ -187,7 +187,20 @@ export async function scrape(platform, action, options = {}) {
     marketplace: 'scrapeMarketplace',
   };
 
-  const fnName = actionMap[action] || action;
+  // Platform-specific action map for Facebook (Story 7.2). Prefer this over the
+  // global actionMap so 'search' maps to 'searchFacebook' instead of 'searchTweets'.
+  const platformActionMap = {
+    facebook: {
+      search: 'searchFacebook',
+      post_comments: 'scrapeFacebookComments',
+      group_posts: 'scrapeFacebookGroupPosts',
+      group_comments: 'scrapeFacebookGroupComments',
+    },
+  };
+
+  const platformKey = platformName === 'fb' ? 'facebook' : platformName;
+  const platformSpecific = platformActionMap[platformKey]?.[action];
+  const fnName = platformSpecific || actionMap[action] || action;
   const fn = mod[fnName];
 
   if (typeof fn !== 'function') {

@@ -19,6 +19,7 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { generateSync as totpGenerateSync } from 'otplib';
 import { generateFingerprint, applyFingerprint, applyNavigatorOverrides, applyWebRTCOverride } from './fingerprint.js';
 import { warmSession } from './warmup.js';
+import { extractHydrationJson } from './hydration.js';
 
 export { warmSession };
 
@@ -922,110 +923,415 @@ export function normalizeSearchResult(raw) {
 }
 
 // ============================================================================
-// Search Posts
+// Multi-Type Search Normalizers (pure — testable without Puppeteer)
 // ============================================================================
 
-/**
- * Search Facebook posts by query
- * @param {Page} page - Puppeteer page instance
- * @param {string} query - Search query string
- * @param {Object} options
- * @param {number} [options.limit=30] - Max results to return
- * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
- * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
- * @param {Function} [options.delay=randomDelay] - Injectable delay seam
- * @returns {Promise<Array>} Normalized search result array
- */
-export async function searchTweets(page, query, options = {}) {
-  const { limit = 30, onProgress, maxRetries = 8, delay = randomDelay } = options;
-  const searchUrl = `${FACEBOOK_BASE}/search/posts?q=${encodeURIComponent(query)}`;
+function extractHandleFromUrl(input) {
+  if (typeof input !== 'string' || !input.trim()) return null;
+  try {
+    const u = new URL(input);
+    const path = u.pathname.replace(/^\/+/, '').split('/')[0];
+    if (!path) return null;
+    if (/^profile\.php\?id=\d+/i.test(path)) return path;
+    const m = path.match(/^([^/?&#]+)/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+export function normalizePostSearchResult(raw) {
+  const {
+    id,
+    text,
+    message,
+    message_text,
+    messageText,
+    author,
+    actor,
+    timestamp,
+    published_time,
+    publishedTime,
+    url,
+    postUrl,
+  } = raw || {};
+
+  const resolvedText = text || message || message_text || messageText || null;
+  const resolvedUrl = url || postUrl || null;
+  const resolvedId = id || resolvedUrl || resolvedText?.slice(0, 60) || null;
+
+  return {
+    id: resolvedId,
+    text: resolvedText,
+    author: author || actor?.name || actor?.id || null,
+    timestamp: timestamp || published_time || publishedTime || null,
+    url: resolvedUrl,
+    platform: 'facebook',
+  };
+}
+
+export function normalizePeopleSearchResult(raw) {
+  const {
+    id,
+    name,
+    username,
+    url,
+    profileUrl,
+    profile_picture,
+    image,
+  } = raw || {};
+
+  const resolvedUrl = url || profileUrl || (id && /^\d+$/.test(String(id)) ? `${FACEBOOK_BASE}/profile.php?id=${id}` : null);
+  const resolvedUsername = username || extractHandleFromUrl(resolvedUrl);
+  const resolvedId = id || resolvedUrl || resolvedUsername || null;
+
+  return {
+    id: resolvedId,
+    name: name || null,
+    username: resolvedUsername,
+    profileUrl: resolvedUrl,
+    image: profile_picture || image || null,
+    platform: 'facebook',
+  };
+}
+
+export function normalizePageSearchResult(raw) {
+  const {
+    id,
+    name,
+    category,
+    category_name,
+    categoryName,
+    likes,
+    fan_count,
+    fanCount,
+    url,
+    pageUrl,
+    profile_picture,
+    image,
+  } = raw || {};
+
+  const resolvedUrl = url || pageUrl || (id && /^\d+$/.test(String(id)) ? `${FACEBOOK_BASE}/pages/${id}` : null);
+  const resolvedId = id || resolvedUrl || null;
+
+  return {
+    id: resolvedId,
+    name: name || null,
+    category: category || category_name || categoryName || null,
+    likes: likes || fan_count || fanCount || null,
+    pageUrl: resolvedUrl,
+    image: profile_picture || image || null,
+    platform: 'facebook',
+  };
+}
+
+export function normalizeGroupSearchResult(raw) {
+  const {
+    id,
+    name,
+    members,
+    member_count,
+    memberCount,
+    privacy,
+    url,
+    groupUrl,
+    profile_picture,
+    image,
+  } = raw || {};
+
+  const resolvedUrl = url || groupUrl || (id && /^\d+$/.test(String(id)) ? `${FACEBOOK_BASE}/groups/${id}` : null);
+  const resolvedId = id || resolvedUrl || null;
+
+  return {
+    id: resolvedId,
+    name: name || null,
+    members: members || member_count || memberCount || null,
+    privacy: privacy || null,
+    groupUrl: resolvedUrl,
+    image: profile_picture || image || null,
+    platform: 'facebook',
+  };
+}
+
+// ============================================================================
+// Multi-Type Search
+// ============================================================================
+
+const VALID_SEARCH_TYPES = new Set(['posts', 'people', 'pages', 'groups', 'all']);
+
+const SEARCH_TYPE_URLS = {
+  posts: '/search/posts',
+  people: '/search/people',
+  pages: '/search/pages',
+  groups: '/search/groups',
+};
+
+const SEARCH_TYPENAMES = {
+  posts: ['Story'],
+  people: ['User'],
+  pages: ['Page'],
+  groups: ['Group'],
+};
+
+function normalizeByType(raw, type) {
+  switch (type) {
+    case 'posts': return normalizePostSearchResult(raw);
+    case 'people': return normalizePeopleSearchResult(raw);
+    case 'pages': return normalizePageSearchResult(raw);
+    case 'groups': return normalizeGroupSearchResult(raw);
+    default: return null;
+  }
+}
+
+function isCheckpointUrl(url) {
+  if (typeof url !== 'string') return false;
+  return url.includes('/checkpoint/') || url.includes('facebook.com/checkpoint');
+}
+
+function assertNoCheckpoint(page, source = 'search') {
+  const currentUrl = typeof page.url === 'function' ? page.url() : null;
+  if (isCheckpointUrl(currentUrl)) {
+    throw new Error(`❌ Facebook ${source} hit a checkpoint. Account may need security review.`);
+  }
+}
+
+function validateSearchType(type) {
+  if (!type || !VALID_SEARCH_TYPES.has(type)) {
+    throw new Error(`❌ search type must be one of: ${Array.from(VALID_SEARCH_TYPES).join(', ')}`);
+  }
+}
+
+function validateSearchQuery(query) {
+  if (typeof query !== 'string' || !query.trim()) {
+    throw new Error('❌ search query must be a non-empty string');
+  }
+}
+
+function validateSearchLimit(limit) {
+  const n = Number(limit);
+  if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) {
+    throw new Error('❌ search limit must be a positive integer');
+  }
+}
+
+function buildSearchQuery(query, location) {
+  let q = query.trim();
+  if (typeof location === 'string' && location.trim()) {
+    q = `${q} near ${location.trim()}`;
+  }
+  return q;
+}
+
+async function extractPostsFromDom(page) {
+  const rawResults = await page.evaluate((nonProfile) => {
+    const NON_PROFILE = new Set(nonProfile);
+    const articles = document.querySelectorAll('[role="article"]');
+    return Array.from(articles).map((article) => {
+      const textEls = article.querySelectorAll('[dir="auto"]');
+      const texts = Array.from(textEls)
+        .map((el) => {
+          let t = el.textContent?.trim() || '';
+          t = t.replace(/\u034F/g, '');
+          t = t.replace(/[\u200B-\u200D\uFEFF\u2060]/g, '').trim();
+          return t;
+        })
+        .filter((t) => t && t.length > 10);
+
+      const text = texts.reduce((best, t) => {
+        if (!best) return t;
+        const bestSpaces = (best.match(/\s+/g) || []).length;
+        const tSpaces = (t.match(/\s+/g) || []).length;
+        return tSpaces > bestSpaces ? t : best;
+      }, '') || null;
+
+      const allLinks = Array.from(article.querySelectorAll('a[href]'));
+      let author = null;
+      for (const a of allLinks) {
+        const href = a.getAttribute('href') || '';
+        if (!href.includes('facebook.com/') && !href.startsWith('/')) continue;
+        if (href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid') || href.includes('/search/')) continue;
+        if (href.includes('l.php') || href.includes('/l/')) continue;
+        const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+        const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
+        if (idMatch) { author = `profile.php?id=${idMatch[1]}`; break; }
+        const segMatch = abs.match(/facebook\.com\/([^/?&#]+)/i);
+        if (segMatch && !NON_PROFILE.has(segMatch[1].toLowerCase())) { author = segMatch[1]; break; }
+      }
+
+      const timeEl = article.querySelector('abbr[data-utime], time[datetime]');
+      let timestamp = timeEl?.getAttribute('data-utime') || timeEl?.getAttribute('datetime') || null;
+      if (!timestamp) {
+        const timeLink = allLinks.find((a) => a.querySelector('span') && /\d/.test(a.textContent));
+        const ariaLabel = timeLink?.getAttribute('aria-label') || timeLink?.querySelector('[aria-label]')?.getAttribute('aria-label');
+        timestamp = ariaLabel || timeLink?.textContent?.trim() || null;
+      }
+
+      const postLinkEl = allLinks.find((a) => {
+        const href = a.getAttribute('href') || '';
+        return href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid');
+      });
+      const postHref = postLinkEl?.getAttribute('href') || null;
+      const url = postHref
+        ? postHref.startsWith('http') ? postHref : `https://www.facebook.com${postHref}`
+        : null;
+
+      const id = url || text?.slice(0, 60) || null;
+      return { id, text, author, timestamp, url };
+    }).filter((r) => r.id);
+  }, NON_PROFILE_SEGMENTS);
+
+  return rawResults;
+}
+
+async function extractListItemsFromDom(page, type) {
+  const rawResults = await page.evaluate((searchType) => {
+    const items = document.querySelectorAll('[role="listitem"], [role="article"]');
+    return Array.from(items).map((item) => {
+      const link = item.querySelector('a[href]');
+      const href = link?.getAttribute('href') || '';
+      if (!href) return null;
+
+      const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+      const name = item.textContent?.trim().split('\n')[0] || null;
+      const img = item.querySelector('img');
+      const image = img?.getAttribute('src') || null;
+
+      const lines = Array.from(item.querySelectorAll('*'))
+        .map((el) => el.textContent?.trim())
+        .filter(Boolean);
+
+      const counts = lines.map((t) => t.match(/([\d,.]+[KkMm]?\+?)\s*(members?|people|likes?)/i)).filter(Boolean);
+      const members = counts.find((m) => /members?|people/i.test(m[0]))?.[1] || null;
+      const likes = counts.find((m) => /likes?/i.test(m[0]))?.[1] || null;
+      const privacy = lines.find((t) => /public|private|closed|secret/i.test(t)) || null;
+      const category = lines.find((t) => t.length > 0 && t !== name && t !== members && t !== likes && t !== privacy) || null;
+
+      const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
+      const id = idMatch ? `profile.php?id=${idMatch[1]}` : (abs.match(/facebook\.com\/([^/?&#]+)/i)?.[1] || abs);
+
+      const base = { id, name, url: abs, image };
+
+      if (searchType === 'people') {
+        return { ...base, username: id, profileUrl: abs };
+      }
+      if (searchType === 'pages') {
+        return { ...base, category, likes, pageUrl: abs };
+      }
+      if (searchType === 'groups') {
+        return { ...base, members, privacy, groupUrl: abs };
+      }
+      return base;
+    }).filter(Boolean);
+  }, type);
+
+  return rawResults;
+}
+
+async function searchByType(page, query, type, options = {}) {
+  const {
+    limit = 30,
+    onProgress,
+    maxRetries = 8,
+    maxScrolls = 50,
+    delay = randomDelay,
+  } = options;
+
+  const searchUrl = `${FACEBOOK_BASE}${SEARCH_TYPE_URLS[type]}?q=${encodeURIComponent(query)}`;
 
   await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  assertNoCheckpoint(page, `${type} search`);
   await delay(2000, 4000);
 
   const results = new Map();
   let retries = 0;
+  let scrolls = 0;
 
-  while (results.size < limit && retries < maxRetries) {
-    const rawResults = await page.evaluate((nonProfile) => {
-      const NON_PROFILE = new Set(nonProfile);
-      const articles = document.querySelectorAll('[role="article"]');
-      return Array.from(articles).map((article) => {
-        // Text content — pick the [dir="auto"] element with real text (not FB anti-scraping garbled text)
-        const textEls = article.querySelectorAll('[dir="auto"]');
-        const texts = Array.from(textEls)
-          .map((el) => {
-            let t = el.textContent?.trim() || '';
-            // Remove Facebook anti-scraping characters: U+034F (CGJ) inserted between chars
-            t = t.replace(/\u034F/g, '');
-            // Remove zero-width spaces and other invisible chars
-            t = t.replace(/[\u200B-\u200D\uFEFF\u2060]/g, '').trim();
-            return t;
-          })
-          .filter((t) => t && t.length > 10);
-        // Pick text with most spaces (real text has words separated by spaces)
-        const text = texts.reduce((best, t) => {
-          if (!best) return t;
-          const bestSpaces = (best.match(/\s+/g) || []).length;
-          const tSpaces = (t.match(/\s+/g) || []).length;
-          return tSpaces > bestSpaces ? t : best;
-        }, '') || null;
-
-        // Author — first real profile link in article (skip permalinks, non-profile segments, l.php redirects)
-        const allLinks = Array.from(article.querySelectorAll('a[href]'));
-        let author = null;
-        for (const a of allLinks) {
-          const href = a.getAttribute('href') || '';
-          if (!href.includes('facebook.com/') && !href.startsWith('/')) continue;
-          if (href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid') || href.includes('/search/')) continue;
-          if (href.includes('l.php') || href.includes('/l/')) continue;
-          const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
-          // profile.php?id=N → preserve the canonical numeric identifier
-          const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
-          if (idMatch) { author = `profile.php?id=${idMatch[1]}`; break; }
-          const segMatch = abs.match(/facebook\.com\/([^/?&#]+)/i);
-          if (segMatch && !NON_PROFILE.has(segMatch[1].toLowerCase())) { author = segMatch[1]; break; }
-        }
-
-        // Timestamp — try abbr/time first, then aria-label on links (Facebook 2025+ uses relative spans)
-        const timeEl = article.querySelector('abbr[data-utime], time[datetime]');
-        let timestamp = timeEl?.getAttribute('data-utime') || timeEl?.getAttribute('datetime') || null;
-        if (!timestamp) {
-          const timeLink = allLinks.find((a) => a.querySelector('span') && /\d/.test(a.textContent));
-          const ariaLabel = timeLink?.getAttribute('aria-label') || timeLink?.querySelector('[aria-label]')?.getAttribute('aria-label');
-          timestamp = ariaLabel || timeLink?.textContent?.trim() || null;
-        }
-
-        // Post URL — prefer permalink
-        const postLinkEl = allLinks.find((a) => {
-          const href = a.getAttribute('href') || '';
-          return href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid');
-        });
-        const postHref = postLinkEl?.getAttribute('href') || null;
-        const url = postHref
-          ? postHref.startsWith('http') ? postHref : `https://www.facebook.com${postHref}`
-          : null;
-
-        const id = url || text?.slice(0, 60) || null;
-        return { id, text, author, timestamp, url };
-      }).filter((r) => r.id);
-    }, NON_PROFILE_SEGMENTS);
-
+  while (results.size < limit && retries < maxRetries && scrolls < maxScrolls) {
     const prevSize = results.size;
-    rawResults.forEach((raw) => {
-      if (!results.has(raw.id)) {
-        results.set(raw.id, normalizeSearchResult(raw));
-      }
+
+    const hydrated = await extractHydrationJson(page, SEARCH_TYPENAMES[type], {
+      fallbackExtractor: async () => [],
     });
 
+    for (const raw of hydrated) {
+      const normalized = normalizeByType(raw, type);
+      if (normalized && normalized.id) {
+        results.set(normalized.id, normalized);
+      }
+    }
+
+    if (results.size < limit) {
+      const domResults = type === 'posts'
+        ? await extractPostsFromDom(page)
+        : await extractListItemsFromDom(page, type);
+
+      for (const raw of domResults) {
+        const normalized = normalizeByType(raw, type);
+        if (normalized && normalized.id) {
+          results.set(normalized.id, normalized);
+        }
+      }
+    }
+
     if (onProgress) onProgress({ scraped: results.size, limit });
-    if (results.size === prevSize) { retries++; } else { retries = 0; }
+
+    if (results.size === prevSize) {
+      retries++;
+    } else {
+      retries = 0;
+    }
 
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await delay(1500, 3000);
+    scrolls++;
   }
 
   return Array.from(results.values()).slice(0, limit);
+}
+
+/**
+ * Search Facebook by multiple types (posts, people, pages, groups) or all.
+ * @param {Page} page - Puppeteer page instance
+ * @param {string} query - Search query string
+ * @param {Object} options
+ * @param {string} [options.type='posts'] - 'posts' | 'people' | 'pages' | 'groups' | 'all'
+ * @param {string} [options.location] - Optional location hint, appended to query
+ * @param {number} [options.limit=30] - Max results per type
+ * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
+ * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
+ * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
+ * @param {Function} [options.delay=randomDelay] - Injectable delay seam
+ * @returns {Promise<Object|Array>} Normalized results (array for single type, object for 'all')
+ */
+export async function searchFacebook(page, query, options = {}) {
+  const { type = 'posts', location, limit = 30 } = options;
+
+  validateSearchQuery(query);
+  validateSearchType(type);
+  validateSearchLimit(limit);
+
+  const effectiveQuery = buildSearchQuery(query, location);
+
+  if (type === 'all') {
+    const posts = await searchByType(page, effectiveQuery, 'posts', options);
+    const people = await searchByType(page, effectiveQuery, 'people', options);
+    const pages = await searchByType(page, effectiveQuery, 'pages', options);
+    const groups = await searchByType(page, effectiveQuery, 'groups', options);
+    return { posts, people, pages, groups };
+  }
+
+  return searchByType(page, effectiveQuery, type, options);
+}
+
+/**
+ * Backward-compatible thin wrapper around searchFacebook for existing callers.
+ * @param {Page} page - Puppeteer page instance
+ * @param {string} query - Search query string
+ * @param {Object} options
+ * @returns {Promise<Array>} Normalized post search result array
+ */
+export async function searchTweets(page, query, options = {}) {
+  return searchFacebook(page, query, { ...options, type: 'posts' });
 }
 
 // ============================================================================
@@ -1400,6 +1706,7 @@ export default {
   scrapeFollowers,
   scrapeTweets,
   searchTweets,
+  searchFacebook,
   scrapeGroupMembers,
   scrapeMarketplace,
 };

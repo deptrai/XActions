@@ -87,6 +87,12 @@ describe('POST /api/facebook/scrape — integration', () => {
     expect(res.body.error).toMatch(/requires query/);
   });
 
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 when search action has invalid type`, async () => {
+    const res = await postScrape({ action: 'search', query: 'hello', type: 'invalid' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/search type must be one of/);
+  });
+
   it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 for an invalidly shaped raw cookie`, async () => {
     const res = await postScrape({
       action: 'profile',
