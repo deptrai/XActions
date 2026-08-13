@@ -120,7 +120,7 @@ export async function checkAccountHealth(account, options = {}) {
   const html = res.data || '';
   const jar = buildCookieJar(cookie, res.headers?.['set-cookie'] || []);
 
-  const hasCUser = /\d+/.test(jar.get('c_user') || '');
+  const hasCUser = /^\d+$/.test(jar.get('c_user') || '');
   const hasXs = (jar.get('xs') || '').length > 0;
   const tokens = parseFacebookTokens(html);
 

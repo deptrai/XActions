@@ -20,17 +20,18 @@
  * @param {Set<string>} typeSet
  * @param {any[]} results
  */
-function walkJson(value, typeSet, results) {
+function walkJson(value, typeSet, results, visited) {
   if (Array.isArray(value)) {
-    for (const item of value) walkJson(item, typeSet, results);
+    for (const item of value) walkJson(item, typeSet, results, visited);
   } else if (value && typeof value === 'object') {
+    if (visited.has(value)) return;
+    visited.add(value);
     if (value.__typename && typeSet.has(value.__typename)) {
       results.push(value);
     }
     for (const key of Object.keys(value)) {
-      // Avoid infinite recursion on self-referencing objects (rare, but defensive)
       if (key === '__typename') continue;
-      walkJson(value[key], typeSet, results);
+      walkJson(value[key], typeSet, results, visited);
     }
   }
 }
@@ -68,7 +69,7 @@ export async function extractHydrationJson(page, typenames, options = {}) {
       if (!text.trim()) continue;
       try {
         const data = JSON.parse(text);
-        walkJson(data, typeSet, collected);
+        walkJson(data, typeSet, collected, new WeakSet());
       } catch {
         // Invalid JSON inside a data-content-len script — skip silently
       }

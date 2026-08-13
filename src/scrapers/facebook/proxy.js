@@ -135,10 +135,12 @@ export function parseFlatProxy(raw) {
   if (parts.length < 2) return null;
   const host     = parts[0] || null;
   const portStr  = parts[1] || null;
+  const portNum  = Number(portStr);
+  if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) return null;
   const username = parts.length > 2 ? (parts[2] || null) : null;
   // Password may contain colons — rejoin everything after parts[2]
   const password = parts.length > 3 ? parts.slice(3).join(':') : null;
-  return buildDescriptor(host, portStr, username, password);
+  return buildDescriptor(host, String(portNum), username, password);
 }
 
 // ============================================================================

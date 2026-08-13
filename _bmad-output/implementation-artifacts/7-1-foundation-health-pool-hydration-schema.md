@@ -4,7 +4,7 @@
 baseline_commit: 55863bcd05ec1afe1639d39b4fb788d1d1ea6888
 ---
 
-Status: review
+Status: done
 
 ## Change Log
 
@@ -146,3 +146,18 @@ swe-1.7-max
 - tests/scrapers/facebook/hydration.test.js
 - tests/api/facebook-accounts.test.js
 - tests/scrapers/facebook-profile.test.js
+
+### Review Findings
+
+- [x] [Review][Patch] PATCH route is a single commented line with literal `\n` characters; the `router.patch` block is not registered [api/routes/facebookAccounts.js:211] — the code was inserted with escaped newlines, so it is parsed as one giant comment. Must be reformatted and the `router.patch` call must become live code.
+- [x] [Review][Patch] PATCH `prisma.facebookAccount.update` omits `userId` from the where clause [api/routes/facebookAccounts.js:211] — ownership check uses `findFirst`, but the update is only keyed by `id`, allowing a TOCTOU cross-user update. Add `userId: req.user.id` to the update `where`.
+- [x] [Review][Patch] `walkJson` does not track visited objects; circular hydration JSON will stack-overflow [src/scrapers/facebook/hydration.js:23] — the comment says it avoids self-referencing objects, but it only skips the `__typename` key. Add a `WeakSet` of visited objects.
+- [x] [Review][Patch] `parseFlatProxy` accepts any non-empty `port` string; invalid ports like `abc` or `99999` pass validation [src/scrapers/facebook/proxy.js:132] — validate `parts[1]` is a numeric port in 1–65535.
+- [x] [Review][Patch] `runBatch` allows negative or non-numeric `maxConcurrency` to reach `p-limit` [api/services/facebookAccountPool.js:123] — `Number(-5) || DEFAULT` yields `-5` and `Math.min(-5, 8)` = `-5`. Clamp with `Math.max(1, ...)`.
+- [x] [Review][Patch] `buildUserDataDir` strips all non-digits; a non-numeric `c_user` yields an empty profile directory name [api/services/facebookAccountPool.js:43] — guard before `fs.mkdirSync` and throw or use the raw value when it has no digits.
+- [x] [Review][Patch] `resolveAccountContext` does not validate `c_user`/`xs` after JSON parse [api/services/facebookAccountPool.js:63] — an account with valid JSON but missing `c_user` or `xs` is returned with `undefined` values and used as a live context. Guard and return `null`.
+- [x] [Review][Patch] `runBatch` `accountIds` guard only checks `.length`, allowing non-arrays like strings to pass [api/services/facebookAccountPool.js:115] — add `!Array.isArray(accountIds)` check.
+- [x] [Review][Patch] `runBatch` does not validate that each `task` is a function [api/services/facebookAccountPool.js:150] — a non-callable task throws at runtime. Add `typeof task !== 'function'` guard.
+- [x] [Review][Patch] `checkAccountHealth` `c_user` jar check is not anchored [api/services/facebookHealth.js:123] — `/\d+/` accepts strings containing a digit, not all-digit `c_user`. Use `/^\d+$/` or the existing `C_USER_RE` pattern.
+- [x] [Review][Patch] `checkAccountHealth` cache is not invalidated when account cookie/proxy changes [api/services/facebookHealth.js:84] — POST/PATCH/DELETE routes update the account but leave stale health records; the pool can use a dead/invalid account until the 5-minute TTL expires. Delete/invalidate the `FacebookAccountHealth` row on mutation.
+- [x] [Review][Patch] `runBatch` checkpoint detection relies on error message substrings [api/services/facebookAccountPool.js:191] — Puppeteer errors may not include 'checkpoint'/'security check'/'CAPTCHA', causing non-retry or over-retry. Consider reusing the health service or a page-content-based signal.

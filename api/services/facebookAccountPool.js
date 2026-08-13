@@ -40,7 +40,11 @@ const DEFAULT_DELAY_MAX = 8000;
  * @returns {string}
  */
 export function buildUserDataDir(c_user) {
-  const dir = path.resolve(process.cwd(), '.data', 'facebook-profiles', String(c_user).replace(/\D/g, ''));
+  const clean = String(c_user).replace(/\D/g, '');
+  if (!clean) {
+    throw new Error('❌ buildUserDataDir requires a numeric c_user');
+  }
+  const dir = path.resolve(process.cwd(), '.data', 'facebook-profiles', clean);
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -66,6 +70,7 @@ export async function resolveAccountContext(account, options = {}) {
   } catch {
     return null;
   }
+  if (!c_user || !xs) return null;
 
   let proxyServer = null;
   let proxyAuth = null;
@@ -112,15 +117,15 @@ export async function runBatch(tasks, options = {}) {
     resolveAccountContextImpl,
   } = options;
 
-  if (!accountIds || accountIds.length === 0) {
-    throw new Error('❌ runBatch requires at least one accountId');
+  if (!Array.isArray(accountIds) || accountIds.length === 0) {
+    throw new Error('❌ runBatch requires a non-empty accountIds array');
   }
 
   if (!Array.isArray(tasks) || tasks.length === 0) {
     return { results: [], accountUsage: {} };
   }
 
-  const concurrency = Math.min(Number(maxConcurrency) || DEFAULT_MAX_CONCURRENCY, MAX_CONCURRENCY);
+  const concurrency = Math.max(1, Math.min(Number(maxConcurrency) || DEFAULT_MAX_CONCURRENCY, MAX_CONCURRENCY));
 
   const accounts = await prisma.facebookAccount.findMany({
     where: { id: { in: accountIds } },
@@ -147,8 +152,11 @@ export async function runBatch(tasks, options = {}) {
   const limit = pLimit(concurrency);
 
   const results = await Promise.all(
-    tasks.map((task, index) =>
-      limit(async () => {
+    tasks.map((task, index) => {
+      if (typeof task !== 'function') {
+        throw new Error(`❌ task at index ${index} must be a function`);
+      }
+      return limit(async () => {
         // stagger launches by index to spread load; later tasks wait a bit
         await randomDelay(0, Math.min(delayMax, delayMin + index * 1000));
 
@@ -187,11 +195,18 @@ export async function runBatch(tasks, options = {}) {
           } catch (err) {
             if (browser) await browser.close().catch(() => {});
 
+            let pageUrl = '';
+            try { pageUrl = page?.url?.() || ''; } catch { pageUrl = ''; }
             const message = err?.message || '';
+            const lowerMessage = message.toLowerCase();
+            const lowerUrl = pageUrl.toLowerCase();
             const isCheckpoint =
-              message.includes('checkpoint') ||
-              message.includes('security check') ||
-              message.includes('CAPTCHA');
+              lowerMessage.includes('checkpoint') ||
+              lowerMessage.includes('security check') ||
+              lowerMessage.includes('captcha') ||
+              lowerUrl.includes('/checkpoint/') ||
+              lowerUrl.includes('facebook.com/checkpoint') ||
+              lowerUrl.includes('help/1865253247038416');
 
             if (isCheckpoint) {
               usage[ctx.id].checkpoints += 1;
@@ -206,7 +221,7 @@ export async function runBatch(tasks, options = {}) {
 
         throw new Error('❌ All active accounts hit checkpoint while running task');
       })
-    )
+    })
   );
 
   return { results, accountUsage: usage };

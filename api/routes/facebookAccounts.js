@@ -75,6 +75,14 @@ export function decrypt(encryptedData) {
   }
 }
 
+async function invalidateHealthCache(accountId) {
+  try {
+    await prisma.facebookAccountHealth.deleteMany({ where: { accountId } });
+  } catch {
+    // Swallow — the health row may not exist yet.
+  }
+}
+
 // ============================================================================
 // Validation helpers
 // ============================================================================
@@ -135,6 +143,7 @@ router.post('/', authenticate, async (req, res) => {
       data: { userId: req.user.id, label, encryptedCookie, encryptedProxy },
       select: { id: true, label: true },  // NFR3: never return encrypted blob
     });
+    await invalidateHealthCache(account.id);
 
     return res.status(201).json({ ok: true, id: account.id, label: account.label });
   } catch (err) {
@@ -201,6 +210,7 @@ router.delete('/:id', authenticate, async (req, res) => {
 
     // Ownership enforced atomically at the DB layer (userId in the where clause).
     await prisma.facebookAccount.delete({ where: { id, userId: req.user.id } });
+    await invalidateHealthCache(id);
     return res.json({ ok: true });
   } catch (err) {
     console.error('❌ DELETE /api/facebook/accounts error:', err?.code || err?.name || 'unknown');
@@ -208,7 +218,49 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
-// ============================================================================\n// PATCH /api/facebook/accounts/:id — update proxy (Story 7.1 AC4)\n// ============================================================================\n\nrouter.patch('/:id', authenticate, async (req, res) => {\n  try {\n    const { id } = req.params;\n    const { proxy } = req.body ?? {};\n\n    const account = await prisma.facebookAccount.findFirst({\n      where: { id, userId: req.user.id },\n      select: { id: true },\n    });\n    if (!account) return res.status(404).json({ ok: false, error: 'Account not found' });\n\n    if (proxy === undefined || proxy === null) {\n      return res.status(400).json({ ok: false, error: 'proxy is required' });\n    }\n    if (typeof proxy !== 'string' || !proxy.trim()) {\n      return res.status(400).json({ ok: false, error: 'proxy must be a non-empty string' });\n    }\n    if (!parseFlatProxy(proxy.trim())) {\n      return res.status(400).json({ ok: false, error: 'proxy must be in "host:port" or "host:port:user:pass" format' });\n    }\n\n    const encryptedProxy = encrypt(proxy.trim());\n    await prisma.facebookAccount.update({\n      where: { id },\n      data: { encryptedProxy },\n    });\n    return res.json({ ok: true });\n  } catch (err) {\n    if (err?.code === 'P2025') {\n      return res.status(404).json({ ok: false, error: 'Account not found' });\n    }\n    console.error('❌ PATCH /api/facebook/accounts/:id error:', err?.code || err?.name || 'unknown');\n    return res.status(500).json({ ok: false, error: 'Failed to update account proxy' });\n  }\n});\n\n// ============================================================================\n// Cookie resolution helper — accountId → decrypted { c_user, xs } (Story 5.5 D1)
+// ============================================================================
+// PATCH /api/facebook/accounts/:id — update proxy (Story 7.1 AC4)
+// ============================================================================
+
+router.patch('/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { proxy } = req.body ?? {};
+
+    const account = await prisma.facebookAccount.findFirst({
+      where: { id, userId: req.user.id },
+      select: { id: true },
+    });
+    if (!account) return res.status(404).json({ ok: false, error: 'Account not found' });
+
+    if (proxy === undefined || proxy === null) {
+      return res.status(400).json({ ok: false, error: 'proxy is required' });
+    }
+    if (typeof proxy !== 'string' || !proxy.trim()) {
+      return res.status(400).json({ ok: false, error: 'proxy must be a non-empty string' });
+    }
+    if (!parseFlatProxy(proxy.trim())) {
+      return res.status(400).json({ ok: false, error: 'proxy must be in "host:port" or "host:port:user:pass" format' });
+    }
+
+    const encryptedProxy = encrypt(proxy.trim());
+    await prisma.facebookAccount.update({
+      where: { id, userId: req.user.id },
+      data: { encryptedProxy },
+    });
+    await invalidateHealthCache(id);
+    return res.json({ ok: true });
+  } catch (err) {
+    if (err?.code === 'P2025') {
+      return res.status(404).json({ ok: false, error: 'Account not found' });
+    }
+    console.error('❌ PATCH /api/facebook/accounts/:id error:', err?.code || err?.name || 'unknown');
+    return res.status(500).json({ ok: false, error: 'Failed to update account proxy' });
+  }
+});
+
+// ============================================================================
+// Cookie resolution helper — accountId → decrypted { c_user, xs } (Story 5.5 D1)
 // Used by /api/facebook/automate to bridge a saved account into the run pipeline
 // without the raw cookie ever leaving the server (NFR3).
 // ============================================================================
