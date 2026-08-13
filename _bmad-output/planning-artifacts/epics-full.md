@@ -992,7 +992,7 @@ So that all advanced Facebook scrape actions are reliable, safe, and consistent.
 **And** cookie values are never logged
 
 **Given** an array of `tasks` and eligible `accountIds`
-**When** `facebookScrapeService.runBatch(tasks, { maxConcurrency, delayBetweenLaunches })` is called
+**When** `FacebookAccountPool.runBatch(tasks, { maxConcurrency, delayBetweenLaunches })` is called
 **Then** it filters only `active` accounts from the health cache
 **And** honors `FacebookAccount.proxy` if set
 **And** assigns each task to a live account with matching proxy using round-robin / LRU

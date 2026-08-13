@@ -8,7 +8,7 @@
 
 **FR:** FR-55, FR-56, FR-61  
 **NFR:** NFR-10, NFR-11, NFR-12, NFR-13, NFR-14, NFR-15  
-**File targets:** `api/services/facebookHealth.js` `[ASSUMPTION]`, `api/services/facebookAccountPool.js` `[ASSUMPTION]`, `src/scrapers/facebook/hydration.js` `[ASSUMPTION]`, `api/services/facebookScrape.js` (for `runBatch`), `api/routes/facebookAccounts.js`, Prisma schema
+**File targets:** `api/services/facebookHealth.js` `[ASSUMPTION]`, `api/services/facebookAccountPool.js` `[ASSUMPTION]`, `src/scrapers/facebook/hydration.js` `[ASSUMPTION]`, `api/routes/facebookAccounts.js`, Prisma schema
 
 ### Acceptance Criteria
 
@@ -22,7 +22,7 @@ Account health:
 - Cache TTL 5 phút; `checkAccountHealth(..., { force })` trả cache nếu `lastCheckAt` < 5 phút, nếu `force: true` hoặc hết TTL thì fetch lại.
 
 Account pool:
-- `facebookScrapeService.runBatch(tasks, { maxConcurrency: 4, delayBetweenLaunches, accountIds })`.
+- `FacebookAccountPool.runBatch(tasks, { maxConcurrency: 4, delayBetweenLaunches, accountIds })`.
 - Lọc active accounts từ health cache TTL 5 phút.
 - Honor `FacebookAccount.proxy` nếu có.
 - Gán task round-robin / LRU trong số account active với proxy khớp.
@@ -139,7 +139,7 @@ Group comments:
 
 **FR:** FR-63  
 **NFR:** NFR-10, NFR-13  
-**File targets:** `api/services/facebookScrape.js`, `api/services/facebookAuth.js`, `api/routes/facebook.js`, `src/mcp/server.js`, `api/routes/facebookAccounts.js`
+**File targets:** `api/services/facebookScrape.js`, `api/services/facebookAuth.js`, `api/routes/facebook.js`, `src/mcp/server.js`
 
 ### Acceptance Criteria
 
@@ -148,7 +148,6 @@ Group comments:
 - `FacebookScrapeService` gọi `scrape('facebook', action, args)` từ `src/scrapers/index.js`, với `browserOptions.userDataDir`, `browserOptions.proxy`, `browserOptions.proxyAuth`.
 - `scrape()` gọi `page.authenticate(options.proxyAuth)` sau `createPage` và trước `loginWithCookie`.
 - `api/routes/facebook.js` `POST /scrape` gọi `facebookScrapeService.run` và cập nhật `VALID_ACTIONS` thêm `post_comments`, `group_posts`, `group_comments`.
-- `api/routes/facebookAccounts.js` `POST /` nhận thêm `proxy` plaintext, validate dạng flat string, encrypt thành `encryptedProxy`; cân nhắc thêm `PATCH /:id` để update proxy.
 - MCP tools mới gọi `facebookScrapeService`.
 - Không duplicate login/scrape logic.
 - Mỗi tool có contract tests trong `tests/mcp/`.
@@ -232,7 +231,7 @@ Response shapes:
 |---|---|---|
 | 7.1 | `tests/services/facebookHealth.test.js` | `checkAccountHealth` active/checkpoint/dead, TTL, force, no cookie log. |
 | 7.1 | `tests/services/facebookAccountPool.test.js` | pool assignment, proxy affinity, concurrency cap, retry slot. |
-| 7.1 | `tests/services/facebookScrape.test.js` | `run`/`runBatch` dispatch, auth resolve, proxyAuth truyền đúng. |
+| 7.4 | `tests/services/facebookScrape.test.js` | `run`/`runBatch` dispatch, auth resolve, proxyAuth truyền đúng. |
 | 7.1 | `tests/scrapers/facebook/hydration.test.js` | `extractHydrationJson` walker, `__typename` filter, DOM fallback. |
 | 7.2 | `tests/scrapers/facebook/search.test.js` | multi-type search, `all` sequential + parallel, URL patterns, exact shapes. |
 | 7.3 | `tests/scrapers/facebook/comments.test.js` | post URL validation, hydration fallback, reply extraction. |
@@ -240,7 +239,7 @@ Response shapes:
 | 7.3 | `tests/scrapers/facebook/group-comments.test.js` | group post URL validation, thin wrapper. |
 | 7.4 | `tests/mcp/facebook-epic7-tools.test.js` | MCP tool input schema, dispatch qua `FacebookScrapeService`, contract tests. |
 | 7.4 | `tests/api/facebook-scrape.test.js` | `POST /api/facebook/scrape` action allowlist + proxy + auth. |
-| 7.4 | `tests/api/facebook-accounts.test.js` | create với `proxy`, `encryptedProxy`, update proxy (nếu có PATCH). |
+| 7.1 | `tests/api/facebook-accounts.test.js` | create với `proxy`, `encryptedProxy`, update proxy (nếu có PATCH). |
 
 ## Cross-Cutting Implementation Order
 
