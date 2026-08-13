@@ -1552,6 +1552,58 @@ export async function fb_post({ text, dryRun = true }) {
   const { page: pg } = await ensureFbBrowser();
   return createFacebookPost(pg, text, { dryRun });
 }
+
+export async function x_list_platforms() {
+  return {
+    platforms: [
+      {
+        name: 'twitter',
+        displayName: 'X / Twitter',
+        aliases: ['x'],
+        auth: 'session cookie (auth_token) or XACTIONS_SESSION_COOKIE env',
+        capabilities: [
+          'profile', 'followers', 'following', 'tweets', 'search', 'thread',
+          'follow', 'unfollow', 'post', 'like', 'retweet', 'reply', 'bookmark',
+          'dm', 'lists', 'spaces', 'trends', 'analytics', 'settings', 'grok_ai',
+          'download_video', 'engagement_automation', 'competitor_analysis', 'brand_monitor',
+          'voice_analysis', 'tweet_generation',
+        ],
+      },
+      {
+        name: 'bluesky',
+        displayName: 'Bluesky',
+        aliases: ['bsky'],
+        auth: 'username (handle) with optional instance',
+        capabilities: ['profile', 'followers', 'following', 'tweets', 'search'],
+      },
+      {
+        name: 'mastodon',
+        displayName: 'Mastodon',
+        auth: 'username and instance URL',
+        capabilities: ['profile', 'followers', 'following', 'tweets', 'search'],
+      },
+      {
+        name: 'threads',
+        displayName: 'Threads',
+        auth: 'username',
+        capabilities: ['profile', 'followers', 'following', 'tweets', 'search'],
+      },
+      {
+        name: 'facebook',
+        displayName: 'Facebook',
+        aliases: ['fb'],
+        auth: 'authCookie { c_user, xs }',
+        capabilities: [
+          'profile', 'posts', 'followers', 'search',
+          'like', 'comment', 'post', 'share', 'messenger',
+          'friend_requests', 'cancel_friend_requests', 'group_join', 'group_post',
+          'warmup_scroll', 'warmup_account', 'schedule_post',
+        ],
+      },
+    ],
+  };
+}
+
 export const toolMap = {
   // Auth
   x_login,
@@ -1639,6 +1691,8 @@ export const toolMap = {
   fb_like,
   fb_comment,
   fb_post,
+  // Cross-Platform
+  x_list_platforms,
   // Utility (not an MCP tool, used by server.js cleanup)
   closeBrowser,
 };
