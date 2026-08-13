@@ -1080,8 +1080,8 @@ So that the surface is consistent and maintainable.
 
 **Acceptance Criteria:**
 
-**Given** `facebookScrapeService` exists
-**When** `run(action, args)` or `runBatch(tasks, options)` is called
+**Given** `api/services/facebookScrape.js` is created with `run(action, args)` and `runBatch(tasks, options)`
+**When** `facebookScrapeService.run(...)` or `runBatch(...)` is called
 **Then** it resolves `authCookie` through `FacebookAuthResolver`
 **And** calls `scrape('facebook', action, args)` from `src/scrapers/index.js`
 **And** passes `browserOptions.userDataDir`, `browserOptions.proxy`, and `browserOptions.proxyAuth`
