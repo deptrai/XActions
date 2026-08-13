@@ -115,13 +115,13 @@ describe('NFR3 — encrypt never leaks cookie values in output', () => {
 });
 
 // ============================================================================
-// P1 Kill: encrypt/decrypt — exact encoding strings (L49, L50, L58, L65, L66)
+// P1 Kill: encrypt/decrypt — exact encoding strings (
 // ============================================================================
 
 describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
   it(`[${nextTestId('API')}] encrypt output is hex-encoded (not empty string replacement)`, () => {
     const enc = encrypt('test_payload');
-    // StringLiteral mutant L49/L50: 'hex' → '' → cipher.update throws or produces binary
+    // StringLiteral mutant: 'hex' → '' → cipher.update throws or produces binary
     // If encoding is empty, encrypt would throw or produce non-hex output
     expect(enc).toMatch(/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/);
   });
@@ -130,12 +130,12 @@ describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
     const plain = 'exact_roundtrip_test_12345';
     const enc = encrypt(plain);
     const dec = decrypt(enc);
-    // StringLiteral mutant L65/L66: 'hex'/'utf8' → '' → decrypt fails or returns garbage
+    // StringLiteral mutant: 'hex'/'utf8' → '' → decrypt fails or returns garbage
     expect(dec).toBe(plain);
   });
 
   it(`[${nextTestId('API')}] decrypt returns null for 3-part string (not 4 parts)`, () => {
-    // ConditionalExpression mutant L58: false → parts.length check bypassed
+    // ConditionalExpression mutant: false → parts.length check bypassed
     // With 3 parts, decipher.update(parts[3]) would get undefined → throw → null
     // But mutant skips the check, tries to process → may throw or return garbage
     expect(decrypt('a:b:c')).toBeNull();
@@ -154,7 +154,7 @@ describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
   });
 
   it(`[${nextTestId('API')}] encrypt output parts are valid hex strings (encoding strings matter)`, () => {
-    // StringLiteral mutant L49/L50: 'hex' → '' → cipher.update returns Buffer, not hex string
+    // StringLiteral mutant: 'hex' → '' → cipher.update returns Buffer, not hex string
     // When encoding is '', cipher.update returns a Buffer object, and Buffer + string = string
     // but the concatenation would produce "[object Object]" or binary garbage, not hex
     const enc = encrypt('encoding_test');
@@ -169,7 +169,7 @@ describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
   });
 
   it(`[${nextTestId('API')}] decrypt with wrong encoding returns null or wrong value (encoding strings matter)`, () => {
-    // StringLiteral mutant L65/L66: 'hex'/'utf8' → '' → decipher.update returns Buffer
+    // StringLiteral mutant: 'hex'/'utf8' → '' → decipher.update returns Buffer
     // This would either throw or return garbage — either way, not the original plaintext
     const plain = 'encoding_roundtrip_abc123';
     const enc = encrypt(plain);
@@ -178,8 +178,8 @@ describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
     expect(dec).toBe(plain);
   });
 
-  it(`[${nextTestId('API')}] decrypt with 3 parts returns null (parts.length check, L58)`, () => {
-    // ConditionalExpression mutant L58: false → check bypassed
+  it(`[${nextTestId('API')}] decrypt with 3 parts returns null (parts.length check, `, () => {
+    // ConditionalExpression mutant: false → check bypassed
     // With 3 parts, parts[3] is undefined → decipher.update(undefined) throws → catch → null
     // But mutant skips the check, tries to process → may throw or return garbage
     // Key: with 3 valid hex parts, the mutant would try to process and throw
@@ -188,7 +188,7 @@ describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
     expect(result).toBeNull();
   });
 
-  it(`[${nextTestId('API')}] decrypt with 5 parts returns null (parts.length check, L58)`, () => {
+  it(`[${nextTestId('API')}] decrypt with 5 parts returns null (parts.length check, `, () => {
     // 5 parts should also be rejected
     const result = decrypt('aabb:bccd:eeff:0011:2233');
     expect(result).toBeNull();
@@ -199,27 +199,27 @@ describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
     expect(decrypt('aaaa:bbbb:cccc:dddd')).toBeNull();
   });
 
-  it(`[${nextTestId('API')}] c_user with leading/trailing spaces is trimmed before regex test (L88)`, () => {
-    // MethodExpression mutant L88: String(c_user).trim() → String(c_user) (no trim)
+  it(`[${nextTestId('API')}] c_user with leading/trailing spaces is trimmed before regex test (`, () => {
+    // MethodExpression mutant: String(c_user).trim() → String(c_user) (no trim)
     // With c_user = '  1234567890  ', trim gives '1234567890' (valid), no-trim gives '  1234567890  ' (invalid)
     // Original: trim → valid → null
     // Mutant: no trim → invalid → error
     expect(validateAccountBody({ label: 'x', c_user: '  1234567890  ', xs: 'xs' })).toBeNull();
   });
 
-  it(`[${nextTestId('API')}] c_user with only leading spaces is trimmed (L88)`, () => {
+  it(`[${nextTestId('API')}] c_user with only leading spaces is trimmed (`, () => {
     // Additional: c_user = ' 1234567890' → trim → '1234567890' (valid)
     expect(validateAccountBody({ label: 'x', c_user: ' 1234567890', xs: 'xs' })).toBeNull();
   });
 });
 
 // ============================================================================
-// P1 Kill: validateAccountBody — boundary + type checks (L84, L86, L88, L90, L92)
+// P1 Kill: validateAccountBody — boundary + type checks (
 // ============================================================================
 
 describe('validateAccountBody — boundary + type (P1 kill)', () => {
   it(`[${nextTestId('API')}] accepts label of exactly 50 chars (boundary, not >)`, () => {
-    // EqualityOperator mutant L86: > → >= → 50 chars rejected (should be accepted)
+    // EqualityOperator mutant: > → >= → 50 chars rejected (should be accepted)
     expect(validateAccountBody({ label: 'a'.repeat(50), c_user: '1234567890', xs: 'xs' })).toBeNull();
   });
 
@@ -229,8 +229,8 @@ describe('validateAccountBody — boundary + type (P1 kill)', () => {
   });
 
   it(`[${nextTestId('API')}] rejects non-string label (number)`, () => {
-    // LogicalOperator mutant L84: || → && → both conditions must be true
-    // ConditionalExpression mutant L84: false → typeof check bypassed
+    // LogicalOperator mutant: || → && → both conditions must be true
+    // ConditionalExpression mutant: false → typeof check bypassed
     expect(validateAccountBody({ label: 123, c_user: '1234567890', xs: 'xs' }))
       .toMatch(/label/i);
   });
@@ -241,7 +241,7 @@ describe('validateAccountBody — boundary + type (P1 kill)', () => {
   });
 
   it(`[${nextTestId('API')}] trim is applied before length check on label`, () => {
-    // MethodExpression mutant L86: label.trim() → label (no trim)
+    // MethodExpression mutant: label.trim() → label (no trim)
     // With label = 'a'.repeat(49) + '  ', trim gives 49 chars (accepted), no-trim gives 51 (rejected)
     // Original: trim → 49 → accepted (null)
     // Mutant: no trim → 51 → rejected (error message with "50")
@@ -250,15 +250,15 @@ describe('validateAccountBody — boundary + type (P1 kill)', () => {
   });
 
   it(`[${nextTestId('API')}] c_user is coerced to string before regex test`, () => {
-    // MethodExpression mutant L88: String(c_user) → c_user (no coercion)
+    // MethodExpression mutant: String(c_user) → c_user (no coercion)
     // With c_user as number, .trim() would throw without String()
     expect(() => validateAccountBody({ label: 'x', c_user: 1234567890, xs: 'xs' })).not.toThrow();
     expect(validateAccountBody({ label: 'x', c_user: 1234567890, xs: 'xs' })).toBeNull();
   });
 
   it(`[${nextTestId('API')}] rejects non-string xs (number)`, () => {
-    // LogicalOperator mutant L90: || → && 
-    // ConditionalExpression mutant L90: false → typeof check bypassed
+    // LogicalOperator mutant: || → &&
+    // ConditionalExpression mutant: false → typeof check bypassed
     expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 123 }))
       .toMatch(/xs/i);
   });
@@ -269,7 +269,7 @@ describe('validateAccountBody — boundary + type (P1 kill)', () => {
   });
 
   it(`[${nextTestId('API')}] accepts xs of exactly 4096 chars (boundary, not >)`, () => {
-    // EqualityOperator mutant L92: > → >= → 4096 chars rejected (should be accepted)
+    // EqualityOperator mutant: > → >= → 4096 chars rejected (should be accepted)
     expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 'a'.repeat(4096) })).toBeNull();
   });
 
@@ -279,7 +279,7 @@ describe('validateAccountBody — boundary + type (P1 kill)', () => {
   });
 
   it(`[${nextTestId('API')}] trim is applied before length check on xs`, () => {
-    // MethodExpression mutant L92: xs.trim() → xs (no trim)
+    // MethodExpression mutant: xs.trim() → xs (no trim)
     // With xs = 'a'.repeat(4095) + '  ', trim gives 4095 (accepted), no-trim gives 4097 (rejected)
     // Original: trim → 4095 → accepted (null)
     // Mutant: no trim → 4097 → rejected (error with "4096")
@@ -288,7 +288,7 @@ describe('validateAccountBody — boundary + type (P1 kill)', () => {
   });
 
   it(`[${nextTestId('API')}] rejects whitespace-only xs`, () => {
-    // ConditionalExpression mutant L90: false → xs.trim().length === 0 check bypassed
+    // ConditionalExpression mutant: false → xs.trim().length === 0 check bypassed
     expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: '   ' }))
       .toMatch(/xs.*required/i);
   });

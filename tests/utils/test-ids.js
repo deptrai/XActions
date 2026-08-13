@@ -1,8 +1,9 @@
 const counters = new Map();
 
-export function nextTestId(level) {
+export function nextTestId(level, priority = 'P2') {
   // Build a short, file-scoped prefix from the caller's path so IDs are unique
-  // across test files even under the forks pool.
+  // across test files even under the forks pool, and append a priority marker
+  // so the suite can be filtered by @P0–@P3.
   const stack = new Error().stack || '';
   const callerLine = stack
     .split('\n')
@@ -16,5 +17,5 @@ export function nextTestId(level) {
   const key = `${scope}::${level}`;
   const next = (counters.get(key) || 0) + 1;
   counters.set(key, next);
-  return `5.5-${scope}-${level}-${String(next).padStart(3, '0')}`;
+  return `5.5-${scope}-${level}-${String(next).padStart(3, '0')} @${priority}`;
 }

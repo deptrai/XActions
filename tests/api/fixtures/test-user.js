@@ -1,6 +1,6 @@
 // Shared test fixture for API + E2E tests that need a real DB user + valid JWT.
 // by nichxbt
-import { randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -9,22 +9,31 @@ const prisma = new PrismaClient();
 
 export const TEST_SECRET = process.env.JWT_SECRET || 'test-secret';
 
+let userIdCounter = 0;
 export function makeTestUserId(prefix = 'test') {
-  // Keep deterministic-ish per run but unique enough to avoid collisions
-  return `${prefix}-${randomUUID().slice(0, 8)}`;
+  // Deterministic per-process counter keeps IDs reproducible across runs
+  // while still being unique within a test file/fork.
+  return `${prefix}-${String(++userIdCounter).padStart(6, '0')}`;
 }
 
 export function makeTestToken(userId, username = 'ghost') {
   return jwt.sign({ userId, username }, TEST_SECRET, { expiresIn: '1h' });
 }
 
+let cookieCounter = 0;
+function deterministicHex(input, len = 8) {
+  return createHash('sha256').update(String(input)).digest('hex').slice(0, len);
+}
+
 export function makeValidFacebookCookie(overrides = {}) {
-  // Random numeric UID (15 digits) so the cookie passes shape validation
-  // but is clearly not tied to a real session.
-  const cUser = String(100000000000000 + Math.floor(Math.random() * 900000000000000));
+  // Deterministic numeric UID (15 digits) so the cookie passes shape validation
+  // but is clearly not tied to a real session. Counter + sha256 keep each cookie
+  // unique and reproducible across runs.
+  const n = ++cookieCounter;
+  const cUser = String(100000000000000 + n).padStart(15, '0');
   return {
     c_user: cUser,
-    xs: `xs-${randomUUID().slice(0, 24)}`,
+    xs: `xs-${String(n).padStart(8, '0')}-${deterministicHex(n)}`,
     ...overrides,
   };
 }
