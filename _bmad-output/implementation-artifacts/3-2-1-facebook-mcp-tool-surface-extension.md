@@ -4,7 +4,7 @@
 baseline_commit: a2a9c7a
 ---
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -160,7 +160,15 @@ sonnet-4.6
 
 ### Completion Notes List
 
-_To be filled by dev agent after implementation._
+- Added 3 tool definitions to `src/mcp/server.js`.
+- Implemented `executeFacebookListAccounts` for DB-only account listing.
+- Extended `executeFacebookEpic4Tool` with `x_facebook_group_members` and `x_facebook_marketplace`.
+- Added/updated MCP contract tests; `npx vitest run tests/mcp/` passes 140/140.
+- Smoke test after Devin restart:
+  - `x_facebook_list_accounts`: returns id/label/userId/createdAt for stored accounts, redacts cookies.
+  - `x_facebook_group_members`: returns `note` for private/restricted groups (expected for tested group).
+  - `x_facebook_marketplace`: dry-run preview URL works; real run executes but returns `[]` — needs scraper verification (selector/location/FB result load).
+- Push: `42ca53c`
 
 ### File List
 
