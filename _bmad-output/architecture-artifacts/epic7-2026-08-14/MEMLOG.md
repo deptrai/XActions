@@ -14,8 +14,8 @@ Epic 7 mở rộng khả năng **đọc** Facebook của XActions để phục v
 
 - `FacebookAccountHealthService` — kiểm tra account live qua HTTP, lưu cache.
 - `FacebookAccountPool` — quản lý pool tài khoản, gán task, giới hạn concurrency, proxy affinity.
-- `FacebookScrapeService` — điều phối `run` (single) và `runBatch` (parallel) cho API/MCP.
-- `FacebookScraperDispatcher` — chọn scraper theo `action`: search/comments/group-posts/hydration.
+- `FacebookScrapeService` — điều phối `run` (single) và `runBatch` (parallel) cho API/MCP; dispatch qua `scrape('facebook', action, args)` hoặc fan-out `type: 'all'` nội bộ.
+- `FacebookAuthResolver` — helper resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) dùng chung cho API + MCP.
 - `FacebookScrapers` — các hàm Puppeteer: `searchFacebook`, `scrapeFacebookComments`, `scrapeFacebookGroupPosts`, `extractHydrationJson`.
 - `API route` `POST /api/facebook/scrape` — REST surface.
 - `MCP tool handlers` — 5 tools mới: `x_facebook_search`, `x_facebook_post_comments`, `x_facebook_group_posts`, `x_facebook_group_comments`, `x_facebook_posts`.

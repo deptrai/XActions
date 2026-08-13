@@ -22,7 +22,8 @@
 ### Implementation Notes
 
 - Dùng `axios`, `buildCookieString` từ `src/scrapers/facebook/graphql.js`.
-- Cache kết quả vào `FacebookAccountHealth` (Prisma), TTL 5 phút.
+- Cache kết quả vào `FacebookAccountHealth` (Prisma); TTL 5 phút dựa trên `lastCheckAt`.
+- `checkAccountHealth({ c_user, xs }, { force })`: trả cache nếu `lastCheckAt` < 5 phút và `status !== 'dead'; nếu `force: true` hoặc hết TTL thì fetch lại.
 - Hàm pure `parseFacebookTokens` đã có thể tái dùng để lấy `fb_dtsg`.
 
 ## Story 7.2: Account Pool & Parallel Runner
@@ -45,9 +46,10 @@
 
 ### Implementation Notes
 
-- Dùng `p-limit@7.2.0` cho concurrency cap.
+- Dùng `p-limit@7.2.0` pin exact (cập nhật `package.json`).
 - Wrapper xử lý delay giữa các lần launch.
-- Proxy affinity: nhóm account theo proxy trước khi gán.
+- Proxy affinity: `FacebookAccount.proxy` là flat string `"host:port"` hoặc `"host:port:user:pass"`; dùng `parseFlatProxy` để lấy `server`, `username`, `password`; truyền `proxy: server` cho `createBrowser`, gọi `page.authenticate` nếu có auth.
+- Health cache TTL 5 phút: `checkAccountHealth` bỏ qua cache nếu `lastCheckAt` > 5 phút hoặc `force: true`.
 
 ## Story 7.3: Multi-Type Facebook Search
 
@@ -67,10 +69,11 @@
 
 - Mở rộng `searchTweets` hiện tại hoặc thêm hàm `searchFacebook`.
 - URL patterns:
-  - posts: `/search/posts?q=...`
-  - people: `/search/people?q=...`
-  - pages: `/search/pages?q=...`
-  - groups: `/search/groups?q=...`
+  - posts: `/search/posts/?q=...`
+  - people: `/search/people/?q=...`
+  - pages: `/search/pages/?q=...`
+  - groups: `/search/groups/?q=...`
+- `type: 'all'` mặc định sequential; với `parallel: true`, `FacebookScrapeService` tự fan-out thành 4 task `search` rồi gộp.
 - Tái dùng `extractHydrationJson` làm primary extraction.
 
 ## Story 7.4: Scrape Post Comments
@@ -102,7 +105,7 @@
 ### Acceptance Criteria
 
 - Input: `groupUrl`, `limit`, `authCookie`.
-- Dùng mobile UA (390x844).
+- Dùng mobile UA (390x844): `page.setUserAgent(...)` + `page.setViewport({ width: 390, height: 844, isMobile: true })` trước khi `page.goto`.
 - Trả về posts với shape tương tự `scrapeTweets`.
 - Trả về `note` nếu group private/restricted và account không phải member.
 
@@ -159,7 +162,9 @@
 ### Acceptance Criteria
 
 - Tạo `api/services/facebookScrape.js` với `run(action, args)` và `runBatch(tasks, options)`.
-- `api/routes/facebook.js` `POST /scrape` gọi `facebookScrapeService`.
+- `FacebookScrapeService` resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) qua helper `api/services/facebookAuth.js` dùng chung cho cả API và MCP.
+- `FacebookScrapeService` gọi `scrape('facebook', action, args)` từ `src/scrapers/index.js`, với `browserOptions.userDataDir` và `proxy`.
+- `api/routes/facebook.js` `POST /scrape` gọi `facebookScrapeService.run`.
 - MCP tools mới gọi `facebookScrapeService`.
 - Không duplicate login/scrape logic.
 - Mỗi tool có contract tests trong `tests/mcp/`.
@@ -172,7 +177,7 @@
 | `x_facebook_post_comments` | `post_comments` | `postUrl`, `limit`, `includeReplies`, `authCookie` |
 | `x_facebook_group_posts` | `group_posts` | `groupUrl`, `limit`, `authCookie` |
 | `x_facebook_group_comments` | `group_comments` | `postUrl`, `limit`, `includeReplies`, `authCookie` |
-| `x_facebook_posts` | `posts` | `url` (profile/page), `limit`, `authCookie` |
+| `x_facebook_posts` | `posts` | `url` (profile/page), `limit`, `authCookie` — thin wrapper, tương đương `x_scrape` `platform: facebook, action: posts` |
 
 ### API Contract
 
@@ -182,7 +187,7 @@ Body: { action, ...args, authCookie }
 Response: { ok: true, action, result }
 ```
 
-Valid `action`: `profile`, `posts`, `followers`, `search`, `group-members`, `marketplace`, `post_comments`, `group_posts`, `group_comments`, `search_multi` `[ASSUMPTION]`.
+Valid `action`: `profile`, `posts`, `followers`, `search`, `group-members`, `marketplace`, `post_comments`, `group_posts`, `group_comments`.
 
 ## Cross-Cutting Implementation Order
 

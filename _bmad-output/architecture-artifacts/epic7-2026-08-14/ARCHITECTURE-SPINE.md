@@ -71,7 +71,8 @@ C4Component
 | `FacebookAccountHealthService` | `api/services/facebookHealth.js` `[ASSUMPTION]` | HTTP GET `facebook.com/` với cookie, parse `fb_dtsg`, kiểm tra checkpoint, cache vào `FacebookAccountHealth`. |
 | `FacebookAccountPool` | `api/services/facebookAccountPool.js` `[ASSUMPTION]` | Lọc live accounts, gán task round-robin/LRU, honor proxy, giới hạn concurrency. |
 | `FacebookScrapeService` | `api/services/facebookScrape.js` | `run(action, args)` và `runBatch(tasks, options)`. Single source of truth cho API + MCP. |
-| `FacebookScraperDispatcher` | inside `FacebookScrapeService` hoặc `src/scrapers/facebook/dispatcher.js` `[ASSUMPTION]` | Map `action` → `searchFacebook`, `scrapeFacebookComments`, `scrapeFacebookGroupPosts`, `extractHydrationJson`. |
+| `FacebookAuthResolver` | `api/services/facebookAuth.js` | Resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) cho cả API và MCP, không log cookie. |
+| `FacebookScraperDispatcher` | inside `FacebookScrapeService` | Map `action` → `scrape('facebook', action, args)` hoặc fan-out `type: 'all'` nội bộ. Tái dùng `src/scrapers/index.js` `scrape()` để tận dụng auto browser/page/login/close. |
 | `searchFacebook` | `src/scrapers/facebook/index.js` | Search posts/people/pages/groups hoặc `all`. |
 | `scrapeFacebookComments` | `src/scrapers/facebook/index.js` `[ASSUMPTION]` | Scrape comments của post, hỗ trợ replies. |
 | `scrapeFacebookGroupPosts` | `src/scrapers/facebook/index.js` `[ASSUMPTION]` | Scrape posts trong group, dùng mobile UA. |
@@ -130,10 +131,11 @@ model FacebookAccount {
   userId          String
   label           String
   encryptedCookie String
-  proxy           String?  // [ASSUMPTION] nullable proxy URL/credential
+  proxy           String?  // flat proxy string: "host:port" hoặc "host:port:user:pass"
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  health          FacebookAccountHealth?
 
   @@unique([userId, label])
   @@index([userId])
@@ -170,7 +172,7 @@ model FacebookAccountHealth {
 
 | NFR | Implementation |
 |---|---|
-| NFR-10 Không lưu trữ | Service trả JSON; không `prisma.operation.create` cho kết quả scrape. |
+| NFR-10 Không lưu trữ | Service trả JSON trực tiếp; không tạo `Operation` cho read scrape (hoặc nếu audit cần, chỉ lưu metadata mà không lưu `result`). |
 | NFR-11 Health check < 2s | `axios.get` không mở browser; cache Prisma với TTL 5 phút. |
 | NFR-12 Concurrency cap | `p-limit` + `maxConcurrency` default 4, max 8. |
 | NFR-13 Privacy | Cookie/token values không log; `resolveAccountCookie` đã encrypt. |
@@ -187,6 +189,6 @@ model FacebookAccountHealth {
 ## 11. Assumptions
 
 - `[ASSUMPTION]` Anti-detection từ Epic 6 (fingerprint, proxy, warmup) được tái dùng.
-- `[ASSUMPTION]` Mỗi account có thể có `proxy`; nếu không, dùng proxy mặc định theo cấu hình.
-- `[ASSUMPTION]` `p-limit@7.2.0` sẽ được cài đặt pin exact.
-- `[ASSUMPTION]` Health check không cần mở browser, chỉ cần HTTP GET với cookie.
+- `[ASSUMPTION]` Mỗi account có thể có `proxy` dạng flat string `"host:port"` hoặc `"host:port:user:pass"`; `FacebookAccountPool` parse qua `src/scrapers/facebook/proxy.js` `parseFlatProxy` và gọi `page.authenticate` nếu có auth.
+- `[ASSUMPTION]` `p-limit@7.2.0` sẽ được thêm vào `package.json` dưới dạng pin exact.
+- `[ASSUMPTION]` Health check không cần mở browser, chỉ cần HTTP GET với cookie; cache TTL 5 phút dựa trên `lastCheckAt`.
