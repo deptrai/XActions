@@ -1,5 +1,5 @@
 # generated: 06-12-2026 02:18
-# last_updated: 2026-08-13 (story 6-15 → ready-for-dev)
+# last_updated: 2026-08-13 (story 6-15 → done)
 # project: XActions
 # project_key: NOKEY
 # tracking_system: file-system
@@ -89,7 +89,7 @@ development_status:
   6-12-natural-scrolling: done
   6-13-velocity-limits: done
   6-14-account-age: done
-  6-15-session-warming: ready-for-dev
+  6-15-session-warming: done
   6-16-timezone-geolocation: backlog
   6-17-persistent-profiles: backlog
   epic-6-retrospective: optional

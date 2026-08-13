@@ -523,9 +523,11 @@ describe('loginWithCookie (P1 kill, fake page)', () => {
   it('navigates to Facebook base URL (L215)', async () => {
     const page = makeFakePage();
     await loginWithCookie(page, { c_user: '100001', xs: 'xs-token' });
-    expect(page.calls.goto).toHaveLength(2);
+    // loginWithCookie navigates to base URL, then warmSession navigates to homepage (Story 6.15)
+    expect(page.calls.goto).toHaveLength(3);
     expect(page.calls.goto[0].url).toContain('facebook.com');
     expect(page.calls.goto[1].url).toContain('facebook.com');
+    expect(page.calls.goto[2].url).toContain('facebook.com');
   });
 
   it('stores c_user as page._fbAccountId on successful login (Story 6.14 — AC5)', async () => {

@@ -23,6 +23,7 @@ export function makeFakePage(opts = {}) {
     evalResults = {},
     content = '<html><body></body></html>',
     gotoResult = { ok: true },
+    viewport = { width: 1280, height: 720 },
   } = opts;
 
   const calls = {
@@ -111,6 +112,8 @@ export function makeFakePage(opts = {}) {
     setViewport: async (vp) => {
       calls.setViewport.push(vp);
     },
+
+    viewportSize: () => ({ ...viewport }),
 
     evaluateOnNewDocument: async (fn, ...args) => {
       calls.evaluateOnNewDocument.push({ fn: fn.toString(), args });

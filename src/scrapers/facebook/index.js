@@ -16,6 +16,9 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { generateSync as totpGenerateSync } from 'otplib';
 import { generateFingerprint, applyFingerprint, applyNavigatorOverrides, applyWebRTCOverride } from './fingerprint.js';
+import { warmSession } from './warmup.js';
+
+export { warmSession };
 
 puppeteer.use(StealthPlugin());
 
@@ -213,7 +216,9 @@ export function normalizeProfile(raw, inputHandle) {
  * @param {string} cookies.xs - Facebook session token cookie
  * @throws {Error} If either cookie is missing or empty
  */
-export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st, locale, headless = true } = {}) {
+export async function loginWithCookie(page, cookies = {}, options = {}) {
+  const combined = { ...cookies, ...options };
+  const { c_user, xs, sb, datar, fr, fbl_st, locale, headless = true, skipWarmup = false } = combined;
   if (!c_user?.trim() || !xs?.trim()) {
     throw new Error('❌ Facebook login requires both c_user and xs cookies');
   }
@@ -287,6 +292,18 @@ export async function loginWithCookie(page, { c_user, xs, sb, datar, fr, fbl_st,
 
   // Store account ID on page context for downstream age/velocity lookup (Story 6.14 — AC5)
   page._fbAccountId = c_user;
+
+  // Step 6: Session warming sequence (Story 6.15 — ADR-016, AC3, AC4)
+  // Skip condition per ADR-016: skip when headless === false AND skipWarmup === true (debug mode)
+  const isDebugSkip = headless === false && skipWarmup === true;
+  if (!isDebugSkip) {
+    try {
+      const warmupOpts = { ...options, skipWarmup };
+      await warmSession(page, warmupOpts);
+    } catch (err) {
+      console.warn(`⚠️ loginWithCookie: session warming warning — ${err?.message ?? err}`);
+    }
+  }
 }
 
 // ============================================================================
