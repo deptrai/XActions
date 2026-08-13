@@ -15,6 +15,7 @@ import {
   searchTweets,
   scrapeGroupMembers,
   createPage,
+  applyProxyLocation,
 } from '../../src/scrapers/facebook/index.js';
 import { makeFakePage, makeFakeBrowser } from '../helpers/fake-page.js';
 
@@ -1321,6 +1322,148 @@ describe('createPage — fingerprint integration (Story 6.2 + 6.4 + 6.5)', () =>
     await expect(createPage(browser)).rejects.toThrow(/Failed to apply WebRTC override/);
     // Verify the page was closed to prevent resource leak
     expect(pages[0]._closed).toBe(true);
+  });
+});
+
+// ============================================================================
+// createPage — timezone & geolocation integration (Story 6.16, AC1-AC7)
+// ============================================================================
+
+describe('createPage — timezone & geolocation (Story 6.16)', () => {
+  it('emulateTimezone is called with IANA timezone string when proxyLocation provides it (AC1)', async () => {
+    const browser = makeFakeBrowser();
+    const proxyLocation = { timezone: 'America/New_York', latitude: 40.7128, longitude: -74.0060 };
+    const page = await createPage(browser, { proxyLocation });
+    expect(page.calls.emulateTimezone).toHaveLength(1);
+    expect(page.calls.emulateTimezone[0]).toBe('America/New_York');
+  });
+
+  it('setGeolocation is called with latitude and longitude matching proxyLocation (AC2)', async () => {
+    const browser = makeFakeBrowser();
+    const proxyLocation = { timezone: 'America/New_York', latitude: 40.7128, longitude: -74.0060 };
+    const page = await createPage(browser, { proxyLocation });
+    expect(page.calls.setGeolocation).toHaveLength(1);
+    expect(page.calls.setGeolocation[0]).toEqual({ latitude: 40.7128, longitude: -74.0060 });
+  });
+
+  it('browserContext.overridePermissions is called for facebook.com with geolocation (AC2)', async () => {
+    const browser = makeFakeBrowser();
+    const proxyLocation = { timezone: 'America/New_York', latitude: 40.7128, longitude: -74.0060 };
+    const page = await createPage(browser, { proxyLocation });
+    expect(page.calls.overridePermissions).toHaveLength(1);
+    expect(page.calls.overridePermissions[0]).toEqual({
+      origin: 'https://www.facebook.com',
+      permissions: ['geolocation'],
+    });
+  });
+
+  it('skips emulateTimezone, setGeolocation, and overridePermissions when proxyLocation is absent (AC3)', async () => {
+    const browser = makeFakeBrowser();
+    const page = await createPage(browser);
+    expect(page.calls.emulateTimezone).toHaveLength(0);
+    expect(page.calls.setGeolocation).toHaveLength(0);
+    expect(page.calls.overridePermissions).toHaveLength(0);
+  });
+
+  it('skips override with warning when proxyLocation is partial or invalid (AC4)', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const browser = makeFakeBrowser();
+
+    // Partial: missing longitude
+    const page1 = await createPage(browser, { proxyLocation: { timezone: 'America/New_York', latitude: 40.7128 } });
+    expect(page1.calls.emulateTimezone).toHaveLength(0);
+    expect(page1.calls.setGeolocation).toHaveLength(0);
+
+    // Invalid: non-numeric latitude
+    const page2 = await createPage(browser, { proxyLocation: { timezone: 'America/New_York', latitude: '40.7128', longitude: -74.0060 } });
+    expect(page2.calls.emulateTimezone).toHaveLength(0);
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Skipped proxy location override'));
+    warnSpy.mockRestore();
+  });
+
+  it('normalizes lat and lng aliases to latitude and longitude (AC5)', async () => {
+    const browser = makeFakeBrowser();
+    const proxyLocation = { timezone: 'Europe/London', lat: 51.5074, lng: -0.1278 };
+    const page = await createPage(browser, { proxyLocation });
+    expect(page.calls.setGeolocation).toHaveLength(1);
+    expect(page.calls.setGeolocation[0]).toEqual({ latitude: 51.5074, longitude: -0.1278 });
+  });
+
+  it('forwards optional accuracy field to setGeolocation when present (AC5)', async () => {
+    const browser = makeFakeBrowser();
+    const proxyLocation = { timezone: 'Asia/Tokyo', latitude: 35.6762, longitude: 139.6503, accuracy: 50 };
+    const page = await createPage(browser, { proxyLocation });
+    expect(page.calls.setGeolocation[0]).toEqual({ latitude: 35.6762, longitude: 139.6503, accuracy: 50 });
+  });
+
+  it('closes page and throws generic error when emulateTimezone fails (AC6, AC7)', async () => {
+    const browser = makeFakeBrowser();
+    const pages = [];
+    browser.newPage = async () => {
+      const page = makeFakePage();
+      page.emulateTimezone = async () => { throw new Error('Timezone error'); };
+      page.close = async () => { page._closed = true; };
+      pages.push(page);
+      return page;
+    };
+    const proxyLocation = { timezone: 'America/New_York', latitude: 40.7128, longitude: -74.0060 };
+    await expect(createPage(browser, { proxyLocation })).rejects.toThrow(/Failed to apply proxy location/);
+    expect(pages[0]._closed).toBe(true);
+  });
+
+  it('never logs proxyLocation fields in error message when setGeolocation fails (AC7)', async () => {
+    const browser = makeFakeBrowser();
+    browser.newPage = async () => {
+      const page = makeFakePage();
+      page.setGeolocation = async () => { throw new Error('Geo error secret_coord'); };
+      page.close = async () => { page._closed = true; };
+      return page;
+    };
+    const proxyLocation = { timezone: 'America/New_York', latitude: 40.7128, longitude: -74.0060 };
+    const err = await createPage(browser, { proxyLocation }).catch((e) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toBe('❌ Failed to apply proxy location');
+    expect(err.message).not.toContain('America/New_York');
+    expect(err.message).not.toContain('40.7128');
+  });
+
+  it('closes page and throws generic error when overridePermissions fails (AC6)', async () => {
+    const browser = makeFakeBrowser();
+    const pages = [];
+    browser.newPage = async () => {
+      const page = makeFakePage();
+      page.browserContext = () => ({
+        overridePermissions: async () => { throw new Error('Permission error'); },
+      });
+      page.close = async () => { page._closed = true; };
+      pages.push(page);
+      return page;
+    };
+    const proxyLocation = { timezone: 'America/New_York', latitude: 40.7128, longitude: -74.0060 };
+    await expect(createPage(browser, { proxyLocation })).rejects.toThrow(/Failed to apply proxy location/);
+    expect(pages[0]._closed).toBe(true);
+  });
+
+  it('skips override when coordinates or accuracy are out of valid range (AC4)', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const browser = makeFakeBrowser();
+
+    // Latitude out of range
+    const page1 = await createPage(browser, { proxyLocation: { timezone: 'America/New_York', latitude: 91, longitude: 0 } });
+    expect(page1.calls.emulateTimezone).toHaveLength(0);
+
+    // Longitude out of range
+    const page2 = await createPage(browser, { proxyLocation: { timezone: 'America/New_York', latitude: 0, longitude: 181 } });
+    expect(page2.calls.emulateTimezone).toHaveLength(0);
+
+    // Negative accuracy is ignored; valid coordinates still apply
+    const page3 = await createPage(browser, { proxyLocation: { timezone: 'America/New_York', latitude: 0, longitude: 0, accuracy: -1 } });
+    expect(page3.calls.setGeolocation).toHaveLength(1);
+    expect(page3.calls.setGeolocation[0]).toEqual({ latitude: 0, longitude: 0 });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Skipped proxy location override'));
+    warnSpy.mockRestore();
   });
 });
 

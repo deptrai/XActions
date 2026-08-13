@@ -44,6 +44,7 @@ export function makeFakePage(opts = {}) {
     evaluateOnNewDocument: [],
     emulateTimezone: [],
     setGeolocation: [],
+    overridePermissions: [],
     keyboard: { down: [], up: [], press: [], type: [] },
     mouse: { move: [], click: [], down: [], up: [], wheel: [] },
   };
@@ -126,6 +127,12 @@ export function makeFakePage(opts = {}) {
     setGeolocation: async (geo) => {
       calls.setGeolocation.push(geo);
     },
+
+    browserContext: () => ({
+      overridePermissions: async (origin, permissions) => {
+        calls.overridePermissions.push({ origin, permissions });
+      },
+    }),
 
     $: async (selector) => {
       calls.$.push(selector);

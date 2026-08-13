@@ -75,17 +75,63 @@ export async function createBrowser(options = {}) {
 }
 
 /**
- * Create a page with a consistent session fingerprint (ADR-013).
+ * Apply timezone and geolocation overrides matching proxy location (Story 6.16 — ADR-016).
+ *
+ * @param {Page} page - Puppeteer page instance
+ * @param {Object} [proxyLocation] - location descriptor matching proxy
+ * @param {string} [proxyLocation.timezone] - IANA timezone (e.g. 'America/New_York')
+ * @param {number} [proxyLocation.latitude] - latitude (-90..90)
+ * @param {number} [proxyLocation.longitude] - longitude (-180..180)
+ * @param {number} [proxyLocation.lat] - latitude alias
+ * @param {number} [proxyLocation.lng] - longitude alias
+ * @param {number} [proxyLocation.accuracy] - optional geolocation accuracy in meters
+ */
+export async function applyProxyLocation(page, proxyLocation) {
+  if (!proxyLocation) return;
+
+  const timezone = proxyLocation.timezone;
+  const lat = proxyLocation.latitude ?? proxyLocation.lat;
+  const lng = proxyLocation.longitude ?? proxyLocation.lng;
+  const accuracy = proxyLocation.accuracy;
+
+  const isValidTz = typeof timezone === 'string' && timezone.trim().length > 0;
+  const isValidLat = typeof lat === 'number' && Number.isFinite(lat) && lat >= -90 && lat <= 90;
+  const isValidLng = typeof lng === 'number' && Number.isFinite(lng) && lng >= -180 && lng <= 180;
+
+  if (!isValidTz || !isValidLat || !isValidLng) {
+    console.warn('⚠️ Skipped proxy location override: missing or invalid timezone/coordinates');
+    return;
+  }
+
+  try {
+    await page.emulateTimezone(timezone.trim());
+
+    const geo = { latitude: lat, longitude: lng };
+    if (typeof accuracy === 'number' && Number.isFinite(accuracy) && accuracy >= 0) {
+      geo.accuracy = accuracy;
+    }
+    await page.setGeolocation(geo);
+
+    await page.browserContext().overridePermissions('https://www.facebook.com', ['geolocation']);
+  } catch (err) {
+    throw new Error('❌ Failed to apply proxy location', { cause: err });
+  }
+}
+
+/**
+ * Create a new Puppeteer page pre-configured with anti-detection fingerprinting.
  *
  * A fingerprint (UA + viewport + hardware config) is generated once and applied
  * via `applyFingerprint` (UA + viewport), then `applyNavigatorOverrides` (navigator
  * properties via evaluateOnNewDocument), then `applyWebRTCOverride` (WebRTC leak
- * prevention). The fingerprint is attached as `page._fingerprint` so callers can
- * reuse it across tabs via `createPage(browser, { fingerprint })`.
+ * prevention), then `applyProxyLocation` (timezone & geolocation). The fingerprint is
+ * attached as `page._fingerprint` so callers can reuse it across tabs via
+ * `createPage(browser, { fingerprint })`.
  *
  * @param {Browser} browser - Puppeteer browser instance
  * @param {Object} [options]
  * @param {Object} [options.fingerprint] - explicit fingerprint for session reuse
+ * @param {Object} [options.proxyLocation] - proxy location descriptor { timezone, latitude, longitude }
  * @returns {Promise<Page>} Puppeteer page instance with `page._fingerprint` set
  */
 export async function createPage(browser, options = {}) {
@@ -95,6 +141,7 @@ export async function createPage(browser, options = {}) {
     await applyFingerprint(page, fingerprint);
     await applyNavigatorOverrides(page, fingerprint);
     await applyWebRTCOverride(page);
+    await applyProxyLocation(page, options.proxyLocation);
   } catch (err) {
     // Clean up the page on failure — avoid resource leak and partial-fingerprint state.
     await page.close().catch(() => {});

@@ -1,10 +1,10 @@
 ---
-baseline_commit: 3ea943df3b9b54d4f545675f89e0f73de0b67932
+baseline_commit: 6c6821fcb1ada62d0712e124d00df6320ebf665e
 ---
 
 # Story 6.16: Timezone & Geolocation Override
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -61,52 +61,52 @@ So that Facebook doesn't detect IP-timezone-geo mismatch.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Implement `applyProxyLocation` helper in `src/scrapers/facebook/index.js`** (AC: #1, #2, #4, #5, #6, #7)
-  - [ ] 1.1 Export an internal helper `applyProxyLocation(page, proxyLocation)` (or keep it local if tests only need `createPage`)
-  - [ ] 1.2 If `proxyLocation` is falsy, return immediately — no guessing
-  - [ ] 1.3 Normalize `lat`/`lng` aliases to `latitude`/`longitude`; preserve optional `accuracy` if present
-  - [ ] 1.4 Validate that `timezone` is a non-empty string and `latitude`/`longitude` are finite numbers; if not, warn and skip
-  - [ ] 1.5 Call `await page.emulateTimezone(timezone)`
-  - [ ] 1.6 Build geolocation object `{ latitude, longitude }`; add `accuracy` only if it is a finite number; call `await page.setGeolocation(geo)`
-  - [ ] 1.7 Call `await page.browserContext().overridePermissions('https://www.facebook.com', ['geolocation'])` to grant permission
-  - [ ] 1.8 On any Puppeteer error, throw `new Error('❌ Failed to apply proxy location', { cause: err })` — do NOT echo `proxyLocation` values
+- [x] **Task 1: Implement `applyProxyLocation` helper in `src/scrapers/facebook/index.js`** (AC: #1, #2, #4, #5, #6, #7)
+  - [x] 1.1 Export an internal helper `applyProxyLocation(page, proxyLocation)` (or keep it local if tests only need `createPage`)
+  - [x] 1.2 If `proxyLocation` is falsy, return immediately — no guessing
+  - [x] 1.3 Normalize `lat`/`lng` aliases to `latitude`/`longitude`; preserve optional `accuracy` if present
+  - [x] 1.4 Validate that `timezone` is a non-empty string and `latitude`/`longitude` are finite numbers; if not, warn and skip
+  - [x] 1.5 Call `await page.emulateTimezone(timezone)`
+  - [x] 1.6 Build geolocation object `{ latitude, longitude }`; add `accuracy` only if it is a finite number; call `await page.setGeolocation(geo)`
+  - [x] 1.7 Call `await page.browserContext().overridePermissions('https://www.facebook.com', ['geolocation'])` to grant permission
+  - [x] 1.8 On any Puppeteer error, throw `new Error('❌ Failed to apply proxy location', { cause: err })` — do NOT echo `proxyLocation` values
 
-- [ ] **Task 2: Integrate `applyProxyLocation` into `createPage`** (AC: #1, #2, #3, #6)
-  - [ ] 2.1 Destructure `proxyLocation` from `createPage(browser, options = {})` options
-  - [ ] 2.2 Add `await applyProxyLocation(page, proxyLocation)` after `applyWebRTCOverride(page)` and before `page._fingerprint = fingerprint`
-  - [ ] 2.3 Keep it inside the existing `try` block so a failure triggers `page.close()` and rethrows, matching the `applyFingerprint` / `applyNavigatorOverrides` / `applyWebRTCOverride` behavior
-  - [ ] 2.4 Update `createPage` JSDoc to document `options.proxyLocation`
+- [x] **Task 2: Integrate `applyProxyLocation` into `createPage`** (AC: #1, #2, #3, #6)
+  - [x] 2.1 Destructure `proxyLocation` from `createPage(browser, options = {})` options
+  - [x] 2.2 Add `await applyProxyLocation(page, proxyLocation)` after `applyWebRTCOverride(page)` and before `page._fingerprint = fingerprint`
+  - [x] 2.3 Keep it inside the existing `try` block so a failure triggers `page.close()` and rethrows, matching the `applyFingerprint` / `applyNavigatorOverrides` / `applyWebRTCOverride` behavior
+  - [x] 2.4 Update `createPage` JSDoc to document `options.proxyLocation`
 
-- [ ] **Task 3: Update `tests/helpers/fake-page.js` to support permission assertions** (AC: #2)
-  - [ ] 3.1 Add `overridePermissions: []` to the `calls` recorder
-  - [ ] 3.2 Add `browserContext()` method to the fake page returning an object with `overridePermissions: async (origin, permissions) => { calls.overridePermissions.push({ origin, permissions }); }`
-  - [ ] 3.3 Keep `emulateTimezone` and `setGeolocation` recorders as-is (they already exist)
+- [x] **Task 3: Update `tests/helpers/fake-page.js` to support permission assertions** (AC: #2)
+  - [x] 3.1 Add `overridePermissions: []` to the `calls` recorder
+  - [x] 3.2 Add `browserContext()` method to the fake page returning an object with `overridePermissions: async (origin, permissions) => { calls.overridePermissions.push({ origin, permissions }); }`
+  - [x] 3.3 Keep `emulateTimezone` and `setGeolocation` recorders as-is (they already exist)
 
-- [ ] **Task 4: Write `createPage` timezone/geolocation tests in `tests/scrapers/facebook-index.test.js`** (AC: #1, #2, #3, #4, #5, #6, #8)
-  - [ ] 4.1 Add a new `describe('createPage — timezone & geolocation (Story 6.16)', ...)` block after the existing `createPage` describe
-  - [ ] 4.2 Test: `emulateTimezone` is called with `America/New_York` when `proxyLocation` provides it
-  - [ ] 4.3 Test: `setGeolocation` is called with `{ latitude, longitude }` matching `proxyLocation`
-  - [ ] 4.4 Test: `page.browserContext().overridePermissions` is called for origin `https://www.facebook.com` with `['geolocation']`
-  - [ ] 4.5 Test: when no `proxyLocation` is passed, none of the three methods are called
-  - [ ] 4.6 Test: when `proxyLocation` is partial (e.g. only `latitude`), the methods are not called and `createPage` does not throw
-  - [ ] 4.7 Test: `lat`/`lng` aliases are normalized to `latitude`/`longitude` before `setGeolocation`
-  - [ ] 4.8 Test: optional `accuracy` is forwarded to `setGeolocation` when present
-  - [ ] 4.9 Test: if `emulateTimezone` throws, `createPage` rejects with `/Failed to apply proxy location/` and closes the page
-  - [ ] 4.10 Test: existing `createPage` tests still pass without `proxyLocation` (regression guard)
+- [x] **Task 4: Write `createPage` timezone/geolocation tests in `tests/scrapers/facebook-index.test.js`** (AC: #1, #2, #3, #4, #5, #6, #8)
+  - [x] 4.1 Add a new `describe('createPage — timezone & geolocation (Story 6.16)', ...)` block after the existing `createPage` describe
+  - [x] 4.2 Test: `emulateTimezone` is called with `America/New_York` when `proxyLocation` provides it
+  - [x] 4.3 Test: `setGeolocation` is called with `{ latitude, longitude }` matching `proxyLocation`
+  - [x] 4.4 Test: `page.browserContext().overridePermissions` is called for origin `https://www.facebook.com` with `['geolocation']`
+  - [x] 4.5 Test: when no `proxyLocation` is passed, none of the three methods are called
+  - [x] 4.6 Test: when `proxyLocation` is partial (e.g. only `latitude`), the methods are not called and `createPage` does not throw
+  - [x] 4.7 Test: `lat`/`lng` aliases are normalized to `latitude`/`longitude` before `setGeolocation`
+  - [x] 4.8 Test: optional `accuracy` is forwarded to `setGeolocation` when present
+  - [x] 4.9 Test: if `emulateTimezone` throws, `createPage` rejects with `/Failed to apply proxy location/` and closes the page
+  - [x] 4.10 Test: existing `createPage` tests still pass without `proxyLocation` (regression guard)
 
-- [ ] **Task 5: Write optional real-browser smoke test `test-timezone-geolocation-real.mjs`** (AC: #1)
-  - [ ] 5.1 Follow the pattern of `test-session-warming-real.mjs` (live account optional)
-  - [ ] 5.2 Launch a real browser with `createBrowser({ headless: process.env.PUPPETEER_HEADLESS !== 'false' })`
-  - [ ] 5.3 Call `createPage(browser, { proxyLocation: { timezone: 'America/New_York', latitude: 40.7128, longitude: -74.0060 } })`
-  - [ ] 5.4 Evaluate `Intl.DateTimeFormat().resolvedOptions().timeZone` in the page and assert it equals `America/New_York`
-  - [ ] 5.5 Close the browser
-  - [ ] 5.6 Skip gracefully (exit 0 or process.exit(2)) if no real browser is available
+- [x] **Task 5: Write optional real-browser smoke test `test-timezone-geolocation-real.mjs`** (AC: #1)
+  - [x] 5.1 Follow the pattern of `test-session-warming-real.mjs` (live account optional)
+  - [x] 5.2 Launch a real browser with `createBrowser({ headless: process.env.PUPPETEER_HEADLESS !== 'false' })`
+  - [x] 5.3 Call `createPage(browser, { proxyLocation: { timezone: 'America/New_York', latitude: 40.7128, longitude: -74.0060 } })`
+  - [x] 5.4 Evaluate `Intl.DateTimeFormat().resolvedOptions().timeZone` in the page and assert it equals `America/New_York`
+  - [x] 5.5 Close the browser
+  - [x] 5.6 Skip gracefully (exit 0 or process.exit(2)) if no real browser is available
 
-- [ ] **Task 6: Run full test suite and verify no regressions** (AC: #8)
-  - [ ] 6.1 Run `npx vitest run tests/scrapers/facebook-index.test.js`
-  - [ ] 6.2 Run `npx vitest run tests/scrapers/facebook-*.test.js`
-  - [ ] 6.3 Run `npx vitest run tests/services/facebook-automation-batch.test.js`
-  - [ ] 6.4 Optionally run `node test-timezone-geolocation-real.mjs`
+- [x] **Task 6: Run full test suite and verify no regressions** (AC: #8)
+  - [x] 6.1 Run `npx vitest run tests/scrapers/facebook-index.test.js`
+  - [x] 6.2 Run `npx vitest run tests/scrapers/facebook-*.test.js`
+  - [x] 6.3 Run `npx vitest run tests/services/facebook-automation-batch.test.js`
+  - [x] 6.4 Optionally run `node test-timezone-geolocation-real.mjs`
 
 ## Dev Notes
 
@@ -196,17 +196,18 @@ Devin CLI / SWE-1.7 Max
 
 ### Debug Log References
 
-- `npx vitest run tests/scrapers/facebook-index.test.js` → TBD
-- `npx vitest run tests/scrapers/facebook-*.test.js` → TBD
-- `npx vitest run tests/services/facebook-automation-batch.test.js` → TBD
+- `npx vitest run tests/scrapers/facebook-index.test.js` → 11/11 Story 6.16 tests pass
+- `npx vitest run tests/scrapers/facebook-*.test.js` → 808 passed, 14 skipped (re-run after patches: green)
+- `npx vitest run tests/services/facebook-automation-batch.test.js` → 94 passed
+- `node test-timezone-geolocation-real.mjs` → passed (real Puppeteer, timezone `America/New_York`)
 
 ### Completion Notes List
 
-- [ ] `applyProxyLocation` implemented and integrated into `createPage`
-- [ ] `tests/helpers/fake-page.js` extended with `browserContext().overridePermissions`
-- [ ] Unit tests added to `facebook-index.test.js`
-- [ ] Optional real-browser smoke test `test-timezone-geolocation-real.mjs` added
-- [ ] Full Facebook test suite passes
+- [x] `applyProxyLocation` implemented and integrated into `createPage`
+- [x] `tests/helpers/fake-page.js` extended with `browserContext().overridePermissions`
+- [x] Unit tests added to `facebook-index.test.js` (11 Story 6.16 tests + range/accuracy validation)
+- [x] Optional real-browser smoke test `test-timezone-geolocation-real.mjs` added
+- [x] Full Facebook test suite passes
 
 ### File List
 
@@ -214,3 +215,37 @@ Devin CLI / SWE-1.7 Max
 - `tests/helpers/fake-page.js` — UPDATE
 - `tests/scrapers/facebook-index.test.js` — UPDATE
 - `test-timezone-geolocation-real.mjs` — NEW (optional)
+
+## Review Findings
+
+### Summary
+
+- **0** decision-needed
+- **5** patch
+- **2** defer
+- **10+** dismissed as noise / false positive
+
+### Patch Findings
+
+- [x] [Review][Patch] Validate latitude/longitude range in `applyProxyLocation` before calling Puppeteer `src/scrapers/facebook/index.js:98-99`
+  - Out-of-range coordinates are now treated as malformed and fall through to the warning/skip path instead of throwing.
+
+- [x] [Review][Patch] Validate `accuracy` is non-negative in `applyProxyLocation` `src/scrapers/facebook/index.js:110-112`
+  - Negative accuracy is ignored; only non-negative `accuracy` values are forwarded to `setGeolocation`.
+
+- [x] [Review][Patch] Fix NFR4 test that passes silently if no error is thrown `tests/scrapers/facebook-index.test.js`
+  - The AC7 test now asserts the caught error is an `Error` before checking the message, preventing a vacuous pass.
+
+- [x] [Review][Patch] Handle `createBrowser` failures gracefully in `test-timezone-geolocation-real.mjs`
+  - Real-browser test now wraps `createBrowser` and exits with code `2` when the browser cannot be launched.
+
+- [x] [Review][Patch] Add tests for `setGeolocation` and `overridePermissions` throwing `tests/scrapers/facebook-index.test.js`
+  - Added explicit tests for `overridePermissions` failure and a range/accuracy validation test; the AC7 test already covers `setGeolocation` failure.
+
+### Defer Findings
+
+- [x] [Review][Defer] `err.cause` may leak proxyLocation values from Puppeteer's native error message `src/scrapers/facebook/index.js:117`
+  - The thrown error message is generic, but `{ cause: err }` attaches the original Puppeteer error, which *could* include the invalid timezone string if `emulateTimezone` throws. This mirrors the existing `applyFingerprint` pattern. Defer pending a project-wide decision on whether `cause` chains violate NFR4.
+
+- [x] [Review][Defer] Missing test for `lat`/`lng` alias normalization when `latitude`/`longitude` are absent and `timezone` is also missing `tests/scrapers/facebook-index.test.js:1368-1383`
+  - Partial `proxyLocation` with only `lat`/`lng` and no `timezone` correctly falls through to the warning/skip path, but there is no test specifically for that alias-only partial scenario. Coverage gap, not a functional defect.
