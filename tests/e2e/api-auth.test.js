@@ -7,6 +7,7 @@ import request from 'supertest';
 import app from '../../api/server.js';
 import { seedTestUser, cleanupTestUser, makeTestUserId } from '../api/fixtures/test-user.js';
 import { nextTestId } from '../utils/test-ids.js';
+const TEST_SCOPE = 'e2e-api-auth';
 
 const TEST_USER_ID = makeTestUserId('auth-e2e');
 
@@ -22,10 +23,10 @@ afterAll(async () => {
 
 describe('Auth endpoints', () => {
   it.each([
-    [nextTestId('E2E', 'P1'), 'empty body', {}, ['username', 'password']],
-    [nextTestId('E2E', 'P1'), 'invalid username', { username: 'ab', password: 'validpassword123' }, ['username']],
-    [nextTestId('E2E', 'P1'), 'invalid email', { username: 'validuser', password: 'validpassword123', email: 'not-an-email' }, ['email']],
-    [nextTestId('E2E', 'P1'), 'password too short', { username: 'validuser', password: 'short' }, ['password']],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P1'), 'empty body', {}, ['username', 'password']],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P1'), 'invalid username', { username: 'ab', password: 'validpassword123' }, ['username']],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P1'), 'invalid email', { username: 'validuser', password: 'validpassword123', email: 'not-an-email' }, ['email']],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P1'), 'password too short', { username: 'validuser', password: 'short' }, ['password']],
   ])(`[%s] POST /api/auth/register with %s → 400`,
     async (id, desc, body, expectedPaths) => {
       const res = await request(app).post('/api/auth/register').send(body);
@@ -38,7 +39,7 @@ describe('Auth endpoints', () => {
     }
   );
 
-  it(`[${nextTestId('E2E', 'P2')}] POST /api/auth/register with existing username → 400`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/register with existing username → 400`, async () => {
     const res = await request(app).post('/api/auth/register').send({
       username: testUser.user.username,
       password: 'validpassword123',
@@ -47,7 +48,7 @@ describe('Auth endpoints', () => {
     expect(res.body.error).toMatch(/already taken/i);
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] POST /api/auth/login with empty body → 400`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/login with empty body → 400`, async () => {
     const res = await request(app).post('/api/auth/login').send({});
     expect(res.status).toBe(400);
     expect(res.body.errors).toBeInstanceOf(Array);
@@ -56,7 +57,7 @@ describe('Auth endpoints', () => {
     expect(paths).toContain('password');
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] POST /api/auth/login with invalid credentials → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/login with invalid credentials → 401`, async () => {
     const res = await request(app).post('/api/auth/login').send({
       identifier: testUser.user.username,
       password: 'wrongpassword123',
@@ -65,7 +66,7 @@ describe('Auth endpoints', () => {
     expect(res.body.error).toMatch(/invalid credentials/i);
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] POST /api/auth/login with valid credentials → 200`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/login with valid credentials → 200`, async () => {
     const res = await request(app).post('/api/auth/login').send({
       identifier: testUser.user.username,
       password: testUser.password,
@@ -76,8 +77,8 @@ describe('Auth endpoints', () => {
   });
 
   it.each([
-    [nextTestId('E2E', 'P0'), 'no token', {}],
-    [nextTestId('E2E', 'P0'), 'malformed token', { token: 'not.a.jwt' }],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P0'), 'no token', {}],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P0'), 'malformed token', { token: 'not.a.jwt' }],
   ])(`[%s] POST /api/auth/refresh with %s → 401`, async (id, desc, body) => {
     const res = await request(app).post('/api/auth/refresh').send(body);
     expect(res.status).toBe(401);
@@ -85,19 +86,19 @@ describe('Auth endpoints', () => {
   });
 
   // Protected endpoint auth guards (not auth-rate-limited)
-  it(`[${nextTestId('E2E', 'P2')}] GET /api/operations without Authorization header → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/operations without Authorization header → 401`, async () => {
     const res = await request(app).get('/api/operations');
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error');
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] GET /api/user without Authorization header → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/user without Authorization header → 401`, async () => {
     const res = await request(app).get('/api/user');
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error');
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] Protected endpoint with malformed Bearer token → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] Protected endpoint with malformed Bearer token → 401`, async () => {
     const res = await request(app)
       .get('/api/operations')
       .set('Authorization', 'Bearer this.is.not.a.real.jwt');
@@ -105,7 +106,7 @@ describe('Auth endpoints', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] Protected endpoint with wrong scheme (no Bearer) → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] Protected endpoint with wrong scheme (no Bearer) → 401`, async () => {
     const res = await request(app)
       .get('/api/operations')
       .set('Authorization', 'Basic dXNlcjpwYXNz');

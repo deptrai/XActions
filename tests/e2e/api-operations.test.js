@@ -12,6 +12,7 @@ import {
   makeOperationId,
 } from '../api/fixtures/test-user.js';
 import { nextTestId } from '../utils/test-ids.js';
+const TEST_SCOPE = 'e2e-api-operations';
 
 const TEST_USER_ID = makeTestUserId('operations-e2e');
 
@@ -29,13 +30,13 @@ afterAll(async () => {
 describe('Operations endpoints', () => {
   // ─── Auth guard ──────────────────────────────────────────────────────────
 
-  it(`[${nextTestId('E2E', 'P2')}] GET /api/operations without auth → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/operations without auth → 401`, async () => {
     const res = await request(app).get('/api/operations');
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error');
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] GET /api/operations with malformed token → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/operations with malformed token → 401`, async () => {
     const res = await request(app)
       .get('/api/operations')
       .set('Authorization', 'Bearer bad.token.here');
@@ -43,7 +44,7 @@ describe('Operations endpoints', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] GET /api/operations with no Bearer scheme → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/operations with no Bearer scheme → 401`, async () => {
     const res = await request(app)
       .get('/api/operations')
       .set('Authorization', 'Token sometoken');
@@ -51,19 +52,19 @@ describe('Operations endpoints', () => {
     expect(res.body.error).toMatch(/token/i);
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] GET /api/operations/status/:id without auth → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/operations/status/:id without auth → 401`, async () => {
     const res = await request(app).get(`/api/operations/status/${makeOperationId()}`);
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error');
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] POST /api/operations/cancel/:id without auth → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/operations/cancel/:id without auth → 401`, async () => {
     const res = await request(app).post(`/api/operations/cancel/${makeOperationId()}`);
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error');
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] POST /api/operations/unfollow-non-followers without auth → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/operations/unfollow-non-followers without auth → 401`, async () => {
     const res = await request(app)
       .post('/api/operations/unfollow-non-followers')
       .send({ maxUnfollows: 10 });
@@ -73,7 +74,7 @@ describe('Operations endpoints', () => {
 
   // ─── Non-existent user token ──────────────────────────────────────────────
 
-  it(`[${nextTestId('E2E', 'P2')}] GET /api/operations with fake (non-existent user) JWT → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/operations with fake (non-existent user) JWT → 401`, async () => {
     const fakeToken = makeTestToken(makeTestUserId('nonexistent'), makeTestUserId('ghost'));
     const res = await request(app)
       .get('/api/operations')
@@ -85,9 +86,9 @@ describe('Operations endpoints', () => {
   // ─── Validation with real user but no Twitter/Facebook connection ───────────
 
   it.each([
-    [nextTestId('E2E', 'P1'), 'unfollow-non-followers', { maxUnfollows: 10 }],
-    [nextTestId('E2E', 'P1'), 'unfollow-everyone', { maxUnfollows: 10 }],
-    [nextTestId('E2E', 'P1'), 'detect-unfollowers', {}],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P1'), 'unfollow-non-followers', { maxUnfollows: 10 }],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P1'), 'unfollow-everyone', { maxUnfollows: 10 }],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P1'), 'detect-unfollowers', {}],
   ])(`[%s] POST /api/operations/%s with auth but no platform session → 400`, async (id, action, body) => {
     const res = await request(app)
       .post(`/api/operations/${action}`)
@@ -99,19 +100,19 @@ describe('Operations endpoints', () => {
 
   // ─── Pagination query params (auth guard fires first) ─────────────────────
 
-  it(`[${nextTestId('E2E', 'P2')}] GET /api/operations?page=1&limit=5 without auth → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/operations?page=1&limit=5 without auth → 401`, async () => {
     const res = await request(app).get('/api/operations?page=1&limit=5');
     expect(res.status).toBe(401);
   });
 
-  it(`[${nextTestId('E2E', 'P2')}] GET /api/operations?status=pending without auth → 401`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/operations?status=pending without auth → 401`, async () => {
     const res = await request(app).get('/api/operations?status=pending');
     expect(res.status).toBe(401);
   });
 
   // ─── Response shape contract (error responses) ────────────────────────────
 
-  it(`[${nextTestId('E2E', 'P2')}] 401 error response is JSON with error field`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] 401 error response is JSON with error field`, async () => {
     const res = await request(app).get('/api/operations');
     expect(res.headers['content-type']).toMatch(/json/);
     expect(typeof res.body.error).toBe('string');
