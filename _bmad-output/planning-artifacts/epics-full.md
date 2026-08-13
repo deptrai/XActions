@@ -959,6 +959,8 @@ So that I can reach all Facebook capabilities already implemented in the codebas
 ## Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
 
 **Status:** 🆕 backlog
+**Architecture:** `_bmad-output/architecture-artifacts/epic7-2026-08-14/ARCHITECTURE-SPINE.md`
+**Stories:** `_bmad-output/architecture-artifacts/epic7-2026-08-14/STORIES.md`
 
 **Goal:** Expand Facebook scraping to support multi-type search, post/group comments scraping, account health filtering, and parallel execution using a pool of live Facebook accounts.
 
