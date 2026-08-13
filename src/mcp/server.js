@@ -23,6 +23,9 @@
  * @license MIT
  */
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { VERSION } from '../version.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -40,6 +43,7 @@ import { fileURLToPath } from 'node:url';
 // ============================================================================
 
 import { initializePlugins, getPluginTools } from '../plugins/index.js';
+import { resolveMcpFacebookAuth } from './facebook-auth.js';
 
 // ============================================================================
 // Configuration
@@ -58,6 +62,21 @@ let remoteClient = null;
 // ============================================================================
 // Tool Definitions
 // ============================================================================
+
+const FACEBOOK_AUTH_COOKIE_SCHEMA = {
+  type: 'object',
+  properties: {
+    c_user: { type: 'string', description: 'Facebook c_user cookie value' },
+    xs: { type: 'string', description: 'Facebook xs cookie value' },
+    accountId: { type: 'string', description: 'Stored FacebookAccount id' },
+  },
+  anyOf: [
+    { required: ['c_user', 'xs'] },
+    { required: ['accountId'] },
+  ],
+  description:
+    'Facebook session cookie. Provide either {c_user, xs} raw values or {accountId} referencing a stored FacebookAccount. Values are never logged (NFR3).',
+};
 
 const TOOLS = [
   {
@@ -1398,15 +1417,7 @@ const TOOLS = [
           type: 'boolean',
           description: 'Preview mode — no real writes. Defaults to true. Set false to execute.',
         },
-        authCookie: {
-          type: 'object',
-          properties: {
-            c_user: { type: 'string', description: 'Facebook c_user cookie value' },
-            xs: { type: 'string', description: 'Facebook xs cookie value' },
-          },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
         maxBatch: {
           type: 'number',
           description: 'Max posts per batch (default: 20)',
@@ -1428,12 +1439,7 @@ const TOOLS = [
         facebookAccountId: { type: 'string', description: 'Optional Facebook account/page ID to post from' },
         userId: { type: 'string', description: 'Required when dryRun:false — scopes the schedule row to this user' },
         dryRun: { type: 'boolean', description: 'Preview without persisting (default: true)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['content', 'scheduledAt', 'authCookie'],
     },
@@ -1447,12 +1453,7 @@ const TOOLS = [
         postUrls: { type: 'array', items: { type: 'string' }, description: 'Non-empty array of unique facebook.com post URLs to share' },
         dryRun: { type: 'boolean', description: 'Preview without sharing (default: true)' },
         maxBatch: { type: 'number', description: 'Max posts per batch run (default: 20)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['postUrls', 'authCookie'],
     },
@@ -1466,12 +1467,7 @@ const TOOLS = [
         targetUrl: { type: 'string', description: 'facebook.com URL of the feed or page to scroll' },
         durationSeconds: { type: 'number', description: 'Scroll session length in seconds (default: 60, max: 300)' },
         dryRun: { type: 'boolean', description: 'Preview without scrolling (default: true)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['targetUrl', 'authCookie'],
     },
@@ -1487,12 +1483,7 @@ const TOOLS = [
         limit: { type: 'number', description: 'Max groups to find in keyword mode (default: 10)' },
         dryRun: { type: 'boolean', description: 'Preview without joining (default: true)' },
         maxBatch: { type: 'number', description: 'Max groups per batch (default: 20)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['authCookie'],
     },
@@ -1509,12 +1500,7 @@ const TOOLS = [
         force: { type: 'boolean', description: 'Allow more than 10 groups per batch (still capped at 20). Default: false.' },
         dryRun: { type: 'boolean', description: 'Preview without posting (default: true)' },
         maxBatch: { type: 'number', description: 'Max groups per batch (default: 20)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['groupUrls', 'content', 'authCookie'],
     },
@@ -1531,12 +1517,7 @@ const TOOLS = [
         limit: { type: 'number', description: 'Max profiles in suggestions/location mode (default: 10)' },
         dryRun: { type: 'boolean', description: 'Preview without sending (default: true). suggestions/location require dryRun:false.' },
         maxBatch: { type: 'number', description: 'Max requests per batch (default: 20)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['mode', 'authCookie'],
     },
@@ -1551,12 +1532,7 @@ const TOOLS = [
         olderThanDays: { type: 'number', description: 'Only cancel requests older than this many days (optional, non-negative)' },
         dryRun: { type: 'boolean', description: 'Preview without cancelling (default: true)' },
         maxBatch: { type: 'number', description: 'Max cancellations per batch (default: 20). limit must not exceed this.' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['limit', 'authCookie'],
     },
@@ -1571,12 +1547,7 @@ const TOOLS = [
         allowReactions: { type: 'boolean', description: 'Enable probabilistic Like reactions during scroll (default: false)' },
         reactProbability: { type: 'number', description: 'Per-scroll reaction probability (0–0.2, values above 0.2 clamped). Default: 0.05.' },
         dryRun: { type: 'boolean', description: 'Preview without scrolling (default: true). Browser not launched in dry-run.' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['authCookie'],
     },
@@ -2681,14 +2652,8 @@ async function executeFacebookAutomateTool(args) {
     throw new Error(`❌ x_facebook_automate: unknown action "${action}". Valid values: like, comment, post, messenger.`);
   }
 
-  // Hard auth guard (AC3.7, mirrors CLI 3.1). Coerce to string first — c_user is a
-  // numeric Facebook UID and may arrive as a JSON number, which would crash on
-  // .trim() instead of producing the clear auth error.
-  const cUser = String(authCookie?.c_user ?? '').trim();
-  const xs = String(authCookie?.xs ?? '').trim();
-  if (!cUser || !xs) {
-    throw new Error('❌ x_facebook_automate requires authCookie { c_user, xs }. Provide a valid Facebook session cookie.');
-  }
+  // Resolve raw cookie or stored accountId (AC3.7, NFR3). authCookie values are never logged.
+  const { c_user: cUser, xs } = await resolveMcpFacebookAuth(authCookie);
 
   // Fail-fast arg validation before browser launch (AC3.8)
   if ((action === 'like' || action === 'comment') && (!Array.isArray(urls) || urls.length === 0)) {
@@ -2784,13 +2749,8 @@ async function runWithFacebookBrowser(authCookie, fn) {
 async function executeFacebookEpic4Tool(name, args) {
   const { authCookie, dryRun, ...rest } = args;
 
-  const cUser = String(authCookie?.c_user ?? '').trim();
-  const xs = String(authCookie?.xs ?? '').trim();
-  if (!cUser || !xs) {
-    throw new Error(
-      `❌ ${name} requires authCookie { c_user, xs }. Provide a valid Facebook session cookie.`,
-    );
-  }
+  // Resolve raw cookie or stored accountId (NFR3). Cookie values are never logged.
+  const { c_user: cUser, xs, userId: resolvedUserId } = await resolveMcpFacebookAuth(authCookie);
 
   const resolvedDryRun = dryRun === false ? false : true;
 
@@ -2806,7 +2766,8 @@ async function executeFacebookEpic4Tool(name, args) {
   } = await import('../../api/services/facebookAutomation.js');
 
   if (name === 'x_facebook_schedule_post') {
-    const { content, scheduledAt, mediaUrls, facebookAccountId, userId } = rest;
+    const { content, scheduledAt, mediaUrls, facebookAccountId, userId: callerUserId } = rest;
+    const userId = callerUserId ?? resolvedUserId;
     return await scheduleFacebookPost(
       null,
       { content, scheduledAt, mediaUrls, facebookAccountId },
@@ -2825,7 +2786,11 @@ async function executeFacebookEpic4Tool(name, args) {
 
   if (name === 'x_facebook_warmup_scroll') {
     const { targetUrl, durationSeconds } = rest;
-    const options = { dryRun: resolvedDryRun, ...(durationSeconds != null && { durationSeconds }) };
+    const options = {
+      dryRun: resolvedDryRun,
+      ...(durationSeconds != null && { durationSeconds }),
+      ...(resolvedUserId && { userId: resolvedUserId }),
+    };
     if (resolvedDryRun) return await warmupScrollFeed(null, targetUrl, options);
     return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
       warmupScrollFeed(page, targetUrl, options),
