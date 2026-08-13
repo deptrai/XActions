@@ -17,6 +17,8 @@ const TOOL_NAMES = [
   'x_facebook_send_friend_requests',
   'x_facebook_cancel_friend_requests',
   'x_facebook_warmup_account',
+  'x_facebook_group_members',
+  'x_facebook_marketplace',
 ];
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
@@ -205,6 +207,57 @@ describe('executeFacebookEpic4Tool — optional field forwarding', () => {
 });
 
 // ── unknown tool name ─────────────────────────────────────────────────────────
+
+// ── scrape tools (new tool surface) ───────────────────────────────────────────
+
+describe('executeFacebookEpic4Tool — x_facebook_group_members', () => {
+  it('dry-run returns preview with groupUrl', async () => {
+    const result = await executeFacebookEpic4Tool('x_facebook_group_members', {
+      authCookie: VALID_AUTH,
+      groupUrl: 'https://www.facebook.com/groups/testgroup',
+      limit: 50,
+    });
+    expect(result.dryRun).toBe(true);
+    expect(result.platform).toBe('facebook');
+    expect(result.preview.groupUrl).toBe('https://www.facebook.com/groups/testgroup');
+    expect(result.preview.limit).toBe(50);
+  });
+
+  it('throws for non-group URL', async () => {
+    await expect(
+      executeFacebookEpic4Tool('x_facebook_group_members', {
+        authCookie: VALID_AUTH,
+        groupUrl: 'https://example.com/groups/test',
+      }),
+    ).rejects.toThrow('groupUrl');
+  });
+});
+
+describe('executeFacebookEpic4Tool — x_facebook_marketplace', () => {
+  it('dry-run returns preview with query and searchUrl', async () => {
+    const result = await executeFacebookEpic4Tool('x_facebook_marketplace', {
+      authCookie: VALID_AUTH,
+      query: 'macbook pro 14',
+      location: 'Ho Chi Minh',
+      limit: 10,
+      minPrice: 1000,
+      maxPrice: 3000,
+    });
+    expect(result.dryRun).toBe(true);
+    expect(result.platform).toBe('facebook');
+    expect(result.preview.query).toBe('macbook pro 14');
+    expect(result.preview.location).toBe('Ho Chi Minh');
+    expect(result.preview.searchUrl).toContain('macbook%20pro%2014');
+  });
+
+  it('throws for missing query', async () => {
+    await expect(
+      executeFacebookEpic4Tool('x_facebook_marketplace', {
+        authCookie: VALID_AUTH,
+      }),
+    ).rejects.toThrow();
+  });
+});
 
 describe('executeFacebookEpic4Tool — unknown tool', () => {
   it('throws unhandled tool name error', async () => {

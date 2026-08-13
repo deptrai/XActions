@@ -126,3 +126,29 @@ describe('no existing MCP tool removed', () => {
     });
   }
 });
+
+// ============================================================================
+// AC4d — New Facebook MCP tools registered
+// ============================================================================
+
+describe('new Facebook MCP tools are registered', () => {
+  const NEW_TOOLS = ['x_facebook_group_members', 'x_facebook_marketplace', 'x_facebook_list_accounts'];
+
+  for (const toolName of NEW_TOOLS) {
+    it(`${toolName} is registered`, () => {
+      expect(findTool(toolName)).toBeDefined();
+    });
+  }
+
+  it('x_facebook_group_members requires groupUrl and authCookie', () => {
+    const required = findTool('x_facebook_group_members')?.inputSchema?.required ?? [];
+    expect(required).toContain('groupUrl');
+    expect(required).toContain('authCookie');
+  });
+
+  it('x_facebook_marketplace requires query and authCookie', () => {
+    const required = findTool('x_facebook_marketplace')?.inputSchema?.required ?? [];
+    expect(required).toContain('query');
+    expect(required).toContain('authCookie');
+  });
+});

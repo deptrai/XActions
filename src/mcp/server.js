@@ -44,6 +44,7 @@ import { fileURLToPath } from 'node:url';
 
 import { initializePlugins, getPluginTools } from '../plugins/index.js';
 import { resolveMcpFacebookAuth } from './facebook-auth.js';
+import { PrismaClient } from '@prisma/client';
 
 // ============================================================================
 // Configuration
@@ -1552,6 +1553,59 @@ const TOOLS = [
       required: ['authCookie'],
     },
   },
+  {
+    name: 'x_facebook_group_members',
+    description: 'Scrape member list from a Facebook group. Requires auth. Returns bounded list of public member profiles or a note if private/restricted. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        groupUrl: { type: 'string', description: 'facebook.com/groups/... URL to scrape members from' },
+        limit: { type: 'number', description: 'Max members to return (default: 100, max: 500)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['groupUrl', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_marketplace',
+    description: 'Search Facebook Marketplace listings by keyword, location, and price range. PII stripped. Dry-run (default) previews the search URL; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query (e.g. "macbook pro 14")' },
+        location: { type: 'string', description: 'Location/city filter (e.g. "Ho Chi Minh")' },
+        limit: { type: 'number', description: 'Max listings to return (default: 50, max: 200)' },
+        minPrice: { type: 'number', description: 'Minimum price filter' },
+        maxPrice: { type: 'number', description: 'Maximum price filter' },
+        category: { type: 'string', description: 'Marketplace category slug' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['query', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_list_accounts',
+    description: 'List stored Facebook accounts for a user. Returns id, label, userId, createdAt — never cookie values. Provide userId or authCookie.accountId.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string', description: 'User ID to list accounts for' },
+        authCookie: {
+          type: 'object',
+          properties: {
+            accountId: { type: 'string', description: 'Stored FacebookAccount id; used to resolve userId' },
+          },
+          required: ['accountId'],
+        },
+      },
+      anyOf: [
+        { required: ['userId'] },
+        { required: ['authCookie'] },
+      ],
+    },
+  },
   // ====== Social Graph ======
   {
     name: 'x_graph_build',
@@ -2607,6 +2661,11 @@ async function executeTool(name, args) {
     return await executeFacebookAutomateTool(args);
   }
 
+  // Handle Facebook account listing (DB-only, no browser)
+  if (name === 'x_facebook_list_accounts') {
+    return await executeFacebookListAccounts(args);
+  }
+
   // Handle Facebook Epic 4 growth automation tools
   if (name.startsWith('x_facebook_') && name !== 'x_facebook_automate') {
     return await executeFacebookEpic4Tool(name, args);
@@ -2725,6 +2784,44 @@ async function executeFacebookAutomateTool(args) {
   } finally {
     // Swallow close errors so they never mask the original failure
     await browser.close().catch(() => {});
+  }
+}
+
+// by nichxbt
+async function executeFacebookListAccounts(args) {
+  const { userId, authCookie } = args;
+  let targetUserId = userId;
+
+  if (!targetUserId && authCookie?.accountId) {
+    const prisma = new PrismaClient();
+    try {
+      const account = await prisma.facebookAccount.findUnique({
+        where: { id: authCookie.accountId },
+        select: { userId: true },
+      });
+      if (!account) {
+        throw new Error(`❌ Facebook account "${authCookie.accountId}" not found`);
+      }
+      targetUserId = account.userId;
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
+
+  if (!targetUserId) {
+    throw new Error('❌ x_facebook_list_accounts requires userId or authCookie.accountId');
+  }
+
+  const prisma = new PrismaClient();
+  try {
+    const accounts = await prisma.facebookAccount.findMany({
+      where: { userId: targetUserId },
+      select: { id: true, label: true, userId: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { accounts };
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
@@ -2855,6 +2952,47 @@ async function executeFacebookEpic4Tool(name, args) {
     if (resolvedDryRun) return await warmupAccount(null, options);
     return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
       warmupAccount(page, options),
+    );
+  }
+
+  if (name === 'x_facebook_group_members') {
+    const { groupUrl, limit } = rest;
+    if (typeof groupUrl !== 'string' || !groupUrl.trim() || !groupUrl.includes('facebook.com/groups/')) {
+      throw new Error('❌ x_facebook_group_members: groupUrl must be a facebook.com/groups/ URL');
+    }
+    const options = { ...(limit != null && { limit }) };
+    if (resolvedDryRun) {
+      return { dryRun: true, platform: 'facebook', preview: { groupUrl, ...options } };
+    }
+    const { scrapeGroupMembers } = await import('../scrapers/facebook/index.js');
+    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
+      scrapeGroupMembers(page, groupUrl, options),
+    );
+  }
+
+  if (name === 'x_facebook_marketplace') {
+    const { query, location, limit, minPrice, maxPrice, category } = rest;
+    if (typeof query !== 'string' || !query.trim()) {
+      throw new Error('❌ x_facebook_marketplace: query is required');
+    }
+    const options = {
+      ...(limit != null && { limit }),
+      ...(location && { location }),
+      ...(minPrice != null && { minPrice }),
+      ...(maxPrice != null && { maxPrice }),
+      ...(category && { category }),
+    };
+    const searchUrl = `https://www.facebook.com/marketplace/search/?query=${encodeURIComponent(query)}` +
+      (location ? `&location=${encodeURIComponent(location)}` : '') +
+      (minPrice != null ? `&minPrice=${minPrice}` : '') +
+      (maxPrice != null ? `&maxPrice=${maxPrice}` : '') +
+      (category ? `&category=${encodeURIComponent(category)}` : '');
+    if (resolvedDryRun) {
+      return { dryRun: true, platform: 'facebook', preview: { query, ...options, searchUrl } };
+    }
+    const { scrapeMarketplace } = await import('../scrapers/facebook/index.js');
+    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
+      scrapeMarketplace(page, query, options),
     );
   }
 
@@ -4757,4 +4895,4 @@ if (isEntryPoint()) {
 
 // Exported so the tool list can be inspected without starting a transport.
 // Also export Facebook automation tools for direct programmatic use.
-export { TOOLS, main, createMcpServer, executeFacebookAutomateTool, executeFacebookEpic4Tool };
+export { TOOLS, main, createMcpServer, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookListAccounts };

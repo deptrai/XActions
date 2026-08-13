@@ -906,3 +906,44 @@ So that browser retains history, cookies, localStorage across sessions.
 **And** next session restores previous state
 **And** profile directory auto-created if not exists
 **And** profile path format: `./profiles/fb-{c_user}/`
+
+---
+
+## Epic 3 Extension: MCP Facebook Tool Surface
+
+**Goal:** Extend Epic 3 Story 3.2 by exposing additional Facebook capabilities that are already implemented in scrapers/automation but not yet available as MCP tools.
+
+**Status:** backlog
+
+**Motivation:** The original Story 3.2 registered the first set of Facebook MCP tools (profile/posts/followers/search). Subsequent implementation work added `scrapeGroupMembers`, `scrapeMarketplace`, and `FacebookAccount` persistence, but these are not yet reachable through the MCP tool surface.
+
+### Story 3.2.1: MCP Facebook Tool Surface Extension
+
+As an AI agent,
+I want additional Facebook MCP tools for group members, marketplace search, and account listing,
+So that I can reach all Facebook capabilities already implemented in the codebase.
+
+**Acceptance Criteria:**
+
+**Given** a valid `groupUrl`
+**When** I call `x_facebook_group_members` with `authCookie.accountId`
+**Then** the tool resolves `accountId` via `resolveMcpFacebookAuth`
+**And** logs in and navigates to the group members page
+**And** returns a bounded list of `{ name, username?, profileUrl, platform: 'facebook' }`
+**And** returns a `note` instead of throwing when members are private or restricted
+**And** cookie values are never logged
+
+**Given** a `query` string
+**When** I call `x_facebook_marketplace` with `authCookie.accountId`
+**Then** the tool resolves `accountId` via `resolveMcpFacebookAuth`
+**And** logs in and searches `facebook.com/marketplace/search`
+**And** returns listings with `{ id, title, price, location, image, listingUrl }`
+**And** PII (seller phone/email) is stripped before returning
+**And** dry-run mode previews the search URL and filters without launching a browser
+**And** cookie values are never logged
+
+**Given** a valid user context
+**When** I call `x_facebook_list_accounts`
+**Then** it returns `{ id, label, userId }` for each `FacebookAccount`
+**And** never returns `c_user`, `xs`, or `encryptedCookie`
+**And** no cookie or session data is logged
