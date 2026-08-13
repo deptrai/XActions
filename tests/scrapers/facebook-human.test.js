@@ -300,6 +300,16 @@ describe('humanClick (AC1-AC9 — Story 6.10)', () => {
     }
   });
 
+  it('throws when boundingBox has invalid dimensions (zero / non-finite)', async () => {
+    const page = makeFakePage();
+    await expect(
+      humanClick(page, makeElementHandle({ boundingBox: { x: 0, y: 0, width: 0, height: 10 } }), { delayFn: async () => {}, rng: () => 0.5 }),
+    ).rejects.toThrow(/bounding box/);
+    await expect(
+      humanClick(page, makeElementHandle({ boundingBox: { x: 0, y: 0, width: 10, height: NaN } }), { delayFn: async () => {}, rng: () => 0.5 }),
+    ).rejects.toThrow(/bounding box/);
+  });
+
   it('uses element center coordinates (x + width/2, y + height/2) (AC4)', async () => {
     const page = makeFakePage();
     const el = makeElementHandle({ boundingBox: { x: 200, y: 300, width: 100, height: 60 } });
@@ -674,7 +684,7 @@ describe('humanScroll (AC1-AC9 — Story 6.12)', () => {
       const moves = page.calls.mouse.move;
       const maxMoveX = Math.max(...moves.map((m) => m.x));
       // 5px * 0.06 = 0.3px -> clamped to minimum 1px. Max move x near 6px ± jitter
-      expect(maxMoveX).toBeLessThanOrEqual(10);
+      expect(maxMoveX).toBeLessThanOrEqual(8);
     });
 
     it('humanMoveMouse throws when x or y is not a finite number (AC2)', async () => {

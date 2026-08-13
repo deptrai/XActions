@@ -4,7 +4,7 @@ baseline_commit: b68cea50c07cbfceed2d35ddea9a3eb20038712f
 
 # Story 6.18: Human Behavior Hardening
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -225,16 +225,16 @@ Devin CLI / SWE-1.7 Max
 
 ### Debug Log References
 
-- `npx vitest run tests/scrapers/facebook-human.test.js` → TBD
-- `npx vitest run tests/scrapers/facebook-*.test.js` → TBD
-- `npx vitest run tests/services/facebook-automation-batch.test.js` → TBD
+- `npx vitest run tests/scrapers/facebook-human.test.js` → 65/65 pass
+- `npx vitest run tests/scrapers/facebook-*.test.js` → 823/823 pass (14 skipped)
+- `npx vitest run tests/services/facebook-automation-batch.test.js` → 94/94 pass
 
 ### Completion Notes List
 
-- [ ] Proportional overshoot clamped to `[1, 25]` px
-- [ ] Input validation added to all `human.*` exports
-- [ ] Unit tests for overshoot and validation added
-- [ ] Full Facebook test suite passes
+- [x] Proportional overshoot clamped to `[1, 25]` px
+- [x] Input validation added to all `human.*` exports
+- [x] Unit tests for overshoot and validation added
+- [x] Full Facebook test suite passes
 
 ### File List
 
@@ -258,3 +258,9 @@ Devin CLI / SWE-1.7 Max
   - `humanClick` validates `page.mouse.down` and `page.mouse.up` exist.
   - `humanMoveMouse` validates `startX`/`startY` are finite numbers.
   - Overshoot test comments corrected to match `rng = () => 0.1`.
+- Re-review (adversarial, 3 layers) applied additional hardening patches:
+  - Wrapped all injected `rng()` calls with `wrapRng()` to clamp output to `[0, 1]`.
+  - Added `clamp()` helper and clamped all randomized step counts, delays, and overshoot scalars to their documented ranges.
+  - Hardened `getTypoChar` index selection to `[0, adjacent.length - 1]`.
+  - Added bounding box dimension validation in `humanClick` (finite positive width/height).
+  - Tightened tiny-movement overshoot test assertion from `≤10` to `≤8`.

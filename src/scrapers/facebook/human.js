@@ -39,6 +39,22 @@ const defaultDelayFn = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 /** Default RNG — Math.random. Tests inject a seeded RNG for deterministic behavior. */
 const defaultRng = Math.random;
 
+/**
+ * Clamp a number to the inclusive [min, max] range.
+ * Prevents RNG or arithmetic from producing values outside documented bounds.
+ */
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+/**
+ * Wrap an external RNG so its output is always in [0, 1].
+ * Hardens against injected RNGs that may return outside the expected range.
+ */
+function wrapRng(rng) {
+  return () => clamp(rng(), 0, 1);
+}
+
 // ============================================================================
 // Cubic Bezier helpers
 // ============================================================================
@@ -99,8 +115,10 @@ export async function humanMoveMouse(page, x, y, options = {}) {
     throw new Error('❌ humanMoveMouse: page.mouse.move and finite x, y are required');
   }
 
+  const r = wrapRng(rng);
+
   // Step count: 20-35 (randomized)
-  const stepCount = 20 + Math.floor(rng() * 16); // 20..35 inclusive
+  const stepCount = 20 + Math.min(15, Math.floor(r() * 16)); // 20..35 inclusive
 
   // Control points: offset perpendicular to the line start→target.
   // This creates a natural arc rather than a straight line.
@@ -111,8 +129,8 @@ export async function humanMoveMouse(page, x, y, options = {}) {
   const perpX = -dy / dist;
   const perpY = dx / dist;
   // Random offset magnitude for control points (10-40% of distance)
-  const offset1 = (dist * (0.1 + rng() * 0.3)) * (rng() < 0.5 ? -1 : 1);
-  const offset2 = (dist * (0.1 + rng() * 0.3)) * (rng() < 0.5 ? -1 : 1);
+  const offset1 = (dist * (0.1 + r() * 0.3)) * (r() < 0.5 ? -1 : 1);
+  const offset2 = (dist * (0.1 + r() * 0.3)) * (r() < 0.5 ? -1 : 1);
 
   const cp1x = startX + dx * 0.33 + perpX * offset1;
   const cp1y = startY + dy * 0.33 + perpY * offset1;
@@ -120,7 +138,7 @@ export async function humanMoveMouse(page, x, y, options = {}) {
   const cp2y = startY + dy * 0.67 + perpY * offset2;
 
   // 15% chance: overshoot past target, then correct back
-  const willOvershoot = rng() < 0.15;
+  const willOvershoot = r() < 0.15;
 
   let endX = x;
   let endY = y;
@@ -129,8 +147,8 @@ export async function humanMoveMouse(page, x, y, options = {}) {
 
   if (willOvershoot) {
     // Proportional overshoot: 5-15% of movement distance, clamped to [1, 25] pixels (Story 6.18 — AC1)
-    const overScalar = 0.05 + rng() * 0.10;
-    const overDist = Math.max(1, Math.min(25, dist * overScalar));
+    const overScalar = clamp(0.05 + r() * 0.10, 0.05, 0.15);
+    const overDist = clamp(Math.round(dist * overScalar), 1, 25);
     const overDx = (dx / dist) * overDist;
     const overDy = (dy / dist) * overDist;
     overshootX = x + overDx;
@@ -146,25 +164,25 @@ export async function humanMoveMouse(page, x, y, options = {}) {
     const bx = cubicBezier(t, startX, cp1x, cp2x, endX);
     const by = cubicBezier(t, startY, cp1y, cp2y, endY);
     // Micro-jitter ±2px
-    const jx = bx + (rng() - 0.5) * 4;
-    const jy = by + (rng() - 0.5) * 4;
+    const jx = bx + (r() - 0.5) * 4;
+    const jy = by + (r() - 0.5) * 4;
     await page.mouse.move(jx, jy, { steps: 1 });
     // Delay 15-40ms per step
-    await delayFn(15 + rng() * 25);
+    await delayFn(clamp(15 + r() * 25, 15, 40));
   }
 
   // Correction phase: if overshoot, move back to actual target in 3-5 steps
   if (willOvershoot) {
-    const correctionSteps = 3 + Math.floor(rng() * 3); // 3..5
+    const correctionSteps = 3 + Math.min(2, Math.floor(r() * 3)); // 3..5
     for (let i = 1; i <= correctionSteps; i++) {
       const t = i / correctionSteps;
       const cx = overshootX + (x - overshootX) * t;
       const cy = overshootY + (y - overshootY) * t;
       // Micro-jitter ±2px (AC3 — same as main Bezier loop)
-      const jx = cx + (rng() - 0.5) * 4;
-      const jy = cy + (rng() - 0.5) * 4;
+      const jx = cx + (r() - 0.5) * 4;
+      const jy = cy + (r() - 0.5) * 4;
       await page.mouse.move(jx, jy, { steps: 1 });
-      await delayFn(15 + rng() * 25);
+      await delayFn(clamp(15 + r() * 25, 15, 40));
     }
   }
 }
@@ -204,9 +222,11 @@ export async function humanClick(page, element, options = {}) {
     throw new Error('❌ humanClick: page.mouse and element.boundingBox are required');
   }
 
+  const r = wrapRng(rng);
+
   // Get element bounding box — returns null if element is not visible or detached
   const box = await element.boundingBox();
-  if (!box) {
+  if (!box || typeof box.x !== 'number' || !Number.isFinite(box.x) || typeof box.y !== 'number' || !Number.isFinite(box.y) || typeof box.width !== 'number' || !Number.isFinite(box.width) || typeof box.height !== 'number' || !Number.isFinite(box.height) || box.width <= 0 || box.height <= 0) {
     throw new Error('humanClick: element has no bounding box (not visible or detached)');
   }
 
@@ -215,14 +235,14 @@ export async function humanClick(page, element, options = {}) {
   const centerY = box.y + box.height / 2;
 
   // Move mouse to element center via Bezier curve (reuse Story 6.9)
-  await humanMoveMouse(page, centerX, centerY, { delayFn, rng });
+  await humanMoveMouse(page, centerX, centerY, { delayFn, rng: r });
 
   // Hover pause 100-400ms before click
-  await delayFn(100 + rng() * 300);
+  await delayFn(clamp(100 + r() * 300, 100, 400));
 
   // Mouse down → hold 30-120ms → mouse up (NOT page.mouse.click())
   await page.mouse.down();
-  await delayFn(30 + rng() * 90);
+  await delayFn(clamp(30 + r() * 90, 30, 120));
   await page.mouse.up();
 }
 
@@ -269,7 +289,8 @@ function getTypoChar(char, rng) {
   const lower = char.toLowerCase();
   const adjacent = QWERTY_ADJACENT[lower];
   if (!adjacent || adjacent.length === 0) return char;
-  const wrongChar = adjacent[Math.floor(rng() * adjacent.length)];
+  const idx = Math.max(0, Math.min(adjacent.length - 1, Math.floor(rng() * adjacent.length)));
+  const wrongChar = adjacent[idx];
   return char === char.toUpperCase() ? wrongChar.toUpperCase() : wrongChar;
 }
 
@@ -312,16 +333,18 @@ export async function humanType(page, text, options = {}) {
     throw new Error('❌ humanType: page.keyboard and string text are required');
   }
 
+  const r = wrapRng(rng);
+
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     const isLetter = /[a-zA-Z]/.test(char);
 
     // 1.5% typo chance, only for alphabet characters
-    if (isLetter && rng() < 0.015) {
-      const wrongChar = getTypoChar(char, rng);
+    if (isLetter && r() < 0.015) {
+      const wrongChar = getTypoChar(char, r);
       await page.keyboard.type(wrongChar);
       // Realization pause: 100-300ms
-      await delayFn(100 + rng() * 200);
+      await delayFn(clamp(100 + r() * 200, 100, 300));
       // Backspace to delete wrong char
       await page.keyboard.press('Backspace');
       // Type correct char
@@ -332,11 +355,11 @@ export async function humanType(page, text, options = {}) {
 
     // Delay after character based on what this character is
     if (char === ' ') {
-      await delayFn(100 + rng() * 200); // 100-300ms word pause
+      await delayFn(clamp(100 + r() * 200, 100, 300)); // 100-300ms word pause
     } else if (PUNCTUATION_CHARS.has(char)) {
-      await delayFn(200 + rng() * 300); // 200-500ms punctuation pause
+      await delayFn(clamp(200 + r() * 300, 200, 500)); // 200-500ms punctuation pause
     } else {
-      await delayFn(80 + rng() * 40); // 80-120ms normal char delay
+      await delayFn(clamp(80 + r() * 40, 80, 120)); // 80-120ms normal char delay
     }
   }
 }
@@ -378,10 +401,12 @@ export async function humanScroll(page, distance, options = {}) {
 
   if (distance === 0) return;
 
+  const r = wrapRng(rng);
+
   // 5-10 chunks, but never more than the absolute distance so that no
   // chunk rounds to 0 for tiny scrolls (e.g. distance = 1 should not produce
   // four 0-px no-op chunks). [Story 6.12 review]
-  const desiredChunkCount = 5 + Math.floor(rng() * 6);
+  const desiredChunkCount = 5 + Math.min(5, Math.floor(r() * 6));
   const chunkCount = Math.max(1, Math.min(Math.abs(distance), desiredChunkCount));
 
   // Compute sin-curve weights: slow start, fast middle, slow end
@@ -405,10 +430,10 @@ export async function humanScroll(page, distance, options = {}) {
   }
 
   // 20% chance overshoot: scroll 5-15% past target, then correct back
-  const willOvershoot = rng() < 0.20;
+  const willOvershoot = r() < 0.20;
   let overshootDistance = 0;
   if (willOvershoot) {
-    const overshootPercent = 0.05 + rng() * 0.10; // 5-15%
+    const overshootPercent = clamp(0.05 + r() * 0.10, 0.05, 0.15); // 5-15%
     overshootDistance = Math.round(distance * overshootPercent);
     // If overshoot rounds to 0 but distance is non-zero, use at least 1px
     if (overshootDistance === 0 && distance !== 0) {
@@ -421,14 +446,14 @@ export async function humanScroll(page, distance, options = {}) {
     await page.mouse.wheel({ deltaY: chunks[i] });
     // Delay between chunks (not after final chunk unless overshoot follows)
     if (i < chunks.length - 1 || willOvershoot) {
-      await delayFn(100 + rng() * 300);
+      await delayFn(clamp(100 + r() * 300, 100, 400));
     }
   }
 
   // Overshoot and correction
   if (willOvershoot && overshootDistance !== 0) {
     await page.mouse.wheel({ deltaY: overshootDistance });
-    await delayFn(100 + rng() * 300);
+    await delayFn(clamp(100 + r() * 300, 100, 400));
     await page.mouse.wheel({ deltaY: -overshootDistance });
   }
 }
