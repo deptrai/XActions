@@ -69,11 +69,11 @@ C4Component
 | Component | File / Module | Responsibility |
 |---|---|---|
 | `FacebookAccountHealthService` | `api/services/facebookHealth.js` `[ASSUMPTION]` | HTTP GET `facebook.com/` với cookie, parse `fb_dtsg`, kiểm tra checkpoint, cache vào `FacebookAccountHealth`. |
-| `FacebookAccountPool` | `api/services/facebookAccountPool.js` `[ASSUMPTION]` | Lọc live accounts, gán task round-robin/LRU, honor proxy, giới hạn concurrency. |
+| `FacebookAccountPool` | `api/services/facebookAccountPool.js` `[ASSUMPTION]` | Lọc live accounts, gán task round-robin/LRU, decrypt `encryptedProxy` và tạo `proxy`/`proxyAuth`, giới hạn concurrency. |
 | `FacebookScrapeService` | `api/services/facebookScrape.js` | `run(action, args)` và `runBatch(tasks, options)`. Single source of truth cho API + MCP. |
 | `FacebookAuthResolver` | `api/services/facebookAuth.js` | Resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) cho cả API và MCP; validate `account.userId === userId` khi `userId` được cung cấp; MCP tools mới truyền `userId` (từ client context) khi dùng `accountId`; không log cookie. |
-| `FacebookScraperDispatcher` | inside `FacebookScrapeService` | Map `action` → `scrape('facebook', action, args)`; đảm bảo `src/scrapers/index.js` `actionMap` có `post_comments`, `group_posts`, `group_comments`; `search` mở rộng qua `searchTweets` (Facebook) với `options.type`/`options.location`. Fan-out `type: 'all'` nội bộ. |
-| `searchFacebook` | `src/scrapers/facebook/index.js` | Search posts/people/pages/groups hoặc `all`. |
+| `FacebookScraperDispatcher` | inside `FacebookScrapeService` | Map `action` → `scrape('facebook', action, args)`; `src/scrapers/index.js` có `platformActionMap` cho Facebook (`search` → `searchFacebook`, `post_comments` → `scrapeFacebookComments`, `group_posts` → `scrapeFacebookGroupPosts`, `group_comments` → `scrapeFacebookGroupComments`) để không đụng Twitter. `scrape()` hỗ trợ `options.proxyAuth` và gọi `page.authenticate` trước `loginWithCookie`. Fan-out `type: 'all'` nội bộ. |
+| `searchFacebook` | `src/scrapers/facebook/index.js` | Search posts/people/pages/groups hoặc `all`. `searchTweets` giữ lại là wrapper backward-compat cho `scrape()` nếu cần, nhưng logic multi-type nằm ở đây. |
 | `scrapeFacebookComments` | `src/scrapers/facebook/index.js` `[ASSUMPTION]` | Scrape comments của post, hỗ trợ replies. |
 | `scrapeFacebookGroupPosts` | `src/scrapers/facebook/index.js` `[ASSUMPTION]` | Scrape posts trong group, dùng mobile UA. |
 | `extractHydrationJson` | `src/scrapers/facebook/hydration.js` `[ASSUMPTION]` | Trích JSON từ `<script data-content-len>`, walk theo `__typename`. |
@@ -201,6 +201,6 @@ model FacebookAccountHealth {
 ## 11. Assumptions
 
 - `[ASSUMPTION]` Anti-detection từ Epic 6 (fingerprint, proxy, warmup) được tái dùng.
-- `[ASSUMPTION]` Mỗi account có thể có `proxy` dạng flat string `"host:port"` hoặc `"host:port:user:pass"`; API nhận plaintext `proxy`, lưu encrypted qua cùng mechanism `encryptedCookie` thành `encryptedProxy`; `FacebookAccountPool` decrypt trước khi parse qua `parseFlatProxy` và gọi `page.authenticate` nếu có auth.
+- `[ASSUMPTION]` Mỗi account có thể có `proxy` dạng flat string `"host:port"` hoặc `"host:port:user:pass"`; API nhận plaintext `proxy`, lưu encrypted qua cùng mechanism `encryptedCookie` thành `encryptedProxy`; `FacebookAccountPool` decrypt, parse qua `parseFlatProxy` để lấy `server`/`username`/`password`, truyền `proxy: server` cho `createBrowser` và `proxyAuth` cho `scrape()`; `scrape()` gọi `page.authenticate(proxyAuth)` sau `createPage` và trước `loginWithCookie`.
 - `[ASSUMPTION]` `p-limit@7.2.0` sẽ được thêm vào `package.json` dưới dạng pin exact.
 - `[ASSUMPTION]` Health check không cần mở browser, chỉ cần HTTP GET với cookie; cache TTL 5 phút dựa trên `lastCheckAt`.

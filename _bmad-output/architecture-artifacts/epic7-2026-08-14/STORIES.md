@@ -48,7 +48,7 @@
 
 - Dùng `p-limit@7.2.0` pin exact; cập nhật `package.json` (`"p-limit": "7.2.0"`) và chạy `npm install` trước khi chạy.
 - Wrapper xử lý delay giữa các lần launch.
-- Proxy affinity: API nhận plaintext `proxy` dạng `"host:port"` hoặc `"host:port:user:pass"`, lưu encrypted thành `FacebookAccount.encryptedProxy`; `FacebookAccountPool` decrypt trước khi dùng `parseFlatProxy` để lấy `server`, `username`, `password`; truyền `proxy: server` cho `createBrowser`, gọi `page.authenticate` nếu có auth.
+- Proxy affinity: API nhận plaintext `proxy` dạng `"host:port"` hoặc `"host:port:user:pass"`, lưu encrypted thành `FacebookAccount.encryptedProxy`; `FacebookAccountPool` decrypt trước khi dùng `parseFlatProxy` để lấy `server`, `username`, `password`; truyền `proxy: server` cho `createBrowser` và `proxyAuth: { username, password }` qua `scrape('facebook', action, { browserOptions: { proxy: server, proxyAuth }, ... })`; `scrape()` gọi `page.authenticate(proxyAuth)` sau `createPage` và trước `loginWithCookie`.
 - Health cache TTL 5 phút: `checkAccountHealth` bỏ qua cache nếu `lastCheckAt` > 5 phút hoặc `force: true`.
 - Retry không vượt `maxConcurrency`: mỗi `p-limit` slot giữ cho đến khi task thành công hoặc hết retry; nếu checkpoint, lấy account khác trong cùng slot rồi thử lại.
 
@@ -68,8 +68,8 @@
 
 ### Implementation Notes
 
-- `searchTweets` trong `src/scrapers/facebook/index.js` được mở rộng để nhận `options.type` (`posts` | `people` | `pages` | `groups` | `all`) và `options.location`; vẫn export tên cũ để `src/scrapers/index.js` `actionMap.search` tương thích.
-- Có thể export thêm `searchFacebook` nhưng `src/scrapers/index.js` `actionMap.search` vẫn map tới `searchTweets`.
+- Thêm `searchFacebook(page, query, options)` trong `src/scrapers/facebook/index.js` để xử lý `type` và `location`; giữ `searchTweets` là thin wrapper gọi `searchFacebook` để backward-compat.
+- Mở rộng `src/scrapers/index.js` `scrape()` với `platformActionMap`: nều `platform === 'facebook'` thì `search` map tới `searchFacebook`, `post_comments` → `scrapeFacebookComments`, `group_posts` → `scrapeFacebookGroupPosts`, `group_comments` → `scrapeFacebookGroupComments`; nều không thì fallback về `actionMap` toàn cục.
 - URL patterns:
   - posts: `/search/posts/?q=...`
   - people: `/search/people/?q=...`
@@ -167,9 +167,11 @@
 
 - Tạo `api/services/facebookScrape.js` với `run(action, args)` và `runBatch(tasks, options)`.
 - `FacebookScrapeService` resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) qua helper `api/services/facebookAuth.js` dùng chung cho cả API và MCP; validate `userId` khi `accountId` được cung cấp; MCP tools truyền `userId` từ client context khi dùng `accountId`.
-- `FacebookScrapeService` gọi `scrape('facebook', action, args)` từ `src/scrapers/index.js`, với `browserOptions.userDataDir` và `proxy`.
-- Mở rộng `src/scrapers/index.js` `actionMap` với `post_comments`, `group_posts`, `group_comments` trỏ tới `scrapeFacebookComments`, `scrapeFacebookGroupPosts`, `scrapeFacebookGroupComments`. `search` vẫn trỏ tới `searchTweets` (đã mở rộng cho Facebook).
+- `FacebookScrapeService` gọi `scrape('facebook', action, args)` từ `src/scrapers/index.js`, với `browserOptions.userDataDir`, `browserOptions.proxy`, `browserOptions.proxyAuth`.
+- Mở rộng `src/scrapers/index.js` `scrape()` với `platformActionMap` cho `facebook`: `search` → `searchFacebook`, `post_comments` → `scrapeFacebookComments`, `group_posts` → `scrapeFacebookGroupPosts`, `group_comments` → `scrapeFacebookGroupComments`.
+- `scrape()` gọi `page.authenticate(options.proxyAuth)` sau `createPage` và trước `loginWithCookie`.
 - `api/routes/facebook.js` `POST /scrape` gọi `facebookScrapeService.run` và cập nhật `VALID_ACTIONS` thêm `post_comments`, `group_posts`, `group_comments`.
+- `api/routes/facebookAccounts.js` `POST /` nhận thêm `proxy` plaintext, validate dạng flat string, encrypt thành `encryptedProxy`; cân nhắc thêm `PATCH /:id` để update proxy.
 - MCP tools mới gọi `facebookScrapeService`.
 - Không duplicate login/scrape logic.
 - Mỗi tool có contract tests trong `tests/mcp/`.
@@ -193,6 +195,22 @@ Response: { ok: true, action, result }
 ```
 
 Valid `action`: `profile`, `posts`, `followers`, `search`, `group-members`, `marketplace`, `post_comments`, `group_posts`, `group_comments`.
+
+## Test Plan
+
+| Story | Test File | Focus |
+|---|---|---|
+| 7.1 | `tests/services/facebookHealth.test.js` | `checkAccountHealth` active/checkpoint/dead, TTL, force, no cookie log. |
+| 7.2 | `tests/services/facebookAccountPool.test.js` | pool assignment, proxy affinity, concurrency cap, retry slot. |
+| 7.2 | `tests/services/facebookScrape.test.js` | `run`/`runBatch` dispatch, auth resolve, proxyAuth truyền đúng. |
+| 7.3 | `tests/scrapers/facebook/search.test.js` | multi-type search, `all` sequential + parallel, URL patterns. |
+| 7.4 | `tests/scrapers/facebook/comments.test.js` | post URL validation, hydration fallback, reply extraction. |
+| 7.5 | `tests/scrapers/facebook/group-posts.test.js` | mobile UA, private group `note`, URL validation. |
+| 7.6 | `tests/scrapers/facebook/group-comments.test.js` | group post URL validation, thin wrapper. |
+| 7.7 | `tests/scrapers/facebook/hydration.test.js` | `extractHydrationJson` walker, `__typename` filter, DOM fallback. |
+| 7.8 | `tests/mcp/facebook-epic7-tools.test.js` | MCP tool input schema, dispatch qua `FacebookScrapeService`, contract tests. |
+| 7.8 | `tests/api/facebook-scrape.test.js` | `POST /api/facebook/scrape` action allowlist + proxy + auth. |
+| 7.8 | `tests/api/facebook-accounts.test.js` | create với `proxy`, `encryptedProxy`, update proxy (nếu có PATCH). |
 
 ## Cross-Cutting Implementation Order
 
