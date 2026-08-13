@@ -171,14 +171,10 @@ model FacebookAccountHealth {
 
 | Story | AC | Depends on | Output |
 |---|---|---|---|
-| 7.1 Account Health Check | FR-55 | — | `checkAccountHealth(account)` |
-| 7.2 Account Pool & Parallel Runner | FR-56 | 7.1, `p-limit` | `FacebookScrapeService.runBatch` |
-| 7.7 Hydration JSON Extraction | FR-61 | — | `extractHydrationJson(page, typenames)` |
-| 7.8 API + MCP Surface Unification | FR-63 | 7.1, 7.2 | `FacebookScrapeService`, API, MCP tools |
-| 7.3 Multi-Type Facebook Search | FR-57 | 7.2, 7.7, 7.8 | `searchFacebook` + `x_facebook_search` |
-| 7.4 Scrape Post Comments | FR-58 | 7.2, 7.7, 7.8 | `scrapeFacebookComments` + `x_facebook_post_comments` |
-| 7.5 Scrape Group Posts | FR-59 | 7.2, 7.7, 7.8 | `scrapeFacebookGroupPosts` + `x_facebook_group_posts` |
-| 7.6 Scrape Group Comments | FR-60 | 7.4 | `x_facebook_group_comments` |
+| 7.1 Foundation — Health, Pool, Hydration & Schema | FR-55, FR-56, FR-61 | — | `checkAccountHealth(...)`, `FacebookAccountPool`, `extractHydrationJson(...)`, schema migrations |
+| 7.2 Multi-Type Facebook Search | FR-57 | 7.1 | `searchFacebook` + `x_facebook_search` |
+| 7.3 Comments & Group Content | FR-58, FR-59, FR-60 | 7.1 | `scrapeFacebookComments` + `scrapeFacebookGroupPosts` + `scrapeFacebookGroupComments` + tools |
+| 7.4 API + MCP Surface Unification | FR-63 | 7.1, 7.2, 7.3 | `FacebookScrapeService`, `FacebookAuthResolver`, `POST /scrape`, MCP tools |
 
 ## 9. NFR Mapping
 

@@ -970,11 +970,13 @@ So that I can reach all Facebook capabilities already implemented in the codebas
 
 **Additional Requirements relevant:** ADR-006 (adapter pattern), ADR-011 (GraphQL HTTP layer) — chỉ áp dụng nếu Phase 3 (GraphQL replay) được lên lịch, Epic 6 anti-detection infrastructure.
 
-### Story 7.1: Account Health Check & Live Filter
+### Story 7.1: Foundation — Health, Pool, Hydration & Schema
 
-As a user running multi-account scrape,
-I want the system to check which accounts are live before using them,
-So that checkpointed or dead accounts are not selected.
+As a user running multi-account Facebook scraping,
+I want the system to validate account health, run a bounded parallel pool, extract embedded hydration JSON, and store the necessary account/proxy schema,
+So that all advanced Facebook scrape actions are reliable, safe, and consistent.
+
+**Prerequisites:** None (Epic 6 anti-detection infrastructure is assumed).
 
 **Acceptance Criteria:**
 
@@ -984,59 +986,64 @@ So that checkpointed or dead accounts are not selected.
 **And** parses `fb_dtsg` from the HTML
 **And** validates `c_user` and `xs` are present in the response cookie jar
 **And** returns `{ status: 'active' | 'checkpoint' | 'dead', reason?, lastCheckAt }`
-**And** status is `checkpoint` if body contains `/checkpoint/` or `confirm you're human`
+**And** status is `checkpoint` if the body contains `/checkpoint/` or `confirm you're human`
 **And** status is `dead` if `fb_dtsg` is missing or the response cookie jar lacks `c_user`/`xs`
+**And** caches the result with a 5-minute TTL in the `FacebookAccountHealth` table
 **And** cookie values are never logged
 
-### Story 7.2: Account Pool & Parallel Runner
-
-As a user with many Facebook accounts,
-I want to run multiple scrape tasks in parallel,
-So that total scrape time decreases.
-
-**Acceptance Criteria:**
-
-**Given** an array of `tasks` and `accountIds`
+**Given** an array of `tasks` and eligible `accountIds`
 **When** `facebookScrapeService.runBatch(tasks, { maxConcurrency, delayBetweenLaunches })` is called
-**Then** it filters only `active` accounts from health cache (TTL 5 minutes, Prisma)
+**Then** it filters only `active` accounts from the health cache
 **And** honors `FacebookAccount.proxy` if set
-**And** assigns each task to a live account (round-robin / LRU) with matching proxy
-**And** launches up to `maxConcurrency` (default 4, max 8) browsers at a time
+**And** assigns each task to a live account with matching proxy using round-robin / LRU
+**And** uses `p-limit` with `maxConcurrency` default 4 and maximum 8
 **And** waits `delayBetweenLaunches` (default 3-8s) between browser launches
-**And** uses `buildUserDataDir(c_user)` for each browser
+**And** builds `userDataDir` per `c_user`
 **And** retries a task on another live account if the current one hits checkpoint
 **And** returns `results[]` and an `accountUsage` report
 
-### Story 7.3: Multi-Type Facebook Search
+**Given** a loaded Facebook page
+**When** `extractHydrationJson(page, typenames)` is called
+**Then** it collects all `<script type="application/json" data-content-len>` tags
+**And** recursively walks JSON for objects with matching `__typename`
+**And** supports `Story`, `Comment`, `User`, `Page`, `Group`, and `MarketplaceListing`
+**And** falls back to DOM extraction if hydration data is insufficient
+
+**Given** the `FacebookAccount` model
+**When** migrations run
+**Then** they create the `FacebookAccountHealth` model with `accountId` unique and `FacebookAccountHealthStatus` enum
+**And** add `encryptedProxy` to `FacebookAccount`
+**And** the `POST /api/facebook/accounts` endpoint accepts a plaintext `proxy` string and stores it as `encryptedProxy`
+
+### Story 7.2: Multi-Type Facebook Search
 
 As a market researcher,
 I want to search Facebook by posts, people, pages, or groups,
 So that I can find leads across all public surfaces.
 
-**Prerequisites:** Story 7.8 (API + MCP Surface Unification) must implement `facebookScrapeService.run(action, args)` first.
+**Prerequisites:** Story 7.1
 
 **Acceptance Criteria:**
 
 **Given** a `query` and `type` (`posts`, `people`, `pages`, `groups`, `all`)
 **When** `searchFacebook({ page, query, type, location, limit, authCookie, parallel })` is called
 **Then** it navigates to the correct `/search/{type}?q=...` URL
-**And** returns results with `platform: 'facebook'` on every item
 **And** `type: 'posts'` returns `Array<{ id, text, author, timestamp, url, platform: 'facebook' }>`
 **And** `type: 'people'` returns `Array<{ id, name, username, profileUrl, image, platform: 'facebook' }>`
 **And** `type: 'pages'` returns `Array<{ id, name, category, likes, pageUrl, image, platform: 'facebook' }>`
 **And** `type: 'groups'` returns `Array<{ id, name, members, privacy, groupUrl, image, platform: 'facebook' }>`
-**And** `type: 'all'` mặc định sequential trên 1 account
-**And** `type: 'all'` với `parallel: true` phân 4 task cho 4 account
-**And** `type: 'all'` trả về object `{ posts, people, pages, groups }`, mỗi key là mảng có shape tương ứng ở trên
+**And** `type: 'all'` returns `{ posts, people, pages, groups }` with each key an array of the corresponding shape above
+**And** `type: 'all'` defaults to sequential on 1 account
+**And** `type: 'all'` with `parallel: true` fans out 4 tasks to 4 live accounts
 **And** supports pagination via scroll (max 50 scrolls/task, delay 1-3s)
 
-### Story 7.4: Scrape Post Comments
+### Story 7.3: Comments & Group Content
 
-As a growth marketer,
-I want to scrape comments of a Facebook post,
-So that I can understand audience sentiment and engagement.
+As a growth marketer and community analyst,
+I want to scrape comments on a post, posts inside a group, and comments on a group post,
+So that I can understand audience sentiment and monitor group activity.
 
-**Prerequisites:** Story 7.8 (API + MCP Surface Unification) must implement `facebookScrapeService.run(action, args)` first.
+**Prerequisites:** Story 7.1
 
 **Acceptance Criteria:**
 
@@ -1048,66 +1055,53 @@ So that I can understand audience sentiment and engagement.
 **And** returns `{ id, authorName, authorUrl, text, timestamp, likes, replies[], parentId }`
 **And** `replies[]` only present when `includeReplies: true`
 
-### Story 7.5: Scrape Group Posts
-
-As a community analyst,
-I want to scrape posts inside a Facebook group,
-So that I can monitor group activity.
-
-**Prerequisites:** Story 7.8 (API + MCP Surface Unification) must implement `facebookScrapeService.run(action, args)` first.
-
-**Acceptance Criteria:**
-
 **Given** a `groupUrl` and `limit`
 **When** `scrapeFacebookGroupPosts(page, groupUrl, { limit })` is called
-**Then** it uses mobile UA (390x844)
+**Then** it verifies `groupUrl` contains `facebook.com/groups/`
+**And** uses mobile UA (390x844)
 **And** returns posts with the standard post shape
-**And** returns a `note` if group is private and account is not a member
-
-### Story 7.6: Scrape Group Comments
-
-As a community analyst,
-I want to scrape comments of a post inside a Facebook group,
-So that I can analyze group discussions.
-
-**Acceptance Criteria:**
+**And** returns a `note` if the group is private/restricted and the account is not a member
 
 **Given** a group `postUrl` and `limit`
-**When** `scrapeFacebookGroupComments(page, postUrl, { limit, includeReplies, authCookie })` is called
+**When** `scrapeFacebookGroupComments(page, postUrl, { limit, includeReplies })` is called
 **Then** it verifies `postUrl` contains `facebook.com/groups/`
-**And** calls `scrapeFacebookComments({ page, postUrl, limit, includeReplies, authCookie })`
+**And** calls `scrapeFacebookComments({ page, postUrl, limit, includeReplies })`
 **And** returns the same comment shape
-**And** returns a `note` if group is private and account is not member
+**And** returns a `note` if the group is private and the account is not a member
 **And** returns a `note` if comments are restricted
 
-### Story 7.7: Hydration JSON Extraction Fallback
-
-As a scraper developer,
-I want to extract structured data from Facebook's embedded JSON,
-So that I am less dependent on brittle CSS class selectors.
-
-**Acceptance Criteria:**
-
-**Given** a loaded Facebook page
-**When** `extractHydrationJson(page, typenames)` is called
-**Then** it collects all `<script type="application/json" data-content-len>` tags
-**And** recursively walks JSON for objects with matching `__typename`
-**And** supports `Story`, `Comment`, `User`, `Page`, `Group`, `MarketplaceListing`
-**And** falls back to DOM extraction if hydration data is insufficient
-
-### Story 7.8: API + MCP Surface Unification
+### Story 7.4: API + MCP Surface Unification
 
 As an AI agent,
 I want new Facebook scrape tools exposed via MCP that call the same service as the REST API,
 So that the surface is consistent and maintainable.
 
-**Prerequisites:** Story 7.1 (Health), Story 7.2 (Pool), and Story 7.7 (Hydration) must be implemented first.
+**Prerequisites:** Story 7.1, Story 7.2, Story 7.3
 
 **Acceptance Criteria:**
 
 **Given** `facebookScrapeService` exists
-**When** new tools `x_facebook_search`, `x_facebook_posts`, `x_facebook_post_comments`, `x_facebook_group_posts`, `x_facebook_group_comments` are exposed
-**Then** they all route through `facebookScrapeService`
-**And** `POST /api/facebook/scrape` uses the same service
+**When** `run(action, args)` or `runBatch(tasks, options)` is called
+**Then** it resolves `authCookie` through `FacebookAuthResolver`
+**And** calls `scrape('facebook', action, args)` from `src/scrapers/index.js`
+**And** passes `browserOptions.userDataDir`, `browserOptions.proxy`, and `browserOptions.proxyAuth`
+**And** `scrape()` calls `page.authenticate(options.proxyAuth)` after `createPage` and before `loginWithCookie`
 **And** no scraper logic is duplicated in `src/mcp/server.js`
-**And** each new tool has contract tests in `tests/mcp/`
+
+**Given** `authCookie` as `{ c_user, xs }` or `{ accountId }`
+**When** `FacebookAuthResolver.resolve(args, userId)` is called
+**Then** it returns `{ c_user, xs }` for the requested account
+**And** validates `account.userId === userId` when `accountId` is provided
+**And** MCP tools pass `userId` from client context when using `accountId`
+**And** cookie values are never logged
+
+**Given** `api/routes/facebook.js` `POST /scrape`
+**When** called with `{ action, ...args, authCookie }`
+**Then** it calls `facebookScrapeService.run`
+**And** valid actions include `profile`, `posts`, `followers`, `search`, `group-members`, `marketplace`, `post_comments`, `group_posts`, `group_comments`
+**And** it returns `{ ok: true, action, result }`
+
+**Given** `src/mcp/server.js` is running
+**When** tools `x_facebook_search`, `x_facebook_posts`, `x_facebook_post_comments`, `x_facebook_group_posts`, `x_facebook_group_comments` are exposed
+**Then** they all route through `facebookScrapeService`
+**And** each tool has contract tests in `tests/mcp/`.
