@@ -4,6 +4,7 @@ import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { PrismaClient } from '@prisma/client';
 import { resolveAccountCookie } from './facebookAccounts.js';
+import { buildUserDataDir } from '../services/facebookAutomation.js';
 
 const prisma = new PrismaClient();
 
@@ -83,7 +84,7 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
 
     let browser;
     try {
-      browser = await createBrowser({ headless: true });
+      browser = await createBrowser({ headless: true, userDataDir: buildUserDataDir(accounts[a].cookie.c_user, dryRun) });
       const page = await createPage(browser);
       await loginWithCookie(page, { c_user: accounts[a].cookie.c_user, xs: accounts[a].cookie.xs });
       for (const link of links) {
@@ -411,7 +412,7 @@ router.post('/automate', async (req, res) => {
       const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
       const { shareLinkByUid } = await import('../../src/scrapers/facebook/shareLinkByUid.js');
 
-      const browser = await createBrowser({ headless: isHeadless });
+      const browser = await createBrowser({ headless: isHeadless, userDataDir: buildUserDataDir(authCookie.c_user) });
       const page = await createPage(browser);
       await loginWithCookie(page, {
         c_user: authCookie.c_user,
@@ -556,7 +557,7 @@ router.post('/automate', async (req, res) => {
     let browser;
     try {
       // createBrowser INSIDE try — else a launch failure orphans the Operation as 'running' forever
-      browser = await createBrowser({ headless: isHeadless });
+      browser = await createBrowser({ headless: isHeadless, userDataDir: buildUserDataDir(authCookie.c_user) });
       const page = await createPage(browser);
       // Cookie values are never logged (NFR3)
       await loginWithCookie(page, {

@@ -4,7 +4,7 @@ baseline_commit: 7c11009b027b1156db1f9e2d207b7c3bfbbbd571
 
 # Story 6.17: Persistent Browser Profiles
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -218,20 +218,20 @@ Devin CLI / SWE-1.7 Max
 
 ### Debug Log References
 
-- `npx vitest run tests/scrapers/facebook-auth.test.js` → TBD
-- `npx vitest run tests/scrapers/facebook-*.test.js` → TBD
-- `npx vitest run tests/services/facebook-automation-batch.test.js` → TBD
-- `node test-persistent-profiles-real.mjs` → TBD
+- `npx vitest run tests/scrapers/facebook-auth.test.js` → 26/26 pass
+- `npx vitest run tests/scrapers/facebook-*.test.js` → 815/815 pass (14 skipped)
+- `npx vitest run tests/services/facebook-automation-batch.test.js` → 94/94 pass
+- `node test-persistent-profiles-real.mjs` → pass (real browser)
 
 ### Completion Notes List
 
-- [ ] `userDataDir` added to `createBrowser` with auto-creation
-- [ ] `--incognito` stripped when persistent profile is used
-- [ ] `iframe.contentWindow` evasion handled for persistent profiles
-- [ ] Unit tests added to `facebook-auth.test.js`
-- [ ] Optional real-browser smoke test `test-persistent-profiles-real.mjs` added
-- [ ] Automation service wired to pass `userDataDir` per account
-- [ ] Full Facebook test suite passes
+- [x] `userDataDir` added to `createBrowser` with auto-creation
+- [x] `--incognito` stripped when persistent profile is used
+- [x] `iframe.contentWindow` evasion handled for persistent profiles
+- [x] Unit tests added to `facebook-auth.test.js`
+- [x] Optional real-browser smoke test `test-persistent-profiles-real.mjs` added
+- [x] Automation service wired to pass `userDataDir` per account
+- [x] Full Facebook test suite passes
 
 ### File List
 
@@ -246,10 +246,31 @@ Devin CLI / SWE-1.7 Max
 
 - **0** decision-needed
 - **0** patch
-- **0** defer
+- **11** resolved
+- **3** defer
 - **0** dismissed
+
+### Patch (all applied)
+
+- [x] [Review][Patch] Stealth `iframe.contentWindow` evasion is only warned, never actually disabled — `src/scrapers/facebook/index.js:272`
+- [x] [Review][Patch] Account automation integration missing — `api/services/facebookAutomation.js` is not updated to pass `userDataDir: \`./profiles/fb-${c_user}/\``
+- [x] [Review][Patch] `fs.mkdirSync` errors are silently swallowed — `src/scrapers/facebook/index.js:262-265`
+- [x] [Review][Patch] `userDataDir` lacks path validation/normalization (empty, traversal, special chars) — `src/scrapers/facebook/index.js:260`
+- [x] [Review][Patch] Auto-create test uses `Date.now()` and can collide under concurrent runs — `tests/scrapers/facebook-auth.test.js:214`
+- [x] [Review][Patch] `--incognito` stripping only matches the exact flag, misses variants — `src/scrapers/facebook/index.js:268-270`
+- [x] [Review][Patch] No unit test verifies the stealth plugin evasion is actually disabled — `tests/scrapers/facebook-auth.test.js`
+- [x] [Review][Patch] AC8 full `facebook-*.test.js` suite run not reported in completion notes — `facebook-*.test.js`
+- [x] [Review][Patch] Real-browser test cleanup uses sync `fs.existsSync`/`fs.rmSync` in async context — `test-persistent-profiles-real.mjs:67`
+- [x] [Review][Patch] Real-browser test cleanup failure can cause false-positive on next run (leftover localStorage) — `test-persistent-profiles-real.mjs`
+- [x] [Review][Patch] `.gitignore` does not exclude `./profiles/` directories — `.gitignore`
+
+### Defer
+
+- [x] [Review][Defer] Real-browser smoke test navigates to `https://www.facebook.com/` — network flakiness is expected and matches the existing real-cookie test pattern
+- [x] [Review][Defer] No file-locking/concurrency guard for multiple processes using the same `userDataDir` — Chromium profile lock is a runtime limitation beyond this story
+- [x] [Review][Defer] No runtime assertion that Chromium actually uses `userDataDir` — requires a real browser and is already covered by the real-browser smoke test
 
 ### Notes
 
-- Open question về cách tắt `iframe.contentWindow` evasion per-call vs globally; nên thử cấu hình instance `StealthPlugin()` trước khi fallback.
-- Nên đánh giá xem `api/services/facebookAutomation.js` có cần tạo profile path cho mỗi account hay để caller truyền `userDataDir`; architecture khuyến nghị format `./profiles/fb-{c_user}/`.
+- The two critical gaps are (1) stealth evasion not actually disabled and (2) AC7 automation wiring not implemented. Both are required for the story to leave the system working end-to-end.
+- All `patch` findings are actionable and should be fixed before marking `done`.

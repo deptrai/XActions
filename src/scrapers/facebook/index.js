@@ -12,6 +12,8 @@
 
 // by nichxbt
 
+import fs from 'node:fs';
+import path from 'node:path';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { generateSync as totpGenerateSync } from 'otplib';
@@ -20,7 +22,12 @@ import { warmSession } from './warmup.js';
 
 export { warmSession };
 
-puppeteer.use(StealthPlugin());
+// Configure stealth for all Facebook sessions. Persistent profiles conflict with the
+// iframe.contentWindow evasion (ADR-016). Per-call reconfiguration is not reliable with
+// puppeteer-extra, so we use the spec-allowed fallback and disable it globally.
+const allEvasions = [...StealthPlugin().opts.availableEvasions];
+const facebookEvasions = new Set(allEvasions.filter((e) => e !== 'iframe.contentWindow'));
+puppeteer.use(StealthPlugin({ enabledEvasions: facebookEvasions }));
 
 // ============================================================================
 // Core Utilities
@@ -40,23 +47,48 @@ const NON_PROFILE_SEGMENTS = [
 ];
 
 /**
- * Create a browser instance for Facebook scraping
+ * Create a browser instance for Facebook scraping (Story 6.17 — ADR-016 persistent profile).
  * @param {Object} options - Browser launch options
+ * @param {string} [options.userDataDir] - Profile directory path (auto-created if missing)
  * @returns {Promise<Browser>} Puppeteer browser instance
  */
 export async function createBrowser(options = {}) {
-  const { args: extraArgs = [], headless, proxy, launchImpl, executablePath, ...rest } = options;
+  const { args: extraArgs = [], headless, proxy, launchImpl, executablePath, userDataDir, ...rest } = options;
   const stealthArgs = [
     '--no-sandbox',
     '--disable-setuid-sandbox',
     '--disable-blink-features=AutomationControlled',
     '--disable-webrtc', // Story 6.5 — prevent real IP leak via STUN (defense-in-depth with JS override)
   ];
-  // Wire proxy as a Chromium launch arg — the only browser-level way to apply it.
-  // Proxy creds (username/password) are NOT handled here; callers must invoke
-  // page.authenticate({ username, password }) after createPage, using the fields
-  // from rotateProxy's descriptor (see docs/agents/selectors-facebook.md AC4 notes).
-  const proxyArgs = proxy ? [`--proxy-server=${proxy}`] : [];
+
+  let mergedArgs = [...stealthArgs, ...(proxy ? [`--proxy-server=${proxy}`] : []), ...extraArgs];
+
+  // Auto-create profile directory and strip --incognito when persistent profile is used (Story 6.17 — AC2, AC3)
+  if (userDataDir != null) {
+    if (typeof userDataDir !== 'string' || !userDataDir.trim()) {
+      throw new Error('❌ userDataDir must be a non-empty string');
+    }
+
+    const resolvedDir = path.resolve(userDataDir);
+    const relativeToCwd = path.relative(process.cwd(), resolvedDir);
+    if (path.isAbsolute(relativeToCwd) || relativeToCwd.startsWith('..')) {
+      throw new Error('❌ userDataDir must be within the current working directory');
+    }
+
+    try {
+      fs.mkdirSync(resolvedDir, { recursive: true });
+    } catch {
+      throw new Error('❌ Failed to create profile directory');
+    }
+
+    if (mergedArgs.some((a) => /^--incognito(?:=.*)?$/i.test(a))) {
+      console.warn('⚠️ Stripping --incognito flag because persistent profile (userDataDir) is enabled');
+      mergedArgs = mergedArgs.filter((a) => !/^--incognito(?:=.*)?$/i.test(a));
+    }
+
+    console.warn('⚠️ Persistent profile launch uses stealth without iframe.contentWindow evasion (ADR-016 conflict mitigation)');
+  }
+
   // launchImpl seam: tests inject a fake launcher so no real browser spawns.
   const launch = launchImpl ?? puppeteer.launch.bind(puppeteer);
 
@@ -65,13 +97,18 @@ export async function createBrowser(options = {}) {
     || process.env.PUPPETEER_EXECUTABLE_PATH
     || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
-  return launch({
+  const launchOpts = {
     headless: headless !== undefined ? headless : 'new',
-    // Merge stealth + proxy + caller args; order ensures proxy is visible to Chromium
-    args: [...stealthArgs, ...proxyArgs, ...extraArgs],
+    args: mergedArgs,
     executablePath: resolvedExecutablePath,
     ...rest,
-  });
+  };
+
+  if (userDataDir != null) {
+    launchOpts.userDataDir = userDataDir;
+  }
+
+  return launch(launchOpts);
 }
 
 /**

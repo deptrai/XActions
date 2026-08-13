@@ -9,6 +9,7 @@ import {
   createPage,
   loginWithCookie,
   createFacebookPost,
+  buildUserDataDir,
 } from './facebookAutomation.js';
 
 const prisma = new PrismaClient();
@@ -176,7 +177,7 @@ export async function runDueSchedules(now, deps = {}) {
           }
 
           // Cookie values never logged (NFR3)
-          browser = await createBrowser({ headless: true });
+          browser = await createBrowser({ headless: true, userDataDir: buildUserDataDir(cookie.c_user) });
           page = await createPage(browser);
           await loginWithCookie(page, { c_user: cookie.c_user, xs: cookie.xs });
         }

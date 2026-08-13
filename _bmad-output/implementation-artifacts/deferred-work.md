@@ -163,3 +163,9 @@ Issue EPS-5 (Deferred work cleanup) triaged all 6 priority items. Items 1, 2, 3,
 ## Deferred from: code review of 6-12-natural-scrolling (2026-08-13)
 
 - **No input validation for `page`, `distance`, `delayFn`, `rng`** `[src/scrapers/facebook/human.js:352-356]` — Same pattern as `humanMoveMouse`, `humanClick`, and `humanType` (pre-existing). No production call sites for `humanScroll` currently exist. Defer to a cross-cutting validation/refactor story for all `human.*` functions.
+
+## Deferred from: code review of 6-17-persistent-profiles (2026-08-13)
+
+- **Real-browser smoke test navigates to live Facebook** [test-persistent-profiles-real.mjs] — network flakiness is expected for real-browser tests and matches the existing real-cookie test pattern.
+- **No file-locking for concurrent `userDataDir` usage** [src/scrapers/facebook/index.js] — Chromium profile lock is a runtime limitation; callers should use per-account paths as recommended.
+- **No runtime assertion that Chromium uses `userDataDir`** [src/scrapers/facebook/index.js] — requires a real browser; covered by the real-browser smoke test.

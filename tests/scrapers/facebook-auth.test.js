@@ -3,7 +3,7 @@
 // Uses otplib v13 generateSync API (no global state mutation needed).
 // by nichxbt
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { generateTotp, createBrowser } from '../../src/scrapers/facebook/index.js';
 
 // 32-char base32 seed (20 bytes — satisfies otplib v13 minimum of 16 bytes).
@@ -168,5 +168,80 @@ describe('createBrowser proxy arg (launchImpl seam)', () => {
 
     expect(capturedOpts.args).toContain('--my-flag');
     expect(capturedOpts.args).toContain('--proxy-server=http://203.0.113.10:8080');
+  });
+
+  // ============================================================================
+  // createBrowser persistent profile (Story 6.17 — AC1, AC2, AC3, AC4, AC6)
+  // ============================================================================
+
+  describe('createBrowser persistent profile (Story 6.17)', () => {
+    it('passes userDataDir to launch options when provided (AC1)', async () => {
+      let capturedOpts;
+      const launchImpl = async (opts) => { capturedOpts = opts; return {}; };
+      const targetDir = './profiles/test-profile-ac1';
+
+      await createBrowser({ userDataDir: targetDir, launchImpl });
+
+      expect(capturedOpts.userDataDir).toBe(targetDir);
+    });
+
+    it('strips --incognito from args when userDataDir is provided (AC3)', async () => {
+      let capturedOpts;
+      const launchImpl = async (opts) => { capturedOpts = opts; return {}; };
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await createBrowser({ userDataDir: './profiles/test-profile-ac3', args: ['--incognito', '--other-flag'], launchImpl });
+
+      expect(capturedOpts.args).not.toContain('--incognito');
+      expect(capturedOpts.args).toContain('--other-flag');
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Stripping --incognito flag'));
+      warnSpy.mockRestore();
+    });
+
+    it('does not leak userDataDir into launcher options rest parameter (AC6)', async () => {
+      let capturedOpts;
+      const launchImpl = async (opts) => { capturedOpts = opts; return {}; };
+
+      await createBrowser({ userDataDir: './profiles/test-profile-ac6', proxy: 'http://1.2.3.4:8080', launchImpl });
+
+      expect(capturedOpts).not.toHaveProperty('proxy');
+      expect(capturedOpts).not.toHaveProperty('launchImpl');
+      expect(capturedOpts.userDataDir).toBe('./profiles/test-profile-ac6');
+    });
+
+    it('auto-creates userDataDir directory if it does not exist (AC2)', async () => {
+      const launchImpl = async (opts) => ({});
+      const { randomUUID } = await import('node:crypto');
+      const { existsSync, rmSync } = await import('node:fs');
+      const tempDir = `./profiles/test-autocreate-${randomUUID()}`;
+
+      try {
+        await createBrowser({ userDataDir: tempDir, launchImpl });
+        expect(existsSync(tempDir)).toBe(true);
+      } finally {
+        if (existsSync(tempDir)) rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    it('without userDataDir, launch options do not include userDataDir (AC4)', async () => {
+      let capturedOpts;
+      const launchImpl = async (opts) => { capturedOpts = opts; return {}; };
+
+      await createBrowser({ launchImpl });
+
+      expect(capturedOpts).not.toHaveProperty('userDataDir');
+    });
+
+    it('disables iframe.contentWindow stealth evasion in the Facebook puppeteer chain (AC3)', async () => {
+      const puppeteer = (await import('puppeteer-extra')).default;
+      const stealthPlugin = puppeteer.plugins.find((p) => p.name === 'stealth');
+      expect(stealthPlugin).toBeDefined();
+      expect(stealthPlugin.opts.enabledEvasions.has('iframe.contentWindow')).toBe(false);
+    });
+
+    it('rejects userDataDir outside the current working directory', async () => {
+      const launchImpl = async (opts) => ({ count: (opts.count ?? 0) + 1 });
+      await expect(createBrowser({ userDataDir: '../outside-project', launchImpl })).rejects.toThrow(/within the current working directory/);
+    });
   });
 });

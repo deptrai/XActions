@@ -85,6 +85,9 @@ coverage/
 .eslintcache
 .stylelintcache
 
+# Facebook persistent browser profiles (Story 6.17) — contain session data
+profiles/
+
 # Service Worker
 # Serwist
 public/sw*

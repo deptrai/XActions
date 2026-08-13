@@ -94,6 +94,11 @@ export async function humanMoveMouse(page, x, y, options = {}) {
     startY = 0,
   } = options;
 
+  // Input validation (Story 6.18 — AC2, NFR4)
+  if (!page?.mouse?.move || typeof x !== 'number' || !Number.isFinite(x) || typeof y !== 'number' || !Number.isFinite(y) || typeof delayFn !== 'function' || typeof rng !== 'function') {
+    throw new Error('❌ humanMoveMouse: page.mouse.move and finite x, y are required');
+  }
+
   // Step count: 20-35 (randomized)
   const stepCount = 20 + Math.floor(rng() * 16); // 20..35 inclusive
 
@@ -123,8 +128,9 @@ export async function humanMoveMouse(page, x, y, options = {}) {
   let overshootY = y;
 
   if (willOvershoot) {
-    // Overshoot 5-15px beyond target in the direction of movement
-    const overDist = 5 + rng() * 10;
+    // Proportional overshoot: 5-15% of movement distance, clamped to [1, 25] pixels (Story 6.18 — AC1)
+    const overScalar = 0.05 + rng() * 0.10;
+    const overDist = Math.max(1, Math.min(25, dist * overScalar));
     const overDx = (dx / dist) * overDist;
     const overDy = (dy / dist) * overDist;
     overshootX = x + overDx;
@@ -192,6 +198,11 @@ export async function humanClick(page, element, options = {}) {
     delayFn = defaultDelayFn,
     rng = defaultRng,
   } = options;
+
+  // Input validation (Story 6.18 — AC3, NFR4)
+  if (!page?.mouse || !element || typeof element.boundingBox !== 'function' || typeof delayFn !== 'function' || typeof rng !== 'function') {
+    throw new Error('❌ humanClick: page.mouse and element.boundingBox are required');
+  }
 
   // Get element bounding box — returns null if element is not visible or detached
   const box = await element.boundingBox();
@@ -296,6 +307,11 @@ export async function humanType(page, text, options = {}) {
     rng = defaultRng,
   } = options;
 
+  // Input validation (Story 6.18 — AC4, NFR4)
+  if (!page?.keyboard?.type || !page?.keyboard?.press || typeof text !== 'string' || typeof delayFn !== 'function' || typeof rng !== 'function') {
+    throw new Error('❌ humanType: page.keyboard and string text are required');
+  }
+
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     const isLetter = /[a-zA-Z]/.test(char);
@@ -354,6 +370,11 @@ export async function humanScroll(page, distance, options = {}) {
     delayFn = defaultDelayFn,
     rng = defaultRng,
   } = options;
+
+  // Input validation (Story 6.18 — AC5, NFR4)
+  if (!page?.mouse?.wheel || typeof distance !== 'number' || !Number.isFinite(distance) || typeof delayFn !== 'function' || typeof rng !== 'function') {
+    throw new Error('❌ humanScroll: page.mouse.wheel and finite distance are required');
+  }
 
   if (distance === 0) return;
 

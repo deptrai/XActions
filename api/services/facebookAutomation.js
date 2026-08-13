@@ -15,6 +15,22 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 // ============================================================================
+// Persistent profile directory helper (Story 6.17 — ADR-016)
+// ============================================================================
+
+/**
+ * Build a per-account persistent profile path.
+ * Returns undefined in dry-run mode or when c_user is missing.
+ * @param {string} [cUser] - Facebook c_user value (never logged)
+ * @param {boolean} [dryRun] - dry-run flows should not persist
+ * @returns {string|undefined}
+ */
+export function buildUserDataDir(cUser, dryRun = false) {
+  if (dryRun || !cUser) return undefined;
+  return `./profiles/fb-${cUser}/`;
+}
+
+// ============================================================================
 // Delay seam — injectable in tests via options.delay
 // ============================================================================
 

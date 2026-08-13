@@ -1,10 +1,10 @@
 ---
-baseline_commit: b68cea50c07cbfceed2d35ddea9a3eb20038712f
+baseline_commit: 24f12e2209115b3b9685c56b9f1ea94f7d41b64a
 ---
 
 # Story 6.18: Human Behavior Hardening
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -225,16 +225,16 @@ Devin CLI / SWE-1.7 Max
 
 ### Debug Log References
 
-- `npx vitest run tests/scrapers/facebook-human.test.js` → TBD
-- `npx vitest run tests/scrapers/facebook-*.test.js` → TBD
-- `npx vitest run tests/services/facebook-automation-batch.test.js` → TBD
+- `npx vitest run tests/scrapers/facebook-human.test.js` → pass
+- `npx vitest run tests/scrapers/facebook-*.test.js` → 815/815 pass (14 skipped)
+- `npx vitest run tests/services/facebook-automation-batch.test.js` → 94/94 pass
 
 ### Completion Notes List
 
-- [ ] Proportional overshoot clamped to `[1, 25]` px
-- [ ] Input validation added to all `human.*` exports
-- [ ] Unit tests for overshoot and validation added
-- [ ] Full Facebook test suite passes
+- [x] Proportional overshoot clamped to `[1, 25]` px
+- [x] Input validation added to all `human.*` exports
+- [x] Unit tests for overshoot and validation added
+- [x] Full Facebook test suite passes
 
 ### File List
 
