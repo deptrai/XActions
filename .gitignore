@@ -148,6 +148,12 @@ reports/mutation/
 pages-out/
 .wrangler/
 
+# Marketplace debug artifacts (temporary local debugging)
+debug-marketplace*.html
+debug-marketplace*.png
+scripts/debug-marketplace-*.mjs
+scripts/debug-slug-*.mjs
+
 # Stray editor/agent backups (never commit or publish)
 *.backup
 *.bak
