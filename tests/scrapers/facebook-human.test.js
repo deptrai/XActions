@@ -651,10 +651,10 @@ describe('humanScroll (AC1-AC9 — Story 6.12)', () => {
     it('proportional overshoot for large movement (1000px) is capped at 25px (AC1)', async () => {
       const page = makeFakePage();
       // rng sequence:
-      // stepCount call: 0.5 -> 28 steps
-      // control point offsets: 0.5, 0.5, 0.5, 0.5
+      // stepCount call: 0.1 -> 21 steps
+      // control point offsets: 0.1, 0.1, 0.1, 0.1
       // willOvershoot call: 0.1 ( < 0.15 => true!)
-      // overScalar call: 0.5 => 5% + 5% = 10% of 1000 = 100px -> clamped to 25px max!
+      // overScalar call: 0.05 + 0.1*0.10 = 0.06 => 6% of 1000 = 60px -> clamped to 25px max!
       const rng = () => 0.1;
       await humanMoveMouse(page, 1000, 0, { delayFn: async () => {}, rng, startX: 0, startY: 0 });
 
@@ -673,7 +673,7 @@ describe('humanScroll (AC1-AC9 — Story 6.12)', () => {
 
       const moves = page.calls.mouse.move;
       const maxMoveX = Math.max(...moves.map((m) => m.x));
-      // 5px * (0.05 + 0.1*0.10) = 0.3px -> clamped to minimum 1px. Max move x near 6px ± jitter
+      // 5px * 0.06 = 0.3px -> clamped to minimum 1px. Max move x near 6px ± jitter
       expect(maxMoveX).toBeLessThanOrEqual(10);
     });
 
@@ -682,6 +682,8 @@ describe('humanScroll (AC1-AC9 — Story 6.12)', () => {
       await expect(humanMoveMouse(page, NaN, 100)).rejects.toThrow(/humanMoveMouse/);
       await expect(humanMoveMouse(page, 100, undefined)).rejects.toThrow(/humanMoveMouse/);
       await expect(humanMoveMouse(null, 100, 100)).rejects.toThrow(/humanMoveMouse/);
+      await expect(humanMoveMouse(page, 100, 100, { startX: NaN })).rejects.toThrow(/humanMoveMouse/);
+      await expect(humanMoveMouse(page, 100, 100, { startY: Number.POSITIVE_INFINITY })).rejects.toThrow(/humanMoveMouse/);
     });
 
     it('humanClick throws when page or element is invalid (AC3)', async () => {
@@ -690,6 +692,14 @@ describe('humanScroll (AC1-AC9 — Story 6.12)', () => {
       const element = makeElementHandle({ boundingBox: { x: 10, y: 10, width: 20, height: 20 } });
       await expect(humanClick(page, element)).rejects.toThrow(/humanClick/);
       await expect(humanClick(makeFakePage(), null)).rejects.toThrow(/humanClick/);
+
+      const noDown = makeFakePage();
+      delete noDown.mouse.down;
+      await expect(humanClick(noDown, element)).rejects.toThrow(/humanClick/);
+
+      const noUp = makeFakePage();
+      delete noUp.mouse.up;
+      await expect(humanClick(noUp, element)).rejects.toThrow(/humanClick/);
     });
 
     it('humanType throws when page or text is invalid (AC4)', async () => {
@@ -709,6 +719,7 @@ describe('humanScroll (AC1-AC9 — Story 6.12)', () => {
     });
 
     it('error messages are generic and do not echo input values (NFR4)', async () => {
+      expect.assertions(2);
       const secretText = 'CONFIDENTIAL_SECRET_123';
       try {
         await humanType(null, secretText);

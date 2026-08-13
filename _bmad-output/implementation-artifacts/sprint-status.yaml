@@ -1,5 +1,5 @@
 # generated: 06-12-2026 02:18
-# last_updated: 2026-08-13 (stories 6-17, 6-18 → done)
+# last_updated: 2026-08-13 (story 6-18 → review)
 # project: XActions
 # project_key: NOKEY
 # tracking_system: file-system
@@ -92,5 +92,5 @@ development_status:
   6-15-session-warming: done
   6-16-timezone-geolocation: done
   6-17-persistent-profiles: done
-  6-18-human-behavior-hardening: done
+  6-18-human-behavior-hardening: review
   epic-6-retrospective: optional

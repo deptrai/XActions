@@ -95,7 +95,7 @@ export async function humanMoveMouse(page, x, y, options = {}) {
   } = options;
 
   // Input validation (Story 6.18 — AC2, NFR4)
-  if (!page?.mouse?.move || typeof x !== 'number' || !Number.isFinite(x) || typeof y !== 'number' || !Number.isFinite(y) || typeof delayFn !== 'function' || typeof rng !== 'function') {
+  if (!page?.mouse?.move || typeof x !== 'number' || !Number.isFinite(x) || typeof y !== 'number' || !Number.isFinite(y) || typeof startX !== 'number' || !Number.isFinite(startX) || typeof startY !== 'number' || !Number.isFinite(startY) || typeof delayFn !== 'function' || typeof rng !== 'function') {
     throw new Error('❌ humanMoveMouse: page.mouse.move and finite x, y are required');
   }
 
@@ -200,7 +200,7 @@ export async function humanClick(page, element, options = {}) {
   } = options;
 
   // Input validation (Story 6.18 — AC3, NFR4)
-  if (!page?.mouse || !element || typeof element.boundingBox !== 'function' || typeof delayFn !== 'function' || typeof rng !== 'function') {
+  if (!page?.mouse?.down || !page?.mouse?.up || !element || typeof element.boundingBox !== 'function' || typeof delayFn !== 'function' || typeof rng !== 'function') {
     throw new Error('❌ humanClick: page.mouse and element.boundingBox are required');
   }
 

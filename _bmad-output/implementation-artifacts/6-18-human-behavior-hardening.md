@@ -1,10 +1,10 @@
 ---
-baseline_commit: 24f12e2209115b3b9685c56b9f1ea94f7d41b64a
+baseline_commit: b68cea50c07cbfceed2d35ddea9a3eb20038712f
 ---
 
 # Story 6.18: Human Behavior Hardening
 
-Status: review
+Status: ready-for-dev
 
 ## Story
 
@@ -225,16 +225,16 @@ Devin CLI / SWE-1.7 Max
 
 ### Debug Log References
 
-- `npx vitest run tests/scrapers/facebook-human.test.js` → pass
-- `npx vitest run tests/scrapers/facebook-*.test.js` → 815/815 pass (14 skipped)
-- `npx vitest run tests/services/facebook-automation-batch.test.js` → 94/94 pass
+- `npx vitest run tests/scrapers/facebook-human.test.js` → TBD
+- `npx vitest run tests/scrapers/facebook-*.test.js` → TBD
+- `npx vitest run tests/services/facebook-automation-batch.test.js` → TBD
 
 ### Completion Notes List
 
-- [x] Proportional overshoot clamped to `[1, 25]` px
-- [x] Input validation added to all `human.*` exports
-- [x] Unit tests for overshoot and validation added
-- [x] Full Facebook test suite passes
+- [ ] Proportional overshoot clamped to `[1, 25]` px
+- [ ] Input validation added to all `human.*` exports
+- [ ] Unit tests for overshoot and validation added
+- [ ] Full Facebook test suite passes
 
 ### File List
 
@@ -253,3 +253,8 @@ Devin CLI / SWE-1.7 Max
 ### Notes
 
 - This is a deferred-cleanup story derived from review findings of 6.9 and 6.12, not originally in `epics.md`. It is slotted as 6.18 in Epic 6.
+- Post-implementation review (adversarial, 3 layers) applied the following patches:
+  - NFR4 test now uses `expect.assertions(2)` to avoid false-positive on non-throwing code.
+  - `humanClick` validates `page.mouse.down` and `page.mouse.up` exist.
+  - `humanMoveMouse` validates `startX`/`startY` are finite numbers.
+  - Overshoot test comments corrected to match `rng = () => 0.1`.
