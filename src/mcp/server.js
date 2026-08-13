@@ -1582,7 +1582,7 @@ const TOOLS = [
         dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
         authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
-      required: ['query', 'authCookie'],
+      required: ['query'],
     },
   },
   {
@@ -2846,10 +2846,29 @@ async function runWithFacebookBrowser(authCookie, fn) {
 async function executeFacebookEpic4Tool(name, args) {
   const { authCookie, dryRun, ...rest } = args;
 
-  // Resolve raw cookie or stored accountId (NFR3). Cookie values are never logged.
-  const { c_user: cUser, xs, userId: resolvedUserId } = await resolveMcpFacebookAuth(authCookie);
-
   const resolvedDryRun = dryRun === false ? false : true;
+
+  // Marketplace search can be performed anonymously; all other tools require authCookie.
+  let cUser = null;
+  let xs = null;
+  let resolvedUserId = null;
+  let authResolutionError = null;
+  if (authCookie) {
+    try {
+      const resolved = await resolveMcpFacebookAuth(authCookie);
+      cUser = resolved.c_user;
+      xs = resolved.xs;
+      resolvedUserId = resolved.userId;
+    } catch (err) {
+      if (name === 'x_facebook_marketplace') {
+        authResolutionError = err.message;
+      } else {
+        throw err;
+      }
+    }
+  } else if (name !== 'x_facebook_marketplace') {
+    throw new Error('❌ requires authCookie: provide { c_user, xs } or { accountId }');
+  }
 
   const {
     scheduleFacebookPost,
@@ -2982,18 +3001,31 @@ async function executeFacebookEpic4Tool(name, args) {
       ...(maxPrice != null && { maxPrice }),
       ...(category && { category }),
     };
-    const searchUrl = `https://www.facebook.com/marketplace/search/?query=${encodeURIComponent(query)}` +
-      (location ? `&location=${encodeURIComponent(location)}` : '') +
-      (minPrice != null ? `&minPrice=${minPrice}` : '') +
-      (maxPrice != null ? `&maxPrice=${maxPrice}` : '') +
-      (category ? `&category=${encodeURIComponent(category)}` : '');
+    const { buildMarketplaceSearchUrl, createBrowser, createPage, loginWithCookie, scrapeMarketplace } =
+      await import('../scrapers/facebook/index.js');
+    const searchUrl = buildMarketplaceSearchUrl(query, options);
     if (resolvedDryRun) {
       return { dryRun: true, platform: 'facebook', preview: { query, ...options, searchUrl } };
     }
-    const { scrapeMarketplace } = await import('../scrapers/facebook/index.js');
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      scrapeMarketplace(page, query, options),
-    );
+    const browser = await createBrowser({ headless: true });
+    let warning = authResolutionError ? `auth resolution failed: ${authResolutionError}. Searching anonymously.` : null;
+    try {
+      const page = await createPage(browser);
+      if (cUser && xs) {
+        try {
+          await loginWithCookie(page, { c_user: cUser, xs });
+        } catch (err) {
+          warning = `Facebook login failed: ${err.message}. Searching anonymously.`;
+        }
+      }
+      const listings = await scrapeMarketplace(page, query, options);
+      const result = { listings, platform: 'facebook', count: listings.length };
+      if (resolvedUserId) result.userId = resolvedUserId;
+      if (warning) result.warning = warning;
+      return result;
+    } finally {
+      await browser.close().catch(() => {});
+    }
   }
 
   throw new Error(`❌ executeFacebookEpic4Tool: unhandled tool name "${name}"`);

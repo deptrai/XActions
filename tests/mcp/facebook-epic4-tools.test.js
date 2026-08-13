@@ -23,21 +23,29 @@ const TOOL_NAMES = [
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
+const REQUIRED_AUTH_TOOLS = TOOL_NAMES.filter((n) => n !== 'x_facebook_marketplace');
+
 describe('executeFacebookEpic4Tool — auth guard', () => {
-  it.each(TOOL_NAMES)('%s: throws when authCookie missing', async (name) => {
+  it.each(REQUIRED_AUTH_TOOLS)('%s: throws when authCookie missing', async (name) => {
     await expect(executeFacebookEpic4Tool(name, {})).rejects.toThrow('authCookie');
   });
 
-  it.each(TOOL_NAMES)('%s: throws when c_user empty', async (name) => {
+  it.each(REQUIRED_AUTH_TOOLS)('%s: throws when c_user empty', async (name) => {
     await expect(
       executeFacebookEpic4Tool(name, { authCookie: { c_user: '', xs: 'abc' } }),
     ).rejects.toThrow('authCookie');
   });
 
-  it.each(TOOL_NAMES)('%s: throws when xs empty', async (name) => {
+  it.each(REQUIRED_AUTH_TOOLS)('%s: throws when xs empty', async (name) => {
     await expect(
       executeFacebookEpic4Tool(name, { authCookie: { c_user: '123', xs: '' } }),
     ).rejects.toThrow('authCookie');
+  });
+
+  it('x_facebook_marketplace: missing authCookie falls back to anonymous dry-run', async () => {
+    const result = await executeFacebookEpic4Tool('x_facebook_marketplace', { query: 'macbook' });
+    expect(result.dryRun).toBe(true);
+    expect(result.preview.searchUrl).toContain('marketplace');
   });
 });
 
@@ -234,7 +242,7 @@ describe('executeFacebookEpic4Tool — x_facebook_group_members', () => {
 });
 
 describe('executeFacebookEpic4Tool — x_facebook_marketplace', () => {
-  it('dry-run returns preview with query and searchUrl', async () => {
+  it('dry-run returns preview with query and searchUrl (HCM slug)', async () => {
     const result = await executeFacebookEpic4Tool('x_facebook_marketplace', {
       authCookie: VALID_AUTH,
       query: 'macbook pro 14',
@@ -248,6 +256,7 @@ describe('executeFacebookEpic4Tool — x_facebook_marketplace', () => {
     expect(result.preview.query).toBe('macbook pro 14');
     expect(result.preview.location).toBe('Ho Chi Minh');
     expect(result.preview.searchUrl).toContain('macbook%20pro%2014');
+    expect(result.preview.searchUrl).toContain('hochiminhcity');
   });
 
   it('throws for missing query', async () => {

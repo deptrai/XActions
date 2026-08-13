@@ -354,6 +354,7 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
 
   // Step 5: Verify authentication succeeded.
   // Check for: login form (bad cookies) OR security check (anti-bot detection).
+  const currentUrl = page.url();
   const authCheck = (await page.evaluate(() => {
     const bodyText = document.body?.innerText || '';
     const hasLoginForm = !!document.querySelector?.('form[action*="login"], [data-testid="royal_login_form"]');
@@ -362,8 +363,9 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
     const hasSecurityCheck = bodyText.includes('confirmez que vous êtes une personne') ||
       bodyText.includes('confirm that you are a real person') ||
       (bodyText.includes('confirm that you') && bodyText.includes('human')) ||
-      bodyText.includes('security check') ||
-      bodyText.includes('vérification de sécurité') ||
+      bodyText.includes("confirm you're human") ||
+      bodyText.includes('Confirm you') ||
+      bodyText.includes("you're human") ||
       bodyText.includes('Enter the text from the image') ||
       bodyText.includes('hear this code');
     return { hasLoginForm, hasLoginButton, hasSecurityCheck };
@@ -373,7 +375,7 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
     throw new Error('❌ Facebook cookie authentication failed — session expired or invalid cookies');
   }
 
-  if (authCheck.hasSecurityCheck) {
+  if (authCheck.hasSecurityCheck || currentUrl.includes('/checkpoint/')) {
     throw new Error('❌ Facebook security check detected — manual verification required (CAPTCHA/anti-bot)');
   }
 
@@ -1207,6 +1209,47 @@ function normalizeMarketplaceListing(raw) {
   };
 }
 
+// Marketplace location helpers — map free-form city names to Facebook Marketplace slugs or numeric IDs.
+// Slugs are discovered from https://www.facebook.com/marketplace/directory/{country}/
+const MARKETPLACE_KNOWN_LOCATIONS = new Map([
+  ['hochiminhcity', 'hochiminhcity'],
+  ['hochiminh', 'hochiminhcity'],
+  ['hcm', 'hochiminhcity'],
+  ['hcmc', 'hochiminhcity'],
+  ['saigon', 'hochiminhcity'],
+  ['hanoi', '106388046062960'],
+  ['danang', '111711568847056'],
+]);
+
+export function resolveMarketplaceLocation(input) {
+  if (!input || typeof input !== 'string') return null;
+  const key = input.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const mapped = MARKETPLACE_KNOWN_LOCATIONS.get(key);
+  if (mapped) return mapped;
+  const trimmed = input.trim().toLowerCase();
+  if (/^[a-z0-9]+$/.test(trimmed)) return trimmed;
+  return null;
+}
+
+export function buildMarketplaceSearchUrl(query, options = {}) {
+  const { location, category, minPrice, maxPrice } = options;
+  const locationSlug = resolveMarketplaceLocation(location);
+  let basePath = `${FACEBOOK_BASE}/marketplace`;
+  if (locationSlug) {
+    basePath += `/${locationSlug}`;
+  }
+  if (category) {
+    basePath += `/category/${encodeURIComponent(category)}`;
+  }
+  const params = [`query=${encodeURIComponent(query.trim())}`];
+  if (minPrice != null) params.push(`minPrice=${minPrice}`);
+  if (maxPrice != null) params.push(`maxPrice=${maxPrice}`);
+  if (location && !locationSlug) {
+    params.push(`location=${encodeURIComponent(location)}`);
+  }
+  return `${basePath}/search/?${params.join('&')}`;
+}
+
 /**
  * Scrape Facebook Marketplace listings by search query or category.
  *
@@ -1237,118 +1280,89 @@ export async function scrapeMarketplace(page, query, options = {}) {
     throw new Error('❌ Marketplace search requires a non-empty query string');
   }
 
-  // Build search URL
-  let searchUrl = `${FACEBOOK_BASE}/marketplace/search/?query=${encodeURIComponent(query.trim())}`;
-  if (category) {
-    searchUrl = `${FACEBOOK_BASE}/marketplace/category/${encodeURIComponent(category)}/?query=${encodeURIComponent(query.trim())}`;
-  }
-  if (location) {
-    searchUrl += `&location=${encodeURIComponent(location)}`;
-  }
-  if (minPrice) {
-    searchUrl += `&minPrice=${minPrice}`;
-  }
-  if (maxPrice) {
-    searchUrl += `&maxPrice=${maxPrice}`;
+  const searchUrl = buildMarketplaceSearchUrl(query, { location, category, minPrice, maxPrice });
+
+  await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await delay(3000, 5000);
+
+  const finalUrl = page.url();
+  if (finalUrl.includes('/checkpoint/')) {
+    throw new Error('❌ Facebook checkpoint detected — manual verification required. Log in to the account via a real browser, complete the security check, then retry.');
   }
 
-  await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await delay(2000, 4000);
-
-  // Wait for listings to load
   try {
-    await page.waitForSelector('[role="main"], [data-testid="marketplace_search_results"], div[style*="grid"]', { timeout: 10000 });
+    await page.waitForFunction(
+      () => document.querySelectorAll('a[href*="/marketplace/item/"], a[href*="/marketplace/listing/"]').length > 0,
+      { timeout: 20000 },
+    );
   } catch (_) {
-    // Proceed anyway - selectors may differ
+    // Proceed — may still extract if cards load late or page has none.
   }
 
   const listings = new Map();
   let stalls = 0;
-  const maxStalls = 5;
+  const maxStalls = 8;
 
   while (listings.size < limit && stalls < maxStalls) {
     const prevSize = listings.size;
 
-    // Extract listings from the current viewport
-    const rawListings = await page.evaluate(() => {
+    const rawListings = await page.evaluate((evalLimit) => {
       const results = [];
-
-      // Marketplace listings are anchor links to /marketplace/item/{id}/
       const cards = [...document.querySelectorAll('a[href*="/marketplace/item/"], a[href*="/marketplace/listing/"]')];
 
       for (const card of cards) {
         const href = card.getAttribute('href') || '';
         if (!href.includes('marketplace/')) continue;
 
-        const listingUrl = href.startsWith('http') ? href.split('?')[0] : `https://www.facebook.com${href.split('?')[0]}`;
-        const id = listingUrl.split('/').filter(Boolean).pop() || listingUrl;
+        const cleanHref = href.split('?')[0];
+        const id = cleanHref.split('/').filter(Boolean).pop() || '';
+        if (!id || /[^0-9]/.test(id)) continue;
 
-      // Facebook Marketplace card text format (verified 2026-08):
-      // "{Price}{Title}{Location}" all concatenated without separators.
-      // Examples: "$115,000Iphone+15+ProMaxJijiga", "CA$50,000LoveHarar"
-      // Price is always first, title follows, location is trailing city/region name.
-      const allText = card.textContent?.trim() || '';
+        const listingUrl = cleanHref.startsWith('http') ? cleanHref : `https://www.facebook.com${cleanHref}`;
 
-      // Extract price — matches currency symbols + digits (e.g. $115,000 | CA$50,000 | ETB28,000)
-      let price = null;
-      const priceMatch = allText.match(/^([\$€£¥₹A-Z]*\s*[\d,]+(?:\.\d{2})?(?:\s*(?:USD|EUR|VND|ETB))?)/i);
-      if (priceMatch) {
-        price = priceMatch[1].trim();
-      }
-
-      // Extract title and location from remaining text
-      let title = null;
-      let location = null;
-      if (price) {
-        const afterPrice = allText.substring(price.length).trim().replace(/\+/g, ' ');
-
-        // Split camelCase boundaries: "Iphone 15 ProMaxJijiga" → "Iphone 15 Pro Max Jijiga"
-        // Insert space before uppercase letters that follow lowercase letters/digits
-        const expanded = afterPrice.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
-
-        // Location is typically the last 1-2 words that look like a place name
-        // (capitalized, not part of product name). Split and analyze.
-        const words = expanded.split(/\s+/).filter(Boolean);
-
-        if (words.length >= 2) {
-          // Check if last word looks like a location (capitalized, short, common city pattern)
-          const lastWord = words[words.length - 1];
-          const secondLast = words.length >= 2 ? words[words.length - 2] : null;
-
-          // Location patterns: capitalized word at end, possibly preceded by another capitalized word
-          // Common patterns: "Jijiga", "Harar", "Dire Dawa", "Addis Ababa"
-          const looksLikeLocation = (w) =>
-            /^[A-Z][a-z]+$/.test(w) &&
-            !/^(Iphone|Ipad|Macbook|Samsung|Sony|Nike|Adidas|Pro|Max|Plus|Mini|Air|Ultra)/i.test(w);
-
-          if (looksLikeLocation(lastWord)) {
-            // Check if second-to-last is also a location word (e.g. "Dire Dawa")
-            if (secondLast && looksLikeLocation(secondLast)) {
-              location = `${secondLast} ${lastWord}`;
-              title = words.slice(0, -2).join(' ');
-            } else {
-              location = lastWord;
-              title = words.slice(0, -1).join(' ');
-            }
-          } else {
-            title = expanded;
-          }
-        } else if (words.length === 1) {
-          title = expanded;
-        }
-      }
-
-        // Extract image
         const imgEl = card.querySelector('img');
         const image = imgEl?.getAttribute('src') || imgEl?.getAttribute('data-src') || null;
 
-        if (id && (title || price)) {
-          results.push({ id, title, price, location, image, listingUrl });
+        let title = null;
+        let price = null;
+        let cardLocation = null;
+
+        const ariaLabel = card.getAttribute('aria-label')?.trim() || '';
+        if (ariaLabel) {
+          const m = ariaLabel.match(/^(.*),\s*(Free|(?:[A-Z]{0,3}[₫$€£¥₹₩]\s*[\d,\.]+(?:\s*(?:USD|EUR|VND|ETB|VNĐ))?)|(?:[A-Z]{2,5}\s*[\d,\.]+(?:\s*(?:USD|EUR|VND|ETB|VNĐ))?))\s*,\s*(.+?)\s*,\s*listing\s+(\d+)$/is);
+          if (m) {
+            title = m[1].trim().replace(/\s+/g, ' ');
+            price = m[2].trim().replace(/\s+/g, ' ');
+            cardLocation = m[3].trim().replace(/\s+/g, ' ');
+          }
+        }
+
+        if (!title) {
+          const allText = card.textContent?.trim() || '';
+          const priceMatch = allText.match(/^(?:\s*Free\s*|[\$€£¥₹₫₩A-Z]*\s*[\d,]+(?:\.\d{2})?(?:\s*(?:USD|EUR|VND|ETB|VNĐ))?)/i);
+          if (priceMatch) {
+            price = priceMatch[0].trim().replace(/\s+/g, ' ');
+            const after = allText.substring(priceMatch[0].length).trim().replace(/\+/g, ' ').replace(/\s+/g, ' ');
+            const locationMatch = after.match(/(.+?)(?:\s*,\s*)?(Ho Chi Minh City(?:, Vietnam)?|Hanoi(?:, Vietnam)?|Da Nang(?:, Vietnam)?)$/i);
+            if (locationMatch) {
+              title = locationMatch[1].trim();
+              cardLocation = locationMatch[2].trim();
+            } else {
+              title = after;
+            }
+          } else {
+            title = allText;
+          }
+        }
+
+        if (title || price) {
+          results.push({ id, title, price, location: cardLocation, image, listingUrl });
+          if (results.length >= evalLimit) break;
         }
       }
 
       return results;
-    });
+    }, limit);
 
     for (const raw of rawListings) {
       if (!listings.has(raw.id)) {
@@ -1365,7 +1379,6 @@ export async function scrapeMarketplace(page, query, options = {}) {
       stalls = 0;
     }
 
-    // Scroll to load more listings
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await delay(1500, 3000);
   }

@@ -146,9 +146,9 @@ describe('new Facebook MCP tools are registered', () => {
     expect(required).toContain('authCookie');
   });
 
-  it('x_facebook_marketplace requires query and authCookie', () => {
+  it('x_facebook_marketplace requires query only; authCookie is optional', () => {
     const required = findTool('x_facebook_marketplace')?.inputSchema?.required ?? [];
     expect(required).toContain('query');
-    expect(required).toContain('authCookie');
+    expect(required).not.toContain('authCookie');
   });
 });
