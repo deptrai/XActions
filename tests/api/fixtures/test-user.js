@@ -19,9 +19,12 @@ export function makeTestToken(userId, username = 'ghost') {
 }
 
 export function makeValidFacebookCookie(overrides = {}) {
+  // Random numeric UID (15 digits) so the cookie passes shape validation
+  // but is clearly not tied to a real session.
+  const cUser = String(100000000000000 + Math.floor(Math.random() * 900000000000000));
   return {
-    c_user: '100000000000001',
-    xs: 'test-xs-value',
+    c_user: cUser,
+    xs: `xs-${randomUUID().slice(0, 24)}`,
     ...overrides,
   };
 }

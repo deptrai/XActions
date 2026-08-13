@@ -11,6 +11,7 @@ import {
   makeTestUserId,
   makeValidFacebookCookie,
 } from '../api/fixtures/test-user.js';
+import { nextTestId } from '../utils/test-ids.js';
 
 const TEST_USER_ID = makeTestUserId('fb-e2e');
 const VALID_COOKIE = makeValidFacebookCookie();
@@ -29,7 +30,7 @@ afterAll(async () => {
 describe('Facebook automation endpoints', () => {
   // ─── Auth guard ──────────────────────────────────────────────────────────
 
-  it('POST /api/facebook/automate without auth → 401', async () => {
+  it(`[${nextTestId('E2E')}] POST /api/facebook/automate without auth → 401`, async () => {
     const res = await request(app)
       .post('/api/facebook/automate')
       .send({ action: 'like', urls: ['https://facebook.com/post/1'] });
@@ -37,7 +38,7 @@ describe('Facebook automation endpoints', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  it('POST /api/facebook/scrape without auth → 401', async () => {
+  it(`[${nextTestId('E2E')}] POST /api/facebook/scrape without auth → 401`, async () => {
     const res = await request(app)
       .post('/api/facebook/scrape')
       .send({ action: 'profile', url: 'https://facebook.com/somepage' });
@@ -45,7 +46,7 @@ describe('Facebook automation endpoints', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  it('POST /api/facebook/automate with invalid Bearer token → 401', async () => {
+  it(`[${nextTestId('E2E')}] POST /api/facebook/automate with invalid Bearer token → 401`, async () => {
     const res = await request(app)
       .post('/api/facebook/automate')
       .set('Authorization', 'Bearer invalid.jwt.token')
@@ -56,7 +57,7 @@ describe('Facebook automation endpoints', () => {
 
   // ─── Validation layer (reachable with a real DB user) ─────────────────────
 
-  it('POST /api/facebook/automate with valid token but missing action → 400', async () => {
+  it(`[${nextTestId('E2E')}] POST /api/facebook/automate with valid token but missing action → 400`, async () => {
     const res = await request(app)
       .post('/api/facebook/automate')
       .set('Authorization', `Bearer ${token}`)
@@ -65,7 +66,7 @@ describe('Facebook automation endpoints', () => {
     expect(res.body).toHaveProperty('ok', false);
   });
 
-  it('POST /api/facebook/automate with valid token but invalid action → 400', async () => {
+  it(`[${nextTestId('E2E')}] POST /api/facebook/automate with valid token but invalid action → 400`, async () => {
     const res = await request(app)
       .post('/api/facebook/automate')
       .set('Authorization', `Bearer ${token}`)
@@ -76,7 +77,7 @@ describe('Facebook automation endpoints', () => {
 
   // ─── Scrape action validation ─────────────────────────────────────────────
 
-  it('POST /api/facebook/scrape with valid token but missing action → 400', async () => {
+  it(`[${nextTestId('E2E')}] POST /api/facebook/scrape with valid token but missing action → 400`, async () => {
     const res = await request(app)
       .post('/api/facebook/scrape')
       .set('Authorization', `Bearer ${token}`)
@@ -85,7 +86,7 @@ describe('Facebook automation endpoints', () => {
     expect(res.body.error).toMatch(/action must be one of/);
   });
 
-  it('POST /api/facebook/scrape with valid token but invalid action → 400', async () => {
+  it(`[${nextTestId('E2E')}] POST /api/facebook/scrape with valid token but invalid action → 400`, async () => {
     const res = await request(app)
       .post('/api/facebook/scrape')
       .set('Authorization', `Bearer ${token}`)
@@ -96,7 +97,7 @@ describe('Facebook automation endpoints', () => {
 
   // ─── Auth cookie guard ────────────────────────────────────────────────────
 
-  it('POST /api/facebook/automate with valid token but missing authCookie → 400', async () => {
+  it(`[${nextTestId('E2E')}] POST /api/facebook/automate with valid token but missing authCookie → 400`, async () => {
     const res = await request(app)
       .post('/api/facebook/automate')
       .set('Authorization', `Bearer ${token}`)
@@ -105,8 +106,8 @@ describe('Facebook automation endpoints', () => {
     expect(res.body.error).toMatch(/session is required/);
   });
 
-  it('POST /api/facebook/automate with non-existent user token → 401', async () => {
-    const fakeToken = makeTestToken('nonexistent-user-000', 'ghost');
+  it(`[${nextTestId('E2E')}] POST /api/facebook/automate with non-existent user token → 401`, async () => {
+    const fakeToken = makeTestToken(makeTestUserId('nonexistent'), makeTestUserId('ghost'));
     const res = await request(app)
       .post('/api/facebook/automate')
       .set('Authorization', `Bearer ${fakeToken}`)

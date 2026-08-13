@@ -11,6 +11,7 @@ import {
   makeTestUserId,
   makeValidFacebookCookie,
 } from './fixtures/test-user.js';
+import { nextTestId } from '../utils/test-ids.js';
 
 const TEST_USER_ID = makeTestUserId('fb-automate');
 const VALID_COOKIE = makeValidFacebookCookie();
@@ -33,7 +34,7 @@ const postScrape = (body) =>
   request(app).post('/api/facebook/scrape').set('Authorization', `Bearer ${authToken}`).send(body);
 
 describe('Auth guard', () => {
-  it('POST /api/facebook/automate without auth token → 401', async () => {
+  it(`[${nextTestId('API')}] POST /api/facebook/automate without auth token → 401`, async () => {
     const res = await request(app)
       .post('/api/facebook/automate')
       .send({ action: 'like', urls: ['https://facebook.com/post/1'] });
@@ -41,7 +42,7 @@ describe('Auth guard', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  it('POST /api/facebook/scrape without auth token → 401', async () => {
+  it(`[${nextTestId('API')}] POST /api/facebook/scrape without auth token → 401`, async () => {
     const res = await request(app)
       .post('/api/facebook/scrape')
       .send({ action: 'profile', url: 'https://facebook.com/somepage' });
@@ -49,7 +50,7 @@ describe('Auth guard', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  it('POST /api/facebook/automate with malformed Bearer token → 401', async () => {
+  it(`[${nextTestId('API')}] POST /api/facebook/automate with malformed Bearer token → 401`, async () => {
     const res = await request(app)
       .post('/api/facebook/automate')
       .set('Authorization', 'Bearer not.a.valid.jwt')
@@ -80,7 +81,7 @@ describe('Action validation', () => {
     ['send-friend-requests empty targets', { action: 'send-friend-requests', targets: [], authCookie: VALID_COOKIE }, /send-friend-requests.*requires/i],
     ['warmup-scroll-feed missing targetUrl', { action: 'warmup-scroll-feed', authCookie: VALID_COOKIE }, /warmup-scroll-feed.*requires.*targetUrl/i],
     ['warmup-scroll-feed empty targetUrl', { action: 'warmup-scroll-feed', targetUrl: '   ', authCookie: VALID_COOKIE }, /warmup-scroll-feed.*requires.*targetUrl/i],
-  ])('%s → 400', async (desc, body, pattern) => {
+  ])(`[${nextTestId('API')}] %s → 400`, async (desc, body, pattern) => {
     const res = await postAutomate(body);
     expect(res.status).toBe(400);
     expect(res.body.ok).toBe(false);
@@ -89,29 +90,32 @@ describe('Action validation', () => {
 });
 
 describe('No-required-field actions', () => {
-  it('cancel-friend-requests — empty body should NOT return 400 (auth + dryRun only)', async () => {
+  it(`[${nextTestId('API')}] cancel-friend-requests — dryRun with invalid session cookie → 500`, async () => {
     const res = await postAutomate({ action: 'cancel-friend-requests', authCookie: VALID_COOKIE });
-    expect(res.status).not.toBe(400);
-    expect(typeof res.body.ok).toBe('boolean');
+    expect(res.status).toBe(500);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.error).toMatch(/See server logs/i);
   });
 
-  it('cancel-friend-requests — with optional fields should NOT return 400', async () => {
+  it(`[${nextTestId('API')}] cancel-friend-requests — with optional fields → 500 when session is invalid`, async () => {
     const res = await postAutomate({
       action: 'cancel-friend-requests',
       olderThanDays: 30,
       limit: 10,
       authCookie: VALID_COOKIE,
     });
-    expect(res.status).not.toBe(400);
+    expect(res.status).toBe(500);
+    expect(res.body.ok).toBe(false);
   });
 
-  it('warmup-account — empty body should NOT return 400 (auth + dryRun only)', async () => {
+  it(`[${nextTestId('API')}] warmup-account — empty body → 200 dry-run`, async () => {
     const res = await postAutomate({ action: 'warmup-account', authCookie: VALID_COOKIE });
-    expect(res.status).not.toBe(400);
-    expect(typeof res.body.ok).toBe('boolean');
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.dryRun).toBe(true);
   });
 
-  it('warmup-account — with optional fields should NOT return 400', async () => {
+  it(`[${nextTestId('API')}] warmup-account — with optional fields → 200 dry-run`, async () => {
     const res = await postAutomate({
       action: 'warmup-account',
       durationSeconds: 60,
@@ -119,26 +123,28 @@ describe('No-required-field actions', () => {
       reactProbability: 0.3,
       authCookie: VALID_COOKIE,
     });
-    expect(res.status).not.toBe(400);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
   });
 });
 
 describe('Scrape endpoint validation', () => {
-  it('POST /api/facebook/scrape — group-members without url → 400', async () => {
+  it(`[${nextTestId('API')}] POST /api/facebook/scrape — group-members without url → 400`, async () => {
     const res = await postScrape({ action: 'group-members' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/url/i);
   });
 
-  it('POST /api/facebook/scrape — group-members with valid url format should NOT return 400', async () => {
+  it(`[${nextTestId('API')}] POST /api/facebook/scrape — group-members with valid url format → 200`, async () => {
     const res = await postScrape({
       action: 'group-members',
       url: 'https://www.facebook.com/groups/123456789/members',
     });
-    expect(res.status).not.toBe(400);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
   });
 
-  it('POST /api/facebook/automate — missing authCookie entirely → 400', async () => {
+  it(`[${nextTestId('API')}] POST /api/facebook/automate — missing authCookie entirely → 400`, async () => {
     const res = await postAutomate({ action: 'like', urls: ['https://facebook.com/post/1'] });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/session is required/);

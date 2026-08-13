@@ -11,6 +11,28 @@ const prisma = new PrismaClient();
 const router = express.Router();
 router.use(authMiddleware);
 
+const C_USER_UID_RE = /^\d{10,20}$/;
+
+/**
+ * Validate the shape of a raw Facebook session cookie.
+ * Returns an error string if c_user/xs are provided and malformed, null if OK or not provided.
+ * c_user must be a numeric Facebook UID (10-20 digits) and xs must be non-empty.
+ * Cookie values are never logged (NFR3).
+ */
+function validateRawCookie(authCookie) {
+  const cUser = String(authCookie?.c_user ?? '').trim();
+  const xs = String(authCookie?.xs ?? '').trim();
+  // Not a raw cookie — nothing to validate.
+  if (!cUser && !xs) return null;
+  if (!C_USER_UID_RE.test(cUser)) {
+    return '❌ authCookie.c_user must be a numeric Facebook UID (10-20 digits).';
+  }
+  if (!xs) {
+    return '❌ A Facebook session is required: provide authCookie { c_user, xs }, authCookie.accountId, or accountIds[].';
+  }
+  return null;
+}
+
 /**
  * Validate Facebook auth presence: EITHER a stored account reference
  * (authCookie.accountId / accountIds[]) OR a raw session cookie ({ c_user, xs }).
@@ -25,6 +47,8 @@ function requireFacebookCookie(body) {
   }
   // Raw-cookie path. Coerce to string first — c_user is a numeric Facebook UID and may arrive as a
   // JSON number, which would crash on .trim() instead of giving a clean 400.
+  const cookieError = validateRawCookie(authCookie);
+  if (cookieError) return cookieError;
   const cUser = String(authCookie?.c_user ?? '').trim();
   const xs = String(authCookie?.xs ?? '').trim();
   if (!cUser || !xs) {
@@ -133,6 +157,15 @@ router.post('/scrape', async (req, res) => {
     }
     if (['search', 'marketplace'].includes(action) && !query?.trim()) {
       return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
+    }
+
+    // Fail fast on malformed session cookie before launching a browser / hitting the network.
+    const rawCookieProvided = authCookie && (String(authCookie.c_user ?? '').trim() || String(authCookie.xs ?? '').trim());
+    if (rawCookieProvided) {
+      const cookieError = validateRawCookie(authCookie);
+      if (cookieError) {
+        return res.status(400).json({ ok: false, error: cookieError });
+      }
     }
 
     // Dynamic import — avoids loading Puppeteer until needed
