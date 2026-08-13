@@ -60,6 +60,7 @@ bun.lockb
 
 # Build outputs
 dist/
+dist-cloudflare/
 es/
 /lib/
 .next/
@@ -135,7 +136,6 @@ e2e/reports
 .vercel
 
 audit-report.json
-
 # Facebook session cookies — never commit
 cookie.json
 cookies.json
@@ -143,3 +143,13 @@ cookies.json
 # Stryker mutation testing
 .stryker-tmp/
 reports/mutation/
+
+# Site/build outputs
+pages-out/
+.wrangler/
+
+# Stray editor/agent backups (never commit or publish)
+*.backup
+*.bak
+*.orig
+*.rej

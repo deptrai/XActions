@@ -1,6 +1,6 @@
 # generated: 06-12-2026 02:18
 # last_updated: 2026-08-13 (epic 6 → done)
-# project: XActions
+# project: XActions-DONE
 # project_key: NOKEY
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
@@ -92,5 +92,5 @@ development_status:
   6-15-session-warming: done
   6-16-timezone-geolocation: done
   6-17-persistent-profiles: done
-  6-18-human-behavior-hardening: review
+  6-18-human-behavior-hardening: done
   epic-6-retrospective: optional

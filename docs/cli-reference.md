@@ -1,9 +1,11 @@
 # XActions CLI Reference
 
 > **The Complete X/Twitter Automation Toolkit**  
-> Version 3.0.0 | Author: nich ([@nichxbt](https://x.com/nichxbt))
+> Author: nich ([@nichxbt](https://x.com/nichxbt)). Run `xactions --version` for the version you have installed.
 
-The XActions CLI provides powerful command-line tools for X/Twitter automation, scraping, and data extraction. No Twitter API required — saves you $100-$5,000+/month in API costs.
+The XActions CLI provides command-line tools for X/Twitter automation, scraping, and data extraction. No Twitter API required, which saves $100-$5,000+/month in API costs.
+
+**Most read commands need no account at all.** Profiles, timelines, threads, and media all work on the guest tier the moment you install. Logging in unlocks search, followers, following, likes, bookmarks, and DMs. `xactions doctor` tells you which tier you are on right now.
 
 ---
 
@@ -11,6 +13,9 @@ The XActions CLI provides powerful command-line tools for X/Twitter automation, 
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Finding your way around](#finding-your-way-around)
+  - [xactions quickstart](#xactions-quickstart)
+  - [xactions completion](#xactions-completion)
 - [Authentication](#authentication)
   - [xactions login](#xactions-login)
   - [xactions logout](#xactions-logout)
@@ -70,34 +75,86 @@ Verify the installation:
 
 ```bash
 xactions --version
-# Output: 3.0.0
-
-xactions --help
+xactions doctor      # checks Node, the browser, the MCP server, and what works right now
 ```
 
 ### Requirements
 
 - **Node.js**: v18.0.0 or higher
 - **npm**: v8.0.0 or higher
-- A valid X/Twitter account for authentication
+- An X/Twitter account **only** for search, followers, following, likes, bookmarks, and DMs. Everything else works logged out.
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Install XActions
 npm install -g xactions
 
-# 2. Authenticate with your X account
-xactions login
+xactions quickstart          # guided first run, adapts to what you have set up
+xactions doctor              # verify the install and see which tier you are on
 
-# 3. Scrape a profile
-xactions profile elonmusk
+xactions profile NASA        # works with no account
+xactions tweets NASA --limit 20
+xactions analyze NASA        # engagement rate, cadence, content mix, best posting hour
 
-# 4. Get followers and save to file
-xactions followers elonmusk --limit 500 --output followers.json
+xactions connect             # log in once, in a real browser, to unlock the rest
+xactions search "your topic" --limit 50
+xactions followers yourhandle --limit 500 --output followers.json
 ```
+
+Prefer `xactions connect` over `xactions login`: it drives a real browser, you log in normally, and the session is captured for you. `login` is the manual fallback for pasting cookies out of DevTools yourself.
+
+---
+
+## Finding your way around
+
+There are more than fifty commands. Running `xactions` with no arguments prints them grouped by task rather than alphabetically:
+
+```
+Start here              Set up and verify the install
+Read an account         Works with no login at all
+Followers and audience  Who follows whom, and who is worth your time
+Search and monitor      Find posts, then keep watching them
+Write and grow          Draft, sharpen, schedule, and recycle posts
+Automate                Run it without you
+Move data               Export, import, convert, migrate, diff
+Low level               The raw HTTP client
+```
+
+`xactions help <command>` gives the full flag list for any one command.
+
+### xactions quickstart
+
+A guided first run. Reads what you already have configured and prints the three commands that will produce a result on your machine, then the directions worth exploring next.
+
+```bash
+xactions quickstart
+xactions quickstart --json    # just the detected setup state, for scripts
+```
+
+The JSON form reports the config directory, whether a session is saved, and which tier (`guest` or `session`) you are on.
+
+### xactions completion
+
+Tab completion for bash, zsh, and fish. The script is generated from the live command tree, so it covers every command, sub-command, and flag, and stays correct as commands are added.
+
+```bash
+# bash
+xactions completion bash > /etc/bash_completion.d/xactions
+# or, without root:
+echo 'source <(xactions completion bash)' >> ~/.bashrc
+
+# zsh
+xactions completion zsh > "${fpath[1]}/_xactions" && compinit
+# or:
+echo 'source <(xactions completion zsh)' >> ~/.zshrc
+
+# fish
+xactions completion fish > ~/.config/fish/completions/xactions.fish
+```
+
+Regenerate it after upgrading XActions so newly added commands complete.
 
 ---
 
@@ -650,7 +707,7 @@ xactions info
 ```bash
 $ xactions info
 
-⚡ XActions v3.0.0
+⚡ XActions v3.5.0
 
 The Complete X/Twitter Automation Toolkit
 
@@ -2250,7 +2307,7 @@ DEBUG=xactions:* xactions followers nichxbt
 
 ## License
 
-MIT License - see [LICENSE](../LICENSE) for details.
+Apache 2.0 License - see [LICENSE](../LICENSE) for details.
 
 ---
 

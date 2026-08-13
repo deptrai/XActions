@@ -18,10 +18,8 @@
     .btn { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); cursor: pointer; font-size: 13px; transition: all .2s; }
     .btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
     .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .btn.danger { color: var(--red); }
     .month-nav { display: flex; align-items: center; gap: 12px; }
     .month-nav span { font-size: 16px; font-weight: 600; min-width: 160px; text-align: center; }
-    .layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
     .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     .cal-header { background: var(--bg2); padding: 10px; text-align: center; font-size: 12px; color: var(--text2); font-weight: 600; }
     .cal-day { background: var(--bg3); min-height: 120px; padding: 8px; cursor: pointer; transition: background .2s; position: relative; }
@@ -34,52 +32,51 @@
     .cal-event.thread { background: rgba(0,200,83,.2); color: var(--green); }
     .cal-event.draft { background: rgba(255,184,0,.2); color: var(--yellow); }
     .cal-event.posted { background: rgba(0,200,83,.15); color: var(--green); border-left: 2px solid var(--green); }
-    .cal-event.failed { background: rgba(255,68,68,.18); color: var(--red); }
-    .cal-event.cancelled { background: rgba(136,136,136,.18); color: var(--text2); text-decoration: line-through; }
-    /* Queue view (drag & drop reorder) */
-    .queue { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
-    .queue h2 { font-size: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .queue h2 .hint { font-size: 11px; color: var(--text2); font-weight: 400; }
-    .queue-list { display: flex; flex-direction: column; gap: 8px; max-height: 560px; overflow-y: auto; }
-    .queue-item { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; cursor: grab; transition: border .15s, opacity .15s; }
-    .queue-item:hover { border-color: var(--accent); }
-    .queue-item.dragging { opacity: 0.4; border-style: dashed; }
-    .queue-item.drag-over { border-color: var(--accent); border-top: 3px solid var(--accent); }
-    .queue-item .qi-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-    .queue-item .qi-when { font-size: 11px; color: var(--text2); }
-    .queue-item .qi-status { font-size: 10px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
-    .queue-item .qi-status.pending { background: rgba(29,155,240,.2); color: var(--accent); }
-    .queue-item .qi-status.completed { background: rgba(0,200,83,.2); color: var(--green); }
-    .queue-item .qi-status.failed { background: rgba(255,68,68,.2); color: var(--red); }
-    .queue-item .qi-status.cancelled { background: rgba(136,136,136,.2); color: var(--text2); }
-    .queue-item .qi-status.running { background: rgba(255,184,0,.2); color: var(--yellow); }
-    .queue-item .qi-content { font-size: 13px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .queue-item .qi-meta { font-size: 11px; color: var(--text2); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
-    .queue-empty { color: var(--text2); font-size: 13px; text-align: center; padding: 20px 0; }
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.7); z-index: 100; align-items: center; justify-content: center; }
     .modal-overlay.show { display: flex; }
-    .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 520px; max-width: 90vw; }
+    .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 480px; max-width: 90vw; }
     .modal h2 { font-size: 18px; margin-bottom: 16px; }
     .modal label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 4px; margin-top: 12px; }
     .modal input, .modal textarea, .modal select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); font-size: 14px; font-family: inherit; }
     .modal textarea { height: 100px; resize: vertical; }
-    .modal .row { display: flex; gap: 10px; }
-    .modal .row > * { flex: 1; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
     .stats-bar { display: flex; gap: 16px; margin-bottom: 20px; }
     .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; flex: 1; }
     .stat-card .label { font-size: 12px; color: var(--text2); }
     .stat-card .value { font-size: 22px; font-weight: 700; color: #fff; margin-top: 4px; }
-    .source-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: var(--bg3); color: var(--text2); margin-left: 8px; }
-    .source-badge.api { color: var(--green); }
-    .source-badge.local { color: var(--yellow); }
+
+    /* Glow-up */
+    body::before { content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none; background: radial-gradient(1000px 560px at 82% -6%, rgba(29,155,240,.1), transparent 60%); }
+    .btn.primary {
+      background: linear-gradient(135deg, #1d9bf0, #22d3ee);
+      border-color: transparent;
+      box-shadow: 0 8px 24px -8px rgba(29,155,240,.6);
+      transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s, background .2s;
+    }
+    .btn.primary:hover {
+      background: linear-gradient(135deg, #1d9bf0, #22d3ee);
+      color: #fff;
+      border-color: transparent;
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px -8px rgba(29,155,240,.7);
+    }
+    .stat-card { transition: transform .26s cubic-bezier(.22,1,.36,1), border-color .26s, box-shadow .26s; }
+    .stat-card:hover { transform: translateY(-3px); border-color: rgba(29,155,240,.4); box-shadow: 0 10px 34px -12px rgba(0,0,0,.6); }
+    .nav-item.active, .nav-item--active {
+      background: linear-gradient(135deg, rgba(29,155,240,.18), rgba(34,211,238,.1));
+      box-shadow: inset 0 0 0 1px rgba(29,155,240,.4);
+      color: #fff;
+    }
+    input:focus-visible, button:focus-visible, .btn:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible {
+      box-shadow: 0 0 0 3px rgba(29,155,240,.28);
+    }
   </style>
 </head>
 <body>
   <aside class="sidebar-left"></aside>
 
   <main class="main">
-    <h1>📅 Content Calendar <span class="source-badge" id="source-badge">—</span></h1>
+    <h1>📅 Content Calendar</h1>
 
     <div class="stats-bar" id="stats-bar">
       <div class="stat-card"><div class="label">Scheduled</div><div class="value" id="stat-scheduled">0</div></div>
@@ -98,16 +95,7 @@
       <button class="btn primary" id="new-post-btn">+ New Post</button>
     </div>
 
-    <div class="layout">
-      <div class="calendar" id="calendar"></div>
-
-      <div class="queue">
-        <h2>📋 Queue <span class="hint">drag to reorder</span></h2>
-        <div class="queue-list" id="queue-list">
-          <div class="queue-empty">No scheduled tweets</div>
-        </div>
-      </div>
-    </div>
+    <div class="calendar" id="calendar"></div>
   </main>
 
   <!-- New Post Modal -->
@@ -118,27 +106,15 @@
       <textarea id="post-content" placeholder="What's happening?"></textarea>
       <label>Date & Time</label>
       <input type="datetime-local" id="post-datetime">
-      <div class="row">
-        <div>
-          <label>Type</label>
-          <select id="post-type">
-            <option value="tweet">Tweet</option>
-            <option value="thread">Thread</option>
-            <option value="draft">Draft</option>
-          </select>
-        </div>
-        <div>
-          <label>Timezone (IANA)</label>
-          <input type="text" id="post-tz" placeholder="e.g. Europe/London (blank = UTC)">
-        </div>
-      </div>
-      <label>Thread follow-ups (one per line, optional)</label>
-      <textarea id="post-thread" placeholder="Second tweet&#10;Third tweet" style="height:70px"></textarea>
-      <label>Recurrence (node-cron, optional)</label>
-      <input type="text" id="post-recur" placeholder="e.g. 0 9 * * * (daily 9am)">
+      <label>Type</label>
+      <select id="post-type">
+        <option value="tweet">Tweet</option>
+        <option value="thread">Thread</option>
+        <option value="draft">Draft</option>
+      </select>
       <div class="modal-actions">
         <button class="btn" id="modal-cancel">Cancel</button>
-        <button class="btn danger" id="modal-delete" style="display: none;">Delete</button>
+        <button class="btn" id="modal-delete" style="color: var(--red); display: none;">Delete</button>
         <button class="btn primary" id="modal-save">Schedule</button>
       </div>
     </div>
@@ -146,111 +122,11 @@
 
   <script>
     const API_BASE = window.location.origin;
-    // Auth token (set by dashboard login). Absent → unauthenticated → localStorage fallback.
-    function authToken() { return localStorage.getItem('xactions_token') || localStorage.getItem('token') || ''; }
-    function isAuthed() { return !!authToken(); }
-
     let currentDate = new Date();
-    let events = [];          // unified list: { id, content, date, time, type, posted, status, thread?, timezone?, recurrenceCron?, queueOrder? }
+    let events = [];
     let editingEvent = null;
-    let sourceMode = 'local'; // 'api' | 'local'
 
-    // ── API helpers ──────────────────────────────────────────────────────────
-    async function apiList() {
-      const res = await fetch(`${API_BASE}/api/tweet-schedule`, {
-        headers: { Authorization: `Bearer ${authToken()}` },
-      });
-      if (!res.ok) throw new Error(`API list failed: ${res.status}`);
-      const data = await res.json();
-      return (data.schedules || []).map(apiToEvent);
-    }
-
-    async function apiCreate(payload) {
-      const res = await fetch(`${API_BASE}/api/tweet-schedule`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken()}` },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `API create failed: ${res.status}`);
-      return data;
-    }
-
-    async function apiCancel(id) {
-      const res = await fetch(`${API_BASE}/api/tweet-schedule/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${authToken()}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `API cancel failed: ${res.status}`);
-      return data;
-    }
-
-    async function apiReorder(items) {
-      const res = await fetch(`${API_BASE}/api/tweet-schedule/reorder`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken()}` },
-        body: JSON.stringify({ items }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `API reorder failed: ${res.status}`);
-      return data;
-    }
-
-    // Map an API schedule row → the in-memory event shape the calendar renders.
-    function apiToEvent(s) {
-      const dt = new Date(s.scheduledAt);
-      const date = dt.toISOString().slice(0, 10);
-      const time = dt.toISOString().slice(11, 16);
-      const isThread = !!s.thread;
-      return {
-        id: s.id,
-        content: s.content,
-        date, time,
-        type: isThread ? 'thread' : 'tweet',
-        posted: s.status === 'completed',
-        status: s.status,
-        thread: s.thread,
-        timezone: s.timezone,
-        recurrenceCron: s.recurrenceCron,
-        queueOrder: s.queueOrder,
-      };
-    }
-
-    // ── Persistence: API when authed, localStorage fallback otherwise ─────────
-    async function loadEvents() {
-      if (isAuthed()) {
-        try {
-          events = await apiList();
-          sourceMode = 'api';
-        } catch (err) {
-          console.warn('API load failed, falling back to localStorage:', err.message);
-          events = loadLocal();
-          sourceMode = 'local';
-        }
-      } else {
-        events = loadLocal();
-        sourceMode = 'local';
-      }
-      updateSourceBadge();
-    }
-
-    function loadLocal() {
-      try { return JSON.parse(localStorage.getItem('xactions_calendar_events') || '[]'); }
-      catch { return []; }
-    }
-
-    function saveLocal() {
-      localStorage.setItem('xactions_calendar_events', JSON.stringify(events));
-    }
-
-    function updateSourceBadge() {
-      const badge = document.getElementById('source-badge');
-      badge.textContent = sourceMode === 'api' ? 'API' : 'local';
-      badge.className = `source-badge ${sourceMode}`;
-    }
-
-    // ── Calendar Rendering ───────────────────────────────────────────────────
+    // ── Calendar Rendering ──
     function renderCalendar() {
       const cal = document.getElementById('calendar');
       const year = currentDate.getFullYear();
@@ -266,11 +142,13 @@
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       dayNames.forEach(d => { html += `<div class="cal-header">${d}</div>`; });
 
+      // Previous month padding
       const prevMonth = new Date(year, month, 0);
       for (let i = firstDay - 1; i >= 0; i--) {
         html += `<div class="cal-day other-month"><div class="day-num">${prevMonth.getDate() - i}</div></div>`;
       }
 
+      // Current month
       for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
@@ -278,10 +156,11 @@
 
         html += `<div class="cal-day${isToday ? ' today' : ''}" data-date="${dateStr}">
           <div class="day-num">${day}</div>
-          ${dayEvents.map(e => `<div class="cal-event ${e.type} ${e.posted ? 'posted' : (e.status || '')}" data-id="${e.id}" title="${escapeHtml(e.content)}">${escapeHtml(e.content.substring(0, 30))}</div>`).join('')}
+          ${dayEvents.map(e => `<div class="cal-event ${e.type} ${e.posted ? 'posted' : ''}" data-id="${e.id}" title="${e.content}">${e.content.substring(0, 30)}</div>`).join('')}
         </div>`;
       }
 
+      // Next month padding
       const totalCells = firstDay + daysInMonth;
       const remaining = (7 - (totalCells % 7)) % 7;
       for (let i = 1; i <= remaining; i++) {
@@ -290,11 +169,12 @@
 
       cal.innerHTML = html;
 
+      // Click handlers
       cal.querySelectorAll('.cal-day:not(.other-month)').forEach(el => {
         el.addEventListener('click', (e) => {
           if (e.target.classList.contains('cal-event')) {
             const id = e.target.dataset.id;
-            const event = events.find(ev => String(ev.id) === String(id));
+            const event = events.find(ev => ev.id === id);
             if (event) openEditModal(event);
             return;
           }
@@ -303,87 +183,6 @@
       });
 
       updateStats();
-      renderQueue();
-    }
-
-    function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-
-    // ── Queue view (drag & drop reorder) ─────────────────────────────────────
-    function renderQueue() {
-      const list = document.getElementById('queue-list');
-      const pending = events
-        .filter(e => e.status === 'pending' || (!sourceMode && !e.posted))
-        .sort((a, b) => (a.queueOrder ?? 0) - (b.queueOrder ?? 0));
-
-      if (pending.length === 0) {
-        list.innerHTML = '<div class="queue-empty">No scheduled tweets</div>';
-        return;
-      }
-
-      list.innerHTML = pending.map(e => {
-        const when = `${e.date} ${e.time}`;
-        const status = e.status || 'pending';
-        const meta = [
-          e.type === 'thread' ? 'thread' : null,
-          e.timezone ? `tz=${e.timezone}` : null,
-          e.recurrenceCron ? `recur=${e.recurrenceCron}` : null,
-        ].filter(Boolean).join(' · ');
-        return `<div class="queue-item" draggable="true" data-id="${e.id}">
-          <div class="qi-top">
-            <span class="qi-when">${when}</span>
-            <span class="qi-status ${status}">${status}</span>
-          </div>
-          <div class="qi-content">${escapeHtml(e.content)}</div>
-          ${meta ? `<div class="qi-meta">${escapeHtml(meta)}</div>` : ''}
-        </div>`;
-      }).join('');
-
-      // Drag & drop reorder
-      let dragId = null;
-      list.querySelectorAll('.queue-item').forEach(item => {
-        item.addEventListener('dragstart', (e) => {
-          dragId = item.dataset.id;
-          item.classList.add('dragging');
-          e.dataTransfer.effectAllowed = 'move';
-        });
-        item.addEventListener('dragend', () => {
-          item.classList.remove('dragging');
-          list.querySelectorAll('.queue-item').forEach(i => i.classList.remove('drag-over'));
-        });
-        item.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          if (item.dataset.id !== dragId) item.classList.add('drag-over');
-        });
-        item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
-        item.addEventListener('drop', async (e) => {
-          e.preventDefault();
-          item.classList.remove('drag-over');
-          if (!dragId || item.dataset.id === dragId) return;
-          await persistReorder(dragId, item.dataset.id);
-        });
-      });
-    }
-
-    async function persistReorder(draggedId, targetId) {
-      // Reorder events array: move dragged before target, then reassign queueOrder.
-      const ordered = events.filter(e => e.status === 'pending' || (!sourceMode && !e.posted))
-        .sort((a, b) => (a.queueOrder ?? 0) - (b.queueOrder ?? 0));
-      const dragIdx = ordered.findIndex(e => String(e.id) === String(draggedId));
-      const targetIdx = ordered.findIndex(e => String(e.id) === String(targetId));
-      if (dragIdx === -1 || targetIdx === -1) return;
-      const [moved] = ordered.splice(dragIdx, 1);
-      ordered.splice(targetIdx, 0, moved);
-
-      const items = ordered.map((e, i) => ({ id: e.id, queueOrder: i }));
-      ordered.forEach((e, i) => { e.queueOrder = i; });
-
-      if (sourceMode === 'api') {
-        try { await apiReorder(items); }
-        catch (err) { console.warn('Reorder API failed:', err.message); }
-      } else {
-        saveLocal();
-      }
-      renderQueue();
     }
 
     // ── Stats ──
@@ -394,7 +193,7 @@
         const d = new Date(e.date);
         return d.getMonth() === month && d.getFullYear() === year;
       });
-      document.getElementById('stat-scheduled').textContent = monthEvents.filter(e => e.type !== 'draft' && !e.posted && e.status !== 'cancelled' && e.status !== 'failed').length;
+      document.getElementById('stat-scheduled').textContent = monthEvents.filter(e => e.type !== 'draft' && !e.posted).length;
       document.getElementById('stat-drafts').textContent = monthEvents.filter(e => e.type === 'draft').length;
       document.getElementById('stat-posted').textContent = monthEvents.filter(e => e.posted).length;
     }
@@ -406,9 +205,6 @@
       document.getElementById('post-content').value = '';
       document.getElementById('post-datetime').value = date + 'T12:00';
       document.getElementById('post-type').value = 'tweet';
-      document.getElementById('post-tz').value = '';
-      document.getElementById('post-thread').value = '';
-      document.getElementById('post-recur').value = '';
       document.getElementById('modal-delete').style.display = 'none';
       document.getElementById('modal').classList.add('show');
     }
@@ -419,17 +215,6 @@
       document.getElementById('post-content').value = event.content;
       document.getElementById('post-datetime').value = event.date + 'T' + (event.time || '12:00');
       document.getElementById('post-type').value = event.type;
-      document.getElementById('post-tz').value = event.timezone || '';
-      document.getElementById('post-recur').value = event.recurrenceCron || '';
-      // Thread follow-ups stored as JSON string on the API side; split back to lines.
-      let threadLines = '';
-      if (event.thread) {
-        try {
-          const arr = typeof event.thread === 'string' ? JSON.parse(event.thread) : event.thread;
-          threadLines = Array.isArray(arr) ? arr.join('\n') : '';
-        } catch { threadLines = ''; }
-      }
-      document.getElementById('post-thread').value = threadLines;
       document.getElementById('modal-delete').style.display = 'inline-block';
       document.getElementById('modal').classList.add('show');
     }
@@ -437,68 +222,33 @@
     document.getElementById('modal-cancel').onclick = () => document.getElementById('modal').classList.remove('show');
     document.getElementById('modal').onclick = (e) => { if (e.target.id === 'modal') document.getElementById('modal').classList.remove('show'); };
 
-    document.getElementById('modal-save').onclick = async () => {
+    document.getElementById('modal-save').onclick = () => {
       const content = document.getElementById('post-content').value.trim();
       if (!content) return;
       const datetime = document.getElementById('post-datetime').value;
-      if (!datetime) return;
-      // datetime-local is wall-clock in the browser's local tz. Interpret in the chosen tz
-      // by sending the naive string + timezone; the server converts to UTC.
       const [date, time] = datetime.split('T');
       const type = document.getElementById('post-type').value;
-      const tz = document.getElementById('post-tz').value.trim() || undefined;
-      const recur = document.getElementById('post-recur').value.trim() || undefined;
-      const threadRaw = document.getElementById('post-thread').value.trim();
-      const threadArr = threadRaw ? threadRaw.split('\n').map(s => s.trim()).filter(Boolean) : undefined;
-
-      const scheduledAt = `${date}T${time}:00`; // naive wall-clock; server applies tz
 
       if (editingEvent) {
-        // Edit = cancel + recreate (MVP: no PATCH update endpoint). Drafts stay local.
-        if (sourceMode === 'api' && editingEvent.status === 'pending') {
-          try { await apiCancel(editingEvent.id); }
-          catch (err) { alert(err.message); return; }
-          try {
-            const created = await apiCreate({ content, scheduledAt, thread: threadArr, timezone: tz, recurrenceCron: recur, dryRun: false });
-            editingEvent.id = created.scheduleId;
-          } catch (err) { alert(err.message); }
-        } else {
-          editingEvent.content = content;
-          editingEvent.date = date;
-          editingEvent.time = time;
-          editingEvent.type = type;
-          editingEvent.timezone = tz;
-          editingEvent.recurrenceCron = recur;
-          if (threadArr) editingEvent.thread = JSON.stringify(threadArr);
-          saveLocal();
-        }
+        editingEvent.content = content;
+        editingEvent.date = date;
+        editingEvent.time = time;
+        editingEvent.type = type;
       } else {
-        if (sourceMode === 'api' && type !== 'draft') {
-          try {
-            await apiCreate({ content, scheduledAt, thread: threadArr, timezone: tz, recurrenceCron: recur, dryRun: false });
-          } catch (err) { alert(err.message); return; }
-        } else {
-          events.push({ id: Date.now().toString(), content, date, time, type, posted: false, status: type === 'draft' ? 'draft' : 'pending', timezone: tz, recurrenceCron: recur, thread: threadArr ? JSON.stringify(threadArr) : null, queueOrder: 0 });
-          saveLocal();
-        }
+        events.push({ id: Date.now().toString(), content, date, time, type, posted: false });
       }
 
-      await loadEvents();
+      saveEvents();
       renderCalendar();
       document.getElementById('modal').classList.remove('show');
     };
 
-    document.getElementById('modal-delete').onclick = async () => {
-      if (!editingEvent) return;
-      if (sourceMode === 'api' && editingEvent.status === 'pending') {
-        try { await apiCancel(editingEvent.id); }
-        catch (err) { alert(err.message); return; }
-      } else {
-        events = events.filter(e => String(e.id) !== String(editingEvent.id));
-        saveLocal();
+    document.getElementById('modal-delete').onclick = () => {
+      if (editingEvent) {
+        events = events.filter(e => e.id !== editingEvent.id);
+        saveEvents();
+        renderCalendar();
       }
-      await loadEvents();
-      renderCalendar();
       document.getElementById('modal').classList.remove('show');
     };
 
@@ -511,11 +261,18 @@
       openNewModal(today);
     };
 
+    // ── Persistence ──
+    function saveEvents() {
+      localStorage.setItem('xactions_calendar_events', JSON.stringify(events));
+    }
+
+    function loadEvents() {
+      try { events = JSON.parse(localStorage.getItem('xactions_calendar_events') || '[]'); } catch { events = []; }
+    }
+
     // ── Init ──
-    (async () => {
-      await loadEvents();
-      renderCalendar();
-    })();
+    loadEvents();
+    renderCalendar();
   </script>
 <script src="/js/sidebar.js"></script>
 </body>

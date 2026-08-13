@@ -236,7 +236,7 @@ Shows your logged-in account info and XActions version.
 ### Part 11: MCP Server Launch
 
 ```bash
-xactions mcp
+npx xactions-mcp
 ```
 
 Starts the MCP server for Claude Desktop integration. Usually run via Claude Desktop config, not directly.

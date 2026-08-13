@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Client — GraphQL Query ID Registry
  * Twitter's internal GraphQL endpoints with query IDs from the web client bundle.
@@ -12,13 +12,32 @@
  * @license MIT
  */
 
+import { GRAPHQL, BEARER_TOKEN as SHARED_BEARER_TOKEN } from '../../scrapers/twitter/http/endpoints.js';
+
 /**
  * Public bearer token embedded in Twitter's web client JavaScript.
  * Not a secret — used by all Twitter scrapers.
  * @type {string}
  */
-export const BEARER_TOKEN =
-  'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
+export const BEARER_TOKEN = SHARED_BEARER_TOKEN;
+
+/**
+ * Look up a query ID in the shared endpoint map.
+ *
+ * This file used to carry its own copy of every query ID, and the two copies
+ * drifted: 11 of the IDs here went stale while the shared map stayed current,
+ * so `Scraper.getProfile()` answered every call with
+ * `HTTP 404: {"message":"Query not found"}`. Query IDs now have exactly one
+ * home — `src/scrapers/twitter/http/endpoints.js` — and this table only adds
+ * the client-specific metadata (HTTP method, default variables, REST URLs).
+ *
+ * @param {string} name - Key in the shared GRAPHQL map
+ * @param {string} [fallback] - ID to use when the shared map has no entry
+ * @returns {string|null}
+ */
+function queryId(name, fallback = null) {
+  return GRAPHQL[name]?.queryId ?? fallback;
+}
 
 /**
  * Default feature flags Twitter expects with GraphQL requests.
@@ -62,79 +81,79 @@ export const DEFAULT_FEATURES = {
  */
 export const GRAPHQL_ENDPOINTS = {
   UserByScreenName: {
-    queryId: 'xc8f1g7BYqr6VTzTbvNLGg',
+    queryId: queryId('UserByScreenName', 'xc8f1g7BYqr6VTzTbvNLGg'),
     operationName: 'UserByScreenName',
     method: 'GET',
     defaultVariables: { withSafetyModeUserFields: true },
   },
   UserByRestId: {
-    queryId: 'tD8zKvQzwY3kdx5yz6YmOw',
+    queryId: queryId('UserByRestId', 'tD8zKvQzwY3kdx5yz6YmOw'),
     operationName: 'UserByRestId',
     method: 'GET',
     defaultVariables: { withSafetyModeUserFields: true },
   },
   UserTweets: {
-    queryId: 'E3opETHurmVJflFsUBVuUQ',
+    queryId: queryId('UserTweets', 'E3opETHurmVJflFsUBVuUQ'),
     operationName: 'UserTweets',
     method: 'GET',
   },
   UserTweetsAndReplies: {
-    queryId: 'Q6aAvPw7azXZbqXzuqTALA',
+    queryId: queryId('UserTweetsAndReplies', 'Q6aAvPw7azXZbqXzuqTALA'),
     operationName: 'UserTweetsAndReplies',
     method: 'GET',
   },
   TweetDetail: {
-    queryId: 'BbCrSoXIR7z93lLCVFlQ2Q',
+    queryId: queryId('TweetDetail', 'BbCrSoXIR7z93lLCVFlQ2Q'),
     operationName: 'TweetDetail',
     method: 'GET',
   },
   SearchTimeline: {
-    queryId: 'gkjsKepM6gl_HmFWoWKfgg',
+    queryId: queryId('SearchTimeline', 'gkjsKepM6gl_HmFWoWKfgg'),
     operationName: 'SearchTimeline',
     method: 'GET',
   },
   Followers: {
-    queryId: 'djdTXDIk2qhd4OStqlUFeQ',
+    queryId: queryId('Followers', 'djdTXDIk2qhd4OStqlUFeQ'),
     operationName: 'Followers',
     method: 'GET',
   },
   Following: {
-    queryId: 'IWP6Zt14sARO29lJT35bBw',
+    queryId: queryId('Following', 'IWP6Zt14sARO29lJT35bBw'),
     operationName: 'Following',
     method: 'GET',
   },
   Likes: {
-    queryId: 'eSSNbhECHHBBew2wkHY_Bw',
+    queryId: queryId('Likes', 'eSSNbhECHHBBew2wkHY_Bw'),
     operationName: 'Likes',
     method: 'GET',
   },
   CreateTweet: {
-    queryId: 'a1p9RWpkYKBjWv_I3WzS-A',
+    queryId: queryId('CreateTweet', 'a1p9RWpkYKBjWv_I3WzS-A'),
     operationName: 'CreateTweet',
     method: 'POST',
   },
   DeleteTweet: {
-    queryId: 'VaenaVgh5q5ih7kvyVjgtg',
+    queryId: queryId('DeleteTweet', 'VaenaVgh5q5ih7kvyVjgtg'),
     operationName: 'DeleteTweet',
     method: 'POST',
   },
   FavoriteTweet: {
-    queryId: 'lI07N6Otwv1PhnEgXILM7A',
+    queryId: queryId('FavoriteTweet', 'lI07N6Otwv1PhnEgXILM7A'),
     operationName: 'FavoriteTweet',
     method: 'POST',
   },
   UnfavoriteTweet: {
-    queryId: 'ZYKSe-w7KEslx3JhSIk5LA',
+    queryId: queryId('UnfavoriteTweet', 'ZYKSe-w7KEslx3JhSIk5LA'),
     operationName: 'UnfavoriteTweet',
     method: 'POST',
   },
   CreateRetweet: {
-    queryId: 'ojPdsZsimiJrUGLR1sjUtA',
+    queryId: queryId('CreateRetweet', 'ojPdsZsimiJrUGLR1sjUtA'),
     operationName: 'CreateRetweet',
     method: 'POST',
   },
   DeleteRetweet: {
-    queryId: 'iQtK4dl5hBmXewYZCnMPAA',
+    queryId: queryId('DeleteRetweet', 'iQtK4dl5hBmXewYZCnMPAA'),
     operationName: 'DeleteRetweet',
     method: 'POST',
   },
@@ -167,17 +186,17 @@ export const GRAPHQL_ENDPOINTS = {
     isRest: true,
   },
   ListLatestTweetsTimeline: {
-    queryId: '2Vjeyo_L0nizAUhHe3fKyA',
+    queryId: queryId('ListLatestTweetsTimeline', '2Vjeyo_L0nizAUhHe3fKyA'),
     operationName: 'ListLatestTweetsTimeline',
     method: 'GET',
   },
   ListMembers: {
-    queryId: 'BQp2IEYkgxuSxqbTAr1e1g',
+    queryId: queryId('ListMembers', 'BQp2IEYkgxuSxqbTAr1e1g'),
     operationName: 'ListMembers',
     method: 'GET',
   },
   ListByRestId: {
-    queryId: 'lAzEhcd0SKDsk8qSCWgNbg',
+    queryId: queryId('ListByRestId', 'lAzEhcd0SKDsk8qSCWgNbg'),
     operationName: 'ListByRestId',
     method: 'GET',
   },

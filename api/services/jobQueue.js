@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import Queue from 'bull';
 import { PrismaClient } from '@prisma/client';
 import { processUnfollowNonFollowers } from './operations/unfollowNonFollowers.js';
@@ -25,7 +25,9 @@ const prisma = new PrismaClient();
 const cancelledJobs = new Set();
 
 // Create Bull queue with Redis
+// prefix keeps keys namespaced when this Redis instance is shared with other services
 const operationsQueue = new Queue('operations', {
+  prefix: process.env.REDIS_QUEUE_PREFIX || 'xactions',
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: process.env.REDIS_PORT || 6379,

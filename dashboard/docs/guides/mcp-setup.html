@@ -1,83 +1,275 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XActions MCP Server Setup Guide | XActions</title>
-  <meta name="description" content="Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter — for free.">
-  <meta name="keywords" content="xactions, twitter automation, x automation, free, open source, mcp, setup, server, guide, guides &amp; reference">
-  <meta name="author" content="nich (@nichxbt)">
-  <meta name="robots" content="index, follow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>XActions MCP Server Setup Guide — XActions Docs</title>
+<meta name="description" content="Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter — for free.">
+<meta name="keywords" content="xactions, twitter automation, x automation, free, open source, mcp, setup, server, guide, guides &amp; reference">
+<meta name="author" content="nich (@nichxbt)">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="color-scheme" content="light dark">
 
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="XActions MCP Server Setup Guide — XActions">
-  <meta property="og:description" content="Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter — for free.">
-  <meta property="og:url" content="https://xactions.app/docs/guides/mcp-setup">
-  <meta property="og:site_name" content="XActions">
+<meta property="og:type" content="article">
+<meta property="og:title" content="XActions MCP Server Setup Guide — XActions">
+<meta property="og:description" content="Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter — for free.">
+<meta property="og:url" content="https://xactions.app/docs/guides/mcp-setup">
+<meta property="og:image" content="https://xactions.app/og-docs.png">
+<meta property="og:site_name" content="XActions">
 
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="XActions MCP Server Setup Guide — XActions">
-  <meta name="twitter:description" content="Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter — for free.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@nichxbt">
+<meta name="twitter:title" content="XActions MCP Server Setup Guide — XActions">
+<meta name="twitter:description" content="Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter — for free.">
+<meta name="twitter:image" content="https://xactions.app/og-docs.png">
 
-  <link rel="canonical" href="https://xactions.app/docs/guides/mcp-setup">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="canonical" href="https://xactions.app/docs/guides/mcp-setup">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="/docs/assets/docs.css">
 
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "TechArticle",
-    "headline": "XActions MCP Server Setup Guide | XActions",
-    "description": "Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter — for free.",
-    "url": "https://xactions.app/docs/guides/mcp-setup",
-    "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
-    "datePublished": "2026-02-25",
-    "dateModified": "2026-02-25",
-    "mainEntityOfPage": "https://xactions.app/docs/guides/mcp-setup",
-    "articleSection": "Guides & Reference",
-    "keywords": "xactions, twitter automation, x automation, free, open source, mcp, setup, server, guide, guides & reference"
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
-      { "@type": "ListItem", "position": 3, "name": "Guides & Reference", "item": "https://xactions.app/docs/guides" },
-      { "@type": "ListItem", "position": 4, "name": "XActions MCP Server Setup Guide", "item": "https://xactions.app/docs/guides/mcp-setup" }
-    ]
-  }
-  </script>
+<script>
+/* Applied before first paint so a dark-theme reader never sees a white flash. */
+(function(){try{var t=localStorage.getItem('xactions-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
 
-  <link rel="stylesheet" href="/css/common.css">
-  <link rel="stylesheet" href="/css/docs.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "XActions MCP Server Setup Guide — XActions Docs",
+  "description": "Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter — for free.",
+  "url": "https://xactions.app/docs/guides/mcp-setup",
+  "image": "https://xactions.app/og-docs.png",
+  "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
+  "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+  "isAccessibleForFree": true,
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "mainEntityOfPage": "https://xactions.app/docs/guides/mcp-setup",
+  "articleSection": "Guides & Reference",
+  "keywords": "xactions, twitter automation, x automation, free, open source, mcp, setup, server, guide, guides & reference"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Guides & Reference", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 4, "name": "XActions MCP Server Setup Guide", "item": "https://xactions.app/docs/guides/mcp-setup" }
+  ]
+}
+</script>
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar-left" aria-label="Main navigation"></aside>
+<a class="skip-link" href="#main">Skip to content</a>
 
-    <main class="main-content">
-      <header class="main-header">
-        <h1>📖 XActions MCP Server Setup Guide</h1>
-        <div class="breadcrumb">
-          <a href="https://xactions.app">Home</a> › <a href="https://xactions.app/docs">Docs</a> › <a href="https://xactions.app/docs/guides">Guides &amp; Reference</a> › XActions MCP Server Setup Guide
-        </div>
-      </header>
+<header class="topbar">
+  <button class="icon-btn menu-toggle" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button>
+  <a class="topbar__brand" href="/">⚡ XActions</a>
+  <div class="topbar__spacer"></div>
+  <button class="search-trigger" data-search-trigger aria-label="Search documentation">
+    <span aria-hidden="true">🔍</span><span class="search-trigger__label">Search docs</span><kbd>⌘K</kbd>
+  </button>
+  <nav class="topbar__nav" aria-label="Main">
+    <a class="topbar__link" href="/docs" aria-current="page">Docs</a>
+    <a class="topbar__link" href="/tutorials">Tutorials</a>
+    <a class="topbar__link" href="/examples">Examples</a>
+    <a class="topbar__link" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+  <button class="icon-btn" data-theme-toggle aria-label="Switch theme">☾</button>
+</header>
 
-      <article class="article">
-        <span class="cat-badge">Guides &amp; Reference</span>
-        <h1>XActions MCP Server Setup Guide</h1>
+<div class="scrim" data-scrim></div>
+
+<div class="layout">
+  <aside class="sidebar" aria-label="Documentation sections">
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Guides &amp; Reference</div>
+      <a class="sidebar__link" href="/docs/guides/scheduler">⏰ Scheduler &amp; Webhook Triggers</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-api-reference">A2A API Reference — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-protocol">A2A Protocol — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/portability">Account Portability — Export, Migrate &amp; Diff</a>
+      <a class="sidebar__link" href="/docs/guides/algorithm-builder">Algorithm Builder — 24/7 Niche Growth Automation</a>
+      <a class="sidebar__link" href="/docs/guides/analytics-advanced">Analytics &amp; Sentiment Analysis</a>
+      <a class="sidebar__link" href="/docs/guides/architecture">Architecture</a>
+      <a class="sidebar__link" href="/docs/guides/audience-overlap">Audience Overlap Analysis</a>
+      <a class="sidebar__link" href="/docs/guides/spaces-agent">Autonomous Space Agent</a>
+      <a class="sidebar__link" href="/docs/guides/browser-extension">Browser Extension</a>
+      <a class="sidebar__link" href="/docs/guides/browser-scripts">Browser Scripts</a>
+      <a class="sidebar__link" href="/docs/guides/bulk-operations">Bulk Operations</a>
+      <a class="sidebar__link" href="/docs/guides/configuration">Configuration</a>
+      <a class="sidebar__link" href="/docs/guides/content-calendar">Content Calendar</a>
+      <a class="sidebar__link" href="/docs/guides/control-panel">Control Panel — Browser Automation UI</a>
+      <a class="sidebar__link" href="/docs/guides/dashboard">Dashboard</a>
+      <a class="sidebar__link" href="/docs/guides/database">Database Schema</a>
+      <a class="sidebar__link" href="/docs/guides/deployment">Deployment Guide</a>
+      <a class="sidebar__link" href="/docs/guides/engagement-booster">Engagement Booster — Smart Tweet Engagement</a>
+      <a class="sidebar__link" href="/docs/guides/evergreen-recycler">Evergreen Content Recycler</a>
+      <a class="sidebar__link" href="/docs/guides/examples">Examples</a>
+      <a class="sidebar__link" href="/docs/guides/follower-crm">Follower CRM</a>
+      <a class="sidebar__link" href="/docs/guides/getting-started">Getting Started with XActions</a>
+      <a class="sidebar__link" href="/docs/guides/history-store">History Store &amp; Auto-Snapshots</a>
+      <a class="sidebar__link" href="/docs/guides/monitoring">Monitoring Guide</a>
+      <a class="sidebar__link" href="/docs/guides/notifications">Notifications</a>
+      <a class="sidebar__link" href="/docs/guides/plugins">Plugin System</a>
+      <a class="sidebar__link" href="/docs/guides/streaming">Real-Time Streaming</a>
+      <a class="sidebar__link" href="/docs/guides/streams">Real-time Streams — Live Twitter Monitoring</a>
+      <a class="sidebar__link" href="/docs/guides/rss-monitor">Rss Monitor</a>
+      <a class="sidebar__link" href="/docs/guides/scrapers">Scrapers</a>
+      <a class="sidebar__link" href="/docs/guides/scraping-infrastructure">Scraping Infrastructure</a>
+      <a class="sidebar__link" href="/docs/guides/scraping">Scraping Infrastructure</a>
+      <a class="sidebar__link" href="/docs/guides/analytics">Sentiment Analysis &amp; Reputation Monitoring</a>
+      <a class="sidebar__link" href="/docs/guides/skills">Skills Reference</a>
+      <a class="sidebar__link" href="/docs/guides/social-graph">Social Graph</a>
+      <a class="sidebar__link" href="/docs/guides/graph">Social Graph — Network Analysis &amp; Visualization</a>
+      <a class="sidebar__link" href="/docs/guides/graph-system">Social Graph System</a>
+      <a class="sidebar__link" href="/docs/guides/stealth-scraping">Stealth Scraping &amp; Proxy Rotation</a>
+      <a class="sidebar__link" href="/docs/guides/scheduling">Task Scheduling</a>
+      <a class="sidebar__link" href="/docs/guides/teams">Team Management</a>
+      <a class="sidebar__link" href="/docs/guides/cryptocurrency-api-guide">The Complete Guide to Cryptocurrency APIs in 2026</a>
+      <a class="sidebar__link" href="/docs/guides/agents">Thought Leader Agent</a>
+      <a class="sidebar__link" href="/docs/guides/agent-advanced">Thought Leader Agent — Advanced Features</a>
+      <a class="sidebar__link" href="/docs/guides/agent-api-reference">Thought Leader Agent — API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/agent-architecture">Thought Leader Agent — Architecture</a>
+      <a class="sidebar__link" href="/docs/guides/agent-config-reference">Thought Leader Agent — Configuration Reference</a>
+      <a class="sidebar__link" href="/docs/guides/agent-getting-started">Thought Leader Agent — Getting Started</a>
+      <a class="sidebar__link" href="/docs/guides/agent-system">Thought Leader Agent System</a>
+      <a class="sidebar__link" href="/docs/guides/troubleshooting">Troubleshooting</a>
+      <a class="sidebar__link" href="/docs/guides/price-correlation">Tweet-Price Correlation</a>
+      <a class="sidebar__link" href="/docs/guides/usage">Usage</a>
+      <a class="sidebar__link" href="/docs/guides/video-downloader">Video Downloader</a>
+      <a class="sidebar__link" href="/docs/guides/video">Video Engine — Programmatic Video Generation</a>
+      <a class="sidebar__link" href="/docs/guides/video-generation">Video Generation</a>
+      <a class="sidebar__link" href="/docs/guides/workflows">Workflow Engine</a>
+      <a class="sidebar__link" href="/docs/guides/x-developer-api-crypto-guide-2026">X Developer API in 2026: The Complete Guide for Crypto Builders</a>
+      <a class="sidebar__link" href="/docs/guides/dom-selectors">X/Twitter DOM Selector Reference</a>
+      <a class="sidebar__link" href="/docs/guides/api-reference">XActions — API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/ai-api">XActions AI API Documentation</a>
+      <a class="sidebar__link" href="/docs/guides/automation">XActions Automation Framework Guide</a>
+      <a class="sidebar__link" href="/docs/guides/cli-reference">XActions CLI Reference</a>
+      <a class="sidebar__link" href="/docs/guides/xactions-reference">XActions Complete Function Reference</a>
+      <a class="sidebar__link" href="/docs/guides/readme">XActions Documentation</a>
+      <a class="sidebar__link" href="/docs/guides/extension-api">XActions Extension — Internal API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/extension">XActions Extension — User Guide</a>
+      <a class="sidebar__link" href="/docs/guides/growth_strategy">XActions Growth Strategy: 76 → 100,000 Stars</a>
+      <a class="sidebar__link" href="/docs/guides/mcp-setup" aria-current="page">XActions MCP Server Setup Guide</a>
+      <a class="sidebar__link" href="/docs/guides/rest-api">XActions REST API Reference</a>
+      <a class="sidebar__link" href="/docs/guides/feature_inventory">XActions v3.4.4 — Complete Feature Inventory</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Tutorials</div>
+      <a class="sidebar__link" href="/docs/learn/your-first-scrape">Tutorial 01 — Your first scrape</a>
+      <a class="sidebar__link" href="/docs/learn/mcp-with-claude">Tutorial 02 — Claude that can use X</a>
+      <a class="sidebar__link" href="/docs/learn/clean-up-your-following">Tutorial 03 — Clean up your following list</a>
+      <a class="sidebar__link" href="/docs/learn/build-a-brand-monitor">Tutorial 04 — Build a brand monitor</a>
+      <a class="sidebar__link" href="/docs/learn/readme">Tutorials</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Developer Guides</div>
+      <a class="sidebar__link" href="/docs/guides/developer/contributing-features">Adding New Features</a>
+      <a class="sidebar__link" href="/docs/guides/developer/agent-troubleshooting">Agent Troubleshooting Guide</a>
+      <a class="sidebar__link" href="/docs/guides/developer/browser-script-patterns">Browser Script Patterns</a>
+      <a class="sidebar__link" href="/docs/guides/developer/selectors">X/Twitter DOM Selectors Reference</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Architecture</div>
+      <a class="sidebar__link" href="/docs/architecture/http-scraper">HTTP-Based Scraper — Architecture &amp; Implementation Plan</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Browser Automation</div>
+      <a class="sidebar__link" href="/docs/automation/advanced-techniques">Advanced Automation Techniques</a>
+      <a class="sidebar__link" href="/docs/automation/getting-started-browser">Getting Started with Browser Automation</a>
+      <a class="sidebar__link" href="/docs/automation/actions-reference">XActions Actions Library Reference (`actions.js`)</a>
+      <a class="sidebar__link" href="/docs/automation/scripts-reference">XActions Automation Scripts — Complete Reference</a>
+      <a class="sidebar__link" href="/docs/automation/core-reference">XActions Core Module Reference (`core.js`)</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Research &amp; Architecture</div>
+      <a class="sidebar__link" href="/docs/research/llm-powered-thought-leader">24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide</a>
+      <a class="sidebar__link" href="/docs/research/algorithm-cultivation">Algorithmic Feed Cultivation: A Technical Research Paper on Automated Thought Leadership via Platform Signal Training</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Case Studies</div>
+      <a class="sidebar__link" href="/docs/case-studies/robust-dom-extraction">Robust DOM Extraction: A Case Study in Browser Automation Resilience</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Agent Skills</div>
+      <a class="sidebar__link" href="/docs/skills/account-backup">Account Backup &amp; Data Export</a>
+      <a class="sidebar__link" href="/docs/skills/account-tools">Account Tools (Miscellaneous)</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation">Algorithm Cultivation &amp; Thought Leadership</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights">Analytics &amp; Insights</a>
+      <a class="sidebar__link" href="/docs/skills/articles-longform">Articles &amp; Longform</a>
+      <a class="sidebar__link" href="/docs">+ 44 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Skill References</div>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-algorithm-internals">Algorithm Internals &amp; Architecture</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights-script-configs">Analytics Script Configs</a>
+      <a class="sidebar__link" href="/docs/skills/blocking-muting-management-script-details">Blocking &amp; Muting Script Details</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-browser-scripts">Browser Scripts Reference</a>
+      <a class="sidebar__link" href="/docs/skills/content-posting-script-configs">Content Posting Script Configs</a>
+      <a class="sidebar__link" href="/docs">+ 4 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Claude Prompt Library</div>
+      <a class="sidebar__link" href="/docs/prompts/mcp-setup-and-first-commands">Tutorial: Setting Up XActions MCP Server with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/unfollow-non-followers-cleanup">Tutorial: Unfollow Non-Followers &amp; Follower Cleanup with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/growth-automation-suite">Tutorial: Growth Automation Suite — Grow Your X Account on Autopilot</a>
+      <a class="sidebar__link" href="/docs/prompts/scraping-research-analysis">Tutorial: Tweet Scraping, Profile Analysis &amp; Research with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/content-posting-threads-scheduling">Tutorial: Content Posting, Threads, Polls &amp; Scheduling with Claude</a>
+      <a class="sidebar__link" href="/docs">+ 19 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Project Info</div>
+      <a class="sidebar__link" href="/docs/project/contributing">Contributing to XActions</a>
+      <a class="sidebar__link" href="/docs/project/changelog">Changelog</a>
+      <a class="sidebar__link" href="/docs/project/roadmap">XActions Roadmap</a>
+      <a class="sidebar__link" href="/docs/project/security">Security Policy</a>
+      <a class="sidebar__link" href="/docs/project/code_of_conduct">Contributor Covenant Code of Conduct</a>
+      <a class="sidebar__link" href="/docs/project/readme">Quick start</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Extensions &amp; Plugins</div>
+      <a class="sidebar__link" href="/docs/extras/scripts">Chrome DevTools Console Scripts</a>
+      <a class="sidebar__link" href="/docs/extras/examples">Examples</a>
+      <a class="sidebar__link" href="/docs/extras/integrations-n8n">n8n-nodes-xactions</a>
+      <a class="sidebar__link" href="/docs/extras/extension">XActions Browser Extension</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-excel">XActions Excel Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-google-sheets">XActions Google Sheets Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-template">xactions-plugin-example</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Launch &amp; Releases</div>
+      <a class="sidebar__link" href="/docs/launch/v310-launch-content">XActions v3.1.0 — Launch Content</a>
+    </div>
+  </aside>
+
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="https://xactions.app">Home</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Docs</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Guides &amp; Reference</a> <span aria-hidden="true">›</span> <span>XActions MCP Server Setup Guide</span>
+    </nav>
+
+    <span class="eyebrow">📖 Guides &amp; Reference</span>
+
+    <article class="prose">
+<h1 id="xactions-mcp-server-setup-guide">XActions MCP Server Setup Guide</h1>
 <blockquote>
 <p>Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter — for free.</p>
 </blockquote>
-<h2>Getting Your auth_token</h2>
+<hr>
+<h2 id="30-second-quickstart">30-Second Quickstart</h2>
+<pre><code class="language-bash"># Add to your AI client config, then restart the client
+npx xactions-mcp
+</code></pre>
+<p>That&#39;s it. XActions will auto-install and start the MCP server.</p>
+<hr>
+<h2 id="getting-your-auth_token">Getting Your auth_token</h2>
 <p>Most tools require an X/Twitter session cookie for authentication.</p>
 <ol>
-<li>Go to <a href="https://x.com">x.com</a> and <strong>log in</strong></li>
+<li>Go to <a target="_blank" rel="noopener noreferrer" href="https://x.com">x.com</a> and <strong>log in</strong></li>
 <li>Open <strong>DevTools</strong> (F12 or Cmd+Option+I)</li>
 <li>Go to <strong>Application</strong> → <strong>Cookies</strong> → <code>https://x.com</code></li>
 <li>Find the cookie named <strong><code>auth_token</code></strong></li>
@@ -87,14 +279,14 @@
 <p>⚠️ Treat this like a password. Never share it publicly.</p>
 </blockquote>
 <hr>
-<h2>Claude Desktop</h2>
-<h3>1. Open config file</h3>
+<h2 id="claude-desktop">Claude Desktop</h2>
+<h3 id="1-open-config-file">1. Open config file</h3>
 <ul>
 <li><strong>macOS</strong>: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code></li>
 <li><strong>Windows</strong>: <code>%APPDATA%\Claude\claude_desktop_config.json</code></li>
 <li><strong>Linux</strong>: <code>~/.config/Claude/claude_desktop_config.json</code></li>
 </ul>
-<h3>2. Add XActions</h3>
+<h3 id="2-add-xactions">2. Add XActions</h3>
 <pre><code class="language-json">{
   &quot;mcpServers&quot;: {
     &quot;xactions&quot;: {
@@ -107,14 +299,14 @@
   }
 }
 </code></pre>
-<h3>3. Restart Claude Desktop</h3>
+<h3 id="3-restart-claude-desktop">3. Restart Claude Desktop</h3>
 <p>Quit and reopen Claude Desktop. You should see XActions tools listed.</p>
-<h3>Auto-generate config</h3>
+<h3 id="auto-generate-config">Auto-generate config</h3>
 <pre><code class="language-bash">npx xactions mcp-config
 </code></pre>
 <p>This detects your OS and outputs the correct config snippet. Use <code>--write</code> to write it directly.</p>
 <hr>
-<h2>Cursor</h2>
+<h2 id="cursor">Cursor</h2>
 <p>Add to your <strong>Cursor Settings</strong> → <strong>MCP Servers</strong>:</p>
 <pre><code class="language-json">{
   &quot;mcpServers&quot;: {
@@ -130,7 +322,7 @@
 </code></pre>
 <p>Or add to <code>.cursor/mcp.json</code> in your project root.</p>
 <hr>
-<h2>Windsurf</h2>
+<h2 id="windsurf">Windsurf</h2>
 <p>Add to your <strong>Windsurf Settings</strong> (<code>~/.codeium/windsurf/mcp_config.json</code>):</p>
 <pre><code class="language-json">{
   &quot;mcpServers&quot;: {
@@ -145,7 +337,7 @@
 }
 </code></pre>
 <hr>
-<h2>VS Code (GitHub Copilot)</h2>
+<h2 id="vs-code-github-copilot">VS Code (GitHub Copilot)</h2>
 <p>Add to your <strong>VS Code</strong> user <code>settings.json</code> or <code>.vscode/mcp.json</code>:</p>
 <pre><code class="language-json">{
   &quot;mcp&quot;: {
@@ -162,7 +354,7 @@
 }
 </code></pre>
 <hr>
-<h2>Local Install (Alternative)</h2>
+<h2 id="local-install-alternative">Local Install (Alternative)</h2>
 <p>If you prefer a local install instead of npx:</p>
 <pre><code class="language-bash">npm install -g xactions
 </code></pre>
@@ -179,7 +371,7 @@
 }
 </code></pre>
 <hr>
-<h2>Environment Variables</h2>
+<h2 id="environment-variables">Environment Variables</h2>
 <table>
 <thead>
 <tr>
@@ -196,7 +388,7 @@
 <tr>
 <td><code>OPENROUTER_API_KEY</code></td>
 <td>For AI tools</td>
-<td>Free key from <a href="https://openrouter.ai">openrouter.ai</a></td>
+<td>Free key from <a target="_blank" rel="noopener noreferrer" href="https://openrouter.ai">openrouter.ai</a></td>
 </tr>
 <tr>
 <td><code>XACTIONS_MODE</code></td>
@@ -210,8 +402,8 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Available Tools</h2>
-<h3>Scraping (free, no API key needed)</h3>
+<h2 id="available-tools">Available Tools</h2>
+<h3 id="scraping-free-no-api-key-needed">Scraping (free, no API key needed)</h3>
 <table>
 <thead>
 <tr>
@@ -248,7 +440,7 @@
 <td>Extract video download URL from a tweet</td>
 </tr>
 </tbody></table>
-<h3>Analysis</h3>
+<h3 id="analysis">Analysis</h3>
 <table>
 <thead>
 <tr>
@@ -277,7 +469,7 @@
 <td>Monitor brand mentions with sentiment</td>
 </tr>
 </tbody></table>
-<h3>Actions (require auth_token)</h3>
+<h3 id="actions-require-auth_token">Actions (require auth_token)</h3>
 <table>
 <thead>
 <tr>
@@ -322,7 +514,7 @@
 <td>Send a direct message</td>
 </tr>
 </tbody></table>
-<h3>AI Tools (require OPENROUTER_API_KEY)</h3>
+<h3 id="ai-tools-require-openrouter_api_key">AI Tools (require OPENROUTER_API_KEY)</h3>
 <table>
 <thead>
 <tr>
@@ -344,31 +536,31 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Example Prompts</h2>
+<h2 id="example-prompts">Example Prompts</h2>
 <p>Try these with Claude, Cursor, or any MCP-compatible AI:</p>
-<h3>Research</h3>
+<h3 id="research">Research</h3>
 <blockquote>
 <p>&quot;Get the profile and last 20 tweets from @elonmusk. Summarize the main topics.&quot;</p>
 </blockquote>
-<h3>Growth</h3>
+<h3 id="growth">Growth</h3>
 <blockquote>
 <p>&quot;Find everyone I follow who doesn&#39;t follow me back. Show me the list sorted by how long ago I followed them.&quot;</p>
 </blockquote>
-<h3>Content</h3>
+<h3 id="content">Content</h3>
 <blockquote>
 <p>&quot;Analyze @paulg&#39;s writing style, then generate 3 tweet ideas about startups in his voice.&quot;</p>
 </blockquote>
-<h3>Analytics</h3>
+<h3 id="analytics">Analytics</h3>
 <blockquote>
 <p>&quot;Compare the follower counts, tweet frequency, and engagement of @openai, @anthropic, and @google.&quot;</p>
 </blockquote>
-<h3>Engagement</h3>
+<h3 id="engagement">Engagement</h3>
 <blockquote>
 <p>&quot;Search for tweets about &#39;AI agents&#39; from the last day. Like the top 5 most engaging ones.&quot;</p>
 </blockquote>
 <hr>
-<h2>Troubleshooting</h2>
-<h3><code>npx xactions-mcp</code> returns 404 / package not found</h3>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="npx-xactions-mcp-returns-404--package-not-found"><code>npx xactions-mcp</code> returns 404 / package not found</h3>
 <p>Make sure you have the latest version. If the <code>xactions-mcp</code> package hasn&#39;t been published yet, use either of these alternatives:</p>
 <pre><code class="language-bash"># Option 1: Use the -p flag to install from the xactions package
 npx -p xactions xactions-mcp
@@ -390,107 +582,108 @@ xactions-mcp
   }
 }
 </code></pre>
-<h3>&quot;Tool not found&quot; or no tools showing</h3>
+<h3 id="quottool-not-foundquot-or-no-tools-showing">&quot;Tool not found&quot; or no tools showing</h3>
 <ol>
 <li>Make sure the MCP server is configured correctly in your client</li>
 <li>Restart your AI client after changing config</li>
 <li>Check that Node.js 18+ is installed: <code>node --version</code></li>
 </ol>
-<h3>&quot;Could not follow/unfollow/post&quot;</h3>
+<h3 id="quotcould-not-followunfollowpostquot">&quot;Could not follow/unfollow/post&quot;</h3>
 <p>Auth is required for action tools. Make sure <code>XACTIONS_SESSION_COOKIE</code> is set in your MCP config <code>env</code>.</p>
-<h3>&quot;OPENROUTER_API_KEY required&quot;</h3>
-<p>AI tools (voice analysis, tweet generation, thread summarization) need an OpenRouter API key. Get a free one at <a href="https://openrouter.ai">openrouter.ai</a>.</p>
-<h3>Server won&#39;t start</h3>
+<h3 id="quotopenrouter_api_key-requiredquot">&quot;OPENROUTER_API_KEY required&quot;</h3>
+<p>AI tools (voice analysis, tweet generation, thread summarization) need an OpenRouter API key. Get a free one at <a target="_blank" rel="noopener noreferrer" href="https://openrouter.ai">openrouter.ai</a>.</p>
+<h3 id="server-won39t-start">Server won&#39;t start</h3>
 <pre><code class="language-bash"># Test manually
 node node_modules/xactions/src/mcp/server.js
 
 # Or if globally installed
 xactions-mcp
 </code></pre>
-<h3>Browser automation errors</h3>
+<h3 id="browser-automation-errors">Browser automation errors</h3>
 <p>XActions uses Puppeteer for browser automation. If you see Chrome/Chromium errors:</p>
 <pre><code class="language-bash"># Install Chromium dependencies (Linux)
 npx puppeteer browsers install chrome
 </code></pre>
 <hr>
-<h2>Links</h2>
+<h2 id="links">Links</h2>
 <ul>
-<li><strong>GitHub</strong>: <a href="https://github.com/nirholas/XActions">github.com/nirholas/XActions</a></li>
-<li><strong>npm</strong>: <a href="https://www.npmjs.com/package/xactions">npmjs.com/package/xactions</a></li>
+<li><strong>GitHub</strong>: <a target="_blank" rel="noopener noreferrer" href="https://github.com/nirholas/XActions">github.com/nirholas/XActions</a></li>
+<li><strong>npm</strong>: <a target="_blank" rel="noopener noreferrer" href="https://www.npmjs.com/package/xactions">npmjs.com/package/xactions</a></li>
 <li><strong>Dashboard</strong>: <a href="https://xactions.app">xactions.app</a></li>
-<li><strong>Issues</strong>: <a href="https://github.com/nirholas/XActions/issues">github.com/nirholas/XActions/issues</a></li>
+<li><strong>Issues</strong>: <a target="_blank" rel="noopener noreferrer" href="https://github.com/nirholas/XActions/issues">github.com/nirholas/XActions/issues</a></li>
 </ul>
 <hr>
-<p><em>Built by <a href="https://x.com/nichxbt">@nichxbt</a>. MIT License.</em></p>
+<p><em>Built by <a target="_blank" rel="noopener noreferrer" href="https://x.com/nichxbt">@nichxbt</a>. Apache 2.0 License.</em></p>
 
+    </article>
 
-        <div class="cta-box">
-          <h3>⚡ Explore XActions</h3>
-          <p>100% free and open-source. No API keys, no fees, no signup.</p>
-          <a href="/docs">Browse All Documentation</a>
-        </div>
-      </article>
-    </main>
+    <div class="page-meta">
+      <span>4 min read</span>
+      <a href="https://github.com/nirholas/XActions/edit/main/docs/mcp-setup.md" target="_blank" rel="noopener">Edit this page</a>
+      <a href="https://github.com/nirholas/XActions/issues/new?title=Docs%3A%20XActions%20MCP%20Server%20Setup%20Guide" target="_blank" rel="noopener">Report a problem</a>
+    </div>
 
-    <aside class="sidebar-right">
-      <div class="sidebar-card">
-        <h3>📖 In This Section</h3>
-                <a href="/docs/guides/getting-started">📖 Getting Started with XActions</a>
-        <a href="/docs/guides/usage">📖 Usage</a>
-        <a href="/docs/guides/automation">📖 XActions Automation Framework Guide</a>
-        <a href="/docs/guides/monitoring">📖 Monitoring Guide</a>
-        <a href="/docs/guides/cli-reference">📖 XActions CLI Reference</a>
-        <a href="/docs/guides/ai-api">📖 XActions AI API Documentation</a>
-        <a href="/docs/guides/api-reference">📖 XActions — API Reference</a>
-        <a href="/docs/guides/deployment">📖 Deployment Guide</a>
-      </div>
-      <div class="sidebar-card">
-        <h3>🔗 Quick Links</h3>
-        <a href="/docs">All Documentation</a>
-        <a href="/features">All 43+ Features</a>
-        <a href="/tutorials">Tutorials</a>
-        <a href="/ai">AI Integration</a>
-        <a href="/mcp">MCP Server</a>
-        <a href="https://github.com/nirholas/XActions" rel="noopener">GitHub</a>
-      </div>
-    </aside>
+    <nav class="page-nav" aria-label="Previous and next">
+      <a class="page-nav__link" href="/docs/guides/growth_strategy"><span class="page-nav__dir">← Previous</span><span class="page-nav__title">XActions Growth Strategy: 76 → 100,000 Stars</span></a>
+      <a class="page-nav__link page-nav__link--next" href="/docs/guides/rest-api"><span class="page-nav__dir">Next →</span><span class="page-nav__title">XActions REST API Reference</span></a>
+    </nav>
+
+    <div class="callout">
+      <h3>⚡ Free and open source</h3>
+      <p>No API keys, no monthly fees, no signup. Star the repo if it saved you a subscription.</p>
+      <a class="btn" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </main>
+
+  <aside class="toc" data-toc aria-label="On this page">
+    <div class="toc__heading">On this page</div>
+  </aside>
+</div>
+
+<dialog class="search-dialog" data-search-dialog aria-label="Search documentation">
+  <input class="search-dialog__input" data-search-input type="search" placeholder="Search the documentation…" aria-label="Search query" autocomplete="off" spellcheck="false">
+  <div class="search-dialog__results" data-search-results role="listbox" aria-label="Search results"></div>
+  <div class="search-dialog__footer">
+    <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+    <span><kbd>↵</kbd> open</span>
+    <span><kbd>esc</kbd> close</span>
   </div>
+</dialog>
 
-  <footer class="site-footer">
-    <div class="footer-content">
-      <div class="footer-section">
-        <h4>XActions</h4>
-        <p>100% Free & Open Source X/Twitter Automation</p>
-        <p>Created by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></p>
-      </div>
-      <div class="footer-section">
-        <h4>Product</h4>
-        <a href="/features">Features</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/run">Run Scripts</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/analytics">Analytics</a>
-      </div>
-      <div class="footer-section">
-        <h4>AI & Developers</h4>
-        <a href="/ai">AI Integration</a>
-        <a href="/ai-api">AI API (x402)</a>
-        <a href="/mcp">MCP Server</a>
-        <a href="/docs">Documentation</a>
-        <a href="/tutorials">Tutorials</a>
-      </div>
-      <div class="footer-section">
-        <h4>Community</h4>
-        <a href="https://github.com/nirholas/XActions" rel="noopener">GitHub</a>
-        <a href="/about">About</a>
-        <a href="/terms">Terms</a>
-        <a href="/privacy">Privacy</a>
-      </div>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div>
+      <h4>XActions</h4>
+      <p>Free, open-source X/Twitter automation.</p>
+      <p>Built by <a href="https://x.com/nichxbt" target="_blank" rel="noopener">@nichxbt</a></p>
     </div>
-    <div class="footer-bottom">
-      <p>© 2024-2026 XActions. MIT License. No API fees. No limits.</p>
+    <div>
+      <h4>Learn</h4>
+      <a href="/docs/learn/your-first-scrape">Your first scrape</a>
+      <a href="/docs/learn/mcp-with-claude">MCP with Claude</a>
+      <a href="/examples">Examples</a>
+      <a href="/docs/guides/troubleshooting">Troubleshooting</a>
     </div>
-  </footer>
-<script src="/js/sidebar.js"></script>
+    <div>
+      <h4>Reference</h4>
+      <a href="/docs/guides/cli-reference">CLI</a>
+      <a href="/docs/guides/api-reference">API</a>
+      <a href="/docs/guides/mcp-setup">MCP server</a>
+      <a href="/docs/guides/browser-scripts">Browser scripts</a>
+    </div>
+    <div>
+      <h4>Project</h4>
+      <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+      <a href="/docs/project/contributing">Contributing</a>
+      <a href="/docs/project/changelog">Changelog</a>
+      <a href="/docs/project/security">Security</a>
+    </div>
+  </div>
+  <div class="site-footer__bottom">
+    <p>© 2024–2026 XActions. Apache-2.0 licensed. No API fees.</p>
+  </div>
+</footer>
+
+<script src="/docs/assets/docs.js" defer></script>
 </body>
 </html>

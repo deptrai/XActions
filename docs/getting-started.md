@@ -111,7 +111,7 @@ Generate this config automatically:
 xactions mcp-config
 ```
 
-51+ MCP tools available — scraping, posting, engagement, analytics, streaming, and more. See [MCP Setup](mcp-setup.md).
+145 MCP tools available — scraping, posting, engagement, analytics, streaming, and more. See [MCP Setup](mcp-setup.md).
 
 ---
 
@@ -185,3 +185,14 @@ X/Twitter enforces aggressive rate limits. All XActions tools include built-in d
 ---
 
 *By [@nichxbt](https://x.com/nichxbt) — [GitHub](https://github.com/nirholas/XActions)*
+
+---
+
+## Where to go next
+
+- **[Tutorials](../tutorials/)** — guided walkthroughs, starting with
+  [your first scrape](../tutorials/01-your-first-scrape.md)
+- **[Examples](../examples/)** — runnable Node.js programs, each verified
+  against the live API
+- **[Browser scripts](browser-scripts.md)** — the full catalog of console scripts
+- **[Troubleshooting](troubleshooting.md)** — when something does not work

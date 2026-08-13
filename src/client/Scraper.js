@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Client — Scraper Class
  *
@@ -32,6 +32,65 @@ export const SearchMode = Object.freeze({
 });
 
 /**
+ * Turn an unhelpful HTTP failure into an actionable one.
+ *
+ * X answers guest-token requests to login-only endpoints (search, bookmarks,
+ * DMs, home timeline) with a bare 404 and an empty body, which is
+ * indistinguishable from a missing resource unless you already know the
+ * endpoint needs a session. Raising `HTTP 404: Not Found` sent people hunting
+ * for a bug in XActions when the real answer was "log in first".
+ *
+ * Errors are also constructed with the object-form options ScraperError
+ * actually declares. The previous positional calls silently dropped
+ * `endpoint`, `httpStatus`, and `rateLimitReset` on every thrown error.
+ *
+ * @param {Response} res - The failed fetch response
+ * @param {string} url - Requested URL
+ * @param {boolean} authenticated - Whether the request carried a session
+ * @returns {ScraperError} Error ready to throw
+ * @private
+ */
+function describeHttpFailure(res, url, authenticated) {
+  const endpoint = (() => {
+    try {
+      return new URL(url).pathname;
+    } catch {
+      return url;
+    }
+  })();
+
+  if (res.status === 429) {
+    const reset = res.headers?.get?.('x-rate-limit-reset');
+    return new ScraperError(
+      'Rate limited (429). X throttles guest tokens aggressively. Wait for the reset, ' +
+        'authenticate to raise the ceiling, or slow the request rate.',
+      'RATE_LIMITED',
+      {
+        endpoint,
+        httpStatus: res.status,
+        rateLimitReset: reset ? new Date(Number(reset) * 1000) : null,
+      },
+    );
+  }
+
+  if (!authenticated && (res.status === 401 || res.status === 403 || res.status === 404)) {
+    return new AuthenticationError(
+      `HTTP ${res.status} on ${endpoint} while unauthenticated. X restricts this endpoint ` +
+        'to logged-in sessions. Authenticate first with scraper.login(...), ' +
+        'scraper.setCookies(...), or scraper.loadCookies(...) using your auth_token cookie ' +
+        '(DevTools > Application > Cookies > x.com > auth_token), then retry.',
+      'AUTH_REQUIRED',
+      { endpoint, httpStatus: res.status },
+    );
+  }
+
+  return new ScraperError(`HTTP ${res.status}: ${res.statusText}`, 'HTTP_ERROR', {
+    endpoint,
+    httpStatus: res.status,
+  });
+}
+
+/**
  * Lightweight HTTP wrapper that delegates to fetch.
  * In Track 03 this will be replaced by the full HttpClient.
  * @private
@@ -63,17 +122,7 @@ class SimpleHttp {
 
     const res = await this._fetchFn(url, req);
     if (!res.ok) {
-      if (res.status === 429) {
-        const reset = res.headers?.get?.('x-rate-limit-reset');
-        throw new ScraperError(
-          `Rate limited (${res.status})`,
-          'RATE_LIMITED',
-          url,
-          res.status,
-          reset ? new Date(Number(reset) * 1000) : null,
-        );
-      }
-      throw new ScraperError(`HTTP ${res.status}: ${res.statusText}`, 'HTTP_ERROR', url, res.status);
+      throw describeHttpFailure(res, url, this._authenticated);
     }
     return res.json();
   }
@@ -105,10 +154,7 @@ class SimpleHttp {
 
     const res = await this._fetchFn(url, req);
     if (!res.ok) {
-      if (res.status === 429) {
-        throw new ScraperError('Rate limited', 'RATE_LIMITED', url, res.status);
-      }
-      throw new ScraperError(`HTTP ${res.status}: ${res.statusText}`, 'HTTP_ERROR', url, res.status);
+      throw describeHttpFailure(res, url, this._authenticated);
     }
     return res.json();
   }

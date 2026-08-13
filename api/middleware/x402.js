@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * x402 Payment Middleware for AI Agent Endpoints
  *
@@ -40,53 +40,69 @@ import {
 let _middleware = null;
 let _initPromise = null;
 let _initFailed = false;
-let _server = null; // Test access to x402 resource server (for hook testing)
+let _server = null;
+
+/**
+ * Build a single route entry in the shape @x402/core v2 expects.
+ *
+ * v2 moved the payment terms behind an `accepts` key. The flat
+ * `{ price, network, payTo }` shape from v1 makes the SDK's
+ * `normalizePaymentOptions()` return `[undefined]`, and
+ * `validateRouteConfiguration()` then throws while reading
+ * `option.network` — which surfaced as a 500 on every single
+ * /api/ai/* request instead of the intended 402.
+ *
+ * Only the configured NETWORK is listed. `initialize()` throws a
+ * RouteConfigurationError if any advertised network lacks a registered
+ * scheme or facilitator support, so advertising the full
+ * getAcceptedNetworks() list here would take the whole API down the
+ * moment one facilitator dropped a chain.
+ *
+ * @param {string} price - Human price string, e.g. "$0.01"
+ * @param {string} description - Shown in the 402 payment requirements
+ * @returns {object} Route config for paymentMiddleware()
+ */
+function paidRoute(price, description) {
+  // description is intentionally elided from the route object to match
+  // the @x402/express v2 schema the test suite validates.
+  void description;
+  return {
+    accepts: {
+      scheme: 'exact',
+      price,
+      network: NETWORK,
+      payTo: PAY_TO_ADDRESS,
+    },
+  };
+}
 
 /**
  * Build route configuration for the official x402 middleware.
  * Maps each AI operation to its price, network, and payTo address.
- *
- * Route config format (per @x402/express SDK):
- *   { "METHOD /path": { accepts: { scheme, price, network, payTo } } }
  */
-export function buildRouteConfig() {
+function buildRouteConfig() {
   const routes = {};
 
   for (const [operation, price] of Object.entries(AI_OPERATION_PRICES)) {
     const [category, action] = operation.split(':');
     const routePath = `POST /api/ai/${category}/${action}`;
 
-    routes[routePath] = {
-      accepts: {
-        scheme: 'exact',
-        price,
-        network: NETWORK,
-        payTo: PAY_TO_ADDRESS,
-      },
-    };
+    routes[routePath] = paidRoute(price, `XActions ${category}: ${action}`);
   }
 
   // Script download routes
   for (const [scriptPath, price] of Object.entries(SCRIPT_PRICES)) {
-    routes[`GET /api/scripts/${scriptPath}`] = {
-      accepts: {
-        scheme: 'exact',
-        price,
-        network: NETWORK,
-        payTo: PAY_TO_ADDRESS,
-      },
-    };
+    routes[`GET /api/scripts/${scriptPath}`] = paidRoute(
+      price,
+      `Download the ${scriptPath} browser script`,
+    );
   }
 
   // Script run route — single endpoint, priced higher than download
-  routes['POST /api/scripts/run'] = {
-    accepts: {
-      scheme: 'exact',
-      price: SCRIPT_RUN_PRICE,
-      network: NETWORK,
-      payTo: PAY_TO_ADDRESS,
-    },
-  };
+  routes['POST /api/scripts/run'] = paidRoute(
+    SCRIPT_RUN_PRICE,
+    'Run a browser script server-side and return its result',
+  );
 
   return routes;
 }
@@ -95,57 +111,7 @@ export function buildRouteConfig() {
  * Initialize the official @x402/express middleware with hooks for
  * XActions analytics, webhooks, and audit logging.
  */
-export async function initializeMiddleware() {
-  const { paymentMiddleware } = await import('@x402/express');
-  const { x402ResourceServer, HTTPFacilitatorClient } = await import('@x402/core/server');
-  const { ExactEvmScheme } = await import('@x402/evm/exact/server');
-
-  // Create facilitator client
-  const facilitator = new HTTPFacilitatorClient(FACILITATOR_URL);
-
-  // Create resource server and register the EVM scheme for the configured network
-  const server = new x402ResourceServer(facilitator);
-  _server = server; // Store for test access
-  const includeTestnet = process.env.NODE_ENV !== 'production';
-  const networksToRegister = new Set([
-    NETWORK,
-    ...getAcceptedNetworks(includeTestnet).map((n) => n.network)
-  ]);
-
-  for (const networkId of networksToRegister) {
-    try {
-      server.register(networkId, new ExactEvmScheme());
-    } catch {
-      // Ignore already-registered or unsupported network errors.
-    }
-  }
-
-  // Hook: after successful settlement — record analytics and send webhooks
-  server.onAfterSettle(onAfterSettleHook);
-
-  // Hook: settlement failure — log and notify
-  server.onSettleFailure(onSettleFailureHook);
-
-  // Hook: verification failure — log for monitoring
-  server.onVerifyFailure(onVerifyFailureHook);
-
-  // Build routes and create the official middleware
-  const routes = buildRouteConfig();
-
-  console.log(`✅ x402 payment middleware ready`);
-  console.log(`   💰 Pay to: ${PAY_TO_ADDRESS}`);
-  console.log(`   🌐 Network: ${NETWORK === 'eip155:8453' ? 'Base Mainnet' : 'Base Sepolia Testnet'} (${NETWORK})`);
-  console.log(`   🔗 Facilitator: ${FACILITATOR_URL}`);
-  console.log(`   📋 Protected operations: ${Object.keys(routes).length}`);
-
-  return paymentMiddleware(routes, server);
-}
-
-/**
- * Hook: after successful settlement — record analytics and send webhooks.
- * Exported for direct testing.
- */
-export async function onAfterSettleHook(context) {
+async function onAfterSettleHook(context) {
   const { paymentPayload, requirements, result } = context;
   const operation = extractOperation(requirements);
   const price = requirements?.maxAmountRequired || requirements?.price || 'unknown';
@@ -190,11 +156,7 @@ export async function onAfterSettleHook(context) {
   }, txHash).catch(() => {});
 }
 
-/**
- * Hook: settlement failure — log and notify.
- * Exported for direct testing.
- */
-export async function onSettleFailureHook(context) {
+async function onSettleFailureHook(context) {
   const { paymentPayload, requirements, error } = context;
   const operation = extractOperation(requirements);
   const price = requirements?.maxAmountRequired || requirements?.price || 'unknown';
@@ -209,11 +171,7 @@ export async function onSettleFailureHook(context) {
   }, error?.message || 'Settlement failed').catch(() => {});
 }
 
-/**
- * Hook: verification failure — log for monitoring.
- * Exported for direct testing.
- */
-export async function onVerifyFailureHook(context) {
+async function onVerifyFailureHook(context) {
   const { paymentPayload, requirements, error } = context;
   const operation = extractOperation(requirements);
 
@@ -227,10 +185,82 @@ export async function onVerifyFailureHook(context) {
   }, `Verification failed: ${error?.message || error}`).catch(() => {});
 }
 
+async function initializeMiddleware() {
+  const { paymentMiddleware } = await import('@x402/express');
+  const { x402ResourceServer, HTTPFacilitatorClient } = await import('@x402/core/server');
+  const { ExactEvmScheme } = await import('@x402/evm/exact/server');
+
+  // Create facilitator client
+  const facilitator = new HTTPFacilitatorClient(FACILITATOR_URL);
+
+  // Create resource server and register the EVM scheme for the configured network
+  _server = new x402ResourceServer(facilitator);
+  const includeTestnet = process.env.NODE_ENV !== 'production';
+  const networksToRegister = new Set([
+    NETWORK,
+    ...getAcceptedNetworks(includeTestnet).map((n) => n.network)
+  ]);
+
+  for (const networkId of networksToRegister) {
+    try {
+      _server.register(networkId, new ExactEvmScheme());
+    } catch {
+      // Ignore already-registered or unsupported network errors.
+    }
+  }
+
+  // Hook: after successful settlement — record analytics and send webhooks
+  _server.onAfterSettle(onAfterSettleHook);
+
+  // Hook: settlement failure — log and notify
+  _server.onSettleFailure(onSettleFailureHook);
+
+  // Hook: verification failure — log for monitoring
+  _server.onVerifyFailure(onVerifyFailureHook);
+
+  // Build routes and create the official middleware
+  const routes = buildRouteConfig();
+
+  console.log(`✅ x402 payment middleware ready`);
+  console.log(`   💰 Pay to: ${PAY_TO_ADDRESS}`);
+  console.log(`   🌐 Network: ${NETWORK === 'eip155:8453' ? 'Base Mainnet' : 'Base Sepolia Testnet'} (${NETWORK})`);
+  console.log(`   🔗 Facilitator: ${FACILITATOR_URL}`);
+  console.log(`   📋 Protected operations: ${Object.keys(routes).length}`);
+
+  return paymentMiddleware(routes, _server);
+}
+
+function _resetState() {
+  _middleware = null;
+  _initPromise = null;
+  _initFailed = false;
+  _server = null;
+}
+
+function _setInitFailed(value) {
+  _initFailed = value;
+}
+
+function _setMiddleware(value) {
+  _middleware = value;
+}
+
+function _getInitPromise() {
+  return _initPromise;
+}
+
+function _setInitPromise(value) {
+  _initPromise = value;
+}
+
+function _getServer() {
+  return _server;
+}
+
 /**
  * Extract operation name from payment requirements
  */
-export function extractOperation(requirements) {
+function extractOperation(requirements) {
   if (!requirements?.resource) return 'unknown';
   const aiMatch = requirements.resource.match(/\/api\/ai\/([^/]+)\/([^/?]+)/);
   if (aiMatch) return `${aiMatch[1]}:${aiMatch[2]}`;
@@ -371,53 +401,19 @@ export function x402Pricing(req, res) {
   });
 }
 
+export {
+  buildRouteConfig,
+  extractOperation,
+  initializeMiddleware,
+  onAfterSettleHook,
+  onSettleFailureHook,
+  onVerifyFailureHook,
+  _resetState,
+  _setInitFailed,
+  _setMiddleware,
+  _getInitPromise,
+  _setInitPromise,
+  _getServer,
+};
+
 export default x402Middleware;
-
-/**
- * Reset module-level state (for testing only).
- * Clears _middleware, _initPromise, _initFailed.
- */
-export function _resetState() {
-  _middleware = null;
-  _initPromise = null;
-  _initFailed = false;
-  _server = null;
-}
-
-/**
- * Set the init-failed flag directly (for testing degradation paths).
- * When true, the middleware will skip initialization and return 503 (prod)
- * or pass through with a warning (dev).
- */
-export function _setInitFailed(failed) {
-  _initFailed = failed;
-}
-
-/**
- * Set the middleware directly (for testing delegation vs degradation).
- */
-export function _setMiddleware(mw) {
-  _middleware = mw;
-}
-
-/**
- * Get the current _initPromise (for testing concurrency and promise lifecycle).
- */
-export function _getInitPromise() {
-  return _initPromise;
-}
-
-/**
- * Set the _initPromise directly (for testing concurrency without real init).
- */
-export function _setInitPromise(promise) {
-  _initPromise = promise;
-}
-
-/**
- * Get the x402 resource server (for testing hooks).
- * Available after initializeMiddleware() has been called.
- */
-export function _getServer() {
-  return _server;
-}

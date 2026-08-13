@@ -1,6 +1,6 @@
 # Video Downloader
 
-> XActions v3.1.0 — Download videos from X/Twitter tweets.
+> XActions v3.5.0 — Download videos from X/Twitter tweets.
 
 ## Overview
 
@@ -196,4 +196,4 @@ This is a harmless Codespaces tunnel message. It does not affect functionality.
 
 ---
 
-*XActions v3.1.0 — by nichxbt*
+*XActions v3.5.0 — by nichxbt*
