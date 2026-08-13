@@ -84,10 +84,10 @@ describe('Operations endpoints', () => {
   // ─── Validation with real user but no Twitter/Facebook connection ───────────
 
   it.each([
-    ['unfollow-non-followers', { maxUnfollows: 10 }],
-    ['unfollow-everyone', { maxUnfollows: 10 }],
-    ['detect-unfollowers', {}],
-  ])(`[${nextTestId('E2E')}] POST /api/operations/%s with auth but no platform session → 400`, async (action, body) => {
+    [nextTestId('E2E'), 'unfollow-non-followers', { maxUnfollows: 10 }],
+    [nextTestId('E2E'), 'unfollow-everyone', { maxUnfollows: 10 }],
+    [nextTestId('E2E'), 'detect-unfollowers', {}],
+  ])(`[%s] POST /api/operations/%s with auth but no platform session → 400`, async (id, action, body) => {
     const res = await request(app)
       .post(`/api/operations/${action}`)
       .set('Authorization', `Bearer ${token}`)

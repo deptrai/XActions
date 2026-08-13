@@ -22,12 +22,12 @@ afterAll(async () => {
 
 describe('Auth endpoints', () => {
   it.each([
-    ['empty body', {}, ['username', 'password']],
-    ['invalid username', { username: 'ab', password: 'validpassword123' }, ['username']],
-    ['invalid email', { username: 'validuser', password: 'validpassword123', email: 'not-an-email' }, ['email']],
-    ['password too short', { username: 'validuser', password: 'short' }, ['password']],
-  ])(`[${nextTestId('E2E')}] POST /api/auth/register with %s → 400`,
-    async (desc, body, expectedPaths) => {
+    [nextTestId('E2E'), 'empty body', {}, ['username', 'password']],
+    [nextTestId('E2E'), 'invalid username', { username: 'ab', password: 'validpassword123' }, ['username']],
+    [nextTestId('E2E'), 'invalid email', { username: 'validuser', password: 'validpassword123', email: 'not-an-email' }, ['email']],
+    [nextTestId('E2E'), 'password too short', { username: 'validuser', password: 'short' }, ['password']],
+  ])(`[%s] POST /api/auth/register with %s → 400`,
+    async (id, desc, body, expectedPaths) => {
       const res = await request(app).post('/api/auth/register').send(body);
       expect(res.status).toBe(400);
       expect(res.body.errors).toBeInstanceOf(Array);
@@ -76,9 +76,9 @@ describe('Auth endpoints', () => {
   });
 
   it.each([
-    ['no token', {}],
-    ['malformed token', { token: 'not.a.jwt' }],
-  ])(`[${nextTestId('E2E')}] POST /api/auth/refresh with %s → 401`, async (desc, body) => {
+    [nextTestId('E2E'), 'no token', {}],
+    [nextTestId('E2E'), 'malformed token', { token: 'not.a.jwt' }],
+  ])(`[%s] POST /api/auth/refresh with %s → 401`, async (id, desc, body) => {
     const res = await request(app).post('/api/auth/refresh').send(body);
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error');

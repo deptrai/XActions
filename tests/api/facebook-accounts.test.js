@@ -115,7 +115,7 @@ describe('NFR3 — encrypt never leaks cookie values in output', () => {
 });
 
 // ============================================================================
-// P1 Kill: encrypt/decrypt — exact encoding strings (
+// P1 Kill: encrypt/decrypt — exact encoding strings (hex, utf8, parts.length)
 // ============================================================================
 
 describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
@@ -178,7 +178,7 @@ describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
     expect(dec).toBe(plain);
   });
 
-  it(`[${nextTestId('API')}] decrypt with 3 parts returns null (parts.length check, `, () => {
+  it(`[${nextTestId('API')}] decrypt with 3 parts returns null (parts.length check)`, () => {
     // ConditionalExpression mutant: false → check bypassed
     // With 3 parts, parts[3] is undefined → decipher.update(undefined) throws → catch → null
     // But mutant skips the check, tries to process → may throw or return garbage
@@ -188,7 +188,7 @@ describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
     expect(result).toBeNull();
   });
 
-  it(`[${nextTestId('API')}] decrypt with 5 parts returns null (parts.length check, `, () => {
+  it(`[${nextTestId('API')}] decrypt with 5 parts returns null (parts.length check)`, () => {
     // 5 parts should also be rejected
     const result = decrypt('aabb:bccd:eeff:0011:2233');
     expect(result).toBeNull();
@@ -199,7 +199,7 @@ describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
     expect(decrypt('aaaa:bbbb:cccc:dddd')).toBeNull();
   });
 
-  it(`[${nextTestId('API')}] c_user with leading/trailing spaces is trimmed before regex test (`, () => {
+  it(`[${nextTestId('API')}] c_user with leading/trailing spaces is trimmed before regex test`, () => {
     // MethodExpression mutant: String(c_user).trim() → String(c_user) (no trim)
     // With c_user = '  1234567890  ', trim gives '1234567890' (valid), no-trim gives '  1234567890  ' (invalid)
     // Original: trim → valid → null
@@ -207,14 +207,14 @@ describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
     expect(validateAccountBody({ label: 'x', c_user: '  1234567890  ', xs: 'xs' })).toBeNull();
   });
 
-  it(`[${nextTestId('API')}] c_user with only leading spaces is trimmed (`, () => {
+  it(`[${nextTestId('API')}] c_user with only leading spaces is trimmed`, () => {
     // Additional: c_user = ' 1234567890' → trim → '1234567890' (valid)
     expect(validateAccountBody({ label: 'x', c_user: ' 1234567890', xs: 'xs' })).toBeNull();
   });
 });
 
 // ============================================================================
-// P1 Kill: validateAccountBody — boundary + type checks (
+// P1 Kill: validateAccountBody — boundary + type checks (label length, c_user regex, xs length)
 // ============================================================================
 
 describe('validateAccountBody — boundary + type (P1 kill)', () => {
