@@ -219,9 +219,10 @@ Devin CLI / SWE-1.7 Max
 ### Debug Log References
 
 - `npx vitest run tests/scrapers/facebook-auth.test.js` → 26/26 pass
-- `npx vitest run tests/scrapers/facebook-*.test.js` → 815/815 pass (14 skipped)
+- `npx vitest run tests/scrapers/facebook-*.test.js` → 822/822 pass (14 skipped)
 - `npx vitest run tests/services/facebook-automation-batch.test.js` → 94/94 pass
 - `node test-persistent-profiles-real.mjs` → pass (real browser)
+- Real-cookie persistence smoke test → pass (login persists across sessions with the same `userDataDir`)
 
 ### Completion Notes List
 

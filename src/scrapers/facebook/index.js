@@ -320,17 +320,20 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
   // Step 2: Build cookie list with all fields needed for full authentication.
   // Facebook requires sameSite: "None" for cross-site cookies to work.
   // httpOnly: false allows JS to read cookies (needed for FB features).
+  // expires is set far in the future so cookies are written to disk when persistent
+  // profiles are used (Story 6.17 — AC2). Values are not echoed (NFR3).
+  const futureExpiry = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
   const fbCookies = [
-    { name: 'c_user', value: c_user, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' },
-    { name: 'xs', value: xs, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' },
+    { name: 'c_user', value: c_user, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
+    { name: 'xs', value: xs, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
   ];
 
   // Optional but important cookies for full session.
-  if (sb?.trim()) fbCookies.push({ name: 'sb', value: sb, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' });
-  if (datar?.trim()) fbCookies.push({ name: 'datr', value: datar, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' });
-  if (fr?.trim()) fbCookies.push({ name: 'fr', value: fr, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' });
-  if (fbl_st?.trim()) fbCookies.push({ name: 'fbl_st', value: fbl_st, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' });
-  if (locale?.trim()) fbCookies.push({ name: 'locale', value: locale, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None' });
+  if (sb?.trim()) fbCookies.push({ name: 'sb', value: sb, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
+  if (datar?.trim()) fbCookies.push({ name: 'datr', value: datar, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
+  if (fr?.trim()) fbCookies.push({ name: 'fr', value: fr, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
+  if (fbl_st?.trim()) fbCookies.push({ name: 'fbl_st', value: fbl_st, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
+  if (locale?.trim()) fbCookies.push({ name: 'locale', value: locale, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
 
   // Step 3: Set cookies one at a time to avoid ProtocolError from invalid fields.
   let setCount = 0;
