@@ -23,7 +23,7 @@
 
 - Dùng `axios`, `buildCookieString` từ `src/scrapers/facebook/graphql.js`.
 - Cache kết quả vào `FacebookAccountHealth` (Prisma); TTL 5 phút dựa trên `lastCheckAt`.
-- `checkAccountHealth({ c_user, xs }, { force })`: trả cache nếu `lastCheckAt` < 5 phút và `status !== 'dead'; nếu `force: true` hoặc hết TTL thì fetch lại.
+- `checkAccountHealth({ c_user, xs }, { force })`: trả cache nếu `lastCheckAt` < 5 phút (kể cả `dead`); nếu `force: true` hoặc hết TTL thì fetch lại.
 - Hàm pure `parseFacebookTokens` đã có thể tái dùng để lấy `fb_dtsg`.
 
 ## Story 7.2: Account Pool & Parallel Runner
