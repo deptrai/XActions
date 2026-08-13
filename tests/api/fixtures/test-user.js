@@ -9,6 +9,30 @@ const prisma = new PrismaClient();
 
 export const TEST_SECRET = process.env.JWT_SECRET || 'test-secret';
 
+let urlCounter = 0;
+let accountIdCounter = 0;
+let operationIdCounter = 0;
+
+export function makeFacebookPostUrl(id = '1') {
+  return `https://facebook.com/post/${id}`;
+}
+
+export function makeFacebookGroupUrl(id = '123456789') {
+  return `https://www.facebook.com/groups/${id}/members`;
+}
+
+export function makeFacebookProfileUrl(handle = 'somepage') {
+  return `https://facebook.com/${handle}`;
+}
+
+export function makeAccountId(prefix = 'acct') {
+  return `${prefix}${++accountIdCounter}`;
+}
+
+export function makeOperationId() {
+  return `some-operation-id-${++operationIdCounter}`;
+}
+
 let userIdCounter = 0;
 export function makeTestUserId(prefix = 'test') {
   // Deterministic per-process counter keeps IDs reproducible across runs
