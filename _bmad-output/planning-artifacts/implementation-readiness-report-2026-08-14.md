@@ -234,11 +234,11 @@ PRD Epic 7 đã đầy đủ FR/NFR, UJ cụ thể, non-goals rõ ràng, success
 
 ### Recommended Next Steps
 
-1. Sửa `epics-full.md` Story 7.1 AC: `fb_dtsg` từ HTML, `c_user`/`xs` từ cookie jar.
-2. Bổ sung object schema cho `searchFacebook` `type: 'all'` vào `epics-full.md` Story 7.3.
-3. Reorder story list thành 7.1 → 7.2 → 7.7 → 7.8 → 7.3 → 7.4 → 7.5 → 7.6, hoặc thêm dependency note.
-4. Cập nhật `epics-full.md` Epic 7 header ghi rõ FR-62 deferred.
+- [x] Sửa `epics-full.md` Story 7.1 AC: `fb_dtsg` từ HTML, `c_user`/`xs` từ cookie jar.
+- [x] Bổ sung object schema cho `searchFacebook` `type: 'all'` vào `epics-full.md` Story 7.3.
+- [x] Thêm dependency note cho 7.3/7.4/7.5 → 7.8 và 7.8 → 7.1/7.2/7.7.
+- [x] Cập nhật `epics-full.md` Epic 7 header ghi rõ FR-62 deferred.
 
 ### Final Note
 
-Assessment này xác định **4 vấn đề** (1 FR coverage/deferred, 3 epic quality) qua **5 hạng mục** (document, PRD, coverage, UX, quality). Các vấn đề đều có thể sửa nhanh; architecture hiện tại đã đủ chi tiết cho implementation.
+Tất cả các vấn đề từ epic quality review đã được sửa trong `epics-full.md` (commit `7816f56`). Epic 7 hiện ở trạng thái **READY for implementation**.
