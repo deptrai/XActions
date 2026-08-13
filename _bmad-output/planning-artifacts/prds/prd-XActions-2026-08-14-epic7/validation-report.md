@@ -68,3 +68,33 @@ PRD/Epic 7 is a coherent, well-scoped expansion that correctly positions itself 
 3. Add per-read velocity/delay guardrails to NFRs or FRs.
 4. Add inline `[ASSUMPTION]` tags and re-distill the Assumptions Index.
 5. After these fixes, run `bmad-create-story` or proceed to architecture for Epic 7.
+
+---
+
+## Post-Review Update — 2026-08-14
+
+Người dùng approved proposed defaults; artifacts đã cập nhật:
+
+### Resolved
+
+- **High-1:** `x_facebook_search type: 'all'` mặc định sequential; thêm option `parallel: true`.
+- **High-2:** Thêm response shape chính xác cho `type: 'all'` trong §4.2.
+- **High-3:** FR-60 / Story 7.6 nêu rõ gọi `scrapeFacebookComments(...)` và verify group URL.
+- **Medium-1:** `FacebookAccountHealth` dùng Prisma, cache TTL 5 phút.
+- **Medium-2:** Thêm `FacebookAccount.proxy` và `AccountPool` enforce proxy affinity.
+- **Medium-3:** Thêm NFR-15: scroll delay 1-3s, max 50 scrolls/task.
+- **Medium-4:** FR-62 chuyển thành "defer sang Phase 3" rõ ràng.
+- **Medium-5:** FR-55 sửa wording: parse `fb_dtsg` từ HTML, `c_user`/`xs` từ cookie jar.
+- **Low-1:** Thêm inline `[ASSUMPTION]` tags và cập nhật Assumptions Index.
+- **Low-2:** `prd_ref` frontmatter bao gồm cả 2 PRD cha.
+- **Low-3:** `epics-full.md` ghi chú ADR-011 chỉ áp dụng khi Phase 3 (GraphQL replay) lên lịch.
+- **Low-4:** Story 7.3 signature đồng bộ với PRD (`location`, `authCookie`, `parallel`).
+
+### Remaining open
+
+- `p-limit` vs custom concurrency pool (Open Question 1).
+- TLS/JA3 impersonation cho GraphQL replay (Open Question 2).
+
+### Updated grade
+
+**Good** — now with all high findings resolved.

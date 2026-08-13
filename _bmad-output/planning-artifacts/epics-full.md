@@ -964,9 +964,9 @@ So that I can reach all Facebook capabilities already implemented in the codebas
 
 **FRs:** FR55-FR63
 
-**NFRs:** NFR10-NFR14
+**NFRs:** NFR10-NFR15
 
-**Additional Requirements relevant:** ADR-006 (adapter pattern), ADR-011 (GraphQL HTTP layer), Epic 6 anti-detection infrastructure.
+**Additional Requirements relevant:** ADR-006 (adapter pattern), ADR-011 (GraphQL HTTP layer) — chỉ áp dụng nếu Phase 3 (GraphQL replay) được lên lịch, Epic 6 anti-detection infrastructure.
 
 ### Story 7.1: Account Health Check & Live Filter
 
@@ -994,10 +994,12 @@ So that total scrape time decreases.
 **Acceptance Criteria:**
 
 **Given** an array of `tasks` and `accountIds`
-**When** `facebookScrapeService.runBatch(tasks, { maxConcurrency: 4 })` is called
-**Then** it filters only `active` accounts from health cache
-**And** assigns each task to a live account (round-robin / LRU)
-**And** launches up to `maxConcurrency` browsers at a time
+**When** `facebookScrapeService.runBatch(tasks, { maxConcurrency, delayBetweenLaunches })` is called
+**Then** it filters only `active` accounts from health cache (TTL 5 minutes, Prisma)
+**And** honors `FacebookAccount.proxy` if set
+**And** assigns each task to a live account (round-robin / LRU) with matching proxy
+**And** launches up to `maxConcurrency` (default 4, max 8) browsers at a time
+**And** waits `delayBetweenLaunches` (default 3-8s) between browser launches
 **And** uses `buildUserDataDir(c_user)` for each browser
 **And** retries a task on another live account if the current one hits checkpoint
 **And** returns `results[]` and an `accountUsage` report
@@ -1011,11 +1013,13 @@ So that I can find leads across all public surfaces.
 **Acceptance Criteria:**
 
 **Given** a `query` and `type` (`posts`, `people`, `pages`, `groups`, `all`)
-**When** `searchFacebook(page, query, { type, limit })` is called
+**When** `searchFacebook({ page, query, type, location, limit, authCookie, parallel })` is called
 **Then** it navigates to the correct `/search/{type}?q=...` URL
 **And** returns normalized results matching the `type` shape
-**And** `type: 'all'` returns an object with `posts`, `people`, `pages`, `groups` arrays
-**And** supports pagination via scroll
+**And** `type: 'all'` mặc định sequential trên 1 account
+**And** `type: 'all'` với `parallel: true` phân 4 task cho 4 account
+**And** `type: 'all'` trả về object `{ posts, people, pages, groups }`
+**And** supports pagination via scroll (max 50 scrolls/task, delay 1-3s)
 **And** `platform: 'facebook'` on every result
 
 ### Story 7.4: Scrape Post Comments
@@ -1057,9 +1061,11 @@ So that I can analyze group discussions.
 **Acceptance Criteria:**
 
 **Given** a group `postUrl` and `limit`
-**When** `scrapeFacebookGroupComments(page, postUrl, { limit, includeReplies })` is called
-**Then** it reuses `scrapeFacebookComments` logic
+**When** `scrapeFacebookGroupComments(page, postUrl, { limit, includeReplies, authCookie })` is called
+**Then** it verifies `postUrl` contains `facebook.com/groups/`
+**And** calls `scrapeFacebookComments({ page, postUrl, limit, includeReplies, authCookie })`
 **And** returns the same comment shape
+**And** returns a `note` if group is private and account is not member
 **And** returns a `note` if comments are restricted
 
 ### Story 7.7: Hydration JSON Extraction Fallback

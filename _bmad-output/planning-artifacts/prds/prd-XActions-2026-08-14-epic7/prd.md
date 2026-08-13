@@ -4,7 +4,9 @@ created: 2026-08-14
 updated: 2026-08-14
 status: draft
 epic: 7
-prd_ref: prd-XActions-2026-06-08
+prd_ref:
+  - prd-XActions-2026-06-08
+  - prd-XActions-2026-06-10-epic4
 ---
 
 # PRD: Epic 7 — Facebook Advanced Scraping & Multi-Account Parallel Execution
@@ -13,7 +15,7 @@ prd_ref: prd-XActions-2026-06-08
 
 ## 0. Mục Đích Tài Liệu
 
-PRD này là phần tiếp theo của `prd-XActions-2026-06-08` (Epics 1–3: scrape, automate, CLI/MCP/REST/Persistence) và `prd-XActions-2026-06-10-epic4` (Epic 4: growth automation). Epic 7 bổ sung các tính năng **đọc nâng cao** cho Facebook: search đa loại, comments, group posts/comments, kết hợp với **quản lý account pool** và **chạy song song** để tăng throughput. FR tiếp tục từ FR-54 (→ FR-55..FR-63). NFR tiếp tục từ NFR-9 (→ NFR-10..NFR-14).
+PRD này là phần tiếp theo của `prd-XActions-2026-06-08` (Epics 1–3: scrape, automate, CLI/MCP/REST/Persistence) và `prd-XActions-2026-06-10-epic4` (Epic 4: growth automation). Epic 7 bổ sung các tính năng **đọc nâng cao** cho Facebook: search đa loại, comments, group posts/comments, kết hợp với **quản lý account pool** và **chạy song song** để tăng throughput. FR tiếp tục từ FR-54 (→ FR-55..FR-63). NFR tiếp tục từ NFR-9 (→ NFR-10..NFR-15).
 
 Tài liệu này **không** đề cập UI; UI được defer sang phase sau. Dữ liệu scrape **không được lưu** trong XActions; XActions chỉ trả JSON để hệ thống downstream tự lưu.
 
@@ -74,10 +76,11 @@ Người dùng có thể kiểm tra nhanh tài khoản Facebook có live không.
 
 **Consequences (testable):**
 - Gọi HTTP GET `https://www.facebook.com/` với cookie.
-- Parse `fb_dtsg`, `c_user`, `xs` từ HTML.
+- Parse `fb_dtsg` từ HTML; xác thực `c_user` và `xs` từ cookie jar (không từ HTML).
 - Kiểm tra checkpoint: body chứa `/checkpoint/`, `confirm that you're human`, hoặc `security check`.
 - Trả về `{ status: 'active' | 'checkpoint' | 'dead', reason?: string, lastCheckAt: ISO8601 }`.
 - Không mở browser; thời gian < 2 giây.
+- Health cache TTL 5 phút; kết quả lưu vào `FacebookAccountHealth` (Prisma). `[ASSUMPTION: lưu trong Prisma cho bền vững; Redis cache chỉ dùng nếu triển khai production có Redis sẵn.]`
 
 #### FR-56: Account pool & parallel runner
 
@@ -86,8 +89,10 @@ Hệ thống phân bổ nhiều task scrape cho nhiều account live với concu
 **Consequences (testable):**
 - Nhận `tasks: Array<{ action, args }>` và `options: { accountIds[], maxConcurrency, delayBetweenLaunches }`.
 - Lọc account theo health check (TTL 5 phút hoặc tươi hơn).
-- Gán task cho account theo round-robin / least-recently-used.
+- Mỗi `FacebookAccount` có thể có `proxy` cố định; `AccountPool` gán task vào account có proxy đã gắn.
+- Gán task cho account theo round-robin / least-recently-used trong số account active.
 - Mỗi task mở browser riêng với `userDataDir: buildUserDataDir(c_user)`.
+- `delayBetweenLaunches` mặc định 3-8 giây giữa các lần mở browser để tránh burst.
 - Giới hạn `maxConcurrency` mặc định 4, tối đa 8.
 - Retry task sang account khác nếu account bị checkpoint giữa chừng.
 - Trả về `results[]` kèm `accountUsage` report.
@@ -101,13 +106,22 @@ Hệ thống phân bổ nhiều task scrape cho nhiều account live với concu
 Người dùng có thể search Facebook theo 4 loại: posts, people, pages, groups, hoặc all. Realizes UJ-7.1.
 
 **Consequences (testable):**
-- Input: `query`, `type` (`posts`, `people`, `pages`, `groups`, `all`), `location`, `limit`, `authCookie`.
-- `type: 'all'` chạy lần lượt 4 tab hoặc phân task cho 4 account (tùy option `parallel`).
-- Posts: trả về `{ id, text, author, timestamp, url }`.
-- People: trả về `{ id, name, username, profileUrl, image }`.
-- Pages: trả về `{ id, name, category, likes, pageUrl, image }`.
-- Groups: trả về `{ id, name, members, privacy, groupUrl, image }`.
-- Tất cả trả về `platform: 'facebook'`.
+- Input: `query`, `type` (`posts`, `people`, `pages`, `groups`, `all`), `location`, `limit`, `authCookie`, `parallel` (boolean, default `false`).
+- `type: 'all'` mặc định chạy **sequential** trên 1 account, trả về object `posts`, `people`, `pages`, `groups` từng mảng.
+- `type: 'all'` với `parallel: true` phân 4 task cho 4 account live, gộp kết quả cùng object shape.
+- Ví dụ response `type: 'all'`:
+  ```js
+  {
+    posts: [{ id, text, author, timestamp, url, platform: 'facebook' }],
+    people: [{ id, name, username, profileUrl, image, platform: 'facebook' }],
+    pages: [{ id, name, category, likes, pageUrl, image, platform: 'facebook' }],
+    groups: [{ id, name, members, privacy, groupUrl, image, platform: 'facebook' }]
+  }
+  ```
+- Posts: trả về `{ id, text, author, timestamp, url, platform: 'facebook' }`.
+- People: trả về `{ id, name, username, profileUrl, image, platform: 'facebook' }`.
+- Pages: trả về `{ id, name, category, likes, pageUrl, image, platform: 'facebook' }`.
+- Groups: trả về `{ id, name, members, privacy, groupUrl, image, platform: 'facebook' }`.
 
 ### 4.3 Comments Scraping
 
@@ -144,8 +158,9 @@ Người dùng có thể lấy comments của một post trong group. Realizes U
 
 **Consequences (testable):**
 - Input: `postUrl` (post thuộc group), `limit`, `includeReplies`, `authCookie`.
-- Tái dùng `scrapeFacebookComments`.
-- Trả về `note` nếu post/comments bị giới hạn.
+- Gọi `scrapeFacebookComments({ page, postUrl, limit, includeReplies, authCookie })` — cùng hàm với FR-58, không duplicate logic.
+- Trước khi gọi, verify URL là post trong group (chứa `facebook.com/groups/`); nếu không, trả lỗi rõ ràng.
+- Trả về `note` nếu group private và account không phải member.
 
 ### 4.5 Hydration & GraphQL Fallback
 
@@ -209,7 +224,7 @@ API và MCP cùng gọi `facebookScrapeService`. Realizes UJ-7.1..UJ-7.4.
 
 ### 6.2 Out of Scope for Epic 7
 
-- GraphQL replay (FR-62) — làm nếu còn thời gian, ưu tiên thấp hơn comments.
+- **GraphQL replay (FR-62) — defer sang Phase 3 / epic sau.**
 - UI dashboard.
 - Lưu trữ / analytics trên dữ liệu scrape.
 - Reaction/liker list scraping (có thể là Epic 7b).
@@ -221,6 +236,7 @@ API và MCP cùng gọi `facebookScrapeService`. Realizes UJ-7.1..UJ-7.4.
 - **NFR-12:** Concurrency cap — mặc định 4, tối đa 8 browsers đồng thời.
 - **NFR-13:** Privacy — cookie/token values không bao giờ log hay echo.
 - **NFR-14:** Resilience — luôn có DOM fallback khi hydration/GraphQL fail.
+- **NFR-15:** Read velocity — mỗi vòng lặp scroll/crawl có delay 1-3 giây; giới hạn 50 lần scroll mỗi task; không tối ưu hóa tốc độ ở mức làm tăng account risk.
 
 ## 8. Success Metrics
 
@@ -238,15 +254,22 @@ API và MCP cùng gọi `facebookScrapeService`. Realizes UJ-7.1..UJ-7.4.
 
 ## 9. Open Questions
 
-1. `FacebookAccountHealth` nên lưu trong Prisma (`FacebookAccountHealth` model) hay Redis cache? Redis nhanh nhưng mất khi restart; Prisma bền vững hơn.
-2. Có nên thêm `p-limit` vào `package.json` hay tự implement concurrency pool?
-3. Có cần TLS/JA3 impersonation (ví dụ `curl_cffi`) cho GraphQL replay không, hay axios + headers thật đã đủ?
-4. `x_facebook_search` với `type: 'all'` nên chạy sequential trên 1 account hay phân 4 account song song mặc định?
-5. Có cần account `proxy` field trong `FacebookAccount` để gắn account với proxy cố định không?
+### Resolved (defaults applied)
+
+1. ✅ `FacebookAccountHealth` — dùng Prisma model, cache TTL 5 phút. `[DECIDED]`
+2. ✅ `x_facebook_search type: 'all'` — mặc định sequential trên 1 account; `parallel: true` để fan-out. `[DECIDED]`
+3. ✅ `FacebookAccount.proxy` — có field `proxy`, `AccountPool` enforce proxy affinity. `[DECIDED]`
+
+### Remaining
+
+1. Có nên thêm `p-limit` vào `package.json` hay tự implement concurrency pool?
+2. Có cần TLS/JA3 impersonation (ví dụ `curl_cffi`) cho GraphQL replay không, hay axios + headers thật đã đủ?
 
 ## 10. Assumptions Index
 
-- **§2.1** — Người dùng có pool tài khoản Facebook đã nuôi, không phải tài khoản mới tạo.
-- **§4.1** — Anti-detection từ Epic 6 (fingerprint, proxy, warmup) đã hoạt động và được tái dùng.
-- **§4.5** — Hydration JSON và GraphQL `doc_id` có thể thay đổi; DOM fallback là bắt buộc.
-- **§4.6** — `facebookScrapeService` sẽ là single source of truth cho cả API và MCP, tương tự cách `api/services/facebookAutomation.js` được dùng cho automate.
+- **§2.1** — Người dùng có pool tài khoản Facebook đã nuôi, không phải tài khoản mới tạo. `[ASSUMPTION]`
+- **§4.1 (FR-55)** — `FacebookAccountHealth` lưu trong Prisma; Redis cache chỉ dùng nếu production có Redis sẵn. `[ASSUMPTION]`
+- **§4.1 (FR-56)** — Mỗi account có thể gắn proxy cố định; `AccountPool` sẽ honor proxy affinity. `[ASSUMPTION]`
+- **§4.1** — Anti-detection từ Epic 6 (fingerprint, proxy, warmup) đã hoạt động và được tái dùng. `[ASSUMPTION]`
+- **§4.5** — Hydration JSON và GraphQL `doc_id` có thể thay đổi; DOM fallback là bắt buộc. `[ASSUMPTION]`
+- **§4.6** — `facebookScrapeService` sẽ là single source of truth cho cả API và MCP, tương tự cách `api/services/facebookAutomation.js` được dùng cho automate. `[ASSUMPTION]`
