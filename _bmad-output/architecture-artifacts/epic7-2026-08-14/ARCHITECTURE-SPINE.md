@@ -71,13 +71,13 @@ C4Component
 | `FacebookAccountHealthService` | `api/services/facebookHealth.js` `[ASSUMPTION]` | HTTP GET `facebook.com/` với cookie, parse `fb_dtsg`, kiểm tra checkpoint, cache vào `FacebookAccountHealth`. |
 | `FacebookAccountPool` | `api/services/facebookAccountPool.js` `[ASSUMPTION]` | Lọc live accounts, gán task round-robin/LRU, honor proxy, giới hạn concurrency. |
 | `FacebookScrapeService` | `api/services/facebookScrape.js` | `run(action, args)` và `runBatch(tasks, options)`. Single source of truth cho API + MCP. |
-| `FacebookAuthResolver` | `api/services/facebookAuth.js` | Resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) cho cả API và MCP, không log cookie. |
-| `FacebookScraperDispatcher` | inside `FacebookScrapeService` | Map `action` → `scrape('facebook', action, args)` hoặc fan-out `type: 'all'` nội bộ. Tái dùng `src/scrapers/index.js` `scrape()` để tận dụng auto browser/page/login/close. |
+| `FacebookAuthResolver` | `api/services/facebookAuth.js` | Resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) cho cả API và MCP; validate `account.userId === userId` khi `userId` được cung cấp; không log cookie. |
+| `FacebookScraperDispatcher` | inside `FacebookScrapeService` | Map `action` → `scrape('facebook', action, args)`; đảm bảo `src/scrapers/index.js` `actionMap` có `post_comments`, `group_posts`, `group_comments`; `search` mở rộng qua `searchTweets` (Facebook) với `options.type`/`options.location`. Fan-out `type: 'all'` nội bộ. |
 | `searchFacebook` | `src/scrapers/facebook/index.js` | Search posts/people/pages/groups hoặc `all`. |
 | `scrapeFacebookComments` | `src/scrapers/facebook/index.js` `[ASSUMPTION]` | Scrape comments của post, hỗ trợ replies. |
 | `scrapeFacebookGroupPosts` | `src/scrapers/facebook/index.js` `[ASSUMPTION]` | Scrape posts trong group, dùng mobile UA. |
 | `extractHydrationJson` | `src/scrapers/facebook/hydration.js` `[ASSUMPTION]` | Trích JSON từ `<script data-content-len>`, walk theo `__typename`. |
-| `API route` | `api/routes/facebook.js` | `POST /api/facebook/scrape` mở rộng action list. |
+| `API route` | `api/routes/facebook.js` | `POST /api/facebook/scrape` mở rộng `VALID_ACTIONS` và gọi `FacebookScrapeService`. |
 | `MCP tools` | `src/mcp/server.js` | 5 tools mới gọi `FacebookScrapeService`. |
 
 ## 6. Data Flows
@@ -154,6 +154,12 @@ model FacebookAccountHealth {
   @@index([accountId])
 }
 ```
+
+### Migrations
+
+1. `npx prisma migrate dev --name add_facebook_account_fields` — thêm `proxy` + `updatedAt` vào `FacebookAccount`.
+2. `npx prisma migrate dev --name add_facebook_account_health` — tạo bảng `FacebookAccountHealth` với `accountId` unique và relation ngược.
+3. `npx prisma db pull` / `prisma validate` để kiểm tra one-to-one relation.
 
 ## 8. Story Map & Implementation Order
 

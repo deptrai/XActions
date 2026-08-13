@@ -46,10 +46,11 @@
 
 ### Implementation Notes
 
-- Dùng `p-limit@7.2.0` pin exact (cập nhật `package.json`).
+- Dùng `p-limit@7.2.0` pin exact; cập nhật `package.json` trước khi chạy.
 - Wrapper xử lý delay giữa các lần launch.
 - Proxy affinity: `FacebookAccount.proxy` là flat string `"host:port"` hoặc `"host:port:user:pass"`; dùng `parseFlatProxy` để lấy `server`, `username`, `password`; truyền `proxy: server` cho `createBrowser`, gọi `page.authenticate` nếu có auth.
 - Health cache TTL 5 phút: `checkAccountHealth` bỏ qua cache nếu `lastCheckAt` > 5 phút hoặc `force: true`.
+- Retry không vượt `maxConcurrency`: mỗi `p-limit` slot giữ cho đến khi task thành công hoặc hết retry; nếu checkpoint, lấy account khác trong cùng slot rồi thử lại.
 
 ## Story 7.3: Multi-Type Facebook Search
 
@@ -67,7 +68,8 @@
 
 ### Implementation Notes
 
-- Mở rộng `searchTweets` hiện tại hoặc thêm hàm `searchFacebook`.
+- `searchTweets` trong `src/scrapers/facebook/index.js` được mở rộng để nhận `options.type` (`posts` | `people` | `pages` | `groups` | `all`) và `options.location`; vẫn export tên cũ để `src/scrapers/index.js` `actionMap.search` tương thích.
+- Có thể export thêm `searchFacebook` nhưng `src/scrapers/index.js` `actionMap.search` vẫn map tới `searchTweets`.
 - URL patterns:
   - posts: `/search/posts/?q=...`
   - people: `/search/people/?q=...`
@@ -92,6 +94,7 @@
 
 ### Implementation Notes
 
+- Validate `postUrl` bằng `assertFacebookUrl(postUrl)` trước `page.goto`.
 - Dùng `extractHydrationJson` để tìm `Comment` nodes.
 - DOM fallback: query role/aria-label selectors.
 - Mobile UA không bắt buộc; desktop có thể show nested replies.
@@ -111,7 +114,7 @@
 
 ### Implementation Notes
 
-- `groupUrl` validate chứa `facebook.com/groups/`.
+- Validate `groupUrl` bằng `assertFacebookUrl(groupUrl)` và đảm bảo chứa `facebook.com/groups/`.
 - Group feed trên mobile thường có `m.facebook.com/groups/{id}`.
 - Fallback nếu mobile redirect hoặc yêu cầu đăng nhập.
 
@@ -131,6 +134,7 @@
 
 ### Implementation Notes
 
+- Validate `postUrl` bằng `assertFacebookUrl(postUrl)` và đảm bảo chứa `facebook.com/groups/`.
 - Là thin wrapper quanh `scrapeFacebookComments`; không duplicate logic.
 
 ## Story 7.7: Hydration JSON Extraction Fallback
@@ -164,7 +168,8 @@
 - Tạo `api/services/facebookScrape.js` với `run(action, args)` và `runBatch(tasks, options)`.
 - `FacebookScrapeService` resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) qua helper `api/services/facebookAuth.js` dùng chung cho cả API và MCP.
 - `FacebookScrapeService` gọi `scrape('facebook', action, args)` từ `src/scrapers/index.js`, với `browserOptions.userDataDir` và `proxy`.
-- `api/routes/facebook.js` `POST /scrape` gọi `facebookScrapeService.run`.
+- Mở rộng `src/scrapers/index.js` `actionMap` với `post_comments`, `group_posts`, `group_comments` trỏ tới `scrapeFacebookComments`, `scrapeFacebookGroupPosts`, `scrapeFacebookGroupComments`. `search` vẫn trỏ tới `searchTweets` (đã mở rộng cho Facebook).
+- `api/routes/facebook.js` `POST /scrape` gọi `facebookScrapeService.run` và cập nhật `VALID_ACTIONS` thêm `post_comments`, `group_posts`, `group_comments`.
 - MCP tools mới gọi `facebookScrapeService`.
 - Không duplicate login/scrape logic.
 - Mỗi tool có contract tests trong `tests/mcp/`.
