@@ -71,7 +71,7 @@ C4Component
 | `FacebookAccountHealthService` | `api/services/facebookHealth.js` `[ASSUMPTION]` | HTTP GET `facebook.com/` với cookie, parse `fb_dtsg`, kiểm tra checkpoint, cache vào `FacebookAccountHealth`. |
 | `FacebookAccountPool` | `api/services/facebookAccountPool.js` `[ASSUMPTION]` | Lọc live accounts, gán task round-robin/LRU, honor proxy, giới hạn concurrency. |
 | `FacebookScrapeService` | `api/services/facebookScrape.js` | `run(action, args)` và `runBatch(tasks, options)`. Single source of truth cho API + MCP. |
-| `FacebookAuthResolver` | `api/services/facebookAuth.js` | Resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) cho cả API và MCP; validate `account.userId === userId` khi `userId` được cung cấp; không log cookie. |
+| `FacebookAuthResolver` | `api/services/facebookAuth.js` | Resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) cho cả API và MCP; validate `account.userId === userId` khi `userId` được cung cấp; MCP tools mới truyền `userId` (từ client context) khi dùng `accountId`; không log cookie. |
 | `FacebookScraperDispatcher` | inside `FacebookScrapeService` | Map `action` → `scrape('facebook', action, args)`; đảm bảo `src/scrapers/index.js` `actionMap` có `post_comments`, `group_posts`, `group_comments`; `search` mở rộng qua `searchTweets` (Facebook) với `options.type`/`options.location`. Fan-out `type: 'all'` nội bộ. |
 | `searchFacebook` | `src/scrapers/facebook/index.js` | Search posts/people/pages/groups hoặc `all`. |
 | `scrapeFacebookComments` | `src/scrapers/facebook/index.js` `[ASSUMPTION]` | Scrape comments của post, hỗ trợ replies. |
@@ -126,12 +126,18 @@ sequenceDiagram
 ## 7. Schema Changes
 
 ```prisma
+enum FacebookAccountHealthStatus {
+  active
+  checkpoint
+  dead
+}
+
 model FacebookAccount {
   id              String   @id @default(cuid())
   userId          String
   label           String
   encryptedCookie String
-  proxy           String?  // flat proxy string: "host:port" hoặc "host:port:user:pass"
+  encryptedProxy  String?  // flat proxy string ("host:port" hoặc "host:port:user:pass") đã encrypt; API field vẫn gọi là `proxy`
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -144,7 +150,7 @@ model FacebookAccount {
 model FacebookAccountHealth {
   id          String   @id @default(cuid())
   accountId   String   @unique
-  status      String   // active | checkpoint | dead
+  status      FacebookAccountHealthStatus
   reason      String?
   lastCheckAt DateTime
   createdAt   DateTime @default(now())
@@ -157,8 +163,8 @@ model FacebookAccountHealth {
 
 ### Migrations
 
-1. `npx prisma migrate dev --name add_facebook_account_fields` — thêm `proxy` + `updatedAt` vào `FacebookAccount`.
-2. `npx prisma migrate dev --name add_facebook_account_health` — tạo bảng `FacebookAccountHealth` với `accountId` unique và relation ngược.
+1. `npx prisma migrate dev --name add_facebook_account_fields` — thêm `encryptedProxy` + `updatedAt` vào `FacebookAccount`.
+2. `npx prisma migrate dev --name add_facebook_account_health` — tạo bảng `FacebookAccountHealth` với `accountId` unique, enum `FacebookAccountHealthStatus`, và relation ngược.
 3. `npx prisma db pull` / `prisma validate` để kiểm tra one-to-one relation.
 
 ## 8. Story Map & Implementation Order
@@ -195,6 +201,6 @@ model FacebookAccountHealth {
 ## 11. Assumptions
 
 - `[ASSUMPTION]` Anti-detection từ Epic 6 (fingerprint, proxy, warmup) được tái dùng.
-- `[ASSUMPTION]` Mỗi account có thể có `proxy` dạng flat string `"host:port"` hoặc `"host:port:user:pass"`; `FacebookAccountPool` parse qua `src/scrapers/facebook/proxy.js` `parseFlatProxy` và gọi `page.authenticate` nếu có auth.
+- `[ASSUMPTION]` Mỗi account có thể có `proxy` dạng flat string `"host:port"` hoặc `"host:port:user:pass"`; API nhận plaintext `proxy`, lưu encrypted qua cùng mechanism `encryptedCookie` thành `encryptedProxy`; `FacebookAccountPool` decrypt trước khi parse qua `parseFlatProxy` và gọi `page.authenticate` nếu có auth.
 - `[ASSUMPTION]` `p-limit@7.2.0` sẽ được thêm vào `package.json` dưới dạng pin exact.
 - `[ASSUMPTION]` Health check không cần mở browser, chỉ cần HTTP GET với cookie; cache TTL 5 phút dựa trên `lastCheckAt`.

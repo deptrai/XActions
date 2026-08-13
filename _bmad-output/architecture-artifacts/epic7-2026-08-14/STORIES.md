@@ -14,7 +14,7 @@
 
 - `checkAccountHealth({ c_user, xs })` gọi HTTP GET `https://www.facebook.com/` với cookie.
 - Parse `fb_dtsg` từ HTML; xác thực `c_user`, `xs` từ cookie jar.
-- Trả về `{ status: 'active' | 'checkpoint' | 'dead', reason?, lastCheckAt }`.
+- Trả về `{ status: 'active' | 'checkpoint' | 'dead', reason?, lastCheckAt }`; DB lưu enum `FacebookAccountHealthStatus`.
 - `checkpoint` nếu body chứa `/checkpoint/` hoặc `confirm that you're human`.
 - `dead` nếu `fb_dtsg` hoặc `c_user` hoặc `xs` thiếu.
 - Cookie values không bao giờ log.
@@ -46,9 +46,9 @@
 
 ### Implementation Notes
 
-- Dùng `p-limit@7.2.0` pin exact; cập nhật `package.json` trước khi chạy.
+- Dùng `p-limit@7.2.0` pin exact; cập nhật `package.json` (`"p-limit": "7.2.0"`) và chạy `npm install` trước khi chạy.
 - Wrapper xử lý delay giữa các lần launch.
-- Proxy affinity: `FacebookAccount.proxy` là flat string `"host:port"` hoặc `"host:port:user:pass"`; dùng `parseFlatProxy` để lấy `server`, `username`, `password`; truyền `proxy: server` cho `createBrowser`, gọi `page.authenticate` nếu có auth.
+- Proxy affinity: API nhận plaintext `proxy` dạng `"host:port"` hoặc `"host:port:user:pass"`, lưu encrypted thành `FacebookAccount.encryptedProxy`; `FacebookAccountPool` decrypt trước khi dùng `parseFlatProxy` để lấy `server`, `username`, `password`; truyền `proxy: server` cho `createBrowser`, gọi `page.authenticate` nếu có auth.
 - Health cache TTL 5 phút: `checkAccountHealth` bỏ qua cache nếu `lastCheckAt` > 5 phút hoặc `force: true`.
 - Retry không vượt `maxConcurrency`: mỗi `p-limit` slot giữ cho đến khi task thành công hoặc hết retry; nếu checkpoint, lấy account khác trong cùng slot rồi thử lại.
 
@@ -166,7 +166,7 @@
 ### Acceptance Criteria
 
 - Tạo `api/services/facebookScrape.js` với `run(action, args)` và `runBatch(tasks, options)`.
-- `FacebookScrapeService` resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) qua helper `api/services/facebookAuth.js` dùng chung cho cả API và MCP.
+- `FacebookScrapeService` resolve `authCookie` (`{ c_user, xs }` hoặc `{ accountId }`) qua helper `api/services/facebookAuth.js` dùng chung cho cả API và MCP; validate `userId` khi `accountId` được cung cấp; MCP tools truyền `userId` từ client context khi dùng `accountId`.
 - `FacebookScrapeService` gọi `scrape('facebook', action, args)` từ `src/scrapers/index.js`, với `browserOptions.userDataDir` và `proxy`.
 - Mở rộng `src/scrapers/index.js` `actionMap` với `post_comments`, `group_posts`, `group_comments` trỏ tới `scrapeFacebookComments`, `scrapeFacebookGroupPosts`, `scrapeFacebookGroupComments`. `search` vẫn trỏ tới `searchTweets` (đã mở rộng cho Facebook).
 - `api/routes/facebook.js` `POST /scrape` gọi `facebookScrapeService.run` và cập nhật `VALID_ACTIONS` thêm `post_comments`, `group_posts`, `group_comments`.
