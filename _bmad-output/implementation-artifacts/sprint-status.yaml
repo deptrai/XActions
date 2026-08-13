@@ -1,5 +1,5 @@
 # generated: 06-12-2026 02:18
-# last_updated: 2026-08-13 (story 6-18 → review)
+# last_updated: 2026-08-13 (epic 6 → done)
 # project: XActions
 # project_key: NOKEY
 # tracking_system: file-system
@@ -74,7 +74,7 @@ development_status:
   epic-5b-retrospective: optional
 
   # Epic 6: Facebook Anti-Detection & Bot Countermeasures
-  epic-6: in-progress
+  epic-6: done
   6-1-chrome-executable-path: done
   6-2-consistent-fingerprint: done
   6-3-ua-pool-viewport: done
