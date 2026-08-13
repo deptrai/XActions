@@ -236,7 +236,7 @@ N/A — Technical infrastructure, no UX spec needed.
 
 ### Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
 **Goal:** Multi-type search, post/group comments, account health filtering, and parallel execution using account pool.
-**FRs:** FR55-FR63
+**FRs:** FR55-FR61, FR63 (FR62 deferred to Phase 3)
 **Status:** 🆕 backlog
 
 ---
@@ -964,7 +964,7 @@ So that I can reach all Facebook capabilities already implemented in the codebas
 
 **Goal:** Expand Facebook scraping to support multi-type search, post/group comments scraping, account health filtering, and parallel execution using a pool of live Facebook accounts.
 
-**FRs:** FR55-FR63
+**FRs:** FR55-FR61, FR63 (FR62 deferred to Phase 3)
 
 **NFRs:** NFR10-NFR15
 
@@ -980,11 +980,12 @@ So that checkpointed or dead accounts are not selected.
 
 **Given** a `FacebookAccount` with encrypted cookie
 **When** `checkAccountHealth(account)` is called
-**Then** it fetches `https://www.facebook.com/` via HTTP
-**And** parses `fb_dtsg` and `c_user` from the HTML
+**Then** it fetches `https://www.facebook.com/` via HTTP with the account's cookie
+**And** parses `fb_dtsg` from the HTML
+**And** validates `c_user` and `xs` are present in the response cookie jar
 **And** returns `{ status: 'active' | 'checkpoint' | 'dead', reason?, lastCheckAt }`
 **And** status is `checkpoint` if body contains `/checkpoint/` or `confirm you're human`
-**And** status is `dead` if `fb_dtsg` or `c_user` is missing
+**And** status is `dead` if `fb_dtsg` is missing or the response cookie jar lacks `c_user`/`xs`
 **And** cookie values are never logged
 
 ### Story 7.2: Account Pool & Parallel Runner
@@ -1012,23 +1013,30 @@ As a market researcher,
 I want to search Facebook by posts, people, pages, or groups,
 So that I can find leads across all public surfaces.
 
+**Prerequisites:** Story 7.8 (API + MCP Surface Unification) must implement `facebookScrapeService.run(action, args)` first.
+
 **Acceptance Criteria:**
 
 **Given** a `query` and `type` (`posts`, `people`, `pages`, `groups`, `all`)
 **When** `searchFacebook({ page, query, type, location, limit, authCookie, parallel })` is called
 **Then** it navigates to the correct `/search/{type}?q=...` URL
-**And** returns normalized results matching the `type` shape
+**And** returns results with `platform: 'facebook'` on every item
+**And** `type: 'posts'` returns `Array<{ id, text, author, timestamp, url, platform: 'facebook' }>`
+**And** `type: 'people'` returns `Array<{ id, name, username, profileUrl, image, platform: 'facebook' }>`
+**And** `type: 'pages'` returns `Array<{ id, name, category, likes, pageUrl, image, platform: 'facebook' }>`
+**And** `type: 'groups'` returns `Array<{ id, name, members, privacy, groupUrl, image, platform: 'facebook' }>`
 **And** `type: 'all'` mặc định sequential trên 1 account
 **And** `type: 'all'` với `parallel: true` phân 4 task cho 4 account
-**And** `type: 'all'` trả về object `{ posts, people, pages, groups }`
+**And** `type: 'all'` trả về object `{ posts, people, pages, groups }`, mỗi key là mảng có shape tương ứng ở trên
 **And** supports pagination via scroll (max 50 scrolls/task, delay 1-3s)
-**And** `platform: 'facebook'` on every result
 
 ### Story 7.4: Scrape Post Comments
 
 As a growth marketer,
 I want to scrape comments of a Facebook post,
 So that I can understand audience sentiment and engagement.
+
+**Prerequisites:** Story 7.8 (API + MCP Surface Unification) must implement `facebookScrapeService.run(action, args)` first.
 
 **Acceptance Criteria:**
 
@@ -1045,6 +1053,8 @@ So that I can understand audience sentiment and engagement.
 As a community analyst,
 I want to scrape posts inside a Facebook group,
 So that I can monitor group activity.
+
+**Prerequisites:** Story 7.8 (API + MCP Surface Unification) must implement `facebookScrapeService.run(action, args)` first.
 
 **Acceptance Criteria:**
 
@@ -1090,6 +1100,8 @@ So that I am less dependent on brittle CSS class selectors.
 As an AI agent,
 I want new Facebook scrape tools exposed via MCP that call the same service as the REST API,
 So that the surface is consistent and maintainable.
+
+**Prerequisites:** Story 7.1 (Health), Story 7.2 (Pool), and Story 7.7 (Hydration) must be implemented first.
 
 **Acceptance Criteria:**
 
