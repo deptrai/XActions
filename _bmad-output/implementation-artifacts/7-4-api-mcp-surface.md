@@ -4,7 +4,7 @@
 baseline_commit: 2aa8b76
 ---
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
