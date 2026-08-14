@@ -138,7 +138,7 @@ describe('normalizePost (P1 kill)', () => {
       images: ['img1'], hasVideo: true,
     });
     expect(result).toEqual({
-      id: 'post1', text: 'hello', timestamp: 123,
+      id: 'post1', author: null, text: 'hello', timestamp: 123,
       likes: '5', comments: '2', url: 'https://fb.com/post1',
       media: { images: ['img1'], hasVideo: true },
       platform: 'facebook',
@@ -523,7 +523,8 @@ describe('loginWithCookie (P1 kill, fake page)', () => {
 
   it('navigates to Facebook base URL (L215)', async () => {
     const page = makeFakePage();
-    await loginWithCookie(page, { c_user: '100001', xs: 'xs-token' });
+    // Inject instant delayFn + deterministic rng to avoid 25s real-delay timeout under parallel load
+    await loginWithCookie(page, { c_user: '100001', xs: 'xs-token' }, { delayFn: async () => {}, rng: () => 0 });
     // loginWithCookie navigates to base URL, then warmSession navigates to homepage (Story 6.15)
     expect(page.calls.goto).toHaveLength(3);
     expect(page.calls.goto[0].url).toContain('facebook.com');

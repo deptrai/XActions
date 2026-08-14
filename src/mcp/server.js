@@ -2776,7 +2776,7 @@ async function executeTool(name, args) {
       toolName = multiPlatformTools[name];
     }
 
-    const toolFn = localTools[toolName] || localTools[name];
+    const toolFn = localTools?.[toolName] || localTools?.[name];
     if (!toolFn) {
       throw new Error(`Unknown tool: ${name}`);
     }
