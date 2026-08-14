@@ -52,6 +52,7 @@ import { resolveMcpFacebookAuth } from './facebook-auth.js';
 
 const MODE = process.env.XACTIONS_MODE || 'local';
 const API_URL = process.env.XACTIONS_API_URL || 'https://api.xactions.app';
+const API_TOKEN = process.env.XACTIONS_API_TOKEN;
 const X402_PRIVATE_KEY = process.env.X402_PRIVATE_KEY;
 const X402_NETWORK = process.env.X402_NETWORK || 'base-sepolia';
 const SESSION_COOKIE = process.env.XACTIONS_SESSION_COOKIE;
@@ -2625,11 +2626,17 @@ async function initializeBackend() {
   if (MODE === 'remote') {
     console.error('🌐 XActions MCP Server: Remote mode');
     console.error('   API: ' + API_URL);
-    
+
+    if (API_TOKEN) {
+      console.error('   Facebook tools: ✅ routed via REST API (XACTIONS_API_TOKEN set)');
+    } else {
+      console.error('   Facebook tools: ⚠️  XACTIONS_API_TOKEN not set — Facebook tools will fail in remote mode');
+    }
+
     if (!X402_PRIVATE_KEY) {
       console.error('   Payments: disabled (no wallet configured)');
     }
-    
+
     const { createX402Client } = await import('./x402-client.js');
     remoteClient = await createX402Client({
       apiUrl: API_URL,
@@ -2734,11 +2741,21 @@ async function executeTool(name, args) {
 
   // Handle Facebook automation
   if (name === 'x_facebook_automate') {
+    if (MODE === 'remote') {
+      const { remoteAutomateTool, isRemoteSupported } = await import('./remoteFacebook.js');
+      if (!API_TOKEN) throw new Error('❌ XACTIONS_API_TOKEN is required in remote mode');
+      return await remoteAutomateTool(API_URL, API_TOKEN, args);
+    }
     return await executeFacebookAutomateTool(args);
   }
 
   // Handle Facebook account listing (DB-only, no browser)
   if (name === 'x_facebook_list_accounts') {
+    if (MODE === 'remote') {
+      if (!API_TOKEN) throw new Error('❌ XACTIONS_API_TOKEN is required in remote mode');
+      const { remoteListAccounts } = await import('./remoteFacebook.js');
+      return await remoteListAccounts(API_URL, API_TOKEN);
+    }
     return await executeFacebookListAccounts(args);
   }
 
@@ -2751,11 +2768,22 @@ async function executeTool(name, args) {
     'x_facebook_posts',
   ]);
   if (EPIC7_SCRAPE_TOOLS.has(name)) {
+    if (MODE === 'remote') {
+      if (!API_TOKEN) throw new Error('❌ XACTIONS_API_TOKEN is required in remote mode');
+      const { remoteScrapeTool } = await import('./remoteFacebook.js');
+      return await remoteScrapeTool(API_URL, API_TOKEN, name, args);
+    }
     return await executeFacebookScrapeTool(name, args);
   }
 
   // Handle Facebook Epic 4 growth automation tools
   if (name.startsWith('x_facebook_') && name !== 'x_facebook_automate') {
+    if (MODE === 'remote') {
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `❌ ${name} is not available in remote mode. Epic 4 growth tools (schedule, share, warmup, join, post, friend requests) require local browser automation. Use XACTIONS_MODE=local for these tools.` }],
+      };
+    }
     return await executeFacebookEpic4Tool(name, args);
   }
 

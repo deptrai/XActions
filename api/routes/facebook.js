@@ -77,6 +77,40 @@ async function resolveRunAccounts(userId, body) {
 }
 
 /**
+ * Build default browserOptions from production environment variables.
+ * Allows operators to set a Facebook scraping proxy without sending it in every request.
+ * Request-level browserOptions override these defaults.
+ * @returns {Object|null}
+ */
+function defaultBrowserOptionsFromEnv() {
+  const proxy = process.env.FACEBOOK_PROXY?.trim();
+  if (!proxy) return null;
+
+  const opts = { proxy };
+
+  const username = process.env.FACEBOOK_PROXY_AUTH_USERNAME?.trim();
+  const password = process.env.FACEBOOK_PROXY_AUTH_PASSWORD?.trim();
+  if (username && password) {
+    opts.proxyAuth = { username, password };
+  }
+
+  const timezone = process.env.FACEBOOK_PROXY_TIMEZONE?.trim();
+  const lat = process.env.FACEBOOK_PROXY_LATITUDE;
+  const lng = process.env.FACEBOOK_PROXY_LONGITUDE;
+  const accuracy = process.env.FACEBOOK_PROXY_ACCURACY;
+  if (timezone || lat || lng) {
+    opts.proxyLocation = {
+      ...(timezone && { timezone }),
+      ...(lat && { latitude: Number(lat) }),
+      ...(lng && { longitude: Number(lng) }),
+      ...(accuracy && { accuracy: Number(accuracy) }),
+    };
+  }
+
+  return opts;
+}
+
+/**
  * Resolve the single cookie used by /api/facebook/scrape.
  * Priority:
  *   1. Raw authCookie { c_user, xs }
@@ -300,12 +334,24 @@ router.post('/scrape', async (req, res) => {
       throw e;
     }
 
+    // Merge request browserOptions with production env defaults (proxy, geo).
+    const envBrowserOptions = defaultBrowserOptionsFromEnv() || {};
+    const mergedBrowserOptions = {
+      ...envBrowserOptions,
+      ...browserOptions,
+      proxyAuth: { ...(envBrowserOptions.proxyAuth || {}), ...(browserOptions?.proxyAuth || {}) },
+      proxyLocation: { ...(envBrowserOptions.proxyLocation || {}), ...(browserOptions?.proxyLocation || {}) },
+    };
+    // Remove empty nested objects so downstream checks stay simple.
+    if (!Object.keys(mergedBrowserOptions.proxyAuth).length) delete mergedBrowserOptions.proxyAuth;
+    if (!Object.keys(mergedBrowserOptions.proxyLocation).length) delete mergedBrowserOptions.proxyLocation;
+
     // Dynamic import — avoids loading Puppeteer until needed
     const { run: facebookScrapeRun } = await import('../services/facebookScrape.js');
 
     const options = {
       userId: req.user.id,
-      ...(browserOptions ? { browserOptions } : {}),
+      ...(Object.keys(mergedBrowserOptions).length ? { browserOptions: mergedBrowserOptions } : {}),
       // Pass all cookie fields for full session auth (never log values).
       authCookie: resolved.cookie,
     };
@@ -723,11 +769,24 @@ router.post('/automate', async (req, res) => {
     });
     emit({ event: 'start', operationId: operation.id, userId: req.user.id, type: operation.type, status: 'running' });
 
+    const envBrowserOptions = defaultBrowserOptionsFromEnv() || {};
+    const requestBrowserOptions = req.body?.browserOptions || {};
+    const runBrowserOptions = {
+      ...envBrowserOptions,
+      ...requestBrowserOptions,
+      proxyAuth: { ...(envBrowserOptions.proxyAuth || {}), ...(requestBrowserOptions.proxyAuth || {}) },
+      proxyLocation: { ...(envBrowserOptions.proxyLocation || {}), ...(requestBrowserOptions.proxyLocation || {}) },
+      headless: isHeadless,
+      userDataDir: buildUserDataDir(authCookie.c_user),
+    };
+    if (!Object.keys(runBrowserOptions.proxyAuth).length) delete runBrowserOptions.proxyAuth;
+    if (!Object.keys(runBrowserOptions.proxyLocation).length) delete runBrowserOptions.proxyLocation;
+
     let result;
     let browser;
     try {
       // createBrowser INSIDE try — else a launch failure orphans the Operation as 'running' forever
-      browser = await createBrowser({ headless: isHeadless, userDataDir: buildUserDataDir(authCookie.c_user) });
+      browser = await createBrowser(runBrowserOptions);
       const page = await createPage(browser);
       // Cookie values are never logged (NFR3)
       await loginWithCookie(page, {
