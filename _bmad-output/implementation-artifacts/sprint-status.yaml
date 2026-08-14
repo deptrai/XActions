@@ -107,7 +107,7 @@ development_status:
   # Epic 8: Facebook Backend Reliability
   epic-8: in-progress
   8-1-prismaclient-singleton: done
-  8-2-executetool-graceful-errors: backlog
+  8-2-executetool-graceful-errors: ready-for-dev
   8-3-jwt-key-standardization: backlog
   epic-8-retrospective: optional
 
