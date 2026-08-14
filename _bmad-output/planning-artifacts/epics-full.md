@@ -196,18 +196,25 @@ N/A — Technical infrastructure, no UX spec needed.
 
 ### FR Coverage Map
 
-| FR | Epic 1 | Epic 2 | Epic 3 | Epic 4 | Epic 5 | Epic 5b | Epic 6 | Epic 7 |
-|---|---|---|---|---|---|---|---|---|
-| FR1-3 | ✅ | | | | | | |
-| FR4-7 | ✅ | | | | | | |
-| FR8 | | | ✅ | | | | |
-| FR9-11 | | | ✅ | | | | |
-| FR12-14 | | ✅ | | | | | |
-| FR15-22 | | | | ✅ | | | |
-| FR23-27 | | | | | ✅ | | |
-| FR28-39 | | | | | | ✅ | |
-| FR40-54 | | | | | | | ✅ | |
-| FR55-63 | | | | | | | | ✅ |
+| FR/PCR | Epic 1 | Epic 2 | Epic 3 | Epic 4 | Epic 5 | Epic 5b | Epic 6 | Epic 7 | Epic 8 | Epic 9 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| FR1-3 | ✅ | | | | | | | | | |
+| FR4-7 | ✅ | | | | | | | | | |
+| FR8 | | | ✅ | | | | | | | |
+| FR9-11 | | | ✅ | | | | | | | |
+| FR12-14 | | ✅ | | | | | | | | |
+| FR15-22 | | | | ✅ | | | | | | |
+| FR23-27 | | | | | ✅ | | | | | |
+| FR28-39 | | | | | | ✅ | | | | |
+| FR40-54 | | | | | | | ✅ | | | |
+| FR55-63 | | | | | | | | ✅ | | |
+| PCR1 | | | | | | | | | | ✅ |
+| PCR2 | | | | | | | | | ✅ | |
+| PCR3 | | | | | | | | | | ✅ |
+| PCR4 | | | | | | | | | | ✅ |
+| PCR5 | | | | | | | | | | ✅ |
+| PCR6 | | | | | | | | | ✅ | |
+| PCR7 | | | | | | | | | ✅ | |
 
 ## Epic List
 
@@ -249,6 +256,16 @@ N/A — Technical infrastructure, no UX spec needed.
 ### Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
 **Goal:** Multi-type search, post/group comments, account health filtering, and parallel execution using account pool.
 **FRs:** FR55-FR61, FR63 (FR62 deferred to Phase 3)
+**Status:** ✅ Done (4 stories)
+
+### Epic 8: Facebook Backend Reliability
+**Goal:** Harden backend infrastructure: database connection pooling, MCP error contract, auth token handling.
+**FRs/PCRs:** PCR2, PCR6, PCR7
+**Status:** 🆕 backlog
+
+### Epic 9: Facebook Live Data & Behavioral Hardening
+**Goal:** Harden runtime Facebook behavior: dry-run short-circuit, live DOM selectors, testable delay seams.
+**FRs/PCRs:** PCR1, PCR3, PCR4, PCR5
 **Status:** 🆕 backlog
 
 ---
