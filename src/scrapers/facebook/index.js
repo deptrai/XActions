@@ -1582,6 +1582,7 @@ export async function scrapeFacebookGroupSearch(page, groupUrl, options = {}) {
   // Use URL API to handle existing query params/fragments in the group URL correctly.
   const searchUrlObj = new URL(groupUrl);
   searchUrlObj.hostname = 'm.facebook.com';
+  searchUrlObj.port = ''; // clear any non-default port from original URL
   searchUrlObj.search = ''; // strip existing query params
   searchUrlObj.hash = ''; // strip fragments
   searchUrlObj.pathname = searchUrlObj.pathname.replace(/\/$/, '') + '/search/';
