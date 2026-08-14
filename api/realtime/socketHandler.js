@@ -1,13 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+import prisma from '../lib/prisma.js';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-
 // Payment routes archived - XActions is now 100% free and open-source
 // All credit checks have been removed - unlimited operations for all users
-
-const prisma = new PrismaClient();
-
 // Store active sessions
 const activeSessions = new Map(); // odessId -> { odess, dashboard, user, status }
 const adminSockets = new Set(); // Admin sockets watching all sessions

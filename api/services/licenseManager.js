@@ -1,4 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+import prisma from '../lib/prisma.js';
 /**
  * License Key Management
  * 
@@ -6,10 +8,6 @@
  */
 
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 // Tier codes for key generation
 const TIER_CODES = {
   starter: 'STRT',

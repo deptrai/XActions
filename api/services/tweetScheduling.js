@@ -7,11 +7,8 @@
 // (thread, timezone, recurrenceCron). Execution is handled by api/services/tweetScheduler.js,
 // which reuses postTweet / postThread from src/postComposer.js — do NOT rewrite tweet DOM logic.
 
+import prisma from '../lib/prisma.js';
 import cron from 'node-cron';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 const MIN_THREAD_LEN = 2;
 const MAX_THREAD_LEN = 25;
 const MIN_LEAD_MS = 60_000; // scheduledAt must be ≥60s in the future (next cron tick + slack)

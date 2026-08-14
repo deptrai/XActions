@@ -1,4 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+
+import prisma from '../lib/prisma.js';
 /**
  * Facebook Account Pool — bounded parallel task execution across live accounts.
  *
@@ -18,14 +20,10 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import pLimit from 'p-limit';
-import { PrismaClient } from '@prisma/client';
 import { createBrowser, createPage, loginWithCookie } from '../../src/scrapers/facebook/index.js';
 import { parseFlatProxy } from '../../src/scrapers/facebook/proxy.js';
 import { decrypt } from '../routes/facebookAccounts.js';
 import { checkAccountHealth } from './facebookHealth.js';
-
-const prisma = new PrismaClient();
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const randomDelay = (min, max) => sleep(min + Math.random() * (max - min));
 

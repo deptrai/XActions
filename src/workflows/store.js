@@ -11,6 +11,8 @@
  * @license MIT
  */
 
+import prisma from '../../api/lib/prisma.js';
+
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
@@ -369,8 +371,6 @@ export async function getStore() {
 
   if (process.env.DATABASE_URL) {
     try {
-      const { PrismaClient } = await import('@prisma/client');
-      const prisma = new PrismaClient();
       _store = new PrismaStore(prisma);
       return _store;
     } catch {

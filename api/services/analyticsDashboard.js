@@ -1,4 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+
+import prisma from '../lib/prisma.js';
 /**
  * XActions Analytics Dashboard Service (EPS-3)
  *
@@ -16,11 +18,6 @@
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @license MIT
  */
-
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 // ============================================================================
 // Pure helpers — no DB, no side effects. Unit-tested directly.
 // ============================================================================

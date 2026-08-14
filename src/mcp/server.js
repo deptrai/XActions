@@ -26,6 +26,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import prisma from '../../api/lib/prisma.js';
+
 import { VERSION } from '../version.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -44,8 +46,6 @@ import { fileURLToPath } from 'node:url';
 
 import { initializePlugins, getPluginTools } from '../plugins/index.js';
 import { resolveMcpFacebookAuth } from './facebook-auth.js';
-import { PrismaClient } from '@prisma/client';
-
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -2884,32 +2884,27 @@ async function executeFacebookListAccounts(args) {
     throw new Error('❌ x_facebook_list_accounts: userId must be a string');
   }
 
-  const prisma = new PrismaClient();
-  try {
-    if (!targetUserId && authCookie?.accountId) {
-      const account = await prisma.facebookAccount.findUnique({
-        where: { id: authCookie.accountId },
-        select: { userId: true },
-      });
-      if (!account) {
-        throw new Error(`❌ Facebook account "${authCookie.accountId}" not found`);
-      }
-      targetUserId = account.userId;
-    }
-
-    if (!targetUserId) {
-      throw new Error('❌ x_facebook_list_accounts requires userId or authCookie.accountId');
-    }
-
-    const accounts = await prisma.facebookAccount.findMany({
-      where: { userId: targetUserId },
-      select: { id: true, label: true, userId: true, createdAt: true },
-      orderBy: { createdAt: 'desc' },
+  if (!targetUserId && authCookie?.accountId) {
+    const account = await prisma.facebookAccount.findUnique({
+      where: { id: authCookie.accountId },
+      select: { userId: true },
     });
-    return { accounts };
-  } finally {
-    await prisma.$disconnect();
+    if (!account) {
+      throw new Error(`❌ Facebook account "${authCookie.accountId}" not found`);
+    }
+    targetUserId = account.userId;
   }
+
+  if (!targetUserId) {
+    throw new Error('❌ x_facebook_list_accounts requires userId or authCookie.accountId');
+  }
+
+  const accounts = await prisma.facebookAccount.findMany({
+    where: { userId: targetUserId },
+    select: { id: true, label: true, userId: true, createdAt: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  return { accounts };
 }
 
 // by nichxbt

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+import prisma from '../lib/prisma.js';
 import Queue from 'bull';
-import { PrismaClient } from '@prisma/client';
 import { processUnfollowNonFollowers } from './operations/unfollowNonFollowers.js';
 import { processUnfollowEveryone } from './operations/unfollowEveryone.js';
 import { processDetectUnfollowers } from './operations/detectUnfollowers.js';
@@ -18,9 +18,6 @@ import { followEngagersBrowser } from './operations/puppeteer/followEngagers.js'
 import { keywordFollowBrowser } from './operations/puppeteer/keywordFollow.js';
 import { autoCommentBrowser } from './operations/puppeteer/autoComment.js';
 import { runBrowserScript } from './operations/puppeteer/scriptRunner.js';
-
-const prisma = new PrismaClient();
-
 // In-memory job cancellation tracking
 const cancelledJobs = new Set();
 

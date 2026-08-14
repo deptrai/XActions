@@ -1,4 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+import prisma from '../lib/prisma.js';
 /**
  * Unfollower Alerts Service
  * 
@@ -13,11 +15,6 @@
  * @module api/services/unfollowerAlerts
  * @author nichxbt
  */
-
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 /**
  * Check scan results for notable events and send alerts
  * @param {Object} io - Socket.IO server instance

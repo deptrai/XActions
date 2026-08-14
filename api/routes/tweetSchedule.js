@@ -11,13 +11,10 @@
 //   DELETE /api/tweet-schedule/:id      — cancel: pending → cancelled (running/completed → 409)
 //   PATCH  /api/tweet-schedule/reorder  — persist [{ id, queueOrder }] (drag & drop queue view)
 
+import prisma from '../lib/prisma.js';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
 import { scheduleTweet } from '../services/tweetScheduling.js';
-
-const prisma = new PrismaClient();
-
 const router = express.Router();
 router.use(authMiddleware);
 

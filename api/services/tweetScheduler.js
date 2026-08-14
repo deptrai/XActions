@@ -14,13 +14,10 @@
 //    rewrite tweet DOM logic)
 //  - re-arms recurring schedules (recurrenceCron) after a successful execution
 
+import prisma from '../lib/prisma.js';
 import cron from 'node-cron';
-import { PrismaClient } from '@prisma/client';
 import { postTweet, postThread } from '../../src/postComposer.js';
 import { createBrowser, createPage, loginWithCookie } from '../../src/scrapers/twitter/index.js';
-
-const prisma = new PrismaClient();
-
 const THROUGHPUT_WINDOW_MS = 3_600_000; // 1 hour
 const THROUGHPUT_CAP = 5;               // NFR-9 / NFR10: ≤5 executed/hour/user
 const JITTER_MIN_MS = 5 * 60 * 1000;    // 5 min

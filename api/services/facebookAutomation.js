@@ -1,6 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 // by nichxbt
 
+import prisma from '../lib/prisma.js';
 import {
   loginWithCookie,
   createBrowser,
@@ -10,10 +11,6 @@ import {
   getActionLimit,
   enforceDelay,
 } from '../../src/scrapers/facebook/limits.js';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
 // ============================================================================
 // Persistent profile directory helper (Story 6.17 — ADR-016)
 // ============================================================================

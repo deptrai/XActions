@@ -1,4 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+
+import prisma from '../lib/prisma.js';
 /**
  * Facebook Account Health Check (Story 7.1 — AC1)
  *
@@ -11,12 +13,8 @@
  */
 
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
 import { buildCookieString, parseFacebookTokens } from '../../src/scrapers/facebook/graphql.js';
 import { decrypt } from '../routes/facebookAccounts.js';
-
-const prisma = new PrismaClient();
-
 const FACEBOOK_HOME = 'https://www.facebook.com/';
 const TTL_MS = 5 * 60 * 1000;
 

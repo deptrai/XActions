@@ -9,6 +9,8 @@
  * @license MIT
  */
 
+import prisma from '../../api/lib/prisma.js';
+
 import { Command, Help } from 'commander';
 import { VERSION } from '../version.js';
 import chalk from 'chalk';
@@ -2880,25 +2882,19 @@ schedCmd.command('list').description('List scheduled jobs, or tweet schedules wh
   try {
     // EPS-2: `schedule list --status [status]` lists DB-backed tweet schedules.
     if (options.status !== undefined) {
-      const { PrismaClient } = await import('@prisma/client');
-      const prisma = new PrismaClient();
-      try {
-        const where = { platform: 'twitter' };
-        if (options.status) where.status = String(options.status);
-        const schedules = await prisma.schedule.findMany({
-          where,
-          orderBy: [{ queueOrder: 'asc' }, { scheduledAt: 'asc' }],
-          take: 100,
-        });
-        if (schedules.length === 0) { console.log(chalk.dim('No tweet schedules')); return; }
-        for (const s of schedules) {
-          const when = s.scheduledAt.toISOString().replace('T', ' ').slice(0, 16);
-          const tag = s.thread ? 'thread' : 'tweet';
-          const recur = s.recurrenceCron ? chalk.dim(` recur="${s.recurrenceCron}"`) : '';
-          console.log(`  ${chalk.cyan(s.id)}  ${when}  ${chalk.yellow(s.status.padEnd(9))}  ${tag}${recur}  ${chalk.dim(s.content.slice(0, 50))}`);
-        }
-      } finally {
-        await prisma.$disconnect();
+      const where = { platform: 'twitter' };
+      if (options.status) where.status = String(options.status);
+      const schedules = await prisma.schedule.findMany({
+        where,
+        orderBy: [{ queueOrder: 'asc' }, { scheduledAt: 'asc' }],
+        take: 100,
+      });
+      if (schedules.length === 0) { console.log(chalk.dim('No tweet schedules')); return; }
+      for (const s of schedules) {
+        const when = s.scheduledAt.toISOString().replace('T', ' ').slice(0, 16);
+        const tag = s.thread ? 'thread' : 'tweet';
+        const recur = s.recurrenceCron ? chalk.dim(` recur="${s.recurrenceCron}"`) : '';
+        console.log(`  ${chalk.cyan(s.id)}  ${when}  ${chalk.yellow(s.status.padEnd(9))}  ${tag}${recur}  ${chalk.dim(s.content.slice(0, 50))}`);
       }
       return;
     }
@@ -2938,22 +2934,16 @@ async function resolveCliUserId() {
   if (!sessionCookie) {
     throw new Error('No Twitter session cookie found — run `xactions login` or set XACTIONS_SESSION_COOKIE');
   }
-  const { PrismaClient } = await import('@prisma/client');
-  const prisma = new PrismaClient();
-  try {
-    const existing = await prisma.user.findFirst({ where: { sessionCookie } });
-    if (existing) return existing.id;
-    // Provision a CLI-local user so scheduled tweets have a stable owner.
-    const username = `cli_${sessionCookie.slice(0, 8)}`;
-    const user = await prisma.user.upsert({
-      where: { username },
-      update: { sessionCookie },
-      create: { username, sessionCookie, isGuest: true, authMethod: 'cli' },
-    });
-    return user.id;
-  } finally {
-    await prisma.$disconnect();
-  }
+  const existing = await prisma.user.findFirst({ where: { sessionCookie } });
+  if (existing) return existing.id;
+  // Provision a CLI-local user so scheduled tweets have a stable owner.
+  const username = `cli_${sessionCookie.slice(0, 8)}`;
+  const user = await prisma.user.upsert({
+    where: { username },
+    update: { sessionCookie },
+    create: { username, sessionCookie, isGuest: true, authMethod: 'cli' },
+  });
+  return user.id;
 }
 
 schedCmd.command('create').description('Schedule a tweet or thread for future publishing (EPS-2). Dry-run by default.')
@@ -2988,23 +2978,17 @@ schedCmd.command('create').description('Schedule a tweet or thread for future pu
 
 schedCmd.command('cancel <id>').description('Cancel a pending tweet schedule (EPS-2)').action(async (id) => {
   try {
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    try {
-      const claim = await prisma.schedule.updateMany({
-        where: { id, platform: 'twitter', status: 'pending' },
-        data: { status: 'cancelled' },
-      });
-      if (claim.count === 0) {
-        const existing = await prisma.schedule.findFirst({ where: { id, platform: 'twitter' }, select: { status: true } });
-        if (!existing) { console.error(chalk.red(`❌ Schedule ${id} not found`)); return; }
-        console.error(chalk.red(`❌ Cannot cancel schedule in status "${existing.status}" (only pending can be cancelled)`));
-        return;
-      }
-      console.log(chalk.green(`✅ Schedule ${id} cancelled`));
-    } finally {
-      await prisma.$disconnect();
+    const claim = await prisma.schedule.updateMany({
+      where: { id, platform: 'twitter', status: 'pending' },
+      data: { status: 'cancelled' },
+    });
+    if (claim.count === 0) {
+      const existing = await prisma.schedule.findFirst({ where: { id, platform: 'twitter' }, select: { status: true } });
+      if (!existing) { console.error(chalk.red(`❌ Schedule ${id} not found`)); return; }
+      console.error(chalk.red(`❌ Cannot cancel schedule in status "${existing.status}" (only pending can be cancelled)`));
+      return;
     }
+    console.log(chalk.green(`✅ Schedule ${id} cancelled`));
   } catch (error) { console.error(chalk.red(`❌ ${error.message}`)); }
 });
 

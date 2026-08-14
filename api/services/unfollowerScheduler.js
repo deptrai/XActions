@@ -1,4 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+import prisma from '../lib/prisma.js';
 /**
  * Unfollower Scan Scheduler
  * 
@@ -18,12 +20,8 @@
  * @author nichxbt
  */
 
-import { PrismaClient } from '@prisma/client';
 import { runFollowerScan } from './followerScanner.js';
 import { checkAndAlert, getDueSchedules, markScheduleExecuted } from './unfollowerAlerts.js';
-
-const prisma = new PrismaClient();
-
 let schedulerInterval = null;
 const POLL_INTERVAL = 60 * 1000; // Check every 60 seconds
 let isProcessing = false;

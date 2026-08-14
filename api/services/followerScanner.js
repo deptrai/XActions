@@ -1,4 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+import prisma from '../lib/prisma.js';
 /**
  * Follower Scanner Service
  * 
@@ -10,11 +12,7 @@
  * @author nichxbt
  */
 
-import { PrismaClient } from '@prisma/client';
 import { scrapeFollowers } from './browserAutomation.js';
-
-const prisma = new PrismaClient();
-
 /**
  * Run a full follower scan for a user
  * @param {string} userId - XActions user ID

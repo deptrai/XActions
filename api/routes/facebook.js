@@ -1,14 +1,11 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 // by nichxbt
+import prisma from '../lib/prisma.js';
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
-import { PrismaClient } from '@prisma/client';
 import { resolveAccountCookie } from './facebookAccounts.js';
 import { resolve as resolveFacebookAuth } from '../services/facebookAuth.js';
 import { buildUserDataDir } from '../services/facebookAutomation.js';
-
-const prisma = new PrismaClient();
-
 const router = express.Router();
 router.use(authMiddleware);
 

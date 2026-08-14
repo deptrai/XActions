@@ -1,4 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+
+import prisma from '../lib/prisma.js';
 /**
  * Facebook Account Storage API (Story 5.5 — AC2, AC9)
  *
@@ -16,13 +18,10 @@
 
 import express from 'express';
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth.js';
 import { parseFlatProxy } from '../../src/scrapers/facebook/proxy.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
-
 // ============================================================================
 // Encryption helpers — same AES-256-GCM pattern as session-auth.js
 // ============================================================================

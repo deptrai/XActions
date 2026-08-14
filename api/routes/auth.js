@@ -1,13 +1,11 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+import prisma from '../lib/prisma.js';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import { body, validationResult } from 'express-validator';
 
 const router = express.Router();
-const prisma = new PrismaClient();
-
 // Register new user (email optional)
 router.post('/register',
   [

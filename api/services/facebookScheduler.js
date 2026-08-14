@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 // by nichxbt
 
+import prisma from '../lib/prisma.js';
 import cron from 'node-cron';
-import { PrismaClient } from '@prisma/client';
 import { resolveAccountCookie } from '../routes/facebookAccounts.js';
 import {
   createBrowser,
@@ -11,9 +11,6 @@ import {
   createFacebookPost,
   buildUserDataDir,
 } from './facebookAutomation.js';
-
-const prisma = new PrismaClient();
-
 const THROUGHPUT_WINDOW_MS = 3_600_000; // 1 hour
 const THROUGHPUT_CAP = 5;             // NFR-9 / NFR10: ≤5 executed/hour/user
 const JITTER_MIN_MS = 5 * 60 * 1000;  // 5 min
