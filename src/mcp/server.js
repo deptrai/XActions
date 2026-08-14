@@ -1606,6 +1606,82 @@ const TOOLS = [
       ],
     },
   },
+  // ====== Facebook Epic 7 Scrape Tools (Story 7.4) ======
+  {
+    name: 'x_facebook_search',
+    description: 'Search Facebook posts, people, pages, or groups by keyword. type: "all" returns { posts, people, pages, groups }. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query keyword' },
+        type: { type: 'string', enum: ['posts', 'people', 'pages', 'groups', 'all'], description: 'Search category (default: all)' },
+        location: { type: 'string', description: 'Location filter (max 200 chars)' },
+        limit: { type: 'number', description: 'Max results per type (positive integer, max 500)' },
+        parallel: { type: 'boolean', description: 'Fan out type:all across 4 accounts (default: false = sequential)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['query', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_post_comments',
+    description: 'Scrape comments from a Facebook post. Supports nested replies with includeReplies:true. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Facebook post permalink URL' },
+        limit: { type: 'number', description: 'Max comments to return (positive integer, max 500)' },
+        includeReplies: { type: 'boolean', description: 'Include nested replies (default: false)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_group_posts',
+    description: 'Scrape posts from a Facebook group. Uses mobile UA for headless compatibility. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'facebook.com/groups/... URL' },
+        limit: { type: 'number', description: 'Max posts to return (positive integer, max 500)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_group_comments',
+    description: 'Scrape comments from a post inside a Facebook group. URL must contain facebook.com/groups/. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Group post permalink URL (must contain facebook.com/groups/)' },
+        limit: { type: 'number', description: 'Max comments to return (positive integer, max 500)' },
+        includeReplies: { type: 'boolean', description: 'Include nested replies (default: false)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_posts',
+    description: 'Scrape posts from a Facebook profile or page. Thin wrapper equivalent to x_scrape with platform:facebook, action:posts. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Facebook profile or page URL' },
+        limit: { type: 'number', description: 'Max posts to return (positive integer, max 500)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'authCookie'],
+    },
+  },
   // ====== Social Graph ======
   {
     name: 'x_graph_build',
@@ -2666,6 +2742,18 @@ async function executeTool(name, args) {
     return await executeFacebookListAccounts(args);
   }
 
+  // Handle Facebook Epic 7 scrape tools (Story 7.4) — route through FacebookScrapeService
+  const EPIC7_SCRAPE_TOOLS = new Set([
+    'x_facebook_search',
+    'x_facebook_post_comments',
+    'x_facebook_group_posts',
+    'x_facebook_group_comments',
+    'x_facebook_posts',
+  ]);
+  if (EPIC7_SCRAPE_TOOLS.has(name)) {
+    return await executeFacebookScrapeTool(name, args);
+  }
+
   // Handle Facebook Epic 4 growth automation tools
   if (name.startsWith('x_facebook_') && name !== 'x_facebook_automate') {
     return await executeFacebookEpic4Tool(name, args);
@@ -3043,6 +3131,60 @@ async function executeFacebookEpic4Tool(name, args) {
   }
 
   throw new Error(`❌ executeFacebookEpic4Tool: unhandled tool name "${name}"`);
+}
+
+/**
+ * Execute Facebook Epic 7 scrape tool (Story 7.4).
+ * Routes through FacebookScrapeService — single source of truth for API + MCP.
+ * No scraper logic is duplicated here; the service delegates to scrape().
+ *
+ * @param {string} name - Tool name (x_facebook_search, x_facebook_post_comments, etc.)
+ * @param {Object} args - Tool arguments including authCookie, dryRun, and action-specific params.
+ */
+async function executeFacebookScrapeTool(name, args) {
+  const { authCookie, dryRun, ...rest } = args;
+
+  const resolvedDryRun = dryRun === false ? false : true;
+
+  // All 5 scrape tools require authCookie (no anonymous path like marketplace).
+  if (!authCookie) {
+    throw new Error('❌ requires authCookie: provide { c_user, xs } or { accountId }');
+  }
+
+  // Resolve authCookie via FacebookAuthResolver (shared with API route).
+  const { resolve: resolveFacebookAuth } = await import('../../api/services/facebookAuth.js');
+  const resolved = await resolveFacebookAuth(authCookie);
+  const { c_user, xs } = resolved;
+
+  // Map tool name to scrape action.
+  const ACTION_MAP = {
+    x_facebook_search: 'search',
+    x_facebook_post_comments: 'post_comments',
+    x_facebook_group_posts: 'group_posts',
+    x_facebook_group_comments: 'group_comments',
+    x_facebook_posts: 'posts',
+  };
+  const action = ACTION_MAP[name];
+  if (!action) {
+    throw new Error(`❌ executeFacebookScrapeTool: unknown tool "${name}"`);
+  }
+
+  // Build scrape args — map MCP param names to scraper param names.
+  // `url` is the canonical param for post_comments/group_posts/group_comments/posts.
+  // `query` + `type` + `location` + `parallel` are search-specific.
+  const scrapeArgs = {
+    ...rest,
+    authCookie: { c_user, xs },
+    ...(resolved.userId && { userId: resolved.userId }),
+  };
+
+  if (resolvedDryRun) {
+    return { dryRun: true, platform: 'facebook', preview: { action, ...rest } };
+  }
+
+  // Route through FacebookScrapeService (single source of truth).
+  const { run } = await import('../../api/services/facebookScrape.js');
+  return await run(action, scrapeArgs);
 }
 
 /**
@@ -4941,4 +5083,4 @@ if (isEntryPoint()) {
 
 // Exported so the tool list can be inspected without starting a transport.
 // Also export Facebook automation tools for direct programmatic use.
-export { TOOLS, main, createMcpServer, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookListAccounts };
+export { TOOLS, main, createMcpServer, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts };

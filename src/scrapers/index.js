@@ -238,6 +238,18 @@ export async function scrape(platform, action, options = {}) {
       // (previously set after login → a login failure leaked the Chromium process).
       page.__xactions_browser = browser;
 
+      // Authenticate proxy before login so the proxy tunnel is established first.
+      // Story 7.4 AC3: page.authenticate(proxyAuth) after createPage, before loginWithCookie.
+      const proxyAuth = options.browserOptions?.proxyAuth;
+      if (proxyAuth && typeof page.authenticate === 'function') {
+        try {
+          await page.authenticate(proxyAuth);
+        } catch (err) {
+          await browser.close().catch(() => {});
+          throw new Error(`❌ Proxy authentication failed: ${err?.message || 'unknown error'}`);
+        }
+      }
+
       try {
         // Login if auth token provided (Twitter string path — unchanged)
         if (options.authToken && mod.loginWithCookie) {

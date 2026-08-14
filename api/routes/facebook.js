@@ -4,6 +4,7 @@ import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { PrismaClient } from '@prisma/client';
 import { resolveAccountCookie } from './facebookAccounts.js';
+import { resolve as resolveFacebookAuth } from '../services/facebookAuth.js';
 import { buildUserDataDir } from '../services/facebookAutomation.js';
 
 const prisma = new PrismaClient();
@@ -108,12 +109,14 @@ async function resolveScrapeCookie(userId, authCookie, accountIds) {
 
   const accountId = authCookie?.accountId;
   if (accountId && accountId !== 'auto') {
-    return { label: String(accountId), cookie: await resolveAccountCookie(userId, accountId) };
+    const resolved = await resolveFacebookAuth({ accountId }, userId);
+    return { label: String(accountId), cookie: { c_user: resolved.c_user, xs: resolved.xs } };
   }
 
   if (Array.isArray(accountIds) && accountIds.length > 0) {
     const first = accountIds[0];
-    return { label: String(first), cookie: await resolveAccountCookie(userId, first) };
+    const resolved = await resolveFacebookAuth({ accountId: first }, userId);
+    return { label: String(first), cookie: { c_user: resolved.c_user, xs: resolved.xs } };
   }
 
   // Auto-pick a live, recently-verified stored account.
@@ -129,7 +132,10 @@ async function resolveScrapeCookie(userId, authCookie, accountIds) {
     err.code = 'NO_ACTIVE_ACCOUNT';
     throw err;
   }
-  return { label: activeHealth.account.label, cookie: await resolveAccountCookie(userId, activeHealth.account.id) };
+  return { label: activeHealth.account.label, cookie: await (async () => {
+    const resolved = await resolveFacebookAuth({ accountId: activeHealth.account.id }, userId);
+    return { c_user: resolved.c_user, xs: resolved.xs };
+  })() };
 }
 
 /**
@@ -298,7 +304,7 @@ router.post('/scrape', async (req, res) => {
     }
 
     // Dynamic import — avoids loading Puppeteer until needed
-    const { scrape } = await import('../../src/scrapers/index.js');
+    const { run: facebookScrapeRun } = await import('../services/facebookScrape.js');
 
     const options = {
       userId: req.user.id,
@@ -329,7 +335,7 @@ router.post('/scrape', async (req, res) => {
         ? { includeReplies }
         : {}),
     };
-    const result = await scrape('facebook', action, scrapeArgs);
+    const result = await facebookScrapeRun(action, scrapeArgs);
 
     res.json({ ok: true, action, result });
   } catch (error) {
