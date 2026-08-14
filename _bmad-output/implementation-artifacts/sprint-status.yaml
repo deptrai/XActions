@@ -36,13 +36,13 @@ development_status:
   epic-2-retrospective: optional
 
   # Epic 3: Facebook Multi-Surface & Persistence
-  epic-3: in-progress
+  epic-3: done
   3-1-cli-platform: done
   3-2-mcp-facebook: done
   3-2-1-facebook-mcp-tool-surface-extension: done
   3-3-rest-api: done
   3-4-operation-persistence: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   # Epic 4: Facebook Growth Automation
   epic-4: done
