@@ -34,7 +34,7 @@
 
 ```bash
 # Via CLI
-xactions a2a start --port 3100
+node src/a2a/server.js
 
 # Directly
 node src/a2a/server.js
@@ -76,14 +76,16 @@ curl -X POST http://localhost:3100/a2a/tasks \
 ### Discover an agent
 
 ```bash
-xactions a2a discover https://other-agent.example.com
+curl -X POST http://localhost:3100/a2a/agents/discover \
+  -H 'Content-Type: application/json' \
+  -d '{"url": "https://other-agent.example.com"}'
 ```
 
 ### List skills
 
 ```bash
-xactions a2a skills
-xactions a2a skills --query "scrape"
+curl http://localhost:3100/a2a/skills
+curl 'http://localhost:3100/a2a/skills?query=scrape'
 ```
 
 ## Architecture
@@ -121,7 +123,7 @@ xactions a2a skills --query "scrape"
 Every A2A agent publishes a JSON document at `/.well-known/agent.json` describing its capabilities, skills, and supported protocols.
 
 ### Skills
-XActions converts its 140+ MCP tools into A2A skills, each with a unique ID (`xactions.<tool_name>`), description, input schema, and category tags.
+XActions converts its 145 MCP tools into A2A skills, each with a unique ID (`xactions.<tool_name>`), description, input schema, and category tags.
 
 ### Task Lifecycle
 ```
@@ -154,13 +156,32 @@ Complex natural-language tasks are automatically broken into ordered sub-tasks w
 | GET | `/a2a/agents` | List discovered agents |
 | POST | `/a2a/agents/discover` | Discover remote agents |
 
-## CLI Commands
+## Running and driving the server
 
+The CLI has no A2A subcommand. The A2A agent is an HTTP server, and every
+operation is one of the endpoints in the table above.
+
+```bash
+# Start it (defaults to port 3100)
+node src/a2a/server.js
+
+# Or on another port, with a session attached
+A2A_PORT=3200 XACTIONS_SESSION_COOKIE=your_auth_token node src/a2a/server.js
 ```
-xactions a2a start [--port] [--cookie] [--no-auth]
-xactions a2a status [--url]
-xactions a2a skills [--query]
-xactions a2a agents [--url]
-xactions a2a discover <url>
-xactions a2a task "<description>"
+
+```bash
+# Is it up?
+curl http://localhost:3100/a2a/health
+
+# What can it do?
+curl http://localhost:3100/.well-known/agent.json
+curl 'http://localhost:3100/a2a/skills?query=scrape'
+
+# Which other agents does it know about?
+curl http://localhost:3100/a2a/agents
+
+# Give it a task
+curl -X POST http://localhost:3100/a2a/orchestrate \
+  -H 'Content-Type: application/json' \
+  -d '{"task": "Scrape the profile of @nasa and summarise it"}'
 ```

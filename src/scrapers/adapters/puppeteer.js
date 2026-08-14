@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Scraper Adapter — Puppeteer
  * 
@@ -50,7 +50,6 @@ export class PuppeteerAdapter extends BaseAdapter {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-blink-features=AutomationControlled',
-        '--disable-web-security',
         ...(options.args || []),
       ],
       ...(options.proxy ? { args: [...(options.args || []), `--proxy-server=${options.proxy.server}`] } : {}),

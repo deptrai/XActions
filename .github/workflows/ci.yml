@@ -111,6 +111,28 @@ jobs:
       - name: Syntax check (MCP)
         run: node -c src/mcp/server.js
 
+      - name: Syntax check (examples)
+        run: for f in examples/*.js; do node -c "$f"; done
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Needs no dependencies: the auditor is dependency-free by design so a
+      # broken link fails in seconds rather than after a full install.
+      - name: Audit documentation
+        run: npm run docs:check
+
   docker:
     name: Docker Build
     runs-on: ubuntu-latest

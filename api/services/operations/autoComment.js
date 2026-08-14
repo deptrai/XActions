@@ -1,9 +1,6 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
-import { PrismaClient } from '@prisma/client';
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+import prisma from '../../lib/prisma.js';
 import { getTwitterClient } from '../../routes/twitter.js';
-
-const prisma = new PrismaClient();
-
 /**
  * Auto-comment on tweets matching search criteria or from target users
  * Uses Twitter API when OAuth tokens available

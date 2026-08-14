@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -82,6 +82,8 @@ import a2aRoutes from './routes/a2a.js';
 import facebookRoutes from './routes/facebook.js';
 import facebookAccountsRoutes from './routes/facebookAccounts.js';
 import { startFacebookScheduler } from './services/facebookScheduler.js';
+import tweetScheduleRoutes from './routes/tweetSchedule.js';
+import { startTweetScheduler } from './services/tweetScheduler.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
@@ -336,6 +338,7 @@ app.use('/api/agent', agentRoutes);
 // Competitive feature routes (09-A through 09-P)
 app.use('/api/analytics', historyRoutes); // history, growth, overlap endpoints augment existing analytics
 app.use('/api/schedule', scheduleRoutes);
+app.use('/api/tweet-schedule', tweetScheduleRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/datasets', datasetsRoutes);
 app.use('/api/notifications', notificationsRoutes);
@@ -544,6 +547,10 @@ app.get('/price-correlation', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/price-correlation.html'));
 });
 
+app.get('/facebook', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/facebook.html'));
+});
+
 // Error handling middleware — never expose stack traces or internal details in production
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled error:', err.message);
@@ -607,6 +614,14 @@ httpServer.listen(PORT, async () => {
   // it (tests / a dedicated-scheduler deployment).
   if (process.env.ENABLE_FB_SCHEDULER !== 'false') {
     startFacebookScheduler();
+  }
+
+  // Start Tweet scheduler (EPS-2) — same in-process pattern as the Facebook scheduler:
+  // 1-minute node-cron tick, ±2-min SLA, per-user ≤5/hour throughput cap with jitter,
+  // atomic pending→running claim, stale-running sweep on startup. ENABLE_TWEET_SCHEDULER=false
+  // disables it (tests / a dedicated-scheduler deployment).
+  if (process.env.ENABLE_TWEET_SCHEDULER !== 'false') {
+    startTweetScheduler();
   }
 });
 

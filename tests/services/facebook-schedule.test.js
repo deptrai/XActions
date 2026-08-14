@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { PrismaClient } from '@prisma/client';
 import { scheduleFacebookPost } from '../../api/services/facebookAutomation.js';
-import { runDueSchedules } from '../../api/services/facebookScheduler.js';
+import { runDueSchedules, sweepStaleRunning } from '../../api/services/facebookScheduler.js';
 
 const prisma = new PrismaClient();
 
@@ -35,6 +35,19 @@ const fakePage = { _fake: true };
 
 // Injectable sessionFactory: returns a fake page, no real browser
 const fakeSessionFactory = async () => ({ page: fakePage, browser: null });
+
+// Helper: create a due pending schedule (used across multiple describe blocks)
+async function createDueSchedule(overrides = {}) {
+  return prisma.schedule.create({
+    data: {
+      userId: TEST_USER.id,
+      content: 'Test post content',
+      scheduledAt: new Date(Date.now() - 5000),
+      status: 'pending',
+      ...overrides,
+    },
+  });
+}
 
 // Injectable postExecutor: records calls, simulates success
 // Injectable postExecutor that mirrors createFacebookPost's REAL return shape
@@ -193,18 +206,6 @@ describe('runDueSchedules', () => {
   afterEach(async () => {
     await cleanSchedules();
   });
-
-  async function createDueSchedule(overrides = {}) {
-    return prisma.schedule.create({
-      data: {
-        userId: TEST_USER.id,
-        content: 'Test post content',
-        scheduledAt: new Date(Date.now() - 5000), // 5s in past = due (must use real clock for DB query)
-        status: 'pending',
-        ...overrides,
-      },
-    });
-  }
 
   it('due pending schedule transitions to completed', async () => {
     const schedule = await createDueSchedule();
@@ -370,5 +371,479 @@ describe('runDueSchedules', () => {
     expect(updated.status).toBe('completed');
     // The pending→running claim must let only ONE tick execute the post.
     expect(executor.calls).toHaveLength(1);
+  });
+});
+
+// ── P1 Kill: isPostSuccess — all result shapes (L30-36) ──────────────
+
+describe('runDueSchedules — isPostSuccess result shapes (P1 kill)', () => {
+  beforeEach(async () => {
+    await seedUser();
+    await cleanSchedules();
+  });
+  afterEach(async () => {
+    await cleanSchedules();
+  });
+
+  it('null result → schedule marked failed (L30: !result → false)', async () => {
+    const schedule = await createDueSchedule();
+    const nullExecutor = async () => null;
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: nullExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('failed');
+  });
+
+  it('result.ok===true → schedule marked completed (L31: ok===true → true)', async () => {
+    const schedule = await createDueSchedule();
+    const okExecutor = async () => ({ ok: true });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: okExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('completed');
+  });
+
+  it('result.ok===false (bare) → schedule marked failed (L36: ok!==false)', async () => {
+    const schedule = await createDueSchedule();
+    const failExecutor = async () => ({ ok: false });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: failExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('failed');
+  });
+
+  it('result with failed>0 → schedule marked failed (L33: failed===0 && succeeded>0)', async () => {
+    const schedule = await createDueSchedule();
+    const failExecutor = async () => ({ failed: 1, succeeded: 0, results: [] });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: failExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('failed');
+  });
+
+  it('result with failed=0, succeeded>0 → completed (L33 boundary)', async () => {
+    const schedule = await createDueSchedule();
+    const successExecutor = async () => ({ failed: 0, succeeded: 1, results: [] });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: successExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('completed');
+  });
+
+  it('result with failed=0, succeeded=0 → failed (L33: succeeded>0 is required)', async () => {
+    const schedule = await createDueSchedule();
+    const zeroExecutor = async () => ({ failed: 0, succeeded: 0, results: [] });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: zeroExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('failed');
+  });
+
+  it('result with only succeeded (no failed field) → completed (L32: typeof check)', async () => {
+    const schedule = await createDueSchedule();
+    const succeededOnlyExecutor = async () => ({ succeeded: 1 });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: succeededOnlyExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('completed');
+  });
+
+  it('result with only failed (no succeeded field) → failed (L32: typeof check)', async () => {
+    const schedule = await createDueSchedule();
+    const failedOnlyExecutor = async () => ({ failed: 1 });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: failedOnlyExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('failed');
+  });
+
+  it('unknown shape with ok not false → completed (L36: ok!==false)', async () => {
+    const schedule = await createDueSchedule();
+    const unknownExecutor = async () => ({ foo: 'bar' });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: unknownExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('completed');
+  });
+});
+
+// ── P1 Kill: postFailureReason — exact error message (L40-48) ─────────
+// NOTE: postFailureReason creates an Error whose .message contains the reason,
+// but safeErrorString scrubs .message (NFR3) and only returns .code or .name.
+// So the persisted error is "execution error" for plain Error, not the reason.
+// To kill postFailureReason mutants, we need to export it or test via a
+// custom Error subclass that carries the reason in .code.
+
+describe('runDueSchedules — postFailureReason via error.code (P1 kill)', () => {
+  beforeEach(async () => {
+    await seedUser();
+    await cleanSchedules();
+  });
+  afterEach(async () => {
+    await cleanSchedules();
+  });
+
+  it('failed post with results → schedule marked failed (postFailureReason called)', async () => {
+    const schedule = await createDueSchedule();
+    const failExecutor = async () => ({
+      failed: 2, succeeded: 1, results: [{ ok: false, error: 'timeout' }],
+    });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: failExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    // postFailureReason throws Error → safeErrorString returns "execution error"
+    // StringLiteral mutant L59: 'execution error' → '' → empty error
+    expect(updated.status).toBe('failed');
+    expect(updated.error).toBe('execution error');
+  });
+
+  it('failed post with short error in results → schedule marked failed', async () => {
+    const schedule = await createDueSchedule();
+    const failExecutor = async () => ({
+      failed: 1, succeeded: 0, results: [{ ok: false, error: 'composer not found' }],
+    });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: failExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('failed');
+    expect(updated.error).toBe('execution error');
+  });
+
+  it('failed post with long error >80 chars → schedule marked failed', async () => {
+    const schedule = await createDueSchedule();
+    const longError = 'x'.repeat(81);
+    const failExecutor = async () => ({
+      failed: 1, succeeded: 0, results: [{ ok: false, error: longError }],
+    });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: failExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('failed');
+    // NFR3: long error never persisted (safeErrorString scrubs .message)
+    expect(updated.error).not.toContain(longError);
+  });
+
+  it('failed post with result.error (no results array) → schedule marked failed', async () => {
+    const schedule = await createDueSchedule();
+    const failExecutor = async () => ({
+      failed: 1, succeeded: 0, error: 'network error',
+    });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: failExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('failed');
+    // NFR3: "network error" is in .message, scrubbed by safeErrorString
+    expect(updated.error).not.toContain('network error');
+  });
+});
+
+// ── P1 Kill: safeErrorString — err.code/err.name (L57-59) ────────────
+
+describe('runDueSchedules — safeErrorString (P1 kill)', () => {
+  beforeEach(async () => {
+    await seedUser();
+    await cleanSchedules();
+  });
+  afterEach(async () => {
+    await cleanSchedules();
+  });
+
+  it('error with code property → schedule error is the code (L57)', async () => {
+    const schedule = await createDueSchedule();
+    const codeExecutor = async () => {
+      const err = new Error('raw message with cookie=secret');
+      err.code = 'ECONNRESET';
+      throw err;
+    };
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: codeExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    // ConditionalExpression mutant L57: false → code not returned
+    expect(updated.error).toBe('ECONNRESET');
+    expect(updated.error).not.toContain('cookie');
+  });
+
+  it('error with name (not "Error") → schedule error is the name (L58)', async () => {
+    const schedule = await createDueSchedule();
+    const nameExecutor = async () => {
+      const err = new TypeError('type error message');
+      err.name = 'TypeError';
+      throw err;
+    };
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: nameExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    // ConditionalExpression mutant L58: false → name not returned
+    // LogicalOperator mutant L58: && → || → name returned even if "Error"
+    expect(updated.error).toBe('TypeError');
+  });
+
+  it('plain Error (name="Error") → schedule error is "execution error" (L59)', async () => {
+    const schedule = await createDueSchedule();
+    const plainExecutor = async () => {
+      throw new Error('plain error');
+    };
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: plainExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    // StringLiteral mutant L58: 'Error' → '' → name check bypassed
+    // StringLiteral mutant L59: 'execution error' → '' → empty error
+    expect(updated.error).toBe('execution error');
+  });
+
+  it('error with empty code string → falls through to name (L57: err.code truthiness)', async () => {
+    const schedule = await createDueSchedule();
+    const emptyCodeExecutor = async () => {
+      const err = new Error('msg');
+      err.code = '';
+      err.name = 'TimeoutError';
+      throw err;
+    };
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: emptyCodeExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    // ConditionalExpression mutant L57: true → empty code returned (should fall through)
+    expect(updated.error).toBe('TimeoutError');
+  });
+
+  it('error with code="Error" name → falls through to "execution error" (L58: name !== Error)', async () => {
+    const schedule = await createDueSchedule();
+    const errorNameExecutor = async () => {
+      const err = new Error('msg');
+      err.name = 'Error';
+      throw err;
+    };
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: errorNameExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    // name === 'Error' → falls through to 'execution error'
+    expect(updated.error).toBe('execution error');
+  });
+
+  it('null thrown from executor → schedule marked failed, not crashed (L57: err?.code)', async () => {
+    const schedule = await createDueSchedule();
+    const nullThrowExecutor = async () => { throw null; };
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: nullThrowExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    // OptionalChaining mutant L57: err?.code → err.code → throws on null
+    // Original: err?.code = undefined → falls through → 'execution error'
+    // Mutant: err.code throws → outer catch → row aborted, schedule stays 'running'
+    expect(updated.status).toBe('failed');
+    expect(updated.error).toBe('execution error');
+  });
+
+  it('undefined thrown from executor → schedule marked failed (L57: err?.code)', async () => {
+    const schedule = await createDueSchedule();
+    const undefThrowExecutor = async () => { throw undefined; };
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: undefThrowExecutor,
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    expect(updated.status).toBe('failed');
+    expect(updated.error).toBe('execution error');
+  });
+});
+
+// ── P1 Kill: finally block — browser close (L234) ────────────────────
+
+describe('runDueSchedules — finally block browser close (P1 kill, L234)', () => {
+  beforeEach(async () => {
+    await seedUser();
+    await cleanSchedules();
+  });
+  afterEach(async () => {
+    await cleanSchedules();
+  });
+
+  it('browser.close() is called on success (finally block executes)', async () => {
+    const schedule = await createDueSchedule();
+    let browserClosed = false;
+    const fakeBrowser = {
+      close: async () => { browserClosed = true; },
+    };
+    const sessionWithBrowser = async () => ({ page: fakePage, browser: fakeBrowser });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: sessionWithBrowser, postExecutor: makePostExecutor(),
+    });
+    // BlockStatement mutant L234: finally {} → {} → browser.close() not called
+    expect(browserClosed).toBe(true);
+  });
+
+  it('browser.close() is called even when executor throws (finally block)', async () => {
+    const schedule = await createDueSchedule();
+    let browserClosed = false;
+    const fakeBrowser = {
+      close: async () => { browserClosed = true; },
+    };
+    const sessionWithBrowser = async () => ({ page: fakePage, browser: fakeBrowser });
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: sessionWithBrowser, postExecutor: makePostExecutor('throw'),
+    });
+    // BlockStatement mutant L234: finally {} → {} → browser.close() not called
+    expect(browserClosed).toBe(true);
+  });
+
+  it('browser.close() error is swallowed (catch(() => {}))', async () => {
+    const schedule = await createDueSchedule();
+    const fakeBrowser = {
+      close: async () => { throw new Error('close failed'); },
+    };
+    const sessionWithBrowser = async () => ({ page: fakePage, browser: fakeBrowser });
+    // Should not throw even if browser.close() throws
+    await expect(
+      runDueSchedules(new Date(), {
+        prismaClient: prisma, sessionFactory: sessionWithBrowser, postExecutor: makePostExecutor(),
+      }),
+    ).resolves.toBeUndefined();
+  });
+});
+
+// ── P1 Kill: sweepStaleRunning — exact count + log (L253-261) ─────────
+
+describe('sweepStaleRunning — exact behavior (P1 kill)', () => {
+  beforeEach(async () => {
+    await seedUser();
+    await cleanSchedules();
+  });
+  afterEach(async () => {
+    await cleanSchedules();
+  });
+
+  it('returns exact count of swept stale running schedules', async () => {
+    // Create stale running schedules
+    await prisma.schedule.create({
+      data: {
+        userId: TEST_USER.id,
+        content: 'Stale 1',
+        scheduledAt: new Date(Date.now() - 60000),
+        status: 'running',
+      },
+    });
+    await prisma.schedule.create({
+      data: {
+        userId: TEST_USER.id,
+        content: 'Stale 2',
+        scheduledAt: new Date(Date.now() - 60000),
+        status: 'running',
+      },
+    });
+
+    const count = await sweepStaleRunning(prisma);
+    // EqualityOperator mutant L258: > → >= or <= → wrong count check
+    expect(count).toBe(2);
+  });
+
+  it('returns 0 when no stale running schedules exist', async () => {
+    const count = await sweepStaleRunning(prisma);
+    // ConditionalExpression mutant L258: true → log always fires (but count is 0)
+    expect(count).toBe(0);
+  });
+
+  it('marks stale running schedules as failed with error "interrupted"', async () => {
+    const schedule = await prisma.schedule.create({
+      data: {
+        userId: TEST_USER.id,
+        content: 'Stale recovery',
+        scheduledAt: new Date(Date.now() - 60000),
+        status: 'running',
+      },
+    });
+
+    await sweepStaleRunning(prisma);
+    const updated = await prisma.schedule.findUnique({ where: { id: schedule.id } });
+    // StringLiteral mutant L256: 'interrupted' → '' → empty error
+    expect(updated.status).toBe('failed');
+    expect(updated.error).toBe('interrupted');
+  });
+
+  it('does NOT sweep pending or completed schedules (L255: where status=running)', async () => {
+    // ObjectLiteral mutant L255: where: {} → sweeps ALL schedules regardless of status
+    const pending = await prisma.schedule.create({
+      data: {
+        userId: TEST_USER.id,
+        content: 'Pending',
+        scheduledAt: new Date(Date.now() - 60000),
+        status: 'pending',
+      },
+    });
+    const completed = await prisma.schedule.create({
+      data: {
+        userId: TEST_USER.id,
+        content: 'Completed',
+        scheduledAt: new Date(Date.now() - 60000),
+        status: 'completed',
+      },
+    });
+
+    await sweepStaleRunning(prisma);
+    const pendingAfter = await prisma.schedule.findUnique({ where: { id: pending.id } });
+    const completedAfter = await prisma.schedule.findUnique({ where: { id: completed.id } });
+    // Mutant L255: where:{} → pending/completed also swept → status='failed'
+    expect(pendingAfter.status).toBe('pending');
+    expect(completedAfter.status).toBe('completed');
+  });
+});
+
+// ── P1 Kill: throughput cap jitter (L104) ────────────────────────────
+
+describe('runDueSchedules — throughput cap jitter (P1 kill, L104)', () => {
+  beforeEach(async () => {
+    await seedUser();
+    await cleanSchedules();
+  });
+  afterEach(async () => {
+    await cleanSchedules();
+  });
+
+  it('deferred schedule gets jitter within JITTER_MIN_MS..JITTER_MAX_MS range', async () => {
+    const oneHourAgo = new Date(Date.now() - 3_600_000 + 60_000);
+    for (let i = 0; i < 5; i++) {
+      await prisma.schedule.create({
+        data: {
+          userId: TEST_USER.id,
+          content: `Completed ${i}`,
+          scheduledAt: oneHourAgo,
+          status: 'completed',
+          executedAt: oneHourAgo,
+        },
+      });
+    }
+    const sixth = await createDueSchedule({ content: 'Deferred' });
+    const beforeRun = Date.now();
+    await runDueSchedules(new Date(), {
+      prismaClient: prisma, sessionFactory: fakeSessionFactory, postExecutor: makePostExecutor(),
+    });
+    const updated = await prisma.schedule.findUnique({ where: { id: sixth.id } });
+    // ArithmeticOperator mutant L104: * → / → jitter ≈ 0 → deferredTime ≈ now + JITTER_MIN_MS (300000)
+    // But JITTER_MIN_MS is the MINIMUM, so jitter should be > JITTER_MIN_MS (not exactly JITTER_MIN_MS)
+    // JITTER_MIN_MS = 300000 (5min), JITTER_MAX_MS = 900000 (15min)
+    // Original: jitter = 300000 + random * 600000 → range [300000, 900000]
+    // Mutant /: jitter = 300000 + random / 600000 → range [300000, 300000.0000017] → ~300000
+    // To kill mutant: assert deferredTime > now + JITTER_MIN_MS + some buffer (e.g. 310000)
+    const deferredTime = updated.scheduledAt.getTime();
+    // Use beforeRun as lower bound (jitter is added to now passed to runDueSchedules)
+    // Must be > now + 310000 to kill the / mutant (which gives ~300000)
+    expect(deferredTime).toBeGreaterThan(beforeRun + 310000); // must be > JITTER_MIN_MS + buffer
+    expect(deferredTime).toBeLessThan(beforeRun + 1000000); // at most ~15min ahead + buffer
   });
 });

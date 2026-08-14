@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Scrapers — Unified Multi-Platform, Multi-Framework Interface
  * 
@@ -183,9 +183,25 @@ export async function scrape(platform, action, options = {}) {
     communityMembers: 'scrapeCommunityMembers',
     spaces: 'scrapeSpaces',
     feed: 'scrapeFeed',
+    'group-members': 'scrapeGroupMembers',
+    marketplace: 'scrapeMarketplace',
   };
 
-  const fnName = actionMap[action] || action;
+  // Platform-specific action map for Facebook (Story 7.2). Prefer this over the
+  // global actionMap so 'search' maps to 'searchFacebook' instead of 'searchTweets'.
+  const platformActionMap = {
+    facebook: {
+      search: 'searchFacebook',
+      post_comments: 'scrapeFacebookComments',
+      group_posts: 'scrapeFacebookGroupPosts',
+      group_comments: 'scrapeFacebookGroupComments',
+      group_search: 'scrapeFacebookGroupSearch',
+    },
+  };
+
+  const platformKey = platformName === 'fb' ? 'facebook' : platformName;
+  const platformSpecific = platformActionMap[platformKey]?.[action];
+  const fnName = platformSpecific || actionMap[action] || action;
   const fn = mod[fnName];
 
   if (typeof fn !== 'function') {
@@ -216,11 +232,23 @@ export async function scrape(platform, action, options = {}) {
     // Auto-create browser/page if not provided
     if (!page) {
       const browser = await mod.createBrowser(options.browserOptions || {});
-      page = await mod.createPage(browser);
+      page = await mod.createPage(browser, options.browserOptions || {});
 
       // Store browser ref BEFORE login so a login/goto throw still allows cleanup
       // (previously set after login → a login failure leaked the Chromium process).
       page.__xactions_browser = browser;
+
+      // Authenticate proxy before login so the proxy tunnel is established first.
+      // Story 7.4 AC3: page.authenticate(proxyAuth) after createPage, before loginWithCookie.
+      const proxyAuth = options.browserOptions?.proxyAuth;
+      if (proxyAuth && typeof page.authenticate === 'function') {
+        try {
+          await page.authenticate(proxyAuth);
+        } catch (err) {
+          await browser.close().catch(() => {});
+          throw new Error(`❌ Proxy authentication failed: ${err?.message || 'unknown error'}`);
+        }
+      }
 
       try {
         // Login if auth token provided (Twitter string path — unchanged)
@@ -228,7 +256,8 @@ export async function scrape(platform, action, options = {}) {
           await mod.loginWithCookie(page, options.authToken);
         } else if (options.authCookie && mod.loginWithCookie) {
           // Cookie-object path for Facebook ({ c_user, xs }) — additive, does not affect Twitter
-          await mod.loginWithCookie(page, options.authCookie);
+          // Pass browserOptions so loginWithCookie can respect headless/skipWarmup (Story 7.2 testing).
+          await mod.loginWithCookie(page, options.authCookie, options.browserOptions || {});
         }
       } catch (loginErr) {
         // Close the browser we created before re-throwing, else it leaks
@@ -237,8 +266,12 @@ export async function scrape(platform, action, options = {}) {
       }
     }
 
-    // Determine the second argument based on action
-    const target = options.username || options.query || options.hashtag || options.url || options.listUrl || options.communityUrl;
+    // Determine the second argument based on action.
+    // group_search needs url as target (query travels inside options);
+    // all other actions follow the existing priority chain.
+    const target = action === 'group_search'
+      ? options.url
+      : (options.username || options.query || options.hashtag || options.url || options.listUrl || options.communityUrl);
 
     // Actions that only take page + options (no target)
     const noTargetActions = ['scrapeBookmarks', 'scrapeNotifications', 'scrapeTrending'];

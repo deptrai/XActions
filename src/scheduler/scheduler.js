@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Local Scheduler
  * Cron-based task scheduler with job history and webhook triggers.
@@ -203,9 +203,11 @@ export class Scheduler extends EventEmitter {
   // ── Internal ──
 
   _registerJob(config) {
-    const task = cron.schedule(config.cron, () => {
+    // createTask, not schedule: node-cron 4 starts a scheduled task
+    // immediately, and jobs here must stay idle until start() is called.
+    const task = cron.createTask(config.cron, () => {
       this._executeJob(this.jobs.get(config.name));
-    }, { scheduled: false });
+    });
 
     this.jobs.set(config.name, {
       config,

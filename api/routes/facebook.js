@@ -1,14 +1,35 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 // by nichxbt
+import prisma from '../lib/prisma.js';
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
-import { PrismaClient } from '@prisma/client';
 import { resolveAccountCookie } from './facebookAccounts.js';
-
-const prisma = new PrismaClient();
-
+import { resolve as resolveFacebookAuth } from '../services/facebookAuth.js';
+import { buildUserDataDir } from '../services/facebookAutomation.js';
 const router = express.Router();
 router.use(authMiddleware);
+
+const C_USER_UID_RE = /^\d{10,20}$/;
+
+/**
+ * Validate the shape of a raw Facebook session cookie.
+ * Returns an error string if c_user/xs are provided and malformed, null if OK or not provided.
+ * c_user must be a numeric Facebook UID (10-20 digits) and xs must be non-empty.
+ * Cookie values are never logged (NFR3).
+ */
+function validateRawCookie(authCookie) {
+  const cUser = String(authCookie?.c_user ?? '').trim();
+  const xs = String(authCookie?.xs ?? '').trim();
+  // Not a raw cookie — nothing to validate.
+  if (!cUser && !xs) return null;
+  if (!C_USER_UID_RE.test(cUser)) {
+    return '❌ authCookie.c_user must be a numeric Facebook UID (10-20 digits).';
+  }
+  if (!xs) {
+    return '❌ A Facebook session is required: provide authCookie { c_user, xs }, authCookie.accountId, or accountIds[].';
+  }
+  return null;
+}
 
 /**
  * Validate Facebook auth presence: EITHER a stored account reference
@@ -24,6 +45,8 @@ function requireFacebookCookie(body) {
   }
   // Raw-cookie path. Coerce to string first — c_user is a numeric Facebook UID and may arrive as a
   // JSON number, which would crash on .trim() instead of giving a clean 400.
+  const cookieError = validateRawCookie(authCookie);
+  if (cookieError) return cookieError;
   const cUser = String(authCookie?.c_user ?? '').trim();
   const xs = String(authCookie?.xs ?? '').trim();
   if (!cUser || !xs) {
@@ -51,6 +74,65 @@ async function resolveRunAccounts(userId, body) {
     return [{ label: String(authCookie.accountId), cookie: await resolveAccountCookie(userId, authCookie.accountId) }];
   }
   return [{ label: 'raw', cookie: { c_user: authCookie.c_user, xs: authCookie.xs } }];
+}
+
+/**
+ * Resolve the single cookie used by /api/facebook/scrape.
+ * Priority:
+ *   1. Raw authCookie { c_user, xs }
+ *   2. authCookie.accountId (explicit stored account)
+ *   3. accountIds[] (use first for single-page scrape)
+ *   4. Auto-pick the most recently verified active stored account
+ *
+ * Cookie values are decrypted server-side and never logged (NFR3).
+ * @returns {Promise<{label: string, cookie: Object}>}
+ */
+async function resolveScrapeCookie(userId, authCookie, accountIds) {
+  const rawUser = String(authCookie?.c_user ?? '').trim();
+  const rawXs = String(authCookie?.xs ?? '').trim();
+  if (rawUser || rawXs) {
+    if (!rawUser || !/^\d{10,20}$/.test(rawUser)) {
+      const err = new Error('authCookie.c_user must be a numeric Facebook UID (10-20 digits).');
+      err.code = 'INVALID_RAW_COOKIE';
+      throw err;
+    }
+    if (!rawXs) {
+      const err = new Error('authCookie.xs is required when c_user is provided.');
+      err.code = 'INVALID_RAW_COOKIE';
+      throw err;
+    }
+    return { label: 'raw', cookie: authCookie };
+  }
+
+  const accountId = authCookie?.accountId;
+  if (accountId && accountId !== 'auto') {
+    const resolved = await resolveFacebookAuth({ accountId }, userId);
+    return { label: String(accountId), cookie: { c_user: resolved.c_user, xs: resolved.xs } };
+  }
+
+  if (Array.isArray(accountIds) && accountIds.length > 0) {
+    const first = accountIds[0];
+    const resolved = await resolveFacebookAuth({ accountId: first }, userId);
+    return { label: String(first), cookie: { c_user: resolved.c_user, xs: resolved.xs } };
+  }
+
+  // Auto-pick a live, recently-verified stored account.
+  const activeHealth = await prisma.facebookAccountHealth.findFirst({
+    where: { status: 'active', account: { userId } },
+    include: { account: { select: { id: true, label: true } } },
+    orderBy: { lastCheckAt: 'desc' },
+  });
+  if (!activeHealth) {
+    const err = new Error(
+      'No active Facebook account found. Provide authCookie { c_user, xs }, authCookie.accountId, accountIds[], or add a stored account and run a health check.',
+    );
+    err.code = 'NO_ACTIVE_ACCOUNT';
+    throw err;
+  }
+  return { label: activeHealth.account.label, cookie: await (async () => {
+    const resolved = await resolveFacebookAuth({ accountId: activeHealth.account.id }, userId);
+    return { c_user: resolved.c_user, xs: resolved.xs };
+  })() };
 }
 
 /**
@@ -83,7 +165,7 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
 
     let browser;
     try {
-      browser = await createBrowser({ headless: true });
+      browser = await createBrowser({ headless: true, userDataDir: buildUserDataDir(accounts[a].cookie.c_user, dryRun) });
       const page = await createPage(browser);
       await loginWithCookie(page, { c_user: accounts[a].cookie.c_user, xs: accounts[a].cookie.xs });
       for (const link of links) {
@@ -106,20 +188,27 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
 
 /**
  * POST /api/facebook/scrape
- * Scrape Facebook data: profile, posts, followers, or search.
+ * Scrape Facebook data: profile, posts, followers, search, or marketplace.
  *
  * Body: {
- *   action: 'profile' | 'posts' | 'followers' | 'search',
- *   url?: string,       // required for profile/posts/followers
- *   query?: string,     // required for search
- *   authCookie?: { c_user, xs }  // optional; enables authenticated scrape
+ *   action: 'profile' | 'posts' | 'followers' | 'search' | 'marketplace' | 'post_comments' | 'group_posts' | 'group_comments',
+ *   url?: string,       // required for profile/posts/followers/post_comments/group_posts/group_comments
+ *   query?: string,     // required for search / marketplace
+ *   type?: 'posts' | 'people' | 'pages' | 'groups' | 'all', // search only
+ *   parallel?: boolean, // search only, accepted and ignored in Story 7.2
+ *   location?: string,  // search only
+ *   limit?: number,     // positive integer
+ *   includeReplies?: boolean, // post_comments/group_comments only
+ *   authCookie?: { c_user, xs } | { accountId: string }, // optional; auto-picks active stored account if omitted
+ *   accountIds?: string[],                                 // optional; uses first for single-page scrape
+ *   browserOptions?: { proxy, proxyAuth, proxyLocation, headless, skipWarmup }
  * }
  */
 router.post('/scrape', async (req, res) => {
   try {
-    const { action, url, query, authCookie } = req.body ?? {};
+    const { action, url, query, type, parallel, location, limit, includeReplies, authCookie, browserOptions } = req.body ?? {};
 
-    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members'];
+    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace', 'post_comments', 'group_posts', 'group_comments', 'group_search'];
     if (!action || !VALID_ACTIONS.includes(action)) {
       return res.status(400).json({
         ok: false,
@@ -127,31 +216,123 @@ router.post('/scrape', async (req, res) => {
       });
     }
 
-    if (['profile', 'posts', 'followers', 'group-members'].includes(action) && !url?.trim()) {
+    if (['profile', 'posts', 'followers', 'group-members', 'post_comments', 'group_posts', 'group_comments', 'group_search'].includes(action) && !url?.trim()) {
       return res.status(400).json({ ok: false, error: `action "${action}" requires url` });
     }
-    if (action === 'search' && !query?.trim()) {
-      return res.status(400).json({ ok: false, error: 'action "search" requires query' });
+    if (['search', 'marketplace', 'group_search'].includes(action)) {
+      if (typeof query !== 'string' || !query.trim()) {
+        return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
+      }
+      if (query.length > 500) {
+        return res.status(400).json({ ok: false, error: 'query must be at most 500 characters' });
+      }
+    }
+
+    // group_search requires a facebook.com/groups/ URL — validate before browser launch.
+    if (action === 'group_search' && !/facebook\.com\/groups\//i.test(url)) {
+      return res.status(400).json({ ok: false, error: 'group_search requires a facebook.com/groups/ URL' });
+    }
+
+    if (action === 'search' && type !== undefined && type !== null) {
+      const VALID_TYPES = ['posts', 'people', 'pages', 'groups', 'all'];
+      if (!VALID_TYPES.includes(type)) {
+        return res.status(400).json({
+          ok: false,
+          error: `search type must be one of: ${VALID_TYPES.join(', ')}`,
+        });
+      }
+    }
+
+    // Validate optional numeric parameters before launching a browser.
+    if (limit !== undefined && limit !== null) {
+      const n = Number(limit);
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+        return res.status(400).json({ ok: false, error: 'limit must be a positive integer' });
+      }
+      if (n > 500) {
+        return res.status(400).json({ ok: false, error: 'limit must be at most 500' });
+      }
+    }
+
+    // Validate comment-only boolean parameter.
+    if (['post_comments', 'group_comments'].includes(action)) {
+      if (includeReplies !== undefined && includeReplies !== null && typeof includeReplies !== 'boolean') {
+        return res.status(400).json({ ok: false, error: 'includeReplies must be a boolean' });
+      }
+    }
+
+    if (action === 'search') {
+      if (location !== undefined && location !== null) {
+        if (typeof location !== 'string') {
+          return res.status(400).json({ ok: false, error: 'location must be a string' });
+        }
+        if (location.length > 200) {
+          return res.status(400).json({ ok: false, error: 'location must be at most 200 characters' });
+        }
+      }
+      if (parallel !== undefined && parallel !== null && typeof parallel !== 'boolean') {
+        return res.status(400).json({ ok: false, error: 'parallel must be a boolean' });
+      }
+    }
+
+    if (browserOptions !== undefined && browserOptions !== null && (typeof browserOptions !== 'object' || Array.isArray(browserOptions))) {
+      return res.status(400).json({ ok: false, error: 'browserOptions must be an object' });
+    }
+
+    // Resolve the session: raw cookie, stored accountId/accountIds, or auto-pick a live one.
+    let resolved;
+    try {
+      resolved = await resolveScrapeCookie(req.user.id, authCookie, req.body?.accountIds);
+    } catch (e) {
+      const code = e?.code;
+      if (code === 'INVALID_RAW_COOKIE') {
+        return res.status(400).json({ ok: false, error: e.message });
+      }
+      if (code === 'ACCOUNT_NOT_FOUND') {
+        return res.status(400).json({ ok: false, error: 'Selected Facebook account not found' });
+      }
+      if (code === 'ACCOUNT_DECRYPT_FAILED') {
+        return res.status(400).json({ ok: false, error: 'Failed to load the selected Facebook account session', sessionExpired: true });
+      }
+      if (code === 'NO_ACTIVE_ACCOUNT') {
+        return res.status(400).json({ ok: false, error: e.message });
+      }
+      throw e;
     }
 
     // Dynamic import — avoids loading Puppeteer until needed
-    const { scrape } = await import('../../src/scrapers/index.js');
+    const { run: facebookScrapeRun } = await import('../services/facebookScrape.js');
 
     const options = {
       userId: req.user.id,
-      // Only pass authCookie when both fields are present (never log values)
-      ...(authCookie?.c_user?.trim() && authCookie?.xs?.trim()
-        ? { authCookie: { c_user: authCookie.c_user, xs: authCookie.xs } }
-        : {}),
+      ...(browserOptions ? { browserOptions } : {}),
+      // Pass all cookie fields for full session auth (never log values).
+      authCookie: resolved.cookie,
     };
 
     // Dispatcher resolves target from options.url / options.query (NOT options.target).
     // Pass the keys it actually reads, else the target is silently dropped → scrape fails.
     const scrapeArgs = {
       ...options,
-      ...(action === 'search' ? { query: query.trim() } : { url: url.trim() }),
+      ...(action === 'search'
+        ? {
+            query: query.trim(),
+            ...(type !== undefined && type !== null && { type }),
+            ...(parallel !== undefined && parallel !== null && { parallel }),
+            ...(location !== undefined && location !== null && { location: location.trim() }),
+            ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
+          }
+        : action === 'marketplace'
+          ? { query: query.trim() }
+          : action === 'group_search'
+            ? { url: url.trim(), query: query.trim() }
+            : { url: url.trim() }),
+      ...(limit !== undefined && limit !== null ? { limit: Number(limit) } : {}),
+      ...(['post_comments', 'group_comments'].includes(action) && includeReplies !== undefined && includeReplies !== null
+        ? { includeReplies }
+        : {}),
     };
-    const result = await scrape('facebook', action, scrapeArgs);
+    const result = await facebookScrapeRun(action, scrapeArgs);
 
     res.json({ ok: true, action, result });
   } catch (error) {
@@ -188,7 +369,7 @@ router.post('/automate', async (req, res) => {
     const action = rawAction === 'messenger' ? 'messenger-share' : rawAction;
 
     const VALID_ACTIONS = [
-      'like', 'comment', 'post', 'messenger-share',
+      'like', 'comment', 'post', 'messenger-share', 'share-link-uid',
       'share', 'schedule',
       'join-groups', 'batch-post-groups',
       'send-friend-requests', 'cancel-friend-requests',
@@ -279,6 +460,9 @@ router.post('/automate', async (req, res) => {
     // Strict dryRun gate — only explicit false enables real writes
     const resolvedDryRun = dryRun === false ? false : true;
 
+    // headless mode: default true (invisible browser). Set false to show browser window.
+    const isHeadless = req.body?.headless !== false;
+
     // Per-user Socket.IO room — never broadcast operation events to all clients (NFR3 / privacy)
     const emit = (payload) => global.io?.to(`user:${req.user.id}`).emit('facebook:operation', payload);
 
@@ -308,10 +492,12 @@ router.post('/automate', async (req, res) => {
 
       const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
       const { messengerShareCampaign } = await import('../../src/scrapers/facebook/messengerShare.js');
+      // Wrap createBrowser to pass headless option
+      const createBrowserWithHeadless = (opts) => createBrowser({ ...opts, headless: isHeadless });
       const runArgs = {
         accounts, links: allLinks, recipients, content,
         dryRun: resolvedDryRun, maxBatch, delay: messengerDelay,
-        deps: { createBrowser, createPage, loginWithCookie, messengerShareCampaign },
+        deps: { createBrowser: createBrowserWithHeadless, createPage, loginWithCookie, messengerShareCampaign },
       };
 
       // Dry-run: no browser, no Operation row (mirrors generic dry-run short-circuit).
@@ -354,6 +540,94 @@ router.post('/automate', async (req, res) => {
       }
     }
 
+    // ========================================================================
+    // share-link-uid — share post via direct Messenger URL (UID-based)
+    // ========================================================================
+    if (action === 'share-link-uid') {
+      const { postUrl = '', postUrls = [], content = '', message = '', recipientUid = '', recipientUids = [], headless: headlessParam } = req.body ?? {};
+      const url = postUrl || postUrls[0] || '';
+      if (!url.trim()) {
+        return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires postUrl or postUrls[]' });
+      }
+
+      // Normalize recipients: single uid or array
+      const allRecipients = [
+        ...(recipientUid ? [recipientUid] : []),
+        ...(Array.isArray(recipientUids) ? recipientUids : []),
+      ];
+      if (allRecipients.length === 0) {
+        return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires recipientUid or recipientUids[]' });
+      }
+
+      // headless mode: default true (invisible browser). Set false to show browser window.
+      const isHeadless = headlessParam !== false;
+
+      // Dry-run: validate inputs, return preview without launching browser
+      if (resolvedDryRun) {
+        return res.json({
+          ok: true,
+          action,
+          dryRun: true,
+          userId: req.user.id,
+          operationId: null,
+          postUrl: url,
+          recipients: allRecipients,
+          recipientsCount: allRecipients.length,
+          content: content || message || '',
+          headless: isHeadless,
+          method: 'direct-messenger-url',
+        });
+      }
+
+      const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
+      const { shareLinkByUid } = await import('../../src/scrapers/facebook/shareLinkByUid.js');
+
+      const browser = await createBrowser({ headless: isHeadless, userDataDir: buildUserDataDir(authCookie.c_user) });
+      const page = await createPage(browser);
+      await loginWithCookie(page, {
+        c_user: authCookie.c_user,
+        xs: authCookie.xs,
+        sb: authCookie.sb,
+        datar: authCookie.datatar || authCookie.datar,
+        fr: authCookie.fr,
+        fbl_st: authCookie.fbl_st,
+        locale: authCookie.locale,
+        headless: isHeadless,
+      });
+
+      const results = [];
+      try {
+        for (const uid of allRecipients) {
+          const result = await shareLinkByUid(page, {
+            postUrl: url,
+            recipientUid: uid,
+            message: content || message,
+          }, {
+            dryRun: false,
+            headless: isHeadless,
+          });
+          results.push({ uid, ...result });
+        }
+        await browser.close().catch(() => {});
+        const successCount = results.filter((r) => r.ok).length;
+        return res.json({
+          ok: true,
+          action,
+          dryRun: false,
+          userId: req.user.id,
+          postUrl: url,
+          results,
+          successCount,
+          totalCount: allRecipients.length,
+          headless: isHeadless,
+          method: 'direct-messenger-url',
+        });
+      } catch (runError) {
+        await browser.close().catch(() => {});
+        return res.status(500).json({ ok: false, error: 'Share link by UID failed. See server logs.' });
+      }
+    }
+
     const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
     const {
       likeFacebookPosts,
@@ -384,23 +658,23 @@ router.post('/automate', async (req, res) => {
         return await scheduleFacebookPost(page, { content: text, scheduledAt, facebookAccountId }, { ...options, userId: req.user.id });
       }
       if (action === 'join-groups') {
-        const { groupUrls = [] } = req.body ?? {};
-        return await joinFacebookGroups(page, groupUrls, options);
+        const { groupUrls = [], keyword, limit } = req.body ?? {};
+        return await joinFacebookGroups(page, { groupUrls, keyword, limit }, options);
       }
       if (action === 'batch-post-groups') {
         const { groupUrls = [] } = req.body ?? {};
-        return await postToFacebookGroups(page, groupUrls, text, options);
+        return await postToFacebookGroups(page, { groupUrls, content: text }, options);
       }
       if (action === 'send-friend-requests') {
         const { targets = [] } = req.body ?? {};
-        return await sendFriendRequests(page, targets, options);
+        return await sendFriendRequests(page, { mode: 'uid_list', targets }, options);
       }
       if (action === 'cancel-friend-requests') {
-        const { olderThanDays, limit } = req.body ?? {};
+        const { olderThanDays, limit = 10 } = req.body ?? {};
         return await cancelPendingFriendRequests(page, {
           ...options,
           ...(olderThanDays != null && { olderThanDays: Number(olderThanDays) }),
-          ...(limit != null && { limit: Number(limit) }),
+          limit: Number(limit),
         });
       }
       if (action === 'warmup-account') {
@@ -424,7 +698,8 @@ router.post('/automate', async (req, res) => {
 
     // Dry-run never touches the DOM (runGuardedBatch skips actionFn) — no browser,
     // no real Facebook login, no Operation record. Avoids account risk for a preview.
-    if (resolvedDryRun) {
+    // Exception: cancel-friend-requests needs page access even in dryRun to collect pending requests.
+    if (resolvedDryRun && action !== 'cancel-friend-requests') {
       const result = await dispatch(null);
       return res.json({ ok: true, action, dryRun: true, userId: req.user.id, operationId: null, ...result });
     }
@@ -452,10 +727,18 @@ router.post('/automate', async (req, res) => {
     let browser;
     try {
       // createBrowser INSIDE try — else a launch failure orphans the Operation as 'running' forever
-      browser = await createBrowser({ headless: true });
+      browser = await createBrowser({ headless: isHeadless, userDataDir: buildUserDataDir(authCookie.c_user) });
       const page = await createPage(browser);
       // Cookie values are never logged (NFR3)
-      await loginWithCookie(page, { c_user: authCookie.c_user, xs: authCookie.xs });
+      await loginWithCookie(page, {
+        c_user: authCookie.c_user,
+        xs: authCookie.xs,
+        sb: authCookie.sb,
+        datar: authCookie.datatar || authCookie.datar,
+        fr: authCookie.fr,
+        fbl_st: authCookie.fbl_st,
+        locale: authCookie.locale,
+      });
 
       result = await dispatch(page);
 

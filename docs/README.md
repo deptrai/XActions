@@ -1,6 +1,6 @@
 # XActions Documentation
 
-> Complete documentation for XActions v3.1.0 — The X/Twitter Automation Toolkit
+> Complete documentation for XActions v3.5.0 — The X/Twitter Automation Toolkit
 
 ## Quick Links
 
@@ -23,6 +23,9 @@
 | [AI Features](ai-api.md) | AI tweet writer, voice analysis, Grok |
 | [Skills Reference](skills.md) | 31 agent skills for AI assistants |
 | [DOM Selectors](dom-selectors.md) | X/Twitter DOM selector reference |
+| [Facebook API](agents/facebook-api.md) | Facebook REST API (scrape, automate, marketplace) |
+| [Facebook Selectors](agents/selectors-facebook.md) | Facebook DOM selector reference |
+| [Facebook Session Cookie](agents/facebook-session-cookie.md) | Extract c_user + xs cookies |
 | [Troubleshooting](troubleshooting.md) | Common issues and fixes |
 
 ## Interfaces
@@ -31,7 +34,7 @@ XActions provides **5 interfaces** to the same underlying toolkit:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   XActions v3.1.0                    │
+│                   XActions v3.5.0                    │
 ├──────────┬──────────┬───────┬──────────┬────────────┤
 │  CLI     │  MCP     │  API  │ Dashboard│  Browser   │
 │ xactions │ server   │ REST  │   Web UI │  Scripts   │
@@ -41,7 +44,7 @@ XActions provides **5 interfaces** to the same underlying toolkit:
 ```
 
 1. **CLI** — `xactions <command>` from your terminal
-2. **MCP Server** — 87 tools for Claude, Cursor, Windsurf, GPT
+2. **MCP Server** — 145 tools for Claude, Cursor, Windsurf, GPT
 3. **REST API** — 170+ endpoints at `localhost:3001/api`
 4. **Web Dashboard** — Full-featured UI at `localhost:3001`
 5. **Browser Scripts** — Paste into DevTools on x.com
@@ -51,6 +54,7 @@ XActions provides **5 interfaces** to the same underlying toolkit:
 | Platform | Scraping | Posting | Following | Export |
 |----------|----------|---------|-----------|--------|
 | X/Twitter | ✅ | ✅ | ✅ | ✅ |
+| Facebook | ✅ | ✅ | ✅ | ✅ |
 | Bluesky | ✅ | ✅ | ✅ | ✅ |
 | Mastodon | ✅ | ✅ | ✅ | ✅ |
 | Threads | ✅ | — | — | ✅ |

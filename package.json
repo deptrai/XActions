@@ -1,6 +1,6 @@
 {
   "name": "xactions",
-  "version": "3.1.0",
+  "version": "3.5.0",
   "description": "XActions - The Complete X/Twitter Automation Toolkit. Scrapers, MCP server for AI agents, CLI, and browser scripts. No API required. Open source by @nichxbt. Don't Panic.",
   "homepage": "https://xactions.app",
   "repository": {
@@ -52,10 +52,23 @@
     "test:x402:all": "vitest run tests/x402*.test.js",
     "verify:x402": "node scripts/verify-x402.js",
     "test:payment": "node scripts/test-x402-payment.js",
+    "mutation": "stryker run",
+    "mutation:unfollowback": "stryker run stryker.unfollowback.config.js",
+    "mutation:x402": "stryker run stryker.x402-middleware.config.js",
+    "mutation:fb-automation": "stryker run stryker.fb-automation.config.js",
+    "mutation:fb-scrapers": "stryker run stryker.fb-scrapers.config.js",
+    "mutation:fb-scheduler": "stryker run stryker.fb-scheduler.config.js",
+    "mutation:fb-routes": "stryker run stryker.fb-routes.config.js",
+    "loadtest:x402": "node tests/load/x402-middleware-loadtest.js",
     "audit": "node scripts/audit-console-errors.js",
     "audit:verbose": "node scripts/audit-console-errors.js --verbose",
+    "docs:audit": "node scripts/audit-docs.mjs",
+    "docs:scripts": "node scripts/build-browser-scripts-doc.mjs",
+    "docs:check": "node scripts/build-browser-scripts-doc.mjs --check && node scripts/audit-docs.mjs",
+    "check:endpoints": "node scripts/check-endpoints.mjs",
     "deploy": "bash scripts/deploy.sh",
     "deploy:railway": "bash scripts/deploy.sh railway",
+    "build:cloudflare": "node scripts/build-cloudflare.mjs",
     "deploy:cloudflare": "bash scripts/deploy.sh cloudflare",
     "deploy:fly": "bash scripts/deploy.sh fly",
     "deploy:docker": "bash scripts/deploy.sh docker",
@@ -71,18 +84,24 @@
     "video:render:tweet": "node site/video/render.mjs TweetVideo",
     "video:render:thread": "node site/video/render.mjs ThreadVideo",
     "video:render:analytics": "node site/video/render.mjs AnalyticsDashboard",
-    "video:render:promo": "node site/video/render.mjs PromoVideo"
+    "video:render:promo": "node site/video/render.mjs PromoVideo",
+    "site:docs": "node scripts/build-all-docs.js && node scripts/fix-doc-links.js",
+    "site:index": "node scripts/build-index-pages.mjs",
+    "site:scripts": "node scripts/build-script-pages.js",
+    "site:sitemap": "node scripts/build-sitemap.js",
+    "site:build": "npm run site:docs && npm run site:index && npm run site:scripts && npm run site:sitemap && bash deploy/cloudflare/build.sh",
+    "site:deploy": "npm run site:build && npx wrangler pages deploy pages-out --project-name xactions"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@prisma/client": "^5.7.1",
     "@remotion/bundler": "^4.0.428",
     "@remotion/cli": "^4.0.428",
     "@remotion/player": "^4.0.428",
     "@remotion/renderer": "^4.0.428",
-    "axios": "^1.6.2",
+    "axios": "^1.15.2",
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^11.10.0",
+    "better-sqlite3": "^12.10.0",
     "bull": "^4.12.0",
     "chalk": "^5.3.0",
     "commander": "^12.0.0",
@@ -90,18 +109,21 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "exceljs": "^4.4.0",
-    "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.1",
     "express-validator": "^7.0.1",
     "googleapis": "^171.4.0",
     "helmet": "^7.1.0",
     "inquirer": "^9.2.0",
     "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0",
-    "node-cron": "^3.0.3",
-    "nodemailer": "^6.9.16",
+    "morgan": "^1.10.1",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^9.0.3",
     "ora": "^8.0.0",
     "otplib": "^13.4.1",
+    "p-limit": "^7.2.0",
+    "playwright": "^1.62.1",
+    "playwright-extra": "^4.3.6",
     "prisma": "^5.7.1",
     "puppeteer": "^24.34.0",
     "puppeteer-extra": "^3.3.6",
@@ -120,6 +142,9 @@
     "xspace-agent": "^0.1.0"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
+    "autocannon": "^8.0.0",
     "jsdom": "^28.1.0",
     "marked": "^17.0.3",
     "nodemon": "^3.0.2",
@@ -131,7 +156,7 @@
     "url": "https://github.com/nirholas",
     "twitter": "@nichxbt"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": [
     "xactions",
     "twitter",
@@ -178,5 +203,17 @@
   ],
   "engines": {
     "node": ">=18.0.0"
+  },
+  "files": [
+    "src",
+    "types",
+    "api/config/x402-config.js"
+  ],
+  "mcpName": "io.github.nirholas/xactions",
+  "overrides": {
+    "uuid": "^11.1.1"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.10.0": true
   }
 }

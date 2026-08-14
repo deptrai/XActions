@@ -1,6 +1,6 @@
 # generated: 06-12-2026 02:18
-# last_updated: 06-15-2026 14:55
-# project: XActions
+# last_updated: 2026-08-14 (epic 8 added via bmad-correct-course)
+# project: XActions-DONE
 # project_key: NOKEY
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
@@ -11,7 +11,7 @@
 # Retrospective: optional | done
 
 generated: 06-12-2026 02:18
-last_updated: 06-19-2026 17:45
+last_updated: 2026-08-14T09:37:00
 project: XActions
 project_key: NOKEY
 tracking_system: file-system
@@ -39,9 +39,10 @@ development_status:
   epic-3: done
   3-1-cli-platform: done
   3-2-mcp-facebook: done
+  3-2-1-facebook-mcp-tool-surface-extension: done
   3-3-rest-api: done
   3-4-operation-persistence: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   # Epic 4: Facebook Growth Automation
   epic-4: done
@@ -56,7 +57,7 @@ development_status:
   4-9-newsfeed-farming: done
   epic-4-retrospective: optional
 
-  # Epic 5: Facebook Messenger Port (from SST_TOOL_FB C#)
+  # Epic 5: Facebook Messenger Port
   epic-5: done
   5-1-graphql-layer: done
   5-2-messenger-share: done
@@ -64,3 +65,56 @@ development_status:
   5-4-input-queue-surfaces: done
   5-5-session-campaign-ui: done
   epic-5-retrospective: optional
+
+  # Epic 5b: Marketplace & Infrastructure Enhancements (retroactive)
+  epic-5b: done
+  5b-1-marketplace-scraper: done
+  5b-2-share-link-uid-v2: done
+  5b-3-headless-mode: done
+  5b-4-chrome-executable-path: done
+  epic-5b-retrospective: optional
+
+  # Epic 6: Facebook Anti-Detection & Bot Countermeasures
+  epic-6: done
+  6-1-chrome-executable-path: done
+  6-2-consistent-fingerprint: done
+  6-3-ua-pool-viewport: done
+  6-4-navigator-override: done
+  6-5-webrtc-leak-prevention: done
+  6-6-headless-mode: done
+  6-7-headless-aware-timeouts: done
+  6-8-behavioral-delays-share: done
+  6-9-bezier-mouse: done
+  6-10-human-click: done
+  6-11-typing-typos: done
+  6-12-natural-scrolling: done
+  6-13-velocity-limits: done
+  6-14-account-age: done
+  6-15-session-warming: done
+  6-16-timezone-geolocation: done
+  6-17-persistent-profiles: done
+  6-18-human-behavior-hardening: done
+  epic-6-retrospective: optional
+
+  # Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
+  epic-7: done
+  7-1-foundation-health-pool-hydration-schema: done
+  7-2-multi-type-search: done
+  7-3-comments-and-group-content: done
+  7-4-api-mcp-surface: done
+  epic-7-retrospective: done
+
+  # Epic 8: Facebook Backend Reliability
+  epic-8: done
+  8-1-prismaclient-singleton: done
+  8-2-executetool-graceful-errors: done
+  8-3-jwt-key-standardization: done
+  epic-8-retrospective: optional
+
+  # Epic 9: Facebook Live Data & Behavioral Hardening
+  epic-9: backlog
+  9-1-cancel-friend-requests-dry-run-delay: backlog
+  9-2-live-comments-selectors: backlog
+  9-3-live-group-posts-search: backlog
+  9-4-loginwithcookie-delayfn: backlog
+  epic-9-retrospective: optional

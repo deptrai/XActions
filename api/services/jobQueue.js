@@ -1,6 +1,6 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+import prisma from '../lib/prisma.js';
 import Queue from 'bull';
-import { PrismaClient } from '@prisma/client';
 import { processUnfollowNonFollowers } from './operations/unfollowNonFollowers.js';
 import { processUnfollowEveryone } from './operations/unfollowEveryone.js';
 import { processDetectUnfollowers } from './operations/detectUnfollowers.js';
@@ -18,14 +18,13 @@ import { followEngagersBrowser } from './operations/puppeteer/followEngagers.js'
 import { keywordFollowBrowser } from './operations/puppeteer/keywordFollow.js';
 import { autoCommentBrowser } from './operations/puppeteer/autoComment.js';
 import { runBrowserScript } from './operations/puppeteer/scriptRunner.js';
-
-const prisma = new PrismaClient();
-
 // In-memory job cancellation tracking
 const cancelledJobs = new Set();
 
 // Create Bull queue with Redis
+// prefix keeps keys namespaced when this Redis instance is shared with other services
 const operationsQueue = new Queue('operations', {
+  prefix: process.env.REDIS_QUEUE_PREFIX || 'xactions',
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: process.env.REDIS_PORT || 6379,
@@ -463,8 +462,9 @@ async function gracefulShutdown(signal) {
     console.log('✅ Graceful shutdown complete.');
   } catch (err) {
     console.error('❌ Shutdown error:', err.message);
+    process.exitCode = 1;
   } finally {
-    process.exit(0);
+    process.exit(process.exitCode || 0);
   }
 }
 

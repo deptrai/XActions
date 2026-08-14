@@ -133,3 +133,88 @@ These are DOM-accuracy items; fixing blind risks making selectors worse. They re
 
 - **Reaction-timing signature** [api/services/facebookAutomation.js#warmupAccount] — the probabilistic like fires immediately after the inter-scroll pause of the same iteration (scroll → pause → react), so every reaction sits exactly one pause-interval after a scroll. A human reads a post for a few seconds before liking. Add a second micro-delay (e.g. 500–1500ms) between the pause and the `reactFn` call to mimic "read-before-like". DEFERRED: anti-detection refinement, not a correctness bug; bundle with the live-verify / anti-detection pass alongside the other UNVERIFIED Facebook selectors.
 - **Return value does not distinguish duration-complete vs backstop-hit** [api/services/facebookAutomation.js#warmupAccount] — when the loop exits via the `maxScrolls` backstop rather than wall-clock expiry, the result `{ scrolls }` gives no signal that the session was cut short. This only occurs under test injection (no-op `delay` + non-advancing `now`); a real run always exits by duration. DEFERRED: observability-only, no real-run impact.
+
+---
+
+## RESOLVED — EPS-5 deferred-cleanup pass (2026-06-30)
+
+Issue EPS-5 (Deferred work cleanup) triaged all 6 priority items. Items 1, 2, 3, 6 were already fixed in commit `38a1b9b` (2026-06-10 deferred-cleanup pass). This pass resolved item 5; item 4 remains blocked on a live Facebook session.
+
+- ✅ **Item 1 — Dispatcher cleanup-ordering bug** [src/scrapers/index.js] — resolved in `38a1b9b`: browser ref stored BEFORE login; login wrapped in try/catch that closes browser on throw.
+- ✅ **Item 2 — page.goto no try/catch → browser leak on timeout** [src/scrapers/facebook/index.js] — resolved in `38a1b9b`: fn-call + auto-close wrapped in try/finally.
+- ✅ **Item 3 — runGuardedBatch shouldStop semantics** [api/services/facebookAutomation.js] — resolved in `38a1b9b`: shouldStop receives immutable summary `{ attempted, succeeded, failed, lastResult }`.
+- ⏳ **Item 4 — Facebook selector live-verify checklist** [docs/agents/selectors-facebook.md] — STILL BLOCKED on a live authenticated Facebook session. DOM-accuracy items (1.3 texts[0] author-vs-body, engagement regex, image filter avatar leak; 1.4 follower name selector; 2.2 Like selector ambiguity; 2.4 postUrl detection; 4.2 share-to-Feed; 4.4 join pending; 4.8 request-age date format) cannot be fixed blind without risking worse selectors. The verify checklist in selectors-facebook.md is the canonical tracker; resolve when a test Facebook account is available.
+- ✅ **Item 5 — `--disable-web-security` cross-cutting** — RESOLVED THIS PASS. Evaluation: the flag disables Same-Origin Policy, a core browser security boundary. The Puppeteer scrapers (twitter/threads/facebook) navigate same-origin pages and extract DOM via `page.evaluate` — no cross-origin response reads needed. The only cross-origin `fetch` user (`videoDownloader.js`) is a browser-paste script run in DevTools on x.com, not affected by these Puppeteer launch args. Removed `--disable-web-security` from all 5 launch sites: `src/scrapers/facebook/index.js`, `src/scrapers/twitter/index.js`, `src/scrapers/threads/index.js`, `src/scrapers/adapters/puppeteer.js`, `src/scrapers/adapters/selenium.js`; plus 4 `docs/examples/*.md` and 4 `dashboard/docs/*.html` user-facing snippets. `tests/scrapers/facebook-auth.test.js` updated to assert the flag is absent. Callers can still re-add via `extraArgs`/`options.args` if a genuine cross-origin need arises.
+- ✅ **Item 6 — xs cookie sameSite:Strict hardening** [src/scrapers/facebook/index.js] — resolved in `38a1b9b`: `sameSite: 'Strict'` on both `xs` and `c_user` cookies.
+
+**Acceptance status:** vitest green (2111 passed; only `tests/x402-integration.test.js` fails — ECONNREFUSED port 3001, expected when server is down per CLAUDE.md). No mocks/stubs/fakes introduced. Committed & pushed as `nirholas`.
+
+## Deferred from: Facebook API test session (2026-08-10)
+
+- **Comment selector outdated** [api/services/facebookAutomation.js#findCommentInput] — "Comment input not found; locale unsupported or post unreachable". Selector needs update for current Facebook DOM.
+- **Posts scraping returns 0 results** [src/scrapers/facebook/index.js#scrapeTweets] — Desktop site doesn't load posts in headless mode. Need mobile URL fallback for groups.
+- **Profile scraping blocked** [src/scrapers/facebook/index.js#scrapeProfile] — "Facebook profile not found or blocked" on headless. Need graceful handling.
+- **Search text garbled** [src/scrapers/facebook/index.js#searchTweets] — Returns results but text encoding is garbled.
+
+## Deferred from: code review of 6-9-bezier-mouse (2026-08-12)
+
+- **Overshoot disproportionate on tiny movements** [src/scrapers/facebook/human.js:124] — Fixed 5-15px overshoot regardless of movement distance. For 1px movements, overshoot is 5-15x the distance, looking unnatural. Not actionable until integration with real call sites provides realistic coordinate ranges. Revisit when humanMoveMouse is integrated into automation flows (Story 6.10+).
+
+## Deferred from: code review of 6-12-natural-scrolling (2026-08-13)
+
+- **No input validation for `page`, `distance`, `delayFn`, `rng`** `[src/scrapers/facebook/human.js:352-356]` — Same pattern as `humanMoveMouse`, `humanClick`, and `humanType` (pre-existing). No production call sites for `humanScroll` currently exist. Defer to a cross-cutting validation/refactor story for all `human.*` functions.
+
+## Deferred from: code review of 6-17-persistent-profiles (2026-08-13)
+
+- **Real-browser smoke test navigates to live Facebook** [test-persistent-profiles-real.mjs] — network flakiness is expected for real-browser tests and matches the existing real-cookie test pattern.
+- **No file-locking for concurrent `userDataDir` usage** [src/scrapers/facebook/index.js] — Chromium profile lock is a runtime limitation; callers should use per-account paths as recommended.
+- **No runtime assertion that Chromium uses `userDataDir`** [src/scrapers/facebook/index.js] — requires a real browser; covered by the real-browser smoke test.
+
+## Deferred from: code review of 7-2-multi-type-search (2026-08-14)
+
+- **Story 7.3 placeholders in `platformActionMap`** [src/scrapers/index.js:190-203] — `post_comments`, `group_posts`, and `group_comments` map to functions that do not yet exist. Expected to be implemented in Story 7.3; keep the placeholder map.
+- **`normalizeSearchResult` is no longer used by the new search flow** [src/scrapers/facebook/index.js:913-923] — still a public export. Deprecate or remove in a cleanup pass rather than as part of Story 7.2.
+- **Final DOM selector tuning for real Facebook markup** [src/scrapers/facebook/index.js:1125-1184, 1186-1228] — heuristics can only be verified against a live authenticated Facebook session. Tie to `selectors-facebook.md` verify checklist.
+
+## Deferred from: code review of 7-3-comments-and-group-content (2026-08-14)
+
+- **assertFacebookUrlLocal cho phép http:// (non-SSL)** [src/scrapers/facebook/index.js:2233] — pre-existing function không introduce bởi diff này. http URLs có thể bị intercept/downgrade. Fix: enforce `https:` only.
+- **extractCommentsFromDom fallback khi postArticle không tồn tại** [src/scrapers/facebook/index.js:1101-1105] — nếu không tìm thấy post permalink link, tất cả articles được treated as comments. Fallback path, acceptable cho now.
+- **Malformed JSON trong hydration script** [src/scrapers/facebook/hydration.js] — pre-existing. extractHydrationJson cần try-catch quanh JSON.parse và fallback to DOM extractor.
+- **Very large hydration script có thể gây OOM** [src/scrapers/facebook/hydration.js] — pre-existing. Script tag với 10MB+ JSON có thể cause OOM trong JSON.parse. Add size check (skip scripts > 5MB).
+- **Page closed mid-scroll không có try-catch** [src/scrapers/facebook/index.js:1350,1452,1582] — Puppeteer lifecycle issue. Nếu browser/page closed trong scroll loop, throw "Target closed" không được handle. Không specific cho diff này.
+- **PII test coverage thiếu edge cases** [tests/scrapers/facebook-comments.test.js] — pre-existing test gap. Tests chỉ check basic phone format (555-123-4567), thiếu international formats, emails với subdomains.
+
+## Deferred from: code review of 7-2-multi-type-search (re-review 2026-08-14)
+
+- **Race condition in invalidateHealthCache** [api/routes/facebookAccounts.js:78-84] — deleteMany with catch-all swallow. Pre-existing.
+- **Silent error swallowing in assertNoCheckpoint** [src/scrapers/facebook/index.js:632-634] — pre-existing pattern, consistent with codebase.
+- **Redundant checkpoint detection logic** [src/scrapers/facebook/index.js:612-615] — two implementations in index.js vs facebookAccountPool.js. Pre-existing.
+- **Inconsistent validation patterns** [multiple] — limit validation duplicated across files. Pre-existing.
+- **Missing JSDoc for normalizer functions** [src/scrapers/facebook/index.js:460-580] — code quality.
+- **Missing edge case tests for limit** [tests/scrapers/facebook-search.test.js] — test quality gap.
+- **No test for WeakSet cycle detection** [src/scrapers/facebook/hydration.js:23-36] — test quality gap.
+- **Missing test for checkpoint detection in pool** [api/services/facebookAccountPool.js:203-209] — test quality gap.
+- **AC7.17 DOM fallback not reusing searchTweets** [src/scrapers/facebook/index.js:1909-1981] — uses similar selectors, acceptable.
+- **AC10.24/AC1.29 missing parallel in JSDoc** [api/routes/facebook.js, src/scrapers/facebook/index.js] — documentation gap.
+- **Concurrent userDataDir access** [api/services/facebookAccountPool.js:42-50] — pre-existing pool design.
+- **Race conditions in pool selection** [api/services/facebookAccountPool.js:163-167] — pre-existing pool design.
+- **Mobile viewport not reset after group scrape** [src/scrapers/facebook/index.js:1453] — API creates new page per scrape, not an issue in practice.
+- **Proxy password not validated for length** [src/scrapers/facebook/proxy.js:1021] — pre-existing.
+
+## Deferred from: code review of 3-2-1-facebook-mcp-tool-surface-extension (2026-08-14)
+
+- **Tests hit real database without isolation** [tests/mcp/facebook-mcp-account-tools.test.js] — pre-existing test pattern in this codebase.
+- **No error handling for dynamic import failures** [src/mcp/server.js:2986,2999] — pre-existing pattern across all MCP tools.
+- **accountId could list another user's accounts** [src/mcp/server.js:2795-2808] — authorization concern, pre-existing design issue.
+- **No automated smoke test** [spec AC5.21] — manual smoke test documented in completion notes.
+- **Missing test for both userId + authCookie** [tests/mcp/facebook-mcp-account-tools.test.js] — test quality gap.
+
+## Deferred from: code review of 8-3-jwt-key-standardization (2026-08-14)
+
+- *(resolved inline in 8.3 follow-up: optional-auth fail-open, refresh unverified decode, error handler masking)*
+
+- **Connection pool tuning not configured** [`api/lib/prisma.js:5`] — `new PrismaClient()` has no explicit `connection_limit` / `pool_timeout`. Valuable for high-concurrency API but out of story scope. — out of scope
+- **DATABASE_URL validation at module load** [`api/lib/prisma.js:5`] — Missing/invalid `DATABASE_URL` will surface on first query, not at import. Out of story scope. — out of scope
+- **MCP/CLI signal handlers don't await `prisma.$disconnect()`** [`src/mcp/server.js:4841-4854`, `src/cli/index.js:2032-2036,3340-3342`] — Pre-existing handlers call `process.exit(0)` before singleton disconnect completes. Requires cross-cutting shutdown design decision. — pre-existing
+- **`api/routes/history.js` implicit `prisma` dependency via `analyticsDashboard.js`** — Pre-existing code smell; route should import the singleton directly. Not introduced by the singleton. — pre-existing

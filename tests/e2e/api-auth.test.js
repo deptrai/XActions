@@ -1,146 +1,105 @@
+// tests/e2e/api-auth.test.js
+// Auth endpoint validation with a real DB user.
+// Rate-limited auth endpoints are kept <= 10 calls per window to stay deterministic.
 // by nichxbt
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 import app from '../../api/server.js';
+import { seedTestUser, cleanupTestUser, makeTestUserId, TEST_SECRET } from '../api/fixtures/test-user.js';
+import { nextTestId } from '../utils/test-ids.js';
+const TEST_SCOPE = 'e2e-api-auth';
 
-// Auth endpoints have a strict rate limiter: 10 req / 15 min per IP.
-// Supertest reuses the same in-process Express app so all requests come
-// from the same IP (::ffff:127.0.0.1). Once the window is exhausted the
-// limiter returns 429 before the route handler runs.
-// Every test that hits /api/auth/register or /api/auth/login must accept
-// 429 as a valid status alongside the primary expected code.
-const RATE_LIMITED = 429;
+const TEST_USER_ID = makeTestUserId('auth-e2e');
+
+let testUser;
+
+beforeAll(async () => {
+  testUser = await seedTestUser(TEST_USER_ID, 'auth_e2e_user');
+});
+
+afterAll(async () => {
+  await cleanupTestUser(TEST_USER_ID);
+});
 
 describe('Auth endpoints', () => {
-  // ─── POST /api/auth/register ───────────────────────────────────────────────
+  it.each([
+    [nextTestId(TEST_SCOPE, 'E2E', 'P1'), 'empty body', {}, ['username', 'password']],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P1'), 'invalid username', { username: 'ab', password: 'validpassword123' }, ['username']],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P1'), 'invalid email', { username: 'validuser', password: 'validpassword123', email: 'not-an-email' }, ['email']],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P1'), 'password too short', { username: 'validuser', password: 'short' }, ['password']],
+  ])(`[%s] POST /api/auth/register with %s → 400`,
+    async (id, desc, body, expectedPaths) => {
+      const res = await request(app).post('/api/auth/register').send(body);
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toBeInstanceOf(Array);
+      const paths = res.body.errors.map((e) => e.path);
+      for (const path of expectedPaths) {
+        expect(paths).toContain(path);
+      }
+    }
+  );
 
-  it('POST /api/auth/register with missing username → 400', async () => {
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({ password: 'password123' });
-    expect([400, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 400) expect(res.body).toHaveProperty('errors');
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/register with existing username → 400`, async () => {
+    const res = await request(app).post('/api/auth/register').send({
+      username: testUser.user.username,
+      password: 'validpassword123',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/already taken/i);
   });
 
-  it('POST /api/auth/register with missing password → 400', async () => {
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({ username: 'testuser' });
-    expect([400, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 400) expect(res.body).toHaveProperty('errors');
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/login with empty body → 400`, async () => {
+    const res = await request(app).post('/api/auth/login').send({});
+    expect(res.status).toBe(400);
+    expect(res.body.errors).toBeInstanceOf(Array);
+    const paths = res.body.errors.map((e) => e.path);
+    expect(paths).toContain('identifier');
+    expect(paths).toContain('password');
   });
 
-  it('POST /api/auth/register with password too short → 400', async () => {
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({ username: 'validuser', password: 'short' });
-    expect([400, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 400) expect(res.body).toHaveProperty('errors');
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/login with invalid credentials → 401`, async () => {
+    const res = await request(app).post('/api/auth/login').send({
+      identifier: testUser.user.username,
+      password: 'wrongpassword123',
+    });
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/invalid credentials/i);
   });
 
-  it('POST /api/auth/register with username too short → 400', async () => {
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({ username: 'ab', password: 'validpassword123' });
-    expect([400, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 400) expect(res.body).toHaveProperty('errors');
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/login with valid credentials → 200`, async () => {
+    const res = await request(app).post('/api/auth/login').send({
+      identifier: testUser.user.username,
+      password: testUser.password,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('token');
+    expect(res.body.user.username).toBe(testUser.user.username);
   });
 
-  it('POST /api/auth/register with invalid username chars → 400', async () => {
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({ username: 'user name!', password: 'validpassword123' });
-    expect([400, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 400) expect(res.body).toHaveProperty('errors');
+  it.each([
+    [nextTestId(TEST_SCOPE, 'E2E', 'P0'), 'no token', {}],
+    [nextTestId(TEST_SCOPE, 'E2E', 'P0'), 'malformed token', { token: 'not.a.jwt' }],
+  ])(`[%s] POST /api/auth/refresh with %s → 401`, async (id, desc, body) => {
+    const res = await request(app).post('/api/auth/refresh').send(body);
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error');
   });
 
-  it('POST /api/auth/register with invalid email → 400', async () => {
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({ username: 'validuser', password: 'validpassword123', email: 'not-an-email' });
-    expect([400, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 400) expect(res.body).toHaveProperty('errors');
-  });
-
-  it('POST /api/auth/register with empty body → 400', async () => {
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({});
-    expect([400, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 400) expect(res.body).toHaveProperty('errors');
-  });
-
-  // ─── POST /api/auth/login ─────────────────────────────────────────────────
-
-  it('POST /api/auth/login with empty body → 400', async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({});
-    expect([400, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 400) expect(res.body).toHaveProperty('errors');
-  });
-
-  it('POST /api/auth/login with missing password → 400', async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ identifier: 'someuser' });
-    expect([400, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 400) expect(res.body).toHaveProperty('errors');
-  });
-
-  it('POST /api/auth/login with missing identifier → 400', async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ password: 'somepassword' });
-    expect([400, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 400) expect(res.body).toHaveProperty('errors');
-  });
-
-  it('POST /api/auth/login with invalid credentials → 401 or 500 (no DB)', async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ identifier: 'nonexistent_user_xyz', password: 'wrongpassword123' });
-    // Without a DB connection the route returns 500;
-    // with a DB it returns 401.
-    // Rate limiter may return 429 after the window is exhausted.
-    expect([401, 500, RATE_LIMITED]).toContain(res.status);
-  });
-
-  // ─── POST /api/auth/refresh ────────────────────────────────────────────────
-  // /api/auth/refresh shares the same authLimiter (10 req/15 min).
-
-  it('POST /api/auth/refresh with no token → 401', async () => {
-    const res = await request(app)
-      .post('/api/auth/refresh')
-      .send({});
-    expect([401, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 401) expect(res.body).toHaveProperty('error');
-  });
-
-  it('POST /api/auth/refresh with malformed token → 401', async () => {
-    const res = await request(app)
-      .post('/api/auth/refresh')
-      .send({ token: 'totally.invalid.token' });
-    expect([401, RATE_LIMITED]).toContain(res.status);
-    if (res.status === 401) expect(res.body).toHaveProperty('error');
-  });
-
-  // ─── Protected endpoints without token ────────────────────────────────────
-  // These do NOT hit rate-limited auth routes — no 429 risk.
-
-  it('GET /api/operations without Authorization header → 401', async () => {
+  // Protected endpoint auth guards (not auth-rate-limited)
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/operations without Authorization header → 401`, async () => {
     const res = await request(app).get('/api/operations');
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error');
   });
 
-  it('GET /api/user without Authorization header → 401', async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/user without Authorization header → 401`, async () => {
     const res = await request(app).get('/api/user');
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error');
   });
 
-  it('Protected endpoint with malformed Bearer token → 401', async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] Protected endpoint with malformed Bearer token → 401`, async () => {
     const res = await request(app)
       .get('/api/operations')
       .set('Authorization', 'Bearer this.is.not.a.real.jwt');
@@ -148,11 +107,19 @@ describe('Auth endpoints', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  it('Protected endpoint with wrong scheme (no Bearer) → 401', async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] Protected endpoint with wrong scheme (no Bearer) → 401`, async () => {
     const res = await request(app)
       .get('/api/operations')
       .set('Authorization', 'Basic dXNlcjpwYXNz');
     expect(res.status).toBe(401);
     expect(res.body.error).toMatch(/token/i);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] Protected endpoint accepts token signed with { id } payload (Story 8.3)`, async () => {
+    const token = jwt.sign({ id: testUser.user.id, username: testUser.user.username }, TEST_SECRET, { expiresIn: '1h' });
+    const res = await request(app)
+      .get('/api/operations')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
   });
 });

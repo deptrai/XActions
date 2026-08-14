@@ -1,4 +1,6 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+import prisma from '../lib/prisma.js';
 /**
  * XActions Unfollower Tracking API Routes
  * 
@@ -16,7 +18,6 @@
  */
 
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
 import { queueJob } from '../services/jobQueue.js';
 import {
@@ -34,8 +35,6 @@ import {
 } from '../services/unfollowerAlerts.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
-
 // All routes require authentication
 router.use(authMiddleware);
 

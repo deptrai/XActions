@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { findLikeButton } from '../../api/services/facebookAutomation.js';
 
 // Build a fake Puppeteer page.
-// found: the selector string that $() should return an element for (null = none)
+// found: the aria-label text that $() should return an element for (null = none)
 // waitReject: if true, waitForSelector rejects (simulates timeout)
 const makePage = (found = null, waitReject = false) => {
   const el = { click: vi.fn() };
@@ -10,7 +10,11 @@ const makePage = (found = null, waitReject = false) => {
     waitForSelector: waitReject
       ? vi.fn().mockRejectedValue(new Error('timeout'))
       : vi.fn().mockResolvedValue(null),
-    $: vi.fn(async (sel) => (found && sel === found ? el : null)),
+    // Match the implementation's *= (substring) attribute selectors.
+    $: vi.fn(async (sel) => {
+      const foundLabel = found ? (found.match(/"([^"]+)"/) || [])[1] : null;
+      return foundLabel && sel.includes('"' + foundLabel + '"') ? el : null;
+    }),
     _el: el,
   };
 };
@@ -49,9 +53,9 @@ describe('findLikeButton', () => {
     const el = { click: vi.fn() };
     const page = {
       waitForSelector: vi.fn().mockResolvedValue(null),
-      // Both unlike and like selectors return an element
+      // Both unlike and like selectors return an element (implementation uses substring selectors)
       $: vi.fn(async (sel) =>
-        ['[aria-label="Remove Like"]', '[aria-label="Like"]'].includes(sel) ? el : null
+        (sel.includes('"Remove Like"') || sel.includes('"Like"')) ? el : null
       ),
     };
     const result = await findLikeButton(page);

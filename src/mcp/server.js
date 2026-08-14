@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions MCP Server
  * Model Context Protocol server for AI agents (Claude, GPT, etc.)
@@ -23,6 +23,12 @@
  * @license MIT
  */
 
+import dotenv from 'dotenv';
+dotenv.config();
+
+import prisma from '../../api/lib/prisma.js';
+
+import { VERSION } from '../version.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -31,13 +37,15 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'node:crypto';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // ============================================================================
 // Plugin System
 // ============================================================================
 
 import { initializePlugins, getPluginTools } from '../plugins/index.js';
-
+import { resolveMcpFacebookAuth } from './facebook-auth.js';
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -55,6 +63,21 @@ let remoteClient = null;
 // ============================================================================
 // Tool Definitions
 // ============================================================================
+
+const FACEBOOK_AUTH_COOKIE_SCHEMA = {
+  type: 'object',
+  properties: {
+    c_user: { type: 'string', description: 'Facebook c_user cookie value' },
+    xs: { type: 'string', description: 'Facebook xs cookie value' },
+    accountId: { type: 'string', description: 'Stored FacebookAccount id' },
+  },
+  anyOf: [
+    { required: ['c_user', 'xs'] },
+    { required: ['accountId'] },
+  ],
+  description:
+    'Facebook session cookie. Provide either {c_user, xs} raw values or {accountId} referencing a stored FacebookAccount. Values are never logged (NFR3).',
+};
 
 const TOOLS = [
   {
@@ -385,7 +408,7 @@ const TOOLS = [
   },
   {
     name: 'x_schedule_post',
-    description: 'Schedule a tweet for future posting (requires Premium).',
+    description: 'Schedule a tweet for future posting (requires Premium). DEPRECATED — prefer x_schedule (DB-backed, dry-run default, supports threads/timezones/recurrence).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -393,6 +416,29 @@ const TOOLS = [
         scheduledAt: { type: 'string', description: 'ISO 8601 datetime for posting' },
       },
       required: ['text', 'scheduledAt'],
+    },
+  },
+  {
+    name: 'x_schedule',
+    description: 'Schedule a tweet or thread for future publishing (EPS-2). DB-only — no browser launched at create time. Dry-run (default) previews without persisting; set dryRun:false to create the schedule record. The scheduler worker executes it within ±2min SLA, reusing postTweet/postThread browser automation. Supports threads, IANA timezones, and node-cron recurrence.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'Tweet text (non-empty). First tweet of a thread.' },
+        scheduledAt: { type: 'string', description: 'ISO-8601 datetime ≥60 seconds in the future. Wall-clock strings without offset are interpreted in `timezone` (default UTC).' },
+        thread: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional follow-up tweet texts (length 1–24). When present, `content` is the first tweet and these are the replies.',
+        },
+        mediaUrls: { type: 'array', items: { type: 'string' }, description: 'Optional media attachment URLs (stored; execution-time upload deferred).' },
+        timezone: { type: 'string', description: 'Optional IANA timezone name (e.g. Europe/London) to interpret a wall-clock scheduledAt.' },
+        recurrenceCron: { type: 'string', description: 'Optional node-cron expression; re-arms the schedule after a successful execution.' },
+        queueOrder: { type: 'number', description: 'Queue priority (0 = highest); defaults to 0.' },
+        userId: { type: 'string', description: 'Required when dryRun:false — scopes the schedule row to this user.' },
+        dryRun: { type: 'boolean', description: 'Preview without persisting (default: true).' },
+      },
+      required: ['content', 'scheduledAt'],
     },
   },
   {
@@ -1148,6 +1194,28 @@ const TOOLS = [
       required: ['username'],
     },
   },
+  {
+    name: 'x_account_report',
+    description:
+      'Full account report for one or more public X accounts, computed from public data with no login: engagement rate, median interactions per post, posting cadence, content mix (original vs reply vs repost, media and link share), best hour and weekday by median engagement, top posts, top hashtags, and plain-language observations. Pass an array of usernames to get a side-by-side comparison as well. Use this instead of fetching a profile and a timeline separately when the question is about how an account is performing.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: {
+          oneOf: [
+            { type: 'string' },
+            { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 4 },
+          ],
+          description: 'Username without @, or an array of 2 to 4 usernames to compare',
+        },
+        limit: {
+          type: 'number',
+          description: 'Posts to sample per account (default 50, max 200). A larger sample gives steadier medians.',
+        },
+      },
+      required: ['username'],
+    },
+  },
   // ====== AI Tools (require OPENROUTER_API_KEY) ======
   {
     name: 'x_analyze_voice',
@@ -1244,6 +1312,65 @@ const TOOLS = [
       required: ['url'],
     },
   },
+  {
+    name: 'x_ai_write',
+    description: 'AI Tweet Writer (Epic 4). Generate viral tweets, threads (from topic or long text), or bios with a tone selector (funny, professional, controversial). Supports OpenRouter, OpenAI, and Grok/xAI providers. Requires an LLM API key (OPENROUTER_API_KEY / OPENAI_API_KEY / XAI_API_KEY).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        topic: {
+          type: 'string',
+          description: 'Topic or prompt, e.g. "why shipping fast beats perfection"',
+        },
+        username: {
+          type: 'string',
+          description: 'Username whose voice to mimic (without @). Optional — omit for generic generation.',
+        },
+        type: {
+          type: 'string',
+          enum: ['tweet', 'thread', 'thread-from-text', 'bio'],
+          description: 'What to generate (default: tweet). thread-from-text requires text.',
+        },
+        text: {
+          type: 'string',
+          description: 'Long-form text to auto-split into a thread (required when type=thread-from-text).',
+        },
+        tone: {
+          type: 'string',
+          enum: ['funny', 'professional', 'controversial', 'casual', 'inspirational', 'educational'],
+          description: 'Tone selector (default: none / voice-matched).',
+        },
+        style: {
+          type: 'string',
+          enum: ['hot-take', 'educational', 'personal', 'promotional'],
+          description: 'Style override (only for type=tweet).',
+        },
+        count: {
+          type: 'number',
+          description: 'Number of variations (tweets: 1-5, bios: 1-10). Default 5.',
+        },
+        threadLength: {
+          type: 'number',
+          description: 'Thread length: 3-15 (default 8).',
+        },
+        keywords: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Keywords to include (bio only).',
+        },
+        provider: {
+          type: 'string',
+          enum: ['openrouter', 'openai', 'grok'],
+          description: 'LLM provider (default: auto-detect from env keys, fallback openrouter).',
+        },
+        model: {
+          type: 'string',
+          description: 'Model override (e.g. gpt-4o-mini, grok-3-mini, google/gemini-flash-2.0).',
+        },
+      },
+      required: ['topic'],
+    },
+  },
   // ====== Cross-Platform ======
   {
     name: 'x_list_platforms',
@@ -1291,15 +1418,7 @@ const TOOLS = [
           type: 'boolean',
           description: 'Preview mode — no real writes. Defaults to true. Set false to execute.',
         },
-        authCookie: {
-          type: 'object',
-          properties: {
-            c_user: { type: 'string', description: 'Facebook c_user cookie value' },
-            xs: { type: 'string', description: 'Facebook xs cookie value' },
-          },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
         maxBatch: {
           type: 'number',
           description: 'Max posts per batch (default: 20)',
@@ -1321,12 +1440,7 @@ const TOOLS = [
         facebookAccountId: { type: 'string', description: 'Optional Facebook account/page ID to post from' },
         userId: { type: 'string', description: 'Required when dryRun:false — scopes the schedule row to this user' },
         dryRun: { type: 'boolean', description: 'Preview without persisting (default: true)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['content', 'scheduledAt', 'authCookie'],
     },
@@ -1340,12 +1454,7 @@ const TOOLS = [
         postUrls: { type: 'array', items: { type: 'string' }, description: 'Non-empty array of unique facebook.com post URLs to share' },
         dryRun: { type: 'boolean', description: 'Preview without sharing (default: true)' },
         maxBatch: { type: 'number', description: 'Max posts per batch run (default: 20)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['postUrls', 'authCookie'],
     },
@@ -1359,12 +1468,7 @@ const TOOLS = [
         targetUrl: { type: 'string', description: 'facebook.com URL of the feed or page to scroll' },
         durationSeconds: { type: 'number', description: 'Scroll session length in seconds (default: 60, max: 300)' },
         dryRun: { type: 'boolean', description: 'Preview without scrolling (default: true)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['targetUrl', 'authCookie'],
     },
@@ -1380,12 +1484,7 @@ const TOOLS = [
         limit: { type: 'number', description: 'Max groups to find in keyword mode (default: 10)' },
         dryRun: { type: 'boolean', description: 'Preview without joining (default: true)' },
         maxBatch: { type: 'number', description: 'Max groups per batch (default: 20)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['authCookie'],
     },
@@ -1402,12 +1501,7 @@ const TOOLS = [
         force: { type: 'boolean', description: 'Allow more than 10 groups per batch (still capped at 20). Default: false.' },
         dryRun: { type: 'boolean', description: 'Preview without posting (default: true)' },
         maxBatch: { type: 'number', description: 'Max groups per batch (default: 20)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['groupUrls', 'content', 'authCookie'],
     },
@@ -1424,12 +1518,7 @@ const TOOLS = [
         limit: { type: 'number', description: 'Max profiles in suggestions/location mode (default: 10)' },
         dryRun: { type: 'boolean', description: 'Preview without sending (default: true). suggestions/location require dryRun:false.' },
         maxBatch: { type: 'number', description: 'Max requests per batch (default: 20)' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['mode', 'authCookie'],
     },
@@ -1444,12 +1533,7 @@ const TOOLS = [
         olderThanDays: { type: 'number', description: 'Only cancel requests older than this many days (optional, non-negative)' },
         dryRun: { type: 'boolean', description: 'Preview without cancelling (default: true)' },
         maxBatch: { type: 'number', description: 'Max cancellations per batch (default: 20). limit must not exceed this.' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['limit', 'authCookie'],
     },
@@ -1464,14 +1548,138 @@ const TOOLS = [
         allowReactions: { type: 'boolean', description: 'Enable probabilistic Like reactions during scroll (default: false)' },
         reactProbability: { type: 'number', description: 'Per-scroll reaction probability (0–0.2, values above 0.2 clamped). Default: 0.05.' },
         dryRun: { type: 'boolean', description: 'Preview without scrolling (default: true). Browser not launched in dry-run.' },
-        authCookie: {
-          type: 'object',
-          properties: { c_user: { type: 'string' }, xs: { type: 'string' } },
-          required: ['c_user', 'xs'],
-          description: 'Facebook session cookie. Values are never logged (NFR3).',
-        },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
       required: ['authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_group_members',
+    description: 'Scrape member list from a Facebook group. Requires auth. Returns bounded list of public member profiles or a note if private/restricted. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        groupUrl: { type: 'string', description: 'facebook.com/groups/... URL to scrape members from' },
+        limit: { type: 'number', description: 'Max members to return (default: 100, max: 500)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['groupUrl', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_marketplace',
+    description: 'Search Facebook Marketplace listings by keyword, location, and price range. PII stripped. Dry-run (default) previews the search URL; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query (e.g. "macbook pro 14")' },
+        location: { type: 'string', description: 'Location/city filter (e.g. "Ho Chi Minh")' },
+        limit: { type: 'number', description: 'Max listings to return (default: 50, max: 200)' },
+        minPrice: { type: 'number', description: 'Minimum price filter' },
+        maxPrice: { type: 'number', description: 'Maximum price filter' },
+        category: { type: 'string', description: 'Marketplace category slug' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'x_facebook_list_accounts',
+    description: 'List stored Facebook accounts for a user. Returns id, label, userId, createdAt — never cookie values. Provide userId or authCookie.accountId.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string', description: 'User ID to list accounts for' },
+        authCookie: {
+          type: 'object',
+          properties: {
+            accountId: { type: 'string', description: 'Stored FacebookAccount id; used to resolve userId' },
+          },
+          required: ['accountId'],
+        },
+      },
+      anyOf: [
+        { required: ['userId'] },
+        { required: ['authCookie'] },
+      ],
+    },
+  },
+  // ====== Facebook Epic 7 Scrape Tools (Story 7.4) ======
+  {
+    name: 'x_facebook_search',
+    description: 'Search Facebook posts, people, pages, or groups by keyword. type: "all" returns { posts, people, pages, groups }. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query keyword' },
+        type: { type: 'string', enum: ['posts', 'people', 'pages', 'groups', 'all'], description: 'Search category (default: all)' },
+        location: { type: 'string', description: 'Location filter (max 200 chars)' },
+        limit: { type: 'number', description: 'Max results per type (positive integer, max 500)' },
+        parallel: { type: 'boolean', description: 'Fan out type:all across 4 accounts (default: false = sequential)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['query', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_post_comments',
+    description: 'Scrape comments from a Facebook post. Supports nested replies with includeReplies:true. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Facebook post permalink URL' },
+        limit: { type: 'number', description: 'Max comments to return (positive integer, max 500)' },
+        includeReplies: { type: 'boolean', description: 'Include nested replies (default: false)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_group_posts',
+    description: 'Scrape posts from a Facebook group. Uses mobile UA for headless compatibility. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'facebook.com/groups/... URL' },
+        limit: { type: 'number', description: 'Max posts to return (positive integer, max 500)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_group_comments',
+    description: 'Scrape comments from a post inside a Facebook group. URL must contain facebook.com/groups/. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Group post permalink URL (must contain facebook.com/groups/)' },
+        limit: { type: 'number', description: 'Max comments to return (positive integer, max 500)' },
+        includeReplies: { type: 'boolean', description: 'Include nested replies (default: false)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_posts',
+    description: 'Scrape posts from a Facebook profile or page. Thin wrapper equivalent to x_scrape with platform:facebook, action:posts. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Facebook profile or page URL' },
+        limit: { type: 'number', description: 'Max posts to return (positive integer, max 500)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'authCookie'],
     },
   },
   // ====== Social Graph ======
@@ -2467,8 +2675,8 @@ async function executeTool(name, args) {
     return await executeAnalyticsTool(name, args);
   }
 
-  // Handle AI tools (voice, generation, rewrite, summarization)
-  if (name === 'x_analyze_voice' || name === 'x_generate_tweet' || name === 'x_rewrite_tweet' || name === 'x_summarize_thread') {
+  // Handle AI tools (voice, generation, rewrite, summarization, Epic 4 writer)
+  if (name === 'x_analyze_voice' || name === 'x_generate_tweet' || name === 'x_rewrite_tweet' || name === 'x_summarize_thread' || name === 'x_ai_write') {
     return await executeAITool(name, args);
   }
 
@@ -2511,7 +2719,7 @@ async function executeTool(name, args) {
     return await executeCompetitiveTool(name, args);
   }
   if (name === 'x_audience_overlap' || name.startsWith('x_crm_') || name.startsWith('x_bulk_') ||
-      name.startsWith('x_schedule_') || name.startsWith('x_evergreen_') || name.startsWith('x_rss_') ||
+      name.startsWith('x_schedule_') || name === 'x_schedule' || name.startsWith('x_evergreen_') || name.startsWith('x_rss_') ||
       name.startsWith('x_optimize_') || name === 'x_suggest_hashtags' || name === 'x_predict_performance' ||
       name === 'x_generate_variations' || name.startsWith('x_notify_') || name.startsWith('x_dataset_') ||
       name.startsWith('x_team_') || name === 'x_import_data' || name === 'x_convert_format') {
@@ -2529,14 +2737,44 @@ async function executeTool(name, args) {
     return await executeFacebookAutomateTool(args);
   }
 
+  // Handle Facebook account listing (DB-only, no browser)
+  if (name === 'x_facebook_list_accounts') {
+    return await executeFacebookListAccounts(args);
+  }
+
+  // Handle Facebook Epic 7 scrape tools (Story 7.4) — route through FacebookScrapeService
+  const EPIC7_SCRAPE_TOOLS = new Set([
+    'x_facebook_search',
+    'x_facebook_post_comments',
+    'x_facebook_group_posts',
+    'x_facebook_group_comments',
+    'x_facebook_posts',
+  ]);
+  if (EPIC7_SCRAPE_TOOLS.has(name)) {
+    return await executeFacebookScrapeTool(name, args);
+  }
+
   // Handle Facebook Epic 4 growth automation tools
   if (name.startsWith('x_facebook_') && name !== 'x_facebook_automate') {
     return await executeFacebookEpic4Tool(name, args);
   }
 
   if (MODE === 'remote') {
+    if (!remoteClient) {
+      return {
+        isError: true,
+        content: [{ type: 'text', text: 'Remote client not initialized' }],
+      };
+    }
     return await remoteClient.execute(name, args);
   } else {
+    if (!localTools) {
+      return {
+        isError: true,
+        content: [{ type: 'text', text: 'Local tools not initialized' }],
+      };
+    }
+
     // Check if a non-Twitter platform param is set and dispatch to multi-platform variant
     const multiPlatformTools = {
       x_get_profile: 'x_get_profile_multiplatform',
@@ -2553,7 +2791,10 @@ async function executeTool(name, args) {
 
     const toolFn = localTools[toolName] || localTools[name];
     if (!toolFn) {
-      throw new Error(`Unknown tool: ${name}`);
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `Unknown tool: ${name}` }],
+      };
     }
     return await toolFn(args);
   }
@@ -2574,14 +2815,8 @@ async function executeFacebookAutomateTool(args) {
     throw new Error(`❌ x_facebook_automate: unknown action "${action}". Valid values: like, comment, post, messenger.`);
   }
 
-  // Hard auth guard (AC3.7, mirrors CLI 3.1). Coerce to string first — c_user is a
-  // numeric Facebook UID and may arrive as a JSON number, which would crash on
-  // .trim() instead of producing the clear auth error.
-  const cUser = String(authCookie?.c_user ?? '').trim();
-  const xs = String(authCookie?.xs ?? '').trim();
-  if (!cUser || !xs) {
-    throw new Error('❌ x_facebook_automate requires authCookie { c_user, xs }. Provide a valid Facebook session cookie.');
-  }
+  // Resolve raw cookie or stored accountId (AC3.7, NFR3). authCookie values are never logged.
+  const { c_user: cUser, xs } = await resolveMcpFacebookAuth(authCookie);
 
   // Fail-fast arg validation before browser launch (AC3.8)
   if ((action === 'like' || action === 'comment') && (!Array.isArray(urls) || urls.length === 0)) {
@@ -2657,6 +2892,38 @@ async function executeFacebookAutomateTool(args) {
 }
 
 // by nichxbt
+async function executeFacebookListAccounts(args) {
+  const { userId, authCookie } = args;
+  let targetUserId = userId;
+
+  if (userId != null && typeof userId !== 'string') {
+    throw new Error('❌ x_facebook_list_accounts: userId must be a string');
+  }
+
+  if (!targetUserId && authCookie?.accountId) {
+    const account = await prisma.facebookAccount.findUnique({
+      where: { id: authCookie.accountId },
+      select: { userId: true },
+    });
+    if (!account) {
+      throw new Error(`❌ Facebook account "${authCookie.accountId}" not found`);
+    }
+    targetUserId = account.userId;
+  }
+
+  if (!targetUserId) {
+    throw new Error('❌ x_facebook_list_accounts requires userId or authCookie.accountId');
+  }
+
+  const accounts = await prisma.facebookAccount.findMany({
+    where: { userId: targetUserId },
+    select: { id: true, label: true, userId: true, createdAt: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  return { accounts };
+}
+
+// by nichxbt
 async function runWithFacebookBrowser(authCookie, fn) {
   const { createBrowser, createPage, loginWithCookie } =
     await import('../scrapers/facebook/index.js');
@@ -2677,15 +2944,29 @@ async function runWithFacebookBrowser(authCookie, fn) {
 async function executeFacebookEpic4Tool(name, args) {
   const { authCookie, dryRun, ...rest } = args;
 
-  const cUser = String(authCookie?.c_user ?? '').trim();
-  const xs = String(authCookie?.xs ?? '').trim();
-  if (!cUser || !xs) {
-    throw new Error(
-      `❌ ${name} requires authCookie { c_user, xs }. Provide a valid Facebook session cookie.`,
-    );
-  }
-
   const resolvedDryRun = dryRun === false ? false : true;
+
+  // Marketplace search can be performed anonymously; all other tools require authCookie.
+  let cUser = null;
+  let xs = null;
+  let resolvedUserId = null;
+  let authResolutionError = null;
+  if (authCookie) {
+    try {
+      const resolved = await resolveMcpFacebookAuth(authCookie);
+      cUser = resolved.c_user;
+      xs = resolved.xs;
+      resolvedUserId = resolved.userId;
+    } catch (err) {
+      if (name === 'x_facebook_marketplace') {
+        authResolutionError = err.message;
+      } else {
+        throw err;
+      }
+    }
+  } else if (name !== 'x_facebook_marketplace') {
+    throw new Error('❌ requires authCookie: provide { c_user, xs } or { accountId }');
+  }
 
   const {
     scheduleFacebookPost,
@@ -2699,7 +2980,8 @@ async function executeFacebookEpic4Tool(name, args) {
   } = await import('../../api/services/facebookAutomation.js');
 
   if (name === 'x_facebook_schedule_post') {
-    const { content, scheduledAt, mediaUrls, facebookAccountId, userId } = rest;
+    const { content, scheduledAt, mediaUrls, facebookAccountId, userId: callerUserId } = rest;
+    const userId = callerUserId ?? resolvedUserId;
     return await scheduleFacebookPost(
       null,
       { content, scheduledAt, mediaUrls, facebookAccountId },
@@ -2718,7 +3000,11 @@ async function executeFacebookEpic4Tool(name, args) {
 
   if (name === 'x_facebook_warmup_scroll') {
     const { targetUrl, durationSeconds } = rest;
-    const options = { dryRun: resolvedDryRun, ...(durationSeconds != null && { durationSeconds }) };
+    const options = {
+      dryRun: resolvedDryRun,
+      ...(durationSeconds != null && { durationSeconds }),
+      ...(resolvedUserId && { userId: resolvedUserId }),
+    };
     if (resolvedDryRun) return await warmupScrollFeed(null, targetUrl, options);
     return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
       warmupScrollFeed(page, targetUrl, options),
@@ -2786,7 +3072,130 @@ async function executeFacebookEpic4Tool(name, args) {
     );
   }
 
+  if (name === 'x_facebook_group_members') {
+    const { groupUrl, limit } = rest;
+    if (typeof groupUrl !== 'string' || !groupUrl.trim() || !groupUrl.includes('facebook.com/groups/')) {
+      throw new Error('❌ x_facebook_group_members: groupUrl must be a facebook.com/groups/ URL');
+    }
+    if (limit != null && (!Number.isFinite(limit) || limit < 1 || limit > 500)) {
+      throw new Error('❌ x_facebook_group_members: limit must be a number between 1 and 500');
+    }
+    const options = { ...(limit != null && { limit }) };
+    if (resolvedDryRun) {
+      return { dryRun: true, platform: 'facebook', preview: { groupUrl, ...options } };
+    }
+    const { scrapeGroupMembers } = await import('../scrapers/facebook/index.js');
+    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
+      scrapeGroupMembers(page, groupUrl, options),
+    );
+  }
+
+  if (name === 'x_facebook_marketplace') {
+    const { query, location, limit, minPrice, maxPrice, category } = rest;
+    if (typeof query !== 'string' || !query.trim()) {
+      throw new Error('❌ x_facebook_marketplace: query is required');
+    }
+    if (limit != null && (!Number.isFinite(limit) || limit < 1 || limit > 200)) {
+      throw new Error('❌ x_facebook_marketplace: limit must be a number between 1 and 200');
+    }
+    if (minPrice != null && (!Number.isFinite(minPrice) || minPrice < 0)) {
+      throw new Error('❌ x_facebook_marketplace: minPrice must be a non-negative number');
+    }
+    if (maxPrice != null && (!Number.isFinite(maxPrice) || maxPrice < 0)) {
+      throw new Error('❌ x_facebook_marketplace: maxPrice must be a non-negative number');
+    }
+    if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
+      throw new Error('❌ x_facebook_marketplace: minPrice cannot be greater than maxPrice');
+    }
+    const options = {
+      ...(limit != null && { limit }),
+      ...(location && { location }),
+      ...(minPrice != null && { minPrice }),
+      ...(maxPrice != null && { maxPrice }),
+      ...(category && { category }),
+    };
+    const { buildMarketplaceSearchUrl, createBrowser, createPage, loginWithCookie, scrapeMarketplace } =
+      await import('../scrapers/facebook/index.js');
+    const searchUrl = buildMarketplaceSearchUrl(query, options);
+    if (resolvedDryRun) {
+      return { dryRun: true, platform: 'facebook', preview: { query, ...options, searchUrl } };
+    }
+    const browser = await createBrowser({ headless: true });
+    let warning = authResolutionError ? `auth resolution failed: ${authResolutionError}. Searching anonymously.` : null;
+    try {
+      const page = await createPage(browser);
+      if (cUser && xs) {
+        try {
+          await loginWithCookie(page, { c_user: cUser, xs });
+        } catch (err) {
+          warning = `Facebook login failed: ${err.message}. Searching anonymously.`;
+        }
+      }
+      const listings = await scrapeMarketplace(page, query, options);
+      const result = { listings, platform: 'facebook', count: listings.length };
+      if (resolvedUserId) result.userId = resolvedUserId;
+      if (warning) result.warning = warning;
+      return result;
+    } finally {
+      await browser.close().catch(() => {});
+    }
+  }
+
   throw new Error(`❌ executeFacebookEpic4Tool: unhandled tool name "${name}"`);
+}
+
+/**
+ * Execute Facebook Epic 7 scrape tool (Story 7.4).
+ * Routes through FacebookScrapeService — single source of truth for API + MCP.
+ * No scraper logic is duplicated here; the service delegates to scrape().
+ *
+ * @param {string} name - Tool name (x_facebook_search, x_facebook_post_comments, etc.)
+ * @param {Object} args - Tool arguments including authCookie, dryRun, and action-specific params.
+ */
+async function executeFacebookScrapeTool(name, args) {
+  const { authCookie, dryRun, ...rest } = args;
+
+  const resolvedDryRun = dryRun === false ? false : true;
+
+  // All 5 scrape tools require authCookie (no anonymous path like marketplace).
+  if (!authCookie) {
+    throw new Error('❌ requires authCookie: provide { c_user, xs } or { accountId }');
+  }
+
+  // Resolve authCookie via FacebookAuthResolver (shared with API route).
+  const { resolve: resolveFacebookAuth } = await import('../../api/services/facebookAuth.js');
+  const resolved = await resolveFacebookAuth(authCookie);
+  const { c_user, xs } = resolved;
+
+  // Map tool name to scrape action.
+  const ACTION_MAP = {
+    x_facebook_search: 'search',
+    x_facebook_post_comments: 'post_comments',
+    x_facebook_group_posts: 'group_posts',
+    x_facebook_group_comments: 'group_comments',
+    x_facebook_posts: 'posts',
+  };
+  const action = ACTION_MAP[name];
+  if (!action) {
+    throw new Error(`❌ executeFacebookScrapeTool: unknown tool "${name}"`);
+  }
+
+  // Build scrape args — map MCP param names to scraper param names.
+  // `url` is the canonical param for post_comments/group_posts/group_comments/posts.
+  // `query` + `type` + `location` + `parallel` are search-specific.
+  const scrapeArgs = {
+    ...rest,
+    authCookie: { c_user, xs },
+    ...(resolved.userId && { userId: resolved.userId }),
+  };
+
+  if (resolvedDryRun) {
+    return { dryRun: true, platform: 'facebook', preview: { action, ...rest } };
+  }
+
+  // Route through FacebookScrapeService (single source of truth).
+  const { run } = await import('../../api/services/facebookScrape.js');
+  return await run(action, scrapeArgs);
 }
 
 /**
@@ -3833,6 +4242,26 @@ async function executeCompetitiveTool(name, args) {
       return { status: 'removed', name: args.name };
     }
 
+    // ── EPS-2: DB-backed tweet scheduling (dry-run default) ──
+    case 'x_schedule': {
+      const { scheduleTweet } = await import('../../api/services/tweetScheduling.js');
+      const { content, scheduledAt, thread, mediaUrls, timezone, recurrenceCron, queueOrder, userId } = args;
+      // Strict dry-run gate: anything except explicit `false` stays in dry-run (mirrors ADR-007).
+      const dryRun = args.dryRun === false ? false : true;
+      return await scheduleTweet(
+        { content, scheduledAt, thread, mediaUrls, timezone, recurrenceCron, queueOrder },
+        { dryRun, userId },
+      );
+    }
+    // Deprecated browser-only scheduler — kept for backward compatibility (AC8).
+    case 'x_schedule_post': {
+      return {
+        deprecated: true,
+        message: 'x_schedule_post is deprecated. Use x_schedule (DB-backed, dry-run default, supports threads/timezones/recurrence).',
+        received: { text: args.text, scheduledAt: args.scheduledAt },
+      };
+    }
+
     // ── 09-H: Evergreen ──
     case 'x_evergreen_analyze': {
       const { analyzeEvergreenCandidates } = await import('../automation/evergreenRecycler.js');
@@ -4239,6 +4668,85 @@ async function executeAITool(name, args) {
       }
     }
 
+    case 'x_ai_write': {
+      // Epic 4 AI Tweet Writer — supports tweet, thread, thread-from-text, bio.
+      // Provider auto-detection: OpenAI / Grok / OpenRouter (via env keys).
+      const hasOpenAI = process.env.OPENAI_API_KEY;
+      const hasGrok = process.env.XAI_API_KEY || process.env.GROK_API_KEY;
+      if (!OPENROUTER_API_KEY && !hasOpenAI && !hasGrok) {
+        return { error: 'An LLM API key is required. Set OPENROUTER_API_KEY, OPENAI_API_KEY, or XAI_API_KEY (Grok). Get a free OpenRouter key at https://openrouter.ai' };
+      }
+
+      const ai = await import('../ai/index.js');
+      const type = args.type || 'tweet';
+      const llmOpts = {
+        topic: args.topic,
+        tone: args.tone,
+        style: args.style,
+        count: args.count || 5,
+        model: args.model,
+        provider: args.provider,
+      };
+
+      // Resolve a voice profile if a username is given (scrapes + analyzes).
+      let voiceProfile = null;
+      if (args.username) {
+        const scrapersMod = await import('../scrapers/index.js');
+        const scrapers = scrapersMod.default || scrapersMod;
+        const browser = await scrapers.createBrowser();
+        const page = await scrapers.createPage(browser);
+        if (SESSION_COOKIE) await scrapers.loginWithCookie(page, SESSION_COOKIE);
+        try {
+          const tweets = await scrapers.scrapeTweets(page, args.username, { limit: 100 });
+          if (!tweets || tweets.length === 0) return { error: `No tweets found for @${args.username}` };
+          voiceProfile = ai.analyzeVoice(args.username, tweets);
+        } finally {
+          await browser.close();
+        }
+      }
+
+      if (type === 'thread') {
+        if (!voiceProfile) return { error: 'username is required for thread generation (to match a voice).' };
+        const result = await ai.generateThread(voiceProfile, { ...llmOpts, length: args.threadLength || 8 });
+        return { topic: args.topic, ...result };
+      }
+
+      if (type === 'thread-from-text') {
+        if (!args.text) return { error: 'text is required for type=thread-from-text.' };
+        if (!voiceProfile) return { error: 'username is required for thread-from-text (to match a voice).' };
+        const result = await ai.generateThreadFromText(voiceProfile, {
+          text: args.text,
+          maxLength: args.threadLength || 10,
+          tone: args.tone,
+          model: args.model,
+          provider: args.provider,
+        });
+        return { topic: args.topic, ...result };
+      }
+
+      if (type === 'bio') {
+        const result = await ai.generateBio(voiceProfile, {
+          topic: args.topic,
+          keywords: args.keywords,
+          tone: args.tone,
+          count: args.count || 5,
+          model: args.model,
+          provider: args.provider,
+        });
+        return { topic: args.topic, ...result };
+      }
+
+      // Default: single tweet(s). Works with or without a voice profile.
+      const profile = voiceProfile || {
+        username: args.username || 'you',
+        contentPillars: [{ topic: args.topic }],
+        bestPerforming: { commonTraits: [], examples: [] },
+        tone: { formality: 0.5, humor: 0.5, controversy: 0.5, technicality: 0.5 },
+      };
+      const result = await ai.generateTweet(profile, llmOpts);
+      return { topic: args.topic, ...result };
+    }
+
     default:
       throw new Error(`Unknown AI tool: ${name}`);
   }
@@ -4256,7 +4764,7 @@ function createMcpServer() {
   const srv = new Server(
     {
       name: 'xactions-mcp',
-      version: '3.1.0',
+      version: VERSION,
     },
     {
       capabilities: {
@@ -4277,6 +4785,11 @@ function createMcpServer() {
 
     try {
       const result = await executeTool(name, args || {});
+
+      // If executeTool already produced an MCP error result, propagate it as-is
+      if (result && result.isError === true) {
+        return result;
+      }
 
       return {
         content: [
@@ -4351,14 +4864,26 @@ process.on('SIGINT', async () => {
   if (MODE === 'local' && localTools?.closeBrowser) {
     await localTools.closeBrowser();
   }
-  process.exit(0);
+  try {
+    await prisma.$disconnect();
+  } catch (err) {
+    console.error('❌ Prisma disconnect error:', err.message);
+    process.exitCode = 1;
+  }
+  process.exit(process.exitCode || 0);
 });
 
 process.on('SIGTERM', async () => {
   if (MODE === 'local' && localTools?.closeBrowser) {
     await localTools.closeBrowser();
   }
-  process.exit(0);
+  try {
+    await prisma.$disconnect();
+  } catch (err) {
+    console.error('❌ Prisma disconnect error:', err.message);
+    process.exitCode = 1;
+  }
+  process.exit(process.exitCode || 0);
 });
 
 /**
@@ -4368,7 +4893,7 @@ function printBanner(pluginCount, pluginToolCount) {
   const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
   console.error('');
-  console.error('⚡ XActions MCP Server v3.1.0 — 140+ tools');
+  console.error(`⚡ XActions MCP Server v${VERSION} — ${TOOLS.length + pluginToolCount} tools`);
   console.error('   The free, open-source Twitter/X MCP server');
   console.error('   https://github.com/nirholas/XActions');
   console.error('');
@@ -4393,7 +4918,7 @@ function printBanner(pluginCount, pluginToolCount) {
   // ── AI Tools Status ──
   if (OPENROUTER_API_KEY) {
     console.error('✅ AI tools enabled (OPENROUTER_API_KEY set)');
-    console.error('   x_analyze_voice, x_generate_tweet, x_summarize_thread');
+    console.error('   x_analyze_voice, x_generate_tweet, x_ai_write, x_summarize_thread');
   } else {
     console.error('ℹ️  AI tools disabled. Set OPENROUTER_API_KEY for voice analysis & tweet generation.');
     console.error('   Get a free key at https://openrouter.ai');
@@ -4412,7 +4937,7 @@ function printBanner(pluginCount, pluginToolCount) {
     'Scraping':  ['x_get_profile', 'x_get_followers', 'x_get_following', 'x_get_tweets', 'x_search_tweets', 'x_get_thread', 'x_download_video'],
     'Analysis':  ['x_detect_unfollowers', 'x_analyze_sentiment', 'x_best_time_to_post', 'x_competitor_analysis', 'x_brand_monitor'],
     'Actions':   ['x_follow', 'x_unfollow', 'x_like', 'x_post_tweet', 'x_post_thread', 'x_reply'],
-    'AI':        ['x_analyze_voice', 'x_generate_tweet', 'x_summarize_thread'],
+    'AI':        ['x_analyze_voice', 'x_generate_tweet', 'x_ai_write', 'x_rewrite_tweet', 'x_summarize_thread'],
   };
 
   for (const [cat, tools] of Object.entries(categories)) {
@@ -4550,13 +5075,40 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('❌ Fatal error:', error.message);
-  if (process.env.DEBUG) {
-    console.error(error.stack);
+/**
+ * Is this module the process entry point?
+ *
+ * The `xactions-mcp` bin is a symlink npm creates into node_modules/.bin, so
+ * `process.argv[1]` is the symlink path while `import.meta.url` is the real
+ * one. Comparing them directly would never match under npx and the server
+ * would refuse to start. Resolving argv[1] through realpath first makes the
+ * comparison hold for `node src/mcp/server.js`, `npm run mcp` and
+ * `npx -y xactions-mcp` alike.
+ *
+ * @returns {boolean}
+ */
+function isEntryPoint() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
   }
-  process.exit(1);
-});
+}
 
-// Export for testing without starting the stdio transport
-export { TOOLS, executeFacebookAutomateTool, executeFacebookEpic4Tool };
+// Importing this module must not start a server. `xactions doctor`, the test
+// suite and anything else that wants the tool list would otherwise open a
+// stdio transport as a side effect and then hang waiting for a client.
+if (isEntryPoint()) {
+  main().catch((error) => {
+    console.error('❌ Fatal error:', error.message);
+    if (process.env.DEBUG) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  });
+}
+
+// Exported so the tool list can be inspected without starting a transport.
+// Also export Facebook automation tools for direct programmatic use.
+export { TOOLS, main, createMcpServer, initializeBackend, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts };

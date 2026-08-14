@@ -1,7 +1,8 @@
 # Facebook DOM Selectors Reference
 
-> ⚠️ **STATUS: UNVERIFIED — skeleton + verify checklist.**
-> Các selector dưới đây là **điểm khởi đầu dựa trên cấu trúc DOM Facebook đã biết**, CHƯA được verify live trên session thật.
+**Verified: 2026-08-12**
+> Posts, Search, Profile scraping verified live on authenticated session.
+> Followers, Groups, Friend actions still UNVERIFIED — need live test on secondary account.
 > Facebook obfuscate class names (randomized, ví dụ `x1i10hfl`) và đổi DOM thường xuyên — **không** dựa vào class. Ưu tiên `role`, `aria-label`, text anchor.
 > Dev phải chạy [Verify Checklist](#verify-checklist) trên account thật trước khi tin bất kỳ selector nào.
 
@@ -25,7 +26,7 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 | Avatar | `meta[property="og:image"]` | CDN URL, stable |
 | Follower count | Regex `/([\d,.]+[KkMm]?)\s*followers?/i` from `og:description` or `document.body.innerText` | Best-effort, `null` if absent |
 | Meta fallback | `meta[property="og:title"]`, `og:description`, `og:image` | **Ổn định nhất** — ưu tiên hơn DOM |
-| Blocked/missing detect | `og:title` absent or equals `"Facebook"` → throw error | Avoids returning empty objects |
+| Blocked/missing detect | `og:title` absent or equals `"Facebook"` → return partial data with `error` field | Graceful degradation, avoids crash |
 
 > **Approach used in `scrapeProfile`:** meta-first (`og:` tags via `page.evaluate`), DOM body text fallback for follower count. Still UNVERIFIED on a live authenticated session — DOM selectors may differ when logged in vs. public view.
 
@@ -33,29 +34,70 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 
 | Element | Selector / Approach | Ghi chú |
 |---|---|---|
-| Post container | `[role="article"]` | **Primary** — used in scrapeTweets |
-| Post text | `[dir="auto"]` trong article → first non-trivial textContent | Prefer first element with length > 5 |
-| Timestamp | `abbr[data-utime]` hoặc `time[datetime]` hoặc text fallback | Best-effort; FB hides timestamps in links |
+| Post container (desktop) | `[role="article"]` | **Primary** — used for profiles/pages |
+| Post container (mobile/groups) | `div.m.displayed` | **Groups** — desktop doesn't load posts in headless mode |
+| Post text | `[dir="auto"]` → pick text with most spaces (real text vs anti-scraping garbled) | VERIFIED 2026-08-10 |
+| Anti-scraping cleanup | Remove U+034F (CGJ) + zero-width chars | FB inserts invisible chars between letters |
+| Timestamp | `abbr` text or `[aria-label*="ago"]` | Mobile uses `abbr` with "Jul 16" format |
 | Post URL | `a[href*="/posts/"]`, `a[href*="/permalink/"]`, `a[href*="story_fbid"]` | First match wins |
-| Likes count | Regex `/([\d,.]+[KkMm]?)\s*(like\|reaction)/i` on article.textContent | Best-effort; default "0" |
-| Comments count | Regex `/([\d,.]+[KkMm]?)\s*comment/i` on article.textContent | Best-effort; default "0" |
-| Media images | `img` trong article → filter static/emoji/non-http | Avatar images filtered by `static`/`emoji` keywords |
-| Video presence | `video` element trong article | boolean hasVideo |
+| Likes count | Regex `/([\d,.]+[KkMm]?)\s*(like\|reaction)/i` | Best-effort; default "0" |
+| Comments count | Regex `/([\d,.]+[KkMm]?)\s*comment/i` | Best-effort; default "0" |
+| Media images | `img` → filter static/emoji/non-http | Avatar images filtered |
+| Video presence | `video` element | boolean hasVideo |
 
-> **Approach used in `scrapeTweets`:** `[role="article"]` container, text from `[dir="auto"]`, regex-based engagement extraction from article text, scroll-based pagination with bounded retries. Still UNVERIFIED on a live authenticated session — selectors may differ when logged in vs. public view.
+> **Approach used in `scrapeTweets`:** Desktop uses `[role="article"]`. Groups use mobile site (`m.facebook.com`) with mobile UA + `div.m.displayed` selector, filtered by date pattern. Text cleanup removes U+034F anti-scraping chars. Pick text with most spaces (real words vs garbled). VERIFIED 2026-08-10 on live session.
 
 ## Search (FR-4)
 
 | Element | Selector / Approach | Ghi chú |
 |---|---|---|
 | Search URL | `${FACEBOOK_BASE}/search/posts?q=<encodeURIComponent(query)>` | Posts-specific search surface |
-| Result container | `[role="article"]` | **Primary** — same as scrapeTweets (UNVERIFIED on live session) |
-| Result text | First `[dir="auto"]` with length > 5 | UNVERIFIED — may grab author name instead of post body |
-| Author | First `a[href]` in article that is NOT a post permalink/search link | Extracts vanity handle from href; UNVERIFIED |
-| Timestamp | `abbr[data-utime]` or `time[datetime]` or text fallback | UNVERIFIED |
-| Post URL (id) | `a[href*="/posts/"]`, `a[href*="/permalink/"]`, `a[href*="story_fbid"]` | Preferred for stable `id`; text fallback if absent |
+| Result container | `[role="article"]` | **Primary** — same as scrapeTweets |
+| Result text | `[dir="auto"]` → pick text with most spaces (real text vs anti-scraping garbled) | VERIFIED 2026-08-10 |
+| Anti-scraping cleanup | Remove U+034F (CGJ) chars | FB inserts U+034F between chars to prevent scraping |
+| Author | First `a[href]` that is NOT a post permalink/search link | Extracts vanity handle from href |
+| Timestamp | `abbr[data-utime]` or `time[datetime]` or text fallback | Best-effort |
+| Post URL (id) | `a[href*="/posts/"]`, `a[href*="/permalink/"]`, `a[href*="story_fbid"]` | Preferred for stable `id` |
 
-> **Approach used in `searchTweets`:** Navigate to `/search/posts?q=...`, extract `[role="article"]` containers, author from first non-permalink profile link, text from first `[dir="auto"]`. All UNVERIFIED on live authenticated session. Search results may not render without login.
+> **Approach used in `searchTweets`:** Navigate to `/search/posts?q=...`, extract `[role="article"]`, pick text with most spaces (real words vs garbled anti-scraping text), remove U+034F chars. VERIFIED 2026-08-10 on live session.
+
+## Marketplace (FR-NEW — 2026-08-12)
+
+| Element | Selector / Approach | Ghi chú |
+|---|---|---|
+| Search URL | `facebook.com/marketplace/search/?query=<query>` | **Primary** search endpoint |
+| Category URL | `facebook.com/marketplace/category/<slug>/?query=<query>` | Filter by category (phones, vehicles, furniture) |
+| Listing card | `a[href*="/marketplace/item/"]` | **Primary** — anchor links to listing detail |
+| Listing card (alt) | `a[href*="/marketplace/listing/"]` | Fallback pattern |
+| Price | Regex `/^([\$€£¥₹A-Z]*\s*[\d,]+(?:\.\d{2})?(?:\s*(?:USD\|EUR\|VND\|ETB))?)/i` | First match in card text — currency symbol + digits |
+| Title | Text between price and trailing location | CamelCase splitting: insert space before uppercase letters |
+| Location | Trailing capitalized word(s) at end of text | Patterns: city names like "Jijiga", "Harar", "Dire Dawa" |
+| Image | `img` → `src` or `data-src` | First image in card |
+| Listing URL | `https://www.facebook.com/marketplace/item/{id}/` | Stable canonical URL |
+
+### Text Parsing Logic (VERIFIED 2026-08-12)
+
+Facebook Marketplace card text concatenates price + title + location without separators:
+
+```
+Raw:     "$115,000Iphone+15+ProMaxJijiga"
+Step 1:  Price = "$115,000" (regex match)
+Step 2:  After price = "Iphone+15+ProMaxJijiga"
+Step 3:  Replace `+` with space → "Iphone 15 ProMaxJijiga"
+Step 4:  Split camelCase → "Iphone 15 Pro Max Jijiga"
+Step 5:  Location = "Jijiga" (trailing capitalized word, not product keyword)
+Step 6:  Title = "Iphone 15 Pro Max"
+```
+
+### Location Detection Heuristics
+
+A word looks like a location if:
+- Matches `/^[A-Z][a-z]+$/` (capitalized, lowercase rest)
+- NOT a product keyword: `Iphone`, `Ipad`, `Macbook`, `Samsung`, `Sony`, `Nike`, `Adidas`, `Pro`, `Max`, `Plus`, `Mini`, `Air`, `Ultra`
+
+Multi-word locations (e.g., "Dire Dawa") detected when both trailing words match.
+
+> **Approach used in `scrapeMarketplace`:** Navigate to `/marketplace/search/?query=...`, scroll to load more, extract `a[href*="/marketplace/item/"]` cards, parse price/title/location from concatenated text. VERIFIED 2026-08-12 on live session.
 
 ## Followers (FR-3) — ĐẶC BIỆT CẦN VERIFY
 
@@ -94,8 +136,9 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 |---|---|---|
 | Like button (not liked) | `[aria-label="Like"]` / `[aria-label="Thích"]` | **VERIFIED en** 2026-06-09 (Story 2.2 live test); vi UNVERIFIED |
 | Like button (already liked) | `[aria-label="Remove Like"]` / `[aria-label="Bỏ thích"]` | en logic verified via `alreadyLiked` path; click-path UNVERIFIED live |
-| Comment input (en) | `[aria-label*="Write a comment"]`, `[placeholder*="Write a comment"]` | Story 2.3; substring match for flexibility |
+| Comment input (en) | `[aria-label*="Write a public comment"]`, `[aria-label*="Write a comment"]`, `[placeholder*="Write a comment"]` | Story 2.3; substring match. FB updated label to "Write a public comment…" (2026) |
 | Comment input (vi) | `[aria-label*="Viết bình luận"]`, `[placeholder*="Viết bình luận"]` | Story 2.3; Vietnamese locale |
+| Comment input (fallback) | `[role="textbox"][contenteditable="true"]` | Generic fallback for any locale |
 | Comment submit | Enter key (`page.keyboard.press('Enter')`) | Story 2.3; most reliable method |
 | Post submit | `[aria-label="Post"]` / `[aria-label="Đăng"]` | |
 
@@ -171,7 +214,20 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 
 ⚠️ Flow: navigate `{groupUrl}/members` → `waitForSelector` (container list, 8s timeout). Nếu không thấy → return `{ note, platform }` (restricted/private). Nếu thấy → bounded scroll loop (`window.scrollTo(0, document.body.scrollHeight)` + 1-3s delay + stall detection). Extract member rows → `normalizeGroupMember` → NFR-11 strip phone/email. Return array. Tests dùng fake page + DOM fixture + injected `delay` seam, không phụ thuộc selector thật.
 
-## Friends — Send Request (FR-21) — Epic 4
+## Mobile Site Approach (Groups)
+
+> Facebook desktop doesn't load posts in headless mode for groups. Mobile site (`m.facebook.com`) works.
+
+**Configuration:**
+- User-Agent: `Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15`
+- Viewport: 390x844 (mobile)
+- URL: `https://m.facebook.com/groups/<groupId>`
+- Post selector: `div.m.displayed` (filter by date pattern)
+- Text: `[dir="auto"]` with anti-scraping cleanup
+
+**Date pattern filter:** Posts contain dates like "Jul 16", "2h", "3d ago". Filter `div.m.displayed` elements matching `/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+|\d+\s*(min|h|hour|day|week)s?\s*ago/i`.
+
+VERIFIED 2026-08-10 on live session.
 
 > ⚠️ Story 4.7. **Cluster-2 — HIGHEST account-risk action trong Epic 4.** Friend-request spam = top cause of checkpoint.
 > Delay floor **60s** (DOUBLE group floor), batchLimit ≤ 20/session. Non-suppressible warning. TẤT CẢ selector **UNVERIFIED** — confirm live trên account phụ.
@@ -213,13 +269,14 @@ Mọi selector phải bọc trong helper một chỗ để khi Facebook đổi D
 Dev chạy trên account thật (ưu tiên account phụ), đánh dấu khi verify:
 
 ### Scrape (Epic 1)
-- [ ] **Profile**: mở 1 public page + 1 personal profile, xác nhận selector lấy được `name`, `followers`, `bio`, `avatar`. Ghi lại selector thực tế hoạt động.
-- [ ] **Profile meta fallback**: xác nhận `og:title`/`og:description` parse được name + follower count.
-- [ ] **Posts**: scroll 1 page, xác nhận `[role="article"]` bắt được post; verify lấy được text/timestamp/likes/comments/media.
-- [ ] **Posts pagination**: xác nhận scroll load thêm post + bounded retry hoạt động.
+- [x] **Profile**: meta-first approach works, returns partial data if blocked (VERIFIED 2026-08-10)
+- [x] **Profile meta fallback**: `og:title`/`og:description` parse name + follower count
+- [x] **Posts**: mobile site + `div.m.displayed` for groups, date pattern filter (VERIFIED 2026-08-10)
+- [x] **Posts text cleanup**: Remove U+034F anti-scraping chars, pick text with most spaces (VERIFIED 2026-08-10)
+- [ ] **Posts pagination**: xác nhận scroll load thêm post + bounded retry hoạt động
 - [ ] **Followers — Page**: mở 1 Page có tab Followers, xác nhận lấy được list. Ghi selector.
 - [ ] **Followers — Personal**: mở 1 personal profile, xác nhận KHÔNG lấy được → adapter trả `note` đúng (không crash).
-- [ ] **Search**: chạy `facebook.com/search/posts?q=<query>`, xác nhận bắt được results + author.
+- [x] **Search**: `[role="article"]` + text cleanup works (VERIFIED 2026-08-10)
 
 ### Automate / Growth (Epic 2 + Epic 4)
 - [ ] **Share button**: mở 1 post, xác nhận `div[data-ad-rendering-role="share_button"]` click mở được Share dialog.

@@ -1,6 +1,6 @@
 # XActions MCP Server Setup Guide
 
-> Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter — for free.
+> Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter and Facebook — for free.
 
 ---
 
@@ -191,7 +191,22 @@ Then use `xactions-mcp` as the command instead of `npx`:
 | `x_competitor_analysis` | Compare metrics across accounts |
 | `x_brand_monitor` | Monitor brand mentions with sentiment |
 
-### Actions (require auth_token)
+### Facebook Tools (require Facebook cookie)
+
+See [mcp-facebook.md](agents/mcp-facebook.md) for full reference.
+
+| Tool | Description |
+|------|-------------|
+| `x_facebook_search` | Search Facebook posts/people/pages/groups |
+| `x_facebook_posts` | Scrape profile/page posts |
+| `x_facebook_post_comments` | Scrape post comments |
+| `x_facebook_group_posts` | Scrape group posts |
+| `x_facebook_group_comments` | Scrape group post comments |
+| `x_facebook_automate` | Like/comment/post/share |
+| `x_facebook_warmup_account` | Warmup account with natural scrolling |
+| `x_facebook_marketplace` | Search Facebook Marketplace |
+
+### X/Twitter Actions (require auth_token)
 
 | Tool | Description |
 |------|-------------|
@@ -311,4 +326,4 @@ npx puppeteer browsers install chrome
 
 ---
 
-*Built by [@nichxbt](https://x.com/nichxbt). MIT License.*
+*Built by [@nichxbt](https://x.com/nichxbt). Apache 2.0 License.*

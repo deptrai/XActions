@@ -710,7 +710,6 @@ async function unfollowEveryone() {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled',
-      '--disable-web-security',
     ],
   });
   

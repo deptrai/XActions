@@ -8,31 +8,44 @@ import { likeFacebookPosts } from '../../api/services/facebookAutomation.js';
 const noDelay = () => {};
 
 // Build a fake Puppeteer page that drives likeSinglePost through its real branches.
+// likedSelector: the aria-label text for an unliked Like button
+// alreadyLikedSelector: the aria-label text for an already-liked (Remove Like) button
+// waitSelectorFails: if true, waitForSelector rejects (simulates timeout)
 const makeRealPage = ({
   likedSelector = null,
   alreadyLikedSelector = null,
   waitSelectorFails = false,
 } = {}) => {
   const clickSpy = vi.fn();
-  const el = { click: clickSpy };
+  const el = {
+    click: clickSpy,
+    boundingBox: vi.fn().mockResolvedValue({ x: 0, y: 0, width: 100, height: 50 }),
+  };
+  const labelFrom = (selector) => selector ? (selector.match(/"([^"]+)"/) || [])[1] : null;
+  const likedLabel = labelFrom(likedSelector);
+  const alreadyLikedLabel = labelFrom(alreadyLikedSelector);
   return {
     _clickSpy: clickSpy,
+    mouse: { move: vi.fn(), click: vi.fn() },
     goto: vi.fn().mockResolvedValue(null),
     waitForSelector: waitSelectorFails
       ? vi.fn().mockRejectedValue(new Error('timeout'))
       : vi.fn().mockResolvedValue(null),
+    // Match the implementation's *= (substring) attribute selectors.
     $: vi.fn(async (sel) => {
-      if (alreadyLikedSelector && sel === alreadyLikedSelector) return el;
-      if (likedSelector && sel === likedSelector) return el;
+      if (alreadyLikedLabel && sel.includes('"' + alreadyLikedLabel + '"')) return el;
+      if (likedLabel && sel.includes('"' + likedLabel + '"')) return el;
       return null;
     }),
+    boundingBox: vi.fn().mockResolvedValue({ x: 0, y: 0, width: 100, height: 50 }),
+    evaluate: vi.fn().mockResolvedValue(false),
   };
 };
 
 // ============================================================================
 // likeFacebookPosts — real likeSinglePost integration (no likeFn override)
 // Exercises the full: likeFacebookPosts → likeSinglePost → findLikeButton stack.
-// vi.useFakeTimers() skips the 500ms + 300ms sleep() inside likeSinglePost.
+// vi.useFakeTimers() skips the 500ms + 3000ms sleep() inside likeSinglePost.
 // ============================================================================
 
 describe('likeFacebookPosts — likeSinglePost real stack integration', () => {
@@ -47,8 +60,8 @@ describe('likeFacebookPosts — likeSinglePost real stack integration', () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(page.goto).toHaveBeenCalledWith(url, { waitUntil: 'networkidle2', timeout: 30000 });
-    expect(page._clickSpy).toHaveBeenCalledTimes(1);
+    expect(page.goto).toHaveBeenCalledWith(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    expect(page.mouse.click).toHaveBeenCalledTimes(1);
     expect(result.results[0]).toMatchObject({ target: url, ok: true, alreadyLiked: false });
   });
 
@@ -60,7 +73,7 @@ describe('likeFacebookPosts — likeSinglePost real stack integration', () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(page._clickSpy).toHaveBeenCalledTimes(1);
+    expect(page.mouse.click).toHaveBeenCalledTimes(1);
     expect(result.results[0]).toMatchObject({ target: url, ok: true, alreadyLiked: false });
   });
 
@@ -72,7 +85,7 @@ describe('likeFacebookPosts — likeSinglePost real stack integration', () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(page._clickSpy).not.toHaveBeenCalled();
+    expect(page.mouse.click).not.toHaveBeenCalled();
     expect(result.results[0]).toMatchObject({ target: url, ok: true, alreadyLiked: true });
   });
 
@@ -84,7 +97,7 @@ describe('likeFacebookPosts — likeSinglePost real stack integration', () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(page._clickSpy).not.toHaveBeenCalled();
+    expect(page.mouse.click).not.toHaveBeenCalled();
     expect(result.results[0]).toMatchObject({ target: url, ok: true, alreadyLiked: true });
   });
 
@@ -96,7 +109,7 @@ describe('likeFacebookPosts — likeSinglePost real stack integration', () => {
     await vi.runAllTimersAsync();
     const result = await promise;
 
-    expect(page._clickSpy).not.toHaveBeenCalled();
+    expect(page.mouse.click).not.toHaveBeenCalled();
     expect(result.results[0].ok).toBe(false);
     expect(result.results[0].error).toMatch(/Like button not found/i);
   });
@@ -107,7 +120,7 @@ describe('likeFacebookPosts — likeSinglePost real stack integration', () => {
     const result = await likeFacebookPosts(page, ['https://www.facebook.com/post/6']);
 
     expect(page.goto).not.toHaveBeenCalled();
-    expect(page._clickSpy).not.toHaveBeenCalled();
+    expect(page.mouse.click).not.toHaveBeenCalled();
     expect(result.dryRun).toBe(true);
   });
 });

@@ -12,11 +12,23 @@
 
 // by nichxbt
 
+import fs from 'node:fs';
+import path from 'node:path';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { generateSync as totpGenerateSync } from 'otplib';
+import { generateFingerprint, applyFingerprint, applyNavigatorOverrides, applyWebRTCOverride } from './fingerprint.js';
+import { warmSession } from './warmup.js';
+import { extractHydrationJson } from './hydration.js';
 
-puppeteer.use(StealthPlugin());
+export { warmSession };
+
+// Configure stealth for all Facebook sessions. Persistent profiles conflict with the
+// iframe.contentWindow evasion (ADR-016). Per-call reconfiguration is not reliable with
+// puppeteer-extra, so we use the spec-allowed fallback and disable it globally.
+const allEvasions = [...StealthPlugin().opts.availableEvasions];
+const facebookEvasions = new Set(allEvasions.filter((e) => e !== 'iframe.contentWindow'));
+puppeteer.use(StealthPlugin({ enabledEvasions: facebookEvasions }));
 
 // ============================================================================
 // Core Utilities
@@ -27,6 +39,15 @@ const randomDelay = (min = 1000, max = 3000) => sleep(min + Math.random() * (max
 
 const FACEBOOK_BASE = 'https://www.facebook.com';
 
+// Mobile UA + viewport shared by group scrapers (scrapeFacebookGroupPosts,
+// scrapeFacebookGroupSearch). Extracted to avoid duplication.
+const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1';
+const MOBILE_VIEWPORT = { width: 390, height: 844, isMobile: true };
+async function applyMobileViewport(page) {
+  await page.setUserAgent(MOBILE_UA);
+  await page.setViewport(MOBILE_VIEWPORT);
+}
+
 // Path segments after facebook.com/ that are NOT user/page profile handles.
 // Shared by scrapeFollowers and searchTweets author extraction. Passed into
 // page.evaluate as an argument (arrays serialize across the bridge; Sets do not).
@@ -36,44 +57,151 @@ const NON_PROFILE_SEGMENTS = [
 ];
 
 /**
- * Create a browser instance for Facebook scraping
+ * Create a browser instance for Facebook scraping (Story 6.17 — ADR-016 persistent profile).
  * @param {Object} options - Browser launch options
+ * @param {string} [options.userDataDir] - Profile directory path (auto-created if missing)
  * @returns {Promise<Browser>} Puppeteer browser instance
  */
 export async function createBrowser(options = {}) {
-  const { args: extraArgs = [], headless, proxy, launchImpl, ...rest } = options;
+  const { args: extraArgs = [], headless, proxy, launchImpl, executablePath, userDataDir, proxyAuth, proxyLocation, fingerprint, skipWarmup, ...rest } = options;
   const stealthArgs = [
     '--no-sandbox',
     '--disable-setuid-sandbox',
     '--disable-blink-features=AutomationControlled',
-    '--disable-web-security',
+    '--disable-webrtc', // Story 6.5 — prevent real IP leak via STUN (defense-in-depth with JS override)
   ];
-  // Wire proxy as a Chromium launch arg — the only browser-level way to apply it.
-  // Proxy creds (username/password) are NOT handled here; callers must invoke
-  // page.authenticate({ username, password }) after createPage, using the fields
-  // from rotateProxy's descriptor (see docs/agents/selectors-facebook.md AC4 notes).
-  const proxyArgs = proxy ? [`--proxy-server=${proxy}`] : [];
+
+  let mergedArgs = [...stealthArgs, ...(proxy ? [`--proxy-server=${proxy}`] : []), ...extraArgs];
+
+  // Auto-create profile directory and strip --incognito when persistent profile is used (Story 6.17 — AC2, AC3)
+  if (userDataDir != null) {
+    if (typeof userDataDir !== 'string' || !userDataDir.trim()) {
+      throw new Error('❌ userDataDir must be a non-empty string');
+    }
+
+    const resolvedDir = path.resolve(userDataDir);
+    const relativeToCwd = path.relative(process.cwd(), resolvedDir);
+    if (path.isAbsolute(relativeToCwd) || relativeToCwd.startsWith('..')) {
+      throw new Error('❌ userDataDir must be within the current working directory');
+    }
+
+    try {
+      fs.mkdirSync(resolvedDir, { recursive: true });
+    } catch {
+      throw new Error('❌ Failed to create profile directory');
+    }
+
+    if (mergedArgs.some((a) => /^--incognito(?:=.*)?$/i.test(a))) {
+      console.warn('⚠️ Stripping --incognito flag because persistent profile (userDataDir) is enabled');
+      mergedArgs = mergedArgs.filter((a) => !/^--incognito(?:=.*)?$/i.test(a));
+    }
+
+    console.warn('⚠️ Persistent profile launch uses stealth without iframe.contentWindow evasion (ADR-016 conflict mitigation)');
+  }
+
   // launchImpl seam: tests inject a fake launcher so no real browser spawns.
   const launch = launchImpl ?? puppeteer.launch.bind(puppeteer);
-  return launch({
+
+  // Resolve executablePath: explicit option → env var → system Chrome → puppeteer default
+  const resolvedExecutablePath = executablePath
+    || process.env.PUPPETEER_EXECUTABLE_PATH
+    || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+
+  const launchOpts = {
     headless: headless !== undefined ? headless : 'new',
-    // Merge stealth + proxy + caller args; order ensures proxy is visible to Chromium
-    args: [...stealthArgs, ...proxyArgs, ...extraArgs],
+    args: mergedArgs,
+    executablePath: resolvedExecutablePath,
     ...rest,
-  });
+  };
+
+  if (userDataDir != null) {
+    launchOpts.userDataDir = userDataDir;
+  }
+
+  return launch(launchOpts);
 }
 
 /**
- * Create a page with realistic settings
- * @param {Browser} browser - Puppeteer browser instance
- * @returns {Promise<Page>} Puppeteer page instance
+ * Apply timezone and geolocation overrides matching proxy location (Story 6.16 — ADR-016).
+ *
+ * @param {Page} page - Puppeteer page instance
+ * @param {Object} [proxyLocation] - location descriptor matching proxy
+ * @param {string} [proxyLocation.timezone] - IANA timezone (e.g. 'America/New_York')
+ * @param {number} [proxyLocation.latitude] - latitude (-90..90)
+ * @param {number} [proxyLocation.longitude] - longitude (-180..180)
+ * @param {number} [proxyLocation.lat] - latitude alias
+ * @param {number} [proxyLocation.lng] - longitude alias
+ * @param {number} [proxyLocation.accuracy] - optional geolocation accuracy in meters
  */
-export async function createPage(browser) {
+export async function applyProxyLocation(page, proxyLocation) {
+  if (!proxyLocation) return;
+
+  const timezone = proxyLocation.timezone;
+  const lat = proxyLocation.latitude ?? proxyLocation.lat;
+  const lng = proxyLocation.longitude ?? proxyLocation.lng;
+  const accuracy = proxyLocation.accuracy;
+
+  const isValidTz = typeof timezone === 'string' && timezone.trim().length > 0;
+  const isValidLat = typeof lat === 'number' && Number.isFinite(lat) && lat >= -90 && lat <= 90;
+  const isValidLng = typeof lng === 'number' && Number.isFinite(lng) && lng >= -180 && lng <= 180;
+
+  if (!isValidTz || !isValidLat || !isValidLng) {
+    console.warn('⚠️ Skipped proxy location override: missing or invalid timezone/coordinates');
+    return;
+  }
+
+  try {
+    await page.emulateTimezone(timezone.trim());
+
+    const geo = { latitude: lat, longitude: lng };
+    if (typeof accuracy === 'number' && Number.isFinite(accuracy) && accuracy >= 0) {
+      geo.accuracy = accuracy;
+    }
+    await page.setGeolocation(geo);
+
+    await page.browserContext().overridePermissions('https://www.facebook.com', ['geolocation']);
+  } catch (err) {
+    throw new Error('❌ Failed to apply proxy location', { cause: err });
+  }
+}
+
+/**
+ * Create a new Puppeteer page pre-configured with anti-detection fingerprinting.
+ *
+ * A fingerprint (UA + viewport + hardware config) is generated once and applied
+ * via `applyFingerprint` (UA + viewport), then `applyNavigatorOverrides` (navigator
+ * properties via evaluateOnNewDocument), then `applyWebRTCOverride` (WebRTC leak
+ * prevention), then `applyProxyLocation` (timezone & geolocation). The fingerprint is
+ * attached as `page._fingerprint` so callers can reuse it across tabs via
+ * `createPage(browser, { fingerprint })`.
+ *
+ * @param {Browser} browser - Puppeteer browser instance
+ * @param {Object} [options]
+ * @param {Object} [options.fingerprint] - explicit fingerprint for session reuse
+ * @param {Object} [options.proxyLocation] - proxy location descriptor { timezone, latitude, longitude }
+ * @returns {Promise<Page>} Puppeteer page instance with `page._fingerprint` set
+ */
+export async function createPage(browser, options = {}) {
   const page = await browser.newPage();
-  await page.setViewport({ width: 1280 + Math.floor(Math.random() * 100), height: 800 });
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-  );
+
+  // Apply proxy authentication before any navigation so the proxy accepts the browser connection.
+  const proxyAuth = options.proxyAuth;
+  if (proxyAuth && typeof proxyAuth.username === 'string' && typeof proxyAuth.password === 'string') {
+    await page.authenticate({ username: proxyAuth.username, password: proxyAuth.password });
+  }
+
+  const fingerprint = options.fingerprint ?? generateFingerprint();
+  try {
+    await applyFingerprint(page, fingerprint);
+    await applyNavigatorOverrides(page, fingerprint);
+    await applyWebRTCOverride(page);
+    await applyProxyLocation(page, options.proxyLocation);
+  } catch (err) {
+    // Clean up the page on failure — avoid resource leak and partial-fingerprint state.
+    await page.close().catch(() => {});
+    throw err;
+  }
+  page._fingerprint = fingerprint;
   return page;
 }
 
@@ -121,9 +249,10 @@ export function normalizeHandle(input) {
  * @returns {Object} Normalized post
  */
 export function normalizePost(raw) {
-  const { id, text, timestamp, likes, comments, postUrl, images, hasVideo } = raw;
+  const { id, text, timestamp, likes, comments, postUrl, images, hasVideo, author } = raw;
   return {
     id: id || null,
+    author: author || null,
     text: text || null,
     timestamp: timestamp || null,
     likes: likes || '0',
@@ -181,6 +310,175 @@ export function normalizeProfile(raw, inputHandle) {
   };
 }
 
+// ============================================================================
+// Comments & Group Content Normalizers (pure — testable without Puppeteer)
+// ============================================================================
+
+/**
+ * Parse a human-readable like/comment count (e.g. "1.2K", "3M", "1,234") to a number.
+ * Returns null for unparseable or empty values.
+ * @param {any} input
+ * @returns {number|null}
+ */
+function parseEngagementCount(input) {
+  if (input == null) return null;
+  if (typeof input === 'number' && Number.isFinite(input)) return input;
+  const str = String(input).trim();
+  if (!str) return null;
+  const m = str.match(/^([\d,.]+)\s*([KkMmBb])?$/);
+  if (!m) return null;
+  let value = parseFloat(m[1].replace(/,/g, ''));
+  if (Number.isNaN(value)) return null;
+  const suffix = m[2]?.toUpperCase();
+  if (suffix === 'K') value *= 1_000;
+  if (suffix === 'M') value *= 1_000_000;
+  if (suffix === 'B') value *= 1_000_000_000;
+  return Math.floor(value);
+}
+
+/**
+ * Normalize a raw comment from hydration JSON or DOM.
+ * NFR-11: PII is stripped from all text and author fields.
+ *
+ * @param {Object} raw
+ * @param {string|null} [fallbackParentId] - Parent comment id for nested replies
+ * @returns {{ id, authorName, authorUrl, text, timestamp, likes, parentId, replies?: Array }}
+ */
+export function normalizeComment(raw, fallbackParentId = null) {
+  const {
+    id,
+    comment_id,
+    legacy_fbid,
+    text,
+    message,
+    body,
+    renderedText,
+    message_text,
+    messageText,
+    author,
+    actor,
+    author_name,
+    authorName,
+    name,
+    url,
+    authorUrl,
+    profileUrl,
+    timestamp,
+    published_time,
+    publishedTime,
+    created_time,
+    createdTime,
+    likes,
+    like_count,
+    likeCount,
+    reaction_count,
+    reactionCount,
+    reactions,
+    replies,
+    comment_replies,
+    reply_count,
+    replyCount,
+    childComments,
+    parentId,
+    parent_comment_id,
+    parentCommentId,
+    parent_comment,
+  } = raw || {};
+
+  const resolvedText =
+    text ||
+    message ||
+    body ||
+    renderedText ||
+    message_text ||
+    messageText ||
+    null;
+
+  const resolvedAuthorName =
+    authorName ||
+    author_name ||
+    (typeof author === 'string' ? author : author?.name) ||
+    (typeof actor === 'string' ? actor : actor?.name) ||
+    name ||
+    null;
+
+  const resolvedAuthorUrl =
+    authorUrl ||
+    url ||
+    profileUrl ||
+    author?.url ||
+    author?.profileUrl ||
+    actor?.url ||
+    actor?.profileUrl ||
+    null;
+
+  const resolvedTimestamp =
+    timestamp ||
+    published_time ||
+    publishedTime ||
+    created_time ||
+    createdTime ||
+    null;
+
+  const resolvedId =
+    id ||
+    comment_id ||
+    legacy_fbid ||
+    resolvedAuthorUrl ||
+    resolvedText?.slice(0, 60) ||
+    null;
+
+  const resolvedLikes =
+    likes ??
+    like_count ??
+    likeCount ??
+    reaction_count ??
+    reactionCount ??
+    (reactions && typeof reactions === 'object'
+      ? Object.values(reactions).reduce((sum, v) => sum + (typeof v === 'number' ? v : parseEngagementCount(v) || 0), 0)
+      : null) ??
+    0;
+
+  const resolvedParentId =
+    parentId ??
+    parentCommentId ??
+    parent_comment_id ??
+    parent_comment?.id ??
+    fallbackParentId ??
+    null;
+
+  const result = {
+    id: resolvedId,
+    authorName: stripPii(resolvedAuthorName),
+    authorUrl: resolvedAuthorUrl,
+    text: stripPii(resolvedText),
+    timestamp: resolvedTimestamp,
+    likes: parseEngagementCount(resolvedLikes) ?? 0,
+    parentId: resolvedParentId,
+  };
+
+  const rawReplies = replies || comment_replies || childComments;
+  if (Array.isArray(rawReplies) && rawReplies.length > 0) {
+    const nested = rawReplies
+      .map((reply) => normalizeComment(reply, result.id))
+      .filter((r) => r && (r.id || r.text));
+    if (nested.length > 0) {
+      result.replies = nested;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Normalize a raw group post. Reuses the standard post shape.
+ * @param {Object} raw
+ * @returns {Object}
+ */
+export function normalizeGroupPost(raw) {
+  return normalizePost({ ...raw, postUrl: raw?.postUrl || raw?.url });
+}
+
 /**
  * Login to Facebook using c_user and xs cookies
  * @param {Page} page - Puppeteer page instance
@@ -189,32 +487,99 @@ export function normalizeProfile(raw, inputHandle) {
  * @param {string} cookies.xs - Facebook session token cookie
  * @throws {Error} If either cookie is missing or empty
  */
-export async function loginWithCookie(page, { c_user, xs }) {
+export async function loginWithCookie(page, cookies = {}, options = {}) {
+  const combined = { ...cookies, ...options };
+  const { c_user, xs, sb, datar, fr, fbl_st, locale, headless = true, skipWarmup = false } = combined;
   if (!c_user?.trim() || !xs?.trim()) {
     throw new Error('❌ Facebook login requires both c_user and xs cookies');
   }
 
-  await page.setCookie(
-    {
-      name: 'c_user',
-      value: c_user,
-      domain: '.facebook.com',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'Strict',
-    },
-    {
-      name: 'xs',
-      value: xs,
-      domain: '.facebook.com',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'Strict',
-    }
-  );
+  // When browser is visible, use longer timeouts and domcontentloaded (faster than networkidle2)
+  const navTimeout = headless ? 30000 : 60000;
+  const navWaitUntil = headless ? 'networkidle2' : 'domcontentloaded';
 
-  await page.goto(FACEBOOK_BASE, { waitUntil: 'networkidle2', timeout: 30000 });
+  // Step 1: Navigate to Facebook first so browser is on the correct domain.
+  // This is required — setCookie before navigation can fail silently for some
+  // cookie combinations because the browser has no origin context.
+  await page.goto(FACEBOOK_BASE, { waitUntil: 'domcontentloaded', timeout: navTimeout });
+  await randomDelay(1000, 2000);
+
+  // Step 2: Build cookie list with all fields needed for full authentication.
+  // Facebook requires sameSite: "None" for cross-site cookies to work.
+  // httpOnly: false allows JS to read cookies (needed for FB features).
+  // expires is set far in the future so cookies are written to disk when persistent
+  // profiles are used (Story 6.17 — AC2). Values are not echoed (NFR3).
+  const futureExpiry = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
+  const fbCookies = [
+    { name: 'c_user', value: c_user, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
+    { name: 'xs', value: xs, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
+  ];
+
+  // Optional but important cookies for full session.
+  if (sb?.trim()) fbCookies.push({ name: 'sb', value: sb, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
+  if (datar?.trim()) fbCookies.push({ name: 'datr', value: datar, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
+  if (fr?.trim()) fbCookies.push({ name: 'fr', value: fr, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
+  if (fbl_st?.trim()) fbCookies.push({ name: 'fbl_st', value: fbl_st, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
+  if (locale?.trim()) fbCookies.push({ name: 'locale', value: locale, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
+
+  // Step 3: Set cookies one at a time to avoid ProtocolError from invalid fields.
+  let setCount = 0;
+  for (const cookie of fbCookies) {
+    try {
+      await page.setCookie(cookie);
+      setCount++;
+    } catch (e) {
+      // Skip invalid cookies but continue with others.
+      console.warn(`⚠️ Skipped invalid cookie ${cookie.name}: ${e.message?.substring(0, 80)}`);
+    }
+  }
+
+  // Step 4: Navigate again — this sends the cookies to Facebook's server,
+  // which responds with an authenticated session.
+  await page.goto(FACEBOOK_BASE, { waitUntil: navWaitUntil, timeout: navTimeout });
   await randomDelay(2000, 4000);
+
+  // Step 5: Verify authentication succeeded.
+  // Check for: login form (bad cookies) OR security check (anti-bot detection).
+  const currentUrl = page.url();
+  const authCheck = (await page.evaluate(() => {
+    const bodyText = document.body?.innerText || '';
+    const hasLoginForm = !!document.querySelector?.('form[action*="login"], [data-testid="royal_login_form"]');
+    const hasLoginButton = bodyText.includes('Log in') && bodyText.includes('password');
+    // Facebook security check / CAPTCHA indicators (multi-language, various phrasings)
+    const hasSecurityCheck = bodyText.includes('confirmez que vous êtes une personne') ||
+      bodyText.includes('confirm that you are a real person') ||
+      (bodyText.includes('confirm that you') && bodyText.includes('human')) ||
+      bodyText.includes("confirm you're human") ||
+      bodyText.includes('Confirm you') ||
+      bodyText.includes("you're human") ||
+      bodyText.includes('Enter the text from the image') ||
+      bodyText.includes('hear this code');
+    return { hasLoginForm, hasLoginButton, hasSecurityCheck };
+  })) || {};
+
+  if (authCheck.hasLoginForm || authCheck.hasLoginButton) {
+    throw new Error('❌ Facebook cookie authentication failed — session expired or invalid cookies');
+  }
+
+  if (authCheck.hasSecurityCheck || currentUrl.includes('/checkpoint/')) {
+    throw new Error('❌ Facebook security check detected — manual verification required (CAPTCHA/anti-bot)');
+  }
+
+  // Store account ID on page context for downstream age/velocity lookup (Story 6.14 — AC5)
+  page._fbAccountId = c_user;
+
+  // Step 6: Session warming sequence (Story 6.15 — ADR-016, AC3, AC4)
+  // Skip condition per ADR-016: skip when headless === false AND skipWarmup === true (debug mode)
+  const isDebugSkip = headless === false && skipWarmup === true;
+  if (!isDebugSkip) {
+    try {
+      const warmupOpts = { ...options, skipWarmup };
+      await warmSession(page, warmupOpts);
+    } catch (err) {
+      console.warn(`⚠️ loginWithCookie: session warming warning — ${err?.message ?? err}`);
+    }
+  }
 }
 
 // ============================================================================
@@ -436,17 +801,26 @@ export async function scrapeProfile(page, username) {
   });
 
   // Detect blocked/non-existent profile — og:title missing or a Facebook login wall.
-  // NOTE: login-wall detection is English-biased ("Facebook", "Log into Facebook").
-  // Non-English login walls may not be caught here — see deferred-work.md. Prefer
-  // running authenticated (authCookie) so profile pages render fully.
   const title = raw.ogTitle?.trim() || '';
   const isLoginWall = !title
     || /^facebook$/i.test(title)
     || /^log\s+in\s+(to\s+)?facebook/i.test(title)
     || /^log\s*into\s+facebook/i.test(title)
     || /^facebook[\s–—-]+log/i.test(title);
+
+  // Return partial data instead of throwing if we have some info
   if (isLoginWall) {
-    throw new Error(`❌ Facebook profile not found or blocked: "${handle}"`);
+    return {
+      name: handle,
+      username: handle,
+      bio: null,
+      followers: raw.domFollowers || null,
+      following: null,
+      posts: null,
+      profileUrl: url,
+      platform: 'facebook',
+      error: 'Profile requires authentication or is blocked',
+    };
   }
 
   return normalizeProfile(raw, handle);
@@ -592,62 +966,111 @@ export async function scrapeTweets(page, username, options = {}) {
     // in tests to keep the scroll loop fast and browser-free.
     delay = randomDelay,
   } = options;
-  const handle = normalizeHandle(username);
-  const profileUrl = `${FACEBOOK_BASE}/${handle}`;
 
-  await page.goto(profileUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  // Determine target URL: full URLs (groups, permalinks) go directly,
+  // handles get normalized to profile URL.
+  // Groups use mobile site - desktop doesn't load posts in headless mode.
+  const isFullUrl = username?.startsWith('http://') || username?.startsWith('https://');
+  const isGroup = isFullUrl && /\/groups\//.test(username);
+  let targetUrl;
+  if (isGroup) {
+    const cleanUrl = username.replace(/^https?:\/\/(www\.)?facebook\.com/, 'https://m.facebook.com');
+    targetUrl = cleanUrl.startsWith('http') ? cleanUrl : `https://m.facebook.com${cleanUrl}`;
+    // Set mobile user agent for groups - desktop UA gets desktop version even on mobile URL
+    await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1');
+    await page.setViewport({ width: 390, height: 844 });
+  } else {
+    targetUrl = isFullUrl ? username : `${FACEBOOK_BASE}/${normalizeHandle(username)}`;
+  }
+
+  await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await delay(2000, 4000);
+
+  // Wait for actual post content to load (skip loading skeletons)
+  const isMobile = isGroup;
+  const postSelector = isMobile ? 'div.m.displayed' : '[role="article"]';
+  try {
+    await page.waitForFunction((selector) => {
+      const posts = document.querySelectorAll(selector);
+      for (const p of posts) {
+        if (p.innerText && p.innerText.length > 20 && !p.querySelector('[aria-label="Loading"]')) {
+          return true;
+        }
+      }
+      return posts.length === 0;
+    }, { timeout: 15000 }, postSelector);
+  } catch (_) {
+    // Timeout - proceed anyway
+  }
 
   const posts = new Map();
   let retries = 0;
 
   while (posts.size < limit && retries < maxRetries) {
-    const rawPosts = await page.evaluate(() => {
-      const articles = document.querySelectorAll('[role="article"]');
-      return Array.from(articles).map((article) => {
-        // Text content
-        const textEls = article.querySelectorAll('[dir="auto"]');
-        const texts = Array.from(textEls)
-          .map((el) => el.textContent?.trim())
-          .filter((t) => t && t.length > 5);
-        const text = texts[0] || null;
+    const rawPosts = await page.evaluate((useMobile) => {
+      // Mobile groups use div.m.displayed, desktop uses [role="article"]
+      const allElements = document.querySelectorAll(useMobile ? 'div.m.displayed' : '[role="article"]');
+      return Array.from(allElements).map((post) => {
+        if (post.querySelector('[aria-label="Loading"]')) return null;
 
-        // Timestamp
-        const timeEl = article.querySelector('abbr, time');
-        const timestamp = timeEl?.getAttribute('data-utime') || timeEl?.getAttribute('datetime') || timeEl?.textContent?.trim() || null;
+        const fullText = post.innerText?.trim() || '';
+        if (fullText.length < 20) return null;
 
-        // Post URL
-        const linkEls = article.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]');
+        // Mobile: filter for real posts (have date patterns like "Jul 16", "2h", "3d")
+        if (useMobile && !/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+|\d+\s*(min|h|hour|day|week)s?\s*ago/i.test(fullText)) {
+          return null;
+        }
+
+        // Clean up text: remove trailing action buttons
+        let text = fullText
+          .replace(/\n(Like|Comment|Share|Send|Follow|See more|See translation|Write a public comment…)\s*$/i, '')
+          .replace(/\n(Like|Comment|Share|Send|Follow|See more|See translation|Write a public comment…)\n.*$/i, '')
+          .trim();
+        text = text.substring(0, 1000);
+
+        // Timestamp - mobile uses abbr with text like "Jul 16"
+        const timeEl = post.querySelector('abbr, [aria-label*="ago"], [aria-label*="at"], time');
+        const timestamp = timeEl?.textContent?.trim() || timeEl?.getAttribute('aria-label') || null;
+
+        // Post URL - look in parent/sibling for mobile since links may be outside the div
+        let linkEls = post.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]');
+        if (useMobile && linkEls.length === 0) {
+          // Try parent element for mobile
+          const parent = post.parentElement;
+          if (parent) linkEls = parent.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]');
+        }
         const postLink = linkEls[0]?.getAttribute('href') || null;
         const postUrl = postLink
           ? postLink.startsWith('http') ? postLink : `https://www.facebook.com${postLink}`
           : null;
 
-        // Engagement — prefer aria-label on reaction/comment buttons
-        const allText = article.textContent || '';
+        // Engagement
+        const allText = post.textContent || '';
         const likesMatch = allText.match(/([\d,.]+[KkMm]?)\s*(like|reaction)/i);
         const commentsMatch = allText.match(/([\d,.]+[KkMm]?)\s*comment/i);
         const likes = likesMatch ? likesMatch[1] : '0';
         const comments = commentsMatch ? commentsMatch[1] : '0';
 
         // Media
-        const images = Array.from(article.querySelectorAll('img'))
+        const images = Array.from(post.querySelectorAll('img'))
           .map((img) => img.src)
-          .filter((src) => src && !src.includes('static') && !src.includes('emoji') && src.startsWith('http'));
-        const hasVideo = !!article.querySelector('video');
+          .filter((src) => src && !src.includes('static') && !src.includes('emoji') && !src.includes('sprite') && src.startsWith('http'));
+        const hasVideo = !!post.querySelector('video');
 
-        const id = postUrl || text?.slice(0, 60) || null;
+        const id = postUrl || text?.slice(0, 80) || null;
 
         return { id, text, timestamp, likes, comments, postUrl, images, hasVideo };
-      }).filter((p) => p.id);
-    });
+      }).filter((p) => p && p.id);
+    }, isMobile);
 
     const prevSize = posts.size;
-    rawPosts.forEach((raw) => {
-      if (!posts.has(raw.id)) {
-        posts.set(raw.id, normalizePost(raw));
-      }
-    });
+    if (rawPosts) {
+      rawPosts.forEach((raw) => {
+        if (!posts.has(raw.id)) {
+          posts.set(raw.id, normalizePost(raw));
+        }
+      });
+    }
 
     if (onProgress) onProgress({ scraped: posts.size, limit });
 
@@ -659,6 +1082,575 @@ export async function scrapeTweets(page, username, options = {}) {
 
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await delay(1500, 3000);
+  }
+
+  return Array.from(posts.values()).slice(0, limit);
+}
+
+// ============================================================================
+// Comments & Group Content Scraper (Story 7.3 — FR-58, FR-59, FR-60)
+// ============================================================================
+
+/**
+ * Best-effort DOM fallback for post comments.
+ * Returns raw comment-shaped objects that normalizeComment can process.
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string[]} _typenames - Passed by extractHydrationJson; ignored
+ * @returns {Promise<Array>}
+ */
+async function extractCommentsFromDom(page, _typenames) {
+  return page.evaluate((nonProfile) => {
+    const NON_PROFILE = new Set(nonProfile);
+
+    const allArticles = Array.from(document.querySelectorAll('[role="article"]'));
+
+    // On a post permalink page, the main post is usually the first [role="article"]
+    // that contains a post permalink link.
+    const postArticle = allArticles.find((a) =>
+      a.querySelector('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]')
+    );
+
+    const commentArticles = allArticles.filter((a) => a !== postArticle);
+
+    return commentArticles.map((article) => {
+      const textEls = article.querySelectorAll('[dir="auto"]');
+      const texts = Array.from(textEls)
+        .map((el) => (el.innerText || el.textContent || '').trim())
+        .filter(Boolean);
+
+      const text = texts.reduce((best, t) => {
+        if (!best) return t;
+        const bestSpaces = (best.match(/\s+/g) || []).length;
+        const tSpaces = (t.match(/\s+/g) || []).length;
+        return tSpaces > bestSpaces ? t : best;
+      }, null);
+
+      const links = Array.from(article.querySelectorAll('a[href]'));
+      let author = null;
+      let authorUrl = null;
+      for (const a of links) {
+        const href = a.getAttribute('href') || '';
+        if (href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid')) continue;
+        if (href.includes('l.php') || href.includes('/l/')) continue;
+        const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+        try {
+          const u = new URL(abs);
+          if (!u.hostname.toLowerCase().endsWith('facebook.com')) continue;
+          const parts = u.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+          if (parts.length === 0) continue;
+          if (NON_PROFILE.has(parts[0].toLowerCase())) continue;
+          author = (a.textContent || '').trim() || null;
+          authorUrl = abs.split('?')[0];
+          break;
+        } catch {
+          // ignore malformed URLs
+        }
+      }
+
+      const timeEl = article.querySelector('abbr, [aria-label*="ago"], [aria-label*="at"], time');
+      const timestamp = timeEl?.textContent?.trim() || timeEl?.getAttribute('aria-label') || null;
+
+      const allText = article.textContent || '';
+      const likesMatch = allText.match(/([\d,.]+[KkMm]?)\s*(like|reaction)/i);
+      const likes = likesMatch ? likesMatch[1] : '0';
+
+      return { text, author, authorUrl, timestamp, likes, replies: [] };
+    }).filter((c) => c.text || c.author);
+  }, NON_PROFILE_SEGMENTS);
+}
+
+/**
+ * Best-effort DOM fallback for group posts on mobile.
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string[]} _typenames - Passed by extractHydrationJson; ignored
+ * @returns {Promise<Array>}
+ */
+async function extractGroupPostsFromDom(page, _typenames) {
+  return page.evaluate(() => {
+    const UI_HEADER_RE = /^(Public group|Join group|Invite|Videos|Announcements|Events|Write something|Photo|Feeling|Poll|Most relevant|SORT|Open app|About this group|Members|Group by)/i;
+
+    // On mobile m.facebook.com, each post is a div.m.displayed (className="m displayed")
+    // containing the full post text: "AuthorName\n • \nFollow\n‎‎1h‎\n󳄫\n[content]...".
+    // We filter by checking for the "Follow" text (post header pattern).
+    const allElements = document.querySelectorAll('div.m.displayed');
+
+    const posts = [];
+    const seen = new Set();
+
+    for (const div of allElements) {
+      if (div.querySelector('[aria-label="Loading"]')) continue;
+
+      const fullText = div.innerText?.trim() || '';
+      if (fullText.length < 30) continue;
+      if (UI_HEADER_RE.test(fullText)) continue;
+
+      // Each post contains "Follow" in its header. Skip non-post divs.
+      const lines = fullText.split('\n').map((l) => l.trim()).filter(Boolean);
+      const followIdx = lines.findIndex((l) => /^follow$/i.test(l));
+      if (followIdx <= 0) continue;
+
+      // Extract author — pattern: "AuthorName\n • \nFollow\n..."
+      // "•" is on its own line between author and "Follow".
+      // Author is at followIdx - 2 (or followIdx - 1 if no "•" separator).
+      let authorLine = '';
+      if (followIdx >= 2 && lines[followIdx - 1] === '•') {
+        authorLine = lines[followIdx - 2];
+      } else if (followIdx >= 1) {
+        authorLine = lines[followIdx - 1].replace(/\s*•\s*$/, '').trim();
+      }
+      if (!authorLine || authorLine.length >= 100 || UI_HEADER_RE.test(authorLine)) continue;
+
+      const author = authorLine;
+
+      // Extract timestamp — line after "Follow" (e.g. "‎‎1h‎󲄭󳆗" → "1h")
+      let timestamp = null;
+      if (followIdx + 1 < lines.length) {
+        const tsLine = lines[followIdx + 1];
+        const tsMatch = tsLine.match(/(\d+\s*(min|h|hour|day|week|d|w|mo|y)s?|(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+)/i);
+        if (tsMatch) timestamp = tsMatch[0];
+      }
+
+      // Post content starts after timestamp line
+      let text = fullText;
+      if (followIdx + 2 < lines.length) {
+        text = lines.slice(followIdx + 2).join('\n');
+      }
+
+      // Clean up text: remove trailing UI buttons and private-use emoji markers.
+      text = text
+        .replace(/\n(Like|Comment|Share|Send|Follow|See more|See translation|Write a public comment…)\s*$/i, '')
+        .replace(/\n(Like|Comment|Share|Send|Follow|See more|See translation|Write a public comment…)\n.*$/i, '')
+        .replace(/[\u{F0000}-\u{FFFFF}]/gu, '')
+        .trim();
+      text = text.substring(0, 1000);
+
+      if (text.length < 10) continue;
+
+      // Dedupe by author + text prefix
+      const dedupeKey = `${author}|${text.slice(0, 60)}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+
+      // Post URL - mobile may not have direct post links.
+      const linkEls = div.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="/permalink.php"], a[href*="story_fbid"], a[href*="/group/posts/"]');
+      const postLink = linkEls[0]?.getAttribute('href') || null;
+      const postUrl = postLink
+        ? postLink.startsWith('http') ? postLink : `https://www.facebook.com${postLink}`
+        : null;
+
+      // Engagement
+      const allPostText = div.textContent || '';
+      const likesMatch = allPostText.match(/([\d,.]+[KkMm]?)\s*(like|reaction)/i);
+      const commentsMatch = allPostText.match(/([\d,.]+[KkMm]?)\s*comment/i);
+      const likes = likesMatch ? likesMatch[1] : '0';
+      const comments = commentsMatch ? commentsMatch[1] : '0';
+
+      // Media
+      const images = Array.from(div.querySelectorAll('img'))
+        .map((img) => img.src)
+        .filter((src) => src && !src.includes('static') && !src.includes('emoji') && !src.includes('sprite') && src.startsWith('http'));
+      const hasVideo = !!div.querySelector('video');
+
+      const id = postUrl || dedupeKey;
+
+      posts.push({ id, text, author, timestamp, likes, comments, postUrl, images, hasVideo });
+    }
+
+    return posts;
+  });
+}
+
+/**
+ * Click "All comments" sort option if the sort control is present.
+ * Runs inside page.evaluate and swallows errors so a missing sort UI doesn't block scraping.
+ *
+ * @param {import('puppeteer').Page} page
+ */
+async function clickAllCommentsSort(page) {
+  try {
+    await page.evaluate(() => {
+      const sortBtn = Array.from(document.querySelectorAll('[role="button"], button, a, div, span'))
+        .find((el) => /Most relevant|Sort by|Sort comments|Top comments/i.test(el.textContent || el.getAttribute('aria-label') || ''));
+      if (sortBtn) sortBtn.click();
+
+      const allComments = Array.from(document.querySelectorAll('[role="menuitem"], [role="option"], a, button, div, span'))
+        .find((el) => /All comments/i.test(el.textContent || el.getAttribute('aria-label') || ''));
+      if (allComments) allComments.click();
+    });
+  } catch {
+    // Sort controls are optional; do not fail if they are absent.
+  }
+}
+
+/**
+ * Click "View more comments" / "X replies" expanders to reveal hidden comments.
+ *
+ * @param {import('puppeteer').Page} page
+ */
+async function clickCommentExpanders(page) {
+  try {
+    await page.evaluate(() => {
+      const expanders = Array.from(document.querySelectorAll('a, button, div[role="button"], span[role="button"]'))
+        .filter((el) => /View more comments|\d+\s*(more\s+)?replies?/i.test(el.textContent || el.getAttribute('aria-label') || ''));
+      for (const el of expanders) {
+        try { el.click(); } catch { /* ignore stale/clickable errors */ }
+      }
+    });
+  } catch {
+    // Expander controls are optional; do not fail if they are absent.
+  }
+}
+
+/**
+ * Detect whether the current page indicates unavailable/restricted content.
+ *
+ * @param {import('puppeteer').Page} page
+ * @returns {Promise<boolean>}
+ */
+async function isContentUnavailable(page) {
+  if (typeof page.evaluate !== 'function') return false;
+  try {
+    return await page.evaluate(() => {
+      if (typeof document === 'undefined' || !document.body) return false;
+      const text = (document.body.innerText || document.body.textContent || '').toLowerCase();
+      return (
+        text.includes("this content isn't available") ||
+        text.includes('this page is unavailable') ||
+        text.includes('this content is currently unavailable') ||
+        text.includes('comments have been turned off') ||
+        text.includes('comments are turned off')
+      );
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Scrape comments from a Facebook post (FR-58).
+ * READ-ONLY scrape — NOT routed through runGuardedBatch.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} postUrl - facebook.com post URL
+ * @param {Object} [options]
+ * @param {number} [options.limit=50] - Max comments to collect
+ * @param {boolean} [options.includeReplies=false] - Include nested replies
+ * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
+ * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
+ * @param {Function} [options.delay=randomDelay] - Injectable delay seam
+ * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
+ * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ */
+export async function scrapeFacebookComments(page, postUrl, options = {}) {
+  const {
+    limit = 50,
+    includeReplies = false,
+    maxRetries = 8,
+    maxScrolls = 50,
+    delay = randomDelay,
+    onProgress,
+  } = options;
+
+  // AC2: URL validation before any navigation (SSRF guard).
+  assertFacebookUrlLocal(postUrl, 'scrapeFacebookComments: postUrl');
+
+  await page.goto(postUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await assertNoCheckpoint(page, 'post comments');
+  await delay(2000, 4000);
+
+  // AC4: Switch comment sort to "All comments" if the sort UI is present.
+  await clickAllCommentsSort(page);
+  await delay(1000, 2000);
+
+  if (await isContentUnavailable(page)) {
+    return {
+      note: 'Facebook comments are not accessible. The post may be restricted, comments may be disabled, or the content is unavailable.',
+      platform: 'facebook',
+    };
+  }
+
+  // AC5: Bounded scroll loop — empty-scroll detection + limit cap.
+  const comments = new Map(); // keyed by id for deduplication
+  let retries = 0;
+  let scrolls = 0;
+
+  while (comments.size < limit && retries < maxRetries && scrolls < maxScrolls) {
+    const prevSize = comments.size;
+
+    // Click "View more comments" / "X replies" expanders to reveal hidden threads.
+    await clickCommentExpanders(page);
+    await delay(500, 1500);
+
+    const hydrated = await extractHydrationJson(page, ['Comment'], {
+      limit: limit - comments.size,
+      fallbackExtractor: extractCommentsFromDom,
+    });
+
+    for (const raw of hydrated) {
+      const normalized = normalizeComment(raw);
+      if (!normalized || !normalized.id) continue;
+
+      const output = includeReplies
+        ? normalized
+        : (() => { const { replies, ...rest } = normalized; return rest; })();
+
+      comments.set(normalized.id, output);
+    }
+
+    if (onProgress) onProgress({ scraped: comments.size, limit });
+
+    if (comments.size === prevSize) {
+      retries++;
+    } else {
+      retries = 0;
+    }
+
+    // Stop immediately once the limit is reached — no wasted scroll + delay.
+    if (comments.size >= limit) break;
+
+    await assertNoCheckpoint(page, 'post comments');
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await delay(1500, 3000);
+    scrolls++;
+  }
+
+  return Array.from(comments.values()).slice(0, limit);
+}
+
+/**
+ * Scrape posts from a Facebook group (FR-59).
+ * READ-ONLY scrape — NOT routed through runGuardedBatch.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} groupUrl - facebook.com/groups/ URL
+ * @param {Object} [options]
+ * @param {number} [options.limit=100] - Max posts to collect
+ * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
+ * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
+ * @param {Function} [options.delay=randomDelay] - Injectable delay seam
+ * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
+ * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ */
+export async function scrapeFacebookGroupPosts(page, groupUrl, options = {}) {
+  const {
+    limit = 100,
+    maxRetries = 8,
+    maxScrolls = 50,
+    delay = randomDelay,
+    onProgress,
+  } = options;
+
+  // AC2: URL validation before navigation.
+  assertFacebookUrlLocal(groupUrl, 'scrapeFacebookGroupPosts: groupUrl');
+
+  if (!/facebook\.com\/groups\//i.test(groupUrl)) {
+    throw new Error('❌ scrapeFacebookGroupPosts requires a facebook.com/groups/ URL');
+  }
+
+  // AC3: Mobile UA and viewport before navigation.
+  await applyMobileViewport(page);
+
+  // Groups often redirect to m.facebook.com; force mobile host up front.
+  const mobileUrl = groupUrl.replace(/^https?:\/\/(www\.)?facebook\.com/, 'https://m.facebook.com');
+
+  await page.goto(mobileUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await assertNoCheckpoint(page, 'group posts');
+  await delay(2000, 4000);
+
+  // Detect whether the group feed is accessible.
+  let containerFound = false;
+  try {
+    await page.waitForSelector('div.m.displayed, [role="article"]', { timeout: 8000 });
+    containerFound = true;
+  } catch (_) {
+    // Feed not accessible → restricted or login required.
+  }
+
+  if (!containerFound) {
+    return {
+      note: 'Facebook group posts are not accessible. The group may be private, membership may be required, or the group content is restricted.',
+      platform: 'facebook',
+    };
+  }
+
+  // AC8: Bounded scroll loop with deduplication.
+  const posts = new Map(); // keyed by id for deduplication
+  let retries = 0;
+  let scrolls = 0;
+
+  while (posts.size < limit && retries < maxRetries && scrolls < maxScrolls) {
+    const prevSize = posts.size;
+
+    const hydrated = await extractHydrationJson(page, ['Story'], {
+      limit: limit - posts.size,
+      fallbackExtractor: extractGroupPostsFromDom,
+    });
+
+    for (const raw of hydrated) {
+      const normalized = normalizeGroupPost(raw);
+      if (!normalized || !normalized.id) continue;
+      posts.set(normalized.id, normalized);
+    }
+
+    if (onProgress) onProgress({ scraped: posts.size, limit });
+
+    if (posts.size === prevSize) {
+      retries++;
+    } else {
+      retries = 0;
+    }
+
+    // Stop immediately once the limit is reached.
+    if (posts.size >= limit) break;
+
+    await assertNoCheckpoint(page, 'group posts');
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await delay(1500, 3000);
+    scrolls++;
+  }
+
+  return Array.from(posts.values()).slice(0, limit);
+}
+
+/**
+ * Scrape comments from a post inside a Facebook group (FR-60).
+ * Thin wrapper around scrapeFacebookComments; no duplicated extraction logic.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} groupPostUrl - facebook.com/groups/ post URL
+ * @param {Object} [options]
+ * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ */
+export async function scrapeFacebookGroupComments(page, groupPostUrl, options = {}) {
+  if (typeof groupPostUrl !== 'string' || !groupPostUrl.includes('/groups/')) {
+    throw new Error('❌ scrapeFacebookGroupComments requires a facebook.com/groups/ post URL');
+  }
+  return scrapeFacebookComments(page, groupPostUrl, options);
+}
+
+/**
+ * Search for posts **within** a specific Facebook group by keyword (FR-61b).
+ *
+ * Facebook exposes a native group search endpoint:
+ *   https://www.facebook.com/groups/<groupId>/search/?q=<keyword>
+ *   https://m.facebook.com/groups/<groupId>/search/?q=<keyword>
+ *
+ * This is far more efficient than scraping the full group feed and filtering
+ * client-side, because Facebook performs the keyword match server-side and
+ * returns only matching posts.
+ *
+ * READ-ONLY scrape — NOT routed through runGuardedBatch.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} groupUrl - facebook.com/groups/<id> URL
+ * @param {Object} [options]
+ * @param {string} [options.query] - Search keyword (required, non-empty)
+ * @param {number} [options.limit=50] - Max posts to collect
+ * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
+ * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
+ * @param {Function} [options.delay=randomDelay] - Injectable delay seam
+ * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
+ * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ */
+export async function scrapeFacebookGroupSearch(page, groupUrl, options = {}) {
+  const {
+    query,
+    limit = 50,
+    maxRetries = 8,
+    maxScrolls = 50,
+    delay = randomDelay,
+    onProgress,
+  } = options;
+
+  // AC1: Validate groupUrl (SSRF guard) before any navigation.
+  assertFacebookUrlLocal(groupUrl, 'scrapeFacebookGroupSearch: groupUrl');
+  if (!/facebook\.com\/groups\//i.test(groupUrl)) {
+    throw new Error('❌ scrapeFacebookGroupSearch requires a facebook.com/groups/ URL');
+  }
+
+  // AC2: Validate query is a non-empty string.
+  if (typeof query !== 'string' || !query.trim()) {
+    throw new Error('❌ scrapeFacebookGroupSearch requires a non-empty options.query string');
+  }
+
+  // AC3: Mobile UA and viewport before navigation (matches scrapeFacebookGroupPosts).
+  await applyMobileViewport(page);
+
+  // AC4: Build group search URL — force mobile host for consistent DOM.
+  // Use URL API to handle existing query params/fragments in the group URL correctly.
+  const searchUrlObj = new URL(groupUrl);
+  searchUrlObj.hostname = 'm.facebook.com';
+  searchUrlObj.port = ''; // clear any non-default port from original URL
+  searchUrlObj.search = ''; // strip existing query params
+  searchUrlObj.hash = ''; // strip fragments
+  searchUrlObj.pathname = searchUrlObj.pathname.replace(/\/$/, '') + '/search/';
+  searchUrlObj.searchParams.set('q', query.trim());
+  const searchUrl = searchUrlObj.toString();
+
+  await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await assertNoCheckpoint(page, 'group search');
+  await delay(2000, 4000);
+
+  // AC5: Detect whether the group search is accessible.
+  let containerFound = false;
+  try {
+    await page.waitForSelector('div.m.displayed, [role="article"]', { timeout: 8000 });
+    containerFound = true;
+  } catch (_) {
+    // Search not accessible → restricted or login required.
+  }
+
+  if (!containerFound) {
+    return {
+      note: 'Facebook group search is not accessible. The group may be private, membership may be required, or the search returned no results.',
+      platform: 'facebook',
+    };
+  }
+
+  // AC6: Check for "no results" indicator.
+  if (await isContentUnavailable(page)) {
+    return {
+      note: 'Facebook group search returned no results or the content is unavailable.',
+      platform: 'facebook',
+    };
+  }
+
+  // AC7: Bounded scroll loop with deduplication.
+  const posts = new Map(); // keyed by id for deduplication
+  let retries = 0;
+  let scrolls = 0;
+
+  while (posts.size < limit && retries < maxRetries && scrolls < maxScrolls) {
+    const prevSize = posts.size;
+
+    const hydrated = await extractHydrationJson(page, ['Story'], {
+      limit: limit - posts.size,
+      fallbackExtractor: extractGroupPostsFromDom,
+    });
+
+    for (const raw of hydrated) {
+      const normalized = normalizeGroupPost(raw);
+      if (!normalized || !normalized.id) continue;
+      posts.set(normalized.id, normalized);
+    }
+
+    if (onProgress) onProgress({ scraped: posts.size, limit });
+
+    if (posts.size === prevSize) {
+      retries++;
+    } else {
+      retries = 0;
+    }
+
+    // Stop immediately once the limit is reached.
+    if (posts.size >= limit) break;
+
+    await assertNoCheckpoint(page, 'group search');
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await delay(1500, 3000);
+    scrolls++;
   }
 
   return Array.from(posts.values()).slice(0, limit);
@@ -686,97 +1678,549 @@ export function normalizeSearchResult(raw) {
 }
 
 // ============================================================================
-// Search Posts
+// Multi-Type Search Normalizers (pure — testable without Puppeteer)
 // ============================================================================
 
-/**
- * Search Facebook posts by query
- * @param {Page} page - Puppeteer page instance
- * @param {string} query - Search query string
- * @param {Object} options
- * @param {number} [options.limit=30] - Max results to return
- * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
- * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
- * @param {Function} [options.delay=randomDelay] - Injectable delay seam
- * @returns {Promise<Array>} Normalized search result array
- */
-export async function searchTweets(page, query, options = {}) {
-  const { limit = 30, onProgress, maxRetries = 8, delay = randomDelay } = options;
-  const searchUrl = `${FACEBOOK_BASE}/search/posts?q=${encodeURIComponent(query)}`;
+function extractHandleFromUrl(input) {
+  if (typeof input !== 'string' || !input.trim()) return null;
+  try {
+    const u = new URL(input);
+
+    // Numeric profile URLs: facebook.com/profile.php?id=123
+    const idMatch = u.search.match(/[?&]id=(\d+)/);
+    if (idMatch) return idMatch[1];
+
+    const parts = u.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+    if (parts.length === 0) return null;
+
+    // For pages that use the /pages/<name>/<id> path, the last segment is the id.
+    // For groups /groups/<id>, the last segment is the id.
+    // For people /people/<name>/<id> or /<username>, the last usable segment is the id/handle.
+    return parts.at(-1);
+  } catch {
+    return null;
+  }
+}
+
+export function normalizePostSearchResult(raw) {
+  const {
+    id,
+    text,
+    message,
+    message_text,
+    messageText,
+    author,
+    actor,
+    timestamp,
+    published_time,
+    publishedTime,
+    url,
+    postUrl,
+  } = raw || {};
+
+  const resolvedText = text || message || message_text || messageText || null;
+  const resolvedUrl = url || postUrl || null;
+  const resolvedId = id || resolvedUrl || resolvedText?.slice(0, 60) || null;
+
+  return {
+    id: resolvedId,
+    text: resolvedText,
+    author: author || actor?.name || actor?.id || null,
+    timestamp: timestamp || published_time || publishedTime || null,
+    url: resolvedUrl,
+    platform: 'facebook',
+  };
+}
+
+export function normalizePeopleSearchResult(raw) {
+  const {
+    id,
+    name,
+    username,
+    url,
+    profileUrl,
+    profile_picture,
+    image,
+  } = raw || {};
+
+  const resolvedUrl = url || profileUrl || (id && /^\d+$/.test(String(id)) ? `${FACEBOOK_BASE}/profile.php?id=${id}` : null);
+  const derivedUsername = extractHandleFromUrl(resolvedUrl);
+  const resolvedUsername = (
+    typeof username === 'string' &&
+    username.trim() &&
+    !/facebook\.com|[?&#]|^https?:|^\s*$/i.test(username.trim())
+  ) ? username.trim() : derivedUsername;
+  const resolvedId = id || resolvedUsername || resolvedUrl || null;
+
+  return {
+    id: resolvedId,
+    name: name || null,
+    username: resolvedUsername,
+    profileUrl: resolvedUrl,
+    image: profile_picture || image || null,
+    platform: 'facebook',
+  };
+}
+
+export function normalizePageSearchResult(raw) {
+  const {
+    id,
+    name,
+    category,
+    category_name,
+    categoryName,
+    likes,
+    fan_count,
+    fanCount,
+    url,
+    pageUrl,
+    profile_picture,
+    image,
+  } = raw || {};
+
+  const resolvedUrl = url || pageUrl || (id && /^\d+$/.test(String(id)) ? `${FACEBOOK_BASE}/pages/${id}` : null);
+  const resolvedId = id || resolvedUrl || null;
+
+  return {
+    id: resolvedId,
+    name: name || null,
+    category: category || category_name || categoryName || null,
+    likes: likes || fan_count || fanCount || null,
+    pageUrl: resolvedUrl,
+    image: profile_picture || image || null,
+    platform: 'facebook',
+  };
+}
+
+export function normalizeGroupSearchResult(raw) {
+  const {
+    id,
+    name,
+    members,
+    member_count,
+    memberCount,
+    privacy,
+    url,
+    groupUrl,
+    profile_picture,
+    image,
+  } = raw || {};
+
+  const resolvedUrl = url || groupUrl || (id && /^\d+$/.test(String(id)) ? `${FACEBOOK_BASE}/groups/${id}` : null);
+  const resolvedId = id || resolvedUrl || null;
+
+  return {
+    id: resolvedId,
+    name: name || null,
+    members: members || member_count || memberCount || null,
+    privacy: privacy || null,
+    groupUrl: resolvedUrl,
+    image: profile_picture || image || null,
+    platform: 'facebook',
+  };
+}
+
+// ============================================================================
+// Multi-Type Search
+// ============================================================================
+
+const VALID_SEARCH_TYPES = new Set(['posts', 'people', 'pages', 'groups', 'all']);
+
+const SEARCH_TYPE_URLS = {
+  posts: '/search/posts/',
+  people: '/search/people/',
+  pages: '/search/pages/',
+  groups: '/search/groups/',
+};
+
+const SEARCH_TYPENAMES = {
+  posts: ['Story'],
+  people: ['User'],
+  pages: ['Page'],
+  groups: ['Group'],
+};
+
+function normalizeByType(raw, type) {
+  switch (type) {
+    case 'posts': return normalizePostSearchResult(raw);
+    case 'people': return normalizePeopleSearchResult(raw);
+    case 'pages': return normalizePageSearchResult(raw);
+    case 'groups': return normalizeGroupSearchResult(raw);
+    default: return null;
+  }
+}
+
+function isCheckpointUrl(url) {
+  if (typeof url !== 'string') return false;
+  return url.includes('/checkpoint/') || url.includes('facebook.com/checkpoint');
+}
+
+async function assertNoCheckpoint(page, source = 'search') {
+  const currentUrl = typeof page.url === 'function' ? page.url() : null;
+  if (isCheckpointUrl(currentUrl)) {
+    throw new Error(`❌ Facebook ${source} hit a checkpoint. Account may need security review.`);
+  }
+
+  // Check the page body for checkpoint/security-check language.
+  let hasBodyCheckpoint = false;
+  if (typeof page.evaluate === 'function') {
+    try {
+      hasBodyCheckpoint = await page.evaluate(() => {
+        if (typeof document === 'undefined' || !document.body) return false;
+        const text = (document.body.innerText || document.body.textContent || '').toLowerCase();
+        return text.includes('checkpoint') || text.includes('security check') || text.includes('confirm your identity');
+      });
+    } catch {
+      // If evaluate is not available or throws, do not block the search.
+    }
+  }
+  if (hasBodyCheckpoint === true) {
+    throw new Error(`❌ Facebook ${source} hit a checkpoint. Account may need security review.`);
+  }
+}
+
+function validateSearchType(type) {
+  if (!type || !VALID_SEARCH_TYPES.has(type)) {
+    throw new Error(`❌ search type must be one of: ${Array.from(VALID_SEARCH_TYPES).join(', ')}`);
+  }
+}
+
+function validateSearchQuery(query) {
+  if (typeof query !== 'string' || !query.trim()) {
+    throw new Error('❌ search query must be a non-empty string');
+  }
+}
+
+function validateSearchLimit(limit) {
+  const n = Number(limit);
+  if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) {
+    throw new Error('❌ search limit must be a positive integer');
+  }
+}
+
+function buildSearchQuery(query, location) {
+  let q = query.trim();
+  if (typeof location === 'string' && location.trim()) {
+    q = `${q} near ${location.trim()}`;
+  }
+  return q;
+}
+
+async function extractPostsFromDom(page) {
+  const rawResults = await page.evaluate((nonProfile) => {
+    const NON_PROFILE = new Set(nonProfile);
+    const UI_TEXT_RE = /^(like|comment|share|reply|follow|see more|more|options|·)$/i;
+    const articles = document.querySelectorAll('[role="article"]');
+    return Array.from(articles).map((article) => {
+      const textEls = article.querySelectorAll('[dir="auto"]');
+      const texts = Array.from(textEls)
+        .map((el) => {
+          let t = (el.innerText || el.textContent || '').trim();
+          t = t.replace(/\u034F/g, '');
+          t = t.replace(/[\u200B-\u200D\uFEFF\u2060]/g, '').trim();
+          return t;
+        })
+        .filter((t) => {
+          if (!t || t.length < 10) return false;
+          // Reject obvious UI chrome.
+          if (UI_TEXT_RE.test(t)) return false;
+          if (/^(Like|Comment|Share|Reply)\b/.test(t) && t.length < 80) return false;
+          return !/[\u00B7\u2022]/.test(t);
+        });
+
+      const text = texts.reduce((best, t) => {
+        if (!best) return t;
+        const bestSpaces = (best.match(/\s+/g) || []).length;
+        const tSpaces = (t.match(/\s+/g) || []).length;
+        return tSpaces > bestSpaces ? t : best;
+      }, '') || null;
+
+      const allLinks = Array.from(article.querySelectorAll('a[href]'));
+      let author = null;
+      for (const a of allLinks) {
+        const href = a.getAttribute('href') || '';
+        if (!href.includes('facebook.com/') && !href.startsWith('/')) continue;
+        if (href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid') || href.includes('/search/')) continue;
+        if (href.includes('l.php') || href.includes('/l/')) continue;
+        if (/\/(settings|help|about|privacy|terms|login|checkpoint|watch|marketplace|events)\b/i.test(href)) continue;
+        const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+        const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
+        if (idMatch) { author = idMatch[1]; break; }
+        const segMatch = abs.match(/facebook\.com\/([^/?&#]+)/i);
+        if (segMatch && !NON_PROFILE.has(segMatch[1].toLowerCase())) { author = segMatch[1]; break; }
+      }
+
+      const timeEl = article.querySelector('abbr[data-utime], time[datetime]');
+      let timestamp = timeEl?.getAttribute('data-utime') || timeEl?.getAttribute('datetime') || null;
+      if (!timestamp) {
+        const timeLink = allLinks.find((a) => {
+          const text = (a.innerText || a.textContent || '').trim();
+          if (!text || text.length > 30) return false;
+          // Accept relative-time phrasing: "2h", "5 hrs", "Yesterday", "Jan 5", "1 day".
+          return /\d+\s*(h|hr|hrs|hour|hours|d|day|days|w|week|weeks|m|min|mins|minute|minutes)\b|\b(yesterday|today|mon|tue|wed|thu|fri|sat|sun)\b/i.test(text);
+        });
+        const ariaLabel = timeLink?.getAttribute('aria-label') || timeLink?.querySelector('[aria-label]')?.getAttribute('aria-label');
+        timestamp = ariaLabel || timeLink?.textContent?.trim() || null;
+      }
+
+      const postLinkEl = allLinks.find((a) => {
+        const href = a.getAttribute('href') || '';
+        return href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid');
+      });
+      const postHref = postLinkEl?.getAttribute('href') || null;
+      const url = postHref
+        ? postHref.startsWith('http') ? postHref : `https://www.facebook.com${postHref}`
+        : null;
+
+      const id = url || text?.slice(0, 60) || null;
+      return { id, text, author, timestamp, url };
+    }).filter((r) => r.id);
+  }, NON_PROFILE_SEGMENTS);
+
+  return rawResults;
+}
+
+async function extractListItemsFromDom(page, type) {
+  const rawResults = await page.evaluate((searchType) => {
+    const NON_ENTITY_ROOTS = new Set([
+      'search', 'watch', 'marketplace', 'events', 'friends', 'photo', 'photo.php',
+      'reel', 'reels', 'stories', 'hashtag', 'l.php', 'l', 'settings', 'help',
+      'about', 'privacy', 'terms', 'login', 'checkpoint',
+    ]);
+
+    function normalizeEntityUrl(href) {
+      if (!href) return null;
+      const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+      try {
+        const u = new URL(abs);
+        const host = u.hostname.toLowerCase();
+        if (!host.endsWith('facebook.com')) return null;
+        return { href: abs, pathname: u.pathname, search: u.search };
+      } catch {
+        return null;
+      }
+    }
+
+    function extractIdFromEntityUrl(entityUrl) {
+      if (!entityUrl) return null;
+      const { href, pathname, search } = entityUrl;
+
+      // Numeric profile: /profile.php?id=123
+      const idMatch = search.match(/[?&]id=(\d+)/);
+      if (idMatch) return idMatch[1];
+
+      const parts = pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+      if (parts.length === 0) return null;
+
+      // Use the last path segment as the stable identifier for people/pages/groups.
+      // Works for /groups/xyz, /pages/Name/123, /people/Name/123, and /username.
+      return parts.at(-1);
+    }
+
+    function isEntityLink(entityUrl, searchType) {
+      if (!entityUrl) return false;
+      const parts = entityUrl.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+      if (parts.length === 0) return false;
+      const first = parts[0].toLowerCase();
+      if (NON_ENTITY_ROOTS.has(first)) return false;
+
+      if (searchType === 'groups') {
+        return entityUrl.pathname.includes('/groups/');
+      }
+      if (searchType === 'people') {
+        // People search should not return group/page links.
+        if (entityUrl.pathname.includes('/groups/') || entityUrl.pathname.includes('/pages/')) return false;
+        return true;
+      }
+      if (searchType === 'pages') {
+        // Page search should not return group links.
+        if (entityUrl.pathname.includes('/groups/')) return false;
+        return true;
+      }
+      return true;
+    }
+
+    function pickBestLink(item, searchType) {
+      const links = Array.from(item.querySelectorAll('a[href]'));
+      for (const a of links) {
+        const entityUrl = normalizeEntityUrl(a.getAttribute('href'));
+        if (isEntityLink(entityUrl, searchType)) {
+          return { a, entityUrl };
+        }
+      }
+      return null;
+    }
+
+    function getUniqueLines(item) {
+      const text = item.innerText || item.textContent || '';
+      return Array.from(new Set(text.split('\n').map((t) => t.trim()).filter(Boolean)));
+    }
+
+    const items = document.querySelectorAll('[role="listitem"], [role="article"]');
+    return Array.from(items).map((item) => {
+      const picked = pickBestLink(item, searchType);
+      if (!picked) return null;
+
+      const { a, entityUrl } = picked;
+      const abs = entityUrl.href;
+      const id = extractIdFromEntityUrl(entityUrl);
+      if (!id) return null;
+
+      // Prefer the link text as the entity name; fall back to the first non-empty line.
+      const linkText = (a.innerText || a.textContent || '').trim();
+      const allLines = getUniqueLines(item);
+      const name = (linkText && linkText.length <= 80 ? linkText : allLines[0]) || null;
+
+      const img = Array.from(item.querySelectorAll('img')).find((i) => {
+        const src = i.getAttribute('src') || '';
+        return src.startsWith('http') && !src.includes('emoji') && !src.includes('fbcdn.net/images');
+      });
+      const image = img?.getAttribute('src') || null;
+
+      // Parse counts from lines.
+      const counts = allLines
+        .map((t) => t.match(/([\d,.]+[KkMm]?\+?)\s*(members?|people|likes?)/i))
+        .filter(Boolean);
+      const members = counts.find((m) => /members?|people/i.test(m[0]))?.[1] || null;
+      const likes = counts.find((m) => /likes?/i.test(m[0]))?.[1] || null;
+
+      // Whole-word privacy matching to avoid "publication" or "secretary".
+      const privacy = allLines.find((t) => /\b(public|private|closed|secret)\b/i.test(t)) || null;
+
+      // Category is the first remaining line that is not the name, a count, privacy, or a UI string.
+      const category = allLines.find((t) => {
+        if (t === name) return false;
+        if (t === members || t === likes || t === privacy) return false;
+        if (/[\d,.]+[KkMm]?\+?\s*(members?|people|likes?)/i.test(t)) return false;
+        if (/\b(public|private|closed|secret)\b/i.test(t)) return false;
+        if (/^(like|follow|message|join|invite|see all|more|options|share|comment)$/i.test(t)) return false;
+        return true;
+      }) || null;
+
+      const base = { id, name, url: abs, image };
+
+      if (searchType === 'people') {
+        return { ...base, profileUrl: abs };
+      }
+      if (searchType === 'pages') {
+        return { ...base, category, likes, pageUrl: abs };
+      }
+      if (searchType === 'groups') {
+        return { ...base, members, privacy, groupUrl: abs };
+      }
+      return base;
+    }).filter(Boolean);
+  }, type);
+
+  return rawResults;
+}
+
+async function searchByType(page, query, type, options = {}) {
+  const limit = Math.max(1, Math.floor(Number(options.limit) || 30));
+  const onProgress = options.onProgress;
+  const maxRetries = Math.max(1, Math.floor(Number(options.maxRetries) || 8));
+  const maxScrolls = Math.max(1, Math.floor(Number(options.maxScrolls) || 50));
+  const delay = options.delay || randomDelay;
+
+  const searchUrl = `${FACEBOOK_BASE}${SEARCH_TYPE_URLS[type]}?q=${encodeURIComponent(query)}`;
 
   await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await assertNoCheckpoint(page, `${type} search`);
   await delay(2000, 4000);
 
   const results = new Map();
   let retries = 0;
+  let scrolls = 0;
 
-  while (results.size < limit && retries < maxRetries) {
-    const rawResults = await page.evaluate((nonProfile) => {
-      const NON_PROFILE = new Set(nonProfile);
-      const articles = document.querySelectorAll('[role="article"]');
-      return Array.from(articles).map((article) => {
-        // Text content — longest [dir="auto"] element (avoids picking up short name labels)
-        const textEls = article.querySelectorAll('[dir="auto"]');
-        const texts = Array.from(textEls)
-          .map((el) => el.textContent?.trim())
-          .filter((t) => t && t.length > 10);
-        const text = texts.reduce((longest, t) => (t.length > longest.length ? t : longest), '') || null;
-
-        // Author — first real profile link in article (skip permalinks, non-profile segments, l.php redirects)
-        const allLinks = Array.from(article.querySelectorAll('a[href]'));
-        let author = null;
-        for (const a of allLinks) {
-          const href = a.getAttribute('href') || '';
-          if (!href.includes('facebook.com/') && !href.startsWith('/')) continue;
-          if (href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid') || href.includes('/search/')) continue;
-          if (href.includes('l.php') || href.includes('/l/')) continue;
-          const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
-          // profile.php?id=N → preserve the canonical numeric identifier
-          const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
-          if (idMatch) { author = `profile.php?id=${idMatch[1]}`; break; }
-          const segMatch = abs.match(/facebook\.com\/([^/?&#]+)/i);
-          if (segMatch && !NON_PROFILE.has(segMatch[1].toLowerCase())) { author = segMatch[1]; break; }
-        }
-
-        // Timestamp — try abbr/time first, then aria-label on links (Facebook 2025+ uses relative spans)
-        const timeEl = article.querySelector('abbr[data-utime], time[datetime]');
-        let timestamp = timeEl?.getAttribute('data-utime') || timeEl?.getAttribute('datetime') || null;
-        if (!timestamp) {
-          const timeLink = allLinks.find((a) => a.querySelector('span') && /\d/.test(a.textContent));
-          const ariaLabel = timeLink?.getAttribute('aria-label') || timeLink?.querySelector('[aria-label]')?.getAttribute('aria-label');
-          timestamp = ariaLabel || timeLink?.textContent?.trim() || null;
-        }
-
-        // Post URL — prefer permalink
-        const postLinkEl = allLinks.find((a) => {
-          const href = a.getAttribute('href') || '';
-          return href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid');
-        });
-        const postHref = postLinkEl?.getAttribute('href') || null;
-        const url = postHref
-          ? postHref.startsWith('http') ? postHref : `https://www.facebook.com${postHref}`
-          : null;
-
-        const id = url || text?.slice(0, 60) || null;
-        return { id, text, author, timestamp, url };
-      }).filter((r) => r.id);
-    }, NON_PROFILE_SEGMENTS);
-
+  while (results.size < limit && retries < maxRetries && scrolls < maxScrolls) {
     const prevSize = results.size;
-    rawResults.forEach((raw) => {
-      if (!results.has(raw.id)) {
-        results.set(raw.id, normalizeSearchResult(raw));
-      }
+
+    const hydrated = await extractHydrationJson(page, SEARCH_TYPENAMES[type], {
+      limit,
+      fallbackExtractor: async (_page, _typenames) => {
+        return type === 'posts'
+          ? await extractPostsFromDom(page)
+          : await extractListItemsFromDom(page, type);
+      },
     });
 
-    if (onProgress) onProgress({ scraped: results.size, limit });
-    if (results.size === prevSize) { retries++; } else { retries = 0; }
+    for (const raw of hydrated) {
+      const normalized = normalizeByType(raw, type);
+      if (normalized && normalized.id) {
+        results.set(normalized.id, normalized);
+      }
+    }
 
+    if (onProgress) onProgress({ scraped: results.size, limit });
+
+    if (results.size === prevSize) {
+      retries++;
+    } else {
+      retries = 0;
+    }
+
+    // Stop immediately once the limit is reached — no wasted scroll + delay.
+    if (results.size >= limit) break;
+
+    await assertNoCheckpoint(page, `${type} search`);
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await delay(1500, 3000);
+    scrolls++;
   }
 
   return Array.from(results.values()).slice(0, limit);
+}
+
+/**
+ * Search Facebook by multiple types (posts, people, pages, groups) or all.
+ * @param {Page} page - Puppeteer page instance
+ * @param {string} query - Search query string
+ * @param {Object} options
+ * @param {string} [options.type='posts'] - 'posts' | 'people' | 'pages' | 'groups' | 'all'
+ * @param {string} [options.location] - Optional location hint, appended to query
+ * @param {number} [options.limit=30] - Max results per type
+ * @param {boolean} [options.parallel=false] - Accepted for future multi-account fan-out; currently ignored
+ * @param {Object} [options.authCookie] - { c_user, xs } passed by the dispatcher for login
+ * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
+ * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
+ * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
+ * @param {Function} [options.delay=randomDelay] - Injectable delay seam
+ * @returns {Promise<Object|Array>} Normalized results (array for single type, object for 'all')
+ */
+export async function searchFacebook(page, query, options = {}) {
+  const { type = 'posts', location, limit = 30 } = options;
+
+  validateSearchQuery(query);
+  validateSearchType(type);
+  validateSearchLimit(limit);
+
+  const effectiveQuery = buildSearchQuery(query, location);
+
+  // Do not pass the top-level type ('all') down to per-type searches;
+  // coerce limit to a number so downstream comparisons are safe.
+  const perTypeOptions = { ...options, limit: Number(limit) };
+  delete perTypeOptions.type;
+
+  if (type === 'all') {
+    const posts = await searchByType(page, effectiveQuery, 'posts', perTypeOptions);
+    const people = await searchByType(page, effectiveQuery, 'people', perTypeOptions);
+    const pages = await searchByType(page, effectiveQuery, 'pages', perTypeOptions);
+    const groups = await searchByType(page, effectiveQuery, 'groups', perTypeOptions);
+    return { posts, people, pages, groups };
+  }
+
+  return searchByType(page, effectiveQuery, type, perTypeOptions);
+}
+
+/**
+ * Backward-compatible thin wrapper around searchFacebook for existing callers.
+ * @param {Page} page - Puppeteer page instance
+ * @param {string} query - Search query string
+ * @param {Object} options
+ * @returns {Promise<Array>} Normalized post search result array
+ */
+export async function searchTweets(page, query, options = {}) {
+  return searchFacebook(page, query, { ...options, type: 'posts' });
 }
 
 // ============================================================================
@@ -866,21 +2310,15 @@ export async function scrapeGroupMembers(page, groupUrl, options = {}) {
   await page.goto(membersUrl, { waitUntil: 'networkidle2', timeout: 30000 });
   await delay(1000, 3000);
 
-  // AC2/AC3: Detect member-list container. UNVERIFIED selectors — locale-aware fallback chain.
-  // See docs/agents/selectors-facebook.md Groups — Members (FR-20) section.
-  const memberContainerSelectors = [
-    '[aria-label="Group members"]',          // en
-    '[aria-label="Thành viên nhóm"]',        // vi
-    'div[data-pagelet="GroupMembersList"]',  // testid
-    'div[role="list"]',                      // generic fallback
-  ];
-
+  // Detect member list — look for member links pattern: /groups/{groupId}/user/{userId}/
+  // This is the actual Facebook DOM structure (verified August 2026).
   let containerFound = false;
   try {
-    await page.waitForSelector(memberContainerSelectors.join(', '), { timeout: 8000 });
+    // Wait for any member link to appear
+    await page.waitForSelector('a[href*="/groups/"][href*="/user/"]', { timeout: 8000 });
     containerFound = true;
   } catch (_) {
-    // Member list not accessible → restricted group (AC2).
+    // Member list not accessible → restricted group
   }
 
   if (!containerFound) {
@@ -897,46 +2335,24 @@ export async function scrapeGroupMembers(page, groupUrl, options = {}) {
   while (members.size < limit && stalls < maxStalls) {
     const prevSize = members.size;
 
-    // Extract member rows from DOM (UNVERIFIED selectors — see selectors-facebook.md).
-    const rawMembers = await page.evaluate((nonProfileSegs) => {
-      // Member rows: list items under the members container.
-      const items = document.querySelectorAll(
-        '[aria-label="Group members"] [role="listitem"], ' +
-        '[data-pagelet="GroupMembersList"] [role="listitem"], ' +
-        '[role="list"] [role="listitem"]',
-      );
-      const NON_PROFILE = new Set(nonProfileSegs);
-
-      return Array.from(items).map((item) => {
-        const anchors = Array.from(item.querySelectorAll('a[href]'));
-        let profileUrl = null;
-        let username = null;
-
-        for (const a of anchors) {
-          const href = a.getAttribute('href') || '';
-          const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
-          // profile.php?id=N — numeric canonical identifier
-          const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
-          if (idMatch) {
-            profileUrl = `https://www.facebook.com/profile.php?id=${idMatch[1]}`;
-            username = `profile.php?id=${idMatch[1]}`;
-            break;
-          }
-          // vanity handle — first non-reserved path segment
-          const segMatch = abs.match(/facebook\.com\/([^/?&#]+)/i);
-          if (segMatch && !NON_PROFILE.has(segMatch[1].toLowerCase())) {
-            profileUrl = abs.split('?')[0];
-            username = segMatch[1];
-            break;
-          }
+    // Extract member links directly from DOM.
+    // Facebook renders members as links: /groups/{groupId}/user/{userId}/
+    const rawMembers = await page.evaluate(() => {
+      const results = [];
+      document.querySelectorAll('a[href*="/groups/"][href*="/user/"]').forEach(a => {
+        const href = a.getAttribute('href') || '';
+        const name = a.textContent.trim();
+        if (name && href && name.length > 1 && name.length < 100) {
+          const fullUrl = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+          results.push({
+            name,
+            profileUrl: fullUrl.split('?')[0],
+            username: href.split('/').filter(Boolean).pop() || null,
+          });
         }
-
-        const nameEl = item.querySelector('span[dir="auto"], strong, span');
-        const name = nameEl?.textContent?.trim() || null;
-
-        return { name, username, profileUrl };
-      }).filter((m) => m.profileUrl);
-    }, NON_PROFILE_SEGMENTS);
+      });
+      return results;
+    });
 
     for (const raw of rawMembers) {
       if (!members.has(raw.profileUrl)) {
@@ -961,6 +2377,211 @@ export async function scrapeGroupMembers(page, groupUrl, options = {}) {
 }
 
 // ============================================================================
+// Marketplace Scraper
+// ============================================================================
+
+/**
+ * Normalize a raw marketplace listing into the standard shape.
+ * NFR-11: phone/email stripped at this layer before returning to caller.
+ *
+ * @param {Object} raw - Raw listing fields from page.evaluate
+ * @returns {Object} Normalized marketplace listing
+ */
+function normalizeMarketplaceListing(raw) {
+  const { id, title, price, location, image, listingUrl, seller, sellerUrl, category } = raw;
+  return {
+    id: id || null,
+    title: title || null,
+    price: price || null,
+    location: location || null,
+    image: image || null,
+    listingUrl: listingUrl || null,
+    seller: stripPii(seller) || null,
+    sellerUrl: sellerUrl || null,
+    category: category || null,
+    platform: 'facebook',
+    source: 'marketplace',
+  };
+}
+
+// Marketplace location helpers — map free-form city names to Facebook Marketplace slugs or numeric IDs.
+// Slugs are discovered from https://www.facebook.com/marketplace/directory/{country}/
+const MARKETPLACE_KNOWN_LOCATIONS = new Map([
+  ['hochiminhcity', 'hochiminhcity'],
+  ['hochiminh', 'hochiminhcity'],
+  ['hcm', 'hochiminhcity'],
+  ['hcmc', 'hochiminhcity'],
+  ['saigon', 'hochiminhcity'],
+  ['hanoi', '106388046062960'],
+  ['danang', '111711568847056'],
+]);
+
+export function resolveMarketplaceLocation(input) {
+  if (!input || typeof input !== 'string') return null;
+  const key = input.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const mapped = MARKETPLACE_KNOWN_LOCATIONS.get(key);
+  if (mapped) return mapped;
+  const trimmed = input.trim().toLowerCase();
+  if (/^[a-z0-9]+$/.test(trimmed)) return trimmed;
+  return null;
+}
+
+export function buildMarketplaceSearchUrl(query, options = {}) {
+  const { location, category, minPrice, maxPrice } = options;
+  const locationSlug = resolveMarketplaceLocation(location);
+  let basePath = `${FACEBOOK_BASE}/marketplace`;
+  if (locationSlug) {
+    basePath += `/${locationSlug}`;
+  }
+  if (category) {
+    basePath += `/category/${encodeURIComponent(category)}`;
+  }
+  const params = [`query=${encodeURIComponent(query.trim())}`];
+  if (minPrice != null) params.push(`minPrice=${minPrice}`);
+  if (maxPrice != null) params.push(`maxPrice=${maxPrice}`);
+  if (location && !locationSlug) {
+    params.push(`location=${encodeURIComponent(location)}`);
+  }
+  return `${basePath}/search/?${params.join('&')}`;
+}
+
+/**
+ * Scrape Facebook Marketplace listings by search query or category.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} query - Search query (e.g. "iphone 15") or category path
+ * @param {Object} [options]
+ * @param {number} [options.limit=50] - Max listings to return
+ * @param {string} [options.location] - Location filter (city name or "near me")
+ * @param {number} [options.minPrice] - Minimum price filter
+ * @param {number} [options.maxPrice] - Maximum price filter
+ * @param {string} [options.category] - Category slug (e.g. "phones", "vehicles", "furniture")
+ * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
+ * @param {Function} [options.delay=randomDelay] - Injectable delay seam
+ * @returns {Promise<Array>} Array of normalized marketplace listings
+ */
+export async function scrapeMarketplace(page, query, options = {}) {
+  const {
+    limit = 50,
+    location,
+    minPrice,
+    maxPrice,
+    category,
+    onProgress,
+    delay = randomDelay,
+  } = options;
+
+  if (!query || typeof query !== 'string' || !query.trim()) {
+    throw new Error('❌ Marketplace search requires a non-empty query string');
+  }
+
+  const searchUrl = buildMarketplaceSearchUrl(query, { location, category, minPrice, maxPrice });
+
+  await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await delay(3000, 5000);
+
+  const finalUrl = page.url();
+  if (finalUrl.includes('/checkpoint/')) {
+    throw new Error('❌ Facebook checkpoint detected — manual verification required. Log in to the account via a real browser, complete the security check, then retry.');
+  }
+
+  try {
+    await page.waitForFunction(
+      () => document.querySelectorAll('a[href*="/marketplace/item/"], a[href*="/marketplace/listing/"]').length > 0,
+      { timeout: 20000 },
+    );
+  } catch (_) {
+    // Proceed — may still extract if cards load late or page has none.
+  }
+
+  const listings = new Map();
+  let stalls = 0;
+  const maxStalls = 8;
+
+  while (listings.size < limit && stalls < maxStalls) {
+    const prevSize = listings.size;
+
+    const rawListings = await page.evaluate((evalLimit) => {
+      const results = [];
+      const cards = [...document.querySelectorAll('a[href*="/marketplace/item/"], a[href*="/marketplace/listing/"]')];
+
+      for (const card of cards) {
+        const href = card.getAttribute('href') || '';
+        if (!href.includes('marketplace/')) continue;
+
+        const cleanHref = href.split('?')[0];
+        const id = cleanHref.split('/').filter(Boolean).pop() || '';
+        if (!id || /[^0-9]/.test(id)) continue;
+
+        const listingUrl = cleanHref.startsWith('http') ? cleanHref : `https://www.facebook.com${cleanHref}`;
+
+        const imgEl = card.querySelector('img');
+        const image = imgEl?.getAttribute('src') || imgEl?.getAttribute('data-src') || null;
+
+        let title = null;
+        let price = null;
+        let cardLocation = null;
+
+        const ariaLabel = card.getAttribute('aria-label')?.trim() || '';
+        if (ariaLabel) {
+          const m = ariaLabel.match(/^(.*),\s*(Free|(?:[A-Z]{0,3}[₫$€£¥₹₩]\s*[\d,\.]+(?:\s*(?:USD|EUR|VND|ETB|VNĐ))?)|(?:[A-Z]{2,5}\s*[\d,\.]+(?:\s*(?:USD|EUR|VND|ETB|VNĐ))?))\s*,\s*(.+?)\s*,\s*listing\s+(\d+)$/is);
+          if (m) {
+            title = m[1].trim().replace(/\s+/g, ' ');
+            price = m[2].trim().replace(/\s+/g, ' ');
+            cardLocation = m[3].trim().replace(/\s+/g, ' ');
+          }
+        }
+
+        if (!title) {
+          const allText = card.textContent?.trim() || '';
+          const priceMatch = allText.match(/^(?:\s*Free\s*|[\$€£¥₹₫₩A-Z]*\s*[\d,]+(?:\.\d{2})?(?:\s*(?:USD|EUR|VND|ETB|VNĐ))?)/i);
+          if (priceMatch) {
+            price = priceMatch[0].trim().replace(/\s+/g, ' ');
+            const after = allText.substring(priceMatch[0].length).trim().replace(/\+/g, ' ').replace(/\s+/g, ' ');
+            const locationMatch = after.match(/(.+?)(?:\s*,\s*)?(Ho Chi Minh City(?:, Vietnam)?|Hanoi(?:, Vietnam)?|Da Nang(?:, Vietnam)?)$/i);
+            if (locationMatch) {
+              title = locationMatch[1].trim();
+              cardLocation = locationMatch[2].trim();
+            } else {
+              title = after;
+            }
+          } else {
+            title = allText;
+          }
+        }
+
+        if (title || price) {
+          results.push({ id, title, price, location: cardLocation, image, listingUrl });
+          if (results.length >= evalLimit) break;
+        }
+      }
+
+      return results;
+    }, limit);
+
+    for (const raw of rawListings) {
+      if (!listings.has(raw.id)) {
+        listings.set(raw.id, normalizeMarketplaceListing(raw));
+      }
+      if (listings.size >= limit) break;
+    }
+
+    if (onProgress) onProgress({ scraped: listings.size, limit });
+
+    if (listings.size === prevSize) {
+      stalls++;
+    } else {
+      stalls = 0;
+    }
+
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await delay(1500, 3000);
+  }
+
+  return Array.from(listings.values()).slice(0, limit);
+}
+
+// ============================================================================
 // Default Export
 // ============================================================================
 
@@ -974,5 +2595,11 @@ export default {
   scrapeFollowers,
   scrapeTweets,
   searchTweets,
+  searchFacebook,
   scrapeGroupMembers,
+  scrapeMarketplace,
+  scrapeFacebookComments,
+  scrapeFacebookGroupPosts,
+  scrapeFacebookGroupComments,
+  scrapeFacebookGroupSearch,
 };

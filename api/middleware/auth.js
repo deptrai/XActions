@@ -1,9 +1,25 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+import prisma from '../lib/prisma.js';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import { tierMeetsRequirement, getTier, isWithinLimit } from '../config/subscription-tiers.js';
 
-const prisma = new PrismaClient();
+/**
+ * Resolve a user identifier from a decoded JWT payload.
+ * Prefers `userId` over `id` over `sub`. Only accepts non-empty strings.
+ * @param {object} decoded
+ * @returns {string|undefined}
+ */
+export function resolveUserId(decoded) {
+  if (!decoded || typeof decoded !== 'object') return undefined;
+
+  const candidates = [decoded.userId, decoded.id, decoded.sub];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -16,9 +32,14 @@ const authMiddleware = async (req, res, next) => {
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    const userId = resolveUserId(decoded);
+    if (!userId) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
     // Get user from database
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId }
+      where: { id: userId }
     });
 
     if (!user) {
@@ -35,6 +56,7 @@ const authMiddleware = async (req, res, next) => {
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ error: 'Token expired' });
     }
+    console.error('❌ Auth middleware error:', error);
     return res.status(500).json({ error: 'Authentication error' });
   }
 };
@@ -52,16 +74,22 @@ const optionalAuthMiddleware = async (req, res, next) => {
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId }
-    });
+    const userId = resolveUserId(decoded);
+    const user = userId
+      ? await prisma.user.findUnique({
+          where: { id: userId }
+        })
+      : null;
 
     req.user = user || null;
     next();
   } catch (error) {
-    // Invalid token, but still continue
-    req.user = null;
-    next();
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      req.user = null;
+      return next();
+    }
+    console.error('❌ Optional auth error:', error);
+    next(error);
   }
 };
 

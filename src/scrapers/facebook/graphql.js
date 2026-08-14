@@ -440,3 +440,108 @@ export async function checkMessengerCTA(pageId, actorId, tokens = {}, options = 
   }
   return { eligible: false };
 }
+
+// ============================================================================
+// (d) Send message to UID via GraphQL — AC7
+// ============================================================================
+
+/**
+ * Send a message to a user by UID via the Facebook GraphQL API.
+ * Uses Puppeteer page to fetch tokens (avoids axios 400 errors).
+ *
+ * @param {Object} page - Puppeteer page (logged in)
+ * @param {string} targetUid - UID of the recipient
+ * @param {string} message - Message to send
+ * @param {Object} [options]
+ * @returns {Promise<{ ok: boolean, response?: string, error?: string }>}
+ */
+export async function sendMessageToUid(page, targetUid, message, options = {}) {
+  const { docId = MESSENGER_CTA_DOC_ID } = options;
+
+  try {
+    // Get tokens from the current page (already logged in)
+    const tokens = await page.evaluate(() => {
+      const html = document.documentElement.innerHTML;
+      const patterns = {
+        fb_dtsg: /\{"token":"(NAf[^"]+)"/,
+        lsd: /\["LSD",\[\],\{"token":"([^"]+)"/,
+        jazoest: /&jazoest=(\d+)/,
+        hsi: /"hsi":"([^"]+)"/,
+        spin_r: /"__spin_r":(\d+)/,
+        spin_t: /"__spin_t":(\d+)/,
+      };
+      const result = {};
+      for (const [key, pattern] of Object.entries(patterns)) {
+        const match = html.match(pattern);
+        result[key] = match ? match[1] : null;
+      }
+      return result;
+    });
+
+    // Build the GraphQL mutation variables
+    const variables = JSON.stringify({
+      input: {
+        ad_id: null,
+        ad_impression_client_token: null,
+        page_id: String(targetUid),
+        post_id: null,
+        actor_id: String(targetUid),
+        client_mutation_id: '1',
+      },
+    });
+
+    // Build form data
+    const formData = new URLSearchParams({
+      av: String(targetUid),
+      __user: String(targetUid),
+      __aaid: '0',
+      __a: '1',
+      __req: '1a',
+      __comet_req: '15',
+      __ccg: 'EXCELLENT',
+      __rev: tokens.spin_r ?? '',
+      __spin_r: tokens.spin_r ?? '',
+      __spin_b: 'trunk',
+      __spin_t: tokens.spin_t ?? '',
+      __hsi: tokens.hsi ?? '',
+      dpr: '1',
+      fb_dtsg: tokens.fb_dtsg ?? '',
+      jazoest: tokens.jazoest ?? '',
+      lsd: tokens.lsd ?? '',
+      doc_id: docId,
+      variables,
+      fb_api_caller_class: 'RelayModern',
+      fb_api_req_friendly_name: 'MWChatBusinessCTAAdsSenderMutation',
+      server_timestamps: 'true',
+    }).toString();
+
+    // Send via page.fetch (uses browser's cookie jar)
+    const response = await page.evaluate(async (formData) => {
+      const response = await fetch('https://www.facebook.com/api/graphql/', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          'x-fb-friendly-name': 'MWChatBusinessCTAAdsSenderMutation',
+        },
+        body: formData,
+        credentials: 'include',
+      });
+      const text = await response.text();
+      return { status: response.status, text: text.substring(0, 500) };
+    }, formData);
+
+    // Check for success
+    if (response.text.includes('messenger_business_ads_sender')) {
+      return { ok: true, response: response.text };
+    }
+
+    // Check for error
+    if (response.text.includes('error') || response.text.includes('Error')) {
+      return { ok: false, error: response.text };
+    }
+
+    return { ok: true, response: response.text };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}

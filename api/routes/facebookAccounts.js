@@ -1,4 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+
+import prisma from '../lib/prisma.js';
 /**
  * Facebook Account Storage API (Story 5.5 — AC2, AC9)
  *
@@ -16,12 +18,10 @@
 
 import express from 'express';
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth.js';
+import { parseFlatProxy } from '../../src/scrapers/facebook/proxy.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
-
 // ============================================================================
 // Encryption helpers — same AES-256-GCM pattern as session-auth.js
 // ============================================================================
@@ -47,6 +47,7 @@ export function encrypt(text) {
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
+  // Stryker disable next-line StringLiteral: cipher.final('') returns equivalent hex output
   encrypted += cipher.final('hex');
   const authTag = cipher.getAuthTag();
   return salt.toString('hex') + ':' + iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
@@ -55,6 +56,7 @@ export function encrypt(text) {
 export function decrypt(encryptedData) {
   try {
     const parts = encryptedData.split(':');
+    // Stryker disable next-line EqualityOperator,ConditionalExpression: catch block handles invalid part counts equivalently
     if (parts.length !== 4) return null;
     const salt = Buffer.from(parts[0], 'hex');
     const key = crypto.scryptSync(ENCRYPTION_KEY || 'dev-only-key', salt, 32);
@@ -63,11 +65,20 @@ export function decrypt(encryptedData) {
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(authTag);
     let decrypted = decipher.update(parts[3], 'hex', 'utf8');
+    // Stryker disable next-line StringLiteral: decipher.final('') returns equivalent utf8 output
     decrypted += decipher.final('utf8');
     return decrypted;
   } catch {
     // Never log the error detail — may contain key material
     return null;
+  }
+}
+
+async function invalidateHealthCache(accountId) {
+  try {
+    await prisma.facebookAccountHealth.deleteMany({ where: { accountId } });
+  } catch {
+    // Swallow — the health row may not exist yet.
   }
 }
 
@@ -80,7 +91,7 @@ const XS_MAX = 4096; // upper bound — guards against storage-amplification abu
 const C_USER_RE = /^\d{10,20}$/;
 
 export function validateAccountBody(body) {
-  const { label, c_user, xs } = body ?? {};
+  const { label, c_user, xs, proxy } = body ?? {};
   if (!label || typeof label !== 'string' || label.trim().length === 0)
     return 'label is required';
   if (label.trim().length > LABEL_MAX)
@@ -91,6 +102,12 @@ export function validateAccountBody(body) {
     return 'xs is required';
   if (xs.trim().length > XS_MAX)
     return `xs must be ${XS_MAX} characters or fewer`;
+  if (proxy !== undefined && proxy !== null) {
+    if (typeof proxy !== 'string' || !proxy.trim())
+      return 'proxy must be a non-empty string';
+    if (!parseFlatProxy(proxy.trim()))
+      return 'proxy must be in "host:port" or "host:port:user:pass" format';
+  }
   return null;
 }
 
@@ -119,11 +136,13 @@ router.post('/', authenticate, async (req, res) => {
     // Encrypt cookie pair as JSON — c_user and xs never stored in plaintext
     const cookiePayload = JSON.stringify({ c_user, xs });
     const encryptedCookie = encrypt(cookiePayload);
+    const encryptedProxy = req.body.proxy ? encrypt(req.body.proxy.trim()) : null;
 
     const account = await prisma.facebookAccount.create({
-      data: { userId: req.user.id, label, encryptedCookie },
+      data: { userId: req.user.id, label, encryptedCookie, encryptedProxy },
       select: { id: true, label: true },  // NFR3: never return encrypted blob
     });
+    await invalidateHealthCache(account.id);
 
     return res.status(201).json({ ok: true, id: account.id, label: account.label });
   } catch (err) {
@@ -190,10 +209,52 @@ router.delete('/:id', authenticate, async (req, res) => {
 
     // Ownership enforced atomically at the DB layer (userId in the where clause).
     await prisma.facebookAccount.delete({ where: { id, userId: req.user.id } });
+    await invalidateHealthCache(id);
     return res.json({ ok: true });
   } catch (err) {
     console.error('❌ DELETE /api/facebook/accounts error:', err?.code || err?.name || 'unknown');
     return res.status(500).json({ ok: false, error: 'Failed to remove account' });
+  }
+});
+
+// ============================================================================
+// PATCH /api/facebook/accounts/:id — update proxy (Story 7.1 AC4)
+// ============================================================================
+
+router.patch('/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { proxy } = req.body ?? {};
+
+    const account = await prisma.facebookAccount.findFirst({
+      where: { id, userId: req.user.id },
+      select: { id: true },
+    });
+    if (!account) return res.status(404).json({ ok: false, error: 'Account not found' });
+
+    if (proxy === undefined || proxy === null) {
+      return res.status(400).json({ ok: false, error: 'proxy is required' });
+    }
+    if (typeof proxy !== 'string' || !proxy.trim()) {
+      return res.status(400).json({ ok: false, error: 'proxy must be a non-empty string' });
+    }
+    if (!parseFlatProxy(proxy.trim())) {
+      return res.status(400).json({ ok: false, error: 'proxy must be in "host:port" or "host:port:user:pass" format' });
+    }
+
+    const encryptedProxy = encrypt(proxy.trim());
+    await prisma.facebookAccount.update({
+      where: { id, userId: req.user.id },
+      data: { encryptedProxy },
+    });
+    await invalidateHealthCache(id);
+    return res.json({ ok: true });
+  } catch (err) {
+    if (err?.code === 'P2025') {
+      return res.status(404).json({ ok: false, error: 'Account not found' });
+    }
+    console.error('❌ PATCH /api/facebook/accounts/:id error:', err?.code || err?.name || 'unknown');
+    return res.status(500).json({ ok: false, error: 'Failed to update account proxy' });
   }
 });
 

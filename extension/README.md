@@ -98,7 +98,7 @@ popup.js                    service-worker.js              bridge.js            
 |---|---|
 | [Extension User Guide](../docs/extension.md) | Installation, usage, each automation explained, tips, FAQ |
 | [Extension Internal API](../docs/extension-api.md) | Message protocol, storage schema, event flow |
-| [Extension Developer Guide](../docs/extension-dev.md) | Adding automations, modifying UI, DOM selectors, testing |
+| [Extension Developer Guide](../docs/extension-api.md) | Adding automations, modifying UI, DOM selectors, testing |
 
 ## Permissions
 

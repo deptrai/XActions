@@ -23,7 +23,7 @@ Each prompt is designed to:
 ### Getting Started
 | # | Tutorial | Description |
 |---|----------|-------------|
-| 01 | [MCP Setup & First Commands](01-mcp-setup-first-commands.md) | Install XActions MCP server, connect to Claude Desktop, run your first commands |
+| 01 | [MCP Setup & First Commands](01-mcp-setup-and-first-commands.md) | Install XActions MCP server, connect to Claude Desktop, run your first commands |
 | 15 | [CLI Mastery Guide](15-cli-mastery-guide.md) | Master the `xactions` command-line tool — all 12 commands with examples |
 | 16 | [Browser Automation Framework](16-browser-automation-framework.md) | Learn the core.js + actions.js browser automation system |
 
@@ -90,7 +90,7 @@ Each prompt is designed to:
 → Start with [Tutorial 03](03-growth-automation-suite.md) (Growth Suite), then [Tutorial 22](22-advanced-power-user-playbook.md) (Power User Playbook)
 
 **"I want to use XActions with Claude Desktop (MCP)"**
-→ Start with [Tutorial 01](01-mcp-setup-first-commands.md) (MCP Setup)
+→ Start with [Tutorial 01](01-mcp-setup-and-first-commands.md) (MCP Setup)
 
 **"I want to analyze my competitors"**
 → Start with [Tutorial 06](06-analytics-competitor-intelligence.md) (Analytics & Intelligence)
@@ -113,7 +113,7 @@ Each prompt is designed to:
 
 These 23 tutorials cover **every XActions feature**:
 
-- ✅ **49+ MCP tools** — Covered across tutorials 01-23
+- ✅ **145 MCP tools** — Covered across tutorials 01-23
 - ✅ **15 browser automation scripts** — Tutorials 03, 07, 16, 19, 20
 - ✅ **12 CLI commands** — Tutorial 15
 - ✅ **5 scraper modules** — Tutorials 04, 17

@@ -1,4 +1,6 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+import prisma from '../lib/prisma.js';
 /**
  * Stripe Billing Service
  * Handles customer creation, subscriptions, and portal sessions.
@@ -7,11 +9,7 @@
  */
 
 import Stripe from 'stripe';
-import { PrismaClient } from '@prisma/client';
 import { TIERS } from '../config/subscription-tiers.js';
-
-const prisma = new PrismaClient();
-
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured');

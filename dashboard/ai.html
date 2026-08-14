@@ -604,6 +604,8 @@
       <div class="tab-nav" style="display: flex; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 100;">
         <button class="tab-btn active" data-tab="voice" style="flex: 1; padding: 16px; background: none; border: none; color: var(--text-primary); font-size: 0.9375rem; font-weight: 700; cursor: pointer; border-bottom: 2px solid var(--accent); transition: all 0.2s;">🎭 Voice Analysis</button>
         <button class="tab-btn" data-tab="generate" style="flex: 1; padding: 16px; background: none; border: none; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;">✍️ Generate</button>
+        <button class="tab-btn" data-tab="thread" style="flex: 1; padding: 16px; background: none; border: none; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;">🧵 Thread</button>
+        <button class="tab-btn" data-tab="bio" style="flex: 1; padding: 16px; background: none; border: none; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;">📝 Bio</button>
         <button class="tab-btn" data-tab="calendar" style="flex: 1; padding: 16px; background: none; border: none; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;">📅 Calendar</button>
       </div>
 
@@ -720,6 +722,18 @@
                   <option value="promotional">Promotional</option>
                 </select>
               </div>
+              <div style="flex: 1; min-width: 120px;">
+                <label style="font-size: 0.8125rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Tone</label>
+                <select id="gen-tone" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.875rem; outline: none;">
+                  <option value="">Auto</option>
+                  <option value="funny">Funny</option>
+                  <option value="professional">Professional</option>
+                  <option value="controversial">Controversial</option>
+                  <option value="casual">Casual</option>
+                  <option value="inspirational">Inspirational</option>
+                  <option value="educational">Educational</option>
+                </select>
+              </div>
               <div style="min-width: 80px;">
                 <label style="font-size: 0.8125rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Count</label>
                 <input type="number" id="gen-count" value="3" min="1" max="5" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.875rem; outline: none;" />
@@ -776,7 +790,150 @@
         </section>
       </div>
 
-      <!-- ==================== TAB 3: Content Calendar ==================== -->
+      <!-- ==================== TAB 3: Thread from Text ==================== -->
+      <div class="tab-panel" id="tab-thread" style="display: none;">
+        <section class="section">
+          <h2 class="section-title">🧵 Thread from Long Text</h2>
+          <p>Paste long-form text and auto-split it into a coherent thread in a user's voice.</p>
+
+          <div class="feature-card" style="margin-top: 16px;">
+            <!-- Voice Profile Selector -->
+            <div style="margin-bottom: 12px;">
+              <label style="font-size: 0.875rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Voice Profile</label>
+              <select id="thr-profile" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; color: var(--text-primary); font-size: 0.9375rem; outline: none;">
+                <option value="">— Analyze a voice first —</option>
+              </select>
+            </div>
+
+            <!-- Long-form text -->
+            <div style="margin-bottom: 12px;">
+              <label style="font-size: 0.875rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Long-form text</label>
+              <textarea id="thr-text" placeholder="Paste a blog post, article, or notes to convert into a thread..." rows="8" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; color: var(--text-primary); font-size: 0.9375rem; outline: none; resize: vertical; font-family: inherit;"></textarea>
+            </div>
+
+            <!-- Options Row -->
+            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 120px;">
+                <label style="font-size: 0.8125rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Max tweets</label>
+                <input type="number" id="thr-max-length" value="10" min="3" max="15" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.875rem; outline: none;" />
+              </div>
+              <div style="flex: 1; min-width: 120px;">
+                <label style="font-size: 0.8125rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Tone</label>
+                <select id="thr-tone" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.875rem; outline: none;">
+                  <option value="">Auto</option>
+                  <option value="funny">Funny</option>
+                  <option value="professional">Professional</option>
+                  <option value="controversial">Controversial</option>
+                  <option value="casual">Casual</option>
+                  <option value="inspirational">Inspirational</option>
+                  <option value="educational">Educational</option>
+                </select>
+              </div>
+              <div style="flex: 1; min-width: 120px; display: flex; align-items: flex-end;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--text-secondary); cursor: pointer;">
+                  <input type="checkbox" id="thr-hooks" checked style="accent-color: var(--accent);" /> Hook + CTA
+                </label>
+              </div>
+            </div>
+
+            <!-- API Key (optional) -->
+            <details style="margin-bottom: 12px;">
+              <summary style="font-size: 0.8125rem; color: var(--text-secondary); cursor: pointer;">⚙️ Advanced: API Key & Model</summary>
+              <div style="margin-top: 8px;">
+                <input type="password" id="thr-api-key" placeholder="OpenRouter API key (env: OPENROUTER_API_KEY)" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.8125rem; outline: none; margin-bottom: 6px;" />
+                <input type="text" id="thr-model" placeholder="Model (default: google/gemini-flash-2.0)" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.8125rem; outline: none;" />
+              </div>
+            </details>
+
+            <button id="btn-thread" onclick="generateThreadFromText()" style="width: 100%; background: var(--accent); color: white; border: none; border-radius: 9999px; padding: 14px; font-weight: 700; font-size: 1rem; cursor: pointer;">🧵 Generate Thread</button>
+          </div>
+
+          <!-- Loading -->
+          <div id="thr-loading" style="display: none; text-align: center; padding: 40px 16px;">
+            <div style="font-size: 2rem; animation: pulse 1.5s ease-in-out infinite;">🧵</div>
+            <p style="margin-top: 12px; font-weight: 600;">Splitting into a thread...</p>
+          </div>
+
+          <!-- Results -->
+          <div id="thr-results" style="display: none;"></div>
+        </section>
+      </div>
+
+      <!-- ==================== TAB 4: Bio Generator ==================== -->
+      <div class="tab-panel" id="tab-bio" style="display: none;">
+        <section class="section">
+          <h2 class="section-title">📝 Bio Generator</h2>
+          <p>Generate Twitter/X bio options. Works with a voice profile or just a topic.</p>
+
+          <div class="feature-card" style="margin-top: 16px;">
+            <!-- Voice Profile Selector (optional) -->
+            <div style="margin-bottom: 12px;">
+              <label style="font-size: 0.875rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Voice Profile (optional)</label>
+              <select id="bio-profile" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; color: var(--text-primary); font-size: 0.9375rem; outline: none;">
+                <option value="">— None (use topic below) —</option>
+              </select>
+            </div>
+
+            <!-- Topic (required if no profile) -->
+            <div style="margin-bottom: 12px;">
+              <label style="font-size: 0.875rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Topic / Niche (required if no profile)</label>
+              <input type="text" id="bio-topic" placeholder="e.g., indie hacker building dev tools" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; color: var(--text-primary); font-size: 0.9375rem; outline: none;" />
+            </div>
+
+            <!-- Keywords -->
+            <div style="margin-bottom: 12px;">
+              <label style="font-size: 0.875rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Keywords (comma-separated, optional)</label>
+              <input type="text" id="bio-keywords" placeholder="e.g., founder, AI, open source" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; color: var(--text-primary); font-size: 0.9375rem; outline: none;" />
+            </div>
+
+            <!-- Options Row -->
+            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 120px;">
+                <label style="font-size: 0.8125rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Tone</label>
+                <select id="bio-tone" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.875rem; outline: none;">
+                  <option value="">Auto</option>
+                  <option value="funny">Funny</option>
+                  <option value="professional">Professional</option>
+                  <option value="controversial">Controversial</option>
+                  <option value="casual">Casual</option>
+                  <option value="inspirational">Inspirational</option>
+                  <option value="educational">Educational</option>
+                </select>
+              </div>
+              <div style="flex: 1; min-width: 80px;">
+                <label style="font-size: 0.8125rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Count</label>
+                <input type="number" id="bio-count" value="5" min="1" max="10" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.875rem; outline: none;" />
+              </div>
+              <div style="flex: 1; min-width: 80px;">
+                <label style="font-size: 0.8125rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Max chars</label>
+                <input type="number" id="bio-max-length" value="160" min="40" max="160" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.875rem; outline: none;" />
+              </div>
+            </div>
+
+            <!-- API Key (optional) -->
+            <details style="margin-bottom: 12px;">
+              <summary style="font-size: 0.8125rem; color: var(--text-secondary); cursor: pointer;">⚙️ Advanced: API Key & Model</summary>
+              <div style="margin-top: 8px;">
+                <input type="password" id="bio-api-key" placeholder="OpenRouter API key (env: OPENROUTER_API_KEY)" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.8125rem; outline: none; margin-bottom: 6px;" />
+                <input type="text" id="bio-model" placeholder="Model (default: google/gemini-flash-2.0)" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.8125rem; outline: none;" />
+              </div>
+            </details>
+
+            <button id="btn-bio" onclick="generateBio()" style="width: 100%; background: var(--accent); color: white; border: none; border-radius: 9999px; padding: 14px; font-weight: 700; font-size: 1rem; cursor: pointer;">📝 Generate Bios</button>
+          </div>
+
+          <!-- Loading -->
+          <div id="bio-loading" style="display: none; text-align: center; padding: 40px 16px;">
+            <div style="font-size: 2rem; animation: pulse 1.5s ease-in-out infinite;">📝</div>
+            <p style="margin-top: 12px; font-weight: 600;">Generating bio options...</p>
+          </div>
+
+          <!-- Results -->
+          <div id="bio-results" style="display: none;"></div>
+        </section>
+      </div>
+
+      <!-- ==================== TAB 5: Content Calendar ==================== -->
       <div class="tab-panel" id="tab-calendar" style="display: none;">
         <section class="section">
           <h2 class="section-title">📅 Content Calendar</h2>
@@ -1052,6 +1209,7 @@
       const topic = document.getElementById('gen-topic').value.trim();
       const type = document.getElementById('gen-type').value;
       const style = document.getElementById('gen-style').value;
+      const tone = document.getElementById('gen-tone').value;
       const count = parseInt(document.getElementById('gen-count').value) || 3;
       const apiKey = document.getElementById('gen-api-key').value.trim();
       const model = document.getElementById('gen-model').value.trim();
@@ -1079,7 +1237,7 @@
           body = { username: profileKey, topic, type: 'thread', threadLength: count, apiKey: apiKey || undefined, model: model || undefined, voiceProfile };
         } else {
           endpoint = '/api/ai/writer/generate';
-          body = { username: profileKey, topic, style: style || undefined, count, apiKey: apiKey || undefined, model: model || undefined, voiceProfile };
+          body = { username: profileKey, topic, style: style || undefined, tone: tone || undefined, count, apiKey: apiKey || undefined, model: model || undefined, voiceProfile };
         }
 
         const res = await fetch(`${API_BASE}${endpoint}`, {
@@ -1126,6 +1284,131 @@
                 <button onclick="rateTweet(this, 'up')" style="background: none; border: none; cursor: pointer; font-size: 1rem;" title="Good">👍</button>
                 <button onclick="rateTweet(this, 'down')" style="background: none; border: none; cursor: pointer; font-size: 1rem;" title="Bad">👎</button>
               </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+    }
+
+    // ====== Thread from Long Text (Epic 4) ======
+    async function generateThreadFromText() {
+      const profileKey = document.getElementById('thr-profile').value;
+      const text = document.getElementById('thr-text').value.trim();
+      const maxLength = parseInt(document.getElementById('thr-max-length').value) || 10;
+      const tone = document.getElementById('thr-tone').value;
+      const hooks = document.getElementById('thr-hooks').checked;
+      const apiKey = document.getElementById('thr-api-key').value.trim();
+      const model = document.getElementById('thr-model').value.trim();
+
+      if (!profileKey) return alert('Select a voice profile first');
+      if (!text) return alert('Paste the long-form text to split into a thread');
+
+      const voiceProfile = savedProfiles[profileKey];
+      if (!voiceProfile) return alert('Voice profile not found. Run analysis first.');
+
+      document.getElementById('thr-loading').style.display = 'block';
+      document.getElementById('thr-results').style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/ai/writer/thread-from-text`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: profileKey,
+            text,
+            maxLength,
+            hooks,
+            tone: tone || undefined,
+            apiKey: apiKey || undefined,
+            model: model || undefined,
+            voiceProfile,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || data.message || 'Thread generation failed');
+        renderThreadResults(data.data);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        document.getElementById('thr-loading').style.display = 'none';
+      }
+    }
+
+    function renderThreadResults(data) {
+      const el = document.getElementById('thr-results');
+      el.style.display = 'block';
+      const items = (data.thread || []).map(t => ({ text: t.text, meta: t.purpose || `Position ${t.position}` }));
+      el.innerHTML = `<div style="padding: 16px;">
+        <h3 style="margin-bottom: 12px;">🧵 ${items.length}-tweet thread${data.model ? ` <span style="font-size: 0.75rem; color: var(--text-secondary);">(${data.model})</span>` : ''}</h3>
+        ${items.map((item) => `
+          <div class="feature-card" style="margin-bottom: 8px;">
+            <p style="color: var(--text-primary); font-size: 1rem; margin-bottom: 8px; white-space: pre-wrap;">${escapeHTML(item.text)}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.75rem; color: var(--text-secondary);">${escapeHTML(item.meta || '')}</span>
+              <button onclick="copyTweet(this, ${JSON.stringify(item.text).replace(/"/g, '&quot;')})" style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 4px 12px; color: var(--text-primary); font-size: 0.75rem; cursor: pointer;">📋 Copy</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+    }
+
+    // ====== Bio Generator (Epic 4) ======
+    async function generateBio() {
+      const profileKey = document.getElementById('bio-profile').value;
+      const topic = document.getElementById('bio-topic').value.trim();
+      const keywordsStr = document.getElementById('bio-keywords').value.trim();
+      const keywords = keywordsStr ? keywordsStr.split(',').map(k => k.trim()).filter(Boolean) : undefined;
+      const tone = document.getElementById('bio-tone').value;
+      const count = parseInt(document.getElementById('bio-count').value) || 5;
+      const maxLength = parseInt(document.getElementById('bio-max-length').value) || 160;
+      const apiKey = document.getElementById('bio-api-key').value.trim();
+      const model = document.getElementById('bio-model').value.trim();
+
+      const voiceProfile = profileKey ? savedProfiles[profileKey] : undefined;
+
+      if (!voiceProfile && !topic) return alert('Provide a topic, or select a voice profile first.');
+
+      document.getElementById('bio-loading').style.display = 'block';
+      document.getElementById('bio-results').style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/ai/writer/bio`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: profileKey || undefined,
+            topic: topic || undefined,
+            keywords,
+            tone: tone || undefined,
+            count,
+            maxLength,
+            apiKey: apiKey || undefined,
+            model: model || undefined,
+            voiceProfile,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || data.message || 'Bio generation failed');
+        renderBioResults(data.data);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        document.getElementById('bio-loading').style.display = 'none';
+      }
+    }
+
+    function renderBioResults(data) {
+      const el = document.getElementById('bio-results');
+      el.style.display = 'block';
+      const items = (data.bios || []).map(b => ({ text: b.text, meta: `${b.characterCount ?? (b.text || '').length} chars — ${b.style || ''}` }));
+      el.innerHTML = `<div style="padding: 16px;">
+        <h3 style="margin-bottom: 12px;">📝 ${items.length} bio option(s)${data.model ? ` <span style="font-size: 0.75rem; color: var(--text-secondary);">(${data.model})</span>` : ''}</h3>
+        ${items.map((item) => `
+          <div class="feature-card" style="margin-bottom: 8px;">
+            <p style="color: var(--text-primary); font-size: 1rem; margin-bottom: 8px; white-space: pre-wrap;">${escapeHTML(item.text)}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.75rem; color: var(--text-secondary);">${escapeHTML(item.meta || '')}</span>
+              <button onclick="copyTweet(this, ${JSON.stringify(item.text).replace(/"/g, '&quot;')})" style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 4px 12px; color: var(--text-primary); font-size: 0.75rem; cursor: pointer;">📋 Copy</button>
             </div>
           </div>
         `).join('')}
@@ -1230,8 +1513,11 @@
     function updateProfileSelectors() {
       const options = Object.keys(savedProfiles).map(k => `<option value="${k}">@${k}</option>`).join('');
       const placeholder = '<option value="">— Select voice profile —</option>';
+      const placeholderNone = '<option value="">— None (use topic below) —</option>';
       document.getElementById('gen-profile').innerHTML = placeholder + options;
       document.getElementById('cal-profile').innerHTML = placeholder + options;
+      document.getElementById('thr-profile').innerHTML = placeholder + options;
+      document.getElementById('bio-profile').innerHTML = placeholderNone + options;
     }
 
     function copyTweet(btn, text) {
@@ -1296,7 +1582,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p>© 2024-2026 XActions. MIT License. No API fees. No limits.</p>
+      <p>© 2024-2026 XActions. Apache 2.0 License. No API fees. No limits.</p>
     </div>
   </footer>
 </body>

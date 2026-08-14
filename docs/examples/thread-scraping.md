@@ -448,7 +448,6 @@ async function scrapeThread(tweetUrl, options = {}) {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled',
-      '--disable-web-security',
     ],
   });
 

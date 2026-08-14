@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Workflow Store
  * Persistence layer for workflow definitions and execution logs
@@ -10,6 +10,8 @@
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @license MIT
  */
+
+import prisma from '../../api/lib/prisma.js';
 
 import fs from 'fs/promises';
 import path from 'path';
@@ -369,8 +371,6 @@ export async function getStore() {
 
   if (process.env.DATABASE_URL) {
     try {
-      const { PrismaClient } = await import('@prisma/client');
-      const prisma = new PrismaClient();
       _store = new PrismaStore(prisma);
       return _store;
     } catch {

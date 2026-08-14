@@ -141,7 +141,7 @@ describe('scrapeProfile input normalization', () => {
     }),
   });
 
-  it('scrapeProfile throws on missing/blocked profile (ogTitle absent)', async () => {
+  it('scrapeProfile returns blocked status on missing/blocked profile (ogTitle absent)', async () => {
     const fakePage = {
       goto: async () => {},
       evaluate: async () => ({
@@ -152,11 +152,11 @@ describe('scrapeProfile input normalization', () => {
         pageUrl: 'https://www.facebook.com/nonexistent',
       }),
     };
-    await expect(scrapeProfile(fakePage, 'nonexistent'))
-      .rejects.toThrow(/profile not found or blocked/i);
+    const res = await scrapeProfile(fakePage, 'nonexistent');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
-  it('scrapeProfile throws when ogTitle is generic "Facebook"', async () => {
+  it('scrapeProfile returns blocked status when ogTitle is generic "Facebook"', async () => {
     const fakePage = {
       goto: async () => {},
       evaluate: async () => ({
@@ -167,8 +167,8 @@ describe('scrapeProfile input normalization', () => {
         pageUrl: 'https://www.facebook.com/',
       }),
     };
-    await expect(scrapeProfile(fakePage, 'unknown'))
-      .rejects.toThrow(/profile not found or blocked/i);
+    const res = await scrapeProfile(fakePage, 'unknown');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
   it('scrapeProfile returns normalized profile on valid page', async () => {
@@ -401,19 +401,19 @@ describe('[TEA] scrapeProfile — login-wall detection variants', () => {
     }),
   });
 
-  it('[P1] throws on "Log in to Facebook" login-wall title', async () => {
-    await expect(scrapeProfile(makeLoginWallPage('Log in to Facebook'), 'target'))
-      .rejects.toThrow(/profile not found or blocked/i);
+  it('[P1] returns blocked status on "Log in to Facebook" login-wall title', async () => {
+    const res = await scrapeProfile(makeLoginWallPage('Log in to Facebook'), 'target');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
-  it('[P1] throws on "Log into Facebook" login-wall title', async () => {
-    await expect(scrapeProfile(makeLoginWallPage('Log into Facebook'), 'target'))
-      .rejects.toThrow(/profile not found or blocked/i);
+  it('[P1] returns blocked status on "Log into Facebook" login-wall title', async () => {
+    const res = await scrapeProfile(makeLoginWallPage('Log into Facebook'), 'target');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
-  it('[P1] throws on "Facebook – Log in" login-wall title', async () => {
-    await expect(scrapeProfile(makeLoginWallPage('Facebook – Log in'), 'target'))
-      .rejects.toThrow(/profile not found or blocked/i);
+  it('[P1] returns blocked status on "Facebook – Log in" login-wall title', async () => {
+    const res = await scrapeProfile(makeLoginWallPage('Facebook – Log in'), 'target');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 });
 
@@ -509,15 +509,18 @@ describe('[TEA-R3] loginWithCookie — edge cases', () => {
     const fakePage = {
       setCookie: async (...cookies) => { cookiesSet.push(...cookies); },
       goto: async () => {},
+      url: () => 'https://www.facebook.com/',
+      evaluate: async () => ({ hasLoginForm: false, hasLoginButton: false, hasSecurityCheck: false }),
     };
-    await loginWithCookie(fakePage, { c_user: '12345', xs: 'xs-token' });
+    // Skip warming for this cookie-flags test; cookie attributes are independent of warming.
+    await loginWithCookie(fakePage, { c_user: '12345', xs: 'xs-token' }, { headless: false, skipWarmup: true });
     const cUserCookie = cookiesSet.find(c => c.name === 'c_user');
     const xsCookie = cookiesSet.find(c => c.name === 'xs');
     expect(cUserCookie.domain).toBe('.facebook.com');
-    expect(cUserCookie.httpOnly).toBe(true);
+    expect(cUserCookie.httpOnly).toBe(false);
     expect(cUserCookie.secure).toBe(true);
     expect(xsCookie.domain).toBe('.facebook.com');
-    expect(xsCookie.httpOnly).toBe(true);
+    expect(xsCookie.httpOnly).toBe(false);
     expect(xsCookie.secure).toBe(true);
   });
 });
@@ -538,9 +541,9 @@ describe('[TEA-R3] scrapeProfile — login-wall detection comprehensive', () => 
     }),
   });
 
-  it('[P1] throws on "Facebook — Log in" em-dash variant', async () => {
-    await expect(scrapeProfile(makeWallPage('Facebook — Log in'), 'target'))
-      .rejects.toThrow(/profile not found or blocked/i);
+  it('[P1] returns blocked status on "Facebook — Log in" em-dash variant', async () => {
+    const res = await scrapeProfile(makeWallPage('Facebook — Log in'), 'target');
+    expect(res.error).toBe('Profile requires authentication or is blocked');
   });
 
   it('[P2] does NOT throw on legitimate page with "Facebook" in bio title', async () => {

@@ -1,13 +1,10 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+import prisma from '../lib/prisma.js';
+import { resolveUserId } from '../middleware/auth.js';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-
 // Payment routes archived - XActions is now 100% free and open-source
 // All credit checks have been removed - unlimited operations for all users
-
-const prisma = new PrismaClient();
-
 // Store active sessions
 const activeSessions = new Map(); // odessId -> { odess, dashboard, user, status }
 const adminSockets = new Set(); // Admin sockets watching all sessions
@@ -44,8 +41,13 @@ export function initializeSocketIO(httpServer) {
 
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = resolveUserId(decoded);
+        if (!userId) {
+          return next(new Error('Invalid token'));
+        }
+
         const user = await prisma.user.findUnique({
-          where: { id: decoded.userId }
+          where: { id: userId }
         });
 
         if (!user) {
@@ -58,7 +60,11 @@ export function initializeSocketIO(httpServer) {
       socket.role = role || 'dashboard';
       next();
     } catch (error) {
-      next(new Error('Invalid token'));
+      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+        return next(new Error('Invalid token'));
+      }
+      console.error('❌ Socket auth error:', error);
+      return next(new Error('Authentication error'));
     }
   });
 

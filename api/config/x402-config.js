@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * x402 Micropayment Configuration (Optional)
  * 
@@ -290,7 +290,6 @@ export const AI_OPERATION_PRICES = {
   'posting:delete': '$0.002',        // Delete a tweet
   
   // Engagement operations
-  'engagement:like': '$0.002',       // Like a tweet
   'engagement:unlike': '$0.002',     // Unlike a tweet
   'engagement:reply': '$0.005',      // Reply to a tweet
   'engagement:bookmark': '$0.002',   // Bookmark a tweet
@@ -467,7 +466,6 @@ export const AI_OPERATION_PRICES = {
 
   // Additional spaces operations
   'spaces:host': '$0.02',            // Host a new Space
-  'spaces:join': '$0.005',           // Join a live Space
   'spaces:advanced': '$0.01',        // Advanced Spaces features
 
   // Additional premium operations
@@ -550,7 +548,7 @@ export const AI_OPERATION_PRICES = {
 
   // Spaces routes (/api/ai/spaces/*)
   'spaces:list': '$0.005',            // Discover spaces
-  'spaces:join': '$0.05',             // Join a space
+  'spaces:join': '$0.005',            // Join a space
   'spaces:leave': '$0.002',           // Leave a space
   'spaces:status': '$0.001',          // Space status
   'spaces:transcript': '$0.01',       // Space transcript

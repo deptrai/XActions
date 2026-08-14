@@ -1,6 +1,6 @@
 # Architecture
 
-> XActions v3.1.0 — System architecture, project structure, and design decisions.
+> XActions v3.5.0 — System architecture, project structure, and design decisions.
 
 ## High-Level Architecture
 
@@ -70,7 +70,7 @@ xactions/
 │   ├── cli/                # CLI entry point
 │   │   └── index.js        # 80+ commands (2983 lines)
 │   ├── mcp/                # MCP server
-│   │   └── server.js       # 87 tools (3899 lines)
+│   │   └── server.js       # 144 tools
 │   ├── scrapers/           # Multi-platform scrapers
 │   │   ├── twitter/        # Twitter Puppeteer scrapers
 │   │   ├── bluesky/        # Bluesky AT Protocol scrapers
@@ -285,4 +285,4 @@ workflow run morning-engage
 
 ---
 
-*XActions v3.1.0 — by nichxbt*
+*XActions v3.5.0 — by nichxbt*

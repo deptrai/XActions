@@ -1,14 +1,12 @@
-// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+import prisma from '../lib/prisma.js';
 import express from 'express';
 import crypto from 'crypto';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth.js';
 import browserAutomation from '../services/browserAutomation.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
-
 // Encryption helpers for session cookies
 const ENCRYPTION_KEY = process.env.SESSION_SECRET || process.env.JWT_SECRET;
 if (!ENCRYPTION_KEY && process.env.NODE_ENV === 'production') {

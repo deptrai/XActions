@@ -48,6 +48,7 @@
 |---------|----------|--------|
 | Tweet scheduling | 🔥 HIGH | 🟡 Planning |
 | Analytics dashboard | 🔥 HIGH | 🟡 Planning |
+| AI Tweet Writer | 🔥 HIGH | ✅ Done (EPS-4) |
 
 ---
 

@@ -8,58 +8,60 @@
 
 import { describe, it, expect } from 'vitest';
 import { validateAccountBody, encrypt, decrypt } from '../../api/routes/facebookAccounts.js';
+import { nextTestId } from '../utils/test-ids.js';
+const TEST_SCOPE = 'api-facebook-accounts';
 
 // ============================================================================
 // validateAccountBody — AC1 / AC2 validation rules
 // ============================================================================
 
 describe('validateAccountBody', () => {
-  it('returns null for valid input', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns null for valid input`, () => {
     expect(validateAccountBody({ label: 'Main', c_user: '1234567890', xs: 'abc' })).toBeNull();
   });
 
-  it('accepts c_user with 20 digits (max boundary)', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] accepts c_user with 20 digits (max boundary)`, () => {
     expect(validateAccountBody({ label: 'x', c_user: '12345678901234567890', xs: 'xs' })).toBeNull();
   });
 
-  it('returns error for missing label', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns error for missing label`, () => {
     expect(validateAccountBody({ c_user: '1234567890', xs: 'xs' })).toMatch(/label.*required/i);
   });
 
-  it('returns error for empty label', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns error for empty label`, () => {
     expect(validateAccountBody({ label: '', c_user: '1234567890', xs: 'xs' })).toMatch(/label.*required/i);
   });
 
-  it('returns error for whitespace-only label', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns error for whitespace-only label`, () => {
     expect(validateAccountBody({ label: '   ', c_user: '1234567890', xs: 'xs' })).toMatch(/label.*required/i);
   });
 
-  it('returns error for label > 50 chars', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns error for label > 50 chars`, () => {
     expect(validateAccountBody({ label: 'a'.repeat(51), c_user: '1234567890', xs: 'xs' }))
       .toMatch(/50/);
   });
 
-  it('returns error for non-numeric c_user', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns error for non-numeric c_user`, () => {
     expect(validateAccountBody({ label: 'x', c_user: 'abc123', xs: 'xs' })).toMatch(/c_user/i);
   });
 
-  it('returns error for c_user too short (< 10 digits)', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns error for c_user too short (< 10 digits)`, () => {
     expect(validateAccountBody({ label: 'x', c_user: '123456789', xs: 'xs' })).toMatch(/c_user/i);
   });
 
-  it('returns error for c_user too long (> 20 digits)', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns error for c_user too long (> 20 digits)`, () => {
     expect(validateAccountBody({ label: 'x', c_user: '123456789012345678901', xs: 'xs' })).toMatch(/c_user/i);
   });
 
-  it('returns error for missing xs', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns error for missing xs`, () => {
     expect(validateAccountBody({ label: 'x', c_user: '1234567890' })).toMatch(/xs.*required/i);
   });
 
-  it('returns error for empty xs', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns error for empty xs`, () => {
     expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: '' })).toMatch(/xs.*required/i);
   });
 
-  it('is null/undefined-safe (never throws)', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] is null/undefined-safe (never throws)`, () => {
     expect(() => validateAccountBody(null)).not.toThrow();
     expect(() => validateAccountBody(undefined)).not.toThrow();
     expect(validateAccountBody(null)).toMatch(/label/i);
@@ -71,25 +73,25 @@ describe('validateAccountBody', () => {
 // ============================================================================
 
 describe('encrypt / decrypt roundtrip', () => {
-  it('decrypt(encrypt(x)) === x for a cookie JSON payload', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] decrypt(encrypt(x)) === x for a cookie JSON payload`, () => {
     const payload = JSON.stringify({ c_user: '1234567890', xs: 'xs_token_abc' });
     expect(decrypt(encrypt(payload))).toBe(payload);
   });
 
-  it('decrypt returns null for invalid/garbage input (no throw)', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] decrypt returns null for invalid/garbage input (no throw)`, () => {
     expect(decrypt('not-valid')).toBeNull();
     expect(decrypt('')).toBeNull();
     expect(decrypt(null)).toBeNull();
   });
 
-  it('encrypted value never equals the plaintext', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] encrypted value never equals the plaintext`, () => {
     const plain = 'secret_payload';
     const enc = encrypt(plain);
     expect(enc).not.toBe(plain);
     expect(enc).not.toContain(plain);
   });
 
-  it('two encryptions of same plaintext produce different ciphertext (random IV)', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] two encryptions of same plaintext produce different ciphertext (random IV)`, () => {
     const plain = 'same_payload';
     expect(encrypt(plain)).not.toBe(encrypt(plain));
   });
@@ -100,15 +102,213 @@ describe('encrypt / decrypt roundtrip', () => {
 // ============================================================================
 
 describe('NFR3 — encrypt never leaks cookie values in output', () => {
-  it('encrypted output does not contain raw c_user value', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] encrypted output does not contain raw c_user value`, () => {
     const c_user = '9876543210';
     const enc = encrypt(JSON.stringify({ c_user, xs: 'xs_val' }));
     expect(enc).not.toContain(c_user);
   });
 
-  it('encrypted output does not contain raw xs value', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] encrypted output does not contain raw xs value`, () => {
     const xs = 'super_secret_xs_value_nfr3';
     const enc = encrypt(JSON.stringify({ c_user: '1234567890', xs }));
     expect(enc).not.toContain(xs);
+  });
+});
+
+// ============================================================================
+// P1 Kill: encrypt/decrypt — exact encoding strings (hex, utf8, parts.length)
+// ============================================================================
+
+describe('encrypt / decrypt — exact encoding (P1 kill)', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] encrypt output is hex-encoded (not empty string replacement)`, () => {
+    const enc = encrypt('test_payload');
+    // StringLiteral mutant: 'hex' → '' → cipher.update throws or produces binary
+    // If encoding is empty, encrypt would throw or produce non-hex output
+    expect(enc).toMatch(/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] decrypt returns exact plaintext for roundtrip (encoding strings matter)`, () => {
+    const plain = 'exact_roundtrip_test_12345';
+    const enc = encrypt(plain);
+    const dec = decrypt(enc);
+    // StringLiteral mutant: 'hex'/'utf8' → '' → decrypt fails or returns garbage
+    expect(dec).toBe(plain);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] decrypt returns null for 3-part string (not 4 parts)`, () => {
+    // ConditionalExpression mutant: false → parts.length check bypassed
+    // With 3 parts, decipher.update(parts[3]) would get undefined → throw → null
+    // But mutant skips the check, tries to process → may throw or return garbage
+    expect(decrypt('a:b:c')).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] decrypt returns null for 5-part string (not 4 parts)`, () => {
+    expect(decrypt('a:b:c:d:e')).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] decrypt handles tampered ciphertext (auth tag mismatch → null)`, () => {
+    const enc = encrypt('tamper_test');
+    // Flip last char of ciphertext to tamper
+    const parts = enc.split(':');
+    const tampered = parts[3].slice(0, -1) + (parts[3].slice(-1) === '0' ? '1' : '0');
+    expect(decrypt(`${parts[0]}:${parts[1]}:${parts[2]}:${tampered}`)).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] encrypt output parts are valid hex strings (encoding strings matter)`, () => {
+    // StringLiteral mutant: 'hex' → '' → cipher.update returns Buffer, not hex string
+    // When encoding is '', cipher.update returns a Buffer object, and Buffer + string = string
+    // but the concatenation would produce "[object Object]" or binary garbage, not hex
+    const enc = encrypt('encoding_test');
+    const parts = enc.split(':');
+    expect(parts).toHaveLength(4);
+    // Each part must be valid hex (only 0-9a-f chars)
+    for (const part of parts) {
+      expect(part).toMatch(/^[0-9a-f]+$/);
+      // Must be parseable as hex
+      expect(() => Buffer.from(part, 'hex')).not.toThrow();
+    }
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] decrypt with wrong encoding returns null or wrong value (encoding strings matter)`, () => {
+    // StringLiteral mutant: 'hex'/'utf8' → '' → decipher.update returns Buffer
+    // This would either throw or return garbage — either way, not the original plaintext
+    const plain = 'encoding_roundtrip_abc123';
+    const enc = encrypt(plain);
+    const dec = decrypt(enc);
+    // If encoding strings are mutated to '', decrypt would fail or return garbage
+    expect(dec).toBe(plain);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] decrypt with 3 parts returns null (parts.length check)`, () => {
+    // ConditionalExpression mutant: false → check bypassed
+    // With 3 parts, parts[3] is undefined → decipher.update(undefined) throws → catch → null
+    // But mutant skips the check, tries to process → may throw or return garbage
+    // Key: with 3 valid hex parts, the mutant would try to process and throw
+    // We need a 3-part string where parts[3] being undefined causes a distinguishable behavior
+    const result = decrypt('aabbccdd:eeff0011:22334455');
+    expect(result).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] decrypt with 5 parts returns null (parts.length check)`, () => {
+    // 5 parts should also be rejected
+    const result = decrypt('aabb:bccd:eeff:0011:2233');
+    expect(result).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] decrypt with exactly 4 valid hex parts but wrong data returns null`, () => {
+    // 4 parts but not valid encrypted data → should return null (not throw)
+    expect(decrypt('aaaa:bbbb:cccc:dddd')).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] c_user with leading/trailing spaces is trimmed before regex test`, () => {
+    // MethodExpression mutant: String(c_user).trim() → String(c_user) (no trim)
+    // With c_user = '  1234567890  ', trim gives '1234567890' (valid), no-trim gives '  1234567890  ' (invalid)
+    // Original: trim → valid → null
+    // Mutant: no trim → invalid → error
+    expect(validateAccountBody({ label: 'x', c_user: '  1234567890  ', xs: 'xs' })).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] c_user with only leading spaces is trimmed`, () => {
+    // Additional: c_user = ' 1234567890' → trim → '1234567890' (valid)
+    expect(validateAccountBody({ label: 'x', c_user: ' 1234567890', xs: 'xs' })).toBeNull();
+  });
+});
+
+// ============================================================================
+// P1 Kill: validateAccountBody — boundary + type checks (label length, c_user regex, xs length)
+// ============================================================================
+
+describe('validateAccountBody — boundary + type (P1 kill)', () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] accepts label of exactly 50 chars (boundary, not >)`, () => {
+    // EqualityOperator mutant: > → >= → 50 chars rejected (should be accepted)
+    expect(validateAccountBody({ label: 'a'.repeat(50), c_user: '1234567890', xs: 'xs' })).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] rejects label of 51 chars (boundary)`, () => {
+    expect(validateAccountBody({ label: 'a'.repeat(51), c_user: '1234567890', xs: 'xs' }))
+      .toMatch(/50/);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] rejects non-string label (number)`, () => {
+    // LogicalOperator mutant: || → && → both conditions must be true
+    // ConditionalExpression mutant: false → typeof check bypassed
+    expect(validateAccountBody({ label: 123, c_user: '1234567890', xs: 'xs' }))
+      .toMatch(/label/i);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] rejects non-string label (object)`, () => {
+    expect(validateAccountBody({ label: { foo: 'bar' }, c_user: '1234567890', xs: 'xs' }))
+      .toMatch(/label/i);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] trim is applied before length check on label`, () => {
+    // MethodExpression mutant: label.trim() → label (no trim)
+    // With label = 'a'.repeat(49) + '  ', trim gives 49 chars (accepted), no-trim gives 51 (rejected)
+    // Original: trim → 49 → accepted (null)
+    // Mutant: no trim → 51 → rejected (error message with "50")
+    const labelWithSpaces = 'a'.repeat(49) + '  ';
+    expect(validateAccountBody({ label: labelWithSpaces, c_user: '1234567890', xs: 'xs' })).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] c_user is coerced to string before regex test`, () => {
+    // MethodExpression mutant: String(c_user) → c_user (no coercion)
+    // With c_user as number, .trim() would throw without String()
+    expect(() => validateAccountBody({ label: 'x', c_user: 1234567890, xs: 'xs' })).not.toThrow();
+    expect(validateAccountBody({ label: 'x', c_user: 1234567890, xs: 'xs' })).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] rejects non-string xs (number)`, () => {
+    // LogicalOperator mutant: || → &&
+    // ConditionalExpression mutant: false → typeof check bypassed
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 123 }))
+      .toMatch(/xs/i);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] rejects non-string xs (object)`, () => {
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: { foo: 'bar' } }))
+      .toMatch(/xs/i);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] accepts xs of exactly 4096 chars (boundary, not >)`, () => {
+    // EqualityOperator mutant: > → >= → 4096 chars rejected (should be accepted)
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 'a'.repeat(4096) })).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] rejects xs of 4097 chars (boundary)`, () => {
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 'a'.repeat(4097) }))
+      .toMatch(/4096/);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] trim is applied before length check on xs`, () => {
+    // MethodExpression mutant: xs.trim() → xs (no trim)
+    // With xs = 'a'.repeat(4095) + '  ', trim gives 4095 (accepted), no-trim gives 4097 (rejected)
+    // Original: trim → 4095 → accepted (null)
+    // Mutant: no trim → 4097 → rejected (error with "4096")
+    const xsWithSpaces = 'a'.repeat(4095) + '  ';
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: xsWithSpaces })).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] rejects whitespace-only xs`, () => {
+    // ConditionalExpression mutant: false → xs.trim().length === 0 check bypassed
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: '   ' }))
+      .toMatch(/xs.*required/i);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] accepts a valid proxy string`, () => {
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 'xs', proxy: '127.0.0.1:8080' })).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] accepts a proxy with credentials`, () => {
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 'xs', proxy: '127.0.0.1:8080:user:pass' })).toBeNull();
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] rejects an invalid proxy format`, () => {
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 'xs', proxy: 'localhost' }))
+      .toMatch(/proxy.*format/i);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] rejects an empty proxy string`, () => {
+    expect(validateAccountBody({ label: 'x', c_user: '1234567890', xs: 'xs', proxy: '   ' }))
+      .toMatch(/proxy/i);
   });
 });

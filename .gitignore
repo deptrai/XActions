@@ -60,6 +60,7 @@ bun.lockb
 
 # Build outputs
 dist/
+dist-cloudflare/
 es/
 /lib/
 .next/
@@ -84,6 +85,9 @@ coverage/
 .nyc_output/
 .eslintcache
 .stylelintcache
+
+# Facebook persistent browser profiles (Story 6.17) — contain session data
+profiles/
 
 # Service Worker
 # Serwist
@@ -132,7 +136,25 @@ e2e/reports
 .vercel
 
 audit-report.json
-
 # Facebook session cookies — never commit
 cookie.json
 cookies.json
+
+# Stryker mutation testing
+.stryker-tmp/
+reports/mutation/
+
+# Site/build outputs
+pages-out/
+.wrangler/
+
+# Debug artifacts (temporary local debugging)
+debug-*.html
+debug-*.png
+scripts/debug-*.mjs
+
+# Stray editor/agent backups (never commit or publish)
+*.backup
+*.bak
+*.orig
+*.rej
