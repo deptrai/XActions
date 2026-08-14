@@ -1153,11 +1153,11 @@ So that database connection pool is not fragmented and performance remains stabl
 
 **Acceptance Criteria:**
 
-**Given** any API route or service needs database access
-**When** it imports `prisma` from `api/lib/prisma.js`
-**Then** it uses the singleton instance
-**And** the number of `PrismaClient` instances does not scale with route count
-**And** all 47 existing `new PrismaClient()` calls are replaced by the singleton import
+**Given** any API route, service, MCP server, CLI command, or workflow module needs database access
+**When** it runs in the same Node process
+**Then** it imports `prisma` from `api/lib/prisma.js`
+**And** it uses the singleton instance
+**And** the number of live `PrismaClient` instances does not scale with route count
 
 **Given** the singleton module
 **When** it is first imported
