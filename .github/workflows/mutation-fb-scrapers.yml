@@ -5,6 +5,11 @@ name: Mutation — Facebook scrapers
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: 'Branch to mutate (defaults to develop)'
+        required: false
+        default: 'develop'
+        type: string
       breakThreshold:
         description: 'Minimum mutation score before failing (0-100)'
         required: false
@@ -23,6 +28,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || 'develop' }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
