@@ -212,9 +212,7 @@ Issue EPS-5 (Deferred work cleanup) triaged all 6 priority items. Items 1, 2, 3,
 
 ## Deferred from: code review of 8-3-jwt-key-standardization (2026-08-14)
 
-- **Optional auth is fail-open on any error** [api/middleware/auth.js:66-70] — catches all exceptions and continues with `req.user = null`, treating malformed tokens, deleted users, and DB errors as anonymous requests. Pre-existing behavior, not introduced by the JWT key standardization. — pre-existing
-- **Refresh endpoint makes control decisions on unverified payload** [api/routes/auth.js:189-191] — calls `jwt.decode(token)` to extract `userId` and check `exp` before `jwt.verify`. Pre-existing flow; the diff only touched extraction. — pre-existing
-- **Error handlers mask non-token failures and hurt observability** [api/middleware/auth.js:33-41, api/realtime/socketHandler.js:61-63] — return generic errors without logging original exception. Pre-existing. — pre-existing
+- *(resolved inline in 8.3 follow-up: optional-auth fail-open, refresh unverified decode, error handler masking)*
 
 - **Connection pool tuning not configured** [`api/lib/prisma.js:5`] — `new PrismaClient()` has no explicit `connection_limit` / `pool_timeout`. Valuable for high-concurrency API but out of story scope. — out of scope
 - **DATABASE_URL validation at module load** [`api/lib/prisma.js:5`] — Missing/invalid `DATABASE_URL` will surface on first query, not at import. Out of story scope. — out of scope

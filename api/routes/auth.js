@@ -186,10 +186,21 @@ router.post('/refresh', async (req, res) => {
       return res.status(401).json({ error: 'Token required' });
     }
 
-    // Decode without verification to check expiry window
-    const decoded = jwt.decode(token);
+    // Verify signature first, then validate the refresh window and payload.
+    // ignoreExpiration allows recently-expired tokens to be refreshed.
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
+    } catch (verifyError) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    if (!decoded || typeof decoded.exp !== 'number') {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
     const userId = resolveUserId(decoded);
-    if (!decoded || !decoded.exp || !userId) {
+    if (!userId) {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
@@ -198,13 +209,6 @@ router.post('/refresh', async (req, res) => {
     const maxRefreshWindow = 24 * 60 * 60; // 24 hours
     if (decoded.exp < now - maxRefreshWindow) {
       return res.status(401).json({ error: 'Token too old to refresh — please log in again' });
-    }
-
-    // Verify signature (allow recently expired tokens within the refresh window)
-    try {
-      jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
-    } catch {
-      return res.status(401).json({ error: 'Invalid token signature' });
     }
 
     // Verify user still exists
@@ -222,7 +226,8 @@ router.post('/refresh', async (req, res) => {
 
     res.json({ token: newToken });
   } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
+    console.error('❌ Refresh token error:', error);
+    res.status(500).json({ error: 'Authentication error' });
   }
 });
 

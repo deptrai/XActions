@@ -144,8 +144,8 @@ Status: done
 
 - [x] [Review][Patch] **E2E test JWT-secret fallback mismatch** — `tests/e2e/api-auth.test.js:119` now uses `TEST_SECRET` imported from `tests/api/fixtures/test-user.js`, matching the server verifier.
 
-- [x] [Review][Defer] **Optional auth is fail-open on any error** — `api/middleware/auth.js:66-70` catches all exceptions and continues with `req.user = null`. Pre-existing behavior, not introduced by Story 8.3.
+- [x] [Review][Patch] **Optional auth is fail-open on any error** — `optionalAuthMiddleware` now only catches `JsonWebTokenError` and `TokenExpiredError` and continues as anonymous. Other errors are logged with `console.error` and propagated to the Express error handler via `next(error)`. [api/middleware/auth.js:86-95]
 
-- [x] [Review][Defer] **Refresh endpoint makes control decisions on unverified payload** — `api/routes/auth.js:189-191` calls `jwt.decode(token)` before `jwt.verify`. Pre-existing flow; the diff only touched extraction.
+- [x] [Review][Patch] **Refresh endpoint makes control decisions on unverified payload** — `/refresh` now verifies the token signature first with `jwt.verify(..., { ignoreExpiration: true })`, then validates `decoded.exp` is a number and within the refresh window. [api/routes/auth.js:189-205]
 
-- [x] [Review][Defer] **Error handlers mask non-token failures** — `api/middleware/auth.js:33-41` and `api/realtime/socketHandler.js:61-63` return generic errors without logging. Pre-existing.
+- [x] [Review][Patch] **Error handlers mask non-token failures** — `authMiddleware` and `socketHandler` now log non-token errors with `console.error` before returning a generic 500 / "Authentication error". [api/middleware/auth.js:58-60, api/realtime/socketHandler.js:62-66]

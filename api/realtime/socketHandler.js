@@ -60,7 +60,11 @@ export function initializeSocketIO(httpServer) {
       socket.role = role || 'dashboard';
       next();
     } catch (error) {
-      next(new Error('Invalid token'));
+      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+        return next(new Error('Invalid token'));
+      }
+      console.error('❌ Socket auth error:', error);
+      return next(new Error('Authentication error'));
     }
   });
 

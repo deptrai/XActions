@@ -56,6 +56,7 @@ const authMiddleware = async (req, res, next) => {
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ error: 'Token expired' });
     }
+    console.error('❌ Auth middleware error:', error);
     return res.status(500).json({ error: 'Authentication error' });
   }
 };
@@ -83,9 +84,12 @@ const optionalAuthMiddleware = async (req, res, next) => {
     req.user = user || null;
     next();
   } catch (error) {
-    // Invalid token, but still continue
-    req.user = null;
-    next();
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      req.user = null;
+      return next();
+    }
+    console.error('❌ Optional auth error:', error);
+    next(error);
   }
 };
 
