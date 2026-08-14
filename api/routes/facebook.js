@@ -220,6 +220,14 @@ router.post('/scrape', async (req, res) => {
       if (typeof query !== 'string' || !query.trim()) {
         return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
       }
+      if (query.length > 500) {
+        return res.status(400).json({ ok: false, error: 'query must be at most 500 characters' });
+      }
+    }
+
+    // group_search requires a facebook.com/groups/ URL — validate before browser launch.
+    if (action === 'group_search' && !/facebook\.com\/groups\//i.test(url)) {
+      return res.status(400).json({ ok: false, error: 'group_search requires a facebook.com/groups/ URL' });
     }
 
     if (action === 'search' && type !== undefined && type !== null) {
@@ -237,6 +245,9 @@ router.post('/scrape', async (req, res) => {
       const n = Number(limit);
       if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
         return res.status(400).json({ ok: false, error: 'limit must be a positive integer' });
+      }
+      if (n > 500) {
+        return res.status(400).json({ ok: false, error: 'limit must be at most 500' });
       }
     }
 

@@ -39,6 +39,15 @@ const randomDelay = (min = 1000, max = 3000) => sleep(min + Math.random() * (max
 
 const FACEBOOK_BASE = 'https://www.facebook.com';
 
+// Mobile UA + viewport shared by group scrapers (scrapeFacebookGroupPosts,
+// scrapeFacebookGroupSearch). Extracted to avoid duplication.
+const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1';
+const MOBILE_VIEWPORT = { width: 390, height: 844, isMobile: true };
+async function applyMobileViewport(page) {
+  await page.setUserAgent(MOBILE_UA);
+  await page.setViewport(MOBILE_VIEWPORT);
+}
+
 // Path segments after facebook.com/ that are NOT user/page profile handles.
 // Shared by scrapeFollowers and searchTweets author extraction. Passed into
 // page.evaluate as an argument (arrays serialize across the bridge; Sets do not).
@@ -1441,10 +1450,7 @@ export async function scrapeFacebookGroupPosts(page, groupUrl, options = {}) {
   }
 
   // AC3: Mobile UA and viewport before navigation.
-  await page.setUserAgent(
-    'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1'
-  );
-  await page.setViewport({ width: 390, height: 844, isMobile: true });
+  await applyMobileViewport(page);
 
   // Groups often redirect to m.facebook.com; force mobile host up front.
   const mobileUrl = groupUrl.replace(/^https?:\/\/(www\.)?facebook\.com/, 'https://m.facebook.com');
@@ -1570,14 +1576,17 @@ export async function scrapeFacebookGroupSearch(page, groupUrl, options = {}) {
   }
 
   // AC3: Mobile UA and viewport before navigation (matches scrapeFacebookGroupPosts).
-  await page.setUserAgent(
-    'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1'
-  );
-  await page.setViewport({ width: 390, height: 844, isMobile: true });
+  await applyMobileViewport(page);
 
   // AC4: Build group search URL — force mobile host for consistent DOM.
-  const mobileUrl = groupUrl.replace(/^https?:\/\/(www\.)?facebook\.com/, 'https://m.facebook.com');
-  const searchUrl = `${mobileUrl.replace(/\/$/, '')}/search/?q=${encodeURIComponent(query.trim())}`;
+  // Use URL API to handle existing query params/fragments in the group URL correctly.
+  const searchUrlObj = new URL(groupUrl);
+  searchUrlObj.hostname = 'm.facebook.com';
+  searchUrlObj.search = ''; // strip existing query params
+  searchUrlObj.hash = ''; // strip fragments
+  searchUrlObj.pathname = searchUrlObj.pathname.replace(/\/$/, '') + '/search/';
+  searchUrlObj.searchParams.set('q', query.trim());
+  const searchUrl = searchUrlObj.toString();
 
   await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
   await assertNoCheckpoint(page, 'group search');

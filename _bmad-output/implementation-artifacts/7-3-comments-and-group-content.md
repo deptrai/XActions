@@ -4,7 +4,7 @@
 baseline_commit: 715aa942e6d84d78ae4ea38d92dbd95aa27a9bb8
 ---
 
-Status: review
+Status: done
 
 ## Change Log
 
@@ -239,6 +239,20 @@ so that I can analyze engagement, sentiment, and community activity at scale.
 - Created: `tests/scrapers/facebook-group-search.test.js`
 - Created: `tests/api/facebook-scrape.test.js`
 - Modified: `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+### Review Findings
+
+- [x] [Review][Patch] Query length không có giới hạn — API route chấp nhận query dài bất kỳ cho search/marketplace/group_search, có thể gây URL quá dài hoặc DoS [`api/routes/facebook.js:219-223`]
+- [x] [Review][Patch] group_search API route không validate URL là group URL — browser launch trước khi scraper throw, lãng phí tài nguyên [`api/routes/facebook.js:216`]
+- [x] [Review][Patch] group_search URL với query params hiện có tạo URL sai — `https://facebook.com/groups/123/?ref=share` trở thành `https://m.facebook.com/groups/123/?ref=share/search/?q=...` [`src/scrapers/facebook/index.js:1579-1580`]
+- [x] [Review][Patch] Limit không có cap tối đa — API route chỉ validate positive integer, không giới hạn upper bound [`api/routes/facebook.js:236-241`]
+- [x] [Review][Patch] Mobile UA/viewport duplicate logic — scrapeFacebookGroupPosts và scrapeFacebookGroupSearch cùng set identical UA+viewport [`src/scrapers/facebook/index.js:1444-1447,1573-1576`]
+- [x] [Review][Defer] assertFacebookUrlLocal cho phép http:// (non-SSL) — pre-existing function, không introduce bởi diff này [`src/scrapers/facebook/index.js:2233`] — deferred, pre-existing
+- [x] [Review][Defer] extractCommentsFromDom fallback khi postArticle không tồn tại — fallback path, acceptable [`src/scrapers/facebook/index.js:1101-1105`] — deferred, pre-existing
+- [x] [Review][Defer] Malformed JSON trong hydration script — pre-existing trong hydration.js [`src/scrapers/facebook/hydration.js`] — deferred, pre-existing
+- [x] [Review][Defer] Very large hydration script có thể gây OOM — pre-existing trong hydration.js [`src/scrapers/facebook/hydration.js`] — deferred, pre-existing
+- [x] [Review][Defer] Page closed mid-scroll không có try-catch — Puppeteer lifecycle issue, không specific cho diff này [`src/scrapers/facebook/index.js:1350,1452,1582`] — deferred, pre-existing
+- [x] [Review][Defer] PII test coverage thiếu edge cases (international phone, subdomain emails) — pre-existing test gap [`tests/scrapers/facebook-comments.test.js`] — deferred, pre-existing
 
 ## Dev Notes
 

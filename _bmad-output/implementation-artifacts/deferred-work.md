@@ -175,3 +175,12 @@ Issue EPS-5 (Deferred work cleanup) triaged all 6 priority items. Items 1, 2, 3,
 - **Story 7.3 placeholders in `platformActionMap`** [src/scrapers/index.js:190-203] — `post_comments`, `group_posts`, and `group_comments` map to functions that do not yet exist. Expected to be implemented in Story 7.3; keep the placeholder map.
 - **`normalizeSearchResult` is no longer used by the new search flow** [src/scrapers/facebook/index.js:913-923] — still a public export. Deprecate or remove in a cleanup pass rather than as part of Story 7.2.
 - **Final DOM selector tuning for real Facebook markup** [src/scrapers/facebook/index.js:1125-1184, 1186-1228] — heuristics can only be verified against a live authenticated Facebook session. Tie to `selectors-facebook.md` verify checklist.
+
+## Deferred from: code review of 7-3-comments-and-group-content (2026-08-14)
+
+- **assertFacebookUrlLocal cho phép http:// (non-SSL)** [src/scrapers/facebook/index.js:2233] — pre-existing function không introduce bởi diff này. http URLs có thể bị intercept/downgrade. Fix: enforce `https:` only.
+- **extractCommentsFromDom fallback khi postArticle không tồn tại** [src/scrapers/facebook/index.js:1101-1105] — nếu không tìm thấy post permalink link, tất cả articles được treated as comments. Fallback path, acceptable cho now.
+- **Malformed JSON trong hydration script** [src/scrapers/facebook/hydration.js] — pre-existing. extractHydrationJson cần try-catch quanh JSON.parse và fallback to DOM extractor.
+- **Very large hydration script có thể gây OOM** [src/scrapers/facebook/hydration.js] — pre-existing. Script tag với 10MB+ JSON có thể cause OOM trong JSON.parse. Add size check (skip scripts > 5MB).
+- **Page closed mid-scroll không có try-catch** [src/scrapers/facebook/index.js:1350,1452,1582] — Puppeteer lifecycle issue. Nếu browser/page closed trong scroll loop, throw "Target closed" không được handle. Không specific cho diff này.
+- **PII test coverage thiếu edge cases** [tests/scrapers/facebook-comments.test.js] — pre-existing test gap. Tests chỉ check basic phone format (555-123-4567), thiếu international formats, emails với subdomains.
