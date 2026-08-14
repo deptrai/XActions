@@ -1,0 +1,58 @@
+# Mutation testing for Facebook scrapers — runs on the self-hosted "nowing" runner.
+# Trigger manually with: gh workflow run mutation-fb-scrapers --ref develop
+name: Mutation — Facebook scrapers
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to mutate (defaults to develop)'
+        required: false
+        default: 'develop'
+        type: string
+      breakThreshold:
+        description: 'Minimum mutation score before failing (0-100)'
+        required: false
+        default: '60'
+        type: string
+  schedule:
+    # Run every Sunday at 06:00 UTC.
+    - cron: '0 6 * * 0'
+
+jobs:
+  mutation-fb-scrapers:
+    name: Stryker mutation test (facebook scrapers)
+    runs-on: [self-hosted, nowing]
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || 'develop' }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Stryker mutation tests
+        run: npm run mutation:fb-scrapers
+        continue-on-error: false
+        env:
+          CI: true
+          NODE_ENV: test
+
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-fb-scrapers-report
+          path: |
+            reports/mutation/html
+            reports/mutation/mutation.json
+          if-no-files-found: ignore
