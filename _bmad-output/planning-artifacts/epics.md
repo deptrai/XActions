@@ -4,6 +4,7 @@ inputDocuments:
   - _bmad-output/planning-artifacts/architecture.md
   - _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md
   - _bmad-output/planning-artifacts/research/technical-facebook-bot-detection-countermeasures-research-2026-08-12.md
+  - _bmad-output/planning-artifacts/sprint-change-proposal-2026-08-14.md
 ---
 
 # XActions - Facebook Anti-Detection & Bot Countermeasures
@@ -79,6 +80,18 @@ Epic breakdown for Facebook anti-detection countermeasures — fingerprint rando
 - **AR5:** `createBrowser()` phải support proxy via `--proxy-server=` launch arg.
 - **AR6:** `page.authenticate()` phải được gọi trước `page.goto` đầu tiên cho authenticated proxies.
 - **AR7:** Checkpoint detection: check `bodyText.includes('confirm that you') && bodyText.includes('human')` sau login.
+
+### Additional Requirements from Post-Completion Testing (2026-08-14)
+
+Nguồn: `sprint-change-proposal-2026-08-14.md` — phát hiện từ full regression test + real-user MCP/API testing.
+
+- **PCR1:** `x_facebook_cancel_friend_requests` dry-run không được chạy delay thật 63s → short-circuit trước batch loop.
+- **PCR2:** `new PrismaClient()` per route module gây connection-pool fragmentation → singleton refactor cross-cutting.
+- **PCR3:** `post_comments`/`group_comments` cần verify live selectors vì hiện trả note "not accessible" trên mọi post.
+- **PCR4:** `group_posts`/`group_search` cần verify với public/joined group vì hiện trả 0 results.
+- **PCR5:** `loginWithCookie` cần injectable `delayFn` seam để test nhanh và tránh timeout flaky.
+- **PCR6:** `executeTool` cần trả MCP error result (không throw) khi `localTools` null hoặc tool unknown.
+- **PCR7:** Auth middleware cần chấp nhận cả `decoded.userId` và `decoded.id` để tránh token mismatch.
 
 ### UX Design Requirements
 

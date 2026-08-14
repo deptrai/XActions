@@ -104,13 +104,17 @@ development_status:
   7-4-api-mcp-surface: done
   epic-7-retrospective: done
 
-  # Epic 8: Facebook Quality & Hardening
+  # Epic 8: Facebook Backend Reliability
   epic-8: backlog
-  8-1-cancel-friend-requests-dry-run-delay: backlog
-  8-2-prismaclient-singleton: backlog
-  8-3-comments-live-verification: backlog
-  8-4-group-content-verification: backlog
-  8-5-loginwithcookie-delayfn: backlog
-  8-6-executetool-graceful-errors: backlog
-  8-7-jwt-key-standardization: backlog
+  8-1-prismaclient-singleton: backlog
+  8-2-executetool-graceful-errors: backlog
+  8-3-jwt-key-standardization: backlog
   epic-8-retrospective: optional
+
+  # Epic 9: Facebook Live Data & Behavioral Hardening
+  epic-9: backlog
+  9-1-cancel-friend-requests-dry-run-delay: backlog
+  9-2-live-comments-selectors: backlog
+  9-3-live-group-posts-search: backlog
+  9-4-loginwithcookie-delayfn: backlog
+  epic-9-retrospective: optional

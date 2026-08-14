@@ -47,17 +47,18 @@ Các vấn đề này **không phá vỡ MVP**, nhưng cần được capture th
 
 | Epic | Status | Impact |
 |---|---|---|
-| Epic 1 (Anti-Detection) | done | Low — một số delay seams có thể cần cải tiến để test nhanh hơn |
-| Epic 3 (Multi-Surface + Persistence) | done | Medium — PrismaClient singleton deferred từ retrospective, auth middleware JWT key mismatch |
-| Epic 4 (Growth Automation) | done | Medium — `cancel_friend_requests` dry-run chậm, `send_friend_requests` selector cần verify |
+| Epic 1 (Anti-Detection) | done | None |
+| Epic 2 (Automation) | done | None |
+| Epic 3 (Multi-Surface + Persistence) | done | Medium — `new PrismaClient()` deferred, auth middleware JWT key mismatch, `executeTool` throws |
+| Epic 4 (Growth Automation) | done | Low — `cancel_friend_requests` dry-run delay |
 | Epic 5 (Scheduling/Queue) | done | None |
 | Epic 5b (Messenger Share) | done | None |
-| Epic 6 (Human Behavior) | done | Low — `loginWithCookie` randomDelay chưa injectable; test timeout có thể tái diễn |
-| Epic 7 (Advanced Scraping) | done | High — comments/group content cần live verification; `executeTool` null guard; marketplace dry-run path cần kiểm tra |
+| Epic 6 (Anti-Detection) | done | Low — `loginWithCookie` randomDelay chưa injectable; test timeout có thể tái diễn |
+| Epic 7 (Advanced Scraping) | done | High — comments/group content cần live verification |
 
 ### 2.2 Story Impact
 
-Không cần sửa stories đã hoàn thành. Các findings này nên thành **stories mới** trong một epic mới hoặc gắn vào epic maintenance.
+Không cần sửa stories đã hoàn thành. Các findings này thành **stories mới** trong **Epic 8** và **Epic 9**. Không reopen epic đã done.
 
 ### 2.3 Artifact Conflicts
 
@@ -76,42 +77,88 @@ Không cần sửa stories đã hoàn thành. Các findings này nên thành **s
 
 ## 3. Path Forward Evaluation
 
-### 3.1 Option 1: Direct Adjustment — Add Stories
+### 3.1 Option 1: 2 New Epics (Pre-mortem Mitigated)
 
-- **Viable**: ✅ Yes
+- **Epic 8: Facebook Backend Reliability** — PrismaClient singleton, executeTool errors, JWT key standardization
+- **Epic 9: Facebook Live Data & Behavioral Hardening** — cancel friend requests dry-run, live comments, live group content, loginWithCookie delayFn
+- **Viable**: ✅ Yes — avoids reopening done epics and avoids dumping-ground risk
 - **Effort**: Medium
 - **Risk**: Low
-- **Approach**: Tạo Epic 8 "Facebook Quality & Hardening" với các stories được prioritize. Không cần rollback.
 
-### 3.2 Option 2: Rollback
+### 3.2 Option 2: 1 New Epic + 4 Expansions
 
-- **Viable**: ❌ No
-- **Effort**: High
-- **Risk**: High
-- Không có lý do rollback; features đang hoạt động, chỉ cần hardening.
+- **Viable**: ⚠️ Partial — dễ tạo Epic 8 dumping ground; reopen done epics gây status confusion
+- **Effort**: Medium
+- **Risk**: Medium
 
-### 3.3 Option 3: PRD MVP Review
+### 3.3 Option 3: 3 New Focused Epics
 
-- **Viable**: ⚠️ Partial
-- **Effort**: Low
+- **Viable**: ✅ Yes — tách Epic 9 thành Scraper Live (PCR3/4) và Automation Behavior (PCR1/5)
+- **Effort**: Medium
 - **Risk**: Low
-- MVP không bị ảnh hưởng. Một số items có thể defer ra khỏi MVP nếu cần.
 
 ### 3.4 Recommended Approach
 
-**Option 1 / Hybrid**: Create **Epic 8: Facebook Quality & Hardening** (hoặc đưa vào maintenance epic tiếp theo) với 7 stories được ưu tiên. Không cần sửa PRD hiện tại.
+**Option 1: 2 New Epics** — cân bằng giữa minimalism và focus. Không reopen epic done. Epic 8 tập trung backend/infrastructure; Epic 9 tập trung runtime Facebook behavior.
 
 **Rationale**:
-- Low risk, incremental
-- Giải quyết deferred debt đã ghi trong retrospectives
-- Cải thiện testability và observability
-- Không làm thay đổi contract API/MCP hiện có
+- Pre-mortem cho thấy 1-epic + 4-expansion có 2 failure modes: dumping ground + status confusion
+- 2 epics tách biệt infrastructure vs runtime behavior
+- 3 epics sạch hơn nhưng tạo thêm overhead; 2 là điểm ngọt
 
 ---
 
 ## 4. Recommended Change Proposals
 
-### 4.1 Story 8.1 — Fix `x_facebook_cancel_friend_requests` dry-run delay
+### Epic 8: Facebook Backend Reliability
+
+**Epic Goal:** Làm cứng backend infrastructure: database connection pooling, MCP error contract, auth token handling.
+
+#### Story 8.1 — PrismaClient Singleton Refactor
+
+**OLD behavior:** Mỗi route module tạo `new PrismaClient()` (47 instances).
+
+**NEW behavior:** Một `PrismaClient` instance shared toàn project qua `api/lib/prisma.js`.
+
+**Rationale:** Giảm connection pool fragmentation; deferred từ Epic 3.
+
+**AC:**
+- Given any API request
+- When route needs DB
+- Then it imports singleton `prisma` from `api/lib/prisma.js`
+- And `PrismaClient` instances count does not scale with route count
+
+#### Story 8.2 — Graceful `executeTool` Unknown Tool Handling
+
+**OLD behavior:** `executeTool` throws `Cannot read properties of null` khi `localTools` null hoặc `Error("Unknown tool")` khi tool không tồn tại.
+
+**NEW behavior:** Trả về `{ isError: true, content: [...] }` cho MCP client.
+
+**Rationale:** MCP error contract yêu cầu result object, không throw.
+
+**AC:**
+- Given unknown tool name or uninitialized `localTools`
+- When `executeTool` runs
+- Then returns MCP error result, not throw
+
+#### Story 8.3 — Standardize JWT Token Key (`id` vs `userId`)
+
+**OLD behavior:** Auth middleware reads `decoded.userId`; ad-hoc tokens dùng `id` bị 500.
+
+**NEW behavior:** Middleware chấp nhận cả `decoded.userId` và `decoded.id`.
+
+**Rationale:** Tránh mismatch giữa test fixtures và user-generated tokens.
+
+**AC:**
+- Given token with payload `{ id: "..." }` or `{ userId: "..." }`
+- When request hits auth middleware
+- Then user is resolved correctly
+
+### Epic 9: Facebook Live Data & Behavioral Hardening
+
+**Epic Goal:** Làm cứng Facebook runtime behavior: dry-run phải nhanh, live DOM selectors phải hoạt động, delay seams testable.
+
+#### Story 9.1 — Fix `x_facebook_cancel_friend_requests` Dry-Run Delay
 
 **OLD behavior:** Dry-run vẫn chạy qua `runGuardedBatch` với delay 2-5s, mất 63s.
 
@@ -125,21 +172,7 @@ Không cần sửa stories đã hoàn thành. Các findings này nên thành **s
 - Then result returns in <1s
 - And no browser is launched
 
-### 4.2 Story 8.2 — PrismaClient singleton refactor
-
-**OLD behavior:** Mỗi route module tạo `new PrismaClient()`.
-
-**NEW behavior:** Một `PrismaClient` instance shared toàn project.
-
-**Rationale:** Giảm connection pool fragmentation, đã deferred từ Epic 3.
-
-**AC:**
-- Given any API request
-- When route needs DB
-- Then it imports singleton `prisma` from `api/lib/prisma.js`
-- And connection count does not scale with route count
-
-### 4.3 Story 8.3 — Verify live Facebook comments selectors
+#### Story 9.2 — Verify Live Facebook Comments Selectors
 
 **OLD behavior:** `post_comments` và `group_comments` trả note "Facebook comments are not accessible" trên mọi post.
 
@@ -152,7 +185,7 @@ Không cần sửa stories đã hoàn thành. Các findings này nên thành **s
 - When `x_facebook_post_comments` runs with `includeReplies: true`
 - Then it returns array of comments with author, text, timestamp, likes, replies
 
-### 4.4 Story 8.4 — Verify live group posts and group search
+#### Story 9.3 — Verify Live Group Posts and Group Search
 
 **OLD behavior:** `group_posts` và `group_search` trả 0 results trên `digitalmarketing` group.
 
@@ -165,7 +198,7 @@ Không cần sửa stories đã hoàn thành. Các findings này nên thành **s
 - When `x_facebook_group_posts` or `x_facebook_group_search` runs
 - Then it returns non-empty post array or a clear note explaining access restriction
 
-### 4.5 Story 8.5 — Injectable `delayFn` for `loginWithCookie`
+#### Story 9.4 — Injectable `delayFn` for `loginWithCookie`
 
 **OLD behavior:** `loginWithCookie` dùng `randomDelay` module-level `setTimeout`; test mất 3-6s.
 
@@ -178,51 +211,25 @@ Không cần sửa stories đã hoàn thành. Các findings này nên thành **s
 - When function runs
 - Then internal random delays use provided `delayFn`
 
-### 4.6 Story 8.6 — Graceful `executeTool` unknown tool handling
-
-**OLD behavior:** `executeTool` throws `Cannot read properties of null` khi `localTools` null hoặc `Error("Unknown tool")` khi tool không tồn tại.
-
-**NEW behavior:** Trả về `{ isError: true, content: [...] }` cho MCP client.
-
-**Rationale:** MCP error contract yêu cầu result object, không throw.
-
-**AC:**
-- Given unknown tool name
-- When `executeTool` runs
-- Then returns MCP error result, not throw
-
-### 4.7 Story 8.7 — Standardize JWT token key (`id` vs `userId`)
-
-**OLD behavior:** Auth middleware reads `decoded.userId`; ad-hoc tokens dùng `id` bị 500.
-
-**NEW behavior:** Middleware chấp nhận cả `decoded.userId` và `decoded.id`.
-
-**Rationale:** Tránh mismatch giữa test fixtures và user-generated tokens.
-
-**AC:**
-- Given token with payload `{ id: "..." }`
-- When request hits auth middleware
-- Then user is resolved correctly
-
 ---
 
 ## 5. Priority and Sequencing
 
-| Priority | Story | Effort | Risk | Why |
-|---|---|---|---|---|
-| **P1** | 8.2 PrismaClient singleton | Medium | Low | Deferred debt, affects scalability |
-| **P1** | 8.3 Comments live verification | Medium | High | Core Epic 7 requirement |
-| **P1** | 8.4 Group content verification | Medium | High | Core Epic 7 requirement |
-| **P2** | 8.1 Cancel friend requests dry-run | Low | Low | Easy win, bad UX |
-| **P2** | 8.5 loginWithCookie delayFn | Low | Low | Test stability |
-| **P2** | 8.6 executeTool graceful errors | Low | Low | Robustness |
-| **P3** | 8.7 JWT key standardization | Low | Low | Developer experience |
+| Priority | Story | Epic | Effort | Risk | Why |
+|---|---|---|---|---|---|
+| **P1** | 8.1 PrismaClient singleton | 8 | Medium | Low | Deferred debt, affects scalability |
+| **P1** | 9.2 Live comments | 9 | Medium | High | Core Epic 7 requirement |
+| **P1** | 9.3 Live group content | 9 | Medium | High | Core Epic 7 requirement |
+| **P2** | 9.1 Cancel friend requests dry-run | 9 | Low | Low | Easy win, bad UX |
+| **P2** | 9.4 loginWithCookie delayFn | 9 | Low | Low | Test stability |
+| **P2** | 8.2 executeTool graceful errors | 8 | Low | Low | Robustness |
+| **P3** | 8.3 JWT key standardization | 8 | Low | Low | Developer experience |
 
 ### Recommended Sprint Sequence
 
-1. **Sprint N**: 8.2 + 8.1 + 8.5 (technical debt + quick wins)
-2. **Sprint N+1**: 8.3 + 8.4 (live DOM verification, may need iteration)
-3. **Sprint N+2**: 8.6 + 8.7 (polish and standards)
+1. **Sprint N**: 8.1 + 9.1 + 9.4 (technical debt + quick wins)
+2. **Sprint N+1**: 9.2 + 9.3 (live DOM verification, may need iteration)
+3. **Sprint N+2**: 8.2 + 8.3 (polish and standards)
 
 ---
 
@@ -234,7 +241,7 @@ Không cần sửa stories đã hoàn thành. Các findings này nên thành **s
 
 ### 6.2 Scope Changes
 
-Không thay đổi scope PRD hiện tại. Có thể thêm Epic 8 vào roadmap hoặc gộp vào maintenance epic.
+Không thay đổi scope PRD hiện tại. Epic 8 và Epic 9 là post-MVP hardening.
 
 ---
 
@@ -242,10 +249,10 @@ Không thay đổi scope PRD hiện tại. Có thể thêm Epic 8 vào roadmap h
 
 | Role | Responsibility |
 |---|---|
-| **Developer (Amelia)** | Implement stories 8.1–8.7, red-green-refactor |
-| **Test Architect (Murat)** | ATDD scaffolds, real-cookie verification for 8.3/8.4 |
-| **Architect (Winston)** | Review 8.2 singleton design, ADR update nếu cần |
-| **Product (John)** | Approve Epic 8 backlog ordering |
+| **Developer (Amelia)** | Implement stories 8.1–8.3 và 9.1–9.4 |
+| **Test Architect (Murat)** | ATDD scaffolds, real-cookie verification for 9.2/9.3 |
+| **Architect (Winston)** | Review 8.1 singleton design, ADR update nếu cần |
+| **Product (John)** | Approve Epic 8/9 backlog ordering |
 | **Business Analyst (Mary)** | Cập nhật epic/story map, acceptance criteria |
 
 ---
@@ -257,14 +264,14 @@ Không thay đổi scope PRD hiện tại. Có thể thêm Epic 8 vào roadmap h
 | 1. Understand Trigger and Context | ✅ Done |
 | 2. Epic Impact Assessment | ✅ Done |
 | 3. Artifact Conflict and Impact Analysis | ✅ Done |
-| 4. Path Forward Evaluation | ✅ Done — Option 1/Hybrid |
+| 4. Path Forward Evaluation | ✅ Done — 2 New Epics |
 | 5. Sprint Change Proposal Components | ✅ Done |
-| 6. Final Review and Handoff | ⏳ Pending user approval |
+| 6. Final Review and Handoff | ✅ Approved |
 
 ---
 
 ## 9. Approval
 
-**Status:** Pending approval from Luisphan.
+**Status:** Approved by Luisphan via advanced elicitation (Pre-mortem).
 
-**Next step after approval:** Tạo Epic 8 stories trong sprint-status.yaml hoặc bmmad-equivalent backlog, sau đó handoff cho `bmad-create-story` hoặc `bmad-sprint-planning`.
+**Next step:** Cập nhật `sprint-status.yaml` với Epic 8 + Epic 9, sau đó handoff cho `bmad-create-story` hoặc `bmad-sprint-planning`.
