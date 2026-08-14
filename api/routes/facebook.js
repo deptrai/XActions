@@ -382,9 +382,17 @@ router.post('/scrape', async (req, res) => {
 
     res.json({ ok: true, action, result });
   } catch (error) {
-    // Log full detail server-side; return a generic message so Prisma/Puppeteer
-    // internals (paths, SQL, selectors) are not leaked to the HTTP client.
+    // Log full detail server-side; return a user-facing message that preserves
+    // key account/session signals without leaking Puppeteer/DB internals.
     console.error('❌ Facebook scrape error:', error);
+
+    const msg = String(error?.message || '');
+    if (msg.includes('cookie authentication failed')) {
+      return res.status(400).json({ ok: false, error: 'Facebook session expired or invalid cookies.', sessionExpired: true });
+    }
+    if (msg.includes('security check') || msg.includes('checkpoint') || error?.code === 'FB_CHECKPOINT') {
+      return res.status(400).json({ ok: false, error: 'Facebook security check / CAPTCHA detected. The account needs manual verification or a proxy in the cookie\'s home country.', checkpoint: true });
+    }
     res.status(500).json({ ok: false, error: 'Facebook scrape failed. See server logs.' });
   }
 });

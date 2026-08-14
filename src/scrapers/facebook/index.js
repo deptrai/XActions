@@ -771,11 +771,15 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
   })) || {};
 
   if (authCheck.hasLoginForm || authCheck.hasLoginButton) {
-    throw new Error('❌ Facebook cookie authentication failed — session expired or invalid cookies');
+    const err = new Error('❌ Facebook cookie authentication failed — session expired or invalid cookies');
+    err.code = 'FB_INVALID_COOKIE';
+    throw err;
   }
 
   if (authCheck.hasSecurityCheck || currentUrl.includes('/checkpoint/')) {
-    throw new Error('❌ Facebook security check detected — manual verification required (CAPTCHA/anti-bot)');
+    const err = new Error('❌ Facebook security check detected — manual verification required (CAPTCHA/anti-bot)');
+    err.code = 'FB_CHECKPOINT';
+    throw err;
   }
 
   // Store account ID on page context for downstream age/velocity lookup (Story 6.14 — AC5)
