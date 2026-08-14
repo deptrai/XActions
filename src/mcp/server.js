@@ -2760,8 +2760,21 @@ async function executeTool(name, args) {
   }
 
   if (MODE === 'remote') {
+    if (!remoteClient) {
+      return {
+        isError: true,
+        content: [{ type: 'text', text: 'Remote client not initialized' }],
+      };
+    }
     return await remoteClient.execute(name, args);
   } else {
+    if (!localTools) {
+      return {
+        isError: true,
+        content: [{ type: 'text', text: 'Local tools not initialized' }],
+      };
+    }
+
     // Check if a non-Twitter platform param is set and dispatch to multi-platform variant
     const multiPlatformTools = {
       x_get_profile: 'x_get_profile_multiplatform',
@@ -2776,9 +2789,12 @@ async function executeTool(name, args) {
       toolName = multiPlatformTools[name];
     }
 
-    const toolFn = localTools?.[toolName] || localTools?.[name];
+    const toolFn = localTools[toolName] || localTools[name];
     if (!toolFn) {
-      throw new Error(`Unknown tool: ${name}`);
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `Unknown tool: ${name}` }],
+      };
     }
     return await toolFn(args);
   }
@@ -4770,6 +4786,11 @@ function createMcpServer() {
     try {
       const result = await executeTool(name, args || {});
 
+      // If executeTool already produced an MCP error result, propagate it as-is
+      if (result && result.isError === true) {
+        return result;
+      }
+
       return {
         content: [
           {
@@ -5090,4 +5111,4 @@ if (isEntryPoint()) {
 
 // Exported so the tool list can be inspected without starting a transport.
 // Also export Facebook automation tools for direct programmatic use.
-export { TOOLS, main, createMcpServer, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts };
+export { TOOLS, main, createMcpServer, initializeBackend, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts };

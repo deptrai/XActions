@@ -123,15 +123,20 @@ The `CallToolRequestSchema` handler (lines 4767–4831) already catches errors a
 
 ### Agent Model Used
 
-(To be filled after implementation)
+SWE-1.7 Max
 
 ### Completion Notes List
 
-(To be filled after implementation)
+- Modified `executeTool` in `src/mcp/server.js` to return `{ isError: true, content: [{ type: 'text', text: '...' }] }` instead of throwing when `localTools` is uninitialized or the tool name is unknown.
+- Added the same guard for `remoteClient` being uninitialized in remote mode.
+- Updated `CallToolRequestSchema` handler to propagate `executeTool` error results directly (without wrapping them in `JSON.stringify`).
+- Exported `initializeBackend` so tests can reset module state.
+- Added `tests/mcp/execute-tool.test.js` covering AC1 (uninitialized localTools), AC2 (unknown tool after init), and AC3 (known tool still works).
 
 ### File List
 
-(To be filled after implementation)
+- `src/mcp/server.js` (updated)
+- `tests/mcp/execute-tool.test.js` (new)
 
 ## Review Findings
 
