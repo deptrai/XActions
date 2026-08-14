@@ -108,7 +108,7 @@ development_status:
   epic-8: in-progress
   8-1-prismaclient-singleton: done
   8-2-executetool-graceful-errors: done
-  8-3-jwt-key-standardization: review
+  8-3-jwt-key-standardization: done
   epic-8-retrospective: optional
 
   # Epic 9: Facebook Live Data & Behavioral Hardening
