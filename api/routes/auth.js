@@ -1,6 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
 import express from 'express';
+import { resolveUserId } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
@@ -187,7 +188,7 @@ router.post('/refresh', async (req, res) => {
 
     // Decode without verification to check expiry window
     const decoded = jwt.decode(token);
-    const userId = decoded?.userId || decoded?.id || decoded?.sub;
+    const userId = resolveUserId(decoded);
     if (!decoded || !decoded.exp || !userId) {
       return res.status(401).json({ error: 'Invalid token' });
     }

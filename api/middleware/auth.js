@@ -2,6 +2,25 @@
 import prisma from '../lib/prisma.js';
 import jwt from 'jsonwebtoken';
 import { tierMeetsRequirement, getTier, isWithinLimit } from '../config/subscription-tiers.js';
+
+/**
+ * Resolve a user identifier from a decoded JWT payload.
+ * Prefers `userId` over `id` over `sub`. Only accepts non-empty strings.
+ * @param {object} decoded
+ * @returns {string|undefined}
+ */
+export function resolveUserId(decoded) {
+  if (!decoded || typeof decoded !== 'object') return undefined;
+
+  const candidates = [decoded.userId, decoded.id, decoded.sub];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
 const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -13,7 +32,7 @@ const authMiddleware = async (req, res, next) => {
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const userId = decoded.userId || decoded.id || decoded.sub;
+    const userId = resolveUserId(decoded);
     if (!userId) {
       return res.status(401).json({ error: 'Invalid token' });
     }
@@ -54,7 +73,7 @@ const optionalAuthMiddleware = async (req, res, next) => {
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const userId = decoded.userId || decoded.id || decoded.sub;
+    const userId = resolveUserId(decoded);
     const user = userId
       ? await prisma.user.findUnique({
           where: { id: userId }

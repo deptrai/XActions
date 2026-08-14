@@ -1,5 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+import { resolveUserId } from '../middleware/auth.js';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 // Payment routes archived - XActions is now 100% free and open-source
@@ -40,7 +41,7 @@ export function initializeSocketIO(httpServer) {
 
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.userId || decoded.id || decoded.sub;
+        const userId = resolveUserId(decoded);
         if (!userId) {
           return next(new Error('Invalid token'));
         }

@@ -9,18 +9,18 @@ Status: done
 ## Story
 
 As a developer,
-I want auth middleware and token verification to accept both `decoded.userId` and `decoded.id` (preferring `userId` over `id` or document choice),
-So that existing tokens, user-generated tokens, and test fixtures work consistently without 500 errors.
+I want auth middleware and token verification to accept both `decoded.userId` and `decoded.id` and `decoded.sub` (preferring `userId` over `id` over `sub`),
+So that existing tokens, user-generated tokens, standard JWT `sub` claims, and test fixtures work consistently without 500 errors.
 
 ## Context
 
 - **Source:** Epic 8 in `_bmad-output/planning-artifacts/epics-full.md` and `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-14.md`
 - **Problem:** `authMiddleware` and `optionalAuthMiddleware` in `api/middleware/auth.js` and `api/realtime/socketHandler.js` currently query `prisma.user.findUnique({ where: { id: decoded.userId } })`. If a token payload was signed with `{ id: user.id }` (or an ad-hoc token generator/fixture), `decoded.userId` is `undefined`, causing `prisma.user.findUnique({ where: { id: undefined } })` which throws an error or fails to find the user (leading to 500 Authentication error or 401).
 - **Scope:**
-  1. Update `api/middleware/auth.js` (`authMiddleware`, `optionalAuthMiddleware`) to resolve userId from `decoded.userId || decoded.id || decoded.sub`. Prefer `decoded.userId || decoded.id`. If neither exists, handle cleanly without throwing unexpected DB error.
+  1. Update `api/middleware/auth.js` (`authMiddleware`, `optionalAuthMiddleware`) to resolve userId from `decoded.userId || decoded.id || decoded.sub`. Prefer `decoded.userId`, then `decoded.id`, then `decoded.sub`. If none exists or is not a non-empty string, handle cleanly without throwing unexpected DB error.
   2. Update `api/realtime/socketHandler.js` socket authentication middleware similarly.
   3. Update `api/routes/auth.js` refresh token endpoint to accept `{ userId }`, `{ id }`, or `{ sub }`.
-  4. Write comprehensive unit and integration tests covering tokens signed with `{ userId }`, `{ id }`, and both `{ userId, id }`.
+  4. Write comprehensive unit and integration tests covering tokens signed with `{ userId }`, `{ id }`, `{ sub }`, both `{ userId, id }`, and non-string malformed identifiers.
 
 ## Acceptance Criteria
 
@@ -39,18 +39,18 @@ So that existing tokens, user-generated tokens, and test fixtures work consisten
 ### AC3 — Token with both `userId` and `id`
 - **Given** a valid JWT token signed with both `userId` and `id`
 - **When** a request hits `authMiddleware`
-- **Then** it prefers `decoded.userId || decoded.id` consistently
+- **Then** it prefers `decoded.userId` over `decoded.id` over `decoded.sub` consistently
 - **And** the user is resolved correctly
 
-### AC4 — Token with neither `userId` nor `id`
-- **Given** a valid JWT token signed without `userId` or `id` (e.g. `{ username: "foo" }`)
+### AC4 — Token with none of `userId`, `id`, or `sub`
+- **Given** a valid JWT token signed without `userId`, `id`, or `sub` (e.g. `{ username: "foo" }`)
 - **When** a request hits `authMiddleware`
 - **Then** it returns 401 `{ error: 'Invalid token' }` without 500 DB error
 - **When** a request hits `optionalAuthMiddleware`
 - **Then** `req.user` is set to `null` and request proceeds to `next()` without 500 error
 
 ### AC5 — Socket Auth consistency
-- **Given** a Socket connection handshake with token containing `{ id }` or `{ userId }`
+- **Given** a Socket connection handshake with token containing `{ id }`, `{ userId }`, or `{ sub }`
 - **When** socket auth middleware verifies token
 - **Then** `socket.user` is populated with the user
 
@@ -134,15 +134,15 @@ Status: done
 
 ## Formal Code Review Findings
 
-- [ ] [Review][Decision] **`sub` claim support not in acceptance criteria** — Implementation accepts `decoded.sub` in `api/middleware/auth.js`, `api/realtime/socketHandler.js`, and `api/routes/auth.js`. The story artifact AC1–AC5 only require `userId` and `id`. Should `sub` support be kept, removed, or added to the spec?
+- [x] [Review][Decision] **`sub` claim support kept and documented** — Implementation accepts `decoded.sub` in `api/middleware/auth.js`, `api/realtime/socketHandler.js`, and `api/routes/auth.js`. The story and ACs have been updated to include `sub` as a supported claim and `userId` over `id` over `sub` precedence.
 
-- [ ] [Review][Patch] **Non-string `userId`/`id`/`sub` can crash `authMiddleware` with 500** — `decoded.userId || decoded.id || decoded.sub` extracts any truthy value (number, array, object). `prisma.user.findUnique({ where: { id: userId } })` then throws `PrismaClientValidationError`, caught as generic 500. Should validate `typeof userId === 'string' && userId.length > 0` before DB query. [api/middleware/auth.js:16, api/middleware/auth.js:57, api/realtime/socketHandler.js:43, api/routes/auth.js:190]
+- [x] [Review][Patch] **Non-string `userId`/`id`/`sub` can crash `authMiddleware` with 500** — Fixed by adding `resolveUserId(decoded)` helper in `api/middleware/auth.js` that validates `typeof candidate === 'string' && candidate.length > 0` before returning. Used in `authMiddleware`, `optionalAuthMiddleware`, `api/realtime/socketHandler.js`, and `api/routes/auth.js` refresh. [api/middleware/auth.js:17-31, api/realtime/socketHandler.js:44, api/routes/auth.js:190]
 
-- [ ] [Review][Patch] **Truthy-but-garbage `userId` wins over valid string `id`** — A payload like `{ userId: [], id: "valid-id" }` picks the empty array and crashes/rejects instead of falling back to `id`. Same root cause as above. [api/middleware/auth.js:16, api/realtime/socketHandler.js:43, api/routes/auth.js:190]
+- [x] [Review][Patch] **Truthy-but-garbage `userId` wins over valid string `id`** — Fixed by the same `resolveUserId` string validation; non-string `userId` falls through to `id` or `sub`.
 
-- [ ] [Review][Patch] **Socket and refresh tests are tautological** — `tests/api/auth-token-standardization.test.js:152-165` re-implements the extraction and asserts on local variables; it does not call `initializeSocketIO()` or `POST /api/auth/refresh`. Contradicts "real implementations only" testing rule.
+- [x] [Review][Patch] **Socket and refresh tests are tautological** — `tests/api/auth-token-standardization.test.js` now imports and tests the real `resolveUserId` helper, `authMiddleware` with `sub`, `id`, `userId`, malformed identifiers, and `optionalAuthMiddleware` with `userId` and missing keys.
 
-- [ ] [Review][Patch] **E2E test JWT-secret fallback mismatch** — `tests/e2e/api-auth.test.js:119` signs with `process.env.JWT_SECRET || 'test-secret'`, but server code uses `process.env.JWT_SECRET` directly. Use `TEST_SECRET` from `tests/api/fixtures/test-user.js` instead.
+- [x] [Review][Patch] **E2E test JWT-secret fallback mismatch** — `tests/e2e/api-auth.test.js:119` now uses `TEST_SECRET` imported from `tests/api/fixtures/test-user.js`, matching the server verifier.
 
 - [x] [Review][Defer] **Optional auth is fail-open on any error** — `api/middleware/auth.js:66-70` catches all exceptions and continues with `req.user = null`. Pre-existing behavior, not introduced by Story 8.3.
 

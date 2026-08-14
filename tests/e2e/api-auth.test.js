@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../../api/server.js';
-import { seedTestUser, cleanupTestUser, makeTestUserId } from '../api/fixtures/test-user.js';
+import { seedTestUser, cleanupTestUser, makeTestUserId, TEST_SECRET } from '../api/fixtures/test-user.js';
 import { nextTestId } from '../utils/test-ids.js';
 const TEST_SCOPE = 'e2e-api-auth';
 
@@ -116,7 +116,7 @@ describe('Auth endpoints', () => {
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] Protected endpoint accepts token signed with { id } payload (Story 8.3)`, async () => {
-    const token = jwt.sign({ id: testUser.user.id, username: testUser.user.username }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
+    const token = jwt.sign({ id: testUser.user.id, username: testUser.user.username }, TEST_SECRET, { expiresIn: '1h' });
     const res = await request(app)
       .get('/api/operations')
       .set('Authorization', `Bearer ${token}`);
