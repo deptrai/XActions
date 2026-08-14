@@ -38,6 +38,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const randomDelay = (min = 1000, max = 3000) => sleep(min + Math.random() * (max - min));
 
 const FACEBOOK_BASE = 'https://www.facebook.com';
+const MBASIC_BASE = 'https://mbasic.facebook.com';
+const MOBILE_BASE = 'https://m.facebook.com';
 
 // Mobile UA + viewport shared by group scrapers (scrapeFacebookGroupPosts,
 // scrapeFacebookGroupSearch). Extracted to avoid duplication.
@@ -214,6 +216,205 @@ export async function createPage(browser, options = {}) {
   }
   page._fingerprint = fingerprint;
   return page;
+}
+
+/**
+ * Scrape posts from a Facebook profile/page via mbasic.facebook.com.
+ * mbasic serves plain HTML with article[data-ft] posts and a "See more stories" paginator.
+ * @param {Page} page - Puppeteer page instance
+ * @param {string} handle - Normalized Facebook handle
+ * @param {Object} options
+ * @param {number} [options.limit=50] - Max posts to return
+ * @param {Function} [options.onProgress] - Optional progress callback
+ * @param {Function} [options.delay=randomDelay] - Delay function
+ * @returns {Promise<Array>} Post array
+ */
+async function scrapeMbasicPosts(page, handle, options = {}) {
+  const { limit = 50, onProgress, delay = randomDelay } = options;
+
+  const normalizeMbasicPost = (raw) =>
+    normalizePost({
+      id: raw.postId || raw.postUrl || raw.text?.slice(0, 80) || null,
+      text: raw.text || null,
+      timestamp: raw.timestamp || null,
+      likes: raw.likes || '0',
+      comments: raw.comments || '0',
+      postUrl: raw.postUrl || null,
+      images: raw.images || [],
+      hasVideo: raw.hasVideo || false,
+      author: raw.author || null,
+    });
+
+  const collectFromPage = async () => {
+    return page.evaluate(() => {
+      const articles = document.querySelectorAll('article[data-ft*="top_level_post_id"]');
+      return Array.from(articles).map((article) => {
+        try {
+          const dataFt = article.getAttribute('data-ft');
+          let postId = null;
+          if (dataFt) {
+            const m = dataFt.match(/"top_level_post_id"[:"]"?([\d]+)/);
+            if (m) postId = m[1];
+          }
+
+          // Author: h3 strong a, a.actor-link, or any strong a inside article
+          let author = null;
+          let authorUrl = null;
+          const authorEls = article.querySelectorAll('h3 a, h3 strong a, a.actor-link, strong a');
+          for (const a of authorEls) {
+            const txt = a.innerText?.trim();
+            if (txt && txt.length < 100) {
+              author = txt;
+              authorUrl = a.getAttribute('href') || null;
+              break;
+            }
+          }
+
+          // Text container — mbasic wraps the story body in .story_body_container
+          const bodyContainer = article.querySelector('.story_body_container');
+          let text = '';
+          if (bodyContainer) {
+            text = bodyContainer.innerText?.trim();
+          } else {
+            // Fallback: collect meaningful paragraphs
+            const ps = article.querySelectorAll('p, div[role="main"] p');
+            text = Array.from(ps)
+              .map((p) => p.innerText?.trim())
+              .filter((t) => t && t.length > 5)
+              .join('\n');
+          }
+          if (!text) {
+            text = article.innerText?.trim() || '';
+          }
+          // Remove trailing action links
+          text = text
+            .replace(/\n(Like|Comment|Share|Full Story|See more)\s*$/i, '')
+            .replace(/\n(Like|Comment|Share|Full Story|See more)\n.*$/i, '')
+            .trim()
+            .substring(0, 1000);
+
+          // Timestamp — mbasic uses <abbr> with the date
+          const abbr = article.querySelector('abbr');
+          const timestamp = abbr?.textContent?.trim() || abbr?.getAttribute('title') || null;
+
+          // Post URL — footer link to /story.php or /permalink.php
+          let postUrl = null;
+          const linkEls = article.querySelectorAll('a[href*="/story.php"], a[href*="/permalink.php"]');
+          for (const a of linkEls) {
+            const href = a.getAttribute('href');
+            if (href) {
+              postUrl = href.startsWith('http') ? href : `${window.location.origin}${href}`;
+              break;
+            }
+          }
+
+          // Engagement — look in footer / action text
+          const allText = article.innerText || '';
+          const likesMatch = allText.match(/([\d,.]+[KkMm]?)\s*(Like|left reaction|others reacted)/i);
+          const commentsMatch = allText.match(/([\d,.]+[KkMm]?)\s*comment/i);
+          const sharesMatch = allText.match(/([\d,.]+[KkMm]?)\s*Share/i);
+
+          // Images
+          const images = Array.from(article.querySelectorAll('img'))
+            .map((img) => img.getAttribute('src'))
+            .filter((src) => src && !src.includes('static') && !src.includes('emoji') && src.startsWith('http'));
+
+          const hasVideo = !!article.querySelector('video, a[href*="/video/"]');
+
+          return {
+            postId,
+            author,
+            authorUrl,
+            text: text || null,
+            timestamp,
+            likes: likesMatch ? likesMatch[1] : '0',
+            comments: commentsMatch ? commentsMatch[1] : '0',
+            shares: sharesMatch ? sharesMatch[1] : '0',
+            postUrl,
+            images,
+            hasVideo,
+          };
+        } catch (err) {
+          return null;
+        }
+      }).filter((p) => p && p.text && p.text.length > 5);
+    });
+  };
+
+  const findNextPage = async () => {
+    return page.evaluate(() => {
+      const links = Array.from(document.querySelectorAll('a[href*="/profile/timeline/stream/"], a[href*="/page_content?"], a[href*="cursor="]'));
+      if (links.length) {
+        const href = links[0].getAttribute('href');
+        return href.startsWith('http') ? href : `${window.location.origin}${href}`;
+      }
+      // Fallback: text-based "See more" / "Show more" links
+      const moreLinks = Array.from(document.querySelectorAll('a'));
+      for (const a of moreLinks) {
+        const text = (a.innerText || '').trim().toLowerCase();
+        if (/(see more|show more|xem thêm|tiếp|load more|more stories)/i.test(text)) {
+          const href = a.getAttribute('href');
+          if (href) return href.startsWith('http') ? href : `${window.location.origin}${href}`;
+        }
+      }
+      return null;
+    });
+  };
+
+  let targetUrl = `${MBASIC_BASE}/${handle}?v=timeline`;
+  const posts = new Map();
+  let pageCount = 0;
+  const maxPages = Math.max(1, Math.ceil(limit / 4)); // mbasic shows ~4 posts per page
+
+  while (targetUrl && posts.size < limit && pageCount < maxPages) {
+    try {
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await delay(1500, 3000);
+
+      // Detect login wall
+      const blocked = await page.evaluate(() => {
+        const text = document.body?.innerText || '';
+        return text.length < 500 && /log\s*in\s*to\s*facebook|create\s*new\s*account/i.test(text);
+      });
+      if (blocked) break;
+
+      const rawPosts = await collectFromPage();
+      for (const raw of rawPosts) {
+        const key = raw.postId || raw.postUrl || raw.text?.slice(0, 80);
+        if (key && !posts.has(key)) {
+          posts.set(key, normalizeMbasicPost(raw));
+        }
+      }
+
+      if (onProgress) onProgress({ scraped: posts.size, limit });
+
+      targetUrl = posts.size < limit ? await findNextPage() : null;
+      pageCount++;
+    } catch (err) {
+      console.warn(`⚠️ mbasic posts page ${pageCount} failed for ${handle}: ${err.message}`);
+      break;
+    }
+  }
+
+  return Array.from(posts.values()).slice(0, limit);
+}
+
+/**
+ * Test whether the page contains a non-empty mbasic timeline.
+ * Used by scrapeTweets to decide whether to fall back to desktop.
+ * @param {Page} page
+ * @returns {Promise<boolean>}
+ */
+async function hasMbasicPosts(page) {
+  return page.evaluate(() => {
+    const articles = document.querySelectorAll('article[data-ft*="top_level_post_id"]');
+    if (articles.length === 0) return false;
+    for (const a of articles) {
+      const text = a.innerText?.trim() || '';
+      if (text.length > 20) return true;
+    }
+    return false;
+  });
 }
 
 // ============================================================================
@@ -778,6 +979,87 @@ export async function loginWithPassword(page, { uid, pass, baitCookie = null, se
 // ============================================================================
 
 /**
+ * Scrape a Facebook profile or page via mbasic (lightweight HTML, less bot detection).
+ * @param {Page} page - Puppeteer page instance
+ * @param {string} handle - Normalized handle
+ * @returns {Promise<Object|null>} Normalized profile, or null if mbasic is blocked/unusable
+ */
+async function scrapeMbasicProfile(page, handle) {
+  const mbasicUrl = `${MBASIC_BASE}/${handle}?v=timeline`;
+
+  try {
+    await page.goto(mbasicUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await randomDelay(1500, 3000);
+
+    // mbasic sometimes returns a script/jsonp response or a login wall. Detect early.
+    const ready = await page.evaluate(() => {
+      const text = document.body?.innerText || '';
+      const hasArticle = !!document.querySelector('article, div[role="main"], #root');
+      const isLoginWall = /log\s*in\s*to\s*facebook|create\s*new\s*account/i.test(text) && text.length < 500;
+      return { hasArticle, isLoginWall, text };
+    });
+    if (!ready.hasArticle || ready.isLoginWall) return null;
+
+    const raw = await page.evaluate(() => {
+      const bodyText = document.body?.innerText || '';
+      const title = document.title?.trim() || '';
+
+      // Name candidates: h1, first strong in main content, title minus "| Facebook"
+      let name = null;
+      const h1 = document.querySelector('h1');
+      if (h1) name = h1.innerText?.trim();
+      if (!name) {
+        const strong = document.querySelector('strong, div[role="main"] h3, div#root h3');
+        if (strong) name = strong.innerText?.trim();
+      }
+      if (!name && title) {
+        name = title.replace(/\s*\|\s*Facebook\s*$/i, '').trim() || null;
+      }
+
+      // Avatar — mbasic profile picture is usually the first large img
+      let avatar = null;
+      const avatarImg = document.querySelector('img[alt*="profile"], img[src*="scontent"], a[href*="photo.php"] img, img.profPic');
+      if (avatarImg) avatar = avatarImg.getAttribute('src') || avatarImg.getAttribute('data-src') || null;
+
+      // Followers / likes
+      let followers = null;
+      const followerMatch = bodyText.match(/([\d,.]+[KkMmBb]?)\s*(followers?|people\s+follow|likes?)/i);
+      if (followerMatch) followers = followerMatch[1];
+
+      // Bio — paragraph in main area that isn't the name/followers
+      let bio = null;
+      const paragraphs = document.querySelectorAll('div[role="main"] p, div#root p, p');
+      for (const p of paragraphs) {
+        const txt = p.innerText?.trim();
+        if (txt && txt !== name && !/\b(followers?|likes?)\b/i.test(txt)) {
+          bio = txt;
+          break;
+        }
+      }
+
+      return { name, avatar, followers, bio, pageUrl: window.location.href };
+    });
+
+    if (!raw.name && !raw.followers && !raw.bio) return null;
+
+    return {
+      name: raw.name || handle,
+      username: handle,
+      bio: raw.bio || null,
+      followers: raw.followers || null,
+      following: null,
+      posts: null,
+      profileUrl: raw.pageUrl,
+      avatar: raw.avatar || null,
+      platform: 'facebook',
+    };
+  } catch (err) {
+    console.warn(`⚠️ mbasic profile failed for ${handle}: ${err.message}`);
+    return null;
+  }
+}
+
+/**
  * Scrape a public Facebook profile or page
  * @param {Page} page - Puppeteer page instance
  * @param {string} username - Handle (zuck), @handle, or full facebook.com URL
@@ -786,6 +1068,11 @@ export async function loginWithPassword(page, { uid, pass, baitCookie = null, se
 export async function scrapeProfile(page, username) {
   const handle = normalizeHandle(username);
 
+  // Try mbasic first — less bot detection, plain HTML.
+  const mbasicResult = await scrapeMbasicProfile(page, handle);
+  if (mbasicResult) return mbasicResult;
+
+  // Fallback to desktop / m.facebook.com.
   const url = `${FACEBOOK_BASE}/${handle}`;
   await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
   await randomDelay(2000, 4000);
@@ -983,6 +1270,14 @@ export async function scrapeTweets(page, username, options = {}) {
   // Groups use mobile site - desktop doesn't load posts in headless mode.
   const isFullUrl = username?.startsWith('http://') || username?.startsWith('https://');
   const isGroup = isFullUrl && /\/groups\//.test(username);
+
+  // Profiles/pages: try mbasic first (lightweight HTML, less bot detection).
+  if (!isGroup) {
+    const handle = isFullUrl ? username.replace(/^https?:\/\/(www\.|m\.|mbasic\.)?facebook\.com\//, '').replace(/\?.*$/, '') : normalizeHandle(username);
+    const mbasicResult = await scrapeMbasicPosts(page, handle, { limit, onProgress, delay });
+    if (mbasicResult && mbasicResult.length > 0) return mbasicResult;
+  }
+
   let targetUrl;
   if (isGroup) {
     const cleanUrl = username.replace(/^https?:\/\/(www\.)?facebook\.com/, 'https://m.facebook.com');
