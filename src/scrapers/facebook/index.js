@@ -240,9 +240,10 @@ export function normalizeHandle(input) {
  * @returns {Object} Normalized post
  */
 export function normalizePost(raw) {
-  const { id, text, timestamp, likes, comments, postUrl, images, hasVideo } = raw;
+  const { id, text, timestamp, likes, comments, postUrl, images, hasVideo, author } = raw;
   return {
     id: id || null,
+    author: author || null,
     text: text || null,
     timestamp: timestamp || null,
     likes: likes || '0',
@@ -1159,59 +1160,96 @@ async function extractCommentsFromDom(page, _typenames) {
  */
 async function extractGroupPostsFromDom(page, _typenames) {
   return page.evaluate(() => {
-    const UI_TEXT_RE = /^(like|comment|share|send|follow|see more|see translation|write a public comment…)$/i;
+    const UI_HEADER_RE = /^(Public group|Join group|Invite|Videos|Announcements|Events|Write something|Photo|Feeling|Poll|Most relevant|SORT|Open app|About this group|Members|Group by)/i;
+
+    // On mobile m.facebook.com, each post is a div.m.displayed (className="m displayed")
+    // containing the full post text: "AuthorName\n • \nFollow\n‎‎1h‎\n󳄫\n[content]...".
+    // We filter by checking for the "Follow" text (post header pattern).
     const allElements = document.querySelectorAll('div.m.displayed');
 
-    return Array.from(allElements).map((post) => {
-      if (post.querySelector('[aria-label="Loading"]')) return null;
+    const posts = [];
+    const seen = new Set();
 
-      const fullText = post.innerText?.trim() || '';
-      if (fullText.length < 20) return null;
+    for (const div of allElements) {
+      if (div.querySelector('[aria-label="Loading"]')) continue;
 
-      // Mobile: filter for real posts (have date patterns like "Jul 16", "2h", "3d")
-      if (!/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+|\d+\s*(min|h|hour|day|week)s?\s*ago/i.test(fullText)) {
-        return null;
+      const fullText = div.innerText?.trim() || '';
+      if (fullText.length < 30) continue;
+      if (UI_HEADER_RE.test(fullText)) continue;
+
+      // Each post contains "Follow" in its header. Skip non-post divs.
+      const lines = fullText.split('\n').map((l) => l.trim()).filter(Boolean);
+      const followIdx = lines.findIndex((l) => /^follow$/i.test(l));
+      if (followIdx <= 0) continue;
+
+      // Extract author — pattern: "AuthorName\n • \nFollow\n..."
+      // "•" is on its own line between author and "Follow".
+      // Author is at followIdx - 2 (or followIdx - 1 if no "•" separator).
+      let authorLine = '';
+      if (followIdx >= 2 && lines[followIdx - 1] === '•') {
+        authorLine = lines[followIdx - 2];
+      } else if (followIdx >= 1) {
+        authorLine = lines[followIdx - 1].replace(/\s*•\s*$/, '').trim();
+      }
+      if (!authorLine || authorLine.length >= 100 || UI_HEADER_RE.test(authorLine)) continue;
+
+      const author = authorLine;
+
+      // Extract timestamp — line after "Follow" (e.g. "‎‎1h‎󲄭󳆗" → "1h")
+      let timestamp = null;
+      if (followIdx + 1 < lines.length) {
+        const tsLine = lines[followIdx + 1];
+        const tsMatch = tsLine.match(/(\d+\s*(min|h|hour|day|week|d|w|mo|y)s?|(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+)/i);
+        if (tsMatch) timestamp = tsMatch[0];
       }
 
-      // Clean up text: remove trailing action buttons
-      let text = fullText
+      // Post content starts after timestamp line
+      let text = fullText;
+      if (followIdx + 2 < lines.length) {
+        text = lines.slice(followIdx + 2).join('\n');
+      }
+
+      // Clean up text: remove trailing UI buttons and private-use emoji markers.
+      text = text
         .replace(/\n(Like|Comment|Share|Send|Follow|See more|See translation|Write a public comment…)\s*$/i, '')
         .replace(/\n(Like|Comment|Share|Send|Follow|See more|See translation|Write a public comment…)\n.*$/i, '')
+        .replace(/[\u{F0000}-\u{FFFFF}]/gu, '')
         .trim();
       text = text.substring(0, 1000);
 
-      // Timestamp - mobile uses abbr with text like "Jul 16"
-      const timeEl = post.querySelector('abbr, [aria-label*="ago"], [aria-label*="at"], time');
-      const timestamp = timeEl?.textContent?.trim() || timeEl?.getAttribute('aria-label') || null;
+      if (text.length < 10) continue;
 
-      // Post URL - look in parent/sibling for mobile since links may be outside the div
-      let linkEls = post.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]');
-      if (linkEls.length === 0) {
-        const parent = post.parentElement;
-        if (parent) linkEls = parent.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]');
-      }
+      // Dedupe by author + text prefix
+      const dedupeKey = `${author}|${text.slice(0, 60)}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+
+      // Post URL - mobile may not have direct post links.
+      const linkEls = div.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="/permalink.php"], a[href*="story_fbid"], a[href*="/group/posts/"]');
       const postLink = linkEls[0]?.getAttribute('href') || null;
       const postUrl = postLink
         ? postLink.startsWith('http') ? postLink : `https://www.facebook.com${postLink}`
         : null;
 
       // Engagement
-      const allPostText = post.textContent || '';
+      const allPostText = div.textContent || '';
       const likesMatch = allPostText.match(/([\d,.]+[KkMm]?)\s*(like|reaction)/i);
       const commentsMatch = allPostText.match(/([\d,.]+[KkMm]?)\s*comment/i);
       const likes = likesMatch ? likesMatch[1] : '0';
       const comments = commentsMatch ? commentsMatch[1] : '0';
 
       // Media
-      const images = Array.from(post.querySelectorAll('img'))
+      const images = Array.from(div.querySelectorAll('img'))
         .map((img) => img.src)
         .filter((src) => src && !src.includes('static') && !src.includes('emoji') && !src.includes('sprite') && src.startsWith('http'));
-      const hasVideo = !!post.querySelector('video');
+      const hasVideo = !!div.querySelector('video');
 
-      const id = postUrl || text?.slice(0, 80) || null;
+      const id = postUrl || dedupeKey;
 
-      return { id, text, timestamp, likes, comments, postUrl, images, hasVideo };
-    }).filter((p) => p && p.id);
+      posts.push({ id, text, author, timestamp, likes, comments, postUrl, images, hasVideo });
+    }
+
+    return posts;
   });
 }
 
