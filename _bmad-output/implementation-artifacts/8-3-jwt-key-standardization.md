@@ -131,3 +131,21 @@ SWE-1.7 Max
 - [x] **No blockers** — ready for done.
 
 Status: done
+
+## Formal Code Review Findings
+
+- [ ] [Review][Decision] **`sub` claim support not in acceptance criteria** — Implementation accepts `decoded.sub` in `api/middleware/auth.js`, `api/realtime/socketHandler.js`, and `api/routes/auth.js`. The story artifact AC1–AC5 only require `userId` and `id`. Should `sub` support be kept, removed, or added to the spec?
+
+- [ ] [Review][Patch] **Non-string `userId`/`id`/`sub` can crash `authMiddleware` with 500** — `decoded.userId || decoded.id || decoded.sub` extracts any truthy value (number, array, object). `prisma.user.findUnique({ where: { id: userId } })` then throws `PrismaClientValidationError`, caught as generic 500. Should validate `typeof userId === 'string' && userId.length > 0` before DB query. [api/middleware/auth.js:16, api/middleware/auth.js:57, api/realtime/socketHandler.js:43, api/routes/auth.js:190]
+
+- [ ] [Review][Patch] **Truthy-but-garbage `userId` wins over valid string `id`** — A payload like `{ userId: [], id: "valid-id" }` picks the empty array and crashes/rejects instead of falling back to `id`. Same root cause as above. [api/middleware/auth.js:16, api/realtime/socketHandler.js:43, api/routes/auth.js:190]
+
+- [ ] [Review][Patch] **Socket and refresh tests are tautological** — `tests/api/auth-token-standardization.test.js:152-165` re-implements the extraction and asserts on local variables; it does not call `initializeSocketIO()` or `POST /api/auth/refresh`. Contradicts "real implementations only" testing rule.
+
+- [ ] [Review][Patch] **E2E test JWT-secret fallback mismatch** — `tests/e2e/api-auth.test.js:119` signs with `process.env.JWT_SECRET || 'test-secret'`, but server code uses `process.env.JWT_SECRET` directly. Use `TEST_SECRET` from `tests/api/fixtures/test-user.js` instead.
+
+- [x] [Review][Defer] **Optional auth is fail-open on any error** — `api/middleware/auth.js:66-70` catches all exceptions and continues with `req.user = null`. Pre-existing behavior, not introduced by Story 8.3.
+
+- [x] [Review][Defer] **Refresh endpoint makes control decisions on unverified payload** — `api/routes/auth.js:189-191` calls `jwt.decode(token)` before `jwt.verify`. Pre-existing flow; the diff only touched extraction.
+
+- [x] [Review][Defer] **Error handlers mask non-token failures** — `api/middleware/auth.js:33-41` and `api/realtime/socketHandler.js:61-63` return generic errors without logging. Pre-existing.
