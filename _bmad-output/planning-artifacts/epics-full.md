@@ -196,25 +196,18 @@ N/A — Technical infrastructure, no UX spec needed.
 
 ### FR Coverage Map
 
-| FR/PCR | Epic 1 | Epic 2 | Epic 3 | Epic 4 | Epic 5 | Epic 5b | Epic 6 | Epic 7 | Epic 8 | Epic 9 |
-|---|---|---|---|---|---|---|---|---|---|---|
-| FR1-3 | ✅ | | | | | | | | | |
-| FR4-7 | ✅ | | | | | | | | | |
-| FR8 | | | ✅ | | | | | | | |
-| FR9-11 | | | ✅ | | | | | | | |
-| FR12-14 | | ✅ | | | | | | | | |
-| FR15-22 | | | | ✅ | | | | | | |
-| FR23-27 | | | | | ✅ | | | | | |
-| FR28-39 | | | | | | ✅ | | | | |
-| FR40-54 | | | | | | | ✅ | | | |
-| FR55-63 | | | | | | | | ✅ | | |
-| PCR1 | | | | | | | | | | ✅ |
-| PCR2 | | | | | | | | | ✅ | |
-| PCR3 | | | | | | | | | | ✅ |
-| PCR4 | | | | | | | | | | ✅ |
-| PCR5 | | | | | | | | | | ✅ |
-| PCR6 | | | | | | | | | ✅ | |
-| PCR7 | | | | | | | | | ✅ | |
+| FR | Epic 1 | Epic 2 | Epic 3 | Epic 4 | Epic 5 | Epic 5b | Epic 6 | Epic 7 |
+|---|---|---|---|---|---|---|---|---|
+| FR1-3 | ✅ | | | | | | |
+| FR4-7 | ✅ | | | | | | |
+| FR8 | | | ✅ | | | | |
+| FR9-11 | | | ✅ | | | | |
+| FR12-14 | | ✅ | | | | | |
+| FR15-22 | | | | ✅ | | | |
+| FR23-27 | | | | | ✅ | | |
+| FR28-39 | | | | | | ✅ | |
+| FR40-54 | | | | | | | ✅ | |
+| FR55-63 | | | | | | | | ✅ |
 
 ## Epic List
 
@@ -256,16 +249,6 @@ N/A — Technical infrastructure, no UX spec needed.
 ### Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
 **Goal:** Multi-type search, post/group comments, account health filtering, and parallel execution using account pool.
 **FRs:** FR55-FR61, FR63 (FR62 deferred to Phase 3)
-**Status:** ✅ Done (4 stories)
-
-### Epic 8: Facebook Backend Reliability
-**Goal:** Harden backend infrastructure: database connection pooling, MCP error contract, auth token handling.
-**FRs/PCRs:** PCR2, PCR6, PCR7
-**Status:** 🆕 backlog
-
-### Epic 9: Facebook Live Data & Behavioral Hardening
-**Goal:** Harden runtime Facebook behavior: dry-run short-circuit, live DOM selectors, testable delay seams.
-**FRs/PCRs:** PCR1, PCR3, PCR4, PCR5
 **Status:** 🆕 backlog
 
 ---
@@ -1134,3 +1117,149 @@ So that the surface is consistent and maintainable.
 **When** tools `x_facebook_search`, `x_facebook_posts`, `x_facebook_post_comments`, `x_facebook_group_posts`, `x_facebook_group_comments` are exposed
 **Then** they all route through `facebookScrapeService`
 **And** each tool has contract tests in `tests/mcp/`.
+
+---
+
+## Epic 8: Facebook Backend Reliability
+
+**Status:** 🆕 backlog
+
+**Epic Goal:** Harden backend infrastructure: database connection pooling, MCP error contract, auth token handling.
+
+**FRs/PCRs covered:** PCR2, PCR6, PCR7
+
+### Story 8.1: PrismaClient Singleton Refactor
+
+As a system operator,
+I want a single `PrismaClient` instance shared across the API,
+So that database connection pool is not fragmented and performance remains stable.
+
+**Acceptance Criteria:**
+
+**Given** any API route or service needs database access
+**When** it imports `prisma` from `api/lib/prisma.js`
+**Then** it uses the singleton instance
+**And** the number of `PrismaClient` instances does not scale with route count
+**And** all 47 existing `new PrismaClient()` calls are replaced by the singleton import
+
+**Given** the singleton module
+**When** it is first imported
+**Then** it creates one `PrismaClient` instance
+**And** subsequent imports reuse the same instance
+**And** `$disconnect` is handled gracefully on process exit
+
+### Story 8.2: Graceful executeTool Unknown Tool Handling
+
+As an MCP client,
+I want `executeTool` to return a proper MCP error result instead of throwing,
+So that my client does not crash on unknown tools or uninitialized `localTools`.
+
+**Acceptance Criteria:**
+
+**Given** `localTools` is `null` or `undefined`
+**When** `executeTool` is called
+**Then** it returns `{ isError: true, content: [{ type: 'text', text: '...' }] }`
+**And** it does not throw `Cannot read properties of null`
+
+**Given** a tool name that does not exist in `localTools`
+**When** `executeTool` is called
+**Then** it returns `{ isError: true, content: [{ type: 'text', text: 'Unknown tool: <name>' }] }`
+**And** it does not throw `Error("Unknown tool")`
+
+### Story 8.3: Standardize JWT Token Key
+
+As a developer,
+I want auth middleware to accept both `decoded.id` and `decoded.userId`,
+So that existing tokens and test fixtures work consistently without 500 errors.
+
+**Acceptance Criteria:**
+
+**Given** a JWT token with payload `{ id: "..." }`
+**When** the request hits `authMiddleware`
+**Then** the user is resolved correctly
+
+**Given** a JWT token with payload `{ userId: "..." }`
+**When** the request hits `authMiddleware`
+**Then** the user is resolved correctly
+
+**Given** a token with both `id` and `userId`
+**When** the request hits `authMiddleware`
+**Then** it prefers one consistently (document the choice)
+
+---
+
+## Epic 9: Facebook Live Data & Behavioral Hardening
+
+**Status:** 🆕 backlog
+
+**Epic Goal:** Harden runtime Facebook behavior: dry-run short-circuit, live DOM selectors, testable delay seams.
+
+**FRs/PCRs covered:** PCR1, PCR3, PCR4, PCR5
+
+### Story 9.1: Fix cancel_friend_requests Dry-Run Delay
+
+As an MCP user,
+I want `x_facebook_cancel_friend_requests` dry-run to return immediately,
+So that I can preview the action without waiting 63 seconds.
+
+**Acceptance Criteria:**
+
+**Given** `x_facebook_cancel_friend_requests` is called with `dryRun: true`
+**When** the tool executes
+**Then** it returns in less than 1 second
+**And** it does not launch a browser
+**And** it does not call `runGuardedBatch` or any delay loop
+**And** it returns a preview with the list of requests that would be canceled
+
+### Story 9.2: Verify Live Facebook Comments Selectors
+
+As a data analyst,
+I want to scrape comments from public posts with comments enabled,
+So that I can analyze engagement and replies.
+
+**Acceptance Criteria:**
+
+**Given** a public post with comments enabled
+**When** `x_facebook_post_comments` runs with `includeReplies: true`
+**Then** it returns an array of comments
+**And** each comment has `author`, `text`, `timestamp`, `likes`, and `replies`
+
+**Given** a public group post with comments
+**When** `x_facebook_group_comments` runs
+**Then** it returns the same comment shape
+**And** it returns a `note` if comments are restricted or not accessible
+
+### Story 9.3: Verify Live Group Posts and Group Search
+
+As a community manager,
+I want to scrape posts from public or joined groups,
+So that I can monitor group activity and search group content.
+
+**Acceptance Criteria:**
+
+**Given** a public or joined group
+**When** `x_facebook_group_posts` runs
+**Then** it returns a non-empty array of posts
+**And** each post has `id`, `text`, `timestamp`, `likes`, `comments`, `url`, `media`, `platform`
+
+**Given** a public or joined group
+**When** `x_facebook_group_search` runs with a query
+**Then** it returns a non-empty array of matching posts
+**And** it returns a clear note explaining access restriction if the group is private and not joined
+
+### Story 9.4: Injectable delayFn for loginWithCookie
+
+As a developer,
+I want `loginWithCookie` to accept an injectable `delayFn`,
+So that tests run fast and avoid flaky timeouts in parallel suites.
+
+**Acceptance Criteria:**
+
+**Given** `loginWithCookie(page, cookies, { delayFn: async () => {} })`
+**When** the function runs
+**Then** all internal random delays use the provided `delayFn`
+**And** the default behavior remains unchanged when `delayFn` is not provided
+
+**Given** a test passes `delayFn: async () => {}`
+**When** `loginWithCookie` is called
+**Then** the test completes without real `setTimeout` delays
