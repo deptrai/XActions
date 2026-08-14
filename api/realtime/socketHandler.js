@@ -40,8 +40,13 @@ export function initializeSocketIO(httpServer) {
 
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.userId || decoded.id || decoded.sub;
+        if (!userId) {
+          return next(new Error('Invalid token'));
+        }
+
         const user = await prisma.user.findUnique({
-          where: { id: decoded.userId }
+          where: { id: userId }
         });
 
         if (!user) {

@@ -13,9 +13,14 @@ const authMiddleware = async (req, res, next) => {
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    const userId = decoded.userId || decoded.id || decoded.sub;
+    if (!userId) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
     // Get user from database
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId }
+      where: { id: userId }
     });
 
     if (!user) {
@@ -49,9 +54,12 @@ const optionalAuthMiddleware = async (req, res, next) => {
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId }
-    });
+    const userId = decoded.userId || decoded.id || decoded.sub;
+    const user = userId
+      ? await prisma.user.findUnique({
+          where: { id: userId }
+        })
+      : null;
 
     req.user = user || null;
     next();

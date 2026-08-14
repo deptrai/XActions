@@ -187,7 +187,8 @@ router.post('/refresh', async (req, res) => {
 
     // Decode without verification to check expiry window
     const decoded = jwt.decode(token);
-    if (!decoded || !decoded.exp || !decoded.userId) {
+    const userId = decoded?.userId || decoded?.id || decoded?.sub;
+    if (!decoded || !decoded.exp || !userId) {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
@@ -206,14 +207,14 @@ router.post('/refresh', async (req, res) => {
     }
 
     // Verify user still exists
-    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
 
     // Generate new token
     const newToken = jwt.sign(
-      { userId: decoded.userId, username: decoded.username },
+      { userId: user.id, username: user.username },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );

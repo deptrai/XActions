@@ -4,6 +4,7 @@
 // by nichxbt
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 import app from '../../api/server.js';
 import { seedTestUser, cleanupTestUser, makeTestUserId } from '../api/fixtures/test-user.js';
 import { nextTestId } from '../utils/test-ids.js';
@@ -112,5 +113,13 @@ describe('Auth endpoints', () => {
       .set('Authorization', 'Basic dXNlcjpwYXNz');
     expect(res.status).toBe(401);
     expect(res.body.error).toMatch(/token/i);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] Protected endpoint accepts token signed with { id } payload (Story 8.3)`, async () => {
+    const token = jwt.sign({ id: testUser.user.id, username: testUser.user.username }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
+    const res = await request(app)
+      .get('/api/operations')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
   });
 });
