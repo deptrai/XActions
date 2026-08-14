@@ -146,7 +146,7 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
  */
 router.post('/scrape', async (req, res) => {
   try {
-    const { action, url, query, type, parallel, location, limit, authCookie } = req.body ?? {};
+    const { action, url, query, type, parallel, location, limit, authCookie, browserOptions } = req.body ?? {};
 
     const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace'];
     if (!action || !VALID_ACTIONS.includes(action)) {
@@ -193,6 +193,10 @@ router.post('/scrape', async (req, res) => {
       }
     }
 
+    if (browserOptions !== undefined && browserOptions !== null && (typeof browserOptions !== 'object' || Array.isArray(browserOptions))) {
+      return res.status(400).json({ ok: false, error: 'browserOptions must be an object' });
+    }
+
     // Fail fast on malformed session cookie before launching a browser / hitting the network.
     const rawCookieProvided = authCookie && (String(authCookie.c_user ?? '').trim() || String(authCookie.xs ?? '').trim());
     if (rawCookieProvided) {
@@ -207,6 +211,7 @@ router.post('/scrape', async (req, res) => {
 
     const options = {
       userId: req.user.id,
+      ...(browserOptions ? { browserOptions } : {}),
       // Pass all cookie fields for full session auth (never log values)
       ...(authCookie?.c_user?.trim() && authCookie?.xs?.trim()
         ? { authCookie: {

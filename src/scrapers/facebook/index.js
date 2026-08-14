@@ -54,7 +54,7 @@ const NON_PROFILE_SEGMENTS = [
  * @returns {Promise<Browser>} Puppeteer browser instance
  */
 export async function createBrowser(options = {}) {
-  const { args: extraArgs = [], headless, proxy, launchImpl, executablePath, userDataDir, ...rest } = options;
+  const { args: extraArgs = [], headless, proxy, launchImpl, executablePath, userDataDir, proxyAuth, proxyLocation, fingerprint, skipWarmup, ...rest } = options;
   const stealthArgs = [
     '--no-sandbox',
     '--disable-setuid-sandbox',
@@ -174,6 +174,13 @@ export async function applyProxyLocation(page, proxyLocation) {
  */
 export async function createPage(browser, options = {}) {
   const page = await browser.newPage();
+
+  // Apply proxy authentication before any navigation so the proxy accepts the browser connection.
+  const proxyAuth = options.proxyAuth;
+  if (proxyAuth && typeof proxyAuth.username === 'string' && typeof proxyAuth.password === 'string') {
+    await page.authenticate({ username: proxyAuth.username, password: proxyAuth.password });
+  }
+
   const fingerprint = options.fingerprint ?? generateFingerprint();
   try {
     await applyFingerprint(page, fingerprint);

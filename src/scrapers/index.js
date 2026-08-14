@@ -231,7 +231,7 @@ export async function scrape(platform, action, options = {}) {
     // Auto-create browser/page if not provided
     if (!page) {
       const browser = await mod.createBrowser(options.browserOptions || {});
-      page = await mod.createPage(browser);
+      page = await mod.createPage(browser, options.browserOptions || {});
 
       // Store browser ref BEFORE login so a login/goto throw still allows cleanup
       // (previously set after login → a login failure leaked the Chromium process).
@@ -243,7 +243,8 @@ export async function scrape(platform, action, options = {}) {
           await mod.loginWithCookie(page, options.authToken);
         } else if (options.authCookie && mod.loginWithCookie) {
           // Cookie-object path for Facebook ({ c_user, xs }) — additive, does not affect Twitter
-          await mod.loginWithCookie(page, options.authCookie);
+          // Pass browserOptions so loginWithCookie can respect headless/skipWarmup (Story 7.2 testing).
+          await mod.loginWithCookie(page, options.authCookie, options.browserOptions || {});
         }
       } catch (loginErr) {
         // Close the browser we created before re-throwing, else it leaks
