@@ -36,6 +36,26 @@ Cookie không bao giờ được log (NFR3).
 
 ---
 
+## Định dạng kết quả
+
+MCP server trả về kết quả trong `content[0].text` dưới dạng JSON.
+
+- **Thành công**: tool trả về object/result trực tiếp — không bọc trong `{ ok: true }`.
+- **Dry-run (`dryRun: true`)**: thường trả về `{ dryRun: true, platform: 'facebook', preview: { ... } }`.
+- **Lỗi**: MCP server trả `isError: true` và JSON `{ error: '...' }`.
+
+Ví dụ:
+
+```json
+{
+  "content": [
+    { "type": "text", "text": "{ \"dryRun\": true, \"platform\": \"facebook\", \"preview\": {...} }" }
+  ]
+}
+```
+
+Các ví dụ dưới đây hiển thị phần JSON bên trong `text`.
+
 ## Danh sách tool
 
 ### Scrape
@@ -84,17 +104,22 @@ Scrape bài viết từ profile hoặc page.
 }
 ```
 
-**Response:**
+**Response (khi `dryRun: false`):**
 
 ```json
-{
-  "ok": true,
-  "action": "posts",
-  "dryRun": false,
-  "result": [
-    { "id": "...", "text": "...", "timestamp": "3d", "likes": "5", "comments": "2" }
-  ]
-}
+[
+  {
+    "id": "Nguyễn Tuấn Kiệt\n\n·\n4d\nLoại này còn hàng ko",
+    "author": null,
+    "text": "Nguyễn Tuấn Kiệt · 4d Loại này còn hàng ko",
+    "timestamp": "4d",
+    "likes": "0",
+    "comments": "0",
+    "url": null,
+    "media": { "images": [], "hasVideo": false },
+    "platform": "facebook"
+  }
+]
 ```
 
 ---
@@ -118,6 +143,32 @@ Tìm kiếm Facebook theo danh mục.
 
 - `type`: `posts` | `people` | `pages` | `groups` | `all`
 - `type: "all"` trả về `{ posts, people, pages, groups }`
+
+**Response (khi `type: "posts"`, `dryRun: false`):**
+
+```json
+[
+  {
+    "id": "Macbook Pro 14 inch - đáng mua nhất thời điểm 2026 !! … See ",
+    "text": "Macbook Pro 14 inch - đáng mua nhất thời điểm 2026 !! … See more",
+    "author": "Mac24h",
+    "timestamp": "Mac24h",
+    "url": null,
+    "platform": "facebook"
+  }
+]
+```
+
+**Response (khi `type: "all"`, `dryRun: false`):**
+
+```json
+{
+  "posts": [...],
+  "people": [...],
+  "pages": [...],
+  "groups": [...]
+}
+```
 
 ---
 
@@ -236,9 +287,8 @@ hoặc
 
 ```json
 {
-  "ok": true,
   "accounts": [
-    { "id": "...", "label": "FB #1", "userId": "...", "createdAt": "..." }
+    { "id": "cmskftywp0001hlne2991n7oi", "label": "FB Account #2", "userId": "cmskewokf0000o3r4drq6vx3r", "createdAt": "2026-08-08T13:57:11.545Z" }
   ]
 }
 ```
@@ -264,6 +314,19 @@ Tự động hóa like/comment/post/messenger.
 - `action`: `like` | `comment` | `post` | `messenger`
 - `messenger`: yêu cầu `postUrl`, `recipients`, `content`
 - `post`: yêu cầu `text`
+
+**Response (khi `action: "like"`, `dryRun: false`):**
+
+```json
+{
+  "successCount": 3,
+  "totalCount": 3,
+  "failed": [],
+  "platform": "facebook"
+}
+```
+
+> Kết quả cụ thể tùy action. Dry-run trả về `{ dryRun: true, platform: 'facebook', preview: {...} }`.
 
 ---
 
@@ -453,6 +516,23 @@ Ví dụ gửi từ MCP client:
     }
   },
   "id": 1
+}
+```
+
+Ví dụ response thành công:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{ \"dryRun\": true, \"platform\": \"facebook\", \"preview\": { \"action\": \"search\", \"query\": \"macbook pro\", \"type\": \"posts\", \"limit\": 5 } }"
+      }
+    ]
+  }
 }
 ```
 

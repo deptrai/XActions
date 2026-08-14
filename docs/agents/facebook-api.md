@@ -15,7 +15,7 @@ Lấy token qua `POST /api/auth/register` hoặc `POST /api/auth/login`.
 
 ## Cookie Facebook
 
-Facebook xác thực bằng cặp cookie `c_user` + `xs`. API hỗ trợ 3 cách cung cấp session:
+Facebook xác thực bằng cặp cookie `c_user` + `xs`. API hỗ trợ 4 cách cung cấp session:
 
 1. **Raw cookie** trực tiếp: `authCookie: { c_user, xs, datr?, ... }`
 2. **Stored account** trong DB: `authCookie: { accountId }`
@@ -222,7 +222,7 @@ Tự động hóa Facebook với `dryRun` mặc định `true`.
 | `cancel-friend-requests` | — | Hủy lời mời đã gửi. `olderThanDays`, `limit` tùy chọn |
 | `warmup-account` | — | Scroll newsfeed tự nhiên. `durationSeconds`, `allowReactions`, `reactProbability` |
 | `warmup-scroll-feed` | `targetUrl` | Scroll một feed/page cụ thể. `durationSeconds` |
-| `schedule` | `text`, `scheduledAt`, `facebookAccountId` | Lên lịch post (DB-only, không launch browser) |
+| `schedule` | `text`, `scheduledAt` | Lên lịch post (DB-only, không launch browser). `facebookAccountId` tùy chọn |
 
 **Lưu ý:**
 - `dryRun` mặc định `true`. Chỉ khi `dryRun: false` mới thực sự ghi dữ liệu.
@@ -287,8 +287,8 @@ Tất cả endpoint trả về format nhất quán:
 | `requires url/query` | Thiếu tham số bắt buộc | Bổ sung `url` hoặc `query` |
 | `No active Facebook account found` | Không có stored account active | Thêm account hoặc cung cấp raw cookie |
 | `Facebook scrape/automate failed` | Lỗi runtime | Xem server log |
-| `session expired or invalid` | Cookie hết hạn | Trích xuất cookie mới |
-| `security check detected` | Checkpoint/CAPTCHA | Giải thủ công, đổi cookie |
+| `Facebook cookie authentication failed` (log server) | Cookie hết hạn hoặc không hợp lệ | Trích xuất cookie mới |
+| `checkpoint` / `security check` (log server) | Facebook CAPTCHA/checkpoint | Giải thủ công, đổi cookie |
 
 ---
 
