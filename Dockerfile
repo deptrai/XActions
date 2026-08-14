@@ -9,6 +9,13 @@ FROM node:20-slim AS deps
 
 WORKDIR /app
 
+# Install build tools for native modules (better-sqlite3 needs Python + make + g++)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy package files
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
