@@ -4,7 +4,7 @@ baseline_commit: c863ab28b4af3d5eb2681ce2f975e325858aaeb2
 
 # Story 8.3: Standardize JWT Token Key (`id` vs `userId`)
 
-Status: review
+Status: done
 
 ## Story
 
