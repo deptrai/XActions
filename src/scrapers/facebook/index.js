@@ -300,6 +300,175 @@ export function normalizeProfile(raw, inputHandle) {
   };
 }
 
+// ============================================================================
+// Comments & Group Content Normalizers (pure — testable without Puppeteer)
+// ============================================================================
+
+/**
+ * Parse a human-readable like/comment count (e.g. "1.2K", "3M", "1,234") to a number.
+ * Returns null for unparseable or empty values.
+ * @param {any} input
+ * @returns {number|null}
+ */
+function parseEngagementCount(input) {
+  if (input == null) return null;
+  if (typeof input === 'number' && Number.isFinite(input)) return input;
+  const str = String(input).trim();
+  if (!str) return null;
+  const m = str.match(/^([\d,.]+)\s*([KkMmBb])?$/);
+  if (!m) return null;
+  let value = parseFloat(m[1].replace(/,/g, ''));
+  if (Number.isNaN(value)) return null;
+  const suffix = m[2]?.toUpperCase();
+  if (suffix === 'K') value *= 1_000;
+  if (suffix === 'M') value *= 1_000_000;
+  if (suffix === 'B') value *= 1_000_000_000;
+  return Math.floor(value);
+}
+
+/**
+ * Normalize a raw comment from hydration JSON or DOM.
+ * NFR-11: PII is stripped from all text and author fields.
+ *
+ * @param {Object} raw
+ * @param {string|null} [fallbackParentId] - Parent comment id for nested replies
+ * @returns {{ id, authorName, authorUrl, text, timestamp, likes, parentId, replies?: Array }}
+ */
+export function normalizeComment(raw, fallbackParentId = null) {
+  const {
+    id,
+    comment_id,
+    legacy_fbid,
+    text,
+    message,
+    body,
+    renderedText,
+    message_text,
+    messageText,
+    author,
+    actor,
+    author_name,
+    authorName,
+    name,
+    url,
+    authorUrl,
+    profileUrl,
+    timestamp,
+    published_time,
+    publishedTime,
+    created_time,
+    createdTime,
+    likes,
+    like_count,
+    likeCount,
+    reaction_count,
+    reactionCount,
+    reactions,
+    replies,
+    comment_replies,
+    reply_count,
+    replyCount,
+    childComments,
+    parentId,
+    parent_comment_id,
+    parentCommentId,
+    parent_comment,
+  } = raw || {};
+
+  const resolvedText =
+    text ||
+    message ||
+    body ||
+    renderedText ||
+    message_text ||
+    messageText ||
+    null;
+
+  const resolvedAuthorName =
+    authorName ||
+    author_name ||
+    (typeof author === 'string' ? author : author?.name) ||
+    (typeof actor === 'string' ? actor : actor?.name) ||
+    name ||
+    null;
+
+  const resolvedAuthorUrl =
+    authorUrl ||
+    url ||
+    profileUrl ||
+    author?.url ||
+    author?.profileUrl ||
+    actor?.url ||
+    actor?.profileUrl ||
+    null;
+
+  const resolvedTimestamp =
+    timestamp ||
+    published_time ||
+    publishedTime ||
+    created_time ||
+    createdTime ||
+    null;
+
+  const resolvedId =
+    id ||
+    comment_id ||
+    legacy_fbid ||
+    resolvedAuthorUrl ||
+    resolvedText?.slice(0, 60) ||
+    null;
+
+  const resolvedLikes =
+    likes ??
+    like_count ??
+    likeCount ??
+    reaction_count ??
+    reactionCount ??
+    (reactions && typeof reactions === 'object'
+      ? Object.values(reactions).reduce((sum, v) => sum + (typeof v === 'number' ? v : parseEngagementCount(v) || 0), 0)
+      : null) ??
+    0;
+
+  const resolvedParentId =
+    parentId ??
+    parentCommentId ??
+    parent_comment_id ??
+    parent_comment?.id ??
+    fallbackParentId ??
+    null;
+
+  const result = {
+    id: resolvedId,
+    authorName: stripPii(resolvedAuthorName),
+    authorUrl: resolvedAuthorUrl,
+    text: stripPii(resolvedText),
+    timestamp: resolvedTimestamp,
+    likes: parseEngagementCount(resolvedLikes) ?? 0,
+    parentId: resolvedParentId,
+  };
+
+  const rawReplies = replies || comment_replies || childComments;
+  if (Array.isArray(rawReplies) && rawReplies.length > 0) {
+    const nested = rawReplies
+      .map((reply) => normalizeComment(reply, result.id))
+      .filter((r) => r && (r.id || r.text));
+    if (nested.length > 0) {
+      result.replies = nested;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Normalize a raw group post. Reuses the standard post shape.
+ * @param {Object} raw
+ * @returns {Object}
+ */
+export function normalizeGroupPost(raw) {
+  return normalizePost({ ...raw, postUrl: raw?.postUrl || raw?.url });
+}
+
 /**
  * Login to Facebook using c_user and xs cookies
  * @param {Page} page - Puppeteer page instance
@@ -906,6 +1075,415 @@ export async function scrapeTweets(page, username, options = {}) {
   }
 
   return Array.from(posts.values()).slice(0, limit);
+}
+
+// ============================================================================
+// Comments & Group Content Scraper (Story 7.3 — FR-58, FR-59, FR-60)
+// ============================================================================
+
+/**
+ * Best-effort DOM fallback for post comments.
+ * Returns raw comment-shaped objects that normalizeComment can process.
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string[]} _typenames - Passed by extractHydrationJson; ignored
+ * @returns {Promise<Array>}
+ */
+async function extractCommentsFromDom(page, _typenames) {
+  return page.evaluate((nonProfile) => {
+    const NON_PROFILE = new Set(nonProfile);
+
+    const allArticles = Array.from(document.querySelectorAll('[role="article"]'));
+
+    // On a post permalink page, the main post is usually the first [role="article"]
+    // that contains a post permalink link.
+    const postArticle = allArticles.find((a) =>
+      a.querySelector('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]')
+    );
+
+    const commentArticles = allArticles.filter((a) => a !== postArticle);
+
+    return commentArticles.map((article) => {
+      const textEls = article.querySelectorAll('[dir="auto"]');
+      const texts = Array.from(textEls)
+        .map((el) => (el.innerText || el.textContent || '').trim())
+        .filter(Boolean);
+
+      const text = texts.reduce((best, t) => {
+        if (!best) return t;
+        const bestSpaces = (best.match(/\s+/g) || []).length;
+        const tSpaces = (t.match(/\s+/g) || []).length;
+        return tSpaces > bestSpaces ? t : best;
+      }, null);
+
+      const links = Array.from(article.querySelectorAll('a[href]'));
+      let author = null;
+      let authorUrl = null;
+      for (const a of links) {
+        const href = a.getAttribute('href') || '';
+        if (href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid')) continue;
+        if (href.includes('l.php') || href.includes('/l/')) continue;
+        const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+        try {
+          const u = new URL(abs);
+          if (!u.hostname.toLowerCase().endsWith('facebook.com')) continue;
+          const parts = u.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+          if (parts.length === 0) continue;
+          if (NON_PROFILE.has(parts[0].toLowerCase())) continue;
+          author = (a.textContent || '').trim() || null;
+          authorUrl = abs.split('?')[0];
+          break;
+        } catch {
+          // ignore malformed URLs
+        }
+      }
+
+      const timeEl = article.querySelector('abbr, [aria-label*="ago"], [aria-label*="at"], time');
+      const timestamp = timeEl?.textContent?.trim() || timeEl?.getAttribute('aria-label') || null;
+
+      const allText = article.textContent || '';
+      const likesMatch = allText.match(/([\d,.]+[KkMm]?)\s*(like|reaction)/i);
+      const likes = likesMatch ? likesMatch[1] : '0';
+
+      return { text, author, authorUrl, timestamp, likes, replies: [] };
+    }).filter((c) => c.text || c.author);
+  }, NON_PROFILE_SEGMENTS);
+}
+
+/**
+ * Best-effort DOM fallback for group posts on mobile.
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string[]} _typenames - Passed by extractHydrationJson; ignored
+ * @returns {Promise<Array>}
+ */
+async function extractGroupPostsFromDom(page, _typenames) {
+  return page.evaluate(() => {
+    const UI_TEXT_RE = /^(like|comment|share|send|follow|see more|see translation|write a public comment…)$/i;
+    const allElements = document.querySelectorAll('div.m.displayed');
+
+    return Array.from(allElements).map((post) => {
+      if (post.querySelector('[aria-label="Loading"]')) return null;
+
+      const fullText = post.innerText?.trim() || '';
+      if (fullText.length < 20) return null;
+
+      // Mobile: filter for real posts (have date patterns like "Jul 16", "2h", "3d")
+      if (!/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+|\d+\s*(min|h|hour|day|week)s?\s*ago/i.test(fullText)) {
+        return null;
+      }
+
+      // Clean up text: remove trailing action buttons
+      let text = fullText
+        .replace(/\n(Like|Comment|Share|Send|Follow|See more|See translation|Write a public comment…)\s*$/i, '')
+        .replace(/\n(Like|Comment|Share|Send|Follow|See more|See translation|Write a public comment…)\n.*$/i, '')
+        .trim();
+      text = text.substring(0, 1000);
+
+      // Timestamp - mobile uses abbr with text like "Jul 16"
+      const timeEl = post.querySelector('abbr, [aria-label*="ago"], [aria-label*="at"], time');
+      const timestamp = timeEl?.textContent?.trim() || timeEl?.getAttribute('aria-label') || null;
+
+      // Post URL - look in parent/sibling for mobile since links may be outside the div
+      let linkEls = post.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]');
+      if (linkEls.length === 0) {
+        const parent = post.parentElement;
+        if (parent) linkEls = parent.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="story_fbid"]');
+      }
+      const postLink = linkEls[0]?.getAttribute('href') || null;
+      const postUrl = postLink
+        ? postLink.startsWith('http') ? postLink : `https://www.facebook.com${postLink}`
+        : null;
+
+      // Engagement
+      const allPostText = post.textContent || '';
+      const likesMatch = allPostText.match(/([\d,.]+[KkMm]?)\s*(like|reaction)/i);
+      const commentsMatch = allPostText.match(/([\d,.]+[KkMm]?)\s*comment/i);
+      const likes = likesMatch ? likesMatch[1] : '0';
+      const comments = commentsMatch ? commentsMatch[1] : '0';
+
+      // Media
+      const images = Array.from(post.querySelectorAll('img'))
+        .map((img) => img.src)
+        .filter((src) => src && !src.includes('static') && !src.includes('emoji') && !src.includes('sprite') && src.startsWith('http'));
+      const hasVideo = !!post.querySelector('video');
+
+      const id = postUrl || text?.slice(0, 80) || null;
+
+      return { id, text, timestamp, likes, comments, postUrl, images, hasVideo };
+    }).filter((p) => p && p.id);
+  });
+}
+
+/**
+ * Click "All comments" sort option if the sort control is present.
+ * Runs inside page.evaluate and swallows errors so a missing sort UI doesn't block scraping.
+ *
+ * @param {import('puppeteer').Page} page
+ */
+async function clickAllCommentsSort(page) {
+  try {
+    await page.evaluate(() => {
+      const sortBtn = Array.from(document.querySelectorAll('[role="button"], button, a, div, span'))
+        .find((el) => /Most relevant|Sort by|Sort comments|Top comments/i.test(el.textContent || el.getAttribute('aria-label') || ''));
+      if (sortBtn) sortBtn.click();
+
+      const allComments = Array.from(document.querySelectorAll('[role="menuitem"], [role="option"], a, button, div, span'))
+        .find((el) => /All comments/i.test(el.textContent || el.getAttribute('aria-label') || ''));
+      if (allComments) allComments.click();
+    });
+  } catch {
+    // Sort controls are optional; do not fail if they are absent.
+  }
+}
+
+/**
+ * Click "View more comments" / "X replies" expanders to reveal hidden comments.
+ *
+ * @param {import('puppeteer').Page} page
+ */
+async function clickCommentExpanders(page) {
+  try {
+    await page.evaluate(() => {
+      const expanders = Array.from(document.querySelectorAll('a, button, div[role="button"], span[role="button"]'))
+        .filter((el) => /View more comments|\d+\s*(more\s+)?replies?/i.test(el.textContent || el.getAttribute('aria-label') || ''));
+      for (const el of expanders) {
+        try { el.click(); } catch { /* ignore stale/clickable errors */ }
+      }
+    });
+  } catch {
+    // Expander controls are optional; do not fail if they are absent.
+  }
+}
+
+/**
+ * Detect whether the current page indicates unavailable/restricted content.
+ *
+ * @param {import('puppeteer').Page} page
+ * @returns {Promise<boolean>}
+ */
+async function isContentUnavailable(page) {
+  if (typeof page.evaluate !== 'function') return false;
+  try {
+    return await page.evaluate(() => {
+      if (typeof document === 'undefined' || !document.body) return false;
+      const text = (document.body.innerText || document.body.textContent || '').toLowerCase();
+      return (
+        text.includes("this content isn't available") ||
+        text.includes('this page is unavailable') ||
+        text.includes('this content is currently unavailable') ||
+        text.includes('comments have been turned off') ||
+        text.includes('comments are turned off')
+      );
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Scrape comments from a Facebook post (FR-58).
+ * READ-ONLY scrape — NOT routed through runGuardedBatch.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} postUrl - facebook.com post URL
+ * @param {Object} [options]
+ * @param {number} [options.limit=50] - Max comments to collect
+ * @param {boolean} [options.includeReplies=false] - Include nested replies
+ * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
+ * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
+ * @param {Function} [options.delay=randomDelay] - Injectable delay seam
+ * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
+ * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ */
+export async function scrapeFacebookComments(page, postUrl, options = {}) {
+  const {
+    limit = 50,
+    includeReplies = false,
+    maxRetries = 8,
+    maxScrolls = 50,
+    delay = randomDelay,
+    onProgress,
+  } = options;
+
+  // AC2: URL validation before any navigation (SSRF guard).
+  assertFacebookUrlLocal(postUrl, 'scrapeFacebookComments: postUrl');
+
+  await page.goto(postUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await assertNoCheckpoint(page, 'post comments');
+  await delay(2000, 4000);
+
+  // AC4: Switch comment sort to "All comments" if the sort UI is present.
+  await clickAllCommentsSort(page);
+  await delay(1000, 2000);
+
+  if (await isContentUnavailable(page)) {
+    return {
+      note: 'Facebook comments are not accessible. The post may be restricted, comments may be disabled, or the content is unavailable.',
+      platform: 'facebook',
+    };
+  }
+
+  // AC5: Bounded scroll loop — empty-scroll detection + limit cap.
+  const comments = new Map(); // keyed by id for deduplication
+  let retries = 0;
+  let scrolls = 0;
+
+  while (comments.size < limit && retries < maxRetries && scrolls < maxScrolls) {
+    const prevSize = comments.size;
+
+    // Click "View more comments" / "X replies" expanders to reveal hidden threads.
+    await clickCommentExpanders(page);
+    await delay(500, 1500);
+
+    const hydrated = await extractHydrationJson(page, ['Comment'], {
+      limit: limit - comments.size,
+      fallbackExtractor: extractCommentsFromDom,
+    });
+
+    for (const raw of hydrated) {
+      const normalized = normalizeComment(raw);
+      if (!normalized || !normalized.id) continue;
+
+      const output = includeReplies
+        ? normalized
+        : (() => { const { replies, ...rest } = normalized; return rest; })();
+
+      comments.set(normalized.id, output);
+    }
+
+    if (onProgress) onProgress({ scraped: comments.size, limit });
+
+    if (comments.size === prevSize) {
+      retries++;
+    } else {
+      retries = 0;
+    }
+
+    // Stop immediately once the limit is reached — no wasted scroll + delay.
+    if (comments.size >= limit) break;
+
+    await assertNoCheckpoint(page, 'post comments');
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await delay(1500, 3000);
+    scrolls++;
+  }
+
+  return Array.from(comments.values()).slice(0, limit);
+}
+
+/**
+ * Scrape posts from a Facebook group (FR-59).
+ * READ-ONLY scrape — NOT routed through runGuardedBatch.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} groupUrl - facebook.com/groups/ URL
+ * @param {Object} [options]
+ * @param {number} [options.limit=100] - Max posts to collect
+ * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
+ * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
+ * @param {Function} [options.delay=randomDelay] - Injectable delay seam
+ * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
+ * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ */
+export async function scrapeFacebookGroupPosts(page, groupUrl, options = {}) {
+  const {
+    limit = 100,
+    maxRetries = 8,
+    maxScrolls = 50,
+    delay = randomDelay,
+    onProgress,
+  } = options;
+
+  // AC2: URL validation before navigation.
+  assertFacebookUrlLocal(groupUrl, 'scrapeFacebookGroupPosts: groupUrl');
+
+  if (!/facebook\.com\/groups\//i.test(groupUrl)) {
+    throw new Error('❌ scrapeFacebookGroupPosts requires a facebook.com/groups/ URL');
+  }
+
+  // AC3: Mobile UA and viewport before navigation.
+  await page.setUserAgent(
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1'
+  );
+  await page.setViewport({ width: 390, height: 844, isMobile: true });
+
+  // Groups often redirect to m.facebook.com; force mobile host up front.
+  const mobileUrl = groupUrl.replace(/^https?:\/\/(www\.)?facebook\.com/, 'https://m.facebook.com');
+
+  await page.goto(mobileUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await assertNoCheckpoint(page, 'group posts');
+  await delay(2000, 4000);
+
+  // Detect whether the group feed is accessible.
+  let containerFound = false;
+  try {
+    await page.waitForSelector('div.m.displayed, [role="article"]', { timeout: 8000 });
+    containerFound = true;
+  } catch (_) {
+    // Feed not accessible → restricted or login required.
+  }
+
+  if (!containerFound) {
+    return {
+      note: 'Facebook group posts are not accessible. The group may be private, membership may be required, or the group content is restricted.',
+      platform: 'facebook',
+    };
+  }
+
+  // AC8: Bounded scroll loop with deduplication.
+  const posts = new Map(); // keyed by id for deduplication
+  let retries = 0;
+  let scrolls = 0;
+
+  while (posts.size < limit && retries < maxRetries && scrolls < maxScrolls) {
+    const prevSize = posts.size;
+
+    const hydrated = await extractHydrationJson(page, ['Story'], {
+      limit: limit - posts.size,
+      fallbackExtractor: extractGroupPostsFromDom,
+    });
+
+    for (const raw of hydrated) {
+      const normalized = normalizeGroupPost(raw);
+      if (!normalized || !normalized.id) continue;
+      posts.set(normalized.id, normalized);
+    }
+
+    if (onProgress) onProgress({ scraped: posts.size, limit });
+
+    if (posts.size === prevSize) {
+      retries++;
+    } else {
+      retries = 0;
+    }
+
+    // Stop immediately once the limit is reached.
+    if (posts.size >= limit) break;
+
+    await assertNoCheckpoint(page, 'group posts');
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await delay(1500, 3000);
+    scrolls++;
+  }
+
+  return Array.from(posts.values()).slice(0, limit);
+}
+
+/**
+ * Scrape comments from a post inside a Facebook group (FR-60).
+ * Thin wrapper around scrapeFacebookComments; no duplicated extraction logic.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} groupPostUrl - facebook.com/groups/ post URL
+ * @param {Object} [options]
+ * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ */
+export async function scrapeFacebookGroupComments(page, groupPostUrl, options = {}) {
+  if (typeof groupPostUrl !== 'string' || !groupPostUrl.includes('/groups/')) {
+    throw new Error('❌ scrapeFacebookGroupComments requires a facebook.com/groups/ post URL');
+  }
+  return scrapeFacebookComments(page, groupPostUrl, options);
 }
 
 // ============================================================================
@@ -1850,4 +2428,7 @@ export default {
   searchFacebook,
   scrapeGroupMembers,
   scrapeMarketplace,
+  scrapeFacebookComments,
+  scrapeFacebookGroupPosts,
+  scrapeFacebookGroupComments,
 };

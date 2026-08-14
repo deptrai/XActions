@@ -4,11 +4,12 @@
 baseline_commit: 715aa942e6d84d78ae4ea38d92dbd95aa27a9bb8
 ---
 
-Status: ready-for-dev
+Status: review
 
 ## Change Log
 
 - 2026-08-14: Story created from Epic 7 architecture and 7.2 learnings.
+- 2026-08-14: Implemented scrapers (`scrapeFacebookComments`, `scrapeFacebookGroupPosts`, `scrapeFacebookGroupComments`), normalizers, DOM fallback helpers, API route wiring, and tests.
 
 ## Story
 
@@ -107,72 +108,95 @@ so that I can analyze engagement, sentiment, and community activity at scale.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Implement `scrapeFacebookComments` (AC1, AC5)**
-  - [ ] Add `scrapeFacebookComments(page, postUrl, options = {})` to `src/scrapers/facebook/index.js`.
-  - [ ] Validate `postUrl` with `assertFacebookUrlLocal` and normalize it if needed.
-  - [ ] Navigate to the post; call `assertNoCheckpoint`.
-  - [ ] Switch comment sort to "All comments" when the sort control is present.
-  - [ ] Implement bounded scroll loop (`limit`, `maxRetries`, `maxScrolls`, `delay`).
-  - [ ] Extract primary data with `extractHydrationJson(page, ['Comment'], { fallbackExtractor, limit })`.
-  - [ ] Implement `extractCommentsFromDom(page)` fallback.
-  - [ ] Click "View more comments" / "X replies" expanders during scroll.
-  - [ ] Normalize each comment to `{ id, authorName, authorUrl, text, timestamp, likes, replies[], parentId }` using `normalizeComment`.
-  - [ ] Populate `replies[]` and `parentId` only when `includeReplies === true`.
-  - [ ] Return `{ note, platform: 'facebook' }` for restricted posts/comments.
+- [x] **Task 1: Implement `scrapeFacebookComments` (AC1, AC5)**
+  - [x] Add `scrapeFacebookComments(page, postUrl, options = {})` to `src/scrapers/facebook/index.js`.
+  - [x] Validate `postUrl` with `assertFacebookUrlLocal` and normalize it if needed.
+  - [x] Navigate to the post; call `assertNoCheckpoint`.
+  - [x] Switch comment sort to "All comments" when the sort control is present.
+  - [x] Implement bounded scroll loop (`limit`, `maxRetries`, `maxScrolls`, `delay`).
+  - [x] Extract primary data with `extractHydrationJson(page, ['Comment'], { fallbackExtractor, limit })`.
+  - [x] Implement `extractCommentsFromDom(page)` fallback.
+  - [x] Click "View more comments" / "X replies" expanders during scroll.
+  - [x] Normalize each comment to `{ id, authorName, authorUrl, text, timestamp, likes, replies[], parentId }` using `normalizeComment`.
+  - [x] Populate `replies[]` and `parentId` only when `includeReplies === true`.
+  - [x] Return `{ note, platform: 'facebook' }` for restricted posts/comments.
 
-- [ ] **Task 2: Implement `scrapeFacebookGroupPosts` (AC2, AC5)**
-  - [ ] Add `scrapeFacebookGroupPosts(page, groupUrl, options = {})` to `src/scrapers/facebook/index.js`.
-  - [ ] Validate `groupUrl` with `assertFacebookUrlLocal`; ensure it contains `/groups/`.
-  - [ ] Set mobile UA and viewport (`390x844`, `isMobile: true`) before `page.goto`.
-  - [ ] Navigate to the group (handle `m.facebook.com` redirect/login fallback).
-  - [ ] Implement bounded scroll loop with `1–3s` delay and `maxScrolls: 50`.
-  - [ ] Extract primary data with `extractHydrationJson(page, ['Story'], { fallbackExtractor, limit })`.
-  - [ ] Implement `extractGroupPostsFromDom(page)` fallback.
-  - [ ] Normalize each post with `normalizeGroupPost` to the `scrapeTweets` shape.
-  - [ ] Return `{ note, platform: 'facebook' }` for private/restricted groups.
+- [x] **Task 2: Implement `scrapeFacebookGroupPosts` (AC2, AC5)**
+  - [x] Add `scrapeFacebookGroupPosts(page, groupUrl, options = {})` to `src/scrapers/facebook/index.js`.
+  - [x] Validate `groupUrl` with `assertFacebookUrlLocal`; ensure it contains `/groups/`.
+  - [x] Set mobile UA and viewport (`390x844`, `isMobile: true`) before `page.goto`.
+  - [x] Navigate to the group (handle `m.facebook.com` redirect/login fallback).
+  - [x] Implement bounded scroll loop with `1–3s` delay and `maxScrolls: 50`.
+  - [x] Extract primary data with `extractHydrationJson(page, ['Story'], { fallbackExtractor, limit })`.
+  - [x] Implement `extractGroupPostsFromDom(page)` fallback.
+  - [x] Normalize each post with `normalizeGroupPost` to the `scrapeTweets` shape.
+  - [x] Return `{ note, platform: 'facebook' }` for private/restricted groups.
 
-- [ ] **Task 3: Implement `scrapeFacebookGroupComments` (AC3, AC5)**
-  - [ ] Add `scrapeFacebookGroupComments(page, groupPostUrl, options = {})` to `src/scrapers/facebook/index.js`.
-  - [ ] Verify `groupPostUrl` contains `facebook.com/groups/`.
-  - [ ] Call `scrapeFacebookComments(page, groupPostUrl, options)` and return its result.
-  - [ ] No duplicated extraction logic.
+- [x] **Task 3: Implement `scrapeFacebookGroupComments` (AC3, AC5)**
+  - [x] Add `scrapeFacebookGroupComments(page, groupPostUrl, options = {})` to `src/scrapers/facebook/index.js`.
+  - [x] Verify `groupPostUrl` contains `facebook.com/groups/`.
+  - [x] Call `scrapeFacebookComments(page, groupPostUrl, options)` and return its result.
+  - [x] No duplicated extraction logic.
 
-- [ ] **Task 4: Add normalizers and DOM fallback helpers (AC1, AC2, AC5)**
-  - [ ] Add `normalizeComment(raw)` in `src/scrapers/facebook/index.js`.
-  - [ ] Add `normalizeGroupPost(raw)` in `src/scrapers/facebook/index.js`; reuse the existing `normalizePost` shape and only add group-specific fields if needed.
-  - [ ] Add private helpers `extractCommentsFromDom(page)` and `extractGroupPostsFromDom(page)`.
-  - [ ] Apply `stripPii` to all text and author fields.
+- [x] **Task 4: Add normalizers and DOM fallback helpers (AC1, AC2, AC5)**
+  - [x] Add `normalizeComment(raw)` in `src/scrapers/facebook/index.js`.
+  - [x] Add `normalizeGroupPost(raw)` in `src/scrapers/facebook/index.js`; reuse the existing `normalizePost` shape and only add group-specific fields if needed.
+  - [x] Add private helpers `extractCommentsFromDom(page)` and `extractGroupPostsFromDom(page)`.
+  - [x] Apply `stripPii` to all text and author fields.
 
-- [ ] **Task 5: Update default export (AC1, AC2, AC3)**
-  - [ ] Add the three new functions to the default export object in `src/scrapers/facebook/index.js`.
+- [x] **Task 5: Update default export (AC1, AC2, AC3)**
+  - [x] Add the three new functions to the default export object in `src/scrapers/facebook/index.js`.
 
-- [ ] **Task 6: Update API route (AC4)**
-  - [ ] Add `post_comments`, `group_posts`, `group_comments` to `VALID_ACTIONS` in `api/routes/facebook.js`.
-  - [ ] Validate `url` is present for these actions.
-  - [ ] Validate `limit` is a positive integer when present.
-  - [ ] Validate `includeReplies` is a boolean for `post_comments` and `group_comments`.
-  - [ ] Forward `url`, `limit`, and `includeReplies` in `scrapeArgs`.
+- [x] **Task 6: Update API route (AC4)**
+  - [x] Add `post_comments`, `group_posts`, `group_comments` to `VALID_ACTIONS` in `api/routes/facebook.js`.
+  - [x] Validate `url` is present for these actions.
+  - [x] Validate `limit` is a positive integer when present.
+  - [x] Validate `includeReplies` is a boolean for `post_comments` and `group_comments`.
+  - [x] Forward `url`, `limit`, and `includeReplies` in `scrapeArgs`.
 
-- [ ] **Task 7: Tests (all ACs)**
-  - [ ] Create `tests/scrapers/facebook-comments.test.js`:
-    - [ ] Unit tests for `normalizeComment` with hydration and DOM fields.
-    - [ ] `scrapeFacebookComments` with fake `page` for successful extraction.
-    - [ ] Sort-switch, scroll, expander, and limit behavior.
-    - [ ] `includeReplies: true/false` shape.
-    - [ ] Restricted post returns `{ note, platform }`.
-    - [ ] Invalid `postUrl` throws.
-    - [ ] DOM fallback path.
-  - [ ] Create `tests/scrapers/facebook-group-posts.test.js`:
-    - [ ] Unit tests for `normalizeGroupPost`.
-    - [ ] Mobile UA and viewport (`{ width: 390, height: 844, isMobile: true }`) are set before `goto`.
-    - [ ] Group post extraction and `note` for restricted groups.
-    - [ ] Invalid `groupUrl` throws.
-  - [ ] Create `tests/scrapers/facebook-group-comments.test.js` or extend `facebook-comments.test.js`:
-    - [ ] `scrapeFacebookGroupComments` delegates to `scrapeFacebookComments`.
-    - [ ] Rejects non-group URLs.
-    - [ ] Same output shape as post comments.
-  - [ ] Update or create `tests/api/facebook-scrape.test.js` for route-level `post_comments`, `group_posts`, `group_comments` validation.
-  - [ ] Run targeted vitest and relevant integration tests.
+- [x] **Task 7: Tests (all ACs)**
+  - [x] Create `tests/scrapers/facebook-comments.test.js`:
+    - [x] Unit tests for `normalizeComment` with hydration and DOM fields.
+    - [x] `scrapeFacebookComments` with fake `page` for successful extraction.
+    - [x] Sort-switch, scroll, expander, and limit behavior.
+    - [x] `includeReplies: true/false` shape.
+    - [x] Restricted post returns `{ note, platform }`.
+    - [x] Invalid `postUrl` throws.
+    - [x] DOM fallback path.
+  - [x] Create `tests/scrapers/facebook-group-posts.test.js`:
+    - [x] Unit tests for `normalizeGroupPost`.
+    - [x] Mobile UA and viewport (`{ width: 390, height: 844, isMobile: true }`) are set before `goto`.
+    - [x] Group post extraction and `note` for restricted groups.
+    - [x] Invalid `groupUrl` throws.
+  - [x] Create `tests/scrapers/facebook-group-comments.test.js` or extend `facebook-comments.test.js`:
+    - [x] `scrapeFacebookGroupComments` delegates to `scrapeFacebookComments`.
+    - [x] Rejects non-group URLs.
+    - [x] Same output shape as post comments.
+  - [x] Update or create `tests/api/facebook-scrape.test.js` for route-level `post_comments`, `group_posts`, `group_comments` validation.
+  - [x] Run targeted vitest and relevant integration tests.
+
+## Dev Agent Record
+
+### Debug Log
+- 2026-08-14: `normalizeComment` initially did not set `parentId` for nested replies. Added optional `fallbackParentId` parameter and passed the parent `id` when recursing.
+- 2026-08-14: `api/routes/facebook.js` eagerly constructed `searchArgs` with `query.trim()`, which threw for non-search actions. Replaced with conditional inline construction so `query.trim()` is only evaluated for `search` or `marketplace`.
+
+### Completion Notes
+- Implemented `scrapeFacebookComments`, `scrapeFacebookGroupPosts`, `scrapeFacebookGroupComments`, `normalizeComment`, `normalizeGroupPost`, `extractCommentsFromDom`, and `extractGroupPostsFromDom` in `src/scrapers/facebook/index.js`.
+- Wired `post_comments`, `group_posts`, and `group_comments` into `api/routes/facebook.js` with `url`, `limit`, and `includeReplies` validation.
+- Added `scrapeFacebookComments`, `scrapeFacebookGroupPosts`, and `scrapeFacebookGroupComments` to the default export.
+- Created unit/integration tests: `tests/scrapers/facebook-comments.test.js`, `tests/scrapers/facebook-group-posts.test.js`, `tests/scrapers/facebook-group-comments.test.js`, and `tests/api/facebook-scrape.test.js`.
+- Ran `npx vitest run tests/scrapers/facebook*.test.js tests/api/facebook*.test.js` — 24 files passed, 1 skipped (986 passed / 14 skipped).
+
+## File List
+
+- Modified: `src/scrapers/facebook/index.js`
+- Modified: `api/routes/facebook.js`
+- Created: `tests/scrapers/facebook-comments.test.js`
+- Created: `tests/scrapers/facebook-group-posts.test.js`
+- Created: `tests/scrapers/facebook-group-comments.test.js`
+- Created: `tests/api/facebook-scrape.test.js`
+- Modified: `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Dev Notes
 

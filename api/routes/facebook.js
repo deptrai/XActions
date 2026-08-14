@@ -188,13 +188,14 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
  * Scrape Facebook data: profile, posts, followers, search, or marketplace.
  *
  * Body: {
- *   action: 'profile' | 'posts' | 'followers' | 'search' | 'marketplace',
- *   url?: string,       // required for profile/posts/followers
+ *   action: 'profile' | 'posts' | 'followers' | 'search' | 'marketplace' | 'post_comments' | 'group_posts' | 'group_comments',
+ *   url?: string,       // required for profile/posts/followers/post_comments/group_posts/group_comments
  *   query?: string,     // required for search / marketplace
  *   type?: 'posts' | 'people' | 'pages' | 'groups' | 'all', // search only
  *   parallel?: boolean, // search only, accepted and ignored in Story 7.2
  *   location?: string,  // search only
- *   limit?: number,     // search only
+ *   limit?: number,     // positive integer
+ *   includeReplies?: boolean, // post_comments/group_comments only
  *   authCookie?: { c_user, xs } | { accountId: string }, // optional; auto-picks active stored account if omitted
  *   accountIds?: string[],                                 // optional; uses first for single-page scrape
  *   browserOptions?: { proxy, proxyAuth, proxyLocation, headless, skipWarmup }
@@ -202,9 +203,9 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
  */
 router.post('/scrape', async (req, res) => {
   try {
-    const { action, url, query, type, parallel, location, limit, authCookie, browserOptions } = req.body ?? {};
+    const { action, url, query, type, parallel, location, limit, includeReplies, authCookie, browserOptions } = req.body ?? {};
 
-    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace'];
+    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace', 'post_comments', 'group_posts', 'group_comments'];
     if (!action || !VALID_ACTIONS.includes(action)) {
       return res.status(400).json({
         ok: false,
@@ -212,7 +213,7 @@ router.post('/scrape', async (req, res) => {
       });
     }
 
-    if (['profile', 'posts', 'followers', 'group-members'].includes(action) && !url?.trim()) {
+    if (['profile', 'posts', 'followers', 'group-members', 'post_comments', 'group_posts', 'group_comments'].includes(action) && !url?.trim()) {
       return res.status(400).json({ ok: false, error: `action "${action}" requires url` });
     }
     if (['search', 'marketplace'].includes(action)) {
@@ -231,14 +232,22 @@ router.post('/scrape', async (req, res) => {
       }
     }
 
-    // Validate search-only optional parameters before launching a browser.
-    if (action === 'search') {
-      if (limit !== undefined && limit !== null) {
-        const n = Number(limit);
-        if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
-          return res.status(400).json({ ok: false, error: 'limit must be a positive integer' });
-        }
+    // Validate optional numeric parameters before launching a browser.
+    if (limit !== undefined && limit !== null) {
+      const n = Number(limit);
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+        return res.status(400).json({ ok: false, error: 'limit must be a positive integer' });
       }
+    }
+
+    // Validate comment-only boolean parameter.
+    if (['post_comments', 'group_comments'].includes(action)) {
+      if (includeReplies !== undefined && includeReplies !== null && typeof includeReplies !== 'boolean') {
+        return res.status(400).json({ ok: false, error: 'includeReplies must be a boolean' });
+      }
+    }
+
+    if (action === 'search') {
       if (location !== undefined && location !== null) {
         if (typeof location !== 'string') {
           return res.status(400).json({ ok: false, error: 'location must be a string' });
@@ -286,21 +295,23 @@ router.post('/scrape', async (req, res) => {
 
     // Dispatcher resolves target from options.url / options.query (NOT options.target).
     // Pass the keys it actually reads, else the target is silently dropped → scrape fails.
-    const searchArgs = {
-      query: query.trim(),
-      ...(type !== undefined && type !== null && { type }),
-      ...(parallel !== undefined && parallel !== null && { parallel }),
-      ...(location !== undefined && location !== null && { location: location.trim() }),
-      ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
-    };
-
     const scrapeArgs = {
       ...options,
       ...(action === 'search'
-        ? searchArgs
+        ? {
+            query: query.trim(),
+            ...(type !== undefined && type !== null && { type }),
+            ...(parallel !== undefined && parallel !== null && { parallel }),
+            ...(location !== undefined && location !== null && { location: location.trim() }),
+            ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
+          }
         : action === 'marketplace'
           ? { query: query.trim() }
           : { url: url.trim() }),
+      ...(limit !== undefined && limit !== null ? { limit: Number(limit) } : {}),
+      ...(['post_comments', 'group_comments'].includes(action) && includeReplies !== undefined && includeReplies !== null
+        ? { includeReplies }
+        : {}),
     };
     const result = await scrape('facebook', action, scrapeArgs);
 
