@@ -82,8 +82,14 @@ export async function extractHydrationJson(page, typenames, options = {}) {
 
   if (results.length === 0 || (limit && results.length < limit)) {
     const fallback = options.fallbackExtractor || genericDomFallback;
-    const fallbackResults = await fallback(page, typenames);
-    return fallbackResults?.length ? [...results, ...fallbackResults] : results;
+    try {
+      const fallbackResults = await fallback(page, typenames);
+      return fallbackResults?.length ? [...results, ...fallbackResults] : results;
+    } catch {
+      // Fallback extractor failed (e.g., page closed, selector changed) —
+      // return hydration results collected so far rather than losing them.
+      return results;
+    }
   }
 
   return results;

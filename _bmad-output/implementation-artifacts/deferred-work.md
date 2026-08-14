@@ -184,3 +184,20 @@ Issue EPS-5 (Deferred work cleanup) triaged all 6 priority items. Items 1, 2, 3,
 - **Very large hydration script có thể gây OOM** [src/scrapers/facebook/hydration.js] — pre-existing. Script tag với 10MB+ JSON có thể cause OOM trong JSON.parse. Add size check (skip scripts > 5MB).
 - **Page closed mid-scroll không có try-catch** [src/scrapers/facebook/index.js:1350,1452,1582] — Puppeteer lifecycle issue. Nếu browser/page closed trong scroll loop, throw "Target closed" không được handle. Không specific cho diff này.
 - **PII test coverage thiếu edge cases** [tests/scrapers/facebook-comments.test.js] — pre-existing test gap. Tests chỉ check basic phone format (555-123-4567), thiếu international formats, emails với subdomains.
+
+## Deferred from: code review of 7-2-multi-type-search (re-review 2026-08-14)
+
+- **Race condition in invalidateHealthCache** [api/routes/facebookAccounts.js:78-84] — deleteMany with catch-all swallow. Pre-existing.
+- **Silent error swallowing in assertNoCheckpoint** [src/scrapers/facebook/index.js:632-634] — pre-existing pattern, consistent with codebase.
+- **Redundant checkpoint detection logic** [src/scrapers/facebook/index.js:612-615] — two implementations in index.js vs facebookAccountPool.js. Pre-existing.
+- **Inconsistent validation patterns** [multiple] — limit validation duplicated across files. Pre-existing.
+- **Missing JSDoc for normalizer functions** [src/scrapers/facebook/index.js:460-580] — code quality.
+- **Missing edge case tests for limit** [tests/scrapers/facebook-search.test.js] — test quality gap.
+- **No test for WeakSet cycle detection** [src/scrapers/facebook/hydration.js:23-36] — test quality gap.
+- **Missing test for checkpoint detection in pool** [api/services/facebookAccountPool.js:203-209] — test quality gap.
+- **AC7.17 DOM fallback not reusing searchTweets** [src/scrapers/facebook/index.js:1909-1981] — uses similar selectors, acceptable.
+- **AC10.24/AC1.29 missing parallel in JSDoc** [api/routes/facebook.js, src/scrapers/facebook/index.js] — documentation gap.
+- **Concurrent userDataDir access** [api/services/facebookAccountPool.js:42-50] — pre-existing pool design.
+- **Race conditions in pool selection** [api/services/facebookAccountPool.js:163-167] — pre-existing pool design.
+- **Mobile viewport not reset after group scrape** [src/scrapers/facebook/index.js:1453] — API creates new page per scrape, not an issue in practice.
+- **Proxy password not validated for length** [src/scrapers/facebook/proxy.js:1021] — pre-existing.

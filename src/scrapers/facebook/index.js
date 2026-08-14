@@ -2137,7 +2137,7 @@ async function searchByType(page, query, type, options = {}) {
 
     const hydrated = await extractHydrationJson(page, SEARCH_TYPENAMES[type], {
       limit,
-      fallbackExtractor: async () => {
+      fallbackExtractor: async (_page, _typenames) => {
         return type === 'posts'
           ? await extractPostsFromDom(page)
           : await extractListItemsFromDom(page, type);

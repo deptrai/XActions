@@ -263,6 +263,9 @@ router.post('/scrape', async (req, res) => {
         if (typeof location !== 'string') {
           return res.status(400).json({ ok: false, error: 'location must be a string' });
         }
+        if (location.length > 200) {
+          return res.status(400).json({ ok: false, error: 'location must be at most 200 characters' });
+        }
       }
       if (parallel !== undefined && parallel !== null && typeof parallel !== 'boolean') {
         return res.status(400).json({ ok: false, error: 'parallel must be a boolean' });

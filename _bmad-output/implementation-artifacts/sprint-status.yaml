@@ -99,7 +99,7 @@ development_status:
   # Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
   epic-7: in-progress
   7-1-foundation-health-pool-hydration-schema: done
-  7-2-multi-type-search: review
+  7-2-multi-type-search: done
   7-3-comments-and-group-content: done
   7-4-api-mcp-surface: backlog
   epic-7-retrospective: optional
