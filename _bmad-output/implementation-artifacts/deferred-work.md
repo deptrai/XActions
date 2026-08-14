@@ -209,3 +209,10 @@ Issue EPS-5 (Deferred work cleanup) triaged all 6 priority items. Items 1, 2, 3,
 - **accountId could list another user's accounts** [src/mcp/server.js:2795-2808] — authorization concern, pre-existing design issue.
 - **No automated smoke test** [spec AC5.21] — manual smoke test documented in completion notes.
 - **Missing test for both userId + authCookie** [tests/mcp/facebook-mcp-account-tools.test.js] — test quality gap.
+
+## Deferred from: code review of 8-1-prismaclient-singleton (2026-08-14)
+
+- **Connection pool tuning not configured** [`api/lib/prisma.js:5`] — `new PrismaClient()` has no explicit `connection_limit` / `pool_timeout`. Valuable for high-concurrency API but out of story scope. — out of scope
+- **DATABASE_URL validation at module load** [`api/lib/prisma.js:5`] — Missing/invalid `DATABASE_URL` will surface on first query, not at import. Out of story scope. — out of scope
+- **MCP/CLI signal handlers don't await `prisma.$disconnect()`** [`src/mcp/server.js:4841-4854`, `src/cli/index.js:2032-2036,3340-3342`] — Pre-existing handlers call `process.exit(0)` before singleton disconnect completes. Requires cross-cutting shutdown design decision. — pre-existing
+- **`api/routes/history.js` implicit `prisma` dependency via `analyticsDashboard.js`** — Pre-existing code smell; route should import the singleton directly. Not introduced by the singleton. — pre-existing

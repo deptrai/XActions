@@ -240,5 +240,3 @@ export async function scheduleTweet(input = {}, options = {}) {
     status: schedule.status,
   };
 }
-
-export { prisma as _prisma };

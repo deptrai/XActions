@@ -4843,14 +4843,26 @@ process.on('SIGINT', async () => {
   if (MODE === 'local' && localTools?.closeBrowser) {
     await localTools.closeBrowser();
   }
-  process.exit(0);
+  try {
+    await prisma.$disconnect();
+  } catch (err) {
+    console.error('❌ Prisma disconnect error:', err.message);
+    process.exitCode = 1;
+  }
+  process.exit(process.exitCode || 0);
 });
 
 process.on('SIGTERM', async () => {
   if (MODE === 'local' && localTools?.closeBrowser) {
     await localTools.closeBrowser();
   }
-  process.exit(0);
+  try {
+    await prisma.$disconnect();
+  } catch (err) {
+    console.error('❌ Prisma disconnect error:', err.message);
+    process.exitCode = 1;
+  }
+  process.exit(process.exitCode || 0);
 });
 
 /**

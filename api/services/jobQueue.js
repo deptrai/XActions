@@ -462,8 +462,9 @@ async function gracefulShutdown(signal) {
     console.log('✅ Graceful shutdown complete.');
   } catch (err) {
     console.error('❌ Shutdown error:', err.message);
+    process.exitCode = 1;
   } finally {
-    process.exit(0);
+    process.exit(process.exitCode || 0);
   }
 }
 

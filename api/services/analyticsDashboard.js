@@ -401,5 +401,4 @@ export async function getFullDashboard(username, opts = {}) {
   };
 }
 
-export { prisma };
 // by nichxbt

@@ -8,7 +8,11 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.__prisma = prisma;
 }
 
+let isDisconnecting = false;
+
 const disconnect = async (signal) => {
+  if (isDisconnecting) return;
+  isDisconnecting = true;
   try {
     await prisma.$disconnect();
   } catch (err) {
@@ -17,8 +21,8 @@ const disconnect = async (signal) => {
   }
 };
 
-process.on('beforeExit', () => disconnect('beforeExit'));
-process.on('SIGINT', () => disconnect('SIGINT').finally(() => process.exit(0)));
-process.on('SIGTERM', () => disconnect('SIGTERM').finally(() => process.exit(0)));
+process.on('beforeExit', async () => {
+  await disconnect('beforeExit');
+});
 
 export default prisma;

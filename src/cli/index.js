@@ -2033,7 +2033,13 @@ program
         const { stopMonitor: stop } = await import('../analytics/reputation.js');
         stop(monitor.id);
         console.log(chalk.yellow('\n🛑 Monitor stopped.'));
-        process.exit(0);
+        try {
+          await prisma.$disconnect();
+        } catch (err) {
+          console.error(chalk.red('❌ Prisma disconnect error:'), err.message);
+          process.exitCode = 1;
+        }
+        process.exit(process.exitCode || 0);
       });
 
       // Prevent exit
@@ -3337,7 +3343,16 @@ agentCmd
       const config = ThoughtLeaderAgent.loadConfig(options.config);
       const agent = new ThoughtLeaderAgent(config);
 
-      const shutdown = async () => { await agent.stop(); process.exit(0); };
+      const shutdown = async () => {
+        await agent.stop();
+        try {
+          await prisma.$disconnect();
+        } catch (err) {
+          console.error(chalk.red('❌ Prisma disconnect error:'), err.message);
+          process.exitCode = 1;
+        }
+        process.exit(process.exitCode || 0);
+      };
       process.on('SIGINT', shutdown);
       process.on('SIGTERM', shutdown);
 

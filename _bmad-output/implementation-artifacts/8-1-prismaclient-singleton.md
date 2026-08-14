@@ -4,7 +4,7 @@ baseline_commit: bc06cd84ca8dd1bfbb0277b99c3955c9b4946317
 
 # Story 8.1: PrismaClient Singleton Refactor
 
-Status: review
+Status: done
 
 ## Story
 
@@ -165,4 +165,20 @@ import prisma from '../lib/prisma.js';
 - `src/cli/index.js`
 - `src/mcp/server.js`
 - `src/workflows/store.js`
+
+### Formal Review Findings
+
+- [x] [Review][Decision → Patch] **Signal handler ownership across entry points** — Resolved by removing `SIGINT/SIGTERM` handlers from the singleton and giving each entry point ownership. `api/lib/prisma.js` keeps `beforeExit` as a fallback. `api/server.js`, `src/mcp/server.js`, `src/cli/index.js`, and `api/services/jobQueue.js` now explicitly disconnect the singleton on shutdown and preserve non-zero exit codes.
+
+- [x] [Review][Patch] **Singleton exit code override and double disconnect** — Fixed in `api/lib/prisma.js` by removing `SIGINT/SIGTERM` handlers, adding an `isDisconnecting` guard, and making `beforeExit` await `prisma.$disconnect()`.
+
+- [x] [Review][Patch] **Remove `prisma` re-exports from service modules** — Removed `export { prisma }` from `api/services/analyticsDashboard.js` and `export { prisma as _prisma }` from `api/services/tweetScheduling.js`; no external consumers were found.
+
+- [x] [Review][Patch] **MCP/CLI signal handlers don't await `prisma.$disconnect()`** — Fixed by adding `await prisma.$disconnect()` in `src/mcp/server.js` and `src/cli/index.js` signal handlers, with `process.exit(process.exitCode || 0)` to preserve error codes.
+
+- [x] [Review][Defer] **Connection pool tuning not configured** — `api/lib/prisma.js` creates `new PrismaClient()` with no explicit `connection_limit` / `pool_timeout`. Tuning is valuable but out of story scope; consider in a future infra pass. — deferred, pre-existing / out of scope
+
+- [x] [Review][Defer] **DATABASE_URL validation at module load** — `api/lib/prisma.js` creates the client without validating `DATABASE_URL`. A missing or invalid URL will surface on first query. Out of story scope. — deferred, pre-existing / out of scope
+
+- [x] [Review][Defer] **`api/routes/history.js` implicit `prisma` dependency via `analyticsDashboard.js`** — The route relies on `analyticsDashboard.js` to use `prisma` rather than importing it directly. This is a pre-existing code smell, not introduced by the singleton. — deferred, pre-existing
 
