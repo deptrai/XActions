@@ -1524,6 +1524,128 @@ export async function scrapeFacebookGroupComments(page, groupPostUrl, options = 
   return scrapeFacebookComments(page, groupPostUrl, options);
 }
 
+/**
+ * Search for posts **within** a specific Facebook group by keyword (FR-61b).
+ *
+ * Facebook exposes a native group search endpoint:
+ *   https://www.facebook.com/groups/<groupId>/search/?q=<keyword>
+ *   https://m.facebook.com/groups/<groupId>/search/?q=<keyword>
+ *
+ * This is far more efficient than scraping the full group feed and filtering
+ * client-side, because Facebook performs the keyword match server-side and
+ * returns only matching posts.
+ *
+ * READ-ONLY scrape — NOT routed through runGuardedBatch.
+ *
+ * @param {Object} page - Puppeteer page (authenticated)
+ * @param {string} groupUrl - facebook.com/groups/<id> URL
+ * @param {Object} [options]
+ * @param {string} [options.query] - Search keyword (required, non-empty)
+ * @param {number} [options.limit=50] - Max posts to collect
+ * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
+ * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
+ * @param {Function} [options.delay=randomDelay] - Injectable delay seam
+ * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
+ * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ */
+export async function scrapeFacebookGroupSearch(page, groupUrl, options = {}) {
+  const {
+    query,
+    limit = 50,
+    maxRetries = 8,
+    maxScrolls = 50,
+    delay = randomDelay,
+    onProgress,
+  } = options;
+
+  // AC1: Validate groupUrl (SSRF guard) before any navigation.
+  assertFacebookUrlLocal(groupUrl, 'scrapeFacebookGroupSearch: groupUrl');
+  if (!/facebook\.com\/groups\//i.test(groupUrl)) {
+    throw new Error('❌ scrapeFacebookGroupSearch requires a facebook.com/groups/ URL');
+  }
+
+  // AC2: Validate query is a non-empty string.
+  if (typeof query !== 'string' || !query.trim()) {
+    throw new Error('❌ scrapeFacebookGroupSearch requires a non-empty options.query string');
+  }
+
+  // AC3: Mobile UA and viewport before navigation (matches scrapeFacebookGroupPosts).
+  await page.setUserAgent(
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1'
+  );
+  await page.setViewport({ width: 390, height: 844, isMobile: true });
+
+  // AC4: Build group search URL — force mobile host for consistent DOM.
+  const mobileUrl = groupUrl.replace(/^https?:\/\/(www\.)?facebook\.com/, 'https://m.facebook.com');
+  const searchUrl = `${mobileUrl.replace(/\/$/, '')}/search/?q=${encodeURIComponent(query.trim())}`;
+
+  await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await assertNoCheckpoint(page, 'group search');
+  await delay(2000, 4000);
+
+  // AC5: Detect whether the group search is accessible.
+  let containerFound = false;
+  try {
+    await page.waitForSelector('div.m.displayed, [role="article"]', { timeout: 8000 });
+    containerFound = true;
+  } catch (_) {
+    // Search not accessible → restricted or login required.
+  }
+
+  if (!containerFound) {
+    return {
+      note: 'Facebook group search is not accessible. The group may be private, membership may be required, or the search returned no results.',
+      platform: 'facebook',
+    };
+  }
+
+  // AC6: Check for "no results" indicator.
+  if (await isContentUnavailable(page)) {
+    return {
+      note: 'Facebook group search returned no results or the content is unavailable.',
+      platform: 'facebook',
+    };
+  }
+
+  // AC7: Bounded scroll loop with deduplication.
+  const posts = new Map(); // keyed by id for deduplication
+  let retries = 0;
+  let scrolls = 0;
+
+  while (posts.size < limit && retries < maxRetries && scrolls < maxScrolls) {
+    const prevSize = posts.size;
+
+    const hydrated = await extractHydrationJson(page, ['Story'], {
+      limit: limit - posts.size,
+      fallbackExtractor: extractGroupPostsFromDom,
+    });
+
+    for (const raw of hydrated) {
+      const normalized = normalizeGroupPost(raw);
+      if (!normalized || !normalized.id) continue;
+      posts.set(normalized.id, normalized);
+    }
+
+    if (onProgress) onProgress({ scraped: posts.size, limit });
+
+    if (posts.size === prevSize) {
+      retries++;
+    } else {
+      retries = 0;
+    }
+
+    // Stop immediately once the limit is reached.
+    if (posts.size >= limit) break;
+
+    await assertNoCheckpoint(page, 'group search');
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await delay(1500, 3000);
+    scrolls++;
+  }
+
+  return Array.from(posts.values()).slice(0, limit);
+}
+
 // ============================================================================
 // Search Normalizer (pure — testable without Puppeteer)
 // ============================================================================
@@ -2469,4 +2591,5 @@ export default {
   scrapeFacebookComments,
   scrapeFacebookGroupPosts,
   scrapeFacebookGroupComments,
+  scrapeFacebookGroupSearch,
 };

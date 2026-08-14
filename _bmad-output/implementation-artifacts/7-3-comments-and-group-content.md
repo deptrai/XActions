@@ -10,6 +10,7 @@ Status: review
 
 - 2026-08-14: Story created from Epic 7 architecture and 7.2 learnings.
 - 2026-08-14: Implemented scrapers (`scrapeFacebookComments`, `scrapeFacebookGroupPosts`, `scrapeFacebookGroupComments`), normalizers, DOM fallback helpers, API route wiring, and tests.
+- 2026-08-14: Extended story with `scrapeFacebookGroupSearch` (in-group keyword search via Facebook's native `/groups/<id>/search/?q=` endpoint). Added `group_search` action to API route, dispatcher, and tests.
 
 ## Story
 
@@ -106,6 +107,24 @@ so that I can analyze engagement, sentiment, and community activity at scale.
 4. Detect checkpoints via `assertNoCheckpoint(page, source)` after navigation and inside scroll loops.
 5. Respect read velocity: `1–3s` scroll delay, max `50` scrolls per task.
 
+**AC6 — Search Within a Group (FR-61b, NFR-10, NFR-14, NFR-15)**
+
+1. `scrapeFacebookGroupSearch(page, groupUrl, options)` is implemented in `src/scrapers/facebook/index.js` and exported.
+2. `groupUrl` must be a valid `facebook.com/groups/` URL; validate with `assertFacebookUrlLocal` before `page.goto`.
+3. `options.query` is required and must be a non-empty string; throw a clear 400-style error if missing or blank.
+4. Sets mobile UA and viewport (`390x844`, `isMobile: true`) before `page.goto` — same as `scrapeFacebookGroupPosts`.
+5. Navigates to `https://m.facebook.com/groups/<id>/search/?q=<encoded query>` — Facebook's native group search endpoint that performs server-side keyword matching.
+6. Returns posts with the same shape as `scrapeFacebookGroupPosts` (via `normalizeGroupPost`).
+7. Returns `{ note, platform: 'facebook' }` when:
+   - The group is private and the account is not a member (search container not found within timeout).
+   - The search returns no results (content unavailable indicator detected).
+8. Uses `extractHydrationJson(page, ['Story'], { fallbackExtractor, limit })` as primary extraction; `fallbackExtractor` is `extractGroupPostsFromDom` (reused from AC2).
+9. Deduplicates posts with a `Map` keyed by `id` during the scroll loop.
+10. Bounded scroll loop: `1–3s` delay, max `50` scrolls, `maxRetries` consecutive empty scrolls.
+11. `group_search` is added to `VALID_ACTIONS` in `api/routes/facebook.js` with validation that both `url` and `query` are present.
+12. `group_search` is mapped to `scrapeFacebookGroupSearch` in `platformActionMap` (`src/scrapers/index.js`).
+13. The dispatcher resolves `target = options.url` (not `options.query`) for `group_search`, so the scraper receives `(page, groupUrl, options)` where `options.query` carries the keyword.
+
 ## Tasks / Subtasks
 
 - [x] **Task 1: Implement `scrapeFacebookComments` (AC1, AC5)**
@@ -175,6 +194,26 @@ so that I can analyze engagement, sentiment, and community activity at scale.
   - [x] Update or create `tests/api/facebook-scrape.test.js` for route-level `post_comments`, `group_posts`, `group_comments` validation.
   - [x] Run targeted vitest and relevant integration tests.
 
+- [x] **Task 8: Implement `scrapeFacebookGroupSearch` (AC6, AC5)**
+  - [x] Add `scrapeFacebookGroupSearch(page, groupUrl, options)` to `src/scrapers/facebook/index.js`.
+  - [x] Validate `groupUrl` with `assertFacebookUrlLocal`; ensure it contains `/groups/`.
+  - [x] Validate `options.query` is a non-empty string.
+  - [x] Set mobile UA and viewport (`390x844`, `isMobile: true`) before `page.goto`.
+  - [x] Build search URL: `https://m.facebook.com/groups/<id>/search/?q=<encoded query>`.
+  - [x] Detect restricted/private groups via `waitForSelector` timeout → return `{ note, platform }`.
+  - [x] Detect no-results via `isContentUnavailable` → return `{ note, platform }`.
+  - [x] Reuse `extractHydrationJson(page, ['Story'], { fallbackExtractor: extractGroupPostsFromDom, limit })`.
+  - [x] Normalize each post with `normalizeGroupPost`.
+  - [x] Bounded scroll loop with `1–3s` delay, `maxScrolls: 50`, `maxRetries`.
+  - [x] Add to default export.
+  - [x] Add `group_search` to `platformActionMap` in `src/scrapers/index.js`.
+  - [x] Dispatcher: resolve `target = options.url` for `group_search` (not `options.query`).
+  - [x] Add `group_search` to `VALID_ACTIONS` in `api/routes/facebook.js`.
+  - [x] Validate both `url` and `query` are present for `group_search`.
+  - [x] Pass `url` and `query` in `scrapeArgs` for `group_search`.
+  - [x] Create `tests/scrapers/facebook-group-search.test.js` with unit + dispatcher tests.
+  - [x] Add route-level validation tests for `group_search` to `tests/api/facebook-scrape.test.js`.
+
 ## Dev Agent Record
 
 ### Debug Log
@@ -187,14 +226,17 @@ so that I can analyze engagement, sentiment, and community activity at scale.
 - Added `scrapeFacebookComments`, `scrapeFacebookGroupPosts`, and `scrapeFacebookGroupComments` to the default export.
 - Created unit/integration tests: `tests/scrapers/facebook-comments.test.js`, `tests/scrapers/facebook-group-posts.test.js`, `tests/scrapers/facebook-group-comments.test.js`, and `tests/api/facebook-scrape.test.js`.
 - Ran `npx vitest run tests/scrapers/facebook*.test.js tests/api/facebook*.test.js` — 24 files passed, 1 skipped (986 passed / 14 skipped).
+- Extended with `scrapeFacebookGroupSearch` (in-group keyword search): navigates to Facebook's native `/groups/<id>/search/?q=` endpoint for server-side keyword matching, reuses `extractGroupPostsFromDom` fallback and `normalizeGroupPost`, returns `{ note, platform }` for restricted/no-results. Added `group_search` action to API route and dispatcher with `url` + `query` validation. Created `tests/scrapers/facebook-group-search.test.js` and extended `tests/api/facebook-scrape.test.js`.
 
 ## File List
 
 - Modified: `src/scrapers/facebook/index.js`
+- Modified: `src/scrapers/index.js`
 - Modified: `api/routes/facebook.js`
 - Created: `tests/scrapers/facebook-comments.test.js`
 - Created: `tests/scrapers/facebook-group-posts.test.js`
 - Created: `tests/scrapers/facebook-group-comments.test.js`
+- Created: `tests/scrapers/facebook-group-search.test.js`
 - Created: `tests/api/facebook-scrape.test.js`
 - Modified: `_bmad-output/implementation-artifacts/sprint-status.yaml`
 

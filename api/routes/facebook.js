@@ -205,7 +205,7 @@ router.post('/scrape', async (req, res) => {
   try {
     const { action, url, query, type, parallel, location, limit, includeReplies, authCookie, browserOptions } = req.body ?? {};
 
-    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace', 'post_comments', 'group_posts', 'group_comments'];
+    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace', 'post_comments', 'group_posts', 'group_comments', 'group_search'];
     if (!action || !VALID_ACTIONS.includes(action)) {
       return res.status(400).json({
         ok: false,
@@ -213,10 +213,10 @@ router.post('/scrape', async (req, res) => {
       });
     }
 
-    if (['profile', 'posts', 'followers', 'group-members', 'post_comments', 'group_posts', 'group_comments'].includes(action) && !url?.trim()) {
+    if (['profile', 'posts', 'followers', 'group-members', 'post_comments', 'group_posts', 'group_comments', 'group_search'].includes(action) && !url?.trim()) {
       return res.status(400).json({ ok: false, error: `action "${action}" requires url` });
     }
-    if (['search', 'marketplace'].includes(action)) {
+    if (['search', 'marketplace', 'group_search'].includes(action)) {
       if (typeof query !== 'string' || !query.trim()) {
         return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
       }
@@ -307,7 +307,9 @@ router.post('/scrape', async (req, res) => {
           }
         : action === 'marketplace'
           ? { query: query.trim() }
-          : { url: url.trim() }),
+          : action === 'group_search'
+            ? { url: url.trim(), query: query.trim() }
+            : { url: url.trim() }),
       ...(limit !== undefined && limit !== null ? { limit: Number(limit) } : {}),
       ...(['post_comments', 'group_comments'].includes(action) && includeReplies !== undefined && includeReplies !== null
         ? { includeReplies }

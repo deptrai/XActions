@@ -195,6 +195,7 @@ export async function scrape(platform, action, options = {}) {
       post_comments: 'scrapeFacebookComments',
       group_posts: 'scrapeFacebookGroupPosts',
       group_comments: 'scrapeFacebookGroupComments',
+      group_search: 'scrapeFacebookGroupSearch',
     },
   };
 
@@ -253,8 +254,12 @@ export async function scrape(platform, action, options = {}) {
       }
     }
 
-    // Determine the second argument based on action
-    const target = options.username || options.query || options.hashtag || options.url || options.listUrl || options.communityUrl;
+    // Determine the second argument based on action.
+    // group_search needs url as target (query travels inside options);
+    // all other actions follow the existing priority chain.
+    const target = action === 'group_search'
+      ? options.url
+      : (options.username || options.query || options.hashtag || options.url || options.listUrl || options.communityUrl);
 
     // Actions that only take page + options (no target)
     const noTargetActions = ['scrapeBookmarks', 'scrapeNotifications', 'scrapeTrending'];

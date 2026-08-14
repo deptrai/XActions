@@ -121,4 +121,40 @@ describe('POST /api/facebook/scrape — Story 7.3 validations', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/limit must be a positive integer/);
   });
+
+  // --- group_search validations (Story 7.3 extension) ---
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 when group_search missing url`, async () => {
+    const res = await postScrape({
+      action: 'group_search',
+      query: 'macbook pro 14',
+      authCookie: VALID_COOKIE,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.error).toMatch(/requires url/);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 when group_search missing query`, async () => {
+    const res = await postScrape({
+      action: 'group_search',
+      url: makeFacebookGroupUrl(),
+      authCookie: VALID_COOKIE,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.error).toMatch(/requires query/);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 for non-numeric limit on group_search`, async () => {
+    const res = await postScrape({
+      action: 'group_search',
+      url: makeFacebookGroupUrl(),
+      query: 'macbook',
+      limit: 'abc',
+      authCookie: VALID_COOKIE,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/limit must be a positive integer/);
+  });
 });
