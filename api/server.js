@@ -12,8 +12,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import prisma from './lib/prisma.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -626,22 +624,5 @@ httpServer.listen(PORT, async () => {
     startTweetScheduler();
   }
 });
-
-// Graceful shutdown for the API server
-async function gracefulShutdown(signal) {
-  console.log(`\n🛑 Received ${signal} — closing Prisma connection…`);
-  try {
-    await prisma.$disconnect();
-    console.log('✅ Prisma disconnected.');
-  } catch (err) {
-    console.error('❌ Error during Prisma disconnect:', err.message);
-    process.exitCode = 1;
-  } finally {
-    process.exit(process.exitCode || 0);
-  }
-}
-
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 export default app;

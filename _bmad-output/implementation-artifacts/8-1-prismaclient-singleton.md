@@ -168,7 +168,7 @@ import prisma from '../lib/prisma.js';
 
 ### Formal Review Findings
 
-- [x] [Review][Decision → Patch] **Signal handler ownership across entry points** — Resolved by removing `SIGINT/SIGTERM` handlers from the singleton and giving each entry point ownership. `api/lib/prisma.js` keeps `beforeExit` as a fallback. `api/server.js`, `src/mcp/server.js`, `src/cli/index.js`, and `api/services/jobQueue.js` now explicitly disconnect the singleton on shutdown and preserve non-zero exit codes.
+- [x] [Review][Decision → Patch] **Signal handler ownership across entry points** — Resolved by removing `SIGINT/SIGTERM` handlers from the singleton and giving each entry point ownership. `api/lib/prisma.js` keeps `beforeExit` as a fallback. `src/mcp/server.js`, `src/cli/index.js`, and `api/services/jobQueue.js` explicitly disconnect the singleton on shutdown. `api/server.js` relies on the existing `api/services/jobQueue.js` shutdown handler (imported by routes) to close the Prisma connection for the API process.
 
 - [x] [Review][Patch] **Singleton exit code override and double disconnect** — Fixed in `api/lib/prisma.js` by removing `SIGINT/SIGTERM` handlers, adding an `isDisconnecting` guard, and making `beforeExit` await `prisma.$disconnect()`.
 
