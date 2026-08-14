@@ -172,6 +172,34 @@ const scrapeArgs = {
   - [x] Update or create `tests/api/facebook-scrape.test.js` with route-level cases for `type`, `parallel`, and invalid `type`.
   - [x] Run targeted vitest and relevant integration tests.
 
+### Review Findings
+
+#### decision-needed
+
+- [ ] [Review][Decision] none
+
+#### patch
+
+- [ ] [Review][Patch] Fix DOM `id` extraction for `/groups/{id}`, `/pages/{id}`, and numeric `profile.php?id=...` URLs in `extractListItemsFromDom` and `extractHandleFromUrl` (high) [src/scrapers/facebook/index.js:929-937, 1209-1210]
+- [ ] [Review][Patch] Fix `username` priority in `normalizePeopleSearchResult` so DOM `username: id` does not override a URL-derived handle for numeric profiles (high) [src/scrapers/facebook/index.js:973-985, 1214-1215]
+- [ ] [Review][Patch] Validate `limit`, `location`, and `query` type in the API route before calling `scrape()` so malformed inputs return 400 instead of 500 (high) [api/routes/facebook.js:158-160, 162-170, 204-211]
+- [ ] [Review][Patch] Stop forwarding search-only params (`type`, `parallel`, `location`, `limit`) to the `marketplace` action (medium) [api/routes/facebook.js:204-211]
+- [ ] [Review][Patch] Harden `extractListItemsFromDom` with per-type link filtering and stricter category / members / privacy text parsing (medium) [src/scrapers/facebook/index.js:1186-1228]
+- [ ] [Review][Patch] Harden `extractPostsFromDom` text / author / timestamp selection against UI chrome (medium) [src/scrapers/facebook/index.js:1125-1184]
+- [ ] [Review][Patch] Detect checkpoints inside the scroll loop and by body indicators, not just the initial URL (medium) [src/scrapers/facebook/index.js:1091-1096, 1241-1242]
+- [ ] [Review][Patch] Remove no-op `fallbackExtractor` in `searchByType` and avoid redundant `page.evaluate` calls (low) [src/scrapers/facebook/index.js:1252-1266]
+- [ ] [Review][Patch] Avoid one extra scroll + delay after `limit` is already reached (low) [src/scrapers/facebook/index.js:1249-1287]
+- [ ] [Review][Patch] Sanitize `options` passed to per-type `searchByType` calls from `searchFacebook` (remove `type: 'all'`, coerce `limit` to number) (low) [src/scrapers/facebook/index.js:1306-1323]
+- [ ] [Review][Patch] Add trailing slash to `SEARCH_TYPE_URLS` to match AC5 `/search/posts/?q=...` (low) [src/scrapers/facebook/index.js:1062-1067, 1239]
+- [ ] [Review][Patch] Update JSDoc for `POST /api/facebook/scrape` and `searchFacebook` to include `authCookie`, `parallel`, `location`, and `limit` (low) [api/routes/facebook.js:132-141, src/scrapers/facebook/index.js:1292-1305]
+- [ ] [Review][Patch] Add missing tests for per-type DOM fallbacks (`people`, `pages`, `groups`), mixed `all`, route-level `limit`/`location`/valid `type`, `marketplace` isolation, `fb` alias, `searchTweets` wrapper, and checkpoint (medium) [tests/scrapers/facebook-search.test.js, tests/api/facebook-routes-integration.test.js]
+
+#### defer
+
+- [x] [Review][Defer] `platformActionMap` maps to `scrapeFacebookComments` / `scrapeFacebookGroupPosts` / `scrapeFacebookGroupComments`, which are Story 7.3 placeholders by design (low) [src/scrapers/index.js:190-203] — deferred, pre-existing / by design
+- [x] [Review][Defer] `normalizeSearchResult` is no longer used by the new search flow but remains a public export; deprecate or remove in a cleanup pass (low) [src/scrapers/facebook/index.js:913-923] — deferred, pre-existing API surface
+- [x] [Review][Defer] Final DOM selector tuning for real Facebook markup requires a live authenticated session and should be verified via `selectors-facebook.md` (low) [src/scrapers/facebook/index.js:1125-1184, 1186-1228] — deferred, blocked on live verify
+
 ## Dev Notes
 
 ### Critical context

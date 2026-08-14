@@ -930,11 +930,18 @@ function extractHandleFromUrl(input) {
   if (typeof input !== 'string' || !input.trim()) return null;
   try {
     const u = new URL(input);
-    const path = u.pathname.replace(/^\/+/, '').split('/')[0];
-    if (!path) return null;
-    if (/^profile\.php\?id=\d+/i.test(path)) return path;
-    const m = path.match(/^([^/?&#]+)/);
-    return m ? m[1] : null;
+
+    // Numeric profile URLs: facebook.com/profile.php?id=123
+    const idMatch = u.search.match(/[?&]id=(\d+)/);
+    if (idMatch) return idMatch[1];
+
+    const parts = u.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+    if (parts.length === 0) return null;
+
+    // For pages that use the /pages/<name>/<id> path, the last segment is the id.
+    // For groups /groups/<id>, the last segment is the id.
+    // For people /people/<name>/<id> or /<username>, the last usable segment is the id/handle.
+    return parts.at(-1);
   } catch {
     return null;
   }
@@ -982,8 +989,13 @@ export function normalizePeopleSearchResult(raw) {
   } = raw || {};
 
   const resolvedUrl = url || profileUrl || (id && /^\d+$/.test(String(id)) ? `${FACEBOOK_BASE}/profile.php?id=${id}` : null);
-  const resolvedUsername = username || extractHandleFromUrl(resolvedUrl);
-  const resolvedId = id || resolvedUrl || resolvedUsername || null;
+  const derivedUsername = extractHandleFromUrl(resolvedUrl);
+  const resolvedUsername = (
+    typeof username === 'string' &&
+    username.trim() &&
+    !/facebook\.com|[?&#]|^https?:|^\s*$/i.test(username.trim())
+  ) ? username.trim() : derivedUsername;
+  const resolvedId = id || resolvedUsername || resolvedUrl || null;
 
   return {
     id: resolvedId,
@@ -1060,10 +1072,10 @@ export function normalizeGroupSearchResult(raw) {
 const VALID_SEARCH_TYPES = new Set(['posts', 'people', 'pages', 'groups', 'all']);
 
 const SEARCH_TYPE_URLS = {
-  posts: '/search/posts',
-  people: '/search/people',
-  pages: '/search/pages',
-  groups: '/search/groups',
+  posts: '/search/posts/',
+  people: '/search/people/',
+  pages: '/search/pages/',
+  groups: '/search/groups/',
 };
 
 const SEARCH_TYPENAMES = {
@@ -1088,9 +1100,26 @@ function isCheckpointUrl(url) {
   return url.includes('/checkpoint/') || url.includes('facebook.com/checkpoint');
 }
 
-function assertNoCheckpoint(page, source = 'search') {
+async function assertNoCheckpoint(page, source = 'search') {
   const currentUrl = typeof page.url === 'function' ? page.url() : null;
   if (isCheckpointUrl(currentUrl)) {
+    throw new Error(`❌ Facebook ${source} hit a checkpoint. Account may need security review.`);
+  }
+
+  // Check the page body for checkpoint/security-check language.
+  let hasBodyCheckpoint = false;
+  if (typeof page.evaluate === 'function') {
+    try {
+      hasBodyCheckpoint = await page.evaluate(() => {
+        if (typeof document === 'undefined' || !document.body) return false;
+        const text = (document.body.innerText || document.body.textContent || '').toLowerCase();
+        return text.includes('checkpoint') || text.includes('security check') || text.includes('confirm your identity');
+      });
+    } catch {
+      // If evaluate is not available or throws, do not block the search.
+    }
+  }
+  if (hasBodyCheckpoint === true) {
     throw new Error(`❌ Facebook ${source} hit a checkpoint. Account may need security review.`);
   }
 }
@@ -1125,17 +1154,24 @@ function buildSearchQuery(query, location) {
 async function extractPostsFromDom(page) {
   const rawResults = await page.evaluate((nonProfile) => {
     const NON_PROFILE = new Set(nonProfile);
+    const UI_TEXT_RE = /^(like|comment|share|reply|follow|see more|more|options|·)$/i;
     const articles = document.querySelectorAll('[role="article"]');
     return Array.from(articles).map((article) => {
       const textEls = article.querySelectorAll('[dir="auto"]');
       const texts = Array.from(textEls)
         .map((el) => {
-          let t = el.textContent?.trim() || '';
+          let t = (el.innerText || el.textContent || '').trim();
           t = t.replace(/\u034F/g, '');
           t = t.replace(/[\u200B-\u200D\uFEFF\u2060]/g, '').trim();
           return t;
         })
-        .filter((t) => t && t.length > 10);
+        .filter((t) => {
+          if (!t || t.length < 10) return false;
+          // Reject obvious UI chrome.
+          if (UI_TEXT_RE.test(t)) return false;
+          if (/^(Like|Comment|Share|Reply)\b/.test(t) && t.length < 80) return false;
+          return !/[\u00B7\u2022]/.test(t);
+        });
 
       const text = texts.reduce((best, t) => {
         if (!best) return t;
@@ -1151,9 +1187,10 @@ async function extractPostsFromDom(page) {
         if (!href.includes('facebook.com/') && !href.startsWith('/')) continue;
         if (href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid') || href.includes('/search/')) continue;
         if (href.includes('l.php') || href.includes('/l/')) continue;
+        if (/\/(settings|help|about|privacy|terms|login|checkpoint|watch|marketplace|events)\b/i.test(href)) continue;
         const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
         const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
-        if (idMatch) { author = `profile.php?id=${idMatch[1]}`; break; }
+        if (idMatch) { author = idMatch[1]; break; }
         const segMatch = abs.match(/facebook\.com\/([^/?&#]+)/i);
         if (segMatch && !NON_PROFILE.has(segMatch[1].toLowerCase())) { author = segMatch[1]; break; }
       }
@@ -1161,7 +1198,12 @@ async function extractPostsFromDom(page) {
       const timeEl = article.querySelector('abbr[data-utime], time[datetime]');
       let timestamp = timeEl?.getAttribute('data-utime') || timeEl?.getAttribute('datetime') || null;
       if (!timestamp) {
-        const timeLink = allLinks.find((a) => a.querySelector('span') && /\d/.test(a.textContent));
+        const timeLink = allLinks.find((a) => {
+          const text = (a.innerText || a.textContent || '').trim();
+          if (!text || text.length > 30) return false;
+          // Accept relative-time phrasing: "2h", "5 hrs", "Yesterday", "Jan 5", "1 day".
+          return /\d+\s*(h|hr|hrs|hour|hours|d|day|days|w|week|weeks|m|min|mins|minute|minutes)\b|\b(yesterday|today|mon|tue|wed|thu|fri|sat|sun)\b/i.test(text);
+        });
         const ariaLabel = timeLink?.getAttribute('aria-label') || timeLink?.querySelector('[aria-label]')?.getAttribute('aria-label');
         timestamp = ariaLabel || timeLink?.textContent?.trim() || null;
       }
@@ -1185,34 +1227,125 @@ async function extractPostsFromDom(page) {
 
 async function extractListItemsFromDom(page, type) {
   const rawResults = await page.evaluate((searchType) => {
+    const NON_ENTITY_ROOTS = new Set([
+      'search', 'watch', 'marketplace', 'events', 'friends', 'photo', 'photo.php',
+      'reel', 'reels', 'stories', 'hashtag', 'l.php', 'l', 'settings', 'help',
+      'about', 'privacy', 'terms', 'login', 'checkpoint',
+    ]);
+
+    function normalizeEntityUrl(href) {
+      if (!href) return null;
+      const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
+      try {
+        const u = new URL(abs);
+        const host = u.hostname.toLowerCase();
+        if (!host.endsWith('facebook.com')) return null;
+        return { href: abs, pathname: u.pathname, search: u.search };
+      } catch {
+        return null;
+      }
+    }
+
+    function extractIdFromEntityUrl(entityUrl) {
+      if (!entityUrl) return null;
+      const { href, pathname, search } = entityUrl;
+
+      // Numeric profile: /profile.php?id=123
+      const idMatch = search.match(/[?&]id=(\d+)/);
+      if (idMatch) return idMatch[1];
+
+      const parts = pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+      if (parts.length === 0) return null;
+
+      // Use the last path segment as the stable identifier for people/pages/groups.
+      // Works for /groups/xyz, /pages/Name/123, /people/Name/123, and /username.
+      return parts.at(-1);
+    }
+
+    function isEntityLink(entityUrl, searchType) {
+      if (!entityUrl) return false;
+      const parts = entityUrl.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+      if (parts.length === 0) return false;
+      const first = parts[0].toLowerCase();
+      if (NON_ENTITY_ROOTS.has(first)) return false;
+
+      if (searchType === 'groups') {
+        return entityUrl.pathname.includes('/groups/');
+      }
+      if (searchType === 'people') {
+        // People search should not return group/page links.
+        if (entityUrl.pathname.includes('/groups/') || entityUrl.pathname.includes('/pages/')) return false;
+        return true;
+      }
+      if (searchType === 'pages') {
+        // Page search should not return group links.
+        if (entityUrl.pathname.includes('/groups/')) return false;
+        return true;
+      }
+      return true;
+    }
+
+    function pickBestLink(item, searchType) {
+      const links = Array.from(item.querySelectorAll('a[href]'));
+      for (const a of links) {
+        const entityUrl = normalizeEntityUrl(a.getAttribute('href'));
+        if (isEntityLink(entityUrl, searchType)) {
+          return { a, entityUrl };
+        }
+      }
+      return null;
+    }
+
+    function getUniqueLines(item) {
+      const text = item.innerText || item.textContent || '';
+      return Array.from(new Set(text.split('\n').map((t) => t.trim()).filter(Boolean)));
+    }
+
     const items = document.querySelectorAll('[role="listitem"], [role="article"]');
     return Array.from(items).map((item) => {
-      const link = item.querySelector('a[href]');
-      const href = link?.getAttribute('href') || '';
-      if (!href) return null;
+      const picked = pickBestLink(item, searchType);
+      if (!picked) return null;
 
-      const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
-      const name = item.textContent?.trim().split('\n')[0] || null;
-      const img = item.querySelector('img');
+      const { a, entityUrl } = picked;
+      const abs = entityUrl.href;
+      const id = extractIdFromEntityUrl(entityUrl);
+      if (!id) return null;
+
+      // Prefer the link text as the entity name; fall back to the first non-empty line.
+      const linkText = (a.innerText || a.textContent || '').trim();
+      const allLines = getUniqueLines(item);
+      const name = (linkText && linkText.length <= 80 ? linkText : allLines[0]) || null;
+
+      const img = Array.from(item.querySelectorAll('img')).find((i) => {
+        const src = i.getAttribute('src') || '';
+        return src.startsWith('http') && !src.includes('emoji') && !src.includes('fbcdn.net/images');
+      });
       const image = img?.getAttribute('src') || null;
 
-      const lines = Array.from(item.querySelectorAll('*'))
-        .map((el) => el.textContent?.trim())
+      // Parse counts from lines.
+      const counts = allLines
+        .map((t) => t.match(/([\d,.]+[KkMm]?\+?)\s*(members?|people|likes?)/i))
         .filter(Boolean);
-
-      const counts = lines.map((t) => t.match(/([\d,.]+[KkMm]?\+?)\s*(members?|people|likes?)/i)).filter(Boolean);
       const members = counts.find((m) => /members?|people/i.test(m[0]))?.[1] || null;
       const likes = counts.find((m) => /likes?/i.test(m[0]))?.[1] || null;
-      const privacy = lines.find((t) => /public|private|closed|secret/i.test(t)) || null;
-      const category = lines.find((t) => t.length > 0 && t !== name && t !== members && t !== likes && t !== privacy) || null;
 
-      const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
-      const id = idMatch ? `profile.php?id=${idMatch[1]}` : (abs.match(/facebook\.com\/([^/?&#]+)/i)?.[1] || abs);
+      // Whole-word privacy matching to avoid "publication" or "secretary".
+      const privacy = allLines.find((t) => /\b(public|private|closed|secret)\b/i.test(t)) || null;
+
+      // Category is the first remaining line that is not the name, a count, privacy, or a UI string.
+      const category = allLines.find((t) => {
+        if (t === name) return false;
+        if (t === members || t === likes || t === privacy) return false;
+        if (/[\d,.]+[KkMm]?\+?\s*(members?|people|likes?)/i.test(t)) return false;
+        if (/\b(public|private|closed|secret)\b/i.test(t)) return false;
+        if (/^(like|follow|message|join|invite|see all|more|options|share|comment)$/i.test(t)) return false;
+        return true;
+      }) || null;
 
       const base = { id, name, url: abs, image };
 
       if (searchType === 'people') {
-        return { ...base, username: id, profileUrl: abs };
+        return { ...base, profileUrl: abs };
       }
       if (searchType === 'pages') {
         return { ...base, category, likes, pageUrl: abs };
@@ -1228,18 +1361,16 @@ async function extractListItemsFromDom(page, type) {
 }
 
 async function searchByType(page, query, type, options = {}) {
-  const {
-    limit = 30,
-    onProgress,
-    maxRetries = 8,
-    maxScrolls = 50,
-    delay = randomDelay,
-  } = options;
+  const limit = Math.max(1, Math.floor(Number(options.limit) || 30));
+  const onProgress = options.onProgress;
+  const maxRetries = Math.max(1, Math.floor(Number(options.maxRetries) || 8));
+  const maxScrolls = Math.max(1, Math.floor(Number(options.maxScrolls) || 50));
+  const delay = options.delay || randomDelay;
 
   const searchUrl = `${FACEBOOK_BASE}${SEARCH_TYPE_URLS[type]}?q=${encodeURIComponent(query)}`;
 
   await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-  assertNoCheckpoint(page, `${type} search`);
+  await assertNoCheckpoint(page, `${type} search`);
   await delay(2000, 4000);
 
   const results = new Map();
@@ -1250,26 +1381,18 @@ async function searchByType(page, query, type, options = {}) {
     const prevSize = results.size;
 
     const hydrated = await extractHydrationJson(page, SEARCH_TYPENAMES[type], {
-      fallbackExtractor: async () => [],
+      limit,
+      fallbackExtractor: async () => {
+        return type === 'posts'
+          ? await extractPostsFromDom(page)
+          : await extractListItemsFromDom(page, type);
+      },
     });
 
     for (const raw of hydrated) {
       const normalized = normalizeByType(raw, type);
       if (normalized && normalized.id) {
         results.set(normalized.id, normalized);
-      }
-    }
-
-    if (results.size < limit) {
-      const domResults = type === 'posts'
-        ? await extractPostsFromDom(page)
-        : await extractListItemsFromDom(page, type);
-
-      for (const raw of domResults) {
-        const normalized = normalizeByType(raw, type);
-        if (normalized && normalized.id) {
-          results.set(normalized.id, normalized);
-        }
       }
     }
 
@@ -1281,6 +1404,10 @@ async function searchByType(page, query, type, options = {}) {
       retries = 0;
     }
 
+    // Stop immediately once the limit is reached — no wasted scroll + delay.
+    if (results.size >= limit) break;
+
+    await assertNoCheckpoint(page, `${type} search`);
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await delay(1500, 3000);
     scrolls++;
@@ -1297,6 +1424,8 @@ async function searchByType(page, query, type, options = {}) {
  * @param {string} [options.type='posts'] - 'posts' | 'people' | 'pages' | 'groups' | 'all'
  * @param {string} [options.location] - Optional location hint, appended to query
  * @param {number} [options.limit=30] - Max results per type
+ * @param {boolean} [options.parallel=false] - Accepted for future multi-account fan-out; currently ignored
+ * @param {Object} [options.authCookie] - { c_user, xs } passed by the dispatcher for login
  * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
  * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
  * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
@@ -1312,15 +1441,20 @@ export async function searchFacebook(page, query, options = {}) {
 
   const effectiveQuery = buildSearchQuery(query, location);
 
+  // Do not pass the top-level type ('all') down to per-type searches;
+  // coerce limit to a number so downstream comparisons are safe.
+  const perTypeOptions = { ...options, limit: Number(limit) };
+  delete perTypeOptions.type;
+
   if (type === 'all') {
-    const posts = await searchByType(page, effectiveQuery, 'posts', options);
-    const people = await searchByType(page, effectiveQuery, 'people', options);
-    const pages = await searchByType(page, effectiveQuery, 'pages', options);
-    const groups = await searchByType(page, effectiveQuery, 'groups', options);
+    const posts = await searchByType(page, effectiveQuery, 'posts', perTypeOptions);
+    const people = await searchByType(page, effectiveQuery, 'people', perTypeOptions);
+    const pages = await searchByType(page, effectiveQuery, 'pages', perTypeOptions);
+    const groups = await searchByType(page, effectiveQuery, 'groups', perTypeOptions);
     return { posts, people, pages, groups };
   }
 
-  return searchByType(page, effectiveQuery, type, options);
+  return searchByType(page, effectiveQuery, type, perTypeOptions);
 }
 
 /**

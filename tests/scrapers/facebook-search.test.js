@@ -65,8 +65,11 @@ describe('normalizeSearchResult', () => {
 describe('searchTweets', () => {
   const makeEmptyPage = () => ({
     goto: async () => {},
-    evaluate: async (fn) => {
-      if (fn.toString().includes('scrollTo')) return undefined;
+    evaluate: async (fn, ...args) => {
+      const fnStr = fn.toString();
+      if (fnStr.includes('scrollTo')) return undefined;
+      // No-arg evaluate calls are from assertNoCheckpoint body checks.
+      if (args.length === 0) return false;
       return [];
     },
   });
@@ -75,8 +78,11 @@ describe('searchTweets', () => {
     let callCount = 0;
     return {
       goto: async () => {},
-      evaluate: async (fn) => {
-        if (fn.toString().includes('scrollTo')) return undefined;
+      evaluate: async (fn, ...args) => {
+        const fnStr = fn.toString();
+        if (fnStr.includes('scrollTo')) return undefined;
+        // No-arg evaluate calls are from assertNoCheckpoint body checks.
+        if (args.length === 0) return false;
         callCount++;
         return callCount === 1 ? rawResults : [];
       },
@@ -127,8 +133,10 @@ describe('searchTweets', () => {
     let callCount = 0;
     const page = {
       goto: async () => {},
-      evaluate: async (fn) => {
-        if (fn.toString().includes('scrollTo')) return undefined;
+      evaluate: async (fn, ...args) => {
+        const fnStr = fn.toString();
+        if (fnStr.includes('scrollTo')) return undefined;
+        if (args.length === 0) return false;
         callCount++;
         if (callCount <= 2) {
           return [{ id: 'dup-id', text: 'same', author: 'x', timestamp: null, url: 'https://www.facebook.com/x/posts/1' }];
@@ -146,15 +154,17 @@ describe('searchTweets', () => {
 // ============================================================================
 
 describe('dispatcher scrape() search routing', () => {
-  it('scrape("facebook","search",...) routes to searchTweets', async () => {
+  it('scrape("facebook","search",...) routes to searchFacebook', async () => {
     const rawResults = [
       { id: 'https://www.facebook.com/x/posts/1', text: 'test post', author: 'x', timestamp: null, url: 'https://www.facebook.com/x/posts/1' },
     ];
     let callCount = 0;
     const page = {
       goto: async () => {},
-      evaluate: async (fn) => {
-        if (fn.toString().includes('scrollTo')) return undefined;
+      evaluate: async (fn, ...args) => {
+        const fnStr = fn.toString();
+        if (fnStr.includes('scrollTo')) return undefined;
+        if (args.length === 0) return false;
         callCount++;
         return callCount === 1 ? rawResults : [];
       },
@@ -196,8 +206,10 @@ describe('[TEA] searchTweets — edge cases', () => {
     let callCount = 0;
     const page = {
       goto: async () => {},
-      evaluate: async (fn) => {
-        if (fn.toString().includes('scrollTo')) return undefined;
+      evaluate: async (fn, ...args) => {
+        const fnStr = fn.toString();
+        if (fnStr.includes('scrollTo')) return undefined;
+        if (args.length === 0) return false;
         callCount++;
         if (callCount === 1) {
           return [{ id: 'r1', text: 'first', author: 'x', timestamp: null, url: 'https://www.facebook.com/x/posts/1' }];
@@ -381,7 +393,7 @@ describe('normalizeGroupSearchResult', () => {
 // ============================================================================
 
 describe('searchFacebook', () => {
-  function makeSearchPage(resultsByType) {
+  function makeSearchPage(resultsByType, domResultsByType = {}) {
     const byType = new Map();
     for (const [key, value] of Object.entries(resultsByType)) {
       byType.set(JSON.stringify([key]), value);
@@ -391,9 +403,20 @@ describe('searchFacebook', () => {
       goto: async () => {},
       url: () => 'https://www.facebook.com/search/posts',
       evaluate: async (fn, ...args) => {
-        if (fn.toString().includes('scrollTo')) return undefined;
-        if (Array.isArray(args[0])) {
+        const fnStr = fn.toString();
+        if (fnStr.includes('scrollTo')) return undefined;
+        if (args.length === 0) return false;
+        // Hydration extraction: look for data-content-len script walk.
+        if (fnStr.includes('data-content-len')) {
           return byType.get(JSON.stringify(args[0])) || [];
+        }
+        // DOM fallback: extractListItemsFromDom passes the search type string.
+        if (fnStr.includes('[role="listitem"]')) {
+          return domResultsByType[args[0]] || [];
+        }
+        // DOM fallback: extractPostsFromDom passes NON_PROFILE_SEGMENTS array.
+        if (fnStr.includes('[role="article"]')) {
+          return domResultsByType.posts || [];
         }
         return [];
       },
@@ -471,6 +494,91 @@ describe('searchFacebook', () => {
     const result = await searchFacebook(page, 'hello', { type: 'all', delay: () => {}, limit: 1, maxRetries: 1 });
     expect(result).toEqual({ posts: [], people: [], pages: [], groups: [] });
   });
+
+  it('returns a mixed all object when some categories are empty', async () => {
+    const page = makeSearchPage(
+      {
+        Story: [{ id: 'p1', message: 'post', actor: { name: 'a' }, published_time: 't', url: 'u' }],
+        User: [{ id: 'u1', name: 'Person', username: 'person', url: 'https://www.facebook.com/person', profile_picture: 'i' }],
+      },
+      {}
+    );
+    const result = await searchFacebook(page, 'hello', { type: 'all', delay: () => {}, limit: 1, maxRetries: 1 });
+    expect(result.posts).toHaveLength(1);
+    expect(result.people).toHaveLength(1);
+    expect(result.pages).toHaveLength(0);
+    expect(result.groups).toHaveLength(0);
+  });
+
+  it('falls back to DOM results for people', async () => {
+    const domResults = [
+      { id: 'alice', name: 'Alice Smith', profileUrl: 'https://www.facebook.com/alice' },
+    ];
+    const page = makeSearchPage({}, { people: domResults });
+    const result = await searchFacebook(page, 'hello', { type: 'people', delay: () => {}, limit: 1, maxRetries: 1 });
+    expect(result[0].name).toBe('Alice Smith');
+    expect(result[0].username).toBe('alice');
+    expect(result[0].platform).toBe('facebook');
+  });
+
+  it('falls back to DOM results for pages', async () => {
+    const domResults = [
+      { id: 'starbucks', name: 'Starbucks', category: 'Coffee Shop', likes: '1.2M', pageUrl: 'https://www.facebook.com/starbucks' },
+    ];
+    const page = makeSearchPage({}, { pages: domResults });
+    const result = await searchFacebook(page, 'hello', { type: 'pages', delay: () => {}, limit: 1, maxRetries: 1 });
+    expect(result[0].name).toBe('Starbucks');
+    expect(result[0].pageUrl).toBe('https://www.facebook.com/starbucks');
+  });
+
+  it('falls back to DOM results for groups', async () => {
+    const domResults = [
+      { id: 'nodejs', name: 'Node.js Developers', members: '50K', privacy: 'Public', groupUrl: 'https://www.facebook.com/groups/nodejs' },
+    ];
+    const page = makeSearchPage({}, { groups: domResults });
+    const result = await searchFacebook(page, 'hello', { type: 'groups', delay: () => {}, limit: 1, maxRetries: 1 });
+    expect(result[0].name).toBe('Node.js Developers');
+    expect(result[0].groupUrl).toBe('https://www.facebook.com/groups/nodejs');
+  });
+
+  it('falls back to DOM results for posts', async () => {
+    const domResults = [
+      { id: 'post1', text: 'DOM post text', author: 'author1', timestamp: 't', url: 'https://www.facebook.com/x/posts/1' },
+    ];
+    const page = makeSearchPage({}, { posts: domResults });
+    const result = await searchFacebook(page, 'hello', { type: 'posts', delay: () => {}, limit: 1, maxRetries: 1 });
+    expect(result[0].text).toBe('DOM post text');
+    expect(result[0].author).toBe('author1');
+  });
+
+  it('extracts numeric profile ids from DOM people links', async () => {
+    const domResults = [
+      { id: '123', name: 'Numeric User', profileUrl: 'https://www.facebook.com/profile.php?id=123' },
+    ];
+    const page = makeSearchPage({}, { people: domResults });
+    const result = await searchFacebook(page, 'hello', { type: 'people', delay: () => {}, limit: 1, maxRetries: 1 });
+    expect(result[0].id).toBe('123');
+    expect(result[0].username).toBe('123');
+  });
+
+  it('detects checkpoints and throws during the scroll loop', async () => {
+    let calls = 0;
+    const page = {
+      goto: async () => {},
+      url: () => 'https://www.facebook.com/search/posts',
+      evaluate: async (fn, ...args) => {
+        const fnStr = fn.toString();
+        if (fnStr.includes('scrollTo')) return undefined;
+        if (args.length === 0) {
+          calls++;
+          // Second body check simulates a checkpoint interstitial.
+          return calls === 2;
+        }
+        return [{ id: 'p1', message: 'post', actor: { name: 'a' }, published_time: 't', url: 'u' }];
+      },
+    };
+    await expect(searchFacebook(page, 'hello', { type: 'posts', delay: () => {}, limit: 2, maxRetries: 3 })).rejects.toThrow(/checkpoint/);
+  });
 });
 
 // ============================================================================
@@ -478,20 +586,49 @@ describe('searchFacebook', () => {
 // ============================================================================
 
 describe('dispatcher searchFacebook routing', () => {
+  function makeRoutingPage(storyResults) {
+    return {
+      goto: async () => {},
+      url: () => 'https://www.facebook.com/search/posts',
+      evaluate: async (fn, ...args) => {
+        const fnStr = fn.toString();
+        if (fnStr.includes('scrollTo')) return undefined;
+        if (args.length === 0) return false;
+        if (Array.isArray(args[0]) && args[0][0] === 'Story') return storyResults;
+        return [];
+      },
+    };
+  }
+
   it('scrape("facebook","search",...) routes to searchFacebook', async () => {
+    const page = makeRoutingPage([{ id: 'p1', message: 'Hello', actor: { name: 'zuck' }, published_time: 't', url: 'u' }]);
+    const result = await scrape('facebook', 'search', { page, query: 'test', type: 'posts', delay: () => {}, limit: 1, maxRetries: 1 });
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0].platform).toBe('facebook');
+  });
+
+  it('scrape("fb","search",...) alias routes to searchFacebook', async () => {
+    const page = makeRoutingPage([{ id: 'p1', message: 'Hello', actor: { name: 'zuck' }, published_time: 't', url: 'u' }]);
+    const result = await scrape('fb', 'search', { page, query: 'test', type: 'posts', delay: () => {}, limit: 1, maxRetries: 1 });
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0].platform).toBe('facebook');
+  });
+
+  it('searchTweets is a thin wrapper that calls searchFacebook with type: posts', async () => {
+    const domResults = [{ id: 'p1', text: 'wrapped', author: 'a', timestamp: 't', url: 'https://www.facebook.com/x/posts/1' }];
     const page = {
       goto: async () => {},
       url: () => 'https://www.facebook.com/search/posts',
       evaluate: async (fn, ...args) => {
-        if (fn.toString().includes('scrollTo')) return undefined;
-        if (Array.isArray(args[0]) && args[0][0] === 'Story') {
-          return [{ id: 'p1', message: 'Hello', actor: { name: 'zuck' }, published_time: 't', url: 'u' }];
-        }
+        const fnStr = fn.toString();
+        if (fnStr.includes('scrollTo')) return undefined;
+        if (args.length === 0) return false;
+        if (fnStr.includes('[role="article"]')) return domResults;
         return [];
       },
     };
-    const result = await scrape('facebook', 'search', { page, query: 'test', type: 'posts', delay: () => {}, limit: 1, maxRetries: 1 });
-    expect(Array.isArray(result)).toBe(true);
+    const result = await searchTweets(page, 'hello', { delay: () => {}, limit: 1, maxRetries: 1 });
+    expect(result[0].text).toBe('wrapped');
     expect(result[0].platform).toBe('facebook');
   });
 });

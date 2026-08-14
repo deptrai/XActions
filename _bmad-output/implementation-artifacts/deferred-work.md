@@ -169,3 +169,9 @@ Issue EPS-5 (Deferred work cleanup) triaged all 6 priority items. Items 1, 2, 3,
 - **Real-browser smoke test navigates to live Facebook** [test-persistent-profiles-real.mjs] — network flakiness is expected for real-browser tests and matches the existing real-cookie test pattern.
 - **No file-locking for concurrent `userDataDir` usage** [src/scrapers/facebook/index.js] — Chromium profile lock is a runtime limitation; callers should use per-account paths as recommended.
 - **No runtime assertion that Chromium uses `userDataDir`** [src/scrapers/facebook/index.js] — requires a real browser; covered by the real-browser smoke test.
+
+## Deferred from: code review of 7-2-multi-type-search (2026-08-14)
+
+- **Story 7.3 placeholders in `platformActionMap`** [src/scrapers/index.js:190-203] — `post_comments`, `group_posts`, and `group_comments` map to functions that do not yet exist. Expected to be implemented in Story 7.3; keep the placeholder map.
+- **`normalizeSearchResult` is no longer used by the new search flow** [src/scrapers/facebook/index.js:913-923] — still a public export. Deprecate or remove in a cleanup pass rather than as part of Story 7.2.
+- **Final DOM selector tuning for real Facebook markup** [src/scrapers/facebook/index.js:1125-1184, 1186-1228] — heuristics can only be verified against a live authenticated Facebook session. Tie to `selectors-facebook.md` verify checklist.

@@ -51,13 +51,15 @@ async function genericDomFallback() {
  *
  * @param {import('puppeteer').Page} page
  * @param {string[]} typenames - e.g. ['Story','Comment','User','Page','Group','MarketplaceListing']
- * @param {{ fallbackExtractor?: (page, typenames) => Promise<any[]> }} [options]
+ * @param {{ fallbackExtractor?: (page, typenames) => Promise<any[]>, limit?: number }} [options]
  * @returns {Promise<any[]>}
  */
 export async function extractHydrationJson(page, typenames, options = {}) {
   if (!Array.isArray(typenames) || typenames.length === 0) {
     throw new Error('❌ extractHydrationJson requires a non-empty typenames array');
   }
+
+  const limit = options.limit ? Math.max(1, Math.floor(Number(options.limit))) : 0;
 
   const results = await page.evaluate((typeNames) => {
     const collected = [];
@@ -78,9 +80,10 @@ export async function extractHydrationJson(page, typenames, options = {}) {
     return collected;
   }, typenames);
 
-  if (results.length === 0) {
+  if (results.length === 0 || (limit && results.length < limit)) {
     const fallback = options.fallbackExtractor || genericDomFallback;
-    return await fallback(page, typenames);
+    const fallbackResults = await fallback(page, typenames);
+    return fallbackResults?.length ? [...results, ...fallbackResults] : results;
   }
 
   return results;

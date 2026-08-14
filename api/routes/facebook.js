@@ -131,12 +131,16 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
 
 /**
  * POST /api/facebook/scrape
- * Scrape Facebook data: profile, posts, followers, or search.
+ * Scrape Facebook data: profile, posts, followers, search, or marketplace.
  *
  * Body: {
- *   action: 'profile' | 'posts' | 'followers' | 'search',
+ *   action: 'profile' | 'posts' | 'followers' | 'search' | 'marketplace',
  *   url?: string,       // required for profile/posts/followers
- *   query?: string,     // required for search
+ *   query?: string,     // required for search / marketplace
+ *   type?: 'posts' | 'people' | 'pages' | 'groups' | 'all', // search only
+ *   parallel?: boolean, // search only, accepted and ignored in Story 7.2
+ *   location?: string,  // search only
+ *   limit?: number,     // search only
  *   authCookie?: { c_user, xs }  // optional; enables authenticated scrape
  * }
  */
@@ -155,8 +159,10 @@ router.post('/scrape', async (req, res) => {
     if (['profile', 'posts', 'followers', 'group-members'].includes(action) && !url?.trim()) {
       return res.status(400).json({ ok: false, error: `action "${action}" requires url` });
     }
-    if (['search', 'marketplace'].includes(action) && !query?.trim()) {
-      return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
+    if (['search', 'marketplace'].includes(action)) {
+      if (typeof query !== 'string' || !query.trim()) {
+        return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
+      }
     }
 
     if (action === 'search' && type !== undefined && type !== null) {
@@ -166,6 +172,24 @@ router.post('/scrape', async (req, res) => {
           ok: false,
           error: `search type must be one of: ${VALID_TYPES.join(', ')}`,
         });
+      }
+    }
+
+    // Validate search-only optional parameters before launching a browser.
+    if (action === 'search') {
+      if (limit !== undefined && limit !== null) {
+        const n = Number(limit);
+        if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+          return res.status(400).json({ ok: false, error: 'limit must be a positive integer' });
+        }
+      }
+      if (location !== undefined && location !== null) {
+        if (typeof location !== 'string') {
+          return res.status(400).json({ ok: false, error: 'location must be a string' });
+        }
+      }
+      if (parallel !== undefined && parallel !== null && typeof parallel !== 'boolean') {
+        return res.status(400).json({ ok: false, error: 'parallel must be a boolean' });
       }
     }
 
@@ -199,17 +223,21 @@ router.post('/scrape', async (req, res) => {
 
     // Dispatcher resolves target from options.url / options.query (NOT options.target).
     // Pass the keys it actually reads, else the target is silently dropped → scrape fails.
+    const searchArgs = {
+      query: query.trim(),
+      ...(type !== undefined && type !== null && { type }),
+      ...(parallel !== undefined && parallel !== null && { parallel }),
+      ...(location !== undefined && location !== null && { location: location.trim() }),
+      ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
+    };
+
     const scrapeArgs = {
       ...options,
-      ...(action === 'search' || action === 'marketplace'
-        ? {
-            query: query.trim(),
-            ...(type && { type }),
-            ...(parallel !== undefined && { parallel }),
-            ...(location && { location: location.trim() }),
-            ...(limit !== undefined && { limit: Number(limit) }),
-          }
-        : { url: url.trim() }),
+      ...(action === 'search'
+        ? searchArgs
+        : action === 'marketplace'
+          ? { query: query.trim() }
+          : { url: url.trim() }),
     };
     const result = await scrape('facebook', action, scrapeArgs);
 

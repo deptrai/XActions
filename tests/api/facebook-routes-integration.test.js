@@ -93,6 +93,30 @@ describe('POST /api/facebook/scrape — integration', () => {
     expect(res.body.error).toMatch(/search type must be one of/);
   });
 
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 when search action has non-numeric limit`, async () => {
+    const res = await postScrape({ action: 'search', query: 'hello', limit: 'abc' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/limit must be a positive integer/);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 when search action has negative limit`, async () => {
+    const res = await postScrape({ action: 'search', query: 'hello', limit: -5 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/limit must be a positive integer/);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 when search action has non-string location`, async () => {
+    const res = await postScrape({ action: 'search', query: 'hello', location: 123 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/location must be a string/);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 when search action has non-boolean parallel`, async () => {
+    const res = await postScrape({ action: 'search', query: 'hello', parallel: 'yes' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/parallel must be a boolean/);
+  });
+
   it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 for an invalidly shaped raw cookie`, async () => {
     const res = await postScrape({
       action: 'profile',
