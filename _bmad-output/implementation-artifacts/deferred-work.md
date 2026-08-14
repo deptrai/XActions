@@ -201,3 +201,11 @@ Issue EPS-5 (Deferred work cleanup) triaged all 6 priority items. Items 1, 2, 3,
 - **Race conditions in pool selection** [api/services/facebookAccountPool.js:163-167] — pre-existing pool design.
 - **Mobile viewport not reset after group scrape** [src/scrapers/facebook/index.js:1453] — API creates new page per scrape, not an issue in practice.
 - **Proxy password not validated for length** [src/scrapers/facebook/proxy.js:1021] — pre-existing.
+
+## Deferred from: code review of 3-2-1-facebook-mcp-tool-surface-extension (2026-08-14)
+
+- **Tests hit real database without isolation** [tests/mcp/facebook-mcp-account-tools.test.js] — pre-existing test pattern in this codebase.
+- **No error handling for dynamic import failures** [src/mcp/server.js:2986,2999] — pre-existing pattern across all MCP tools.
+- **accountId could list another user's accounts** [src/mcp/server.js:2795-2808] — authorization concern, pre-existing design issue.
+- **No automated smoke test** [spec AC5.21] — manual smoke test documented in completion notes.
+- **Missing test for both userId + authCookie** [tests/mcp/facebook-mcp-account-tools.test.js] — test quality gap.

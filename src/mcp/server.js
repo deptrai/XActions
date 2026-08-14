@@ -2792,9 +2792,13 @@ async function executeFacebookListAccounts(args) {
   const { userId, authCookie } = args;
   let targetUserId = userId;
 
-  if (!targetUserId && authCookie?.accountId) {
-    const prisma = new PrismaClient();
-    try {
+  if (userId != null && typeof userId !== 'string') {
+    throw new Error('❌ x_facebook_list_accounts: userId must be a string');
+  }
+
+  const prisma = new PrismaClient();
+  try {
+    if (!targetUserId && authCookie?.accountId) {
       const account = await prisma.facebookAccount.findUnique({
         where: { id: authCookie.accountId },
         select: { userId: true },
@@ -2803,17 +2807,12 @@ async function executeFacebookListAccounts(args) {
         throw new Error(`❌ Facebook account "${authCookie.accountId}" not found`);
       }
       targetUserId = account.userId;
-    } finally {
-      await prisma.$disconnect();
     }
-  }
 
-  if (!targetUserId) {
-    throw new Error('❌ x_facebook_list_accounts requires userId or authCookie.accountId');
-  }
+    if (!targetUserId) {
+      throw new Error('❌ x_facebook_list_accounts requires userId or authCookie.accountId');
+    }
 
-  const prisma = new PrismaClient();
-  try {
     const accounts = await prisma.facebookAccount.findMany({
       where: { userId: targetUserId },
       select: { id: true, label: true, userId: true, createdAt: true },
@@ -2979,6 +2978,9 @@ async function executeFacebookEpic4Tool(name, args) {
     if (typeof groupUrl !== 'string' || !groupUrl.trim() || !groupUrl.includes('facebook.com/groups/')) {
       throw new Error('❌ x_facebook_group_members: groupUrl must be a facebook.com/groups/ URL');
     }
+    if (limit != null && (!Number.isFinite(limit) || limit < 1 || limit > 500)) {
+      throw new Error('❌ x_facebook_group_members: limit must be a number between 1 and 500');
+    }
     const options = { ...(limit != null && { limit }) };
     if (resolvedDryRun) {
       return { dryRun: true, platform: 'facebook', preview: { groupUrl, ...options } };
@@ -2993,6 +2995,18 @@ async function executeFacebookEpic4Tool(name, args) {
     const { query, location, limit, minPrice, maxPrice, category } = rest;
     if (typeof query !== 'string' || !query.trim()) {
       throw new Error('❌ x_facebook_marketplace: query is required');
+    }
+    if (limit != null && (!Number.isFinite(limit) || limit < 1 || limit > 200)) {
+      throw new Error('❌ x_facebook_marketplace: limit must be a number between 1 and 200');
+    }
+    if (minPrice != null && (!Number.isFinite(minPrice) || minPrice < 0)) {
+      throw new Error('❌ x_facebook_marketplace: minPrice must be a non-negative number');
+    }
+    if (maxPrice != null && (!Number.isFinite(maxPrice) || maxPrice < 0)) {
+      throw new Error('❌ x_facebook_marketplace: maxPrice must be a non-negative number');
+    }
+    if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
+      throw new Error('❌ x_facebook_marketplace: minPrice cannot be greater than maxPrice');
     }
     const options = {
       ...(limit != null && { limit }),

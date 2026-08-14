@@ -4,7 +4,7 @@
 baseline_commit: a2a9c7a
 ---
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -30,7 +30,7 @@ so that I can reach all Facebook capabilities already implemented in the codebas
 
 **AC2 — `x_facebook_marketplace` MCP tool**
 7. A new MCP tool `x_facebook_marketplace` is registered in `src/mcp/server.js` `TOOLS` array.
-8. Input schema: `{ query: string, location?: string, limit?: number, minPrice?: number, maxPrice?: number, category?: string, dryRun?: boolean, authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA }`.
+8. Input schema: `{ query: string, location?: string, limit?: number, minPrice?: number, maxPrice?: number, category?: string, dryRun?: boolean, authCookie?: FACEBOOK_AUTH_COOKIE_SCHEMA }`. `authCookie` is optional — marketplace search works anonymously for public listings.
 9. `dryRun` defaults to `true` and previews the search URL + filters without launching a browser.
 10. Real run resolves `authCookie` via `resolveMcpFacebookAuth`, logs in, and calls `scrapeMarketplace(page, query, { limit, location, minPrice, maxPrice, category })`.
 11. Returns normalized listings `{ id, title, price, location, image, listingUrl, platform: 'facebook', source: 'marketplace' }` with PII stripped by `normalizeMarketplaceListing`.
@@ -84,6 +84,18 @@ so that I can reach all Facebook capabilities already implemented in the codebas
   - [ ] Run `git commit` and `git push`
 
 ## Dev Notes
+
+### Review Findings
+
+- [x] [Review][Decision] AC2.8 marketplace authCookie: spec says required, implementation makes it optional (anonymous search). **Resolved: update spec to optional** — marketplace works anonymously [`src/mcp/server.js:1585`]
+- [x] [Review][Patch] Duplicate PrismaClient instances in executeFacebookListAccounts — 2 instances created, should reuse one [`src/mcp/server.js:2796,2815`]
+- [x] [Review][Patch] Missing numeric parameter validation — limit/minPrice/maxPrice không có range checks [`src/mcp/server.js:2982,2997-3002`]
+- [x] [Review][Patch] Missing userId type validation — number userId would pass `!targetUserId` check [`src/mcp/server.js:2792`]
+- [x] [Review][Defer] Tests hit real database without isolation [tests/mcp/facebook-mcp-account-tools.test.js] — deferred, pre-existing test pattern
+- [x] [Review][Defer] No error handling for dynamic import failures [src/mcp/server.js:2986,2999] — deferred, pre-existing pattern
+- [x] [Review][Defer] accountId could list another user's accounts — authorization concern [src/mcp/server.js:2795-2808] — deferred, pre-existing design
+- [x] [Review][Defer] No automated smoke test [spec AC5.21] — deferred, manual smoke test documented
+- [x] [Review][Defer] Missing test for both userId + authCookie [tests/mcp/facebook-mcp-account-tools.test.js] — deferred, test quality gap
 
 ### Apply previous MCP lessons
 
