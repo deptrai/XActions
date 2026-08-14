@@ -127,6 +127,27 @@ describe('POST /api/facebook/scrape — integration', () => {
     expect(res.body.ok).toBe(false);
     expect(res.body.error).toMatch(/c_user must be a numeric Facebook UID/i);
   });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 for an unknown stored accountId`, async () => {
+    const res = await postScrape({
+      action: 'search',
+      query: 'hello',
+      authCookie: { accountId: makeAccountId() },
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.error).toMatch(/not found/i);
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 when no auth source and no active stored account`, async () => {
+    const res = await postScrape({
+      action: 'search',
+      query: 'hello',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.error).toMatch(/No active Facebook account/i);
+  });
 });
 
 describe('POST /api/facebook/automate — integration', () => {

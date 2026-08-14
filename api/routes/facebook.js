@@ -79,6 +79,60 @@ async function resolveRunAccounts(userId, body) {
 }
 
 /**
+ * Resolve the single cookie used by /api/facebook/scrape.
+ * Priority:
+ *   1. Raw authCookie { c_user, xs }
+ *   2. authCookie.accountId (explicit stored account)
+ *   3. accountIds[] (use first for single-page scrape)
+ *   4. Auto-pick the most recently verified active stored account
+ *
+ * Cookie values are decrypted server-side and never logged (NFR3).
+ * @returns {Promise<{label: string, cookie: Object}>}
+ */
+async function resolveScrapeCookie(userId, authCookie, accountIds) {
+  const rawUser = String(authCookie?.c_user ?? '').trim();
+  const rawXs = String(authCookie?.xs ?? '').trim();
+  if (rawUser || rawXs) {
+    if (!rawUser || !/^\d{10,20}$/.test(rawUser)) {
+      const err = new Error('authCookie.c_user must be a numeric Facebook UID (10-20 digits).');
+      err.code = 'INVALID_RAW_COOKIE';
+      throw err;
+    }
+    if (!rawXs) {
+      const err = new Error('authCookie.xs is required when c_user is provided.');
+      err.code = 'INVALID_RAW_COOKIE';
+      throw err;
+    }
+    return { label: 'raw', cookie: authCookie };
+  }
+
+  const accountId = authCookie?.accountId;
+  if (accountId && accountId !== 'auto') {
+    return { label: String(accountId), cookie: await resolveAccountCookie(userId, accountId) };
+  }
+
+  if (Array.isArray(accountIds) && accountIds.length > 0) {
+    const first = accountIds[0];
+    return { label: String(first), cookie: await resolveAccountCookie(userId, first) };
+  }
+
+  // Auto-pick a live, recently-verified stored account.
+  const activeHealth = await prisma.facebookAccountHealth.findFirst({
+    where: { status: 'active', account: { userId } },
+    include: { account: { select: { id: true, label: true } } },
+    orderBy: { lastCheckAt: 'desc' },
+  });
+  if (!activeHealth) {
+    const err = new Error(
+      'No active Facebook account found. Provide authCookie { c_user, xs }, authCookie.accountId, accountIds[], or add a stored account and run a health check.',
+    );
+    err.code = 'NO_ACTIVE_ACCOUNT';
+    throw err;
+  }
+  return { label: activeHealth.account.label, cookie: await resolveAccountCookie(userId, activeHealth.account.id) };
+}
+
+/**
  * Execute a messenger-share campaign across N accounts and M links (Story 5.5 D2).
  * Recipients are distributed round-robin across accounts; each account opens its own
  * browser session and runs messengerShareCampaign per link (FIFO). Dry-run launches
@@ -141,7 +195,9 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
  *   parallel?: boolean, // search only, accepted and ignored in Story 7.2
  *   location?: string,  // search only
  *   limit?: number,     // search only
- *   authCookie?: { c_user, xs }  // optional; enables authenticated scrape
+ *   authCookie?: { c_user, xs } | { accountId: string }, // optional; auto-picks active stored account if omitted
+ *   accountIds?: string[],                                 // optional; uses first for single-page scrape
+ *   browserOptions?: { proxy, proxyAuth, proxyLocation, headless, skipWarmup }
  * }
  */
 router.post('/scrape', async (req, res) => {
@@ -197,13 +253,25 @@ router.post('/scrape', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'browserOptions must be an object' });
     }
 
-    // Fail fast on malformed session cookie before launching a browser / hitting the network.
-    const rawCookieProvided = authCookie && (String(authCookie.c_user ?? '').trim() || String(authCookie.xs ?? '').trim());
-    if (rawCookieProvided) {
-      const cookieError = validateRawCookie(authCookie);
-      if (cookieError) {
-        return res.status(400).json({ ok: false, error: cookieError });
+    // Resolve the session: raw cookie, stored accountId/accountIds, or auto-pick a live one.
+    let resolved;
+    try {
+      resolved = await resolveScrapeCookie(req.user.id, authCookie, req.body?.accountIds);
+    } catch (e) {
+      const code = e?.code;
+      if (code === 'INVALID_RAW_COOKIE') {
+        return res.status(400).json({ ok: false, error: e.message });
       }
+      if (code === 'ACCOUNT_NOT_FOUND') {
+        return res.status(400).json({ ok: false, error: 'Selected Facebook account not found' });
+      }
+      if (code === 'ACCOUNT_DECRYPT_FAILED') {
+        return res.status(400).json({ ok: false, error: 'Failed to load the selected Facebook account session', sessionExpired: true });
+      }
+      if (code === 'NO_ACTIVE_ACCOUNT') {
+        return res.status(400).json({ ok: false, error: e.message });
+      }
+      throw e;
     }
 
     // Dynamic import — avoids loading Puppeteer until needed
@@ -212,18 +280,8 @@ router.post('/scrape', async (req, res) => {
     const options = {
       userId: req.user.id,
       ...(browserOptions ? { browserOptions } : {}),
-      // Pass all cookie fields for full session auth (never log values)
-      ...(authCookie?.c_user?.trim() && authCookie?.xs?.trim()
-        ? { authCookie: {
-            c_user: authCookie.c_user,
-            xs: authCookie.xs,
-            sb: authCookie.sb,
-            datar: authCookie.datatar || authCookie.datar,
-            fr: authCookie.fr,
-            fbl_st: authCookie.fbl_st,
-            locale: authCookie.locale,
-          } }
-        : {}),
+      // Pass all cookie fields for full session auth (never log values).
+      authCookie: resolved.cookie,
     };
 
     // Dispatcher resolves target from options.url / options.query (NOT options.target).
