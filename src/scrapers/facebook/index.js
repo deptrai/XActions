@@ -69,6 +69,17 @@ export async function createBrowser(options = {}) {
     '--disable-setuid-sandbox',
     '--disable-blink-features=AutomationControlled',
     '--disable-webrtc', // Story 6.5 — prevent real IP leak via STUN (defense-in-depth with JS override)
+    // Anti-detection / anti-fingerprinting launch flags for headless Facebook scraping
+    '--disable-dev-shm-usage',
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--password-store=basic',
+    '--disable-sync',
+    '--disable-background-networking',
+    '--disable-background-timer-throttling',
+    '--disable-renderer-backgrounding',
+    '--disable-features=IsolateOrigins,site-per-process',
+    '--disable-site-isolation-trials',
   ];
 
   let mergedArgs = [...stealthArgs, ...(proxy ? [`--proxy-server=${proxy}`] : []), ...extraArgs];
