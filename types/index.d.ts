@@ -756,10 +756,12 @@ export declare function buildGraphQLUrl(
   fieldToggles?: Record<string, boolean>,
 ): string;
 
-// ── Core Domain (Story 10.1), Store (Story 10.2) & Exporter (Story 10.3) ───
+// ── Core Domain (Story 10.1), Store (Story 10.2), Exporter (Story 10.3) & Checkpoints (Story 10.4) ───
 
 export * as core from './core';
 export * as store from './store';
 export * as exporter from './exporter';
+export * as checkpointManager from './checkpoint-manager';
+
 
 
