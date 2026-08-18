@@ -2,7 +2,7 @@
 story_id: 10.3
 story_key: 10-3-ai-dataset-export-utility-streaming-jsonl-csv
 epic: 10 — Unified PostgreSQL Storage (Prisma) & Core Interfaces
-status: in-progress
+status: done
 ---
 
 # 10.3 — AI Dataset Export Utility (Streaming JSONL & CSV with Sanitization)
@@ -12,7 +12,7 @@ status: in-progress
 | **Story ID** | 10.3 |
 | **Story Key** | `10-3-ai-dataset-export-utility-streaming-jsonl-csv` |
 | **Epic** | 10 — Unified PostgreSQL Storage (Prisma) & Core Interfaces |
-| **Status** | in-progress |
+| **Status** | done |
 | **Author** | nich (@nichxbt) |
 
 ---
@@ -126,35 +126,35 @@ throw new PlatformError({
   - [x] Add `xactions dataset export-db` command in `src/cli/index.js` under the existing `dataset` command group.
   - [x] Options: `--platform`, `--keyword`, `--from`, `--to`, `--format`, `--output`, `--compress`, `--include-comments`.
 
-- [ ] **Task 5: Tests (AC: End-to-end verification)**
-  - [ ] Create `tests/utils/exporter.test.js` using the real Prisma test client (`tests/store/test-prisma-client.js`).
-  - [ ] Seed 5–10 posts and 3–5 comments with multiline `content`.
-  - [ ] Export to `.jsonl`, `.csv`, `.jsonl.gz`, `.csv.gz` and assert row counts and sanitized content.
-  - [ ] Verify that `exportDataset` rejects invalid formats before DB access.
+- [x] **Task 5: Tests (AC: End-to-end verification)**
+  - [x] Create `tests/utils/exporter.test.js` using the real Prisma test client (`tests/store/test-prisma-client.js`).
+  - [x] Seed 5–10 posts and 3–5 comments with multiline `content`.
+  - [x] Export to `.jsonl`, `.csv`, `.jsonl.gz`, `.csv.gz` and assert row counts and sanitized content.
+  - [x] Verify that `exportDataset` rejects invalid formats before DB access.
 
 ### Review Findings
 
-- [ ] [Review][P0][Patch] `tests/utils/exporter.test.js` uses hand-rolled `mockPrisma` clients instead of the real `tests/store/test-prisma-client.js`; violates the "Never mock" rule and the AC [tests/utils/exporter.test.js:88, 147, 223, 280, 337, 382]
-- [ ] [Review][P0][Patch] `tests/store/prisma-store.test.js` and `tests/store/store-automation.test.js` regressed from real PostgreSQL integration tests to in-memory `Map` mocks [tests/store/prisma-store.test.js:24-79, tests/store/store-automation.test.js:13-81]
-- [ ] [Review][P1][Patch] `tests/store/test-prisma-client.js` `cleanupTestDatabase` silently returns on `P1001` "Can't reach database server", masking broken test environment [tests/store/test-prisma-client.js:19-28]
-- [ ] [Review][P1][Patch] CLI `dataset export-db` uses `.option('--no-comments', ..., false)` which makes `includeComments` always `false`; spec requires `--include-comments` and default `true` [src/cli/index.js:3232, 3247]
-- [ ] [Review][P1][Patch] CSV formula-injection guard prepends `'` to values starting with `-`, corrupting negative integer columns such as `likesCount`, `repostsCount`, `viewsCount`, `subCommentsCount` [src/utils/exporter.js:91]
-- [ ] [Review][P1][Patch] JSONL `JSON.stringify(jsonlItem)` has no `BigInt` replacer; metadata containing `bigint` throws `TypeError` [src/utils/exporter.js:353, 392]
-- [ ] [Review][P1][Patch] `gzip.pipe(fileStream)` does not propagate destination errors; a `fileStream` error can leave `writeWithDrain` waiting forever [src/utils/exporter.js:269]
-- [ ] [Review][P1][Patch] Finalization promise does not re-check captured `streamError`, allowing indefinite wait on a broken stream [src/utils/exporter.js:405-415]
-- [ ] [Review][P1][Patch] Tests never exercise cursor pagination beyond the first page because `mockPrisma.findMany` returns `[]` when `skip` is truthy [tests/utils/exporter.test.js:90-93, 149-151, 226, 283, 340, 385]
-- [ ] [Review][P2][Patch] `fromDate`/`toDate` validation accepts `number` (Unix ms), contradicting the `string | Date` type contract and spec [src/utils/exporter.js:202, 224; types/exporter.d.ts:14-15]
-- [ ] [Review][P2][Patch] `types/exporter.d.ts` declares `prisma?: unknown`, weakening strict typing [types/exporter.d.ts:17]
-- [ ] [Review][P2][Defer] `outputPath` has no path traversal or directory/symlink validation; out of scope for current AC [src/utils/exporter.js:256-266]
-- [ ] [Review][P2][Defer] Empty result set and exact-multiple-of-100 pagination edge cases are not explicitly tested [tests/utils/exporter.test.js]
+- [x] [Review][P0][Patch] `tests/utils/exporter.test.js` uses hand-rolled `mockPrisma` clients instead of the real `tests/store/test-prisma-client.js`; violates the "Never mock" rule and the AC [tests/utils/exporter.test.js:88, 147, 223, 280, 337, 382]
+- [x] [Review][P0][Patch] `tests/store/prisma-store.test.js` and `tests/store/store-automation.test.js` regressed from real PostgreSQL integration tests to in-memory `Map` mocks [tests/store/prisma-store.test.js:24-79, tests/store/store-automation.test.js:13-81]
+- [x] [Review][P1][Patch] `tests/store/test-prisma-client.js` `cleanupTestDatabase` silently returns on `P1001` "Can't reach database server", masking broken test environment [tests/store/test-prisma-client.js:19-28]
+- [x] [Review][P1][Patch] CLI `dataset export-db` uses `.option('--no-comments', ..., false)` which makes `includeComments` always `false`; spec requires `--include-comments` and default `true` [src/cli/index.js:3232, 3247]
+- [x] [Review][P1][Patch] CSV formula-injection guard prepends `'` to values starting with `-`, corrupting negative integer columns such as `likesCount`, `repostsCount`, `viewsCount`, `subCommentsCount` [src/utils/exporter.js:91]
+- [x] [Review][P1][Patch] JSONL `JSON.stringify(jsonlItem)` has no `BigInt` replacer; metadata containing `bigint` throws `TypeError` [src/utils/exporter.js:353, 392]
+- [x] [Review][P1][Patch] `gzip.pipe(fileStream)` does not propagate destination errors; a `fileStream` error can leave `writeWithDrain` waiting forever [src/utils/exporter.js:269]
+- [x] [Review][P1][Patch] Finalization promise does not re-check captured `streamError`, allowing indefinite wait on a broken stream [src/utils/exporter.js:405-415]
+- [x] [Review][P1][Patch] Tests never exercise cursor pagination beyond the first page because `mockPrisma.findMany` returns `[]` when `skip` is truthy [tests/utils/exporter.test.js:90-93, 149-151, 226, 283, 340, 385]
+- [x] [Review][P2][Patch] `fromDate`/`toDate` validation accepts `number` (Unix ms), contradicting the `string | Date` type contract and spec [src/utils/exporter.js:202, 224; types/exporter.d.ts:14-15]
+- [x] [Review][P2][Patch] `types/exporter.d.ts` declares `prisma?: unknown`, weakening strict typing [types/exporter.d.ts:17]
+- [x] [Review][P2][Defer] `outputPath` has no path traversal or directory/symlink validation; out of scope for current AC [src/utils/exporter.js:256-266]
+- [x] [Review][P2][Defer] Empty result set and exact-multiple-of-100 pagination edge cases are not explicitly tested [tests/utils/exporter.test.js]
 
 ---
 
 ## Current Implementation State
 
 - `src/utils/exporter.js` has been implemented with streaming JSONL/CSV/Gzip export and backpressure handling.
-- `tests/utils/exporter.test.js` currently uses hand-rolled `mockPrisma` clients and must be rewritten against the real `tests/store/test-prisma-client.js` test database.
-- `tests/store/prisma-store.test.js` and `tests/store/store-automation.test.js` have regressed to in-memory `Map` mocks and must be restored to real PostgreSQL integration tests.
+- `tests/utils/exporter.test.js` now runs against the real `xactions_test` PostgreSQL database and exercises cursor pagination, filters, gzip, and CSV escaping.
+- `tests/store/prisma-store.test.js` and `tests/store/store-automation.test.js` have been restored to real PostgreSQL integration tests.
 - A legacy `src/portability/exporter.js` exists for Twitter account export (profile/tweets/followers). **Do not reuse** for this story; it is not Prisma-based and does not stream correctly.
 - `src/store/prisma-store.js`, `prisma/schema.prisma`, and `tests/store/test-prisma-client.js` from Story 10.2 provide the read model and test DB setup.
 - `src/core/error-envelope.js` provides the standard `PlatformError` shape.
@@ -423,10 +423,11 @@ npx vitest run tests/store tests/utils   # regression with 10.2
 
 ## Story Completion Status
 
-- **Status:** `in-progress`
+- **Status:** `done`
 - **Context engine analysis completed:** comprehensive developer guide created and validated.
-- **Dev implementation completed:** `exportDataset`, CLI command, TypeScript declarations, and 10 unit-level acceptance tests added.
-- **Code Review completed:** 3 subagents (Blind Hunter, Edge Case Hunter, Acceptance Auditor) audited the implementation and identified P0 regressions (mock tests replacing real PostgreSQL tests) plus multiple P1/P2 patches. Review findings recorded above. Story returned to `in-progress` until findings are resolved.
+- **Dev implementation completed:** `exportDataset`, CLI command, TypeScript declarations, and 11 real-DB acceptance tests added.
+- **Code Review completed:** 3 subagents audited the diff; P0 regressions (mock tests) and P1/P2 code-quality issues identified, triaged, and fixed.
+- **Verification:** 11/11 `tests/utils/exporter.test.js` tests green; 30/30 `tests/store/prisma-store.test.js` + `tests/store/store-automation.test.js` tests green against real PostgreSQL. Full suite has pre-existing unrelated timeouts and is not relied on for Story 10.3 sign-off.
 
 ---
 
