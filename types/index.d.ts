@@ -756,6 +756,8 @@ export declare function buildGraphQLUrl(
   fieldToggles?: Record<string, boolean>,
 ): string;
 
-// ── Core Domain (Story 10.1) ────────────────────────────────────────────────
+// ── Core Domain (Story 10.1) & Store (Story 10.2) ───────────────────────────
 
 export * as core from './core';
+export * as store from './store';
+

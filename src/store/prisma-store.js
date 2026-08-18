@@ -6,7 +6,8 @@
  */
 
 import { AbstractStore } from '../core/base-store.js';
-import { generatePostId, generateCommentId } from '../core/types.js';
+import { generatePostId, generateCommentId, isValidCategory, CATEGORY_VALUES } from '../core/types.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
 
 export class PrismaStore extends AbstractStore {
   /** @type {import('@prisma/client').PrismaClient | null} */
@@ -23,7 +24,10 @@ export class PrismaStore extends AbstractStore {
   constructor(options = {}) {
     super();
     this.#prisma = options.prisma || null;
-    this.#chunkSize = options.chunkSize || 500;
+    this.#chunkSize =
+      typeof options.chunkSize === 'number' && options.chunkSize > 0
+        ? Math.floor(options.chunkSize)
+        : 500;
   }
 
   /** @returns {Promise<void>} */
@@ -34,13 +38,122 @@ export class PrismaStore extends AbstractStore {
   }
 
   /**
-   * Normalize namespaced ids.
+   * Normalize and sanitize post item to Prisma Post schema.
    * @param {import('../core/types.js').PostItem} post
-   * @returns {import('../core/types.js').PostItem}
+   * @returns {Object}
    */
   #normalizePost(post) {
-    const id = post.id || generatePostId(post.platform, post.externalId);
-    return { ...post, id };
+    if (!post || typeof post !== 'object') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Post must be a valid non-null object',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const platform = String(post.platform || '');
+    const externalId = String(post.externalId || '');
+    if (!platform || !externalId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Post must contain valid non-empty platform and externalId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform,
+      });
+    }
+
+    const id = post.id || generatePostId(platform, externalId);
+    return {
+      id,
+      platform,
+      externalId,
+      category: post.category,
+      authorId: String(post.authorId || ''),
+      authorName: String(post.authorName || ''),
+      authorAvatar: post.authorAvatar || null,
+      authorUrl: post.authorUrl || null,
+      postUrl: post.postUrl || null,
+      content: post.content || '',
+      mediaUrls: Array.isArray(post.mediaUrls) ? post.mediaUrls : [],
+      likesCount: Number(post.likesCount) || 0,
+      repostsCount: Number(post.repostsCount) || 0,
+      repliesCount: Number(post.repliesCount) || 0,
+      viewsCount: Number(post.viewsCount) || 0,
+      metadata: post.metadata && typeof post.metadata === 'object' ? post.metadata : null,
+      publishedAt: post.publishedAt ? new Date(post.publishedAt) : null,
+      crawledAt: post.crawledAt ? new Date(post.crawledAt) : new Date(),
+    };
+  }
+
+  /**
+   * Normalize and sanitize comment item to Prisma Comment schema.
+   * @param {import('../core/types.js').CommentItem} comment
+   * @returns {Object}
+   */
+  #normalizeComment(comment) {
+    if (!comment || typeof comment !== 'object') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Comment must be a valid non-null object',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const platform = String(comment.platform || '');
+    const rawPostId = String(comment.postId || '');
+    const commentExternalId = String(comment.externalId || '');
+
+    if (!platform || !rawPostId || !commentExternalId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Comment must contain valid non-empty platform, postId, and externalId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform,
+      });
+    }
+
+    const postExternalId = rawPostId.startsWith(`${platform}:`)
+      ? rawPostId.slice(platform.length + 1)
+      : rawPostId;
+    const postId = `${platform}:${postExternalId}`;
+    const id = comment.id || generateCommentId(platform, postExternalId, commentExternalId);
+
+    let parentCommentId = null;
+    if (comment.parentCommentId) {
+      const rawParent = String(comment.parentCommentId);
+      parentCommentId = rawParent.startsWith(`${platform}:`)
+        ? rawParent
+        : generateCommentId(platform, postExternalId, rawParent);
+    }
+
+    const depth =
+      typeof comment.depth === 'number' && Number.isInteger(comment.depth) && comment.depth >= 0
+        ? comment.depth
+        : parentCommentId
+          ? 1
+          : 0;
+
+    return {
+      id,
+      platform,
+      externalId: commentExternalId,
+      postId,
+      parentCommentId,
+      depth,
+      authorId: String(comment.authorId || ''),
+      authorName: String(comment.authorName || ''),
+      authorAvatar: comment.authorAvatar || null,
+      content: comment.content || '',
+      likesCount: Number(comment.likesCount) || 0,
+      subCommentsCount: Number(comment.subCommentsCount) || 0,
+      metadata: comment.metadata && typeof comment.metadata === 'object' ? comment.metadata : null,
+      publishedAt: comment.publishedAt ? new Date(comment.publishedAt) : null,
+      crawledAt: comment.crawledAt ? new Date(comment.crawledAt) : new Date(),
+    };
   }
 
   /**
@@ -48,7 +161,6 @@ export class PrismaStore extends AbstractStore {
    * @returns {Promise<void>}
    */
   async storeContent(post) {
-    await this.init();
     await this.storeBatch([post]);
   }
 
@@ -59,9 +171,23 @@ export class PrismaStore extends AbstractStore {
    * @returns {Promise<void>}
    */
   async storeBatch(posts, opts = {}) {
+    if (!Array.isArray(posts) || !posts.length) return;
+
+    for (const post of posts) {
+      if (!post.category || !isValidCategory(post.category)) {
+        throw new PlatformError({
+          type: ErrorTypes.INVALID_ARGS,
+          code: 'XACT_4001',
+          message: `Invalid or missing category "${post.category}". Allowed: ${CATEGORY_VALUES.join(', ')}`,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: post.platform,
+        });
+      }
+    }
+
     await this.init();
-    if (!posts.length) return;
     const normalized = posts.map((p) => this.#normalizePost(p));
+
     for (let i = 0; i < normalized.length; i += this.#chunkSize) {
       const chunk = normalized.slice(i, i + this.#chunkSize);
       if (opts.upsert) {
@@ -76,18 +202,29 @@ export class PrismaStore extends AbstractStore {
   }
 
   /**
-   * @param {any} model
-   * @param {any[]} items
-   * @returns {Promise<void>}
+   * @param {Object} model
+   * @param {Array<Object>} items
    */
   async #upsertChunk(model, items) {
-    if (!model) return;
-    for (const item of items) {
-      await model.upsert({
-        where: { id: item.id },
-        update: item,
-        create: item,
-      });
+    if (!model || !items.length) return;
+    if (this.#prisma?.$transaction) {
+      await this.#prisma.$transaction(
+        items.map((item) =>
+          model.upsert({
+            where: { id: item.id },
+            update: item,
+            create: item,
+          })
+        )
+      );
+    } else {
+      for (const item of items) {
+        await model.upsert({
+          where: { id: item.id },
+          update: item,
+          create: item,
+        });
+      }
     }
   }
 
@@ -96,7 +233,6 @@ export class PrismaStore extends AbstractStore {
    * @returns {Promise<void>}
    */
   async storeComment(comment) {
-    await this.init();
     await this.storeCommentBatch([comment]);
   }
 
@@ -107,19 +243,13 @@ export class PrismaStore extends AbstractStore {
    * @returns {Promise<void>}
    */
   async storeCommentBatch(comments, opts = {}) {
+    if (!Array.isArray(comments) || !comments.length) return;
     await this.init();
-    if (!comments.length) return;
 
-    // Ensure namespaced id and parent id belongs to same post
     const normalized = comments.map((c) => this.#normalizeComment(c));
-
-    // Topological sort by depth ascending
-    const sorted = [...normalized].sort((a, b) => (a.depth || 0) - (b.depth || 0));
-
-    // Group by depth and insert level by level to avoid self-FK violation
     const byDepth = new Map();
-    for (const comment of sorted) {
-      const depth = comment.depth || 0;
+    for (const comment of normalized) {
+      const depth = comment.depth;
       if (!byDepth.has(depth)) byDepth.set(depth, []);
       byDepth.get(depth).push(comment);
     }
@@ -141,22 +271,11 @@ export class PrismaStore extends AbstractStore {
     }
   }
 
-  /**
-   * @param {import('../core/types.js').CommentItem} comment
-   * @returns {import('../core/types.js').CommentItem}
-   */
-  #normalizeComment(comment) {
-    const postId = comment.postId;
-    const externalId = comment.externalId;
-    const platform = comment.platform;
-    // postId is namespaced "${platform}:${postExternalId}"; extract postExternalId
-    const postExternalId = postId.startsWith(`${platform}:`) ? postId.slice(platform.length + 1) : postId;
-    const id = comment.id || generateCommentId(platform, postExternalId, externalId);
-    return { ...comment, id };
-  }
-
   /** @returns {Promise<void>} */
   async close() {
-    await this.#prisma?.$disconnect();
+    if (this.#prisma) {
+      await this.#prisma.$disconnect();
+      this.#prisma = null;
+    }
   }
 }

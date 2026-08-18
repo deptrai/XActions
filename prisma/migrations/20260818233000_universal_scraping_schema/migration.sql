@@ -8,8 +8,5 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_price ON "Post" USING btree ((metad
 CREATE INDEX IF NOT EXISTS idx_post_metadata_phone ON "Post" USING btree ((metadata->>'phone'));
 CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((metadata->>'salary'));
 
-CREATE INDEX IF NOT EXISTS idx_post_crawled_at ON "Post" USING btree ("crawledAt");
-CREATE INDEX IF NOT EXISTS idx_comment_crawled_at ON "Comment" USING btree ("crawledAt");
-
 -- Note: Prisma may not reflect these raw indexes in the schema. Do not run `prisma db pull`
 -- after applying this migration, as it will drop the `USING gin` clause.
