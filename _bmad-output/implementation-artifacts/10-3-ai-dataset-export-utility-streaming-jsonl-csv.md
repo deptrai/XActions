@@ -43,15 +43,18 @@ status: ready-for-dev
 - **Then** the function:
   - Accepts `format: 'jsonl' | 'csv'`.
   - Accepts `outputPath` (absolute or relative path) and writes the file there.
-  - Accepts `compress: boolean` (default `false`). When `true`, writes a Gzip-compressed `.jsonl.gz` / `.csv.gz` stream.
+  - Accepts `compress: boolean` (default `false`). When `true`, writes a Gzip-compressed `.jsonl.gz` / `.csv.gz` stream and, if the path does not already end in `.gz`, appends `.gz`.
   - Filters by `platform` (exact match, optional).
-  - Filters by `keyword` using case-insensitive `ILIKE` on both `Post.content` and `Comment.content`.
-  - Filters by `fromDate` and `toDate` on `crawledAt` (both optional).
+  - Filters by `keyword` using case-insensitive `ILIKE` on both `Post.content` and `Comment.content` (optional; when omitted, exports all rows).
+  - Filters by `fromDate` and `toDate` on `crawledAt` (both optional, ISO-8601 strings or `Date` objects).
+  - By default queries **both** `Post` and `Comment` (controlled by `includeComments`, default `true`).
+  - Emits all matched `Post` rows first (ordered by `crawledAt`), then all matched `Comment` rows (ordered by `crawledAt`). This keeps the CSV header stable and avoids interleaving complexity.
   - Reads data sequentially via Prisma cursor pagination in small chunks (default ≤ 100 rows per read) to keep memory < 50 MB.
   - Writes through `fs.createWriteStream` and respects backpressure by listening for the `'drain'` event.
   - Sanitizes newline characters (`\r\n`, `\n`, `\r`) in the `content` field to a single space before writing each row.
   - For JSONL, emits one valid JSON object per line.
   - For CSV, emits a header row and correctly escapes commas, quotes, and embedded newlines (RFC 4180-style).
+  - Returns a summary object `{ rowCount, outputPath, compressed }` so callers and tests can verify the result.
 
 ### Output schema
 
@@ -66,13 +69,25 @@ status: ready-for-dev
 
 - **Given** `format: 'csv'`
 - **When** rows are written
-- **Then** a common header row is written once at the top, missing columns are left empty, and `metadata` is serialized as a JSON string in a single CSV cell.
+- **Then** a common header row is written once at the top, missing columns are left empty, `metadata` and `mediaUrls` are serialized as JSON strings inside their cells, and values are CSV-escaped.
 
 ### Input validation
 
-- **Given** an invalid `format` or missing `outputPath`
+- **Given** an invalid `format`, missing `outputPath`, or an unparseable date
 - **When** `exportDataset()` is called
 - **Then** it throws `PlatformError` with `type: 'invalid_args'`, `code: 'XACT_4001'`, `suggestedAction: 'use_x_actions_list'` **before** touching the database or file system.
+
+```js
+import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
+
+throw new PlatformError({
+  type: ErrorTypes.INVALID_ARGS,
+  code: 'XACT_4001',
+  message: `Invalid export format: ${format}`,
+  statusCode: 400,
+  suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+});
+```
 
 ### End-to-end verification
 
@@ -90,19 +105,22 @@ status: ready-for-dev
   - [ ] Build `where` clause for `platform`, `keyword` (`mode: 'insensitive'`), `crawledAt` range.
   - [ ] Throw standard `PlatformError` (`INVALID_ARGS`, `XACT_4001`, `USE_ACTIONS_LIST`) for invalid arguments.
 
-- [ ] **Task 2: Streaming JSONL export with backpressure (AC: Functional contract)**
-  - [ ] Open `fs.createWriteStream` to `outputPath`.
-  - [ ] Optionally pipe through `zlib.createGzip()` when `compress` is true.
-  - [ ] Read `Post` rows with Prisma cursor pagination (`take: 100`, `skip: 1`, `cursor`, `orderBy: { crawledAt: 'asc' }`).
-  - [ ] If `includeComments` is true, read `Comment` rows the same way and merge by `crawledAt` ascending (or posts first, comments second — document the chosen order).
+- [ ] **Task 2: Streaming JSONL/CSV export with backpressure (AC: Functional contract)**
+  - [ ] Resolve the final `outputPath`; append `.gz` when `compress` is true and the path does not already end with `.gz`.
+  - [ ] Open `fs.createWriteStream` and, when `compress` is true, create a `zlib.createGzip()` stream and pipe it to the file stream.
+  - [ ] Read `Post` rows with Prisma cursor pagination (`take: 100`, `skip: 1`, `cursor: { id: lastId }`, `orderBy: [{ crawledAt: 'asc' }, { id: 'asc' }]`). For the first page, omit `cursor` and `skip`.
+  - [ ] After `Post` rows are exhausted, repeat the same cursor pagination for `Comment` rows.
+  - [ ] Default `includeComments` to `true`; when `false`, skip the `Comment` pass.
   - [ ] Sanitize `content` newlines to spaces; leave other fields intact.
-  - [ ] Write `JSON.stringify(row) + '\n'` and handle backpressure via `'drain'`.
+  - [ ] For JSONL, write `JSON.stringify(row) + '\n'`; for CSV, write the header once and then one escaped CSV line per row.
+  - [ ] Handle backpressure via the `'drain'` event on the sink (gzip stream or file stream).
   - [ ] Keep chunk size small enough that Node RSS stays < 50 MB.
+  - [ ] Return `{ rowCount, outputPath, compressed }`.
 
 - [ ] **Task 3: CSV export with escaping (AC: Output schema)**
-  - [ ] Generate a common CSV header matching the JSONL schema union.
+  - [ ] Generate a common CSV header: `type,id,platform,externalId,postId,parentCommentId,depth,authorId,authorName,authorAvatar,content,likesCount,repostsCount,repliesCount,viewsCount,subCommentsCount,mediaUrls,metadata,publishedAt,crawledAt`.
   - [ ] Serialize each row to CSV, escaping quotes as `""` and quoting cells that contain `,`, `"`, or newline.
-  - [ ] Write `metadata` as `JSON.stringify(metadata)` inside the cell.
+  - [ ] Serialize `metadata` and `mediaUrls` with `JSON.stringify(...)` before CSV-escaping.
 
 - [ ] **Task 4: CLI integration (optional but recommended)**
   - [ ] Add `xactions dataset export-db` command in `src/cli/index.js` under the existing `dataset` command group.
@@ -171,19 +189,28 @@ status: ready-for-dev
 
 ### Prisma Query Strategy
 
-Use cursor-based pagination, **not** offset-based pagination, to avoid degrading on large tables:
+Use cursor-based pagination, **not** offset-based pagination, to avoid degrading on large tables.
+The `id` field is the `@id` and therefore unique, so it is the correct cursor. `crawledAt` is not unique, so it cannot be used alone; add it as a secondary sort key.
 
 ```js
+// First page
 const rows = await prisma.post.findMany({
+  where,
+  take: 100,
+  orderBy: [{ crawledAt: 'asc' }, { id: 'asc' }],
+});
+
+// Subsequent pages
+const nextRows = await prisma.post.findMany({
   where,
   take: 100,
   skip: 1,
   cursor: { id: lastId },
-  orderBy: { crawledAt: 'asc' },
+  orderBy: [{ crawledAt: 'asc' }, { id: 'asc' }],
 });
 ```
 
-If filtering by `crawledAt`, combine `where.crawledAt` with `orderBy: { crawledAt: 'asc', id: 'asc' }` and use a composite cursor `({ crawledAt, id })` to avoid duplicate rows when two records share the same `crawledAt`.
+`lastId` is the `id` of the last row returned by the previous page. The `skip: 1` tells Prisma to start **after** the cursor row.
 
 ### Keyword Filtering
 
@@ -193,13 +220,17 @@ Prisma `contains` with `mode: 'insensitive'` maps to PostgreSQL `ILIKE`:
 { content: { contains: keyword, mode: 'insensitive' } }
 ```
 
-For `Comment`, join is unnecessary; query `Comment` directly with the same `platform` and `content` filter.
+For `Comment`, join is unnecessary; query `Comment` directly with the same `platform`, `content`, and `crawledAt` filters. The date filter applies to `crawledAt` (ingestion time) because it is present on every row and indexed.
 
 ### Backpressure Handling
 
 ```js
-const sink = compress ? zlib.createGzip() : fs.createWriteStream(outputPath);
-if (compress) sink.pipe(fs.createWriteStream(outputPath));
+import { createWriteStream } from 'node:fs';
+import { createGzip } from 'node:zlib';
+
+const fileStream = createWriteStream(outputPath);
+const sink = compress ? createGzip() : fileStream;
+if (compress) sink.pipe(fileStream);
 
 function awaitDrain() {
   return new Promise((resolve) => sink.once('drain', resolve));
@@ -237,8 +268,9 @@ Do not strip `\r\n` from binary or metadata; only `content` is required by AD-9.
 ### Gzip Compression
 
 When `compress: true`:
-- JSONL output path can remain `.jsonl.gz` or keep `.jsonl`; the story should document the chosen convention. Recommended: append `.gz` if not present.
-- Use `zlib.createGzip({ level: 6 })` (default) and `pipeline` or manual `gzip.pipe(writeStream)`.
+- Append `.gz` to `outputPath` if it does not already end with `.gz` (e.g. `dataset.jsonl` → `dataset.jsonl.gz`).
+- Use `node:zlib.createGzip({ level: 6 })` (default) and pipe it to `fs.createWriteStream`.
+- Wait for both the gzip and file streams to finish/close before returning the summary.
 
 ---
 
@@ -272,7 +304,7 @@ When `compress: true`:
 
 - Use the same test database setup as Story 10.2 (`DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5434/xactions_test` or `DATABASE_URL`).
 - Run `npx prisma migrate deploy` before tests if the test DB is fresh.
-- Clean seeded rows between tests with `TRUNCATE TABLE IF EXISTS "Post", "Comment" CASCADE` or transactional cleanup.
+- Clean seeded rows between tests with `TRUNCATE TABLE IF EXISTS "Post" CASCADE;` (CrawlCheckpoint and Comment rows are cascade-deleted because of FK relations) or transactional cleanup.
 
 ### Test Cases
 
@@ -280,6 +312,7 @@ When `compress: true`:
   - missing or empty `outputPath`
   - unsupported `format`
   - invalid `fromDate` / `toDate` types
+  - `fromDate` later than `toDate`
 - JSONL export:
   - creates one valid JSON object per physical line
   - line count equals matched row count
@@ -349,22 +382,24 @@ npx vitest run tests/store tests/utils   # regression with 10.2
 ## Warnings & Potential Pitfalls
 
 1. **Do not reuse `src/portability/exporter.js`**. It is for Twitter account export, uses `fs/promises.writeFile` (no streaming), and has no backpressure. [Source: `src/portability/exporter.js`]
-2. **Cursor pagination vs offset**: Offset (`skip` without `cursor`) degrades on large tables. Always use `cursor` with `orderBy`.
-3. **Composite cursor for `crawledAt`**: Many rows may share the same `crawledAt` timestamp. Cursor should include a second unique key (e.g. `id`) to avoid skipping or duplicating rows.
+2. **Cursor pagination vs offset**: Offset (`skip` without `cursor`) degrades on large tables. Always use `cursor: { id: lastId }` with `orderBy: [{ crawledAt: 'asc' }, { id: 'asc' }]`.
+3. **`crawledAt` is not unique**: Many rows may share the same `crawledAt`. Use `id` as the unique cursor and `crawledAt` as the sort key, not the cursor itself.
 4. **Do not double-stringify `metadata` in JSONL**: It is a JSON object, so `JSON.stringify(row)` handles it naturally.
-5. **CSV `metadata` cell**: must be a JSON string within the cell; escape it as part of the normal CSV escaping rules.
+5. **CSV `metadata` and `mediaUrls` cells**: must be JSON strings within the cell; escape them as part of the normal CSV escaping rules.
 6. **Backpressure with Gzip**: `gzip.write(line)` can return `false`; wait for `drain` on the gzip stream, not the file stream, and let `gzip.pipe(file)` propagate backpressure.
-7. **No mocks in tests**: Use the real `xactions_test` database; import `getTestPrismaClient` from `tests/store/test-prisma-client.js`.
+7. **No mocks in tests**: Use the real `xactions_test` database; import `prisma` and `cleanupTestDatabase` from `tests/store/test-prisma-client.js`.
 8. **Scope boundary**: JSON Schema validation of `metadata` is Story 10.5; this story should not implement it.
 
 ---
 
-## Open Questions for Product/Architect
+## Decisions Record
 
-1. Should `exportDataset` default to `Post` only, or always include `Comment` rows? The AC mentions both `Post` and `Comment`, but a single CSV with union columns is awkward. Current recommendation: add `includeComments` option default `false` and merge rows when `true`.
-2. Should the output file path automatically get a `.gz` extension when `compress` is true?
-3. Should the CLI command be `xactions dataset export-db` or `xactions export dataset`?
-4. Should `dateRange` filter by `crawledAt` (XActions ingestion time) or `publishedAt` (platform time)? Current recommendation: `crawledAt`.
+- `includeComments` defaults to `true` to match the AC ("Post and Comment").
+- Output order is `Post` rows first, then `Comment` rows, both sorted by `crawledAt` ascending, to keep CSV header stable.
+- `compress: true` appends `.gz` to `outputPath` if not present.
+- `dateRange` filters `crawledAt` (ingestion time) because it is indexed and non-null.
+- CLI command is `xactions dataset export-db` under the existing `dataset` group.
+- Return value is `{ rowCount: number, outputPath: string, compressed: boolean }`.
 
 ---
 
@@ -396,3 +431,4 @@ npx vitest run tests/store tests/utils   # regression with 10.2
 ### Change Log
 
 - **2026-08-19:** Created comprehensive story context for Story 10.3, ready-for-dev.
+- **2026-08-19:** Validated and refined cursor pagination strategy, error-envelope example, CSV header, backpressure code, and default `includeComments` behavior.
