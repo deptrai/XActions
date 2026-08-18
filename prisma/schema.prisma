@@ -324,3 +324,76 @@ model FacebookAccountHealth {
 
   @@index([accountId])
 }
+
+model Post {
+  id              String    @id // Format: "shopee:123" hoặc "twitter:456"
+  platform        String    // 'twitter' | 'facebook' | 'threads' | 'tiktok' | 'shopee' | 'chotot' | 'topcv' | 'linkedin'
+  externalId      String    // ID gốc của nền tảng
+  category        String    // 'social' | 'ecom' | 'realestate' | 'recruitment' | 'b2b'
+  authorId        String
+  authorName      String
+  authorAvatar    String?
+  authorUrl       String?
+  postUrl         String?
+  content         String    @db.Text
+  mediaUrls       String[]  // PostgreSQL native array of image/video URLs
+
+  // Metrics chung
+  likesCount      Int       @default(0)
+  repostsCount    Int       @default(0)
+  repliesCount    Int       @default(0)
+  viewsCount      Int       @default(0)
+
+  // Dynamic Structured Metadata cho từng ngành (BĐS, Ecom, HR)
+  metadata        Json?     // Chứa: price, salary, phone, rating, soldCount, skills...
+
+  publishedAt     DateTime?
+  crawledAt       DateTime  @default(now())
+  comments        Comment[]
+
+  @@unique([platform, externalId])
+  @@index([platform, crawledAt(sort: Desc)])
+  @@index([category, crawledAt(sort: Desc)])
+  @@index([authorId])
+}
+
+model Comment {
+  id                String    @id // Format: "facebook:post123:comment456"
+  platform          String
+  externalId        String    // ID gốc của comment trên nền tảng
+  postId            String
+  parentCommentId   String?   // null nếu là comment gốc, chứa id nếu là sub-reply
+  depth             Int       @default(0) // Cần cho topological sort
+  authorId          String
+  authorName        String
+  authorAvatar      String?
+  content           String    @db.Text
+  likesCount        Int       @default(0)
+  subCommentsCount  Int       @default(0)
+  metadata          Json?     // Lưu thêm sentiment, phone bóc tách trong comment...
+
+  publishedAt       DateTime?
+  crawledAt         DateTime  @default(now())
+
+  post              Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentComment     Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  subReplies        Comment[] @relation("CommentReplies")
+
+  @@unique([platform, externalId, postId])
+  @@index([postId, parentCommentId])
+  @@index([authorId])
+}
+
+model CrawlCheckpoint {
+  id              String    @id @default(cuid())
+  platform        String
+  targetType      String    // 'keyword' | 'group' | 'page' | 'user' | 'category' | 'search'
+  targetKey       String    // Query string, groupId, username, category slug
+  lastCursor      String?
+  lastTimestamp   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([platform, targetType, targetKey])
+  @@index([platform, updatedAt])
+}

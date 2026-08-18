@@ -56,6 +56,21 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 
 ## Epic 10: Unified PostgreSQL Storage (Prisma) & Core Interfaces
 
+### Story 10.0: Dev Blocker Prep & Core Scaffold
+As a **Core Developer**,
+I want **giải quyết các blocker cơ sở (dependencies, src/core/, src/proxy/, src/store/, Prisma schema, MCP daemon script) trước khi viết business logic**,
+So that **Story 10.1 và các story sau có thể compile, chạy, và test mà không bị thiếu contract hay dependency**.
+
+**Acceptance Criteria:**
+* **Given** repo XActions ở trạng thái sau architecture r3
+* **When** kiểm tra `package.json`, `src/core/`, `src/proxy/`, `src/store/`, `prisma/schema.prisma`, `package.json` scripts
+* **Then** `got-scraping`, `qrcode-terminal`, `socks-proxy-agent` phải có trong `dependencies` (hoặc xác nhận đã có), script `mcp:daemon` phải tồn tại
+* **And** `src/core/` chứa `base-crawler.js`, `base-client.js`, `base-login.js`, `base-store.js`, `error-envelope.js`, `action-registry.js`, `session-manager.js`, `status-api.js`, `adaptive-governor.js`, `index.js`
+* **And** `src/proxy/proxy-pool.js` và `src/store/prisma-store.js` tồn tại dưới dạng stub
+* **And** `prisma/schema.prisma` chứa `Post`, `Comment`, `CrawlCheckpoint` models cùng ràng buộc `@@unique`
+* **And** `prisma/migrations/YYYYMMDDHHMMSS_universal_scraping_schema/migration.sql` tạo GIN index và expression indexes
+* **And** `node src/core/index.js` parse thành công, `npx prisma validate` pass, `npm run mcp:daemon` trả về `GET /health` 200
+
 ### Story 10.1: Core Domain Interfaces & Error Hierarchy Definition
 As a **Core Developer**,
 I want **định nghĩa các abstract class `AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore` cùng cây lỗi chuẩn (`PlatformError`, `RateLimitError`, `AuthSessionExpiredError`, `ProxyDeadError`)**,
