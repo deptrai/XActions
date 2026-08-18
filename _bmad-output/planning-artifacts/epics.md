@@ -77,8 +77,8 @@ I want **định nghĩa các abstract class `AbstractCrawler`, `AbstractApiClien
 So that **mọi platform crawler và adapter trong tương lai đều có kiến trúc nhất quán, chuẩn mực và tự động phân loại lỗi retry**.
 
 **Acceptance Criteria:**
-* **Given** thư mục `src/core/` (100% Pure ESM, Zero-Dependency)
-* **When** module `src/core/base-crawler.js`, `base-client.js`, `base-store.js`, `base-login.js`, `errors.js`, `error-envelope.js`, `status-api.js`, `session-manager.js`, và `action-registry.js` được nạp
+* **Given** thư mục `src/core/` (100% Pure ESM, no external npm dependencies)
+* **When** module `src/core/base-crawler.js`, `base-client.js`, `base-store.js`, `base-login.js`, `error-envelope.js`, `signer-pool.js`, `status-api.js`, `session-manager.js`, và `action-registry.js` được nạp
 * **Then** các class phải định nghĩa đầy đủ phương thức trừu tượng:
   - `AbstractCrawler`: `init()`, `start()`, `search()`, `getPostDetail()`, `getComments()`, `cleanup()`
   - `AbstractApiClient`: `request()`, `sign()`, `updateCookies()` (đảm bảo immutable context cho từng tác vụ)
@@ -93,7 +93,9 @@ So that **mọi platform crawler và adapter trong tương lai đều có kiến
 ### Story 10.2: Prisma Post & Comment Schema with Namespaced ID, JSONB GIN & Batch Chunking
 As a **Backend & Platform Engineer**,
 I want **mở rộng `prisma/schema.prisma` với model `Post` và `Comment` (hỗ trợ Namespaced ID `${platform}:${externalId}`, cột `metadata Json?`), đồng thời triển khai `PrismaStore`**,
-So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung, không bị collision ID, và cho phép Nowing query lọc giá/sđt/lương trong <10ms**.
+So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung, không bị collision ID, và cho phép Nowing query lọc giá/sđt/lương nhanh bằng GIN/expression indexes**.
+
+> **NFR:** Query lọc `metadata` phải đạt <10ms trên tập dữ liệu test 1M rows; benchmark thực hiện trong Story 10.2b (Post-Merge Benchmark) hoặc chuyên mục NFR audit.
 
 **Acceptance Criteria:**
 * **Given** file `prisma/schema.prisma` của dự án XActions
@@ -123,6 +125,7 @@ So that **tôi có thể quản lý tiến độ crawl khi container restart ho�
 * **Given** model `CrawlCheckpoint` đã tồn tại
 * **When** triển khai `src/api/checkpoints.js` và `src/cli/commands/checkpoints.js`
 * **Then** có endpoint `GET /checkpoints`, `GET /checkpoints/:id`, `POST /checkpoints/:id/resume`, `POST /checkpoints/:id/pause`, `POST /checkpoints/:id/retry`
+* **And** các thao tác resume/pause/retry yêu cầu operator đã xác thực với quyền `checkpoint:manage` (hoặc admin tương đương)
 * **And** CLI `xactions checkpoints list/show/resume/pause/retry` hoạt động
 * **And** `CrawlCheckpoint.status` chuyển đổi đúng giữa `running`, `paused`, `failed`, `completed`, `stalled`.
 
@@ -134,10 +137,11 @@ So that **consumer biết trước field nào tồn tại và kiểu dữ liệu
 **Acceptance Criteria:**
 * **Given** dữ liệu `Post` với `metadata Json?`
 * **When** triển khai `src/core/metadata-schema-registry.js` và `src/api/schemas.js`
-* **Then** mỗi platform/category có file `schemas/<platform>/<category>.json` (hoặc TypeScript type)
+* **Then** hệ thống hỗ trợ đăng ký JSON Schema từ file `schemas/<platform>/<category>.json` (hoặc TypeScript type)
+* **And** ít nhất 2 pilot schema được publish: `schemas/twitter/social.json` và `schemas/shopee/ecom.json`
 * **And** API `GET /schemas`, `GET /schemas/:platform/:category` trả về JSON Schema
 * **And** MCP tool `x_schema_get` và CLI `xactions schema get <platform> <category>` hoạt động
-* **And** `PrismaStore` validate `metadata` against schema khi ghi, trả `invalid_args` error nếu mismatch.
+* **And** `PrismaStore` validate `metadata` against schema khi ghi, trả `invalid_args` error nếu mismatch; các schema ngoài pilot có thể được thêm trong epic chuyên biệt sau.
 
 ---
 
