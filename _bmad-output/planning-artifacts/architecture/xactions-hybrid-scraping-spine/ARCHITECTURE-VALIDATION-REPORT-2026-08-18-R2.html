@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Báo cáo Thẩm định Lại Kiến trúc — XActions (r2)</title>
+  <style>
+    :root {
+      --bg: #0f172a; --surface: #1e293b; --surface-2: #334155; --text: #e2e8f0;
+      --muted: #94a3b8; --critical: #f43f5e; --high: #fb923c; --medium: #facc15;
+      --low: #22d3ee; --ok: #22c55e; --border: #475569;
+      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; padding:0; font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.65; }
+    .container { max-width: 1080px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    h1 { font-size: 1.6rem; margin: 0 0 .5rem; }
+    .subtitle { color: var(--muted); font-size: .95rem; }
+    header { border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+    .verdict { display: inline-block; padding: .35rem 1rem; border-radius: .4rem; font-weight: 700; font-size: 1.1rem; background: rgba(244,63,94,.12); color: var(--critical); border: 1px solid rgba(244,63,94,.4); }
+    .callout { background: var(--surface); border-left: 4px solid var(--high); padding: 1rem 1.25rem; border-radius: 0 .5rem .5rem 0; margin: 1.5rem 0; }
+    .callout.critical { border-left-color: var(--critical); }
+    h2 { font-size: 1.25rem; margin-top: 2.2rem; border-bottom: 1px solid var(--surface-2); padding-bottom: .35rem; }
+    h3 { font-size: 1.05rem; margin-top: 1.5rem; color: #cbd5e1; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .9rem; }
+    th, td { border: 1px solid var(--border); padding: .55rem .75rem; text-align: left; vertical-align: top; }
+    th { background: var(--surface-2); color: #fff; font-weight: 600; }
+    tr:nth-child(even) { background: rgba(255,255,255,.03); }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: rgba(255,255,255,.08); padding: .1rem .3rem; border-radius: .2rem; font-size: .86em; }
+    .severity { display: inline-block; padding: .12rem .5rem; border-radius: 999px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .sev-critical { background: rgba(244,63,94,.15); color: var(--critical); border: 1px solid rgba(244,63,94,.35); }
+    .sev-high { background: rgba(251,146,60,.15); color: var(--high); border: 1px solid rgba(251,146,60,.35); }
+    .sev-medium { background: rgba(250,204,21,.12); color: var(--medium); border: 1px solid rgba(250,204,21,.35); }
+    .sev-low { background: rgba(34,211,238,.12); color: var(--low); border: 1px solid rgba(34,211,238,.35); }
+    .finding { background: var(--surface); border: 1px solid var(--border); border-radius: .5rem; padding: 1rem; margin-bottom: 1rem; }
+    .finding-header { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-bottom: .5rem; }
+    .finding-title { font-weight: 700; font-size: 1.02rem; color: #f8fafc; margin: 0; }
+    .finding-meta { color: var(--muted); font-size: .82rem; margin-top: .2rem; }
+    ul { padding-left: 1.25rem; }
+    li { margin: .25rem 0; }
+    .footer { margin-top: 3rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--border); padding-top: 1.5rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Báo cáo Thẩm định Lại Kiến trúc (r2)</h1>
+    <div class="subtitle">XActions Universal Hybrid Scraping &amp; Multi-Platform Architecture — sau chỉnh sửa của user</div>
+    <div style="margin-top:1rem"><span class="verdict">CHƯA ĐẠT — cần merge các ý tưởng mới với các bản fix trước đó</span></div>
+  </header>
+
+  <div class="callout critical">
+    <strong>Tóm tắt điều hành</strong><br/>
+    Phiên bản mới có hai ý tưởng mạnh — <strong>Dual-Channel MCP (HTTP/SSE + Redis Stream)</strong> và <strong>Adaptive Rate Governor</strong> — nhưng lại <strong>revert 4 critical findings</strong> đã được fix ở r1. Đặc biệt, khẳng định <code>&gt;50k evt/s</code> song song với <code>MAXLEN ~ 20000</code> là mâu thuẫn toán học: stream sẽ drop dữ liệu sau &lt;0.5s nếu Nowing chậm. Spine hiện tại <strong>không đạt chuẩn greenlight</strong>.
+  </div>
+
+  <h2>1. Điểm mới đáng giá (nên giữ)</h2>
+  <ul>
+    <li><strong>Dual-Channel Microservice:</strong> Tách realtime on-demand (MCP over HTTP/SSE port 3001) và bulk ingest (Redis Stream) là đúng hướng. Code hiện tại đã hỗ trợ <code>MCP_TRANSPORT=http</code> và <code>PORT=3001</code>.</li>
+    <li><strong>Adaptive Rate Governor:</strong> Ý tưởng điều tốc theo healthy proxy ratio, account velocity và Redis consumer lag là cần thiết cho hệ thống cào quy mô lớn.</li>
+    <li><strong>Daemon mode:</strong> Loại bỏ stdio spawn latency cho Nowing integration — phù hợp với mô hình microservice.</li>
+  </ul>
+
+  <h2>2. Critical Findings — Phải sửa trước khi dev</h2>
+
+  <article class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">C1. <code>CrawlerCommand / ActionRegistry</code> bị loại bỏ</div>
+        <div class="finding-meta">AD-2 | <code>src/core/base-crawler.js</code> | Adversarial Lens</div>
+      </div>
+      <span class="sev-critical severity">Critical</span>
+    </div>
+    <p>AD-2 quay lại phiên bản gốc: mọi crawler kế thừa <code>AbstractCrawler</code> với <code>start(), search(), getPostDetail(), getComments(), cleanup()</code>. Các story vẫn định nghĩa <code>getGroupPosts</code>, <code>searchProducts</code>, <code>getHashtagFeed</code>, v.v. Không có <code>CrawlerCommand</code> thì CLI/MCP không gọi thống nhất được.</p>
+    <p><strong>Hệ quả:</strong> Team Facebook implement <code>getPagePosts(pageId)</code>, team Shopee implement <code>searchProducts(keyword)</code> — cả hai đều đúng AD-2 nhưng không tương thích.</p>
+  </article>
+
+  <article class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">C2. <code>Comment.id</code> collision và thiếu <code>depth</code> trở lại</div>
+        <div class="finding-meta">AD-4, AD-6 | <code>prisma/schema.prisma</code> | Adversarial Lens</div>
+      </div>
+      <span class="sev-critical severity">Critical</span>
+    </div>
+    <p>AD-4 nói <code>Post.id</code> và <code>Comment.id</code> đều là <code>${platform}:${externalId}</code>, nhưng schema ví dụ <code>comment:facebook:987654</code>. <code>@@unique([platform, externalId])</code> trên <code>Comment</code> không ngăn được hai post có cùng comment <code>externalId</code> (ví dụ comment id <code>1</code> trên post A và post B). Model <code>Comment</code> lại thiếu <code>depth</code>, trong khi AD-6 vẫn đòi topological sort theo <code>depth</code>.</p>
+  </article>
+
+  <article class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">C3. <code>CrawlCheckpoint</code> biến mất</div>
+        <div class="finding-meta">AD-10 | <code>prisma/schema.prisma</code> | Adversarial Lens</div>
+      </div>
+      <span class="sev-critical severity">Critical</span>
+    </div>
+    <p>AD-10 yêu cầu <code>since_id</code>/<code>since_time</code> nhưng không có model <code>CrawlCheckpoint</code>. Không có trạng thái per-target, hai instance cào cùng một keyword sẽ trùng/sót. Điều này càng nguy hiểm hơn với Dual-Channel vì bulk side có thể chạy song song on-demand mà không biết nhau.</p>
+  </article>
+
+  <article class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">C4. Mâu thuẫn toán học: <code>&gt;50k evt/s</code> vs <code>MAXLEN ~ 20000</code></div>
+        <div class="finding-meta">AD-7 | <code>stream:social:raw_posts</code> | Reality-Check Lens</div>
+      </div>
+      <span class="sev-critical severity">Critical</span>
+    </div>
+    <p>AD-7 tuyên bố bulk ingestion <code>&gt;50,000 evt/s</code> qua Redis Stream và dùng <code>MAXLEN ~ 20000</code>. Nếu Nowing consumer tạm dừng 1 giây, stream chỉ giữ 20,000 events → 30,000 events bị drop. Với 10 giây lag, mất 480,000 events.</p>
+    <p><strong>Đề xuất:</strong> Nếu đích thực cần 50k evt/s, dùng <code>MINID</code> theo timestamp hoặc <code>MAXLEN ~ 10,000,000+</code>; hoặc giảm claim thành <code>&lt;2k evt/s</code> phù hợp với <code>MAXLEN ~ 20000</code>.</p>
+  </article>
+
+  <h2>3. High Findings</h2>
+
+  <article class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">H1. Adaptive Rate Governor thiếu state và overclaim</div>
+        <div class="finding-meta">AD-11 | <code>src/core/adaptive-governor.js</code> | Reality-Check Lens</div>
+      </div>
+      <span class="sev-high severity">High</span>
+    </div>
+    <p>AD-11 đưa ra công thức <code>Max Throughput = N_healthy_proxies × 1–2 req/s</code>, hibernation 15–30 phút, và khẳng định "triệt tiêu 100% rủi ro die account hàng loạt". Các vấn đề:</p>
+    <ul>
+      <li>Không có AD nào định nghĩa <code>AdaptiveRateGovernor</code> lấy dữ liệu từ đâu (proxy pool, account DB, Redis queue length).</li>
+      <li>Leaky Bucket 30 req/phút và SafeRatePerIP 1–2 req/s là giả định chưa kiểm chứng; mỗi nền tảng (Facebook, Shopee, LinkedIn) có ngưỡng khác nhau.</li>
+      <li>"100%" là overclaim — không có cơ chế nào triệt tiêu hoàn toàn ban hàng loạt.</li>
+    </ul>
+  </article>
+
+  <article class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">H2. GIN Index / raw migration / <code>mediaUrls</code> bị revert</div>
+        <div class="finding-meta">AD-4 | <code>prisma/schema.prisma</code> | Reality-Check Lens</div>
+      </div>
+      <span class="sev-high severity">High</span>
+    </div>
+    <p>AD-4 quay lại dùng Prisma <code>@@index</code> cho GIN Index. Prisma 5.x không tạo được <code>USING gin</code>. <code>mediaUrls</code> quay lại <code>String?</code> (JSON string). Không có raw migration stub.</p>
+  </article>
+
+  <article class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">H3. HTTP client, SOCKS5, <code>AbstractLogin</code>, <code>PlatformResponseValidator</code> bị revert</div>
+        <div class="finding-meta">AD-1, AD-3, AD-5, AD-9 | Reality-Check Lens</div>
+      </div>
+      <span class="sev-high severity">High</span>
+    </div>
+    <p>Phiên bản r1 đã thêm: chọn 1 HTTP client, SOCKS5 proxy agent, <code>AbstractLogin</code> contract + <code>SessionManager</code>, và <code>PlatformResponseValidator</code> thay cho <code>error !== 0</code>. Tất cả đã bị xóa, quay về các quy tắc gốc mơ hồ hơn.</p>
+  </article>
+
+  <article class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">H4. Scope creep và <code>b2b/</code> không định nghĩa</div>
+        <div class="finding-meta">AD-8 | <code>src/scrapers/**</code> | Scope Lens</div>
+      </div>
+      <span class="sev-high severity">High</span>
+    </div>
+    <p>Mermaid thêm lại Instagram, Amazon, Muaban.net, Mua Sắm Công, B2B. AD-8 chỉ liệt kê domain mà không giới hạn platform, khiến team có thể bắt đầu implement <code>src/scrapers/b2b/masothue</code> dù không có story.</p>
+  </article>
+
+  <article class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">H5. Dual-Channel thiếu integration contract với Nowing</div>
+        <div class="finding-meta">AD-7 | <code>src/mcp/server.js</code> | Reality-Check Lens</div>
+      </div>
+      <span class="sev-high severity">High</span>
+    </div>
+    <p>Code hiện tại đã có <code>MCP_TRANSPORT=http</code> và <code>PORT=3001</code>, nhưng spine không nói rõ Nowing kết nối như thế nào: URL nào, auth header nào, health check endpoint, cách xử lý session id, và fallback khi HTTP daemon down. Cần một AD hoặc integration spec cho phần này.</p>
+  </article>
+
+  <h2>4. Reality-Check nhanh</h2>
+  <table>
+    <thead><tr><th>Claim trong spine mới</th><th>Thực tế</th><th>Đánh giá</th></tr></thead>
+    <tbody>
+      <tr><td>MCP HTTP/SSE port 3001</td><td><code>src/mcp/server.js:5096-5100</code> hỗ trợ <code>MCP_TRANSPORT=http</code> và <code>PORT=3001</code></td><td class="sev-low severity">OK</td></tr>
+      <tr><td>Redis Stream <code>&gt;50k evt/s</code></td><td><code>MAXLEN ~ 20000</code> → drop sau &lt;0.5s lag</td><td class="sev-critical severity">Critical</td></tr>
+      <tr><td>Healthy proxy × 1–2 req/s</td><td>Chưa có <code>AdaptiveRateGovernor</code> trong code; giả định chưa kiểm chứng</td><td class="sev-high severity">High</td></tr>
+      <tr><td>GIN Index</td><td>Prisma <code>@@index</code> không tạo <code>USING gin</code></td><td class="sev-high severity">High</td></tr>
+      <tr><td><code>got-scraping</code> / <code>qrcode-terminal</code></td><td>Không trong <code>package.json</code></td><td class="sev-high severity">High</td></tr>
+      <tr><td><code>CrawlCheckpoint</code></td><td>Không trong schema</td><td class="sev-critical severity">Critical</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Khuyến nghị</h2>
+  <p><strong>Không approve phiên bản hiện tại.</strong> Cần merge ý tưởng mới (Dual-Channel, Adaptive Governor) với các bản fix r1 trong một lần update duy nhất:</p>
+  <ol>
+    <li>Giữ AD-11 <code>Adaptive Rate Governor</code> nhưng viết lại thành contract/state machine cụ thể, bỏ overclaim "100%", thêm <code>PlatformRateLimits</code> per platform.</li>
+    <li>Giữ Dual-Channel nhưng làm rõ integration contract (URL, auth, health, fallback) và sửa <code>MAXLEN</code> / <code>MINID</code> hoặc giảm throughput claim.</li>
+    <li>Khôi phục các fix r1: <code>CrawlerCommand</code>, <code>Comment.id/depth</code>, <code>CrawlCheckpoint</code>, GIN raw migration, HTTP/SOCKS selection, <code>AbstractLogin</code> contract, <code>PlatformResponseValidator</code>, giới hạn AD-8.</li>
+    <li>Tách bản update thành hai AD mới (Dual-Channel, Adaptive Governor) và giữ AD-11/AD-12 từ r1 bằng cách đánh số AD tiếp theo (AD-13, AD-14).</li>
+  </ol>
+
+  <div class="footer">
+    Generated by <code>bmad-architecture</code> validate intent — Re-review r2.
+  </div>
+</div>
+</body>
+</html>

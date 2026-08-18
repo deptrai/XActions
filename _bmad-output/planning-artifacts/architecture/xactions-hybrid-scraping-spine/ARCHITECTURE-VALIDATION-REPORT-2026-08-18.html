@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Báo cáo Thẩm định Kiến trúc — XActions Universal Hybrid Scraping (Epics 10–18)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-2: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --critical: #f43f5e;
+      --high: #fb923c;
+      --medium: #facc15;
+      --low: #22d3ee;
+      --ok: #22c55e;
+      --border: #475569;
+      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    h1 { font-size: 1.7rem; margin: 0 0 .5rem; }
+    .subtitle { color: var(--muted); font-size: .95rem; }
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: .75rem;
+      margin-top: 1.25rem;
+    }
+    .meta-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: .5rem;
+      padding: .75rem 1rem;
+    }
+    .meta-item strong { display: block; color: var(--text); font-size: .85rem; text-transform: uppercase; letter-spacing: .03em; }
+    .meta-item span { color: var(--muted); font-size: .95rem; }
+
+    .callout {
+      background: var(--surface);
+      border-left: 4px solid var(--high);
+      padding: 1rem 1.25rem;
+      border-radius: 0 .5rem .5rem 0;
+      margin: 1.5rem 0;
+    }
+    .callout.critical { border-left-color: var(--critical); }
+    .callout.ok { border-left-color: var(--ok); }
+
+    h2 { font-size: 1.35rem; margin-top: 2.5rem; border-bottom: 1px solid var(--surface-2); padding-bottom: .4rem; }
+    h3 { font-size: 1.1rem; margin-top: 1.75rem; color: #cbd5e1; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0 1.5rem;
+      font-size: .92rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: .65rem .85rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--surface-2); color: #fff; font-weight: 600; }
+    tr:nth-child(even) { background: rgba(255,255,255,.03); }
+    td code, th code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .86em; }
+
+    .severity {
+      display: inline-block;
+      padding: .15rem .55rem;
+      border-radius: 999px;
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+    .sev-critical { background: rgba(244,63,94,.15); color: var(--critical); border: 1px solid rgba(244,63,94,.35); }
+    .sev-high { background: rgba(251,146,60,.15); color: var(--high); border: 1px solid rgba(251,146,60,.35); }
+    .sev-medium { background: rgba(250,204,21,.12); color: var(--medium); border: 1px solid rgba(250,204,21,.35); }
+    .sev-low { background: rgba(34,211,238,.12); color: var(--low); border: 1px solid rgba(34,211,238,.35); }
+
+    .finding {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: .5rem;
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .finding-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: .75rem;
+      margin-bottom: .6rem;
+    }
+    .finding-title { font-weight: 700; font-size: 1.05rem; color: #f8fafc; margin: 0; }
+    .finding-meta { color: var(--muted); font-size: .85rem; margin-top: .25rem; }
+    .finding blockquote {
+      margin: .75rem 0;
+      padding-left: 1rem;
+      border-left: 3px solid var(--border);
+      color: var(--muted);
+      font-style: italic;
+    }
+    .finding ul { padding-left: 1.25rem; margin: .5rem 0; }
+    .finding li { margin: .3rem 0; }
+    .fix { background: rgba(34,197,94,.08); border-left: 3px solid var(--ok); padding: .75rem 1rem; border-radius: 0 .4rem .4rem 0; margin-top: .75rem; }
+    .fix strong { color: var(--ok); }
+
+    .verdict {
+      display: inline-block;
+      padding: .35rem 1rem;
+      border-radius: .4rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      background: rgba(244,63,94,.12);
+      color: var(--critical);
+      border: 1px solid rgba(244,63,94,.4);
+    }
+
+    .scorecard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: .75rem;
+      margin: 1.25rem 0;
+    }
+    .scorecard-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: .5rem;
+      padding: 1rem;
+      text-align: center;
+    }
+    .scorecard-value { font-size: 1.6rem; font-weight: 800; }
+    .scorecard-label { font-size: .8rem; color: var(--muted); text-transform: uppercase; margin-top: .25rem; }
+
+    code { background: rgba(255,255,255,.08); padding: .1rem .35rem; border-radius: .25rem; }
+    pre {
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: .5rem;
+      padding: 1rem;
+      overflow-x: auto;
+      font-size: .85rem;
+    }
+    a { color: #38bdf8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .footer { margin-top: 3rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--border); padding-top: 1.5rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Báo cáo Thẩm định Kiến trúc</h1>
+    <div class="subtitle">XActions Universal Hybrid Scraping &amp; Multi-Platform Architecture (Epics 10–18)</div>
+
+    <div class="meta">
+      <div class="meta-item"><strong>Target Spine</strong><span><code>_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md</code></span></div>
+      <div class="meta-item"><strong>Parent Spine</strong><span><code>../nowing/_bmad-output/planning-artifacts/architecture/architecture-xactions-social-integration-2026-08-15/ARCHITECTURE-SPINE.md</code></span></div>
+      <div class="meta-item"><strong>Ngày review</strong><span>2026-08-18</span></div>
+      <div class="meta-item"><strong>Reviewer</strong><span>Winston / BMad Architecture Agent</span></div>
+      <div class="meta-item"><strong>Phương pháp</strong><span>Reviewer Gate: Reality-Check Lens + Adversarial Lens</span></div>
+      <div class="meta-item"><strong>Phán quyết</strong><span class="verdict">CHƯA ĐẠT — Cần Update trước khi dev Story 10.1</span></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="callout critical">
+      <strong>Tóm tắt điều hành</strong><br/>
+      Kiến trúc Epics 10–18 có tầm nhìn rõ ràng và bản đồ domain tốt, nhưng <strong>chưa đạt chuẩn spine là “consistency contract có thể để nhiều đội độc lập xây mà không diverge”</strong>. Có 4 lỗi kiến trúc tới mức <em>critical</em>: interface <code>AbstractCrawler</code> không khớp với phương thức cụ thể trong các story, <code>Comment.id</code> có nguy cơ collision, thiếu bảng trạng thái <code>CrawlCheckpoint</code> cho Gap-Filling, và chỉ mục GIN không thể diễn đạt bằng Prisma schema hiện tại. Nếu không sửa, hai team xây hai platform sẽ tuân thủ AD nhưng vẫn không tương thích.
+    </div>
+
+    <h2>1. Tổng quan phán quyết</h2>
+    <div class="scorecard">
+      <div class="scorecard-item"><div class="scorecard-value" style="color:var(--critical)">4</div><div class="scorecard-label">Critical</div></div>
+      <div class="scorecard-item"><div class="scorecard-value" style="color:var(--high)">5</div><div class="scorecard-label">High</div></div>
+      <div class="scorecard-item"><div class="scorecard-value" style="color:var(--medium)">6</div><div class="scorecard-label">Medium</div></div>
+      <div class="scorecard-item"><div class="scorecard-value" style="color:var(--low)">3</div><div class="scorecard-label">Low</div></div>
+      <div class="scorecard-item"><div class="scorecard-value" style="color:var(--ok)">5</div><div class="scorecard-label">Điểm mạnh</div></div>
+    </div>
+    <p><strong>Kết luận:</strong> Không nên bật đèn xanh cho Story 10.1 cho tới khi (a) AD-2 được làm rõ với <code>CrawlerCommand</code> / factory dispatch, (b) AD-4 được sửa lại <code>Comment.id</code> và bổ sung <code>Comment.depth</code> / <code>CrawlCheckpoint</code>, (c) AD-10 được bổ sung cơ chế lưu trạng thái Gap-Filling, và (d) AD-4 GIN index được thay thế bằng raw migration kèm fallback query path.</p>
+  </section>
+
+  <section>
+    <h2>2. Kiểm tra thực tế — Công nghệ &amp; Brownfield</h2>
+
+    <h3>2.1. Dependency / package.json reality-check</h3>
+    <table>
+      <thead>
+        <tr><th>Công nghệ</th><th>Được ghi trong spine/memlog</th><th>Trạng thái thực tế</th><th>Đánh giá</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>got-scraping</code></td><td>AD-1, Story 13.1 (TLS spoofing)</td><td>Không có trong <code>package.json</code></td><td class="sev-high severity">High</td></tr>
+        <tr><td><code>undici</code></td><td>AD-1 (HTTP fetcher)</td><td>Không có trong dependencies (chỉ built-in Node 18+)</td><td class="sev-medium severity">Medium</td></tr>
+        <tr><td><code>qrcode-terminal</code></td><td>Story 12.1, memlog</td><td>Không có trong <code>package.json</code></td><td class="sev-high severity">High</td></tr>
+        <tr><td><code>playwright</code></td><td>memlog ^1.40.0</td><td><code>^1.62.1</code></td><td class="sev-low severity">Low</td></tr>
+        <tr><td><code>better-sqlite3</code></td><td>memlog ^9.0.0</td><td><code>^12.10.0</code></td><td class="sev-low severity">Low</td></tr>
+        <tr><td><code>puppeteer</code></td><td>Được đề cập là sẽ giảm dùng</td><td><code>^24.34.0</code> vẫn cài đặt</td><td class="sev-medium severity">Medium</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.2. Brownfield reality-check</h3>
+    <table>
+      <thead>
+        <tr><th>Thành phần hiện có</th><th>Trạng thái hiện tại</th><th>Va chạm với spine</th><th>Đánh giá</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>src/client/**</code></td><td>Twitter-specific client (barrel export <code>Scraper.js</code>, models Tweet/Profile/Message)</td><td>Spine bind <code>src/client/**</code> nhưng không nói rõ đây là Twitter client cũ hay <code>AbstractApiClient</code> mới</td><td class="sev-high severity">High</td></tr>
+        <tr><td><code>src/scrapers/twitter/</code>, <code>facebook/</code>, <code>threads/</code>, <code>bluesky/</code>, <code>mastodon/</code></td><td>Các scraper hiện có nằm ngang hàng dưới <code>src/scrapers/</code></td><td>Spine và stories yêu cầu chuyển vào <code>src/scrapers/social/twitter/</code>, <code>src/scrapers/social/facebook/</code>, v.v. Không có chiến lược migration</td><td class="sev-high severity">High</td></tr>
+        <tr><td><code>prisma/schema.prisma</code></td><td>Có <code>User</code>, <code>Operation</code>, <code>JobQueue</code>, <code>Schedule</code>, <code>FacebookAccount</code>, <code>TweetSnapshot</code>, <code>EngagementDaily</code>; không có <code>Post</code>/<code>Comment</code></td><td>Spine thêm <code>Post</code>/<code>Comment</code> mới. Chưa rõ <code>TweetSnapshot</code>/<code>EngagementDaily</code> có bị thay thế hay song song</td><td class="sev-medium severity">Medium</td></tr>
+        <tr><td><code>src/mcp/server.js</code></td><td>Định nghĩa <code>x_login</code>, <code>x_get_profile</code>, <code>x_get_followers</code>, v.v.</td><td>Spine đề cập 80+ MCP tools mới như <code>x_crawl_post</code> nhưng không nêu cách tích hợp với registry cũ và cách xử lý auth (cookie env vs QR/CDP)</td><td class="sev-high severity">High</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>3. Critical Findings — Phải sửa trước khi dev</h2>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">C1. <code>AbstractCrawler</code> interface không khớp với phương thức cụ thể trong các story</div>
+          <div class="finding-meta">AD-2 | <code>src/core/base-crawler.js</code> | Adversarial Lens</div>
+        </div>
+        <span class="sev-critical severity">Critical</span>
+      </div>
+      <p>AD-2 quy định mọi crawler kế thừa <code>AbstractCrawler</code> với các phương thức <code>start()</code>, <code>search()</code>, <code>getPostDetail()</code>, <code>getComments()</code>, <code>cleanup()</code>. Tuy nhiên, các story định nghĩa phương thức hoàn toàn khác:</p>
+      <ul>
+        <li>Story 13.2: <code>search(query)</code>, <code>getTimeline(username)</code></li>
+        <li>Story 13.3: <code>getGroupPosts(groupId)</code>, <code>getPagePosts(pageId)</code></li>
+        <li>Story 15.1: <code>search(query)</code>, <code>getUserFeed(username)</code></li>
+        <li>Story 15.2: <code>getHashtagFeed(tag)</code>, <code>getVideoComments(videoId)</code></li>
+        <li>Story 16.1: <code>searchProducts(keyword)</code>, <code>getProductReviews(itemid, shopid)</code></li>
+        <li>Story 16.2: <code>getTopSellingProducts(category)</code></li>
+        <li>Story 17.1: <code>searchListings({ category, region })</code></li>
+        <li>Story 18.1: <code>searchJobs(keyword)</code></li>
+      </ul>
+      <p><strong>Hai đội độc lập tuân thủ AD-2 vẫn diverge:</strong> một đội implement <code>ShopeeCrawler.searchProducts()</code>, đội khác implement <code>TikTokShopCrawler.getTopSellingProducts()</code>. CLI/MCP không có cách gọi thống nhất.</p>
+      <div class="fix">
+        <strong>Đề xuất sửa:</strong> Bổ sung <code>CrawlerCommand</code> / <code>CrawlerFactory</code> pattern vào AD-2, hoặc làm rõ <code>AbstractCrawler</code> chỉ là base lifecycle còn mọi hành động nền tảng được đăng ký qua <code>actions: Map&lt;string, ActionHandler&gt;</code>. Nếu giữ interface cố định, phải map tất cả story methods thành các lệnh được khai báo rõ ràng trong spine.
+      </div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">C2. <code>Comment.id</code> và <code>Post.id</code> có nguy cơ collision và thiếu <code>depth</code></div>
+          <div class="finding-meta">AD-4, AD-6 | <code>prisma/schema.prisma</code> | Adversarial Lens</div>
+        </div>
+        <span class="sev-critical severity">Critical</span>
+      </div>
+      <p>AD-4 yêu cầu <code>Post.id</code> và <code>Comment.id</code> theo format <code>${platform}:${externalId}</code>. Nhưng trong schema đề xuất:</p>
+      <ul>
+        <li><code>Post.id</code> ví dụ <code>shopee:123</code> — hợp lệ.</li>
+        <li><code>Comment.id</code> ví dụ <code>comment:facebook:987654</code> — <strong>không nhất quán</strong> với quy tắc <code>${platform}:${externalId}</code> và thêm tiền tố <code>comment:</code>.</li>
+        <li>Một <code>externalId</code> comment có thể trùng giữa nhiều post (ví dụ comment id <code>1</code> trên post A và post B). Do đó <code>facebook:1</code> sẽ collision.</li>
+      </ul>
+      <p>Ngoài ra, AD-6 yêu cầu Topological Sort theo <code>depth</code> tăng dần, nhưng model <code>Comment</code> không có trường <code>depth</code>. Nếu team A tính depth ở crawler và team B tính ở store, kết quả insert có thể khác nhau.</p>
+      <div class="fix">
+        <strong>Đề xuất sửa:</strong> (1) Đổi <code>Comment.id</code> thành <code>${platform}:${postExternalId}:${commentExternalId}</code> hoặc dùng CUID nội bộ + <code>@@unique([platform, externalId, postId])</code>; (2) Thêm <code>depth Int @default(0)</code> vào model <code>Comment</code>; (3) Làm rõ topological insert là trách nhiệm của <code>PrismaStore</code> hay <code>AbstractCrawler</code>.
+      </div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">C3. Thiếu bảng trạng thái <code>CrawlCheckpoint</code> cho 3-Tier Gap-Filling</div>
+          <div class="finding-meta">AD-10, AD-SOC-8 | <code>prisma/schema.prisma</code> | Adversarial Lens</div>
+        </div>
+        <span class="sev-critical severity">Critical</span>
+      </div>
+      <p>AD-10 quy định “mọi request cào theo keyword/target phải hỗ trợ tham số <code>since_id</code> / <code>since_time</code> để chỉ cào delta gap”. Tuy nhiên không có model nào lưu <code>lastCrawledAt</code>/<code>lastCursor</code> cho từng target. Điều này mâu thuẫn với AD-SOC-8 của Nowing (3-tier cache) vì L2 cache của XActions cần biết target nào đã cào tới đâu.</p>
+      <p><strong>Hệ quả:</strong> Hai instance crawler chạy song song sẽ cào chồng chéo hoặc bỏ sót khoảng trống; nếu container restart, không có checkpoint để resume.</p>
+      <div class="fix">
+        <strong>Đề xuất sửa:</strong> Thêm model <code>CrawlCheckpoint { id, platform, targetType, targetId, targetKey, lastCursor, lastTimestamp, createdAt, updatedAt }</code> với <code>@@unique([platform, targetType, targetKey])</code>. Xác định AD mới hoặc sửa AD-10 để bắt buộc lưu checkpoint trước khi phát Thin Event.
+      </div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">C4. GIN Index trên <code>metadata Json?</code> không thể khai báo bằng Prisma schema</div>
+          <div class="finding-meta">AD-4 | <code>prisma/schema.prisma</code> | Reality-Check Lens</div>
+        </div>
+        <span class="sev-critical severity">Critical</span>
+      </div>
+      <p>AD-4 yêu cầu <code>CREATE INDEX USING gin (metadata)</code> và Expression Index cho <code>price</code>, <code>phone</code>, <code>salary</code>. Trong Prisma 5.x, <code>@@index([...])</code> chỉ tạo B-tree index; không có native syntax cho <code>USING gin</code> hay expression index. Điều này đe dọa NFR hứa hẹn query Nowing &lt;10ms.</p>
+      <p>Hiện tại schema đề xuất chỉ có:</p>
+      <pre><code>@@index([platform, crawledAt(sort: Desc)])
+@@index([category, crawledAt(sort: Desc)])
+@@index([authorId])</code></pre>
+      <p>Không có GIN index nào được khai báo.</p>
+      <div class="fix">
+        <strong>Đề xuất sửa:</strong> Thêm raw migration <code>prisma/migrations/YYYYMMDDHHMMSS_add_post_comment_gin_indexes/migration.sql</code> chứa <code>CREATE INDEX ... USING gin</code> và expression index. AD-4 phải thay đổi từ “GIN Index được tạo qua schema” thành “GIN Index được tạo qua raw migration; query metadata phải fallback về B-tree nếu GIN chưa apply”.
+      </div>
+    </article>
+  </section>
+
+  <section>
+    <h2>4. High Findings — Cần giải quyết trước khi chạy Phase 1</h2>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">H1. Thiếu dependency <code>got-scraping</code>, <code>qrcode-terminal</code>; <code>undici</code> cần làm rõ</div>
+          <div class="finding-meta">AD-1, AD-5, Story 12.1, Story 13.1 | <code>package.json</code> | Reality-Check Lens</div>
+        </div>
+        <span class="sev-high severity">High</span>
+      </div>
+      <p>Spine dựa vào <code>got-scraping</code> cho TLS/JA4 spoofing và <code>qrcode-terminal</code> cho login QR. Cả hai đều không có trong <code>package.json</code>. Nếu dev bắt đầu Story 10.1–13.1 sẽ phải dừng lại để cài đặt. <code>undici</code> là built-in Node 18+ nhưng spine đề cập như một lựa chọn thay thế <code>got-scraping</code>; cần làm rõ khi nào dùng cái nào.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Thêm <code>got-scraping</code> và <code>qrcode-terminal</code> vào dependencies (hoặc thay <code>got-scraping</code> bằng <code>undici</code> + <code>tls-client</code> nếu ưu tiên license). AD-1 nên ghi rõ HTTP client mặc định.</div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">H2. <code>src/client/**</code> bị bind nhưng vai trò không rõ — có thể xung đột với Twitter client hiện tại</div>
+          <div class="finding-meta">AD-1, AD-2 | <code>src/client/index.js</code>, <code>src/core/base-client.js</code> | Brownfield Lens</div>
+        </div>
+        <span class="sev-high severity">High</span>
+      </div>
+      <p>Spine bind <code>src/client/**</code> nhưng directory này hiện tại chứa Twitter-specific barrel export <code>Scraper.js</code>, models <code>Tweet</code>/<code>Profile</code>/<code>Message</code>. Nếu <code>AbstractApiClient</code> đặt tại <code>src/core/base-client.js</code>, việc để <code>src/client</code> cùng tồn tại sẽ khiến hai owner quản lý một khái niệm “client”.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Làm rõ <code>src/client</code> là legacy Twitter client giữ lại cho backward compatibility, còn <code>src/core/base-client.js</code> là abstraction mới; hoặc di chuyển legacy client vào <code>src/scrapers/social/twitter/client/</code> trong một AD migration.</div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">H3. Tích hợp MCP 80+ tools với registry cũ và auth chưa được định nghĩa</div>
+          <div class="finding-meta">AD-7, Story 14.2 | <code>src/mcp/server.js</code> | Adversarial Lens</div>
+        </div>
+        <span class="sev-high severity">High</span>
+      </div>
+      <p>Hiện tại <code>src/mcp/server.js</code> sử dụng <code>XACTIONS_SESSION_COOKIE</code> env cho Twitter. Story 14.2 đề xuất <code>x_crawl_post</code>, <code>x_crawl_comments_tree</code> với auth qua QR/CDP. Nếu không định nghĩa <code>AuthSession</code> chung, mỗi tool sẽ lấy session theo cách riêng: một số đọc env, một số gọi QR, một số dùng CDP — vi phạm NFR16 backward compatibility.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Thêm AD về <code>SessionManager</code> — một nguồn sự thật duy nhất cho cookie/token, được cấp bởi <code>AbstractLogin</code>, và được MCP tool <code>x_use_session</code> hoặc CLI flag <code>--session</code> tiêm vào crawler. Các tool cũ <code>x_get_profile</code> phải tương thích mà không cần refactor.</div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">H4. Thin Event Redis Stream dễ mất dữ liệu khi Nowing consumer chậm/offline</div>
+          <div class="finding-meta">AD-7 | <code>stream:social:raw_posts</code> | Adversarial Lens</div>
+        </div>
+        <span class="sev-high severity">High</span>
+      </div>
+      <p>AD-7 dùng <code>XADD stream:social:raw_posts MAXLEN ~ 20000</code>. <code>MAXLEN ~</code> là approximate trimming, khi stream đạt khoảng 20k entries thì entry cũ bị xóa. Nếu Nowing worker bị tắt vài giờ, XActions vẫn ghi tiếp → mất sự kiện. Điều này mâu thuẫn với AD-SOC-4 của Nowing về “tách rời khỏi tiến trình NLP” nhưng không có nghĩa là chấp nhận mất dữ liệu.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Dùng <code>XREADGROUP</code> với consumer group <code>nowing_nlp_workers</code> (đã nêu trong AD-7) và tăng <code>MAXLEN</code> lên lớn hơn nhiều (ví dụ <code>~ 1000000</code>) hoặc để <code>MINID</code> dựa trên thời gian. Có thể bổ sung AD mới: “Mọi event phát đi phải được ghi vào <code>CrawlCheckpoint</code> trước để có thể replay”.</div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">H5. Xóa 30 ngày TTL dữ liệu thô nhưng không có cơ chế enforcement</div>
+          <div class="finding-meta">AD-10 | <code>src/store/**</code>, <code>prisma/schema.prisma</code> | Adversarial Lens</div>
+        </div>
+        <span class="sev-high severity">High</span>
+      </div>
+      <p>AD-10 nói “Dữ liệu thô trong bảng <code>Post</code> và <code>Comment</code> của XActions áp dụng chính sách lưu trữ 30 ngày (Hot Cache TTL)”. PostgreSQL không có TTL tự động. Nếu không có scheduled job hoặc partition policy, dữ liệu sẽ tồn đọng vĩnh viễn, vi phạm chính sách retention và phình database.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Bổ sung <code>DataRetentionPolicy</code> AD: (a) thêm trường <code>expiresAt</code> hoặc dùng partition by range <code>crawledAt</code>, (b) chạy background job hàng ngày xóa partition cũ hơn 30 ngày, (c) Nowing lưu vĩnh viễn bản lead đã enrich.</div>
+    </article>
+  </section>
+
+  <section>
+    <h2>5. Medium Findings — Nên sửa trước Phase 2</h2>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">M1. <code>AbstractLogin</code> không được ràng buộc trong AD nào</div>
+          <div class="finding-meta">Story 10.1, AD-5 | <code>src/core/base-login.js</code> | Structural Lens</div>
+        </div>
+        <span class="sev-medium severity">Medium</span>
+      </div>
+      <p>Story 10.1 định nghĩa <code>AbstractLogin</code> nhưng spine chỉ có AD-5 về QR/CDP. Không có AD nào bắt buộc <code>AbstractLogin</code> phải cung cấp <code>getSession()</code>, <code>isAuthenticated()</code>, <code>getAccountId()</code> v.v. Nếu mỗi nền tảng tự implement login, session shape sẽ khác nhau.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Thêm AD-5b <code>AbstractLogin Contract</code>: mọi phương thức đăng nhập phải trả về <code>{ accountId, cookies, tokens, expiresAt }</code> theo cùng một shape, được <code>SessionManager</code> tiêu thụ.</div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">M2. <code>Post.mediaUrls</code> là <code>String?</code> thay vì array thực sự</div>
+          <div class="finding-meta">AD-4 | <code>prisma/schema.prisma</code> | Adversarial Lens</div>
+        </div>
+        <span class="sev-medium severity">Medium</span>
+      </div>
+      <p>Trong schema đề xuất, <code>mediaUrls String?</code> được chú thích là “JSON string mảng ảnh/video”. Điều này khiến hai đội một bên lưu mảng dạng <code>JSON.stringify(['url1','url2'])</code>, bên kia lưu chuỗi phân cách bằng dấu phẩy. JSONL exporter và Nowing adapter phải đoán format.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Đổi <code>mediaUrls</code> thành <code>mediaUrls String[]</code> (PostgreSQL array) hoặc <code>mediaUrls Json?</code> nếu cần metadata kèm theo. Nếu giữ String, định nghĩa strict format trong AD-4.</div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">M3. AD-8 Multi-Domain Expansion vượt phạm vi Epics 10–18</div>
+          <div class="finding-meta">AD-8 | <code>src/scrapers/**</code> | Scope Lens</div>
+        </div>
+        <span class="sev-medium severity">Medium</span>
+      </div>
+      <p>AD-8 liệt kê <code>social/instagram</code>, <code>ecom/amazon</code>, <code>realestate/muaban.net</code>, <code>recruitment/itviec</code>, <code>b2b/</code> mặc dù không có story nào trong Epics 10–18 cover. Đây là “scope creep” trong kiến trúc: hai developer có thể tự bắt đầu implement Instagram hoặc Amazon vì spine cho phép.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Đưa các domain chưa có epic vào phần <strong>Deferred</strong> của spine. AD-8 chỉ nên liệt kê các domain đã được epic 10–18 cover: <code>social/{twitter,facebook,threads,tiktok}</code>, <code>ecom/{shopee,tiktok-shop}</code>, <code>realestate/{chotot,batdongsan}</code>, <code>recruitment/{topcv,vietnamworks,linkedin}</code>.</div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">M4. “Zero-Dependency <code>src/core/</code>” bị hiểu sai</div>
+          <div class="finding-meta">AD-1, AD-2, AD-4 | <code>src/core/**</code> | Reality-Check Lens</div>
+        </div>
+        <span class="sev-medium severity">Medium</span>
+      </div>
+      <p>Spine mô tả <code>src/core/</code> “100% Pure ESM, Zero-Dependency”. Nhưng <code>AbstractApiClient</code> cần HTTP client, <code>AbstractStore</code> cần Prisma/DB driver, <code>AbstractLogin</code> cần QR/CDP libs. “Zero-Dependency” nếu hiểu theo nghĩa đen là không thể.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Sửa thành “<code>src/core/</code> chỉ phụ thuộc vào platform-agnostic dependencies (HTTP/DB/protocol interfaces); không chứa logic platform-specific hoặc selectors thay đổi theo tuần”. Định nghĩa rõ dependency whitelist.</div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">M5. Proxy SOCKS5 với <code>undici</code> / <code>got-scraping</code> chưa được làm rõ</div>
+          <div class="finding-meta">AD-3 | <code>src/proxy/**</code> | Reality-Check Lens</div>
+        </div>
+        <span class="sev-medium severity">Medium</span>
+      </div>
+      <p>AD-3 yêu cầu SOCKS5 proxy. <code>undici</code> v6 không hỗ trợ SOCKS5 proxy trực tiếp; cần <code>socks-proxy-agent</code>. <code>got-scraping</code> hỗ trợ HTTP/HTTPS proxy nhưng SOCKS5 cần cấu hình agent. Nếu team network chọn <code>undici</code> mà team client chọn <code>got-scraping</code>, proxy behavior sẽ khác nhau.</p>
+      <div class="fix"><strong>Đề xuất:</strong> AD-3 nên chốt HTTP client + proxy agent duy nhất: ví dụ <code>got-scraping</code> với <code>socks-proxy-agent</code> cho SOCKS5, hoặc <code>undici</code> + custom ProxyAgent. Ghi rõ cách xử lý <code>--force-webrtc-ip-handling-policy</code> cho Playwright/CDP.</div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">M6. <code>PrismaStore</code> batch 500 qua <code>prisma.$transaction()</code> chưa chứng minh throughput</div>
+          <div class="finding-meta">AD-4, Story 10.2 | <code>src/store/prisma-store.js</code> | Reality-Check Lens</div>
+        </div>
+        <span class="sev-medium severity">Medium</span>
+      </div>
+      <p>AD-4 hứa hẹn “tốc độ &gt;5,000 records/s” với chunk 500 qua <code>prisma.$transaction()</code>. Nhưng <code>$transaction</code> chứa 500 lệnh <code>upsert</code> sẽ tạo 500 round-trip nội bộ. <code>createMany</code> + <code>skipDuplicates</code> hoặc bulk raw SQL nhanh hơn. Con số 5,000 records/s là giả định chưa được kiểm chứng.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Làm rõ chiến lược upsert: dùng <code>createMany</code> + bắt exception rồi <code>updateMany</code> cho conflict, hoặc raw SQL <code>INSERT ... ON CONFLICT</code>. Ghi rõ benchmark target là điều kiện để chấp nhận AD-4.</div>
+    </article>
+  </section>
+
+  <section>
+    <h2>6. Low Findings — Polish / Deferred</h2>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">L1. <code>Promise.race()</code> timeout 3s có thể quá gắt cho signature nặng</div>
+          <div class="finding-meta">AD-1 | <code>src/core/signer-pool.js</code> | Risk Lens</div>
+        </div>
+        <span class="sev-low severity">Low</span>
+      </div>
+      <p>AD-1 bắt buộc 3,000ms timeout cho <code>page.evaluate()</code> sinh chữ ký. Một số trang TikTok/Facebook nặng có thể cần 5–10s để khởi tạo JS context. Timeout cứng 3s sẽ gây retry liên tục, làm chậm pipeline.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Đổi thành adaptive timeout: 3s cho lần evaluate đầu tiên, 5–8s cho lần đầu warmup, hoặc để configurable theo platform. Tách AD-1 thành “circuit breaker” và “timeout budget”.</div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">L2. CDP Attach helper chưa định nghĩa cách launch Chrome với flag đúng</div>
+          <div class="finding-meta">AD-5, Story 12.2 | <code>src/core/base-crawler.js</code> | Reality-Check Lens</div>
+        </div>
+        <span class="sev-low severity">Low</span>
+      </div>
+      <p>Spine đề cập <code>launchBrowserWithCdp('http://localhost:9222')</code> nhưng không nêu <code>--remote-debugging-port=9222</code>, <code>--user-data-dir</code>, hoặc cách tránh xung đột profile. Trên macOS nếu Chrome đang chạy user profile thì attach có thể bị treo.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Bổ sung AD-5c với launch command template và warning: “CDP mode requires Chrome launched with <code>--remote-debugging-port=9222</code> and a dedicated <code>--user-data-dir</code>”.</div>
+    </article>
+
+    <article class="finding">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">L3. Anti-Bot False 200 OK quy tắc <code>error !== 0</code> quá platform-specific</div>
+          <div class="finding-meta">AD-9 | <code>src/scrapers/**</code> | Adversarial Lens</div>
+        </div>
+        <span class="sev-low severity">Low</span>
+      </div>
+      <p>AD-9 yêu cầu “Nếu <code>error !== 0</code> throw <code>RateLimitError</code>”. TikTok có thể dùng <code>error</code> field, Shopee dùng captcha code <code>90309999</code>, Facebook/Threads GraphQL trả về <code>errors</code> array. Quy tắc <code>error !== 0</code> không đủ generic.</p>
+      <div class="fix"><strong>Đề xuất:</strong> Thay bằng <code>PlatformResponseValidator</code> interface: mỗi platform cung cấp <code>isBotChallenge(response)</code>, <code>isRateLimit(response)</code>, <code>isValidPayload(response)</code>. AD-9 trở thành “mọi crawler phải đăng ký validator và throw <code>PlatformError</code> khi validator trả về false”.</div>
+    </article>
+  </section>
+
+  <section>
+    <h2>7. Đối soát với Parent Spine (Nowing)</h2>
+    <table>
+      <thead>
+        <tr><th>Nowing AD-SOC</th><th>Nội dung</th><th>Độ khớp với XActions spine</th><th>Chú ý</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>AD-SOC-1</td><td>Universal scraping delegation qua MCP/Redis</td><td>✅ Khớp (AD-7)</td><td>OK</td></tr>
+        <tr><td>AD-SOC-2</td><td>TLS/JA4, signer bridge, cookie warmup</td><td>⚠️ Cơ bản khớp (AD-1, AD-3)</td><td>Thiếu “cookie warmup” trong XActions AD</td></tr>
+        <tr><td>AD-SOC-3</td><td>Proxy pool với auto-quarantine</td><td>✅ Khớp (AD-3)</td><td>SOCKS5 detail chưa rõ (H5)</td></tr>
+        <tr><td>AD-SOC-4</td><td>Redis Stream thin events MAXLEN ~20000</td><td>⚠️ Khớp về wording nhưng mất dữ liệu (H4)</td><td>Nowing cần consumer group + MAXLEN lớn hơn</td></tr>
+        <tr><td>AD-SOC-5</td><td>Intent classification, raw_entities JSONB</td><td>❌ Không được đề cập trong XActions spine</td><td>XActions chỉ lưu <code>metadata Json?</code>; việc gán <code>intent_tag</code> thuộc Nowing hay XActions?</td></tr>
+        <tr><td>AD-SOC-6</td><td>Idempotent storage <code>(platform, external_post_id)</code></td><td>✅ Khớp (AD-4)</td><td>OK</td></tr>
+        <tr><td>AD-SOC-7</td><td>Realtime Alert &amp; CRM Lead</td><td>❌ Không trong XActions scope</td><td>Đúng, thuộc Nowing Epic 21</td></tr>
+        <tr><td>AD-SOC-8</td><td>3-Tier Gap-Filling (L1/L2/L3 cache)</td><td>⚠️ Khớp về khái niệm, thiếu <code>CrawlCheckpoint</code> (C3)</td><td>Cần bổ sung bảng checkpoint</td></tr>
+        <tr><td>AD-SOC-9</td><td>Multi-domain + legacy decommission</td><td>✅ Khớp (AD-8)</td><td>Scope cần thu hẹp (M3)</td></tr>
+        <tr><td>AD-SOC-10</td><td>Retention 30 ngày XActions / vĩnh viễn Nowing</td><td>⚠️ Khớp về policy, thiếu enforcement (H5)</td><td>Cần job/ partition</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>8. Điểm mạnh cần giữ</h2>
+    <ul>
+      <li><strong>Hybrid Browser-as-Signer / HTTP-as-Fetcher (AD-1):</strong> Đúng hướng giảm resource so với full browser per request. Phù hợp với brownfield hiện có <code>src/scrapers/adapters/</code>.</li>
+      <li><strong>Namespaced ID (AD-4):</strong> Giải quyết collision cross-platform rất tốt, chỉ cần sửa lại <code>Comment.id</code>.</li>
+      <li><strong>Thin Event Redis Stream (AD-7):</strong> Tách biệt tốt giữa XActions và Nowing, chỉ cần điều chỉnh retention/consumer group.</li>
+      <li><strong>Multi-Domain directory (AD-8):</strong> Phân loại rõ ràng, dễ mở rộng.</li>
+      <li><strong>Topological Comment Insertion (AD-6):</strong> Đúng bài toán chống FK violation.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>9. Khuyến nghị &amp; Next Steps</h2>
+    <div class="callout">
+      <p><strong>Nên chạy <code>bmad-architecture update</code></strong> để sửa spine trước khi bất kỳ story nào của Epic 10 được dev. Các AD cần cập nhật: AD-2, AD-3, AD-4, AD-5, AD-7, AD-8, AD-9, AD-10. Cần bổ sung các AD mới: <code>AD-2b CrawlerCommand Dispatch</code>, <code>AD-4b GIN Index via Raw Migration</code>, <code>AD-5b AbstractLogin Contract</code>, <code>AD-7b Consumer Group &amp; Retention</code>, <code>AD-10b CrawlCheckpoint &amp; Data Retention Enforcement</code>.</p>
+    </div>
+    <ol>
+      <li><strong>Trước Story 10.1:</strong> Sửa C1–C4. Nếu không, các story đầu tiên sẽ phải refactor lại schema và interface.</li>
+      <li><strong>Trước Phase 1 (Stories 10–12):</strong> Giải quyết H1–H5: dependencies, <code>src/client</code> role, MCP auth, Redis retention, TTL enforcement.</li>
+      <li><strong>Trước Phase 2 (Stories 13–14):</strong> Giải quyết M1–M6: login contract, mediaUrls type, scope creep, zero-dependency wording, proxy agent, batch strategy.</li>
+      <li><strong>Re-run Reviewer Gate</strong> sau khi update spine để xác nhận không còn AD incompatibilities.</li>
+    </ol>
+  </section>
+
+  <div class="footer">
+    <p>Generated by <code>bmad-architecture</code> validate intent. Report path: <code>_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-VALIDATION-REPORT-2026-08-18.html</code></p>
+    <p>This review applies the BMad Architecture Reviewer Gate: reality-check against existing package versions and brownfield code, plus adversarial construction of two compliant-yet-incompatible units per AD.</p>
+  </div>
+</div>
+</body>
+</html>
