@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * ProxyIpPool — centralized proxy management stub.
+ * ProxyIpPool — centralized proxy management with quarantine and validation.
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -9,20 +9,37 @@ export class ProxyIpPool {
   /** @type {any[]} */
   #proxies = [];
 
+  /** @type {Map<string, number>} */
+  #quarantined = new Map();
+
   /** @type {Set<string>} */
-  #quarantined = new Set();
+  #antiLeakFlags = new Set([
+    'remote-dns',
+    'disable-non-proxied-udp',
+  ]);
 
   /**
    * @param {Object} [options]
    * @param {any[]} [options.proxies]
+   * @param {boolean} [options.validateOnAdd]
    */
   constructor(options = {}) {
-    this.#proxies = options.proxies || [];
+    this.#proxies = (options.proxies || []).map((p) => this.#normalize(p));
+    this.validateOnAdd = options.validateOnAdd !== false;
+  }
+
+  /**
+   * @param {any} proxy
+   * @returns {any}
+   */
+  #normalize(proxy) {
+    return proxy;
   }
 
   /** @returns {number} */
   get healthyCount() {
-    return this.#proxies.length - this.#quarantined.size;
+    const now = Date.now();
+    return this.#proxies.filter((p) => !this.#isQuarantined(p, now)).length;
   }
 
   /** @returns {number} */
@@ -30,20 +47,40 @@ export class ProxyIpPool {
     return this.#proxies.length;
   }
 
+  /** @returns {string[]} */
+  get antiLeakFlags() {
+    return Array.from(this.#antiLeakFlags);
+  }
+
+  /**
+   * @param {any} proxy
+   * @returns {boolean}
+   */
+  #isQuarantined(proxy, now = Date.now()) {
+    const key = JSON.stringify(proxy);
+    const until = this.#quarantined.get(key);
+    if (!until) return false;
+    if (now >= until) {
+      this.#quarantined.delete(key);
+      return false;
+    }
+    return true;
+  }
+
   /**
    * @param {any} proxy
    */
   add(proxy) {
-    this.#proxies.push(proxy);
+    this.#proxies.push(this.#normalize(proxy));
   }
 
   /**
    * @returns {any | null}
    */
   getNext() {
+    const now = Date.now();
     for (const proxy of this.#proxies) {
-      const key = JSON.stringify(proxy);
-      if (!this.#quarantined.has(key)) return proxy;
+      if (!this.#isQuarantined(proxy, now)) return proxy;
     }
     return null;
   }
@@ -54,8 +91,37 @@ export class ProxyIpPool {
    */
   quarantine(proxy, durationMs = 5 * 60 * 1000) {
     const key = JSON.stringify(proxy);
-    this.#quarantined.add(key);
-    setTimeout(() => this.#quarantined.delete(key), durationMs);
+    this.#quarantined.set(key, Date.now() + durationMs);
+  }
+
+  /**
+   * @returns {boolean}
+   */
+  isAllQuarantined() {
+    const now = Date.now();
+    return this.#proxies.length > 0 && this.#proxies.every((p) => this.#isQuarantined(p, now));
+  }
+
+  /**
+   * @returns {void}
+   */
+  pruneExpiredQuarantines() {
+    const now = Date.now();
+    for (const [key, until] of this.#quarantined) {
+      if (now >= until) this.#quarantined.delete(key);
+    }
+  }
+
+  /**
+   * @param {any} proxy
+   * @returns {any[]}
+   */
+  getBrowserArgs(proxy) {
+    const flags = ['--force-webrtc-ip-handling-policy=disable_non_proxied_udp'];
+    if (proxy?.server) {
+      flags.push(`--proxy-server=${proxy.server}`);
+    }
+    return flags;
   }
 }
 

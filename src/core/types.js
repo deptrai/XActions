@@ -87,10 +87,49 @@
  * @property {string} code
  * @property {string} type
  * @property {string} message
- * @property {number} [retryAfter]
+ * @property {number} statusCode
+ * @property {boolean} isRetryable
+ * @property {number} retryAfterMs
+ * @property {number} retryAfter
  * @property {string} suggestedAction
  * @property {string} [accountId]
  * @property {string} [platform]
  */
 
-export {};
+export const CATEGORIES = Object.freeze({
+  SOCIAL: 'social',
+  ECOMMERCE: 'ecom',
+  REAL_ESTATE: 'realestate',
+  RECRUITMENT: 'recruitment',
+  B2B: 'b2b',
+});
+
+/** @type {string[]} */
+export const CATEGORY_VALUES = Object.values(CATEGORIES);
+
+/**
+ * @param {string} platform
+ * @param {string} externalId
+ * @returns {string}
+ */
+export function generatePostId(platform, externalId) {
+  return `${platform}:${externalId}`;
+}
+
+/**
+ * @param {string} platform
+ * @param {string} postExternalId
+ * @param {string} commentExternalId
+ * @returns {string}
+ */
+export function generateCommentId(platform, postExternalId, commentExternalId) {
+  return `${platform}:${postExternalId}:${commentExternalId}`;
+}
+
+/**
+ * @param {string} category
+ * @returns {boolean}
+ */
+export function isValidCategory(category) {
+  return CATEGORY_VALUES.includes(category);
+}

@@ -6,6 +6,8 @@
  */
 
 import { PlatformError } from './error-envelope.js';
+import { globalActionRegistry } from './action-registry.js';
+import { isValidCategory } from './types.js';
 
 /** @typedef {import('./types.js').CrawlerCommand} CrawlerCommand */
 /** @typedef {import('./types.js').ActionDescriptor} ActionDescriptor */
@@ -38,10 +40,19 @@ export class AbstractCrawler {
    * Register an action for this crawler.
    * @param {string} action
    * @param {Function} handler
-   * @param {Partial<ActionDescriptor>} [descriptor]
+   * @param {Omit<ActionDescriptor, 'action'>} [descriptor]
    */
   registerAction(action, handler, descriptor = {}) {
-    this.#registry.set(action, { handler: handler.bind(this), descriptor });
+    if (!/^[a-z0-9_]+$/.test(action)) {
+      throw new PlatformError({
+        type: 'invalid_args',
+        message: `Action "${action}" must be snake_case`,
+        suggestedAction: 'use_x_actions_list',
+      });
+    }
+    const fullDescriptor = { action, ...descriptor };
+    this.#registry.set(action, { handler: handler.bind(this), descriptor: fullDescriptor });
+    globalActionRegistry.registerPlatformActions(this.name, [fullDescriptor]);
   }
 
   /** @returns {ActionDescriptor[]} */
@@ -54,6 +65,28 @@ export class AbstractCrawler {
       example: descriptor.example || {},
       outputType: descriptor.outputType || 'PostItem[]',
     }));
+  }
+
+  /**
+   * Validate a post/comment item before storage.
+   * @param {PostItem | CommentItem} item
+   */
+  validateItem(item) {
+    if (!item || typeof item.id !== 'string' || typeof item.platform !== 'string') {
+      throw new PlatformError({
+        type: 'invalid_args',
+        message: 'Item must have id and platform',
+        suggestedAction: 'use_x_actions_list',
+      });
+    }
+    if ('category' in item && !isValidCategory(item.category)) {
+      throw new PlatformError({
+        type: 'invalid_args',
+        message: `Invalid category "${item.category}". Allowed: ${CATEGORY_VALUES.join(', ')}`,
+        platform: this.name,
+        suggestedAction: 'use_x_actions_list',
+      });
+    }
   }
 
   /**

@@ -8,9 +8,20 @@
 /** @typedef {import('./types.js').GovernorStatus} GovernorStatus */
 
 export class StatusApi {
+  /** @type {import('./adaptive-governor.js').AdaptiveRateGovernor | null} */
+  #governor = null;
+
+  /**
+   * @param {Object} [deps]
+   * @param {import('./adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
+   */
+  constructor(deps = {}) {
+    this.#governor = deps.governor || null;
+  }
+
   /** @returns {GovernorStatus} */
   getGovernorStatus() {
-    return {
+    return this.#governor ? this.#governor.getStatus() : {
       healthyProxyCount: 0,
       totalProxyCount: 0,
       healthyProxyRatio: 0,

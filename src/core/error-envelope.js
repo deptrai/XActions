@@ -27,13 +27,29 @@ export const SuggestedActions = Object.freeze({
   USE_ACTIONS_LIST: 'use_x_actions_list',
 });
 
+const RETRYABLE_TYPES = new Set([
+  ErrorTypes.RATE_LIMIT,
+  ErrorTypes.BOT_CHALLENGE,
+  ErrorTypes.PROXY_EXHAUSTED,
+  ErrorTypes.HIBERNATION,
+]);
+
+/**
+ * @param {string} type
+ * @returns {boolean}
+ */
+function isRetryableType(type) {
+  return RETRYABLE_TYPES.has(type);
+}
+
 export class PlatformError extends Error {
   /**
    * @param {Object} opts
    * @param {string} [opts.code]
    * @param {string} [opts.type]
    * @param {string} [opts.message]
-   * @param {number} [opts.retryAfter]
+   * @param {number} [opts.statusCode]
+   * @param {number} [opts.retryAfterMs]
    * @param {string} [opts.suggestedAction]
    * @param {string} [opts.accountId]
    * @param {string} [opts.platform]
@@ -43,10 +59,21 @@ export class PlatformError extends Error {
     this.name = 'PlatformError';
     this.code = opts.code || 'XACT_0000';
     this.type = opts.type || ErrorTypes.INTERNAL;
-    this.retryAfter = opts.retryAfter ?? 0;
+    this.statusCode = opts.statusCode ?? 500;
+    this.retryAfterMs = opts.retryAfterMs ?? 0;
     this.suggestedAction = opts.suggestedAction || SuggestedActions.CONTACT_SUPPORT;
     this.accountId = opts.accountId;
     this.platform = opts.platform;
+  }
+
+  /** @returns {boolean} */
+  get isRetryable() {
+    return isRetryableType(this.type);
+  }
+
+  /** @returns {number} */
+  get retryAfter() {
+    return Math.ceil(this.retryAfterMs / 1000);
   }
 
   /** @returns {ErrorEnvelope} */
@@ -55,6 +82,9 @@ export class PlatformError extends Error {
       code: this.code,
       type: this.type,
       message: this.message,
+      statusCode: this.statusCode,
+      isRetryable: this.isRetryable,
+      retryAfterMs: this.retryAfterMs,
       retryAfter: this.retryAfter,
       suggestedAction: this.suggestedAction,
       accountId: this.accountId,
@@ -65,28 +95,48 @@ export class PlatformError extends Error {
 
 export class RateLimitError extends PlatformError {
   constructor(opts = {}) {
-    super({ type: ErrorTypes.RATE_LIMIT, suggestedAction: SuggestedActions.ROTATE_PROXY, ...opts });
+    super({
+      type: ErrorTypes.RATE_LIMIT,
+      statusCode: 429,
+      suggestedAction: SuggestedActions.ROTATE_PROXY,
+      ...opts,
+    });
     this.name = 'RateLimitError';
   }
 }
 
 export class BotChallengeError extends PlatformError {
   constructor(opts = {}) {
-    super({ type: ErrorTypes.BOT_CHALLENGE, suggestedAction: SuggestedActions.ROTATE_PROXY, ...opts });
+    super({
+      type: ErrorTypes.BOT_CHALLENGE,
+      statusCode: 403,
+      suggestedAction: SuggestedActions.ROTATE_PROXY,
+      ...opts,
+    });
     this.name = 'BotChallengeError';
   }
 }
 
 export class AuthSessionExpiredError extends PlatformError {
   constructor(opts = {}) {
-    super({ type: ErrorTypes.AUTH_EXPIRED, suggestedAction: SuggestedActions.RELOGIN, ...opts });
+    super({
+      type: ErrorTypes.AUTH_EXPIRED,
+      statusCode: 401,
+      suggestedAction: SuggestedActions.RELOGIN,
+      ...opts,
+    });
     this.name = 'AuthSessionExpiredError';
   }
 }
 
 export class ProxyDeadError extends PlatformError {
   constructor(opts = {}) {
-    super({ type: ErrorTypes.PROXY_EXHAUSTED, suggestedAction: SuggestedActions.WAIT, ...opts });
+    super({
+      type: ErrorTypes.PROXY_EXHAUSTED,
+      statusCode: 503,
+      suggestedAction: SuggestedActions.WAIT,
+      ...opts,
+    });
     this.name = 'ProxyDeadError';
   }
 }

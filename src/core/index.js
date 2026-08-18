@@ -22,3 +22,11 @@ export { ActionRegistry, globalActionRegistry } from './action-registry.js';
 export { SessionManager, globalSessionManager } from './session-manager.js';
 export { StatusApi } from './status-api.js';
 export { AdaptiveRateGovernor, PlatformRateLimit } from './adaptive-governor.js';
+export { PreSignedTokenRing, SignerWorkerPagePool } from './signer-pool.js';
+export {
+  CATEGORIES,
+  CATEGORY_VALUES,
+  generatePostId,
+  generateCommentId,
+  isValidCategory,
+} from './types.js';

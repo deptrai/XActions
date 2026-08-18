@@ -354,6 +354,7 @@ model Post {
   @@unique([platform, externalId])
   @@index([platform, crawledAt(sort: Desc)])
   @@index([category, crawledAt(sort: Desc)])
+  @@index([crawledAt])
   @@index([authorId])
 }
 
@@ -376,11 +377,12 @@ model Comment {
   crawledAt         DateTime  @default(now())
 
   post              Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  parentComment     Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  parentComment     Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: SetNull)
   subReplies        Comment[] @relation("CommentReplies")
 
   @@unique([platform, externalId, postId])
   @@index([postId, parentCommentId])
+  @@index([crawledAt])
   @@index([authorId])
 }
 
@@ -389,11 +391,16 @@ model CrawlCheckpoint {
   platform        String
   targetType      String    // 'keyword' | 'group' | 'page' | 'user' | 'category' | 'search'
   targetKey       String    // Query string, groupId, username, category slug
+  status          String    @default("running") // 'running' | 'paused' | 'failed' | 'completed' | 'stalled'
   lastCursor      String?
   lastTimestamp   DateTime?
+  lastCrawledAt   DateTime?
+  nextScheduledAt DateTime?
+  errorCount      Int       @default(0)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   @@unique([platform, targetType, targetKey])
   @@index([platform, updatedAt])
+  @@index([status, nextScheduledAt])
 }

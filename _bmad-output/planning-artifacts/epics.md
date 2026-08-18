@@ -86,7 +86,8 @@ So that **mọi platform crawler và adapter trong tương lai đều có kiến
   - `AbstractCrawler.listActions(): ActionDescriptor[]` để AI/CLI khám phá action theo platform.
 * **And** ném lỗi `Method not implemented` nếu lớp con chưa override khi khởi tạo qua `new.target`
 * **And** toàn bộ error classes kế thừa từ `PlatformError` cung cấp các trường: `statusCode`, `platform`, `isRetryable` (boolean), `retryAfterMs` (number), `suggestedAction`.
-* **And** `AbstractErrorEnvelope` chuẩn hóa shape trả về: `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
+* **And** `AbstractErrorEnvelope` / `PlatformError.toEnvelope()` chuẩn hóa shape trả về: `{ code, type, message, statusCode, isRetryable, retryAfterMs, retryAfter, suggestedAction, accountId?, platform }`.
+* **And** `AbstractCrawler` tự động đăng ký action vào `ActionRegistry`, validate `category` trước khi lưu, và đảm bảo `action` là snake_case.
 * **And** `GovernorStatusApi` định nghĩa shape `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 
 ### Story 10.2: Prisma Post & Comment Schema with Namespaced ID, JSONB GIN & Batch Chunking
@@ -98,9 +99,8 @@ So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung
 * **Given** file `prisma/schema.prisma` của dự án XActions
 * **When** định nghĩa model `Post` (gồm `id` Namespaced, `platform`, `externalId`, `category`, `authorId`, `authorName`, `content`, `mediaUrls String[]`, `likesCount`, `repostsCount`, `repliesCount`, `viewsCount`, `metadata Json?`, `publishedAt`, `crawledAt`), `Comment` (gồm `id` Namespaced, `platform`, `externalId`, `postId`, `parentCommentId`, `depth`, `authorId`, `authorName`, `content`, `metadata Json?`, quan hệ tự tham chiếu `@relation("CommentReplies")`), và `CrawlCheckpoint` (`@@unique([platform, targetType, targetKey])`)
 * **Then** migration được sinh hợp lệ, tạo ràng buộc `@@unique([platform, externalId])` trên `Post`, `@@unique([platform, externalId, postId])` trên `Comment`, GIN index trên `metadata` (raw SQL migration), và Expression Index trên `phone`/`price`/`salary`
-* **And** `PrismaStore` (`src/store/prisma-store.js`) thực hiện upsert bài viết và bình luận theo batch chunk 500 bản ghi; mặc định dùng `createMany` + `skipDuplicates`, benchmark trước khi dùng 500 `upsert` trong transaction.
-* **And** `CheckpointApi` cung cấp `GET/POST /checkpoints` và CLI `xactions checkpoints *` cho resume/pause/retry.
-* **And** `MetadataSchemaRegistry` publish JSON Schema cho từng `platform/category` tại `schemas/<platform>/<category>.json` và API `GET /schemas/:platform/:category`.
+* **And** `PrismaStore` (`src/store/prisma-store.js`) thực hiện insert bài viết và bình luận theo batch chunk 500 bản ghi; mặc định dùng `createMany` + `skipDuplicates`, hỗ trợ `upsert` qua option `{ upsert: true }`, và insert comment theo từng `depth` level để tránh self-referencing FK violation.
+* **And** `CrawlCheckpoint` model có đầy đủ trường `status`, `errorCount`, `lastCrawledAt`, `nextScheduledAt`.
 
 ### Story 10.3: AI Dataset Export Utility (Streaming JSONL & CSV with Sanitization)
 As an **AI Engineer / Data Scientist**,
@@ -113,6 +113,31 @@ So that **tôi có thể trích xuất dataset theo filter (`platform`, `keyword
 * **Then** hệ thống đọc dữ liệu tuần tự theo cursor / stream từ Prisma và ghi vào file đích qua `fs.createWriteStream`
 * **And** tự động làm sạch ký tự xuống dòng (`\r\n`) trong trường `content` thành khoảng trắng trước khi ghi dòng JSONL
 * **And** kiểm soát Backpressure an toàn bằng cách lắng nghe event `'drain'` khi stream buffer đầy, RAM duy trì < 50MB.
+
+### Story 10.4: CrawlCheckpoint Operational API (Resume / Pause / Retry)
+As a **Platform Operator**,
+I want **API và CLI để xem, resume, pause, retry từng checkpoint cào**,
+So that **tôi có thể quản lý tiến độ crawl khi container restart hoặc target bị lỗi**.
+
+**Acceptance Criteria:**
+* **Given** model `CrawlCheckpoint` đã tồn tại
+* **When** triển khai `src/api/checkpoints.js` và `src/cli/commands/checkpoints.js`
+* **Then** có endpoint `GET /checkpoints`, `GET /checkpoints/:id`, `POST /checkpoints/:id/resume`, `POST /checkpoints/:id/pause`, `POST /checkpoints/:id/retry`
+* **And** CLI `xactions checkpoints list/show/resume/pause/retry` hoạt động
+* **And** `CrawlCheckpoint.status` chuyển đổi đúng giữa `running`, `paused`, `failed`, `completed`, `stalled`.
+
+### Story 10.5: Metadata Schema Contract & Registry for Consumers
+As a **Nowing Integrator**,
+I want **mỗi platform/category publish JSON Schema cho `Post.metadata` và API discovery**,
+So that **consumer biết trước field nào tồn tại và kiểu dữ liệu chuẩn hóa**.
+
+**Acceptance Criteria:**
+* **Given** dữ liệu `Post` với `metadata Json?`
+* **When** triển khai `src/core/metadata-schema-registry.js` và `src/api/schemas.js`
+* **Then** mỗi platform/category có file `schemas/<platform>/<category>.json` (hoặc TypeScript type)
+* **And** API `GET /schemas`, `GET /schemas/:platform/:category` trả về JSON Schema
+* **And** MCP tool `x_schema_get` và CLI `xactions schema get <platform> <category>` hoạt động
+* **And** `PrismaStore` validate `metadata` against schema khi ghi, trả `invalid_args` error nếu mismatch.
 
 ---
 

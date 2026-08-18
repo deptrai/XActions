@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * AdaptiveRateGovernor — infrastructure-aware throttling stub.
+ * AdaptiveRateGovernor — infrastructure-aware throttling.
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -46,15 +46,28 @@ export class AdaptiveRateGovernor {
   /** @type {number} */
   #redisConsumerLag = 0;
 
+  /** @type {Map<string, number[]>} */
+  #accountRequestTimestamps = new Map();
+
+  /** @type {number} */
+  #currentReqPerSecond = 0;
+
+  /** @type {number} */
+  #windowStart = 0;
+
   /** @type {Array<{accountId: string, until: number, reason: string}>} */
   #hibernatingAccounts = [];
+
+  /** @type {import('../proxy/proxy-pool.js').ProxyIpPool | null} */
+  #proxyPool = null;
 
   /**
    * @param {Object} [deps]
    * @param {import('../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
    */
   constructor(deps = {}) {
-    this.proxyPool = deps.proxyPool;
+    this.#proxyPool = deps.proxyPool || null;
+    this.#windowStart = Date.now();
   }
 
   /**
@@ -77,17 +90,66 @@ export class AdaptiveRateGovernor {
     this.#redisConsumerLag = state.redisConsumerLag;
   }
 
+  /** @returns {void} */
+  refreshFromProxyPool() {
+    if (!this.#proxyPool) return;
+    this.#healthyProxyCount = this.#proxyPool.healthyCount;
+    this.#totalProxyCount = this.#proxyPool.totalCount;
+  }
+
   /**
    * @param {string} platform
    * @returns {number}
    */
   getMaxThroughput(platform) {
+    this.refreshFromProxyPool();
     const limit = this.#platformLimits.get(platform) || new PlatformRateLimit(platform);
     let factor = 1;
     if (this.#healthyProxyCount < this.#totalProxyCount * 0.5) factor = 0.5;
     if (this.#healthyProxyCount < 5) factor = 0;
     if (this.#redisConsumerLag > 10000) factor *= 0.25;
     return this.#healthyProxyCount * limit.baseReqPerSecondPerProxy * limit.throttleFactor * factor;
+  }
+
+  /**
+   * @param {string} accountId
+   */
+  recordRequest(accountId) {
+    const now = Date.now();
+    const timestamps = this.#accountRequestTimestamps.get(accountId) || [];
+    timestamps.push(now);
+    // Keep only last 60 seconds
+    const cutoff = now - 60_000;
+    const filtered = timestamps.filter((t) => t > cutoff);
+    this.#accountRequestTimestamps.set(accountId, filtered);
+
+    // Update current rps window
+    if (now - this.#windowStart >= 1000) {
+      this.#currentReqPerSecond = 0;
+      this.#windowStart = now;
+    }
+    this.#currentReqPerSecond += 1;
+  }
+
+  /**
+   * @param {string} accountId
+   * @returns {number}
+   */
+  getAccountVelocity(accountId) {
+    const timestamps = this.#accountRequestTimestamps.get(accountId) || [];
+    const now = Date.now();
+    return timestamps.filter((t) => now - t < 60_000).length;
+  }
+
+  /**
+   * @param {string} accountId
+   * @param {string} platform
+   * @returns {boolean}
+   */
+  canAccountRequest(accountId, platform) {
+    if (this.isHibernating(accountId)) return false;
+    const limit = this.#platformLimits.get(platform) || new PlatformRateLimit(platform);
+    return this.getAccountVelocity(accountId) < limit.safeRequestsPerMinute;
   }
 
   /**
@@ -101,10 +163,21 @@ export class AdaptiveRateGovernor {
     this.#hibernatingAccounts.push({ accountId, until, reason });
   }
 
+  /**
+   * @param {string} accountId
+   * @returns {boolean}
+   */
+  isHibernating(accountId) {
+    const now = Date.now();
+    this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.until > now);
+    return this.#hibernatingAccounts.some((h) => h.accountId === accountId);
+  }
+
   /** @returns {GovernorStatus} */
   getStatus() {
     const now = Date.now();
     this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.until > now);
+    this.refreshFromProxyPool();
     const healthyProxyRatio = this.#totalProxyCount ? this.#healthyProxyCount / this.#totalProxyCount : 0;
     const throttleLevel =
       this.#redisConsumerLag > 10000 ? 'backpressure' :
@@ -115,7 +188,7 @@ export class AdaptiveRateGovernor {
       healthyProxyCount: this.#healthyProxyCount,
       totalProxyCount: this.#totalProxyCount,
       healthyProxyRatio,
-      currentReqPerSecond: 0,
+      currentReqPerSecond: this.#currentReqPerSecond,
       redisConsumerLag: this.#redisConsumerLag,
       hibernatingAccounts: this.#hibernatingAccounts.map((h) => ({
         accountId: h.accountId,
