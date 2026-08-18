@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-18T23:30:00.000Z
+last_updated: 2026-08-19T01:30:00.000Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -33,7 +33,6 @@ story_location: /Users/luisphan/Documents/GitHub/XActions/_bmad-output/implement
 development_status:
   # --- Epic 10: Unified PostgreSQL Storage (Prisma) & Core Interfaces ---
   epic-10: in-progress
-  10-0-dev-blocker-prep-core-scaffold: done
   10-1-core-domain-interfaces-error-hierarchy-definition: ready-for-dev
   10-2-prisma-post-comment-relational-schema-migration: backlog
   10-3-ai-dataset-export-utility-streaming-jsonl-csv: backlog
@@ -43,7 +42,7 @@ development_status:
 
   # --- Epic 11: Resilient Network & Proxy Pool Management ---
   epic-11: backlog
-  11-1-proxyippool-with-auto-validation-expiry-buffer: backlog
+  11-1-proxyippool-accountpool-sticky-round-robin: backlog
   11-2-static-dynamic-residential-tunnel-proxy-providers: backlog
   11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: backlog
   11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: backlog
@@ -68,7 +67,6 @@ development_status:
   14-1-hierarchical-comment-tree-extraction-algorithm: backlog
   14-2-mcp-tool-exporters-cli-crawl-commands: backlog
   14-3-realtime-redis-stream-ingest-for-nowing-ai-lead-hub: backlog
-  14-4-nowing-adapter-cutover-legacy-scrapers-decommissioning: backlog
   epic-14-retrospective: optional
 
   # --- Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine ---
@@ -96,7 +94,7 @@ development_status:
   18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: backlog
   epic-18-retrospective: optional
 
-  # --- Epic 19: Web SaaS Dashboard & Operational Observability ---
+  # --- Epic 19: Internal Operator Dashboard, Admin CLI & Operational Observability ---
   epic-19: backlog
   19-1-dashboard-jobs-checkpoints-view: backlog
   19-2-dashboard-proxies-accounts-view: backlog
@@ -107,3 +105,8 @@ development_status:
   19-7-admin-rest-api-proxy-account-checkpoint: backlog
   19-8-admin-mcp-tools: backlog
   epic-19-retrospective: optional
+
+  # --- Epic 20: Nowing Cutover & Legacy Scraper Decommissioning ---
+  epic-20: backlog
+  20-1-nowing-adapter-cutover-legacy-scrapers-decommissioning: backlog
+  epic-20-retrospective: optional

@@ -8,7 +8,7 @@ inputDocuments:
   - '../nowing/_bmad-output/planning-artifacts/architecture/architecture-xactions-social-integration-2026-08-15/ARCHITECTURE-SPINE.md'
 ---
 
-# XActions Universal Hybrid Scraping & Automation Engine — Epic Breakdown (Epics 10–19)
+# XActions Universal Hybrid Scraping & Automation Engine — Epic Breakdown (Epics 10–20)
 
 ## Overview
 
@@ -22,7 +22,7 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 
 * **FR64 (Core Abstraction):** Hệ thống phải cung cấp các cổng trừu tượng chuẩn hóa (`AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore`, `ISignerBridge`) làm khung cơ sở cho mọi nền tảng.
 * **FR65 (Tiered Hybrid Scraping Engine):** Hệ thống phải hỗ trợ cơ chế thực thi lai kết hợp Pre-Signed Token Ring Buffer O(1) và Worker Page Pool cho chữ ký động (`page.evaluate()` với timeout 3s) cùng Async HTTP Client (`got-scraping`/`undici`) với TLS/JA4 Spoofing.
-* **FR66A (Resilient Anti-Leak Proxy Pool):** Hệ thống phải quản lý tập trung danh sách Proxy (Static & Dynamic Tunnel) với cờ chống rò rỉ WebRTC/DNS, tự động validate, tính buffer expiration, và tự động cách ly (quarantine) IP lỗi 5 phút.
+* **FR66 (Resilient Anti-Leak Proxy Pool):** Hệ thống phải quản lý tập trung danh sách Proxy (Static & Dynamic Tunnel) với cờ chống rò rỉ WebRTC/DNS, tự động validate, tính buffer expiration, và tự động cách ly (quarantine) IP lỗi 5 phút.
 * **FR66B (Adaptive Infrastructure Rate Limiter & Account Protection Governor):** Hệ thống phải tự động điều tốc nhịp cào theo tỷ lệ Proxy sống (`Max Throughput = Healthy Proxies * SafeRatePerIP`), áp dụng Leaky Bucket và đưa tài khoản vào chế độ Ngủ đông (Hibernation) 15–30 phút khi gặp thử thách bảo vệ để giảm nguy cơ die tài khoản hàng loạt (không đảm bảo 100%).
 * **FR67 (Namespaced PostgreSQL Storage & JSONB GIN Indexes):** Hệ thống phải lưu trữ toàn bộ bài viết (`Post`) và cây bình luận phân cấp (`Comment`) tập trung vào PostgreSQL qua Prisma ORM với quy ước Namespaced ID `${platform}:${externalId}`, cột `metadata Json?` có GIN Index và hỗ trợ batch transaction chunked 500 records.
 * **FR68 (Terminal QR Login):** Hệ thống CLI/MCP phải hỗ trợ hiển thị mã QR ASCII chuẩn 1:1 trên Terminal console qua `qrcode-terminal` có countdown 60s, timeout 120s và polling cookie ngầm.
@@ -41,7 +41,7 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 * **FR81 (VietnamWorks Job Scraper):** Cào tin tuyển dụng IT và Executive trên VietnamWorks qua API public / HTML parser.
 * **FR82 (LinkedIn Lead & Job Scraper):** Cào thông tin ứng viên, công ty và bài đăng tuyển dụng trên LinkedIn qua CDP Attach Port 9222.
 * **FR83 (Nowing Thin Event Stream Ingest):** Phát luồng dữ liệu cào dạng Thin Event Pointers (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 1000000` hoặc `MINID` theo thời gian, configurable) cho Nowing AI Hub.
-* **FR84 (Nowing Scrapers Cutover & Decommissioning):** Nâng cấp adapter Nowing sang Daemon MCP HTTP/SSE (Port 3001) và dọn dẹp, loại bỏ toàn bộ 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
+* **FR84 (Nowing Scrapers Cutover & Decommissioning):** Nâng cấp adapter Nowing sang Daemon MCP HTTP/SSE (Port 3001) và dọn dẹp, loại bỏ toàn bộ 20+ scraper cũ cùng browser dependencies khỏi Nowing backend. (Epic 20)
 
 ### NonFunctional Requirements
 
@@ -56,29 +56,17 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 
 ## Epic 10: Unified PostgreSQL Storage (Prisma) & Core Interfaces
 
-### Story 10.0: Dev Blocker Prep & Core Scaffold
-As a **Core Developer**,
-I want **giải quyết các blocker cơ sở (dependencies, src/core/, src/proxy/, src/store/, Prisma schema, MCP daemon script) trước khi viết business logic**,
-So that **Story 10.1 và các story sau có thể compile, chạy, và test mà không bị thiếu contract hay dependency**.
-
-**Acceptance Criteria:**
-* **Given** repo XActions ở trạng thái sau architecture r3
-* **When** kiểm tra `package.json`, `src/core/`, `src/proxy/`, `src/store/`, `prisma/schema.prisma`, `package.json` scripts
-* **Then** `got-scraping`, `qrcode-terminal`, `socks-proxy-agent` phải có trong `dependencies` (hoặc xác nhận đã có), script `mcp:daemon` phải tồn tại
-* **And** `src/core/` chứa `base-crawler.js`, `base-client.js`, `base-login.js`, `base-store.js`, `error-envelope.js`, `action-registry.js`, `session-manager.js`, `status-api.js`, `adaptive-governor.js`, `index.js`
-* **And** `src/proxy/proxy-pool.js` và `src/store/prisma-store.js` tồn tại dưới dạng stub
-* **And** `prisma/schema.prisma` chứa `Post`, `Comment`, `CrawlCheckpoint` models cùng ràng buộc `@@unique`
-* **And** `prisma/migrations/YYYYMMDDHHMMSS_universal_scraping_schema/migration.sql` tạo GIN index và expression indexes
-* **And** `node src/core/index.js` parse thành công, `npx prisma validate` pass, `npm run mcp:daemon` trả về `GET /health` 200
-
 ### Story 10.1: Core Domain Interfaces & Error Hierarchy Definition
 As a **Core Developer**,
 I want **định nghĩa các abstract class `AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore` cùng cây lỗi chuẩn (`PlatformError`, `RateLimitError`, `AuthSessionExpiredError`, `ProxyDeadError`)**,
 So that **mọi platform crawler và adapter trong tương lai đều có kiến trúc nhất quán, chuẩn mực và tự động phân loại lỗi retry**.
 
 **Acceptance Criteria:**
-* **Given** thư mục `src/core/` (100% Pure ESM, no external npm dependencies)
-* **When** module `src/core/base-crawler.js`, `base-client.js`, `base-store.js`, `base-login.js`, `error-envelope.js`, `signer-pool.js`, `status-api.js`, `session-manager.js`, và `action-registry.js` được nạp
+* **Given** repo XActions ở trạng thái sau architecture r3
+* **When** kiểm tra `package.json` và `src/core/`
+* **Then** `got-scraping`, `qrcode-terminal`, `socks-proxy-agent`, và `undici` phải có trong `dependencies` (hoặc xác nhận đã có)
+* **And** thư mục `src/core/` là 100% Pure ESM, no external npm dependencies
+* **And** module `src/core/base-crawler.js`, `base-client.js`, `base-store.js`, `base-login.js`, `error-envelope.js`, `signer-pool.js`, `status-api.js`, `session-manager.js`, `adaptive-governor.js`, và `index.js` được tạo
 * **Then** các class phải định nghĩa đầy đủ phương thức trừu tượng:
   - `AbstractCrawler`: `init()`, `start()`, `search()`, `getPostDetail()`, `getComments()`, `cleanup()`
   - `AbstractApiClient`: `request()`, `sign()`, `updateCookies()` (đảm bảo immutable context cho từng tác vụ)
@@ -89,20 +77,41 @@ So that **mọi platform crawler và adapter trong tương lai đều có kiến
 * **And** `AbstractErrorEnvelope` / `PlatformError.toEnvelope()` chuẩn hóa shape trả về: `{ code, type, message, statusCode, isRetryable, retryAfterMs, retryAfter, suggestedAction, accountId?, platform }`.
 * **And** `AbstractCrawler` tự động đăng ký action vào `ActionRegistry`, validate `category` trước khi lưu, và đảm bảo `action` là snake_case.
 * **And** `GovernorStatusApi` định nghĩa shape `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
+* **And** `node src/core/index.js` parse thành công và `npx prisma validate` pass.
 
 ### Story 10.2: Prisma Post & Comment Schema with Namespaced ID, JSONB GIN & Batch Chunking
 As a **Backend & Platform Engineer**,
 I want **mở rộng `prisma/schema.prisma` với model `Post` và `Comment` (hỗ trợ Namespaced ID `${platform}:${externalId}`, cột `metadata Json?`), đồng thời triển khai `PrismaStore`**,
 So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung, không bị collision ID, và cho phép Nowing query lọc giá/sđt/lương nhanh bằng GIN/expression indexes**.
 
-> **NFR:** Query lọc `metadata` phải đạt <10ms trên tập dữ liệu test 1M rows; benchmark thực hiện trong Story 10.2b (Post-Merge Benchmark) hoặc chuyên mục NFR audit.
+> **NFR:** Query lọc `metadata` phải đạt <10ms trên tập dữ liệu test 1M rows; benchmark thực hiện trong chuyên mục NFR audit.
 
 **Acceptance Criteria:**
+
+#### Post model
 * **Given** file `prisma/schema.prisma` của dự án XActions
-* **When** định nghĩa model `Post` (gồm `id` Namespaced, `platform`, `externalId`, `category`, `authorId`, `authorName`, `content`, `mediaUrls String[]`, `likesCount`, `repostsCount`, `repliesCount`, `viewsCount`, `metadata Json?`, `publishedAt`, `crawledAt`), `Comment` (gồm `id` Namespaced, `platform`, `externalId`, `postId`, `parentCommentId`, `depth`, `authorId`, `authorName`, `content`, `metadata Json?`, quan hệ tự tham chiếu `@relation("CommentReplies")`), và `CrawlCheckpoint` (`@@unique([platform, targetType, targetKey])`)
-* **Then** migration được sinh hợp lệ, tạo ràng buộc `@@unique([platform, externalId])` trên `Post`, `@@unique([platform, externalId, postId])` trên `Comment`, GIN index trên `metadata` (raw SQL migration), và Expression Index trên `phone`/`price`/`salary`
-* **And** `PrismaStore` (`src/store/prisma-store.js`) thực hiện insert bài viết và bình luận theo batch chunk 500 bản ghi; mặc định dùng `createMany` + `skipDuplicates`, hỗ trợ `upsert` qua option `{ upsert: true }`, và insert comment theo từng `depth` level để tránh self-referencing FK violation.
-* **And** `CrawlCheckpoint` model có đầy đủ trường `status`, `errorCount`, `lastCrawledAt`, `nextScheduledAt`.
+* **When** định nghĩa model `Post` với `id` Namespaced `${platform}:${externalId}`, `platform`, `externalId`, `category`, `authorId`, `authorName`, `content`, `mediaUrls String[]`, `likesCount`, `repostsCount`, `repliesCount`, `viewsCount`, `metadata Json?`, `publishedAt`, `crawledAt`
+* **Then** `@@unique([platform, externalId])` tồn tại trên `Post` và migration sinh ra hợp lệ
+
+#### Comment model
+* **Given** schema `Post` đã tồn tại
+* **When** định nghĩa model `Comment` với `id` Namespaced, `platform`, `externalId`, `postId`, `parentCommentId`, `depth`, `authorId`, `authorName`, `content`, `metadata Json?`, và quan hệ tự tham chiếu `@relation("CommentReplies")`
+* **Then** `@@unique([platform, externalId, postId])` tồn tại trên `Comment` và migration sinh ra hợp lệ
+
+#### Indexes
+* **Given** migration đã được tạo
+* **When** chạy raw SQL migration
+* **Then** GIN index trên `metadata` và Expression Index trên `phone`/`price`/`salary` được tạo
+
+#### CrawlCheckpoint model
+* **Given** schema `Post` và `Comment` đã tồn tại
+* **When** định nghĩa model `CrawlCheckpoint` với `@@unique([platform, targetType, targetKey])` và các trường `status`, `errorCount`, `lastCrawledAt`, `nextScheduledAt`
+* **Then** migration sinh ra hợp lệ
+
+#### PrismaStore batch writer
+* **Given** models `Post` và `Comment` đã tồn tại
+* **When** triển khai `src/store/prisma-store.js`
+* **Then** insert bài viết và bình luận theo batch chunk 500 bản ghi; mặc định dùng `createMany` + `skipDuplicates`, hỗ trợ `upsert` qua option `{ upsert: true }`, và insert comment theo từng `depth` level để tránh self-referencing FK violation.
 
 ### Story 10.3: AI Dataset Export Utility (Streaming JSONL & CSV with Sanitization)
 As an **AI Engineer / Data Scientist**,
@@ -148,12 +157,14 @@ So that **consumer biết trước field nào tồn tại và kiểu dữ liệu
 
 ## Epic 11: Resilient Network & Proxy Pool Management
 
-### Story 11.1: ProxyIpPool with Anti-Leak Flags, Auto-Validation & Expiry Buffer
+### Story 11.1: ProxyIpPool & AccountPool for Sticky/Round-Robin IP and Multi-Account Rotation
 As an **Automation Operator**,
-I want **hệ thống tự động kiểm tra chất lượng proxy, ngăn chặn rò rỉ WebRTC/DNS và phát hiện proxy sắp hết hạn trước 30 giây**,
-So that **request gửi đi luôn sử dụng IP sống, an toàn và không bị lộ IP gốc của máy chủ**.
+I want **hệ thống quản lý tập trung proxy (sticky IP cho tài khoản, round-robin IP cho no-auth) và một account pool để xoay tài khoản khi gặp rate-limit hoặc hibernation**,
+So that **request gửi đi luôn sử dụng IP sống, an toàn, không bị lộ IP gốc, và tài khoản auth-required không bị die hàng loạt**.
 
 **Acceptance Criteria:**
+
+#### ProxyIpPool
 * **Given** danh sách proxy đầu vào (HTTP/HTTPS/SOCKS5)
 * **When** khởi tạo `ProxyIpPool` (`src/proxy/proxy-pool.js`)
 * **Then** tự động cấu hình `remote DNS resolution` và cờ browser `--force-webrtc-ip-handling-policy=disable_non_proxied_udp`
@@ -161,6 +172,14 @@ So that **request gửi đi luôn sử dụng IP sống, an toàn và không b�
   - `getStickyProxy(accountId)` — trả về cùng một proxy cho một tài khoản (auth-required platforms).
   - `getNext()` — round-robin trên các proxy khỏe (no-auth platforms, residential rotation).
 * **And** tự động làm mới IP nếu thời gian sống còn lại dưới 30 giây (buffer window) hoặc proxy bị quarantine.
+
+#### AccountPool
+* **Given** nhiều tài khoản cho cùng một platform
+* **When** khởi tạo `AccountPool` (`src/core/account-pool.js`)
+* **Then** hệ thống lưu trữ account với `platform`, `accountId`, `credentials`, `assignedProxy`, `hibernatingUntil`, `velocity`
+* **And** `getNextAvailable(platform)` trả về account khả dụng tiếp theo theo round-robin
+* **And** `markUnavailable(accountId, reason, duration)` đánh dấu account hibernating hoặc rate-limited
+* **And** `getAccountVelocity(accountId)` trả về số request trong sliding window.
 
 ### Story 11.2: Static & Dynamic Residential Tunnel Proxy Providers
 As a **Scale-Out Scraper**,
@@ -223,7 +242,7 @@ So that **hệ thống scrape nhanh nhất có thể mà không bị nền tản
 * **And** `AbstractCrawler.start(command)` gọi `governor.recordRequest()` và kiểm tra `governor.canAccountRequest()` / `governor.getMaxThroughput(platform)` trước mỗi action.
 * **And** Auth-required platforms (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) sử dụng sticky IP; no-auth platforms (Batdongsan, Chotot, v.v.) sử dụng rotating residential proxy.
 * **And** không bao giờ fallback về direct connection khi proxy fail; mọi request phải qua `ProxyIpPool`.
-* **And** tạo `src/core/account-pool.js`, cập nhật `src/core/platform-validator.js` với `AbstractPlatformResponseValidator` để các scraper con implement `isValidPayload`, `isBotChallenge`, `isRateLimit`.
+* **And** cập nhật `src/core/platform-validator.js` với `AbstractPlatformResponseValidator` để các scraper con implement `isValidPayload`, `isBotChallenge`, `isRateLimit`.
 
 ---
 
@@ -317,13 +336,32 @@ I want **XActions MCP Server chạy thường trực dạng Daemon HTTP/SSE (Por
 So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà không phải spawn subprocess `node`**.
 
 **Acceptance Criteria:**
-* **Given** Daemon MCP Server `src/mcp/server.js` lắng nghe trên cổng `http://localhost:3001/mcp`
-* **When** AI Agent hoặc Nowing gọi tool `x_crawl_post`, `x_crawl_comments_tree`, `x_actions_list` qua HTTP/SSE
+
+#### Daemon server
+* **Given** `package.json` chưa có script MCP daemon
+* **When** thêm script `mcp:daemon` trỏ đến `src/mcp/server.js`
+* **Then** `npm run mcp:daemon` khởi động server lắng nghe trên `http://localhost:3001/mcp` và `GET /health` trả về 200
+
+#### JSON Envelope & Artifact
+* **Given** Daemon MCP Server đang chạy
+* **When** AI Agent hoặc Nowing gọi tool `x_crawl_post`, `x_crawl_comments_tree` qua HTTP/SSE
 * **Then** response trả về JSON Envelope chuẩn: `{ success, platform, meta, data (top 20-30), summary, error? }` với độ trễ phản hồi < 2ms
 * **And** nếu tổng số records > 100 ➔ Tự động lưu file dataset JSONL và trả về trường `meta.datasetArtifactPath` để AI đọc chọn lọc.
-* **And** `x_actions_list` trả về `ActionDescriptor[]` với `{ action, description, requiredArgs, optionalArgs, example, outputType }`.
-* **And** error envelope chuẩn hóa: `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
-* **And** health check endpoint `GET /health` và CLI `xactions daemon status/start/stop`.
+
+#### Action discovery
+* **Given** `AbstractCrawler.listActions()` đã tồn tại
+* **When** gọi tool `x_actions_list`
+* **Then** trả về `ActionDescriptor[]` với `{ action, description, requiredArgs, optionalArgs, example, outputType }`.
+
+#### Error envelope
+* **Given** bất kỳ tool nào gặp lỗi
+* **When** hệ thống trả response
+* **Then** error envelope chuẩn hóa: `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
+
+#### CLI daemon commands & legacy mapping
+* **Given** CLI `xactions` và legacy `unfollowx`
+* **When** gọi `xactions daemon status/start/stop`
+* **Then** CLI quản lý vòng đời daemon MCP
 * **And** legacy CLI commands `unfollowx` được map vào `CrawlerCommand` hoặc trả error `suggestedAction: 'use_x_actions_list'`.
 
 ### Story 14.3: Realtime Thin Event Redis Stream for Nowing AI Lead Hub
@@ -339,19 +377,6 @@ So that **Nowing backend có thể chạy background NLP Intent Extractor theo t
 * **And** `GET /metrics/stream` trả về `{ eventsPerSecond, pendingMessages, consumerLag, droppedEvents, lastAckTime, maxLen, minId }`.
 * **And** cảnh báo khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s` qua webhook/email.
 * **And** log `throttle_reason: redis_lag` khi governor giảm nhịp do consumer lag.
-
-### Story 14.4: Nowing Daemon Client Cutover & Legacy Scrapers Decommissioning
-As a **Lead System Architect**,
-I want **nâng cấp adapter bên Nowing kết nối sang XActions Daemon HTTP/SSE (Port 3001) và gỡ bỏ toàn bộ 20+ scraper cũ trong `nowing_backend/app/proprietary/platforms/`**,
-So that **Nowing backend được tinh gọn 100%, giảm kích thước Docker từ 4GB xuống <500MB và thống nhất hạ tầng cào duy nhất về XActions**.
-
-**Acceptance Criteria:**
-* **Given** repository Nowing tại `/Users/luisphan/Documents/GitHub/nowing`
-* **When** XActions hoàn thành các crawler đa nền tảng (Social, Ecom, BĐS, Tuyển dụng)
-* **Then** cập nhật `nowing_backend/app/proprietary/platforms/xactions/adapter.py` sử dụng HTTP Keep-Alive Connection Pool gọi sang `http://xactions-service:3001`
-* **And** thực hiện kiểm thử đối soát (Shadow Run) xác nhận Nowing nhận đủ 100% dữ liệu
-* **And** xóa bỏ an toàn các thư mục scraper cũ trong `nowing_backend/app/proprietary/platforms/` (`shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.)
-* **And** gỡ bỏ các dependency trình duyệt nặng (`selenium`, `playwright-python`, Chromium binaries) khỏi Dockerfile của Nowing.
 
 ---
 
@@ -580,3 +605,20 @@ So that **Claude/Cursor/Antigravity có thể hỏi "tình trạng proxy pool th
 * **Then** trả về governor status, proxy health, hibernating accounts
 * **And** `x_admin_proxies_list`, `x_admin_accounts_list`, `x_admin_account_wake`, `x_admin_proxy_quarantine`, `x_admin_checkpoints_list`, `x_admin_checkpoint_action` hoạt động tương tự CLI.
 * **And** yêu cầu permission `admin`.
+
+---
+
+## Epic 20: Nowing Cutover & Legacy Scraper Decommissioning
+
+### Story 20.1: Nowing Daemon Client Cutover & Legacy Scrapers Decommissioning
+As a **Lead System Architect**,
+I want **nâng cấp adapter bên Nowing kết nối sang XActions Daemon HTTP/SSE (Port 3001) và gỡ bỏ toàn bộ 20+ scraper cũ trong `nowing_backend/app/proprietary/platforms/`**,
+So that **Nowing backend được tinh gọn 100%, giảm kích thước Docker từ 4GB xuống <500MB và thống nhất hạ tầng cào duy nhất về XActions**.
+
+**Acceptance Criteria:**
+* **Given** repository Nowing tại `/Users/luisphan/Documents/GitHub/nowing`
+* **And** XActions đã hoàn thành các crawler đa nền tảng (Social, Ecom, BĐS, Tuyển dụng) từ Epic 15–18
+* **When** cập nhật `nowing_backend/app/proprietary/platforms/xactions/adapter.py` sử dụng HTTP Keep-Alive Connection Pool gọi sang `http://xactions-service:3001`
+* **Then** Nowing nhận đủ 100% dữ liệu qua kiểm thử đối soát (Shadow Run)
+* **And** xóa bỏ an toàn các thư mục scraper cũ trong `nowing_backend/app/proprietary/platforms/` (`shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.)
+* **And** gỡ bỏ các dependency trình duyệt nặng (`selenium`, `playwright-python`, Chromium binaries) khỏi Dockerfile của Nowing.

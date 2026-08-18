@@ -138,7 +138,7 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 - ✅ PRD is concise and aligned with Epics 10–18.
 - ✅ 21 FRs and 6 NFRs are explicitly numbered and grouped by Epic.
 - ⚠️ FR-66 / FR-66B overlap slightly with Story 11.5 newly-added anti-bot pipeline (will verify in epic coverage).
-- ⚠️ PRD still refers to 4 phases (10–18) without Epic 19; operator dashboard/admin CLI added after PRD approval.
+- ⚠️ PRD still refers to 4 phases (10–18) without Epic 19–20; operator dashboard/admin CLI and Nowing cutover added after PRD approval.
 - ⚠️ Data retention and 3-tier gap-filling are in PRD but not labeled as FR/NFR.
 
 ---
@@ -170,13 +170,13 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 | FR81 | VietnamWorks IT & Executive Job Scraper | **Epic 18** | Story 18.2 (`src/scrapers/recruitment/vietnamworks/`) | ✅ Covered |
 | FR82 | LinkedIn B2B Lead & Job Scraper (via CDP Mode) | **Epic 18** | Story 18.3 (`src/scrapers/recruitment/linkedin/`) | ✅ Covered |
 | FR83 | Realtime Thin Event Redis Stream Ingest for Nowing Hub | **Epic 14** | Story 14.3 (`stream:social:raw_posts`) | ✅ Covered |
-| FR84 | Nowing Adapter Cutover & Legacy Scraper Decommission | **Epic 14** | Story 14.4 (Nowing Adapter & Docker Diet) | ✅ Covered |
+| FR84 | Nowing Adapter Cutover & Legacy Scraper Decommission | **Epic 20** | Story 20.1 (Nowing Adapter & Docker Diet) | ✅ Covered |
 
 ### Coverage Issues
 
 - ✅ **21/21 PRD FRs are mapped** to at least one epic and user story.
-- ⚠️ **Naming inconsistency:** PRD uses `FR66` / `FR66B`; `epics.md` uses `FR66A` / `FR66B`. The split is the same (proxy vs rate limiter) but the sub-label differs. Recommend aligning `epics.md` to `FR66` and `FR66B` to match PRD.
-- ⚠️ **Epic 19 not in PRD:** Admin/Operator dashboard, CLI, API, MCP (Stories 19.1–19.8) is not traceable to any FR in PRD. This is scope added after PRD approval and should be either added to PRD as an FR or treated as operational requirements.
+- ✅ **Naming inconsistency resolved:** `epics.md` đã đổi `FR66A` thành `FR66` để khớp PRD.
+- ⚠️ **Epic 19 & 20 not in PRD:** Admin/Operator dashboard, CLI, API, MCP (Stories 19.1–19.8) và Nowing cutover (Story 20.1) không nằm trong PRD. Đây là scope mới cần PRD addendum hoặc operational requirements.
 - ⚠️ **Data Retention Policy** and **3-Tier Incremental Gap-Filling** are in PRD Section 5 but not explicitly labeled as FRs. If they are intended to be requirements, they should be added as FR85/FR86 or NFRs.
 
 ### Coverage Statistics
@@ -388,3 +388,28 @@ Assessment này xác định **5 vấn đề nghiêm trọng** và **nhiều v�
 Báo cáo chi tiết được lưu tại:
 
 <ref_file file="/Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/implementation-readiness-report-2026-08-19.md" />
+
+---
+
+## Remediation Update (2026-08-19)
+
+Đã áp dụng các chỉnh sửa trực tiếp lên `epics.md` và `sprint-status.yaml` theo khuyến nghị:
+
+| Issue | Fix |
+|---|---|
+| Story 10.0 (technical setup milestone) | Removed. Content merged into Story 10.1 (package/core deps + parse test), Story 10.2 (Prisma schema/migration/store), Story 11.1 (proxy-pool stub), and Story 14.2 (mcp:daemon script). |
+| Forward dependency 11.3/11.4 → 11.5 (`AccountPool`) | Story 11.1 now creates both `ProxyIpPool` and `AccountPool`; Story 11.5 only wires the existing `AccountPool`. |
+| Story 14.4 depends on Epics 15–18 | Moved to **Epic 20 — Nowing Cutover & Legacy Scraper Decommissioning** as Story 20.1. Epic 14 no longer blocked. |
+| Oversized Story 10.2 | Restructured AC into separate sections: Post model, Comment model, indexes, CrawlCheckpoint model, PrismaStore batch writer. |
+| Oversized Story 14.2 | Restructured AC into sections: daemon server, JSON envelope/artifact, action discovery, error envelope, CLI/legacy mapping. |
+| FR66A/FR66B naming | `epics.md` now uses `FR66` (proxy pool) and `FR66B` (rate limiter) to match PRD. |
+| FR84 mapping | Updated to **Epic 20, Story 20.1**. |
+
+### Remaining Items
+
+- Story 11.5 (End-to-End Anti-Bot Pipeline) remains an integration story with a multi-step AC. It is now valid because `AccountPool` exists in 11.1, but could still be split into smaller substories if desired.
+- PRD addendum needed for Epic 19/20 and unlabeled data retention/gap-filling requirements.
+
+### Updated Readiness
+
+With the critical forward dependencies removed and setup story eliminated, the plan is now structurally feasible. **Overall Readiness Status: READY with reservations** — pending PRD addendum and final split of Story 11.5 if required.
