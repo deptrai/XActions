@@ -7,7 +7,7 @@
 
 import { PlatformError } from './error-envelope.js';
 import { globalActionRegistry } from './action-registry.js';
-import { isValidCategory } from './types.js';
+import { isValidCategory, CATEGORY_VALUES } from './types.js';
 
 /** @typedef {import('./types.js').CrawlerCommand} CrawlerCommand */
 /** @typedef {import('./types.js').ActionDescriptor} ActionDescriptor */

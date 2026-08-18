@@ -11,6 +11,12 @@ export class AbstractPlatformResponseValidator {
   /** @type {string} */
   platform = 'base';
 
+  constructor() {
+    if (new.target === AbstractPlatformResponseValidator) {
+      throw new TypeError('AbstractPlatformResponseValidator is abstract; extend it.');
+    }
+  }
+
   /**
    * @param {any} response
    * @returns {boolean}

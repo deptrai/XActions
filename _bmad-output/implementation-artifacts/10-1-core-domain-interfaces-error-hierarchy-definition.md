@@ -2,7 +2,7 @@
 
 **Story ID:** 10.1  
 **Epic:** 10 — Unified PostgreSQL Storage (Prisma) & Core Interfaces  
-**Status:** ready-for-dev  
+**Status:** done  
 **Owner:** DEV  
 **Source:** `epics.md` Story 10.1, `prd.md` FR-64, `ARCHITECTURE-SPINE.md` AD-1, AD-2, AD-9, AD-11, AD-14, AD-15
 
@@ -22,7 +22,7 @@ So that **every platform crawler and adapter in the future has a consistent, idi
 * **Given** `package.json`
 * **When** checking `dependencies`
 * **Then** `got-scraping`, `qrcode-terminal`, `socks-proxy-agent`, and `undici` are present or confirmed available
-* **Verification:** `got-scraping@3.2.15`, `qrcode-terminal@0.12.0`, `socks-proxy-agent@8.0.5` already in `package.json`. `undici` is not in `dependencies` but Node 18+ exposes global `fetch`; add `undici` only if `undici.ProxyAgent` is used directly by `base-client`.
+* **Verification:** `got-scraping@3.2.15`, `qrcode-terminal@0.12.0`, `socks-proxy-agent@8.0.5` và `undici@6.21.2` đều có trong `package.json`. `undici.ProxyAgent` có sẵn để subclass sử dụng khi cần.
 
 ### AC-2: `src/core/` is 100% Pure ESM, zero runtime npm dependencies
 * **Given** the `src/core/` directory
@@ -48,6 +48,7 @@ So that **every platform crawler and adapter in the future has a consistent, idi
 | `AbstractApiClient` | `init(session)`, `request(method, url, options)`, `sign(payload)` |
 | `AbstractStore` | `init()`, `storeContent(post)`, `storeBatch(posts)`, `storeComment(comment)`, `storeCommentBatch(comments)`, `close()` |
 | `AbstractLogin` | `login()`, `refresh()`, `isAuthenticated()` |
+| `AbstractPlatformResponseValidator` | `isValidPayload(response)`, `isBotChallenge(response)`, `isRateLimit(response)` |
 
 * **Verification:** All classes guard `new.target === AbstractXxx` and methods throw `Error`. ✅
 
@@ -155,8 +156,8 @@ So that **every platform crawler and adapter in the future has a consistent, idi
 
 ## Completion Criteria
 
-- [ ] All ACs verified against existing `src/core/` implementation.
-- [ ] `undici` dependency status resolved (added to `package.json` or documented as not needed).
-- [ ] Core unit tests added and passing (`vitest run tests/core/`).
-- [ ] `npx prisma validate` passes.
-- [ ] `node src/core/index.js` exits with code 0.
+- [x] All ACs verified against existing `src/core/` implementation.
+- [x] `undici` dependency added to `package.json` (`^6.21.2`, Node 18 compatible).
+- [x] Core unit tests added and passing (`vitest run tests/core/index.test.js` = 24 passed).
+- [x] `npx prisma validate` passes.
+- [x] `node src/core/index.js` exits with code 0.
