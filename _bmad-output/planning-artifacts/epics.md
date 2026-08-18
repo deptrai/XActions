@@ -196,6 +196,26 @@ So that **hệ thống không bị quá tải khi Proxy xoay không kịp và tr
 * **And** hãm tốc độ cào khi hàng đợi Redis Stream `stream:social:raw_posts` vượt quá 10,000 unread messages (Consumer Lag Backpressure)
 * **And** cung cấp `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 
+### Story 11.5: End-to-End Anti-Bot & Rate-Limit Defense Pipeline
+As a **Reliability Engineer**,
+I want **wire `AbstractApiClient`, `ProxyIpPool`, `AdaptiveRateGovernor` và `PlatformResponseValidator` thành một pipeline duy nhất để tự động phát hiện bot/rate-limit, rotate proxy, hibernate account, và retry có kiểm soát**,
+So that **hệ thống scrape nhanh nhất có thể mà không bị nền tảng detect bot hoặc die tài khoản hàng loạt**.
+
+**Acceptance Criteria:**
+* **Given** `AbstractApiClient` được khởi tạo với `proxyPool`, `governor`, `sessionManager` và platform-specific `PlatformResponseValidator`
+* **When** gọi `request(method, url, options)`
+* **Then** hệ thống thực hiện tuần tự:
+  1. `governor.canAccountRequest(accountId, platform)` — từ chối nếu account đang hibernation hoặc vượt `safeRequestsPerMinute`.
+  2. `proxyPool.getNext()` — lấy proxy lành mạnh tiếp theo; nếu `isAllQuarantined()` thì vào Standby Backoff 30s và throw `ProxyDeadError`.
+  3. Gửi request qua proxy agent (`undici.ProxyAgent` / `socks-proxy-agent` / Playwright browser context tùy platform).
+  4. `governor.recordRequest(accountId)` — ghi nhận request vào sliding window.
+  5. `PlatformResponseValidator.isValidPayload(response)` / `isBotChallenge(response)` / `isRateLimit(response)` — parse body dù HTTP status là 200.
+* **And** nếu `isRateLimit` hoặc HTTP 429/403 → throw `RateLimitError`, `proxyPool.quarantine(proxy)`, retry tối đa 3 lần với proxy mới và exponential backoff 1s, 2s, 4s.
+* **And** nếu `isBotChallenge` hoặc WAF/captcha → throw `BotChallengeError`, `proxyPool.quarantine(proxy, 5 phút)`, `governor.hibernateAccount(accountId, 'bot_challenge', 15–30 phút)`, rotate proxy và không retry ngay.
+* **And** `AbstractCrawler.start(command)` gọi `governor.recordRequest()` và kiểm tra `governor.canAccountRequest()` trước mỗi action; nếu vượt `getMaxThroughput(platform)` thì delay hoặc bỏ qua batch.
+* **And** không bao giờ fallback về direct connection khi proxy fail; mọi request phải qua `ProxyIpPool`.
+* **And** tạo `src/core/platform-validator.js` với `AbstractPlatformResponseValidator` để các scraper con implement `isValidPayload`, `isBotChallenge`, `isRateLimit`.
+
 ---
 
 ## Epic 12: Frictionless Authentication (Terminal QR & CDP Attach)
