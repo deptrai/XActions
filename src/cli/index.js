@@ -3220,6 +3220,46 @@ datasetCmd.command('delete <name>').description('Delete a dataset').action(async
   } catch (error) { console.error(chalk.red(`❌ ${error.message}`)); }
 });
 
+datasetCmd.command('export-db')
+  .description('Export scraped dataset directly from PostgreSQL (streaming JSONL/CSV)')
+  .requiredOption('-o, --output <path>', 'Output file path')
+  .option('-f, --format <format>', 'Export format: jsonl, csv', 'jsonl')
+  .option('-p, --platform <platform>', 'Filter by platform (e.g. twitter, facebook, shopee)')
+  .option('-k, --keyword <keyword>', 'Filter content by keyword (case-insensitive)')
+  .option('--from <date>', 'Filter from crawledAt date (ISO string)')
+  .option('--to <date>', 'Filter to crawledAt date (ISO string)')
+  .option('-c, --compress', 'Enable Gzip compression (.gz)', false)
+  .option('--include-comments', 'Include Comment rows in the export', true)
+  .action(async (options) => {
+    let prisma;
+    try {
+      const { default: sharedPrisma } = await import('../../api/lib/prisma.js');
+      prisma = sharedPrisma;
+      const { exportDataset } = await import('../utils/exporter.js');
+      const result = await exportDataset({
+        format: options.format,
+        outputPath: options.output,
+        compress: options.compress,
+        platform: options.platform,
+        keyword: options.keyword,
+        fromDate: options.from,
+        toDate: options.to,
+        includeComments: options.includeComments,
+        prisma,
+      });
+      console.log(chalk.green(`✅ Export completed: ${result.rowCount} records -> ${result.outputPath} (compressed: ${result.compressed})`));
+    } catch (error) {
+      console.error(chalk.red(`❌ ${error.message}`));
+      process.exitCode = 1;
+    } finally {
+      if (prisma) {
+        try {
+          await prisma.$disconnect();
+        } catch {}
+      }
+    }
+  });
+
 // ============================================================================
 // 09-N: Team Management
 // ============================================================================
