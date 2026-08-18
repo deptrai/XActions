@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-19T03:56:00.000Z
+last_updated: 2026-08-19T04:25:00.000Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -35,7 +35,7 @@ development_status:
   epic-10: in-progress
   10-1-core-domain-interfaces-error-hierarchy-definition: done
   10-2-prisma-post-comment-relational-schema-migration: done
-  10-3-ai-dataset-export-utility-streaming-jsonl-csv: backlog
+  10-3-ai-dataset-export-utility-streaming-jsonl-csv: ready-for-dev
   10-4-crawlcheckpoint-operational-api-resume-pause-retry: backlog
   10-5-metadata-schema-contract-registry-for-consumers: backlog
   epic-10-retrospective: optional
