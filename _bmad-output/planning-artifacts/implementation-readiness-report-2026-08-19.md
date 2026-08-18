@@ -6,6 +6,7 @@ stepsCompleted:
   - step-04-ux-alignment
   - step-05-epic-quality-review
   - step-06-final-assessment
+  - step-07-re-assessment
 includedDocuments:
   prd:
     - /Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/prd.md
@@ -239,7 +240,7 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 
 ---
 
-## Step 5: Epic Quality Review
+## Step 5: Epic Quality Review (Initial Findings — See Final Re-Assessment for Resolution)
 
 ### Epic Structure & User Value
 
@@ -334,9 +335,9 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 
 ### Overall Readiness Status
 
-**NEEDS WORK**
+**READY with reservations** *(updated after remediation — see Final Re-Assessment below)*
 
-Hệ thống có nền tảng kiến trúc và yêu cầu rất tốt, nhưng tồn tại **forward dependencies nghiêm trọng** trong epic/story và một số story có kích thước không phù hợp. Cần giải quyết các vấn đề này trước khi bắt đầu implementation Phase 4.
+Hệ thống có nền tảng kiến trúc và yêu cầu rất tốt. Các forward dependencies nghiêm trọng đã được xử lý trong remediation; một số vấn đề nhỏ còn lại được ghi nhận ở Final Re-Assessment.
 
 ### Critical Issues Requiring Immediate Action
 
@@ -413,3 +414,49 @@ Báo cáo chi tiết được lưu tại:
 ### Updated Readiness
 
 With the critical forward dependencies removed and setup story eliminated, the plan is now structurally feasible. **Overall Readiness Status: READY with reservations** — pending PRD addendum and final split of Story 11.5 if required.
+
+---
+
+## Final Re-Assessment Verification (2026-08-19)
+
+### Re-Run Scope
+
+Re-run `bmad-check-implementation-readiness` focused on the critical issues identified in the initial assessment.
+
+### Verification Checklist
+
+| Initial Finding | Verification | Status |
+|---|---|---|
+| Story 10.0 exists as technical setup milestone | Searched `epics.md` for `Story 10.0` / `Dev Blocker` → **No matches** | ✅ Resolved |
+| Story 11.3/11.4 references `AccountPool` before creation | `Story 11.1` now creates `src/core/account-pool.js` and defines `getNextAvailable`/`markUnavailable`; `Story 11.5` no longer creates `account-pool.js` | ✅ Resolved |
+| Story 14.4 depends on Epics 15–18 | `Story 14.4` removed from Epic 14; `Epic 20 — Story 20.1` created as the cutover/decommission story | ✅ Resolved |
+| Story 10.2 single giant AC | ACs restructured into Post, Comment, Indexes, CrawlCheckpoint, PrismaStore sections | ✅ Resolved |
+| Story 14.2 combines too many responsibilities | ACs restructured into Daemon, Envelope/Artifact, Action discovery, Error envelope, CLI/Legacy sections | ✅ Resolved |
+| FR84 mapped to Epic 14 | Updated to **Epic 20** in `epics.md` and coverage matrix | ✅ Resolved |
+| FR66A naming | Updated to **FR66** in `epics.md` | ✅ Resolved |
+
+### Re-Assessed Epic Independence
+
+| Epic | Independence | Notes |
+|---|---|---|
+| Epic 10 | ✅ Independent | No setup story; foundation stories can start |
+| Epic 11 | ✅ Independent | `AccountPool` created in 11.1; no forward refs |
+| Epic 12 | ✅ Independent | — |
+| Epic 13 | ✅ Independent | — |
+| Epic 14 | ✅ Independent | Cutover moved to Epic 20 |
+| Epic 15–18 | ✅ Independent | Build on previous but no cycles |
+| Epic 19 | ✅ Independent | Backward-only deps on 10/11/14 |
+| Epic 20 | ✅ Independent | Depends on 15–18, placed last |
+
+### Remaining Reservations
+
+1. **PRD addendum required** for Epic 19 (admin/operator dashboard) and Epic 20 (Nowing cutover), plus data retention / 3-tier gap-filling labels.
+2. **NFRs not explicitly traced** to individual story ACs — should add per-story NFR acceptance criteria.
+3. **Story 11.5** is still an integration story with multi-step AC. It is no longer a forward-dependency blocker, but could be split further for better sprint sizing.
+4. **Minor UX gaps** F1, F2, F8 remain (daemon startup UX, non-TTY QR, metadata schema contract).
+
+### Final Readiness Sign-Off
+
+**Status: READY with reservations**
+
+The epic/story structure is now implementable. No critical forward dependencies or setup milestone block the start of Phase 4. The remaining items are documentation/scope-clarification tasks that can be addressed in parallel with implementation.
