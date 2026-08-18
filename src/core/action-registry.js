@@ -5,11 +5,18 @@
  * @license MIT
  */
 
+import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
+
 /** @typedef {import('./types.js').ActionDescriptor} ActionDescriptor */
 
 export class ActionRegistry {
   /** @type {Map<string, { platform: string, descriptor: ActionDescriptor }>} */
   #actions = new Map();
+
+  /** @returns {void} */
+  clear() {
+    this.#actions.clear();
+  }
 
   /**
    * @param {string} platform
@@ -17,7 +24,26 @@ export class ActionRegistry {
    */
   registerPlatformActions(platform, descriptors) {
     for (const descriptor of descriptors) {
-      this.#actions.set(`${platform}:${descriptor.action}`, { platform, descriptor });
+      const key = `${platform}:${descriptor.action}`;
+      if (this.#actions.has(key)) {
+        const existing = this.#actions.get(key).descriptor;
+        if (
+          existing.description !== descriptor.description ||
+          existing.outputType !== descriptor.outputType ||
+          JSON.stringify(existing.requiredArgs) !== JSON.stringify(descriptor.requiredArgs) ||
+          JSON.stringify(existing.optionalArgs) !== JSON.stringify(descriptor.optionalArgs) ||
+          JSON.stringify(existing.example) !== JSON.stringify(descriptor.example)
+        ) {
+          throw new PlatformError({
+            type: ErrorTypes.INVALID_ARGS,
+            message: `Action "${descriptor.action}" is already registered for platform "${platform}" with a different descriptor`,
+            platform,
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          });
+        }
+        continue;
+      }
+      this.#actions.set(key, { platform, descriptor });
     }
   }
 

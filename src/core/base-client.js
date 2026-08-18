@@ -8,7 +8,7 @@
  * @license MIT
  */
 
-import { PlatformError } from './error-envelope.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
 
 export class AbstractApiClient {
   /** @type {string} */
@@ -96,10 +96,11 @@ export class AbstractApiClient {
    */
   handleError(response, platform) {
     throw new PlatformError({
-      type: 'internal',
+      type: ErrorTypes.INTERNAL,
       message: 'Request failed',
       platform,
-      suggestedAction: 'retry_after_delay',
+      suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+      details: response,
     });
   }
 }

@@ -56,15 +56,29 @@ describe('Abstract class contracts', () => {
   });
 });
 
+describe('AbstractApiClient.handleError', () => {
+  it('throws PlatformError and preserves response details', () => {
+    const client = new (class extends AbstractApiClient {
+      name = 'test';
+    })();
+    const response = { statusCode: 500, body: 'fail' };
+    try {
+      client.handleError(response, 'twitter');
+    } catch (err) {
+      expect(err).toBeInstanceOf(PlatformError);
+      expect(err.details).toBe(response);
+      expect(err.platform).toBe('twitter');
+    }
+  });
+});
+
 describe('AbstractCrawler action registry', () => {
   class TestCrawler extends AbstractCrawler {
     name = 'test';
   }
 
   beforeEach(() => {
-    globalActionRegistry.listAll().forEach((d) => {
-      // No public unregister, so we use a fresh TestCrawler per test.
-    });
+    globalActionRegistry.clear();
   });
 
   it('registers snake_case actions and returns descriptors', () => {
@@ -164,6 +178,38 @@ describe('ActionRegistry', () => {
     expect(registry.listByPlatform('twitter')).toHaveLength(1);
     expect(registry.listAll()).toHaveLength(1);
   });
+
+  it('is idempotent when re-registering the same descriptor', () => {
+    const registry = new ActionRegistry();
+    registry.registerPlatformActions('twitter', [
+      { action: 'search', description: 'Search', requiredArgs: [], example: {}, outputType: 'PostItem[]' },
+    ]);
+    registry.registerPlatformActions('twitter', [
+      { action: 'search', description: 'Search', requiredArgs: [], example: {}, outputType: 'PostItem[]' },
+    ]);
+    expect(registry.listAll()).toHaveLength(1);
+  });
+
+  it('throws when re-registering with a conflicting descriptor', () => {
+    const registry = new ActionRegistry();
+    registry.registerPlatformActions('twitter', [
+      { action: 'search', description: 'Search', requiredArgs: [], example: {}, outputType: 'PostItem[]' },
+    ]);
+    expect(() =>
+      registry.registerPlatformActions('twitter', [
+        { action: 'search', description: 'Different', requiredArgs: [], example: {}, outputType: 'PostItem[]' },
+      ])
+    ).toThrow(PlatformError);
+  });
+
+  it('clear removes all registrations', () => {
+    const registry = new ActionRegistry();
+    registry.registerPlatformActions('twitter', [
+      { action: 'search', description: 'Search', requiredArgs: [], example: {}, outputType: 'PostItem[]' },
+    ]);
+    registry.clear();
+    expect(registry.listAll()).toHaveLength(0);
+  });
 });
 
 describe('SessionManager & AccountPool', () => {
@@ -182,6 +228,14 @@ describe('SessionManager & AccountPool', () => {
     expect(ap.getNextAvailable('twitter')).toBe('acc-1');
     ap.markUnavailable('acc-1');
     expect(ap.getNextAvailable('twitter')).toBe('acc-2');
+  });
+
+  it('hasAvailable does not advance the round-robin pointer', () => {
+    const ap = new AccountPool();
+    ap.registerAccounts('twitter', ['acc-1', 'acc-2']);
+    expect(ap.hasAvailable('twitter')).toBe(true);
+    expect(ap.hasAvailable('twitter')).toBe(true);
+    expect(ap.getNextAvailable('twitter')).toBe('acc-1');
   });
 });
 
@@ -226,5 +280,14 @@ describe('Types helpers', () => {
     }
     const crawler = new TestCrawler();
     expect(() => crawler.validateItem({ id: 'test:1', platform: 'test', category: 'unknown' })).toThrow(/Allowed:/);
+  });
+
+  it('AbstractCrawler.validateItem rejects empty id or platform', () => {
+    class TestCrawler extends AbstractCrawler {
+      name = 'test';
+    }
+    const crawler = new TestCrawler();
+    expect(() => crawler.validateItem({ id: '', platform: 'test', category: CATEGORIES.SOCIAL })).toThrow(/non-empty/);
+    expect(() => crawler.validateItem({ id: 'test:1', platform: '', category: CATEGORIES.SOCIAL })).toThrow(/non-empty/);
   });
 });

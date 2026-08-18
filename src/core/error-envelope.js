@@ -55,6 +55,7 @@ export class PlatformError extends Error {
    * @param {string} [opts.suggestedAction]
    * @param {string} [opts.accountId]
    * @param {string} [opts.platform]
+   * @param {any} [opts.details]
    */
   constructor(opts = {}) {
     super(opts.message || 'Platform error');
@@ -66,6 +67,7 @@ export class PlatformError extends Error {
     this.suggestedAction = opts.suggestedAction || SuggestedActions.CONTACT_SUPPORT;
     this.accountId = opts.accountId;
     this.platform = opts.platform;
+    this.details = opts.details;
   }
 
   /** @returns {boolean} */

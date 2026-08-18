@@ -44,13 +44,15 @@ So that **every platform crawler and adapter in the future has a consistent, idi
 
 | Class | Abstract Methods |
 |---|---|
-| `AbstractCrawler` | `init()`, `start(command)`, `search(args)`, `getPostDetail(args)`, `getComments(args)`, `cleanup()` |
+| `AbstractCrawler` | `init()`, `search(args)`, `getPostDetail(args)`, `getComments(args)`, `cleanup()` |
 | `AbstractApiClient` | `init(session)`, `request(method, url, options)`, `sign(payload)` |
 | `AbstractStore` | `init()`, `storeContent(post)`, `storeBatch(posts)`, `storeComment(comment)`, `storeCommentBatch(comments)`, `close()` |
 | `AbstractLogin` | `login()`, `refresh()`, `isAuthenticated()` |
 | `AbstractPlatformResponseValidator` | `isValidPayload(response)`, `isBotChallenge(response)`, `isRateLimit(response)` |
 
-* **Verification:** All classes guard `new.target === AbstractXxx` and methods throw `Error`. ✅
+* **Note:** `AbstractCrawler.start(command)` is implemented as a **concrete template-method dispatcher** in `src/core/base-crawler.js`. It validates the command, looks up the registered action, and invokes the handler. This is required by AC-5 and is the intended contract, not an abstract `Error`-throwing stub.
+
+* **Verification:** All abstract classes guard `new.target === AbstractXxx`, all abstract methods throw `Error('Method not implemented: ...')`, and `AbstractCrawler.start()` dispatches registered actions. ✅
 
 ### AC-5: `AbstractCrawler` action registry, category validation, snake_case enforcement
 * **Given** a subclassed crawler

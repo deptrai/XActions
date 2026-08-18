@@ -46,26 +46,12 @@ export class AccountPool {
   }
 
   /**
-   * Get the next available account for a platform.
+   * Get the next available account for a platform and advance the round-robin pointer.
    * @param {string} platform
    * @returns {string | null}
    */
   getNextAvailable(platform) {
-    const accounts = this.#accountsByPlatform.get(platform);
-    if (!accounts || accounts.size === 0) return null;
-
-    const list = Array.from(accounts);
-    let startIndex = this.#roundRobinIndex.get(platform) || 0;
-    for (let i = 0; i < list.length; i++) {
-      const index = (startIndex + i) % list.length;
-      const accountId = list[index];
-      if (this.#unavailableAccounts.has(accountId)) continue;
-      if (this.#governor?.isHibernating(accountId)) continue;
-      if (this.#governor && !this.#governor.canAccountRequest(accountId, platform)) continue;
-      this.#roundRobinIndex.set(platform, (index + 1) % list.length);
-      return accountId;
-    }
-    return null;
+    return this.#findNextAvailable(platform, true);
   }
 
   /**
@@ -85,12 +71,37 @@ export class AccountPool {
   }
 
   /**
-   * Check if a platform has any available account.
+   * Check if a platform has any available account without mutating the round-robin pointer.
    * @param {string} platform
    * @returns {boolean}
    */
   hasAvailable(platform) {
-    return this.getNextAvailable(platform) !== null;
+    return this.#findNextAvailable(platform, false) !== null;
+  }
+
+  /**
+   * @param {string} platform
+   * @param {boolean} advance
+   * @returns {string | null}
+   */
+  #findNextAvailable(platform, advance) {
+    const accounts = this.#accountsByPlatform.get(platform);
+    if (!accounts || accounts.size === 0) return null;
+
+    const list = Array.from(accounts);
+    let startIndex = this.#roundRobinIndex.get(platform) || 0;
+    for (let i = 0; i < list.length; i++) {
+      const index = (startIndex + i) % list.length;
+      const accountId = list[index];
+      if (this.#unavailableAccounts.has(accountId)) continue;
+      if (this.#governor?.isHibernating(accountId)) continue;
+      if (this.#governor && !this.#governor.canAccountRequest(accountId, platform)) continue;
+      if (advance) {
+        this.#roundRobinIndex.set(platform, (index + 1) % list.length);
+      }
+      return accountId;
+    }
+    return null;
   }
 
   /**

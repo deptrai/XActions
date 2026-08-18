@@ -5,7 +5,7 @@
  * @license MIT
  */
 
-import { PlatformError } from './error-envelope.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
 import { globalActionRegistry } from './action-registry.js';
 import { isValidCategory, CATEGORY_VALUES } from './types.js';
 
@@ -45,9 +45,9 @@ export class AbstractCrawler {
   registerAction(action, handler, descriptor = {}) {
     if (!/^[a-z0-9_]+$/.test(action)) {
       throw new PlatformError({
-        type: 'invalid_args',
+        type: ErrorTypes.INVALID_ARGS,
         message: `Action "${action}" must be snake_case`,
-        suggestedAction: 'use_x_actions_list',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
       });
     }
     const fullDescriptor = { action, ...descriptor };
@@ -72,19 +72,25 @@ export class AbstractCrawler {
    * @param {PostItem | CommentItem} item
    */
   validateItem(item) {
-    if (!item || typeof item.id !== 'string' || typeof item.platform !== 'string') {
+    if (
+      !item ||
+      typeof item.id !== 'string' ||
+      item.id.length === 0 ||
+      typeof item.platform !== 'string' ||
+      item.platform.length === 0
+    ) {
       throw new PlatformError({
-        type: 'invalid_args',
-        message: 'Item must have id and platform',
-        suggestedAction: 'use_x_actions_list',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Item must have a non-empty id and platform',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
       });
     }
     if ('category' in item && !isValidCategory(item.category)) {
       throw new PlatformError({
-        type: 'invalid_args',
+        type: ErrorTypes.INVALID_ARGS,
         message: `Invalid category "${item.category}". Allowed: ${CATEGORY_VALUES.join(', ')}`,
         platform: this.name,
-        suggestedAction: 'use_x_actions_list',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
       });
     }
   }
@@ -96,17 +102,17 @@ export class AbstractCrawler {
   async start(command) {
     if (!command || typeof command.action !== 'string') {
       throw new PlatformError({
-        type: 'invalid_args',
+        type: ErrorTypes.INVALID_ARGS,
         message: 'CrawlerCommand must have a string action',
-        suggestedAction: 'use_x_actions_list',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
       });
     }
     const entry = this.#registry.get(command.action);
     if (!entry) {
       throw new PlatformError({
-        type: 'invalid_args',
+        type: ErrorTypes.INVALID_ARGS,
         message: `Unknown action "${command.action}" for ${this.name}`,
-        suggestedAction: 'use_x_actions_list',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
       });
     }
     return entry.handler(command.args, command.session);
