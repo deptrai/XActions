@@ -1,427 +1,385 @@
 ---
 stepsCompleted: [1, 2, 3, 4]
 inputDocuments:
-  - _bmad-output/planning-artifacts/architecture.md
-  - _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md
-  - _bmad-output/planning-artifacts/research/technical-facebook-bot-detection-countermeasures-research-2026-08-12.md
-  - _bmad-output/planning-artifacts/sprint-change-proposal-2026-08-14.md
+  - 'planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
+  - 'planning-artifacts/research/technical-mediacrawler-architecture-for-xactions-research-2026-08-18.md'
+  - 'planning-artifacts/epics-full.md'
+  - 'prisma/schema.prisma'
+  - '../nowing/_bmad-output/planning-artifacts/architecture/architecture-xactions-social-integration-2026-08-15/ARCHITECTURE-SPINE.md'
 ---
 
-# XActions - Facebook Anti-Detection & Bot Countermeasures
+# XActions Universal Hybrid Scraping & Automation Engine — Epic Breakdown (Epics 10–18)
 
 ## Overview
 
-Epic breakdown for Facebook anti-detection countermeasures — fingerprint randomization, behavioral simulation, and session hygiene to minimize checkpoint triggers and account restrictions.
+Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ thống **XActions Universal Hybrid Scraping & Automation Microservice** (tiếp nối Epics 1–9 trong `epics-full.md`). Hệ thống được thiết kế theo chuẩn **Hexagonal Architecture + Tiered Hybrid Signer Engine + Dual-Channel Microservice Daemon + Adaptive Rate Limiter**, hợp nhất 100% cơ sở dữ liệu trên **PostgreSQL (Prisma ORM với JSONB GIN Indexes)** và đóng vai trò là Scraping Engine toàn năng cho hệ sinh thái **Nowing (AI Lead & Research Hub)** cũng như nền tảng SaaS/CLI/AI MCP độc lập.
+
+---
 
 ## Requirements Inventory
 
 ### Functional Requirements
 
-**FR1:** Hệ thống phải có User-Agent pool với 20+ real Chrome UAs, khởi tạo ngẫu nhiên mỗi session nhưng consistent trong suốt session.
-
-**FR2:** Hệ thống phải randomize viewport (width, height, devicePixelRatio) match với platform của UA đã chọn.
-
-**FR3:** Hệ thống phải prevent WebRTC leak (disable WebRTC hoặc override STUN servers) để IP thật không bị lộ qua proxy.
-
-**FR4:** Hệ thống phải override `navigator.webdriver`, `navigator.hardwareConcurrency`, `navigator.deviceMemory`, `navigator.platform` để khớp với fingerprint giả.
-
-**FR5:** Hệ thống phải có Bezier curve mouse movement simulation với micro-jitter và overshoot+correction behavior.
-
-**FR6:** Hệ thống phải có human click simulation với hover pause (100-400ms) trước khi click.
-
-**FR7:** Hệ thống phải có typing simulation với typo rate (1-2%), variable speed, và natural pauses.
-
-**FR8:** Hệ thống phải có natural scrolling với variable speed (acceleration/deceleration), momentum, và occasional overshoot+correction.
-
-**FR9:** Hệ thống phải có session warming sequence: visit homepage → scroll → move mouse randomly → sau đó mới thực hiện actions.
-
-**FR10:** Hệ thống phải hỗ trợ timezone override khớp với proxy location.
-
-**FR11:** Hệ thống phải hỗ trợ geolocation override khớp với proxy location.
-
-**FR12:** Hệ thống phải support persistent browser profiles (userDataDir) để retain history, cookies, localStorage.
-
-**FR13:** Hệ thống phải có fingerprint consistency: một fingerprint duy nhất per session, không randomize mid-session.
-
-**FR14:** Hệ thống phải expose `headless` parameter cho tất cả Facebook automation endpoints.
-
-**FR15:** Khi `headless: false`, hệ thống phải dùng `domcontentloaded` wait strategy và longer delays để user có thể theo dõi.
-
-**FR16:** Khi `headless: true`, hệ thống phải dùng `networkidle2` wait strategy và shorter delays.
-
-**FR17:** Hệ thống phải tự động resolve Chrome executablePath: explicit option → env var → system Chrome path.
-
-**FR18:** Hệ thống phải có action velocity limits: likes/hour ≤ 30, comments/hour ≤ 10, friend requests/day ≤ 20.
-
-**FR19:** Hệ thống phải có account age awareness: new accounts (<7 days) bị giới hạn 50% activity.
-
-**FR20:** Hệ thống phải hiển thị `headless: true/fong` trong response để confirm mode đã dùng.
+* **FR64 (Core Abstraction):** Hệ thống phải cung cấp các cổng trừu tượng chuẩn hóa (`AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore`, `ISignerBridge`) làm khung cơ sở cho mọi nền tảng.
+* **FR65 (Tiered Hybrid Scraping Engine):** Hệ thống phải hỗ trợ cơ chế thực thi lai kết hợp Pre-Signed Token Ring Buffer O(1) và Worker Page Pool cho chữ ký động (`page.evaluate()` với timeout 3s) cùng Async HTTP Client (`got-scraping`/`undici`) với TLS/JA4 Spoofing.
+* **FR66A (Resilient Anti-Leak Proxy Pool):** Hệ thống phải quản lý tập trung danh sách Proxy (Static & Dynamic Tunnel) với cờ chống rò rỉ WebRTC/DNS, tự động validate, tính buffer expiration, và tự động cách ly (quarantine) IP lỗi 5 phút.
+* **FR66B (Adaptive Infrastructure Rate Limiter & Account Protection Governor):** Hệ thống phải tự động điều tốc nhịp cào theo tỷ lệ Proxy sống (`Max Throughput = Healthy Proxies * SafeRatePerIP`), áp dụng Leaky Bucket và đưa tài khoản vào chế độ Ngủ đông (Hibernation) 15–30 phút khi gặp thử thách bảo vệ để triệt tiêu 100% nguy cơ die account hàng loạt.
+* **FR67 (Namespaced PostgreSQL Storage & JSONB GIN Indexes):** Hệ thống phải lưu trữ toàn bộ bài viết (`Post`) và cây bình luận phân cấp (`Comment`) tập trung vào PostgreSQL qua Prisma ORM với quy ước Namespaced ID `${platform}:${externalId}`, cột `metadata Json?` có GIN Index và hỗ trợ batch transaction chunked 500 records.
+* **FR68 (Terminal QR Login):** Hệ thống CLI/MCP phải hỗ trợ hiển thị mã QR ASCII chuẩn 1:1 trên Terminal console qua `qrcode-terminal` có countdown 60s, timeout 120s và polling cookie ngầm.
+* **FR69 (CDP Remote Attach):** Hệ thống phải hỗ trợ kết nối trực tiếp vào trình duyệt Chrome thật của người dùng qua cổng `--remote-debugging-port=9222` kèm Gaussian jitter (3–7s) để triệt tiêu nguy cơ checkpoint (LinkedIn, TopCV, Twitter).
+* **FR70 (Topological Comment Tree):** Hệ thống phải hỗ trợ trích xuất cây bình luận đa tầng, chống tham chiếu vòng và thực hiện Topological Sort (lưu Root trước, Sub-replies sau theo depth) để tránh Deadlock và Foreign Key violation.
+* **FR71 (Twitter Crawler Refactor):** Tái cấu trúc bộ cào Twitter trong `src/scrapers/social/twitter/` tuân thủ kiến trúc `AbstractCrawler` và `BaseHybridClient`.
+* **FR72 (Facebook Crawler Refactor):** Tái cấu trúc bộ cào Facebook trong `src/scrapers/social/facebook/` tuân thủ kiến trúc `AbstractCrawler` và GraphQL DocID dispatch.
+* **FR73 (MCP Daemon & CLI Integration):** Chạy MCP Server dưới dạng Daemon HTTP/SSE (Port 3001), tích hợp CLI (`unfollowx`) và 80+ MCP tools cho AI Agent với 3-Layer JSON Envelope và Auto-Artifact generation.
+* **FR74 (Threads Scraper Adapter):** Cào bài viết, timeline, search keywords và replies trên Threads thông qua Meta GraphQL internal endpoints (LSD token + DocID).
+* **FR75 (TikTok Video & Comment Scraper):** Cào video trending, hashtag feeds và comments trên TikTok thông qua Playwright Signer Bridge giải mã chữ ký `a_bogus` & `msToken` có kiểm tra mã chặn False 200 OK.
+* **FR76 (Shopee Product & Review Scraper):** Cào danh sách sản phẩm, giá bán, flash sale và đánh giá người mua trên Shopee VN qua Web API kết hợp TLS Spoofing và Anti-Bot Validation.
+* **FR77 (TikTok Shop E-Commerce Scraper):** Cào sản phẩm bán chạy, doanh số ước tính và đánh giá shop trên TikTok Shop.
+* **FR78 (Chợ Tốt Multi-Category Scraper):** Cào tin đăng BĐS, việc làm trên Chợ Tốt bóc tách số điện thoại chính chủ (loại bỏ SĐT masked `***` và validate regex VN).
+* **FR79 (Batdongsan.com.vn Scraper):** Cào tin bất động sản chính chủ, dự án và biến động giá trên Batdongsan.com.vn qua HTTP Client.
+* **FR80 (TopCV Recruitment Scraper):** Cào tin tuyển dụng, JD chi tiết, mức lương và thông tin công ty trên TopCV.
+* **FR81 (VietnamWorks Job Scraper):** Cào tin tuyển dụng IT và Executive trên VietnamWorks qua API public / HTML parser.
+* **FR82 (LinkedIn Lead & Job Scraper):** Cào thông tin ứng viên, công ty và bài đăng tuyển dụng trên LinkedIn qua CDP Attach Port 9222.
+* **FR83 (Nowing Thin Event Stream Ingest):** Phát luồng dữ liệu cào dạng Thin Event Pointers (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 20000`) cho Nowing AI Hub.
+* **FR84 (Nowing Scrapers Cutover & Decommissioning):** Nâng cấp adapter Nowing sang Daemon MCP HTTP/SSE (Port 3001) và dọn dẹp, loại bỏ toàn bộ 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
 
 ### NonFunctional Requirements
 
-**NFR1:** Hiệu suất — Bezel mouse movement phải hoàn thành trong <2s cho khoảng cách màn hình điển hình.
-
-**NFR2:** Khả năng bảo trì — Fingerprint config phải centralized trong một module, dễ update UA pool và viewport list.
-
-**NFR3:** Khả năng test — Behavioral functions phải có injectable delay seam để test không cần chờ thật.
-
-**NFR4:** NFR3 Privacy — Không log hay echo cookie values trong error messages hoặc API responses.
-
-**NFR5:** NFR1 Rate Limiting — Facebook automation phải có delay floor cao hơn Twitter (ADR-012).
-
-**NFR6:** ADR-007 — Mọi mutate action phải có dry-run default.
-
-### Additional Requirements (from Architecture)
-
-- **AR1:** Stealth plugin (puppeteer-extra-plugin-stealth) đã có cho Threads/Twitter — tái dùng cho Facebook.
-- **AR2:** Facebook cần delay rộng hơn Twitter cho mọi mutating action.
-- **AR3:** Batch size ≤ 20/session cho Facebook friend requests.
-- **AR4:** Proxy rotation infrastructure đã có (proxyfb, tmproxy, shoplike providers).
-- **AR5:** `createBrowser()` phải support proxy via `--proxy-server=` launch arg.
-- **AR6:** `page.authenticate()` phải được gọi trước `page.goto` đầu tiên cho authenticated proxies.
-- **AR7:** Checkpoint detection: check `bodyText.includes('confirm that you') && bodyText.includes('human')` sau login.
-
-### Additional Requirements from Post-Completion Testing (2026-08-14)
-
-Nguồn: `sprint-change-proposal-2026-08-14.md` — phát hiện từ full regression test + real-user MCP/API testing.
-
-- **PCR1:** `x_facebook_cancel_friend_requests` dry-run không được chạy delay thật 63s → short-circuit trước batch loop.
-- **PCR2:** `new PrismaClient()` per route module gây connection-pool fragmentation → singleton refactor cross-cutting.
-- **PCR3:** `post_comments`/`group_comments` cần verify live selectors vì hiện trả note "not accessible" trên mọi post.
-- **PCR4:** `group_posts`/`group_search` cần verify với public/joined group vì hiện trả 0 results.
-- **PCR5:** `loginWithCookie` cần injectable `delayFn` seam để test nhanh và tránh timeout flaky.
-- **PCR6:** `executeTool` cần trả MCP error result (không throw) khi `localTools` null hoặc tool unknown.
-- **PCR7:** Auth middleware cần chấp nhận cả `decoded.userId` và `decoded.id` để tránh token mismatch.
-
-### UX Design Requirements
-
-N/A — No UX design spec for this technical infrastructure feature.
-
-### FR Coverage Map
-
-| FR | Epic 1 (Anti-Detection) |
-|---|---|
-| FR1 (UA Pool) | ✅ |
-| FR2 (Viewport) | ✅ |
-| FR3 (WebRTC) | ✅ |
-| FR4 (Navigator) | ✅ |
-| FR5 (Bezier Mouse) | ✅ |
-| FR6 (Human Click) | ✅ |
-| FR7 (Typing) | ✅ |
-| FR8 (Scrolling) | ✅ |
-| FR9 (Session Warming) | ✅ |
-| FR10 (Timezone) | ✅ |
-| FR11 (Geolocation) | ✅ |
-| FR12 (Persistent Profiles) | ✅ |
-| FR13 (Consistency) | ✅ |
-| FR14 (Headless Param) | ✅ |
-| FR15 (Headless-aware) | ✅ |
-| FR16 (Headless strategy) | ✅ |
-| FR17 (Chrome Path) | ✅ |
-| FR18 (Velocity Limits) | ✅ |
-| FR19 (Account Age) | ✅ |
-| FR20 (Headless Response) | ✅ |
-
-## Epic List
-
-### Epic 1: Facebook Anti-Detection & Bot Countermeasures
-
-**Epic Goal:** Build comprehensive anti-detection infrastructure cho Facebook automation — bao gồm fingerprint randomization, behavioral simulation, session hygiene, headless mode, và velocity controls — để minimize checkpoint triggers và account restrictions. Toàn bộ stories trong epic này chạm cùng file core (`createBrowser`, `createPage`, `loginWithCookie`, `shareLinkByUid`) và được develop theo thứ tự logic tăng dần.
-
-**Stories (theo thứ tự development):**
-
-1. **Story 1.1:** Chrome executablePath Auto-Resolution — `createBrowser()` tự động resolve system Chrome path (explicit option → env var → system path).
-2. **Story 1.2:** Consistent Session Fingerprint — generate một fingerprint object per session, reuse throughout, không change mid-session.
-3. **Story 1.3:** User-Agent Pool & Viewport Randomization — 20+ real Chrome UAs + viewport randomization trong `createPage()`, devicePixelFactor khớp platform.
-4. **Story 1.4:** Navigator Properties Override — override `navigator.webdriver`, `hardwareConcurrency`, `deviceMemory`, `platform`, `plugins`.
-5. **Story 1.5:** WebRTC Leak Prevention — disable/override RTCPeerConnection, `--disable-webrtc` launch arg.
-6. **Story 1.6:** Headless Mode Parameter — `headless` param cho tất cả endpoints, response trả về mode.
-7. **Story 1.7:** Headless-Aware Timeouts — `loginWithCookie()` dùng `domcontentloaded`+60s (visible) hoặc `networkidle2`+30s (hidden).
-8. **Story 1.8:** Behavioral Delays in Share-Link-UID — delays phù hợp headless mode (8-12s visible / 5-8s hidden).
-9. **Story 1.9:** Bezier Mouse Movement — cubic Bezier curve với micro-jitter, 15% overshoot + correction, <2s.
-10. **Story 1.10:** Human Click with Hover — hover pause 100-400ms, variable hold 30-120ms, dùng element handle.
-11. **Story 1.11:** Typing with Typos — variable speed 80-120ms/ký tự, typo rate 1-2%, natural pauses.
-12. **Story 1.12:** Natural Scrolling — sin curve speed, 20% overshoot + correction, delay giữa chunks.
-13. **Story 1.13:** Action Velocity Limiting — likes ≤30/hr, comments ≤10/hr, friend requests ≤20/day, messages ≤20/hr, delay floor 5-15s.
-14. **Story 1.14:** Account Age Awareness — new accounts (<7 days) giới hạn 50%, accounts 1-4 weeks giới hạn 80%.
-15. **Story 1.15:** Session Warming Sequence — visit homepage → scroll → mouse movements → mới perform actions.
-16. **Story 1.16:** Timezone & Geolocation Override — `emulateTimezone` + `setGeolocation` khớp proxy, grant permissions.
-17. **Story 1.17:** Persistent Browser Profiles — `userDataDir` retain cookies/localStorage, tự động tạo profile directory.
+* **NFR11 (Resource Optimization):** Giảm ít nhất 85% RAM và 70% CPU so với mô hình Full Headless Browser khi cào khối lượng lớn (> 1,000 bài viết/bình luận).
+* **NFR12 (High Throughput & Latency):** Tăng tốc độ thu thập dữ liệu lên ít nhất 5x–10x so với việc render DOM từng trang qua Puppeteer/Playwright; độ trễ RPC <2ms qua Daemon HTTP/SSE.
+* **NFR13 (Resilience & Auto-Failover):** Tự động phát hiện proxy die hoặc rate-limit và chuyển đổi IP tức thì, replay request tối đa 3 lần với exponential backoff.
+* **NFR14 (Zero-Credential Security):** Bảo mật tuyệt đối thông tin phiên của người dùng; hỗ trợ đăng nhập không cần mật khẩu trực tiếp qua QR Code hoặc CDP Attach.
+* **NFR15 (Clean Architecture & Extensibility):** Tách biệt 100% giữa Core domain contracts và Implementation adapters; việc thêm nền tảng mới không làm thay đổi core logic.
+* **NFR16 (License & Backward Compatibility):** 100% mã nguồn tuân thủ giấy phép tự do (MIT / Apache 2.0); giữ nguyên khả năng tương thích ngược với CLI `unfollowx` và toàn bộ 80+ MCP tools hiện có.
 
 ---
 
-## Epic 1: Facebook Anti-Detection & Bot Countermeasures
+## Epic 10: Unified PostgreSQL Storage (Prisma) & Core Interfaces
 
-**Epic Goal:** Build comprehensive anti-detection infrastructure cho Facebook automation — fingerprint randomization, behavioral simulation, session hygiene, headless mode, và velocity controls — để minimize checkpoint triggers và account restrictions. Toàn bộ stories trong epic này chạm cùng file core (`createBrowser`, `createPage`, `loginWithCookie`, `shareLinkByUid`) và được develop theo thứ tự logic tăng dần.
-
-**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR14, FR15, FR16, FR17, FR18, FR19, FR20
-
-**NFRs relevant:** NFR1 (Bezel <2s), NFR2 (centralized config), NFR3 (testable delays), NFR4 (no cookie logging), NFR5 (delay floor), NFR6 (dry-run default)
-
-**Additional Requirements relevant:** AR1 (stealth plugin), AR2 (longer delays), AR3 (batch ≤20), AR5 (proxy support), AR6 (auth before goto), AR7 (checkpoint detection)
-
-### Story 1.1: Chrome executablePath Auto-Resolution
-
-As a developer,
-I want `createBrowser()` tự động resolve system Chrome path,
-So that mỗi automation session launch Chrome mà không cần puppeteer bundled.
+### Story 10.1: Core Domain Interfaces & Error Hierarchy Definition
+As a **Core Developer**,
+I want **định nghĩa các abstract class `AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore` cùng cây lỗi chuẩn (`PlatformError`, `RateLimitError`, `AuthSessionExpiredError`, `ProxyDeadError`)**,
+So that **mọi platform crawler và adapter trong tương lai đều có kiến trúc nhất quán, chuẩn mực và tự động phân loại lỗi retry**.
 
 **Acceptance Criteria:**
+* **Given** thư mục `src/core/` (100% Pure ESM, Zero-Dependency)
+* **When** module `src/core/base-crawler.js`, `base-client.js`, `base-store.js`, `base-login.js`, và `errors.js` được nạp
+* **Then** các class phải định nghĩa đầy đủ phương thức trừu tượng:
+  - `AbstractCrawler`: `init()`, `start()`, `search()`, `getPostDetail()`, `getComments()`, `cleanup()`
+  - `AbstractApiClient`: `request()`, `sign()`, `updateCookies()` (đảm bảo immutable context cho từng tác vụ)
+  - `AbstractStore`: `init()`, `storeContent(post)`, `storeBatch(posts)`, `storeComment(comment)`, `storeCommentBatch(comments)`, `close()`
+* **And** ném lỗi `Method not implemented` nếu lớp con chưa override khi khởi tạo qua `new.target`
+* **And** toàn bộ error classes kế thừa từ `PlatformError` cung cấp các trường: `statusCode`, `platform`, `isRetryable` (boolean), và `retryAfterMs` (number).
 
-**Given** Chrome được cài đặt tại `/Applications/Google Chrome.app/`
-**When** `createBrowser()` được gọi mà không có `executablePath`
-**Then** hệ thống kiểm tra theo thứ tự: explicit option → `PUPPETEER_EXECUTABLE_PATH` env → system path mặc định
-**And** Chrome launches thành công với system installation
-**And** không có "Could not find Chrome" error
-
-### Story 1.2: Consistent Session Fingerprint
-
-As a developer,
-I want mỗi session generate ONE fingerprint và reuse throughout,
-So that Facebook không detect fingerprint changes mid-session.
-
-**Acceptance Criteria:**
-
-**Given** một automation session mới bắt đầu
-**When** `createBrowser()` + `createPage()` được gọi
-**Then** một fingerprint object được generate (UA + viewport + hardware config)
-**And** fingerprint được lưu trong session context
-**And** tất cả navigation trong session dùng cùng fingerprint
-**And** fingerprint KHÔNG change giữa session (consistent across tabs)
-
-### Story 1.3: User-Agent Pool & Viewport Randomization
-
-As a developer,
-I want User-Agent pool với 20+ real Chrome UAs và viewport randomization,
-So that mỗi session có unique nhưng realistic browser fingerprint.
+### Story 10.2: Prisma Post & Comment Schema with Namespaced ID, JSONB GIN & Batch Chunking
+As a **Backend & Platform Engineer**,
+I want **mở rộng `prisma/schema.prisma` với model `Post` và `Comment` (hỗ trợ Namespaced ID `${platform}:${externalId}`, cột `metadata Json?`), đồng thời triển khai `PrismaStore`**,
+So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung, không bị collision ID, và cho phép Nowing query lọc giá/sđt/lương trong <10ms**.
 
 **Acceptance Criteria:**
+* **Given** file `prisma/schema.prisma` của dự án XActions
+* **When** định nghĩa model `Post` (gồm `id` Namespaced, `platform`, `externalId`, `category`, `authorId`, `authorName`, `content`, `mediaUrls`, `likesCount`, `repostsCount`, `repliesCount`, `viewsCount`, `metadata Json?`, `publishedAt`, `crawledAt`) và `Comment` (gồm `id` Namespaced, `postId`, `parentCommentId`, `authorId`, `authorName`, `content`, `metadata Json?`, quan hệ tự tham chiếu `@relation("CommentReplies")`)
+* **Then** migration được sinh hợp lệ, tạo ràng buộc `@@unique([platform, externalId])`, GIN index trên `metadata`, và Expression Index trên `phone`/`price`
+* **And** `PrismaStore` (`src/store/prisma-store.js`) thực hiện upsert bài viết và bình luận theo batch chunk 500 bản ghi qua `prisma.$transaction()` đảm bảo tốc độ >5,000 records/s.
+* **And** các model legacy (`TweetSnapshot`, `EngagementDaily`, `FollowerSnapshot`, `FollowerChange`) được đánh dấu `// @deprecated — sẽ xóa bỏ sau khi Story 13.2 (Twitter Refactor) chạy ổn định` trong `prisma/schema.prisma`, giữ nguyên backward compatibility trong Phase 1.
 
-**Given** một session mới đã chọn fingerprint
-**When** `createPage()` được gọi
-**Then** UA được set qua `page.setUserAgent()` từ pool
-**And** viewport được set qua `page.setViewport()` từ predefined list (1920x1080, 1366x768, 1536x864, 1440x900, 2560x1440)
-**And** deviceScaleFactor khớp với UA platform (1 cho desktop, 2 cho Retina)
-**And** UA và viewport được log trong dry-run response (không log cookie)
-
-### Story 1.4: Navigator Properties Override
-
-As a developer,
-I want override navigator automation indicators,
-So that Facebook không detect `navigator.webdriver`, `hardwareConcurrency`, `deviceMemory`, `platform`, `plugins` inconsistencies.
+### Story 10.3: AI Dataset Export Utility (Streaming JSONL & CSV with Sanitization)
+As an **AI Engineer / Data Scientist**,
+I want **một utility xuất dữ liệu từ PostgreSQL ra định dạng JSON Lines (`.jsonl`) và CSV dạng stream có xử lý Backpressure và sanitize ký tự xuống dòng**,
+So that **tôi có thể trích xuất dataset theo filter (`platform`, `keyword`, `dateRange`) phục vụ huấn luyện LLM hoặc Vector DB RAG mà không bị lỗi format hay tràn RAM**.
 
 **Acceptance Criteria:**
+* **Given** database PostgreSQL chứa dữ liệu `Post` và `Comment`
+* **When** gọi hàm `exportDataset({ platform, fromDate, format: 'jsonl'|'csv', outputPath, compress: boolean })` trong `src/utils/exporter.js`
+* **Then** hệ thống đọc dữ liệu tuần tự theo cursor / stream từ Prisma và ghi vào file đích qua `fs.createWriteStream`
+* **And** tự động làm sạch ký tự xuống dòng (`\r\n`) trong trường `content` thành khoảng trắng trước khi ghi dòng JSONL
+* **And** kiểm soát Backpressure an toàn bằng cách lắng nghe event `'drain'` khi stream buffer đầy, RAM duy trì < 50MB.
 
-**Given** browser đã launch với stealth plugin
-**When** `createPage()` chạy
-**Then** `navigator.webdriver` trả về `undefined`
-**And** `navigator.hardwareConcurrency` random trong [4, 6, 8]
-**And** `navigator.deviceMemory` random từ [2, 4, 8]
-**And** `navigator.platform` khớp với UA platform (Win32 cho Windows)
-**And** `navigator.plugins.length` > 0
+---
 
-### Story 1.5: WebRTC Leak Prevention
+## Epic 11: Resilient Network & Proxy Pool Management
 
-As a developer,
-I want WebRTC bị disable hoặc override,
-So that IP thật không bị lộ qua STUN servers khi dùng proxy.
-
-**Acceptance Criteria:**
-
-**Given** browser với proxy đã configure
-**When** một Facebook page được load
-**Then** `RTCPeerConnection` API bị override hoặc disabled
-**And** `--disable-webrtc` launch arg được thêm vào browser
-**And** không có STUN requests ra ngoài proxy
-
-### Story 1.6: Headless Mode Parameter
-
-As a developer,
-I want tất cả Facebook endpoints accept `headless` parameter,
-So that users có thể debug với browser visible hoặc run production với headless.
+### Story 11.1: ProxyIpPool with Anti-Leak Flags, Auto-Validation & Expiry Buffer
+As an **Automation Operator**,
+I want **hệ thống tự động kiểm tra chất lượng proxy, ngăn chặn rò rỉ WebRTC/DNS và phát hiện proxy sắp hết hạn trước 30 giây**,
+So that **request gửi đi luôn sử dụng IP sống, an toàn và không bị lộ IP gốc của máy chủ**.
 
 **Acceptance Criteria:**
+* **Given** danh sách proxy đầu vào (HTTP/HTTPS/SOCKS5)
+* **When** khởi tạo `ProxyIpPool` (`src/proxy/proxy-pool.js`)
+* **Then** tự động cấu hình `remote DNS resolution` và cờ browser `--force-webrtc-ip-handling-policy=disable_non_proxied_udp`
+* **And** tự động làm mới IP nếu thời gian sống còn lại dưới 30 giây (buffer window).
 
-**Given** `createBrowser({ headless: false })`
-**When** browser được launch
-**Then** browser window hiển thị và user có thể thấy automation
-**And** response trả về `headless: false`
-
-**Given** `createBrowser({ headless: true })` (default)
-**When** browser được launch
-**Then** browser chạy invisible
-**And** response trả về `headless: true`
-
-### Story 1.7: Headless-Aware Timeouts
-
-As a developer,
-I want `loginWithCookie()` dùng appropriate timeout strategy,
-So that visible browser có đủ thời gian load Facebook fully.
+### Story 11.2: Static & Dynamic Residential Tunnel Proxy Providers
+As a **Scale-Out Scraper**,
+I want **hỗ trợ cả Static Proxy list và Dynamic Residential Tunnel Proxy (xoay IP per-request)**,
+So that **tôi có thể linh hoạt sử dụng các nhà cung cấp proxy phổ biến như BrightData, IPRoyal, Kuaidaili, Smartproxy**.
 
 **Acceptance Criteria:**
+* **Given** chuỗi cấu hình proxy dạng URL `http://user:pass@host:port`
+* **When** khởi tạo `StaticProxyProvider` hoặc `DynamicTunnelProvider` trong `src/proxy/providers.js`
+* **Then** hệ thống parse chính xác hostname, port, username, password và scheme
+* **And** tích hợp tương thích với `undici.ProxyAgent` và `playwright.chromium.launch({ proxy })`.
 
-**Given** `headless: false`
-**When** `loginWithCookie()` được gọi
-**Then** `waitUntil: 'domcontentloaded'` được dùng
-**And** timeout = 60000ms
-
-**Given** `headless: true`
-**When** `loginWithCookie()` được gọi
-**Then** `waitUntil: 'networkidle2'` được dùng
-**And** timeout = 30000ms
-
-### Story 1.8: Behavioral Delays in Share-Link-UID
-
-As a user running share-link-uid automation,
-I want delays phù hợp với headless mode,
-So that tôi có thể theo dõi khi browser visible.
+### Story 11.3: 429/403 Auto-Quarantine, Standby Backoff & Exponential Replay Interceptor
+As a **Reliability Engineer**,
+I want **hệ thống tự động cách ly proxy bị chặn và replay request với proxy mới kèm cơ chế Standby Backoff khi toàn bộ pool bị rate-limit**,
+So that **toàn bộ pipeline không bao giờ bị crash khi nền tảng kích hoạt bảo vệ diện rộng**.
 
 **Acceptance Criteria:**
+* **Given** một HTTP request trả về mã trạng thái `429 Too Many Requests` hoặc `403 Forbidden`
+* **When** interceptor bắt được lỗi
+* **Then** proxy hiện tại bị đưa vào `failedProxies` cách ly trong 5 phút
+* **And** hệ thống tự động rút proxy mới từ pool và thực hiện retry request tối đa 3 lần với exponential backoff (1s, 2s, 4s)
+* **And** nếu toàn bộ proxy trong pool bị cách ly ➔ Chuyển sang trạng thái Standby Backoff (chờ 30s) và cảnh báo thay vì loop vô tận.
 
-**Given** `headless: false`
-**When** `shareLinkByUid()` chạy
-**Then** delay 8-12s sau navigation
-**And** delay 3-5s sau khi paste URL
-**And** delay 3-5s sau khi send
-**And** console logs: `[uid] Conversation opened: ...` và `[uid] Sending message...`
-
-**Given** `headless: true`
-**When** `shareLinkByUid()` chạy
-**Then** delay 5-8s sau navigation
-**And** delay 1.5-2.5s sau khi paste URL
-**And** delay 2-3s sau khi send
-
-### Story 1.9: Bezier Mouse Movement
-
-As a developer,
-I want mouse movement theo Bezier curve với micro-jitter,
-So that Facebook không detect straight-line bot movement.
+### Story 11.4: Adaptive Infrastructure-Aware Rate Limiter & Account Protection Governor
+As a **Platform Governor & Account Security Engineer**,
+I want **hệ thống tự động tính toán Throughput cào dựa trên số lượng Proxy sống và đưa tài khoản vào trạng thái Ngủ đông khi gặp thử thách bảo vệ**,
+So that **hệ thống không bị quá tải khi Proxy xoay không kịp và triệt tiêu 100% nguy cơ die tài khoản hàng loạt**.
 
 **Acceptance Criteria:**
+* **Given** module `AdaptiveRateGovernor` trong `src/core/rate-governor.js`
+* **When** số lượng Proxy khả dụng trong `ProxyIpPool` thay đổi hoặc tài khoản gặp cảnh báo WAF
+* **Then** tự động điều chỉnh tốc độ cào toàn cục: `Max Throughput = Healthy Proxies * SafeRatePerIP` (giảm nhịp 50% nếu proxy sống giảm 50%)
+* **And** nếu Proxy sống rơi vào mức báo động (< 5 IPs) ➔ Tự động tạm dừng cào ngầm, ưu tiên toàn bộ proxy cho On-Demand User Search
+* **And** tự động đưa tài khoản vào chế độ Ngủ đông (Hibernation) 15–30 phút khi nhận mã thử thách Captcha/WAF
+* **And** hãm tốc độ cào khi hàng đợi Redis Stream `stream:social:raw_posts` vượt quá 10,000 unread messages (Consumer Lag Backpressure).
 
-**Given** cần click ở vị trí (x, y)
-**When** `humanMoveMouse(page, x, y)` được gọi
-**Then** mouse di chuyển theo cubic Bezier curve (20-35 steps)
-**And** mỗi step có micro-jitter ±2px (human tremor)
-**And** 15% chance có overshoot + correction
-**And** movement hoàn thành trong <2s (NFR1)
+---
 
-### Story 1.10: Human Click with Hover
+## Epic 12: Frictionless Authentication (Terminal QR & CDP Attach)
 
-As a developer,
-I want click simulation với hover pause và variable hold duration,
-So that Facebook không detect instant/mechanical clicks.
-
-**Acceptance Criteria:**
-
-**Given** đã move đến target vị trí
-**When** `humanClick(page, x, y)` được gọi
-**Then** hover pause 100-400ms trước khi click
-**And** mouse down → hold 30-120ms → mouse up
-**And** không có coordinate-based clicks (dùng element handle)
-
-### Story 1.11: Typing with Typos
-
-As a developer,
-I want typing simulation với variable speed và occasional typos,
-So that Facebook không detect mechanical typing patterns.
+### Story 12.1: Terminal ASCII QR Code Login Module with Countdown & Timeout
+As a **CLI User**,
+I want **mã QR đăng nhập hiển thị trực tiếp bằng ký tự ASCII chuẩn 1:1 trên Terminal console kèm countdown timer 60s**,
+So that **tôi có thể dùng app điện thoại quét mã đăng nhập tức thì mà không bị tràn màn hình hay treo process**.
 
 **Acceptance Criteria:**
+* **Given** URL hoặc base64 image của mã QR đăng nhập
+* **When** gọi `displayTerminalQrCode(data)` trong `src/utils/qrcode.js`
+* **Then** mã QR hiển thị gọn gàng (`small: true`) kèm thanh đếm ngược 60s
+* **And** vòng lặp nền `checkLoginState()` tự động kiểm tra cookie mỗi 1 giây và tự động hủy timer sau 120s timeout nếu không quét
+* **And** tự động lưu cookie vào session storage khi đăng nhập thành công và dọn dẹp terminal.
 
-**Given** cần type text vào input
-**When** `humanType(page, text)` được gọi
-**Then** mỗi ký tự có variable delay 80-120ms
-**And** typo rate 1-2% cho alphabet characters
-**And** typo được gõ sai → pause → backspace → type lại
-**And** pause 100-300ms giữa các words
-**And** pause 200-500ms sau punctuation
-
-### Story 1.12: Natural Scrolling
-
-As a developer,
-I want scrolling với variable speed và momentum,
-So that Facebook không detect fixed-distance instant scrolls.
+### Story 12.2: CDP Remote Attach Mode with Launch Helper & Gaussian Jitter
+As a **Power User**,
+I want **kết nối XActions trực tiếp vào Chrome thật của tôi qua cổng 9222 với helper tự mở Chrome và độ trễ ngẫu nhiên Gaussian**,
+So that **hệ thống sử dụng nguyên vẹn profile và fingerprint thật của tôi để cào LinkedIn/TopCV mà không bị phát hiện automation**.
 
 **Acceptance Criteria:**
+* **Given** lệnh `unfollowx auth --launch-chrome` hoặc Chrome đang mở cổng 9222
+* **When** gọi `launchBrowserWithCdp('http://localhost:9222')` trong `src/core/base-crawler.js`
+* **Then** Playwright kết nối thành công tới browser instance đang mở mà không spawn process mới
+* **And** áp dụng độ trễ phân phối ngẫu nhiên Gaussian Jitter (3–7s) giữa các thao tác cào.
 
-**Given** cần scroll distance pixels
-**When** `humanScroll(page, distance)` được gọi
-**Then** scroll được chia thành 5-10 chunks với variable speed
-**And** speed follows sin curve (slow → fast → slow)
-**And** 20% chance có overshoot + correction
-**And** delay 100-400ms giữa các chunks
+---
 
-### Story 1.13: Action Velocity Limiting
+## Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor)
 
-As a developer,
-I want built-in rate limiting cho Facebook actions,
-So that automation không exceed human-possible speeds.
-
-**Acceptance Criteria:**
-
-**Given** automation session đang chạy
-**When** actions được thực hiện liên tục
-**Then** likes giới hạn ≤ 30/hour
-**And** comments giới hạn ≤ 10/hour
-**And** friend requests giới hạn ≤ 20/day
-**And** messages giới hạn ≤ 20/hour
-**And** delay floor 5-15s giữa actions (NFR5, AR2)
-
-### Story 1.14: Account Age Awareness
-
-As a developer,
-I want account age được tính để giới hạn activity,
-So that new accounts không bị flag ngay lập tức.
+### Story 13.1: Tiered Signer Architecture (Pre-Signed Token Ring & Worker Page Pool)
+As a **Scraper Architect**,
+I want **hệ thống Tiered Signer gồm Pre-Signed Token Ring cho session tokens và Worker Page Pool cho dynamic signatures có timeout 3s**,
+So that **các request cần chữ ký mã hóa phức tạp đạt throughput >500 req/s mà không bị nghẽn đơn luồng hay crash process**.
 
 **Acceptance Criteria:**
+* **Given** các endpoint yêu cầu dynamic signature (TikTok `a_bogus`, Twitter `x-client-transaction-id`)
+* **When** gọi `client.requestWithSign(method, url, payload)` trong `src/core/base-client.js`
+* **Then** client lấy token phiên O(1) từ `PreSignedTokenRing` hoặc phân phối tác vụ ký tới `SignerPagePool`
+* **And** mọi lệnh evaluate bọc trong `Promise.race()` với timeout 3,000ms
+* **And** dispatch HTTP request bằng `got-scraping` (TLS Spoofing) hoặc `undici.fetch()`.
 
-**Given** account có creationDate
-**When** automation khởi động
-**Then** accounts < 7 days bị giới hạn 50% action limits
-**And** accounts 1-4 weeks bị giới hạn 80% limits
-**And** accounts > 3 months cho phép full limits
-
-### Story 1.15: Session Warming Sequence
-
-As a developer,
-I want tự động warm-up session trước khi thực hiện actions,
-So that Facebook không detect cold-session-immediate-action pattern.
+### Story 13.2: Refactor Twitter Scraper to Hybrid Architecture
+As a **Twitter Growth Marketer**,
+I want **cào profile, timeline tweets, và kết quả tìm kiếm Twitter với tốc độ cao**,
+So that **tôi có thể thu thập hàng ngàn tweet trong vài giây với lượng RAM tiêu thụ tối thiểu**.
 
 **Acceptance Criteria:**
+* **Given** `TwitterCrawler` kế thừa `AbstractCrawler` trong `src/scrapers/social/twitter/index.js`
+* **When** thực hiện `search(query)` hoặc `getTimeline(username)`
+* **Then** scraper sử dụng `TwitterHttpClient` kết hợp `SignerPagePool` để lấy GraphQL data
+* **And** chuẩn hóa dữ liệu trả về theo model `PostItem` với ID Namespaced `twitter:${tweetId}`
+* **And** tự động ghi vào `PrismaStore` lưu vào PostgreSQL.
 
-**Given** logged in successfully
-**When** session warming được trigger
-**Then** visit homepage → wait 3-8s
-**And** scroll 300-800px → wait 2-6s
-**And** scroll 200-500px → wait 1-4s
-**And** random mouse movements 3 lần → wait 0.5-2s mỗi lần
-**And** sau đó mới safe để perform actions
-
-### Story 1.16: Timezone & Geolocation Override
-
-As a developer,
-I want override timezone và geolocation khớp proxy location,
-So that Facebook không detect IP-timezone-geo mismatch.
+### Story 13.3: Refactor Facebook Scraper to Hybrid Architecture
+As a **Facebook Community Marketer**,
+I want **cào bài viết nhóm và trang Facebook qua DocID GraphQL requests và Proxy Pool**,
+So that **tôi có thể theo dõi cộng đồng với độ trễ thấp và không bị checkpoint IP**.
 
 **Acceptance Criteria:**
+* **Given** `FacebookCrawler` kế thừa `AbstractCrawler` trong `src/scrapers/social/facebook/index.js`
+* **When** thực hiện `getGroupPosts(groupId)` hoặc `getPagePosts(pageId)`
+* **Then** scraper dispatch request qua GraphQL endpoints với `ProxyIpPool`
+* **And** chuẩn hóa dữ liệu trả về theo model `PostItem` với ID Namespaced `facebook:${postId}`
+* **And** tương thích hoàn toàn với session cookie đã mã hóa trong database.
 
-**Given** proxy ở US-East
-**When** session được khởi tạo
-**Then** `page.emulateTimezone('America/New_York')` được gọi
-**And** `page.setGeolocation({ lat, lng })` match proxy location
-**And** `Intl.DateTimeFormat().resolvedOptions().timeZone` returns correct timezone
-**And** permissions được grant cho geolocation API
+---
 
-### Story 1.17: Persistent Browser Profiles
+## Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream
 
-As a developer,
-I want support persistent browser profiles qua userDataDir,
-So that browser retains history, cookies, localStorage across sessions.
+### Story 14.1: Hierarchical Comment Tree Extraction with Topological Sort
+As an **AI Persona / Sentiment Researcher**,
+I want **cào toàn bộ cây bình luận phân cấp và lưu vào PostgreSQL theo thứ tự Topological Sort**,
+So that **tôi nắm bắt trọn vẹn ngữ cảnh tranh luận mà không bị lỗi Foreign Key violation hay Deadlock CSDL**.
 
 **Acceptance Criteria:**
+* **Given** một `postId` từ Twitter hoặc Facebook
+* **When** gọi `getComments(postId, { maxDepth: 3, maxComments: 500 })`
+* **Then** scraper cào tuần tự root comments và đệ quy phân trang lấy toàn bộ sub-replies
+* **And** kiểm tra chống tham chiếu vòng (`parentCommentId !== id`)
+* **And** thực hiện Topological Sort: Lưu toàn bộ RootComments trước, sau đó lưu SubComments theo tầng `depth` tăng dần vào PostgreSQL qua `PrismaStore`.
 
-**Given** profile directory được specify
-**When** `createBrowser({ userDataDir: './profiles/account-1' })` được gọi
-**Then** browser retains cookies và localStorage sau khi close
-**And** next session restore previous state
-**And** profile directory tự động create nếu chưa tồn tại
+### Story 14.2: MCP Tool Exporters & Daemon HTTP/SSE Server
+As an **AI Agent (Claude / Antigravity / Cursor)**,
+I want **XActions MCP Server chạy thường trực dạng Daemon HTTP/SSE (Port 3001) trả về 3-Layer JSON Envelope và tự động xuất File Artifact khi dữ liệu >100 records**,
+So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà không phải spawn subprocess `node`**.
+
+**Acceptance Criteria:**
+* **Given** Daemon MCP Server `src/mcp/server.js` lắng nghe trên cổng `http://localhost:3001/mcp`
+* **When** AI Agent hoặc Nowing gọi tool `x_crawl_post` hoặc `x_crawl_comments_tree` qua HTTP/SSE
+* **Then** response trả về JSON Envelope chuẩn: `{ success, platform, meta, data (top 20-30), summary, error? }` với độ trễ phản hồi < 2ms
+* **And** nếu tổng số records > 100 ➔ Tự động lưu file dataset JSONL và trả về trường `meta.datasetArtifactPath` để AI đọc chọn lọc.
+
+### Story 14.3: Realtime Thin Event Redis Stream for Nowing AI Lead Hub
+As a **Nowing Platform Orchestrator**,
+I want **dữ liệu cào từ XActions được phát tức thì dưới dạng Thin Event Pointer vào Redis Stream `stream:social:raw_posts`**,
+So that **Nowing backend có thể chạy background NLP Intent Extractor theo thời gian thực mà không làm tràn bộ nhớ Redis**.
+
+**Acceptance Criteria:**
+* **Given** cấu hình `REDIS_STREAM_ENABLED=true`
+* **When** bất kỳ crawler nào hoàn tất cào một batch bài viết/bình luận
+* **Then** phát event `XADD stream:social:raw_posts MAXLEN ~ 20000 * payload <json>`
+* **And** payload chỉ chứa Thin Event: `{ id, platform, externalId, category, authorId, crawledAt, storageRef }`.
+
+### Story 14.4: Nowing Daemon Client Cutover & Legacy Scrapers Decommissioning
+As a **Lead System Architect**,
+I want **nâng cấp adapter bên Nowing kết nối sang XActions Daemon HTTP/SSE (Port 3001) và gỡ bỏ toàn bộ 20+ scraper cũ trong `nowing_backend/app/proprietary/platforms/`**,
+So that **Nowing backend được tinh gọn 100%, giảm kích thước Docker từ 4GB xuống <500MB và thống nhất hạ tầng cào duy nhất về XActions**.
+
+**Acceptance Criteria:**
+* **Given** repository Nowing tại `/Users/luisphan/Documents/GitHub/nowing`
+* **When** XActions hoàn thành các crawler đa nền tảng (Social, Ecom, BĐS, Tuyển dụng)
+* **Then** cập nhật `nowing_backend/app/proprietary/platforms/xactions/adapter.py` sử dụng HTTP Keep-Alive Connection Pool gọi sang `http://xactions-service:3001`
+* **And** thực hiện kiểm thử đối soát (Shadow Run) xác nhận Nowing nhận đủ 100% dữ liệu
+* **And** xóa bỏ an toàn các thư mục scraper cũ trong `nowing_backend/app/proprietary/platforms/` (`shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.)
+* **And** gỡ bỏ các dependency trình duyệt nặng (`selenium`, `playwright-python`, Chromium binaries) khỏi Dockerfile của Nowing.
+
+---
+
+## Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine
+
+### Story 15.1: Threads Scraper Adapter (Meta Internal GraphQL)
+As a **Viral Marketer & Trend Researcher**,
+I want **cào bài viết, timeline và bình luận trên mạng xã hội Threads**,
+So that **tôi có thể nắm bắt các chủ đề nóng và drama thịnh hành của giới trẻ Việt Nam**.
+
+**Acceptance Criteria:**
+* **Given** `ThreadsCrawler` trong `src/scrapers/social/threads/index.js` kế thừa `AbstractCrawler`
+* **When** gọi `search(query)` hoặc `getUserFeed(username)`
+* **Then** crawler sử dụng `ThreadsClient` dispatch request GraphQL với token `lsd` từ Token Ring và `doc_id` của Meta
+* **And** trích xuất danh sách bài viết chuẩn hóa theo schema `PostItem` (`platform: 'threads'`, `id: 'threads:${id}'`)
+* **And** lưu trữ thành công vào PostgreSQL.
+
+### Story 15.2: TikTok Video, Hashtag & Comment Scraper with Anti-Bot Payload Validation
+As a **Short-Form Content Creator / E-commerce Researcher**,
+I want **cào video trending và hàng ngàn bình luận trên TikTok có kiểm tra mã chặn False 200 OK**,
+So that **tôi có thể phân tích xu hướng video mà không lưu phải dữ liệu rỗng khi bị chặn ngầm**.
+
+**Acceptance Criteria:**
+* **Given** `TikTokCrawler` trong `src/scrapers/social/tiktok/index.js`
+* **When** gọi `getHashtagFeed(tag)` hoặc `getVideoComments(videoId)`
+* **Then** crawler sử dụng `SignerPagePool` để sinh dynamic query params `a_bogus` và `msToken`
+* **And** kiểm tra payload: Nếu `error !== 0` hoặc feed rỗng bất thường ➔ Throw `RateLimitError` để xoay IP
+* **And** lưu trữ video và bình luận vào PostgreSQL.
+
+---
+
+## Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop)
+
+### Story 16.1: Shopee Search, Product & Review Scraper with TLS Spoofing
+As an **E-Commerce Merchant / Data Analyst**,
+I want **cào danh mục sản phẩm, flash sale, giá bán và đánh giá từ Shopee Việt Nam qua TLS Spoofing**,
+So that **tôi có thể phân tích đối thủ cạnh tranh mà không bị chặn bởi Akamai WAF**.
+
+**Acceptance Criteria:**
+* **Given** `ShopeeCrawler` trong `src/scrapers/ecom/shopee/index.js`
+* **When** gọi `searchProducts(keyword)` hoặc `getProductReviews(itemid, shopid)`
+* **Then** scraper gọi Shopee Web Search API qua `got-scraping` (TLS/JA4 Spoofing) và `ProxyIpPool`
+* **And** kiểm tra anti-bot captcha code (`90309999`) ➔ Tự động xoay proxy nếu bị challenge
+* **And** lưu trữ chuẩn hóa theo `PostItem` (`platform: 'shopee'`, `category: 'ecom'`, `metadata: { price, soldCount, rating }`).
+
+### Story 16.2: TikTok Shop Product & Sales Scraper
+As a **TikTok Affiliate & Merchant**,
+I want **cào dữ liệu sản phẩm bán chạy và hoa hồng affiliate trên TikTok Shop**,
+So that **tôi có thể phát hiện các sản phẩm Winning Products để chạy quảng cáo**.
+
+**Acceptance Criteria:**
+* **Given** `TikTokShopCrawler` trong `src/scrapers/ecom/tiktok-shop/index.js`
+* **When** gọi `getTopSellingProducts(category)`
+* **Then** crawler cào dữ liệu qua Web API kết hợp dynamic signing từ Signer Pool
+* **And** trích xuất giá, doanh số, shop rating và lưu vào PostgreSQL.
+
+---
+
+## Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan)
+
+### Story 17.1: Chợ Tốt Multi-Category Scraper with Phone Mask Detector
+As a **Real Estate Broker / Lead Generator**,
+I want **cào tin đăng BĐS trên Chợ Tốt kèm giải mã số điện thoại và loại bỏ số masked (`***`)**,
+So that **Nowing AI Lead Hub nhận được 100% số điện thoại chính chủ chất lượng cao**.
+
+**Acceptance Criteria:**
+* **Given** `ChototCrawler` trong `src/scrapers/realestate/chotot/index.js`
+* **When** gọi `searchListings({ category: 'nha-dat', region: 'tp-ho-chi-minh' })`
+* **Then** scraper gọi API gateway của Chợ Tốt lấy tin đăng và gọi endpoint giải mã SĐT
+* **And** kiểm tra SĐT: Nếu chứa ký tự `*` hoặc không khớp regex SĐT Việt Nam ➔ Bỏ qua số masked và xoay account
+* **And** lưu tin đăng kèm SĐT vào `Post.metadata` trong PostgreSQL và phát Thin Event tới Nowing.
+
+### Story 17.2: Batdongsan.com.vn Property Scraper
+As an **Investor**,
+I want **cào tin rao BĐS dự án và giá đất trên Batdongsan.com.vn**,
+So that **tôi có thể theo dõi biến động thị trường theo từng quận/huyện**.
+
+**Acceptance Criteria:**
+* **Given** `BatdongsanCrawler` trong `src/scrapers/realestate/batdongsan/index.js`
+* **When** gọi `scrapeCategory(url)`
+* **Then** scraper cào dữ liệu qua HTTP Client với User-Agent rotation và Proxy Pool
+* **And** bóc tách diện tích, mức giá/m2, vị trí và lưu vào `Post.metadata` trong PostgreSQL.
+
+---
+
+## Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn)
+
+### Story 18.1: TopCV Job & Company Scraper
+As an **HR Tech Recruiter**,
+I want **cào tin tuyển dụng, kỹ năng yêu cầu và dải lương trên TopCV**,
+So that **tôi có thể nắm bắt xu hướng tuyển dụng thị trường IT và tài chính tại Việt Nam**.
+
+**Acceptance Criteria:**
+* **Given** `TopCvCrawler` trong `src/scrapers/recruitment/topcv/index.js`
+* **When** gọi `searchJobs(keyword)`
+* **Then** crawler cào tin tuyển dụng, parse an toàn dải lương (xử lý trường hợp "Thỏa thuận")
+* **And** lưu trữ chuẩn hóa theo `PostItem` (`platform: 'topcv'`, `category: 'recruitment'`, `metadata: { salaryMin, salaryMax, skills }`).
+
+### Story 18.2: VietnamWorks Job Scraper
+As a **Headhunter**,
+I want **cào tin tuyển dụng cấp trung và cao cấp trên VietnamWorks**,
+So that **tôi có thể tìm kiếm cơ hội tuyển dụng cho ứng viên**.
+
+**Acceptance Criteria:**
+* **Given** `VietnamWorksCrawler` trong `src/scrapers/recruitment/vietnamworks/index.js`
+* **When** gọi `searchJobs({ keyword, city })`
+* **Then** scraper gọi API public của VietnamWorks lấy danh sách công việc và JD chi tiết
+* **And** tự động làm mới public guest token nếu nhận mã 401.
+
+### Story 18.3: LinkedIn B2B Lead & Job Scraper (via CDP Remote Attach & Gaussian Jitter)
+As a **B2B Sales Director**,
+I want **cào thông tin công ty và nhân sự chủ chốt trên LinkedIn qua CDP Attach với độ trễ Gaussian Jitter (3–7s)**,
+So that **tôi có thể tạo danh sách khách hàng doanh nghiệp B2B chất lượng cao mà không bị khóa tài khoản**.
+
+**Acceptance Criteria:**
+* **Given** `LinkedInCrawler` trong `src/scrapers/recruitment/linkedin/index.js`
+* **When** kết nối qua CDP Remote Attach (Port 9222) vào Chrome thật của người dùng
+* **Then** crawler sử dụng phiên đăng nhập LinkedIn có sẵn để cào thông tin profile, title, company
+* **And** áp dụng Gaussian delay ngẫu nhiên (3–7s) và kiểm tra màn hình checkpoint challenge
+* **And** lưu trữ vào PostgreSQL.

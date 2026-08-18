@@ -1,120 +1,93 @@
-# generated: 06-12-2026 02:18
-# last_updated: 2026-08-14 (epic 8 added via bmad-correct-course)
-# project: XActions-DONE
-# project_key: NOKEY
+# generated: 2026-08-18T21:53:00.000Z
+# last_updated: 2026-08-18T22:31:00.000Z
+# project: XActions
+# project_key: XACT
 # tracking_system: file-system
-# story_location: _bmad-output/implementation-artifacts
+# story_location: /Users/luisphan/Documents/GitHub/XActions/_bmad-output/implementation-artifacts
 
 # STATUS DEFINITIONS:
-# Epic:  backlog | in-progress | done
-# Story: backlog | ready-for-dev | in-progress | review | done
-# Retrospective: optional | done
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
 
-generated: 06-12-2026 02:18
-last_updated: 2026-08-14T09:37:00
+generated: 2026-08-18T21:53:00.000Z
+last_updated: 2026-08-18T22:31:00.000Z
 project: XActions
-project_key: NOKEY
+project_key: XACT
 tracking_system: file-system
-story_location: "_bmad-output/implementation-artifacts"
+story_location: /Users/luisphan/Documents/GitHub/XActions/_bmad-output/implementation-artifacts
 
 development_status:
-  # Epic 1: Facebook Data Reading
-  epic-1: done
-  1-1-facebook-adapter-scaffold: done
-  1-2-scrape-profile: done
-  1-3-scrape-posts: done
-  1-4-scrape-followers: done
-  1-5-search-posts: done
-  epic-1-retrospective: optional
+  # --- Epic 10: Unified PostgreSQL Storage (Prisma) & Core Interfaces ---
+  epic-10: backlog
+  10-1-core-domain-interfaces-error-hierarchy-definition: backlog
+  10-2-prisma-post-comment-relational-schema-migration: backlog
+  10-3-ai-dataset-export-utility-streaming-jsonl-csv: backlog
+  epic-10-retrospective: optional
 
-  # Epic 2: Facebook Automation
-  epic-2: done
-  2-1-automation-scaffold: done
-  2-2-auto-like: done
-  2-3-auto-comment: done
-  2-4-create-post: done
-  epic-2-retrospective: optional
+  # --- Epic 11: Resilient Network & Proxy Pool Management ---
+  epic-11: backlog
+  11-1-proxyippool-with-auto-validation-expiry-buffer: backlog
+  11-2-static-dynamic-residential-tunnel-proxy-providers: backlog
+  11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: backlog
+  11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: backlog
+  epic-11-retrospective: optional
 
-  # Epic 3: Facebook Multi-Surface & Persistence
-  epic-3: done
-  3-1-cli-platform: done
-  3-2-mcp-facebook: done
-  3-2-1-facebook-mcp-tool-surface-extension: done
-  3-3-rest-api: done
-  3-4-operation-persistence: done
-  epic-3-retrospective: done
+  # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
+  epic-12: backlog
+  12-1-terminal-ascii-qr-code-login-module: backlog
+  12-2-cdp-remote-attach-mode-chrome-devtools-protocol: backlog
+  epic-12-retrospective: optional
 
-  # Epic 4: Facebook Growth Automation
-  epic-4: done
-  4-1-schedule-post: done
-  4-2-auto-share-post: done
-  4-3-view-boost: done
-  4-4-join-groups: done
-  4-5-batch-post-groups: done
-  4-6-scrape-group-members: done
-  4-7-send-friend-requests: done
-  4-8-cancel-friend-requests: done
-  4-9-newsfeed-farming: done
-  epic-4-retrospective: optional
+  # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---
+  epic-13: backlog
+  13-1-basehybridclient-with-playwright-signature-bridge: backlog
+  13-2-refactor-twitter-scraper-to-hybrid-architecture: backlog
+  13-3-refactor-facebook-scraper-to-hybrid-architecture: backlog
+  epic-13-retrospective: optional
 
-  # Epic 5: Facebook Messenger Port
-  epic-5: done
-  5-1-graphql-layer: done
-  5-2-messenger-share: done
-  5-3-auth-proxy: done
-  5-4-input-queue-surfaces: done
-  5-5-session-campaign-ui: done
-  epic-5-retrospective: optional
+  # --- Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream ---
+  epic-14: backlog
+  14-1-hierarchical-comment-tree-extraction-algorithm: backlog
+  14-2-mcp-tool-exporters-cli-crawl-commands: backlog
+  14-3-realtime-redis-stream-ingest-for-nowing-ai-lead-hub: backlog
+  14-4-nowing-adapter-cutover-legacy-scrapers-decommissioning: backlog
+  epic-14-retrospective: optional
 
-  # Epic 5b: Marketplace & Infrastructure Enhancements (retroactive)
-  epic-5b: done
-  5b-1-marketplace-scraper: done
-  5b-2-share-link-uid-v2: done
-  5b-3-headless-mode: done
-  5b-4-chrome-executable-path: done
-  epic-5b-retrospective: optional
+  # --- Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine ---
+  epic-15: backlog
+  15-1-threads-scraper-adapter-meta-internal-graphql: backlog
+  15-2-tiktok-video-hashtag-comment-scraper: backlog
+  epic-15-retrospective: optional
 
-  # Epic 6: Facebook Anti-Detection & Bot Countermeasures
-  epic-6: done
-  6-1-chrome-executable-path: done
-  6-2-consistent-fingerprint: done
-  6-3-ua-pool-viewport: done
-  6-4-navigator-override: done
-  6-5-webrtc-leak-prevention: done
-  6-6-headless-mode: done
-  6-7-headless-aware-timeouts: done
-  6-8-behavioral-delays-share: done
-  6-9-bezier-mouse: done
-  6-10-human-click: done
-  6-11-typing-typos: done
-  6-12-natural-scrolling: done
-  6-13-velocity-limits: done
-  6-14-account-age: done
-  6-15-session-warming: done
-  6-16-timezone-geolocation: done
-  6-17-persistent-profiles: done
-  6-18-human-behavior-hardening: done
-  epic-6-retrospective: optional
+  # --- Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop) ---
+  epic-16: backlog
+  16-1-shopee-search-product-review-scraper: backlog
+  16-2-tiktok-shop-product-sales-scraper: backlog
+  epic-16-retrospective: optional
 
-  # Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
-  epic-7: done
-  7-1-foundation-health-pool-hydration-schema: done
-  7-2-multi-type-search: done
-  7-3-comments-and-group-content: done
-  7-4-api-mcp-surface: done
-  epic-7-retrospective: done
+  # --- Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan) ---
+  epic-17: backlog
+  17-1-chotot-multi-category-scraper-with-phone-extractor: backlog
+  17-2-batdongsan-com-vn-property-scraper: backlog
+  epic-17-retrospective: optional
 
-  # Epic 8: Facebook Backend Reliability
-  epic-8: done
-  8-1-prismaclient-singleton: done
-  8-2-executetool-graceful-errors: done
-  8-3-jwt-key-standardization: done
-  epic-8-retrospective: optional
-
-  # Epic 9: Facebook Live Data & Behavioral Hardening
-  epic-9: backlog
-  9-1-cancel-friend-requests-dry-run-delay: backlog
-  9-2-live-comments-selectors: backlog
-  9-3-live-group-posts-search: backlog
-  9-4-loginwithcookie-delayfn: backlog
-  epic-9-retrospective: optional
+  # --- Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn) ---
+  epic-18: backlog
+  18-1-topcv-job-company-scraper: backlog
+  18-2-vietnamworks-job-scraper: backlog
+  18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: backlog
+  epic-18-retrospective: optional
