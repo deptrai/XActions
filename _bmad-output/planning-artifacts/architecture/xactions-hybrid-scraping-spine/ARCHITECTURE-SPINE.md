@@ -43,7 +43,7 @@ flowchart TB
         Nowing["Nowing AI Lead Hub<br/>(FastAPI / Redis Stream / HTTP Pool)"]
         CLI["CLI Tool (unfollowx)"]
         MCP["AI Agents<br/>(Claude / Antigravity / Cursor)"]
-        Web["XActions Web SaaS Dashboard<br/>(Express API)"]
+        Web["XActions Internal Operator Dashboard<br/>(Express API)"]
         Alerts["Alerts & Notifications<br/>(Webhook / Email)"]
     end
 
@@ -273,16 +273,17 @@ flowchart TB
   3. **Validation:** `PrismaStore` và exporter validate `metadata` against schema khi ghi; lỗi validation trả về `invalid_args` error envelope với `field` và `expectedType`.
   4. **Reserved Fields:** Các field `price`, `salary`, `phone`, `rating`, `soldCount`, `skills`, `location` phải dùng kiểu dữ liệu chuẩn hóa trong schema (ví dụ `price: number`, `phone: string`, `location: { region, district }`).
 
-### AD-19 — Web SaaS Dashboard Operational Surface [ADOPTED - NEW]
-* **Binds:** `dashboard/**`, `src/api/**`, `src/core/**`
-* **Prevents:** Dashboard và API diverge về trạng thái hiển thị; operator thiếu single pane of glass để vận hành.
+### AD-19 — Internal Operator Dashboard, Admin CLI & MCP Surface [ADOPTED - NEW]
+* **Binds:** `dashboard/**`, `src/api/**`, `src/core/**`, `src/cli/**`, `src/mcp/**`
+* **Prevents:** Operator thiếu single pane of glass để vận hành; CLI, dashboard, và MCP diverge về trạng thái hiển thị.
 * **Rule:**
-  1. **Required Views:** Dashboard MVP phải có 5 views: **Jobs**, **Proxies**, **Accounts**, **Checkpoints**, **Stream Metrics**.
-  2. **Data Sources:** Mỗi view lấy dữ liệu từ API tương ứng (`/admin/proxies`, `/admin/accounts`, `/admin/checkpoints`, `/admin/stream/metrics`, `/governor/status`). Không truy cập DB trực tiếp từ dashboard.
-  3. **Real-Time Updates:** Các view Jobs, Stream Metrics, Proxies cập nhật mỗi 5s qua SSE hoặc polling. Accounts và Checkpoints cập nhật mỗi 30s.
-  4. **Actions:** Từ dashboard có thể `pause/resume/retry` checkpoints, `quarantine/release` proxies, `wake/hibernate` accounts (manual override).
-  5. **Admin CLI:** Cung cấp lệnh `xactions admin`, `xactions checkpoints`, `xactions stream` để xem status và thực hiện operational actions từ terminal. CLI gọi cùng `/admin/*` API.
-  6. **Admin MCP:** Cung cấp tools `x_admin_*` cho AI agents để query status và thực hiện manual override.
+  1. **Scope:** Operator surface dùng **nội bộ** cho team vận hành XActions, không phải multi-tenant SaaS dashboard cho khách hàng. Auth bằng internal admin API key hoặc A2A token.
+  2. **Required Views:** Dashboard MVP phải có 5 views: **Jobs**, **Proxies**, **Accounts**, **Checkpoints**, **Stream Metrics**.
+  3. **Data Sources:** Mỗi view lấy dữ liệu từ API tương ứng (`/admin/proxies`, `/admin/accounts`, `/admin/checkpoints`, `/admin/stream/metrics`, `/governor/status`). Không truy cập DB trực tiếp từ dashboard.
+  4. **Real-Time Updates:** Các view Jobs, Stream Metrics, Proxies cập nhật mỗi 5s qua SSE hoặc polling. Accounts và Checkpoints cập nhật mỗi 30s.
+  5. **Actions:** Từ dashboard có thể `pause/resume/retry` checkpoints, `quarantine/release` proxies, `wake/hibernate` accounts (manual override).
+  6. **Admin CLI:** Cung cấp lệnh `xactions admin`, `xactions checkpoints`, `xactions stream` để xem status và thực hiện operational actions từ terminal. CLI gọi cùng `/admin/*` API.
+  7. **Admin MCP:** Cung cấp tools `x_admin_*` cho AI agents nội bộ để query status và thực hiện manual override.
 
 ---
 
@@ -430,5 +431,5 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((meta
 * AD-16: CrawlCheckpoint Operational API.
 * AD-17: Redis Stream Metrics & Backpressure Observability.
 * AD-18: Metadata Schema Contract for Consumers.
-* AD-19: Web SaaS Dashboard Operational Surface.
+* AD-19: Internal Operator Dashboard, Admin CLI & MCP Surface.
 * Thêm section Inherited Invariants, Deferred, Open Questions.

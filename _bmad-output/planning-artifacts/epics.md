@@ -475,7 +475,7 @@ So that **tôi có thể tạo danh sách khách hàng doanh nghiệp B2B chất
 
 ---
 
-## Epic 19: Web SaaS Dashboard, Admin CLI & Operational Observability
+## Epic 19: Internal Operator Dashboard, Admin CLI & Operational Observability
 
 ### Story 19.1: Dashboard Jobs & Checkpoints View
 As an **Operations Manager**,
@@ -483,7 +483,7 @@ I want **một dashboard view hiển thị toàn bộ jobs crawl, checkpoints, t
 So that **tôi có thể giám sát và điều khiển pipeline cào mà không cần gõ lệnh terminal**.
 
 **Acceptance Criteria:**
-* **Given** dashboard Express server (`dashboard/` hoặc route `/dashboard`)
+* **Given** internal operator dashboard Express server (`dashboard/` hoặc route `/admin`)
 * **When** mở view "Jobs & Checkpoints"
 * **Then** hiển thị bảng checkpoints với cột `platform`, `targetKey`, `status`, `lastCrawledAt`, `lastCursor`, `errorCount`
 * **And** hỗ trợ actions `resume`, `pause`, `retry` mỗi checkpoint qua API `POST /checkpoints/:id/{action}`
@@ -516,7 +516,7 @@ So that **tôi phát hiện sớm khi Nowing consumer chậm hoặc stream bị 
 * **And** hỗ trợ cấu hình alert channel (`ALERT_WEBHOOK`, `ALERT_EMAIL`).
 
 ### Story 19.4: Admin CLI — Governor, Proxies & Accounts
-As an **Automation Operator**,
+As an **Internal Automation Operator**,
 I want **một nhóm lệnh CLI `xactions admin` để xem governor status, proxy pool, hibernating accounts, và thực hiện manual override**,
 So that **tôi có thể vận hành hệ thống từ terminal mà không cần mở dashboard**.
 
@@ -556,7 +556,7 @@ So that **tôi debug kỹ thuật nhanh mà không cần dashboard**.
 * **And** `xactions stream alert test` gửi test alert qua `ALERT_WEBHOOK` hoặc `ALERT_EMAIL`.
 
 ### Story 19.7: Admin REST API for Proxy, Account & Checkpoint Management
-As a **Dashboard & CLI Developer**,
+As an **Internal Operator & CLI Developer**,
 I want **các endpoint REST `/admin/*` để dashboard và CLI lấy dữ liệu + thực hiện actions vận hành**,
 So that **admin surface không truy cập DB trực tiếp và sử dụng chung data source**.
 
@@ -567,7 +567,7 @@ So that **admin surface không truy cập DB trực tiếp và sử dụng chung
 * **And** POST `/admin/accounts/:id/wake` và POST `/admin/accounts/:id/rotate`
 * **And** GET/POST `/admin/checkpoints/...` wrap lại Story 10.4
 * **And** GET `/admin/stream/metrics` và `/admin/stream/alerts`
-* **And** tất cả endpoints yêu cầu `admin` permission hoặc `checkpoint:manage` (cho checkpoint-only).
+* **And** tất cả endpoints yêu cầu `admin` permission hoặc `checkpoint:manage` (cho checkpoint-only); auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth.
 
 ### Story 19.8: Admin MCP Tools for AI Agents
 As an **AI Agent Operator**,

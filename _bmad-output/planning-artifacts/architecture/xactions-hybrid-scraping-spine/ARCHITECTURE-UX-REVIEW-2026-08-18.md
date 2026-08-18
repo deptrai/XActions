@@ -64,10 +64,10 @@
 * **Vấn đề:** `Post.metadata` chứa `price`, `salary`, `phone`, v.v. nhưng Nowing không biết field nào có cho từng platform/category. `metadata Json?` là "túi đen" đối với consumer.
 * **Đề xuất UX:** Thêm `Rule 6` vào AD-4: mỗi platform/category phải publish JSON Schema hoặc TypeScript type cho `metadata`. MCP/CLI cung cấp `x_schema_get --platform shopee --category ecom`. Hoặc dùng Prisma Json validation + shared type package.
 
-### F9 — Dashboard / Web SaaS chưa được định nghĩa UX
-* **AD liên quan:** AD-7, AD-10, AD-13
-* **Vấn đề:** Spine đề cập "XActions Web SaaS Dashboard" trong diagram nhưng không có AD nào về UX dashboard. Với 4 hệ thống con (proxy pool, checkpoints, governor, stream), dashboard là nơi duy nhất giúp operator hiểu tình trạng.
-* **Đề xuất UX:** Thêm AD-14 hoặc section về Dashboard MVP views: Jobs, Proxies, Accounts, Checkpoints, Stream Metrics. Mỗi view cần hiển thị real-time status và hành động cơ bản (pause/resume/retry).
+### F9 — Internal Operator Dashboard chưa được định nghĩa UX
+* **AD liên quan:** AD-7, AD-10, AD-13, AD-19
+* **Vấn đề:** Spine đề cập "XActions Internal Operator Dashboard" trong diagram nhưng chưa có AD chi tiết về UX dashboard. Với 4 hệ thống con (proxy pool, checkpoints, governor, stream), dashboard là nơi duy nhất giúp operator nội bộ hiểu tình trạng.
+* **Đề xuất UX:** Dashboard dùng nội bộ, auth bằng admin API key. Có 5 views: Jobs, Proxies, Accounts, Checkpoints, Stream Metrics. Mỗi view hiển thị real-time status và actions cơ bản (pause/resume/retry).
 
 ### F10 — Backward compatibility với CLI cũ (`unfollowx`)
 * **AD liên quan:** AD-2

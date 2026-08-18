@@ -89,7 +89,7 @@ Hội đồng Thẩm định BMad (Product Management, Architecture, Engineering
 * **Phase 2: Hybrid Signer, Social Flagships & Nowing Cutover (Stories 13.1, 13.2, 13.3, 14.1, 14.2, 14.3, 14.4)** *(7 Stories)*
 * **Phase 3: Viral Social & E-Commerce Expansion (Stories 15.1, 15.2, 16.1, 16.2)** *(4 Stories)*
 * **Phase 4: High-Value Localized Leads & B2B Recruitment (Stories 17.1, 17.2, 18.1, 18.2, 18.3)** *(5 Stories)*
-* **Phase 5: Admin Dashboard, Admin CLI & Operational Observability (Stories 19.1–19.8)** *(8 Stories)*
+* **Phase 5: Internal Operator Dashboard, Admin CLI & Operational Observability (Stories 19.1–19.8)** *(8 Stories)*
 
 ---
 
