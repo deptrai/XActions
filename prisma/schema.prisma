@@ -329,7 +329,7 @@ model Post {
   id              String    @id // Format: "shopee:123" hoặc "twitter:456"
   platform        String    // 'twitter' | 'facebook' | 'threads' | 'tiktok' | 'shopee' | 'chotot' | 'topcv' | 'linkedin'
   externalId      String    // ID gốc của nền tảng
-  category        String    // 'social' | 'ecom' | 'realestate' | 'recruitment' | 'b2b'
+  category        String    // 'social' | 'ecom' | 'realestate' | 'recruitment' | 'b2b' (B2B leads, not public procurement/tax-code B2B)
   authorId        String
   authorName      String
   authorAvatar    String?

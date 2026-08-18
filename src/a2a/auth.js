@@ -25,13 +25,13 @@ const OUTBOUND_FILE = path.join(A2A_DIR, 'outbound-auth.json');
 
 /** Available permissions */
 export const PERMISSIONS = [
-  'read', 'write', 'admin', 'scrape', 'post', 'follow', 'analytics', 'workflow',
+  'read', 'write', 'admin', 'scrape', 'post', 'follow', 'analytics', 'workflow', 'checkpoint:manage',
 ];
 
 /** Permission presets */
 export const PERMISSION_PRESETS = {
   readonly: ['read', 'scrape', 'analytics'],
-  standard: ['read', 'write', 'scrape', 'analytics', 'follow'],
+  standard: ['read', 'write', 'scrape', 'analytics', 'follow', 'checkpoint:manage'],
   full: [...PERMISSIONS],
 };
 

@@ -90,13 +90,15 @@ Current `sprint-status.yaml`:
 
 ---
 
-## 6. Open Questions for Stakeholders
+## 6. Open Questions — Resolved
 
-1. **Metadata schema ownership:** Does XActions own all JSON schemas, or does Nowing contribute schemas for its own categories?
-2. **Checkpoint authorization:** Who can pause/resume/retry checkpoints? Admin, operator, or the crawl job owner?
-3. **30-day retention policy:** Is this a legal/compliance requirement or a cost optimization? If legal, do we need audit logging?
-4. **Category taxonomy:** Is `b2b` a separate category, or a sub-classification of `recruitment`? The schema currently allows 5 distinct values.
-5. **Query <10ms NFR:** Is this a contractual SLA to Nowing, or an internal target? If SLA, which specific queries must meet it?
+Resolved by checking `prd.md` data-retention section, `src/a2a/auth.js` permission model, `ARCHITECTURE-SPINE.md` AD-18, and taxonomy. Full rationale in <ref_file file="/Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/EPIC10-DECISION-LOG-2026-08-18.md" />.
+
+1. ✅ **Metadata schema ownership:** XActions owns and publishes all `metadata` JSON schemas; Nowing consumes via `GET /schemas/:platform/:category`.
+2. ✅ **Checkpoint authorization:** Any identity with `checkpoint:manage` permission or `admin`. Added `'checkpoint:manage'` to `src/a2a/auth.js`.
+3. ✅ **30-day retention policy:** Cost optimization to keep DB < 5GB, not legal/compliance. No audit logging required.
+4. ✅ **Category taxonomy:** `b2b` is a separate category for B2B leads (LinkedIn), not a sub-class of `recruitment`. Public-procurement B2B remains deferred per spine.
+5. ✅ **Query <10ms NFR:** Internal target, not contractual SLA. Moved to NFR/benchmark story.
 
 ---
 
@@ -126,8 +128,8 @@ Current `sprint-status.yaml`:
 | Story slicing | ✅ after 10.2 split |
 | AC clarity | ⚠️ needs 4 quick edits |
 | Dependencies mapped | ✅ |
-| Sprint tracker accuracy | ❌ needs update |
-| Stakeholder open questions | ⚠️ 5 questions outstanding |
+| Sprint tracker accuracy | ✅ updated |
+| Stakeholder open questions | ✅ resolved in decision log |
 
 **Go/No-Go:** Go for Epic 10, provided the 4 AC edits and sprint-status update are done first.
 

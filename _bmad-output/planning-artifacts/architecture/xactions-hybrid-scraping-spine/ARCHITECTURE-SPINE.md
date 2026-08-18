@@ -392,8 +392,8 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((meta
 
 ## 6. Open Questions
 
-1. **Intent tagging (AD-SOC-5):** Nowing hay XActions chịu trách nhiệm gán `intent_tag` (`sell`, `buy`, `hiring`, `seeking`)? Nếu XActions gán, cần thêm model/field `Post.intentTag` và AD mới. Nếu Nowing gán, cần ghi rõ trong integration contract.
-2. **MCP over HTTP/SSE Auth:** Xác thực giữa Nowing và XActions daemon dùng Bearer token, mTLS, hay network-isolation only? Cần quyết định trước khi deploy.
+1. **Intent tagging (AD-SOC-5):** ~~Nowing hay XActions chịu trách nhiệm gán `intent_tag` (`sell`, `buy`, `hiring`, `seeking`)?~~ **Resolved: Nowing owns intent classification.** XActions gửi Thin Event raw; Nowing NLP/Lead pipeline gán `intent_tag` và lưu vĩnh viễn. Không thêm `Post.intentTag` vào schema XActions.
+2. **MCP over HTTP/SSE Auth:** ~~Xác thực giữa Nowing và XActions daemon dùng Bearer token, mTLS, hay network-isolation only?~~ **Resolved: MVP dùng `Authorization: Bearer <token>`** qua `src/a2a/auth.js`. mTLS là hardening item tương lai; network-isolation bổ sung ở infra.
 3. **Per-Platform Rate Limits:** Các giá trị `safeRequestsPerMinute` và `baseReqPerSecondPerProxy` cho Facebook, Shopee, LinkedIn, v.v. cần được đo thực tế; ban đầu có thể dùng giá trị bảo thủ và tune sau.
 
 ---

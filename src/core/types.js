@@ -101,6 +101,8 @@ export const CATEGORIES = Object.freeze({
   ECOMMERCE: 'ecom',
   REAL_ESTATE: 'realestate',
   RECRUITMENT: 'recruitment',
+  // B2B lead data (e.g. LinkedIn company profiles, decision-maker posts).
+  // Note: public-procurement B2B (Mua Sắm Công, Mã Số Thuế) is out of scope for Epics 10-18.
   B2B: 'b2b',
 });
 
