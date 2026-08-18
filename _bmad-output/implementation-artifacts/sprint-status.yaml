@@ -101,4 +101,9 @@ development_status:
   19-1-dashboard-jobs-checkpoints-view: backlog
   19-2-dashboard-proxies-accounts-view: backlog
   19-3-dashboard-stream-metrics-alerts-view: backlog
+  19-4-admin-cli-governor-proxies-accounts: backlog
+  19-5-admin-cli-checkpoints: backlog
+  19-6-admin-cli-stream-metrics-alerts: backlog
+  19-7-admin-rest-api-proxy-account-checkpoint: backlog
+  19-8-admin-mcp-tools: backlog
   epic-19-retrospective: optional

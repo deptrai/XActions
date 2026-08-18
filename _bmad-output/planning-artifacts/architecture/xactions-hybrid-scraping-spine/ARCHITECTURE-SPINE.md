@@ -278,9 +278,11 @@ flowchart TB
 * **Prevents:** Dashboard và API diverge về trạng thái hiển thị; operator thiếu single pane of glass để vận hành.
 * **Rule:**
   1. **Required Views:** Dashboard MVP phải có 5 views: **Jobs**, **Proxies**, **Accounts**, **Checkpoints**, **Stream Metrics**.
-  2. **Data Sources:** Mỗi view lấy dữ liệu từ API tương ứng (`/jobs`, `/governor/status`, `/checkpoints`, `/metrics/stream`). Không truy cập DB trực tiếp từ dashboard.
+  2. **Data Sources:** Mỗi view lấy dữ liệu từ API tương ứng (`/admin/proxies`, `/admin/accounts`, `/admin/checkpoints`, `/admin/stream/metrics`, `/governor/status`). Không truy cập DB trực tiếp từ dashboard.
   3. **Real-Time Updates:** Các view Jobs, Stream Metrics, Proxies cập nhật mỗi 5s qua SSE hoặc polling. Accounts và Checkpoints cập nhật mỗi 30s.
   4. **Actions:** Từ dashboard có thể `pause/resume/retry` checkpoints, `quarantine/release` proxies, `wake/hibernate` accounts (manual override).
+  5. **Admin CLI:** Cung cấp lệnh `xactions admin`, `xactions checkpoints`, `xactions stream` để xem status và thực hiện operational actions từ terminal. CLI gọi cùng `/admin/*` API.
+  6. **Admin MCP:** Cung cấp tools `x_admin_*` cho AI agents để query status và thực hiện manual override.
 
 ---
 

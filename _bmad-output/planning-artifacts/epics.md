@@ -475,7 +475,7 @@ So that **tôi có thể tạo danh sách khách hàng doanh nghiệp B2B chất
 
 ---
 
-## Epic 19: Web SaaS Dashboard & Operational Observability
+## Epic 19: Web SaaS Dashboard, Admin CLI & Operational Observability
 
 ### Story 19.1: Dashboard Jobs & Checkpoints View
 As an **Operations Manager**,
@@ -514,3 +514,69 @@ So that **tôi phát hiện sớm khi Nowing consumer chậm hoặc stream bị 
 * **And** hiển thị danh sách cảnh báo đang active với ngưỡng `pendingMessages > 50,000` hoặc `lastAckTime > 60s`
 * **And** cập nhật real-time mỗi 5s.
 * **And** hỗ trợ cấu hình alert channel (`ALERT_WEBHOOK`, `ALERT_EMAIL`).
+
+### Story 19.4: Admin CLI — Governor, Proxies & Accounts
+As an **Automation Operator**,
+I want **một nhóm lệnh CLI `xactions admin` để xem governor status, proxy pool, hibernating accounts, và thực hiện manual override**,
+So that **tôi có thể vận hành hệ thống từ terminal mà không cần mở dashboard**.
+
+**Acceptance Criteria:**
+* **Given** CLI command `xactions admin status`
+* **When** chạy
+* **Then** in ra `healthyProxyCount / totalProxyCount`, `currentReqPerSecond`, `redisConsumerLag`, `throttleLevel`, danh sách `hibernatingAccounts`
+* **And** `xactions admin proxies list` liệt kê proxy với trạng thái `healthy` / `quarantined` / `expiryAt`
+* **And** `xactions admin accounts list --platform <platform>` liệt kê account, `velocity`, `hibernatingUntil`, `assignedProxy`
+* **And** `xactions admin proxy quarantine <proxyKey>` cách ly proxy thủ công
+* **And** `xactions admin proxy release <proxyKey>` bỏ cách ly proxy thủ công
+* **And** `xactions admin account wake <accountId>` đánh thức account từ hibernation thủ công
+* **And** `xactions admin account rotate <accountId> <platform>` đổi account khác trong `AccountPool`.
+
+### Story 19.5: Admin CLI — Checkpoints
+As a **Platform Operator**,
+I want **nhóm lệnh CLI `xactions checkpoints` để liệt kê, resume, pause, retry checkpoint từ terminal**,
+So that **tôi có thể quản lý tiến độ cào nhanh chóng khi target bị lỗi hoặc container restart**.
+
+**Acceptance Criteria:**
+* **Given** lệnh `xactions checkpoints list --platform <platform> --status running|paused|failed|completed`
+* **When** chạy
+* **Then** in ra bảng checkpoints với `platform`, `targetKey`, `status`, `lastCrawledAt`, `lastCursor`, `errorCount`
+* **And** `xactions checkpoints resume <id>`, `xactions checkpoints pause <id>`, `xactions checkpoints retry <id>` gọi API tương ứng và cập nhật trạng thái
+* **And** yêu cầu permission `checkpoint:manage` hoặc `admin`.
+
+### Story 19.6: Admin CLI — Stream Metrics & Alerts
+As a **Reliability Engineer**,
+I want **lệnh CLI `xactions stream` để xem throughput, consumer lag, và kích hoạt test alert**,
+So that **tôi debug kỹ thuật nhanh mà không cần dashboard**.
+
+**Acceptance Criteria:**
+* **Given** lệnh `xactions stream metrics`
+* **When** chạy
+* **Then** in ra `eventsPerSecond`, `pendingMessages`, `consumerLag`, `droppedEvents`, `lastAckTime`
+* **And** `xactions stream alerts` hiển thị active alerts với ngưỡng vượt
+* **And** `xactions stream alert test` gửi test alert qua `ALERT_WEBHOOK` hoặc `ALERT_EMAIL`.
+
+### Story 19.7: Admin REST API for Proxy, Account & Checkpoint Management
+As a **Dashboard & CLI Developer**,
+I want **các endpoint REST `/admin/*` để dashboard và CLI lấy dữ liệu + thực hiện actions vận hành**,
+So that **admin surface không truy cập DB trực tiếp và sử dụng chung data source**.
+
+**Acceptance Criteria:**
+* **Given** API `/admin/proxies` (GET) trả về danh sách proxy + trạng thái
+* **And** POST `/admin/proxies/:key/quarantine` và `/admin/proxies/:key/release`
+* **And** GET `/admin/accounts?platform=...` trả về account + velocity + hibernation status
+* **And** POST `/admin/accounts/:id/wake` và POST `/admin/accounts/:id/rotate`
+* **And** GET/POST `/admin/checkpoints/...` wrap lại Story 10.4
+* **And** GET `/admin/stream/metrics` và `/admin/stream/alerts`
+* **And** tất cả endpoints yêu cầu `admin` permission hoặc `checkpoint:manage` (cho checkpoint-only).
+
+### Story 19.8: Admin MCP Tools for AI Agents
+As an **AI Agent Operator**,
+I want **các MCP tool `x_admin_*` để AI agents có thể kiểm tra status và thực hiện vận hành cơ bản**,
+So that **Claude/Cursor/Antigravity có thể hỏi "tình trạng proxy pool thế nào" hoặc "đánh thức account fb:123"**.
+
+**Acceptance Criteria:**
+* **Given** MCP daemon đang chạy
+* **When** gọi `x_admin_status`
+* **Then** trả về governor status, proxy health, hibernating accounts
+* **And** `x_admin_proxies_list`, `x_admin_accounts_list`, `x_admin_account_wake`, `x_admin_proxy_quarantine`, `x_admin_checkpoints_list`, `x_admin_checkpoint_action` hoạt động tương tự CLI.
+* **And** yêu cầu permission `admin`.
