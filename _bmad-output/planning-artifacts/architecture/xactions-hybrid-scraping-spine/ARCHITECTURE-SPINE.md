@@ -160,6 +160,7 @@ flowchart TB
   1. *Terminal QR Login:* Render mã QR ASCII tỷ lệ 1:1 chuẩn (`small: true`), có countdown timer 60s, timeout 120s và fallback URL. Yêu cầu package `qrcode-terminal` trong `package.json`.
   2. *CDP Attach Mode:* Kết nối vào Chrome thật qua cổng 9222; Chrome phải được launch với `--remote-debugging-port=9222` và `--user-data-dir=<dedicated>` để tránh xung đột profile. Áp dụng độ trễ phân phối ngẫu nhiên Gaussian Jitter (3–7s) khi cào LinkedIn/TopCV để tránh bị phát hiện.
   3. *AbstractLogin Contract:* Mọi implementation QR/CDP/cookie phải trả về cùng shape `{ accountId, cookies, tokens, expiresAt }`. Một `SessionManager` duy nhất giữ trạng thái và cung cấp cho `AbstractApiClient` và MCP tools.
+  4. *Sticky IP per Account:* Auth-required platforms (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) buộc một tài khoản gắn với một proxy cố định trong suốt session. `SessionManager` lưu `accountId`; `ProxyIpPool.getStickyProxy(accountId)` trả về proxy được gán. Không được tự động xoay IP mỗi request cho tài khoản đã đăng nhập.
 
 ### AD-6 — Hierarchical Comment Tree Normalization & Topological Insertion [ADOPTED]
 * **Binds:** `src/store/**`, Entity Models, `prisma/schema.prisma`
@@ -180,17 +181,19 @@ flowchart TB
 ### AD-8 — Multi-Domain Expansion Blueprint [ADOPTED]
 * **Binds:** `src/scrapers/**`
 * **Prevents:** Mọi platform thêm mới đặt sai vị trí hoặc team implement các domain ngoài phạm vi Epic.
-* **Rule:** Tổ chức module theo Domain rõ ràng, giới hạn trong phạm vi Epics 10–18:
-  - `src/scrapers/social/`: Twitter, Facebook, Threads, TikTok.
-  - `src/scrapers/ecom/`: Shopee, TikTok Shop.
-  - `src/scrapers/realestate/`: Chợ Tốt, Batdongsan.com.vn.
-  - `src/scrapers/recruitment/`: TopCV, VietnamWorks, LinkedIn.
+* **Rule:** Tổ chức module theo Domain rõ ràng, giới hạn trong phạm vi Epics 10–18. Mỗi crawler khai báo `requiresAuth` để hệ thống chọn sticky IP + account rotation hoặc rotating residential IP:
+  - `src/scrapers/social/` (requires auth): Twitter, Facebook, Threads, TikTok.
+  - `src/scrapers/ecom/` (requires auth): Shopee, TikTok Shop.
+  - `src/scrapers/realestate/` (no auth): Chợ Tốt, Batdongsan.com.vn.
+  - `src/scrapers/recruitment/` (mixed; LinkedIn requires auth for full profile, job listings may be no auth): TopCV, VietnamWorks, LinkedIn.
 
 ### AD-9 — Anti-Bot Payload Validation & Data Sanitization Defense [ADOPTED]
 * **Binds:** `src/scrapers/**`, `src/utils/exporter.js`
 * **Prevents:** Lưu dữ liệu rác khi WAF trả về HTTP 200 kèm error code, ô nhiễm CRM do SĐT masked (`***`), hoặc vỡ định dạng JSONL do ký tự xuống dòng.
 * **Rule:**
-  1. Mọi crawler phải đăng ký một `PlatformResponseValidator` gồm `isValidPayload(response)`, `isBotChallenge(response)`, `isRateLimit(response)`. Nếu validator trả về challenge/rate-limit, throw `RateLimitError` để xoay IP ngay cả khi HTTP status là 200.
+  1. Mọi crawler phải đăng ký một `PlatformResponseValidator` gồm `isValidPayload(response)`, `isBotChallenge(response)`, `isRateLimit(response)`. Nếu validator trả về challenge/rate-limit:
+     - *No-auth platforms:* throw `RateLimitError` để xoay IP (rotate proxy) ngay cả khi HTTP status là 200.
+     - *Auth-required platforms:* throw `BotChallengeError`/`RateLimitError`, quarantine proxy, hibernate tài khoản 15–30 phút, và chuyển `AccountPool` sang tài khoản tiếp theo. Không xoay IP liên tục cho cùng một tài khoản.
   2. Chợ Tốt SĐT: Bỏ qua các số chứa `*` và validate regex số điện thoại Việt Nam hợp lệ.
   3. JSONL Exporter: Tự động sanitize ký tự xuống dòng (`\r\n`) trong `content` trước khi ghi stream.
 
@@ -228,8 +231,9 @@ flowchart TB
 * **Rule:**
   1. **Error Envelope chuẩn:** Mọi lỗi trả về qua MCP/HTTP/CLI phải dùng shape `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
      - `type` là một trong: `rate_limit`, `bot_challenge`, `auth_expired`, `proxy_exhausted`, `hibernation`, `invalid_args`, `internal`.
-     - `suggestedAction` là một trong: `retry_after_delay`, `rotate_proxy`, `relogin`, `wait`, `reduce_rate`, `contact_support`.
-     - Ví dụ: `{ code: 42901, type: 'bot_challenge', message: 'Facebook returned WAF challenge for acct fb:123', retryAfter: 1200, suggestedAction: 'rotate_proxy', accountId: 'fb:123', platform: 'facebook' }`.
+     - `suggestedAction` là một trong: `retry_after_delay`, `rotate_proxy`, `rotate_account`, `hibernate_account`, `relogin`, `wait`, `reduce_rate`, `contact_support`.
+     - Auth-required example: `{ code: 42901, type: 'bot_challenge', message: 'Facebook returned WAF challenge for acct fb:123', retryAfter: 1200, suggestedAction: 'hibernate_account', accountId: 'fb:123', platform: 'facebook' }`.
+     - No-auth example: `{ code: 42902, type: 'rate_limit', message: 'Chotot returned 429 on IP 1.2.3.4', retryAfter: 300, suggestedAction: 'rotate_proxy', platform: 'chotot' }`.
   2. **Action Discovery Contract:** Mỗi platform crawler phải implement `listActions(): ActionDescriptor[]` trả về `{ action, description, requiredArgs, optionalArgs, example, outputType }`. MCP cung cấp tool `x_actions_list` và CLI cung cấp `xactions actions --platform <platform>`.
   3. **Governor Status API:** `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
   4. **Legacy CLI Mapping:** Các lệnh cũ của `unfollowx` (`x_get_followers`, `x_unfollow_non_followers`, v.v.) được map vào `CrawlerCommand` với `{ action: '<mapped>', platform: 'twitter' }`. Nếu lệnh cũ không còn hỗ trợ, trả về error envelope với `suggestedAction: 'use_x_actions_list'`.

@@ -23,6 +23,7 @@ export { SessionManager, globalSessionManager } from './session-manager.js';
 export { AccountPool, globalAccountPool } from './account-pool.js';
 export { StatusApi } from './status-api.js';
 export { AdaptiveRateGovernor, PlatformRateLimit } from './adaptive-governor.js';
+export { AbstractPlatformResponseValidator } from './platform-validator.js';
 export { PreSignedTokenRing, SignerWorkerPagePool } from './signer-pool.js';
 export {
   CATEGORIES,

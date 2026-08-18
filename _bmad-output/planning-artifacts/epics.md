@@ -157,7 +157,10 @@ So that **request gửi đi luôn sử dụng IP sống, an toàn và không b�
 * **Given** danh sách proxy đầu vào (HTTP/HTTPS/SOCKS5)
 * **When** khởi tạo `ProxyIpPool` (`src/proxy/proxy-pool.js`)
 * **Then** tự động cấu hình `remote DNS resolution` và cờ browser `--force-webrtc-ip-handling-policy=disable_non_proxied_udp`
-* **And** tự động làm mới IP nếu thời gian sống còn lại dưới 30 giây (buffer window).
+* **And** hỗ trợ hai chế độ lấy proxy:
+  - `getStickyProxy(accountId)` — trả về cùng một proxy cho một tài khoản (auth-required platforms).
+  - `getNext()` — round-robin trên các proxy khỏe (no-auth platforms, residential rotation).
+* **And** tự động làm mới IP nếu thời gian sống còn lại dưới 30 giây (buffer window) hoặc proxy bị quarantine.
 
 ### Story 11.2: Static & Dynamic Residential Tunnel Proxy Providers
 As a **Scale-Out Scraper**,
@@ -168,6 +171,8 @@ So that **tôi có thể linh hoạt sử dụng các nhà cung cấp proxy ph�
 * **Given** chuỗi cấu hình proxy dạng URL `http://user:pass@host:port`
 * **When** khởi tạo `StaticProxyProvider` hoặc `DynamicTunnelProvider` trong `src/proxy/providers.js`
 * **Then** hệ thống parse chính xác hostname, port, username, password và scheme
+* **And** `StaticProxyProvider` phù hợp cho auth-required platforms (sticky IP per account) hoặc nhóm proxy cố định.
+* **And** `DynamicTunnelProvider` phù hợp cho no-auth platforms (residential IP xoay per-request) hoặc khi cần đổi IP mỗi request.
 * **And** tích hợp tương thích với `undici.ProxyAgent` và `playwright.chromium.launch({ proxy })`.
 
 ### Story 11.3: 429/403 Auto-Quarantine, Standby Backoff & Exponential Replay Interceptor
@@ -179,7 +184,8 @@ So that **toàn bộ pipeline không bao giờ bị crash khi nền tảng kích
 * **Given** một HTTP request trả về mã trạng thái `429 Too Many Requests` hoặc `403 Forbidden`
 * **When** interceptor bắt được lỗi
 * **Then** proxy hiện tại bị đưa vào `failedProxies` cách ly trong 5 phút
-* **And** hệ thống tự động rút proxy mới từ pool và thực hiện retry request tối đa 3 lần với exponential backoff (1s, 2s, 4s)
+* **And** cho no-auth platforms: rút proxy mới từ pool (`getNext()`) và retry request tối đa 3 lần với exponential backoff (1s, 2s, 4s)
+* **And** cho auth-required platforms: giữ nguyên account, lấy proxy mới (`getStickyProxy(accountId)` với proxy fallback), hoặc nếu rate-limit do account thì chuyển `AccountPool.getNextAvailable(platform)` và retry với account mới
 * **And** nếu toàn bộ proxy trong pool bị cách ly ➔ Chuyển sang trạng thái Standby Backoff (chờ 30s) và cảnh báo thay vì loop vô tận.
 
 ### Story 11.4: Adaptive Infrastructure-Aware Rate Limiter & Account Protection Governor
@@ -192,7 +198,8 @@ So that **hệ thống không bị quá tải khi Proxy xoay không kịp và tr
 * **When** số lượng Proxy khả dụng trong `ProxyIpPool` thay đổi hoặc tài khoản gặp cảnh báo WAF
 * **Then** tự động điều chỉnh tốc độ cào toàn cục: `maxReqPerSecond = healthyProxyCount * platform.baseReqPerSecondPerProxy * platform.throttleFactor` (giảm nhịp 50% nếu proxy sống giảm 50%)
 * **And** nếu Proxy sống rơi vào mức báo động (< 5 IPs) ➔ Tự động tạm dừng cào bulk, ưu tiên on-demand queries
-* **And** tự động đưa tài khoản vào chế độ Ngủ đông (Hibernation) 15–30 phút khi nhận mã thử thách Captcha/WAF
+* **And** cho auth-required platforms: mỗi tài khoản có token bucket `safeRequestsPerMinute`; tự động đưa tài khoản vào Hibernation 15–30 phút khi gặp Captcha/WAF; `AccountPool` tự động chuyển sang tài khoản tiếp theo khi account hiện tại đạt giới hạn hoặc hibernation
+* **And** cho no-auth platforms: tốc độ giới hạn theo proxy/IP, không cần hibernation account; nếu IP bị ban, quarantine và rotate proxy
 * **And** hãm tốc độ cào khi hàng đợi Redis Stream `stream:social:raw_posts` vượt quá 10,000 unread messages (Consumer Lag Backpressure)
 * **And** cung cấp `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 

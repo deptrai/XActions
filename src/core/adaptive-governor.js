@@ -11,6 +11,9 @@ export class PlatformRateLimit {
   /** @type {string} */
   platform;
 
+  /** @type {boolean} */
+  requiresAuth = true;
+
   /** @type {number} */
   safeRequestsPerMinute = 30;
 
@@ -76,6 +79,22 @@ export class AdaptiveRateGovernor {
    */
   setPlatformLimit(platform, limits = {}) {
     this.#platformLimits.set(platform, new PlatformRateLimit(platform, limits));
+  }
+
+  /**
+   * @param {string} platform
+   * @returns {PlatformRateLimit}
+   */
+  getPlatformLimit(platform) {
+    return this.#platformLimits.get(platform) || new PlatformRateLimit(platform);
+  }
+
+  /**
+   * @param {string} platform
+   * @returns {boolean}
+   */
+  isAuthRequired(platform) {
+    return this.getPlatformLimit(platform).requiresAuth;
   }
 
   /**

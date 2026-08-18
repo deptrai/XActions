@@ -21,7 +21,7 @@ Hội đồng Thẩm định BMad (Product Management, Architecture, Engineering
 * **Độ bao phủ Yêu cầu (Traceability):** **100%** (22/22 Functional Requirements FR64 ➔ FR84 và 6/6 NFRs).
 * **Tính toàn vẹn Kiến trúc (Spine Integrity):** **100% Aligned** giữa XActions (`AD-1` ➔ `AD-11`) và Nowing (`AD-SOC-1` ➔ `AD-SOC-11`).
 * **Tính sẵn sàng của User Stories:** **24/24 Stories** đạt chuẩn cấu trúc *Given/When/Then* với tiêu chí nghiệm thu định lượng (Acceptance Criteria) và các kịch bản bọc thép phòng vệ (Adaptive Infrastructure Rate Limiter, Fault Injection, Anti-Bot, Deadlock Prevention, Thin Events).
-* **Cơ Chế Bảo Vệ Hạ Tầng (Adaptive Rate Limiter):** Đã bổ sung `Story 11.4` bảo đảm tự động điều tốc theo số lượng Proxy sống và đưa tài khoản vào chế độ Ngủ đông khi gặp thử thách, triệt tiêu 100% rủi ro die account hàng loạt.
+* **Cơ Chế Bảo Vệ Hạ Tầng (Adaptive Rate Limiter):** Đã bổ sung `Story 11.5` định nghĩa pipeline tích hợp `ProxyIpPool` + `AccountPool` với hai chế độ: (1) auth-required platforms dùng sticky IP + xoay tài khoản khi rate-limit/hibernation; (2) no-auth platforms dùng rotating residential IP. `Story 11.4` điều tốc theo số lượng Proxy sống và đưa tài khoản vào chế độ Ngủ đông khi gặp thử thách.
 
 ---
 
@@ -31,8 +31,8 @@ Hội đồng Thẩm định BMad (Product Management, Architecture, Engineering
 |:---:|:---|:---:|:---|:---:|
 | **FR64** | Core Domain Interfaces & Standard Error Hierarchy | **Epic 10** | Story 10.1 (`src/core/base-crawler.js`, `errors.js`) | ✅ **100% Covered** |
 | **FR65** | Tiered Hybrid Scraping Engine (Token Ring + Worker Page Pool) | **Epic 13** | Story 13.1 (`src/core/base-client.js`, `signer-pool.js`) | ✅ **100% Covered** |
-| **FR66** | Centralized Resilient Proxy Pool, Auto-Quarantine & Standby Backoff | **Epic 11** | Story 11.1, 11.2, 11.3 (`src/proxy/**`, `interceptor.js`) | ✅ **100% Covered** |
-| **FR66B** | Adaptive Infrastructure Rate Limiter & Account Hibernation | **Epic 11** | Story 11.4 (`src/core/rate-governor.js`) | ✅ **100% Covered** |
+| **FR66** | Centralized Resilient Proxy Pool, Auto-Quarantine & Standby Backoff | **Epic 11** | Story 11.1, 11.2, 11.3, 11.5 (`src/proxy/**`, `src/core/account-pool.js`, `interceptor.js`) | ✅ **100% Covered** |
+| **FR66B** | Adaptive Infrastructure Rate Limiter & Account Hibernation | **Epic 11** | Story 11.4, 11.5 (`src/core/adaptive-governor.js`, `src/core/account-pool.js`) | ✅ **100% Covered** |
 | **FR67** | Namespaced PostgreSQL Storage & JSONB GIN Indexes | **Epic 10** | Story 10.2 (`prisma/schema.prisma`, `PrismaStore`) | ✅ **100% Covered** |
 | **FR68** | Terminal ASCII QR Code Login Module | **Epic 12** | Story 12.1 (`src/utils/qrcode.js`) | ✅ **100% Covered** |
 | **FR69** | CDP Remote Attach (Port 9222) with Gaussian Jitter | **Epic 12** | Story 12.2 (`src/core/base-crawler.js`) | ✅ **100% Covered** |
@@ -60,7 +60,7 @@ Hội đồng Thẩm định BMad (Product Management, Architecture, Engineering
 |---|---|---|:---:|
 | **NFR11** | Giảm ≥85% RAM & ≥70% CPU | Bỏ render DOM trình duyệt; dùng `undici` + 1 page idle ký token ngầm. | 🟢 **ĐẠT** |
 | **NFR12** | Tăng throughput ≥5x–10x (>500 req/s) | Async HTTP Client với Connection Pool và Pre-Signed Token Ring Buffer O(1). | 🟢 **ĐẠT** |
-| **NFR13** | Tự phục hồi Proxy (Auto-Failover) | Cách ly IP lỗi 5 phút; Replay exponential backoff 3 lần; Adaptive Rate Throttling. | 🟢 **ĐẠT** |
+| **NFR13** | Tự phục hồi Proxy (Auto-Failover) | Cách ly IP lỗi 5 phút; Sticky IP cho auth-required platforms; Rotate residential IP cho no-auth platforms; Replay exponential backoff 3 lần; Adaptive Rate Throttling. | 🟢 **ĐẠT** |
 | **NFR14** | Bảo mật Phi Mật Khẩu (Zero-Credential) | Terminal ASCII QR Code (Story 12.1) + CDP Remote Attach Port 9222 (Story 12.2). | 🟢 **ĐẠT** |
 | **NFR15** | Kiến Trúc Sạch (Clean Hexagonal) | Lớp `src/core/` đạt chuẩn Zero-Dependency thuần ESM. | 🟢 **ĐẠT** |
 | **NFR16** | Tương thích ngược & Bản quyền MIT | Bảo toàn 100% chữ ký lệnh CLI `unfollowx` và 80+ công cụ MCP hiện hữu. | 🟢 **ĐẠT** |
@@ -71,7 +71,7 @@ Hội đồng Thẩm định BMad (Product Management, Architecture, Engineering
 
 1. **AD-1 (Tiered Hybrid Signer):** Token phiên O(1) từ Buffer + Worker Pool 4–8 tabs ngầm có `Promise.race()` 3s timeout.
 2. **AD-2 (Unified Abstract Interfaces):** Mọi crawler kế thừa `AbstractCrawler` và `AbstractApiClient`.
-3. **AD-3 (Anti-Leak Proxy Pool):** Bắt buộc cờ `--force-webrtc-ip-handling-policy=disable_non_proxied_udp` và Remote DNS.
+3. **AD-3 (Anti-Leak Proxy Pool):** Bắt buộc cờ `--force-webrtc-ip-handling-policy=disable_non_proxied_udp` và Remote DNS. Hỗ trợ 2 chế độ: sticky IP cho auth-required platforms, rotating IP cho no-auth platforms.
 4. **AD-4 (Namespaced PostgreSQL & JSONB GIN):** Khóa chính dạng `${platform}:${externalId}`, cột `metadata Json?` có GIN Index.
 5. **AD-5 (Non-Invasive Auth):** Terminal QR hiển thị 1:1 có đếm ngược 60s; CDP Mode hỗ trợ Gaussian Jitter (3–7s).
 6. **AD-6 (Topological Comment Insertion):** Lưu RootComments trước, SubComments sau theo depth, chống tham chiếu vòng.
@@ -79,7 +79,7 @@ Hội đồng Thẩm định BMad (Product Management, Architecture, Engineering
 8. **AD-8 (Multi-Domain Directory):** Phân chia module rõ ràng: `social/`, `ecom/`, `realestate/`, `recruitment/`, `b2b/`.
 9. **AD-9 (Anti-Bot False 200 OK & Data Sanitization):** Kiểm tra `error !== 0` trên HTTP 200, loại bỏ SĐT masked `***`, sanitize `\r\n` cho JSONL.
 10. **AD-10 (3-Tier Incremental Gap-Filling & Retention Policy):** Cào bù khoảng trống theo timestamp/cursor; dữ liệu thô XActions lưu 30 ngày (TTL), Nowing lưu Leads vĩnh viễn.
-11. **AD-11 (Adaptive Infrastructure Rate Limiting & Account Protection):** Tự động điều tốc theo tỷ lệ Proxy sống (`Max Throughput = Healthy Proxies * SafeRatePerIP`) và đưa tài khoản vào chế độ Ngủ đông 15–30 phút khi gặp thử thách, triệt tiêu 100% rủi ro die account hàng loạt.
+11. **AD-11 (Adaptive Infrastructure Rate Limiting & Account Protection):** Tự động điều tốc theo tỷ lệ Proxy sống (`Max Throughput = Healthy Proxies * SafeRatePerIP`). Auth-required platforms: sticky IP + `AccountPool` tự động chuyển tài khoản khi đạt giới hạn hoặc bị hibernation 15–30 phút. No-auth platforms: rotate residential IP per request.
 
 ---
 

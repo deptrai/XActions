@@ -20,6 +20,8 @@ export const ErrorTypes = Object.freeze({
 export const SuggestedActions = Object.freeze({
   RETRY_AFTER_DELAY: 'retry_after_delay',
   ROTATE_PROXY: 'rotate_proxy',
+  ROTATE_ACCOUNT: 'rotate_account',
+  HIBERNATE_ACCOUNT: 'hibernate_account',
   RELOGIN: 'relogin',
   WAIT: 'wait',
   REDUCE_RATE: 'reduce_rate',
