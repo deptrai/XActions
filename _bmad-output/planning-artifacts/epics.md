@@ -8,7 +8,7 @@ inputDocuments:
   - '../nowing/_bmad-output/planning-artifacts/architecture/architecture-xactions-social-integration-2026-08-15/ARCHITECTURE-SPINE.md'
 ---
 
-# XActions Universal Hybrid Scraping & Automation Engine — Epic Breakdown (Epics 10–18)
+# XActions Universal Hybrid Scraping & Automation Engine — Epic Breakdown (Epics 10–19)
 
 ## Overview
 
@@ -23,7 +23,7 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 * **FR64 (Core Abstraction):** Hệ thống phải cung cấp các cổng trừu tượng chuẩn hóa (`AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore`, `ISignerBridge`) làm khung cơ sở cho mọi nền tảng.
 * **FR65 (Tiered Hybrid Scraping Engine):** Hệ thống phải hỗ trợ cơ chế thực thi lai kết hợp Pre-Signed Token Ring Buffer O(1) và Worker Page Pool cho chữ ký động (`page.evaluate()` với timeout 3s) cùng Async HTTP Client (`got-scraping`/`undici`) với TLS/JA4 Spoofing.
 * **FR66A (Resilient Anti-Leak Proxy Pool):** Hệ thống phải quản lý tập trung danh sách Proxy (Static & Dynamic Tunnel) với cờ chống rò rỉ WebRTC/DNS, tự động validate, tính buffer expiration, và tự động cách ly (quarantine) IP lỗi 5 phút.
-* **FR66B (Adaptive Infrastructure Rate Limiter & Account Protection Governor):** Hệ thống phải tự động điều tốc nhịp cào theo tỷ lệ Proxy sống (`Max Throughput = Healthy Proxies * SafeRatePerIP`), áp dụng Leaky Bucket và đưa tài khoản vào chế độ Ngủ đông (Hibernation) 15–30 phút khi gặp thử thách bảo vệ để triệt tiêu 100% nguy cơ die account hàng loạt.
+* **FR66B (Adaptive Infrastructure Rate Limiter & Account Protection Governor):** Hệ thống phải tự động điều tốc nhịp cào theo tỷ lệ Proxy sống (`Max Throughput = Healthy Proxies * SafeRatePerIP`), áp dụng Leaky Bucket và đưa tài khoản vào chế độ Ngủ đông (Hibernation) 15–30 phút khi gặp thử thách bảo vệ để giảm nguy cơ die tài khoản hàng loạt (không đảm bảo 100%).
 * **FR67 (Namespaced PostgreSQL Storage & JSONB GIN Indexes):** Hệ thống phải lưu trữ toàn bộ bài viết (`Post`) và cây bình luận phân cấp (`Comment`) tập trung vào PostgreSQL qua Prisma ORM với quy ước Namespaced ID `${platform}:${externalId}`, cột `metadata Json?` có GIN Index và hỗ trợ batch transaction chunked 500 records.
 * **FR68 (Terminal QR Login):** Hệ thống CLI/MCP phải hỗ trợ hiển thị mã QR ASCII chuẩn 1:1 trên Terminal console qua `qrcode-terminal` có countdown 60s, timeout 120s và polling cookie ngầm.
 * **FR69 (CDP Remote Attach):** Hệ thống phải hỗ trợ kết nối trực tiếp vào trình duyệt Chrome thật của người dùng qua cổng `--remote-debugging-port=9222` kèm Gaussian jitter (3–7s) để triệt tiêu nguy cơ checkpoint (LinkedIn, TopCV, Twitter).
@@ -40,7 +40,7 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 * **FR80 (TopCV Recruitment Scraper):** Cào tin tuyển dụng, JD chi tiết, mức lương và thông tin công ty trên TopCV.
 * **FR81 (VietnamWorks Job Scraper):** Cào tin tuyển dụng IT và Executive trên VietnamWorks qua API public / HTML parser.
 * **FR82 (LinkedIn Lead & Job Scraper):** Cào thông tin ứng viên, công ty và bài đăng tuyển dụng trên LinkedIn qua CDP Attach Port 9222.
-* **FR83 (Nowing Thin Event Stream Ingest):** Phát luồng dữ liệu cào dạng Thin Event Pointers (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 20000`) cho Nowing AI Hub.
+* **FR83 (Nowing Thin Event Stream Ingest):** Phát luồng dữ liệu cào dạng Thin Event Pointers (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 1000000` hoặc `MINID` theo thời gian, configurable) cho Nowing AI Hub.
 * **FR84 (Nowing Scrapers Cutover & Decommissioning):** Nâng cấp adapter Nowing sang Daemon MCP HTTP/SSE (Port 3001) và dọn dẹp, loại bỏ toàn bộ 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
 
 ### NonFunctional Requirements
@@ -63,13 +63,16 @@ So that **mọi platform crawler và adapter trong tương lai đều có kiến
 
 **Acceptance Criteria:**
 * **Given** thư mục `src/core/` (100% Pure ESM, Zero-Dependency)
-* **When** module `src/core/base-crawler.js`, `base-client.js`, `base-store.js`, `base-login.js`, và `errors.js` được nạp
+* **When** module `src/core/base-crawler.js`, `base-client.js`, `base-store.js`, `base-login.js`, `errors.js`, `error-envelope.js`, `status-api.js`, `session-manager.js`, và `action-registry.js` được nạp
 * **Then** các class phải định nghĩa đầy đủ phương thức trừu tượng:
   - `AbstractCrawler`: `init()`, `start()`, `search()`, `getPostDetail()`, `getComments()`, `cleanup()`
   - `AbstractApiClient`: `request()`, `sign()`, `updateCookies()` (đảm bảo immutable context cho từng tác vụ)
   - `AbstractStore`: `init()`, `storeContent(post)`, `storeBatch(posts)`, `storeComment(comment)`, `storeCommentBatch(comments)`, `close()`
+  - `AbstractCrawler.listActions(): ActionDescriptor[]` để AI/CLI khám phá action theo platform.
 * **And** ném lỗi `Method not implemented` nếu lớp con chưa override khi khởi tạo qua `new.target`
-* **And** toàn bộ error classes kế thừa từ `PlatformError` cung cấp các trường: `statusCode`, `platform`, `isRetryable` (boolean), và `retryAfterMs` (number).
+* **And** toàn bộ error classes kế thừa từ `PlatformError` cung cấp các trường: `statusCode`, `platform`, `isRetryable` (boolean), `retryAfterMs` (number), `suggestedAction`.
+* **And** `AbstractErrorEnvelope` chuẩn hóa shape trả về: `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
+* **And** `GovernorStatusApi` định nghĩa shape `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 
 ### Story 10.2: Prisma Post & Comment Schema with Namespaced ID, JSONB GIN & Batch Chunking
 As a **Backend & Platform Engineer**,
@@ -78,10 +81,11 @@ So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung
 
 **Acceptance Criteria:**
 * **Given** file `prisma/schema.prisma` của dự án XActions
-* **When** định nghĩa model `Post` (gồm `id` Namespaced, `platform`, `externalId`, `category`, `authorId`, `authorName`, `content`, `mediaUrls`, `likesCount`, `repostsCount`, `repliesCount`, `viewsCount`, `metadata Json?`, `publishedAt`, `crawledAt`) và `Comment` (gồm `id` Namespaced, `postId`, `parentCommentId`, `authorId`, `authorName`, `content`, `metadata Json?`, quan hệ tự tham chiếu `@relation("CommentReplies")`)
-* **Then** migration được sinh hợp lệ, tạo ràng buộc `@@unique([platform, externalId])`, GIN index trên `metadata`, và Expression Index trên `phone`/`price`
-* **And** `PrismaStore` (`src/store/prisma-store.js`) thực hiện upsert bài viết và bình luận theo batch chunk 500 bản ghi qua `prisma.$transaction()` đảm bảo tốc độ >5,000 records/s.
-* **And** các model legacy (`TweetSnapshot`, `EngagementDaily`, `FollowerSnapshot`, `FollowerChange`) được đánh dấu `// @deprecated — sẽ xóa bỏ sau khi Story 13.2 (Twitter Refactor) chạy ổn định` trong `prisma/schema.prisma`, giữ nguyên backward compatibility trong Phase 1.
+* **When** định nghĩa model `Post` (gồm `id` Namespaced, `platform`, `externalId`, `category`, `authorId`, `authorName`, `content`, `mediaUrls String[]`, `likesCount`, `repostsCount`, `repliesCount`, `viewsCount`, `metadata Json?`, `publishedAt`, `crawledAt`), `Comment` (gồm `id` Namespaced, `platform`, `externalId`, `postId`, `parentCommentId`, `depth`, `authorId`, `authorName`, `content`, `metadata Json?`, quan hệ tự tham chiếu `@relation("CommentReplies")`), và `CrawlCheckpoint` (`@@unique([platform, targetType, targetKey])`)
+* **Then** migration được sinh hợp lệ, tạo ràng buộc `@@unique([platform, externalId])` trên `Post`, `@@unique([platform, externalId, postId])` trên `Comment`, GIN index trên `metadata` (raw SQL migration), và Expression Index trên `phone`/`price`/`salary`
+* **And** `PrismaStore` (`src/store/prisma-store.js`) thực hiện upsert bài viết và bình luận theo batch chunk 500 bản ghi; mặc định dùng `createMany` + `skipDuplicates`, benchmark trước khi dùng 500 `upsert` trong transaction.
+* **And** `CheckpointApi` cung cấp `GET/POST /checkpoints` và CLI `xactions checkpoints *` cho resume/pause/retry.
+* **And** `MetadataSchemaRegistry` publish JSON Schema cho từng `platform/category` tại `schemas/<platform>/<category>.json` và API `GET /schemas/:platform/:category`.
 
 ### Story 10.3: AI Dataset Export Utility (Streaming JSONL & CSV with Sanitization)
 As an **AI Engineer / Data Scientist**,
@@ -139,12 +143,13 @@ I want **hệ thống tự động tính toán Throughput cào dựa trên số 
 So that **hệ thống không bị quá tải khi Proxy xoay không kịp và triệt tiêu 100% nguy cơ die tài khoản hàng loạt**.
 
 **Acceptance Criteria:**
-* **Given** module `AdaptiveRateGovernor` trong `src/core/rate-governor.js`
+* **Given** module `AdaptiveRateGovernor` trong `src/core/adaptive-governor.js`
 * **When** số lượng Proxy khả dụng trong `ProxyIpPool` thay đổi hoặc tài khoản gặp cảnh báo WAF
-* **Then** tự động điều chỉnh tốc độ cào toàn cục: `Max Throughput = Healthy Proxies * SafeRatePerIP` (giảm nhịp 50% nếu proxy sống giảm 50%)
-* **And** nếu Proxy sống rơi vào mức báo động (< 5 IPs) ➔ Tự động tạm dừng cào ngầm, ưu tiên toàn bộ proxy cho On-Demand User Search
+* **Then** tự động điều chỉnh tốc độ cào toàn cục: `maxReqPerSecond = healthyProxyCount * platform.baseReqPerSecondPerProxy * platform.throttleFactor` (giảm nhịp 50% nếu proxy sống giảm 50%)
+* **And** nếu Proxy sống rơi vào mức báo động (< 5 IPs) ➔ Tự động tạm dừng cào bulk, ưu tiên on-demand queries
 * **And** tự động đưa tài khoản vào chế độ Ngủ đông (Hibernation) 15–30 phút khi nhận mã thử thách Captcha/WAF
-* **And** hãm tốc độ cào khi hàng đợi Redis Stream `stream:social:raw_posts` vượt quá 10,000 unread messages (Consumer Lag Backpressure).
+* **And** hãm tốc độ cào khi hàng đợi Redis Stream `stream:social:raw_posts` vượt quá 10,000 unread messages (Consumer Lag Backpressure)
+* **And** cung cấp `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 
 ---
 
@@ -158,8 +163,11 @@ So that **tôi có thể dùng app điện thoại quét mã đăng nhập tức
 **Acceptance Criteria:**
 * **Given** URL hoặc base64 image của mã QR đăng nhập
 * **When** gọi `displayTerminalQrCode(data)` trong `src/utils/qrcode.js`
-* **Then** mã QR hiển thị gọn gàng (`small: true`) kèm thanh đếm ngược 60s
+* **Then** mã QR hiển thị gọn gàng (`small: true` hoặc tự động nhỏ lại khi terminal width < 80 cols) kèm thanh đếm ngược 60s
 * **And** vòng lặp nền `checkLoginState()` tự động kiểm tra cookie mỗi 1 giây và tự động hủy timer sau 120s timeout nếu không quét
+* **And** phát hiện `process.stdout.isTTY`; nếu non-TTY, in URL + short code và hướng dẫn quét trên thiết bị khác
+* **And** hỗ trợ CLI flags `--qr-url`, `--push` (webhook/notification), và `--cdp`
+* **And** thông báo lỗi rõ ràng: `[QR EXPIRED] ...`, `[ACCOUNT CHECKPOINTED] ...`
 * **And** tự động lưu cookie vào session storage khi đăng nhập thành công và dọn dẹp terminal.
 
 ### Story 12.2: CDP Remote Attach Mode with Launch Helper & Gaussian Jitter
@@ -236,9 +244,13 @@ So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 
 **Acceptance Criteria:**
 * **Given** Daemon MCP Server `src/mcp/server.js` lắng nghe trên cổng `http://localhost:3001/mcp`
-* **When** AI Agent hoặc Nowing gọi tool `x_crawl_post` hoặc `x_crawl_comments_tree` qua HTTP/SSE
+* **When** AI Agent hoặc Nowing gọi tool `x_crawl_post`, `x_crawl_comments_tree`, `x_actions_list` qua HTTP/SSE
 * **Then** response trả về JSON Envelope chuẩn: `{ success, platform, meta, data (top 20-30), summary, error? }` với độ trễ phản hồi < 2ms
 * **And** nếu tổng số records > 100 ➔ Tự động lưu file dataset JSONL và trả về trường `meta.datasetArtifactPath` để AI đọc chọn lọc.
+* **And** `x_actions_list` trả về `ActionDescriptor[]` với `{ action, description, requiredArgs, optionalArgs, example, outputType }`.
+* **And** error envelope chuẩn hóa: `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
+* **And** health check endpoint `GET /health` và CLI `xactions daemon status/start/stop`.
+* **And** legacy CLI commands `unfollowx` được map vào `CrawlerCommand` hoặc trả error `suggestedAction: 'use_x_actions_list'`.
 
 ### Story 14.3: Realtime Thin Event Redis Stream for Nowing AI Lead Hub
 As a **Nowing Platform Orchestrator**,
@@ -248,8 +260,11 @@ So that **Nowing backend có thể chạy background NLP Intent Extractor theo t
 **Acceptance Criteria:**
 * **Given** cấu hình `REDIS_STREAM_ENABLED=true`
 * **When** bất kỳ crawler nào hoàn tất cào một batch bài viết/bình luận
-* **Then** phát event `XADD stream:social:raw_posts MAXLEN ~ 20000 * payload <json>`
+* **Then** phát event `XADD stream:social:raw_posts MAXLEN ~ 1000000 * payload <json>` (hoặc `MINID` theo thời gian, configurable)
 * **And** payload chỉ chứa Thin Event: `{ id, platform, externalId, category, authorId, crawledAt, storageRef }`.
+* **And** `GET /metrics/stream` trả về `{ eventsPerSecond, pendingMessages, consumerLag, droppedEvents, lastAckTime, maxLen, minId }`.
+* **And** cảnh báo khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s` qua webhook/email.
+* **And** log `throttle_reason: redis_lag` khi governor giảm nhịp do consumer lag.
 
 ### Story 14.4: Nowing Daemon Client Cutover & Legacy Scrapers Decommissioning
 As a **Lead System Architect**,
@@ -383,3 +398,45 @@ So that **tôi có thể tạo danh sách khách hàng doanh nghiệp B2B chất
 * **Then** crawler sử dụng phiên đăng nhập LinkedIn có sẵn để cào thông tin profile, title, company
 * **And** áp dụng Gaussian delay ngẫu nhiên (3–7s) và kiểm tra màn hình checkpoint challenge
 * **And** lưu trữ vào PostgreSQL.
+
+---
+
+## Epic 19: Web SaaS Dashboard & Operational Observability
+
+### Story 19.1: Dashboard Jobs & Checkpoints View
+As an **Operations Manager**,
+I want **một dashboard view hiển thị toàn bộ jobs crawl, checkpoints, trạng thái resume/pause/failed và tiến độ last cursor/timestamp**,
+So that **tôi có thể giám sát và điều khiển pipeline cào mà không cần gõ lệnh terminal**.
+
+**Acceptance Criteria:**
+* **Given** dashboard Express server (`dashboard/` hoặc route `/dashboard`)
+* **When** mở view "Jobs & Checkpoints"
+* **Then** hiển thị bảng checkpoints với cột `platform`, `targetKey`, `status`, `lastCrawledAt`, `lastCursor`, `errorCount`
+* **And** hỗ trợ actions `resume`, `pause`, `retry` mỗi checkpoint qua API `POST /checkpoints/:id/{action}`
+* **And** cập nhật real-time mỗi 30s (SSE hoặc polling).
+
+### Story 19.2: Dashboard Proxies & Accounts View
+As an **Automation Operator**,
+I want **một dashboard view hiển thị sức khỏe proxy pool, danh sách tài khoản đang hibernation, và tốc độ cào hiện tại**,
+So that **tôi biết khi nào cần thêm proxy, rotate account, hoặc chờ hibernation kết thúc**.
+
+**Acceptance Criteria:**
+* **Given** view "Proxies & Accounts"
+* **When** load trang
+* **Then** hiển thị `healthyProxyCount / totalProxyCount`, `currentReqPerSecond`, `redisConsumerLag`, `throttleLevel`
+* **And** hiển thị danh sách `hibernatingAccounts` với `remainingTime` và `reason`
+* **And** hỗ trợ actions `quarantine/release` proxy và `wake` account (manual override)
+* **And** cập nhật real-time mỗi 5s.
+
+### Story 19.3: Dashboard Stream Metrics & Alerts View
+As a **Reliability Engineer**,
+I want **một dashboard view hiển thị Redis Stream throughput, consumer lag, dropped events và alerts**,
+So that **tôi phát hiện sớm khi Nowing consumer chậm hoặc stream bị drop dữ liệu**.
+
+**Acceptance Criteria:**
+* **Given** view "Stream Metrics & Alerts"
+* **When** load trang
+* **Then** hiển thị chart `eventsPerSecond`, `pendingMessages`, `consumerLag`, `droppedEvents`, `lastAckTime`
+* **And** hiển thị danh sách cảnh báo đang active với ngưỡng `pendingMessages > 50,000` hoặc `lastAckTime > 60s`
+* **And** cập nhật real-time mỗi 5s.
+* **And** hỗ trợ cấu hình alert channel (`ALERT_WEBHOOK`, `ALERT_EMAIL`).
