@@ -7,7 +7,7 @@ paradigm: 'Hexagonal / Ports & Adapters + Tiered Hybrid Signer Pool + Dual-Chann
 scope: 'XActions Universal Scraping Engine: Social Media, E-Commerce, Real Estate, Recruitment, Proxy Network, PostgreSQL Storage with JSONB GIN Indexes, MCP HTTP/SSE Daemon, Redis Streams, and Adaptive Account Protection'
 status: final
 created: '2026-08-18'
-updated: '2026-08-18T22:55:00Z'
+updated: '2026-08-18T23:15:00Z'
 binds:
   - 'src/core/**'
   - 'src/scrapers/**'
@@ -213,6 +213,18 @@ flowchart TB
   4. **Consumer Lag Backpressure:** Khi Redis Stream pending > 10,000 messages, giảm nhịp cào bulk xuống 25% cho tới khi lag < 5,000.
   5. **No Direct IP Leak:** Mọi request phải qua `ProxyIpPool`; governor không bao giờ cho phép fallback direct connection.
 
+### AD-14 — Operational Status & Error Envelope for Consumers [ADOPTED - NEW]
+* **Binds:** `src/mcp/**`, `src/api/**`, `src/cli/**`, `src/core/error-envelope.js`, `src/core/status-api.js`
+* **Prevents:** AI agents, CLI users, và operators nhận lỗi không đồng nhất hoặc bị "silent stall" khi hệ thống tự điều tiết; hai surface khác nhau (MCP, HTTP, CLI) trả về status/error shape khác nhau.
+* **Rule:**
+  1. **Error Envelope chuẩn:** Mọi lỗi trả về qua MCP/HTTP/CLI phải dùng shape `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
+     - `type` là một trong: `rate_limit`, `bot_challenge`, `auth_expired`, `proxy_exhausted`, `hibernation`, `invalid_args`, `internal`.
+     - `suggestedAction` là một trong: `retry_after_delay`, `rotate_proxy`, `relogin`, `wait`, `reduce_rate`, `contact_support`.
+     - Ví dụ: `{ code: 42901, type: 'bot_challenge', message: 'Facebook returned WAF challenge for acct fb:123', retryAfter: 1200, suggestedAction: 'rotate_proxy', accountId: 'fb:123', platform: 'facebook' }`.
+  2. **Action Discovery Contract:** Mỗi platform crawler phải implement `listActions(): ActionDescriptor[]` trả về `{ action, description, requiredArgs, optionalArgs, example, outputType }`. MCP cung cấp tool `x_actions_list` và CLI cung cấp `xactions actions --platform <platform>`.
+  3. **Governor Status API:** `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
+  4. **Legacy CLI Mapping:** Các lệnh cũ của `unfollowx` (`x_get_followers`, `x_unfollow_non_followers`, v.v.) được map vào `CrawlerCommand` với `{ action: '<mapped>', platform: 'twitter' }`. Nếu lệnh cũ không còn hỗ trợ, trả về error envelope với `suggestedAction: 'use_x_actions_list'`.
+
 ---
 
 ## 3. Inherited Invariants (from Nowing Parent Spine)
@@ -354,4 +366,5 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((meta
 * AD-11: CrawlerCommand & ActionRegistry.
 * AD-12: CrawlCheckpoint State.
 * AD-13: Adaptive Infrastructure-Aware Rate Limiting & Account Protection Governor.
+* AD-14: Operational Status & Error Envelope for Consumers (từ UX review r3).
 * Thêm section Inherited Invariants, Deferred, Open Questions.
