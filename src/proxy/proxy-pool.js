@@ -1,6 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * ProxyIpPool — centralized proxy management with quarantine and validation.
+ * ProxyIpPool — centralized proxy management with quarantine, validation,
+ * and two allocation strategies: sticky (per-account) and round-robin (no-auth).
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -11,6 +12,12 @@ export class ProxyIpPool {
 
   /** @type {Map<string, number>} */
   #quarantined = new Map();
+
+  /** @type {Map<string, any>} */
+  #stickyMap = new Map();
+
+  /** @type {number} */
+  #roundRobinIndex = 0;
 
   /** @type {Set<string>} */
   #antiLeakFlags = new Set([
@@ -54,10 +61,11 @@ export class ProxyIpPool {
 
   /**
    * @param {any} proxy
+   * @param {number} [now]
    * @returns {boolean}
    */
   #isQuarantined(proxy, now = Date.now()) {
-    const key = JSON.stringify(proxy);
+    const key = this.#key(proxy);
     const until = this.#quarantined.get(key);
     if (!until) return false;
     if (now >= until) {
@@ -69,20 +77,64 @@ export class ProxyIpPool {
 
   /**
    * @param {any} proxy
+   * @returns {string}
+   */
+  #key(proxy) {
+    return typeof proxy === 'string' ? proxy : JSON.stringify(proxy);
+  }
+
+  /**
+   * @param {any} proxy
    */
   add(proxy) {
     this.#proxies.push(this.#normalize(proxy));
   }
 
   /**
+   * Get a proxy for no-auth platforms (round-robin over healthy proxies).
    * @returns {any | null}
    */
   getNext() {
     const now = Date.now();
-    for (const proxy of this.#proxies) {
-      if (!this.#isQuarantined(proxy, now)) return proxy;
+    const healthy = this.#proxies.filter((p) => !this.#isQuarantined(p, now));
+    if (!healthy.length) return null;
+    const proxy = healthy[this.#roundRobinIndex % healthy.length];
+    this.#roundRobinIndex = (this.#roundRobinIndex + 1) % healthy.length;
+    return proxy;
+  }
+
+  /**
+   * Get a sticky proxy for an authenticated account.
+   * Returns the same proxy for the same account unless it is quarantined.
+   * @param {string} accountId
+   * @returns {any | null}
+   */
+  getStickyProxy(accountId) {
+    const now = Date.now();
+    const existing = this.#stickyMap.get(accountId);
+    if (existing && !this.#isQuarantined(existing, now)) {
+      return existing;
     }
-    return null;
+    const healthy = this.#proxies.filter((p) => !this.#isQuarantined(p, now));
+    if (!healthy.length) return null;
+    // Use account hash to pick deterministically, fallback to round-robin
+    const index = this.#hashAccount(accountId) % healthy.length;
+    const proxy = healthy[index];
+    this.#stickyMap.set(accountId, proxy);
+    return proxy;
+  }
+
+  /**
+   * @param {string} accountId
+   * @returns {number}
+   */
+  #hashAccount(accountId) {
+    let hash = 0;
+    for (let i = 0; i < accountId.length; i++) {
+      hash = ((hash << 5) - hash) + accountId.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash);
   }
 
   /**
@@ -90,8 +142,14 @@ export class ProxyIpPool {
    * @param {number} [durationMs]
    */
   quarantine(proxy, durationMs = 5 * 60 * 1000) {
-    const key = JSON.stringify(proxy);
+    const key = this.#key(proxy);
     this.#quarantined.set(key, Date.now() + durationMs);
+    // Remove any sticky bindings using this proxy
+    for (const [accountId, assigned] of this.#stickyMap) {
+      if (this.#key(assigned) === key) {
+        this.#stickyMap.delete(accountId);
+      }
+    }
   }
 
   /**

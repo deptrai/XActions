@@ -198,23 +198,25 @@ So that **hệ thống không bị quá tải khi Proxy xoay không kịp và tr
 
 ### Story 11.5: End-to-End Anti-Bot & Rate-Limit Defense Pipeline
 As a **Reliability Engineer**,
-I want **wire `AbstractApiClient`, `ProxyIpPool`, `AdaptiveRateGovernor` và `PlatformResponseValidator` thành một pipeline duy nhất để tự động phát hiện bot/rate-limit, rotate proxy, hibernate account, và retry có kiểm soát**,
-So that **hệ thống scrape nhanh nhất có thể mà không bị nền tảng detect bot hoặc die tài khoản hàng loạt**.
+I want **wire `AbstractApiClient`, `ProxyIpPool`, `AdaptiveRateGovernor`, `AccountPool` và `PlatformResponseValidator` thành một pipeline duy nhất, với 2 chiến lược rõ ràng: sticky IP cho tài khoản và rotating IP cho no-auth platforms**,
+So that **hệ thống scrape nhanh nhất có thể mà không bị nền tảng detect bot, ban IP, hoặc die tài khoản hàng loạt**.
 
 **Acceptance Criteria:**
-* **Given** `AbstractApiClient` được khởi tạo với `proxyPool`, `governor`, `sessionManager` và platform-specific `PlatformResponseValidator`
+* **Given** `AbstractApiClient` được khởi tạo với `proxyPool`, `governor`, `accountPool`, `sessionManager` và platform-specific `PlatformResponseValidator`
 * **When** gọi `request(method, url, options)`
 * **Then** hệ thống thực hiện tuần tự:
-  1. `governor.canAccountRequest(accountId, platform)` — từ chối nếu account đang hibernation hoặc vượt `safeRequestsPerMinute`.
-  2. `proxyPool.getNext()` — lấy proxy lành mạnh tiếp theo; nếu `isAllQuarantined()` thì vào Standby Backoff 30s và throw `ProxyDeadError`.
-  3. Gửi request qua proxy agent (`undici.ProxyAgent` / `socks-proxy-agent` / Playwright browser context tùy platform).
-  4. `governor.recordRequest(accountId)` — ghi nhận request vào sliding window.
-  5. `PlatformResponseValidator.isValidPayload(response)` / `isBotChallenge(response)` / `isRateLimit(response)` — parse body dù HTTP status là 200.
+  1. Xác định `requiresAuth` của platform. Nếu `true` → lấy `accountId` từ `accountPool.getNextAvailable(platform)`; kiểm tra `governor.canAccountRequest(accountId, platform)`; nếu hibernation thì chuyển account.
+  2. Nếu `requiresAuth` → `proxyPool.getStickyProxy(accountId)` (sticky IP cho tài khoản). Nếu `!requiresAuth` → `proxyPool.getNext()` (round-robin / residential rotation per request).
+  3. Nếu proxy bị quarantine hoặc `isAllQuarantined()` → Standby Backoff 30s và throw `ProxyDeadError`.
+  4. Gửi request qua proxy agent (`undici.ProxyAgent` / `socks-proxy-agent` / Playwright browser context tùy platform).
+  5. `governor.recordRequest(accountId)` — ghi nhận request vào sliding window.
+  6. `PlatformResponseValidator.isValidPayload(response)` / `isBotChallenge(response)` / `isRateLimit(response)` — parse body dù HTTP status là 200.
 * **And** nếu `isRateLimit` hoặc HTTP 429/403 → throw `RateLimitError`, `proxyPool.quarantine(proxy)`, retry tối đa 3 lần với proxy mới và exponential backoff 1s, 2s, 4s.
-* **And** nếu `isBotChallenge` hoặc WAF/captcha → throw `BotChallengeError`, `proxyPool.quarantine(proxy, 5 phút)`, `governor.hibernateAccount(accountId, 'bot_challenge', 15–30 phút)`, rotate proxy và không retry ngay.
-* **And** `AbstractCrawler.start(command)` gọi `governor.recordRequest()` và kiểm tra `governor.canAccountRequest()` trước mỗi action; nếu vượt `getMaxThroughput(platform)` thì delay hoặc bỏ qua batch.
+* **And** nếu `isBotChallenge` hoặc WAF/captcha → throw `BotChallengeError`, `proxyPool.quarantine(proxy, 5 phút)`, `governor.hibernateAccount(accountId, 'bot_challenge', 15–30 phút)`, `accountPool.markUnavailable(accountId)` và chuyển sang account/proxy tiếp theo.
+* **And** `AbstractCrawler.start(command)` gọi `governor.recordRequest()` và kiểm tra `governor.canAccountRequest()` / `governor.getMaxThroughput(platform)` trước mỗi action.
+* **And** Auth-required platforms (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) sử dụng sticky IP; no-auth platforms (Batdongsan, Chotot, v.v.) sử dụng rotating residential proxy.
 * **And** không bao giờ fallback về direct connection khi proxy fail; mọi request phải qua `ProxyIpPool`.
-* **And** tạo `src/core/platform-validator.js` với `AbstractPlatformResponseValidator` để các scraper con implement `isValidPayload`, `isBotChallenge`, `isRateLimit`.
+* **And** tạo `src/core/account-pool.js`, cập nhật `src/core/platform-validator.js` với `AbstractPlatformResponseValidator` để các scraper con implement `isValidPayload`, `isBotChallenge`, `isRateLimit`.
 
 ---
 

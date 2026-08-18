@@ -20,6 +20,7 @@ export {
 } from './error-envelope.js';
 export { ActionRegistry, globalActionRegistry } from './action-registry.js';
 export { SessionManager, globalSessionManager } from './session-manager.js';
+export { AccountPool, globalAccountPool } from './account-pool.js';
 export { StatusApi } from './status-api.js';
 export { AdaptiveRateGovernor, PlatformRateLimit } from './adaptive-governor.js';
 export { PreSignedTokenRing, SignerWorkerPagePool } from './signer-pool.js';

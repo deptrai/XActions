@@ -1,6 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * AbstractApiClient — platform-agnostic HTTP client contract.
+ * Supports two proxy strategies:
+ *  - requiresAuth=true  → sticky IP per account (via ProxyIpPool.getStickyProxy)
+ *  - requiresAuth=false → rotating residential IP per request (via ProxyIpPool.getNext)
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -10,6 +13,9 @@ import { PlatformError } from './error-envelope.js';
 export class AbstractApiClient {
   /** @type {string} */
   name = 'base';
+
+  /** @type {boolean} */
+  requiresAuth = true;
 
   /** @type {any} */
   httpClient = null;
@@ -21,6 +27,8 @@ export class AbstractApiClient {
    * @param {Object} [options]
    * @param {import('./session-manager.js').SessionManager} [options.sessionManager]
    * @param {import('../proxy/proxy-pool.js').ProxyIpPool} [options.proxyPool]
+   * @param {import('./account-pool.js').AccountPool} [options.accountPool]
+   * @param {import('./adaptive-governor.js').AdaptiveRateGovernor} [options.governor]
    */
   constructor(options = {}) {
     if (new.target === AbstractApiClient) {
@@ -28,6 +36,23 @@ export class AbstractApiClient {
     }
     this.sessionManager = options.sessionManager;
     this.proxyPool = options.proxyPool;
+    this.accountPool = options.accountPool;
+    this.governor = options.governor;
+  }
+
+  /**
+   * Resolve the correct proxy for the request:
+   * - authenticated platforms: sticky IP per account
+   * - no-auth platforms: rotating IP from pool
+   * @param {string} [accountId]
+   * @returns {any | null}
+   */
+  resolveProxy(accountId) {
+    if (!this.proxyPool) return null;
+    if (this.requiresAuth && accountId) {
+      return this.proxyPool.getStickyProxy(accountId);
+    }
+    return this.proxyPool.getNext();
   }
 
   /**
