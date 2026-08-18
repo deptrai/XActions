@@ -1,17 +1,17 @@
 ---
-title: "PRD: Epics 10–18 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform"
+title: "PRD: Epics 10–20 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform"
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 status: approved
 author: "John (BMad Product Manager) & Winston (BMad System Architect)"
-epics: [10, 11, 12, 13, 14, 15, 16, 17, 18]
+epics: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 prd_ref:
   - prd-XActions-2026-06-08
   - prd-XActions-2026-06-10-epic4
   - prd-XActions-2026-08-14-epic7
 ---
 
-# PRD: Epics 10–18 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform
+# PRD: Epics 10–20 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform
 
 *Chuyển đổi toàn diện XActions thành Nền tảng Động cơ Cào Dữ liệu Toàn Năng (Universal Scraping Microservice) đa ngành: Mạng Xã Hội (X, Facebook, Threads, TikTok, Instagram), Thương Mại Điện Tử (Shopee, TikTok Shop), Bất Động Sản (Chợ Tốt bóc tách SĐT, Batdongsan.com.vn), và Tuyển Dụng (TopCV, VietnamWorks, LinkedIn).*
 
@@ -129,3 +129,41 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 ---
 
 *Tài liệu PRD chính thức được phê duyệt bởi Hội đồng Quản trị Sản phẩm BMad ngày 18/08/2026.*
+
+---
+
+## 7. Phụ Lục — Cập Nhật Sau Readiness Assessment (2026-08-19)
+
+### 7.1. Yêu cầu chức năng bổ sung (FR-85 ➔ FR-88)
+
+*Các yêu cầu dưới đây xuất hiện trong kiến trúc và epic nhưng chưa được gán số FR cho đến khi re-assessment hoàn tất.*
+
+* **FR-85 (Internal Operator Dashboard & Admin CLI):** Cung cấp giao diện vận hành nội bộ (web dashboard + CLI `xactions admin`) để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. Auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth.
+* **FR-86 (Metadata Schema Contract for Consumers):** Mỗi platform/category phải publish JSON Schema hoặc TypeScript type cho `Post.metadata`; consumer có thể lấy schema qua API `GET /schemas/:platform/:category`, MCP tool `x_schema_get`, và CLI `xactions schema get`. `PrismaStore` validate `metadata` against schema khi ghi.
+* **FR-87 (Data Retention Policy):** Dữ liệu raw crawl (bản gốc thu thập) lưu trong XActions với TTL 30 ngày; dữ liệu lead/processed output đẩy sang Nowing được giữ vĩnh viễn. Lịch sử checkpoints và audit logs giữ 90 ngày.
+* **FR-88 (3-Tier Incremental Gap-Filling):** Cào theo mô hình 3 tầng: (1) full seed, (2) delta/gap fill theo `publishedAt`/`lastCrawledAt`, (3) on-demand refresh; loại bỏ 100% duplication và tiết kiệm 90% chi phí proxy so với full re-crawl.
+
+### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17)
+
+* **NFR-17 (Operational Observability):** Hệ thống phải expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling mỗi 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`.
+
+### 7.3. Lộ trình phân kỳ cập nhật
+
+Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forward dependency:
+
+* **Phase 1: Foundation & Resilient Infrastructure (Stories 10.1 ➔ 10.5, 11.1 ➔ 11.7, 12.1 ➔ 12.2)**
+* **Phase 2: Hybrid Signer, Social Flagships & Event Stream (Stories 13.1 ➔ 13.3, 14.1 ➔ 14.3)**
+* **Phase 3: Viral Social & E-Commerce Expansion (Stories 15.1 ➔ 15.2, 16.1 ➔ 16.2)**
+* **Phase 4: High-Value Localized Leads & B2B Recruitment (Stories 17.1 ➔ 17.2, 18.1 ➔ 18.3)**
+* **Phase 5: Operational Observability & Nowing Cutover (Stories 19.1 ➔ 19.8, 20.1)**
+
+### 7.4. Traceability ngắn gọn
+
+| Epic | FR chính |
+|---|---|
+| Epic 19 | FR-85 |
+| Epic 20 | FR-84 |
+| Story 10.5 | FR-86 |
+| Data Retention | FR-87 |
+| 3-Tier Gap-Filling | FR-88 |
+| Stream Metrics / Alerts | NFR-17 |

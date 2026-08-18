@@ -136,11 +136,10 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 
 ### PRD Completeness Assessment
 
-- ✅ PRD is concise and aligned with Epics 10–18.
-- ✅ 21 FRs and 6 NFRs are explicitly numbered and grouped by Epic.
-- ⚠️ FR-66 / FR-66B overlap slightly with Story 11.5 newly-added anti-bot pipeline (will verify in epic coverage).
-- ⚠️ PRD still refers to 4 phases (10–18) without Epic 19–20; operator dashboard/admin CLI and Nowing cutover added after PRD approval.
-- ⚠️ Data retention and 3-tier gap-filling are in PRD but not labeled as FR/NFR.
+- ✅ PRD is concise and aligned with Epics 10–20.
+- ✅ 25 FRs and 7 NFRs are explicitly numbered and grouped by Epic (including addendum).
+- ✅ FR-66 / FR-66B / FR-88 / NFR-13 traced through Epic 11 (Stories 11.1, 11.3, 11.4, 11.5, 11.6, 11.7).
+- ✅ PRD addendum (Section 7) covers Epic 19–20, data retention, 3-tier gap-filling, metadata schema contract, and observability.
 
 ---
 
@@ -177,15 +176,15 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 
 - ✅ **21/21 PRD FRs are mapped** to at least one epic and user story.
 - ✅ **Naming inconsistency resolved:** `epics.md` đã đổi `FR66A` thành `FR66` để khớp PRD.
-- ⚠️ **Epic 19 & 20 not in PRD:** Admin/Operator dashboard, CLI, API, MCP (Stories 19.1–19.8) và Nowing cutover (Story 20.1) không nằm trong PRD. Đây là scope mới cần PRD addendum hoặc operational requirements.
-- ⚠️ **Data Retention Policy** and **3-Tier Incremental Gap-Filling** are in PRD Section 5 but not explicitly labeled as FRs. If they are intended to be requirements, they should be added as FR85/FR86 or NFRs.
+- ✅ **Epic 19 & 20 now in PRD addendum (Section 7):** FR-85 (Internal Operator Dashboard & Admin CLI), FR-84 remains Epic 20, FR-86 (Metadata Schema), FR-87 (Data Retention), FR-88 (3-Tier Gap-Filling), and NFR-17 (Observability) added.
+- ✅ **NFR traceability added:** `epics.md` now includes NFR Traceability Matrix mapping NFR11–NFR17 to specific stories.
 
 ### Coverage Statistics
 
-- Total PRD FRs: **21**
-- FRs covered in epics: **21**
+- Total PRD FRs: **25** (FR-64 to FR-88)
+- FRs covered in epics: **25**
 - Coverage percentage: **100%**
-- New scope outside PRD: **Epic 19 (8 stories)**
+- New scope outside PRD: **None** — Epic 19–20 covered by PRD addendum
 
 ---
 
@@ -215,14 +214,14 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 
 | UX Finding | Architecture Decision | Status |
 |---|---|---|
-| F1 | AD-7 covers MCP daemon but not startup UX / `xactions daemon` command | ⚠️ Gap |
-| F2 | AD-5 covers QR login but no non-TTY fallback | ⚠️ Gap |
+| F1 | AD-7 now adds Rule 5: Startup & Operational UX with `xactions daemon start/status/stop` and dashboard tile; Story 14.2 covers CLI daemon commands | ✅ Aligned |
+| F2 | AD-5 Rule 1 and Story 12.1 AC explicitly detect `process.stdout.isTTY` and print URL + short code for non-TTY with `--push` fallback | ✅ Aligned |
 | F3 | AD-13 + Story 11.4 define `GET /governor/status` and `xactions status` | ✅ Aligned |
 | F4 | AD-10 + Story 10.4 + Epic 19 define `/checkpoints`, `xactions checkpoints` | ✅ Aligned |
 | F5 | AD-11 + Story 10.1 `AbstractCrawler.listActions()` | ✅ Aligned |
 | F6 | AD-9 + `PlatformError.toEnvelope()` with `suggestedAction` | ✅ Aligned |
 | F7 | AD-17 + Epic 19.3 stream metrics view | ✅ Aligned |
-| F8 | AD-4 does not yet require published JSON Schema for `metadata` | ⚠️ Gap |
+| F8 | AD-4 Rule 6 now requires JSON Schema/TypeScript type per platform/category; Story 10.5 implements `metadata-schema-registry.js`, `/schemas` API and validation | ✅ Aligned |
 | F9 | AD-19 now defines Internal Operator Dashboard with 5 views | ✅ Aligned |
 | F10 | AD-2 Rule 4 backward compatibility for legacy CLI | ✅ Aligned |
 
@@ -234,9 +233,8 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 
 ### UX Alignment Verdict
 
-- ✅ **7/10 findings** are aligned or addressed by updated architecture/epics.
-- ⚠️ **3/10 findings** (F1, F2, F8) remain as gaps and should be explicitly scheduled.
-- ⚠️ **Internal operator dashboard scope** is new and should be approved as post-PRD operational requirements.
+- ✅ **10/10 findings** are aligned or addressed by updated architecture/epics.
+- ⚠️ **Internal operator dashboard scope** is now covered by FR-85 / Epic 19 and AD-19.
 
 ---
 
@@ -335,7 +333,7 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 
 ### Overall Readiness Status
 
-**READY with reservations** *(updated after remediation — see Final Re-Assessment below)*
+**READY** *(updated after remediation — see Final Re-Assessment below)*
 
 Hệ thống có nền tảng kiến trúc và yêu cầu rất tốt. Các forward dependencies nghiêm trọng đã được xử lý trong remediation; một số vấn đề nhỏ còn lại được ghi nhận ở Final Re-Assessment.
 
@@ -413,7 +411,7 @@ Báo cáo chi tiết được lưu tại:
 
 ### Updated Readiness
 
-With the critical forward dependencies removed and setup story eliminated, the plan is now structurally feasible. **Overall Readiness Status: READY with reservations** — pending PRD addendum and final split of Story 11.5 if required.
+With the critical forward dependencies removed, setup story eliminated, PRD addendum completed, NFRs traced, Story 11.5 split, and UX gaps closed, **Overall Readiness Status: READY**.
 
 ---
 
@@ -450,13 +448,13 @@ Re-run `bmad-check-implementation-readiness` focused on the critical issues iden
 
 ### Remaining Reservations
 
-1. **PRD addendum required** for Epic 19 (admin/operator dashboard) and Epic 20 (Nowing cutover), plus data retention / 3-tier gap-filling labels.
-2. **NFRs not explicitly traced** to individual story ACs — should add per-story NFR acceptance criteria.
-3. **Story 11.5** is still an integration story with multi-step AC. It is no longer a forward-dependency blocker, but could be split further for better sprint sizing.
-4. **Minor UX gaps** F1, F2, F8 remain (daemon startup UX, non-TTY QR, metadata schema contract).
+1. ✅ **PRD addendum completed** — PRD `Section 7` now includes FR-85 to FR-88 and NFR-17.
+2. ✅ **NFR traceability completed** — `epics.md` includes NFR Traceability Matrix mapping NFR11–NFR17 to stories.
+3. ✅ **Story 11.5 split** — Replaced with Stories 11.5 (Request Pipeline), 11.6 (Rate-Limit/Bot Defense), and 11.7 (Crawler-Governor Integration).
+4. ✅ **UX gaps F1, F2, F8 closed** — AD-7 Rule 5 (daemon startup UX), AD-5 Rule 1 (non-TTY QR), AD-4 Rule 6 (metadata schema contract) now align with stories.
 
 ### Final Readiness Sign-Off
 
-**Status: READY with reservations**
+**Status: READY**
 
-The epic/story structure is now implementable. No critical forward dependencies or setup milestone block the start of Phase 4. The remaining items are documentation/scope-clarification tasks that can be addressed in parallel with implementation.
+All critical issues, forward dependencies, PRD gaps, NFR traceability, and UX alignment items identified in the initial assessment have been resolved. The epic/story structure is implementation-ready for Phase 4.

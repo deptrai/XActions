@@ -152,12 +152,13 @@ flowchart TB
   3. Cột `metadata Json?` yêu cầu **GIN Index** (`CREATE INDEX USING gin (metadata)`) và Expression Index cho các trường lọc trọng điểm (`price`, `phone`, `salary`). Vì Prisma 5.x không hỗ trợ `USING gin` natively, index phải được tạo qua raw migration SQL và theo dõi trong `prisma/migrations/`.
   4. Mọi thao tác ghi hàng loạt chunk theo lô 500 records. Chiến lược mặc định là `createMany` + `skipDuplicates` kèm `updateMany` cho conflict; `prisma.$transaction()` 500 lệnh `upsert` chỉ dùng khi benchmark xác nhận đạt >5,000 records/s.
   5. `Post.mediaUrls` là `String[]` (PostgreSQL native array) hoặc `Json?` nếu cần object metadata; không dùng JSON-stringified `String`.
+  6. *Metadata Schema Contract:* Mỗi `platform`/`category` phải publish JSON Schema hoặc TypeScript type cho `metadata`. Consumer có thể lấy schema qua `GET /schemas/:platform/:category`, MCP `x_schema_get`, hoặc CLI `xactions schema get`. `PrismaStore` validate `metadata` against schema khi ghi; mismatch trả `invalid_args`.
 
 ### AD-5 — Non-Invasive Authentication via Terminal QR & CDP Attach [ADOPTED]
 * **Binds:** `src/core/base-login.js`, `src/utils/qrcode.js`, `src/core/session-manager.js`
 * **Prevents:** Tình trạng checkpoint, khóa tài khoản do login từ IP/thiết bị lạ, hoặc trải nghiệm kém khi phải copy-paste cookie thủ công.
 * **Rule:**
-  1. *Terminal QR Login:* Render mã QR ASCII tỷ lệ 1:1 chuẩn (`small: true`), có countdown timer 60s, timeout 120s và fallback URL. Yêu cầu package `qrcode-terminal` trong `package.json`.
+  1. *Terminal QR Login:* Render mã QR ASCII tỷ lệ 1:1 chuẩn (`small: true`), có countdown timer 60s, timeout 120s và fallback URL. Phát hiện `process.stdout.isTTY`; nếu non-TTY (headless server/Docker/CI), in URL + short code kèm hướng dẫn quét trên thiết bị khác hoặc gửi push/webhook. Yêu cầu package `qrcode-terminal` trong `package.json`.
   2. *CDP Attach Mode:* Kết nối vào Chrome thật qua cổng 9222; Chrome phải được launch với `--remote-debugging-port=9222` và `--user-data-dir=<dedicated>` để tránh xung đột profile. Áp dụng độ trễ phân phối ngẫu nhiên Gaussian Jitter (3–7s) khi cào LinkedIn/TopCV để tránh bị phát hiện.
   3. *AbstractLogin Contract:* Mọi implementation QR/CDP/cookie phải trả về cùng shape `{ accountId, cookies, tokens, expiresAt }`. Một `SessionManager` duy nhất giữ trạng thái và cung cấp cho `AbstractApiClient` và MCP tools.
   4. *Sticky IP per Account:* Auth-required platforms (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) buộc một tài khoản gắn với một proxy cố định trong suốt session. `SessionManager` lưu `accountId`; `ProxyIpPool.getStickyProxy(accountId)` trả về proxy được gán. Không được tự động xoay IP mỗi request cho tài khoản đã đăng nhập.
@@ -177,11 +178,12 @@ flowchart TB
   2. *Integration Contract:* URL gốc là `/mcp`, session id do `StreamableHTTPServerTransport` sinh, health check tại `GET /health`, auth qua header `Authorization: Bearer <token>` hoặc mTLS. Nowing client giữ session id trong cache và reconnect SSE khi disconnect.
   3. *Redis Stream Bulk Ingest:* XActions phát Thin Event Pointers (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào `stream:social:raw_posts`. Kích thước stream theo `MINID` hoặc `MAXLEN ~ 1000000` (configurable) thay vì 20,000; tốc độ bulk ingestion phụ thuộc vào consumer capacity và được kiểm soát bởi AD-13.
   4. *Durability:* Mọi event phát đi phải được ghi vào `CrawlCheckpoint` trước. Nowing đọc qua Consumer Group (`nowing_nlp_workers`) và xác nhận qua `XACK`.
+  5. *Startup & Operational UX:* MCP Daemon phải cung cấp CLI commands `xactions daemon start/status/stop` và dashboard tile hiển thị daemon state (running/stopped/error). Startup script `mcp:daemon` phải in log rõ ràng với URL `http://localhost:3001/mcp` và `GET /health`.
 
 ### AD-8 — Multi-Domain Expansion Blueprint [ADOPTED]
 * **Binds:** `src/scrapers/**`
 * **Prevents:** Mọi platform thêm mới đặt sai vị trí hoặc team implement các domain ngoài phạm vi Epic.
-* **Rule:** Tổ chức module theo Domain rõ ràng, giới hạn trong phạm vi Epics 10–18. Mỗi crawler khai báo `requiresAuth` để hệ thống chọn sticky IP + account rotation hoặc rotating residential IP:
+* **Rule:** Tổ chức module theo Domain rõ ràng, giới hạn trong phạm vi Epics 10–20. Mỗi crawler khai báo `requiresAuth` để hệ thống chọn sticky IP + account rotation hoặc rotating residential IP:
   - `src/scrapers/social/` (requires auth): Twitter, Facebook, Threads, TikTok.
   - `src/scrapers/ecom/` (requires auth): Shopee, TikTok Shop.
   - `src/scrapers/realestate/` (no auth): Chợ Tốt, Batdongsan.com.vn.
@@ -420,7 +422,7 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((meta
 * AD-5: Khôi phục `AbstractLogin` contract + `SessionManager`, yêu cầu `qrcode-terminal` package.
 * AD-6: Giữ depth topological sort.
 * AD-7: Nâng cấp thành Dual-Channel (HTTP/SSE daemon + Redis Stream), sửa `MAXLEN`/`MINID`, thêm integration contract.
-* AD-8: Giới hạn scope về các platform của Epics 10–18.
+* AD-8: Giới hạn scope về các platform của Epics 10–20.
 * AD-9: Khôi phục `PlatformResponseValidator`.
 * AD-10: Khôi phục `CrawlCheckpoint` và retention enforcement.
 * AD-11: CrawlerCommand & ActionRegistry.

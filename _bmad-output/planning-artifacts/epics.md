@@ -42,6 +42,10 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 * **FR82 (LinkedIn Lead & Job Scraper):** Cào thông tin ứng viên, công ty và bài đăng tuyển dụng trên LinkedIn qua CDP Attach Port 9222.
 * **FR83 (Nowing Thin Event Stream Ingest):** Phát luồng dữ liệu cào dạng Thin Event Pointers (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 1000000` hoặc `MINID` theo thời gian, configurable) cho Nowing AI Hub.
 * **FR84 (Nowing Scrapers Cutover & Decommissioning):** Nâng cấp adapter Nowing sang Daemon MCP HTTP/SSE (Port 3001) và dọn dẹp, loại bỏ toàn bộ 20+ scraper cũ cùng browser dependencies khỏi Nowing backend. (Epic 20)
+* **FR85 (Internal Operator Dashboard & Admin CLI):** Cung cấp dashboard nội bộ và CLI `xactions admin` để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. (Epic 19)
+* **FR86 (Metadata Schema Contract for Consumers):** Mỗi platform/category publish JSON Schema cho `Post.metadata` và API/CLI/MCP discovery. (Story 10.5)
+* **FR87 (Data Retention Policy):** Dữ liệu raw crawl TTL 30 ngày; leads/processed output vĩnh viễn; checkpoints/audit logs 90 ngày. (Story 10.2, Epic 19)
+* **FR88 (3-Tier Incremental Gap-Filling):** Cào theo mô hình full seed → delta/gap fill → on-demand refresh; 0% duplication; 90% proxy cost saving. (Epic 10, 11)
 
 ### NonFunctional Requirements
 
@@ -51,6 +55,7 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 * **NFR14 (Zero-Credential Security):** Bảo mật tuyệt đối thông tin phiên của người dùng; hỗ trợ đăng nhập không cần mật khẩu trực tiếp qua QR Code hoặc CDP Attach.
 * **NFR15 (Clean Architecture & Extensibility):** Tách biệt 100% giữa Core domain contracts và Implementation adapters; việc thêm nền tảng mới không làm thay đổi core logic.
 * **NFR16 (License & Backward Compatibility):** 100% mã nguồn tuân thủ giấy phép tự do (MIT / Apache 2.0); giữ nguyên khả năng tương thích ngược với CLI `unfollowx` và toàn bộ 80+ MCP tools hiện có.
+* **NFR17 (Operational Observability):** Hệ thống expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`.
 
 ---
 
@@ -222,10 +227,10 @@ So that **hệ thống không bị quá tải khi Proxy xoay không kịp và tr
 * **And** hãm tốc độ cào khi hàng đợi Redis Stream `stream:social:raw_posts` vượt quá 10,000 unread messages (Consumer Lag Backpressure)
 * **And** cung cấp `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 
-### Story 11.5: End-to-End Anti-Bot & Rate-Limit Defense Pipeline
+### Story 11.5: End-to-End Request Pipeline (Two-Mode IP Strategy)
 As a **Reliability Engineer**,
-I want **wire `AbstractApiClient`, `ProxyIpPool`, `AdaptiveRateGovernor`, `AccountPool` và `PlatformResponseValidator` thành một pipeline duy nhất, với 2 chiến lược rõ ràng: sticky IP cho tài khoản và rotating IP cho no-auth platforms**,
-So that **hệ thống scrape nhanh nhất có thể mà không bị nền tảng detect bot, ban IP, hoặc die tài khoản hàng loạt**.
+I want **`AbstractApiClient` wire `ProxyIpPool`, `AdaptiveRateGovernor` và `AccountPool` thành một pipeline rõ ràng: sticky IP cho tài khoản auth-required và rotating IP cho no-auth platforms**,
+So that **mọi request đều đi qua proxy đúng chế độ mà không bao giờ fallback về direct connection**.
 
 **Acceptance Criteria:**
 * **Given** `AbstractApiClient` được khởi tạo với `proxyPool`, `governor`, `accountPool`, `sessionManager` và platform-specific `PlatformResponseValidator`
@@ -237,12 +242,32 @@ So that **hệ thống scrape nhanh nhất có thể mà không bị nền tản
   4. Gửi request qua proxy agent (`undici.ProxyAgent` / `socks-proxy-agent` / Playwright browser context tùy platform).
   5. `governor.recordRequest(accountId)` — ghi nhận request vào sliding window.
   6. `PlatformResponseValidator.isValidPayload(response)` / `isBotChallenge(response)` / `isRateLimit(response)` — parse body dù HTTP status là 200.
-* **And** nếu `isRateLimit` hoặc HTTP 429/403 → throw `RateLimitError`, `proxyPool.quarantine(proxy)`, retry tối đa 3 lần với proxy mới và exponential backoff 1s, 2s, 4s.
-* **And** nếu `isBotChallenge` hoặc WAF/captcha → throw `BotChallengeError`, `proxyPool.quarantine(proxy, 5 phút)`, `governor.hibernateAccount(accountId, 'bot_challenge', 15–30 phút)`, `accountPool.markUnavailable(accountId)` và chuyển sang account/proxy tiếp theo.
-* **And** `AbstractCrawler.start(command)` gọi `governor.recordRequest()` và kiểm tra `governor.canAccountRequest()` / `governor.getMaxThroughput(platform)` trước mỗi action.
 * **And** Auth-required platforms (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) sử dụng sticky IP; no-auth platforms (Batdongsan, Chotot, v.v.) sử dụng rotating residential proxy.
 * **And** không bao giờ fallback về direct connection khi proxy fail; mọi request phải qua `ProxyIpPool`.
-* **And** cập nhật `src/core/platform-validator.js` với `AbstractPlatformResponseValidator` để các scraper con implement `isValidPayload`, `isBotChallenge`, `isRateLimit`.
+
+### Story 11.6: Rate-Limit & Bot-Challenge Defense (Quarantine, Retry, Hibernation)
+As a **Reliability Engineer**,
+I want **hệ thống tự động xử lý 429/403 và WAF/captcha bằng cách cách ly proxy, retry với proxy mới, và đưa tài khoản vào hibernation**,
+So that **hệ thống không die hàng loạt khi nền tảng kích hoạt bảo vệ**.
+
+**Acceptance Criteria:**
+* **Given** `AbstractApiClient` pipeline đã chạy
+* **When** nhận `isRateLimit` hoặc HTTP 429/403
+* **Then** throw `RateLimitError`, `proxyPool.quarantine(proxy)`, retry tối đa 3 lần với proxy mới và exponential backoff 1s, 2s, 4s.
+* **And** khi `isBotChallenge` hoặc WAF/captcha → throw `BotChallengeError`, `proxyPool.quarantine(proxy, 5 phút)`, `governor.hibernateAccount(accountId, 'bot_challenge', 15–30 phút)`, `accountPool.markUnavailable(accountId)` và chuyển sang account/proxy tiếp theo.
+* **And** toàn bộ proxy bị quarantine → chuyển Standby Backoff 30s thay vì loop vô tận.
+
+### Story 11.7: Crawler-Governor Integration & Platform Response Validator Contract
+As a **Platform Scraper Developer**,
+I want **`AbstractCrawler` kiểm tra governor trước mỗi action và một `AbstractPlatformResponseValidator` contract để scraper con tự implement logic nhận diện bot**,
+So that **mỗi platform có thể định nghĩa riêng payload hợp lệ, WAF, và rate-limit mà không làm rối core**.
+
+**Acceptance Criteria:**
+* **Given** `AbstractCrawler` kế thừa `base-crawler.js`
+* **When** gọi `start(command)`
+* **Then** crawler gọi `governor.recordRequest()` và kiểm tra `governor.canAccountRequest()` / `governor.getMaxThroughput(platform)` trước mỗi action.
+* **And** `src/core/platform-validator.js` định nghĩa `AbstractPlatformResponseValidator` với `isValidPayload(response)`, `isBotChallenge(response)`, `isRateLimit(response)`.
+* **And** ít nhất 2 scraper con (Twitter, Facebook) implement `PlatformResponseValidator` riêng.
 
 ---
 
@@ -622,3 +647,17 @@ So that **Nowing backend được tinh gọn 100%, giảm kích thước Docker 
 * **Then** Nowing nhận đủ 100% dữ liệu qua kiểm thử đối soát (Shadow Run)
 * **And** xóa bỏ an toàn các thư mục scraper cũ trong `nowing_backend/app/proprietary/platforms/` (`shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.)
 * **And** gỡ bỏ các dependency trình duyệt nặng (`selenium`, `playwright-python`, Chromium binaries) khỏi Dockerfile của Nowing.
+
+---
+
+## NFR Traceability Matrix
+
+| NFR | Description | Primary Stories | Validation Approach |
+|---|---|---|---|
+| NFR11 | Resource Optimization (85% RAM, 70% CPU) | 10.2, 13.1, 13.2, 13.3, 15.2, 16.1, 16.2, 17.1, 17.2, 18.1, 18.2, 18.3, 20.1 | Benchmark `process.memoryUsage()` vs legacy headless; Nowing Docker image <500MB |
+| NFR12 | High Throughput (>500 req/s, <2ms RPC) | 13.1, 13.2, 13.3, 14.2, 15.2, 16.1, 16.2, 17.1, 17.2, 18.1, 18.2, 18.3 | Load test with `autocannon`/`k6`; measure req/s and MCP response latency |
+| NFR13 | Resilience & Auto-Failover (proxy retry 3x) | 11.1, 11.3, 11.4, 11.5, 11.6, 11.7 | Simulated 429/403/ProxyDead; verify quarantine, backoff, replay |
+| NFR14 | Zero-Credential Security | 12.1, 12.2 | No plain-text password in DB; QR/CDP auth flows only |
+| NFR15 | Clean Architecture & Extensibility | 10.1, 10.5, 11.1, 14.2 | `src/core/` has zero npm deps; new platform adds only `src/scrapers/<platform>/index.js` |
+| NFR16 | License & Backward Compatibility | 14.2, 20.1 | License headers present; `unfollowx` commands mapped or return actionable error |
+| NFR17 | Operational Observability | 11.4, 14.3, 19.1, 19.2, 19.3, 19.6 | Verify endpoints return metrics; alert fires when thresholds exceeded |
