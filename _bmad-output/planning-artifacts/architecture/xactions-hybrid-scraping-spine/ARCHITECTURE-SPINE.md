@@ -7,7 +7,7 @@ paradigm: 'Hexagonal / Ports & Adapters + Tiered Hybrid Signer Pool + Dual-Chann
 scope: 'XActions Universal Scraping Engine: Social Media, E-Commerce, Real Estate, Recruitment, Proxy Network, PostgreSQL Storage with JSONB GIN Indexes, MCP HTTP/SSE Daemon, Redis Streams, and Adaptive Account Protection'
 status: final
 created: '2026-08-18'
-updated: '2026-08-18T23:15:00Z'
+updated: '2026-08-18T23:25:00Z'
 binds:
   - 'src/core/**'
   - 'src/scrapers/**'
@@ -44,6 +44,7 @@ flowchart TB
         CLI["CLI Tool (unfollowx)"]
         MCP["AI Agents<br/>(Claude / Antigravity / Cursor)"]
         Web["XActions Web SaaS Dashboard<br/>(Express API)"]
+        Alerts["Alerts & Notifications<br/>(Webhook / Email)"]
     end
 
     subgraph XActionsMicroservice ["XActions Universal Scraping Microservice (Daemon Port 3001)"]
@@ -95,6 +96,7 @@ flowchart TB
             EXP["Streaming Exporter (JSONL / CSV)"]
             RS["Reliable Thin Event Redis Stream"]
             CK["CrawlCheckpoint (Gap-Filling State)"]
+            MET["Metrics & Observability<br/>(Stream Lag / Governor / Alerts)"]
         end
     end
 
@@ -103,6 +105,8 @@ flowchart TB
     ScraperAdapters --> SignerLayer
     ScraperAdapters --> NetworkAuth
     ScraperAdapters --> StorageLayer
+    GOV -->|alerts| Alerts
+    MET -->|metrics| Web
 ```
 
 ---
@@ -224,6 +228,50 @@ flowchart TB
   2. **Action Discovery Contract:** Mỗi platform crawler phải implement `listActions(): ActionDescriptor[]` trả về `{ action, description, requiredArgs, optionalArgs, example, outputType }`. MCP cung cấp tool `x_actions_list` và CLI cung cấp `xactions actions --platform <platform>`.
   3. **Governor Status API:** `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
   4. **Legacy CLI Mapping:** Các lệnh cũ của `unfollowx` (`x_get_followers`, `x_unfollow_non_followers`, v.v.) được map vào `CrawlerCommand` với `{ action: '<mapped>', platform: 'twitter' }`. Nếu lệnh cũ không còn hỗ trợ, trả về error envelope với `suggestedAction: 'use_x_actions_list'`.
+
+### AD-15 — Terminal QR Login with Non-TTY Fallback & Clear Auth Feedback [ADOPTED - NEW]
+* **Binds:** `src/core/base-login.js`, `src/utils/qrcode.js`, `src/cli/login.js`
+* **Prevents:** User bị kẹt ở headless server, Docker, CI, hoặc terminal nhỏ; đăng nhập thất bại mà không có actionable message.
+* **Rule:**
+  1. **TTY Detection:** Trước khi render QR ASCII, kiểm tra `process.stdout.isTTY`. Nếu không phải TTY, in URL dạng text kèm short code và hướng dẫn mở trên thiết bị khác.
+  2. **Non-TTY Fallbacks:** Hỗ trợ `xactions login --qr-url` (chỉ in URL), `xactions login --push` (gửi push qua webhook/notification nếu user đã cấu hình), và `xactions login --cdp` (bỏ qua QR).
+  3. **Error Messages:** Nếu timeout 120s, in `[QR EXPIRED] Run again with 'xactions login --qr' or use '--cdp' if you have a running Chrome.` Nếu checkpoint, in `[ACCOUNT CHECKPOINTED] Open browser at <url> or use CDP to solve manually.` (Use plain text with clear prefix, no emoji).
+  4. **Terminal Size Adaptation:** QR ASCII tự động nhỏ lại (`small: true`) khi terminal width < 80 cols.
+
+### AD-16 — CrawlCheckpoint Operational API [ADOPTED - NEW]
+* **Binds:** `src/store/**`, `src/api/**`, `src/cli/**`, `prisma/schema.prisma`
+* **Prevents:** Operator/AI không thấy tiến độ crawl, không resume/pause/retry target, và không debug gap-filling.
+* **Rule:**
+  1. **Checkpoint API:** `GET /checkpoints` trả về list với filter `{ platform, targetType, targetKey, status }`; `GET /checkpoints/:id` chi tiết; `POST /checkpoints/:id/resume`; `POST /checkpoints/:id/pause`; `POST /checkpoints/:id/retry`.
+  2. **CLI Surface:** `xactions checkpoints list`, `xactions checkpoints show <id>`, `xactions checkpoints resume <id>`, `xactions checkpoints pause <id>`.
+  3. **Status Values:** `running`, `paused`, `failed`, `completed`, `stalled`. Mỗi checkpoint hiển thị `lastCrawledAt`, `lastCursor`, `lastTimestamp`, `nextScheduledAt`, `errorCount`.
+
+### AD-17 — Redis Stream Metrics & Backpressure Observability [ADOPTED - NEW]
+* **Binds:** `src/mcp/**`, `src/api/**`, `src/store/**`, `src/utils/metrics.js`
+* **Prevents:** Operator không biết stream đang drop event hoặc Nowing consumer đang lag; hệ thống chạy blind khi bulk throughput thay đổi.
+* **Rule:**
+  1. **Metrics Endpoint:** `GET /metrics/stream` trả về `{ eventsPerSecond, pendingMessages, consumerLag, droppedEvents, lastAckTime, maxLen, minId }`.
+  2. **CLI/Dashboard:** `xactions stream metrics` và dashboard tile "Redis Stream Health".
+  3. **Alert Thresholds:** Cảnh báo khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`. Alert channel cấu hình qua `ALERT_WEBHOOK` hoặc `ALERT_EMAIL`.
+  4. **Backpressure Visibility:** Khi governor kích hoạt backpressure, ghi log/metric `throttle_reason: redis_lag` với `reduced_to_percent`.
+
+### AD-18 — Metadata Schema Contract for Consumers [ADOPTED - NEW]
+* **Binds:** `src/scrapers/**`, `src/store/**`, `src/mcp/**`, `src/api/**`
+* **Prevents:** Nowing consumer không biết field nào có trong `Post.metadata` cho từng platform/category; hai platform tự định nghĩa field trùng tên khác kiểu.
+* **Rule:**
+  1. **Schema Registry:** Mỗi platform/category phải publish JSON Schema cho `metadata` tại `schemas/<platform>/<category>.json` hoặc TypeScript type file.
+  2. **Discovery API:** `GET /schemas` liệt kê tất cả; `GET /schemas/:platform/:category` trả schema. MCP tool `x_schema_get` và CLI `xactions schema get <platform> <category>`.
+  3. **Validation:** `PrismaStore` và exporter validate `metadata` against schema khi ghi; lỗi validation trả về `invalid_args` error envelope với `field` và `expectedType`.
+  4. **Reserved Fields:** Các field `price`, `salary`, `phone`, `rating`, `soldCount`, `skills`, `location` phải dùng kiểu dữ liệu chuẩn hóa trong schema (ví dụ `price: number`, `phone: string`, `location: { region, district }`).
+
+### AD-19 — Web SaaS Dashboard Operational Surface [ADOPTED - NEW]
+* **Binds:** `dashboard/**`, `src/api/**`, `src/core/**`
+* **Prevents:** Dashboard và API diverge về trạng thái hiển thị; operator thiếu single pane of glass để vận hành.
+* **Rule:**
+  1. **Required Views:** Dashboard MVP phải có 5 views: **Jobs**, **Proxies**, **Accounts**, **Checkpoints**, **Stream Metrics**.
+  2. **Data Sources:** Mỗi view lấy dữ liệu từ API tương ứng (`/jobs`, `/governor/status`, `/checkpoints`, `/metrics/stream`). Không truy cập DB trực tiếp từ dashboard.
+  3. **Real-Time Updates:** Các view Jobs, Stream Metrics, Proxies cập nhật mỗi 5s qua SSE hoặc polling. Accounts và Checkpoints cập nhật mỗi 30s.
+  4. **Actions:** Từ dashboard có thể `pause/resume/retry` checkpoints, `quarantine/release` proxies, `wake/hibernate` accounts (manual override).
 
 ---
 
@@ -366,5 +414,10 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((meta
 * AD-11: CrawlerCommand & ActionRegistry.
 * AD-12: CrawlCheckpoint State.
 * AD-13: Adaptive Infrastructure-Aware Rate Limiting & Account Protection Governor.
-* AD-14: Operational Status & Error Envelope for Consumers (từ UX review r3).
+* AD-14: Operational Status & Error Envelope for Consumers.
+* AD-15: Terminal QR Login with Non-TTY Fallback & Clear Auth Feedback.
+* AD-16: CrawlCheckpoint Operational API.
+* AD-17: Redis Stream Metrics & Backpressure Observability.
+* AD-18: Metadata Schema Contract for Consumers.
+* AD-19: Web SaaS Dashboard Operational Surface.
 * Thêm section Inherited Invariants, Deferred, Open Questions.
