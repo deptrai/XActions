@@ -11,6 +11,12 @@ export class AbstractLogin {
   /** @type {string} */
   name = 'base';
 
+  constructor() {
+    if (new.target === AbstractLogin) {
+      throw new TypeError('AbstractLogin is abstract; extend it.');
+    }
+  }
+
   /** @returns {Promise<LoginResult>} */
   async login() {
     throw new Error('Method not implemented: login()');

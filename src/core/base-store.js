@@ -9,6 +9,12 @@
 /** @typedef {import('./types.js').CommentItem} CommentItem */
 
 export class AbstractStore {
+  constructor() {
+    if (new.target === AbstractStore) {
+      throw new TypeError('AbstractStore is abstract; extend it.');
+    }
+  }
+
   /** @returns {Promise<void>} */
   async init() {
     throw new Error('Method not implemented: init()');
