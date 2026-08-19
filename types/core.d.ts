@@ -5,6 +5,8 @@
  * @license MIT
  */
 
+import type { ProxyIpPool, ProxyProviderContract } from './proxy.js';
+
 export interface PostItem {
   id: string;
   platform: string;
@@ -185,20 +187,48 @@ export abstract class AbstractCrawler {
   abstract cleanup(): Promise<void>;
 }
 
+export interface AbstractApiClientOptions {
+  sessionManager?: SessionManager;
+  proxyPool?: ProxyIpPool;
+  proxyProvider?: ProxyProviderContract | ProxyIpPool;
+  accountPool?: AccountPool;
+  governor?: AdaptiveRateGovernor;
+  platform?: string;
+  client?: 'undici' | 'got';
+  httpClient?: (options: Record<string, unknown>) => Promise<unknown>;
+  requiresAuth?: boolean;
+  maxProxyRetries?: number;
+  maxAccountRotations?: number;
+  backoffBaseMs?: number;
+  backoffMultiplier?: number;
+  maxBackoffMs?: number;
+  rateLimitHibernationMs?: number;
+  standbyBackoffMs?: number;
+}
+
 export abstract class AbstractApiClient {
   name: string;
+  platform: string;
   requiresAuth: boolean;
-  httpClient: unknown;
+  client: 'undici' | 'got';
+  httpClient: ((options: Record<string, unknown>) => Promise<unknown>) | null;
   cookies: Record<string, unknown>;
-  constructor(options?: {
-    sessionManager?: SessionManager;
-    proxyPool?: unknown;
-    accountPool?: AccountPool;
-    governor?: AdaptiveRateGovernor;
-  });
+  maxProxyRetries: number;
+  maxAccountRotations: number;
+  backoffBaseMs: number;
+  backoffMultiplier: number;
+  maxBackoffMs: number;
+  rateLimitHibernationMs: number;
+  standbyBackoffMs: number;
+  sessionManager?: SessionManager;
+  proxyPool?: ProxyIpPool;
+  proxyProvider?: ProxyProviderContract | ProxyIpPool;
+  accountPool?: AccountPool;
+  governor?: AdaptiveRateGovernor;
+  constructor(options?: AbstractApiClientOptions);
   resolveProxy(accountId?: string): unknown;
   abstract init(session: Record<string, unknown>): Promise<void>;
-  abstract request(method: string, url: string, options?: Record<string, unknown>): Promise<unknown>;
+  request(method: string, url: string, options?: Record<string, unknown> & { accountId?: string }): Promise<unknown>;
   abstract sign(payload: Record<string, unknown>): Promise<unknown>;
   updateCookies(cookies: Record<string, unknown>): void;
   handleError(response: unknown, platform: string): never;
@@ -252,15 +282,28 @@ export class SessionManager {
 
 export const globalSessionManager: SessionManager;
 
+export interface AccountRecord {
+  platform: string;
+  accountId: string;
+  credentials?: Record<string, unknown> | null;
+  assignedProxy?: unknown;
+  hibernatingUntil?: number | null;
+  velocity?: number;
+}
+
 export class AccountPool {
   constructor(deps?: { governor?: AdaptiveRateGovernor });
-  registerAccounts(platform: string, accountIds: string[]): void;
+  registerAccounts(platform: string, accountIds: string[], options?: { credentials?: Record<string, unknown> }): void;
   getNextAvailable(platform: string): string | null;
   hasAvailable(platform: string): boolean;
-  markUnavailable(accountId: string): void;
-  markAvailable(accountId: string): void;
+  markUnavailable(accountId: string, reason?: string, durationMs?: number, platform?: string): void;
+  markAvailable(accountId: string, platform?: string): void;
+  getAccountVelocity(accountId: string, platform?: string): number;
+  recordRequest(accountId: string, platform?: string): void;
+  setAssignedProxy(accountId: string, proxy: unknown, platform?: string): void;
   listPlatforms(): string[];
   listAccounts(platform: string): string[];
+  getAccount(accountId: string, platform?: string): AccountRecord | null;
 }
 
 export const globalAccountPool: AccountPool;
@@ -281,18 +324,20 @@ export class PlatformRateLimit {
 }
 
 export class AdaptiveRateGovernor {
-  constructor(deps?: { proxyPool?: unknown });
+  constructor(deps?: { proxyPool?: unknown; healthyProxyFloor?: number });
   setPlatformLimit(platform: string, limits?: Partial<PlatformRateLimit>): void;
   getPlatformLimit(platform: string): PlatformRateLimit;
   isAuthRequired(platform: string): boolean;
   updateState(state: { healthyProxyCount: number; totalProxyCount: number; redisConsumerLag: number }): void;
   refreshFromProxyPool(): void;
   getMaxThroughput(platform: string): number;
-  recordRequest(accountId: string): void;
-  getAccountVelocity(accountId: string): number;
-  canAccountRequest(accountId: string, platform: string): boolean;
-  hibernateAccount(accountId: string, reason: string, durationMs?: number): void;
-  isHibernating(accountId: string): boolean;
+  recordRequest(accountId: string, platform?: string): void;
+  getAccountVelocity(accountId: string, platform?: string): number;
+  canAccountRequest(accountId: string, platform?: string): boolean;
+  hibernateAccount(accountId: string, reason: string, durationMs?: number, platform?: string): void;
+  recordRateLimit(accountId: string, platform?: string, durationMs?: number): void;
+  wakeAccount(accountId: string, platform?: string): void;
+  isHibernating(accountId: string, platform?: string): boolean;
   getStatus(): GovernorStatus;
 }
 
