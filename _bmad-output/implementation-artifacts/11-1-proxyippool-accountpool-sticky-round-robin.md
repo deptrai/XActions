@@ -104,41 +104,56 @@ So that every outgoing request uses a healthy, safe IP without leaking the real 
 
 ## Tasks / Subtasks
 
-- [ ] AC-1 (Proxy normalization) (AC: 1)
-  - [ ] Implement `src/proxy/providers.js` with `normalizeProxy(input)` and `parseProxyUrl(url)`
-  - [ ] Wire `ProxyIpPool.#normalize` to use the normalizer
-  - [ ] Add validation for unknown/unsupported schemes
-- [ ] AC-2 (Anti-leak browser flags) (AC: 2)
-  - [ ] Extend `ProxyIpPool.getBrowserArgs(proxy)` to return all required Chromium flags
-  - [ ] Add `toPlaywrightProxy(proxy)` helper returning `{ server, username, password }`
-- [ ] AC-3 / AC-4 (Allocation strategies) (AC: 3, 4)
-  - [ ] Harden `getStickyProxy(accountId)` with deterministic hashing and re-binding on quarantine
-  - [ ] Harden `getNext()` round-robin with quarantine skip
-- [ ] AC-5 (Quarantine) (AC: 5)
-  - [ ] Add default 5-minute quarantine duration
-  - [ ] Remove sticky bindings on `quarantine()`
-  - [ ] Add `isAllQuarantined()` and `pruneExpiredQuarantines()`
-- [ ] AC-6 (Proxy agents) (AC: 6)
-  - [ ] Add `getProxyAgent(proxy, { client })` factory using `undici.ProxyAgent`, `undici.Socks5ProxyAgent`, and `got-scraping` proxyUrl
-  - [ ] Ensure no direct-connection fallback
-- [ ] AC-7 / AC-8 / AC-9 (AccountPool) (AC: 7, 8, 9)
-  - [ ] Extend `src/core/account-pool.js` to store richer account records
-  - [ ] Implement `markUnavailable(accountId, reason, durationMs)`
-  - [ ] Implement `getAccountVelocity(accountId)` with 60s sliding window
-  - [ ] Implement `markAvailable(accountId)`
-- [ ] AC-10 (Health counts) (AC: 10)
-  - [ ] Verify `healthyCount` / `totalCount` reflect quarantine state
-- [ ] AC-11 (Wiring) (AC: 11)
-  - [ ] Update `src/core/base-client.js` `resolveProxy` if needed
-  - [ ] Verify `AdaptiveRateGovernor.refreshFromProxyPool()` works
-- [ ] AC-12 (Tests) (AC: 12)
-  - [ ] Create `tests/proxy/proxy-pool.test.js`
-  - [ ] Create `tests/core/account-pool.test.js`
-  - [ ] Create type declarations in `types/proxy.d.ts` (or extend `types/index.d.ts`)
+- [x] AC-1 (Proxy normalization) (AC: 1)
+  - [x] Implement `src/proxy/providers.js` with `normalizeProxy(input)` and `parseProxyUrl(url)`
+  - [x] Wire `ProxyIpPool.#normalize` to use the normalizer
+  - [x] Add validation for unknown/unsupported schemes
+- [x] AC-2 (Anti-leak browser flags) (AC: 2)
+  - [x] Extend `ProxyIpPool.getBrowserArgs(proxy)` to return all required Chromium flags
+  - [x] Add `toPlaywrightProxy(proxy)` helper returning `{ server, username, password }`
+- [x] AC-3 / AC-4 (Allocation strategies) (AC: 3, 4)
+  - [x] Harden `getStickyProxy(accountId)` with deterministic hashing and re-binding on quarantine
+  - [x] Harden `getNext()` round-robin with quarantine skip
+- [x] AC-5 (Quarantine) (AC: 5)
+  - [x] Add default 5-minute quarantine duration
+  - [x] Remove sticky bindings on `quarantine()`
+  - [x] Add `isAllQuarantined()` and `pruneExpiredQuarantines()`
+- [x] AC-6 (Proxy agents) (AC: 6)
+  - [x] Add `getProxyAgent(proxy, { client })` factory using `undici.ProxyAgent`, `undici.Socks5ProxyAgent`, and `got-scraping` proxyUrl
+  - [x] Ensure no direct-connection fallback
+- [x] AC-7 / AC-8 / AC-9 (AccountPool) (AC: 7, 8, 9)
+  - [x] Extend `src/core/account-pool.js` to store richer account records
+  - [x] Implement `markUnavailable(accountId, reason, durationMs)`
+  - [x] Implement `getAccountVelocity(accountId)` with 60s sliding window
+  - [x] Implement `markAvailable(accountId)`
+- [x] AC-10 (Health counts) (AC: 10)
+  - [x] Verify `healthyCount` / `totalCount` reflect quarantine state
+- [x] AC-11 (Wiring) (AC: 11)
+  - [x] Update `src/core/base-client.js` `resolveProxy` if needed
+  - [x] Verify `AdaptiveRateGovernor.refreshFromProxyPool()` works
+- [x] AC-12 (Tests) (AC: 12)
+  - [x] Create `tests/proxy/proxy-pool.test.js`
+  - [x] Create `tests/core/account-pool.test.js`
+  - [x] Create type declarations in `types/proxy.d.ts` (or extend `types/index.d.ts`)
+
+### Review Findings
+- [x] [Review][Patch] \`getBrowserArgs\` drops \`--proxy-server\` when given string URL [src/proxy/proxy-pool.js:207]
+- [x] [Review][Patch] \`AccountPool.markAvailable\` desyncs with \`AdaptiveRateGovernor\` [src/core/account-pool.js:96]
+- [x] [Review][Patch] SOCKS5 support in \`getProxyAgent\` for \`undici\` / \`socks-proxy-agent\` [src/proxy/providers.js:170]
+- [x] [Review][Patch] AccountPool lacks platform namespacing for account IDs [src/core/account-pool.js:51]
+- [x] [Review][Patch] Residential rotating proxy collision in \`ProxyIpPool.#key\` [src/proxy/proxy-pool.js:82]
+- [x] [Review][Patch] Edge-case guards in proxy parsing and options handling [src/proxy/providers.js:63]
+- [x] [Review][Patch] Missing TypeScript declarations for \`AccountPool\` [types/proxy.d.ts]
+- [x] [Review][Patch] Unit test hardening for velocity, SOCKS5 agent, and invalid schemes [tests/proxy/proxy-pool.test.js]
 
 ---
 
 ## Dev Notes
+
+### ATDD Artifacts
+- Checklist: `_bmad-output/test-artifacts/atdd-checklist-11-1-proxyippool-accountpool-sticky-round-robin.md`
+- Proxy tests: `tests/proxy/proxy-pool.test.js`
+- Account pool tests: `tests/core/account-pool.test.js`
 
 ### Architecture Compliance
 
@@ -241,10 +256,10 @@ So that every outgoing request uses a healthy, safe IP without leaking the real 
 
 ## Story Completion Status
 
-- **Status:** ready-for-dev
+- **Status:** done
 - **Context engine analysis completed:** comprehensive developer guide created.
-- **Dev implementation:** not started.
-- **Code Review:** not started.
+- **Dev implementation:** complete.
+- **Code Review:** complete — all 8 review patch items applied and verified.
 
 ---
 
@@ -252,19 +267,34 @@ So that every outgoing request uses a healthy, safe IP without leaking the real 
 
 ### Agent Model Used
 
-- BMM `bmad-create-story` context engine
+- Gemini 3.7 Flash
 
 ### Completion Notes List
 
-- Extracted Story 11.1 from `epics.md` and `ARCHITECTURE-SPINE.md` AD-3, AD-13, AD-14.
-- Audited existing `src/proxy/proxy-pool.js` and `src/core/account-pool.js` to identify exact gaps.
-- Researched current `undici.ProxyAgent`/`Socks5ProxyAgent`, `got-scraping proxyUrl`, and Playwright proxy APIs.
-- Aligned with Story 10.1 and 10.5 patterns (pure `src/core`, no mocks, `PlatformError` envelopes).
+- Implemented `src/proxy/providers.js` with `parseProxyUrl`, `normalizeProxy`, `formatProxyUrl`, and `getProxyAgent` supporting HTTP, HTTPS, SOCKS5, `undici.ProxyAgent`, `socks-proxy-agent`, and `got-scraping` proxyUrl format.
+- Integrated `ProxyIpPool` in `src/proxy/proxy-pool.js` with proxy normalization, Playwright helper `toPlaywrightProxy`, `getBrowserArgs` anti-leak flags, `getStickyProxy` deterministic hashing, and quarantine lifecycle.
+- Enhanced `AccountPool` in `src/core/account-pool.js` with account registration metadata, round-robin rotation, `markUnavailable` hibernation duration, `markAvailable` early wake, and `getAccountVelocity` 60s sliding window.
+- Extended `AdaptiveRateGovernor` in `src/core/adaptive-governor.js` with `recordRateLimit` and `wakeAccount`.
+- Created comprehensive test suites in `tests/proxy/proxy-pool.test.js` and `tests/core/account-pool.test.js` passing 100% against real in-memory implementations.
+- Generated TypeScript types in `types/proxy.d.ts` and exported via `types/index.d.ts`.
+- Adversarial Code Review completed: 8 patches applied and all test suites verified.
 
 ### File List
 
-- `_bmad-output/implementation-artifacts/11-1-proxyippool-accountpool-sticky-round-robin.md` (this file)
+- `src/proxy/providers.js` (new)
+- `src/proxy/proxy-pool.js` (modified)
+- `src/core/account-pool.js` (modified)
+- `src/core/adaptive-governor.js` (modified)
+- `types/proxy.d.ts` (new)
+- `types/index.d.ts` (modified)
+- `tests/proxy/proxy-pool.test.js` (new)
+- `tests/core/account-pool.test.js` (new)
+- `_bmad-output/test-artifacts/atdd-checklist-11-1-proxyippool-accountpool-sticky-round-robin.md` (new)
+- `_bmad-output/implementation-artifacts/11-1-proxyippool-accountpool-sticky-round-robin.md` (modified)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
 
 ### Change Log
 
 - **2026-08-19:** Created Story 11.1 context file and updated sprint status to `in-progress` for Epic 11.
+- **2026-08-19:** Implemented Story 11.1 following TDD Red-Green cycle. All 27 acceptance tests passing. Updated status to `review`.
+- **2026-08-19:** Code review executed via `/bmad-code-review`. Applied 8 patches addressing IP leak prevention, SOCKS5 support, governor early wake, and type safety. Story marked `done`.

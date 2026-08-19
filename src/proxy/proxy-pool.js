@@ -6,6 +6,8 @@
  * @license MIT
  */
 
+import { normalizeProxy, getProxyAgent } from './providers.js';
+
 export class ProxyIpPool {
   /** @type {any[]} */
   #proxies = [];
@@ -31,8 +33,8 @@ export class ProxyIpPool {
    * @param {boolean} [options.validateOnAdd]
    */
   constructor(options = {}) {
-    this.#proxies = (options.proxies || []).map((p) => this.#normalize(p));
     this.validateOnAdd = options.validateOnAdd !== false;
+    this.#proxies = (options.proxies || []).map((p) => this.#normalize(p));
   }
 
   /**
@@ -40,7 +42,7 @@ export class ProxyIpPool {
    * @returns {any}
    */
   #normalize(proxy) {
-    return proxy;
+    return normalizeProxy(proxy);
   }
 
   /** @returns {number} */
@@ -80,7 +82,14 @@ export class ProxyIpPool {
    * @returns {string}
    */
   #key(proxy) {
-    return typeof proxy === 'string' ? proxy : JSON.stringify(proxy);
+    if (!proxy) return '';
+    try {
+      const normalized = this.#normalize(proxy);
+      const authKey = normalized.username ? `${normalized.username}@` : '';
+      return `${normalized.scheme}://${authKey}${normalized.host}:${normalized.port}`;
+    } catch {
+      return typeof proxy === 'string' ? proxy : JSON.stringify(proxy);
+    }
   }
 
   /**
@@ -171,15 +180,68 @@ export class ProxyIpPool {
   }
 
   /**
+   * Convert normalized proxy to Playwright proxy configuration object.
    * @param {any} proxy
-   * @returns {any[]}
+   * @returns {{ server: string, username?: string, password?: string } | null}
+   */
+  static toPlaywrightProxy(proxy) {
+    if (!proxy) return null;
+    const normalized = typeof proxy === 'string' ? normalizeProxy(proxy) : proxy;
+    const result = { server: normalized.server || `${normalized.scheme || 'http'}://${normalized.host}:${normalized.port}` };
+    if (normalized.username !== undefined) result.username = normalized.username;
+    if (normalized.password !== undefined) result.password = normalized.password;
+    return result;
+  }
+
+  /**
+   * @param {any} proxy
+   * @returns {{ server: string, username?: string, password?: string } | null}
+   */
+  toPlaywrightProxy(proxy) {
+    return ProxyIpPool.toPlaywrightProxy(proxy);
+  }
+
+  /**
+   * @param {any} proxy
+   * @returns {string[]}
    */
   getBrowserArgs(proxy) {
     const flags = ['--force-webrtc-ip-handling-policy=disable_non_proxied_udp'];
-    if (proxy?.server) {
-      flags.push(`--proxy-server=${proxy.server}`);
+    if (!proxy) return flags;
+    try {
+      const normalized = typeof proxy === 'string' ? normalizeProxy(proxy) : (proxy.server ? proxy : normalizeProxy(proxy));
+      if (normalized?.server) {
+        flags.push(`--proxy-server=${normalized.server}`);
+      }
+    } catch {
+      if (typeof proxy === 'string' && proxy.trim()) {
+        flags.push(`--proxy-server=${proxy.trim()}`);
+      } else if (proxy?.server) {
+        flags.push(`--proxy-server=${proxy.server}`);
+      }
     }
     return flags;
+  }
+
+  /**
+   * Factory for creating client-specific proxy agent without direct connection fallback.
+   * @param {any} proxy
+   * @param {Object} [options]
+   * @param {'undici' | 'got'} [options.client='undici']
+   * @returns {any}
+   */
+  getProxyAgent(proxy, options = {}) {
+    return getProxyAgent(proxy, options);
+  }
+
+  /**
+   * @param {any} proxy
+   * @param {Object} [options]
+   * @param {'undici' | 'got'} [options.client='undici']
+   * @returns {any}
+   */
+  static getProxyAgent(proxy, options = {}) {
+    return getProxyAgent(proxy, options);
   }
 }
 

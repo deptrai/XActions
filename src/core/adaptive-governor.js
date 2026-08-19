@@ -183,6 +183,24 @@ export class AdaptiveRateGovernor {
   }
 
   /**
+   * Record a rate limit event for an account and hibernate it.
+   * @param {string} accountId
+   * @param {string} [platform]
+   * @param {number} [durationMs]
+   */
+  recordRateLimit(accountId, platform, durationMs = 15 * 60 * 1000) {
+    this.hibernateAccount(accountId, `rate_limit:${platform || 'unknown'}`, durationMs);
+  }
+
+  /**
+   * Wake up an account early by clearing its hibernation status.
+   * @param {string} accountId
+   */
+  wakeAccount(accountId) {
+    this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.accountId !== accountId);
+  }
+
+  /**
    * @param {string} accountId
    * @returns {boolean}
    */

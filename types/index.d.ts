@@ -766,3 +766,4 @@ export * as checkpointManager from './checkpoint-manager';
 
 
 export * as metadataSchema from './metadata-schema';
+export * as proxy from './proxy';

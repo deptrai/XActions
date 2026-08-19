@@ -42,7 +42,7 @@ development_status:
 
   # --- Epic 11: Resilient Network & Proxy Pool Management ---
   epic-11: in-progress
-  11-1-proxyippool-accountpool-sticky-round-robin: ready-for-dev
+  11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: backlog
   11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: backlog
   11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: backlog
