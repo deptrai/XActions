@@ -6,6 +6,7 @@ import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
 import { AccountPool } from '../../src/core/account-pool.js';
 import { AdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
 import { PlatformError, ErrorTypes } from '../../src/core/error-envelope.js';
+import { ProxyAgent } from 'undici';
 
 class TestApiClient extends AbstractApiClient {
   name = 'test-client';
@@ -38,7 +39,7 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
   });
 
   describe('AC-1 & AC-2: 429/403 Detection & Auto-Quarantine', () => {
-    test.skip('should auto-quarantine proxy on HTTP 429 response and retry with next healthy proxy', async () => {
+    test('should auto-quarantine proxy on HTTP 429 response and retry with next healthy proxy', async () => {
       let callCount = 0;
       const mockHttpClient = vi.fn(async ({ proxy }) => {
         callCount++;
@@ -64,7 +65,7 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
       expect(provider.healthyCount).toBe(2); // 1 quarantined
     });
 
-    test.skip('should auto-quarantine proxy on HTTP 403 bot challenge response', async () => {
+    test('should auto-quarantine proxy on HTTP 403 bot challenge response', async () => {
       let callCount = 0;
       const mockHttpClient = vi.fn(async ({ proxy }) => {
         callCount++;
@@ -91,15 +92,26 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
   });
 
   describe('AC-3: No-Auth Platforms — Proxy Rotation + Exponential Replay with Jitter', () => {
-    test.skip('should replay up to maxProxyRetries with exponential backoff delays', async () => {
+    test('should replay up to maxProxyRetries with exponential backoff delays', async () => {
       let callCount = 0;
       const mockHttpClient = vi.fn(async () => {
         callCount++;
         return { status: 429, headers: {}, data: 'rate limit' };
       });
 
+      const fivePool = new ProxyIpPool({
+        proxies: [
+          'http://p1.example.com:8080',
+          'http://p2.example.com:8080',
+          'http://p3.example.com:8080',
+          'http://p4.example.com:8080',
+          'http://p5.example.com:8080',
+        ],
+      });
+      const fiveProvider = new StaticProxyProvider({ pool: fivePool });
+
       const client = new TestApiClient({
-        proxyProvider: provider,
+        proxyProvider: fiveProvider,
         httpClient: mockHttpClient,
         requiresAuth: false,
         maxProxyRetries: 3,
@@ -119,7 +131,7 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
       expect(error.code).toBe('XACT_4290');
     });
 
-    test.skip('should stop retrying immediately and throw XACT_5030 when all proxies are quarantined', async () => {
+    test('should stop retrying immediately and throw XACT_5030 when all proxies are quarantined', async () => {
       const smallProvider = new StaticProxyProvider({
         proxies: ['http://single.proxy:8080'],
       });
@@ -153,7 +165,7 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
   });
 
   describe('AC-4: Auth-Required Platforms — Sticky Proxy Fallback + Account Rotation', () => {
-    test.skip('should attempt new sticky proxy first, then rotate account on repeated 429s', async () => {
+    test('should attempt new sticky proxy first, then rotate account on repeated 429s', async () => {
       accountPool.registerAccounts('twitter', ['acc_primary', 'acc_backup']);
 
       let callCount = 0;
@@ -194,7 +206,7 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
   });
 
   describe('AC-5: Standby Backoff When Whole Pool is Quarantined', () => {
-    test.skip('should throw XACT_5030 with standbyBackoffMs and mark account unavailable on full pool quarantine', async () => {
+    test('should throw XACT_5030 with standbyBackoffMs and mark account unavailable on full pool quarantine', async () => {
       const exhaustedPool = new ProxyIpPool({ proxies: ['http://p1.example.com:8080'] });
       exhaustedPool.quarantine('http://p1.example.com:8080', 60000);
       const exhaustedProvider = new StaticProxyProvider({ pool: exhaustedPool });
@@ -218,7 +230,7 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
   });
 
   describe('AC-6: Retry-After Header Honor & Clamping', () => {
-    test.skip('should parse Retry-After header in seconds and use it for backoff delay', async () => {
+    test('should parse Retry-After header in seconds and use it for backoff delay', async () => {
       let callCount = 0;
       const mockHttpClient = vi.fn(async () => {
         callCount++;
@@ -247,8 +259,8 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
   });
 
   describe('AC-7: AdaptiveRateGovernor Integration', () => {
-    test.skip('should block requests from hibernating accounts via governor check', async () => {
-      governor.hibernateAccount('acc_hibernating', 'twitter', 60000, 'rate_limit');
+    test('should block requests from hibernating accounts via governor check', async () => {
+      governor.hibernateAccount('acc_hibernating', 'rate_limit', 60000, 'twitter');
 
       class AuthClient extends AbstractApiClient {
         name = 'auth-client';
@@ -271,7 +283,7 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
       });
     });
 
-    test.skip('should record successful requests in both governor and accountPool', async () => {
+    test('should record successful requests in both governor and accountPool', async () => {
       accountPool.registerAccounts('twitter', ['acc_good']);
 
       const mockHttpClient = vi.fn(async () => ({
@@ -300,7 +312,7 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
   });
 
   describe('AC-8 & AC-9: Pluggable Transport & No Direct Connection Fallback', () => {
-    test.skip('should pass correct proxy agent to httpClient without direct fallback', async () => {
+    test('should pass correct proxy agent to httpClient without direct fallback', async () => {
       let passedAgent = null;
       const mockHttpClient = vi.fn(async ({ agent, proxy }) => {
         passedAgent = agent;
@@ -318,7 +330,7 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
       expect(passedAgent).toBeInstanceOf(ProxyAgent);
     });
 
-    test.skip('should throw proxy_exhausted when proxyProvider is missing and proxy is required', async () => {
+    test('should throw proxy_exhausted when proxyProvider is missing and proxy is required', async () => {
       const client = new TestApiClient({
         proxyProvider: null,
         proxyPool: null,

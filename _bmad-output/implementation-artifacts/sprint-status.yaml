@@ -44,7 +44,7 @@ development_status:
   epic-11: in-progress
   11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
-  11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: ready-for-dev
+  11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: review
   11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: backlog
   11-5-end-to-end-request-pipeline-two-mode-ip: backlog
   11-6-rate-limit-bot-challenge-defense: backlog
