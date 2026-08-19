@@ -14,7 +14,7 @@ import { ProxyAgent, Socks5ProxyAgent } from 'undici';
 
 describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD Red Phase)', () => {
   describe('AC-1: StaticProxyProvider Implementation & Unified Contract', () => {
-    test.skip('should instantiate with a list of proxy strings and wrap an internal ProxyIpPool', () => {
+    test('should instantiate with a list of proxy strings and wrap an internal ProxyIpPool', () => {
       const provider = new StaticProxyProvider({
         proxies: [
           'http://proxy1.example.com:8080',
@@ -27,7 +27,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(provider.isAllQuarantined()).toBe(false);
     });
 
-    test.skip('should accept an existing ProxyIpPool instance in options', () => {
+    test('should accept an existing ProxyIpPool instance in options', () => {
       const pool = new ProxyIpPool({
         proxies: ['http://pool-proxy.example.com:8080'],
       });
@@ -37,7 +37,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(provider.getNext().host).toBe('pool-proxy.example.com');
     });
 
-    test.skip('should return sticky proxy for accountId and round-robin when accountId is omitted', () => {
+    test('should return sticky proxy for accountId and round-robin when accountId is omitted', () => {
       const provider = new StaticProxyProvider({
         proxies: [
           'http://proxy1.example.com:8080',
@@ -54,7 +54,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(rr1.server).not.toBe(rr2.server);
     });
 
-    test.skip('should provide getStickyProxy, getNext, and quarantine methods adhering to contract', () => {
+    test('should provide getStickyProxy, getNext, and quarantine methods adhering to contract', () => {
       const provider = new StaticProxyProvider({
         proxies: ['http://proxy1.example.com:8080'],
       });
@@ -70,7 +70,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(provider.isAllQuarantined()).toBe(true);
     });
 
-    test.skip('should generate Playwright proxy config, agents, and browser launch args', () => {
+    test('should generate Playwright proxy config, agents, and browser launch args', () => {
       const provider = new StaticProxyProvider({
         proxies: ['http://user:pass@proxy1.example.com:8080'],
       });
@@ -93,7 +93,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
   });
 
   describe('AC-2: DynamicTunnelProvider Gateway Parsing & Auto-Detection', () => {
-    test.skip('should parse gateway URL and auto-detect provider presets from hostname', () => {
+    test('should parse gateway URL and auto-detect provider presets from hostname', () => {
       const brightdata = new DynamicTunnelProvider({
         gatewayUrl: 'http://user:pass@brd.superproxy.io:22225',
       });
@@ -120,7 +120,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(custom.provider).toBe('custom');
     });
 
-    test.skip('should allow explicit provider override regardless of gateway hostname', () => {
+    test('should allow explicit provider override regardless of gateway hostname', () => {
       const provider = new DynamicTunnelProvider({
         gatewayUrl: 'http://user:pass@custom-domain.com:8080',
         provider: 'brightdata',
@@ -128,7 +128,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(provider.provider).toBe('brightdata');
     });
 
-    test.skip('should throw PlatformError XACT_4001 on missing or invalid gatewayUrl', () => {
+    test('should throw PlatformError XACT_4001 on missing or invalid gatewayUrl', () => {
       expect(() => new DynamicTunnelProvider({})).toThrow(PlatformError);
       expect(() => new DynamicTunnelProvider({ gatewayUrl: '' })).toThrow(PlatformError);
       expect(() => new DynamicTunnelProvider({ gatewayUrl: 'invalid://url' })).toThrow(PlatformError);
@@ -136,7 +136,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
   });
 
   describe('AC-3: Per-Request Residential IP Rotation', () => {
-    test.skip('should generate unique per-request session tag and credentials on each getProxy() call', () => {
+    test('should generate unique per-request session tag and credentials on each getProxy() call', () => {
       const provider = new DynamicTunnelProvider({
         gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
         rotatePerRequest: true,
@@ -155,7 +155,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(p1.username).not.toBe(p2.username);
     });
 
-    test.skip('should provide getNext() as an alias for per-request rotation', () => {
+    test('should provide getNext() as an alias for per-request rotation', () => {
       const provider = new DynamicTunnelProvider({
         gatewayUrl: 'http://myuser:mypass@brd.superproxy.io:22225',
       });
@@ -175,7 +175,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       vi.useRealTimers();
     });
 
-    test.skip('should maintain deterministic session credentials for the same accountId within session window', () => {
+    test('should maintain deterministic session credentials for the same accountId within session window', () => {
       const provider = new DynamicTunnelProvider({
         gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
         sessionDurationMs: 600000, // 10 mins
@@ -188,7 +188,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(p1.server).toBe(p2.server);
     });
 
-    test.skip('should automatically roll over to a new session tag when sessionDurationMs elapses', () => {
+    test('should automatically roll over to a new session tag when sessionDurationMs elapses', () => {
       const provider = new DynamicTunnelProvider({
         gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
         sessionDurationMs: 600000,
@@ -203,7 +203,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(p1.username).not.toBe(p2.username);
     });
 
-    test.skip('should immediately invalidate session tag on rotateSession(accountId) or quarantine(proxy)', () => {
+    test('should immediately invalidate session tag on rotateSession(accountId) or quarantine(proxy)', () => {
       const provider = new DynamicTunnelProvider({
         gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
         sessionDurationMs: 600000,
@@ -222,7 +222,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
   });
 
   describe('AC-5: Geo-Targeting Formatting Presets & Custom Template', () => {
-    test.skip('should format BrightData username with country, city, and session correctly', () => {
+    test('should format BrightData username with country, city, and session correctly', () => {
       const provider = new DynamicTunnelProvider({
         gatewayUrl: 'http://lum_user:lum_pass@brd.superproxy.io:22225',
         provider: 'brightdata',
@@ -237,7 +237,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(proxy.username).toBe('user-lum_user-country-us-city-newyork-session-sess123');
     });
 
-    test.skip('should format Smartproxy and IPRoyal with underscore delimited tags', () => {
+    test('should format Smartproxy and IPRoyal with underscore delimited tags', () => {
       const sp = new DynamicTunnelProvider({
         gatewayUrl: 'http://sp_user:sp_pass@gate.smartproxy.com:7000',
         provider: 'smartproxy',
@@ -262,7 +262,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(iprProxy.username).toBe('user-ipr_user_country-de_city-berlin_session-sess789');
     });
 
-    test.skip('should format Kuaidaili with user and session tags', () => {
+    test('should format Kuaidaili with user and session tags', () => {
       const kdl = new DynamicTunnelProvider({
         gatewayUrl: 'http://kdl_user:kdl_pass@open.kdlapi.com:10000',
         provider: 'kuaidaili',
@@ -272,7 +272,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(proxy.username).toBe('user-kdl_user_session-sess999');
     });
 
-    test.skip('should render custom template pattern string accurately', () => {
+    test('should render custom template pattern string accurately', () => {
       const custom = new DynamicTunnelProvider({
         gatewayUrl: 'http://baseuser:basepass@custom.proxy:8080',
         provider: 'custom',
@@ -287,7 +287,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(proxy.username).toBe('baseuser:country=vn:session=sessVN');
     });
 
-    test.skip('should cleanly omit optional geo segments without creating dangling delimiters', () => {
+    test('should cleanly omit optional geo segments without creating dangling delimiters', () => {
       const provider = new DynamicTunnelProvider({
         gatewayUrl: 'http://user:pass@brd.superproxy.io:22225',
         provider: 'brightdata',
@@ -302,7 +302,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
   });
 
   describe('AC-6: Unified Provider Factory (createProxyProvider)', () => {
-    test.skip('should instantiate DynamicTunnelProvider when type is dynamic or gatewayUrl is provided', () => {
+    test('should instantiate DynamicTunnelProvider when type is dynamic or gatewayUrl is provided', () => {
       const p1 = createProxyProvider({
         type: 'dynamic',
         gatewayUrl: 'http://user:pass@gate.smartproxy.com:7000',
@@ -315,7 +315,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(p2).toBeInstanceOf(DynamicTunnelProvider);
     });
 
-    test.skip('should instantiate StaticProxyProvider when type is static or proxies list is provided', () => {
+    test('should instantiate StaticProxyProvider when type is static or proxies list is provided', () => {
       const p1 = createProxyProvider({
         type: 'static',
         proxies: ['http://proxy1.example.com:8080'],
@@ -328,7 +328,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(p2).toBeInstanceOf(StaticProxyProvider);
     });
 
-    test.skip('should throw PlatformError XACT_4001 on unknown provider type or invalid configuration', () => {
+    test('should throw PlatformError XACT_4001 on unknown provider type or invalid configuration', () => {
       expect(() => createProxyProvider({ type: 'unknown' })).toThrow(PlatformError);
       expect(() => createProxyProvider(null)).toThrow(PlatformError);
       expect(() => createProxyProvider({})).toThrow(PlatformError);
@@ -336,7 +336,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
   });
 
   describe('AC-7: Anti-Leak Browser & Protocol Compatibility', () => {
-    test.skip('should create valid undici ProxyAgent / Socks5ProxyAgent and anti-leak Chromium flags', () => {
+    test('should create valid undici ProxyAgent / Socks5ProxyAgent and anti-leak Chromium flags', () => {
       const httpProvider = new DynamicTunnelProvider({
         gatewayUrl: 'http://user:pass@brd.superproxy.io:22225',
       });

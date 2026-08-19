@@ -1,12 +1,13 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Proxy normalization and URL parser utilities for ProxyIpPool.
+ * Proxy normalization, URL parser utilities, StaticProxyProvider, and DynamicTunnelProvider for ProxyIpPool.
  * @author nich (@nichxbt)
  * @license MIT
  */
 
 import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
 import { ProxyAgent, Socks5ProxyAgent } from 'undici';
+import { ProxyIpPool } from './proxy-pool.js';
 
 export const SUPPORTED_PROXY_SCHEMES = ['http', 'https', 'socks5'];
 
@@ -82,7 +83,7 @@ export function parseProxyUrl(urlString) {
   let parsed;
   try {
     parsed = new URL(urlString.trim());
-  } catch (err) {
+  } catch {
     throw new PlatformError({
       type: ErrorTypes.INVALID_ARGS,
       code: 'XACT_4001',
@@ -255,6 +256,317 @@ export function getProxyAgent(proxy, options = {}) {
     type: ErrorTypes.INVALID_ARGS,
     code: 'XACT_4001',
     message: `Unsupported client type for proxy agent: "${client}"`,
+    suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+  });
+}
+
+/**
+ * Static Proxy Provider implementation wrapping ProxyIpPool.
+ */
+export class StaticProxyProvider {
+  /**
+   * @param {Object} [options]
+   * @param {ProxyIpPool} [options.pool]
+   * @param {Array<string | Object>} [options.proxies]
+   * @param {boolean} [options.validateOnAdd]
+   */
+  constructor(options = {}) {
+    if (!options || typeof options !== 'object') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'StaticProxyProvider options must be an object',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    if (options.pool instanceof ProxyIpPool) {
+      this.pool = options.pool;
+    } else if (Array.isArray(options.proxies)) {
+      this.pool = new ProxyIpPool({
+        proxies: options.proxies,
+        validateOnAdd: options.validateOnAdd,
+      });
+    } else {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'StaticProxyProvider requires options.pool or options.proxies array',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+  }
+
+  get healthyCount() {
+    return this.pool.healthyCount;
+  }
+
+  get totalCount() {
+    return this.pool.totalCount;
+  }
+
+  isAllQuarantined() {
+    return this.pool.isAllQuarantined();
+  }
+
+  getProxy(options = {}) {
+    if (options?.accountId) {
+      return this.pool.getStickyProxy(options.accountId);
+    }
+    return this.pool.getNext();
+  }
+
+  getStickyProxy(accountId) {
+    return this.pool.getStickyProxy(accountId);
+  }
+
+  getNext() {
+    return this.pool.getNext();
+  }
+
+  quarantine(proxy, durationMs) {
+    this.pool.quarantine(proxy, durationMs);
+  }
+
+  toPlaywrightProxy(proxy) {
+    return this.pool.toPlaywrightProxy(proxy);
+  }
+
+  getProxyAgent(proxy, options = {}) {
+    return getProxyAgent(proxy, options);
+  }
+
+  getBrowserArgs(proxy) {
+    return this.pool.getBrowserArgs(proxy);
+  }
+}
+
+/**
+ * Dynamic Tunnel Residential Proxy Provider with multi-provider presets and rotation.
+ */
+export class DynamicTunnelProvider {
+  #accountSeeds = new Map();
+  #globalSeed = 0;
+
+  /**
+   * @param {Object} options
+   * @param {string} options.gatewayUrl
+   * @param {'brightdata' | 'smartproxy' | 'iproyal' | 'kuaidaili' | 'custom'} [options.provider]
+   * @param {string} [options.template]
+   * @param {boolean} [options.rotatePerRequest=true]
+   * @param {number} [options.sessionDurationMs=600000]
+   * @param {string} [options.country]
+   * @param {string} [options.city]
+   */
+  constructor(options = {}) {
+    if (!options || typeof options !== 'object') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'DynamicTunnelProvider options must be an object',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    if (!options.gatewayUrl || typeof options.gatewayUrl !== 'string') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'DynamicTunnelProvider requires a non-empty gatewayUrl string',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    this.rawGateway = parseProxyUrl(options.gatewayUrl);
+    this.provider = options.provider || this.#autoDetectProvider(this.rawGateway.host);
+    this.template = options.template || '{username}:country={country}:session={sessionId}';
+    this.rotatePerRequest = options.rotatePerRequest !== false;
+    this.sessionDurationMs = options.sessionDurationMs || 600000;
+    this.defaultCountry = options.country;
+    this.defaultCity = options.city;
+  }
+
+  #autoDetectProvider(host) {
+    const h = (host || '').toLowerCase();
+    if (h.endsWith('superproxy.io') || h.endsWith('luminati.io') || h.includes('superproxy.') || h.includes('luminati.')) {
+      return 'brightdata';
+    }
+    if (h.endsWith('smartproxy.com') || h.endsWith('smartproxy.io') || h.includes('smartproxy.')) {
+      return 'smartproxy';
+    }
+    if (h.endsWith('iproyal.com') || h.endsWith('royalproxy.io') || h.includes('iproyal.') || h.includes('royalproxy.')) {
+      return 'iproyal';
+    }
+    if (h.endsWith('kdlapi.com') || h.endsWith('kuaidaili.com') || h.includes('kdlapi.') || h.includes('kuaidaili.')) {
+      return 'kuaidaili';
+    }
+    return 'custom';
+  }
+
+  get healthyCount() {
+    return 1;
+  }
+
+  get totalCount() {
+    return 1;
+  }
+
+  isAllQuarantined() {
+    return false;
+  }
+
+  rotateSession(accountId) {
+    if (accountId) {
+      const current = this.#accountSeeds.get(accountId) || 0;
+      this.#accountSeeds.set(accountId, current + 1);
+    } else {
+      this.#globalSeed++;
+    }
+  }
+
+  quarantine(proxy, durationMs) {
+    for (const [accId] of this.#accountSeeds.entries()) {
+      const current = this.#accountSeeds.get(accId) || 0;
+      this.#accountSeeds.set(accId, current + 1);
+    }
+    this.#globalSeed++;
+  }
+
+  #formatUsername({ country, city, sessionId }) {
+    const baseUser = this.rawGateway.username || '';
+    const preset = this.provider;
+
+    if (preset === 'brightdata') {
+      const parts = [`user-${baseUser}`];
+      if (country) parts.push(`country-${country}`);
+      if (city) parts.push(`city-${city}`);
+      if (sessionId) parts.push(`session-${sessionId}`);
+      return parts.join('-');
+    }
+
+    if (preset === 'smartproxy' || preset === 'iproyal') {
+      const parts = [`user-${baseUser}`];
+      if (country) parts.push(`country-${country}`);
+      if (city) parts.push(`city-${city}`);
+      if (sessionId) parts.push(`session-${sessionId}`);
+      return parts.join('_');
+    }
+
+    if (preset === 'kuaidaili') {
+      const parts = [`user-${baseUser}`];
+      if (sessionId) parts.push(`session-${sessionId}`);
+      return parts.join('_');
+    }
+
+    if (preset === 'custom') {
+      let tpl = this.template;
+      tpl = tpl.replace('{username}', baseUser);
+      tpl = tpl.replace('{country}', country || '');
+      tpl = tpl.replace('{city}', city || '');
+      tpl = tpl.replace('{sessionId}', sessionId || '');
+      return tpl;
+    }
+
+    return baseUser;
+  }
+
+  getProxy(options = {}) {
+    const accountId = options.accountId;
+    const country = options.country || this.defaultCountry;
+    const city = options.city || this.defaultCity;
+    let sessionId = options.sessionId;
+
+    if (!sessionId) {
+      if (accountId) {
+        const bucket = Math.floor(Date.now() / this.sessionDurationMs);
+        const seed = (this.#accountSeeds.get(accountId) || 0) + this.#globalSeed;
+        sessionId = `${accountId}_${bucket}_${seed}`;
+      } else {
+        const rnd = Math.random().toString(36).slice(2, 10);
+        const ts = Date.now().toString(36);
+        sessionId = `sess_${rnd}${ts}_${this.#globalSeed}`;
+      }
+    }
+
+    const username = this.#formatUsername({ country, city, sessionId });
+    const password = this.rawGateway.password;
+
+    return normalizeProxy({
+      scheme: this.rawGateway.scheme,
+      host: this.rawGateway.host,
+      port: this.rawGateway.port,
+      username,
+      password,
+    });
+  }
+
+  getStickyProxy(accountId) {
+    return this.getProxy({ accountId });
+  }
+
+  getNext() {
+    return this.getProxy();
+  }
+
+  toPlaywrightProxy(proxy) {
+    if (!proxy) return null;
+    const norm = normalizeProxy(proxy);
+    const result = {
+      server: norm.server,
+    };
+    if (norm.username !== undefined) result.username = norm.username;
+    if (norm.password !== undefined) result.password = norm.password;
+    return result;
+  }
+
+  getProxyAgent(proxy, options = {}) {
+    return getProxyAgent(proxy, options);
+  }
+
+  getBrowserArgs(proxy) {
+    if (!proxy) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Proxy is required to generate browser args',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    const norm = normalizeProxy(proxy);
+    return [
+      '--force-webrtc-ip-handling-policy=disable_non_proxied_udp',
+      `--proxy-server=${norm.server}`,
+    ];
+  }
+}
+
+/**
+ * Unified factory for creating proxy providers.
+ * @param {Object} config
+ * @returns {StaticProxyProvider | DynamicTunnelProvider}
+ */
+export function createProxyProvider(config) {
+  if (!config || typeof config !== 'object') {
+    throw new PlatformError({
+      type: ErrorTypes.INVALID_ARGS,
+      code: 'XACT_4001',
+      message: 'Provider configuration object is required',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+    });
+  }
+
+  if (config.type === 'dynamic' || config.gatewayUrl) {
+    return new DynamicTunnelProvider(config);
+  }
+
+  if (config.type === 'static' || config.proxies || config.pool) {
+    return new StaticProxyProvider(config);
+  }
+
+  throw new PlatformError({
+    type: ErrorTypes.INVALID_ARGS,
+    code: 'XACT_4001',
+    message: `Unknown or unsupported proxy provider configuration: "${JSON.stringify(config)}"`,
     suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
   });
 }

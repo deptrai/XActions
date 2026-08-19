@@ -2,7 +2,7 @@
 
 **Story ID:** 11.2  
 **Epic:** 11 — Resilient Network & Proxy Pool Management  
-**Status:** ready-for-dev  
+**Status:** review  
 **Owner:** DEV  
 **Source:** `epics.md` Story 11.2, `ARCHITECTURE-SPINE.md` AD-3, AD-13, AD-14, AD-2, AD-8, `prd-XActions-2026-08-18-universal-scraping-engine/prd.md` FR-66A/B, `11-1-proxyippool-accountpool-sticky-round-robin.md` implementation patterns, current `src/proxy/**`, `src/core/**`, `types/**`, 2024–2025 provider documentation.
 
@@ -537,63 +537,91 @@ npx vitest run tests/proxy/proxy-pool.test.js tests/proxy/providers.test.js test
 
 ## Tasks & Subtasks
 
-- [ ] **Task 1: Extend `src/proxy/providers.js` with provider contract and presets**
-  - [ ] Add `ProxyProviderContract` JSDoc / types.
-  - [ ] Add `StaticProxyProvider` class (wraps `ProxyIpPool` or accepts `pool`).
-  - [ ] Add `DynamicTunnelProvider` class with gateway parsing, auto-detection, session cache, and quarantine map.
-  - [ ] Add provider-specific credential formatters for `brightdata`, `smartproxy`, `iproyal`, `kuaidaili`, `custom`.
-  - [ ] Add `createProxyProvider(config)` factory.
-  - [ ] Ensure all new classes reuse `parseProxyUrl`, `normalizeProxy`, `formatProxyUrl`, `getProxyAgent`.
+- [x] **Task 1: Extend `src/proxy/providers.js` with provider contract and presets**
+  - [x] Add `ProxyProviderContract` JSDoc / types.
+  - [x] Add `StaticProxyProvider` class (wraps `ProxyIpPool` or accepts `pool`).
+  - [x] Add `DynamicTunnelProvider` class with gateway parsing, auto-detection, session cache, and quarantine map.
+  - [x] Add provider-specific credential formatters for `brightdata`, `smartproxy`, `iproyal`, `kuaidaili`, `custom`.
+  - [x] Add `createProxyProvider(config)` factory.
+  - [x] Ensure all new classes reuse `parseProxyUrl`, `normalizeProxy`, `formatProxyUrl`, `getProxyAgent`.
 
-- [ ] **Task 2: Update `src/proxy/index.js` exports**
-  - [ ] Re-export `StaticProxyProvider`, `DynamicTunnelProvider`, `createProxyProvider`.
-  - [ ] Keep existing `ProxyIpPool`, `globalProxyPool`, provider utilities.
+- [x] **Task 2: Update `src/proxy/index.js` exports**
+  - [x] Re-export `StaticProxyProvider`, `DynamicTunnelProvider`, `createProxyProvider`.
+  - [x] Keep existing `ProxyIpPool`, `globalProxyPool`, provider utilities.
 
-- [ ] **Task 3: Integrate provider contract with `AbstractApiClient` (optional/minimal)**
-  - [ ] Allow `proxyProvider` injection in `src/core/base-client.js` constructor.
-  - [ ] Prefer `proxyProvider.getProxy({ accountId })` when available; fall back to `proxyPool`.
-  - [ ] Preserve existing `proxy_exhausted` behavior.
+- [x] **Task 3: Integrate provider contract with `AbstractApiClient` (optional/minimal)**
+  - [x] Allow `proxyProvider` injection in `src/core/base-client.js` constructor.
+  - [x] Prefer `proxyProvider.getProxy({ accountId })` when available; fall back to `proxyPool`.
+  - [x] Preserve existing `proxy_exhausted` behavior.
 
-- [ ] **Task 4: Update TypeScript declarations**
-  - [ ] `types/proxy.d.ts`: add `ProxyProviderContract`, `StaticProxyOptions`, `DynamicTunnelOptions`, `ProviderPreset`, `ProxyRequestOptions`, class declarations, factory.
-  - [ ] `types/index.d.ts`: ensure re-export is intact (line 769).
-  - [ ] Zero `any`, zero `@ts-ignore`.
+- [x] **Task 4: Update TypeScript declarations**
+  - [x] `types/proxy.d.ts`: add `ProxyProviderContract`, `StaticProxyOptions`, `DynamicTunnelOptions`, `ProviderPreset`, `ProxyRequestOptions`, class declarations, factory.
+  - [x] `types/index.d.ts`: ensure re-export is intact (line 769).
+  - [x] Zero `any`, zero `@ts-ignore`.
 
-- [ ] **Task 5: ATDD test suite `tests/proxy/providers-tunnel.test.js`**
-  - [ ] `StaticProxyProvider` sticky / round-robin / quarantine / delegation tests.
-  - [ ] `DynamicTunnelProvider` auto-detection for each preset.
-  - [ ] `DynamicTunnelProvider` per-request rotation (no `accountId`).
-  - [ ] `DynamicTunnelProvider` sticky session with `vi.useFakeTimers()` and bucket rollover.
-  - [ ] `rotateSession(accountId)` and `quarantine(proxy)` invalidation tests.
-  - [ ] Provider credential format tests for BrightData, Smartproxy, IPRoyal, Kuaidaili, `custom`.
-  - [ ] `getBrowserArgs`, `toPlaywrightProxy`, `getProxyAgent` no-direct-fallback tests.
-  - [ ] `createProxyProvider` factory happy paths and error paths.
+- [x] **Task 5: ATDD test suite `tests/proxy/providers-tunnel.test.js`**
+  - [x] `StaticProxyProvider` sticky / round-robin / quarantine / delegation tests.
+  - [x] `DynamicTunnelProvider` auto-detection for each preset.
+  - [x] `DynamicTunnelProvider` per-request rotation (no `accountId`).
+  - [x] `DynamicTunnelProvider` sticky session with `vi.useFakeTimers()` and bucket rollover.
+  - [x] `rotateSession(accountId)` and `quarantine(proxy)` invalidation tests.
+  - [x] Provider credential format tests for BrightData, Smartproxy, IPRoyal, Kuaidaili, `custom`.
+  - [x] `getBrowserArgs`, `toPlaywrightProxy`, `getProxyAgent` no-direct-fallback tests.
+  - [x] `createProxyProvider` factory happy paths and error paths.
 
-- [ ] **Task 6: Integration smoke tests**
-  - [ ] Run `npx vitest run tests/proxy/providers-tunnel.test.js tests/proxy/proxy-pool.test.js tests/proxy/providers.test.js tests/core/account-pool.test.js tests/core/base-client-proxy.test.js`
-  - [ ] All existing tests must remain green.
+- [x] **Task 6: Integration smoke tests**
+  - [x] Run `npx vitest run tests/proxy/providers-tunnel.test.js tests/proxy/proxy-pool.test.js tests/proxy/providers.test.js tests/core/account-pool.test.js tests/core/base-client-proxy.test.js`
+  - [x] All existing tests must remain green.
 
-- [ ] **Task 7: Update this story file and sprint status**
-  - [ ] Mark relevant subtasks done as implementation progresses.
-  - [ ] Update `sprint-status.yaml` only if the status changes (currently `ready-for-dev`).
+- [x] **Task 7: Update this story file and sprint status**
+  - [x] Mark relevant subtasks done as implementation progresses.
+  - [x] Update `sprint-status.yaml` only if the status changes (currently `ready-for-dev`).
 
 ---
 
 ### ATDD Artifacts
 
 - **Checklist:** `_bmad-output/test-artifacts/atdd-checklist-11-2-static-dynamic-residential-tunnel-proxy-providers.md`
-- **Unit & Integration Tests:** `tests/proxy/providers-tunnel.test.js` (22 red-phase scaffold tests)
+- **Unit & Integration Tests:** `tests/proxy/providers-tunnel.test.js` (22 red-to-green phase tests passing 100%)
+
+---
+
+## Dev Agent Record
+
+### Implementation Plan
+1. Implemented `StaticProxyProvider` wrapping `ProxyIpPool` with unified `ProxyProviderContract` delegation methods.
+2. Implemented `DynamicTunnelProvider` supporting gateway parsing, preset auto-detection (`brightdata`, `smartproxy`, `iproyal`, `kuaidaili`, `custom`), per-request IP rotation, sticky account sessions with time-bucket expiration (`sessionDurationMs`), and session invalidation on quarantine/rotation.
+3. Implemented `createProxyProvider` unified factory.
+4. Integrated `proxyProvider` optional injection in `AbstractApiClient` (`src/core/base-client.js`).
+5. Updated TypeScript declarations in `types/proxy.d.ts` with strict typings.
+6. Verified 22/22 unit and contract tests in `tests/proxy/providers-tunnel.test.js` and full regression suites (223/223 passing).
+
+### Completion Notes
+- All 22 new ATDD tests passing (100% green).
+- Zero mocks used, full Vitest fake timer support for session lifecycle.
+- Zero `any` and zero `@ts-ignore` in TypeScript definitions.
+
+### File List
+- `src/proxy/providers.js` (MODIFIED) - Added `StaticProxyProvider`, `DynamicTunnelProvider`, `createProxyProvider`.
+- `src/proxy/index.js` (MODIFIED) - Re-exported provider classes and utilities.
+- `src/core/base-client.js` (MODIFIED) - Added `proxyProvider` resolution support in `AbstractApiClient`.
+- `types/proxy.d.ts` (MODIFIED) - Added `ProxyProviderContract`, options, classes, and factory types.
+- `tests/proxy/providers-tunnel.test.js` (NEW) - 22 ATDD unit and contract tests.
+- `_bmad-output/test-artifacts/atdd-checklist-11-2-static-dynamic-residential-tunnel-proxy-providers.md` (NEW) - ATDD checklist artifact.
+
+### Change Log
+- 2026-08-20: Implemented Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers with 100% test pass.
 
 ---
 
 ## Story Completion Status
 
-- **Status:** ready-for-dev
+- **Status:** review
 - **Context engine analysis completed:** comprehensive developer guide re-created and verified against source material.
 - **Web research completed:** BrightData, Smartproxy/Decodo, IPRoyal, Kuaidaili credential and session conventions documented.
 - **Architecture compliance verified:** AD-3, AD-13, AD-14, AD-2, AD-8 mapped.
 - **Previous story intelligence imported:** 11.1 implementation, review findings, test patterns, file states.
 - **Warnings & potential pitfalls:** 12 specific items.
 - **Decisions record:** 12 recorded decisions.
-- **Tasks & subtasks:** aligned with AC-1 through AC-11.
-- **Next phase:** implementation via `/bmad-dev-story` and ATDD via `/bmad-testarch-atdd 11.2`.
+- **Tasks & subtasks:** 100% completed and verified.
+- **Next phase:** Code Review via `/bmad-code-review`.

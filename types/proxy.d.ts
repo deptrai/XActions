@@ -7,8 +7,11 @@
 
 import type { ProxyAgent, Socks5ProxyAgent } from 'undici';
 
+export type SupportedProxyScheme = 'http' | 'https' | 'socks5';
+export type ProviderPreset = 'brightdata' | 'smartproxy' | 'iproyal' | 'kuaidaili' | 'custom';
+
 export interface NormalizedProxy {
-  scheme: 'http' | 'https' | 'socks5';
+  scheme: SupportedProxyScheme;
   host: string;
   port: number;
   username?: string;
@@ -29,6 +32,43 @@ export interface ProxyIpPoolOptions {
 
 export interface ProxyAgentOptions {
   client?: 'undici' | 'got';
+}
+
+export interface ProxyRequestOptions {
+  accountId?: string;
+  platform?: string;
+  country?: string;
+  city?: string;
+  sessionId?: string;
+}
+
+export interface ProxyProviderContract {
+  get healthyCount(): number;
+  get totalCount(): number;
+  isAllQuarantined(): boolean;
+  getProxy(options?: ProxyRequestOptions): NormalizedProxy | null;
+  getStickyProxy(accountId: string): NormalizedProxy | null;
+  getNext(): NormalizedProxy | null;
+  quarantine(proxy: string | Partial<NormalizedProxy>, durationMs?: number): void;
+  toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
+  getProxyAgent(proxy: string | NormalizedProxy, options?: ProxyAgentOptions): ProxyAgent | Socks5ProxyAgent | string;
+  getBrowserArgs(proxy: string | Partial<NormalizedProxy>): string[];
+}
+
+export interface StaticProxyOptions {
+  pool?: ProxyIpPool;
+  proxies?: Array<string | Partial<NormalizedProxy>>;
+  validateOnAdd?: boolean;
+}
+
+export interface DynamicTunnelOptions {
+  gatewayUrl: string;
+  provider?: ProviderPreset;
+  template?: string;
+  rotatePerRequest?: boolean;
+  sessionDurationMs?: number;
+  country?: string;
+  city?: string;
 }
 
 export interface AccountRecord {
@@ -89,6 +129,51 @@ export declare class AccountPool {
 
 export declare const globalAccountPool: AccountPool;
 
+export declare class StaticProxyProvider implements ProxyProviderContract {
+  pool: ProxyIpPool;
+
+  constructor(options?: StaticProxyOptions);
+
+  get healthyCount(): number;
+  get totalCount(): number;
+  isAllQuarantined(): boolean;
+  getProxy(options?: ProxyRequestOptions): NormalizedProxy | null;
+  getStickyProxy(accountId: string): NormalizedProxy | null;
+  getNext(): NormalizedProxy | null;
+  quarantine(proxy: string | Partial<NormalizedProxy>, durationMs?: number): void;
+  toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
+  getProxyAgent(proxy: string | NormalizedProxy, options?: ProxyAgentOptions): ProxyAgent | Socks5ProxyAgent | string;
+  getBrowserArgs(proxy: string | Partial<NormalizedProxy>): string[];
+}
+
+export declare class DynamicTunnelProvider implements ProxyProviderContract {
+  provider: ProviderPreset;
+  template: string;
+  rotatePerRequest: boolean;
+  sessionDurationMs: number;
+  defaultCountry?: string;
+  defaultCity?: string;
+
+  constructor(options: DynamicTunnelOptions);
+
+  get healthyCount(): number;
+  get totalCount(): number;
+  isAllQuarantined(): boolean;
+  rotateSession(accountId?: string): void;
+  quarantine(proxy?: string | Partial<NormalizedProxy>, durationMs?: number): void;
+  getProxy(options?: ProxyRequestOptions): NormalizedProxy;
+  getStickyProxy(accountId: string): NormalizedProxy;
+  getNext(): NormalizedProxy;
+  toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
+  getProxyAgent(proxy: string | NormalizedProxy, options?: ProxyAgentOptions): ProxyAgent | Socks5ProxyAgent | string;
+  getBrowserArgs(proxy: string | Partial<NormalizedProxy>): string[];
+}
+
+export declare function createProxyProvider(
+  config: (StaticProxyOptions & { type?: 'static' }) | (DynamicTunnelOptions & { type?: 'dynamic' }) | Record<string, unknown>
+): StaticProxyProvider | DynamicTunnelProvider;
+
+export declare const SUPPORTED_PROXY_SCHEMES: string[];
 export declare function parseProxyUrl(urlString: string): NormalizedProxy;
 export declare function normalizeProxy(input: string | Partial<NormalizedProxy>): NormalizedProxy;
 export declare function formatProxyUrl(proxy: string | Partial<NormalizedProxy>): string;

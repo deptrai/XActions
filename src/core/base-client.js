@@ -38,6 +38,7 @@ export class AbstractApiClient {
     }
     this.sessionManager = options.sessionManager;
     this.proxyPool = options.proxyPool;
+    this.proxyProvider = options.proxyProvider;
     this.accountPool = options.accountPool;
     this.governor = options.governor;
   }
@@ -54,11 +55,19 @@ export class AbstractApiClient {
    * @returns {any}
    */
   resolveProxy(accountId) {
-    if (!this.proxyPool) return null;
+    const provider = this.proxyProvider || this.proxyPool;
+    if (!provider) return null;
 
-    const proxy = this.requiresAuth && accountId
-      ? this.proxyPool.getStickyProxy(accountId)
-      : this.proxyPool.getNext();
+    let proxy;
+    if (typeof provider.getProxy === 'function') {
+      proxy = this.requiresAuth && accountId
+        ? provider.getProxy({ accountId })
+        : provider.getProxy();
+    } else {
+      proxy = this.requiresAuth && accountId
+        ? provider.getStickyProxy(accountId)
+        : provider.getNext();
+    }
 
     if (!proxy) {
       // Enter standby backoff for the account, if registered, before throwing.
