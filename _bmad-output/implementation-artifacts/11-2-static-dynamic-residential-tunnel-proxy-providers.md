@@ -18,51 +18,57 @@ So that **I can seamlessly switch between static dedicated IPs for authenticated
 
 ## Acceptance Criteria
 
-### AC-1: StaticProxyProvider Implementation & Contract
+### AC-1: StaticProxyProvider Implementation & Unified Contract
 * **Given** a list of static proxies (strings or objects) or an existing `ProxyIpPool` instance
 * **When** `new StaticProxyProvider(options)` is instantiated with `{ proxies, pool }`
 * **Then** it implements the standard `ProxyProviderContract`:
-  - `getProxy({ accountId })`: returns sticky proxy for `accountId`, or round-robin proxy if `accountId` is omitted
-  - `getStickyProxy(accountId)`: returns sticky proxy from internal pool
+  - `getProxy({ accountId, platform, country })`: returns sticky proxy for `accountId`, or round-robin proxy if `accountId` is omitted
+  - `getStickyProxy(accountId)`: returns deterministic sticky proxy from internal pool
   - `getNext()`: returns next healthy proxy in round-robin order
-  - `quarantine(proxy, durationMs)`: quarantines proxy and drops account bindings
+  - `quarantine(proxy, durationMs)`: quarantines proxy and drops account bindings in pool
   - `toPlaywrightProxy(proxy)`: converts proxy to `{ server, username, password }` Playwright format
-  - `getProxyAgent(proxy, options)`: returns `undici.ProxyAgent`, `SocksProxyAgent`, or got proxy string
+  - `getProxyAgent(proxy, options)`: returns `undici.ProxyAgent`, `SocksProxyAgent`, or got proxy string without direct fallback
   - `getBrowserArgs(proxy)`: returns anti-leak Chromium launch arguments
 * **And** getters `healthyCount`, `totalCount`, and `isAllQuarantined()` accurately reflect underlying pool state.
 
-### AC-2: DynamicTunnelProvider Gateway Parsing & Validation
-* **Given** a dynamic residential gateway URL (e.g. `http://user:pass@gate.smartproxy.com:7000` or `http://brd.superproxy.io:22225`)
+### AC-2: DynamicTunnelProvider Gateway Parsing & Auto-Detection
+* **Given** a dynamic residential gateway URL (e.g. `http://user:pass@gate.smartproxy.com:7000`, `http://brd.superproxy.io:22225`, or `socks5://geo.iproyal.com:12321`)
 * **When** `new DynamicTunnelProvider(options)` is instantiated
-* **Then** it validates and parses the gateway URL using `parseProxyUrl`
-* **And** extracts scheme, host, port, base username, and password
-* **And** throws `PlatformError` (`XACT_4001`, `invalid_args`) if `gatewayUrl` is missing, empty, or invalid.
+* **Then** it parses and validates the gateway URL using `parseProxyUrl`
+* **And** automatically auto-detects `provider` preset from gateway hostname if not explicitly passed:
+  - `*.superproxy.io` ➔ `'brightdata'`
+  - `*.smartproxy.com` ➔ `'smartproxy'`
+  - `*.iproyal.com` ➔ `'iproyal'`
+  - `*.kdlapi.com` ➔ `'kuaidaili'`
+  - otherwise defaults to `'custom'`
+* **And** throws `PlatformError` (`XACT_4001`, `invalid_args`, `statusCode: 400`) if `gatewayUrl` is missing, empty, or invalid.
 
 ### AC-3: Per-Request Residential IP Rotation
 * **Given** a `DynamicTunnelProvider` configured with `rotatePerRequest: true` (default)
 * **When** `getProxy()` is called without an `accountId`
-* **Then** it generates a unique per-request session tag and injects it into the proxy authentication credentials
+* **Then** it generates a unique per-request session tag (random hex string/timestamp)
+* **And** injects the session tag into proxy credentials according to the provider preset format
 * **And** returns a canonical `NormalizedProxy` pointing to the gateway with session credentials
-* **And** successive calls return different session credentials ensuring a new residential exit IP per request.
+* **And** successive calls return different session credentials, ensuring a new residential exit IP per request.
 
-### AC-4: Sticky Residential Session per Account
+### AC-4: Sticky Residential Session per Account & Expiration Lifecycle
 * **Given** a `DynamicTunnelProvider` configured with `sessionDurationMs` (default: 600,000ms / 10 minutes)
 * **When** `getProxy({ accountId })` is called with a specific `accountId`
-* **Then** it deterministically generates a session ID bound to `accountId` (e.g. `session-acc_<hash>`)
+* **Then** it deterministically generates a session ID bound to `accountId` using time-bucket hashing (`Math.floor(Date.now() / sessionDurationMs)`)
 * **And** returns the same session credentials for repeated calls within the session duration window
-* **And** automatically expires and generates a fresh session ID after `sessionDurationMs` elapses, or when `rotateSession(accountId)` is explicitly called
-* **And** calling `quarantine(proxy)` for a dynamic tunnel proxy immediately rotates that account's session tag to a new exit node.
+* **And** automatically rolls over to a new session tag when the time bucket elapses
+* **And** calling `rotateSession(accountId)` or `quarantine(proxy)` for that account immediately invalidates the current session tag and generates a fresh residential exit node.
 
-### AC-5: Geo-Targeting Formatting (Presets for Major Providers)
-* **Given** provider configuration or options specifying `provider`, `country`, `city`, `sessionId`
+### AC-5: Geo-Targeting Formatting Presets & Custom Template
+* **Given** provider configuration or call options specifying `country`, `city`, `sessionId`
 * **When** constructing authentication credentials for a dynamic proxy request
 * **Then** it formats username/credentials according to the selected provider preset:
   - `brightdata`: `user-${baseUser}-country-${country}-city-${city}-session-${sessionId}`
   - `smartproxy`: `user-${baseUser}_country-${country}_city-${city}_session-${sessionId}`
   - `iproyal`: `user-${baseUser}_country-${country}_city-${city}_session-${sessionId}`
-  - `kuaidaili`: supports secret token channel auth or user-session formatting
+  - `kuaidaili`: `user-${baseUser}_session-${sessionId}`
   - `custom`: uses configurable template pattern string (e.g. `{username}:country={country}:session={sessionId}`)
-* **And** omits `country`/`city`/`session` segments when they are not specified.
+* **And** omits `country`/`city` segments cleanly when they are not specified without adding extra dashes or underscores.
 
 ### AC-6: Unified Provider Factory (`createProxyProvider`)
 * **Given** a provider configuration object
@@ -71,10 +77,10 @@ So that **I can seamlessly switch between static dedicated IPs for authenticated
 * **And** returns a `StaticProxyProvider` instance if `config.type === 'static'` or `config.proxies` is present
 * **And** throws `PlatformError` (`XACT_4001`) if the configuration is invalid or provider type is unknown.
 
-### AC-7: Proxy Agent & Playwright Anti-Leak Integration
+### AC-7: Anti-Leak Browser & Protocol Compatibility
 * **Given** a proxy returned from either `StaticProxyProvider` or `DynamicTunnelProvider`
 * **When** `getProxyAgent(proxy, options)` or `toPlaywrightProxy(proxy)` is called
-* **Then** it creates valid, direct HTTP/HTTPS/SOCKS5 agents via `undici.ProxyAgent` or `SocksProxyAgent` without falling back to direct connection
+* **Then** it creates valid HTTP/HTTPS/SOCKS5 agents via `undici.ProxyAgent` or `SocksProxyAgent` without falling back to direct connection
 * **And** `getBrowserArgs(proxy)` includes anti-leak flags:
   - `--force-webrtc-ip-handling-policy=disable_non_proxied_udp`
   - `--proxy-server=<server>`.
@@ -86,14 +92,60 @@ So that **I can seamlessly switch between static dedicated IPs for authenticated
 
 ---
 
+## Previous Story Intelligence (Story 11.1 Learnings)
+
+1. **Proxy `#key` Generation with Password**:
+   - Rotating residential proxy gateways share the identical `host:port` (e.g. `gate.smartproxy.com:7000`) and differentiate exit nodes via `username` or `password`. When tracking/quarantining proxies, the identification key must include credentials: `${scheme}://${username}:${password}@${host}:${port}` to avoid quarantine collisions across unrelated sessions.
+2. **RFC 3986 IPv6 Brackets Formatting**:
+   - IPv6 hosts (e.g. `2001:db8::1`) must always be wrapped in square brackets `[2001:db8::1]:port` when formatting URLs.
+3. **Zero Fallback to Direct Connection**:
+   - If a proxy fails to resolve or is null/invalid, never fall back to direct HTTP connection; throw `PlatformError` (`XACT_4001`) immediately to prevent real IP leaks.
+4. **Pure In-Memory Testing (No Mocks)**:
+   - All tests must run against real in-memory objects and local HTTP/SOCKS5 instances with Vitest fake timers (`vi.useFakeTimers()`).
+
+---
+
+## Git Intelligence Summary
+
+- `b69625c` — `feat(api): add live REST API endpoints for ProxyIpPool and AccountPool (/api/proxies)`
+- `b81a542` — `test(automate): expand test automation coverage for proxy providers and client proxy routing (92 passing tests)`
+- `061725b` — `fix(proxy): address round 2 code review findings (IPv6 format, proxy key with password, account merge)`
+- `6d85ba9` — `feat(proxy): complete story 11.1 ProxyIpPool and AccountPool with review patches`
+
+---
+
+## File Modification Analysis
+
+| File | Action | Purpose & Preserved Behavior |
+|---|---|---|
+| `src/proxy/providers.js` | **UPDATE** | Add `DynamicTunnelProvider`, `StaticProxyProvider`, `createProxyProvider`. **MUST PRESERVE** existing `parseProxyUrl`, `normalizeProxy`, `formatProxyUrl`, `getProxyAgent`, `SUPPORTED_PROXY_SCHEMES`. |
+| `src/proxy/index.js` | **UPDATE** | Re-export `DynamicTunnelProvider`, `StaticProxyProvider`, `createProxyProvider`. |
+| `types/proxy.d.ts` | **UPDATE** | Add TypeScript type definitions for `ProxyProviderContract`, `StaticProxyOptions`, `DynamicTunnelOptions`, and classes. |
+| `types/index.d.ts` | **UPDATE** | Export new types from `types/proxy.d.ts`. |
+| `tests/proxy/providers-tunnel.test.js` | **NEW** | ATDD test suite covering AC-1 through AC-8. |
+
+---
+
+## Technical Specifications & Provider Presets Matrix
+
+| Provider Preset | Hostname Patterns | Username Format |
+|---|---|---|
+| `brightdata` | `*.superproxy.io`, `*.luminati.io` | `user-${user}-country-${country}-city-${city}-session-${sessionId}` |
+| `smartproxy` | `*.smartproxy.com`, `*.smartproxy.io` | `user-${user}_country-${country}_city-${city}_session-${sessionId}` |
+| `iproyal` | `*.iproyal.com`, `*.royalproxy.io` | `user-${user}_country-${country}_city-${city}_session-${sessionId}` |
+| `kuaidaili` | `*.kdlapi.com`, `*.kuaidaili.com` | `user-${user}_session-${sessionId}` |
+| `custom` | Any other hostname | Evaluates `template` (e.g. `{username}:country={country}:session={sessionId}`) |
+
+---
+
 ## Tasks & Subtasks
 
 - [ ] **Task 1: Implement Dynamic Tunnel Provider & Geo-Preset Formatter (`src/proxy/providers.js`)**
   - [ ] Implement `DynamicTunnelProvider` class.
-  - [ ] Implement provider presets: `brightdata`, `smartproxy`, `iproyal`, `kuaidaili`, `custom`.
-  - [ ] Implement per-request random session generator.
-  - [ ] Implement account sticky session cache with sliding expiry (`sessionDurationMs`).
-  - [ ] Implement `rotateSession(accountId)` and `quarantine(proxy)` session refresh.
+  - [ ] Implement auto-detection and presets for `brightdata`, `smartproxy`, `iproyal`, `kuaidaili`, `custom`.
+  - [ ] Implement per-request random session generator (`rotatePerRequest`).
+  - [ ] Implement account sticky session with time-bucket expiration (`sessionDurationMs`).
+  - [ ] Implement `rotateSession(accountId)` and `quarantine(proxy)` instant session invalidation.
 
 - [ ] **Task 2: Implement Static Proxy Provider (`src/proxy/providers.js`)**
   - [ ] Implement `StaticProxyProvider` class wrapping `ProxyIpPool`.
@@ -117,28 +169,8 @@ So that **I can seamlessly switch between static dedicated IPs for authenticated
 
 ---
 
-## Dev Notes & Technical Guardrails
-
-### 1. Architecture Compliance
-- **File Location:** `src/proxy/providers.js` and `src/proxy/index.js`.
-- **Runtime:** Pure ESM (`import`/`export`), Node >= 18.
-- **Dependencies:** `undici` (for `ProxyAgent`), `socks-proxy-agent` (for `SocksProxyAgent`), and internal `src/core/error-envelope.js`.
-- **Error Handling:** All invalid configs or missing gateways MUST throw `PlatformError` (`XACT_4001`, `invalid_args`, `statusCode: 400`).
-
-### 2. Session ID Generation & Residential Gateways
-Residential proxy gateways typically accept session IDs embedded in the proxy username:
-- BrightData: `user-lum-customer-hl_123456-zone-residential-country-vn-session-sess12345`
-- Smartproxy: `user-customer123-country-vn-session-sess12345`
-- IPRoyal: `user-royal123_country-vn_session-sess12345`
-
-For `DynamicTunnelProvider`:
-- When `rotatePerRequest: true` without `accountId`: session ID is generated using `crypto.randomBytes(4).toString('hex')`.
-- When `accountId` is passed: session ID is `acc_${hash(accountId)}_${epochBucket}` where `epochBucket = Math.floor(Date.now() / sessionDurationMs)`. When time moves to the next bucket, the session tag automatically updates to a new residential exit IP!
-
----
-
 ## Story Completion Status
 
 - **Status:** `ready-for-dev`
-- **Checklist Verified:** Yes
+- **Checklist Verified:** 100% Validated against BMad Checklist
 - **Next Phase:** ATDD Scaffolding via `/bmad-testarch-atdd 11.2` or implementation via `/bmad-dev-story`.
