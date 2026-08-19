@@ -2,7 +2,7 @@
 story_id: 10.5
 story_key: 10-5-metadata-schema-contract-registry-for-consumers
 epic: 10 — Unified PostgreSQL Storage (Prisma) & Core Interfaces
-status: ready-for-dev
+status: in-progress
 ---
 
 # 10.5 — Metadata Schema Contract & Registry for Consumers
@@ -333,10 +333,10 @@ status: ready-for-dev
 
 ## Story Completion Status
 
-- **Status:** `ready-for-dev`
+- **Status:** `in-progress`
 - **Context engine analysis completed:** comprehensive developer guide created.
-- **Dev implementation:** not started.
-- **Code Review:** not started.
+- **Dev implementation:** completed; pending review fixes.
+- **Code Review:** in progress.
 
 ---
 
@@ -359,3 +359,21 @@ status: ready-for-dev
 
 - **2026-08-19:** Created Story 10.5 context file and updated sprint status to `ready-for-dev`.
 - **2026-08-19:** Validated story against `checklist.md`: fixed `PlatformError` type for 404, clarified multi-type and reserved `location` fields, added `schemas/` packaging and missing-directory guards, and documented `/api/schemas` route prefix decision.
+
+### Review Findings (Round 3 — Code Review Run)
+
+- [ ] [Review][Patch] Null/undefined `metadata` is not skipped when a schema is registered; `validateMetadata` and `PrismaStore` reject posts without metadata for any schema-registered `(platform, category)` pair. This violates the story's opt-in validation contract and will break crawlers that do not yet populate metadata. [src/core/metadata-schema-registry.js:219-230, src/store/prisma-store.js:198-212]
+- [ ] [Review][Patch] `api/routes/schemas.js` and `src/cli/index.js` reference `ErrorTypes.NOT_FOUND`, which does not exist in `ErrorTypes`; the error type silently falls back to `internal`. Both should use `ErrorTypes.INTERNAL` with `statusCode: 404` per the story spec. [api/routes/schemas.js:37, src/cli/index.js:3416]
+- [ ] [Review][Patch] `MetadataSchemaRegistry.listSchemas` populates `version` from `schema.$schema` (the JSON Schema draft URI) instead of a real `version` property, making the `version` descriptor misleading. [src/core/metadata-schema-registry.js:208]
+- [ ] [Review][Patch] `GET /api/schemas` error response returns `error.message` instead of the standard `error.toEnvelope()` envelope used by the rest of the XActions API. [api/routes/schemas.js:20]
+- [ ] [Review][Patch] `x_schema_get` in `src/mcp/server.js` returns a plain `{ error: string }` object for missing schemas; the MCP server treats it as a successful result. It should throw a `PlatformError` or return an MCP `isError` result. [src/mcp/server.js:4804-4811]
+- [ ] [Review][Patch] `tests/store/prisma-store-schema-validation.test.js` uses a mocked/fake `prisma` object in the `validateSchema: false` test, violating the project's "no mocks" rule and the story's real-PostgreSQL test requirement. [tests/store/prisma-store-schema-validation.test.js:45-60]
+- [ ] [Review][Patch] `types/metadata-schema.d.ts` has `ValidationResult.errors?: string[]` (optional) while the runtime always returns an `errors` array, and `validateMetadata` accepts `metadata: object` which is too narrow for null/undefined/unknown inputs. [types/metadata-schema.d.ts:24-27, types/metadata-schema.d.ts:62]
+
+### Dismissed Edge-Case Findings
+
+- `additionalProperties` validation is not implemented — out of scope; no schema uses it.
+- Case-sensitivity of platform/category and `:` in platform names — not required by the contract; platform/category are stable lowercase tokens.
+- URL-decoding of path params — Express `req.params` already decodes path segments.
+- Stack overflow on deeply nested metadata — theoretical; metadata is expected to be shallow.
+- Schema file JSON parse errors are logged and skipped — acceptable startup behavior; malformed schemas do not crash the process.
