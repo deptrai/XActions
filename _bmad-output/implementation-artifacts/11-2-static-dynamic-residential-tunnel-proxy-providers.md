@@ -579,6 +579,13 @@ npx vitest run tests/proxy/proxy-pool.test.js tests/proxy/providers.test.js test
 
 ---
 
+### ATDD Artifacts
+
+- **Checklist:** `_bmad-output/test-artifacts/atdd-checklist-11-2-static-dynamic-residential-tunnel-proxy-providers.md`
+- **Unit & Integration Tests:** `tests/proxy/providers-tunnel.test.js` (22 red-phase scaffold tests)
+
+---
+
 ## Story Completion Status
 
 - **Status:** ready-for-dev
