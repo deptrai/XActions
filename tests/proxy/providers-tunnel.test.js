@@ -12,7 +12,7 @@ import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
 import { PlatformError } from '../../src/core/error-envelope.js';
 import { ProxyAgent, Socks5ProxyAgent } from 'undici';
 
-describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD Red Phase)', () => {
+describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers', () => {
   describe('AC-1: StaticProxyProvider Implementation & Unified Contract', () => {
     test('should instantiate with a list of proxy strings and wrap an internal ProxyIpPool', () => {
       const provider = new StaticProxyProvider({
@@ -22,6 +22,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
         ],
       });
 
+      expect(provider.name).toBe('static');
       expect(provider.totalCount).toBe(2);
       expect(provider.healthyCount).toBe(2);
       expect(provider.isAllQuarantined()).toBe(false);
@@ -98,11 +99,17 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
         gatewayUrl: 'http://user:pass@brd.superproxy.io:22225',
       });
       expect(brightdata.provider).toBe('brightdata');
+      expect(brightdata.name).toBe('dynamic');
 
       const smartproxy = new DynamicTunnelProvider({
         gatewayUrl: 'http://user:pass@gate.smartproxy.com:7000',
       });
       expect(smartproxy.provider).toBe('smartproxy');
+
+      const decodo = new DynamicTunnelProvider({
+        gatewayUrl: 'http://user:pass@gate.decodo.com:7000',
+      });
+      expect(decodo.provider).toBe('smartproxy');
 
       const iproyal = new DynamicTunnelProvider({
         gatewayUrl: 'socks5://user:pass@geo.iproyal.com:12321',
@@ -155,6 +162,17 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(p1.username).not.toBe(p2.username);
     });
 
+    test('should maintain static session when rotatePerRequest is false and accountId is omitted', () => {
+      const provider = new DynamicTunnelProvider({
+        gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
+        rotatePerRequest: false,
+      });
+
+      const p1 = provider.getProxy();
+      const p2 = provider.getProxy();
+      expect(p1.username).toBe(p2.username);
+    });
+
     test('should provide getNext() as an alias for per-request rotation', () => {
       const provider = new DynamicTunnelProvider({
         gatewayUrl: 'http://myuser:mypass@brd.superproxy.io:22225',
@@ -163,6 +181,14 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       const p1 = provider.getNext();
       const p2 = provider.getNext();
       expect(p1.username).not.toBe(p2.username);
+    });
+
+    test('should safely handle null options passed to getProxy', () => {
+      const provider = new DynamicTunnelProvider({
+        gatewayUrl: 'http://myuser:mypass@brd.superproxy.io:22225',
+      });
+
+      expect(() => provider.getProxy(null)).not.toThrow();
     });
   });
 
@@ -219,6 +245,17 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       const p3 = provider.getProxy({ accountId: 'acc_target' });
       expect(p2.username).not.toBe(p3.username);
     });
+
+    test('should support clearAccount and reset for cache cleanup', () => {
+      const provider = new DynamicTunnelProvider({
+        gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
+      });
+
+      provider.getProxy({ accountId: 'acc_cleanup' });
+      provider.clearAccount('acc_cleanup');
+      provider.reset();
+      expect(provider.healthyCount).toBe(1);
+    });
   });
 
   describe('AC-5: Geo-Targeting Formatting Presets & Custom Template', () => {
@@ -229,12 +266,22 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       });
 
       const proxy = provider.getProxy({
-        country: 'us',
-        city: 'newyork',
+        country: 'US',
+        city: 'New York',
         sessionId: 'sess123',
       });
 
       expect(proxy.username).toBe('user-lum_user-country-us-city-newyork-session-sess123');
+    });
+
+    test('should avoid duplicate user- prefix if baseUser already has user-, brd-, or lum-', () => {
+      const provider = new DynamicTunnelProvider({
+        gatewayUrl: 'http://brd-customer-123-zone-res:pass@brd.superproxy.io:22225',
+        provider: 'brightdata',
+      });
+
+      const proxy = provider.getProxy({ sessionId: 's1' });
+      expect(proxy.username).toBe('brd-customer-123-zone-res-session-s1');
     });
 
     test('should format Smartproxy and IPRoyal with underscore delimited tags', () => {
@@ -272,11 +319,11 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(proxy.username).toBe('user-kdl_user_session-sess999');
     });
 
-    test('should render custom template pattern string accurately', () => {
+    test('should render custom template pattern string accurately with replaceAll', () => {
       const custom = new DynamicTunnelProvider({
         gatewayUrl: 'http://baseuser:basepass@custom.proxy:8080',
         provider: 'custom',
-        template: '{username}:country={country}:session={sessionId}',
+        template: '{username}:country={country}:session={sessionId}:s={sessionId}',
       });
 
       const proxy = custom.getProxy({
@@ -284,7 +331,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
         sessionId: 'sessVN',
       });
 
-      expect(proxy.username).toBe('baseuser:country=vn:session=sessVN');
+      expect(proxy.username).toBe('baseuser:country=vn:session=sessVN:s=sessVN');
     });
 
     test('should cleanly omit optional geo segments without creating dangling delimiters', () => {
@@ -328,15 +375,28 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
       expect(p2).toBeInstanceOf(StaticProxyProvider);
     });
 
-    test('should throw PlatformError XACT_4001 on unknown provider type or invalid configuration', () => {
+    test('should prioritize explicit type when both gatewayUrl and proxies are provided', () => {
+      const p1 = createProxyProvider({
+        type: 'static',
+        gatewayUrl: 'http://user:pass@gate.smartproxy.com:7000',
+        proxies: ['http://proxy1.example.com:8080'],
+      });
+      expect(p1).toBeInstanceOf(StaticProxyProvider);
+    });
+
+    test('should throw PlatformError XACT_4001 on ambiguous or unknown provider configuration', () => {
       expect(() => createProxyProvider({ type: 'unknown' })).toThrow(PlatformError);
       expect(() => createProxyProvider(null)).toThrow(PlatformError);
       expect(() => createProxyProvider({})).toThrow(PlatformError);
+      expect(() => createProxyProvider({
+        gatewayUrl: 'http://user:pass@gate.smartproxy.com:7000',
+        proxies: ['http://proxy1.example.com:8080'],
+      })).toThrow(PlatformError);
     });
   });
 
   describe('AC-7: Anti-Leak Browser & Protocol Compatibility', () => {
-    test('should create valid undici ProxyAgent / Socks5ProxyAgent and anti-leak Chromium flags', () => {
+    test('should create valid undici ProxyAgent / Socks5ProxyAgent and anti-leak Chromium flags including DNS rules', () => {
       const httpProvider = new DynamicTunnelProvider({
         gatewayUrl: 'http://user:pass@brd.superproxy.io:22225',
       });
@@ -353,6 +413,8 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers (ATDD
 
       const browserArgs = socksProvider.getBrowserArgs(socksProxy);
       expect(browserArgs).toContain('--force-webrtc-ip-handling-policy=disable_non_proxied_udp');
+      expect(browserArgs).toContain('--disable-features=WebRtcHideLocalIpsWithMdns');
+      expect(browserArgs).toContain(`--host-resolver-rules="MAP * ~NOTFOUND , EXCLUDE ${socksProxy.host}"`);
       expect(browserArgs).toContain(`--proxy-server=${socksProxy.server}`);
     });
   });

@@ -17,6 +17,8 @@ const DEFAULT_SCHEME_PORTS = {
   socks5: 1080,
 };
 
+const MAX_ACCOUNT_SEEDS = 10000;
+
 /**
  * @typedef {Object} NormalizedProxy
  * @property {string} scheme
@@ -83,12 +85,13 @@ export function parseProxyUrl(urlString) {
   let parsed;
   try {
     parsed = new URL(urlString.trim());
-  } catch {
+  } catch (err) {
     throw new PlatformError({
       type: ErrorTypes.INVALID_ARGS,
       code: 'XACT_4001',
       message: `Malformed proxy URL: "${urlString}"`,
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      cause: err,
     });
   }
 
@@ -264,6 +267,8 @@ export function getProxyAgent(proxy, options = {}) {
  * Static Proxy Provider implementation wrapping ProxyIpPool.
  */
 export class StaticProxyProvider {
+  name = 'static';
+
   /**
    * @param {Object} [options]
    * @param {ProxyIpPool} [options.pool]
@@ -310,8 +315,9 @@ export class StaticProxyProvider {
   }
 
   getProxy(options = {}) {
-    if (options?.accountId) {
-      return this.pool.getStickyProxy(options.accountId);
+    const opts = options || {};
+    if (opts.accountId) {
+      return this.pool.getStickyProxy(opts.accountId);
     }
     return this.pool.getNext();
   }
@@ -345,7 +351,9 @@ export class StaticProxyProvider {
  * Dynamic Tunnel Residential Proxy Provider with multi-provider presets and rotation.
  */
 export class DynamicTunnelProvider {
+  name = 'dynamic';
   #accountSeeds = new Map();
+  #quarantinedSessions = new Map();
   #globalSeed = 0;
 
   /**
@@ -391,7 +399,7 @@ export class DynamicTunnelProvider {
     if (h.endsWith('superproxy.io') || h.endsWith('luminati.io') || h.includes('superproxy.') || h.includes('luminati.')) {
       return 'brightdata';
     }
-    if (h.endsWith('smartproxy.com') || h.endsWith('smartproxy.io') || h.includes('smartproxy.')) {
+    if (h.endsWith('smartproxy.com') || h.endsWith('smartproxy.io') || h.endsWith('decodo.com') || h.includes('smartproxy.') || h.includes('decodo.')) {
       return 'smartproxy';
     }
     if (h.endsWith('iproyal.com') || h.endsWith('royalproxy.io') || h.includes('iproyal.') || h.includes('royalproxy.')) {
@@ -404,6 +412,7 @@ export class DynamicTunnelProvider {
   }
 
   get healthyCount() {
+    this.pruneExpiredQuarantines();
     return 1;
   }
 
@@ -412,19 +421,51 @@ export class DynamicTunnelProvider {
   }
 
   isAllQuarantined() {
+    this.pruneExpiredQuarantines();
     return false;
+  }
+
+  pruneExpiredQuarantines() {
+    const now = Date.now();
+    for (const [key, expiresAt] of this.#quarantinedSessions.entries()) {
+      if (now >= expiresAt) {
+        this.#quarantinedSessions.delete(key);
+      }
+    }
   }
 
   rotateSession(accountId) {
     if (accountId) {
       const current = this.#accountSeeds.get(accountId) || 0;
+      if (this.#accountSeeds.size >= MAX_ACCOUNT_SEEDS) {
+        const firstKey = this.#accountSeeds.keys().next().value;
+        if (firstKey) this.#accountSeeds.delete(firstKey);
+      }
       this.#accountSeeds.set(accountId, current + 1);
     } else {
       this.#globalSeed++;
     }
   }
 
-  quarantine(proxy, durationMs) {
+  clearAccount(accountId) {
+    if (accountId) {
+      this.#accountSeeds.delete(accountId);
+    }
+  }
+
+  reset() {
+    this.#accountSeeds.clear();
+    this.#quarantinedSessions.clear();
+    this.#globalSeed = 0;
+  }
+
+  quarantine(proxy, durationMs = 300000) {
+    if (proxy) {
+      const norm = normalizeProxy(proxy);
+      const key = formatProxyUrl(norm);
+      this.#quarantinedSessions.set(key, Date.now() + durationMs);
+    }
+
     for (const [accId] of this.#accountSeeds.entries()) {
       const current = this.#accountSeeds.get(accId) || 0;
       this.#accountSeeds.set(accId, current + 1);
@@ -433,58 +474,67 @@ export class DynamicTunnelProvider {
   }
 
   #formatUsername({ country, city, sessionId }) {
-    const baseUser = this.rawGateway.username || '';
+    const rawUser = this.rawGateway.username || '';
+    const cleanCountry = country ? String(country).toLowerCase().trim() : '';
+    const cleanCity = city ? String(city).toLowerCase().replace(/\s+/g, '').trim() : '';
     const preset = this.provider;
 
+    const baseUser = (rawUser.startsWith('user-') || rawUser.startsWith('brd-') || rawUser.startsWith('lum-'))
+      ? rawUser
+      : (rawUser ? `user-${rawUser}` : '');
+
     if (preset === 'brightdata') {
-      const parts = [`user-${baseUser}`];
-      if (country) parts.push(`country-${country}`);
-      if (city) parts.push(`city-${city}`);
+      const parts = [baseUser];
+      if (cleanCountry) parts.push(`country-${cleanCountry}`);
+      if (cleanCity) parts.push(`city-${cleanCity}`);
       if (sessionId) parts.push(`session-${sessionId}`);
-      return parts.join('-');
+      return parts.filter(Boolean).join('-');
     }
 
     if (preset === 'smartproxy' || preset === 'iproyal') {
-      const parts = [`user-${baseUser}`];
-      if (country) parts.push(`country-${country}`);
-      if (city) parts.push(`city-${city}`);
+      const parts = [baseUser];
+      if (cleanCountry) parts.push(`country-${cleanCountry}`);
+      if (cleanCity) parts.push(`city-${cleanCity}`);
       if (sessionId) parts.push(`session-${sessionId}`);
-      return parts.join('_');
+      return parts.filter(Boolean).join('_');
     }
 
     if (preset === 'kuaidaili') {
-      const parts = [`user-${baseUser}`];
+      const parts = [baseUser];
       if (sessionId) parts.push(`session-${sessionId}`);
-      return parts.join('_');
+      return parts.filter(Boolean).join('_');
     }
 
     if (preset === 'custom') {
       let tpl = this.template;
-      tpl = tpl.replace('{username}', baseUser);
-      tpl = tpl.replace('{country}', country || '');
-      tpl = tpl.replace('{city}', city || '');
-      tpl = tpl.replace('{sessionId}', sessionId || '');
+      tpl = tpl.replaceAll('{username}', rawUser);
+      tpl = tpl.replaceAll('{country}', cleanCountry);
+      tpl = tpl.replaceAll('{city}', cleanCity);
+      tpl = tpl.replaceAll('{sessionId}', sessionId || '');
       return tpl;
     }
 
-    return baseUser;
+    return rawUser;
   }
 
   getProxy(options = {}) {
-    const accountId = options.accountId;
-    const country = options.country || this.defaultCountry;
-    const city = options.city || this.defaultCity;
-    let sessionId = options.sessionId;
+    const opts = options || {};
+    const accountId = opts.accountId;
+    const country = opts.country || this.defaultCountry;
+    const city = opts.city || this.defaultCity;
+    let sessionId = opts.sessionId;
 
     if (!sessionId) {
       if (accountId) {
         const bucket = Math.floor(Date.now() / this.sessionDurationMs);
         const seed = (this.#accountSeeds.get(accountId) || 0) + this.#globalSeed;
         sessionId = `${accountId}_${bucket}_${seed}`;
-      } else {
+      } else if (this.rotatePerRequest) {
         const rnd = Math.random().toString(36).slice(2, 10);
         const ts = Date.now().toString(36);
         sessionId = `sess_${rnd}${ts}_${this.#globalSeed}`;
+      } else {
+        sessionId = `sess_static_${this.#globalSeed}`;
       }
     }
 
@@ -535,6 +585,8 @@ export class DynamicTunnelProvider {
     const norm = normalizeProxy(proxy);
     return [
       '--force-webrtc-ip-handling-policy=disable_non_proxied_udp',
+      '--disable-features=WebRtcHideLocalIpsWithMdns',
+      `--host-resolver-rules="MAP * ~NOTFOUND , EXCLUDE ${norm.host}"`,
       `--proxy-server=${norm.server}`,
     ];
   }
@@ -555,11 +607,28 @@ export function createProxyProvider(config) {
     });
   }
 
-  if (config.type === 'dynamic' || config.gatewayUrl) {
+  if (config.gatewayUrl && (config.proxies || config.pool) && !config.type) {
+    throw new PlatformError({
+      type: ErrorTypes.INVALID_ARGS,
+      code: 'XACT_4001',
+      message: 'Ambiguous proxy configuration: both gatewayUrl and static proxies provided without explicit type',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+    });
+  }
+
+  if (config.type === 'dynamic') {
     return new DynamicTunnelProvider(config);
   }
 
-  if (config.type === 'static' || config.proxies || config.pool) {
+  if (config.type === 'static') {
+    return new StaticProxyProvider(config);
+  }
+
+  if (config.gatewayUrl) {
+    return new DynamicTunnelProvider(config);
+  }
+
+  if (config.proxies || config.pool) {
     return new StaticProxyProvider(config);
   }
 

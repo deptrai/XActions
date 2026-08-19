@@ -43,13 +43,14 @@ export interface ProxyRequestOptions {
 }
 
 export interface ProxyProviderContract {
+  name: string;
   get healthyCount(): number;
   get totalCount(): number;
   isAllQuarantined(): boolean;
   getProxy(options?: ProxyRequestOptions): NormalizedProxy | null;
   getStickyProxy(accountId: string): NormalizedProxy | null;
   getNext(): NormalizedProxy | null;
-  quarantine(proxy: string | Partial<NormalizedProxy>, durationMs?: number): void;
+  quarantine(proxy?: string | Partial<NormalizedProxy>, durationMs?: number): void;
   toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
   getProxyAgent(proxy: string | NormalizedProxy, options?: ProxyAgentOptions): ProxyAgent | Socks5ProxyAgent | string;
   getBrowserArgs(proxy: string | Partial<NormalizedProxy>): string[];
@@ -130,6 +131,7 @@ export declare class AccountPool {
 export declare const globalAccountPool: AccountPool;
 
 export declare class StaticProxyProvider implements ProxyProviderContract {
+  name: string;
   pool: ProxyIpPool;
 
   constructor(options?: StaticProxyOptions);
@@ -140,13 +142,14 @@ export declare class StaticProxyProvider implements ProxyProviderContract {
   getProxy(options?: ProxyRequestOptions): NormalizedProxy | null;
   getStickyProxy(accountId: string): NormalizedProxy | null;
   getNext(): NormalizedProxy | null;
-  quarantine(proxy: string | Partial<NormalizedProxy>, durationMs?: number): void;
+  quarantine(proxy?: string | Partial<NormalizedProxy>, durationMs?: number): void;
   toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
   getProxyAgent(proxy: string | NormalizedProxy, options?: ProxyAgentOptions): ProxyAgent | Socks5ProxyAgent | string;
   getBrowserArgs(proxy: string | Partial<NormalizedProxy>): string[];
 }
 
 export declare class DynamicTunnelProvider implements ProxyProviderContract {
+  name: string;
   provider: ProviderPreset;
   template: string;
   rotatePerRequest: boolean;
@@ -160,6 +163,9 @@ export declare class DynamicTunnelProvider implements ProxyProviderContract {
   get totalCount(): number;
   isAllQuarantined(): boolean;
   rotateSession(accountId?: string): void;
+  clearAccount(accountId: string): void;
+  reset(): void;
+  pruneExpiredQuarantines(): void;
   quarantine(proxy?: string | Partial<NormalizedProxy>, durationMs?: number): void;
   getProxy(options?: ProxyRequestOptions): NormalizedProxy;
   getStickyProxy(accountId: string): NormalizedProxy;
