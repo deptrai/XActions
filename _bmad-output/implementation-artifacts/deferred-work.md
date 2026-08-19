@@ -20,3 +20,8 @@
 
 - [ ] [Review][P2][Defer] `hibernation` and `quarantine` depend on `Date.now()` and are sensitive to clock skew; monotonic timing is out of scope for Story 11.1 [src/core/account-pool.js:87, src/proxy/proxy-pool.js:161]
 - [ ] [Review][P2][Defer] No transaction / checkout between proxy selection and actual request use; checkout/checkin belongs to the request pipeline (Story 11.5/11.7) [src/proxy/proxy-pool.js:111-140]
+
+## Deferred from: code review of 11-2-static-dynamic-residential-tunnel-proxy-providers (2026-08-20)
+
+- [ ] [Review][P2][Defer] Session time-bucket and quarantine expirations depend on `Date.now()` and are sensitive to clock skew; monotonic clock is out of scope for Story 11.2 [src/proxy/providers.js:429, src/proxy/providers.js:529]
+- [ ] [Review][P2][Defer] No checkout/checkin between dynamic proxy session selection and the actual HTTP request; request-pipeline transaction belongs to Story 11.5/11.7 [src/proxy/providers.js:520-551]
