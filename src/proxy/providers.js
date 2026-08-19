@@ -557,7 +557,7 @@ export class DynamicTunnelProvider {
   }
 
   get #gatewayKey() {
-    return this.rawGateway.server;
+    return formatProxyUrl(this.rawGateway);
   }
 
   get totalCount() {
@@ -649,14 +649,7 @@ export class DynamicTunnelProvider {
     const key = formatProxyUrl(norm);
     const until = Date.now() + durationMs;
 
-    const accountId = this.#proxyToAccount.get(key);
-
-    if (accountId) {
-      this.#quarantined.set(key, until);
-    } else {
-      this.#quarantined.set(this.#gatewayKey, until);
-      this.#quarantined.set(key, until);
-    }
+    this.#quarantined.set(key, until);
   }
 
   #baseUsername(rawUser) {

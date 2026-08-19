@@ -606,6 +606,13 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers', () 
       const proxy = provider.getProxy();
       provider.quarantine(proxy);
 
+      // A single per-request session should not quarantine the whole gateway.
+      expect(provider.healthyCount).toBe(1);
+      expect(provider.isAllQuarantined()).toBe(false);
+      expect(provider.getProxy()).toBeDefined();
+
+      // Quarantining the bare gateway should block the provider.
+      provider.quarantine(provider.rawGateway);
       expect(provider.healthyCount).toBe(0);
       expect(provider.isAllQuarantined()).toBe(true);
     });
@@ -618,7 +625,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers', () 
         standbyBackoffMs: 15000,
       });
 
-      provider.quarantine(provider.getProxy());
+      provider.quarantine(provider.rawGateway);
 
       let err;
       try {
@@ -676,7 +683,7 @@ describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers', () 
         rotatePerRequest: true,
       });
 
-      provider.quarantine(provider.getProxy(), 100);
+      provider.quarantine(provider.rawGateway, 100);
       expect(provider.isAllQuarantined()).toBe(true);
 
       vi.advanceTimersByTime(150);
