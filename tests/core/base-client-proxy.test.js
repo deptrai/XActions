@@ -29,9 +29,16 @@ describe('AbstractApiClient Proxy Resolution Contract', () => {
     accountPool = new AccountPool({ governor });
   });
 
-  test('should return null when proxyPool is not configured on client', () => {
+  test('should throw proxy_exhausted when proxy provider is not configured on client', () => {
     const client = new MockAuthClient();
-    expect(client.resolveProxy('user1')).toBeNull();
+    expect(() => client.resolveProxy('user1')).toThrow(PlatformError);
+    try {
+      client.resolveProxy('user1');
+    } catch (err) {
+      expect(err.type).toBe('proxy_exhausted');
+      expect(err.code).toBe('XACT_5030');
+      expect(err.retryAfterMs).toBe(30_000);
+    }
   });
 
   test('should return sticky proxy for authenticated client with accountId', () => {

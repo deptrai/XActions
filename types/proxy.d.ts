@@ -39,7 +39,18 @@ export interface ProxyRequestOptions {
   platform?: string;
   country?: string;
   city?: string;
+  state?: string;
+  region?: string;
+  isp?: string;
+  zip?: string;
+  asn?: string;
   sessionId?: string;
+  sessionduration?: number;
+  lifetime?: string;
+  period?: number;
+  sid?: string;
+  const?: boolean;
+  rotatePerRequest?: boolean;
 }
 
 export interface ProxyProviderContract {
@@ -66,10 +77,22 @@ export interface DynamicTunnelOptions {
   gatewayUrl: string;
   provider?: ProviderPreset;
   template?: string;
+  kuaidailiMode?: 'normal' | 'pro';
   rotatePerRequest?: boolean;
   sessionDurationMs?: number;
+  standbyBackoffMs?: number;
   country?: string;
   city?: string;
+  state?: string;
+  region?: string;
+  isp?: string;
+  zip?: string;
+  asn?: string;
+  lifetime?: string;
+  period?: number;
+  sid?: string;
+  sessionduration?: number;
+  const?: boolean;
 }
 
 export interface AccountRecord {
@@ -152,8 +175,10 @@ export declare class DynamicTunnelProvider implements ProxyProviderContract {
   name: string;
   provider: ProviderPreset;
   template: string;
+  kuaidailiMode: 'normal' | 'pro';
   rotatePerRequest: boolean;
   sessionDurationMs: number;
+  standbyBackoffMs: number;
   defaultCountry?: string;
   defaultCity?: string;
 

@@ -56,17 +56,51 @@ export class AbstractApiClient {
    */
   resolveProxy(accountId) {
     const provider = this.proxyProvider || this.proxyPool;
-    if (!provider) return null;
+    if (!provider) {
+      throw new PlatformError({
+        type: ErrorTypes.PROXY_EXHAUSTED,
+        code: 'XACT_5030',
+        message: 'Proxy provider not configured',
+        suggestedAction: SuggestedActions.WAIT,
+        retryAfterMs: STANDBY_BACKOFF_MS,
+        accountId,
+      });
+    }
+
+    const hasGetProxy = typeof provider.getProxy === 'function';
+    const hasGetStickyProxy = typeof provider.getStickyProxy === 'function';
+    const hasGetNext = typeof provider.getNext === 'function';
+    const hasQuarantine = typeof provider.quarantine === 'function';
+
+    const hasContract = (hasGetProxy || (hasGetStickyProxy && hasGetNext)) && hasQuarantine;
+    if (!hasContract) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Provider does not implement the proxy contract',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        accountId,
+      });
+    }
 
     let proxy;
-    if (typeof provider.getProxy === 'function') {
+    if (hasGetProxy) {
       proxy = this.requiresAuth && accountId
         ? provider.getProxy({ accountId })
         : provider.getProxy();
-    } else {
+    } else if (hasGetStickyProxy && hasGetNext) {
       proxy = this.requiresAuth && accountId
         ? provider.getStickyProxy(accountId)
         : provider.getNext();
+    } else {
+      throw new PlatformError({
+        type: ErrorTypes.PROXY_EXHAUSTED,
+        code: 'XACT_5030',
+        message: 'Provider has no proxy allocation method',
+        suggestedAction: SuggestedActions.WAIT,
+        retryAfterMs: STANDBY_BACKOFF_MS,
+        accountId,
+      });
     }
 
     if (!proxy) {
