@@ -2104,88 +2104,6 @@ program
     }
   });
 
-// ============================================================================
-// Cross-Platform Scrape Command
-// ============================================================================
-
-const scrapeCmd = program
-  .command('scrape <action> [target]')
-  .description('Multi-platform scrape: profile, followers, following, tweets, search, hashtag, trending')
-  .option('-p, --platform <platform>', 'Platform: twitter, bluesky, mastodon, threads', 'twitter')
-  .option('-u, --username <username>', 'Target username (alternative to positional arg)')
-  .option('-q, --query <query>', 'Search query (for search action)')
-  .option('-l, --limit <number>', 'Maximum results', '100')
-  .option('-i, --instance <url>', 'Mastodon instance URL (e.g. https://mastodon.social)')
-  .option('-o, --output <file>', 'Output file (json or csv)')
-  .option('-j, --json', 'Output as JSON to stdout')
-  .action(async (action, target, options) => {
-    const platform = options.platform.toLowerCase();
-    const limit = parseInt(options.limit);
-    const username = target || options.username;
-    const query = options.query || target;
-
-    const actionLabel = `${platform}/${action}` + (username ? ` @${username}` : query ? ` "${query}"` : '');
-    const spinner = ora(`Scraping ${actionLabel}`).start();
-
-    try {
-      const { scrape } = await import('../scrapers/index.js');
-
-      const scrapeOptions = {
-        limit,
-        instance: options.instance,
-      };
-
-      // Set the right target field based on action
-      if (['profile', 'followers', 'following', 'tweets', 'posts'].includes(action)) {
-        if (!username) throw new Error(`Action "${action}" requires a username. Usage: xactions scrape ${action} <username> --platform ${platform}`);
-        scrapeOptions.username = username;
-      } else if (['search'].includes(action)) {
-        if (!query) throw new Error('Search action requires a query. Usage: xactions scrape search "query" --platform bluesky');
-        scrapeOptions.query = query;
-      } else if (['hashtag'].includes(action)) {
-        if (!target) throw new Error('Hashtag action requires a tag. Usage: xactions scrape hashtag javascript --platform mastodon');
-        scrapeOptions.hashtag = target;
-      }
-
-      // For Puppeteer-based platforms, use auth if available
-      if (['twitter', 'x', 'threads'].includes(platform)) {
-        const config = await loadConfig();
-        if (config.authToken) {
-          scrapeOptions.authToken = config.authToken;
-        }
-      }
-
-      const result = await scrape(platform, action, scrapeOptions);
-      spinner.succeed(`Scraped ${actionLabel}`);
-
-      if (options.output) {
-        const ext = path.extname(options.output).toLowerCase();
-        const { exportToJSON, exportToCSV } = await import('../scrapers/index.js');
-        const data = Array.isArray(result) ? result : [result];
-        if (ext === '.csv') {
-          await exportToCSV(data, options.output);
-        } else {
-          await exportToJSON(data, options.output);
-        }
-        console.log(chalk.green(`✓ Saved to ${options.output}`));
-      } else if (options.json || Array.isArray(result)) {
-        console.log(JSON.stringify(result, null, 2));
-      } else {
-        // Pretty-print profile-like objects
-        console.log(chalk.bold(`\n⚡ ${platform} / ${action}\n`));
-        for (const [key, value] of Object.entries(result)) {
-          if (value !== null && value !== undefined) {
-            console.log(`  ${chalk.cyan(key + ':')} ${typeof value === 'object' ? JSON.stringify(value) : value}`);
-          }
-        }
-        console.log();
-      }
-    } catch (error) {
-      spinner.fail(`Failed to scrape ${actionLabel}`);
-      console.error(chalk.red(error.message));
-    }
-  });
-
 program
   .command('platforms')
   .description('List supported social media platforms')
@@ -2196,9 +2114,9 @@ program
     console.log(`  ${chalk.cyan('mastodon')}  Mastodon — REST API (any instance, no browser needed)`);
     console.log(`  ${chalk.cyan('threads')}   Threads — Puppeteer-based scraping`);
     console.log();
-    console.log(chalk.gray('Usage: xactions scrape <action> <target> --platform <platform>'));
-    console.log(chalk.gray('Example: xactions scrape profile user.bsky.social --platform bluesky'));
-    console.log(chalk.gray('Example: xactions scrape tweets Gargron --platform mastodon --instance https://mastodon.social'));
+    console.log(chalk.gray('Usage: xactions scrape --platform <platform> --action <action> --username <target>'));
+    console.log(chalk.gray('Example: xactions scrape --platform bluesky --action profile --username user.bsky.social'));
+    console.log(chalk.gray('Example: xactions scrape --platform mastodon --action tweets --username Gargron --instance https://mastodon.social'));
     console.log();
   });
 
@@ -3923,9 +3841,7 @@ clientCmd
 // AI Commands (Epic 4 — AI Tweet Writer)
 // ============================================================================
 
-const aiCommand = program.command('ai').description('AI-powered tweet writing tools (Epic 4)');
-
-aiCommand
+ai
   .command('write')
   .description('Generate tweets with AI — "Write a viral tweet about [topic]"')
   .requiredOption('-t, --topic <topic>', 'Topic or prompt for the tweet(s)')
