@@ -47,6 +47,9 @@ export class AdaptiveRateGovernor {
   #totalProxyCount = 0;
 
   /** @type {number} */
+  #healthyProxyFloor = 0;
+
+  /** @type {number} */
   #redisConsumerLag = 0;
 
   /** @type {Map<string, number[]>} */
@@ -67,10 +70,28 @@ export class AdaptiveRateGovernor {
   /**
    * @param {Object} [deps]
    * @param {import('../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
+   * @param {number} [deps.healthyProxyFloor]
    */
   constructor(deps = {}) {
     this.#proxyPool = deps.proxyPool || null;
+    this.#healthyProxyFloor = Math.max(0, deps.healthyProxyFloor ?? 0);
     this.#windowStart = Date.now();
+  }
+
+  /**
+   * Internal account records are keyed by `platform:accountId`.
+   * @param {string} accountId
+   * @param {string} [platform]
+   * @returns {string}
+   */
+  #resolveAccountId(accountId, platform) {
+    if (platform) {
+      return `${platform}:${accountId}`;
+    }
+    if (typeof accountId === 'string' && accountId.includes(':')) {
+      return accountId;
+    }
+    return accountId;
   }
 
   /**
@@ -123,24 +144,32 @@ export class AdaptiveRateGovernor {
   getMaxThroughput(platform) {
     this.refreshFromProxyPool();
     const limit = this.#platformLimits.get(platform) || new PlatformRateLimit(platform);
+    const total = this.#totalProxyCount;
+    const healthy = this.#healthyProxyCount;
+    const healthyProxyRatio = total > 0 ? healthy / total : 0;
+
     let factor = 1;
-    if (this.#healthyProxyCount < this.#totalProxyCount * 0.5) factor = 0.5;
-    if (this.#healthyProxyCount < 5) factor = 0;
+    if (healthy < total * 0.5) factor = 0.5;
+    if (healthyProxyRatio < 0.1) factor = 0;
+    if (this.#healthyProxyFloor > 0 && healthy < this.#healthyProxyFloor) factor = 0;
     if (this.#redisConsumerLag > 10000) factor *= 0.25;
-    return this.#healthyProxyCount * limit.baseReqPerSecondPerProxy * limit.throttleFactor * factor;
+
+    return healthy * limit.baseReqPerSecondPerProxy * limit.throttleFactor * factor;
   }
 
   /**
    * @param {string} accountId
+   * @param {string} [platform]
    */
-  recordRequest(accountId) {
+  recordRequest(accountId, platform) {
+    const key = this.#resolveAccountId(accountId, platform);
     const now = Date.now();
-    const timestamps = this.#accountRequestTimestamps.get(accountId) || [];
+    const timestamps = this.#accountRequestTimestamps.get(key) || [];
     timestamps.push(now);
     // Keep only last 60 seconds
     const cutoff = now - 60_000;
     const filtered = timestamps.filter((t) => t > cutoff);
-    this.#accountRequestTimestamps.set(accountId, filtered);
+    this.#accountRequestTimestamps.set(key, filtered);
 
     // Update current rps window
     if (now - this.#windowStart >= 1000) {
@@ -152,10 +181,12 @@ export class AdaptiveRateGovernor {
 
   /**
    * @param {string} accountId
+   * @param {string} [platform]
    * @returns {number}
    */
-  getAccountVelocity(accountId) {
-    const timestamps = this.#accountRequestTimestamps.get(accountId) || [];
+  getAccountVelocity(accountId, platform) {
+    const key = this.#resolveAccountId(accountId, platform);
+    const timestamps = this.#accountRequestTimestamps.get(key) || [];
     const now = Date.now();
     return timestamps.filter((t) => now - t < 60_000).length;
   }
@@ -166,20 +197,23 @@ export class AdaptiveRateGovernor {
    * @returns {boolean}
    */
   canAccountRequest(accountId, platform) {
-    if (this.isHibernating(accountId)) return false;
+    const key = this.#resolveAccountId(accountId, platform);
+    if (this.isHibernating(key)) return false;
     const limit = this.#platformLimits.get(platform) || new PlatformRateLimit(platform);
-    return this.getAccountVelocity(accountId) < limit.safeRequestsPerMinute;
+    return this.getAccountVelocity(key) < limit.safeRequestsPerMinute;
   }
 
   /**
    * @param {string} accountId
    * @param {string} reason
    * @param {number} [durationMs]
+   * @param {string} [platform]
    */
-  hibernateAccount(accountId, reason, durationMs = 15 * 60 * 1000) {
+  hibernateAccount(accountId, reason, durationMs = 15 * 60 * 1000, platform) {
+    const key = this.#resolveAccountId(accountId, platform);
     const until = Date.now() + durationMs;
-    this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.accountId !== accountId);
-    this.#hibernatingAccounts.push({ accountId, until, reason });
+    this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.accountId !== key);
+    this.#hibernatingAccounts.push({ accountId: key, until, reason });
   }
 
   /**
@@ -189,25 +223,29 @@ export class AdaptiveRateGovernor {
    * @param {number} [durationMs]
    */
   recordRateLimit(accountId, platform, durationMs = 15 * 60 * 1000) {
-    this.hibernateAccount(accountId, `rate_limit:${platform || 'unknown'}`, durationMs);
+    this.hibernateAccount(accountId, `rate_limit:${platform || 'unknown'}`, durationMs, platform);
   }
 
   /**
    * Wake up an account early by clearing its hibernation status.
    * @param {string} accountId
+   * @param {string} [platform]
    */
-  wakeAccount(accountId) {
-    this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.accountId !== accountId);
+  wakeAccount(accountId, platform) {
+    const key = this.#resolveAccountId(accountId, platform);
+    this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.accountId !== key);
   }
 
   /**
    * @param {string} accountId
+   * @param {string} [platform]
    * @returns {boolean}
    */
-  isHibernating(accountId) {
+  isHibernating(accountId, platform) {
+    const key = this.#resolveAccountId(accountId, platform);
     const now = Date.now();
     this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.until > now);
-    return this.#hibernatingAccounts.some((h) => h.accountId === accountId);
+    return this.#hibernatingAccounts.some((h) => h.accountId === key);
   }
 
   /** @returns {GovernorStatus} */

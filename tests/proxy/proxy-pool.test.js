@@ -72,10 +72,23 @@ describe('ProxyIpPool Acceptance Tests (Story 11.1 - TDD Red Phase)', () => {
       const args = pool.getBrowserArgs(proxy);
       expect(args).toContain('--force-webrtc-ip-handling-policy=disable_non_proxied_udp');
       expect(args).toContain('--proxy-server=http://1.2.3.4:8080');
+      expect(args).toContain('--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 1.2.3.4');
 
       // Test string URL support
       const strArgs = pool.getBrowserArgs('http://5.6.7.8:3128');
       expect(strArgs).toContain('--proxy-server=http://5.6.7.8:3128');
+      expect(strArgs).toContain('--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 5.6.7.8');
+    });
+
+    test('should bracket IPv6 proxy hosts in browser args', () => {
+      const args = pool.getBrowserArgs('http://[2001:db8::1]:8080');
+      expect(args).toContain('--proxy-server=http://[2001:db8::1]:8080');
+      expect(args).toContain('--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE [2001:db8::1]');
+    });
+
+    test('should throw PlatformError on invalid proxy input', () => {
+      expect(() => pool.getBrowserArgs('not-a-proxy')).toThrow(PlatformError);
+      expect(() => pool.getBrowserArgs(null)).toThrow(PlatformError);
     });
 
     test('should provide toPlaywrightProxy helper with server, username, password', () => {
@@ -129,6 +142,17 @@ describe('ProxyIpPool Acceptance Tests (Story 11.1 - TDD Red Phase)', () => {
       const newProxy = pool.getStickyProxy('acc_rebind');
       expect(newProxy).toBeDefined();
       expect(newProxy.host).not.toEqual(initialProxy.host);
+    });
+
+    test('should return shallow copies that do not mutate internal proxy records', () => {
+      const p1 = pool.getStickyProxy('acc_mutation');
+      const p2 = pool.getStickyProxy('acc_mutation');
+      expect(p1).toEqual(p2);
+      expect(p1).not.toBe(p2);
+
+      p1.port = 9999;
+      const p3 = pool.getStickyProxy('acc_mutation');
+      expect(p3.port).toBe(p2.port);
     });
   });
 
@@ -186,11 +210,17 @@ describe('ProxyIpPool Acceptance Tests (Story 11.1 - TDD Red Phase)', () => {
     });
 
     test('should report isAllQuarantined accurately', () => {
+      expect(new ProxyIpPool().isAllQuarantined()).toBe(true);
       expect(pool.isAllQuarantined()).toBe(false);
       pool.quarantine('http://192.168.1.1:8080');
       expect(pool.isAllQuarantined()).toBe(false);
       pool.quarantine('http://192.168.1.2:8080');
       expect(pool.isAllQuarantined()).toBe(true);
+    });
+
+    test('should reject quarantine of unknown or null proxies', () => {
+      expect(() => pool.quarantine(null)).toThrow(PlatformError);
+      expect(() => pool.quarantine('http://9.9.9.9:8080')).toThrow(PlatformError);
     });
 
     test('should prune expired quarantines and restore proxy to pool', () => {
@@ -233,7 +263,7 @@ describe('ProxyIpPool Acceptance Tests (Story 11.1 - TDD Red Phase)', () => {
       expect(proxyUrl).toBe('socks5://u:p@proxy.net:1080');
     });
 
-    test('should return SocksProxyAgent for socks5 proxies with undici client', () => {
+    test('should return undici.Socks5ProxyAgent for socks5 proxies with undici client', () => {
       const proxy = {
         scheme: 'socks5',
         host: '1.2.3.4',
@@ -242,6 +272,7 @@ describe('ProxyIpPool Acceptance Tests (Story 11.1 - TDD Red Phase)', () => {
       };
       const agent = pool.getProxyAgent(proxy, { client: 'undici' });
       expect(agent).toBeDefined();
+      expect(agent).toBeInstanceOf(undici.Socks5ProxyAgent);
     });
 
     test('should never fall back to direct connection if proxy is invalid or null', () => {

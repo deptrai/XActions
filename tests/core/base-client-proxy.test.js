@@ -4,6 +4,7 @@ import { AbstractApiClient } from '../../src/core/base-client.js';
 import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
 import { AccountPool } from '../../src/core/account-pool.js';
 import { AdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
+import { PlatformError } from '../../src/core/error-envelope.js';
 
 class MockAuthClient extends AbstractApiClient {
   name = 'mock-auth';
@@ -58,5 +59,27 @@ describe('AbstractApiClient Proxy Resolution Contract', () => {
     const p2 = client.resolveProxy('acc_1');
 
     expect(p1.host).not.toBe(p2.host);
+  });
+
+  test('should throw proxy_exhausted PlatformError when pool is exhausted', () => {
+    const emptyPool = new ProxyIpPool();
+    const client = new MockNoAuthClient({ proxyPool: emptyPool, accountPool, governor });
+
+    expect(() => client.resolveProxy()).toThrow(PlatformError);
+    try {
+      client.resolveProxy();
+    } catch (err) {
+      expect(err.type).toBe('proxy_exhausted');
+      expect(err.retryAfterMs).toBe(30_000);
+    }
+  });
+
+  test('should hibernate the account when auth client proxy pool is exhausted', () => {
+    const emptyPool = new ProxyIpPool();
+    accountPool.registerAccounts('twitter', ['exhausted_acc']);
+    const client = new MockAuthClient({ proxyPool: emptyPool, accountPool, governor });
+
+    expect(() => client.resolveProxy('exhausted_acc')).toThrow(PlatformError);
+    expect(accountPool.getNextAvailable('twitter')).toBeNull();
   });
 });

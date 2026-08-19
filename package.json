@@ -137,7 +137,7 @@
     "socket.io": "^4.7.5",
     "socks-proxy-agent": "^8.0.5",
     "stripe": "^14.10.0",
-    "undici": "^6.21.2"
+    "undici": "^7.29.0"
   },
   "optionalDependencies": {
     "@atproto/api": "^0.13.35",
@@ -208,7 +208,7 @@
     "x-algorithm"
   ],
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.18.1"
   },
   "files": [
     "src",

@@ -2,7 +2,7 @@
 
 **Story ID:** 11.1  
 **Epic:** 11 — Resilient Network & Proxy Pool Management  
-**Status:** ready-for-dev  
+**Status:** done  
 **Owner:** DEV  
 **Source:** `epics.md` Story 11.1, `ARCHITECTURE-SPINE.md` AD-3, AD-13, AD-14, AD-2, AD-8, `10-1` & `10-5` implementation patterns
 
@@ -145,6 +145,89 @@ So that every outgoing request uses a healthy, safe IP without leaking the real 
 - [x] [Review][Patch] Edge-case guards in proxy parsing and options handling [src/proxy/providers.js:63]
 - [x] [Review][Patch] Missing TypeScript declarations for \`AccountPool\` [types/proxy.d.ts]
 - [x] [Review][Patch] Unit test hardening for velocity, SOCKS5 agent, and invalid schemes [tests/proxy/proxy-pool.test.js]
+
+### Review Findings — Round 2 (adversarial review)
+
+- [x] [Review][Decision] **Account record namespacing strategy** [src/core/account-pool.js:51-59]
+  - `#accountRecords` is keyed by bare `accountId`, so re-registering the same `id` under a different platform overwrites `platform`, `credentials`, and `hibernatingUntil`. Need a decision on whether to (a) require globally unique `accountId`s, (b) namespace internal records as `platform:accountId`, or (c) keep per-platform maps. If (b) is chosen, `getNextAvailable` must still return the bare `accountId` expected by callers, while `AdaptiveRateGovernor` and `AbstractApiClient` must be aware of the composite key.
+
+- [x] [Review][Decision] **Remote DNS / anti-leak browser flag** [src/proxy/proxy-pool.js:214-230]
+  - `getBrowserArgs` only emits `--force-webrtc-ip-handling-policy=disable_non_proxied_udp` and `--proxy-server`. AD-3 and AC-2 require remote DNS resolution. The exact mechanism is ambiguous: a `MAP * ~NOTFOUND, EXCLUDE ~NOTFOUND` `--host-resolver-rules` string can break local endpoints; SOCKS5 remote DNS may require `socks5h://` or a PAC script; Playwright's `proxy` object may handle DNS itself. Need a decision on the supported approach per proxy scheme.
+
+- [x] [Review][Decision] **Should `getNextAvailable` auto-record a request?** [src/core/account-pool.js:73-75,129-138]
+  - `getNextAvailable` does not call `recordRequest`, so velocity limiting depends on every caller remembering to record. If Story 11.5's request pipeline records centrally, this is correct. Otherwise it is a contract gap that lets accounts be hammered.
+
+- [x] [Review][Patch] **`resolveProxy` forwards `null` from an exhausted pool, allowing direct connection** [src/core/base-client.js:50-56]
+  - When `getNext()` or `getStickyProxy()` returns `null`, `resolveProxy` passes it through. A caller can then initiate an unproxied request, leaking the origin IP. Should throw `PlatformError` with `type: proxy_exhausted` and enter Standby Backoff.
+
+- [x] [Review][Patch] **`getMaxThroughput` uses absolute healthy proxy count `< 5` instead of healthy ratio** [src/core/adaptive-governor.js:127-128]
+  - `if (this.#healthyProxyCount < 5) factor = 0;` treats a 4/4 healthy pool as critical. AD-13 rule 2 calls for a healthy proxy ratio threshold (parenthetical `< 5 IPs` only for a ~50-proxy pool). Should be `healthyProxyRatio < 0.1` with a configurable floor.
+
+- [x] [Review][Patch] **`hasAvailable` mutates account hibernation state** [src/core/account-pool.js:157-159,166-196]
+  - The read-only `hasAvailable` path calls `#findNextAvailable(platform, false)`, which still executes `markAvailable(accountId)` when `hibernatingUntil` has expired. A status check can silently wake an account and alter governor state.
+
+- [x] [Review][Patch] **`getProxyAgent('undici')` for SOCKS5 returns a Node `SocksProxyAgent`, not an undici `Dispatcher`** [src/proxy/providers.js:187-191]
+  - `new SocksProxyAgent(proxyUrl)` is an `http.Agent` subclass and cannot be used with `undici.request({ dispatcher })`. Should use `undici.Socks5ProxyAgent` (or equivalent) for the `undici` path.
+
+- [x] [Review][Patch] **`#key` builds the credential segment without URL-encoding** [src/proxy/proxy-pool.js:89-98]
+  - `authKey = \`${normalized.username || ''}:${normalized.password || ''}@\`` is inserted raw into a URL-like key. Special characters in passwords (`#`, `?`, `:`, `@`) produce an invalid/ambiguous key and break `getStickyProxy` / `quarantine` consistency. Use `formatProxyUrl` or `encodeURIComponent`.
+
+- [x] [Review][Patch] **IPv6 proxy objects produce unbracketed `server` strings** [src/proxy/providers.js:127, src/proxy/proxy-pool.js:196-219]
+  - `server = \`${scheme}://${input.host}:${port}\`` does not wrap IPv6 addresses in brackets. Chromium/Playwright cannot parse `http://2001:db8::1:8080`. `formatProxyUrl` already brackets IPv6; `normalizeProxy` should reuse that logic.
+
+- [x] [Review][Patch] **`getBrowserArgs` catch fallback pushes raw invalid proxy string** [src/proxy/proxy-pool.js:222-228]
+  - If `normalizeProxy` throws, the catch block appends `--proxy-server=${proxy.trim()}` or `proxy.server` without validation. Malformed strings like `'not-a-proxy'` may be ignored by Chromium, causing a direct connection. Should throw `PlatformError` instead.
+
+- [x] [Review][Patch] **`markUnavailable` default `durationMs = 0` creates a permanent manual lock** [src/core/account-pool.js:83-92]
+  - Called with one argument, the account is added to `#unavailableAccounts`, `hibernatingUntil` stays `null`, and the governor is not notified. The account never auto-wakes, violating AC-9 "temporarily unavailable". Default to a finite hibernation duration or throw when `durationMs <= 0`.
+
+- [x] [Review][Patch] **`getAccount` exposes raw credentials and proxy objects without redaction** [src/core/account-pool.js:217-224]
+  - Returns a spread of the full record including `credentials`. If logged, sent to an admin dashboard, or persisted, secrets leak. Return a redacted copy.
+
+- [x] [Review][Patch] **`isAllQuarantined` returns `false` for an empty pool** [src/proxy/proxy-pool.js:173-176]
+  - `return this.#proxies.length > 0 && ...` means a pool with zero proxies returns `false`. An empty pool is 0% healthy and should trigger Standby Backoff; instead it lets `resolveProxy` return `null`.
+
+- [x] [Review][Patch] **`#hashAccount` can produce a negative array index** [src/proxy/proxy-pool.js:146-153]
+  - `Math.abs(hash)` after a signed 32-bit `| 0` operation can remain negative for `Integer.MIN_VALUE`. `negative % healthy.length` yields a negative index, returning `undefined`. Use an unsigned shift `(hash >>> 0) % healthy.length`.
+
+- [x] [Review][Patch] **`getNext` / `getStickyProxy` return references to internal proxy objects** [src/proxy/proxy-pool.js:111-118,125-140]
+  - Callers can mutate `proxy.port` or `proxy.host` and corrupt the canonical proxy for subsequent allocations. Return a shallow/deep copy.
+
+- [x] [Review][Patch] **`getNext` round-robin pointer wraps against the current healthy count** [src/proxy/proxy-pool.js:115-116]
+  - Quarantining a proxy shrinks `healthy.length`, so the modulo wraps earlier and may re-visit a healthy proxy before completing the original full cycle. Maintain the pointer against the total pool size and skip quarantined entries.
+
+- [x] [Review][Patch] **`quarantine` does not verify the proxy exists in the pool** [src/proxy/proxy-pool.js:159-168]
+  - Calling `quarantine` with an arbitrary proxy sets a quarantine key; later `add()` of a proxy with a matching key starts it quarantined. Validate membership or throw.
+
+- [x] [Review][Patch] **`quarantine(undefined / null)` silently no-ops** [src/proxy/proxy-pool.js:89-98,159-168]
+  - `#key` returns `''` for falsy input and `quarantine` stores `Date.now() + durationMs` under the empty key. It should throw `PlatformError` for invalid input.
+
+- [x] [Review][Patch] **`validateOnAdd` option is dead code** [src/proxy/proxy-pool.js:36-37,103-105]
+  - The constructor sets `this.validateOnAdd` but always calls `#normalize` / `normalizeProxy`, which throws on invalid input. Honor the flag when `false` or remove the option.
+
+- [x] [Review][Patch] **`registerAccounts` accepts a string `accountIds` and iterates its characters** [src/core/account-pool.js:45-49]
+  - `for (const id of (accountIds || []))` with a string splits into characters. Validate that `accountIds` is an array.
+
+- [x] [Review][Patch] **`registerAccounts` clobbers falsy credentials and resets velocity on re-registration** [src/core/account-pool.js:51-59]
+  - `credentials[id] || prev?.credentials || null` drops falsy values; `velocity: 0` is always written. Preserve previous credentials when new ones are not supplied and do not reset velocity.
+
+- [x] [Review][Patch] **`formatProxyUrl` emits auth with empty username and a special-character password** [src/proxy/providers.js:157-159]
+  - Builds `http://:p%40ss%3Aword@host` when `username` is empty. Skip the auth segment entirely when both `username` and `password` are empty.
+
+- [x] [Review][Patch] **TypeScript declarations use `any`** [types/proxy.d.ts]
+  - `getProxyAgent` returns `any`, `assignedProxy?: any | null`, `governor?: any`, `setAssignedProxy(proxy: any)`. Replace with `unknown`, `NormalizedProxy`, and proper agent/ dispatcher union types to satisfy the strict-mode rule.
+
+- [x] [Review][Patch] **No post-selection health check and no checkout for `getNext` / `getStickyProxy`** [src/proxy/proxy-pool.js:111-140]
+  - In concurrent or multi-worker use another call could `quarantine` a proxy after it was handed out. Add a simple `isQuarantined` re-check before returning (or wrap in a checkout/checkin API in a later story).
+
+- [ ] [Review][Defer] **Hibernation and quarantine depend on `Date.now()` and are sensitive to clock skew** [src/core/account-pool.js:87, src/proxy/proxy-pool.js:161]
+  - Clock jumps can release proxies/accounts too early or hold them too long. Mitigation requires `process.hrtime`-based or monotonic timing, which is out of scope for Story 11.1.
+
+- [ ] [Review][Defer] **No transaction between proxy selection and actual request use** [src/proxy/proxy-pool.js:111-140]
+  - In multi-task/multi-worker usage a proxy could be quarantined between `getNext` and the first `request`. True checkout/checkin belongs to the request pipeline (Story 11.5/11.7).
+
+- [ ] [Review][Dismiss] **Velocity timestamp arrays can grow unbounded** [src/core/account-pool.js:133-137, src/core/adaptive-governor.js:136-143]
+  - Dismissed: both `recordRequest` and `getAccountVelocity` trim the 60-second window on every call, so the array is bounded by the request rate within the window.
 
 ---
 

@@ -6,10 +6,15 @@
  */
 
 import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
-import { ProxyAgent } from 'undici';
-import { SocksProxyAgent } from 'socks-proxy-agent';
+import { ProxyAgent, Socks5ProxyAgent } from 'undici';
 
 export const SUPPORTED_PROXY_SCHEMES = ['http', 'https', 'socks5'];
+
+const DEFAULT_SCHEME_PORTS = {
+  http: 80,
+  https: 443,
+  socks5: 1080,
+};
 
 /**
  * @typedef {Object} NormalizedProxy
@@ -18,8 +23,46 @@ export const SUPPORTED_PROXY_SCHEMES = ['http', 'https', 'socks5'];
  * @property {number} port
  * @property {string} [username]
  * @property {string} [password]
- * @property {string} server - Canonical host:port with scheme (e.g., "http://1.2.3.4:8080")
+ * @property {string} server - Canonical host:port with scheme (e.g., "http://1.2.3.4:8080").
+ *                              IPv6 addresses are bracketed (e.g., "http://[2001:db8::1]:8080").
  */
+
+/**
+ * Wrap an IPv6 address in brackets unless it is already bracketed.
+ * @param {string} host
+ * @returns {string}
+ */
+function bracketHost(host) {
+  if (typeof host !== 'string') return String(host);
+  if (host.includes(':') && !host.startsWith('[') && !host.endsWith(']')) {
+    return `[${host}]`;
+  }
+  return host;
+}
+
+/**
+ * Build the canonical scheme://[host]:port server string without credentials.
+ * @param {string} scheme
+ * @param {string} host
+ * @param {number} port
+ * @returns {string}
+ */
+function buildServer(scheme, host, port) {
+  return `${scheme}://${bracketHost(host)}:${port}`;
+}
+
+/**
+ * Coerce a port value to a finite number, falling back to the scheme default.
+ * @param {any} value
+ * @param {number} defaultPort
+ * @returns {number}
+ */
+function parsePort(value, defaultPort) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : defaultPort;
+  if (value === undefined || value === null || value === '') return defaultPort;
+  const parsed = parseInt(String(value), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultPort;
+}
 
 /**
  * Parse a proxy URL string into normalized components.
@@ -58,10 +101,10 @@ export function parseProxyUrl(urlString) {
     });
   }
 
-  const host = parsed.hostname;
-  const defaultPort = scheme === 'https' ? 443 : scheme === 'socks5' ? 1080 : 80;
-  const parsedPort = parsed.port ? parseInt(parsed.port, 10) : defaultPort;
-  const port = Number.isFinite(parsedPort) ? parsedPort : defaultPort;
+  // Node's `URL.hostname` includes brackets for IPv6; store the raw address.
+  const host = parsed.hostname.replace(/^\[|\]$/g, '');
+  const defaultPort = DEFAULT_SCHEME_PORTS[scheme] ?? 80;
+  const port = parsePort(parsed.port, defaultPort);
 
   let username;
   let password;
@@ -76,7 +119,11 @@ export function parseProxyUrl(urlString) {
     password = parsed.password || undefined;
   }
 
-  const server = `${scheme}://${host}:${port}`;
+  // An empty username in the URL should not be treated as a credential.
+  if (username === '') username = undefined;
+  if (password === '') password = undefined;
+
+  const server = buildServer(scheme, host, port);
 
   const result = {
     scheme,
@@ -121,19 +168,20 @@ export function normalizeProxy(input) {
       });
     }
 
-    const defaultPort = scheme === 'https' ? 443 : scheme === 'socks5' ? 1080 : 80;
-    const parsedPort = typeof input.port === 'number' ? input.port : (input.port ? parseInt(input.port, 10) : defaultPort);
-    const port = Number.isFinite(parsedPort) ? parsedPort : defaultPort;
-    const server = input.server || `${scheme}://${input.host}:${port}`;
+    // Strip surrounding brackets from an IPv6 host supplied as an object.
+    const host = String(input.host).replace(/^\[|\]$/g, '');
+    const defaultPort = DEFAULT_SCHEME_PORTS[scheme] ?? 80;
+    const port = parsePort(input.port, defaultPort);
+    const server = buildServer(scheme, host, port);
 
     const result = {
       scheme,
-      host: input.host,
+      host,
       port,
       server,
     };
 
-    if (input.username !== undefined) result.username = input.username;
+    if (input.username !== undefined && input.username !== '') result.username = input.username;
     if (input.password !== undefined) result.password = input.password;
 
     return result;
@@ -149,22 +197,34 @@ export function normalizeProxy(input) {
 
 /**
  * Build the full proxy URL string including credentials if present.
- * @param {any} proxy
+ *
+ * The auth segment is omitted entirely when the username is empty (even if a
+ * password is present), preventing malformed URLs like `http://:pass@host`.
+ *
+ * @param {string | Object} proxy
  * @returns {string}
  */
 export function formatProxyUrl(proxy) {
   const norm = normalizeProxy(proxy);
-  const auth = norm.username || norm.password ? `${encodeURIComponent(norm.username || '')}${norm.password !== undefined ? `:${encodeURIComponent(norm.password)}` : ''}@` : '';
-  const hostStr = norm.host.includes(':') && !norm.host.startsWith('[') ? `[${norm.host}]` : norm.host;
-  return `${norm.scheme}://${auth}${hostStr}:${norm.port}`;
+  const hostStr = bracketHost(norm.host);
+
+  const hasUser = norm.username !== undefined && norm.username !== '';
+  const hasPass = norm.password !== undefined && norm.password !== '';
+
+  if (!hasUser) {
+    return `${norm.scheme}://${hostStr}:${norm.port}`;
+  }
+
+  const passPart = hasPass ? `:${encodeURIComponent(norm.password)}` : '';
+  return `${norm.scheme}://${encodeURIComponent(norm.username)}${passPart}@${hostStr}:${norm.port}`;
 }
 
 /**
- * Factory for creating client-specific proxy agents without direct fallback.
- * @param {any} proxy
+ * Factory for creating client-specific proxy agents without direct connection fallback.
+ * @param {string | Object} proxy
  * @param {Object} [options]
  * @param {'undici' | 'got'} [options.client='undici']
- * @returns {any}
+ * @returns {import('undici').ProxyAgent | import('undici').Socks5ProxyAgent | string}
  */
 export function getProxyAgent(proxy, options = {}) {
   if (!proxy) {
@@ -186,7 +246,7 @@ export function getProxyAgent(proxy, options = {}) {
 
   if (client === 'undici') {
     if (normalized.scheme === 'socks5') {
-      return new SocksProxyAgent(proxyUrl);
+      return new Socks5ProxyAgent(proxyUrl);
     }
     return new ProxyAgent(proxyUrl);
   }

@@ -8,8 +8,7 @@ import {
   SUPPORTED_PROXY_SCHEMES,
 } from '../../src/proxy/providers.js';
 import { PlatformError } from '../../src/core/error-envelope.js';
-import { ProxyAgent } from 'undici';
-import { SocksProxyAgent } from 'socks-proxy-agent';
+import { ProxyAgent, Socks5ProxyAgent } from 'undici';
 
 describe('Proxy Providers & Normalization Unit Tests', () => {
   describe('SUPPORTED_PROXY_SCHEMES', () => {
@@ -68,6 +67,12 @@ describe('Proxy Providers & Normalization Unit Tests', () => {
     test('should throw PlatformError XACT_4001 on unsupported protocol scheme', () => {
       expect(() => parseProxyUrl('ftp://10.0.0.1:21')).toThrow(PlatformError);
       expect(() => parseProxyUrl('ws://10.0.0.1:8080')).toThrow(PlatformError);
+    });
+
+    test('should bracket IPv6 addresses in the canonical server string', () => {
+      const parsed = parseProxyUrl('http://[2001:db8::1]:8080');
+      expect(parsed.host).toBe('2001:db8::1');
+      expect(parsed.server).toBe('http://[2001:db8::1]:8080');
     });
   });
 
@@ -155,6 +160,17 @@ describe('Proxy Providers & Normalization Unit Tests', () => {
       });
       expect(url).toBe('http://[2001:db8::1]:8080');
     });
+
+    test('should not emit an auth segment when the username is empty', () => {
+      const url = formatProxyUrl({
+        scheme: 'http',
+        host: 'proxy.net',
+        port: 3128,
+        username: '',
+        password: 'p@ss:word',
+      });
+      expect(url).toBe('http://proxy.net:3128');
+    });
   });
 
   describe('getProxyAgent', () => {
@@ -166,9 +182,15 @@ describe('Proxy Providers & Normalization Unit Tests', () => {
       expect(httpsAgent).toBeInstanceOf(ProxyAgent);
     });
 
-    test('should create SocksProxyAgent for SOCKS5 proxy when client is undici', () => {
+    test('should create undici.Socks5ProxyAgent for SOCKS5 proxy when client is undici', () => {
       const socksAgent = getProxyAgent('socks5://user:pass@127.0.0.1:1080', { client: 'undici' });
-      expect(socksAgent).toBeInstanceOf(SocksProxyAgent);
+      expect(socksAgent).toBeInstanceOf(Socks5ProxyAgent);
+    });
+
+    test('should throw PlatformError for invalid or empty proxy input', () => {
+      expect(() => getProxyAgent(null)).toThrow(PlatformError);
+      expect(() => getProxyAgent('')).toThrow(PlatformError);
+      expect(() => getProxyAgent('not-a-proxy')).toThrow(PlatformError);
     });
 
     test('should return proxy URL string when client is got', () => {

@@ -10,6 +10,8 @@
 
 import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
 
+const STANDBY_BACKOFF_MS = 30 * 1000;
+
 export class AbstractApiClient {
   /** @type {string} */
   name = 'base';
@@ -44,15 +46,37 @@ export class AbstractApiClient {
    * Resolve the correct proxy for the request:
    * - authenticated platforms: sticky IP per account
    * - no-auth platforms: rotating IP from pool
+   *
+   * Throws a `proxy_exhausted` PlatformError instead of returning `null` so that
+   * callers cannot accidentally initiate an unproxied request.
+   *
    * @param {string} [accountId]
-   * @returns {any | null}
+   * @returns {any}
    */
   resolveProxy(accountId) {
     if (!this.proxyPool) return null;
-    if (this.requiresAuth && accountId) {
-      return this.proxyPool.getStickyProxy(accountId);
+
+    const proxy = this.requiresAuth && accountId
+      ? this.proxyPool.getStickyProxy(accountId)
+      : this.proxyPool.getNext();
+
+    if (!proxy) {
+      // Enter standby backoff for the account, if registered, before throwing.
+      if (this.accountPool && accountId && this.accountPool.getAccount(accountId)) {
+        this.accountPool.markUnavailable(accountId, 'proxy_exhausted', STANDBY_BACKOFF_MS);
+      }
+
+      throw new PlatformError({
+        type: ErrorTypes.PROXY_EXHAUSTED,
+        code: 'XACT_5030',
+        message: 'Proxy pool exhausted: no healthy proxy available',
+        suggestedAction: SuggestedActions.WAIT,
+        retryAfterMs: STANDBY_BACKOFF_MS,
+        accountId,
+      });
     }
-    return this.proxyPool.getNext();
+
+    return proxy;
   }
 
   /**
