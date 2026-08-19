@@ -49,7 +49,7 @@ so that **the scraping pipeline never hard-crashes when a platform turns on wide
 * **When** 429/403 or proxy dead occurs
 * **Then** the interceptor first attempts to keep the same account and obtain a new sticky proxy with `provider.getStickyProxy(accountId)` (or `provider.getProxy({ accountId })`)
 * **And** it retries up to `maxProxyRetries` (default 3) with the same account, quarantining each failed proxy and moving to the next sticky assignment
-* **And** if all `maxProxyRetries` attempts fail and the platform is auth-required, the interceptor marks the current account unavailable with `accountPool.markUnavailable(accountId, 'rate_limit', rateLimitHibernationMs, platform)` and `governor.recordRateLimit(accountId, platform, rateLimitHibernationMs)`
+* **And** if all `maxProxyRetries` attempts fail and the platform is auth-required, the interceptor marks the current account unavailable with `accountPool.markUnavailable(accountId, 'rate_limit', rateLimitHibernationMs, platform)` (which also invokes `governor.hibernateAccount` when a governor is configured)
 * **And** it then attempts to rotate the account with `accountPool.getNextAvailable(platform)` (the next account becomes the current `accountId`)
 * **And** it resets the proxy retry counter and continues the exponential backoff sequence for the new account, up to one extra full set of `maxProxyRetries`
 * **And** if no healthy proxy or no available account exists, it throws `proxy_exhausted` or `hibernation` with `retryAfterMs` set to the longer of `standbyBackoffMs` or the account hibernation duration
@@ -75,8 +75,8 @@ so that **the scraping pipeline never hard-crashes when a platform turns on wide
 * **Given** an `AdaptiveRateGovernor` is configured
 * **When** a request starts
 * **Then** the pipeline calls `governor.canAccountRequest(accountId, platform)` for auth-required platforms and throws `PlatformError` (`type: HIBERNATION`, `code: XACT_4291`, `suggestedAction: ROTATE_ACCOUNT`) if the account is hibernating or over velocity
-* **And** on a successful request, it calls `governor.recordRequest(accountId, platform)` and `accountPool.recordRequest(accountId, platform)`
-* **And** on 429/403, it calls `governor.recordRateLimit(accountId, platform, rateLimitHibernationMs)` when an account is known
+* **And** on a successful request, it calls `governor.recordRequest(accountId, this.platform)` and `accountPool.recordRequest(accountId, this.platform)`
+* **And** on 429/403, the account hibernation triggered by `accountPool.markUnavailable(..., 'rate_limit', ...)` is forwarded to the governor (no separate `governor.recordRateLimit` call is required)
 
 ### AC-8: Request pipeline is implemented inside `AbstractApiClient`
 * **Given** `src/core/base-client.js`
@@ -93,9 +93,17 @@ so that **the scraping pipeline never hard-crashes when a platform turns on wide
 * **And** it throws `proxy_exhausted` (`XACT_5030`) with a clear message and `suggestedAction: WAIT`
 
 ### AC-10: TypeScript declarations and zero-dependency core
-* **Given** `types/proxy.d.ts` and `types/index.d.ts`
+* **Given** `types/core.d.ts`, `types/proxy.d.ts`, and `types/index.d.ts`
 * **When** the declarations are consumed
-* **Then** `AbstractApiClient` declares `request()`, `client`, `maxProxyRetries`, `backoffBaseMs`, `backoffMultiplier`, `maxBackoffMs`, `rateLimitHibernationMs`, and any new interceptor options
+* **Then** `AbstractApiClient` in `types/core.d.ts` declares:
+  - `platform?: string` property
+  - `proxyProvider?: ProxyProviderContract | ProxyIpPool` constructor option
+  - `client?: 'undici' | 'got'` constructor option
+  - `maxProxyRetries`, `maxAccountRotations`, `backoffBaseMs`, `backoffMultiplier`, `maxBackoffMs`, `rateLimitHibernationMs`, `standbyBackoffMs` constructor options
+  - `httpClient?: HttpClientFn` constructor option
+  - `request()` is **not** `abstract` (the base class provides the implementation)
+  - `handleError(response, platform)` returns `never` (always throws a `PlatformError`)
+* **And** `types/proxy.d.ts` exports the `ProxyProviderContract` and `NormalizedProxy` types needed by `types/core.d.ts`
 * **And** `ProxyRequestOptions` is extended with `maxProxyRetries`, `backoff`, `retry`, `client` if needed
 * **And** there are zero `any` annotations and zero `@ts-ignore` comments
 * **And** `src/core/error-envelope.js` receives no new external dependencies
@@ -115,7 +123,7 @@ so that **the scraping pipeline never hard-crashes when a platform turns on wide
 
 | Pattern | Source in 11.1 / 11.2 / current code | Why it matters for 11.3 |
 |---|---|---|
-| `ProxyProviderContract` — `getProxy/getStickyProxy/getNext/quarantine/isAllQuarantined/healthyCount/totalCount` | `types/proxy.d.ts:56-68`, `src/proxy/providers.js:156-258` | The interceptor must only speak this contract so it works with `ProxyIpPool`, `StaticProxyProvider`, and `DynamicTunnelProvider` interchangeably. |
+| `ProxyProviderContract` — `getProxy/getStickyProxy/getNext/quarantine/isAllQuarantined/healthyCount/totalCount` | `types/proxy.d.ts:56-68` | The interceptor must only speak this contract so it works with `ProxyIpPool`, `StaticProxyProvider`, and `DynamicTunnelProvider` interchangeably. |
 | Quarantine key uses `formatProxyUrl(normalized)` including credentials | `src/proxy/proxy-pool.js:93-104`, `src/proxy/providers.js:559-566` | Quarantine must target the exact session URL, not the gateway, otherwise one bad session disables the whole provider. |
 | `DynamicTunnelProvider` session key includes session tag and `quarantine` marks the session, not the gateway | `src/proxy/providers.js:627-653` | 429/403 on a residential session must not block the gateway; the interceptor must pass the exact proxy object returned by `getProxy` to `quarantine`. |
 | `AbstractApiClient.resolveProxy` throws `proxy_exhausted` (`XACT_5030`, 30s) when provider is missing or exhausted | `src/core/base-client.js:57-123` | The new `request()` must keep this contract and surface it on standby backoff. |
@@ -123,7 +131,7 @@ so that **the scraping pipeline never hard-crashes when a platform turns on wide
 | `AdaptiveRateGovernor` `canAccountRequest`, `recordRequest`, `recordRateLimit` | `src/core/adaptive-governor.js:164-227` | The pipeline must check account velocity before the first request and record rate-limit hibernation after 429. |
 | `ErrorTypes` and `isRetryable` set | `src/core/error-envelope.js:10-45` | Only `RATE_LIMIT`, `BOT_CHALLENGE`, `PROXY_EXHAUSTED`, and `HIBERNATION` are retryable. Auth / non-retryable errors stop the loop. |
 | `PlatformError.toEnvelope()` standard shape `{ code, type, message, statusCode, isRetryable, retryAfterMs, retryAfter, suggestedAction, accountId, platform }` | `src/core/error-envelope.js:83-97` | Every thrown error in the interceptor must be a `PlatformError` and produce this envelope for MCP/HTTP/CLI consumers. |
-| `getProxyAgent(proxy, { client: 'undici' \| 'got' })` returns the right shape per client | `src/proxy/providers.js:229-260`, `types/proxy.d.ts:66` | The interceptor must ask the provider for the agent in the format the selected `httpClient` expects. |
+| `getProxyAgent(proxy, { client: 'undici' \| 'got' })` returns the right shape per client | `src/proxy/providers.js:246-260`, `types/proxy.d.ts:66` | The interceptor must ask the provider for the agent in the format the selected `httpClient` expects. |
 
 ### 11.2 code-review findings that directly shape 11.3
 
@@ -224,22 +232,29 @@ so that **the scraping pipeline never hard-crashes when a platform turns on wide
      if !governor.canAccountRequest(accountId, platform):
         throw PlatformError({ type: HIBERNATION, code: XACT_4291, suggestedAction: ROTATE_ACCOUNT })
 3. Resolve proxy:
-     proxy = this.resolveProxy(accountId)
+     proxy = this.resolveProxy(accountId, { platform: this.platform })
+     // resolveProxy passes { accountId, platform } to provider.getProxy() when the provider contract uses it
 4. Build HTTP transport options:
      agent = provider.getProxyAgent(proxy, { client: this.client })
      requestOptions = { method, headers, body, signal, ...options, agent }
 5. Dispatch via httpClient:
-     response = await this.httpClient(url, requestOptions)
-6. If status is 429/403:
-     throw RateLimitError / BotChallengeError with accountId, platform, retryAfterMs parsed from Retry-After
-7. If status >= 500 or network/connection error:
-     throw ProxyDeadError (or platform equivalent) with type PROXY_EXHAUSTED
-8. If status is 401:
-     throw AuthSessionExpiredError (no retry)
-9. Record success:
-     governor.recordRequest(accountId, platform)
-     accountPool.recordRequest(accountId, platform)
-10. Return response
+     try:
+       response = await this.httpClient(url, requestOptions)
+     catch (transportError):
+       if transportError is a `PlatformError` and isRetryable, rethrow it
+       else wrap it in `ProxyDeadError` (`XACT_5030`, type `PROXY_EXHAUSTED`, suggestedAction `WAIT`) and rethrow
+6. Classify the response:
+     this.handleError(response, this.platform)
+     // handleError throws the appropriate PlatformError (RateLimitError, BotChallengeError, AuthSessionExpiredError, ProxyDeadError, or generic PlatformError)
+7. Record success:
+     if requiresAuth and accountId:
+       if (governor) governor.recordRequest(accountId, this.platform)
+       if (accountPool) accountPool.recordRequest(accountId, this.platform)
+     else if this.platform:
+       // No-auth: track under a synthetic per-platform no-auth account key.
+       if (governor) governor.recordRequest('noauth', this.platform)
+       if (accountPool) accountPool.recordRequest('noauth', this.platform)
+8. Return response
 ```
 
 ### 2. Retry / quarantine loop
@@ -260,11 +275,23 @@ while (proxyRetries < maxProxyRetries || accountRotations === 0 for auth):
     if provider.isAllQuarantined():
       throw proxy_exhausted standby error
 
+    # Normalize any non-PlatformError to a PlatformError so the retry logic and envelope are consistent
+    if not (error instanceof PlatformError):
+      error = new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_0000',
+        message: error?.message || 'Request failed',
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        details: error,
+        accountId,
+        platform,
+      })
+
     proxyRetries += 1
 
     if requiresAuth and proxyRetries >= maxProxyRetries and accountRotations < maxAccountRotations:
       accountPool.markUnavailable(accountId, 'rate_limit', rateLimitHibernationMs, platform)
-      governor.recordRateLimit(accountId, platform, rateLimitHibernationMs)
+      // AccountPool already invokes governor.hibernateAccount when a governor is configured.
       accountId = accountPool.getNextAvailable(platform)
       if !accountId:
         throw hibernation / proxy_exhausted
@@ -286,17 +313,20 @@ throw lastError
 ### 3. Backoff formula
 
 ```
-baseDelay = backoffBaseMs * (backoffMultiplier ^ (attempt - 1))
-// default: 1000 * (2 ^ (attempt - 1)) => 1000, 2000, 4000
+baseDelay = backoffBaseMs * Math.pow(backoffMultiplier, attempt - 1)
+// default: 1000 * Math.pow(2, attempt - 1) => 1000, 2000, 4000
 withFullJitter = Math.floor(Math.random() * baseDelay)
-withRetryAfter = max(withFullJitter, retryAfterMsFromHeader)
-finalDelay = min(withRetryAfter, maxBackoffMs)
+withRetryAfter = Math.max(withFullJitter, retryAfterMsFromHeader)
+finalDelay = Math.min(withRetryAfter, maxBackoffMs)
 ```
+
+Implement the delay with `await new Promise(resolve => setTimeout(resolve, finalDelay))` or `await setTimeout(finalDelay)` from `node:timers/promises`.
 
 ### 4. Configuration defaults
 
 ```ts
 interface RequestPipelineOptions {
+  platform?: string;               // defaults to `this.name` (e.g. 'twitter')
   maxProxyRetries?: number;        // default 3
   maxAccountRotations?: number;    // default 1
   backoffBaseMs?: number;          // default 1000
@@ -305,34 +335,88 @@ interface RequestPipelineOptions {
   rateLimitHibernationMs?: number; // default 15 * 60 * 1000
   standbyBackoffMs?: number;       // default 30 * 1000
   client?: 'undici' | 'got';       // default 'undici'
-  httpClient?: (url, options) => Promise<Response>; // required
+  httpClient?: HttpClientFn;       // required; see contract below
 }
 ```
 
+### 4a. `HttpClient` contract
+
+`AbstractApiClient` does not perform the actual HTTP call itself; it delegates to the `httpClient` function. The contract must be stable so any `undici`/`got` wrapper works:
+
+```ts
+export interface HttpClientFn {
+  (
+    url: string,
+    options: {
+      method?: string;
+      headers?: Record<string, string>;
+      body?: string | Buffer | Uint8Array;
+      agent?: import('undici').ProxyAgent | import('undici').Socks5ProxyAgent | string;
+      signal?: AbortSignal;
+    }
+  ): Promise<HttpClientResponse>;
+}
+
+export interface HttpClientResponse {
+  status: number;
+  headers: { get(name: string): string | null };
+  // Body can be consumed by the caller; `request()` only needs status and headers.
+  body?: unknown;
+}
+```
+
+- `httpClient` **must** return a response object with `.status` and `.headers.get(name)`.
+- `httpClient` **must** throw for network/transport failures (the interceptor wraps them in `ProxyDeadError`).
+- The `agent` passed in `options.agent` is either an `undici` `ProxyAgent`/`Socks5ProxyAgent` (for `client: 'undici'`) or a proxy URL string (for `client: 'got'`).
+- If `httpClient` is not set when `request()` is called, throw `PlatformError` (`type: INVALID_ARGS`, `code: XACT_4001`, `suggestedAction: USE_ACTIONS_LIST`).
+
 ### 5. `AbstractApiClient` constructor changes
 
+- Add `platform?: string` constructor option. Set `this.platform = options.platform || this.name` so platform-specific calls (`accountPool.getNextAvailable`, `governor.canAccountRequest`, `governor.recordRequest`) always have a platform value. This is the primary way to avoid cross-platform account collisions.
+- Add `proxyProvider?: ProxyProviderContract | ProxyIpPool` as an alternative to `proxyPool` (already accepted in `base-client.js` but missing from `types/core.d.ts`).
 - Add `client?: 'undici' | 'got'` (default `'undici'`).
-- Add `maxProxyRetries` etc. with defaults.
-- Add `httpClient?: (url, options) => Promise<Response>` function. If not provided, `request()` throws `invalid_args`.
-- Keep `proxyProvider` / `proxyPool`, `accountPool`, `governor`, `sessionManager`.
+- Add `maxProxyRetries`, `maxAccountRotations`, `backoffBaseMs`, `backoffMultiplier`, `maxBackoffMs`, `rateLimitHibernationMs`, `standbyBackoffMs` with defaults from the Configuration defaults section.
+- Add `httpClient?: HttpClientFn`. If not provided, `request()` throws `invalid_args`.
+- Keep `proxyPool`, `accountPool`, `governor`, `sessionManager`.
 
 ### 6. Pluggable HTTP transport
 
-`src/core` must not import `undici` or `got-scraping`. The platform subclass or factory sets `this.httpClient` to a function compatible with the chosen `client`:
+`src/core` must not import `undici` or `got-scraping`. The platform subclass or a helper in `src/proxy/` (see Task 4) sets `this.httpClient` to a function matching the `HttpClientFn` contract:
 
-- `client: 'undici'`: `httpClient = async (url, { method, headers, body, agent, signal }) => fetch(url, { method, headers, body, dispatcher: agent, signal })` using `undici.fetch` (or `undici.request`). The `agent` is a `ProxyAgent` or `Socks5ProxyAgent`.
-- `client: 'got'`: `httpClient = async (url, { method, headers, body, agent, signal }) => gotScraping({ url, method, headers, body, proxyUrl: agent, timeout: { request: 30000 }, signal })` where `agent` is the proxy URL string.
+- `client: 'undici'`: `httpClient = async (url, { method, headers, body, agent, signal }) => {
+    const res = await undici.fetch(url, { method, headers, body, dispatcher: agent, signal });
+    return {
+      status: res.status,
+      headers: { get: (n) => res.headers.get(n) },
+      body: res.body,
+    };
+  }` where `agent` is a `ProxyAgent` or `Socks5ProxyAgent`.
+- `client: 'got'`: `httpClient = async (url, { method, headers, body, agent, signal }) => {
+    const res = await gotScraping({ url, method, headers, body, proxyUrl: agent, timeout: { request: 30000 }, signal });
+    return {
+      status: res.statusCode,
+      headers: { get: (n) => res.headers[n.toLowerCase()] },
+      body: res.body,
+    };
+  }` where `agent` is the full proxy URL string returned by `provider.getProxyAgent(proxy, { client: 'got' })`.
 
-> **Note on Node fetch and dispatcher:** Node's global `fetch` does **not** accept a `dispatcher` option. To use a custom `ProxyAgent` you must use `undici.fetch` or `undici.request`. A helper factory in `src/proxy/` (e.g. `createHttpClient(client, agent)`) can be provided, but the `AbstractApiClient` must receive a ready-to-call `httpClient` so `src/core` stays dependency-free.
+`AbstractApiClient.request()` only reads `response.status` and `response.headers.get('retry-after')`; the caller (platform subclass) is responsible for parsing the response body after `request()` returns.
 
-### 7. Error classification in `request()`
+> **Note on Node fetch and dispatcher:** Node's global `fetch` does **not** accept a `dispatcher` option. To use a custom `ProxyAgent` you must import and use `undici.fetch` or `undici.request` in the injected `httpClient`. A helper factory in `src/proxy/` (e.g. `createUndiciClient(agent)`) can be provided, but the `AbstractApiClient` must receive a ready-to-call `httpClient` so `src/core` stays dependency-free.
 
-- `status === 429` → `RateLimitError` (`XACT_4290`, `ROTATE_PROXY`)
-- `status === 403` → `BotChallengeError` (`XACT_4030`, `ROTATE_PROXY`)
-- `status === 401` → `AuthSessionExpiredError` (`XACT_4010`, `RELOGIN`) — not retried
-- `status >= 500` → `ProxyDeadError` (`XACT_5030`, `WAIT`) — retried
-- Network/connection error → `ProxyDeadError` (`XACT_5030`, `WAIT`) — retried
-- Any other status → call `this.handleError(response, platform)` and throw the result
+### 7. Error classification in `handleError()` (called by `request()`)
+
+The default `handleError(response, platform)` in `AbstractApiClient` must be updated from the current generic `INTERNAL` throw to a status-based classifier. Platform subclasses may override it to inspect the response body and throw `RateLimitError` / `BotChallengeError` even when the HTTP status is 200.
+
+Default rules:
+- `response.status === 429` → `RateLimitError` (`XACT_4290`, `ROTATE_PROXY`)
+- `response.status === 403` → `BotChallengeError` (`XACT_4030`, `ROTATE_PROXY`)
+- `response.status === 401` → `AuthSessionExpiredError` (`XACT_4010`, `RELOGIN`) — not retried
+- `response.status >= 500` → `ProxyDeadError` (`XACT_5030`, `WAIT`) — retried
+- Any other 4xx/5xx status → `PlatformError` with the appropriate `statusCode`; use `type: INTERNAL` if no specific type applies
+- Unknown / unparseable response → `PlatformError` (`XACT_0000`, `INTERNAL`)
+
+`request()` invokes `handleError()` after a successful `httpClient` dispatch. If `handleError` throws a `PlatformError` whose `isRetryable` is true, `request()` enters the quarantine/retry loop. If `isRetryable` is false, the error is rethrown immediately.
 
 ### 8. Forward compatibility for `PlatformResponseValidator`
 
@@ -345,7 +429,7 @@ interface RequestPipelineOptions {
 | Package | Version in `package.json` | Role in 11.3 | Notes |
 |---|---|---|---|
 | `undici` | `^7.29.0` | `ProxyAgent`, `Socks5ProxyAgent`, `undici.request`/`undici.fetch`, retry interceptor. | `src/proxy/**` may use `undici` directly. The base `AbstractApiClient` must receive an `httpClient` function so `src/core` does not depend on `undici`. |
-| `got-scraping` | `^3.2.15` | Legacy HTTP client; still used in `src/client/` and `src/scrapers/twitter/`. | **Context7 + web research indicates `got-scraping` is EOL (final release 4.2.1, Feb 2026).** New `AbstractApiClient` subclasses should prefer `undici`. `got-scraping` support in the interceptor is for backward compatibility only. |
+| `got-scraping` | `^3.2.15` | Legacy HTTP client; still used in `src/client/` and `src/scrapers/twitter/`. | **Apify has ended active feature development for `got-scraping` (final line was 4.2.1, early 2026).** The project is currently on `^3.2.15`, which is in maintenance mode. New `AbstractApiClient` subclasses should prefer `undici`. `got-scraping` support in the interceptor is for backward compatibility only. |
 | `vitest` | `^4.0.18` | Test runner. | Use `vi.useFakeTimers()` for backoff and quarantine expiry. |
 
 **Do not introduce new runtime dependencies in `src/core/**`.** `src/core` may only import `error-envelope.js` and `types.js` (and JSDoc type-only imports). All HTTP transport and proxy agent construction stays in `src/proxy/` or is injected by platform subclasses.
@@ -360,7 +444,8 @@ interface RequestPipelineOptions {
 | `src/proxy/providers.js` | **UPDATE (minimal)** | Ensure `StaticProxyProvider.getProxyAgent` and `DynamicTunnelProvider.getProxyAgent` accept `{ client: 'undici' \| 'got' }` and return the right shape (ProxyAgent / Socks5ProxyAgent / string). No breaking change to existing provider logic. |
 | `src/proxy/index.js` | **UPDATE (minimal)** | Export any new helper factory (e.g. `createUndiciClient`, `createGotClient`) if added to `src/proxy/**` for platform clients. |
 | `src/core/error-envelope.js` | **UPDATE** | Add new codes `XACT_4290`, `XACT_4030`, `XACT_4010` and ensure `RateLimitError`, `BotChallengeError`, `AuthSessionExpiredError` accept them. No new dependencies. |
-| `types/proxy.d.ts` | **UPDATE** | Add `client`, `maxProxyRetries`, `backoffBaseMs`, `backoffMultiplier`, `maxBackoffMs`, `rateLimitHibernationMs`, `standbyBackoffMs`, `httpClient` to `AbstractApiClient` constructor and `ProxyRequestOptions` / request options as appropriate. Zero `any`. |
+| `types/core.d.ts` | **UPDATE** | Add `platform`, `proxyProvider`, `client`, `maxProxyRetries`, `maxAccountRotations`, `backoffBaseMs`, `backoffMultiplier`, `maxBackoffMs`, `rateLimitHibernationMs`, `standbyBackoffMs`, `httpClient` to `AbstractApiClient` constructor. Change `request()` from `abstract` to a concrete method signature. Add `HttpClientFn` and `HttpClientResponse` interfaces. Zero `any`. |
+| `types/proxy.d.ts` | **UPDATE (minimal)** | Ensure `ProxyProviderContract`, `NormalizedProxy`, `ProxyIpPool`, `StaticProxyProvider`, `DynamicTunnelProvider`, `ProxyAgentOptions`, and `ProxyRequestOptions` are exported so `types/core.d.ts` can import them. Add `client` to `ProxyAgentOptions` if not already present. |
 | `types/index.d.ts` | **NO CHANGE** | Re-export is already in place. |
 | `tests/core/base-client-request.test.js` | **NEW** | ATDD suite for the request pipeline. Use real providers and `vi.useFakeTimers()`. |
 | `tests/core/base-client-proxy.test.js` | **UPDATE (minimal)** | Add tests for `proxyProvider` vs `proxyPool` contract validation if not already covered. |
@@ -458,9 +543,10 @@ npx vitest run tests/proxy/providers-tunnel.test.js tests/proxy/proxy-pool.test.
 - `src/core/account-pool.js:1-411` — `AccountPool` with `getNextAvailable`, `markUnavailable`, `recordRequest`, `setAssignedProxy`, `getAccount` (redacted).
 - `src/core/adaptive-governor.js:1-276` — `AdaptiveRateGovernor` with `canAccountRequest`, `recordRequest`, `recordRateLimit`, `hibernateAccount`, `getMaxThroughput`, `getStatus`.
 - `src/proxy/proxy-pool.js:1-337` — `ProxyIpPool` with `getNext`, `getStickyProxy`, `quarantine`, `isAllQuarantined`, `getProxyAgent`, `getBrowserArgs`.
-- `src/proxy/providers.js:1-1031` — `StaticProxyProvider`, `DynamicTunnelProvider`, `createProxyProvider`, `formatProxyUrl`, `getProxyAgent`.
+- `src/proxy/providers.js:1-1024` — `StaticProxyProvider`, `DynamicTunnelProvider`, `createProxyProvider`, `formatProxyUrl`, `getProxyAgent`.
 - `src/proxy/index.js:1-8` — current re-exports.
 - `types/proxy.d.ts:1-211` — proxy and provider TypeScript declarations.
+- `types/core.d.ts:188-205` — `AbstractApiClient` TypeScript declarations (must be updated to remove `abstract` from `request()` and add new constructor options).
 - `src/core/types.js:1-100` — `ErrorEnvelope`, `GovernorStatus` typedefs.
 
 ### Existing test files (to keep green)
@@ -521,11 +607,14 @@ npx vitest run tests/proxy/providers-tunnel.test.js tests/proxy/proxy-pool.test.
 ## Tasks & Subtasks
 
 - [ ] **Task 1: Update `src/core/error-envelope.js`**
-  - [ ] Add error codes `XACT_4290`, `XACT_4030`, `XACT_4010` to `PlatformError` usage.
-  - [ ] Ensure `RateLimitError`, `BotChallengeError`, `AuthSessionExpiredError` can carry custom `code` and `accountId`.
+  - [ ] Add an exported `ErrorCodes` constant object with `RATE_LIMIT: 'XACT_4290'`, `BOT_CHALLENGE: 'XACT_4030'`, `AUTH_EXPIRED: 'XACT_4010'`, `HIBERNATION: 'XACT_4291'`, `PROXY_EXHAUSTED: 'XACT_5030'`.
+  - [ ] Ensure `RateLimitError`, `BotChallengeError`, `AuthSessionExpiredError`, `ProxyDeadError` can carry custom `code` and `accountId`.
+  - [ ] Update the default `handleError()` in `src/core/base-client.js` to construct errors with these codes.
 
 - [ ] **Task 2: Implement `AbstractApiClient.request()` in `src/core/base-client.js`**
-  - [ ] Add constructor options: `client`, `maxProxyRetries`, `maxAccountRotations`, `backoffBaseMs`, `backoffMultiplier`, `maxBackoffMs`, `rateLimitHibernationMs`, `standbyBackoffMs`, `httpClient`.
+  - [ ] Add constructor options: `platform`, `proxyProvider`, `client`, `maxProxyRetries`, `maxAccountRotations`, `backoffBaseMs`, `backoffMultiplier`, `maxBackoffMs`, `rateLimitHibernationMs`, `standbyBackoffMs`, `httpClient`.
+  - [ ] Store `this.platform = options.platform || this.name` and ensure all `accountPool` / `governor` calls include `this.platform`.
+  - [ ] Update `resolveProxy()` to accept an optional `{ platform }` object and pass `{ accountId, platform }` to `provider.getProxy()` when the provider has the `getProxy(contract)` form.
   - [ ] Implement private `#resolveAccountAndProxy(options)` helper.
   - [ ] Implement `#buildAgent(proxy)` using `provider.getProxyAgent`.
   - [ ] Implement `#classifyResponse(response)` and update `handleError()`.
@@ -542,8 +631,8 @@ npx vitest run tests/proxy/providers-tunnel.test.js tests/proxy/proxy-pool.test.
   - [ ] Helper is optional; platform clients may set their own `httpClient`.
 
 - [ ] **Task 5: Update TypeScript declarations**
-  - [ ] `types/proxy.d.ts`: extend `ProxyRequestOptions` and `AbstractApiClient` constructor options.
-  - [ ] Add `client`, `maxProxyRetries`, `backoffBaseMs`, etc.
+  - [ ] `types/core.d.ts`: add `platform`, `proxyProvider`, `client`, `maxProxyRetries`, `maxAccountRotations`, `backoffBaseMs`, `backoffMultiplier`, `maxBackoffMs`, `rateLimitHibernationMs`, `standbyBackoffMs`, and `httpClient` to `AbstractApiClient` constructor. Change `request()` from `abstract` to concrete. Add `HttpClientFn` and `HttpClientResponse` interfaces.
+  - [ ] `types/proxy.d.ts`: extend `ProxyAgentOptions` and `ProxyRequestOptions` with `client` and request-pipeline options if needed. Ensure `ProxyProviderContract` and `NormalizedProxy` are exported for `types/core.d.ts`.
   - [ ] Zero `any` and zero `@ts-ignore`.
 
 - [ ] **Task 6: ATDD test suite `tests/core/base-client-request.test.js`**
@@ -576,10 +665,10 @@ npx vitest run tests/proxy/providers-tunnel.test.js tests/proxy/proxy-pool.test.
 
 ### Implementation Plan
 1. Implement error-code updates in `src/core/error-envelope.js`.
-2. Implement `AbstractApiClient.request()` with the full request pipeline, quarantine, retry, and backoff in `src/core/base-client.js`.
+2. Implement `AbstractApiClient.request()` with the full request pipeline, quarantine, retry, and backoff in `src/core/base-client.js`. Add `platform` and `httpClient` constructor options.
 3. Wire in `AccountPool` hibernation and `AdaptiveRateGovernor` calls.
 4. Verify provider `getProxyAgent` works for both `undici` and `got` clients.
-5. Update `types/proxy.d.ts` with strict types.
+5. Update `types/core.d.ts` and `types/proxy.d.ts` with strict types and remove `abstract` from `AbstractApiClient.request()`.
 6. Write `tests/core/base-client-request.test.js` using real in-memory providers and fake timers.
 7. Run regression suite and keep all existing tests green.
 
@@ -590,6 +679,7 @@ npx vitest run tests/proxy/providers-tunnel.test.js tests/proxy/proxy-pool.test.
 - `src/core/base-client.js` (MODIFIED)
 - `src/core/error-envelope.js` (MODIFIED)
 - `src/proxy/providers.js` (MINIMAL UPDATE if needed)
+- `types/core.d.ts` (MODIFIED)
 - `types/proxy.d.ts` (MODIFIED)
 - `tests/core/base-client-request.test.js` (NEW)
 - `tests/core/base-client-proxy.test.js` (MINIMAL UPDATE if needed)
