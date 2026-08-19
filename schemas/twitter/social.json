@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Twitter Social Post Metadata",
+  "type": "object",
+  "properties": {
+    "tweetId": {
+      "type": "string"
+    },
+    "replyCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "retweetCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "likeCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "quoteCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bookmarkCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "isRetweet": {
+      "type": "boolean"
+    },
+    "isReply": {
+      "type": "boolean"
+    },
+    "isQuote": {
+      "type": "boolean"
+    },
+    "hashtags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "mentions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lang": {
+      "type": "string"
+    },
+    "conversationId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tweetId"
+  ]
+}

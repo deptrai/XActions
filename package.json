@@ -213,6 +213,7 @@
   "files": [
     "src",
     "types",
+    "schemas",
     "api/config/x402-config.js"
   ],
   "mcpName": "io.github.nirholas/xactions",

@@ -22,17 +22,23 @@ export class AbstractStore {
 
   /**
    * @param {PostItem} post
+   * @param {Object} [opts]
+   * @param {boolean} [opts.upsert=false]
+   * @param {boolean} [opts.validateSchema=true]
    * @returns {Promise<void>}
    */
-  async storeContent(post) {
+  async storeContent(post, opts = {}) {
     throw new Error('Method not implemented: storeContent()');
   }
 
   /**
    * @param {PostItem[]} posts
+   * @param {Object} [opts]
+   * @param {boolean} [opts.upsert=false]
+   * @param {boolean} [opts.validateSchema=true]
    * @returns {Promise<void>}
    */
-  async storeBatch(posts) {
+  async storeBatch(posts, opts = {}) {
     throw new Error('Method not implemented: storeBatch()');
   }
 

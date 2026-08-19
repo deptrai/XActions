@@ -168,13 +168,13 @@ describe('Story 10.2: PrismaStore — Post Batch Storage & 500-Record Chunking (
       authorId: 'shop_99',
       authorName: 'Official Store',
       content: 'Product description v1',
-      metadata: { price: 150000, soldCount: 10 },
+      metadata: { itemId: 'item_555', shopId: 'shop_99', price: 150000, soldCount: 10 },
     };
 
     const postUpdated = {
       ...postInitial,
       content: 'Product description v2 updated',
-      metadata: { price: 140000, soldCount: 25 },
+      metadata: { itemId: 'item_555', shopId: 'shop_99', price: 140000, soldCount: 25 },
     };
 
     await store.storeBatch([postInitial]);

@@ -46,8 +46,8 @@ export interface CommentItem {
 
 export abstract class AbstractStore {
   abstract init(): Promise<void>;
-  abstract storeContent(post: PostItem): Promise<void>;
-  abstract storeBatch(posts: PostItem[], opts?: { upsert?: boolean }): Promise<void>;
+  abstract storeContent(post: PostItem, opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
+  abstract storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
   abstract storeComment(comment: CommentItem): Promise<void>;
   abstract storeCommentBatch(comments: CommentItem[], opts?: { upsert?: boolean }): Promise<void>;
   abstract close(): Promise<void>;
@@ -56,13 +56,14 @@ export abstract class AbstractStore {
 export interface PrismaStoreOptions {
   prisma?: unknown;
   chunkSize?: number;
+  validateSchema?: boolean;
 }
 
 export class PrismaStore extends AbstractStore {
   constructor(options?: PrismaStoreOptions);
   init(): Promise<void>;
-  storeContent(post: PostItem): Promise<void>;
-  storeBatch(posts: PostItem[], opts?: { upsert?: boolean }): Promise<void>;
+  storeContent(post: PostItem, opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
+  storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
   storeComment(comment: CommentItem): Promise<void>;
   storeCommentBatch(comments: CommentItem[], opts?: { upsert?: boolean }): Promise<void>;
   close(): Promise<void>;

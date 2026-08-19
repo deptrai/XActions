@@ -32,3 +32,4 @@ export {
   generateCommentId,
   isValidCategory,
 } from './types.js';
+export { default as metadataSchemaRegistry } from './metadata-schema-registry.js';

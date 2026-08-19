@@ -49,7 +49,7 @@ describe('Automated Test Suite: PrismaStore High-Throughput & Stress Testing', (
       authorId: `shop_${i % 5}`,
       authorName: `Official Store ${i % 5}`,
       content: `E-commerce product #${i + 1}`,
-      metadata: { price: 100000 + i * 1000, inStock: true },
+      metadata: { itemId: `product_${i + 1}`, shopId: `shop_${i % 5}`, price: 100000 + i * 1000, inStock: true },
     }));
 
     await store.storeBatch(posts, { upsert: true });

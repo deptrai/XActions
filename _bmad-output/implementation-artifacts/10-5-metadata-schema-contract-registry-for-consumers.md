@@ -2,7 +2,7 @@
 story_id: 10.5
 story_key: 10-5-metadata-schema-contract-registry-for-consumers
 epic: 10 — Unified PostgreSQL Storage (Prisma) & Core Interfaces
-status: in-progress
+status: done
 ---
 
 # 10.5 — Metadata Schema Contract & Registry for Consumers
@@ -333,10 +333,10 @@ status: in-progress
 
 ## Story Completion Status
 
-- **Status:** `in-progress`
+- **Status:** `done`
 - **Context engine analysis completed:** comprehensive developer guide created.
-- **Dev implementation:** completed; pending review fixes.
-- **Code Review:** in progress.
+- **Dev implementation:** completed.
+- **Code Review:** completed; Round 3 patches applied.
 
 ---
 
@@ -359,16 +359,17 @@ status: in-progress
 
 - **2026-08-19:** Created Story 10.5 context file and updated sprint status to `ready-for-dev`.
 - **2026-08-19:** Validated story against `checklist.md`: fixed `PlatformError` type for 404, clarified multi-type and reserved `location` fields, added `schemas/` packaging and missing-directory guards, and documented `/api/schemas` route prefix decision.
+- **2026-08-19:** Code review (Round 3): applied all 7 patches — skip null/undefined metadata, fix `ErrorTypes.NOT_FOUND` → `ErrorTypes.INTERNAL`, use `version` not `$schema`, standardize API error envelope, MCP `isError` for missing schemas, real-DB test for `validateSchema: false`, and tighten `types/metadata-schema.d.ts`. Also updated pre-existing test fixtures to conform to the new Shopee e-commerce schema.
 
 ### Review Findings (Round 3 — Code Review Run)
 
-- [ ] [Review][Patch] Null/undefined `metadata` is not skipped when a schema is registered; `validateMetadata` and `PrismaStore` reject posts without metadata for any schema-registered `(platform, category)` pair. This violates the story's opt-in validation contract and will break crawlers that do not yet populate metadata. [src/core/metadata-schema-registry.js:219-230, src/store/prisma-store.js:198-212]
-- [ ] [Review][Patch] `api/routes/schemas.js` and `src/cli/index.js` reference `ErrorTypes.NOT_FOUND`, which does not exist in `ErrorTypes`; the error type silently falls back to `internal`. Both should use `ErrorTypes.INTERNAL` with `statusCode: 404` per the story spec. [api/routes/schemas.js:37, src/cli/index.js:3416]
-- [ ] [Review][Patch] `MetadataSchemaRegistry.listSchemas` populates `version` from `schema.$schema` (the JSON Schema draft URI) instead of a real `version` property, making the `version` descriptor misleading. [src/core/metadata-schema-registry.js:208]
-- [ ] [Review][Patch] `GET /api/schemas` error response returns `error.message` instead of the standard `error.toEnvelope()` envelope used by the rest of the XActions API. [api/routes/schemas.js:20]
-- [ ] [Review][Patch] `x_schema_get` in `src/mcp/server.js` returns a plain `{ error: string }` object for missing schemas; the MCP server treats it as a successful result. It should throw a `PlatformError` or return an MCP `isError` result. [src/mcp/server.js:4804-4811]
-- [ ] [Review][Patch] `tests/store/prisma-store-schema-validation.test.js` uses a mocked/fake `prisma` object in the `validateSchema: false` test, violating the project's "no mocks" rule and the story's real-PostgreSQL test requirement. [tests/store/prisma-store-schema-validation.test.js:45-60]
-- [ ] [Review][Patch] `types/metadata-schema.d.ts` has `ValidationResult.errors?: string[]` (optional) while the runtime always returns an `errors` array, and `validateMetadata` accepts `metadata: object` which is too narrow for null/undefined/unknown inputs. [types/metadata-schema.d.ts:24-27, types/metadata-schema.d.ts:62]
+- [x] [Review][Patch] Null/undefined `metadata` is not skipped when a schema is registered; `validateMetadata` and `PrismaStore` reject posts without metadata for any schema-registered `(platform, category)` pair. This violates the story's opt-in validation contract and will break crawlers that do not yet populate metadata. [src/core/metadata-schema-registry.js:219-230, src/store/prisma-store.js:198-212]
+- [x] [Review][Patch] `api/routes/schemas.js` and `src/cli/index.js` reference `ErrorTypes.NOT_FOUND`, which does not exist in `ErrorTypes`; the error type silently falls back to `internal`. Both should use `ErrorTypes.INTERNAL` with `statusCode: 404` per the story spec. [api/routes/schemas.js:37, src/cli/index.js:3416]
+- [x] [Review][Patch] `MetadataSchemaRegistry.listSchemas` populates `version` from `schema.$schema` (the JSON Schema draft URI) instead of a real `version` property, making the `version` descriptor misleading. [src/core/metadata-schema-registry.js:208]
+- [x] [Review][Patch] `GET /api/schemas` error response returns `error.message` instead of the standard `error.toEnvelope()` envelope used by the rest of the XActions API. [api/routes/schemas.js:20]
+- [x] [Review][Patch] `x_schema_get` in `src/mcp/server.js` returns a plain `{ error: string }` object for missing schemas; the MCP server treats it as a successful result. It should throw a `PlatformError` or return an MCP `isError` result. [src/mcp/server.js:4804-4811]
+- [x] [Review][Patch] `tests/store/prisma-store-schema-validation.test.js` uses a mocked/fake `prisma` object in the `validateSchema: false` test, violating the project's "no mocks" rule and the story's real-PostgreSQL test requirement. [tests/store/prisma-store-schema-validation.test.js:45-60]
+- [x] [Review][Patch] `types/metadata-schema.d.ts` has `ValidationResult.errors?: string[]` (optional) while the runtime always returns an `errors` array, and `validateMetadata` accepts `metadata: object` which is too narrow for null/undefined/unknown inputs. [types/metadata-schema.d.ts:24-27, types/metadata-schema.d.ts:62]
 
 ### Dismissed Edge-Case Findings
 

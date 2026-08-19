@@ -8,6 +8,7 @@
 import { AbstractStore } from '../core/base-store.js';
 import { generatePostId, generateCommentId, isValidCategory, CATEGORY_VALUES } from '../core/types.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
+import metadataSchemaRegistry from '../core/metadata-schema-registry.js';
 
 export class PrismaStore extends AbstractStore {
   /** @type {import('@prisma/client').PrismaClient | null} */
@@ -16,10 +17,14 @@ export class PrismaStore extends AbstractStore {
   /** @type {number} */
   #chunkSize = 500;
 
+  /** @type {boolean} */
+  #validateSchema = true;
+
   /**
    * @param {Object} [options]
    * @param {import('@prisma/client').PrismaClient} [options.prisma]
-   * @param {number} [options.chunkSize]
+   * @param {number} [options.chunkSize=500]
+   * @param {boolean} [options.validateSchema=true]
    */
   constructor(options = {}) {
     super();
@@ -28,6 +33,7 @@ export class PrismaStore extends AbstractStore {
       typeof options.chunkSize === 'number' && options.chunkSize > 0
         ? Math.floor(options.chunkSize)
         : 500;
+    this.#validateSchema = options.validateSchema !== false;
   }
 
   /** @returns {Promise<void>} */
@@ -158,10 +164,11 @@ export class PrismaStore extends AbstractStore {
 
   /**
    * @param {import('../core/types.js').PostItem} post
+   * @param {Object} [opts]
    * @returns {Promise<void>}
    */
-  async storeContent(post) {
-    await this.storeBatch([post]);
+  async storeContent(post, opts = {}) {
+    await this.storeBatch([post], opts);
   }
 
   /**
@@ -173,15 +180,34 @@ export class PrismaStore extends AbstractStore {
   async storeBatch(posts, opts = {}) {
     if (!Array.isArray(posts) || !posts.length) return;
 
-    for (const post of posts) {
+    const shouldValidateSchema = opts.validateSchema ?? this.#validateSchema;
+
+    for (let i = 0; i < posts.length; i++) {
+      const post = posts[i];
       if (!post.category || !isValidCategory(post.category)) {
         throw new PlatformError({
           type: ErrorTypes.INVALID_ARGS,
           code: 'XACT_4001',
-          message: `Invalid or missing category "${post.category}". Allowed: ${CATEGORY_VALUES.join(', ')}`,
+          message: `Invalid or missing category "${post.category}" at index ${i}. Allowed: ${CATEGORY_VALUES.join(', ')}`,
           suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
           platform: post.platform,
+          details: { index: i },
         });
+      }
+
+      if (shouldValidateSchema) {
+        const validation = metadataSchemaRegistry.validateMetadata(post.platform, post.category, post.metadata);
+        if (!validation.valid) {
+          throw new PlatformError({
+            type: ErrorTypes.INVALID_ARGS,
+            code: 'XACT_4001',
+            message: `Metadata schema validation failed at index ${i}`,
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+            platform: post.platform,
+            statusCode: 400,
+            details: { index: i, errors: validation.errors },
+          });
+        }
       }
     }
 

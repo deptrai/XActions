@@ -37,7 +37,7 @@ development_status:
   10-2-prisma-post-comment-relational-schema-migration: done
   10-3-ai-dataset-export-utility-streaming-jsonl-csv: ready-for-dev
   10-4-crawlcheckpoint-operational-api-resume-pause-retry: ready-for-dev
-  10-5-metadata-schema-contract-registry-for-consumers: in-progress
+  10-5-metadata-schema-contract-registry-for-consumers: done
   epic-10-retrospective: optional
 
   # --- Epic 11: Resilient Network & Proxy Pool Management ---

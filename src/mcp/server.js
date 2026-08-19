@@ -2613,6 +2613,27 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: 'x_schema_list',
+    description: 'List all registered metadata schemas and their descriptions.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: 'x_schema_get',
+    description: 'Get JSON schema definition for a specific platform and category.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: { type: 'string', description: 'Platform identifier (e.g. "twitter", "shopee")' },
+        category: { type: 'string', description: 'Category identifier (e.g. "social", "ecom")' },
+      },
+      required: ['platform', 'category'],
+    },
+  },
 ];
 
 // ============================================================================
@@ -4773,6 +4794,32 @@ async function executeAITool(name, args) {
       };
       const result = await ai.generateTweet(profile, llmOpts);
       return { topic: args.topic, ...result };
+    }
+
+    case 'x_schema_list': {
+      const { metadataSchemaRegistry } = await import('../core/index.js');
+      return { schemas: metadataSchemaRegistry.listSchemas() };
+    }
+
+    case 'x_schema_get': {
+      const { metadataSchemaRegistry } = await import('../core/index.js');
+      const { platform, category } = args;
+      const schema = metadataSchemaRegistry.getSchema(platform, category);
+      if (!schema) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                code: 'XACT_4041',
+                message: `Schema not found for platform: ${platform}, category: ${category}`,
+              }, null, 2),
+            },
+          ],
+        };
+      }
+      return { schema };
     }
 
     default:

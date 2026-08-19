@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Shopee Ecommerce Product Metadata",
+  "type": "object",
+  "properties": {
+    "itemId": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "number" }
+      ]
+    },
+    "shopId": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "number" }
+      ]
+    },
+    "price": {
+      "type": "number",
+      "minimum": 0
+    },
+    "currency": {
+      "type": "string",
+      "default": "VND"
+    },
+    "originalPrice": {
+      "type": "number",
+      "minimum": 0
+    },
+    "discountPercent": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "soldCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "stock": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "location": {
+      "type": "object",
+      "properties": {
+        "region": { "type": "string" },
+        "district": { "type": "string" },
+        "locationRaw": { "type": "string" }
+      }
+    },
+    "sellerName": {
+      "type": "string"
+    },
+    "categoryName": {
+      "type": "string"
+    },
+    "brand": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "itemId",
+    "shopId",
+    "price"
+  ]
+}

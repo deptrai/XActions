@@ -765,3 +765,4 @@ export * as checkpointManager from './checkpoint-manager';
 
 
 
+export * as metadataSchema from './metadata-schema';
