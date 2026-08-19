@@ -15,3 +15,8 @@
 
 ## Deferred from: code review 10-5-metadata-schema-contract-registry-for-consumers.md (2026-08-19)
 - Synchronous Validation in 500-item Loop [src/store/prisma-store.js] - Could marginally stall event loop
+
+## Deferred from: code review of 11-1-proxyippool-accountpool-sticky-round-robin.md (2026-08-19)
+
+- [ ] [Review][P2][Defer] `hibernation` and `quarantine` depend on `Date.now()` and are sensitive to clock skew; monotonic timing is out of scope for Story 11.1 [src/core/account-pool.js:87, src/proxy/proxy-pool.js:161]
+- [ ] [Review][P2][Defer] No transaction / checkout between proxy selection and actual request use; checkout/checkin belongs to the request pipeline (Story 11.5/11.7) [src/proxy/proxy-pool.js:111-140]
