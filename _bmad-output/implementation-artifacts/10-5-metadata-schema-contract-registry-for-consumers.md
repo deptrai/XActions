@@ -44,13 +44,13 @@ status: ready-for-dev
 
 - **Given** JSON Schema definitions stored in `schemas/<platform>/<category>.json` or registered programmatically
 - **When** calling `MetadataSchemaRegistry`:
-  - `loadSchemasFromDisk(schemasDir)`: recursively discovers and registers all `.json` files in `<schemasDir>/<platform>/<category>.json`. Must use synchronous `fs` methods (`fs.readdirSync`, `fs.readFileSync`) to ensure the registry is ready on module load without race conditions.
+  - `loadSchemasFromDisk(schemasDir)`: recursively discovers and registers all `.json` files in `<schemasDir>/<platform>/<category>.json`. Must use synchronous `fs` methods (`fs.readdirSync`, `fs.readFileSync`) to ensure the registry is ready on module load without race conditions. If the directory does not exist, the registry must start empty without throwing.
   - `registerSchema(platform, category, schema)`: registers a JSON schema for a specific platform and category. Schemas MUST be cached in memory (e.g., `Map<string, object>`) to ensure high-performance, zero-disk-I/O lookups.
   - `getSchema(platform, category)`: returns the registered JSON Schema object from the in-memory cache, or `null` if not found.
   - `hasSchema(platform, category)`: returns boolean indicating whether a schema is registered.
   - `listSchemas()`: returns array of schema descriptors `{ platform, category, title, description, version, propertiesCount }`.
   - `validateMetadata(platform, category, metadata)`: validates a metadata object against the registered schema. Returns `{ valid: boolean, errors: string[] }`. The validator must accumulate errors with exact JSON paths (e.g. `metadata.shopId must be integer`).
-- **And** `src/core/metadata-schema-registry.js` has **zero external npm dependencies** (NFR15 Clean Architecture), using a built-in lightweight JSON Schema validator for common types (`string`, `number`, `integer`, `boolean`, `array`, `object`, `required`, `enum`, `minimum`, `maximum`, `pattern`).
+- **And** `src/core/metadata-schema-registry.js` has **zero external npm dependencies** (NFR15 Clean Architecture), using a built-in, recursive JSON Schema validator for common types (`string`, `number`, `integer`, `boolean`, `array`, `object`, `required`, `enum`, `minimum`, `maximum`, `pattern`) and nested `properties` / `items`.
 
 ### AC2 — Pilot JSON Schemas (`schemas/twitter/social.json` & `schemas/shopee/ecom.json`)
 
@@ -71,8 +71,8 @@ status: ready-for-dev
     - `lang` (string)
     - `conversationId` (string)
   - `schemas/shopee/ecom.json`: defines fields for Shopee e-commerce products:
-    - `itemId` (string/number, required)
-    - `shopId` (string/number, required)
+    - `itemId` (`oneOf`/`anyOf` `string` or `number`, required)
+    - `shopId` (`oneOf`/`anyOf` `string` or `number`, required)
     - `price` (number, required, >= 0)
     - `currency` (string, default "VND")
     - `originalPrice` (number, >= 0)
@@ -80,7 +80,7 @@ status: ready-for-dev
     - `rating` (number, 0-5)
     - `soldCount` (integer, >= 0)
     - `stock` (integer, >= 0)
-    - `location` (string)
+    - `location` (object with `region` and `district` strings per AD-18 reserved field standard; store raw source string under `locationRaw` when only unparsed text is available)
     - `sellerName` (string)
     - `categoryName` (string)
     - `brand` (string)
@@ -91,8 +91,8 @@ status: ready-for-dev
 - **When** sending HTTP requests:
   - `GET /api/schemas`: returns `{ success: true, data: { schemas: [...] } }` listing all registered schemas.
   - `GET /api/schemas/:platform/:category`: returns `{ success: true, data: { platform, category, schema } }`.
-  - If schema does not exist for `:platform/:category`, returns `404` with `PlatformError` (`XACT_4041`, `not_found`).
-- **And** route is mounted at `app.use('/api/schemas', schemasRoutes)` in `api/server.js`.
+  - If schema does not exist for `:platform/:category`, returns `404` with `PlatformError({ type: ErrorTypes.INTERNAL, code: 'XACT_4041', statusCode: 404, message: 'Schema not found', suggestedAction: SuggestedActions.USE_ACTIONS_LIST })`.
+- **And** route is mounted at `app.use('/api/schemas', schemasRoutes)` in `api/server.js` (the `/api` prefix is consistent with all other XActions REST routes; AD-18's `GET /schemas` is mapped to `/api/schemas` in this implementation).
 - **And** public discovery endpoints do not require authentication, but support rate-limiting.
 
 ### AC4 — MCP Tools (`src/mcp/server.js`)
@@ -149,7 +149,9 @@ status: ready-for-dev
 - [ ] **Task 3: PrismaStore Validation Integration (AC: AC6)**
   - [ ] Update `src/store/prisma-store.js` to validate `post.metadata` against `metadataSchemaRegistry` during `storeContent` and `storeBatch`.
   - [ ] Throw `PlatformError` (`XACT_4001`) with clear error message when validation fails.
-  - [ ] Support `{ validateSchema: false }` option in `PrismaStore` constructor / method options.
+  - [ ] Support `{ validateSchema: false }` option in `PrismaStore` constructor and method options.
+  - [ ] Update `src/core/base-store.js` `AbstractStore` method signatures and `types/store.d.ts` to include `validateSchema?: boolean` in options.
+  - [ ] If no schema is registered for a `(platform, category)` pair, allow the write to proceed unchanged (opt-in validation).
 
 - [ ] **Task 4: REST API Endpoints (AC: AC3)**
   - [ ] Create `api/routes/schemas.js` with `GET /` and `GET /:platform/:category`.
@@ -177,7 +179,7 @@ status: ready-for-dev
 - **Pre-Transaction Validation:** Never validate schemas inside a database transaction. In `storeBatch`, loop and validate the entire array first, then write to Prisma.
 - **Synchronous Module Load:** It is completely acceptable and required to use `fs.readdirSync` during the initial module load of the registry to prevent async initialization issues for consumers.
 - **Safe ESM Path Resolution:** Always use robust path resolution in ESM. Use `const __dirname = path.dirname(fileURLToPath(import.meta.url)); const schemasDir = path.resolve(__dirname, '../../schemas');` to avoid pathing disasters when running from different directories.
-- **Zero-Dependency Constraint in `src/core/`:** As defined in `ARCHITECTURE-SPINE.md` and NFR15, `src/core/` must not import heavy npm packages like `ajv`. A lightweight, self-contained recursive validator (~80 lines) covers all required JSON schema rules.
+- **Zero-Dependency Constraint in `src/core/`:** As defined in `ARCHITECTURE-SPINE.md` and NFR15, `src/core/` must not import heavy npm packages like `ajv`. A lightweight, self-contained recursive validator (~80 lines) covers all required JSON schema rules including nested `properties` and `items`.
 - **Pilot Schemas:** Twitter `social` and Shopee `ecom` serve as the reference standard for social media and e-commerce crawlers across upcoming epics.
 - **Category Validation Order:** `PrismaStore.storeBatch` already validates `category` before writing. Add `metadata` validation **after** `category` validation and **before** normalizing/writing. This keeps error ordering predictable.
 - **Error Shape:** All validation failures must be surfaced as `PlatformError({ type: ErrorTypes.INVALID_ARGS, code: 'XACT_4001', statusCode: 400, message, suggestedAction: SuggestedActions.USE_ACTIONS_LIST, details: { index, errors } })`. Routes should use `error.toEnvelope()` for the response body.
@@ -186,7 +188,7 @@ status: ready-for-dev
 
 - **Registry Key:** Use `${platform}:${category}` as the in-memory cache key. It mirrors `Post.id` namespacing and is easy to search.
 - **Schema Descriptor:** Extract `title`, `description`, and `version` from the root schema object. `version` may be omitted if not present. `propertiesCount` is the count of top-level `properties` keys.
-- **Validator Capabilities:** Support `type` coercion only for primitives found in the payload (e.g. a JSON number matches `integer` when `Number.isInteger`). Do not coerce strings to numbers or booleans.
+- **Validator Capabilities:** Support `type` matching for primitives found in the payload. A JSON number matches `integer` only when `Number.isInteger`. Support `oneOf`/`anyOf` type lists (e.g. `itemId` may be `string` or `number`). Do not coerce strings to numbers or booleans.
 - **Array `items`:** For `type: 'array'`, validate each element against `items` schema if `items` is present. For `hashtags` and `mentions`, `items: { type: 'string' }`.
 - **Optional `metadata`:** A `null` or missing `metadata` should not trigger validation if a schema is registered (it is simply skipped). A `metadata` object present but invalid must trigger the error.
 
@@ -203,6 +205,8 @@ status: ready-for-dev
 - `src/cli/index.js` uses `commander` and has a pattern for nested subcommands (see `checkpoints` group).
 - `src/mcp/server.js` uses a `TOOLS` array and a `executeTool(name, args)` switch. New tools are added by pushing to `TOOLS` and adding a `case`.
 - No `schemas/` directory, `src/core/metadata-schema-registry.js`, `api/routes/schemas.js`, or `types/metadata-schema.d.ts` exists yet.
+- `src/core/base-store.js` defines `AbstractStore` method signatures and may need `validateSchema` added to method options.
+- `package.json` `files` array does not include `schemas/`; ensure schemas are reachable in installed/published builds.
 
 ---
 
@@ -301,13 +305,16 @@ status: ready-for-dev
 1. **Do not add heavy validators to `src/core/`.** `ajv` and similar packages violate NFR15. The validator must be hand-rolled and self-contained.
 2. **Do not modify `prisma/schema.prisma` in this story.** The `Post.metadata` and `Comment.metadata` JSONB columns already exist.
 3. **Do not fail writes when no schema is registered.** Unbounded fallback is required by AC6; schemas are opt-in contracts, not mandatory gates.
-4. **Do not validate inside a Prisma transaction.** Validate all batch items before starting the transaction.
-5. **Do not create a new auth system.** Schema discovery is public; rate-limiting is optional.
-6. **Do not return Prisma internals in error messages.** Use `PlatformError` with `code`, `message`, and `statusCode`.
-7. **Do not mock Prisma in tests.** Use the real `xactions_test` database.
-8. **Do not allow unbounded `limit` in API/CLI.** Cap at `500` and default to `50` for list endpoints if any are added later.
-9. **Do not use relative `__dirname` without `import.meta.url` in ESM.** The registry must resolve `schemas/` correctly regardless of cwd.
-10. **Scope boundary:** This story is the **schema contract and registry**, not the crawler itself. Do not implement platform-specific scrapers or data transformation beyond the two pilot schemas.
+4. **Do not crash if `schemas/` is missing on module load.** The registry must start empty and log a warning; this is required for tests and clean installs.
+5. **Do not validate inside a Prisma transaction.** Validate all batch items before starting the transaction.
+6. **Do not create a new auth system.** Schema discovery is public; rate-limiting is optional.
+7. **Do not return Prisma internals in error messages.** Use `PlatformError` with `code`, `message`, and `statusCode`.
+8. **Do not mock Prisma in tests.** Use the real `xactions_test` database.
+9. **Do not allow unbounded `limit` in API/CLI.** Cap at `500` and default to `50` for list endpoints if any are added later.
+10. **Do not use relative `__dirname` without `import.meta.url` in ESM.** The registry must resolve `schemas/` correctly regardless of cwd.
+11. **Do not forget `package.json` `files`.** If the package is published, add `schemas/` to the `files` array (or copy schemas into `src/`) so the registry can find them in installed builds.
+12. **Do not validate `Comment.metadata` in this story.** Scope is `Post.metadata` per AC6. Comment metadata contracts can be added later when AD-18 is extended.
+13. **Scope boundary:** This story is the **schema contract and registry**, not the crawler itself. Do not implement platform-specific scrapers or data transformation beyond the two pilot schemas.
 
 ---
 
@@ -317,6 +324,7 @@ status: ready-for-dev
 - The schema registry is a `src/core` service with a singleton default export (`metadataSchemaRegistry`) so `PrismaStore`, API, CLI, and MCP can share the same in-memory cache.
 - Schema files live in a new top-level `schemas/` directory. The registry loads them synchronously at module initialization and caches them in memory.
 - Validation failures throw `PlatformError` (`XACT_4001`, `INVALID_ARGS`, `statusCode: 400`) with a `details` object containing the item index and validation errors.
+- REST discovery routes are mounted under `/api/schemas` to match the existing XActions route convention (`/api/*`), even though AD-18 uses the shorthand `/schemas`. The public path remains `/api/schemas`.
 - CLI and MCP only expose read/list operations. Schema registration is file-driven or programmatic, not operator-editable in this story.
 - Public read access for schema discovery is acceptable because the schemas are public contracts for consumers; rate limiting can be added later.
 - Reserved field types (`price`, `salary`, `phone`, etc.) should be documented in the pilot schemas and future schemas must follow the same conventions.
@@ -350,3 +358,4 @@ status: ready-for-dev
 ### Change Log
 
 - **2026-08-19:** Created Story 10.5 context file and updated sprint status to `ready-for-dev`.
+- **2026-08-19:** Validated story against `checklist.md`: fixed `PlatformError` type for 404, clarified multi-type and reserved `location` fields, added `schemas/` packaging and missing-directory guards, and documented `/api/schemas` route prefix decision.
