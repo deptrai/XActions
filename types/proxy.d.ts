@@ -44,7 +44,7 @@ export declare class ProxyIpPool {
   quarantine(proxy: string | Partial<NormalizedProxy>, durationMs?: number): void;
   isAllQuarantined(): boolean;
   pruneExpiredQuarantines(): void;
-  getBrowserArgs(proxy?: NormalizedProxy | null): string[];
+  getBrowserArgs(proxy?: string | Partial<NormalizedProxy> | null): string[];
   toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
   static toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
   getProxyAgent(proxy: string | NormalizedProxy, options?: ProxyAgentOptions): any;

@@ -48,12 +48,13 @@ export class AccountPool {
 
     for (const id of (accountIds || [])) {
       set.add(id);
+      const prev = this.#accountRecords.get(id);
       this.#accountRecords.set(id, {
         platform,
         accountId: id,
-        credentials: credentials[id] || null,
-        assignedProxy: null,
-        hibernatingUntil: null,
+        credentials: credentials[id] || prev?.credentials || null,
+        assignedProxy: prev?.assignedProxy || null,
+        hibernatingUntil: prev?.hibernatingUntil || null,
         velocity: 0,
       });
     }
@@ -214,7 +215,12 @@ export class AccountPool {
    * @returns {Object | null}
    */
   getAccount(accountId) {
-    return this.#accountRecords.get(accountId) || null;
+    const record = this.#accountRecords.get(accountId);
+    if (!record) return null;
+    return {
+      ...record,
+      velocity: this.getAccountVelocity(accountId),
+    };
   }
 }
 

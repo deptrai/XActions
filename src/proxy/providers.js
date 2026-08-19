@@ -155,7 +155,8 @@ export function normalizeProxy(input) {
 export function formatProxyUrl(proxy) {
   const norm = normalizeProxy(proxy);
   const auth = norm.username || norm.password ? `${encodeURIComponent(norm.username || '')}${norm.password !== undefined ? `:${encodeURIComponent(norm.password)}` : ''}@` : '';
-  return `${norm.scheme}://${auth}${norm.host}:${norm.port}`;
+  const hostStr = norm.host.includes(':') && !norm.host.startsWith('[') ? `[${norm.host}]` : norm.host;
+  return `${norm.scheme}://${auth}${hostStr}:${norm.port}`;
 }
 
 /**

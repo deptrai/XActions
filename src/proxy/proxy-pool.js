@@ -45,10 +45,15 @@ export class ProxyIpPool {
     return normalizeProxy(proxy);
   }
 
+  /** @returns {any[]} */
+  get healthyProxies() {
+    const now = Date.now();
+    return this.#proxies.filter((p) => !this.#isQuarantined(p, now));
+  }
+
   /** @returns {number} */
   get healthyCount() {
-    const now = Date.now();
-    return this.#proxies.filter((p) => !this.#isQuarantined(p, now)).length;
+    return this.healthyProxies.length;
   }
 
   /** @returns {number} */
@@ -85,7 +90,7 @@ export class ProxyIpPool {
     if (!proxy) return '';
     try {
       const normalized = this.#normalize(proxy);
-      const authKey = normalized.username ? `${normalized.username}@` : '';
+      const authKey = normalized.username || normalized.password ? `${normalized.username || ''}:${normalized.password || ''}@` : '';
       return `${normalized.scheme}://${authKey}${normalized.host}:${normalized.port}`;
     } catch {
       return typeof proxy === 'string' ? proxy : JSON.stringify(proxy);
@@ -100,37 +105,38 @@ export class ProxyIpPool {
   }
 
   /**
-   * Get a proxy for no-auth platforms (round-robin over healthy proxies).
+   * Get the next healthy proxy using round-robin rotation.
    * @returns {any | null}
    */
   getNext() {
-    const now = Date.now();
-    const healthy = this.#proxies.filter((p) => !this.#isQuarantined(p, now));
-    if (!healthy.length) return null;
+    const healthy = this.healthyProxies;
+    if (healthy.length === 0) return null;
+
     const proxy = healthy[this.#roundRobinIndex % healthy.length];
     this.#roundRobinIndex = (this.#roundRobinIndex + 1) % healthy.length;
     return proxy;
   }
 
   /**
-   * Get a sticky proxy for an authenticated account.
-   * Returns the same proxy for the same account unless it is quarantined.
+   * Get a deterministic sticky proxy for an account ID.
    * @param {string} accountId
    * @returns {any | null}
    */
   getStickyProxy(accountId) {
-    const now = Date.now();
-    const existing = this.#stickyMap.get(accountId);
-    if (existing && !this.#isQuarantined(existing, now)) {
-      return existing;
+    const healthy = this.healthyProxies;
+    if (healthy.length === 0) return null;
+
+    const boundKey = this.#stickyMap.get(accountId);
+    if (boundKey) {
+      const existing = healthy.find((p) => this.#key(p) === boundKey);
+      if (existing) return existing;
+      this.#stickyMap.delete(accountId);
     }
-    const healthy = this.#proxies.filter((p) => !this.#isQuarantined(p, now));
-    if (!healthy.length) return null;
-    // Use account hash to pick deterministically, fallback to round-robin
+
     const index = this.#hashAccount(accountId) % healthy.length;
-    const proxy = healthy[index];
-    this.#stickyMap.set(accountId, proxy);
-    return proxy;
+    const selected = healthy[index];
+    this.#stickyMap.set(accountId, this.#key(selected));
+    return selected;
   }
 
   /**
@@ -138,10 +144,10 @@ export class ProxyIpPool {
    * @returns {number}
    */
   #hashAccount(accountId) {
+    const str = typeof accountId === 'string' ? accountId : String(accountId || '');
     let hash = 0;
-    for (let i = 0; i < accountId.length; i++) {
-      hash = ((hash << 5) - hash) + accountId.charCodeAt(i);
-      hash |= 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
     }
     return Math.abs(hash);
   }
