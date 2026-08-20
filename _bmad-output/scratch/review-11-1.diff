@@ -1,0 +1,1389 @@
+diff --git a/src/core/account-pool.js b/src/core/account-pool.js
+index bd017b2..2b0070e 100644
+--- a/src/core/account-pool.js
++++ b/src/core/account-pool.js
+@@ -12,12 +12,18 @@ export class AccountPool {
+   /** @type {Map<string, Set<string>>} */
+   #accountsByPlatform = new Map();
+ 
++  /** @type {Map<string, Object>} */
++  #accountRecords = new Map();
++
+   /** @type {Map<string, number>} */
+   #roundRobinIndex = new Map();
+ 
+   /** @type {Set<string>} */
+   #unavailableAccounts = new Set();
+ 
++  /** @type {Map<string, number[]>} */
++  #localVelocityTimestamps = new Map();
++
+   /** @type {import('./adaptive-governor.js').AdaptiveRateGovernor | null} */
+   #governor = null;
+ 
+@@ -30,15 +36,29 @@ export class AccountPool {
+   }
+ 
+   /**
+-   * Register accounts for a platform.
++   * Register accounts for a platform with optional credentials/metadata.
+    * @param {string} platform
+    * @param {string[]} accountIds
++   * @param {Object} [options]
++   * @param {Record<string, any>} [options.credentials]
+    */
+-  registerAccounts(platform, accountIds) {
++  registerAccounts(platform, accountIds, options = {}) {
+     const set = this.#accountsByPlatform.get(platform) || new Set();
+-    for (const id of accountIds) {
++    const credentials = options?.credentials || {};
++
++    for (const id of (accountIds || [])) {
+       set.add(id);
++      const prev = this.#accountRecords.get(id);
++      this.#accountRecords.set(id, {
++        platform,
++        accountId: id,
++        credentials: credentials[id] || prev?.credentials || null,
++        assignedProxy: prev?.assignedProxy || null,
++        hibernatingUntil: prev?.hibernatingUntil || null,
++        velocity: 0,
++      });
+     }
++
+     this.#accountsByPlatform.set(platform, set);
+     if (!this.#roundRobinIndex.has(platform)) {
+       this.#roundRobinIndex.set(platform, 0);
+@@ -57,9 +77,18 @@ export class AccountPool {
+   /**
+    * Mark an account as temporarily unavailable (e.g., rate-limited or hibernating).
+    * @param {string} accountId
++   * @param {string} [reason='unavailable']
++   * @param {number} [durationMs=0]
+    */
+-  markUnavailable(accountId) {
++  markUnavailable(accountId, reason = 'unavailable', durationMs = 0) {
+     this.#unavailableAccounts.add(accountId);
++    const record = this.#accountRecords.get(accountId);
++    if (record) {
++      record.hibernatingUntil = durationMs > 0 ? Date.now() + durationMs : null;
++    }
++    if (this.#governor && durationMs > 0) {
++      this.#governor.hibernateAccount(accountId, reason, durationMs);
++    }
+   }
+ 
+   /**
+@@ -68,6 +97,56 @@ export class AccountPool {
+    */
+   markAvailable(accountId) {
+     this.#unavailableAccounts.delete(accountId);
++    const record = this.#accountRecords.get(accountId);
++    if (record) {
++      record.hibernatingUntil = null;
++    }
++    if (this.#governor) {
++      this.#governor.wakeAccount(accountId);
++    }
++  }
++
++  /**
++   * Get account request velocity in the last 60-second sliding window.
++   * @param {string} accountId
++   * @returns {number}
++   */
++  getAccountVelocity(accountId) {
++    if (this.#governor) {
++      return this.#governor.getAccountVelocity(accountId);
++    }
++    const timestamps = this.#localVelocityTimestamps.get(accountId) || [];
++    const now = Date.now();
++    const active = timestamps.filter((t) => now - t < 60_000);
++    this.#localVelocityTimestamps.set(accountId, active);
++    return active.length;
++  }
++
++  /**
++   * Record a request for account velocity tracking.
++   * @param {string} accountId
++   */
++  recordRequest(accountId) {
++    if (this.#governor) {
++      this.#governor.recordRequest(accountId);
++    }
++    const timestamps = this.#localVelocityTimestamps.get(accountId) || [];
++    const now = Date.now();
++    const active = timestamps.filter((t) => now - t < 60_000);
++    active.push(now);
++    this.#localVelocityTimestamps.set(accountId, active);
++  }
++
++  /**
++   * Assign a proxy to an account.
++   * @param {string} accountId
++   * @param {any} proxy
++   */
++  setAssignedProxy(accountId, proxy) {
++    const record = this.#accountRecords.get(accountId);
++    if (record) {
++      record.assignedProxy = proxy;
++    }
+   }
+ 
+   /**
+@@ -90,12 +169,24 @@ export class AccountPool {
+ 
+     const list = Array.from(accounts);
+     let startIndex = this.#roundRobinIndex.get(platform) || 0;
++    const now = Date.now();
++
+     for (let i = 0; i < list.length; i++) {
+       const index = (startIndex + i) % list.length;
+       const accountId = list[index];
+-      if (this.#unavailableAccounts.has(accountId)) continue;
++      const record = this.#accountRecords.get(accountId);
++
++      if (this.#unavailableAccounts.has(accountId)) {
++        if (record?.hibernatingUntil && now >= record.hibernatingUntil) {
++          this.markAvailable(accountId);
++        } else {
++          continue;
++        }
++      }
++
+       if (this.#governor?.isHibernating(accountId)) continue;
+       if (this.#governor && !this.#governor.canAccountRequest(accountId, platform)) continue;
++
+       if (advance) {
+         this.#roundRobinIndex.set(platform, (index + 1) % list.length);
+       }
+@@ -118,6 +209,19 @@ export class AccountPool {
+   listAccounts(platform) {
+     return Array.from(this.#accountsByPlatform.get(platform) || []);
+   }
++
++  /**
++   * @param {string} accountId
++   * @returns {Object | null}
++   */
++  getAccount(accountId) {
++    const record = this.#accountRecords.get(accountId);
++    if (!record) return null;
++    return {
++      ...record,
++      velocity: this.getAccountVelocity(accountId),
++    };
++  }
+ }
+ 
+ export const globalAccountPool = new AccountPool();
+diff --git a/src/core/adaptive-governor.js b/src/core/adaptive-governor.js
+index 18110b7..46d369c 100644
+--- a/src/core/adaptive-governor.js
++++ b/src/core/adaptive-governor.js
+@@ -182,6 +182,24 @@ export class AdaptiveRateGovernor {
+     this.#hibernatingAccounts.push({ accountId, until, reason });
+   }
+ 
++  /**
++   * Record a rate limit event for an account and hibernate it.
++   * @param {string} accountId
++   * @param {string} [platform]
++   * @param {number} [durationMs]
++   */
++  recordRateLimit(accountId, platform, durationMs = 15 * 60 * 1000) {
++    this.hibernateAccount(accountId, `rate_limit:${platform || 'unknown'}`, durationMs);
++  }
++
++  /**
++   * Wake up an account early by clearing its hibernation status.
++   * @param {string} accountId
++   */
++  wakeAccount(accountId) {
++    this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.accountId !== accountId);
++  }
++
+   /**
+    * @param {string} accountId
+    * @returns {boolean}
+diff --git a/src/proxy/providers.js b/src/proxy/providers.js
+new file mode 100644
+index 0000000..a49fc04
+--- /dev/null
++++ b/src/proxy/providers.js
+@@ -0,0 +1,200 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * Proxy normalization and URL parser utilities for ProxyIpPool.
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
++import { ProxyAgent } from 'undici';
++import { SocksProxyAgent } from 'socks-proxy-agent';
++
++export const SUPPORTED_PROXY_SCHEMES = ['http', 'https', 'socks5'];
++
++/**
++ * @typedef {Object} NormalizedProxy
++ * @property {string} scheme
++ * @property {string} host
++ * @property {number} port
++ * @property {string} [username]
++ * @property {string} [password]
++ * @property {string} server - Canonical host:port with scheme (e.g., "http://1.2.3.4:8080")
++ */
++
++/**
++ * Parse a proxy URL string into normalized components.
++ * @param {string} urlString
++ * @returns {NormalizedProxy}
++ */
++export function parseProxyUrl(urlString) {
++  if (typeof urlString !== 'string' || !urlString.trim()) {
++    throw new PlatformError({
++      type: ErrorTypes.INVALID_ARGS,
++      code: 'XACT_4001',
++      message: 'Proxy URL must be a non-empty string',
++      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++    });
++  }
++
++  let parsed;
++  try {
++    parsed = new URL(urlString.trim());
++  } catch (err) {
++    throw new PlatformError({
++      type: ErrorTypes.INVALID_ARGS,
++      code: 'XACT_4001',
++      message: `Malformed proxy URL: "${urlString}"`,
++      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++    });
++  }
++
++  const scheme = parsed.protocol.replace(/:$/, '').toLowerCase();
++  if (!SUPPORTED_PROXY_SCHEMES.includes(scheme)) {
++    throw new PlatformError({
++      type: ErrorTypes.INVALID_ARGS,
++      code: 'XACT_4001',
++      message: `Unsupported proxy scheme: "${scheme}". Supported: ${SUPPORTED_PROXY_SCHEMES.join(', ')}`,
++      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++    });
++  }
++
++  const host = parsed.hostname;
++  const defaultPort = scheme === 'https' ? 443 : scheme === 'socks5' ? 1080 : 80;
++  const parsedPort = parsed.port ? parseInt(parsed.port, 10) : defaultPort;
++  const port = Number.isFinite(parsedPort) ? parsedPort : defaultPort;
++
++  let username;
++  let password;
++  try {
++    username = parsed.username ? decodeURIComponent(parsed.username) : undefined;
++  } catch {
++    username = parsed.username || undefined;
++  }
++  try {
++    password = parsed.password ? decodeURIComponent(parsed.password) : undefined;
++  } catch {
++    password = parsed.password || undefined;
++  }
++
++  const server = `${scheme}://${host}:${port}`;
++
++  const result = {
++    scheme,
++    host,
++    port,
++    server,
++  };
++
++  if (username !== undefined) result.username = username;
++  if (password !== undefined) result.password = password;
++
++  return result;
++}
++
++/**
++ * Normalize a proxy input (string URL or object) to canonical structure.
++ * @param {string | Object} input
++ * @returns {NormalizedProxy}
++ */
++export function normalizeProxy(input) {
++  if (typeof input === 'string') {
++    return parseProxyUrl(input);
++  }
++
++  if (typeof input === 'object' && input !== null) {
++    const scheme = String(input.scheme || 'http').toLowerCase();
++    if (!SUPPORTED_PROXY_SCHEMES.includes(scheme)) {
++      throw new PlatformError({
++        type: ErrorTypes.INVALID_ARGS,
++        code: 'XACT_4001',
++        message: `Unsupported proxy scheme: "${scheme}". Supported: ${SUPPORTED_PROXY_SCHEMES.join(', ')}`,
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++
++    if (!input.host) {
++      throw new PlatformError({
++        type: ErrorTypes.INVALID_ARGS,
++        code: 'XACT_4001',
++        message: 'Proxy host is required',
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++
++    const defaultPort = scheme === 'https' ? 443 : scheme === 'socks5' ? 1080 : 80;
++    const parsedPort = typeof input.port === 'number' ? input.port : (input.port ? parseInt(input.port, 10) : defaultPort);
++    const port = Number.isFinite(parsedPort) ? parsedPort : defaultPort;
++    const server = input.server || `${scheme}://${input.host}:${port}`;
++
++    const result = {
++      scheme,
++      host: input.host,
++      port,
++      server,
++    };
++
++    if (input.username !== undefined) result.username = input.username;
++    if (input.password !== undefined) result.password = input.password;
++
++    return result;
++  }
++
++  throw new PlatformError({
++    type: ErrorTypes.INVALID_ARGS,
++    code: 'XACT_4001',
++    message: 'Proxy must be a URL string or an object',
++    suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++  });
++}
++
++/**
++ * Build the full proxy URL string including credentials if present.
++ * @param {any} proxy
++ * @returns {string}
++ */
++export function formatProxyUrl(proxy) {
++  const norm = normalizeProxy(proxy);
++  const auth = norm.username || norm.password ? `${encodeURIComponent(norm.username || '')}${norm.password !== undefined ? `:${encodeURIComponent(norm.password)}` : ''}@` : '';
++  const hostStr = norm.host.includes(':') && !norm.host.startsWith('[') ? `[${norm.host}]` : norm.host;
++  return `${norm.scheme}://${auth}${hostStr}:${norm.port}`;
++}
++
++/**
++ * Factory for creating client-specific proxy agents without direct fallback.
++ * @param {any} proxy
++ * @param {Object} [options]
++ * @param {'undici' | 'got'} [options.client='undici']
++ * @returns {any}
++ */
++export function getProxyAgent(proxy, options = {}) {
++  if (!proxy) {
++    throw new PlatformError({
++      type: ErrorTypes.INVALID_ARGS,
++      code: 'XACT_4001',
++      message: 'Proxy is required to create a proxy agent',
++      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++    });
++  }
++
++  const normalized = normalizeProxy(proxy);
++  const client = options?.client || 'undici';
++  const proxyUrl = formatProxyUrl(normalized);
++
++  if (client === 'got') {
++    return proxyUrl;
++  }
++
++  if (client === 'undici') {
++    if (normalized.scheme === 'socks5') {
++      return new SocksProxyAgent(proxyUrl);
++    }
++    return new ProxyAgent(proxyUrl);
++  }
++
++  throw new PlatformError({
++    type: ErrorTypes.INVALID_ARGS,
++    code: 'XACT_4001',
++    message: `Unsupported client type for proxy agent: "${client}"`,
++    suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++  });
++}
+diff --git a/src/proxy/proxy-pool.js b/src/proxy/proxy-pool.js
+index 1c14ea8..5614b89 100644
+--- a/src/proxy/proxy-pool.js
++++ b/src/proxy/proxy-pool.js
+@@ -6,6 +6,8 @@
+  * @license MIT
+  */
+ 
++import { normalizeProxy, getProxyAgent } from './providers.js';
++
+ export class ProxyIpPool {
+   /** @type {any[]} */
+   #proxies = [];
+@@ -31,8 +33,8 @@ export class ProxyIpPool {
+    * @param {boolean} [options.validateOnAdd]
+    */
+   constructor(options = {}) {
+-    this.#proxies = (options.proxies || []).map((p) => this.#normalize(p));
+     this.validateOnAdd = options.validateOnAdd !== false;
++    this.#proxies = (options.proxies || []).map((p) => this.#normalize(p));
+   }
+ 
+   /**
+@@ -40,13 +42,18 @@ export class ProxyIpPool {
+    * @returns {any}
+    */
+   #normalize(proxy) {
+-    return proxy;
++    return normalizeProxy(proxy);
++  }
++
++  /** @returns {any[]} */
++  get healthyProxies() {
++    const now = Date.now();
++    return this.#proxies.filter((p) => !this.#isQuarantined(p, now));
+   }
+ 
+   /** @returns {number} */
+   get healthyCount() {
+-    const now = Date.now();
+-    return this.#proxies.filter((p) => !this.#isQuarantined(p, now)).length;
++    return this.healthyProxies.length;
+   }
+ 
+   /** @returns {number} */
+@@ -80,7 +87,14 @@ export class ProxyIpPool {
+    * @returns {string}
+    */
+   #key(proxy) {
+-    return typeof proxy === 'string' ? proxy : JSON.stringify(proxy);
++    if (!proxy) return '';
++    try {
++      const normalized = this.#normalize(proxy);
++      const authKey = normalized.username || normalized.password ? `${normalized.username || ''}:${normalized.password || ''}@` : '';
++      return `${normalized.scheme}://${authKey}${normalized.host}:${normalized.port}`;
++    } catch {
++      return typeof proxy === 'string' ? proxy : JSON.stringify(proxy);
++    }
+   }
+ 
+   /**
+@@ -91,37 +105,38 @@ export class ProxyIpPool {
+   }
+ 
+   /**
+-   * Get a proxy for no-auth platforms (round-robin over healthy proxies).
++   * Get the next healthy proxy using round-robin rotation.
+    * @returns {any | null}
+    */
+   getNext() {
+-    const now = Date.now();
+-    const healthy = this.#proxies.filter((p) => !this.#isQuarantined(p, now));
+-    if (!healthy.length) return null;
++    const healthy = this.healthyProxies;
++    if (healthy.length === 0) return null;
++
+     const proxy = healthy[this.#roundRobinIndex % healthy.length];
+     this.#roundRobinIndex = (this.#roundRobinIndex + 1) % healthy.length;
+     return proxy;
+   }
+ 
+   /**
+-   * Get a sticky proxy for an authenticated account.
+-   * Returns the same proxy for the same account unless it is quarantined.
++   * Get a deterministic sticky proxy for an account ID.
+    * @param {string} accountId
+    * @returns {any | null}
+    */
+   getStickyProxy(accountId) {
+-    const now = Date.now();
+-    const existing = this.#stickyMap.get(accountId);
+-    if (existing && !this.#isQuarantined(existing, now)) {
+-      return existing;
++    const healthy = this.healthyProxies;
++    if (healthy.length === 0) return null;
++
++    const boundKey = this.#stickyMap.get(accountId);
++    if (boundKey) {
++      const existing = healthy.find((p) => this.#key(p) === boundKey);
++      if (existing) return existing;
++      this.#stickyMap.delete(accountId);
+     }
+-    const healthy = this.#proxies.filter((p) => !this.#isQuarantined(p, now));
+-    if (!healthy.length) return null;
+-    // Use account hash to pick deterministically, fallback to round-robin
++
+     const index = this.#hashAccount(accountId) % healthy.length;
+-    const proxy = healthy[index];
+-    this.#stickyMap.set(accountId, proxy);
+-    return proxy;
++    const selected = healthy[index];
++    this.#stickyMap.set(accountId, this.#key(selected));
++    return selected;
+   }
+ 
+   /**
+@@ -129,10 +144,10 @@ export class ProxyIpPool {
+    * @returns {number}
+    */
+   #hashAccount(accountId) {
++    const str = typeof accountId === 'string' ? accountId : String(accountId || '');
+     let hash = 0;
+-    for (let i = 0; i < accountId.length; i++) {
+-      hash = ((hash << 5) - hash) + accountId.charCodeAt(i);
+-      hash |= 0;
++    for (let i = 0; i < str.length; i++) {
++      hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+     }
+     return Math.abs(hash);
+   }
+@@ -170,17 +185,70 @@ export class ProxyIpPool {
+     }
+   }
+ 
++  /**
++   * Convert normalized proxy to Playwright proxy configuration object.
++   * @param {any} proxy
++   * @returns {{ server: string, username?: string, password?: string } | null}
++   */
++  static toPlaywrightProxy(proxy) {
++    if (!proxy) return null;
++    const normalized = typeof proxy === 'string' ? normalizeProxy(proxy) : proxy;
++    const result = { server: normalized.server || `${normalized.scheme || 'http'}://${normalized.host}:${normalized.port}` };
++    if (normalized.username !== undefined) result.username = normalized.username;
++    if (normalized.password !== undefined) result.password = normalized.password;
++    return result;
++  }
++
++  /**
++   * @param {any} proxy
++   * @returns {{ server: string, username?: string, password?: string } | null}
++   */
++  toPlaywrightProxy(proxy) {
++    return ProxyIpPool.toPlaywrightProxy(proxy);
++  }
++
+   /**
+    * @param {any} proxy
+-   * @returns {any[]}
++   * @returns {string[]}
+    */
+   getBrowserArgs(proxy) {
+     const flags = ['--force-webrtc-ip-handling-policy=disable_non_proxied_udp'];
+-    if (proxy?.server) {
+-      flags.push(`--proxy-server=${proxy.server}`);
++    if (!proxy) return flags;
++    try {
++      const normalized = typeof proxy === 'string' ? normalizeProxy(proxy) : (proxy.server ? proxy : normalizeProxy(proxy));
++      if (normalized?.server) {
++        flags.push(`--proxy-server=${normalized.server}`);
++      }
++    } catch {
++      if (typeof proxy === 'string' && proxy.trim()) {
++        flags.push(`--proxy-server=${proxy.trim()}`);
++      } else if (proxy?.server) {
++        flags.push(`--proxy-server=${proxy.server}`);
++      }
+     }
+     return flags;
+   }
++
++  /**
++   * Factory for creating client-specific proxy agent without direct connection fallback.
++   * @param {any} proxy
++   * @param {Object} [options]
++   * @param {'undici' | 'got'} [options.client='undici']
++   * @returns {any}
++   */
++  getProxyAgent(proxy, options = {}) {
++    return getProxyAgent(proxy, options);
++  }
++
++  /**
++   * @param {any} proxy
++   * @param {Object} [options]
++   * @param {'undici' | 'got'} [options.client='undici']
++   * @returns {any}
++   */
++  static getProxyAgent(proxy, options = {}) {
++    return getProxyAgent(proxy, options);
++  }
+ }
+ 
+ export const globalProxyPool = new ProxyIpPool();
+diff --git a/tests/core/account-pool.test.js b/tests/core/account-pool.test.js
+new file mode 100644
+index 0000000..da50297
+--- /dev/null
++++ b/tests/core/account-pool.test.js
+@@ -0,0 +1,115 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++import { describe, test, expect, beforeEach } from 'vitest';
++import { AccountPool } from '../../src/core/account-pool.js';
++import { AdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
++
++describe('AccountPool Acceptance Tests (Story 11.1 - TDD Red Phase)', () => {
++  let pool;
++  let governor;
++
++  beforeEach(() => {
++    governor = new AdaptiveRateGovernor();
++    pool = new AccountPool({ governor });
++  });
++
++  describe('AC-7: Account Registration and Storage', () => {
++    test('should register accounts and store platform, credentials, and velocity metadata', () => {
++      pool.registerAccounts('twitter', ['tw_acc_1', 'tw_acc_2'], {
++        credentials: { tw_acc_1: { token: 'secret' } }
++      });
++      
++      const accounts = pool.listAccounts('twitter');
++      expect(accounts).toHaveLength(2);
++      expect(accounts).toContain('tw_acc_1');
++      expect(accounts).toContain('tw_acc_2');
++    });
++  });
++
++  describe('AC-8: Account Round-Robin and Availability', () => {
++    beforeEach(() => {
++      pool.registerAccounts('shopee', ['shopee_1', 'shopee_2', 'shopee_3']);
++    });
++
++    test('should rotate accounts in round-robin order', () => {
++      const a1 = pool.getNextAvailable('shopee');
++      const a2 = pool.getNextAvailable('shopee');
++      const a3 = pool.getNextAvailable('shopee');
++      const a4 = pool.getNextAvailable('shopee');
++
++      expect(a1).toBe('shopee_1');
++      expect(a2).toBe('shopee_2');
++      expect(a3).toBe('shopee_3');
++      expect(a4).toBe('shopee_1');
++    });
++
++    test('should check hasAvailable without mutating round-robin pointer', () => {
++      expect(pool.hasAvailable('shopee')).toBe(true);
++      const a1 = pool.getNextAvailable('shopee');
++      expect(a1).toBe('shopee_1');
++      expect(pool.hasAvailable('shopee')).toBe(true);
++      const a2 = pool.getNextAvailable('shopee');
++      expect(a2).toBe('shopee_2');
++    });
++
++    test('should return null when no accounts registered for platform', () => {
++      expect(pool.getNextAvailable('unknown_platform')).toBeNull();
++      expect(pool.hasAvailable('unknown_platform')).toBe(false);
++    });
++  });
++
++  describe('AC-9: Account Unavailability, Hibernation, and Velocity', () => {
++    beforeEach(() => {
++      pool.registerAccounts('threads', ['th_1', 'th_2']);
++    });
++
++    test('should skip unavailable/hibernating accounts during round-robin', () => {
++      pool.markUnavailable('th_1', 'rate_limit', 60000);
++      
++      const a1 = pool.getNextAvailable('threads');
++      const a2 = pool.getNextAvailable('threads');
++      expect(a1).toBe('th_2');
++      expect(a2).toBe('th_2');
++    });
++
++    test('should restore account when markAvailable is called', () => {
++      pool.markUnavailable('th_1');
++      expect(pool.getNextAvailable('threads')).toBe('th_2');
++
++      pool.markAvailable('th_1');
++      // Should now be able to pick th_1 again
++      const picked = [pool.getNextAvailable('threads'), pool.getNextAvailable('threads')];
++      expect(picked).toContain('th_1');
++    });
++
++    test('should track and return account velocity in 60s sliding window', () => {
++      expect(typeof pool.getAccountVelocity).toBe('function');
++      expect(pool.getAccountVelocity('th_1')).toBe(0);
++
++      pool.recordRequest('th_1');
++      pool.recordRequest('th_1');
++      expect(pool.getAccountVelocity('th_1')).toBe(2);
++    });
++
++    test('should assign proxy to account record', () => {
++      pool.setAssignedProxy('th_1', { server: 'http://1.2.3.4:8080' });
++      const acc = pool.getAccount('th_1');
++      expect(acc.assignedProxy).toEqual({ server: 'http://1.2.3.4:8080' });
++    });
++  });
++
++  describe('AC-11: Integration with AdaptiveRateGovernor', () => {
++    test('should respect governor hibernation and cooldown status', () => {
++      pool.registerAccounts('tiktok', ['tt_1']);
++      governor.recordRateLimit('tt_1', 'tiktok', 60000);
++
++      expect(pool.hasAvailable('tiktok')).toBe(false);
++      expect(pool.getNextAvailable('tiktok')).toBeNull();
++
++      // Early wake via markAvailable
++      pool.markAvailable('tt_1');
++      expect(governor.isHibernating('tt_1')).toBe(false);
++      expect(pool.hasAvailable('tiktok')).toBe(true);
++      expect(pool.getNextAvailable('tiktok')).toBe('tt_1');
++    });
++  });
++});
+diff --git a/tests/core/base-client-proxy.test.js b/tests/core/base-client-proxy.test.js
+new file mode 100644
+index 0000000..0ca98f8
+--- /dev/null
++++ b/tests/core/base-client-proxy.test.js
+@@ -0,0 +1,62 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++import { describe, test, expect, beforeEach } from 'vitest';
++import { AbstractApiClient } from '../../src/core/base-client.js';
++import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
++import { AccountPool } from '../../src/core/account-pool.js';
++import { AdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
++
++class MockAuthClient extends AbstractApiClient {
++  name = 'mock-auth';
++  requiresAuth = true;
++}
++
++class MockNoAuthClient extends AbstractApiClient {
++  name = 'mock-no-auth';
++  requiresAuth = false;
++}
++
++describe('AbstractApiClient Proxy Resolution Contract', () => {
++  let proxyPool;
++  let accountPool;
++  let governor;
++
++  beforeEach(() => {
++    proxyPool = new ProxyIpPool({
++      proxies: ['http://1.1.1.1:8080', 'http://2.2.2.2:8080'],
++    });
++    governor = new AdaptiveRateGovernor({ proxyPool });
++    accountPool = new AccountPool({ governor });
++  });
++
++  test('should return null when proxyPool is not configured on client', () => {
++    const client = new MockAuthClient();
++    expect(client.resolveProxy('user1')).toBeNull();
++  });
++
++  test('should return sticky proxy for authenticated client with accountId', () => {
++    const client = new MockAuthClient({ proxyPool, accountPool, governor });
++    const p1 = client.resolveProxy('acc_1');
++    const p2 = client.resolveProxy('acc_1');
++
++    expect(p1).toBeDefined();
++    expect(p1.host).toBe(p2.host);
++  });
++
++  test('should fallback to round-robin when authenticated client does not provide accountId', () => {
++    const client = new MockAuthClient({ proxyPool, accountPool, governor });
++    const p1 = client.resolveProxy();
++    const p2 = client.resolveProxy();
++
++    expect(p1).toBeDefined();
++    expect(p2).toBeDefined();
++    expect(p1.host).not.toBe(p2.host);
++  });
++
++  test('should return rotating proxy for no-auth client regardless of accountId', () => {
++    const client = new MockNoAuthClient({ proxyPool, accountPool, governor });
++    const p1 = client.resolveProxy('acc_1');
++    const p2 = client.resolveProxy('acc_1');
++
++    expect(p1.host).not.toBe(p2.host);
++  });
++});
+diff --git a/tests/proxy/providers.test.js b/tests/proxy/providers.test.js
+new file mode 100644
+index 0000000..aeaf8bd
+--- /dev/null
++++ b/tests/proxy/providers.test.js
+@@ -0,0 +1,195 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++import { describe, test, expect } from 'vitest';
++import {
++  parseProxyUrl,
++  normalizeProxy,
++  formatProxyUrl,
++  getProxyAgent,
++  SUPPORTED_PROXY_SCHEMES,
++} from '../../src/proxy/providers.js';
++import { PlatformError } from '../../src/core/error-envelope.js';
++import { ProxyAgent } from 'undici';
++import { SocksProxyAgent } from 'socks-proxy-agent';
++
++describe('Proxy Providers & Normalization Unit Tests', () => {
++  describe('SUPPORTED_PROXY_SCHEMES', () => {
++    test('should include http, https, and socks5', () => {
++      expect(SUPPORTED_PROXY_SCHEMES).toEqual(['http', 'https', 'socks5']);
++    });
++  });
++
++  describe('parseProxyUrl', () => {
++    test('should parse standard http proxy URL', () => {
++      const parsed = parseProxyUrl('http://proxy.example.com:8080');
++      expect(parsed).toEqual({
++        scheme: 'http',
++        host: 'proxy.example.com',
++        port: 8080,
++        server: 'http://proxy.example.com:8080',
++      });
++    });
++
++    test('should parse https and socks5 URLs with default ports when omitted', () => {
++      const httpNoPort = parseProxyUrl('http://proxy.com');
++      expect(httpNoPort.port).toBe(80);
++
++      const httpsNoPort = parseProxyUrl('https://proxy.com');
++      expect(httpsNoPort.port).toBe(443);
++
++      const socks5NoPort = parseProxyUrl('socks5://proxy.com');
++      expect(socks5NoPort.port).toBe(1080);
++    });
++
++    test('should parse authenticated proxy URLs with special characters', () => {
++      const parsed = parseProxyUrl('http://myuser%40test.com:my%3Apass@10.0.0.1:3128');
++      expect(parsed.username).toBe('myuser@test.com');
++      expect(parsed.password).toBe('my:pass');
++      expect(parsed.host).toBe('10.0.0.1');
++      expect(parsed.port).toBe(3128);
++    });
++
++    test('should gracefully handle malformed percent encoding in credentials without crashing', () => {
++      const parsed = parseProxyUrl('http://user%ZZ:pass%YY@10.0.0.1:8080');
++      expect(parsed.username).toBe('user%ZZ');
++      expect(parsed.password).toBe('pass%YY');
++      expect(parsed.host).toBe('10.0.0.1');
++    });
++
++    test('should throw PlatformError XACT_4001 on empty or non-string input', () => {
++      expect(() => parseProxyUrl('')).toThrow(PlatformError);
++      expect(() => parseProxyUrl(null)).toThrow(PlatformError);
++      expect(() => parseProxyUrl(12345)).toThrow(PlatformError);
++    });
++
++    test('should throw PlatformError XACT_4001 on malformed URL format', () => {
++      expect(() => parseProxyUrl('not_a_valid_url')).toThrow(PlatformError);
++    });
++
++    test('should throw PlatformError XACT_4001 on unsupported protocol scheme', () => {
++      expect(() => parseProxyUrl('ftp://10.0.0.1:21')).toThrow(PlatformError);
++      expect(() => parseProxyUrl('ws://10.0.0.1:8080')).toThrow(PlatformError);
++    });
++  });
++
++  describe('normalizeProxy', () => {
++    test('should normalize string URLs via parseProxyUrl', () => {
++      const normalized = normalizeProxy('http://admin:secret@127.0.0.1:8888');
++      expect(normalized.username).toBe('admin');
++      expect(normalized.password).toBe('secret');
++      expect(normalized.server).toBe('http://127.0.0.1:8888');
++    });
++
++    test('should accept and normalize structured proxy objects', () => {
++      const normalized = normalizeProxy({
++        scheme: 'SOCKS5',
++        host: 'socks.provider.io',
++        port: 1080,
++        username: 'user',
++        password: 'pwd',
++      });
++      expect(normalized.scheme).toBe('socks5');
++      expect(normalized.host).toBe('socks.provider.io');
++      expect(normalized.port).toBe(1080);
++      expect(normalized.server).toBe('socks5://socks.provider.io:1080');
++    });
++
++    test('should handle string and NaN ports by falling back to default scheme port', () => {
++      const normalized = normalizeProxy({
++        host: 'proxy.org',
++        scheme: 'https',
++        port: 'NaN',
++      });
++      expect(normalized.port).toBe(443);
++      expect(normalized.server).toBe('https://proxy.org:443');
++    });
++
++    test('should throw PlatformError when object is missing host', () => {
++      expect(() => normalizeProxy({ scheme: 'http', port: 8080 })).toThrow(PlatformError);
++    });
++
++    test('should throw PlatformError on unsupported scheme in object', () => {
++      expect(() => normalizeProxy({ scheme: 'gopher', host: 'proxy.com' })).toThrow(PlatformError);
++    });
++
++    test('should throw PlatformError on invalid object types', () => {
++      expect(() => normalizeProxy(undefined)).toThrow(PlatformError);
++      expect(() => normalizeProxy(true)).toThrow(PlatformError);
++    });
++  });
++
++  describe('formatProxyUrl', () => {
++    test('should format proxy without authentication', () => {
++      const url = formatProxyUrl({
++        scheme: 'http',
++        host: '1.2.3.4',
++        port: 8080,
++      });
++      expect(url).toBe('http://1.2.3.4:8080');
++    });
++
++    test('should format proxy with username and password encoding', () => {
++      const url = formatProxyUrl({
++        scheme: 'http',
++        host: 'proxy.net',
++        port: 3128,
++        username: 'user@name',
++        password: 'pass:word',
++      });
++      expect(url).toBe('http://user%40name:pass%3Aword@proxy.net:3128');
++    });
++
++    test('should format IPv6 host addresses with brackets per RFC 3986', () => {
++      const url = formatProxyUrl({
++        scheme: 'http',
++        host: '2001:db8::1',
++        port: 8080,
++      });
++      expect(url).toBe('http://[2001:db8::1]:8080');
++    });
++
++    test('should avoid double-bracket wrapping on IPv6 host already containing brackets', () => {
++      const url = formatProxyUrl({
++        scheme: 'http',
++        host: '[2001:db8::1]',
++        port: 8080,
++      });
++      expect(url).toBe('http://[2001:db8::1]:8080');
++    });
++  });
++
++  describe('getProxyAgent', () => {
++    test('should create undici.ProxyAgent for HTTP and HTTPS proxies', () => {
++      const httpAgent = getProxyAgent('http://1.1.1.1:8080', { client: 'undici' });
++      expect(httpAgent).toBeInstanceOf(ProxyAgent);
++
++      const httpsAgent = getProxyAgent('https://1.1.1.1:443', { client: 'undici' });
++      expect(httpsAgent).toBeInstanceOf(ProxyAgent);
++    });
++
++    test('should create SocksProxyAgent for SOCKS5 proxy when client is undici', () => {
++      const socksAgent = getProxyAgent('socks5://user:pass@127.0.0.1:1080', { client: 'undici' });
++      expect(socksAgent).toBeInstanceOf(SocksProxyAgent);
++    });
++
++    test('should return proxy URL string when client is got', () => {
++      const proxyUrl = getProxyAgent('http://admin:pass@10.0.0.1:8080', { client: 'got' });
++      expect(proxyUrl).toBe('http://admin:pass@10.0.0.1:8080');
++    });
++
++    test('should default client option to undici when options is omitted or null', () => {
++      const agent = getProxyAgent('http://127.0.0.1:8080');
++      expect(agent).toBeInstanceOf(ProxyAgent);
++
++      const agentNullOpts = getProxyAgent('http://127.0.0.1:8080', null);
++      expect(agentNullOpts).toBeInstanceOf(ProxyAgent);
++    });
++
++    test('should throw PlatformError on unsupported client type', () => {
++      expect(() => getProxyAgent('http://127.0.0.1:8080', { client: 'unsupported_client' })).toThrow(PlatformError);
++    });
++
++    test('should throw PlatformError when proxy parameter is null or empty', () => {
++      expect(() => getProxyAgent(null)).toThrow(PlatformError);
++    });
++  });
++});
+diff --git a/tests/proxy/proxy-pool.test.js b/tests/proxy/proxy-pool.test.js
+new file mode 100644
+index 0000000..275828b
+--- /dev/null
++++ b/tests/proxy/proxy-pool.test.js
+@@ -0,0 +1,267 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++import { describe, test, expect, beforeEach } from 'vitest';
++import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
++import { PlatformError } from '../../src/core/error-envelope.js';
++import * as undici from 'undici';
++
++describe('ProxyIpPool Acceptance Tests (Story 11.1 - TDD Red Phase)', () => {
++  let pool;
++
++  beforeEach(() => {
++    pool = new ProxyIpPool();
++  });
++
++  describe('AC-1: Proxy Input Normalization', () => {
++    test('should normalize string URLs with auth to canonical object', () => {
++      pool.add('http://user:pass@1.2.3.4:8080');
++      const next = pool.getNext();
++      expect(next).toEqual({
++        scheme: 'http',
++        host: '1.2.3.4',
++        port: 8080,
++        username: 'user',
++        password: 'pass',
++        server: 'http://1.2.3.4:8080',
++      });
++    });
++
++    test('should support https and socks5 schemes in addition to http', () => {
++      pool.add('https://secure.proxy.com:8443');
++      pool.add('socks5://user:pass@socks.proxy.com:1080');
++      
++      expect(pool.totalCount).toBe(2);
++      const p1 = pool.getNext();
++      const p2 = pool.getNext();
++      expect(p1.scheme).toBe('https');
++      expect(p2.scheme).toBe('socks5');
++    });
++
++    test('should accept pre-normalized proxy objects', () => {
++      pool.add({
++        scheme: 'http',
++        host: '10.0.0.1',
++        port: 3128,
++        username: 'u',
++        password: 'p',
++        server: 'http://10.0.0.1:3128',
++      });
++      const next = pool.getNext();
++      expect(next.host).toBe('10.0.0.1');
++      expect(next.port).toBe(3128);
++    });
++
++    test('should throw PlatformError XACT_4001 on invalid proxy strings', () => {
++      expect(() => {
++        pool.add('invalid-proxy-format');
++      }).toThrowError();
++
++      expect(() => {
++        pool.add('ftp://unsupported.com:21');
++      }).toThrowError(PlatformError);
++    });
++  });
++
++  describe('AC-2: Anti-Leak Browser Configuration', () => {
++    test('should return Chromium flags including WebRTC disable and proxy server', () => {
++      const proxy = {
++        scheme: 'http',
++        host: '1.2.3.4',
++        port: 8080,
++        server: 'http://1.2.3.4:8080',
++      };
++      const args = pool.getBrowserArgs(proxy);
++      expect(args).toContain('--force-webrtc-ip-handling-policy=disable_non_proxied_udp');
++      expect(args).toContain('--proxy-server=http://1.2.3.4:8080');
++
++      // Test string URL support
++      const strArgs = pool.getBrowserArgs('http://5.6.7.8:3128');
++      expect(strArgs).toContain('--proxy-server=http://5.6.7.8:3128');
++    });
++
++    test('should provide toPlaywrightProxy helper with server, username, password', () => {
++      const proxy = {
++        scheme: 'http',
++        host: '1.2.3.4',
++        port: 8080,
++        username: 'user123',
++        password: 'secret@pass',
++        server: 'http://1.2.3.4:8080',
++      };
++      const pwProxy = pool.toPlaywrightProxy ? pool.toPlaywrightProxy(proxy) : ProxyIpPool.toPlaywrightProxy(proxy);
++      expect(pwProxy).toEqual({
++        server: 'http://1.2.3.4:8080',
++        username: 'user123',
++        password: 'secret@pass',
++      });
++    });
++  });
++
++  describe('AC-3: Sticky Proxy per Account', () => {
++    beforeEach(() => {
++      pool.add('http://1.1.1.1:8080');
++      pool.add('http://2.2.2.2:8080');
++      pool.add('http://3.3.3.3:8080');
++    });
++
++    test('should return the same proxy for repeated calls with same accountId', () => {
++      const p1 = pool.getStickyProxy('account_abc');
++      const p2 = pool.getStickyProxy('account_abc');
++      const p3 = pool.getStickyProxy('account_abc');
++      expect(p1).toBeDefined();
++      expect(p1).toEqual(p2);
++      expect(p2).toEqual(p3);
++    });
++
++    test('should select proxy deterministically across fresh pool instances', () => {
++      const pool2 = new ProxyIpPool({
++        proxies: ['http://1.1.1.1:8080', 'http://2.2.2.2:8080', 'http://3.3.3.3:8080'],
++      });
++      const selected1 = pool.getStickyProxy('deterministic_user_123');
++      const selected2 = pool2.getStickyProxy('deterministic_user_123');
++      expect(selected1.host).toEqual(selected2.host);
++    });
++
++    test('should rebind to a new healthy proxy when assigned proxy is quarantined', () => {
++      const initialProxy = pool.getStickyProxy('acc_rebind');
++      expect(initialProxy).toBeDefined();
++
++      pool.quarantine(initialProxy, 60000);
++      const newProxy = pool.getStickyProxy('acc_rebind');
++      expect(newProxy).toBeDefined();
++      expect(newProxy.host).not.toEqual(initialProxy.host);
++    });
++  });
++
++  describe('AC-4: Round-Robin Proxy for No-Auth Platforms', () => {
++    beforeEach(() => {
++      pool.add('http://10.0.0.1:8080');
++      pool.add('http://10.0.0.2:8080');
++      pool.add('http://10.0.0.3:8080');
++    });
++
++    test('should rotate healthy proxies in round-robin order', () => {
++      const p1 = pool.getNext();
++      const p2 = pool.getNext();
++      const p3 = pool.getNext();
++      const p4 = pool.getNext();
++
++      expect(p1.host).toBe('10.0.0.1');
++      expect(p2.host).toBe('10.0.0.2');
++      expect(p3.host).toBe('10.0.0.3');
++      expect(p4.host).toBe('10.0.0.1'); // Wrapped around
++    });
++
++    test('should skip quarantined proxies during round-robin', () => {
++      pool.quarantine('http://10.0.0.2:8080');
++      const p1 = pool.getNext();
++      const p2 = pool.getNext();
++      const p3 = pool.getNext();
++
++      expect(p1.host).toBe('10.0.0.1');
++      expect(p2.host).toBe('10.0.0.3');
++      expect(p3.host).toBe('10.0.0.1');
++    });
++
++    test('should return null when all proxies are quarantined or pool is empty', () => {
++      const emptyPool = new ProxyIpPool();
++      expect(emptyPool.getNext()).toBeNull();
++
++      pool.quarantine('http://10.0.0.1:8080');
++      pool.quarantine('http://10.0.0.2:8080');
++      pool.quarantine('http://10.0.0.3:8080');
++      expect(pool.getNext()).toBeNull();
++    });
++  });
++
++  describe('AC-5: Quarantine and Refresh Lifecycle', () => {
++    beforeEach(() => {
++      pool.add('http://192.168.1.1:8080');
++      pool.add('http://192.168.1.2:8080');
++    });
++
++    test('should default to 5 minutes quarantine duration', () => {
++      const p = pool.getNext();
++      pool.quarantine(p);
++      expect(pool.healthyCount).toBe(1);
++    });
++
++    test('should report isAllQuarantined accurately', () => {
++      expect(pool.isAllQuarantined()).toBe(false);
++      pool.quarantine('http://192.168.1.1:8080');
++      expect(pool.isAllQuarantined()).toBe(false);
++      pool.quarantine('http://192.168.1.2:8080');
++      expect(pool.isAllQuarantined()).toBe(true);
++    });
++
++    test('should prune expired quarantines and restore proxy to pool', () => {
++      pool.quarantine('http://192.168.1.1:8080', 50); // 50ms
++      expect(pool.healthyCount).toBe(1);
++
++      return new Promise((resolve) => {
++        setTimeout(() => {
++          pool.pruneExpiredQuarantines();
++          expect(pool.healthyCount).toBe(2);
++          resolve();
++        }, 80);
++      });
++    });
++  });
++
++  describe('AC-6: Proxy Agent Factory', () => {
++    test('should return undici.ProxyAgent for http/https proxies', () => {
++      const proxy = {
++        scheme: 'http',
++        host: '1.2.3.4',
++        port: 8080,
++        server: 'http://1.2.3.4:8080',
++      };
++      const agent = pool.getProxyAgent(proxy, { client: 'undici' });
++      expect(agent).toBeDefined();
++      expect(agent instanceof undici.ProxyAgent).toBe(true);
++    });
++
++    test('should return got-scraping proxyUrl string when client is got', () => {
++      const proxy = {
++        scheme: 'socks5',
++        host: 'proxy.net',
++        port: 1080,
++        username: 'u',
++        password: 'p',
++        server: 'socks5://u:p@proxy.net:1080',
++      };
++      const proxyUrl = pool.getProxyAgent(proxy, { client: 'got' });
++      expect(proxyUrl).toBe('socks5://u:p@proxy.net:1080');
++    });
++
++    test('should return SocksProxyAgent for socks5 proxies with undici client', () => {
++      const proxy = {
++        scheme: 'socks5',
++        host: '1.2.3.4',
++        port: 1080,
++        server: 'socks5://1.2.3.4:1080',
++      };
++      const agent = pool.getProxyAgent(proxy, { client: 'undici' });
++      expect(agent).toBeDefined();
++    });
++
++    test('should never fall back to direct connection if proxy is invalid or null', () => {
++      expect(() => pool.getProxyAgent(null, { client: 'undici' })).toThrow();
++    });
++  });
++
++  describe('AC-10: Health and Total Counts', () => {
++    test('should accurately reflect totalCount and healthyCount through lifecycle', () => {
++      expect(pool.totalCount).toBe(0);
++      expect(pool.healthyCount).toBe(0);
++
++      pool.add('http://1.1.1.1:8080');
++      pool.add('http://2.2.2.2:8080');
++      expect(pool.totalCount).toBe(2);
++      expect(pool.healthyCount).toBe(2);
++
++      pool.quarantine('http://1.1.1.1:8080');
++      expect(pool.totalCount).toBe(2);
++      expect(pool.healthyCount).toBe(1);
++    });
++  });
++});
+diff --git a/types/index.d.ts b/types/index.d.ts
+index 47d03b6..9b26958 100644
+--- a/types/index.d.ts
++++ b/types/index.d.ts
+@@ -766,3 +766,4 @@ export * as checkpointManager from './checkpoint-manager';
+ 
+ 
+ export * as metadataSchema from './metadata-schema';
++export * as proxy from './proxy';
+diff --git a/types/proxy.d.ts b/types/proxy.d.ts
+new file mode 100644
+index 0000000..324403d
+--- /dev/null
++++ b/types/proxy.d.ts
+@@ -0,0 +1,93 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * TypeScript Type Declarations for ProxyIpPool and Proxy Providers
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++export interface NormalizedProxy {
++  scheme: 'http' | 'https' | 'socks5' | string;
++  host: string;
++  port: number;
++  username?: string;
++  password?: string;
++  server: string;
++}
++
++export interface PlaywrightProxyConfig {
++  server: string;
++  username?: string;
++  password?: string;
++}
++
++export interface ProxyIpPoolOptions {
++  proxies?: Array<string | Partial<NormalizedProxy>>;
++  validateOnAdd?: boolean;
++}
++
++export interface ProxyAgentOptions {
++  client?: 'undici' | 'got';
++}
++
++export declare class ProxyIpPool {
++  validateOnAdd: boolean;
++
++  constructor(options?: ProxyIpPoolOptions);
++
++  get healthyCount(): number;
++  get totalCount(): number;
++  get antiLeakFlags(): string[];
++
++  add(proxy: string | Partial<NormalizedProxy>): void;
++  getNext(): NormalizedProxy | null;
++  getStickyProxy(accountId: string): NormalizedProxy | null;
++  quarantine(proxy: string | Partial<NormalizedProxy>, durationMs?: number): void;
++  isAllQuarantined(): boolean;
++  pruneExpiredQuarantines(): void;
++  getBrowserArgs(proxy?: string | Partial<NormalizedProxy> | null): string[];
++  toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
++  static toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
++  getProxyAgent(proxy: string | NormalizedProxy, options?: ProxyAgentOptions): any;
++  static getProxyAgent(proxy: string | NormalizedProxy, options?: ProxyAgentOptions): any;
++}
++
++export declare const globalProxyPool: ProxyIpPool;
++
++export interface AccountRecord {
++  platform: string;
++  accountId: string;
++  credentials?: Record<string, any> | null;
++  assignedProxy?: any | null;
++  hibernatingUntil?: number | null;
++  velocity?: number;
++}
++
++export interface AccountPoolOptions {
++  governor?: any;
++}
++
++export interface RegisterAccountsOptions {
++  credentials?: Record<string, any>;
++}
++
++export declare class AccountPool {
++  constructor(deps?: AccountPoolOptions);
++  registerAccounts(platform: string, accountIds: string[], options?: RegisterAccountsOptions): void;
++  getNextAvailable(platform: string): string | null;
++  markUnavailable(accountId: string, reason?: string, durationMs?: number): void;
++  markAvailable(accountId: string): void;
++  getAccountVelocity(accountId: string): number;
++  recordRequest(accountId: string): void;
++  setAssignedProxy(accountId: string, proxy: any): void;
++  hasAvailable(platform: string): boolean;
++  listPlatforms(): string[];
++  listAccounts(platform: string): string[];
++  getAccount(accountId: string): AccountRecord | null;
++}
++
++export declare const globalAccountPool: AccountPool;
++
++export declare function parseProxyUrl(urlString: string): NormalizedProxy;
++export declare function normalizeProxy(input: string | Partial<NormalizedProxy>): NormalizedProxy;
++export declare function formatProxyUrl(proxy: string | Partial<NormalizedProxy>): string;
++export declare function getProxyAgent(proxy: string | Partial<NormalizedProxy>, options?: ProxyAgentOptions): any;
