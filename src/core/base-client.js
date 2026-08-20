@@ -302,11 +302,12 @@ export class AbstractApiClient {
 
         // Success condition (2xx / 3xx)
         if (status >= 200 && status < 400) {
-          if (currentAccountId && this.accountPool) {
-            this.accountPool.recordRequest(currentAccountId, this.platform);
+          const trackingKey = this.requiresAuth && currentAccountId ? currentAccountId : 'noauth';
+          if (this.accountPool) {
+            this.accountPool.recordRequest(trackingKey, this.platform);
           }
-          if (currentAccountId && this.governor && typeof this.governor.recordRequest === 'function') {
-            this.governor.recordRequest(currentAccountId, this.platform);
+          if (this.governor && typeof this.governor.recordRequest === 'function') {
+            this.governor.recordRequest(trackingKey, this.platform);
           }
           return response;
         }

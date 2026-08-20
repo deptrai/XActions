@@ -2,7 +2,7 @@
 
 **Story ID:** 11.3  
 **Epic:** 11 — Resilient Network & Proxy Pool Management  
-**Status:** review  
+**Status:** done  
 **Owner:** DEV  
 **Source:** `epics.md` Story 11.3, `ARCHITECTURE-SPINE.md` AD-3, AD-9, AD-13, AD-14, AD-2, AD-8; PRD FR-66B, NFR-13; previous stories 11.1 and 11.2; current `src/core/base-client.js`, `src/proxy/**`, `src/core/account-pool.js`, `src/core/adaptive-governor.js`, `src/core/error-envelope.js`.
 
