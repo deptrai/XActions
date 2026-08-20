@@ -609,6 +609,29 @@ This assessment identified **21+ issues** across **6 categories**: PRD versionin
 **Assessor:** BMad Product Manager (AI facilitator)  
 **Date:** 2026-08-21
 
+---
+
+## Remediation Progress
+
+Các hành động sau đã được thực hiện sau khi báo cáo được phê duyệt:
+
+| Critical Issue | Hành động | File / Commit |
+|---|---|---|
+| **1. Canonical PRD / FR-NFR numbering** | Chọn `prd.md` làm canonical; đánh dấu 4 PRD trong `prds/` là deprecated; tạo `prd-canonicalization-addendum-2026-08-21.md` với master register FR/NFR. | `CANONICAL-DOCS.md`, `prd.md`, `prds/*` |
+| **2. Epic 8/10/20 quality** | Đổi tên & goal Epic 8 → user-centric; thêm foundation note vào Epic 10; đổi `As a` user role trong 10.1/10.2; tách Story 20.1 thành 20.1–20.4 với AC cụ thể; cập nhật NFR matrix. | `epics-full.md`, `epics.md` |
+| **3. Cross-epic dependencies** | Thêm `Cross-Epic Dependency & Sequence Map` trong `epics.md` trước Requirements Inventory. | `epics.md` |
+| **4/5. UX gaps & canonical architecture** | Đánh dấu `architecture.md` deprecated, `ARCHITECTURE-SPINE.md` canonical; tạo `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` map F1–F10 sang epic/story và AC; cập nhật `CANONICAL-DOCS.md`. | `architecture.md`, `ARCHITECTURE-SPINE.md`, `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` |
+
+**Commit history:**
+- `docs: canonicalize PRDs and add FR/NFR master register`
+- `docs: reframe Epic 8/10, split Epic 20, add cross-epic dependency map`
+- `docs: canonicalize architecture and add UX remediation mapping`
+
+**Vấn đề vẫn cần quyết định của user / hội đồng sản phẩm:**
+- FR-24..FR-54 (Epics 5b–6) chưa có nguồn PRD — có cần viết PRD bổ sung?
+- FR-62 (GraphQL replay): implement hay loại bỏ?
+- Có cần update `ux/DESIGN.md` và `ux/EXPERIENCE.md` theo `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md`?
+
 ### UX Alignment Assessment
 
 | Criterion | Finding |
