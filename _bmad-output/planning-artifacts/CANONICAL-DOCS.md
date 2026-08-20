@@ -40,7 +40,7 @@ skill: bmad-check-implementation-readiness
 | `ARCHITECTURE-UPDATE-GATE-2026-08-18-R3.md` | r3 update gate. |
 | `ARCHITECTURE-UX-REVIEW-2026-08-18.md` | UX findings cần được chuyển thành epic/story. |
 | `EPIC10-DECISION-LOG-2026-08-18.md` | Decision log. |
-| `architecture-ecosystem-manus-killer-2026-08-20/ARCHITECTURE-SPINE.md` | Bản ecosystem rộng hơn — xem xét merge hoặc để riêng như `architecture/v2`. |
+| `architecture-ecosystem-manus-killer-2026-08-20/ARCHITECTURE-SPINE.md` | **External ecosystem artifact** (chainlens + nowing), đã commit để tham khảo, không phải canonical của XActions. |
 
 **Lưu ý:** `architecture.md` (whole, 45K) đã được đánh dấu deprecated. Nội dung còn giá trị đã được hợp nhất vào `ARCHITECTURE-SPINE.md`.
 
@@ -80,3 +80,21 @@ Hai file này bổ sung nhau; sẽ merge thành một `epics.md` duy nhất tron
 5. ✅ Tạo `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` map F1–F10 sang epic/story.
 6. ✅ Tạo `EXPERIENCE-UNIVERSAL-2026-08-21.md` và cập nhật `DESIGN.md` với New Components.
 7. Còn lại: chỉnh sửa epic/story cụ thể để bổ sung AC từ F1–F10.
+
+## External / Ecosystem Artifacts (Committed for Reference)
+
+| File | Mục đích |
+|---|---|
+| `briefs/brief-ecosystem-manus-killer-2026-08-20/brief.md` | Product brief cho ecosystem chainlens + nowing (Manus-Killer). |
+| `briefs/brief-ecosystem-manus-killer-2026-08-20/addendum.md` | Addendum của brief trên. |
+| `architecture/architecture-ecosystem-manus-killer-2026-08-20/ARCHITECTURE-SPINE.md` | Architecture spine cho ecosystem chainlens + nowing. |
+| `scratch/*` | Triage/review artifacts từ subagent (liên quan XActions metadata schema, shopee schema, v.v.). |
+| `test-artifacts/atdd-checklist-34-D3*.md` | ATDD checklists cho billing system (nhiều khả năng thuộc dự án nowing/chainlens, đã commit theo yêu cầu). |
+
+## Source Code (Newly Tracked)
+
+| Path | Ghi chú |
+|---|---|
+| `apps/api/src/billing/` | Billing code + tests (credit balance, credit admission guard). |
+| `apps/api/src/search/providers/dev/` | Search provider dev code + tests. |
+| `apps/web/public/chainlens-logo*.svg` | Chainlens brand assets. |
