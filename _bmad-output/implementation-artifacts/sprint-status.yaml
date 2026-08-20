@@ -1,5 +1,5 @@
 # generated: 2026-08-18T21:53:00.000Z
-# last_updated: 2026-08-21T05:00:00.000Z
+# last_updated: 2026-08-21T06:00:00.000Z
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-21T05:00:00.000Z
+last_updated: 2026-08-21T06:00:00.000Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -48,7 +48,7 @@ development_status:
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
   11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: done
   11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: ready-for-dev
-  11-7-crawler-governor-integration-validator-contract: backlog
+  11-7-crawler-governor-integration-validator-contract: ready-for-dev
   epic-11-retrospective: optional
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
@@ -85,24 +85,24 @@ development_status:
   epic-15-retrospective: optional
 
   # --- Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop) ---
-  # No code in this repo; legacy scrapers live in nowing_backend/app/proprietary/platforms/.
-  epic-16: backlog
-  16-1-shopee-search-product-review-scraper: backlog
-  16-2-tiktok-shop-product-sales-scraper: backlog
+  # Story files created; legacy scrapers in nowing_backend/app/proprietary/platforms/ to port.
+  epic-16: in-progress
+  16-1-shopee-search-product-review-scraper: ready-for-dev
+  16-2-tiktok-shop-product-sales-scraper: ready-for-dev
   epic-16-retrospective: optional
 
   # --- Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan) ---
-  # No code in this repo; legacy scrapers live in nowing_backend/app/proprietary/platforms/.
-  epic-17: backlog
-  17-1-chotot-multi-category-scraper-with-phone-extractor: backlog
-  17-2-batdongsan-com-vn-property-scraper: backlog
+  # Story files created; legacy scrapers in nowing_backend/app/proprietary/platforms/ to port.
+  epic-17: in-progress
+  17-1-chotot-multi-category-scraper-with-phone-extractor: ready-for-dev
+  17-2-batdongsan-com-vn-property-scraper: ready-for-dev
   epic-17-retrospective: optional
 
   # --- Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn) ---
-  # No code in this repo; 18.3 is blocked by 12.2 CDP attach.
-  epic-18: backlog
-  18-1-topcv-job-company-scraper: backlog
-  18-2-vietnamworks-job-scraper: backlog
+  # 18.1/18.2 story files created; 18.3 blocked by 12.2 CDP attach.
+  epic-18: in-progress
+  18-1-topcv-job-company-scraper: ready-for-dev
+  18-2-vietnamworks-job-scraper: ready-for-dev
   18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: backlog
   epic-18-retrospective: optional
 
