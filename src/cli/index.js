@@ -1976,8 +1976,13 @@ program
         console.log(JSON.stringify(status, null, 2));
         return;
       }
+      const throttleColor =
+        status.throttleLevel === 'normal' ? chalk.green :
+        status.throttleLevel === 'reduced' ? chalk.yellow :
+        status.throttleLevel === 'backpressure' ? chalk.magenta : chalk.red;
+
       console.log(`\n${chalk.bold.cyan('⚡ XActions System & Governor Status')}\n`);
-      console.log(`  ${chalk.bold('Throttle Level:')}       ${status.throttleLevel === 'normal' ? chalk.green(status.throttleLevel) : chalk.red(status.throttleLevel)}`);
+      console.log(`  ${chalk.bold('Throttle Level:')}       ${throttleColor(status.throttleLevel)}`);
       console.log(`  ${chalk.bold('Healthy Proxies:')}      ${status.healthyProxyCount} / ${status.totalProxyCount} (${(status.healthyProxyRatio * 100).toFixed(1)}%)`);
       console.log(`  ${chalk.bold('Current Req/Sec:')}      ${status.currentReqPerSecond}`);
       console.log(`  ${chalk.bold('Redis Consumer Lag:')}   ${status.redisConsumerLag}`);
@@ -1989,8 +1994,8 @@ program
       }
       console.log();
     } catch (err) {
-      console.error(chalk.red(`❌ Error retrieving status: ${err.message}`));
-      process.exit(1);
+      console.error(chalk.red(`❌ Error retrieving status: ${err?.message || String(err)}`));
+      process.exitCode = 1;
     }
   });
 

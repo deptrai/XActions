@@ -54,6 +54,9 @@ export class AdaptiveRateGovernor {
   /** @type {number} */
   #redisConsumerLag = 0;
 
+  /** @type {boolean} */
+  #isBackpressureActive = false;
+
   /** @type {Map<string, number[]>} */
   #accountRequestTimestamps = new Map();
 
@@ -88,6 +91,9 @@ export class AdaptiveRateGovernor {
    */
   #resolveAccountId(accountId, platform) {
     if (platform) {
+      if (typeof accountId === 'string' && accountId.startsWith(`${platform}:`)) {
+        return accountId;
+      }
       return `${platform}:${accountId}`;
     }
     if (typeof accountId === 'string' && accountId.includes(':')) {
@@ -122,22 +128,35 @@ export class AdaptiveRateGovernor {
 
   /**
    * @param {Object} state
-   * @param {number} state.healthyProxyCount
-   * @param {number} state.totalProxyCount
+   * @param {number} [state.healthyProxyCount]
+   * @param {number} [state.totalProxyCount]
    * @param {number} [state.redisConsumerLag]
    */
   updateState(state) {
+    if (!state || typeof state !== 'object') return;
     if (state.healthyProxyCount !== undefined) this.#healthyProxyCount = state.healthyProxyCount;
     if (state.totalProxyCount !== undefined) this.#totalProxyCount = state.totalProxyCount;
-    if (state.redisConsumerLag !== undefined) this.#redisConsumerLag = state.redisConsumerLag;
+    if (state.redisConsumerLag !== undefined) this.updateRedisConsumerLag(state.redisConsumerLag);
   }
 
   /**
-   * Update Redis consumer group lag directly.
+   * Update Redis consumer group lag directly with hysteresis (10000 on, 5000 off).
    * @param {number} lag
    */
   updateRedisConsumerLag(lag) {
     this.#redisConsumerLag = Math.max(0, Number(lag) || 0);
+    if (this.#redisConsumerLag > 10000) {
+      this.#isBackpressureActive = true;
+    } else if (this.#redisConsumerLag < 5000) {
+      this.#isBackpressureActive = false;
+    }
+  }
+
+  /**
+   * @returns {number}
+   */
+  getRedisConsumerLag() {
+    return this.#redisConsumerLag;
   }
 
   /** @returns {void} */
@@ -159,13 +178,13 @@ export class AdaptiveRateGovernor {
     const healthyProxyRatio = total > 0 ? healthy / total : 0;
 
     let factor = 1;
-    if (healthyProxyRatio < 0.1 || (this.#healthyProxyFloor > 0 && healthy < this.#healthyProxyFloor)) {
+    if (total > 0 && (healthyProxyRatio < 0.1 || (this.#healthyProxyFloor > 0 && healthy < this.#healthyProxyFloor))) {
       return 0;
     }
-    if (healthy < total * 0.5) {
+    if (total > 0 && healthy < total * 0.5) {
       factor = 0.5;
     }
-    if (this.#redisConsumerLag > 10000) {
+    if (this.#isBackpressureActive || this.#redisConsumerLag > 10000) {
       factor *= 0.25;
     }
 
@@ -242,12 +261,12 @@ export class AdaptiveRateGovernor {
   }
 
   /**
-   * Record a bot challenge event for an account and hibernate it.
+   * Record a bot challenge event for an account and hibernate it. Default 20 minutes.
    * @param {string} accountId
    * @param {string} [platform]
    * @param {number} [durationMs]
    */
-  recordBotChallenge(accountId, platform, durationMs = 15 * 60 * 1000) {
+  recordBotChallenge(accountId, platform, durationMs = 20 * 60 * 1000) {
     this.hibernateAccount(accountId, 'bot_challenge', durationMs, platform);
   }
 
@@ -278,11 +297,31 @@ export class AdaptiveRateGovernor {
     const now = Date.now();
     this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.until > now);
     this.refreshFromProxyPool();
+
+    // Reset currentReqPerSecond if window has passed
+    if (now - this.#windowStart >= 1000) {
+      this.#currentReqPerSecond = 0;
+      this.#windowStart = now;
+    }
+
+    // Prune inactive account timestamps
+    const cutoff = now - 60_000;
+    for (const [key, timestamps] of this.#accountRequestTimestamps.entries()) {
+      const active = timestamps.filter((t) => t > cutoff);
+      if (active.length === 0) {
+        this.#accountRequestTimestamps.delete(key);
+      } else {
+        this.#accountRequestTimestamps.set(key, active);
+      }
+    }
+
     const healthyProxyRatio = this.#totalProxyCount ? this.#healthyProxyCount / this.#totalProxyCount : 0;
+    const isCritical = this.#totalProxyCount > 0 && (healthyProxyRatio < 0.1 || (this.#healthyProxyFloor > 0 && this.#healthyProxyCount < this.#healthyProxyFloor));
+    const isBackpressure = this.#isBackpressureActive || this.#redisConsumerLag > 10000;
     const throttleLevel =
-      healthyProxyRatio < 0.1 ? 'critical' :
-      this.#redisConsumerLag > 10000 ? 'backpressure' :
-      healthyProxyRatio < 0.5 ? 'reduced' : 'normal';
+      isCritical ? 'critical' :
+      isBackpressure ? 'backpressure' :
+      (this.#totalProxyCount > 0 && healthyProxyRatio < 0.5) ? 'reduced' : 'normal';
 
     return {
       healthyProxyCount: this.#healthyProxyCount,

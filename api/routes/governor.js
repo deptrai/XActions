@@ -19,13 +19,19 @@ router.get('/status', (req, res) => {
     const status = globalStatusApi.getGovernorStatus();
     res.json({
       success: true,
-      data: status,
+      status,
+      data: status, // for compatibility
     });
   } catch (err) {
     res.status(500).json({
       success: false,
       error: {
-        message: err.message,
+        code: 'XACT_5000',
+        type: 'internal_error',
+        message: err?.message || String(err),
+        statusCode: 500,
+        isRetryable: false,
+        suggestedAction: 'retry_after_delay',
       },
     });
   }

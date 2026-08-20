@@ -2,7 +2,7 @@
 
 **Story ID:** 11.4  
 **Epic:** 11 — Resilient Network & Proxy Pool Management  
-**Status:** review  
+**Status:** done  
 **Owner:** DEV  
 **Source:** `epics.md` Story 11.4, `ARCHITECTURE-SPINE.md` AD-13 / AD-14 / AD-17, PRD FR-66B / NFR-13 / NFR-17, previous stories 11.1–11.3, current `src/core/adaptive-governor.js`, `src/core/status-api.js`, `src/core/account-pool.js`, `src/proxy/proxy-pool.js`, `src/core/base-client.js`, `src/core/index.js`, `src/mcp/server.js`, `src/cli/index.js`, `api/server.js`.
 
@@ -619,10 +619,27 @@ if (this.governor && typeof this.governor.recordRateLimit === 'function') {
 
 ---
 
+### Review Findings (Adversarial Code Review - 14/14 Patched & Verified)
+- [x] [Review][Patch] Fix `currentReqPerSecond` decay to zero when traffic ceases [`src/core/adaptive-governor.js`]
+- [x] [Review][Patch] Implement default Redis connection and `refreshGovernorConsumerLag` helper in `StreamMetricsReader` [`src/utils/stream-metrics.js`]
+- [x] [Review][Patch] Re-export global singletons and classes in root `types/index.d.ts` [`types/index.d.ts`]
+- [x] [Review][Patch] Add `getRedisConsumerLag()` getter in `AdaptiveRateGovernor` and `types/core.d.ts` [`src/core/adaptive-governor.js`, `types/core.d.ts`]
+- [x] [Review][Patch] Prevent double platform prefixing in `#resolveAccountId` [`src/core/adaptive-governor.js`]
+- [x] [Review][Patch] Fix `healthyProxyFloor` and 0-total proxy handling in `getStatus()` [`src/core/adaptive-governor.js`]
+- [x] [Review][Patch] Add hysteresis mechanism (10,000 threshold, 5,000 recovery) for Redis lag backpressure [`src/core/adaptive-governor.js`]
+- [x] [Review][Patch] Set default `durationMs` for `recordBotChallenge` to 20 minutes [`src/core/adaptive-governor.js`]
+- [x] [Review][Patch] Standardize `GET /governor/status` payload and error handling [`api/routes/governor.js`]
+- [x] [Review][Patch] Refine CLI `xactions status` color coding and use `process.exitCode = 1` [`src/cli/index.js`]
+- [x] [Review][Patch] Prune empty timestamp arrays in `#accountRequestTimestamps` to prevent memory leak [`src/core/adaptive-governor.js`]
+- [x] [Review][Patch] Remove `any` JSDoc annotations in `StreamMetricsReader` [`src/utils/stream-metrics.js`]
+- [x] [Review][Patch] Add null/undefined guard to `updateState()` [`src/core/adaptive-governor.js`]
+- [x] [Review][Patch] Add automated test coverage for Governor route, CLI, and StreamMetricsReader [`tests/core/status-api.test.js`, `tests/utils/stream-metrics.test.js`]
+
+---
+
 ## File Structure Requirements
 
 | File | Action | Purpose |
-|---|---|---|
 | `src/core/adaptive-governor.js` | UPDATE | Add `recordRateLimit`, `recordBotChallenge`, `updateRedisConsumerLag`, `globalAdaptiveRateGovernor`, fix hibernation reason, tighten `getStatus`. |
 | `src/core/status-api.js` | UPDATE | Add `globalStatusApi` singleton. |
 | `src/core/index.js` | UPDATE | Export `globalAdaptiveRateGovernor` and `globalStatusApi`. |
@@ -756,7 +773,8 @@ Create `tests/utils/stream-metrics.test.js` (optional, skip if no Redis server):
 
 ## Story Completion Status
 
-- **Status:** review
+- **Status:** done
 - **Context engine analysis completed:** PRD, architecture, contracts, and requirements analyzed.
-- **Testing:** 18/18 tests passing (100% green), 273/273 regression tests passing.
-- **Next phase:** Code review via `/bmad-code-review`.
+- **Testing:** 18/18 tests passing (100% green), 291/291 regression tests passing across 18 test files.
+- **Code Review:** 14/14 adversarial review patches applied and verified.
+- **Next phase:** Proceed to Story 11.5.

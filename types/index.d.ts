@@ -762,8 +762,23 @@ export * as core from './core';
 export * as store from './store';
 export * as exporter from './exporter';
 export * as checkpointManager from './checkpoint-manager';
-
-
-
 export * as metadataSchema from './metadata-schema';
 export * as proxy from './proxy';
+
+export {
+  AdaptiveRateGovernor,
+  PlatformRateLimit,
+  StatusApi,
+  globalAdaptiveRateGovernor,
+  globalStatusApi,
+  AccountPool,
+  globalAccountPool,
+} from './core';
+
+export {
+  ProxyIpPool,
+  StaticProxyProvider,
+  DynamicTunnelProvider,
+  createProxyProvider,
+  globalProxyPool,
+} from './proxy';

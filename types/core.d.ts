@@ -289,6 +289,7 @@ export class AdaptiveRateGovernor {
   isAuthRequired(platform: string): boolean;
   updateState(state: { healthyProxyCount?: number; totalProxyCount?: number; redisConsumerLag?: number }): void;
   updateRedisConsumerLag(lag: number): void;
+  getRedisConsumerLag(): number;
   refreshFromProxyPool(): void;
   getMaxThroughput(platform: string): number;
   recordRequest(accountId: string, platform?: string): void;

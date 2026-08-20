@@ -7,7 +7,7 @@ import {
 } from '../../src/core/adaptive-governor.js';
 import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
 
-describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Protection Governor (ATDD Green Phase)', () => {
+describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Protection Governor (ATDD Green Phase & Patches)', () => {
   let pool;
   let governor;
 
@@ -75,9 +75,30 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       });
 
       governor.updateRedisConsumerLag(15000);
+      expect(governor.getRedisConsumerLag()).toBe(15000);
 
       const throughput = governor.getMaxThroughput('twitter');
       expect(throughput).toBe(5);
+    });
+
+    test('should maintain backpressure throttle with hysteresis until lag falls below 5,000', () => {
+      governor.setPlatformLimit('twitter', {
+        baseReqPerSecondPerProxy: 2,
+        throttleFactor: 1.0,
+      });
+
+      governor.updateRedisConsumerLag(12000);
+      expect(governor.getStatus().throttleLevel).toBe('backpressure');
+
+      // Lag drops to 7000 (below 10k, but above 5k hysteresis recovery point) -> still backpressure
+      governor.updateRedisConsumerLag(7000);
+      expect(governor.getStatus().throttleLevel).toBe('backpressure');
+      expect(governor.getMaxThroughput('twitter')).toBe(5);
+
+      // Lag drops to 4000 (below 5k) -> recovers to normal
+      governor.updateRedisConsumerLag(4000);
+      expect(governor.getStatus().throttleLevel).toBe('normal');
+      expect(governor.getMaxThroughput('twitter')).toBe(20);
     });
   });
 
@@ -97,12 +118,23 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(governor.canAccountRequest('acc_1', 'twitter')).toBe(false);
     });
 
-    test('should increment global currentReqPerSecond counter on recordRequest', () => {
+    test('should increment global currentReqPerSecond counter and decay to 0 after window', async () => {
       governor.recordRequest('acc_1', 'twitter');
       governor.recordRequest('acc_2', 'twitter');
 
-      const status = governor.getStatus();
+      let status = governor.getStatus();
       expect(status.currentReqPerSecond).toBeGreaterThanOrEqual(2);
+
+      await new Promise((r) => setTimeout(r, 1050));
+
+      status = governor.getStatus();
+      expect(status.currentReqPerSecond).toBe(0);
+    });
+
+    test('should not double-prefix account IDs that already contain platform prefix', () => {
+      governor.recordRequest('twitter:acc_prefixed', 'twitter');
+      expect(governor.getAccountVelocity('acc_prefixed', 'twitter')).toBe(1);
+      expect(governor.getAccountVelocity('twitter:acc_prefixed')).toBe(1);
     });
   });
 
@@ -114,14 +146,15 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(governor.canAccountRequest('acc_limited', 'twitter')).toBe(false);
     });
 
-    test('should support recordBotChallenge with custom hibernation window', () => {
-      governor.recordBotChallenge('acc_bot', 'twitter', 15 * 60 * 1000);
+    test('should support recordBotChallenge with custom or default 20-min hibernation window', () => {
+      governor.recordBotChallenge('acc_bot', 'twitter');
 
       expect(governor.isHibernating('acc_bot', 'twitter')).toBe(true);
       const status = governor.getStatus();
       const accountEntry = status.hibernatingAccounts.find((h) => h.accountId.includes('acc_bot'));
       expect(accountEntry).toBeDefined();
       expect(accountEntry.reason).toBe('bot_challenge');
+      expect(accountEntry.remainingSeconds).toBeGreaterThan(1100); // ~1200s (20 mins)
     });
 
     test('should immediately restore account availability on wakeAccount', () => {
@@ -178,12 +211,18 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(Array.isArray(status.hibernatingAccounts)).toBe(true);
     });
 
-    test('should assign throttleLevel as backpressure when redis lag exceeds threshold', () => {
-      governor.updateRedisConsumerLag(12000);
-      expect(governor.getStatus().throttleLevel).toBe('backpressure');
+    test('should report normal throttleLevel when total proxy count is 0', () => {
+      const emptyGovernor = new AdaptiveRateGovernor();
+      expect(emptyGovernor.getStatus().throttleLevel).toBe('normal');
+    });
 
-      governor.updateRedisConsumerLag(2000);
-      expect(governor.getStatus().throttleLevel).toBe('normal');
+    test('should assign throttleLevel as critical when healthy proxy count falls below healthyProxyFloor', () => {
+      const floorGovernor = new AdaptiveRateGovernor({ proxyPool: pool, healthyProxyFloor: 5 });
+      // Quarantine 6 of 10 proxies -> 4 healthy remaining (< floor 5)
+      for (let i = 1; i <= 6; i++) {
+        pool.quarantine(`http://p${i}.example.com:8080`, 60000);
+      }
+      expect(floorGovernor.getStatus().throttleLevel).toBe('critical');
     });
 
     test('should assign throttleLevel as critical when healthy proxy ratio is under 10%', () => {
@@ -192,6 +231,13 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       }
 
       expect(governor.getStatus().throttleLevel).toBe('critical');
+    });
+
+    test('should safely handle null or invalid state updates without crashing', () => {
+      governor.updateState(null);
+      governor.updateState(undefined);
+      governor.updateState({ healthyProxyCount: 8, totalProxyCount: 10, redisConsumerLag: 100 });
+      expect(governor.getRedisConsumerLag()).toBe(100);
     });
 
     test('should provide globalAdaptiveRateGovernor singleton instance', () => {
