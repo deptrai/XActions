@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-21T04:30:00.000Z
+last_updated: 2026-08-21T05:00:00.000Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -52,44 +52,54 @@ development_status:
   epic-11-retrospective: optional
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
-  epic-12: backlog
-  12-1-terminal-ascii-qr-code-login-module: backlog
+  # 12.1 partially overlaps src/utils/qrcode.js (renderTerminalQr) and src/qrCodeSharing.js
+  epic-12: in-progress
+  12-1-terminal-ascii-qr-code-login-module: ready-for-dev
   12-2-cdp-remote-attach-mode-chrome-devtools-protocol: backlog
   epic-12-retrospective: optional
 
   # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---
-  epic-13: backlog
-  13-1-basehybridclient-with-playwright-signature-bridge: backlog
-  13-2-refactor-twitter-scraper-to-hybrid-architecture: backlog
-  13-3-refactor-facebook-scraper-to-hybrid-architecture: backlog
+  # Strong legacy overlap: src/scrapers/twitter/, src/scrapers/facebook/, src/scrapers/twitter/http/,
+  # src/client/Scraper.js and src/scrapers/index.js already implement equivalent features.
+  # New AbstractCrawler-based wrappers in src/scrapers/social/ are still needed.
+  epic-13: in-progress
+  13-1-basehybridclient-with-playwright-signature-bridge: in-progress
+  13-2-refactor-twitter-scraper-to-hybrid-architecture: ready-for-dev
+  13-3-refactor-facebook-scraper-to-hybrid-architecture: ready-for-dev
   epic-13-retrospective: optional
 
   # --- Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream ---
-  epic-14: backlog
-  14-1-hierarchical-comment-tree-extraction-algorithm: backlog
-  14-2-mcp-tool-exporters-cli-crawl-commands: backlog
-  14-3-realtime-redis-stream-ingest-for-nowing-ai-lead-hub: backlog
+  # 14.2 partially overlaps package.json mcp:daemon and src/mcp/server.js startHttpTransport.
+  # 14.3 partially overlaps src/streaming/streamManager.js (Redis/Bull/Socket.IO infra).
+  epic-14: in-progress
+  14-1-hierarchical-comment-tree-extraction-algorithm: ready-for-dev
+  14-2-mcp-tool-exporters-cli-crawl-commands: in-progress
+  14-3-realtime-redis-stream-ingest-for-nowing-ai-lead-hub: in-progress
   epic-14-retrospective: optional
 
   # --- Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine ---
-  epic-15: backlog
-  15-1-threads-scraper-adapter-meta-internal-graphql: backlog
+  # 15.1 overlaps legacy src/scrapers/threads/index.js (Puppeteer-based). 15.2 is new.
+  epic-15: in-progress
+  15-1-threads-scraper-adapter-meta-internal-graphql: ready-for-dev
   15-2-tiktok-video-hashtag-comment-scraper: backlog
   epic-15-retrospective: optional
 
   # --- Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop) ---
+  # No code in this repo; legacy scrapers live in nowing_backend/app/proprietary/platforms/.
   epic-16: backlog
   16-1-shopee-search-product-review-scraper: backlog
   16-2-tiktok-shop-product-sales-scraper: backlog
   epic-16-retrospective: optional
 
   # --- Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan) ---
+  # No code in this repo; legacy scrapers live in nowing_backend/app/proprietary/platforms/.
   epic-17: backlog
   17-1-chotot-multi-category-scraper-with-phone-extractor: backlog
   17-2-batdongsan-com-vn-property-scraper: backlog
   epic-17-retrospective: optional
 
   # --- Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn) ---
+  # No code in this repo; 18.3 is blocked by 12.2 CDP attach.
   epic-18: backlog
   18-1-topcv-job-company-scraper: backlog
   18-2-vietnamworks-job-scraper: backlog
@@ -97,18 +107,22 @@ development_status:
   epic-18-retrospective: optional
 
   # --- Epic 19: Internal Operator Dashboard, Admin CLI & Operational Observability ---
-  epic-19: backlog
-  19-1-dashboard-jobs-checkpoints-view: backlog
-  19-2-dashboard-proxies-accounts-view: backlog
-  19-3-dashboard-stream-metrics-alerts-view: backlog
-  19-4-admin-cli-governor-proxies-accounts: backlog
-  19-5-admin-cli-checkpoints: backlog
-  19-6-admin-cli-stream-metrics-alerts: backlog
-  19-7-admin-rest-api-proxy-account-checkpoint: backlog
+  # 19.1/19.2/19.3 need dashboard views; backends exist (/api/checkpoints, /api/proxies, /api/streams).
+  # 19.5 is done (xactions checkpoints CLI). 19.6 partially overlaps xactions stream CLI.
+  epic-19: in-progress
+  19-1-dashboard-jobs-checkpoints-view: ready-for-dev
+  19-2-dashboard-proxies-accounts-view: ready-for-dev
+  19-3-dashboard-stream-metrics-alerts-view: ready-for-dev
+  19-4-admin-cli-governor-proxies-accounts: ready-for-dev
+  19-5-admin-cli-checkpoints: done
+  19-6-admin-cli-stream-metrics-alerts: in-progress
+  19-7-admin-rest-api-proxy-account-checkpoint: ready-for-dev
   19-8-admin-mcp-tools: backlog
   epic-19-retrospective: optional
 
   # --- Epic 20: Nowing Cutover & Legacy Scraper Decommissioning ---
+  # Blocked until Epics 13-18 are complete. Will decommission src/client/, src/scrapers/twitter/,
+  # src/scrapers/facebook/, src/scrapers/threads/ and src/scrapers/twitter/http/ once new crawlers stable.
   epic-20: backlog
   20-1-nowing-adapter-cutover-legacy-scrapers-decommissioning: backlog
   epic-20-retrospective: optional

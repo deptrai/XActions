@@ -14,6 +14,50 @@ inputDocuments:
 
 Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ thống **XActions Universal Hybrid Scraping & Automation Microservice** (tiếp nối Epics 1–9 trong `epics-full.md`). Hệ thống được thiết kế theo chuẩn **Hexagonal Architecture + Tiered Hybrid Signer Engine + Dual-Channel Microservice Daemon + Adaptive Rate Limiter**, hợp nhất 100% cơ sở dữ liệu trên **PostgreSQL (Prisma ORM với JSONB GIN Indexes)** và đóng vai trò là Scraping Engine toàn năng cho hệ sinh thái **Nowing (AI Lead & Research Hub)** cũng như nền tảng SaaS/CLI/AI MCP độc lập.
 
+## Backlog Status & Legacy Code Overlap (Audit 2026-08-21)
+
+> Được cập nhật sau khi so sánh toàn bộ backlog Epics 12–20 với source code hiện có.
+
+### Consolidated / Absorbed
+- **Story 11.5** (End-to-End Request Pipeline) và **Story 11.6** (Rate-Limit/Bot-Challenge Defense) đã được hấp thụ vào **Story 11.3** (End-to-End Request Pipeline with 429/403 Auto-Quarantine, Exponential Backoff & Two-Mode IP Strategy). Xem `src/core/base-client.js`.
+- **Story 11.4** được thu nhỏ thành "Governor Surface & Backpressure" vì core `AdaptiveRateGovernor` đã implement trong `src/core/adaptive-governor.js`.
+
+### Partial Overlap — Refactor / Wrap Recommended
+| Story | Existing Code | Gap |
+|---|---|---|
+| 12.1 | `src/utils/qrcode.js` (`renderTerminalQr`, `isTty`) | countdown, `checkLoginState`, CLI flags, non-TTY fallback |
+| 13.1 | `src/core/signer-pool.js` (`PreSignedTokenRing`) | `SignerWorkerPagePool.init/evaluate/close` + 3s timeout |
+| 13.2 | `src/scrapers/twitter/index.js`, `src/scrapers/twitter/http/`, `src/client/Scraper.js`, `src/scrapers/index.js` | `TwitterCrawler extends AbstractCrawler` in `src/scrapers/social/twitter/` |
+| 13.3 | `src/scrapers/facebook/index.js`, `src/scrapers/facebook/graphql.js` | `FacebookCrawler extends AbstractCrawler` in `src/scrapers/social/facebook/` |
+| 14.1 | `src/scrapers/twitter/http/thread.js` (conversation/thread) | topological sort + Prisma batch save by depth |
+| 14.2 | `package.json` `mcp:daemon`, `src/mcp/server.js` `startHttpTransport()` (port 3001) | 3-layer JSON envelope, `x_crawl_*`, `x_actions_list`, artifact export |
+| 14.3 | `src/streaming/streamManager.js` (Redis/Bull/Socket.IO) | `stream:social:raw_posts` thin events, metrics endpoint, alerts |
+| 15.1 | `src/scrapers/threads/index.js` (Puppeteer) | `ThreadsCrawler extends AbstractCrawler` in `src/scrapers/social/threads/` |
+| 19.1–19.3 | `/api/checkpoints`, `/api/proxies`, `/api/streams` routes exist | dashboard views in `dashboard/admin.html` |
+| 19.5 | `xactions checkpoints list/show/resume/pause/retry` | done |
+| 19.6 | `xactions stream start/stop/list/history/pause/resume` | Nowing `stream:social:raw_posts` metrics + alerts |
+| 19.7 | `/api/proxies`, `/api/streams`, `/api/checkpoints` | mount under `/admin/*` with admin auth |
+
+### New / No Code in Repo
+| Epic | Stories | Note |
+|---|---|---|
+| 12.2 | CDP attach | no `launchBrowserWithCdp` or Playwright CDP connect |
+| 15.2 | TikTok scraper | no code |
+| 16.x | Shopee, TikTok Shop | legacy lives in Nowing repo, not here |
+| 17.x | Chotot, Batdongsan | legacy lives in Nowing repo |
+| 18.1–18.2 | TopCV, VietnamWorks | no code |
+| 18.3 | LinkedIn via CDP | blocked by 12.2 |
+| 19.4, 19.8 | `xactions admin` CLI, `x_admin_*` MCP tools | no code |
+
+### Decommission Plan (Epic 20.1)
+After new hybrid crawlers (Epics 13–18) are stable, the following legacy modules will be removed:
+- `src/client/Scraper.js` and `src/client/`
+- `src/scrapers/twitter/index.js` and `src/scrapers/twitter/http/`
+- `src/scrapers/facebook/index.js`
+- `src/scrapers/threads/index.js`
+
+`src/scrapers/index.js` will be refactored to delegate to `AbstractCrawler` instances rather than legacy function modules.
+
 ---
 
 ## Requirements Inventory
