@@ -2,13 +2,15 @@
 title: "PRD: Epics 10–18 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform"
 created: 2026-08-18
 updated: 2026-08-18
-status: approved
+status: deprecated
+supersededBy: _bmad-output/planning-artifacts/prd.md
 author: "John (BMad Product Manager) & Winston (BMad System Architect)"
 epics: [10, 11, 12, 13, 14, 15, 16, 17, 18]
 prd_ref:
   - prd-XActions-2026-06-08
   - prd-XActions-2026-06-10-epic4
   - prd-XActions-2026-08-14-epic7
+note: Là bản nháp trước khi prd.md được bổ sung appendix FR-85..88 / NFR-17. Giữ lại để tham khảo lịch sử.
 ---
 
 # PRD: Epics 10–18 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform

@@ -1,14 +1,16 @@
 ---
 title: "PRD: Epics 10–20 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform"
 created: 2026-08-18
-updated: 2026-08-19
-status: approved
+updated: 2026-08-21
+status: canonical
 author: "John (BMad Product Manager) & Winston (BMad System Architect)"
 epics: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-prd_ref:
-  - prd-XActions-2026-06-08
-  - prd-XActions-2026-06-10-epic4
-  - prd-XActions-2026-08-14-epic7
+replaces:
+  - _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md
+  - _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md
+  - _bmad-output/planning-artifacts/prds/prd-XActions-2026-08-14-epic7/prd.md
+  - _bmad-output/planning-artifacts/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md
+canonical: true
 ---
 
 # PRD: Epics 10–20 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform
@@ -129,6 +131,22 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 ---
 
 *Tài liệu PRD chính thức được phê duyệt bởi Hội đồng Quản trị Sản phẩm BMad ngày 18/08/2026.*
+
+---
+
+## 8. Phụ Lục — Canonicalization & FR/NFR Master Register
+
+Để giải quyết xung đột tài liệu PRD và đánh số FR/NFR giữa các phiên bản, xem `prd-canonicalization-addendum-2026-08-21.md`.
+
+### Tài liệu canonical liên quan
+
+- `CANONICAL-DOCS.md` — registry các tài liệu canonical/deprecated.
+- `prd-canonicalization-addendum-2026-08-21.md` — master register FR/NFR với prefix phạm vi (`FB-`, `E7-`, `U-`).
+
+### Quyết định pending
+
+- **FR-62 (GraphQL replay):** hiện tại `epics-full.md` ghi deferred. Cần quyết định implement trong Phase 3 hay loại bỏ khỏi PRD.
+- **FR-24..FR-54:** tồn tại trong `epics-full.md` (Epics 5b–6) nhưng không có trong PRD canonical. Cần viết PRD bổ sung hoặc gộp vào đây.
 
 ---
 
