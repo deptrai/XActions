@@ -1,5 +1,10 @@
 import { defineConfig } from 'vitest/config';
 
+const testDatabaseUrl =
+  process.env.DATABASE_URL_TEST ||
+  process.env.DATABASE_URL ||
+  'postgresql://postgres:postgres@localhost:5434/xactions_test?schema=public';
+
 export default defineConfig({
   test: {
     globals: true,
@@ -12,6 +17,10 @@ export default defineConfig({
     include: ['tests/**/*.test.js'],
     exclude: ['node_modules', 'dist', 'archive'],
     reporters: ['verbose'],
+    env: {
+      DATABASE_URL: testDatabaseUrl,
+      DATABASE_URL_TEST: testDatabaseUrl,
+    },
     sequence: {
       shuffle: true,
     },

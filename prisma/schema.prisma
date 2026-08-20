@@ -28,11 +28,11 @@ model User {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   cryptoPayments      CryptoPayment[]
+  facebookAccounts    FacebookAccount[]
   operations          Operation[]
   payments            Payment[]
-  subscription        Subscription?
-  facebookAccounts    FacebookAccount[]
   schedules           Schedule[]
+  subscription        Subscription?
 
   @@index([email])
   @@index([username])
@@ -221,14 +221,14 @@ model UnfollowerSchedule {
 }
 
 model FacebookAccount {
-  id              String   @id @default(cuid())
+  id              String                 @id @default(cuid())
   userId          String
   label           String
   encryptedCookie String
+  createdAt       DateTime               @default(now())
   encryptedProxy  String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt       DateTime               @default(now()) @updatedAt
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   health          FacebookAccountHealth?
 
   @@unique([userId, label])
@@ -241,26 +241,18 @@ model Schedule {
   content           String
   mediaUrls         String?
   scheduledAt       DateTime
-  // pending → running (claimed by a tick) → completed | failed.
-  // `cancelled` reserved for a future manual-cancel surface.
   status            String    @default("pending")
   facebookAccountId String?
   operationId       String?
   error             String?
   executedAt        DateTime?
-  // EPS-2 Tweet Scheduling — platform discriminator + tweet-specific fields.
-  // `platform` defaults to "twitter"; existing Facebook rows backfilled to "facebook".
-  // `thread` is a JSON-stringified array of follow-up tweet texts (null for single tweets).
-  // `timezone` is an IANA tz name used to interpret scheduledAt at create time (stored as UTC).
-  // `recurrenceCron` re-arms the schedule after execution (node-cron expression).
-  // `queueOrder` drives drag & drop reorder in the dashboard queue view (0 = highest priority).
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   platform          String    @default("twitter")
   thread            String?
   timezone          String?
   recurrenceCron    String?
   queueOrder        Int       @default(0)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status, scheduledAt])
@@ -268,130 +260,116 @@ model Schedule {
   @@index([userId])
 }
 
-// EPS-3 Analytics Dashboard — per-tweet metrics captured at a point in time.
-// One row per (tweetId, snapshotAt); the dashboard ranks the latest snapshot per tweet.
 model TweetSnapshot {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   username      String
   tweetId       String
   text          String?
-  likes         Int      @default(0)
-  retweets      Int      @default(0)
-  replies       Int      @default(0)
-  quotes        Int      @default(0)
-  views         Int      @default(0)
-  bookmarkCount Int      @default(0)
+  likes         Int       @default(0)
+  retweets      Int       @default(0)
+  replies       Int       @default(0)
+  quotes        Int       @default(0)
+  views         Int       @default(0)
+  bookmarkCount Int       @default(0)
   tweetedAt     DateTime?
-  snapshotAt    DateTime @default(now())
+  snapshotAt    DateTime  @default(now())
 
   @@index([username, snapshotAt])
   @@index([username, tweetId])
   @@index([tweetId, snapshotAt])
 }
 
-// EPS-3 Analytics Dashboard — daily engagement roll-up per username.
-// Upserted on (username, date) so re-runs replace the day's aggregate.
 model EngagementDaily {
-  id                 String   @id @default(cuid())
-  username           String
-  date               String
-  avgEngagementRate  Float    @default(0)
-  totalImpressions   Int      @default(0)
-  totalEngagements   Int      @default(0)
-  topTweetId         String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                String   @id @default(cuid())
+  username          String
+  date              String
+  avgEngagementRate Float    @default(0)
+  totalImpressions  Int      @default(0)
+  totalEngagements  Int      @default(0)
+  topTweetId        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@unique([username, date])
   @@index([username, date])
 }
 
-enum FacebookAccountHealthStatus {
-  active
-  checkpoint
-  dead
-}
-
 model FacebookAccountHealth {
-  id          String   @id @default(cuid())
-  accountId   String   @unique
+  id          String                      @id @default(cuid())
+  accountId   String                      @unique
   status      FacebookAccountHealthStatus
   reason      String?
   lastCheckAt DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  account     FacebookAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+  account     FacebookAccount             @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([accountId])
 }
 
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model Post {
-  id              String    @id // Format: "shopee:123" hoặc "twitter:456"
-  platform        String    // 'twitter' | 'facebook' | 'threads' | 'tiktok' | 'shopee' | 'chotot' | 'topcv' | 'linkedin'
-  externalId      String    // ID gốc của nền tảng
-  category        String    // 'social' | 'ecom' | 'realestate' | 'recruitment' | 'b2b' (B2B leads, not public procurement/tax-code B2B)
-  authorId        String
-  authorName      String
-  authorAvatar    String?
-  authorUrl       String?
-  postUrl         String?
-  content         String    @db.Text
-  mediaUrls       String[]  // PostgreSQL native array of image/video URLs
-
-  // Metrics chung
-  likesCount      Int       @default(0)
-  repostsCount    Int       @default(0)
-  repliesCount    Int       @default(0)
-  viewsCount      Int       @default(0)
-
-  // Dynamic Structured Metadata cho từng ngành (BĐS, Ecom, HR)
-  metadata        Json?     // Chứa: price, salary, phone, rating, soldCount, skills...
-
-  publishedAt     DateTime?
-  crawledAt       DateTime  @default(now())
-  comments        Comment[]
+  id           String    @id
+  platform     String
+  externalId   String
+  category     String
+  authorId     String
+  authorName   String
+  authorAvatar String?
+  authorUrl    String?
+  postUrl      String?
+  content      String
+  mediaUrls    String[]
+  likesCount   Int       @default(0)
+  repostsCount Int       @default(0)
+  repliesCount Int       @default(0)
+  viewsCount   Int       @default(0)
+  metadata     Json?
+  publishedAt  DateTime?
+  crawledAt    DateTime  @default(now())
+  comments     Comment[]
 
   @@unique([platform, externalId])
   @@index([platform, crawledAt(sort: Desc)])
   @@index([category, crawledAt(sort: Desc)])
   @@index([crawledAt])
   @@index([authorId])
+  @@index([metadata], map: "idx_post_metadata_gin", type: Gin)
 }
 
 model Comment {
-  id                String    @id // Format: "facebook:post123:comment456"
-  platform          String
-  externalId        String    // ID gốc của comment trên nền tảng
-  postId            String
-  parentCommentId   String?   // null nếu là comment gốc, chứa id nếu là sub-reply
-  depth             Int       @default(0) // Cần cho topological sort
-  authorId          String
-  authorName        String
-  authorAvatar      String?
-  content           String    @db.Text
-  likesCount        Int       @default(0)
-  subCommentsCount  Int       @default(0)
-  metadata          Json?     // Lưu thêm sentiment, phone bóc tách trong comment...
-
-  publishedAt       DateTime?
-  crawledAt         DateTime  @default(now())
-
-  post              Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  parentComment     Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: SetNull)
-  subReplies        Comment[] @relation("CommentReplies")
+  id               String    @id
+  platform         String
+  externalId       String
+  postId           String
+  parentCommentId  String?
+  depth            Int       @default(0)
+  authorId         String
+  authorName       String
+  authorAvatar     String?
+  content          String
+  likesCount       Int       @default(0)
+  subCommentsCount Int       @default(0)
+  metadata         Json?
+  publishedAt      DateTime?
+  crawledAt        DateTime  @default(now())
+  parentComment    Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
+  subReplies       Comment[] @relation("CommentReplies")
+  post             Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([platform, externalId, postId])
   @@index([postId, parentCommentId])
   @@index([crawledAt])
   @@index([authorId])
+  @@index([metadata], map: "idx_comment_metadata_gin", type: Gin)
 }
 
 model CrawlCheckpoint {
   id              String    @id @default(cuid())
   platform        String
-  targetType      String    // 'keyword' | 'group' | 'page' | 'user' | 'category' | 'search'
-  targetKey       String    // Query string, groupId, username, category slug
-  status          String    @default("running") // 'running' | 'paused' | 'failed' | 'completed' | 'stalled'
+  targetType      String
+  targetKey       String
+  status          String    @default("running")
   lastCursor      String?
   lastTimestamp   DateTime?
   lastCrawledAt   DateTime?
@@ -403,4 +381,10 @@ model CrawlCheckpoint {
   @@unique([platform, targetType, targetKey])
   @@index([platform, updatedAt])
   @@index([status, nextScheduledAt])
+}
+
+enum FacebookAccountHealthStatus {
+  active
+  checkpoint
+  dead
 }
