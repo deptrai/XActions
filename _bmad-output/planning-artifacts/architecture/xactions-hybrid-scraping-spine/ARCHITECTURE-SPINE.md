@@ -6,8 +6,14 @@ altitude: system-microservice
 paradigm: 'Hexagonal / Ports & Adapters + Tiered Hybrid Signer Pool + Dual-Channel High-Speed Microservice + Adaptive Infrastructure-Aware Rate Limiting'
 scope: 'XActions Universal Scraping Engine: Social Media, E-Commerce, Real Estate, Recruitment, Proxy Network, PostgreSQL Storage with JSONB GIN Indexes, MCP HTTP/SSE Daemon, Redis Streams, and Adaptive Account Protection'
 status: final
+canonical: true
 created: '2026-08-18'
-updated: '2026-08-18T23:25:00Z'
+updated: '2026-08-21T00:00:00Z'
+supersedes:
+  - _bmad-output/planning-artifacts/architecture.md
+ux_review:
+  - ARCHITECTURE-UX-REVIEW-2026-08-18.md
+  - ARCHITECTURE-UX-REMEDIATION-2026-08-21.md
 binds:
   - 'src/core/**'
   - 'src/scrapers/**'
@@ -435,3 +441,24 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((meta
 * AD-18: Metadata Schema Contract for Consumers.
 * AD-19: Internal Operator Dashboard, Admin CLI & MCP Surface.
 * Thêm section Inherited Invariants, Deferred, Open Questions.
+
+---
+
+## 8. UX Remediation Alignment
+
+Spine r3 đã hấp thụ 10 UX findings từ `ARCHITECTURE-UX-REVIEW-2026-08-18.md` thành các AD mới (AD-14..AD-19). Kế hoạch triển khai chi tiết, acceptance criteria, và mapping sang epic/story xem tại `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md`.
+
+| UX Finding | AD mới | Chủ đề | Trạng thái |
+|---|---|---|---|
+| F1 — Daemon startup UX | AD-7 | CLI `xactions daemon start/status/stop`, dashboard tile | Adopted |
+| F2 — QR non-TTY fallback | AD-15 | URL/short code/webhook, timeout message | Adopted |
+| F3 — Governor status | AD-13 + AD-14 | `GET /governor/status`, error envelope, `suggestedAction` | Adopted |
+| F4 — Checkpoint visibility | AD-16 | Checkpoint API, dashboard/CLI table | Adopted |
+| F5 — Action discovery | AD-11 + AD-18 | `listActions()`, schema registry | Adopted |
+| F6 — Error envelope | AD-14 | Standard `{ code, type, message, retryAfter, suggestedAction }` | Adopted |
+| F7 — Stream metrics | AD-17 | `GET /metrics/stream`, dashboard panel, alert thresholds | Adopted |
+| F8 — Metadata schema | AD-18 | Schema registry, validation, discovery | Adopted |
+| F9 — Operator dashboard | AD-19 | 5 views, admin CLI/MCP | Adopted |
+| F10 — Legacy CLI mapping | AD-2 | CrawlerCommand mapping, `unfollowx` alias | Adopted |
+
+Tất cả AD UX đã được chuyển thành story acceptance criteria trong `epics.md` và `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md`.

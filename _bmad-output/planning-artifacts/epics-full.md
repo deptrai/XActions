@@ -250,16 +250,16 @@ N/A — Technical infrastructure, no UX spec needed.
 
 ### Epic 6: Facebook Anti-Detection & Bot Countermeasures
 **Goal:** Fingerprint randomization, behavioral simulation, session hygiene, velocity controls.
-**FRs:** FR40-FR54
+**FRs:** FR-40..FR-54 (xem `prd-facebook-epics-5-6-2026-08-21.md`)
 **Status:** 🔄 4 done (Chrome path, headless, timeouts, share delays), 13 backlog
 
 ### Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
 **Goal:** Multi-type search, post/group comments, account health filtering, and parallel execution using account pool.
-**FRs:** FR55-FR61, FR63 (FR62 deferred to Phase 3)
+**FRs:** FR-55..FR-61, FR-63 (FR-62 deferred — xem `FUTURE-WORK.md`)
 **Status:** ✅ Done (4 stories)
 
-### Epic 8: Facebook Backend Reliability
-**Goal:** Harden backend infrastructure: database connection pooling, MCP error contract, auth token handling.
+### Epic 8: Facebook Backend Stability for Operators & MCP Clients
+**Goal:** Ensure the Facebook automation backend remains reliable and predictable for operators, MCP clients, and developers by hardening database connection pooling, MCP error contracts, and auth token handling.
 **FRs/PCRs:** PCR2, PCR6, PCR7
 **Status:** 🆕 backlog
 
@@ -993,7 +993,7 @@ So that I can reach all Facebook capabilities already implemented in the codebas
 
 **Goal:** Expand Facebook scraping to support multi-type search, post/group comments scraping, account health filtering, and parallel execution using a pool of live Facebook accounts.
 
-**FRs:** FR55-FR61, FR63 (FR62 deferred to Phase 3)
+**FRs:** FR-55..FR-61, FR-63 (FR-62 deferred — xem `FUTURE-WORK.md`)
 
 **NFRs:** NFR10-NFR15
 

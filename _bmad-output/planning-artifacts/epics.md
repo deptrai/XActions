@@ -16,6 +16,20 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 
 ---
 
+## Cross-Epic Dependency & Sequence Map
+
+| Epic/Story | Cần output từ | Lý do | Rủi ro nếu chưa xong |
+|---|---|---|---|
+| Epic 13-18 (crawlers) | Epic 10.1, 10.2, 10.5 | `AbstractCrawler`, `PrismaStore`, `metadata-schema` là nền tảng | Crawler không có interface/storage/schema để kế thừa. |
+| Epic 13-18 (crawlers) | Epic 11.1, 11.2, 11.3, 11.4 | `ProxyIpPool`, `AbstractApiClient`, `AdaptiveRateGovernor` | Không có proxy/retry/governor. |
+| Epic 15.2 (TikTok) | Epic 13.1 | `SignerWorkerPagePool` để giải mã `a_bogus`/`msToken` | Không thể sign TikTok request. |
+| Epic 18.3 (LinkedIn) | Epic 12.2 | CDP Remote Attach cho LinkedIn | **Blocked** — 12.2 còn backlog. |
+| Epic 19 (admin) | Epic 10.4, 11.4, 14.3 | Checkpoints, governor, stream metrics | Dashboard/CLI không có dữ liệu để hiển thị. |
+| Story 20.1 | Epics 13-18 | Crawler đa nền tảng phải stable trước shadow-run | Không có dữ liệu để đối soát. |
+| Story 20.2 | Story 20.1 | Shadow-run parity ≥ 99% trong 7 ngày | Xóa scraper cũ gây mất dữ liệu. |
+
+**Quy tắc dependency:** Không có forward reference theo số epic (Epic N không cần Epic N+1), nhưng **Epic 13–18 phải đợi Epic 10, 11 hoàn thành** và **Epic 20 phải đợi 13–18 + 20.1**. Epic 12.2 cần ưu tiên trước Epic 18.3.
+
 ## Requirements Inventory
 
 ### Functional Requirements
@@ -59,7 +73,9 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 
 ---
 
-## Epic 10: Unified PostgreSQL Storage (Prisma) & Core Interfaces
+## Epic 10: Data & Platform Foundation for Universal Scraping
+
+> **Foundation Enabler Epic:** This epic delivers the shared contracts, storage, and schema that all platform-specific scrapers (Epics 13–18), operational surfaces (Epic 19), and downstream consumers (Nowing, AI agents, CLI users) depend on. The direct users are platform engineers, data scientists, operators, and integrators; the end-user value is realized through faster, more reliable, and consistent multi-platform scraping.
 
 ### Story 10.1: Core Domain Interfaces & Error Hierarchy Definition
 As a **Core Developer**,
@@ -161,6 +177,8 @@ So that **consumer biết trước field nào tồn tại và kiểu dữ liệu
 ---
 
 ## Epic 11: Resilient Network & Proxy Pool Management
+
+> **Implementation Order:** Story 11.1 (Proxy/AccountPool) → 11.2 (Providers) → 11.4 (Governor) → 11.7 (Crawler-Governor + Validator) → 11.5 (End-to-End Pipeline) → 11.6 (Rate-Limit/Bot-Challenge Defense) → 11.3 (429/403 Interceptor). Story 11.3 đã được thu nhỏ scope và có thể được hấp thụ bởi 11.5/11.6 nếu cần; hiện tại giữ riêng để theo dõi interceptor unit.
 
 ### Story 11.1: ProxyIpPool & AccountPool for Sticky/Round-Robin IP and Multi-Account Rotation
 As an **Automation Operator**,
@@ -635,18 +653,31 @@ So that **Claude/Cursor/Antigravity có thể hỏi "tình trạng proxy pool th
 
 ## Epic 20: Nowing Cutover & Legacy Scraper Decommissioning
 
-### Story 20.1: Nowing Daemon Client Cutover & Legacy Scrapers Decommissioning
-As a **Lead System Architect**,
-I want **nâng cấp adapter bên Nowing kết nối sang XActions Daemon HTTP/SSE (Port 3001) và gỡ bỏ toàn bộ 20+ scraper cũ trong `nowing_backend/app/proprietary/platforms/`**,
-So that **Nowing backend được tinh gọn 100%, giảm kích thước Docker từ 4GB xuống <500MB và thống nhất hạ tầng cào duy nhất về XActions**.
+### Story 20.1: Nowing Shadow-Run Adapter over XActions Daemon
+As a **Nowing Integration Lead**,
+I want **nâng cấp adapter `nowing_backend/app/proprietary/platforms/xactions/adapter.py` để gọi XActions MCP Daemon HTTP/SSE (Port 3001) qua HTTP Keep-Alive Connection Pool**,
+So that **Nowing bắt đầu nhận dữ liệu từ XActions song song với scraper cũ để so sánh (shadow run) trước khi thay thế hoàn toàn**.
+
+**Pre-condition:** Epics 13–18 (crawler Social, Ecom, BĐS, Tuyển dụng) đã ổn định.
 
 **Acceptance Criteria:**
 * **Given** repository Nowing tại `/Users/luisphan/Documents/GitHub/nowing`
-* **And** XActions đã hoàn thành các crawler đa nền tảng (Social, Ecom, BĐS, Tuyển dụng) từ Epic 15–18
-* **When** cập nhật `nowing_backend/app/proprietary/platforms/xactions/adapter.py` sử dụng HTTP Keep-Alive Connection Pool gọi sang `http://xactions-service:3001`
-* **Then** Nowing nhận đủ 100% dữ liệu qua kiểm thử đối soát (Shadow Run)
-* **And** xóa bỏ an toàn các thư mục scraper cũ trong `nowing_backend/app/proprietary/platforms/` (`shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.)
-* **And** gỡ bỏ các dependency trình duyệt nặng (`selenium`, `playwright-python`, Chromium binaries) khỏi Dockerfile của Nowing.
+* **When** cập nhật `adapter.py` gọi sang `http://xactions-service:3001`
+* **Then** Nowing nhận đủ 100% dữ liệu qua kiểm thử đối soát (Shadow Run) trong môi trường staging
+* **And** adapter ghi log diff (field-level) giữa dữ liệu cũ và mới cho từng platform
+
+### Story 20.2: Legacy Scraper Code Decommissioning
+As a **Nowing Maintainer**,
+I want **xóa bỏ an toàn các thư mục scraper cũ trong `nowing_backend/app/proprietary/platforms/`**,
+So that **codebase không còn chứa code cũ đã được thay thế, giảm rủi ro bảo trì và độ phức tạp**.
+
+**Pre-condition:** Story 20.1 shadow-run đạt ≥ 99% field parity trong 7 ngày liên tiếp.
+
+**Acceptance Criteria:**
+* **Given** shadow-run đạt ≥ 99% field parity trong 7 ngày liên tiếp
+* **When** xóa các thư mục `shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.
+* **Then** CI tests pass, Nowing Docker image < 500MB
+* **And** gỡ bỏ `selenium`, `playwright-python`, Chromium binaries khỏi Dockerfile Nowing
 
 ---
 

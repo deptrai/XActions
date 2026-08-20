@@ -1,8 +1,10 @@
 ---
 title: Facebook Platform Extension
 created: 2026-06-08
-updated: 2026-06-08
-status: draft-reviewed
+updated: 2026-08-21
+status: deprecated
+supersededBy: _bmad-output/planning-artifacts/epics-full.md
+note: "Nội dung FR1–14 đã được hợp nhất vào epics-full.md và prd-facebook-epics-5-6-2026-08-21.md. Giữ lại để tham khảo lịch sử."
 ---
 
 # PRD: Facebook Platform Extension

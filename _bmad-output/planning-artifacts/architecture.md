@@ -14,9 +14,12 @@ workflowType: 'architecture'
 project_name: 'XActions'
 user_name: 'Luisphan'
 date: '2026-06-05'
-status: 'brownfield-as-built'
+updated: 2026-08-21
+status: deprecated
+supersededBy: _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
+note: "Architecture brownfield as-built gốc. Kiến trúc hiện tại được tổng hợp, mở rộng, và duy trì tại ARCHITECTURE-SPINE.md (r3). Giữ lại để tham khảo legacy decisions."
 prd_status: 'not-found-in-bmad-output'
-lastUpdate: '2026-06-07'
+lastUpdate: '2026-08-21'
 addenda:
   - facebook-platform-extension
 ---

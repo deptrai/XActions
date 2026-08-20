@@ -656,3 +656,19 @@ Assessment này xác định **5 nhóm vấn đề critical** (canonicalization,
 - **Report file:** `_bmad-output/planning-artifacts/implementation-readiness-report-2026-08-21.md`
 
 Workflow complete.
+
+---
+
+# Remediation Progress — 2026-08-21
+
+| Critical Issue | Hành động đã thực hiện | File / Commit |
+|---|---|---|
+| **1. Canonical PRD & FR/NFR** | `prd.md` được đánh dấu `canonical: true`. 4 PRD cũ deprecated. Tạo `prd-facebook-epics-5-6-2026-08-21.md` cho FR-23..FR-54. Tạo `prd-canonicalization-addendum-2026-08-21.md` master register với prefix `FB-`, `U-`, `FUTURE-`. Tạo `FUTURE-WORK.md` cho FR-62. | `prd.md`, `prds/*/prd.md`, `prd-facebook-epics-5-6-2026-08-21.md`, `prd-canonicalization-addendum-2026-08-21.md`, `FUTURE-WORK.md` |
+| **2. Epic Quality** | Reframe Epic 8 → "Facebook Backend Stability for Operators & MCP Clients". Reframe Epic 10 → "Data & Platform Foundation for Universal Scraping" với user value. Split Story 20.1 → 20.1 + 20.2. Thêm implementation order cho Epic 11. | `epics-full.md`, `epics.md` |
+| **3. Cross-Epic Dependency Map** | Thêm map `Epic/Story → Cần output từ → Rủi ro` ngay sau mở đầu `epics.md`. | `epics.md` |
+| **4. UX Alignment** | Tạo `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` map F1–F10 → epic/story + AC + priority. Bổ sung new components trong `DESIGN.md`. Tạo `EXPERIENCE-UNIVERSAL-2026-08-21.md` với operator/AI/CLI/multi-platform flows. | `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md`, `DESIGN.md`, `EXPERIENCE-UNIVERSAL-2026-08-21.md` |
+| **5. Canonical Architecture** | `ARCHITECTURE-SPINE.md` đánh dấu `canonical: true`. `architecture.md` deprecated. Thêm section UX Remediation Alignment trong spine với table F1–F10. Tạo `CANONICAL-DOCS.md` registry. | `ARCHITECTURE-SPINE.md`, `architecture.md`, `CANONICAL-DOCS.md` |
+
+### Updated Overall Readiness Status
+
+**CONDITIONAL READY** — Các tài liệu canonical đã được thiết lập, FR/NFR master register tồn tại, epic quality đã cải thiện, UX gaps được map thành AC. Cần review và phê duyệt bởi Product Council trước khi bắt đầu Phase 4.

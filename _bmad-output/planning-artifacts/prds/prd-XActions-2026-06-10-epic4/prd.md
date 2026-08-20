@@ -1,8 +1,10 @@
 ---
 title: "Epic 4 — Facebook Growth Automation"
 created: 2026-06-10
-updated: 2026-06-10
-status: draft
+updated: 2026-08-21
+status: deprecated
+supersededBy: _bmad-output/planning-artifacts/epics-full.md
+note: "Nội dung FR-15..FR-23 đã được hợp nhất vào epics-full.md. Giữ lại để tham khảo lịch sử."
 epic: 4
 prd_ref: prd-XActions-2026-06-08
 ---

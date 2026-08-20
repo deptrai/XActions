@@ -1,8 +1,15 @@
 ---
 title: "PRD: Epics 10–20 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform"
 created: 2026-08-18
-updated: 2026-08-19
+updated: 2026-08-21
 status: approved
+canonical: true
+supersedes:
+  - _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md
+  - _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md
+  - _bmad-output/planning-artifacts/prds/prd-XActions-2026-08-14-epic7/prd.md
+  - _bmad-output/planning-artifacts/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md
+note: "Canonical PRD cho Epics 10–20. Các PRD cũ trong `prds/` được đánh dấu deprecated. FR-24..FR-54 xem `prd-facebook-epics-5-6-2026-08-21.md`. FR-62 xem `FUTURE-WORK.md`."
 author: "John (BMad Product Manager) & Winston (BMad System Architect)"
 epics: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 prd_ref:
@@ -167,3 +174,14 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Data Retention | FR-87 |
 | 3-Tier Gap-Filling | FR-88 |
 | Stream Metrics / Alerts | NFR-17 |
+
+### 7.5. Canonicalization & Related Documents
+
+- **Canonical PRD:** Tài liệu này (`prd.md`) là canonical cho Epics 10–20.
+- **PRD liên quan khác:**
+  - `prd-facebook-epics-5-6-2026-08-21.md` — PRD canonical cho Epics 5, 5b, 6 (FR-23–FR-54).
+  - `FUTURE-WORK.md` — deferred scope: FR-62, advanced Marketplace filters, canvas/WebGL spoofing.
+- **Canonicalization addendum:** `_bmad-output/planning-artifacts/prd-canonicalization-addendum-2026-08-21.md` — master register FR/NFR với prefix phạm vi.
+- **Open decisions:**
+  - **FR-62 (GraphQL replay):** hiện tại deferred, xem `FUTURE-WORK.md`.
+  - **FR-24..FR-54:** đã được bổ sung trong `prd-facebook-epics-5-6-2026-08-21.md`.

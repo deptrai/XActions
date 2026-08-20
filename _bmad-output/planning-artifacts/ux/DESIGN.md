@@ -227,6 +227,47 @@ The primary interaction unit. One card per automation feature.
 - Hover: `surface-alt` background
 - Icons: emoji (consistent with project voice)
 
+## New Components for Hybrid Engine & Admin Dashboard
+
+> Bổ sung từ `EXPERIENCE-UNIVERSAL-2026-08-21.md` và `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` để mở rộng design system cho operator dashboard, MCP/CLI output, và multi-platform flows.
+
+### Admin Status Card
+
+- Layout: `icon` + `metric` + `trend` + `action link`.
+- Colors: `success` khi healthy, `warning` khi threshold vượt, `error` khi critical.
+- Example: Proxy pool card hiển thị `12/15 healthy` với progress bar.
+
+### Alert Banner
+
+- Position: top of admin view.
+- Content: `icon` + `message` + `suggestedAction` button.
+- Auto-dismiss after 30s unless critical.
+
+### Data Table (Checkpoints / Proxies / Accounts)
+
+- Header: platform, target/status, last activity, actions.
+- Rows: alternating `surface` background.
+- Inline action buttons: Resume, Pause, Retry, Cancel.
+- Empty state với actionable CTA.
+
+### Schema Viewer
+
+- Tree view `platform → category` bên trái.
+- JSON Schema preview bên phải.
+- "Validate sample" button kiểm tra `Post.metadata` mẫu.
+
+### Stream Metrics Line Chart
+
+- Time range: 5 minutes, 1 hour, 24 hours.
+- Series: `eventsPerSecond`, `pendingMessages`.
+- Alert threshold line (màu `error`).
+
+### CLI Output Blocks
+
+- `--json` flag cho pipable output.
+- Non-TTY fallback: plain text tables, URLs, short codes.
+- Error block bao gồm `code`, `message`, `suggestedAction`.
+
 ## Do's and Don'ts
 
 **Do:**
