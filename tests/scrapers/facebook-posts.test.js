@@ -185,7 +185,7 @@ describe('[TEA] scrapeTweets — scroll loop behavior', () => {
         return [];
       },
     };
-    const result = await scrapeTweets(page, 'zuck', { limit: 10, delay: () => {}, maxRetries: 3 });
+    const result = await scrapeTweets(page, 'zuck', { limit: 10, delay: () => {}, maxRetries: 3, useMbasic: false });
     expect(result.filter(p => p.id === 'dup-id').length).toBe(1);
   });
 
@@ -204,7 +204,7 @@ describe('[TEA] scrapeTweets — scroll loop behavior', () => {
         return [];
       },
     };
-    const result = await scrapeTweets(page, 'zuck', { limit: 50, delay: () => {}, maxRetries: 3 });
+    const result = await scrapeTweets(page, 'zuck', { limit: 50, delay: () => {}, maxRetries: 3, useMbasic: false });
     expect(result.length).toBe(1);
     expect(result[0].id).toBe('p1');
   });

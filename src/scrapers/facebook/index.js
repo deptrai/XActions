@@ -1069,12 +1069,15 @@ async function scrapeMbasicProfile(page, handle) {
  * @param {string} username - Handle (zuck), @handle, or full facebook.com URL
  * @returns {Object} Normalized profile data
  */
-export async function scrapeProfile(page, username) {
+export async function scrapeProfile(page, username, options = {}) {
+  const { useMbasic = true } = options;
   const handle = normalizeHandle(username);
 
   // Try mbasic first — less bot detection, plain HTML.
-  const mbasicResult = await scrapeMbasicProfile(page, handle);
-  if (mbasicResult) return mbasicResult;
+  if (useMbasic) {
+    const mbasicResult = await scrapeMbasicProfile(page, handle);
+    if (mbasicResult) return mbasicResult;
+  }
 
   // Fallback to desktop / m.facebook.com.
   const url = `${FACEBOOK_BASE}/${handle}`;
@@ -1267,6 +1270,7 @@ export async function scrapeTweets(page, username, options = {}) {
     // Injectable delay seam — defaults to human-like jitter, override (e.g. () => {})
     // in tests to keep the scroll loop fast and browser-free.
     delay = randomDelay,
+    useMbasic = true,
   } = options;
 
   // Determine target URL: full URLs (groups, permalinks) go directly,
@@ -1276,7 +1280,7 @@ export async function scrapeTweets(page, username, options = {}) {
   const isGroup = isFullUrl && /\/groups\//.test(username);
 
   // Profiles/pages: try mbasic first (lightweight HTML, less bot detection).
-  if (!isGroup) {
+  if (useMbasic && !isGroup) {
     const handle = isFullUrl ? username.replace(/^https?:\/\/(www\.|m\.|mbasic\.)?facebook\.com\//, '').replace(/\?.*$/, '') : normalizeHandle(username);
     const mbasicResult = await scrapeMbasicPosts(page, handle, { limit, onProgress, delay });
     if (mbasicResult && mbasicResult.length > 0) return mbasicResult;

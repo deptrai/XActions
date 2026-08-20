@@ -630,7 +630,7 @@ describe('scrapeProfile (P1 kill, fake page)', () => {
       domFollowers: null,
       pageUrl: 'https://facebook.com/test',
     });
-    await scrapeProfile(page, 'test');
+    await scrapeProfile(page, 'test', { useMbasic: false });
     expect(page.calls.goto).toHaveLength(1);
     expect(page.calls.goto[0].url).toBe('https://www.facebook.com/test');
   });
@@ -643,7 +643,7 @@ describe('scrapeProfile (P1 kill, fake page)', () => {
       domFollowers: null,
       pageUrl: 'https://facebook.com/test',
     });
-    await scrapeProfile(page, '@test');
+    await scrapeProfile(page, '@test', { useMbasic: false });
     expect(page.calls.goto[0].url).toBe('https://www.facebook.com/test');
   });
 
@@ -655,7 +655,7 @@ describe('scrapeProfile (P1 kill, fake page)', () => {
       domFollowers: null,
       pageUrl: 'https://facebook.com/test',
     });
-    await scrapeProfile(page, 'https://facebook.com/test');
+    await scrapeProfile(page, 'https://facebook.com/test', { useMbasic: false });
     expect(page.calls.goto[0].url).toBe('https://www.facebook.com/test');
   });
 });
@@ -797,7 +797,7 @@ describe('scrapeTweets (P1 kill, fake page)', () => {
   it('navigates to profile URL (L595-597)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => [];
-    await scrapeTweets(page, 'testuser', { delay, maxRetries: 1 });
+    await scrapeTweets(page, 'testuser', { delay, maxRetries: 1, useMbasic: false });
     expect(page.calls.goto[0].url).toBe('https://www.facebook.com/testuser');
   });
 

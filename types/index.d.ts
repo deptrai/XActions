@@ -19,6 +19,7 @@ export interface ScrapeOptions {
   limit?: number;
   format?: 'json' | 'csv';
   output?: string;
+  useMbasic?: boolean;
 }
 
 // ── Profile ─────────────────────────────────────────────────────────────────
@@ -275,7 +276,7 @@ export function createBrowser(options?: BrowserOptions): Promise<Browser>;
 export function createPage(browser: Browser): Promise<Page>;
 
 /** Scrape a user's profile data */
-export function scrapeProfile(page: Page, username: string): Promise<Profile>;
+export function scrapeProfile(page: Page, username: string, options?: ScrapeOptions): Promise<Profile>;
 
 /** Scrape a user's followers */
 export function scrapeFollowers(page: Page, username: string, options?: ScrapeOptions): Promise<User[]>;
