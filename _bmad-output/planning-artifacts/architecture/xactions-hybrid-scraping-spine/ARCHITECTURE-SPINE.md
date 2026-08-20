@@ -5,7 +5,8 @@ purpose: build-substrate
 altitude: system-microservice
 paradigm: 'Hexagonal / Ports & Adapters + Tiered Hybrid Signer Pool + Dual-Channel High-Speed Microservice + Adaptive Infrastructure-Aware Rate Limiting'
 scope: 'XActions Universal Scraping Engine: Social Media, E-Commerce, Real Estate, Recruitment, Proxy Network, PostgreSQL Storage with JSONB GIN Indexes, MCP HTTP/SSE Daemon, Redis Streams, and Adaptive Account Protection'
-status: final
+status: canonical
+replaces: _bmad-output/planning-artifacts/architecture.md
 created: '2026-08-18'
 updated: '2026-08-18T23:25:00Z'
 binds:

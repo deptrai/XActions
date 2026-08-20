@@ -41,7 +41,14 @@ skill: bmad-check-implementation-readiness
 | `EPIC10-DECISION-LOG-2026-08-18.md` | Decision log. |
 | `architecture-ecosystem-manus-killer-2026-08-20/ARCHITECTURE-SPINE.md` | Bản ecosystem rộng hơn — xem xét merge hoặc để riêng như `architecture/v2`. |
 
-**Lưu ý:** `architecture.md` (whole, 45K) là bản tổng hợp cũ hơn. Sau khi merge nội dung còn giá trị vào `ARCHITECTURE-SPINE.md`, sẽ đánh dấu `architecture.md` là deprecated.
+**Lưu ý:** `architecture.md` (whole, 45K) đã được đánh dấu deprecated. Nội dung còn giá trị đã được hợp nhất vào `ARCHITECTURE-SPINE.md`.
+
+### UX Remediation Canonical
+
+| File | Mục đích |
+|---|---|
+| `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` | Bản gốc 10 findings. |
+| `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` | **Canonical remediation** — map F1–F10 sang epic/story và AC bổ sung. |
 
 ## Canonical Epics & Stories
 
@@ -62,8 +69,10 @@ Hai file này bổ sung nhau; sẽ merge thành một `epics.md` duy nhất tron
 
 ## Actions tiếp theo
 
-1. Cập nhật frontmatter các PRD deprecated.
-2. Bổ sung `canonical: true` vào `prd.md`.
-3. Tạo `prd-canonicalization-addendum.md` để giải quyết FR/NFR numbering conflicts.
-4. Cập nhật `epics.md` dependency map.
-5. Update UX docs dựa trên `ARCHITECTURE-UX-REVIEW`.
+1. ✅ Cập nhật frontmatter các PRD deprecated.
+2. ✅ Bổ sung `canonical: true` vào `prd.md`.
+3. ✅ Tạo `prd-canonicalization-addendum.md` để giải quyết FR/NFR numbering conflicts.
+4. ✅ Cập nhật `epics.md` dependency map.
+5. ✅ Tạo `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` map F1–F10 sang epic/story.
+6. Cập nhật UX docs `ux/DESIGN.md` và `ux/EXPERIENCE.md` dựa trên remediation.
+7. Chỉnh sửa epic/story cụ thể để bổ sung AC từ F1–F10.
