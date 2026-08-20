@@ -570,6 +570,30 @@ pendingDuplicates:
 
 ---
 
+## Post-Assessment Remediation (Executed)
+
+### Quyết định từ user: "tự quyết định theo best practices"
+
+Tất cả 3 vấn đề mở từ **Final Assessment** đã được giải quyết và push lên `main` (`deptrai/XActions`):
+
+| Vấn đề | Quyết định | File tạo/cập nhật |
+|---|---|---|
+| **FR-24..FR-54 thiếu PRD** | Tạo PRD canonical `prd-facebook-epics-5-6-2026-08-21.md` bao gồm Vision, Target User, UJ, Glossary, Features, FR23–FR54, NFR1–10, AR1–10, MVP scope. | `prd-facebook-epics-5-6-2026-08-21.md` |
+| **FR-62 GraphQL replay** | Giữ deferred; tạo `FUTURE-WORK.md` ghi rõ điều kiện mở lại; cập nhật `epics-full.md` và `prd.md` tham chiếu. | `FUTURE-WORK.md`, `epics-full.md`, `prd.md` |
+| **UX docs lỗi thời** | Tạo `EXPERIENCE-UNIVERSAL-2026-08-21.md` cho operator/AI/multi-platform flows; cập nhật `DESIGN.md` New Components; cập nhật `CANONICAL-DOCS.md`. | `EXPERIENCE-UNIVERSAL-2026-08-21.md`, `DESIGN.md`, `CANONICAL-DOCS.md` |
+
+### Commit history push lên remote
+
+- `docs: add PRD for Epics 5-6, future-work, universal UX, update canonical registry`
+- Các commit trước: canonicalization, epic reframe, architecture UX remediation.
+
+### Trạng thái hiện tại
+
+- `main` branch trên `deptrai/XActions` đã được cập nhật với toàn bộ remediation.
+- Các untracked files khác (architecture-ecosystem-manus-killer-2026-08-20, briefs, scratch, test-artifacts, apps/) vẫn chưa được stage vì không thuộc phạm vi readiness remediation.
+
+---
+
 ## Step 6: Final Assessment
 
 ### Overall Readiness Status
