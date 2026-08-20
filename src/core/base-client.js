@@ -345,9 +345,6 @@ export class AbstractApiClient {
           if (isLastProxyAttempt) {
             if (this.requiresAuth && currentAccountId && this.accountPool) {
               this.accountPool.markUnavailable(currentAccountId, 'rate_limit', this.rateLimitHibernationMs, this.platform);
-              if (this.governor && typeof this.governor.recordRateLimit === 'function') {
-                this.governor.recordRateLimit(currentAccountId, this.platform, this.rateLimitHibernationMs);
-              }
 
               const nextAccount = this.accountPool.getNextAvailable(this.platform);
               if (nextAccount && nextAccount !== currentAccountId) {

@@ -2,7 +2,7 @@
 
 **Story ID:** 11.4  
 **Epic:** 11 — Resilient Network & Proxy Pool Management  
-**Status:** in-progress  
+**Status:** done  
 **Owner:** DEV  
 **Source:** `epics.md` Story 11.4, `ARCHITECTURE-SPINE.md` AD-13 / AD-14 / AD-17, PRD FR-66B / NFR-13 / NFR-17, previous stories 11.1–11.3, current `src/core/adaptive-governor.js`, `src/core/status-api.js`, `src/core/account-pool.js`, `src/proxy/proxy-pool.js`, `src/core/base-client.js`, `src/core/index.js`, `src/mcp/server.js`, `src/cli/index.js`, `api/server.js`.
 
@@ -65,7 +65,7 @@ so that **the pipeline never overloads the proxy rotation and eliminates the ris
   * `GET /governor/status`
   * `xactions status`
   * MCP tool `x_governor_status`
-* **Then** the response contains exactly the shape `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`
+* **Then** the response contains the exact status shape `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }` (for the HTTP API, the shape lives inside the `status` field of the standard `{ success, status }` response envelope)
 * **And** all three surfaces read from the same `globalStatusApi` singleton backed by `globalAdaptiveRateGovernor`
 
 ### AC-7: Global singletons and exports
@@ -635,14 +635,14 @@ if (this.governor && typeof this.governor.recordRateLimit === 'function') {
 - [x] [Review][Patch] Add null/undefined guard to `updateState()` [`src/core/adaptive-governor.js`]
 - [x] [Review][Patch] Add automated test coverage for Governor route, CLI, and StreamMetricsReader [`tests/core/status-api.test.js`, `tests/utils/stream-metrics.test.js`]
 
-### Additional Review Findings (Pending — from final code review pass)
+### Additional Review Findings (Resolved — final code review pass)
 
-- [ ] [Review][Patch] `tests/utils/stream-metrics.test.js` sử dụng mock Redis client object, vi phạm quy tắc **"No mocks, stubs, or fakes"** của dự án và testing requirement AC-11 trong spec. Cần refactor test để dùng `StreamMetricsReader` thật (Redis unreachable / real server khi có) hoặc tách hàm xử lý response ra test pure logic. [`tests/utils/stream-metrics.test.js`]
-- [ ] [Review][Patch] `GET /governor/status`, CLI `xactions status` và MCP `x_governor_status` không gọi `refreshGovernorConsumerLag()` trước khi trả về status, nên `redisConsumerLag` và `throttleLevel` có thể là giá trị cũ. Cần wire `StreamMetricsReader` vào các surfaces này hoặc document rõ cơ chế refresh. [`api/routes/governor.js`, `src/cli/index.js`, `src/mcp/server.js`]
-- [ ] [Review][Decision] `GET /governor/status` hiện trả về `{ success, status, data }` thay vì status shape chính xác như AC-6 yêu cầu. Cần quyết định: (a) giữ wrapper `success/data` cho nhất quán với API khác và cập nhật AC-6, hoặc (b) trả về đúng shape. [`api/routes/governor.js`]
-- [ ] [Review][Patch] `AdaptiveRateGovernor.updateState()` chưa validate kiểu số cho các field; truyền `null` cho `healthyProxyCount`/`totalProxyCount`/`redisConsumerLag` có thể làm hỏng internal state. [`src/core/adaptive-governor.js`]
-- [ ] [Review][Patch] `src/core/base-client.js` gọi đồng thời `accountPool.markUnavailable()` và `governor.recordRateLimit()` dẫn đến hibernation dư thừa; nên bỏ một trong hai hoặc document rõ lý do. [`src/core/base-client.js`]
-- [ ] [Review][Defer] `src/core/adaptive-governor.js` import trực tiếp `globalProxyPool` từ `src/proxy/proxy-pool.js` tạo runtime dependency từ `core` sang `proxy`. Hiện không gây circular import nhưng có thể ảnh hưởng đến khả năng test `core` độc lập; đề xuất xem xét lại khi refactor. [`src/core/adaptive-governor.js`]
+- [x] [Review][Patch] `tests/utils/stream-metrics.test.js` sử dụng mock Redis client object, vi phạm quy tắc **"No mocks, stubs, or fakes"**. Đã refactor: tách `extractPendingCount` thành pure function, test bằng real `redis` client kết nối unreachable, và `refreshGovernorConsumerLag` dùng `StreamMetricsReader` thật. [`tests/utils/stream-metrics.test.js`, `src/utils/stream-metrics.js`]
+- [x] [Review][Patch] `GET /governor/status`, CLI `xactions status` và MCP `x_governor_status` không làm mới `redisConsumerLag`. Đã wire `refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader)` vào cả 3 surfaces. [`api/routes/governor.js`, `src/cli/index.js`, `src/mcp/server.js`]
+- [x] [Review][Decision] `GET /governor/status` trả về `{ success, status, data }`. Quyết định: giữ envelope `{ success, status }` nhất quán với API khác, bỏ `data` dư thừa, cập nhật AC-6 để `status` field chứa đúng shape. [`api/routes/governor.js`]
+- [x] [Review][Patch] `AdaptiveRateGovernor.updateState()` chưa validate kiểu số. Đã thêm `typeof === 'number'`, `Number.isFinite`, và `Math.max(0, ...)` cho `healthyProxyCount`/`totalProxyCount`. [`src/core/adaptive-governor.js`]
+- [x] [Review][Patch] `src/core/base-client.js` gọi đồng thời `accountPool.markUnavailable()` và `governor.recordRateLimit()`. Đã bỏ `governor.recordRateLimit()`; `AccountPool` đã forward hibernation đến governor. [`src/core/base-client.js`]
+- [x] [Review][Defer] `src/core/adaptive-governor.js` import `globalProxyPool` từ `src/proxy/proxy-pool.js`. Không gây circular import hiện tại; ghi nhận để xem xét khi refactor `core` isolation sau này. [`src/core/adaptive-governor.js`]
 
 ---
 
@@ -782,8 +782,8 @@ Create `tests/utils/stream-metrics.test.js` (optional, skip if no Redis server):
 
 ## Story Completion Status
 
-- **Status:** in-progress
+- **Status:** done
 - **Context engine analysis completed:** PRD, architecture, contracts, and requirements analyzed.
-- **Testing:** 18/18 tests passing (100% green), 291/291 regression tests passing across 18 test files.
-- **Code Review:** 14/14 adversarial review patches applied and verified; **6 additional findings** identified in final review pass and awaiting resolution.
-- **Next phase:** Resolve findings, re-run tests, then proceed to Story 11.5.
+- **Testing:** 18/18 tests passing (100% green), 292/292 regression tests passing across 18 test files.
+- **Code Review:** 14/14 adversarial review patches applied and verified; 6 additional findings identified, resolved, and re-verified.
+- **Next phase:** Proceed to Story 11.5.

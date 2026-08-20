@@ -134,8 +134,12 @@ export class AdaptiveRateGovernor {
    */
   updateState(state) {
     if (!state || typeof state !== 'object') return;
-    if (state.healthyProxyCount !== undefined) this.#healthyProxyCount = state.healthyProxyCount;
-    if (state.totalProxyCount !== undefined) this.#totalProxyCount = state.totalProxyCount;
+    if (typeof state.healthyProxyCount === 'number' && Number.isFinite(state.healthyProxyCount)) {
+      this.#healthyProxyCount = Math.max(0, state.healthyProxyCount);
+    }
+    if (typeof state.totalProxyCount === 'number' && Number.isFinite(state.totalProxyCount)) {
+      this.#totalProxyCount = Math.max(0, state.totalProxyCount);
+    }
     if (state.redisConsumerLag !== undefined) this.updateRedisConsumerLag(state.redisConsumerLag);
   }
 

@@ -1970,7 +1970,9 @@ program
   .option('--json', 'Output raw JSON')
   .action(async (options) => {
     try {
-      const { globalStatusApi } = await import('../core/index.js');
+      const { globalStatusApi, globalAdaptiveRateGovernor } = await import('../core/index.js');
+      const { refreshGovernorConsumerLag, globalStreamMetricsReader } = await import('../utils/stream-metrics.js');
+      await refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader);
       const status = globalStatusApi.getGovernorStatus();
       if (options.json) {
         console.log(JSON.stringify(status, null, 2));

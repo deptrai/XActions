@@ -4832,7 +4832,9 @@ async function executeAITool(name, args) {
     }
 
     case 'x_governor_status': {
-      const { globalStatusApi } = await import('../core/index.js');
+      const { globalStatusApi, globalAdaptiveRateGovernor } = await import('../core/index.js');
+      const { refreshGovernorConsumerLag, globalStreamMetricsReader } = await import('../utils/stream-metrics.js');
+      await refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader);
       const status = globalStatusApi.getGovernorStatus();
       return status;
     }

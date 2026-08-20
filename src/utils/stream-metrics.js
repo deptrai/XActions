@@ -5,6 +5,23 @@
  * @license MIT
  */
 
+/**
+ * Normalize the value returned by Redis XPENDING into a pending message count.
+ * Works for redis (object with `pending`/`count`) and ioredis-like (array or object) clients.
+ * @param {any} info
+ * @returns {number}
+ */
+export function extractPendingCount(info) {
+  if (info === null || info === undefined) return 0;
+  if (Array.isArray(info) && info.length > 0) {
+    return Number(info[0]) || 0;
+  }
+  if (typeof info === 'object') {
+    return Number(info?.pending ?? info?.count ?? 0) || 0;
+  }
+  return Number(info) || 0;
+}
+
 export class StreamMetricsReader {
   /** @type {import('redis').RedisClientType | null} */
   #redisClient = null;
@@ -44,7 +61,9 @@ export class StreamMetricsReader {
       const { createClient } = await import('redis');
       const url = process.env.REDIS_URL || (process.env.REDIS_HOST ? `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}` : 'redis://localhost:6379');
       const client = createClient({ url });
-      client.on('error', () => {}); // Prevent unhandled error event crashes
+      client.on('error', (err) => {
+        console.warn('[StreamMetricsReader] Redis client error:', err?.message || String(err));
+      });
       await client.connect();
       this.#redisClient = client;
       this.#isOwnedClient = true;
@@ -68,14 +87,11 @@ export class StreamMetricsReader {
     try {
       if (typeof client.xPending === 'function') {
         const info = await client.xPending(this.#streamKey, this.#groupName);
-        return Number(info?.pending ?? info?.count ?? 0) || 0;
+        return extractPendingCount(info);
       }
       if (typeof client.xpending === 'function') {
         const info = await client.xpending(this.#streamKey, this.#groupName);
-        if (Array.isArray(info) && info.length > 0) {
-          return Number(info[0]) || 0;
-        }
-        return Number(info?.pending ?? info?.count ?? 0) || 0;
+        return extractPendingCount(info);
       }
       return 0;
     } catch (err) {
@@ -114,3 +130,6 @@ export async function refreshGovernorConsumerLag(governor, reader = new StreamMe
   }
   return lag;
 }
+
+/** @type {StreamMetricsReader} */
+export const globalStreamMetricsReader = new StreamMetricsReader();

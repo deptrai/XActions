@@ -6,7 +6,8 @@
  */
 
 import { Router } from 'express';
-import { globalStatusApi } from '../../src/core/index.js';
+import { globalStatusApi, globalAdaptiveRateGovernor } from '../../src/core/index.js';
+import { refreshGovernorConsumerLag, globalStreamMetricsReader } from '../../src/utils/stream-metrics.js';
 
 const router = Router();
 
@@ -14,13 +15,13 @@ const router = Router();
  * GET /governor/status
  * Returns live rate governor, proxy health, and hibernation metrics.
  */
-router.get('/status', (req, res) => {
+router.get('/status', async (req, res) => {
   try {
+    await refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader);
     const status = globalStatusApi.getGovernorStatus();
     res.json({
       success: true,
       status,
-      data: status, // for compatibility
     });
   } catch (err) {
     res.status(500).json({
