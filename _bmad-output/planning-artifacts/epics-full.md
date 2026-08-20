@@ -258,8 +258,8 @@ N/A — Technical infrastructure, no UX spec needed.
 **FRs:** FR55-FR61, FR63 (FR62 deferred to Phase 3)
 **Status:** ✅ Done (4 stories)
 
-### Epic 8: Facebook Backend Reliability
-**Goal:** Harden backend infrastructure: database connection pooling, MCP error contract, auth token handling.
+### Epic 8: Facebook Backend Stability for Operators & MCP Clients
+**Goal:** Ensure the Facebook automation backend remains reliable and predictable for operators, MCP clients, and developers by hardening database connection pooling, MCP error contracts, and auth token handling.
 **FRs/PCRs:** PCR2, PCR6, PCR7
 **Status:** 🆕 backlog
 
@@ -1137,11 +1137,11 @@ So that the surface is consistent and maintainable.
 
 ---
 
-## Epic 8: Facebook Backend Reliability
+## Epic 8: Facebook Backend Stability for Operators & MCP Clients
 
 **Status:** 🆕 backlog
 
-**Epic Goal:** Harden backend infrastructure: database connection pooling, MCP error contract, auth token handling.
+**Epic Goal:** Ensure the Facebook automation backend remains reliable and predictable for operators, MCP clients, and developers by hardening database connection pooling, MCP error contracts, and auth token handling.
 
 **FRs/PCRs covered:** PCR2, PCR6, PCR7
 

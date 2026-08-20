@@ -60,6 +60,21 @@ After new hybrid crawlers (Epics 13–18) are stable, the following legacy modul
 
 ---
 
+## Cross-Epic Dependency & Sequence Map
+
+| Epic/Story | Cần output từ | Lý do | Rủi ro nếu chưa xong |
+|---|---|---|---|
+| Epic 13-18 (crawlers) | Epic 10.1, 10.2, 10.5 | `AbstractCrawler`, `PrismaStore`, `metadata-schema` là nền tảng | Crawler không có interface/storage/schema để kế thừa. |
+| Epic 13-18 (crawlers) | Epic 11.3, 11.4, 11.7 | `AbstractApiClient`, `AdaptiveRateGovernor`, `Crawler-Governor Integration` | Không có proxy/retry/governor/validator. |
+| Epic 15.2 | Epic 13.1 | `SignerWorkerPagePool` để giải mã `a_bogus`/`msToken` | Không thể sign TikTok request. |
+| Epic 18.3 | Epic 12.2 | CDP Remote Attach cho LinkedIn | **Blocked** — 12.2 còn backlog. |
+| Epic 19 (admin) | Epic 10.4, 11.4, 14.3 | Checkpoints, governor, stream metrics | Dashboard/CLI không có dữ liệu để hiển thị. |
+| Epic 20 | Epics 13-18 | Tất cả crawler đa nền tảng phải stable trước khi decommission | Không thể shadow-run hoặc xóa scraper cũ an toàn. |
+
+**Quy tắc dependency:** Không có forward reference theo số epic (Epic N không cần Epic N+1), nhưng **Epic 13–18 phải đợi Epic 10, 11 hoàn thành** và **Epic 20 phải đợi 13–18**. Epic 12.2 cần ưu tiên trước Epic 18.3.
+
+---
+
 ## Requirements Inventory
 
 ### Functional Requirements
@@ -103,10 +118,12 @@ After new hybrid crawlers (Epics 13–18) are stable, the following legacy modul
 
 ---
 
-## Epic 10: Unified PostgreSQL Storage (Prisma) & Core Interfaces
+## Epic 10: Data & Platform Foundation for Universal Scraping
+
+> **Foundation Enabler Epic:** This epic delivers the shared contracts, storage, and schema that all platform-specific scrapers (Epics 13–18), operational surfaces (Epic 19), and downstream consumers (Nowing, AI agents, CLI users) depend on. The direct users are platform engineers, data scientists, operators, and integrators; the end-user value is realized through faster, more reliable, and consistent multi-platform scraping.
 
 ### Story 10.1: Core Domain Interfaces & Error Hierarchy Definition
-As a **Core Developer**,
+As a **Platform Engineer**,
 I want **định nghĩa các abstract class `AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore` cùng cây lỗi chuẩn (`PlatformError`, `RateLimitError`, `AuthSessionExpiredError`, `ProxyDeadError`)**,
 So that **mọi platform crawler và adapter trong tương lai đều có kiến trúc nhất quán, chuẩn mực và tự động phân loại lỗi retry**.
 
@@ -129,7 +146,7 @@ So that **mọi platform crawler và adapter trong tương lai đều có kiến
 * **And** `node src/core/index.js` parse thành công và `npx prisma validate` pass.
 
 ### Story 10.2: Prisma Post & Comment Schema with Namespaced ID, JSONB GIN & Batch Chunking
-As a **Backend & Platform Engineer**,
+As a **Data Platform Engineer**,
 I want **mở rộng `prisma/schema.prisma` với model `Post` và `Comment` (hỗ trợ Namespaced ID `${platform}:${externalId}`, cột `metadata Json?`), đồng thời triển khai `PrismaStore`**,
 So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung, không bị collision ID, và cho phép Nowing query lọc giá/sđt/lương nhanh bằng GIN/expression indexes**.
 
@@ -658,18 +675,52 @@ So that **Claude/Cursor/Antigravity có thể hỏi "tình trạng proxy pool th
 
 ## Epic 20: Nowing Cutover & Legacy Scraper Decommissioning
 
-### Story 20.1: Nowing Daemon Client Cutover & Legacy Scrapers Decommissioning
+> **Decommission Epic:** This epic delivers the business/technical migration from Nowing's legacy scrapers to the XActions hybrid engine. Because it depends on all platform crawlers being stable, the stories are sequenced after Epics 13–18.
+
+### Story 20.1: Nowing Shadow-Run Adapter over XActions Daemon
 As a **Lead System Architect**,
-I want **nâng cấp adapter bên Nowing kết nối sang XActions Daemon HTTP/SSE (Port 3001) và gỡ bỏ toàn bộ 20+ scraper cũ trong `nowing_backend/app/proprietary/platforms/`**,
-So that **Nowing backend được tinh gọn 100%, giảm kích thước Docker từ 4GB xuống <500MB và thống nhất hạ tầng cào duy nhất về XActions**.
+I want **nâng cấp adapter `nowing_backend/app/proprietary/platforms/xactions/adapter.py` để gọi XActions MCP Daemon HTTP/SSE (Port 3001) qua HTTP Keep-Alive Connection Pool**,
+So that **Nowing bắt đầu nhận dữ liệu từ XActions song song với scraper cũ để so sánh (shadow run) trước khi thay thế hoàn toàn**.
 
 **Acceptance Criteria:**
 * **Given** repository Nowing tại `/Users/luisphan/Documents/GitHub/nowing`
 * **And** XActions đã hoàn thành các crawler đa nền tảng (Social, Ecom, BĐS, Tuyển dụng) từ Epic 15–18
-* **When** cập nhật `nowing_backend/app/proprietary/platforms/xactions/adapter.py` sử dụng HTTP Keep-Alive Connection Pool gọi sang `http://xactions-service:3001`
-* **Then** Nowing nhận đủ 100% dữ liệu qua kiểm thử đối soát (Shadow Run)
-* **And** xóa bỏ an toàn các thư mục scraper cũ trong `nowing_backend/app/proprietary/platforms/` (`shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.)
-* **And** gỡ bỏ các dependency trình duyệt nặng (`selenium`, `playwright-python`, Chromium binaries) khỏi Dockerfile của Nowing.
+* **When** cập nhật `adapter.py` gọi sang `http://xactions-service:3001`
+* **Then** Nowing nhận đủ 100% dữ liệu qua kiểm thử đối soát (Shadow Run) trong môi trường staging
+* **And** adapter ghi log diff (field-level) giữa dữ liệu cũ và mới cho từng platform
+
+### Story 20.2: Legacy Scraper Code Decommissioning
+As a **Nowing Maintainer**,
+I want **xóa bỏ an toàn các thư mục scraper cũ trong `nowing_backend/app/proprietary/platforms/`**,
+So that **codebase không còn chứa code cũ đã được thay thế, giảm rủi ro bảo trì và độ phức tạp**.
+
+**Acceptance Criteria:**
+* **Given** shadow-run đạt ≥ 99% field parity trong 7 ngày liên tiếp
+* **When** xóa `shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.
+* **Then** CI Nowing pass, không còn import từ các module đã xóa
+* **And** backup snapshot của code cũ được lưu trong `archive/legacy-scrapers-YYYY-MM-DD`
+
+### Story 20.3: Browser Dependency Removal from Nowing
+As a **DevOps Engineer**,
+I want **gỡ bỏ `selenium`, `playwright-python`, và Chromium binaries khỏi Dockerfile của Nowing**,
+So that **Docker image giảm từ 4GB xuống <500MB và thời gian build/deploy cải thiện**.
+
+**Acceptance Criteria:**
+* **Given** Story 20.2 hoàn thành
+* **When** cập nhật `Dockerfile` và `requirements.txt`
+* **Then** `docker images` hiển thị image mới <500MB
+* **And** smoke test container khởi động và phục vụ request cơ bản
+
+### Story 20.4: Nowing Cutover Validation & Rollback Plan
+As a **Release Engineer**,
+I want **chạy validation cuối cùng và xác định rollback plan trước khi bật XActions 100% trong production**,
+So that **người dùng Nowing không bị gián đoạn dữ liệu nếu có lỗi**.
+
+**Acceptance Criteria:**
+* **Given** Stories 20.1–20.3 hoàn thành
+* **When** chạy integration test end-to-end với XActions production endpoint
+* **Then** ≥ 99.5% dữ liệu parity, latency P95 < 2s
+* **And** rollback plan (feature flag hoặc DNS revert) được document và test trong staging
 
 ---
 
@@ -677,10 +728,10 @@ So that **Nowing backend được tinh gọn 100%, giảm kích thước Docker 
 
 | NFR | Description | Primary Stories | Validation Approach |
 |---|---|---|---|
-| NFR11 | Resource Optimization (85% RAM, 70% CPU) | 10.2, 13.1, 13.2, 13.3, 15.2, 16.1, 16.2, 17.1, 17.2, 18.1, 18.2, 18.3, 20.1 | Benchmark `process.memoryUsage()` vs legacy headless; Nowing Docker image <500MB |
+| NFR11 | Resource Optimization (85% RAM, 70% CPU) | 10.2, 13.1, 13.2, 13.3, 15.2, 16.1, 16.2, 17.1, 17.2, 18.1, 18.2, 18.3, 20.3 | Benchmark `process.memoryUsage()` vs legacy headless; Nowing Docker image <500MB |
 | NFR12 | High Throughput (>500 req/s, <2ms RPC) | 13.1, 13.2, 13.3, 14.2, 15.2, 16.1, 16.2, 17.1, 17.2, 18.1, 18.2, 18.3 | Load test with `autocannon`/`k6`; measure req/s and MCP response latency |
 | NFR13 | Resilience & Auto-Failover (proxy retry 3x) | 11.1, 11.3, 11.4, 11.5, 11.6, 11.7 | Simulated 429/403/ProxyDead; verify quarantine, backoff, replay |
 | NFR14 | Zero-Credential Security | 12.1, 12.2 | No plain-text password in DB; QR/CDP auth flows only |
 | NFR15 | Clean Architecture & Extensibility | 10.1, 10.5, 11.1, 14.2 | `src/core/` has zero npm deps; new platform adds only `src/scrapers/<platform>/index.js` |
-| NFR16 | License & Backward Compatibility | 14.2, 20.1 | License headers present; `unfollowx` commands mapped or return actionable error |
+| NFR16 | License & Backward Compatibility | 14.2, 20.1, 20.2, 20.4 | License headers present; `unfollowx` commands mapped or return actionable error; rollback plan tested |
 | NFR17 | Operational Observability | 11.4, 14.3, 19.1, 19.2, 19.3, 19.6 | Verify endpoints return metrics; alert fires when thresholds exceeded |
