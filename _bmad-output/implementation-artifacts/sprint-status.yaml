@@ -1,5 +1,5 @@
 # generated: 2026-08-18T21:53:00.000Z
-# last_updated: 2026-08-19T00:00:00.000Z
+# last_updated: 2026-08-20T23:08:35.000Z
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-20T22:41:11.000Z
+last_updated: 2026-08-20T23:08:35.000Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -33,17 +33,17 @@ story_location: /Users/luisphan/Documents/GitHub/XActions/_bmad-output/implement
 development_status:
   # --- Epic 6: Facebook Anti-Detection & Bot Countermeasures ---
   epic-6: in-progress
-  6-1-browser-fingerprint-and-session-stealth: ready-for-dev
-  6-2-human-behavioral-simulation: backlog
-  6-3-velocity-and-account-age-controls: backlog
+  6-1-browser-fingerprint-and-session-stealth: done
+  6-2-human-behavioral-simulation: done
+  6-3-velocity-and-account-age-controls: review
   epic-6-retrospective: optional
 
   # --- Epic 10: Unified PostgreSQL Storage (Prisma) & Core Interfaces ---
-  epic-10: in-progress
+  epic-10: done
   10-1-core-domain-interfaces-error-hierarchy-definition: done
   10-2-prisma-post-comment-relational-schema-migration: done
   10-3-ai-dataset-export-utility-streaming-jsonl-csv: done
-  10-4-crawlcheckpoint-operational-api-resume-pause-retry: ready-for-dev
+  10-4-crawlcheckpoint-operational-api-resume-pause-retry: done
   10-5-metadata-schema-contract-registry-for-consumers: done
   epic-10-retrospective: optional
 
@@ -51,16 +51,16 @@ development_status:
   epic-11: in-progress
   11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
-  11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: done
+  11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: review
   11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: done
-  11-5-end-to-end-request-pipeline-two-mode-ip: ready-for-dev
-  11-6-rate-limit-bot-challenge-defense: ready-for-dev
-  11-7-crawler-governor-integration-validator-contract: ready-for-dev
+  11-5-end-to-end-request-pipeline-two-mode-ip: in-progress
+  11-6-rate-limit-bot-challenge-defense: in-progress
+  11-7-crawler-governor-integration-validator-contract: in-progress
   epic-11-retrospective: optional
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
-  epic-12: backlog
-  12-1-terminal-ascii-qr-code-login-module: backlog
+  epic-12: in-progress
+  12-1-terminal-ascii-qr-code-login-module: in-progress
   12-2-cdp-remote-attach-mode-chrome-devtools-protocol: backlog
   epic-12-retrospective: optional
 
@@ -79,8 +79,8 @@ development_status:
   epic-14-retrospective: optional
 
   # --- Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine ---
-  epic-15: backlog
-  15-1-threads-scraper-adapter-meta-internal-graphql: backlog
+  epic-15: in-progress
+  15-1-threads-scraper-adapter-meta-internal-graphql: in-progress
   15-2-tiktok-video-hashtag-comment-scraper: backlog
   epic-15-retrospective: optional
 
@@ -104,15 +104,15 @@ development_status:
   epic-18-retrospective: optional
 
   # --- Epic 19: Internal Operator Dashboard, Admin CLI & Operational Observability ---
-  epic-19: backlog
+  epic-19: in-progress
   19-1-dashboard-jobs-checkpoints-view: backlog
   19-2-dashboard-proxies-accounts-view: backlog
   19-3-dashboard-stream-metrics-alerts-view: backlog
-  19-4-admin-cli-governor-proxies-accounts: backlog
-  19-5-admin-cli-checkpoints: backlog
-  19-6-admin-cli-stream-metrics-alerts: backlog
-  19-7-admin-rest-api-proxy-account-checkpoint: backlog
-  19-8-admin-mcp-tools: backlog
+  19-4-admin-cli-governor-proxies-accounts: in-progress
+  19-5-admin-cli-checkpoints: in-progress
+  19-6-admin-cli-stream-metrics-alerts: in-progress
+  19-7-admin-rest-api-proxy-account-checkpoint: in-progress
+  19-8-admin-mcp-tools: in-progress
   epic-19-retrospective: optional
 
   # --- Epic 20: Nowing Cutover & Legacy Scraper Decommissioning ---
