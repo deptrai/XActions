@@ -24,18 +24,25 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-21T02:30:00.000Z
+last_updated: 2026-08-21T04:00:00.000Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
 story_location: /Users/luisphan/Documents/GitHub/XActions/_bmad-output/implementation-artifacts
 
 development_status:
+  # --- Epic 6: Facebook Anti-Detection & Bot Countermeasures ---
+  epic-6: backlog
+  6-1-browser-fingerprint-and-session-stealth: backlog
+  6-2-human-behavioral-simulation: backlog
+  6-3-velocity-and-account-age-controls: backlog
+  epic-6-retrospective: optional
+
   # --- Epic 10: Unified PostgreSQL Storage (Prisma) & Core Interfaces ---
   epic-10: in-progress
   10-1-core-domain-interfaces-error-hierarchy-definition: done
   10-2-prisma-post-comment-relational-schema-migration: done
-  10-3-ai-dataset-export-utility-streaming-jsonl-csv: ready-for-dev
+  10-3-ai-dataset-export-utility-streaming-jsonl-csv: done
   10-4-crawlcheckpoint-operational-api-resume-pause-retry: ready-for-dev
   10-5-metadata-schema-contract-registry-for-consumers: done
   epic-10-retrospective: optional
@@ -45,10 +52,10 @@ development_status:
   11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
   11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: review
-  11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: backlog
-  11-5-end-to-end-request-pipeline-two-mode-ip: backlog
-  11-6-rate-limit-bot-challenge-defense: backlog
-  11-7-crawler-governor-integration-validator-contract: backlog
+  11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: ready-for-dev
+  11-5-end-to-end-request-pipeline-two-mode-ip: ready-for-dev
+  11-6-rate-limit-bot-challenge-defense: ready-for-dev
+  11-7-crawler-governor-integration-validator-contract: ready-for-dev
   epic-11-retrospective: optional
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
@@ -112,3 +119,25 @@ development_status:
   epic-20: backlog
   20-1-nowing-adapter-cutover-legacy-scrapers-decommissioning: backlog
   epic-20-retrospective: optional
+
+# Current Sprint Plan
+# ===================
+current_sprint:
+  name: "Sprint 2026-08-21 — Finish Epic 10 core + kick off Epic 11 governor"
+  start: "2026-08-21"
+  goals:
+    - "Complete Story 10.4 (CrawlCheckpoint Operational API: resume/pause/retry)"
+    - "Start Story 11.4 (Adaptive Rate Limiter & Governor)"
+    - "Start Story 11.5 (End-to-End Request Pipeline)"
+    - "Start Story 11.6 (Rate-Limit & Bot-Challenge Defense)"
+    - "Start Story 11.7 (Crawler-Governor Integration & Platform Validator Contract)"
+    - "Define Epic 6 stories (Fingerprint, Behavioral, Velocity)"
+  stories:
+    - "10-4-crawlcheckpoint-operational-api-resume-pause-retry"
+    - "11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor"
+    - "11-5-end-to-end-request-pipeline-two-mode-ip"
+    - "11-6-rate-limit-bot-challenge-defense"
+    - "11-7-crawler-governor-integration-validator-contract"
+  blocked:
+    - "10-4 needs Story 10.2 schema merged to main"
+    - "11.4/11.5/11.6/11.7 need Story 11.3 code review complete"

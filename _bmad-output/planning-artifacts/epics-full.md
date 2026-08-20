@@ -251,7 +251,65 @@ N/A — Technical infrastructure, no UX spec needed.
 ### Epic 6: Facebook Anti-Detection & Bot Countermeasures
 **Goal:** Fingerprint randomization, behavioral simulation, session hygiene, velocity controls.
 **FRs:** FR-40..FR-54 (xem `prd-facebook-epics-5-6-2026-08-21.md`)
-**Status:** 🔄 4 done (Chrome path, headless, timeouts, share delays), 13 backlog
+**NFRs:** NFR-1..NFR-10
+**Status:** 🆕 3 stories backlog
+
+#### Story 6.1: Browser Fingerprint & Session Stealth
+**As an** Account Farmer / Warming Specialist,
+**I want** the browser to present a consistent, realistic fingerprint per session and prevent WebRTC/Navigator leaks,
+**So that** my accounts are less likely to be flagged as automation.
+
+**FRs:** FR-40, FR-41, FR-42, FR-43, FR-49, FR-50, FR-51, FR-52
+**NFRs:** NFR-2, NFR-4
+**ARs:** AR-1, AR-5
+
+**Acceptance Criteria:**
+- **Given** a new browser session is created
+- **When** the session is configured with a proxy location
+- **Then** the system picks one of ≥20 real Chrome UAs and keeps it consistent for the whole session
+- **And** the viewport matches the UA platform
+- **And** `RTCPeerConnection` is disabled/overridden to prevent WebRTC leaks
+- **And** `navigator.webdriver`, `hardwareConcurrency`, `deviceMemory`, and `platform` are overridden
+- **And** timezone and geolocation match the proxy location
+- **And** `userDataDir` is supported for persistent browser profiles
+- **And** the same fingerprint is used for the entire session (no mid-session change)
+- **And** cookie values never appear in logs or API responses
+
+#### Story 6.2: Human Behavioral Simulation
+**As an** Account Farmer,
+**I want** mouse, click, typing, and scroll actions to mimic human behavior with random delays,
+**So that** the platform does not detect bot patterns.
+
+**FRs:** FR-44, FR-45, FR-46, FR-47, FR-48
+**NFRs:** NFR-1, NFR-3, NFR-5, NFR-6
+
+**Acceptance Criteria:**
+- **Given** a simulated human action is requested
+- **When** the action runs
+- **Then** mouse movement uses Bezier curve + micro-jitter + overshoot+correction and completes in <2s
+- **And** every click has a hover pause of 100–400ms before clicking
+- **And** typing has a typo rate of 1–2% with variable speed
+- **And** scrolling has variable speed, momentum, and overshoot
+- **And** session warming is available as a sequence: homepage → scroll → mouse → actions
+- **And** every behavioral delay is injectable via a `delayFn` seam for testing
+- **And** all Facebook mutating actions use a higher delay floor than Twitter
+
+#### Story 6.3: Velocity & Account Age Controls
+**As a** Growth Marketer / Account Farmer,
+**I want** the system to enforce velocity limits per account age and action type,
+**So that** new accounts do not get checkpointed.
+
+**FRs:** FR-53, FR-54
+**NFRs:** NFR-9, NFR-10
+
+**Acceptance Criteria:**
+- **Given** an account is loaded into a campaign
+- **When** the system checks campaign safety
+- **Then** it applies per-action velocity limits: likes ≤30/hr, comments ≤10/hr, friend requests ≤20/day
+- **And** it applies age-based scaling: <7 days = 50%, 1–4 weeks = 80%, >1 month = 100% of base limits
+- **And** the scheduler caps throughput at ≤5 posts/hour/user
+- **And** friend requests use a fixed delay of 60–180s and cannot be overridden
+- **And** every mutating action defaults to dry-run unless explicitly confirmed
 
 ### Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
 **Goal:** Multi-type search, post/group comments, account health filtering, and parallel execution using account pool.
