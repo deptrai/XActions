@@ -1,6 +1,6 @@
 # Story 6.1: Browser Fingerprint & Session Stealth
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
