@@ -215,7 +215,9 @@ flowchart TB
 ### AD-11 — CrawlerCommand & ActionRegistry [ADOPTED]
 * **Binds:** `src/core/base-crawler.js`, `src/scrapers/**`
 * **Prevents:** Hai platform team tự định nghĩa phương thức public khác nhau (`getGroupPosts` vs `searchProducts`) khiến CLI/MCP không thể gọi thống nhất.
-* **Rule:** Mỗi platform crawler khai báo `ActionRegistry: Map<string, (args: any) => Promise<PostItem[] | Comment[]>>` trong constructor. `AbstractCrawler.start({ action, args })` lookup registry và trả về kết quả chuẩn hóa. Tên `action` phải là snake_case: `search`, `post_detail`, `comments`, `timeline`, `group_posts`, `page_posts`, `search_products`, `search_jobs`, v.v.
+* **Rule:**
+  1. Mỗi platform crawler khai báo `ActionRegistry: Map<string, (args: any) => Promise<PostItem[] | Comment[]>>` trong constructor. `AbstractCrawler.start({ action, args })` lookup registry và trả về kết quả chuẩn hóa. Tên `action` phải là snake_case: `search`, `post_detail`, `comments`, `timeline`, `group_posts`, `page_posts`, `search_products`, `search_jobs`, v.v.
+  2. `AbstractCrawler.listActions()` trả về `ActionDescriptor[]` với shape cố định: `{ action: string, description: string, requiredArgs: string[], example: object, category: string, requiresAuth: boolean }`. Không cho phép trường tên `args`, `params`, hoặc `inputs`; consumer (CLI/MCP/AI agent) parse theo `requiredArgs` và `example`.
 
 ### AD-12 — CrawlCheckpoint State for Idempotent Resume [ADOPTED]
 * **Binds:** `src/store/**`, `prisma/schema.prisma`, `src/scrapers/**`
@@ -431,7 +433,7 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((meta
 * AD-8: Giới hạn scope về các platform của Epics 10–20.
 * AD-9: Khôi phục `PlatformResponseValidator`.
 * AD-10: Khôi phục `CrawlCheckpoint` và retention enforcement.
-* AD-11: CrawlerCommand & ActionRegistry.
+* AD-11: CrawlerCommand & ActionRegistry; pinned `ActionDescriptor` field names.
 * AD-12: CrawlCheckpoint State.
 * AD-13: Adaptive Infrastructure-Aware Rate Limiting & Account Protection Governor.
 * AD-14: Operational Status & Error Envelope for Consumers.
