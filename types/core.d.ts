@@ -270,6 +270,8 @@ export class StatusApi {
   getGovernorStatus(): GovernorStatus;
 }
 
+export const globalStatusApi: StatusApi;
+
 export class PlatformRateLimit {
   platform: string;
   requiresAuth: boolean;
@@ -281,20 +283,26 @@ export class PlatformRateLimit {
 }
 
 export class AdaptiveRateGovernor {
-  constructor(deps?: { proxyPool?: unknown });
+  constructor(deps?: { proxyPool?: unknown; healthyProxyFloor?: number });
   setPlatformLimit(platform: string, limits?: Partial<PlatformRateLimit>): void;
   getPlatformLimit(platform: string): PlatformRateLimit;
   isAuthRequired(platform: string): boolean;
-  updateState(state: { healthyProxyCount: number; totalProxyCount: number; redisConsumerLag: number }): void;
+  updateState(state: { healthyProxyCount?: number; totalProxyCount?: number; redisConsumerLag?: number }): void;
+  updateRedisConsumerLag(lag: number): void;
   refreshFromProxyPool(): void;
   getMaxThroughput(platform: string): number;
-  recordRequest(accountId: string): void;
-  getAccountVelocity(accountId: string): number;
+  recordRequest(accountId: string, platform?: string): void;
+  getAccountVelocity(accountId: string, platform?: string): number;
   canAccountRequest(accountId: string, platform: string): boolean;
-  hibernateAccount(accountId: string, reason: string, durationMs?: number): void;
-  isHibernating(accountId: string): boolean;
+  hibernateAccount(accountId: string, reason: string, durationMs?: number, platform?: string): void;
+  recordRateLimit(accountId: string, platform?: string, durationMs?: number): void;
+  recordBotChallenge(accountId: string, platform?: string, durationMs?: number): void;
+  wakeAccount(accountId: string, platform?: string): void;
+  isHibernating(accountId: string, platform?: string): boolean;
   getStatus(): GovernorStatus;
 }
+
+export const globalAdaptiveRateGovernor: AdaptiveRateGovernor;
 
 export class PreSignedTokenRing {
   constructor(options?: { capacity?: number });

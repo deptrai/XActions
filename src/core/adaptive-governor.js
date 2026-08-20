@@ -5,6 +5,8 @@
  * @license MIT
  */
 
+import { globalProxyPool } from '../proxy/proxy-pool.js';
+
 /** @typedef {import('./types.js').GovernorStatus} GovernorStatus */
 
 export class PlatformRateLimit {
@@ -122,12 +124,20 @@ export class AdaptiveRateGovernor {
    * @param {Object} state
    * @param {number} state.healthyProxyCount
    * @param {number} state.totalProxyCount
-   * @param {number} state.redisConsumerLag
+   * @param {number} [state.redisConsumerLag]
    */
   updateState(state) {
-    this.#healthyProxyCount = state.healthyProxyCount;
-    this.#totalProxyCount = state.totalProxyCount;
-    this.#redisConsumerLag = state.redisConsumerLag;
+    if (state.healthyProxyCount !== undefined) this.#healthyProxyCount = state.healthyProxyCount;
+    if (state.totalProxyCount !== undefined) this.#totalProxyCount = state.totalProxyCount;
+    if (state.redisConsumerLag !== undefined) this.#redisConsumerLag = state.redisConsumerLag;
+  }
+
+  /**
+   * Update Redis consumer group lag directly.
+   * @param {number} lag
+   */
+  updateRedisConsumerLag(lag) {
+    this.#redisConsumerLag = Math.max(0, Number(lag) || 0);
   }
 
   /** @returns {void} */
@@ -149,10 +159,15 @@ export class AdaptiveRateGovernor {
     const healthyProxyRatio = total > 0 ? healthy / total : 0;
 
     let factor = 1;
-    if (healthy < total * 0.5) factor = 0.5;
-    if (healthyProxyRatio < 0.1) factor = 0;
-    if (this.#healthyProxyFloor > 0 && healthy < this.#healthyProxyFloor) factor = 0;
-    if (this.#redisConsumerLag > 10000) factor *= 0.25;
+    if (healthyProxyRatio < 0.1 || (this.#healthyProxyFloor > 0 && healthy < this.#healthyProxyFloor)) {
+      return 0;
+    }
+    if (healthy < total * 0.5) {
+      factor = 0.5;
+    }
+    if (this.#redisConsumerLag > 10000) {
+      factor *= 0.25;
+    }
 
     return healthy * limit.baseReqPerSecondPerProxy * limit.throttleFactor * factor;
   }
@@ -223,7 +238,17 @@ export class AdaptiveRateGovernor {
    * @param {number} [durationMs]
    */
   recordRateLimit(accountId, platform, durationMs = 15 * 60 * 1000) {
-    this.hibernateAccount(accountId, `rate_limit:${platform || 'unknown'}`, durationMs, platform);
+    this.hibernateAccount(accountId, 'rate_limit', durationMs, platform);
+  }
+
+  /**
+   * Record a bot challenge event for an account and hibernate it.
+   * @param {string} accountId
+   * @param {string} [platform]
+   * @param {number} [durationMs]
+   */
+  recordBotChallenge(accountId, platform, durationMs = 15 * 60 * 1000) {
+    this.hibernateAccount(accountId, 'bot_challenge', durationMs, platform);
   }
 
   /**
@@ -255,8 +280,8 @@ export class AdaptiveRateGovernor {
     this.refreshFromProxyPool();
     const healthyProxyRatio = this.#totalProxyCount ? this.#healthyProxyCount / this.#totalProxyCount : 0;
     const throttleLevel =
-      this.#redisConsumerLag > 10000 ? 'backpressure' :
       healthyProxyRatio < 0.1 ? 'critical' :
+      this.#redisConsumerLag > 10000 ? 'backpressure' :
       healthyProxyRatio < 0.5 ? 'reduced' : 'normal';
 
     return {
@@ -267,10 +292,12 @@ export class AdaptiveRateGovernor {
       redisConsumerLag: this.#redisConsumerLag,
       hibernatingAccounts: this.#hibernatingAccounts.map((h) => ({
         accountId: h.accountId,
-        remainingSeconds: Math.ceil((h.until - now) / 1000),
+        remainingSeconds: Math.max(0, Math.ceil((h.until - now) / 1000)),
         reason: h.reason,
       })),
       throttleLevel,
     };
   }
 }
+
+export const globalAdaptiveRateGovernor = new AdaptiveRateGovernor({ proxyPool: globalProxyPool });

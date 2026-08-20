@@ -4,8 +4,8 @@ import { StatusApi, globalStatusApi } from '../../src/core/status-api.js';
 import { AdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
 import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
 
-describe('Story 11.4 — StatusApi Contract & Governor Integration (ATDD Red Phase)', () => {
-  test.skip('should return default zero-state status when constructed without governor', () => {
+describe('Story 11.4 — StatusApi Contract & Governor Integration (ATDD Green Phase)', () => {
+  test('should return default zero-state status when constructed without governor', () => {
     const statusApi = new StatusApi();
     const status = statusApi.getGovernorStatus();
 
@@ -20,7 +20,7 @@ describe('Story 11.4 — StatusApi Contract & Governor Integration (ATDD Red Pha
     });
   });
 
-  test.skip('should delegate getGovernorStatus() to injected AdaptiveRateGovernor instance', () => {
+  test('should delegate getGovernorStatus() to injected AdaptiveRateGovernor instance', () => {
     const pool = new ProxyIpPool({
       proxies: ['http://proxy1.example.com:8080', 'http://proxy2.example.com:8080'],
     });
@@ -34,7 +34,7 @@ describe('Story 11.4 — StatusApi Contract & Governor Integration (ATDD Red Pha
     expect(status.throttleLevel).toBe('normal');
   });
 
-  test.skip('should export globalStatusApi singleton instance', () => {
+  test('should export globalStatusApi singleton instance', () => {
     expect(globalStatusApi).toBeInstanceOf(StatusApi);
   });
 });

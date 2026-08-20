@@ -7,7 +7,7 @@ import {
 } from '../../src/core/adaptive-governor.js';
 import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
 
-describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Protection Governor (ATDD Red Phase)', () => {
+describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Protection Governor (ATDD Green Phase)', () => {
   let pool;
   let governor;
 
@@ -30,7 +30,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
   });
 
   describe('AC-1: Dynamic Throughput Calculation by Live Proxy Health', () => {
-    test.skip('should compute nominal throughput = healthyCount * baseRps * throttleFactor at 100% health', () => {
+    test('should compute nominal throughput = healthyCount * baseRps * throttleFactor at 100% health', () => {
       governor.setPlatformLimit('twitter', {
         baseReqPerSecondPerProxy: 2,
         throttleFactor: 1.0,
@@ -40,7 +40,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(throughput).toBe(20);
     });
 
-    test.skip('should scale throughput down by 50% when healthy proxy count falls below 50% of total', () => {
+    test('should scale throughput down by 50% when healthy proxy count falls below 50% of total', () => {
       governor.setPlatformLimit('twitter', {
         baseReqPerSecondPerProxy: 2,
         throttleFactor: 1.0,
@@ -54,7 +54,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(throughput).toBe(4);
     });
 
-    test.skip('should return 0 throughput (pause) when healthy proxy ratio is under 10% or below floor', () => {
+    test('should return 0 throughput (pause) when healthy proxy ratio is under 10% or below floor', () => {
       governor.setPlatformLimit('twitter', {
         baseReqPerSecondPerProxy: 2,
         throttleFactor: 1.0,
@@ -68,7 +68,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(throughput).toBe(0);
     });
 
-    test.skip('should throttle throughput to 25% when redis consumer lag exceeds 10,000', () => {
+    test('should throttle throughput to 25% when redis consumer lag exceeds 10,000', () => {
       governor.setPlatformLimit('twitter', {
         baseReqPerSecondPerProxy: 2,
         throttleFactor: 1.0,
@@ -82,7 +82,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
   });
 
   describe('AC-2: Account-Level Token-Bucket Sliding Window & Velocity', () => {
-    test.skip('should reject requests when account request velocity exceeds safeRequestsPerMinute', () => {
+    test('should reject requests when account request velocity exceeds safeRequestsPerMinute', () => {
       governor.setPlatformLimit('twitter', {
         safeRequestsPerMinute: 3,
       });
@@ -97,7 +97,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(governor.canAccountRequest('acc_1', 'twitter')).toBe(false);
     });
 
-    test.skip('should increment global currentReqPerSecond counter on recordRequest', () => {
+    test('should increment global currentReqPerSecond counter on recordRequest', () => {
       governor.recordRequest('acc_1', 'twitter');
       governor.recordRequest('acc_2', 'twitter');
 
@@ -107,14 +107,14 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
   });
 
   describe('AC-3: Programmatic Hibernation, Bot Challenges & Wake', () => {
-    test.skip('should put account into hibernation on recordRateLimit and reject requests', () => {
+    test('should put account into hibernation on recordRateLimit and reject requests', () => {
       governor.recordRateLimit('acc_limited', 'twitter', 5000);
 
       expect(governor.isHibernating('acc_limited', 'twitter')).toBe(true);
       expect(governor.canAccountRequest('acc_limited', 'twitter')).toBe(false);
     });
 
-    test.skip('should support recordBotChallenge with custom hibernation window', () => {
+    test('should support recordBotChallenge with custom hibernation window', () => {
       governor.recordBotChallenge('acc_bot', 'twitter', 15 * 60 * 1000);
 
       expect(governor.isHibernating('acc_bot', 'twitter')).toBe(true);
@@ -124,7 +124,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(accountEntry.reason).toBe('bot_challenge');
     });
 
-    test.skip('should immediately restore account availability on wakeAccount', () => {
+    test('should immediately restore account availability on wakeAccount', () => {
       governor.recordRateLimit('acc_wake', 'twitter', 60000);
       expect(governor.isHibernating('acc_wake', 'twitter')).toBe(true);
 
@@ -133,7 +133,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(governor.canAccountRequest('acc_wake', 'twitter')).toBe(true);
     });
 
-    test.skip('should automatically prune expired hibernating accounts in getStatus()', async () => {
+    test('should automatically prune expired hibernating accounts in getStatus()', async () => {
       governor.recordRateLimit('acc_short', 'twitter', 50);
 
       expect(governor.isHibernating('acc_short', 'twitter')).toBe(true);
@@ -148,7 +148,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
   });
 
   describe('AC-4: No-Auth Platform Handling with Synthetic Key', () => {
-    test.skip('should track and limit no-auth platform requests under synthetic noauth key', () => {
+    test('should track and limit no-auth platform requests under synthetic noauth key', () => {
       governor.setPlatformLimit('chotot', {
         requiresAuth: false,
         safeRequestsPerMinute: 2,
@@ -165,7 +165,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
   });
 
   describe('AC-5 & AC-6: Governor Status Shape & Global Singleton', () => {
-    test.skip('should return complete GovernorStatus shape matching schema', () => {
+    test('should return complete GovernorStatus shape matching schema', () => {
       const status = governor.getStatus();
 
       expect(status).toHaveProperty('healthyProxyCount');
@@ -178,7 +178,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(Array.isArray(status.hibernatingAccounts)).toBe(true);
     });
 
-    test.skip('should assign throttleLevel as backpressure when redis lag exceeds threshold', () => {
+    test('should assign throttleLevel as backpressure when redis lag exceeds threshold', () => {
       governor.updateRedisConsumerLag(12000);
       expect(governor.getStatus().throttleLevel).toBe('backpressure');
 
@@ -186,7 +186,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(governor.getStatus().throttleLevel).toBe('normal');
     });
 
-    test.skip('should assign throttleLevel as critical when healthy proxy ratio is under 10%', () => {
+    test('should assign throttleLevel as critical when healthy proxy ratio is under 10%', () => {
       for (let i = 1; i <= 10; i++) {
         pool.quarantine(`http://p${i}.example.com:8080`, 60000);
       }
@@ -194,7 +194,7 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(governor.getStatus().throttleLevel).toBe('critical');
     });
 
-    test.skip('should provide globalAdaptiveRateGovernor singleton instance', () => {
+    test('should provide globalAdaptiveRateGovernor singleton instance', () => {
       expect(globalAdaptiveRateGovernor).toBeInstanceOf(AdaptiveRateGovernor);
     });
   });

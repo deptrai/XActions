@@ -2634,6 +2634,15 @@ const TOOLS = [
       required: ['platform', 'category'],
     },
   },
+  {
+    name: 'x_governor_status',
+    description: 'Get rate governor, proxy pool health, and account hibernation status.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
 ];
 
 // ============================================================================
@@ -4820,6 +4829,12 @@ async function executeAITool(name, args) {
         };
       }
       return { schema };
+    }
+
+    case 'x_governor_status': {
+      const { globalStatusApi } = await import('../core/index.js');
+      const status = globalStatusApi.getGovernorStatus();
+      return status;
     }
 
     default:

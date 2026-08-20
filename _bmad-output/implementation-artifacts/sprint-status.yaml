@@ -52,7 +52,7 @@ development_status:
   11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
   11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: done
-  11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: ready-for-dev
+  11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: review
   11-5-end-to-end-request-pipeline-two-mode-ip: ready-for-dev
   11-6-rate-limit-bot-challenge-defense: ready-for-dev
   11-7-crawler-governor-integration-validator-contract: ready-for-dev

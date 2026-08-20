@@ -1964,6 +1964,36 @@ ${chalk.yellow('Run "xactions --help" for all commands')}
 `);
   });
 
+program
+  .command('status')
+  .description('Show system and rate governor status (proxies, throttling, hibernation)')
+  .option('--json', 'Output raw JSON')
+  .action(async (options) => {
+    try {
+      const { globalStatusApi } = await import('../core/index.js');
+      const status = globalStatusApi.getGovernorStatus();
+      if (options.json) {
+        console.log(JSON.stringify(status, null, 2));
+        return;
+      }
+      console.log(`\n${chalk.bold.cyan('⚡ XActions System & Governor Status')}\n`);
+      console.log(`  ${chalk.bold('Throttle Level:')}       ${status.throttleLevel === 'normal' ? chalk.green(status.throttleLevel) : chalk.red(status.throttleLevel)}`);
+      console.log(`  ${chalk.bold('Healthy Proxies:')}      ${status.healthyProxyCount} / ${status.totalProxyCount} (${(status.healthyProxyRatio * 100).toFixed(1)}%)`);
+      console.log(`  ${chalk.bold('Current Req/Sec:')}      ${status.currentReqPerSecond}`);
+      console.log(`  ${chalk.bold('Redis Consumer Lag:')}   ${status.redisConsumerLag}`);
+      console.log(`  ${chalk.bold('Hibernating Accounts:')} ${status.hibernatingAccounts.length}`);
+      if (status.hibernatingAccounts.length > 0) {
+        status.hibernatingAccounts.forEach((acc) => {
+          console.log(`    • ${chalk.yellow(acc.accountId)} — ${acc.remainingSeconds}s remaining (${acc.reason})`);
+        });
+      }
+      console.log();
+    } catch (err) {
+      console.error(chalk.red(`❌ Error retrieving status: ${err.message}`));
+      process.exit(1);
+    }
+  });
+
 // ============================================================================
 // Analytics Commands
 // ============================================================================

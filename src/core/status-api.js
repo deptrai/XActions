@@ -5,6 +5,8 @@
  * @license MIT
  */
 
+import { globalAdaptiveRateGovernor } from './adaptive-governor.js';
+
 /** @typedef {import('./types.js').GovernorStatus} GovernorStatus */
 
 export class StatusApi {
@@ -32,3 +34,5 @@ export class StatusApi {
     };
   }
 }
+
+export const globalStatusApi = new StatusApi({ governor: globalAdaptiveRateGovernor });
