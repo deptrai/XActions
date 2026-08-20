@@ -132,6 +132,11 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 *Tài liệu PRD chính thức được phê duyệt bởi Hội đồng Quản trị Sản phẩm BMad ngày 18/08/2026.*
 
+### PRD liên quan khác
+
+- `prd-facebook-epics-5-6-2026-08-21.md` — PRD canonical cho Epics 5, 5b, 6 (FR23–FR54).
+- `FUTURE-WORK.md` — deferred scope: FR-62, FR49–FR51, Phase 3 backlog.
+
 ---
 
 ## 8. Phụ Lục — Canonicalization & FR/NFR Master Register

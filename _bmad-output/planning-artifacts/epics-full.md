@@ -255,7 +255,7 @@ N/A — Technical infrastructure, no UX spec needed.
 
 ### Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
 **Goal:** Multi-type search, post/group comments, account health filtering, and parallel execution using account pool.
-**FRs:** FR55-FR61, FR63 (FR62 deferred to Phase 3)
+**FRs:** FR55-FR61, FR63 (FR62 deferred — xem `FUTURE-WORK.md`)
 **Status:** ✅ Done (4 stories)
 
 ### Epic 8: Facebook Backend Stability for Operators & MCP Clients
@@ -993,11 +993,11 @@ So that I can reach all Facebook capabilities already implemented in the codebas
 
 **Goal:** Expand Facebook scraping to support multi-type search, post/group comments scraping, account health filtering, and parallel execution using a pool of live Facebook accounts.
 
-**FRs:** FR55-FR61, FR63 (FR62 deferred to Phase 3)
+**FRs:** FR55-FR61, FR63 (FR62 deferred — xem `FUTURE-WORK.md`)
 
 **NFRs:** NFR10-NFR15
 
-**Additional Requirements relevant:** ADR-006 (adapter pattern), ADR-011 (GraphQL HTTP layer) — chỉ áp dụng nếu Phase 3 (GraphQL replay) được lên lịch, Epic 6 anti-detection infrastructure.
+**Additional Requirements relevant:** ADR-006 (adapter pattern), ADR-011 (GraphQL HTTP layer). ADR-011 chỉ áp dụng đầy đủ khi Phase 3 (FR-62 GraphQL replay) được lên lịch — xem `FUTURE-WORK.md`.
 
 ### Story 7.1: Foundation — Health, Pool, Hydration & Schema
 

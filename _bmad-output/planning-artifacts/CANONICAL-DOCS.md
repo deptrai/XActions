@@ -12,6 +12,7 @@ skill: bmad-check-implementation-readiness
 | File | Lý do chọn | Trạng thái |
 |---|---|---|
 | `_bmad-output/planning-artifacts/prd.md` | Mới nhất (2026-08-19, approved), bao gồm FR-85..88 và NFR-17 từ readiness assessment. | **Canonical** |
+| `_bmad-output/planning-artifacts/prd-facebook-epics-5-6-2026-08-21.md` | Tổng hợp FR23–FR54 cho Epics 5, 5b, 6. | **Canonical** |
 
 ### Deprecated PRDs
 
@@ -47,6 +48,7 @@ skill: bmad-check-implementation-readiness
 
 | File | Mục đích |
 |---|---|
+| `FUTURE-WORK.md` | **Canonical backlog** cho deferred scope (FR-62, FR49–FR51, Phase 3). |
 | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` | Bản gốc 10 findings. |
 | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` | **Canonical remediation** — map F1–F10 sang epic/story và AC bổ sung. |
 
@@ -63,9 +65,11 @@ Hai file này bổ sung nhau; sẽ merge thành một `epics.md` duy nhất tron
 
 | File | Trạng thái |
 |---|---|
-| `_bmad-output/planning-artifacts/ux/DESIGN.md` | Lỗi thời (2026-06-19), cần update cho hybrid engine. |
-| `_bmad-output/planning-artifacts/ux/EXPERIENCE.md` | Lỗi thời (2026-06-19), cần update cho admin/operator/AI personas. |
-| `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` | **Canonical input** cho UX gaps cần giải quyết. |
+| `_bmad-output/planning-artifacts/ux/DESIGN.md` | **Canonical design tokens**; đã bổ sung New Components cho hybrid engine / admin dashboard. |
+| `_bmad-output/planning-artifacts/ux/EXPERIENCE.md` | Lỗi thời (2026-06-19); còn giá trị cho Facebook/X dashboard cũ. |
+| `_bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` | **Canonical** cho operator, AI agent, multi-platform, CDP, MCP/CLI flows. |
+| `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` | Bản gốc 10 findings. |
+| `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` | **Canonical remediation** — map F1–F10 sang epic/story. |
 
 ## Actions tiếp theo
 
@@ -74,5 +78,5 @@ Hai file này bổ sung nhau; sẽ merge thành một `epics.md` duy nhất tron
 3. ✅ Tạo `prd-canonicalization-addendum.md` để giải quyết FR/NFR numbering conflicts.
 4. ✅ Cập nhật `epics.md` dependency map.
 5. ✅ Tạo `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` map F1–F10 sang epic/story.
-6. Cập nhật UX docs `ux/DESIGN.md` và `ux/EXPERIENCE.md` dựa trên remediation.
-7. Chỉnh sửa epic/story cụ thể để bổ sung AC từ F1–F10.
+6. ✅ Tạo `EXPERIENCE-UNIVERSAL-2026-08-21.md` và cập nhật `DESIGN.md` với New Components.
+7. Còn lại: chỉnh sửa epic/story cụ thể để bổ sung AC từ F1–F10.
