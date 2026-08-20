@@ -263,8 +263,8 @@ N/A — Technical infrastructure, no UX spec needed.
 **FRs/PCRs:** PCR2, PCR6, PCR7
 **Status:** 🆕 backlog
 
-### Epic 9: Facebook Live Data & Behavioral Hardening
-**Goal:** Harden runtime Facebook behavior: dry-run short-circuit, live DOM selectors, testable delay seams.
+### Epic 9: Facebook Live Data & Behavioral Reliability
+**Goal:** Improve reliability and debuggability of Facebook automation for operators and support by hardening dry-run short-circuit, live DOM selectors, and testable delay seams.
 **FRs/PCRs:** PCR1, PCR3, PCR4, PCR5
 **Status:** 🆕 backlog
 

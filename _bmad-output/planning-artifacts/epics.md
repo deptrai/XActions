@@ -78,9 +78,9 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 > **Foundation Enabler Epic:** This epic delivers the shared contracts, storage, and schema that all platform-specific scrapers (Epics 13–18), operational surfaces (Epic 19), and downstream consumers (Nowing, AI agents, CLI users) depend on. The direct users are platform engineers, data scientists, operators, and integrators; the end-user value is realized through faster, more reliable, and consistent multi-platform scraping.
 
 ### Story 10.1: Core Domain Interfaces & Error Hierarchy Definition
-As a **Core Developer**,
+As a **Scraper Developer / Platform Engineer**,
 I want **định nghĩa các abstract class `AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore` cùng cây lỗi chuẩn (`PlatformError`, `RateLimitError`, `AuthSessionExpiredError`, `ProxyDeadError`)**,
-So that **mọi platform crawler và adapter trong tương lai đều có kiến trúc nhất quán, chuẩn mực và tự động phân loại lỗi retry**.
+So that **tôi có thể thêm nền tảng mới (Shopee, LinkedIn, v.v.) mà không vi phạm core logic, và AI agent / operator nhận được actionable errors khi gặp sự cố**.
 
 **Acceptance Criteria:**
 * **Given** repo XActions ở trạng thái sau architecture r3
@@ -101,7 +101,7 @@ So that **mọi platform crawler và adapter trong tương lai đều có kiến
 * **And** `node src/core/index.js` parse thành công và `npx prisma validate` pass.
 
 ### Story 10.2: Prisma Post & Comment Schema with Namespaced ID, JSONB GIN & Batch Chunking
-As a **Backend & Platform Engineer**,
+As a **Data Platform Engineer / Nowing Integrator**,
 I want **mở rộng `prisma/schema.prisma` với model `Post` và `Comment` (hỗ trợ Namespaced ID `${platform}:${externalId}`, cột `metadata Json?`), đồng thời triển khai `PrismaStore`**,
 So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung, không bị collision ID, và cho phép Nowing query lọc giá/sđt/lương nhanh bằng GIN/expression indexes**.
 
@@ -685,10 +685,10 @@ So that **codebase không còn chứa code cũ đã được thay thế, giảm 
 
 | NFR | Description | Primary Stories | Validation Approach |
 |---|---|---|---|
-| NFR11 | Resource Optimization (85% RAM, 70% CPU) | 10.2, 13.1, 13.2, 13.3, 15.2, 16.1, 16.2, 17.1, 17.2, 18.1, 18.2, 18.3, 20.1 | Benchmark `process.memoryUsage()` vs legacy headless; Nowing Docker image <500MB |
+| NFR11 | Resource Optimization (85% RAM, 70% CPU) | 10.2, 13.1, 13.2, 13.3, 15.2, 16.1, 16.2, 17.1, 17.2, 18.1, 18.2, 18.3, 20.2 | Benchmark `process.memoryUsage()` vs legacy headless; Nowing Docker image <500MB |
 | NFR12 | High Throughput (>500 req/s, <2ms RPC) | 13.1, 13.2, 13.3, 14.2, 15.2, 16.1, 16.2, 17.1, 17.2, 18.1, 18.2, 18.3 | Load test with `autocannon`/`k6`; measure req/s and MCP response latency |
 | NFR13 | Resilience & Auto-Failover (proxy retry 3x) | 11.1, 11.3, 11.4, 11.5, 11.6, 11.7 | Simulated 429/403/ProxyDead; verify quarantine, backoff, replay |
 | NFR14 | Zero-Credential Security | 12.1, 12.2 | No plain-text password in DB; QR/CDP auth flows only |
 | NFR15 | Clean Architecture & Extensibility | 10.1, 10.5, 11.1, 14.2 | `src/core/` has zero npm deps; new platform adds only `src/scrapers/<platform>/index.js` |
-| NFR16 | License & Backward Compatibility | 14.2, 20.1 | License headers present; `unfollowx` commands mapped or return actionable error |
+| NFR16 | License & Backward Compatibility | 14.2, 20.1, 20.2 | License headers present; `unfollowx` commands mapped or return actionable error |
 | NFR17 | Operational Observability | 11.4, 14.3, 19.1, 19.2, 19.3, 19.6 | Verify endpoints return metrics; alert fires when thresholds exceeded |
