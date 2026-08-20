@@ -131,6 +131,9 @@ npx vitest run tests/core/base-client-request.test.js
 
 npx vitest run tests/core/ tests/proxy/
 # 160 passed, 0 failed across 8 test files
+
+npx vitest run tests/client/
+# 95 passed, 0 failed across 6 test files
 ```
 
 Then set `sprint-status.yaml`:
