@@ -8,7 +8,13 @@
  * @license MIT
  */
 
-import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
+import {
+  PlatformError,
+  RateLimitError,
+  BotChallengeError,
+  ErrorTypes,
+  SuggestedActions,
+} from './error-envelope.js';
 
 const STANDBY_BACKOFF_MS = 30 * 1000;
 const DEFAULT_QUARANTINE_MS = 5 * 60 * 1000;
@@ -28,6 +34,9 @@ export class AbstractApiClient {
 
   /** @type {Function | null} */
   httpClient = null;
+
+  /** @type {import('./platform-validator.js').AbstractPlatformResponseValidator | null} */
+  responseValidator = null;
 
   /** @type {Object} */
   cookies = {};
@@ -60,6 +69,7 @@ export class AbstractApiClient {
    * @param {import('../proxy/providers.js').ProxyProviderContract} [options.proxyProvider]
    * @param {import('./account-pool.js').AccountPool} [options.accountPool]
    * @param {import('./adaptive-governor.js').AdaptiveRateGovernor} [options.governor]
+   * @param {import('./platform-validator.js').AbstractPlatformResponseValidator} [options.responseValidator]
    * @param {string} [options.platform]
    * @param {'undici' | 'got'} [options.client]
    * @param {Function} [options.httpClient]
@@ -81,6 +91,7 @@ export class AbstractApiClient {
     this.proxyProvider = options.proxyProvider;
     this.accountPool = options.accountPool;
     this.governor = options.governor;
+    this.responseValidator = options.responseValidator || null;
 
     if (options.platform !== undefined) this.platform = options.platform;
     if (options.client !== undefined) this.client = options.client;
@@ -124,71 +135,30 @@ export class AbstractApiClient {
   }
 
   /**
-   * Resolve the correct proxy for the request:
-   * - authenticated platforms: sticky IP per account
-   * - no-auth platforms: rotating IP from pool
-   *
-   * Throws a `proxy_exhausted` PlatformError instead of returning `null` so that
-   * callers cannot accidentally initiate an unproxied request.
-   *
+   * Resolve proxy from proxyProvider or proxyPool.
+   * Throws PROXY_EXHAUSTED if no proxy is available.
    * @param {string} [accountId]
-   * @returns {any}
+   * @param {boolean} [requiresResidential=false]
+   * @returns {string | Object}
    */
-  resolveProxy(accountId) {
-    const provider = this.proxyProvider || this.proxyPool;
-    if (!provider) {
-      throw new PlatformError({
-        type: ErrorTypes.PROXY_EXHAUSTED,
-        code: 'XACT_5030',
-        message: 'Proxy provider not configured',
-        suggestedAction: SuggestedActions.WAIT,
-        retryAfterMs: this.standbyBackoffMs,
-        accountId,
-      });
-    }
-
-    const hasGetProxy = typeof provider.getProxy === 'function';
-    const hasGetStickyProxy = typeof provider.getStickyProxy === 'function';
-    const hasGetNext = typeof provider.getNext === 'function';
-    const hasQuarantine = typeof provider.quarantine === 'function';
-
-    const hasContract = (hasGetProxy || (hasGetStickyProxy && hasGetNext)) && hasQuarantine;
-    if (!hasContract) {
-      throw new PlatformError({
-        type: ErrorTypes.INVALID_ARGS,
-        code: 'XACT_4001',
-        message: 'Provider does not implement the proxy contract',
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        accountId,
-      });
-    }
-
-    let proxy;
-    if (hasGetProxy) {
-      proxy = this.requiresAuth && accountId
-        ? provider.getProxy({ accountId })
-        : provider.getProxy();
-    } else if (hasGetStickyProxy && hasGetNext) {
-      proxy = this.requiresAuth && accountId
-        ? provider.getStickyProxy(accountId)
-        : provider.getNext();
-    } else {
-      throw new PlatformError({
-        type: ErrorTypes.PROXY_EXHAUSTED,
-        code: 'XACT_5030',
-        message: 'Provider has no proxy allocation method',
-        suggestedAction: SuggestedActions.WAIT,
-        retryAfterMs: this.standbyBackoffMs,
-        accountId,
-      });
+  resolveProxy(accountId, requiresResidential = false) {
+    let proxy = null;
+    if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
+      proxy = this.proxyProvider.getProxy(accountId, requiresResidential);
+    } else if (this.proxyPool) {
+      if (this.requiresAuth && accountId && typeof this.proxyPool.getStickyProxy === 'function') {
+        proxy = this.proxyPool.getStickyProxy(accountId);
+      } else if (typeof this.proxyPool.getRotatingProxy === 'function') {
+        proxy = this.proxyPool.getRotatingProxy();
+      } else if (typeof this.proxyPool.getRoundRobinProxy === 'function') {
+        proxy = this.proxyPool.getRoundRobinProxy();
+      }
     }
 
     if (!proxy) {
-      // Enter standby backoff for the account, if registered, before throwing.
-      if (this.accountPool && accountId && this.accountPool.getAccount(accountId)) {
-        this.accountPool.markUnavailable(accountId, 'proxy_exhausted', this.standbyBackoffMs);
+      if (this.requiresAuth && accountId && this.accountPool) {
+        this.accountPool.markUnavailable(accountId, 'proxy_exhausted', this.standbyBackoffMs, this.platform);
       }
-
       throw new PlatformError({
         type: ErrorTypes.PROXY_EXHAUSTED,
         code: 'XACT_5030',
@@ -196,6 +166,7 @@ export class AbstractApiClient {
         suggestedAction: SuggestedActions.WAIT,
         retryAfterMs: this.standbyBackoffMs,
         accountId,
+        platform: this.platform,
       });
     }
 
@@ -261,11 +232,13 @@ export class AbstractApiClient {
           });
         }
 
-        const proxy = this.resolveProxy(currentAccountId);
+        const proxy = this.resolveProxy(currentAccountId, opts.requiresResidential);
 
         let agent = null;
         if (proxy && provider && typeof provider.getProxyAgent === 'function') {
           agent = provider.getProxyAgent(proxy, { client: this.client });
+        } else if (proxy && provider && typeof provider.createProxyAgent === 'function') {
+          agent = provider.createProxyAgent(proxy, this.client);
         }
 
         if (typeof this.httpClient !== 'function') {
@@ -302,6 +275,40 @@ export class AbstractApiClient {
 
         // Success condition (2xx / 3xx)
         if (status >= 200 && status < 400) {
+          if (this.responseValidator) {
+            if (this.responseValidator.isRateLimit(response)) {
+              throw new RateLimitError({
+                code: 'XACT_4290',
+                message: 'Rate limit payload detected from upstream platform',
+                statusCode: 429,
+                suggestedAction: SuggestedActions.ROTATE_PROXY,
+                platform: this.platform,
+                details: response?.data || response,
+              });
+            }
+            if (this.responseValidator.isBotChallenge(response)) {
+              throw new BotChallengeError({
+                code: 'XACT_4030',
+                message: 'Bot challenge detected on upstream platform',
+                statusCode: 403,
+                suggestedAction: SuggestedActions.ROTATE_PROXY,
+                platform: this.platform,
+                details: response?.data || response,
+              });
+            }
+            if (!this.responseValidator.isValidPayload(response)) {
+              throw new PlatformError({
+                type: ErrorTypes.INVALID_ARGS,
+                code: 'XACT_4001',
+                message: 'Response payload is invalid or corrupted',
+                statusCode: 400,
+                suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+                platform: this.platform,
+                details: response?.data || response,
+              });
+            }
+          }
+
           const trackingKey = this.requiresAuth && currentAccountId ? currentAccountId : 'noauth';
           if (this.accountPool) {
             this.accountPool.recordRequest(trackingKey, this.platform);
@@ -345,6 +352,9 @@ export class AbstractApiClient {
           if (isLastProxyAttempt) {
             if (this.requiresAuth && currentAccountId && this.accountPool) {
               this.accountPool.markUnavailable(currentAccountId, 'rate_limit', this.rateLimitHibernationMs, this.platform);
+              if (this.governor && typeof this.governor.recordRateLimit === 'function') {
+                this.governor.recordRateLimit(currentAccountId, this.platform, this.rateLimitHibernationMs);
+              }
 
               const nextAccount = this.accountPool.getNextAvailable(this.platform);
               if (nextAccount && nextAccount !== currentAccountId) {
@@ -417,4 +427,3 @@ export class AbstractApiClient {
     });
   }
 }
-

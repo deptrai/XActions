@@ -155,6 +155,22 @@ export class ProxyIpPool {
   }
 
   /**
+   * Alias for getNext() to satisfy round-robin proxy contract.
+   * @returns {any | null}
+   */
+  getRoundRobinProxy() {
+    return this.getNext();
+  }
+
+  /**
+   * Alias for getNext() to satisfy rotating proxy contract.
+   * @returns {any | null}
+   */
+  getRotatingProxy() {
+    return this.getNext();
+  }
+
+  /**
    * Get a deterministic sticky proxy for an account ID.
    * @param {string} accountId
    * @returns {any | null}

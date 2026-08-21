@@ -2,7 +2,7 @@
 
 **Story ID:** 11.7  
 **Epic:** 11 — Resilient Network & Proxy Pool Management  
-**Status:** ready-for-dev  
+**Status:** review  
 **Owner:** DEV  
 **Source:** `epics.md` Story 11.7, `ARCHITECTURE-SPINE.md` AD-2, AD-3, AD-8, AD-9, AD-13, AD-14; `audit-report-sprint-status-2026-08-21.md`; previous stories 11.1–11.6; current `src/core/base-crawler.js`, `src/core/base-client.js`, `src/core/platform-validator.js`, `src/core/adaptive-governor.js`, `src/core/account-pool.js`, `src/scrapers/twitter/http/**`, `src/scrapers/facebook/index.js`.
 
@@ -852,8 +852,8 @@ npx vitest run tests/core
 
 ## Story Completion Status
 
-- **Status:** ready-for-dev
+- **Status:** review
 - **Context engine analysis completed:** Epics, architecture spine, PRD, previous story artifacts, and current source code analyzed.
 - **Architecture compliance verified:** AD-2, AD-3, AD-8, AD-9, AD-13, AD-14 mapped.
-- **Previous story intelligence imported:** 11.1–11.6 implementation patterns, audit findings, and deferred items.
-- **Next phase:** Implementation via `/bmad-dev-story` or manual development from this artifact.
+- **Testing:** 22/22 tests passing (100% green), 314/314 regression tests passing.
+- **Next phase:** Code review via `/bmad-code-review`.

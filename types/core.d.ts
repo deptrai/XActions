@@ -169,10 +169,16 @@ export class ProxyDeadError extends PlatformError {
 
 export abstract class AbstractCrawler {
   name: string;
+  requiresAuth: boolean;
+  governor: AdaptiveRateGovernor | null;
+  accountPool: AccountPool | null;
   constructor(deps?: {
     client?: AbstractApiClient;
     store?: AbstractStore;
     sessionManager?: SessionManager;
+    governor?: AdaptiveRateGovernor;
+    accountPool?: AccountPool;
+    requiresAuth?: boolean;
   });
   registerAction(action: string, handler: Function, descriptor?: Partial<Omit<ActionDescriptor, 'action'>>): void;
   listActions(): ActionDescriptor[];
@@ -187,19 +193,40 @@ export abstract class AbstractCrawler {
 
 export abstract class AbstractApiClient {
   name: string;
+  platform: string;
   requiresAuth: boolean;
   httpClient: unknown;
+  responseValidator: AbstractPlatformResponseValidator | null;
   cookies: Record<string, unknown>;
+  maxProxyRetries: number;
+  maxAccountRotations: number;
+  backoffBaseMs: number;
+  backoffMultiplier: number;
+  maxBackoffMs: number;
+  rateLimitHibernationMs: number;
+  standbyBackoffMs: number;
   constructor(options?: {
     sessionManager?: SessionManager;
     proxyPool?: unknown;
+    proxyProvider?: unknown;
     accountPool?: AccountPool;
     governor?: AdaptiveRateGovernor;
+    responseValidator?: AbstractPlatformResponseValidator;
+    platform?: string;
+    client?: 'undici' | 'got';
+    httpClient?: Function;
+    requiresAuth?: boolean;
+    maxProxyRetries?: number;
+    maxAccountRotations?: number;
+    backoffBaseMs?: number;
+    backoffMultiplier?: number;
+    maxBackoffMs?: number;
+    rateLimitHibernationMs?: number;
+    standbyBackoffMs?: number;
   });
-  resolveProxy(accountId?: string): unknown;
-  abstract init(session: Record<string, unknown>): Promise<void>;
-  abstract request(method: string, url: string, options?: Record<string, unknown>): Promise<unknown>;
-  abstract sign(payload: Record<string, unknown>): Promise<unknown>;
+  resolveProxy(accountId?: string, requiresResidential?: boolean): unknown;
+  request(method: string, url: string, options?: Record<string, unknown>): Promise<unknown>;
+  sign(payload: Record<string, unknown>): Promise<unknown>;
   updateCookies(cookies: Record<string, unknown>): void;
   handleError(response: unknown, platform: string): never;
 }

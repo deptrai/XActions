@@ -6,7 +6,7 @@ import { AdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
 import { AccountPool } from '../../src/core/account-pool.js';
 import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
 import { StaticProxyProvider } from '../../src/proxy/providers.js';
-import { PlatformError, ErrorTypes } from '../../src/core/error-envelope.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from '../../src/core/error-envelope.js';
 import { AbstractPlatformResponseValidator } from '../../src/core/platform-validator.js';
 
 class MockPlatformValidator extends AbstractPlatformResponseValidator {
@@ -62,7 +62,7 @@ class NoAuthCrawler extends AbstractCrawler {
   }
 }
 
-describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contract (ATDD Red Phase)', () => {
+describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contract (ATDD Green Phase)', () => {
   let proxyPool;
   let governor;
   let accountPool;
@@ -77,13 +77,13 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
   });
 
   describe('AC-1 & AC-2: AbstractCrawler Governor & Account Admission', () => {
-    test.skip('should accept governor and accountPool in constructor or inherit from client', () => {
+    test('should accept governor and accountPool in constructor or inherit from client', () => {
       const crawler = new TestCrawler({ governor, accountPool });
       expect(crawler.governor).toBe(governor);
       expect(crawler.accountPool).toBe(accountPool);
     });
 
-    test.skip('should throw INVALID_ARGS before governor checks when action is unknown', async () => {
+    test('should throw INVALID_ARGS before governor checks when action is unknown', async () => {
       const crawler = new TestCrawler({ governor, accountPool });
       await expect(
         crawler.start({ action: 'non_existent_action', args: {} })
@@ -93,7 +93,7 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
       });
     });
 
-    test.skip('should throw HIBERNATION (XACT_4291) when account is hibernating', async () => {
+    test('should throw HIBERNATION (XACT_4291) when account is hibernating', async () => {
       governor.recordRateLimit('acc_1', 'test-platform', 60000);
       const crawler = new TestCrawler({ governor, accountPool });
 
@@ -106,11 +106,11 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
       ).rejects.toMatchObject({
         code: 'XACT_4291',
         type: ErrorTypes.RATE_LIMIT,
-        suggestedAction: 'ROTATE_ACCOUNT',
+        suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
       });
     });
 
-    test.skip('should fallback to accountPool.getNextAvailable when accountId is omitted in auth crawler', async () => {
+    test('should fallback to accountPool.getNextAvailable when accountId is omitted in auth crawler', async () => {
       const crawler = new TestCrawler({ governor, accountPool });
       const result = await crawler.start({
         action: 'scrape_profile',
@@ -121,7 +121,7 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
       expect(governor.getAccountVelocity('acc_1', 'test-platform')).toBe(1);
     });
 
-    test.skip('should throw PROXY_EXHAUSTED (XACT_5030) when governor throughput is 0', async () => {
+    test('should throw PROXY_EXHAUSTED (XACT_5030) when governor throughput is 0', async () => {
       // Quarantine all proxies
       proxyPool.quarantine('http://p1.example.com:8080', 60000);
       proxyPool.quarantine('http://p2.example.com:8080', 60000);
@@ -135,11 +135,11 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
         })
       ).rejects.toMatchObject({
         code: 'XACT_5030',
-        suggestedAction: 'WAIT',
+        suggestedAction: SuggestedActions.WAIT,
       });
     });
 
-    test.skip('should record request under synthetic noauth key for no-auth crawler', async () => {
+    test('should record request under synthetic noauth key for no-auth crawler', async () => {
       const crawler = new NoAuthCrawler({ governor });
       const result = await crawler.start({
         action: 'scrape_public',
@@ -152,7 +152,7 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
   });
 
   describe('AC-3 & AC-4: AbstractApiClient Response Validator Integration', () => {
-    test.skip('should throw RateLimitError when 200 response contains rate-limit payload', async () => {
+    test('should throw RateLimitError when 200 response contains rate-limit payload', async () => {
       const provider = new StaticProxyProvider({ pool: proxyPool });
       const validator = new MockPlatformValidator();
 
@@ -177,11 +177,11 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
       await expect(client.request('GET', 'https://example.com/api')).rejects.toMatchObject({
         code: 'XACT_4290',
         statusCode: 429,
-        suggestedAction: 'ROTATE_PROXY',
+        suggestedAction: SuggestedActions.ROTATE_PROXY,
       });
     });
 
-    test.skip('should throw BotChallengeError when 200 response contains hidden challenge', async () => {
+    test('should throw BotChallengeError when 200 response contains hidden challenge', async () => {
       const provider = new StaticProxyProvider({ pool: proxyPool });
       const validator = new MockPlatformValidator();
 
@@ -206,11 +206,11 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
       await expect(client.request('GET', 'https://example.com/api')).rejects.toMatchObject({
         code: 'XACT_4030',
         statusCode: 403,
-        suggestedAction: 'ROTATE_PROXY',
+        suggestedAction: SuggestedActions.ROTATE_PROXY,
       });
     });
 
-    test.skip('should throw INVALID_ARGS when response payload is invalid/corrupted', async () => {
+    test('should throw INVALID_ARGS when response payload is invalid/corrupted', async () => {
       const provider = new StaticProxyProvider({ pool: proxyPool });
       const validator = new MockPlatformValidator();
 

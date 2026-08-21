@@ -55,7 +55,7 @@ development_status:
   11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: done
   11-5-end-to-end-request-pipeline-two-mode-ip: done
   11-6-rate-limit-bot-challenge-defense: done
-  11-7-crawler-governor-integration-validator-contract: ready-for-dev
+  11-7-crawler-governor-integration-validator-contract: review
   epic-11-retrospective: optional
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---

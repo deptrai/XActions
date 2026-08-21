@@ -5,7 +5,7 @@ import { TwitterPlatformResponseValidator } from '../../../src/scrapers/twitter/
 describe('TwitterPlatformResponseValidator Contract Tests (Story 11.7 - ATDD Red Phase)', () => {
   const validator = new TwitterPlatformResponseValidator();
 
-  test.skip('should recognize valid UserByScreenName GraphQL response payload', () => {
+  test('should recognize valid UserByScreenName GraphQL response payload', () => {
     const response = {
       data: {
         user: {
@@ -27,7 +27,7 @@ describe('TwitterPlatformResponseValidator Contract Tests (Story 11.7 - ATDD Red
     expect(validator.isRateLimit(response)).toBe(false);
   });
 
-  test.skip('should recognize valid UserTweets timeline response instructions', () => {
+  test('should recognize valid UserTweets timeline response instructions', () => {
     const response = {
       data: {
         user: {
@@ -52,7 +52,7 @@ describe('TwitterPlatformResponseValidator Contract Tests (Story 11.7 - ATDD Red
     expect(validator.isRateLimit(response)).toBe(false);
   });
 
-  test.skip('should recognize valid TweetDetail response payload', () => {
+  test('should recognize valid TweetDetail response payload', () => {
     const response = {
       data: {
         tweetResult: {
@@ -72,7 +72,7 @@ describe('TwitterPlatformResponseValidator Contract Tests (Story 11.7 - ATDD Red
     expect(validator.isRateLimit(response)).toBe(false);
   });
 
-  test.skip('should detect rate limit from GraphQL errors array with code 88 or message', () => {
+  test('should detect rate limit from GraphQL errors array with code 88 or message', () => {
     const response = {
       errors: [
         {
@@ -87,7 +87,7 @@ describe('TwitterPlatformResponseValidator Contract Tests (Story 11.7 - ATDD Red
     expect(validator.isBotChallenge(response)).toBe(false);
   });
 
-  test.skip('should detect bot challenge from Cloudflare or Incapsula HTML response body', () => {
+  test('should detect bot challenge from Cloudflare or Incapsula HTML response body', () => {
     const htmlResponse = {
       status: 200,
       data: '<html><head><title>Just a moment...</title></head><body><div id="cf-browser-verification">Please verify you are human</div></body></html>',
@@ -97,13 +97,13 @@ describe('TwitterPlatformResponseValidator Contract Tests (Story 11.7 - ATDD Red
     expect(validator.isValidPayload(htmlResponse)).toBe(false);
   });
 
-  test.skip('should detect rate limit from HTTP 429 status code', () => {
+  test('should detect rate limit from HTTP 429 status code', () => {
     const response = { status: 429, headers: {}, data: '' };
     expect(validator.isRateLimit(response)).toBe(true);
     expect(validator.isValidPayload(response)).toBe(false);
   });
 
-  test.skip('should not treat not-found errors as bot challenge', () => {
+  test('should not treat not-found errors as bot challenge', () => {
     const response = {
       errors: [
         {
