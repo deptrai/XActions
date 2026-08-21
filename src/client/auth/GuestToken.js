@@ -13,6 +13,8 @@
 import { BEARER_TOKEN } from '../api/graphqlQueries.js';
 import { randomUserAgent } from './userAgent.js';
 
+/** @typedef {import('../api/parsers.js').Raw} Raw */
+
 const ACTIVATE_URL = 'https://api.x.com/1.1/guest/activate.json';
 
 /** Default guest token TTL: 3 hours */
@@ -29,18 +31,19 @@ export class GuestToken {
   /**
    * @param {Object} [options]
    * @param {number} [options.maxAge=10800000] - Token TTL in ms (default 3h)
-   * @param {Function} [options.fetch] - Custom fetch implementation
+   * @param {typeof globalThis.fetch} [options.fetch] - Custom fetch implementation
+   * @param {string} [options.userAgent] - Custom User-Agent string
    */
   constructor(options = {}) {
     /** @private */
     this._maxAge = options.maxAge || DEFAULT_MAX_AGE;
     /** @private @type {string|null} */
     this._token = null;
-    /** @private @type {number|null} */
-    this._activatedAt = null;
+    /** @private @type {number|undefined} */
+    this._activatedAt = undefined;
     /** @type {string} Browser User-Agent sent with every request */
     this.userAgent = options.userAgent || randomUserAgent();
-    /** @private */
+    /** @private @type {typeof globalThis.fetch} */
     this._fetchFn = options.fetch || globalThis.fetch;
   }
 
@@ -84,8 +87,9 @@ export class GuestToken {
         throw new Error(`Guest token activation failed on retry: HTTP ${retryResponse.status} — ${text.slice(0, 200)}`);
       }
 
-      const retryData = await retryResponse.json();
-      this._token = retryData.guest_token;
+      const retryData = /** @type {Raw} */ (await retryResponse.json());
+      this._token = /** @type {string} */ (retryData.guest_token);
+      if (!this._token) throw new Error('No guest_token in activation response');
       this._activatedAt = Date.now();
       return this._token;
     }
@@ -95,11 +99,11 @@ export class GuestToken {
       throw new Error(`Guest token activation failed: HTTP ${response.status} — ${text.slice(0, 200)}`);
     }
 
-    const data = await response.json();
+    const data = /** @type {Raw} */ (await response.json());
     if (!data.guest_token) {
       throw new Error('No guest_token in activation response');
     }
-    this._token = data.guest_token;
+    this._token = /** @type {string} */ (data.guest_token);
     this._activatedAt = Date.now();
     return this._token;
   }
@@ -129,19 +133,22 @@ export class GuestToken {
     if (this.isExpired()) {
       await this.activate();
     }
+    if (!this._token) throw new Error('No guest token available');
     return this._token;
   }
 
   /**
    * Get headers for unauthenticated (guest) requests.
-   * @returns {{ 'x-guest-token': string, Authorization: string }}
+   * @returns {Record<string, string>}
    */
   getHeaders() {
-    return {
+    /** @type {Record<string, string>} */
+    const headers = {
       'x-guest-token': this._token || '',
       'Authorization': `Bearer ${BEARER_TOKEN}`,
       'User-Agent': this.userAgent,
     };
+    return headers;
   }
 
   /**
@@ -149,7 +156,7 @@ export class GuestToken {
    */
   reset() {
     this._token = null;
-    this._activatedAt = null;
+    this._activatedAt = undefined;
   }
 }
 

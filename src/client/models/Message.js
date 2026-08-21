@@ -8,6 +8,8 @@
  * @license MIT
  */
 
+/** @typedef {import('../api/parsers.js').Raw} Raw */
+
 /**
  * Represents a single direct message.
  */
@@ -32,7 +34,7 @@ export class Message {
   /**
    * Create a Message from a raw Twitter DM API entry.
    *
-   * @param {Object} raw - Raw DM message object
+   * @param {Raw} raw - Raw DM message object
    * @param {string} [conversationId=''] - Conversation ID context
    * @returns {Message|null} Parsed message, or null if unparseable
    */
@@ -43,23 +45,25 @@ export class Message {
     msg.id = raw.id?.toString() || '';
     msg.conversationId = conversationId;
 
-    const msgData = raw.message_data || raw;
-    msg.text = msgData.text || '';
+    const msgData = /** @type {Raw} */ (raw.message_data || raw);
+    msg.text = /** @type {string} */ (msgData.text || '');
     msg.senderId = msgData.sender_id?.toString() || raw.sender_id?.toString() || '';
     msg.recipientId = msgData.recipient_id?.toString() || '';
 
     if (raw.time) {
       msg.createdAt = new Date(Number(raw.time));
     } else if (raw.created_at) {
-      msg.createdAt = new Date(raw.created_at);
+      msg.createdAt = new Date(/** @type {string} */ (raw.created_at));
     }
 
     // Extract media URLs from attachments or entities
-    const media = msgData.attachment?.media || msgData.entities?.media;
+    const attachment = /** @type {Raw|undefined} */ (msgData.attachment);
+    const entities = /** @type {Raw|undefined} */ (msgData.entities);
+    const media = attachment?.media || entities?.media;
     if (media) {
-      const items = Array.isArray(media) ? media : [media];
+      const items = Array.isArray(media) ? (/** @type {Raw[]} */ (media)) : [/** @type {Raw} */ (media)];
       msg.mediaUrls = items
-        .map((m) => m.media_url_https || m.media_url || '')
+        .map((/** @type {Raw} */ m) => /** @type {string} */ (m.media_url_https || m.media_url || ''))
         .filter(Boolean);
     }
 
@@ -68,7 +72,7 @@ export class Message {
 
   /**
    * JSON-serializable representation.
-   * @returns {Object}
+   * @returns {Raw}
    */
   toJSON() {
     return {

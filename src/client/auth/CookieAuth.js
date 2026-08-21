@@ -13,6 +13,7 @@
 import { CookieJar } from './CookieJar.js';
 import { extractCsrfToken, extractUserId, extractAuthToken, updateJarFromResponse } from './CookieParser.js';
 import { AuthenticationError } from '../errors.js';
+import { TokenManager } from './TokenManager.js';
 
 /**
  * Cookie-based authentication manager.
@@ -20,15 +21,70 @@ import { AuthenticationError } from '../errors.js';
  */
 export class CookieAuth {
   /**
-   * @param {import('./TokenManager.js').TokenManager} tokenManager
+   * @param {import('./TokenManager.js').TokenManager} [tokenManager]
    */
   constructor(tokenManager) {
     /** @private */
-    this._tokenManager = tokenManager;
+    this._tokenManager = tokenManager || new TokenManager();
     /** @type {CookieJar} */
     this.jar = new CookieJar();
     /** @private */
     this._authenticated = false;
+    /** @type {string|undefined} */
+    this._username = undefined;
+  }
+
+  /**
+   * Create a CookieAuth from a plain cookie object.
+   *
+   * @param {Record<string, string>} obj
+   * @param {import('./TokenManager.js').TokenManager} [tokenManager]
+   * @returns {CookieAuth}
+   */
+  static fromObject(obj, tokenManager) {
+    const auth = new CookieAuth(tokenManager);
+    if (obj && typeof obj === 'object') {
+      const cookies = Object.entries(obj).map(([name, value]) => ({ name, value: String(value) }));
+      auth.setCookies(cookies);
+    }
+    return auth;
+  }
+
+  /**
+   * Parse a cookie header string into a CookieAuth.
+   *
+   * @param {string} cookieString
+   * @param {import('./TokenManager.js').TokenManager} [tokenManager]
+   * @returns {CookieAuth}
+   */
+  static parse(cookieString, tokenManager) {
+    const auth = new CookieAuth(tokenManager);
+    auth.setCookies(cookieString);
+    return auth;
+  }
+
+  /**
+   * Load cookies from a JSON file.
+   *
+   * @param {string} filePath
+   * @param {import('./TokenManager.js').TokenManager} [tokenManager]
+   * @returns {Promise<CookieAuth>}
+   */
+  static async load(filePath, tokenManager) {
+    const auth = new CookieAuth(tokenManager);
+    await auth.loadCookies(filePath);
+    return auth;
+  }
+
+  /**
+   * Create CookieAuth from the XACTIONS_SESSION_COOKIE environment variable.
+   *
+   * @param {import('./TokenManager.js').TokenManager} [tokenManager]
+   * @returns {CookieAuth}
+   */
+  static fromEnv(tokenManager) {
+    const cookieString = typeof process !== 'undefined' ? process.env.XACTIONS_SESSION_COOKIE || '' : '';
+    return CookieAuth.parse(cookieString, tokenManager);
   }
 
   /**
@@ -43,12 +99,41 @@ export class CookieAuth {
   }
 
   /**
-   * Get the authenticated user's ID from the twid cookie.
+   * Get the authenticated user ID from the twid cookie.
    *
    * @returns {string|null}
    */
   getAuthenticatedUserId() {
     return extractUserId(this.jar);
+  }
+
+  /**
+   * Set a single cookie by name and value.
+   *
+   * @param {string} name
+   * @param {string} value
+   */
+  set(name, value) {
+    this.jar.set({ name, value });
+    this._syncTokens();
+  }
+
+  /**
+   * Store the Twitter username for this session.
+   *
+   * @param {string} username
+   */
+  setUsername(username) {
+    this._username = username;
+  }
+
+  /**
+   * Get the stored username.
+   *
+   * @returns {string|undefined}
+   */
+  getUsername() {
+    return this._username;
   }
 
   /**
@@ -130,7 +215,7 @@ export class CookieAuth {
   clear() {
     this.jar.clear();
     this._authenticated = false;
-    this._tokenManager.setCsrfToken(null);
+    this._tokenManager.setCsrfToken(undefined);
   }
 
   /**

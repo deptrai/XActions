@@ -11,7 +11,7 @@ import { ScraperError } from './errors.js';
 
 /**
  * Validate and clean a Twitter username.
- * Strips leading @, enforces 1-15 alphanumeric + underscore chars.
+ * Strips leading at sign, enforces 1-15 alphanumeric + underscore chars.
  *
  * @param {string} username
  * @returns {string} Cleaned username

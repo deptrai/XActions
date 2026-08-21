@@ -25,21 +25,21 @@ export class SessionValidator {
    * @param {Object} options
    * @param {import('./TokenManager.js').TokenManager} options.tokenManager - Token manager for headers
    * @param {import('./CookieAuth.js').CookieAuth} options.cookieAuth - Cookie auth for session data
-   * @param {Function} [options.fetch] - Custom fetch implementation
+   * @param {typeof globalThis.fetch} [options.fetch] - Custom fetch implementation
    */
   constructor({ tokenManager, cookieAuth, fetch: fetchFn }) {
     /** @private */
     this._tokenManager = tokenManager;
     /** @private */
     this._cookieAuth = cookieAuth;
-    /** @private */
+    /** @private @type {typeof globalThis.fetch} */
     this._fetch = fetchFn || globalThis.fetch;
   }
 
   /**
    * Validate the current session by making a lightweight API call.
    *
-   * @returns {Promise<{ valid: boolean, reason?: string, user?: Object }>}
+   * @returns {Promise<{ valid: boolean, reason?: string, user?: {id: string, username: string, displayName: string, profileImageUrl: string|null}|null }>}
    */
   async validate() {
     try {
@@ -50,14 +50,14 @@ export class SessionValidator {
       });
 
       if (response.ok) {
-        const user = await response.json();
+        const user = /** @type {Record<string, unknown>} */ (await response.json());
         return {
           valid: true,
           user: {
-            id: user.id_str,
-            username: user.screen_name,
-            displayName: user.name,
-            profileImageUrl: user.profile_image_url_https || null,
+            id: String(user.id_str),
+            username: String(user.screen_name),
+            displayName: String(user.name),
+            profileImageUrl: user.profile_image_url_https ? String(user.profile_image_url_https) : null,
           },
         };
       }
@@ -68,8 +68,8 @@ export class SessionValidator {
       }
 
       if (response.status === 403) {
-        const body = await response.json().catch(() => ({}));
-        const errors = body.errors || [];
+        const body = /** @type {Record<string, unknown>} */ (await response.json().catch(() => ({})));
+        const errors = /** @type {Array<{code?: number}>} */ (body.errors || []);
         const errorCode = errors[0]?.code;
 
         if (errorCode === 326) {
@@ -93,14 +93,14 @@ export class SessionValidator {
         });
 
         if (retryResponse.ok) {
-          const user = await retryResponse.json();
+          const user = /** @type {Record<string, unknown>} */ (await retryResponse.json());
           return {
             valid: true,
             user: {
-              id: user.id_str,
-              username: user.screen_name,
-              displayName: user.name,
-              profileImageUrl: user.profile_image_url_https || null,
+              id: String(user.id_str),
+              username: String(user.screen_name),
+              displayName: String(user.name),
+              profileImageUrl: user.profile_image_url_https ? String(user.profile_image_url_https) : null,
             },
           };
         }
@@ -116,11 +116,14 @@ export class SessionValidator {
       return { valid: false, reason: 'expired' };
     } catch (err) {
       // Network errors ≠ invalid session
-      if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.name === 'TypeError') {
-        throw new ScraperError(
-          `Network error during session validation: ${err.message}`,
-          'NETWORK_ERROR',
-        );
+      if (err instanceof Error && ('code' in err || err.name === 'TypeError')) {
+        const nodeErr = /** @type {Error & {code?: string}} */ (err);
+        if (nodeErr.code === 'ECONNREFUSED' || nodeErr.code === 'ENOTFOUND' || err.name === 'TypeError') {
+          throw new ScraperError(
+            `Network error during session validation: ${err.message}`,
+            'NETWORK_ERROR',
+          );
+        }
       }
       throw err;
     }
@@ -130,7 +133,7 @@ export class SessionValidator {
    * Validate the session and refresh the CSRF token from the response.
    * Twitter rotates ct0 periodically — this keeps it fresh.
    *
-   * @returns {Promise<{ valid: boolean, reason?: string, user?: Object }>}
+   * @returns {Promise<{ valid: boolean, reason?: string, user?: {id: string, username: string, displayName: string, profileImageUrl: string|null}|null }>}
    */
   async validateAndRefreshCsrf() {
     const headers = this._tokenManager.getHeaders(true);
@@ -155,14 +158,14 @@ export class SessionValidator {
     }
 
     if (response.ok) {
-      const user = await response.json();
+      const user = /** @type {Record<string, unknown>} */ (await response.json());
       return {
         valid: true,
         user: {
-          id: user.id_str,
-          username: user.screen_name,
-          displayName: user.name,
-          profileImageUrl: user.profile_image_url_https || null,
+          id: String(user.id_str),
+          username: String(user.screen_name),
+          displayName: String(user.name),
+          profileImageUrl: user.profile_image_url_https ? String(user.profile_image_url_https) : null,
         },
       };
     }
@@ -188,13 +191,17 @@ export class SessionValidator {
         result.reason === 'expired' ? 'AUTH_REQUIRED' : 'AUTH_FAILED',
       );
     }
-    return result.user;
+    const user = result.user;
+    if (!user) {
+      throw new AuthenticationError('Could not retrieve logged-in user', 'AUTH_FAILED');
+    }
+    return user;
   }
 
   /**
    * Check if an error indicates an expired session.
    *
-   * @param {Error} error - The error to check
+   * @param {Error & {httpStatus?: number, code?: string, twitterErrorCode?: number}} error - The error to check
    * @returns {boolean} True if the error indicates session expiration
    */
   isSessionExpired(error) {

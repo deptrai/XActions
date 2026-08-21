@@ -14,6 +14,9 @@ import { Tweet } from '../models/Tweet.js';
 import { NotFoundError, ScraperError } from '../errors.js';
 import { parseTimelineEntries, parseTweetEntry, parseModuleEntry } from './parsers.js';
 
+/** @typedef {import('./parsers.js').Raw} Raw */
+/** @typedef {import('./parsers.js').HttpClient} HttpClient */
+
 /** @private Random delay between paginated requests */
 function randomDelay(min = 1000, max = 2000) {
   return new Promise((resolve) => setTimeout(resolve, min + Math.random() * (max - min)));
@@ -22,7 +25,7 @@ function randomDelay(min = 1000, max = 2000) {
 /**
  * Get a single tweet by ID.
  *
- * @param {Object} http - HTTP client with get/post methods
+ * @param {HttpClient} http - HTTP client with get/post methods
  * @param {string} tweetId - Numeric tweet ID
  * @returns {Promise<Tweet>}
  * @throws {NotFoundError}
@@ -42,31 +45,32 @@ export async function getTweet(http, tweetId) {
   const url = buildGraphQLUrl(endpoint, variables);
   const data = await http.get(url);
 
-  // Navigate the TweetDetail response — entries are nested in instructions
-  const instructions = data?.data?.tweetResult?.result?.tweet
-    ? null // Direct tweet result
-    : data?.data?.threaded_conversation_with_injections_v2?.instructions;
+  const dataData = /** @type {Raw} */ (data.data);
+  const tweetResultRoot = /** @type {Raw|undefined} */ (dataData?.tweetResult);
+  const directResultRaw = /** @type {Raw|undefined} */ (tweetResultRoot?.result);
 
   // Try direct tweet result first
-  const directResult = data?.data?.tweetResult?.result;
-  if (directResult) {
-    const tweet = Tweet.fromGraphQL(directResult);
+  if (directResultRaw) {
+    const tweet = Tweet.fromGraphQL(directResultRaw);
     if (tweet) return tweet;
   }
+
+  const threaded = /** @type {Raw|undefined} */ (dataData?.threaded_conversation_with_injections_v2);
+  const instructions = /** @type {Raw[]|undefined} */ (threaded?.instructions);
 
   // Try timeline entries format
   if (instructions) {
     for (const instruction of instructions) {
       if (instruction.type !== 'TimelineAddEntries') continue;
-      for (const entry of instruction.entries || []) {
+      for (const entry of /** @type {Raw[]} */ (instruction.entries || [])) {
         if (!entry.entryId?.startsWith('tweet-')) continue;
-        const tweetResult = entry.content?.itemContent?.tweet_results?.result;
+        const tweetResult = /** @type {Raw|undefined} */ (entry.content?.itemContent?.tweet_results?.result);
         if (tweetResult) {
           let result = tweetResult;
           if (result.__typename === 'TweetWithVisibilityResults' && result.tweet) {
-            result = result.tweet;
+            result = /** @type {Raw} */ (result.tweet);
           }
-          if (result.rest_id === tweetId || result.legacy?.id_str === tweetId) {
+          if (result.rest_id === tweetId || (/** @type {Raw|undefined} */ (result.legacy))?.id_str === tweetId) {
             const tweet = Tweet.fromGraphQL(result);
             if (tweet) return tweet;
           }
@@ -83,7 +87,7 @@ export async function getTweet(http, tweetId) {
 /**
  * Get tweets from a user's timeline.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} userId - Numeric user ID
  * @param {number} [count=40] - Maximum tweets to yield
  * @yields {Tweet}
@@ -94,14 +98,14 @@ export async function* getTweets(http, userId, count = 40) {
 
   while (yielded < count) {
     const endpoint = GRAPHQL_ENDPOINTS.UserTweets;
-    const variables = {
+    const variables = /** @type {Record<string, unknown>} */ ({
       userId,
       count: 20,
       includePromotedContent: false,
       withQuickPromoteEligibilityTweetFields: true,
       withVoice: true,
       withV2Timeline: true,
-    };
+    });
     if (cursor) variables.cursor = cursor;
 
     const url = buildGraphQLUrl(endpoint, variables);
@@ -132,7 +136,7 @@ export async function* getTweets(http, userId, count = 40) {
 /**
  * Get tweets and replies from a user's timeline.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} userId
  * @param {number} [count=40]
  * @yields {Tweet}
@@ -143,14 +147,14 @@ export async function* getTweetsAndReplies(http, userId, count = 40) {
 
   while (yielded < count) {
     const endpoint = GRAPHQL_ENDPOINTS.UserTweetsAndReplies;
-    const variables = {
+    const variables = /** @type {Record<string, unknown>} */ ({
       userId,
       count: 20,
       includePromotedContent: false,
       withCommunity: true,
       withVoice: true,
       withV2Timeline: true,
-    };
+    });
     if (cursor) variables.cursor = cursor;
 
     const url = buildGraphQLUrl(endpoint, variables);
@@ -192,7 +196,7 @@ export async function* getTweetsAndReplies(http, userId, count = 40) {
 /**
  * Get a user's liked tweets.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} userId
  * @param {number} [count=40]
  * @yields {Tweet}
@@ -203,7 +207,7 @@ export async function* getLikedTweets(http, userId, count = 40) {
 
   while (yielded < count) {
     const endpoint = GRAPHQL_ENDPOINTS.Likes;
-    const variables = {
+    const variables = /** @type {Record<string, unknown>} */ ({
       userId,
       count: 20,
       includePromotedContent: false,
@@ -211,7 +215,7 @@ export async function* getLikedTweets(http, userId, count = 40) {
       withBirdwatchNotes: false,
       withVoice: true,
       withV2Timeline: true,
-    };
+    });
     if (cursor) variables.cursor = cursor;
 
     const url = buildGraphQLUrl(endpoint, variables);
@@ -242,7 +246,7 @@ export async function* getLikedTweets(http, userId, count = 40) {
 /**
  * Get the latest tweet from a user.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} userId
  * @returns {Promise<Tweet|null>}
  */
@@ -255,26 +259,22 @@ export async function getLatestTweet(http, userId) {
 /**
  * Post a new tweet.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} text - Tweet text
- * @param {Object} [options={}]
- * @param {string[]} [options.mediaIds] - Media entity IDs to attach
- * @param {string} [options.replyTo] - Tweet ID to reply to
+ * @param {Record<string, unknown>} [options={}] - Optional mediaIds (string[]) and replyTo (string)
  * @returns {Promise<Tweet>}
  */
 export async function sendTweet(http, text, options = {}) {
   const endpoint = GRAPHQL_ENDPOINTS.CreateTweet;
-  const url = endpoint.url(endpoint.queryId);
-
-  const variables = {
+  const variables = /** @type {Record<string, unknown>} */ ({
     tweet_text: text,
     dark_request: false,
     media: {
-      media_entities: (options.mediaIds || []).map((id) => ({ media_id: id, tagged_users: [] })),
+      media_entities: (/** @type {string[]} */ (options.mediaIds || [])).map((id) => ({ media_id: id, tagged_users: [] })),
       possibly_sensitive: false,
     },
     semantic_annotation_ids: [],
-  };
+  });
 
   if (options.replyTo) {
     variables.reply = {
@@ -283,6 +283,7 @@ export async function sendTweet(http, text, options = {}) {
     };
   }
 
+  const url = buildGraphQLUrl(endpoint, variables);
   const body = {
     variables,
     features: DEFAULT_FEATURES,
@@ -290,11 +291,11 @@ export async function sendTweet(http, text, options = {}) {
   };
 
   const data = await http.post(url, body);
-  const tweetResult = data?.data?.create_tweet?.tweet_results?.result;
+  const tweetResult = /** @type {Raw|undefined} */ (data.data?.create_tweet?.tweet_results?.result);
 
   if (tweetResult) {
-    const tweet = Tweet.fromGraphQL(tweetResult);
-    if (tweet) return tweet;
+    const parsed = Tweet.fromGraphQL(tweetResult);
+    if (parsed) return parsed;
   }
 
   // Return a minimal tweet on parsing failure
@@ -306,7 +307,7 @@ export async function sendTweet(http, text, options = {}) {
 /**
  * Post a quote tweet.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} text
  * @param {string} quotedTweetId
  * @param {string[]} [mediaIds=[]]
@@ -314,9 +315,7 @@ export async function sendTweet(http, text, options = {}) {
  */
 export async function sendQuoteTweet(http, text, quotedTweetId, mediaIds = []) {
   const endpoint = GRAPHQL_ENDPOINTS.CreateTweet;
-  const url = endpoint.url(endpoint.queryId);
-
-  const variables = {
+  const variables = /** @type {Record<string, unknown>} */ ({
     tweet_text: text,
     dark_request: false,
     attachment_url: `https://x.com/i/status/${quotedTweetId}`,
@@ -325,8 +324,9 @@ export async function sendQuoteTweet(http, text, quotedTweetId, mediaIds = []) {
       possibly_sensitive: false,
     },
     semantic_annotation_ids: [],
-  };
+  });
 
+  const url = buildGraphQLUrl(endpoint, variables);
   const body = {
     variables,
     features: DEFAULT_FEATURES,
@@ -334,11 +334,11 @@ export async function sendQuoteTweet(http, text, quotedTweetId, mediaIds = []) {
   };
 
   const data = await http.post(url, body);
-  const tweetResult = data?.data?.create_tweet?.tweet_results?.result;
+  const tweetResult = /** @type {Raw|undefined} */ (data.data?.create_tweet?.tweet_results?.result);
 
   if (tweetResult) {
-    const tweet = Tweet.fromGraphQL(tweetResult);
-    if (tweet) return tweet;
+    const parsed = Tweet.fromGraphQL(tweetResult);
+    if (parsed) return parsed;
   }
 
   const tweet = new Tweet();
@@ -351,15 +351,16 @@ export async function sendQuoteTweet(http, text, quotedTweetId, mediaIds = []) {
 /**
  * Delete a tweet.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} tweetId
  * @returns {Promise<void>}
  */
 export async function deleteTweet(http, tweetId) {
   const endpoint = GRAPHQL_ENDPOINTS.DeleteTweet;
-  const url = endpoint.url(endpoint.queryId);
+  const variables = { tweet_id: tweetId, dark_request: false };
+  const url = buildGraphQLUrl(endpoint, variables);
   const body = {
-    variables: { tweet_id: tweetId, dark_request: false },
+    variables,
     queryId: endpoint.queryId,
   };
   await http.post(url, body);
@@ -368,15 +369,16 @@ export async function deleteTweet(http, tweetId) {
 /**
  * Like a tweet.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} tweetId
  * @returns {Promise<void>}
  */
 export async function likeTweet(http, tweetId) {
   const endpoint = GRAPHQL_ENDPOINTS.FavoriteTweet;
-  const url = endpoint.url(endpoint.queryId);
+  const variables = { tweet_id: tweetId };
+  const url = buildGraphQLUrl(endpoint, variables);
   const body = {
-    variables: { tweet_id: tweetId },
+    variables,
     queryId: endpoint.queryId,
   };
   await http.post(url, body);
@@ -385,15 +387,16 @@ export async function likeTweet(http, tweetId) {
 /**
  * Unlike a tweet.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} tweetId
  * @returns {Promise<void>}
  */
 export async function unlikeTweet(http, tweetId) {
   const endpoint = GRAPHQL_ENDPOINTS.UnfavoriteTweet;
-  const url = endpoint.url(endpoint.queryId);
+  const variables = { tweet_id: tweetId };
+  const url = buildGraphQLUrl(endpoint, variables);
   const body = {
-    variables: { tweet_id: tweetId },
+    variables,
     queryId: endpoint.queryId,
   };
   await http.post(url, body);
@@ -402,15 +405,16 @@ export async function unlikeTweet(http, tweetId) {
 /**
  * Retweet a tweet.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} tweetId
  * @returns {Promise<void>}
  */
 export async function retweet(http, tweetId) {
   const endpoint = GRAPHQL_ENDPOINTS.CreateRetweet;
-  const url = endpoint.url(endpoint.queryId);
+  const variables = { tweet_id: tweetId, dark_request: false };
+  const url = buildGraphQLUrl(endpoint, variables);
   const body = {
-    variables: { tweet_id: tweetId, dark_request: false },
+    variables,
     queryId: endpoint.queryId,
   };
   await http.post(url, body);
@@ -419,15 +423,16 @@ export async function retweet(http, tweetId) {
 /**
  * Unretweet (undo retweet).
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} tweetId
  * @returns {Promise<void>}
  */
 export async function unretweet(http, tweetId) {
   const endpoint = GRAPHQL_ENDPOINTS.DeleteRetweet;
-  const url = endpoint.url(endpoint.queryId);
+  const variables = { source_tweet_id: tweetId, dark_request: false };
+  const url = buildGraphQLUrl(endpoint, variables);
   const body = {
-    variables: { source_tweet_id: tweetId, dark_request: false },
+    variables,
     queryId: endpoint.queryId,
   };
   await http.post(url, body);

@@ -19,7 +19,7 @@ import { dirname } from 'node:path';
  * @property {string} value
  * @property {string} [domain='.x.com']
  * @property {string} [path='/']
- * @property {Date|null} [expires=null]
+ * @property {Date | string | null} [expires=null]
  * @property {boolean} [httpOnly=false]
  * @property {boolean} [secure=false]
  * @property {string} [sameSite='Lax']
@@ -50,7 +50,7 @@ export class CookieJar {
   /**
    * Add or update a cookie by name.
    *
-   * @param {Cookie|{name: string, value: string}} cookie
+   * @param {Cookie} cookie
    */
   set(cookie) {
     if (!cookie || !cookie.name) return;
@@ -142,16 +142,19 @@ export class CookieJar {
    * @returns {Array<Cookie>}
    */
   toJSON() {
-    return this.getAll().map((c) => ({
-      name: c.name,
-      value: c.value,
-      domain: c.domain,
-      path: c.path,
-      expires: c.expires ? c.expires.toISOString() : null,
-      httpOnly: c.httpOnly,
-      secure: c.secure,
-      sameSite: c.sameSite,
-    }));
+    return this.getAll().map((c) => {
+      const expires = c.expires instanceof Date ? c.expires : (c.expires ? new Date(c.expires) : null);
+      return {
+        name: c.name,
+        value: c.value,
+        domain: c.domain,
+        path: c.path,
+        expires: expires ? expires.toISOString() : null,
+        httpOnly: c.httpOnly,
+        secure: c.secure,
+        sameSite: c.sameSite,
+      };
+    });
   }
 
   /**
@@ -191,7 +194,9 @@ export class CookieJar {
       const json = JSON.parse(content);
       return CookieJar.fromJSON(json);
     } catch (err) {
-      if (err.code === 'ENOENT') return new CookieJar();
+      if (err instanceof Error && 'code' in err && /** @type {Error & {code?: string}} */ (err).code === 'ENOENT') {
+        return new CookieJar();
+      }
       throw err;
     }
   }
@@ -206,7 +211,8 @@ export class CookieJar {
     const cookie = this._cookies.get(name);
     if (!cookie) return true;
     if (!cookie.expires) return false;
-    return cookie.expires.getTime() < Date.now();
+    const expires = typeof cookie.expires === 'string' ? new Date(cookie.expires) : cookie.expires;
+    return expires.getTime() < Date.now();
   }
 
   /**
@@ -215,8 +221,11 @@ export class CookieJar {
   removeExpired() {
     const now = Date.now();
     for (const [name, cookie] of this._cookies.entries()) {
-      if (cookie.expires && cookie.expires.getTime() < now) {
-        this._cookies.delete(name);
+      if (cookie.expires) {
+        const expires = typeof cookie.expires === 'string' ? new Date(cookie.expires) : cookie.expires;
+        if (expires.getTime() < now) {
+          this._cookies.delete(name);
+        }
       }
     }
   }

@@ -9,36 +9,39 @@
  * @license MIT
  */
 
+/** @typedef {import('../api/parsers.js').Raw} Raw */
+
 /**
  * Parse a Twitter media entity into a normalized object.
- * @param {Object} media - Raw media entity from legacy.entities.media[]
+ * @param {Raw} media - Raw media entity from legacy.entities.media[]
  * @returns {{id: string, type: string, url: string, preview: string, width: number, height: number, duration: number|null, altText: string|null}|null}
  * @private
  */
 function parseMediaEntity(media) {
   if (!media) return null;
 
-  const type = media.type || 'photo';
+  const type = /** @type {string} */ (media.type || 'photo');
+  /** @type {{id: string, type: string, url: string, preview: string, width: number, height: number, duration: number|null, altText: string|null}} */
   const result = {
-    id: media.id_str || media.media_key || '',
+    id: /** @type {string} */ (media.id_str || media.media_key || ''),
     type,
-    url: media.media_url_https || media.media_url || '',
-    preview: media.media_url_https || media.media_url || '',
-    width: media.original_info?.width || media.sizes?.large?.w || 0,
-    height: media.original_info?.height || media.sizes?.large?.h || 0,
+    url: /** @type {string} */ (media.media_url_https || media.media_url || ''),
+    preview: /** @type {string} */ (media.media_url_https || media.media_url || ''),
+    width: /** @type {number} */ ((/** @type {Raw} */ (media.original_info))?.width || (/** @type {Raw} */ (media.sizes))?.large?.w || 0),
+    height: /** @type {number} */ ((/** @type {Raw} */ (media.original_info))?.height || (/** @type {Raw} */ (media.sizes))?.large?.h || 0),
     duration: null,
-    altText: media.ext_alt_text || null,
+    altText: /** @type {string|null} */ (media.ext_alt_text || null),
   };
 
   if ((type === 'video' || type === 'animated_gif') && media.video_info) {
-    const variants = (media.video_info.variants || [])
-      .filter((v) => v.content_type === 'video/mp4')
-      .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+    const variants = (/** @type {Raw[]} */ ((/** @type {Raw} */ (media.video_info)).variants || []))
+      .filter((/** @type {Raw} */ v) => v.content_type === 'video/mp4')
+      .sort((/** @type {Raw} */ a, /** @type {Raw} */ b) => (/** @type {number} */ (b.bitrate || 0)) - (/** @type {number} */ (a.bitrate || 0)));
     if (variants.length > 0) {
-      result.url = variants[0].url;
+      result.url = /** @type {string} */ (variants[0].url);
     }
-    result.duration = media.video_info.duration_millis
-      ? Math.round(media.video_info.duration_millis / 1000)
+    result.duration = ((/** @type {Raw} */ (media.video_info)).duration_millis)
+      ? Math.round(/** @type {number} */ ((/** @type {Raw} */ (media.video_info)).duration_millis) / 1000)
       : null;
   }
 
@@ -47,26 +50,32 @@ function parseMediaEntity(media) {
 
 /**
  * Parse a poll from a tweet's card data.
- * @param {Object} card - Raw card data
+ * @param {Raw} card - Raw card data
  * @returns {{id: string, options: Array<{label: string, votes: number}>, endDatetime: string|null, votingStatus: string, totalVotes: number}|null}
  * @private
  */
 function parsePollFromCard(card) {
   if (!card) return null;
 
-  const bindingValues = card.legacy?.binding_values || card.binding_values;
+  const bindingValues = /** @type {Raw} */ (card.legacy)?.binding_values || card.binding_values;
   if (!bindingValues) return null;
 
+  /** @type {Record<string, string>} */
   const vals = {};
   if (Array.isArray(bindingValues)) {
-    for (const bv of bindingValues) {
+    for (const bv of (/** @type {Raw[]} */ (bindingValues))) {
       if (bv.key && bv.value) {
-        vals[bv.key] = bv.value.string_value || bv.value.scribe_value?.value || '';
+        const key = /** @type {string} */ (bv.key);
+        const rawValue = typeof bv.value === 'string'
+          ? { string_value: bv.value }
+          : /** @type {Raw} */ (/** @type {unknown} */ (bv.value));
+        vals[key] = /** @type {string} */ (rawValue.string_value || rawValue.scribe_value?.value || '');
       }
     }
   } else {
-    for (const [key, val] of Object.entries(bindingValues)) {
-      vals[key] = val?.string_value || val?.scribe_value?.value || '';
+    for (const [key, val] of Object.entries(/** @type {Record<string, unknown>} */ (bindingValues))) {
+      const value = /** @type {Raw} */ (val);
+      vals[key] = /** @type {string} */ (value?.string_value || (/** @type {Raw} */ (value?.scribe_value))?.value || '');
     }
   }
 
@@ -151,20 +160,20 @@ export class Tweet {
     this.views = 0;
     /** @type {number} */
     this.bookmarkCount = 0;
-    /** @type {Object|null} */
+    /** @type {Record<string, unknown>|null} */
     this.place = null;
     /** @type {boolean} */
     this.sensitiveContent = false;
     /** @type {string} */
     this.conversationId = '';
-    /** @type {Object|null} */
+    /** @type {Record<string, unknown>|null} */
     this.poll = null;
   }
 
   /**
    * Create a Tweet from a raw Twitter GraphQL "tweet_results.result" object.
    *
-   * @param {Object} raw - Raw GraphQL tweet result
+   * @param {Raw} raw - Raw GraphQL tweet result
    * @returns {Tweet|null} Parsed tweet, or null if unparseable/tombstone
    */
   static fromGraphQL(raw) {
@@ -172,45 +181,46 @@ export class Tweet {
 
     // Handle "TweetWithVisibilityResults" wrapper
     if (raw.__typename === 'TweetWithVisibilityResults' && raw.tweet) {
-      raw = raw.tweet;
+      raw = /** @type {Raw} */ (raw.tweet);
     }
 
     // Handle tombstone (deleted/unavailable tweets)
     if (raw.__typename === 'TweetTombstone') return null;
 
-    const legacy = raw.legacy;
+    const legacy = /** @type {Raw|undefined} */ (raw.legacy);
     if (!legacy) return null;
 
     const tweet = new Tweet();
 
     // Core fields
-    tweet.id = legacy.id_str || raw.rest_id || '';
-    tweet.fullText = legacy.full_text || legacy.text || '';
+    tweet.id = /** @type {string} */ (legacy.id_str || raw.rest_id || '');
+    tweet.fullText = /** @type {string} */ (legacy.full_text || legacy.text || '');
     tweet.text = tweet.fullText;
-    tweet.conversationId = legacy.conversation_id_str || '';
+    tweet.conversationId = /** @type {string} */ (legacy.conversation_id_str || '');
 
     // User info from core.user_results
-    const userResult = raw.core?.user_results?.result;
+    const userResult = /** @type {Raw|undefined} */ (/** @type {Raw|undefined} */ (raw.core)?.user_results)?.result;
     if (userResult) {
-      tweet.username = userResult.legacy?.screen_name || '';
-      tweet.userId = userResult.rest_id || userResult.legacy?.id_str || '';
+      const userLegacy = /** @type {Raw|undefined} */ (userResult.legacy);
+      tweet.username = /** @type {string} */ (userLegacy?.screen_name || '');
+      tweet.userId = /** @type {string} */ (userResult.rest_id || userLegacy?.id_str || '');
     }
 
     // Timestamp
     if (legacy.created_at) {
-      tweet.timeParsed = new Date(legacy.created_at);
+      tweet.timeParsed = new Date(/** @type {string} */ (legacy.created_at));
       tweet.timestamp = tweet.timeParsed.getTime();
     }
 
     // Entities
-    const entities = legacy.entities || {};
-    tweet.hashtags = (entities.hashtags || []).map((h) => h.text).filter(Boolean);
-    tweet.mentions = (entities.user_mentions || []).map((m) => m.screen_name).filter(Boolean);
-    tweet.urls = (entities.urls || []).map((u) => u.expanded_url || u.url).filter(Boolean);
+    const entities = /** @type {Raw} */ (legacy.entities || {});
+    tweet.hashtags = (/** @type {Raw[]} */ (entities.hashtags || [])).map((/** @type {Raw} */ h) => /** @type {string} */ (h.text)).filter(Boolean);
+    tweet.mentions = (/** @type {Raw[]} */ (entities.user_mentions || [])).map((/** @type {Raw} */ m) => /** @type {string} */ (m.screen_name)).filter(Boolean);
+    tweet.urls = (/** @type {Raw[]} */ (entities.urls || [])).map((/** @type {Raw} */ u) => /** @type {string} */ (u.expanded_url || u.url)).filter(Boolean);
 
     // Media (prefer extended_entities for full media info)
-    const mediaEntities = legacy.extended_entities?.media || entities.media || [];
-    for (const media of mediaEntities) {
+    const mediaEntities = (legacy.extended_entities?.media || entities.media || []);
+    for (const media of /** @type {Raw[]} */ (mediaEntities)) {
       const parsed = parseMediaEntity(media);
       if (!parsed) continue;
       if (parsed.type === 'photo') {
@@ -226,46 +236,50 @@ export class Tweet {
     }
 
     // Engagement counts
-    tweet.likes = parseInt(legacy.favorite_count, 10) || 0;
-    tweet.retweets = parseInt(legacy.retweet_count, 10) || 0;
-    tweet.replies = parseInt(legacy.reply_count, 10) || 0;
-    tweet.bookmarkCount = parseInt(legacy.bookmark_count, 10) || 0;
+    tweet.likes = Number(legacy.favorite_count || 0) || 0;
+    tweet.retweets = Number(legacy.retweet_count || 0) || 0;
+    tweet.replies = Number(legacy.reply_count || 0) || 0;
+    tweet.bookmarkCount = Number(legacy.bookmark_count || 0) || 0;
 
     // Views
-    const viewCount = raw.views?.count;
-    tweet.views = viewCount ? parseInt(viewCount, 10) || 0 : 0;
+    const views = /** @type {Raw|undefined} */ (raw.views);
+    const viewCount = views?.count;
+    tweet.views = viewCount ? Number(viewCount || 0) || 0 : 0;
 
     // Reply info
-    tweet.inReplyToStatusId = legacy.in_reply_to_status_id_str || null;
+    tweet.inReplyToStatusId = /** @type {string|null} */ (legacy.in_reply_to_status_id_str || null);
     tweet.isReply = !!tweet.inReplyToStatusId;
 
     // Quoted tweet (recursive)
-    const quotedResult = raw.quoted_status_result?.result;
+    const quoted = /** @type {Raw|undefined} */ (raw.quoted_status_result);
+    const quotedResult = /** @type {Raw|undefined} */ (quoted?.result);
     if (quotedResult) {
-      tweet.quotedStatusId = legacy.quoted_status_id_str || quotedResult.rest_id || null;
+      tweet.quotedStatusId = /** @type {string} */ (legacy.quoted_status_id_str || quotedResult.rest_id || null);
       tweet.quotedStatus = Tweet.fromGraphQL(quotedResult);
       tweet.isQuote = true;
     }
 
     // Retweet (recursive)
-    const retweetResult = legacy.retweeted_status_result?.result;
+    const retweeted = /** @type {Raw|undefined} */ (legacy.retweeted_status_result);
+    const retweetResult = /** @type {Raw|undefined} */ (retweeted?.result);
     if (retweetResult) {
       tweet.retweetedStatus = Tweet.fromGraphQL(retweetResult);
       tweet.isRetweet = true;
     }
 
     // Sensitive content
-    tweet.sensitiveContent = legacy.possibly_sensitive || false;
+    tweet.sensitiveContent = /** @type {boolean} */ (legacy.possibly_sensitive || false);
 
     // Place/geo
-    if (legacy.place) {
+    const place = /** @type {Raw|undefined} */ (legacy.place);
+    if (place) {
       tweet.place = {
-        id: legacy.place.id,
-        name: legacy.place.name || legacy.place.full_name,
-        fullName: legacy.place.full_name,
-        country: legacy.place.country,
-        countryCode: legacy.place.country_code,
-        placeType: legacy.place.place_type,
+        id: /** @type {string} */ (place.id),
+        name: /** @type {string} */ (place.name || place.full_name || ''),
+        fullName: /** @type {string} */ (place.full_name || ''),
+        country: /** @type {string} */ (place.country || ''),
+        countryCode: /** @type {string} */ (place.country_code || ''),
+        placeType: /** @type {string} */ (place.place_type || ''),
       };
     }
 
@@ -290,7 +304,7 @@ export class Tweet {
 
   /**
    * JSON-serializable representation.
-   * @returns {Object}
+   * @returns {Record<string, unknown>}
    */
   toJSON() {
     return {

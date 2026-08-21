@@ -20,7 +20,7 @@
  * Parse a single Set-Cookie header value into a Cookie object.
  *
  * @param {string} header - A single Set-Cookie header string
- * @returns {{ name: string, value: string, domain?: string, path?: string, expires?: Date|null, httpOnly?: boolean, secure?: boolean, sameSite?: string }|null}
+ * @returns {import('./CookieJar.js').Cookie | null}
  */
 export function parseSetCookieHeader(header) {
   if (!header || typeof header !== 'string') return null;
@@ -42,7 +42,7 @@ export function parseSetCookieHeader(header) {
 
   if (!name) return null;
 
-  /** @type {any} */
+  /** @type {import('./CookieJar.js').Cookie} */
   const cookie = {
     name,
     value,
@@ -111,11 +111,11 @@ export function parseSetCookieHeader(header) {
  * Parse multiple Set-Cookie headers into an array of Cookie objects.
  *
  * @param {string[]} headers - Array of Set-Cookie header strings
- * @returns {Array<{ name: string, value: string, domain?: string, path?: string, expires?: Date|null, httpOnly?: boolean, secure?: boolean, sameSite?: string }>}
+ * @returns {Array<import('./CookieJar.js').Cookie>}
  */
 export function parseSetCookieHeaders(headers) {
   if (!Array.isArray(headers)) return [];
-  return headers.map(parseSetCookieHeader).filter(Boolean);
+  return headers.map(parseSetCookieHeader).filter((c) => c !== null);
 }
 
 // ============================================================================
@@ -132,6 +132,7 @@ export function parseSetCookieHeaders(headers) {
 export function updateJarFromResponse(jar, response) {
   if (!jar || !response) return;
 
+  /** @type {string[]} */
   let setCookies = [];
 
   // Modern Node.js (18.14+): response.headers.getSetCookie()

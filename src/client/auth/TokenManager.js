@@ -16,6 +16,8 @@
 import { BEARER_TOKEN } from '../api/graphqlQueries.js';
 import { randomUserAgent } from './userAgent.js';
 
+/** @typedef {import('../api/parsers.js').Raw} Raw */
+
 const ACTIVATE_URL = 'https://api.x.com/1.1/guest/activate.json';
 
 /** Guest tokens last approximately 3 hours */
@@ -32,15 +34,15 @@ const GUEST_TOKEN_MAX_AGE = 3 * 60 * 60 * 1000;
  */
 export class TokenManager {
   /**
-   * @param {Function} [fetchFn] - Custom fetch implementation (defaults to globalThis.fetch)
+   * @param {typeof globalThis.fetch} [fetchFn] - Custom fetch implementation (defaults to globalThis.fetch)
    */
   constructor(fetchFn) {
     /** @type {string} The public Twitter bearer token */
     this.bearerToken = BEARER_TOKEN;
-    /** @type {string|null} Current guest token */
-    this.guestToken = null;
-    /** @type {number|null} Timestamp when guest token expires */
-    this.guestTokenExpiresAt = null;
+    /** @type {string|undefined} Current guest token */
+    this.guestToken = undefined;
+    /** @type {number|undefined} Timestamp when guest token expires */
+    this.guestTokenExpiresAt = undefined;
     /** @type {string|null} CSRF token for authenticated requests (from ct0 cookie) */
     this.csrfToken = null;
     /**
@@ -51,7 +53,7 @@ export class TokenManager {
      * @type {string}
      */
     this.userAgent = randomUserAgent();
-    /** @private */
+    /** @private @type {typeof globalThis.fetch} */
     this._fetchFn = fetchFn || globalThis.fetch;
   }
 
@@ -94,8 +96,9 @@ export class TokenManager {
         );
       }
 
-      const retryData = await retryResponse.json();
-      this.guestToken = retryData.guest_token;
+      const retryData = /** @type {Raw} */ (await retryResponse.json());
+      this.guestToken = /** @type {string} */ (retryData.guest_token);
+      if (!this.guestToken) throw new Error('No guest_token in activation response');
       this.guestTokenExpiresAt = Date.now() + GUEST_TOKEN_MAX_AGE;
       return this.guestToken;
     }
@@ -107,8 +110,9 @@ export class TokenManager {
       );
     }
 
-    const data = await response.json();
-    this.guestToken = data.guest_token;
+    const data = /** @type {Raw} */ (await response.json());
+    this.guestToken = /** @type {string} */ (data.guest_token);
+    if (!this.guestToken) throw new Error('No guest_token in activation response');
     this.guestTokenExpiresAt = Date.now() + GUEST_TOKEN_MAX_AGE;
     return this.guestToken;
   }
@@ -120,7 +124,7 @@ export class TokenManager {
    * @returns {Promise<string>} A valid guest token
    */
   async getGuestToken() {
-    if (this.isGuestTokenValid()) return this.guestToken;
+    if (this.isGuestTokenValid()) return /** @type {string} */ (this.guestToken);
     return this.activateGuestToken();
   }
 
@@ -128,9 +132,10 @@ export class TokenManager {
    * Build the HTTP headers that Twitter expects for API requests.
    *
    * @param {boolean} [authenticated=false] - Whether this is an authenticated request
-   * @returns {Object} Headers object ready for fetch()
+   * @returns {Record<string, string>} Headers object ready for fetch()
    */
   getHeaders(authenticated = false) {
+    /** @type {Record<string, string>} */
     const headers = {
       Authorization: `Bearer ${this.bearerToken}`,
       'User-Agent': this.userAgent,
@@ -152,10 +157,18 @@ export class TokenManager {
   /**
    * Set the CSRF token (extracted from the ct0 cookie after login).
    *
-   * @param {string|null} token - CSRF token value, or null to clear
+   * @param {string|null|undefined} token - CSRF token value, or null/undefined to clear
    */
   setCsrfToken(token) {
-    this.csrfToken = token;
+    this.csrfToken = token ?? null;
+  }
+
+  /**
+   * Alias for setCsrfToken used by session refresh.
+   * @param {string} token
+   */
+  refreshCsrf(token) {
+    this.setCsrfToken(token);
   }
 
   /**
@@ -175,7 +188,7 @@ export class TokenManager {
    * Invalidate the current guest token, forcing re-activation on next request.
    */
   invalidateGuestToken() {
-    this.guestToken = null;
-    this.guestTokenExpiresAt = null;
+    this.guestToken = undefined;
+    this.guestTokenExpiresAt = undefined;
   }
 }

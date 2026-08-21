@@ -9,6 +9,8 @@
  * @license MIT
  */
 
+/** @typedef {import('../api/parsers.js').Raw} Raw */
+
 /**
  * Represents a Twitter user profile.
  */
@@ -48,7 +50,7 @@ export class Profile {
     this.verified = false;
     /** @type {boolean} */
     this.protected = false;
-    /** @type {Object|null} */
+    /** @type {Record<string, unknown>|null} */
     this.birthdate = null;
     /** @type {string[]} */
     this.pinnedTweetIds = [];
@@ -69,7 +71,7 @@ export class Profile {
   /**
    * Create a Profile from a raw Twitter GraphQL "user_results.result" object.
    *
-   * @param {Object} raw - Raw GraphQL user result
+   * @param {Raw} raw - Raw GraphQL user result
    * @returns {Profile|null} Parsed profile, or null if unparseable
    */
   static fromGraphQL(raw) {
@@ -78,66 +80,70 @@ export class Profile {
     // Handle UserUnavailable
     if (raw.__typename === 'UserUnavailable') return null;
 
-    const legacy = raw.legacy;
+    const legacy = /** @type {Raw|undefined} */ (raw.legacy);
     if (!legacy) return null;
 
     const profile = new Profile();
 
     // Core fields
-    profile.id = raw.rest_id || legacy.id_str || '';
-    profile.username = legacy.screen_name || '';
-    profile.name = legacy.name || '';
-    profile.bio = legacy.description || '';
-    profile.location = legacy.location || '';
+    profile.id = /** @type {string} */ (raw.rest_id || legacy.id_str || '');
+    profile.username = /** @type {string} */ (legacy.screen_name || '');
+    profile.name = /** @type {string} */ (legacy.name || '');
+    profile.bio = /** @type {string} */ (legacy.description || '');
+    profile.location = /** @type {string} */ (legacy.location || '');
 
     // Website — expand t.co URL from entities
-    const websiteEntity = legacy.entities?.url?.urls?.[0];
-    profile.website = websiteEntity?.expanded_url || websiteEntity?.url || legacy.url || '';
+    const entities = /** @type {Raw} */ (legacy.entities || {});
+    const urlEntity = /** @type {Raw} */ (/** @type {unknown} */ (entities.url));
+    const websiteEntity = /** @type {Raw|undefined} */ ((/** @type {Raw[]} */ (urlEntity?.urls || []))[0]);
+    profile.website = /** @type {string} */ (websiteEntity?.expanded_url || websiteEntity?.url || legacy.url || '');
 
     // Join date
     if (legacy.created_at) {
-      profile.joined = new Date(legacy.created_at);
+      profile.joined = new Date(/** @type {string} */ (legacy.created_at));
     }
 
     // Counts
-    profile.followersCount = parseInt(legacy.followers_count, 10) || 0;
-    profile.followingCount = parseInt(legacy.friends_count, 10) || 0;
-    profile.tweetCount = parseInt(legacy.statuses_count, 10) || 0;
-    profile.likesCount = parseInt(legacy.favourites_count, 10) || 0;
-    profile.listedCount = parseInt(legacy.listed_count, 10) || 0;
-    profile.mediaCount = parseInt(legacy.media_count, 10) || 0;
+    profile.followersCount = Number(legacy.followers_count || 0) || 0;
+    profile.followingCount = Number(legacy.friends_count || 0) || 0;
+    profile.tweetCount = Number(legacy.statuses_count || 0) || 0;
+    profile.likesCount = Number(legacy.favourites_count || 0) || 0;
+    profile.listedCount = Number(legacy.listed_count || 0) || 0;
+    profile.mediaCount = Number(legacy.media_count || 0) || 0;
 
     // Images
-    profile.avatar = (legacy.profile_image_url_https || '').replace('_normal', '_400x400');
-    profile.banner = legacy.profile_banner_url || '';
+    profile.avatar = (/** @type {string} */ (legacy.profile_image_url_https || '')).replace('_normal', '_400x400');
+    profile.banner = /** @type {string} */ (legacy.profile_banner_url || '');
 
     // Verification
-    profile.verified = legacy.verified || false;
-    profile.isBlueVerified = raw.is_blue_verified || false;
-    profile.protected = legacy.protected || false;
+    profile.verified = /** @type {boolean} */ (legacy.verified || false);
+    profile.isBlueVerified = /** @type {boolean} */ (raw.is_blue_verified || false);
+    profile.protected = /** @type {boolean} */ (legacy.protected || false);
 
     // Pinned tweets
-    profile.pinnedTweetIds = (legacy.pinned_tweet_ids_str || []).slice();
+    profile.pinnedTweetIds = (/** @type {string[]} */ (legacy.pinned_tweet_ids_str || [])).slice();
 
     // Business/government affiliations
-    const affiliateLabels = raw.affiliates_highlighted_label?.label || {};
+    const affiliateLabels = /** @type {Raw} */ (/** @type {Raw|undefined} */ (raw.affiliates_highlighted_label)?.label || {});
     if (affiliateLabels.userLabelType === 'GovernmentLabel') {
       profile.isGovernment = true;
     } else if (affiliateLabels.userLabelType === 'BusinessLabel') {
       profile.isBusiness = true;
     }
-    profile.affiliatesCount = parseInt(raw.business_account?.affiliates_count, 10) || 0;
+    const businessAccount = /** @type {Raw|undefined} */ (raw.business_account);
+    profile.affiliatesCount = Number(businessAccount?.affiliates_count || 0) || 0;
 
     // DM ability
-    profile.canDm = legacy.can_dm || false;
+    profile.canDm = /** @type {boolean} */ (legacy.can_dm || false);
 
     // Birthdate
-    if (legacy.birthdate) {
+    const birthdate = /** @type {Raw|undefined} */ (legacy.birthdate);
+    if (birthdate) {
       profile.birthdate = {
-        day: legacy.birthdate.day || null,
-        month: legacy.birthdate.month || null,
-        year: legacy.birthdate.year || null,
-        visibility: legacy.birthdate.visibility || 'Self',
+        day: birthdate.day || null,
+        month: birthdate.month || null,
+        year: birthdate.year || null,
+        visibility: /** @type {string} */ (birthdate.visibility || 'Self'),
       };
     }
 
@@ -154,7 +160,7 @@ export class Profile {
 
   /**
    * JSON-serializable representation.
-   * @returns {Object}
+   * @returns {Raw}
    */
   toJSON() {
     return {

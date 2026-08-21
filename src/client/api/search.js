@@ -14,6 +14,8 @@ import { Tweet } from '../models/Tweet.js';
 import { Profile } from '../models/Profile.js';
 import { parseTimelineEntries, parseTweetEntry, parseUserEntry } from './parsers.js';
 
+/** @typedef {import('./parsers.js').HttpClient} HttpClient */
+
 /** @private Random delay between paginated requests */
 function randomDelay(min = 1000, max = 2000) {
   return new Promise((resolve) => setTimeout(resolve, min + Math.random() * (max - min)));
@@ -26,6 +28,7 @@ function randomDelay(min = 1000, max = 2000) {
  * @private
  */
 function searchModeToProduct(mode) {
+  /** @type {Record<string, string>} */
   const map = {
     Top: 'Top',
     Latest: 'Latest',
@@ -38,7 +41,7 @@ function searchModeToProduct(mode) {
 /**
  * Search tweets.
  *
- * @param {Object} http - HTTP client with get/post methods
+ * @param {HttpClient} http - HTTP client with get/post methods
  * @param {string} query - Search query (supports advanced operators)
  * @param {number} [count=100] - Maximum number of results
  * @param {string} [mode='Latest'] - SearchMode: 'Top', 'Latest', 'Photos', 'Videos'
@@ -50,12 +53,12 @@ export async function* searchTweets(http, query, count = 100, mode = 'Latest') {
 
   while (yielded < count) {
     const endpoint = GRAPHQL_ENDPOINTS.SearchTimeline;
-    const variables = {
+    const variables = /** @type {Record<string, unknown>} */ ({
       rawQuery: query,
       count: 20,
       querySource: 'typed_query',
       product: searchModeToProduct(mode),
-    };
+    });
     if (cursor) variables.cursor = cursor;
 
     const url = buildGraphQLUrl(endpoint, variables);
@@ -86,7 +89,7 @@ export async function* searchTweets(http, query, count = 100, mode = 'Latest') {
 /**
  * Search profiles (people).
  *
- * @param {Object} http - HTTP client with get/post methods
+ * @param {HttpClient} http - HTTP client with get/post methods
  * @param {string} query - Search query
  * @param {number} [count=100] - Maximum number of results
  * @yields {Profile}
@@ -97,12 +100,12 @@ export async function* searchProfiles(http, query, count = 100) {
 
   while (yielded < count) {
     const endpoint = GRAPHQL_ENDPOINTS.SearchTimeline;
-    const variables = {
+    const variables = /** @type {Record<string, unknown>} */ ({
       rawQuery: query,
       count: 20,
       querySource: 'typed_query',
       product: 'People',
-    };
+    });
     if (cursor) variables.cursor = cursor;
 
     const url = buildGraphQLUrl(endpoint, variables);

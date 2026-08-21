@@ -14,6 +14,9 @@ import { Profile } from '../models/Profile.js';
 import { NotFoundError, ScraperError } from '../errors.js';
 import { parseTimelineEntries, parseUserEntry } from './parsers.js';
 
+/** @typedef {import('./parsers.js').Raw} Raw */
+/** @typedef {import('./parsers.js').HttpClient} HttpClient */
+
 /** @private Random delay between paginated requests */
 function randomDelay(min = 1000, max = 2000) {
   return new Promise((resolve) => setTimeout(resolve, min + Math.random() * (max - min)));
@@ -22,8 +25,8 @@ function randomDelay(min = 1000, max = 2000) {
 /**
  * Get a user profile by screen name.
  *
- * @param {Object} http - HTTP client with get/post methods
- * @param {string} username - Screen name (without @)
+ * @param {HttpClient} http - HTTP client with get/post methods
+ * @param {string} username - Screen name (without at sign)
  * @returns {Promise<Profile>}
  * @throws {NotFoundError}
  */
@@ -36,7 +39,7 @@ export async function getUserByScreenName(http, username) {
   const url = buildGraphQLUrl(endpoint, variables);
   const data = await http.get(url);
 
-  const userResult = data?.data?.user?.result;
+  const userResult = /** @type {Raw|undefined} */ (data.data?.user?.result);
   if (!userResult || userResult.__typename === 'UserUnavailable') {
     throw new NotFoundError(`User "${username}" not found`, 'USER_NOT_FOUND', {
       endpoint: 'UserByScreenName',
@@ -56,7 +59,7 @@ export async function getUserByScreenName(http, username) {
 /**
  * Get a user profile by REST ID.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} userId - Numeric user ID
  * @returns {Promise<Profile>}
  * @throws {NotFoundError}
@@ -70,7 +73,7 @@ export async function getUserById(http, userId) {
   const url = buildGraphQLUrl(endpoint, variables);
   const data = await http.get(url);
 
-  const userResult = data?.data?.user?.result;
+  const userResult = /** @type {Raw|undefined} */ (data.data?.user?.result);
   if (!userResult || userResult.__typename === 'UserUnavailable') {
     throw new NotFoundError(`User ID "${userId}" not found`, 'USER_NOT_FOUND', {
       endpoint: 'UserByRestId',
@@ -90,7 +93,7 @@ export async function getUserById(http, userId) {
 /**
  * Get a user's numeric ID from their screen name.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} username
  * @returns {Promise<string>}
  */
@@ -102,7 +105,7 @@ export async function getUserIdByScreenName(http, username) {
 /**
  * Get a user's followers with cursor pagination.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} userId - Numeric user ID
  * @param {number} [count=100] - Maximum profiles to yield
  * @yields {Profile}
@@ -113,11 +116,11 @@ export async function* getFollowers(http, userId, count = 100) {
 
   while (yielded < count) {
     const endpoint = GRAPHQL_ENDPOINTS.Followers;
-    const variables = {
+    const variables = /** @type {Record<string, unknown>} */ ({
       userId,
       count: 20,
       includePromotedContent: false,
-    };
+    });
     if (cursor) variables.cursor = cursor;
 
     const url = buildGraphQLUrl(endpoint, variables);
@@ -148,7 +151,7 @@ export async function* getFollowers(http, userId, count = 100) {
 /**
  * Get accounts a user follows with cursor pagination.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} userId - Numeric user ID
  * @param {number} [count=100] - Maximum profiles to yield
  * @yields {Profile}
@@ -159,11 +162,11 @@ export async function* getFollowing(http, userId, count = 100) {
 
   while (yielded < count) {
     const endpoint = GRAPHQL_ENDPOINTS.Following;
-    const variables = {
+    const variables = /** @type {Record<string, unknown>} */ ({
       userId,
       count: 20,
       includePromotedContent: false,
-    };
+    });
     if (cursor) variables.cursor = cursor;
 
     const url = buildGraphQLUrl(endpoint, variables);
@@ -194,13 +197,13 @@ export async function* getFollowing(http, userId, count = 100) {
 /**
  * Follow a user.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} userId - Numeric user ID
  * @returns {Promise<void>}
  */
 export async function followUser(http, userId) {
   const endpoint = GRAPHQL_ENDPOINTS.CreateFollow;
-  const url = endpoint.url();
+  const url = buildGraphQLUrl(endpoint);
   const body = new URLSearchParams({
     include_profile_interstitial_type: '1',
     include_blocking: '1',
@@ -216,19 +219,19 @@ export async function followUser(http, userId) {
     skip_status: '1',
     user_id: userId,
   });
-  await http.post(url, body, { contentType: 'application/x-www-form-urlencoded' });
+  await http.post(url, body, { 'Content-Type': 'application/x-www-form-urlencoded' });
 }
 
 /**
  * Unfollow a user.
  *
- * @param {Object} http
+ * @param {HttpClient} http
  * @param {string} userId - Numeric user ID
  * @returns {Promise<void>}
  */
 export async function unfollowUser(http, userId) {
   const endpoint = GRAPHQL_ENDPOINTS.DestroyFollow;
-  const url = endpoint.url();
+  const url = buildGraphQLUrl(endpoint);
   const body = new URLSearchParams({
     include_profile_interstitial_type: '1',
     include_blocking: '1',
@@ -244,5 +247,5 @@ export async function unfollowUser(http, userId) {
     skip_status: '1',
     user_id: userId,
   });
-  await http.post(url, body, { contentType: 'application/x-www-form-urlencoded' });
+  await http.post(url, body, { 'Content-Type': 'application/x-www-form-urlencoded' });
 }

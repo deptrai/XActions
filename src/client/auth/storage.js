@@ -14,6 +14,8 @@ import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { CookieAuth } from './CookieAuth.js';
 
+/** @typedef {import('../api/parsers.js').Raw} Raw */
+
 const CONFIG_DIR = join(homedir(), '.xactions');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 const DEFAULT_COOKIE_FILE = join(CONFIG_DIR, 'cookies.json');
@@ -25,14 +27,16 @@ const DEFAULT_COOKIE_FILE = join(CONFIG_DIR, 'cookies.json');
 /**
  * Read the config file, returning an empty object if it doesn't exist.
  * @private
- * @returns {Promise<Object>}
+ * @returns {Promise<Raw>}
  */
 async function readConfig() {
   try {
     const content = await fs.readFile(CONFIG_FILE, 'utf-8');
-    return JSON.parse(content);
+    return /** @type {Raw} */ (JSON.parse(content));
   } catch (err) {
-    if (err.code === 'ENOENT') return {};
+    if (err instanceof Error && 'code' in err && /** @type {Error & {code?: string}} */ (err).code === 'ENOENT') {
+      return /** @type {Raw} */ ({});
+    }
     throw err;
   }
 }
@@ -40,7 +44,7 @@ async function readConfig() {
 /**
  * Write config to file, preserving existing fields.
  * @private
- * @param {Object} config
+ * @param {Raw} config
  */
 async function writeConfig(config) {
   await fs.mkdir(dirname(CONFIG_FILE), { recursive: true });
@@ -74,8 +78,9 @@ export async function saveCookiesToConfig(cookieAuth, username) {
     config.sessions = {};
   }
 
+  const cookieRecord = Object.fromEntries(cookieAuth.getCookies().map((c) => [c.name, c.value]));
   config.sessions[username] = {
-    cookies: cookieAuth.getAll(),
+    cookies: cookieRecord,
     created: new Date().toISOString(),
     lastUsed: new Date().toISOString(),
   };
@@ -94,7 +99,7 @@ export async function saveCookiesToConfig(cookieAuth, username) {
 export async function loadCookiesFromConfig(username) {
   const config = await readConfig();
 
-  const session = config.sessions?.[username];
+  const session = /** @type {Raw|undefined} */ (/** @type {Raw} */ (config.sessions)?.[username]);
   if (!session || !session.cookies) {
     return new CookieAuth();
   }
@@ -104,7 +109,8 @@ export async function loadCookiesFromConfig(username) {
   config.activeSession = username;
   await writeConfig(config);
 
-  const auth = CookieAuth.fromObject(session.cookies);
+  const cookies = /** @type {Record<string, string>} */ (session.cookies);
+  const auth = CookieAuth.fromObject(cookies);
   auth.setUsername(username);
   return auth;
 }
@@ -116,13 +122,13 @@ export async function loadCookiesFromConfig(username) {
  */
 export async function listSessions() {
   const config = await readConfig();
-  const sessions = config.sessions || {};
+  const sessions = /** @type {Record<string, Raw>} */ (config.sessions || {});
 
   return Object.entries(sessions).map(([username, data]) => ({
     username,
-    createdAt: data.created || 'unknown',
-    lastUsed: data.lastUsed || 'unknown',
-    isValid: !!(data.cookies?.auth_token && data.cookies?.ct0),
+    createdAt: /** @type {string} */ (data.created || 'unknown'),
+    lastUsed: /** @type {string} */ (data.lastUsed || 'unknown'),
+    isValid: !!(data.cookies && /** @type {Record<string, string>} */ (data.cookies).auth_token && /** @type {Record<string, string>} */ (data.cookies).ct0),
   }));
 }
 
@@ -135,15 +141,16 @@ export async function listSessions() {
 export async function deleteSession(username) {
   const config = await readConfig();
 
-  if (!config.sessions?.[username]) {
+  const sessions = /** @type {Record<string, Raw>} */ (config.sessions || {});
+  if (!sessions[username]) {
     return false;
   }
 
-  delete config.sessions[username];
+  delete sessions[username];
 
   // Clear activeSession if it was the deleted one
   if (config.activeSession === username) {
-    const remaining = Object.keys(config.sessions);
+    const remaining = Object.keys(sessions);
     config.activeSession = remaining.length > 0 ? remaining[0] : null;
   }
 
@@ -159,8 +166,9 @@ export async function deleteSession(username) {
 export async function getActiveSession() {
   const config = await readConfig();
 
-  const activeUsername = config.activeSession;
-  if (!activeUsername || !config.sessions?.[activeUsername]) {
+  const activeUsername = /** @type {string|undefined} */ (config.activeSession);
+  const sessions = /** @type {Record<string, Raw>} */ (config.sessions || {});
+  if (!activeUsername || !sessions[activeUsername]) {
     return null;
   }
 

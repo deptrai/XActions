@@ -17,6 +17,8 @@ import { AuthenticationError } from '../errors.js';
 import { updateJarFromResponse, extractCsrfToken } from './CookieParser.js';
 import { randomUserAgent } from './userAgent.js';
 
+/** @typedef {import('../api/parsers.js').Raw} Raw */
+
 const LOGIN_URL = 'https://api.x.com/1.1/onboarding/task.json';
 
 /**
@@ -32,13 +34,13 @@ export class CredentialAuth {
     this._cookieAuth = cookieAuth;
     /** @private */
     this._tokenManager = tokenManager;
-    /** @private */
+    /** @private @type {typeof globalThis.fetch} */
     this._fetchFn = globalThis.fetch;
   }
 
   /**
    * Set a custom fetch function.
-   * @param {Function} fn
+   * @param {typeof globalThis.fetch} fn
    */
   setFetch(fn) {
     this._fetchFn = fn;
@@ -68,7 +70,7 @@ export class CredentialAuth {
 
     // Step 4: Handle challenges (email verification, etc.)
     // Twitter may ask for alternate identifier (email) before password
-    if (flowToken._subtask === 'LoginEnterAlternateIdentifierSubtask') {
+    if (flowToken.subtask === 'LoginEnterAlternateIdentifierSubtask') {
       if (!email) {
         throw new AuthenticationError(
           'Twitter requires email verification. Provide email in credentials.',
@@ -79,10 +81,10 @@ export class CredentialAuth {
     }
 
     // Step 5: Submit password
-    flowToken = await this._submitPassword(guestToken, flowToken.token || flowToken, password);
+    flowToken = await this._submitPassword(guestToken, flowToken.token, password);
 
     // Step 6: Handle account duplication check if needed
-    if (flowToken._subtask === 'AccountDuplicationCheck') {
+    if (flowToken.subtask === 'AccountDuplicationCheck') {
       flowToken = await this._handleDuplicationCheck(guestToken, flowToken.token);
     }
 
@@ -97,6 +99,8 @@ export class CredentialAuth {
 
   /**
    * @private
+   * @param {string} guestToken
+   * @returns {Promise<{ token: string, subtask: string|null }>}
    */
   async _initiateLoginFlow(guestToken) {
     const response = await this._post(guestToken, LOGIN_URL, {
@@ -114,10 +118,13 @@ export class CredentialAuth {
 
   /**
    * @private
+   * @param {string} guestToken
+   * @param {{ token: string, subtask: string|null }} flowToken
+   * @returns {Promise<{ token: string, subtask: string|null }>}
    */
   async _submitInstrumentation(guestToken, flowToken) {
     const response = await this._post(guestToken, LOGIN_URL, {
-      flow_token: flowToken.token || flowToken,
+      flow_token: flowToken.token,
       subtask_inputs: [{
         subtask_id: 'LoginJsInstrumentationSubtask',
         js_instrumentation: { response: '{}', link: 'next_link' },
@@ -128,10 +135,14 @@ export class CredentialAuth {
 
   /**
    * @private
+   * @param {string} guestToken
+   * @param {{ token: string, subtask: string|null }} flowToken
+   * @param {string} username
+   * @returns {Promise<{ token: string, subtask: string|null }>}
    */
   async _submitUsername(guestToken, flowToken, username) {
     const response = await this._post(guestToken, LOGIN_URL, {
-      flow_token: flowToken.token || flowToken,
+      flow_token: flowToken.token,
       subtask_inputs: [{
         subtask_id: 'LoginEnterUserIdentifierSSO',
         settings_list: {
@@ -148,6 +159,10 @@ export class CredentialAuth {
 
   /**
    * @private
+   * @param {string} guestToken
+   * @param {string} flowToken
+   * @param {string} email
+   * @returns {Promise<{ token: string, subtask: string|null }>}
    */
   async _submitAlternateIdentifier(guestToken, flowToken, email) {
     const response = await this._post(guestToken, LOGIN_URL, {
@@ -162,6 +177,10 @@ export class CredentialAuth {
 
   /**
    * @private
+   * @param {string} guestToken
+   * @param {string} flowToken
+   * @param {string} password
+   * @returns {Promise<{ token: string, subtask: string|null }>}
    */
   async _submitPassword(guestToken, flowToken, password) {
     const response = await this._post(guestToken, LOGIN_URL, {
@@ -176,6 +195,9 @@ export class CredentialAuth {
 
   /**
    * @private
+   * @param {string} guestToken
+   * @param {string} flowToken
+   * @returns {Promise<{ token: string, subtask: string|null }>}
    */
   async _handleDuplicationCheck(guestToken, flowToken) {
     const response = await this._post(guestToken, LOGIN_URL, {
@@ -191,6 +213,11 @@ export class CredentialAuth {
   /**
    * Make a POST to the login flow endpoint.
    * @private
+   * @param {string} guestToken
+   * @param {string} url
+   * @param {Record<string, unknown>} body
+   * @param {{params?: Record<string, string>}} [options]
+   * @returns {Promise<Raw>}
    */
   async _post(guestToken, url, body, options = {}) {
     let finalUrl = url;
@@ -199,6 +226,7 @@ export class CredentialAuth {
       finalUrl = `${url}?${qs}`;
     }
 
+    /** @type {Record<string, string>} */
     const headers = {
       Authorization: `Bearer ${BEARER_TOKEN}`,
       'Content-Type': 'application/json',
@@ -212,7 +240,7 @@ export class CredentialAuth {
     // Include cookies if we have any (flow sets cookies as it proceeds)
     const cookieStr = this._cookieAuth.getCookieString();
     if (cookieStr) {
-      headers['Cookie'] = cookieStr;
+      headers.Cookie = cookieStr;
     }
 
     const csrf = extractCsrfToken(this._cookieAuth.jar);
@@ -231,20 +259,21 @@ export class CredentialAuth {
     this._cookieAuth.updateFromResponse(response);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMsg = errorData?.errors?.[0]?.message || `Login failed: HTTP ${response.status}`;
+      const errorData = /** @type {Raw} */ (await response.json().catch(() => ({})));
+      const errorMsg = /** @type {string} */ (errorData.errors?.[0]?.message) || `Login failed: HTTP ${response.status}`;
       throw new AuthenticationError(errorMsg, 'AUTH_FAILED', {
         httpStatus: response.status,
         endpoint: 'onboarding/task',
       });
     }
 
-    return response.json();
+    return /** @type {Raw} */ (await response.json());
   }
 
   /**
    * Extract flow token and current subtask from response.
    * @private
+   * @param {Raw} data
    */
   _extractFlowToken(data) {
     const flowToken = data.flow_token;
@@ -253,9 +282,9 @@ export class CredentialAuth {
     }
 
     // Detect what subtask is next
-    const subtasks = data.subtasks || [];
-    const nextSubtask = subtasks[0]?.subtask_id || null;
+    const subtasks = /** @type {Raw[]} */ (data.subtasks || []);
+    const nextSubtask = /** @type {string|null} */ (subtasks[0]?.subtask_id || null);
 
-    return { token: flowToken, _subtask: nextSubtask };
+    return { token: String(flowToken), subtask: nextSubtask };
   }
 }

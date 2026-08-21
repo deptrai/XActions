@@ -20,6 +20,9 @@ import { ScraperError, AuthenticationError } from './errors.js';
 import { validateUsername, validateTweetId, validateTweetText, validateCount } from './validation.js';
 import { TokenManager } from './auth/TokenManager.js';
 
+/** @typedef {import('./api/parsers.js').Raw} Raw */
+/** @typedef {import('./api/parsers.js').HttpClient} HttpClient */
+
 /**
  * Search mode enum for Twitter search.
  * @enum {string}
@@ -30,6 +33,14 @@ export const SearchMode = Object.freeze({
   Photos: 'Photos',
   Videos: 'Videos',
 });
+
+/**
+ * @typedef {Object} ScraperOptions
+ * @property {string|Array<{name: string, value: string}>} [cookies] - Cookie string or array
+ * @property {string} [proxy] - Proxy URL
+ * @property {typeof globalThis.fetch} [fetch] - Custom fetch function
+ * @property {(req: Record<string, unknown>) => Record<string, unknown>} [transform] - Request transform function
+ */
 
 /**
  * Turn an unhelpful HTTP failure into an actionable one.
@@ -96,43 +107,54 @@ function describeHttpFailure(res, url, authenticated) {
  * @private
  */
 class SimpleHttp {
+  /**
+   * @param {TokenManager} tokenManager
+   * @param {ScraperOptions} [options]
+   */
   constructor(tokenManager, options = {}) {
+    /** @private */
     this._tokenManager = tokenManager;
+    /** @private @type {typeof globalThis.fetch} */
     this._fetchFn = options.fetch || globalThis.fetch;
-    this._proxy = options.proxy || null;
+    /** @private @type {string|undefined} */
+    this._proxy = options.proxy;
+    /** @private @type {((req: Record<string, unknown>) => Record<string, unknown>) | null} */
     this._transform = options.transform || null;
+    /** @type {string|null} */
     this._cookies = null;
+    /** @type {boolean} */
     this._authenticated = false;
   }
 
   /**
    * Make a GET request.
    * @param {string} url
-   * @returns {Promise<any>}
+   * @returns {Promise<Raw>}
    */
   async get(url) {
     await this._tokenManager.getGuestToken();
     const headers = this._tokenManager.getHeaders(this._authenticated);
     if (this._cookies) {
-      headers['Cookie'] = this._cookies;
+      headers.Cookie = this._cookies;
     }
 
+    /** @type {Record<string, unknown>} */
     let req = { method: 'GET', headers };
-    if (this._transform) req = this._transform(req) || req;
+    if (this._transform) req = this._transform(req);
 
-    const res = await this._fetchFn(url, req);
+    const res = await this._fetchFn(url, /** @type {RequestInit} */ (req));
     if (!res.ok) {
       throw describeHttpFailure(res, url, this._authenticated);
     }
-    return res.json();
+    return /** @type {Raw} */ (await res.json());
   }
 
   /**
    * Make a POST request.
    * @param {string} url
-   * @param {any} body
-   * @param {Object} [extraHeaders]
-   * @returns {Promise<any>}
+   * @param {unknown} body
+   * @param {Record<string, string>} [extraHeaders]
+   * @returns {Promise<Raw>}
    */
   async post(url, body, extraHeaders = {}) {
     await this._tokenManager.getGuestToken();
@@ -141,7 +163,7 @@ class SimpleHttp {
       ...extraHeaders,
     };
     if (this._cookies) {
-      headers['Cookie'] = this._cookies;
+      headers.Cookie = this._cookies;
     }
     if (typeof body === 'object' && !extraHeaders['Content-Type']) {
       headers['Content-Type'] = 'application/json';
@@ -149,14 +171,15 @@ class SimpleHttp {
 
     const payload = typeof body === 'string' ? body : JSON.stringify(body);
 
+    /** @type {Record<string, unknown>} */
     let req = { method: 'POST', headers, body: payload };
-    if (this._transform) req = this._transform(req) || req;
+    if (this._transform) req = this._transform(req);
 
-    const res = await this._fetchFn(url, req);
+    const res = await this._fetchFn(url, /** @type {RequestInit} */ (req));
     if (!res.ok) {
       throw describeHttpFailure(res, url, this._authenticated);
     }
-    return res.json();
+    return /** @type {Raw} */ (await res.json());
   }
 }
 
@@ -182,11 +205,7 @@ export class Scraper {
   /**
    * Create a new Scraper instance.
    *
-   * @param {Object} [options={}]
-   * @param {string|Array} [options.cookies] - Cookie string or array
-   * @param {string} [options.proxy] - Proxy URL
-   * @param {Function} [options.fetch] - Custom fetch function
-   * @param {Function} [options.transform] - Request transform function
+   * @param {ScraperOptions} [options={}]
    */
   constructor(options = {}) {
     /** @private */
@@ -249,7 +268,7 @@ export class Scraper {
     this._http._cookies = null;
     this._http._authenticated = false;
     this._auth.invalidateGuestToken();
-    this._auth.setCsrfToken(null);
+    this._auth.setCsrfToken(undefined);
     this._userIdCache.clear();
   }
 
@@ -327,7 +346,7 @@ export class Scraper {
   /**
    * Get a user profile by username.
    *
-   * @param {string} username - Twitter handle (with or without @)
+   * @param {string} username - Twitter handle (with or without at sign)
    * @returns {Promise<import('./models/Profile.js').Profile>}
    */
   async getProfile(username) {
@@ -470,9 +489,7 @@ export class Scraper {
    * Send a tweet.
    *
    * @param {string} text - Tweet text
-   * @param {Object} [options={}]
-   * @param {string[]} [options.mediaIds] - Media entity IDs to attach
-   * @param {string} [options.replyTo] - Tweet ID to reply to
+   * @param {Record<string, unknown>} [options={}] - Optional mediaIds (string[]) and replyTo (string)
    * @returns {Promise<import('./models/Tweet.js').Tweet>}
    */
   async sendTweet(text, options = {}) {
