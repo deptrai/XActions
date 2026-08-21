@@ -1,26 +1,247 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * TerminalQrLogin — Terminal ASCII QR Code authentication handler.
+ * Implements frictionless login with 1:1 ASCII QR, real-time countdown,
+ * non-TTY shortcode fallback, and secure cookie persistence.
  * @author nich (@nichxbt)
  * @license MIT
  */
 
 import { AbstractLogin } from '../base-login.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from '../error-envelope.js';
+import { globalSessionManager } from '../session-manager.js';
+import { displayTerminalQrCode, isTty } from '../../utils/qrcode.js';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+
+/** @typedef {import('../types.js').LoginResult} LoginResult */
+
+const AMBIGUOUS_CHARS = new Set(['0', 'O', 'I', '1', 'l']);
+const SHORT_CODE_CHARSET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 
 export class TerminalQrLogin extends AbstractLogin {
   /** @type {string} */
   name = 'terminal-qr';
 
+  /**
+   * @param {Object} [options]
+   * @param {string} [options.platform='twitter']
+   * @param {string[]} [options.requiredCookies]
+   * @param {Function} [options.getQrCode]
+   * @param {Function} [options.checkLoginState]
+   * @param {string} [options.cookiePath]
+   * @param {number} [options.intervalMs=1000]
+   * @param {number} [options.timeoutSec=120]
+   * @param {number} [options.countdownSec=60]
+   * @param {boolean} [options.quiet=false]
+   * @param {AbortSignal} [options.signal]
+   */
   constructor(options = {}) {
     super();
     this.options = options;
+    this.platform = options.platform || 'twitter';
+    this.intervalMs = options.intervalMs || 1000;
+    this.timeoutSec = options.timeoutSec || 120;
+    this.countdownSec = options.countdownSec || 60;
+    this.cookiePath = options.cookiePath || path.join(os.homedir(), '.xactions', 'cookies.json');
   }
 
+  /**
+   * Generate a secure, user-friendly 6-character short code without ambiguous characters.
+   * @returns {string}
+   */
   generateShortCode() {
-    throw new Error('Method not implemented: generateShortCode()');
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+      const idx = Math.floor(Math.random() * SHORT_CODE_CHARSET.length);
+      result += SHORT_CODE_CHARSET[idx];
+    }
+    return result;
   }
 
-  async login() {
-    throw new Error('Method not implemented: login()');
+  /**
+   * Resolve required cookies based on platform if not explicitly specified.
+   * @returns {string[]}
+   */
+  getRequiredCookies() {
+    if (this.options.requiredCookies && Array.isArray(this.options.requiredCookies)) {
+      return this.options.requiredCookies;
+    }
+    switch (this.platform.toLowerCase()) {
+      case 'facebook':
+        return ['c_user', 'xs'];
+      case 'twitter':
+      default:
+        return ['auth_token', 'ct0'];
+    }
+  }
+
+  /**
+   * Execute the QR login lifecycle.
+   * @param {Object} [runtimeOptions]
+   * @returns {Promise<LoginResult>}
+   */
+  async login(runtimeOptions = {}) {
+    const opts = { ...this.options, ...runtimeOptions };
+    const platform = opts.platform || this.platform;
+    const intervalMs = opts.intervalMs || this.intervalMs;
+    const timeoutSec = opts.timeoutSec || this.timeoutSec;
+    const shortCode = this.generateShortCode();
+
+    // 1. Get QR code data/URL
+    let qrData = '';
+    if (typeof opts.getQrCode === 'function') {
+      qrData = await opts.getQrCode();
+    } else if (opts.qrUrl) {
+      qrData = opts.qrUrl;
+    } else {
+      qrData = `https://x.com/i/flow/qr?code=${shortCode}&platform=${platform}`;
+    }
+
+    // 2. Render QR code or Non-TTY fallback
+    if (!opts.quiet) {
+      try {
+        const rendered = await displayTerminalQrCode(qrData, {
+          shortCode,
+          showUrl: true
+        });
+        if (isTty()) {
+          console.log(rendered);
+        } else {
+          process.stdout.write(rendered);
+        }
+      } catch (err) {
+        // If display fails, log warning but proceed with polling
+        console.warn(`[QR WARNING] Could not display QR: ${err.message}`);
+      }
+    }
+
+    // 3. Polling loop with timeout and cleanup
+    return new Promise((resolve, reject) => {
+      let isDone = false;
+      let remainingSeconds = timeoutSec;
+      let intervalId = null;
+
+      const cleanup = () => {
+        isDone = true;
+        if (intervalId !== null) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      };
+
+      if (opts.signal) {
+        opts.signal.addEventListener('abort', () => {
+          cleanup();
+          reject(new PlatformError({
+            type: 'CANCELLED',
+            code: 'XACT_4099',
+            message: '[LOGIN CANCELLED] Login aborted by user signal',
+            suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+            platform
+          }));
+        }, { once: true });
+      }
+
+      const poll = async () => {
+        if (isDone) return;
+
+        try {
+          if (typeof opts.checkLoginState === 'function') {
+            const checkResult = await opts.checkLoginState();
+            if (isDone) return;
+
+            if (checkResult) {
+              // Checkpoint required
+              if (checkResult.checkpoint) {
+                cleanup();
+                return reject(new PlatformError({
+                  type: 'CHECKPOINT',
+                  code: 'XACT_4031',
+                  message: `[ACCOUNT CHECKPOINTED] ${checkResult.message || 'Identity verification required on platform'}`,
+                  suggestedAction: SuggestedActions.RELOGIN,
+                  platform
+                }));
+              }
+
+              // Successfully authenticated
+              if (checkResult.authenticated || checkResult.cookies) {
+                cleanup();
+
+                const accountId = checkResult.accountId || `act_${platform}_${Date.now()}`;
+                const loginResult = {
+                  accountId,
+                  cookies: checkResult.cookies,
+                  tokens: checkResult.tokens || {},
+                  expiresAt: checkResult.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                };
+
+                // Save cookies to session manager
+                globalSessionManager.set(accountId, loginResult);
+
+                // Save to local file if cookiePath is specified
+                try {
+                  if (this.cookiePath) {
+                    const dir = path.dirname(this.cookiePath);
+                    await fs.mkdir(dir, { recursive: true });
+                    await fs.writeFile(
+                      this.cookiePath,
+                      JSON.stringify(checkResult.cookies, null, 2),
+                      { mode: 0o600 }
+                    );
+                  }
+                } catch {
+                  // File save errors should not fail the login memory state
+                }
+
+                if (!opts.quiet && isTty()) {
+                  process.stdout.write(`\r\x1b[K✅ Account active (${accountId})\n`);
+                }
+
+                return resolve(loginResult);
+              }
+            }
+          }
+
+          remainingSeconds -= Math.max(1, Math.round(intervalMs / 1000));
+
+          if (!opts.quiet && isTty()) {
+            if (remainingSeconds <= 60 && remainingSeconds > 0) {
+              process.stdout.write(`\r\x1b[K⚠️  QR expiring soon... (${remainingSeconds}s remaining)`);
+            } else if (remainingSeconds > 0) {
+              process.stdout.write(`\r\x1b[K⏳ Scan the QR code. Expires in ${remainingSeconds}s...`);
+            }
+          }
+
+          if (remainingSeconds <= 0) {
+            cleanup();
+            return reject(new PlatformError({
+              type: 'TIMEOUT',
+              code: 'XACT_4080',
+              message: `[QR EXPIRED] Login timeout (${timeoutSec}s). Run again to generate a new QR code.`,
+              suggestedAction: 'RETRY',
+              isRetryable: true,
+              platform
+            }));
+          }
+        } catch (pollErr) {
+          if (!isDone) {
+            cleanup();
+            reject(pollErr instanceof PlatformError ? pollErr : new PlatformError({
+              type: ErrorTypes.INTERNAL,
+              message: `[LOGIN FAILED] ${pollErr.message}`,
+              suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+              platform
+            }));
+          }
+        }
+      };
+
+      intervalId = setInterval(poll, intervalMs);
+      if (typeof intervalId.unref === 'function') {
+        intervalId.unref();
+      }
+    });
   }
 }

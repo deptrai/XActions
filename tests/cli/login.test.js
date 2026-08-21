@@ -14,7 +14,7 @@ describe('Story 12.1 — CLI Login Command with QR & Non-TTY Flags (tests/cli/lo
   });
 
   describe('CLI Flag Parsing for login command', () => {
-    it.skip('[P0] should parse --qr, --qr-url, --push, --cdp, --platform, and --timeout options', () => {
+    it('[P0] should parse --qr, --qr-url, --push, --cdp, --platform, and --timeout options', () => {
       let capturedOptions = null;
 
       program
@@ -51,7 +51,7 @@ describe('Story 12.1 — CLI Login Command with QR & Non-TTY Flags (tests/cli/lo
       expect(capturedOptions.push).toBe(true);
     });
 
-    it.skip('[P1] should default platform to twitter and timeout to 120s when flags are omitted', () => {
+    it('[P1] should default platform to twitter and timeout to 120s when flags are omitted', () => {
       let capturedOptions = null;
 
       program

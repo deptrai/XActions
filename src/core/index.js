@@ -8,6 +8,7 @@
 export { AbstractCrawler } from './base-crawler.js';
 export { AbstractApiClient } from './base-client.js';
 export { AbstractLogin } from './base-login.js';
+export { TerminalQrLogin } from './login/terminal-qr.js';
 export { AbstractStore } from './base-store.js';
 export {
   PlatformError,

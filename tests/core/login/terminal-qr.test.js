@@ -15,24 +15,23 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
   });
 
   describe('Class Hierarchy & Contract', () => {
-    it.skip('[P0] should extend AbstractLogin and have name "terminal-qr"', () => {
+    it('[P0] should extend AbstractLogin and have name "terminal-qr"', () => {
       const login = new TerminalQrLogin();
       expect(login).toBeInstanceOf(AbstractLogin);
       expect(login.name).toBe('terminal-qr');
     });
 
-    it.skip('[P0] generateShortCode() should produce a clean 6-character code excluding ambiguous chars', () => {
+    it('[P0] generateShortCode() should produce a clean 6-character code excluding ambiguous chars', () => {
       const login = new TerminalQrLogin();
       const code = login.generateShortCode();
       expect(code).toBeDefined();
       expect(code.length).toBe(6);
-      // Excludes 0, O, I, 1, l
       expect(code).not.toMatch(/[0OI1l]/);
     });
   });
 
   describe('Login Polling, Countdown & Lifecycle', () => {
-    it.skip('[P0] should resolve LoginResult when checkLoginState succeeds within timeout', async () => {
+    it('[P0] should resolve LoginResult when checkLoginState succeeds within timeout', async () => {
       let callCount = 0;
       const mockCheckLoginState = vi.fn().mockImplementation(async () => {
         callCount++;
@@ -52,7 +51,8 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
         getQrCode: async () => 'https://x.com/i/flow/qr?token=test_session',
         checkLoginState: mockCheckLoginState,
         intervalMs: 1000,
-        timeoutSec: 60
+        timeoutSec: 60,
+        quiet: true
       });
 
       const loginPromise = login.login();
@@ -67,7 +67,7 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
       expect(result.cookies.ct0).toBe('secret_ct0');
     });
 
-    it.skip('[P0] should abort and throw PlatformError [QR EXPIRED] when timeout (120s) expires', async () => {
+    it('[P0] should abort and throw PlatformError [QR EXPIRED] when timeout (120s) expires', async () => {
       const mockCheckLoginState = vi.fn().mockResolvedValue(false);
 
       const login = new TerminalQrLogin({
@@ -75,15 +75,11 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
         getQrCode: async () => 'https://x.com/i/flow/qr?token=test_session',
         checkLoginState: mockCheckLoginState,
         intervalMs: 1000,
-        timeoutSec: 120
+        timeoutSec: 120,
+        quiet: true
       });
 
-      const loginPromise = login.login();
-
-      // Advance timers beyond 120s
-      const timerPromise = vi.advanceTimersByTimeAsync(121000);
-
-      await expect(Promise.all([loginPromise, timerPromise])).rejects.toSatisfy((err) => {
+      const assertion = expect(login.login()).rejects.toSatisfy((err) => {
         expect(err).toBeInstanceOf(PlatformError);
         expect(err.message).toContain('[QR EXPIRED]');
         expect(err.type).toBe('TIMEOUT');
@@ -91,9 +87,12 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
         expect(err.suggestedAction).toBe('RETRY');
         return true;
       });
+
+      await vi.advanceTimersByTimeAsync(121000);
+      await assertion;
     });
 
-    it.skip('[P1] should throw PlatformError [ACCOUNT CHECKPOINTED] when platform returns checkpoint', async () => {
+    it('[P1] should throw PlatformError [ACCOUNT CHECKPOINTED] when platform returns checkpoint', async () => {
       const mockCheckLoginState = vi.fn().mockResolvedValue({
         checkpoint: true,
         message: 'Identity verification required'
@@ -103,21 +102,22 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
         platform: 'twitter',
         getQrCode: async () => 'https://x.com/i/flow/qr?token=test_session',
         checkLoginState: mockCheckLoginState,
-        intervalMs: 1000
+        intervalMs: 1000,
+        quiet: true
       });
 
-      const loginPromise = login.login();
-      await vi.advanceTimersByTimeAsync(1000);
-
-      await expect(loginPromise).rejects.toSatisfy((err) => {
+      const assertion = expect(login.login()).rejects.toSatisfy((err) => {
         expect(err).toBeInstanceOf(PlatformError);
         expect(err.message).toContain('[ACCOUNT CHECKPOINTED]');
         expect(err.type).toBe('CHECKPOINT');
         return true;
       });
+
+      await vi.advanceTimersByTimeAsync(1000);
+      await assertion;
     });
 
-    it.skip('[P0] should cleanly clear all background timers on completion (no dangling intervals)', async () => {
+    it('[P0] should cleanly clear all background timers on completion (no dangling intervals)', async () => {
       const mockCheckLoginState = vi.fn().mockResolvedValue({
         authenticated: true,
         accountId: 'act_clean_timer',
@@ -128,14 +128,14 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
         platform: 'twitter',
         getQrCode: async () => 'https://x.com/i/flow/qr?token=test',
         checkLoginState: mockCheckLoginState,
-        intervalMs: 1000
+        intervalMs: 1000,
+        quiet: true
       });
 
       const loginPromise = login.login();
       await vi.advanceTimersByTimeAsync(1000);
       await loginPromise;
 
-      // Verify that no timers remain active
       expect(vi.getTimerCount()).toBe(0);
     });
   });

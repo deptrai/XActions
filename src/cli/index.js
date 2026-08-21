@@ -220,8 +220,30 @@ registerCompletionCommand(program);
 
 program
   .command('login')
-  .description('Set up authentication with session cookie')
-  .action(async () => {
+  .description('Set up authentication with session cookie or terminal QR code')
+  .option('--qr', 'Use QR code login')
+  .option('--qr-url <url>', 'Provide pre-generated QR URL')
+  .option('--push', 'Send push notification for non-TTY')
+  .option('--cdp', 'Use CDP attach instead of QR')
+  .option('--platform <platform>', 'Platform to authenticate', 'twitter')
+  .option('--timeout <seconds>', 'QR timeout', '120')
+  .action(async (options = {}) => {
+    if (options.qr || options.qrUrl) {
+      const { TerminalQrLogin } = await import('../core/login/terminal-qr.js');
+      const login = new TerminalQrLogin({
+        platform: options.platform || 'twitter',
+        qrUrl: options.qrUrl,
+        timeoutSec: parseInt(options.timeout || '120', 10)
+      });
+      try {
+        await login.login();
+      } catch (err) {
+        console.error(chalk.red(`\n${err.message || 'Login failed'}`));
+        process.exitCode = 1;
+      }
+      return;
+    }
+
     console.log(chalk.cyan('\n⚡ XActions Login Setup\n'));
     console.log(chalk.gray('To get your session cookies:'));
     console.log(chalk.gray('1. Go to x.com and log in'));
