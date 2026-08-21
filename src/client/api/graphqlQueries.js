@@ -15,6 +15,24 @@
 import { GRAPHQL, BEARER_TOKEN as SHARED_BEARER_TOKEN } from '../../scrapers/twitter/http/endpoints.js';
 
 /**
+ * @typedef {Object} GraphQLEndpoint
+ * @property {string} queryId
+ * @property {string} operationName
+ * @property {'GET' | 'POST'} method
+ * @property {Record<string, unknown>} [defaultVariables]
+ * @property {false} [isRest]
+ */
+
+/**
+ * @typedef {Object} RestEndpoint
+ * @property {null} queryId
+ * @property {null} operationName
+ * @property {'GET' | 'POST'} method
+ * @property {() => string} url
+ * @property {true} isRest
+ */
+
+/**
  * Public bearer token embedded in Twitter's web client JavaScript.
  * Not a secret — used by all Twitter scrapers.
  * @type {string}
@@ -32,16 +50,16 @@ export const BEARER_TOKEN = SHARED_BEARER_TOKEN;
  * the client-specific metadata (HTTP method, default variables, REST URLs).
  *
  * @param {string} name - Key in the shared GRAPHQL map
- * @param {string} [fallback] - ID to use when the shared map has no entry
- * @returns {string|null}
+ * @param {string} [fallback=''] - ID to use when the shared map has no entry
+ * @returns {string}
  */
-function queryId(name, fallback = null) {
-  return GRAPHQL[name]?.queryId ?? fallback;
+function queryId(name, fallback = '') {
+  return /** @type {string | undefined} */ (GRAPHQL[name]?.queryId) ?? fallback;
 }
 
 /**
  * Default feature flags Twitter expects with GraphQL requests.
- * @type {Object}
+ * @type {Record<string, boolean>}
  */
 export const DEFAULT_FEATURES = {
   rweb_tipjar_consumption_enabled: true,
@@ -77,7 +95,7 @@ export const DEFAULT_FEATURES = {
 
 /**
  * GraphQL endpoint definitions.
- * @type {Object}
+ * @type {Record<string, GraphQLEndpoint | RestEndpoint>}
  */
 export const GRAPHQL_ENDPOINTS = {
   UserByScreenName: {
@@ -212,20 +230,25 @@ export const GRAPHQL_ENDPOINTS = {
 /**
  * Build a full GraphQL URL with encoded variables and features query params.
  *
- * @param {Object} endpoint - Entry from GRAPHQL_ENDPOINTS
- * @param {Object} [variables={}] - GraphQL variables
- * @param {Object} [features] - Feature flags (defaults to DEFAULT_FEATURES)
+ * @param {GraphQLEndpoint | RestEndpoint} endpoint - Entry from GRAPHQL_ENDPOINTS
+ * @param {Record<string, unknown>} [variables={}] - GraphQL variables
+ * @param {Record<string, boolean>} [features] - Feature flags (defaults to DEFAULT_FEATURES)
  * @returns {string} Full URL with query parameters
  */
 export function buildGraphQLUrl(endpoint, variables = {}, features) {
-  if (endpoint.isRest && endpoint.url) {
+  if (endpoint.isRest) {
     return endpoint.url();
   }
 
   const { queryId, operationName } = endpoint;
   const base = `https://x.com/i/api/graphql/${queryId}/${operationName}`;
 
-  const mergedVars = { ...endpoint.defaultVariables, ...variables };
+  // GraphQL mutations are POSTed with variables in the body, not the URL.
+  if (endpoint.method === 'POST') {
+    return base;
+  }
+
+  const mergedVars = { ...(endpoint.defaultVariables || {}), ...variables };
   const mergedFeatures = features || DEFAULT_FEATURES;
 
   const params = new URLSearchParams();

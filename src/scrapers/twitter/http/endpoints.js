@@ -14,6 +14,30 @@
  * @license MIT
  */
 
+/**
+ * Parameters accepted by the GraphQL variable builders.
+ * @typedef {Record<string, unknown>} GraphQLVariablesParams
+ * @property {number} [count]
+ * @property {string} [cursor]
+ * @property {string} [username]
+ * @property {string} [userId]
+ * @property {string} [tweetId]
+ * @property {string} [focalTweetId]
+ * @property {string} [query]
+ * @property {string} [product]
+ * @property {string} [listId]
+ * @property {string[]} [seenTweetIds]
+ * @property {string} [text]
+ * @property {unknown[]} [mediaEntities]
+ */
+
+/**
+ * Options for validateEndpoints().
+ * @typedef {Object} ValidateOptions
+ * @property {string[]} [endpoints] - Specific endpoint keys to check
+ * @property {typeof globalThis.fetch} [fetch] - Custom fetch implementation
+ */
+
 // ---------------------------------------------------------------------------
 // Base URLs
 // ---------------------------------------------------------------------------
@@ -39,6 +63,7 @@ export const BEARER_TOKEN =
 // When both sources provide an ID, the more recent one is preferred.
 // Query IDs marked [twikit] or [scraper] indicate their primary source.
 
+/** @type {Record<string, {queryId: string, operationName: string}>} */
 export const GRAPHQL = {
   // ---- Queries (user profiles) ----
   UserByScreenName:     { queryId: 'NimuplG1OB7Fd2btCLdBOw', operationName: 'UserByScreenName' },     // [twikit] d60/twikit gql.py
@@ -96,6 +121,7 @@ export const GRAPHQL = {
 // Source: d60/twikit twikit/client/v11.py
 // ---------------------------------------------------------------------------
 
+/** @type {Record<string, string>} */
 export const REST = {
   // Follow / Unfollow (FollowUser / UnfollowUser)
   friendshipsCreate:  '/1.1/friendships/create.json',
@@ -143,6 +169,7 @@ export const REST = {
 // These flags are sent with nearly every GraphQL request by the Twitter web client.
 // ---------------------------------------------------------------------------
 
+/** @type {Record<string, boolean>} */
 export const DEFAULT_FEATURES = {
   rweb_video_screen_enabled: false,
   profile_label_improvements_pcf_label_in_post_enabled: true,
@@ -182,6 +209,7 @@ export const DEFAULT_FEATURES = {
   responsive_web_profile_redirect_enabled: false,
 };
 
+/** @type {Record<string, boolean>} */
 export const DEFAULT_FIELD_TOGGLES = {
   withArticleRichContentState: true,
   withArticlePlainText: false,
@@ -194,6 +222,7 @@ export const DEFAULT_FIELD_TOGGLES = {
 // Source: d60/twikit constants.py USER_FEATURES
 // ---------------------------------------------------------------------------
 
+/** @type {Record<string, boolean>} */
 export const USER_FEATURES = {
   hidden_profile_likes_enabled: true,
   hidden_profile_subscriptions_enabled: true,
@@ -213,6 +242,7 @@ export const USER_FEATURES = {
 // Conservative estimates based on observed Twitter behavior.
 // ---------------------------------------------------------------------------
 
+/** @type {Record<string, number>} */
 export const RATE_LIMITS = {
   // Queries
   UserByScreenName: 95,
@@ -265,6 +295,7 @@ export const RATE_LIMITS = {
 // User Agent Strings (realistic Chrome 131–133 on Windows/Mac/Linux, Feb 2026)
 // ---------------------------------------------------------------------------
 
+/** @type {string[]} */
 export const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
@@ -283,9 +314,9 @@ export const USER_AGENTS = [
  *
  * @param {string} queryId
  * @param {string} operationName
- * @param {object} variables
- * @param {object} [features]
- * @param {object} [fieldToggles]
+ * @param {Record<string, unknown>} variables
+ * @param {Record<string, boolean>} [features]
+ * @param {Record<string, unknown>} [fieldToggles]
  * @returns {string}
  */
 export function buildGraphQLUrl(queryId, operationName, variables, features = DEFAULT_FEATURES, fieldToggles) {
@@ -301,9 +332,9 @@ export function buildGraphQLUrl(queryId, operationName, variables, features = DE
 /**
  * Build the variables object for common GraphQL query types.
  *
- * @param {'UserByScreenName'|'UserByRestId'|'UserTweets'|'UserTweetsAndReplies'|'UserMedia'|'UserLikes'|'TweetDetail'|'TweetResultByRestId'|'SearchTimeline'|'Followers'|'Following'|'Likes'|'Retweeters'|'ListMembers'|'ListTimeline'|'BookmarkTimeline'|'HomeTimeline'|'CreateTweet'|'DeleteTweet'|'FavoriteTweet'|'UnfavoriteTweet'|'CreateRetweet'|'DeleteRetweet'|'CreateBookmark'|'DeleteBookmark'|string} type
- * @param {object} params
- * @returns {object}
+ * @param {string} type
+ * @param {GraphQLVariablesParams} [params={}]
+ * @returns {Record<string, unknown>}
  */
 export function buildGraphQLVariables(type, params = {}) {
   const count = params.count ?? 20;
@@ -325,33 +356,33 @@ export function buildGraphQLVariables(type, params = {}) {
 
     // ---- User timelines ----
     case 'UserTweets': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         userId: params.userId,
         count,
         includePromotedContent: true,
         withQuickPromoteEligibilityTweetFields: true,
         withVoice: true,
         withV2Timeline: true,
-      };
+      });
       if (cursor) v.cursor = cursor;
       return v;
     }
 
     case 'UserTweetsAndReplies': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         userId: params.userId,
         count,
         includePromotedContent: true,
         withCommunity: true,
         withVoice: true,
         withV2Timeline: true,
-      };
+      });
       if (cursor) v.cursor = cursor;
       return v;
     }
 
     case 'UserMedia': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         userId: params.userId,
         count,
         includePromotedContent: false,
@@ -359,13 +390,13 @@ export function buildGraphQLVariables(type, params = {}) {
         withBirdwatchNotes: false,
         withVoice: true,
         withV2Timeline: true,
-      };
+      });
       if (cursor) v.cursor = cursor;
       return v;
     }
 
     case 'UserLikes': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         userId: params.userId,
         count,
         includePromotedContent: false,
@@ -373,14 +404,14 @@ export function buildGraphQLVariables(type, params = {}) {
         withBirdwatchNotes: false,
         withVoice: true,
         withV2Timeline: true,
-      };
+      });
       if (cursor) v.cursor = cursor;
       return v;
     }
 
     // ---- Tweets ----
     case 'TweetDetail': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         focalTweetId: params.tweetId,
         with_rux_injections: false,
         rankingMode: 'Relevance',
@@ -390,7 +421,7 @@ export function buildGraphQLVariables(type, params = {}) {
         withBirdwatchNotes: true,
         withVoice: true,
         withV2Timeline: true,
-      };
+      });
       if (cursor) v.cursor = cursor;
       return v;
     }
@@ -406,12 +437,12 @@ export function buildGraphQLVariables(type, params = {}) {
 
     // ---- Search ----
     case 'SearchTimeline': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         rawQuery: params.query,
         count,
         querySource: 'typed_query',
         product: params.product ?? 'Top',
-      };
+      });
       if (cursor) v.cursor = cursor;
       return v;
     }
@@ -419,11 +450,11 @@ export function buildGraphQLVariables(type, params = {}) {
     // ---- Relationships ----
     case 'Followers':
     case 'Following': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         userId: params.userId,
         count,
         includePromotedContent: false,
-      };
+      });
       if (cursor) v.cursor = cursor;
       return v;
     }
@@ -431,39 +462,39 @@ export function buildGraphQLVariables(type, params = {}) {
     // ---- Engagement queries ----
     case 'Likes':
     case 'Retweeters': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         tweetId: params.tweetId,
         count,
         includePromotedContent: true,
-      };
+      });
       if (cursor) v.cursor = cursor;
       return v;
     }
 
     // ---- Lists ----
     case 'ListMembers': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         listId: params.listId,
         count,
-      };
+      });
       if (cursor) v.cursor = cursor;
       return v;
     }
 
     case 'ListTimeline': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         listId: params.listId,
         count,
-      };
+      });
       if (cursor) v.cursor = cursor;
       return v;
     }
 
     // ---- Bookmarks ----
     case 'BookmarkTimeline': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         count,
-      };
+      });
       if (cursor) v.cursor = cursor;
       return v;
     }
@@ -471,13 +502,13 @@ export function buildGraphQLVariables(type, params = {}) {
     // ---- Home ----
     case 'HomeTimeline':
     case 'HomeLatestTimeline': {
-      const v = {
+      const v = /** @type {Record<string, unknown>} */ ({
         count,
         includePromotedContent: true,
         latestControlAvailable: true,
         requestContext: 'launch',
         withCommunity: true,
-      };
+      });
       if (cursor) v.cursor = cursor;
       if (params.seenTweetIds) v.seenTweetIds = params.seenTweetIds;
       return v;
@@ -527,15 +558,17 @@ export function buildGraphQLVariables(type, params = {}) {
  * Makes a lightweight OPTIONS/HEAD probe to confirm the endpoint returns
  * a recognizable response (not 404). Requires a valid auth cookie or guest token.
  *
- * @param {object} [options]
- * @param {string[]} [options.endpoints] - Specific endpoint keys to check (default: all queries)
- * @param {typeof globalThis.fetch} [options.fetch] - Custom fetch implementation
+ * @param {ValidateOptions} [options={}]
  * @returns {Promise<{valid: string[], invalid: string[], errors: Record<string, string>}>}
  */
 export async function validateEndpoints(options = {}) {
   const fetchFn = options.fetch ?? globalThis.fetch;
   const endpointKeys = options.endpoints ?? Object.keys(GRAPHQL);
-  const results = { valid: [], invalid: [], errors: {} };
+  const results = {
+    valid: /** @type {string[]} */ ([]),
+    invalid: /** @type {string[]} */ ([]),
+    errors: /** @type {Record<string, string>} */ ({}),
+  };
 
   for (const key of endpointKeys) {
     const endpoint = GRAPHQL[key];
@@ -566,8 +599,9 @@ export async function validateEndpoints(options = {}) {
         results.valid.push(key);
       }
     } catch (err) {
+      const error = /** @type {Error} */ (err);
       results.invalid.push(key);
-      results.errors[key] = err.message ?? String(err);
+      results.errors[key] = error.message ?? String(error);
     }
   }
 
