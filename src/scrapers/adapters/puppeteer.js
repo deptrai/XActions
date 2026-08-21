@@ -23,9 +23,9 @@ export class PuppeteerAdapter extends BaseAdapter {
   async #getPuppeteer() {
     if (!this.#puppeteer) {
       const puppeteer = await import('puppeteer-extra');
-      const StealthPlugin = await import('puppeteer-extra-plugin-stealth');
-      puppeteer.default.use(StealthPlugin.default());
-      this.#puppeteer = puppeteer.default;
+      const { default: StealthPlugin } = await import('puppeteer-extra-plugin-stealth');
+      puppeteer.default.use(StealthPlugin());
+      this.#puppeteer = /** @type {import('puppeteer-extra').PuppeteerExtra} */ (/** @type {unknown} */ (puppeteer.default));
     }
     if (!this.#puppeteer) {
       throw new Error('puppeteer-extra could not be initialized');

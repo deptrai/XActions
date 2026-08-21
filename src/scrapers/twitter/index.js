@@ -23,57 +23,115 @@ import fs from 'fs/promises';
 puppeteer.use(StealthPlugin());
 
 // ============================================================================
+// Type Definitions
+// ============================================================================
+
+/**
+ * @typedef {Object} TwitterScrapeOptions
+ * @property {number} [limit]
+ * @property {boolean} [includeReplies]
+ * @property {'latest' | 'top' | 'people' | 'photos' | 'videos'} [filter]
+ * @property {number} [scrollDelay]
+ * @property {'all' | 'mentions'} [tab]
+ * @property {(progress: { scraped: number; limit: number }) => void} [onProgress]
+ */
+
+/**
+ * @typedef {Object} MediaItem
+ * @property {'image' | 'video'} type
+ * @property {string} url
+ * @property {string} [tweetUrl]
+ */
+
+// ============================================================================
 // Core Utilities
 // ============================================================================
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** @param {number} [min] @param {number} [max] */
 const randomDelay = (min = 1000, max = 3000) => sleep(min + Math.random() * (max - min));
 
 /**
  * Create a browser instance with stealth settings.
- * 
+ *
  * Supports adapter mode:
  *   const browser = await createBrowser({ adapter: 'playwright' });
  *   const browser = await createBrowser({ adapter: 'puppeteer' });
  *   const browser = await createBrowser(); // Legacy Puppeteer
- * 
- * @param {Object} [options]
- * @param {string} [options.adapter] - Framework adapter: 'puppeteer', 'playwright', 'cheerio'
- * @param {boolean} [options.headless] - Run headless (default: true)
- * @returns {Promise<Object>} Browser instance
+ *
+ * @param {LaunchOptions & { adapter?: string }} [options]
+ * @returns {Promise<import('puppeteer').Browser>} Browser instance
  */
 export async function createBrowser(options = {}) {
   if (options.adapter) {
     const { getAdapter } = await import('../adapters/index.js');
     const adapter = await getAdapter(options.adapter);
     const { adapter: _, ...adapterOptions } = options;
-    return adapter.launch(adapterOptions);
+    const adapterBrowser = await adapter.launch(adapterOptions);
+    const browser = /** @type {import('puppeteer').Browser} */ (adapterBrowser._native);
+    browser._adapter = adapterBrowser._adapter;
+    browser._native = adapterBrowser._native;
+    return browser;
   }
 
+  const {
+    headless,
+    browser,
+    browserType,
+    browserPlugin,
+    seleniumServer,
+    maxPagesPerBrowser,
+    retireAfter,
+    fingerprint,
+    headerGeneratorOptions,
+    runScripts,
+    cookies,
+    headers,
+    rateLimitStrategy,
+    proxyUrl,
+    proxyUrls,
+    maxConcurrency,
+    maxRequestsPerCrawl,
+    userAgent,
+    proxy,
+    adapter: _,
+    ...puppeteerOptions
+  } = options;
+
   return puppeteer.launch({
-    headless: options.headless !== false ? 'new' : false,
+    headless: headless === 'shell' ? 'shell' : headless !== false ? true : false,
+    browser: browser === 'firefox' ? 'firefox' : 'chrome',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled',
     ],
-    ...options,
+    ...puppeteerOptions,
   });
 }
 
 /**
  * Create a page with realistic settings.
  * Works with both native Puppeteer browsers and adapter browsers.
- * 
- * @param {Object} browser - Browser instance (native or adapter)
- * @param {Object} [options]
- * @returns {Promise<Object>} Page instance
+ *
+ * @param {import('puppeteer').Browser} browser - Browser instance (native or adapter)
+ * @param {NewPageOptions} [options]
+ * @returns {Promise<import('puppeteer').Page>} Page instance
  */
 export async function createPage(browser, options = {}) {
   if (browser._adapter) {
     const { getAdapter } = await import('../adapters/index.js');
     const adapter = await getAdapter(browser._adapter);
-    return adapter.newPage(browser, options);
+    const adapterPage = await adapter.newPage(
+      /** @type {AdapterBrowser} */ (/** @type {unknown} */ (browser)),
+      options
+    );
+    const page = /** @type {import('puppeteer').Page} */ (adapterPage._native);
+    page._adapter = adapterPage._adapter;
+    page._native = adapterPage._native;
+    return page;
   }
 
   const page = await browser.newPage();
@@ -87,12 +145,17 @@ export async function createPage(browser, options = {}) {
 /**
  * Login with session cookie.
  * Works with both native Puppeteer pages and adapter pages.
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} authToken
+ * @returns {Promise<import('puppeteer').Page>}
  */
 export async function loginWithCookie(page, authToken) {
   if (page._adapter) {
     const { getAdapter } = await import('../adapters/index.js');
     const adapter = await getAdapter(page._adapter);
-    await adapter.setCookie(page, {
+    const adapterPage = /** @type {AdapterPage} */ (/** @type {unknown} */ (page));
+    await adapter.setCookie(adapterPage, {
       name: 'auth_token',
       value: authToken,
       domain: '.x.com',
@@ -100,7 +163,7 @@ export async function loginWithCookie(page, authToken) {
       httpOnly: true,
       secure: true,
     });
-    await adapter.goto(page, 'https://x.com/home', { waitUntil: 'networkidle' });
+    await adapter.goto(adapterPage, 'https://x.com/home', { waitUntil: 'networkidle' });
     return page;
   }
 
@@ -122,13 +185,19 @@ export async function loginWithCookie(page, authToken) {
 
 /**
  * Scrape profile information for a user
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} username
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function scrapeProfile(page, username) {
   await page.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
   await randomDelay();
 
   const profile = await page.evaluate(() => {
+    /** @type {(sel: string) => string | null} */
     const getText = (sel) => document.querySelector(sel)?.textContent?.trim() || null;
+    /** @type {(sel: string, attr: string) => string | null} */
     const getAttr = (sel, attr) => document.querySelector(sel)?.getAttribute(attr) || null;
 
     const headerStyle = document.querySelector('[data-testid="UserProfileHeader_Items"]')
@@ -170,6 +239,11 @@ export async function scrapeProfile(page, username) {
 
 /**
  * Scrape followers for a user
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} username
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeFollowers(page, username, options = {}) {
   const { limit = 1000, onProgress } = options;
@@ -231,6 +305,11 @@ export async function scrapeFollowers(page, username, options = {}) {
 
 /**
  * Scrape accounts a user is following
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} username
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeFollowing(page, username, options = {}) {
   const { limit = 1000, onProgress } = options;
@@ -290,6 +369,11 @@ export async function scrapeFollowing(page, username, options = {}) {
 
 /**
  * Scrape tweets from a user's profile
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} username
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeTweets(page, username, options = {}) {
   const { limit = 100, includeReplies = false, onProgress } = options;
@@ -368,6 +452,11 @@ export async function scrapeTweets(page, username, options = {}) {
 
 /**
  * Search tweets by query
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} query
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function searchTweets(page, query, options = {}) {
   const { limit = 100, filter = 'latest', onProgress } = options;
@@ -440,6 +529,10 @@ export async function searchTweets(page, query, options = {}) {
 
 /**
  * Scrape a full tweet thread
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} tweetUrl
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeThread(page, tweetUrl) {
   await page.goto(tweetUrl, { waitUntil: 'networkidle2' });
@@ -490,6 +583,11 @@ export async function scrapeThread(page, tweetUrl) {
 
 /**
  * Scrape users who liked a tweet
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} tweetUrl
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeLikes(page, tweetUrl, options = {}) {
   const { limit = 100 } = options;
@@ -543,6 +641,11 @@ export async function scrapeLikes(page, tweetUrl, options = {}) {
 
 /**
  * Scrape tweets for a hashtag
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} hashtag
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeHashtag(page, hashtag, options = {}) {
   const { limit = 100, filter = 'latest' } = options;
@@ -557,39 +660,45 @@ export async function scrapeHashtag(page, hashtag, options = {}) {
 
 /**
  * Scrape media (images/videos) from a user
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} username
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<MediaItem[]>}
  */
 export async function scrapeMedia(page, username, options = {}) {
   const { limit = 100 } = options;
-  
+
   await page.goto(`https://x.com/${username}/media`, { waitUntil: 'networkidle2' });
   await randomDelay();
 
+  /** @type {MediaItem[]} */
   const media = [];
   let retries = 0;
   const maxRetries = 10;
 
   while (media.length < limit && retries < maxRetries) {
-    const newMedia = await page.evaluate(() => {
+    const newMedia = /** @type {MediaItem[]} */ (await page.evaluate(() => {
       const items = document.querySelectorAll('article[data-testid="tweet"]');
       return Array.from(items).flatMap((article) => {
         const images = Array.from(article.querySelectorAll('[data-testid="tweetPhoto"] img'))
           .map(img => ({
             type: 'image',
-            url: img.src.replace(/&name=\w+/, '&name=large'),
+            url: (img.src || '').replace(/&name=\w+/, '&name=large'),
           }));
-        
+
         const videos = article.querySelector('[data-testid="videoPlayer"]')
-          ? [{ type: 'video', url: article.querySelector('a[href*="/status/"]')?.href }]
+          ? [{ type: 'video', url: article.querySelector('a[href*="/status/"]')?.href || '' }]
           : [];
-        
-        const tweetUrl = article.querySelector('a[href*="/status/"]')?.href;
-        
+
+        const tweetUrl = article.querySelector('a[href*="/status/"]')?.href || '';
+
         return [...images, ...videos].map(m => ({
           ...m,
           tweetUrl,
         }));
       });
-    });
+    }));
 
     const prevLength = media.length;
     newMedia.forEach((m) => {
@@ -617,6 +726,11 @@ export async function scrapeMedia(page, username, options = {}) {
 
 /**
  * Scrape members of a Twitter list
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} listUrl
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeListMembers(page, listUrl, options = {}) {
   const { limit = 500 } = options;
@@ -670,6 +784,10 @@ export async function scrapeListMembers(page, listUrl, options = {}) {
 
 /**
  * Scrape bookmarked tweets (requires login)
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeBookmarks(page, options = {}) {
   const { limit = 100, scrollDelay = 2000 } = options;
@@ -717,6 +835,10 @@ export async function scrapeBookmarks(page, options = {}) {
 
 /**
  * Scrape recent notifications (requires login)
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeNotifications(page, options = {}) {
   const { limit = 50, tab = 'all', scrollDelay = 2000 } = options;
@@ -765,6 +887,10 @@ export async function scrapeNotifications(page, options = {}) {
 
 /**
  * Scrape trending topics from the Explore page
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeTrending(page, options = {}) {
   const { limit = 30 } = options;
@@ -797,6 +923,11 @@ export async function scrapeTrending(page, options = {}) {
 
 /**
  * Scrape members of an X Community
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} communityUrl
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeCommunityMembers(page, communityUrl, options = {}) {
   const { limit = 100, scrollDelay = 2000 } = options;
@@ -844,6 +975,11 @@ export async function scrapeCommunityMembers(page, communityUrl, options = {}) {
 
 /**
  * Scrape X Spaces from search results
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {string} query
+ * @param {TwitterScrapeOptions} [options]
+ * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function scrapeSpaces(page, query, options = {}) {
   const { limit = 20, scrollDelay = 2000 } = options;
@@ -893,6 +1029,10 @@ export async function scrapeSpaces(page, query, options = {}) {
 
 /**
  * Export data to JSON file
+ *
+ * @param {unknown} data
+ * @param {string} filename
+ * @returns {Promise<string>}
  */
 export async function exportToJSON(data, filename) {
   await fs.writeFile(filename, JSON.stringify(data, null, 2));
@@ -901,6 +1041,10 @@ export async function exportToJSON(data, filename) {
 
 /**
  * Export data to CSV file
+ *
+ * @param {Array<Record<string, unknown>>} data
+ * @param {string} filename
+ * @returns {Promise<string>}
  */
 export async function exportToCSV(data, filename) {
   if (!data.length) return filename;

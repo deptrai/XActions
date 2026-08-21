@@ -21,7 +21,7 @@ interface AdapterPage {
 }
 
 interface LaunchOptions {
-  headless?: boolean;
+  headless?: boolean | 'shell' | 'new';
   args?: string[];
   proxy?: { server?: string; username?: string; password?: string } | string;
   browser?: string;
