@@ -12,6 +12,7 @@ import { createHash, randomBytes } from 'node:crypto';
 
 export const SUPPORTED_PROXY_SCHEMES = ['http', 'https', 'socks5'];
 
+/** @type {Record<string, number>} */
 const DEFAULT_SCHEME_PORTS = {
   http: 80,
   https: 443,
@@ -25,6 +26,7 @@ const MAX_ACCOUNT_SEEDS = 10000;
 
 const PROVIDER_PRESETS = new Set(['brightdata', 'smartproxy', 'iproyal', 'kuaidaili', 'custom']);
 
+/** @type {Record<string, { max?: number, exact?: number, regex: RegExp }>} */
 const PROVIDER_SID_LIMITS = {
   brightdata: { max: 64, regex: /^[a-zA-Z0-9]+$/ },
   smartproxy: { max: 32, regex: /^[a-zA-Z0-9_]+$/ },
@@ -59,6 +61,46 @@ const PROVIDER_SID_LIMITS = {
  */
 
 /**
+ * @typedef {Object} ProxyRequestOptions
+ * @property {string} [accountId]
+ * @property {boolean} [requiresResidential]
+ * @property {string} [country]
+ * @property {string} [city]
+ * @property {string} [state]
+ * @property {string} [region]
+ * @property {string} [isp]
+ * @property {string} [zip]
+ * @property {string} [asn]
+ * @property {string} [sessionId]
+ * @property {string} [sid]
+ * @property {number} [sessionduration]
+ * @property {string} [lifetime]
+ * @property {string | number} [period]
+ * @property {boolean} [const]
+ */
+
+/**
+ * @typedef {Object} ProxyRequest
+ * @property {string} [country]
+ * @property {string} [city]
+ * @property {string} [state]
+ * @property {string} [region]
+ * @property {string} [isp]
+ * @property {string} [zip]
+ * @property {string} [asn]
+ * @property {string} [lifetime]
+ * @property {string | number} [period]
+ * @property {string} [sid]
+ * @property {string} [sessionId]
+ * @property {number} [sessionduration]
+ * @property {boolean} [const]
+ */
+
+/**
+ * @typedef {ProxyRequestOptions & { gatewayUrl: string, provider?: string, template?: string, kuaidailiMode?: 'normal' | 'pro', rotatePerRequest?: boolean, sessionDurationMs?: number, standbyBackoffMs?: number }} DynamicTunnelOptions
+ */
+
+/**
  * Wrap an IPv6 address in brackets unless it is already bracketed.
  * @param {string} host
  * @returns {string}
@@ -84,7 +126,7 @@ function buildServer(scheme, host, port) {
 
 /**
  * Coerce a port value to a finite number, falling back to the scheme default.
- * @param {any} value
+ * @param {unknown} value
  * @param {number} defaultPort
  * @returns {number}
  */
@@ -157,12 +199,12 @@ export function parseProxyUrl(urlString) {
 
   const server = buildServer(scheme, host, port);
 
-  const result = {
+  const result = /** @type {NormalizedProxy} */ ({
     scheme,
     host,
     port,
     server,
-  };
+  });
 
   if (username !== undefined) result.username = username;
   if (password !== undefined) result.password = password;
@@ -172,7 +214,7 @@ export function parseProxyUrl(urlString) {
 
 /**
  * Normalize a proxy input (string URL or object) to canonical structure.
- * @param {string | Object} input
+ * @param {string | Record<string, unknown>} input
  * @returns {NormalizedProxy}
  */
 export function normalizeProxy(input) {
@@ -181,7 +223,8 @@ export function normalizeProxy(input) {
   }
 
   if (typeof input === 'object' && input !== null) {
-    const scheme = String(input.scheme || 'http').toLowerCase();
+    const record = /** @type {Record<string, unknown>} */ (input);
+    const scheme = String(record.scheme || 'http').toLowerCase();
     if (!SUPPORTED_PROXY_SCHEMES.includes(scheme)) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
@@ -191,7 +234,7 @@ export function normalizeProxy(input) {
       });
     }
 
-    if (!input.host) {
+    if (!record.host) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
         code: 'XACT_4001',
@@ -201,20 +244,20 @@ export function normalizeProxy(input) {
     }
 
     // Strip surrounding brackets from an IPv6 host supplied as an object.
-    const host = String(input.host).replace(/^\[|\]$/g, '');
+    const host = String(record.host).replace(/^\[|\]$/g, '');
     const defaultPort = DEFAULT_SCHEME_PORTS[scheme] ?? 80;
-    const port = parsePort(input.port, defaultPort);
+    const port = parsePort(record.port, defaultPort);
     const server = buildServer(scheme, host, port);
 
-    const result = {
+    const result = /** @type {NormalizedProxy} */ ({
       scheme,
       host,
       port,
       server,
-    };
+    });
 
-    if (input.username !== undefined && input.username !== '') result.username = input.username;
-    if (input.password !== undefined) result.password = input.password;
+    if (record.username !== undefined && record.username !== '') result.username = String(record.username);
+    if (record.password !== undefined) result.password = String(record.password);
 
     return result;
   }
@@ -233,29 +276,25 @@ export function normalizeProxy(input) {
  * The auth segment is omitted entirely when the username is empty (even if a
  * password is present), preventing malformed URLs like `http://:pass@host`.
  *
- * @param {string | Object} proxy
+ * @param {string | Record<string, unknown>} proxy
  * @returns {string}
  */
 export function formatProxyUrl(proxy) {
   const norm = normalizeProxy(proxy);
   const hostStr = bracketHost(norm.host);
 
-  const hasUser = norm.username !== undefined && norm.username !== '';
-  const hasPass = norm.password !== undefined && norm.password !== '';
-
-  if (!hasUser) {
+  if (!norm.username) {
     return `${norm.scheme}://${hostStr}:${norm.port}`;
   }
 
-  const passPart = hasPass ? `:${encodeURIComponent(norm.password)}` : '';
+  const passPart = norm.password ? `:${encodeURIComponent(norm.password)}` : '';
   return `${norm.scheme}://${encodeURIComponent(norm.username)}${passPart}@${hostStr}:${norm.port}`;
 }
 
 /**
  * Factory for creating client-specific proxy agents without direct connection fallback.
- * @param {string | Object} proxy
- * @param {Object} [options]
- * @param {'undici' | 'got'} [options.client='undici']
+ * @param {string | Record<string, unknown>} proxy
+ * @param {{ client?: 'undici' | 'got' } & Record<string, unknown>} [options]
  * @returns {import('undici').ProxyAgent | import('undici').Socks5ProxyAgent | string}
  */
 export function getProxyAgent(proxy, options = {}) {
@@ -298,10 +337,7 @@ export class StaticProxyProvider {
   name = 'static';
 
   /**
-   * @param {Object} [options]
-   * @param {ProxyIpPool} [options.pool]
-   * @param {Array<string | Object>} [options.proxies]
-   * @param {boolean} [options.validateOnAdd]
+   * @param {{ pool?: ProxyIpPool, proxies?: Array<string | Record<string, unknown>>, validateOnAdd?: boolean } & Record<string, unknown>} [options]
    */
   constructor(options = {}) {
     if (!options || typeof options !== 'object') {
@@ -342,34 +378,63 @@ export class StaticProxyProvider {
     return this.pool.isAllQuarantined();
   }
 
+  /**
+   * @param {Partial<ProxyRequestOptions>} [options]
+   * @returns {NormalizedProxy | string | null}
+   */
   getProxy(options = {}) {
     const opts = options || {};
     if (opts.accountId) {
-      return this.pool.getStickyProxy(opts.accountId);
+      const accountId = /** @type {string} */ (opts.accountId);
+      return this.pool.getStickyProxy(accountId);
     }
     return this.pool.getNext();
   }
 
+  /**
+   * @param {string} accountId
+   * @returns {NormalizedProxy | string | null}
+   */
   getStickyProxy(accountId) {
     return this.pool.getStickyProxy(accountId);
   }
 
+  /**
+   * @returns {NormalizedProxy | string | null}
+   */
   getNext() {
     return this.pool.getNext();
   }
 
+  /**
+   * @param {string | Record<string, unknown>} proxy
+   * @param {number} [durationMs]
+   */
   quarantine(proxy, durationMs) {
     this.pool.quarantine(proxy, durationMs);
   }
 
+  /**
+   * @param {string | Record<string, unknown>} proxy
+   * @returns {Record<string, unknown> | null}
+   */
   toPlaywrightProxy(proxy) {
     return this.pool.toPlaywrightProxy(proxy);
   }
 
+  /**
+   * @param {string | Record<string, unknown>} proxy
+   * @param {{ client?: 'undici' | 'got' } & Record<string, unknown>} [options]
+   * @returns {unknown}
+   */
   getProxyAgent(proxy, options = {}) {
     return getProxyAgent(proxy, options);
   }
 
+  /**
+   * @param {string | Record<string, unknown>} proxy
+   * @returns {string[]}
+   */
   getBrowserArgs(proxy) {
     return this.pool.getBrowserArgs(proxy);
   }
@@ -438,19 +503,11 @@ export class DynamicTunnelProvider {
   #proxyToAccount = new Map();
   #quarantined = new Map();
   #globalSeed = 0;
+  /** @type {string | null} */
   #globalSessionId = null;
 
   /**
-   * @param {Object} options
-   * @param {string} options.gatewayUrl
-   * @param {'brightdata' | 'smartproxy' | 'iproyal' | 'kuaidaili' | 'custom'} [options.provider]
-   * @param {string} [options.template]
-   * @param {'normal' | 'pro'} [options.kuaidailiMode]
-   * @param {boolean} [options.rotatePerRequest=true]
-   * @param {number} [options.sessionDurationMs=600000]
-   * @param {number} [options.standbyBackoffMs=30000]
-   * @param {string} [options.country]
-   * @param {string} [options.city]
+   * @param {Partial<DynamicTunnelOptions>} [options]
    */
   constructor(options = {}) {
     if (!options || typeof options !== 'object') {
@@ -545,6 +602,10 @@ export class DynamicTunnelProvider {
     this.defaultConst = options.const;
   }
 
+  /**
+   * @param {string} host
+   * @returns {string}
+   */
   #autoDetectProvider(host) {
     const parts = (host || '').toLowerCase().split('.').filter(Boolean);
     if (parts.length < 2) return 'custom';
@@ -603,6 +664,9 @@ export class DynamicTunnelProvider {
     }
   }
 
+  /**
+   * @param {string} [accountId]
+   */
   rotateSession(accountId) {
     if (accountId) {
       const current = this.#sessionSeeds.get(accountId) || 0;
@@ -619,6 +683,9 @@ export class DynamicTunnelProvider {
     }
   }
 
+  /**
+   * @param {string} [accountId]
+   */
   clearAccount(accountId) {
     if (accountId) {
       this.#sessionSeeds.delete(accountId);
@@ -639,6 +706,10 @@ export class DynamicTunnelProvider {
     this.#globalSessionId = null;
   }
 
+  /**
+   * @param {string | Record<string, unknown>} proxy
+   * @param {number} [durationMs]
+   */
   quarantine(proxy, durationMs = DEFAULT_QUARANTINE_MS) {
     if (proxy == null) {
       throw new PlatformError({
@@ -667,6 +738,10 @@ export class DynamicTunnelProvider {
     this.#quarantined.set(key, until);
   }
 
+  /**
+   * @param {string} rawUser
+   * @returns {string}
+   */
   #baseUsername(rawUser) {
     if (!rawUser) return '';
     if (
@@ -679,8 +754,14 @@ export class DynamicTunnelProvider {
     return `user-${rawUser}`;
   }
 
+  /**
+   * @param {Record<string, unknown>} options
+   * @returns {ProxyRequest}
+   */
   #resolveRequestOptions(options) {
+    /** @param {unknown} v */
     const toLower = (v) => (v !== undefined && v !== null && v !== '' ? String(v).toLowerCase().trim() : '');
+    /** @param {unknown} v */
     const toStr = (v) => (v !== undefined && v !== null && v !== '' ? String(v).trim() : '');
 
     const country = toLower(options.country ?? this.defaultCountry);
@@ -693,10 +774,10 @@ export class DynamicTunnelProvider {
     const zip = toStr(options.zip ?? this.defaultZip);
     const asn = toStr(options.asn ?? this.defaultAsn);
     const lifetime = toStr(options.lifetime ?? this.defaultLifetime);
-    const period = options.period ?? this.defaultPeriod;
+    const period = /** @type {string | number | undefined} */ (options.period ?? this.defaultPeriod);
     const sid = toStr(options.sid ?? this.defaultSid);
-    const sessionduration = options.sessionduration ?? this.defaultSessionduration;
-    const const_ = options.const ?? this.defaultConst;
+    const sessionduration = /** @type {number | undefined} */ (options.sessionduration ?? this.defaultSessionduration);
+    const const_ = /** @type {boolean | undefined} */ (options.const ?? this.defaultConst);
 
     let sessionDurationMin = 0;
     if (typeof sessionduration === 'number' && Number.isFinite(sessionduration) && sessionduration > 0) {
@@ -725,13 +806,18 @@ export class DynamicTunnelProvider {
     };
   }
 
+  /**
+   * @param {ProxyRequest} req
+   * @param {string | undefined} accountId
+   * @returns {string}
+   */
   #resolveSessionId(req, accountId) {
     if (this.provider === 'custom') {
       if (req.sessionId) return req.sessionId;
       return randomBase36(16);
     }
 
-    let rawSid = this.provider === 'kuaidaili' && req.sid ? req.sid : req.sessionId;
+    const rawSid = /** @type {string | undefined} */ (this.provider === 'kuaidaili' && req.sid ? req.sid : req.sessionId);
     if (rawSid && isValidSessionId(rawSid, this.provider)) {
       return rawSid;
     }
@@ -755,6 +841,10 @@ export class DynamicTunnelProvider {
     return this.#globalSessionId;
   }
 
+  /**
+   * @param {ProxyRequest} req
+   * @returns {{ username: string, password: string }}
+   */
   #formatCredentials(req) {
     const rawUser = this.rawGateway.username || '';
     const rawPass = this.rawGateway.password || '';
@@ -779,7 +869,7 @@ export class DynamicTunnelProvider {
       if (req.country) parts.push(`country-${req.country}`);
       if (req.city) parts.push(`city-${req.city}`);
       if (req.sessionId) parts.push(`session-${req.sessionId}`);
-      if (req.sessionduration > 0) parts.push(`sessionduration-${req.sessionduration}`);
+      if (typeof req.sessionduration === 'number' && req.sessionduration > 0) parts.push(`sessionduration-${req.sessionduration}`);
       return { username: parts.filter((p) => p !== '').join('_'), password: rawPass };
     }
 
@@ -840,6 +930,10 @@ export class DynamicTunnelProvider {
     return { username: rawUser, password: rawPass };
   }
 
+  /**
+   * @param {Partial<ProxyRequestOptions>} [options]
+   * @returns {NormalizedProxy}
+   */
   getProxy(options = {}) {
     const opts = options || {};
     this.pruneExpiredQuarantines();
@@ -928,29 +1022,47 @@ export class DynamicTunnelProvider {
     return proxy;
   }
 
+  /**
+   * @param {string} accountId
+   * @returns {NormalizedProxy | null}
+   */
   getStickyProxy(accountId) {
     return this.getProxy({ accountId });
   }
 
+  /**
+   * @returns {NormalizedProxy | null}
+   */
   getNext() {
     return this.getProxy();
   }
 
+  /**
+   * @param {string | Record<string, unknown>} proxy
+   * @returns {Record<string, unknown> | null}
+   */
   toPlaywrightProxy(proxy) {
     if (!proxy) return null;
     const norm = normalizeProxy(proxy);
-    const result = {
-      server: norm.server,
-    };
+    const result = /** @type {Record<string, unknown> & { server: string, username?: string, password?: string }} */ ({ server: norm.server });
     if (norm.username !== undefined) result.username = norm.username;
     if (norm.password !== undefined) result.password = norm.password;
     return result;
   }
 
+  /**
+   * @param {string | Record<string, unknown>} proxy
+   * @param {{ client?: 'undici' | 'got' } & Record<string, unknown>} [options]
+   * @returns {unknown}
+   */
   getProxyAgent(proxy, options = {}) {
     return getProxyAgent(proxy, options);
   }
 
+  /**
+   * @param {string | Record<string, unknown>} proxy
+   * @returns {string[]}
+   */
   getBrowserArgs(proxy) {
     if (!proxy) {
       throw new PlatformError({
@@ -975,8 +1087,8 @@ export class DynamicTunnelProvider {
 
 /**
  * Redact a provider configuration object before including it in an error message.
- * @param {Object} config
- * @returns {Object}
+ * @param {Record<string, unknown>} config
+ * @returns {Record<string, unknown>}
  */
 function redactConfig(config) {
   if (!config || typeof config !== 'object') return config;
@@ -985,14 +1097,15 @@ function redactConfig(config) {
   if (copy.basePassword) copy.basePassword = '<redacted>';
   if (copy.password) copy.password = '<redacted>';
   if (Array.isArray(copy.proxies)) {
-    copy.proxies = `<${copy.proxies.length} proxies redacted>`;
+    const arr = copy.proxies;
+    copy.proxies = `<${arr.length} proxies redacted>`;
   }
   return copy;
 }
 
 /**
  * Unified factory for creating proxy providers.
- * @param {Object} config
+ * @param {Record<string, unknown>} config
  * @returns {StaticProxyProvider | DynamicTunnelProvider}
  */
 export function createProxyProvider(config) {
@@ -1015,19 +1128,19 @@ export function createProxyProvider(config) {
   }
 
   if (config.type === 'dynamic') {
-    return new DynamicTunnelProvider(config);
+    return new DynamicTunnelProvider(/** @type {Partial<DynamicTunnelOptions>} */ (config));
   }
 
   if (config.type === 'static') {
-    return new StaticProxyProvider(config);
+    return new StaticProxyProvider(/** @type {{ pool?: ProxyIpPool, proxies?: Array<string | Record<string, unknown>>, validateOnAdd?: boolean }} */ (config));
   }
 
   if (config.gatewayUrl) {
-    return new DynamicTunnelProvider(config);
+    return new DynamicTunnelProvider(/** @type {Partial<DynamicTunnelOptions>} */ (config));
   }
 
   if (config.proxies || config.pool) {
-    return new StaticProxyProvider(config);
+    return new StaticProxyProvider(/** @type {{ pool?: ProxyIpPool, proxies?: Array<string | Record<string, unknown>>, validateOnAdd?: boolean }} */ (config));
   }
 
   throw new PlatformError({
