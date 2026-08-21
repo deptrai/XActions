@@ -99,18 +99,22 @@ const SELECTORS = {
 // Utility Functions
 // ============================================================================
 
+/** @param {number} ms */
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/** @param {number} min @param {number} max */
 function randomBetween(min, max) {
   return Math.floor(min + Math.random() * (max - min));
 }
 
+/** @param {{ min: number; max: number }} timing */
 function randomDelay(timing) {
   return sleep(randomBetween(timing.min, timing.max));
 }
 
+/** @param {string} emoji @param {string} message */
 function log(emoji, message) {
   const timestamp = new Date().toLocaleTimeString();
   console.log(`${emoji} [${timestamp}] ${message}`);
@@ -118,6 +122,8 @@ function log(emoji, message) {
 
 /**
  * Human-like mouse movement simulation
+ * @param {import('puppeteer').Page} page
+ * @param {import('puppeteer').ElementHandle} element
  */
 async function humanClick(page, element) {
   try {
@@ -140,6 +146,9 @@ async function humanClick(page, element) {
 
 /**
  * Human-like typing with variable speed
+ * @param {import('puppeteer').Page} page
+ * @param {string} selector
+ * @param {string} text
  */
 async function humanType(page, selector, text) {
   try {
@@ -164,6 +173,8 @@ async function humanType(page, selector, text) {
 
 /**
  * Human-like scrolling with variable speed and pauses
+ * @param {import('puppeteer').Page} page
+ * @param {import('./types/xactions.js').XActionsOptions} [options]
  */
 async function humanScroll(page, options = {}) {
   const scrolls = options.scrolls || randomBetween(3, 8);
@@ -187,6 +198,8 @@ async function humanScroll(page, options = {}) {
 
 /**
  * Call OpenRouter for text generation
+ * @param {Record<string, string>[]} messages
+ * @param {import('./types/xactions.js').Persona} persona
  */
 async function callLLM(messages, persona) {
   const apiKey = persona.llm.apiKey || process.env.OPENROUTER_API_KEY;
@@ -220,16 +233,19 @@ async function callLLM(messages, persona) {
       return null;
     }
 
-    const data = await response.json();
+    const data = /** @type {import('./types/xactions.js').LLMResponse} */ (await response.json());
     return data.choices?.[0]?.message?.content?.trim() || null;
   } catch (err) {
-    log('❌', `LLM request failed: ${err.message}`);
+    log('❌', `LLM request failed: ${(/** @type {Error} */ (err)).message}`);
     return null;
   }
 }
 
 /**
  * Generate a comment for a tweet using persona's voice
+ * @param {string} tweetText
+ * @param {string} tweetAuthor
+ * @param {import('./types/xactions.js').Persona} persona
  */
 async function generateComment(tweetText, tweetAuthor, persona) {
   const systemPrompt = buildPersonaSystemPrompt(persona);
@@ -251,6 +267,8 @@ async function generateComment(tweetText, tweetAuthor, persona) {
 
 /**
  * Generate an original post using persona's voice
+ * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/xactions.js').XActionsOptions} [context]
  */
 async function generatePost(persona, context = {}) {
   const systemPrompt = buildPersonaSystemPrompt(persona);
@@ -274,9 +292,11 @@ async function generatePost(persona, context = {}) {
 
 /**
  * Extract visible tweets from the current page
+ * @param {import('puppeteer').Page} page
+ * @returns {Promise<import('./types/xactions.js').VisibleTweet[]>}
  */
 async function extractVisibleTweets(page) {
-  return page.evaluate((sel) => {
+  return /** @type {import('./types/xactions.js').VisibleTweet[]} */ (await page.evaluate((sel) => {
     const tweets = document.querySelectorAll(sel.tweet);
     return Array.from(tweets).slice(0, 20).map(tweet => {
       const textEl = tweet.querySelector(sel.tweetText);
@@ -302,14 +322,16 @@ async function extractVisibleTweets(page) {
 
       return { text, author, isLiked, likes, index: Array.from(tweets).indexOf(tweet) };
     }).filter(t => t.text.length > 10);
-  }, SELECTORS);
+  }, SELECTORS));
 }
 
 /**
  * Extract visible user cells from the current page
+ * @param {import('puppeteer').Page} page
+ * @returns {Promise<import('./types/xactions.js').VisibleUser[]>}
  */
 async function extractVisibleUsers(page) {
-  return page.evaluate((sel) => {
+  return /** @type {import('./types/xactions.js').VisibleUser[]} */ (await page.evaluate((sel) => {
     const cells = document.querySelectorAll(sel.userCell);
     return Array.from(cells).slice(0, 15).map(cell => {
       const links = cell.querySelectorAll('a[role="link"]');
@@ -325,11 +347,14 @@ async function extractVisibleUsers(page) {
       const hasFollowButton = !!cell.querySelector('[data-testid$="-follow"]');
       return { username, bio, hasFollowButton };
     }).filter(u => u.username);
-  }, SELECTORS);
+  }, SELECTORS));
 }
 
 /**
  * Search for a term on X
+ * @param {import('puppeteer').Page} page
+ * @param {string} term
+ * @param {string} [tab]
  */
 async function doSearch(page, term, tab = 'top') {
   log('🔍', `Searching: "${term}" (${tab})`);
@@ -342,13 +367,14 @@ async function doSearch(page, term, tab = 'top') {
     await humanScroll(page, { scrolls: randomBetween(2, 5) });
     return true;
   } catch (err) {
-    log('⚠️', `Search failed: ${err.message}`);
+    log('⚠️', `Search failed: ${(/** @type {Error} */ (err)).message}`);
     return false;
   }
 }
 
 /**
  * Browse home timeline
+ * @param {import('puppeteer').Page} page
  */
 async function browseHome(page) {
   log('🏠', 'Browsing home timeline');
@@ -358,13 +384,15 @@ async function browseHome(page) {
     await humanScroll(page, { scrolls: randomBetween(3, 8) });
     return true;
   } catch (err) {
-    log('⚠️', `Home browse failed: ${err.message}`);
+    log('⚠️', `Home browse failed: ${(/** @type {Error} */ (err)).message}`);
     return false;
   }
 }
 
 /**
  * Like a tweet on the current page
+ * @param {import('puppeteer').Page} page
+ * @param {number|null} [tweetIndex]
  */
 async function likeTweet(page, tweetIndex = null) {
   try {
@@ -392,6 +420,9 @@ async function likeTweet(page, tweetIndex = null) {
 
 /**
  * Follow a user on the current page
+ * @param {import('puppeteer').Page} page
+ * @param {import('./types/xactions.js').Persona} persona
+ * @param {string|null} [username]
  */
 async function followUser(page, persona, username = null) {
   try {
@@ -427,6 +458,9 @@ async function followUser(page, persona, username = null) {
 
 /**
  * Comment on a tweet using LLM-generated text
+ * @param {import('puppeteer').Page} page
+ * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/xactions.js').VisibleTweet} tweet
  */
 async function commentOnTweet(page, persona, tweet) {
   if (!tweet?.text || !tweet?.author) return false;
@@ -467,13 +501,15 @@ async function commentOnTweet(page, persona, tweet) {
     }
     return false;
   } catch (err) {
-    log('⚠️', `Comment failed: ${err.message}`);
+    log('⚠️', `Comment failed: ${(/** @type {Error} */ (err)).message}`);
     return false;
   }
 }
 
 /**
  * Create an original post using LLM
+ * @param {import('puppeteer').Page} page
+ * @param {import('./types/xactions.js').Persona} persona
  */
 async function createPost(page, persona) {
   const postText = await generatePost(persona);
@@ -507,13 +543,15 @@ async function createPost(page, persona) {
     }
     return false;
   } catch (err) {
-    log('⚠️', `Post failed: ${err.message}`);
+    log('⚠️', `Post failed: ${(/** @type {Error} */ (err)).message}`);
     return false;
   }
 }
 
 /**
  * Visit a user's profile and browse it
+ * @param {import('puppeteer').Page} page
+ * @param {string} username
  */
 async function visitProfile(page, username) {
   log('👤', `Visiting @${username}'s profile`);
@@ -537,6 +575,7 @@ async function visitProfile(page, username) {
 
 /**
  * Check own profile (natural behavior)
+ * @param {import('puppeteer').Page} page
  */
 async function checkOwnProfile(page) {
   log('🪞', 'Checking own profile');
@@ -560,6 +599,7 @@ async function checkOwnProfile(page) {
 
 /**
  * Check notifications
+ * @param {import('puppeteer').Page} page
  */
 async function checkNotifications(page) {
   log('🔔', 'Checking notifications');
@@ -575,6 +615,9 @@ async function checkNotifications(page) {
 
 /**
  * Smart unfollow — unfollow users who didn't follow back after the grace period
+ * @param {import('puppeteer').Page} page
+ * @param {import('./types/xactions.js').Persona} persona
+ * @param {number} [maxUnfollows]
  */
 async function smartUnfollow(page, persona, maxUnfollows = 5) {
   const graceDays = persona.strategy.unfollowAfterDays || 5;
@@ -585,7 +628,7 @@ async function smartUnfollow(page, persona, maxUnfollows = 5) {
   const candidates = Object.entries(persona.state.followedUsers || {})
     .filter(([, info]) => {
       if (info.unfollowed) return false;
-      const followedAt = new Date(info.followedAt).getTime();
+      const followedAt = new Date(/** @type {string} */ (info.followedAt)).getTime();
       return (now - followedAt) > graceMs;
     })
     .slice(0, maxUnfollows);
@@ -632,7 +675,7 @@ async function smartUnfollow(page, persona, maxUnfollows = 5) {
         await randomDelay(TIMING.BETWEEN_ACTIONS);
       }
     } catch (err) {
-      log('⚠️', `Unfollow error for @${username}: ${err.message}`);
+      log('⚠️', `Unfollow error for @${username}: ${(/** @type {Error} */ (err)).message}`);
     }
   }
 
@@ -648,14 +691,19 @@ async function smartUnfollow(page, persona, maxUnfollows = 5) {
 
 /**
  * Run a single session with the given activity plan
+ * @param {import('puppeteer').Page} page
+ * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/xactions.js').ActivityPlan} plan
  */
 async function runSession(page, persona, plan) {
   const startTime = Date.now();
   const maxDuration = plan.duration * 60 * 1000;
+  /** @type {import('./types/xactions.js').SessionStats} */
   const stats = {
     searches: 0,
     likes: 0,
     follows: 0,
+    unfollows: 0,
     comments: 0,
     posts: 0,
     profileVisits: 0,
@@ -665,12 +713,14 @@ async function runSession(page, persona, plan) {
   log('🎬', `Starting session — ${plan.activities.length} activities planned, ~${plan.duration}min`);
 
   // Collect tweets and users as we browse
+  /** @type {import('./types/xactions.js').VisibleTweet[]} */
   let collectedTweets = [];
+  /** @type {import('./types/xactions.js').VisibleUser[]} */
   let collectedUsers = [];
   let tweetCursor = 0;
   let userCursor = 0;
 
-  for (const activity of plan.activities) {
+  for (const activity of /** @type {import('./types/xactions.js').Activity[]} */ (plan.activities)) {
     // Check time limit
     if (Date.now() - startTime > maxDuration) {
       log('⏰', 'Session time limit reached');
@@ -680,7 +730,7 @@ async function runSession(page, persona, plan) {
     try {
       switch (activity.type) {
         case 'search': {
-          const searched = await doSearch(page, activity.term, activity.tab);
+          const searched = await doSearch(page, /** @type {string} */ (activity.term), /** @type {string} */ (activity.tab));
           if (searched) {
             stats.searches++;
             // Collect tweets and users from search results
@@ -820,7 +870,7 @@ async function runSession(page, persona, plan) {
 
     } catch (err) {
       stats.errors++;
-      log('❌', `Activity "${activity.type}" error: ${err.message}`);
+      log('❌', `Activity "${activity.type}" error: ${(/** @type {Error} */ (err)).message}`);
       // Don't crash the session — continue with next activity
     }
   }
@@ -847,15 +897,8 @@ async function runSession(page, persona, plan) {
 
 /**
  * Start the algorithm builder — runs continuously with human-like patterns.
- * 
- * @param {Object} options
- * @param {string} options.personaId - Persona ID to load
- * @param {string} options.authToken - X/Twitter auth_token cookie value
- * @param {boolean} [options.headless=true] - Run browser in headless mode
- * @param {boolean} [options.dryRun=false] - Log actions without executing
- * @param {number} [options.maxSessions=0] - 0 = infinite, or stop after N sessions
- * @param {Function} [options.onSessionComplete] - Callback after each session
- * @param {AbortSignal} [options.signal] - AbortController signal to stop
+ *
+ * @param {Partial<import('./types/xactions.js').StartOptions>} [options]
  */
 async function startAlgorithmBuilder(options = {}) {
   const {
@@ -873,7 +916,7 @@ async function startAlgorithmBuilder(options = {}) {
     throw new Error('authToken or XACTIONS_SESSION_COOKIE env var required');
   }
 
-  const cookie = authToken || process.env.XACTIONS_SESSION_COOKIE;
+  const cookie = /** @type {string} */ (authToken || process.env.XACTIONS_SESSION_COOKIE);
   let persona = loadPersona(personaId);
 
   log('🤖', `Algorithm Builder starting for persona: ${persona.name} (${persona.preset})`);
@@ -893,7 +936,7 @@ async function startAlgorithmBuilder(options = {}) {
     await loginWithCookie(page, cookie);
     log('✅', 'Logged in to X successfully');
   } catch (err) {
-    log('💀', `Failed to launch browser: ${err.message}`);
+    log('💀', `Failed to launch browser: ${(/** @type {Error} */ (err)).message}`);
     throw err;
   }
 
@@ -980,6 +1023,7 @@ async function startAlgorithmBuilder(options = {}) {
 
 /**
  * Run a single session (useful for testing)
+ * @param {Partial<import('./types/xactions.js').StartOptions>} [options]
  */
 async function runSingleSession(options = {}) {
   return startAlgorithmBuilder({ ...options, maxSessions: 1 });

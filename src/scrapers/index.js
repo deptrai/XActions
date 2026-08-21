@@ -100,6 +100,7 @@ export const {
 /**
  * Available platform modules
  */
+/** @type {Record<string, Record<string, unknown>>} */
 export const platforms = {
   twitter,
   x: twitter, // alias
@@ -115,7 +116,7 @@ export const platforms = {
 /**
  * Get a platform module by name
  * @param {string} platform - Platform name
- * @returns {Object} Platform module
+ * @returns {Record<string, unknown>} Platform module
  */
 export function getPlatform(platform) {
   const mod = platforms[platform?.toLowerCase()];
@@ -137,15 +138,8 @@ export function getPlatform(platform) {
  * 
  * @param {string} platform - Platform name: 'twitter', 'bluesky', 'mastodon', 'threads'
  * @param {string} action - Action name: 'profile', 'followers', 'following', 'tweets', 'search', 'hashtag', 'trending'
- * @param {Object} options - Action-specific options
- * @param {string} [options.username] - Target username
- * @param {string} [options.query] - Search query (for 'search' action)
- * @param {string} [options.hashtag] - Hashtag (for 'hashtag' action)
- * @param {number} [options.limit] - Max results
- * @param {string} [options.instance] - Mastodon instance URL
- * @param {Object} [options.page] - Puppeteer page (for Twitter/Threads)
- * @param {Object} [options.client] - API client (for Bluesky/Mastodon)
- * @returns {Promise<Object|Array>} Scraped data
+ * @param {import('../types/xactions.js').XActionsOptions} options - Action-specific options
+ * @returns {Promise<Record<string, unknown>>} Scraped data
  * 
  * @example
  *   // Twitter
@@ -165,6 +159,7 @@ export async function scrape(platform, action, options = {}) {
   const platformName = platform.toLowerCase();
 
   // Action name mapping
+  /** @type {Record<string, string>} */
   const actionMap = {
     profile: 'scrapeProfile',
     followers: 'scrapeFollowers',
@@ -189,6 +184,7 @@ export async function scrape(platform, action, options = {}) {
 
   // Platform-specific action map for Facebook (Story 7.2). Prefer this over the
   // global actionMap so 'search' maps to 'searchFacebook' instead of 'searchTweets'.
+  /** @type {Record<string, Record<string, string>>} */
   const platformActionMap = {
     facebook: {
       search: 'searchFacebook',
@@ -202,11 +198,12 @@ export async function scrape(platform, action, options = {}) {
   const platformKey = platformName === 'fb' ? 'facebook' : platformName;
   const platformSpecific = platformActionMap[platformKey]?.[action];
   const fnName = platformSpecific || actionMap[action] || action;
-  const fn = mod[fnName];
+  const fn = /** @type {((...args: unknown[]) => Promise<Record<string, unknown>>) | undefined} */ (mod[fnName]);
+  const platformMod = /** @type {Record<string, Function>} */ (mod);
 
   if (typeof fn !== 'function') {
-    const available = Object.keys(mod).filter(
-      (k) => typeof mod[k] === 'function' && (k.startsWith('scrape') || k.startsWith('search'))
+    const available = Object.keys(platformMod).filter(
+      (k) => typeof platformMod[k] === 'function' && (k.startsWith('scrape') || k.startsWith('search'))
     );
     throw new Error(
       `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
@@ -231,33 +228,33 @@ export async function scrape(platform, action, options = {}) {
 
     // Auto-create browser/page if not provided
     if (!page) {
-      const browser = await mod.createBrowser(options.browserOptions || {});
-      page = await mod.createPage(browser, options.browserOptions || {});
+      const browser = await platformMod.createBrowser(options.browserOptions || {});
+      page = await platformMod.createPage(browser, options.browserOptions || {});
 
       // Store browser ref BEFORE login so a login/goto throw still allows cleanup
       // (previously set after login → a login failure leaked the Chromium process).
-      page.__xactions_browser = browser;
+      (/** @type {import('puppeteer').Page} */ (page)).__xactions_browser = browser;
 
       // Authenticate proxy before login so the proxy tunnel is established first.
       // Story 7.4 AC3: page.authenticate(proxyAuth) after createPage, before loginWithCookie.
       const proxyAuth = options.browserOptions?.proxyAuth;
-      if (proxyAuth && typeof page.authenticate === 'function') {
+      if (proxyAuth && typeof (/** @type {import('puppeteer').Page} */ (page)).authenticate === 'function') {
         try {
-          await page.authenticate(proxyAuth);
+          await (/** @type {import('puppeteer').Page} */ (page)).authenticate(/** @type {import('puppeteer').Credentials} */ (proxyAuth));
         } catch (err) {
           await browser.close().catch(() => {});
-          throw new Error(`❌ Proxy authentication failed: ${err?.message || 'unknown error'}`);
+          throw new Error(`❌ Proxy authentication failed: ${(/** @type {Error} */ (err)).message || 'unknown error'}`);
         }
       }
 
       try {
         // Login if auth token provided (Twitter string path — unchanged)
-        if (options.authToken && mod.loginWithCookie) {
-          await mod.loginWithCookie(page, options.authToken);
-        } else if (options.authCookie && mod.loginWithCookie) {
+        if (options.authToken && platformMod.loginWithCookie) {
+          await platformMod.loginWithCookie(page, options.authToken);
+        } else if (options.authCookie && platformMod.loginWithCookie) {
           // Cookie-object path for Facebook ({ c_user, xs }) — additive, does not affect Twitter
           // Pass browserOptions so loginWithCookie can respect headless/skipWarmup (Story 7.2 testing).
-          await mod.loginWithCookie(page, options.authCookie, options.browserOptions || {});
+          await platformMod.loginWithCookie(page, options.authCookie, options.browserOptions || {});
         }
       } catch (loginErr) {
         // Close the browser we created before re-throwing, else it leaks
@@ -265,6 +262,8 @@ export async function scrape(platform, action, options = {}) {
         throw loginErr;
       }
     }
+
+    if (!page) throw new Error('Failed to create or receive a Puppeteer page');
 
     // Determine the second argument based on action.
     // group_search needs url as target (query travels inside options);
@@ -300,13 +299,13 @@ export async function scrape(platform, action, options = {}) {
     // Auto-create client if not provided
     if (!client) {
       if (platformName === 'bluesky' || platformName === 'bsky') {
-        client = await bluesky.createAgent({
+        client = await /** @type {Record<string, Function>} */ (bluesky).createAgent({
           service: options.service,
           identifier: options.identifier,
           password: options.password,
         });
       } else {
-        client = mastodon.createClient({
+        client = /** @type {Record<string, Function>} */ (mastodon).createClient({
           instance: options.instance,
           accessToken: options.accessToken,
         });
@@ -340,13 +339,14 @@ export async function scrape(platform, action, options = {}) {
  * Get a plugin-contributed scraper by name.
  * Plugins register scrapers via the plugin system — this provides a unified lookup.
  * @param {string} name - Scraper name
- * @returns {Promise<Function|undefined>} The scraper handler, or undefined
+ * @returns {Promise<((...args: unknown[]) => Promise<Record<string, unknown>>) | undefined>} The scraper handler, or undefined
  */
 export async function getPluginScraper(name) {
   try {
     const { getPluginScrapers } = await import('../plugins/index.js');
-    const scraper = getPluginScrapers().find((s) => s.name === name);
-    return scraper?.handler;
+    const scrapers = /** @type {Record<string, unknown>[]} */ (getPluginScrapers());
+    const scraper = scrapers.find((s) => (/** @type {Record<string, unknown>} */ (s)).name === name);
+    return /** @type {((...args: unknown[]) => Promise<Record<string, unknown>>) | undefined} */ (scraper ? (/** @type {Record<string, unknown>} */ (scraper)).handler : undefined);
   } catch {
     return undefined;
   }

@@ -14,6 +14,7 @@
  * - Priority notifications (2026)
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -30,8 +31,8 @@ const SELECTORS = {
 /**
  * Scrape recent notifications
  * @param {import('puppeteer').Page} page
- * @param {Object} options
- * @returns {Promise<Array>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getNotifications(page, options = {}) {
   const { limit = 50, type = 'all' } = options;
@@ -40,11 +41,12 @@ export async function getNotifications(page, options = {}) {
   await page.goto(url, { waitUntil: 'networkidle2' });
   await sleep(3000);
 
+  /** @type {Record<string, unknown>[]} */
   const notifications = [];
   let scrollAttempts = 0;
 
   while (notifications.length < limit && scrollAttempts < 15) {
-    const newNotifs = await page.evaluate(() => {
+    const newNotifs = /** @type {Record<string, unknown>[]} */ (await page.evaluate(() => {
       return Array.from(document.querySelectorAll('[data-testid="notification"]')).map(notif => {
         const text = notif.textContent || '';
         const links = Array.from(notif.querySelectorAll('a')).map(a => ({
@@ -54,7 +56,7 @@ export async function getNotifications(page, options = {}) {
         const time = notif.querySelector('time')?.getAttribute('datetime') || '';
         return { text: text.substring(0, 200), links, time };
       });
-    });
+    }));
 
     for (const notif of newNotifs) {
       if (!notifications.find(n => n.text === notif.text && n.time === notif.time)) {
@@ -78,7 +80,7 @@ export async function getNotifications(page, options = {}) {
  * Mute a user
  * @param {import('puppeteer').Page} page
  * @param {string} username
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function muteUser(page, username) {
   await page.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
@@ -99,7 +101,7 @@ export async function muteUser(page, username) {
  * Unmute a user
  * @param {import('puppeteer').Page} page
  * @param {string} username
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function unmuteUser(page, username) {
   await page.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
@@ -117,8 +119,8 @@ export async function unmuteUser(page, username) {
  * Mute a word/phrase
  * @param {import('puppeteer').Page} page
  * @param {string} word
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function muteWord(page, word, options = {}) {
   const { duration = 'forever' } = options; // forever, 24h, 7d, 30d
@@ -145,7 +147,7 @@ export async function muteWord(page, word, options = {}) {
 /**
  * Get notification settings
  * @param {import('puppeteer').Page} page
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getNotificationSettings(page) {
   await page.goto('https://x.com/settings/notifications', { waitUntil: 'networkidle2' });

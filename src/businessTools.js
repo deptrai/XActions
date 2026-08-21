@@ -15,6 +15,7 @@
  * - Post boosting
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -28,8 +29,8 @@ const SELECTORS = {
  * Monitor brand mentions
  * @param {import('puppeteer').Page} page
  * @param {string} brandName - Brand name or @handle to monitor
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function monitorBrandMentions(page, brandName, options = {}) {
   const { limit = 50, since = null } = options;
@@ -42,11 +43,12 @@ export async function monitorBrandMentions(page, brandName, options = {}) {
   });
   await sleep(3000);
 
+  /** @type {Record<string, unknown>[]} */
   const mentions = [];
   let scrollAttempts = 0;
 
   while (mentions.length < limit && scrollAttempts < Math.ceil(limit / 5)) {
-    const newMentions = await page.evaluate((sel) => {
+    const newMentions = /** @type {Record<string, unknown>[]} */ (await page.evaluate(( /** @type {Record<string, string>} */ sel) => {
       return Array.from(document.querySelectorAll(sel.tweet)).map(tweet => {
         const text = tweet.querySelector(sel.tweetText)?.textContent || '';
         const author = tweet.querySelector('[data-testid="User-Name"] a')?.textContent || '';
@@ -65,7 +67,7 @@ export async function monitorBrandMentions(page, brandName, options = {}) {
 
         return { text, author, time, link, likes, reposts, sentiment };
       });
-    }, SELECTORS);
+    }, SELECTORS));
 
     for (const mention of newMentions) {
       if (mention.link && !mentions.find(m => m.link === mention.link)) {
@@ -98,8 +100,8 @@ export async function monitorBrandMentions(page, brandName, options = {}) {
  * Get audience insights for an account
  * @param {import('puppeteer').Page} page
  * @param {string} username
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getAudienceInsights(page, username, options = {}) {
   const { sampleSize = 50 } = options;
@@ -108,12 +110,13 @@ export async function getAudienceInsights(page, username, options = {}) {
   await page.goto(`https://x.com/${username}/followers`, { waitUntil: 'networkidle2' });
   await sleep(3000);
 
+  /** @type {Record<string, unknown>[]} */
   const followers = [];
   let scrollAttempts = 0;
 
   while (followers.length < sampleSize && scrollAttempts < Math.ceil(sampleSize / 5)) {
-    const newFollowers = await page.evaluate((sel) => {
-      const extractBio = (cell) => {
+    const newFollowers = /** @type {Record<string, unknown>[]} */ (await page.evaluate(( /** @type {Record<string, string>} */ sel) => {
+      const extractBio = (/** @type {Element} */ cell) => {
         const testId = cell.querySelector('[data-testid="UserDescription"]');
         if (testId?.textContent?.trim()) return testId.textContent.trim();
         const autoDir = cell.querySelector('[dir="auto"]:not([data-testid])');
@@ -127,7 +130,7 @@ export async function getAudienceInsights(page, username, options = {}) {
         const isVerified = !!user.querySelector('[data-testid="icon-verified"]');
         return { name, bio: bio.substring(0, 200), isVerified };
       });
-    }, SELECTORS);
+    }, SELECTORS));
 
     for (const f of newFollowers) {
       if (f.name && !followers.find(e => e.name === f.name)) {
@@ -145,8 +148,9 @@ export async function getAudienceInsights(page, username, options = {}) {
   const verifiedPct = Math.round((sample.filter(f => f.isVerified).length / sample.length) * 100);
 
   // Extract common interests from bios
-  const bioWords = sample.map(f => f.bio.toLowerCase()).join(' ');
+  const bioWords = sample.map(f => (/** @type {string} */ (f.bio)).toLowerCase()).join(' ');
   const techKeywords = ['developer', 'engineer', 'coding', 'tech', 'AI', 'startup', 'founder', 'crypto', 'web3', 'design'];
+  /** @type {Record<string, number>} */
   const interests = {};
   techKeywords.forEach(kw => {
     const count = (bioWords.match(new RegExp(kw, 'gi')) || []).length;
@@ -165,8 +169,8 @@ export async function getAudienceInsights(page, username, options = {}) {
 /**
  * Competitor analysis
  * @param {import('puppeteer').Page} page
- * @param {Array<string>} competitors - Array of usernames to compare
- * @returns {Promise<Object>}
+ * @param {string[]} competitors - Array of usernames to compare
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function analyzeCompetitors(page, competitors) {
   const results = [];
@@ -175,15 +179,15 @@ export async function analyzeCompetitors(page, competitors) {
     await page.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
     await sleep(2000);
 
-    const profile = await page.evaluate(() => {
-      const getText = (sel) => document.querySelector(sel)?.textContent?.trim() || '';
+    const profile = /** @type {Record<string, unknown>} */ (await page.evaluate(() => {
+      const getText = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent?.trim() || '';
       return {
         followers: getText('a[href$="/followers"] span'),
         following: getText('a[href$="/following"] span'),
         isVerified: !!document.querySelector('[data-testid="icon-verified"]'),
         bio: getText('[data-testid="UserDescription"]'),
       };
-    });
+    }));
 
     results.push({ username, ...profile });
     await sleep(1000);

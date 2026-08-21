@@ -16,6 +16,7 @@
  * - Accessibility options
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -39,7 +40,7 @@ const SELECTORS = {
 /**
  * Get current settings overview
  * @param {import('puppeteer').Page} page
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getSettings(page) {
   await page.goto('https://x.com/settings/account', { waitUntil: 'networkidle2' });
@@ -67,7 +68,7 @@ export async function getSettings(page) {
  * Toggle protected/private account
  * @param {import('puppeteer').Page} page
  * @param {boolean} protect - true to protect, false to unprotect
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function toggleProtectedAccount(page, protect) {
   await page.goto('https://x.com/settings/audience_and_tagging', { waitUntil: 'networkidle2' });
@@ -105,8 +106,8 @@ export async function toggleProtectedAccount(page, protect) {
 /**
  * Get blocked accounts list
  * @param {import('puppeteer').Page} page
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getBlockedAccounts(page, options = {}) {
   const { limit = 100 } = options;
@@ -114,17 +115,18 @@ export async function getBlockedAccounts(page, options = {}) {
   await page.goto('https://x.com/settings/blocked/all', { waitUntil: 'networkidle2' });
   await sleep(3000);
 
+  /** @type {Record<string, unknown>[]} */
   const blocked = [];
   let scrollAttempts = 0;
 
   while (blocked.length < limit && scrollAttempts < Math.ceil(limit / 5)) {
-    const users = await page.evaluate(() => {
+    const users = /** @type {Record<string, unknown>[]} */ (await page.evaluate(() => {
       return Array.from(document.querySelectorAll('[data-testid="UserCell"]')).map(user => {
         const name = user.querySelector('[dir="ltr"]')?.textContent || '';
         const handle = user.querySelector('a[role="link"]')?.href?.split('/').pop() || '';
         return { name, handle };
       });
-    });
+    }));
 
     for (const user of users) {
       if (user.handle && !blocked.find(b => b.handle === user.handle)) {
@@ -147,8 +149,8 @@ export async function getBlockedAccounts(page, options = {}) {
 /**
  * Get muted accounts list
  * @param {import('puppeteer').Page} page
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getMutedAccounts(page, options = {}) {
   const { limit = 100 } = options;
@@ -156,17 +158,18 @@ export async function getMutedAccounts(page, options = {}) {
   await page.goto('https://x.com/settings/muted/all', { waitUntil: 'networkidle2' });
   await sleep(3000);
 
+  /** @type {Record<string, unknown>[]} */
   const muted = [];
   let scrollAttempts = 0;
 
   while (muted.length < limit && scrollAttempts < Math.ceil(limit / 5)) {
-    const users = await page.evaluate(() => {
+    const users = /** @type {Record<string, unknown>[]} */ (await page.evaluate(() => {
       return Array.from(document.querySelectorAll('[data-testid="UserCell"]')).map(user => {
         const name = user.querySelector('[dir="ltr"]')?.textContent || '';
         const handle = user.querySelector('a[role="link"]')?.href?.split('/').pop() || '';
         return { name, handle };
       });
-    });
+    }));
 
     for (const user of users) {
       if (user.handle && !muted.find(m => m.handle === user.handle)) {
@@ -189,7 +192,7 @@ export async function getMutedAccounts(page, options = {}) {
 /**
  * Request data download/archive
  * @param {import('puppeteer').Page} page
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function requestDataDownload(page) {
   await page.goto('https://x.com/settings/download_your_data', { waitUntil: 'networkidle2' });
@@ -217,8 +220,8 @@ export async function requestDataDownload(page) {
 /**
  * Set content preferences (reduce political content, etc.)
  * @param {import('puppeteer').Page} page
- * @param {Object} preferences
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').ContentPreferences} preferences
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function setContentPreferences(page, preferences = {}) {
   await page.goto('https://x.com/settings/content_preferences', { waitUntil: 'networkidle2' });

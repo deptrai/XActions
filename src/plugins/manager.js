@@ -23,22 +23,22 @@ import {
 // In-Memory Plugin Registry
 // ============================================================================
 
-/** @type {Map<string, Object>} Loaded plugin instances keyed by name */
+/** @type {Map<string, Record<string, unknown>>} Loaded plugin instances keyed by name */
 const loadedPlugins = new Map();
 
-/** @type {Object[]} All registered MCP tools from plugins */
+/** @type {Record<string, unknown>[]} All registered MCP tools from plugins */
 const pluginTools = [];
 
-/** @type {Object[]} All registered scrapers from plugins */
+/** @type {Record<string, unknown>[]} All registered scrapers from plugins */
 const pluginScrapers = [];
 
-/** @type {Object[]} All registered Express routes from plugins */
+/** @type {Record<string, unknown>[]} All registered Express routes from plugins */
 const pluginRoutes = [];
 
-/** @type {Object[]} All registered browser actions from plugins */
+/** @type {Record<string, unknown>[]} All registered browser actions from plugins */
 const pluginActions = [];
 
-/** @type {Object[]} All registered hooks from plugins */
+/** @type {Record<string, unknown>[]} All registered hooks from plugins */
 const pluginHooks = [];
 
 // ============================================================================
@@ -48,7 +48,7 @@ const pluginHooks = [];
 /**
  * Install a plugin by npm package name
  * @param {string} name - Package name (e.g., xactions-plugin-analytics)
- * @returns {Promise<Object>} The installed plugin info
+ * @returns {Promise<Record<string, unknown>>} The installed plugin info
  */
 export async function installPlugin(name) {
   // Allow local paths (starting with . or /)
@@ -65,16 +65,18 @@ export async function installPlugin(name) {
     try {
       execSync(`npm install ${name}`, { stdio: 'pipe', cwd: process.cwd() });
     } catch (error) {
-      throw new Error(`Failed to install "${name}": ${error.message}`);
+      throw new Error(`Failed to install "${name}": ${(/** @type {Error} */ (error)).message}`);
     }
   }
 
   // Load and validate
-  const plugin = await loadPlugin(name);
+  const plugin = /** @type {Record<string, unknown>} */ (await loadPlugin(name));
 
   // Register in config
   const config = await readPluginsConfig();
-  config.plugins[plugin.name] = {
+  const plugins = /** @type {Record<string, Record<string, unknown>>} */ (config.plugins || {});
+  const pluginName = /** @type {string} */ (plugin.name);
+  plugins[pluginName] = {
     package: name,
     path: isLocal ? name : undefined,
     version: plugin.version,
@@ -87,14 +89,19 @@ export async function installPlugin(name) {
   // Load into memory
   await registerPlugin(plugin);
 
+  const actions = Array.isArray(plugin.actions) ? /** @type {Record<string, unknown>[]} */ (plugin.actions) : [];
+  const scrapers = Array.isArray(plugin.scrapers) ? /** @type {Record<string, unknown>[]} */ (plugin.scrapers) : [];
+  const tools = Array.isArray(plugin.tools) ? /** @type {Record<string, unknown>[]} */ (plugin.tools) : [];
+  const routes = Array.isArray(plugin.routes) ? /** @type {Record<string, unknown>[]} */ (plugin.routes) : [];
+
   return {
-    name: plugin.name,
+    name: pluginName,
     version: plugin.version,
     description: plugin.description,
-    actions: plugin.actions?.length || 0,
-    scrapers: plugin.scrapers?.length || 0,
-    tools: plugin.tools?.length || 0,
-    routes: plugin.routes?.length || 0,
+    actions: actions.length,
+    scrapers: scrapers.length,
+    tools: tools.length,
+    routes: routes.length,
   };
 }
 
@@ -105,7 +112,8 @@ export async function installPlugin(name) {
  */
 export async function removePlugin(name) {
   const config = await readPluginsConfig();
-  const entry = config.plugins[name];
+  const plugins = /** @type {Record<string, Record<string, unknown>>} */ (config.plugins || {});
+  const entry = plugins[name];
 
   if (!entry) {
     throw new Error(`Plugin "${name}" is not installed.`);
@@ -115,16 +123,17 @@ export async function removePlugin(name) {
   await unregisterPlugin(name);
 
   // Uninstall npm package if applicable
-  if (entry.package && !entry.path) {
+  const pkg = entry.package;
+  if (pkg && !entry.path) {
     try {
-      execSync(`npm uninstall ${entry.package}`, { stdio: 'pipe', cwd: process.cwd() });
+      execSync(`npm uninstall ${pkg}`, { stdio: 'pipe', cwd: process.cwd() });
     } catch {
       // Non-fatal — config will be cleaned up regardless
     }
   }
 
   // Remove from config
-  delete config.plugins[name];
+  delete plugins[name];
   await writePluginsConfig(config);
 
   return true;
@@ -132,17 +141,18 @@ export async function removePlugin(name) {
 
 /**
  * List all registered plugins with their status
- * @returns {Promise<Object[]>}
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function listPlugins() {
   const config = await readPluginsConfig();
-  return Object.entries(config.plugins || {}).map(([name, entry]) => ({
+  const plugins = /** @type {Record<string, Record<string, unknown>>} */ (config.plugins || {});
+  return Object.entries(plugins).map(([name, entry]) => ({
     name,
-    version: entry.version,
-    description: entry.description,
-    enabled: entry.enabled !== false,
+    version: (/** @type {Record<string, unknown>} */ (entry)).version,
+    description: (/** @type {Record<string, unknown>} */ (entry)).description,
+    enabled: (/** @type {Record<string, unknown>} */ (entry)).enabled !== false,
     loaded: loadedPlugins.has(name),
-    installedAt: entry.installedAt,
+    installedAt: (/** @type {Record<string, unknown>} */ (entry)).installedAt,
   }));
 }
 
@@ -152,12 +162,14 @@ export async function listPlugins() {
  */
 export async function enablePlugin(name) {
   const config = await readPluginsConfig();
-  if (!config.plugins[name]) throw new Error(`Plugin "${name}" not found.`);
-  config.plugins[name].enabled = true;
+  const plugins = /** @type {Record<string, Record<string, unknown>>} */ (config.plugins || {});
+  if (!plugins[name]) throw new Error(`Plugin "${name}" not found.`);
+  plugins[name].enabled = true;
   await writePluginsConfig(config);
 
   // Load it
-  const plugin = await loadPlugin(config.plugins[name].path || config.plugins[name].package || name);
+  const entry = plugins[name];
+  const plugin = await loadPlugin((/** @type {string} */ (entry.path)) || (/** @type {string} */ (entry.package)) || name);
   await registerPlugin(plugin);
 }
 
@@ -167,8 +179,9 @@ export async function enablePlugin(name) {
  */
 export async function disablePlugin(name) {
   const config = await readPluginsConfig();
-  if (!config.plugins[name]) throw new Error(`Plugin "${name}" not found.`);
-  config.plugins[name].enabled = false;
+  const plugins = /** @type {Record<string, Record<string, unknown>>} */ (config.plugins || {});
+  if (!plugins[name]) throw new Error(`Plugin "${name}" not found.`);
+  plugins[name].enabled = false;
   await writePluginsConfig(config);
 
   await unregisterPlugin(name);
@@ -180,54 +193,61 @@ export async function disablePlugin(name) {
 
 /**
  * Register a plugin's exports into the in-memory registries
- * @param {Object} plugin - Validated plugin module
+ * @param {Record<string, unknown>} plugin - Validated plugin module
  */
 async function registerPlugin(plugin) {
-  if (loadedPlugins.has(plugin.name)) {
-    await unregisterPlugin(plugin.name);
+  const name = /** @type {string} */ (plugin.name);
+  if (loadedPlugins.has(name)) {
+    await unregisterPlugin(name);
   }
 
-  loadedPlugins.set(plugin.name, plugin);
+  loadedPlugins.set(name, plugin);
 
   // Register tools
-  if (plugin.tools?.length) {
-    for (const tool of plugin.tools) {
-      pluginTools.push({ ...tool, _plugin: plugin.name });
+  const tools = plugin.tools;
+  if (Array.isArray(tools)) {
+    for (const tool of /** @type {Record<string, unknown>[]} */ (tools)) {
+      pluginTools.push({ ...tool, _plugin: name });
     }
   }
 
   // Register scrapers
-  if (plugin.scrapers?.length) {
-    for (const scraper of plugin.scrapers) {
-      pluginScrapers.push({ ...scraper, _plugin: plugin.name });
+  const scrapers = plugin.scrapers;
+  if (Array.isArray(scrapers)) {
+    for (const scraper of /** @type {Record<string, unknown>[]} */ (scrapers)) {
+      pluginScrapers.push({ ...scraper, _plugin: name });
     }
   }
 
   // Register routes
-  if (plugin.routes?.length) {
-    for (const route of plugin.routes) {
-      pluginRoutes.push({ ...route, _plugin: plugin.name });
+  const routes = plugin.routes;
+  if (Array.isArray(routes)) {
+    for (const route of /** @type {Record<string, unknown>[]} */ (routes)) {
+      pluginRoutes.push({ ...route, _plugin: name });
     }
   }
 
   // Register actions
-  if (plugin.actions?.length) {
-    for (const action of plugin.actions) {
-      pluginActions.push({ ...action, _plugin: plugin.name });
+  const actions = plugin.actions;
+  if (Array.isArray(actions)) {
+    for (const action of /** @type {Record<string, unknown>[]} */ (actions)) {
+      pluginActions.push({ ...action, _plugin: name });
     }
   }
 
   // Register hooks
-  if (plugin.hooks) {
-    pluginHooks.push({ ...plugin.hooks, _plugin: plugin.name });
+  const hooks = /** @type {Record<string, unknown>} */ (plugin.hooks);
+  if (hooks) {
+    pluginHooks.push({ ...hooks, _plugin: name });
   }
 
   // Call onLoad lifecycle hook
-  if (plugin.hooks?.onLoad) {
+  const onLoad = hooks?.onLoad;
+  if (typeof onLoad === 'function') {
     try {
-      await plugin.hooks.onLoad();
+      await (/** @type {(...args: unknown[]) => Promise<unknown>} */ (onLoad))();
     } catch (error) {
-      console.error(`⚠️  Plugin "${plugin.name}" onLoad hook failed: ${error.message}`);
+      console.error(`⚠️  Plugin "${name}" onLoad hook failed: ${(/** @type {Error} */ (error)).message}`);
     }
   }
 }
@@ -241,18 +261,20 @@ async function unregisterPlugin(name) {
   if (!plugin) return;
 
   // Call onUnload lifecycle hook
-  if (plugin.hooks?.onUnload) {
+  const hooks = /** @type {Record<string, unknown>} */ (plugin.hooks);
+  const onUnload = hooks?.onUnload;
+  if (typeof onUnload === 'function') {
     try {
-      await plugin.hooks.onUnload();
+      await (/** @type {(...args: unknown[]) => Promise<unknown>} */ (onUnload))();
     } catch (error) {
-      console.error(`⚠️  Plugin "${name}" onUnload hook failed: ${error.message}`);
+      console.error(`⚠️  Plugin "${name}" onUnload hook failed: ${(/** @type {Error} */ (error)).message}`);
     }
   }
 
   // Remove from all registries
-  const removeByPlugin = (arr) => {
+  const removeByPlugin = (/** @type {Record<string, unknown>[]} */ arr) => {
     for (let i = arr.length - 1; i >= 0; i--) {
-      if (arr[i]._plugin === name) arr.splice(i, 1);
+      if ((/** @type {Record<string, unknown>} */ (arr[i]))._plugin === name) arr.splice(i, 1);
     }
   };
 
@@ -272,15 +294,16 @@ async function unregisterPlugin(name) {
 /**
  * Execute a named hook across all loaded plugins
  * @param {string} hookName - Hook name (e.g., 'beforeAction', 'afterAction')
- * @param {Object} context - Context passed to each hook function
+ * @param {Record<string, unknown>} context - Context passed to each hook function
  */
 export async function executeHook(hookName, context = {}) {
   for (const hooks of pluginHooks) {
-    if (typeof hooks[hookName] === 'function') {
+    const hook = hooks[hookName];
+    if (typeof hook === 'function') {
       try {
-        await hooks[hookName](context);
+        await (/** @type {(...args: unknown[]) => Promise<unknown>} */ (hook))(context);
       } catch (error) {
-        console.error(`⚠️  Hook "${hookName}" in plugin "${hooks._plugin}" failed: ${error.message}`);
+        console.error(`⚠️  Hook "${hookName}" in plugin "${(/** @type {string} */ (hooks._plugin))}" failed: ${(/** @type {Error} */ (error)).message}`);
       }
     }
   }
@@ -328,7 +351,9 @@ export function getPluginActions() {
   return [...pluginActions];
 }
 
-/** Get a loaded plugin by name */
+/** Get a loaded plugin by name
+ * @param {string} name
+ */
 export function getPlugin(name) {
   return loadedPlugins.get(name);
 }

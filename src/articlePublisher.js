@@ -14,6 +14,7 @@
  * - Article management (list, edit, delete)
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -30,8 +31,8 @@ const SELECTORS = {
 /**
  * Publish a long-form article
  * @param {import('puppeteer').Page} page
- * @param {Object} article - { title, body, coverImage? }
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').ArticleInput} article - { title, body, coverImage? }
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function publishArticle(page, article) {
   const { title, body, coverImage = null } = article;
@@ -66,7 +67,7 @@ export async function publishArticle(page, article) {
         await sleep(3000);
       }
     } catch (e) {
-      console.log('⚠️ Cover image upload failed:', e.message);
+      console.log('⚠️ Cover image upload failed:', (/** @type {Error} */ (e)).message);
     }
   }
 
@@ -86,8 +87,8 @@ export async function publishArticle(page, article) {
 /**
  * Save article as draft
  * @param {import('puppeteer').Page} page
- * @param {Object} article - { title, body }
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').ArticleInput} article - { title, body }
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function saveDraft(page, article) {
   const { title, body } = article;
@@ -117,7 +118,7 @@ export async function saveDraft(page, article) {
  * Get published articles
  * @param {import('puppeteer').Page} page
  * @param {string} username
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getArticles(page, username) {
   await page.goto(`https://x.com/${username}/articles`, { waitUntil: 'networkidle2' });
@@ -145,7 +146,7 @@ export async function getArticles(page, username) {
  * Get article analytics
  * @param {import('puppeteer').Page} page
  * @param {string} articleUrl
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getArticleAnalytics(page, articleUrl) {
   await page.goto(articleUrl, { waitUntil: 'networkidle2' });

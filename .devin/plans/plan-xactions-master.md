@@ -92,14 +92,23 @@ Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 
   - Annotated fetch `headers` in Mastodon as `Record<string, string>` and internal `api` helper as `Promise<unknown>` to allow downstream casts.
   - `npm run typecheck` now passes with **0 errors**.
   - `npx vitest run tests/scrapers tests/cli` passes (1081 passed, 14 skipped).
-- [ ] 4.7 — Type `src/scrapers/index.js` and `src/index.js` / `src/algorithmBuilder.js`
-- [ ] 4.8 — Type `src/api` (Prisma, services, routes) and `src/workflows`
-- [ ] 4.9 — Type `src/mcp` server and tools
-- [ ] 4.10 — Type remaining `src/{agents,ai,a2a,analytics,streaming,plugins,utils,automation}`
-- [ ] 4.11 — Add missing `.d.ts` declarations for untyped dependencies
-- [ ] 4.12 — Final `npm run typecheck` (entire `src` + `api`) and full `npx vitest run`
+- [x] 4.7 — Type `src/scrapers/index.js` and `src/index.js` / `src/algorithmBuilder.js`
+  - Added JSDoc types across `src/algorithmBuilder.js` (actions, scraping, session flow).
+  - Added `VisibleTweet`, `VisibleUser`, `Persona*`, `ThreadItem`, `TierInfo`, and other types to `src/types/xactions.d.ts`.
+  - Typed `src/scrapers/index.js` page-launch helpers and `__xactions_browser` extension.
+  - Fixed barrel re-exports in `src/index.js` and added JSDoc for `browserScripts`, `managers`, `plugins`.
+  - Also typed the root manager files (`articlePublisher`, `bookmarkManager`, `businessTools`, `creatorStudio`, `discoveryExplore`, `dmManager`, `engagementManager`, `grokIntegration`, `notificationManager`, `pollCreator`, `postComposer`, `premiumManager`, `profileManager`, `settingsManager`, `spacesManager`) and `src/personaEngine.js`.
+  - `npm run typecheck` passes with **0 errors**.
+- [x] 4.8 — Type `src/plugins/loader.js` and `src/plugins/manager.js`
+  - Replaced `Object` JSDoc with `Record<string, unknown>`, casted page-evaluate results, and resolved plugin registry unknowns.
+  - `tests/plugins/loader.test.js` passes (17 tests).
+- [ ] 4.9 — Type `src/api` (Prisma, services, routes) and `src/workflows`
+- [ ] 4.10 — Type `src/mcp` server and tools
+- [ ] 4.11 — Type remaining `src/{agents,ai,a2a,analytics,streaming,utils,automation}`
+- [ ] 4.12 — Add missing `.d.ts` declarations for untyped dependencies
+- [ ] 4.13 — Final `npm run typecheck` (entire `src` + `api`) and full `npx vitest run`
 
-Status: Phase 4.5 completed; `src/scrapers/facebook` domain modules, `api/lib/prisma.js`, and `api/services/facebookAutomation.js` fully typed. `npm run typecheck` passes with 0 errors and `npx vitest run tests/scrapers tests/cli tests/api/facebook-automate-routes.test.js` passes (1107 passed, 14 skipped).
+Status: Phase 4.7 and 4.8 completed. `src/scrapers/index.js`, `src/index.js`, `src/algorithmBuilder.js`, root manager files, `src/personaEngine.js`, and `src/plugins/loader.js`/`manager.js` are now typed. `npm run typecheck` passes with **0 errors** and targeted `npx vitest run tests/plugins/loader.test.js tests/scrapers/facebook-index.test.js` passes (151 tests).
 
 ## Verification baseline
 

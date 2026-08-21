@@ -15,6 +15,7 @@
  * - Sync contacts
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 // ============================================================================
@@ -49,16 +50,16 @@ const SELECTORS = {
 /**
  * Scrape detailed profile information
  * @param {import('puppeteer').Page} page - Puppeteer page
- * @param {string} username - Twitter username (without @)
- * @returns {Promise<Object>} Profile data
+ * @param {string} username - Twitter username (without at-sign)
+ * @returns {Promise<Record<string, unknown>>} Profile data
  */
 export async function getProfile(page, username) {
   await page.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
   await sleep(2000);
 
-  const profile = await page.evaluate((sel) => {
-    const getText = (s) => document.querySelector(s)?.textContent?.trim() || null;
-    const getAttr = (s, attr) => document.querySelector(s)?.getAttribute(attr) || null;
+  const profile = /** @type {Record<string, unknown>} */ (await page.evaluate(( /** @type {Record<string, string>} */ sel) => {
+    const getText = (/** @type {string} */ s) => document.querySelector(s)?.textContent?.trim() || null;
+    const getAttr = (/** @type {string} */ s, /** @type {string} */ attr) => document.querySelector(s)?.getAttribute(attr) || null;
 
     return {
       name: getText(sel.profileName),
@@ -71,7 +72,7 @@ export async function getProfile(page, username) {
       following: getText(sel.followingCount),
       avatarUrl: getAttr('img[alt="Opens profile photo"]', 'src'),
     };
-  }, SELECTORS);
+  }, SELECTORS));
 
   return { username, ...profile, scrapedAt: new Date().toISOString() };
 }
@@ -81,8 +82,8 @@ export async function getProfile(page, username) {
  * @param {import('puppeteer').Page} page
  * @param {string} username
  * @param {string} sort - 'latest' or 'most_liked'
- * @param {Object} options
- * @returns {Promise<Array>} Sorted posts
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>[]>} Sorted posts
  */
 export async function filterPosts(page, username, sort = 'latest', options = {}) {
   const { limit = 50, type = 'all' } = options;
@@ -98,12 +99,13 @@ export async function filterPosts(page, username, sort = 'latest', options = {})
     console.log(`⚠️ Sort filter not available, using default order`);
   }
 
+  /** @type {Record<string, unknown>[]} */
   const posts = [];
   let scrollAttempts = 0;
   const maxScrolls = Math.ceil(limit / 5);
 
   while (posts.length < limit && scrollAttempts < maxScrolls) {
-    const newPosts = await page.evaluate(() => {
+    const newPosts = /** @type {Record<string, unknown>[]} */ (await page.evaluate(() => {
       return Array.from(document.querySelectorAll('article[data-testid="tweet"]')).map(tweet => {
         const text = tweet.querySelector('[data-testid="tweetText"]')?.textContent || '';
         const time = tweet.querySelector('time')?.getAttribute('datetime') || '';
@@ -113,7 +115,7 @@ export async function filterPosts(page, username, sort = 'latest', options = {})
         const link = tweet.querySelector('a[href*="/status/"]')?.href || '';
         return { text, time, likes, reposts, replies, link };
       });
-    });
+    }));
 
     for (const post of newPosts) {
       if (!posts.find(p => p.link === post.link)) {
@@ -136,8 +138,8 @@ export async function filterPosts(page, username, sort = 'latest', options = {})
 /**
  * Update profile fields
  * @param {import('puppeteer').Page} page
- * @param {Object} updates - Fields to update { name, bio, location, website }
- * @returns {Promise<Object>} Update result
+ * @param {import('./types/xactions.js').ProfileUpdates} updates - Fields to update { name, bio, location, website }
+ * @returns {Promise<Record<string, unknown>>} Update result
  */
 export async function updateProfile(page, updates = {}) {
   await page.goto('https://x.com/settings/profile', { waitUntil: 'networkidle2' });

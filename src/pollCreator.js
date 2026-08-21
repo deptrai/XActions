@@ -14,6 +14,7 @@
  * - Poll results scraping
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -21,7 +22,7 @@ const SELECTORS = {
   tweetTextarea: '[data-testid="tweetTextarea_0"]',
   tweetButton: '[data-testid="tweetButton"]',
   addPoll: '[aria-label="Add poll"]',
-  pollOption: (i) => `[data-testid="pollOption_${i}"]`,
+  pollOption: (/** @type {number} */ i) => `[data-testid="pollOption_${i}"]`,
   addPollOption: '[data-testid="addPollOption"]',
   pollDurationDays: '[data-testid="pollDurationDays"]',
   pollDurationHours: '[data-testid="pollDurationHours"]',
@@ -34,9 +35,9 @@ const SELECTORS = {
  * Create a poll
  * @param {import('puppeteer').Page} page
  * @param {string} question - Poll question text
- * @param {Array<string>} choices - 2-4 poll options
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {string[]} choices - 2-4 poll options
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function createPoll(page, question, choices, options = {}) {
   const { durationDays = 1, durationHours = 0, durationMinutes = 0 } = options;
@@ -128,16 +129,17 @@ export async function createPoll(page, question, choices, options = {}) {
  * Get poll results from a tweet
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl - URL of the poll tweet
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getPollResults(page, tweetUrl) {
   await page.goto(tweetUrl, { waitUntil: 'networkidle2' });
   await sleep(3000);
 
-  const results = await page.evaluate(() => {
+  const results = /** @type {Record<string, unknown> | null} */ (await page.evaluate(() => {
     const poll = document.querySelector('[data-testid="pollResults"], [role="group"]');
     if (!poll) return null;
 
+    /** @type {Record<string, unknown>[]} */
     const options = [];
     poll.querySelectorAll('[role="radio"], [data-testid*="pollOption"]').forEach(opt => {
       const text = opt.textContent || '';
@@ -149,7 +151,7 @@ export async function getPollResults(page, tweetUrl) {
     const timeRemaining = poll.querySelector('[data-testid="pollTimeRemaining"]')?.textContent || '';
 
     return { options, totalVotes, timeRemaining };
-  });
+  }));
 
   return {
     url: tweetUrl,

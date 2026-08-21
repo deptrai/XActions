@@ -21,6 +21,8 @@ import { homedir } from 'os';
 // ============================================================================
 
 const PERSONAS_DIR = join(homedir(), '.xactions', 'personas');
+
+/** @type {Record<string, string>} */
 const DEFAULT_MODELS = {
   comment: 'google/gemini-flash-2.0',
   post: 'google/gemini-flash-2.0',
@@ -31,6 +33,7 @@ const DEFAULT_MODELS = {
 // Preset Niches — quick-start persona templates
 // ============================================================================
 
+/** @type {Record<string, import('./types/xactions.js').PersonaNiche>} */
 const NICHE_PRESETS = {
   'crypto-degen': {
     name: 'Crypto Degen',
@@ -108,6 +111,7 @@ const NICHE_PRESETS = {
 // Activity Pattern Presets — simulate different human schedules
 // ============================================================================
 
+/** @type {Record<string, import('./types/xactions.js').PersonaActivityPattern>} */
 const ACTIVITY_PATTERNS = {
   'night-owl': {
     name: 'Night Owl',
@@ -151,8 +155,10 @@ const ACTIVITY_PATTERNS = {
 // Engagement Strategies
 // ============================================================================
 
+/** @type {Record<string, import('./types/xactions.js').PersonaStrategy>} */
 const ENGAGEMENT_STRATEGIES = {
   'aggressive': {
+    preset: 'aggressive',
     name: 'Aggressive Growth',
     description: 'Maximum engagement — high follow/like/comment rates',
     dailyLimits: { follows: 80, likes: 150, comments: 40, posts: 5, searches: 20, profileVisits: 30 },
@@ -164,6 +170,7 @@ const ENGAGEMENT_STRATEGIES = {
     sessionsPerDay: { min: 6, max: 10 },
   },
   'moderate': {
+    preset: 'moderate',
     name: 'Moderate Growth',
     description: 'Balanced engagement — steady growth without overexposure',
     dailyLimits: { follows: 40, likes: 80, comments: 20, posts: 3, searches: 12, profileVisits: 15 },
@@ -175,6 +182,7 @@ const ENGAGEMENT_STRATEGIES = {
     sessionsPerDay: { min: 4, max: 7 },
   },
   'conservative': {
+    preset: 'conservative',
     name: 'Conservative Growth',
     description: 'Slow and safe — mimics very casual user behavior',
     dailyLimits: { follows: 15, likes: 40, comments: 8, posts: 1, searches: 6, profileVisits: 8 },
@@ -186,6 +194,7 @@ const ENGAGEMENT_STRATEGIES = {
     sessionsPerDay: { min: 2, max: 4 },
   },
   'thoughtleader': {
+    preset: 'thoughtleader',
     name: 'Thought Leader',
     description: 'Quality over quantity — fewer follows, more high-value comments and posts',
     dailyLimits: { follows: 20, likes: 60, comments: 30, posts: 4, searches: 10, profileVisits: 20 },
@@ -204,16 +213,18 @@ const ENGAGEMENT_STRATEGIES = {
 
 /**
  * Create a new persona configuration
+ * @param {import('./types/xactions.js').PersonaOptions} [options]
+ * @returns {import('./types/xactions.js').Persona}
  */
 function createPersona(options = {}) {
-  const preset = NICHE_PRESETS[options.preset] || NICHE_PRESETS['custom'];
-  const activityPattern = ACTIVITY_PATTERNS[options.activityPattern] || ACTIVITY_PATTERNS['always-on'];
-  const strategy = ENGAGEMENT_STRATEGIES[options.strategy] || ENGAGEMENT_STRATEGIES['moderate'];
+  const preset = NICHE_PRESETS[options.preset || 'custom'];
+  const activityPattern = ACTIVITY_PATTERNS[options.activityPattern || 'always-on'];
+  const strategy = ENGAGEMENT_STRATEGIES[options.strategy || 'moderate'];
 
   const persona = {
     // Identity
     id: options.id || `persona_${Date.now()}`,
-    name: options.name || preset.name,
+    name: options.name || preset.name || 'Custom',
     preset: options.preset || 'custom',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -229,10 +240,10 @@ function createPersona(options = {}) {
 
     // Voice & Writing Style
     voice: {
-      tone: options.tone || preset.tone,
-      commentStyle: options.commentStyle || preset.commentStyle,
-      bioTemplate: options.bioTemplate || preset.bioTemplate,
-      postTopics: options.postTopics || [...preset.postTopics],
+      tone: options.tone || preset.tone || '',
+      commentStyle: options.commentStyle || preset.commentStyle || '',
+      bioTemplate: options.bioTemplate || preset.bioTemplate || '',
+      postTopics: options.postTopics || [...(preset.postTopics || [])],
       emojiUsage: options.emojiUsage ?? 'moderate',  // none, light, moderate, heavy
       hashtagUsage: options.hashtagUsage ?? 'light',  // none, light, moderate, heavy
       language: options.language || 'en',
@@ -249,7 +260,6 @@ function createPersona(options = {}) {
 
     // Engagement Strategy
     strategy: {
-      preset: options.strategy || 'moderate',
       ...strategy,
     },
 
@@ -303,6 +313,8 @@ function createPersona(options = {}) {
 
 /**
  * Build the LLM system prompt from persona config
+ * @param {import('./types/xactions.js').Persona} persona
+ * @returns {string}
  */
 function buildPersonaSystemPrompt(persona) {
   if (persona.llm.systemPrompt) return persona.llm.systemPrompt;
@@ -347,6 +359,10 @@ WHAT MAKES A GREAT COMMENT:
 
 /**
  * Build a comment generation prompt for a specific tweet
+ * @param {import('./types/xactions.js').Persona} persona
+ * @param {string} tweetText
+ * @param {string} tweetAuthor
+ * @returns {string}
  */
 function buildCommentPrompt(persona, tweetText, tweetAuthor) {
   return `You're scrolling Twitter and you see this tweet from @${tweetAuthor}:
@@ -360,6 +376,9 @@ Respond with ONLY the comment text, nothing else.`;
 
 /**
  * Build a post generation prompt
+ * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/xactions.js').XActionsOptions} [context]
+ * @returns {string}
  */
 function buildPostPrompt(persona, context = {}) {
   const topicSuggestion = context.topic || persona.voice.postTopics[Math.floor(Math.random() * persona.voice.postTopics.length)];
@@ -380,6 +399,10 @@ Keep it under ${persona.voice.maxPostLength} characters. Write ONLY the tweet te
 
 /**
  * Build a reply prompt for a specific conversation
+ * @param {import('./types/xactions.js').Persona} persona
+ * @param {Record<string, string>} originalTweet
+ * @param {Record<string, string>} replyTo
+ * @returns {string}
  */
 function buildReplyPrompt(persona, originalTweet, replyTo) {
   return `You're in a conversation on Twitter.
@@ -398,6 +421,7 @@ Respond with ONLY the reply text.`;
 
 /**
  * Ensure personas directory exists
+ * @returns {void}
  */
 function ensureDir() {
   if (!existsSync(PERSONAS_DIR)) {
@@ -407,6 +431,8 @@ function ensureDir() {
 
 /**
  * Save persona to disk
+ * @param {import('./types/xactions.js').Persona} persona
+ * @returns {string}
  */
 function savePersona(persona) {
   ensureDir();
@@ -425,6 +451,8 @@ function savePersona(persona) {
 
 /**
  * Load persona from disk
+ * @param {string} id
+ * @returns {import('./types/xactions.js').Persona}
  */
 function loadPersona(id) {
   const filePath = join(PERSONAS_DIR, `${id}.json`);
@@ -433,12 +461,13 @@ function loadPersona(id) {
   }
   const data = JSON.parse(readFileSync(filePath, 'utf-8'));
   // Restore Set from array
-  data.state.engagedPosts = new Set(data.state.engagedPosts || []);
-  return data;
+  data.state.engagedPosts = new Set(/** @type {string[]} */ (data.state.engagedPosts || []));
+  return /** @type {import('./types/xactions.js').Persona} */ (data);
 }
 
 /**
  * List all saved personas
+ * @returns {Record<string, unknown>[]}
  */
 function listPersonas() {
   ensureDir();
@@ -467,6 +496,8 @@ function listPersonas() {
 
 /**
  * Delete a persona
+ * @param {string} id
+ * @returns {boolean}
  */
 function deletePersona(id) {
   const filePath = join(PERSONAS_DIR, `${id}.json`);
@@ -483,6 +514,8 @@ function deletePersona(id) {
 
 /**
  * Determine if the persona should be active right now
+ * @param {import('./types/xactions.js').Persona} persona
+ * @returns {boolean}
  */
 function shouldBeActive(persona) {
   const now = new Date();
@@ -499,6 +532,8 @@ function shouldBeActive(persona) {
 /**
  * Get the intensity multiplier for the current time
  * Peak hours = more activity, off-peak = less
+ * @param {import('./types/xactions.js').Persona} persona
+ * @returns {number}
  */
 function getActivityIntensity(persona) {
   const now = new Date();
@@ -526,6 +561,8 @@ function getActivityIntensity(persona) {
 
 /**
  * Calculate how long the next session should be (in minutes)
+ * @param {import('./types/xactions.js').Persona} persona
+ * @returns {number}
  */
 function getSessionDuration(persona) {
   const strategy = persona.strategy;
@@ -538,6 +575,8 @@ function getSessionDuration(persona) {
 
 /**
  * Calculate delay until next session (in minutes)
+ * @param {import('./types/xactions.js').Persona} persona
+ * @returns {number}
  */
 function getDelayUntilNextSession(persona) {
   const strategy = persona.strategy;
@@ -556,6 +595,8 @@ function getDelayUntilNextSession(persona) {
 /**
  * Choose what actions to perform this session
  * Returns a shuffled activity plan
+ * @param {import('./types/xactions.js').Persona} persona
+ * @returns {import('./types/xactions.js').ActivityPlan}
  */
 function planSession(persona) {
   const strategy = persona.strategy;
@@ -566,6 +607,7 @@ function planSession(persona) {
   const avgSessions = (strategy.sessionsPerDay.min + strategy.sessionsPerDay.max) / 2;
   const scale = (1 / avgSessions) * intensity;
 
+  /** @type {import('./types/xactions.js').ActivityPlan} */
   const plan = {
     duration,
     activities: [],
@@ -640,6 +682,12 @@ function planSession(persona) {
 // Helpers
 // ============================================================================
 
+/**
+ * Shuffle an array in place
+ * @template T
+ * @param {T[]} arr
+ * @returns {T[]}
+ */
 function shuffleArray(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));

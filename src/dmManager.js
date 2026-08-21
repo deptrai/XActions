@@ -14,6 +14,7 @@
  * - Conversation search
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -35,7 +36,7 @@ const SELECTORS = {
  * @param {import('puppeteer').Page} page
  * @param {string} username - Recipient username
  * @param {string} message - Message text
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function sendDM(page, username, message) {
   await page.goto('https://x.com/messages', { waitUntil: 'networkidle2' });
@@ -77,8 +78,8 @@ export async function sendDM(page, username, message) {
 /**
  * Get DM conversations list
  * @param {import('puppeteer').Page} page
- * @param {Object} options
- * @returns {Promise<Array>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getConversations(page, options = {}) {
   const { limit = 20 } = options;
@@ -86,7 +87,7 @@ export async function getConversations(page, options = {}) {
   await page.goto('https://x.com/messages', { waitUntil: 'networkidle2' });
   await sleep(3000);
 
-  const conversations = await page.evaluate((sel, lim) => {
+  const conversations = /** @type {Record<string, unknown>[]} */ (await page.evaluate(( /** @type {Record<string, string>} */ sel, /** @type {number} */ lim) => {
     return Array.from(document.querySelectorAll(sel.conversation)).slice(0, lim).map(conv => {
       const name = conv.querySelector('[dir="ltr"] span')?.textContent || '';
       const lastMessage = conv.querySelector('[data-testid="lastMessage"]')?.textContent || '';
@@ -94,7 +95,7 @@ export async function getConversations(page, options = {}) {
       const unread = conv.querySelector('[data-testid="unread"]') !== null;
       return { name, lastMessage, time, unread };
     });
-  }, SELECTORS, limit);
+  }, SELECTORS, limit));
 
   return { conversations, scrapedAt: new Date().toISOString() };
 }
@@ -103,8 +104,8 @@ export async function getConversations(page, options = {}) {
  * Export messages from a conversation
  * @param {import('puppeteer').Page} page
  * @param {string} conversationUrl - URL of the DM conversation
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function exportConversation(page, conversationUrl, options = {}) {
   const { limit = 100 } = options;
@@ -112,19 +113,20 @@ export async function exportConversation(page, conversationUrl, options = {}) {
   await page.goto(conversationUrl, { waitUntil: 'networkidle2' });
   await sleep(3000);
 
+  /** @type {Record<string, unknown>[]} */
   const messages = [];
   let scrollAttempts = 0;
 
   // Scroll up to load older messages
   while (messages.length < limit && scrollAttempts < 20) {
-    const newMessages = await page.evaluate((sel) => {
+    const newMessages = /** @type {Record<string, unknown>[]} */ (await page.evaluate(( /** @type {Record<string, string>} */ sel) => {
       return Array.from(document.querySelectorAll(sel.messageEntry)).map(msg => {
         const text = msg.textContent || '';
         const time = msg.querySelector('time')?.getAttribute('datetime') || '';
         const sender = msg.querySelector('[data-testid="User-Name"]')?.textContent || '';
         return { text, time, sender };
       });
-    }, SELECTORS);
+    }, SELECTORS));
 
     for (const msg of newMessages) {
       if (!messages.find(m => m.text === msg.text && m.time === msg.time)) {
@@ -152,20 +154,20 @@ export async function exportConversation(page, conversationUrl, options = {}) {
 /**
  * Get message requests
  * @param {import('puppeteer').Page} page
- * @returns {Promise<Array>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getMessageRequests(page) {
   await page.goto('https://x.com/messages/requests', { waitUntil: 'networkidle2' });
   await sleep(3000);
 
-  const requests = await page.evaluate((sel) => {
+  const requests = /** @type {Record<string, unknown>[]} */ (await page.evaluate(( /** @type {Record<string, string>} */ sel) => {
     return Array.from(document.querySelectorAll(sel.conversation)).map(conv => {
       const name = conv.querySelector('[dir="ltr"] span')?.textContent || '';
       const preview = conv.querySelector('[data-testid="lastMessage"]')?.textContent || '';
       const time = conv.querySelector('time')?.getAttribute('datetime') || '';
       return { name, preview, time };
     });
-  }, SELECTORS);
+  }, SELECTORS));
 
   return { requests, scrapedAt: new Date().toISOString() };
 }
@@ -173,15 +175,15 @@ export async function getMessageRequests(page) {
 /**
  * Update DM privacy settings
  * @param {import('puppeteer').Page} page
- * @param {Object} settings
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').DMSettings} settings
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function updateDMSettings(page, settings = {}) {
   await page.goto('https://x.com/settings/messages', { waitUntil: 'networkidle2' });
   await sleep(2000);
 
   // Toggle settings as needed
-  const result = { updated: [], timestamp: new Date().toISOString() };
+  const result = { updated: /** @type {string[]} */ ([]), timestamp: new Date().toISOString() };
 
   if (settings.allowDMsFrom !== undefined) {
     // Find and toggle the appropriate setting

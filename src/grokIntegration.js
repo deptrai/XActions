@@ -14,6 +14,7 @@
  * - Topic summaries (2026)
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -31,8 +32,8 @@ const SELECTORS = {
  * Send a query to Grok AI
  * @param {import('puppeteer').Page} page
  * @param {string} query - The question/prompt for Grok
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function queryGrok(page, query, options = {}) {
   const { newChat = true, waitTime = 15000 } = options;
@@ -80,7 +81,7 @@ export async function queryGrok(page, query, options = {}) {
  * Generate an image with Grok AI (Premium+ required)
  * @param {import('puppeteer').Page} page
  * @param {string} prompt - Image generation prompt
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function generateImage(page, prompt) {
   await page.goto('https://x.com/i/grok', { waitUntil: 'networkidle2' });
@@ -123,7 +124,7 @@ export async function generateImage(page, prompt) {
  * Summarize a topic or thread using Grok
  * @param {import('puppeteer').Page} page
  * @param {string} topic - Topic or thread URL to summarize
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function summarize(page, topic) {
   const prompt = topic.startsWith('http')
@@ -137,7 +138,7 @@ export async function summarize(page, topic) {
  * Analyze a post's potential performance
  * @param {import('puppeteer').Page} page
  * @param {string} postText - The post text to analyze
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function analyzePost(page, postText) {
   const prompt = `Analyze this X/Twitter post for potential engagement and reach. Rate it 1-10 and suggest improvements:\n\n"${postText}"`;

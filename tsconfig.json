@@ -16,6 +16,6 @@
     "baseUrl": ".",
     "paths": {}
   },
-  "include": ["src/core/**/*.js", "src/client/**/*.js", "src/scrapers/twitter/**/*.js", "src/scrapers/facebook/**/*.js", "src/scrapers/bluesky/**/*.js", "src/scrapers/mastodon/**/*.js", "src/scrapers/threads/**/*.js", "src/scrapers/adapters/**/*.js", "src/types/**/*.d.ts", "api/lib/prisma.js", "api/services/facebookAutomation.js"],
+  "include": ["src/core/**/*.js", "src/client/**/*.js", "src/scrapers/twitter/**/*.js", "src/scrapers/facebook/**/*.js", "src/scrapers/bluesky/**/*.js", "src/scrapers/mastodon/**/*.js", "src/scrapers/threads/**/*.js", "src/scrapers/adapters/**/*.js", "src/scrapers/index.js", "src/index.js", "src/algorithmBuilder.js", "src/types/**/*.d.ts", "api/lib/prisma.js", "api/services/facebookAutomation.js"],
   "exclude": ["node_modules", "dist", "archive"]
 }

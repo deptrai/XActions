@@ -14,6 +14,7 @@
  * - Pay-for-reach analysis (2026)
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -25,6 +26,7 @@ const SELECTORS = {
 
 /**
  * Tier feature definitions
+ * @type {Record<string, Record<string, unknown>>}
  */
 const TIER_FEATURES = {
   free: {
@@ -120,13 +122,13 @@ const TIER_FEATURES = {
  * Check a user's Premium tier
  * @param {import('puppeteer').Page} page
  * @param {string} username
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function checkPremiumStatus(page, username) {
   await page.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
   await sleep(2000);
 
-  const status = await page.evaluate((sel) => {
+  const status = /** @type {Record<string, unknown>} */ (await page.evaluate(( /** @type {Record<string, string>} */ sel) => {
     const isVerified = !!document.querySelector(sel.verificationBadge);
     const badges = document.querySelectorAll('svg[data-testid]');
     let badgeType = 'none';
@@ -138,11 +140,11 @@ export async function checkPremiumStatus(page, username) {
     });
 
     return { isVerified, badgeType };
-  }, SELECTORS);
+  }, SELECTORS));
 
   // Infer tier from badge
   let inferredTier = 'free';
-  if (status.badgeType === 'gold') inferredTier = 'organization';
+  if ((/** @type {string} */ (status.badgeType)) === 'gold') inferredTier = 'organization';
   else if (status.isVerified) inferredTier = 'premium_or_higher';
 
   return {
@@ -157,7 +159,7 @@ export async function checkPremiumStatus(page, username) {
 /**
  * Get features available for a tier
  * @param {string} tier - 'free', 'basic', 'premium', 'premium+', 'supergrok'
- * @returns {Object}
+ * @returns {Record<string, unknown>}
  */
 export function getTierFeatures(tier) {
   const normalized = tier.toLowerCase().replace(/\s+/g, '');
@@ -168,7 +170,7 @@ export function getTierFeatures(tier) {
  * Compare two tiers
  * @param {string} tier1
  * @param {string} tier2
- * @returns {Object}
+ * @returns {Record<string, unknown>}
  */
 export function compareTiers(tier1, tier2) {
   const t1 = getTierFeatures(tier1);
@@ -178,35 +180,41 @@ export function compareTiers(tier1, tier2) {
     return { error: t1.error || t2.error };
   }
 
+  /** @type {Record<string, unknown>} */
   const comparison = {};
+  const t1Features = /** @type {Record<string, unknown>} */ (t1.features || {});
+  const t2Features = /** @type {Record<string, unknown>} */ (t2.features || {});
   const allFeatures = new Set([
-    ...Object.keys(t1.features || {}),
-    ...Object.keys(t2.features || {}),
+    ...Object.keys(t1Features),
+    ...Object.keys(t2Features),
   ]);
+
+  const t1Tier = /** @type {string} */ (t1.tier);
+  const t2Tier = /** @type {string} */ (t2.tier);
 
   for (const feature of allFeatures) {
     comparison[feature] = {
-      [t1.tier]: t1.features?.[feature] ?? 'N/A',
-      [t2.tier]: t2.features?.[feature] ?? 'N/A',
+      [t1Tier]: t1Features[feature] ?? 'N/A',
+      [t2Tier]: t2Features[feature] ?? 'N/A',
     };
   }
 
-  return { comparison, tiers: [t1.tier, t2.tier] };
+  return { comparison, tiers: [t1Tier, t2Tier] };
 }
 
 /**
  * Check revenue sharing eligibility
  * @param {import('puppeteer').Page} page
  * @param {string} username
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function checkRevenueEligibility(page, username) {
-  const profile = await page.evaluate(() => {
+  const profile = /** @type {Record<string, unknown>} */ (await page.evaluate(() => {
     const followers = document.querySelector('a[href$="/followers"] span')?.textContent || '0';
     return { followers };
-  });
+  }));
 
-  const followerCount = parseInt(profile.followers.replace(/[,K.M]/g, '')) || 0;
+  const followerCount = parseInt((/** @type {string} */ (profile.followers)).replace(/[,K.M]/g, '')) || 0;
 
   return {
     username,

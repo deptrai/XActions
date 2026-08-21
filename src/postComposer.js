@@ -16,6 +16,7 @@
  * - Delete posts
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 // ============================================================================
@@ -60,8 +61,8 @@ const SELECTORS = {
  * Post a tweet
  * @param {import('puppeteer').Page} page
  * @param {string} text - Tweet text
- * @param {Object} options
- * @returns {Promise<Object>} Post result
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>} Post result
  */
 export async function postTweet(page, text, options = {}) {
   const { media = null, altText = null, replyTo = null } = options;
@@ -83,9 +84,10 @@ export async function postTweet(page, text, options = {}) {
 
   // Add media if provided
   if (media) {
-    const fileInput = await page.$(SELECTORS.mediaInput);
+    const fileInput = /** @type {import('puppeteer').ElementHandle<HTMLInputElement> | null} */ (await page.$(SELECTORS.mediaInput));
     if (fileInput) {
-      await fileInput.uploadFile(media);
+      const files = Array.isArray(media) ? media : [media];
+      await fileInput.uploadFile(...files);
       await sleep(2000);
 
       // Add alt text if provided
@@ -116,8 +118,8 @@ export async function postTweet(page, text, options = {}) {
 /**
  * Post a thread (multiple linked tweets)
  * @param {import('puppeteer').Page} page
- * @param {Array<string|Object>} tweets - Array of tweet texts or { text, media } objects
- * @returns {Promise<Object>} Thread result
+ * @param {import('./types/xactions.js').ThreadItem[]} tweets - Array of tweet texts or { text, media } objects
+ * @returns {Promise<Record<string, unknown>>} Thread result
  */
 export async function postThread(page, tweets) {
   await page.goto('https://x.com/compose/tweet', { waitUntil: 'networkidle2' });
@@ -126,7 +128,8 @@ export async function postThread(page, tweets) {
   const results = [];
 
   for (let i = 0; i < tweets.length; i++) {
-    const tweet = typeof tweets[i] === 'string' ? { text: tweets[i] } : tweets[i];
+    const raw = tweets[i];
+    const tweet = typeof raw === 'string' ? { text: raw } : raw;
 
     if (i > 0) {
       // Add new tweet to thread
@@ -146,7 +149,7 @@ export async function postThread(page, tweets) {
 
     // Add media if present
     if (tweet.media) {
-      const fileInput = await page.$(SELECTORS.mediaInput);
+      const fileInput = /** @type {import('puppeteer').ElementHandle<HTMLInputElement> | null} */ (await page.$(SELECTORS.mediaInput));
       if (fileInput) {
         await fileInput.uploadFile(tweet.media);
         await sleep(2000);
@@ -172,9 +175,9 @@ export async function postThread(page, tweets) {
  * Create a poll
  * @param {import('puppeteer').Page} page
  * @param {string} question - Poll question
- * @param {Array<string>} choices - 2-4 poll options
- * @param {Object} options
- * @returns {Promise<Object>} Poll result
+ * @param {string[]} choices - 2-4 poll options
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>} Poll result
  */
 export async function createPoll(page, question, choices, options = {}) {
   const { duration = '1d' } = options;
@@ -236,7 +239,7 @@ export async function createPoll(page, question, choices, options = {}) {
  * @param {import('puppeteer').Page} page
  * @param {string} text - Tweet text
  * @param {Date|string} scheduledTime - When to post
- * @returns {Promise<Object>} Schedule result
+ * @returns {Promise<Record<string, unknown>>} Schedule result
  */
 export async function schedulePost(page, text, scheduledTime) {
   await page.goto('https://x.com/compose/tweet', { waitUntil: 'networkidle2' });
@@ -286,7 +289,7 @@ export async function schedulePost(page, text, scheduledTime) {
  * @param {import('puppeteer').Page} page
  * @param {string} postUrl - URL of the post to quote
  * @param {string} commentary - Your commentary
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function quotePost(page, postUrl, commentary) {
   await page.goto(postUrl, { waitUntil: 'networkidle2' });
@@ -321,7 +324,7 @@ export async function quotePost(page, postUrl, commentary) {
  * Repost/retweet a post
  * @param {import('puppeteer').Page} page
  * @param {string} postUrl
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function repost(page, postUrl) {
   await page.goto(postUrl, { waitUntil: 'networkidle2' });
@@ -343,7 +346,7 @@ export async function repost(page, postUrl) {
  * Delete a post
  * @param {import('puppeteer').Page} page
  * @param {string} postUrl
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function deletePost(page, postUrl) {
   await page.goto(postUrl, { waitUntil: 'networkidle2' });

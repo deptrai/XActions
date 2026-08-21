@@ -34,7 +34,7 @@ const PLUGIN_NAME_PATTERNS = [
 
 /**
  * Read the plugins registry from ~/.xactions/plugins.json
- * @returns {Promise<Object>} The plugins config { plugins: { name: { version, path, enabled } } }
+ * @returns {Promise<Record<string, unknown>>} The plugins config { plugins: { name: { version, path, enabled } } }
  */
 export async function readPluginsConfig() {
   try {
@@ -47,7 +47,7 @@ export async function readPluginsConfig() {
 
 /**
  * Write the plugins registry to ~/.xactions/plugins.json
- * @param {Object} config - The plugins config
+ * @param {Record<string, unknown>} config - The plugins config
  */
 export async function writePluginsConfig(config) {
   await fs.mkdir(CONFIG_DIR, { recursive: true });
@@ -69,7 +69,7 @@ export function isValidPluginName(name) {
 
 /**
  * Validate a loaded plugin module has the required interface
- * @param {Object} mod - The imported module
+ * @param {Record<string, unknown>} mod - The imported module
  * @returns {{ valid: boolean, errors: string[] }}
  */
 export function validatePlugin(mod) {
@@ -109,7 +109,7 @@ export function validatePlugin(mod) {
 /**
  * Load a single plugin by name or path
  * @param {string} nameOrPath - npm package name or local file path
- * @returns {Promise<Object>} The loaded and validated plugin module
+ * @returns {Promise<Record<string, unknown>>} The loaded and validated plugin module
  */
 export async function loadPlugin(nameOrPath) {
   let mod;
@@ -138,20 +138,22 @@ export async function loadPlugin(nameOrPath) {
 
 /**
  * Load all enabled plugins from the registry
- * @returns {Promise<Object[]>} Array of loaded plugin modules
+ * @returns {Promise<Record<string, unknown>[]>} Array of loaded plugin modules
  */
 export async function loadAllPlugins() {
   const config = await readPluginsConfig();
+  /** @type {Record<string, unknown>[]} */
   const plugins = [];
 
-  for (const [name, entry] of Object.entries(config.plugins || {})) {
-    if (entry.enabled === false) continue;
+  for (const [name, entry] of Object.entries(/** @type {Record<string, Record<string, unknown>>} */ (config.plugins || {}))) {
+    const pluginEntry = /** @type {Record<string, unknown>} */ (entry);
+    if (pluginEntry.enabled === false) continue;
 
     try {
-      const plugin = await loadPlugin(entry.path || name);
+      const plugin = await loadPlugin((/** @type {string} */ (pluginEntry.path)) || name);
       plugins.push(plugin);
     } catch (error) {
-      console.error(`⚠️  Failed to load plugin "${name}": ${error.message}`);
+      console.error(`⚠️  Failed to load plugin "${name}": ${(/** @type {Error} */ (error)).message}`);
     }
   }
 

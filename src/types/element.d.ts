@@ -10,6 +10,8 @@ interface Element {
   href?: string;
   /** Resolved or attribute src for media elements. */
   src?: string;
+  /** Alt text for media elements. */
+  alt?: string;
   /** Rendered visible text for HTMLElement subtypes. */
   innerText?: string;
   /** Programmatic click (available on HTMLElement in page context). */

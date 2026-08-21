@@ -15,6 +15,7 @@
  * - Affiliate tracking
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -32,8 +33,8 @@ const SELECTORS = {
 /**
  * Get account analytics
  * @param {import('puppeteer').Page} page
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getAccountAnalytics(page, options = {}) {
   const { period = '28d' } = options;
@@ -41,10 +42,11 @@ export async function getAccountAnalytics(page, options = {}) {
   await page.goto('https://x.com/i/account_analytics', { waitUntil: 'networkidle2' });
   await sleep(3000);
 
-  const analytics = await page.evaluate(() => {
-    const getText = (sel) => document.querySelector(sel)?.textContent?.trim() || '0';
-    
+  const analytics = /** @type {Record<string, unknown>} */ (await page.evaluate(() => {
+    const getText = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent?.trim() || '0';
+
     // Try to extract key metrics from the analytics page
+    /** @type {Record<string, unknown>} */
     const metrics = {};
     const statElements = document.querySelectorAll('[data-testid*="stat"], [data-testid*="metric"]');
     statElements.forEach(el => {
@@ -61,7 +63,7 @@ export async function getAccountAnalytics(page, options = {}) {
     });
 
     return metrics;
-  });
+  }));
 
   return {
     period,
@@ -74,7 +76,7 @@ export async function getAccountAnalytics(page, options = {}) {
  * Get analytics for a specific post
  * @param {import('puppeteer').Page} page
  * @param {string} postUrl
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getPostAnalytics(page, postUrl) {
   await page.goto(postUrl, { waitUntil: 'networkidle2' });
@@ -88,7 +90,7 @@ export async function getPostAnalytics(page, postUrl) {
     // Analytics may be inline on the post
   }
 
-  const analytics = await page.evaluate(() => {
+  const analytics = /** @type {Record<string, unknown> | null} */ (await page.evaluate(() => {
     const tweet = document.querySelector('article[data-testid="tweet"]');
     if (!tweet) return null;
 
@@ -99,7 +101,7 @@ export async function getPostAnalytics(page, postUrl) {
       bookmarks: tweet.querySelector('[data-testid="bookmark"] span')?.textContent || '0',
       views: tweet.querySelector('[data-testid="impressions"], [data-testid="analyticsButton"] span')?.textContent || '0',
     };
-  });
+  }));
 
   return {
     postUrl,
@@ -111,16 +113,16 @@ export async function getPostAnalytics(page, postUrl) {
 /**
  * Get revenue/earnings data
  * @param {import('puppeteer').Page} page
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getRevenue(page) {
   await page.goto('https://x.com/settings/monetization', { waitUntil: 'networkidle2' });
   await sleep(3000);
 
-  const revenue = await page.evaluate(() => {
+  const revenue = /** @type {Record<string, unknown>} */ (await page.evaluate(() => {
     const text = document.querySelector('[role="main"]')?.textContent || '';
     return { rawText: text.substring(0, 500) };
-  });
+  }));
 
   return {
     revenue,
@@ -132,8 +134,8 @@ export async function getRevenue(page) {
 /**
  * Get subscriber list
  * @param {import('puppeteer').Page} page
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getSubscribers(page, options = {}) {
   const { limit = 50 } = options;
@@ -141,14 +143,14 @@ export async function getSubscribers(page, options = {}) {
   await page.goto('https://x.com/settings/monetization/subscribers', { waitUntil: 'networkidle2' });
   await sleep(3000);
 
-  const subscribers = await page.evaluate((sel, max) => {
+  const subscribers = /** @type {Record<string, unknown>[]} */ (await page.evaluate(( /** @type {Record<string, string>} */ sel, /** @type {number} */ max) => {
     return Array.from(document.querySelectorAll('[data-testid="UserCell"]')).slice(0, max).map(user => {
       const name = user.querySelector('[dir="ltr"]')?.textContent || '';
       const username = user.querySelector('a[role="link"]')?.href?.split('/').pop() || '';
       const since = user.querySelector('time')?.getAttribute('datetime') || '';
       return { name, username, subscribedSince: since };
     });
-  }, SELECTORS, limit);
+  }, SELECTORS, limit));
 
   return {
     subscribers,
@@ -160,7 +162,7 @@ export async function getSubscribers(page, options = {}) {
 /**
  * Creator dashboard - combined analytics
  * @param {import('puppeteer').Page} page
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getCreatorDashboard(page) {
   const analytics = await getAccountAnalytics(page);

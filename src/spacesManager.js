@@ -14,6 +14,7 @@
  * - Circle management
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -31,8 +32,8 @@ const SELECTORS = {
 /**
  * Get live Spaces
  * @param {import('puppeteer').Page} page
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getLiveSpaces(page, options = {}) {
   const { query = '', limit = 20 } = options;
@@ -44,7 +45,8 @@ export async function getLiveSpaces(page, options = {}) {
   await page.goto(url, { waitUntil: 'networkidle2' });
   await sleep(3000);
 
-  const spaces = await page.evaluate((max) => {
+  const spaces = /** @type {Record<string, unknown>[]} */ (await page.evaluate(( /** @type {number} */ max) => {
+    /** @type {Record<string, unknown>[]} */
     const items = [];
     document.querySelectorAll('[data-testid="SpaceCard"], [data-testid="space"]').forEach(card => {
       items.push({
@@ -58,7 +60,7 @@ export async function getLiveSpaces(page, options = {}) {
       });
     });
     return items.slice(0, max);
-  }, limit);
+  }, limit));
 
   return {
     spaces,
@@ -72,13 +74,14 @@ export async function getLiveSpaces(page, options = {}) {
  * Get scheduled Spaces
  * @param {import('puppeteer').Page} page
  * @param {string} username
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getScheduledSpaces(page, username) {
   await page.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
   await sleep(2000);
 
-  const scheduled = await page.evaluate(() => {
+  const scheduled = /** @type {Record<string, unknown>[]} */ (await page.evaluate(() => {
+    /** @type {Record<string, unknown>[]} */
     const items = [];
     document.querySelectorAll('[data-testid="scheduledSpace"]').forEach(el => {
       items.push({
@@ -88,7 +91,7 @@ export async function getScheduledSpaces(page, username) {
       });
     });
     return items;
-  });
+  }));
 
   return {
     username,
@@ -102,24 +105,24 @@ export async function getScheduledSpaces(page, username) {
  * Scrape Space metadata
  * @param {import('puppeteer').Page} page
  * @param {string} spaceUrl
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function scrapeSpace(page, spaceUrl) {
   await page.goto(spaceUrl, { waitUntil: 'networkidle2' });
   await sleep(5000);
 
-  const metadata = await page.evaluate((sel) => {
+  const metadata = /** @type {Record<string, unknown>} */ (await page.evaluate(( /** @type {Record<string, string>} */ sel) => {
     return {
       title: document.querySelector(sel.spaceTitle)?.textContent || '',
       topic: document.querySelector(sel.spaceTopic)?.textContent || '',
       speakers: document.querySelector(sel.spaceSpeakers)?.textContent || '0',
       listeners: document.querySelector(sel.spaceListeners)?.textContent || '0',
       isRecording: !!document.querySelector(sel.spaceRecording),
-      participantList: Array.from(document.querySelectorAll('[data-testid="UserCell"]')).map(u =>
+      participantList: Array.from(document.querySelectorAll('[data-testid="UserCell"]')).map(/** @param {Element} u */ (u) =>
         u.querySelector('[dir="ltr"]')?.textContent || ''
       ),
     };
-  }, SELECTORS);
+  }, SELECTORS));
 
   return {
     url: spaceUrl,
@@ -131,8 +134,8 @@ export async function scrapeSpace(page, spaceUrl) {
 /**
  * Create an event
  * @param {import('puppeteer').Page} page
- * @param {Object} event - { title, description, date, time, location? }
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').EventInput} event - { title, description, date, time, location? }
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function createEvent(page, event) {
   const { title, description, date, time, location = '' } = event;

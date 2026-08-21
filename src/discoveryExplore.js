@@ -15,6 +15,7 @@
  * - Grok AI topic summaries (2026)
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -34,8 +35,8 @@ const SELECTORS = {
  * Search tweets with query
  * @param {import('puppeteer').Page} page
  * @param {string} query - Search query (supports operators)
- * @param {Object} options
- * @returns {Promise<Array>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function searchTweets(page, query, options = {}) {
   const { limit = 50, tab = 'latest', since = null, until = null } = options;
@@ -48,11 +49,12 @@ export async function searchTweets(page, query, options = {}) {
   await page.goto(`https://x.com/search?q=${encodeURIComponent(searchQuery)}${tabParam}`, { waitUntil: 'networkidle2' });
   await sleep(3000);
 
+  /** @type {Record<string, unknown>[]} */
   const tweets = [];
   let scrollAttempts = 0;
 
   while (tweets.length < limit && scrollAttempts < Math.ceil(limit / 3)) {
-    const newTweets = await page.evaluate((sel) => {
+    const newTweets = /** @type {Record<string, unknown>[]} */ (await page.evaluate((sel) => {
       return Array.from(document.querySelectorAll(sel.tweet)).map(tweet => {
         const text = tweet.querySelector(sel.tweetText)?.textContent || '';
         const time = tweet.querySelector('time')?.getAttribute('datetime') || '';
@@ -62,7 +64,7 @@ export async function searchTweets(page, query, options = {}) {
         const reposts = tweet.querySelector('[data-testid="retweet"] span')?.textContent || '0';
         return { text, time, author, link, likes, reposts };
       });
-    }, SELECTORS);
+    }, SELECTORS));
 
     for (const tweet of newTweets) {
       if (tweet.link && !tweets.find(t => t.link === tweet.link)) {
@@ -81,8 +83,8 @@ export async function searchTweets(page, query, options = {}) {
 /**
  * Get trending topics
  * @param {import('puppeteer').Page} page
- * @param {Object} options
- * @returns {Promise<Array>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getTrends(page, options = {}) {
   const { location = 'global' } = options;
@@ -90,14 +92,14 @@ export async function getTrends(page, options = {}) {
   await page.goto('https://x.com/explore/tabs/trending', { waitUntil: 'networkidle2' });
   await sleep(3000);
 
-  const trends = await page.evaluate((sel) => {
+  const trends = /** @type {Record<string, unknown>[]} */ (await page.evaluate((sel) => {
     return Array.from(document.querySelectorAll(sel.trendItem)).map((trend, index) => {
       const name = trend.querySelector('[dir="ltr"] span')?.textContent || '';
       const category = trend.querySelector('[dir="ltr"]:first-child')?.textContent || '';
       const tweetCount = trend.querySelector('[dir="ltr"]:last-child')?.textContent || '';
       return { rank: index + 1, name, category, tweetCount: tweetCount.trim() };
     });
-  }, SELECTORS);
+  }, SELECTORS));
 
   return { location, trends, scrapedAt: new Date().toISOString() };
 }
@@ -105,12 +107,13 @@ export async function getTrends(page, options = {}) {
 /**
  * Get explore feed content
  * @param {import('puppeteer').Page} page
- * @param {Object} options
- * @returns {Promise<Array>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getExploreFeed(page, options = {}) {
   const { limit = 30, tab = 'foryou' } = options;
 
+  /** @type {Record<string, string>} */
   const tabUrls = {
     foryou: 'https://x.com/explore',
     trending: 'https://x.com/explore/tabs/trending',
@@ -122,11 +125,12 @@ export async function getExploreFeed(page, options = {}) {
   await page.goto(tabUrls[tab] || tabUrls.foryou, { waitUntil: 'networkidle2' });
   await sleep(3000);
 
+  /** @type {Record<string, unknown>[]} */
   const items = [];
   let scrollAttempts = 0;
 
   while (items.length < limit && scrollAttempts < 10) {
-    const newItems = await page.evaluate((sel) => {
+    const newItems = /** @type {Record<string, unknown>[]} */ (await page.evaluate((sel) => {
       return Array.from(document.querySelectorAll(sel.tweet)).map(tweet => {
         const text = tweet.querySelector(sel.tweetText)?.textContent || '';
         const time = tweet.querySelector('time')?.getAttribute('datetime') || '';
@@ -134,7 +138,7 @@ export async function getExploreFeed(page, options = {}) {
         const link = tweet.querySelector('a[href*="/status/"]')?.href || '';
         return { text, time, author, link };
       });
-    }, SELECTORS);
+    }, SELECTORS));
 
     for (const item of newItems) {
       if (item.link && !items.find(i => i.link === item.link)) {
@@ -154,7 +158,7 @@ export async function getExploreFeed(page, options = {}) {
  * Follow a topic
  * @param {import('puppeteer').Page} page
  * @param {string} topicName
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function followTopic(page, topicName) {
   await page.goto(`https://x.com/search?q=${encodeURIComponent(topicName)}&f=topic`, { waitUntil: 'networkidle2' });
@@ -172,8 +176,8 @@ export async function followTopic(page, topicName) {
 /**
  * Advanced search with multiple filters
  * @param {import('puppeteer').Page} page
- * @param {Object} filters
- * @returns {Promise<Array>}
+ * @param {import('./types/xactions.js').SearchFilters} filters
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function advancedSearch(page, filters = {}) {
   const {

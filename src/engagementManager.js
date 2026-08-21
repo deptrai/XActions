@@ -16,6 +16,7 @@
  * - Video reactions
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -41,7 +42,7 @@ const SELECTORS = {
  * Like a tweet by URL
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function likeTweet(page, tweetUrl) {
   await page.goto(tweetUrl, { waitUntil: 'networkidle2' });
@@ -62,7 +63,7 @@ export async function likeTweet(page, tweetUrl) {
  * Unlike a tweet by URL
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function unlikeTweet(page, tweetUrl) {
   await page.goto(tweetUrl, { waitUntil: 'networkidle2' });
@@ -84,8 +85,8 @@ export async function unlikeTweet(page, tweetUrl) {
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl
  * @param {string} replyText
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function replyToTweet(page, tweetUrl, replyText, options = {}) {
   const { media = null } = options;
@@ -103,9 +104,10 @@ export async function replyToTweet(page, tweetUrl, replyText, options = {}) {
 
   // Add media if provided
   if (media) {
-    const fileInput = await page.$('[data-testid="fileInput"]');
+    const fileInput = /** @type {import('puppeteer').ElementHandle<HTMLInputElement> | null} */ (await page.$('[data-testid="fileInput"]'));
     if (fileInput) {
-      await fileInput.uploadFile(media);
+      const files = Array.isArray(media) ? media : [media];
+      await fileInput.uploadFile(...files);
       await sleep(2000);
     }
   }
@@ -127,7 +129,7 @@ export async function replyToTweet(page, tweetUrl, replyText, options = {}) {
  * Bookmark a tweet
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function bookmarkTweet(page, tweetUrl) {
   await page.goto(tweetUrl, { waitUntil: 'networkidle2' });
@@ -146,7 +148,7 @@ export async function bookmarkTweet(page, tweetUrl) {
  * Remove a bookmark
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function unbookmarkTweet(page, tweetUrl) {
   await page.goto(tweetUrl, { waitUntil: 'networkidle2' });
@@ -164,7 +166,7 @@ export async function unbookmarkTweet(page, tweetUrl) {
  * Hide a reply on your post
  * @param {import('puppeteer').Page} page
  * @param {string} replyUrl
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function hideReply(page, replyUrl) {
   await page.goto(replyUrl, { waitUntil: 'networkidle2' });
@@ -181,8 +183,8 @@ export async function hideReply(page, replyUrl) {
 /**
  * Auto-like posts in a feed based on keywords
  * @param {import('puppeteer').Page} page
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function autoLikeByKeyword(page, options = {}) {
   const { keywords = [], limit = 20, delay = 2000, url = 'https://x.com/home' } = options;
@@ -233,17 +235,17 @@ export async function autoLikeByKeyword(page, options = {}) {
  * Get engagement analytics for a post
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getEngagementAnalytics(page, tweetUrl) {
   await page.goto(tweetUrl, { waitUntil: 'networkidle2' });
   await sleep(2000);
 
-  const analytics = await page.evaluate((sel) => {
+  const analytics = /** @type {Record<string, string> | null} */ (await page.evaluate(( /** @type {Record<string, string>} */ sel) => {
     const tweet = document.querySelector(sel.tweet);
     if (!tweet) return null;
 
-    const getText = (s) => tweet.querySelector(s)?.textContent?.trim() || '0';
+    const getText = (/** @type {string} */ s) => tweet.querySelector(s)?.textContent?.trim() || '0';
 
     return {
       likes: getText(sel.like + ' span') || getText(sel.unlike + ' span'),
@@ -251,7 +253,7 @@ export async function getEngagementAnalytics(page, tweetUrl) {
       replies: getText('[data-testid="reply"] span'),
       impressions: getText(sel.impressionCount),
     };
-  }, SELECTORS);
+  }, SELECTORS));
 
   return {
     url: tweetUrl,

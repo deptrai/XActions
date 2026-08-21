@@ -14,6 +14,7 @@
  * - Search within bookmarks
  */
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SELECTORS = {
@@ -31,8 +32,8 @@ const SELECTORS = {
 /**
  * Get all bookmarks
  * @param {import('puppeteer').Page} page
- * @param {Object} options
- * @returns {Promise<Object>}
+ * @param {import('./types/xactions.js').XActionsOptions} options
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getBookmarks(page, options = {}) {
   const { limit = 100, format = 'json' } = options;
@@ -40,12 +41,13 @@ export async function getBookmarks(page, options = {}) {
   await page.goto('https://x.com/i/bookmarks', { waitUntil: 'networkidle2' });
   await sleep(3000);
 
+  /** @type {Record<string, unknown>[]} */
   const bookmarks = [];
   let scrollAttempts = 0;
   const maxScrolls = Math.ceil(limit / 5);
 
   while (bookmarks.length < limit && scrollAttempts < maxScrolls) {
-    const newBookmarks = await page.evaluate((sel) => {
+    const newBookmarks = /** @type {Record<string, unknown>[]} */ (await page.evaluate(( /** @type {Record<string, string>} */ sel) => {
       return Array.from(document.querySelectorAll(sel.tweet)).map(tweet => {
         const text = tweet.querySelector(sel.tweetText)?.textContent || '';
         const author = tweet.querySelector('[data-testid="User-Name"] a')?.textContent || '';
@@ -55,7 +57,7 @@ export async function getBookmarks(page, options = {}) {
         const hasMedia = !!tweet.querySelector('img[src*="media"], video');
         return { text, author, time, link, likes, hasMedia };
       });
-    }, SELECTORS);
+    }, SELECTORS));
 
     for (const bm of newBookmarks) {
       if (bm.link && !bookmarks.find(b => b.link === bm.link)) {
@@ -73,7 +75,7 @@ export async function getBookmarks(page, options = {}) {
   if (format === 'csv') {
     const csv = [
       'text,author,time,link,likes,hasMedia',
-      ...result.map(b => `"${b.text.replace(/"/g, '""')}","${b.author}","${b.time}","${b.link}","${b.likes}","${b.hasMedia}"`),
+      ...result.map(/** @param {Record<string, unknown>} b */ (b) => `"${(/** @type {string} */ (b.text)).replace(/"/g, '""')}","${b.author}","${b.time}","${b.link}","${b.likes}","${b.hasMedia}"`),
     ].join('\n');
     return { format: 'csv', data: csv, count: result.length };
   }
@@ -90,7 +92,7 @@ export async function getBookmarks(page, options = {}) {
  * Create a bookmark folder (Premium required)
  * @param {import('puppeteer').Page} page
  * @param {string} folderName
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function createFolder(page, folderName) {
   await page.goto('https://x.com/i/bookmarks', { waitUntil: 'networkidle2' });
@@ -116,7 +118,7 @@ export async function createFolder(page, folderName) {
 /**
  * Clear all bookmarks
  * @param {import('puppeteer').Page} page
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function clearAllBookmarks(page) {
   await page.goto('https://x.com/i/bookmarks', { waitUntil: 'networkidle2' });
