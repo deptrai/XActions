@@ -2,24 +2,34 @@
 /**
  * XActions Workflow Actions
  * Wraps existing scrapers and automation functions as workflow steps
- * 
+ *
  * Each action follows a standard interface:
  *   execute(params, context) → result
- * 
+ *
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @license MIT
  */
 
 import scrapers from '../scrapers/index.js';
 
+/**
+ * @typedef {import('../types/xactions.js').WorkflowAction} WorkflowAction
+ * @typedef {import('../types/xactions.js').WorkflowContext} WorkflowContext
+ * @typedef {import('../types/xactions.js').WorkflowStep} WorkflowStep
+ */
+
 // ============================================================================
 // Browser Pool (shared across action executions)
 // ============================================================================
 
+/** @type {import('puppeteer').Browser | null} */
 let _browser = null;
 let _browserUseCount = 0;
 const MAX_BROWSER_USES = 50; // Recycle browser after N uses
 
+/**
+ * @returns {Promise<import('puppeteer').Browser>}
+ */
 async function getBrowser() {
   if (!_browser || _browserUseCount >= MAX_BROWSER_USES) {
     if (_browser) {
@@ -32,6 +42,10 @@ async function getBrowser() {
   return _browser;
 }
 
+/**
+ * @param {string} [authToken]
+ * @returns {Promise<import('puppeteer').Page>}
+ */
 async function getAuthenticatedPage(authToken) {
   const browser = await getBrowser();
   const page = await scrapers.createPage(browser);
@@ -50,13 +64,82 @@ export async function closeBrowser() {
 }
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Resolve a dot-notated path on an object.
+ *
+ * @param {Record<string, unknown>} item
+ * @param {string} field
+ * @returns {unknown}
+ */
+function getValueByPath(item, field) {
+  const parts = field.split('.');
+  let current = /** @type {Record<string, unknown> | unknown} */ (item);
+  for (const part of parts) {
+    if (current === undefined || current === null) return undefined;
+    if (typeof current !== 'object') return undefined;
+    current = /** @type {Record<string, unknown>} */ (current)[part];
+  }
+  return current;
+}
+
+/**
+ * Resolve a {{variable}} or {{variable.path}} reference from the context.
+ *
+ * @param {string} path
+ * @param {WorkflowContext} context
+ * @param {string} [defaultValue]
+ * @returns {unknown}
+ */
+function resolveTemplateValue(path, context, defaultValue = `{{${path}}}`) {
+  const parts = path.trim().split('.');
+  let value = /** @type {Record<string, unknown> | unknown} */ (context);
+  for (const part of parts) {
+    if (value === undefined || value === null) return defaultValue;
+    if (typeof value !== 'object') return defaultValue;
+    value = /** @type {Record<string, unknown>} */ (value)[part];
+  }
+  if (typeof value === 'object' && value !== null) return JSON.stringify(value);
+  return value ?? defaultValue;
+}
+
+/**
+ * Extract a chat completion content string from an OpenRouter-style response.
+ *
+ * @param {unknown} response
+ * @param {string} [fallback]
+ * @returns {string}
+ */
+function extractContent(response, fallback = '') {
+  const json = /** @type {Record<string, unknown>} */ (response);
+  const choices = /** @type {Record<string, unknown>[]} */ (json.choices ?? []);
+  const first = /** @type {Record<string, unknown>} */ (choices[0] ?? {});
+  const message = /** @type {Record<string, unknown>} */ (first.message ?? {});
+  return String(message.content ?? fallback);
+}
+
+/**
+ * @param {Record<string, unknown>} item
+ * @returns {string}
+ */
+function getUsername(item) {
+  return String(item.username ?? '');
+}
+
+// ============================================================================
 // Action Registry
 // ============================================================================
 
+/** @type {Record<string, WorkflowAction>} */
 const actions = {};
 
 /**
  * Register a workflow action
+ *
+ * @param {string} name
+ * @param {WorkflowAction} definition
  */
 export function registerAction(name, definition) {
   actions[name] = definition;
@@ -64,6 +147,9 @@ export function registerAction(name, definition) {
 
 /**
  * Get a registered action by name
+ *
+ * @param {string} name
+ * @returns {WorkflowAction | null}
  */
 export function getAction(name) {
   return actions[name] || null;
@@ -71,6 +157,8 @@ export function getAction(name) {
 
 /**
  * Get all registered actions with metadata
+ *
+ * @returns {Record<string, unknown>[]}
  */
 export function listActions() {
   return Object.entries(actions).map(([name, def]) => ({
@@ -91,8 +179,8 @@ registerAction('scrapeProfile', {
   params: {
     target: { type: 'string', required: true, description: 'Username (with or without @)' },
   },
-  async execute(params, context) {
-    const username = params.target.replace(/^@/, '');
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const username = String(params.target ?? '').replace(/^@/, '');
     const page = await getAuthenticatedPage(context.authToken);
     try {
       const profile = await scrapers.scrapeProfile(page, username);
@@ -110,11 +198,12 @@ registerAction('scrapeFollowers', {
     target: { type: 'string', required: true, description: 'Username' },
     limit: { type: 'number', default: 100, description: 'Max followers to scrape' },
   },
-  async execute(params, context) {
-    const username = params.target.replace(/^@/, '');
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const username = String(params.target ?? '').replace(/^@/, '');
+    const limit = Number(params.limit ?? 100);
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      return await scrapers.scrapeFollowers(page, username, { limit: params.limit || 100 });
+      return await scrapers.scrapeFollowers(page, username, { limit });
     } finally {
       await page.close();
     }
@@ -128,11 +217,12 @@ registerAction('scrapeFollowing', {
     target: { type: 'string', required: true, description: 'Username' },
     limit: { type: 'number', default: 100, description: 'Max following to scrape' },
   },
-  async execute(params, context) {
-    const username = params.target.replace(/^@/, '');
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const username = String(params.target ?? '').replace(/^@/, '');
+    const limit = Number(params.limit ?? 100);
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      return await scrapers.scrapeFollowing(page, username, { limit: params.limit || 100 });
+      return await scrapers.scrapeFollowing(page, username, { limit });
     } finally {
       await page.close();
     }
@@ -146,11 +236,12 @@ registerAction('scrapeTweets', {
     target: { type: 'string', required: true, description: 'Username' },
     limit: { type: 'number', default: 20, description: 'Max tweets to scrape' },
   },
-  async execute(params, context) {
-    const username = params.target.replace(/^@/, '');
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const username = String(params.target ?? '').replace(/^@/, '');
+    const limit = Number(params.limit ?? 20);
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      return await scrapers.scrapeTweets(page, username, { limit: params.limit || 20 });
+      return await scrapers.scrapeTweets(page, username, { limit });
     } finally {
       await page.close();
     }
@@ -164,10 +255,12 @@ registerAction('searchTweets', {
     query: { type: 'string', required: true, description: 'Search query' },
     limit: { type: 'number', default: 20, description: 'Max results' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const query = String(params.query ?? '');
+    const limit = Number(params.limit ?? 20);
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      return await scrapers.searchTweets(page, params.query, { limit: params.limit || 20 });
+      return await scrapers.searchTweets(page, query, { limit });
     } finally {
       await page.close();
     }
@@ -181,11 +274,12 @@ registerAction('scrapeHashtag', {
     hashtag: { type: 'string', required: true, description: 'Hashtag (with or without #)' },
     limit: { type: 'number', default: 20, description: 'Max results' },
   },
-  async execute(params, context) {
-    const hashtag = params.hashtag.replace(/^#/, '');
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const hashtag = String(params.hashtag ?? '').replace(/^#/, '');
+    const limit = Number(params.limit ?? 20);
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      return await scrapers.scrapeHashtag(page, hashtag, { limit: params.limit || 20 });
+      return await scrapers.scrapeHashtag(page, hashtag, { limit });
     } finally {
       await page.close();
     }
@@ -196,7 +290,7 @@ registerAction('scrapeTrending', {
   description: 'Scrape trending topics from Twitter/X',
   category: 'scraper',
   params: {},
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
     const page = await getAuthenticatedPage(context.authToken);
     try {
       return await scrapers.scrapeTrending(page);
@@ -216,16 +310,16 @@ registerAction('follow', {
   params: {
     target: { type: 'string', required: true, description: 'Username to follow (with or without @)' },
   },
-  async execute(params, context) {
-    const username = params.target.replace(/^@/, '');
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const username = String(params.target ?? '').replace(/^@/, '');
     const page = await getAuthenticatedPage(context.authToken);
     try {
       await page.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
-      await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
       const followBtn = await page.$('[data-testid="placementTracking"] [role="button"]:not([data-testid$="-unfollow"])');
       if (followBtn) {
         await followBtn.click();
-        await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
         return { success: true, message: `Followed @${username}` };
       }
       return { success: false, message: `Could not follow @${username} (already following or button not found)` };
@@ -241,19 +335,19 @@ registerAction('unfollow', {
   params: {
     target: { type: 'string', required: true, description: 'Username to unfollow (with or without @)' },
   },
-  async execute(params, context) {
-    const username = params.target.replace(/^@/, '');
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const username = String(params.target ?? '').replace(/^@/, '');
     const page = await getAuthenticatedPage(context.authToken);
     try {
       await page.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
-      await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
       const unfollowBtn = await page.$('[data-testid$="-unfollow"]');
       if (unfollowBtn) {
         await unfollowBtn.click();
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(resolve => setTimeout(resolve, 500));
         const confirmBtn = await page.$('[data-testid="confirmationSheetConfirm"]');
         if (confirmBtn) await confirmBtn.click();
-        await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
         return { success: true, message: `Unfollowed @${username}` };
       }
       return { success: false, message: `Could not unfollow @${username} (not following or button not found)` };
@@ -269,19 +363,20 @@ registerAction('postTweet', {
   params: {
     text: { type: 'string', required: true, description: 'Tweet text (supports {{variable}} template syntax)' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const text = String(params.text ?? '');
     const page = await getAuthenticatedPage(context.authToken);
     try {
       await page.goto('https://x.com/compose/tweet', { waitUntil: 'networkidle2' });
-      await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
       const textbox = await page.$('[data-testid="tweetTextarea_0"]');
       if (textbox) {
-        await textbox.type(params.text, { delay: 50 });
-        await new Promise(r => setTimeout(r, 500));
+        await textbox.type(text, { delay: 50 });
+        await new Promise(resolve => setTimeout(resolve, 500));
         const tweetBtn = await page.$('[data-testid="tweetButton"]');
         if (tweetBtn) {
           await tweetBtn.click();
-          await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
           return { success: true, message: 'Tweet posted successfully' };
         }
       }
@@ -298,15 +393,16 @@ registerAction('like', {
   params: {
     url: { type: 'string', required: true, description: 'URL of the tweet to like' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const url = String(params.url ?? '');
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      await page.goto(params.url, { waitUntil: 'networkidle2' });
-      await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+      await page.goto(url, { waitUntil: 'networkidle2' });
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
       const likeBtn = await page.$('[data-testid="like"]');
       if (likeBtn) {
         await likeBtn.click();
-        await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
         return { success: true, message: 'Tweet liked' };
       }
       return { success: false, message: 'Could not like tweet (already liked or button not found)' };
@@ -322,18 +418,19 @@ registerAction('retweet', {
   params: {
     url: { type: 'string', required: true, description: 'URL of the tweet to retweet' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const url = String(params.url ?? '');
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      await page.goto(params.url, { waitUntil: 'networkidle2' });
-      await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+      await page.goto(url, { waitUntil: 'networkidle2' });
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
       const retweetBtn = await page.$('[data-testid="retweet"]');
       if (retweetBtn) {
         await retweetBtn.click();
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(resolve => setTimeout(resolve, 500));
         const confirmBtn = await page.$('[data-testid="retweetConfirm"]');
         if (confirmBtn) await confirmBtn.click();
-        await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
         return { success: true, message: 'Retweeted successfully' };
       }
       return { success: false, message: 'Could not retweet (already retweeted or button not found)' };
@@ -350,19 +447,21 @@ registerAction('reply', {
     url: { type: 'string', required: true, description: 'URL of the tweet to reply to' },
     text: { type: 'string', required: true, description: 'Reply text' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const url = String(params.url ?? '');
+    const text = String(params.text ?? '');
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      await page.goto(params.url, { waitUntil: 'networkidle2' });
-      await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+      await page.goto(url, { waitUntil: 'networkidle2' });
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
       const replyBox = await page.$('[data-testid="tweetTextarea_0"]');
       if (replyBox) {
-        await replyBox.type(params.text, { delay: 50 });
-        await new Promise(r => setTimeout(r, 500));
+        await replyBox.type(text, { delay: 50 });
+        await new Promise(resolve => setTimeout(resolve, 500));
         const replyBtn = await page.$('[data-testid="tweetButtonInline"]');
         if (replyBtn) {
           await replyBtn.click();
-          await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
           return { success: true, message: 'Reply posted' };
         }
       }
@@ -380,17 +479,21 @@ registerAction('getNonFollowers', {
     target: { type: 'string', required: true, description: 'Your username' },
     limit: { type: 'number', default: 200, description: 'Max users to check' },
   },
-  async execute(params, context) {
-    const username = params.target.replace(/^@/, '');
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const username = String(params.target ?? '').replace(/^@/, '');
+    const limit = Number(params.limit ?? 200);
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      const followers = await scrapers.scrapeFollowers(page, username, { limit: params.limit || 200 });
-      const following = await scrapers.scrapeFollowing(page, username, { limit: params.limit || 200 });
-      const followerSet = new Set(followers.map(f => f.username?.toLowerCase()).filter(Boolean));
-      const nonFollowers = following.filter(f => !followerSet.has(f.username?.toLowerCase()));
+      const followers = /** @type {Record<string, unknown>[]} */ (await scrapers.scrapeFollowers(page, username, { limit }));
+      const following = /** @type {Record<string, unknown>[]} */ (await scrapers.scrapeFollowing(page, username, { limit }));
+      const followerSet = new Set(followers.map(f => getUsername(f).toLowerCase()).filter(Boolean));
+      const nonFollowers = following.filter(f => {
+        const u = getUsername(f);
+        return u && !followerSet.has(u.toLowerCase());
+      });
       return {
         username,
-        nonFollowers: nonFollowers.map(f => f.username),
+        nonFollowers: nonFollowers.map(f => getUsername(f)),
         count: nonFollowers.length,
         totalFollowers: followers.length,
         totalFollowing: following.length,
@@ -411,10 +514,11 @@ registerAction('scrapeThread', {
   params: {
     url: { type: 'string', required: true, description: 'URL of the tweet thread' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const url = String(params.url ?? '');
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      return await scrapers.scrapeThread(page, params.url);
+      return await scrapers.scrapeThread(page, url);
     } finally {
       await page.close();
     }
@@ -428,11 +532,12 @@ registerAction('scrapeMedia', {
     target: { type: 'string', required: true, description: 'Username' },
     limit: { type: 'number', default: 20, description: 'Max media items to scrape' },
   },
-  async execute(params, context) {
-    const username = params.target.replace(/^@/, '');
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const username = String(params.target ?? '').replace(/^@/, '');
+    const limit = Number(params.limit ?? 20);
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      return await scrapers.scrapeMedia(page, username, { limit: params.limit || 20 });
+      return await scrapers.scrapeMedia(page, username, { limit });
     } finally {
       await page.close();
     }
@@ -445,10 +550,11 @@ registerAction('scrapeBookmarks', {
   params: {
     limit: { type: 'number', default: 50, description: 'Max bookmarks to scrape' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const limit = Number(params.limit ?? 50);
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      return await scrapers.scrapeBookmarks(page, { limit: params.limit || 50 });
+      return await scrapers.scrapeBookmarks(page, { limit });
     } finally {
       await page.close();
     }
@@ -461,10 +567,11 @@ registerAction('scrapeNotifications', {
   params: {
     limit: { type: 'number', default: 30, description: 'Max notifications to scrape' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const limit = Number(params.limit ?? 30);
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      return await scrapers.scrapeNotifications(page, { limit: params.limit || 30 });
+      return await scrapers.scrapeNotifications(page, { limit });
     } finally {
       await page.close();
     }
@@ -478,10 +585,12 @@ registerAction('scrapeListMembers', {
     url: { type: 'string', required: true, description: 'URL of the Twitter list' },
     limit: { type: 'number', default: 100, description: 'Max members to scrape' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const url = String(params.url ?? '');
+    const limit = Number(params.limit ?? 100);
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      return await scrapers.scrapeListMembers(page, params.url, { limit: params.limit || 100 });
+      return await scrapers.scrapeListMembers(page, url, { limit });
     } finally {
       await page.close();
     }
@@ -495,10 +604,12 @@ registerAction('scrapeLikes', {
     url: { type: 'string', required: true, description: 'URL of the tweet' },
     limit: { type: 'number', default: 50, description: 'Max likers to scrape' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const url = String(params.url ?? '');
+    const limit = Number(params.limit ?? 50);
     const page = await getAuthenticatedPage(context.authToken);
     try {
-      return await scrapers.scrapeLikes(page, params.url, { limit: params.limit || 50 });
+      return await scrapers.scrapeLikes(page, url, { limit });
     } finally {
       await page.close();
     }
@@ -518,13 +629,15 @@ registerAction('filter', {
     operator: { type: 'string', required: true, description: 'Comparison operator' },
     value: { type: 'any', required: true, description: 'Value to compare against' },
   },
-  async execute(params, context) {
-    const data = context[params.input];
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const input = String(params.input ?? '');
+    const data = context[input];
     if (!Array.isArray(data)) {
-      throw new Error(`filter: "${params.input}" is not an array`);
+      throw new Error(`filter: "${input}" is not an array`);
     }
+    const items = /** @type {Record<string, unknown>[]} */ (data);
 
-    const ops = {
+    const ops = /** @type {Record<string, (a: unknown, b: unknown) => boolean>} */ ({
       '>': (a, b) => Number(a) > Number(b),
       '<': (a, b) => Number(a) < Number(b),
       '>=': (a, b) => Number(a) >= Number(b),
@@ -532,15 +645,14 @@ registerAction('filter', {
       '==': (a, b) => String(a) === String(b),
       '!=': (a, b) => String(a) !== String(b),
       'contains': (a, b) => String(a).toLowerCase().includes(String(b).toLowerCase()),
-    };
-
-    const op = ops[params.operator];
-    if (!op) throw new Error(`filter: unknown operator "${params.operator}"`);
-
-    return data.filter(item => {
-      const val = params.field.split('.').reduce((o, k) => o?.[k], item);
-      return op(val, params.value);
     });
+
+    const operator = String(params.operator ?? '');
+    const field = String(params.field ?? '');
+    const op = ops[operator];
+    if (!op) throw new Error(`filter: unknown operator "${operator}"`);
+
+    return items.filter(item => op(getValueByPath(item, field), params.value));
   },
 });
 
@@ -550,8 +662,9 @@ registerAction('count', {
   params: {
     input: { type: 'string', required: true, description: 'Context variable name (array)' },
   },
-  async execute(params, context) {
-    const data = context[params.input];
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const input = String(params.input ?? '');
+    const data = context[input];
     return Array.isArray(data) ? data.length : 0;
   },
 });
@@ -563,14 +676,17 @@ registerAction('pick', {
     input: { type: 'string', required: true, description: 'Context variable name (array)' },
     fields: { type: 'array', required: true, description: 'Fields to pick' },
   },
-  async execute(params, context) {
-    const data = context[params.input];
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const input = String(params.input ?? '');
+    const data = context[input];
     if (!Array.isArray(data)) {
-      throw new Error(`pick: "${params.input}" is not an array`);
+      throw new Error(`pick: "${input}" is not an array`);
     }
-    return data.map(item => {
-      const picked = {};
-      for (const field of params.fields) {
+    const items = /** @type {Record<string, unknown>[]} */ (data);
+    const fields = /** @type {string[]} */ (params.fields ?? []);
+    return items.map(item => {
+      const picked = /** @type {Record<string, unknown>} */ ({});
+      for (const field of fields) {
         picked[field] = item[field];
       }
       return picked;
@@ -586,12 +702,16 @@ registerAction('slice', {
     start: { type: 'number', default: 0, description: 'Start index' },
     end: { type: 'number', description: 'End index (exclusive)' },
   },
-  async execute(params, context) {
-    const data = context[params.input];
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const input = String(params.input ?? '');
+    const data = context[input];
     if (!Array.isArray(data)) {
-      throw new Error(`slice: "${params.input}" is not an array`);
+      throw new Error(`slice: "${input}" is not an array`);
     }
-    return data.slice(params.start || 0, params.end);
+    const items = /** @type {unknown[]} */ (data);
+    const start = params.start !== undefined ? Number(params.start) : 0;
+    const end = params.end !== undefined ? Number(params.end) : undefined;
+    return items.slice(start, end);
   },
 });
 
@@ -608,11 +728,15 @@ registerAction('summarize', {
     model: { type: 'string', default: 'meta-llama/llama-3.1-8b-instruct:free', description: 'Model ID' },
     prompt: { type: 'string', default: 'Summarize the following text concisely:', description: 'System prompt' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const input = String(params.input ?? '');
     // Resolve input from context if it's a variable reference
-    let text = context[params.input] ?? params.input;
-    if (typeof text === 'object') text = JSON.stringify(text, null, 2);
-    
+    let text = context[input] ?? input;
+    if (typeof text === 'object' && text !== null) text = JSON.stringify(text, null, 2);
+
+    const prompt = String(params.prompt ?? 'Summarize the following text concisely:');
+    const model = String(params.model ?? 'meta-llama/llama-3.1-8b-instruct:free');
+
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
       // Fallback: simple extractive summary (no LLM)
@@ -629,17 +753,17 @@ registerAction('summarize', {
         'X-Title': 'XActions Workflow',
       },
       body: JSON.stringify({
-        model: params.model || 'meta-llama/llama-3.1-8b-instruct:free',
+        model,
         messages: [
-          { role: 'system', content: params.prompt || 'Summarize the following text concisely:' },
+          { role: 'system', content: prompt },
           { role: 'user', content: String(text).slice(0, 4000) },
         ],
         max_tokens: 500,
       }),
     });
 
-    const result = await response.json();
-    return result.choices?.[0]?.message?.content || 'Summary unavailable';
+    const result = /** @type {Record<string, unknown>} */ (await response.json());
+    return extractContent(result, 'Summary unavailable');
   },
 });
 
@@ -651,18 +775,21 @@ registerAction('generateText', {
     system: { type: 'string', default: 'You are a helpful assistant.', description: 'System prompt' },
     model: { type: 'string', default: 'meta-llama/llama-3.1-8b-instruct:free', description: 'Model ID' },
   },
-  async execute(params, context) {
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      return `[AI generation unavailable — set OPENROUTER_API_KEY] Prompt was: ${params.prompt}`;
+      return `[AI generation unavailable — set OPENROUTER_API_KEY] Prompt was: ${String(params.prompt ?? '')}`;
     }
 
     // Template replacement in prompt
-    let prompt = params.prompt;
+    let prompt = String(params.prompt ?? '');
     for (const [key, value] of Object.entries(context)) {
-      const strVal = typeof value === 'string' ? value : JSON.stringify(value);
+      const strVal = typeof value === 'string' ? value : JSON.stringify(value) ?? '';
       prompt = prompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), strVal);
     }
+
+    const model = String(params.model ?? 'meta-llama/llama-3.1-8b-instruct:free');
+    const system = String(params.system ?? 'You are a helpful assistant.');
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -673,17 +800,17 @@ registerAction('generateText', {
         'X-Title': 'XActions Workflow',
       },
       body: JSON.stringify({
-        model: params.model || 'meta-llama/llama-3.1-8b-instruct:free',
+        model,
         messages: [
-          { role: 'system', content: params.system || 'You are a helpful assistant.' },
+          { role: 'system', content: system },
           { role: 'user', content: prompt.slice(0, 4000) },
         ],
         max_tokens: 500,
       }),
     });
 
-    const result = await response.json();
-    return result.choices?.[0]?.message?.content || '';
+    const result = /** @type {Record<string, unknown>} */ (await response.json());
+    return extractContent(result);
   },
 });
 
@@ -698,9 +825,10 @@ registerAction('log', {
     message: { type: 'string', description: 'Message to log' },
     variable: { type: 'string', description: 'Context variable name to log' },
   },
-  async execute(params, context) {
-    const value = params.variable ? context[params.variable] : params.message;
-    console.log(`📋 [Workflow Log]`, typeof value === 'object' ? JSON.stringify(value, null, 2) : value);
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const variable = String(params.variable ?? '');
+    const value = variable ? context[variable] : params.message;
+    console.log(`📋 [Workflow Log]`, typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : value);
     return value;
   },
 });
@@ -711,8 +839,8 @@ registerAction('delay', {
   params: {
     ms: { type: 'number', required: true, description: 'Milliseconds to wait' },
   },
-  async execute(params) {
-    const ms = Math.min(params.ms || 1000, 300000); // Max 5 minutes
+  async execute(/** @type {Record<string, unknown>} */ params) {
+    const ms = Math.min(Number(params.ms ?? 1000), 300000); // Max 5 minutes
     await new Promise(resolve => setTimeout(resolve, ms));
     return { waited: ms };
   },
@@ -725,10 +853,12 @@ registerAction('exportJSON', {
     input: { type: 'string', required: true, description: 'Context variable name' },
     filepath: { type: 'string', required: true, description: 'Output file path' },
   },
-  async execute(params, context) {
-    const data = context[params.input];
-    await scrapers.exportToJSON(data, params.filepath);
-    return { exported: params.filepath, records: Array.isArray(data) ? data.length : 1 };
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const input = String(params.input ?? '');
+    const filepath = String(params.filepath ?? '');
+    const data = context[input];
+    await scrapers.exportToJSON(data, filepath);
+    return { exported: filepath, records: Array.isArray(data) ? data.length : 1 };
   },
 });
 
@@ -739,10 +869,15 @@ registerAction('exportCSV', {
     input: { type: 'string', required: true, description: 'Context variable name' },
     filepath: { type: 'string', required: true, description: 'Output file path' },
   },
-  async execute(params, context) {
-    const data = context[params.input];
-    await scrapers.exportToCSV(data, params.filepath);
-    return { exported: params.filepath, records: Array.isArray(data) ? data.length : 1 };
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    const input = String(params.input ?? '');
+    const filepath = String(params.filepath ?? '');
+    const data = context[input];
+    if (!Array.isArray(data)) {
+      throw new Error(`exportCSV: "${input}" is not an array`);
+    }
+    await scrapers.exportToCSV(/** @type {Record<string, unknown>[]} */ (data), filepath);
+    return { exported: filepath, records: data.length };
   },
 });
 
@@ -752,18 +887,11 @@ registerAction('template', {
   params: {
     text: { type: 'string', required: true, description: 'Template text with {{variable}} placeholders' },
   },
-  async execute(params, context) {
-    let text = params.text;
+  async execute(/** @type {Record<string, unknown>} */ params, /** @type {WorkflowContext} */ context) {
+    let text = String(params.text ?? '');
     // Replace {{variable}} and {{variable.field}} patterns
     text = text.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-      const parts = path.trim().split('.');
-      let value = context;
-      for (const part of parts) {
-        if (value === undefined || value === null) return match;
-        value = value[part];
-      }
-      if (typeof value === 'object') return JSON.stringify(value);
-      return String(value ?? match);
+      return String(resolveTemplateValue(String(path), context, match));
     });
     return text;
   },
@@ -775,35 +903,33 @@ registerAction('template', {
 
 /**
  * Execute a workflow action step
- * 
- * @param {object} step - The workflow step definition
- * @param {object} context - The workflow variable context
- * @returns {Promise<any>} - The action result
+ *
+ * @param {WorkflowStep} step - The workflow step definition
+ * @param {WorkflowContext} context - The workflow variable context
+ * @returns {Promise<unknown>} - The action result
  */
 export async function executeAction(step, context) {
   const actionName = step.action;
+
+  if (typeof actionName !== 'string') {
+    throw new Error('Step has no action');
+  }
+
   const action = actions[actionName];
-  
+
   if (!action) {
     throw new Error(`Unknown action: "${actionName}". Available: ${Object.keys(actions).join(', ')}`);
   }
 
   // Resolve template variables in string params
-  const resolvedParams = {};
+  const resolvedParams = /** @type {Record<string, unknown>} */ ({});
   for (const [key, value] of Object.entries(step)) {
     if (key === 'action' || key === 'output' || key === 'condition') continue;
-    
+
     if (typeof value === 'string') {
       // Replace {{variable}} references
       resolvedParams[key] = value.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-        const parts = path.trim().split('.');
-        let resolved = context;
-        for (const part of parts) {
-          if (resolved === undefined || resolved === null) return match;
-          resolved = resolved[part];
-        }
-        if (typeof resolved === 'object') return JSON.stringify(resolved);
-        return String(resolved ?? match);
+        return String(resolveTemplateValue(String(path), context, match));
       });
     } else {
       resolvedParams[key] = value;

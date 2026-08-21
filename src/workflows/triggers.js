@@ -2,18 +2,22 @@
 /**
  * XActions Workflow Triggers
  * Event triggers for starting workflow execution
- * 
+ *
  * Supported trigger types:
  * - schedule/cron: Run on a cron schedule (via Bull queue)
  * - webhook: Run when a webhook is received
  * - manual: Run only when explicitly triggered
  * - event: Run when a specific event occurs (new tweet, follower change)
- * 
+ *
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @license MIT
  */
 
 import { EventEmitter } from 'events';
+
+/**
+ * @typedef {import('../types/xactions.js').WorkflowTrigger} WorkflowTrigger
+ */
 
 // ============================================================================
 // Trigger Manager
@@ -22,14 +26,20 @@ import { EventEmitter } from 'events';
 class TriggerManager extends EventEmitter {
   constructor() {
     super();
+    /** @type {Map<string, Record<string, unknown>>} */
     this._scheduledJobs = new Map(); // workflowId → Bull job reference
+    /** @type {Map<string, string>} */
     this._webhookHandlers = new Map(); // webhookId → workflowId
+    /** @type {Map<string, Record<string, unknown>>} */
     this._eventWatchers = new Map(); // workflowId → watcher config
+    /** @type {import('bull').Queue | null} */
     this._queue = null; // Bull queue reference (set externally)
   }
 
   /**
    * Set the Bull queue to use for scheduled triggers
+   *
+   * @param {import('bull').Queue} queue
    */
   setQueue(queue) {
     this._queue = queue;
@@ -37,8 +47,10 @@ class TriggerManager extends EventEmitter {
 
   /**
    * Register a trigger for a workflow
+   *
    * @param {string} workflowId
-   * @param {object} trigger - { type, cron?, interval?, webhook?, event?, ... }
+   * @param {WorkflowTrigger} trigger - { type, cron?, interval?, webhook?, event?, ... }
+   * @returns {Promise<Record<string, unknown>>}
    */
   async register(workflowId, trigger) {
     if (!trigger || !trigger.type) {
@@ -65,18 +77,22 @@ class TriggerManager extends EventEmitter {
 
   /**
    * Unregister all triggers for a workflow
+   *
+   * @param {string} workflowId
    */
   async unregister(workflowId) {
     // Remove scheduled job
     if (this._scheduledJobs.has(workflowId)) {
-      const jobInfo = this._scheduledJobs.get(workflowId);
-      if (jobInfo.repeatKey && this._queue) {
+      const jobInfo = /** @type {Record<string, unknown>} */ (this._scheduledJobs.get(workflowId));
+      const repeatKey = /** @type {string | undefined} */ (jobInfo?.repeatKey);
+      if (repeatKey && this._queue) {
         try {
-          await this._queue.removeRepeatableByKey(jobInfo.repeatKey);
+          await this._queue.removeRepeatableByKey(repeatKey);
         } catch {}
       }
-      if (jobInfo.intervalId) {
-        clearInterval(jobInfo.intervalId);
+      const intervalId = /** @type {NodeJS.Timeout | undefined} */ (jobInfo?.intervalId);
+      if (intervalId) {
+        clearInterval(intervalId);
       }
       this._scheduledJobs.delete(workflowId);
     }
@@ -94,8 +110,12 @@ class TriggerManager extends EventEmitter {
 
   /**
    * Handle incoming webhook
+   *
+   * @param {string} webhookId
+   * @param {Record<string, unknown>} [payload]
+   * @returns {boolean}
    */
-  handleWebhook(webhookId, payload) {
+  handleWebhook(webhookId, payload = {}) {
     const workflowId = this._webhookHandlers.get(webhookId);
     if (workflowId) {
       this.emit('trigger', {
@@ -111,10 +131,12 @@ class TriggerManager extends EventEmitter {
 
   /**
    * Get all registered triggers
+   *
+   * @returns {Record<string, unknown>[]}
    */
   getRegisteredTriggers() {
-    const triggers = [];
-    
+    const triggers = /** @type {Record<string, unknown>[]} */ ([]);
+
     for (const [workflowId, jobInfo] of this._scheduledJobs) {
       triggers.push({
         workflowId,
@@ -146,6 +168,11 @@ class TriggerManager extends EventEmitter {
   // Private: Schedule (cron)
   // --------------------------------------------------------------------------
 
+  /**
+   * @param {string} workflowId
+   * @param {WorkflowTrigger} trigger
+   * @returns {Promise<Record<string, unknown>>}
+   */
   async _registerSchedule(workflowId, trigger) {
     if (!trigger.cron) {
       throw new Error('Schedule trigger requires a "cron" field');
@@ -165,7 +192,7 @@ class TriggerManager extends EventEmitter {
       this._scheduledJobs.set(workflowId, {
         type: 'schedule',
         config: { cron: trigger.cron },
-        repeatKey: job.opts?.repeat?.key,
+        repeatKey: job.opts.repeat?.key,
       });
     } else {
       // Fallback: use cron-like interval parsing
@@ -184,9 +211,14 @@ class TriggerManager extends EventEmitter {
   // Private: Interval
   // --------------------------------------------------------------------------
 
+  /**
+   * @param {string} workflowId
+   * @param {WorkflowTrigger} trigger
+   * @returns {Promise<Record<string, unknown>>}
+   */
   async _registerInterval(workflowId, trigger) {
     const intervalMs = trigger.interval || 60000;
-    
+
     const intervalId = setInterval(() => {
       this.emit('trigger', {
         workflowId,
@@ -208,6 +240,11 @@ class TriggerManager extends EventEmitter {
   // Private: Webhook
   // --------------------------------------------------------------------------
 
+  /**
+   * @param {string} workflowId
+   * @param {WorkflowTrigger} trigger
+   * @returns {Promise<Record<string, unknown>>}
+   */
   async _registerWebhook(workflowId, trigger) {
     // Generate a unique webhook ID
     const webhookId = trigger.webhookId || `wh-${workflowId}-${Date.now().toString(36)}`;
@@ -225,6 +262,11 @@ class TriggerManager extends EventEmitter {
   // Private: Event
   // --------------------------------------------------------------------------
 
+  /**
+   * @param {string} workflowId
+   * @param {WorkflowTrigger} trigger
+   * @returns {Promise<Record<string, unknown>>}
+   */
   async _registerEvent(workflowId, trigger) {
     if (!trigger.event) {
       throw new Error('Event trigger requires an "event" field');

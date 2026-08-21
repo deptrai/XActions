@@ -2,11 +2,11 @@
 /**
  * XActions Workflow Store
  * Persistence layer for workflow definitions and execution logs
- * 
+ *
  * Supports two backends:
  * - Prisma/PostgreSQL (when DATABASE_URL is set)
  * - JSON files (fallback, stores in ~/.xactions/workflows/)
- * 
+ *
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @license MIT
  */
@@ -17,6 +17,10 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
+
+/**
+ * @typedef {import('../types/xactions.js').WorkflowStore} WorkflowStore
+ */
 
 // ============================================================================
 // Config
@@ -43,6 +47,10 @@ class FileStore {
 
   // -- Workflows --
 
+  /**
+   * @param {Record<string, unknown>} workflow
+   * @returns {Promise<Record<string, unknown>>}
+   */
   async saveWorkflow(workflow) {
     await this._init();
     if (!workflow.id) {
@@ -52,50 +60,65 @@ class FileStore {
     if (!workflow.createdAt) {
       workflow.createdAt = workflow.updatedAt;
     }
-    const filePath = path.join(WORKFLOWS_DIR, `${workflow.id}.json`);
+    const filePath = path.join(WORKFLOWS_DIR, `${String(workflow.id)}.json`);
     await fs.writeFile(filePath, JSON.stringify(workflow, null, 2));
     return workflow;
   }
 
+  /**
+   * @param {string} id
+   * @returns {Promise<Record<string, unknown> | null>}
+   */
   async getWorkflow(id) {
     await this._init();
     try {
       const filePath = path.join(WORKFLOWS_DIR, `${id}.json`);
       const data = await fs.readFile(filePath, 'utf-8');
-      return JSON.parse(data);
+      return /** @type {Record<string, unknown>} */ (JSON.parse(data));
     } catch {
       return null;
     }
   }
 
+  /**
+   * @returns {Promise<Record<string, unknown>[]>}
+   */
   async listWorkflows() {
     await this._init();
     try {
       const files = await fs.readdir(WORKFLOWS_DIR);
-      const workflows = [];
+      const workflows = /** @type {Record<string, unknown>[]} */ ([]);
       for (const file of files) {
         if (!file.endsWith('.json')) continue;
         try {
           const data = await fs.readFile(path.join(WORKFLOWS_DIR, file), 'utf-8');
-          const wf = JSON.parse(data);
+          const wf = /** @type {Record<string, unknown>} */ (JSON.parse(data));
           workflows.push({
             id: wf.id,
             name: wf.name,
             description: wf.description,
             trigger: wf.trigger,
             enabled: wf.enabled !== false,
-            stepsCount: wf.steps?.length || 0,
+            stepsCount: Array.isArray(wf.steps) ? wf.steps.length : 0,
             createdAt: wf.createdAt,
             updatedAt: wf.updatedAt,
           });
         } catch {}
       }
-      return workflows.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+      return workflows.sort((a, b) => {
+        const aUpdated = String(a.updatedAt || '');
+        const bUpdated = String(b.updatedAt || '');
+        return bUpdated.localeCompare(aUpdated);
+      });
     } catch {
       return [];
     }
   }
 
+  /**
+   * @param {string} id
+   * @returns {Promise<boolean>}
+   */
   async deleteWorkflow(id) {
     await this._init();
     try {
@@ -106,52 +129,74 @@ class FileStore {
     }
   }
 
+  /**
+   * @param {string} name
+   * @returns {Promise<Record<string, unknown> | null>}
+   */
   async findWorkflowByName(name) {
     const workflows = await this.listWorkflows();
-    const match = workflows.find(w => w.name.toLowerCase() === name.toLowerCase());
+    const target = name.toLowerCase();
+    const match = workflows.find(w => {
+      const wName = String(w.name ?? '').toLowerCase();
+      return wName === target;
+    });
     if (match) {
-      return this.getWorkflow(match.id);
+      return this.getWorkflow(String(match.id));
     }
     return null;
   }
 
   // -- Execution Runs --
 
+  /**
+   * @param {Record<string, unknown>} run
+   * @returns {Promise<Record<string, unknown>>}
+   */
   async saveRun(run) {
     await this._init();
     if (!run.id) {
       run.id = crypto.randomUUID();
     }
-    const dir = path.join(RUNS_DIR, run.workflowId);
+    const dir = path.join(RUNS_DIR, String(run.workflowId));
     await fs.mkdir(dir, { recursive: true });
-    const filePath = path.join(dir, `${run.id}.json`);
+    const filePath = path.join(dir, `${String(run.id)}.json`);
     await fs.writeFile(filePath, JSON.stringify(run, null, 2));
     return run;
   }
 
+  /**
+   * @param {string} workflowId
+   * @param {string} runId
+   * @returns {Promise<Record<string, unknown> | null>}
+   */
   async getRun(workflowId, runId) {
     await this._init();
     try {
       const filePath = path.join(RUNS_DIR, workflowId, `${runId}.json`);
       const data = await fs.readFile(filePath, 'utf-8');
-      return JSON.parse(data);
+      return /** @type {Record<string, unknown>} */ (JSON.parse(data));
     } catch {
       return null;
     }
   }
 
+  /**
+   * @param {string} workflowId
+   * @param {number} [limit]
+   * @returns {Promise<Record<string, unknown>[]>}
+   */
   async listRuns(workflowId, limit = 20) {
     await this._init();
     try {
       const dir = path.join(RUNS_DIR, workflowId);
       const files = await fs.readdir(dir);
-      const runs = [];
+      const runs = /** @type {Record<string, unknown>[]} */ ([]);
       for (const file of files.reverse()) {
         if (!file.endsWith('.json')) continue;
         if (runs.length >= limit) break;
         try {
           const data = await fs.readFile(path.join(dir, file), 'utf-8');
-          const run = JSON.parse(data);
+          const run = /** @type {Record<string, unknown>} */ (JSON.parse(data));
           runs.push({
             id: run.id,
             workflowId: run.workflowId,
@@ -171,6 +216,10 @@ class FileStore {
     }
   }
 
+  /**
+   * @param {Record<string, unknown>} run
+   * @returns {Promise<Record<string, unknown>>}
+   */
   async updateRun(run) {
     return this.saveRun(run);
   }
@@ -181,38 +230,43 @@ class FileStore {
 // ============================================================================
 
 class PrismaStore {
-  constructor(prisma) {
+  constructor() {
+    /** @type {import('@prisma/client').PrismaClient} */
     this._prisma = prisma;
   }
 
+  /**
+   * @param {Record<string, unknown>} workflow
+   * @returns {Promise<Record<string, unknown>>}
+   */
   async saveWorkflow(workflow) {
     if (!workflow.id) {
       workflow.id = crypto.randomUUID();
     }
-    
+    const id = String(workflow.id);
+    const userId = String(workflow.userId || 'system');
+    const status = workflow.enabled !== false ? 'active' : 'inactive';
+
     // Use the Operation model with type 'workflow_definition'
     const existing = await this._prisma.operation.findUnique({
-      where: { id: workflow.id },
+      where: { id },
     });
+
+    const data = {
+      type: 'workflow_definition',
+      status,
+      config: JSON.stringify(workflow),
+      userId,
+    };
 
     if (existing) {
       await this._prisma.operation.update({
-        where: { id: workflow.id },
-        data: {
-          config: JSON.stringify(workflow),
-          updatedAt: new Date(),
-        },
+        where: { id },
+        data: { ...data, updatedAt: new Date() },
       });
     } else {
       await this._prisma.operation.create({
-        data: {
-          id: workflow.id,
-          type: 'workflow_definition',
-          status: workflow.enabled !== false ? 'active' : 'inactive',
-          config: JSON.stringify(workflow),
-          userId: workflow.userId || 'system',
-          createdAt: new Date(),
-        },
+        data: { id, ...data, createdAt: new Date() },
       });
     }
 
@@ -220,13 +274,17 @@ class PrismaStore {
     return workflow;
   }
 
+  /**
+   * @param {string} id
+   * @returns {Promise<Record<string, unknown> | null>}
+   */
   async getWorkflow(id) {
     try {
       const op = await this._prisma.operation.findUnique({
         where: { id },
       });
-      if (op && op.type === 'workflow_definition') {
-        return JSON.parse(op.config);
+      if (op && op.type === 'workflow_definition' && op.config) {
+        return /** @type {Record<string, unknown>} */ (JSON.parse(op.config));
       }
       return null;
     } catch {
@@ -234,6 +292,9 @@ class PrismaStore {
     }
   }
 
+  /**
+   * @returns {Promise<Record<string, unknown>[]>}
+   */
   async listWorkflows() {
     try {
       const ops = await this._prisma.operation.findMany({
@@ -241,16 +302,16 @@ class PrismaStore {
         orderBy: { updatedAt: 'desc' },
       });
       return ops.map(op => {
-        const wf = JSON.parse(op.config);
+        const wf = /** @type {Record<string, unknown>} */ (op.config ? JSON.parse(op.config) : {});
         return {
           id: wf.id,
           name: wf.name,
           description: wf.description,
           trigger: wf.trigger,
           enabled: wf.enabled !== false,
-          stepsCount: wf.steps?.length || 0,
-          createdAt: op.createdAt?.toISOString(),
-          updatedAt: op.updatedAt?.toISOString(),
+          stepsCount: Array.isArray(wf.steps) ? wf.steps.length : 0,
+          createdAt: op.createdAt.toISOString(),
+          updatedAt: op.updatedAt.toISOString(),
         };
       });
     } catch {
@@ -258,6 +319,10 @@ class PrismaStore {
     }
   }
 
+  /**
+   * @param {string} id
+   * @returns {Promise<boolean>}
+   */
   async deleteWorkflow(id) {
     try {
       await this._prisma.operation.delete({ where: { id } });
@@ -267,54 +332,77 @@ class PrismaStore {
     }
   }
 
+  /**
+   * @param {string} name
+   * @returns {Promise<Record<string, unknown> | null>}
+   */
   async findWorkflowByName(name) {
     const workflows = await this.listWorkflows();
-    const match = workflows.find(w => w.name?.toLowerCase() === name.toLowerCase());
-    if (match) return this.getWorkflow(match.id);
+    const target = name.toLowerCase();
+    const match = workflows.find(w => {
+      const wName = String(w.name ?? '').toLowerCase();
+      return wName === target;
+    });
+    if (match) return this.getWorkflow(String(match.id));
     return null;
   }
 
+  /**
+   * @param {Record<string, unknown>} run
+   * @returns {Promise<Record<string, unknown>>}
+   */
   async saveRun(run) {
     if (!run.id) {
       run.id = crypto.randomUUID();
     }
 
+    const id = String(run.id);
+    const userId = String(run.userId || 'system');
+    const status = String(run.status);
+    const startedAt = typeof run.startedAt === 'string' ? new Date(run.startedAt) : null;
+    const completedAt = typeof run.completedAt === 'string' ? new Date(run.completedAt) : null;
+
     const existing = await this._prisma.operation.findUnique({
-      where: { id: run.id },
+      where: { id },
     });
 
     const data = {
       type: 'workflow_run',
-      status: run.status,
+      status,
       config: JSON.stringify(run),
       result: run.result ? JSON.stringify(run.result) : null,
-      error: run.error || null,
-      userId: run.userId || 'system',
-      startedAt: run.startedAt ? new Date(run.startedAt) : null,
-      completedAt: run.completedAt ? new Date(run.completedAt) : null,
+      error: typeof run.error === 'string' ? run.error : null,
+      userId,
+      startedAt,
+      completedAt,
     };
 
     if (existing) {
       await this._prisma.operation.update({
-        where: { id: run.id },
+        where: { id },
         data,
       });
     } else {
       await this._prisma.operation.create({
-        data: { id: run.id, ...data, createdAt: new Date() },
+        data: { id, ...data, createdAt: new Date() },
       });
     }
 
     return run;
   }
 
+  /**
+   * @param {string} workflowId
+   * @param {string} runId
+   * @returns {Promise<Record<string, unknown> | null>}
+   */
   async getRun(workflowId, runId) {
     try {
       const op = await this._prisma.operation.findUnique({
         where: { id: runId },
       });
-      if (op && op.type === 'workflow_run') {
-        return JSON.parse(op.config);
+      if (op && op.type === 'workflow_run' && op.config) {
+        return /** @type {Record<string, unknown>} */ (JSON.parse(op.config));
       }
       return null;
     } catch {
@@ -322,6 +410,11 @@ class PrismaStore {
     }
   }
 
+  /**
+   * @param {string} workflowId
+   * @param {number} [limit]
+   * @returns {Promise<Record<string, unknown>[]>}
+   */
   async listRuns(workflowId, limit = 20) {
     try {
       const ops = await this._prisma.operation.findMany({
@@ -333,7 +426,7 @@ class PrismaStore {
         take: limit,
       });
       return ops.map(op => {
-        const run = JSON.parse(op.config);
+        const run = /** @type {Record<string, unknown>} */ (op.config ? JSON.parse(op.config) : {});
         return {
           id: run.id,
           workflowId: run.workflowId,
@@ -351,6 +444,10 @@ class PrismaStore {
     }
   }
 
+  /**
+   * @param {Record<string, unknown>} run
+   * @returns {Promise<Record<string, unknown>>}
+   */
   async updateRun(run) {
     return this.saveRun(run);
   }
@@ -360,18 +457,21 @@ class PrismaStore {
 // Store Factory
 // ============================================================================
 
+/** @type {WorkflowStore | null} */
 let _store = null;
 
 /**
  * Get the workflow store instance
  * Uses Prisma if DATABASE_URL is set, otherwise falls back to JSON files
+ *
+ * @returns {Promise<WorkflowStore>}
  */
 export async function getStore() {
   if (_store) return _store;
 
   if (process.env.DATABASE_URL) {
     try {
-      _store = new PrismaStore(prisma);
+      _store = new PrismaStore();
       return _store;
     } catch {
       // Prisma not available, fall through to file store

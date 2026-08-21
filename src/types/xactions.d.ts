@@ -399,3 +399,141 @@ export interface TierInfo {
   price?: string;
   features?: Record<string, unknown>;
 }
+
+// ============================================================================
+// Workflow Engine Types
+// ============================================================================
+
+/** A single step inside a workflow. */
+export interface WorkflowStep {
+  [key: string]: unknown;
+  action?: string;
+  condition?: string | WorkflowCondition;
+  output?: string;
+  onFail?: string;
+  onError?: string;
+}
+
+/** A trigger configuration for a workflow. */
+export interface WorkflowTrigger {
+  [key: string]: unknown;
+  type: 'manual' | 'schedule' | 'cron' | 'interval' | 'webhook' | 'event';
+  cron?: string;
+  interval?: number;
+  webhook?: string;
+  webhookId?: string;
+  event?: string;
+  target?: string;
+  threshold?: number;
+}
+
+/** A workflow definition. */
+export interface Workflow {
+  [key: string]: unknown;
+  id?: string;
+  name: string;
+  description?: string;
+  steps: WorkflowStep[];
+  trigger?: WorkflowTrigger;
+  enabled?: boolean;
+  userId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Runtime variable context passed between workflow steps. */
+export interface WorkflowContext extends Record<string, unknown> {
+  _workflow?: { id?: string; name?: string };
+  _run?: { id?: string; trigger?: string };
+  _timestamp?: string;
+  authToken?: string;
+}
+
+/** A registered workflow action. */
+export interface WorkflowAction {
+  [key: string]: unknown;
+  description: string;
+  category?: string;
+  params?: Record<string, unknown>;
+  execute: (params: Record<string, unknown>, context: WorkflowContext) => Promise<unknown>;
+}
+
+/** A condition expression or structured condition. */
+export interface WorkflowCondition {
+  [key: string]: unknown;
+  all?: string[];
+  any?: string[];
+  left?: string;
+  operator?: string;
+  right?: unknown;
+}
+
+/** Result returned by a condition evaluation. */
+export interface ConditionEvaluation {
+  [key: string]: unknown;
+  passed: boolean;
+  details: string;
+}
+
+/** A single step result stored on a workflow run. */
+export interface WorkflowStepResult {
+  [key: string]: unknown;
+  index: number;
+  type: string;
+  name: string;
+  startedAt: string;
+  completedAt: string | null;
+  status: 'running' | 'completed' | 'skipped' | 'failed';
+  result: unknown;
+  error: string | null;
+}
+
+/** A workflow execution run record. */
+export interface WorkflowRun {
+  [key: string]: unknown;
+  id: string;
+  workflowId: string;
+  workflowName: string;
+  status: 'running' | 'completed' | 'cancelled' | 'failed';
+  trigger: string;
+  userId: string;
+  startedAt: string;
+  completedAt: string | null;
+  stepsCompleted: number;
+  totalSteps: number;
+  steps: WorkflowStepResult[];
+  context: Record<string, unknown>;
+  error: string | null;
+  result: Record<string, unknown> | null;
+}
+
+/** Options accepted by {@link runWorkflow}. */
+export interface WorkflowRunOptions {
+  [key: string]: unknown;
+  trigger?: string;
+  initialContext?: Record<string, unknown>;
+  authToken?: string;
+  userId?: string;
+  onProgress?: (event: Record<string, unknown>) => void;
+  isCancelled?: () => boolean;
+}
+
+/** Validation result returned by {@link validateWorkflow}. */
+export interface WorkflowValidation {
+  [key: string]: unknown;
+  valid: boolean;
+  errors: string[];
+}
+
+/** Persistence interface used by the workflow store. */
+export interface WorkflowStore {
+  saveWorkflow(workflow: Record<string, unknown>): Promise<Record<string, unknown>>;
+  getWorkflow(id: string): Promise<Record<string, unknown> | null>;
+  listWorkflows(): Promise<Record<string, unknown>[]>;
+  deleteWorkflow(id: string): Promise<boolean>;
+  findWorkflowByName(name: string): Promise<Record<string, unknown> | null>;
+  saveRun(run: Record<string, unknown>): Promise<Record<string, unknown>>;
+  getRun(workflowId: string, runId: string): Promise<Record<string, unknown> | null>;
+  listRuns(workflowId: string, limit?: number): Promise<Record<string, unknown>[]>;
+  updateRun(run: Record<string, unknown>): Promise<Record<string, unknown>>;
+}
