@@ -658,7 +658,8 @@ export async function downloadMedia(url, destPath, options = {}) {
 
   // Node 18+ - resp.body is a ReadableStream; convert to Node stream
   const reader = resp.body.getReader();
-  const nodeStream = new ReadableStream({
+  const { ReadableStream: WebReadableStream } = await import('node:stream/web');
+  const nodeStream = new WebReadableStream({
     async pull(controller) {
       const { done, value } = await reader.read();
       if (done) {
