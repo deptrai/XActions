@@ -2,10 +2,10 @@
 /**
  * XActions Mastodon Scrapers
  * REST API-based scrapers for Mastodon (any instance)
- * 
+ *
  * Uses the public Mastodon REST API with fetch. No Puppeteer needed.
  * Most public data requires no authentication.
- * 
+ *
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license MIT
@@ -18,11 +18,35 @@
 const DEFAULT_INSTANCE = 'https://mastodon.social';
 
 /**
+ * @typedef {Object} MastodonClient
+ * @property {string} instance
+ * @property {string | null} accessToken
+ */
+
+/**
+ * @typedef {Object} MastodonClientOptions
+ * @property {string} [instance]
+ * @property {string} [accessToken]
+ */
+
+/**
+ * @typedef {Object} MastodonScrapeOptions
+ * @property {number} [limit]
+ * @property {boolean} [includeReplies]
+ * @property {(progress: { scraped: number; limit: number }) => void} [onProgress]
+ */
+
+/**
+ * @typedef {Object} MastodonApiOptions
+ * @property {Record<string, string | number | boolean | undefined>} [params]
+ * @property {string} [method]
+ */
+
+/**
  * Create a Mastodon API client
- * @param {Object} options
- * @param {string} [options.instance] - Instance URL (default: mastodon.social)
- * @param {string} [options.accessToken] - OAuth access token for auth-protected endpoints
- * @returns {Object} Mastodon client
+ *
+ * @param {MastodonClientOptions} [options]
+ * @returns {MastodonClient}
  */
 export function createClient(options = {}) {
   const instance = (options.instance || DEFAULT_INSTANCE).replace(/\/$/, '');
@@ -40,8 +64,8 @@ export function createClient(options = {}) {
  * is supposed to be plain text, which then shows up verbatim in exports,
  * dashboards, and anything that cross-posts the result.
  *
- * @param {string|null|undefined} html
- * @returns {string|null} Plain text, or null when there was nothing to convert
+ * @param {string | null | undefined} html
+ * @returns {string | null} Plain text, or null when there was nothing to convert
  */
 function toPlainText(html) {
   if (!html) return null;
@@ -62,17 +86,23 @@ function toPlainText(html) {
 
 /**
  * Internal helper — make a Mastodon API request
+ *
+ * @param {MastodonClient} client
+ * @param {string} path
+ * @param {MastodonApiOptions} [options]
+ * @returns {Promise<unknown>}
  */
 async function api(client, path, options = {}) {
   const { params = {}, method = 'GET' } = options;
 
   const qs = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== null)
-    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .map(([k, v]) => `${k}=${encodeURIComponent(/** @type {string | number | boolean} */ (v))}`)
     .join('&');
 
   const url = `${client.instance}/api/v1${path}${qs ? '?' + qs : ''}`;
 
+  /** @type {Record<string, string>} */
   const headers = {};
   if (client.accessToken) {
     headers['Authorization'] = `Bearer ${client.accessToken}`;
@@ -83,12 +113,16 @@ async function api(client, path, options = {}) {
     const text = await res.text();
     throw new Error(`Mastodon API error (${res.status}): ${text}`);
   }
-  return res.json();
+  return await res.json();
 }
 
 /**
  * Internal helper — look up a user by username
  * Returns the account object
+ *
+ * @param {MastodonClient} client
+ * @param {string} username
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function lookupAccount(client, username) {
   // Strip leading @
@@ -96,20 +130,23 @@ async function lookupAccount(client, username) {
 
   // Try the v1 lookup endpoint first (Mastodon 3.4+)
   try {
-    const data = await api(client, '/accounts/lookup', {
-      params: { acct: handle },
-    });
-    return data;
+    return /** @type {Record<string, unknown>} */ (
+      await api(client, '/accounts/lookup', {
+        params: { acct: handle },
+      })
+    );
   } catch {
     // Fallback: search for the user
-    const results = await api(client, '/accounts/search', {
-      params: { q: handle, limit: 5, resolve: true },
-    });
+    const results = /** @type {Record<string, unknown>[]} */ (
+      await api(client, '/accounts/search', {
+        params: { q: handle, limit: 5, resolve: true },
+      })
+    );
 
     const match = results.find(
       (a) =>
-        a.acct.toLowerCase() === handle.toLowerCase() ||
-        a.username.toLowerCase() === handle.toLowerCase()
+        /** @type {string} */ (a.acct).toLowerCase() === handle.toLowerCase() ||
+        /** @type {string} */ (a.username).toLowerCase() === handle.toLowerCase()
     );
 
     if (!match) throw new Error(`User not found on ${client.instance}: ${username}`);
@@ -123,30 +160,32 @@ async function lookupAccount(client, username) {
 
 /**
  * Scrape a Mastodon profile
- * @param {Object} client - Mastodon client from createClient()
+ *
+ * @param {MastodonClient} client - Mastodon client from createClient()
  * @param {string} username - Mastodon handle (e.g. user or user@instance.social)
- * @returns {Object} Normalized profile data
+ * @returns {Promise<Record<string, unknown>>} Normalized profile data
  */
 export async function scrapeProfile(client, username) {
   const account = await lookupAccount(client, username);
+  const a = /** @type {Record<string, unknown>} */ (account);
 
   return {
-    name: account.display_name || null,
-    username: account.acct || null,
-    id: account.id || null,
-    bio: toPlainText(account.note),
-    avatar: account.avatar || null,
-    header: account.header || null,
-    followers: account.followers_count ?? null,
-    following: account.following_count ?? null,
-    posts: account.statuses_count ?? null,
-    joined: account.created_at || null,
-    url: account.url || null,
-    bot: account.bot || false,
-    locked: account.locked || false,
-    fields: (account.fields || []).map((f) => ({
-      name: f.name,
-      value: toPlainText(f.value) || '',
+    name: /** @type {string | null} */ (a.display_name) || null,
+    username: /** @type {string | null} */ (a.acct) || null,
+    id: /** @type {string | null} */ (a.id) || null,
+    bio: toPlainText(/** @type {string | null | undefined} */ (a.note)),
+    avatar: /** @type {string | null} */ (a.avatar) || null,
+    header: /** @type {string | null} */ (a.header) || null,
+    followers: /** @type {number | null | undefined} */ (a.followers_count) ?? null,
+    following: /** @type {number | null | undefined} */ (a.following_count) ?? null,
+    posts: /** @type {number | null | undefined} */ (a.statuses_count) ?? null,
+    joined: /** @type {string | null} */ (a.created_at) || null,
+    url: /** @type {string | null} */ (a.url) || null,
+    bot: /** @type {boolean} */ (a.bot) || false,
+    locked: /** @type {boolean} */ (a.locked) || false,
+    fields: (/** @type {Record<string, unknown>[]} */ (a.fields || [])).map((f) => ({
+      name: /** @type {string} */ (f.name),
+      value: toPlainText(/** @type {string | null | undefined} */ (f.value)) || '',
     })),
     platform: 'mastodon',
     instance: client.instance,
@@ -159,31 +198,42 @@ export async function scrapeProfile(client, username) {
 
 /**
  * Scrape followers for a Mastodon user
+ *
+ * @param {MastodonClient} client
+ * @param {string} username
+ * @param {MastodonScrapeOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeFollowers(client, username, options = {}) {
-  const { limit = 100, onProgress } = options;
+  const limit = options.limit ?? 100;
+  const onProgress = options.onProgress;
 
   const account = await lookupAccount(client, username);
+  const accountId = /** @type {string} */ (account.id);
   const followers = [];
+  /** @type {string | undefined} */
   let maxId;
 
   while (followers.length < limit) {
     const pageLimit = Math.min(80, limit - followers.length);
+    /** @type {Record<string, string | number | boolean | undefined>} */
     const params = { limit: pageLimit };
     if (maxId) params.max_id = maxId;
 
-    const data = await api(client, `/accounts/${account.id}/followers`, { params });
+    const data = /** @type {Record<string, unknown>[]} */ (
+      await api(client, `/accounts/${accountId}/followers`, { params })
+    );
     if (!data || data.length === 0) break;
 
     for (const f of data) {
       followers.push({
-        username: f.acct,
-        id: f.id,
-        name: f.display_name || null,
-        bio: toPlainText(f.note),
-        avatar: f.avatar || null,
-        url: f.url || null,
-        bot: f.bot || false,
+        username: /** @type {string} */ (f.acct),
+        id: /** @type {string} */ (f.id),
+        name: /** @type {string | null} */ (f.display_name) || null,
+        bio: toPlainText(/** @type {string | null | undefined} */ (f.note)),
+        avatar: /** @type {string | null} */ (f.avatar) || null,
+        url: /** @type {string | null} */ (f.url) || null,
+        bot: /** @type {boolean} */ (f.bot) || false,
         platform: 'mastodon',
       });
     }
@@ -192,7 +242,7 @@ export async function scrapeFollowers(client, username, options = {}) {
       onProgress({ scraped: followers.length, limit });
     }
 
-    maxId = data[data.length - 1]?.id;
+    maxId = /** @type {string} */ (data[data.length - 1]?.id);
     if (data.length < pageLimit) break;
   }
 
@@ -205,31 +255,42 @@ export async function scrapeFollowers(client, username, options = {}) {
 
 /**
  * Scrape accounts a Mastodon user is following
+ *
+ * @param {MastodonClient} client
+ * @param {string} username
+ * @param {MastodonScrapeOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeFollowing(client, username, options = {}) {
-  const { limit = 100, onProgress } = options;
+  const limit = options.limit ?? 100;
+  const onProgress = options.onProgress;
 
   const account = await lookupAccount(client, username);
+  const accountId = /** @type {string} */ (account.id);
   const following = [];
+  /** @type {string | undefined} */
   let maxId;
 
   while (following.length < limit) {
     const pageLimit = Math.min(80, limit - following.length);
+    /** @type {Record<string, string | number | boolean | undefined>} */
     const params = { limit: pageLimit };
     if (maxId) params.max_id = maxId;
 
-    const data = await api(client, `/accounts/${account.id}/following`, { params });
+    const data = /** @type {Record<string, unknown>[]} */ (
+      await api(client, `/accounts/${accountId}/following`, { params })
+    );
     if (!data || data.length === 0) break;
 
     for (const f of data) {
       following.push({
-        username: f.acct,
-        id: f.id,
-        name: f.display_name || null,
-        bio: toPlainText(f.note),
-        avatar: f.avatar || null,
-        url: f.url || null,
-        bot: f.bot || false,
+        username: /** @type {string} */ (f.acct),
+        id: /** @type {string} */ (f.id),
+        name: /** @type {string | null} */ (f.display_name) || null,
+        bio: toPlainText(/** @type {string | null | undefined} */ (f.note)),
+        avatar: /** @type {string | null} */ (f.avatar) || null,
+        url: /** @type {string | null} */ (f.url) || null,
+        bot: /** @type {boolean} */ (f.bot) || false,
         platform: 'mastodon',
       });
     }
@@ -238,7 +299,7 @@ export async function scrapeFollowing(client, username, options = {}) {
       onProgress({ scraped: following.length, limit });
     }
 
-    maxId = data[data.length - 1]?.id;
+    maxId = /** @type {string} */ (data[data.length - 1]?.id);
     if (data.length < pageLimit) break;
   }
 
@@ -251,16 +312,26 @@ export async function scrapeFollowing(client, username, options = {}) {
 
 /**
  * Scrape posts from a Mastodon user (equivalent of scrapeTweets)
+ *
+ * @param {MastodonClient} client
+ * @param {string} username
+ * @param {MastodonScrapeOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeTweets(client, username, options = {}) {
-  const { limit = 50, includeReplies = false, onProgress } = options;
+  const limit = options.limit ?? 50;
+  const includeReplies = options.includeReplies ?? false;
+  const onProgress = options.onProgress;
 
   const account = await lookupAccount(client, username);
+  const accountId = /** @type {string} */ (account.id);
   const posts = [];
+  /** @type {string | undefined} */
   let maxId;
 
   while (posts.length < limit) {
     const pageLimit = Math.min(40, limit - posts.length);
+    /** @type {Record<string, string | number | boolean | undefined>} */
     const params = {
       limit: pageLimit,
       exclude_replies: !includeReplies,
@@ -268,7 +339,9 @@ export async function scrapeTweets(client, username, options = {}) {
     };
     if (maxId) params.max_id = maxId;
 
-    const data = await api(client, `/accounts/${account.id}/statuses`, { params });
+    const data = /** @type {Record<string, unknown>[]} */ (
+      await api(client, `/accounts/${accountId}/statuses`, { params })
+    );
     if (!data || data.length === 0) break;
 
     for (const status of data) {
@@ -279,7 +352,7 @@ export async function scrapeTweets(client, username, options = {}) {
       onProgress({ scraped: posts.length, limit });
     }
 
-    maxId = data[data.length - 1]?.id;
+    maxId = /** @type {string} */ (data[data.length - 1]?.id);
     if (data.length < pageLimit) break;
   }
 
@@ -292,9 +365,15 @@ export async function scrapeTweets(client, username, options = {}) {
 
 /**
  * Search Mastodon posts by query
+ *
+ * @param {MastodonClient} client
+ * @param {string} query
+ * @param {MastodonScrapeOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function searchTweets(client, query, options = {}) {
-  const { limit = 50, onProgress } = options;
+  const limit = options.limit ?? 50;
+  const onProgress = options.onProgress;
 
   // Use v2 search endpoint
   const qs = new URLSearchParams({
@@ -305,6 +384,7 @@ export async function searchTweets(client, query, options = {}) {
   });
 
   const url = `${client.instance}/api/v2/search?${qs}`;
+  /** @type {Record<string, string>} */
   const headers = {};
   if (client.accessToken) {
     headers['Authorization'] = `Bearer ${client.accessToken}`;
@@ -314,9 +394,11 @@ export async function searchTweets(client, query, options = {}) {
   if (!res.ok) {
     throw new Error(`Mastodon search error (${res.status}): ${await res.text()}`);
   }
-  const data = await res.json();
+  const data = /** @type {Record<string, unknown>} */ (await res.json());
 
-  const posts = (data.statuses || []).map((s) => normalizeStatus(s, client.instance));
+  const posts = (/** @type {Record<string, unknown>[]} */ (data.statuses || [])).map((s) =>
+    normalizeStatus(s, client.instance)
+  );
 
   if (onProgress) {
     onProgress({ scraped: posts.length, limit });
@@ -331,20 +413,30 @@ export async function searchTweets(client, query, options = {}) {
 
 /**
  * Scrape posts from a hashtag timeline
+ *
+ * @param {MastodonClient} client
+ * @param {string} hashtag
+ * @param {MastodonScrapeOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeHashtag(client, hashtag, options = {}) {
-  const { limit = 50, onProgress } = options;
+  const limit = options.limit ?? 50;
+  const onProgress = options.onProgress;
   const tag = hashtag.replace(/^#/, '');
 
   const posts = [];
+  /** @type {string | undefined} */
   let maxId;
 
   while (posts.length < limit) {
     const pageLimit = Math.min(40, limit - posts.length);
+    /** @type {Record<string, string | number | boolean | undefined>} */
     const params = { limit: pageLimit };
     if (maxId) params.max_id = maxId;
 
-    const data = await api(client, `/timelines/tag/${encodeURIComponent(tag)}`, { params });
+    const data = /** @type {Record<string, unknown>[]} */ (
+      await api(client, `/timelines/tag/${encodeURIComponent(tag)}`, { params })
+    );
     if (!data || data.length === 0) break;
 
     for (const status of data) {
@@ -355,7 +447,7 @@ export async function scrapeHashtag(client, hashtag, options = {}) {
       onProgress({ scraped: posts.length, limit });
     }
 
-    maxId = data[data.length - 1]?.id;
+    maxId = /** @type {string} */ (data[data.length - 1]?.id);
     if (data.length < pageLimit) break;
   }
 
@@ -368,20 +460,31 @@ export async function scrapeHashtag(client, hashtag, options = {}) {
 
 /**
  * Scrape trending topics from a Mastodon instance
+ *
+ * @param {MastodonClient} client
+ * @param {MastodonScrapeOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeTrending(client, options = {}) {
-  const { limit = 20 } = options;
+  const limit = options.limit ?? 20;
 
   // Trending tags
-  const tags = await api(client, '/trends/tags', { params: { limit } });
+  const tags = /** @type {Record<string, unknown>[]} */ (
+    await api(client, '/trends/tags', { params: { limit } })
+  );
 
-  return (tags || []).map((t) => ({
-    topic: `#${t.name}`,
-    posts: t.history?.[0]?.uses || '0',
-    accounts: t.history?.[0]?.accounts || '0',
-    url: t.url || `${client.instance}/tags/${t.name}`,
-    platform: 'mastodon',
-  }));
+  return tags.map((t) => {
+    const history = /** @type {Record<string, unknown>[]} */ (t.history || []);
+    const first = /** @type {Record<string, unknown>} */ (history[0]);
+    const name = /** @type {string} */ (t.name);
+    return {
+      topic: `#${name}`,
+      posts: /** @type {string | number} */ (first?.uses) || '0',
+      accounts: /** @type {string | number} */ (first?.accounts) || '0',
+      url: /** @type {string | null} */ (t.url) || `${client.instance}/tags/${name}`,
+      platform: 'mastodon',
+    };
+  });
 }
 
 // ============================================================================
@@ -390,32 +493,39 @@ export async function scrapeTrending(client, options = {}) {
 
 /**
  * Normalize a Mastodon status to common post format
+ *
+ * @param {Record<string, unknown>} status
+ * @param {string} instance
+ * @returns {Record<string, unknown>}
  */
 function normalizeStatus(status, instance) {
-  const images = (status.media_attachments || [])
-    .filter((m) => m.type === 'image')
-    .map((m) => m.url || m.preview_url);
+  const mediaAttachments = /** @type {Record<string, unknown>[]} */ (status.media_attachments || []);
+  const account = /** @type {Record<string, unknown> | null | undefined} */ (status.account);
 
-  const hasVideo = (status.media_attachments || []).some(
-    (m) => m.type === 'video' || m.type === 'gifv'
+  const images = mediaAttachments
+    .filter((m) => /** @type {string} */ (m.type) === 'image')
+    .map((m) => /** @type {string} */ (m.url || m.preview_url));
+
+  const hasVideo = mediaAttachments.some(
+    (m) => /** @type {string} */ (m.type) === 'video' || /** @type {string} */ (m.type) === 'gifv'
   );
 
   return {
     id: status.id,
-    text: toPlainText(status.content),
-    timestamp: status.created_at || null,
-    likes: status.favourites_count ?? 0,
-    reposts: status.reblogs_count ?? 0,
-    replies: status.replies_count ?? 0,
-    url: status.url || null,
-    author: status.account?.acct || null,
+    text: toPlainText(/** @type {string | null | undefined} */ (status.content)),
+    timestamp: /** @type {string | null} */ (status.created_at) || null,
+    likes: /** @type {number | null | undefined} */ (status.favourites_count) ?? 0,
+    reposts: /** @type {number | null | undefined} */ (status.reblogs_count) ?? 0,
+    replies: /** @type {number | null | undefined} */ (status.replies_count) ?? 0,
+    url: /** @type {string | null} */ (status.url) || null,
+    author: account ? /** @type {string | null} */ (account.acct) || null : null,
     media: {
       images,
       hasVideo,
     },
     isRepost: !!status.reblog,
-    sensitive: status.sensitive || false,
-    visibility: status.visibility || 'public',
+    sensitive: /** @type {boolean} */ (status.sensitive) || false,
+    visibility: /** @type {string} */ (status.visibility) || 'public',
     platform: 'mastodon',
     instance,
   };

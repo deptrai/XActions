@@ -85,7 +85,13 @@ Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 
   - Typed `api/lib/prisma.js` and `api/services/facebookAutomation.js`.
   - `npm run typecheck` now passes with **0 errors** for the full `tsconfig.json` include list.
   - Fixed vitest regressions: `normalizeFollower` and `normalizeSearchResult` now coerce empty strings to `null`.
-- [ ] 4.6 — Type `src/scrapers/bluesky`, `src/scrapers/mastodon`, `src/scrapers/threads`
+- [x] 4.6 — Type `src/scrapers/bluesky`, `src/scrapers/mastodon`, `src/scrapers/threads`
+  - Added JSDoc `@typedef` types for clients, options, and response data; used `Record<string, unknown>` and `import('puppeteer')` / `import('@atproto/api')` references.
+  - Replaced `path.reduce` in Bluesky `xrpc` with a typed `for` loop and `Record<string, unknown>` casts.
+  - Fixed `puppeteer.launch` `headless` expression in Threads to `options.headless === false ? false : true` (semantics preserved, type-safe).
+  - Annotated fetch `headers` in Mastodon as `Record<string, string>` and internal `api` helper as `Promise<unknown>` to allow downstream casts.
+  - `npm run typecheck` now passes with **0 errors**.
+  - `npx vitest run tests/scrapers tests/cli` passes (1081 passed, 14 skipped).
 - [ ] 4.7 — Type `src/scrapers/index.js` and `src/index.js` / `src/algorithmBuilder.js`
 - [ ] 4.8 — Type `src/api` (Prisma, services, routes) and `src/workflows`
 - [ ] 4.9 — Type `src/mcp` server and tools
@@ -101,7 +107,7 @@ Status: Phase 4.5 completed; `src/scrapers/facebook` domain modules, `api/lib/pr
 - API smoke: `npx vitest run tests/api/facebook-automate-routes.test.js`
 - Type: `npm run typecheck`
 - Pre-existing type error baseline: **137 errors** (as of Phase 2 completion)
-- Current type error count: **0 errors** for the full `tsconfig.json` include list (`src/core`, `src/client`, `src/scrapers/twitter`, `src/scrapers/facebook`, `src/scrapers/adapters`, `src/types`, `api/lib/prisma.js`, `api/services/facebookAutomation.js`).
+- Current type error count: **0 errors** for the full `tsconfig.json` include list (`src/core`, `src/client`, `src/scrapers/twitter`, `src/scrapers/facebook`, `src/scrapers/adapters`, `src/scrapers/bluesky`, `src/scrapers/mastodon`, `src/scrapers/threads`, `src/types`, `api/lib/prisma.js`, `api/services/facebookAutomation.js`).
 
 ## Notes
 

@@ -2,10 +2,10 @@
 /**
  * XActions Bluesky Scrapers
  * AT Protocol-based scrapers for Bluesky (bsky.social)
- * 
+ *
  * Uses the official @atproto/api package. No Puppeteer needed.
  * Public data requires no authentication.
- * 
+ *
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license MIT
@@ -18,13 +18,40 @@
 const DEFAULT_SERVICE = 'https://public.api.bsky.app';
 
 /**
+ * @typedef {Object} BlueskyAgentOptions
+ * @property {string} [service]
+ * @property {string} [identifier]
+ * @property {string} [password]
+ */
+
+/**
+ * @typedef {Object} BlueskySdkClient
+ * @property {'sdk'} type
+ * @property {import('@atproto/api').BskyAgent} agent
+ */
+
+/**
+ * @typedef {Object} BlueskyFetchClient
+ * @property {'fetch'} type
+ * @property {string} service
+ * @property {string} [identifier]
+ * @property {string} [password]
+ */
+
+/** @typedef {BlueskySdkClient | BlueskyFetchClient} BlueskyClient */
+
+/**
+ * @typedef {Object} BlueskyScrapeOptions
+ * @property {number} [limit]
+ * @property {(progress: { scraped: number; limit: number }) => void} [onProgress]
+ */
+
+/**
  * Create a Bluesky API agent
  * Uses @atproto/api if installed, otherwise falls back to fetch-based client.
- * @param {Object} options
- * @param {string} [options.service] - PDS URL (default: public API)
- * @param {string} [options.identifier] - Handle or DID for login
- * @param {string} [options.password] - App password for login
- * @returns {Object} Bluesky agent
+ *
+ * @param {BlueskyAgentOptions} [options]
+ * @returns {Promise<BlueskyClient>}
  */
 export async function createAgent(options = {}) {
   const service = options.service || DEFAULT_SERVICE;
@@ -54,6 +81,10 @@ export async function createAgent(options = {}) {
 
 /**
  * Internal helper — resolve a Bluesky handle to a DID
+ *
+ * @param {BlueskyClient} client
+ * @param {string} handle
+ * @returns {Promise<string>}
  */
 async function resolveHandle(client, handle) {
   if (handle.startsWith('did:')) return handle;
@@ -66,12 +97,17 @@ async function resolveHandle(client, handle) {
   const url = `${client.service}/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to resolve handle: ${handle}`);
-  const data = await res.json();
-  return data.did;
+  const data = /** @type {Record<string, unknown>} */ (await res.json());
+  return /** @type {string} */ (data.did);
 }
 
 /**
  * Internal helper — call an XRPC method
+ *
+ * @param {BlueskyClient} client
+ * @param {string} nsid
+ * @param {Record<string, string | number | undefined>} [params]
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function xrpc(client, nsid, params = {}) {
   if (client.type === 'sdk') {
@@ -82,22 +118,29 @@ async function xrpc(client, nsid, params = {}) {
     // "Cannot read properties of undefined (reading '_client')" for every
     // Bluesky scrape.
     const path = nsid.split('.');
-    const name = path.pop();
-    const owner = path.reduce((obj, key) => obj?.[key], client.agent.api);
+    const name = /** @type {string} */ (path.pop());
+    let owner = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (client.agent.api));
+    for (const key of path) {
+      owner = /** @type {Record<string, unknown>} */ (owner[key]);
+      if (!owner) break;
+    }
 
     if (owner && typeof owner[name] === 'function') {
-      const res = await owner[name](params);
+      const method = /** @type {(p: Record<string, string | number | undefined>) => Promise<{ data: Record<string, unknown> }>} */ (owner[name]);
+      const res = await method.call(owner, params);
       return res.data;
     }
 
     // Fallback to generic call
-    const res = await client.agent.api.app.bsky.actor.getProfile(params);
-    return res.data;
+    const res = await client.agent.api.app.bsky.actor.getProfile(
+      /** @type {import('@atproto/api').AppBskyActorGetProfile.QueryParams} */ (/** @type {unknown} */ (params))
+    );
+    return /** @type {Record<string, unknown>} */ (res.data);
   }
 
   const qs = Object.entries(params)
     .filter(([, v]) => v !== undefined)
-    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .map(([k, v]) => `${k}=${encodeURIComponent(/** @type {string | number} */ (v))}`)
     .join('&');
 
   const url = `${client.service}/xrpc/${nsid}${qs ? '?' + qs : ''}`;
@@ -106,7 +149,7 @@ async function xrpc(client, nsid, params = {}) {
     const text = await res.text();
     throw new Error(`Bluesky API error (${res.status}): ${text}`);
   }
-  return res.json();
+  return /** @type {Record<string, unknown>} */ (await res.json());
 }
 
 // ============================================================================
@@ -115,9 +158,10 @@ async function xrpc(client, nsid, params = {}) {
 
 /**
  * Scrape a Bluesky profile
- * @param {Object} client - Bluesky agent from createAgent()
+ *
+ * @param {BlueskyClient} client - Bluesky agent from createAgent()
  * @param {string} username - Bluesky handle (e.g. user.bsky.social) or DID
- * @returns {Object} Normalized profile data
+ * @returns {Promise<Record<string, unknown>>} Normalized profile data
  */
 export async function scrapeProfile(client, username) {
   const handle = username.replace(/^@/, '');
@@ -125,17 +169,19 @@ export async function scrapeProfile(client, username) {
   const data = await xrpc(client, 'app.bsky.actor.getProfile', { actor: handle });
 
   return {
-    name: data.displayName || null,
-    username: data.handle || null,
-    did: data.did || null,
-    bio: data.description || null,
-    avatar: data.avatar || null,
-    banner: data.banner || null,
-    followers: data.followersCount ?? null,
-    following: data.followsCount ?? null,
-    posts: data.postsCount ?? null,
-    joined: data.createdAt || null,
-    labels: (data.labels || []).map((l) => l.val),
+    name: /** @type {string | null} */ (data.displayName) || null,
+    username: /** @type {string | null} */ (data.handle) || null,
+    did: /** @type {string | null} */ (data.did) || null,
+    bio: /** @type {string | null} */ (data.description) || null,
+    avatar: /** @type {string | null} */ (data.avatar) || null,
+    banner: /** @type {string | null} */ (data.banner) || null,
+    followers: /** @type {number | null | undefined} */ (data.followersCount) ?? null,
+    following: /** @type {number | null | undefined} */ (data.followsCount) ?? null,
+    posts: /** @type {number | null | undefined} */ (data.postsCount) ?? null,
+    joined: /** @type {string | null} */ (data.createdAt) || null,
+    labels: (/** @type {Record<string, unknown>[]} */ (data.labels || [])).map(
+      (l) => /** @type {string} */ (l.val)
+    ),
     platform: 'bluesky',
   };
 }
@@ -146,16 +192,19 @@ export async function scrapeProfile(client, username) {
 
 /**
  * Scrape followers for a Bluesky user
- * @param {Object} client - Bluesky agent
+ *
+ * @param {BlueskyClient} client - Bluesky agent
  * @param {string} username - Bluesky handle
- * @param {Object} options
- * @returns {Array} List of follower objects
+ * @param {BlueskyScrapeOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>} List of follower objects
  */
 export async function scrapeFollowers(client, username, options = {}) {
-  const { limit = 100, onProgress } = options;
+  const limit = options.limit ?? 100;
+  const onProgress = options.onProgress;
   const handle = username.replace(/^@/, '');
 
   const followers = [];
+  /** @type {string | undefined} */
   let cursor;
 
   while (followers.length < limit) {
@@ -166,15 +215,16 @@ export async function scrapeFollowers(client, username, options = {}) {
       cursor,
     });
 
-    if (!data.followers || data.followers.length === 0) break;
+    const page = /** @type {Record<string, unknown>[]} */ (data.followers || []);
+    if (page.length === 0) break;
 
-    for (const f of data.followers) {
+    for (const f of page) {
       followers.push({
-        username: f.handle,
-        did: f.did,
-        name: f.displayName || null,
-        bio: f.description || null,
-        avatar: f.avatar || null,
+        username: /** @type {string} */ (f.handle),
+        did: /** @type {string} */ (f.did),
+        name: /** @type {string | null} */ (f.displayName) || null,
+        bio: /** @type {string | null} */ (f.description) || null,
+        avatar: /** @type {string | null} */ (f.avatar) || null,
         platform: 'bluesky',
       });
     }
@@ -183,7 +233,7 @@ export async function scrapeFollowers(client, username, options = {}) {
       onProgress({ scraped: followers.length, limit });
     }
 
-    cursor = data.cursor;
+    cursor = /** @type {string | undefined} */ (data.cursor);
     if (!cursor) break;
   }
 
@@ -196,12 +246,19 @@ export async function scrapeFollowers(client, username, options = {}) {
 
 /**
  * Scrape accounts a user is following on Bluesky
+ *
+ * @param {BlueskyClient} client
+ * @param {string} username
+ * @param {BlueskyScrapeOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeFollowing(client, username, options = {}) {
-  const { limit = 100, onProgress } = options;
+  const limit = options.limit ?? 100;
+  const onProgress = options.onProgress;
   const handle = username.replace(/^@/, '');
 
   const following = [];
+  /** @type {string | undefined} */
   let cursor;
 
   while (following.length < limit) {
@@ -212,15 +269,16 @@ export async function scrapeFollowing(client, username, options = {}) {
       cursor,
     });
 
-    if (!data.follows || data.follows.length === 0) break;
+    const page = /** @type {Record<string, unknown>[]} */ (data.follows || []);
+    if (page.length === 0) break;
 
-    for (const f of data.follows) {
+    for (const f of page) {
       following.push({
-        username: f.handle,
-        did: f.did,
-        name: f.displayName || null,
-        bio: f.description || null,
-        avatar: f.avatar || null,
+        username: /** @type {string} */ (f.handle),
+        did: /** @type {string} */ (f.did),
+        name: /** @type {string | null} */ (f.displayName) || null,
+        bio: /** @type {string | null} */ (f.description) || null,
+        avatar: /** @type {string | null} */ (f.avatar) || null,
         platform: 'bluesky',
       });
     }
@@ -229,7 +287,7 @@ export async function scrapeFollowing(client, username, options = {}) {
       onProgress({ scraped: following.length, limit });
     }
 
-    cursor = data.cursor;
+    cursor = /** @type {string | undefined} */ (data.cursor);
     if (!cursor) break;
   }
 
@@ -242,13 +300,20 @@ export async function scrapeFollowing(client, username, options = {}) {
 
 /**
  * Scrape posts from a Bluesky user's feed
+ *
+ * @param {BlueskyClient} client
+ * @param {string} username
+ * @param {BlueskyScrapeOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeTweets(client, username, options = {}) {
-  const { limit = 50, onProgress } = options;
+  const limit = options.limit ?? 50;
+  const onProgress = options.onProgress;
   const handle = username.replace(/^@/, '');
 
   const did = await resolveHandle(client, handle);
   const posts = [];
+  /** @type {string | undefined} */
   let cursor;
 
   while (posts.length < limit) {
@@ -259,28 +324,36 @@ export async function scrapeTweets(client, username, options = {}) {
       cursor,
     });
 
-    if (!data.feed || data.feed.length === 0) break;
+    const feed = /** @type {Record<string, unknown>[]} */ (data.feed || []);
+    if (feed.length === 0) break;
 
-    for (const item of data.feed) {
-      const post = item.post;
-      const record = post.record || {};
+    for (const item of feed) {
+      const post = /** @type {Record<string, unknown>} */ (item.post);
+      const record = /** @type {Record<string, unknown>} */ (post.record || {});
+      const author = /** @type {Record<string, unknown>} */ (post.author);
+      const embed = /** @type {Record<string, unknown> | undefined} */ (record.embed);
+      const postUri = /** @type {string | undefined} */ (post.uri);
 
       posts.push({
-        id: post.uri || null,
-        text: record.text || null,
-        timestamp: record.createdAt || null,
-        likes: post.likeCount ?? 0,
-        reposts: post.repostCount ?? 0,
-        replies: post.replyCount ?? 0,
-        url: post.uri
-          ? `https://bsky.app/profile/${post.author?.handle}/post/${post.uri.split('/').pop()}`
+        id: postUri || null,
+        text: /** @type {string | null} */ (record.text) || null,
+        timestamp: /** @type {string | null} */ (record.createdAt) || null,
+        likes: /** @type {number | null | undefined} */ (post.likeCount) ?? 0,
+        reposts: /** @type {number | null | undefined} */ (post.repostCount) ?? 0,
+        replies: /** @type {number | null | undefined} */ (post.replyCount) ?? 0,
+        url: postUri
+          ? `https://bsky.app/profile/${/** @type {string | undefined} */ (author?.handle)}/post/${postUri.split('/').pop()}`
           : null,
-        author: post.author?.handle || null,
+        author: /** @type {string | null} */ (author?.handle) || null,
         media: {
-          images: (record.embed?.images || []).map((img) => img.image?.ref?.$link
-            ? `https://cdn.bsky.app/img/feed_thumbnail/plain/${post.author?.did}/${img.image.ref.$link}@jpeg`
-            : null
-          ).filter(Boolean),
+          images: (/** @type {Record<string, unknown>[]} */ (embed?.images || [])).map((img) => {
+            const image = /** @type {Record<string, unknown> | undefined} */ (img.image);
+            const ref = /** @type {Record<string, unknown> | undefined} */ (image?.ref);
+            const $link = /** @type {string | undefined} */ (ref?.$link);
+            return $link
+              ? `https://cdn.bsky.app/img/feed_thumbnail/plain/${/** @type {string | undefined} */ (author?.did)}/${$link}@jpeg`
+              : null;
+          }).filter(Boolean),
           hasVideo: false,
         },
         isRepost: !!item.reason,
@@ -292,7 +365,7 @@ export async function scrapeTweets(client, username, options = {}) {
       onProgress({ scraped: posts.length, limit });
     }
 
-    cursor = data.cursor;
+    cursor = /** @type {string | undefined} */ (data.cursor);
     if (!cursor) break;
   }
 
@@ -305,10 +378,17 @@ export async function scrapeTweets(client, username, options = {}) {
 
 /**
  * Search Bluesky posts by query
+ *
+ * @param {BlueskyClient} client
+ * @param {string} query
+ * @param {BlueskyScrapeOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function searchTweets(client, query, options = {}) {
-  const { limit = 50, onProgress } = options;
+  const limit = options.limit ?? 50;
+  const onProgress = options.onProgress;
   const posts = [];
+  /** @type {string | undefined} */
   let cursor;
 
   while (posts.length < limit) {
@@ -319,19 +399,23 @@ export async function searchTweets(client, query, options = {}) {
       cursor,
     });
 
-    if (!data.posts || data.posts.length === 0) break;
+    const page = /** @type {Record<string, unknown>[]} */ (data.posts || []);
+    if (page.length === 0) break;
 
-    for (const post of data.posts) {
-      const record = post.record || {};
+    for (const post of page) {
+      const record = /** @type {Record<string, unknown>} */ (post.record || {});
+      const author = /** @type {Record<string, unknown>} */ (post.author);
+      const postUri = /** @type {string | undefined} */ (post.uri);
+
       posts.push({
-        id: post.uri || null,
-        text: record.text || null,
-        author: post.author?.handle || null,
-        timestamp: record.createdAt || null,
-        likes: post.likeCount ?? 0,
-        reposts: post.repostCount ?? 0,
-        url: post.uri
-          ? `https://bsky.app/profile/${post.author?.handle}/post/${post.uri.split('/').pop()}`
+        id: postUri || null,
+        text: /** @type {string | null} */ (record.text) || null,
+        author: /** @type {string | null} */ (author?.handle) || null,
+        timestamp: /** @type {string | null} */ (record.createdAt) || null,
+        likes: /** @type {number | null | undefined} */ (post.likeCount) ?? 0,
+        reposts: /** @type {number | null | undefined} */ (post.repostCount) ?? 0,
+        url: postUri
+          ? `https://bsky.app/profile/${/** @type {string | undefined} */ (author?.handle)}/post/${postUri.split('/').pop()}`
           : null,
         platform: 'bluesky',
       });
@@ -341,7 +425,7 @@ export async function searchTweets(client, query, options = {}) {
       onProgress({ scraped: posts.length, limit });
     }
 
-    cursor = data.cursor;
+    cursor = /** @type {string | undefined} */ (data.cursor);
     if (!cursor) break;
   }
 
@@ -354,10 +438,16 @@ export async function searchTweets(client, query, options = {}) {
 
 /**
  * Get posts from a specific Bluesky feed (custom algorithm)
+ *
+ * @param {BlueskyClient} client
+ * @param {string} feedUri
+ * @param {BlueskyScrapeOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeFeed(client, feedUri, options = {}) {
-  const { limit = 50 } = options;
+  const limit = options.limit ?? 50;
   const posts = [];
+  /** @type {string | undefined} */
   let cursor;
 
   while (posts.length < limit) {
@@ -368,26 +458,30 @@ export async function scrapeFeed(client, feedUri, options = {}) {
       cursor,
     });
 
-    if (!data.feed || data.feed.length === 0) break;
+    const feed = /** @type {Record<string, unknown>[]} */ (data.feed || []);
+    if (feed.length === 0) break;
 
-    for (const item of data.feed) {
-      const post = item.post;
-      const record = post.record || {};
+    for (const item of feed) {
+      const post = /** @type {Record<string, unknown>} */ (item.post);
+      const record = /** @type {Record<string, unknown>} */ (post.record || {});
+      const author = /** @type {Record<string, unknown>} */ (post.author);
+      const postUri = /** @type {string | undefined} */ (post.uri);
+
       posts.push({
-        id: post.uri || null,
-        text: record.text || null,
-        author: post.author?.handle || null,
-        timestamp: record.createdAt || null,
-        likes: post.likeCount ?? 0,
-        reposts: post.repostCount ?? 0,
-        url: post.uri
-          ? `https://bsky.app/profile/${post.author?.handle}/post/${post.uri.split('/').pop()}`
+        id: postUri || null,
+        text: /** @type {string | null} */ (record.text) || null,
+        author: /** @type {string | null} */ (author?.handle) || null,
+        timestamp: /** @type {string | null} */ (record.createdAt) || null,
+        likes: /** @type {number | null | undefined} */ (post.likeCount) ?? 0,
+        reposts: /** @type {number | null | undefined} */ (post.repostCount) ?? 0,
+        url: postUri
+          ? `https://bsky.app/profile/${/** @type {string | undefined} */ (author?.handle)}/post/${postUri.split('/').pop()}`
           : null,
         platform: 'bluesky',
       });
     }
 
-    cursor = data.cursor;
+    cursor = /** @type {string | undefined} */ (data.cursor);
     if (!cursor) break;
   }
 
