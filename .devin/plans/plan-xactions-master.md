@@ -71,16 +71,21 @@ Objective: drive `npm run typecheck` down to zero errors starting from the 137 p
 
 Status: completed. Latest commits: `22412d4`, `756377b`. `npm run typecheck` now passes with **0 errors**; `npx vitest run tests/core tests/cli` passes (250 tests).
 
-## Phase 4 — Convert remaining source tree to TypeScript
+## Phase 4 — Extend JSDoc types to the remaining `src/` tree
 
-- [ ] Convert `src/scrapers` (twitter, facebook modules, etc.)
-- [ ] Convert `src/client` HTTP client modules
-- [ ] Convert `src/mcp` server modules
-- [ ] Convert `src/api` routes and services
-- [ ] Update root `tsconfig.json` to include the whole `src` tree
-- [ ] Final `npm run typecheck` and full test run
+Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 progressively adds other `src/` directories to `include`, driving `tsc --noEmit` to zero for each slice. Files remain `.js` (no transpiler yet) and are typed via JSDoc.
 
-Status: pending (details to be refined in Phase 3).
+- [ ] 4.0 — Expand `tsconfig.json` to `src/**/*.js` and record the initial error baseline
+- [ ] 4.1 — Type `src/client` HTTP client modules (auth, CookieAuth, TokenManager, GraphQL queries, HTTP scraper)
+- [ ] 4.2 — Type `src/scrapers` shared and adapter modules (adapters, shared, normalizers)
+- [ ] 4.3 — Type `src/scrapers/facebook` domain modules (core, auth, posts, comments, etc.)
+- [ ] 4.4 — Type `src/scrapers/twitter` modules
+- [ ] 4.5 — Type `src/mcp` server and tool modules
+- [ ] 4.6 — Type `src/api` routes and services
+- [ ] 4.7 — Add missing `.d.ts` declarations for untyped dependencies used by the above slices
+- [ ] 4.8 — Final `npm run typecheck` (entire `src`) and full `npx vitest run`
+
+Status: in progress (starting from zero errors in `src/core`).
 
 ## Verification baseline
 
@@ -88,7 +93,7 @@ Status: pending (details to be refined in Phase 3).
 - API smoke: `npx vitest run tests/api/facebook-automate-routes.test.js`
 - Type: `npm run typecheck`
 - Pre-existing type error baseline: **137 errors** (as of Phase 2 completion)
-- Current type error count: **133 errors** (after Phase 3.1 fixes in `error-envelope.js` and `types.js`)
+- Current type error count: **0 errors** (Phase 3 completed; `src/core` and direct dependencies pass `tsc --noEmit`)
 
 ## Notes
 
