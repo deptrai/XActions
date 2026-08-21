@@ -2,7 +2,7 @@
 
 **Story ID:** 11.7  
 **Epic:** 11 — Resilient Network & Proxy Pool Management  
-**Status:** review  
+**Status:** done  
 **Owner:** DEV  
 **Source:** `epics.md` Story 11.7, `ARCHITECTURE-SPINE.md` AD-2, AD-3, AD-8, AD-9, AD-13, AD-14; `audit-report-sprint-status-2026-08-21.md`; previous stories 11.1–11.6; current `src/core/base-crawler.js`, `src/core/base-client.js`, `src/core/platform-validator.js`, `src/core/adaptive-governor.js`, `src/core/account-pool.js`, `src/scrapers/twitter/http/**`, `src/scrapers/facebook/index.js`.
 
@@ -696,6 +696,20 @@ export class ChototCrawler extends AbstractCrawler {
 
 No new runtime dependencies. `src/core/**` continues to have zero external runtime dependencies.
 
+### Review Findings (Adversarial Code Review)
+- [x] [Review][Patch] Fix `proxyProvider.getProxy` argument signature in `resolveProxy` [`src/core/base-client.js`]
+- [x] [Review][Patch] Throw `ErrorTypes.HIBERNATION` instead of `RATE_LIMIT` on hibernating account in `AbstractCrawler.start` [`src/core/base-crawler.js`]
+- [x] [Review][Patch] Throw `AUTH_EXPIRED` when auth crawler has no available account and preserve resolved `accountId` in session [`src/core/base-crawler.js`]
+- [x] [Review][Patch] Prevent double-counting requests between `AbstractCrawler` and `AbstractApiClient` in governor [`src/core/base-crawler.js`]
+- [x] [Review][Patch] Implement comprehensive error classification in `AbstractApiClient.handleError()` [`src/core/base-client.js`]
+- [x] [Review][Patch] Populate `retryAfterMs` and account hibernation in `#validateResponse()` [`src/core/base-client.js`]
+- [x] [Review][Patch] Export validators from Twitter and Facebook scraper entry points [`src/scrapers/twitter/http/index.js`, `src/scrapers/facebook/index.js`]
+- [x] [Review][Patch] Refine `TwitterPlatformResponseValidator` challenge regexes, GraphQL error code 326, and `platform = 'twitter'` [`src/scrapers/twitter/validator.js`]
+- [x] [Review][Patch] Refine `FacebookPlatformResponseValidator` challenge regexes, `isValidPayload` guard, and `platform = 'facebook'` [`src/scrapers/facebook/validator.js`]
+- [x] [Review][Patch] Update `types/core.d.ts` and `types/proxy.d.ts` with `registerAction` overload and proxy method aliases [`types/core.d.ts`, `types/proxy.d.ts`]
+- [x] [Review][Patch] Prevent false `PROXY_EXHAUSTED` in `AbstractCrawler` when governor has unconfigured proxy pool [`src/core/base-crawler.js`]
+- [x] [Review][Patch] Update unit tests to verify all 12 patches [`tests/core/crawler-governor.test.js`]
+
 ---
 
 ## File Structure Requirements
@@ -852,8 +866,9 @@ npx vitest run tests/core
 
 ## Story Completion Status
 
-- **Status:** review
+- **Status:** done
 - **Context engine analysis completed:** Epics, architecture spine, PRD, previous story artifacts, and current source code analyzed.
 - **Architecture compliance verified:** AD-2, AD-3, AD-8, AD-9, AD-13, AD-14 mapped.
-- **Testing:** 22/22 tests passing (100% green), 314/314 regression tests passing.
-- **Next phase:** Code review via `/bmad-code-review`.
+- **Testing:** 25/25 tests passing (100% green), 317/317 regression tests passing.
+- **Code Review:** All 12 patches applied and verified.
+- **Next phase:** Epic 11 Complete.

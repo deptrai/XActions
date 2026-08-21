@@ -8,6 +8,9 @@
 import { AbstractPlatformResponseValidator } from '../../core/platform-validator.js';
 
 export class FacebookPlatformResponseValidator extends AbstractPlatformResponseValidator {
+  /** @type {string} */
+  platform = 'facebook';
+
   /**
    * @private
    * @param {any} response
@@ -35,6 +38,13 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
    * @returns {string}
    */
   #getText(response) {
+    if (typeof response?.data === 'object' && response.data !== null) {
+      try {
+        return JSON.stringify(response.data).toLowerCase();
+      } catch {
+        // ignore
+      }
+    }
     return this.#getBody(response).toLowerCase();
   }
 
@@ -43,6 +53,10 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
    * @returns {boolean}
    */
   isValidPayload(response) {
+    if (this.isRateLimit(response) || this.isBotChallenge(response)) {
+      return false;
+    }
+
     if (Array.isArray(response) || Array.isArray(response?.data)) {
       return true;
     }
@@ -59,13 +73,17 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
     const body = this.#getBody(response);
     if (!body) return false;
 
-    // mbasic login wall: very short page with only login prompt
-    if (body.length < 500 && /log\s*in\s*to\s*facebook|create\s*new\s*account/i.test(body)) {
+    // mbasic login wall: short or stripped page with only login prompt
+    if (/log\s*in\s*to\s*facebook|create\s*new\s*account/i.test(body) && !/<article\b|data-ft=/i.test(body)) {
       return false;
     }
 
-    // A real profile or post page has an article / data-ft / post container
-    if (/<article\b|data-ft=|role="main"|id="root"|div class=".*story"/i.test(body)) {
+    // A real profile or post page has an article / data-ft / story container
+    if (/<article\b|data-ft=|div class=".*story"/i.test(body)) {
+      return true;
+    }
+
+    if (/<html/i.test(body) && (body.includes('role="main"') || body.includes('id="root"'))) {
       return true;
     }
 
@@ -78,18 +96,17 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
    */
   isBotChallenge(response) {
     const url = this.#getUrl(response);
-    if (/checkpoint|facebook\.com\/checkpoint/i.test(url)) {
+    if (/(?:facebook\.com\/checkpoint|\/checkpoint\/)/i.test(url)) {
       return true;
     }
 
     const text = this.#getText(response);
     if (
-      text.includes('checkpoint') ||
       text.includes('security check') ||
       text.includes('confirm your identity') ||
-      text.includes('suspicious activity') ||
-      text.includes('captcha') ||
-      text.includes('please confirm your identity')
+      text.includes('please confirm your identity') ||
+      text.includes('/checkpoint/') ||
+      text.includes('captcha')
     ) {
       return true;
     }
@@ -113,9 +130,10 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
     const text = this.#getText(response);
     if (
       text.includes("you're temporarily blocked") ||
-      text.includes('too many') ||
-      text.includes('rate limit') ||
-      text.includes('unusual activity')
+      text.includes('you are temporarily blocked') ||
+      text.includes('action blocked') ||
+      text.includes('too many requests') ||
+      text.includes('rate limit')
     ) {
       return true;
     }

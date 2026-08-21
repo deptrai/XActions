@@ -21,7 +21,7 @@ export class AbstractCrawler {
   name = 'base';
 
   /** @type {boolean} */
-  requiresAuth = true;
+  requiresAuth = false;
 
   /** @type {AdaptiveRateGovernor | null} */
   governor = null;
@@ -171,12 +171,23 @@ export class AbstractCrawler {
       }
     }
 
+    if (this.requiresAuth && !accountId) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_EXPIRED,
+        code: 'XACT_4010',
+        message: `No available account for authenticated crawler on platform ${this.name}`,
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: this.name,
+      });
+    }
+
     // Consult governor
     if (this.governor) {
       if (this.requiresAuth && accountId) {
         if (!this.governor.canAccountRequest(accountId, this.name)) {
           throw new PlatformError({
-            type: ErrorTypes.RATE_LIMIT,
+            type: ErrorTypes.HIBERNATION,
             code: 'XACT_4291',
             message: `Account "${accountId}" is hibernating or exceeded rate velocity on ${this.name}`,
             statusCode: 429,
@@ -187,23 +198,33 @@ export class AbstractCrawler {
         }
       }
 
-      if (this.governor.getMaxThroughput(this.name) === 0) {
-        throw new PlatformError({
-          type: ErrorTypes.PROXY_EXHAUSTED,
-          code: 'XACT_5030',
-          message: `No healthy proxies available for platform ${this.name}`,
-          statusCode: 503,
-          suggestedAction: SuggestedActions.WAIT,
-          retryAfterMs: 30000,
-          accountId,
-          platform: this.name,
-        });
+      if (typeof this.governor.getMaxThroughput === 'function') {
+        const throughput = this.governor.getMaxThroughput(this.name);
+        const status = typeof this.governor.getStatus === 'function' ? this.governor.getStatus() : null;
+        const totalProxies = status ? status.totalProxyCount : 1;
+
+        if (totalProxies > 0 && throughput === 0) {
+          throw new PlatformError({
+            type: ErrorTypes.PROXY_EXHAUSTED,
+            code: 'XACT_5030',
+            message: `No healthy proxies available for platform ${this.name}`,
+            statusCode: 503,
+            suggestedAction: SuggestedActions.WAIT,
+            retryAfterMs: 30000,
+            accountId,
+            platform: this.name,
+          });
+        }
       }
 
-      this.governor.recordRequest(accountId || 'noauth', this.name);
+      // Record request in governor only if this crawler does not wrap an AbstractApiClient (which records on its own)
+      if (!this.client && typeof this.governor.recordRequest === 'function') {
+        this.governor.recordRequest(accountId || 'noauth', this.name);
+      }
     }
 
-    return entry.handler(command.args, command.session);
+    const session = { ...(command.session || {}), ...(accountId ? { accountId } : {}) };
+    return entry.handler(command.args, session);
   }
 
   /** @returns {Promise<void>} */

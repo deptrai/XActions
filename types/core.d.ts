@@ -181,6 +181,7 @@ export abstract class AbstractCrawler {
     requiresAuth?: boolean;
   });
   registerAction(action: string, handler: Function, descriptor?: Partial<Omit<ActionDescriptor, 'action'>>): void;
+  registerAction(descriptor: Partial<ActionDescriptor> & { action: string; handler: Function }): void;
   listActions(): ActionDescriptor[];
   validateItem(item: PostItem | CommentItem): void;
   start(command: CrawlerCommand): Promise<unknown>;

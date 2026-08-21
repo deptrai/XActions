@@ -30,6 +30,9 @@ export { uploadMedia, uploadImage, uploadVideo, uploadGif, setAltText, scrapeMed
 // Endpoint constants
 export { BEARER_TOKEN, GRAPHQL, REST, DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES, RATE_LIMITS, USER_AGENTS, buildGraphQLUrl, buildGraphQLVariables } from './endpoints.js';
 
+// Validators
+export { TwitterPlatformResponseValidator } from '../validator.js';
+
 // Error classes
 export { TwitterApiError, RateLimitError, AuthError, NotFoundError, NetworkError, parseTwitterErrors } from './errors.js';
 

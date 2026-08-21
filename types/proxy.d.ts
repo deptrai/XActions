@@ -123,6 +123,8 @@ export declare class ProxyIpPool {
 
   add(proxy: string | Partial<NormalizedProxy>): void;
   getNext(): NormalizedProxy | null;
+  getRoundRobinProxy(): NormalizedProxy | null;
+  getRotatingProxy(): NormalizedProxy | null;
   getStickyProxy(accountId: string): NormalizedProxy | null;
   quarantine(proxy: string | Partial<NormalizedProxy>, durationMs?: number): void;
   isAllQuarantined(): boolean;

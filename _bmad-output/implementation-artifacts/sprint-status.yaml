@@ -48,14 +48,14 @@ development_status:
   epic-10-retrospective: optional
 
   # --- Epic 11: Resilient Network & Proxy Pool Management ---
-  epic-11: in-progress
+  epic-11: done
   11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
   11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: done
   11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: done
   11-5-end-to-end-request-pipeline-two-mode-ip: done
   11-6-rate-limit-bot-challenge-defense: done
-  11-7-crawler-governor-integration-validator-contract: review
+  11-7-crawler-governor-integration-validator-contract: done
   epic-11-retrospective: optional
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---

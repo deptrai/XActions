@@ -20,8 +20,9 @@ import { generateSync as totpGenerateSync } from 'otplib';
 import { generateFingerprint, applyFingerprint, applyNavigatorOverrides, applyWebRTCOverride } from './fingerprint.js';
 import { warmSession } from './warmup.js';
 import { extractHydrationJson } from './hydration.js';
+import { FacebookPlatformResponseValidator } from './validator.js';
 
-export { warmSession };
+export { warmSession, FacebookPlatformResponseValidator };
 
 // Configure stealth for all Facebook sessions. Persistent profiles conflict with the
 // iframe.contentWindow evasion (ADR-016). Per-call reconfiguration is not reliable with

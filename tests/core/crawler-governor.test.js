@@ -6,7 +6,7 @@ import { AdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
 import { AccountPool } from '../../src/core/account-pool.js';
 import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
 import { StaticProxyProvider } from '../../src/proxy/providers.js';
-import { PlatformError, ErrorTypes, SuggestedActions } from '../../src/core/error-envelope.js';
+import { PlatformError, AuthSessionExpiredError, ProxyDeadError, ErrorTypes, SuggestedActions } from '../../src/core/error-envelope.js';
 import { AbstractPlatformResponseValidator } from '../../src/core/platform-validator.js';
 
 class MockPlatformValidator extends AbstractPlatformResponseValidator {
@@ -36,8 +36,8 @@ class TestCrawler extends AbstractCrawler {
       requiredArgs: ['username'],
       example: { username: 'testuser' },
       outputType: 'Profile',
-      handler: async (args) => {
-        return { success: true, username: args.username };
+      handler: async (args, session) => {
+        return { success: true, username: args.username, sessionAccountId: session?.accountId };
       },
     });
   }
@@ -105,12 +105,28 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
         })
       ).rejects.toMatchObject({
         code: 'XACT_4291',
-        type: ErrorTypes.RATE_LIMIT,
+        type: ErrorTypes.HIBERNATION,
         suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
       });
     });
 
-    test('should fallback to accountPool.getNextAvailable when accountId is omitted in auth crawler', async () => {
+    test('should throw AUTH_EXPIRED (401) when auth crawler has no available accounts', async () => {
+      const emptyAccountPool = new AccountPool({ governor });
+      const crawler = new TestCrawler({ governor, accountPool: emptyAccountPool });
+
+      await expect(
+        crawler.start({
+          action: 'scrape_profile',
+          args: { username: 'testuser' },
+        })
+      ).rejects.toMatchObject({
+        code: 'XACT_4010',
+        type: ErrorTypes.AUTH_EXPIRED,
+        statusCode: 401,
+      });
+    });
+
+    test('should fallback to accountPool.getNextAvailable when accountId is omitted in auth crawler and inject into session', async () => {
       const crawler = new TestCrawler({ governor, accountPool });
       const result = await crawler.start({
         action: 'scrape_profile',
@@ -118,6 +134,7 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
       });
 
       expect(result.success).toBe(true);
+      expect(result.sessionAccountId).toBe('acc_1');
       expect(governor.getAccountVelocity('acc_1', 'test-platform')).toBe(1);
     });
 
@@ -236,6 +253,34 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
         code: 'XACT_4001',
         type: ErrorTypes.INVALID_ARGS,
       });
+    });
+
+    test('should classify 401 as AuthSessionExpiredError and 500 as ProxyDeadError in handleError', () => {
+      class CustomApiClient extends AbstractApiClient {
+        name = 'custom-platform';
+      }
+      const client = new CustomApiClient();
+
+      expect(() => client.handleError({ status: 401 }, 'custom-platform')).toThrow(AuthSessionExpiredError);
+      expect(() => client.handleError({ status: 502 }, 'custom-platform')).toThrow(ProxyDeadError);
+    });
+
+    test('should preserve sticky proxy when using StaticProxyProvider with accountId', async () => {
+      const provider = new StaticProxyProvider({ pool: proxyPool });
+      class CustomApiClient extends AbstractApiClient {
+        name = 'custom-platform';
+        requiresAuth = true;
+      }
+      const client = new CustomApiClient({
+        proxyProvider: provider,
+        requiresAuth: true,
+        httpClient: async ({ proxy }) => ({ status: 200, data: { proxy } }),
+      });
+
+      const res1 = await client.request('GET', 'https://example.com/api', { accountId: 'acc_1' });
+      const res2 = await client.request('GET', 'https://example.com/api', { accountId: 'acc_1' });
+
+      expect(res1.data.proxy.host).toBe(res2.data.proxy.host);
     });
   });
 });

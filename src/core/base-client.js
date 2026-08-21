@@ -12,6 +12,8 @@ import {
   PlatformError,
   RateLimitError,
   BotChallengeError,
+  AuthSessionExpiredError,
+  ProxyDeadError,
   ErrorTypes,
   SuggestedActions,
 } from './error-envelope.js';
@@ -137,17 +139,36 @@ export class AbstractApiClient {
   /**
    * Resolve proxy from proxyProvider or proxyPool.
    * Throws PROXY_EXHAUSTED if no proxy is available.
-   * @param {string} [accountId]
+   * @param {string | Object} [accountId]
    * @param {boolean} [requiresResidential=false]
    * @returns {string | Object}
    */
   resolveProxy(accountId, requiresResidential = false) {
+    const rawAccountId = typeof accountId === 'string' ? accountId : accountId?.accountId;
     let proxy = null;
+
     if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
-      proxy = this.proxyProvider.getProxy(accountId, requiresResidential);
+      const opts = typeof accountId === 'string'
+        ? { accountId, requiresResidential }
+        : (accountId ? { ...accountId, requiresResidential } : { requiresResidential });
+      proxy = this.proxyProvider.getProxy(opts);
     } else if (this.proxyPool) {
-      if (this.requiresAuth && accountId && typeof this.proxyPool.getStickyProxy === 'function') {
-        proxy = this.proxyPool.getStickyProxy(accountId);
+      if (requiresResidential) {
+        throw new PlatformError({
+          type: ErrorTypes.PROXY_EXHAUSTED,
+          code: 'XACT_5030',
+          message: `Residential proxy requested but proxyPool has no residential support on ${this.platform}`,
+          statusCode: 503,
+          suggestedAction: SuggestedActions.WAIT,
+          retryAfterMs: this.standbyBackoffMs,
+          accountId: rawAccountId,
+          platform: this.platform,
+        });
+      }
+      if (this.requiresAuth && rawAccountId && typeof this.proxyPool.getStickyProxy === 'function') {
+        proxy = this.proxyPool.getStickyProxy(rawAccountId);
+      } else if (typeof this.proxyPool.getNext === 'function') {
+        proxy = this.proxyPool.getNext();
       } else if (typeof this.proxyPool.getRotatingProxy === 'function') {
         proxy = this.proxyPool.getRotatingProxy();
       } else if (typeof this.proxyPool.getRoundRobinProxy === 'function') {
@@ -156,16 +177,17 @@ export class AbstractApiClient {
     }
 
     if (!proxy) {
-      if (this.requiresAuth && accountId && this.accountPool) {
-        this.accountPool.markUnavailable(accountId, 'proxy_exhausted', this.standbyBackoffMs, this.platform);
+      if (this.requiresAuth && rawAccountId && this.accountPool) {
+        this.accountPool.markUnavailable(rawAccountId, 'proxy_exhausted', this.standbyBackoffMs, this.platform);
       }
       throw new PlatformError({
         type: ErrorTypes.PROXY_EXHAUSTED,
         code: 'XACT_5030',
         message: 'Proxy pool exhausted: no healthy proxy available',
+        statusCode: 503,
         suggestedAction: SuggestedActions.WAIT,
         retryAfterMs: this.standbyBackoffMs,
-        accountId,
+        accountId: rawAccountId,
         platform: this.platform,
       });
     }
@@ -203,6 +225,7 @@ export class AbstractApiClient {
             type: ErrorTypes.HIBERNATION,
             code: 'XACT_4291',
             message: `Account "${currentAccountId}" is hibernating or exceeded velocity limit`,
+            statusCode: 429,
             suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
             accountId: currentAccountId,
             platform: this.platform,
@@ -225,6 +248,7 @@ export class AbstractApiClient {
             type: ErrorTypes.PROXY_EXHAUSTED,
             code: 'XACT_5030',
             message: 'Proxy pool exhausted: all proxies quarantined in standby',
+            statusCode: 503,
             suggestedAction: SuggestedActions.WAIT,
             retryAfterMs: this.standbyBackoffMs,
             accountId: currentAccountId,
@@ -246,6 +270,7 @@ export class AbstractApiClient {
             type: ErrorTypes.INTERNAL,
             code: 'XACT_5000',
             message: 'httpClient transport is not configured on client',
+            statusCode: 500,
             suggestedAction: SuggestedActions.CONTACT_SUPPORT,
           });
         }
@@ -277,21 +302,38 @@ export class AbstractApiClient {
         if (status >= 200 && status < 400) {
           if (this.responseValidator) {
             if (this.responseValidator.isRateLimit(response)) {
+              const retryAfterHeader = response?.headers?.['retry-after'] || response?.headers?.['Retry-After'];
+              const retryAfterMs = this.#parseRetryAfter(retryAfterHeader) || this.backoffBaseMs;
+              if (this.requiresAuth && currentAccountId && this.accountPool) {
+                this.accountPool.markUnavailable(currentAccountId, 'rate_limit', this.rateLimitHibernationMs, this.platform);
+                if (this.governor && typeof this.governor.recordRateLimit === 'function') {
+                  this.governor.recordRateLimit(currentAccountId, this.platform, this.rateLimitHibernationMs);
+                }
+              }
               throw new RateLimitError({
                 code: 'XACT_4290',
                 message: 'Rate limit payload detected from upstream platform',
                 statusCode: 429,
-                suggestedAction: SuggestedActions.ROTATE_PROXY,
+                suggestedAction: this.requiresAuth ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
+                retryAfterMs,
+                accountId: currentAccountId,
                 platform: this.platform,
                 details: response?.data || response,
               });
             }
             if (this.responseValidator.isBotChallenge(response)) {
+              if (this.requiresAuth && currentAccountId && this.accountPool) {
+                this.accountPool.markUnavailable(currentAccountId, 'bot_challenge', this.rateLimitHibernationMs, this.platform);
+                if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
+                  this.governor.recordBotChallenge(currentAccountId, this.platform);
+                }
+              }
               throw new BotChallengeError({
                 code: 'XACT_4030',
                 message: 'Bot challenge detected on upstream platform',
                 statusCode: 403,
-                suggestedAction: SuggestedActions.ROTATE_PROXY,
+                suggestedAction: this.requiresAuth ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
+                accountId: currentAccountId,
                 platform: this.platform,
                 details: response?.data || response,
               });
@@ -303,6 +345,7 @@ export class AbstractApiClient {
                 message: 'Response payload is invalid or corrupted',
                 statusCode: 400,
                 suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+                accountId: currentAccountId,
                 platform: this.platform,
                 details: response?.data || response,
               });
@@ -333,6 +376,7 @@ export class AbstractApiClient {
               type: ErrorTypes.PROXY_EXHAUSTED,
               code: 'XACT_5030',
               message: 'Proxy pool exhausted: all proxies quarantined in standby',
+              statusCode: 503,
               suggestedAction: SuggestedActions.WAIT,
               retryAfterMs: this.standbyBackoffMs,
               accountId: currentAccountId,
@@ -378,7 +422,7 @@ export class AbstractApiClient {
 
           await this.#sleep(chosenDelay);
         } else {
-          // Other unexpected status codes
+          // Other status codes (401, 5xx, etc.)
           this.handleError(response, this.platform);
         }
       }
@@ -390,6 +434,7 @@ export class AbstractApiClient {
       type: ErrorTypes.INTERNAL,
       code: 'XACT_5000',
       message: 'Request pipeline exhausted all retry and account rotation attempts',
+      statusCode: 500,
       suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
       accountId: currentAccountId,
       platform: this.platform,
@@ -413,17 +458,69 @@ export class AbstractApiClient {
   }
 
   /**
+   * Comprehensive error classification for non-2xx/3xx/429/403 responses.
    * @param {any} response
    * @param {string} platform
-   * @returns {never | any}
+   * @returns {never}
    */
   handleError(response, platform) {
+    const status = response?.status ?? 500;
+
+    if (status === 401) {
+      throw new AuthSessionExpiredError({
+        code: 'XACT_4010',
+        message: 'Authentication expired on upstream platform',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform,
+        details: response?.data || response,
+      });
+    }
+
+    if (status === 403) {
+      throw new BotChallengeError({
+        code: 'XACT_4030',
+        message: 'Bot challenge detected on upstream platform',
+        statusCode: 403,
+        suggestedAction: SuggestedActions.ROTATE_PROXY,
+        platform,
+        details: response?.data || response,
+      });
+    }
+
+    if (status === 429) {
+      const retryAfterHeader = response?.headers?.['retry-after'] || response?.headers?.['Retry-After'];
+      const retryAfterMs = this.#parseRetryAfter(retryAfterHeader);
+      throw new RateLimitError({
+        code: 'XACT_4290',
+        message: 'Rate limit exceeded on upstream platform',
+        statusCode: 429,
+        suggestedAction: SuggestedActions.ROTATE_PROXY,
+        retryAfterMs,
+        platform,
+        details: response?.data || response,
+      });
+    }
+
+    if (status >= 500) {
+      throw new ProxyDeadError({
+        code: 'XACT_5030',
+        message: `Upstream platform returned server error ${status}`,
+        statusCode: status,
+        suggestedAction: SuggestedActions.WAIT,
+        platform,
+        details: response?.data || response,
+      });
+    }
+
     throw new PlatformError({
       type: ErrorTypes.INTERNAL,
-      message: 'Request failed',
-      platform,
+      code: 'XACT_5000',
+      message: `Request failed with status ${status}`,
+      statusCode: status,
       suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
-      details: response,
+      platform,
+      details: response?.data || response,
     });
   }
 }

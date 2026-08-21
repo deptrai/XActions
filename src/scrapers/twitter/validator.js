@@ -8,6 +8,9 @@
 import { AbstractPlatformResponseValidator } from '../../core/platform-validator.js';
 
 export class TwitterPlatformResponseValidator extends AbstractPlatformResponseValidator {
+  /** @type {string} */
+  platform = 'twitter';
+
   /**
    * Extract raw body string if available.
    * @private
@@ -56,7 +59,15 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
 
     const text = this.#getText(response);
     if (text.includes('<html') && !text.includes('cf-browser-verification') && !text.includes('captcha')) {
-      return true;
+      if (
+        text.includes('react-root') ||
+        text.includes('twitter-site') ||
+        text.includes('<article') ||
+        text.includes('data-testid') ||
+        text.includes('main')
+      ) {
+        return true;
+      }
     }
 
     return false;
@@ -67,16 +78,37 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
    * @returns {boolean}
    */
   isBotChallenge(response) {
-    if (response?.status === 403) return true;
+    // Check GraphQL errors
+    const errors = response?.errors || response?.data?.errors;
+    if (Array.isArray(errors)) {
+      for (const err of errors) {
+        if (err?.code === 326) return true; // Account locked / challenge required
+        const msg = String(err?.message || '').toLowerCase();
+        if (msg.includes('challenge') || msg.includes('temporarily locked') || msg.includes('verify your account')) {
+          return true;
+        }
+      }
+    }
+
+    if (response?.status === 403) {
+      // Do not treat resource not found / authorization as bot challenge if specific errors indicate otherwise
+      if (Array.isArray(errors) && errors.some((e) => e?.code === 32 || e?.code === 34 || e?.code === 179)) {
+        return false;
+      }
+      return true;
+    }
 
     const text = this.#getText(response);
     if (
       text.includes('cf-browser-verification') ||
+      text.includes('incapsula_resource') ||
+      text.includes('data-translate="why_captcha"') ||
+      text.includes('challenge-running') ||
+      text.includes('just a moment...') ||
+      text.includes('<title>access denied</title>') ||
+      text.includes('<title>attention required! | cloudflare</title>') ||
       text.includes('challenge') ||
-      text.includes('captcha') ||
-      text.includes('incapsula') ||
-      text.includes('access denied') ||
-      text.includes('just a moment')
+      text.includes('captcha')
     ) {
       return true;
     }
