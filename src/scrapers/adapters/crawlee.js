@@ -1,18 +1,18 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Scraper Adapter — Crawlee
- * 
+ *
  * Adapter wrapping Crawlee (by Apify) — the best-in-class Node.js crawling framework.
  * Adds smart request queuing, automatic retries, proxy rotation, session management,
  * and anti-blocking measures on top of Puppeteer or Playwright.
- * 
+ *
  * Best for: production-scale scraping, rotating proxies, managing large crawl jobs,
  * automatic retry/error handling, respecting rate limits.
- * 
+ *
  * Crawlee can use either Puppeteer or Playwright as its underlying browser.
- * 
+ *
  * Install: npm install crawlee
- * 
+ *
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -25,11 +25,15 @@ export class CrawleeAdapter extends BaseAdapter {
   supportsJavaScript = true;
   requiresBrowser = true;
 
+  /** @type {import('crawlee') | null} */
   #crawlee = null;
 
   async #getCrawlee() {
     if (!this.#crawlee) {
       this.#crawlee = await import('crawlee');
+    }
+    if (!this.#crawlee) {
+      throw new Error('crawlee could not be loaded');
     }
     return this.#crawlee;
   }
@@ -48,88 +52,59 @@ export class CrawleeAdapter extends BaseAdapter {
 
   /**
    * Launch a Crawlee browser pool.
-   * 
-   * Options:
-   *   - browserPlugin: 'puppeteer' (default) or 'playwright'
-   *   - proxyUrls: string[] of proxy URLs for rotation
-   *   - maxConcurrency: max concurrent pages (default 1)
-   *   - sessionPoolOptions: Crawlee session pool config
+   * @param {LaunchOptions} [options]
+   * @returns {Promise<AdapterBrowser>}
    */
   async launch(options = {}) {
     const crawlee = await this.#getCrawlee();
     const browserPlugin = options.browserPlugin || 'puppeteer';
 
-    let launcherClass;
-    let launchContext = {
-      launchOptions: {
-        headless: options.headless !== false,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-blink-features=AutomationControlled',
-          ...(options.args || []),
-        ],
-      },
+    const launchOptions = {
+      headless: options.headless !== false,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-blink-features=AutomationControlled',
+        ...(options.args || []),
+      ],
     };
 
-    // Determine which browser to use under Crawlee
-    if (browserPlugin === 'playwright') {
-      try {
-        const { PlaywrightCrawler } = crawlee;
-        launcherClass = PlaywrightCrawler;
-      } catch {
-        throw new Error('Crawlee with Playwright requires: npm install crawlee playwright');
+    const launchContext = { launchOptions };
+
+    /** @type {import('crawlee').CrawleeBrowserPool | null} */
+    let browserPool = null;
+
+    try {
+      const bp = await import('@crawlee/browser-pool');
+      const BrowserPool = bp.BrowserPool;
+      const PuppeteerPlugin = bp.PuppeteerPlugin;
+      const PlaywrightPlugin = bp.PlaywrightPlugin;
+
+      /** @type {import('crawlee').CrawleePlugin} */
+      let plugin;
+      if (browserPlugin === 'playwright') {
+        const pw = await import('playwright');
+        plugin = new PlaywrightPlugin(pw.chromium, launchContext);
+      } else {
+        const pptr = await import('puppeteer');
+        plugin = new PuppeteerPlugin(pptr.default, launchContext);
       }
-    } else {
-      try {
-        const { PuppeteerCrawler } = crawlee;
-        launcherClass = PuppeteerCrawler;
-      } catch {
-        throw new Error('Crawlee with Puppeteer requires: npm install crawlee puppeteer');
-      }
+
+      browserPool = new BrowserPool({
+        browserPlugins: [plugin],
+        maxOpenPagesPerBrowser: options.maxPagesPerBrowser || 3,
+        retireBrowserAfterPageCount: options.retireAfter || 20,
+      });
+    } catch (e) {
+      throw new Error(`Crawlee browser pool could not be created: ${e instanceof Error ? e.message : String(e)}`);
     }
 
-    // Build proxy configuration if provided
     let proxyConfiguration = null;
     if (options.proxyUrls?.length) {
       proxyConfiguration = new crawlee.ProxyConfiguration({
         proxyUrls: options.proxyUrls,
       });
     }
-
-    // For the adapter pattern, we don't create a full crawler — we use the BrowserPool directly
-    // This gives us raw page access while benefiting from Crawlee's browser management
-    let BrowserPool, PuppeteerPlugin, PlaywrightPlugin;
-    try {
-      const bp = await import('@crawlee/browser-pool');
-      BrowserPool = bp.BrowserPool;
-      PuppeteerPlugin = bp.PuppeteerPlugin;
-      PlaywrightPlugin = bp.PlaywrightPlugin;
-    } catch {
-      // Fallback: crawlee re-exports these
-      BrowserPool = crawlee.BrowserPool;
-      PuppeteerPlugin = crawlee.PuppeteerPlugin;
-      PlaywrightPlugin = crawlee.PlaywrightPlugin;
-    }
-
-    let plugin;
-    if (browserPlugin === 'playwright') {
-      const pw = await import('playwright');
-      plugin = new PlaywrightPlugin(pw.chromium, {
-        launchOptions: launchContext.launchOptions,
-      });
-    } else {
-      const pptr = await import('puppeteer');
-      plugin = new PuppeteerPlugin(pptr.default, {
-        launchOptions: launchContext.launchOptions,
-      });
-    }
-
-    const browserPool = new BrowserPool({
-      browserPlugins: [plugin],
-      maxOpenPagesPerBrowser: options.maxPagesPerBrowser || 3,
-      retireBrowserAfterPageCount: options.retireAfter || 20,
-    });
 
     return {
       _native: browserPool,
@@ -140,68 +115,99 @@ export class CrawleeAdapter extends BaseAdapter {
     };
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @param {NewPageOptions} [options]
+   * @returns {Promise<AdapterPage>}
+   */
   async newPage(browser, options = {}) {
-    const page = await browser._native.newPage();
-    const nativePage = page;
+    const b = /** @type {AdapterBrowser & { _native: import('crawlee').CrawleeBrowserPool, _browserPlugin: string }} */ (browser);
+    const page = await b._native.newPage();
 
-    // Set viewport and UA on the underlying page
-    if (browser._browserPlugin === 'playwright') {
-      // Playwright pages from BrowserPool
-    } else {
-      // Puppeteer pages
-      try {
-        const width = options.viewport?.width || 1280 + Math.floor(Math.random() * 100);
-        const height = options.viewport?.height || 800;
-        await nativePage.setViewport({ width, height });
-        await nativePage.setUserAgent(
-          options.userAgent ||
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        );
-      } catch {
-        // BrowserPool page may not support these directly
-      }
+    try {
+      const width = options.viewport?.width || 1280 + Math.floor(Math.random() * 100);
+      const height = options.viewport?.height || 800;
+      await page.setViewport({ width, height });
+      await page.setUserAgent(
+        options.userAgent ||
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      );
+    } catch {
+      // BrowserPool page may not support these directly
     }
 
     return {
-      _native: nativePage,
+      _native: page,
       _adapter: this.name,
-      _browserPool: browser._native,
+      _browserPool: b._native,
     };
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} url
+   * @param {GotoOptions} [options]
+   * @returns {Promise<void>}
+   */
   async goto(page, url, options = {}) {
-    const waitUntilMap = {
+    const p = /** @type {AdapterPage & { _native: import('crawlee').CrawleePage }} */ (page);
+    const waitUntilMap = /** @type {Record<NonNullable<GotoOptions['waitUntil']>, string>} */ ({
       load: 'load',
       domcontentloaded: 'domcontentloaded',
       networkidle: 'networkidle2',
       networkidle0: 'networkidle0',
       networkidle2: 'networkidle2',
-    };
-    const waitUntil = waitUntilMap[options.waitUntil] || options.waitUntil || 'networkidle2';
-    await page._native.goto(url, { waitUntil, timeout: options.timeout || 30000 });
+    });
+    const waitUntil = options.waitUntil ? waitUntilMap[options.waitUntil] : 'networkidle2';
+    await p._native.goto(url, { waitUntil, timeout: options.timeout || 30000 });
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {((...args: unknown[]) => unknown)|string} fn
+   * @param {...unknown} args
+   * @returns {Promise<unknown>}
+   */
   async evaluate(page, fn, ...args) {
-    return page._native.evaluate(fn, ...args);
+    const p = /** @type {AdapterPage & { _native: import('crawlee').CrawleePage }} */ (page);
+    return p._native.evaluate(fn, ...args);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} selector
+   * @param {((...args: unknown[]) => unknown)} [mapFn]
+   * @returns {Promise<Array<unknown>>}
+   */
   async queryAll(page, selector, mapFn) {
+    const p = /** @type {AdapterPage & { _native: import('crawlee').CrawleePage }} */ (page);
     if (mapFn) {
-      return page._native.$$eval(selector, mapFn);
+      return /** @type {Promise<Array<unknown>>} */ (p._native.$$eval(selector, /** @type {(elements: unknown[]) => unknown} */ (mapFn)));
     }
-    return page._native.$$(selector);
+    return p._native.$$(selector);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {Promise<string>}
+   */
   async getContent(page) {
-    return page._native.content();
+    const p = /** @type {AdapterPage & { _native: import('crawlee').CrawleePage }} */ (page);
+    return p._native.content();
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {Cookie} cookie
+   * @returns {Promise<void>}
+   */
   async setCookie(page, cookie) {
-    // Try Puppeteer style first, fallback to Playwright style
-    if (typeof page._native.setCookie === 'function') {
-      await page._native.setCookie(cookie);
-    } else if (page._native.context) {
-      await page._native.context().addCookies([{
+    const p = /** @type {AdapterPage & { _native: import('crawlee').CrawleePage }} */ (page);
+    if (typeof p._native.setCookie === 'function') {
+      await p._native.setCookie(cookie);
+    } else if (p._native.context) {
+      const context = p._native.context();
+      await context.addCookies([{
         name: cookie.name,
         value: cookie.value,
         domain: cookie.domain,
@@ -212,58 +218,73 @@ export class CrawleeAdapter extends BaseAdapter {
     }
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {ScrollOptions} [options]
+   * @returns {Promise<void>}
+   */
   async scroll(page, options = {}) {
+    const p = /** @type {AdapterPage & { _native: import('crawlee').CrawleePage }} */ (page);
     if (options.y !== undefined) {
-      await page._native.evaluate((y) => window.scrollBy(0, y), options.y);
+      await p._native.evaluate((y) => window.scrollBy(0, Number(y)), options.y);
     } else {
-      await page._native.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await p._native.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     }
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {ScreenshotOptions} [options]
+   * @returns {Promise<Buffer>}
+   */
   async screenshot(page, options = {}) {
-    return page._native.screenshot(options);
+    const p = /** @type {AdapterPage & { _native: import('crawlee').CrawleePage }} */ (page);
+    return /** @type {Promise<Buffer>} */ (p._native.screenshot(options));
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} selector
+   * @param {WaitForSelectorOptions} [options]
+   * @returns {Promise<void>}
+   */
   async waitForSelector(page, selector, options = {}) {
-    await page._native.waitForSelector(selector, { timeout: options.timeout || 30000 });
+    const p = /** @type {AdapterPage & { _native: import('crawlee').CrawleePage }} */ (page);
+    await p._native.waitForSelector(selector, { timeout: options.timeout || 30000 });
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {Promise<void>}
+   */
   async closePage(page) {
-    if (page._browserPool) {
-      // Return page to pool instead of closing browser
-      try {
-        await page._native.close();
-      } catch {
-        // Page may already be closed
-      }
-    } else {
-      await page._native.close();
+    const p = /** @type {AdapterPage & { _native: import('crawlee').CrawleePage, _browserPool: import('crawlee').CrawleeBrowserPool }} */ (page);
+    try {
+      await p._native.close();
+    } catch {
+      // Page may already be closed
     }
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @returns {Promise<void>}
+   */
   async closeBrowser(browser) {
-    await browser._native.destroy();
+    const b = /** @type {AdapterBrowser & { _native: import('crawlee').CrawleeBrowserPool }} */ (browser);
+    await b._native.destroy();
   }
 
   /**
    * Crawlee-specific: Create a full PuppeteerCrawler or PlaywrightCrawler
-   * for batch crawling jobs with automatic queuing, retry, and proxy rotation.
-   * 
-   * This is the "Crawlee way" — you define a requestHandler and let Crawlee
-   * manage the crawl lifecycle.
-   * 
-   * @param {Object} options
-   * @param {Function} options.requestHandler - async (context) => { ... }
-   * @param {string[]} [options.startUrls] - URLs to crawl
-   * @param {number} [options.maxRequestsPerCrawl] - Limit total requests
-   * @param {number} [options.maxConcurrency] - Concurrent pages
-   * @param {string[]} [options.proxyUrls] - Proxy URLs for rotation
-   * @returns {Object} Crawler instance with run() method
+   * @param {CreateCrawlerOptions} [options]
+   * @returns {Promise<{ run: () => Promise<unknown> }>}
    */
   async createCrawler(options = {}) {
     const crawlee = await this.#getCrawlee();
     const { PuppeteerCrawler, ProxyConfiguration } = crawlee;
 
+    /** @type {import('crawlee').CrawlerOptions} */
     const crawlerOptions = {
       requestHandler: options.requestHandler,
       maxRequestsPerCrawl: options.maxRequestsPerCrawl || 100,
@@ -282,13 +303,22 @@ export class CrawleeAdapter extends BaseAdapter {
       });
     }
 
-    return new PuppeteerCrawler(crawlerOptions);
+    const crawler = new PuppeteerCrawler(crawlerOptions);
+    return crawler;
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {unknown}
+   */
   getNativePage(page) {
     return page._native;
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @returns {unknown}
+   */
   getNativeBrowser(browser) {
     return browser._native;
   }

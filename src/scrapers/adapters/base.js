@@ -1,33 +1,13 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Scraper Adapter — Base Class
- * 
+ *
  * Abstract interface that all scraper framework adapters must implement.
  * This enables XActions to work with Puppeteer, Playwright, HTTP/Cheerio,
  * or any other scraping framework.
- * 
+ *
  * @author nich (@nichxbt)
  * @license MIT
- */
-
-/**
- * @typedef {Object} AdapterBrowser
- * @property {Function} newPage - Create a new page/context
- * @property {Function} close - Close the browser
- * @property {*} _native - The underlying native browser instance
- */
-
-/**
- * @typedef {Object} AdapterPage
- * @property {Function} goto - Navigate to a URL
- * @property {Function} evaluate - Execute JS in page context (browser adapters)
- * @property {Function} querySelectorAll - Query DOM elements
- * @property {Function} setCookie - Set a cookie
- * @property {Function} setViewport - Set viewport size
- * @property {Function} setUserAgent - Set user agent string
- * @property {Function} scroll - Scroll the page
- * @property {Function} close - Close the page
- * @property {*} _native - The underlying native page instance
  */
 
 export class BaseAdapter {
@@ -59,10 +39,7 @@ export class BaseAdapter {
 
   /**
    * Launch a browser instance (or equivalent context)
-   * @param {Object} options
-   * @param {boolean} [options.headless=true] - Run in headless mode
-   * @param {string[]} [options.args] - Additional browser arguments
-   * @param {Object} [options.proxy] - Proxy configuration
+   * @param {LaunchOptions} [options]
    * @returns {Promise<AdapterBrowser>}
    */
   async launch(options = {}) {
@@ -72,9 +49,7 @@ export class BaseAdapter {
   /**
    * Create a new page with realistic settings
    * @param {AdapterBrowser} browser
-   * @param {Object} [options]
-   * @param {string} [options.userAgent] - Custom user agent
-   * @param {{ width: number, height: number }} [options.viewport] - Viewport size
+   * @param {NewPageOptions} [options]
    * @returns {Promise<AdapterPage>}
    */
   async newPage(browser, options = {}) {
@@ -85,9 +60,7 @@ export class BaseAdapter {
    * Navigate to a URL
    * @param {AdapterPage} page
    * @param {string} url
-   * @param {Object} [options]
-   * @param {string} [options.waitUntil] - Wait until condition ('load', 'domcontentloaded', 'networkidle')
-   * @param {number} [options.timeout] - Navigation timeout in ms
+   * @param {GotoOptions} [options]
    * @returns {Promise<void>}
    */
   async goto(page, url, options = {}) {
@@ -98,9 +71,9 @@ export class BaseAdapter {
    * Execute JavaScript in page context
    * Only available for browser-based adapters (supportsJavaScript === true)
    * @param {AdapterPage} page
-   * @param {Function|string} fn - Function or string to evaluate
-   * @param {...*} args - Arguments to pass to the function
-   * @returns {Promise<*>} Result of evaluation
+   * @param {((...args: unknown[]) => unknown)|string} fn - Function or string to evaluate
+   * @param {...unknown} args - Arguments to pass to the function
+   * @returns {Promise<unknown>} Result of evaluation
    */
   async evaluate(page, fn, ...args) {
     throw new Error(`${this.name}: evaluate() not implemented — this adapter does not support JS execution`);
@@ -111,8 +84,8 @@ export class BaseAdapter {
    * Works for both browser and HTTP adapters
    * @param {AdapterPage} page
    * @param {string} selector - CSS selector
-   * @param {Function} [mapFn] - Function to map each element (receives element)
-   * @returns {Promise<Array>}
+   * @param {((...args: unknown[]) => unknown)} [mapFn] - Function to map each element (receives element)
+   * @returns {Promise<Array<unknown>>}
    */
   async queryAll(page, selector, mapFn) {
     throw new Error(`${this.name}: queryAll() not implemented`);
@@ -130,13 +103,7 @@ export class BaseAdapter {
   /**
    * Set a single cookie on the page/context
    * @param {AdapterPage} page
-   * @param {Object} cookie
-   * @param {string} cookie.name
-   * @param {string} cookie.value
-   * @param {string} cookie.domain
-   * @param {string} [cookie.path]
-   * @param {boolean} [cookie.httpOnly]
-   * @param {boolean} [cookie.secure]
+   * @param {Cookie} cookie
    * @returns {Promise<void>}
    */
   async setCookie(page, cookie) {
@@ -146,7 +113,7 @@ export class BaseAdapter {
   /**
    * Set multiple cookies on the page/context
    * @param {AdapterPage} page
-   * @param {Array<{name: string, value: string, domain: string, path?: string, httpOnly?: boolean, secure?: boolean}>} cookies
+   * @param {Array<Cookie>} cookies
    * @returns {Promise<void>}
    */
   async setCookies(page, cookies) {
@@ -158,7 +125,7 @@ export class BaseAdapter {
   /**
    * Connect to an existing browser via CDP (Chrome DevTools Protocol)
    * @param {string} cdpUrl - CDP HTTP endpoint, e.g. 'http://localhost:9222'
-   * @param {Object} [options]
+   * @param {LaunchOptions} [options]
    * @returns {Promise<AdapterBrowser>}
    */
   async connect(cdpUrl, options = {}) {
@@ -168,9 +135,7 @@ export class BaseAdapter {
   /**
    * Scroll the page
    * @param {AdapterPage} page
-   * @param {Object} [options]
-   * @param {number} [options.x=0] - Horizontal scroll
-   * @param {number} [options.y] - Vertical scroll (defaults to bottom)
+   * @param {ScrollOptions} [options]
    * @returns {Promise<void>}
    */
   async scroll(page, options = {}) {
@@ -180,9 +145,7 @@ export class BaseAdapter {
   /**
    * Take a screenshot
    * @param {AdapterPage} page
-   * @param {Object} [options]
-   * @param {string} [options.path] - File path to save
-   * @param {boolean} [options.fullPage] - Capture full page
+   * @param {ScreenshotOptions} [options]
    * @returns {Promise<Buffer>}
    */
   async screenshot(page, options = {}) {
@@ -193,8 +156,7 @@ export class BaseAdapter {
    * Wait for a selector to appear
    * @param {AdapterPage} page
    * @param {string} selector
-   * @param {Object} [options]
-   * @param {number} [options.timeout=30000]
+   * @param {WaitForSelectorOptions} [options]
    * @returns {Promise<void>}
    */
   async waitForSelector(page, selector, options = {}) {
@@ -221,7 +183,7 @@ export class BaseAdapter {
 
   /**
    * Get adapter info
-   * @returns {Object}
+   * @returns {{ name: string, description: string, supportsJavaScript: boolean, requiresBrowser: boolean }}
    */
   getInfo() {
     return {

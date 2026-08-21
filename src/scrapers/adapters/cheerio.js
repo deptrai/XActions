@@ -1,24 +1,44 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Scraper Adapter — HTTP/Cheerio
- * 
+ *
  * Lightweight adapter using HTTP requests + Cheerio for HTML parsing.
  * No browser required — much faster and uses far less memory.
- * 
+ *
  * Best for: scraping public pages that don't need JS, quick data extraction,
  * CI/CD environments without browser binaries.
- * 
+ *
  * Limitation: Cannot execute JavaScript in page context. Pages that require
  * client-side JS rendering (most of x.com) need a browser adapter instead.
  * This adapter is ideal for pre-rendered pages, APIs, or cached/static content.
- * 
+ *
  * Install: npm install cheerio
- * 
+ *
  * @author nich (@nichxbt)
  * @license MIT
  */
 
 import { BaseAdapter } from './base.js';
+
+/**
+ * @typedef {Object} CheerioBrowser
+ * @property {import('cheerio').CheerioAPI | null} _native
+ * @property {string} _adapter
+ * @property {{ headers: Record<string, string>, proxy: unknown, timeout: number }} _options
+ * @property {Map<string, string>} _cookies
+ */
+
+/**
+ * @typedef {Object} CheerioPage
+ * @property {import('cheerio').CheerioAPI | null} _native
+ * @property {string} _adapter
+ * @property {CheerioBrowser} _browser
+ * @property {string} _html
+ * @property {string} _url
+ * @property {Map<string, string>} _cookies
+ * @property {Record<string, string>} _headers
+ * @property {import('cheerio').CheerioAPI | null} _cheerio
+ */
 
 export class CheerioAdapter extends BaseAdapter {
   name = 'cheerio';
@@ -26,11 +46,15 @@ export class CheerioAdapter extends BaseAdapter {
   supportsJavaScript = false;
   requiresBrowser = false;
 
+  /** @type {import('cheerio') | null} */
   #cheerio = null;
 
   async #getCheerio() {
     if (!this.#cheerio) {
       this.#cheerio = await import('cheerio');
+    }
+    if (!this.#cheerio) {
+      throw new Error('cheerio could not be loaded');
     }
     return this.#cheerio;
   }
@@ -47,8 +71,11 @@ export class CheerioAdapter extends BaseAdapter {
     }
   }
 
+  /**
+   * @param {LaunchOptions} [options]
+   * @returns {Promise<AdapterBrowser>}
+   */
   async launch(options = {}) {
-    // No browser to launch — just store config
     return {
       _native: null,
       _adapter: this.name,
@@ -67,50 +94,66 @@ export class CheerioAdapter extends BaseAdapter {
     };
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @param {NewPageOptions} [options]
+   * @returns {Promise<AdapterPage>}
+   */
   async newPage(browser, options = {}) {
     const cheerio = await this.#getCheerio();
+    const b = /** @type {CheerioBrowser} */ (browser);
     return {
-      _native: null,     // Will hold the cheerio $ instance after navigation
+      _native: null,
       _adapter: this.name,
-      _browser: browser,  // Reference to "browser" for config
+      _browser: b,
       _html: '',
       _url: '',
-      _cookies: new Map(browser._cookies),
-      _headers: { ...browser._options.headers },
-      _cheerio: cheerio,
+      _cookies: new Map(b._cookies),
+      _headers: { ...b._options.headers },
+      _cheerio: /** @type {import('cheerio').CheerioAPI | null} */ (cheerio.default),
     };
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} url
+   * @param {GotoOptions} [options]
+   * @returns {Promise<void>}
+   */
   async goto(page, url, options = {}) {
-    const cookieStr = Array.from(page._cookies.entries())
+    const p = /** @type {CheerioPage} */ (page);
+    const cookieStr = Array.from(p._cookies.entries())
       .map(([name, val]) => `${name}=${val}`)
       .join('; ');
 
-    const headers = { ...page._headers };
+    const headers = { ...p._headers };
     if (cookieStr) headers['Cookie'] = cookieStr;
 
-    const fetchOptions = {
+    const fetchOptions = /** @type {RequestInit} */ ({
       headers,
       redirect: 'follow',
-      signal: AbortSignal.timeout(page._browser._options.timeout),
-    };
+      signal: AbortSignal.timeout(p._browser._options.timeout),
+    });
 
-    // Support proxy via environment (https_proxy) — direct proxy support
-    // would need a package like undici/proxy-agent
     const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText} — ${url}`);
     }
 
-    page._html = await response.text();
-    page._url = url;
-    page._native = page._cheerio.load(page._html);
+    p._html = await response.text();
+    p._url = url;
+    const cheerio = await this.#getCheerio();
+    p._native = cheerio.load(p._html);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {((...args: unknown[]) => unknown)|string} fn
+   * @param {...unknown} args
+   * @returns {Promise<unknown>}
+   */
   async evaluate(page, fn, ...args) {
-    // Cheerio cannot execute JS in a page context.
-    // Instead, provide the parsed $ (cheerio instance) to a compatible evaluator.
     throw new Error(
       'CheerioAdapter does not support evaluate() — use queryAll() or getContent() instead, ' +
       'or switch to a browser adapter (puppeteer/playwright) for JS-heavy pages.'
@@ -118,81 +161,112 @@ export class CheerioAdapter extends BaseAdapter {
   }
 
   /**
-   * Query elements with Cheerio and optionally map them.
-   * The mapFn receives a Cheerio-wrapped element and the Cheerio instance.
-   * 
-   * @param {Object} page
+   * @param {AdapterPage} page
    * @param {string} selector
-   * @param {Function} [mapFn] - (elements$, $) => array — receives Cheerio collection
-   * @returns {Promise<Array>}
+   * @param {((...args: unknown[]) => unknown)} [mapFn]
+   * @returns {Promise<Array<unknown>>}
    */
   async queryAll(page, selector, mapFn) {
-    if (!page._native) {
+    const p = /** @type {CheerioPage} */ (page);
+    if (!p._native) {
       throw new Error('No page loaded — call goto() first');
     }
-    const $ = page._native;
+    const $ = p._native;
     const elements = $(selector);
 
     if (mapFn) {
-      // mapFn gets the cheerio elements array and $ context
-      return mapFn(elements, $);
+      return /** @type {unknown[]} */ (mapFn(elements, $));
     }
 
-    // Return array of element outer HTML
-    const results = [];
-    elements.each((_, el) => {
+    const results = /** @type {string[]} */ ([]);
+    elements.each(/** @param {number} _ @param {unknown} el */ (_, el) => {
       results.push($.html(el));
     });
     return results;
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {Promise<string>}
+   */
   async getContent(page) {
-    return page._html;
+    return /** @type {CheerioPage} */ (page)._html;
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {Cookie} cookie
+   * @returns {Promise<void>}
+   */
   async setCookie(page, cookie) {
-    page._cookies.set(cookie.name, cookie.value);
-    // Also set on browser for new pages
-    page._browser._cookies.set(cookie.name, cookie.value);
+    const p = /** @type {CheerioPage} */ (page);
+    p._cookies.set(cookie.name, cookie.value);
+    p._browser._cookies.set(cookie.name, cookie.value);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {ScrollOptions} [options]
+   * @returns {Promise<void>}
+   */
   async scroll(page, options = {}) {
     // No-op for HTTP adapter — pages are fetched fully
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {ScreenshotOptions} [options]
+   * @returns {Promise<Buffer>}
+   */
   async screenshot(page, options = {}) {
-    // Can't screenshot without a browser, but we can save the HTML
+    const p = /** @type {CheerioPage} */ (page);
     if (options.path) {
       const fs = await import('fs/promises');
-      await fs.writeFile(options.path.replace(/\.(png|jpg)$/, '.html'), page._html);
+      await fs.writeFile(options.path.replace(/\.(png|jpg)$/, '.html'), p._html);
     }
-    return Buffer.from(page._html);
+    return Buffer.from(p._html);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} selector
+   * @param {WaitForSelectorOptions} [options]
+   * @returns {Promise<void>}
+   */
   async waitForSelector(page, selector, options = {}) {
-    if (!page._native) {
+    const p = /** @type {CheerioPage} */ (page);
+    if (!p._native) {
       throw new Error('No page loaded');
     }
-    const $ = page._native;
+    const $ = p._native;
     if ($(selector).length === 0) {
       throw new Error(`Selector "${selector}" not found in static HTML`);
     }
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {Promise<void>}
+   */
   async closePage(page) {
-    page._native = null;
-    page._html = '';
+    const p = /** @type {CheerioPage} */ (page);
+    p._native = null;
+    p._html = '';
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @returns {Promise<void>}
+   */
   async closeBrowser(browser) {
-    // Nothing to close
-    browser._cookies.clear();
+    const b = /** @type {CheerioBrowser} */ (browser);
+    b._cookies.clear();
   }
 
   /**
    * Cheerio-specific: Parse arbitrary HTML string
    * @param {string} html
-   * @returns {Object} Cheerio $ instance
+   * @returns {Promise<import('cheerio').CheerioAPI>}
    */
   async parseHTML(html) {
     const cheerio = await this.#getCheerio();
@@ -202,8 +276,8 @@ export class CheerioAdapter extends BaseAdapter {
   /**
    * Make a raw HTTP request (useful for APIs, JSON endpoints)
    * @param {string} url
-   * @param {Object} [options] - fetch() options
-   * @returns {Promise<*>} Parsed JSON or text
+   * @param {RequestInit} [options] - fetch() options
+   * @returns {Promise<unknown>} Parsed JSON or text
    */
   async fetchJSON(url, options = {}) {
     const response = await fetch(url, {

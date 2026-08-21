@@ -1,25 +1,25 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Scraper Adapter — Registry & Factory
- * 
+ *
  * Central registry for all scraper framework adapters.
  * Provides adapter discovery, selection, and auto-fallback.
- * 
+ *
  * Usage:
  *   import { getAdapter, setDefaultAdapter } from './adapters/index.js';
- *   
+ *
  *   // Use the default (puppeteer) adapter
  *   const adapter = await getAdapter();
- *   
+ *
  *   // Use a specific adapter
  *   const adapter = await getAdapter('playwright');
- *   
+ *
  *   // Set global default
  *   setDefaultAdapter('playwright');
- *   
+ *
  *   // Register a custom adapter
  *   registerAdapter('my-adapter', MyAdapterClass);
- * 
+ *
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -30,12 +30,21 @@ import { BaseAdapter } from './base.js';
 // Adapter Registry
 // ============================================================================
 
-/** @type {Map<string, { AdapterClass: typeof BaseAdapter, instance: BaseAdapter | null }>} */
+/**
+ * @typedef {Object} RegistryEntry
+ * @property {typeof BaseAdapter | null} AdapterClass
+ * @property {BaseAdapter | null} instance
+ * @property {() => Promise<{ default?: typeof BaseAdapter }>} [importFn]
+ */
+
+/** @type {Map<string, RegistryEntry>} */
 const registry = new Map();
 let defaultAdapterName = process.env.XACTIONS_SCRAPER_ADAPTER || 'puppeteer';
 
 /**
  * Register a built-in adapter (lazy — only instantiated when requested)
+ * @param {string} name
+ * @param {() => Promise<{ default?: typeof BaseAdapter }>} importFn
  */
 function registerBuiltin(name, importFn) {
   registry.set(name, { importFn, AdapterClass: null, instance: null });
@@ -80,11 +89,22 @@ export async function getAdapter(name) {
     if (entry.importFn) {
       const mod = await entry.importFn();
       const AdapterClass = mod.default || Object.values(mod).find(v => v?.prototype instanceof BaseAdapter);
+      if (!AdapterClass) {
+        throw new Error(`Adapter "${adapterName}" did not export a valid BaseAdapter subclass.`);
+      }
+      const instance = new AdapterClass();
       entry.AdapterClass = AdapterClass;
-      entry.instance = new AdapterClass();
+      entry.instance = instance;
     } else if (entry.AdapterClass) {
-      entry.instance = new entry.AdapterClass();
+      const instance = new entry.AdapterClass();
+      entry.instance = instance;
+    } else {
+      throw new Error(`Adapter "${adapterName}" has no loader or class.`);
     }
+  }
+
+  if (!entry.instance) {
+    throw new Error(`Adapter "${adapterName}" could not be instantiated.`);
   }
 
   return entry.instance;
@@ -154,7 +174,7 @@ export function registerAdapter(name, AdapterClass) {
   if (!(AdapterClass.prototype instanceof BaseAdapter)) {
     throw new Error('Adapter must extend BaseAdapter');
   }
-  registry.set(name, { AdapterClass, instance: null, importFn: null });
+  registry.set(name, { AdapterClass, instance: null, importFn: undefined });
 }
 
 /**
@@ -167,7 +187,7 @@ export function listAdapters() {
 
 /**
  * Get info about all registered adapters
- * @returns {Promise<Object[]>}
+ * @returns {Promise<Array<{ name: string, description?: string, supportsJavaScript?: boolean, requiresBrowser?: boolean, available: boolean, installHint?: string | null, error?: string }>>}
  */
 export async function getAdapterInfo() {
   const results = [];
@@ -187,10 +207,11 @@ export async function getAdapterInfo() {
         installHint: deps.message || null,
       });
     } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
       results.push({
         name,
         available: false,
-        error: e.message,
+        error: message,
       });
     }
   }
@@ -200,9 +221,10 @@ export async function getAdapterInfo() {
 
 /**
  * Check which adapters are available on this system
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, { available: boolean, message?: string }>>}
  */
 export async function checkAvailability() {
+  /** @type {Record<string, { available: boolean, message?: string }>} */
   const status = {};
   const seen = new Set();
 
@@ -215,7 +237,8 @@ export async function checkAvailability() {
       const check = await adapter.checkDependencies();
       status[adapter.name] = check;
     } catch (e) {
-      status[name] = { available: false, message: e.message };
+      const message = e instanceof Error ? e.message : String(e);
+      status[name] = { available: false, message };
     }
   }
 

@@ -1,19 +1,19 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Scraper Adapter — Selenium WebDriver
- * 
+ *
  * Adapter wrapping Selenium WebDriver for browser automation.
  * Selenium is the original browser automation framework — mature, cross-language,
  * widely used in enterprise and testing environments.
- * 
+ *
  * Supports: Chrome (via chromedriver), Firefox (via geckodriver), Edge, Safari.
- * 
+ *
  * Best for: teams already using Selenium, enterprise environments, cross-language
  * automation suites, when you need to reuse existing Selenium infrastructure.
- * 
+ *
  * Install: npm install selenium-webdriver
  * Plus a driver: npm install chromedriver  (or geckodriver for Firefox)
- * 
+ *
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -26,11 +26,15 @@ export class SeleniumAdapter extends BaseAdapter {
   supportsJavaScript = true;
   requiresBrowser = true;
 
+  /** @type {typeof import('selenium-webdriver') | null} */
   #selenium = null;
 
   async #getSelenium() {
     if (!this.#selenium) {
       this.#selenium = await import('selenium-webdriver');
+    }
+    if (!this.#selenium) {
+      throw new Error('selenium-webdriver could not be loaded');
     }
     return this.#selenium;
   }
@@ -49,30 +53,25 @@ export class SeleniumAdapter extends BaseAdapter {
 
   /**
    * Launch a Selenium WebDriver browser.
-   * 
-   * Options:
-   *   - browser: 'chrome' (default), 'firefox', 'edge', 'safari'
-   *   - headless: boolean (default true)
-   *   - seleniumServer: URL of remote Selenium Grid (optional)
+   * @param {LaunchOptions} [options]
+   * @returns {Promise<AdapterBrowser>}
    */
   async launch(options = {}) {
     const selenium = await this.#getSelenium();
-    const { Builder, Capabilities } = selenium;
+    const { Builder } = selenium;
     const browserName = options.browser || 'chrome';
 
     let builder = new Builder().forBrowser(browserName);
 
-    // Connect to remote Selenium Grid if specified
     if (options.seleniumServer) {
       builder = builder.usingServer(options.seleniumServer);
     }
 
-    // Configure browser-specific options
     if (browserName === 'chrome') {
       try {
         const chrome = await import('selenium-webdriver/chrome.js');
         const chromeOptions = new chrome.Options();
-        
+
         if (options.headless !== false) {
           chromeOptions.addArguments('--headless=new');
         }
@@ -82,15 +81,15 @@ export class SeleniumAdapter extends BaseAdapter {
           '--disable-blink-features=AutomationControlled',
           ...(options.args || []),
         );
-        
+
         if (options.proxy) {
-          chromeOptions.addArguments(`--proxy-server=${options.proxy.server}`);
+          const proxyServer = typeof options.proxy === 'object' ? options.proxy.server : options.proxy;
+          if (proxyServer) chromeOptions.addArguments(`--proxy-server=${proxyServer}`);
         }
 
-        // Anti-detection
         chromeOptions.excludeSwitches('enable-automation');
         chromeOptions.addArguments('--disable-infobars');
-        
+
         builder = builder.setChromeOptions(chromeOptions);
       } catch {
         // chromedriver not available, try basic config
@@ -104,10 +103,11 @@ export class SeleniumAdapter extends BaseAdapter {
           firefoxOptions.addArguments('--headless');
         }
         if (options.proxy) {
+          const proxyServer = typeof options.proxy === 'object' ? options.proxy.server : options.proxy;
           firefoxOptions.setPreference('network.proxy.type', 1);
-          firefoxOptions.setPreference('network.proxy.http', options.proxy.server);
+          if (proxyServer) firefoxOptions.setPreference('network.proxy.http', proxyServer);
         }
-        
+
         builder = builder.setFirefoxOptions(firefoxOptions);
       } catch {
         // geckodriver not available
@@ -124,19 +124,18 @@ export class SeleniumAdapter extends BaseAdapter {
   }
 
   /**
-   * newPage in Selenium opens a new tab/window (or reuses the main one).
-   * Selenium doesn't have the same page concept as Puppeteer — the driver IS the page.
+   * @param {AdapterBrowser} browser
+   * @param {NewPageOptions} [options]
+   * @returns {Promise<AdapterPage>}
    */
   async newPage(browser, options = {}) {
-    const driver = browser._native;
+    const b = /** @type {AdapterBrowser & { _native: import('selenium-webdriver').WebDriver }} */ (browser);
+    const driver = b._native;
 
-    // Set viewport via window size
     const width = options.viewport?.width || 1280 + Math.floor(Math.random() * 100);
     const height = options.viewport?.height || 800;
     await driver.manage().window().setRect({ width, height });
 
-    // Selenium uses a single driver, but we can open new windows for multiple "pages"
-    // For the first page, we reuse the existing window
     return {
       _native: driver,
       _adapter: this.name,
@@ -145,32 +144,40 @@ export class SeleniumAdapter extends BaseAdapter {
     };
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} url
+   * @param {GotoOptions} [options]
+   * @returns {Promise<void>}
+   */
   async goto(page, url, options = {}) {
-    const driver = page._native;
-    
-    // Switch to this page's window handle
-    await driver.switchTo().window(page._windowHandle);
+    const p = /** @type {AdapterPage & { _native: import('selenium-webdriver').WebDriver, _windowHandle: string }} */ (page);
+    const driver = p._native;
 
+    await driver.switchTo().window(p._windowHandle);
     await driver.get(url);
 
-    // Wait for page load state
     const waitUntil = options.waitUntil || 'networkidle';
     const timeout = options.timeout || 30000;
 
     if (waitUntil === 'load' || waitUntil === 'networkidle' || waitUntil === 'networkidle2') {
-      // Wait for document.readyState === 'complete'
-      const selenium = await this.#getSelenium();
-      const { until } = selenium;
       await driver.wait(async () => {
         const state = await driver.executeScript('return document.readyState');
-        return state === 'complete';
+        return /** @type {string} */ (state) === 'complete';
       }, timeout);
     }
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {((...args: unknown[]) => unknown)|string} fn
+   * @param {...unknown} args
+   * @returns {Promise<unknown>}
+   */
   async evaluate(page, fn, ...args) {
-    const driver = page._native;
-    await driver.switchTo().window(page._windowHandle);
+    const p = /** @type {AdapterPage & { _native: import('selenium-webdriver').WebDriver, _windowHandle: string }} */ (page);
+    const driver = p._native;
+    await driver.switchTo().window(p._windowHandle);
 
     if (typeof fn === 'function') {
       const script = `return (${fn.toString()}).apply(null, arguments);`;
@@ -179,37 +186,53 @@ export class SeleniumAdapter extends BaseAdapter {
     return driver.executeScript(fn, ...args);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} selector
+   * @param {((...args: unknown[]) => unknown)} [mapFn]
+   * @returns {Promise<Array<unknown>>}
+   */
   async queryAll(page, selector, mapFn) {
-    const driver = page._native;
-    await driver.switchTo().window(page._windowHandle);
+    const p = /** @type {AdapterPage & { _native: import('selenium-webdriver').WebDriver, _windowHandle: string }} */ (page);
+    const driver = p._native;
+    await driver.switchTo().window(p._windowHandle);
 
     const selenium = await this.#getSelenium();
     const { By } = selenium;
 
     if (mapFn) {
-      // Use executeScript to run the mapFn in the browser context, similar to $$eval
       const script = `
         const elements = document.querySelectorAll(arguments[0]);
         const fn = ${mapFn.toString()};
         return fn(Array.from(elements));
       `;
-      return driver.executeScript(script, selector);
+      return /** @type {unknown[]} */ (await driver.executeScript(script, selector));
     }
 
     return driver.findElements(By.css(selector));
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {Promise<string>}
+   */
   async getContent(page) {
-    const driver = page._native;
-    await driver.switchTo().window(page._windowHandle);
+    const p = /** @type {AdapterPage & { _native: import('selenium-webdriver').WebDriver, _windowHandle: string }} */ (page);
+    const driver = p._native;
+    await driver.switchTo().window(p._windowHandle);
     return driver.getPageSource();
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {Cookie} cookie
+   * @returns {Promise<void>}
+   */
   async setCookie(page, cookie) {
-    const driver = page._native;
-    await driver.switchTo().window(page._windowHandle);
+    const p = /** @type {AdapterPage & { _native: import('selenium-webdriver').WebDriver, _windowHandle: string }} */ (page);
+    const driver = p._native;
+    await driver.switchTo().window(p._windowHandle);
 
-    // Selenium requires being on the cookie's domain first
     await driver.manage().addCookie({
       name: cookie.name,
       value: cookie.value,
@@ -220,9 +243,15 @@ export class SeleniumAdapter extends BaseAdapter {
     });
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {ScrollOptions} [options]
+   * @returns {Promise<void>}
+   */
   async scroll(page, options = {}) {
-    const driver = page._native;
-    await driver.switchTo().window(page._windowHandle);
+    const p = /** @type {AdapterPage & { _native: import('selenium-webdriver').WebDriver, _windowHandle: string }} */ (page);
+    const driver = p._native;
+    await driver.switchTo().window(p._windowHandle);
 
     if (options.y !== undefined) {
       await driver.executeScript(`window.scrollBy(0, ${options.y})`);
@@ -231,12 +260,18 @@ export class SeleniumAdapter extends BaseAdapter {
     }
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {ScreenshotOptions} [options]
+   * @returns {Promise<Buffer>}
+   */
   async screenshot(page, options = {}) {
-    const driver = page._native;
-    await driver.switchTo().window(page._windowHandle);
+    const p = /** @type {AdapterPage & { _native: import('selenium-webdriver').WebDriver, _windowHandle: string }} */ (page);
+    const driver = p._native;
+    await driver.switchTo().window(p._windowHandle);
 
     const base64 = await driver.takeScreenshot();
-    const buffer = Buffer.from(base64, 'base64');
+    const buffer = Buffer.from(/** @type {string} */ (base64), 'base64');
 
     if (options.path) {
       const fs = await import('fs/promises');
@@ -245,9 +280,16 @@ export class SeleniumAdapter extends BaseAdapter {
     return buffer;
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} selector
+   * @param {WaitForSelectorOptions} [options]
+   * @returns {Promise<void>}
+   */
   async waitForSelector(page, selector, options = {}) {
-    const driver = page._native;
-    await driver.switchTo().window(page._windowHandle);
+    const p = /** @type {AdapterPage & { _native: import('selenium-webdriver').WebDriver, _windowHandle: string }} */ (page);
+    const driver = p._native;
+    await driver.switchTo().window(p._windowHandle);
 
     const selenium = await this.#getSelenium();
     const { By, until } = selenium;
@@ -258,28 +300,38 @@ export class SeleniumAdapter extends BaseAdapter {
     );
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {Promise<void>}
+   */
   async closePage(page) {
-    if (page._isNewWindow) {
-      const driver = page._native;
-      await driver.switchTo().window(page._windowHandle);
+    const p = /** @type {AdapterPage & { _native: import('selenium-webdriver').WebDriver, _windowHandle: string, _isNewWindow: boolean }} */ (page);
+    if (p._isNewWindow) {
+      const driver = p._native;
+      await driver.switchTo().window(p._windowHandle);
       await driver.close();
     }
-    // Don't close the main window — that would quit the driver
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @returns {Promise<void>}
+   */
   async closeBrowser(browser) {
-    await browser._native.quit();
+    const b = /** @type {AdapterBrowser & { _native: import('selenium-webdriver').WebDriver }} */ (browser);
+    await b._native.quit();
   }
 
   /**
    * Selenium-specific: Open a new tab/window and return a page for it.
-   * Use this to manage multiple pages in the same Selenium session.
+   * @param {AdapterBrowser} browser
+   * @returns {Promise<AdapterPage>}
    */
   async newTab(browser) {
-    const driver = browser._native;
+    const b = /** @type {AdapterBrowser & { _native: import('selenium-webdriver').WebDriver }} */ (browser);
+    const driver = b._native;
     const selenium = await this.#getSelenium();
 
-    // Open new tab
     await driver.switchTo().newWindow('tab');
     const handle = await driver.getWindowHandle();
 
@@ -293,33 +345,54 @@ export class SeleniumAdapter extends BaseAdapter {
 
   /**
    * Selenium-specific: Get all window handles.
+   * @param {AdapterBrowser} browser
+   * @returns {Promise<string[]>}
    */
   async getWindowHandles(browser) {
-    return browser._native.getAllWindowHandles();
+    const b = /** @type {AdapterBrowser & { _native: import('selenium-webdriver').WebDriver }} */ (browser);
+    return b._native.getAllWindowHandles();
   }
 
   /**
    * Selenium-specific: Execute async script (for scripts that use callbacks).
+   * @param {AdapterPage} page
+   * @param {string} script
+   * @param {...unknown} args
+   * @returns {Promise<unknown>}
    */
   async executeAsyncScript(page, script, ...args) {
-    const driver = page._native;
-    await driver.switchTo().window(page._windowHandle);
+    const p = /** @type {AdapterPage & { _native: import('selenium-webdriver').WebDriver, _windowHandle: string }} */ (page);
+    const driver = p._native;
+    await driver.switchTo().window(p._windowHandle);
     return driver.executeAsyncScript(script, ...args);
   }
 
   /**
    * Selenium-specific: Wait for a custom condition.
+   * @param {AdapterPage} page
+   * @param {import('selenium-webdriver').Condition<unknown>} conditionFn
+   * @param {number} [timeout]
+   * @returns {Promise<void>}
    */
   async waitFor(page, conditionFn, timeout = 30000) {
-    const driver = page._native;
-    await driver.switchTo().window(page._windowHandle);
+    const p = /** @type {AdapterPage & { _native: import('selenium-webdriver').WebDriver, _windowHandle: string }} */ (page);
+    const driver = p._native;
+    await driver.switchTo().window(p._windowHandle);
     await driver.wait(conditionFn, timeout);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {unknown}
+   */
   getNativePage(page) {
     return page._native;
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @returns {unknown}
+   */
   getNativeBrowser(browser) {
     return browser._native;
   }

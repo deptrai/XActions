@@ -1,14 +1,14 @@
 /// <reference lib="dom" />
 
-import type { PuppeteerNode } from 'puppeteer';
-
 declare module 'puppeteer-extra' {
-  interface PuppeteerExtra extends PuppeteerNode {
+  import type { PuppeteerNode } from 'puppeteer';
+
+  export interface PuppeteerExtra extends PuppeteerNode {
     use(plugin: unknown): this;
   }
 
-  const puppeteerExtra: PuppeteerExtra;
-  export default puppeteerExtra;
+  const defaultExport: PuppeteerExtra;
+  export default defaultExport;
 }
 
 declare module 'puppeteer-extra-plugin-stealth' {

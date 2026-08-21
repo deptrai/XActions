@@ -1,10 +1,10 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Scraper Adapter — Puppeteer
- * 
+ *
  * Adapter wrapping puppeteer-extra with stealth plugin.
  * This is the default adapter — matches the original XActions scraper behavior.
- * 
+ *
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -17,6 +17,7 @@ export class PuppeteerAdapter extends BaseAdapter {
   supportsJavaScript = true;
   requiresBrowser = true;
 
+  /** @type {import('puppeteer-extra').PuppeteerExtra | null} */
   #puppeteer = null;
 
   async #getPuppeteer() {
@@ -25,6 +26,9 @@ export class PuppeteerAdapter extends BaseAdapter {
       const StealthPlugin = await import('puppeteer-extra-plugin-stealth');
       puppeteer.default.use(StealthPlugin.default());
       this.#puppeteer = puppeteer.default;
+    }
+    if (!this.#puppeteer) {
+      throw new Error('puppeteer-extra could not be initialized');
     }
     return this.#puppeteer;
   }
@@ -42,24 +46,36 @@ export class PuppeteerAdapter extends BaseAdapter {
     }
   }
 
+  /**
+   * @param {LaunchOptions} [options]
+   * @returns {Promise<AdapterBrowser>}
+   */
   async launch(options = {}) {
     const puppeteer = await this.#getPuppeteer();
-    const browser = await puppeteer.launch({
-      headless: options.headless !== false ? 'new' : false,
+    const { proxy, ...rest } = options;
+    const launchOptions = /** @type {import('puppeteer').LaunchOptions} */ ({
+      headless: options.headless !== false,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-blink-features=AutomationControlled',
         ...(options.args || []),
+        ...(proxy && typeof proxy === 'object' ? [`--proxy-server=${proxy.server}`] : []),
       ],
-      ...(options.proxy ? { args: [...(options.args || []), `--proxy-server=${options.proxy.server}`] } : {}),
-      ...options,
+      ...rest,
     });
+    const browser = await puppeteer.launch(launchOptions);
     return { _native: browser, _adapter: this.name };
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @param {NewPageOptions} [options]
+   * @returns {Promise<AdapterPage>}
+   */
   async newPage(browser, options = {}) {
-    const page = await browser._native.newPage();
+    const nativeBrowser = /** @type {import('puppeteer').Browser} */ (browser._native);
+    const page = await nativeBrowser.newPage();
     const width = options.viewport?.width || 1280 + Math.floor(Math.random() * 100);
     const height = options.viewport?.height || 800;
     await page.setViewport({ width, height });
@@ -75,63 +91,126 @@ export class PuppeteerAdapter extends BaseAdapter {
     return { _native: page, _adapter: this.name };
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} url
+   * @param {GotoOptions} [options]
+   * @returns {Promise<void>}
+   */
   async goto(page, url, options = {}) {
-    const waitUntilMap = {
+    const nativePage = /** @type {import('puppeteer').Page} */ (page._native);
+    const waitUntilMap = /** @type {Record<NonNullable<GotoOptions['waitUntil']>, import('puppeteer').PuppeteerLifeCycleEvent>} */ ({
       load: 'load',
       domcontentloaded: 'domcontentloaded',
       networkidle: 'networkidle2',
       networkidle0: 'networkidle0',
       networkidle2: 'networkidle2',
-    };
-    const waitUntil = waitUntilMap[options.waitUntil] || options.waitUntil || 'networkidle2';
-    await page._native.goto(url, { waitUntil, timeout: options.timeout || 30000 });
+    });
+    const waitUntil = options.waitUntil ? waitUntilMap[options.waitUntil] : 'networkidle2';
+    await nativePage.goto(url, { waitUntil, timeout: options.timeout || 30000 });
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {Function|string} fn
+   * @param {...unknown} args
+   * @returns {Promise<unknown>}
+   */
   async evaluate(page, fn, ...args) {
-    return page._native.evaluate(fn, ...args);
+    const nativePage = /** @type {import('puppeteer').Page} */ (page._native);
+    return nativePage.evaluate(/** @type {import('puppeteer').EvaluateFunc<unknown[]> | string} */ (fn), ...args);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} selector
+   * @param {Function} [mapFn]
+   * @returns {Promise<Array<unknown>>}
+   */
   async queryAll(page, selector, mapFn) {
+    const nativePage = /** @type {import('puppeteer').Page} */ (page._native);
     if (mapFn) {
-      return page._native.$$eval(selector, mapFn);
+      return /** @type {Promise<Array<unknown>>} */ (nativePage.$$eval(selector, /** @type {(elements: unknown[]) => unknown} */ (mapFn)));
     }
-    return page._native.$$(selector);
+    return nativePage.$$(selector);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {Promise<string>}
+   */
   async getContent(page) {
-    return page._native.content();
+    const nativePage = /** @type {import('puppeteer').Page} */ (page._native);
+    return nativePage.content();
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {Cookie} cookie
+   * @returns {Promise<void>}
+   */
   async setCookie(page, cookie) {
-    await page._native.setCookie(cookie);
+    const nativePage = /** @type {import('puppeteer').Page} */ (page._native);
+    await nativePage.setCookie(cookie);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {ScrollOptions} [options]
+   * @returns {Promise<void>}
+   */
   async scroll(page, options = {}) {
+    const nativePage = /** @type {import('puppeteer').Page} */ (page._native);
     if (options.y !== undefined) {
-      await page._native.evaluate((y) => window.scrollBy(0, y), options.y);
+      await nativePage.evaluate((y) => window.scrollBy(0, y), options.y);
     } else {
-      await page._native.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await nativePage.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     }
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {ScreenshotOptions} [options]
+   * @returns {Promise<Buffer>}
+   */
   async screenshot(page, options = {}) {
-    return page._native.screenshot(options);
+    const nativePage = /** @type {import('puppeteer').Page} */ (page._native);
+    return /** @type {Promise<Buffer>} */ (nativePage.screenshot(options));
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} selector
+   * @param {WaitForSelectorOptions} [options]
+   * @returns {Promise<void>}
+   */
   async waitForSelector(page, selector, options = {}) {
-    await page._native.waitForSelector(selector, { timeout: options.timeout || 30000 });
+    const nativePage = /** @type {import('puppeteer').Page} */ (page._native);
+    await nativePage.waitForSelector(selector, { timeout: options.timeout || 30000 });
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {Promise<void>}
+   */
   async closePage(page) {
-    await page._native.close();
+    const nativePage = /** @type {import('puppeteer').Page} */ (page._native);
+    await nativePage.close();
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @returns {Promise<void>}
+   */
   async closeBrowser(browser) {
-    await browser._native.close();
+    const nativeBrowser = /** @type {import('puppeteer').Browser} */ (browser._native);
+    await nativeBrowser.close();
   }
 
   /**
    * Get the native Puppeteer page for direct access (backward compat / advanced usage)
+   * @param {AdapterPage} page
+   * @returns {unknown}
    */
   getNativePage(page) {
     return page._native;
@@ -139,6 +218,8 @@ export class PuppeteerAdapter extends BaseAdapter {
 
   /**
    * Get the native Puppeteer browser for direct access
+   * @param {AdapterBrowser} browser
+   * @returns {unknown}
    */
   getNativeBrowser(browser) {
     return browser._native;
@@ -148,8 +229,8 @@ export class PuppeteerAdapter extends BaseAdapter {
    * Connect to an existing Chrome instance via CDP.
    * Fetches the WebSocket debugger URL from /json/version then puppeteer.connects.
    * @param {string} cdpUrl - e.g. 'http://localhost:9222'
-   * @param {Object} [options]
-   * @returns {Promise<{_native: *, _adapter: string, _browserType: string}>}
+   * @param {LaunchOptions} [options]
+   * @returns {Promise<AdapterBrowser>}
    */
   async connect(cdpUrl, options = {}) {
     const url = new URL(cdpUrl);
@@ -166,11 +247,12 @@ export class PuppeteerAdapter extends BaseAdapter {
     }
 
     const puppeteer = await this.#getPuppeteer();
-    const browser = await puppeteer.connect({
+    const connectOptions = /** @type {import('puppeteer').ConnectOptions} */ ({
       browserWSEndpoint: version.webSocketDebuggerUrl,
       defaultViewport: null,
       ...options,
     });
+    const browser = await puppeteer.connect(connectOptions);
 
     return { _native: browser, _adapter: this.name, _browserType: 'chromium' };
   }

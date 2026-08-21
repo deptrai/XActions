@@ -1,13 +1,13 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Scraper Adapter — Playwright
- * 
+ *
  * Adapter wrapping Playwright for browser automation.
  * Supports Chromium, Firefox, and WebKit.
  * Better auto-wait, trace recording, and CI support than Puppeteer.
- * 
+ *
  * Install: npm install playwright
- * 
+ *
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -20,11 +20,15 @@ export class PlaywrightAdapter extends BaseAdapter {
   supportsJavaScript = true;
   requiresBrowser = true;
 
+  /** @type {typeof import('playwright') | null} */
   #playwright = null;
 
   async #getPlaywright() {
     if (!this.#playwright) {
       this.#playwright = await import('playwright');
+    }
+    if (!this.#playwright) {
+      throw new Error('playwright could not be loaded');
     }
     return this.#playwright;
   }
@@ -41,24 +45,31 @@ export class PlaywrightAdapter extends BaseAdapter {
     }
   }
 
+  /**
+   * @param {LaunchOptions} [options]
+   * @returns {Promise<AdapterBrowser>}
+   */
   async launch(options = {}) {
     const pw = await this.#getPlaywright();
-    const browserType = options.browser || 'chromium'; // 'chromium', 'firefox', 'webkit'
-    const launcher = pw[browserType] || pw.chromium;
+    const pwRecord = /** @type {Record<string, import('playwright').BrowserType | undefined>} */ (/** @type {unknown} */ (pw));
+    const browserType = options.browser || 'chromium';
+    const launcher = pwRecord[browserType] || pw.chromium;
 
-    const launchOptions = {
+    const { proxy, ...rest } = options;
+    const launchOptions = /** @type {import('playwright').LaunchOptions} */ ({
       headless: options.headless !== false,
       args: [
         '--disable-blink-features=AutomationControlled',
         ...(options.args || []),
       ],
-    };
+      ...rest,
+    });
 
-    if (options.proxy) {
+    if (proxy && typeof proxy === 'object') {
       launchOptions.proxy = {
-        server: options.proxy.server,
-        username: options.proxy.username,
-        password: options.proxy.password,
+        server: proxy.server || '',
+        username: proxy.username,
+        password: proxy.password,
       };
     }
 
@@ -66,7 +77,13 @@ export class PlaywrightAdapter extends BaseAdapter {
     return { _native: browser, _adapter: this.name, _browserType: browserType };
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @param {NewPageOptions} [options]
+   * @returns {Promise<AdapterPage>}
+   */
   async newPage(browser, options = {}) {
+    const b = /** @type {AdapterBrowser & { _native: import('playwright').Browser }} */ (browser);
     const width = options.viewport?.width || 1280 + Math.floor(Math.random() * 100);
     const height = options.viewport?.height || 800;
 
@@ -76,43 +93,75 @@ export class PlaywrightAdapter extends BaseAdapter {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     };
 
-    // Playwright uses browser contexts for isolation
-    const context = await browser._native.newContext(contextOptions);
+    const context = await b._native.newContext(/** @type {import('playwright').BrowserContextOptions} */ (contextOptions));
     const page = await context.newPage();
 
     return { _native: page, _context: context, _adapter: this.name };
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} url
+   * @param {GotoOptions} [options]
+   * @returns {Promise<void>}
+   */
   async goto(page, url, options = {}) {
-    const waitUntilMap = {
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page }} */ (page);
+    const waitUntilMap = /** @type {Record<NonNullable<GotoOptions['waitUntil']>, 'load'|'domcontentloaded'|'networkidle'>} */ ({
       load: 'load',
       domcontentloaded: 'domcontentloaded',
       networkidle: 'networkidle',
       networkidle0: 'networkidle',
       networkidle2: 'networkidle',
-    };
-    const waitUntil = waitUntilMap[options.waitUntil] || options.waitUntil || 'networkidle';
-    await page._native.goto(url, { waitUntil, timeout: options.timeout || 30000 });
+    });
+    const waitUntil = /** @type {'load'|'domcontentloaded'|'networkidle'|'commit'} */ (options.waitUntil ? waitUntilMap[options.waitUntil] : 'networkidle');
+    await p._native.goto(url, { waitUntil, timeout: options.timeout || 30000 });
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {((...args: unknown[]) => unknown)|string} fn
+   * @param {...unknown} args
+   * @returns {Promise<unknown>}
+   */
   async evaluate(page, fn, ...args) {
-    return page._native.evaluate(fn, ...args);
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page }} */ (page);
+    const native = /** @type {{ evaluate: (fn: unknown, ...args: unknown[]) => Promise<unknown> }} */ (p._native);
+    return native.evaluate(fn, ...args);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} selector
+   * @param {((...args: unknown[]) => unknown)} [mapFn]
+   * @returns {Promise<Array<unknown>>}
+   */
   async queryAll(page, selector, mapFn) {
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page }} */ (page);
+    const native = /** @type {{ $$eval: (selector: string, mapFn: (elements: unknown[]) => unknown) => Promise<unknown>, $$: (selector: string) => Promise<unknown[]> }} */ (p._native);
     if (mapFn) {
-      return page._native.$$eval(selector, mapFn);
+      return /** @type {Promise<Array<unknown>>} */ (native.$$eval(selector, /** @type {(elements: unknown[]) => unknown} */ (mapFn)));
     }
-    return page._native.$$(selector);
+    return native.$$(selector);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {Promise<string>}
+   */
   async getContent(page) {
-    return page._native.content();
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page }} */ (page);
+    return p._native.content();
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {Cookie} cookie
+   * @returns {Promise<void>}
+   */
   async setCookie(page, cookie) {
-    // Playwright sets cookies on the browser context
-    const context = page._context || page._native.context();
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page, _context?: import('playwright').BrowserContext }} */ (page);
+    const context = p._context || p._native.context();
     await context.addCookies([{
       name: cookie.name,
       value: cookie.value,
@@ -123,39 +172,73 @@ export class PlaywrightAdapter extends BaseAdapter {
     }]);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {ScrollOptions} [options]
+   * @returns {Promise<void>}
+   */
   async scroll(page, options = {}) {
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page }} */ (page);
+    const native = /** @type {{ evaluate: (fn: unknown, ...args: unknown[]) => Promise<unknown> }} */ (p._native);
     if (options.y !== undefined) {
-      await page._native.evaluate((y) => window.scrollBy(0, y), options.y);
+      await native.evaluate(/** @param {unknown} y */ (y) => window.scrollBy(0, Number(y)), options.y);
     } else {
-      await page._native.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await native.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     }
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {ScreenshotOptions} [options]
+   * @returns {Promise<Buffer>}
+   */
   async screenshot(page, options = {}) {
-    return page._native.screenshot(options);
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page }} */ (page);
+    return p._native.screenshot(options);
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @param {string} selector
+   * @param {WaitForSelectorOptions} [options]
+   * @returns {Promise<void>}
+   */
   async waitForSelector(page, selector, options = {}) {
-    await page._native.waitForSelector(selector, { timeout: options.timeout || 30000 });
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page }} */ (page);
+    await p._native.waitForSelector(selector, { timeout: options.timeout || 30000 });
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {Promise<void>}
+   */
   async closePage(page) {
-    if (page._context) {
-      await page._context.close();
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page, _context?: import('playwright').BrowserContext }} */ (page);
+    if (p._context) {
+      await p._context.close();
     } else {
-      await page._native.close();
+      await p._native.close();
     }
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @returns {Promise<void>}
+   */
   async closeBrowser(browser) {
-    await browser._native.close();
+    const b = /** @type {AdapterBrowser & { _native: import('playwright').Browser }} */ (browser);
+    await b._native.close();
   }
 
   /**
    * Start tracing (Playwright-specific — useful for debugging)
+   * @param {AdapterPage} page
+   * @param {Record<string, unknown>} [options]
+   * @returns {Promise<void>}
    */
   async startTracing(page, options = {}) {
-    const context = page._context || page._native.context();
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page, _context?: import('playwright').BrowserContext }} */ (page);
+    const context = p._context || p._native.context();
     await context.tracing.start({
       screenshots: true,
       snapshots: true,
@@ -165,18 +248,26 @@ export class PlaywrightAdapter extends BaseAdapter {
 
   /**
    * Stop tracing and save
+   * @param {AdapterPage} page
+   * @param {string} [path]
+   * @returns {Promise<void>}
    */
   async stopTracing(page, path = 'trace.zip') {
-    const context = page._context || page._native.context();
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page, _context?: import('playwright').BrowserContext }} */ (page);
+    const context = p._context || p._native.context();
     await context.tracing.stop({ path });
   }
 
   /**
    * Route interception (Playwright-specific)
    * Block images, CSS, fonts to speed up scraping
+   * @param {AdapterPage} page
+   * @param {string[]} [resourceTypes]
+   * @returns {Promise<void>}
    */
   async blockResources(page, resourceTypes = ['image', 'stylesheet', 'font']) {
-    await page._native.route('**/*', (route) => {
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page }} */ (page);
+    await p._native.route('**/*', /** @param {import('playwright').Route} route */ (route) => {
       if (resourceTypes.includes(route.request().resourceType())) {
         route.abort();
       } else {
@@ -185,25 +276,35 @@ export class PlaywrightAdapter extends BaseAdapter {
     });
   }
 
+  /**
+   * @param {AdapterPage} page
+   * @returns {unknown}
+   */
   getNativePage(page) {
     return page._native;
   }
 
+  /**
+   * @param {AdapterBrowser} browser
+   * @returns {unknown}
+   */
   getNativeBrowser(browser) {
     return browser._native;
   }
 
   /**
-   * Connect to an existing Chrome instance via CDP
+   * Connect to an existing Chrome instance via CDP.
    * @param {string} cdpUrl - e.g. 'http://localhost:9222'
-   * @param {Object} [options]
-   * @returns {Promise<{_native: *, _adapter: string, _browserType: string}>}
+   * @param {LaunchOptions} [options]
+   * @returns {Promise<AdapterBrowser>}
    */
   async connect(cdpUrl, options = {}) {
     const pw = await this.#getPlaywright();
+    const pwRecord = /** @type {Record<string, import('playwright').BrowserType | undefined>} */ (/** @type {unknown} */ (pw));
     const browserType = options.browserType || options.browser || 'chromium';
-    const launcher = pw[browserType] || pw.chromium;
-    const browser = await launcher.connectOverCDP(cdpUrl, options);
+    const launcher = pwRecord[browserType] || pw.chromium;
+    const connectOptions = /** @type {import('playwright').ConnectOptions} */ ({ ...options });
+    const browser = await launcher.connectOverCDP(cdpUrl, connectOptions);
     return { _native: browser, _adapter: this.name, _browserType: browserType };
   }
 }
