@@ -170,3 +170,63 @@ export async function smartOutput(data, options, defaultName = 'data') {
   // Default: print JSON to stdout
   console.log(JSON.stringify(data, null, 2));
 }
+
+/**
+ * Parse a positive integer CLI argument.
+ * @param {string} value
+ * @param {string} fieldName
+ * @returns {number}
+ */
+export function parseCliPositiveInt(value, fieldName) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${fieldName} must be a positive integer`);
+  }
+  return parsed;
+}
+
+/**
+ * Parse a non-negative integer CLI argument.
+ * @param {string} value
+ * @param {string} fieldName
+ * @returns {number}
+ */
+export function parseCliNonNegativeInt(value, fieldName) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${fieldName} must be a non-negative integer`);
+  }
+  return parsed;
+}
+
+/**
+ * Print a CLI error and set a non-zero exit code.
+ * @param {Error} error
+ * @param {{json?: boolean}} [options={}]
+ */
+export function printCliError(error, options = {}) {
+  if (options.json) {
+    console.log(JSON.stringify({
+      success: false,
+      error: {
+        code: error.code || 'XACT_5000',
+        message: error.message,
+      },
+    }, null, 2));
+  } else {
+    console.error(chalk.red(`❌ ${error.message}`));
+  }
+  process.exitCode = 1;
+}
+
+/**
+ * Disconnect a Prisma client safely.
+ * @param {import('@prisma/client').PrismaClient|undefined} prisma
+ */
+export async function disconnectPrisma(prisma) {
+  if (prisma) {
+    try { await prisma.$disconnect(); } catch (err) {
+      console.warn(`⚠️ Prisma disconnect warning: ${err.message}`);
+    }
+  }
+}
