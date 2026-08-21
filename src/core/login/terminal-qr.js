@@ -2,7 +2,7 @@
 /**
  * TerminalQrLogin — Terminal ASCII QR Code authentication handler.
  * Implements frictionless login with 1:1 ASCII QR, real-time countdown,
- * non-TTY shortcode fallback, and secure cookie persistence.
+ * cryptographically secure shortcodes, non-TTY fallback, and secure cookie persistence.
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -14,10 +14,10 @@ import { displayTerminalQrCode, isTty } from '../../utils/qrcode.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import crypto from 'node:crypto';
 
 /** @typedef {import('../types.js').LoginResult} LoginResult */
 
-const AMBIGUOUS_CHARS = new Set(['0', 'O', 'I', '1', 'l']);
 const SHORT_CODE_CHARSET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 
 export class TerminalQrLogin extends AbstractLogin {
@@ -44,17 +44,22 @@ export class TerminalQrLogin extends AbstractLogin {
     this.intervalMs = options.intervalMs || 1000;
     this.timeoutSec = options.timeoutSec || 120;
     this.countdownSec = options.countdownSec || 60;
-    this.cookiePath = options.cookiePath || path.join(os.homedir(), '.xactions', 'cookies.json');
+    
+    // Multi-platform cookie filename isolation
+    const defaultCookieFilename = this.platform.toLowerCase() === 'twitter' 
+      ? 'cookies.json' 
+      : `cookies-${this.platform.toLowerCase()}.json`;
+    this.cookiePath = options.cookiePath || path.join(os.homedir(), '.xactions', defaultCookieFilename);
   }
 
   /**
-   * Generate a secure, user-friendly 6-character short code without ambiguous characters.
+   * Generate a cryptographically secure 6-character short code without ambiguous characters.
    * @returns {string}
    */
   generateShortCode() {
     let result = '';
     for (let i = 0; i < 6; i++) {
-      const idx = Math.floor(Math.random() * SHORT_CODE_CHARSET.length);
+      const idx = crypto.randomInt(0, SHORT_CODE_CHARSET.length);
       result += SHORT_CODE_CHARSET[idx];
     }
     return result;
@@ -78,6 +83,17 @@ export class TerminalQrLogin extends AbstractLogin {
   }
 
   /**
+   * Validate that cookie object contains all required keys for the target platform.
+   * @param {Object} cookies
+   * @returns {boolean}
+   */
+  validateCookies(cookies) {
+    if (!cookies || typeof cookies !== 'object') return false;
+    const required = this.getRequiredCookies();
+    return required.every(key => Boolean(cookies[key]));
+  }
+
+  /**
    * Execute the QR login lifecycle.
    * @param {Object} [runtimeOptions]
    * @returns {Promise<LoginResult>}
@@ -87,7 +103,19 @@ export class TerminalQrLogin extends AbstractLogin {
     const platform = opts.platform || this.platform;
     const intervalMs = opts.intervalMs || this.intervalMs;
     const timeoutSec = opts.timeoutSec || this.timeoutSec;
+    const targetCookiePath = opts.cookiePath || this.cookiePath;
     const shortCode = this.generateShortCode();
+
+    // Check pre-aborted signal immediately
+    if (opts.signal?.aborted) {
+      throw new PlatformError({
+        type: 'CANCELLED',
+        code: 'XACT_4099',
+        message: '[LOGIN CANCELLED] Login aborted by user signal',
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform
+      });
+    }
 
     // 1. Get QR code data/URL
     let qrData = '';
@@ -112,14 +140,14 @@ export class TerminalQrLogin extends AbstractLogin {
           process.stdout.write(rendered);
         }
       } catch (err) {
-        // If display fails, log warning but proceed with polling
         console.warn(`[QR WARNING] Could not display QR: ${err.message}`);
       }
     }
 
-    // 3. Polling loop with timeout and cleanup
+    // 3. Polling loop with timeout, locking, and cleanup
     return new Promise((resolve, reject) => {
       let isDone = false;
+      let inFlight = false;
       let remainingSeconds = timeoutSec;
       let intervalId = null;
 
@@ -128,6 +156,9 @@ export class TerminalQrLogin extends AbstractLogin {
         if (intervalId !== null) {
           clearInterval(intervalId);
           intervalId = null;
+        }
+        if (!opts.quiet && isTty()) {
+          process.stdout.write('\r\x1b[K');
         }
       };
 
@@ -145,34 +176,52 @@ export class TerminalQrLogin extends AbstractLogin {
       }
 
       const poll = async () => {
-        if (isDone) return;
+        if (isDone || inFlight) return;
+        inFlight = true;
 
         try {
+          let checkResult = null;
+
+          // Polling source: custom checkLoginState function OR file polling from disk
           if (typeof opts.checkLoginState === 'function') {
-            const checkResult = await opts.checkLoginState();
-            if (isDone) return;
-
-            if (checkResult) {
-              // Checkpoint required
-              if (checkResult.checkpoint) {
-                cleanup();
-                return reject(new PlatformError({
-                  type: 'CHECKPOINT',
-                  code: 'XACT_4031',
-                  message: `[ACCOUNT CHECKPOINTED] ${checkResult.message || 'Identity verification required on platform'}`,
-                  suggestedAction: SuggestedActions.RELOGIN,
-                  platform
-                }));
+            checkResult = await opts.checkLoginState();
+          } else if (targetCookiePath) {
+            try {
+              const fileContent = await fs.readFile(targetCookiePath, 'utf-8');
+              const parsed = JSON.parse(fileContent);
+              if (this.validateCookies(parsed)) {
+                checkResult = { authenticated: true, cookies: parsed };
               }
+            } catch {
+              // File does not exist yet or is being written; continue polling
+            }
+          }
 
-              // Successfully authenticated
-              if (checkResult.authenticated || checkResult.cookies) {
+          if (isDone) return;
+
+          if (checkResult) {
+            // Checkpoint required
+            if (checkResult.checkpoint) {
+              cleanup();
+              return reject(new PlatformError({
+                type: 'CHECKPOINT',
+                code: 'XACT_4031',
+                message: `[ACCOUNT CHECKPOINTED] ${checkResult.message || 'Identity verification required on platform'}`,
+                suggestedAction: SuggestedActions.RELOGIN,
+                platform
+              }));
+            }
+
+            // Successfully authenticated
+            if (checkResult.authenticated || checkResult.cookies) {
+              const cookies = checkResult.cookies || {};
+              if (this.validateCookies(cookies) || checkResult.authenticated) {
                 cleanup();
 
                 const accountId = checkResult.accountId || `act_${platform}_${Date.now()}`;
                 const loginResult = {
                   accountId,
-                  cookies: checkResult.cookies,
+                  cookies,
                   tokens: checkResult.tokens || {},
                   expiresAt: checkResult.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
                 };
@@ -180,19 +229,19 @@ export class TerminalQrLogin extends AbstractLogin {
                 // Save cookies to session manager
                 globalSessionManager.set(accountId, loginResult);
 
-                // Save to local file if cookiePath is specified
+                // Save to local file if path is specified and cookies object is valid
                 try {
-                  if (this.cookiePath) {
-                    const dir = path.dirname(this.cookiePath);
+                  if (targetCookiePath && cookies && typeof cookies === 'object' && Object.keys(cookies).length > 0) {
+                    const dir = path.dirname(targetCookiePath);
                     await fs.mkdir(dir, { recursive: true });
                     await fs.writeFile(
-                      this.cookiePath,
-                      JSON.stringify(checkResult.cookies, null, 2),
+                      targetCookiePath,
+                      JSON.stringify(cookies, null, 2),
                       { mode: 0o600 }
                     );
                   }
-                } catch {
-                  // File save errors should not fail the login memory state
+                } catch (err) {
+                  console.warn(`[WARNING] Failed to write cookie file: ${err.message}`);
                 }
 
                 if (!opts.quiet && isTty()) {
@@ -204,13 +253,13 @@ export class TerminalQrLogin extends AbstractLogin {
             }
           }
 
-          remainingSeconds -= Math.max(1, Math.round(intervalMs / 1000));
+          remainingSeconds -= intervalMs >= 1000 ? Math.round(intervalMs / 1000) : (intervalMs / 1000);
 
           if (!opts.quiet && isTty()) {
-            if (remainingSeconds <= 60 && remainingSeconds > 0) {
-              process.stdout.write(`\r\x1b[K⚠️  QR expiring soon... (${remainingSeconds}s remaining)`);
+            if (remainingSeconds <= this.countdownSec && remainingSeconds > 0) {
+              process.stdout.write(`\r\x1b[K⚠️  QR expiring soon... (${Math.round(remainingSeconds)}s remaining)`);
             } else if (remainingSeconds > 0) {
-              process.stdout.write(`\r\x1b[K⏳ Scan the QR code. Expires in ${remainingSeconds}s...`);
+              process.stdout.write(`\r\x1b[K⏳ Scan the QR code. Expires in ${Math.round(remainingSeconds)}s...`);
             }
           }
 
@@ -226,15 +275,17 @@ export class TerminalQrLogin extends AbstractLogin {
             }));
           }
         } catch (pollErr) {
-          if (!isDone) {
+          // Allow transient network errors to retry during polling loop
+          if (pollErr instanceof PlatformError && (pollErr.type === 'CHECKPOINT' || pollErr.type === 'CANCELLED')) {
             cleanup();
-            reject(pollErr instanceof PlatformError ? pollErr : new PlatformError({
-              type: ErrorTypes.INTERNAL,
-              message: `[LOGIN FAILED] ${pollErr.message}`,
-              suggestedAction: SuggestedActions.CONTACT_SUPPORT,
-              platform
-            }));
+            return reject(pollErr);
           }
+          // Log transient warning and continue polling until timeout
+          if (!opts.quiet) {
+            console.warn(`[POLL WARNING] Transient error during poll: ${pollErr.message}`);
+          }
+        } finally {
+          inFlight = false;
         }
       };
 

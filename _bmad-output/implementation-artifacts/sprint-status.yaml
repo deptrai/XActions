@@ -60,7 +60,7 @@ development_status:
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
   epic-12: in-progress
-  12-1-terminal-ascii-qr-code-login-module: review
+  12-1-terminal-ascii-qr-code-login-module: done
   12-2-cdp-remote-attach-mode-chrome-devtools-protocol: ready-for-dev
   epic-12-retrospective: optional
 

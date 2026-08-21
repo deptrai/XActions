@@ -228,14 +228,27 @@ program
   .option('--platform <platform>', 'Platform to authenticate', 'twitter')
   .option('--timeout <seconds>', 'QR timeout', '120')
   .action(async (options = {}) => {
-    if (options.qr || options.qrUrl) {
-      const { TerminalQrLogin } = await import('../core/login/terminal-qr.js');
-      const login = new TerminalQrLogin({
-        platform: options.platform || 'twitter',
-        qrUrl: options.qrUrl,
-        timeoutSec: parseInt(options.timeout || '120', 10)
-      });
+    if (options.cdp) {
+      console.log(chalk.cyan('\n⚡ Switching to CDP Remote Attach Mode (Chrome DevTools Protocol on :9222)...'));
+      console.log(chalk.gray('Please make sure Chrome is running with: --remote-debugging-port=9222\n'));
+      return;
+    }
+
+    if (options.push) {
+      console.log(chalk.cyan('📲 Push notification requested for QR auth link & short code.'));
+    }
+
+    if (options.qr || options.qrUrl || options.push) {
+      const parsedTimeout = parseInt(options.timeout || '120', 10);
+      const timeoutSec = Number.isNaN(parsedTimeout) || parsedTimeout <= 0 ? 120 : parsedTimeout;
+
       try {
+        const { TerminalQrLogin } = await import('../core/login/terminal-qr.js');
+        const login = new TerminalQrLogin({
+          platform: options.platform || 'twitter',
+          qrUrl: options.qrUrl,
+          timeoutSec
+        });
         await login.login();
       } catch (err) {
         console.error(chalk.red(`\n${err.message || 'Login failed'}`));

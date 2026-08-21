@@ -3,6 +3,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TerminalQrLogin } from '../../../src/core/login/terminal-qr.js';
 import { AbstractLogin } from '../../../src/core/base-login.js';
 import { PlatformError } from '../../../src/core/error-envelope.js';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
 
 describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () => {
   beforeEach(() => {
@@ -27,6 +30,14 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
       expect(code).toBeDefined();
       expect(code.length).toBe(6);
       expect(code).not.toMatch(/[0OI1l]/);
+    });
+
+    it('[P1] should isolate cookiePath by platform (cookies.json vs cookies-facebook.json)', () => {
+      const twitterLogin = new TerminalQrLogin({ platform: 'twitter' });
+      expect(twitterLogin.cookiePath).toContain('cookies.json');
+
+      const facebookLogin = new TerminalQrLogin({ platform: 'facebook' });
+      expect(facebookLogin.cookiePath).toContain('cookies-facebook.json');
     });
   });
 
@@ -56,8 +67,6 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
       });
 
       const loginPromise = login.login();
-
-      // Advance timers by 3 seconds
       await vi.advanceTimersByTimeAsync(3000);
 
       const result = await loginPromise;
@@ -92,6 +101,24 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
       await assertion;
     });
 
+    it('[P0] should reject immediately when AbortSignal is pre-aborted', async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      const login = new TerminalQrLogin({
+        platform: 'twitter',
+        signal: controller.signal,
+        quiet: true
+      });
+
+      await expect(login.login()).rejects.toSatisfy((err) => {
+        expect(err).toBeInstanceOf(PlatformError);
+        expect(err.type).toBe('CANCELLED');
+        expect(err.message).toContain('[LOGIN CANCELLED]');
+        return true;
+      });
+    });
+
     it('[P1] should throw PlatformError [ACCOUNT CHECKPOINTED] when platform returns checkpoint', async () => {
       const mockCheckLoginState = vi.fn().mockResolvedValue({
         checkpoint: true,
@@ -121,7 +148,7 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
       const mockCheckLoginState = vi.fn().mockResolvedValue({
         authenticated: true,
         accountId: 'act_clean_timer',
-        cookies: { auth_token: 'tok' }
+        cookies: { auth_token: 'tok', ct0: 'csrf' }
       });
 
       const login = new TerminalQrLogin({
@@ -137,6 +164,35 @@ describe('Story 12.1 — TerminalQrLogin (src/core/login/terminal-qr.js)', () =>
       await loginPromise;
 
       expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('[P0] should save cookie file with secure 0o600 file permissions upon success', async () => {
+      const tempCookiePath = path.join(os.tmpdir(), `test-cookies-${Date.now()}.json`);
+      const writeFileSpy = vi.spyOn(fs, 'writeFile').mockResolvedValue();
+
+      const mockCheckLoginState = vi.fn().mockResolvedValue({
+        authenticated: true,
+        accountId: 'act_perm_test',
+        cookies: { auth_token: 'valid_auth', ct0: 'valid_ct0' }
+      });
+
+      const login = new TerminalQrLogin({
+        platform: 'twitter',
+        cookiePath: tempCookiePath,
+        checkLoginState: mockCheckLoginState,
+        intervalMs: 1000,
+        quiet: true
+      });
+
+      const loginPromise = login.login();
+      await vi.advanceTimersByTimeAsync(1000);
+      await loginPromise;
+
+      expect(writeFileSpy).toHaveBeenCalledWith(
+        tempCookiePath,
+        expect.stringContaining('valid_auth'),
+        expect.objectContaining({ mode: 0o600 })
+      );
     });
   });
 });

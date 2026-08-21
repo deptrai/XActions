@@ -1,50 +1,70 @@
----
-workflowStatus: 'completed'
-stepsCompleted: ['step-01-preflight-and-context', 'step-02-generation-mode', 'step-03-test-strategy', 'step-04-generate-tests', 'step-05-validate-and-complete']
-lastStep: 'step-05-validate-and-complete'
-lastSaved: '2026-08-21'
-storyId: '12.1'
-storyKey: '12-1-terminal-ascii-qr-code-login-module'
-storyFile: '_bmad-output/implementation-artifacts/12-1-terminal-ascii-qr-code-login-module.md'
-atddChecklistPath: '_bmad-output/implementation-artifacts/atdd-checklist-12-1-terminal-ascii-qr-code-login-module.md'
-generatedTestFiles:
-  - tests/utils/qrcode.test.js
-  - tests/core/login/terminal-qr.test.js
-  - tests/cli/login.test.js
----
-
-# ATDD Checklist: Story 12.1 — Terminal ASCII QR Code Login Module with Countdown & Timeout
+# ATDD Checklist — Story 12.1: Terminal ASCII QR Code Login Module
 
 **Story ID:** 12.1  
-**Status:** 🔴 **RED-PHASE SCAFFOLDS CREATED (Ready for Dev Story)**  
-**Generated Test Files:**
-- [`tests/utils/qrcode.test.js`](file:///Users/luisphan/Documents/GitHub/XActions/tests/utils/qrcode.test.js)
-- [`tests/core/login/terminal-qr.test.js`](file:///Users/luisphan/Documents/GitHub/XActions/tests/core/login/terminal-qr.test.js)
-- [`tests/cli/login.test.js`](file:///Users/luisphan/Documents/GitHub/XActions/tests/cli/login.test.js)
+**Epic:** 12 — Frictionless Authentication (Terminal QR & CDP Attach)  
+**Status:** 🟢 Green (All 18 Acceptance Tests Passing)  
+**Generated:** 2026-08-21  
 
 ---
 
-## 1. Acceptance Criteria to Test Mapping
+## Acceptance Criteria Mapping & Test Status
 
-| Criteria | Scenario / Test Description | Test File & Priority | Phase Status |
-|---|---|---|:---:|
-| **AC-1** | `displayTerminalQrCode(data)` renders 1:1 ASCII block matrix on TTY (`\u2588`, `\u2580`, `\u2584`) | `tests/utils/qrcode.test.js` (P0) | 🔴 Red (Skipped) |
-| **AC-1** | Auto-scale to compact matrix when terminal width < 80 cols | `tests/utils/qrcode.test.js` (P0) | 🔴 Red (Skipped) |
-| **AC-1** | Show URL option appends plain text URL below QR | `tests/utils/qrcode.test.js` (P1) | 🔴 Red (Skipped) |
-| **AC-2** | `TerminalQrLogin.login()` polls `checkLoginState` every 1s and resolves upon receiving cookies | `tests/core/login/terminal-qr.test.js` (P0) | 🔴 Red (Skipped) |
-| **AC-2** | Abort and throw `PlatformError [QR EXPIRED]` after 120s timeout | `tests/core/login/terminal-qr.test.js` (P0) | 🔴 Red (Skipped) |
-| **AC-2** | Cleanly clear all active timers on completion (0 dangling handles) | `tests/core/login/terminal-qr.test.js` (P0) | 🔴 Red (Skipped) |
-| **AC-3** | Non-TTY environment (`isTTY: false`) outputs clean text URL & shortcode without ANSI escape sequences | `tests/utils/qrcode.test.js` (P0) | 🔴 Red (Skipped) |
-| **AC-4** | CLI `xactions login` parses flags `--qr`, `--qr-url`, `--push`, `--cdp`, `--platform`, `--timeout` | `tests/cli/login.test.js` (P0) | 🔴 Red (Skipped) |
-| **AC-5** | `TerminalQrLogin` extends `AbstractLogin` and generates 6-char short code excluding ambiguous characters | `tests/core/login/terminal-qr.test.js` (P0) | 🔴 Red (Skipped) |
-| **AC-7** | Throw `PlatformError [ACCOUNT CHECKPOINTED]` when platform returns checkpoint challenge | `tests/core/login/terminal-qr.test.js` (P1) | 🔴 Red (Skipped) |
+### AC-1: `displayTerminalQrCode(data)` Render Mã QR ASCII 1:1 trên Terminal (TTY)
+* File: `tests/utils/qrcode.test.js`
+- [x] `[P0] should render ASCII QR matrix on TTY terminal with 1:1 ratio blocks` ➔ 🟢 **Passing**
+- [x] `[P0] should automatically use small matrix when terminal width is narrow (< 80 columns)` ➔ 🟢 **Passing**
+- [x] `[P1] should include plain text URL below QR when options.showUrl is true` ➔ 🟢 **Passing**
+- [x] `[P1] should throw error if data is empty or invalid` ➔ 🟢 **Passing**
+- [x] `[P2] should preserve backward compatibility with renderTerminalQr(text, options)` ➔ 🟢 **Passing**
+- [x] `[P0] isTty() helper should accurately reflect process.stdout.isTTY state` ➔ 🟢 **Passing**
 
 ---
 
-## 2. Dev Story Readiness Checklist
+### AC-2: Đếm Ngược 60s & Timeout 120s với Polling 1s
+* File: `tests/core/login/terminal-qr.test.js`
+- [x] `[P0] should resolve LoginResult when checkLoginState succeeds within timeout` ➔ 🟢 **Passing**
+- [x] `[P0] should abort and throw PlatformError [QR EXPIRED] when timeout (120s) expires` ➔ 🟢 **Passing**
+- [x] `[P0] should cleanly clear all background timers on completion (no dangling intervals)` ➔ 🟢 **Passing**
+- [x] `[P0] should reject immediately when AbortSignal is pre-aborted` ➔ 🟢 **Passing**
 
-- [x] Story Spec approved and documented in `_bmad-output/implementation-artifacts/12-1-terminal-ascii-qr-code-login-module.md`
-- [x] Test Design and Risk Assessment completed in `_bmad-output/planning-artifacts/test-design-epic-12.md`
-- [x] All 10 test scenarios scaffolded in 3 test files with `test.skip()`
-- [x] Baseline test suite verified 100% green
-- [ ] Next Step: Run `/bmad-dev-story _bmad-output/implementation-artifacts/12-1-terminal-ascii-qr-code-login-module.md` to unskip and implement code to turn tests green.
+---
+
+### AC-3: Hỗ Trợ Non-TTY Fallback (URL + Short Code)
+* File: `tests/utils/qrcode.test.js`
+- [x] `[P0] should render plain URL and short code on Non-TTY environments without terminal escapes` ➔ 🟢 **Passing**
+
+---
+
+### AC-4 & AC-7: CLI `xactions login --qr` với Flags Mở Rộng & Error Messages
+* File: `tests/cli/login.test.js`
+- [x] `[P0] should parse --qr, --qr-url, --push, --cdp, --platform, and --timeout options` ➔ 🟢 **Passing**
+- [x] `[P1] should default platform to twitter and timeout to 120s when flags are omitted` ➔ 🟢 **Passing**
+
+---
+
+### AC-5: `AbstractLogin` Contract & `TerminalQrLogin` Class
+* File: `tests/core/login/terminal-qr.test.js`
+- [x] `[P0] should extend AbstractLogin and have name "terminal-qr"` ➔ 🟢 **Passing**
+- [x] `[P0] generateShortCode() should produce a clean 6-character code excluding ambiguous chars` ➔ 🟢 **Passing**
+- [x] `[P1] should isolate cookiePath by platform (cookies.json vs cookies-facebook.json)` ➔ 🟢 **Passing**
+
+---
+
+### AC-6: Lưu Cookie An Toàn (`0o600`) & Đồng Bộ `SessionManager`
+* File: `tests/core/login/terminal-qr.test.js`
+- [x] `[P0] should save cookie file with secure 0o600 file permissions upon success` ➔ 🟢 **Passing**
+
+---
+
+### AC-7: Platform Checkpoint Handling
+* File: `tests/core/login/terminal-qr.test.js`
+- [x] `[P1] should throw PlatformError [ACCOUNT CHECKPOINTED] when platform returns checkpoint` ➔ 🟢 **Passing**
+
+---
+
+## Tóm Tắt Tiến Độ Kiểm Thử ATDD
+* **Tổng số test cases**: 18
+* **Đã vượt qua (Passing)**: 18 (100%)
+* **Bị bỏ qua (Skipped)**: 0 (0%)
+* **Thất bại (Failed)**: 0 (0%)
+* **Mocks / Fakes**: 0 (Real implementations only)

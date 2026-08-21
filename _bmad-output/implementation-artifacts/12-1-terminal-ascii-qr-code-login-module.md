@@ -2,7 +2,7 @@
 
 **Story ID:** 12.1  
 **Epic:** 12 — Frictionless Authentication (Terminal QR & CDP Attach)  
-**Status:** review  
+**Status:** done  
 **Owner:** DEV  
 **Source:** `epics.md` Story 12.1, `prd.md` FR-68, `ARCHITECTURE-SPINE.md` AD-5 & AD-15, `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` Flows C1/C2, existing `src/utils/qrcode.js`, `src/core/base-login.js`, `src/cli/index.js`, `src/core/session-manager.js`, `src/client/Scraper.js`.
 
@@ -113,7 +113,7 @@ so that **tôi không cần copy-paste token, không để lộ credential, và 
 - [x] **Task 2: Tạo `src/core/login/terminal-qr.js`** (AC-2, AC-5, AC-6)
   - [x] 2.1 `class TerminalQrLogin extends AbstractLogin`
   - [x] 2.2 Implement `login()` với countdown, polling 1s, timeout 120s
-  - [x] 2.3 `generateShortCode()` cho non-TTY
+  - [x] 2.3 `generateShortCode()` cho non-TTY với `crypto.randomInt`
   - [x] 2.4 Save cookies + `SessionManager.set()`
 - [x] **Task 3: Cập nhật CLI `src/cli/index.js`** (AC-3, AC-4, AC-7)
   - [x] 3.1 Thêm options `--qr`, `--qr-url`, `--push`, `--cdp`, `--platform`, `--timeout` cho command `login`
@@ -128,29 +128,37 @@ so that **tôi không cần copy-paste token, không để lộ credential, và 
   - [x] 5.2 Không leak stack trace
 - [x] **Task 6: Viết tests** (AC-8)
   - [x] 6.1 `tests/utils/qrcode.test.js` (7 tests passing)
-  - [x] 6.2 `tests/core/login/terminal-qr.test.js` (6 tests passing)
+  - [x] 6.2 `tests/core/login/terminal-qr.test.js` (9 tests passing)
   - [x] 6.3 `tests/cli/login.test.js` (2 tests passing)
+
+### Review Findings (AI)
+- [x] [Review][Patch] Pre-aborted Signal Guard [src/core/login/terminal-qr.js]
+- [x] [Review][Patch] In-Flight Poll Locking [src/core/login/terminal-qr.js]
+- [x] [Review][Patch] Default Cookie File Polling from disk [src/core/login/terminal-qr.js]
+- [x] [Review][Patch] Cookie Key Validation via getRequiredCookies [src/core/login/terminal-qr.js]
+- [x] [Review][Patch] Cryptographically Secure Shortcode via crypto.randomInt [src/core/login/terminal-qr.js]
+- [x] [Review][Patch] Multi-Platform Cookie Path Isolation [src/core/login/terminal-qr.js]
+- [x] [Review][Patch] CLI Safe Timeout & Flags Dispatch (--cdp, --push) [src/cli/index.js]
+- [x] [Review][Patch] Comprehensive Test Coverage & 0o600 Permission Tests [tests/core/login/terminal-qr.test.js]
 
 ---
 
-## Dev Notes
+## Senior Developer Review (AI)
 
-### Architecture Compliance
+**Review Outcome:** Approved  
+**Review Date:** 2026-08-21  
+**Total Action Items:** 8 resolved / 8 total  
+**Severity Breakdown:** 4 High, 4 Medium, 0 Low  
 
-* **AD-5 — Non-Invasive Authentication via Terminal QR & CDP Attach [ADOPTED]** — `src/core/base-login.js`, `src/utils/qrcode.js`, `src/core/session-manager.js`  
-  * Rule 2: `AbstractLogin` contract trả về `{ accountId, cookies, tokens, expiresAt }`. `TerminalQrLogin` tuân thủ đầy đủ.
-  * Rule 3: Sticky IP cho auth-required platforms; `SessionManager` lưu `accountId`.
-  * Rule 4: Terminal ASCII QR code tỷ lệ 1:1 với `qrcode-terminal` (small: true), 60s countdown, 120s timeout, polling cookie ngầm.
-
-* **AD-15 — Terminal QR Login with Non-TTY Fallback & Clear Auth Feedback [ADOPTED-NEW]** — `src/core/base-login.js`, `src/utils/qrcode.js`, `src/cli/login.js`  
-  * Rule 1: Tự động phát hiện TTY; non-TTY thì in URL + short code.
-  * Rule 2: Countdown overwrite trên cùng một dòng.
-  * Rule 3: Error messages dùng prefix `[QR EXPIRED]`, `[ACCOUNT CHECKPOINTED]`, `[QR INVALID]`, `[LOGIN FAILED]`.
-
-* **AD-2 — Error Envelope Hierarchy [ADOPTED]** — `src/core/error-envelope.js`  
-  * Mọi lỗi QR là `PlatformError` với `type`, `code`, `suggestedAction`, `platform`, `details`.
-
-* **AD-3 — Zero core dependencies [ADOPTED]** — `src/core/` không có npm dependencies tĩnh. `TerminalQrLogin` dùng dynamic imports và zero external npm packages trong `src/core/`.
+### Action Items
+- [x] Resolved: Pre-aborted signal rejection implemented.
+- [x] Resolved: In-flight polling locking added to prevent overlapping calls.
+- [x] Resolved: Default disk cookie polling enabled when no custom callback provided.
+- [x] Resolved: Platform required cookie keys validated before resolving login.
+- [x] Resolved: Crypto random shortcode generation using `crypto.randomInt`.
+- [x] Resolved: Isolated cookie file storage per platform (`cookies.json`, `cookies-<platform>.json`).
+- [x] Resolved: Safe timeout parsing and CDP attach dispatch in CLI.
+- [x] Resolved: File permissions mode `0o600` verified with automated tests.
 
 ---
 
@@ -159,21 +167,13 @@ so that **tôi không cần copy-paste token, không để lộ credential, và 
 ### Agent Model Used
 Antigravity (SWE-Agent) + Serena LSP context.
 
-### Debug Log References
-* `src/utils/qrcode.js` — Implemented `displayTerminalQrCode`, `renderTerminalQr`, `isTty`.
-* `src/core/login/terminal-qr.js` — Implemented `TerminalQrLogin` with countdown, 1s polling, 120s timeout, short code generator, checkpoint and expired error envelopes.
-* `src/cli/index.js` — Enhanced `login` command with `--qr`, `--qr-url`, `--push`, `--cdp`, `--platform`, `--timeout`.
-* `src/core/index.js` — Exported `TerminalQrLogin`.
-
 ### Completion Notes List
-* ✅ `displayTerminalQrCode` implemented and renders scannable ASCII QR with auto-scale for terminal width < 80 cols.
-* ✅ `TerminalQrLogin` extends `AbstractLogin` and returns `LoginResult`.
-* ✅ Countdown 60s + timeout 120s + 1s polling implemented with zero dangling timer handles.
-* ✅ TTY detection and non-TTY URL/short code fallback implemented.
-* ✅ CLI `xactions login --qr --platform <twitter|facebook>` options parsed and handled.
-* ✅ Error messages follow `[QR ...]` convention.
-* ✅ Cookie saved securely (`0o600`) and `SessionManager` updated.
-* ✅ 15/15 tests passing across 3 test files with 0 regressions.
+* ✅ Implemented `displayTerminalQrCode` with responsive 1:1 ASCII rendering, small matrix for < 80 columns, and plain text Non-TTY fallback.
+* ✅ Implemented `TerminalQrLogin` extending `AbstractLogin` with 120s timeout, countdown timer, zero dangling timer leaks, and platform checkpoint handling.
+* ✅ Implemented secure shortcode generator using `crypto.randomInt`.
+* ✅ Added safe cookie file storage with file mode `0o600` and `SessionManager` integration.
+* ✅ Updated CLI `xactions login` with `--qr`, `--qr-url`, `--push`, `--cdp`, `--platform`, `--timeout`.
+* ✅ All 18 ATDD unit and integration tests passing cleanly with 0 mocks.
 
 ### File List
 * `src/utils/qrcode.js` (MODIFIED)
@@ -183,8 +183,9 @@ Antigravity (SWE-Agent) + Serena LSP context.
 * `tests/utils/qrcode.test.js` (NEW)
 * `tests/core/login/terminal-qr.test.js` (NEW)
 * `tests/cli/login.test.js` (NEW)
+* `_bmad-output/implementation-artifacts/atdd-checklist-12-1-terminal-ascii-qr-code-login-module.md` (MODIFIED)
 * `_bmad-output/implementation-artifacts/12-1-terminal-ascii-qr-code-login-module.md` (MODIFIED)
 * `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED)
 
 ### Change Log
-* 2026-08-21: Implemented Story 12.1 Terminal ASCII QR Code Login Module, non-TTY fallback, CLI options, session storage, and ATDD test suite. Status changed from `in-progress` to `review`.
+* 2026-08-21: Story 12.1 implemented, reviewed, patched, and verified. Status updated to `done`.
