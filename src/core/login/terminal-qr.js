@@ -290,9 +290,6 @@ export class TerminalQrLogin extends AbstractLogin {
       };
 
       intervalId = setInterval(poll, intervalMs);
-      if (typeof intervalId.unref === 'function') {
-        intervalId.unref();
-      }
     });
   }
 }
