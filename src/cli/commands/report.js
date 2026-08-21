@@ -14,6 +14,7 @@
 import chalk from 'chalk';
 import ora from 'ora';
 
+import { createHttpScraper, smartOutput } from '../shared.js';
 import { buildAccountReport, compareReports, formatCount, WEEKDAYS } from '../../analysis/accountReport.js';
 
 /** Bar characters, lightest to fullest, for the inline hour histogram. */
@@ -197,11 +198,8 @@ function printComparison(reports) {
  * Register the command.
  *
  * @param {import('commander').Command} program
- * @param {object} deps
- * @param {() => Promise<import('../../client/index.js').Scraper>} deps.createHttpScraper
- * @param {(data: object[], options: object, defaultName: string) => Promise<void>} deps.smartOutput
  */
-export function registerReportCommand(program, { createHttpScraper, smartOutput }) {
+export function registerReportCommand(program) {
   program
     // Named `analyze` rather than `report` because `report` already belongs to
     // the reputation monitor, which needs a monitor running first. These are
