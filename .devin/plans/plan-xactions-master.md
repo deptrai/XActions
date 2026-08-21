@@ -58,14 +58,18 @@ Objective: drive `npm run typecheck` down to zero errors starting from the 137 p
 - [x] 3.1 — Fix the first batch of leaf/pure contract errors:
   - `src/core/error-envelope.js` — typed `RETRYABLE_TYPES` as `Set<string>`, added `isRetryable` to `PlatformError` options, set `this.isRetryable` from options or compute it, removed the getter, used `Record<string, unknown>` for `details`
   - `src/core/types.js` — made `ActionDescriptor` fields optional (`description`, `requiredArgs`, `example`, `outputType`)
-- [ ] 3.2 — Type `metadata-schema-registry.js` and `action-registry.js`
+- [x] 3.2 — Type `metadata-schema-registry.js` and `action-registry.js`
+  - `metadata-schema-registry.js` — added recursive `JsonSchema` JSDoc typedef, typed all
+    `MetadataSchemaRegistry` methods and fields, cast unknown `JSON.parse` output, used
+    `Record<string, unknown>` and `unknown[]` for data traversal
+  - `action-registry.js` — guard `Map.get()` result before accessing `.descriptor`
 - [ ] 3.3 — Type core data modules (`account-pool.js`, `base-client.js`, `base-crawler.js`, `proxy-pool.js` providers)
 - [ ] 3.4 — Type controller/entry modules (`terminal-qr.js`, etc.)
 - [ ] 3.5 — Add missing `.d.ts` declarations for untyped packages (e.g., `qrcode-terminal`)
 - [ ] 3.6 — Run `npm run typecheck` until zero errors
 - [ ] 3.7 — Run full test suite and fix any regressions
 
-Current status: in progress. Type errors reduced from **137** to **133**; `npx vitest run tests/core` passes (121 passed).
+Current status: in progress. Type errors reduced from **137** to **115**; `npx vitest run tests/core` passes (121 passed).
 
 ## Phase 4 — Convert remaining source tree to TypeScript
 

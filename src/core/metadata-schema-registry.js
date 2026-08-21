@@ -6,10 +6,33 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
+ * @typedef {Object} JsonSchema
+ * @property {string | string[]} [type]
+ * @property {unknown[]} [enum]
+ * @property {number} [minimum]
+ * @property {number} [maximum]
+ * @property {string} [pattern]
+ * @property {Record<string, JsonSchema>} [properties]
+ * @property {string[]} [required]
+ * @property {JsonSchema} [items]
+ * @property {JsonSchema[]} [oneOf]
+ * @property {JsonSchema[]} [anyOf]
+ * @property {string} [title]
+ * @property {string} [description]
+ * @property {string} [version]
+ */
+
+/**
  * Validates data against a simple JSON schema
  * Supports type, required, properties, items, enum, minimum, maximum, pattern
+ *
+ * @param {JsonSchema} schema
+ * @param {unknown} data
+ * @param {string} [dataPath]
+ * @returns {string[]}
  */
 function validateSchemaNode(schema, data, dataPath = 'metadata') {
+  /** @type {string[]} */
   const errors = [];
 
   if (schema === undefined || schema === null) return errors;
@@ -69,17 +92,18 @@ function validateSchemaNode(schema, data, dataPath = 'metadata') {
       errors.push(`${dataPath} must be an object`);
       return errors;
     }
+    const record = /** @type {Record<string, unknown>} */ (data);
     if (schema.required && Array.isArray(schema.required)) {
       for (const req of schema.required) {
-        if (data[req] === undefined) {
+        if (record[req] === undefined) {
           errors.push(`${dataPath}.${req} is required`);
         }
       }
     }
-    if (schema.properties && typeof data === 'object' && data !== null) {
+    if (schema.properties) {
       for (const [key, propSchema] of Object.entries(schema.properties)) {
-        if (data[key] !== undefined) {
-          errors.push(...validateSchemaNode(propSchema, data[key], `${dataPath}.${key}`));
+        if (record[key] !== undefined) {
+          errors.push(...validateSchemaNode(propSchema, record[key], `${dataPath}.${key}`));
         }
       }
     }
@@ -87,9 +111,10 @@ function validateSchemaNode(schema, data, dataPath = 'metadata') {
 
   // Array checks
   if ((schema.type === 'array' || schema.items) && Array.isArray(data)) {
+    const dataArray = /** @type {unknown[]} */ (data);
     if (schema.items) {
-      for (let i = 0; i < data.length; i++) {
-        errors.push(...validateSchemaNode(schema.items, data[i], `${dataPath}[${i}]`));
+      for (let i = 0; i < dataArray.length; i++) {
+        errors.push(...validateSchemaNode(schema.items, dataArray[i], `${dataPath}[${i}]`));
       }
     }
   }
@@ -126,11 +151,17 @@ function validateSchemaNode(schema, data, dataPath = 'metadata') {
 
 class MetadataSchemaRegistry {
   constructor() {
+    /** @type {Map<string, JsonSchema>} */
     this.schemas = new Map();
   }
 
   /**
    * Register a JSON schema for a specific platform and category
+   *
+   * @param {string} platform
+   * @param {string} category
+   * @param {JsonSchema} schema
+   * @returns {void}
    */
   registerSchema(platform, category, schema) {
     if (!platform || !category || !schema) {
@@ -142,6 +173,10 @@ class MetadataSchemaRegistry {
 
   /**
    * Get a registered JSON schema
+   *
+   * @param {string} platform
+   * @param {string} category
+   * @returns {JsonSchema | null}
    */
   getSchema(platform, category) {
     const key = `${platform}:${category}`;
@@ -150,6 +185,10 @@ class MetadataSchemaRegistry {
 
   /**
    * Check if a schema is registered
+   *
+   * @param {string} platform
+   * @param {string} category
+   * @returns {boolean}
    */
   hasSchema(platform, category) {
     const key = `${platform}:${category}`;
@@ -158,12 +197,15 @@ class MetadataSchemaRegistry {
 
   /**
    * Recursively discover and register all .json files in a directory
+   *
+   * @param {string} schemasDir
+   * @returns {void}
    */
   loadSchemasFromDisk(schemasDir) {
     if (!fs.existsSync(schemasDir) || !fs.statSync(schemasDir).isDirectory()) return;
 
     const platforms = fs.readdirSync(schemasDir, { withFileTypes: true });
-    
+
     for (const platformDirent of platforms) {
       if (!platformDirent.isDirectory()) continue;
       
@@ -179,7 +221,7 @@ class MetadataSchemaRegistry {
         
         try {
           const content = fs.readFileSync(schemaPath, 'utf8');
-          const schema = JSON.parse(content);
+          const schema = /** @type {JsonSchema} */ (JSON.parse(content));
           this.registerSchema(platform, category, schema);
         } catch (error) {
           console.error(`Failed to load schema from ${schemaPath}:`, error);
@@ -190,8 +232,11 @@ class MetadataSchemaRegistry {
 
   /**
    * List all available schemas
+   *
+   * @returns {Array<{ platform: string, category: string, title: string, description: string, version: string, propertiesCount: number }>}
    */
   listSchemas() {
+    /** @type {Array<{ platform: string, category: string, title: string, description: string, version: string, propertiesCount: number }>} */
     const result = [];
     for (const [key, schema] of this.schemas.entries()) {
       const [platform, category] = key.split(':');
@@ -214,7 +259,11 @@ class MetadataSchemaRegistry {
 
   /**
    * Validate a metadata object against the registered schema
-   * Returns { valid: boolean, errors: string[] }
+   *
+   * @param {string} platform
+   * @param {string} category
+   * @param {unknown} metadata
+   * @returns {{ valid: boolean, errors: string[] }}
    */
   validateMetadata(platform, category, metadata) {
     const schema = this.getSchema(platform, category);

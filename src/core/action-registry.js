@@ -26,7 +26,9 @@ export class ActionRegistry {
     for (const descriptor of descriptors) {
       const key = `${platform}:${descriptor.action}`;
       if (this.#actions.has(key)) {
-        const existing = this.#actions.get(key).descriptor;
+        const entry = this.#actions.get(key);
+        if (!entry) continue;
+        const existing = entry.descriptor;
         if (
           existing.description !== descriptor.description ||
           existing.outputType !== descriptor.outputType ||
