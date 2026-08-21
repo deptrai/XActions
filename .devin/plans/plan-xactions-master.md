@@ -48,20 +48,24 @@ Status: completed, committed, pushed (`main` includes the refactor).
 
 Status: completed. Latest commit: `6f51792 — Split monolithic facebook scraper into domain-specific modules.`
 
-## Phase 3 — Convert `src/core` to TypeScript
+## Phase 3 — Make `src/core` (and its `src/proxy`/`src/utils` dependencies) pass TypeScript strict checking
 
-Objective: migrate the `src/core` JavaScript modules to TypeScript and drive `tsc --noEmit` down to zero errors (starting from the current 137 pre-existing errors).
+Context: the project runs as Node.js ESM (`package.json` uses `node src/...js` and `tsc --noEmit`). There is no TS transpilation/loader in place, so the immediate goal is to drive `npm run typecheck` to zero errors by adding JSDoc/TypeScript-compatible types to the existing `.js` source. Renaming files to `.ts` would require installing `tsx` or a build step; that remains a future Phase 4 option.
 
-- [ ] 3.0 — Audit `src/core` and downstream dependencies (`src/proxy`, `src/utils/qrcode.js`) and group errors by root cause
-- [ ] 3.1 — Create/validate `src/core/tsconfig.json` and define the file conversion order
-- [ ] 3.2 — Convert leaf/pure modules first (e.g., `error-envelope.js`, `metadata-schema-registry.js`, `action-registry.js`)
-- [ ] 3.3 — Convert core data modules (`account-pool.js`, `base-client.js`, `base-crawler.js`, `proxy-pool.js` providers)
-- [ ] 3.4 — Convert controller/entry modules (`terminal-qr.js`, etc.)
+Objective: drive `npm run typecheck` down to zero errors starting from the 137 pre-existing errors (now 133 after the first batch of fixes).
+
+- [x] 3.0 — Audit `src/core` and downstream dependencies (`src/proxy`, `src/utils/qrcode.js`) and group errors by root cause
+- [x] 3.1 — Fix the first batch of leaf/pure contract errors:
+  - `src/core/error-envelope.js` — typed `RETRYABLE_TYPES` as `Set<string>`, added `isRetryable` to `PlatformError` options, set `this.isRetryable` from options or compute it, removed the getter, used `Record<string, unknown>` for `details`
+  - `src/core/types.js` — made `ActionDescriptor` fields optional (`description`, `requiredArgs`, `example`, `outputType`)
+- [ ] 3.2 — Type `metadata-schema-registry.js` and `action-registry.js`
+- [ ] 3.3 — Type core data modules (`account-pool.js`, `base-client.js`, `base-crawler.js`, `proxy-pool.js` providers)
+- [ ] 3.4 — Type controller/entry modules (`terminal-qr.js`, etc.)
 - [ ] 3.5 — Add missing `.d.ts` declarations for untyped packages (e.g., `qrcode-terminal`)
 - [ ] 3.6 — Run `npm run typecheck` until zero errors
 - [ ] 3.7 — Run full test suite and fix any regressions
 
-Status: in progress — will begin after this plan is updated.
+Current status: in progress. Type errors reduced from **137** to **133**; `npx vitest run tests/core` passes (121 passed).
 
 ## Phase 4 — Convert remaining source tree to TypeScript
 
@@ -80,6 +84,7 @@ Status: pending (details to be refined in Phase 3).
 - API smoke: `npx vitest run tests/api/facebook-automate-routes.test.js`
 - Type: `npm run typecheck`
 - Pre-existing type error baseline: **137 errors** (as of Phase 2 completion)
+- Current type error count: **133 errors** (after Phase 3.1 fixes in `error-envelope.js` and `types.js`)
 
 ## Notes
 

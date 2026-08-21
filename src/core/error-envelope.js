@@ -29,6 +29,7 @@ export const SuggestedActions = Object.freeze({
   USE_ACTIONS_LIST: 'use_x_actions_list',
 });
 
+/** @type {Set<string>} */
 const RETRYABLE_TYPES = new Set([
   ErrorTypes.RATE_LIMIT,
   ErrorTypes.BOT_CHALLENGE,
@@ -55,24 +56,21 @@ export class PlatformError extends Error {
    * @param {string} [opts.suggestedAction]
    * @param {string} [opts.accountId]
    * @param {string} [opts.platform]
-   * @param {any} [opts.details]
+   * @param {Record<string, unknown>} [opts.details]
+   * @param {boolean} [opts.isRetryable]
    */
   constructor(opts = {}) {
     super(opts.message || 'Platform error');
     this.name = 'PlatformError';
     this.code = opts.code || 'XACT_0000';
     this.type = opts.type || ErrorTypes.INTERNAL;
+    this.isRetryable = opts.isRetryable ?? isRetryableType(this.type);
     this.statusCode = opts.statusCode ?? 500;
     this.retryAfterMs = opts.retryAfterMs ?? 0;
     this.suggestedAction = opts.suggestedAction || SuggestedActions.CONTACT_SUPPORT;
     this.accountId = opts.accountId;
     this.platform = opts.platform;
     this.details = opts.details;
-  }
-
-  /** @returns {boolean} */
-  get isRetryable() {
-    return isRetryableType(this.type);
   }
 
   /** @returns {number} */

@@ -64,11 +64,11 @@
 /**
  * @typedef {Object} ActionDescriptor
  * @property {string} action
- * @property {string} description
- * @property {string[]} requiredArgs
+ * @property {string} [description]
+ * @property {string[]} [requiredArgs]
  * @property {string[]} [optionalArgs]
- * @property {Object} example
- * @property {string} outputType
+ * @property {Object} [example]
+ * @property {string} [outputType]
  */
 
 /**
