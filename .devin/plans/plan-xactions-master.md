@@ -78,17 +78,18 @@ Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 
 - [x] 4.0 — Expand `tsconfig.json` to `src/client/**/*.js` and record the initial error baseline
 - [x] 4.1 — Type `src/client` HTTP client modules
 - [x] 4.2 — Type `src/scrapers/twitter/http` modules + `src/scrapers/twitter/validator.js`
-- [ ] 4.3 — Type `src/scrapers/adapters` modules
-- [ ] 4.4 — Type `src/scrapers/facebook` domain modules and coupled `api/lib/prisma.js` + `api/services/facebookAutomation.js`
-- [ ] 4.5 — Type `src/scrapers/twitter/index.js` and `bluesky`/`mastodon`/`threads`
-- [ ] 4.6 — Type `src/scrapers/index.js` and `src/index.js` / `src/algorithmBuilder.js`
-- [ ] 4.7 — Type `src/api` (Prisma, services, routes) and `src/workflows`
-- [ ] 4.8 — Type `src/mcp` server and tools
-- [ ] 4.9 — Type remaining `src/{agents,ai,a2a,analytics,streaming,plugins,utils,automation}`
-- [ ] 4.10 — Add missing `.d.ts` declarations for untyped dependencies
-- [ ] 4.11 — Final `npm run typecheck` (entire `src` + `api`) and full `npx vitest run`
+- [x] 4.3 — Type `src/scrapers/adapters` modules
+- [~] 4.4 — Type `src/scrapers/twitter/index.js`
+- [ ] 4.5 — Type `src/scrapers/facebook` domain modules and coupled `api/lib/prisma.js` + `api/services/facebookAutomation.js`
+- [ ] 4.6 — Type `src/scrapers/bluesky`, `src/scrapers/mastodon`, `src/scrapers/threads`
+- [ ] 4.7 — Type `src/scrapers/index.js` and `src/index.js` / `src/algorithmBuilder.js`
+- [ ] 4.8 — Type `src/api` (Prisma, services, routes) and `src/workflows`
+- [ ] 4.9 — Type `src/mcp` server and tools
+- [ ] 4.10 — Type remaining `src/{agents,ai,a2a,analytics,streaming,plugins,utils,automation}`
+- [ ] 4.11 — Add missing `.d.ts` declarations for untyped dependencies
+- [ ] 4.12 — Final `npm run typecheck` (entire `src` + `api`) and full `npx vitest run`
 
-Status: Phase 4.2 completed; `src/core`, `src/client`, `src/scrapers/twitter/http` and `src/scrapers/twitter/validator.js` pass `tsc --noEmit`.
+Status: Phase 4.3 completed; adapters fully typed and passing. Phase 4.4 `src/scrapers/twitter/index.js` in progress.
 
 ## Verification baseline
 
@@ -96,7 +97,7 @@ Status: Phase 4.2 completed; `src/core`, `src/client`, `src/scrapers/twitter/htt
 - API smoke: `npx vitest run tests/api/facebook-automate-routes.test.js`
 - Type: `npm run typecheck`
 - Pre-existing type error baseline: **137 errors** (as of Phase 2 completion)
-- Current type error count: **0 errors** for `src/core` + `src/client` + `src/scrapers/twitter/http` + `src/scrapers/twitter/validator.js`; next slice `src/scrapers/adapters`.
+- Current type error count: **0 errors** for `src/core` + `src/client` + `src/scrapers/twitter/{http, validator, adapters}`; `src/scrapers/twitter/index.js` in progress.
 
 ## Notes
 
