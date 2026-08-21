@@ -34,7 +34,7 @@
 // ============================================================================
 
 /** Default delay function — setTimeout-based. Tests inject vi.fn() to skip waiting. */
-const defaultDelayFn = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const defaultDelayFn = (/** @type {number} */ ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Default RNG — Math.random. Tests inject a seeded RNG for deterministic behavior. */
 const defaultRng = Math.random;
@@ -42,6 +42,11 @@ const defaultRng = Math.random;
 /**
  * Clamp a number to the inclusive [min, max] range.
  * Prevents RNG or arithmetic from producing values outside documented bounds.
+ *
+ * @param {number} value
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
  */
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -50,6 +55,9 @@ function clamp(value, min, max) {
 /**
  * Wrap an external RNG so its output is always in [0, 1].
  * Hardens against injected RNGs that may return outside the expected range.
+ *
+ * @param {() => number} rng
+ * @returns {() => number}
  */
 function wrapRng(rng) {
   return () => clamp(rng(), 0, 1);
@@ -95,11 +103,7 @@ function cubicBezier(t, p0, p1, p2, p3) {
  * @param {import('puppeteer').Page} page - Puppeteer page with `page.mouse.move`
  * @param {number} x - target x coordinate
  * @param {number} y - target y coordinate
- * @param {Object} [options]
- * @param {Function} [options.delayFn] - delay function (default: setTimeout-based)
- * @param {Function} [options.rng] - random number generator (default: Math.random)
- * @param {number} [options.startX=0] - starting x position (default: 0)
- * @param {number} [options.startY=0] - starting y position (default: 0)
+ * @param {FacebookOptions} [options]
  * @returns {Promise<void>}
  */
 export async function humanMoveMouse(page, x, y, options = {}) {
@@ -205,9 +209,7 @@ export async function humanMoveMouse(page, x, y, options = {}) {
  *
  * @param {import('puppeteer').Page} page - Puppeteer page with `page.mouse`
  * @param {import('puppeteer').ElementHandle} element - Element handle to click
- * @param {Object} [options]
- * @param {Function} [options.delayFn] - delay function (default: setTimeout-based)
- * @param {Function} [options.rng] - random number generator (default: Math.random)
+ * @param {FacebookOptions} [options]
  * @returns {Promise<void>}
  * @throws {Error} if element has no bounding box (not visible or detached)
  */
@@ -250,6 +252,7 @@ export async function humanClick(page, element, options = {}) {
 // QWERTY adjacent-key map for plausibly wrong typo characters
 // ============================================================================
 
+/** @type {Record<string, string[]>} */
 const QWERTY_ADJACENT = {
   a: ['q', 'w', 's', 'z'],
   b: ['v', 'g', 'h', 'n'],
@@ -284,6 +287,10 @@ const PUNCTUATION_CHARS = new Set(['.', ',', '!', '?', ';', ':']);
 /**
  * Pick a plausible typo for an alphabet character: a random adjacent QWERTY key.
  * Preserves the original case.
+ *
+ * @param {string} char
+ * @param {() => number} rng
+ * @returns {string}
  */
 function getTypoChar(char, rng) {
   const lower = char.toLowerCase();
@@ -317,9 +324,7 @@ function getTypoChar(char, rng) {
  *
  * @param {import('puppeteer').Page} page - Puppeteer page with `page.keyboard`
  * @param {string} text - Text to type
- * @param {Object} [options]
- * @param {Function} [options.delayFn] - delay function (default: setTimeout-based)
- * @param {Function} [options.rng] - random number generator (default: Math.random)
+ * @param {FacebookOptions} [options]
  * @returns {Promise<void>}
  */
 export async function humanType(page, text, options = {}) {
@@ -383,9 +388,7 @@ export async function humanType(page, text, options = {}) {
  *
  * @param {import('puppeteer').Page} page - Puppeteer page with `page.mouse.wheel`
  * @param {number} distance - scroll distance in pixels (positive = down, negative = up)
- * @param {Object} [options]
- * @param {Function} [options.delayFn] - delay function (default: setTimeout-based)
- * @param {Function} [options.rng] - random number generator (default: Math.random)
+ * @param {FacebookOptions} [options]
  * @returns {Promise<void>}
  */
 export async function humanScroll(page, distance, options = {}) {

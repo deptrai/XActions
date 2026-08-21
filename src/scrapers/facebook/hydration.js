@@ -16,9 +16,10 @@
 
 /**
  * Recursively walk a JSON value, collecting objects whose `__typename` is in the allow list.
- * @param {any} value
+ * @param {unknown} value
  * @param {Set<string>} typeSet
- * @param {any[]} results
+ * @param {Record<string, unknown>[]} results
+ * @param {WeakSet<object>} visited
  */
 function walkJson(value, typeSet, results, visited) {
   if (Array.isArray(value)) {
@@ -26,12 +27,13 @@ function walkJson(value, typeSet, results, visited) {
   } else if (value && typeof value === 'object') {
     if (visited.has(value)) return;
     visited.add(value);
-    if (value.__typename && typeSet.has(value.__typename)) {
-      results.push(value);
+    const record = /** @type {Record<string, unknown>} */ (value);
+    if (typeof record.__typename === 'string' && typeSet.has(record.__typename)) {
+      results.push(record);
     }
-    for (const key of Object.keys(value)) {
+    for (const key of Object.keys(record)) {
       if (key === '__typename') continue;
-      walkJson(value[key], typeSet, results, visited);
+      walkJson(record[key], typeSet, results, visited);
     }
   }
 }
@@ -39,7 +41,7 @@ function walkJson(value, typeSet, results, visited) {
 /**
  * Generic DOM fallback. Returns an empty array by default; type-specific fallbacks should
  * be supplied by the caller via `options.fallbackExtractor`.
- * @returns {Promise<any[]>}
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 async function genericDomFallback() {
   return [];
@@ -51,8 +53,8 @@ async function genericDomFallback() {
  *
  * @param {import('puppeteer').Page} page
  * @param {string[]} typenames - e.g. ['Story','Comment','User','Page','Group','MarketplaceListing']
- * @param {{ fallbackExtractor?: (page, typenames) => Promise<any[]>, limit?: number }} [options]
- * @returns {Promise<any[]>}
+ * @param {FacebookHydrationOptions} [options]
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function extractHydrationJson(page, typenames, options = {}) {
   if (!Array.isArray(typenames) || typenames.length === 0) {
@@ -61,7 +63,8 @@ export async function extractHydrationJson(page, typenames, options = {}) {
 
   const limit = options.limit ? Math.max(1, Math.floor(Number(options.limit))) : 0;
 
-  const results = await page.evaluate((typeNames) => {
+  const rawResults = await page.evaluate((typeNames) => {
+    /** @type {Record<string, unknown>[]} */
     const collected = [];
     const typeSet = new Set(typeNames);
 
@@ -79,6 +82,8 @@ export async function extractHydrationJson(page, typenames, options = {}) {
 
     return collected;
   }, typenames);
+
+  const results = /** @type {Record<string, unknown>[]} */ (rawResults);
 
   if (results.length === 0 || (limit && results.length < limit)) {
     const fallback = options.fallbackExtractor || genericDomFallback;

@@ -1,3 +1,5 @@
+
+/** @typedef {import('puppeteer').Page} Page */
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 /**
  * Facebook Messenger-share input/queue parser (Story 5.4 — Messenger Port, Epic 5).
@@ -116,17 +118,13 @@ export function parseLinksFile(text) {
  * full recipients array + content (every link broadcast to every target page).
  * FIFO order preserved. Empty/whitespace/null inputs → empty queue, never throw.
  *
- * @param {object} input
- * @param {string} [input.recipientsText] - raw recipients file text
- * @param {string[]} [input.recipients]    - pre-parsed recipients (overrides text)
- * @param {string} [input.linksText]        - raw links file text
- * @param {string[]} [input.links]          - pre-parsed links (overrides text; still facebook.com-filtered)
- * @param {string} [input.content]          - message body (with optional `**` segments)
+ * @param {FacebookCampaignQueueInput} [input]
  * @returns {{ campaigns: Array<{ postUrl: string, recipients: string[], content: string }>,
  *             stats: { recipients: number, links: number, skipped: number } }}
  */
 export function buildCampaignQueue(input = {}) {
-  const { recipientsText, recipients, linksText, links, content } = input ?? {};
+  const safeInput = input ?? {};
+  const { recipientsText, recipients, linksText, links, content } = safeInput;
 
   // Recipients: prefer pre-parsed array, else parse text. Always clean/dedup.
   const recipientList = Array.isArray(recipients)

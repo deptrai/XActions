@@ -23,9 +23,9 @@ import { normalizeHandle, normalizeProfile } from './normalize.js';
 
 /**
  * Scrape a Facebook profile or page via mbasic (lightweight HTML, less bot detection).
- * @param {Page} page - Puppeteer page instance
+ * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} handle - Normalized handle
- * @returns {Promise<Object|null>} Normalized profile, or null if mbasic is blocked/unusable
+ * @returns {Promise<Record<string, unknown>|null>} Normalized profile, or null if mbasic is blocked/unusable
  */
 async function scrapeMbasicProfile(page, handle) {
   const mbasicUrl = `${MBASIC_BASE}/${handle}?v=timeline`;
@@ -43,17 +43,17 @@ async function scrapeMbasicProfile(page, handle) {
     });
     if (!ready.hasArticle || ready.isLoginWall) return null;
 
-    const raw = await page.evaluate(() => {
+    const raw = /** @type {Record<string, unknown>} */ (await page.evaluate(() => {
       const bodyText = document.body?.innerText || '';
       const title = document.title?.trim() || '';
 
       // Name candidates: h1, first strong in main content, title minus "| Facebook"
       let name = null;
       const h1 = document.querySelector('h1');
-      if (h1) name = h1.innerText?.trim();
+      if (h1) name = h1.innerText?.trim() || null;
       if (!name) {
         const strong = document.querySelector('strong, div[role="main"] h3, div#root h3');
-        if (strong) name = strong.innerText?.trim();
+        if (strong) name = strong.innerText?.trim() || null;
       }
       if (!name && title) {
         name = title.replace(/\s*\|\s*Facebook\s*$/i, '').trim() || null;
@@ -81,7 +81,7 @@ async function scrapeMbasicProfile(page, handle) {
       }
 
       return { name, avatar, followers, bio, pageUrl: window.location.href };
-    });
+    }));
 
     if (!raw.name && !raw.followers && !raw.bio) return null;
 
@@ -94,19 +94,20 @@ async function scrapeMbasicProfile(page, handle) {
       posts: null,
       profileUrl: raw.pageUrl,
       avatar: raw.avatar || null,
-      platform: 'facebook',
+      platform: /** @type {'facebook'} */ ('facebook'),
     };
   } catch (err) {
-    console.warn(`⚠️ mbasic profile failed for ${handle}: ${err.message}`);
+    console.warn(`⚠️ mbasic profile failed for ${handle}: ${(err instanceof Error ? err.message : String(err))}`);
     return null;
   }
 }
 
 /**
  * Scrape a public Facebook profile or page
- * @param {Page} page - Puppeteer page instance
+ * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} username - Handle (zuck), @handle, or full facebook.com URL
- * @returns {Object} Normalized profile data
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<Record<string, unknown>>} Normalized profile data
  */
 export async function scrapeProfile(page, username, options = {}) {
   const { useMbasic = true } = options;
@@ -123,7 +124,8 @@ export async function scrapeProfile(page, username, options = {}) {
   await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
   await randomDelay(2000, 4000);
 
-  const raw = await page.evaluate(() => {
+  const raw = /** @type {Record<string, unknown>} */ (await page.evaluate(() => {
+    /** @param {string} prop */
     const getMeta = (prop) => {
       const el = document.querySelector(`meta[property="${prop}"], meta[name="${prop}"]`);
       return el?.getAttribute('content') || null;
@@ -142,10 +144,10 @@ export async function scrapeProfile(page, username, options = {}) {
       domFollowers,
       pageUrl: window.location.href,
     };
-  });
+  }));
 
   // Detect blocked/non-existent profile — og:title missing or a Facebook login wall.
-  const title = raw.ogTitle?.trim() || '';
+  const title = typeof raw.ogTitle === 'string' ? raw.ogTitle.trim() : '';
   const isLoginWall = !title
     || /^facebook$/i.test(title)
     || /^log\s+in\s+(to\s+)?facebook/i.test(title)
@@ -162,7 +164,7 @@ export async function scrapeProfile(page, username, options = {}) {
       following: null,
       posts: null,
       profileUrl: url,
-      platform: 'facebook',
+      platform: /** @type {'facebook'} */ ('facebook'),
       error: 'Profile requires authentication or is blocked',
     };
   }

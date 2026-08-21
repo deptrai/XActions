@@ -21,20 +21,18 @@ import { extractHydrationJson } from './hydration.js';
 /**
  * Scrape posts from a Facebook profile/page via mbasic.facebook.com.
  * mbasic serves plain HTML with article[data-ft] posts and a "See more stories" paginator.
- * @param {Page} page - Puppeteer page instance
+ * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} handle - Normalized Facebook handle
- * @param {Object} options
- * @param {number} [options.limit=50] - Max posts to return
- * @param {Function} [options.onProgress] - Optional progress callback
- * @param {Function} [options.delay=randomDelay] - Delay function
- * @returns {Promise<Array>} Post array
+ * @param {FacebookOptions} options
+ * @returns {Promise<Record<string, unknown>[]>} Post array
  */
 async function scrapeMbasicPosts(page, handle, options = {}) {
   const { limit = 50, onProgress, delay = randomDelay } = options;
 
+  /** @param {Record<string, unknown>} raw */
   const normalizeMbasicPost = (raw) =>
     normalizePost({
-      id: raw.postId || raw.postUrl || raw.text?.slice(0, 80) || null,
+      id: typeof raw.postId === 'string' ? raw.postId : (typeof raw.postUrl === 'string' ? raw.postUrl : (typeof raw.text === 'string' ? raw.text.slice(0, 80) : null)),
       text: raw.text || null,
       timestamp: raw.timestamp || null,
       likes: raw.likes || '0',
@@ -46,7 +44,7 @@ async function scrapeMbasicPosts(page, handle, options = {}) {
     });
 
   const collectFromPage = async () => {
-    return page.evaluate(() => {
+    const raw = await page.evaluate(() => {
       const articles = document.querySelectorAll('article[data-ft*="top_level_post_id"]');
       return Array.from(articles).map((article) => {
         try {
@@ -74,7 +72,7 @@ async function scrapeMbasicPosts(page, handle, options = {}) {
           const bodyContainer = article.querySelector('.story_body_container');
           let text = '';
           if (bodyContainer) {
-            text = bodyContainer.innerText?.trim();
+            text = bodyContainer.innerText?.trim() || '';
           } else {
             // Fallback: collect meaningful paragraphs
             const ps = article.querySelectorAll('p, div[role="main"] p');
@@ -139,6 +137,7 @@ async function scrapeMbasicPosts(page, handle, options = {}) {
         }
       }).filter((p) => p && p.text && p.text.length > 5);
     });
+    return /** @type {Record<string, unknown>[]} */ (raw);
   };
 
   const findNextPage = async () => {
@@ -146,6 +145,7 @@ async function scrapeMbasicPosts(page, handle, options = {}) {
       const links = Array.from(document.querySelectorAll('a[href*="/profile/timeline/stream/"], a[href*="/page_content?"], a[href*="cursor="]'));
       if (links.length) {
         const href = links[0].getAttribute('href');
+        if (!href) return null;
         return href.startsWith('http') ? href : `${window.location.origin}${href}`;
       }
       // Fallback: text-based "See more" / "Show more" links
@@ -161,6 +161,7 @@ async function scrapeMbasicPosts(page, handle, options = {}) {
     });
   };
 
+  /** @type {string|null} */
   let targetUrl = `${MBASIC_BASE}/${handle}?v=timeline`;
   const posts = new Map();
   let pageCount = 0;
@@ -180,7 +181,7 @@ async function scrapeMbasicPosts(page, handle, options = {}) {
 
       const rawPosts = await collectFromPage();
       for (const raw of rawPosts) {
-        const key = raw.postId || raw.postUrl || raw.text?.slice(0, 80);
+        const key = typeof raw.postId === 'string' ? raw.postId : (typeof raw.postUrl === 'string' ? raw.postUrl : (typeof raw.text === 'string' ? raw.text.slice(0, 80) : null));
         if (key && !posts.has(key)) {
           posts.set(key, normalizeMbasicPost(raw));
         }
@@ -191,18 +192,18 @@ async function scrapeMbasicPosts(page, handle, options = {}) {
       targetUrl = posts.size < limit ? await findNextPage() : null;
       pageCount++;
     } catch (err) {
-      console.warn(`⚠️ mbasic posts page ${pageCount} failed for ${handle}: ${err.message}`);
+      console.warn(`⚠️ mbasic posts page ${pageCount} failed for ${handle}: ${(err instanceof Error ? err.message : String(err))}`);
       break;
     }
   }
 
-  return Array.from(posts.values()).slice(0, limit);
+  return /** @type {Record<string, unknown>[]} */ (Array.from(posts.values()).slice(0, limit));
 }
 
 /**
  * Test whether the page contains a non-empty mbasic timeline.
  * Used by scrapeTweets to decide whether to fall back to desktop.
- * @param {Page} page
+ * @param {import('puppeteer').Page} page
  * @returns {Promise<boolean>}
  */
 async function hasMbasicPosts(page) {
@@ -223,12 +224,10 @@ async function hasMbasicPosts(page) {
 
 /**
  * Scrape recent posts from a Facebook profile or page
- * @param {Page} page - Puppeteer page instance
+ * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} username - Handle, @handle, or full facebook.com URL
- * @param {Object} options
- * @param {number} [options.limit=50] - Max posts to return
- * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
- * @returns {Promise<Array>} Normalized post array
+ * @param {FacebookOptions} options
+ * @returns {Promise<Record<string, unknown>[]>} Normalized post array
  */
 export async function scrapeTweets(page, username, options = {}) {
   const {
@@ -244,7 +243,7 @@ export async function scrapeTweets(page, username, options = {}) {
   // Determine target URL: full URLs (groups, permalinks) go directly,
   // handles get normalized to profile URL.
   // Groups use mobile site - desktop doesn't load posts in headless mode.
-  const isFullUrl = username?.startsWith('http://') || username?.startsWith('https://');
+  const isFullUrl = typeof username === 'string' && (username.startsWith('http://') || username.startsWith('https://'));
   const isGroup = isFullUrl && /\/groups\//.test(username);
 
   // Profiles/pages: try mbasic first (lightweight HTML, less bot detection).
@@ -289,7 +288,7 @@ export async function scrapeTweets(page, username, options = {}) {
   let retries = 0;
 
   while (posts.size < limit && retries < maxRetries) {
-    const rawPosts = await page.evaluate((useMobile) => {
+    const rawPosts = /** @type {Record<string, unknown>[]} */ (await page.evaluate((useMobile) => {
       // Mobile groups use div.m.displayed, desktop uses [role="article"]
       const allElements = document.querySelectorAll(useMobile ? 'div.m.displayed' : '[role="article"]');
       return Array.from(allElements).map((post) => {
@@ -343,15 +342,15 @@ export async function scrapeTweets(page, username, options = {}) {
 
         return { id, text, timestamp, likes, comments, postUrl, images, hasVideo };
       }).filter((p) => p && p.id);
-    }, isMobile);
+    }, isMobile));
 
     const prevSize = posts.size;
     if (rawPosts) {
-      rawPosts.forEach((raw) => {
-        if (!posts.has(raw.id)) {
+      for (const raw of rawPosts) {
+        if (raw && raw.id && !posts.has(raw.id)) {
           posts.set(raw.id, normalizePost(raw));
         }
-      });
+      }
     }
 
     if (onProgress) onProgress({ scraped: posts.size, limit });
@@ -366,7 +365,7 @@ export async function scrapeTweets(page, username, options = {}) {
     await delay(1500, 3000);
   }
 
-  return Array.from(posts.values()).slice(0, limit);
+  return /** @type {Record<string, unknown>[]} */ (Array.from(posts.values()).slice(0, limit));
 }
 
 /**
@@ -374,17 +373,18 @@ export async function scrapeTweets(page, username, options = {}) {
  *
  * @param {import('puppeteer').Page} page
  * @param {string[]} _typenames - Passed by extractHydrationJson; ignored
- * @returns {Promise<Array>}
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function extractGroupPostsFromDom(page, _typenames) {
-  return page.evaluate(() => {
+  const raw = await page.evaluate(() => {
     const UI_HEADER_RE = /^(Public group|Join group|Invite|Videos|Announcements|Events|Write something|Photo|Feeling|Poll|Most relevant|SORT|Open app|About this group|Members|Group by)/i;
 
     // On mobile m.facebook.com, each post is a div.m.displayed (className="m displayed")
-    // containing the full post text: "AuthorName\n • \nFollow\n‎‎1h‎\n󳄫\n[content]...".
+    // containing the full post text: "AuthorName\n • \nFollow\n[content]...".
     // We filter by checking for the "Follow" text (post header pattern).
     const allElements = document.querySelectorAll('div.m.displayed');
 
+    /** @type {Record<string, unknown>[]} */
     const posts = [];
     const seen = new Set();
 
@@ -413,7 +413,7 @@ export async function extractGroupPostsFromDom(page, _typenames) {
 
       const author = authorLine;
 
-      // Extract timestamp — line after "Follow" (e.g. "‎‎1h‎󲄭󳆗" → "1h")
+      // Extract timestamp — line after "Follow" (e.g. "1h")
       let timestamp = null;
       if (followIdx + 1 < lines.length) {
         const tsLine = lines[followIdx + 1];
@@ -469,21 +469,17 @@ export async function extractGroupPostsFromDom(page, _typenames) {
 
     return posts;
   });
+  return /** @type {Record<string, unknown>[]} */ (raw);
 }
 
 /**
  * Scrape posts from a Facebook group (FR-59).
  * READ-ONLY scrape — NOT routed through runGuardedBatch.
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} groupUrl - facebook.com/groups/ URL
- * @param {Object} [options]
- * @param {number} [options.limit=100] - Max posts to collect
- * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
- * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
- * @param {Function} [options.delay=randomDelay] - Injectable delay seam
- * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
- * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<Record<string, unknown>[] | { note: string, platform: 'facebook' }>}
  */
 export async function scrapeFacebookGroupPosts(page, groupUrl, options = {}) {
   const {
@@ -523,12 +519,12 @@ export async function scrapeFacebookGroupPosts(page, groupUrl, options = {}) {
   if (!containerFound) {
     return {
       note: 'Facebook group posts are not accessible. The group may be private, membership may be required, or the group content is restricted.',
-      platform: 'facebook',
+      platform: /** @type {'facebook'} */ ('facebook'),
     };
   }
 
   // AC8: Bounded scroll loop with deduplication.
-  const posts = new Map(); // keyed by id for deduplication
+  const posts = new Map();
   let retries = 0;
   let scrolls = 0;
 
@@ -563,9 +559,13 @@ export async function scrapeFacebookGroupPosts(page, groupUrl, options = {}) {
     scrolls++;
   }
 
-  return Array.from(posts.values()).slice(0, limit);
+  return /** @type {Record<string, unknown>[]} */ (Array.from(posts.values()).slice(0, limit));
 }
 
+/**
+ * @param {import('puppeteer').Page} page
+ * @returns {Promise<Record<string, unknown>[]>}
+ */
 export async function extractPostsFromDom(page) {
   const rawResults = await page.evaluate((nonProfile) => {
     const NON_PROFILE = new Set(nonProfile);
@@ -602,7 +602,7 @@ export async function extractPostsFromDom(page) {
         if (!href.includes('facebook.com/') && !href.startsWith('/')) continue;
         if (href.includes('/posts/') || href.includes('/permalink/') || href.includes('story_fbid') || href.includes('/search/')) continue;
         if (href.includes('l.php') || href.includes('/l/')) continue;
-        if (/\/(settings|help|about|privacy|terms|login|checkpoint|watch|marketplace|events)\b/i.test(href)) continue;
+        if (/(settings|help|about|privacy|terms|login|checkpoint|watch|marketplace|events)\b/i.test(href)) continue;
         const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
         const idMatch = abs.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
         if (idMatch) { author = idMatch[1]; break; }
@@ -637,5 +637,5 @@ export async function extractPostsFromDom(page) {
     }).filter((r) => r.id);
   }, NON_PROFILE_SEGMENTS);
 
-  return rawResults;
+  return /** @type {Record<string, unknown>[]} */ (rawResults);
 }

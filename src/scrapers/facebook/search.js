@@ -18,7 +18,11 @@ import { SEARCH_TYPE_URLS, SEARCH_TYPENAMES, normalizeByType, validateSearchQuer
 import { extractPostsFromDom } from './posts.js';
 import { extractHydrationJson } from './hydration.js';
 
-
+/**
+ * @param {import('puppeteer').Page} page
+ * @param {string} type
+ * @returns {Promise<Record<string, unknown>[]>}
+ */
 async function extractListItemsFromDom(page, type) {
   const rawResults = await page.evaluate((searchType) => {
     const NON_ENTITY_ROOTS = new Set([
@@ -27,6 +31,7 @@ async function extractListItemsFromDom(page, type) {
       'about', 'privacy', 'terms', 'login', 'checkpoint',
     ]);
 
+    /** @param {string|null|undefined} href */
     function normalizeEntityUrl(href) {
       if (!href) return null;
       const abs = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
@@ -40,6 +45,7 @@ async function extractListItemsFromDom(page, type) {
       }
     }
 
+    /** @param {{ href: string, pathname: string, search: string }|null} entityUrl */
     function extractIdFromEntityUrl(entityUrl) {
       if (!entityUrl) return null;
       const { href, pathname, search } = entityUrl;
@@ -56,6 +62,7 @@ async function extractListItemsFromDom(page, type) {
       return parts.at(-1);
     }
 
+    /** @param {{ href: string, pathname: string, search: string }|null} entityUrl @param {string} searchType */
     function isEntityLink(entityUrl, searchType) {
       if (!entityUrl) return false;
       const parts = entityUrl.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
@@ -79,6 +86,7 @@ async function extractListItemsFromDom(page, type) {
       return true;
     }
 
+    /** @param {Element} item @param {string} searchType */
     function pickBestLink(item, searchType) {
       const links = Array.from(item.querySelectorAll('a[href]'));
       for (const a of links) {
@@ -90,6 +98,7 @@ async function extractListItemsFromDom(page, type) {
       return null;
     }
 
+    /** @param {Element} item */
     function getUniqueLines(item) {
       const text = item.innerText || item.textContent || '';
       return Array.from(new Set(text.split('\n').map((t) => t.trim()).filter(Boolean)));
@@ -98,7 +107,7 @@ async function extractListItemsFromDom(page, type) {
     const items = document.querySelectorAll('[role="listitem"], [role="article"]');
     return Array.from(items).map((item) => {
       const picked = pickBestLink(item, searchType);
-      if (!picked) return null;
+      if (!picked || !picked.entityUrl) return null;
 
       const { a, entityUrl } = picked;
       const abs = entityUrl.href;
@@ -117,11 +126,13 @@ async function extractListItemsFromDom(page, type) {
       const image = img?.getAttribute('src') || null;
 
       // Parse counts from lines.
-      const counts = allLines
-        .map((t) => t.match(/([\d,.]+[KkMm]?\+?)\s*(members?|people|likes?)/i))
-        .filter(Boolean);
-      const members = counts.find((m) => /members?|people/i.test(m[0]))?.[1] || null;
-      const likes = counts.find((m) => /likes?/i.test(m[0]))?.[1] || null;
+      const counts = /** @type {RegExpMatchArray[]} */ (
+        allLines
+          .map((t) => t.match(/([\d,.]+[KkMm]?\+?)\s*(members?|people|likes?)/i))
+          .filter(Boolean)
+      );
+      const members = counts.find((m) => /members?|people/i.test(/** @type {RegExpMatchArray} */ (m)[0]))?.[1] || null;
+      const likes = counts.find((m) => /likes?/i.test(/** @type {RegExpMatchArray} */ (m)[0]))?.[1] || null;
 
       // Whole-word privacy matching to avoid "publication" or "secretary".
       const privacy = allLines.find((t) => /\b(public|private|closed|secret)\b/i.test(t)) || null;
@@ -151,9 +162,16 @@ async function extractListItemsFromDom(page, type) {
     }).filter(Boolean);
   }, type);
 
-  return rawResults;
+  return /** @type {Record<string, unknown>[]} */ (rawResults);
 }
 
+/**
+ * @param {import('puppeteer').Page} page
+ * @param {string} query
+ * @param {string} type
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<(FacebookPostSearchResult | FacebookPeopleSearchResult | FacebookPageSearchResult | FacebookGroupSearchResult)[]>}
+ */
 async function searchByType(page, query, type, options = {}) {
   const limit = Math.max(1, Math.floor(Number(options.limit) || 30));
   const onProgress = options.onProgress;
@@ -161,7 +179,12 @@ async function searchByType(page, query, type, options = {}) {
   const maxScrolls = Math.max(1, Math.floor(Number(options.maxScrolls) || 50));
   const delay = options.delay || randomDelay;
 
-  const searchUrl = `${FACEBOOK_BASE}${SEARCH_TYPE_URLS[type]}?q=${encodeURIComponent(query)}`;
+  const typePath = SEARCH_TYPE_URLS[type];
+  if (!typePath) {
+    throw new Error(`❌ searchByType: unknown search type "${type}"`);
+  }
+
+  const searchUrl = `${FACEBOOK_BASE}${typePath}?q=${encodeURIComponent(query)}`;
 
   await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
   await assertNoCheckpoint(page, `${type} search`);
@@ -174,12 +197,13 @@ async function searchByType(page, query, type, options = {}) {
   while (results.size < limit && retries < maxRetries && scrolls < maxScrolls) {
     const prevSize = results.size;
 
-    const hydrated = await extractHydrationJson(page, SEARCH_TYPENAMES[type], {
+    const typeNames = SEARCH_TYPENAMES[type] || [];
+    const hydrated = await extractHydrationJson(page, typeNames, {
       limit,
       fallbackExtractor: async (_page, _typenames) => {
-        return type === 'posts'
+        return /** @type {Record<string, unknown>[]} */ (type === 'posts'
           ? await extractPostsFromDom(page)
-          : await extractListItemsFromDom(page, type);
+          : await extractListItemsFromDom(page, type));
       },
     });
 
@@ -207,24 +231,15 @@ async function searchByType(page, query, type, options = {}) {
     scrolls++;
   }
 
-  return Array.from(results.values()).slice(0, limit);
+  return /** @type {(FacebookPostSearchResult | FacebookPeopleSearchResult | FacebookPageSearchResult | FacebookGroupSearchResult)[]} */ (Array.from(results.values()).slice(0, limit));
 }
 
 /**
  * Search Facebook by multiple types (posts, people, pages, groups) or all.
- * @param {Page} page - Puppeteer page instance
+ * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} query - Search query string
- * @param {Object} options
- * @param {string} [options.type='posts'] - 'posts' | 'people' | 'pages' | 'groups' | 'all'
- * @param {string} [options.location] - Optional location hint, appended to query
- * @param {number} [options.limit=30] - Max results per type
- * @param {boolean} [options.parallel=false] - Accepted for future multi-account fan-out; currently ignored
- * @param {Object} [options.authCookie] - { c_user, xs } passed by the dispatcher for login
- * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
- * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
- * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
- * @param {Function} [options.delay=randomDelay] - Injectable delay seam
- * @returns {Promise<Object|Array>} Normalized results (array for single type, object for 'all')
+ * @param {FacebookOptions} options
+ * @returns {Promise<Record<string, unknown[]> | (FacebookPostSearchResult | FacebookPeopleSearchResult | FacebookPageSearchResult | FacebookGroupSearchResult)[]>} Normalized results (array for single type, object for 'all')
  */
 export async function searchFacebook(page, query, options = {}) {
   const { type = 'posts', location, limit = 30 } = options;
@@ -253,11 +268,11 @@ export async function searchFacebook(page, query, options = {}) {
 
 /**
  * Backward-compatible thin wrapper around searchFacebook for existing callers.
- * @param {Page} page - Puppeteer page instance
+ * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} query - Search query string
- * @param {Object} options
- * @returns {Promise<Array>} Normalized post search result array
+ * @param {FacebookOptions} options
+ * @returns {Promise<(FacebookPostSearchResult | FacebookPeopleSearchResult | FacebookPageSearchResult | FacebookGroupSearchResult)[]>} Normalized post search result array
  */
 export async function searchTweets(page, query, options = {}) {
-  return searchFacebook(page, query, { ...options, type: 'posts' });
+  return /** @type {Promise<(FacebookPostSearchResult | FacebookPeopleSearchResult | FacebookPageSearchResult | FacebookGroupSearchResult)[]>} */ (searchFacebook(page, query, { ...options, type: 'posts' }));
 }

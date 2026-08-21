@@ -43,7 +43,7 @@ export function normalizeHandle(input) {
   if (/^profile\.php\?id=\d+/i.test(handle)) {
     // Preserve only the canonical profile.php?id=<digits>, dropping any &trailing params
     const m = handle.match(/^profile\.php\?id=\d+/i);
-    handle = m[0];
+    if (m) handle = m[0];
   } else {
     handle = handle.split('/')[0].split('?')[0];
   }
@@ -56,8 +56,8 @@ export function normalizeHandle(input) {
 
 /**
  * Normalize a raw post object from page.evaluate into the standard post shape.
- * @param {Object} raw - Raw post fields from page.evaluate
- * @returns {Object} Normalized post
+ * @param {Record<string, unknown>} raw - Raw post fields from page.evaluate
+ * @returns {Record<string, unknown>} Normalized post
  */
 export function normalizePost(raw) {
   const { id, text, timestamp, likes, comments, postUrl, images, hasVideo, author } = raw;
@@ -79,16 +79,16 @@ export function normalizePost(raw) {
 
 /**
  * Normalize raw meta/DOM values into the standard profile shape.
- * @param {Object} raw - Raw values from page.evaluate
+ * @param {Record<string, unknown>} raw - Raw values from page.evaluate
  * @param {string} inputHandle - The handle provided by the caller
- * @returns {Object} Normalized profile
+ * @returns {Record<string, unknown>} Normalized profile
  */
 export function normalizeProfile(raw, inputHandle) {
   const { ogTitle, ogDescription, ogImage, domFollowers, pageUrl } = raw;
 
   // Parse name from og:title: "Name | Facebook" or "Name (username) | Facebook"
   let name = null;
-  if (ogTitle) {
+  if (typeof ogTitle === 'string') {
     name = ogTitle.replace(/\s*[\||\-–—]\s*Facebook.*$/i, '').trim() || null;
   }
 
@@ -96,17 +96,17 @@ export function normalizeProfile(raw, inputHandle) {
   // ogDescription is free text → regex-extract the count.
   // domFollowers is already the extracted count (e.g. "1.2M") → use directly.
   let followers = null;
-  if (ogDescription) {
+  if (typeof ogDescription === 'string') {
     const match = ogDescription.match(/([\d,.]+[KkMmBb]?)\s*(followers?|people follow)/i);
     if (match) followers = match[1];
   }
-  if (!followers && domFollowers) {
+  if (!followers && typeof domFollowers === 'string') {
     followers = domFollowers;
   }
 
   // Parse bio from og:description — strip leading follower count line
   let bio = null;
-  if (ogDescription) {
+  if (typeof ogDescription === 'string') {
     bio = ogDescription.replace(/^[\d,.]+[KkMmBb]?\s*(followers?|people follow)[^.]*\.\s*/i, '').trim() || null;
   }
 
@@ -128,7 +128,7 @@ export function normalizeProfile(raw, inputHandle) {
 /**
  * Parse a human-readable like/comment count (e.g. "1.2K", "3M", "1,234") to a number.
  * Returns null for unparseable or empty values.
- * @param {any} input
+ * @param {unknown} input
  * @returns {number|null}
  */
 function parseEngagementCount(input) {
@@ -151,9 +151,9 @@ function parseEngagementCount(input) {
  * Normalize a raw comment from hydration JSON or DOM.
  * NFR-11: PII is stripped from all text and author fields.
  *
- * @param {Object} raw
+ * @param {Record<string, unknown>} raw
  * @param {string|null} [fallbackParentId] - Parent comment id for nested replies
- * @returns {{ id, authorName, authorUrl, text, timestamp, likes, parentId, replies?: Array }}
+ * @returns {FacebookComment}
  */
 export function normalizeComment(raw, fallbackParentId = null) {
   const {
@@ -205,11 +205,18 @@ export function normalizeComment(raw, fallbackParentId = null) {
     messageText ||
     null;
 
+  const authorObj = typeof author === 'object' && author !== null
+    ? /** @type {Record<string, unknown>} */ (author)
+    : undefined;
+  const actorObj = typeof actor === 'object' && actor !== null
+    ? /** @type {Record<string, unknown>} */ (actor)
+    : undefined;
+
   const resolvedAuthorName =
     authorName ||
     author_name ||
-    (typeof author === 'string' ? author : author?.name) ||
-    (typeof actor === 'string' ? actor : actor?.name) ||
+    (typeof author === 'string' ? author : authorObj?.name) ||
+    (typeof actor === 'string' ? actor : actorObj?.name) ||
     name ||
     null;
 
@@ -217,10 +224,10 @@ export function normalizeComment(raw, fallbackParentId = null) {
     authorUrl ||
     url ||
     profileUrl ||
-    author?.url ||
-    author?.profileUrl ||
-    actor?.url ||
-    actor?.profileUrl ||
+    authorObj?.url ||
+    authorObj?.profileUrl ||
+    actorObj?.url ||
+    actorObj?.profileUrl ||
     null;
 
   const resolvedTimestamp =
@@ -231,12 +238,14 @@ export function normalizeComment(raw, fallbackParentId = null) {
     createdTime ||
     null;
 
+  const resolvedTextStr = typeof resolvedText === 'string' ? resolvedText : null;
+
   const resolvedId =
     id ||
     comment_id ||
     legacy_fbid ||
     resolvedAuthorUrl ||
-    resolvedText?.slice(0, 60) ||
+    resolvedTextStr?.slice(0, 60) ||
     null;
 
   const resolvedLikes =
@@ -254,24 +263,27 @@ export function normalizeComment(raw, fallbackParentId = null) {
     parentId ??
     parentCommentId ??
     parent_comment_id ??
-    parent_comment?.id ??
+    (typeof parent_comment === 'object' && parent_comment !== null
+      ? /** @type {Record<string, unknown>} */ (parent_comment).id
+      : null) ??
     fallbackParentId ??
     null;
 
+  /** @type {FacebookComment} */
   const result = {
-    id: resolvedId,
+    id: typeof resolvedId === 'string' ? resolvedId : null,
     authorName: stripPii(resolvedAuthorName),
-    authorUrl: resolvedAuthorUrl,
+    authorUrl: typeof resolvedAuthorUrl === 'string' ? resolvedAuthorUrl : null,
     text: stripPii(resolvedText),
-    timestamp: resolvedTimestamp,
+    timestamp: typeof resolvedTimestamp === 'string' ? resolvedTimestamp : null,
     likes: parseEngagementCount(resolvedLikes) ?? 0,
-    parentId: resolvedParentId,
+    parentId: typeof resolvedParentId === 'string' ? resolvedParentId : null,
   };
 
   const rawReplies = replies || comment_replies || childComments;
   if (Array.isArray(rawReplies) && rawReplies.length > 0) {
     const nested = rawReplies
-      .map((reply) => normalizeComment(reply, result.id))
+      .map((reply) => normalizeComment(/** @type {Record<string, unknown>} */ (reply), result.id))
       .filter((r) => r && (r.id || r.text));
     if (nested.length > 0) {
       result.replies = nested;
@@ -283,8 +295,8 @@ export function normalizeComment(raw, fallbackParentId = null) {
 
 /**
  * Normalize a raw group post. Reuses the standard post shape.
- * @param {Object} raw
- * @returns {Object}
+ * @param {Record<string, unknown>} raw
+ * @returns {Record<string, unknown>}
  */
 export function normalizeGroupPost(raw) {
   return normalizePost({ ...raw, postUrl: raw?.postUrl || raw?.url });
@@ -296,15 +308,15 @@ export function normalizeGroupPost(raw) {
 
 /**
  * Normalize a raw follower row into the standard follower shape.
- * @param {Object} raw
- * @returns {{ name, username, url, platform }}
+ * @param {Record<string, unknown>} raw
+ * @returns {FacebookFollower}
  */
 export function normalizeFollower(raw) {
   const { name, username, url } = raw;
   return {
-    name: name || null,
-    username: username || null,
-    url: url || null,
+    name: typeof name === 'string' && name.trim() ? name : null,
+    username: typeof username === 'string' && username.trim() ? username : null,
+    url: typeof url === 'string' && url.trim() ? url : null,
     platform: 'facebook',
   };
 }
@@ -315,17 +327,21 @@ export function normalizeFollower(raw) {
 
 /**
  * Normalize a raw search result into the standard search result shape.
- * @param {Object} raw
- * @returns {{ id, text, author, timestamp, url, platform }}
+ * @param {Record<string, unknown>} raw
+ * @returns {FacebookSearchResult}
  */
 export function normalizeSearchResult(raw) {
   const { id, text, author, timestamp, url } = raw;
   return {
-    id: id || null,
-    text: text || null,
-    author: author || null,
-    timestamp: timestamp || null,
-    url: url || null,
+    id: typeof id === 'string' && id.trim() ? id : null,
+    text: typeof text === 'string' && text.trim() ? text : null,
+    author: typeof author === 'string' && author.trim()
+      ? author
+      : (typeof author === 'object' && author !== null
+        ? /** @type {Record<string, unknown>} */ (author)
+        : null),
+    timestamp: (typeof timestamp === 'string' && timestamp.trim()) || typeof timestamp === 'number' ? timestamp : null,
+    url: typeof url === 'string' && url.trim() ? url : null,
     platform: 'facebook',
   };
 }
@@ -334,6 +350,10 @@ export function normalizeSearchResult(raw) {
 // Multi-Type Search Normalizers (pure — testable without Puppeteer)
 // ============================================================================
 
+/**
+ * @param {unknown} input
+ * @returns {string|null}
+ */
 function extractHandleFromUrl(input) {
   if (typeof input !== 'string' || !input.trim()) return null;
   try {
@@ -349,12 +369,16 @@ function extractHandleFromUrl(input) {
     // For pages that use the /pages/<name>/<id> path, the last segment is the id.
     // For groups /groups/<id>, the last segment is the id.
     // For people /people/<name>/<id> or /<username>, the last usable segment is the id/handle.
-    return parts.at(-1);
+    return parts.at(-1) || null;
   } catch {
     return null;
   }
 }
 
+/**
+ * @param {Record<string, unknown>} raw
+ * @returns {FacebookPostSearchResult}
+ */
 export function normalizePostSearchResult(raw) {
   const {
     id,
@@ -371,20 +395,37 @@ export function normalizePostSearchResult(raw) {
     postUrl,
   } = raw || {};
 
-  const resolvedText = text || message || message_text || messageText || null;
-  const resolvedUrl = url || postUrl || null;
+  const resolvedTextRaw = text || message || message_text || messageText || null;
+  const resolvedText = typeof resolvedTextRaw === 'string' ? resolvedTextRaw : null;
+  const resolvedUrlRaw = url || postUrl || null;
+  const resolvedUrl = typeof resolvedUrlRaw === 'string' ? resolvedUrlRaw : null;
   const resolvedId = id || resolvedUrl || resolvedText?.slice(0, 60) || null;
 
+  const actorObj = typeof actor === 'object' && actor !== null
+    ? /** @type {Record<string, unknown>} */ (actor)
+    : undefined;
+
   return {
-    id: resolvedId,
+    id: typeof resolvedId === 'string' ? resolvedId : null,
     text: resolvedText,
-    author: author || actor?.name || actor?.id || null,
-    timestamp: timestamp || published_time || publishedTime || null,
+    author: /** @type {string | Record<string, unknown> | null} */ (
+      (typeof author === 'string' ? author : null) ||
+      actorObj?.name ||
+      actorObj?.id ||
+      null
+    ),
+    timestamp: typeof (timestamp || published_time || publishedTime) === 'string'
+      ? /** @type {string} */ (timestamp || published_time || publishedTime)
+      : null,
     url: resolvedUrl,
     platform: 'facebook',
   };
 }
 
+/**
+ * @param {Record<string, unknown>} raw
+ * @returns {FacebookPeopleSearchResult}
+ */
 export function normalizePeopleSearchResult(raw) {
   const {
     id,
@@ -396,25 +437,34 @@ export function normalizePeopleSearchResult(raw) {
     image,
   } = raw || {};
 
-  const resolvedUrl = url || profileUrl || (id && /^\d+$/.test(String(id)) ? `${FACEBOOK_BASE}/profile.php?id=${id}` : null);
+  const idStr = typeof id === 'string' ? id : null;
+  const resolvedUrlRaw = url || profileUrl || (idStr && /^\d+$/.test(idStr) ? `${FACEBOOK_BASE}/profile.php?id=${idStr}` : null);
+  const resolvedUrl = typeof resolvedUrlRaw === 'string' ? resolvedUrlRaw : null;
   const derivedUsername = extractHandleFromUrl(resolvedUrl);
+  const rawUsername = typeof username === 'string' ? username : null;
   const resolvedUsername = (
-    typeof username === 'string' &&
-    username.trim() &&
-    !/facebook\.com|[?&#]|^https?:|^\s*$/i.test(username.trim())
-  ) ? username.trim() : derivedUsername;
+    rawUsername &&
+    rawUsername.trim() &&
+    !/facebook\.com|[?&#]|^https?:|^\s*$/i.test(rawUsername.trim())
+  ) ? rawUsername.trim() : derivedUsername;
   const resolvedId = id || resolvedUsername || resolvedUrl || null;
 
   return {
-    id: resolvedId,
-    name: name || null,
+    id: typeof resolvedId === 'string' ? resolvedId : null,
+    name: typeof name === 'string' ? name : null,
     username: resolvedUsername,
     profileUrl: resolvedUrl,
-    image: profile_picture || image || null,
+    image: typeof (profile_picture || image) === 'string'
+      ? /** @type {string} */ (profile_picture || image)
+      : null,
     platform: 'facebook',
   };
 }
 
+/**
+ * @param {Record<string, unknown>} raw
+ * @returns {FacebookPageSearchResult}
+ */
 export function normalizePageSearchResult(raw) {
   const {
     id,
@@ -431,20 +481,33 @@ export function normalizePageSearchResult(raw) {
     image,
   } = raw || {};
 
-  const resolvedUrl = url || pageUrl || (id && /^\d+$/.test(String(id)) ? `${FACEBOOK_BASE}/pages/${id}` : null);
+  const idStr = typeof id === 'string' ? id : null;
+  const resolvedUrlRaw = url || pageUrl || (idStr && /^\d+$/.test(idStr) ? `${FACEBOOK_BASE}/pages/${idStr}` : null);
+  const resolvedUrl = typeof resolvedUrlRaw === 'string' ? resolvedUrlRaw : null;
   const resolvedId = id || resolvedUrl || null;
+  const resolvedLikes = likes || fan_count || fanCount || null;
 
   return {
-    id: resolvedId,
-    name: name || null,
-    category: category || category_name || categoryName || null,
-    likes: likes || fan_count || fanCount || null,
+    id: typeof resolvedId === 'string' ? resolvedId : null,
+    name: typeof name === 'string' ? name : null,
+    category: typeof (category || category_name || categoryName) === 'string'
+      ? /** @type {string} */ (category || category_name || categoryName)
+      : null,
+    likes: typeof resolvedLikes === 'string' || typeof resolvedLikes === 'number'
+      ? resolvedLikes
+      : null,
     pageUrl: resolvedUrl,
-    image: profile_picture || image || null,
+    image: typeof (profile_picture || image) === 'string'
+      ? /** @type {string} */ (profile_picture || image)
+      : null,
     platform: 'facebook',
   };
 }
 
+/**
+ * @param {Record<string, unknown>} raw
+ * @returns {FacebookGroupSearchResult}
+ */
 export function normalizeGroupSearchResult(raw) {
   const {
     id,
@@ -459,16 +522,23 @@ export function normalizeGroupSearchResult(raw) {
     image,
   } = raw || {};
 
-  const resolvedUrl = url || groupUrl || (id && /^\d+$/.test(String(id)) ? `${FACEBOOK_BASE}/groups/${id}` : null);
+  const idStr = typeof id === 'string' ? id : null;
+  const resolvedUrlRaw = url || groupUrl || (idStr && /^\d+$/.test(idStr) ? `${FACEBOOK_BASE}/groups/${idStr}` : null);
+  const resolvedUrl = typeof resolvedUrlRaw === 'string' ? resolvedUrlRaw : null;
   const resolvedId = id || resolvedUrl || null;
+  const resolvedMembers = members || member_count || memberCount || null;
 
   return {
-    id: resolvedId,
-    name: name || null,
-    members: members || member_count || memberCount || null,
-    privacy: privacy || null,
+    id: typeof resolvedId === 'string' ? resolvedId : null,
+    name: typeof name === 'string' ? name : null,
+    members: typeof resolvedMembers === 'string' || typeof resolvedMembers === 'number'
+      ? resolvedMembers
+      : null,
+    privacy: typeof privacy === 'string' ? privacy : null,
     groupUrl: resolvedUrl,
-    image: profile_picture || image || null,
+    image: typeof (profile_picture || image) === 'string'
+      ? /** @type {string} */ (profile_picture || image)
+      : null,
     platform: 'facebook',
   };
 }
@@ -479,42 +549,59 @@ export function normalizeGroupSearchResult(raw) {
 
 export const VALID_SEARCH_TYPES = new Set(['posts', 'people', 'pages', 'groups', 'all']);
 
-export const SEARCH_TYPE_URLS = {
+export const SEARCH_TYPE_URLS = /** @type {Record<string, string>} */ ({
   posts: '/search/posts/',
   people: '/search/people/',
   pages: '/search/pages/',
   groups: '/search/groups/',
-};
+});
 
-export const SEARCH_TYPENAMES = {
+export const SEARCH_TYPENAMES = /** @type {Record<string, string[]>} */ ({
   posts: ['Story'],
   people: ['User'],
   pages: ['Page'],
   groups: ['Group'],
-};
+});
 
+/**
+ * @param {Record<string, unknown>} raw
+ * @param {string} type
+ * @returns {FacebookPostSearchResult | FacebookPeopleSearchResult | FacebookPageSearchResult | FacebookGroupSearchResult | null}
+ */
 export function normalizeByType(raw, type) {
   switch (type) {
-    case 'posts': return normalizePostSearchResult(raw);
-    case 'people': return normalizePeopleSearchResult(raw);
-    case 'pages': return normalizePageSearchResult(raw);
-    case 'groups': return normalizeGroupSearchResult(raw);
+    case 'posts': return /** @type {FacebookPostSearchResult} */ (normalizePostSearchResult(raw));
+    case 'people': return /** @type {FacebookPeopleSearchResult} */ (normalizePeopleSearchResult(raw));
+    case 'pages': return /** @type {FacebookPageSearchResult} */ (normalizePageSearchResult(raw));
+    case 'groups': return /** @type {FacebookGroupSearchResult} */ (normalizeGroupSearchResult(raw));
     default: return null;
   }
 }
 
+/**
+ * @param {string} type
+ * @returns {void}
+ */
 export function validateSearchType(type) {
   if (!type || !VALID_SEARCH_TYPES.has(type)) {
     throw new Error(`❌ search type must be one of: ${Array.from(VALID_SEARCH_TYPES).join(', ')}`);
   }
 }
 
+/**
+ * @param {string} query
+ * @returns {void}
+ */
 export function validateSearchQuery(query) {
   if (typeof query !== 'string' || !query.trim()) {
     throw new Error('❌ search query must be a non-empty string');
   }
 }
 
+/**
+ * @param {number} limit
+ * @returns {void}
+ */
 export function validateSearchLimit(limit) {
   const n = Number(limit);
   if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) {
@@ -522,6 +609,11 @@ export function validateSearchLimit(limit) {
   }
 }
 
+/**
+ * @param {string} query
+ * @param {unknown} location
+ * @returns {string}
+ */
 export function buildSearchQuery(query, location) {
   let q = query.trim();
   if (typeof location === 'string' && location.trim()) {
@@ -535,8 +627,12 @@ export function buildSearchQuery(query, location) {
 const PII_PHONE_RE = /(\+?\d[\d\s\-().]{7,}\d)/g;
 const PII_EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
 
+/**
+ * @param {unknown} value
+ * @returns {string|null}
+ */
 function stripPii(value) {
-  if (!value || typeof value !== 'string') return value ?? null;
+  if (typeof value !== 'string') return null;
   const cleaned = value.replace(PII_PHONE_RE, '').replace(PII_EMAIL_RE, '').trim();
   return cleaned || null;
 }
@@ -545,14 +641,18 @@ function stripPii(value) {
  * Normalize a raw group member row into the standard member shape.
  * NFR-11: phone/email stripped at this layer before returning to caller.
  *
- * @param {{ name: string|null, username: string|null, profileUrl: string }} raw
- * @returns {{ name: string|null, username?: string, profileUrl: string, platform: 'facebook' }}
+ * @param {FacebookGroupMember} raw
+ * @returns {FacebookGroupMember}
  */
 export function normalizeGroupMember(raw) {
   const name = stripPii(raw.name);
-  const username = raw.username ? stripPii(raw.username) : undefined;
-  const result = { name, profileUrl: raw.profileUrl, platform: 'facebook' };
-  if (username !== undefined) result.username = username;
+  const username = typeof raw.username === 'string' ? (stripPii(raw.username) ?? undefined) : undefined;
+  const result = {
+    name,
+    profileUrl: raw.profileUrl,
+    platform: /** @type {'facebook'} */ ('facebook'),
+    ...(username ? { username } : {}),
+  };
   return result;
 }
 
@@ -564,21 +664,21 @@ export function normalizeGroupMember(raw) {
  * Normalize a raw marketplace listing into the standard shape.
  * NFR-11: phone/email stripped at this layer before returning to caller.
  *
- * @param {Object} raw - Raw listing fields from page.evaluate
- * @returns {Object} Normalized marketplace listing
+ * @param {Record<string, unknown>} raw - Raw listing fields from page.evaluate
+ * @returns {FacebookMarketplaceListing}
  */
 export function normalizeMarketplaceListing(raw) {
   const { id, title, price, location, image, listingUrl, seller, sellerUrl, category } = raw;
   return {
-    id: id || null,
-    title: title || null,
-    price: price || null,
-    location: location || null,
-    image: image || null,
-    listingUrl: listingUrl || null,
+    id: typeof id === 'string' ? id : null,
+    title: typeof title === 'string' ? title : null,
+    price: typeof price === 'string' ? price : null,
+    location: typeof location === 'string' ? location : null,
+    image: typeof image === 'string' ? image : null,
+    listingUrl: typeof listingUrl === 'string' ? listingUrl : null,
     seller: stripPii(seller) || null,
-    sellerUrl: sellerUrl || null,
-    category: category || null,
+    sellerUrl: typeof sellerUrl === 'string' ? sellerUrl : null,
+    category: typeof category === 'string' ? category : null,
     platform: 'facebook',
     source: 'marketplace',
   };
@@ -596,8 +696,12 @@ const MARKETPLACE_KNOWN_LOCATIONS = new Map([
   ['danang', '111711568847056'],
 ]);
 
+/**
+ * @param {unknown} input
+ * @returns {string|null}
+ */
 export function resolveMarketplaceLocation(input) {
-  if (!input || typeof input !== 'string') return null;
+  if (typeof input !== 'string' || !input.trim()) return null;
   const key = input.toLowerCase().replace(/[^a-z0-9]/g, '');
   const mapped = MARKETPLACE_KNOWN_LOCATIONS.get(key);
   if (mapped) return mapped;
@@ -606,6 +710,11 @@ export function resolveMarketplaceLocation(input) {
   return null;
 }
 
+/**
+ * @param {string} query
+ * @param {FacebookOptions} [options]
+ * @returns {string}
+ */
 export function buildMarketplaceSearchUrl(query, options = {}) {
   const { location, category, minPrice, maxPrice } = options;
   const locationSlug = resolveMarketplaceLocation(location);
@@ -613,13 +722,13 @@ export function buildMarketplaceSearchUrl(query, options = {}) {
   if (locationSlug) {
     basePath += `/${locationSlug}`;
   }
-  if (category) {
-    basePath += `/category/${encodeURIComponent(category)}`;
+  if (typeof category === 'string' && category.trim()) {
+    basePath += `/category/${encodeURIComponent(category.trim())}`;
   }
   const params = [`query=${encodeURIComponent(query.trim())}`];
-  if (minPrice != null) params.push(`minPrice=${minPrice}`);
-  if (maxPrice != null) params.push(`maxPrice=${maxPrice}`);
-  if (location && !locationSlug) {
+  if (typeof minPrice === 'number' && Number.isFinite(minPrice)) params.push(`minPrice=${minPrice}`);
+  if (typeof maxPrice === 'number' && Number.isFinite(maxPrice)) params.push(`maxPrice=${maxPrice}`);
+  if (typeof location === 'string' && !locationSlug) {
     params.push(`location=${encodeURIComponent(location)}`);
   }
   return `${basePath}/search/?${params.join('&')}`;

@@ -39,6 +39,7 @@ const FIREFOX_UA = 'Mozilla/5.0(Windows NT 10.0; WOW64; rv:58.0) Gecko/20100101 
 //   so err.config.url cannot be accidentally referenced.
 // ============================================================================
 
+/** @type {Record<string, FacebookProxyProvider>} */
 const PROVIDERS = {
   proxyfb: {
     // C# proxyfb.cs: GET changeProxy (primary), GET getProxy (fallback)
@@ -81,6 +82,11 @@ const VALID_PROVIDERS = Object.keys(PROVIDERS);
 // Tests inject a stub via options.fetchImpl; real network only hits in production.
 // ============================================================================
 
+/**
+ * @param {string} url
+ * @param {{ method?: string, headers?: Record<string, string>, body?: string }} [init]
+ * @returns {Promise<{ status: number, text: () => Promise<string> }>}
+ */
 async function defaultFetch(url, init = {}) {
   const res = await axios.request({
     url,
@@ -106,13 +112,13 @@ async function defaultFetch(url, init = {}) {
  * @param {string|number} port
  * @param {string|null} [username]
  * @param {string|null} [password]
- * @returns {{ proxy: string, server: string, username?: string, password?: string }|null}
+ * @returns {FacebookProxyDescriptor|null}
  */
 function buildDescriptor(host, port, username, password) {
   if (!host || !port) return null;
   const proxy = `${host}:${port}`;
   const server = `http://${proxy}`;
-  /** @type {Record<string,string>} */
+  /** @type {FacebookProxyDescriptor} */
   const desc = { proxy, server };
   if (username) desc.username = username;
   if (password) desc.password = password;
@@ -127,7 +133,7 @@ function buildDescriptor(host, port, username, password) {
 
 /**
  * @param {string|null|undefined} raw
- * @returns {{ proxy, server, username?, password? }|null}
+ * @returns {FacebookProxyDescriptor|null}
  */
 export function parseFlatProxy(raw) {
   if (typeof raw !== 'string' || !raw.includes(':')) return null;
@@ -140,7 +146,7 @@ export function parseFlatProxy(raw) {
   const username = parts.length > 2 ? (parts[2] || null) : null;
   // Password may contain colons — rejoin everything after parts[2]
   const password = parts.length > 3 ? parts.slice(3).join(':') : null;
-  return buildDescriptor(host, String(portNum), username, password);
+  return buildDescriptor(/** @type {string} */ (host), String(portNum), username, password);
 }
 
 // ============================================================================
@@ -150,34 +156,36 @@ export function parseFlatProxy(raw) {
 /**
  * proxyfb response: { "success": "True", "proxy": "host:port[:user:pass]" }
  * Note: success is the STRING "True" (not boolean). C# ref: proxyfb.cs lines 25-28.
- * @param {object} parsed
- * @returns {{ proxy, server, username?, password? }|null}
+ * @param {Record<string, unknown>} parsed
+ * @returns {FacebookProxyDescriptor|null}
  */
 function parseProxyfb(parsed) {
-  return parseFlatProxy(parsed?.proxy ?? null);
+  return parseFlatProxy(/** @type {string | null | undefined} */ (parsed?.proxy));
 }
 
 /**
  * tmproxy response: { "code": "0", "data": { "https": "host:port[:user:pass]" } }
  * Field is literally named "https" per proxyTM.cs line 23 (jobject["data"]["https"]).
- * @param {object} parsed
- * @returns {{ proxy, server, username?, password? }|null}
+ * @param {Record<string, unknown>} parsed
+ * @returns {FacebookProxyDescriptor|null}
  */
 function parseTmproxy(parsed) {
-  return parseFlatProxy(parsed?.data?.https ?? null);
+  const data = /** @type {Record<string, unknown> | undefined} */ (parsed?.data);
+  return parseFlatProxy(/** @type {string | null | undefined} */ (data?.https));
 }
 
 /**
  * shoplike response: { "status": "...success...", "data": { "proxy": "host:port[:user:pass]" } }
  * Status check is substring contains("success") (per shopLike.cs line 25).
- * @param {object} parsed
- * @returns {{ proxy, server, username?, password? }|null}
+ * @param {Record<string, unknown>} parsed
+ * @returns {FacebookProxyDescriptor|null}
  */
 function parseShoplike(parsed) {
-  return parseFlatProxy(parsed?.data?.proxy ?? null);
+  const data = /** @type {Record<string, unknown> | undefined} */ (parsed?.data);
+  return parseFlatProxy(/** @type {string | null | undefined} */ (data?.proxy));
 }
 
-/** Dispatch table — keyed by provider name. */
+/** @type {Record<string, (parsed: Record<string, unknown>) => FacebookProxyDescriptor | null>} */
 const PARSERS = { proxyfb: parseProxyfb, tmproxy: parseTmproxy, shoplike: parseShoplike };
 
 // ============================================================================
@@ -188,18 +196,20 @@ const PARSERS = { proxyfb: parseProxyfb, tmproxy: parseTmproxy, shoplike: parseS
 // ============================================================================
 
 /**
- * @param {object}   cfg          PROVIDERS entry
- * @param {Function} urlFn        cfg.primaryUrl or cfg.fallbackUrl
- * @param {Function} okFn         cfg.primaryOk or cfg.fallbackOk
- * @param {Function} parseFn      PARSERS[provider]
- * @param {string}   key          Provider API key (never logged)
- * @param {Function} fetchImpl    fetch-shaped seam
- * @param {string}   providerName For warn messages only (never includes key)
- * @returns {Promise<object|null>}
+ * @param {FacebookProxyProvider} cfg          PROVIDERS entry
+ * @param {(key: string) => string} urlFn      cfg.primaryUrl or cfg.fallbackUrl
+ * @param {(parsed: Record<string, unknown>) => boolean} okFn  cfg.primaryOk or cfg.fallbackOk
+ * @param {(parsed: Record<string, unknown>) => FacebookProxyDescriptor | null} parseFn  PARSERS[provider]
+ * @param {string} key                         Provider API key (never logged)
+ * @param {FacebookProxyOptions['fetchImpl']} fetchImpl  fetch-shaped seam
+ * @param {string} providerName                For warn messages only (never includes key)
+ * @returns {Promise<FacebookProxyDescriptor | null>}
  */
 async function _attempt(cfg, urlFn, okFn, parseFn, key, fetchImpl, providerName) {
   // SECURITY: urlFn(key) may embed the API key — never log the result of this call.
+  /** @type {string} */
   let text;
+  if (!fetchImpl) throw new Error('❌ _attempt: fetchImpl is required');
   try {
     const res = await fetchImpl(urlFn(key), {
       method:  cfg.method,
@@ -212,6 +222,7 @@ async function _attempt(cfg, urlFn, okFn, parseFn, key, fetchImpl, providerName)
     // Binding-free: no reference to the error object, so err.config.url cannot leak
     return null;
   }
+  /** @type {Record<string, unknown>} */
   let parsed;
   try { parsed = JSON.parse(text); } catch { return null; }
   if (!okFn(parsed)) return null;
@@ -239,8 +250,8 @@ async function _attempt(cfg, urlFn, okFn, parseFn, key, fetchImpl, providerName)
  *
  * @param {'proxyfb'|'tmproxy'|'shoplike'} provider
  * @param {string} key  Provider API key/token
- * @param {{ fetchImpl?: Function }} [options]
- * @returns {Promise<{ proxy: string, server: string, username?: string, password?: string }|null>}
+ * @param {FacebookProxyOptions} [options]
+ * @returns {Promise<FacebookProxyDescriptor | null>}
  * @throws {Error} Unknown provider or missing/empty key
  */
 export async function rotateProxy(provider, key, options = {}) {
@@ -254,8 +265,8 @@ export async function rotateProxy(provider, key, options = {}) {
   }
 
   const { fetchImpl = defaultFetch } = options;
-  const cfg     = PROVIDERS[provider];
-  const parseFn = PARSERS[provider];
+  const cfg     = /** @type {FacebookProxyProvider} */ (PROVIDERS[provider]);
+  const parseFn = /** @type {(parsed: Record<string, unknown>) => FacebookProxyDescriptor | null} */ (PARSERS[provider]);
 
   // Step 1: primary endpoint
   const primary = await _attempt(cfg, cfg.primaryUrl, cfg.primaryOk, parseFn, key, fetchImpl, provider);

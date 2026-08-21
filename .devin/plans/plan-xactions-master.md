@@ -80,7 +80,11 @@ Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 
 - [x] 4.2 — Type `src/scrapers/twitter/http` modules + `src/scrapers/twitter/validator.js`
 - [x] 4.3 — Type `src/scrapers/adapters` modules
 - [x] 4.4 — Type `src/scrapers/twitter/index.js`
-- [ ] 4.5 — Type `src/scrapers/facebook` domain modules and coupled `api/lib/prisma.js` + `api/services/facebookAutomation.js`
+- [x] 4.5 — Type `src/scrapers/facebook` domain modules and coupled `api/lib/prisma.js` + `api/services/facebookAutomation.js`
+  - Added JSDoc types across `src/scrapers/facebook/*.js` and updated `src/types/facebook.d.ts`.
+  - Typed `api/lib/prisma.js` and `api/services/facebookAutomation.js`.
+  - `npm run typecheck` now passes with **0 errors** for the full `tsconfig.json` include list.
+  - Fixed vitest regressions: `normalizeFollower` and `normalizeSearchResult` now coerce empty strings to `null`.
 - [ ] 4.6 — Type `src/scrapers/bluesky`, `src/scrapers/mastodon`, `src/scrapers/threads`
 - [ ] 4.7 — Type `src/scrapers/index.js` and `src/index.js` / `src/algorithmBuilder.js`
 - [ ] 4.8 — Type `src/api` (Prisma, services, routes) and `src/workflows`
@@ -89,7 +93,7 @@ Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 
 - [ ] 4.11 — Add missing `.d.ts` declarations for untyped dependencies
 - [ ] 4.12 — Final `npm run typecheck` (entire `src` + `api`) and full `npx vitest run`
 
-Status: Phase 4.4 completed; `src/scrapers/twitter/index.js` fully typed and `npm run typecheck` passes with 0 errors. PuppeteerAdapter contract tests pass.
+Status: Phase 4.5 completed; `src/scrapers/facebook` domain modules, `api/lib/prisma.js`, and `api/services/facebookAutomation.js` fully typed. `npm run typecheck` passes with 0 errors and `npx vitest run tests/scrapers tests/cli tests/api/facebook-automate-routes.test.js` passes (1107 passed, 14 skipped).
 
 ## Verification baseline
 
@@ -97,7 +101,7 @@ Status: Phase 4.4 completed; `src/scrapers/twitter/index.js` fully typed and `np
 - API smoke: `npx vitest run tests/api/facebook-automate-routes.test.js`
 - Type: `npm run typecheck`
 - Pre-existing type error baseline: **137 errors** (as of Phase 2 completion)
-- Current type error count: **0 errors** for `src/core` + `src/client` + `src/scrapers/twitter/{http, validator, adapters, index}`.
+- Current type error count: **0 errors** for the full `tsconfig.json` include list (`src/core`, `src/client`, `src/scrapers/twitter`, `src/scrapers/facebook`, `src/scrapers/adapters`, `src/types`, `api/lib/prisma.js`, `api/services/facebookAutomation.js`).
 
 ## Notes
 

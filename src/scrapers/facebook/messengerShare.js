@@ -22,6 +22,9 @@
 
 import { runGuardedBatch } from '../../../api/services/facebookAutomation.js';
 
+/** @typedef {import('puppeteer').Page} Page */
+/** @typedef {import('puppeteer').ElementHandle} ElementHandle */
+
 // ============================================================================
 // Constants & Selectors (VERIFIED against live Facebook share dialog)
 // ============================================================================
@@ -126,24 +129,20 @@ export function pickRandomSegment(text) {
  * Build the final message: pick random segment, strip emoji, normalize newlines.
  *
  * @param {string} rawContent - Raw message content (may contain ** delimiters)
- * @param {Object} options
- * @param {boolean} [options.stripEmoji=true] - Whether to strip emoji surrogates
- * @param {Function} [options.segmentPicker=pickRandomSegment] - Segment picker fn
+ * @param {FacebookOptions} options
  * @returns {string} Final composed message
  */
 export function composeMessage(rawContent, options = {}) {
   const { stripEmoji = true, segmentPicker = pickRandomSegment } = options;
-  let message = segmentPicker(rawContent);
+  const picked = segmentPicker(rawContent);
   // Guard against non-string segment-picker output (null/undefined/number/etc.)
   // so the downstream `.replace()` calls cannot throw on a non-string value.
-  if (typeof message !== 'string') {
-    message = message == null ? '' : String(message);
-  }
-  if (stripEmoji) {
-    message = stripEmojiSurrogates(message);
-  }
+  const message = typeof picked === 'string'
+    ? picked
+    : (picked == null ? '' : String(picked));
+  const clean = stripEmoji ? stripEmojiSurrogates(message) : message;
   // Normalize whitespace but preserve intentional newlines
-  return message.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  return clean.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 // ============================================================================
@@ -156,8 +155,7 @@ export function composeMessage(rawContent, options = {}) {
  *
  * @param {Page} page - Puppeteer page instance
  * @param {string} message - Message to type
- * @param {Object} options
- * @param {Function} [options.delay] - Delay function between lines
+ * @param {FacebookOptions} options
  */
 export async function typeMessage(page, message, options = {}) {
   const { delay = () => new Promise((r) => setTimeout(r, 50 + Math.random() * 100)) } = options;
@@ -299,13 +297,11 @@ async function waitForRecipientButtons(page, labelRe, timeout = 8000) {
  * 2. Click the sidebar thread row matching `recipientName`.
  * 3. Type `message` into the thread compose box and press Enter to send.
  *
- * @param {Page} page - Puppeteer page instance (logged in)
+ * @param {import('puppeteer').Page} page - Puppeteer page instance (logged in)
  * @param {string} recipientName - Display name of the thread to open
  * @param {string} message - Plain-text message to send
- * @param {Object} [options]
- * @param {Function} [options.delay] - Injectable delay seam
- * @param {number} [options.selectorTimeout=10000] - Timeout for selector waits
- * @returns {Promise<{ok: boolean, error?: string}>}
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<{ok: boolean, sentVia?: string, error?: string}>}
  */
 export async function sendMessageToThread(page, recipientName, message, options = {}) {
   const {
@@ -385,7 +381,7 @@ export async function sendMessageToThread(page, recipientName, message, options 
 
     return { ok: true, sentVia: sent || 'enter-fallback' };
   } catch (err) {
-    return { ok: false, error: err.message };
+    return { ok: false, error: (err instanceof Error ? err.message : String(err)) };
   }
 }
 
@@ -406,16 +402,10 @@ export async function sendMessageToThread(page, recipientName, message, options 
  * required for recipients with an existing conversation. `pageId` is now
  * ignored (kept in the signature for backward compatibility).
  *
- * @param {Page} page - Puppeteer page instance (logged in)
- * @param {Object} target - Share target
- * @param {string} target.recipientName - Display name of the recipient to match
- * @param {string} target.postUrl - URL of the post to share
- * @param {string} [target.message] - Message delivered as a separate DM after the share
- * @param {Object} [options]
- * @param {Function} [options.delay] - Injectable delay seam
- * @param {number} [options.selectorTimeout=8000] - Timeout for selector waits
- * @param {Function} [options.sendMessageFn=sendMessageToThread] - DM sender (injectable for tests)
- * @returns {Promise<{ok: boolean, recipientName: string, error?: string}>}
+ * @param {import('puppeteer').Page} page - Puppeteer page instance (logged in)
+ * @param {{ recipientName: string; postUrl: string; message?: string; [key: string]: unknown }} target - Share target
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<{ok: boolean, recipientName: string, clickedLabel?: string, messageDelivered?: boolean, messageError?: string, error?: string }>}
  */
 export async function shareToMessenger(page, target, options = {}) {
   const {
@@ -439,9 +429,12 @@ export async function shareToMessenger(page, target, options = {}) {
     // a synthetic mouse click but not element.click().
     let shareBtn = await waitForAny(page, SELECTORS.shareButton, selectorTimeout);
     if (!shareBtn) {
-      const byXPath = await page.$x(SELECTORS.shareButtonXPath);
-      if (byXPath.length > 0) shareBtn = byXPath[0];
-      else return { ok: false, recipientName, error: 'Share button not found' };
+      shareBtn = /** @type {import('puppeteer').ElementHandle|null} */ (await page.evaluate((xpath) => {
+        const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+        const node = result.singleNodeValue;
+        return node || null;
+      }, SELECTORS.shareButtonXPath));
+      if (!shareBtn) return { ok: false, recipientName, error: 'Share button not found' };
     }
     await page.evaluate((el) => el.click(), shareBtn);
     await delay(1500, 3000);
@@ -498,7 +491,7 @@ export async function shareToMessenger(page, target, options = {}) {
 
     return { ok: true, recipientName, clickedLabel, ...(message ? { messageDelivered } : {}) };
   } catch (err) {
-    return { ok: false, recipientName, error: err.message };
+    return { ok: false, recipientName, error: (err instanceof Error ? err.message : String(err)) };
   }
 }
 
@@ -516,16 +509,8 @@ export async function shareToMessenger(page, target, options = {}) {
  * @param {string} campaign.postUrl - URL of the post to share
  * @param {string[]} campaign.recipients - Array of Page/person names to share to
  * @param {string} [campaign.content] - Raw message content (may contain ** delimiters)
- * @param {Object} [options]
- * @param {boolean} [options.dryRun] - Dry-run mode (default: true via runGuardedBatch)
- * @param {boolean} [options.stripEmoji=true] - Strip emoji surrogates from message
- * @param {Function} [options.delay] - Injectable delay seam
- * @param {number} [options.selectorTimeout=8000] - DOM selector timeout
- * @param {Function} [options.composeFn=composeMessage] - Message compose function
- * @param {Function} [options.shareFn=shareToMessenger] - Share function (injectable for tests)
- * @param {number} [options.delayBetween] - Passed to runGuardedBatch
- * @param {Function} [options.onProgress] - Progress callback
- * @returns {Promise<Object>} runGuardedBatch result shape
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<Record<string, unknown>>} runGuardedBatch result shape
  */
 export async function messengerShareCampaign(page, campaign, options = {}) {
   const {
@@ -561,13 +546,14 @@ export async function messengerShareCampaign(page, campaign, options = {}) {
   });
 
   // actionFn wraps shareToMessenger with page and options
-  const actionFn = async (target) => {
-    const result = await shareFn(page, target, { delay: delayFn, selectorTimeout });
+  /** @param {Record<string, unknown>} target */
+  const actionFn = /** @type {(...args: unknown[]) => unknown} */ (async (target) => {
+    const result = await shareFn(page, /** @type {{ recipientName: string; postUrl: string; message?: string }} */ (target), { delay: delayFn, selectorTimeout });
     return result;
-  };
+  });
 
   // Route through runGuardedBatch — dry-run default, delay seam, bounded batch
-  const batchResult = await batchFn(items, actionFn, guardedOptions);
+  const batchResult = /** @type {Record<string, unknown>} */ (await batchFn(items, actionFn, guardedOptions));
 
   return batchResult;
 }

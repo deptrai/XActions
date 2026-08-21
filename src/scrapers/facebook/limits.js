@@ -29,7 +29,7 @@
 // Default seams — overridable in tests (NFR3)
 // ============================================================================
 
-const defaultDelayFn = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const defaultDelayFn = (/** @type {number} */ ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const defaultRng = Math.random;
 const defaultNowFn = () => Date.now();
 
@@ -64,6 +64,7 @@ function normalizeTimestamp(value) {
  * Human-scaled action limits for Facebook automation.
  * These are hard floors — callers may not safely exceed them.
  */
+/** @type {Record<string, Record<string, number>>} */
 const LIMITS_RAW = {
   like: { perHour: 30 },
   comment: { perHour: 10 },
@@ -155,13 +156,14 @@ function scaleLimit(value, factor) {
  *
  * @param {string} action - one of 'like', 'comment', 'friendRequest', 'message'
  * @param {number} [accountAgeDays=Infinity] - account age in days
- * @returns {Object|null} - scaled limit object (e.g. { perHour: 30 }) or null if action unknown
+ * @returns {Record<string, number>|null} - scaled limit object (e.g. { perHour: 30 }) or null if action unknown
  */
 export function getActionLimit(action, accountAgeDays = Infinity) {
   const limit = LIMITS[action];
   if (!limit) return null;
 
   const factor = getAgeFactor(accountAgeDays);
+  /** @type {Record<string, number>} */
   const scaled = {};
   for (const [key, value] of Object.entries(limit)) {
     scaled[key] = scaleLimit(value, factor);
@@ -181,9 +183,7 @@ export function getActionLimit(action, accountAgeDays = Infinity) {
  *
  * @param {string} action - action type (reserved)
  * @param {number} [accountAgeDays=Infinity] - account age in days (reserved)
- * @param {Object} [options]
- * @param {Function} [options.delayFn] - delay function (default: setTimeout-based)
- * @param {Function} [options.rng] - random number generator (default: Math.random)
+ * @param {FacebookOptions} [options]
  * @returns {Promise<void>}
  */
 export async function enforceDelay(action, accountAgeDays = Infinity, options = {}) {
@@ -207,9 +207,7 @@ export async function enforceDelay(action, accountAgeDays = Infinity, options = 
  * This is fail-safe for anti-detection: unknown age = assume new account.
  *
  * @param {string} c_user - Facebook user ID string
- * @param {Object} [options]
- * @param {Object} [options.db] - database adapter with `getAccountCreatedAt(c_user)` method
- * @param {Function} [options.nowFn] - returns current timestamp in ms (default: Date.now)
+ * @param {FacebookOptions} [options]
  * @returns {Promise<number>} account age in days (integer >= 0)
  */
 export async function getAccountAgeDays(c_user, options = {}) {

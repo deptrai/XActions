@@ -26,7 +26,7 @@ import { humanScroll, humanMoveMouse } from './human.js';
 // Default seams — overridable in tests (NFR3)
 // ============================================================================
 
-const defaultDelayFn = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const defaultDelayFn = (/** @type {number} */ ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const defaultRng = Math.random;
 
 const FACEBOOK_HOME = 'https://www.facebook.com/';
@@ -49,12 +49,9 @@ const FACEBOOK_HOME = 'https://www.facebook.com/';
  *
  * Warming is best-effort: errors are caught & logged as warnings without aborting session.
  *
- * @param {Object} page - Puppeteer page instance
- * @param {Object} [options]
- * @param {Function} [options.delayFn] - delay function seam (default: setTimeout)
- * @param {Function} [options.rng] - random number generator seam (default: Math.random)
- * @param {boolean} [options.skipWarmup=false] - if true, skips warming immediately
- * @returns {Promise<Object>} { steps: string[], durationMs: number, error?: string }
+ * @param {import('puppeteer').Page} page - Puppeteer page instance
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<Record<string, unknown>>} { steps: string[], durationMs: number, error?: string }
  */
 export async function warmSession(page, options = {}) {
   const {
@@ -104,7 +101,8 @@ export async function warmSession(page, options = {}) {
 
     // 7. Random mouse movements 3 times
     steps.push('mouse_moves');
-    const viewport = (typeof page.viewportSize === 'function' && page.viewportSize()) || { width: 1280, height: 720 };
+    const pageRecord = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (page));
+    const viewport = /** @type {{ width: number; height: number }} */ ((typeof pageRecord.viewportSize === 'function' && pageRecord.viewportSize()) || { width: 1280, height: 720 });
     const safeWidth = Math.max(0, viewport.width - 1);
     const safeHeight = Math.max(0, viewport.height - 1);
     const minMargin = 100;
@@ -128,7 +126,7 @@ export async function warmSession(page, options = {}) {
       durationMs: Date.now() - startTime,
     };
   } catch (err) {
-    const errorMsg = err?.message ?? String(err);
+    const errorMsg = (err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err)) ?? String(err);
     console.warn(`⚠️ warmSession: warming sequence hit error — ${errorMsg}`);
     steps.push('error');
     return {

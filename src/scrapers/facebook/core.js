@@ -31,6 +31,10 @@ puppeteer.use(StealthPlugin({ enabledEvasions: facebookEvasions }));
 // Core Utilities
 // ============================================================================
 
+/**
+ * @param {number} ms
+ * @returns {Promise<void>}
+ */
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const randomDelay = (min = 1000, max = 3000) => sleep(min + Math.random() * (max - min));
 
@@ -42,6 +46,10 @@ export const MOBILE_BASE = 'https://m.facebook.com';
 // scrapeFacebookGroupSearch). Extracted to avoid duplication.
 export const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1';
 export const MOBILE_VIEWPORT = { width: 390, height: 844, isMobile: true };
+/**
+ * @param {import('puppeteer').Page} page
+ * @returns {Promise<void>}
+ */
 export async function applyMobileViewport(page) {
   await page.setUserAgent(MOBILE_UA);
   await page.setViewport(MOBILE_VIEWPORT);
@@ -57,9 +65,8 @@ export const NON_PROFILE_SEGMENTS = [
 
 /**
  * Create a browser instance for Facebook scraping (Story 6.17 — ADR-016 persistent profile).
- * @param {Object} options - Browser launch options
- * @param {string} [options.userDataDir] - Profile directory path (auto-created if missing)
- * @returns {Promise<Browser>} Puppeteer browser instance
+ * @param {FacebookOptions} options - Browser launch options
+ * @returns {Promise<import('puppeteer').Browser>} Puppeteer browser instance
  */
 export async function createBrowser(options = {}) {
   const { args: extraArgs = [], headless, proxy, launchImpl, executablePath, userDataDir, proxyAuth, proxyLocation, fingerprint, skipWarmup, ...rest } = options;
@@ -117,6 +124,7 @@ export async function createBrowser(options = {}) {
     || process.env.PUPPETEER_EXECUTABLE_PATH
     || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
+  /** @type {Record<string, unknown>} */
   const launchOpts = {
     headless: headless !== undefined ? headless : 'new',
     args: mergedArgs,
@@ -128,20 +136,16 @@ export async function createBrowser(options = {}) {
     launchOpts.userDataDir = userDataDir;
   }
 
-  return launch(launchOpts);
+  return /** @type {import('puppeteer').Browser} */ (
+    await launch(/** @type {import('puppeteer').LaunchOptions} */ (/** @type {unknown} */ (launchOpts)))
+  );
 }
 
 /**
  * Apply timezone and geolocation overrides matching proxy location (Story 6.16 — ADR-016).
  *
- * @param {Page} page - Puppeteer page instance
- * @param {Object} [proxyLocation] - location descriptor matching proxy
- * @param {string} [proxyLocation.timezone] - IANA timezone (e.g. 'America/New_York')
- * @param {number} [proxyLocation.latitude] - latitude (-90..90)
- * @param {number} [proxyLocation.longitude] - longitude (-180..180)
- * @param {number} [proxyLocation.lat] - latitude alias
- * @param {number} [proxyLocation.lng] - longitude alias
- * @param {number} [proxyLocation.accuracy] - optional geolocation accuracy in meters
+ * @param {import('puppeteer').Page} page - Puppeteer page instance
+ * @param {Record<string, unknown>} [proxyLocation] - location descriptor matching proxy
  */
 export async function applyProxyLocation(page, proxyLocation) {
   if (!proxyLocation) return;
@@ -163,7 +167,8 @@ export async function applyProxyLocation(page, proxyLocation) {
   try {
     await page.emulateTimezone(timezone.trim());
 
-    const geo = { latitude: lat, longitude: lng };
+    /** @type {{ latitude: number; longitude: number; accuracy?: number }} */
+    const geo = { latitude: /** @type {number} */ (lat), longitude: /** @type {number} */ (lng) };
     if (typeof accuracy === 'number' && Number.isFinite(accuracy) && accuracy >= 0) {
       geo.accuracy = accuracy;
     }
@@ -185,11 +190,9 @@ export async function applyProxyLocation(page, proxyLocation) {
  * attached as `page._fingerprint` so callers can reuse it across tabs via
  * `createPage(browser, { fingerprint })`.
  *
- * @param {Browser} browser - Puppeteer browser instance
- * @param {Object} [options]
- * @param {Object} [options.fingerprint] - explicit fingerprint for session reuse
- * @param {Object} [options.proxyLocation] - proxy location descriptor { timezone, latitude, longitude }
- * @returns {Promise<Page>} Puppeteer page instance with `page._fingerprint` set
+ * @param {import('puppeteer').Browser} browser - Puppeteer browser instance
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<import('puppeteer').Page>} Puppeteer page instance with `page._fingerprint` set
  */
 export async function createPage(browser, options = {}) {
   const page = await browser.newPage();
@@ -200,7 +203,9 @@ export async function createPage(browser, options = {}) {
     await page.authenticate({ username: proxyAuth.username, password: proxyAuth.password });
   }
 
-  const fingerprint = options.fingerprint ?? generateFingerprint();
+  const fingerprint = /** @type {FacebookFingerprint} */ (
+    /** @type {unknown} */ (options.fingerprint ?? generateFingerprint())
+  );
   try {
     await applyFingerprint(page, fingerprint);
     await applyNavigatorOverrides(page, fingerprint);
@@ -211,7 +216,7 @@ export async function createPage(browser, options = {}) {
     await page.close().catch(() => {});
     throw err;
   }
-  page._fingerprint = fingerprint;
+  (/** @type {Record<string, unknown>} */ (/** @type {unknown} */ (page)))._fingerprint = fingerprint;
   return page;
 }
 
@@ -240,11 +245,20 @@ export async function isContentUnavailable(page) {
   }
 }
 
+/**
+ * @param {string|null} url
+ * @returns {boolean}
+ */
 export function isCheckpointUrl(url) {
   if (typeof url !== 'string') return false;
   return url.includes('/checkpoint/') || url.includes('facebook.com/checkpoint');
 }
 
+/**
+ * @param {import('puppeteer').Page} page
+ * @param {unknown} source
+ * @returns {Promise<void>}
+ */
 export async function assertNoCheckpoint(page, source = 'search') {
   const currentUrl = typeof page.url === 'function' ? page.url() : null;
   if (isCheckpointUrl(currentUrl)) {
@@ -276,6 +290,11 @@ export async function assertNoCheckpoint(page, source = 'search') {
 // assertFacebookUrl duplicated here to avoid a circular dependency:
 // api/services/facebookAutomation.js already imports from this file.
 // Keep in sync with api/services/facebookAutomation.js#assertFacebookUrl.
+/**
+ * @param {string} url
+ * @param {unknown} [label]
+ * @returns {void}
+ */
 export function assertFacebookUrlLocal(url, label = 'URL') {
   if (typeof url !== 'string' || !url.trim()) {
     throw new Error(`❌ ${label} must be a non-empty string`);

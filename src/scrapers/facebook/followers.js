@@ -26,14 +26,10 @@ import { normalizeHandle, normalizeFollower, normalizeGroupMember } from './norm
  * Returns an array when the list is publicly accessible (Pages),
  * or a note object when restricted (personal profiles).
  *
- * @param {Page} page - Puppeteer page instance
+ * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} username - Handle, @handle, or full facebook.com URL
- * @param {Object} options
- * @param {number} [options.limit=100] - Max followers to return
- * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
- * @param {number} [options.maxRetries=10] - Stop after N consecutive empty scrolls
- * @param {Function} [options.delay=randomDelay] - Injectable delay seam (pass `() => {}` in tests)
- * @returns {Promise<Array|Object>} Follower array OR { note, username, platform } if restricted
+ * @param {FacebookOptions} options
+ * @returns {Promise<Record<string, unknown>[] | { note: string, username: string, platform: 'facebook' }>} Follower array OR { note, username, platform } if restricted
  */
 export async function scrapeFollowers(page, username, options = {}) {
   const { limit = 100, onProgress, maxRetries = 10, delay = randomDelay } = options;
@@ -59,7 +55,7 @@ export async function scrapeFollowers(page, username, options = {}) {
     return {
       note: 'Facebook follower list is not publicly exposed for this profile. Only Pages with public follower settings expose individual follower data.',
       username: handle,
-      platform: 'facebook',
+      platform: /** @type {'facebook'} */ ('facebook'),
     };
   }
 
@@ -67,7 +63,7 @@ export async function scrapeFollowers(page, username, options = {}) {
   let retries = 0;
 
   while (followers.size < limit && retries < maxRetries) {
-    const rawFollowers = await page.evaluate((nonProfile) => {
+    const rawFollowers = /** @type {Record<string, unknown>[]} */ (await page.evaluate((nonProfile) => {
       const items = document.querySelectorAll('[role="listitem"]');
       const NON_PROFILE = new Set(nonProfile);
       return Array.from(items).map((item) => {
@@ -97,14 +93,14 @@ export async function scrapeFollowers(page, username, options = {}) {
         const id = url || name;
         return { id, name, username, url };
       }).filter((f) => f.id);
-    }, NON_PROFILE_SEGMENTS);
+    }, NON_PROFILE_SEGMENTS));
 
     const prevSize = followers.size;
-    rawFollowers.forEach((raw) => {
+    for (const raw of rawFollowers) {
       if (!followers.has(raw.id)) {
         followers.set(raw.id, normalizeFollower({ name: raw.name, username: raw.username, url: raw.url }));
       }
-    });
+    }
 
     if (onProgress) onProgress({ scraped: followers.size, limit });
     if (followers.size === prevSize) { retries++; } else { retries = 0; }
@@ -113,7 +109,7 @@ export async function scrapeFollowers(page, username, options = {}) {
     await delay(1500, 3000);
   }
 
-  return Array.from(followers.values()).slice(0, limit);
+  return /** @type {Record<string, unknown>[]} */ (Array.from(followers.values()).slice(0, limit));
 }
 
 /**
@@ -124,14 +120,10 @@ export async function scrapeFollowers(page, username, options = {}) {
  * Returns an array of normalized members when the list is accessible,
  * or a { note, platform } object when the list is restricted/unavailable.
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} groupUrl - facebook.com group URL
- * @param {Object} [options]
- * @param {number} [options.limit=100] - Max members to collect
- * @param {number} [options.maxStalls=5] - Stop after N consecutive scrolls with no new members
- * @param {Function} [options.delay] - Injectable delay seam (default: randomDelay 1-3s)
- * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
- * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<Record<string, unknown>[] | { note: string, platform: 'facebook' }>}
  */
 export async function scrapeGroupMembers(page, groupUrl, options = {}) {
   const {
@@ -163,12 +155,12 @@ export async function scrapeGroupMembers(page, groupUrl, options = {}) {
   if (!containerFound) {
     return {
       note: 'Facebook group member list is not accessible. The group may be private, membership may be required, or the admin has disabled the member list.',
-      platform: 'facebook',
+      platform: /** @type {'facebook'} */ ('facebook'),
     };
   }
 
   // AC4: Bounded scroll loop — stall detection + limit cap.
-  const members = new Map(); // keyed by profileUrl for deduplication
+  const members = new Map();
   let stalls = 0;
 
   while (members.size < limit && stalls < maxStalls) {
@@ -176,22 +168,24 @@ export async function scrapeGroupMembers(page, groupUrl, options = {}) {
 
     // Extract member links directly from DOM.
     // Facebook renders members as links: /groups/{groupId}/user/{userId}/
-    const rawMembers = await page.evaluate(() => {
+    const rawMembers = /** @type {FacebookGroupMember[]} */ (await page.evaluate(() => {
+      /** @type {FacebookGroupMember[]} */
       const results = [];
-      document.querySelectorAll('a[href*="/groups/"][href*="/user/"]').forEach(a => {
+      document.querySelectorAll('a[href*="/groups/"][href*="/user/"]').forEach((a) => {
         const href = a.getAttribute('href') || '';
-        const name = a.textContent.trim();
+        const name = a.textContent?.trim() || '';
         if (name && href && name.length > 1 && name.length < 100) {
           const fullUrl = href.startsWith('http') ? href : `https://www.facebook.com${href}`;
           results.push({
             name,
             profileUrl: fullUrl.split('?')[0],
-            username: href.split('/').filter(Boolean).pop() || null,
+            username: href.split('/').filter(Boolean).pop() || undefined,
+            platform: /** @type {'facebook'} */ ('facebook'),
           });
         }
       });
       return results;
-    });
+    }));
 
     for (const raw of rawMembers) {
       if (!members.has(raw.profileUrl)) {
@@ -212,5 +206,5 @@ export async function scrapeGroupMembers(page, groupUrl, options = {}) {
     await delay(1000, 3000);
   }
 
-  return Array.from(members.values()).slice(0, limit);
+  return /** @type {Record<string, unknown>[]} */ (Array.from(members.values()).slice(0, limit));
 }

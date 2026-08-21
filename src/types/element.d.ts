@@ -12,4 +12,8 @@ interface Element {
   src?: string;
   /** Rendered visible text for HTMLElement subtypes. */
   innerText?: string;
+  /** Programmatic click (available on HTMLElement in page context). */
+  click(): void;
+  /** Programmatic focus (available on HTMLElement in page context). */
+  focus(options?: FocusOptions): void;
 }

@@ -12,29 +12,29 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
   platform = 'facebook';
 
   /**
-   * @private
-   * @param {any} response
+   * @param {unknown} response
    * @returns {string}
    */
   #getBody(response) {
     if (typeof response === 'string') return response;
-    if (typeof response?.data === 'string') return response.data;
-    if (typeof response?.body === 'string') return response.body;
+    const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
+    if (typeof record?.data === 'string') return record.data;
+    if (typeof record?.body === 'string') return record.body;
     return '';
   }
 
   /**
-   * @private
-   * @param {any} response
+   * @param {unknown} response
    * @returns {string}
    */
   #getUrl(response) {
-    return response?.url || response?.data?.url || '';
+    const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
+    const data = record?.data && typeof record.data === 'object' ? /** @type {Record<string, unknown>} */ (record.data) : null;
+    return typeof record?.url === 'string' ? record.url : (typeof data?.url === 'string' ? data.url : '');
   }
 
   /**
-   * @private
-   * @param {any} response
+   * @param {unknown} response
    * @returns {string}
    */
   #getText(response) {
@@ -43,7 +43,9 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
 
     // Only inspect explicit error arrays inside object payloads,
     // never the full parsed data object (could contain benign matching text).
-    const errors = response?.errors || response?.data?.errors;
+    const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
+    const data = record?.data && typeof record.data === 'object' ? /** @type {Record<string, unknown>} */ (record.data) : null;
+    const errors = data?.errors ?? record?.errors;
     if (Array.isArray(errors) && errors.length > 0) {
       try {
         return JSON.stringify(errors).toLowerCase();
@@ -56,7 +58,7 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isValidPayload(response) {
@@ -64,16 +66,17 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
       return false;
     }
 
-    if (Array.isArray(response) || Array.isArray(response?.data)) {
+    if (Array.isArray(response) || (typeof response === 'object' && response && Array.isArray(/** @type {Record<string, unknown>} */ (response).data))) {
       return true;
     }
 
-    const data = response?.data;
-    if (data && typeof data === 'object' && (data.posts || data.profile || data.comments || data.nodes || data.viewer || data.user || data.name || data.id)) {
+    const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
+    const data = record?.data && typeof record.data === 'object' ? /** @type {Record<string, unknown>} */ (record.data) : null;
+    if (data && (data.posts || data.profile || data.comments || data.nodes || data.viewer || data.user || data.name || data.id)) {
       return true;
     }
 
-    if (response && typeof response === 'object' && (response.name || response.id || response.postUrl || response.content)) {
+    if (record && (record.name || record.id || record.postUrl || record.content)) {
       return true;
     }
 
@@ -98,7 +101,7 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isBotChallenge(response) {
@@ -119,7 +122,8 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
       return true;
     }
 
-    if (response?.status === 403) {
+    const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
+    if (typeof record?.status === 'number' && record.status === 403) {
       return true;
     }
 
@@ -127,11 +131,12 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isRateLimit(response) {
-    if (response?.status === 429) {
+    const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
+    if (typeof record?.status === 'number' && record.status === 429) {
       return true;
     }
 

@@ -10,7 +10,7 @@ import axios from 'axios';
  * Fetch session state values from Facebook home page.
  * These values are required for GraphQL API calls.
  * @param {string} cookieStr - Full cookie string
- * @returns {Promise<object>} Session state values
+ * @returns {Promise<FacebookSessionState>} Session state values
  */
 async function fetchSessionState(cookieStr) {
   const res = await axios.get('https://www.facebook.com/', {
@@ -24,6 +24,7 @@ async function fetchSessionState(cookieStr) {
   });
 
   const html = res.data;
+  /** @type {FacebookSessionState} */
   const state = {};
 
   // Extract session state values from HTML
@@ -44,7 +45,7 @@ async function fetchSessionState(cookieStr) {
 
   for (const [key, pattern] of Object.entries(patterns)) {
     const match = html.match(pattern);
-    state[key] = match ? match[1] : '';
+    state[key] = match ? match[1] : undefined;
   }
 
   return state;
@@ -56,13 +57,13 @@ async function fetchSessionState(cookieStr) {
  *
  * @param {string} targetUid - UID to send message to
  * @param {string} cookieStr - Full cookie string
- * @param {object} tokens - Session tokens (fb_dtsg, lsd, etc.)
+ * @param {FacebookSessionTokens & FacebookSessionState} [tokens]
  * @returns {Promise<{ ok: boolean, response?: string, error?: string }>}
  */
 export async function sendMessageToUidServerSide(targetUid, cookieStr, tokens = {}) {
   try {
     // Fetch session state if not provided
-    const state = tokens.hs ? tokens : await fetchSessionState(cookieStr);
+    const state = tokens.hs ? /** @type {FacebookSessionState} */ (tokens) : await fetchSessionState(cookieStr);
 
     // Build the GraphQL mutation variables
     const variables = JSON.stringify({
@@ -147,7 +148,7 @@ export async function sendMessageToUidServerSide(targetUid, cookieStr, tokens = 
 
     return { ok: true, response: text.substring(0, 200) };
   } catch (err) {
-    return { ok: false, error: err.message };
+    return { ok: false, error: (err instanceof Error ? err.message : String(err)) };
   }
 }
 

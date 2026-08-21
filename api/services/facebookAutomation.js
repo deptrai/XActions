@@ -31,7 +31,9 @@ export function buildUserDataDir(cUser, dryRun = false) {
 // Delay seam — injectable in tests via options.delay
 // ============================================================================
 
+/** @type {(ms: number) => Promise<void>} */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** @type {(min?: number, max?: number) => Promise<void>} */
 export const randomDelay = (min = 1000, max = 3000) => {
   if (min > max) throw new Error(`randomDelay: min (${min}) must be <= max (${max})`);
   return sleep(min + Math.random() * (max - min));
@@ -83,18 +85,10 @@ export const ACCOUNT_RISK_WARNING =
 /**
  * Run a bounded, guarded batch of write actions on Facebook.
  *
- * @param {Array} items - Targets to act on (e.g. post URLs, user IDs)
- * @param {Function} actionFn - async (item) => any — called per item when dryRun=false
- * @param {Object} options
- * @param {boolean} [options.dryRun=true] - Default true; no real write unless explicitly false
- * @param {Function} [options.delay=randomDelay] - Injectable delay seam; pass () => {} in tests
- * @param {number}  [options.delayMin=1000] - Min ms for inter-item delay (Story 4.4); default preserves prior behavior
- * @param {number}  [options.delayMax=3000] - Max ms for inter-item delay (Story 4.4); must be >= delayMin
- * @param {number}  [options.maxBatch=20] - Hard cap on batch size (enforced in both dry-run and real)
- * @param {number}  [options.maxRetry=1] - Max retries per item on failure (0 = no retry)
- * @param {Function} [options.shouldStop] - (results: Array) => boolean — called after each item; return true to abort
- * @param {Function} [options.onProgress] - Called after each item: ({ attempted, total })
- * @returns {Promise<Object>} Structured result (AC4 shape)
+ * @param {unknown[]} items - Targets to act on (e.g. post URLs, user IDs)
+ * @param {(...args: unknown[]) => unknown} actionFn - async (item) => any — called per item when dryRun=false
+ * @param {FacebookOptions} options
+ * @returns {Promise<FacebookBatchResult>} Structured result (AC4 shape)
  */
 export async function runGuardedBatch(items, actionFn, options = {}) {
   if (!Array.isArray(items)) {
@@ -224,7 +218,7 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
       }
 
       if (lastErr !== null) {
-        results.push({ target: item, ok: false, error: lastErr?.message ?? String(lastErr) });
+        results.push({ target: item, ok: false, error: (lastErr instanceof Error ? (lastErr instanceof Error ? lastErr.message : String(lastErr)) : String(lastErr)) ?? String(lastErr) });
         failed++;
       }
     }
@@ -262,7 +256,7 @@ export async function runGuardedBatch(items, actionFn, options = {}) {
         }
       } catch (err) {
         // delay errors must not abort batch; log and continue
-        console.warn(`⚠️ runGuardedBatch: delay threw — ${err?.message ?? err}. Continuing.`);
+        console.warn(`⚠️ runGuardedBatch: delay threw — ${(err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err)) ?? err}. Continuing.`);
       }
     }
   }
@@ -293,8 +287,8 @@ export { loginWithCookie, createBrowser, createPage };
  * Find Like button with locale-aware selectors.
  * Single chokepoint for locale strings (AC2.5).
  *
- * @param {Object} page - Puppeteer page
- * @returns {Promise<{element: Object, alreadyLiked: boolean}>}
+ * @param {import('puppeteer').Page} page - Puppeteer page
+ * @returns {Promise<{element: import('puppeteer').ElementHandle, alreadyLiked: boolean}>}
  * @throws {Error} If Like button not found (locale unsupported or post unreachable)
  */
 export async function findLikeButton(page) {
@@ -328,7 +322,7 @@ export async function findLikeButton(page) {
   for (const selector of unlikeSelectors) {
     const element = await page.$(selector);
     if (element) {
-      return { element, alreadyLiked: true };
+      return { element: /** @type {import('puppeteer').ElementHandle} */ (element), alreadyLiked: true };
     }
   }
 
@@ -336,7 +330,7 @@ export async function findLikeButton(page) {
   for (const selector of likeSelectors) {
     const element = await page.$(selector);
     if (element) {
-      return { element, alreadyLiked: false };
+      return { element: /** @type {import('puppeteer').ElementHandle} */ (element), alreadyLiked: false };
     }
   }
 
@@ -350,7 +344,7 @@ export async function findLikeButton(page) {
  * Like a single Facebook post (AC2).
  * Internal helper for likeFacebookPosts.
  *
- * @param {Object} page - Puppeteer page
+ * @param {import('puppeteer').Page} page - Puppeteer page
  * @param {string} postUrl - Full URL to Facebook post
  * @returns {Promise<{liked: boolean, alreadyLiked: boolean}>}
  * @throws {Error} If Like button not found
@@ -408,15 +402,10 @@ async function likeSinglePost(page, postUrl) {
 /**
  * Auto-like one or more Facebook posts with dry-run preview (Story 2.2).
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string[]} postUrls - Array of Facebook post URLs to like
- * @param {Object} options - Configuration options
- * @param {boolean} [options.dryRun=true] - Preview mode (default); set false for real writes
- * @param {Function} [options.delay] - Injectable delay between actions
- * @param {number} [options.maxBatch=20] - Max posts per batch
- * @param {number} [options.maxRetry=1] - Retry attempts per post on failure
- * @param {Function} [options.likeFn] - Injectable like function (for testing); defaults to likeSinglePost
- * @returns {Promise<Object>} Result with dryRun, preview, results, attempted, succeeded, failed
+ * @param {FacebookOptions} options - Configuration options
+ * @returns {Promise<FacebookBatchResult>} Result with dryRun, preview, results, attempted, succeeded, failed
  */
 export async function likeFacebookPosts(page, postUrls, options = {}) {
   // Nullish-coalesce so an explicit `likeFn: null` falls back to the default
@@ -429,12 +418,13 @@ export async function likeFacebookPosts(page, postUrls, options = {}) {
   const capturedResults = new Map();
 
   // Build actionFn that wraps likeFn with page (AC1.2)
-  const actionFn = async (postUrl) => {
+  const actionFn = /** @type {(item: unknown) => Promise<Record<string, unknown>>} */ (async (item) => {
+    const postUrl = /** @type {string} */ (item);
     const result = await likeFn(page, postUrl);
     // Capture the return value so we can merge it into results later
     capturedResults.set(postUrl, result);
     return result;
-  };
+  });
 
   // Route through runGuardedBatch — single chokepoint (AC1.2)
   const batchResult = await runGuardedBatch(postUrls, actionFn, guardedOptions);
@@ -461,8 +451,8 @@ export async function likeFacebookPosts(page, postUrls, options = {}) {
 /**
  * Find comment input with locale-aware selectors.
  *
- * @param {Object} page - Puppeteer page
- * @returns {Promise<Object>} Comment input element
+ * @param {import('puppeteer').Page} page - Puppeteer page
+ * @returns {Promise<import('puppeteer').ElementHandle>} Comment input element
  * @throws {Error} If comment input not found (locale unsupported or post unreachable)
  */
 async function findCommentInput(page) {
@@ -487,7 +477,7 @@ async function findCommentInput(page) {
 
   for (const selector of commentSelectors) {
     const element = await page.$(selector);
-    if (element) return element;
+    if (element) return /** @type {import('puppeteer').ElementHandle} */ (element);
   }
 
   throw new Error(`❌ Comment input not found; locale unsupported or post unreachable`);
@@ -497,7 +487,7 @@ async function findCommentInput(page) {
  * Comment on a single Facebook post (AC2).
  * Internal helper for commentOnFacebookPosts.
  *
- * @param {Object} page - Puppeteer page
+ * @param {import('puppeteer').Page} page - Puppeteer page
  * @param {string} postUrl - Full URL to Facebook post
  * @param {string} commentText - User-provided comment content
  * @returns {Promise<{commented: boolean}>}
@@ -532,16 +522,11 @@ async function commentSinglePost(page, postUrl, commentText) {
 /**
  * Auto-comment on one or more Facebook posts with dry-run preview (Story 2.3).
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string[]} postUrls - Array of Facebook post URLs to comment on
  * @param {string} commentText - User-provided comment content
- * @param {Object} options - Configuration options
- * @param {boolean} [options.dryRun=true] - Preview mode (default); set false for real writes
- * @param {Function} [options.delay] - Injectable delay between actions
- * @param {number} [options.maxBatch=20] - Max posts per batch
- * @param {number} [options.maxRetry=1] - Retry attempts per post on failure
- * @param {Function} [options.commentFn] - Injectable comment function (for testing); defaults to commentSinglePost
- * @returns {Promise<Object>} Result with dryRun, preview, results, attempted, succeeded, failed
+ * @param {FacebookOptions} options - Configuration options
+ * @returns {Promise<FacebookBatchResult>} Result with dryRun, preview, results, attempted, succeeded, failed
  */
 export async function commentOnFacebookPosts(page, postUrls, commentText, options = {}) {
   // Nullish-coalesce so explicit `commentFn: null` falls back to default (same guard class as dryRun/likeFn).
@@ -554,9 +539,10 @@ export async function commentOnFacebookPosts(page, postUrls, commentText, option
   }
 
   // Build actionFn that wraps commentFn with page and commentText (AC1.2)
-  const actionFn = async (postUrl) => {
+  const actionFn = /** @type {(item: unknown) => Promise<Record<string, unknown>>} */ (async (item) => {
+    const postUrl = /** @type {string} */ (item);
     return await commentFn(page, postUrl, commentText);
-  };
+  });
 
   // Route through runGuardedBatch — single chokepoint (AC1.2)
   const batchResult = await runGuardedBatch(postUrls, actionFn, guardedOptions);
@@ -587,8 +573,8 @@ export async function commentOnFacebookPosts(page, postUrls, commentText, option
 /**
  * Find post composer with locale-aware selectors.
  *
- * @param {Object} page - Puppeteer page
- * @returns {Promise<Object>} Post composer element
+ * @param {import('puppeteer').Page} page - Puppeteer page
+ * @returns {Promise<import('puppeteer').ElementHandle>} Post composer element
  * @throws {Error} If post composer not found (locale unsupported or page unreachable)
  */
 async function findPostComposer(page) {
@@ -649,7 +635,7 @@ async function findPostComposer(page) {
     try {
       const element = await page.waitForSelector(selector, { timeout: 3000 });
       if (element) {
-        return element;
+        return /** @type {import('puppeteer').ElementHandle} */ (element);
       }
     } catch (_) {}
   }
@@ -660,8 +646,8 @@ async function findPostComposer(page) {
 /**
  * Find post submit button with locale-aware selectors.
  *
- * @param {Object} page - Puppeteer page
- * @returns {Promise<Object>} Submit button element
+ * @param {import('puppeteer').Page} page - Puppeteer page
+ * @returns {Promise<import('puppeteer').ElementHandle>} Submit button element
  * @throws {Error} If submit button not found
  */
 async function findPostSubmitButton(page) {
@@ -676,7 +662,7 @@ async function findPostSubmitButton(page) {
     try {
       const element = await page.waitForSelector(`${selector}:not([aria-disabled="true"])`, { timeout: 3000 });
       if (element) {
-        return element;
+        return /** @type {import('puppeteer').ElementHandle} */ (element);
       }
     } catch (_) {}
   }
@@ -695,7 +681,7 @@ async function findPostSubmitButton(page) {
       return null;
     });
     if (element && element.asElement()) {
-      return element.asElement();
+      return /** @type {import('puppeteer').ElementHandle} */ (element.asElement());
     }
   } catch (_) {}
 
@@ -706,7 +692,7 @@ async function findPostSubmitButton(page) {
  * Create a single Facebook post (AC2).
  * Internal helper for createFacebookPost.
  *
- * @param {Object} page - Puppeteer page
+ * @param {import('puppeteer').Page} page - Puppeteer page
  * @param {string} content - User-provided post content
  * @returns {Promise<{posted: boolean, postUrl?: string}>}
  * @throws {Error} If post composer or submit button not found
@@ -731,6 +717,7 @@ async function createSinglePost(page, content) {
 
   // Find and click submit button (AC2.7)
   const submitElement = await findPostSubmitButton(page);
+  if (!submitElement) throw new Error('❌ submitElement not found');
   await submitElement.click();
 
   // Wait for post to be created
@@ -748,15 +735,10 @@ async function createSinglePost(page, content) {
 /**
  * Create a Facebook text post with dry-run preview (Story 2.4).
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} content - User-provided post content
- * @param {Object} options - Configuration options
- * @param {boolean} [options.dryRun=true] - Preview mode (default); set false for real writes
- * @param {Function} [options.delay] - Injectable delay (not used for single post)
- * @param {number} [options.maxBatch=20] - Max batch size (enforced even for single item)
- * @param {number} [options.maxRetry=1] - Retry attempts on failure
- * @param {Function} [options.createPostFn] - Injectable create function (for testing); defaults to createSinglePost
- * @returns {Promise<Object>} Result with dryRun, preview, results, attempted, succeeded, failed
+ * @param {FacebookOptions} options - Configuration options
+ * @returns {Promise<FacebookBatchResult>} Result with dryRun, preview, results, attempted, succeeded, failed
  */
 export async function createFacebookPost(page, content, options = {}) {
   // Nullish-coalesce so explicit `createPostFn: null` falls back to default (same guard class as dryRun/likeFn).
@@ -772,11 +754,12 @@ export async function createFacebookPost(page, content, options = {}) {
   // return values, so surface them via a side-channel Map keyed by content (same
   // pattern as likeFacebookPosts).
   const captured = new Map();
-  const actionFn = async (contentItem) => {
+  const actionFn = /** @type {(item: unknown) => Promise<Record<string, unknown>>} */ (async (item) => {
+    const contentItem = /** @type {string} */ (item);
     const r = await createPostFn(page, contentItem);
     captured.set(contentItem, r);
     return r;
-  };
+  });
 
   // Route through runGuardedBatch with single-item array — ensures guardrail consistency (AC4.13)
   const batchResult = await runGuardedBatch([content], actionFn, guardedOptions);
@@ -817,16 +800,10 @@ export async function createFacebookPost(page, content, options = {}) {
  * functions but is NOT used at schedule time — the worker acquires its own
  * session at execution (see facebookScheduler.js). It MAY be null.
  *
- * @param {Object|null} page - Accepted but NOT used (may be null)
- * @param {Object} params
- * @param {string} params.content - Post content (non-empty)
- * @param {string[]} [params.mediaUrls] - Media URLs (JSON-serialised; reserved for future use)
- * @param {string} params.scheduledAt - ISO-8601 future datetime (>= now + 60s)
- * @param {string} [params.facebookAccountId] - Saved FacebookAccount id to post from
- * @param {Object} [options]
- * @param {boolean} [options.dryRun=true] - Default true; only explicit false creates a DB record
- * @param {string} [options.userId] - Required when dryRun:false; MUST come from the authenticated caller
- * @returns {Promise<Object>} Preview (dry-run) or { scheduleId, scheduledAt, status } (real)
+ * @param {import('puppeteer').Page | null} page - Accepted but NOT used (may be null)
+ * @param {{ content?: string; mediaUrls?: string[]; scheduledAt?: string; facebookAccountId?: string }} [contentItem]
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<Record<string, unknown>>} Preview (dry-run) or { scheduleId, scheduledAt, status } (real)
  */
 export async function scheduleFacebookPost(
   page,
@@ -841,6 +818,9 @@ export async function scheduleFacebookPost(
   }
 
   // Parse and validate scheduledAt as ISO-8601
+  if (typeof scheduledAt !== 'string') {
+    throw new Error('❌ scheduleFacebookPost: scheduledAt must be a string');
+  }
   const scheduledDate = new Date(scheduledAt);
   if (isNaN(scheduledDate.getTime())) {
     throw new Error('❌ scheduleFacebookPost: scheduledAt must be a valid ISO-8601 datetime');
@@ -876,7 +856,7 @@ export async function scheduleFacebookPost(
   // --- real run: persist one Schedule row scoped by userId (AC4) ---
   const schedule = await prisma.schedule.create({
     data: {
-      userId,
+      userId: /** @type {string} */ (userId),
       content,
       mediaUrls: mediaUrls ? JSON.stringify(mediaUrls) : null,
       scheduledAt: scheduledDate,
@@ -907,7 +887,7 @@ export async function scheduleFacebookPost(
  * messengerShare.js); the "Share now" action is UNVERIFIED — wrapped in a
  * fallback chain with a clear throw if none resolve.
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} postUrl - Full URL to Facebook post
  * @returns {Promise<{shared: boolean, alreadyShared?: boolean}>}
  * @throws {Error} If Share button or "Share now" action not found (PII-free)
@@ -969,7 +949,7 @@ async function shareSinglePost(page, postUrl) {
     // Only a selector TIMEOUT means "not present yet" → fall through to text lookup.
     // A detached frame / destroyed context (e.g. a redirect) is a real error — re-throw
     // it instead of masking it behind the generic "Share now not found" below.
-    if (!/timeout|waiting for selector/i.test(err?.message ?? '')) throw err;
+    if (!/timeout|waiting for selector/i.test((err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err)) ?? '')) throw err;
   }
 
   // Text/role fallback: find a clickable menuitem/button whose text EXACTLY equals the
@@ -984,7 +964,7 @@ async function shareSinglePost(page, postUrl) {
     }, SHARE_NOW_TEXT);
     // evaluateHandle always returns a JSHandle (truthy even when it wraps null);
     // asElement() returns the ElementHandle, or null when the wrapped value is null.
-    shareNowEl = handle.asElement();
+    shareNowEl = /** @type {import('puppeteer').ElementHandle | null} */ (handle.asElement());
   }
 
   if (!shareNowEl) {
@@ -1009,15 +989,10 @@ async function shareSinglePost(page, postUrl) {
  * dry-run preview (Story 4.2). Clones the likeFacebookPosts shape — routes
  * postUrls through runGuardedBatch; the only difference is the per-URL action.
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string[]} postUrls - Array of Facebook post URLs to share
- * @param {Object} options - Configuration options
- * @param {boolean} [options.dryRun=true] - Preview mode (default); set false for real shares
- * @param {Function} [options.delay] - Injectable delay between actions
- * @param {number} [options.maxBatch=20] - Max posts per batch
- * @param {number} [options.maxRetry=1] - Retry attempts per post on failure
- * @param {Function} [options.shareFn] - Injectable share function (for testing); defaults to shareSinglePost
- * @returns {Promise<Object>} Result with dryRun, preview, results, attempted, succeeded, failed
+ * @param {FacebookOptions} options - Configuration options
+ * @returns {Promise<FacebookBatchResult>} Result with dryRun, preview, results, attempted, succeeded, failed
  */
 export async function shareFacebookPosts(page, postUrls, options = {}) {
   // Validate postUrls before opening anything (AC4) — fail before browser.
@@ -1047,11 +1022,12 @@ export async function shareFacebookPosts(page, postUrls, options = {}) {
   // Capture per-URL return values (e.g. alreadyShared) via closure Map (AC3.9).
   const capturedResults = new Map();
 
-  const actionFn = async (postUrl) => {
+  const actionFn = /** @type {(item: unknown) => Promise<Record<string, unknown>>} */ (async (item) => {
+    const postUrl = /** @type {string} */ (item);
     const result = await shareFn(page, postUrl);
     capturedResults.set(postUrl, result);
     return result;
-  };
+  });
 
   // Route through runGuardedBatch — single chokepoint (AC1.2).
   const batchResult = await runGuardedBatch(postUrls, actionFn, guardedOptions);
@@ -1087,7 +1063,7 @@ const DEFAULT_DURATION_SECONDS = 60;
  * options.createOperation so the unit tests stay DB-free.
  * @returns {Promise<{id: string}>}
  */
-async function defaultCreateOperation({ userId, targetUrl, durationSeconds }) {
+async function defaultCreateOperation(/** @type {{ userId: string; targetUrl: string; durationSeconds: number }} */ { userId, targetUrl, durationSeconds }) {
   const op = await prisma.operation.create({
     data: {
       userId,
@@ -1105,7 +1081,7 @@ async function defaultCreateOperation({ userId, targetUrl, durationSeconds }) {
  * Default Operation update seam (real Prisma path). Injectable in tests via
  * options.updateOperation so the success/failure update stays DB-free.
  */
-async function defaultUpdateOperation(id, data) {
+async function defaultUpdateOperation(/** @type {string} */ id, /** @type {Record<string, unknown>} */ data) {
   await prisma.operation.update({ where: { id }, data });
 }
 
@@ -1115,20 +1091,14 @@ async function defaultUpdateOperation(id, data) {
  * comment/share) — scroll only. NOT a runGuardedBatch case (no item list, no
  * write action — explicitly excluded from NFR-7/NFR-8).
  *
- * @param {Object|null} page - Puppeteer page (authenticated); MAY be null in dry-run
+ * @param {import('puppeteer').Page | null} page - Puppeteer page (authenticated); MAY be null in dry-run
  * @param {string} targetUrl - facebook.com page/post URL to scroll
- * @param {Object} [options]
- * @param {boolean} [options.dryRun=true] - Default true; only explicit false drives the browser
- * @param {number} [options.durationSeconds=60] - Dwell time; clamped to MAX_DURATION_SECONDS (300)
- * @param {string} [options.userId] - If provided on a real run, an Operation is recorded
- * @param {Function} [options.delay=randomDelay] - Injectable pause seam between scrolls.
+ * @param {FacebookOptions} [options]
  *   ⚠️ COUPLED WITH `now`: if you override `delay` with a non-sleeping fn (e.g. tests pass
  *   `() => {}`), you MUST also override `now` with a fake clock that advances — otherwise the
  *   wall-clock loop would busy-spin. An iteration backstop bounds the damage, but the contract
  *   is: override both together or neither.
- * @param {Function} [options.now] - Injectable clock (default () => Date.now()); see `delay`.
- * @param {Function} [options.createOperation] - Injectable Operation persistence seam
- * @returns {Promise<Object>} Preview (dry-run) or run summary (real)
+ * @returns {Promise<Record<string, unknown>>} Preview (dry-run) or run summary (real)
  */
 export async function warmupScrollFeed(page, targetUrl, options = {}) {
   const {
@@ -1172,6 +1142,7 @@ export async function warmupScrollFeed(page, targetUrl, options = {}) {
   }
 
   // --- real run ---
+  if (!page) throw new Error('❌ warmupScrollFeed: page is required for real runs');
   const durationMs = effectiveDuration * 1000;
 
   // Randomized inter-scroll pause bounds (named so the iteration cap below stays in sync).
@@ -1187,9 +1158,10 @@ export async function warmupScrollFeed(page, targetUrl, options = {}) {
   const maxScrolls = Math.ceil(durationMs / SCROLL_PAUSE_MIN_MS) + 1;
 
   // Operation record only when a userId is supplied (AC5) — skip silently otherwise.
+  /** @type {Record<string, unknown> | null} */
   let operation = null;
   if (userId) {
-    operation = await createOperation({ userId, targetUrl, durationSeconds: effectiveDuration });
+    operation = /** @type {Record<string, unknown>} */ (await createOperation({ userId, targetUrl, durationSeconds: effectiveDuration }));
   }
 
   let scrolls = 0;
@@ -1209,7 +1181,7 @@ export async function warmupScrollFeed(page, targetUrl, options = {}) {
 
     if (operation) {
       await Promise.resolve(
-        updateOperation(operation.id, {
+        updateOperation(/** @type {string} */ (operation.id), {
           status: 'completed', completedAt: new Date(), result: JSON.stringify({ scrolls }),
         }),
       );
@@ -1221,20 +1193,21 @@ export async function warmupScrollFeed(page, targetUrl, options = {}) {
       targetUrl,
       durationSeconds: effectiveDuration,
       scrolls,
-      operationId: operation?.id ?? null,
+      operationId: /** @type {string | null} */ (operation?.id ?? null),
     };
   } catch (err) {
     // PII-bounded error: preserve both code AND a truncated message (Puppeteer nav errors
     // carry the actionable detail in message). targetUrl is not a secret (AC5.10); no cookie
     // is in scope here. Truncated so it can never grow unbounded.
-    const safeError = err?.code
-      ? `${err.code}: ${(err?.message ?? '').slice(0, 150)}`
-      : (err?.name && err.name !== 'Error' ? err.name : (err?.message ?? 'unknown error').slice(0, 200));
+    const errRecord = /** @type {Record<string, unknown>} */ (err);
+    const safeError = (typeof errRecord.code === 'string' && errRecord.code)
+      ? `${errRecord.code}: ${(err instanceof Error ? err.message : String(err)).slice(0, 150)}`
+      : (err instanceof Error && err.name !== 'Error' ? err.name : (err instanceof Error ? err.message : 'unknown error').slice(0, 200));
     if (operation) {
       // Promise.resolve() so a synchronously-throwing injected updateOperation can't bypass
       // the catch and mask the original err.
       await Promise.resolve(
-        updateOperation(operation.id, {
+        updateOperation(/** @type {string} */ (operation.id), {
           status: 'failed', completedAt: new Date(), error: safeError,
         }),
       ).catch(() => {});
@@ -1259,7 +1232,7 @@ const GROUP_ACTION_DELAY_MAX_MS = 90000;
  * selectors — fallback chain + clear PII-free throw). A group requiring admin
  * approval returns status:'pending' (NOT a failure — FR-18).
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} groupUrl - facebook.com group URL
  * @returns {Promise<{joined: boolean, status: 'joined'|'pending'}>}
  * @throws {Error} If the Join button is not found (PII-free)
@@ -1345,7 +1318,7 @@ async function joinSingleGroup(page, groupUrl) {
  * surface and scroll-collects up to `limit` group URLs. Injectable via
  * options.searchFn so tests never hit the network.
  *
- * @param {Object} page - Puppeteer page
+ * @param {import('puppeteer').Page} page - Puppeteer page
  * @param {string} keyword - search term
  * @param {number} limit - max group URLs to collect
  * @returns {Promise<string[]>}
@@ -1360,7 +1333,7 @@ async function defaultGroupSearch(page, keyword, limit) {
   while (collected.size < limit && stalls < 5) {
     const before = collected.size;
     const links = await page.$$eval('a[href*="/groups/"]', (as) =>
-      as.map((a) => a.href).filter((h) => /\/groups\/[^/]+\/?$/.test(h.split('?')[0])),
+      as.map((a) => (a.getAttribute('href') || '')).filter((h) => /\/groups\/[^/]+\/?$/.test(h.split('?')[0])),
     );
     for (const href of links) {
       collected.add(href.split('?')[0]);
@@ -1378,21 +1351,14 @@ async function defaultGroupSearch(page, keyword, limit) {
  * Cluster-1 batch write: routes through runGuardedBatch (NFR-7) with the
  * mandatory account-risk warning (NFR-8) and a 30s inter-join delay floor (NFR-6).
  *
- * @param {Object} page - Puppeteer page (authenticated); may be null for URL-mode dry-run
- * @param {Object} input - `{ groupUrls: string[] }` (URL mode) or `{ keyword, limit }` (keyword mode)
- * @param {Object} [options]
- * @param {boolean} [options.dryRun=true] - Default true; only explicit false sends real joins.
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated); may be null for URL-mode dry-run
+ * @param {Record<string, unknown>} input - `{ groupUrls: string[] }` (URL mode) or `{ keyword, limit }` (keyword mode)
+ * @param {FacebookOptions} [options]
  *   NOTE: in keyword mode, dry-run does NOT resolve URLs (search would drive the browser) —
  *   it returns an empty preview + a warning. Use URL mode (or a real run) to preview groups.
- * @param {number} [options.delayMin] - Clamped UP to GROUP_ACTION_DELAY_FLOOR_MS (30s) — cannot go lower
- * @param {number} [options.delayMax] - Defaults to 90s
- * @param {Function} [options.delay] - Injectable delay seam (tests pass a spy)
- * @param {Function} [options.joinFn] - Injectable per-group join (default joinSingleGroup)
- * @param {Function} [options.searchFn] - Injectable keyword search (default defaultGroupSearch)
- * @param {number} [options.maxBatch=20] - Inherited from runGuardedBatch; BOUNDS the number of
  *   groups joined per call. In keyword mode, `limit` should be <= maxBatch — a resolved set
  *   larger than maxBatch makes runGuardedBatch throw an "exceeds maxBatch" error.
- * @returns {Promise<Object>} runGuardedBatch result, with per-URL status merged in
+ * @returns {Promise<FacebookBatchResult>} runGuardedBatch result, with per-URL status merged in
  */
 export async function joinFacebookGroups(page, input, options = {}) {
   const {
@@ -1439,7 +1405,7 @@ export async function joinFacebookGroups(page, input, options = {}) {
       };
     }
     // Real run: resolve URLs via the (injectable) search seam, then validate.
-    const limit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 10;
+    const limit = typeof input.limit === 'number' && Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 10;
     groupUrls = await searchFn(page, input.keyword.trim(), limit);
     if (!Array.isArray(groupUrls) || groupUrls.length === 0) {
       // Empty search results → return an empty result, do NOT throw (AC3).
@@ -1462,8 +1428,8 @@ export async function joinFacebookGroups(page, input, options = {}) {
   // Guard with Number.isFinite (not just ??): NaN/Infinity (e.g. from parseFloat('x'))
   // would survive `?? floor` and make Math.max(floor, NaN) === NaN, silently bypassing
   // the floor and surfacing a confusing error from runGuardedBatch's own validation.
-  const safeMinOpt = Number.isFinite(delayMinOpt) && delayMinOpt >= 0 ? delayMinOpt : GROUP_ACTION_DELAY_FLOOR_MS;
-  const safeMaxOpt = Number.isFinite(delayMaxOpt) && delayMaxOpt >= 0 ? delayMaxOpt : GROUP_ACTION_DELAY_MAX_MS;
+  const safeMinOpt = typeof delayMinOpt === 'number' && Number.isFinite(delayMinOpt) && delayMinOpt >= 0 ? delayMinOpt : GROUP_ACTION_DELAY_FLOOR_MS;
+  const safeMaxOpt = typeof delayMaxOpt === 'number' && Number.isFinite(delayMaxOpt) && delayMaxOpt >= 0 ? delayMaxOpt : GROUP_ACTION_DELAY_MAX_MS;
   const delayMin = Math.max(GROUP_ACTION_DELAY_FLOOR_MS, safeMinOpt);
   const delayMax = Math.max(delayMin, safeMaxOpt);
 
@@ -1472,11 +1438,12 @@ export async function joinFacebookGroups(page, input, options = {}) {
   // Capture per-URL status (joined/pending) for the post-batch merge (AC4) —
   // same closure-Map pattern as 4.2's alreadyShared.
   const captured = new Map();
-  const actionFn = async (groupUrl) => {
+  const actionFn = /** @type {(item: unknown) => Promise<Record<string, unknown>>} */ (async (item) => {
+    const groupUrl = /** @type {string} */ (item);
     const result = await joinFn(page, groupUrl);
     captured.set(groupUrl, result);
     return result;
-  };
+  });
 
   const batchResult = await runGuardedBatch(groupUrls, actionFn, guardedOptions);
 
@@ -1509,7 +1476,7 @@ export const GROUP_POST_BATCH_LIMIT = 10;
  * Selectors are UNVERIFIED (locale-aware, fallback chain) — see selectors-facebook.md
  * Groups section. A PII-free throw is raised if the composer or submit button is not found.
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} groupUrl - facebook.com group URL
  * @param {string} content - Post content to type
  * @returns {Promise<{posted: boolean}>}
@@ -1537,7 +1504,7 @@ async function postToSingleGroup(page, groupUrl, content) {
   } catch (err) {
     // Only swallow selector timeout — a detached frame / destroyed context is a real
     // error that should propagate, not be masked behind a generic "not found" throw.
-    if (!/timeout|waiting for selector/i.test(err?.message ?? '')) throw err;
+    if (!/timeout|waiting for selector/i.test((err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err)) ?? '')) throw err;
     throw new Error('❌ Group post composer not found; group unreachable or locale unsupported');
   }
 
@@ -1593,16 +1560,10 @@ async function postToSingleGroup(page, groupUrl, content) {
  * for a future story. mediaUrls is validated for type only and documented as
  * not-yet-implemented; it is NOT silently dropped.
  *
- * @param {Object} page - Puppeteer page (authenticated); may be null for dry-run
- * @param {Object} input - { groupUrls: string[], content: string, mediaUrls?: string[] }
- * @param {Object} [options]
- * @param {boolean} [options.dryRun=true] - Default true; only explicit false posts for real.
- * @param {boolean} [options.force=false] - Allow >10 groups (up to runGuardedBatch maxBatch=20).
- * @param {number} [options.delayMin] - Clamped UP to GROUP_ACTION_DELAY_FLOOR_MS (30s).
- * @param {number} [options.delayMax] - Defaults to 90s.
- * @param {Function} [options.delay] - Injectable delay seam (tests pass a spy).
- * @param {Function} [options.postFn] - Injectable per-group post (default postToSingleGroup).
- * @returns {Promise<Object>} runGuardedBatch result with per-group {target, ok, error?}
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated); may be null for dry-run
+ * @param {FacebookOptions} input
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<FacebookBatchResult>} runGuardedBatch result with per-group {target, ok, error?}
  */
 export async function postToFacebookGroups(page, input, options = {}) {
   const {
@@ -1658,16 +1619,17 @@ export async function postToFacebookGroups(page, input, options = {}) {
   }
 
   // --- NFR-6 delay floor: clamp UP to 30s, never below; default 30s/90s ---
-  const safeMinOpt = Number.isFinite(delayMinOpt) && delayMinOpt >= 0 ? delayMinOpt : GROUP_ACTION_DELAY_FLOOR_MS;
-  const safeMaxOpt = Number.isFinite(delayMaxOpt) && delayMaxOpt >= 0 ? delayMaxOpt : GROUP_ACTION_DELAY_MAX_MS;
+  const safeMinOpt = typeof delayMinOpt === 'number' && Number.isFinite(delayMinOpt) && delayMinOpt >= 0 ? delayMinOpt : GROUP_ACTION_DELAY_FLOOR_MS;
+  const safeMaxOpt = typeof delayMaxOpt === 'number' && Number.isFinite(delayMaxOpt) && delayMaxOpt >= 0 ? delayMaxOpt : GROUP_ACTION_DELAY_MAX_MS;
   const delayMin = Math.max(GROUP_ACTION_DELAY_FLOOR_MS, safeMinOpt);
   const delayMax = Math.max(delayMin, safeMaxOpt);
 
   const guardedOptions = { ...rest, delayMin, delayMax };
 
-  const actionFn = async (groupUrl) => {
+  const actionFn = /** @type {(item: unknown) => Promise<Record<string, unknown>>} */ (async (item) => {
+    const groupUrl = /** @type {string} */ (item);
     return postFn(page, groupUrl, content);
-  };
+  });
 
   const batchResult = await runGuardedBatch(groupUrls, actionFn, guardedOptions);
 
@@ -1697,6 +1659,7 @@ const FRIEND_REQUEST_DELAY_MAX_MS = 180000;
 const FR_PII_PHONE_RE = /(\+?\d[\d\s\-().]{7,}\d)/g;
 const FR_PII_EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
 
+/** @param {string|null|undefined} value */
 function stripFriendPii(value) {
   if (!value || typeof value !== 'string') return value ?? null;
   const cleaned = value.replace(FR_PII_PHONE_RE, '').replace(FR_PII_EMAIL_RE, '').trim();
@@ -1714,7 +1677,7 @@ function stripFriendPii(value) {
  *
  * UNVERIFIED locale-aware selectors — fallback chain. See selectors-facebook.md.
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} profileUrl - facebook.com profile URL
  * @returns {Promise<{sent: boolean, status: 'sent'|'already_friend'|'pending'|'not_found'}>}
  * @throws {Error} If the profile is unreachable / no actionable button found (PII-free)
@@ -1756,7 +1719,7 @@ async function sendSingleFriendRequest(page, profileUrl) {
       { timeout: 5000 },
     );
   } catch (err) {
-    if (err?.name === 'TimeoutError' || /timeout/i.test(err?.message ?? '')) {
+    if (err instanceof Error && (err.name === 'TimeoutError' || /timeout/i.test(err.message))) {
       throw new Error('❌ Friend request controls not found; profile unreachable, blocked, or locale unsupported');
     }
     throw err;
@@ -1805,7 +1768,7 @@ async function sendSingleFriendRequest(page, profileUrl) {
  * profile cards. Extracts ONLY { name, profileUrl, location? } per card — NFR-11
  * strips phone/email even if visible. Injectable via options.searchFn.
  *
- * @param {Object} page - Puppeteer page
+ * @param {import('puppeteer').Page} page - Puppeteer page
  * @param {number} limit - max profiles to collect
  * @returns {Promise<Array<{ name: string|null, profileUrl: string, location: string|null }>>}
  */
@@ -1863,17 +1826,11 @@ async function defaultFriendSuggestions(page, limit) {
  * with the mandatory non-suppressible account-risk warning (NFR-8) and a 60s inter-request
  * delay floor (NFR-6). batchLimit <= 20/session (runGuardedBatch default maxBatch).
  *
- * @param {Object} page - Puppeteer page (authenticated); may be null for uid_list dry-run
- * @param {Object} input - { mode: 'uid_list'|'suggestions'|'location', targets?, location?, limit? }
- * @param {Object} [options]
- * @param {boolean} [options.dryRun=true] - Default true; only explicit false sends real requests.
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated); may be null for uid_list dry-run
+ * @param {FacebookOptions} input
+ * @param {FacebookOptions} [options]
  *   In suggestions/location mode, dry-run does NOT drive the browser — returns empty preview + warning.
- * @param {number} [options.delayMin] - Clamped UP to FRIEND_REQUEST_DELAY_FLOOR_MS (60s) — cannot go lower
- * @param {number} [options.delayMax] - Defaults to 180s
- * @param {Function} [options.delay] - Injectable delay seam (tests pass a spy)
- * @param {Function} [options.requestFn] - Injectable per-profile request (default sendSingleFriendRequest)
- * @param {Function} [options.searchFn] - Injectable suggestions search (default defaultFriendSuggestions)
- * @returns {Promise<Object>} runGuardedBatch result, with per-profile status merged in
+ * @returns {Promise<FacebookBatchResult>} runGuardedBatch result, with per-profile status merged in
  */
 export async function sendFriendRequests(page, input, options = {}) {
   const {
@@ -1901,6 +1858,7 @@ export async function sendFriendRequests(page, input, options = {}) {
       throw new Error('❌ sendFriendRequests: uid_list mode requires a non-empty targets array');
     }
     for (const t of targets) {
+      if (typeof t !== 'string') throw new Error('❌ sendFriendRequests: uid_list targets must be strings');
       assertFacebookUrl(t, 'sendFriendRequests: target');
     }
     profileUrls = targets;
@@ -1922,17 +1880,18 @@ export async function sendFriendRequests(page, input, options = {}) {
     if (mode === 'location' && (typeof location !== 'string' || !location.trim())) {
       throw new Error('❌ sendFriendRequests: location mode requires a non-empty location string');
     }
-    const limit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 10;
+    const limit = typeof input.limit === 'number' && Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 10;
     const collected = await searchFn(page, limit);
-    let profiles = Array.isArray(collected) ? collected : [];
+    const rawProfiles = Array.isArray(collected) ? collected : [];
     // NFR-11: strip phone/email from every collected text field at normalizer level.
-    profiles = profiles.map((p) => ({
-      name: stripFriendPii(p.name),
-      profileUrl: p.profileUrl,
-      location: stripFriendPii(p.location),
-    }));
+    let profiles = /** @type {{ name: string|null; profileUrl: string; location: string|null }[]} */ (rawProfiles.map((p) => ({
+      name: stripFriendPii(/** @type {string|null|undefined} */ (p.name)),
+      profileUrl: /** @type {string} */ (p.profileUrl),
+      location: stripFriendPii(/** @type {string|null|undefined} */ (p.location)),
+    })));
     if (mode === 'location') {
-      const needle = location.trim().toLowerCase();
+      const safeLocation = typeof location === 'string' ? location : '';
+      const needle = safeLocation.trim().toLowerCase();
       profiles = profiles.filter((p) => (p.location ?? '').toLowerCase().includes(needle));
     }
     profileUrls = profiles.map((p) => p.profileUrl).filter(Boolean);
@@ -1952,8 +1911,8 @@ export async function sendFriendRequests(page, input, options = {}) {
   // --- NFR-6 Cluster-2 delay floor: clamp UP to 60s, never below; default 60s/180s ---
   // Number.isFinite guard (not just ??): NaN/Infinity would survive `?? floor` and make
   // Math.max(floor, NaN) === NaN, silently bypassing the floor (4.4 review P2).
-  const safeMinOpt = Number.isFinite(delayMinOpt) && delayMinOpt >= 0 ? delayMinOpt : FRIEND_REQUEST_DELAY_FLOOR_MS;
-  const safeMaxOpt = Number.isFinite(delayMaxOpt) && delayMaxOpt >= 0 ? delayMaxOpt : FRIEND_REQUEST_DELAY_MAX_MS;
+  const safeMinOpt = typeof delayMinOpt === 'number' && Number.isFinite(delayMinOpt) && delayMinOpt >= 0 ? delayMinOpt : FRIEND_REQUEST_DELAY_FLOOR_MS;
+  const safeMaxOpt = typeof delayMaxOpt === 'number' && Number.isFinite(delayMaxOpt) && delayMaxOpt >= 0 ? delayMaxOpt : FRIEND_REQUEST_DELAY_MAX_MS;
   const delayMin = Math.max(FRIEND_REQUEST_DELAY_FLOOR_MS, safeMinOpt);
   const delayMax = Math.max(delayMin, safeMaxOpt);
 
@@ -1962,11 +1921,12 @@ export async function sendFriendRequests(page, input, options = {}) {
   // Capture per-profile status for the post-batch merge (AC4) — same closure-Map
   // pattern as 4.4's joined/pending. Skip states (already_friend/pending) are ok:true.
   const captured = new Map();
-  const actionFn = async (profileUrl) => {
+  const actionFn = /** @type {(item: unknown) => Promise<Record<string, unknown>>} */ (async (item) => {
+    const profileUrl = /** @type {string} */ (item);
     const result = await requestFn(page, profileUrl);
     captured.set(profileUrl, result);
     return result;
-  };
+  });
 
   const batchResult = await runGuardedBatch(profileUrls, actionFn, guardedOptions);
 
@@ -1998,7 +1958,7 @@ const CANCEL_DELAY_MAX_MS = 5000;
  * Parse a "Sent X days ago" / "Đã gửi X ngày trước" string into an age in days.
  * Best-effort: returns null if unparseable (caller errs on the side of including).
  *
- * @param {string|null} dateSentText
+ * @param {string|null|undefined} dateSentText
  * @returns {number|null} age in days, or null if unparseable
  */
 function parseRequestAgeDays(dateSentText) {
@@ -2025,9 +1985,9 @@ function parseRequestAgeDays(dateSentText) {
  * with `{ name, profileUrl, dateSent }`. UNVERIFIED selectors — see selectors-facebook.md.
  * Injectable via options.collectFn so tests skip the real browser.
  *
- * @param {Object} page - Puppeteer page
+ * @param {import('puppeteer').Page} page - Puppeteer page
  * @param {number} limit - max requests to collect
- * @param {Function} delay - injectable delay seam
+ * @param {(...args: unknown[]) => unknown} delay - injectable delay seam
  * @returns {Promise<Array<{ name: string|null, profileUrl: string, dateSent: string|null }>>}
  */
 async function defaultCollectSentRequests(page, limit, delay) {
@@ -2090,9 +2050,9 @@ async function defaultCollectSentRequests(page, limit, delay) {
  * would be a false success. A profile showing only that state throws
  * button-not-found and is counted as `failed` instead (honest failure).
  *
- * @param {Object} page - Puppeteer page
+ * @param {import('puppeteer').Page} page - Puppeteer page
  * @param {string} profileUrl - facebook.com profile URL
- * @param {Function} [delay=randomDelay] - injectable jittered delay seam
+ * @param {(min?: number, max?: number) => Promise<void>} [delay=randomDelay] - injectable jittered delay seam
  * @returns {Promise<{cancelled: boolean}>}
  * @throws {Error} If the Cancel-request button is not found (PII-free)
  */
@@ -2116,7 +2076,7 @@ async function cancelSingleRequest(page, profileUrl, delay = randomDelay) {
   try {
     await page.waitForSelector(cancelSelectors.join(', '), { timeout: 5000 });
   } catch (err) {
-    if (err?.name === 'TimeoutError' || /timeout/i.test(err?.message ?? '')) {
+    if (err instanceof Error && (err.name === 'TimeoutError' || /timeout/i.test(err.message))) {
       throw new Error('❌ Cancel-request button not found; request already resolved or profile unreachable');
     }
     throw err;
@@ -2143,16 +2103,9 @@ async function cancelSingleRequest(page, profileUrl, delay = randomDelay) {
  *
  * Dry-run runs Phase 1 (read navigation) but NOT Phase 2 (no Cancel click).
  *
- * @param {Object} page - Puppeteer page (authenticated)
- * @param {Object} [options]
- * @param {number} options.limit - Max cancellations (required, positive integer)
- * @param {number} [options.olderThanDays] - Only cancel requests older than N days
- * @param {boolean} [options.dryRun=true] - Default true; only explicit false cancels
- * @param {Function} [options.delay] - Injectable delay seam (tests pass a spy)
- * @param {Function} [options.collectFn] - Injectable Phase-1 collect (default scrape)
- * @param {Function} [options.cancelFn] - Injectable per-request cancel (default cancelSingleRequest)
- * @returns {Promise<Object>} dry-run: { dryRun, platform, pending, count };
- *   real: { dryRun, platform, cancelled, failed, remaining }
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<Record<string, unknown>>} dry-run: { dryRun, platform, pending, count }; real: { dryRun, platform, cancelled, failed, remaining }
  */
 export async function cancelPendingFriendRequests(page, options = {}) {
   const {
@@ -2164,18 +2117,19 @@ export async function cancelPendingFriendRequests(page, options = {}) {
     cancelFn: cancelFnOpt,
     ...rest
   } = options;
-  const collectFn = collectFnOpt ?? defaultCollectSentRequests;
-  const cancelFn = cancelFnOpt ?? cancelSingleRequest;
+  const collectFn = /** @type {(page: import('puppeteer').Page, limit: number, delay: (min?: number, max?: number) => Promise<void>) => Promise<Record<string, unknown>[]>} */ (collectFnOpt ?? defaultCollectSentRequests);
+  const cancelFn = /** @type {typeof cancelSingleRequest} */ (cancelFnOpt ?? cancelSingleRequest);
 
   // AC6: validate limit — positive finite integer.
-  if (!Number.isFinite(limit) || limit <= 0 || Math.floor(limit) !== limit) {
+  if (typeof limit !== 'number' || !Number.isFinite(limit) || limit <= 0 || Math.floor(limit) !== limit) {
     throw new Error('❌ cancelPendingFriendRequests: limit must be a positive integer');
   }
 
   // runGuardedBatch hard-caps a batch at maxBatch (default 20) and throws if
   // exceeded. Validate here so the caller gets a clear message instead of an
   // opaque internal "exceeds maxBatch" error after Phase 1 already ran.
-  const maxBatch = Number.isFinite(rest.maxBatch) ? rest.maxBatch : 20;
+  const rawMaxBatch = rest.maxBatch;
+  const maxBatch = typeof rawMaxBatch === 'number' && Number.isFinite(rawMaxBatch) ? rawMaxBatch : 20;
   if (limit > maxBatch) {
     throw new Error(
       `❌ cancelPendingFriendRequests: limit (${limit}) exceeds maxBatch (${maxBatch}); ` +
@@ -2185,19 +2139,20 @@ export async function cancelPendingFriendRequests(page, options = {}) {
 
   // olderThanDays, when provided, must be a non-negative finite number — a
   // negative/NaN value would otherwise silently skip the filter (caller bug).
-  if (olderThanDays !== undefined && (!Number.isFinite(olderThanDays) || olderThanDays < 0)) {
+  if (olderThanDays !== undefined && (typeof olderThanDays !== 'number' || !Number.isFinite(olderThanDays) || olderThanDays < 0)) {
     throw new Error('❌ cancelPendingFriendRequests: olderThanDays must be a non-negative number');
   }
 
   // --- Phase 1: collect pending requests (runs in dry-run too — preview needs it) ---
-  let pending = await collectFn(page, limit, delay);
+  let pending = /** @type {Record<string, unknown>[]} */ (await collectFn(page, limit, delay));
   if (!Array.isArray(pending)) pending = [];
+  pending = /** @type {Record<string, unknown>[]} */ (pending);
 
   // olderThanDays filter: include unparseable dates (err toward cleanup, AC2.7).
-  if (Number.isFinite(olderThanDays) && olderThanDays > 0) {
+  if (typeof olderThanDays === 'number' && Number.isFinite(olderThanDays) && olderThanDays > 0) {
     pending = pending.filter((r) => {
-      const age = parseRequestAgeDays(r.dateSent);
-      return age === null || age >= olderThanDays;
+      const age = parseRequestAgeDays(/** @type {string|null|undefined} */ (r.dateSent));
+      return age === null || (age >= olderThanDays);
     });
   }
 
@@ -2234,7 +2189,7 @@ export async function cancelPendingFriendRequests(page, options = {}) {
     ...rest, delay, dryRun: false, delayMin: CANCEL_DELAY_MIN_MS, delayMax: CANCEL_DELAY_MAX_MS,
   };
 
-  const actionFn = async (profileUrl) => cancelFn(page, profileUrl, delay);
+  const actionFn = /** @type {(item: unknown) => Promise<Record<string, unknown>>} */ (async (item) => { const profileUrl = /** @type {string} */ (item); return cancelFn(page, profileUrl, delay); });
   const batchResult = await runGuardedBatch(targets, actionFn, guardedOptions);
 
   // --- Transform runGuardedBatch result into { cancelled, failed, remaining } ---
@@ -2258,9 +2213,15 @@ export async function cancelPendingFriendRequests(page, options = {}) {
 export const MAX_WARMUP_DURATION_SECONDS = 600;
 export const DEFAULT_WARMUP_DURATION_SECONDS = 120;
 
+/** @typedef {import('puppeteer').Page} Page */
+/** @typedef {import('puppeteer').ElementHandle} ElementHandle */
+
 const WARMUP_HOME_URL = 'https://www.facebook.com/';
 
-// Default reaction: find Like button, skip silently if not found, click only if not already liked.
+/**
+ * Default reaction: find Like button, skip silently if not found, click only if not already liked.
+ * @param {import('puppeteer').Page} page
+ */
 async function defaultReactFn(page) {
   let result;
   try {
@@ -2283,17 +2244,10 @@ async function defaultReactFn(page) {
  * Warm up a Facebook account with natural newsfeed scrolling and optional light reactions.
  * Navigates to the home feed (hardcoded) — NOT a runGuardedBatch case (no item batch).
  *
- * @param {Object|null} page - Puppeteer page (authenticated); MAY be null in dry-run
- * @param {Object} [options]
- * @param {boolean} [options.dryRun=true] - Default true; only explicit false drives the browser
- * @param {number} [options.durationSeconds] - Dwell time; clamped to MAX_WARMUP_DURATION_SECONDS (600); default 120
- * @param {boolean} [options.allowReactions=false] - When false, pure scroll only (no reactions)
- * @param {number} [options.reactProbability=0.05] - Per-scroll reaction probability; >0.2 clamped to 0.2; <=0/NaN/non-number → 0
- * @param {Function} [options.reactFn] - Injectable reaction seam (default: find-then-click Like)
- * @param {Function} [options.delay=randomDelay] - Injectable pause seam.
+ * @param {import('puppeteer').Page | null} page - Puppeteer page (authenticated); MAY be null in dry-run
+ * @param {FacebookOptions} [options]
  *   ⚠️ COUPLED WITH `now`: override both together or neither.
- * @param {Function} [options.now] - Injectable clock (default () => Date.now()); see `delay`.
- * @returns {Promise<Object>} Preview (dry-run) or run summary (real)
+ * @returns {Promise<Record<string, unknown>>} Preview (dry-run) or run summary (real)
  */
 export async function warmupAccount(page, options = {}) {
   const {
@@ -2402,7 +2356,7 @@ export async function warmupAccount(page, options = {}) {
         await delay(SCROLL_PAUSE_MIN_MS, SCROLL_PAUSE_MAX_MS);
       }
     } catch (err) {
-      console.warn(`⚠️ warmupAccount: delay threw — ${err?.message ?? err}. Continuing.`);
+      console.warn(`⚠️ warmupAccount: delay threw — ${(err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err)) ?? err}. Continuing.`);
     }
 
     // Optional probabilistic reaction (AC3). reactFn errors are swallowed so a

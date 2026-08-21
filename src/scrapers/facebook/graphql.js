@@ -76,7 +76,7 @@ const BROWSER_HEADERS = {
  * status ourselves) rather than throwing — only genuine network errors throw.
  *
  * @param {string} url
- * @param {{ method?: string, headers?: object, body?: string }} [init]
+ * @param {{ method?: string, headers?: Record<string, string>, body?: string }} [init]
  * @returns {Promise<{ status: number, text: () => Promise<string> }>}
  */
 async function defaultFetch(url, init = {}) {
@@ -103,7 +103,7 @@ async function defaultFetch(url, init = {}) {
  * string form the token scraper needs. Extra pairs (datr, etc.) may be appended
  * via `extra`. Callers (and Story 5.2) use this so they never hand-build strings.
  *
- * @param {{ c_user: string, xs: string, [k: string]: string }} cookies
+ * @param {Record<string, string>} [cookies]
  * @param {Record<string,string>} [extra] - additional name=value pairs
  * @returns {string} e.g. "c_user=123; xs=abc; datr=..."
  */
@@ -155,12 +155,11 @@ const TOKEN_PATTERNS = {
  * object. Any token not found → that field is `null` (caller decides if fatal).
  *
  * @param {string} html - raw HTML string
- * @returns {{ fb_dtsg: string|null, lsd: string|null, jazoest: string|null,
- *             hsi: string|null, spin_r: string|null, spin_t: string|null }}
+ * @returns {FacebookSessionTokens}
  */
 export function parseFacebookTokens(html) {
   const source = typeof html === 'string' ? html : '';
-  /** @type {Record<string, string|null>} */
+  /** @type {FacebookSessionTokens} */
   const tokens = {};
   for (const [key, pattern] of Object.entries(TOKEN_PATTERNS)) {
     const match = source.match(pattern);
@@ -181,9 +180,8 @@ export function parseFacebookTokens(html) {
  * network/HTTP-transport error throws, with a generic message.
  *
  * @param {string} cookie - full cookie string ("c_user=..; xs=..; datr=..; ..")
- * @param {object} [options]
- * @param {Function} [options.fetchImpl=defaultFetch] - fetch-API-shaped seam
- * @returns {Promise<{ fb_dtsg, lsd, jazoest, hsi, spin_r, spin_t }>}
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<FacebookSessionTokens>}
  * @throws {Error} generic message on network/HTTP transport failure
  */
 export async function getFacebookTokens(cookie, options = {}) {
@@ -215,7 +213,10 @@ export async function getFacebookTokens(cookie, options = {}) {
 // ============================================================================
 
 /** Scrape an ad-account id from HTML. Tries asset_id= first (billing hub
- *  fallback per C# getPage.cs:44-45), then act= / act_ (adsmanager). */
+ *  fallback per C# getPage.cs:44-45), then act= / act_ (adsmanager).
+ * @param {string} html
+ * @returns {string|null}
+ */
 function scrapeAdAccountId(html) {
   if (!html) return null;
   // billing hub embeds asset_id=<digits> (C# fallback extraction key)
@@ -226,7 +227,10 @@ function scrapeAdAccountId(html) {
   return actMatch ? actMatch[1] : null;
 }
 
-/** Scrape the long-lived EAAG... Graph token from a billing page. */
+/** Scrape the long-lived EAAG... Graph token from a billing page.
+ * @param {string} html
+ * @returns {string|null}
+ */
 function scrapeEaagToken(html) {
   if (!html) return null;
   // EAAG tokens may contain alphanumeric + base64 chars (`-`, `_`, `+`, `/`, `=`)
@@ -246,9 +250,7 @@ function scrapeEaagToken(html) {
  *   3.  GET graph.facebook.com/<ver>/<uid>?fields=facebook_pages...&access_token=EAAG
  *
  * @param {string} cookie - full cookie string (c_user supplies the uid)
- * @param {object} [options]
- * @param {Function} [options.fetchImpl=defaultFetch]
- * @param {string}   [options.graphVersion=GRAPH_API_VERSION]
+ * @param {FacebookOptions} [options]
  * @returns {Promise<Array<{ pageId: string, name: string, accessToken: string }>>}
  */
 export async function getPagesFromCookie(cookie, options = {}) {
@@ -260,6 +262,7 @@ export async function getPagesFromCookie(cookie, options = {}) {
   }
 
   const headers = { ...BROWSER_HEADERS, Cookie: cookie };
+  /** @param {string} url */
   const safeGet = async (url) => {
     try {
       const res = await fetchImpl(url, { method: 'GET', headers });
@@ -309,11 +312,13 @@ export async function getPagesFromCookie(cookie, options = {}) {
     return [];
   }
 
-  const data = parsed?.facebook_pages?.data;
-  if (!Array.isArray(data)) {
+  const rawData = parsed?.facebook_pages?.data;
+  if (!Array.isArray(rawData)) {
     console.warn('⚠️ Facebook page list: unexpected response shape (no facebook_pages.data array) — returning empty list');
     return [];
   }
+
+  const data = /** @type {Record<string, unknown>[]} */ (rawData);
 
   return data
     // C# getPage.cs:64 — only include pages with a non-empty access_token
@@ -322,8 +327,8 @@ export async function getPagesFromCookie(cookie, options = {}) {
       // C# returns p["id"] as primary; additional_profile_id stored separately
       pageId: String(p.id),
       additionalProfileId: p.additional_profile_id ? String(p.additional_profile_id) : null,
-      name: p.name ?? '',
-      accessToken: p.access_token,
+      name: String(p.name ?? ''),
+      accessToken: String(p.access_token),
     }));
 }
 
@@ -341,15 +346,13 @@ export async function getPagesFromCookie(cookie, options = {}) {
  *
  * @param {string} pageId
  * @param {string} actorId - the session uid (c_user)
- * @param {{ fb_dtsg: string|null, lsd: string|null, jazoest: string|null,
- *           hsi: string|null, spin_r: string|null, spin_t: string|null }} tokens
- * @param {object} [options]
- * @param {Function} [options.fetchImpl=defaultFetch]
- * @param {string}   [options.docId=MESSENGER_CTA_DOC_ID]
+ * @param {FacebookSessionTokens} [tokens]
+ * @param {FacebookOptions} [options]
  * @returns {Promise<{ eligible: boolean }>}
  */
 export async function checkMessengerCTA(pageId, actorId, tokens = {}, options = {}) {
   const { fetchImpl = defaultFetch, docId = MESSENGER_CTA_DOC_ID } = options;
+  const safeTokens = tokens || {};
 
   // BLOCKER-1 fix: variables must wrap in {"input":{...}} with all required fields
   // per C# Main.cs:579
@@ -372,16 +375,16 @@ export async function checkMessengerCTA(pageId, actorId, tokens = {}, options = 
     __a: '1',
     __req: '1a',
     __comet_req: '15',
-    __rev: tokens.spin_r ?? '',
-    __spin_r: tokens.spin_r ?? '',
+    __rev: safeTokens.spin_r ?? '',
+    __spin_r: safeTokens.spin_r ?? '',
     __spin_b: 'trunk',
-    __spin_t: tokens.spin_t ?? '',
-    __hsi: tokens.hsi ?? '',
+    __spin_t: safeTokens.spin_t ?? '',
+    __hsi: safeTokens.hsi ?? '',
     dpr: '1',
     __ccg: 'EXCELLENT',
-    fb_dtsg: tokens.fb_dtsg ?? '',
-    jazoest: tokens.jazoest ?? '',
-    lsd: tokens.lsd ?? '',
+    fb_dtsg: safeTokens.fb_dtsg ?? '',
+    jazoest: safeTokens.jazoest ?? '',
+    lsd: safeTokens.lsd ?? '',
     __aaid: '0',
     server_timestamps: 'true',
     doc_id: docId,
@@ -397,7 +400,7 @@ export async function checkMessengerCTA(pageId, actorId, tokens = {}, options = 
       headers: {
         ...BROWSER_HEADERS,
         'content-type': 'application/x-www-form-urlencoded',
-        'x-fb-lsd': tokens.lsd ?? '',
+        'x-fb-lsd': safeTokens.lsd ?? '',
         'x-fb-friendly-name': 'MWChatBusinessCTAAdsSenderMutation',
         origin: 'https://www.facebook.com',
       },
@@ -449,10 +452,10 @@ export async function checkMessengerCTA(pageId, actorId, tokens = {}, options = 
  * Send a message to a user by UID via the Facebook GraphQL API.
  * Uses Puppeteer page to fetch tokens (avoids axios 400 errors).
  *
- * @param {Object} page - Puppeteer page (logged in)
+ * @param {import('puppeteer').Page} page - Puppeteer page (logged in)
  * @param {string} targetUid - UID of the recipient
  * @param {string} message - Message to send
- * @param {Object} [options]
+ * @param {FacebookOptions} [options]
  * @returns {Promise<{ ok: boolean, response?: string, error?: string }>}
  */
 export async function sendMessageToUid(page, targetUid, message, options = {}) {
@@ -460,7 +463,7 @@ export async function sendMessageToUid(page, targetUid, message, options = {}) {
 
   try {
     // Get tokens from the current page (already logged in)
-    const tokens = await page.evaluate(() => {
+    const tokens = /** @type {FacebookSessionTokens} */ (await page.evaluate(() => {
       const html = document.documentElement.innerHTML;
       const patterns = {
         fb_dtsg: /\{"token":"(NAf[^"]+)"/,
@@ -470,13 +473,14 @@ export async function sendMessageToUid(page, targetUid, message, options = {}) {
         spin_r: /"__spin_r":(\d+)/,
         spin_t: /"__spin_t":(\d+)/,
       };
+      /** @type {FacebookSessionTokens} */
       const result = {};
       for (const [key, pattern] of Object.entries(patterns)) {
         const match = html.match(pattern);
         result[key] = match ? match[1] : null;
       }
       return result;
-    });
+    }));
 
     // Build the GraphQL mutation variables
     const variables = JSON.stringify({
@@ -542,6 +546,6 @@ export async function sendMessageToUid(page, targetUid, message, options = {}) {
 
     return { ok: true, response: response.text };
   } catch (err) {
-    return { ok: false, error: err.message };
+    return { ok: false, error: (err instanceof Error ? err.message : String(err)) };
   }
 }

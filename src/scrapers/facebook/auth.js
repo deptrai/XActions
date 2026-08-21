@@ -20,14 +20,13 @@ import { generateSync as totpGenerateSync } from 'otplib';
 
 /**
  * Login to Facebook using c_user and xs cookies
- * @param {Page} page - Puppeteer page instance
- * @param {Object} cookies - Cookie object with c_user and xs
- * @param {string} cookies.c_user - Facebook user ID cookie (numeric, 15-17 digits)
- * @param {string} cookies.xs - Facebook session token cookie
+ * @param {import('puppeteer').Page} page - Puppeteer page instance
+ * @param {FacebookLoginCookieOptions} cookies - Cookie object with c_user and xs
+ * @param {FacebookOptions} [options]
  * @throws {Error} If either cookie is missing or empty
  */
 export async function loginWithCookie(page, cookies = {}, options = {}) {
-  const combined = { ...cookies, ...options };
+  const combined = /** @type {Record<string, unknown> & FacebookLoginCookieOptions} */ ({ ...cookies, ...options });
   const { c_user, xs, sb, datar, fr, fbl_st, locale, headless = true, skipWarmup = false } = combined;
   if (!c_user?.trim() || !xs?.trim()) {
     throw new Error('❌ Facebook login requires both c_user and xs cookies');
@@ -49,9 +48,10 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
   // expires is set far in the future so cookies are written to disk when persistent
   // profiles are used (Story 6.17 — AC2). Values are not echoed (NFR3).
   const futureExpiry = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
+  /** @type {import('puppeteer').CookieParam[]} */
   const fbCookies = [
-    { name: 'c_user', value: c_user, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
-    { name: 'xs', value: xs, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
+    { name: 'c_user', value: /** @type {string} */ (c_user), domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
+    { name: 'xs', value: /** @type {string} */ (xs), domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
   ];
 
   // Optional but important cookies for full session.
@@ -69,7 +69,7 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
       setCount++;
     } catch (e) {
       // Skip invalid cookies but continue with others.
-      console.warn(`⚠️ Skipped invalid cookie ${cookie.name}: ${e.message?.substring(0, 80)}`);
+      console.warn(`⚠️ Skipped invalid cookie ${cookie.name}: ${(e instanceof Error ? e.message : String(e))?.substring(0, 80)}`);
     }
   }
 
@@ -98,19 +98,15 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
   })) || {};
 
   if (authCheck.hasLoginForm || authCheck.hasLoginButton) {
-    const err = new Error('❌ Facebook cookie authentication failed — session expired or invalid cookies');
-    err.code = 'FB_INVALID_COOKIE';
-    throw err;
+    throw Object.assign(new Error('❌ Facebook cookie authentication failed — session expired or invalid cookies'), { code: 'FB_INVALID_COOKIE' });
   }
 
   if (authCheck.hasSecurityCheck || currentUrl.includes('/checkpoint/')) {
-    const err = new Error('❌ Facebook security check detected — manual verification required (CAPTCHA/anti-bot)');
-    err.code = 'FB_CHECKPOINT';
-    throw err;
+    throw Object.assign(new Error('❌ Facebook security check detected — manual verification required (CAPTCHA/anti-bot)'), { code: 'FB_CHECKPOINT' });
   }
 
   // Store account ID on page context for downstream age/velocity lookup (Story 6.14 — AC5)
-  page._fbAccountId = c_user;
+  (/** @type {Record<string, unknown>} */ (/** @type {unknown} */ (page)))._fbAccountId = c_user;
 
   // Step 6: Session warming sequence (Story 6.15 — ADR-016, AC3, AC4)
   // Skip condition per ADR-016: skip when headless === false AND skipWarmup === true (debug mode)
@@ -120,7 +116,7 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
       const warmupOpts = { ...options, skipWarmup };
       await warmSession(page, warmupOpts);
     } catch (err) {
-      console.warn(`⚠️ loginWithCookie: session warming warning — ${err?.message ?? err}`);
+      console.warn(`⚠️ loginWithCookie: session warming warning — ${(err instanceof Error ? err.message : String(err)) ?? String(err)}`);
     }
   }
 }
@@ -176,11 +172,7 @@ export function generateTotp(seed, options = {}) {
  *     (lowercase i, Branch B), aria-label='Continue' — all from Main.cs Post().
  *
  * @param {import('puppeteer').Page} page
- * @param {object} [creds]
- * @param {string} creds.uid
- * @param {string} creds.pass
- * @param {{ name: string, value: string, domain?: string }|null} [creds.baitCookie]
- * @param {string|null} [creds.seed]  32-char base32 TOTP seed (optional)
+ * @param {FacebookPasswordCreds} [creds]
  * @returns {Promise<import('puppeteer').Page | { page: import('puppeteer').Page, requires2fa: true }>}
  */
 export async function loginWithPassword(page, { uid, pass, baitCookie = null, seed = null } = {}) {

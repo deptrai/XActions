@@ -28,10 +28,10 @@ import { extractHydrationJson } from './hydration.js';
  *
  * @param {import('puppeteer').Page} page
  * @param {string[]} _typenames - Passed by extractHydrationJson; ignored
- * @returns {Promise<Array>}
+ * @returns {Promise<Record<string, unknown>[]>}
  */
 async function extractCommentsFromDom(page, _typenames) {
-  return page.evaluate((nonProfile) => {
+  const raw = await page.evaluate((nonProfile) => {
     const NON_PROFILE = new Set(nonProfile);
 
     const allArticles = Array.from(document.querySelectorAll('[role="article"]'));
@@ -55,7 +55,7 @@ async function extractCommentsFromDom(page, _typenames) {
         const bestSpaces = (best.match(/\s+/g) || []).length;
         const tSpaces = (t.match(/\s+/g) || []).length;
         return tSpaces > bestSpaces ? t : best;
-      }, null);
+      }, /** @type {string|null} */ (null));
 
       const links = Array.from(article.querySelectorAll('a[href]'));
       let author = null;
@@ -89,6 +89,7 @@ async function extractCommentsFromDom(page, _typenames) {
       return { text, author, authorUrl, timestamp, likes, replies: [] };
     }).filter((c) => c.text || c.author);
   }, NON_PROFILE_SEGMENTS);
+  return /** @type {Record<string, unknown>[]} */ (raw);
 }
 
 /**
@@ -96,6 +97,7 @@ async function extractCommentsFromDom(page, _typenames) {
  * Runs inside page.evaluate and swallows errors so a missing sort UI doesn't block scraping.
  *
  * @param {import('puppeteer').Page} page
+ * @returns {Promise<void>}
  */
 async function clickAllCommentsSort(page) {
   try {
@@ -117,6 +119,7 @@ async function clickAllCommentsSort(page) {
  * Click "View more comments" / "X replies" expanders to reveal hidden comments.
  *
  * @param {import('puppeteer').Page} page
+ * @returns {Promise<void>}
  */
 async function clickCommentExpanders(page) {
   try {
@@ -136,16 +139,10 @@ async function clickCommentExpanders(page) {
  * Scrape comments from a Facebook post (FR-58).
  * READ-ONLY scrape — NOT routed through runGuardedBatch.
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} postUrl - facebook.com post URL
- * @param {Object} [options]
- * @param {number} [options.limit=50] - Max comments to collect
- * @param {boolean} [options.includeReplies=false] - Include nested replies
- * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
- * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
- * @param {Function} [options.delay=randomDelay] - Injectable delay seam
- * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
- * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<Record<string, unknown>[] | { note: string, platform: 'facebook' }>}
  */
 export async function scrapeFacebookComments(page, postUrl, options = {}) {
   const {
@@ -171,12 +168,12 @@ export async function scrapeFacebookComments(page, postUrl, options = {}) {
   if (await isContentUnavailable(page)) {
     return {
       note: 'Facebook comments are not accessible. The post may be restricted, comments may be disabled, or the content is unavailable.',
-      platform: 'facebook',
+      platform: /** @type {'facebook'} */ ('facebook'),
     };
   }
 
   // AC5: Bounded scroll loop — empty-scroll detection + limit cap.
-  const comments = new Map(); // keyed by id for deduplication
+  const comments = new Map();
   let retries = 0;
   let scrolls = 0;
 
@@ -193,7 +190,7 @@ export async function scrapeFacebookComments(page, postUrl, options = {}) {
     });
 
     for (const raw of hydrated) {
-      const normalized = normalizeComment(raw);
+      const normalized = normalizeComment(/** @type {Record<string, unknown>} */ (raw));
       if (!normalized || !normalized.id) continue;
 
       const output = includeReplies
@@ -220,17 +217,17 @@ export async function scrapeFacebookComments(page, postUrl, options = {}) {
     scrolls++;
   }
 
-  return Array.from(comments.values()).slice(0, limit);
+  return /** @type {Record<string, unknown>[]} */ (Array.from(comments.values()).slice(0, limit));
 }
 
 /**
  * Scrape comments from a post inside a Facebook group (FR-60).
  * Thin wrapper around scrapeFacebookComments; no duplicated extraction logic.
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} groupPostUrl - facebook.com/groups/ post URL
- * @param {Object} [options]
- * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<Record<string, unknown>[] | { note: string, platform: 'facebook' }>}
  */
 export async function scrapeFacebookGroupComments(page, groupPostUrl, options = {}) {
   if (typeof groupPostUrl !== 'string' || !groupPostUrl.includes('/groups/')) {

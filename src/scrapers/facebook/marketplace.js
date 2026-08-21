@@ -20,17 +20,10 @@ import { buildMarketplaceSearchUrl, normalizeMarketplaceListing } from './normal
 /**
  * Scrape Facebook Marketplace listings by search query or category.
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} query - Search query (e.g. "iphone 15") or category path
- * @param {Object} [options]
- * @param {number} [options.limit=50] - Max listings to return
- * @param {string} [options.location] - Location filter (city name or "near me")
- * @param {number} [options.minPrice] - Minimum price filter
- * @param {number} [options.maxPrice] - Maximum price filter
- * @param {string} [options.category] - Category slug (e.g. "phones", "vehicles", "furniture")
- * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
- * @param {Function} [options.delay=randomDelay] - Injectable delay seam
- * @returns {Promise<Array>} Array of normalized marketplace listings
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<unknown[]>} Array of normalized marketplace listings
  */
 export async function scrapeMarketplace(page, query, options = {}) {
   const {

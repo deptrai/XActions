@@ -32,16 +32,10 @@ import { extractHydrationJson } from './hydration.js';
  *
  * READ-ONLY scrape — NOT routed through runGuardedBatch.
  *
- * @param {Object} page - Puppeteer page (authenticated)
+ * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} groupUrl - facebook.com/groups/<id> URL
- * @param {Object} [options]
- * @param {string} [options.query] - Search keyword (required, non-empty)
- * @param {number} [options.limit=50] - Max posts to collect
- * @param {number} [options.maxRetries=8] - Stop after N consecutive empty scrolls
- * @param {number} [options.maxScrolls=50] - Max scroll attempts per task
- * @param {Function} [options.delay=randomDelay] - Injectable delay seam
- * @param {Function} [options.onProgress] - Called each scroll: ({ scraped, limit })
- * @returns {Promise<Array|{ note: string, platform: 'facebook' }>}
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<Record<string, unknown>[] | { note: string, platform: 'facebook' }>}
  */
 export async function scrapeFacebookGroupSearch(page, groupUrl, options = {}) {
   const {

@@ -90,6 +90,11 @@ const DEVICE_MEMORY_POOL = [2, 4, 8];
 // Helpers
 // ============================================================================
 
+/**
+ * @template T
+ * @param {T[]} arr
+ * @returns {T}
+ */
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 /**
@@ -125,9 +130,7 @@ function deriveDeviceScaleFactor(platform) {
  * The fingerprint MUST be reused for every page/tab in that session
  * (ADR-013: one fingerprint per session — do NOT randomize mid-session).
  *
- * @returns {{ ua: string, viewport: { width: number, height: number },
- *             deviceScaleFactor: number, hardwareConcurrency: number,
- *             deviceMemory: number, platform: string }}
+ * @returns {FacebookFingerprint}
  */
 export function generateFingerprint() {
   const ua = pick(UA_POOL);
@@ -148,8 +151,7 @@ export function generateFingerprint() {
  * NFR4: error messages must NOT include fingerprint fields.
  *
  * @param {import('puppeteer').Page} page
- * @param {{ ua: string, viewport: { width: number, height: number },
- *           deviceScaleFactor: number }} fingerprint
+ * @param {FacebookFingerprint} fingerprint
  * @returns {Promise<void>}
  */
 export async function applyFingerprint(page, fingerprint) {
@@ -185,7 +187,7 @@ export async function applyFingerprint(page, fingerprint) {
  * NFR4: error messages must NOT include fingerprint fields.
  *
  * @param {import('puppeteer').Page} page
- * @param {{ hardwareConcurrency: number, deviceMemory: number, platform: string }} fingerprint
+ * @param {FacebookFingerprint} fingerprint
  * @returns {Promise<void>}
  */
 export async function applyNavigatorOverrides(page, fingerprint) {
@@ -244,17 +246,22 @@ export async function applyWebRTCOverride(page) {
     await page.evaluateOnNewDocument(() => {
       // Override RTCPeerConnection — prevents STUN/TURN requests that leak real IP.
       // Using a function that throws ensures any attempt to use WebRTC fails loudly.
-      window.RTCPeerConnection = function () {
-        throw new Error('WebRTC is disabled');
-      };
+      const win = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (window));
+      if (typeof window.RTCPeerConnection !== 'undefined') {
+        win.RTCPeerConnection = /** @type {unknown} */ (function () {
+          throw new Error('WebRTC is disabled');
+        });
+      }
       // Chrome-prefixed version (older Chrome builds).
-      window.webkitRTCPeerConnection = function () {
-        throw new Error('WebRTC is disabled');
-      };
+      if (typeof window.webkitRTCPeerConnection !== 'undefined') {
+        win.webkitRTCPeerConnection = /** @type {unknown} */ (function () {
+          throw new Error('WebRTC is disabled');
+        });
+      }
       // Nullify getUserMedia — prevents media device enumeration that can leak
       // device info and potentially IP via ICE candidates.
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia = undefined;
+      if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+        Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { value: undefined, configurable: true });
       }
     });
   } catch (err) {

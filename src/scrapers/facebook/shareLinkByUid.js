@@ -15,14 +15,18 @@
 
 import { runGuardedBatch } from '../../../api/services/facebookAutomation.js';
 
+
+/** @typedef {{ postUrl: string; recipientUid: string; message?: string }} ShareLinkTarget */
+/** @typedef {{ postUrl: string; recipients: string[]; message?: string }} ShareCampaignTarget */
+
 /**
  * Send a post URL to a specific user via direct Messenger URL.
  * Uses clipboard API to paste URL into contenteditable compose box.
  *
- * @param {Object} page - Puppeteer page (logged in)
+ * @param {import('puppeteer').Page} page - Puppeteer page (logged in)
  * @param {string} recipientUid - Facebook UID of the recipient
  * @param {string} postUrl - URL of the post to share
- * @param {Function} delay - Delay function
+ * @param {(...args: number[]) => Promise<void>} delay - Delay function
  * @param {boolean} headless - Whether browser is running headless (affects delays for visibility)
  * @returns {Promise<{ok: boolean, recipientUid: string, error?: string, method?: string}>}
  */
@@ -116,12 +120,9 @@ async function sendUrlToUid(page, recipientUid, postUrl, delay, headless = true)
 
 /**
  * Share a post URL to a recipient via direct Messenger.
- * @param {Object} page - Puppeteer page (logged in)
- * @param {Object} target - Share target
- * @param {string} target.postUrl - URL of the post to share
- * @param {string} target.recipientUid - Facebook UID of the recipient
- * @param {string} [target.message] - Optional message (appended after URL)
- * @param {Object} [options]
+ * @param {import('puppeteer').Page} page - Puppeteer page (logged in)
+ * @param {ShareLinkTarget} target - Share target
+ * @param {FacebookOptions} [options]
  * @returns {Promise<{ok: boolean, postUrl: string, recipientUid?: string, sharesSent: number, error?: string, method?: string}>}
  */
 export async function shareLinkByUid(page, target, options = {}) {
@@ -129,7 +130,7 @@ export async function shareLinkByUid(page, target, options = {}) {
   const { delay = () => new Promise(r => setTimeout(r, 1000)), headless = true } = options;
 
   if (!postUrl) {
-    return { ok: false, postUrl: '', error: 'Missing postUrl' };
+    return { ok: false, postUrl: '', sharesSent: 0, error: 'Missing postUrl' };
   }
 
   try {
@@ -137,7 +138,7 @@ export async function shareLinkByUid(page, target, options = {}) {
 
     if (recipientUid) {
       // Direct UID share - navigate to messages/t/{uid}
-      const result = await sendUrlToUid(page, recipientUid, urlToShare, delay, headless);
+      const result = await sendUrlToUid(page, recipientUid, urlToShare, delay, /** @type {boolean} */ (headless));
       return {
         ok: result.ok,
         postUrl,
@@ -165,7 +166,7 @@ export async function shareLinkByUid(page, target, options = {}) {
     });
 
     if (!shareClicked) {
-      return { ok: false, postUrl, error: 'Share button not found' };
+      return { ok: false, postUrl, sharesSent: 0, error: 'Share button not found' };
     }
 
     await delay(2000, 3000);
@@ -186,26 +187,23 @@ export async function shareLinkByUid(page, target, options = {}) {
     });
 
     if (!friendProfileClicked) {
-      return { ok: false, postUrl, error: 'Friend profile share option not found' };
+      return { ok: false, postUrl, sharesSent: 0, error: 'Friend profile share option not found' };
     }
 
     await delay(2000, 3000);
 
     return { ok: true, postUrl, sharesSent: 1, method: 'share-dialog-friend-profile' };
   } catch (err) {
-    return { ok: false, postUrl, error: err.message };
+    return { ok: false, postUrl, sharesSent: 0, error: (err instanceof Error ? err.message : String(err)) };
   }
 }
 
 /**
  * Batch share links to multiple recipients.
- * @param {Object} page - Puppeteer page
- * @param {Object} campaign
- * @param {string} campaign.postUrl - URL of the post to share
- * @param {string[]} campaign.recipients - Array of Facebook UIDs
- * @param {string} [campaign.message] - Optional message
- * @param {Object} [options]
- * @returns {Promise<Object>} runGuardedBatch result
+ * @param {import('puppeteer').Page} page - Puppeteer page
+ * @param {ShareCampaignTarget} campaign
+ * @param {FacebookOptions} [options]
+ * @returns {Promise<Record<string, unknown>>} runGuardedBatch result
  */
 export async function shareLinkByUidCampaign(page, campaign, options = {}) {
   const { postUrl, recipients, message } = campaign;
@@ -224,10 +222,11 @@ export async function shareLinkByUidCampaign(page, campaign, options = {}) {
     toString: () => uid,
   }));
 
-  const actionFn = async (target) => {
+  const actionFn = /** @type {(item: unknown) => Promise<Record<string, unknown>>} */ (async (item) => {
+    const target = /** @type {ShareLinkTarget} */ (item);
     const result = await shareLinkByUid(page, target, options);
     return result;
-  };
+  });
 
   return runGuardedBatch(items, actionFn, {
     ...options,
