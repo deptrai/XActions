@@ -8,13 +8,15 @@
 
 import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
 
+/** @typedef {import('./types.js').AccountRecord} AccountRecord */
+
 const DEFAULT_HIBERNATION_MS = 15 * 60 * 1000;
 
 export class AccountPool {
   /** @type {Map<string, Set<string>>} */
   #accountsByPlatform = new Map();
 
-  /** @type {Map<string, Object>} */
+  /** @type {Map<string, AccountRecord>} */
   #accountRecords = new Map();
 
   /** @type {Map<string, string>} */
@@ -77,7 +79,7 @@ export class AccountPool {
    * Resolve a bare or composite account id to the stored record.
    * @param {string} accountId
    * @param {string} [platform]
-   * @returns {Object | null}
+   * @returns {AccountRecord | null}
    */
   #resolveRecord(accountId, platform) {
     const key = this.#resolveKey(accountId, platform);
@@ -94,8 +96,7 @@ export class AccountPool {
    *
    * @param {string} platform
    * @param {string[]} accountIds
-   * @param {Object} [options]
-   * @param {Record<string, any>} [options.credentials]
+   * @param {{ credentials?: Record<string, Record<string, unknown>> }} [options]
    */
   registerAccounts(platform, accountIds, options = {}) {
     if (typeof platform !== 'string' || !platform) {
@@ -204,7 +205,7 @@ export class AccountPool {
       });
     }
 
-    const key = this.#resolveKey(accountId, platform);
+    const key = this.#compositeKey(record.platform, record.accountId);
     this.#unavailableAccounts.add(key);
     record.hibernatingUntil = Date.now() + durationMs;
 
@@ -222,7 +223,7 @@ export class AccountPool {
     const record = this.#resolveRecord(accountId, platform);
     if (!record) return;
 
-    const key = this.#resolveKey(accountId, platform);
+    const key = this.#compositeKey(record.platform, record.accountId);
     this.#unavailableAccounts.delete(key);
     record.hibernatingUntil = null;
 
@@ -275,7 +276,7 @@ export class AccountPool {
   /**
    * Assign a proxy to an account.
    * @param {string} accountId
-   * @param {any} proxy
+   * @param {unknown} proxy
    * @param {string} [platform]
    */
   setAssignedProxy(accountId, proxy, platform) {
@@ -365,7 +366,7 @@ export class AccountPool {
    *
    * @param {string} accountId
    * @param {string} [platform]
-   * @returns {Object | null}
+   * @returns {Record<string, unknown> | null}
    */
   getAccount(accountId, platform) {
     const record = this.#resolveRecord(accountId, platform);
@@ -381,14 +382,15 @@ export class AccountPool {
   }
 
   /**
-   * @param {any} proxy
-   * @returns {any}
+   * @param {unknown} proxy
+   * @returns {unknown}
    */
   #redactProxy(proxy) {
     if (!proxy) return null;
 
-    if (typeof proxy === 'object') {
-      const redacted = { ...proxy };
+    if (typeof proxy === 'object' && proxy !== null) {
+      const record = /** @type {Record<string, unknown>} */ (proxy);
+      const redacted = { ...record };
       delete redacted.username;
       delete redacted.password;
       return redacted;

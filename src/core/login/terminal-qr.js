@@ -18,6 +18,32 @@ import crypto from 'node:crypto';
 
 /** @typedef {import('../types.js').LoginResult} LoginResult */
 
+/**
+ * @typedef {Object} LoginState
+ * @property {boolean} [checkpoint]
+ * @property {string} [message]
+ * @property {boolean} [authenticated]
+ * @property {Record<string, unknown>} [cookies]
+ * @property {string} [accountId]
+ * @property {Record<string, unknown>} [tokens]
+ * @property {string} [expiresAt]
+ */
+
+/**
+ * @typedef {Object} TerminalQrOptions
+ * @property {string} [platform='twitter']
+ * @property {string[]} [requiredCookies]
+ * @property {() => Promise<string>} [getQrCode]
+ * @property {() => Promise<LoginState>} [checkLoginState]
+ * @property {string} [cookiePath]
+ * @property {number} [intervalMs=1000]
+ * @property {number} [timeoutSec=120]
+ * @property {number} [countdownSec=60]
+ * @property {boolean} [quiet=false]
+ * @property {AbortSignal} [signal]
+ * @property {string} [qrUrl]
+ */
+
 const SHORT_CODE_CHARSET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 
 export class TerminalQrLogin extends AbstractLogin {
@@ -25,17 +51,7 @@ export class TerminalQrLogin extends AbstractLogin {
   name = 'terminal-qr';
 
   /**
-   * @param {Object} [options]
-   * @param {string} [options.platform='twitter']
-   * @param {string[]} [options.requiredCookies]
-   * @param {Function} [options.getQrCode]
-   * @param {Function} [options.checkLoginState]
-   * @param {string} [options.cookiePath]
-   * @param {number} [options.intervalMs=1000]
-   * @param {number} [options.timeoutSec=120]
-   * @param {number} [options.countdownSec=60]
-   * @param {boolean} [options.quiet=false]
-   * @param {AbortSignal} [options.signal]
+   * @param {TerminalQrOptions} [options]
    */
   constructor(options = {}) {
     super();
@@ -84,7 +100,7 @@ export class TerminalQrLogin extends AbstractLogin {
 
   /**
    * Validate that cookie object contains all required keys for the target platform.
-   * @param {Object} cookies
+   * @param {Record<string, unknown>} cookies
    * @returns {boolean}
    */
   validateCookies(cookies) {
@@ -95,7 +111,7 @@ export class TerminalQrLogin extends AbstractLogin {
 
   /**
    * Execute the QR login lifecycle.
-   * @param {Object} [runtimeOptions]
+   * @param {TerminalQrOptions} [runtimeOptions]
    * @returns {Promise<LoginResult>}
    */
   async login(runtimeOptions = {}) {
@@ -140,7 +156,7 @@ export class TerminalQrLogin extends AbstractLogin {
           process.stdout.write(rendered);
         }
       } catch (err) {
-        console.warn(`[QR WARNING] Could not display QR: ${err.message}`);
+        console.warn(`[QR WARNING] Could not display QR: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 
@@ -149,7 +165,7 @@ export class TerminalQrLogin extends AbstractLogin {
       let isDone = false;
       let inFlight = false;
       let remainingSeconds = timeoutSec;
-      let intervalId = null;
+      let intervalId = /** @type {NodeJS.Timeout | null} */ (null);
 
       const cleanup = () => {
         isDone = true;
@@ -188,7 +204,7 @@ export class TerminalQrLogin extends AbstractLogin {
           } else if (targetCookiePath) {
             try {
               const fileContent = await fs.readFile(targetCookiePath, 'utf-8');
-              const parsed = JSON.parse(fileContent);
+              const parsed = /** @type {Record<string, unknown>} */ (JSON.parse(fileContent));
               if (this.validateCookies(parsed)) {
                 checkResult = { authenticated: true, cookies: parsed };
               }
@@ -241,7 +257,7 @@ export class TerminalQrLogin extends AbstractLogin {
                     );
                   }
                 } catch (err) {
-                  console.warn(`[WARNING] Failed to write cookie file: ${err.message}`);
+                  console.warn(`[WARNING] Failed to write cookie file: ${err instanceof Error ? err.message : String(err)}`);
                 }
 
                 if (!opts.quiet && isTty()) {
@@ -282,7 +298,7 @@ export class TerminalQrLogin extends AbstractLogin {
           }
           // Log transient warning and continue polling until timeout
           if (!opts.quiet) {
-            console.warn(`[POLL WARNING] Transient error during poll: ${pollErr.message}`);
+            console.warn(`[POLL WARNING] Transient error during poll: ${pollErr instanceof Error ? pollErr.message : String(pollErr)}`);
           }
         } finally {
           inFlight = false;

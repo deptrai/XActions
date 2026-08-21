@@ -284,7 +284,7 @@ export class ProxyIpPool {
   static toPlaywrightProxy(proxy) {
     if (!proxy) return null;
     const normalized = typeof proxy === 'string' ? normalizeProxy(proxy) : normalizeProxy(proxy);
-    const result = { server: normalized.server };
+    const result = /** @type {{ server: string, username?: string, password?: string }} */ ({ server: normalized.server });
     if (normalized.username !== undefined) result.username = normalized.username;
     if (normalized.password !== undefined) result.password = normalized.password;
     return result;

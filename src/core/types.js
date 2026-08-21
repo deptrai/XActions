@@ -49,16 +49,26 @@
 /**
  * @typedef {Object} LoginResult
  * @property {string} accountId
- * @property {string} cookies
- * @property {Object} tokens
- * @property {Date} [expiresAt]
+ * @property {string | Record<string, unknown>} cookies
+ * @property {Record<string, unknown>} tokens
+ * @property {Date | string} [expiresAt]
  */
 
 /**
  * @typedef {Object} CrawlerCommand
  * @property {string} action
- * @property {Object} args
- * @property {Object} [session]
+ * @property {{ accountId?: string, [key: string]: unknown }} [args]
+ * @property {{ accountId?: string, [key: string]: unknown }} [session]
+ * @property {string} [platform]
+ */
+
+/**
+ * @typedef {Object} AccountRecord
+ * @property {string} platform
+ * @property {string} accountId
+ * @property {Record<string, unknown> | null} credentials
+ * @property {unknown} assignedProxy
+ * @property {number | null} hibernatingUntil
  */
 
 /**
@@ -92,7 +102,7 @@
  * @property {number} retryAfterMs
  * @property {number} retryAfter
  * @property {string} suggestedAction
- * @property {string} [accountId]
+ * @property {string | null} [accountId]
  * @property {string} [platform]
  */
 

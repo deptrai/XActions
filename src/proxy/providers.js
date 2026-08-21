@@ -44,6 +44,21 @@ const PROVIDER_SID_LIMITS = {
  */
 
 /**
+ * @typedef {Object} ProxyProviderContract
+ * @property {string} name
+ * @property {() => number} healthyCount
+ * @property {() => number} totalCount
+ * @property {() => boolean} isAllQuarantined
+ * @property {(options?: Record<string, unknown>) => (NormalizedProxy | string | null)} getProxy
+ * @property {(accountId: string) => (NormalizedProxy | string | null)} getStickyProxy
+ * @property {() => (NormalizedProxy | string | null)} getNext
+ * @property {(proxy?: string | NormalizedProxy, durationMs?: number) => void} quarantine
+ * @property {(proxy: string | NormalizedProxy) => Record<string, unknown> | null} toPlaywrightProxy
+ * @property {(proxy: string | NormalizedProxy, options?: Record<string, unknown>) => unknown} getProxyAgent
+ * @property {(proxy: string | NormalizedProxy) => string[]} getBrowserArgs
+ */
+
+/**
  * Wrap an IPv6 address in brackets unless it is already bracketed.
  * @param {string} host
  * @returns {string}

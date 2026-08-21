@@ -167,7 +167,7 @@ export class AbstractCrawler {
     if (this.requiresAuth && !accountId && this.accountPool) {
       const account = this.accountPool.getNextAvailable(this.name);
       if (account) {
-        accountId = typeof account === 'object' ? account.id || account.accountId : account;
+        accountId = account;
       }
     }
 

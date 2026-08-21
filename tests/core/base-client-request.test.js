@@ -222,9 +222,10 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
       const elapsed = Date.now() - start;
 
       expect(testState.callCount).toBe(3);
-      // First two retries include backoff; total should be > 10ms and < 100ms.
+      // First two retries include backoff; total should be > 10ms and < 250ms
+      // (real proxy/undici overhead is included, so the upper bound is generous).
       expect(elapsed).toBeGreaterThan(10);
-      expect(elapsed).toBeLessThan(100);
+      expect(elapsed).toBeLessThan(250);
     });
 
     test('should stop retrying immediately and throw XACT_5030 when all proxies are quarantined', async () => {

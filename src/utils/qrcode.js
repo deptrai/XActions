@@ -1,4 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+/// <reference path="./qrcode-terminal.d.ts" />
 /**
  * QR code utilities for terminal login with TTY auto-scaling and Non-TTY fallback.
  * @author nich (@nichxbt)
@@ -52,7 +53,8 @@ export async function displayTerminalQrCode(data, options = {}) {
       });
     });
   } catch (err) {
-    throw new Error(`[QR INVALID] qrcode-terminal rendering failed: ${err.message}`);
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`[QR INVALID] qrcode-terminal rendering failed: ${message}`);
   }
 }
 

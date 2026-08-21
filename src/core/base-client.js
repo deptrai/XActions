@@ -18,6 +18,25 @@ import {
   SuggestedActions,
 } from './error-envelope.js';
 
+/** @typedef {import('./types.js').AccountRecord} AccountRecord */
+
+/**
+ * @typedef {{ accountId?: string, requiresResidential?: boolean, headers?: Record<string, unknown>, body?: unknown, [key: string]: unknown }} RequestOptions
+ */
+
+/**
+ * @typedef {Object} ProxyProviderLike
+ * @property {() => boolean} isAllQuarantined
+ * @property {(proxy: string | Record<string, unknown>, options?: Record<string, unknown>) => unknown} getProxyAgent
+ * @property {(proxy?: string | Record<string, unknown>, durationMs?: number) => void} quarantine
+ * @property {(options?: Record<string, unknown>) => (string | Record<string, unknown> | null)} [getProxy]
+ * @property {(accountId: string) => (string | Record<string, unknown> | null)} [getStickyProxy]
+ * @property {() => (string | Record<string, unknown> | null)} [getNext]
+ * @property {() => (string | Record<string, unknown> | null)} [getRotatingProxy]
+ * @property {() => (string | Record<string, unknown> | null)} [getRoundRobinProxy]
+ * @property {(proxy: string | Record<string, unknown>, client?: string) => unknown} [createProxyAgent]
+ */
+
 const STANDBY_BACKOFF_MS = 30 * 1000;
 const DEFAULT_QUARANTINE_MS = 5 * 60 * 1000;
 
@@ -67,8 +86,8 @@ export class AbstractApiClient {
   /**
    * @param {Object} [options]
    * @param {import('./session-manager.js').SessionManager} [options.sessionManager]
-   * @param {import('../proxy/proxy-pool.js').ProxyIpPool} [options.proxyPool]
-   * @param {import('../proxy/providers.js').ProxyProviderContract} [options.proxyProvider]
+   * @param {ProxyProviderLike} [options.proxyPool]
+   * @param {ProxyProviderLike} [options.proxyProvider]
    * @param {import('./account-pool.js').AccountPool} [options.accountPool]
    * @param {import('./adaptive-governor.js').AdaptiveRateGovernor} [options.governor]
    * @param {import('./platform-validator.js').AbstractPlatformResponseValidator} [options.responseValidator]
@@ -139,18 +158,16 @@ export class AbstractApiClient {
   /**
    * Resolve proxy from proxyProvider or proxyPool.
    * Throws PROXY_EXHAUSTED if no proxy is available.
-   * @param {string | Object} [accountId]
+   * @param {string | AccountRecord | null} [accountId]
    * @param {boolean} [requiresResidential=false]
-   * @returns {string | Object}
+   * @returns {string | Record<string, unknown>}
    */
   resolveProxy(accountId, requiresResidential = false) {
     const rawAccountId = typeof accountId === 'string' ? accountId : accountId?.accountId;
     let proxy = null;
 
     if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
-      const opts = typeof accountId === 'string'
-        ? { accountId, requiresResidential }
-        : (accountId ? { ...accountId, requiresResidential } : { requiresResidential });
+      const opts = { accountId: rawAccountId, requiresResidential };
       proxy = this.proxyProvider.getProxy(opts);
     } else if (this.proxyPool) {
       if (requiresResidential) {
@@ -209,8 +226,8 @@ export class AbstractApiClient {
    *
    * @param {string} method
    * @param {string} url
-   * @param {Object} [options]
-   * @returns {Promise<any>}
+   * @param {RequestOptions} [options]
+   * @returns {Promise<unknown>}
    */
   async request(method, url, options = {}) {
     const opts = options || {};

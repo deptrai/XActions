@@ -54,10 +54,11 @@ export class PlatformError extends Error {
    * @param {number} [opts.statusCode]
    * @param {number} [opts.retryAfterMs]
    * @param {string} [opts.suggestedAction]
-   * @param {string} [opts.accountId]
+   * @param {string | null} [opts.accountId]
    * @param {string} [opts.platform]
    * @param {Record<string, unknown>} [opts.details]
    * @param {boolean} [opts.isRetryable]
+   * @param {unknown} [opts.cause]
    */
   constructor(opts = {}) {
     super(opts.message || 'Platform error');
@@ -71,6 +72,7 @@ export class PlatformError extends Error {
     this.accountId = opts.accountId;
     this.platform = opts.platform;
     this.details = opts.details;
+    if (opts.cause !== undefined) this.cause = opts.cause;
   }
 
   /** @returns {number} */
