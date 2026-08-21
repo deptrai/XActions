@@ -143,6 +143,37 @@ export class PuppeteerAdapter extends BaseAdapter {
   getNativeBrowser(browser) {
     return browser._native;
   }
+
+  /**
+   * Connect to an existing Chrome instance via CDP.
+   * Fetches the WebSocket debugger URL from /json/version then puppeteer.connects.
+   * @param {string} cdpUrl - e.g. 'http://localhost:9222'
+   * @param {Object} [options]
+   * @returns {Promise<{_native: *, _adapter: string, _browserType: string}>}
+   */
+  async connect(cdpUrl, options = {}) {
+    const url = new URL(cdpUrl);
+    const versionUrl = `${url.protocol}//${url.host}/json/version`;
+
+    const response = await fetch(versionUrl);
+    if (!response.ok) {
+      throw new Error(`[CDP ERROR] Could not connect to Chrome on ${cdpUrl}: ${response.status} ${response.statusText}`);
+    }
+
+    const version = await response.json();
+    if (!version.webSocketDebuggerUrl) {
+      throw new Error('[CDP ERROR] Chrome DevTools endpoint returned empty. Please refresh the browser and retry.');
+    }
+
+    const puppeteer = await this.#getPuppeteer();
+    const browser = await puppeteer.connect({
+      browserWSEndpoint: version.webSocketDebuggerUrl,
+      defaultViewport: null,
+      ...options,
+    });
+
+    return { _native: browser, _adapter: this.name, _browserType: 'chromium' };
+  }
 }
 
 export default PuppeteerAdapter;

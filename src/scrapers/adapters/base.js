@@ -34,6 +34,12 @@ export class BaseAdapter {
   /** @type {string} Adapter name */
   name = 'base';
 
+  constructor() {
+    if (new.target === BaseAdapter) {
+      throw new TypeError('BaseAdapter is abstract; extend it.');
+    }
+  }
+
   /** @type {string} Adapter description */
   description = 'Abstract base adapter';
 
@@ -122,7 +128,7 @@ export class BaseAdapter {
   }
 
   /**
-   * Set a cookie on the page/context
+   * Set a single cookie on the page/context
    * @param {AdapterPage} page
    * @param {Object} cookie
    * @param {string} cookie.name
@@ -135,6 +141,28 @@ export class BaseAdapter {
    */
   async setCookie(page, cookie) {
     throw new Error(`${this.name}: setCookie() not implemented`);
+  }
+
+  /**
+   * Set multiple cookies on the page/context
+   * @param {AdapterPage} page
+   * @param {Array<{name: string, value: string, domain: string, path?: string, httpOnly?: boolean, secure?: boolean}>} cookies
+   * @returns {Promise<void>}
+   */
+  async setCookies(page, cookies) {
+    for (const cookie of cookies) {
+      await this.setCookie(page, cookie);
+    }
+  }
+
+  /**
+   * Connect to an existing browser via CDP (Chrome DevTools Protocol)
+   * @param {string} cdpUrl - CDP HTTP endpoint, e.g. 'http://localhost:9222'
+   * @param {Object} [options]
+   * @returns {Promise<AdapterBrowser>}
+   */
+  async connect(cdpUrl, options = {}) {
+    throw new Error(`${this.name}: connect() not implemented`);
   }
 
   /**

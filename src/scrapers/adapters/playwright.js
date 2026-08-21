@@ -192,6 +192,20 @@ export class PlaywrightAdapter extends BaseAdapter {
   getNativeBrowser(browser) {
     return browser._native;
   }
+
+  /**
+   * Connect to an existing Chrome instance via CDP
+   * @param {string} cdpUrl - e.g. 'http://localhost:9222'
+   * @param {Object} [options]
+   * @returns {Promise<{_native: *, _adapter: string, _browserType: string}>}
+   */
+  async connect(cdpUrl, options = {}) {
+    const pw = await this.#getPlaywright();
+    const browserType = options.browserType || options.browser || 'chromium';
+    const launcher = pw[browserType] || pw.chromium;
+    const browser = await launcher.connectOverCDP(cdpUrl, options);
+    return { _native: browser, _adapter: this.name, _browserType: browserType };
+  }
 }
 
 export default PlaywrightAdapter;
