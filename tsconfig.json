@@ -16,6 +16,6 @@
     "baseUrl": ".",
     "paths": {}
   },
-  "include": ["src/core/**/*.js", "src/client/**/*.js"],
+  "include": ["src/core/**/*.js", "src/client/**/*.js", "src/scrapers/twitter/http/**/*.js"],
   "exclude": ["node_modules", "dist", "archive"]
 }

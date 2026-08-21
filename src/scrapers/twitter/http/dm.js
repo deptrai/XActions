@@ -3,7 +3,7 @@
  * Twitter/X Direct Message Operations via HTTP
  *
  * Send messages, read conversations, list inbox, delete messages,
- * and mark conversations as read — all over HTTP without Puppeteer
+ * and mark conversations as read - all over HTTP without Puppeteer
  * or the official paid API.
  *
  * Every function requires an authenticated {@link TwitterHttpClient}.
@@ -15,6 +15,8 @@
  */
 
 import { GRAPHQL, REST, REST_BASE } from './endpoints.js';
+
+/** @typedef {import('./types.js').Raw} Raw */
 import {
   AuthError,
   NotFoundError,
@@ -38,6 +40,7 @@ const DEFAULT_CONVERSATION_LIMIT = 100;
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -54,7 +57,7 @@ function requireAuth(client) {
  * Resolve a Twitter username (screen name) to a user ID via GraphQL.
  *
  * @param {import('./client.js').TwitterHttpClient} client
- * @param {string} username — screen name without `@`
+ * @param {string} username - screen name without `@`
  * @returns {Promise<string>} user rest_id
  */
 async function resolveUserId(client, username) {
@@ -77,10 +80,11 @@ async function resolveUserId(client, username) {
  * @param {string} recipientId
  * @param {string} text
  * @param {object} [options]
- * @param {string} [options.mediaId] — media ID for image/video attachment
- * @returns {object}
+ * @param {string} [options.mediaId] - media ID for image/video attachment
+ * @returns {Raw}
  */
 function buildDMBody(recipientId, text, options = {}) {
+  /** @type {Record<string, unknown>} */
   const messageData = { text };
 
   if (options.mediaId) {
@@ -90,7 +94,7 @@ function buildDMBody(recipientId, text, options = {}) {
     };
   }
 
-  return {
+  return /** @type {Raw} */ ({
     event: {
       type: 'message_create',
       message_create: {
@@ -98,26 +102,28 @@ function buildDMBody(recipientId, text, options = {}) {
         message_data: messageData,
       },
     },
-  };
+  });
 }
 
 /**
  * Parse a single DM event from the API response into a normalized message.
  *
- * @param {object} event — raw DM event object
- * @returns {object} normalized message
+ * @param {Raw} event - raw DM event object
+ * @returns {{ id: string, text: string, senderId: string, createdAt: string, media: Raw[]|null, reactions: Array<{ emoji: string, senderId: string }> }}
  */
 function parseMessageEvent(event) {
-  const msgCreate = event?.message_create ?? {};
-  const msgData = msgCreate?.message_data ?? {};
+  const msgCreate = /** @type {Raw} */ (event?.message_create ?? {});
+  const msgData = /** @type {Raw} */ (msgCreate?.message_data ?? {});
 
+  /** @type {Raw[]} */
   const media = [];
-  const attachment = msgData.attachment;
+  const attachment = /** @type {Raw} */ (msgData.attachment);
   if (attachment?.media) {
-    media.push({
-      type: attachment.media.type || 'photo',
-      url: attachment.media.media_url_https || attachment.media.url || '',
-    });
+    const mediaObj = /** @type {Raw} */ (/** @type {unknown} */ (attachment.media));
+    media.push(/** @type {Raw} */ ({
+      type: mediaObj.type || 'photo',
+      url: mediaObj.media_url_https || mediaObj.url || '',
+    }));
   }
 
   return {
@@ -135,16 +141,16 @@ function parseMessageEvent(event) {
 /**
  * Parse inbox state into normalized conversation list.
  *
- * @param {object} inboxState — raw inbox_initial_state object
+ * @param {Raw} inboxState - raw inbox_initial_state object
  * @param {object} [options]
  * @param {number} [options.limit]
  * @returns {{ conversations: object[], cursor: string|null }}
  */
 function parseInboxState(inboxState, options = {}) {
-  const entries = inboxState?.inbox_initial_state ?? inboxState ?? {};
-  const conversations = entries.conversations ?? {};
-  const entries_data = entries.entries ?? [];
-  const users = entries.users ?? {};
+  const entries = /** @type {Raw} */ (inboxState?.inbox_initial_state ?? inboxState ?? {});
+  const conversations = /** @type {Record<string, Raw>} */ (entries.conversations ?? {});
+  const entries_data = /** @type {Raw[]} */ (entries.entries ?? []);
+  const users = /** @type {Record<string, Raw>} */ (entries.users ?? {});
   const limit = options.limit || DEFAULT_INBOX_LIMIT;
 
   const result = [];
@@ -153,11 +159,13 @@ function parseInboxState(inboxState, options = {}) {
     if (result.length >= limit) break;
 
     // Participants
-    const participantIds = (conv.participants ?? []).map(
-      (p) => p.user_id || p,
-    );
+    const rawParticipants = /** @type {Raw[]} */ (conv.participants ?? []);
+    const participantIds = rawParticipants.map((p) => {
+      if (typeof p === 'string') return p;
+      return String(p.user_id ?? '');
+    });
     const participants = participantIds.map((uid) => {
-      const u = users[uid] ?? {};
+      const u = /** @type {Raw} */ (users[uid] ?? {});
       return {
         id: String(uid),
         username: u.screen_name || '',
@@ -168,23 +176,24 @@ function parseInboxState(inboxState, options = {}) {
 
     // Last message from the entries matching this conversation
     const convEntries = entries_data.filter(
-      (e) =>
-        e?.message?.conversation_id === convId ||
-        e?.conversation_id === convId,
+      (e) => {
+        const msg = /** @type {Raw} */ (e.message ?? {});
+        return msg.conversation_id === convId || e.conversation_id === convId;
+      },
     );
-    const lastEntry = convEntries[0] ?? {};
-    const lastMsg = lastEntry?.message?.message_data ?? {};
+    const lastEntry = /** @type {Raw} */ (convEntries[0] ?? {});
+    const lastMsg = /** @type {Raw} */ (lastEntry.message ?? {});
+    const lastMsgData = /** @type {Raw} */ (lastMsg.message_data ?? {});
 
     result.push({
       conversationId: convId,
       participants,
       lastMessage: {
-        text: lastMsg.text || '',
-        createdAt: lastEntry?.message?.time
-          ? new Date(Number(lastEntry.message.time)).toISOString()
+        text: lastMsgData.text || '',
+        createdAt: lastMsg.time
+          ? new Date(Number(lastMsg.time)).toISOString()
           : '',
-        senderId: lastEntry?.message?.message_data?.sender_id ||
-          lastEntry?.message?.sender_id || '',
+        senderId: lastMsgData.sender_id || lastMsg.sender_id || '',
       },
       unreadCount: Number(conv.unread_count ?? 0),
       type: conv.type === 'GROUP_DM' ? 'group' : 'one_to_one',
@@ -199,44 +208,49 @@ function parseInboxState(inboxState, options = {}) {
 /**
  * Parse a conversation response into normalized message array.
  *
- * @param {object} convData — raw conversation data
+ * @param {Raw} convData - raw conversation data
  * @param {object} [options]
  * @param {number} [options.limit]
  * @returns {{ messages: object[], cursor: string|null }}
  */
 function parseConversationData(convData, options = {}) {
   const limit = options.limit || DEFAULT_CONVERSATION_LIMIT;
-  const state = convData?.conversation_timeline ?? convData ?? {};
-  const entries = state?.entries ?? [];
+  const state = /** @type {Raw} */ (convData?.conversation_timeline ?? convData ?? {});
+  const entries = /** @type {Raw[]} */ (state?.entries ?? []);
+  /** @type {Array<{ id: string, text: string, senderId: string, createdAt: string, media: Raw[]|null, reactions: Array<{ emoji: string, senderId: string }> }>} */
   const messages = [];
 
-  for (const entry of entries) {
+  for (const rawEntry of entries) {
     if (messages.length >= limit) break;
 
-    const msg = entry?.message ?? entry;
+    const entry = /** @type {Raw} */ (rawEntry);
+    const rawMsg = entry?.message ?? entry;
+    const msg = /** @type {Raw} */ (rawMsg);
     if (!msg?.id && !msg?.message_data) continue;
 
-    const msgData = msg.message_data ?? {};
+    const msgData = /** @type {Raw} */ (msg.message_data ?? {});
+    /** @type {Raw[]} */
     const media = [];
-    const attachment = msgData.attachment;
+    const attachment = /** @type {Raw} */ (msgData.attachment);
     if (attachment?.media) {
-      media.push({
-        type: attachment.media.type || 'photo',
-        url: attachment.media.media_url_https || attachment.media.url || '',
-      });
+      const mediaObj = /** @type {Raw} */ (/** @type {unknown} */ (attachment.media));
+      media.push(/** @type {Raw} */ ({
+        type: mediaObj.type || 'photo',
+        url: mediaObj.media_url_https || mediaObj.url || '',
+      }));
     }
 
     messages.push({
-      id: msg.id || entry.id || '',
-      text: msgData.text || msg.text || '',
-      senderId: msgData.sender_id || msg.sender_id || '',
+      id: /** @type {string} */ (msg.id || entry.id || ''),
+      text: /** @type {string} */ (msgData.text || msg.text || ''),
+      senderId: /** @type {string} */ (msgData.sender_id || msg.sender_id || ''),
       createdAt: msg.time
         ? new Date(Number(msg.time)).toISOString()
         : msg.created_timestamp
           ? new Date(Number(msg.created_timestamp)).toISOString()
           : '',
       media: media.length > 0 ? media : null,
-      reactions: parseReactions(msg.reactions ?? entry.reactions),
+      reactions: parseReactions(/** @type {Raw[]} */ (msg.reactions ?? entry.reactions)),
     });
   }
 
@@ -248,13 +262,13 @@ function parseConversationData(convData, options = {}) {
 /**
  * Parse reaction data from a message.
  *
- * @param {Array} reactions — raw reaction data
+ * @param {Raw[]} reactions - raw reaction data
  * @returns {Array<{ emoji: string, senderId: string }>}
  */
 function parseReactions(reactions) {
   if (!Array.isArray(reactions)) return [];
   return reactions.map((r) => ({
-    emoji: r.key || r.emoji || '',
+    emoji: /** @type {string} */ (r.key || r.emoji || ''),
     senderId: r.sender_id || '',
   }));
 }
@@ -268,11 +282,11 @@ function parseReactions(reactions) {
  *
  * REST: POST /1.1/direct_messages/events/new.json
  *
- * @param {import('./client.js').TwitterHttpClient} client — authenticated client
- * @param {string} recipientId — recipient user ID
- * @param {string} text — message text
+ * @param {import('./client.js').TwitterHttpClient} client - authenticated client
+ * @param {string} recipientId - recipient user ID
+ * @param {string} text - message text
  * @param {object} [options]
- * @param {string} [options.mediaId] — media ID for image/video attachment
+ * @param {string} [options.mediaId] - media ID for image/video attachment
  * @returns {Promise<{ messageId: string, createdAt: string }>}
  */
 export async function sendDM(client, recipientId, text, options = {}) {
@@ -294,7 +308,7 @@ export async function sendDM(client, recipientId, text, options = {}) {
   });
 
   // Parse the created event
-  const event = response?.event ?? {};
+  const event = /** @type {Raw} */ (response?.event ?? {});
   return {
     messageId: event.id || '',
     createdAt: event.created_timestamp
@@ -307,11 +321,11 @@ export async function sendDM(client, recipientId, text, options = {}) {
  * Send a direct message to a user by their username (screen name).
  * Resolves the username to a user ID first, then sends.
  *
- * @param {import('./client.js').TwitterHttpClient} client — authenticated client
- * @param {string} username — screen name (with or without `@`)
- * @param {string} text — message text
+ * @param {import('./client.js').TwitterHttpClient} client - authenticated client
+ * @param {string} username - screen name (with or without `@`)
+ * @param {string} text - message text
  * @param {object} [options]
- * @param {string} [options.mediaId] — media ID for image/video attachment
+ * @param {string} [options.mediaId] - media ID for image/video attachment
  * @returns {Promise<{ messageId: string, createdAt: string }>}
  */
 export async function sendDMByUsername(client, username, text, options = {}) {
@@ -326,10 +340,10 @@ export async function sendDMByUsername(client, username, text, options = {}) {
  *
  * REST: GET /1.1/dm/inbox_initial_state.json
  *
- * @param {import('./client.js').TwitterHttpClient} client — authenticated client
+ * @param {import('./client.js').TwitterHttpClient} client - authenticated client
  * @param {object} [options]
- * @param {number} [options.limit=50] — max conversations to return
- * @param {string} [options.cursor] — pagination cursor
+ * @param {number} [options.limit=50] - max conversations to return
+ * @param {string} [options.cursor] - pagination cursor
  * @returns {Promise<{ conversations: object[], cursor: string|null }>}
  */
 export async function getInbox(client, options = {}) {
@@ -356,11 +370,11 @@ export async function getInbox(client, options = {}) {
  *
  * REST: GET /1.1/dm/conversation/{conversationId}.json
  *
- * @param {import('./client.js').TwitterHttpClient} client — authenticated client
- * @param {string} conversationId — conversation ID
+ * @param {import('./client.js').TwitterHttpClient} client - authenticated client
+ * @param {string} conversationId - conversation ID
  * @param {object} [options]
- * @param {number} [options.limit=100] — max messages to return
- * @param {string} [options.cursor] — pagination cursor (max_id)
+ * @param {number} [options.limit=100] - max messages to return
+ * @param {string} [options.cursor] - pagination cursor (max_id)
  * @returns {Promise<{ messages: object[], cursor: string|null }>}
  */
 export async function getConversation(client, conversationId, options = {}) {
@@ -391,8 +405,8 @@ export async function getConversation(client, conversationId, options = {}) {
  *
  * REST: DELETE /1.1/direct_messages/events/destroy.json?id={messageId}
  *
- * @param {import('./client.js').TwitterHttpClient} client — authenticated client
- * @param {string} messageId — DM event ID
+ * @param {import('./client.js').TwitterHttpClient} client - authenticated client
+ * @param {string} messageId - DM event ID
  * @returns {Promise<{ success: boolean }>}
  */
 export async function deleteMessage(client, messageId) {
@@ -417,9 +431,9 @@ export async function deleteMessage(client, messageId) {
  *
  * REST: POST /1.1/dm/conversation/{conversationId}/mark_read.json
  *
- * @param {import('./client.js').TwitterHttpClient} client — authenticated client
- * @param {string} conversationId — conversation ID
- * @param {string} lastMessageId — ID of the last read message
+ * @param {import('./client.js').TwitterHttpClient} client - authenticated client
+ * @param {string} conversationId - conversation ID
+ * @param {string} lastMessageId - ID of the last read message
  * @returns {Promise<{ success: boolean }>}
  */
 export async function markRead(client, conversationId, lastMessageId) {

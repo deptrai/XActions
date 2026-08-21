@@ -1,4 +1,10 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+/** @typedef {import('./types.js').Raw} Raw */
+/** @typedef {import('./types.js').RateLimitInfo} RateLimitInfo */
+/** @typedef {import('./types.js').TwitterHttpClientOptions} TwitterHttpClientOptions */
+/** @typedef {import('./types.js').RequestOptions} RequestOptions */
+/** @typedef {import('./types.js').GraphqlOptions} GraphqlOptions */
 /**
  * Twitter HTTP Client Core
  *
@@ -30,8 +36,12 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * @param {string[]} agents
+ */
 function pickUserAgent(agents) {
   return agents[Math.floor(Math.random() * agents.length)];
 }
@@ -45,6 +55,9 @@ export class WaitingRateLimitStrategy {
     this._sleep = sleepFn;
   }
 
+  /**
+   * @param {RateLimitInfo} info
+   */
   async onRateLimit({ resetAt }) {
     const waitMs = Math.max((resetAt || Date.now() + 60_000) - Date.now(), 1000);
     await this._sleep(waitMs);
@@ -52,10 +65,13 @@ export class WaitingRateLimitStrategy {
 }
 
 export class ErrorRateLimitStrategy {
+  /**
+   * @param {RateLimitInfo} info
+   */
   async onRateLimit({ resetAt, endpoint }) {
     throw new RateLimitError(
       `Rate limited on ${endpoint}, resets at ${new Date(resetAt || Date.now())}`,
-      { resetAt }
+      { resetAt, endpoint }
     );
   }
 }
@@ -66,21 +82,17 @@ export class ErrorRateLimitStrategy {
 
 export class TwitterHttpClient {
   /**
-   * @param {object} [options]
-   * @param {string} [options.cookies] - Cookie string (`name=val; name2=val2`)
-   * @param {string} [options.proxy] - Proxy URL (http(s)://, socks5://)
-   * @param {'wait'|'error'|object} [options.rateLimitStrategy='error']
-   * @param {number} [options.maxRetries=3]
-   * @param {string|'rotate'} [options.userAgent]
-   * @param {function} [options.fetch] - Custom fetch implementation
+   * @param {TwitterHttpClientOptions} [options]
    */
   constructor(options = {}) {
+    /** @type {Record<string, string>} */
     this._cookies = {};
     this._proxy = options.proxy || null;
     this._maxRetries = options.maxRetries ?? 3;
     this._fetch = options.fetch || globalThis.fetch;
     this._userAgents = USER_AGENTS;
 
+    this._userAgents = USER_AGENTS;
     if (options.userAgent && options.userAgent !== 'rotate') {
       this._userAgents = [options.userAgent];
     }
@@ -131,6 +143,9 @@ export class TwitterHttpClient {
     return Boolean(this._cookies.auth_token);
   }
 
+  /**
+   * @param {string} proxyUrl
+   */
   setProxy(proxyUrl) {
     this._proxy = proxyUrl;
   }
@@ -140,10 +155,10 @@ export class TwitterHttpClient {
   /**
    * Build request headers.
    * @param {boolean} [authenticated=true]
-   * @returns {object}
+   * @returns {Record<string, string>}
    */
   _buildHeaders(authenticated = true) {
-    const headers = {
+    const headers = /** @type {Record<string, string>} */ ({
       authorization: `Bearer ${decodeURIComponent(BEARER_TOKEN)}`,
       'user-agent': pickUserAgent(this._userAgents),
       accept: '*/*',
@@ -151,7 +166,7 @@ export class TwitterHttpClient {
       'content-type': 'application/json',
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',
-    };
+    });
 
     if (authenticated && this.isAuthenticated()) {
       headers['x-csrf-token'] = this.getCsrfToken();
@@ -171,12 +186,8 @@ export class TwitterHttpClient {
    * Send an HTTP request with retry logic.
    *
    * @param {string} url
-   * @param {object} [options]
-   * @param {string} [options.method='GET']
-   * @param {object|string} [options.body]
-   * @param {object} [options.headers]
-   * @param {boolean} [options.authenticated=true]
-   * @returns {Promise<object>} Parsed JSON
+   * @param {RequestOptions} [options]
+   * @returns {Promise<Raw>} Parsed JSON
    */
   async request(url, options = {}) {
     const method = options.method || 'GET';
@@ -187,6 +198,7 @@ export class TwitterHttpClient {
         ? JSON.stringify(options.body)
         : options.body;
 
+    /** @type {Error|undefined} */
     let lastError;
     for (let attempt = 0; attempt <= this._maxRetries; attempt++) {
       const startTime = Date.now();
@@ -202,6 +214,7 @@ export class TwitterHttpClient {
         const resetTs = parseInt(res.headers?.get?.('x-rate-limit-reset') ?? '', 10) * 1000;
 
         if (res.status === 429) {
+          /** @type {RateLimitInfo} */
           const rlErr = { resetAt: resetTs || Date.now() + 60_000, endpoint: url, retryCount: attempt };
           await this._rateLimitStrategy.onRateLimit(rlErr);
           continue; // retry after strategy handles it
@@ -214,7 +227,7 @@ export class TwitterHttpClient {
           throw new NotFoundError('Resource not found', { status: 404, endpoint: url });
         }
 
-        const json = await res.json?.() ?? {};
+        const json = /** @type {Raw} */ (await res.json?.() ?? {});
 
         if (res.status >= 400) {
           throw new TwitterApiError(`HTTP ${res.status}`, { status: res.status, endpoint: url, data: json });
@@ -223,17 +236,18 @@ export class TwitterHttpClient {
         return json;
       } catch (err) {
         const elapsed = Date.now() - startTime;
+        const error = /** @type {Error} */ (err);
         if (this._debug) {
-          console.log(`[TwitterHttpClient] ${method} ${url} → ERROR (${elapsed}ms): ${err.message}`);
+          console.log(`[TwitterHttpClient] ${method} ${url} → ERROR (${elapsed}ms): ${error.message}`);
         }
-        lastError = err;
+        lastError = error;
         // Don't retry auth / not-found / explicit API errors
         if (
-          err instanceof AuthError ||
-          err instanceof NotFoundError ||
-          (err instanceof TwitterApiError && !(err instanceof RateLimitError))
+          error instanceof AuthError ||
+          error instanceof NotFoundError ||
+          (error instanceof TwitterApiError && !(error instanceof RateLimitError))
         ) {
-          throw err;
+          throw error;
         }
         // Network-level retry
         if (attempt < this._maxRetries) {
@@ -253,11 +267,9 @@ export class TwitterHttpClient {
    *
    * @param {string} queryId
    * @param {string} operationName
-   * @param {object} variables
-   * @param {object} [options]
-   * @param {object} [options.features]
-   * @param {boolean} [options.mutation=false] - If true, sends POST
-   * @returns {Promise<object>}
+   * @param {Record<string, unknown>} variables
+   * @param {GraphqlOptions} [options]
+   * @returns {Promise<Raw>}
    */
   async graphql(queryId, operationName, variables, options = {}) {
     const features = options.features || DEFAULT_FEATURES;
@@ -265,7 +277,7 @@ export class TwitterHttpClient {
 
     if (isMutation) {
       const url = `${GRAPHQL_BASE}/${queryId}/${operationName}`;
-      // Mutations don't paginate — return raw JSON
+      // Mutations don't paginate - return raw JSON
       return this.request(url, {
         method: 'POST',
         body: { variables, features, queryId },
@@ -273,7 +285,7 @@ export class TwitterHttpClient {
     }
 
     const url = buildGraphQLUrl(queryId, operationName, variables, features);
-    const json = await this.request(url);
+    const json = /** @type {Raw} */ (await this.request(url));
 
     // Extract bottom cursor for pagination (queries only)
     const cursor = this._extractCursor(json);
@@ -285,12 +297,9 @@ export class TwitterHttpClient {
    *
    * @param {string} queryId
    * @param {string} operationName
-   * @param {object} variables
-   * @param {object} [options]
-   * @param {object} [options.features]
-   * @param {number} [options.limit=Infinity] - Stop after this many items
-   * @param {function} [options.onProgress] - Called with `{ fetched, limit }`
-   * @yields {{ data: object, cursor: string|null }}
+   * @param {Record<string, unknown>} variables
+   * @param {GraphqlOptions} [options]
+   * @yields {Raw}
    */
   async *graphqlPaginate(queryId, operationName, variables, options = {}) {
     const limit = options.limit ?? Infinity;
@@ -301,7 +310,7 @@ export class TwitterHttpClient {
       const vars = cursor ? { ...variables, cursor } : { ...variables };
       const result = await this.graphql(queryId, operationName, vars, options);
 
-      yield result;
+      /** @type {Raw} */ (yield result);
       fetched += 1;
 
       if (options.onProgress) {
@@ -320,7 +329,7 @@ export class TwitterHttpClient {
    * Twitter nests cursors in timeline instruction entries with entryId
    * starting with "cursor-bottom".
    *
-   * @param {object} json
+   * @param {Raw} json
    * @returns {string|null}
    * @private
    */
@@ -333,7 +342,7 @@ export class TwitterHttpClient {
       for (const instruction of instructions) {
         const entries = instruction.entries || instruction.moduleItems || [];
         for (const entry of entries) {
-          const id = entry.entryId || entry.entry_id || '';
+          const id = /** @type {string} */ (entry.entryId || entry.entry_id) || '';
           if (id.startsWith('cursor-bottom')) {
             return (
               entry.content?.value ||
@@ -352,15 +361,15 @@ export class TwitterHttpClient {
 
   /**
    * Recursively search the response for a timeline instructions array.
-   * @param {object} obj
-   * @returns {Array|null}
+   * @param {Raw} obj
+   * @returns {Raw[]|null}
    * @private
    */
   _findInstructions(obj) {
     if (!obj || typeof obj !== 'object') return null;
     if (Array.isArray(obj.instructions)) return obj.instructions;
     for (const key of Object.keys(obj)) {
-      const result = this._findInstructions(obj[key]);
+      const result = this._findInstructions(/** @type {Raw} */ (obj[key]));
       if (result) return result;
     }
     return null;
@@ -371,11 +380,9 @@ export class TwitterHttpClient {
   /**
    * Execute a REST API call (typically POST with form data).
    *
-   * @param {string} path — e.g. `/1.1/friendships/create.json`
-   * @param {object} [options]
-   * @param {string} [options.method='POST']
-   * @param {object} [options.body] - Will be sent as x-www-form-urlencoded for REST
-   * @returns {Promise<object>}
+   * @param {string} path - e.g. `/1.1/friendships/create.json`
+   * @param {RequestOptions} [options]
+   * @returns {Promise<Raw>}
    */
   async rest(path, options = {}) {
     const url = `${REST_BASE}${path}`;
@@ -386,7 +393,7 @@ export class TwitterHttpClient {
 
     let body;
     if (options.body && typeof options.body === 'object') {
-      body = new URLSearchParams(options.body).toString();
+      body = new URLSearchParams(/** @type {Record<string, string>} */ (options.body)).toString();
     } else {
       body = options.body;
     }

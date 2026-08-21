@@ -9,17 +9,26 @@
  * - Session validation & refresh
  * - Cookie persistence (JSON, compatible with the-convocation/twitter-scraper)
  *
- * Uses native fetch — no Puppeteer dependency.
+ * Uses native fetch - no Puppeteer dependency.
  *
  * @author nich (@nichxbt)
  * @license MIT
  */
 
 import fs from 'fs/promises';
+
+/** @typedef {import('./types.js').Raw} Raw */
 import crypto from 'crypto';
 
+/**
+ * @typedef {Object} AuthErrorDetails
+ * @property {number} [status]
+ * @property {string} [subtask]
+ * @property {string|object|null} [response]
+ */
+
 // ---------------------------------------------------------------------------
-// Bearer token — embedded in Twitter's web client JS bundle (public)
+// Bearer token - embedded in Twitter's web client JS bundle (public)
 // Same token used by the-convocation/twitter-scraper, d60/twikit, etc.
 // ---------------------------------------------------------------------------
 const BEARER_TOKEN =
@@ -53,10 +62,7 @@ const USER_AGENTS = [
 export class AuthError extends Error {
   /**
    * @param {string} message
-   * @param {object} [details]
-   * @param {number} [details.status] — HTTP status code
-   * @param {string} [details.subtask] — Login subtask that failed
-   * @param {object} [details.response] — Raw API response
+   * @param {AuthErrorDetails} [details]
    */
   constructor(message, details = {}) {
     super(message);
@@ -72,6 +78,7 @@ export class AuthError extends Error {
 // ---------------------------------------------------------------------------
 
 /** Sleep for `ms` milliseconds. */
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Pick a random user-agent string. */
@@ -90,6 +97,7 @@ const randomUA = () => USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length
  */
 export function parseCookieString(cookieString) {
   if (!cookieString || typeof cookieString !== 'string') return {};
+  /** @type {Record<string, string>} */
   const cookies = {};
   const pairs = cookieString.split(';');
   for (const pair of pairs) {
@@ -114,7 +122,7 @@ function buildCookieHeader(cookies) {
 }
 
 // ---------------------------------------------------------------------------
-// Guest token cache lifetime (2.5 hours — tokens expire at ~3 h)
+// Guest token cache lifetime (2.5 hours - tokens expire at ~3 h)
 // ---------------------------------------------------------------------------
 const GUEST_TOKEN_TTL_MS = 2.5 * 60 * 60 * 1000;
 
@@ -125,6 +133,11 @@ const ALGO = 'aes-256-gcm';
 const IV_LEN = 16;
 const TAG_LEN = 16;
 
+/**
+ * @param {string} plaintext
+ * @param {string} key
+ * @returns {string}
+ */
 function encrypt(plaintext, key) {
   const keyBuf = crypto.scryptSync(key, 'xactions-salt', 32);
   const iv = crypto.randomBytes(IV_LEN);
@@ -134,6 +147,11 @@ function encrypt(plaintext, key) {
   return Buffer.concat([iv, tag, enc]).toString('base64');
 }
 
+/**
+ * @param {string} ciphertext
+ * @param {string} key
+ * @returns {string}
+ */
 function decrypt(ciphertext, key) {
   const buf = Buffer.from(ciphertext, 'base64');
   const keyBuf = crypto.scryptSync(key, 'xactions-salt', 32);
@@ -176,9 +194,9 @@ export class TwitterAuth {
 
   /**
    * @param {object} [options]
-   * @param {string}  [options.encryptionKey] — AES-256 key for encrypting persisted cookies
-   * @param {typeof globalThis.fetch} [options.fetch] — Custom fetch (for testing / proxies)
-   * @param {string}  [options.userAgent] — Fixed user-agent (default: random rotation)
+   * @param {string}  [options.encryptionKey] - AES-256 key for encrypting persisted cookies
+   * @param {typeof globalThis.fetch} [options.fetch] - Custom fetch (for testing / proxies)
+   * @param {string}  [options.userAgent] - Fixed user-agent (default: random rotation)
    */
   constructor(options = {}) {
     this.#encryptionKey = options.encryptionKey ?? null;
@@ -202,7 +220,7 @@ export class TwitterAuth {
       return { guestToken: this.#guestToken.token, expiresAt: this.#guestToken.expiresAt };
     }
 
-    // Prevent thundering herd — only one activation at a time
+    // Prevent thundering herd - only one activation at a time
     if (!this.#guestActivationPromise) {
       this.#guestActivationPromise = this.#activateGuestToken().finally(() => {
         this.#guestActivationPromise = null;
@@ -232,7 +250,7 @@ export class TwitterAuth {
       });
     }
 
-    const data = await res.json();
+    const data = /** @type {Raw} */ (await res.json());
     if (!data.guest_token) {
       throw new AuthError('Guest token activation returned no token', { response: data });
     }
@@ -250,7 +268,7 @@ export class TwitterAuth {
   /**
    * Set up an authenticated session from a browser cookie string.
    *
-   * @param {string} cookieString — e.g. "auth_token=xxx; ct0=yyy; twid=u%3D123"
+   * @param {string} cookieString - e.g. "auth_token=xxx; ct0=yyy; twid=u%3D123"
    * @returns {Promise<{ id: string, username: string, name: string }>}
    * @throws {AuthError} if cookies are invalid or session is expired
    */
@@ -274,6 +292,9 @@ export class TwitterAuth {
       });
     }
 
+    if (!validation.user) {
+      throw new AuthError('Session validation returned no user');
+    }
     this.#user = validation.user;
     return { ...validation.user };
   }
@@ -295,7 +316,7 @@ export class TwitterAuth {
    *
    * @param {string} username
    * @param {string} password
-   * @param {string} [email] — Required if Twitter prompts for email verification
+   * @param {string} [email] - Required if Twitter prompts for email verification
    * @returns {Promise<{ id: string, username: string, name: string }>}
    * @throws {AuthError}
    */
@@ -340,7 +361,7 @@ export class TwitterAuth {
     flowToken = await this.#handleAcidChallenge(ONBOARDING_URL, flowToken, email);
 
     // -- Step 7: Handle 2FA if needed ----------------------------------------
-    // (Will throw AuthError if 2FA is required — user must handle manually)
+    // (Will throw AuthError if 2FA is required - user must handle manually)
     flowToken = await this.#handle2FA(ONBOARDING_URL, flowToken);
 
     // -- Extract cookies from the successful login response ------------------
@@ -361,6 +382,9 @@ export class TwitterAuth {
       throw new AuthError(`Login succeeded but session validation failed: ${validation.reason}`);
     }
 
+    if (!validation.user) {
+      throw new AuthError('Session validation returned no user');
+    }
     this.#user = validation.user;
     return { ...validation.user };
   }
@@ -368,11 +392,14 @@ export class TwitterAuth {
   /** @type {Response | null} */
   #lastLoginResponse = null;
 
-  /** @type {Array<{flowToken: string, subtasks: Array}>} */
+  /** @type {Array<{flowToken: string, subtasks: Raw[]}>} */
   #loginFlowState = [];
 
   /**
-   * Init the login flow — POST with flow_name to get first flow_token.
+   * Init the login flow - POST with flow_name to get first flow_token.
+   *
+   * @param {string} url
+   * @returns {Promise<string>}
    */
   async #loginFlowInit(url) {
     const res = await this.#fetch(url, {
@@ -442,14 +469,23 @@ export class TwitterAuth {
     }
 
     this.#lastLoginResponse = res;
-    const data = await res.json();
-    this.#loginFlowState.push({ flowToken: data.flow_token, subtasks: data.subtasks ?? [] });
-    return data.flow_token;
+    const data = /** @type {Raw} */ (await res.json());
+    const nextFlowToken = /** @type {string} */ (data.flow_token);
+    if (!nextFlowToken) {
+      throw new AuthError('Login flow response missing flow_token');
+    }
+    this.#loginFlowState.push({ flowToken: nextFlowToken, subtasks: data.subtasks ?? [] });
+    return nextFlowToken;
   }
 
   /**
    * Submit a subtask in the login flow.
    * Returns the next flow_token.
+   *
+   * @param {string} url
+   * @param {string} flowToken
+   * @param {Raw} subtaskInput
+   * @returns {Promise<string>}
    */
   async #loginSubtask(url, flowToken, subtaskInput) {
     const res = await this.#fetch(url, {
@@ -478,13 +514,20 @@ export class TwitterAuth {
       );
     }
 
-    const data = await res.json();
-    this.#loginFlowState.push({ flowToken: data.flow_token, subtasks: data.subtasks ?? [] });
-    return data.flow_token;
+    const data = /** @type {Raw} */ (await res.json());
+    const nextFlowToken = /** @type {string} */ (data.flow_token);
+    if (!nextFlowToken) {
+      throw new AuthError('Login flow response missing flow_token');
+    }
+    this.#loginFlowState.push({ flowToken: nextFlowToken, subtasks: data.subtasks ?? [] });
+    return nextFlowToken;
   }
 
   /**
    * Check if the latest flow state contains a given subtask_id.
+   *
+   * @param {string} subtaskId
+   * @returns {boolean}
    */
   #hasSubtask(subtaskId) {
     const latest = this.#loginFlowState[this.#loginFlowState.length - 1];
@@ -494,6 +537,10 @@ export class TwitterAuth {
 
   /**
    * Handle AccountDuplicationCheck subtask (auto-accept).
+   *
+   * @param {string} url
+   * @param {string} flowToken
+   * @returns {Promise<string>}
    */
   async #handleDuplicationCheck(url, flowToken) {
     if (!this.#hasSubtask('AccountDuplicationCheck')) return flowToken;
@@ -506,6 +553,11 @@ export class TwitterAuth {
 
   /**
    * Handle LoginAcid (email verification) subtask.
+   *
+   * @param {string} url
+   * @param {string} flowToken
+   * @param {string} email
+   * @returns {Promise<string>}
    */
   async #handleAcidChallenge(url, flowToken, email) {
     if (!this.#hasSubtask('LoginAcid')) return flowToken;
@@ -524,7 +576,11 @@ export class TwitterAuth {
   }
 
   /**
-   * Handle LoginTwoFactorAuthChallenge — throws because we can't auto-solve 2FA.
+   * Handle LoginTwoFactorAuthChallenge - throws because we can't auto-solve 2FA.
+   *
+   * @param {string} url
+   * @param {string} flowToken
+   * @returns {Promise<string>}
    */
   async #handle2FA(url, flowToken) {
     if (!this.#hasSubtask('LoginTwoFactorAuthChallenge')) return flowToken;
@@ -588,7 +644,7 @@ export class TwitterAuth {
         };
       }
 
-      const data = await res.json();
+      const data = /** @type {Raw} */ (await res.json());
       if (!data.id_str && !data.id) {
         return { valid: false, user: null, reason: 'Response missing user ID' };
       }
@@ -600,7 +656,8 @@ export class TwitterAuth {
       };
       return { valid: true, user, reason: 'ok' };
     } catch (err) {
-      return { valid: false, user: null, reason: `Network error: ${err.message}` };
+      const error = /** @type {Error} */ (err);
+      return { valid: false, user: null, reason: `Network error: ${error.message}` };
     }
   }
 
@@ -650,11 +707,12 @@ export class TwitterAuth {
     }));
 
     let payload;
-    if (this.#encryptionKey) {
+    const encryptionKey = this.#encryptionKey;
+    if (encryptionKey) {
       const sensitive = ['auth_token', 'ct0', 'kdt'];
       const encrypted = cookieArray.map((c) => {
         if (sensitive.includes(c.name)) {
-          return { ...c, value: encrypt(c.value, this.#encryptionKey), encrypted: true };
+          return { ...c, value: encrypt(c.value, encryptionKey), encrypted: true };
         }
         return c;
       });
@@ -690,13 +748,15 @@ export class TwitterAuth {
 
     if (!Array.isArray(cookieArray)) return false;
 
+    /** @type {Record<string, string>} */
     const cookies = {};
+    const encryptionKey = this.#encryptionKey;
     for (const c of cookieArray) {
       if (!c.name) continue;
       let val = c.value;
-      if (c.encrypted && this.#encryptionKey) {
+      if (c.encrypted && encryptionKey) {
         try {
-          val = decrypt(val, this.#encryptionKey);
+          val = decrypt(val, encryptionKey);
         } catch {
           return false; // wrong key or corrupted
         }
@@ -725,11 +785,12 @@ export class TwitterAuth {
   /**
    * Build the full set of request headers for Twitter API calls.
    *
-   * @param {boolean} [authenticated=false] — If true, include auth cookies.
+   * @param {boolean} [authenticated=false] - If true, include auth cookies.
    *   If false, include guest token headers.
    * @returns {Record<string, string>}
    */
   getHeaders(authenticated = false) {
+    /** @type {Record<string, string>} */
     const headers = {
       ...this.#baseHeaders(),
       accept: 'application/json',

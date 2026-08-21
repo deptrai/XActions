@@ -1,4 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+/** @typedef {import('./types.js').Raw} Raw */
 /**
  * XActions Twitter HTTP Scraper
  * Direct HTTP-based scraping via Twitter's internal GraphQL API
@@ -43,11 +45,8 @@ export { TwitterApiError, RateLimitError, AuthError, NotFoundError, NetworkError
 /**
  * Create an HTTP scraper instance ready to use.
  * 
- * @param {Object} options
- * @param {string} [options.cookies] - Browser cookie string for authentication
- * @param {string} [options.proxy] - HTTP/SOCKS5 proxy URL
- * @param {'wait'|'error'} [options.rateLimitStrategy] - How to handle rate limits
- * @returns {Promise<Object>} Scraper with all methods bound to the client
+ * @param {import('./types.js').TwitterHttpClientOptions} [options]
+ * @returns {Promise<import('./types.js').HttpScraper>} Scraper with all methods bound to the client
  * 
  * @example
  * import { createHttpScraper } from 'xactions/scrapers/twitter/http';
@@ -62,7 +61,10 @@ export async function createHttpScraper(options = {}) {
   const client = new TwitterHttpClient(options);
 
   if (options.cookies) {
-    const auth = new TwitterAuth(client);
+    const auth = new TwitterAuth({
+      fetch: client._fetch,
+      userAgent: client._userAgents[0],
+    });
     await auth.loginWithCookies(options.cookies);
   }
 
@@ -76,7 +78,7 @@ export async function createHttpScraper(options = {}) {
     import('./media.js'),
   ]);
 
-  return {
+  return /** @type {import('./types.js').HttpScraper} */ ({
     client,
 
     // Profile
@@ -108,11 +110,14 @@ export async function createHttpScraper(options = {}) {
 
     // Actions (mutations)
     postTweet: (text, opts) => actionsMod.postTweet(client, text, opts),
-    postThread: (tweets, opts) => actionsMod.postThread(client, tweets, opts),
+    postThread: (tweets, opts) => actionsMod.postThread(client, tweets.map((t) => (typeof t === 'string' ? { text: t } : t)), opts),
     deleteTweet: (tweetId) => actionsMod.deleteTweet(client, tweetId),
     replyToTweet: (tweetId, text, opts) => actionsMod.replyToTweet(client, tweetId, text, opts),
     quoteTweet: (tweetId, text, opts) => actionsMod.quoteTweet(client, tweetId, text, opts),
-    schedulePost: (text, scheduledAt, opts) => actionsMod.schedulePost(client, text, scheduledAt, opts),
+    schedulePost: (text, scheduledAt, opts) => {
+      const when = typeof scheduledAt === 'string' ? new Date(scheduledAt) : scheduledAt;
+      return actionsMod.schedulePost(client, text, when, opts);
+    },
 
     // Engagement
     likeTweet: (tweetId) => engagementMod.likeTweet(client, tweetId),
@@ -141,7 +146,7 @@ export async function createHttpScraper(options = {}) {
     uploadGif: (input, opts) => mediaMod.uploadGif(client, input, opts),
     setAltText: (mediaId, altText) => mediaMod.setAltText(client, mediaId, altText),
     scrapeMedia: (username, opts) => mediaMod.scrapeMedia(client, username, opts),
-    downloadMedia: (url, opts) => mediaMod.downloadMedia(client, url, opts),
+    downloadMedia: (url, destPath, opts) => mediaMod.downloadMedia(url, destPath, opts),
     getVideoUrl: (tweetId) => mediaMod.getVideoUrl(client, tweetId),
-  };
+  });
 }

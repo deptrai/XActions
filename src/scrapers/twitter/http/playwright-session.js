@@ -1,11 +1,13 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+/** @typedef {import('./types.js').Raw} Raw */
 /**
- * Playwright Session Harvester — Zero-credential guest session for Twitter API
+ * Playwright Session Harvester - Zero-credential guest session for Twitter API
  *
  * Uses a real browser (Playwright/Chromium) to load a public Twitter profile,
  * intercepts the outgoing GraphQL request, and copies the actual request headers
  * (including Authorization, x-guest-token, cookie, csrf token) for reuse in
- * direct API calls — no login, no API key, no developer account needed.
+ * direct API calls - no login, no API key, no developer account needed.
  *
  * Why: Twitter's guest/activate.json endpoint has become unreliable. This
  * approach works because public profiles are viewable without login, so the
@@ -39,7 +41,7 @@
 const DEFAULT_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
-/** Public profile used to trigger the GraphQL request — well-known, always exists */
+/** Public profile used to trigger the GraphQL request - well-known, always exists */
 const PROBE_PROFILE = 'x';
 
 /** Max ms to wait for a GraphQL request to fire after page load */
@@ -57,7 +59,7 @@ export const DEFAULT_SESSION_TTL = 80;
  * intercept the first outgoing UserByScreenName GraphQL request. Returns a
  * copy of its request headers for use with `fetch()`.
  *
- * The browser is closed immediately after harvesting — it is not kept alive.
+ * The browser is closed immediately after harvesting - it is not kept alive.
  *
  * @param {object} [options]
  * @param {string} [options.probeProfile='x'] - Public username to load (triggers the GraphQL request)
@@ -88,7 +90,9 @@ export async function harvestSession({
   const context = await browser.newContext({ userAgent, locale: 'en-US' });
   const page = await context.newPage();
 
+  /** @type {Record<string, string>|null} */
   let harvestedHeaders = null;
+  /** @type {Promise<void>} */
   const ready = new Promise((resolve) => {
     // Intercept outgoing GraphQL requests and steal headers from the first one
     page.route('**/graphql/**', async (route) => {
@@ -122,7 +126,7 @@ export async function harvestSession({
   }
 
   if (!harvestedHeaders) {
-    throw new Error('Failed to harvest session — no GraphQL request intercepted');
+    throw new Error('Failed to harvest session - no GraphQL request intercepted');
   }
 
   return harvestedHeaders;
@@ -261,7 +265,7 @@ export async function createClientFromSession(options = {}) {
   try {
     ({ TwitterHttpClient } = await import('./client.js'));
   } catch {
-    throw new Error('TwitterHttpClient not found — ensure client.js is present');
+    throw new Error('TwitterHttpClient not found - ensure client.js is present');
   }
 
   const headers = await harvestSession(options);

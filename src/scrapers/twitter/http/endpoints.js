@@ -1,13 +1,15 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+/** @typedef {import('./types.js').Raw} Raw */
 /**
  * Twitter/X Internal API Endpoint Map
  *
  * These endpoints are reverse-engineered from Twitter's web client.
- * GraphQL query IDs change periodically — update them when Twitter deploys new bundles.
+ * GraphQL query IDs change periodically - update them when Twitter deploys new bundles.
  *
  * Sources:
- *   - the-convocation/twitter-scraper (MIT) — src/api-data.ts
- *   - d60/twikit (MIT) — twikit/client/gql.py, twikit/client/v11.py, twikit/constants.py
+ *   - the-convocation/twitter-scraper (MIT) - src/api-data.ts
+ *   - d60/twikit (MIT) - twikit/client/gql.py, twikit/client/v11.py, twikit/constants.py
  *   - Twitter web client network inspection
  *
  * @author nich (@nichxbt)
@@ -67,7 +69,7 @@ export const BEARER_TOKEN =
 export const GRAPHQL = {
   // ---- Queries (user profiles) ----
   UserByScreenName:     { queryId: 'NimuplG1OB7Fd2btCLdBOw', operationName: 'UserByScreenName' },     // [twikit] d60/twikit gql.py
-  UserByRestId:         { queryId: 'tD8zKvQzwY3kdx5yz6YmOw', operationName: 'UserByRestId' },         // [twikit] d60/twikit gql.py — also in scraper
+  UserByRestId:         { queryId: 'tD8zKvQzwY3kdx5yz6YmOw', operationName: 'UserByRestId' },         // [twikit] d60/twikit gql.py - also in scraper
 
   // ---- Queries (user timelines) ----
   UserTweets:           { queryId: 'QWF3SzpHmykQHsQMixG0cg', operationName: 'UserTweets' },           // [twikit] d60/twikit gql.py
@@ -87,7 +89,7 @@ export const GRAPHQL = {
   Following:            { queryId: '2vUj-_Ek-UmBVDNtd8OnQA', operationName: 'Following' },            // [twikit] d60/twikit gql.py
 
   // ---- Queries (engagement) ----
-  Likes:                { queryId: 'LLkw5EcVutJL6y-2gkz22A', operationName: 'Favoriters' },           // [twikit] d60/twikit gql.py — who liked a tweet
+  Likes:                { queryId: 'LLkw5EcVutJL6y-2gkz22A', operationName: 'Favoriters' },           // [twikit] d60/twikit gql.py - who liked a tweet
   Retweeters:           { queryId: 'X-XEqG5qHQSAwmvy00xfyQ', operationName: 'Retweeters' },           // [twikit] d60/twikit gql.py
 
   // ---- Queries (lists) ----
@@ -103,16 +105,16 @@ export const GRAPHQL = {
 
   // ---- Mutations (tweets) ----
   CreateTweet:     { queryId: 'SiM_cAu83R0wnrpmKQQSEw', operationName: 'CreateTweet' },               // [twikit] d60/twikit gql.py
-  DeleteTweet:     { queryId: 'VaenaVgh5q5ih7kvyVjgtg', operationName: 'DeleteTweet' },                // [twikit] d60/twikit gql.py — also in scraper
+  DeleteTweet:     { queryId: 'VaenaVgh5q5ih7kvyVjgtg', operationName: 'DeleteTweet' },                // [twikit] d60/twikit gql.py - also in scraper
 
   // ---- Mutations (engagement) ----
-  FavoriteTweet:   { queryId: 'lI07N6Otwv1PhnEgXILM7A', operationName: 'FavoriteTweet' },             // [twikit] d60/twikit gql.py — also in scraper
-  UnfavoriteTweet: { queryId: 'ZYKSe-w7KEslx3JhSIk5LA', operationName: 'UnfavoriteTweet' },           // [twikit] d60/twikit gql.py — also in scraper
-  CreateRetweet:   { queryId: 'ojPdsZsimiJrUGLR1sjUtA', operationName: 'CreateRetweet' },              // [twikit] d60/twikit gql.py — also in scraper
-  DeleteRetweet:   { queryId: 'iQtK4dl5hBmXewYZuEOKVw', operationName: 'DeleteRetweet' },             // [twikit] d60/twikit gql.py — also in scraper
+  FavoriteTweet:   { queryId: 'lI07N6Otwv1PhnEgXILM7A', operationName: 'FavoriteTweet' },             // [twikit] d60/twikit gql.py - also in scraper
+  UnfavoriteTweet: { queryId: 'ZYKSe-w7KEslx3JhSIk5LA', operationName: 'UnfavoriteTweet' },           // [twikit] d60/twikit gql.py - also in scraper
+  CreateRetweet:   { queryId: 'ojPdsZsimiJrUGLR1sjUtA', operationName: 'CreateRetweet' },              // [twikit] d60/twikit gql.py - also in scraper
+  DeleteRetweet:   { queryId: 'iQtK4dl5hBmXewYZuEOKVw', operationName: 'DeleteRetweet' },             // [twikit] d60/twikit gql.py - also in scraper
 
   // ---- Mutations (bookmarks) ----
-  CreateBookmark:  { queryId: 'aoDbu3RHznuiSkQ9aNM67Q', operationName: 'CreateBookmark' },            // [twikit] d60/twikit gql.py — also in scraper
+  CreateBookmark:  { queryId: 'aoDbu3RHznuiSkQ9aNM67Q', operationName: 'CreateBookmark' },            // [twikit] d60/twikit gql.py - also in scraper
   DeleteBookmark:  { queryId: 'Wlmlj2-xzyS1GN3a6cj-mQ', operationName: 'DeleteBookmark' },           // [twikit] d60/twikit gql.py
 };
 
@@ -594,7 +596,7 @@ export async function validateEndpoints(options = {}) {
       // Only 404 means the query ID is stale.
       if (res.status === 404) {
         results.invalid.push(key);
-        results.errors[key] = `HTTP 404 — query ID likely stale`;
+        results.errors[key] = `HTTP 404 - query ID likely stale`;
       } else {
         results.valid.push(key);
       }

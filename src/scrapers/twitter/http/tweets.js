@@ -2,7 +2,7 @@
 /**
  * Twitter HTTP Tweet Scraper
  *
- * Scrapes tweets via Twitter's internal GraphQL API — no browser required.
+ * Scrapes tweets via Twitter's internal GraphQL API - no browser required.
  * Supports user timelines, replies, single tweet lookup, and thread
  * reconstruction.
  *
@@ -11,6 +11,8 @@
  */
 
 import { GRAPHQL, DEFAULT_FEATURES } from './endpoints.js';
+
+/** @typedef {import('./types.js').Raw} Raw */
 import { NotFoundError, TwitterApiError } from './errors.js';
 
 // ---------------------------------------------------------------------------
@@ -33,7 +35,7 @@ function toISODate(raw) {
 /**
  * Select the highest-bitrate MP4 variant from a video_info.variants array.
  *
- * @param {object[]} variants
+ * @param {Raw[]} variants
  * @returns {string|null}
  */
 function pickBestVideoUrl(variants) {
@@ -41,13 +43,13 @@ function pickBestVideoUrl(variants) {
   const mp4s = variants.filter((v) => v.content_type === 'video/mp4' && v.url);
   if (!mp4s.length) return null;
   mp4s.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-  return mp4s[0].url;
+  return typeof mp4s[0].url === 'string' ? mp4s[0].url : null;
 }
 
 /**
  * Strip HTML tags from a source string (e.g. Twitter Web App link).
  *
- * @param {string|null} raw
+ * @param {string|undefined|null} raw
  * @returns {string}
  */
 function cleanSource(raw) {
@@ -56,7 +58,7 @@ function cleanSource(raw) {
 }
 
 // ---------------------------------------------------------------------------
-// parseTweetData — Pure transform function
+// parseTweetData - Pure transform function
 // ---------------------------------------------------------------------------
 
 /**
@@ -66,10 +68,10 @@ function cleanSource(raw) {
  * Handles `__typename`: `'Tweet'`, `'TweetWithVisibilityResults'`,
  * `'TweetTombstone'`.
  *
- * @param {object} rawTweet — A tweet result object from the GraphQL response
+ * @param {Raw} rawTweet - A tweet result object from the GraphQL response
  *   (typically `tweet_results.result` or a timeline entry's
  *   `itemContent.tweet_results.result`).
- * @returns {object|null} Normalised tweet object, or `null` for tombstones /
+ * @returns {Raw|null} Normalised tweet object, or `null` for tombstones /
  *   unparseable entries.
  */
 export function parseTweetData(rawTweet) {
@@ -79,9 +81,11 @@ export function parseTweetData(rawTweet) {
 
   // Deleted / withheld tweets
   if (typename === 'TweetTombstone') {
+    const tombstone = rawTweet.tombstone;
+    const tombstoneText = (typeof tombstone === 'object' && tombstone && typeof tombstone.text === 'object' && tombstone.text && /** @type {Raw} */ (tombstone.text).text) || '[Unavailable]';
     return {
       id: null,
-      text: rawTweet.tombstone?.text?.text || '[Unavailable]',
+      text: tombstoneText,
       tombstone: true,
       platform: 'twitter',
     };
@@ -111,17 +115,17 @@ export function parseTweetData(rawTweet) {
 
   // ---- Metrics ----------------------------------------------------------
   const viewsCount = tweet.views?.count ?? tweet.ext_views?.count ?? null;
-  const metrics = {
+  const metrics = /** @type {Raw} */ (/** @type {Record<string, unknown>} */ ({
     likes: legacy.favorite_count ?? 0,
     retweets: legacy.retweet_count ?? 0,
     replies: legacy.reply_count ?? 0,
     quotes: legacy.quote_count ?? 0,
     bookmarks: legacy.bookmark_count ?? 0,
     views: viewsCount != null ? Number(viewsCount) : 0,
-  };
+  }));
 
   // ---- Media ------------------------------------------------------------
-  const rawMedia = legacy.extended_entities?.media || [];
+  const rawMedia = /** @type {Raw[]} */ (legacy.extended_entities?.media || []);
   const media = rawMedia.map((m) => {
     const originalInfo = m.original_info || {};
     return {
@@ -129,7 +133,7 @@ export function parseTweetData(rawTweet) {
       url: m.media_url_https || m.media_url || '',
       width: originalInfo.width ?? m.sizes?.large?.w ?? 0,
       height: originalInfo.height ?? m.sizes?.large?.h ?? 0,
-      videoUrl: m.video_info ? pickBestVideoUrl(m.video_info.variants) : null,
+      videoUrl: m.video_info ? pickBestVideoUrl(m.video_info.variants || []) : null,
     };
   });
 
@@ -146,7 +150,7 @@ export function parseTweetData(rawTweet) {
     inReplyTo = {
       tweetId: legacy.in_reply_to_status_id_str,
       userId: legacy.in_reply_to_user_id_str || null,
-      username: legacy.in_reply_to_screen_name || null,
+      username: legacy.in_reply_to_screen_name || '',
     };
   }
 
@@ -158,9 +162,9 @@ export function parseTweetData(rawTweet) {
     displayUrl: u.display_url,
   }));
 
-  const hashtags = (legacy.entities?.hashtags || []).map((h) => h.text);
+  const hashtags = (legacy.entities?.hashtags || []).map((h) => (typeof h === 'object' ? h.text : h)).filter((t) => typeof t === 'string');
   const mentions = (legacy.entities?.user_mentions || []).map((m) => ({
-    username: m.screen_name,
+    username: m.screen_name || '',
     id: m.id_str || null,
   }));
 
@@ -179,7 +183,7 @@ export function parseTweetData(rawTweet) {
   return {
     id: tweet.rest_id || legacy.id_str || null,
     text: legacy.full_text || '',
-    createdAt: toISODate(legacy.created_at),
+    createdAt: toISODate(legacy.created_at || null) || null,
     author,
     metrics,
     media,
@@ -198,22 +202,22 @@ export function parseTweetData(rawTweet) {
 }
 
 // ---------------------------------------------------------------------------
-// parseTimelineInstructions — Parse Twitter's timeline response format
+// parseTimelineInstructions - Parse Twitter's timeline response format
 // ---------------------------------------------------------------------------
 
 /**
  * Parse the `instructions` array from a Twitter timeline GraphQL response.
  *
  * Handles entry types:
- * - `TimelineAddEntries` — primary timeline entries and cursors
- * - `TimelineAddToModule` — entries inside conversation modules
- * - `TimelinePinEntry` — pinned tweets
+ * - `TimelineAddEntries` - primary timeline entries and cursors
+ * - `TimelineAddToModule` - entries inside conversation modules
+ * - `TimelinePinEntry` - pinned tweets
  *
- * @param {object[]} instructions — The `instructions` array.
- * @returns {{ tweets: object[], cursor: string|null }}
+ * @param {Raw[]} instructions - The `instructions` array.
+ * @returns {{ tweets: Raw[], cursor: string|null }}
  */
 export function parseTimelineInstructions(instructions) {
-  const tweets = [];
+  const tweets = /** @type {Raw[]} */ ([]);
   let cursor = null;
 
   if (!Array.isArray(instructions)) {
@@ -235,7 +239,7 @@ export function parseTimelineInstructions(instructions) {
             null;
           continue;
         }
-        // Top cursor — ignore
+        // Top cursor - ignore
         if (entry.entryId?.startsWith('cursor-top-')) {
           continue;
         }
@@ -291,8 +295,8 @@ export function parseTimelineInstructions(instructions) {
 /**
  * Extract the tweet result object from a standard timeline entry.
  *
- * @param {object} entry
- * @returns {object|null}
+ * @param {Raw} entry
+ * @returns {Raw|null}
  */
 function extractTweetResult(entry) {
   // Standard tweet entry: content.itemContent.tweet_results.result
@@ -302,7 +306,7 @@ function extractTweetResult(entry) {
 }
 
 // ---------------------------------------------------------------------------
-// scrapeTweets — User tweets timeline
+// scrapeTweets - User tweets timeline
 // ---------------------------------------------------------------------------
 
 /**
@@ -310,13 +314,13 @@ function extractTweetResult(entry) {
  * endpoint.
  *
  * @param {import('./client.js').TwitterHttpClient} client
- * @param {string} username — Screen name (without `@`).
+ * @param {string} username - Screen name (without `@`).
  * @param {object} [options]
  * @param {number} [options.limit=100]
  * @param {boolean} [options.includeReplies=false]
- * @param {string|null} [options.cursor=null] — Resume pagination from cursor.
- * @param {function} [options.onProgress] — `({ fetched, limit }) => void`
- * @returns {Promise<object[]>} Array of parsed tweet objects.
+ * @param {string|null} [options.cursor=null] - Resume pagination from cursor.
+ * @param {function} [options.onProgress] - `({ fetched, limit }) => void`
+ * @returns {Promise<Raw[]>} Array of parsed tweet objects.
  */
 export async function scrapeTweets(client, username, options = {}) {
   const { limit = 100, includeReplies = false, cursor = null, onProgress } = options;
@@ -330,10 +334,11 @@ export async function scrapeTweets(client, username, options = {}) {
   const userId = await resolveUserId(client, username);
 
   const { queryId, operationName } = GRAPHQL.UserTweets;
-  const allTweets = [];
+  const allTweets = /** @type {Raw[]} */ ([]);
   let nextCursor = cursor;
 
   while (allTweets.length < limit) {
+    /** @type {Record<string, unknown>} */
     const variables = {
       userId,
       count: 20,
@@ -369,7 +374,7 @@ export async function scrapeTweets(client, username, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// scrapeTweetsAndReplies — User tweets + replies timeline
+// scrapeTweetsAndReplies - User tweets + replies timeline
 // ---------------------------------------------------------------------------
 
 /**
@@ -382,7 +387,7 @@ export async function scrapeTweets(client, username, options = {}) {
  * @param {number} [options.limit=100]
  * @param {string|null} [options.cursor=null]
  * @param {function} [options.onProgress]
- * @returns {Promise<object[]>}
+ * @returns {Promise<Raw[]>}
  */
 export async function scrapeTweetsAndReplies(client, username, options = {}) {
   const { limit = 100, cursor = null, onProgress } = options;
@@ -390,10 +395,11 @@ export async function scrapeTweetsAndReplies(client, username, options = {}) {
   const userId = await resolveUserId(client, username);
 
   const { queryId, operationName } = GRAPHQL.UserTweetsAndReplies;
-  const allTweets = [];
+  const allTweets = /** @type {Raw[]} */ ([]);
   let nextCursor = cursor;
 
   while (allTweets.length < limit) {
+    /** @type {Record<string, unknown>} */
     const variables = {
       userId,
       count: 20,
@@ -428,7 +434,7 @@ export async function scrapeTweetsAndReplies(client, username, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// scrapeTweetById — Single tweet lookup
+// scrapeTweetById - Single tweet lookup
 // ---------------------------------------------------------------------------
 
 /**
@@ -436,12 +442,13 @@ export async function scrapeTweetsAndReplies(client, username, options = {}) {
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
- * @returns {Promise<object>} Parsed tweet object.
+ * @returns {Promise<Raw>} Parsed tweet object.
  * @throws {NotFoundError} If the tweet doesn't exist.
  */
 export async function scrapeTweetById(client, tweetId) {
   const { queryId, operationName } = GRAPHQL.TweetResultByRestId;
 
+  /** @type {Record<string, unknown>} */
   const variables = {
     tweetId,
     withCommunity: false,
@@ -465,7 +472,7 @@ export async function scrapeTweetById(client, tweetId) {
 }
 
 // ---------------------------------------------------------------------------
-// scrapeThread — Full conversation thread reconstruction
+// scrapeThread - Full conversation thread reconstruction
 // ---------------------------------------------------------------------------
 
 /**
@@ -478,15 +485,16 @@ export async function scrapeTweetById(client, tweetId) {
  * `options.allAuthors` is true.
  *
  * @param {import('./client.js').TwitterHttpClient} client
- * @param {string} tweetId — Any tweet in the thread.
+ * @param {string} tweetId - Any tweet in the thread.
  * @param {object} [options]
  * @param {boolean} [options.allAuthors=false]
- * @returns {Promise<{ rootTweet: object, tweets: object[], totalReplies: number }>}
+ * @returns {Promise<{ rootTweet: Raw, tweets: Raw[], totalReplies: number }>}
  */
 export async function scrapeThread(client, tweetId, options = {}) {
   const { allAuthors = false } = options;
   const { queryId, operationName } = GRAPHQL.TweetDetail;
 
+  /** @type {Record<string, unknown>} */
   const variables = {
     focalTweetId: tweetId,
     with_rux_injections: false,
@@ -504,7 +512,7 @@ export async function scrapeThread(client, tweetId, options = {}) {
     resp?.data?.threaded_conversation_with_injections_v2?.instructions ?? [];
 
   // Collect all tweets from the conversation
-  const allTweets = [];
+  const allTweets = /** @type {Raw[]} */ ([]);
   for (const instruction of instructions) {
     const entries = instruction.entries || [];
     for (const entry of entries) {
@@ -574,6 +582,7 @@ export async function scrapeThread(client, tweetId, options = {}) {
  */
 async function resolveUserId(client, username) {
   const { queryId, operationName } = GRAPHQL.UserByScreenName;
+  /** @type {Record<string, unknown>} */
   const variables = {
     screen_name: username,
     withSafetyModeUserFields: true,
@@ -582,7 +591,7 @@ async function resolveUserId(client, username) {
   const resp = await client.graphql(queryId, operationName, variables);
   const result = resp?.data?.user?.result;
 
-  if (!result || result.__typename === 'UserUnavailable') {
+  if (!result || result.__typename === 'UserUnavailable' || !result.rest_id) {
     throw new NotFoundError(`User @${username} not found`);
   }
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Twitter HTTP Scraper — Write Actions (Mutations)
+ * Twitter HTTP Scraper - Write Actions (Mutations)
  *
  * Post tweets, threads, replies, quote tweets, schedule posts, delete tweets.
  * All operations use Twitter's internal GraphQL API and require an
@@ -11,6 +11,8 @@
  */
 
 import { GRAPHQL, GRAPHQL_BASE, DEFAULT_FEATURES } from './endpoints.js';
+
+/** @typedef {import('./types.js').Raw} Raw */
 import { AuthError, TwitterApiError } from './errors.js';
 
 // ---------------------------------------------------------------------------
@@ -30,6 +32,7 @@ const CREATE_SCHEDULED_TWEET = {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const randomDelay = (min = 1000, max = 3000) => sleep(min + Math.random() * (max - min));
 
@@ -63,14 +66,14 @@ function validateTweetText(text, { premium = false } = {}) {
 
 /**
  * Extract the created tweet object from the CreateTweet mutation response.
- * @param {object} json — raw response from the GraphQL endpoint
- * @returns {object} parsed tweet result
+ * @param {Raw} json - raw response from the GraphQL endpoint
+ * @returns {Raw} parsed tweet result
  */
 function parseTweetResult(json) {
   // Twitter nests the result at varying depths depending on the response shape
   const result =
     json?.data?.create_tweet?.tweet_results?.result ??
-    json?.data?.create_tweet?.tweet_result?.result ??
+    /** @type {Raw} */ (json?.data?.create_tweet?.tweet_result)?.result ??
     json?.data?.create_tweet ??
     json;
   return result;
@@ -83,16 +86,16 @@ function parseTweetResult(json) {
 /**
  * Post a tweet via the CreateTweet GraphQL mutation.
  *
- * @param {import('./client.js').TwitterHttpClient} client — authenticated client
- * @param {string} text — tweet body
+ * @param {import('./client.js').TwitterHttpClient} client - authenticated client
+ * @param {string} text - tweet body
  * @param {object} [options]
- * @param {string} [options.replyTo] — tweet ID to reply to
- * @param {string[]} [options.mediaIds] — uploaded media IDs to attach
- * @param {string} [options.quoteTweetId] — tweet ID to quote
- * @param {boolean} [options.sensitive=false] — mark media as sensitive
- * @param {boolean} [options.premium=false] — allow >280 chars
- * @param {string[]} [options.excludeReplyUserIds] — user IDs to exclude from reply thread
- * @returns {Promise<object>} the created tweet object
+ * @param {string} [options.replyTo] - tweet ID to reply to
+ * @param {string[]} [options.mediaIds] - uploaded media IDs to attach
+ * @param {string} [options.quoteTweetId] - tweet ID to quote
+ * @param {boolean} [options.sensitive=false] - mark media as sensitive
+ * @param {boolean} [options.premium=false] - allow >280 chars
+ * @param {string[]} [options.excludeReplyUserIds] - user IDs to exclude from reply thread
+ * @returns {Promise<Raw>} the created tweet object
  */
 export async function postTweet(client, text, options = {}) {
   requireAuth(client);
@@ -108,7 +111,7 @@ export async function postTweet(client, text, options = {}) {
 
   const { queryId, operationName } = GRAPHQL.CreateTweet;
 
-  const variables = {
+  const variables = /** @type {Record<string, unknown>} */ ({
     tweet_text: text,
     dark_request: false,
     media: {
@@ -116,7 +119,7 @@ export async function postTweet(client, text, options = {}) {
       possibly_sensitive: sensitive,
     },
     semantic_annotation_ids: [],
-  };
+  });
 
   // Reply
   if (replyTo) {
@@ -146,7 +149,7 @@ export async function postTweet(client, text, options = {}) {
  * @param {Array<{ text: string, mediaIds?: string[] }>} tweets
  * @param {object} [options]
  * @param {boolean} [options.premium=false]
- * @returns {Promise<object[]>} array of created tweet objects
+ * @returns {Promise<Raw[]>} array of created tweet objects
  */
 export async function postThread(client, tweets, options = {}) {
   requireAuth(client);
@@ -161,10 +164,10 @@ export async function postThread(client, tweets, options = {}) {
   for (let i = 0; i < tweets.length; i++) {
     const { text, mediaIds } = tweets[i];
 
-    const tweetOptions = {
+    const tweetOptions = /** @type {Record<string, unknown>} */ ({
       ...options,
       mediaIds: mediaIds || [],
-    };
+    });
 
     if (previousTweetId) {
       tweetOptions.replyTo = previousTweetId;
@@ -217,13 +220,13 @@ export async function deleteTweet(client, tweetId) {
  * Reply to a tweet. Convenience wrapper around postTweet.
  *
  * @param {import('./client.js').TwitterHttpClient} client
- * @param {string} tweetId — tweet to reply to
- * @param {string} text — reply body
+ * @param {string} tweetId - tweet to reply to
+ * @param {string} text - reply body
  * @param {object} [options]
  * @param {string[]} [options.mediaIds]
  * @param {string[]} [options.excludeReplyUserIds]
  * @param {boolean} [options.premium]
- * @returns {Promise<object>}
+ * @returns {Promise<Raw>}
  */
 export async function replyToTweet(client, tweetId, text, options = {}) {
   return postTweet(client, text, {
@@ -236,12 +239,12 @@ export async function replyToTweet(client, tweetId, text, options = {}) {
  * Quote-tweet another tweet. Convenience wrapper around postTweet.
  *
  * @param {import('./client.js').TwitterHttpClient} client
- * @param {string} tweetId — tweet to quote
- * @param {string} text — commentary
+ * @param {string} tweetId - tweet to quote
+ * @param {string} text - commentary
  * @param {object} [options]
  * @param {string[]} [options.mediaIds]
  * @param {boolean} [options.premium]
- * @returns {Promise<object>}
+ * @returns {Promise<Raw>}
  */
 export async function quoteTweet(client, tweetId, text, options = {}) {
   return postTweet(client, text, {
@@ -255,11 +258,11 @@ export async function quoteTweet(client, tweetId, text, options = {}) {
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} text
- * @param {Date|number} scheduledAt — Date object or Unix epoch in seconds
+ * @param {Date|number} scheduledAt - Date object or Unix epoch in seconds
  * @param {object} [options]
  * @param {string[]} [options.mediaIds]
  * @param {boolean} [options.premium]
- * @returns {Promise<{ scheduledTweetId: string }>}
+ * @returns {Promise<{ scheduledTweetId: string|null }>}
  */
 export async function schedulePost(client, text, scheduledAt, options = {}) {
   requireAuth(client);
@@ -292,8 +295,8 @@ export async function schedulePost(client, text, scheduledAt, options = {}) {
   });
 
   const scheduledTweetId =
-    json?.data?.tweet?.rest_id ??
-    json?.data?.create_scheduled_tweet?.id ??
+    /** @type {Raw} */ (json?.data?.tweet)?.rest_id ??
+    /** @type {Raw} */ (json?.data?.create_scheduled_tweet)?.id ??
     json?.data?.id ??
     null;
 

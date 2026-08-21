@@ -1,6 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+/** @typedef {import('./types.js').Raw} Raw */
+/** @typedef {import('./types.js').RateLimitInfo} RateLimitInfo */
 /**
- * Twitter HTTP Scraper — Error Classes
+ * Twitter HTTP Scraper - Error Classes
  *
  * Structured error hierarchy for all HTTP-based Twitter operations.
  *
@@ -34,10 +37,7 @@ export class TwitterApiError extends Error {
 export class RateLimitError extends TwitterApiError {
   /**
    * @param {string} message
-   * @param {object} [options]
-   * @param {number} [options.resetAt] - Unix timestamp (ms) when limit resets
-   * @param {number} [options.limit] - Max requests allowed
-   * @param {number} [options.remaining] - Remaining requests
+   * @param {RateLimitInfo} [options]
    */
   constructor(message, { resetAt, limit, remaining, ...rest } = {}) {
     super(message, rest);
@@ -52,6 +52,10 @@ export class RateLimitError extends TwitterApiError {
  * Thrown when authentication is missing or invalid (HTTP 401/403).
  */
 export class AuthError extends TwitterApiError {
+  /**
+   * @param {string} message
+   * @param {object} [options]
+   */
   constructor(message, options = {}) {
     super(message, options);
     this.name = 'AuthError';
@@ -62,6 +66,10 @@ export class AuthError extends TwitterApiError {
  * Thrown when the requested resource is not found (HTTP 404).
  */
 export class NotFoundError extends TwitterApiError {
+  /**
+   * @param {string} message
+   * @param {object} [options]
+   */
   constructor(message, options = {}) {
     super(message, options);
     this.name = 'NotFoundError';
@@ -72,6 +80,10 @@ export class NotFoundError extends TwitterApiError {
  * Thrown on network-level failures (connection refused, timeout, DNS).
  */
 export class NetworkError extends TwitterApiError {
+  /**
+   * @param {string} message
+   * @param {object} [options]
+   */
   constructor(message, options = {}) {
     super(message, options);
     this.name = 'NetworkError';
@@ -81,17 +93,17 @@ export class NetworkError extends TwitterApiError {
 /**
  * Parse Twitter API error responses and throw the appropriate error class.
  *
- * @param {object} response - Parsed JSON response body
+ * @param {Raw} response - Parsed JSON response body
  * @param {number} status - HTTP status code
  * @param {string} [endpoint] - Endpoint path for context
- * @returns {{ handled: boolean, result?: object }} — If handled idempotently, returns result
+ * @returns {{ handled: boolean, result?: object }} - If handled idempotently, returns result
  * @throws {RateLimitError|AuthError|NotFoundError|TwitterApiError}
  */
 export function parseTwitterErrors(response, status, endpoint) {
   const errors = response?.errors || [];
   const errorMessages = errors.map((e) => e.message || '').join('; ');
 
-  // Idempotent cases — not real errors
+  // Idempotent cases - not real errors
   for (const err of errors) {
     const msg = (err.message || '').toLowerCase();
     if (
@@ -135,7 +147,7 @@ export function parseTwitterErrors(response, status, endpoint) {
   for (const err of errors) {
     const msg = (err.message || '').toLowerCase();
     if (msg.includes('suspended')) {
-      throw new TwitterApiError(err.message, { status, endpoint, data: response });
+      throw new TwitterApiError(err.message || '', { status, endpoint, data: response });
     }
   }
 

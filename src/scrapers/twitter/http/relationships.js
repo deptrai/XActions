@@ -19,6 +19,9 @@ import {
 } from './endpoints.js';
 import { AuthError, NotFoundError } from './errors.js';
 
+/** @typedef {import('./types.js').Raw} Raw */
+/** @typedef {(info: { phase: string, fetched?: number, limit?: number, page?: number, stats?: Raw }) => void} ProgressCallback */
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -39,8 +42,8 @@ const PAGE_COUNT = 20;
  * This is intentionally self-contained so relationships.js has no circular
  * dependency on profile.js. The output shape matches the Puppeteer scrapers.
  *
- * @param {object} rawUser — `user_results.result` from GraphQL response
- * @returns {object|null} Parsed user or null if unavailable
+ * @param {Raw} rawUser - `user_results.result` from GraphQL response
+ * @returns {Raw|null} Parsed user or null if unavailable
  */
 export function parseUserEntry(rawUser) {
   if (!rawUser || rawUser.__typename === 'UserUnavailable') return null;
@@ -51,7 +54,7 @@ export function parseUserEntry(rawUser) {
     id: rawUser.rest_id ?? null,
     username: legacy.screen_name ?? null,
     name: legacy.name ?? null,
-    bio: legacy.description ?? null,
+    bio: typeof legacy.description === 'string' ? legacy.description : null,
     verified: rawUser.is_blue_verified ?? legacy.verified ?? false,
     avatar: (legacy.profile_image_url_https ?? '').replace('_normal', '_400x400') || null,
     followersCount: legacy.followers_count ?? 0,
@@ -72,11 +75,11 @@ export function parseUserEntry(rawUser) {
  * in the same `instructions[].entries[]` structure as tweet timelines, but
  * with `user-` prefixed entry IDs.
  *
- * @param {Array} instructions — `timeline.instructions` array from GraphQL
- * @returns {{ users: object[], cursor: string|null }}
+ * @param {Raw[]} instructions - `timeline.instructions` array from GraphQL
+ * @returns {{ users: Raw[], cursor: string|null }}
  */
 export function parseUserList(instructions) {
-  const users = [];
+  const users = /** @type {Raw[]} */ ([]);
   let cursor = null;
 
   if (!Array.isArray(instructions)) {
@@ -91,7 +94,7 @@ export function parseUserList(instructions) {
     ) {
       const entries = instruction.entries ?? [];
       for (const entry of entries) {
-        const entryId = entry.entryId ?? entry.entry_id ?? '';
+        const entryId = String(entry.entryId ?? entry.entry_id ?? '');
 
         // Cursor entries (bottom cursor for pagination)
         if (entryId.startsWith('cursor-bottom-')) {
@@ -102,7 +105,7 @@ export function parseUserList(instructions) {
           continue;
         }
 
-        // Top cursor — skip
+        // Top cursor - skip
         if (entryId.startsWith('cursor-top-')) {
           continue;
         }
@@ -111,7 +114,7 @@ export function parseUserList(instructions) {
         if (entryId.startsWith('user-')) {
           const userResult =
             entry.content?.itemContent?.user_results?.result ??
-            entry.content?.itemContent?.userDisplayType?.user_results?.result ??
+            /** @type {Raw} */ (/** @type {unknown} */ (entry.content?.itemContent?.userDisplayType))?.user_results?.result ??
             null;
 
           if (userResult) {
@@ -154,8 +157,8 @@ export function parseUserList(instructions) {
  * Ensure the client is authenticated (has auth_token cookie, not guest-only).
  * Follower/following endpoints require authentication.
  *
- * @param {object} client — TwitterHttpClient instance
- * @param {string} endpoint — Endpoint name for error context
+ * @param {import('./client.js').TwitterHttpClient} client - TwitterHttpClient instance
+ * @param {string} endpoint - Endpoint name for error context
  * @throws {AuthError}
  */
 function requireAuth(client, endpoint) {
@@ -174,9 +177,9 @@ function requireAuth(client, endpoint) {
 /**
  * Resolve a Twitter username to a rest_id (user ID).
  *
- * @param {object} client — TwitterHttpClient instance
+ * @param {import('./client.js').TwitterHttpClient} client - TwitterHttpClient instance
  * @param {string} username
- * @returns {Promise<string>} — The user's rest_id
+ * @returns {Promise<string>} - The user's rest_id
  * @throws {NotFoundError}
  */
 async function resolveUserId(client, username) {
@@ -192,7 +195,7 @@ async function resolveUserId(client, username) {
     });
   }
 
-  return userResult.rest_id;
+  return String(userResult.rest_id);
 }
 
 // ---------------------------------------------------------------------------
@@ -205,12 +208,12 @@ async function resolveUserId(client, username) {
  * Handles the common pattern of: build variables → paginate GraphQL →
  * parse user list instructions → deduplicate → respect limit → report progress.
  *
- * @param {object} client — TwitterHttpClient instance
- * @param {object} endpoint — `{ queryId, operationName }` from GRAPHQL map
- * @param {object} baseVariables — Variables for the first page (e.g. `{ userId }`)
- * @param {object} options — `{ limit, cursor, onProgress }`
- * @param {string} responseDataPath — Dot-path to instructions in response
- * @returns {Promise<object[]>} — Array of parsed user objects
+ * @param {import('./client.js').TwitterHttpClient} client - TwitterHttpClient instance
+ * @param {{ queryId: string, operationName: string }} endpoint - `{ queryId, operationName }` from GRAPHQL map
+ * @param {Record<string, unknown>} baseVariables - Variables for the first page (e.g. `{ userId }`)
+ * @param {{ limit?: number, cursor?: string|null, onProgress?: Function }} options - `{ limit, cursor, onProgress }`
+ * @param {string} responseDataPath - Dot-path to instructions in response
+ * @returns {Promise<Raw[]>} - Array of parsed user objects
  */
 async function scrapeUserList(client, endpoint, baseVariables, options = {}, responseDataPath) {
   const { limit = DEFAULT_LIMIT, cursor: initialCursor = null, onProgress } = options;
@@ -221,6 +224,7 @@ async function scrapeUserList(client, endpoint, baseVariables, options = {}, res
   let pageNum = 0;
 
   while (seen.size < limit) {
+    /** @type {Record<string, unknown>} */
     const variables = {
       ...baseVariables,
       count: PAGE_COUNT,
@@ -234,15 +238,16 @@ async function scrapeUserList(client, endpoint, baseVariables, options = {}, res
     const resp = await client.graphql(queryId, operationName, variables, DEFAULT_FEATURES);
 
     // Navigate to instructions using the response data path
-    const instructions = getNestedValue(resp, responseDataPath) ?? [];
+    const instructions = /** @type {Raw[]} */ (getNestedValue(resp, responseDataPath) ?? []);
 
     const { users, cursor } = parseUserList(instructions);
 
     // Deduplicate and collect
     for (const user of users) {
       if (seen.size >= limit) break;
-      if (!seen.has(user.username)) {
-        seen.set(user.username, user);
+      const username = String(user.username);
+      if (!seen.has(username)) {
+        seen.set(username, user);
       }
     }
 
@@ -261,23 +266,25 @@ async function scrapeUserList(client, endpoint, baseVariables, options = {}, res
 
 /**
  * Navigate a nested object using a dot-separated path.
- * @param {object} obj
- * @param {string} path — e.g. 'data.user.result.timeline.timeline.instructions'
+ * @param {Raw} obj
+ * @param {string} path - e.g. 'data.user.result.timeline.timeline.instructions'
  * @returns {*}
  */
 function getNestedValue(obj, path) {
   if (!path) return obj;
   const keys = path.split('.');
-  let current = obj;
+  let current = /** @type {Raw} */ (obj);
   for (const key of keys) {
     if (current == null) return undefined;
-    current = current[key];
+    const next = current[key];
+    if (typeof next !== 'object' || next == null) return undefined;
+    current = /** @type {Raw} */ (next);
   }
   return current;
 }
 
 // ---------------------------------------------------------------------------
-// Public API — Follower/Following scraping
+// Public API - Follower/Following scraping
 // ---------------------------------------------------------------------------
 
 /**
@@ -286,13 +293,13 @@ function getNestedValue(obj, path) {
  * Requires authentication (auth_token cookie). Guest tokens cannot access
  * follower lists.
  *
- * @param {object} client — TwitterHttpClient instance (authenticated)
- * @param {string} username — Twitter username (without @)
+ * @param {import('./client.js').TwitterHttpClient} client - TwitterHttpClient instance (authenticated)
+ * @param {string} username - Twitter username (without `@`)
  * @param {object} [options]
- * @param {number} [options.limit=1000] — Maximum followers to scrape
- * @param {string} [options.cursor=null] — Resume pagination from cursor
- * @param {Function} [options.onProgress] — Progress callback `({ fetched, limit, page })`
- * @returns {Promise<object[]>} — Array of user objects in XActions format
+ * @param {number} [options.limit=1000] - Maximum followers to scrape
+ * @param {string|null} [options.cursor=null] - Resume pagination from cursor
+ * @param {ProgressCallback} [options.onProgress] - Progress callback `({ fetched, limit, page })`
+ * @returns {Promise<Raw[]>} - Array of user objects in XActions format
  * @throws {AuthError} if client is not authenticated
  * @throws {NotFoundError} if username doesn't exist
  *
@@ -321,13 +328,13 @@ export async function scrapeFollowers(client, username, options = {}) {
  *
  * Requires authentication (auth_token cookie).
  *
- * @param {object} client — TwitterHttpClient instance (authenticated)
- * @param {string} username — Twitter username (without @)
+ * @param {import('./client.js').TwitterHttpClient} client - TwitterHttpClient instance (authenticated)
+ * @param {string} username - Twitter username (without `@`)
  * @param {object} [options]
- * @param {number} [options.limit=1000] — Maximum accounts to scrape
- * @param {string} [options.cursor=null] — Resume pagination from cursor
- * @param {Function} [options.onProgress] — Progress callback `({ fetched, limit, page })`
- * @returns {Promise<object[]>} — Array of user objects in XActions format
+ * @param {number} [options.limit=1000] - Maximum accounts to scrape
+ * @param {string|null} [options.cursor=null] - Resume pagination from cursor
+ * @param {ProgressCallback} [options.onProgress] - Progress callback `({ fetched, limit, page })`
+ * @returns {Promise<Raw[]>} - Array of user objects in XActions format
  * @throws {AuthError} if client is not authenticated
  * @throws {NotFoundError} if username doesn't exist
  */
@@ -355,11 +362,11 @@ export async function scrapeFollowing(client, username, options = {}) {
  * This is XActions' most popular feature. It scrapes both follower and following
  * lists, then performs a set comparison.
  *
- * @param {object} client — TwitterHttpClient instance (authenticated)
- * @param {string} username — Twitter username (without @)
+ * @param {import('./client.js').TwitterHttpClient} client - TwitterHttpClient instance (authenticated)
+ * @param {string} username - Twitter username (without `@`)
  * @param {object} [options]
- * @param {number} [options.limit=Infinity] — Max users per list (followers & following)
- * @param {Function} [options.onProgress] — Phase-aware progress callback
+ * @param {number} [options.limit=Infinity] - Max users per list (followers & following)
+ * @param {ProgressCallback} [options.onProgress] - Phase-aware progress callback
  * @returns {Promise<{ nonFollowers: object[], mutuals: object[], stats: object }>}
  * @throws {AuthError} if client is not authenticated
  * @throws {NotFoundError} if username doesn't exist
@@ -385,14 +392,14 @@ export async function scrapeNonFollowers(client, username, options = {}) {
   onProgress?.({ phase: 'following', fetched: 0, limit: perListLimit ?? DEFAULT_LIMIT });
   const following = await scrapeFollowing(client, username, {
     ...listOptions,
-    onProgress: (p) => onProgress?.({ phase: 'following', ...p }),
+    onProgress: (p) => onProgress?.({ ...p, phase: 'following' }),
   });
 
   // Phase 2: Scrape followers list (people who follow you)
   onProgress?.({ phase: 'followers', fetched: 0, limit: perListLimit ?? DEFAULT_LIMIT });
   const followers = await scrapeFollowers(client, username, {
     ...listOptions,
-    onProgress: (p) => onProgress?.({ phase: 'followers', ...p }),
+    onProgress: (p) => onProgress?.({ ...p, phase: 'followers' }),
   });
 
   // Phase 3: Compare sets
@@ -423,13 +430,13 @@ export async function scrapeNonFollowers(client, username, options = {}) {
  *
  * Requires authentication.
  *
- * @param {object} client — TwitterHttpClient instance (authenticated)
- * @param {string} tweetId — Tweet ID
+ * @param {import('./client.js').TwitterHttpClient} client - TwitterHttpClient instance (authenticated)
+ * @param {string} tweetId - Tweet ID
  * @param {object} [options]
- * @param {number} [options.limit=1000] — Maximum likers to scrape
- * @param {string} [options.cursor=null] — Resume pagination from cursor
- * @param {Function} [options.onProgress] — Progress callback
- * @returns {Promise<object[]>} — Array of user objects
+ * @param {number} [options.limit=1000] - Maximum likers to scrape
+ * @param {string|null} [options.cursor=null] - Resume pagination from cursor
+ * @param {ProgressCallback} [options.onProgress] - Progress callback
+ * @returns {Promise<Raw[]>} - Array of user objects
  * @throws {AuthError} if client is not authenticated
  */
 export async function scrapeLikers(client, tweetId, options = {}) {
@@ -458,13 +465,13 @@ export async function scrapeLikers(client, tweetId, options = {}) {
  *
  * Requires authentication.
  *
- * @param {object} client — TwitterHttpClient instance (authenticated)
- * @param {string} tweetId — Tweet ID
+ * @param {import('./client.js').TwitterHttpClient} client - TwitterHttpClient instance (authenticated)
+ * @param {string} tweetId - Tweet ID
  * @param {object} [options]
- * @param {number} [options.limit=1000] — Maximum retweeters to scrape
- * @param {string} [options.cursor=null] — Resume pagination from cursor
- * @param {Function} [options.onProgress] — Progress callback
- * @returns {Promise<object[]>} — Array of user objects
+ * @param {number} [options.limit=1000] - Maximum retweeters to scrape
+ * @param {string|null} [options.cursor=null] - Resume pagination from cursor
+ * @param {ProgressCallback} [options.onProgress] - Progress callback
+ * @returns {Promise<Raw[]>} - Array of user objects
  * @throws {AuthError} if client is not authenticated
  */
 export async function scrapeRetweeters(client, tweetId, options = {}) {
@@ -488,13 +495,13 @@ export async function scrapeRetweeters(client, tweetId, options = {}) {
  *
  * Requires authentication.
  *
- * @param {object} client — TwitterHttpClient instance (authenticated)
- * @param {string} listId — Twitter list ID
+ * @param {import('./client.js').TwitterHttpClient} client - TwitterHttpClient instance (authenticated)
+ * @param {string} listId - Twitter list ID
  * @param {object} [options]
- * @param {number} [options.limit=1000] — Maximum members to scrape
- * @param {string} [options.cursor=null] — Resume pagination from cursor
- * @param {Function} [options.onProgress] — Progress callback
- * @returns {Promise<object[]>} — Array of user objects
+ * @param {number} [options.limit=1000] - Maximum members to scrape
+ * @param {string|null} [options.cursor=null] - Resume pagination from cursor
+ * @param {ProgressCallback} [options.onProgress] - Progress callback
+ * @returns {Promise<Raw[]>} - Array of user objects
  * @throws {AuthError} if client is not authenticated
  */
 export async function scrapeListMembers(client, listId, options = {}) {

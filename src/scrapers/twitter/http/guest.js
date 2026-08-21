@@ -1,6 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+
+/** @typedef {import('./types.js').Raw} Raw */
 /**
- * Guest Token Manager — Unauthenticated access to Twitter's public API
+ * Guest Token Manager - Unauthenticated access to Twitter's public API
  *
  * Acquires and manages guest tokens that enable scraping public profiles,
  * tweets, and search results without any login credentials.
@@ -31,7 +33,7 @@
 const BEARER_TOKEN =
   'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
 
-/** Guest token expiry window — 2.5 hours (tokens actually expire at ~3h) */
+/** Guest token expiry window - 2.5 hours (tokens actually expire at ~3h) */
 const TOKEN_TTL_MS = 2.5 * 60 * 60 * 1000;
 
 /** Rate-limit window (15 minutes in ms) */
@@ -63,6 +65,7 @@ const USER_AGENTS = [
 // Helpers
 // ============================================================================
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -73,7 +76,7 @@ const randomUserAgent = () =>
   USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 
 // ============================================================================
-// GuestToken — wraps a single token with metadata
+// GuestToken - wraps a single token with metadata
 // ============================================================================
 
 /**
@@ -217,11 +220,11 @@ export class GuestTokenManager {
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       throw new Error(
-        `Guest token activation failed: HTTP ${res.status} — ${body}`,
+        `Guest token activation failed: HTTP ${res.status} - ${body}`,
       );
     }
 
-    const data = await res.json();
+    const data = /** @type {Raw} */ (await res.json());
 
     if (!data.guest_token) {
       throw new Error(
@@ -235,7 +238,7 @@ export class GuestTokenManager {
   }
 
   /**
-   * Get a valid guest token — cached if still fresh, otherwise auto-activates.
+   * Get a valid guest token - cached if still fresh, otherwise auto-activates.
    *
    * Concurrent-safe: if multiple callers invoke this simultaneously while the
    * token is expired, only a single activation request is made (thundering-herd
@@ -252,7 +255,7 @@ export class GuestTokenManager {
       }
       await this.#activationPromise;
     }
-    return this.#currentToken.value;
+    return this.#currentToken ? this.#currentToken.value : '';
   }
 
   /**
@@ -372,7 +375,7 @@ export class GuestTokenManager {
    *
    * @param {GuestToken|string} token     Token instance or raw token string
    * @param {string}            endpoint  Logical endpoint name (search|profile|tweet)
-   * @param {object}            headers   Response headers (or Headers instance)
+   * @param {Record<string, string>|Headers} headers   Response headers (or Headers instance)
    */
   recordRateLimit(token, endpoint, headers) {
     const target = typeof token === 'string'
@@ -381,19 +384,20 @@ export class GuestTokenManager {
 
     if (!target) return;
 
-    const remaining = parseInt(
-      headers['x-rate-limit-remaining'] ??
-        headers.get?.('x-rate-limit-remaining'),
-      10,
-    );
-    const resetEpoch = parseInt(
-      headers['x-rate-limit-reset'] ?? headers.get?.('x-rate-limit-reset'),
-      10,
-    );
+    const headerRecord = /** @type {Record<string, string>} */ (headers);
+    const headerObj = /** @type {Headers} */ (headers);
+    const remainingStr = typeof headers.get === 'function'
+      ? (headerObj.get('x-rate-limit-remaining') ?? '')
+      : headerRecord['x-rate-limit-remaining'];
+    const resetStr = typeof headers.get === 'function'
+      ? (headerObj.get('x-rate-limit-reset') ?? '')
+      : headerRecord['x-rate-limit-reset'];
+    const remaining = parseInt(remainingStr, 10);
+    const resetEpoch = parseInt(resetStr, 10);
 
     if (Number.isNaN(remaining) || Number.isNaN(resetEpoch)) return;
 
-    // Twitter sends reset as Unix seconds — convert to ms
+    // Twitter sends reset as Unix seconds - convert to ms
     target.recordRateLimit(endpoint, remaining, resetEpoch * 1000);
   }
 

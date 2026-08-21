@@ -12,12 +12,14 @@
  */
 
 import { readFile, writeFile, stat } from 'node:fs/promises';
+
+/** @typedef {import('./types.js').Raw} Raw */
 import { createWriteStream, createReadStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { extname, resolve } from 'node:path';
 
 // ---------------------------------------------------------------------------
-// GraphQL endpoint constants — will be imported from endpoints.js (Build 01-01)
+// GraphQL endpoint constants - will be imported from endpoints.js (Build 01-01)
 // once it exists. Defined inline here so this module works standalone.
 // Sources: the-convocation/twitter-scraper, d60/twikit (MIT)
 // ---------------------------------------------------------------------------
@@ -25,7 +27,8 @@ import { extname, resolve } from 'node:path';
 let _endpointsModule;
 try { _endpointsModule = await import('./endpoints.js'); } catch { /* not yet created */ }
 
-const GRAPHQL_ENDPOINTS = _endpointsModule?.GRAPHQL_ENDPOINTS ?? {
+/** @type {Record<string, { queryId: string, operationName: string }>} */
+const GRAPHQL_ENDPOINTS = _endpointsModule?.GRAPHQL ?? {
   UserByScreenName: {
     queryId: 'qW5u-DAen42o5BN1EFcoLA',
     operationName: 'UserByScreenName',
@@ -79,6 +82,7 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;       // 5 MB
 const MAX_GIF_BYTES = 15 * 1024 * 1024;         // 15 MB
 const MAX_VIDEO_BYTES = 512 * 1024 * 1024;       // 512 MB
 
+/** @type {Record<string, string>} */
 const MIME_BY_EXT = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -89,6 +93,7 @@ const MIME_BY_EXT = {
   '.mov': 'video/quicktime',
 };
 
+/** @type {Record<string, string>} */
 const CATEGORY_BY_MIME = {
   'image/jpeg': 'tweet_image',
   'image/png': 'tweet_image',
@@ -107,7 +112,7 @@ const STATUS_POLL_MAX_MS = 15000;
 
 /**
  * Detect MIME type from a file extension string.
- * @param {string} ext — e.g. '.png'
+ * @param {string} ext - e.g. '.png'
  * @returns {string|null}
  */
 export function mimeFromExtension(ext) {
@@ -132,7 +137,7 @@ export function mimeFromBuffer(buf) {
   if (buf.length >= 12 && buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return 'image/webp';
   // MP4: ftyp at offset 4
   if (buf.length >= 8 && buf[4] === 0x66 && buf[5] === 0x74 && buf[6] === 0x79 && buf[7] === 0x70) return 'video/mp4';
-  // MOV: ftyp qt at offset 4 (also matches mp4 ftyp — check moov at 4)
+  // MOV: ftyp qt at offset 4 (also matches mp4 ftyp - check moov at 4)
   if (buf.length >= 8 && buf[4] === 0x6d && buf[5] === 0x6f && buf[6] === 0x6f && buf[7] === 0x76) return 'video/quicktime';
 
   return null;
@@ -140,8 +145,8 @@ export function mimeFromBuffer(buf) {
 
 /**
  * Resolve a file path or Buffer into { buffer, mediaType }.
- * @param {string|Buffer} input — path or raw bytes
- * @param {string} [explicitMime] — override MIME if provided
+ * @param {string|Buffer} input - path or raw bytes
+ * @param {string} [explicitMime] - override MIME if provided
  * @returns {Promise<{ buffer: Buffer, mediaType: string }>}
  */
 export async function resolveInput(input, explicitMime) {
@@ -161,7 +166,7 @@ export async function resolveInput(input, explicitMime) {
   }
 
   if (!mediaType) {
-    throw new Error('Could not detect media type — provide mediaType in options');
+    throw new Error('Could not detect media type - provide mediaType in options');
   }
 
   return { buffer, mediaType };
@@ -171,10 +176,14 @@ export async function resolveInput(input, explicitMime) {
 // Utility
 // ---------------------------------------------------------------------------
 
+/** @param {number} ms */
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/**
+ * @param {import('./client.js').TwitterHttpClient & { AuthError?: typeof Error }} client
+ */
 function requireAuth(client) {
   if (!client.isAuthenticated()) {
     const AuthError = client.AuthError ?? Error;
@@ -192,8 +201,8 @@ function requireAuth(client) {
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {Buffer} buffer
- * @param {string} mediaType — MIME e.g. 'image/jpeg'
- * @param {string} mediaCategory — 'tweet_image' | 'tweet_video' | 'tweet_gif'
+ * @param {string} mediaType - MIME e.g. 'image/jpeg'
+ * @param {string} mediaCategory - 'tweet_image' | 'tweet_video' | 'tweet_gif'
  * @param {{ onProgress?: (info: { phase: string, percent: number }) => void }} [opts]
  * @returns {Promise<{ mediaId: string, mediaKey: string|null }>}
  */
@@ -270,7 +279,7 @@ export async function uploadChunked(client, buffer, mediaType, mediaCategory, op
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} mediaId
- * @param {Function} [onProgress]
+ * @param {(info: { phase: string, percent: number }) => void} [onProgress]
  */
 export async function pollProcessingStatus(client, mediaId, onProgress) {
   let waitMs = STATUS_POLL_INITIAL_MS;
@@ -285,22 +294,22 @@ export async function pollProcessingStatus(client, mediaId, onProgress) {
       },
     });
 
-    const info = resp.processing_info;
+    const info = /** @type {import('./types.js').Raw} */ (resp.processing_info);
     if (!info) return; // no processing needed
 
     const state = info.state; // 'pending' | 'in_progress' | 'succeeded' | 'failed'
-    const progressPercent = info.progress_percent ?? 0;
+    const progressPercent = /** @type {number} */ (info.progress_percent) ?? 0;
 
     onProgress?.({ phase: 'processing', percent: progressPercent });
 
     if (state === 'succeeded') return;
     if (state === 'failed') {
-      const errMsg = info.error?.message ?? 'Media processing failed';
+      const errMsg = /** @type {{ message?: string }|undefined} */ (info.error)?.message ?? 'Media processing failed';
       throw new Error(`Media processing failed for ${mediaId}: ${errMsg}`);
     }
 
     // Twitter tells us how long to wait via check_after_secs
-    const checkAfterMs = (info.check_after_secs ?? Math.ceil(waitMs / 1000)) * 1000;
+    const checkAfterMs = (Number(info.check_after_secs) || Math.ceil(waitMs / 1000)) * 1000;
     await sleep(checkAfterMs);
 
     waitMs = Math.min(waitMs * 2, STATUS_POLL_MAX_MS);
@@ -314,9 +323,9 @@ export async function pollProcessingStatus(client, mediaId, onProgress) {
 /**
  * Upload any media file (image, video, GIF) to Twitter.
  *
- * @param {import('./client.js').TwitterHttpClient} client — authenticated client
- * @param {string|Buffer} filePath — file path or Buffer
- * @param {{ mediaType?: string, altText?: string, onProgress?: Function }} [options]
+ * @param {import('./client.js').TwitterHttpClient} client - authenticated client
+ * @param {string|Buffer} filePath - file path or Buffer
+ * @param {import('./types.js').MediaUploadOptions} [options]
  * @returns {Promise<{ mediaId: string, mediaKey: string|null }>}
  */
 export async function uploadMedia(client, filePath, options = {}) {
@@ -344,7 +353,7 @@ export async function uploadMedia(client, filePath, options = {}) {
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string|Buffer} imagePathOrBuffer
- * @param {{ altText?: string, mediaType?: string }} [options]
+ * @param {import('./types.js').MediaUploadOptions} [options]
  * @returns {Promise<{ mediaId: string, mediaKey: string|null }>}
  */
 export async function uploadImage(client, imagePathOrBuffer, options = {}) {
@@ -359,7 +368,9 @@ export async function uploadImage(client, imagePathOrBuffer, options = {}) {
   }
 
   const category = mediaType === 'image/gif' ? 'tweet_gif' : 'tweet_image';
-  const result = await uploadChunked(client, buffer, mediaType, category);
+  const result = await uploadChunked(client, buffer, mediaType, category, {
+    onProgress: options.onProgress,
+  });
 
   if (options.altText) {
     await setAltText(client, result.mediaId, options.altText);
@@ -374,7 +385,7 @@ export async function uploadImage(client, imagePathOrBuffer, options = {}) {
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string|Buffer} videoPathOrBuffer
- * @param {{ onProgress?: (info: { phase: string, percent: number }) => void }} [options]
+ * @param {import('./types.js').MediaUploadOptions} [options]
  * @returns {Promise<{ mediaId: string, mediaKey: string|null }>}
  */
 export async function uploadVideo(client, videoPathOrBuffer, options = {}) {
@@ -398,9 +409,10 @@ export async function uploadVideo(client, videoPathOrBuffer, options = {}) {
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string|Buffer} gifPathOrBuffer
+ * @param {import('./types.js').MediaUploadOptions} [options]
  * @returns {Promise<{ mediaId: string, mediaKey: string|null }>}
  */
-export async function uploadGif(client, gifPathOrBuffer) {
+export async function uploadGif(client, gifPathOrBuffer, options = {}) {
   requireAuth(client);
 
   const { buffer } = await resolveInput(gifPathOrBuffer, 'image/gif');
@@ -411,7 +423,9 @@ export async function uploadGif(client, gifPathOrBuffer) {
     );
   }
 
-  return uploadChunked(client, buffer, 'image/gif', 'tweet_gif');
+  return uploadChunked(client, buffer, 'image/gif', 'tweet_gif', {
+    onProgress: options.onProgress,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -445,9 +459,9 @@ export async function setAltText(client, mediaId, altText) {
 /**
  * Parse a single media entity from Twitter's extended_entities / media array.
  *
- * @param {object} media — raw media object from Twitter response
+ * @param {Raw} media - raw media object from Twitter response
  * @param {string} tweetId
- * @returns {object}
+ * @returns {Raw}
  */
 export function parseMediaEntity(media, tweetId) {
   const type = media.type; // 'photo' | 'video' | 'animated_gif'
@@ -470,12 +484,12 @@ export function parseMediaEntity(media, tweetId) {
     }
   }
 
-  const originalInfo = media.original_info ?? {};
+  const originalInfo = /** @type {import('./types.js').Raw} */ (media.original_info ?? {});
 
   return {
     tweetId,
-    mediaType: type,
-    url: type === 'photo' ? url : (videoUrl ?? url),
+    mediaType: /** @type {string} */ (type),
+    url: type === 'photo' ? url : (/** @type {string} */ (videoUrl) ?? url),
     thumbnailUrl: media.media_url_https ?? media.media_url ?? '',
     width: originalInfo.width ?? media.sizes?.large?.w ?? 0,
     height: originalInfo.height ?? media.sizes?.large?.h ?? 0,
@@ -488,7 +502,7 @@ export function parseMediaEntity(media, tweetId) {
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} username
- * @param {{ limit?: number, cursor?: string }} [options]
+ * @param {{ limit?: number, cursor?: string|null }} [options]
  * @returns {Promise<Array<object>>}
  */
 export async function scrapeMedia(client, username, options = {}) {
@@ -506,13 +520,17 @@ export async function scrapeMedia(client, username, options = {}) {
   if (!userResult || userResult.__typename === 'UserUnavailable') {
     throw new Error(`User @${username} not found or unavailable`);
   }
-  const userId = userResult.rest_id;
+  const userId = /** @type {string} */ (userResult.rest_id);
+  if (!userId) {
+    throw new Error(`User @${username} has no user ID`);
+  }
 
   // Paginate through UserMedia
   const mediaItems = [];
   let nextCursor = cursor;
 
   while (mediaItems.length < limit) {
+    /** @type {Record<string, unknown>} */
     const variables = {
       userId,
       count: Math.min(20, limit - mediaItems.length),
@@ -546,15 +564,18 @@ export async function scrapeMedia(client, username, options = {}) {
           continue;
         }
 
-        // Tweet entries — may be nested in modules
+        // Tweet entries - may be nested in modules
         const tweetResults = extractTweetResultsFromEntry(entry);
         for (const tweetResult of tweetResults) {
           const legacy = tweetResult?.legacy;
           if (!legacy) continue;
 
-          const tweetId = tweetResult.rest_id ?? legacy.id_str;
-          const mediaArray =
+          const tweetId = /** @type {string} */ (tweetResult.rest_id ?? legacy.id_str);
+          const mediaRaw =
             legacy.extended_entities?.media ?? legacy.entities?.media ?? [];
+          if (!Array.isArray(mediaRaw)) continue;
+          /** @type {Raw[]} */
+          const mediaArray = mediaRaw;
 
           for (const m of mediaArray) {
             if (mediaItems.length >= limit) break;
@@ -573,26 +594,30 @@ export async function scrapeMedia(client, username, options = {}) {
 
 /**
  * Extract tweet result objects from a timeline entry (handles module wrapping).
- * @param {object} entry
- * @returns {object[]}
+ * @param {Raw} entry
+ * @returns {Raw[]}
  */
 function extractTweetResultsFromEntry(entry) {
+  /** @type {Raw[]} */
   const results = [];
 
   // Direct tweet entry
   const itemContent = entry.content?.itemContent ?? entry.content;
   if (itemContent?.tweet_results?.result) {
-    const r = itemContent.tweet_results.result;
+    const r = /** @type {Raw} */ (itemContent.tweet_results.result);
     // Handle TweetWithVisibilityResults wrapper
-    results.push(r.__typename === 'TweetWithVisibilityResults' ? r.tweet : r);
+    const target = r.__typename === 'TweetWithVisibilityResults' ? r.tweet : r;
+    if (target) results.push(target);
   }
 
   // Module entries (media tab uses TimelineModule)
-  const moduleItems = entry.content?.items ?? [];
+  const moduleItems = /** @type {Raw[]} */ (entry.content?.items ?? []);
   for (const item of moduleItems) {
     const inner = item.item?.itemContent?.tweet_results?.result;
     if (inner) {
-      results.push(inner.__typename === 'TweetWithVisibilityResults' ? inner.tweet : inner);
+      const r = /** @type {Raw} */ (inner);
+      const target = r.__typename === 'TweetWithVisibilityResults' ? r.tweet : r;
+      if (target) results.push(target);
     }
   }
 
@@ -627,7 +652,11 @@ export async function downloadMedia(url, destPath, options = {}) {
 
   const fileStream = createWriteStream(resolvedPath);
 
-  // Node 18+ — resp.body is a ReadableStream; convert to Node stream
+  if (!resp.body) {
+    throw new Error(`Download failed: no response body for ${url}`);
+  }
+
+  // Node 18+ - resp.body is a ReadableStream; convert to Node stream
   const reader = resp.body.getReader();
   const nodeStream = new ReadableStream({
     async pull(controller) {
@@ -686,7 +715,10 @@ export async function getVideoUrl(client, tweetId) {
   const legacy = tweet?.legacy;
   if (!legacy) return null;
 
-  const mediaArray = legacy.extended_entities?.media ?? legacy.entities?.media ?? [];
+  const mediaRaw = legacy.extended_entities?.media ?? legacy.entities?.media ?? [];
+  if (!Array.isArray(mediaRaw)) return null;
+  /** @type {import('./types.js').Raw[]} */
+  const mediaArray = mediaRaw;
   const videos = mediaArray.filter(
     (m) => m.type === 'video' || m.type === 'animated_gif',
   );
@@ -694,20 +726,20 @@ export async function getVideoUrl(client, tweetId) {
   if (videos.length === 0) return null;
 
   const video = videos[0];
-  const variants = (video.video_info?.variants ?? [])
+  const variants = /** @type {import('./types.js').Raw[]} */ (video.video_info?.variants ?? [])
     .filter((v) => v.content_type === 'video/mp4')
     .sort((a, b) => (b.bitrate ?? 0) - (a.bitrate ?? 0));
 
   if (variants.length === 0) return null;
 
   const best = variants[0];
-  const aspectRatio = video.video_info?.aspect_ratio ?? [16, 9];
-  const originalInfo = video.original_info ?? {};
+  const aspectRatio = /** @type {number[]} */ (video.video_info?.aspect_ratio ?? [16, 9]);
+  const originalInfo = /** @type {import('./types.js').Raw} */ (video.original_info ?? {});
 
   return {
-    url: best.url,
+    url: /** @type {string} */ (best.url),
     bitrate: best.bitrate ?? 0,
-    contentType: best.content_type,
+    contentType: best.content_type || 'video/mp4',
     width: originalInfo.width ?? aspectRatio[0],
     height: originalInfo.height ?? aspectRatio[1],
   };

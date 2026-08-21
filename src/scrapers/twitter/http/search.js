@@ -3,7 +3,7 @@
  * Twitter HTTP Search Scraper
  *
  * Searches tweets, users, hashtags, and trending topics via Twitter's
- * internal GraphQL API — no browser required. Drop-in replacement for the
+ * internal GraphQL API - no browser required. Drop-in replacement for the
  * Puppeteer-based searchTweets() and scrapeHashtag() in ../index.js.
  *
  * @author nich (@nichxbt)
@@ -11,34 +11,36 @@
  */
 
 import { GRAPHQL, REST_BASE } from './endpoints.js';
+
+/** @typedef {import('./types.js').Raw} Raw */
 import { parseTweetData, parseTimelineInstructions } from './tweets.js';
 import { parseUserData } from './profile.js';
 import { NotFoundError, TwitterApiError } from './errors.js';
 
 // ---------------------------------------------------------------------------
-// buildAdvancedQuery — Compose Twitter advanced search query string
+// buildAdvancedQuery - Compose Twitter advanced search query string
 // ---------------------------------------------------------------------------
 
 /**
  * Build a Twitter advanced search query string from structured options.
  *
  * @param {object} options
- * @param {string} [options.keywords] — Free-text keywords
- * @param {string} [options.from] — Tweets from this username
- * @param {string} [options.to] — Tweets directed at this username
- * @param {string} [options.since] — Start date (YYYY-MM-DD)
- * @param {string} [options.until] — End date (YYYY-MM-DD)
- * @param {number} [options.minLikes] — Minimum favourite count
- * @param {number} [options.minRetweets] — Minimum retweet count
- * @param {number} [options.minReplies] — Minimum reply count
- * @param {string} [options.lang] — Language code (e.g. 'en')
- * @param {string|string[]} [options.filter] — Include filter(s): 'links', 'images', 'videos', 'media', 'native_video'
- * @param {string|string[]} [options.exclude] — Exclude filter(s): 'retweets', 'replies'
- * @param {string} [options.near] — Geo-location string (e.g. 'San Francisco')
- * @param {string} [options.within] — Radius for geo search (e.g. '15mi')
- * @param {string} [options.url] — Tweets containing this URL
- * @param {string} [options.mentioning] — Tweets mentioning @username
- * @param {string} [options.listId] — Tweets from members of a list
+ * @param {string} [options.keywords] - Free-text keywords
+ * @param {string} [options.from] - Tweets from this username
+ * @param {string} [options.to] - Tweets directed at this username
+ * @param {string} [options.since] - Start date (YYYY-MM-DD)
+ * @param {string} [options.until] - End date (YYYY-MM-DD)
+ * @param {number} [options.minLikes] - Minimum favourite count
+ * @param {number} [options.minRetweets] - Minimum retweet count
+ * @param {number} [options.minReplies] - Minimum reply count
+ * @param {string} [options.lang] - Language code (e.g. 'en')
+ * @param {string|string[]} [options.filter] - Include filter(s): 'links', 'images', 'videos', 'media', 'native_video'
+ * @param {string|string[]} [options.exclude] - Exclude filter(s): 'retweets', 'replies'
+ * @param {string} [options.near] - Geo-location string (e.g. 'San Francisco')
+ * @param {string} [options.within] - Radius for geo search (e.g. '15mi')
+ * @param {string} [options.url] - Tweets containing this URL
+ * @param {string} [options.mentioning] - Tweets mentioning `@username`
+ * @param {string} [options.listId] - Tweets from members of a list
  * @returns {string} Composed Twitter search query
  *
  * @example
@@ -95,28 +97,28 @@ export function buildAdvancedQuery(options = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// searchTweets — Search tweets via SearchTimeline GraphQL endpoint
+// searchTweets - Search tweets via SearchTimeline GraphQL endpoint
 // ---------------------------------------------------------------------------
 
 /**
  * Search tweets via Twitter's `SearchTimeline` GraphQL endpoint.
  *
  * @param {import('./client.js').TwitterHttpClient} client
- * @param {string} query — Search query string (plain or advanced syntax)
+ * @param {string} query - Search query string (plain or advanced syntax)
  * @param {object} [options]
- * @param {number} [options.limit=100] — Maximum tweets to return
- * @param {string} [options.type='Latest'] — 'Top' | 'Latest' | 'Photos' | 'Videos'
- * @param {string|null} [options.cursor=null] — Resume from pagination cursor
- * @param {function} [options.onProgress] — `({ fetched, limit }) => void`
- * @param {string} [options.since] — Start date for query (YYYY-MM-DD)
- * @param {string} [options.until] — End date for query (YYYY-MM-DD)
- * @param {string} [options.from] — Tweets from this username
- * @param {string} [options.to] — Tweets directed at this username
- * @param {number} [options.minLikes] — Minimum favourite count
- * @param {number} [options.minRetweets] — Minimum retweet count
- * @param {string} [options.lang] — Language code
- * @param {string} [options.filter] — Include filter
- * @returns {Promise<object[]>} Array of parsed tweet objects
+ * @param {number} [options.limit=100] - Maximum tweets to return
+ * @param {string} [options.type='Latest'] - 'Top' | 'Latest' | 'Photos' | 'Videos'
+ * @param {string|null} [options.cursor=null] - Resume from pagination cursor
+ * @param {function} [options.onProgress] - `({ fetched, limit }) => void`
+ * @param {string} [options.since] - Start date for query (YYYY-MM-DD)
+ * @param {string} [options.until] - End date for query (YYYY-MM-DD)
+ * @param {string} [options.from] - Tweets from this username
+ * @param {string} [options.to] - Tweets directed at this username
+ * @param {number} [options.minLikes] - Minimum favourite count
+ * @param {number} [options.minRetweets] - Minimum retweet count
+ * @param {string} [options.lang] - Language code
+ * @param {string} [options.filter] - Include filter
+ * @returns {Promise<Raw[]>} Array of parsed tweet objects
  */
 export async function searchTweets(client, query, options = {}) {
   const {
@@ -152,6 +154,7 @@ export async function searchTweets(client, query, options = {}) {
   let nextCursor = cursor;
 
   while (allTweets.length < limit) {
+    /** @type {Record<string, unknown>} */
     const variables = {
       rawQuery,
       count: 20,
@@ -185,7 +188,7 @@ export async function searchTweets(client, query, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// searchUsers — Search users via SearchTimeline with product='People'
+// searchUsers - Search users via SearchTimeline with product='People'
 // ---------------------------------------------------------------------------
 
 /**
@@ -193,12 +196,12 @@ export async function searchTweets(client, query, options = {}) {
  * `product: 'People'`.
  *
  * @param {import('./client.js').TwitterHttpClient} client
- * @param {string} query — Search query string
+ * @param {string} query - Search query string
  * @param {object} [options]
- * @param {number} [options.limit=100] — Maximum users to return
- * @param {string|null} [options.cursor=null] — Resume from pagination cursor
- * @param {function} [options.onProgress] — `({ fetched, limit }) => void`
- * @returns {Promise<object[]>} Array of parsed user profile objects
+ * @param {number} [options.limit=100] - Maximum users to return
+ * @param {string|null} [options.cursor=null] - Resume from pagination cursor
+ * @param {function} [options.onProgress] - `({ fetched, limit }) => void`
+ * @returns {Promise<Raw[]>} Array of parsed user profile objects
  */
 export async function searchUsers(client, query, options = {}) {
   const { limit = 100, cursor = null, onProgress } = options;
@@ -208,6 +211,7 @@ export async function searchUsers(client, query, options = {}) {
   let nextCursor = cursor;
 
   while (allUsers.length < limit) {
+    /** @type {Record<string, unknown>} */
     const variables = {
       rawQuery: query,
       count: 20,
@@ -245,11 +249,11 @@ export async function searchUsers(client, query, options = {}) {
  * User search results use `user_results` instead of `tweet_results` in
  * the timeline entries.
  *
- * @param {object[]} instructions
- * @returns {{ users: object[], cursor: string|null }}
+ * @param {Raw[]} instructions
+ * @returns {{ users: Raw[], cursor: string|null }}
  */
 function parseSearchUserInstructions(instructions) {
-  const users = [];
+  const users = /** @type {Raw[]} */ ([]);
   let cursor = null;
 
   if (!Array.isArray(instructions)) {
@@ -270,7 +274,7 @@ function parseSearchUserInstructions(instructions) {
             null;
           continue;
         }
-        // Top cursor — skip
+        // Top cursor - skip
         if (entry.entryId?.startsWith('cursor-top-')) {
           continue;
         }
@@ -294,7 +298,7 @@ function parseSearchUserInstructions(instructions) {
 }
 
 // ---------------------------------------------------------------------------
-// scrapeTrending — Trending topics
+// scrapeTrending - Trending topics
 // ---------------------------------------------------------------------------
 
 /**
@@ -306,8 +310,8 @@ function parseSearchUserInstructions(instructions) {
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {object} [options]
- * @param {number} [options.woeid=1] — Where On Earth ID (1 = worldwide)
- * @returns {Promise<object[]>} Array of `{ name, tweetCount, url, category }`
+ * @param {number} [options.woeid=1] - Where On Earth ID (1 = worldwide)
+ * @returns {Promise<Raw[]>} Array of `{ name, tweetCount, url, category }`
  */
 export async function scrapeTrending(client, options = {}) {
   const { woeid = 1 } = options;
@@ -319,30 +323,30 @@ export async function scrapeTrending(client, options = {}) {
 
   // Response is an array with one element per location
   const trendData = Array.isArray(resp) ? resp[0] : resp;
-  const trends = trendData?.trends || [];
+  const trends = /** @type {Raw[]} */ (trendData?.trends || []);
 
-  return trends.map((trend) => ({
+  return /** @type {Raw[]} */ (/** @type {unknown} */ (trends.map((trend) => ({
     name: trend.name || '',
-    tweetCount: trend.tweet_volume ?? null,
-    url: trend.url || null,
+    tweetCount: trend.tweet_volume != null ? Number(trend.tweet_volume) : null,
+    url: typeof trend.url === 'string' ? trend.url : null,
     category: trend.promoted_content ? 'promoted' : null,
-  }));
+  }))));
 }
 
 // ---------------------------------------------------------------------------
-// scrapeHashtag — Convenience wrapper around searchTweets
+// scrapeHashtag - Convenience wrapper around searchTweets
 // ---------------------------------------------------------------------------
 
 /**
- * Scrape tweets by hashtag — convenience wrapper around `searchTweets`.
+ * Scrape tweets by hashtag - convenience wrapper around `searchTweets`.
  *
  * Maintains backward compatibility with the Puppeteer-based
  * `scrapeHashtag()` in ../index.js.
  *
  * @param {import('./client.js').TwitterHttpClient} client
- * @param {string} hashtag — Hashtag text (with or without `#` prefix)
- * @param {object} [options] — Same options as `searchTweets`
- * @returns {Promise<object[]>} Array of parsed tweet objects
+ * @param {string} hashtag - Hashtag text (with or without `#` prefix)
+ * @param {object} [options] - Same options as `searchTweets`
+ * @returns {Promise<Raw[]>} Array of parsed tweet objects
  */
 export async function scrapeHashtag(client, hashtag, options = {}) {
   const tag = hashtag.startsWith('#') ? hashtag : `#${hashtag}`;

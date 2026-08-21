@@ -3,7 +3,7 @@
  * Twitter Engagement Operations via HTTP
  *
  * Like/unlike, retweet/unretweet, follow/unfollow, block/unblock,
- * mute/unmute, bookmark, pin, and bulk operations — all over HTTP
+ * mute/unmute, bookmark, pin, and bulk operations - all over HTTP
  * without Puppeteer or the official API.
  *
  * Every function requires an authenticated {@link TwitterHttpClient}.
@@ -14,6 +14,8 @@
  */
 
 import { GRAPHQL, REST } from './endpoints.js';
+
+/** @typedef {import('./types.js').Raw} Raw */
 import {
   AuthError,
   RateLimitError,
@@ -25,6 +27,7 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -34,7 +37,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  */
 function requireAuth(client) {
   if (!client.isAuthenticated()) {
-    throw new AuthError('Authentication required — set cookies before performing engagement actions');
+    throw new AuthError('Authentication required - set cookies before performing engagement actions');
   }
 }
 
@@ -43,7 +46,7 @@ function requireAuth(client) {
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {{ queryId: string, operationName: string }} endpoint
- * @param {object} variables
+ * @param {Record<string, unknown>} variables
  * @returns {Promise<{ success: boolean }>}
  */
 async function graphqlMutation(client, endpoint, variables) {
@@ -62,7 +65,7 @@ async function graphqlMutation(client, endpoint, variables) {
     for (const err of errors) {
       const msg = (err.message || '').toLowerCase();
 
-      // Idempotent cases — already done, treat as success
+      // Idempotent cases - already done, treat as success
       if (
         msg.includes('already favorited') ||
         msg.includes('already retweeted') ||
@@ -94,7 +97,7 @@ async function graphqlMutation(client, endpoint, variables) {
 
       // Suspended
       if (msg.includes('suspended')) {
-        throw new TwitterApiError(err.message, {
+        throw new TwitterApiError(err.message || '', {
           endpoint: endpoint.operationName,
           data: response,
         });
@@ -116,7 +119,7 @@ async function graphqlMutation(client, endpoint, variables) {
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} path - REST endpoint path
- * @param {object} body - POST form body
+ * @param {Record<string, string>} body - POST form body
  * @returns {Promise<{ success: boolean }>}
  */
 async function restMutation(client, path, body) {
@@ -151,7 +154,7 @@ async function restMutation(client, path, body) {
       }
 
       if (msg.includes('suspended')) {
-        throw new TwitterApiError(err.message, { endpoint: path, data: response });
+        throw new TwitterApiError(err.message || '', { endpoint: path, data: response });
       }
     }
 
@@ -376,6 +379,7 @@ export async function unpinTweet(client, tweetId) {
 // ===========================================================================
 
 /** Default safety delays (ms) per operation type. */
+/** @type {Record<string, number>} */
 const DEFAULT_DELAYS = {
   follow: 2000,
   unfollow: 2000,
@@ -391,7 +395,7 @@ const DEFAULT_DELAYS = {
  * @param {object} params
  * @param {import('./client.js').TwitterHttpClient} params.client
  * @param {string[]} params.ids - Array of user/tweet IDs to process
- * @param {(client: object, id: string) => Promise<{ success: boolean }>} params.action
+ * @param {(client: import('./client.js').TwitterHttpClient, id: string) => Promise<{ success: boolean }>} params.action
  * @param {string} params.type - Operation type for delay defaults & labels
  * @param {object} [params.options]
  * @param {number} [params.options.delayMs] - Delay between each action
@@ -417,7 +421,7 @@ async function bulkOperation({ client, ids, action, type, options = {} }) {
         await action(client, id);
         succeeded++;
       } catch (err) {
-        failed.push({ id, error: err.message || String(err) });
+        failed.push({ id, error: /** @type {Error} */ (err).message || String(err) });
       }
     } else {
       succeeded++;
@@ -439,7 +443,7 @@ async function bulkOperation({ client, ids, action, type, options = {} }) {
 }
 
 /**
- * Bulk unfollow users — XActions' core use case.
+ * Bulk unfollow users - XActions' core use case.
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string[]} userIds

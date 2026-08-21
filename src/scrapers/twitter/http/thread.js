@@ -17,6 +17,8 @@
  */
 
 import { GRAPHQL } from './endpoints.js';
+
+/** @typedef {import('./types.js').Raw} Raw */
 import { NotFoundError } from './errors.js';
 import { parseTweetData } from './tweets.js';
 
@@ -24,13 +26,14 @@ import { parseTweetData } from './tweets.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Deduplicate tweets by `id`, keeping the first occurrence.
  *
- * @param {object[]} tweets
- * @returns {object[]}
+ * @param {Raw[]} tweets
+ * @returns {Raw[]}
  */
 function deduplicateTweets(tweets) {
   const seen = new Set();
@@ -44,8 +47,8 @@ function deduplicateTweets(tweets) {
 /**
  * Sort tweets chronologically by createdAt (ascending).
  *
- * @param {object[]} tweets
- * @returns {object[]}
+ * @param {Raw[]} tweets
+ * @returns {Raw[]}
  */
 function sortChronologically(tweets) {
   return [...tweets].sort((a, b) => {
@@ -56,7 +59,7 @@ function sortChronologically(tweets) {
 }
 
 // ---------------------------------------------------------------------------
-// parseConversationModule — Parse Twitter's conversation thread module
+// parseConversationModule - Parse Twitter's conversation thread module
 // ---------------------------------------------------------------------------
 
 /**
@@ -67,12 +70,12 @@ function sortChronologically(tweets) {
  * of `TimelineTimelineItem` entries, each holding either a tweet or a
  * "Show more" cursor.
  *
- * @param {object} module — A module entry from the TweetDetail response.
- * @returns {{ tweets: object[], cursors: object[] }}
+ * @param {Raw} module - A module entry from the TweetDetail response.
+ * @returns {{ tweets: Raw[], cursors: Raw[] }}
  */
 export function parseConversationModule(module) {
-  const tweets = [];
-  const cursors = [];
+  const tweets = /** @type {Raw[]} */ ([]);
+  const cursors = /** @type {Raw[]} */ ([]);
 
   if (!module) return { tweets, cursors };
 
@@ -107,10 +110,10 @@ export function parseConversationModule(module) {
         cursorType === 'TimelineTimelineCursor' ||
         itemContent.__typename === 'TimelineTimelineCursor')
     ) {
-      cursors.push({
+      cursors.push(/** @type {Raw} */ ({
         type: cursorType,
         value: cursorValue,
-      });
+      }));
     }
   }
 
@@ -118,20 +121,20 @@ export function parseConversationModule(module) {
 }
 
 // ---------------------------------------------------------------------------
-// parseTweetDetailResponse — Extract tweets & cursors from TweetDetail
+// parseTweetDetailResponse - Extract tweets & cursors from TweetDetail
 // ---------------------------------------------------------------------------
 
 /**
  * Parse a full TweetDetail GraphQL response into flat arrays of tweets
  * and cursors.
  *
- * @param {object} response — The raw GraphQL response from TweetDetail.
- * @returns {{ tweets: object[], cursors: object[], modules: Map<string, object[]> }}
+ * @param {Raw} response - The raw GraphQL response from TweetDetail.
+ * @returns {{ tweets: Raw[], cursors: Raw[], modules: Map<string, Raw[]> }}
  */
 function parseTweetDetailResponse(response) {
-  const allTweets = [];
-  const allCursors = [];
-  const modules = new Map(); // entryId → tweets[]
+  const allTweets = /** @type {Raw[]} */ ([]);
+  const allCursors = /** @type {Raw[]} */ ([]);
+  const modules = /** @type {Map<string, Raw[]>} */ (new Map()); // entryId → tweets[]
 
   const instructions =
     response?.data?.threaded_conversation_with_injections_v2?.instructions ?? [];
@@ -162,7 +165,7 @@ function parseTweetDetailResponse(response) {
             entry.content?.itemContent?.cursorType ??
             entry.content?.cursorType;
           if (cursorValue && cursorType) {
-            allCursors.push({ type: cursorType, value: cursorValue });
+            allCursors.push(/** @type {Raw} */ ({ type: cursorType, value: cursorValue }));
           }
           continue;
         }
@@ -172,7 +175,7 @@ function parseTweetDetailResponse(response) {
           entryType === 'TimelineTimelineModule' ||
           entryId.startsWith('conversationthread-')
         ) {
-          const { tweets, cursors } = parseConversationModule(entry.content);
+          const { tweets, cursors } = parseConversationModule(entry.content || /** @type {Raw} */ ({}));
           allTweets.push(...tweets);
           allCursors.push(...cursors);
           if (tweets.length > 0) {
@@ -192,13 +195,13 @@ function parseTweetDetailResponse(response) {
             entry.content?.itemContent?.cursorType ??
             (entryId.includes('bottom') ? 'Bottom' : 'ShowMore');
           if (value) {
-            allCursors.push({ type, value });
+            allCursors.push(/** @type {Raw} */ ({ type, value }));
           }
         }
       }
     }
 
-    // ---- TimelineAddToModule — appended replies --------------------------
+    // ---- TimelineAddToModule - appended replies --------------------------
     if (type === 'TimelineAddToModule') {
       const moduleItems = instruction.moduleItems || [];
       for (const item of moduleItems) {
@@ -221,7 +224,7 @@ function parseTweetDetailResponse(response) {
 }
 
 // ---------------------------------------------------------------------------
-// reconstructThread — Pure function for thread ordering
+// reconstructThread - Pure function for thread ordering
 // ---------------------------------------------------------------------------
 
 /**
@@ -231,12 +234,12 @@ function parseTweetDetailResponse(response) {
  * Handles self-threads, branching conversations, and missing (deleted)
  * tweets by inspecting each tweet's `inReplyTo` field.
  *
- * @param {object[]} tweets — Flat array of parsed tweets (with `inReplyTo`).
+ * @param {Raw[]} tweets - Flat array of parsed tweets (with `inReplyTo`).
  * @returns {{
- *   rootTweet: object|null,
- *   authorReplies: object[],
- *   conversation: object[],
- *   tree: Map<string|null, object[]>,
+ *   rootTweet: Raw|null,
+ *   authorReplies: Raw[],
+ *   conversation: Raw[],
+ *   tree: Map<string|null, Raw[]>,
  * }}
  */
 export function reconstructThread(tweets) {
@@ -250,14 +253,14 @@ export function reconstructThread(tweets) {
     if (tweet.id) tweetMap.set(tweet.id, tweet);
   }
 
-  // Find root tweet(s) — tweets that are not replies, or whose parent is not
+  // Find root tweet(s) - tweets that are not replies, or whose parent is not
   // in our set (the parent was not fetched / was deleted)
   const roots = [];
   for (const tweet of tweets) {
     if (!tweet.inReplyTo) {
       roots.push(tweet);
     } else if (!tweetMap.has(tweet.inReplyTo.tweetId)) {
-      // Parent not in our set — treat as a root of its subtree
+      // Parent not in our set - treat as a root of its subtree
       roots.push(tweet);
     }
   }
@@ -267,11 +270,12 @@ export function reconstructThread(tweets) {
   const rootTweet = sortedRoots[0] || tweets[0] || null;
 
   // Build parent → children map (tree)
-  const tree = new Map();
+  const tree = /** @type {Map<string|null, Raw[]>} */ (new Map());
   for (const tweet of tweets) {
     const parentId = tweet.inReplyTo?.tweetId ?? null;
-    if (!tree.has(parentId)) tree.set(parentId, []);
-    tree.get(parentId).push(tweet);
+    const siblings = tree.get(parentId) || [];
+    siblings.push(tweet);
+    tree.set(parentId, siblings);
   }
   // Sort children chronologically
   for (const [, children] of tree) {
@@ -292,10 +296,11 @@ export function reconstructThread(tweets) {
   // Walk the tree depth-first to produce ordered flat arrays
   const visited = new Set();
 
+  /** @param {string|null} tweetId */
   function walk(tweetId) {
     const children = tree.get(tweetId) || [];
     for (const child of children) {
-      if (visited.has(child.id)) continue;
+      if (!child.id || visited.has(child.id)) continue;
       visited.add(child.id);
 
       if (child.author?.id === authorId) {
@@ -317,7 +322,7 @@ export function reconstructThread(tweets) {
   // Also walk from null parent (for tweets whose parent isn't in our set)
   const orphanChildren = tree.get(null) || [];
   for (const orphan of orphanChildren) {
-    if (visited.has(orphan.id)) continue;
+    if (!orphan.id || visited.has(orphan.id)) continue;
     visited.add(orphan.id);
     conversation.push(orphan);
     if (orphan.author?.id === authorId) {
@@ -346,7 +351,7 @@ export function reconstructThread(tweets) {
 }
 
 // ---------------------------------------------------------------------------
-// scrapeThread — Thread scraping from a single tweet
+// scrapeThread - Thread scraping from a single tweet
 // ---------------------------------------------------------------------------
 
 /**
@@ -356,13 +361,13 @@ export function reconstructThread(tweets) {
  * context: parent tweets above, the focal tweet, and replies below.
  *
  * @param {import('./client.js').TwitterHttpClient} client
- * @param {string} tweetId — Any tweet in the thread.
+ * @param {string} tweetId - Any tweet in the thread.
  * @param {object} [options]
- * @param {string} [options.cursor] — Resume pagination cursor.
+ * @param {string} [options.cursor] - Resume pagination cursor.
  * @returns {Promise<{
- *   rootTweet: object,
- *   authorReplies: object[],
- *   conversation: object[],
+ *   rootTweet: Raw|null,
+ *   authorReplies: Raw[],
+ *   conversation: Raw[],
  *   totalReplies: number,
  *   hasMore: boolean,
  *   cursor: string|null,
@@ -371,6 +376,7 @@ export function reconstructThread(tweets) {
 export async function scrapeThread(client, tweetId, options = {}) {
   const { queryId, operationName } = GRAPHQL.TweetDetail;
 
+  /** @type {Record<string, unknown>} */
   const variables = {
     focalTweetId: tweetId,
     with_rux_injections: false,
@@ -417,7 +423,7 @@ export async function scrapeThread(client, tweetId, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// scrapeFullThread — Walk up to root, then scrape full thread
+// scrapeFullThread - Walk up to root, then scrape full thread
 // ---------------------------------------------------------------------------
 
 /**
@@ -428,13 +434,12 @@ export async function scrapeThread(client, tweetId, options = {}) {
  * then calls `scrapeThread()` on the discovered root.
  *
  * @param {import('./client.js').TwitterHttpClient} client
- * @param {string} tweetId — Any tweet in the thread.
- * @param {object} [options]
- * @param {number} [options.maxDepth=50] — Max parent traversals to prevent loops.
+ * @param {string} tweetId - Any tweet in the thread.
+ * @param {import('./types.js').ThreadOptions} [options]
  * @returns {Promise<{
- *   rootTweet: object,
- *   authorReplies: object[],
- *   conversation: object[],
+ *   rootTweet: Raw|null,
+ *   authorReplies: Raw[],
+ *   conversation: Raw[],
  *   totalReplies: number,
  *   hasMore: boolean,
  *   cursor: string|null,
@@ -453,7 +458,8 @@ export async function scrapeFullThread(client, tweetId, options = {}) {
     if (visited.has(currentId)) break; // cycle guard
     visited.add(currentId);
 
-    const variables = {
+    /** @type {Record<string, unknown>} */
+  const variables = {
       focalTweetId: currentId,
       with_rux_injections: false,
       rankingMode: 'Relevance',
@@ -477,7 +483,7 @@ export async function scrapeFullThread(client, tweetId, options = {}) {
       currentId = focalTweet.inReplyTo.tweetId;
       depth++;
     } else {
-      // This is the root — we're done walking up
+      // This is the root - we're done walking up
       break;
     }
   }
@@ -487,7 +493,7 @@ export async function scrapeFullThread(client, tweetId, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// scrapeConversation — All replies with pagination
+// scrapeConversation - All replies with pagination
 // ---------------------------------------------------------------------------
 
 /**
@@ -495,15 +501,12 @@ export async function scrapeFullThread(client, tweetId, options = {}) {
  * Paginates through "Show more replies" cursors.
  *
  * @param {import('./client.js').TwitterHttpClient} client
- * @param {string} tweetId — The tweet to get replies for.
- * @param {object} [options]
- * @param {number} [options.limit=200]
- * @param {'relevance'|'recency'} [options.sortBy='relevance']
- * @param {function} [options.onProgress] — `({ fetched, limit }) => void`
+ * @param {string} tweetId - The tweet to get replies for.
+ * @param {import('./types.js').ThreadOptions} [options]
  * @returns {Promise<{
- *   rootTweet: object,
- *   authorReplies: object[],
- *   conversation: object[],
+ *   rootTweet: Raw|null,
+ *   authorReplies: Raw[],
+ *   conversation: Raw[],
  *   totalReplies: number,
  *   hasMore: boolean,
  *   cursor: string|null,
@@ -516,12 +519,13 @@ export async function scrapeConversation(client, tweetId, options = {}) {
   const rankingMode =
     sortBy === 'recency' ? 'Recency' : 'Relevance';
 
-  const allTweets = [];
+  const allTweets = /** @type {Raw[]} */ ([]);
   let nextCursor = null;
   let firstRun = true;
 
   while (allTweets.length < limit) {
-    const variables = {
+    /** @type {Record<string, unknown>} */
+  const variables = {
       focalTweetId: tweetId,
       with_rux_injections: false,
       rankingMode,
@@ -540,7 +544,7 @@ export async function scrapeConversation(client, tweetId, options = {}) {
     const { tweets, cursors } = parseTweetDetailResponse(resp);
 
     // Add new tweets (deduplicate across pages)
-    const existingIds = new Set(allTweets.map((t) => t.id));
+    const existingIds = new Set(allTweets.map((t) => t.id).filter((id) => id != null));
     let newCount = 0;
     for (const tweet of tweets) {
       if (tweet.id && !existingIds.has(tweet.id)) {
@@ -570,7 +574,7 @@ export async function scrapeConversation(client, tweetId, options = {}) {
       break;
     }
 
-    nextCursor = showMoreCursor.value;
+    nextCursor = /** @type {string} */ (showMoreCursor.value);
 
     // Rate-limit courtesy delay between pages
     if (!firstRun) {

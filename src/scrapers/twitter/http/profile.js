@@ -3,7 +3,7 @@
  * Twitter HTTP Profile Scraper
  *
  * Scrapes user profiles via Twitter's internal GraphQL API (UserByScreenName,
- * UserByRestId) — no browser required.  Drop-in replacement for the
+ * UserByRestId) - no browser required.  Drop-in replacement for the
  * Puppeteer-based scrapeProfile() in ../index.js.
  *
  * @author nich (@nichxbt)
@@ -11,6 +11,8 @@
  */
 
 import { GRAPHQL } from './endpoints.js';
+
+/** @typedef {import('./types.js').Raw} Raw */
 import { NotFoundError, AuthError, TwitterApiError } from './errors.js';
 
 // ---------------------------------------------------------------------------
@@ -20,8 +22,8 @@ import { NotFoundError, AuthError, TwitterApiError } from './errors.js';
 /**
  * Expand t.co URLs using the entity data Twitter provides.
  *
- * @param {string} text — The raw text containing t.co links
- * @param {object[]} urlEntities — `legacy.entities.url.urls` or
+ * @param {string} text - The raw text containing t.co links
+ * @param {Raw[]} urlEntities - `legacy.entities.url.urls` or
  *   `legacy.entities.description.urls` arrays
  * @returns {string} Text with t.co links replaced by expanded URLs
  */
@@ -29,8 +31,10 @@ function expandTcoUrls(text, urlEntities = []) {
   if (!text || !urlEntities.length) return text || '';
   let expanded = text;
   for (const entity of urlEntities) {
-    if (entity.url && entity.expanded_url) {
-      expanded = expanded.replace(entity.url, entity.expanded_url);
+    const shortUrl = typeof entity.url === 'string' ? entity.url : '';
+    const longUrl = typeof entity.expanded_url === 'string' ? entity.expanded_url : '';
+    if (shortUrl && longUrl) {
+      expanded = expanded.replace(shortUrl, longUrl);
     }
   }
   return expanded;
@@ -39,7 +43,7 @@ function expandTcoUrls(text, urlEntities = []) {
 /**
  * Upgrade the avatar thumbnail URL to a higher-resolution version.
  *
- * Twitter serves `_normal` (48 × 48) by default — swap to `_400x400`.
+ * Twitter serves `_normal` (48 × 48) by default - swap to `_400x400`.
  *
  * @param {string|null} url
  * @returns {string|null}
@@ -65,43 +69,48 @@ function toISODate(raw) {
 /**
  * Safely extract the expanded website URL from legacy entity data.
  *
- * @param {object} legacy — The `legacy` object from a User result.
+ * @param {Raw} legacy - The `legacy` object from a User result.
  * @returns {string|null}
  */
 function extractWebsite(legacy) {
-  const urlEntities = legacy?.entities?.url?.urls;
-  if (!urlEntities || !urlEntities.length) return legacy?.url || null;
+  const urlEntities = /** @type {Raw} */ (/** @type {unknown} */ (legacy?.entities?.url))?.urls;
+  if (!urlEntities || !urlEntities.length) return typeof legacy?.url === 'string' ? legacy.url : null;
   // Prefer the expanded URL (resolves the t.co redirect)
-  return urlEntities[0].expanded_url || urlEntities[0].url || legacy.url || null;
+  const expanded = urlEntities[0].expanded_url || urlEntities[0].url || legacy.url;
+  return typeof expanded === 'string' ? expanded : null;
 }
 
 /**
  * Extract bio entity metadata (URLs, hashtags, mentions).
  *
- * @param {object} legacy
- * @returns {{ urls: object[], hashtags: object[], mentions: object[] }}
+ * @param {Raw} legacy
+ * @returns {Raw}
  */
 function extractBioEntities(legacy) {
-  const desc = legacy?.entities?.description || {};
-  return {
-    urls: (desc.urls || []).map((u) => ({
+  const desc = /** @type {Raw} */ (/** @type {unknown} */ (legacy?.entities?.description || {}));
+  return /** @type {Raw} */ ({
+    urls: /** @type {Raw[]} */ ((desc.urls || []).map((u) => ({
       display: u.display_url,
       expanded: u.expanded_url,
       url: u.url,
       start: u.indices?.[0] ?? null,
       end: u.indices?.[1] ?? null,
-    })),
-    hashtags: (desc.hashtags || []).map((h) => ({
-      text: h.text,
-      start: h.indices?.[0] ?? null,
-      end: h.indices?.[1] ?? null,
-    })),
-    mentions: (desc.user_mentions || []).map((m) => ({
-      username: m.screen_name,
-      start: m.indices?.[0] ?? null,
-      end: m.indices?.[1] ?? null,
-    })),
-  };
+    }))),
+    hashtags: /** @type {Raw[]} */ ((desc.hashtags || [])
+      .filter((h) => typeof h === 'object' && h !== null)
+      .map((h) => ({
+        text: h.text,
+        start: h.indices?.[0] ?? null,
+        end: h.indices?.[1] ?? null,
+      }))),
+    mentions: /** @type {Raw[]} */ ((desc.user_mentions || [])
+      .filter((m) => typeof m === 'object' && m !== null)
+      .map((m) => ({
+        username: m.screen_name,
+        start: m.indices?.[0] ?? null,
+        end: m.indices?.[1] ?? null,
+      }))),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -112,11 +121,11 @@ function extractBioEntities(legacy) {
  * Transform Twitter's raw GraphQL user object into the clean XActions
  * profile format.
  *
- * This is a **pure function** — it performs no I/O and has no side effects.
+ * This is a **pure function** - it performs no I/O and has no side effects.
  *
- * @param {object} rawUser — The `data.user.result` (or equivalent) object
+ * @param {Raw} rawUser - The `data.user.result` (or equivalent) object
  *   from a Twitter GraphQL response.
- * @returns {object} Normalised XActions profile object.
+ * @returns {Raw} Normalised XActions profile object.
  * @throws {NotFoundError} If the user is unavailable (suspended / deactivated).
  */
 export function parseUserData(rawUser) {
@@ -131,16 +140,16 @@ export function parseUserData(rawUser) {
   }
 
   const legacy = rawUser.legacy || {};
-  const descriptionUrls = legacy.entities?.description?.urls || [];
+  const descriptionUrls = /** @type {Raw} */ (/** @type {unknown} */ (legacy.entities?.description))?.urls || [];
 
   return {
     id: rawUser.rest_id || null,
     name: legacy.name || '',
     username: legacy.screen_name || '',
-    bio: expandTcoUrls(legacy.description, descriptionUrls),
+    bio: expandTcoUrls(typeof legacy.description === 'string' ? legacy.description : '', descriptionUrls),
     location: legacy.location || '',
     website: extractWebsite(legacy),
-    joined: toISODate(legacy.created_at),
+    joined: toISODate(legacy.created_at || null),
     birthday: legacy.birthdate
       ? `${legacy.birthdate.year || ''}${legacy.birthdate.month ? '-' + String(legacy.birthdate.month).padStart(2, '0') : ''}${legacy.birthdate.day ? '-' + String(legacy.birthdate.day).padStart(2, '0') : ''}`.trim() || null
       : null,
@@ -149,7 +158,7 @@ export function parseUserData(rawUser) {
     tweets: legacy.statuses_count ?? 0,
     likes: legacy.favourites_count ?? 0,
     media: legacy.media_count ?? 0,
-    avatar: upgradeAvatarUrl(legacy.profile_image_url_https),
+    avatar: upgradeAvatarUrl(legacy.profile_image_url_https || null),
     header: legacy.profile_banner_url || null,
     verified: Boolean(rawUser.is_blue_verified || legacy.verified),
     protected: Boolean(legacy.protected),
@@ -170,9 +179,9 @@ export function parseUserData(rawUser) {
  * Works with both **guest tokens** (for public profiles) and **auth tokens**
  * (any visible profile).
  *
- * @param {import('./client.js').TwitterHttpClient} client — Configured HTTP client.
- * @param {string} username — The screen name (without leading `@`).
- * @returns {Promise<object>} XActions profile object.
+ * @param {import('./client.js').TwitterHttpClient} client - Configured HTTP client.
+ * @param {string} username - The screen name (without leading `@`).
+ * @returns {Promise<Raw>} XActions profile object.
  * @throws {NotFoundError} Non-existent or suspended username.
  * @throws {AuthError} Protected account accessed without auth.
  * @throws {TwitterApiError} Other API errors.
@@ -201,7 +210,7 @@ export async function scrapeProfile(client, username) {
 
   // Protected account without auth → surface a clear error
   if (result.__typename === 'User' && result.legacy?.protected && !client.isAuthenticated()) {
-    // We can still return the partial profile data — but callers should know
+    // We can still return the partial profile data - but callers should know
     // the bio / tweets may be restricted.
   }
 
@@ -215,9 +224,9 @@ export async function scrapeProfile(client, username) {
 /**
  * Scrape a user profile by REST ID via the `UserByRestId` GraphQL endpoint.
  *
- * @param {import('./client.js').TwitterHttpClient} client — Configured HTTP client.
- * @param {string} userId — The numeric user ID.
- * @returns {Promise<object>} XActions profile object.
+ * @param {import('./client.js').TwitterHttpClient} client - Configured HTTP client.
+ * @param {string} userId - The numeric user ID.
+ * @returns {Promise<Raw>} XActions profile object.
  * @throws {NotFoundError} Unknown user ID.
  * @throws {AuthError} Protected account without auth.
  * @throws {TwitterApiError} Other API errors.
