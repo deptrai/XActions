@@ -282,5 +282,72 @@ describe('Story 11.7 — Crawler-Governor Integration & Response Validator Contr
 
       expect(res1.data.proxy.host).toBe(res2.data.proxy.host);
     });
+
+    test('should record once in governor when AccountPool shares the same governor', async () => {
+      const sharedAccountPool = new AccountPool({ governor });
+      sharedAccountPool.registerAccounts('test-platform', ['acc_shared']);
+
+      class CustomApiClient extends AbstractApiClient {
+        name = 'custom-platform';
+        platform = 'test-platform';
+        requiresAuth = true;
+      }
+      const client = new CustomApiClient({
+        proxyProvider: new StaticProxyProvider({ pool: proxyPool }),
+        governor,
+        accountPool: sharedAccountPool,
+        httpClient: async () => ({ status: 200, data: { ok: true } }),
+      });
+
+      await client.request('GET', 'https://example.com/api', { accountId: 'acc_shared' });
+
+      expect(governor.getAccountVelocity('acc_shared', 'test-platform')).toBe(1);
+      expect(sharedAccountPool.getAccountVelocity('acc_shared', 'test-platform')).toBe(1);
+    });
+
+    test('should throw AUTH_EXPIRED when auth client has no account and no account pool', async () => {
+      class CustomApiClient extends AbstractApiClient {
+        name = 'custom-platform';
+        platform = 'custom-platform';
+        requiresAuth = true;
+      }
+      const client = new CustomApiClient({
+        httpClient: async () => ({ status: 200, data: { ok: true } }),
+      });
+
+      await expect(client.request('GET', 'https://example.com/api')).rejects.toMatchObject({
+        code: 'XACT_4010',
+        type: ErrorTypes.AUTH_EXPIRED,
+      });
+    });
+
+    test('should not double-count governor velocity when crawler client shares the same governor', async () => {
+      class CustomClient extends AbstractApiClient {
+        name = 'test-platform';
+        platform = 'test-platform';
+      }
+      const client = new CustomClient({
+        proxyProvider: new StaticProxyProvider({ pool: proxyPool }),
+        governor,
+        httpClient: async () => ({ status: 200, data: { ok: true } }),
+      });
+
+      class TestCrawlerWithClient extends AbstractCrawler {
+        name = 'test-platform';
+        requiresAuth = true;
+        constructor(deps) {
+          super(deps);
+          this.registerAction({
+            action: 'scrape_with_client',
+            handler: async () => client.request('GET', 'https://example.com', { accountId: 'acc_1' }),
+          });
+        }
+      }
+
+      const crawler = new TestCrawlerWithClient({ client, governor, accountPool });
+      await crawler.start({ action: 'scrape_with_client', args: {}, session: { accountId: 'acc_1' } });
+
+      expect(governor.getAccountVelocity('acc_1', 'test-platform')).toBe(1);
+    });
   });
 });

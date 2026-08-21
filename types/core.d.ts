@@ -226,6 +226,7 @@ export abstract class AbstractApiClient {
     standbyBackoffMs?: number;
   });
   resolveProxy(accountId?: string, requiresResidential?: boolean): unknown;
+  init(session: Record<string, unknown>): Promise<void>;
   request(method: string, url: string, options?: Record<string, unknown>): Promise<unknown>;
   sign(payload: Record<string, unknown>): Promise<unknown>;
   updateCookies(cookies: Record<string, unknown>): void;

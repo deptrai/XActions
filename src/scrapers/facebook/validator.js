@@ -38,14 +38,21 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
    * @returns {string}
    */
   #getText(response) {
-    if (typeof response?.data === 'object' && response.data !== null) {
+    const body = this.#getBody(response);
+    if (body) return body.toLowerCase();
+
+    // Only inspect explicit error arrays inside object payloads,
+    // never the full parsed data object (could contain benign matching text).
+    const errors = response?.errors || response?.data?.errors;
+    if (Array.isArray(errors) && errors.length > 0) {
       try {
-        return JSON.stringify(response.data).toLowerCase();
+        return JSON.stringify(errors).toLowerCase();
       } catch {
         // ignore
       }
     }
-    return this.#getBody(response).toLowerCase();
+
+    return '';
   }
 
   /**
@@ -106,7 +113,8 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
       text.includes('confirm your identity') ||
       text.includes('please confirm your identity') ||
       text.includes('/checkpoint/') ||
-      text.includes('captcha')
+      text.includes('captcha') ||
+      /log\s*in\s*to\s*facebook|create\s*new\s*account|log\s*in\s*to\s*continue|you\s*must\s*log\s*in/.test(text)
     ) {
       return true;
     }

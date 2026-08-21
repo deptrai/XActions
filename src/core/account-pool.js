@@ -40,6 +40,11 @@ export class AccountPool {
     this.#governor = deps.governor || null;
   }
 
+  /** @returns {import('./adaptive-governor.js').AdaptiveRateGovernor | null} */
+  get governor() {
+    return this.#governor;
+  }
+
   /**
    * Internal records are keyed by `platform:accountId`.
    * @param {string} platform

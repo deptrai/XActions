@@ -201,7 +201,7 @@ export class AbstractCrawler {
       if (typeof this.governor.getMaxThroughput === 'function') {
         const throughput = this.governor.getMaxThroughput(this.name);
         const status = typeof this.governor.getStatus === 'function' ? this.governor.getStatus() : null;
-        const totalProxies = status ? status.totalProxyCount : 1;
+        const totalProxies = status?.totalProxyCount ?? 0;
 
         if (totalProxies > 0 && throughput === 0) {
           throw new PlatformError({
@@ -217,9 +217,12 @@ export class AbstractCrawler {
         }
       }
 
-      // Record request in governor only if this crawler does not wrap an AbstractApiClient (which records on its own)
-      if (!this.client && typeof this.governor.recordRequest === 'function') {
-        this.governor.recordRequest(accountId || 'noauth', this.name);
+      // Record the action attempt, unless the wrapped AbstractApiClient already records with the same governor.
+      if (typeof this.governor.recordRequest === 'function') {
+        const clientRecordsInSameGovernor = this.client && this.client.governor === this.governor;
+        if (!clientRecordsInSameGovernor) {
+          this.governor.recordRequest(accountId || 'noauth', this.name);
+        }
       }
     }
 

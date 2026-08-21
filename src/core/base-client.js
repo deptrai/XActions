@@ -216,6 +216,16 @@ export class AbstractApiClient {
     const opts = options || {};
     let currentAccountId = opts.accountId;
 
+    if (this.requiresAuth && !currentAccountId && !this.accountPool) {
+      throw new AuthSessionExpiredError({
+        code: 'XACT_4010',
+        message: `No account or account pool configured for authenticated ${this.platform} request`,
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: this.platform,
+      });
+    }
+
     // Check governor before request for auth-required platforms
     if (this.requiresAuth && currentAccountId && this.governor) {
       if (typeof this.governor.canAccountRequest === 'function') {
@@ -356,7 +366,11 @@ export class AbstractApiClient {
           if (this.accountPool) {
             this.accountPool.recordRequest(trackingKey, this.platform);
           }
-          if (this.governor && typeof this.governor.recordRequest === 'function') {
+          if (
+            this.governor &&
+            typeof this.governor.recordRequest === 'function' &&
+            (!this.accountPool || this.accountPool.governor !== this.governor)
+          ) {
             this.governor.recordRequest(trackingKey, this.platform);
           }
           return response;
@@ -407,11 +421,10 @@ export class AbstractApiClient {
               }
             }
 
-            throw new PlatformError({
-              type: status === 429 ? ErrorTypes.RATE_LIMIT : ErrorTypes.BOT_CHALLENGE,
+            const errorClass = status === 429 ? RateLimitError : BotChallengeError;
+            throw new errorClass({
               code: status === 429 ? 'XACT_4290' : 'XACT_4030',
               message: status === 429 ? 'Rate limit exceeded on upstream platform' : 'Bot challenge detected on upstream platform',
-              statusCode: status,
               suggestedAction: SuggestedActions.ROTATE_PROXY,
               retryAfterMs: chosenDelay,
               accountId: currentAccountId,

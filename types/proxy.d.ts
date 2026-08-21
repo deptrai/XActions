@@ -37,6 +37,7 @@ export interface ProxyAgentOptions {
 export interface ProxyRequestOptions {
   accountId?: string;
   platform?: string;
+  requiresResidential?: boolean;
   country?: string;
   city?: string;
   state?: string;

@@ -62,4 +62,29 @@ describe('FacebookPlatformResponseValidator Contract Tests (Story 11.7 - ATDD Re
     expect(validator.isValidPayload(postArrayResponse)).toBe(true);
     expect(validator.isBotChallenge(postArrayResponse)).toBe(false);
   });
+
+  test('should not treat a valid post object with challenge-like content as a bot challenge', () => {
+    const validPostResponse = {
+      status: 200,
+      data: {
+        id: 'fb:123',
+        name: 'Test Page',
+        content: 'Please confirm your identity before posting.',
+      },
+    };
+
+    expect(validator.isValidPayload(validPostResponse)).toBe(true);
+    expect(validator.isBotChallenge(validPostResponse)).toBe(false);
+    expect(validator.isRateLimit(validPostResponse)).toBe(false);
+  });
+
+  test('should identify login wall as bot challenge', () => {
+    const loginWall = {
+      status: 200,
+      data: '<html><body>Log in to Facebook or create a new account to continue.</body></html>',
+    };
+
+    expect(validator.isBotChallenge(loginWall)).toBe(true);
+    expect(validator.isValidPayload(loginWall)).toBe(false);
+  });
 });
