@@ -75,17 +75,20 @@ Status: completed. Latest commits: `22412d4`, `756377b`. `npm run typecheck` now
 
 Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 progressively adds other `src/` directories to `include`, driving `tsc --noEmit` to zero for each slice. Files remain `.js` (no transpiler yet) and are typed via JSDoc.
 
-- [ ] 4.0 — Expand `tsconfig.json` to `src/**/*.js` and record the initial error baseline
-- [ ] 4.1 — Type `src/client` HTTP client modules (auth, CookieAuth, TokenManager, GraphQL queries, HTTP scraper)
-- [ ] 4.2 — Type `src/scrapers` shared and adapter modules (adapters, shared, normalizers)
-- [ ] 4.3 — Type `src/scrapers/facebook` domain modules (core, auth, posts, comments, etc.)
-- [ ] 4.4 — Type `src/scrapers/twitter` modules
-- [ ] 4.5 — Type `src/mcp` server and tool modules
-- [ ] 4.6 — Type `src/api` routes and services
-- [ ] 4.7 — Add missing `.d.ts` declarations for untyped dependencies used by the above slices
-- [ ] 4.8 — Final `npm run typecheck` (entire `src`) and full `npx vitest run`
+- [x] 4.0 — Expand `tsconfig.json` to `src/client/**/*.js` and record the initial error baseline
+- [x] 4.1 — Type `src/client` HTTP client modules
+- [x] 4.2 — Type `src/scrapers/twitter/http` modules + `src/scrapers/twitter/validator.js`
+- [ ] 4.3 — Type `src/scrapers/adapters` modules
+- [ ] 4.4 — Type `src/scrapers/facebook` domain modules and coupled `api/lib/prisma.js` + `api/services/facebookAutomation.js`
+- [ ] 4.5 — Type `src/scrapers/twitter/index.js` and `bluesky`/`mastodon`/`threads`
+- [ ] 4.6 — Type `src/scrapers/index.js` and `src/index.js` / `src/algorithmBuilder.js`
+- [ ] 4.7 — Type `src/api` (Prisma, services, routes) and `src/workflows`
+- [ ] 4.8 — Type `src/mcp` server and tools
+- [ ] 4.9 — Type remaining `src/{agents,ai,a2a,analytics,streaming,plugins,utils,automation}`
+- [ ] 4.10 — Add missing `.d.ts` declarations for untyped dependencies
+- [ ] 4.11 — Final `npm run typecheck` (entire `src` + `api`) and full `npx vitest run`
 
-Status: in progress (starting from zero errors in `src/core`).
+Status: Phase 4.2 completed; `src/core`, `src/client`, `src/scrapers/twitter/http` and `src/scrapers/twitter/validator.js` pass `tsc --noEmit`.
 
 ## Verification baseline
 
@@ -93,7 +96,7 @@ Status: in progress (starting from zero errors in `src/core`).
 - API smoke: `npx vitest run tests/api/facebook-automate-routes.test.js`
 - Type: `npm run typecheck`
 - Pre-existing type error baseline: **137 errors** (as of Phase 2 completion)
-- Current type error count: **0 errors** (Phase 3 completed; `src/core` and direct dependencies pass `tsc --noEmit`)
+- Current type error count: **0 errors** for `src/core` + `src/client` + `src/scrapers/twitter/http` + `src/scrapers/twitter/validator.js`; next slice `src/scrapers/adapters`.
 
 ## Notes
 

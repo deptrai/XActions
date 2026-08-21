@@ -13,8 +13,7 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
 
   /**
    * Extract raw body string if available.
-   * @private
-   * @param {any} response
+   * @param {Record<string, unknown>} response
    * @returns {string}
    */
   #getBody(response) {
@@ -26,8 +25,7 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
 
   /**
    * Extract lowercased body text.
-   * @private
-   * @param {any} response
+   * @param {Record<string, unknown>} response
    * @returns {string}
    */
   #getText(response) {
