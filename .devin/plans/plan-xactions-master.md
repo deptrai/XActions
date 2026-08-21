@@ -63,13 +63,13 @@ Objective: drive `npm run typecheck` down to zero errors starting from the 137 p
     `MetadataSchemaRegistry` methods and fields, cast unknown `JSON.parse` output, used
     `Record<string, unknown>` and `unknown[]` for data traversal
   - `action-registry.js` — guard `Map.get()` result before accessing `.descriptor`
-- [ ] 3.3 — Type core data modules (`account-pool.js`, `base-client.js`, `base-crawler.js`, `proxy-pool.js` providers)
-- [ ] 3.4 — Type controller/entry modules (`terminal-qr.js`, etc.)
-- [ ] 3.5 — Add missing `.d.ts` declarations for untyped packages (e.g., `qrcode-terminal`)
-- [ ] 3.6 — Run `npm run typecheck` until zero errors
-- [ ] 3.7 — Run full test suite and fix any regressions
+- [x] 3.3 — Type core data modules (`account-pool.js`, `base-client.js`, `base-crawler.js`, `proxy-pool.js` providers)
+- [x] 3.4 — Type controller/entry modules (`terminal-qr.js`, `qrcode.js`)
+- [x] 3.5 — Add missing `.d.ts` declarations for untyped packages (`qrcode-terminal`)
+- [x] 3.6 — Run `npm run typecheck` until zero errors
+- [x] 3.7 — Run full test suite and fix any regressions
 
-Current status: in progress. Type errors reduced from **137** to **115**; `npx vitest run tests/core` passes (121 passed).
+Status: completed. Latest commits: `22412d4`, `756377b`. `npm run typecheck` now passes with **0 errors**; `npx vitest run tests/core tests/cli` passes (250 tests).
 
 ## Phase 4 — Convert remaining source tree to TypeScript
 
