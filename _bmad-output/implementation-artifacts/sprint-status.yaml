@@ -120,14 +120,26 @@ development_status:
   20-1-nowing-adapter-cutover-legacy-scrapers-decommissioning: backlog
   epic-20-retrospective: optional
 
+  # --- Epic 21: B2B Procurement, Corporate & Automotive Intelligence Engine ---
+  epic-21: backlog
+  21-1-b2b-tender-company-registry-crawler: backlog
+  21-2-automotive-vehicles-market-crawler: backlog
+  epic-21-retrospective: optional
+
+  # --- Epic 22: Local F&B Merchant, Healthcare & Legal Intelligence Engine ---
+  epic-22: backlog
+  22-1-fnb-merchant-restaurant-directory-crawler: backlog
+  22-2-healthcare-clinics-pharmacy-network-crawler: backlog
+  22-3-legal-trademark-intellectual-property-crawler: backlog
+  epic-22-retrospective: optional
+
 # Current Sprint Plan
 # ===================
 current_sprint:
-  name: "Sprint 2026-08-21 — Finish Epic 10 core + kick off Epic 11 governor"
+  name: "Sprint 2026-08-21 — Epic 11 Complete & Epics 12-22 Roadmap"
   start: "2026-08-21"
   goals:
-    - "Complete Story 11.7 (Crawler-Governor Integration & Platform Validator Contract)"
+    - "Complete Epic 12 (Frictionless Authentication) & Epic 13 (High-Throughput Hybrid Signer)"
   stories:
-    - "11-7-crawler-governor-integration-validator-contract"
-  blocked:
-    - "11.7 needs concrete FacebookPlatformResponseValidator and crawler-governor wiring"
+    - "12-1-terminal-ascii-qr-code-login-module"
+  blocked: []
