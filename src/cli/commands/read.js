@@ -167,6 +167,9 @@ export function registerReadCommands(program) {
         }
         assertNotEmpty([...followerHandles], `followers of @${username}`, AUTH_HINT);
 
+        // The GraphQL follow lists carry no `followsBack` flag, so the previous
+        // filter on it matched every single account and reported the entire
+        // following list as non-followers. Diff the two lists instead.
         const nonFollowers = following.filter(
           (u) => !followerHandles.has(u.username.toLowerCase()),
         );
@@ -300,15 +303,19 @@ export function registerReadCommands(program) {
 
       try {
         const browser = await scrapers.createBrowser();
-        const page = await scrapers.createPage(browser);
+        let tweets;
+        try {
+          const page = await scrapers.createPage(browser);
 
-        const config = await loadConfig();
-        if (config.authToken) {
-          await scrapers.loginWithCookie(page, config.authToken);
+          const config = await loadConfig();
+          if (config.authToken) {
+            await scrapers.loginWithCookie(page, config.authToken);
+          }
+
+          tweets = await scrapers.scrapeHashtag(page, tag, { limit });
+        } finally {
+          await browser.close().catch(() => {});
         }
-
-        const tweets = await scrapers.scrapeHashtag(page, tag, { limit });
-        await browser.close();
 
         spinner.succeed(`Found ${tweets.length} tweets`);
 
@@ -336,15 +343,19 @@ export function registerReadCommands(program) {
 
       try {
         const browser = await scrapers.createBrowser();
-        const page = await scrapers.createPage(browser);
+        let thread;
+        try {
+          const page = await scrapers.createPage(browser);
 
-        const config = await loadConfig();
-        if (config.authToken) {
-          await scrapers.loginWithCookie(page, config.authToken);
+          const config = await loadConfig();
+          if (config.authToken) {
+            await scrapers.loginWithCookie(page, config.authToken);
+          }
+
+          thread = await scrapers.scrapeThread(page, url);
+        } finally {
+          await browser.close().catch(() => {});
         }
-
-        const thread = await scrapers.scrapeThread(page, url);
-        await browser.close();
 
         spinner.succeed(`Scraped ${thread.length} tweets in thread`);
 
@@ -378,15 +389,19 @@ export function registerReadCommands(program) {
 
       try {
         const browser = await scrapers.createBrowser();
-        const page = await scrapers.createPage(browser);
+        let media;
+        try {
+          const page = await scrapers.createPage(browser);
 
-        const config = await loadConfig();
-        if (config.authToken) {
-          await scrapers.loginWithCookie(page, config.authToken);
+          const config = await loadConfig();
+          if (config.authToken) {
+            await scrapers.loginWithCookie(page, config.authToken);
+          }
+
+          media = await scrapers.scrapeMedia(page, username, { limit });
+        } finally {
+          await browser.close().catch(() => {});
         }
-
-        const media = await scrapers.scrapeMedia(page, username, { limit });
-        await browser.close();
 
         spinner.succeed(`Found ${media.length} media items`);
 

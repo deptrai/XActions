@@ -54,10 +54,6 @@ import { renderRootHelp } from './help-groups.js';
 const program = new Command();
 
 // ============================================================================
-// Helpers (moved to ./shared.js)
-// ============================================================================
-
-// ============================================================================
 // CLI Setup
 // ============================================================================
 
@@ -112,13 +108,6 @@ registerTeamCommand(program);
 registerCompatCommands(program);
 registerAgentCommand(program);
 registerClientCommand(program);
-
-
-
-
-
-
-
 
 // ============================================================================
 // Parse and Run

@@ -158,6 +158,8 @@ export function registerAutomateCommand(program) {
         } else if (action === 'post') {
           result = await createFacebookPost(page, options.text, guardedOptions);
         } else if (action === 'messenger-share') {
+          // ADR-012: messenger-share uses a HIGHER delay floor (5–15s jitter), NOT the
+          // 1–3s like/comment default. Dry-run still passes the no-op delay from above.
           const messengerDelay = dryRun
             ? () => {}
             : (min = 5000, max = 15000) =>
