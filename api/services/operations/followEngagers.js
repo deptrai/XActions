@@ -1,9 +1,31 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../../lib/prisma.js';
 import { getTwitterClient } from '../../routes/twitter.js';
+
+/**
+ * @typedef {object} FollowEngagersConfig
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [engagementType]
+ * @property {number} [maxFollows]
+ * @property {boolean} [dryRun]
+ * @property {string[]} [whitelist]
+ */
+
+/**
+ * @typedef {object} ProcessFollowEngagersOptions
+ * @property {string} operationId
+ * @property {string} userId
+ * @property {FollowEngagersConfig} config
+ */
+
 /**
  * Follow users who engaged (liked/retweeted) with specific tweets
  * Uses Twitter API when OAuth tokens available
+ *
+ * @param {ProcessFollowEngagersOptions} options
+ * @param {() => boolean} [isCancelled]
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function processFollowEngagers({ operationId, userId, config }, isCancelled = () => false) {
   try {
@@ -20,29 +42,28 @@ async function processFollowEngagers({ operationId, userId, config }, isCancelle
       throw new Error('User not found or Twitter not connected');
     }
 
-    const client = await getTwitterClient(user);
-    const { 
-      tweetId,         // Tweet ID to get engagers from
-      tweetUrl,        // Or tweet URL (we'll extract ID)
-      engagementType = 'likes', // 'likes' or 'retweets'
+    const client = /** @type {import('axios').AxiosInstance} */ (await getTwitterClient(user));
+    const {
+      tweetId,
+      tweetUrl,
+      engagementType = 'likes',
       maxFollows = 50,
       dryRun = false,
-      whitelist = []   // Users to skip
+      whitelist = []
     } = config;
 
     const meResponse = await client.get('/users/me');
-    const myTwitterId = meResponse.data.data.id;
+    const meData = /** @type {TwitterApiEnvelope} */ (meResponse.data);
+    const meInner = /** @type {Record<string, unknown>} */ (meData.data);
+    const myTwitterId = String(meInner.id);
 
-    // Extract tweet ID from URL if needed
     const targetTweetId = tweetId || (tweetUrl ? tweetUrl.split('/status/')[1]?.split('?')[0] : null);
-    
+
     if (!targetTweetId) {
       throw new Error('Either tweetId or tweetUrl must be provided');
     }
 
-    // Get engagers
-    let engagers = [];
-    const endpoint = engagementType === 'likes' 
+    const endpoint = engagementType === 'likes'
       ? `/tweets/${targetTweetId}/liking_users`
       : `/tweets/${targetTweetId}/retweeted_by`;
 
@@ -52,12 +73,13 @@ async function processFollowEngagers({ operationId, userId, config }, isCancelle
         'user.fields': 'username,public_metrics'
       }
     });
-    engagers = engagersResponse.data.data || [];
+    const engagersData = /** @type {TwitterApiEnvelope} */ (engagersResponse.data);
+    /** @type {TwitterApiUser[]} */
+    const engagers = /** @type {TwitterApiUser[]} */ (engagersData.data || []);
 
-    // Filter out whitelist and already following
-    const whitelistLower = whitelist.map(u => u.toLowerCase());
-    const filteredEngagers = engagers.filter(e => 
-      !whitelistLower.includes(e.username.toLowerCase())
+    const whitelistLower = whitelist.map(/** @param {string} u */ (u) => u.toLowerCase());
+    const filteredEngagers = engagers.filter(/** @param {TwitterApiUser} e */ (e) =>
+      e.username ? !whitelistLower.includes(e.username.toLowerCase()) : true
     );
 
     let followedCount = 0;
@@ -78,14 +100,13 @@ async function processFollowEngagers({ operationId, userId, config }, isCancelle
             target_user_id: engager.id
           });
           followedCount++;
-          
+
           followedUsers.push({
             id: engager.id,
             username: engager.username
           });
 
-          // Rate limiting: wait 2-4 seconds between follows
-          await new Promise(resolve => 
+          await new Promise(resolve =>
             setTimeout(resolve, 2000 + Math.random() * 2000)
           );
         } else {
@@ -96,8 +117,8 @@ async function processFollowEngagers({ operationId, userId, config }, isCancelle
           });
         }
       } catch (error) {
-        // Check if already following
-        if (error.message?.includes('already')) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes('already')) {
           followedUsers.push({
             id: engager.id,
             username: engager.username,
@@ -106,7 +127,7 @@ async function processFollowEngagers({ operationId, userId, config }, isCancelle
         } else {
           errors.push({
             username: engager.username,
-            error: error.message
+            error: message
           });
         }
       }
@@ -122,7 +143,7 @@ async function processFollowEngagers({ operationId, userId, config }, isCancelle
       cancelled: isCancelled()
     };
   } catch (error) {
-    console.error('❌ Follow engagers error:', error);
+    console.error('❌ Follow engagers error:', error instanceof Error ? error.message : String(error));
     throw error;
   }
 }

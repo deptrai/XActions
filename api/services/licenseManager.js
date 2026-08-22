@@ -48,6 +48,8 @@ const TIER_FEATURES = {
 
 /**
  * Generate a random segment for license key
+ * @param {number} [length]
+ * @returns {string}
  */
 function generateSegment(length = 4) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I, O, 0, 1 to avoid confusion
@@ -61,9 +63,11 @@ function generateSegment(length = 4) {
 /**
  * Generate a new license key
  * Format: XACT-TIER-XXXX-XXXX-SIGN
+ * @param {string} tier
+ * @returns {string}
  */
 function generateLicenseKey(tier) {
-  const tierCode = TIER_CODES[tier] || 'STRT';
+  const tierCode = TIER_CODES[/** @type {keyof typeof TIER_CODES} */ (tier)] || 'STRT';
   const segment1 = generateSegment(4);
   const segment2 = generateSegment(4);
   
@@ -79,6 +83,8 @@ function generateLicenseKey(tier) {
 
 /**
  * Verify license key signature
+ * @param {string} key
+ * @returns {boolean}
  */
 function verifyKeySignature(key) {
   const parts = key.split('-');
@@ -96,22 +102,34 @@ function verifyKeySignature(key) {
 }
 
 /**
- * Create a new license in the database
+ * @typedef {object} LicenseCreateOptions
+ * @property {string} [tier]
+ * @property {string} [customerName]
+ * @property {string} [customerEmail]
+ * @property {string} [companyName]
+ * @property {Date | string} [expiresAt]
+ * @property {number} [maxInstances]
+ * @property {string} [notes]
+ * @property {string} [paymentId]
+ * @property {number} [amountPaid]
  */
-async function createLicense(options) {
-  const {
-    tier = 'starter',
-    customerName,
-    customerEmail,
-    companyName,
-    expiresAt,
-    maxInstances,
-    notes,
-    paymentId,
-    amountPaid,
-  } = options;
 
-  const features = TIER_FEATURES[tier] || TIER_FEATURES.starter;
+/**
+ * Create a new license in the database
+ * @param {Partial<LicenseCreateOptions>} [options]
+ */
+async function createLicense(options = {}) {
+  const tier = typeof options.tier === 'string' ? options.tier : 'starter';
+  const customerName = /** @type {string | null | undefined} */ (options.customerName);
+  const customerEmail = /** @type {string | null | undefined} */ (options.customerEmail);
+  const companyName = /** @type {string | null | undefined} */ (options.companyName);
+  const expiresAt = /** @type {Date | string | null | undefined} */ (options.expiresAt);
+  const maxInstances = /** @type {number | undefined} */ (options.maxInstances);
+  const notes = /** @type {string | null | undefined} */ (options.notes);
+  const paymentId = /** @type {string | null | undefined} */ (options.paymentId);
+  const amountPaid = typeof options.amountPaid === 'number' ? options.amountPaid : undefined;
+
+  const features = /** @type {Record<string, Record<string, unknown>>} */ (TIER_FEATURES)[tier] || TIER_FEATURES.starter;
   const key = generateLicenseKey(tier);
 
   const license = await prisma.license.create({
@@ -121,11 +139,11 @@ async function createLicense(options) {
       customerName,
       customerEmail,
       companyName,
-      maxUsers: features.maxUsers,
-      maxInstances: maxInstances || features.maxInstances,
-      whiteLabel: features.whiteLabel,
-      customDomain: features.customDomain,
-      apiAccess: features.apiAccess,
+      maxUsers: Number(features.maxUsers),
+      maxInstances: maxInstances !== undefined ? maxInstances : Number(features.maxInstances),
+      whiteLabel: Boolean(features.whiteLabel),
+      customDomain: Boolean(features.customDomain),
+      apiAccess: Boolean(features.apiAccess),
       expiresAt: expiresAt || null,
       paymentId,
       amountPaid,
@@ -138,6 +156,7 @@ async function createLicense(options) {
 
 /**
  * Validate a license key against the database
+ * @param {string} key
  */
 async function validateLicenseKey(key) {
   // First check format and signature
@@ -189,6 +208,8 @@ async function validateLicenseKey(key) {
 
 /**
  * Activate a license on an instance
+ * @param {string} key
+ * @param {string} instanceId
  */
 async function activateLicense(key, instanceId) {
   const license = await prisma.license.findUnique({
@@ -200,10 +221,10 @@ async function activateLicense(key, instanceId) {
   }
 
   // Parse existing instance IDs
-  let instanceIds = [];
+  let instanceIds = /** @type {string[]} */ ([]);
   try {
-    instanceIds = JSON.parse(license.instanceIds || '[]');
-  } catch (e) {
+    instanceIds = /** @type {string[]} */ (JSON.parse(license.instanceIds || '[]'));
+  } catch {
     instanceIds = [];
   }
 
@@ -234,6 +255,8 @@ async function activateLicense(key, instanceId) {
 
 /**
  * Revoke a license
+ * @param {string} key
+ * @param {string} reason
  */
 async function revokeLicense(key, reason) {
   const license = await prisma.license.update({
@@ -248,12 +271,24 @@ async function revokeLicense(key, reason) {
 }
 
 /**
+ * @typedef {object} LicenseListOptions
+ * @property {string} [status]
+ * @property {string} [tier]
+ * @property {number} [limit]
+ * @property {number} [offset]
+ */
+
+/**
  * List all licenses
+ * @param {Partial<LicenseListOptions>} [options]
  */
 async function listLicenses(options = {}) {
-  const { status, tier, limit = 100, offset = 0 } = options;
+  const status = /** @type {string | undefined} */ (options.status);
+  const tier = /** @type {string | undefined} */ (options.tier);
+  const limit = typeof options.limit === 'number' ? options.limit : 100;
+  const offset = typeof options.offset === 'number' ? options.offset : 0;
 
-  const where = {};
+  const where = /** @type {{ status?: string; tier?: string }} */ ({});
   if (status) where.status = status;
   if (tier) where.tier = tier;
 
@@ -271,6 +306,7 @@ async function listLicenses(options = {}) {
 
 /**
  * Get license by key
+ * @param {string} key
  */
 async function getLicense(key) {
   return prisma.license.findUnique({

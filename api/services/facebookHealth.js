@@ -18,12 +18,23 @@ import { decrypt } from '../routes/facebookAccounts.js';
 const FACEBOOK_HOME = 'https://www.facebook.com/';
 const TTL_MS = 5 * 60 * 1000;
 
+/**
+ * @typedef {object} HealthCheckOptions
+ * @property {boolean} [force]
+ * @property {typeof defaultFetch} [fetchImpl]
+ */
+
 // Internal fetch seam: tests may override with a fake fetch.
+/**
+ * @param {string} url
+ * @param {Record<string, unknown>} [options]
+ * @returns {Promise<{ status: number; data: string; headers: Record<string, unknown> }>}
+ */
 async function defaultFetch(url, options = {}) {
   const res = await axios.request({
     url,
-    method: options.method || 'GET',
-    headers: options.headers,
+    method: /** @type {string} */ (options.method) || 'GET',
+    headers: /** @type {Record<string, string> | undefined} */ (options.headers),
     responseType: 'text',
     transformResponse: [(d) => d],
     maxRedirects: 5,
@@ -68,55 +79,56 @@ function buildCookieJar(initialCookies, setCookieHeaders = []) {
  * the response HTML + cookie jar.
  *
  * @param {Record<string, unknown>} account - FacebookAccount record (must have id + encryptedCookie)
- * @param {Record<string, unknown>} [options]
- * @param {boolean} [options.force=false] - bypass 5-minute cache
- * @param {Function} [options.fetchImpl=defaultFetch] - HTTP fetch seam
- * @returns {Promise<{ status: 'active' | 'checkpoint' | 'dead', reason?: string, lastCheckAt: Date }>}
+ * @param {Partial<HealthCheckOptions>} [options]
+ * @returns {Promise<{ status: 'active' | 'checkpoint' | 'dead', reason?: string | null, lastCheckAt: Date }>}
  */
 export async function checkAccountHealth(account, options = {}) {
   if (!account?.id) {
     throw new Error('❌ checkAccountHealth requires an account with id');
   }
-  const { force = false, fetchImpl = defaultFetch } = options;
+  const force = options.force === true;
+  const fetchImpl = options.fetchImpl ?? defaultFetch;
 
   const existing = await prisma.facebookAccountHealth.findUnique({
-    where: { accountId: account.id },
+    where: { accountId: String(account.id) },
   });
   const now = Date.now();
   if (!force && existing && now - new Date(existing.lastCheckAt).getTime() < TTL_MS) {
     return {
-      status: existing.status,
+      status: /** @type {'active' | 'checkpoint' | 'dead'} */ (existing.status),
       reason: existing.reason,
       lastCheckAt: existing.lastCheckAt,
     };
   }
 
-  const cookiePayload = decrypt(account.encryptedCookie);
+  const cookiePayload = decrypt(/** @type {string} */ (account.encryptedCookie));
   if (!cookiePayload) {
-    const record = await upsertHealth(account.id, 'dead', 'decrypt_failed');
+    const record = await upsertHealth(String(account.id), 'dead', 'decrypt_failed');
     return { status: 'dead', reason: record.reason, lastCheckAt: record.lastCheckAt };
   }
 
-  let c_user, xs;
+  let c_user;
+  let xs;
   try {
     ({ c_user, xs } = JSON.parse(cookiePayload));
   } catch {
-    const record = await upsertHealth(account.id, 'dead', 'invalid_cookie_json');
+    const record = await upsertHealth(String(account.id), 'dead', 'invalid_cookie_json');
     return { status: 'dead', reason: record.reason, lastCheckAt: record.lastCheckAt };
   }
 
-  const cookie = buildCookieString({ c_user, xs });
+  const cookie = buildCookieString({ c_user: String(c_user), xs: String(xs) });
 
   let res;
   try {
     res = await fetchImpl(FACEBOOK_HOME, { headers: { Cookie: cookie } });
   } catch {
-    const record = await upsertHealth(account.id, 'dead', 'network_error');
+    const record = await upsertHealth(String(account.id), 'dead', 'network_error');
     return { status: 'dead', reason: record.reason, lastCheckAt: record.lastCheckAt };
   }
 
   const html = res.data || '';
-  const jar = buildCookieJar(cookie, res.headers?.['set-cookie'] || []);
+  const setCookie = /** @type {string[]} */ (res.headers?.['set-cookie'] || []);
+  const jar = buildCookieJar(cookie, setCookie);
 
   const hasCUser = /^\d+$/.test(jar.get('c_user') || '');
   const hasXs = (jar.get('xs') || '').length > 0;
@@ -127,12 +139,15 @@ export async function checkAccountHealth(account, options = {}) {
     html.includes('/checkpoint/') ||
     html.toLowerCase().includes('confirm that you\'re human') ||
     html.toLowerCase().includes('confirm you\'re human') ||
-    html.toLowerCase().includes('confirm that you') && html.toLowerCase().includes('human') ||
+    (html.toLowerCase().includes('confirm that you') && html.toLowerCase().includes('human')) ||
     html.toLowerCase().includes('security check');
 
   const dead = !tokens.fb_dtsg || !hasCUser || !hasXs;
 
-  let status, reason;
+  /** @type {'active' | 'checkpoint' | 'dead'} */
+  let status;
+  /** @type {string | null} */
+  let reason;
   if (checkpoint) {
     status = 'checkpoint';
     reason = 'checkpoint_or_captcha';
@@ -144,10 +159,15 @@ export async function checkAccountHealth(account, options = {}) {
     reason = null;
   }
 
-  const record = await upsertHealth(account.id, status, reason);
+  const record = await upsertHealth(String(account.id), status, reason);
   return { status, reason: record.reason, lastCheckAt: record.lastCheckAt };
 }
 
+/**
+ * @param {string} accountId
+ * @param {'active' | 'checkpoint' | 'dead'} status
+ * @param {string | null} reason
+ */
 async function upsertHealth(accountId, status, reason) {
   const lastCheckAt = new Date();
   return await prisma.facebookAccountHealth.upsert({

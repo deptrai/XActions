@@ -19,10 +19,11 @@ puppeteer.use(StealthPlugin());
 // Core Utilities
 // ============================================================================
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const randomDelay = (min = 1000, max = 3000) => sleep(min + Math.random() * (max - min));
+const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
+export const randomDelay = (/** @type {number} */ min = 1000, /** @type {number} */ max = 3000) => sleep(min + Math.random() * (max - min));
 
 // Browser instance management (singleton)
+/** @type {import('puppeteer').Browser | null} */
 let browserInstance = null;
 
 /**
@@ -42,7 +43,7 @@ async function getBrowser() {
 
   if (!browserInstance) {
     browserInstance = await puppeteer.launch({
-      headless: process.env.PUPPETEER_HEADLESS === 'false' ? false : 'new',
+      headless: process.env.PUPPETEER_HEADLESS === 'false' ? false : true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -77,6 +78,8 @@ export async function closeBrowser() {
 
 /**
  * Create an authenticated page with session cookie
+ * @param {string} [sessionCookie]
+ * @returns {Promise<import('puppeteer').Page>}
  */
 async function getAuthenticatedPage(sessionCookie) {
   const browser = await getBrowser();
@@ -108,6 +111,8 @@ async function getAuthenticatedPage(sessionCookie) {
   return page;
 }
 
+export const createPage = getAuthenticatedPage;
+
 // ============================================================================
 // Profile Scraper
 // ============================================================================
@@ -126,8 +131,8 @@ export async function scrapeProfile(sessionCookie, username) {
     await randomDelay();
 
     const profile = await page.evaluate(() => {
-      const getText = (sel) => document.querySelector(sel)?.textContent?.trim() || null;
-      const getAttr = (sel, attr) => document.querySelector(sel)?.getAttribute(attr) || null;
+      const getText = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent?.trim() || null;
+      const getAttr = (/** @type {string} */ sel, /** @type {string} */ attr) => document.querySelector(sel)?.getAttribute(attr) || null;
 
       // Get avatar
       const avatar = document.querySelector('[data-testid="UserAvatar-Container-unknown"] img, [data-testid*="UserAvatar"] img')?.src;
@@ -174,7 +179,8 @@ export async function scrapeProfile(sessionCookie, username) {
  * @returns {Promise<Record<string, unknown>>} { users: [], nextCursor }
  */
 export async function scrapeFollowers(sessionCookie, username, options = {}) {
-  const { limit = 100, cursor } = options;
+  const limit = typeof options.limit === 'number' ? options.limit : 100;
+  const cursor = options.cursor ? String(options.cursor) : undefined;
   const page = await getAuthenticatedPage(sessionCookie);
 
   try {
@@ -205,7 +211,7 @@ export async function scrapeFollowers(sessionCookie, username, options = {}) {
             verified: !!verifiedEl,
             profileImage: avatarEl?.src || null,
           };
-        }).filter(u => u.username && !u.username.includes('?'));
+        }).filter((u) => !!u.username && !u.username.includes('?'));
       });
 
       const prevSize = users.size;
@@ -243,7 +249,8 @@ export async function scrapeFollowers(sessionCookie, username, options = {}) {
  * @returns {Promise<Record<string, unknown>>} { users: [], nextCursor }
  */
 export async function scrapeFollowing(sessionCookie, username, options = {}) {
-  const { limit = 100, cursor } = options;
+  const limit = typeof options.limit === 'number' ? options.limit : 100;
+  const cursor = options.cursor ? String(options.cursor) : undefined;
   const page = await getAuthenticatedPage(sessionCookie);
 
   try {
@@ -276,7 +283,7 @@ export async function scrapeFollowing(sessionCookie, username, options = {}) {
             verified: !!verifiedEl,
             profileImage: avatarEl?.src || null,
           };
-        }).filter(u => u.username && !u.username.includes('?'));
+        }).filter((u) => !!u.username && !u.username.includes('?'));
       });
 
       const prevSize = users.size;
@@ -313,7 +320,9 @@ export async function scrapeFollowing(sessionCookie, username, options = {}) {
  * @returns {Promise<Record<string, unknown>>} { items: [], nextCursor }
  */
 export async function scrapeTweets(sessionCookie, username, options = {}) {
-  const { limit = 50, includeReplies = false, cursor } = options;
+  const limit = typeof options.limit === 'number' ? options.limit : 50;
+  const includeReplies = typeof options.includeReplies === 'boolean' ? options.includeReplies : false;
+  const cursor = options.cursor ? String(options.cursor) : undefined;
   const page = await getAuthenticatedPage(sessionCookie);
 
   try {
@@ -341,7 +350,7 @@ export async function scrapeTweets(sessionCookie, username, options = {}) {
           const linkEl = article.querySelector('a[href*="/status/"]');
           
           // Get media
-          const images = Array.from(article.querySelectorAll('[data-testid="tweetPhoto"] img')).map(i => ({
+          const images = /** @type {HTMLImageElement[]} */ (Array.from(article.querySelectorAll('[data-testid="tweetPhoto"] img'))).map((i) => ({
             type: 'image',
             url: i.src,
           }));
@@ -360,7 +369,7 @@ export async function scrapeTweets(sessionCookie, username, options = {}) {
             isRetweet: !!article.querySelector('[data-testid="socialContext"]'),
             isQuote: !!article.querySelector('[data-testid="quoteTweet"]'),
           };
-        }).filter(t => t.id);
+        }).filter((t) => !!t.id);
       });
 
       const prevSize = tweets.size;
@@ -397,10 +406,13 @@ export async function scrapeTweets(sessionCookie, username, options = {}) {
  * @returns {Promise<Record<string, unknown>>} { items: [], nextCursor }
  */
 export async function searchTweets(sessionCookie, query, options = {}) {
-  const { limit = 50, filter = 'latest', cursor } = options;
+  const limit = typeof options.limit === 'number' ? options.limit : 50;
+  const filter = typeof options.filter === 'string' ? options.filter : 'latest';
+  const cursor = options.cursor ? String(options.cursor) : undefined;
   const page = await getAuthenticatedPage(sessionCookie);
 
   try {
+    /** @type {Record<string, string>} */
     const filterMap = {
       latest: 'live',
       top: 'top',
@@ -448,7 +460,7 @@ export async function searchTweets(sessionCookie, query, options = {}) {
             replies: repliesEl?.textContent || '0',
             url: linkEl?.href || null,
           };
-        }).filter(t => t.id);
+        }).filter((t) => !!t.id);
       });
 
       const prevSize = tweets.size;
@@ -500,8 +512,8 @@ export async function scrapeThread(sessionCookie, tweetId) {
       const articles = document.querySelectorAll('article[data-testid="tweet"]');
       
       // Get main author
-      const mainArticle = Array.from(articles).find(a => 
-        a.querySelector(`a[href*="/status/${mainTweetId}"]`)
+      const mainArticle = Array.from(articles).find(/** @param {Element} a */ (a) =>
+        !!a.querySelector(`a[href*="/status/${mainTweetId}"]`)
       );
       const mainAuthorEl = mainArticle?.querySelector('[data-testid="User-Name"] a');
       const mainAuthor = mainAuthorEl?.href?.split('/')[3];
@@ -531,7 +543,7 @@ export async function scrapeThread(sessionCookie, tweetId) {
             isMainAuthor: author === mainAuthor,
           };
         })
-        .filter(t => t.id && t.isMainAuthor);
+        .filter((t) => !!t.id && !!t.isMainAuthor);
 
       return {
         author: {
@@ -576,26 +588,31 @@ export async function scrapeHashtag(sessionCookie, hashtag, options = {}) {
  * @returns {Promise<Record<string, unknown>>} { items: [], nextCursor }
  */
 export async function scrapeMedia(sessionCookie, username, options = {}) {
-  const { limit = 50, type = 'all', cursor } = options;
+  const limit = typeof options.limit === 'number' ? options.limit : 50;
+  const type = typeof options.type === 'string' ? options.type : 'all';
+  const cursor = options.cursor ? String(options.cursor) : undefined;
   const page = await getAuthenticatedPage(sessionCookie);
 
   try {
     await page.goto(`https://x.com/${username}/media`, { waitUntil: 'networkidle2' });
     await randomDelay();
 
+    /** @type {{ type: string; url: string; tweetUrl?: string; tweetId?: string }[]} */
     const media = [];
     let retries = 0;
     const maxRetries = 10;
 
     while (media.length < limit && retries < maxRetries) {
+      /** @type {{ type: string; url: string; tweetUrl?: string; tweetId?: string }[]} */
       const newMedia = await page.evaluate(() => {
         const items = document.querySelectorAll('article[data-testid="tweet"]');
         return Array.from(items).flatMap((article) => {
           const tweetUrl = article.querySelector('a[href*="/status/"]')?.href;
           const tweetId = tweetUrl?.match(/status\/(\d+)/)?.[1];
+          if (!tweetUrl) return [];
           
-          const images = Array.from(article.querySelectorAll('[data-testid="tweetPhoto"] img'))
-            .map(img => ({
+          const images = /** @type {HTMLImageElement[]} */ (Array.from(article.querySelectorAll('[data-testid="tweetPhoto"] img')))
+            .map((img) => ({
               type: 'image',
               url: img.src.replace(/&name=\w+/, '&name=large'),
               tweetUrl,
@@ -616,7 +633,7 @@ export async function scrapeMedia(sessionCookie, username, options = {}) {
 
       const prevLength = media.length;
       newMedia.forEach((m) => {
-        if (!media.find(existing => existing.url === m.url)) {
+        if (!media.find((existing) => existing.url === m.url)) {
           if (type === 'all' || type === m.type + 's') {
             media.push(m);
           }
@@ -654,7 +671,8 @@ export async function scrapeMedia(sessionCookie, username, options = {}) {
  * @returns {Promise<Record<string, unknown>>} { users: [], nextCursor }
  */
 export async function scrapeTweetLikes(sessionCookie, tweetId, options = {}) {
-  const { limit = 100, cursor } = options;
+  const limit = typeof options.limit === 'number' ? options.limit : 100;
+  const cursor = options.cursor ? String(options.cursor) : undefined;
   const page = await getAuthenticatedPage(sessionCookie);
 
   try {
@@ -683,7 +701,7 @@ export async function scrapeTweetLikes(sessionCookie, tweetId, options = {}) {
             bio: bioEl?.textContent || null,
             verified: !!verifiedEl,
           };
-        }).filter(u => u.username && !u.username.includes('?'));
+        }).filter((u) => !!u.username && !u.username.includes('?'));
       });
 
       const prevSize = users.size;
@@ -723,7 +741,8 @@ export const scrapeLikes = scrapeTweetLikes;
  * @returns {Promise<Record<string, unknown>>} { users: [], nextCursor }
  */
 export async function scrapeTweetRetweets(sessionCookie, tweetId, options = {}) {
-  const { limit = 100, cursor } = options;
+  const limit = typeof options.limit === 'number' ? options.limit : 100;
+  const cursor = options.cursor ? String(options.cursor) : undefined;
   const page = await getAuthenticatedPage(sessionCookie);
 
   try {
@@ -752,7 +771,7 @@ export async function scrapeTweetRetweets(sessionCookie, tweetId, options = {}) 
             bio: bioEl?.textContent || null,
             verified: !!verifiedEl,
           };
-        }).filter(u => u.username && !u.username.includes('?'));
+        }).filter((u) => !!u.username && !u.username.includes('?'));
       });
 
       const prevSize = users.size;
@@ -791,7 +810,8 @@ export const scrapeRetweets = scrapeTweetRetweets;
  * @returns {Promise<Record<string, unknown>>} { items: [], nextCursor }
  */
 export async function scrapeBookmarks(sessionCookie, options = {}) {
-  const { limit = 100, cursor } = options;
+  const limit = typeof options.limit === 'number' ? options.limit : 100;
+  const cursor = options.cursor ? String(options.cursor) : undefined;
   const page = await getAuthenticatedPage(sessionCookie);
 
   try {
@@ -828,7 +848,7 @@ export async function scrapeBookmarks(sessionCookie, options = {}) {
             replies: repliesEl?.textContent || '0',
             url: linkEl?.href || null,
           };
-        }).filter(t => t.id);
+        }).filter((t) => !!t.id);
       });
 
       const prevSize = bookmarks.size;
@@ -861,7 +881,7 @@ export async function scrapeBookmarks(sessionCookie, options = {}) {
  * Scrape details of a specific tweet
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} tweetId - Tweet ID
- * @returns {Promise<Record<string, unknown>>} Tweet details
+ * @returns {Promise<Record<string, unknown> | null>} Tweet details
  */
 export async function scrapeTweetDetails(sessionCookie, tweetId) {
   const page = await getAuthenticatedPage(sessionCookie);
@@ -884,7 +904,7 @@ export async function scrapeTweetDetails(sessionCookie, tweetId) {
       const viewsEl = article.querySelector('a[href*="/analytics"] span span');
       
       // Get media
-      const images = Array.from(article.querySelectorAll('[data-testid="tweetPhoto"] img')).map(i => ({
+      const images = /** @type {HTMLImageElement[]} */ (Array.from(article.querySelectorAll('[data-testid="tweetPhoto"] img'))).map((i) => ({
         type: 'image',
         url: i.src,
       }));
@@ -921,7 +941,7 @@ export async function scrapeTweetDetails(sessionCookie, tweetId) {
  * Extract video URLs from a tweet
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} tweetId - Tweet ID containing video
- * @returns {Promise<unknown[]>} Array of video URLs with quality info
+ * @returns {Promise<Record<string, unknown>[]>} Array of video URLs with quality info
  */
 export async function extractVideoUrls(sessionCookie, tweetId) {
   const page = await getAuthenticatedPage(sessionCookie);
@@ -938,6 +958,7 @@ export async function extractVideoUrls(sessionCookie, tweetId) {
     }
 
     const videos = await page.evaluate(() => {
+      /** @type {Record<string, unknown>[]} */
       const results = [];
       const pageContent = document.documentElement.innerHTML;
       
@@ -948,9 +969,9 @@ export async function extractVideoUrls(sessionCookie, tweetId) {
         /https:\/\/[^"'\s]*\/ext_tw_video[^"'\s]*\.mp4[^"'\s]*/g,
       ];
       
-      patterns.forEach(pattern => {
+      patterns.forEach((pattern) => {
         const matches = pageContent.match(pattern) || [];
-        matches.forEach(url => {
+        matches.forEach((url) => {
           // Clean up URL
           let cleanUrl = url.replace(/\\u002F/g, '/').replace(/\\/g, '');
           cleanUrl = cleanUrl.split('"')[0].split("'")[0].split(' ')[0];
@@ -975,10 +996,11 @@ export async function extractVideoUrls(sessionCookie, tweetId) {
       });
 
       // Deduplicate by URL (ignoring query params)
+      /** @type {Record<string, unknown>[]} */
       const unique = [];
       const seen = new Set();
-      results.forEach(v => {
-        const key = v.url.split('?')[0];
+      results.forEach((v) => {
+        const key = String(v.url).split('?')[0];
         if (!seen.has(key)) {
           seen.add(key);
           unique.push(v);
@@ -987,11 +1009,11 @@ export async function extractVideoUrls(sessionCookie, tweetId) {
 
       // Sort by quality (highest first)
       return unique.sort((a, b) => {
-        const getPixels = (q) => {
+        const getPixels = (/** @type {string} */ q) => {
           const match = q.match(/(\d+)x(\d+)/);
           return match ? parseInt(match[1]) * parseInt(match[2]) : 0;
         };
-        return getPixels(b.quality) - getPixels(a.quality);
+        return getPixels(String(b.quality)) - getPixels(String(a.quality));
       });
     });
 
@@ -1001,20 +1023,251 @@ export async function extractVideoUrls(sessionCookie, tweetId) {
   }
 }
 
+
+/**
+ * Navigate to X/Twitter home.
+ * @param {import('puppeteer').Page} page
+ * @returns {Promise<void>}
+ */
+export async function navigateToTwitter(page) {
+  await page.goto('https://x.com/home', { waitUntil: 'networkidle2' });
+}
+
+
+/**
+ * Check whether the current page appears to be logged in to X/Twitter.
+ * @param {import('puppeteer').Page} page
+ * @returns {Promise<boolean>}
+ */
+export async function checkAuthentication(page) {
+  return !!(await page.$('[data-testid="AppTabBar_Home_Link"], [data-testid="SideNav_AccountSwitcher_Button"], [data-testid="primaryColumn"]'));
+}
+
+/**
+ * Scrape a user's recent tweets, normalizing the shape used by operations.
+ * @param {string} sessionCookie
+ * @param {string} username
+ * @param {number} [limit]
+ * @returns {Promise<Record<string, unknown>[]>}
+ */
+export async function getUserTweets(sessionCookie, username, limit = 50) {
+  const result = await scrapeTweets(sessionCookie, username, { limit });
+  /** @type {Record<string, unknown>[]} */
+  const items = /** @type {Record<string, unknown>[]} */ (result.items || []);
+  return items.map((t) => {
+    const author = /** @type {Record<string, unknown>} */ (t.author);
+    return {
+      id: String(t.id || ''),
+      text: String(t.text || ''),
+      url: String(t.url || ''),
+      username: String(author.username || '')
+    };
+  });
+}
+
+/**
+ * Scrape accounts a user is following.
+ * @param {string} sessionCookie
+ * @param {string} username
+ * @param {number} [limit]
+ * @returns {Promise<Record<string, unknown>[]>}
+ */
+export async function getFollowing(sessionCookie, username, limit = 100) {
+  const result = await scrapeFollowing(sessionCookie, username, { limit });
+  /** @type {Record<string, unknown>[]} */
+  const users = /** @type {Record<string, unknown>[]} */ (result.users || []);
+  return users.map((u) => ({
+    username: String(u.username || ''),
+    displayName: String(u.name || ''),
+    name: String(u.name || ''),
+    bio: u.bio,
+    verified: u.verified,
+    profileImage: u.profileImage,
+    followsBack: u.followsBack
+  }));
+}
+
+/**
+ * Scrape a user's followers.
+ * @param {string} sessionCookie
+ * @param {string} username
+ * @param {number} [limit]
+ * @returns {Promise<Record<string, unknown>[]>}
+ */
+export async function getFollowers(sessionCookie, username, limit = 100) {
+  const result = await scrapeFollowers(sessionCookie, username, { limit });
+  /** @type {Record<string, unknown>[]} */
+  const users = /** @type {Record<string, unknown>[]} */ (result.users || []);
+  return users.map((u) => ({
+    username: String(u.username || ''),
+    displayName: String(u.name || ''),
+    name: String(u.name || ''),
+    bio: u.bio,
+    verified: u.verified,
+    profileImage: u.profileImage
+  }));
+}
+
+/**
+ * Scrape users who liked or retweeted a tweet.
+ * @param {string} sessionCookie
+ * @param {string} tweetUrl
+ * @param {'likes' | 'retweets'} [engagementType]
+ * @param {number} [limit]
+ * @returns {Promise<Record<string, unknown>[]>}
+ */
+export async function getTweetEngagers(sessionCookie, tweetUrl, engagementType = 'likes', limit = 100) {
+  const tweetId = tweetUrl.split('/status/')[1]?.split('?')[0];
+  if (!tweetId) throw new Error('Invalid tweet URL');
+
+  const result = engagementType === 'likes'
+    ? await scrapeTweetLikes(sessionCookie, tweetId, { limit })
+    : await scrapeTweetRetweets(sessionCookie, tweetId, { limit });
+
+  /** @type {Record<string, unknown>[]} */
+  const users = /** @type {Record<string, unknown>[]} */ (result.users || []);
+  return users.map((u) => ({
+    username: String(u.username || ''),
+    displayName: String(u.name || ''),
+    name: String(u.name || '')
+  }));
+}
+
+/**
+ * Follow a user by navigating to their profile and clicking the Follow button.
+ * @param {import('puppeteer').Page} page
+ * @param {string} username
+ * @returns {Promise<Record<string, unknown>>}
+ */
+export async function followUser(page, username) {
+  try {
+    await page.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
+    await randomDelay(1000, 2000);
+
+    const followButton = await page.$('button[aria-label*="Follow" i], div[data-testid="follow"]');
+    if (!followButton) {
+      return { success: true, alreadyFollowing: true };
+    }
+
+    await followButton.click();
+    await sleep(2000);
+    return { success: true, alreadyFollowing: false };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
+ * Unfollow a user by navigating to their profile and clicking the Unfollow button.
+ * @param {import('puppeteer').Page} page
+ * @param {string} username
+ * @returns {Promise<Record<string, unknown>>}
+ */
+export async function unfollowUser(page, username) {
+  try {
+    await page.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
+    await randomDelay(1000, 2000);
+
+    const unfollowButton = await page.$('button[aria-label*="Following" i], div[data-testid="unfollow"]');
+    if (!unfollowButton) {
+      return { success: false, error: 'Unfollow button not found' };
+    }
+
+    await unfollowButton.click();
+    await sleep(500);
+
+    const confirmButton = await page.$('div[data-testid="confirmationSheetConfirm"]');
+    if (confirmButton) await confirmButton.click();
+
+    await sleep(1500);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
+ * Like a tweet by navigating to it and clicking the Like button.
+ * @param {import('puppeteer').Page} page
+ * @param {string} tweetUrl
+ * @returns {Promise<Record<string, unknown>>}
+ */
+export async function likePost(page, tweetUrl) {
+  try {
+    await page.goto(tweetUrl, { waitUntil: 'networkidle2' });
+    await randomDelay(1000, 2000);
+
+    const likeButton = await page.$('div[data-testid="like"]');
+    if (!likeButton) {
+      const unlikeButton = await page.$('div[data-testid="unlike"]');
+      if (unlikeButton) return { success: true, alreadyLiked: true };
+      return { success: false, error: 'Like button not found' };
+    }
+
+    await likeButton.click();
+    await sleep(2000);
+    return { success: true, alreadyLiked: false };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
+ * Post a comment on a tweet.
+ * @param {import('puppeteer').Page} page
+ * @param {string} tweetUrl
+ * @param {string} commentText
+ * @returns {Promise<Record<string, unknown>>}
+ */
+export async function postComment(page, tweetUrl, commentText) {
+  try {
+    await page.goto(tweetUrl, { waitUntil: 'networkidle2' });
+    await randomDelay(1000, 2000);
+
+    const replyButton = await page.$('div[data-testid="reply"]');
+    if (!replyButton) {
+      return { success: false, error: 'Reply button not found' };
+    }
+
+    await replyButton.click();
+    await page.waitForSelector('div[role="textbox"]', { timeout: 5000 });
+    await page.type('div[role="textbox"]', commentText);
+
+    const tweetButton = await page.$('button[data-testid="tweetButton"], div[data-testid="tweetButton"]');
+    if (!tweetButton) {
+      return { success: false, error: 'Tweet button not found' };
+    }
+
+    await tweetButton.click();
+    await sleep(3000);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 // ============================================================================
 // Legacy BrowserAutomation Class (for backward compatibility)
 // ============================================================================
 
 class BrowserAutomation {
   constructor() {
+    /** @type {import('puppeteer').Browser | null} */
     this.browser = null;
   }
 
+  /**
+   * @returns {Promise<import('puppeteer').Browser>}
+   */
   async initialize() {
     this.browser = await getBrowser();
     return this.browser;
   }
 
+  /**
+   * @param {string} [sessionCookie]
+   * @returns {Promise<import('puppeteer').Page>}
+   */
   async createPage(sessionCookie) {
     return getAuthenticatedPage(sessionCookie);
   }
@@ -1023,6 +1276,11 @@ class BrowserAutomation {
     await closeBrowser();
   }
 
+  /**
+   * @param {number} min
+   * @param {number} max
+   * @returns {Promise<number>}
+   */
   async randomDelay(min, max) {
     return randomDelay(min, max);
   }

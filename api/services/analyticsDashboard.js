@@ -23,6 +23,71 @@ import prisma from '../lib/prisma.js';
 // ============================================================================
 
 /**
+ * @typedef {object} SnapshotPoint
+ * @property {string} date
+ * @property {number} followers
+ * @property {number} following
+ * @property {number} tweets
+ */
+
+/**
+ * @typedef {object} RatioPoint
+ * @property {string} date
+ * @property {number} following
+ * @property {number} followers
+ * @property {number} ratio
+ */
+
+/**
+ * @typedef {object} EngagementPoint
+ * @property {string} date
+ * @property {number} engagementRate
+ * @property {number} avgEngagementRate
+ * @property {number} totalEngagements
+ * @property {number} totalImpressions
+ * @property {string | null} topTweetId
+ */
+
+/**
+ * @typedef {object} EngagementBucket
+ * @property {number} totalEngagements
+ * @property {number} totalImpressions
+ * @property {number} days
+ */
+
+/**
+ * @typedef {object} EngagementStat
+ * @property {string} bucket
+ * @property {number} totalEngagements
+ * @property {number} totalImpressions
+ * @property {number} engagementRate
+ * @property {number} sampleDays
+ */
+
+/**
+ * @typedef {object} AggregatedPoint
+ * @property {string} bucket
+ * @property {number} followers
+ * @property {number} following
+ * @property {number} tweets
+ * @property {number} followerDelta
+ */
+
+/**
+ * @typedef {object} Overview
+ * @property {number} followers
+ * @property {number} following
+ * @property {number} tweets
+ * @property {number} followerChange
+ * @property {number} followerPct
+ * @property {number} followingRatio
+ * @property {number} engagementRate
+ * @property {number} totalEngagements
+ * @property {number} totalImpressions
+ * @property {number} engagementChange
+ */
+
+/**
  * Parse an AccountSnapshot row into a normalized time-series point.
  *
  * AccountSnapshot.data is a JSON string written by api/services/monitoring.js
@@ -95,7 +160,7 @@ export function tweetEngagementScore(t) {
  *
  * @param {Array<{ tweetId: string, likes?: number, retweets?: number, replies?: number, quotes?: number, views?: number, text?: string, tweetedAt?: Date|string|null, snapshotAt?: Date|string }>} tweets
  * @param {number} [limit=10]
- * @returns {Array<object>}
+ * @returns {Array<Record<string, unknown>>}
  */
 export function rankTopTweets(tweets, limit = 10) {
   const list = Array.isArray(tweets) ? tweets : [];
@@ -189,14 +254,21 @@ export function aggregateByInterval(rows, interval) {
 // DB queries — Prisma. Thin wrappers around the pure helpers.
 // ============================================================================
 
-/** Clamp an integer query param to a safe range. */
+/** Clamp an integer query param to a safe range.
+ * @param {unknown} value
+ * @param {number} fallback
+ * @param {number} min
+ * @param {number} max
+ */
 function clampInt(value, fallback, min, max) {
   const n = Math.floor(Number(value));
   if (!Number.isFinite(n)) return fallback;
   return Math.max(min, Math.min(max, n));
 }
 
-/** Build a `from` Date for `days` ago. */
+/** Build a `from` Date for `days` ago.
+ * @param {number} days
+ */
 function fromDate(days) {
   return new Date(Date.now() - days * 86400000);
 }
@@ -205,7 +277,7 @@ function fromDate(days) {
  * Fetch AccountSnapshot rows for a username within `days`, ordered ascending.
  * @param {string} username
  * @param {number} days
- * @returns {Promise<object[]>}
+ * @returns {Promise<import('@prisma/client').AccountSnapshot[]>}
  */
 async function fetchSnapshots(username, days) {
   return prisma.accountSnapshot.findMany({
@@ -221,7 +293,7 @@ async function fetchSnapshots(username, days) {
  * GET dashboard payload — follower growth series parsed from AccountSnapshot.
  * @param {string} username
  * @param {{ days?: number }} opts
- * @returns {Promise<{ username: string, days: number, followerGrowth: object[] }>}
+ * @returns {Promise<{ username: string, days: number, followerGrowth: SnapshotPoint[] }>}
  */
 export async function getDashboard(username, opts = {}) {
   const days = clampInt(opts.days, 30, 1, 365);
@@ -234,7 +306,7 @@ export async function getDashboard(username, opts = {}) {
  * GET following/followers ratio series.
  * @param {string} username
  * @param {{ days?: number }} opts
- * @returns {Promise<{ username: string, days: number, series: object[] }>}
+ * @returns {Promise<{ username: string, days: number, series: RatioPoint[] }>}
  */
 export async function getRatioSeries(username, opts = {}) {
   const days = clampInt(opts.days, 30, 1, 365);
@@ -255,7 +327,7 @@ export async function getRatioSeries(username, opts = {}) {
  * GET engagement rate series from EngagementDaily.
  * @param {string} username
  * @param {{ days?: number }} opts
- * @returns {Promise<{ username: string, days: number, series: object[] }>}
+ * @returns {Promise<{ username: string, days: number, series: EngagementPoint[] }>}
  */
 export async function getEngagementSeries(username, opts = {}) {
   const days = clampInt(opts.days, 30, 1, 365);
@@ -282,7 +354,7 @@ export async function getEngagementSeries(username, opts = {}) {
  * GET best performing tweets from TweetSnapshot (latest snapshot per tweet).
  * @param {string} username
  * @param {{ limit?: number, days?: number }} opts
- * @returns {Promise<{ username: string, tweets: object[] }>}
+ * @returns {Promise<{ username: string, tweets: Record<string, unknown>[] }>}
  */
 export async function getTopTweets(username, opts = {}) {
   const limit = clampInt(opts.limit, 10, 1, 100);
@@ -309,11 +381,11 @@ export async function getTopTweets(username, opts = {}) {
  * GET aggregated stats (daily/weekly/monthly) — follower deltas + engagement totals.
  * @param {string} username
  * @param {{ days?: number, interval?: 'day'|'week'|'month' }} opts
- * @returns {Promise<{ username: string, days: number, interval: string, followerStats: object[], engagementStats: object[] }>}
+ * @returns {Promise<{ username: string, days: number, interval: 'day'|'week'|'month', followerStats: AggregatedPoint[], engagementStats: EngagementStat[] }>}
  */
 export async function getStats(username, opts = {}) {
   const days = clampInt(opts.days, 30, 1, 365);
-  const interval = ['day', 'week', 'month'].includes(opts.interval) ? opts.interval : 'day';
+  const interval = /** @type {'day'|'week'|'month'} */ (['day', 'week', 'month'].includes(/** @type {string} */ (opts.interval)) ? opts.interval : 'day');
 
   const snapshots = await fetchSnapshots(username, days);
   const parsed = snapshots.map(parseSnapshotData);
@@ -353,7 +425,7 @@ export async function getStats(username, opts = {}) {
  * Composite dashboard payload — all chart data in one call (used by the UI).
  * @param {string} username
  * @param {{ days?: number, limit?: number }} opts
- * @returns {Promise<object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function getFullDashboard(username, opts = {}) {
   const days = clampInt(opts.days, 30, 1, 365);

@@ -14,8 +14,38 @@ const MAX_THREAD_LEN = 25;
 const MIN_LEAD_MS = 60_000; // scheduledAt must be ≥60s in the future (next cron tick + slack)
 
 /**
+ * @typedef {object} TweetScheduleInput
+ * @property {string} [content]
+ * @property {string[]} [mediaUrls]
+ * @property {string | Date} [scheduledAt]
+ * @property {string[]} [thread]
+ * @property {string} [timezone]
+ * @property {string} [recurrenceCron]
+ * @property {number} [queueOrder]
+ */
+
+/**
+ * @typedef {object} TweetScheduleOptions
+ * @property {boolean} [dryRun]
+ * @property {string} [userId]
+ * @property {() => number} [now]
+ */
+
+/**
+ * @typedef {object} TweetScheduleResult
+ * @property {boolean} dryRun
+ * @property {string} platform
+ * @property {Record<string, unknown>} [preview]
+ * @property {string} [scheduleId]
+ * @property {string} [scheduledAt]
+ * @property {string} [status]
+ */
+
+/**
  * Validate an IANA timezone name. Returns the canonical name or throws.
  * Intl.supportedValuesOf('timeZone') is available in Node 17+ (XActions requires Node ≥18).
+ * @param {string | null | undefined} timezone
+ * @returns {string | null}
  */
 function validateTimezone(timezone) {
   if (timezone === undefined || timezone === null) return null;
@@ -98,7 +128,7 @@ function parseScheduledAt(scheduledAt, timezone) {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   }).formatToParts(probe);
-  const get = (type) => tzParts.find((p) => p.type === type)?.value;
+  const get = (/** @type {string} */ type) => tzParts.find((p) => p.type === type)?.value;
   const tzWall = `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`;
   // The difference between the probe (UTC wall-clock) and the tz wall-clock is the offset.
   const probeMs = new Date(`${wallClock}Z`).getTime();
@@ -113,6 +143,8 @@ function parseScheduledAt(scheduledAt, timezone) {
 /**
  * Validate the optional thread array. Returns a normalized string[] or null.
  * `content` is the first tweet; `thread` holds the follow-up replies.
+ * @param {string[] | null | undefined} thread
+ * @returns {string[] | null}
  */
 function validateThread(thread) {
   if (thread === undefined || thread === null) return null;
@@ -134,6 +166,10 @@ function validateThread(thread) {
   return normalized;
 }
 
+/**
+ * @param {string | null | undefined} recurrenceCron
+ * @returns {string | null}
+ */
 function validateRecurrence(recurrenceCron) {
   if (recurrenceCron === undefined || recurrenceCron === null) return null;
   if (typeof recurrenceCron !== 'string' || !recurrenceCron.trim()) {
@@ -152,19 +188,9 @@ function validateRecurrence(recurrenceCron) {
  * (api/services/tweetScheduler.js) acquires a Puppeteer session at execution time
  * and reuses postTweet / postThread from src/postComposer.js.
  *
- * @param {Record<string, unknown>} input
- * @param {string} input.content - Tweet text (non-empty). First tweet of a thread.
- * @param {string[]?} input.mediaUrls - Optional media URL list (JSON-stringified on store).
- * @param {string|Date} input.scheduledAt - ISO-8601 datetime, ≥60s in the future.
- * @param {string[]?} input.thread - Follow-up tweet texts (length 1–24; content is tweet #1).
- * @param {string?} input.timezone - IANA tz name to interpret a wall-clock scheduledAt.
- * @param {string?} input.recurrenceCron - node-cron expression; re-arms after execution.
- * @param {number?} input.queueOrder - Queue priority (0 = highest); defaults to 0.
- * @param {Record<string, unknown>} options
- * @param {boolean} [options.dryRun=true] - Preview without persisting.
- * @param {string} [options.userId] - Required when dryRun:false — scopes the row.
- * @param {Function} [options.now=Date.now] - Injectable clock for tests.
- * @returns {Promise<Record<string, unknown>>}
+ * @param {Partial<TweetScheduleInput>} [input]
+ * @param {Partial<TweetScheduleOptions>} [options]
+ * @returns {Promise<TweetScheduleResult>}
  */
 export async function scheduleTweet(input = {}, options = {}) {
   const {
@@ -175,8 +201,10 @@ export async function scheduleTweet(input = {}, options = {}) {
     timezone,
     recurrenceCron,
     queueOrder,
-  } = input;
-  const { dryRun = true, userId, now = () => Date.now() } = options;
+  } = /** @type {Partial<TweetScheduleInput>} */ (input);
+  const dryRun = options.dryRun === false ? false : true;
+  const userId = /** @type {string | undefined} */ (options.userId);
+  const now = /** @type {() => number} */ (options.now ?? Date.now);
 
   // Non-empty content guard — empty content = blank tweet.
   if (typeof content !== 'string' || !content.trim()) {
@@ -187,7 +215,7 @@ export async function scheduleTweet(input = {}, options = {}) {
   const threadNormalized = validateThread(thread);
   const recurrence = validateRecurrence(recurrenceCron);
 
-  const scheduledDate = parseScheduledAt(scheduledAt, tz);
+  const scheduledDate = parseScheduledAt(/** @type {string | Date} */ (scheduledAt), tz);
   if (scheduledDate.getTime() < now() + MIN_LEAD_MS) {
     throw new Error('❌ scheduleTweet: scheduledAt must be at least 60 seconds in the future');
   }
@@ -219,9 +247,9 @@ export async function scheduleTweet(input = {}, options = {}) {
   // --- real run: persist one Schedule row scoped by userId ---
   const schedule = await prisma.schedule.create({
     data: {
-      userId,
-      content,
-      mediaUrls: mediaUrls ? JSON.stringify(mediaUrls) : null,
+      userId: /** @type {string} */ (userId),
+      content: /** @type {string} */ (content),
+      mediaUrls: mediaUrls ? JSON.stringify(/** @type {string[]} */ (mediaUrls)) : null,
       scheduledAt: scheduledDate,
       status: 'pending',
       platform: 'twitter',

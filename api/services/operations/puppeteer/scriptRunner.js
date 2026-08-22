@@ -48,6 +48,10 @@ const PATCHABLE_KEYS = new Set([
  * Only keys present in PATCHABLE_KEYS are touched; others are silently
  * ignored.  Substitution is intentionally simple — it replaces the value
  * on the first occurrence of `key: <value>` in the source text.
+ *
+ * @param {string} scriptCode
+ * @param {Record<string, unknown>} params
+ * @returns {string}
  */
 function patchConfig(scriptCode, params) {
   let patched = scriptCode;
@@ -63,6 +67,9 @@ function patchConfig(scriptCode, params) {
 /**
  * Resolve a validated script path to an absolute file path.
  * Throws if the resolved path escapes the src/ tree (path-traversal guard).
+ *
+ * @param {string} scriptPath
+ * @returns {string}
  */
 function resolveScriptPath(scriptPath) {
   if (scriptPath.startsWith('automation/')) {
@@ -84,16 +91,27 @@ function resolveScriptPath(scriptPath) {
 }
 
 /**
+ * @typedef {object} RunBrowserScriptConfig
+ * @property {string} scriptPath
+ * @property {string} sessionCookie
+ * @property {Record<string, unknown>} [params]
+ * @property {string} [startUrl]
+ */
+
+/**
+ * @typedef {object} ConsoleLogEntry
+ * @property {string} type
+ * @property {string} text
+ * @property {number} ts
+ */
+
+/**
  * Run a single XActions browser script via Puppeteer.
  *
- * @param {object} config
- * @param {string} config.scriptPath  - e.g. "src/unfollowback" or "automation/autoLiker"
- * @param {string} config.sessionCookie - X auth_token cookie value
- * @param {object} [config.params]    - CONFIG overrides (dryRun, maxUnfollows, …)
- * @param {string} [config.startUrl]  - Page to load before running (default: x.com/home)
- * @param {Function} updateProgress   - Called with status strings during execution
- * @param {Function} isCancelled      - Returns true if the job was cancelled externally
- * @returns {Promise<object>}
+ * @param {RunBrowserScriptConfig} config
+ * @param {(message: string) => void} updateProgress
+ * @param {() => boolean} [isCancelled]
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function runBrowserScript(config, updateProgress, isCancelled) {
   const {
@@ -109,10 +127,14 @@ export async function runBrowserScript(config, updateProgress, isCancelled) {
   const rawCode = await readFile(filePath, 'utf8');
   const patchedCode = patchConfig(rawCode, params);
 
-  if (!global.activeBrowsers) global.activeBrowsers = new Set();
+  /** @type {Set<import('puppeteer').Browser> | undefined} */
+  const activeBrowsers = globalThis.activeBrowsers;
+  if (!activeBrowsers) {
+    globalThis.activeBrowsers = new Set();
+  }
 
   const browser = await puppeteer.launch({
-    headless: process.env.PUPPETEER_HEADLESS === 'false' ? false : 'new',
+    headless: process.env.PUPPETEER_HEADLESS === 'false' ? false : true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -126,7 +148,7 @@ export async function runBrowserScript(config, updateProgress, isCancelled) {
     ],
   });
 
-  global.activeBrowsers.add(browser);
+  globalThis.activeBrowsers?.add(browser);
   const page = await browser.newPage();
 
   await page.setViewport({ width: 1280, height: 800 });
@@ -134,7 +156,7 @@ export async function runBrowserScript(config, updateProgress, isCancelled) {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
   );
 
-  // Capture console output — this is the primary result channel for browser scripts
+  /** @type {ConsoleLogEntry[]} */
   const logs = [];
   page.on('console', (msg) => {
     const entry = { type: msg.type(), text: msg.text(), ts: Date.now() };
@@ -142,13 +164,12 @@ export async function runBrowserScript(config, updateProgress, isCancelled) {
     updateProgress(msg.text());
   });
   page.on('pageerror', (err) => {
-    logs.push({ type: 'error', text: err.message, ts: Date.now() });
+    logs.push({ type: 'error', text: (err instanceof Error ? err.message : String(err)), ts: Date.now() });
   });
 
   let scriptResult = null;
 
   try {
-    // Authenticate
     await page.setCookie({
       name: 'auth_token',
       value: sessionCookie,
@@ -161,26 +182,26 @@ export async function runBrowserScript(config, updateProgress, isCancelled) {
     updateProgress(`Navigating to ${startUrl}`);
     await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
 
-    // Expose caller params to the script via window.__XACTIONS_PARAMS__
-    await page.evaluate((p) => { window.__XACTIONS_PARAMS__ = p; }, params);
+    await page.evaluate((p) => {
+      const w = /** @type {Window & typeof globalThis & { __XACTIONS_PARAMS__: Record<string, unknown> }} */ (window);
+      w.__XACTIONS_PARAMS__ = p;
+    }, params);
 
     updateProgress('Executing script…');
 
-    // Run with a hard timeout; if the script exposes window.XActions.abort()
-    // we call it before force-closing so it can flush its final log line.
     const timeoutHandle = setTimeout(async () => {
       updateProgress('⏱️ Script timeout reached — aborting');
       try {
         await page.evaluate(() => {
-          if (typeof window?.XActions?.abort === 'function') {
-            window.XActions.abort();
+          const w = /** @type {Window & typeof globalThis & { XActions?: { abort: () => void } }} */ (window);
+          if (typeof w?.XActions?.abort === 'function') {
+            w.XActions.abort();
           }
         });
       } catch { /* page may already be closing */ }
     }, SCRIPT_TIMEOUT_MS);
 
     try {
-      // eval() in the page context executes both IIFEs and module-style scripts
       scriptResult = await Promise.race([
         page.evaluate((code) => {
           return Promise.resolve(eval(code)); // eslint-disable-line no-eval
@@ -204,6 +225,6 @@ export async function runBrowserScript(config, updateProgress, isCancelled) {
     };
   } finally {
     await browser.close();
-    global.activeBrowsers?.delete(browser);
+    globalThis.activeBrowsers?.delete(browser);
   }
 }

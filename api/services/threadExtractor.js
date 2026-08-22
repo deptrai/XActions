@@ -22,18 +22,84 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
 puppeteer.use(StealthPlugin());
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * @typedef {object} BrowserPoolEntry
+ * @property {import('puppeteer').Browser} browser
+ * @property {boolean} busy
+ */
+
+/**
+ * @typedef {object} ParsedTweetUrl
+ * @property {string} tweetId
+ * @property {string} username
+ */
+
+/**
+ * @typedef {object} ExtractOptions
+ * @property {number} [timeout]
+ * @property {number} [maxTweets]
+ * @property {string} [cookie]
+ */
+
+/**
+ * @typedef {object} RawTweet
+ * @property {string} text
+ * @property {string} handle
+ * @property {string} displayName
+ * @property {string} avatar
+ * @property {string} timestamp
+ * @property {string} tweetUrl
+ * @property {string[]} images
+ * @property {string[]} videos
+ * @property {Record<string, number>} stats
+ */
+
+/**
+ * @typedef {object} ThreadAuthor
+ * @property {string} name
+ * @property {string} username
+ * @property {string} avatar
+ */
+
+/**
+ * @typedef {object} ThreadMedia
+ * @property {string} type
+ * @property {string} url
+ */
+
+/**
+ * @typedef {object} ThreadTweet
+ * @property {number} number
+ * @property {string} text
+ * @property {ThreadMedia[]} media
+ * @property {Record<string, number>} stats
+ * @property {string} timestamp
+ * @property {string} url
+ */
+
+/**
+ * @typedef {object} ThreadData
+ * @property {boolean} isThread
+ * @property {ThreadAuthor} author
+ * @property {ThreadTweet[]} tweets
+ * @property {number} threadLength
+ * @property {string} sourceUrl
+ * @property {string} extractedAt
+ */
 
 // ============================================================================
 // Browser Pool (max 2 instances)
 // ============================================================================
 
 const POOL_SIZE = 2;
+/** @type {BrowserPoolEntry[]} */
 const browsers = [];
 
 async function createBrowser() {
   return puppeteer.launch({
-    headless: 'new',
+    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -48,6 +114,9 @@ async function createBrowser() {
   });
 }
 
+/**
+ * @returns {Promise<BrowserPoolEntry>}
+ */
 async function getBrowser() {
   // Reuse an existing browser if available
   for (const entry of browsers) {
@@ -88,6 +157,9 @@ async function getBrowser() {
   });
 }
 
+/**
+ * @param {BrowserPoolEntry | null} entry
+ */
 function releaseBrowser(entry) {
   if (entry) entry.busy = false;
 }
@@ -112,7 +184,7 @@ const CACHE_TTL = 24 * 60 * 60 * 1000;
 /**
  * Parse a tweet URL and extract the tweet ID and username
  * @param {string} url - Twitter/X URL
- * @returns {{ tweetId: string, username: string } | null}
+ * @returns {ParsedTweetUrl | null}
  */
 export function parseTweetUrl(url) {
   if (!url || typeof url !== 'string') return null;
@@ -132,7 +204,7 @@ export function parseTweetUrl(url) {
 /**
  * Get a cached thread by tweet ID
  * @param {string} tweetId
- * @returns {object|null}
+ * @returns {Record<string, unknown> | null}
  */
 export function getCachedThread(tweetId) {
   const entry = threadCache.get(tweetId);
@@ -147,7 +219,7 @@ export function getCachedThread(tweetId) {
 /**
  * Cache a thread result
  * @param {string} tweetId
- * @param {object} data
+ * @param {Record<string, unknown>} data
  */
 function cacheThread(tweetId, data) {
   threadCache.set(tweetId, { data, timestamp: Date.now() });
@@ -167,7 +239,7 @@ function cacheThread(tweetId, data) {
  * 3. The conversation container holding >1 tweet from the same handle
  *
  * @param {import('puppeteer').Page} page
- * @param {string} authorUsername - The tweet author's handle (without @)
+ * @param {string} authorUsername - The tweet author's handle (without the at sign)
  * @returns {Promise<boolean>}
  */
 async function detectThread(page, authorUsername) {
@@ -255,43 +327,44 @@ async function clickExpansionButtons(page) {
  * Extract structured data from every tweet article visible on the page.
  * Runs inside page.evaluate().
  *
- * @returns {Array<object>}
+ * @returns {RawTweet[]}
  */
 function extractTweetsFromPage() {
   const articles = document.querySelectorAll('article[data-testid="tweet"]');
+  /** @type {RawTweet[]} */
   const tweets = [];
 
   articles.forEach((article) => {
     try {
       // Text
       const textEl = article.querySelector('[data-testid="tweetText"]');
-      const text = textEl ? textEl.textContent : '';
+      const text = (textEl?.textContent || '').trim();
 
       // User info
       const userNameEl = article.querySelector('[data-testid="User-Name"]');
-      const userNameText = userNameEl ? userNameEl.textContent : '';
+      const userNameText = (userNameEl?.textContent || '').trim();
       const handleMatch = userNameText.match(/@(\w+)/);
-      const handle = handleMatch ? handleMatch[1] : '';
+      const handle = (handleMatch?.[1] || '').trim();
 
       // Display name (first link inside User-Name)
       const nameLinks = userNameEl ? userNameEl.querySelectorAll('a') : [];
-      const displayName = nameLinks.length > 0 ? nameLinks[0].textContent.trim() : '';
+      const displayName = nameLinks.length > 0 ? (nameLinks[0].textContent || '').trim() : '';
 
       // Avatar
-      const avatarEl = article.querySelector('img[src*="profile_images"]');
+      const avatarEl = /** @type {HTMLImageElement | null} */ (article.querySelector('img[src*="profile_images"]'));
       const avatar = avatarEl ? avatarEl.src : '';
 
       // Timestamp
       const timeEl = article.querySelector('time');
-      const timestamp = timeEl ? timeEl.getAttribute('datetime') : '';
+      const timestamp = (timeEl?.getAttribute('datetime') || '').trim();
 
       // Tweet URL
-      const timeLink = timeEl ? timeEl.closest('a') : null;
-      const tweetUrl = timeLink ? timeLink.href : '';
+      const timeLink = /** @type {HTMLAnchorElement | null} */ (timeEl ? timeEl.closest('a') : null);
+      const tweetUrl = (timeLink && timeLink.href) || '';
 
       // Media — images
       const images = Array.from(
-        article.querySelectorAll('img[src*="media"], img[src*="twimg.com/media"]')
+        /** @type {NodeListOf<HTMLImageElement>} */ (article.querySelectorAll('img[src*="media"], img[src*="twimg.com/media"]'))
       )
         .map((img) => img.src)
         .filter((src) => !src.includes('profile_images') && !src.includes('emoji'));
@@ -302,7 +375,7 @@ function extractTweetsFromPage() {
         .filter(Boolean);
 
       // Engagement stats
-      const getStatValue = (testId) => {
+      const getStatValue = (/** @type {string} */ testId) => {
         const el = article.querySelector(`[data-testid="${testId}"]`);
         if (!el) return 0;
         const label = el.getAttribute('aria-label') || el.textContent || '0';
@@ -351,14 +424,13 @@ function extractTweetsFromPage() {
  * 5. Returns structured data with text, media, stats, timestamps
  *
  * @param {string} url - The tweet URL (x.com or twitter.com)
- * @param {object} [options]
- * @param {number} [options.timeout=30000] - Max time in ms (default 30s)
- * @param {number} [options.maxTweets=100] - Max tweets to extract
- * @param {string} [options.cookie] - Optional auth_token cookie for private accounts
- * @returns {Promise<object>} Thread data
+ * @param {ExtractOptions} [options]
+ * @returns {Promise<ThreadData>} Thread data
  */
 export async function extractThread(url, options = {}) {
-  const { timeout = 30000, maxTweets = 100, cookie } = options;
+const timeout = options.timeout !== undefined ? options.timeout : 30000;
+const maxTweets = options.maxTweets !== undefined ? options.maxTweets : 100;
+const cookie = options.cookie;
 
   const parsed = parseTweetUrl(url);
   if (!parsed) {
@@ -368,7 +440,7 @@ export async function extractThread(url, options = {}) {
   // Check cache first
   const cached = getCachedThread(parsed.tweetId);
   if (cached) {
-    return cached;
+    return /** @type {ThreadData} */ (cached);
   }
 
   // Normalize URL to x.com
@@ -419,7 +491,7 @@ export async function extractThread(url, options = {}) {
     if (!isThread) {
       // Still extract the single tweet so the caller gets data back,
       // but flag it as isThread: false
-      const singleRaw = await page.evaluate(extractTweetsFromPage);
+      const singleRaw = /** @type {RawTweet[]} */ (await page.evaluate(extractTweetsFromPage));
       const authorLower = parsed.username.toLowerCase();
       const singleTweet = singleRaw.find(
         (t) => t.handle.toLowerCase() === authorLower
@@ -429,7 +501,7 @@ export async function extractThread(url, options = {}) {
         throw new Error('Could not extract the tweet. The page may have failed to load.');
       }
 
-      const result = {
+      const result = /** @type {ThreadData} */ ({
         isThread: false,
         author: {
           name: singleTweet.displayName,
@@ -452,9 +524,9 @@ export async function extractThread(url, options = {}) {
         threadLength: 1,
         sourceUrl: normalizedUrl,
         extractedAt: new Date().toISOString(),
-      };
+      });
 
-      cacheThread(parsed.tweetId, result);
+      cacheThread(parsed.tweetId, /** @type {Record<string, unknown>} */ (result));
       return result;
     }
 
@@ -497,7 +569,7 @@ export async function extractThread(url, options = {}) {
     // ------------------------------------------------------------------
     // Extract all tweet data from the page
     // ------------------------------------------------------------------
-    const rawData = await page.evaluate(extractTweetsFromPage);
+    const rawData = /** @type {RawTweet[]} */ (await page.evaluate(extractTweetsFromPage));
 
     // Filter to thread author's tweets, deduplicate, sort chronologically
     const authorLower = parsed.username.toLowerCase();
@@ -511,7 +583,7 @@ export async function extractThread(url, options = {}) {
         seen.add(key);
         return true;
       })
-      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     if (threadTweets.length === 0) {
       throw new Error('No thread tweets found. The tweet may not be part of a thread, or the page failed to load.');
@@ -538,17 +610,17 @@ export async function extractThread(url, options = {}) {
       url: t.tweetUrl,
     }));
 
-    const result = {
+    const result = /** @type {ThreadData} */ ({
       isThread: true,
       author,
       tweets: numberedTweets,
       threadLength: numberedTweets.length,
       sourceUrl: normalizedUrl,
       extractedAt: new Date().toISOString(),
-    };
+    });
 
     // Cache the result
-    cacheThread(parsed.tweetId, result);
+    cacheThread(parsed.tweetId, /** @type {Record<string, unknown>} */ (result));
 
     return result;
   } finally {
@@ -563,7 +635,7 @@ export async function extractThread(url, options = {}) {
 
 /**
  * Format thread as plain text
- * @param {object} thread - Extracted thread data
+ * @param {ThreadData} thread - Extracted thread data
  * @returns {string}
  */
 export function formatAsText(thread) {
@@ -587,7 +659,7 @@ export function formatAsText(thread) {
 
 /**
  * Format thread as markdown
- * @param {object} thread - Extracted thread data
+ * @param {ThreadData} thread - Extracted thread data
  * @returns {string}
  */
 export function formatAsMarkdown(thread) {

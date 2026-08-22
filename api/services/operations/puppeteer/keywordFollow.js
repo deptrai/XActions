@@ -1,65 +1,89 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-import browserAutomation from '../../browserAutomation.js';
+import {
+  createPage,
+  navigateToTwitter,
+  checkAuthentication,
+  searchTweets,
+  followUser,
+  randomDelay,
+} from '../../browserAutomation.js';
+
+/**
+ * @typedef {object} KeywordFollowBrowserConfig
+ * @property {string} sessionCookie
+ * @property {string[]} [keywords]
+ * @property {string} [query]
+ * @property {number} [maxFollows]
+ * @property {boolean} [dryRun]
+ * @property {string[]} [whitelist]
+ */
 
 /**
  * Follow users who tweet about specific keywords using browser automation
  * @param {string} userId - User ID for the operation
- * @param {object} config - Configuration including sessionCookie, keywords, etc.
- * @param {function} updateProgress - Callback to update job progress
- * @param {function} isCancelled - Function to check if job is cancelled
+ * @param {KeywordFollowBrowserConfig} config - Configuration
+ * @param {(message: string) => void} updateProgress - Callback to update job progress
+ * @param {() => boolean} [isCancelled] - Function to check if job is cancelled
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function keywordFollowBrowser(userId, config, updateProgress, isCancelled = () => false) {
-  const page = await browserAutomation.createPage(config.sessionCookie);
-  
+  const page = await createPage(config.sessionCookie);
+
   try {
-    await browserAutomation.navigateToTwitter(page);
-    
-    const isAuth = await browserAutomation.checkAuthentication(page);
+    await navigateToTwitter(page);
+
+    const isAuth = await checkAuthentication(page);
     if (!isAuth) {
       throw new Error('Session expired - please reconnect your X account');
     }
 
-    const { 
-      keywords = [],    // Keywords/hashtags to search
-      query,            // Or raw search query
+    const {
+      keywords = [],
+      query,
       maxFollows = 50,
       dryRun = false,
-      whitelist = []
+      whitelist = [],
     } = config;
 
-    // Build search query
-    const searchQuery = query || keywords.map(k => 
-      k.startsWith('#') ? k : k
-    ).join(' OR ');
+    const searchQuery = query || keywords.map((k) => (k.startsWith('#') ? k : k)).join(' OR ');
 
     if (!searchQuery) {
       throw new Error('Either keywords or query must be provided');
     }
 
-    // Search for tweets
     updateProgress(`Searching for tweets matching "${searchQuery}"...`);
-    const tweets = await browserAutomation.searchTweets(page, searchQuery, maxFollows * 3);
+    const result = await searchTweets(config.sessionCookie, searchQuery, { limit: maxFollows * 3 });
+    const items = /** @type {Record<string, unknown>[]} */ (result.items || []);
+    const tweets = items.map((t) => {
+      const author = /** @type {Record<string, unknown>} */ (t.author || {});
+      return {
+        id: String(t.id || ''),
+        text: String(t.text || ''),
+        url: String(t.url || ''),
+        username: String(author.username || ''),
+      };
+    });
 
     updateProgress(`Found ${tweets.length} tweets, extracting unique authors...`);
 
-    // Get unique authors
+    /** @type {Record<string, unknown>[]} */
     const uniqueAuthors = [];
     const seenAuthors = new Set();
 
     for (const tweet of tweets) {
-      if (tweet.username && !seenAuthors.has(tweet.username.toLowerCase())) {
-        seenAuthors.add(tweet.username.toLowerCase());
+      const username = String(tweet.username || '');
+      if (username && !seenAuthors.has(username.toLowerCase())) {
+        seenAuthors.add(username.toLowerCase());
         uniqueAuthors.push({
-          username: tweet.username,
-          tweetText: tweet.text?.substring(0, 100)
+          username,
+          tweetText: String(tweet.text || '').substring(0, 100),
         });
       }
     }
 
-    // Filter whitelist
-    const whitelistLower = whitelist.map(u => u.toLowerCase());
-    const filteredAuthors = uniqueAuthors.filter(a => 
-      !whitelistLower.includes(a.username.toLowerCase())
+    const whitelistLower = whitelist.map((u) => u.toLowerCase());
+    const filteredAuthors = uniqueAuthors.filter((a) =>
+      !whitelistLower.includes(String(a.username || '').toLowerCase())
     );
 
     updateProgress(`Found ${filteredAuthors.length} unique authors to potentially follow`);
@@ -68,11 +92,13 @@ async function keywordFollowBrowser(userId, config, updateProgress, isCancelled 
       return {
         success: true,
         followed: [],
-        message: 'No authors found for the given keywords'
+        message: 'No authors found for the given keywords',
       };
     }
 
+    /** @type {Record<string, unknown>[]} */
     const followed = [];
+    /** @type {Record<string, unknown>[]} */
     const failed = [];
     const limit = Math.min(filteredAuthors.length, maxFollows);
 
@@ -83,44 +109,42 @@ async function keywordFollowBrowser(userId, config, updateProgress, isCancelled 
       }
 
       const author = filteredAuthors[i];
-      
-      updateProgress(`Following @${author.username} (${i + 1}/${limit})`);
+      const username = String(author.username || '');
+
+      updateProgress(`Following @${username} (${i + 1}/${limit})`);
 
       if (!dryRun) {
-        const result = await browserAutomation.followUser(page, author.username);
-        
+        const result = await followUser(page, username);
+
         if (result.success) {
           followed.push({
-            username: author.username,
+            username,
             alreadyFollowing: result.alreadyFollowing || false,
-            matchedTweet: author.tweetText
+            matchedTweet: author.tweetText,
           });
         } else {
           failed.push({
-            username: author.username,
-            error: result.error
+            username,
+            error: result.error,
           });
         }
 
-        // Random delay to avoid rate limits (3-6 seconds)
-        await browserAutomation.randomDelay(3000, 6000);
+        await randomDelay(3000, 6000);
 
-        // Longer pause every 10 follows
         if ((i + 1) % 10 === 0) {
           updateProgress(`Pausing for safety (${i + 1}/${limit} completed)...`);
-          await browserAutomation.randomDelay(15000, 30000);
+          await randomDelay(15000, 30000);
         }
 
-        // Extended pause every 30 follows
         if ((i + 1) % 30 === 0) {
           updateProgress(`Extended pause (${i + 1}/${limit} completed)...`);
-          await browserAutomation.randomDelay(60000, 90000);
+          await randomDelay(60000, 90000);
         }
       } else {
         followed.push({
-          username: author.username,
+          username,
           matchedTweet: author.tweetText,
-          dryRun: true
+          dryRun: true,
         });
       }
     }
@@ -133,9 +157,8 @@ async function keywordFollowBrowser(userId, config, updateProgress, isCancelled 
       totalAuthorsFound: uniqueAuthors.length,
       totalProcessed: followed.length + failed.length,
       dryRun,
-      cancelled: isCancelled()
+      cancelled: isCancelled(),
     };
-
   } finally {
     await page.close();
   }

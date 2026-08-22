@@ -24,8 +24,8 @@ import { createBrowser, createPage, loginWithCookie } from '../../src/scrapers/f
 import { parseFlatProxy } from '../../src/scrapers/facebook/proxy.js';
 import { decrypt } from '../routes/facebookAccounts.js';
 import { checkAccountHealth } from './facebookHealth.js';
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const randomDelay = (min, max) => sleep(min + Math.random() * (max - min));
+const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
+const randomDelay = (/** @type {number} */ min, /** @type {number} */ max) => sleep(min + Math.random() * (max - min));
 
 const DEFAULT_MAX_CONCURRENCY = 4;
 const MAX_CONCURRENCY = 8;
@@ -48,21 +48,42 @@ export function buildUserDataDir(c_user) {
 }
 
 /**
+ * @typedef {import('puppeteer').Credentials} ProxyAuth
+ */
+
+/**
+ * @typedef {object} AccountContext
+ * @property {string} id
+ * @property {string} c_user
+ * @property {string} xs
+ * @property {string} userDataDir
+ * @property {string | null} proxyServer
+ * @property {ProxyAuth | null} proxyAuth
+ */
+
+/**
+ * @typedef {object} ResolveOptions
+ * @property {(account: Record<string, unknown>, options?: Record<string, unknown>) => Promise<Record<string, unknown>>} [checkAccountHealthImpl]
+ */
+
+/**
  * Resolve a stored FacebookAccount into the runtime context the pool needs.
  * Decrypts cookie and proxy, validates health, parses proxy.
  *
- * @param {Record<string, unknown>} account - Prisma FacebookAccount
- * @returns {Promise<{ id, c_user, xs, userDataDir, proxyServer, proxyAuth }|null>}
+ * @param {import('@prisma/client').FacebookAccount} account - Prisma FacebookAccount
+ * @param {ResolveOptions} [options]
+ * @returns {Promise<AccountContext | null>}
  */
 export async function resolveAccountContext(account, options = {}) {
   const healthCheck = options.checkAccountHealthImpl || checkAccountHealth;
-  const health = await healthCheck(account, { force: false });
+  const health = await healthCheck(/** @type {Record<string, unknown>} */ (account), { force: false });
   if (health.status !== 'active') return null;
 
   const cookiePayload = decrypt(account.encryptedCookie);
   if (!cookiePayload) return null;
 
-  let c_user, xs;
+  let c_user;
+  let xs;
   try {
     ({ c_user, xs } = JSON.parse(cookiePayload));
   } catch {
@@ -78,30 +99,45 @@ export async function resolveAccountContext(account, options = {}) {
       const desc = parseFlatProxy(proxyText);
       if (desc) {
         proxyServer = desc.server;
-        if (desc.username) proxyAuth = { username: desc.username, password: desc.password };
+        if (desc.username) proxyAuth = { username: desc.username, password: desc.password || '' };
       }
     }
   }
 
   return {
     id: account.id,
-    c_user,
-    xs,
-    userDataDir: buildUserDataDir(c_user),
+    c_user: String(c_user),
+    xs: String(xs),
+    userDataDir: buildUserDataDir(String(c_user)),
     proxyServer,
     proxyAuth,
   };
 }
 
 /**
+ * @typedef {object} BatchOptions
+ * @property {number} [maxConcurrency]
+ * @property {number | { min: number; max: number }} [delayBetweenLaunches]
+ * @property {string[]} [accountIds]
+ * @property {(opts: Record<string, unknown>) => Promise<import('puppeteer').Browser>} [launchImpl]
+ * @property {(page: import('puppeteer').Page, cookie: { c_user: string; xs: string }, options?: Record<string, unknown>) => Promise<void>} [loginImpl]
+ * @property {Record<string, unknown>} [loginOptions]
+ * @property {Record<string, unknown>} [resolveAccountContextOptions]
+ * @property {(account: import('@prisma/client').FacebookAccount, options?: ResolveOptions) => Promise<AccountContext | null>} [resolveAccountContextImpl]
+ */
+
+/**
+ * @typedef {object} AccountUsage
+ * @property {number} tasks
+ * @property {number} checkpoints
+ */
+
+/**
  * Run an array of tasks in parallel across a pool of live Facebook accounts.
  *
- * @param {Function[]} tasks - Each task is `async (page, accountContext) => result`
- * @param {Record<string, unknown>} options
- * @param {number} [options.maxConcurrency=4] - max concurrent browsers
- * @param {number|{min:number,max:number}} [options.delayBetweenLaunches=3-8s] - delay before each launch
- * @param {string[]} [options.accountIds] - account IDs to consider
- * @returns {Promise<{ results: any[], accountUsage: object }>}
+ * @param {((page: import('puppeteer').Page, ctx: AccountContext) => Promise<Record<string, unknown>>)[]} tasks
+ * @param {Partial<BatchOptions>} [options]
+ * @returns {Promise<{ results: Record<string, unknown>[]; accountUsage: Record<string, AccountUsage> }>}
  */
 export async function runBatch(tasks, options = {}) {
   const {
@@ -126,7 +162,7 @@ export async function runBatch(tasks, options = {}) {
   const concurrency = Math.max(1, Math.min(Number(maxConcurrency) || DEFAULT_MAX_CONCURRENCY, MAX_CONCURRENCY));
 
   const accounts = await prisma.facebookAccount.findMany({
-    where: { id: { in: accountIds } },
+    where: { id: { in: /** @type {string[]} */ (accountIds) } },
   });
 
   if (accounts.length === 0) {
@@ -135,14 +171,16 @@ export async function runBatch(tasks, options = {}) {
 
   // Build active account contexts (health checked + cookie/proxy decrypted)
   const resolver = resolveAccountContextImpl || resolveAccountContext;
-  const contexts = (await Promise.all(accounts.map((a) => resolver(a, resolveAccountContextOptions)))).filter(Boolean);
+  /** @type {AccountContext[]} */
+  const contexts = /** @type {AccountContext[]} */ ((await Promise.all(accounts.map((a) => resolver(/** @type {import('@prisma/client').FacebookAccount} */ (a), resolveAccountContextOptions)))).filter(Boolean));
 
   if (contexts.length === 0) {
     throw new Error('❌ No active Facebook accounts available for the pool');
   }
 
+  /** @type {Record<string, AccountUsage>} */
   const usage = {};
-  contexts.forEach((ctx) => { usage[ctx.id] = { tasks: 0, checkpoints: 0 }; });
+  contexts.forEach((/** @type {AccountContext} */ ctx) => { usage[ctx.id] = { tasks: 0, checkpoints: 0 }; });
 
   const delayMin = typeof delayBetweenLaunches === 'number' ? delayBetweenLaunches : DEFAULT_DELAY_MIN;
   const delayMax = typeof delayBetweenLaunches === 'number' ? delayBetweenLaunches : DEFAULT_DELAY_MAX;
@@ -163,15 +201,18 @@ export async function runBatch(tasks, options = {}) {
 
         for (let i = 0; i < attempts; i++) {
           const ctx = contexts[(startIndex + i) % contexts.length];
-          const browserOptions = { userDataDir: ctx.userDataDir };
+          const browserOptions = /** @type {Record<string, unknown>} */ ({ userDataDir: ctx.userDataDir });
           if (ctx.proxyServer) browserOptions.proxy = ctx.proxyServer;
           if (launchImpl) browserOptions.launchImpl = launchImpl;
 
+          /** @type {import('puppeteer').Browser | undefined} */
           let browser;
+          /** @type {import('puppeteer').Page | undefined} */
           let page;
           try {
             await randomDelay(delayMin, delayMax);
-            browser = await createBrowser(browserOptions);
+            const launchFn = launchImpl || createBrowser;
+            browser = await launchFn(/** @type {Record<string, unknown>} */ (browserOptions));
             page = await createPage(browser);
 
             if (ctx.proxyAuth) {
@@ -195,7 +236,7 @@ export async function runBatch(tasks, options = {}) {
 
             let pageUrl = '';
             try { pageUrl = page?.url?.() || ''; } catch { pageUrl = ''; }
-            const message = err?.message || '';
+            const message = err instanceof Error ? err.message : '';
             const lowerMessage = message.toLowerCase();
             const lowerUrl = pageUrl.toLowerCase();
             const isCheckpoint =

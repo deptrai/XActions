@@ -1,39 +1,53 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-import browserAutomation from '../../browserAutomation.js';
+import {
+  createPage,
+  navigateToTwitter,
+  checkAuthentication,
+  getFollowing,
+  getFollowers,
+  unfollowUser,
+  randomDelay,
+} from '../../browserAutomation.js';
 
+/**
+ * @typedef {object} UnfollowNonFollowersBrowserConfig
+ * @property {string} sessionCookie
+ * @property {string} username
+ * @property {number} [maxUsers]
+ * @property {number} [limit]
+ */
+
+/**
+ * @param {string} userId
+ * @param {UnfollowNonFollowersBrowserConfig} config
+ * @param {(message: string) => void} updateProgress
+ * @returns {Promise<Record<string, unknown>>}
+ */
 async function unfollowNonFollowersBrowser(userId, config, updateProgress) {
-  const page = await browserAutomation.createPage(config.sessionCookie);
-  
+  const page = await createPage(config.sessionCookie);
+
   try {
-    // Navigate and authenticate
-    await browserAutomation.navigateToTwitter(page);
-    
-    const isAuth = await browserAutomation.checkAuthentication(page);
+    await navigateToTwitter(page);
+
+    const isAuth = await checkAuthentication(page);
     if (!isAuth) {
       throw new Error('Session expired - please reconnect your X account');
     }
 
+    const maxUsers = config.maxUsers || 1000;
+
     updateProgress('Fetching your following list...');
-    const following = await browserAutomation.getFollowing(
-      page, 
-      config.username, 
-      config.maxUsers || 1000
-    );
+    const following = await getFollowing(config.sessionCookie, config.username, maxUsers);
 
     updateProgress(`Found ${following.length} accounts you follow`);
-    
+
     updateProgress('Fetching your followers list...');
-    const followers = await browserAutomation.getFollowers(
-      page, 
-      config.username, 
-      config.maxUsers || 1000
-    );
+    const followers = await getFollowers(config.sessionCookie, config.username, maxUsers);
 
     updateProgress(`Found ${followers.length} followers`);
 
-    // Find non-followers
-    const followerUsernames = new Set(followers.map(f => f.username));
-    const nonFollowers = following.filter(f => !followerUsernames.has(f.username));
+    const followerUsernames = new Set(followers.map((f) => String(f.username || '')));
+    const nonFollowers = following.filter((f) => !followerUsernames.has(String(f.username || '')));
 
     updateProgress(`Identified ${nonFollowers.length} accounts that don't follow you back`);
 
@@ -41,35 +55,36 @@ async function unfollowNonFollowersBrowser(userId, config, updateProgress) {
       return {
         success: true,
         unfollowed: [],
-        message: 'Everyone you follow also follows you back!'
+        message: 'Everyone you follow also follows you back!',
       };
     }
 
-    // Unfollow non-followers with rate limiting
+    /** @type {string[]} */
     const unfollowed = [];
+    /** @type {Record<string, unknown>[]} */
     const failed = [];
     const limit = config.limit || nonFollowers.length;
+    const total = Math.min(nonFollowers.length, limit);
 
-    for (let i = 0; i < Math.min(nonFollowers.length, limit); i++) {
+    for (let i = 0; i < total; i++) {
       const user = nonFollowers[i];
-      
-      updateProgress(`Unfollowing ${user.username} (${i + 1}/${Math.min(nonFollowers.length, limit)})`);
+      const username = String(user.username || '');
 
-      const result = await browserAutomation.unfollowUser(page, user.username);
-      
+      updateProgress(`Unfollowing ${username} (${i + 1}/${total})`);
+
+      const result = await unfollowUser(page, username);
+
       if (result.success) {
-        unfollowed.push(user.username);
+        unfollowed.push(username);
       } else {
-        failed.push({ username: user.username, error: result.error });
+        failed.push({ username, error: result.error });
       }
 
-      // Random delay to avoid rate limits (3-7 seconds)
-      await browserAutomation.randomDelay(3000, 7000);
+      await randomDelay(3000, 7000);
 
-      // Longer pause every 10 unfollows
       if ((i + 1) % 10 === 0) {
-        updateProgress(`Pausing for safety (${i + 1}/${Math.min(nonFollowers.length, limit)} completed)...`);
-        await browserAutomation.randomDelay(15000, 30000);
+        updateProgress(`Pausing for safety (${i + 1}/${total} completed)...`);
+        await randomDelay(15000, 30000);
       }
     }
 
@@ -77,10 +92,9 @@ async function unfollowNonFollowersBrowser(userId, config, updateProgress) {
       success: true,
       unfollowed,
       failed,
-      nonFollowers: nonFollowers.map(u => u.username),
-      totalProcessed: unfollowed.length + failed.length
+      nonFollowers: nonFollowers.map((u) => u.username),
+      totalProcessed: unfollowed.length + failed.length,
     };
-
   } finally {
     await page.close();
   }

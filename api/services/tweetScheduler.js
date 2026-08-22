@@ -24,17 +24,39 @@ const JITTER_MIN_MS = 5 * 60 * 1000;    // 5 min
 const JITTER_MAX_MS = 15 * 60 * 1000;   // 15 min
 
 /**
+ * @typedef {object} TweetResult
+ * @property {boolean} [success]
+ * @property {string} [error]
+ */
+
+/**
+ * @typedef {object} ScheduleSession
+ * @property {import('puppeteer').Page} page
+ * @property {import('puppeteer').Browser} [browser]
+ */
+
+/**
+ * @typedef {object} SchedulerDeps
+ * @property {(page: import('puppeteer').Page, schedule: import('@prisma/client').Schedule) => Promise<TweetResult>} [postExecutor]
+ * @property {(schedule: import('@prisma/client').Schedule) => Promise<ScheduleSession>} [sessionFactory]
+ * @property {import('@prisma/client').PrismaClient} [prismaClient]
+ */
+
+/**
  * Did the tweet executor actually publish?
  * postTweet / postThread resolve with `{ success: boolean, ... }` and do NOT throw on a
  * failed post (e.g. composer not found). Treat success:true as the only success signal.
  * A bare truthy result without `success` is treated as failure (defensive — never silently
  * mark a row completed when we cannot confirm the post landed).
+ * @param {TweetResult} result
  */
 function isTweetSuccess(result) {
   return !!result && result.success === true;
 }
 
-/** Extract a PII-free failure reason from a tweet result (no cookie/URL data). */
+/** Extract a PII-free failure reason from a tweet result (no cookie/URL data).
+ * @param {TweetResult} result
+ */
 function tweetFailureReason(result) {
   const reason = result?.error;
   return `tweet failed (success=${result?.success ?? false})${
@@ -44,12 +66,14 @@ function tweetFailureReason(result) {
 
 /**
  * Build a PII-free error string for persistence/logging.
- * Allowlist err.code / err.name ONLY — never persist raw err.message, which for
+ * Allowlist err.code / err.name ONLY — never persist raw (err instanceof Error ? err.message : String(err)), which for
  * Puppeteer/login errors on x.com can embed the auth_token cookie value (NFR3).
+ * @param {unknown} err
  */
 function safeErrorString(err) {
-  if (typeof err?.code === 'string' && err.code) return err.code;
-  if (typeof err?.name === 'string' && err.name && err.name !== 'Error') return err.name;
+  const e = /** @type {{ code?: unknown; name?: unknown }} */ (err);
+  if (typeof e.code === 'string' && e.code) return e.code;
+  if (typeof e.name === 'string' && e.name && e.name !== 'Error') return e.name;
   return 'execution error';
 }
 
@@ -57,6 +81,8 @@ function safeErrorString(err) {
  * Compute the next fire time for a recurring schedule.
  * Uses node-cron's internal parser via a transient schedule + a manual next-at computation.
  * Falls back to now + 1 hour if the expression cannot be advanced.
+ * @param {string} recurrenceCron
+ * @param {number} fromMs
  */
 function nextRecurrenceAt(recurrenceCron, fromMs) {
   if (!recurrenceCron || !cron.validate(recurrenceCron)) return null;
@@ -82,6 +108,11 @@ function nextRecurrenceAt(recurrenceCron, fromMs) {
 }
 
 // Check a single cron field against a value, handling *, */n, lists, and ranges.
+/**
+ * @param {string} expr
+ * @param {number} fieldIndex
+ * @param {number} value
+ */
 function cronPartMatches(expr, fieldIndex, value) {
   const part = expr.trim().split(/\s+/)[fieldIndex];
   if (!part) return fieldIndex >= 5; // 5-field cron: dow is last
@@ -114,17 +145,14 @@ function cronPartMatches(expr, fieldIndex, value) {
  * Pure-ish — injectable `deps` for browser-free tests (no vi.mock needed).
  *
  * @param {Date} now - Current time (injected for testability)
- * @param {Record<string, unknown>} [deps]
- * @param {Function} [deps.postExecutor] - (page, schedule) => result; defaults to postTweet/postThread
- * @param {Function} [deps.sessionFactory] - (schedule) => Promise<{page, browser}>; defaults to real browser flow
- * @param {Record<string, unknown>} [deps.prismaClient] - Prisma instance; defaults to module-level singleton
+ * @param {Partial<SchedulerDeps>} [deps]
  */
 export async function runDueTweets(now, deps = {}) {
   const {
     postExecutor = null,
     sessionFactory = null,
     prismaClient = prisma,
-  } = deps;
+  } = /** @type {SchedulerDeps} */ (deps);
 
   const dueSchedules = await prismaClient.schedule.findMany({
     where: {
@@ -171,8 +199,10 @@ export async function runDueTweets(now, deps = {}) {
       }
 
       // --- Operation record: scoped by userId, PII-free config ---
-      const emit = (payload) =>
+      /** @type {(payload: Record<string, unknown>) => void} */
+      const emit = (payload) => {
         global.io?.to(`user:${schedule.userId}`).emit('tweet:operation', payload);
+      };
 
       const operation = await prismaClient.operation.create({
         data: {
@@ -198,9 +228,11 @@ export async function runDueTweets(now, deps = {}) {
         status: 'running',
       });
 
+      /** @type {import('puppeteer').Browser | null} */
       let browser = null;
       try {
         // --- Acquire session (injectable for tests) ---
+        /** @type {import('puppeteer').Page} */
         let page;
         if (sessionFactory) {
           const session = await sessionFactory(schedule);
@@ -226,12 +258,13 @@ export async function runDueTweets(now, deps = {}) {
         }
 
         // --- Execute: reuse postTweet / postThread — do NOT reinvent ---
+        /** @type {(p: import('puppeteer').Page, sched: import('@prisma/client').Schedule) => Promise<TweetResult>} */
         const executor = postExecutor ?? ((p, sched) => {
-          const threadArr = sched.thread ? JSON.parse(sched.thread) : null;
-          if (threadArr && threadArr.length > 0) {
-            return postThread(p, [sched.content, ...threadArr]);
+          const threadArr = sched.thread ? JSON.parse(/** @type {string} */ (sched.thread)) : null;
+          if (threadArr && Array.isArray(threadArr) && threadArr.length > 0) {
+            return /** @type {Promise<TweetResult>} */ (postThread(p, [sched.content, ...threadArr]));
           }
-          return postTweet(p, sched.content);
+          return /** @type {Promise<TweetResult>} */ (postTweet(p, sched.content));
         });
 
         const result = await executor(page, schedule);
@@ -314,6 +347,7 @@ let schedulerStarted = false;
  * Recover schedules left in `running` by a crashed/killed process.
  * A fresh scheduler owns no in-flight rows, so any pre-existing `running`
  * row is stale → mark it failed (no blind retry).
+ * @param {import('@prisma/client').PrismaClient} [prismaClient]
  */
 export async function sweepStaleRunningTweets(prismaClient = prisma) {
   const swept = await prismaClient.schedule.updateMany({

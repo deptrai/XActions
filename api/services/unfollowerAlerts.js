@@ -16,15 +16,27 @@ import prisma from '../lib/prisma.js';
  * @author nichxbt
  */
 /**
+ * @typedef {object} FollowerScanResult
+ * @property {Record<string, unknown>[]} gained
+ * @property {Record<string, unknown>[]} lost
+ * @property {number} [totalFollowers]
+ * @property {string} [scanDate]
+ * @property {boolean} [isFirstScan]
+ */
+
+/**
  * Check scan results for notable events and send alerts
- * @param {Record<string, unknown>} io - Socket.IO server instance
+ * @param {import('socket.io').Server} io - Socket.IO server instance
  * @param {string} userId - XActions user ID
- * @param {Record<string, unknown>} scanResult - Result from followerScanner.runFollowerScan()
- * @returns {Promise<unknown[]>} Generated alerts
+ * @param {FollowerScanResult} scanResult - Result from followerScanner.runFollowerScan()
+ * @returns {Promise<Record<string, unknown>[]>} Generated alerts
  */
 export async function checkAndAlert(io, userId, scanResult) {
-  const { gained, lost, totalFollowers, scanDate } = scanResult;
-  const alerts = [];
+  const gained = /** @type {Record<string, unknown>[]} */ (scanResult.gained ?? []);
+  const lost = /** @type {Record<string, unknown>[]} */ (scanResult.lost ?? []);
+  const totalFollowers = /** @type {number} */ (scanResult.totalFollowers ?? 0);
+  const scanDate = /** @type {string | undefined} */ (scanResult.scanDate);
+  const alerts = /** @type {Record<string, unknown>[]} */ ([]);
 
   if (scanResult.isFirstScan) {
     // No alerts on first scan — no diff to compare
@@ -43,7 +55,7 @@ export async function checkAndAlert(io, userId, scanResult) {
   }
 
   // 2. Verified accounts that unfollowed
-  const verifiedUnfollowers = lost.filter(u => u.verified);
+  const verifiedUnfollowers = lost.filter((u) => Boolean(u.verified));
   if (verifiedUnfollowers.length > 0) {
     alerts.push({
       type: 'verified_unfollow',
@@ -57,7 +69,7 @@ export async function checkAndAlert(io, userId, scanResult) {
   // 3. High-profile unfollowers (>10k followers)
   // Note: We don't always have follower counts from the scrape,
   // but if we do, flag them
-  const highProfileUnfollowers = lost.filter(u => u.followerCount && u.followerCount > 10000);
+  const highProfileUnfollowers = lost.filter((u) => Number(u.followerCount) > 10000);
   if (highProfileUnfollowers.length > 0) {
     alerts.push({
       type: 'highprofile_unfollow',
@@ -137,6 +149,7 @@ export async function checkAndAlert(io, userId, scanResult) {
  * Deliver alert to user-configured webhook URL
  * @param {string} userId - XActions user ID
  * @param {Record<string, unknown>} payload - Alert payload
+ * @returns {Promise<void>}
  */
 async function deliverWebhook(userId, payload) {
   try {
@@ -164,7 +177,7 @@ async function deliverWebhook(userId, payload) {
       console.log(`📨 Webhook delivered for user ${userId}`);
     }
   } catch (error) {
-    console.warn(`⚠️ Webhook delivery error for user ${userId}:`, error.message);
+    console.warn(`⚠️ Webhook delivery error for user ${userId}:`, (error instanceof Error ? error.message : String(error)));
   }
 }
 
@@ -172,6 +185,7 @@ async function deliverWebhook(userId, payload) {
  * Schedule management
  */
 
+/** @type {Record<string, number>} */
 const INTERVAL_MS = {
   hourly: 60 * 60 * 1000,
   every6h: 6 * 60 * 60 * 1000,
@@ -181,8 +195,8 @@ const INTERVAL_MS = {
 /**
  * Set or update auto-scan schedule
  * @param {string} userId - XActions user ID
- * @param {string} interval - 'hourly', 'every6h', 'daily'
- * @param {string} [webhookUrl] - Optional webhook URL for alerts
+ * @param {'hourly' | 'every6h' | 'daily'} interval - 'hourly', 'every6h', 'daily'
+ * @param {string | null} [webhookUrl] - Optional webhook URL for alerts
  * @returns {Promise<Record<string, unknown>>} Schedule record
  */
 export async function setSchedule(userId, interval, webhookUrl = null) {
@@ -216,7 +230,7 @@ export async function setSchedule(userId, interval, webhookUrl = null) {
 /**
  * Stop auto-scanning for a user
  * @param {string} userId - XActions user ID
- * @returns {Object|null} Updated schedule or null
+ * @returns {Promise<Record<string, unknown> | null>} Updated schedule or null
  */
 export async function stopSchedule(userId) {
   try {
@@ -235,7 +249,7 @@ export async function stopSchedule(userId) {
 /**
  * Get current schedule for a user
  * @param {string} userId - XActions user ID
- * @returns {Object|null} Schedule record
+ * @returns {Promise<Record<string, unknown> | null>} Schedule record
  */
 export async function getSchedule(userId) {
   return prisma.unfollowerSchedule.findUnique({
@@ -246,7 +260,7 @@ export async function getSchedule(userId) {
 /**
  * Get all active schedules that are due to run
  * Used by the scheduler to find jobs to process
- * @returns {Promise<unknown[]>} Schedules due for execution
+ * @returns {Promise<Record<string, unknown>[]>} Schedules due for execution
  */
 export async function getDueSchedules() {
   return prisma.unfollowerSchedule.findMany({
@@ -260,6 +274,7 @@ export async function getDueSchedules() {
 /**
  * Mark a schedule as just executed and set next run time
  * @param {string} userId - XActions user ID
+ * @returns {Promise<void>}
  */
 export async function markScheduleExecuted(userId) {
   const schedule = await prisma.unfollowerSchedule.findUnique({
@@ -268,7 +283,8 @@ export async function markScheduleExecuted(userId) {
 
   if (!schedule) return;
 
-  const intervalMs = INTERVAL_MS[schedule.interval] || INTERVAL_MS.daily;
+  const interval = /** @type {string} */ (schedule.interval);
+  const intervalMs = INTERVAL_MS[interval] || INTERVAL_MS.daily;
 
   await prisma.unfollowerSchedule.update({
     where: { userId },

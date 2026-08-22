@@ -1,41 +1,68 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-import browserAutomation from '../../browserAutomation.js';
+import {
+  createPage,
+  navigateToTwitter,
+  checkAuthentication,
+  getUserTweets,
+  searchTweets,
+  likePost,
+  randomDelay,
+} from '../../browserAutomation.js';
+
+/**
+ * @typedef {object} AutoLikeBrowserConfig
+ * @property {string} sessionCookie
+ * @property {string} [query]
+ * @property {string} [targetUsername]
+ * @property {number} [maxLikes]
+ * @property {boolean} [dryRun]
+ */
 
 /**
  * Auto-like tweets using browser automation
  * @param {string} userId - User ID for the operation
- * @param {object} config - Configuration including sessionCookie, query/targetUsername, etc.
- * @param {function} updateProgress - Callback to update job progress
- * @param {function} isCancelled - Function to check if job is cancelled
+ * @param {AutoLikeBrowserConfig} config - Configuration
+ * @param {(message: string) => void} updateProgress - Callback to update job progress
+ * @param {() => boolean} [isCancelled] - Function to check if job is cancelled
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function autoLikeBrowser(userId, config, updateProgress, isCancelled = () => false) {
-  const page = await browserAutomation.createPage(config.sessionCookie);
-  
+  const page = await createPage(config.sessionCookie);
+
   try {
-    await browserAutomation.navigateToTwitter(page);
-    
-    const isAuth = await browserAutomation.checkAuthentication(page);
+    await navigateToTwitter(page);
+
+    const isAuth = await checkAuthentication(page);
     if (!isAuth) {
       throw new Error('Session expired - please reconnect your X account');
     }
 
-    const { 
-      query,           // Search query for tweets
-      targetUsername,  // Or target a specific user's tweets
+    const {
+      query,
+      targetUsername,
       maxLikes = 50,
-      dryRun = false 
+      dryRun = false,
     } = config;
 
+    /** @type {Record<string, unknown>[]} */
     let tweets = [];
-    
+
     if (targetUsername) {
-      // Navigate to user's profile and get their tweets
       updateProgress(`Fetching tweets from @${targetUsername}...`);
-      tweets = await getUserTweets(page, targetUsername, maxLikes);
+      tweets = await getUserTweets(config.sessionCookie, targetUsername, maxLikes);
     } else if (query) {
-      // Search for tweets
       updateProgress(`Searching for tweets matching "${query}"...`);
-      tweets = await browserAutomation.searchTweets(page, query, maxLikes);
+      const result = await searchTweets(config.sessionCookie, query, { limit: maxLikes });
+      const items = /** @type {Record<string, unknown>[]} */ (result.items || []);
+      tweets = items.map((t) => {
+        const author = /** @type {Record<string, unknown>} */ (t.author || {});
+        return {
+          id: String(t.id || ''),
+          text: String(t.text || ''),
+          url: String(t.url || ''),
+          username: String(author.username || ''),
+        };
+      });
     } else {
       throw new Error('Either query or targetUsername must be provided');
     }
@@ -46,11 +73,13 @@ async function autoLikeBrowser(userId, config, updateProgress, isCancelled = () 
       return {
         success: true,
         liked: [],
-        message: 'No tweets found to like'
+        message: 'No tweets found to like',
       };
     }
 
+    /** @type {Record<string, unknown>[]} */
     const liked = [];
+    /** @type {Record<string, unknown>[]} */
     const failed = [];
     const limit = Math.min(tweets.length, maxLikes);
 
@@ -61,39 +90,38 @@ async function autoLikeBrowser(userId, config, updateProgress, isCancelled = () 
       }
 
       const tweet = tweets[i];
-      
+
       updateProgress(`Liking tweet ${i + 1}/${limit} from @${tweet.username}`);
 
-      if (!dryRun && tweet.url) {
-        const result = await browserAutomation.likePost(page, tweet.url);
-        
+      const tweetUrl = String(tweet.url || '');
+      if (!dryRun && tweetUrl) {
+        const result = await likePost(page, tweetUrl);
+
         if (result.success) {
           liked.push({
-            url: tweet.url,
+            url: tweetUrl,
             username: tweet.username,
-            alreadyLiked: result.alreadyLiked || false
+            alreadyLiked: result.alreadyLiked || false,
           });
         } else {
           failed.push({
-            url: tweet.url,
+            url: tweetUrl,
             username: tweet.username,
-            error: result.error
+            error: result.error,
           });
         }
 
-        // Random delay to avoid rate limits (2-5 seconds)
-        await browserAutomation.randomDelay(2000, 5000);
+        await randomDelay(2000, 5000);
 
-        // Longer pause every 10 likes
         if ((i + 1) % 10 === 0) {
           updateProgress(`Pausing for safety (${i + 1}/${limit} completed)...`);
-          await browserAutomation.randomDelay(10000, 20000);
+          await randomDelay(10000, 20000);
         }
       } else if (dryRun) {
         liked.push({
-          url: tweet.url,
+          url: tweetUrl,
           username: tweet.username,
-          dryRun: true
+          dryRun: true,
         });
       }
     }
@@ -104,57 +132,11 @@ async function autoLikeBrowser(userId, config, updateProgress, isCancelled = () 
       failed,
       totalProcessed: liked.length + failed.length,
       dryRun,
-      cancelled: isCancelled()
+      cancelled: isCancelled(),
     };
-
   } finally {
     await page.close();
   }
-}
-
-/**
- * Get tweets from a specific user's timeline
- */
-async function getUserTweets(page, username, limit = 50) {
-  const tweets = [];
-  
-  await page.goto(`https://x.com/${username}`, { 
-    waitUntil: 'networkidle2' 
-  });
-
-  let scrollAttempts = 0;
-  const maxScrolls = Math.ceil(limit / 10);
-
-  while (tweets.length < limit && scrollAttempts < maxScrolls) {
-    const newTweets = await page.evaluate((targetUsername) => {
-      const tweetElements = document.querySelectorAll('article[data-testid="tweet"]');
-      return Array.from(tweetElements).map(tweet => {
-        const tweetLink = tweet.querySelector('a[href*="/status/"]');
-        const tweetUrl = tweetLink?.href;
-        const tweetId = tweetUrl?.split('/status/')[1]?.split('?')[0];
-        const tweetText = tweet.querySelector('[data-testid="tweetText"]')?.textContent;
-        
-        return {
-          username: targetUsername,
-          text: tweetText,
-          url: tweetUrl,
-          id: tweetId
-        };
-      }).filter(t => t.url);
-    }, username);
-
-    newTweets.forEach(tweet => {
-      if (!tweets.find(t => t.id === tweet.id)) {
-        tweets.push(tweet);
-      }
-    });
-
-    await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
-    await browserAutomation.randomDelay(2000, 3000);
-    scrollAttempts++;
-  }
-
-  return tweets.slice(0, limit);
 }
 
 export { autoLikeBrowser };

@@ -1,9 +1,29 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../../lib/prisma.js';
 import { getTwitterClient } from '../../routes/twitter.js';
+
+/**
+ * @typedef {object} AutoLikeConfig
+ * @property {string} [query]
+ * @property {string} [targetUsername]
+ * @property {number} [maxLikes]
+ * @property {boolean} [dryRun]
+ */
+
+/**
+ * @typedef {object} ProcessAutoLikeOptions
+ * @property {string} operationId
+ * @property {string} userId
+ * @property {AutoLikeConfig} config
+ */
+
 /**
  * Auto-like tweets based on search query or target user's tweets
  * Uses Twitter API when OAuth tokens available
+ *
+ * @param {ProcessAutoLikeOptions} options
+ * @param {() => boolean} [isCancelled]
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function processAutoLike({ operationId, userId, config }, isCancelled = () => false) {
   try {
@@ -20,26 +40,30 @@ async function processAutoLike({ operationId, userId, config }, isCancelled = ()
       throw new Error('User not found or Twitter not connected');
     }
 
-    const client = await getTwitterClient(user);
-    const { 
-      query,           // Search query for tweets
-      targetUsername,  // Or target a specific user's tweets
+    const client = /** @type {import('axios').AxiosInstance} */ (await getTwitterClient(user));
+    const {
+      query,
+      targetUsername,
       maxLikes = 50,
-      dryRun = false 
+      dryRun = false
     } = config;
 
     const meResponse = await client.get('/users/me');
-    const myTwitterId = meResponse.data.data.id;
+    const meData = /** @type {TwitterApiEnvelope} */ (meResponse.data);
+    const meInner = /** @type {Record<string, unknown>} */ (meData.data);
+    const myTwitterId = String(meInner.id);
 
+    /** @type {TwitterApiTweet[]} */
     let tweets = [];
     let likedCount = 0;
     const likedTweets = [];
     const errors = [];
 
     if (targetUsername) {
-      // Get tweets from a specific user
       const userResponse = await client.get(`/users/by/username/${targetUsername}`);
-      const targetUserId = userResponse.data.data.id;
+      const userData = /** @type {TwitterApiEnvelope} */ (userResponse.data);
+      const userInner = /** @type {Record<string, unknown>} */ (userData.data);
+      const targetUserId = String(userInner.id);
 
       const tweetsResponse = await client.get(`/users/${targetUserId}/tweets`, {
         params: {
@@ -47,9 +71,9 @@ async function processAutoLike({ operationId, userId, config }, isCancelled = ()
           'tweet.fields': 'created_at,author_id'
         }
       });
-      tweets = tweetsResponse.data.data || [];
+      const tweetsData = /** @type {TwitterApiEnvelope} */ (tweetsResponse.data);
+      tweets = /** @type {TwitterApiTweet[]} */ (tweetsData.data || []);
     } else if (query) {
-      // Search for tweets
       const searchResponse = await client.get('/tweets/search/recent', {
         params: {
           query,
@@ -57,7 +81,8 @@ async function processAutoLike({ operationId, userId, config }, isCancelled = ()
           'tweet.fields': 'created_at,author_id'
         }
       });
-      tweets = searchResponse.data.data || [];
+      const searchData = /** @type {TwitterApiEnvelope} */ (searchResponse.data);
+      tweets = /** @type {TwitterApiTweet[]} */ (searchData.data || []);
     } else {
       throw new Error('Either query or targetUsername must be provided');
     }
@@ -76,14 +101,13 @@ async function processAutoLike({ operationId, userId, config }, isCancelled = ()
             tweet_id: tweet.id
           });
           likedCount++;
-          
+
           likedTweets.push({
             id: tweet.id,
             text: tweet.text?.substring(0, 100)
           });
 
-          // Rate limiting: wait 2-3 seconds between likes
-          await new Promise(resolve => 
+          await new Promise(resolve =>
             setTimeout(resolve, 2000 + Math.random() * 1000)
           );
         } else {
@@ -94,9 +118,10 @@ async function processAutoLike({ operationId, userId, config }, isCancelled = ()
           });
         }
       } catch (error) {
+        const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
         errors.push({
           tweetId: tweet.id,
-          error: error.message
+          error: message
         });
       }
     }
@@ -111,7 +136,7 @@ async function processAutoLike({ operationId, userId, config }, isCancelled = ()
       cancelled: isCancelled()
     };
   } catch (error) {
-    console.error('❌ Auto-like error:', error);
+    console.error('❌ Auto-like error:', error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error));
     throw error;
   }
 }

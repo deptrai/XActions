@@ -21,17 +21,32 @@ export function calculateReadingTime(texts) {
 }
 
 /**
+ * @typedef {object} SummarizeThreadOptions
+ * @property {{ text: string }[]} tweets - Array of tweet objects with text
+ * @property {string} [author] - Thread author username
+ * @property {string} [apiKey] - OpenRouter API key (falls back to env)
+ * @property {string} [model] - Model to use
+ */
+
+/**
+ * @typedef {object} ThreadSummary
+ * @property {string | null} summary
+ * @property {string[]} keyPoints
+ * @property {string} readingTime
+ * @property {boolean} [available]
+ * @property {string} [message]
+ */
+
+/**
  * Summarize a thread using OpenRouter AI
- * 
- * @param {object} options
- * @param {Array<{text: string}>} options.tweets - Array of tweet objects with text
- * @param {string} [options.author] - Thread author username
- * @param {string} [options.apiKey] - OpenRouter API key (falls back to env)
- * @param {string} [options.model] - Model to use
- * @returns {Promise<{ summary: string, keyPoints: string[], readingTime: string }>}
+ * @param {Partial<SummarizeThreadOptions>} [options]
+ * @returns {Promise<ThreadSummary>}
  */
 export async function summarizeThread(options = {}) {
-  const { tweets, author, apiKey: providedKey, model } = options;
+  const tweets = options.tweets ?? [];
+  const author = options.author;
+  const providedKey = options.apiKey;
+  const model = options.model;
 
   if (!tweets || tweets.length === 0) {
     throw new Error('No tweets provided for summarization');
@@ -130,7 +145,7 @@ Rules:
       available: true,
     };
   } catch (error) {
-    console.error('❌ Thread summarization error:', error.message);
+    console.error('❌ Thread summarization error:', (error instanceof Error ? error.message : String(error)));
     return {
       summary: null,
       keyPoints: [],

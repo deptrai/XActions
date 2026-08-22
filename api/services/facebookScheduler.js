@@ -17,12 +17,22 @@ const JITTER_MIN_MS = 5 * 60 * 1000;  // 5 min
 const JITTER_MAX_MS = 15 * 60 * 1000; // 15 min
 
 /**
+ * @typedef {object} PostResult
+ * @property {boolean} [ok]
+ * @property {number} [succeeded]
+ * @property {number} [failed]
+ * @property {Record<string, unknown>[]} [results]
+ * @property {string} [error]
+ */
+
+/**
  * Did the post executor actually publish?
  *
  * `createFacebookPost` resolves with a runGuardedBatch result
  * (`{ succeeded, failed, results, ... }`) and does NOT throw on a failed post.
  * Treat as success only when at least one item succeeded and none failed.
  * A bare truthy/`{ ok:true }` (injected test executors) is also accepted.
+ * @param {PostResult} result
  */
 function isPostSuccess(result) {
   if (!result) return false;
@@ -34,11 +44,14 @@ function isPostSuccess(result) {
   return result.ok !== false;
 }
 
-/** Extract a PII-free failure reason from a batch result (no cookie/URL data). */
+/** Extract a PII-free failure reason from a batch result (no cookie/URL data).
+ * @param {PostResult} result
+ */
 // Stryker disable BlockStatement,LogicalOperator: error message is scrubbed by safeErrorString (NFR3) — mutants are equivalent in this context
 function postFailureReason(result) {
-  const first = Array.isArray(result?.results)
-    ? result.results.find((r) => r && r.ok === false)
+  const results = /** @type {Record<string, unknown>[]} */ (result?.results);
+  const first = Array.isArray(results)
+    ? results.find((r) => r && r.ok === false)
     : null;
   const reason = first?.error || result?.error;
   // Only surface short, structured reasons; never echo a raw message that could carry secrets.
@@ -49,15 +62,30 @@ function postFailureReason(result) {
 
 /**
  * Build a PII-free error string for persistence/logging.
- * Allowlist err.code / err.name ONLY — never persist raw err.message, which for
+ * Allowlist err.code / err.name ONLY — never persist raw (err instanceof Error ? err.message : String(err)), which for
  * Puppeteer/login errors can embed cookie or URL values (NFR3).
+ * @param {unknown} err
  */
 function safeErrorString(err) {
+  const e = /** @type {{ code?: unknown; name?: unknown }} */ (err);
   // Stryker disable next-line OptionalChaining: err is always an Error object from catch block, never null
-  if (typeof err?.code === 'string' && err.code) return err.code;
-  if (typeof err?.name === 'string' && err.name && err.name !== 'Error') return err.name;
+  if (typeof e.code === 'string' && e.code) return e.code;
+  if (typeof e.name === 'string' && e.name && e.name !== 'Error') return e.name;
   return 'execution error';
 }
+
+/**
+ * @typedef {object} ScheduleSession
+ * @property {import('puppeteer').Page} page
+ * @property {import('puppeteer').Browser} [browser]
+ */
+
+/**
+ * @typedef {object} SchedulerDeps
+ * @property {(page: import('puppeteer').Page, content: string) => Promise<PostResult>} [postExecutor]
+ * @property {(schedule: import('@prisma/client').Schedule) => Promise<ScheduleSession>} [sessionFactory]
+ * @property {import('@prisma/client').PrismaClient} [prismaClient]
+ */
 
 /**
  * Execute all due scheduled posts for the current tick.
@@ -65,17 +93,14 @@ function safeErrorString(err) {
  * Pure-ish — injectable `deps` for browser-free tests (no vi.mock needed).
  *
  * @param {Date} now - Current time (injected for testability)
- * @param {Record<string, unknown>} [deps]
- * @param {Function} [deps.postExecutor] - (page, content) => result; defaults to createFacebookPost
- * @param {Function} [deps.sessionFactory] - (schedule) => Promise<{page, browser}>; defaults to real browser flow
- * @param {Record<string, unknown>} [deps.prismaClient] - Prisma instance; defaults to module-level singleton
+ * @param {Partial<SchedulerDeps>} [deps]
  */
 export async function runDueSchedules(now, deps = {}) {
   const {
     postExecutor = null,
     sessionFactory = null,
     prismaClient = prisma,
-  } = deps;
+  } = /** @type {SchedulerDeps} */ (deps);
 
   const dueSchedules = await prismaClient.schedule.findMany({
     where: {
@@ -124,8 +149,10 @@ export async function runDueSchedules(now, deps = {}) {
       }
 
       // --- Operation record (AC8): scoped by userId, PII-free config ---
-      const emit = (payload) =>
+      /** @type {(payload: Record<string, unknown>) => void} */
+      const emit = (payload) => {
         global.io?.to(`user:${schedule.userId}`).emit('facebook:operation', payload);
+      };
 
       const operation = await prismaClient.operation.create({
         data: {
@@ -150,9 +177,11 @@ export async function runDueSchedules(now, deps = {}) {
         status: 'running',
       });
 
+      /** @type {import('puppeteer').Browser | null} */
       let browser = null;
       try {
         // --- Acquire session (injectable for tests) ---
+        /** @type {import('puppeteer').Page} */
         let page;
         if (sessionFactory) {
           const session = await sessionFactory(schedule);
@@ -160,7 +189,8 @@ export async function runDueSchedules(now, deps = {}) {
           browser = session.browser ?? null;
         } else {
           // Resolve FacebookAccount — reuse SAME decrypt path as /api/facebook/accounts (NFR3)
-          let cookie;
+          /** @type {{ c_user: string; xs: string } | null} */
+          let cookie = null;
           if (schedule.facebookAccountId) {
             cookie = await resolveAccountCookie(schedule.userId, schedule.facebookAccountId);
           } else {
@@ -180,6 +210,7 @@ export async function runDueSchedules(now, deps = {}) {
         }
 
         // --- Execute post: reuse createFacebookPost — do NOT reinvent (REUSE-FIRST mandate) ---
+        /** @type {(p: import('puppeteer').Page, content: string) => Promise<PostResult>} */
         const executor =
           postExecutor ??
           ((p, content) => createFacebookPost(p, content, { dryRun: false }));
@@ -210,8 +241,8 @@ export async function runDueSchedules(now, deps = {}) {
         console.log(`✅ Schedule ${schedule.id} executed for user ${schedule.userId}`);
       } catch (err) {
         // P6: PII-free error string — allowlist err.code/err.name ONLY; never persist raw
-        // err.message (Puppeteer/login errors can embed cookie/URL values → NFR3 leak).
-        const safeError = safeErrorString(err);
+        // (err instanceof Error ? err.message : String(err)) (Puppeteer/login errors can embed cookie/URL values → NFR3 leak).
+        const safeError = safeErrorString(/** @type {Error} */ (err));
         const executedAt = new Date();
 
         // status:failed + no retry — next tick's pending filter excludes this schedule (AC7)
@@ -239,7 +270,7 @@ export async function runDueSchedules(now, deps = {}) {
       }
     } catch (rowErr) {
       // P4: a failure in claim / count / operation.create must not abort remaining due rows.
-      console.error(`❌ Scheduler row ${schedule.id} aborted:`, safeErrorString(rowErr));
+      console.error(`❌ Scheduler row ${schedule.id} aborted:`, safeErrorString(/** @type {Error} */ (rowErr)));
     }
   }
 }
@@ -251,6 +282,7 @@ let schedulerStarted = false;
  * Recover schedules left in `running` by a crashed/killed process.
  * A fresh scheduler owns no in-flight rows, so any pre-existing `running`
  * row is stale → mark it failed (no blind retry, AC7).
+ * @param {import('@prisma/client').PrismaClient} [prismaClient]
  */
 export async function sweepStaleRunning(prismaClient = prisma) {
   const swept = await prismaClient.schedule.updateMany({
@@ -284,7 +316,7 @@ export function startFacebookScheduler() {
 
   // Crash recovery: clear stale `running` rows from a prior process before ticking.
   sweepStaleRunning().catch((err) =>
-    console.error('❌ Facebook scheduler startup sweep failed:', safeErrorString(err)),
+    console.error('❌ Facebook scheduler startup sweep failed:', safeErrorString(/** @type {Error} */ (err))),
   );
 
   cron.schedule('* * * * *', async () => {
@@ -292,7 +324,7 @@ export function startFacebookScheduler() {
       await runDueSchedules(new Date());
     } catch (err) {
       // Never crash the cron process on a tick error
-      console.error('❌ Facebook scheduler tick error:', safeErrorString(err));
+      console.error('❌ Facebook scheduler tick error:', safeErrorString(/** @type {Error} */ (err)));
     }
   });
 

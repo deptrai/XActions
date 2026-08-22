@@ -34,7 +34,7 @@ export async function resolve(authCookie, userId) {
   }
 
   // Stored account path — look up and decrypt server-side.
-  const accountId = authCookie.accountId;
+  const accountId = /** @type {string | undefined} */ (authCookie.accountId);
   if (accountId) {
     // Enforce ownership at the query layer when userId is provided.
     // If userId is not provided, we cannot safely resolve accountId (MCP tools
@@ -47,14 +47,14 @@ export async function resolve(authCookie, userId) {
       select: { userId: true, encryptedCookie: true },
     });
     if (!account) {
-      const err = new Error('Facebook account not found');
+      const err = /** @type {Error & { code?: string }} */ (new Error('Facebook account not found'));
       err.code = 'ACCOUNT_NOT_FOUND';
       throw err;
     }
 
     const decrypted = decrypt(account.encryptedCookie);
     if (!decrypted) {
-      const err = new Error('Failed to decrypt stored account cookie');
+      const err = /** @type {Error & { code?: string }} */ (new Error('Failed to decrypt stored account cookie'));
       err.code = 'ACCOUNT_DECRYPT_FAILED';
       throw err;
     }

@@ -27,6 +27,41 @@ const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY_MS = 1000; // 1 second
 const WEBHOOK_TIMEOUT_MS = 10000; // 10 seconds
 
+/**
+ * @typedef {object} PaymentDetails
+ * @property {string} price
+ * @property {string} operation
+ * @property {string} payerAddress
+ * @property {string} network
+ * @property {string | null} [transactionHash]
+ * @property {string | null} [settlementId]
+ * @property {Record<string, unknown>} [metadata]
+ */
+
+/**
+ * @typedef {object} PaymentEventData
+ * @property {string} amount
+ * @property {number} amountCents
+ * @property {string} currency
+ * @property {string} operation
+ * @property {string} operationCategory
+ * @property {string} payer
+ * @property {string | null} payerShort
+ * @property {string} network
+ * @property {string} networkName
+ * @property {string | null} transactionHash
+ * @property {string | null} settlementId
+ * @property {Record<string, unknown>} metadata
+ */
+
+/**
+ * @typedef {object} WebhookResult
+ * @property {boolean} success
+ * @property {number} [attempts]
+ * @property {string | null} [error]
+ * @property {number} [statusCode]
+ */
+
 // Event types
 export const PAYMENT_EVENTS = {
   RECEIVED: 'payment.received',
@@ -41,7 +76,7 @@ const deliveryLog = {
   successful: 0,
   failed: 0,
   retried: 0,
-  recentDeliveries: [], // Last 100 deliveries
+  recentDeliveries: /** @type {Record<string, unknown>[]} */ ([]), // Last 100 deliveries
 };
 
 /**
@@ -64,7 +99,7 @@ function generateSignature(payload, secret, timestamp) {
  * Create a payment event payload
  * 
  * @param {string} eventType - One of PAYMENT_EVENTS
- * @param {Record<string, unknown>} payment - Payment details
+ * @param {PaymentDetails} payment - Payment details
  * @returns {Record<string, unknown>} Formatted event payload
  */
 function createEventPayload(eventType, payment) {
@@ -117,12 +152,12 @@ function parseAmountToCents(price) {
  * @returns {string} Network name
  */
 function getNetworkName(network) {
-  const networks = {
+  const networks = /** @type {Record<string, string>} */ ({
     'eip155:8453': 'Base',
     'eip155:84532': 'Base Sepolia (Testnet)',
     'eip155:1': 'Ethereum',
     'eip155:42161': 'Arbitrum One',
-  };
+  });
   return networks[network] || network || 'Unknown';
 }
 
@@ -155,7 +190,7 @@ async function fetchWithTimeout(url, options, timeout = WEBHOOK_TIMEOUT_MS) {
  * @param {string} url - Webhook URL
  * @param {Record<string, unknown>} payload - Event payload
  * @param {Record<string, unknown>} options - Additional options
- * @returns {Promise<{success: boolean, attempts: number, error?: string}>}
+ * @returns {Promise<WebhookResult>}
  */
 async function sendWithRetry(url, payload, options = {}) {
   const payloadString = JSON.stringify(payload);
@@ -164,14 +199,17 @@ async function sendWithRetry(url, payload, options = {}) {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const timestamp = new Date().toISOString();
-      const headers = {
+      const event = /** @type {string} */ (payload.event);
+      const eventId = /** @type {string} */ (payload.id);
+      const extraHeaders = /** @type {Record<string, string>} */ (options.headers || {});
+      const headers = /** @type {Record<string, string>} */ ({
         'Content-Type': 'application/json',
         'User-Agent': 'XActions-Webhook/1.0',
-        'X-Webhook-Event': payload.event,
-        'X-Webhook-ID': payload.id,
+        'X-Webhook-Event': event,
+        'X-Webhook-ID': eventId,
         'X-Webhook-Timestamp': timestamp,
-        ...options.headers,
-      };
+        ...extraHeaders,
+      });
       
       // Add signature if secret is configured
       if (WEBHOOK_SECRET) {
@@ -201,7 +239,7 @@ async function sendWithRetry(url, payload, options = {}) {
       
       lastError = `HTTP ${response.status}`;
     } catch (err) {
-      lastError = err.name === 'AbortError' ? 'Timeout' : err.message;
+      lastError = err instanceof Error ? (err.name === 'AbortError' ? 'Timeout' : err.message) : String(err);
     }
     
     // Exponential backoff before retry
@@ -219,7 +257,7 @@ async function sendWithRetry(url, payload, options = {}) {
  * Log delivery result
  * 
  * @param {string} destination - Webhook destination type
- * @param {Record<string, unknown>} result - Delivery result
+ * @param {WebhookResult} result - Delivery result
  * @param {Record<string, unknown>} payload - Original payload
  */
 function logDelivery(destination, result, payload) {
@@ -227,10 +265,11 @@ function logDelivery(destination, result, payload) {
   
   if (result.success) {
     deliveryLog.successful++;
-    console.log(`✅ Webhook delivered to ${destination} (${result.attempts} attempt${result.attempts > 1 ? 's' : ''})`);
+    const attempts = result.attempts ?? 0;
+    console.log(`✅ Webhook delivered to ${destination} (${attempts} attempt${attempts > 1 ? 's' : ''})`);
   } else {
     deliveryLog.failed++;
-    console.error(`❌ Webhook delivery to ${destination} failed after ${result.attempts} attempts: ${result.error}`);
+    console.error(`❌ Webhook delivery to ${destination} failed after ${result.attempts ?? 0} attempts: ${result.error}`);
   }
   
   // Keep last 100 deliveries
@@ -253,7 +292,7 @@ function logDelivery(destination, result, payload) {
  * Send payment notification to custom webhook URL
  * 
  * @param {Record<string, unknown>} payload - Event payload
- * @returns {Promise<{success: boolean}>}
+ * @returns {Promise<WebhookResult>}
  */
 async function sendCustomWebhook(payload) {
   if (!WEBHOOK_URL) return { success: false, error: 'Not configured' };
@@ -267,32 +306,34 @@ async function sendCustomWebhook(payload) {
  * Send payment notification to Discord webhook
  * 
  * @param {Record<string, unknown>} payload - Event payload
- * @returns {Promise<{success: boolean}>}
+ * @returns {Promise<WebhookResult>}
  */
 async function sendDiscordNotification(payload) {
   if (!DISCORD_WEBHOOK) return { success: false, error: 'Not configured' };
   
-  const data = payload.data;
-  const isTestnet = data.network?.includes('84532') || data.networkName?.includes('Testnet');
-  
+  const data = /** @type {PaymentEventData} */ (payload.data);
+  const source = /** @type {Record<string, string>} */ (payload.source);
+  const event = /** @type {string} */ (payload.event);
+  const isTestnet = data.network.includes('84532') || data.networkName.includes('Testnet');
+
   // Color coding by event type and network
-  const colors = {
+  const colors = /** @type {Record<string, number>} */ ({
     [PAYMENT_EVENTS.RECEIVED]: isTestnet ? 0x3498db : 0x00ff00, // Blue for testnet, Green for mainnet
     [PAYMENT_EVENTS.SETTLED]: 0x2ecc71,   // Emerald
     [PAYMENT_EVENTS.FAILED]: 0xe74c3c,    // Red
     [PAYMENT_EVENTS.VERIFICATION_FAILED]: 0xe67e22, // Orange
-  };
-  
-  const titles = {
+  });
+
+  const titles = /** @type {Record<string, string>} */ ({
     [PAYMENT_EVENTS.RECEIVED]: '💰 Payment Received',
     [PAYMENT_EVENTS.SETTLED]: '✅ Payment Settled',
     [PAYMENT_EVENTS.FAILED]: '❌ Payment Failed',
     [PAYMENT_EVENTS.VERIFICATION_FAILED]: '⚠️ Verification Failed',
-  };
-  
+  });
+
   const embed = {
-    title: titles[payload.event] || '💰 Payment Event',
-    color: colors[payload.event] || 0x7289da,
+    title: titles[event] || '💰 Payment Event',
+    color: colors[event] || 0x7289da,
     fields: [
       { name: '💵 Amount', value: data.amount || 'N/A', inline: true },
       { name: '⚙️ Operation', value: data.operation || 'N/A', inline: true },
@@ -300,10 +341,10 @@ async function sendDiscordNotification(payload) {
     ],
     timestamp: payload.timestamp,
     footer: {
-      text: `XActions x402 • ${payload.source.environment}`,
+      text: `XActions x402 • ${source.environment}`,
     },
   };
-  
+
   // Add payer address
   if (data.payerShort) {
     embed.fields.push({
@@ -316,11 +357,12 @@ async function sendDiscordNotification(payload) {
   // Add transaction hash with link
   if (data.transactionHash) {
     const explorerUrl = getExplorerUrl(data.network, data.transactionHash);
+    const txHash = data.transactionHash;
     embed.fields.push({
       name: '🔗 Transaction',
-      value: explorerUrl 
+      value: explorerUrl
         ? `[View on Explorer](${explorerUrl})`
-        : `\`${data.transactionHash.slice(0, 16)}...\``,
+        : `\`${txHash.slice(0, 16)}...\``,
       inline: true,
     });
   }
@@ -348,37 +390,38 @@ async function sendDiscordNotification(payload) {
  * Send payment notification to Slack webhook
  * 
  * @param {Record<string, unknown>} payload - Event payload
- * @returns {Promise<{success: boolean}>}
+ * @returns {Promise<WebhookResult>}
  */
 async function sendSlackNotification(payload) {
   if (!SLACK_WEBHOOK) return { success: false, error: 'Not configured' };
   
-  const data = payload.data;
-  const isTestnet = data.network?.includes('84532');
-  
-  const icons = {
+  const data = /** @type {PaymentEventData} */ (payload.data);
+  const event = /** @type {string} */ (payload.event);
+  const isTestnet = data.network.includes('84532');
+
+  const icons = /** @type {Record<string, string>} */ ({
     [PAYMENT_EVENTS.RECEIVED]: '💰',
     [PAYMENT_EVENTS.SETTLED]: '✅',
     [PAYMENT_EVENTS.FAILED]: '❌',
     [PAYMENT_EVENTS.VERIFICATION_FAILED]: '⚠️',
-  };
-  
-  const colors = {
+  });
+
+  const colors = /** @type {Record<string, string>} */ ({
     [PAYMENT_EVENTS.RECEIVED]: isTestnet ? '#3498db' : '#00ff00',
     [PAYMENT_EVENTS.SETTLED]: '#2ecc71',
     [PAYMENT_EVENTS.FAILED]: '#e74c3c',
     [PAYMENT_EVENTS.VERIFICATION_FAILED]: '#e67e22',
-  };
+  });
   
   const slackPayload = {
     attachments: [{
-      color: colors[payload.event] || '#7289da',
-      blocks: [
+      color: colors[event] || '#7289da',
+      blocks: /** @type {Record<string, unknown>[]} */ ([
         {
           type: 'header',
           text: {
             type: 'plain_text',
-            text: `${icons[payload.event] || '💰'} Payment ${payload.event.split('.')[1]}`,
+            text: `${icons[event] || '💰'} Payment ${event.split('.')[1]}`,
             emoji: true,
           },
         },
@@ -391,7 +434,7 @@ async function sendSlackNotification(payload) {
             { type: 'mrkdwn', text: `*Payer:*\n\`${data.payerShort || 'N/A'}\`` },
           ],
         },
-      ],
+      ]),
     }],
   };
   
@@ -429,18 +472,18 @@ async function sendSlackNotification(payload) {
  * Get block explorer URL for a transaction
  * 
  * @param {string} network - Network ID
- * @param {string} txHash - Transaction hash
+ * @param {string | null} txHash - Transaction hash
  * @returns {string|null} Explorer URL or null
  */
 function getExplorerUrl(network, txHash) {
   if (!txHash) return null;
   
-  const explorers = {
+  const explorers = /** @type {Record<string, string>} */ ({
     'eip155:8453': `https://basescan.org/tx/${txHash}`,
     'eip155:84532': `https://sepolia.basescan.org/tx/${txHash}`,
     'eip155:1': `https://etherscan.io/tx/${txHash}`,
     'eip155:42161': `https://arbiscan.io/tx/${txHash}`,
-  };
+  });
   
   return explorers[network] || null;
 }
@@ -448,12 +491,7 @@ function getExplorerUrl(network, txHash) {
 /**
  * Notify all configured endpoints about a payment event
  * 
- * @param {Record<string, unknown>} payment - Payment details
- * @param {string} payment.price - Amount paid
- * @param {string} payment.operation - Operation that was paid for
- * @param {string} payment.payerAddress - Address that paid
- * @param {string} payment.network - Blockchain network used
- * @param {string} [payment.transactionHash] - Transaction hash if available
+ * @param {PaymentDetails} payment - Payment details
  * @param {string} [eventType] - Event type (defaults to RECEIVED)
  */
 export async function notifyPaymentReceived(payment, eventType = PAYMENT_EVENTS.RECEIVED) {
@@ -470,14 +508,16 @@ export async function notifyPaymentReceived(payment, eventType = PAYMENT_EVENTS.
     sendDiscordNotification(payload),
     sendSlackNotification(payload),
   ]);
-  
+
+  const formatError = (/** @type {unknown} */ reason) => reason instanceof Error ? reason.message : String(reason);
+
   const summary = {
     eventId: payload.id,
     eventType,
     destinations: {
-      custom: results[0].status === 'fulfilled' ? results[0].value : { success: false, error: results[0].reason?.message },
-      discord: results[1].status === 'fulfilled' ? results[1].value : { success: false, error: results[1].reason?.message },
-      slack: results[2].status === 'fulfilled' ? results[2].value : { success: false, error: results[2].reason?.message },
+      custom: results[0].status === 'fulfilled' ? /** @type {WebhookResult} */ (results[0].value) : { success: false, attempts: 0, error: formatError(results[0].reason) },
+      discord: results[1].status === 'fulfilled' ? /** @type {WebhookResult} */ (results[1].value) : { success: false, attempts: 0, error: formatError(results[1].reason) },
+      slack: results[2].status === 'fulfilled' ? /** @type {WebhookResult} */ (results[2].value) : { success: false, attempts: 0, error: formatError(results[2].reason) },
     },
     anySuccessful: results.some(r => r.status === 'fulfilled' && r.value?.success),
   };
@@ -488,7 +528,7 @@ export async function notifyPaymentReceived(payment, eventType = PAYMENT_EVENTS.
 /**
  * Notify about a failed payment (verification or settlement failure)
  * 
- * @param {Record<string, unknown>} payment - Payment details
+ * @param {PaymentDetails} payment - Payment details
  * @param {string} reason - Failure reason
  */
 export async function notifyPaymentFailed(payment, reason) {
@@ -501,7 +541,7 @@ export async function notifyPaymentFailed(payment, reason) {
 /**
  * Notify about a successfully settled payment
  * 
- * @param {Record<string, unknown>} payment - Payment details
+ * @param {PaymentDetails} payment - Payment details
  * @param {string} settlementId - Settlement transaction ID
  */
 export async function notifyPaymentSettled(payment, settlementId) {
@@ -567,7 +607,7 @@ export async function testWebhooks() {
   const results = {
     timestamp: new Date().toISOString(),
     eventId: payload.id,
-    destinations: {},
+    destinations: /** @type {Record<string, unknown>} */ ({}),
   };
   
   if (WEBHOOK_URL) {

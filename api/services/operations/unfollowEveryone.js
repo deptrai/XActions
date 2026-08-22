@@ -1,6 +1,24 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../../lib/prisma.js';
 import { getTwitterClient } from '../../routes/twitter.js';
+
+/**
+ * @typedef {object} UnfollowEveryoneConfig
+ * @property {number} [maxUnfollows]
+ * @property {boolean} [dryRun]
+ */
+
+/**
+ * @typedef {object} ProcessUnfollowEveryoneOptions
+ * @property {string} operationId
+ * @property {string} userId
+ * @property {UnfollowEveryoneConfig} config
+ */
+
+/**
+ * @param {ProcessUnfollowEveryoneOptions} options
+ * @returns {Promise<Record<string, unknown>>}
+ */
 async function processUnfollowEveryone({ operationId, userId, config }) {
   try {
     await prisma.operation.update({
@@ -16,22 +34,23 @@ async function processUnfollowEveryone({ operationId, userId, config }) {
       throw new Error('User not found or Twitter not connected');
     }
 
-    const client = await getTwitterClient(user);
+    const client = /** @type {import('axios').AxiosInstance} */ (await getTwitterClient(user));
     const { maxUnfollows = 100, dryRun = false } = config;
 
-    // Get authenticated user's Twitter ID
     const meResponse = await client.get('/users/me');
-    const myTwitterId = meResponse.data.data.id;
+    const meData = /** @type {TwitterApiEnvelope} */ (meResponse.data);
+    const meInner = /** @type {Record<string, unknown>} */ (meData.data);
+    const myTwitterId = String(meInner.id);
 
-    // Get list of users I'm following
     const followingResponse = await client.get(`/users/${myTwitterId}/following`, {
       params: {
         max_results: Math.min(maxUnfollows, 1000),
         'user.fields': 'username'
       }
     });
-
-    const following = followingResponse.data.data || [];
+    const followingData = /** @type {TwitterApiEnvelope} */ (followingResponse.data);
+    /** @type {TwitterApiUser[]} */
+    const following = /** @type {TwitterApiUser[]} */ (followingData.data || []);
     let unfollowedCount = 0;
     const unfollowedUsers = [];
 
@@ -42,17 +61,17 @@ async function processUnfollowEveryone({ operationId, userId, config }) {
         if (!dryRun) {
           await client.delete(`/users/${myTwitterId}/following/${followedUser.id}`);
           unfollowedCount++;
-          
+
           unfollowedUsers.push({
             id: followedUser.id,
             username: followedUser.username
           });
 
-          // Rate limiting: wait 1 second between unfollows
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } catch (error) {
-        console.error(`Error unfollowing ${followedUser.username}:`, error.message);
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`Error unfollowing ${followedUser.username}:`, message);
       }
     }
 
@@ -63,7 +82,7 @@ async function processUnfollowEveryone({ operationId, userId, config }) {
       dryRun
     };
   } catch (error) {
-    console.error('❌ Unfollow everyone error:', error);
+    console.error('❌ Unfollow everyone error:', error instanceof Error ? error.message : String(error));
     throw error;
   }
 }

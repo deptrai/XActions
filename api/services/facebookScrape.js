@@ -18,12 +18,20 @@ import { runBatch as poolRunBatch } from './facebookAccountPool.js';
  *
  * @param {string} action - One of VALID_ACTIONS (profile, posts, followers, search, etc.)
  * @param {Record<string, unknown>} args - Action arguments including authCookie, browserOptions, and action-specific params.
- * @returns {Promise<any>} Scraper result (array or object depending on action).
+ * @returns {Promise<Record<string, unknown>>} Scraper result (array or object depending on action).
  */
 export async function run(action, args = {}) {
-  const { authCookie, userId, browserOptions, ...rest } = args;
+  const authCookie = /** @type {Record<string, unknown>} */ (args.authCookie);
+  const userId = /** @type {string | undefined} */ (args.userId);
+  const browserOptions = /** @type {Record<string, unknown> | undefined} */ (args.browserOptions);
+  const rest = /** @type {Record<string, unknown>} */ ({});
+  for (const [k, v] of Object.entries(args)) {
+    if (!['authCookie', 'userId', 'browserOptions'].includes(k)) {
+      rest[k] = v;
+    }
+  }
 
-  if (!authCookie) {
+  if (!authCookie || typeof authCookie !== 'object') {
     throw new Error('❌ FacebookScrapeService.run requires authCookie');
   }
 
@@ -39,34 +47,36 @@ export async function run(action, args = {}) {
 
   // search with type: 'all' and parallel: true fans out to 4 sub-tasks.
   if (action === 'search' && rest.type === 'all' && rest.parallel === true) {
-    return runSearchAllParallel(scrapeArgs, rest, userId, browserOptions);
+    return runSearchAllParallel(/** @type {import('../../src/types/xactions.js').XActionsOptions} */ (scrapeArgs), rest, userId, browserOptions);
   }
 
   // Default: delegate to scrape() from src/scrapers/index.js.
   const { scrape } = await import('../../src/scrapers/index.js');
-  return scrape('facebook', action, scrapeArgs);
+  return /** @type {Record<string, unknown>} */ (await scrape('facebook', action, /** @type {import('../../src/types/xactions.js').XActionsOptions} */ (scrapeArgs)));
 }
 
 /**
  * Run search with type: 'all' and parallel: true — fan out to 4 sub-tasks.
  * Uses FacebookAccountPool.runBatch for multi-account parallel execution.
  *
- * @param {Record<string, unknown>} baseArgs - Base scrape args (authCookie, browserOptions, etc.)
+ * @param {import('../../src/types/xactions.js').XActionsOptions} baseArgs - Base scrape args (authCookie, browserOptions, etc.)
  * @param {Record<string, unknown>} rest - Action-specific params (query, location, limit, etc.)
  * @param {string} [userId] - User ID for account resolution.
  * @param {Record<string, unknown>} [browserOptions] - Browser options.
- * @returns {Promise<{ posts: any[], people: any[], pages: any[], groups: any[] }>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function runSearchAllParallel(baseArgs, rest, userId, browserOptions) {
-  const { query, location, limit } = rest;
+  const query = /** @type {string} */ (rest.query ?? '');
+  const location = /** @type {string | undefined} */ (rest.location);
+  const limit = /** @type {number | undefined} */ (rest.limit);
   const types = ['posts', 'people', 'pages', 'groups'];
 
   // If we have accountIds, use runBatch for true parallelism.
-  const accountIds = rest.accountIds;
+  const accountIds = /** @type {string[]} */ (rest.accountIds);
   if (Array.isArray(accountIds) && accountIds.length > 0) {
-    const tasks = types.map((type) => async (page) => {
+    const tasks = types.map((type) => /** @param {import('puppeteer').Page} page */ async (page) => {
       const { scrape } = await import('../../src/scrapers/index.js');
-      return scrape('facebook', 'search', {
+      return /** @type {Record<string, unknown>} */ (await scrape('facebook', 'search', {
         ...baseArgs,
         query,
         type,
@@ -74,13 +84,14 @@ async function runSearchAllParallel(baseArgs, rest, userId, browserOptions) {
         ...(limit != null && { limit }),
         page, // reuse the pool's page — skip auto-create
         autoClose: false, // pool manages browser lifecycle
-      });
+      }));
     });
 
-    const { results } = await poolRunBatch(tasks, {
+    const batchResult = await poolRunBatch(tasks, {
       accountIds,
       maxConcurrency: Math.min(4, accountIds.length),
     });
+    const results = /** @type {Record<string, unknown>[][]} */ (/** @type {unknown} */ (batchResult.results ?? []));
 
     return {
       posts: results[0] || [],
@@ -92,22 +103,22 @@ async function runSearchAllParallel(baseArgs, rest, userId, browserOptions) {
 
   // Fallback: sequential on a single account (same as parallel: false).
   const { scrape } = await import('../../src/scrapers/index.js');
-  return scrape('facebook', 'search', {
+  return /** @type {Record<string, unknown>} */ (await scrape('facebook', 'search', {
     ...baseArgs,
     query,
     type: 'all',
     ...(location != null && { location }),
     ...(limit != null && { limit }),
-  });
+  }));
 }
 
 /**
  * Run multiple scrape tasks in parallel across multiple accounts.
  * Delegates to FacebookAccountPool.runBatch.
  *
- * @param {Function[]} tasks - Each task is `async (page, accountContext) => result`
+ * @param {((page: import('puppeteer').Page, accountContext?: Record<string, unknown>) => Promise<Record<string, unknown>>)[]} tasks - Each task is `async (page, accountContext) => result`
  * @param {Record<string, unknown>} options - { maxConcurrency, delayBetweenLaunches, accountIds }
- * @returns {Promise<{ results: any[], accountUsage: object }>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function runBatch(tasks, options = {}) {
   return poolRunBatch(tasks, options);

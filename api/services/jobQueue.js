@@ -27,7 +27,7 @@ const operationsQueue = new Queue('operations', {
   prefix: process.env.REDIS_QUEUE_PREFIX || 'xactions',
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
-    port: process.env.REDIS_PORT || 6379,
+    port: Number(process.env.REDIS_PORT || 6379),
     password: process.env.REDIS_PASSWORD
   },
   defaultJobOptions: {
@@ -44,8 +44,8 @@ const operationsQueue = new Queue('operations', {
 /**
  * Add a new job to the queue
  * @param {string} type - Job type (operation name)
- * @param {object} data - Job data including sessionCookie, config, etc.
- * @param {object} options - Queue options (priority, delay, etc.)
+ * @param {Record<string, unknown>} data - Job data including sessionCookie, config, etc.
+ * @param {Record<string, unknown>} options - Queue options (priority, delay, etc.)
  */
 async function addJob(type, data, options = {}) {
   // Create operation record in database
@@ -53,8 +53,8 @@ async function addJob(type, data, options = {}) {
     data: {
       type,
       status: 'queued',
-      userId: data.userId,
-      config: data.config || {},
+      userId: String(data.userId),
+      config: JSON.stringify(data.config || {}),
       createdAt: new Date()
     }
   });
@@ -66,9 +66,9 @@ async function addJob(type, data, options = {}) {
   };
 
   const job = await operationsQueue.add(type, jobData, {
-    priority: options.priority || 10,
-    delay: options.delay || 0,
-    attempts: options.attempts || 3,
+    priority: Number(options.priority) || 10,
+    delay: Number(options.delay) || 0,
+    attempts: Number(options.attempts) || 3,
     jobId: operation.id // Use operation ID as job ID for easy lookup
   });
   
@@ -78,13 +78,14 @@ async function addJob(type, data, options = {}) {
 
 /**
  * Queue job (legacy function for backward compatibility)
+ * @param {Record<string, unknown>} jobData
  */
 async function queueJob(jobData) {
-  const job = await operationsQueue.add(jobData.type, jobData, {
-    priority: jobData.priority || 10
+  const job = await operationsQueue.add(String(jobData.type), jobData, {
+    priority: Number(jobData.priority) || 10
   });
   
-  console.log(`📨 Job queued: ${job.id} (${jobData.type})`);
+  console.log(`📨 Job queued: ${job.id} (${String(jobData.type)})`);
   return job;
 }
 
@@ -218,12 +219,11 @@ operationsQueue.process('unfollowNonFollowers', 2, async (job) => {
     return await unfollowNonFollowersBrowser(
       job.data.userId,
       job.data.config,
-      (message) => job.progress(message),
-      () => isJobCancelled(job.data.operationId)
+      (message) => job.progress(message)
     );
   }
   
-  return await processUnfollowNonFollowers(job.data, () => isJobCancelled(job.data.operationId));
+  return await processUnfollowNonFollowers(job.data);
 });
 
 // Process jobs - unfollowEveryone
@@ -234,12 +234,11 @@ operationsQueue.process('unfollowEveryone', 2, async (job) => {
     return await unfollowEveryoneBrowser(
       job.data.userId,
       job.data.config,
-      (message) => job.progress(message),
-      () => isJobCancelled(job.data.operationId)
+      (message) => job.progress(message)
     );
   }
   
-  return await processUnfollowEveryone(job.data, () => isJobCancelled(job.data.operationId));
+  return await processUnfollowEveryone(job.data);
 });
 
 // Process jobs - detectUnfollowers
@@ -250,12 +249,11 @@ operationsQueue.process('detectUnfollowers', 3, async (job) => {
     return await detectUnfollowersBrowser(
       job.data.userId,
       job.data.config,
-      (message) => job.progress(message),
-      () => isJobCancelled(job.data.operationId)
+      (message) => job.progress(message)
     );
   }
   
-  return await processDetectUnfollowers(job.data, () => isJobCancelled(job.data.operationId));
+  return await processDetectUnfollowers(job.data);
 });
 
 // Process jobs - autoLike
@@ -271,7 +269,7 @@ operationsQueue.process('autoLike', 2, async (job) => {
     );
   }
   
-  return await processAutoLike(job.data, () => isJobCancelled(job.data.operationId));
+  return await processAutoLike(job.data);
 });
 
 // Process jobs - followEngagers
@@ -287,7 +285,7 @@ operationsQueue.process('followEngagers', 2, async (job) => {
     );
   }
   
-  return await processFollowEngagers(job.data, () => isJobCancelled(job.data.operationId));
+  return await processFollowEngagers(job.data);
 });
 
 // Process jobs - keywordFollow
@@ -303,7 +301,7 @@ operationsQueue.process('keywordFollow', 2, async (job) => {
     );
   }
   
-  return await processKeywordFollow(job.data, () => isJobCancelled(job.data.operationId));
+  return await processKeywordFollow(job.data);
 });
 
 // Process jobs - autoComment
@@ -319,7 +317,7 @@ operationsQueue.process('autoComment', 2, async (job) => {
     );
   }
   
-  return await processAutoComment(job.data, () => isJobCancelled(job.data.operationId));
+  return await processAutoComment(job.data);
 });
 
 // Process jobs - scriptRun (generic browser script executor)
@@ -348,15 +346,18 @@ operationsQueue.process('datasetFetch', 2, async (job) => {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-/** Fire a best-effort POST to a callbackUrl with the job result */
+/** Fire a best-effort POST to a callbackUrl with the job result
+ * @param {string} url
+ * @param {Record<string, unknown>} payload
+ */
 function deliverCallback(url, payload) {
   if (!url) return;
   fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-XActions-Event': payload.event },
+    headers: { 'Content-Type': 'application/json', 'X-XActions-Event': String(payload.event) },
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(10_000),
-  }).catch(err => console.warn(`⚠️  callbackUrl delivery failed (${url}): ${err.message}`));
+  }).catch(err => console.warn(`⚠️  callbackUrl delivery failed (${url}): ${(err instanceof Error ? err.message : String(err))}`));
 }
 
 // ── Job event handlers ──────────────────────────────────────────────────────
@@ -369,7 +370,7 @@ operationsQueue.on('active', async (job) => {
       data: { status: 'processing', startedAt: new Date() },
     });
   } catch (err) {
-    console.warn(`⚠️  Could not set startedAt for ${job.data.operationId}: ${err.message}`);
+    console.warn(`⚠️  Could not set startedAt for ${job.data.operationId}: ${(err instanceof Error ? err.message : String(err))}`);
   }
   global.io?.to(`job:${job.data.operationId}`).emit('job:active', {
     jobId: job.data.operationId,
@@ -413,12 +414,12 @@ operationsQueue.on('failed', async (job, err) => {
 
   await prisma.operation.update({
     where: { id: job.data.operationId },
-    data: { status: 'failed', error: err.message, retryCount: job.attemptsMade },
+    data: { status: 'failed', error: (err instanceof Error ? err.message : String(err)), retryCount: job.attemptsMade },
   });
 
   global.io?.to(`job:${job.data.operationId}`).emit('job:failed', {
     jobId: job.data.operationId,
-    error: err.message,
+    error: (err instanceof Error ? err.message : String(err)),
     failedAt: new Date().toISOString(),
   });
 
@@ -426,7 +427,7 @@ operationsQueue.on('failed', async (job, err) => {
     event: 'job.failed',
     jobId: job.data.operationId,
     type: job.data.type,
-    error: err.message,
+    error: (err instanceof Error ? err.message : String(err)),
     failedAt: new Date().toISOString(),
   });
 });
@@ -437,6 +438,9 @@ operationsQueue.on('stalled', (job) => {
 
 // ── Graceful shutdown ───────────────────────────────────────────────────────
 
+/**
+ * @param {string} signal
+ */
 async function gracefulShutdown(signal) {
   console.log(`📊 Received ${signal} — draining job queue…`);
   try {
@@ -447,13 +451,13 @@ async function gracefulShutdown(signal) {
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Drain timeout after 30s')), 30_000)
       ),
-    ]).catch(err => console.warn(`⚠️  ${err.message} — forcing shutdown`));
+    ]).catch(err => console.warn(`⚠️  ${(err instanceof Error ? err.message : String(err))} — forcing shutdown`));
 
     // Close any Puppeteer browsers still open
     if (global.activeBrowsers?.size) {
       console.log(`🧹 Closing ${global.activeBrowsers.size} browser(s)…`);
       await Promise.allSettled(
-        Array.from(global.activeBrowsers).map(b => b.close().catch(() => {}))
+        Array.from(global.activeBrowsers).map((b) => b.close().catch(() => {}))
       );
     }
 
@@ -461,7 +465,7 @@ async function gracefulShutdown(signal) {
     await prisma.$disconnect();
     console.log('✅ Graceful shutdown complete.');
   } catch (err) {
-    console.error('❌ Shutdown error:', err.message);
+    console.error('❌ Shutdown error:', (err instanceof Error ? err.message : String(err)));
     process.exitCode = 1;
   } finally {
     process.exit(process.exitCode || 0);

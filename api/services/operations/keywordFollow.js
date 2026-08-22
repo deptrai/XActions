@@ -1,9 +1,32 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../../lib/prisma.js';
 import { getTwitterClient } from '../../routes/twitter.js';
+
+/**
+ * @typedef {object} KeywordFollowConfig
+ * @property {string[]} [keywords]
+ * @property {string} [query]
+ * @property {number} [maxFollows]
+ * @property {number} [minFollowers]
+ * @property {number} [maxFollowers]
+ * @property {boolean} [dryRun]
+ * @property {string[]} [whitelist]
+ */
+
+/**
+ * @typedef {object} ProcessKeywordFollowOptions
+ * @property {string} operationId
+ * @property {string} userId
+ * @property {KeywordFollowConfig} config
+ */
+
 /**
  * Follow users who tweet about specific keywords/hashtags
  * Uses Twitter API when OAuth tokens available
+ *
+ * @param {ProcessKeywordFollowOptions} options
+ * @param {() => boolean} [isCancelled]
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function processKeywordFollow({ operationId, userId, config }, isCancelled = () => false) {
   try {
@@ -20,22 +43,23 @@ async function processKeywordFollow({ operationId, userId, config }, isCancelled
       throw new Error('User not found or Twitter not connected');
     }
 
-    const client = await getTwitterClient(user);
-    const { 
-      keywords = [],    // Keywords/hashtags to search for
-      query,            // Or raw search query
+    const client = /** @type {import('axios').AxiosInstance} */ (await getTwitterClient(user));
+    const {
+      keywords = [],
+      query,
       maxFollows = 50,
-      minFollowers = 0, // Minimum follower count filter
-      maxFollowers,     // Maximum follower count filter
+      minFollowers = 0,
+      maxFollowers,
       dryRun = false,
-      whitelist = []    // Users to skip
+      whitelist = []
     } = config;
 
     const meResponse = await client.get('/users/me');
-    const myTwitterId = meResponse.data.data.id;
+    const meData = /** @type {TwitterApiEnvelope} */ (meResponse.data);
+    const meInner = /** @type {Record<string, unknown>} */ (meData.data);
+    const myTwitterId = String(meInner.id);
 
-    // Build search query
-    const searchQuery = query || keywords.map(k => 
+    const searchQuery = query || keywords.map(/** @param {string} k */ (k) =>
       k.startsWith('#') ? k : `#${k}`
     ).join(' OR ');
 
@@ -43,7 +67,6 @@ async function processKeywordFollow({ operationId, userId, config }, isCancelled
       throw new Error('Either keywords or query must be provided');
     }
 
-    // Search for recent tweets
     const searchResponse = await client.get('/tweets/search/recent', {
       params: {
         query: searchQuery,
@@ -53,23 +76,25 @@ async function processKeywordFollow({ operationId, userId, config }, isCancelled
         'user.fields': 'username,public_metrics'
       }
     });
+    const searchData = /** @type {TwitterApiEnvelope} */ (searchResponse.data);
+    /** @type {TwitterApiTweet[]} */
+    const tweets = /** @type {TwitterApiTweet[]} */ (searchData.data || []);
+    /** @type {TwitterApiUser[]} */
+    const users = /** @type {TwitterApiUser[]} */ (searchData.includes?.users || []);
 
-    const tweets = searchResponse.data.data || [];
-    const users = searchResponse.data.includes?.users || [];
+    const userMap = new Map(users.map(/** @param {TwitterApiUser} u */ (u) => [String(u.id), u]));
 
-    // Create user map
-    const userMap = new Map(users.map(u => [u.id, u]));
-
-    // Get unique authors with their metrics
+    /** @type {TwitterApiUser[]} */
     const uniqueAuthors = [];
     const seenAuthors = new Set();
 
     for (const tweet of tweets) {
-      const author = userMap.get(tweet.author_id);
+      const authorId = tweet.author_id;
+      if (!authorId) continue;
+      const author = userMap.get(authorId);
       if (author && !seenAuthors.has(author.id)) {
         seenAuthors.add(author.id);
-        
-        // Apply follower filters
+
         const followers = author.public_metrics?.followers_count || 0;
         if (followers >= minFollowers) {
           if (!maxFollowers || followers <= maxFollowers) {
@@ -79,10 +104,9 @@ async function processKeywordFollow({ operationId, userId, config }, isCancelled
       }
     }
 
-    // Filter whitelist
-    const whitelistLower = whitelist.map(u => u.toLowerCase());
-    const filteredAuthors = uniqueAuthors.filter(a => 
-      !whitelistLower.includes(a.username.toLowerCase())
+    const whitelistLower = whitelist.map(/** @param {string} u */ (u) => u.toLowerCase());
+    const filteredAuthors = uniqueAuthors.filter(/** @param {TwitterApiUser} a */ (a) =>
+      a.username ? !whitelistLower.includes(a.username.toLowerCase()) : true
     );
 
     let followedCount = 0;
@@ -103,15 +127,14 @@ async function processKeywordFollow({ operationId, userId, config }, isCancelled
             target_user_id: author.id
           });
           followedCount++;
-          
+
           followedUsers.push({
             id: author.id,
             username: author.username,
             followers: author.public_metrics?.followers_count
           });
 
-          // Rate limiting: wait 2-4 seconds between follows
-          await new Promise(resolve => 
+          await new Promise(resolve =>
             setTimeout(resolve, 2000 + Math.random() * 2000)
           );
         } else {
@@ -123,7 +146,8 @@ async function processKeywordFollow({ operationId, userId, config }, isCancelled
           });
         }
       } catch (error) {
-        if (error.message?.includes('already')) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes('already')) {
           followedUsers.push({
             id: author.id,
             username: author.username,
@@ -132,7 +156,7 @@ async function processKeywordFollow({ operationId, userId, config }, isCancelled
         } else {
           errors.push({
             username: author.username,
-            error: error.message
+            error: message
           });
         }
       }
@@ -149,7 +173,7 @@ async function processKeywordFollow({ operationId, userId, config }, isCancelled
       cancelled: isCancelled()
     };
   } catch (error) {
-    console.error('❌ Keyword follow error:', error);
+    console.error('❌ Keyword follow error:', error instanceof Error ? error.message : String(error));
     throw error;
   }
 }

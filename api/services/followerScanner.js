@@ -13,6 +13,22 @@ import prisma from '../lib/prisma.js';
  */
 
 import { scrapeFollowers } from './browserAutomation.js';
+
+/**
+ * @typedef {object} FollowerRecord
+ * @property {string} username
+ * @property {string | null} [name]
+ * @property {string | null} [profileImage]
+ * @property {string | null} [avatarUrl]
+ * @property {string | null} [followedSince]
+ */
+
+/**
+ * @typedef {object} ScrapeFollowersResult
+ * @property {FollowerRecord[]} users
+ * @property {string | null} [nextCursor]
+ */
+
 /**
  * Run a full follower scan for a user
  * @param {string} userId - XActions user ID
@@ -22,12 +38,12 @@ import { scrapeFollowers } from './browserAutomation.js';
  * @returns {Promise<Record<string, unknown>>} Scan result with gained/lost arrays
  */
 export async function runFollowerScan(userId, sessionCookie, username, options = {}) {
-  const { limit = 5000 } = options;
+  const limit = typeof options.limit === 'number' ? options.limit : 5000;
 
   console.log(`🔍 Starting follower scan for @${username} (limit: ${limit})`);
 
   // 1. Scrape current followers via Puppeteer
-  const result = await scrapeFollowers(sessionCookie, username, { limit });
+  const result = /** @type {ScrapeFollowersResult} */ (await scrapeFollowers(sessionCookie, username, { limit }));
   const currentFollowers = result.users || [];
 
   console.log(`📊 Scraped ${currentFollowers.length} followers for @${username}`);
@@ -39,7 +55,7 @@ export async function runFollowerScan(userId, sessionCookie, username, options =
   });
 
   // 3. Build lookup maps
-  const currentMap = new Map();
+  const currentMap = /** @type {Map<string, FollowerRecord>} */ (new Map());
   for (const f of currentFollowers) {
     currentMap.set(f.username, {
       username: f.username,
@@ -48,42 +64,45 @@ export async function runFollowerScan(userId, sessionCookie, username, options =
     });
   }
 
-  let gained = [];
-  let lost = [];
+  let gained = /** @type {FollowerRecord[]} */ ([]);
+  let lost = /** @type {FollowerRecord[]} */ ([]);
 
   if (previousSnapshot) {
-    const previousFollowers = JSON.parse(previousSnapshot.followers);
-    const previousMap = new Map();
+    const previousFollowers = /** @type {FollowerRecord[]} */ (JSON.parse(/** @type {string} */ (previousSnapshot.followers)));
+    const previousMap = /** @type {Map<string, FollowerRecord>} */ (new Map());
     for (const f of previousFollowers) {
       previousMap.set(f.username, f);
     }
 
-    const currentSet = new Set(currentMap.keys());
-    const previousSet = new Set(previousMap.keys());
+    const currentSet = /** @type {Set<string>} */ (new Set(currentMap.keys()));
+    const previousSet = /** @type {Set<string>} */ (new Set(previousMap.keys()));
 
     // New followers = in current but not in previous
     gained = [...currentSet]
-      .filter(u => !previousSet.has(u))
-      .map(u => currentMap.get(u));
+      .filter(/** @param {string} u */ (u) => !previousSet.has(u))
+      .map(/** @param {string} u */ (u) => /** @type {FollowerRecord} */ (currentMap.get(u)));
 
     // Lost followers = in previous but not in current
     lost = [...previousSet]
-      .filter(u => !currentSet.has(u))
-      .map(u => ({
-        ...previousMap.get(u),
-        followedSince: previousMap.get(u).followedSince || previousSnapshot.createdAt,
-      }));
+      .filter(/** @param {string} u */ (u) => !currentSet.has(u))
+      .map(/** @param {string} u */ (u) => {
+        const prev = /** @type {FollowerRecord} */ (previousMap.get(u));
+        return {
+          ...prev,
+          followedSince: prev.followedSince || String(previousSnapshot.createdAt),
+        };
+      });
   }
 
   // 4. Store new snapshot
-  const followersJson = currentFollowers.map(f => ({
+  const followersJson = currentFollowers.map((f) => ({
     username: f.username,
     name: f.name || null,
     avatarUrl: f.profileImage || null,
     followedSince: previousSnapshot
       ? (() => {
           const prev = JSON.parse(previousSnapshot.followers);
-          const existing = prev.find(p => p.username === f.username);
+          const existing = prev.find(/** @param {FollowerRecord} p */ (p) => p.username === f.username);
           return existing?.followedSince || new Date().toISOString();
         })()
       : new Date().toISOString(),
@@ -150,7 +169,7 @@ export async function runFollowerScan(userId, sessionCookie, username, options =
  * Get scan history for a user
  * @param {string} userId - XActions user ID
  * @param {number} limit - Number of scans to return
- * @returns {Promise<unknown[]>} Scan history with gained/lost counts
+ * @returns {Promise<Record<string, unknown>[]>} Scan history with gained/lost counts
  */
 export async function getScanHistory(userId, limit = 30) {
   const snapshots = await prisma.followerSnapshot.findMany({
@@ -270,7 +289,7 @@ export async function getFollowerStats(userId) {
     gained30d,
     lost30d,
     netChange30d: gained30d - lost30d,
-    growthRate: parseFloat(growthRate),
+    growthRate: parseFloat(String(growthRate)),
   };
 }
 
@@ -279,10 +298,10 @@ export async function getFollowerStats(userId) {
  * @param {string} userId - XActions user ID
  * @param {string} type - 'gained', 'lost', or 'all'
  * @param {number} limit - Max records
- * @returns {Promise<unknown[]>} Recent follower changes
+ * @returns {Promise<Record<string, unknown>[]>} Recent follower changes
  */
 export async function getRecentChanges(userId, type = 'all', limit = 50) {
-  const where = { userId };
+  const where = /** @type {Record<string, unknown>} */ ({ userId });
   if (type !== 'all') where.type = type;
 
   const changes = await prisma.followerChange.findMany({
@@ -291,7 +310,7 @@ export async function getRecentChanges(userId, type = 'all', limit = 50) {
     take: limit,
   });
 
-  return changes.map(c => ({
+  return changes.map((c) => ({
     id: c.id,
     type: c.type,
     username: c.username,
@@ -309,7 +328,7 @@ export async function getRecentChanges(userId, type = 'all', limit = 50) {
  * Get follower count history for charting
  * @param {string} userId - XActions user ID
  * @param {number} days - Number of days to look back
- * @returns {Promise<unknown[]>} Daily follower counts
+ * @returns {Promise<Record<string, unknown>[]>} Daily follower counts
  */
 export async function getFollowerCountHistory(userId, days = 30) {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -326,7 +345,7 @@ export async function getFollowerCountHistory(userId, days = 30) {
     },
   });
 
-  return snapshots.map(s => ({
+  return snapshots.map((s) => ({
     date: s.createdAt,
     count: s.totalCount,
   }));

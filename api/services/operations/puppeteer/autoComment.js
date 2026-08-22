@@ -1,49 +1,77 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-import browserAutomation from '../../browserAutomation.js';
+import {
+  createPage,
+  navigateToTwitter,
+  checkAuthentication,
+  getUserTweets,
+  searchTweets,
+  postComment,
+  randomDelay,
+} from '../../browserAutomation.js';
+
+/**
+ * @typedef {object} AutoCommentBrowserConfig
+ * @property {string} sessionCookie
+ * @property {string} [query]
+ * @property {string} [targetUsername]
+ * @property {string[]} [comments]
+ * @property {string} [comment]
+ * @property {number} [maxComments]
+ * @property {boolean} [dryRun]
+ */
 
 /**
  * Auto-comment on tweets using browser automation
  * @param {string} userId - User ID for the operation
- * @param {object} config - Configuration including sessionCookie, query/targetUsername, comments
- * @param {function} updateProgress - Callback to update job progress
- * @param {function} isCancelled - Function to check if job is cancelled
+ * @param {AutoCommentBrowserConfig} config - Configuration
+ * @param {(message: string) => void} updateProgress - Callback to update job progress
+ * @param {() => boolean} [isCancelled] - Function to check if job is cancelled
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function autoCommentBrowser(userId, config, updateProgress, isCancelled = () => false) {
-  const page = await browserAutomation.createPage(config.sessionCookie);
-  
+  const page = await createPage(config.sessionCookie);
+
   try {
-    await browserAutomation.navigateToTwitter(page);
-    
-    const isAuth = await browserAutomation.checkAuthentication(page);
+    await navigateToTwitter(page);
+
+    const isAuth = await checkAuthentication(page);
     if (!isAuth) {
       throw new Error('Session expired - please reconnect your X account');
     }
 
-    const { 
-      query,              // Search query for tweets
-      targetUsername,     // Or target a specific user's tweets
-      comments = [],      // Array of comment templates to rotate
-      comment,            // Or single comment
+    const {
+      query,
+      targetUsername,
+      comments = [],
+      comment,
       maxComments = 20,
-      dryRun = false 
+      dryRun = false,
     } = config;
 
-    // Validate comments
     const commentList = comments.length > 0 ? comments : (comment ? [comment] : []);
     if (commentList.length === 0) {
       throw new Error('At least one comment text must be provided');
     }
 
+    /** @type {Record<string, unknown>[]} */
     let tweets = [];
-    
+
     if (targetUsername) {
-      // Get tweets from user's timeline
       updateProgress(`Fetching tweets from @${targetUsername}...`);
-      tweets = await getUserTweets(page, targetUsername, maxComments * 2);
+      tweets = await getUserTweets(config.sessionCookie, targetUsername, maxComments * 2);
     } else if (query) {
-      // Search for tweets
       updateProgress(`Searching for tweets matching "${query}"...`);
-      tweets = await browserAutomation.searchTweets(page, query, maxComments * 2);
+      const result = await searchTweets(config.sessionCookie, query, { limit: maxComments * 2 });
+      const items = /** @type {Record<string, unknown>[]} */ (result.items || []);
+      tweets = items.map((t) => {
+        const author = /** @type {Record<string, unknown>} */ (t.author || {});
+        return {
+          id: String(t.id || ''),
+          text: String(t.text || ''),
+          url: String(t.url || ''),
+          username: String(author.username || ''),
+        };
+      });
     } else {
       throw new Error('Either query or targetUsername must be provided');
     }
@@ -54,11 +82,13 @@ async function autoCommentBrowser(userId, config, updateProgress, isCancelled = 
       return {
         success: true,
         commented: [],
-        message: 'No tweets found to comment on'
+        message: 'No tweets found to comment on',
       };
     }
 
+    /** @type {Record<string, unknown>[]} */
     const commented = [];
+    /** @type {Record<string, unknown>[]} */
     const failed = [];
     const limit = Math.min(tweets.length, maxComments);
 
@@ -69,47 +99,43 @@ async function autoCommentBrowser(userId, config, updateProgress, isCancelled = 
       }
 
       const tweet = tweets[i];
-      
-      // Rotate through comments
       const commentText = commentList[i % commentList.length];
-      
+
       updateProgress(`Commenting on tweet ${i + 1}/${limit} from @${tweet.username}`);
 
-      if (!dryRun && tweet.url) {
-        const result = await browserAutomation.postComment(page, tweet.url, commentText);
-        
+      const tweetUrl = String(tweet.url || '');
+      if (!dryRun && tweetUrl) {
+        const result = await postComment(page, tweetUrl, commentText);
+
         if (result.success) {
           commented.push({
-            tweetUrl: tweet.url,
+            tweetUrl,
             username: tweet.username,
-            tweetText: tweet.text?.substring(0, 100),
-            comment: commentText
+            tweetText: String(tweet.text || '').substring(0, 100),
+            comment: commentText,
           });
         } else {
           failed.push({
-            tweetUrl: tweet.url,
+            tweetUrl,
             username: tweet.username,
-            error: result.error
+            error: result.error,
           });
         }
 
-        // Longer delays for comments - Twitter is very strict
-        // Wait 30-60 seconds between comments
-        updateProgress(`Waiting before next comment (rate limit safety)...`);
-        await browserAutomation.randomDelay(30000, 60000);
+        updateProgress('Waiting before next comment (rate limit safety)...');
+        await randomDelay(30000, 60000);
 
-        // Extra long pause every 5 comments
         if ((i + 1) % 5 === 0) {
           updateProgress(`Extended pause (${i + 1}/${limit} completed)...`);
-          await browserAutomation.randomDelay(120000, 180000); // 2-3 minutes
+          await randomDelay(120000, 180000);
         }
       } else if (dryRun) {
         commented.push({
-          tweetUrl: tweet.url,
+          tweetUrl,
           username: tweet.username,
-          tweetText: tweet.text?.substring(0, 100),
+          tweetText: String(tweet.text || '').substring(0, 100),
           comment: commentText,
-          dryRun: true
+          dryRun: true,
         });
       }
     }
@@ -120,57 +146,11 @@ async function autoCommentBrowser(userId, config, updateProgress, isCancelled = 
       failed,
       totalProcessed: commented.length + failed.length,
       dryRun,
-      cancelled: isCancelled()
+      cancelled: isCancelled(),
     };
-
   } finally {
     await page.close();
   }
-}
-
-/**
- * Get tweets from a specific user's timeline
- */
-async function getUserTweets(page, username, limit = 50) {
-  const tweets = [];
-  
-  await page.goto(`https://x.com/${username}`, { 
-    waitUntil: 'networkidle2' 
-  });
-
-  let scrollAttempts = 0;
-  const maxScrolls = Math.ceil(limit / 10);
-
-  while (tweets.length < limit && scrollAttempts < maxScrolls) {
-    const newTweets = await page.evaluate((targetUsername) => {
-      const tweetElements = document.querySelectorAll('article[data-testid="tweet"]');
-      return Array.from(tweetElements).map(tweet => {
-        const tweetLink = tweet.querySelector('a[href*="/status/"]');
-        const tweetUrl = tweetLink?.href;
-        const tweetId = tweetUrl?.split('/status/')[1]?.split('?')[0];
-        const tweetText = tweet.querySelector('[data-testid="tweetText"]')?.textContent;
-        
-        return {
-          username: targetUsername,
-          text: tweetText,
-          url: tweetUrl,
-          id: tweetId
-        };
-      }).filter(t => t.url);
-    }, username);
-
-    newTweets.forEach(tweet => {
-      if (!tweets.find(t => t.id === tweet.id)) {
-        tweets.push(tweet);
-      }
-    });
-
-    await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
-    await browserAutomation.randomDelay(2000, 3000);
-    scrollAttempts++;
-  }
-
-  return tweets.slice(0, limit);
 }
 
 export { autoCommentBrowser };

@@ -22,13 +22,14 @@ import prisma from '../lib/prisma.js';
 
 import { runFollowerScan } from './followerScanner.js';
 import { checkAndAlert, getDueSchedules, markScheduleExecuted } from './unfollowerAlerts.js';
+/** @type {NodeJS.Timeout | null} */
 let schedulerInterval = null;
 const POLL_INTERVAL = 60 * 1000; // Check every 60 seconds
 let isProcessing = false;
 
 /**
  * Process all due schedules
- * @param {Record<string, unknown>} io - Socket.IO server instance
+ * @param {import('socket.io').Server} io - Socket.IO server instance
  */
 async function processDueSchedules(io) {
   if (isProcessing) return; // Prevent overlapping runs
@@ -42,10 +43,11 @@ async function processDueSchedules(io) {
     console.log(`⏰ Scheduler: ${dueSchedules.length} scan(s) due`);
 
     for (const schedule of dueSchedules) {
+      const userId = String(schedule.userId);
       try {
         // Look up user for session cookie
         const user = await prisma.user.findUnique({
-          where: { id: schedule.userId },
+          where: { id: userId },
           select: {
             id: true,
             sessionCookie: true,
@@ -54,39 +56,39 @@ async function processDueSchedules(io) {
         });
 
         if (!user?.sessionCookie || !user?.twitterUsername) {
-          console.warn(`⚠️ Scheduler: Skipping user ${schedule.userId} — missing session cookie or username`);
-          await markScheduleExecuted(schedule.userId);
+          console.warn(`⚠️ Scheduler: Skipping user ${userId} — missing session cookie or username`);
+          await markScheduleExecuted(userId);
           continue;
         }
 
         console.log(`🔍 Scheduler: Running scan for @${user.twitterUsername}`);
 
         // Run the scan
-        const result = await runFollowerScan(
+        const result = /** @type {{ gained: Record<string, unknown>[]; lost: Record<string, unknown>[]; totalFollowers?: number; scanDate?: string; isFirstScan?: boolean }} */ (await runFollowerScan(
           user.id,
-          user.sessionCookie,
-          user.twitterUsername,
+          /** @type {string} */ (user.sessionCookie),
+          /** @type {string} */ (user.twitterUsername),
           { limit: 5000 }
-        );
+        ));
 
         // Check for alerts
         await checkAndAlert(io, user.id, result);
 
         // Mark as executed and set next run time
-        await markScheduleExecuted(schedule.userId);
+        await markScheduleExecuted(userId);
 
         console.log(`✅ Scheduler: Scan complete for @${user.twitterUsername} (+${result.gained.length}/-${result.lost.length})`);
 
         // Small delay between scans to avoid hammering X
         await new Promise(r => setTimeout(r, 5000));
       } catch (err) {
-        console.error(`❌ Scheduler: Scan failed for user ${schedule.userId}:`, err.message);
+        console.error(`❌ Scheduler: Scan failed for user ${userId}:`, (err instanceof Error ? err.message : String(err)));
         // Still mark as executed to prevent infinite retry loops
-        await markScheduleExecuted(schedule.userId);
+        await markScheduleExecuted(userId);
       }
     }
   } catch (err) {
-    console.error('❌ Scheduler: Error checking due schedules:', err.message);
+    console.error('❌ Scheduler: Error checking due schedules:', (err instanceof Error ? err.message : String(err)));
   } finally {
     isProcessing = false;
   }
@@ -94,7 +96,7 @@ async function processDueSchedules(io) {
 
 /**
  * Start the scheduler polling loop
- * @param {Record<string, unknown>} io - Socket.IO server instance
+ * @param {import('socket.io').Server} io - Socket.IO server instance
  */
 export function startScheduler(io) {
   if (schedulerInterval) {

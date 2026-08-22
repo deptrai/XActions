@@ -1,9 +1,31 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../../lib/prisma.js';
 import { getTwitterClient } from '../../routes/twitter.js';
+
+/**
+ * @typedef {object} AutoCommentConfig
+ * @property {string} [query]
+ * @property {string} [targetUsername]
+ * @property {string[]} [comments]
+ * @property {string} [comment]
+ * @property {number} [maxComments]
+ * @property {boolean} [dryRun]
+ */
+
+/**
+ * @typedef {object} ProcessAutoCommentOptions
+ * @property {string} operationId
+ * @property {string} userId
+ * @property {AutoCommentConfig} config
+ */
+
 /**
  * Auto-comment on tweets matching search criteria or from target users
  * Uses Twitter API when OAuth tokens available
+ *
+ * @param {ProcessAutoCommentOptions} options
+ * @param {() => boolean} [isCancelled]
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function processAutoComment({ operationId, userId, config }, isCancelled = () => false) {
   try {
@@ -20,31 +42,32 @@ async function processAutoComment({ operationId, userId, config }, isCancelled =
       throw new Error('User not found or Twitter not connected');
     }
 
-    const client = await getTwitterClient(user);
-    const { 
-      query,              // Search query for tweets
-      targetUsername,     // Or target a specific user's tweets
-      comments = [],      // Array of comment templates to rotate
-      comment,            // Or single comment
+    const client = /** @type {import('axios').AxiosInstance} */ (await getTwitterClient(user));
+    const {
+      query,
+      targetUsername,
+      comments = [],
+      comment,
       maxComments = 20,
-      dryRun = false 
+      dryRun = false
     } = config;
 
-    // Validate comments
     const commentList = comments.length > 0 ? comments : (comment ? [comment] : []);
     if (commentList.length === 0) {
       throw new Error('At least one comment text must be provided');
     }
 
+    /** @type {TwitterApiTweet[]} */
     let tweets = [];
     let commentedCount = 0;
     const commentedTweets = [];
     const errors = [];
 
     if (targetUsername) {
-      // Get tweets from a specific user
       const userResponse = await client.get(`/users/by/username/${targetUsername}`);
-      const targetUserId = userResponse.data.data.id;
+      const userData = /** @type {TwitterApiEnvelope} */ (userResponse.data);
+      const userInner = /** @type {Record<string, unknown>} */ (userData.data);
+      const targetUserId = String(userInner.id);
 
       const tweetsResponse = await client.get(`/users/${targetUserId}/tweets`, {
         params: {
@@ -52,9 +75,9 @@ async function processAutoComment({ operationId, userId, config }, isCancelled =
           'tweet.fields': 'created_at,author_id,conversation_id'
         }
       });
-      tweets = tweetsResponse.data.data || [];
+      const tweetsData = /** @type {TwitterApiEnvelope} */ (tweetsResponse.data);
+      tweets = /** @type {TwitterApiTweet[]} */ (tweetsData.data || []);
     } else if (query) {
-      // Search for tweets
       const searchResponse = await client.get('/tweets/search/recent', {
         params: {
           query,
@@ -62,7 +85,8 @@ async function processAutoComment({ operationId, userId, config }, isCancelled =
           'tweet.fields': 'created_at,author_id,conversation_id'
         }
       });
-      tweets = searchResponse.data.data || [];
+      const searchData = /** @type {TwitterApiEnvelope} */ (searchResponse.data);
+      tweets = /** @type {TwitterApiTweet[]} */ (searchData.data || []);
     } else {
       throw new Error('Either query or targetUsername must be provided');
     }
@@ -76,11 +100,9 @@ async function processAutoComment({ operationId, userId, config }, isCancelled =
       if (commentedCount >= maxComments) break;
 
       try {
-        // Rotate through comments
         const commentText = commentList[commentedCount % commentList.length];
-        
+
         if (!dryRun) {
-          // Post reply using Twitter API v2
           await client.post('/tweets', {
             text: commentText,
             reply: {
@@ -88,15 +110,14 @@ async function processAutoComment({ operationId, userId, config }, isCancelled =
             }
           });
           commentedCount++;
-          
+
           commentedTweets.push({
             tweetId: tweet.id,
             tweetText: tweet.text?.substring(0, 100),
             comment: commentText
           });
 
-          // Rate limiting: wait 30-60 seconds between comments (Twitter is strict on this)
-          await new Promise(resolve => 
+          await new Promise(resolve =>
             setTimeout(resolve, 30000 + Math.random() * 30000)
           );
         } else {
@@ -108,9 +129,10 @@ async function processAutoComment({ operationId, userId, config }, isCancelled =
           });
         }
       } catch (error) {
+        const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
         errors.push({
           tweetId: tweet.id,
-          error: error.message
+          error: message
         });
       }
     }
@@ -125,7 +147,7 @@ async function processAutoComment({ operationId, userId, config }, isCancelled =
       cancelled: isCancelled()
     };
   } catch (error) {
-    console.error('❌ Auto-comment error:', error);
+    console.error('❌ Auto-comment error:', error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error));
     throw error;
   }
 }

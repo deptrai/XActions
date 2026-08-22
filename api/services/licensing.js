@@ -47,11 +47,14 @@ const LICENSE_TIERS = {
 };
 
 // In-memory cache
+/** @type {Record<string, unknown> | null} */
 let cachedLicense = null;
+/** @type {string | null} */
 let instanceId = null;
 
 /**
  * Generate a unique instance ID (persisted in env or generated once)
+ * @returns {string}
  */
 function getInstanceId() {
   if (instanceId) return instanceId;
@@ -68,7 +71,7 @@ function getInstanceId() {
       .substring(0, 16);
   }
   
-  return instanceId;
+  return /** @type {string} */ (instanceId);
 }
 
 /**
@@ -109,6 +112,8 @@ async function sendTelemetryPing() {
 
 /**
  * Validate a license key format
+ * @param {string} key
+ * @returns {boolean}
  */
 function isValidKeyFormat(key) {
   if (!key) return false;
@@ -118,7 +123,19 @@ function isValidKeyFormat(key) {
 }
 
 /**
+ * @typedef {object} LicenseStatus
+ * @property {boolean} valid
+ * @property {string} tier
+ * @property {Record<string, unknown>} [features]
+ * @property {Date | string | null} [expiresAt]
+ * @property {Record<string, unknown> | null} [customer]
+ * @property {string} [error]
+ */
+
+/**
  * Validate license key (checks database)
+ * @param {string} licenseKey
+ * @returns {Promise<LicenseStatus>}
  */
 async function validateLicense(licenseKey) {
   if (!licenseKey || !isValidKeyFormat(licenseKey)) {
@@ -127,7 +144,7 @@ async function validateLicense(licenseKey) {
   
   try {
     // Validate against database
-    const result = await dbValidateLicense(licenseKey);
+    const result = /** @type {LicenseStatus} */ (await dbValidateLicense(licenseKey));
     
     if (!result.valid) {
       return { valid: false, tier: 'free', error: result.error };
@@ -152,9 +169,10 @@ async function validateLicense(licenseKey) {
 
 /**
  * Get current license status
+ * @returns {Promise<LicenseStatus>}
  */
 async function getLicenseStatus() {
-  if (cachedLicense) return cachedLicense;
+  if (cachedLicense) return /** @type {LicenseStatus} */ (cachedLicense);
   
   const licenseKey = process.env.XACTIONS_LICENSE_KEY;
   
@@ -164,15 +182,16 @@ async function getLicenseStatus() {
       tier: 'free',
       features: LICENSE_TIERS.free,
     };
-    return cachedLicense;
+    return /** @type {LicenseStatus} */ (cachedLicense);
   }
   
   cachedLicense = await validateLicense(licenseKey);
-  return cachedLicense;
+  return /** @type {LicenseStatus} */ (cachedLicense);
 }
 
 /**
  * Check if branding should be shown
+ * @returns {Promise<boolean>}
  */
 async function shouldShowBranding() {
   const license = await getLicenseStatus();
@@ -181,14 +200,17 @@ async function shouldShowBranding() {
 
 /**
  * Check if a feature is enabled
+ * @param {string} feature
+ * @returns {Promise<boolean>}
  */
 async function isFeatureEnabled(feature) {
   const license = await getLicenseStatus();
-  return license.features?.[feature] === true;
+  return /** @type {boolean} */ (license.features?.[feature]) === true;
 }
 
 /**
  * Get branding HTML (for footer injection)
+ * @returns {Promise<string>}
  */
 async function getBrandingHtml() {
   if (!(await shouldShowBranding())) {
@@ -219,6 +241,7 @@ async function getBrandingHtml() {
 
 /**
  * Initialize licensing on server start
+ * @returns {Promise<LicenseStatus>}
  */
 async function initializeLicensing() {
   console.log('🔐 Initializing licensing...');
@@ -240,13 +263,14 @@ async function initializeLicensing() {
 
 /**
  * Express middleware to inject branding
+ * @returns {import('express').RequestHandler}
  */
 function brandingMiddleware() {
-  return async (req, res, next) => {
+  return async (/** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res, /** @type {import('express').NextFunction} */ next) => {
     // Only inject into HTML responses
     const originalSend = res.send;
     
-    res.send = async function(body) {
+    res.send = /** @type {(body: unknown) => import('express').Response} */ (/** @type {unknown} */ (async function(/** @type {unknown} */ body) {
       // Check if HTML and branding should be shown
       if (typeof body === 'string' && 
           body.includes('</body>') && 
@@ -254,8 +278,8 @@ function brandingMiddleware() {
         const branding = await getBrandingHtml();
         body = body.replace('</body>', `${branding}</body>`);
       }
-      return originalSend.call(this, body);
-    };
+      return originalSend.call(/** @type {import('express').Response} */ (this), body);
+    }));
     
     next();
   };

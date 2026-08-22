@@ -30,6 +30,23 @@ const DEFAULT_HEADERS = {
 
 const EXTRACTION_TIMEOUT = 15000;
 
+/**
+ * @typedef {object} BrowserEntry
+ * @property {import('puppeteer').Browser} browser
+ * @property {boolean} busy
+ */
+
+/**
+ * @typedef {object} Video
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {number} [width]
+ * @property {number} [height]
+ * @property {number} [bitrate]
+ * @property {string} [contentType]
+ * @property {string} [source]
+ */
+
 // ============================================================================
 // URL Validation
 // ============================================================================
@@ -52,6 +69,7 @@ export function parseTweetUrl(url) {
 // Strategy 1: Guest Token + GraphQL API
 // ============================================================================
 
+/** @type {string | null} */
 let cachedGuestToken = null;
 let guestTokenExpiry = 0;
 
@@ -89,6 +107,8 @@ async function getGuestToken() {
 /**
  * Extract video via Twitter's GraphQL API using a guest token.
  * This is the fastest and most reliable method.
+ * @param {string} tweetId
+ * @param {string} username
  */
 async function extractViaGraphQL(tweetId, username) {
   const guestToken = await getGuestToken();
@@ -144,7 +164,7 @@ async function extractViaGraphQL(tweetId, username) {
     headers: {
       ...DEFAULT_HEADERS,
       'Authorization': `Bearer ${BEARER_TOKEN}`,
-      'x-guest-token': guestToken,
+      'x-guest-token': String(guestToken),
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',
     },
@@ -254,6 +274,8 @@ async function extractViaGraphQL(tweetId, username) {
 /**
  * Extract video via the fxtwitter API (open-source Twitter embed fixer).
  * Reliable fallback when guest token / GraphQL strategy fails.
+ * @param {string} tweetId
+ * @param {string} username
  */
 async function extractViaFxTwitter(tweetId, username) {
   // fxtwitter provides a JSON API at api.fxtwitter.com
@@ -278,7 +300,7 @@ async function extractViaFxTwitter(tweetId, username) {
   }
 
   // fxtwitter puts media in tweet.media.videos or tweet.media.all
-  const mediaItems = tweet.media?.videos || tweet.media?.all?.filter(m => m.type === 'video') || [];
+  const mediaItems = tweet.media?.videos || tweet.media?.all?.filter(/** @param {Record<string, unknown>} m */ (m) => m.type === 'video') || [];
   const videos = [];
   let thumbnailUrl = tweet.media?.videos?.[0]?.thumbnail_url || null;
   let durationMs = null;
@@ -367,6 +389,7 @@ async function extractViaFxTwitter(tweetId, username) {
 // ============================================================================
 
 let puppeteerLoaded = false;
+/** @type {import('puppeteer-extra').PuppeteerExtra | null} */
 let puppeteer = null;
 
 /**
@@ -378,21 +401,25 @@ async function loadPuppeteer() {
   try {
     const puppeteerModule = await import('puppeteer-extra');
     const stealthModule = await import('puppeteer-extra-plugin-stealth');
-    puppeteer = puppeteerModule.default;
+    puppeteer = /** @type {import('puppeteer-extra').PuppeteerExtra} */ (/** @type {unknown} */ (puppeteerModule.default || puppeteerModule));
     puppeteer.use(stealthModule.default());
     puppeteerLoaded = true;
   } catch (err) {
-    throw new Error(`Puppeteer not available: ${err.message}`);
+    throw new Error(`Puppeteer not available: ${(err instanceof Error ? err.message : String(err))}`);
   }
 }
 
 const POOL_SIZE = 2;
+/** @type {BrowserEntry[]} */
 const browsers = [];
 
 async function createBrowser() {
   await loadPuppeteer();
+  if (!puppeteer) {
+    throw new Error('Puppeteer not loaded');
+  }
   return puppeteer.launch({
-    headless: 'new',
+    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -443,6 +470,9 @@ async function getBrowser() {
   });
 }
 
+/**
+ * @param {Record<string, unknown>} entry
+ */
 function releaseBrowser(entry) {
   if (entry) entry.busy = false;
 }
@@ -460,6 +490,8 @@ export async function closePool() {
 /**
  * Extract video using Puppeteer browser automation.
  * This is the heaviest strategy but works as a last resort.
+ * @param {string} tweetId
+ * @param {string} username
  */
 async function extractViaPuppeteer(tweetId, username) {
   const normalizedUrl = `https://x.com/${username}/status/${tweetId}`;
@@ -477,6 +509,7 @@ async function extractViaPuppeteer(tweetId, username) {
 
     await page.setUserAgent(DEFAULT_HEADERS['User-Agent']);
 
+    /** @type {Record<string, unknown>[]} */
     const interceptedVideos = [];
     let tweetText = '';
     let authorName = username;
@@ -484,7 +517,7 @@ async function extractViaPuppeteer(tweetId, username) {
     let durationMs = 0;
 
     // Intercept GraphQL responses
-    page.on('response', async (response) => {
+    page.on('response', /** @param {import('puppeteer').HTTPResponse} response */ async (response) => {
       try {
         const url = response.url();
         if (!url.includes('TweetDetail') && !url.includes('TweetResultByRestId')) return;
@@ -520,7 +553,7 @@ async function extractViaPuppeteer(tweetId, username) {
       }
     });
 
-    page.on('request', (request) => {
+    page.on('request', /** @param {import('puppeteer').HTTPRequest} request */ (request) => {
       const url = request.url();
       if (url.includes('video.twimg.com') && url.includes('.mp4')) {
         interceptedVideos.push({
@@ -646,34 +679,41 @@ async function extractViaPuppeteer(tweetId, username) {
 
 /**
  * Recursively extract video_info.variants from a nested JSON object
+ * @param {Record<string, unknown>} obj
+ * @param {Record<string, unknown>[]} results
  */
 function extractVideoInfoFromJson(obj, results) {
   if (!obj || typeof obj !== 'object') return;
 
-  if (obj.video_info && Array.isArray(obj.video_info.variants)) {
-    for (const variant of obj.video_info.variants) {
-      if (variant.content_type === 'video/mp4' && variant.url) {
-        results.push({
-          url: variant.url,
-          bitrate: variant.bitrate || 0,
-          content_type: variant.content_type,
-          source: 'graphql',
-        });
+  if (obj.video_info && typeof obj.video_info === 'object') {
+    const videoInfo = /** @type {Record<string, unknown>} */ (obj.video_info);
+    const variants = /** @type {Record<string, unknown>[]} */ (videoInfo.variants);
+    if (Array.isArray(variants)) {
+      for (const variant of variants) {
+        if (variant.content_type === 'video/mp4' && variant.url) {
+          results.push({
+            url: variant.url,
+            bitrate: variant.bitrate || 0,
+            content_type: variant.content_type,
+            source: 'graphql',
+          });
+        }
       }
     }
-    if (obj.video_info.duration_millis) {
-      results._durationMs = obj.video_info.duration_millis;
+    if (videoInfo.duration_millis) {
+      const r = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (results));
+      r._durationMs = videoInfo.duration_millis;
     }
     return;
   }
 
   if (Array.isArray(obj)) {
     for (const item of obj) {
-      extractVideoInfoFromJson(item, results);
+      extractVideoInfoFromJson(/** @type {Record<string, unknown>} */ (/** @type {unknown} */ (item)), results);
     }
   } else {
     for (const key of Object.keys(obj)) {
-      extractVideoInfoFromJson(obj[key], results);
+      extractVideoInfoFromJson(/** @type {Record<string, unknown>} */ (/** @type {unknown} */ (obj[key])), results);
     }
   }
 }
@@ -682,6 +722,10 @@ function extractVideoInfoFromJson(obj, results) {
 // Quality Label Helper
 // ============================================================================
 
+/**
+ * @param {number} width
+ * @param {number} height
+ */
 function getQualityLabel(width, height) {
   const maxDim = Math.max(width, height);
   if (maxDim >= 3840) return '4K';
@@ -725,8 +769,8 @@ export async function extractVideo(tweetUrl) {
     console.log(`✅ GraphQL extraction succeeded: ${result.videos.length} variant(s)`);
     return result;
   } catch (err) {
-    console.warn('⚠️ GraphQL extraction failed:', err.message);
-    errors.push(`GraphQL: ${err.message}`);
+    console.warn('⚠️ GraphQL extraction failed:', (err instanceof Error ? err.message : String(err)));
+    errors.push(`GraphQL: ${(err instanceof Error ? err.message : String(err))}`);
   }
 
   // Strategy 2: fxtwitter API
@@ -736,8 +780,8 @@ export async function extractVideo(tweetUrl) {
     console.log(`✅ fxtwitter extraction succeeded: ${result.videos.length} variant(s)`);
     return result;
   } catch (err) {
-    console.warn('⚠️ fxtwitter extraction failed:', err.message);
-    errors.push(`fxtwitter: ${err.message}`);
+    console.warn('⚠️ fxtwitter extraction failed:', (err instanceof Error ? err.message : String(err)));
+    errors.push(`fxtwitter: ${(err instanceof Error ? err.message : String(err))}`);
   }
 
   // Strategy 3: Puppeteer (last resort)
@@ -747,8 +791,8 @@ export async function extractVideo(tweetUrl) {
     console.log(`✅ Puppeteer extraction succeeded: ${result.videos.length} variant(s)`);
     return result;
   } catch (err) {
-    console.warn('⚠️ Puppeteer extraction failed:', err.message);
-    errors.push(`Puppeteer: ${err.message}`);
+    console.warn('⚠️ Puppeteer extraction failed:', (err instanceof Error ? err.message : String(err)));
+    errors.push(`Puppeteer: ${(err instanceof Error ? err.message : String(err))}`);
   }
 
   // All strategies failed
@@ -767,7 +811,7 @@ export async function extractVideo(tweetUrl) {
  * Useful for author info / thumbnails, not video URLs.
  * 
  * @param {string} tweetUrl
- * @returns {Promise<Object|null>}
+ * @returns {Promise<Record<string, unknown> | null>}
  */
 export async function extractViaEmbed(tweetUrl) {
   try {
