@@ -819,7 +819,7 @@ export async function scheduleFacebookPost(
 
   // Parse and validate scheduledAt as ISO-8601
   if (typeof scheduledAt !== 'string') {
-    throw new Error('❌ scheduleFacebookPost: scheduledAt must be a string');
+    throw new Error('❌ scheduleFacebookPost: scheduledAt must be a valid ISO-8601 datetime');
   }
   const scheduledDate = new Date(scheduledAt);
   if (isNaN(scheduledDate.getTime())) {

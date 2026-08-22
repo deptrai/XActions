@@ -28,6 +28,7 @@ export const NETWORK = process.env.X402_NETWORK || (isProduction ? 'eip155:8453'
 let configValidated = false;
 
 // Supported networks configuration (multi-network support)
+/** @type {Record<string, Record<string, unknown>>} */
 export const SUPPORTED_NETWORKS = {
   // ── Production mainnets ──────────────────────────────────────
   'eip155:8453': {
@@ -109,6 +110,7 @@ export const SUPPORTED_NETWORKS = {
 
 // Token contract addresses per network
 // Each entry maps a token symbol to its contract address on that chain.
+/** @type {Record<string, Record<string, string>>} */
 export const SUPPORTED_TOKENS = {
   // ── Base ──────────────────────────────────────────────────────
   'eip155:8453': {
@@ -200,11 +202,11 @@ export const SUPPORTED_TOKENS = {
 /**
  * Get list of accepted networks for payments
  * @param {boolean} includeTestnet - Whether to include testnet networks
- * @returns {Array} Array of network configurations with token addresses
+ * @returns {Array<Record<string, unknown>>} Array of network configurations with token addresses
  */
 export function getAcceptedNetworks(includeTestnet = false) {
   return Object.entries(SUPPORTED_NETWORKS)
-    .filter(([_, config]) => includeTestnet || !config.testnet)
+    .filter(([_, config]) => includeTestnet || !Boolean(config.testnet))
     .map(([network, config]) => ({
       network,
       ...config,
@@ -217,7 +219,7 @@ export function getAcceptedNetworks(includeTestnet = false) {
 /**
  * Get network configuration by network ID
  * @param {string} networkId - Network identifier (e.g., 'eip155:8453')
- * @returns {Object|null} Network configuration or null if not found
+ * @returns {Record<string, unknown>|null} Network configuration or null if not found
  */
 export function getNetworkConfig(networkId) {
   const base = SUPPORTED_NETWORKS[networkId];
@@ -232,14 +234,16 @@ export function getNetworkConfig(networkId) {
 /**
  * Get all accepted tokens across all supported networks
  * @param {boolean} includeTestnet - Whether to include testnet networks
- * @returns {Array<{symbol: string, networks: Array}>} Accepted tokens
+ * @returns {Array<{symbol: string, networks: Array<Record<string, unknown>>}>} Accepted tokens
  */
 export function getAcceptedTokens(includeTestnet = false) {
+  /** @type {Record<string, Array<Record<string, unknown>>>} */
   const tokenMap = {};
   for (const [networkId, tokens] of Object.entries(SUPPORTED_TOKENS)) {
     const net = SUPPORTED_NETWORKS[networkId];
     if (!net) continue;
-    if (!includeTestnet && net.testnet) continue;
+    if (!tokens) continue;
+    if (!includeTestnet && Boolean(net.testnet)) continue;
     for (const [symbol, address] of Object.entries(tokens)) {
       if (!tokenMap[symbol]) tokenMap[symbol] = [];
       tokenMap[symbol].push({ network: networkId, name: net.name, address });
@@ -249,6 +253,7 @@ export function getAcceptedTokens(includeTestnet = false) {
 }
 
 // Pricing tiers for AI agent operations (in USD, paid in USDC)
+/** @type {Record<string, string>} */
 export const AI_OPERATION_PRICES = {
   // Scraping operations
   'scrape:profile': '$0.001',        // Profile info
@@ -666,6 +671,7 @@ export const AI_OPERATION_PRICES = {
 };
 
 // Pricing for browser script downloads (GET /api/scripts/src/:name, GET /api/scripts/automation/:name)
+/** @type {Record<string, string>} */
 export const SCRIPT_PRICES = {
   // ── src/ scripts ─────────────────────────────────────────────
   // $0.001 — simple utility/view scripts
@@ -837,7 +843,12 @@ export const SCRIPT_PRICES = {
 export const SCRIPT_RUN_PRICE = '$0.025';
 
 // Route configuration for x402 middleware
+/**
+ * @param {string} payTo
+ * @returns {Record<string, Record<string, unknown>>}
+ */
 export function getRouteConfig(payTo) {
+  /** @type {Record<string, Record<string, unknown>>} */
   const routes = {};
   
   for (const [operation, price] of Object.entries(AI_OPERATION_PRICES)) {
@@ -964,7 +975,12 @@ export function isX402Configured() {
 }
 
 // Get human-readable operation name
+/**
+ * @param {string} operation
+ * @returns {string}
+ */
 export function getOperationName(operation) {
+  /** @type {Record<string, string>} */
   const names = {
     'scrape:profile': 'Scrape Profile',
     'scrape:followers': 'Scrape Followers',

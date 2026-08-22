@@ -6,7 +6,7 @@ import { tierMeetsRequirement, getTier, isWithinLimit } from '../config/subscrip
 /**
  * Resolve a user identifier from a decoded JWT payload.
  * Prefers `userId` over `id` over `sub`. Only accepts non-empty strings.
- * @param {object} decoded
+ * @param {Record<string, unknown>} decoded
  * @returns {string|undefined}
  */
 export function resolveUserId(decoded) {
@@ -21,11 +21,16 @@ export function resolveUserId(decoded) {
   return undefined;
 }
 
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
 const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+
+    if (typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'No token provided' });
     }
 
@@ -47,14 +52,11 @@ const authMiddleware = async (req, res, next) => {
     }
 
     // Attach user to request - all users have full access
-    req.user = user;
+    req.user = /** @type {Record<string, unknown>} */ (user);
     next();
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expired' });
+    if (error instanceof Error && (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError')) {
+      return res.status(401).json({ error: error.name === 'JsonWebTokenError' ? 'Invalid token' : 'Token expired' });
     }
     console.error('❌ Auth middleware error:', error);
     return res.status(500).json({ error: 'Authentication error' });
@@ -62,11 +64,16 @@ const authMiddleware = async (req, res, next) => {
 };
 
 // Optional auth - doesn't fail if no token, just attaches user if valid
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
 const optionalAuthMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+
+    if (typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
       req.user = null;
       return next();
     }
@@ -81,10 +88,10 @@ const optionalAuthMiddleware = async (req, res, next) => {
         })
       : null;
 
-    req.user = user || null;
+    req.user = user ? /** @type {Record<string, unknown>} */ (user) : null;
     next();
   } catch (error) {
-    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+    if (error instanceof Error && (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError')) {
       req.user = null;
       return next();
     }
@@ -97,18 +104,26 @@ const optionalAuthMiddleware = async (req, res, next) => {
  * Require a minimum subscription tier.
  * Loads the user's subscription from DB and checks tier level.
  * Must be used after authMiddleware.
+ * @param {string} [requiredTier]
  */
 const requireSubscription = (requiredTier = 'free') => {
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
   return async (req, res, next) => {
     if (requiredTier === 'free') return next();
 
     try {
+      const reqUser = /** @type {Record<string, unknown>} */ (req.user);
+      const reqUserId = /** @type {string} */ (reqUser.id);
       const subscription = await prisma.subscription.findUnique({
-        where: { userId: req.user.id },
+        where: { userId: reqUserId },
       });
 
       const userTier = (subscription?.status === 'active' || subscription?.status === 'cancelled')
-        ? subscription.tier
+        ? /** @type {string} */ (subscription.tier)
         : 'free';
 
       // Cancelled subs still have access until cancelAt date
@@ -118,7 +133,7 @@ const requireSubscription = (requiredTier = 'free') => {
         req.userTier = userTier;
       }
 
-      if (!tierMeetsRequirement(req.userTier, requiredTier)) {
+      if (!tierMeetsRequirement(/** @type {string} */ (req.userTier), requiredTier)) {
         return res.status(403).json({
           error: 'Upgrade required',
           requiredTier,
@@ -129,7 +144,7 @@ const requireSubscription = (requiredTier = 'free') => {
 
       next();
     } catch (error) {
-      console.error('❌ Subscription check error:', error.message);
+      console.error('❌ Subscription check error:', error instanceof Error ? error.message : error);
       // Fail open — don't block users if DB is down
       next();
     }
@@ -140,17 +155,26 @@ const requireSubscription = (requiredTier = 'free') => {
  * Check daily usage against tier limits.
  * limitKey: 'apiCallsPerDay' | 'scrapesPerDay' | 'automationsPerDay'
  * Must be used after authMiddleware.
+ * @param {string} limitKey
  */
 const checkUsageLimit = (limitKey) => {
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   */
   return async (req, res, next) => {
     try {
+      const reqUser = /** @type {Record<string, unknown>} */ (req.user);
+      const reqUserId = /** @type {string} */ (reqUser.id);
       const subscription = await prisma.subscription.findUnique({
-        where: { userId: req.user.id },
+        where: { userId: reqUserId },
       });
 
-      const userTier = subscription?.status === 'active' ? subscription.tier : 'free';
+      const userTier = subscription?.status === 'active' ? /** @type {string} */ (subscription.tier) : 'free';
       const tierConfig = getTier(userTier);
-      const limit = tierConfig.limits[limitKey];
+      const tierLimits = /** @type {Record<string, number>} */ (tierConfig.limits);
+      const limit = tierLimits[limitKey];
 
       if (limit === -1) return next(); // unlimited
 
@@ -160,7 +184,7 @@ const checkUsageLimit = (limitKey) => {
 
       const todayCount = await prisma.operation.count({
         where: {
-          userId: req.user.id,
+          userId: reqUserId,
           createdAt: { gte: todayStart },
         },
       });
@@ -177,7 +201,7 @@ const checkUsageLimit = (limitKey) => {
 
       next();
     } catch (error) {
-      console.error('❌ Usage limit check error:', error.message);
+      console.error('❌ Usage limit check error:', error instanceof Error ? error.message : error);
       next();
     }
   };
@@ -185,13 +209,16 @@ const checkUsageLimit = (limitKey) => {
 
 /**
  * Require admin privileges
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
  */
 const requireAdmin = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  if (!req.user.isAdmin) {
+  if (!Boolean(req.user.isAdmin)) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 

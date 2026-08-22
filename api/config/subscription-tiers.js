@@ -6,6 +6,7 @@
  * @author nichxbt
  */
 
+/** @type {Record<string, Record<string, unknown>>} */
 export const TIERS = {
   free: {
     name: 'Free',
@@ -100,10 +101,13 @@ export const TIERS = {
 };
 
 // Tier hierarchy for comparison (higher = more access)
+/** @type {Record<string, number>} */
 const TIER_RANK = { free: 0, pro: 1, business: 2, enterprise: 3 };
 
 /**
  * Check if a tier meets or exceeds a required tier level
+ * @param {string} userTier
+ * @param {string} requiredTier
  */
 export function tierMeetsRequirement(userTier, requiredTier) {
   return (TIER_RANK[userTier] ?? 0) >= (TIER_RANK[requiredTier] ?? 0);
@@ -111,13 +115,17 @@ export function tierMeetsRequirement(userTier, requiredTier) {
 
 /**
  * Get tier config by name, defaults to free
+ * @param {string} tierName
+ * @returns {Record<string, unknown>}
  */
 export function getTier(tierName) {
-  return TIERS[tierName] || TIERS.free;
+  return /** @type {Record<string, unknown>} */ (TIERS[tierName] || TIERS.free);
 }
 
 /**
  * Check if a limit is exceeded (-1 = unlimited)
+ * @param {number} limit
+ * @param {number} current
  */
 export function isWithinLimit(limit, current) {
   if (limit === -1) return true;

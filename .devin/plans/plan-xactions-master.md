@@ -102,13 +102,20 @@ Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 
 - [x] 4.8 — Type `src/plugins/loader.js` and `src/plugins/manager.js`
   - Replaced `Object` JSDoc with `Record<string, unknown>`, casted page-evaluate results, and resolved plugin registry unknowns.
   - `tests/plugins/loader.test.js` passes (17 tests).
-- [ ] 4.9 — Type `src/api` (Prisma, services, routes) and `src/workflows`
-- [ ] 4.10 — Type `src/mcp` server and tools
-- [ ] 4.11 — Type remaining `src/{agents,ai,a2a,analytics,streaming,utils,automation}`
-- [ ] 4.12 — Add missing `.d.ts` declarations for untyped dependencies
-- [ ] 4.13 — Final `npm run typecheck` (entire `src` + `api`) and full `npx vitest run`
+- [x] 4.9 — Type `src/workflows`
+  - Added shared `Workflow*` interfaces to `src/types/xactions.d.ts`.
+  - Typed `src/workflows/{actions,conditions,engine,index,store,triggers}.js` with JSDoc.
+  - `npm run typecheck` passes with **0 errors**; `npx vitest run tests/workflows` passes (137 tests).
+- [~] 4.10 — Type `api/` (Prisma, services, routes)
+  - 4.10a — In progress. Expanded `tsconfig.json` include for `api/config`, `api/lib`, `api/middleware`, `api/services`, `api/openapi.js`, and `api/realtime/socketHandler.js`; added minimal `.d.ts` declarations for `express`, `jsonwebtoken`, and `socket.io`; added JSDoc types and runtime fixes to `api/config/subscription-tiers.js`, `api/config/x402-config.js`, `api/middleware/auth.js`, and `api/middleware/ai-detector.js`; created `.d.ts` shims for `api/routes/twitter.d.ts`, `api/routes/facebookAccounts.d.ts`, `src/scraping/paginationEngine.d.ts`, and `src/streaming/index.d.ts`; fixed an error message mismatch in `api/services/facebookAutomation.js`. `npm run typecheck` currently **707 errors** (down from 929 after the include expansion). Targeted `npx vitest run tests/api/*.test.js tests/services/*.test.js` passes (611 tests).
+  - 4.10b — Type `api/routes/**/*.js`.
+  - 4.10c — Type `api/server.js` and `api/serverless.js`.
+- [ ] 4.11 — Type `src/mcp` server and tools
+- [ ] 4.12 — Type remaining `src/{agents,ai,a2a,analytics,streaming,utils,automation}`
+- [ ] 4.13 — Add missing `.d.ts` declarations for untyped dependencies
+- [ ] 4.14 — Final `npm run typecheck` (entire `src` + `api`) and full `npx vitest run`
 
-Status: Phase 4.7 and 4.8 completed. `src/scrapers/index.js`, `src/index.js`, `src/algorithmBuilder.js`, root manager files, `src/personaEngine.js`, and `src/plugins/loader.js`/`manager.js` are now typed. `npm run typecheck` passes with **0 errors** and targeted `npx vitest run tests/plugins/loader.test.js tests/scrapers/facebook-index.test.js` passes (151 tests).
+Status: Phase 4.10a in progress. `api/` base layer is partially typed; `npm run typecheck` reports 707 errors in the newly-included files. Targeted `npx vitest run tests/api/*.test.js tests/services/*.test.js` passes (611 tests).
 
 ## Verification baseline
 
@@ -116,7 +123,7 @@ Status: Phase 4.7 and 4.8 completed. `src/scrapers/index.js`, `src/index.js`, `s
 - API smoke: `npx vitest run tests/api/facebook-automate-routes.test.js`
 - Type: `npm run typecheck`
 - Pre-existing type error baseline: **137 errors** (as of Phase 2 completion)
-- Current type error count: **0 errors** for the full `tsconfig.json` include list (`src/core`, `src/client`, `src/scrapers/twitter`, `src/scrapers/facebook`, `src/scrapers/adapters`, `src/scrapers/bluesky`, `src/scrapers/mastodon`, `src/scrapers/threads`, `src/types`, `api/lib/prisma.js`, `api/services/facebookAutomation.js`).
+- Current type error count: **707 errors** for the updated `tsconfig.json` include list (`src/core`, `src/client`, `src/scrapers/twitter`, `src/scrapers/facebook`, `src/scrapers/adapters`, `src/scrapers/bluesky`, `src/scrapers/mastodon`, `src/scrapers/threads`, `src/types`, `api/config`, `api/lib`, `api/middleware`, `api/services`, `api/openapi.js`, `api/realtime/socketHandler.js`).
 
 ## Notes
 
