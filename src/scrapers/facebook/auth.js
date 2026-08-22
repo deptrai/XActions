@@ -32,11 +32,14 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
     throw new Error('❌ Facebook login requires both c_user and xs cookies');
   }
 
-  // Use longer timeouts when visible, but always use domcontentloaded on mbasic (faster than networkidle2)
-  const navTimeout = headless ? 30000 : 60000;
+  const navTimeout = 60000;
 
   // Step 1: Navigate to Facebook first so browser is on the correct domain.
-  // Use mbasic (lightweight HTML, less bot detection) for the login handshake.
+  // Use a consistent desktop UA — mbasic with a desktop UA redirects to the
+  // lightweight www.facebook.com, which accepts the cookies and exposes the feed.
+  const DESKTOP_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+  if (typeof page.setUserAgent === 'function') await page.setUserAgent(DESKTOP_UA);
+  if (typeof page.setViewport === 'function') await page.setViewport({ width: 1280, height: 720 });
   await page.goto(MBASIC_BASE, { waitUntil: 'domcontentloaded', timeout: navTimeout });
   await randomDelay(1000, 2000);
 
@@ -71,18 +74,24 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
     }
   }
 
-  // Step 4: Navigate again — this sends the cookies to Facebook's server,
-  // which responds with an authenticated session. Stay on mbasic for stability.
+  // Step 4: Navigate back to mbasic so the cookies are sent to Facebook.
+  // With a desktop UA this usually redirects to www.facebook.com (home/feed).
   await page.goto(MBASIC_BASE, { waitUntil: 'domcontentloaded', timeout: navTimeout });
   await randomDelay(2000, 4000);
 
   // Step 5: Verify authentication succeeded.
-  // Check for: login form (bad cookies) OR security check (anti-bot detection).
+  // A valid session shows the home/feed with a logout link; bad cookies render a login form.
   const currentUrl = page.url();
   const authCheck = (await page.evaluate(() => {
     const bodyText = document.body?.innerText || '';
+    const title = document.title?.trim() || '';
     const hasLoginForm = !!document.querySelector?.('form[action*="login"], [data-testid="royal_login_form"]');
-    const hasLoginButton = bodyText.includes('Log in') && bodyText.includes('password');
+    const hasLoginButton = /\blog\s*in\b/i.test(bodyText) && /\bpassword\b/i.test(bodyText);
+    const hasLoginTitle = /^\s*(log\s*in|facebook\s*[-–—]?\s*log\s*in)\s*$/i.test(title);
+    const hasLogoutLink = !!document.querySelector?.('a[href*="/logout.php"], a[href*="/logout/"], a[href*="/logout?"]');
+    const hasSearchOrCreate = bodyText.includes('What\'s on your mind') ||
+      bodyText.includes('Search Facebook') ||
+      bodyText.includes('Create post');
     // Facebook security check / CAPTCHA indicators (multi-language, various phrasings)
     const hasSecurityCheck = bodyText.includes('confirmez que vous êtes une personne') ||
       bodyText.includes('confirm that you are a real person') ||
@@ -92,10 +101,12 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
       bodyText.includes("you're human") ||
       bodyText.includes('Enter the text from the image') ||
       bodyText.includes('hear this code');
-    return { hasLoginForm, hasLoginButton, hasSecurityCheck };
+    return { hasLoginForm, hasLoginButton, hasLoginTitle, hasLogoutLink, hasSearchOrCreate, hasSecurityCheck };
   })) || {};
 
-  if (authCheck.hasLoginForm || authCheck.hasLoginButton) {
+  const isLoginUrl = currentUrl.includes('/login.php') || /\blogin\b/i.test(currentUrl);
+  const isAuthenticated = authCheck.hasLogoutLink || authCheck.hasSearchOrCreate;
+  if ((authCheck.hasLoginForm || authCheck.hasLoginButton || authCheck.hasLoginTitle || isLoginUrl) && !isAuthenticated) {
     throw Object.assign(new Error('❌ Facebook cookie authentication failed — session expired or invalid cookies'), { code: 'FB_INVALID_COOKIE' });
   }
 

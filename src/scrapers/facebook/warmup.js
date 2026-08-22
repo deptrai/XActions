@@ -71,7 +71,7 @@ export async function warmSession(page, options = {}) {
     // 1. Visit homepage
     steps.push('goto_home');
     if (typeof page.goto === 'function') {
-      await page.goto(FACEBOOK_HOME, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto(FACEBOOK_HOME, { waitUntil: 'domcontentloaded', timeout: 20000 });
     }
 
     // 2. Wait 3-8s

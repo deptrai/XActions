@@ -51,8 +51,8 @@ export const MOBILE_VIEWPORT = { width: 390, height: 844, isMobile: true };
  * @returns {Promise<void>}
  */
 export async function applyMobileViewport(page) {
-  await page.setUserAgent(MOBILE_UA);
-  await page.setViewport(MOBILE_VIEWPORT);
+  if (typeof page.setUserAgent === 'function') await page.setUserAgent(MOBILE_UA);
+  if (typeof page.setViewport === 'function') await page.setViewport(MOBILE_VIEWPORT);
 }
 
 // Path segments after facebook.com/ that are NOT user/page profile handles.
@@ -292,20 +292,24 @@ export async function assertNoOnboardingWall(page, source = 'scraper') {
   if (typeof page.evaluate !== 'function') return;
   const hasWall = await page.evaluate(() => {
     if (typeof document === 'undefined' || !document.body) return false;
-    const text = (document.body.innerText || document.body.textContent || '').toLowerCase();
-    const title = (document.title || '').toLowerCase();
-    const combined = `${title} ${text}`;
+    const title = (document.title || '').toLowerCase().trim();
+    const href = (window.location.href || '').toLowerCase();
+    const h1 = (document.querySelector('h1')?.innerText || '').toLowerCase().trim();
+    // Only trigger on pages that are explicitly the Find-friends / Add-friends onboarding screen.
+    // These phrases also appear in normal sidebars, so a body-text check is too aggressive.
     return (
-      combined.includes('find friends') ||
-      combined.includes('add friends') ||
-      combined.includes('friend requests') ||
-      combined.includes('suggested for you') ||
-      combined.includes('people you may know') ||
-      combined.includes('add friend')
+      title.startsWith('find friends') ||
+      title.startsWith('add friends') ||
+      title.startsWith('people you may know') ||
+      href.includes('/find-friends') ||
+      href.includes('/friends/center/') ||
+      h1 === 'find friends' ||
+      h1 === 'add friends' ||
+      h1.startsWith('find friends')
     );
   });
-  if (hasWall) {
-    throw Object.assign(new Error(`❌ Facebook ${source} hit an onboarding wall (Find friends / Suggested for you). Account is restricted or new.`), { code: 'FB_ONBOARDING_WALL' });
+  if (hasWall === true) {
+    throw Object.assign(new Error(`❌ Facebook ${source} hit an onboarding wall (Find friends). Account may need friend-suggestions step completed in a real browser.`), { code: 'FB_ONBOARDING_WALL' });
   }
 }
 

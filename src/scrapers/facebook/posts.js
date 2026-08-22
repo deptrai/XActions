@@ -162,7 +162,8 @@ async function scrapeMbasicPosts(page, handle, options = {}) {
   };
 
   /** @type {string|null} */
-  let targetUrl = `${MBASIC_BASE}/${handle}?v=timeline`;
+  const mbasicPath = /^\d+$/.test(handle) ? `profile.php?id=${handle}` : handle;
+  let targetUrl = /** @type {string|null} */ (`${MBASIC_BASE}/${mbasicPath}${mbasicPath.includes('?') ? '&' : '?'}v=timeline`);
   const posts = new Map();
   let pageCount = 0;
   const maxPages = Math.max(1, Math.ceil(limit / 4)); // mbasic shows ~4 posts per page
@@ -264,9 +265,13 @@ export async function scrapeTweets(page, username, options = {}) {
     isMobile = true;
   } else {
     // Mobile site is more resilient in headless mode than the JS-heavy desktop site.
-    targetUrl = isFullUrl
-      ? username.replace(/^https?:\/\/(www\.|mbasic\.)?facebook\.com/i, 'https://m.facebook.com')
-      : `${MOBILE_BASE}/${normalizeHandle(username)}`;
+    if (isFullUrl) {
+      targetUrl = username.replace(/^https?:\/\/(www\.|mbasic\.)?facebook\.com/i, 'https://m.facebook.com');
+    } else {
+      const handle = normalizeHandle(username);
+      const profilePath = /^\d+$/.test(handle) ? `profile.php?id=${handle}` : handle;
+      targetUrl = `${MOBILE_BASE}/${profilePath}`;
+    }
     isMobile = true;
   }
 

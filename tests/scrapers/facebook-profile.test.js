@@ -141,7 +141,7 @@ describe('scrapeProfile input normalization', () => {
     }),
   });
 
-  it('scrapeProfile returns blocked status on missing/blocked profile (ogTitle absent)', async () => {
+  it('scrapeProfile throws blocked error on missing/blocked profile (ogTitle absent)', async () => {
     const fakePage = {
       goto: async () => {},
       evaluate: async () => ({
@@ -152,11 +152,10 @@ describe('scrapeProfile input normalization', () => {
         pageUrl: 'https://www.facebook.com/nonexistent',
       }),
     };
-    const res = await scrapeProfile(fakePage, 'nonexistent');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+    await expect(scrapeProfile(fakePage, 'nonexistent')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
-  it('scrapeProfile returns blocked status when ogTitle is generic "Facebook"', async () => {
+  it('scrapeProfile throws blocked error when ogTitle is generic "Facebook"', async () => {
     const fakePage = {
       goto: async () => {},
       evaluate: async () => ({
@@ -167,8 +166,7 @@ describe('scrapeProfile input normalization', () => {
         pageUrl: 'https://www.facebook.com/',
       }),
     };
-    const res = await scrapeProfile(fakePage, 'unknown');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+    await expect(scrapeProfile(fakePage, 'unknown')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
   it('scrapeProfile returns normalized profile on valid page', async () => {
@@ -401,19 +399,16 @@ describe('[TEA] scrapeProfile — login-wall detection variants', () => {
     }),
   });
 
-  it('[P1] returns blocked status on "Log in to Facebook" login-wall title', async () => {
-    const res = await scrapeProfile(makeLoginWallPage('Log in to Facebook'), 'target');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+  it('[P1] throws blocked error on "Log in to Facebook" login-wall title', async () => {
+    await expect(scrapeProfile(makeLoginWallPage('Log in to Facebook'), 'target')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
-  it('[P1] returns blocked status on "Log into Facebook" login-wall title', async () => {
-    const res = await scrapeProfile(makeLoginWallPage('Log into Facebook'), 'target');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+  it('[P1] throws blocked error on "Log into Facebook" login-wall title', async () => {
+    await expect(scrapeProfile(makeLoginWallPage('Log into Facebook'), 'target')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
-  it('[P1] returns blocked status on "Facebook – Log in" login-wall title', async () => {
-    const res = await scrapeProfile(makeLoginWallPage('Facebook – Log in'), 'target');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+  it('[P1] throws blocked error on "Facebook – Log in" login-wall title', async () => {
+    await expect(scrapeProfile(makeLoginWallPage('Facebook – Log in'), 'target')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 });
 
@@ -541,9 +536,8 @@ describe('[TEA-R3] scrapeProfile — login-wall detection comprehensive', () => 
     }),
   });
 
-  it('[P1] returns blocked status on "Facebook — Log in" em-dash variant', async () => {
-    const res = await scrapeProfile(makeWallPage('Facebook — Log in'), 'target');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+  it('[P1] throws blocked error on "Facebook — Log in" em-dash variant', async () => {
+    await expect(scrapeProfile(makeWallPage('Facebook — Log in'), 'target')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
   it('[P2] does NOT throw on legitimate page with "Facebook" in bio title', async () => {

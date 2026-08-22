@@ -65,8 +65,10 @@ describe('scrapeTweets', () => {
   const makeFakePage = (rawPosts = []) => ({
     goto: async () => {},
     evaluate: async (fn) => {
-      // If fn is the scroll call (no return value needed), skip
-      if (fn.toString().includes('scrollTo')) return undefined;
+      const fnStr = fn.toString();
+      if (fnStr.includes('scrollTo')) return undefined;
+      // assertNoOnboardingWall check — return false so it does not throw or consume posts
+      if (fnStr.includes('find friends') || fnStr.includes('add friends')) return false;
       // Otherwise return canned raw posts
       return rawPosts;
     },
@@ -119,7 +121,9 @@ describe('dispatcher scrape() posts/tweets routing', () => {
   const makeFakePage = (rawPosts = []) => ({
     goto: async () => {},
     evaluate: async (fn) => {
-      if (fn.toString().includes('scrollTo')) return undefined;
+      const fnStr = fn.toString();
+      if (fnStr.includes('scrollTo')) return undefined;
+      if (fnStr.includes('find friends') || fnStr.includes('add friends')) return false;
       return rawPosts;
     },
   });
@@ -196,6 +200,7 @@ describe('[TEA] scrapeTweets — scroll loop behavior', () => {
       evaluate: async (fn) => {
         const fnStr = fn.toString();
         if (fnStr.includes('scrollTo')) return undefined;
+        if (fnStr.includes('find friends') || fnStr.includes('add friends')) return false;
         callCount++;
         // Return 1 post on first call, then nothing
         if (callCount === 1) {

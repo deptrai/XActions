@@ -544,67 +544,58 @@ describe('loginWithCookie (P1 kill, fake page)', () => {
 // ============================================================================
 
 describe('scrapeProfile (P1 kill, fake page)', () => {
-  it('returns blocked status object for blocked profile (ogTitle missing → login wall, L442-448)', async () => {
+  it('throws blocked error for blocked profile (ogTitle missing → login wall, L442-448)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: null, ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    const res = await scrapeProfile(page, 'ghostuser');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
-  it('returns blocked status object for generic "Facebook" title (L443: /^facebook$/i)', async () => {
+  it('throws blocked error for generic "Facebook" title (L443: /^facebook$/i)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    const res = await scrapeProfile(page, 'ghostuser');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
-  it('returns blocked status object for "Log into Facebook" title (L444)', async () => {
+  it('throws blocked error for "Log into Facebook" title (L444)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Log into Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    const res = await scrapeProfile(page, 'ghostuser');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
-  it('returns blocked status object for "Log in to Facebook" title (L444)', async () => {
+  it('throws blocked error for "Log in to Facebook" title (L444)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Log in to Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    const res = await scrapeProfile(page, 'ghostuser');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
-  it('returns blocked status object for "FACEBOOK" uppercase (L443: /^facebook$/i)', async () => {
+  it('throws blocked error for "FACEBOOK" uppercase (L443: /^facebook$/i)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'FACEBOOK', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    const res = await scrapeProfile(page, 'ghostuser');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
-  it('returns blocked status object for "Log  in  to Facebook" multiple spaces (L444: \\s+)', async () => {
+  it('throws blocked error for "Log  in  to Facebook" multiple spaces (L444: \\s+)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Log  in  to Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    const res = await scrapeProfile(page, 'ghostuser');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
-  it('returns blocked status object for "Loginto Facebook" no space (L445: \\s* matches 0)', async () => {
+  it('throws blocked error for "Loginto Facebook" no space (L445: \\s* matches 0)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Loginto Facebook', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    const res = await scrapeProfile(page, 'ghostuser');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
-  it('returns blocked status object for "Facebook - Log in" (L446: facebook[\\s–—-]+log)', async () => {
+  it('throws blocked error for "Facebook - Log in" (L446: facebook[\\s–—-]+log)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Facebook - Log in', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    const res = await scrapeProfile(page, 'ghostuser');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
-  it('returns blocked status object for "Facebook—Log in" em dash (L446)', async () => {
+  it('throws blocked error for "Facebook—Log in" em dash (L446)', async () => {
     const page = makeFakePage();
     page.evaluate = async () => ({ ogTitle: 'Facebook—Log in', ogDescription: null, domFollowers: null, pageUrl: 'https://fb.com/x' });
-    const res = await scrapeProfile(page, 'ghostuser');
-    expect(res.error).toBe('Profile requires authentication or is blocked');
+    await expect(scrapeProfile(page, 'ghostuser')).rejects.toMatchObject({ code: 'FB_ONBOARDING_WALL' });
   });
 
   it('returns normalized profile for valid page (L451)', async () => {
@@ -798,7 +789,7 @@ describe('scrapeTweets (P1 kill, fake page)', () => {
     const page = makeFakePage();
     page.evaluate = async () => [];
     await scrapeTweets(page, 'testuser', { delay, maxRetries: 1, useMbasic: false });
-    expect(page.calls.goto[0].url).toBe('https://www.facebook.com/testuser');
+    expect(page.calls.goto[0].url).toBe('https://m.facebook.com/testuser');
   });
 
   it('scrapes posts from [role=article] elements (L604-642)', async () => {
