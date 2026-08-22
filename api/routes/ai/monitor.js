@@ -26,74 +26,7 @@ const router = express.Router();
  * @property {string} [completedAt]
  */
 
-/**
- * @typedef {Object} ScrapedUser
- * @property {string} [username]
- * @property {string} [name]
- * @property {string} [displayName]
- * @property {string} [bio]
- * @property {boolean} [verified]
- * @property {boolean} [followsBack]
- * @property {boolean} [followsYou]
- * @property {string} [profileImage]
- * @property {string} [profileImageUrl]
- * @property {string} [followers]
- * @property {string} [following]
- */
-
-/**
- * @typedef {Object} ScrapedTweet
- * @property {string} [id]
- * @property {string} [text]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [url]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [views]
- * @property {string} [quotes]
- * @property {string} [bookmarks]
- * @property {unknown[]} [media]
- * @property {boolean} [isReply]
- * @property {boolean} [isRetweet]
- * @property {boolean} [isQuote]
- * @property {string} [replyToUser]
- * @property {string} [quotedTweetId]
- * @property {ScrapedUser} [author]
- * @property {string} [username]
- * @property {string} [authorName]
- * @property {Record<string, unknown>} [metrics]
- */
-
-/**
- * @typedef {Object} ScrapedMedia
- * @property {string} [type]
- * @property {string} [url]
- * @property {string} [thumbnailUrl]
- * @property {string} [tweetId]
- * @property {string} [tweetUrl]
- * @property {string} [timestamp]
- * @property {Record<string, unknown>} [dimensions]
- * @property {number} [duration]
- * @property {string} [thumbnail]
- */
-
-/**
- * @typedef {Object} ScrapedBookmark
- * @property {string} [id]
- * @property {string} [text]
- * @property {ScrapedUser} [author]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [url]
- * @property {string} [bookmarkedAt]
- * @property {string} [username]
- * @property {string} [authorName]
- */
+/* ScrapedUser, ScrapedTweet, ScrapedMedia, and ScrapedBookmark types are provided globally by src/types/ai-routes.d.ts */
 
 /**
  * @typedef {Object} VideoVariant
@@ -356,7 +289,7 @@ router.get('/snapshot/:username', async (req, res) => {
   
   try {
     const { getLatestSnapshot } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/monitoring.js')));
-    const snapshot = await getLatestSnapshot(cleanUsername);
+    const snapshot = /** @type {MonitoringSnapshot | null} */ (await getLatestSnapshot(cleanUsername));
     
     if (!snapshot) {
       return res.status(404).json({
@@ -415,11 +348,11 @@ router.post('/compare', async (req, res) => {
   
   try {
     const { compareSnapshots } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/monitoring.js')));
-    const comparison = await compareSnapshots({
+    const comparison = /** @type {ComparisonResult | null} */ (await compareSnapshots({
       username: username?.replace(/^@/, '').toLowerCase(),
       snapshotId1,
       snapshotId2,
-    });
+    }));
     
     if (!comparison) {
       return res.status(404).json({
@@ -499,14 +432,14 @@ router.post('/alert/new-followers', async (req, res) => {
     const { getLatestSnapshot, saveSnapshot } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/monitoring.js')));
     
     // Get current followers (limited for speed)
-    const current = /** @type {Record<string, unknown>} */ (await scrapeFollowers((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: 200 }));
+    const current = /** @type {UserListResult} */ (await scrapeFollowers((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: 200 }));
     const currentUsernames = new Set((current.users || []).map(u => u.username.toLowerCase()));
     
     // Get previous snapshot
-    const previous = await getLatestSnapshot(cleanUsername);
+    const previous = /** @type {MonitoringSnapshot | null} */ (await getLatestSnapshot(cleanUsername));
     
-    let newFollowers = [];
-    let lostFollowers = [];
+    let newFollowers = /** @type {Record<string, unknown>[]} */ ([]);
+    let lostFollowers = /** @type {string[]} */ ([]);
     
     if (previous && previous.followers) {
       const previousUsernames = new Set(previous.followers.map(u => u.toLowerCase()));
@@ -604,9 +537,9 @@ router.get('/list', async (req, res) => {
   
   try {
     const { listMonitoredAccounts } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/monitoring.js')));
-    const accounts = await listMonitoredAccounts({
+    const accounts = /** @type {Record<string, unknown>[]} */ (await listMonitoredAccounts({
       limit: Math.min(parseInt(String(limit), 10) || 50, 200),
-    });
+    }));
     
     res.json({
       success: true,
@@ -654,7 +587,7 @@ router.post('/keyword', async (req, res) => {
     }
 
     if (action === 'list') {
-      const jobs = /** @type {Record<string, unknown>[]} */ (await getRecentJobs({ type: 'monitorKeyword', limit: 20 }));
+      const jobs = /** @type {QueueJob[]} */ (await getRecentJobs({ type: 'monitorKeyword', limit: 20 }));
       return res.json({ success: true, data: { monitors: jobs.map(j => ({ monitorId: j.id, keyword: j.config?.keyword, status: j.status })) } });
     }
 
@@ -739,7 +672,7 @@ router.post('/track-engagement', async (req, res) => {
   const interval = /** @type {string | undefined} */ (req.body.interval) ?? '1h';
   const duration = /** @type {string | undefined} */ (req.body.duration) ?? '24h';
 
-  const urls = tweetUrls || [];
+  const urls = /** @type {string[]} */ (tweetUrls || []);
   const ids = tweetIds || [];
   const allIds = [
     ...ids,

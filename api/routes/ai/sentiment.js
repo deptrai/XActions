@@ -25,74 +25,7 @@ const router = express.Router();
  * @property {string} [completedAt]
  */
 
-/**
- * @typedef {Object} ScrapedUser
- * @property {string} [username]
- * @property {string} [name]
- * @property {string} [displayName]
- * @property {string} [bio]
- * @property {boolean} [verified]
- * @property {boolean} [followsBack]
- * @property {boolean} [followsYou]
- * @property {string} [profileImage]
- * @property {string} [profileImageUrl]
- * @property {string} [followers]
- * @property {string} [following]
- */
-
-/**
- * @typedef {Object} ScrapedTweet
- * @property {string} [id]
- * @property {string} [text]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [url]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [views]
- * @property {string} [quotes]
- * @property {string} [bookmarks]
- * @property {unknown[]} [media]
- * @property {boolean} [isReply]
- * @property {boolean} [isRetweet]
- * @property {boolean} [isQuote]
- * @property {string} [replyToUser]
- * @property {string} [quotedTweetId]
- * @property {ScrapedUser} [author]
- * @property {string} [username]
- * @property {string} [authorName]
- * @property {Record<string, unknown>} [metrics]
- */
-
-/**
- * @typedef {Object} ScrapedMedia
- * @property {string} [type]
- * @property {string} [url]
- * @property {string} [thumbnailUrl]
- * @property {string} [tweetId]
- * @property {string} [tweetUrl]
- * @property {string} [timestamp]
- * @property {Record<string, unknown>} [dimensions]
- * @property {number} [duration]
- * @property {string} [thumbnail]
- */
-
-/**
- * @typedef {Object} ScrapedBookmark
- * @property {string} [id]
- * @property {string} [text]
- * @property {ScrapedUser} [author]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [url]
- * @property {string} [bookmarkedAt]
- * @property {string} [username]
- * @property {string} [authorName]
- */
+/* ScrapedUser, ScrapedTweet, ScrapedMedia, and ScrapedBookmark types are provided globally by src/types/ai-routes.d.ts */
 
 /**
  * @typedef {Object} VideoVariant
@@ -141,6 +74,9 @@ router.use((req, res, next) => {
 });
 
 // Simple rule-based sentiment scorer
+/**
+ * @param {string} text
+ */
 function scoreSentiment(text) {
   const t = text.toLowerCase();
   const positive = ['great', 'love', 'amazing', 'excellent', 'best', 'awesome', 'good', 'thanks', 'happy', 'win', '🔥', '❤️', '✅', '💯', '🎉', '🙌'];
@@ -151,6 +87,9 @@ function scoreSentiment(text) {
   return Math.max(-1, Math.min(1, score));
 }
 
+/**
+ * @param {number} score
+ */
 function labelScore(score) {
   if (score > 0.1) return 'positive';
   if (score < -0.1) return 'negative';
@@ -163,14 +102,14 @@ function labelScore(score) {
  */
 router.post('/analyze', async (req, res) => {
   const text = /** @type {string | undefined} */ (req.body.text);
-  const texts = /** @type {string | undefined} */ (req.body.texts);
+  const texts = /** @type {string[] | undefined} */ (req.body.texts);
   const query = /** @type {string | undefined} */ (req.body.query);
   const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
   const mode = /** @type {string | undefined} */ (req.body.mode) ?? 'rule';
 
   // Mode 1: analyze provided text(s)
   if (text || texts) {
-    const items = texts || [text];
+    const items = /** @type {string[]} */ (texts || [text]);
     const startTime = Date.now();
     const analyzed = items.map(t => {
       const score = scoreSentiment(t);
@@ -198,7 +137,7 @@ router.post('/analyze', async (req, res) => {
     try {
       const startTime = Date.now();
       const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-      const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), query, { limit: effectiveLimit, filter: 'latest' }));
+      const results = /** @type {TweetListResult} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), query, { limit: effectiveLimit, filter: 'latest' }));
 
       const analyzed = (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).map(t => ({
         text: t.text,
@@ -262,14 +201,14 @@ router.post('/monitor', async (req, res) => {
     const { queueJob, cancelJob, getRecentJobs, getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
 
     if (action === 'list') {
-      const jobs = /** @type {Record<string, unknown>[]} */ (await getRecentJobs({ type: 'reputationMonitor', limit: 20 }));
+      const jobs = /** @type {QueueJob[]} */ (await getRecentJobs({ type: 'reputationMonitor', limit: 20 }));
       return successResponse(res, {
         monitors: jobs.map(j => ({ monitorId: j.id, username: j.config?.username, status: j.status, createdAt: j.createdAt })),
       });
     }
 
     if (action === 'status' && monitorId) {
-      const status = /** @type {Record<string, unknown>} */ (await getJobStatus(monitorId));
+      const status = /** @type {QueueJob | null} */ (await getJobStatus(monitorId));
       return successResponse(res, { monitorId, status: status?.status || 'not_found', result: status?.result });
     }
 

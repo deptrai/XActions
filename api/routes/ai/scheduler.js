@@ -25,74 +25,7 @@ const router = express.Router();
  * @property {string} [completedAt]
  */
 
-/**
- * @typedef {Object} ScrapedUser
- * @property {string} [username]
- * @property {string} [name]
- * @property {string} [displayName]
- * @property {string} [bio]
- * @property {boolean} [verified]
- * @property {boolean} [followsBack]
- * @property {boolean} [followsYou]
- * @property {string} [profileImage]
- * @property {string} [profileImageUrl]
- * @property {string} [followers]
- * @property {string} [following]
- */
-
-/**
- * @typedef {Object} ScrapedTweet
- * @property {string} [id]
- * @property {string} [text]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [url]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [views]
- * @property {string} [quotes]
- * @property {string} [bookmarks]
- * @property {unknown[]} [media]
- * @property {boolean} [isReply]
- * @property {boolean} [isRetweet]
- * @property {boolean} [isQuote]
- * @property {string} [replyToUser]
- * @property {string} [quotedTweetId]
- * @property {ScrapedUser} [author]
- * @property {string} [username]
- * @property {string} [authorName]
- * @property {Record<string, unknown>} [metrics]
- */
-
-/**
- * @typedef {Object} ScrapedMedia
- * @property {string} [type]
- * @property {string} [url]
- * @property {string} [thumbnailUrl]
- * @property {string} [tweetId]
- * @property {string} [tweetUrl]
- * @property {string} [timestamp]
- * @property {Record<string, unknown>} [dimensions]
- * @property {number} [duration]
- * @property {string} [thumbnail]
- */
-
-/**
- * @typedef {Object} ScrapedBookmark
- * @property {string} [id]
- * @property {string} [text]
- * @property {ScrapedUser} [author]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [url]
- * @property {string} [bookmarkedAt]
- * @property {string} [username]
- * @property {string} [authorName]
- */
+/* ScrapedUser, ScrapedTweet, ScrapedMedia, and ScrapedBookmark types are provided globally by src/types/ai-routes.d.ts */
 
 /**
  * @typedef {Object} VideoVariant
@@ -200,14 +133,14 @@ router.post('/list', async (req, res) => {
 
   try {
     const { getRecentJobs } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
-    const jobs = /** @type {Record<string, unknown>[]} */ (await getRecentJobs({ type: 'scheduleAdd', limit: Math.min(parseInt(String(limit), 10) || 50, 200) }));
+    const jobs = /** @type {QueueJob[]} */ (await getRecentJobs({ type: 'scheduleAdd', limit: Math.min(parseInt(String(limit), 10) || 50, 200) }));
 
     const filtered = status === 'all' ? jobs : jobs.filter(j => j.status === status);
 
     return successResponse(res, {
       scheduled: filtered.map(j => ({
         scheduleId: j.id,
-        text: j.config?.text?.slice(0, 100),
+        text: (/** @type {string | undefined} */ (j.config?.text))?.slice(0, 100),
         scheduledAt: j.config?.scheduledAt,
         cron: j.config?.cron,
         status: j.status,
@@ -324,11 +257,11 @@ router.post('/rss-drafts', async (req, res) => {
 
   try {
     const { getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
-    const feedStatus = /** @type {Record<string, unknown>} */ (await getJobStatus(feedId));
+    const feedStatus = /** @type {QueueJob | null} */ (await getJobStatus(feedId));
 
     return successResponse(res, {
       feedId,
-      drafts: (feedStatus?.result?.drafts || []).slice(0, Math.min(parseInt(String(limit), 10) || 10, 50)),
+      drafts: (/** @type {unknown[] | undefined} */ (feedStatus?.result?.drafts) || []).slice(0, Math.min(parseInt(String(limit), 10) || 10, 50)),
     });
   } catch (error) {
     const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
@@ -354,7 +287,7 @@ router.post('/evergreen', async (req, res) => {
   try {
     const startTime = Date.now();
     const { scrapeTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const tweets = /** @type {Record<string, unknown>} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: 200 }));
+    const tweets = /** @type {TweetListResult} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: 200 }));
 
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - (parseInt(String(minAgeDays), 10) || 30));

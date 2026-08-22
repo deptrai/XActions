@@ -25,74 +25,7 @@ const router = express.Router();
  * @property {string} [completedAt]
  */
 
-/**
- * @typedef {Object} ScrapedUser
- * @property {string} [username]
- * @property {string} [name]
- * @property {string} [displayName]
- * @property {string} [bio]
- * @property {boolean} [verified]
- * @property {boolean} [followsBack]
- * @property {boolean} [followsYou]
- * @property {string} [profileImage]
- * @property {string} [profileImageUrl]
- * @property {string} [followers]
- * @property {string} [following]
- */
-
-/**
- * @typedef {Object} ScrapedTweet
- * @property {string} [id]
- * @property {string} [text]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [url]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [views]
- * @property {string} [quotes]
- * @property {string} [bookmarks]
- * @property {unknown[]} [media]
- * @property {boolean} [isReply]
- * @property {boolean} [isRetweet]
- * @property {boolean} [isQuote]
- * @property {string} [replyToUser]
- * @property {string} [quotedTweetId]
- * @property {ScrapedUser} [author]
- * @property {string} [username]
- * @property {string} [authorName]
- * @property {Record<string, unknown>} [metrics]
- */
-
-/**
- * @typedef {Object} ScrapedMedia
- * @property {string} [type]
- * @property {string} [url]
- * @property {string} [thumbnailUrl]
- * @property {string} [tweetId]
- * @property {string} [tweetUrl]
- * @property {string} [timestamp]
- * @property {Record<string, unknown>} [dimensions]
- * @property {number} [duration]
- * @property {string} [thumbnail]
- */
-
-/**
- * @typedef {Object} ScrapedBookmark
- * @property {string} [id]
- * @property {string} [text]
- * @property {ScrapedUser} [author]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [url]
- * @property {string} [bookmarkedAt]
- * @property {string} [username]
- * @property {string} [authorName]
- */
+/* ScrapedUser, ScrapedTweet, ScrapedMedia, and ScrapedBookmark types are provided globally by src/types/ai-routes.d.ts */
 
 /**
  * @typedef {Object} VideoVariant
@@ -192,7 +125,7 @@ router.post('/profile', async (req, res) => {
     
     // Dynamic import to handle potential module issues
     const { scrapeProfile } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const profile = /** @type {Record<string, unknown>} */ (await scrapeProfile((/** @type {string} */ (req.sessionCookie)), cleanUsername));
+    const profile = /** @type {ScrapedProfile} */ (await scrapeProfile((/** @type {string} */ (req.sessionCookie)), cleanUsername));
     
     return successResponse(res, {
       username: profile.username,
@@ -268,7 +201,7 @@ router.post('/followers', async (req, res) => {
     const startTime = Date.now();
     
     const { scrapeFollowers } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const followers = /** @type {Record<string, unknown>} */ (await scrapeFollowers((/** @type {string} */ (req.sessionCookie)), cleanUsername, { 
+    const followers = /** @type {UserListResult} */ (await scrapeFollowers((/** @type {string} */ (req.sessionCookie)), cleanUsername, { 
       limit: effectiveLimit,
       cursor,
     }));
@@ -330,7 +263,7 @@ router.post('/following', async (req, res) => {
     const startTime = Date.now();
     
     const { scrapeFollowing } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const following = /** @type {Record<string, unknown>} */ (await scrapeFollowing((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
+    const following = /** @type {UserListResult} */ (await scrapeFollowing((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
       limit: effectiveLimit,
       cursor,
     }));
@@ -396,7 +329,7 @@ router.post('/tweets', async (req, res) => {
     const startTime = Date.now();
     
     const { scrapeTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const tweets = /** @type {Record<string, unknown>} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
+    const tweets = /** @type {TweetListResult} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
       limit: effectiveLimit,
       includeReplies,
       includeRetweets,
@@ -485,7 +418,7 @@ router.post('/search', async (req, res) => {
     const startTime = Date.now();
     
     const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), query, {
+    const results = /** @type {TweetListResult} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), query, {
       limit: effectiveLimit,
       filter: effectiveFilter,
       cursor,
@@ -571,7 +504,7 @@ router.post('/thread', async (req, res) => {
     const startTime = Date.now();
     
     const { scrapeThread } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const thread = /** @type {Record<string, unknown>} */ (await scrapeThread((/** @type {string} */ (req.sessionCookie)), effectiveTweetId));
+    const thread = /** @type {ThreadResult} */ (await scrapeThread((/** @type {string} */ (req.sessionCookie)), effectiveTweetId));
     
     return successResponse(res, {
       originalTweetId: effectiveTweetId,
@@ -643,7 +576,7 @@ router.post('/hashtag', async (req, res) => {
     const startTime = Date.now();
     
     const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), `#${cleanHashtag}`, {
+    const results = /** @type {TweetListResult} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), `#${cleanHashtag}`, {
       limit: effectiveLimit,
       filter: filter === 'top' ? 'top' : 'latest',
       cursor,
@@ -716,7 +649,7 @@ router.post('/media', async (req, res) => {
     const startTime = Date.now();
     
     const { scrapeMedia } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const media = /** @type {Record<string, unknown>} */ (await scrapeMedia((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
+    const media = /** @type {MediaListResult} */ (await scrapeMedia((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
       limit: effectiveLimit,
       type,
       cursor,
@@ -786,7 +719,7 @@ router.post('/likes', async (req, res) => {
     const startTime = Date.now();
     
     const { scrapeTweetLikes } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const likers = /** @type {Record<string, unknown>} */ (await scrapeTweetLikes((/** @type {string} */ (req.sessionCookie)), effectiveTweetId, {
+    const likers = /** @type {UserListResult} */ (await scrapeTweetLikes((/** @type {string} */ (req.sessionCookie)), effectiveTweetId, {
       limit: effectiveLimit,
       cursor,
     }));
@@ -847,7 +780,7 @@ router.post('/retweets', async (req, res) => {
     const startTime = Date.now();
     
     const { scrapeTweetRetweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const retweeters = /** @type {Record<string, unknown>} */ (await scrapeTweetRetweets((/** @type {string} */ (req.sessionCookie)), effectiveTweetId, {
+    const retweeters = /** @type {UserListResult} */ (await scrapeTweetRetweets((/** @type {string} */ (req.sessionCookie)), effectiveTweetId, {
       limit: effectiveLimit,
       cursor,
     }));
@@ -908,7 +841,7 @@ router.post('/replies', async (req, res) => {
   try {
     const startTime = Date.now();
     const { scrapeThread } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const thread = /** @type {Record<string, unknown>} */ (await scrapeThread((/** @type {string} */ (req.sessionCookie)), effectiveTweetId));
+    const thread = /** @type {ThreadResult} */ (await scrapeThread((/** @type {string} */ (req.sessionCookie)), effectiveTweetId));
 
     const replies = (thread.tweets || [])
       .filter(t => t.id !== effectiveTweetId)
@@ -963,7 +896,7 @@ router.post('/quote-tweets', async (req, res) => {
   try {
     const startTime = Date.now();
     const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), `quoted_tweet_id:${effectiveTweetId}`, {
+    const results = /** @type {TweetListResult} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), `quoted_tweet_id:${effectiveTweetId}`, {
       limit: effectiveLimit,
       filter: 'latest',
       cursor,
@@ -1016,7 +949,7 @@ router.post('/user-likes', async (req, res) => {
     const startTime = Date.now();
     const { scrapeTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
     // Likes tab scraped via profile likes tab
-    const tweets = /** @type {Record<string, unknown>} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
+    const tweets = /** @type {TweetListResult} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
       limit: effectiveLimit,
       tab: 'likes',
       cursor,
@@ -1065,7 +998,7 @@ router.post('/mentions', async (req, res) => {
   try {
     const startTime = Date.now();
     const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), `@${cleanUsername}`, {
+    const results = /** @type {TweetListResult} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), `@${cleanUsername}`, {
       limit: effectiveLimit,
       filter: filter === 'top' ? 'top' : 'latest',
       cursor,
@@ -1117,10 +1050,10 @@ router.post('/recommendations', async (req, res) => {
   try {
     const startTime = Date.now();
     const { scrapeProfile, scrapeFollowers } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const profile = /** @type {Record<string, unknown>} */ (await scrapeProfile((/** @type {string} */ (req.sessionCookie)), cleanUsername));
+    const profile = /** @type {ScrapedProfile} */ (await scrapeProfile((/** @type {string} */ (req.sessionCookie)), cleanUsername));
 
     // Get followers of followers as recommendations (2nd-degree connections)
-    const followers = /** @type {Record<string, unknown>} */ (await scrapeFollowers((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: 10 }));
+    const followers = /** @type {UserListResult} */ (await scrapeFollowers((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: 10 }));
     const seen = new Set([cleanUsername]);
     const recommendations = [];
 

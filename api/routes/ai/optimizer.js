@@ -25,74 +25,7 @@ const router = express.Router();
  * @property {string} [completedAt]
  */
 
-/**
- * @typedef {Object} ScrapedUser
- * @property {string} [username]
- * @property {string} [name]
- * @property {string} [displayName]
- * @property {string} [bio]
- * @property {boolean} [verified]
- * @property {boolean} [followsBack]
- * @property {boolean} [followsYou]
- * @property {string} [profileImage]
- * @property {string} [profileImageUrl]
- * @property {string} [followers]
- * @property {string} [following]
- */
-
-/**
- * @typedef {Object} ScrapedTweet
- * @property {string} [id]
- * @property {string} [text]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [url]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [views]
- * @property {string} [quotes]
- * @property {string} [bookmarks]
- * @property {unknown[]} [media]
- * @property {boolean} [isReply]
- * @property {boolean} [isRetweet]
- * @property {boolean} [isQuote]
- * @property {string} [replyToUser]
- * @property {string} [quotedTweetId]
- * @property {ScrapedUser} [author]
- * @property {string} [username]
- * @property {string} [authorName]
- * @property {Record<string, unknown>} [metrics]
- */
-
-/**
- * @typedef {Object} ScrapedMedia
- * @property {string} [type]
- * @property {string} [url]
- * @property {string} [thumbnailUrl]
- * @property {string} [tweetId]
- * @property {string} [tweetUrl]
- * @property {string} [timestamp]
- * @property {Record<string, unknown>} [dimensions]
- * @property {number} [duration]
- * @property {string} [thumbnail]
- */
-
-/**
- * @typedef {Object} ScrapedBookmark
- * @property {string} [id]
- * @property {string} [text]
- * @property {ScrapedUser} [author]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [url]
- * @property {string} [bookmarkedAt]
- * @property {string} [username]
- * @property {string} [authorName]
- */
+/* ScrapedUser, ScrapedTweet, ScrapedMedia, and ScrapedBookmark types are provided globally by src/types/ai-routes.d.ts */
 
 /**
  * @typedef {Object} VideoVariant
@@ -192,10 +125,10 @@ router.post('/hashtags', async (req, res) => {
   try {
     const startTime = Date.now();
     const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-    const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), query, { limit: 50, filter: 'top' }));
+    const results = /** @type {TweetListResult} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), query, { limit: 50, filter: 'top' }));
 
     // Extract hashtags from top tweets
-    const hashtagCounts = {};
+    const hashtagCounts = /** @type {Record<string, number>} */ ({});
     for (const tweet of /** @type {ScrapedTweet[]} */ (results.items || [])) {
       const tags = tweet.text?.match(/#\w+/g) || [];
       for (const tag of tags) {
@@ -257,7 +190,7 @@ router.post('/predict', async (req, res) => {
     if (username) {
       try {
         const { scrapeTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
-        const tweets = /** @type {Record<string, unknown>} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), username.replace(/^@/, ''), { limit: 50 }));
+        const tweets = /** @type {TweetListResult} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), username.replace(/^@/, ''), { limit: 50 }));
         const items = /** @type {ScrapedTweet[]} */ (tweets.items || []);
         const avgLikes = items.length > 0
           ? Math.round(items.reduce((s, t) => s + (parseInt(String(t.likes), 10) || 0), 0) / items.length)

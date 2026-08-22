@@ -36,74 +36,7 @@ const router = express.Router();
  * @property {string} [completedAt]
  */
 
-/**
- * @typedef {Object} ScrapedUser
- * @property {string} [username]
- * @property {string} [name]
- * @property {string} [displayName]
- * @property {string} [bio]
- * @property {boolean} [verified]
- * @property {boolean} [followsBack]
- * @property {boolean} [followsYou]
- * @property {string} [profileImage]
- * @property {string} [profileImageUrl]
- * @property {string} [followers]
- * @property {string} [following]
- */
-
-/**
- * @typedef {Object} ScrapedTweet
- * @property {string} [id]
- * @property {string} [text]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [url]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [views]
- * @property {string} [quotes]
- * @property {string} [bookmarks]
- * @property {unknown[]} [media]
- * @property {boolean} [isReply]
- * @property {boolean} [isRetweet]
- * @property {boolean} [isQuote]
- * @property {string} [replyToUser]
- * @property {string} [quotedTweetId]
- * @property {ScrapedUser} [author]
- * @property {string} [username]
- * @property {string} [authorName]
- * @property {Record<string, unknown>} [metrics]
- */
-
-/**
- * @typedef {Object} ScrapedMedia
- * @property {string} [type]
- * @property {string} [url]
- * @property {string} [thumbnailUrl]
- * @property {string} [tweetId]
- * @property {string} [tweetUrl]
- * @property {string} [timestamp]
- * @property {Record<string, unknown>} [dimensions]
- * @property {number} [duration]
- * @property {string} [thumbnail]
- */
-
-/**
- * @typedef {Object} ScrapedBookmark
- * @property {string} [id]
- * @property {string} [text]
- * @property {ScrapedUser} [author]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [url]
- * @property {string} [bookmarkedAt]
- * @property {string} [username]
- * @property {string} [authorName]
- */
+/* ScrapedUser, ScrapedTweet, ScrapedMedia, and ScrapedBookmark types are provided globally by src/types/ai-routes.d.ts */
 
 /**
  * @typedef {Object} VideoVariant
@@ -134,8 +67,7 @@ const generationLimiter = rateLimit({
 // In-memory voice profile store (replace with DB in production)
 // ============================================================================
 
-/** @type {Map<string, { profile: Record<string, unknown>; savedAt: string }>} */
-/** @type {Map<string, { profile: Record<string, unknown>; savedAt: string }>} */
+/** @type {Map<string, { profile: VoiceProfile; savedAt: string }>} */
 const voiceProfiles = new Map();
 
 // ============================================================================
@@ -167,8 +99,8 @@ router.post('/analyze-voice', generationLimiter, async (req, res) => {
     }
 
     // Step 1: Scrape tweets
-    const { scrapeTweets } = await import('../../../src/scrapers/index.js');
-    const tweets = await scrapeTweets(username, authToken, { limit: tweetLimit });
+    const { scrapeTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../../src/scrapers/index.js')));
+    const tweets = /** @type {Record<string, unknown>[] | null} */ (await scrapeTweets(username, authToken, { limit: (/** @type {number} */ (tweetLimit)) }));
 
     if (!tweets || tweets.length === 0) {
       return res.status(404).json({
@@ -184,7 +116,7 @@ router.post('/analyze-voice', generationLimiter, async (req, res) => {
 
     // Step 3: Save profile
     voiceProfiles.set(username.toLowerCase().replace(/^@/, ''), {
-      profile,
+      profile: /** @type {VoiceProfile} */ (/** @type {unknown} */ (profile)),
       savedAt: new Date().toISOString(),
     });
 
@@ -228,7 +160,7 @@ router.post('/generate', generationLimiter, async (req, res) => {
     const provider = /** @type {string | undefined} */ (req.body.provider);
     const openaiApiKey = /** @type {string | undefined} */ (req.body.openaiApiKey);
     const grokApiKey = /** @type {string | undefined} */ (req.body.grokApiKey);
-    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
+    const directProfile = /** @type {VoiceProfile | undefined} */ (req.body.voiceProfile);
 
     if (!topic) {
       return res.status(400).json({ error: 'topic is required' });
@@ -297,7 +229,7 @@ router.post('/thread-from-text', generationLimiter, async (req, res) => {
     const provider = /** @type {string | undefined} */ (req.body.provider);
     const openaiApiKey = /** @type {string | undefined} */ (req.body.openaiApiKey);
     const grokApiKey = /** @type {string | undefined} */ (req.body.grokApiKey);
-    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
+    const directProfile = /** @type {VoiceProfile | undefined} */ (req.body.voiceProfile);
 
     if (!text) {
       return res.status(400).json({ error: 'text is required — the long-form text to split into a thread' });
@@ -355,7 +287,7 @@ router.post('/bio', generationLimiter, async (req, res) => {
     const provider = /** @type {string | undefined} */ (req.body.provider);
     const openaiApiKey = /** @type {string | undefined} */ (req.body.openaiApiKey);
     const grokApiKey = /** @type {string | undefined} */ (req.body.grokApiKey);
-    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
+    const directProfile = /** @type {VoiceProfile | undefined} */ (req.body.voiceProfile);
 
     let voiceProfile = directProfile;
     if (!voiceProfile && username) {
@@ -404,7 +336,7 @@ router.post('/rewrite', generationLimiter, async (req, res) => {
     const count = /** @type {string | number | undefined} */ (req.body.count) ?? 3;
     const model = /** @type {string | undefined} */ (req.body.model);
     const apiKey = /** @type {string | undefined} */ (req.body.apiKey);
-    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
+    const directProfile = /** @type {VoiceProfile | undefined} */ (req.body.voiceProfile);
 
     if (!text) {
       return res.status(400).json({ error: 'text is required — the tweet to rewrite' });
@@ -455,7 +387,7 @@ router.post('/calendar', generationLimiter, async (req, res) => {
     const days = /** @type {string | number | undefined} */ (req.body.days) ?? 7;
     const model = /** @type {string | undefined} */ (req.body.model);
     const apiKey = /** @type {string | undefined} */ (req.body.apiKey);
-    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
+    const directProfile = /** @type {VoiceProfile | undefined} */ (req.body.voiceProfile);
 
     let voiceProfile = directProfile;
     if (!voiceProfile && username) {
@@ -502,7 +434,7 @@ router.post('/reply', generationLimiter, async (req, res) => {
     const count = /** @type {string | number | undefined} */ (req.body.count) ?? 3;
     const model = /** @type {string | undefined} */ (req.body.model);
     const apiKey = /** @type {string | undefined} */ (req.body.apiKey);
-    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
+    const directProfile = /** @type {VoiceProfile | undefined} */ (req.body.voiceProfile);
 
     if (!originalTweet) {
       return res.status(400).json({ error: 'originalTweet is required — the tweet to reply to' });

@@ -25,74 +25,7 @@ const router = express.Router();
  * @property {string} [completedAt]
  */
 
-/**
- * @typedef {Object} ScrapedUser
- * @property {string} [username]
- * @property {string} [name]
- * @property {string} [displayName]
- * @property {string} [bio]
- * @property {boolean} [verified]
- * @property {boolean} [followsBack]
- * @property {boolean} [followsYou]
- * @property {string} [profileImage]
- * @property {string} [profileImageUrl]
- * @property {string} [followers]
- * @property {string} [following]
- */
-
-/**
- * @typedef {Object} ScrapedTweet
- * @property {string} [id]
- * @property {string} [text]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [url]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [views]
- * @property {string} [quotes]
- * @property {string} [bookmarks]
- * @property {unknown[]} [media]
- * @property {boolean} [isReply]
- * @property {boolean} [isRetweet]
- * @property {boolean} [isQuote]
- * @property {string} [replyToUser]
- * @property {string} [quotedTweetId]
- * @property {ScrapedUser} [author]
- * @property {string} [username]
- * @property {string} [authorName]
- * @property {Record<string, unknown>} [metrics]
- */
-
-/**
- * @typedef {Object} ScrapedMedia
- * @property {string} [type]
- * @property {string} [url]
- * @property {string} [thumbnailUrl]
- * @property {string} [tweetId]
- * @property {string} [tweetUrl]
- * @property {string} [timestamp]
- * @property {Record<string, unknown>} [dimensions]
- * @property {number} [duration]
- * @property {string} [thumbnail]
- */
-
-/**
- * @typedef {Object} ScrapedBookmark
- * @property {string} [id]
- * @property {string} [text]
- * @property {ScrapedUser} [author]
- * @property {string} [timestamp]
- * @property {string} [createdAt]
- * @property {string} [likes]
- * @property {string} [retweets]
- * @property {string} [replies]
- * @property {string} [url]
- * @property {string} [bookmarkedAt]
- * @property {string} [username]
- * @property {string} [authorName]
- */
+/* ScrapedUser, ScrapedTweet, ScrapedMedia, and ScrapedBookmark types are provided globally by src/types/ai-routes.d.ts */
 
 /**
  * @typedef {Object} VideoVariant
@@ -226,7 +159,7 @@ router.post('/list', async (req, res) => {
 
   try {
     const { getRecentJobs } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
-    const jobs = /** @type {Record<string, unknown>[]} */ (await getRecentJobs({ type: 'streamStart', limit: Math.min(parseInt(String(limit), 10) || 20, 100) }));
+    const jobs = /** @type {QueueJob[]} */ (await getRecentJobs({ type: 'streamStart', limit: Math.min(parseInt(String(limit), 10) || 20, 100) }));
 
     return successResponse(res, {
       streams: jobs.map(j => ({
@@ -309,7 +242,7 @@ router.post('/status', async (req, res) => {
 
   try {
     const { getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
-    const status = /** @type {Record<string, unknown>} */ (await getJobStatus(streamId));
+    const status = /** @type {QueueJob | null} */ (await getJobStatus(streamId));
 
     if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Stream not found' });
 
@@ -317,8 +250,8 @@ router.post('/status', async (req, res) => {
       streamId,
       status: status.status,
       progress: status.progress || null,
-      itemsCollected: status.result?.items?.length || 0,
-      latestItems: (/** @type {Record<string, unknown>[]} */ (/** @type {Record<string, unknown>[]} */ (status.result?.items || []))).slice(-10),
+      itemsCollected: (/** @type {ScrapedTweet[] | undefined} */ (status.result?.items))?.length || 0,
+      latestItems: (/** @type {ScrapedTweet[]} */ (status.result?.items || [])).slice(-10),
       timing: { startedAt: status.startedAt, updatedAt: status.updatedAt },
     });
   } catch (error) {
@@ -342,7 +275,7 @@ router.post('/history', async (req, res) => {
 
   try {
     const { getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
-    const status = /** @type {Record<string, unknown>} */ (await getJobStatus(streamId));
+    const status = /** @type {QueueJob | null} */ (await getJobStatus(streamId));
 
     if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Stream not found' });
 

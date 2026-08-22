@@ -81,7 +81,9 @@ declare module 'express' {
       use(...handlers: (RequestHandler | IRouter)[]): IRouter;
       use(...handlers: (ErrorRequestHandler | IRouter)[]): IRouter;
       use(path: string, ...handlers: (RequestHandler | IRouter)[]): IRouter;
+      use(path: string[], ...handlers: (RequestHandler | IRouter)[]): IRouter;
       use(path: string, ...handlers: (ErrorRequestHandler | IRouter)[]): IRouter;
+      use(path: string[], ...handlers: (ErrorRequestHandler | IRouter)[]): IRouter;
     }
 
     export interface Application extends IRouter {
