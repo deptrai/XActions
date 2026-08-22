@@ -235,6 +235,17 @@ flowchart TB
   5. **Consumer Lag Backpressure:** Khi Redis Stream pending > 10,000 messages, giảm nhịp cào bulk xuống 25% cho tới khi lag < 5,000.
   6. **No Direct IP Leak:** Mọi request phải qua `ProxyIpPool`; governor không bao giờ cho phép fallback direct connection.
 
+### AD-20 — Dual-Pool Resource Isolation & Multi-Consumer Quota [ADOPTED - NEW]
+* **Binds:** `src/core/adaptive-governor.js`, `src/mcp/**`, `src/proxy/proxy-pool.js`
+* **Prevents:** On-demand MCP queries (từ Nowing hoặc ChainLens-Research) bị starved bởi bulk crawl workers chạy nền.
+* **Ref:** `PRD-ECOSYSTEM-TRINITY-ALIGNMENT.md` TRINITY-9
+* **Rule:**
+  1. **Realtime Pool (30% proxy capacity):** Dành cho MCP on-demand queries từ Nowing và ChainLens. Ưu tiên cao, timeout 5s. Khi cạn, tạm yield proxy từ Bulk Pool.
+  2. **Bulk Pool (70% proxy capacity):** Dành cho background crawl. Có thể bị throttle khi Realtime Pool áp lực.
+  3. **Consumer Quota:** Mỗi consumer (Nowing, ChainLens) được cấp quota riêng biệt trong Rate Governor. ChainLens: 10 RPM dedicated. Nowing: theo workspace plan.
+  4. **Consumer Identification:** Service Bearer Token (`XACTIONS_MCP_API_KEY`) phân biệt consumer qua header `X-Consumer-Id: nowing | chainlens`.
+  5. **ChainLens-Research Consumer (Luồng A — Live Domain Grounding):** ChainLens-Research gọi XActions MCP tools (`x_facebook_group_posts`, `x_search_tweets`, `x_shopee_search`) qua HTTP Keep-Alive tới `http://xactions:3001/mcp` khi Deep/Wide Research cần dữ liệu thực địa từ MXH. Đây là best-effort enhancement — nếu XActions offline, ChainLens tiếp tục pipeline bình thường.
+
 ### AD-14 — Operational Status & Error Envelope for Consumers [ADOPTED - NEW]
 * **Binds:** `src/mcp/**`, `src/api/**`, `src/cli/**`, `src/core/error-envelope.js`, `src/core/status-api.js`
 * **Prevents:** AI agents, CLI users, và operators nhận lỗi không đồng nhất hoặc bị "silent stall" khi hệ thống tự điều tiết; hai surface khác nhau (MCP, HTTP, CLI) trả về status/error shape khác nhau.
