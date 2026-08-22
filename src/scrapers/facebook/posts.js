@@ -13,7 +13,7 @@
 // by nichxbt
 
 // Facebook scraper — posts.js
-import { randomDelay, FACEBOOK_BASE, MBASIC_BASE, applyMobileViewport, NON_PROFILE_SEGMENTS, assertFacebookUrlLocal, assertNoCheckpoint } from './core.js';
+import { randomDelay, FACEBOOK_BASE, MBASIC_BASE, MOBILE_BASE, applyMobileViewport, NON_PROFILE_SEGMENTS, assertFacebookUrlLocal, assertNoCheckpoint, assertNoOnboardingWall } from './core.js';
 import { normalizeHandle, normalizePost, normalizeGroupPost } from './normalize.js';
 import { extractHydrationJson } from './hydration.js';
 
@@ -170,6 +170,7 @@ async function scrapeMbasicPosts(page, handle, options = {}) {
   while (targetUrl && posts.size < limit && pageCount < maxPages) {
     try {
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await assertNoOnboardingWall(page, 'mbasic posts');
       await delay(1500, 3000);
 
       // Detect login wall
@@ -192,6 +193,8 @@ async function scrapeMbasicPosts(page, handle, options = {}) {
       targetUrl = posts.size < limit ? await findNextPage() : null;
       pageCount++;
     } catch (err) {
+      const code = /** @type {Error & Record<string, unknown>} */ (err).code;
+      if (code === 'FB_ONBOARDING_WALL') throw err;
       console.warn(`⚠️ mbasic posts page ${pageCount} failed for ${handle}: ${(err instanceof Error ? err.message : String(err))}`);
       break;
     }
@@ -254,21 +257,29 @@ export async function scrapeTweets(page, username, options = {}) {
   }
 
   let targetUrl;
+  let isMobile = false;
   if (isGroup) {
     const cleanUrl = username.replace(/^https?:\/\/(www\.)?facebook\.com/, 'https://m.facebook.com');
     targetUrl = cleanUrl.startsWith('http') ? cleanUrl : `https://m.facebook.com${cleanUrl}`;
-    // Set mobile user agent for groups - desktop UA gets desktop version even on mobile URL
-    await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1');
-    await page.setViewport({ width: 390, height: 844 });
+    isMobile = true;
   } else {
-    targetUrl = isFullUrl ? username : `${FACEBOOK_BASE}/${normalizeHandle(username)}`;
+    // Mobile site is more resilient in headless mode than the JS-heavy desktop site.
+    targetUrl = isFullUrl
+      ? username.replace(/^https?:\/\/(www\.|mbasic\.)?facebook\.com/i, 'https://m.facebook.com')
+      : `${MOBILE_BASE}/${normalizeHandle(username)}`;
+    isMobile = true;
   }
 
-  await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  // Set mobile user agent whenever we hit the mobile domain - desktop UA gets desktop version even on mobile URL
+  if (isMobile) {
+    await applyMobileViewport(page);
+  }
+
+  await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await assertNoOnboardingWall(page, 'posts');
   await delay(2000, 4000);
 
   // Wait for actual post content to load (skip loading skeletons)
-  const isMobile = isGroup;
   const postSelector = isMobile ? 'div.m.displayed' : '[role="article"]';
   try {
     await page.waitForFunction((selector) => {
@@ -338,7 +349,7 @@ export async function scrapeTweets(page, username, options = {}) {
           .filter((src) => src && !src.includes('static') && !src.includes('emoji') && !src.includes('sprite') && src.startsWith('http'));
         const hasVideo = !!post.querySelector('video');
 
-        const id = postUrl || text?.slice(0, 80) || null;
+        const id = postUrl || null;
 
         return { id, text, timestamp, likes, comments, postUrl, images, hasVideo };
       }).filter((p) => p && p.id);

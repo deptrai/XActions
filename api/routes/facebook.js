@@ -456,6 +456,9 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
     if (msg.includes('security check') || msg.includes('checkpoint') || (/** @type {Error & Record<string, unknown>} */ (error)).code === 'FB_CHECKPOINT') {
       return res.status(400).json({ ok: false, error: 'Facebook security check / CAPTCHA detected. The account needs manual verification or a proxy in the cookie\'s home country.', checkpoint: true });
     }
+    if ((/** @type {Error & Record<string, unknown>} */ (error)).code === 'FB_ONBOARDING_WALL' || msg.includes('onboarding wall')) {
+      return res.status(400).json({ ok: false, error: 'Facebook account is showing an onboarding / friend-suggestion wall. Complete setup on a real browser before scraping.', accountRestricted: true });
+    }
     res.status(500).json({ ok: false, error: 'Facebook scrape failed. See server logs.' });
   }
 });
@@ -928,6 +931,11 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
   } catch (error) {
     // Log full detail server-side; return a generic message (no internal leak).
     console.error('❌ Facebook automate error:', error);
+
+    const msg = String((error instanceof Error ? error.message : String(error)) || '');
+    if ((/** @type {Error & Record<string, unknown>} */ (error)).code === 'FB_ONBOARDING_WALL' || msg.includes('onboarding wall')) {
+      return res.status(400).json({ ok: false, error: 'Facebook account is showing an onboarding / friend-suggestion wall. Complete setup on a real browser before automating.', accountRestricted: true });
+    }
     res.status(500).json({ ok: false, error: 'Facebook automate failed. See server logs.' });
   }
 });

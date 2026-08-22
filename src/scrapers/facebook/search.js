@@ -13,7 +13,7 @@
 // by nichxbt
 
 // Facebook scraper — search.js
-import { randomDelay, FACEBOOK_BASE, assertNoCheckpoint } from './core.js';
+import { randomDelay, FACEBOOK_BASE, assertNoCheckpoint, assertNoOnboardingWall } from './core.js';
 import { SEARCH_TYPE_URLS, SEARCH_TYPENAMES, normalizeByType, validateSearchQuery, validateSearchType, validateSearchLimit, buildSearchQuery } from './normalize.js';
 import { extractPostsFromDom } from './posts.js';
 import { extractHydrationJson } from './hydration.js';
@@ -186,7 +186,8 @@ async function searchByType(page, query, type, options = {}) {
 
   const searchUrl = `${FACEBOOK_BASE}${typePath}?q=${encodeURIComponent(query)}`;
 
-  await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+  await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await assertNoOnboardingWall(page, `${type} search`);
   await assertNoCheckpoint(page, `${type} search`);
   await delay(2000, 4000);
 

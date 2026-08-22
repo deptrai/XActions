@@ -283,6 +283,32 @@ export async function assertNoCheckpoint(page, source = 'search') {
   }
 }
 
+/**
+ * @param {import('puppeteer').Page} page
+ * @param {unknown} source
+ * @returns {Promise<void>}
+ */
+export async function assertNoOnboardingWall(page, source = 'scraper') {
+  if (typeof page.evaluate !== 'function') return;
+  const hasWall = await page.evaluate(() => {
+    if (typeof document === 'undefined' || !document.body) return false;
+    const text = (document.body.innerText || document.body.textContent || '').toLowerCase();
+    const title = (document.title || '').toLowerCase();
+    const combined = `${title} ${text}`;
+    return (
+      combined.includes('find friends') ||
+      combined.includes('add friends') ||
+      combined.includes('friend requests') ||
+      combined.includes('suggested for you') ||
+      combined.includes('people you may know') ||
+      combined.includes('add friend')
+    );
+  });
+  if (hasWall) {
+    throw Object.assign(new Error(`❌ Facebook ${source} hit an onboarding wall (Find friends / Suggested for you). Account is restricted or new.`), { code: 'FB_ONBOARDING_WALL' });
+  }
+}
+
 // ============================================================================
 // Group Members Scraper (Story 4.6 — FR-20, read-only)
 // ============================================================================

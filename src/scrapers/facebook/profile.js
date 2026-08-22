@@ -13,7 +13,7 @@
 // by nichxbt
 
 // Facebook scraper — profile.js
-import { randomDelay, FACEBOOK_BASE, MBASIC_BASE } from './core.js';
+import { randomDelay, FACEBOOK_BASE, MBASIC_BASE, MOBILE_BASE, applyMobileViewport, assertNoOnboardingWall } from './core.js';
 import { normalizeHandle, normalizeProfile } from './normalize.js';
 
 
@@ -32,6 +32,7 @@ async function scrapeMbasicProfile(page, handle) {
 
   try {
     await page.goto(mbasicUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await assertNoOnboardingWall(page, 'mbasic profile');
     await randomDelay(1500, 3000);
 
     // mbasic sometimes returns a script/jsonp response or a login wall. Detect early.
@@ -48,15 +49,46 @@ async function scrapeMbasicProfile(page, handle) {
       const title = document.title?.trim() || '';
 
       // Name candidates: h1, first strong in main content, title minus "| Facebook"
+      const isGibberishName = (/** @type {string | null} */ n) => {
+        if (!n) return true;
+        const trimmed = n.trim();
+        if (!trimmed) return true;
+        if (/^[\d,.$\s]+$/.test(trimmed)) return true; // pure number/count
+        if (/^(facebook|log\s*in|home|search|messages?|notifications?|menu|find friends|add friends|friend requests|suggested for you|people you may know|add friend)$/i.test(trimmed)) return true;
+        return false;
+      };
+
       let name = null;
-      const h1 = document.querySelector('h1');
-      if (h1) name = h1.innerText?.trim() || null;
-      if (!name) {
-        const strong = document.querySelector('strong, div[role="main"] h3, div#root h3');
-        if (strong) name = strong.innerText?.trim() || null;
+
+      // 1. Title "Name | Facebook" is the most reliable on mbasic.
+      const titleMatch = title.match(/^(.+?)\s*\|\s*Facebook\s*$/i);
+      if (titleMatch && !isGibberishName(titleMatch[1])) {
+        name = titleMatch[1].trim();
       }
-      if (!name && title) {
-        name = title.replace(/\s*\|\s*Facebook\s*$/i, '').trim() || null;
+
+      // 2. h1 (excluding generic labels)
+      if (isGibberishName(name)) {
+        const h1 = document.querySelector('h1');
+        const h1Text = h1?.innerText?.trim() || null;
+        if (h1Text && !isGibberishName(h1Text)) name = h1Text;
+      }
+
+      // 3. First meaningful strong/h3 in main content
+      if (isGibberishName(name)) {
+        const candidates = document.querySelectorAll('strong, div[role="main"] h3, div#root h3, .actor, a[href*="/profile.php"], a[href^="/"]');
+        for (const el of candidates) {
+          const txt = el.innerText?.trim();
+          if (txt && !isGibberishName(txt)) {
+            name = txt;
+            break;
+          }
+        }
+      }
+
+      // 4. Fallback: strip "Facebook" from title (even if no pipe)
+      if (isGibberishName(name) && title) {
+        const stripped = title.replace(/\s*\|\s*Facebook\s*$/i, '').replace(/\s*-\s*Facebook\s*$/i, '').trim();
+        if (!isGibberishName(stripped)) name = stripped;
       }
 
       // Avatar — mbasic profile picture is usually the first large img
@@ -115,13 +147,21 @@ export async function scrapeProfile(page, username, options = {}) {
 
   // Try mbasic first — less bot detection, plain HTML.
   if (useMbasic) {
-    const mbasicResult = await scrapeMbasicProfile(page, handle);
-    if (mbasicResult) return mbasicResult;
+    try {
+      const mbasicResult = await scrapeMbasicProfile(page, handle);
+      if (mbasicResult) return mbasicResult;
+    } catch (err) {
+      const code = /** @type {Error & Record<string, unknown>} */ (err).code;
+      if (code === 'FB_ONBOARDING_WALL') throw err;
+      console.warn(`⚠️ mbasic profile failed for ${handle}: ${(err instanceof Error ? err.message : String(err))}`);
+    }
   }
 
-  // Fallback to desktop / m.facebook.com.
-  const url = `${FACEBOOK_BASE}/${handle}`;
-  await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+  // Fallback to mobile facebook.com (lighter HTML, less bot detection than desktop).
+  const url = `${MOBILE_BASE}/${handle}`;
+  await applyMobileViewport(page);
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await assertNoOnboardingWall(page, 'mobile profile');
   await randomDelay(2000, 4000);
 
   const raw = /** @type {Record<string, unknown>} */ (await page.evaluate(() => {
@@ -154,19 +194,12 @@ export async function scrapeProfile(page, username, options = {}) {
     || /^log\s*into\s+facebook/i.test(title)
     || /^facebook[\s–—-]+log/i.test(title);
 
-  // Return partial data instead of throwing if we have some info
+  // A login wall on the authenticated fallback means the session is not usable for this view.
   if (isLoginWall) {
-    return {
-      name: handle,
-      username: handle,
-      bio: null,
-      followers: raw.domFollowers || null,
-      following: null,
-      posts: null,
-      profileUrl: url,
-      platform: /** @type {'facebook'} */ ('facebook'),
-      error: 'Profile requires authentication or is blocked',
-    };
+    throw Object.assign(
+      new Error('❌ Facebook profile is blocked by a login wall. The account may be restricted, new, or stuck on the Find friends onboarding screen.'),
+      { code: 'FB_ONBOARDING_WALL' }
+    );
   }
 
   return normalizeProfile(raw, handle);

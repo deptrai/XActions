@@ -13,7 +13,7 @@
 // by nichxbt
 
 // Facebook scraper — auth.js
-import { FACEBOOK_BASE, randomDelay } from './core.js';
+import { MBASIC_BASE, FACEBOOK_BASE, randomDelay } from './core.js';
 import { warmSession } from './warmup.js';
 import { generateSync as totpGenerateSync } from 'otplib';
 
@@ -32,14 +32,12 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
     throw new Error('❌ Facebook login requires both c_user and xs cookies');
   }
 
-  // When browser is visible, use longer timeouts and domcontentloaded (faster than networkidle2)
+  // Use longer timeouts when visible, but always use domcontentloaded on mbasic (faster than networkidle2)
   const navTimeout = headless ? 30000 : 60000;
-  const navWaitUntil = headless ? 'networkidle2' : 'domcontentloaded';
 
   // Step 1: Navigate to Facebook first so browser is on the correct domain.
-  // This is required — setCookie before navigation can fail silently for some
-  // cookie combinations because the browser has no origin context.
-  await page.goto(FACEBOOK_BASE, { waitUntil: 'domcontentloaded', timeout: navTimeout });
+  // Use mbasic (lightweight HTML, less bot detection) for the login handshake.
+  await page.goto(MBASIC_BASE, { waitUntil: 'domcontentloaded', timeout: navTimeout });
   await randomDelay(1000, 2000);
 
   // Step 2: Build cookie list with all fields needed for full authentication.
@@ -74,8 +72,8 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
   }
 
   // Step 4: Navigate again — this sends the cookies to Facebook's server,
-  // which responds with an authenticated session.
-  await page.goto(FACEBOOK_BASE, { waitUntil: navWaitUntil, timeout: navTimeout });
+  // which responds with an authenticated session. Stay on mbasic for stability.
+  await page.goto(MBASIC_BASE, { waitUntil: 'domcontentloaded', timeout: navTimeout });
   await randomDelay(2000, 4000);
 
   // Step 5: Verify authentication succeeded.
