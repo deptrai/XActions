@@ -1,5 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { queueJob } from '../services/jobQueue.js';
@@ -9,12 +12,14 @@ router.use(authMiddleware);
 
 // Get bookmarks
 router.get('/', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const { limit = 100, format = 'json' } = req.query;
+    const { limit = '100', format = 'json' } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getBookmarks',
         status: 'pending',
         config: JSON.stringify({ limit: parseInt(limit), format }),
@@ -24,9 +29,9 @@ router.get('/', async (req, res) => {
     await queueJob({
       type: 'getBookmarks',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { limit: parseInt(limit), format, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { limit: parseInt(limit), format, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Bookmark export queued' });
@@ -38,13 +43,15 @@ router.get('/', async (req, res) => {
 
 // Create bookmark folder (Premium+)
 router.post('/folders', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Folder name is required' });
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'createBookmarkFolder',
         status: 'pending',
         config: JSON.stringify({ name }),
@@ -54,9 +61,9 @@ router.post('/folders', async (req, res) => {
     await queueJob({
       type: 'createBookmarkFolder',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { name, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { name, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Folder creation queued' });
@@ -68,14 +75,16 @@ router.post('/folders', async (req, res) => {
 
 // Clear all bookmarks
 router.delete('/clear', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'clearBookmarks',
         status: 'pending',
         config: JSON.stringify({}),
@@ -85,9 +94,9 @@ router.delete('/clear', async (req, res) => {
     await queueJob({
       type: 'clearBookmarks',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Bookmark clear queued' });

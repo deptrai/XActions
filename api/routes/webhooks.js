@@ -28,10 +28,10 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
 
   let event;
   try {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+    event = stripe.webhooks.constructEvent(/** @type {string | Buffer} */ (/** @type {unknown} */ (req.body)), String(sig), webhookSecret);
   } catch (err) {
-    console.error(`❌ Stripe webhook signature verification failed: ${err.message}`);
+    console.error(`❌ Stripe webhook signature verification failed: ${(err instanceof Error ? err.message : String(err))}`);
     return res.status(400).json({ error: 'Invalid signature' });
   }
 
@@ -41,13 +41,17 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
     await handleWebhookEvent(event);
     res.json({ received: true });
   } catch (err) {
-    console.error(`❌ Stripe webhook handler error: ${err.message}`);
+    console.error(`❌ Stripe webhook handler error: ${(err instanceof Error ? err.message : String(err))}`);
     res.status(500).json({ error: 'Webhook handler failed' });
   }
 });
 
 /**
  * Verify webhook signature
+ * @param {Record<string, unknown> | string | Buffer} payload
+ * @param {string | string[] | undefined} signature
+ * @param {string | undefined} secret
+ * @returns {boolean}
  */
 function verifySignature(payload, signature, secret) {
   // If no secret is configured, skip verification (opt-in)
@@ -60,7 +64,7 @@ function verifySignature(payload, signature, secret) {
     .update(JSON.stringify(payload))
     .digest('hex');
 
-  const sigBuf = Buffer.from(signature);
+  const sigBuf = Buffer.from(String(signature));
   const expBuf = Buffer.from(expectedSignature);
   // Buffers must be same length for timingSafeEqual
   if (sigBuf.length !== expBuf.length) return false;
@@ -84,25 +88,25 @@ router.post('/payments', express.json(), (req, res) => {
     return res.status(401).json({ error: 'Invalid signature' });
   }
   
-  const payload = req.body;
-  
+  const payload = /** @type {{ event?: string; id?: string; timestamp?: string; data?: Record<string, unknown> }} */ (req.body);
+
   console.log('\n' + '='.repeat(60));
   console.log('💰 PAYMENT WEBHOOK RECEIVED');
   console.log('='.repeat(60));
-  console.log(`Event: ${event || payload.event}`);
-  console.log(`ID: ${webhookId || payload.id}`);
-  console.log(`Time: ${payload.timestamp}`);
-  
+  console.log(`Event: ${String(event || payload.event || '')}`);
+  console.log(`ID: ${String(webhookId || payload.id || '')}`);
+  console.log(`Time: ${String(payload.timestamp || '')}`);
+
   if (payload.data) {
-    console.log(`Amount: ${payload.data.amount}`);
-    console.log(`Operation: ${payload.data.operation}`);
-    console.log(`Network: ${payload.data.networkName || payload.data.network}`);
-    console.log(`Payer: ${payload.data.payer}`);
+    console.log(`Amount: ${String(payload.data.amount)}`);
+    console.log(`Operation: ${String(payload.data.operation)}`);
+    console.log(`Network: ${String(payload.data.networkName || payload.data.network)}`);
+    console.log(`Payer: ${String(payload.data.payer)}`);
     if (payload.data.transactionHash) {
-      console.log(`TX: ${payload.data.transactionHash}`);
+      console.log(`TX: ${String(payload.data.transactionHash)}`);
     }
     if (payload.data.explorerUrl) {
-      console.log(`Explorer: ${payload.data.explorerUrl}`);
+      console.log(`Explorer: ${String(payload.data.explorerUrl)}`);
     }
   }
   console.log('='.repeat(60) + '\n');

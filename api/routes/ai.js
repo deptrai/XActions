@@ -28,23 +28,25 @@ router.use(requireAIAgent);
  */
 router.post('/scrape/profile', async (req, res) => {
   try {
-    const { username, authToken } = req.body;
-    
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const username = body.username;
+    const authToken = body.authToken;
+
     if (!username) {
       return res.status(400).json({ error: 'username is required' });
     }
-    
+
     if (!authToken) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'authToken is required',
         hint: 'Provide your X/Twitter auth_token cookie value'
       });
     }
-    
+
     // Import scraper dynamically
     const { scrapeProfile } = await import('../../src/scrapers/index.js');
     const profile = await scrapeProfile(username, authToken);
-    
+
     res.json({
       success: true,
       data: profile,
@@ -52,9 +54,9 @@ router.post('/scrape/profile', async (req, res) => {
       payment: req.x402?.verified ? 'settled' : 'skipped',
     });
   } catch (error) {
-    res.status(500).json({ 
-      error: 'Scraping failed', 
-      message: error.message 
+    res.status(500).json({
+      error: 'Scraping failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -66,15 +68,18 @@ router.post('/scrape/profile', async (req, res) => {
  */
 router.post('/scrape/followers', async (req, res) => {
   try {
-    const { username, authToken, limit = 1000 } = req.body;
-    
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const username = body.username;
+    const authToken = body.authToken;
+    const limit = body.limit ? Number(body.limit) : 1000;
+
     if (!username || !authToken) {
       return res.status(400).json({ error: 'username and authToken are required' });
     }
-    
+
     const { scrapeFollowers } = await import('../../src/scrapers/index.js');
     const followers = await scrapeFollowers(username, authToken, { limit });
-    
+
     res.json({
       success: true,
       data: followers,
@@ -82,7 +87,7 @@ router.post('/scrape/followers', async (req, res) => {
       operation: 'scrape:followers',
     });
   } catch (error) {
-    res.status(500).json({ error: 'Scraping failed', message: error.message });
+    res.status(500).json({ error: 'Scraping failed', message: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -93,15 +98,18 @@ router.post('/scrape/followers', async (req, res) => {
  */
 router.post('/scrape/following', async (req, res) => {
   try {
-    const { username, authToken, limit = 1000 } = req.body;
-    
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const username = body.username;
+    const authToken = body.authToken;
+    const limit = body.limit ? Number(body.limit) : 1000;
+
     if (!username || !authToken) {
       return res.status(400).json({ error: 'username and authToken are required' });
     }
-    
+
     const { scrapeFollowing } = await import('../../src/scrapers/index.js');
     const following = await scrapeFollowing(username, authToken, { limit });
-    
+
     res.json({
       success: true,
       data: following,
@@ -109,7 +117,7 @@ router.post('/scrape/following', async (req, res) => {
       operation: 'scrape:following',
     });
   } catch (error) {
-    res.status(500).json({ error: 'Scraping failed', message: error.message });
+    res.status(500).json({ error: 'Scraping failed', message: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -120,15 +128,18 @@ router.post('/scrape/following', async (req, res) => {
  */
 router.post('/scrape/tweets', async (req, res) => {
   try {
-    const { username, authToken, limit = 100 } = req.body;
-    
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const username = body.username;
+    const authToken = body.authToken;
+    const limit = body.limit ? Number(body.limit) : 100;
+
     if (!username || !authToken) {
       return res.status(400).json({ error: 'username and authToken are required' });
     }
-    
+
     const { scrapeTweets } = await import('../../src/scrapers/index.js');
     const tweets = await scrapeTweets(username, authToken, { limit });
-    
+
     res.json({
       success: true,
       data: tweets,
@@ -136,7 +147,7 @@ router.post('/scrape/tweets', async (req, res) => {
       operation: 'scrape:tweets',
     });
   } catch (error) {
-    res.status(500).json({ error: 'Scraping failed', message: error.message });
+    res.status(500).json({ error: 'Scraping failed', message: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -147,23 +158,26 @@ router.post('/scrape/tweets', async (req, res) => {
  */
 router.post('/scrape/thread', async (req, res) => {
   try {
-    const { tweetUrl, authToken } = req.body;
-    
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const tweetUrl = body.tweetUrl;
+    const authToken = body.authToken;
+
     if (!tweetUrl || !authToken) {
       return res.status(400).json({ error: 'tweetUrl and authToken are required' });
     }
-    
+
     const { scrapeThread } = await import('../../src/scrapers/index.js');
     const thread = await scrapeThread(tweetUrl, authToken);
-    
+    const tweetCount = Array.isArray(thread.tweets) ? thread.tweets.length : 0;
+
     res.json({
       success: true,
       data: thread,
-      tweetCount: thread.tweets?.length || 0,
+      tweetCount,
       operation: 'scrape:thread',
     });
   } catch (error) {
-    res.status(500).json({ error: 'Scraping failed', message: error.message });
+    res.status(500).json({ error: 'Scraping failed', message: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -174,15 +188,18 @@ router.post('/scrape/thread', async (req, res) => {
  */
 router.post('/scrape/search', async (req, res) => {
   try {
-    const { query, authToken, limit = 100 } = req.body;
-    
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const query = body.query;
+    const authToken = body.authToken;
+    const limit = body.limit ? Number(body.limit) : 100;
+
     if (!query || !authToken) {
       return res.status(400).json({ error: 'query and authToken are required' });
     }
-    
+
     const { searchTweets } = await import('../../src/scrapers/index.js');
     const results = await searchTweets(query, authToken, { limit });
-    
+
     res.json({
       success: true,
       data: results,
@@ -191,7 +208,7 @@ router.post('/scrape/search', async (req, res) => {
       operation: 'scrape:search',
     });
   } catch (error) {
-    res.status(500).json({ error: 'Search failed', message: error.message });
+    res.status(500).json({ error: 'Search failed', message: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -206,12 +223,15 @@ router.post('/scrape/search', async (req, res) => {
  */
 router.post('/action/unfollow-non-followers', async (req, res) => {
   try {
-    const { authToken, limit = 100, dryRun = false } = req.body;
-    
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const authToken = body.authToken;
+    const limit = body.limit ? Number(body.limit) : 100;
+    const dryRun = (/** @type {unknown} */ (body.dryRun)) === true || body.dryRun === 'true';
+
     if (!authToken) {
       return res.status(400).json({ error: 'authToken is required' });
     }
-    
+
     // This would integrate with the browser automation service
     res.json({
       success: true,
@@ -220,7 +240,7 @@ router.post('/action/unfollow-non-followers', async (req, res) => {
       note: 'This operation runs asynchronously. Check /api/ai/monitor/account for results.',
     });
   } catch (error) {
-    res.status(500).json({ error: 'Operation failed', message: error.message });
+    res.status(500).json({ error: 'Operation failed', message: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -231,40 +251,46 @@ router.post('/action/unfollow-non-followers', async (req, res) => {
  */
 router.post('/action/detect-unfollowers', async (req, res) => {
   try {
-    const { username, authToken, previousSnapshot } = req.body;
-    
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const username = String(body.username);
+    const authToken = String(body.authToken);
+    const previousSnapshot = Array.isArray(body.previousSnapshot)
+      ? body.previousSnapshot.map(String)
+      : /** @type {string[]} */ ([]);
+
     if (!username || !authToken) {
       return res.status(400).json({ error: 'username and authToken are required' });
     }
-    
+
     const { scrapeFollowers } = await import('../../src/scrapers/index.js');
     const currentFollowers = await scrapeFollowers(username, authToken, { limit: 5000 });
-    const currentSet = new Set(currentFollowers.map(f => f.username.toLowerCase()));
-    
-    let unfollowers = [];
-    let newFollowers = [];
-    
-    if (previousSnapshot && Array.isArray(previousSnapshot)) {
+    const currentUsernames = currentFollowers.map(f => String(f.username).toLowerCase());
+    const currentSet = new Set(currentUsernames);
+
+    let unfollowers = /** @type {string[]} */ ([]);
+    let newFollowers = /** @type {string[]} */ ([]);
+
+    if (previousSnapshot.length) {
       const prevSet = new Set(previousSnapshot.map(u => u.toLowerCase()));
       unfollowers = previousSnapshot.filter(u => !currentSet.has(u.toLowerCase()));
       newFollowers = currentFollowers
-        .filter(f => !prevSet.has(f.username.toLowerCase()))
-        .map(f => f.username);
+        .filter(f => !prevSet.has(String(f.username).toLowerCase()))
+        .map(f => String(f.username));
     }
-    
+
     res.json({
       success: true,
       data: {
         currentFollowerCount: currentFollowers.length,
         unfollowers,
         newFollowers,
-        snapshot: currentFollowers.map(f => f.username),
+        snapshot: currentFollowers.map(f => String(f.username)),
       },
       operation: 'action:detect-unfollowers',
       hint: 'Save the snapshot array and pass it as previousSnapshot on next call',
     });
   } catch (error) {
-    res.status(500).json({ error: 'Operation failed', message: error.message });
+    res.status(500).json({ error: 'Operation failed', message: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -279,17 +305,20 @@ router.post('/action/detect-unfollowers', async (req, res) => {
  */
 router.post('/monitor/account', async (req, res) => {
   try {
-    const { username, authToken, previousState } = req.body;
-    
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const username = String(body.username);
+    const authToken = String(body.authToken);
+    const previousState = /** @type {Record<string, unknown>} */ (body.previousState || {});
+
     if (!username || !authToken) {
       return res.status(400).json({ error: 'username and authToken are required' });
     }
-    
+
     const { scrapeProfile } = await import('../../src/scrapers/index.js');
     const currentState = await scrapeProfile(username, authToken);
-    
-    let changes = [];
-    if (previousState) {
+
+    let changes = /** @type {Array<{ field: string; from: unknown; to: unknown }>} */ ([]);
+    if (Object.keys(previousState).length) {
       if (previousState.followers !== currentState.followers) {
         changes.push({
           field: 'followers',
@@ -312,7 +341,7 @@ router.post('/monitor/account', async (req, res) => {
         });
       }
     }
-    
+
     res.json({
       success: true,
       data: {
@@ -324,7 +353,7 @@ router.post('/monitor/account', async (req, res) => {
       hint: 'Save currentState and pass as previousState on next call to detect changes',
     });
   } catch (error) {
-    res.status(500).json({ error: 'Monitoring failed', message: error.message });
+    res.status(500).json({ error: 'Monitoring failed', message: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -339,12 +368,13 @@ router.post('/monitor/account', async (req, res) => {
  */
 router.post('/download/video', async (req, res) => {
   try {
-    const { tweetUrl, authToken } = req.body;
-    
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const tweetUrl = body.tweetUrl;
+
     if (!tweetUrl) {
       return res.status(400).json({ error: 'tweetUrl is required' });
     }
-    
+
     // Extract video URLs from tweet
     // This would need browser automation or API parsing
     res.json({
@@ -357,7 +387,7 @@ router.post('/download/video', async (req, res) => {
       operation: 'download:video',
     });
   } catch (error) {
-    res.status(500).json({ error: 'Download failed', message: error.message });
+    res.status(500).json({ error: 'Download failed', message: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -368,36 +398,41 @@ router.post('/download/video', async (req, res) => {
  */
 router.post('/unroll/thread', async (req, res) => {
   try {
-    const { tweetUrl, authToken, format = 'json' } = req.body;
-    
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const tweetUrl = body.tweetUrl;
+    const authToken = body.authToken;
+    const format = body.format || 'json';
+
     if (!tweetUrl || !authToken) {
       return res.status(400).json({ error: 'tweetUrl and authToken are required' });
     }
-    
+
     const { scrapeThread } = await import('../../src/scrapers/index.js');
-    const thread = await scrapeThread(tweetUrl, authToken);
-    
-    let output = thread;
+    const thread = /** @type {Record<string, unknown> & { tweets?: Array<Record<string, unknown>>; author?: string }} */ (await scrapeThread(tweetUrl, authToken));
+    const tweets = /** @type {Array<Record<string, unknown>>} */ (thread.tweets || []);
+    const author = String(thread.author);
+
+    let output = /** @type {Record<string, unknown>} */ (thread);
     if (format === 'markdown') {
       output = {
-        markdown: `# Thread by @${thread.author}\n\n` +
-          thread.tweets.map((t, i) => `## ${i + 1}\n\n${t.text}\n`).join('\n'),
+        markdown: `# Thread by @${author}\n\n` +
+          tweets.map((t, i) => `## ${i + 1}\n\n${String(t.text)}\n`).join('\n'),
         ...thread,
       };
     } else if (format === 'text') {
       output = {
-        text: thread.tweets.map((t, i) => `${i + 1}. ${t.text}`).join('\n\n'),
+        text: tweets.map((t, i) => `${i + 1}. ${String(t.text)}`).join('\n\n'),
         ...thread,
       };
     }
-    
+
     res.json({
       success: true,
       data: output,
       operation: 'unroll:thread',
     });
   } catch (error) {
-    res.status(500).json({ error: 'Unroll failed', message: error.message });
+    res.status(500).json({ error: 'Unroll failed', message: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 

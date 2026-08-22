@@ -1,5 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { queueJob } from '../services/jobQueue.js';
@@ -9,8 +12,10 @@ router.use(authMiddleware);
 
 // Send a DM
 router.post('/send', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
@@ -21,7 +26,7 @@ router.post('/send', async (req, res) => {
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'sendDM',
         status: 'pending',
         config: JSON.stringify({ username, message }),
@@ -31,9 +36,9 @@ router.post('/send', async (req, res) => {
     await queueJob({
       type: 'sendDM',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { username, message, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { username, message, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'DM queued' });
@@ -45,12 +50,14 @@ router.post('/send', async (req, res) => {
 
 // Get conversations
 router.get('/conversations', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const { limit = 20 } = req.query;
+    const { limit = '20' } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getConversations',
         status: 'pending',
         config: JSON.stringify({ limit: parseInt(limit) }),
@@ -60,9 +67,9 @@ router.get('/conversations', async (req, res) => {
     await queueJob({
       type: 'getConversations',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { limit: parseInt(limit), sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { limit: parseInt(limit), sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Conversations fetch queued' });
@@ -74,12 +81,14 @@ router.get('/conversations', async (req, res) => {
 
 // Export DMs
 router.get('/export', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const { format = 'json', limit = 100 } = req.query;
+    const { format = 'json', limit = '100' } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'exportDMs',
         status: 'pending',
         config: JSON.stringify({ format, limit: parseInt(limit) }),
@@ -89,9 +98,9 @@ router.get('/export', async (req, res) => {
     await queueJob({
       type: 'exportDMs',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { format, limit: parseInt(limit), sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { format, limit: parseInt(limit), sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'DM export queued' });

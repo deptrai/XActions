@@ -17,6 +17,78 @@ import { errorResponse } from '../../utils/errorResponse.js';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -27,7 +99,7 @@ const generateOperationId = () =>
  * is still alive and avoid wasting a payment on an expired auth token.
  */
 router.post('/validate-session', async (req, res) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({
       success: false,
@@ -57,13 +129,15 @@ router.post('/validate-session', async (req, res) => {
       ...(valid ? {} : { hint: 'Session cookie appears expired — log into x.com to refresh it' }),
     });
   } catch (err) {
+    const _errMessage = err instanceof Error ? err.message : String(err);
     return res.json({
       success: true,
       valid: false,
       error: 'CHECK_FAILED',
-      message: err.message,
+      message: _errMessage,
       checkedAt: new Date().toISOString(),
     });
+  
   }
 });
 
@@ -74,7 +148,7 @@ router.use(async (req, res, next) => {
     return next();
   }
   
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   
   if (!sessionCookie) {
     return res.status(400).json({
@@ -95,16 +169,14 @@ router.use(async (req, res, next) => {
  * Unfollow accounts that don't follow back
  */
 router.post('/unfollow-non-followers', async (req, res) => {
-  const { 
-    maxUnfollows = 100, 
-    dryRun = false,
-    excludeUsernames = [],
-    excludeVerified = false,
-    delayMs = 2000,
-  } = req.body;
+  const maxUnfollows = /** @type {string | number | undefined} */ (req.body.maxUnfollows) ?? 100;
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
+  const excludeUsernames = /** @type {string[] | undefined} */ (req.body.excludeUsernames) ?? [];
+  const excludeVerified = /** @type {boolean | undefined} */ (req.body.excludeVerified) ?? false;
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 2000;
   
   // Validate inputs
-  const effectiveMax = Math.min(Math.max(parseInt(maxUnfollows) || 100, 1), 500);
+  const effectiveMax = Math.min(Math.max(parseInt(String(maxUnfollows), 10) || 100, 1), 500);
   const excludeList = Array.isArray(excludeUsernames) 
     ? excludeUsernames.map(u => u.replace(/^@/, '').toLowerCase())
     : [];
@@ -113,7 +185,7 @@ router.post('/unfollow-non-followers', async (req, res) => {
     const operationId = generateOperationId();
     
     // Queue the job
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'unfollowNonFollowers',
@@ -122,8 +194,8 @@ router.post('/unfollow-non-followers', async (req, res) => {
         dryRun: !!dryRun,
         excludeUsernames: excludeList,
         excludeVerified: !!excludeVerified,
-        delayMs: Math.max(parseInt(delayMs) || 2000, 1000),
-        sessionCookie: req.sessionCookie,
+        delayMs: Math.max(parseInt(String(delayMs), 10) || 2000, 1000),
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       agentType: req.headers['x-agent-type'] || 'unknown',
@@ -159,8 +231,10 @@ router.post('/unfollow-non-followers', async (req, res) => {
       },
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Unfollow non-followers error:', error);
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -169,14 +243,12 @@ router.post('/unfollow-non-followers', async (req, res) => {
  * Unfollow all accounts
  */
 router.post('/unfollow-everyone', async (req, res) => {
-  const { 
-    maxUnfollows = 100,
-    dryRun = false,
-    excludeUsernames = [],
-    delayMs = 2000,
-  } = req.body;
+  const maxUnfollows = /** @type {string | number | undefined} */ (req.body.maxUnfollows) ?? 100;
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
+  const excludeUsernames = /** @type {string[] | undefined} */ (req.body.excludeUsernames) ?? [];
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 2000;
   
-  const effectiveMax = Math.min(Math.max(parseInt(maxUnfollows) || 100, 1), 500);
+  const effectiveMax = Math.min(Math.max(parseInt(String(maxUnfollows), 10) || 100, 1), 500);
   const excludeList = Array.isArray(excludeUsernames)
     ? excludeUsernames.map(u => u.replace(/^@/, '').toLowerCase())
     : [];
@@ -184,7 +256,7 @@ router.post('/unfollow-everyone', async (req, res) => {
   try {
     const operationId = generateOperationId();
     
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'unfollowEveryone',
@@ -192,8 +264,8 @@ router.post('/unfollow-everyone', async (req, res) => {
         maxUnfollows: effectiveMax,
         dryRun: !!dryRun,
         excludeUsernames: excludeList,
-        delayMs: Math.max(parseInt(delayMs) || 2000, 1000),
-        sessionCookie: req.sessionCookie,
+        delayMs: Math.max(parseInt(String(delayMs), 10) || 2000, 1000),
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -223,7 +295,9 @@ router.post('/unfollow-everyone', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -232,7 +306,7 @@ router.post('/unfollow-everyone', async (req, res) => {
  * Detect who has unfollowed (compares with previous snapshot)
  */
 router.post('/detect-unfollowers', async (req, res) => {
-  const { username } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
   
   if (!username) {
     return res.status(400).json({
@@ -250,13 +324,13 @@ router.post('/detect-unfollowers', async (req, res) => {
   try {
     const operationId = generateOperationId();
     
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'detectUnfollowers',
       config: {
         username: cleanUsername,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -280,7 +354,9 @@ router.post('/detect-unfollowers', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -289,14 +365,12 @@ router.post('/detect-unfollowers', async (req, res) => {
  * Auto-like tweets matching criteria
  */
 router.post('/auto-like', async (req, res) => {
-  const {
-    username,       // Like tweets from specific user
-    hashtag,        // Like tweets with hashtag
-    keyword,        // Like tweets containing keyword
-    maxLikes = 50,
-    dryRun = false,
-    delayMs = 3000,
-  } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const hashtag = /** @type {string | undefined} */ (req.body.hashtag);
+  const keyword = /** @type {string | undefined} */ (req.body.keyword);
+  const maxLikes = /** @type {string | number | undefined} */ (req.body.maxLikes) ?? 50;
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 3000;
   
   if (!username && !hashtag && !keyword) {
     return res.status(400).json({
@@ -313,7 +387,7 @@ router.post('/auto-like', async (req, res) => {
     });
   }
   
-  const effectiveMax = Math.min(Math.max(parseInt(maxLikes) || 50, 1), 200);
+  const effectiveMax = Math.min(Math.max(parseInt(String(maxLikes), 10) || 50, 1), 200);
   const target = username 
     ? { type: 'username', value: username.replace(/^@/, '').toLowerCase() }
     : hashtag 
@@ -323,7 +397,7 @@ router.post('/auto-like', async (req, res) => {
   try {
     const operationId = generateOperationId();
     
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'autoLike',
@@ -331,8 +405,8 @@ router.post('/auto-like', async (req, res) => {
         target,
         maxLikes: effectiveMax,
         dryRun: !!dryRun,
-        delayMs: Math.max(parseInt(delayMs) || 3000, 2000),
-        sessionCookie: req.sessionCookie,
+        delayMs: Math.max(parseInt(String(delayMs), 10) || 3000, 2000),
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -361,7 +435,9 @@ router.post('/auto-like', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -370,15 +446,13 @@ router.post('/auto-like', async (req, res) => {
  * Follow users who engaged with a tweet
  */
 router.post('/follow-engagers', async (req, res) => {
-  const {
-    tweetUrl,
-    tweetId,
-    engagementType = 'all', // 'likes', 'retweets', 'replies', 'all'
-    maxFollows = 50,
-    dryRun = false,
-    delayMs = 3000,
-    filters = {},
-  } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
+  const engagementType = /** @type {string | undefined} */ (req.body.engagementType) ?? 'all';
+  const maxFollows = /** @type {string | number | undefined} */ (req.body.maxFollows) ?? 50;
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 3000;
+  const filters = /** @type {Record<string, unknown> | undefined} */ (req.body.filters) ?? {};
   
   if (!tweetUrl && !tweetId) {
     return res.status(400).json({
@@ -407,14 +481,14 @@ router.post('/follow-engagers', async (req, res) => {
     if (match) effectiveTweetId = match[1];
   }
   
-  const effectiveMax = Math.min(Math.max(parseInt(maxFollows) || 50, 1), 200);
+  const effectiveMax = Math.min(Math.max(parseInt(String(maxFollows), 10) || 50, 1), 200);
   const validEngagementTypes = ['likes', 'retweets', 'replies', 'all'];
   const effectiveEngagement = validEngagementTypes.includes(engagementType) ? engagementType : 'all';
   
   try {
     const operationId = generateOperationId();
     
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'followEngagers',
@@ -424,13 +498,13 @@ router.post('/follow-engagers', async (req, res) => {
         engagementType: effectiveEngagement,
         maxFollows: effectiveMax,
         dryRun: !!dryRun,
-        delayMs: Math.max(parseInt(delayMs) || 3000, 2000),
+        delayMs: Math.max(parseInt(String(delayMs), 10) || 3000, 2000),
         filters: {
           minFollowers: filters.minFollowers || null,
           maxFollowers: filters.maxFollowers || null,
           mustHaveBio: filters.mustHaveBio || false,
         },
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -459,7 +533,9 @@ router.post('/follow-engagers', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -468,13 +544,11 @@ router.post('/follow-engagers', async (req, res) => {
  * Follow users tweeting about keyword
  */
 router.post('/keyword-follow', async (req, res) => {
-  const {
-    keyword,
-    maxFollows = 50,
-    dryRun = false,
-    delayMs = 3000,
-    filters = {},
-  } = req.body;
+  const keyword = /** @type {string | undefined} */ (req.body.keyword);
+  const maxFollows = /** @type {string | number | undefined} */ (req.body.maxFollows) ?? 50;
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 3000;
+  const filters = /** @type {Record<string, unknown> | undefined} */ (req.body.filters) ?? {};
   
   if (!keyword) {
     return res.status(400).json({
@@ -495,12 +569,12 @@ router.post('/keyword-follow', async (req, res) => {
     });
   }
   
-  const effectiveMax = Math.min(Math.max(parseInt(maxFollows) || 50, 1), 200);
+  const effectiveMax = Math.min(Math.max(parseInt(String(maxFollows), 10) || 50, 1), 200);
   
   try {
     const operationId = generateOperationId();
     
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'keywordFollow',
@@ -508,14 +582,14 @@ router.post('/keyword-follow', async (req, res) => {
         keyword,
         maxFollows: effectiveMax,
         dryRun: !!dryRun,
-        delayMs: Math.max(parseInt(delayMs) || 3000, 2000),
+        delayMs: Math.max(parseInt(String(delayMs), 10) || 3000, 2000),
         filters: {
           minFollowers: filters.minFollowers || 100,
           maxFollowers: filters.maxFollowers || null,
           mustHaveBio: filters.mustHaveBio || false,
           excludeVerified: filters.excludeVerified || false,
         },
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -543,7 +617,9 @@ router.post('/keyword-follow', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -552,15 +628,13 @@ router.post('/keyword-follow', async (req, res) => {
  * Auto-comment on tweets matching criteria
  */
 router.post('/auto-comment', async (req, res) => {
-  const {
-    username,
-    hashtag,
-    keyword,
-    comments,       // Array of possible comments to randomly select from
-    maxComments = 10,
-    dryRun = false,
-    delayMs = 10000, // Longer delay for comments
-  } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const hashtag = /** @type {string | undefined} */ (req.body.hashtag);
+  const keyword = /** @type {string | undefined} */ (req.body.keyword);
+  const comments = /** @type {unknown[] | undefined} */ (req.body.comments);
+  const maxComments = /** @type {string | number | undefined} */ (req.body.maxComments) ?? 10;
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 10000;
   
   if (!username && !hashtag && !keyword) {
     return res.status(400).json({
@@ -585,7 +659,7 @@ router.post('/auto-comment', async (req, res) => {
     });
   }
   
-  const effectiveMax = Math.min(Math.max(parseInt(maxComments) || 10, 1), 50);
+  const effectiveMax = Math.min(Math.max(parseInt(String(maxComments), 10) || 10, 1), 50);
   const target = username 
     ? { type: 'username', value: username.replace(/^@/, '').toLowerCase() }
     : hashtag 
@@ -595,7 +669,7 @@ router.post('/auto-comment', async (req, res) => {
   try {
     const operationId = generateOperationId();
     
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'autoComment',
@@ -604,8 +678,8 @@ router.post('/auto-comment', async (req, res) => {
         comments: comments.slice(0, 20), // Limit to 20 templates
         maxComments: effectiveMax,
         dryRun: !!dryRun,
-        delayMs: Math.max(parseInt(delayMs) || 10000, 5000),
-        sessionCookie: req.sessionCookie,
+        delayMs: Math.max(parseInt(String(delayMs), 10) || 10000, 5000),
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -636,7 +710,9 @@ router.post('/auto-comment', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -645,18 +721,18 @@ router.post('/auto-comment', async (req, res) => {
  * Follow a specific user
  */
 router.post('/follow', async (req, res) => {
-  const { username } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
 
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'followUser',
-      config: { username: cleanUsername, sessionCookie: req.sessionCookie },
+      config: { username: cleanUsername, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -670,7 +746,9 @@ router.post('/follow', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -679,18 +757,18 @@ router.post('/follow', async (req, res) => {
  * Unfollow a specific user
  */
 router.post('/unfollow', async (req, res) => {
-  const { username } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
 
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'unfollowUser',
-      config: { username: cleanUsername, sessionCookie: req.sessionCookie },
+      config: { username: cleanUsername, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -704,7 +782,9 @@ router.post('/unfollow', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -713,7 +793,8 @@ router.post('/unfollow', async (req, res) => {
  * Like a specific tweet
  */
 router.post('/like', async (req, res) => {
-  const { tweetUrl, tweetId } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
   if (!tweetUrl && !tweetId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl or tweetId is required' });
 
   let effectiveTweetId = tweetId;
@@ -724,11 +805,11 @@ router.post('/like', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'likeTweet',
-      config: { tweetId: effectiveTweetId, sessionCookie: req.sessionCookie },
+      config: { tweetId: effectiveTweetId, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -742,7 +823,9 @@ router.post('/like', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -751,7 +834,8 @@ router.post('/like', async (req, res) => {
  * Retweet a specific tweet
  */
 router.post('/retweet', async (req, res) => {
-  const { tweetUrl, tweetId } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
   if (!tweetUrl && !tweetId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl or tweetId is required' });
 
   let effectiveTweetId = tweetId;
@@ -762,11 +846,11 @@ router.post('/retweet', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'retweetTweet',
-      config: { tweetId: effectiveTweetId, sessionCookie: req.sessionCookie },
+      config: { tweetId: effectiveTweetId, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -780,7 +864,9 @@ router.post('/retweet', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -789,7 +875,9 @@ router.post('/retweet', async (req, res) => {
  * Quote-tweet with a comment
  */
 router.post('/quote-tweet', async (req, res) => {
-  const { tweetUrl, tweetId, text } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
+  const text = /** @type {string | undefined} */ (req.body.text);
   if (!text) return res.status(400).json({ error: 'INVALID_INPUT', message: 'text is required' });
   if (!tweetUrl && !tweetId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl or tweetId is required' });
 
@@ -801,11 +889,11 @@ router.post('/quote-tweet', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'quoteTweet',
-      config: { tweetId: effectiveTweetId, text, sessionCookie: req.sessionCookie },
+      config: { tweetId: effectiveTweetId, text, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -819,7 +907,9 @@ router.post('/quote-tweet', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -828,17 +918,18 @@ router.post('/quote-tweet', async (req, res) => {
  * Post a new tweet
  */
 router.post('/post-tweet', async (req, res) => {
-  const { text, replyToTweetId } = req.body;
+  const text = /** @type {string | undefined} */ (req.body.text);
+  const replyToTweetId = /** @type {string | undefined} */ (req.body.replyToTweetId);
   if (!text) return res.status(400).json({ error: 'INVALID_INPUT', message: 'text is required' });
   if (text.length > 280) return res.status(400).json({ error: 'INVALID_INPUT', message: 'text exceeds 280 characters' });
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'postTweet',
-      config: { text, replyToTweetId: replyToTweetId || null, sessionCookie: req.sessionCookie },
+      config: { text, replyToTweetId: replyToTweetId || null, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -852,7 +943,9 @@ router.post('/post-tweet', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -861,13 +954,19 @@ router.post('/post-tweet', async (req, res) => {
  * Auto-follow users matching criteria
  */
 router.post('/auto-follow', async (req, res) => {
-  const { username, hashtag, keyword, maxFollows = 50, dryRun = false, delayMs = 3000, filters = {} } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const hashtag = /** @type {string | undefined} */ (req.body.hashtag);
+  const keyword = /** @type {string | undefined} */ (req.body.keyword);
+  const maxFollows = /** @type {string | number | undefined} */ (req.body.maxFollows) ?? 50;
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 3000;
+  const filters = /** @type {Record<string, unknown> | undefined} */ (req.body.filters) ?? {};
 
   if (!username && !hashtag && !keyword) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'username, hashtag, or keyword required' });
   }
 
-  const effectiveMax = Math.min(Math.max(parseInt(maxFollows) || 50, 1), 200);
+  const effectiveMax = Math.min(Math.max(parseInt(String(maxFollows), 10) || 50, 1), 200);
   const target = username
     ? { type: 'username', value: username.replace(/^@/, '').toLowerCase() }
     : hashtag ? { type: 'hashtag', value: hashtag.replace(/^#/, '') }
@@ -875,14 +974,14 @@ router.post('/auto-follow', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'autoFollow',
       config: {
         target, maxFollows: effectiveMax, dryRun: !!dryRun,
-        delayMs: Math.max(parseInt(delayMs) || 3000, 2000), filters,
-        sessionCookie: req.sessionCookie,
+        delayMs: Math.max(parseInt(String(delayMs), 10) || 3000, 2000), filters,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -898,7 +997,9 @@ router.post('/auto-follow', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -907,21 +1008,25 @@ router.post('/auto-follow', async (req, res) => {
  * Intelligently unfollow low-engagement accounts
  */
 router.post('/smart-unfollow', async (req, res) => {
-  const { maxUnfollows = 50, dryRun = false, delayMs = 2000, minDaysSinceFollow = 7, skipVerified = false } = req.body;
+  const maxUnfollows = /** @type {string | number | undefined} */ (req.body.maxUnfollows) ?? 50;
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 2000;
+  const minDaysSinceFollow = /** @type {string | number | undefined} */ (req.body.minDaysSinceFollow) ?? 7;
+  const skipVerified = /** @type {boolean | undefined} */ (req.body.skipVerified) ?? false;
 
-  const effectiveMax = Math.min(Math.max(parseInt(maxUnfollows) || 50, 1), 300);
+  const effectiveMax = Math.min(Math.max(parseInt(String(maxUnfollows), 10) || 50, 1), 300);
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'smartUnfollow',
       config: {
         maxUnfollows: effectiveMax, dryRun: !!dryRun,
-        delayMs: Math.max(parseInt(delayMs) || 2000, 1000),
+        delayMs: Math.max(parseInt(String(delayMs), 10) || 2000, 1000),
         minDaysSinceFollow, skipVerified,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -937,7 +1042,9 @@ router.post('/smart-unfollow', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -946,13 +1053,18 @@ router.post('/smart-unfollow', async (req, res) => {
  * Auto-retweet matching tweets
  */
 router.post('/auto-retweet', async (req, res) => {
-  const { username, hashtag, keyword, maxRetweets = 20, dryRun = false, delayMs = 5000 } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const hashtag = /** @type {string | undefined} */ (req.body.hashtag);
+  const keyword = /** @type {string | undefined} */ (req.body.keyword);
+  const maxRetweets = /** @type {string | number | undefined} */ (req.body.maxRetweets) ?? 20;
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 5000;
 
   if (!username && !hashtag && !keyword) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'username, hashtag, or keyword required' });
   }
 
-  const effectiveMax = Math.min(Math.max(parseInt(maxRetweets) || 20, 1), 50);
+  const effectiveMax = Math.min(Math.max(parseInt(String(maxRetweets), 10) || 20, 1), 50);
   const target = username
     ? { type: 'username', value: username.replace(/^@/, '').toLowerCase() }
     : hashtag ? { type: 'hashtag', value: hashtag.replace(/^#/, '') }
@@ -960,14 +1072,14 @@ router.post('/auto-retweet', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'autoRetweet',
       config: {
         target, maxRetweets: effectiveMax, dryRun: !!dryRun,
-        delayMs: Math.max(parseInt(delayMs) || 5000, 3000),
-        sessionCookie: req.sessionCookie,
+        delayMs: Math.max(parseInt(String(delayMs), 10) || 5000, 3000),
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -983,7 +1095,9 @@ router.post('/auto-retweet', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -992,7 +1106,9 @@ router.post('/auto-retweet', async (req, res) => {
  * Execute multiple actions in sequence
  */
 router.post('/bulk-execute', async (req, res) => {
-  const { actions, delayMs = 3000, stopOnError = false } = req.body;
+  const actions = /** @type {string | undefined} */ (req.body.actions);
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 3000;
+  const stopOnError = /** @type {boolean | undefined} */ (req.body.stopOnError) ?? false;
 
   if (!Array.isArray(actions) || actions.length === 0) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'actions array is required' });
@@ -1002,15 +1118,15 @@ router.post('/bulk-execute', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'bulkExecute',
       config: {
         actions: effectiveActions,
-        delayMs: Math.max(parseInt(delayMs) || 3000, 1000),
+        delayMs: Math.max(parseInt(String(delayMs), 10) || 3000, 1000),
         stopOnError: !!stopOnError,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -1026,7 +1142,9 @@ router.post('/bulk-execute', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -1038,8 +1156,8 @@ router.post('/cancel/:operationId', async (req, res) => {
   const { operationId } = req.params;
   
   try {
-    const { cancelJob } = await import('../../services/jobQueue.js');
-    const result = await cancelJob(operationId);
+    const { cancelJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const result = /** @type {Record<string, unknown>} */ (await cancelJob(operationId));
     
     if (!result) {
       return res.status(404).json({
@@ -1057,7 +1175,9 @@ router.post('/cancel/:operationId', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'CANCEL_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'CANCEL_FAILED', _errMessage);
+  
   }
 });
 
@@ -1069,8 +1189,8 @@ router.get('/status/:operationId', async (req, res) => {
   const { operationId } = req.params;
   
   try {
-    const { getJobStatus } = await import('../../services/jobQueue.js');
-    const status = await getJobStatus(operationId);
+    const { getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const status = /** @type {Record<string, unknown>} */ (await getJobStatus(operationId));
     
     if (!status) {
       return res.status(404).json({
@@ -1104,7 +1224,9 @@ router.get('/status/:operationId', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'STATUS_CHECK_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'STATUS_CHECK_FAILED', _errMessage);
+  
   }
 });
 
@@ -1113,14 +1235,14 @@ router.get('/status/:operationId', async (req, res) => {
  * Get recent operation history for this session
  */
 router.get('/history', async (req, res) => {
-  const { limit = 20 } = req.query;
+  const limit = /** @type {string | number | undefined} */ (req.query.limit) ?? 20;
   
   try {
-    const { getRecentJobs } = await import('../../services/jobQueue.js');
-    const jobs = await getRecentJobs({
+    const { getRecentJobs } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const jobs = /** @type {Record<string, unknown>[]} */ (await getRecentJobs({
       source: 'ai-api',
-      limit: Math.min(parseInt(limit) || 20, 100),
-    });
+      limit: Math.min(parseInt(String(limit), 10) || 20, 100),
+    }));
     
     res.json({
       success: true,
@@ -1139,7 +1261,9 @@ router.get('/history', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'HISTORY_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'HISTORY_FAILED', _errMessage);
+  
   }
 });
 

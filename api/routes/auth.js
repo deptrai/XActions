@@ -9,11 +9,11 @@ import { body, validationResult } from 'express-validator';
 const router = express.Router();
 // Register new user (email optional)
 router.post('/register',
-  [
+  /** @type {import('express').RequestHandler[]} */ ([
     body('password').isLength({ min: 8 }),
     body('username').isLength({ min: 3, max: 30 }).matches(/^[a-zA-Z0-9_]+$/),
     body('email').optional({ checkFalsy: true }).isEmail().normalizeEmail()
-  ],
+  ]),
   async (req, res) => {
     try {
       const errors = validationResult(req);
@@ -21,7 +21,7 @@ router.post('/register',
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { password, username, email } = req.body;
+      const { password, username, email } = /** @type {{ password: string; username: string; email?: string }} */ (req.body);
 
       // Check if username exists
       const existingUser = await prisma.user.findFirst({
@@ -68,7 +68,7 @@ router.post('/register',
       // Generate JWT (use username if no email)
       const token = jwt.sign(
         { userId: user.id, username: user.username },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || '',
         { expiresIn: '7d' }
       );
 
@@ -83,13 +83,13 @@ router.post('/register',
         }
       });
     } catch (error) {
-      console.error('❌ Registration error:', error.message);
+      console.error('❌ Registration error:', (error instanceof Error ? error.message : String(error)));
       // Surface real error in development for debugging
       if (process.env.NODE_ENV !== 'production') {
         return res.status(500).json({
           error: 'Registration failed',
-          details: error.message,
-          hint: error.message.includes('connect') || error.message.includes('ECONNREFUSED')
+          details: (error instanceof Error ? error.message : String(error)),
+          hint: (error instanceof Error ? error.message : String(error)).includes('connect') || (error instanceof Error ? error.message : String(error)).includes('ECONNREFUSED')
             ? 'PostgreSQL is not running. Start it with: docker compose up -d postgres'
             : undefined
         });
@@ -101,10 +101,10 @@ router.post('/register',
 
 // Login (accepts username OR email)
 router.post('/login',
-  [
+  /** @type {import('express').RequestHandler[]} */ ([
     body('identifier').notEmpty().withMessage('Username or email required'),
     body('password').notEmpty()
-  ],
+  ]),
   async (req, res) => {
     try {
       const errors = validationResult(req);
@@ -112,7 +112,7 @@ router.post('/login',
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { identifier, password } = req.body;
+      const { identifier, password } = /** @type {{ identifier: string; password: string }} */ (req.body);
 
       // Find user by email OR username
       const user = await prisma.user.findFirst({
@@ -146,7 +146,7 @@ router.post('/login',
       // Generate JWT
       const token = jwt.sign(
         { userId: user.id, username: user.username },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || '',
         { expiresIn: '7d' }
       );
 
@@ -162,12 +162,12 @@ router.post('/login',
         }
       });
     } catch (error) {
-      console.error('❌ Login error:', error.message);
+      console.error('❌ Login error:', (error instanceof Error ? error.message : String(error)));
       if (process.env.NODE_ENV !== 'production') {
         return res.status(500).json({
           error: 'Login failed',
-          details: error.message,
-          hint: error.message.includes('connect') || error.message.includes('ECONNREFUSED')
+          details: (error instanceof Error ? error.message : String(error)),
+          hint: (error instanceof Error ? error.message : String(error)).includes('connect') || (error instanceof Error ? error.message : String(error)).includes('ECONNREFUSED')
             ? 'PostgreSQL is not running. Start it with: docker compose up -d postgres'
             : undefined
         });
@@ -180,7 +180,7 @@ router.post('/login',
 // Refresh token — only allow refresh within 24 hours of expiration
 router.post('/refresh', async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token } = /** @type {{ token: string }} */ (req.body);
 
     if (!token) {
       return res.status(401).json({ error: 'Token required' });
@@ -190,7 +190,7 @@ router.post('/refresh', async (req, res) => {
     // ignoreExpiration allows recently-expired tokens to be refreshed.
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
+      decoded = jwt.verify(token, process.env.JWT_SECRET || '', { ignoreExpiration: true });
     } catch (verifyError) {
       return res.status(401).json({ error: 'Invalid token' });
     }
@@ -220,7 +220,7 @@ router.post('/refresh', async (req, res) => {
     // Generate new token
     const newToken = jwt.sign(
       { userId: user.id, username: user.username },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || '',
       { expiresIn: '7d' }
     );
 

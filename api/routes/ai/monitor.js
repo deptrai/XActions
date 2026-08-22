@@ -14,6 +14,78 @@ import crypto from 'crypto';
 const router = express.Router();
 
 /**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
+/**
  * Generate unique operation ID
  */
 const generateOperationId = () => {
@@ -22,6 +94,13 @@ const generateOperationId = () => {
 
 /**
  * Helper: Create consistent error response
+ */
+/**
+ * @param {import('express').Response} res
+ * @param {number} statusCode
+ * @param {string} error
+ * @param {string} message
+ * @param {Record<string, unknown> & { retryable?: boolean; retryAfterMs?: number }} [extras]
  */
 const errorResponse = (res, statusCode, error, message, extras = {}) => {
   return res.status(statusCode).json({
@@ -42,7 +121,7 @@ router.use(async (req, res, next) => {
     return next();
   }
   
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   
   if (!sessionCookie) {
     return res.status(400).json({
@@ -62,7 +141,10 @@ router.use(async (req, res, next) => {
  * Create or update account monitoring snapshot
  */
 router.post('/account', async (req, res) => {
-  const { username, includeFollowers = true, includeFollowing = true, includeStats = true } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const includeFollowers = /** @type {boolean | undefined} */ (req.body.includeFollowers) ?? true;
+  const includeFollowing = /** @type {boolean | undefined} */ (req.body.includeFollowing) ?? true;
+  const includeStats = /** @type {boolean | undefined} */ (req.body.includeStats) ?? true;
   
   if (!username) {
     return res.status(400).json({
@@ -83,7 +165,7 @@ router.post('/account', async (req, res) => {
   try {
     const operationId = generateOperationId();
     
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'monitorAccount',
@@ -92,7 +174,7 @@ router.post('/account', async (req, res) => {
         includeFollowers: !!includeFollowers,
         includeFollowing: !!includeFollowing,
         includeStats: !!includeStats,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -121,8 +203,10 @@ router.post('/account', async (req, res) => {
       },
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Monitor account error:', error);
-    return errorResponse(res, 500, 'MONITOR_FAILED', error.message);
+    return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   }
 });
 
@@ -131,7 +215,8 @@ router.post('/account', async (req, res) => {
  * Monitor follower changes for an account
  */
 router.post('/followers', async (req, res) => {
-  const { username, compareWithPrevious = true } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const compareWithPrevious = /** @type {boolean | undefined} */ (req.body.compareWithPrevious) ?? true;
   
   if (!username) {
     return res.status(400).json({
@@ -146,14 +231,14 @@ router.post('/followers', async (req, res) => {
   try {
     const operationId = generateOperationId();
     
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'monitorFollowers',
       config: {
         username: cleanUsername,
         compareWithPrevious: !!compareWithPrevious,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -179,7 +264,9 @@ router.post('/followers', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'MONITOR_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   }
 });
 
@@ -188,7 +275,8 @@ router.post('/followers', async (req, res) => {
  * Monitor following changes for an account
  */
 router.post('/following', async (req, res) => {
-  const { username, compareWithPrevious = true } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const compareWithPrevious = /** @type {boolean | undefined} */ (req.body.compareWithPrevious) ?? true;
   
   if (!username) {
     return res.status(400).json({
@@ -203,14 +291,14 @@ router.post('/following', async (req, res) => {
   try {
     const operationId = generateOperationId();
     
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'monitorFollowing',
       config: {
         username: cleanUsername,
         compareWithPrevious: !!compareWithPrevious,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -236,7 +324,9 @@ router.post('/following', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'MONITOR_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   }
 });
 
@@ -249,7 +339,7 @@ router.get('/snapshot/:username', async (req, res) => {
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
   
   try {
-    const { getLatestSnapshot } = await import('../../services/monitoring.js');
+    const { getLatestSnapshot } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/monitoring.js')));
     const snapshot = await getLatestSnapshot(cleanUsername);
     
     if (!snapshot) {
@@ -280,7 +370,9 @@ router.get('/snapshot/:username', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'SNAPSHOT_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'SNAPSHOT_FAILED', _errMessage);
+  
   }
 });
 
@@ -289,7 +381,9 @@ router.get('/snapshot/:username', async (req, res) => {
  * Compare two snapshots to see differences
  */
 router.post('/compare', async (req, res) => {
-  const { username, snapshotId1, snapshotId2 } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const snapshotId1 = /** @type {string | undefined} */ (req.body.snapshotId1);
+  const snapshotId2 = /** @type {string | undefined} */ (req.body.snapshotId2);
   
   if (!username && (!snapshotId1 || !snapshotId2)) {
     return res.status(400).json({
@@ -304,7 +398,7 @@ router.post('/compare', async (req, res) => {
   }
   
   try {
-    const { compareSnapshots } = await import('../../services/monitoring.js');
+    const { compareSnapshots } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/monitoring.js')));
     const comparison = await compareSnapshots({
       username: username?.replace(/^@/, '').toLowerCase(),
       snapshotId1,
@@ -358,7 +452,9 @@ router.post('/compare', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'COMPARE_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'COMPARE_FAILED', _errMessage);
+  
   }
 });
 
@@ -367,7 +463,7 @@ router.post('/compare', async (req, res) => {
  * Get new followers since last check
  */
 router.post('/alert/new-followers', async (req, res) => {
-  const { username } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
   
   if (!username) {
     return res.status(400).json({
@@ -383,11 +479,11 @@ router.post('/alert/new-followers', async (req, res) => {
     const startTime = Date.now();
     
     // Get current followers and compare with stored snapshot
-    const { scrapeFollowers } = await import('../../services/browserAutomation.js');
-    const { getLatestSnapshot, saveSnapshot } = await import('../../services/monitoring.js');
+    const { scrapeFollowers } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const { getLatestSnapshot, saveSnapshot } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/monitoring.js')));
     
     // Get current followers (limited for speed)
-    const current = await scrapeFollowers(req.sessionCookie, cleanUsername, { limit: 200 });
+    const current = /** @type {Record<string, unknown>} */ (await scrapeFollowers((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: 200 }));
     const currentUsernames = new Set((current.users || []).map(u => u.username.toLowerCase()));
     
     // Get previous snapshot
@@ -447,8 +543,10 @@ router.post('/alert/new-followers', async (req, res) => {
       },
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ New followers alert error:', error);
-    return errorResponse(res, 500, 'ALERT_FAILED', error.message);
+    return errorResponse(res, 500, 'ALERT_FAILED', _errMessage);
+  
   }
 });
 
@@ -461,7 +559,7 @@ router.delete('/snapshot/:username', async (req, res) => {
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
   
   try {
-    const { deleteSnapshots } = await import('../../services/monitoring.js');
+    const { deleteSnapshots } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/monitoring.js')));
     const deleted = await deleteSnapshots(cleanUsername);
     
     res.json({
@@ -475,7 +573,9 @@ router.delete('/snapshot/:username', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'DELETE_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'DELETE_FAILED', _errMessage);
+  
   }
 });
 
@@ -484,12 +584,12 @@ router.delete('/snapshot/:username', async (req, res) => {
  * List all monitored accounts
  */
 router.get('/list', async (req, res) => {
-  const { limit = 50 } = req.query;
+  const limit = /** @type {string | number | undefined} */ (req.query.limit) ?? 50;
   
   try {
-    const { listMonitoredAccounts } = await import('../../services/monitoring.js');
+    const { listMonitoredAccounts } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/monitoring.js')));
     const accounts = await listMonitoredAccounts({
-      limit: Math.min(parseInt(limit) || 50, 200),
+      limit: Math.min(parseInt(String(limit), 10) || 50, 200),
     });
     
     res.json({
@@ -509,7 +609,9 @@ router.get('/list', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'LIST_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'LIST_FAILED', _errMessage);
+  
   }
 });
 
@@ -518,14 +620,17 @@ router.get('/list', async (req, res) => {
  * Start monitoring a keyword for new mentions
  */
 router.post('/keyword', async (req, res) => {
-  const { keyword, interval = '15m', action = 'start', monitorId } = req.body;
+  const keyword = /** @type {string | undefined} */ (req.body.keyword);
+  const interval = /** @type {string | undefined} */ (req.body.interval) ?? '15m';
+  const action = /** @type {string | undefined} */ (req.body.action) ?? 'start';
+  const monitorId = /** @type {string | undefined} */ (req.body.monitorId);
 
   if (action === 'start' && !keyword) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'keyword is required' });
   }
 
   try {
-    const { queueJob, cancelJob, getRecentJobs } = await import('../../services/jobQueue.js');
+    const { queueJob, cancelJob, getRecentJobs } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
 
     if (action === 'stop' && monitorId) {
       await cancelJob(monitorId);
@@ -533,7 +638,7 @@ router.post('/keyword', async (req, res) => {
     }
 
     if (action === 'list') {
-      const jobs = await getRecentJobs({ type: 'monitorKeyword', limit: 20 });
+      const jobs = /** @type {Record<string, unknown>[]} */ (await getRecentJobs({ type: 'monitorKeyword', limit: 20 }));
       return res.json({ success: true, data: { monitors: jobs.map(j => ({ monitorId: j.id, keyword: j.config?.keyword, status: j.status })) } });
     }
 
@@ -541,7 +646,7 @@ router.post('/keyword', async (req, res) => {
     await queueJob({
       id: operationId,
       type: 'monitorKeyword',
-      config: { keyword, interval, sessionCookie: req.sessionCookie },
+      config: { keyword, interval, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -554,7 +659,9 @@ router.post('/keyword', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'MONITOR_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   }
 });
 
@@ -563,10 +670,13 @@ router.post('/keyword', async (req, res) => {
  * Get notifications when specific accounts follow/unfollow
  */
 router.post('/follower-alerts', async (req, res) => {
-  const { username, webhookUrl, action = 'start', alertId } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const webhookUrl = /** @type {string | undefined} */ (req.body.webhookUrl);
+  const action = /** @type {string | undefined} */ (req.body.action) ?? 'start';
+  const alertId = /** @type {string | undefined} */ (req.body.alertId);
 
   try {
-    const { queueJob, cancelJob } = await import('../../services/jobQueue.js');
+    const { queueJob, cancelJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
 
     if (action === 'stop' && alertId) {
       await cancelJob(alertId);
@@ -582,7 +692,7 @@ router.post('/follower-alerts', async (req, res) => {
       config: {
         username: username.replace(/^@/, '').toLowerCase(),
         webhookUrl: webhookUrl || null,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -597,7 +707,9 @@ router.post('/follower-alerts', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'MONITOR_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   }
 });
 
@@ -606,7 +718,10 @@ router.post('/follower-alerts', async (req, res) => {
  * Track engagement on specific tweets over time
  */
 router.post('/track-engagement', async (req, res) => {
-  const { tweetIds, tweetUrls, interval = '1h', duration = '24h' } = req.body;
+  const tweetIds = /** @type {string[] | undefined} */ (req.body.tweetIds);
+  const tweetUrls = /** @type {string | undefined} */ (req.body.tweetUrls);
+  const interval = /** @type {string | undefined} */ (req.body.interval) ?? '1h';
+  const duration = /** @type {string | undefined} */ (req.body.duration) ?? '24h';
 
   const urls = tweetUrls || [];
   const ids = tweetIds || [];
@@ -621,14 +736,14 @@ router.post('/track-engagement', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'trackEngagement',
       config: {
         tweetIds: allIds.slice(0, 20),
         interval, duration,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -643,7 +758,9 @@ router.post('/track-engagement', async (req, res) => {
       },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'MONITOR_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   }
 });
 

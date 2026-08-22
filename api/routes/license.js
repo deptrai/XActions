@@ -40,12 +40,13 @@ router.get('/', async (req, res) => {
  */
 router.post('/validate', async (req, res) => {
   try {
-    const { licenseKey } = req.body;
-    
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const licenseKey = body.licenseKey;
+
     if (!licenseKey) {
       return res.status(400).json({ error: 'License key required' });
     }
-    
+
     const result = await validateLicense(licenseKey);
     
     res.json({

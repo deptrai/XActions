@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
     const datasets = await listDatasets();
     res.json({ datasets });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -30,7 +30,7 @@ router.get('/:name', async (req, res) => {
     const data = await ds.getData({ offset, limit });
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -38,8 +38,8 @@ router.get('/:name', async (req, res) => {
 router.get('/:name/export', async (req, res) => {
   try {
     const { DatasetStore } = await import('../../src/scraping/paginationEngine.js');
-    const ds = new DatasetStore(req.params.name);
-    const format = req.query.format || 'json';
+    const ds = /** @type {{ export: (format: string) => Promise<unknown> }} */ (/** @type {unknown} */ (new DatasetStore(req.params.name)));
+    const format = String(req.query.format || 'json');
     const data = await ds.export(format);
     if (format === 'csv') {
       res.setHeader('Content-Type', 'text/csv');
@@ -47,7 +47,7 @@ router.get('/:name/export', async (req, res) => {
     }
     res.send(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -55,11 +55,11 @@ router.get('/:name/export', async (req, res) => {
 router.delete('/:name', async (req, res) => {
   try {
     const { DatasetStore } = await import('../../src/scraping/paginationEngine.js');
-    const ds = new DatasetStore(req.params.name);
+    const ds = /** @type {{ delete: () => Promise<void> }} */ (/** @type {unknown} */ (new DatasetStore(req.params.name)));
     await ds.delete();
     res.json({ status: 'deleted', name: req.params.name });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

@@ -1,5 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { queueJob } from '../services/jobQueue.js';
@@ -9,15 +12,17 @@ router.use(authMiddleware);
 
 // Like a tweet
 router.post('/like/:tweetId', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
     const { tweetId } = req.params;
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'likeTweet',
         status: 'pending',
         config: JSON.stringify({ tweetId }),
@@ -27,9 +32,9 @@ router.post('/like/:tweetId', async (req, res) => {
     await queueJob({
       type: 'likeTweet',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { tweetId, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { tweetId, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Like queued' });
@@ -41,11 +46,13 @@ router.post('/like/:tweetId', async (req, res) => {
 
 // Unlike a tweet
 router.delete('/like/:tweetId', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { tweetId } = req.params;
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'unlikeTweet',
         status: 'pending',
         config: JSON.stringify({ tweetId }),
@@ -55,9 +62,9 @@ router.delete('/like/:tweetId', async (req, res) => {
     await queueJob({
       type: 'unlikeTweet',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { tweetId, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { tweetId, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Unlike queued' });
@@ -69,8 +76,10 @@ router.delete('/like/:tweetId', async (req, res) => {
 
 // Reply to a tweet
 router.post('/reply/:tweetId', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
@@ -80,7 +89,7 @@ router.post('/reply/:tweetId', async (req, res) => {
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'replyToTweet',
         status: 'pending',
         config: JSON.stringify({ tweetId, text }),
@@ -90,9 +99,9 @@ router.post('/reply/:tweetId', async (req, res) => {
     await queueJob({
       type: 'replyToTweet',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { tweetId, text, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { tweetId, text, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Reply queued' });
@@ -104,11 +113,13 @@ router.post('/reply/:tweetId', async (req, res) => {
 
 // Bookmark a tweet
 router.post('/bookmark/:tweetId', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { tweetId } = req.params;
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'bookmarkTweet',
         status: 'pending',
         config: JSON.stringify({ tweetId }),
@@ -118,9 +129,9 @@ router.post('/bookmark/:tweetId', async (req, res) => {
     await queueJob({
       type: 'bookmarkTweet',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { tweetId, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { tweetId, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Bookmark queued' });
@@ -132,8 +143,10 @@ router.post('/bookmark/:tweetId', async (req, res) => {
 
 // Auto-like by keyword
 router.post('/auto-like', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
@@ -144,7 +157,7 @@ router.post('/auto-like', async (req, res) => {
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'autoLike',
         status: 'pending',
         config: JSON.stringify({ keywords, maxLikes, delay }),
@@ -154,9 +167,9 @@ router.post('/auto-like', async (req, res) => {
     await queueJob({
       type: 'autoLike',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { keywords, maxLikes, delay, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { keywords, maxLikes, delay, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Auto-like queued' });
@@ -168,11 +181,13 @@ router.post('/auto-like', async (req, res) => {
 
 // Get engagement analytics
 router.get('/analytics', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { period = '7d' } = req.query;
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'engagementAnalytics',
         status: 'pending',
         config: JSON.stringify({ period }),
@@ -182,9 +197,9 @@ router.get('/analytics', async (req, res) => {
     await queueJob({
       type: 'engagementAnalytics',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { period, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { period, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Analytics fetch queued' });

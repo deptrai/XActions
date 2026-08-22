@@ -2,6 +2,19 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 
+/**
+ * @typedef {Object} AutomationState
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {string} status
+ * @property {number} actionCount
+ * @property {string | null} startedAt
+ * @property {Record<string, unknown>} settings
+ * @property {unknown} lastAction
+ * @property {number} errors
+ */
+
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -10,7 +23,7 @@ router.use(authMiddleware);
  * In-memory automation state
  * In production, this would be backed by Redis or Prisma
  */
-const automationState = new Map();
+const automationState = /** @type {Map<string, AutomationState>} */ (new Map());
 
 const AUTOMATION_DEFINITIONS = {
   'auto-liker': {
@@ -66,7 +79,7 @@ for (const [id, def] of Object.entries(AUTOMATION_DEFINITIONS)) {
  */
 router.get('/status', (req, res) => {
   try {
-    const statuses = {};
+    const statuses = /** @type {Record<string, AutomationState>} */ ({});
     for (const [id, state] of automationState) {
       statuses[id] = { ...state };
     }
@@ -84,13 +97,15 @@ router.get('/status', (req, res) => {
 router.post('/:name/start', (req, res) => {
   try {
     const { name } = req.params;
-    const settings = req.body.settings || {};
-
-    if (!automationState.has(name)) {
-      return res.status(404).json({ error: `Automation '${name}' not found` });
-    }
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const settings = typeof body.settings === 'object' && !Array.isArray(body.settings)
+      ? /** @type {Record<string, unknown>} */ (body.settings)
+      : {};
 
     const state = automationState.get(name);
+    if (!state) {
+      return res.status(404).json({ error: `Automation '${name}' not found` });
+    }
     if (state.status === 'running') {
       return res.status(400).json({ error: `Automation '${name}' is already running` });
     }
@@ -105,9 +120,9 @@ router.post('/:name/start', (req, res) => {
     automationState.set(name, state);
 
     // Emit Socket.IO event if io is available
-    const io = req.app.get('io');
+    const io = req.app && /** @type {{ to: (room: string) => { emit: (event: string, data: unknown) => void } }} */ (req.app.get('io'));
     if (io) {
-      io.to('dashboard').emit('automation:started', { id: name, ...state });
+      io.to('dashboard').emit('automation:started', { ...state });
     }
 
     res.json({ status: 'started', automation: state });
@@ -125,20 +140,19 @@ router.post('/:name/stop', (req, res) => {
   try {
     const { name } = req.params;
 
-    if (!automationState.has(name)) {
+    const state = automationState.get(name);
+    if (!state) {
       return res.status(404).json({ error: `Automation '${name}' not found` });
     }
-
-    const state = automationState.get(name);
     state.status = 'stopped';
     state.startedAt = null;
 
     automationState.set(name, state);
 
     // Emit Socket.IO event
-    const io = req.app.get('io');
+    const io = req.app && /** @type {{ to: (room: string) => { emit: (event: string, data: unknown) => void } }} */ (req.app.get('io'));
     if (io) {
-      io.to('dashboard').emit('automation:stopped', { id: name, ...state });
+      io.to('dashboard').emit('automation:stopped', { ...state });
     }
 
     res.json({ status: 'stopped', automation: state });
@@ -155,17 +169,20 @@ router.post('/:name/stop', (req, res) => {
 router.post('/:name/settings', (req, res) => {
   try {
     const { name } = req.params;
-    const { settings } = req.body;
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const settings = typeof body.settings === 'object' && !Array.isArray(body.settings)
+      ? /** @type {Record<string, unknown>} */ (body.settings)
+      : null;
 
-    if (!automationState.has(name)) {
-      return res.status(404).json({ error: `Automation '${name}' not found` });
-    }
-
-    if (!settings || typeof settings !== 'object') {
+    if (!settings) {
       return res.status(400).json({ error: 'Settings object is required' });
     }
 
     const state = automationState.get(name);
+    if (!state) {
+      return res.status(404).json({ error: `Automation '${name}' not found` });
+    }
+
     state.settings = { ...state.settings, ...settings };
     automationState.set(name, state);
 
@@ -192,7 +209,7 @@ router.post('/stop-all', (req, res) => {
       }
     }
 
-    const io = req.app.get('io');
+    const io = req.app && /** @type {{ to: (room: string) => { emit: (event: string, data: unknown) => void } }} */ (req.app.get('io'));
     if (io) {
       io.to('dashboard').emit('automation:allStopped', { stopped });
     }

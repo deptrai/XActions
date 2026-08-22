@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
     const scheduler = getScheduler();
     res.json({ jobs: scheduler.listJobs() });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -30,7 +30,7 @@ router.post('/', async (req, res) => {
     scheduler.addJob({ name, cron, action: action || name });
     res.json({ status: 'scheduled', name, cron });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -41,7 +41,7 @@ router.delete('/:name', async (req, res) => {
     getScheduler().removeJob(req.params.name);
     res.json({ status: 'removed', name: req.params.name });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -52,7 +52,7 @@ router.post('/:name/run', async (req, res) => {
     await getScheduler().runJobNow(req.params.name);
     res.json({ status: 'executed', name: req.params.name });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

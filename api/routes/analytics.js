@@ -47,7 +47,7 @@ router.use(authenticate);
  */
 router.post('/sentiment', async (req, res) => {
   try {
-    const { text, texts, mode } = req.body;
+    const { text, texts, mode } = /** @type {{ text?: string; texts?: string[]; mode?: string }} */ (req.body);
 
     if (!text && (!texts || !Array.isArray(texts) || texts.length === 0)) {
       return res.status(400).json({
@@ -62,7 +62,7 @@ router.post('/sentiment', async (req, res) => {
       if (texts.length > 100) {
         return res.status(400).json({ error: 'Maximum 100 texts per batch request' });
       }
-      const results = await analyzeBatch(texts, options);
+      const results = /** @type {Record<string, unknown>[]} */ (await analyzeBatch(texts, options));
       return res.json({ results, count: results.length });
     }
 
@@ -71,8 +71,8 @@ router.post('/sentiment', async (req, res) => {
     const result = await analyzeSentiment(text, options);
     return res.json(result);
   } catch (error) {
-    console.error('❌ Sentiment analysis error:', error.message);
-    return res.status(500).json({ error: error.message });
+    console.error('❌ Sentiment analysis error:', (error instanceof Error ? error.message : String(error)));
+    return res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -88,14 +88,20 @@ router.post('/sentiment', async (req, res) => {
  */
 router.post('/monitor', async (req, res) => {
   try {
-    const { target, type, interval, sentimentMode, alertConfig } = req.body;
+    const { target, type, interval, sentimentMode, alertConfig } = /** @type {{
+      target: string;
+      type?: string;
+      interval?: number;
+      sentimentMode?: string;
+      alertConfig?: Record<string, unknown>;
+    }} */ (req.body);
 
     if (!target) {
       return res.status(400).json({ error: '"target" (username or keyword) is required' });
     }
 
     // Get Socket.IO instance from app if available
-    const io = req.app.get('io');
+    const io = /** @type {{ to: (room: string) => { emit: (event: string, data: Record<string, unknown>) => void } } | null | undefined} */ (req.app?.get('io'));
 
     const monitor = createMonitor({
       target,
@@ -103,23 +109,23 @@ router.post('/monitor', async (req, res) => {
       intervalMs: interval ? Math.max(60, Number(interval)) * 1000 : undefined, // min 60s
       sentimentMode: sentimentMode || 'rules',
       alertConfig: {
-        ...alertConfig,
+        ...(alertConfig || {}),
         socketRoom: `monitor_${target}`,
       },
     }, {
-      onAlert: (alert) => {
+      onAlert: (/** @type {Record<string, unknown>} */ alert) => {
         // Emit alert via Socket.IO if available
         if (io) {
           io.to(`monitor_${target}`).emit('analytics:alert', alert);
         }
-        console.log(`🚨 Alert: ${alert.message}`);
+        console.log(`🚨 Alert: ${String(alert.message)}`);
       },
     });
 
     return res.status(201).json(monitor);
   } catch (error) {
-    console.error('❌ Monitor creation error:', error.message);
-    return res.status(500).json({ error: error.message });
+    console.error('❌ Monitor creation error:', (error instanceof Error ? error.message : String(error)));
+    return res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -128,7 +134,7 @@ router.post('/monitor', async (req, res) => {
  * List all active monitors
  */
 router.get('/monitor', (req, res) => {
-  const monitors = listMonitors();
+  const monitors = /** @type {Array<Record<string, unknown> & { id: string; target: string }>} */ (listMonitors());
   return res.json({ monitors, count: monitors.length });
 });
 
@@ -143,7 +149,7 @@ router.get('/monitor/:id', (req, res) => {
   }
 
   const history = getMonitorHistory(req.params.id, {
-    limit: parseInt(req.query.limit) || 100,
+    limit: parseInt(req.query.limit || '0') || 100,
     since: req.query.since,
   });
 
@@ -180,7 +186,7 @@ router.get('/reports/:username', (req, res) => {
   const format = req.query.format || 'json';
 
   // Find monitor for this username
-  const monitors = listMonitors();
+  const monitors = /** @type {Array<Record<string, unknown> & { id: string; target: string }>} */ (listMonitors());
   const monitor = monitors.find(m =>
     m.target.replace(/^@/, '').toLowerCase() === username.toLowerCase()
   );
@@ -193,7 +199,7 @@ router.get('/reports/:username', (req, res) => {
 
   const history = getMonitorHistory(monitor.id, { limit: 10000 });
 
-  const { report, markdown } = generateReport(monitor, history, { period, format });
+  const { report, markdown } = /** @type {{ report: Record<string, unknown>; markdown: string }} */ (generateReport(monitor, history, { period, format }));
 
   if (format === 'markdown') {
     res.type('text/markdown').send(markdown);
@@ -213,11 +219,11 @@ router.get('/reports/:username', (req, res) => {
  * Query: ?monitorId=xxx&severity=warning&limit=50
  */
 router.get('/alerts', (req, res) => {
-  const alerts = getAlerts({
+  const alerts = /** @type {Record<string, unknown>[]} */ (getAlerts({
     monitorId: req.query.monitorId,
     severity: req.query.severity,
-    limit: parseInt(req.query.limit) || 50,
-  });
+    limit: parseInt(req.query.limit || '0') || 50,
+  }));
 
   return res.json({ alerts, count: alerts.length });
 });
@@ -242,7 +248,13 @@ router.get('/alerts', (req, res) => {
  */
 router.post('/price-correlation', async (req, res) => {
   try {
-    const { tweets, tokenId, network, poolAddress, windows } = req.body;
+    const { tweets, tokenId, network, poolAddress, windows } = /** @type {{
+      tweets: Array<Record<string, unknown>>;
+      tokenId?: string;
+      network?: string;
+      poolAddress?: string;
+      windows?: number[];
+    }} */ (req.body);
 
     if (!tweets || !Array.isArray(tweets) || tweets.length === 0) {
       return res.status(400).json({
@@ -270,8 +282,8 @@ router.post('/price-correlation', async (req, res) => {
 
     return res.json(result);
   } catch (error) {
-    console.error('❌ Price correlation error:', error.message);
-    return res.status(500).json({ error: error.message });
+    console.error('❌ Price correlation error:', (error instanceof Error ? error.message : String(error)));
+    return res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

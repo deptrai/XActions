@@ -12,6 +12,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -29,7 +101,7 @@ const successResponse = (res, data, meta = {}) =>
 
 // Session middleware
 router.use((req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({ error: 'SESSION_REQUIRED', message: 'Session cookie is required' });
   }
@@ -42,7 +114,11 @@ router.use((req, res, next) => {
  * Add a scheduled post (cron or datetime)
  */
 router.post('/add', async (req, res) => {
-  const { text, scheduledAt, cron, timezone = 'UTC', repeat = false } = req.body;
+  const text = /** @type {string | undefined} */ (req.body.text);
+  const scheduledAt = /** @type {string | undefined} */ (req.body.scheduledAt);
+  const cron = /** @type {string | undefined} */ (req.body.cron);
+  const timezone = /** @type {string | undefined} */ (req.body.timezone) ?? 'UTC';
+  const repeat = /** @type {boolean | undefined} */ (req.body.repeat) ?? false;
 
   if (!text) return res.status(400).json({ error: 'INVALID_INPUT', message: 'text is required' });
   if (!scheduledAt && !cron) return res.status(400).json({ error: 'INVALID_INPUT', message: 'scheduledAt or cron is required' });
@@ -56,7 +132,7 @@ router.post('/add', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'scheduleAdd',
@@ -65,7 +141,7 @@ router.post('/add', async (req, res) => {
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
         cron: cron || null,
         timezone, repeat: !!repeat,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -77,7 +153,9 @@ router.post('/add', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -86,11 +164,12 @@ router.post('/add', async (req, res) => {
  * List scheduled posts
  */
 router.post('/list', async (req, res) => {
-  const { status = 'pending', limit = 50 } = req.body;
+  const status = /** @type {string | undefined} */ (req.body.status) ?? 'pending';
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
 
   try {
-    const { getRecentJobs } = await import('../../services/jobQueue.js');
-    const jobs = await getRecentJobs({ type: 'scheduleAdd', limit: Math.min(parseInt(limit) || 50, 200) });
+    const { getRecentJobs } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const jobs = /** @type {Record<string, unknown>[]} */ (await getRecentJobs({ type: 'scheduleAdd', limit: Math.min(parseInt(String(limit), 10) || 50, 200) }));
 
     const filtered = status === 'all' ? jobs : jobs.filter(j => j.status === status);
 
@@ -106,7 +185,9 @@ router.post('/list', async (req, res) => {
       count: filtered.length,
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -115,16 +196,18 @@ router.post('/list', async (req, res) => {
  * Remove a scheduled post
  */
 router.post('/remove', async (req, res) => {
-  const { scheduleId } = req.body;
+  const scheduleId = /** @type {string | undefined} */ (req.body.scheduleId);
   if (!scheduleId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'scheduleId is required' });
 
   try {
-    const { cancelJob } = await import('../../services/jobQueue.js');
+    const { cancelJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await cancelJob(scheduleId);
 
     return successResponse(res, { scheduleId, status: 'removed', removedAt: new Date().toISOString() });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -133,20 +216,23 @@ router.post('/remove', async (req, res) => {
  * Add an RSS feed for auto-posting
  */
 router.post('/rss-add', async (req, res) => {
-  const { url, postTemplate, interval = '1h', maxPerDay = 5 } = req.body;
+  const url = /** @type {string | undefined} */ (req.body.url);
+  const postTemplate = /** @type {string | undefined} */ (req.body.postTemplate);
+  const interval = /** @type {string | undefined} */ (req.body.interval) ?? '1h';
+  const maxPerDay = /** @type {string | number | undefined} */ (req.body.maxPerDay) ?? 5;
 
   if (!url) return res.status(400).json({ error: 'INVALID_INPUT', message: 'url is required' });
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'rssAdd',
       config: {
         url, postTemplate: postTemplate || '{{title}} {{url}}',
-        interval, maxPerDay: Math.min(parseInt(maxPerDay) || 5, 20),
-        sessionCookie: req.sessionCookie,
+        interval, maxPerDay: Math.min(parseInt(String(maxPerDay), 10) || 5, 20),
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -158,7 +244,9 @@ router.post('/rss-add', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -167,17 +255,18 @@ router.post('/rss-add', async (req, res) => {
  * Manually check RSS feed for new items
  */
 router.post('/rss-check', async (req, res) => {
-  const { feedId, url } = req.body;
+  const feedId = /** @type {string | undefined} */ (req.body.feedId);
+  const url = /** @type {string | undefined} */ (req.body.url);
 
   if (!feedId && !url) return res.status(400).json({ error: 'INVALID_INPUT', message: 'feedId or url is required' });
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'rssCheck',
-      config: { feedId: feedId || null, url: url || null, sessionCookie: req.sessionCookie },
+      config: { feedId: feedId || null, url: url || null, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -187,7 +276,9 @@ router.post('/rss-check', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -196,19 +287,22 @@ router.post('/rss-check', async (req, res) => {
  * Get draft posts from RSS feed items
  */
 router.post('/rss-drafts', async (req, res) => {
-  const { feedId, limit = 10 } = req.body;
+  const feedId = /** @type {string | undefined} */ (req.body.feedId);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 10;
   if (!feedId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'feedId is required' });
 
   try {
-    const { getJobStatus } = await import('../../services/jobQueue.js');
-    const feedStatus = await getJobStatus(feedId);
+    const { getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const feedStatus = /** @type {Record<string, unknown>} */ (await getJobStatus(feedId));
 
     return successResponse(res, {
       feedId,
-      drafts: (feedStatus?.result?.drafts || []).slice(0, Math.min(parseInt(limit) || 10, 50)),
+      drafts: (feedStatus?.result?.drafts || []).slice(0, Math.min(parseInt(String(limit), 10) || 10, 50)),
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -217,36 +311,39 @@ router.post('/rss-drafts', async (req, res) => {
  * Find evergreen (timeless) tweets to re-share
  */
 router.post('/evergreen', async (req, res) => {
-  const { username, minLikes = 50, minAgeDays = 30, limit = 10 } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const minLikes = /** @type {string | number | undefined} */ (req.body.minLikes) ?? 50;
+  const minAgeDays = /** @type {string | number | undefined} */ (req.body.minAgeDays) ?? 30;
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 10;
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
 
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 10, 1), 30);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 10, 1), 30);
 
   try {
     const startTime = Date.now();
-    const { scrapeTweets } = await import('../../services/browserAutomation.js');
-    const tweets = await scrapeTweets(req.sessionCookie, cleanUsername, { limit: 200 });
+    const { scrapeTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const tweets = /** @type {Record<string, unknown>} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: 200 }));
 
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - (parseInt(minAgeDays) || 30));
+    cutoffDate.setDate(cutoffDate.getDate() - (parseInt(String(minAgeDays), 10) || 30));
 
-    const evergreen = (tweets.items || [])
+    const evergreen = (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (tweets.items || [])))
       .filter(t => {
         const ts = t.timestamp || t.createdAt;
         if (!ts) return false;
         const tweetDate = new Date(ts);
-        return tweetDate < cutoffDate && (parseInt(t.likes) || 0) >= (parseInt(minLikes) || 50);
+        return tweetDate < cutoffDate && (parseInt(String(t.likes), 10) || 0) >= (parseInt(String(minLikes), 10) || 50);
       })
-      .sort((a, b) => (parseInt(b.likes) || 0) - (parseInt(a.likes) || 0))
+      .sort((a, b) => (parseInt(String(b.likes), 10) || 0) - (parseInt(String(a.likes), 10) || 0))
       .slice(0, effectiveLimit)
       .map(t => ({
         id: t.id,
         text: t.text,
         createdAt: t.timestamp || t.createdAt,
         url: t.url,
-        likes: parseInt(t.likes) || 0,
-        retweets: parseInt(t.retweets) || 0,
+        likes: parseInt(String(t.likes), 10) || 0,
+        retweets: parseInt(String(t.retweets), 10) || 0,
       }));
 
     return successResponse(res, {
@@ -255,7 +352,9 @@ router.post('/evergreen', async (req, res) => {
       count: evergreen.length,
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   }
 });
 

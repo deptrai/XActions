@@ -13,6 +13,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -30,7 +102,7 @@ const successResponse = (res, data, meta = {}) =>
 
 // Session middleware
 router.use((req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({
       error: 'SESSION_REQUIRED',
@@ -48,7 +120,9 @@ router.use((req, res, next) => {
  * Post a single tweet
  */
 router.post('/tweet', async (req, res) => {
-  const { text, replyToTweetId, mediaUrls = [] } = req.body;
+  const text = /** @type {string | undefined} */ (req.body.text);
+  const replyToTweetId = /** @type {string | undefined} */ (req.body.replyToTweetId);
+  const mediaUrls = /** @type {string[] | undefined} */ (req.body.mediaUrls) ?? [];
 
   if (!text) {
     return res.status(400).json({
@@ -68,11 +142,11 @@ router.post('/tweet', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'postTweet',
-      config: { text, replyToTweetId: replyToTweetId || null, mediaUrls, sessionCookie: req.sessionCookie },
+      config: { text, replyToTweetId: replyToTweetId || null, mediaUrls, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -82,7 +156,9 @@ router.post('/tweet', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     }, { note: 'Tweet will be posted within seconds' });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -91,7 +167,8 @@ router.post('/tweet', async (req, res) => {
  * Post a multi-tweet thread
  */
 router.post('/thread', async (req, res) => {
-  const { tweets, delayMs = 2000 } = req.body;
+  const tweets = /** @type {string | undefined} */ (req.body.tweets);
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 2000;
 
   if (!Array.isArray(tweets) || tweets.length < 2) {
     return res.status(400).json({
@@ -104,15 +181,15 @@ router.post('/thread', async (req, res) => {
     });
   }
 
-  const effectiveDelay = Math.max(parseInt(delayMs) || 2000, 1500);
+  const effectiveDelay = Math.max(parseInt(String(delayMs), 10) || 2000, 1500);
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'postThread',
-      config: { tweets: tweets.slice(0, 25), delayMs: effectiveDelay, sessionCookie: req.sessionCookie },
+      config: { tweets: tweets.slice(0, 25), delayMs: effectiveDelay, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -125,7 +202,9 @@ router.post('/thread', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -134,22 +213,24 @@ router.post('/thread', async (req, res) => {
  * Create a poll tweet
  */
 router.post('/poll', async (req, res) => {
-  const { question, options, durationMinutes = 1440 } = req.body;
+  const question = /** @type {string | undefined} */ (req.body.question);
+  const options = /** @type {string | undefined} */ (req.body.options);
+  const durationMinutes = /** @type {string | number | undefined} */ (req.body.durationMinutes) ?? 1440;
 
   if (!question) return res.status(400).json({ error: 'INVALID_INPUT', message: 'question is required' });
   if (!Array.isArray(options) || options.length < 2 || options.length > 4) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'options must be 2–4 choices' });
   }
 
-  const effectiveDuration = Math.min(Math.max(parseInt(durationMinutes) || 1440, 5), 10080);
+  const effectiveDuration = Math.min(Math.max(parseInt(String(durationMinutes), 10) || 1440, 5), 10080);
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'createPoll',
-      config: { question, options, durationMinutes: effectiveDuration, sessionCookie: req.sessionCookie },
+      config: { question, options, durationMinutes: effectiveDuration, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -160,7 +241,9 @@ router.post('/poll', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -169,7 +252,9 @@ router.post('/poll', async (req, res) => {
  * Schedule a tweet for later
  */
 router.post('/schedule', async (req, res) => {
-  const { text, scheduledAt, timezone = 'UTC' } = req.body;
+  const text = /** @type {string | undefined} */ (req.body.text);
+  const scheduledAt = /** @type {string | undefined} */ (req.body.scheduledAt);
+  const timezone = /** @type {string | undefined} */ (req.body.timezone) ?? 'UTC';
 
   if (!text) return res.status(400).json({ error: 'INVALID_INPUT', message: 'text is required' });
   if (!scheduledAt) return res.status(400).json({ error: 'INVALID_INPUT', message: 'scheduledAt (ISO 8601) is required' });
@@ -181,11 +266,11 @@ router.post('/schedule', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'scheduleTweet',
-      config: { text, scheduledAt: scheduledDate.toISOString(), timezone, sessionCookie: req.sessionCookie },
+      config: { text, scheduledAt: scheduledDate.toISOString(), timezone, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -196,7 +281,9 @@ router.post('/schedule', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -205,7 +292,8 @@ router.post('/schedule', async (req, res) => {
  * Delete a tweet
  */
 router.post('/delete', async (req, res) => {
-  const { tweetUrl, tweetId } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
 
   if (!tweetUrl && !tweetId) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl or tweetId is required' });
@@ -223,11 +311,11 @@ router.post('/delete', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'deleteTweet',
-      config: { tweetId: effectiveTweetId, sessionCookie: req.sessionCookie },
+      config: { tweetId: effectiveTweetId, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -238,7 +326,9 @@ router.post('/delete', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 2000 },
     }, { warning: 'Deleted tweets cannot be recovered' });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -247,7 +337,9 @@ router.post('/delete', async (req, res) => {
  * Reply to a tweet
  */
 router.post('/reply', async (req, res) => {
-  const { text, tweetUrl, tweetId } = req.body;
+  const text = /** @type {string | undefined} */ (req.body.text);
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
 
   if (!text) return res.status(400).json({ error: 'INVALID_INPUT', message: 'text is required' });
   if (!tweetUrl && !tweetId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl or tweetId is required' });
@@ -260,11 +352,11 @@ router.post('/reply', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'replyTweet',
-      config: { text, tweetId: effectiveTweetId, sessionCookie: req.sessionCookie },
+      config: { text, tweetId: effectiveTweetId, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -275,7 +367,9 @@ router.post('/reply', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -284,7 +378,8 @@ router.post('/reply', async (req, res) => {
  * Bookmark a tweet
  */
 router.post('/bookmark', async (req, res) => {
-  const { tweetUrl, tweetId } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
 
   if (!tweetUrl && !tweetId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl or tweetId is required' });
 
@@ -296,11 +391,11 @@ router.post('/bookmark', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'bookmarkTweet',
-      config: { tweetId: effectiveTweetId, sessionCookie: req.sessionCookie },
+      config: { tweetId: effectiveTweetId, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -311,7 +406,9 @@ router.post('/bookmark', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 2000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -320,33 +417,36 @@ router.post('/bookmark', async (req, res) => {
  * Get saved bookmarks
  */
 router.post('/bookmarks', async (req, res) => {
-  const { limit = 50, cursor } = req.body;
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 200);
 
   try {
     const startTime = Date.now();
-    const { scrapeBookmarks } = await import('../../services/browserAutomation.js');
-    const bookmarks = await scrapeBookmarks(req.sessionCookie, { limit: effectiveLimit, cursor });
+    const { scrapeBookmarks } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const bookmarks = /** @type {Record<string, unknown>} */ (await scrapeBookmarks((/** @type {string} */ (req.sessionCookie)), { limit: effectiveLimit, cursor }));
 
     return successResponse(res, {
-      bookmarks: (bookmarks.items || []).map(b => ({
+      bookmarks: (/** @type {ScrapedBookmark[]} */ (/** @type {ScrapedBookmark[]} */ (bookmarks.items || []))).map(b => ({
         id: b.id,
         text: b.text,
         author: { username: b.author?.username || b.username, displayName: b.author?.name },
         createdAt: b.timestamp || b.createdAt,
         url: b.url,
-        metrics: { likes: parseInt(b.likes) || 0, retweets: parseInt(b.retweets) || 0 },
+        metrics: { likes: parseInt(String(b.likes), 10) || 0, retweets: parseInt(String(b.retweets), 10) || 0 },
       })),
       pagination: {
-        count: (bookmarks.items || []).length,
+        count: (/** @type {ScrapedBookmark[]} */ (/** @type {ScrapedBookmark[]} */ (bookmarks.items || []))).length,
         limit: effectiveLimit,
         nextCursor: bookmarks.nextCursor || null,
         hasMore: !!bookmarks.nextCursor,
       },
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Bookmarks scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -355,15 +455,15 @@ router.post('/bookmarks', async (req, res) => {
  * Clear all bookmarks
  */
 router.post('/clear-bookmarks', async (req, res) => {
-  const { dryRun = false } = req.body;
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'clearBookmarks',
-      config: { dryRun: !!dryRun, sessionCookie: req.sessionCookie },
+      config: { dryRun: !!dryRun, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -373,7 +473,9 @@ router.post('/clear-bookmarks', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     }, { warning: dryRun ? 'Dry run - no bookmarks will be cleared' : '⚠️ All bookmarks will be deleted' });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -382,18 +484,21 @@ router.post('/clear-bookmarks', async (req, res) => {
  * Publish a long-form article
  */
 router.post('/article', async (req, res) => {
-  const { title, body, publish = false, coverImageUrl } = req.body;
+  const title = /** @type {string | undefined} */ (req.body.title);
+  const body = /** @type {string | undefined} */ (req.body.body);
+  const publish = /** @type {boolean | undefined} */ (req.body.publish) ?? false;
+  const coverImageUrl = /** @type {string | undefined} */ (req.body.coverImageUrl);
 
   if (!title) return res.status(400).json({ error: 'INVALID_INPUT', message: 'title is required' });
   if (!body) return res.status(400).json({ error: 'INVALID_INPUT', message: 'body is required' });
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'publishArticle',
-      config: { title, body, publish: !!publish, coverImageUrl: coverImageUrl || null, sessionCookie: req.sessionCookie },
+      config: { title, body, publish: !!publish, coverImageUrl: coverImageUrl || null, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -404,7 +509,9 @@ router.post('/article', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 

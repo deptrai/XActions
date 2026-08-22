@@ -7,19 +7,27 @@
 
 import { Router } from 'express';
 
+/**
+ * @typedef {Object} Notifier
+ * @property {(opts: Record<string, unknown>) => Promise<Record<string, unknown>>} send
+ * @property {(channel: string) => Promise<Record<string, unknown>>} test
+ * @property {(opts: Record<string, unknown>) => Record<string, unknown>} configure
+ */
+
 const router = Router();
 
 // POST /api/notifications/send
 router.post('/send', async (req, res) => {
   try {
     const { getNotifier } = await import('../../src/notifications/notifier.js');
-    const notifier = await getNotifier();
-    const { title, message, severity } = req.body;
+    const notifier = /** @type {Notifier} */ (await getNotifier());
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const { title, message, severity } = body;
     if (!message) return res.status(400).json({ error: 'message required' });
     const result = await notifier.send({ title, message, severity });
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -27,11 +35,11 @@ router.post('/send', async (req, res) => {
 router.post('/test/:channel', async (req, res) => {
   try {
     const { getNotifier } = await import('../../src/notifications/notifier.js');
-    const notifier = await getNotifier();
+    const notifier = /** @type {Notifier} */ (await getNotifier());
     const result = await notifier.test(req.params.channel);
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -39,11 +47,12 @@ router.post('/test/:channel', async (req, res) => {
 router.post('/configure', async (req, res) => {
   try {
     const { getNotifier } = await import('../../src/notifications/notifier.js');
-    const notifier = await getNotifier();
-    const result = notifier.configure(req.body);
+    const notifier = /** @type {Notifier} */ (await getNotifier());
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const result = notifier.configure(body);
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

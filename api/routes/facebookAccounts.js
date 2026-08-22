@@ -2,6 +2,9 @@
 
 import prisma from '../lib/prisma.js';
 /**
+ * @typedef {import('@prisma/client').User} User
+ */
+/**
  * Facebook Account Storage API (Story 5.5 — AC2, AC9)
  *
  * Server-side encrypted Facebook session storage. Cookie values are AES-256-GCM
@@ -116,6 +119,8 @@ export function validateAccountBody(body) {
 // ============================================================================
 
 router.post('/', authenticate, async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const validationError = validateAccountBody(req.body);
     if (validationError) return res.status(400).json({ ok: false, error: validationError });
@@ -126,7 +131,7 @@ router.post('/', authenticate, async (req, res) => {
 
     // Duplicate label check (AC1 #3)
     const existing = await prisma.facebookAccount.findFirst({
-      where: { userId: req.user.id, label },
+      where: { userId: reqUser.id, label },
       select: { id: true },
     });
     if (existing) {
@@ -139,7 +144,7 @@ router.post('/', authenticate, async (req, res) => {
     const encryptedProxy = req.body.proxy ? encrypt(req.body.proxy.trim()) : null;
 
     const account = await prisma.facebookAccount.create({
-      data: { userId: req.user.id, label, encryptedCookie, encryptedProxy },
+      data: { userId: reqUser.id, label, encryptedCookie, encryptedProxy },
       select: { id: true, label: true },  // NFR3: never return encrypted blob
     });
     await invalidateHealthCache(account.id);
@@ -162,9 +167,11 @@ router.post('/', authenticate, async (req, res) => {
 // ============================================================================
 
 router.get('/', authenticate, async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const accounts = await prisma.facebookAccount.findMany({
-      where: { userId: req.user.id },
+      where: { userId: reqUser.id },
       select: { id: true, label: true },  // AC2 #5 / AC9 #26: label + opaque id only
       orderBy: { createdAt: 'asc' },
     });
@@ -181,12 +188,14 @@ router.get('/', authenticate, async (req, res) => {
 // ============================================================================
 
 router.delete('/:id', authenticate, async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { id } = req.params;
 
     // Own-account guard first
     const account = await prisma.facebookAccount.findFirst({
-      where: { id, userId: req.user.id },
+      where: { id, userId: reqUser.id },
       select: { id: true },
     });
     if (!account) return res.status(404).json({ ok: false, error: 'Account not found' });
@@ -196,7 +205,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     // never blocks Facebook account removal.
     const activeRun = await prisma.operation.findFirst({
       where: {
-        userId: req.user.id,
+        userId: reqUser.id,
         status: 'running',
         type: { startsWith: 'facebook_' },
         config: { contains: id },
@@ -208,7 +217,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     }
 
     // Ownership enforced atomically at the DB layer (userId in the where clause).
-    await prisma.facebookAccount.delete({ where: { id, userId: req.user.id } });
+    await prisma.facebookAccount.delete({ where: { id, userId: reqUser.id } });
     await invalidateHealthCache(id);
     return res.json({ ok: true });
   } catch (err) {
@@ -222,12 +231,14 @@ router.delete('/:id', authenticate, async (req, res) => {
 // ============================================================================
 
 router.patch('/:id', authenticate, async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { id } = req.params;
     const { proxy } = req.body ?? {};
 
     const account = await prisma.facebookAccount.findFirst({
-      where: { id, userId: req.user.id },
+      where: { id, userId: reqUser.id },
       select: { id: true },
     });
     if (!account) return res.status(404).json({ ok: false, error: 'Account not found' });
@@ -244,7 +255,7 @@ router.patch('/:id', authenticate, async (req, res) => {
 
     const encryptedProxy = encrypt(proxy.trim());
     await prisma.facebookAccount.update({
-      where: { id, userId: req.user.id },
+      where: { id, userId: reqUser.id },
       data: { encryptedProxy },
     });
     await invalidateHealthCache(id);

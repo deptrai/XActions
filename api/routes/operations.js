@@ -1,5 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { getTwitterClient } from './twitter.js';
@@ -14,8 +17,10 @@ router.use(authMiddleware);
 
 // Unfollow non-followers
 router.post('/unfollow-non-followers', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected - use OAuth or Session Cookie' });
     }
 
@@ -24,7 +29,7 @@ router.post('/unfollow-non-followers', async (req, res) => {
     // Create operation record
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'unfollowNonFollowers',
         status: 'pending',
         config: JSON.stringify({ maxUnfollows, dryRun })
@@ -35,13 +40,13 @@ router.post('/unfollow-non-followers', async (req, res) => {
     await queueJob({
       type: 'unfollowNonFollowers',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
       config: { 
         maxUnfollows, 
         dryRun,
-        username: req.user.twitterUsername,
-        sessionCookie: req.user.sessionCookie
+        username: reqUser.twitterUsername,
+        sessionCookie: reqUser.sessionCookie
       }
     });
 
@@ -58,8 +63,10 @@ router.post('/unfollow-non-followers', async (req, res) => {
 
 // Unfollow everyone
 router.post('/unfollow-everyone', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected - use OAuth or Session Cookie' });
     }
 
@@ -67,7 +74,7 @@ router.post('/unfollow-everyone', async (req, res) => {
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'unfollowEveryone',
         status: 'pending',
         config: JSON.stringify({ maxUnfollows, dryRun })
@@ -77,13 +84,13 @@ router.post('/unfollow-everyone', async (req, res) => {
     await queueJob({
       type: 'unfollowEveryone',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
       config: { 
         maxUnfollows, 
         dryRun,
-        username: req.user.twitterUsername,
-        sessionCookie: req.user.sessionCookie
+        username: reqUser.twitterUsername,
+        sessionCookie: reqUser.sessionCookie
       }
     });
 
@@ -100,14 +107,16 @@ router.post('/unfollow-everyone', async (req, res) => {
 
 // Detect unfollowers
 router.post('/detect-unfollowers', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected - use OAuth or Session Cookie' });
     }
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'detectUnfollowers',
         status: 'pending',
         config: JSON.stringify({})
@@ -117,11 +126,11 @@ router.post('/detect-unfollowers', async (req, res) => {
     await queueJob({
       type: 'detectUnfollowers',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
       config: {
-        username: req.user.twitterUsername,
-        sessionCookie: req.user.sessionCookie
+        username: reqUser.twitterUsername,
+        sessionCookie: reqUser.sessionCookie
       }
     });
 
@@ -138,13 +147,15 @@ router.post('/detect-unfollowers', async (req, res) => {
 
 // Get operation status
 router.get('/status/:operationId', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { operationId } = req.params;
 
     const operation = await prisma.operation.findFirst({
       where: {
         id: operationId,
-        userId: req.user.id
+        userId: reqUser.id
       }
     });
 
@@ -161,13 +172,15 @@ router.get('/status/:operationId', async (req, res) => {
 
 // Cancel operation
 router.post('/cancel/:operationId', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { operationId } = req.params;
 
     const operation = await prisma.operation.findFirst({
       where: {
         id: operationId,
-        userId: req.user.id,
+        userId: reqUser.id,
         status: { in: ['pending', 'processing'] }
       }
     });
@@ -190,11 +203,15 @@ router.post('/cancel/:operationId', async (req, res) => {
 
 // List all operations
 router.get('/', async (req, res) => {
-  try {
-    const { page = 1, limit = 20, status, type } = req.query;
-    const skip = (page - 1) * limit;
+  const reqUser = /** @type {User} */ (req.user);
 
-    const where = { userId: req.user.id };
+  try {
+    const { page = '1', limit = '20', status, type } = req.query;
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const where = /** @type {Record<string, string>} */ ({ userId: reqUser.id });
     if (status) where.status = status;
     if (type) where.type = type;
 
@@ -202,8 +219,8 @@ router.get('/', async (req, res) => {
       prisma.operation.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: parseInt(skip),
-        take: parseInt(limit)
+        skip,
+        take: limitNum
       }),
       prisma.operation.count({ where })
     ]);
@@ -212,9 +229,9 @@ router.get('/', async (req, res) => {
       operations,
       pagination: {
         total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / limit)
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {

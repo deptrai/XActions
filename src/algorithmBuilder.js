@@ -917,7 +917,10 @@ async function startAlgorithmBuilder(options = {}) {
   }
 
   const cookie = /** @type {string} */ (authToken || process.env.XACTIONS_SESSION_COOKIE);
-  let persona = loadPersona(personaId);
+  const persona = loadPersona(personaId);
+  if (!persona) {
+    throw new Error(`Persona ${personaId} not found`);
+  }
 
   log('🤖', `Algorithm Builder starting for persona: ${persona.name} (${persona.preset})`);
   log('📋', `Strategy: ${persona.strategy.preset} | Activity: ${persona.activityPattern.preset}`);

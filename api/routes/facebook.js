@@ -1,6 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 // by nichxbt
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { resolveAccountCookie } from './facebookAccounts.js';
@@ -239,6 +242,8 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
  * }
  */
 router.post('/scrape', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { action, url, query, type, parallel, location, limit, includeReplies, authCookie, browserOptions } = req.body ?? {};
 
@@ -316,11 +321,11 @@ router.post('/scrape', async (req, res) => {
     // Resolve the session: raw cookie, stored accountId/accountIds, or auto-pick a live one.
     let resolved;
     try {
-      resolved = await resolveScrapeCookie(req.user.id, authCookie, req.body?.accountIds);
+      resolved = await resolveScrapeCookie(reqUser.id, authCookie, req.body?.accountIds);
     } catch (e) {
       const code = e?.code;
       if (code === 'INVALID_RAW_COOKIE') {
-        return res.status(400).json({ ok: false, error: e.message });
+        return res.status(400).json({ ok: false, error: (e instanceof Error ? e.message : String(e)) });
       }
       if (code === 'ACCOUNT_NOT_FOUND') {
         return res.status(400).json({ ok: false, error: 'Selected Facebook account not found' });
@@ -329,7 +334,7 @@ router.post('/scrape', async (req, res) => {
         return res.status(400).json({ ok: false, error: 'Failed to load the selected Facebook account session', sessionExpired: true });
       }
       if (code === 'NO_ACTIVE_ACCOUNT') {
-        return res.status(400).json({ ok: false, error: e.message });
+        return res.status(400).json({ ok: false, error: (e instanceof Error ? e.message : String(e)) });
       }
       throw e;
     }
@@ -350,7 +355,7 @@ router.post('/scrape', async (req, res) => {
     const { run: facebookScrapeRun } = await import('../services/facebookScrape.js');
 
     const options = {
-      userId: req.user.id,
+      userId: reqUser.id,
       ...(Object.keys(mergedBrowserOptions).length ? { browserOptions: mergedBrowserOptions } : {}),
       // Pass all cookie fields for full session auth (never log values).
       authCookie: resolved.cookie,
@@ -386,7 +391,7 @@ router.post('/scrape', async (req, res) => {
     // key account/session signals without leaking Puppeteer/DB internals.
     console.error('❌ Facebook scrape error:', error);
 
-    const msg = String(error?.message || '');
+    const msg = String((error instanceof Error ? error.message : String(error)) || '');
     if (msg.includes('cookie authentication failed')) {
       return res.status(400).json({ ok: false, error: 'Facebook session expired or invalid cookies.', sessionExpired: true });
     }
@@ -411,6 +416,8 @@ router.post('/scrape', async (req, res) => {
  * }
  */
 router.post('/automate', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { action: rawAction, urls = [], text = '', dryRun, authCookie, maxBatch,
             recipients = [], content = '', postUrl = '', postUrls = [] } = req.body ?? {};
@@ -518,7 +525,7 @@ router.post('/automate', async (req, res) => {
     const isHeadless = req.body?.headless !== false;
 
     // Per-user Socket.IO room — never broadcast operation events to all clients (NFR3 / privacy)
-    const emit = (payload) => global.io?.to(`user:${req.user.id}`).emit('facebook:operation', payload);
+    const emit = (payload) => global.io?.to(`user:${reqUser.id}`).emit('facebook:operation', payload);
 
     // ========================================================================
     // messenger-share — dedicated path (Story 5.5 D1+D2): multi-account
@@ -534,7 +541,7 @@ router.post('/automate', async (req, res) => {
 
       let accounts;
       try {
-        accounts = await resolveRunAccounts(req.user.id, req.body);
+        accounts = await resolveRunAccounts(reqUser.id, req.body);
       } catch (e) {
         // accountId not found / decrypt failed — 400, never leak detail (NFR3)
         const sessionExpired = e?.code === 'ACCOUNT_DECRYPT_FAILED';
@@ -557,13 +564,13 @@ router.post('/automate', async (req, res) => {
       // Dry-run: no browser, no Operation row (mirrors generic dry-run short-circuit).
       if (resolvedDryRun) {
         const result = await runMessengerCampaign(runArgs);
-        return res.json({ ok: true, action, dryRun: true, userId: req.user.id, operationId: null, ...result });
+        return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
       }
 
       // Real run — PII-free Operation config (counts/lengths only, NFR3).
       const operation = await prisma.operation.create({
         data: {
-          userId: req.user.id,
+          userId: reqUser.id,
           type: 'facebook_messenger_share',
           status: 'running',
           startedAt: new Date(),
@@ -574,7 +581,7 @@ router.post('/automate', async (req, res) => {
           }),
         },
       });
-      emit({ event: 'start', operationId: operation.id, userId: req.user.id, type: operation.type, status: 'running' });
+      emit({ event: 'start', operationId: operation.id, userId: reqUser.id, type: operation.type, status: 'running' });
 
       try {
         const result = await runMessengerCampaign(runArgs);
@@ -582,14 +589,14 @@ router.post('/automate', async (req, res) => {
           where: { id: operation.id },
           data: { status: 'completed', completedAt: new Date(), result: JSON.stringify(result) },
         });
-        emit({ event: 'complete', operationId: operation.id, userId: req.user.id, status: 'completed' });
-        return res.json({ ok: true, action, dryRun: false, userId: req.user.id, operationId: operation.id, ...result });
+        emit({ event: 'complete', operationId: operation.id, userId: reqUser.id, status: 'completed' });
+        return res.json({ ok: true, action, dryRun: false, userId: reqUser.id, operationId: operation.id, ...result });
       } catch (runError) {
         await prisma.operation.update({
           where: { id: operation.id },
-          data: { status: 'failed', completedAt: new Date(), error: runError.message },
+          data: { status: 'failed', completedAt: new Date(), error: (runError instanceof Error ? runError.message : String(runError)) },
         });
-        emit({ event: 'error', operationId: operation.id, userId: req.user.id, status: 'failed', error: runError.message });
+        emit({ event: 'error', operationId: operation.id, userId: reqUser.id, status: 'failed', error: (runError instanceof Error ? runError.message : String(runError)) });
         return res.status(500).json({ ok: false, error: 'Messenger campaign failed. See server logs.' });
       }
     }
@@ -622,7 +629,7 @@ router.post('/automate', async (req, res) => {
           ok: true,
           action,
           dryRun: true,
-          userId: req.user.id,
+          userId: reqUser.id,
           operationId: null,
           postUrl: url,
           recipients: allRecipients,
@@ -668,7 +675,7 @@ router.post('/automate', async (req, res) => {
           ok: true,
           action,
           dryRun: false,
-          userId: req.user.id,
+          userId: reqUser.id,
           postUrl: url,
           results,
           successCount,
@@ -709,7 +716,7 @@ router.post('/automate', async (req, res) => {
       if (action === 'share') return await shareFacebookPosts(page, urls, options);
       if (action === 'schedule') {
         const { scheduledAt, facebookAccountId } = req.body ?? {};
-        return await scheduleFacebookPost(page, { content: text, scheduledAt, facebookAccountId }, { ...options, userId: req.user.id });
+        return await scheduleFacebookPost(page, { content: text, scheduledAt, facebookAccountId }, { ...options, userId: reqUser.id });
       }
       if (action === 'join-groups') {
         const { groupUrls = [], keyword, limit } = req.body ?? {};
@@ -755,7 +762,7 @@ router.post('/automate', async (req, res) => {
     // Exception: cancel-friend-requests needs page access even in dryRun to collect pending requests.
     if (resolvedDryRun && action !== 'cancel-friend-requests') {
       const result = await dispatch(null);
-      return res.json({ ok: true, action, dryRun: true, userId: req.user.id, operationId: null, ...result });
+      return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
     }
 
     // Real run — create Operation record (config excludes authCookie; never persist cookie values, NFR3)
@@ -768,14 +775,14 @@ router.post('/automate', async (req, res) => {
     const operationConfig = { action, urls: configUrls, text: configText, maxBatch: maxBatch ?? null };
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: `facebook_${action}`,
         status: 'running',
         startedAt: new Date(),
         config: JSON.stringify(operationConfig),
       },
     });
-    emit({ event: 'start', operationId: operation.id, userId: req.user.id, type: operation.type, status: 'running' });
+    emit({ event: 'start', operationId: operation.id, userId: reqUser.id, type: operation.type, status: 'running' });
 
     const envBrowserOptions = defaultBrowserOptionsFromEnv() || {};
     const requestBrowserOptions = req.body?.browserOptions || {};
@@ -813,13 +820,13 @@ router.post('/automate', async (req, res) => {
         where: { id: operation.id },
         data: { status: 'completed', completedAt: new Date(), result: JSON.stringify(result) },
       });
-      emit({ event: 'complete', operationId: operation.id, userId: req.user.id, status: 'completed' });
+      emit({ event: 'complete', operationId: operation.id, userId: reqUser.id, status: 'completed' });
     } catch (browserError) {
       await prisma.operation.update({
         where: { id: operation.id },
-        data: { status: 'failed', completedAt: new Date(), error: browserError.message },
+        data: { status: 'failed', completedAt: new Date(), error: (browserError instanceof Error ? browserError.message : String(browserError)) },
       });
-      emit({ event: 'error', operationId: operation.id, userId: req.user.id, status: 'failed', error: browserError.message });
+      emit({ event: 'error', operationId: operation.id, userId: reqUser.id, status: 'failed', error: (browserError instanceof Error ? browserError.message : String(browserError)) });
       throw browserError;
     } finally {
       // Swallow close errors so they never mask the original failure
@@ -830,7 +837,7 @@ router.post('/automate', async (req, res) => {
       ok: true,
       action,
       dryRun: resolvedDryRun,
-      userId: req.user.id,
+      userId: reqUser.id,
       operationId: operation.id,
       ...result,
     });

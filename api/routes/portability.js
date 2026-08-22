@@ -89,13 +89,13 @@ router.post('/export', async (req, res) => {
         job.result = summary;
       } catch (err) {
         job.status = 'failed';
-        job.error = err.message;
+        job.error = (err instanceof Error ? err.message : String(err));
       }
     })();
 
     res.status(202).json({ jobId, status: 'queued', message: 'Export started' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -185,7 +185,7 @@ router.post('/migrate', async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -206,7 +206,7 @@ router.post('/diff', async (req, res) => {
 
     res.json({ summary: diff.summary, diff, report });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -248,7 +248,7 @@ router.get('/exports', async (req, res) => {
 
     res.json({ exports: exports.sort((a, b) => b.name.localeCompare(a.name)) });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

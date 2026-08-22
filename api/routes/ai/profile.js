@@ -12,6 +12,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -29,7 +101,7 @@ const successResponse = (res, data, meta = {}) =>
 
 // Session middleware
 router.use((req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({
       error: 'SESSION_REQUIRED',
@@ -46,7 +118,12 @@ router.use((req, res, next) => {
  * Update profile fields (name, bio, location, website, avatar, banner)
  */
 router.post('/update', async (req, res) => {
-  const { name, bio, location, website, avatarUrl, bannerUrl } = req.body;
+  const name = /** @type {string | undefined} */ (req.body.name);
+  const bio = /** @type {string | undefined} */ (req.body.bio);
+  const location = /** @type {string | undefined} */ (req.body.location);
+  const website = /** @type {string | undefined} */ (req.body.website);
+  const avatarUrl = /** @type {string | undefined} */ (req.body.avatarUrl);
+  const bannerUrl = /** @type {string | undefined} */ (req.body.bannerUrl);
 
   if (!name && !bio && !location && !website && !avatarUrl && !bannerUrl) {
     return res.status(400).json({
@@ -73,11 +150,11 @@ router.post('/update', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'updateProfile',
-      config: { updates, sessionCookie: req.sessionCookie },
+      config: { updates, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -88,7 +165,9 @@ router.post('/update', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -97,15 +176,15 @@ router.post('/update', async (req, res) => {
  * Check if a user has X Premium (Blue/Gold/Verified)
  */
 router.post('/check-premium', async (req, res) => {
-  const { username } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
 
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
 
   try {
     const startTime = Date.now();
-    const { scrapeProfile } = await import('../../services/browserAutomation.js');
-    const profile = await scrapeProfile(req.sessionCookie, cleanUsername);
+    const { scrapeProfile } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const profile = /** @type {Record<string, unknown>} */ (await scrapeProfile((/** @type {string} */ (req.sessionCookie)), cleanUsername));
 
     return successResponse(res, {
       username: cleanUsername,
@@ -116,16 +195,18 @@ router.post('/check-premium', async (req, res) => {
         label: profile.affiliatedLabel || null,
       },
       profile: {
-        followersCount: parseInt(profile.followers) || 0,
-        tweetsCount: parseInt(profile.tweets) || 0,
+        followersCount: parseInt(String(profile.followers), 10) || 0,
+        tweetsCount: parseInt(String(profile.tweets), 10) || 0,
         joinDate: profile.joinDate || null,
       },
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    if (error.message?.includes('not found')) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    if (_errMessage?.includes('not found')) {
       return errorResponse(res, 404, 'USER_NOT_FOUND', `User @${cleanUsername} not found`, { retryable: false });
     }
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -136,11 +217,11 @@ router.post('/check-premium', async (req, res) => {
 router.post('/settings', async (req, res) => {
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'getAccountSettings',
-      config: { sessionCookie: req.sessionCookie },
+      config: { sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -150,7 +231,9 @@ router.post('/settings', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -159,7 +242,7 @@ router.post('/settings', async (req, res) => {
  * Toggle protected tweets (private/public account)
  */
 router.post('/toggle-protected', async (req, res) => {
-  const { enabled } = req.body;
+  const enabled = /** @type {boolean | undefined} */ (req.body.enabled);
 
   if (typeof enabled !== 'boolean') {
     return res.status(400).json({
@@ -171,11 +254,11 @@ router.post('/toggle-protected', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'toggleProtectedTweets',
-      config: { enabled, sessionCookie: req.sessionCookie },
+      config: { enabled, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -186,7 +269,9 @@ router.post('/toggle-protected', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -195,16 +280,16 @@ router.post('/toggle-protected', async (req, res) => {
  * Get list of blocked accounts
  */
 router.post('/blocked', async (req, res) => {
-  const { limit = 100 } = req.body;
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 1000);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 100;
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 100, 1), 1000);
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'getBlockedAccounts',
-      config: { limit: effectiveLimit, sessionCookie: req.sessionCookie },
+      config: { limit: effectiveLimit, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -215,7 +300,9 @@ router.post('/blocked', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 

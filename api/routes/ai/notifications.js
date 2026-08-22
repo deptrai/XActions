@@ -12,6 +12,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -35,7 +107,10 @@ router.use((req, res, next) => next());
  * Send a push notification / webhook
  */
 router.post('/send', async (req, res) => {
-  const { webhookUrl, event, data, channel = 'webhook' } = req.body;
+  const webhookUrl = /** @type {string | undefined} */ (req.body.webhookUrl);
+  const event = /** @type {string | undefined} */ (req.body.event);
+  const data = /** @type {string | undefined} */ (req.body.data);
+  const channel = /** @type {string | undefined} */ (req.body.channel) ?? 'webhook';
 
   if (!webhookUrl && channel === 'webhook') {
     return res.status(400).json({
@@ -53,7 +128,7 @@ router.post('/send', async (req, res) => {
   const operationId = generateOperationId();
 
   try {
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'sendNotification',
@@ -73,7 +148,9 @@ router.post('/send', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 2000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -82,7 +159,7 @@ router.post('/send', async (req, res) => {
  * Send a test notification to verify webhook
  */
 router.post('/test', async (req, res) => {
-  const { webhookUrl } = req.body;
+  const webhookUrl = /** @type {string | undefined} */ (req.body.webhookUrl);
 
   if (!webhookUrl) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'webhookUrl is required' });
@@ -108,8 +185,10 @@ router.post('/test', async (req, res) => {
       responseStatusText: response.statusText,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     return errorResponse(res, 400, 'WEBHOOK_UNREACHABLE',
-      `Could not reach webhook: ${error.message}`, { retryable: false });
+      `Could not reach webhook: ${_errMessage}`, { retryable: false });
+  
   }
 });
 

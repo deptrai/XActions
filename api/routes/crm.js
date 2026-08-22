@@ -20,7 +20,7 @@ router.post('/sync/:username', async (req, res) => {
     const result = await syncFollowers(req.params.username);
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -32,7 +32,7 @@ router.post('/tag', async (req, res) => {
     tagContact(username, tag);
     res.json({ status: 'tagged', username, tag });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -43,7 +43,7 @@ router.get('/search', async (req, res) => {
     const results = searchContacts(req.query.q || '');
     res.json({ contacts: results });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -54,7 +54,7 @@ router.get('/segment/:name', async (req, res) => {
     const members = getSegment(req.params.name);
     res.json({ segment: req.params.name, members });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -65,7 +65,7 @@ router.post('/score', async (req, res) => {
     const result = autoScore();
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

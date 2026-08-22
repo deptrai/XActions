@@ -12,6 +12,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -29,7 +101,7 @@ const successResponse = (res, data, meta = {}) =>
 
 // Session middleware
 router.use((req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({ error: 'SESSION_REQUIRED', message: 'Session cookie is required' });
   }
@@ -42,30 +114,34 @@ router.use((req, res, next) => {
  * Discover live and scheduled Spaces
  */
 router.post('/list', async (req, res) => {
-  const { query, limit = 20, type = 'live' } = req.body;
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 50);
+  const query = /** @type {string | undefined} */ (req.body.query);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 20;
+  const type = /** @type {string | undefined} */ (req.body.type) ?? 'live';
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 20, 1), 50);
 
   try {
     const startTime = Date.now();
-    const { searchTweets } = await import('../../services/browserAutomation.js');
+    const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
     const searchQuery = query ? `${query} filter:spaces` : 'filter:spaces';
-    const results = await searchTweets(req.sessionCookie, searchQuery, {
+    const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), searchQuery, {
       limit: effectiveLimit,
       filter: 'top',
-    });
+    }));
 
     return successResponse(res, {
-      spaces: (results.items || []).map(t => ({
+      spaces: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).map(t => ({
         title: t.text?.match(/🎙|Spaces/i) ? t.text : `Space by @${t.author?.username}`,
         hostUsername: t.author?.username || t.username,
         url: t.url,
         tweet: { id: t.id, text: t.text, createdAt: t.timestamp },
       })),
-      count: (results.items || []).length,
+      count: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).length,
       type,
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -74,7 +150,8 @@ router.post('/list', async (req, res) => {
  * Scrape metadata from a Space URL
  */
 router.post('/scrape', async (req, res) => {
-  const { spaceUrl, spaceId } = req.body;
+  const spaceUrl = /** @type {string | undefined} */ (req.body.spaceUrl);
+  const spaceId = /** @type {string | undefined} */ (req.body.spaceId);
 
   if (!spaceUrl && !spaceId) {
     return res.status(400).json({
@@ -85,14 +162,14 @@ router.post('/scrape', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'scrapeSpace',
       config: {
         spaceUrl: spaceUrl || null,
         spaceId: spaceId || null,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -103,7 +180,9 @@ router.post('/scrape', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -112,7 +191,11 @@ router.post('/scrape', async (req, res) => {
  * Join a Space as a listener (with optional AI co-host)
  */
 router.post('/join', async (req, res) => {
-  const { spaceUrl, spaceId, provider = 'openai', systemPrompt, model } = req.body;
+  const spaceUrl = /** @type {string | undefined} */ (req.body.spaceUrl);
+  const spaceId = /** @type {string | undefined} */ (req.body.spaceId);
+  const provider = /** @type {string | undefined} */ (req.body.provider) ?? 'openai';
+  const systemPrompt = /** @type {string | undefined} */ (req.body.systemPrompt);
+  const model = /** @type {string | undefined} */ (req.body.model);
 
   if (!spaceUrl && !spaceId) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'spaceUrl or spaceId is required' });
@@ -120,7 +203,7 @@ router.post('/join', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'spaceJoin',
@@ -130,7 +213,7 @@ router.post('/join', async (req, res) => {
         provider,
         systemPrompt: systemPrompt || null,
         model: model || null,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -141,7 +224,9 @@ router.post('/join', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -150,17 +235,19 @@ router.post('/join', async (req, res) => {
  * Leave an active Space session
  */
 router.post('/leave', async (req, res) => {
-  const { operationId: spaceOperationId } = req.body;
+  const spaceOperationId = /** @type {string | undefined} */ (req.body.operationId);
 
   try {
-    const { cancelJob } = await import('../../services/jobQueue.js');
+    const { cancelJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     if (spaceOperationId) {
       await cancelJob(spaceOperationId);
     }
 
     return successResponse(res, { status: 'left', spaceOperationId: spaceOperationId || null });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -169,13 +256,13 @@ router.post('/leave', async (req, res) => {
  * Get status of a Space session
  */
 router.post('/status', async (req, res) => {
-  const { operationId: spaceOperationId } = req.body;
+  const spaceOperationId = /** @type {string | undefined} */ (req.body.operationId);
 
   if (!spaceOperationId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'operationId is required' });
 
   try {
-    const { getJobStatus } = await import('../../services/jobQueue.js');
-    const status = await getJobStatus(spaceOperationId);
+    const { getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const status = /** @type {Record<string, unknown>} */ (await getJobStatus(spaceOperationId));
 
     if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Space session not found' });
 
@@ -186,7 +273,9 @@ router.post('/status', async (req, res) => {
       timing: { startedAt: status.startedAt, completedAt: status.completedAt },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'STATUS_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'STATUS_FAILED', _errMessage);
+  
   }
 });
 
@@ -195,13 +284,14 @@ router.post('/status', async (req, res) => {
  * Get transcript from a completed Space session
  */
 router.post('/transcript', async (req, res) => {
-  const { operationId: spaceOperationId, format = 'text' } = req.body;
+  const spaceOperationId = /** @type {string | undefined} */ (req.body.operationId);
+  const format = /** @type {string | undefined} */ (req.body.format) ?? 'text';
 
   if (!spaceOperationId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'operationId is required' });
 
   try {
-    const { getJobStatus } = await import('../../services/jobQueue.js');
-    const status = await getJobStatus(spaceOperationId);
+    const { getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const status = /** @type {Record<string, unknown>} */ (await getJobStatus(spaceOperationId));
 
     if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Space session not found' });
 
@@ -214,7 +304,9 @@ router.post('/transcript', async (req, res) => {
       available: !!transcript,
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 

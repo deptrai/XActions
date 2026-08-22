@@ -7,6 +7,9 @@
  */
 
 import express from 'express';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import { authMiddleware } from '../middleware/auth.js';
 import { TIERS } from '../config/subscription-tiers.js';
 import {
@@ -41,11 +44,13 @@ router.get('/plans', (req, res) => {
  * Get current user's subscription status
  */
 router.get('/subscription', authMiddleware, async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const status = await getSubscriptionStatus(req.user.id);
+    const status = await getSubscriptionStatus(reqUser.id);
     res.json(status);
   } catch (error) {
-    console.error('❌ Failed to get subscription:', error.message);
+    console.error('❌ Failed to get subscription:', (error instanceof Error ? error.message : String(error)));
     res.status(500).json({ error: 'Failed to get subscription status' });
   }
 });
@@ -56,8 +61,11 @@ router.get('/subscription', authMiddleware, async (req, res) => {
  * Body: { tier: 'pro' | 'business' }
  */
 router.post('/checkout', authMiddleware, async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const { tier } = req.body;
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const tier = String(body.tier || '');
 
     if (!tier || !TIERS[tier]) {
       return res.status(400).json({ error: 'Invalid tier. Choose: pro, business' });
@@ -71,10 +79,10 @@ router.post('/checkout', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Contact sales for enterprise pricing' });
     }
 
-    const session = await createCheckoutSession(req.user, tier);
+    const session = await createCheckoutSession(reqUser, tier);
     res.json({ url: session.url });
   } catch (error) {
-    console.error('❌ Checkout error:', error.message);
+    console.error('❌ Checkout error:', (error instanceof Error ? error.message : String(error)));
     res.status(500).json({ error: 'Failed to create checkout session' });
   }
 });
@@ -84,11 +92,13 @@ router.post('/checkout', authMiddleware, async (req, res) => {
  * Create a Stripe Customer Portal session (manage billing, update card, cancel)
  */
 router.post('/portal', authMiddleware, async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const session = await createPortalSession(req.user);
+    const session = await createPortalSession(reqUser);
     res.json({ url: session.url });
   } catch (error) {
-    console.error('❌ Portal error:', error.message);
+    console.error('❌ Portal error:', (error instanceof Error ? error.message : String(error)));
     res.status(500).json({ error: 'Failed to create portal session' });
   }
 });
@@ -98,15 +108,17 @@ router.post('/portal', authMiddleware, async (req, res) => {
  * Cancel subscription at end of current billing period
  */
 router.post('/cancel', authMiddleware, async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const result = await cancelSubscription(req.user.id);
+    const result = await cancelSubscription(reqUser.id);
     res.json({
       message: 'Subscription will be cancelled at end of billing period',
       cancelAt: result.cancelAt,
     });
   } catch (error) {
-    console.error('❌ Cancel error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Cancel error:', (error instanceof Error ? error.message : String(error)));
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

@@ -16,6 +16,9 @@
  */
 
 import express from 'express';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -23,12 +26,24 @@ const router = express.Router();
 // Require authentication for all graph routes
 router.use(authenticate);
 
+/**
+ * @typedef {Object} GraphModule
+ * @property {(username: string, opts: Record<string, unknown>) => Promise<Record<string, unknown>>} build
+ * @property {() => Promise<Record<string, unknown>[]>} list
+ * @property {(id: string) => Promise<Record<string, unknown> | null>} get
+ * @property {(id: string) => Promise<boolean>} delete
+ * @property {(data: Record<string, unknown>) => Record<string, unknown>} serializeGraph
+ * @property {(data: Record<string, unknown>) => Record<string, unknown>} analyze
+ * @property {(data: Record<string, unknown>, seed: unknown) => Record<string, unknown>} recommend
+ * @property {(data: Record<string, unknown>, format: string) => string | Record<string, unknown>} visualize
+ */
+
 // Lazy-load graph module to avoid circular deps
-let _graph = null;
+let _graph = /** @type {GraphModule | null} */ (null);
 async function getGraph() {
   if (!_graph) {
     const mod = await import('../../src/graph/index.js');
-    _graph = mod.default;
+    _graph = /** @type {GraphModule} */ (mod.default);
   }
   return _graph;
 }
@@ -42,16 +57,20 @@ async function getGraph() {
  * Body: { username, depth?, maxFollowers?, maxFollowing?, maxNodes?, authToken? }
  */
 router.post('/build', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const graph = await getGraph();
-    const {
-      username,
-      depth = 2,
-      maxFollowers = 200,
-      maxFollowing = 200,
-      maxNodes = 500,
-      authToken,
-    } = req.body;
+    if (!graph) {
+      return res.status(500).json({ error: 'Graph module unavailable' });
+    }
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const username = String(body.username || '');
+    const depth = Number(body.depth) || 2;
+    const maxFollowers = Number(body.maxFollowers) || 200;
+    const maxFollowing = Number(body.maxFollowing) || 200;
+    const maxNodes = Number(body.maxNodes) || 500;
+    const authToken = body.authToken ? String(body.authToken) : undefined;
 
     if (!username) {
       return res.status(400).json({ error: '"username" is required' });
@@ -67,18 +86,19 @@ router.post('/build', async (req, res) => {
         maxFollowers,
         maxFollowing,
         maxNodes,
-        authToken: authToken || req.user?.sessionCookie,
+        authToken: authToken || reqUser?.sessionCookie,
       });
 
-      buildPromise.then((result) => {
-        console.log(`✅ Graph build complete: @${username} — ${result.nodes?.length || 0} nodes`);
+      buildPromise.then((/** @type {Record<string, unknown> & { nodes?: unknown[]; id?: string }} */ result) => {
+        const nodes = Array.isArray(result.nodes) ? result.nodes.length : 0;
+        console.log(`✅ Graph build complete: @${username} — ${nodes} nodes`);
         // Emit Socket.IO event if available
-        const io = req.app.get('io');
+        const io = req.app && /** @type {{ emit: (event: string, data: unknown) => void }} */ (req.app.get('io'));
         if (io) {
-          io.emit('graph:complete', { graphId: result.id, seed: username, nodesCount: result.nodes?.length || 0 });
+          io.emit('graph:complete', { graphId: result.id, seed: username, nodesCount: nodes });
         }
-      }).catch((err) => {
-        console.error(`❌ Graph build failed for @${username}: ${err.message}`);
+      }).catch((/** @type {unknown} */ err) => {
+        console.error(`❌ Graph build failed for @${username}: ${err instanceof Error ? err.message : String(err)}`);
       });
 
       return res.status(202).json({
@@ -96,13 +116,13 @@ router.post('/build', async (req, res) => {
       maxFollowers,
       maxFollowing,
       maxNodes,
-      authToken: authToken || req.user?.sessionCookie,
+      authToken: authToken || reqUser?.sessionCookie,
     });
 
     res.status(201).json(result);
   } catch (error) {
-    console.error('❌ Graph build error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Graph build error:', (error instanceof Error ? error.message : String(error)));
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -116,10 +136,11 @@ router.post('/build', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const graph = await getGraph();
+    if (!graph) return res.status(500).json({ error: 'Graph module unavailable' });
     const graphs = await graph.list();
     res.json({ graphs, count: graphs.length });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -129,13 +150,14 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const graph = await getGraph();
+    if (!graph) return res.status(500).json({ error: 'Graph module unavailable' });
     const data = await graph.get(req.params.id);
     if (!data) {
       return res.status(404).json({ error: 'Graph not found' });
     }
     res.json(graph.serializeGraph(data));
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -145,13 +167,14 @@ router.get('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const graph = await getGraph();
+    if (!graph) return res.status(500).json({ error: 'Graph module unavailable' });
     const deleted = await graph.delete(req.params.id);
     if (!deleted) {
       return res.status(404).json({ error: 'Graph not found' });
     }
     res.json({ success: true, message: 'Graph deleted' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -165,6 +188,7 @@ router.delete('/:id', async (req, res) => {
 router.get('/:id/analysis', async (req, res) => {
   try {
     const graphMod = await getGraph();
+    if (!graphMod) return res.status(500).json({ error: 'Graph module unavailable' });
     const data = await graphMod.get(req.params.id);
     if (!data) {
       return res.status(404).json({ error: 'Graph not found' });
@@ -172,7 +196,7 @@ router.get('/:id/analysis', async (req, res) => {
     const analysis = graphMod.analyze(data);
     res.json(analysis);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -182,6 +206,7 @@ router.get('/:id/analysis', async (req, res) => {
 router.get('/:id/recommendations', async (req, res) => {
   try {
     const graphMod = await getGraph();
+    if (!graphMod) return res.status(500).json({ error: 'Graph module unavailable' });
     const data = await graphMod.get(req.params.id);
     if (!data) {
       return res.status(404).json({ error: 'Graph not found' });
@@ -189,7 +214,7 @@ router.get('/:id/recommendations', async (req, res) => {
     const recs = graphMod.recommend(data, data.seed);
     res.json(recs);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -200,6 +225,7 @@ router.get('/:id/recommendations', async (req, res) => {
 router.get('/:id/visualization', async (req, res) => {
   try {
     const graphMod = await getGraph();
+    if (!graphMod) return res.status(500).json({ error: 'Graph module unavailable' });
     const data = await graphMod.get(req.params.id);
     if (!data) {
       return res.status(404).json({ error: 'Graph not found' });
@@ -216,7 +242,7 @@ router.get('/:id/visualization', async (req, res) => {
       res.json(result);
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

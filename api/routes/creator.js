@@ -1,5 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { queueJob } from '../services/jobQueue.js';
@@ -9,12 +12,14 @@ router.use(authMiddleware);
 
 // Get account analytics
 router.get('/analytics', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { period = '28d' } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getCreatorAnalytics',
         status: 'pending',
         config: JSON.stringify({ period }),
@@ -24,9 +29,9 @@ router.get('/analytics', async (req, res) => {
     await queueJob({
       type: 'getCreatorAnalytics',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { period, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { period, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Analytics fetch queued' });
@@ -38,10 +43,12 @@ router.get('/analytics', async (req, res) => {
 
 // Get revenue info
 router.get('/revenue', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getRevenue',
         status: 'pending',
         config: JSON.stringify({}),
@@ -51,9 +58,9 @@ router.get('/revenue', async (req, res) => {
     await queueJob({
       type: 'getRevenue',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Revenue fetch queued' });
@@ -65,12 +72,14 @@ router.get('/revenue', async (req, res) => {
 
 // Get subscribers
 router.get('/subscribers', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const { limit = 100 } = req.query;
+    const { limit = '100' } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getSubscribers',
         status: 'pending',
         config: JSON.stringify({ limit: parseInt(limit) }),
@@ -80,9 +89,9 @@ router.get('/subscribers', async (req, res) => {
     await queueJob({
       type: 'getSubscribers',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { limit: parseInt(limit), sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { limit: parseInt(limit), sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Subscribers fetch queued' });

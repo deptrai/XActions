@@ -19,6 +19,9 @@
  */
 
 import express from 'express';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import {
   createStream,
   stopStream,
@@ -42,6 +45,8 @@ const router = express.Router();
 // ============================================================================
 
 router.post('/', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { type, username, interval } = req.body;
 
@@ -62,15 +67,15 @@ router.post('/', async (req, res) => {
       type,
       username,
       interval: intervalMs,
-      authToken: req.body.authToken || req.user?.sessionCookie || undefined,
-      userId: req.user?.id,
+      authToken: req.body.authToken || reqUser?.sessionCookie || undefined,
+      userId: reqUser?.id,
     });
 
     res.status(201).json(stream);
   } catch (error) {
-    const status = error.message?.includes('already exists') ? 409 : 500;
-    console.error('❌ POST /api/streams error:', error.message);
-    res.status(status).json({ error: error.message });
+    const status = (error instanceof Error ? error.message : String(error))?.includes('already exists') ? 409 : 500;
+    console.error('❌ POST /api/streams error:', (error instanceof Error ? error.message : String(error)));
+    res.status(status).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -85,7 +90,7 @@ router.get('/stats', async (_req, res) => {
     res.json({ ...stats, healthy });
   } catch (error) {
     console.error('❌ GET /api/streams/stats error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -99,7 +104,7 @@ router.get('/', async (_req, res) => {
     res.json({ streams, count: streams.length, pool: getPoolStatus() });
   } catch (error) {
     console.error('❌ GET /api/streams error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -113,7 +118,7 @@ router.delete('/', async (_req, res) => {
     res.json(result);
   } catch (error) {
     console.error('❌ DELETE /api/streams error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -130,7 +135,7 @@ router.get('/:id', async (req, res) => {
     res.json(status);
   } catch (error) {
     console.error('❌ GET /api/streams/:id error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -147,9 +152,9 @@ router.patch('/:id', async (req, res) => {
     const stream = await updateStream(req.params.id, updates);
     res.json(stream);
   } catch (error) {
-    const status = error.message?.includes('not found') ? 404 : 500;
-    console.error('❌ PATCH /api/streams/:id error:', error.message);
-    res.status(status).json({ error: error.message });
+    const status = (error instanceof Error ? error.message : String(error))?.includes('not found') ? 404 : 500;
+    console.error('❌ PATCH /api/streams/:id error:', (error instanceof Error ? error.message : String(error)));
+    res.status(status).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -163,7 +168,7 @@ router.delete('/:id', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('❌ DELETE /api/streams/:id error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -176,9 +181,9 @@ router.post('/:id/pause', async (req, res) => {
     const stream = await pauseStream(req.params.id);
     res.json(stream);
   } catch (error) {
-    const status = error.message?.includes('not found') ? 404 : 400;
-    console.error('❌ POST /api/streams/:id/pause error:', error.message);
-    res.status(status).json({ error: error.message });
+    const status = (error instanceof Error ? error.message : String(error))?.includes('not found') ? 404 : 400;
+    console.error('❌ POST /api/streams/:id/pause error:', (error instanceof Error ? error.message : String(error)));
+    res.status(status).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -191,9 +196,9 @@ router.post('/:id/resume', async (req, res) => {
     const stream = await resumeStream(req.params.id);
     res.json(stream);
   } catch (error) {
-    const status = error.message?.includes('not found') ? 404 : 400;
-    console.error('❌ POST /api/streams/:id/resume error:', error.message);
-    res.status(status).json({ error: error.message });
+    const status = (error instanceof Error ? error.message : String(error))?.includes('not found') ? 404 : 400;
+    console.error('❌ POST /api/streams/:id/resume error:', (error instanceof Error ? error.message : String(error)));
+    res.status(status).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -209,7 +214,7 @@ router.get('/:id/history', async (req, res) => {
     res.json({ streamId: req.params.id, events, count: events.length });
   } catch (error) {
     console.error('❌ GET /api/streams/:id/history error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

@@ -1,5 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { queueJob } from '../services/jobQueue.js';
@@ -9,12 +12,14 @@ router.use(authMiddleware);
 
 // Get profile info
 router.get('/:username', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { username } = req.params;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getProfile',
         status: 'pending',
         config: JSON.stringify({ username }),
@@ -24,9 +29,9 @@ router.get('/:username', async (req, res) => {
     await queueJob({
       type: 'getProfile',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { username, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { username, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Profile fetch queued' });
@@ -38,8 +43,10 @@ router.get('/:username', async (req, res) => {
 
 // Update profile
 router.put('/update', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
@@ -50,7 +57,7 @@ router.put('/update', async (req, res) => {
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'updateProfile',
         status: 'pending',
         config: JSON.stringify({ name, bio, location, website }),
@@ -60,9 +67,9 @@ router.put('/update', async (req, res) => {
     await queueJob({
       type: 'updateProfile',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { name, bio, location, website, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { name, bio, location, website, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Profile update queued' });

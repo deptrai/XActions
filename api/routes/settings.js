@@ -1,5 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { queueJob } from '../services/jobQueue.js';
@@ -9,10 +12,12 @@ router.use(authMiddleware);
 
 // Get settings snapshot
 router.get('/', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getSettings',
         status: 'pending',
         config: JSON.stringify({}),
@@ -22,9 +27,9 @@ router.get('/', async (req, res) => {
     await queueJob({
       type: 'getSettings',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Settings fetch queued' });
@@ -36,8 +41,10 @@ router.get('/', async (req, res) => {
 
 // Toggle protected account
 router.put('/protected', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
@@ -48,7 +55,7 @@ router.put('/protected', async (req, res) => {
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'toggleProtected',
         status: 'pending',
         config: JSON.stringify({ enabled }),
@@ -58,9 +65,9 @@ router.put('/protected', async (req, res) => {
     await queueJob({
       type: 'toggleProtected',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { enabled, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { enabled, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Protected toggle queued' });
@@ -72,12 +79,14 @@ router.put('/protected', async (req, res) => {
 
 // Get blocked accounts
 router.get('/blocked', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const { limit = 200 } = req.query;
+    const { limit = '200' } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getBlocked',
         status: 'pending',
         config: JSON.stringify({ limit: parseInt(limit) }),
@@ -87,9 +96,9 @@ router.get('/blocked', async (req, res) => {
     await queueJob({
       type: 'getBlocked',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { limit: parseInt(limit), sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { limit: parseInt(limit), sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Blocked list fetch queued' });
@@ -101,12 +110,14 @@ router.get('/blocked', async (req, res) => {
 
 // Get muted accounts
 router.get('/muted', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const { limit = 200 } = req.query;
+    const { limit = '200' } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getMuted',
         status: 'pending',
         config: JSON.stringify({ limit: parseInt(limit) }),
@@ -116,9 +127,9 @@ router.get('/muted', async (req, res) => {
     await queueJob({
       type: 'getMuted',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { limit: parseInt(limit), sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { limit: parseInt(limit), sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Muted list fetch queued' });
@@ -130,14 +141,16 @@ router.get('/muted', async (req, res) => {
 
 // Request data download
 router.post('/download-data', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'requestDataDownload',
         status: 'pending',
         config: JSON.stringify({}),
@@ -147,9 +160,9 @@ router.post('/download-data', async (req, res) => {
     await queueJob({
       type: 'requestDataDownload',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Data download request queued' });

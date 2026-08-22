@@ -27,7 +27,7 @@ const router = express.Router();
  */
 router.post('/unroll', async (req, res) => {
   try {
-    const { url, cookie } = req.body;
+    const { url, cookie } = /** @type {{ url: string; cookie?: string }} */ (req.body);
 
     if (!url) {
       return res.status(400).json({
@@ -48,10 +48,10 @@ router.post('/unroll', async (req, res) => {
 
     return res.json(thread);
   } catch (error) {
-    console.error('❌ Thread unroll error:', error.message);
+    console.error('❌ Thread unroll error:', (error instanceof Error ? error.message : String(error)));
     return res.status(500).json({
       error: 'Failed to unroll thread',
-      message: error.message,
+      message: (error instanceof Error ? error.message : String(error)),
     });
   }
 });
@@ -67,7 +67,7 @@ router.post('/unroll', async (req, res) => {
  */
 router.post('/summarize', async (req, res) => {
   try {
-    const { tweets, url } = req.body;
+    const { tweets, url } = /** @type {{ tweets?: Array<Record<string, unknown>>; url?: string }} */ (req.body);
 
     let tweetData = tweets;
     let author = null;
@@ -90,17 +90,18 @@ router.post('/summarize', async (req, res) => {
       });
     }
 
+    const threadTweets = tweetData.map(t => ({ text: String(t.text) }));
     const result = await summarizeThread({
-      tweets: tweetData,
-      author,
+      tweets: threadTweets,
+      author: author || undefined,
     });
 
     return res.json(result);
   } catch (error) {
-    console.error('❌ Thread summarize error:', error.message);
+    console.error('❌ Thread summarize error:', (error instanceof Error ? error.message : String(error)));
     return res.status(500).json({
       error: 'Failed to summarize thread',
-      message: error.message,
+      message: (error instanceof Error ? error.message : String(error)),
     });
   }
 });
@@ -135,14 +136,14 @@ router.get('/:tweetId', async (req, res) => {
     } catch (extractError) {
       return res.status(404).json({
         error: 'Thread not found or unable to extract',
-        message: extractError.message,
+        message: (extractError instanceof Error ? extractError.message : String(extractError)),
       });
     }
   } catch (error) {
-    console.error('❌ Thread get error:', error.message);
+    console.error('❌ Thread get error:', (error instanceof Error ? error.message : String(error)));
     return res.status(500).json({
       error: 'Failed to get thread',
-      message: error.message,
+      message: (error instanceof Error ? error.message : String(error)),
     });
   }
 });
@@ -167,10 +168,10 @@ router.get('/:tweetId/text', async (req, res) => {
       return res.status(404).json({ error: 'Thread not cached. Unroll it first via POST /api/thread/unroll' });
     }
 
-    const text = formatAsText(cached);
+    const text = formatAsText(/** @type {import('../services/threadExtractor.js').ThreadData} */ (/** @type {unknown} */ (cached)));
     res.type('text/plain').send(text);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -194,10 +195,10 @@ router.get('/:tweetId/markdown', async (req, res) => {
       return res.status(404).json({ error: 'Thread not cached. Unroll it first via POST /api/thread/unroll' });
     }
 
-    const md = formatAsMarkdown(cached);
+    const md = formatAsMarkdown(/** @type {import('../services/threadExtractor.js').ThreadData} */ (/** @type {unknown} */ (cached)));
     res.type('text/markdown').send(md);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

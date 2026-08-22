@@ -29,7 +29,7 @@ router.get('/status', async (req, res) => {
       error: {
         code: 'XACT_5000',
         type: 'internal_error',
-        message: err?.message || String(err),
+        message: (err instanceof Error ? err.message : String(err)) || String(err),
         statusCode: 500,
         isRetryable: false,
         suggestedAction: 'retry_after_delay',

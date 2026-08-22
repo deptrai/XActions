@@ -12,6 +12,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -29,7 +101,7 @@ const successResponse = (res, data, meta = {}) =>
 
 // Session middleware
 router.use((req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({ error: 'SESSION_REQUIRED', message: 'Session cookie is required' });
   }
@@ -88,18 +160,20 @@ router.post('/presets', async (req, res) => {
  * Create a new persona
  */
 router.post('/create', async (req, res) => {
-  const {
-    name, niche, strategy = 'thought-leader',
-    model = 'gpt-4o-mini', systemPrompt,
-    activityPattern, targetAudience,
-  } = req.body;
+  const name = /** @type {string | undefined} */ (req.body.name);
+  const niche = /** @type {string | undefined} */ (req.body.niche);
+  const strategy = /** @type {string | undefined} */ (req.body.strategy) ?? 'thought-leader';
+  const model = /** @type {string | undefined} */ (req.body.model) ?? 'gpt-4o-mini';
+  const systemPrompt = /** @type {string | undefined} */ (req.body.systemPrompt);
+  const activityPattern = /** @type {string | undefined} */ (req.body.activityPattern);
+  const targetAudience = /** @type {string | undefined} */ (req.body.targetAudience);
 
   if (!name) return res.status(400).json({ error: 'INVALID_INPUT', message: 'name is required' });
   if (!niche) return res.status(400).json({ error: 'INVALID_INPUT', message: 'niche is required (e.g. "AI", "crypto", "fitness")' });
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'personaCreate',
@@ -108,7 +182,7 @@ router.post('/create', async (req, res) => {
         systemPrompt: systemPrompt || null,
         activityPattern: activityPattern || null,
         targetAudience: targetAudience || null,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -120,7 +194,9 @@ router.post('/create', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -130,8 +206,8 @@ router.post('/create', async (req, res) => {
  */
 router.post('/list', async (req, res) => {
   try {
-    const { getRecentJobs } = await import('../../services/jobQueue.js');
-    const jobs = await getRecentJobs({ type: 'personaCreate', limit: 50 });
+    const { getRecentJobs } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const jobs = /** @type {Record<string, unknown>[]} */ (await getRecentJobs({ type: 'personaCreate', limit: 50 }));
 
     return successResponse(res, {
       personas: jobs
@@ -146,7 +222,9 @@ router.post('/list', async (req, res) => {
         })),
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -155,12 +233,12 @@ router.post('/list', async (req, res) => {
  * Get persona status
  */
 router.post('/status', async (req, res) => {
-  const { personaId } = req.body;
+  const personaId = /** @type {string | undefined} */ (req.body.personaId);
   if (!personaId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'personaId is required' });
 
   try {
-    const { getJobStatus } = await import('../../services/jobQueue.js');
-    const status = await getJobStatus(personaId);
+    const { getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const status = /** @type {Record<string, unknown>} */ (await getJobStatus(personaId));
 
     if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Persona not found' });
 
@@ -172,7 +250,9 @@ router.post('/status', async (req, res) => {
       result: status.result || null,
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -181,7 +261,8 @@ router.post('/status', async (req, res) => {
  * Edit a persona's settings
  */
 router.post('/edit', async (req, res) => {
-  const { personaId, updates } = req.body;
+  const personaId = /** @type {string | undefined} */ (req.body.personaId);
+  const updates = /** @type {string | undefined} */ (req.body.updates);
   if (!personaId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'personaId is required' });
   if (!updates || Object.keys(updates).length === 0) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'updates object is required' });
@@ -189,11 +270,11 @@ router.post('/edit', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'personaEdit',
-      config: { personaId, updates, sessionCookie: req.sessionCookie },
+      config: { personaId, updates, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -204,7 +285,9 @@ router.post('/edit', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 2000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -213,16 +296,16 @@ router.post('/edit', async (req, res) => {
  * Delete a persona
  */
 router.post('/delete', async (req, res) => {
-  const { personaId } = req.body;
+  const personaId = /** @type {string | undefined} */ (req.body.personaId);
   if (!personaId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'personaId is required' });
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'personaDelete',
-      config: { personaId, sessionCookie: req.sessionCookie },
+      config: { personaId, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -232,7 +315,9 @@ router.post('/delete', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 2000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -241,20 +326,22 @@ router.post('/delete', async (req, res) => {
  * Start running a persona (continuous automation)
  */
 router.post('/run', async (req, res) => {
-  const { personaId, dryRun = false, sessions = 1 } = req.body;
+  const personaId = /** @type {string | undefined} */ (req.body.personaId);
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
+  const sessions = /** @type {string | number | undefined} */ (req.body.sessions) ?? 1;
   if (!personaId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'personaId is required' });
 
-  const effectiveSessions = Math.min(Math.max(parseInt(sessions) || 1, 1), 5);
+  const effectiveSessions = Math.min(Math.max(parseInt(String(sessions), 10) || 1, 1), 5);
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'personaRun',
       config: {
         personaId, dryRun: !!dryRun, sessions: effectiveSessions,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -267,7 +354,9 @@ router.post('/run', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 30000 },
     }, { note: dryRun ? 'Dry run — actions will be logged but not executed' : 'Persona is now running' });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 

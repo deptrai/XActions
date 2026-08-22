@@ -13,6 +13,78 @@ import crypto from 'crypto';
 const router = express.Router();
 
 /**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
+/**
  * Generate unique operation ID
  */
 const generateOperationId = () => {
@@ -21,6 +93,13 @@ const generateOperationId = () => {
 
 /**
  * Helper: Create consistent error response
+ */
+/**
+ * @param {import('express').Response} res
+ * @param {number} statusCode
+ * @param {string} error
+ * @param {string} message
+ * @param {Record<string, unknown> & { retryable?: boolean; retryAfterMs?: number }} [extras]
  */
 const errorResponse = (res, statusCode, error, message, extras = {}) => {
   return res.status(statusCode).json({
@@ -37,6 +116,11 @@ const errorResponse = (res, statusCode, error, message, extras = {}) => {
 /**
  * Helper: Create consistent success response
  */
+/**
+ * @param {import('express').Response} res
+ * @param {Record<string, unknown>} data
+ * @param {Record<string, unknown>} [meta]
+ */
 const successResponse = (res, data, meta = {}) => {
   return res.json({
     success: true,
@@ -51,7 +135,7 @@ const successResponse = (res, data, meta = {}) => {
 // Require session cookie for most utilities
 router.use(async (req, res, next) => {
   // Some endpoints might work without session
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   req.sessionCookie = sessionCookie;
   next();
 });
@@ -61,7 +145,9 @@ router.use(async (req, res, next) => {
  * Download video from a tweet
  */
 router.post('/video', async (req, res) => {
-  const { tweetUrl, tweetId, quality = 'highest' } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
+  const quality = /** @type {string | undefined} */ (req.body.quality) ?? 'highest';
   
   if (!tweetUrl && !tweetId) {
     return res.status(400).json({
@@ -94,8 +180,8 @@ router.post('/video', async (req, res) => {
   try {
     const startTime = Date.now();
     
-    const { extractVideoUrls } = await import('../../services/browserAutomation.js');
-    const videos = await extractVideoUrls(req.sessionCookie, effectiveTweetId);
+    const { extractVideoUrls } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const videos = /** @type {VideoVariant[]} */ (await extractVideoUrls((/** @type {string} */ (req.sessionCookie)), effectiveTweetId));
     
     if (!videos || videos.length === 0) {
       return res.status(404).json({
@@ -111,7 +197,7 @@ router.post('/video', async (req, res) => {
     const sortedVideos = videos.sort((a, b) => {
       const getResolution = (v) => {
         const match = v.quality?.match(/(\d+)x(\d+)/);
-        return match ? parseInt(match[1]) * parseInt(match[2]) : 0;
+        return match ? parseInt(String(match[1]), 10) * parseInt(String(match[2]), 10) : 0;
       };
       return getResolution(b) - getResolution(a);
     });
@@ -141,8 +227,10 @@ router.post('/video', async (req, res) => {
       note: 'Video URLs are temporary and may expire. Download promptly.',
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Video download error:', error);
-    return errorResponse(res, 500, 'DOWNLOAD_FAILED', error.message);
+    return errorResponse(res, 500, 'DOWNLOAD_FAILED', _errMessage);
+  
   }
 });
 
@@ -151,9 +239,11 @@ router.post('/video', async (req, res) => {
  * Export user's bookmarks
  */
 router.post('/bookmarks', async (req, res) => {
-  const { limit = 100, format = 'json', cursor } = req.body;
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 100;
+  const format = /** @type {string | undefined} */ (req.body.format) ?? 'json';
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
   
-  if (!req.sessionCookie) {
+  if (!(/** @type {string} */ (req.sessionCookie))) {
     return res.status(400).json({
       error: 'SESSION_REQUIRED',
       code: 'E_SESSION_MISSING',
@@ -161,18 +251,18 @@ router.post('/bookmarks', async (req, res) => {
     });
   }
   
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 500);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 100, 1), 500);
   
   try {
     const startTime = Date.now();
     
-    const { scrapeBookmarks } = await import('../../services/browserAutomation.js');
-    const bookmarks = await scrapeBookmarks(req.sessionCookie, {
+    const { scrapeBookmarks } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const bookmarks = /** @type {Record<string, unknown>} */ (await scrapeBookmarks((/** @type {string} */ (req.sessionCookie)), {
       limit: effectiveLimit,
       cursor,
-    });
+    }));
     
-    const formattedBookmarks = (bookmarks.items || []).map(b => ({
+    const formattedBookmarks = (/** @type {ScrapedBookmark[]} */ (/** @type {ScrapedBookmark[]} */ (bookmarks.items || []))).map(b => ({
       id: b.id,
       text: b.text,
       author: {
@@ -182,9 +272,9 @@ router.post('/bookmarks', async (req, res) => {
       createdAt: b.timestamp || b.createdAt,
       url: b.url || `https://x.com/i/status/${b.id}`,
       metrics: {
-        likes: parseInt(b.likes) || 0,
-        retweets: parseInt(b.retweets) || 0,
-        replies: parseInt(b.replies) || 0,
+        likes: parseInt(String(b.likes), 10) || 0,
+        retweets: parseInt(String(b.retweets), 10) || 0,
+        replies: parseInt(String(b.replies), 10) || 0,
       },
       bookmarkedAt: b.bookmarkedAt || null,
     }));
@@ -226,8 +316,10 @@ router.post('/bookmarks', async (req, res) => {
       exportFormat: format,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Bookmark export error:', error);
-    return errorResponse(res, 500, 'EXPORT_FAILED', error.message);
+    return errorResponse(res, 500, 'EXPORT_FAILED', _errMessage);
+  
   }
 });
 
@@ -236,7 +328,10 @@ router.post('/bookmarks', async (req, res) => {
  * Unroll a thread into readable text
  */
 router.post('/thread', async (req, res) => {
-  const { tweetUrl, tweetId, format = 'text', includeMetrics = false } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
+  const format = /** @type {string | undefined} */ (req.body.format) ?? 'text';
+  const includeMetrics = /** @type {boolean | undefined} */ (req.body.includeMetrics) ?? false;
   
   if (!tweetUrl && !tweetId) {
     return res.status(400).json({
@@ -262,8 +357,8 @@ router.post('/thread', async (req, res) => {
   try {
     const startTime = Date.now();
     
-    const { scrapeThread } = await import('../../services/browserAutomation.js');
-    const thread = await scrapeThread(req.sessionCookie, effectiveTweetId);
+    const { scrapeThread } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const thread = /** @type {Record<string, unknown>} */ (await scrapeThread((/** @type {string} */ (req.sessionCookie)), effectiveTweetId));
     
     if (!thread || !thread.tweets || thread.tweets.length === 0) {
       return res.status(404).json({
@@ -306,9 +401,9 @@ router.post('/thread', async (req, res) => {
           text: t.text,
           ...(includeMetrics && {
             metrics: {
-              likes: parseInt(t.likes) || 0,
-              retweets: parseInt(t.retweets) || 0,
-              replies: parseInt(t.replies) || 0,
+              likes: parseInt(String(t.likes), 10) || 0,
+              retweets: parseInt(String(t.retweets), 10) || 0,
+              replies: parseInt(String(t.replies), 10) || 0,
             },
           }),
         })),
@@ -351,8 +446,10 @@ router.post('/thread', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Thread unroll error:', error);
-    return errorResponse(res, 500, 'UNROLL_FAILED', error.message);
+    return errorResponse(res, 500, 'UNROLL_FAILED', _errMessage);
+  
   }
 });
 
@@ -361,7 +458,8 @@ router.post('/thread', async (req, res) => {
  * Analyze a profile's engagement patterns
  */
 router.post('/profile', async (req, res) => {
-  const { username, tweetCount = 50 } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const tweetCount = /** @type {string | number | undefined} */ (req.body.tweetCount) ?? 50;
   
   if (!username) {
     return res.status(400).json({
@@ -376,26 +474,26 @@ router.post('/profile', async (req, res) => {
   }
   
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  const effectiveCount = Math.min(Math.max(parseInt(tweetCount) || 50, 10), 200);
+  const effectiveCount = Math.min(Math.max(parseInt(String(tweetCount), 10) || 50, 10), 200);
   
   try {
     const startTime = Date.now();
     
     // Fetch profile and recent tweets
-    const { scrapeProfile, scrapeTweets } = await import('../../services/browserAutomation.js');
+    const { scrapeProfile, scrapeTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
     
-    const [profile, tweets] = await Promise.all([
-      scrapeProfile(req.sessionCookie, cleanUsername),
-      scrapeTweets(req.sessionCookie, cleanUsername, { limit: effectiveCount }),
-    ]);
+    const [profile, tweets] = /** @type {[Record<string, unknown>, Record<string, unknown>]} */ (await Promise.all([
+      scrapeProfile((/** @type {string} */ (req.sessionCookie)), cleanUsername),
+      scrapeTweets((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: effectiveCount }),
+    ]));
     
-    const tweetItems = tweets.items || [];
+    const tweetItems = /** @type {ScrapedTweet[]} */ (tweets.items || []);
     
     // Calculate engagement metrics
-    const totalLikes = tweetItems.reduce((sum, t) => sum + (parseInt(t.likes) || 0), 0);
-    const totalRetweets = tweetItems.reduce((sum, t) => sum + (parseInt(t.retweets) || 0), 0);
-    const totalReplies = tweetItems.reduce((sum, t) => sum + (parseInt(t.replies) || 0), 0);
-    const totalViews = tweetItems.reduce((sum, t) => sum + (parseInt(t.views) || 0), 0);
+    const totalLikes = tweetItems.reduce((sum, t) => sum + (parseInt(String(t.likes), 10) || 0), 0);
+    const totalRetweets = tweetItems.reduce((sum, t) => sum + (parseInt(String(t.retweets), 10) || 0), 0);
+    const totalReplies = tweetItems.reduce((sum, t) => sum + (parseInt(String(t.replies), 10) || 0), 0);
+    const totalViews = tweetItems.reduce((sum, t) => sum + (parseInt(String(t.views), 10) || 0), 0);
     
     const avgLikes = tweetItems.length > 0 ? Math.round(totalLikes / tweetItems.length) : 0;
     const avgRetweets = tweetItems.length > 0 ? Math.round(totalRetweets / tweetItems.length) : 0;
@@ -403,19 +501,19 @@ router.post('/profile', async (req, res) => {
     const avgViews = tweetItems.length > 0 ? Math.round(totalViews / tweetItems.length) : 0;
     
     // Calculate engagement rate (likes + retweets + replies) / followers
-    const followers = parseInt(profile.followers) || 1;
+    const followers = parseInt(String(profile.followers), 10) || 1;
     const avgEngagement = avgLikes + avgRetweets + avgReplies;
     const engagementRate = ((avgEngagement / followers) * 100).toFixed(4);
     
     // Find top performing tweets
     const topTweets = [...tweetItems]
-      .sort((a, b) => (parseInt(b.likes) || 0) - (parseInt(a.likes) || 0))
+      .sort((a, b) => (parseInt(String(b.likes), 10) || 0) - (parseInt(String(a.likes), 10) || 0))
       .slice(0, 5)
       .map(t => ({
         id: t.id,
         text: t.text?.slice(0, 100) + (t.text?.length > 100 ? '...' : ''),
-        likes: parseInt(t.likes) || 0,
-        retweets: parseInt(t.retweets) || 0,
+        likes: parseInt(String(t.likes), 10) || 0,
+        retweets: parseInt(String(t.retweets), 10) || 0,
         url: t.url || `https://x.com/${cleanUsername}/status/${t.id}`,
       }));
     
@@ -442,8 +540,8 @@ router.post('/profile', async (req, res) => {
         displayName: profile.name,
         bio: profile.bio,
         followers: followers,
-        following: parseInt(profile.following) || 0,
-        totalTweets: parseInt(profile.tweets) || 0,
+        following: parseInt(String(profile.following), 10) || 0,
+        totalTweets: parseInt(String(profile.tweets), 10) || 0,
         verified: profile.verified || false,
         joinDate: profile.joinDate,
       },
@@ -465,8 +563,8 @@ router.post('/profile', async (req, res) => {
           dailyDistribution: tweetsByDay,
         },
         ratios: {
-          followersToFollowing: (followers / (parseInt(profile.following) || 1)).toFixed(2),
-          tweetsPerFollower: (parseInt(profile.tweets) / followers).toFixed(4),
+          followersToFollowing: (followers / (parseInt(String(profile.following), 10) || 1)).toFixed(2),
+          tweetsPerFollower: (parseInt(String(profile.tweets), 10) / followers).toFixed(4),
         },
       },
     }, {
@@ -474,8 +572,10 @@ router.post('/profile', async (req, res) => {
       analyzedAt: new Date().toISOString(),
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Profile analysis error:', error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', error.message);
+    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   }
 });
 
@@ -484,7 +584,8 @@ router.post('/profile', async (req, res) => {
  * Analyze engagement on a specific tweet
  */
 router.post('/tweet', async (req, res) => {
-  const { tweetUrl, tweetId } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
   
   if (!tweetUrl && !tweetId) {
     return res.status(400).json({
@@ -504,8 +605,8 @@ router.post('/tweet', async (req, res) => {
   try {
     const startTime = Date.now();
     
-    const { scrapeTweetDetails } = await import('../../services/browserAutomation.js');
-    const tweet = await scrapeTweetDetails(req.sessionCookie, effectiveTweetId);
+    const { scrapeTweetDetails } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const tweet = /** @type {Record<string, unknown> | null} */ (await scrapeTweetDetails((/** @type {string} */ (req.sessionCookie)), effectiveTweetId));
     
     if (!tweet) {
       return res.status(404).json({
@@ -516,12 +617,12 @@ router.post('/tweet', async (req, res) => {
       });
     }
     
-    const likes = parseInt(tweet.likes) || 0;
-    const retweets = parseInt(tweet.retweets) || 0;
-    const replies = parseInt(tweet.replies) || 0;
-    const views = parseInt(tweet.views) || 0;
-    const quotes = parseInt(tweet.quotes) || 0;
-    const bookmarks = parseInt(tweet.bookmarks) || 0;
+    const likes = parseInt(String(tweet.likes), 10) || 0;
+    const retweets = parseInt(String(tweet.retweets), 10) || 0;
+    const replies = parseInt(String(tweet.replies), 10) || 0;
+    const views = parseInt(String(tweet.views), 10) || 0;
+    const quotes = parseInt(String(tweet.quotes), 10) || 0;
+    const bookmarks = parseInt(String(tweet.bookmarks), 10) || 0;
     
     const totalEngagement = likes + retweets + replies + quotes;
     const engagementRate = views > 0 ? ((totalEngagement / views) * 100).toFixed(4) : '0';
@@ -560,8 +661,10 @@ router.post('/tweet', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Tweet analysis error:', error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', error.message);
+    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   }
 });
 

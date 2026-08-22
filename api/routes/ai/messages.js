@@ -12,6 +12,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -29,7 +101,7 @@ const successResponse = (res, data, meta = {}) =>
 
 // Session middleware
 router.use((req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({
       error: 'SESSION_REQUIRED',
@@ -46,7 +118,9 @@ router.use((req, res, next) => {
  * Send a direct message to a user
  */
 router.post('/send', async (req, res) => {
-  const { username, message, mediaUrl } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const message = /** @type {string | undefined} */ (req.body.message);
+  const mediaUrl = /** @type {string | undefined} */ (req.body.mediaUrl);
 
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
   if (!message) return res.status(400).json({ error: 'INVALID_INPUT', message: 'message is required' });
@@ -56,7 +130,7 @@ router.post('/send', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'sendDM',
@@ -64,7 +138,7 @@ router.post('/send', async (req, res) => {
         username: cleanUsername,
         message,
         mediaUrl: mediaUrl || null,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -77,7 +151,9 @@ router.post('/send', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     }, { warning: 'Respect user preferences — only DM users who expect contact' });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -86,16 +162,16 @@ router.post('/send', async (req, res) => {
  * List DM conversations
  */
 router.post('/conversations', async (req, res) => {
-  const { limit = 20 } = req.body;
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 20;
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 20, 1), 100);
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'getDMConversations',
-      config: { limit: effectiveLimit, sessionCookie: req.sessionCookie },
+      config: { limit: effectiveLimit, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -105,7 +181,9 @@ router.post('/conversations', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -114,21 +192,22 @@ router.post('/conversations', async (req, res) => {
  * Export all DM history
  */
 router.post('/export', async (req, res) => {
-  const { format = 'json', limit = 1000 } = req.body;
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 1000, 1), 5000);
+  const format = /** @type {string | undefined} */ (req.body.format) ?? 'json';
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 1000;
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 1000, 1), 5000);
   const validFormats = ['json', 'csv', 'txt'];
   const effectiveFormat = validFormats.includes(format) ? format : 'json';
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'exportDMs',
       config: {
         format: effectiveFormat,
         limit: effectiveLimit,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -142,7 +221,9 @@ router.post('/export', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 10000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 

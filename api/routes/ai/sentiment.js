@@ -12,6 +12,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -29,7 +101,7 @@ const successResponse = (res, data, meta = {}) =>
 
 // Session middleware
 router.use((req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({ error: 'SESSION_REQUIRED', message: 'Session cookie is required' });
   }
@@ -59,7 +131,11 @@ function labelScore(score) {
  * Analyze sentiment of text(s) or tweets from a search
  */
 router.post('/analyze', async (req, res) => {
-  const { text, texts, query, limit = 50, mode = 'rule' } = req.body;
+  const text = /** @type {string | undefined} */ (req.body.text);
+  const texts = /** @type {string | undefined} */ (req.body.texts);
+  const query = /** @type {string | undefined} */ (req.body.query);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
+  const mode = /** @type {string | undefined} */ (req.body.mode) ?? 'rule';
 
   // Mode 1: analyze provided text(s)
   if (text || texts) {
@@ -87,18 +163,18 @@ router.post('/analyze', async (req, res) => {
 
   // Mode 2: search Twitter and analyze results
   if (query) {
-    const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 10), 200);
+    const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 10), 200);
     try {
       const startTime = Date.now();
-      const { searchTweets } = await import('../../services/browserAutomation.js');
-      const results = await searchTweets(req.sessionCookie, query, { limit: effectiveLimit, filter: 'latest' });
+      const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+      const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), query, { limit: effectiveLimit, filter: 'latest' }));
 
-      const analyzed = (results.items || []).map(t => ({
+      const analyzed = (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).map(t => ({
         text: t.text,
         author: t.author?.username || t.username,
         score: parseFloat(scoreSentiment(t.text).toFixed(3)),
         label: labelScore(scoreSentiment(t.text)),
-        likes: parseInt(t.likes) || 0,
+        likes: parseInt(String(t.likes), 10) || 0,
       }));
 
       const avgScore = analyzed.length > 0
@@ -118,8 +194,10 @@ router.post('/analyze', async (req, res) => {
         tweets: analyzed,
       }, { durationMs: Date.now() - startTime });
     } catch (error) {
-      return errorResponse(res, 500, 'ANALYSIS_FAILED', error.message);
-    }
+    const _errMessage = error instanceof Error ? error.message : String(error);
+      return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+    
+  }
   }
 
   return res.status(400).json({
@@ -139,7 +217,10 @@ router.post('/analyze', async (req, res) => {
  * Start/stop/list reputation monitoring
  */
 router.post('/monitor', async (req, res) => {
-  const { action = 'start', username, monitorId, interval = '1h' } = req.body;
+  const action = /** @type {string | undefined} */ (req.body.action) ?? 'start';
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const monitorId = /** @type {string | undefined} */ (req.body.monitorId);
+  const interval = /** @type {string | undefined} */ (req.body.interval) ?? '1h';
 
   const validActions = ['start', 'stop', 'list', 'status'];
   if (!validActions.includes(action)) {
@@ -147,17 +228,17 @@ router.post('/monitor', async (req, res) => {
   }
 
   try {
-    const { queueJob, cancelJob, getRecentJobs, getJobStatus } = await import('../../services/jobQueue.js');
+    const { queueJob, cancelJob, getRecentJobs, getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
 
     if (action === 'list') {
-      const jobs = await getRecentJobs({ type: 'reputationMonitor', limit: 20 });
+      const jobs = /** @type {Record<string, unknown>[]} */ (await getRecentJobs({ type: 'reputationMonitor', limit: 20 }));
       return successResponse(res, {
         monitors: jobs.map(j => ({ monitorId: j.id, username: j.config?.username, status: j.status, createdAt: j.createdAt })),
       });
     }
 
     if (action === 'status' && monitorId) {
-      const status = await getJobStatus(monitorId);
+      const status = /** @type {Record<string, unknown>} */ (await getJobStatus(monitorId));
       return successResponse(res, { monitorId, status: status?.status || 'not_found', result: status?.result });
     }
 
@@ -176,7 +257,7 @@ router.post('/monitor', async (req, res) => {
       config: {
         username: username.replace(/^@/, '').toLowerCase(),
         interval,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -190,7 +271,9 @@ router.post('/monitor', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 60000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -199,26 +282,27 @@ router.post('/monitor', async (req, res) => {
  * Generate a full reputation report for a username
  */
 router.post('/report', async (req, res) => {
-  const { username, limit = 100 } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 100;
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
 
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 100, 20), 300);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 100, 20), 300);
 
   try {
     const startTime = Date.now();
-    const { scrapeProfile, searchTweets } = await import('../../services/browserAutomation.js');
-    const [profile, mentions] = await Promise.all([
-      scrapeProfile(req.sessionCookie, cleanUsername),
-      searchTweets(req.sessionCookie, `@${cleanUsername}`, { limit: effectiveLimit, filter: 'latest' }),
-    ]);
+    const { scrapeProfile, searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const [profile, mentions] = /** @type {[Record<string, unknown>, Record<string, unknown>]} */ (await Promise.all([
+      scrapeProfile((/** @type {string} */ (req.sessionCookie)), cleanUsername),
+      searchTweets((/** @type {string} */ (req.sessionCookie)), `@${cleanUsername}`, { limit: effectiveLimit, filter: 'latest' }),
+    ]));
 
-    const items = mentions.items || [];
+    const items = /** @type {ScrapedTweet[]} */ (mentions.items || []);
     const scored = items.map(t => ({
       text: t.text,
       author: t.author?.username || t.username,
       score: scoreSentiment(t.text),
-      likes: parseInt(t.likes) || 0,
+      likes: parseInt(String(t.likes), 10) || 0,
       url: t.url,
     }));
 
@@ -232,7 +316,7 @@ router.post('/report', async (req, res) => {
     return successResponse(res, {
       username: cleanUsername,
       profile: {
-        followers: parseInt(profile.followers) || 0,
+        followers: parseInt(String(profile.followers), 10) || 0,
         verified: profile.verified || false,
         bio: profile.bio,
       },
@@ -250,7 +334,9 @@ router.post('/report', async (req, res) => {
       },
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   }
 });
 

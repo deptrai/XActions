@@ -12,6 +12,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -29,7 +101,7 @@ const successResponse = (res, data, meta = {}) =>
 
 // Session middleware
 router.use((req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({ error: 'SESSION_REQUIRED', message: 'Session cookie is required' });
   }
@@ -42,11 +114,12 @@ router.use((req, res, next) => {
  * Start a keyword/user stream
  */
 router.post('/start', async (req, res) => {
-  const {
-    type = 'keyword',
-    username, keyword, hashtag,
-    interval = 60, maxItems = 1000,
-  } = req.body;
+  const type = /** @type {string | undefined} */ (req.body.type) ?? 'keyword';
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const keyword = /** @type {string | undefined} */ (req.body.keyword);
+  const hashtag = /** @type {string | undefined} */ (req.body.hashtag);
+  const interval = /** @type {string | number | undefined} */ (req.body.interval) ?? 60;
+  const maxItems = /** @type {string | number | undefined} */ (req.body.maxItems) ?? 1000;
 
   const validTypes = ['keyword', 'user', 'hashtag', 'mentions'];
   if (!validTypes.includes(type)) {
@@ -57,12 +130,12 @@ router.post('/start', async (req, res) => {
   if (type === 'user' && !username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required for user streams' });
   if (type === 'hashtag' && !hashtag) return res.status(400).json({ error: 'INVALID_INPUT', message: 'hashtag is required for hashtag streams' });
 
-  const effectiveInterval = Math.max(parseInt(interval) || 60, 30); // min 30s
-  const effectiveMax = Math.min(parseInt(maxItems) || 1000, 10000);
+  const effectiveInterval = Math.max(parseInt(String(interval), 10) || 60, 30); // min 30s
+  const effectiveMax = Math.min(parseInt(String(maxItems), 10) || 1000, 10000);
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'streamStart',
@@ -73,7 +146,7 @@ router.post('/start', async (req, res) => {
         hashtag: hashtag ? hashtag.replace(/^#/, '') : null,
         intervalSeconds: effectiveInterval,
         maxItems: effectiveMax,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -87,7 +160,9 @@ router.post('/start', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: effectiveInterval * 1000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -96,16 +171,18 @@ router.post('/start', async (req, res) => {
  * Stop a running stream
  */
 router.post('/stop', async (req, res) => {
-  const { streamId } = req.body;
+  const streamId = /** @type {string | undefined} */ (req.body.streamId);
   if (!streamId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'streamId is required' });
 
   try {
-    const { cancelJob } = await import('../../services/jobQueue.js');
+    const { cancelJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await cancelJob(streamId);
 
     return successResponse(res, { streamId, status: 'stopped', stoppedAt: new Date().toISOString() });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -114,11 +191,11 @@ router.post('/stop', async (req, res) => {
  * List active and recent streams
  */
 router.post('/list', async (req, res) => {
-  const { limit = 20 } = req.body;
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 20;
 
   try {
-    const { getRecentJobs } = await import('../../services/jobQueue.js');
-    const jobs = await getRecentJobs({ type: 'streamStart', limit: Math.min(parseInt(limit) || 20, 100) });
+    const { getRecentJobs } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const jobs = /** @type {Record<string, unknown>[]} */ (await getRecentJobs({ type: 'streamStart', limit: Math.min(parseInt(String(limit), 10) || 20, 100) }));
 
     return successResponse(res, {
       streams: jobs.map(j => ({
@@ -131,7 +208,9 @@ router.post('/list', async (req, res) => {
       count: jobs.length,
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -140,23 +219,25 @@ router.post('/list', async (req, res) => {
  * Pause a stream
  */
 router.post('/pause', async (req, res) => {
-  const { streamId } = req.body;
+  const streamId = /** @type {string | undefined} */ (req.body.streamId);
   if (!streamId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'streamId is required' });
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'streamPause',
-      config: { streamId, sessionCookie: req.sessionCookie },
+      config: { streamId, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
 
     return successResponse(res, { streamId, status: 'paused', pausedAt: new Date().toISOString() });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -165,23 +246,25 @@ router.post('/pause', async (req, res) => {
  * Resume a paused stream
  */
 router.post('/resume', async (req, res) => {
-  const { streamId } = req.body;
+  const streamId = /** @type {string | undefined} */ (req.body.streamId);
   if (!streamId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'streamId is required' });
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'streamResume',
-      config: { streamId, sessionCookie: req.sessionCookie },
+      config: { streamId, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
 
     return successResponse(res, { streamId, status: 'resumed', resumedAt: new Date().toISOString() });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -190,12 +273,12 @@ router.post('/resume', async (req, res) => {
  * Get stream status and recent results
  */
 router.post('/status', async (req, res) => {
-  const { streamId } = req.body;
+  const streamId = /** @type {string | undefined} */ (req.body.streamId);
   if (!streamId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'streamId is required' });
 
   try {
-    const { getJobStatus } = await import('../../services/jobQueue.js');
-    const status = await getJobStatus(streamId);
+    const { getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const status = /** @type {Record<string, unknown>} */ (await getJobStatus(streamId));
 
     if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Stream not found' });
 
@@ -204,11 +287,13 @@ router.post('/status', async (req, res) => {
       status: status.status,
       progress: status.progress || null,
       itemsCollected: status.result?.items?.length || 0,
-      latestItems: (status.result?.items || []).slice(-10),
+      latestItems: (/** @type {Record<string, unknown>[]} */ (/** @type {Record<string, unknown>[]} */ (status.result?.items || []))).slice(-10),
       timing: { startedAt: status.startedAt, updatedAt: status.updatedAt },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -217,18 +302,20 @@ router.post('/status', async (req, res) => {
  * Get historical items collected by a stream
  */
 router.post('/history', async (req, res) => {
-  const { streamId, limit = 100, eventType } = req.body;
+  const streamId = /** @type {string | undefined} */ (req.body.streamId);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 100;
+  const eventType = /** @type {string | undefined} */ (req.body.eventType);
   if (!streamId) return res.status(400).json({ error: 'INVALID_INPUT', message: 'streamId is required' });
 
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 1000);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 100, 1), 1000);
 
   try {
-    const { getJobStatus } = await import('../../services/jobQueue.js');
-    const status = await getJobStatus(streamId);
+    const { getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const status = /** @type {Record<string, unknown>} */ (await getJobStatus(streamId));
 
     if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Stream not found' });
 
-    let items = status.result?.items || [];
+    let items = /** @type {Record<string, unknown>[]} */ (status.result?.items || []);
     if (eventType) items = items.filter(i => i.type === eventType);
     items = items.slice(-effectiveLimit);
 
@@ -239,7 +326,9 @@ router.post('/history', async (req, res) => {
       filters: { eventType: eventType || null, limit: effectiveLimit },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 

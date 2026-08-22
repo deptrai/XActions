@@ -130,7 +130,12 @@ router.get('/automation/:name', async (req, res) => {
  *   callbackUrl   {string}  optional  POST job result here when complete
  */
 router.post('/run', async (req, res) => {
-  const { script, sessionCookie, params = {}, startUrl, callbackUrl } = req.body;
+  const body = /** @type {Record<string, unknown>} */ (req.body);
+  const script = String(body.script || '');
+  const sessionCookie = String(body.sessionCookie || '');
+  const params = typeof body.params === 'object' && !Array.isArray(body.params) ? body.params : {};
+  const startUrl = body.startUrl ? String(body.startUrl) : undefined;
+  const callbackUrl = body.callbackUrl ? String(body.callbackUrl) : undefined;
 
   if (!script) {
     return res.status(400).json({ error: 'script is required' });
@@ -216,7 +221,7 @@ router.post('/run', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Script run error:', error);
-    return res.status(500).json({ error: 'QUEUE_FAILED', message: error.message });
+    return res.status(500).json({ error: 'QUEUE_FAILED', message: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

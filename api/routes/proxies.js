@@ -34,7 +34,7 @@ router.post('/add', (req, res) => {
       totalCount: globalProxyPool.totalCount,
     });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: (err instanceof Error ? err.message : String(err)) });
   }
 });
 

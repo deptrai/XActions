@@ -1,5 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { queueJob } from '../services/jobQueue.js';
@@ -9,18 +12,23 @@ router.use(authMiddleware);
 
 // Post a tweet
 router.post('/tweet', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
-    const { text, replyTo, quoteTweetId } = req.body;
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const text = String(body.text || '');
     if (!text) return res.status(400).json({ error: 'Tweet text is required' });
     if (text.length > 25000) return res.status(400).json({ error: 'Tweet exceeds max length' });
+    const replyTo = body.replyTo;
+    const quoteTweetId = body.quoteTweetId;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'postTweet',
         status: 'pending',
         config: JSON.stringify({ text, replyTo, quoteTweetId }),
@@ -30,9 +38,9 @@ router.post('/tweet', async (req, res) => {
     await queueJob({
       type: 'postTweet',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { text, replyTo, quoteTweetId, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { text, replyTo, quoteTweetId, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Tweet queued' });
@@ -44,19 +52,22 @@ router.post('/tweet', async (req, res) => {
 
 // Post a thread
 router.post('/thread', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
-    const { tweets } = req.body;
-    if (!tweets || !Array.isArray(tweets) || tweets.length < 2) {
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const tweets = Array.isArray(body.tweets) ? body.tweets : [];
+    if (tweets.length < 2) {
       return res.status(400).json({ error: 'Thread requires at least 2 tweets' });
     }
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'postThread',
         status: 'pending',
         config: JSON.stringify({ tweets }),
@@ -66,9 +77,9 @@ router.post('/thread', async (req, res) => {
     await queueJob({
       type: 'postThread',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { tweets, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { tweets, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Thread queued' });
@@ -80,20 +91,25 @@ router.post('/thread', async (req, res) => {
 
 // Create a poll
 router.post('/poll', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
-    const { question, options, durationMinutes = 1440 } = req.body;
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const question = String(body.question || '');
+    const options = Array.isArray(body.options) ? body.options.map(String) : [];
+    const durationMinutes = Number(body.durationMinutes) || 1440;
     if (!question) return res.status(400).json({ error: 'Poll question is required' });
-    if (!options || options.length < 2 || options.length > 4) {
+    if (options.length < 2 || options.length > 4) {
       return res.status(400).json({ error: 'Poll requires 2-4 options' });
     }
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'createPoll',
         status: 'pending',
         config: JSON.stringify({ question, options, durationMinutes }),
@@ -103,9 +119,9 @@ router.post('/poll', async (req, res) => {
     await queueJob({
       type: 'createPoll',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { question, options, durationMinutes, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { question, options, durationMinutes, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Poll queued' });
@@ -117,12 +133,16 @@ router.post('/poll', async (req, res) => {
 
 // Schedule a post
 router.post('/schedule', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
-    const { text, scheduledAt } = req.body;
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const text = String(body.text || '');
+    const scheduledAt = String(body.scheduledAt || '');
     if (!text) return res.status(400).json({ error: 'Tweet text is required' });
     if (!scheduledAt) return res.status(400).json({ error: 'Schedule time is required' });
 
@@ -133,7 +153,7 @@ router.post('/schedule', async (req, res) => {
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'schedulePost',
         status: 'pending',
         config: JSON.stringify({ text, scheduledAt }),
@@ -143,9 +163,9 @@ router.post('/schedule', async (req, res) => {
     await queueJob({
       type: 'schedulePost',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { text, scheduledAt, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { text, scheduledAt, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Scheduled post queued' });
@@ -157,8 +177,10 @@ router.post('/schedule', async (req, res) => {
 
 // Delete a tweet
 router.delete('/tweet/:tweetId', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
+    if (!reqUser.twitterAccessToken && !reqUser.sessionCookie) {
       return res.status(400).json({ error: 'Twitter account not connected' });
     }
 
@@ -166,7 +188,7 @@ router.delete('/tweet/:tweetId', async (req, res) => {
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'deleteTweet',
         status: 'pending',
         config: JSON.stringify({ tweetId }),
@@ -176,9 +198,9 @@ router.delete('/tweet/:tweetId', async (req, res) => {
     await queueJob({
       type: 'deleteTweet',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { tweetId, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { tweetId, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Delete queued' });

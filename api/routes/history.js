@@ -30,7 +30,7 @@ router.get('/history/:username', async (req, res) => {
     const data = getAccountHistory(req.params.username, { from, interval: req.query.interval || 'day' });
     res.json({ snapshots: data, username: req.params.username, days });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -42,7 +42,7 @@ router.get('/growth/:username', async (req, res) => {
     const data = getGrowthRate(req.params.username, days);
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -50,12 +50,13 @@ router.get('/growth/:username', async (req, res) => {
 router.post('/compare', async (req, res) => {
   try {
     const { compareAccounts } = await import('../../src/analytics/historyStore.js');
-    const { usernames, metric, days } = req.body;
-    const from = new Date(Date.now() - (days || 30) * 86400000).toISOString();
-    const data = compareAccounts(usernames, metric, { from });
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const usernames = Array.isArray(body.usernames) ? body.usernames.map(String) : /** @type {string[]} */ ([]);
+    const metric = String(body.metric || '');
+    const data = compareAccounts(usernames, metric, { from: new Date(Date.now() - (Number(body.days) || 30) * 86400000).toISOString() });
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -71,7 +72,7 @@ router.get('/export/:username', async (req, res) => {
     }
     res.send(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -84,7 +85,7 @@ router.get('/overlap', async (req, res) => {
     const data = await analyzeOverlap(username1, username2);
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -106,8 +107,8 @@ router.get('/dashboard/:username', async (req, res) => {
     });
     res.json(data);
   } catch (error) {
-    console.error('❌ Dashboard error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Dashboard error:', (error instanceof Error ? error.message : String(error)));
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -122,8 +123,8 @@ router.get('/follower-growth/:username', async (req, res) => {
     const data = await getDashboard(username, { days: parseInt(req.query.days, 10) || 30 });
     res.json(data);
   } catch (error) {
-    console.error('❌ Follower growth error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Follower growth error:', (error instanceof Error ? error.message : String(error)));
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -138,8 +139,8 @@ router.get('/ratio/:username', async (req, res) => {
     const data = await getRatioSeries(username, { days: parseInt(req.query.days, 10) || 30 });
     res.json(data);
   } catch (error) {
-    console.error('❌ Ratio series error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ratio series error:', (error instanceof Error ? error.message : String(error)));
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -154,8 +155,8 @@ router.get('/engagement/:username', async (req, res) => {
     const data = await getEngagementSeries(username, { days: parseInt(req.query.days, 10) || 30 });
     res.json(data);
   } catch (error) {
-    console.error('❌ Engagement series error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Engagement series error:', (error instanceof Error ? error.message : String(error)));
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -173,8 +174,8 @@ router.get('/top-tweets/:username', async (req, res) => {
     });
     res.json(data);
   } catch (error) {
-    console.error('❌ Top tweets error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Top tweets error:', (error instanceof Error ? error.message : String(error)));
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -186,18 +187,19 @@ router.get('/stats/:username', async (req, res) => {
   try {
     const username = req.params.username.replace(/^@/, '').trim();
     if (!username) return res.status(400).json({ error: 'username is required' });
-    const interval = req.query.interval;
-    if (interval && !['day', 'week', 'month'].includes(interval)) {
+    const requestedInterval = req.query.interval;
+    if (requestedInterval && !['day', 'week', 'month'].includes(requestedInterval)) {
       return res.status(400).json({ error: 'interval must be one of: day, week, month' });
     }
+    const interval = /** @type {"day" | "week" | "month" | undefined} */ (requestedInterval);
     const data = await getStats(username, {
       days: parseInt(req.query.days, 10) || 30,
       interval: interval || 'day',
     });
     res.json(data);
   } catch (error) {
-    console.error('❌ Stats aggregation error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Stats aggregation error:', (error instanceof Error ? error.message : String(error)));
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

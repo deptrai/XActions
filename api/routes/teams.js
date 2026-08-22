@@ -6,18 +6,23 @@
  */
 
 import { Router } from 'express';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import { authenticate as authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
 // GET /api/teams — list teams for the authenticated user
 router.get('/', authMiddleware, async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { getUserTeams } = await import('../../src/auth/teamManager.js');
-    const teams = await getUserTeams(req.user.username);
+    const teams = await getUserTeams(reqUser.username);
     res.json({ teams });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -30,7 +35,7 @@ router.post('/', async (req, res) => {
     const team = await createTeam(name, owner || 'default');
     res.json(team);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -41,7 +46,7 @@ router.get('/:id/members', async (req, res) => {
     const members = await listTeamMembers(req.params.id);
     res.json({ members });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -53,7 +58,7 @@ router.post('/:id/invite', async (req, res) => {
     const result = await inviteUser(req.params.id, email, role);
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -64,7 +69,7 @@ router.delete('/:id/members/:username', async (req, res) => {
     const result = await removeUser(req.params.id, req.params.username);
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -75,7 +80,7 @@ router.put('/:id/members/:username/role', async (req, res) => {
     const result = await updateRole(req.params.id, req.params.username, req.body.role);
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -87,7 +92,7 @@ router.get('/:id/activity', async (req, res) => {
     const log = await getActivityLog(req.params.id, filters);
     res.json({ activity: log });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

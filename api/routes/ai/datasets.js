@@ -12,6 +12,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -29,7 +101,7 @@ const successResponse = (res, data, meta = {}) =>
 
 // Session middleware
 router.use((req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({ error: 'SESSION_REQUIRED', message: 'Session cookie is required' });
   }
@@ -81,7 +153,8 @@ const DATASET_CATALOG = [
  * List available datasets
  */
 router.post('/list', async (req, res) => {
-  const { tags, search } = req.body;
+  const tags = /** @type {string[] | undefined} */ (req.body.tags);
+  const search = /** @type {string | undefined} */ (req.body.search);
 
   let filtered = DATASET_CATALOG;
 
@@ -108,7 +181,9 @@ router.post('/list', async (req, res) => {
  * Fetch a dataset (live-scraped)
  */
 router.post('/get', async (req, res) => {
-  const { name, limit = 100, offset = 0 } = req.body;
+  const name = /** @type {string | undefined} */ (req.body.name);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 100;
+  const offset = /** @type {string | number | undefined} */ (req.body.offset) ?? 0;
 
   if (!name) return res.status(400).json({ error: 'INVALID_INPUT', message: 'name is required' });
 
@@ -121,19 +196,19 @@ router.post('/get', async (req, res) => {
     });
   }
 
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 1000);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 100, 1), 1000);
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'datasetFetch',
       config: {
         dataset: name,
         limit: effectiveLimit,
-        offset: parseInt(offset) || 0,
-        sessionCookie: req.sessionCookie,
+        offset: parseInt(String(offset), 10) || 0,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -142,11 +217,13 @@ router.post('/get', async (req, res) => {
     return successResponse(res, {
       operationId, status: 'queued', type: 'dataset-fetch',
       dataset: { name: dataset.name, description: dataset.description, schema: dataset.schema },
-      config: { limit: effectiveLimit, offset: parseInt(offset) || 0 },
+      config: { limit: effectiveLimit, offset: parseInt(String(offset), 10) || 0 },
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 

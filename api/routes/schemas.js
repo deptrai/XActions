@@ -17,10 +17,10 @@ router.get('/', (req, res) => {
       data: { schemas }
     });
   } catch (error) {
-    const statusCode = error.statusCode || 500;
+    const statusCode = error instanceof PlatformError ? error.statusCode : 500;
     const body = error instanceof PlatformError
       ? error.toEnvelope()
-      : { code: 'XACT_5000', message: error.message };
+      : { code: 'XACT_5000', message: (error instanceof Error ? error.message : String(error)) };
     res.status(statusCode).json({ success: false, error: body });
   }
 });
@@ -55,7 +55,7 @@ router.get('/:platform/:category', (req, res) => {
     if (error instanceof PlatformError) {
       res.status(error.statusCode || 400).json({ success: false, error: error.toEnvelope() });
     } else {
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: (error instanceof Error ? error.message : String(error)) });
     }
   }
 });

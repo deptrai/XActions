@@ -6,6 +6,14 @@
  * Shape matches the format established in api/routes/ai/actions.js so all
  * routes that migrate to this helper require zero call-site changes.
  */
+
+/**
+ * @param {import('express').Response} res
+ * @param {number} statusCode
+ * @param {string} error
+ * @param {string} message
+ * @param {Record<string, unknown> & { retryable?: boolean; retryAfterMs?: number }} [extras]
+ */
 export function errorResponse(res, statusCode, error, message, extras = {}) {
   return res.status(statusCode).json({
     success: false,

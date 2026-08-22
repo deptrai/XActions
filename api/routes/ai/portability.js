@@ -13,6 +13,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -30,7 +102,7 @@ const successResponse = (res, data, meta = {}) =>
 
 // Session middleware
 router.use((req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({ error: 'SESSION_REQUIRED', message: 'Session cookie is required' });
   }
@@ -60,22 +132,20 @@ router.post('/platforms', async (req, res) => {
  * Export full account data
  */
 router.post('/export-account', async (req, res) => {
-  const {
-    username,
-    formats = ['json'],
-    only = ['profile', 'tweets', 'followers', 'following'],
-    limit = 1000,
-  } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const formats = /** @type {string[] | undefined} */ (req.body.formats) ?? ['json'];
+  const only = /** @type {string[] | undefined} */ (req.body.only) ?? ['profile', 'tweets', 'followers', 'following'];
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 1000;
 
   const validFormats = ['json', 'csv', 'txt'];
   const validSections = ['profile', 'tweets', 'followers', 'following', 'bookmarks', 'dms', 'likes'];
   const effectiveFormats = formats.filter(f => validFormats.includes(f));
   const effectiveSections = Array.isArray(only) ? only.filter(s => validSections.includes(s)) : validSections;
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 1000, 100), 10000);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 1000, 100), 10000);
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'exportAccount',
@@ -84,7 +154,7 @@ router.post('/export-account', async (req, res) => {
         formats: effectiveFormats,
         sections: effectiveSections,
         limit: effectiveLimit,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -98,7 +168,9 @@ router.post('/export-account', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 15000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -107,7 +179,10 @@ router.post('/export-account', async (req, res) => {
  * Migrate account data to another platform
  */
 router.post('/migrate', async (req, res) => {
-  const { username, platform, dryRun = true, exportDir } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const platform = /** @type {string | undefined} */ (req.body.platform);
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? true;
+  const exportDir = /** @type {string | undefined} */ (req.body.exportDir);
 
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
   if (!platform) return res.status(400).json({ error: 'INVALID_INPUT', message: 'platform is required (bluesky|mastodon|nostr)' });
@@ -119,7 +194,7 @@ router.post('/migrate', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'migrateAccount',
@@ -127,7 +202,7 @@ router.post('/migrate', async (req, res) => {
         username: username.replace(/^@/, '').toLowerCase(),
         platform, dryRun: !!dryRun,
         exportDir: exportDir || null,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -139,7 +214,9 @@ router.post('/migrate', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 15000 },
     }, { note: dryRun ? 'Dry run — no data will be written to target platform' : `Live migration to ${platform}` });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -148,7 +225,10 @@ router.post('/migrate', async (req, res) => {
  * Diff two exports to find changes
  */
 router.post('/diff', async (req, res) => {
-  const { exportA, exportB, dirA, dirB } = req.body;
+  const exportA = /** @type {string | undefined} */ (req.body.exportA);
+  const exportB = /** @type {string | undefined} */ (req.body.exportB);
+  const dirA = /** @type {string | undefined} */ (req.body.dirA);
+  const dirB = /** @type {string | undefined} */ (req.body.dirB);
 
   if (!exportA && !exportB && !dirA && !dirB) {
     return res.status(400).json({
@@ -178,11 +258,11 @@ router.post('/diff', async (req, res) => {
   // File-path based diff
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'diffExports',
-      config: { dirA: dirA || null, dirB: dirB || null, sessionCookie: req.sessionCookie },
+      config: { dirA: dirA || null, dirB: dirB || null, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -192,7 +272,9 @@ router.post('/diff', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -201,18 +283,20 @@ router.post('/diff', async (req, res) => {
  * Import data from another platform
  */
 router.post('/import', async (req, res) => {
-  const { data, from, dryRun = true } = req.body;
+  const data = /** @type {string | undefined} */ (req.body.data);
+  const from = /** @type {string | undefined} */ (req.body.from);
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? true;
 
   if (!data) return res.status(400).json({ error: 'INVALID_INPUT', message: 'data is required' });
   if (!from) return res.status(400).json({ error: 'INVALID_INPUT', message: 'from platform is required' });
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'importData',
-      config: { data, from, dryRun: !!dryRun, sessionCookie: req.sessionCookie },
+      config: { data, from, dryRun: !!dryRun, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -223,7 +307,9 @@ router.post('/import', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -232,7 +318,9 @@ router.post('/import', async (req, res) => {
  * Convert data between formats (synchronous)
  */
 router.post('/convert', async (req, res) => {
-  const { data, from = 'json', to = 'csv' } = req.body;
+  const data = /** @type {string | undefined} */ (req.body.data);
+  const from = /** @type {string | undefined} */ (req.body.from) ?? 'json';
+  const to = /** @type {string | undefined} */ (req.body.to) ?? 'csv';
 
   if (!data) return res.status(400).json({ error: 'INVALID_INPUT', message: 'data is required' });
 
@@ -267,7 +355,9 @@ router.post('/convert', async (req, res) => {
       byteSize: Buffer.byteLength(String(converted)),
     });
   } catch (error) {
-    return errorResponse(res, 500, 'CONVERSION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'CONVERSION_FAILED', _errMessage);
+  
   }
 });
 

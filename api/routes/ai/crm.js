@@ -12,6 +12,78 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -29,7 +101,7 @@ const successResponse = (res, data, meta = {}) =>
 
 // Session middleware
 router.use((req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) {
     return res.status(400).json({ error: 'SESSION_REQUIRED', message: 'Session cookie is required' });
   }
@@ -42,16 +114,18 @@ router.use((req, res, next) => {
  * Sync followers/following to CRM database
  */
 router.post('/sync', async (req, res) => {
-  const { username, type = 'followers', limit = 1000 } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const type = /** @type {string | undefined} */ (req.body.type) ?? 'followers';
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 1000;
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
 
   const validTypes = ['followers', 'following', 'both'];
   const effectiveType = validTypes.includes(type) ? type : 'followers';
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 1000, 100), 10000);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 1000, 100), 10000);
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'crmSync',
@@ -59,7 +133,7 @@ router.post('/sync', async (req, res) => {
         username: username.replace(/^@/, '').toLowerCase(),
         syncType: effectiveType,
         limit: effectiveLimit,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -73,7 +147,9 @@ router.post('/sync', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 10000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -82,7 +158,9 @@ router.post('/sync', async (req, res) => {
  * Tag a contact in the CRM
  */
 router.post('/tag', async (req, res) => {
-  const { username, tags, remove = false } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const tags = /** @type {string[] | undefined} */ (req.body.tags);
+  const remove = /** @type {boolean | undefined} */ (req.body.remove) ?? false;
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
   if (!Array.isArray(tags) || tags.length === 0) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'tags array is required' });
@@ -90,14 +168,14 @@ router.post('/tag', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'crmTag',
       config: {
         username: username.replace(/^@/, '').toLowerCase(),
         tags, remove: !!remove,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -109,7 +187,9 @@ router.post('/tag', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 2000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -118,13 +198,17 @@ router.post('/tag', async (req, res) => {
  * Search CRM contacts
  */
 router.post('/search', async (req, res) => {
-  const { query, tags, minFollowers, maxFollowers, limit = 50 } = req.body;
+  const query = /** @type {string | undefined} */ (req.body.query);
+  const tags = /** @type {string[] | undefined} */ (req.body.tags);
+  const minFollowers = /** @type {string | number | undefined} */ (req.body.minFollowers);
+  const maxFollowers = /** @type {string | number | undefined} */ (req.body.maxFollowers);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
 
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 500);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 500);
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'crmSearch',
@@ -134,7 +218,7 @@ router.post('/search', async (req, res) => {
         minFollowers: minFollowers || null,
         maxFollowers: maxFollowers || null,
         limit: effectiveLimit,
-        sessionCookie: req.sessionCookie,
+        sessionCookie: (/** @type {string} */ (req.sessionCookie)),
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -146,7 +230,9 @@ router.post('/search', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 
@@ -155,7 +241,9 @@ router.post('/search', async (req, res) => {
  * Get or create a CRM segment
  */
 router.post('/segment', async (req, res) => {
-  const { name, criteria, action = 'get' } = req.body;
+  const name = /** @type {string | undefined} */ (req.body.name);
+  const criteria = /** @type {string | undefined} */ (req.body.criteria);
+  const action = /** @type {string | undefined} */ (req.body.action) ?? 'get';
 
   const validActions = ['get', 'create', 'list'];
   if (!validActions.includes(action)) {
@@ -168,11 +256,11 @@ router.post('/segment', async (req, res) => {
 
   try {
     const operationId = generateOperationId();
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
       id: operationId,
       type: 'crmSegment',
-      config: { action, name: name || null, criteria: criteria || null, sessionCookie: req.sessionCookie },
+      config: { action, name: name || null, criteria: criteria || null, sessionCookie: (/** @type {string} */ (req.sessionCookie)) },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
     });
@@ -183,7 +271,9 @@ router.post('/segment', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    return errorResponse(res, 500, 'ACTION_FAILED', error.message);
+    const _errMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   }
 });
 

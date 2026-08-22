@@ -68,7 +68,7 @@ router.get('/status', optionalAuthMiddleware, (req, res) => {
 
     res.json(response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Agent status error:', message);
     res.status(500).json({ error: message });
   }
@@ -93,7 +93,7 @@ router.get('/metrics', optionalAuthMiddleware, (req, res) => {
     const report = agentInstance.db.getGrowthReport(days);
     res.json(report);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Agent metrics error:', message);
     res.status(500).json({ error: message });
   }
@@ -122,7 +122,7 @@ router.get('/actions', optionalAuthMiddleware, (req, res) => {
 
     res.json({ actions, total, limit, offset });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Agent actions error:', message);
     res.status(500).json({ error: message });
   }
@@ -145,11 +145,11 @@ router.get('/llm-usage', optionalAuthMiddleware, (req, res) => {
     }
 
     const usage = agentInstance.db.getLLMUsage(days);
-    const cost = agentInstance.db.getLLMCost(days);
+    const cost = Number(agentInstance.db.getLLMCost(days));
 
     res.json({ usage, cost: `$${cost.toFixed(4)}`, costRaw: cost });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Agent LLM usage error:', message);
     res.status(500).json({ error: message });
   }
@@ -183,7 +183,7 @@ router.get('/config', authMiddleware, (req, res) => {
 
     res.json({ config: safe });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Agent config error:', message);
     res.status(500).json({ error: message });
   }
@@ -217,7 +217,7 @@ router.post('/config', authMiddleware, (req, res) => {
 
     res.json({ success: true, message: 'Config updated' });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Agent config update error:', message);
     res.status(500).json({ error: message });
   }
@@ -237,7 +237,7 @@ router.post('/start', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Agent is already running' });
     }
 
-    const configPath = req.body.configPath || path.resolve('data', 'agent-config.json');
+    const configPath = /** @type {string | undefined} */ (req.body.configPath) || path.resolve('data', 'agent-config.json');
 
     if (!fs.existsSync(configPath)) {
       return res.status(400).json({
@@ -261,7 +261,7 @@ router.post('/start', authMiddleware, async (req, res) => {
 
     res.json({ success: true, message: 'Agent started', startedAt: new Date(agentStartedAt).toISOString() });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Agent start error:', message);
     agentInstance = null;
     agentStartedAt = null;
@@ -288,7 +288,7 @@ router.post('/stop', authMiddleware, async (req, res) => {
 
     res.json({ success: true, message: 'Agent stopped', uptime: formatUptime(uptime) });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Agent stop error:', message);
     agentInstance = null;
     agentStartedAt = null;
@@ -308,19 +308,20 @@ router.post('/stop', authMiddleware, async (req, res) => {
  */
 router.post('/feed-score', authMiddleware, async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text } = /** @type {{ text: string }} */ (req.body);
     if (!text) return res.status(400).json({ error: 'text is required' });
 
     if (!agentInstance?.llm) {
       return res.status(400).json({ error: 'Agent not running or LLM not configured' });
     }
 
-    const nicheKeywords = agentInstance.config?.niche?.keywords || [];
+    const niche = /** @type {{ keywords?: string[]; searchTerms?: string[] } | null | undefined} */ (agentInstance.config?.niche);
+    const nicheKeywords = niche?.keywords || niche?.searchTerms || [];
     const score = await agentInstance.llm.scoreRelevance(text, nicheKeywords);
 
     res.json({ score, text: text.slice(0, 140) + (text.length > 140 ? '...' : '') });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Feed score error:', message);
     res.status(500).json({ error: message });
   }
@@ -345,7 +346,7 @@ router.get('/report', optionalAuthMiddleware, (req, res) => {
     const report = agentInstance.db.getGrowthReport(days);
     res.json({ report, days });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Agent report error:', message);
     res.status(500).json({ error: message });
   }
@@ -365,7 +366,7 @@ router.get('/schedule', optionalAuthMiddleware, (req, res) => {
       return res.json({ schedule: [], message: 'Agent not running' });
     }
 
-    const plan = agentInstance.scheduler.getDailyPlan();
+    const plan = /** @type {Record<string, unknown>[]} */ (agentInstance.scheduler.getDailyPlan());
     const schedule = plan.map((/** @type {Record<string, unknown>} */ a) => ({
       type: a.type,
       scheduledFor: a.scheduledFor,
@@ -377,7 +378,7 @@ router.get('/schedule', optionalAuthMiddleware, (req, res) => {
 
     res.json({ schedule, count: schedule.length });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Agent schedule error:', message);
     res.status(500).json({ error: message });
   }
@@ -399,10 +400,10 @@ router.get('/content', optionalAuthMiddleware, (req, res) => {
       return res.json({ content: [], message: 'Agent not running or no database' });
     }
 
-    const content = agentInstance.db.getRecentPosts(limit);
+    const content = /** @type {Record<string, unknown>[]} */ (agentInstance.db.getRecentPosts(limit));
     res.json({ content, count: content.length });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error('❌ Agent content error:', message);
     res.status(500).json({ error: message });
   }

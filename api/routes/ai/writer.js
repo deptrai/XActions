@@ -23,6 +23,78 @@ import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 // ============================================================================
 // Rate Limiting — 10 generations/minute
 // ============================================================================
@@ -43,6 +115,7 @@ const generationLimiter = rateLimit({
 // In-memory voice profile store (replace with DB in production)
 // ============================================================================
 
+/** @type {Map<string, { profile: Record<string, unknown>; savedAt: string }>} */
 const voiceProfiles = new Map();
 
 // ============================================================================
@@ -58,7 +131,9 @@ const voiceProfiles = new Map();
  */
 router.post('/analyze-voice', generationLimiter, async (req, res) => {
   try {
-    const { username, authToken, tweetLimit = 200 } = req.body;
+    const username = /** @type {string | undefined} */ (req.body.username);
+    const authToken = /** @type {string | undefined} */ (req.body.authToken);
+    const tweetLimit = /** @type {string | number | undefined} */ (req.body.tweetLimit) ?? 200;
 
     if (!username) {
       return res.status(400).json({ error: 'username is required' });
@@ -103,10 +178,12 @@ router.post('/analyze-voice', generationLimiter, async (req, res) => {
       tweetsScraped: tweets.length,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
       error: 'Voice analysis failed',
-      message: error.message,
+      message: _errMessage,
     });
+  
   }
 });
 
@@ -119,13 +196,19 @@ router.post('/analyze-voice', generationLimiter, async (req, res) => {
  */
 router.post('/generate', generationLimiter, async (req, res) => {
   try {
-    const {
-      username, topic, style, tone, count = 3,
-      type = 'tweet', threadLength = 5,
-      model, apiKey, provider, openaiApiKey, grokApiKey,
-      // Allow passing a voice profile directly
-      voiceProfile: directProfile,
-    } = req.body;
+    const username = /** @type {string | undefined} */ (req.body.username);
+    const topic = /** @type {string | undefined} */ (req.body.topic);
+    const style = /** @type {string | undefined} */ (req.body.style);
+    const tone = /** @type {string | undefined} */ (req.body.tone);
+    const count = /** @type {string | number | undefined} */ (req.body.count) ?? 3;
+    const type = /** @type {string | undefined} */ (req.body.type) ?? 'tweet';
+    const threadLength = /** @type {string | number | undefined} */ (req.body.threadLength) ?? 5;
+    const model = /** @type {string | undefined} */ (req.body.model);
+    const apiKey = /** @type {string | undefined} */ (req.body.apiKey);
+    const provider = /** @type {string | undefined} */ (req.body.provider);
+    const openaiApiKey = /** @type {string | undefined} */ (req.body.openaiApiKey);
+    const grokApiKey = /** @type {string | undefined} */ (req.body.grokApiKey);
+    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
 
     if (!topic) {
       return res.status(400).json({ error: 'topic is required' });
@@ -167,10 +250,12 @@ router.post('/generate', generationLimiter, async (req, res) => {
       });
     }
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
       error: 'Generation failed',
-      message: error.message,
+      message: _errMessage,
     });
+  
   }
 });
 
@@ -182,11 +267,17 @@ router.post('/generate', generationLimiter, async (req, res) => {
  */
 router.post('/thread-from-text', generationLimiter, async (req, res) => {
   try {
-    const {
-      username, text, maxLength = 10, hooks = true, tone,
-      model, apiKey, provider, openaiApiKey, grokApiKey,
-      voiceProfile: directProfile,
-    } = req.body;
+    const username = /** @type {string | undefined} */ (req.body.username);
+    const text = /** @type {string | undefined} */ (req.body.text);
+    const maxLength = /** @type {string | number | undefined} */ (req.body.maxLength) ?? 10;
+    const hooks = /** @type {boolean | undefined} */ (req.body.hooks) ?? true;
+    const tone = /** @type {string | undefined} */ (req.body.tone);
+    const model = /** @type {string | undefined} */ (req.body.model);
+    const apiKey = /** @type {string | undefined} */ (req.body.apiKey);
+    const provider = /** @type {string | undefined} */ (req.body.provider);
+    const openaiApiKey = /** @type {string | undefined} */ (req.body.openaiApiKey);
+    const grokApiKey = /** @type {string | undefined} */ (req.body.grokApiKey);
+    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
 
     if (!text) {
       return res.status(400).json({ error: 'text is required — the long-form text to split into a thread' });
@@ -216,10 +307,12 @@ router.post('/thread-from-text', generationLimiter, async (req, res) => {
       operation: 'ai:thread-from-text',
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
       error: 'Thread generation failed',
-      message: error.message,
+      message: _errMessage,
     });
+  
   }
 });
 
@@ -231,11 +324,18 @@ router.post('/thread-from-text', generationLimiter, async (req, res) => {
  */
 router.post('/bio', generationLimiter, async (req, res) => {
   try {
-    const {
-      username, topic, keywords, tone, count = 5, maxLength = 160,
-      model, apiKey, provider, openaiApiKey, grokApiKey,
-      voiceProfile: directProfile,
-    } = req.body;
+    const username = /** @type {string | undefined} */ (req.body.username);
+    const topic = /** @type {string | undefined} */ (req.body.topic);
+    const keywords = /** @type {string[] | undefined} */ (req.body.keywords);
+    const tone = /** @type {string | undefined} */ (req.body.tone);
+    const count = /** @type {string | number | undefined} */ (req.body.count) ?? 5;
+    const maxLength = /** @type {string | number | undefined} */ (req.body.maxLength) ?? 160;
+    const model = /** @type {string | undefined} */ (req.body.model);
+    const apiKey = /** @type {string | undefined} */ (req.body.apiKey);
+    const provider = /** @type {string | undefined} */ (req.body.provider);
+    const openaiApiKey = /** @type {string | undefined} */ (req.body.openaiApiKey);
+    const grokApiKey = /** @type {string | undefined} */ (req.body.grokApiKey);
+    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
 
     let voiceProfile = directProfile;
     if (!voiceProfile && username) {
@@ -261,10 +361,12 @@ router.post('/bio', generationLimiter, async (req, res) => {
       operation: 'ai:generate-bio',
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
       error: 'Bio generation failed',
-      message: error.message,
+      message: _errMessage,
     });
+  
   }
 });
 
@@ -276,10 +378,13 @@ router.post('/bio', generationLimiter, async (req, res) => {
  */
 router.post('/rewrite', generationLimiter, async (req, res) => {
   try {
-    const {
-      username, text, goal = 'more_engaging', count = 3,
-      model, apiKey, voiceProfile: directProfile,
-    } = req.body;
+    const username = /** @type {string | undefined} */ (req.body.username);
+    const text = /** @type {string | undefined} */ (req.body.text);
+    const goal = /** @type {string | undefined} */ (req.body.goal) ?? 'more_engaging';
+    const count = /** @type {string | number | undefined} */ (req.body.count) ?? 3;
+    const model = /** @type {string | undefined} */ (req.body.model);
+    const apiKey = /** @type {string | undefined} */ (req.body.apiKey);
+    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
 
     if (!text) {
       return res.status(400).json({ error: 'text is required — the tweet to rewrite' });
@@ -307,10 +412,12 @@ router.post('/rewrite', generationLimiter, async (req, res) => {
       operation: 'ai:rewrite-tweet',
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
       error: 'Rewrite failed',
-      message: error.message,
+      message: _errMessage,
     });
+  
   }
 });
 
@@ -322,10 +429,13 @@ router.post('/rewrite', generationLimiter, async (req, res) => {
  */
 router.post('/calendar', generationLimiter, async (req, res) => {
   try {
-    const {
-      username, topics, postsPerDay = 2, days = 7,
-      model, apiKey, voiceProfile: directProfile,
-    } = req.body;
+    const username = /** @type {string | undefined} */ (req.body.username);
+    const topics = /** @type {string[] | undefined} */ (req.body.topics);
+    const postsPerDay = /** @type {string | number | undefined} */ (req.body.postsPerDay) ?? 2;
+    const days = /** @type {string | number | undefined} */ (req.body.days) ?? 7;
+    const model = /** @type {string | undefined} */ (req.body.model);
+    const apiKey = /** @type {string | undefined} */ (req.body.apiKey);
+    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
 
     let voiceProfile = directProfile;
     if (!voiceProfile && username) {
@@ -349,10 +459,12 @@ router.post('/calendar', generationLimiter, async (req, res) => {
       operation: 'ai:generate-calendar',
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
       error: 'Calendar generation failed',
-      message: error.message,
+      message: _errMessage,
     });
+  
   }
 });
 
@@ -364,10 +476,13 @@ router.post('/calendar', generationLimiter, async (req, res) => {
  */
 router.post('/reply', generationLimiter, async (req, res) => {
   try {
-    const {
-      username, originalTweet, tone, count = 3,
-      model, apiKey, voiceProfile: directProfile,
-    } = req.body;
+    const username = /** @type {string | undefined} */ (req.body.username);
+    const originalTweet = /** @type {string | undefined} */ (req.body.originalTweet);
+    const tone = /** @type {string | undefined} */ (req.body.tone);
+    const count = /** @type {string | number | undefined} */ (req.body.count) ?? 3;
+    const model = /** @type {string | undefined} */ (req.body.model);
+    const apiKey = /** @type {string | undefined} */ (req.body.apiKey);
+    const directProfile = /** @type {Record<string, unknown> | undefined} */ (req.body.voiceProfile);
 
     if (!originalTweet) {
       return res.status(400).json({ error: 'originalTweet is required — the tweet to reply to' });
@@ -395,10 +510,12 @@ router.post('/reply', generationLimiter, async (req, res) => {
       operation: 'ai:generate-reply',
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
       error: 'Reply generation failed',
-      message: error.message,
+      message: _errMessage,
     });
+  
   }
 });
 

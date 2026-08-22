@@ -12,9 +12,81 @@ import express from 'express';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 // Require session cookie for all scraping
 router.use(async (req, res, next) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   
   if (!sessionCookie) {
     return res.status(400).json({
@@ -37,6 +109,13 @@ router.use(async (req, res, next) => {
 /**
  * Helper: Create consistent error response
  */
+/**
+ * @param {import('express').Response} res
+ * @param {number} statusCode
+ * @param {string} error
+ * @param {string} message
+ * @param {Record<string, unknown> & { retryable?: boolean; retryAfterMs?: number }} [extras]
+ */
 const errorResponse = (res, statusCode, error, message, extras = {}) => {
   return res.status(statusCode).json({
     success: false,
@@ -51,6 +130,11 @@ const errorResponse = (res, statusCode, error, message, extras = {}) => {
 
 /**
  * Helper: Create consistent success response
+ */
+/**
+ * @param {import('express').Response} res
+ * @param {Record<string, unknown>} data
+ * @param {Record<string, unknown>} [meta]
  */
 const successResponse = (res, data, meta = {}) => {
   return res.json({
@@ -69,7 +153,7 @@ const successResponse = (res, data, meta = {}) => {
  * Get profile information for a username
  */
 router.post('/profile', async (req, res) => {
-  const { username } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
   
   if (!username) {
     return res.status(400).json({
@@ -88,8 +172,8 @@ router.post('/profile', async (req, res) => {
     const startTime = Date.now();
     
     // Dynamic import to handle potential module issues
-    const { scrapeProfile } = await import('../../services/browserAutomation.js');
-    const profile = await scrapeProfile(req.sessionCookie, cleanUsername);
+    const { scrapeProfile } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const profile = /** @type {Record<string, unknown>} */ (await scrapeProfile((/** @type {string} */ (req.sessionCookie)), cleanUsername));
     
     return successResponse(res, {
       username: profile.username,
@@ -98,9 +182,9 @@ router.post('/profile', async (req, res) => {
       location: profile.location,
       website: profile.website,
       joinDate: profile.joinDate,
-      followersCount: parseInt(profile.followers) || 0,
-      followingCount: parseInt(profile.following) || 0,
-      tweetsCount: parseInt(profile.tweets) || 0,
+      followersCount: parseInt(String(profile.followers), 10) || 0,
+      followingCount: parseInt(String(profile.following), 10) || 0,
+      tweetsCount: parseInt(String(profile.tweets), 10) || 0,
       verified: profile.verified || false,
       protected: profile.protected || false,
       profileImageUrl: profile.profileImage,
@@ -110,27 +194,29 @@ router.post('/profile', async (req, res) => {
       requestedUsername: cleanUsername,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Profile scrape error:', error);
     
-    if (error.message?.includes('not found') || error.message?.includes('404')) {
+    if (_errMessage?.includes('not found') || _errMessage?.includes('404')) {
       return errorResponse(res, 404, 'USER_NOT_FOUND', `User @${cleanUsername} not found`, {
         retryable: false,
       });
     }
     
-    if (error.message?.includes('suspended')) {
+    if (_errMessage?.includes('suspended')) {
       return errorResponse(res, 410, 'USER_SUSPENDED', `User @${cleanUsername} is suspended`, {
         retryable: false,
       });
     }
     
-    if (error.message?.includes('rate limit')) {
+    if (_errMessage?.includes('rate limit')) {
       return errorResponse(res, 429, 'RATE_LIMITED', 'Rate limited by X/Twitter', {
         retryAfterMs: 60000,
       });
     }
     
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -139,7 +225,9 @@ router.post('/profile', async (req, res) => {
  * Get follower list for a username
  */
 router.post('/followers', async (req, res) => {
-  const { username, limit = 100, cursor } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 100;
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
   
   if (!username) {
     return res.status(400).json({
@@ -155,16 +243,16 @@ router.post('/followers', async (req, res) => {
   }
   
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 1000);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 100, 1), 1000);
   
   try {
     const startTime = Date.now();
     
-    const { scrapeFollowers } = await import('../../services/browserAutomation.js');
-    const followers = await scrapeFollowers(req.sessionCookie, cleanUsername, { 
+    const { scrapeFollowers } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const followers = /** @type {Record<string, unknown>} */ (await scrapeFollowers((/** @type {string} */ (req.sessionCookie)), cleanUsername, { 
       limit: effectiveLimit,
       cursor,
-    });
+    }));
     
     return successResponse(res, {
       username: cleanUsername,
@@ -174,7 +262,7 @@ router.post('/followers', async (req, res) => {
         bio: u.bio || null,
         followsYou: u.followsYou || false,
         verified: u.verified || false,
-        followersCount: parseInt(u.followers) || null,
+        followersCount: parseInt(String(u.followers), 10) || null,
         profileImageUrl: u.profileImage || null,
       })),
       pagination: {
@@ -187,8 +275,10 @@ router.post('/followers', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Followers scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -197,7 +287,9 @@ router.post('/followers', async (req, res) => {
  * Get following list for a username
  */
 router.post('/following', async (req, res) => {
-  const { username, limit = 100, cursor } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 100;
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
   
   if (!username) {
     return res.status(400).json({
@@ -213,16 +305,16 @@ router.post('/following', async (req, res) => {
   }
   
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 1000);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 100, 1), 1000);
   
   try {
     const startTime = Date.now();
     
-    const { scrapeFollowing } = await import('../../services/browserAutomation.js');
-    const following = await scrapeFollowing(req.sessionCookie, cleanUsername, {
+    const { scrapeFollowing } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const following = /** @type {Record<string, unknown>} */ (await scrapeFollowing((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
       limit: effectiveLimit,
       cursor,
-    });
+    }));
     
     return successResponse(res, {
       username: cleanUsername,
@@ -232,7 +324,7 @@ router.post('/following', async (req, res) => {
         bio: u.bio || null,
         followsBack: u.followsBack || false,
         verified: u.verified || false,
-        followersCount: parseInt(u.followers) || null,
+        followersCount: parseInt(String(u.followers), 10) || null,
         profileImageUrl: u.profileImage || null,
       })),
       pagination: {
@@ -245,8 +337,10 @@ router.post('/following', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Following scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -255,7 +349,11 @@ router.post('/following', async (req, res) => {
  * Get tweets from a user's profile
  */
 router.post('/tweets', async (req, res) => {
-  const { username, limit = 50, includeReplies = false, includeRetweets = true, cursor } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
+  const includeReplies = /** @type {boolean | undefined} */ (req.body.includeReplies) ?? false;
+  const includeRetweets = /** @type {boolean | undefined} */ (req.body.includeRetweets) ?? true;
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
   
   if (!username) {
     return res.status(400).json({
@@ -273,33 +371,33 @@ router.post('/tweets', async (req, res) => {
   }
   
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 200);
   
   try {
     const startTime = Date.now();
     
-    const { scrapeTweets } = await import('../../services/browserAutomation.js');
-    const tweets = await scrapeTweets(req.sessionCookie, cleanUsername, {
+    const { scrapeTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const tweets = /** @type {Record<string, unknown>} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
       limit: effectiveLimit,
       includeReplies,
       includeRetweets,
       cursor,
-    });
+    }));
     
     return successResponse(res, {
       username: cleanUsername,
-      tweets: (tweets.items || []).map(t => ({
+      tweets: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (tweets.items || []))).map(t => ({
         id: t.id,
         text: t.text,
         createdAt: t.timestamp || t.createdAt,
         url: t.url || `https://x.com/${cleanUsername}/status/${t.id}`,
         metrics: {
-          likes: parseInt(t.likes) || 0,
-          retweets: parseInt(t.retweets) || 0,
-          replies: parseInt(t.replies) || 0,
-          views: parseInt(t.views) || 0,
-          quotes: parseInt(t.quotes) || 0,
-          bookmarks: parseInt(t.bookmarks) || 0,
+          likes: parseInt(String(t.likes), 10) || 0,
+          retweets: parseInt(String(t.retweets), 10) || 0,
+          replies: parseInt(String(t.replies), 10) || 0,
+          views: parseInt(String(t.views), 10) || 0,
+          quotes: parseInt(String(t.quotes), 10) || 0,
+          bookmarks: parseInt(String(t.bookmarks), 10) || 0,
         },
         media: (t.media || []).map(m => ({
           type: m.type,
@@ -313,7 +411,7 @@ router.post('/tweets', async (req, res) => {
         quotedTweetId: t.quotedTweetId || null,
       })),
       pagination: {
-        count: (tweets.items || []).length,
+        count: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (tweets.items || []))).length,
         limit: effectiveLimit,
         nextCursor: tweets.nextCursor || null,
         hasMore: !!tweets.nextCursor,
@@ -323,8 +421,10 @@ router.post('/tweets', async (req, res) => {
       filters: { includeReplies, includeRetweets },
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Tweets scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -333,7 +433,10 @@ router.post('/tweets', async (req, res) => {
  * Search tweets by query
  */
 router.post('/search', async (req, res) => {
-  const { query, limit = 50, filter = 'latest', cursor } = req.body;
+  const query = /** @type {string | undefined} */ (req.body.query);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
+  const filter = /** @type {string | undefined} */ (req.body.filter) ?? 'latest';
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
   
   if (!query) {
     return res.status(400).json({
@@ -355,24 +458,24 @@ router.post('/search', async (req, res) => {
     });
   }
   
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 200);
   const validFilters = ['latest', 'top', 'people', 'media', 'lists'];
   const effectiveFilter = validFilters.includes(filter) ? filter : 'latest';
   
   try {
     const startTime = Date.now();
     
-    const { searchTweets } = await import('../../services/browserAutomation.js');
-    const results = await searchTweets(req.sessionCookie, query, {
+    const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), query, {
       limit: effectiveLimit,
       filter: effectiveFilter,
       cursor,
-    });
+    }));
     
     return successResponse(res, {
       query,
       filter: effectiveFilter,
-      results: (results.items || []).map(t => ({
+      results: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).map(t => ({
         id: t.id,
         text: t.text,
         author: {
@@ -384,15 +487,15 @@ router.post('/search', async (req, res) => {
         createdAt: t.timestamp || t.createdAt,
         url: t.url,
         metrics: {
-          likes: parseInt(t.likes) || 0,
-          retweets: parseInt(t.retweets) || 0,
-          replies: parseInt(t.replies) || 0,
-          views: parseInt(t.views) || 0,
+          likes: parseInt(String(t.likes), 10) || 0,
+          retweets: parseInt(String(t.retweets), 10) || 0,
+          replies: parseInt(String(t.replies), 10) || 0,
+          views: parseInt(String(t.views), 10) || 0,
         },
         media: t.media || [],
       })),
       pagination: {
-        count: (results.items || []).length,
+        count: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).length,
         limit: effectiveLimit,
         nextCursor: results.nextCursor || null,
         hasMore: !!results.nextCursor,
@@ -401,8 +504,10 @@ router.post('/search', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Search scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -411,7 +516,8 @@ router.post('/search', async (req, res) => {
  * Get full thread/conversation
  */
 router.post('/thread', async (req, res) => {
-  const { tweetUrl, tweetId } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
   
   if (!tweetUrl && !tweetId) {
     return res.status(400).json({
@@ -445,8 +551,8 @@ router.post('/thread', async (req, res) => {
   try {
     const startTime = Date.now();
     
-    const { scrapeThread } = await import('../../services/browserAutomation.js');
-    const thread = await scrapeThread(req.sessionCookie, effectiveTweetId);
+    const { scrapeThread } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const thread = /** @type {Record<string, unknown>} */ (await scrapeThread((/** @type {string} */ (req.sessionCookie)), effectiveTweetId));
     
     return successResponse(res, {
       originalTweetId: effectiveTweetId,
@@ -462,9 +568,9 @@ router.post('/thread', async (req, res) => {
         text: t.text,
         createdAt: t.timestamp || t.createdAt,
         metrics: {
-          likes: parseInt(t.likes) || 0,
-          retweets: parseInt(t.retweets) || 0,
-          replies: parseInt(t.replies) || 0,
+          likes: parseInt(String(t.likes), 10) || 0,
+          retweets: parseInt(String(t.retweets), 10) || 0,
+          replies: parseInt(String(t.replies), 10) || 0,
         },
         media: t.media || [],
       })),
@@ -474,13 +580,15 @@ router.post('/thread', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Thread scrape error:', error);
     
-    if (error.message?.includes('not found')) {
+    if (_errMessage?.includes('not found')) {
       return errorResponse(res, 404, 'TWEET_NOT_FOUND', 'Tweet not found', { retryable: false });
     }
     
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -489,7 +597,10 @@ router.post('/thread', async (req, res) => {
  * Get tweets for a hashtag
  */
 router.post('/hashtag', async (req, res) => {
-  const { hashtag, limit = 50, filter = 'latest', cursor } = req.body;
+  const hashtag = /** @type {string | undefined} */ (req.body.hashtag);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
+  const filter = /** @type {string | undefined} */ (req.body.filter) ?? 'latest';
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
   
   if (!hashtag) {
     return res.status(400).json({
@@ -507,22 +618,22 @@ router.post('/hashtag', async (req, res) => {
   
   // Normalize hashtag (remove # if present)
   const cleanHashtag = hashtag.replace(/^#/, '');
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 200);
   
   try {
     const startTime = Date.now();
     
-    const { searchTweets } = await import('../../services/browserAutomation.js');
-    const results = await searchTweets(req.sessionCookie, `#${cleanHashtag}`, {
+    const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), `#${cleanHashtag}`, {
       limit: effectiveLimit,
       filter: filter === 'top' ? 'top' : 'latest',
       cursor,
-    });
+    }));
     
     return successResponse(res, {
       hashtag: cleanHashtag,
       filter,
-      tweets: (results.items || []).map(t => ({
+      tweets: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).map(t => ({
         id: t.id,
         text: t.text,
         author: {
@@ -533,13 +644,13 @@ router.post('/hashtag', async (req, res) => {
         createdAt: t.timestamp || t.createdAt,
         url: t.url,
         metrics: {
-          likes: parseInt(t.likes) || 0,
-          retweets: parseInt(t.retweets) || 0,
-          replies: parseInt(t.replies) || 0,
+          likes: parseInt(String(t.likes), 10) || 0,
+          retweets: parseInt(String(t.retweets), 10) || 0,
+          replies: parseInt(String(t.replies), 10) || 0,
         },
       })),
       pagination: {
-        count: (results.items || []).length,
+        count: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).length,
         limit: effectiveLimit,
         nextCursor: results.nextCursor || null,
         hasMore: !!results.nextCursor,
@@ -548,8 +659,10 @@ router.post('/hashtag', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Hashtag scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -558,7 +671,10 @@ router.post('/hashtag', async (req, res) => {
  * Get media (images/videos) from a profile
  */
 router.post('/media', async (req, res) => {
-  const { username, limit = 50, type = 'all', cursor } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
+  const type = /** @type {string | undefined} */ (req.body.type) ?? 'all';
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
   
   if (!username) {
     return res.status(400).json({
@@ -575,21 +691,21 @@ router.post('/media', async (req, res) => {
   }
   
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 100);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 100);
   
   try {
     const startTime = Date.now();
     
-    const { scrapeMedia } = await import('../../services/browserAutomation.js');
-    const media = await scrapeMedia(req.sessionCookie, cleanUsername, {
+    const { scrapeMedia } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const media = /** @type {Record<string, unknown>} */ (await scrapeMedia((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
       limit: effectiveLimit,
       type,
       cursor,
-    });
+    }));
     
     return successResponse(res, {
       username: cleanUsername,
-      media: (media.items || []).map(m => ({
+      media: (/** @type {ScrapedMedia[]} */ (/** @type {ScrapedMedia[]} */ (media.items || []))).map(m => ({
         type: m.type, // 'image' or 'video'
         url: m.url,
         thumbnailUrl: m.thumbnail,
@@ -600,22 +716,24 @@ router.post('/media', async (req, res) => {
         duration: m.type === 'video' ? m.duration : null,
       })),
       pagination: {
-        count: (media.items || []).length,
+        count: (/** @type {ScrapedMedia[]} */ (/** @type {ScrapedMedia[]} */ (media.items || []))).length,
         limit: effectiveLimit,
         nextCursor: media.nextCursor || null,
         hasMore: !!media.nextCursor,
       },
       summary: {
-        images: (media.items || []).filter(m => m.type === 'image').length,
-        videos: (media.items || []).filter(m => m.type === 'video').length,
+        images: (/** @type {ScrapedMedia[]} */ (/** @type {ScrapedMedia[]} */ (media.items || []))).filter(m => m.type === 'image').length,
+        videos: (/** @type {ScrapedMedia[]} */ (/** @type {ScrapedMedia[]} */ (media.items || []))).filter(m => m.type === 'video').length,
       },
     }, {
       durationMs: Date.now() - startTime,
       filterType: type,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Media scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -624,7 +742,10 @@ router.post('/media', async (req, res) => {
  * Get users who liked a tweet
  */
 router.post('/likes', async (req, res) => {
-  const { tweetUrl, tweetId, limit = 100, cursor } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 100;
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
   
   if (!tweetUrl && !tweetId) {
     return res.status(400).json({
@@ -640,16 +761,16 @@ router.post('/likes', async (req, res) => {
     if (match) effectiveTweetId = match[1];
   }
   
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 500);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 100, 1), 500);
   
   try {
     const startTime = Date.now();
     
-    const { scrapeTweetLikes } = await import('../../services/browserAutomation.js');
-    const likers = await scrapeTweetLikes(req.sessionCookie, effectiveTweetId, {
+    const { scrapeTweetLikes } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const likers = /** @type {Record<string, unknown>} */ (await scrapeTweetLikes((/** @type {string} */ (req.sessionCookie)), effectiveTweetId, {
       limit: effectiveLimit,
       cursor,
-    });
+    }));
     
     return successResponse(res, {
       tweetId: effectiveTweetId,
@@ -658,7 +779,7 @@ router.post('/likes', async (req, res) => {
         displayName: u.name || u.displayName,
         bio: u.bio || null,
         verified: u.verified || false,
-        followersCount: parseInt(u.followers) || null,
+        followersCount: parseInt(String(u.followers), 10) || null,
       })),
       pagination: {
         count: (likers.users || []).length,
@@ -670,8 +791,10 @@ router.post('/likes', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Likes scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -680,7 +803,10 @@ router.post('/likes', async (req, res) => {
  * Get users who retweeted a tweet
  */
 router.post('/retweets', async (req, res) => {
-  const { tweetUrl, tweetId, limit = 100, cursor } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 100;
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
   
   if (!tweetUrl && !tweetId) {
     return res.status(400).json({
@@ -696,16 +822,16 @@ router.post('/retweets', async (req, res) => {
     if (match) effectiveTweetId = match[1];
   }
   
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 100, 1), 500);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 100, 1), 500);
   
   try {
     const startTime = Date.now();
     
-    const { scrapeTweetRetweets } = await import('../../services/browserAutomation.js');
-    const retweeters = await scrapeTweetRetweets(req.sessionCookie, effectiveTweetId, {
+    const { scrapeTweetRetweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const retweeters = /** @type {Record<string, unknown>} */ (await scrapeTweetRetweets((/** @type {string} */ (req.sessionCookie)), effectiveTweetId, {
       limit: effectiveLimit,
       cursor,
-    });
+    }));
     
     return successResponse(res, {
       tweetId: effectiveTweetId,
@@ -714,7 +840,7 @@ router.post('/retweets', async (req, res) => {
         displayName: u.name || u.displayName,
         bio: u.bio || null,
         verified: u.verified || false,
-        followersCount: parseInt(u.followers) || null,
+        followersCount: parseInt(String(u.followers), 10) || null,
       })),
       pagination: {
         count: (retweeters.users || []).length,
@@ -726,8 +852,10 @@ router.post('/retweets', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Retweets scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -736,7 +864,11 @@ router.post('/retweets', async (req, res) => {
  * Get replies to a tweet (search-based)
  */
 router.post('/replies', async (req, res) => {
-  const { tweetUrl, tweetId, username, limit = 50, cursor } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
 
   if (!tweetUrl && !tweetId) {
     return res.status(400).json({
@@ -752,12 +884,12 @@ router.post('/replies', async (req, res) => {
     if (match) effectiveTweetId = match[1];
   }
 
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 200);
 
   try {
     const startTime = Date.now();
-    const { scrapeThread } = await import('../../services/browserAutomation.js');
-    const thread = await scrapeThread(req.sessionCookie, effectiveTweetId);
+    const { scrapeThread } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const thread = /** @type {Record<string, unknown>} */ (await scrapeThread((/** @type {string} */ (req.sessionCookie)), effectiveTweetId));
 
     const replies = (thread.tweets || [])
       .filter(t => t.id !== effectiveTweetId)
@@ -768,9 +900,9 @@ router.post('/replies', async (req, res) => {
         author: { username: t.author?.username || t.username, displayName: t.author?.name },
         createdAt: t.timestamp || t.createdAt,
         metrics: {
-          likes: parseInt(t.likes) || 0,
-          retweets: parseInt(t.retweets) || 0,
-          replies: parseInt(t.replies) || 0,
+          likes: parseInt(String(t.likes), 10) || 0,
+          retweets: parseInt(String(t.retweets), 10) || 0,
+          replies: parseInt(String(t.replies), 10) || 0,
         },
       }));
 
@@ -780,8 +912,10 @@ router.post('/replies', async (req, res) => {
       pagination: { count: replies.length, limit: effectiveLimit },
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Replies scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -790,7 +924,10 @@ router.post('/replies', async (req, res) => {
  * Get quote tweets for a tweet
  */
 router.post('/quote-tweets', async (req, res) => {
-  const { tweetUrl, tweetId, limit = 50, cursor } = req.body;
+  const tweetUrl = /** @type {string | undefined} */ (req.body.tweetUrl);
+  const tweetId = /** @type {string | undefined} */ (req.body.tweetId);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
 
   if (!tweetUrl && !tweetId) {
     return res.status(400).json({ error: 'INVALID_INPUT', message: 'tweetUrl or tweetId is required' });
@@ -802,20 +939,20 @@ router.post('/quote-tweets', async (req, res) => {
     if (match) effectiveTweetId = match[1];
   }
 
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 200);
 
   try {
     const startTime = Date.now();
-    const { searchTweets } = await import('../../services/browserAutomation.js');
-    const results = await searchTweets(req.sessionCookie, `quoted_tweet_id:${effectiveTweetId}`, {
+    const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), `quoted_tweet_id:${effectiveTweetId}`, {
       limit: effectiveLimit,
       filter: 'latest',
       cursor,
-    });
+    }));
 
     return successResponse(res, {
       tweetId: effectiveTweetId,
-      quoteTweets: (results.items || []).map(t => ({
+      quoteTweets: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).map(t => ({
         id: t.id,
         text: t.text,
         author: {
@@ -825,18 +962,20 @@ router.post('/quote-tweets', async (req, res) => {
         },
         createdAt: t.timestamp || t.createdAt,
         url: t.url,
-        metrics: { likes: parseInt(t.likes) || 0, retweets: parseInt(t.retweets) || 0 },
+        metrics: { likes: parseInt(String(t.likes), 10) || 0, retweets: parseInt(String(t.retweets), 10) || 0 },
       })),
       pagination: {
-        count: (results.items || []).length,
+        count: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).length,
         limit: effectiveLimit,
         nextCursor: results.nextCursor || null,
         hasMore: !!results.nextCursor,
       },
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Quote tweets scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -845,43 +984,47 @@ router.post('/quote-tweets', async (req, res) => {
  * Get tweets a user has liked
  */
 router.post('/user-likes', async (req, res) => {
-  const { username, limit = 50, cursor } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
 
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
 
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 200);
 
   try {
     const startTime = Date.now();
-    const { scrapeTweets } = await import('../../services/browserAutomation.js');
+    const { scrapeTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
     // Likes tab scraped via profile likes tab
-    const tweets = await scrapeTweets(req.sessionCookie, cleanUsername, {
+    const tweets = /** @type {Record<string, unknown>} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), cleanUsername, {
       limit: effectiveLimit,
       tab: 'likes',
       cursor,
-    });
+    }));
 
     return successResponse(res, {
       username: cleanUsername,
-      likedTweets: (tweets.items || []).map(t => ({
+      likedTweets: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (tweets.items || []))).map(t => ({
         id: t.id,
         text: t.text,
         author: { username: t.author?.username || t.username, displayName: t.author?.name },
         createdAt: t.timestamp || t.createdAt,
         url: t.url,
-        metrics: { likes: parseInt(t.likes) || 0, retweets: parseInt(t.retweets) || 0 },
+        metrics: { likes: parseInt(String(t.likes), 10) || 0, retweets: parseInt(String(t.retweets), 10) || 0 },
       })),
       pagination: {
-        count: (tweets.items || []).length,
+        count: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (tweets.items || []))).length,
         limit: effectiveLimit,
         nextCursor: tweets.nextCursor || null,
         hasMore: !!tweets.nextCursor,
       },
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ User likes scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -890,47 +1033,52 @@ router.post('/user-likes', async (req, res) => {
  * Get mentions of a user
  */
 router.post('/mentions', async (req, res) => {
-  const { username, limit = 50, filter = 'latest', cursor } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 50;
+  const filter = /** @type {string | undefined} */ (req.body.filter) ?? 'latest';
+  const cursor = /** @type {string | undefined} */ (req.body.cursor);
 
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
 
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 200);
 
   try {
     const startTime = Date.now();
-    const { searchTweets } = await import('../../services/browserAutomation.js');
-    const results = await searchTweets(req.sessionCookie, `@${cleanUsername}`, {
+    const { searchTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const results = /** @type {Record<string, unknown>} */ (await searchTweets((/** @type {string} */ (req.sessionCookie)), `@${cleanUsername}`, {
       limit: effectiveLimit,
       filter: filter === 'top' ? 'top' : 'latest',
       cursor,
-    });
+    }));
 
     return successResponse(res, {
       username: cleanUsername,
-      mentions: (results.items || []).map(t => ({
+      mentions: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).map(t => ({
         id: t.id,
         text: t.text,
         author: {
           username: t.author?.username || t.username,
           displayName: t.author?.name,
           verified: t.author?.verified || false,
-          followersCount: parseInt(t.author?.followers) || null,
+          followersCount: parseInt(String(t.author?.followers), 10) || null,
         },
         createdAt: t.timestamp || t.createdAt,
         url: t.url,
-        metrics: { likes: parseInt(t.likes) || 0, retweets: parseInt(t.retweets) || 0, replies: parseInt(t.replies) || 0 },
+        metrics: { likes: parseInt(String(t.likes), 10) || 0, retweets: parseInt(String(t.retweets), 10) || 0, replies: parseInt(String(t.replies), 10) || 0 },
       })),
       pagination: {
-        count: (results.items || []).length,
+        count: (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).length,
         limit: effectiveLimit,
         nextCursor: results.nextCursor || null,
         hasMore: !!results.nextCursor,
       },
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Mentions scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 
@@ -939,20 +1087,21 @@ router.post('/mentions', async (req, res) => {
  * Get recommended users to follow based on profile
  */
 router.post('/recommendations', async (req, res) => {
-  const { username, limit = 20 } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 20;
 
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
 
   const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 50);
+  const effectiveLimit = Math.min(Math.max(parseInt(String(limit), 10) || 20, 1), 50);
 
   try {
     const startTime = Date.now();
-    const { scrapeProfile, scrapeFollowers } = await import('../../services/browserAutomation.js');
-    const profile = await scrapeProfile(req.sessionCookie, cleanUsername);
+    const { scrapeProfile, scrapeFollowers } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const profile = /** @type {Record<string, unknown>} */ (await scrapeProfile((/** @type {string} */ (req.sessionCookie)), cleanUsername));
 
     // Get followers of followers as recommendations (2nd-degree connections)
-    const followers = await scrapeFollowers(req.sessionCookie, cleanUsername, { limit: 10 });
+    const followers = /** @type {Record<string, unknown>} */ (await scrapeFollowers((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: 10 }));
     const seen = new Set([cleanUsername]);
     const recommendations = [];
 
@@ -964,7 +1113,7 @@ router.post('/recommendations', async (req, res) => {
         displayName: follower.name || follower.displayName,
         bio: follower.bio || null,
         verified: follower.verified || false,
-        followersCount: parseInt(follower.followers) || null,
+        followersCount: parseInt(String(follower.followers), 10) || null,
         reason: `Followed by @${cleanUsername}'s followers`,
       });
     }
@@ -975,8 +1124,10 @@ router.post('/recommendations', async (req, res) => {
       count: Math.min(recommendations.length, effectiveLimit),
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
+    const _errMessage = error instanceof Error ? error.message : String(error);
     console.error('❌ Recommendations scrape error:', error);
-    return errorResponse(res, 500, 'SCRAPE_FAILED', error.message);
+    return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   }
 });
 

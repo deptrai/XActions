@@ -39,6 +39,9 @@ router.use(videoLimiter);
 const cache = new Map();
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
+/**
+ * @param {string} tweetId
+ */
 function getCached(tweetId) {
   const entry = cache.get(tweetId);
   if (!entry) return null;
@@ -49,6 +52,10 @@ function getCached(tweetId) {
   return entry.data;
 }
 
+/**
+ * @param {string} tweetId
+ * @param {Record<string, unknown>} data
+ */
 function setCache(tweetId, data) {
   cache.set(tweetId, { data, timestamp: Date.now() });
   // Evict old entries if cache grows too large (max 500)
@@ -73,7 +80,8 @@ function setCache(tweetId, data) {
  */
 router.post('/extract', async (req, res) => {
   try {
-    const { url } = req.body;
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const url = body.url;
 
     if (!url) {
       return res.status(400).json({ error: 'Missing required field: url' });
@@ -101,18 +109,18 @@ router.post('/extract', async (req, res) => {
 
     return res.json(result);
   } catch (error) {
-    console.error('❌ Video extraction error:', error.message);
+    console.error('❌ Video extraction error:', (error instanceof Error ? error.message : String(error)));
 
-    if (error.message.includes('No video found')) {
-      return res.status(404).json({ error: error.message });
+    if ((error instanceof Error ? error.message : String(error)).includes('No video found')) {
+      return res.status(404).json({ error: (error instanceof Error ? error.message : String(error)) });
     }
 
-    if (error.message.includes('Invalid tweet URL')) {
-      return res.status(400).json({ error: error.message });
+    if ((error instanceof Error ? error.message : String(error)).includes('Invalid tweet URL')) {
+      return res.status(400).json({ error: (error instanceof Error ? error.message : String(error)) });
     }
 
     return res.status(500).json({
-      error: error.message || 'Failed to extract video. The tweet may be private, deleted, or rate-limited.',
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to extract video. The tweet may be private, deleted, or rate-limited.',
     });
   }
 });
@@ -127,7 +135,10 @@ router.post('/extract', async (req, res) => {
  */
 router.get('/download', async (req, res) => {
   try {
-    const { url, author, tweetId } = req.query;
+    const query = /** @type {Record<string, string>} */ (req.query);
+    const url = query.url;
+    const author = query.author;
+    const tweetId = query.tweetId;
 
     if (!url) {
       return res.status(400).json({ error: 'Missing required query param: url' });
@@ -178,6 +189,10 @@ router.get('/download', async (req, res) => {
       res.setHeader('Content-Length', contentLength);
     }
 
+    if (!videoResponse.body) {
+      return res.status(500).json({ error: 'Video stream unavailable' });
+    }
+
     // Stream the response (don't buffer in memory)
     const reader = videoResponse.body.getReader();
     const pump = async () => {
@@ -193,7 +208,7 @@ router.get('/download', async (req, res) => {
 
     await pump();
   } catch (error) {
-    console.error('❌ Video download proxy error:', error.message);
+    console.error('❌ Video download proxy error:', (error instanceof Error ? error.message : String(error)));
     if (!res.headersSent) {
       res.status(500).json({ error: 'Failed to download video' });
     }
@@ -210,7 +225,8 @@ router.get('/download', async (req, res) => {
  */
 router.post('/extract-form', async (req, res) => {
   try {
-    const url = req.body.url;
+    const body = /** @type {Record<string, string>} */ (req.body);
+    const url = body.url;
     const parsed = parseTweetUrl(url);
 
     if (!parsed) {
@@ -232,7 +248,7 @@ router.post('/extract-form', async (req, res) => {
     const downloadUrl = `/api/video/download?url=${encodeURIComponent(best.url)}&author=${encodeURIComponent(result.username)}&tweetId=${encodeURIComponent(result.tweetId)}`;
     return res.redirect(downloadUrl);
   } catch (error) {
-    console.error('❌ Form extraction error:', error.message);
+    console.error('❌ Form extraction error:', (error instanceof Error ? error.message : String(error)));
     return res.redirect('/video?error=failed');
   }
 });

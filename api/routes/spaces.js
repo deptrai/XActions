@@ -1,5 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { queueJob } from '../services/jobQueue.js';
@@ -9,12 +12,14 @@ router.use(authMiddleware);
 
 // Get live Spaces
 router.get('/live', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const { topic, limit = 20 } = req.query;
+    const { topic, limit = '20' } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getLiveSpaces',
         status: 'pending',
         config: JSON.stringify({ topic, limit: parseInt(limit) }),
@@ -24,9 +29,9 @@ router.get('/live', async (req, res) => {
     await queueJob({
       type: 'getLiveSpaces',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { topic, limit: parseInt(limit), sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { topic, limit: parseInt(limit), sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Spaces fetch queued' });
@@ -38,12 +43,14 @@ router.get('/live', async (req, res) => {
 
 // Get scheduled Spaces
 router.get('/scheduled', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const { limit = 20 } = req.query;
+    const { limit = '20' } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getScheduledSpaces',
         status: 'pending',
         config: JSON.stringify({ limit: parseInt(limit) }),
@@ -53,9 +60,9 @@ router.get('/scheduled', async (req, res) => {
     await queueJob({
       type: 'getScheduledSpaces',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { limit: parseInt(limit), sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { limit: parseInt(limit), sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Scheduled Spaces fetch queued' });
@@ -67,13 +74,15 @@ router.get('/scheduled', async (req, res) => {
 
 // Scrape a specific Space
 router.get('/scrape', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { url } = req.query;
     if (!url) return res.status(400).json({ error: 'Space URL is required' });
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'scrapeSpace',
         status: 'pending',
         config: JSON.stringify({ url }),
@@ -83,9 +92,9 @@ router.get('/scrape', async (req, res) => {
     await queueJob({
       type: 'scrapeSpace',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { url, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { url, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Space scrape queued' });

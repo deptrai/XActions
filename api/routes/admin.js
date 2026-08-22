@@ -27,6 +27,11 @@ import {
 const router = Router();
 
 // Timing-safe comparison that handles different-length strings without throwing
+/**
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean}
+ */
 function safeCompare(a, b) {
   if (!a || !b) return false;
   const bufA = Buffer.from(a);
@@ -51,7 +56,17 @@ router.post('/licenses', authenticateToken, requireAdmin, async (req, res) => {
       notes,
       paymentId,
       amountPaid,
-    } = req.body;
+    } = /** @type {{
+      tier?: string;
+      customerName?: string;
+      customerEmail?: string;
+      companyName?: string;
+      expiresInDays?: string;
+      maxInstances?: number;
+      notes?: string;
+      paymentId?: string;
+      amountPaid?: number;
+    }} */ (req.body);
 
     // Calculate expiry date if specified
     let expiresAt = null;
@@ -60,17 +75,17 @@ router.post('/licenses', authenticateToken, requireAdmin, async (req, res) => {
       expiresAt.setDate(expiresAt.getDate() + parseInt(expiresInDays));
     }
 
-    const license = await createLicense({
+    const license = /** @type {import('@prisma/client').License} */ (await createLicense({
       tier,
       customerName,
       customerEmail,
       companyName,
-      expiresAt,
+      expiresAt: expiresAt || undefined,
       maxInstances,
       notes,
       paymentId,
       amountPaid,
-    });
+    }));
 
     res.status(201).json({
       success: true,
@@ -102,13 +117,13 @@ router.post('/licenses', authenticateToken, requireAdmin, async (req, res) => {
  */
 router.get('/licenses', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { status, tier, limit = 100, offset = 0 } = req.query;
+    const { status, tier, limit = '100', offset = '0' } = req.query;
 
     const result = await listLicenses({
       status,
       tier,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: parseInt(limit || '0'),
+      offset: parseInt(offset || '0'),
     });
 
     res.json(result);
@@ -125,7 +140,7 @@ router.get('/licenses', authenticateToken, requireAdmin, async (req, res) => {
 router.get('/licenses/:key', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { key } = req.params;
-    const license = await getLicense(key);
+    const license = /** @type {import('@prisma/client').License | null} */ (await getLicense(key));
 
     if (!license) {
       return res.status(404).json({ error: 'License not found' });
@@ -145,9 +160,9 @@ router.get('/licenses/:key', authenticateToken, requireAdmin, async (req, res) =
 router.post('/licenses/:key/revoke', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { key } = req.params;
-    const { reason } = req.body;
+    const { reason } = /** @type {{ reason?: string }} */ (req.body);
 
-    const license = await revokeLicense(key, reason);
+    const license = /** @type {import('@prisma/client').License} */ (await revokeLicense(key, String(reason || '')));
 
     res.json({
       success: true,
@@ -193,7 +208,7 @@ router.post('/licenses/:key/validate', authenticateToken, requireAdmin, async (r
  */
 router.get('/x402/stats', (req, res) => {
   // Timing-safe auth check via API key header
-  const adminKey = req.headers['x-admin-key'] || '';
+  const adminKey = String(req.headers['x-admin-key'] || '');
   const expected = process.env.ADMIN_API_KEY || '';
   if (!expected || !safeCompare(adminKey, expected)) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -214,7 +229,7 @@ router.get('/x402/stats', (req, res) => {
  */
 router.get('/x402/webhooks', (req, res) => {
   // Timing-safe auth check via API key header
-  const adminKey = req.headers['x-admin-key'] || '';
+  const adminKey = String(req.headers['x-admin-key'] || '');
   const expected = process.env.ADMIN_API_KEY || '';
   if (!expected || !safeCompare(adminKey, expected)) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -235,7 +250,7 @@ router.get('/x402/webhooks', (req, res) => {
  */
 router.post('/x402/webhooks/test', async (req, res) => {
   // Timing-safe auth check via API key header
-  const adminKey = req.headers['x-admin-key'] || '';
+  const adminKey = String(req.headers['x-admin-key'] || '');
   const expected = process.env.ADMIN_API_KEY || '';
   if (!expected || !safeCompare(adminKey, expected)) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -262,7 +277,7 @@ router.post('/x402/webhooks/test', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to test webhooks',
-      message: error.message
+      message: (error instanceof Error ? error.message : String(error))
     });
   }
 });

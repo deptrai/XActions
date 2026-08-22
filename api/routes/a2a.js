@@ -38,7 +38,7 @@ router.get('/skills', async (req, res) => {
       },
     });
   } catch (err) {
-    return errorResponse(res, 503, 'SKILLS_UNAVAILABLE', err.message, { retryable: true });
+    return errorResponse(res, 503, 'SKILLS_UNAVAILABLE', (err instanceof Error ? err.message : String(err)), { retryable: true });
   }
 });
 
@@ -54,7 +54,13 @@ router.get('/skills', async (req, res) => {
  *   contextId   {string}  optional  Conversation/thread ID for multi-step workflows
  */
 router.post('/task', async (req, res) => {
-  const { id, skill, input, callbackUrl, contextId } = req.body;
+  const { id, skill, input, callbackUrl, contextId } = /** @type {{
+    id?: string;
+    skill: string;
+    input: Record<string, unknown>;
+    callbackUrl?: string;
+    contextId?: string;
+  }} */ (req.body);
 
   if (!skill) {
     return errorResponse(res, 400, 'INVALID_INPUT', 'skill is required', { retryable: false });
@@ -116,7 +122,7 @@ router.post('/task', async (req, res) => {
     });
   } catch (err) {
     console.error('❌ A2A task error:', err);
-    return errorResponse(res, 500, 'TASK_FAILED', err.message);
+    return errorResponse(res, 500, 'TASK_FAILED', (err instanceof Error ? err.message : String(err)));
   }
 });
 
@@ -124,11 +130,15 @@ router.post('/task', async (req, res) => {
  * Map an A2A skill ID to a Bull job type name.
  * Convention: 'xactions.x_unfollow_non_followers' → 'unfollowNonFollowers'
  */
+/**
+ * @param {string} skillId
+ * @returns {string}
+ */
 function skillToJobType(skillId) {
   const raw = skillId
     .replace(/^xactions\.x_/, '')   // strip 'xactions.x_' prefix
     .replace(/^x_/, '');            // strip plain 'x_' prefix
-  return raw.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+  return raw.replace(/_([a-z])/g, (/** @type {string} */ _, /** @type {string} */ c) => c.toUpperCase());
 }
 
 export default router;

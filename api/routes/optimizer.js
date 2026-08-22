@@ -18,7 +18,7 @@ router.post('/optimize', async (req, res) => {
     const result = await optimizeTweet(text, { goal: goal || 'engagement' });
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -29,7 +29,7 @@ router.post('/hashtags', async (req, res) => {
     const result = await suggestHashtags(req.body.text, { count: req.body.count || 5 });
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -40,7 +40,7 @@ router.post('/predict', async (req, res) => {
     const result = await predictPerformance(req.body.text);
     res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 
@@ -51,7 +51,7 @@ router.post('/variations', async (req, res) => {
     const result = await generateVariations(req.body.text, req.body.count || 3);
     res.json({ variations: result });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
   }
 });
 

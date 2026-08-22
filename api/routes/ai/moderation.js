@@ -13,33 +13,108 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+/**
+ * @typedef {Object} ScrapedUser
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [displayName]
+ * @property {string} [bio]
+ * @property {boolean} [verified]
+ * @property {boolean} [followsBack]
+ * @property {boolean} [followsYou]
+ * @property {string} [profileImage]
+ * @property {string} [profileImageUrl]
+ * @property {string} [followers]
+ * @property {string} [following]
+ */
+
+/**
+ * @typedef {Object} ScrapedTweet
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [url]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [views]
+ * @property {string} [quotes]
+ * @property {string} [bookmarks]
+ * @property {unknown[]} [media]
+ * @property {boolean} [isReply]
+ * @property {boolean} [isRetweet]
+ * @property {boolean} [isQuote]
+ * @property {string} [replyToUser]
+ * @property {string} [quotedTweetId]
+ * @property {ScrapedUser} [author]
+ */
+
+/**
+ * @typedef {Object} ScrapedMedia
+ * @property {string} [type]
+ * @property {string} [url]
+ * @property {string} [thumbnailUrl]
+ * @property {string} [tweetId]
+ * @property {string} [tweetUrl]
+ * @property {string} [timestamp]
+ * @property {Record<string, unknown>} [dimensions]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} ScrapedBookmark
+ * @property {string} [id]
+ * @property {string} [text]
+ * @property {ScrapedUser} [author]
+ * @property {string} [timestamp]
+ * @property {string} [createdAt]
+ * @property {string} [likes]
+ * @property {string} [retweets]
+ * @property {string} [replies]
+ * @property {string} [url]
+ * @property {string} [bookmarkedAt]
+ */
+
+/**
+ * @typedef {Object} VideoVariant
+ * @property {string} url
+ * @property {string} [quality]
+ * @property {string} [contentType]
+ * @property {number} [bitrate]
+ */
+
+
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
 /** @param {import('express').Request} req @param {import('express').Response} res @returns {string | null} */
 const requireSession = (req, res) => {
-  const sessionCookie = req.body.sessionCookie || req.headers['x-session-cookie'];
+  const sessionCookie = /** @type {string | undefined} */ (req.body.sessionCookie) || /** @type {string | undefined} */ (req.headers['x-session-cookie']);
   if (!sessionCookie) { res.status(400).json({ success: false, error: 'SESSION_REQUIRED', message: 'Provide sessionCookie in body or X-Session-Cookie header' }); return null; }
-  return sessionCookie;
+  return sessionCookie || null;
 };
 
 /** @param {import('express').Response} res @param {string} operationId @param {string} type @param {Record<string, unknown>} config */
 const queueOperation = async (res, operationId, type, config) => {
-  try { const { queueJob } = await import('../../services/jobQueue.js'); await queueJob({ id: operationId, type, config, status: 'queued' }); } catch { /* queue unavailable */ }
+  try { const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js'))); await queueJob({ id: operationId, type, config, status: 'queued' }); } catch { /* queue unavailable */ }
   return res.json({ success: true, operationId, status: 'queued', statusUrl: `/api/ai/action/status/${operationId}` });
 };
 
 /** POST /api/ai/moderation/block-bots */
 router.post('/block-bots', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { threshold = 0.7, dryRun = false, limit = 100 } = req.body;
+  const threshold = /** @type {string | number | undefined} */ (req.body.threshold) ?? 0.7;
+  const dryRun = /** @type {boolean | undefined} */ (req.body.dryRun) ?? false;
+  const limit = /** @type {string | number | undefined} */ (req.body.limit) ?? 100;
   return queueOperation(res, generateOperationId(), 'blockBots', { session, threshold, dryRun, limit });
 });
 
 /** POST /api/ai/moderation/mass-block */
 router.post('/mass-block', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { usernames, delayMs = 2000 } = req.body;
+  const usernames = /** @type {string[] | undefined} */ (req.body.usernames);
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 2000;
   if (!usernames?.length) return res.status(400).json({ error: 'INVALID_INPUT', message: 'usernames array required' });
   return queueOperation(res, generateOperationId(), 'massBlock', { session, usernames, delayMs });
 });
@@ -47,7 +122,8 @@ router.post('/mass-block', async (req, res) => {
 /** POST /api/ai/moderation/mass-unblock */
 router.post('/mass-unblock', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { usernames, delayMs = 2000 } = req.body;
+  const usernames = /** @type {string[] | undefined} */ (req.body.usernames);
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 2000;
   if (!usernames?.length) return res.status(400).json({ error: 'INVALID_INPUT', message: 'usernames array required' });
   return queueOperation(res, generateOperationId(), 'massUnblock', { session, usernames, delayMs });
 });
@@ -55,14 +131,15 @@ router.post('/mass-unblock', async (req, res) => {
 /** POST /api/ai/moderation/mass-unmute */
 router.post('/mass-unmute', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { usernames, delayMs = 2000 } = req.body;
+  const usernames = /** @type {string[] | undefined} */ (req.body.usernames);
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 2000;
   return queueOperation(res, generateOperationId(), 'massUnmute', { session, usernames, delayMs });
 });
 
 /** POST /api/ai/moderation/mute-keywords */
 router.post('/mute-keywords', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { keywords } = req.body;
+  const keywords = /** @type {string[] | undefined} */ (req.body.keywords);
   if (!keywords?.length) return res.status(400).json({ error: 'INVALID_INPUT', message: 'keywords array required' });
   return queueOperation(res, generateOperationId(), 'muteKeywords', { session, keywords });
 });
@@ -70,14 +147,15 @@ router.post('/mute-keywords', async (req, res) => {
 /** POST /api/ai/moderation/muted-words */
 router.post('/muted-words', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { action = 'list' } = req.body;
+  const action = /** @type {string | undefined} */ (req.body.action) ?? 'list';
   return queueOperation(res, generateOperationId(), 'mutedWords', { session, action });
 });
 
 /** POST /api/ai/moderation/remove-followers */
 router.post('/remove-followers', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { usernames, delayMs = 3000 } = req.body;
+  const usernames = /** @type {string[] | undefined} */ (req.body.usernames);
+  const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 3000;
   if (!usernames?.length) return res.status(400).json({ error: 'INVALID_INPUT', message: 'usernames array required' });
   return queueOperation(res, generateOperationId(), 'removeFollowers', { session, usernames, delayMs });
 });
@@ -85,7 +163,7 @@ router.post('/remove-followers', async (req, res) => {
 /** POST /api/ai/moderation/report-spam */
 router.post('/report-spam', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { usernames } = req.body;
+  const usernames = /** @type {string[] | undefined} */ (req.body.usernames);
   if (!usernames?.length) return res.status(400).json({ error: 'INVALID_INPUT', message: 'usernames array required' });
   return queueOperation(res, generateOperationId(), 'reportSpam', { session, usernames });
 });
@@ -93,7 +171,7 @@ router.post('/report-spam', async (req, res) => {
 /** POST /api/ai/moderation/shadowban-check */
 router.post('/shadowban-check', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { username } = req.body;
+  const username = /** @type {string | undefined} */ (req.body.username);
   if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username required' });
   return queueOperation(res, generateOperationId(), 'shadowbanCheck', { session, username });
 });
@@ -101,7 +179,7 @@ router.post('/shadowban-check', async (req, res) => {
 /** POST /api/ai/moderation/verified-only */
 router.post('/verified-only', async (req, res) => {
   const session = requireSession(req, res); if (!session) return;
-  const { enabled = true } = req.body;
+  const enabled = /** @type {boolean | undefined} */ (req.body.enabled) ?? true;
   return queueOperation(res, generateOperationId(), 'verifiedOnly', { session, enabled });
 });
 

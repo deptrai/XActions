@@ -1,5 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import crypto from 'crypto';
 import { body, validationResult } from 'express-validator';
@@ -47,7 +50,7 @@ function decrypt(encryptedData) {
     console.warn('⚠️  Encountered legacy encryption format — re-save to upgrade');
     return null;
   } catch (error) {
-    console.error('❌ Decryption error:', error.message);
+    console.error('❌ Decryption error:', (error instanceof Error ? error.message : String(error)));
     return null;
   }
 }
@@ -60,6 +63,8 @@ router.post('/save-session',
     body('username').optional().isString()
   ],
   async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -82,7 +87,7 @@ router.post('/save-session',
       // Save encrypted session cookie to user record
       const encryptedCookie = encrypt(sessionCookie);
       await prisma.user.update({
-        where: { id: req.user.id },
+        where: { id: reqUser.id },
         data: {
           sessionCookie: encryptedCookie,
           twitterUsername: username || null,
@@ -95,7 +100,7 @@ router.post('/save-session',
         authMethod: 'session'
       });
     } catch (error) {
-      console.error('❌ Save session error:', error.message);
+      console.error('❌ Save session error:', (error instanceof Error ? error.message : String(error)));
       res.status(500).json({ error: 'Failed to save session' });
     }
   }
@@ -105,9 +110,11 @@ router.post('/save-session',
 router.delete('/remove-session',
   authenticate,
   async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
     try {
       await prisma.user.update({
-        where: { id: req.user.id },
+        where: { id: reqUser.id },
         data: {
           sessionCookie: null,
           authMethod: null
@@ -116,7 +123,7 @@ router.delete('/remove-session',
 
       res.json({ message: 'Session removed successfully' });
     } catch (error) {
-      console.error('❌ Remove session error:', error.message);
+      console.error('❌ Remove session error:', (error instanceof Error ? error.message : String(error)));
       res.status(500).json({ error: 'Failed to remove session' });
     }
   }
@@ -126,9 +133,11 @@ router.delete('/remove-session',
 router.get('/auth-method',
   authenticate,
   async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
     try {
       const user = await prisma.user.findUnique({
-        where: { id: req.user.id },
+        where: { id: reqUser.id },
         select: {
           authMethod: true,
           twitterUsername: true,
@@ -147,7 +156,7 @@ router.get('/auth-method',
         username: user.twitterUsername
       });
     } catch (error) {
-      console.error('❌ Get auth method error:', error.message);
+      console.error('❌ Get auth method error:', (error instanceof Error ? error.message : String(error)));
       res.status(500).json({ error: 'Failed to get auth method' });
     }
   }

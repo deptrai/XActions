@@ -1,5 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
+/**
+ * @typedef {import('@prisma/client').User} User
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { queueJob } from '../services/jobQueue.js';
@@ -9,13 +12,15 @@ router.use(authMiddleware);
 
 // Search tweets
 router.get('/search', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const { query, limit = 50, filter } = req.query;
+    const { query, limit = '50', filter } = req.query;
     if (!query) return res.status(400).json({ error: 'Search query is required' });
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'searchTweets',
         status: 'pending',
         config: JSON.stringify({ query, limit: parseInt(limit), filter }),
@@ -25,9 +30,9 @@ router.get('/search', async (req, res) => {
     await queueJob({
       type: 'searchTweets',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { query, limit: parseInt(limit), filter, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { query, limit: parseInt(limit), filter, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Search queued' });
@@ -39,12 +44,14 @@ router.get('/search', async (req, res) => {
 
 // Get trends
 router.get('/trends', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
     const { category } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getTrends',
         status: 'pending',
         config: JSON.stringify({ category }),
@@ -54,9 +61,9 @@ router.get('/trends', async (req, res) => {
     await queueJob({
       type: 'getTrends',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { category, sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { category, sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Trends fetch queued' });
@@ -68,12 +75,14 @@ router.get('/trends', async (req, res) => {
 
 // Get explore feed
 router.get('/explore', async (req, res) => {
+  const reqUser = /** @type {User} */ (req.user);
+
   try {
-    const { category = 'trending', limit = 30 } = req.query;
+    const { category = 'trending', limit = '30' } = req.query;
 
     const operation = await prisma.operation.create({
       data: {
-        userId: req.user.id,
+        userId: reqUser.id,
         type: 'getExploreFeed',
         status: 'pending',
         config: JSON.stringify({ category, limit: parseInt(limit) }),
@@ -83,9 +92,9 @@ router.get('/explore', async (req, res) => {
     await queueJob({
       type: 'getExploreFeed',
       operationId: operation.id,
-      userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { category, limit: parseInt(limit), sessionCookie: req.user.sessionCookie },
+      userId: reqUser.id,
+      authMethod: reqUser.authMethod || 'oauth',
+      config: { category, limit: parseInt(limit), sessionCookie: reqUser.sessionCookie },
     });
 
     res.json({ operationId: operation.id, status: 'queued', message: 'Explore feed fetch queued' });
