@@ -72,11 +72,16 @@ export async function getLatestSnapshot(username, type = 'full') {
 
   if (!snapshot) return null;
 
+  const data = /** @type {Record<string, unknown>} */ (JSON.parse(snapshot.data));
+
   return {
     id: snapshot.id,
     username,
     type,
-    ...JSON.parse(snapshot.data),
+    ...data,
+    includesFollowersList: Array.isArray(data.followers),
+    includesFollowingList: Array.isArray(data.following),
+    stats: null,
     createdAt: snapshot.createdAt
   };
 }
@@ -98,6 +103,24 @@ export async function compareSnapshots(snapshotId1, snapshotId2) {
 
   const data1 = /** @type {Record<string, unknown>} */ (JSON.parse(snap1.data));
   const data2 = /** @type {Record<string, unknown>} */ (JSON.parse(snap2.data));
+
+  const snapshot1 = {
+    id: snap1.id,
+    username: snap1.username,
+    type: snap1.type,
+    createdAt: snap1.createdAt,
+    followerCount: data1.followerCount,
+    followingCount: data1.followingCount,
+  };
+
+  const snapshot2 = {
+    id: snap2.id,
+    username: snap2.username,
+    type: snap2.type,
+    createdAt: snap2.createdAt,
+    followerCount: data2.followerCount,
+    followingCount: data2.followingCount,
+  };
 
   const changes = /** @type {SnapshotChanges} */ ({
     timespan: {
@@ -154,7 +177,21 @@ export async function compareSnapshots(snapshotId1, snapshotId2) {
     }
   }
 
-  return changes;
+  const timeBetweenMs = Number(new Date(snap2.createdAt)) - Number(new Date(snap1.createdAt));
+  const hours = Math.max(0, Math.round(timeBetweenMs / 3600000));
+  const timeBetweenHuman = hours < 24 ? `${hours}h` : `${Math.round(hours / 24)}d`;
+
+  return {
+    username: snap1.username,
+    snapshot1,
+    snapshot2,
+    followersGained: changes.followers.gained,
+    followersLost: changes.followers.lost,
+    followingAdded: changes.following.added,
+    followingRemoved: changes.following.removed,
+    profileChanges: changes.profile.changes,
+    timeBetweenHuman,
+  };
 }
 
 /**
@@ -175,4 +212,83 @@ export async function listSnapshots(username, limit = 10) {
     type: s.type,
     createdAt: s.createdAt
   }));
+}
+
+/**
+ * Save a pre-built snapshot for a user without re-scraping.
+ * @param {string} username
+ * @param {Record<string, unknown>} data
+ */
+export async function saveSnapshot(username, data) {
+  const snapshot = await prisma.accountSnapshot.create({
+    data: {
+      username,
+      type: 'full',
+      data: JSON.stringify(data),
+      createdAt: new Date()
+    }
+  });
+
+  return {
+    id: snapshot.id,
+    username,
+    type: snapshot.type,
+    ...data,
+    includesFollowersList: Array.isArray(data.followers),
+    includesFollowingList: Array.isArray(data.following),
+    stats: null,
+    createdAt: snapshot.createdAt
+  };
+}
+
+/**
+ * Delete all snapshots for a user.
+ * @param {string} username
+ */
+export async function deleteSnapshots(username) {
+  const result = await prisma.accountSnapshot.deleteMany({
+    where: { username }
+  });
+
+  return result.count;
+}
+
+/**
+ * List all monitored accounts (users with snapshots).
+ * @param {{ limit?: number }} options
+ */
+export async function listMonitoredAccounts(options = {}) {
+  const limit = Math.min(Math.max(Number(options.limit) || 50, 1), 200);
+
+  const snapshots = await prisma.accountSnapshot.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 1000 // Pre-limit for grouping; real limit applied after grouping.
+  });
+
+  /** @type {Map<string, { lastSnapshotAt: Date; snapshotCount: number; latestFollowerCount?: number; latestFollowingCount?: number }>} */
+  const accounts = new Map();
+  for (const s of snapshots) {
+    if (!accounts.has(s.username)) {
+      const data = /** @type {Record<string, unknown>} */ (s.data ? JSON.parse(s.data) : {});
+      accounts.set(s.username, {
+        lastSnapshotAt: s.createdAt,
+        snapshotCount: 1,
+        latestFollowerCount: typeof data.followerCount === 'number' ? data.followerCount : undefined,
+        latestFollowingCount: typeof data.followingCount === 'number' ? data.followingCount : undefined
+      });
+    } else {
+      const existing = accounts.get(s.username);
+      if (existing) existing.snapshotCount += 1;
+    }
+  }
+
+  return Array.from(accounts.entries())
+    .slice(0, limit)
+    .map(([username, info]) => ({
+      username,
+      lastSnapshotAt: info.lastSnapshotAt,
+      snapshotCount: info.snapshotCount,
+      latestFollowerCount: info.latestFollowerCount,
+      latestFollowingCount: info.latestFollowingCount
+    }));
 }

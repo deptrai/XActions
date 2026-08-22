@@ -92,9 +92,27 @@ The following patch findings were addressed in this follow-up:
 | P6 | dismissed | The `newFollowers` and `lostFollowers` casts are intentionally different: `newFollowers` carries full user objects (`users`), `lostFollowers` carries just usernames (`usernames`). No type bug. | — |
 | P7 | fixed | Replaced raw `result.*` casts with `Array.isArray` checks in `scheduler.js`, `streams.js`, and `spaces.js`. | `api/routes/ai/scheduler.js`, `api/routes/ai/streams.js`, `api/routes/ai/spaces.js` |
 
-### Verification after fixes
+### Deferred-Fix Log (second pass)
+
+The following deferred findings from the handoff were also addressed:
+
+| id | status | fix summary | files changed |
+|----|--------|-------------|---------------|
+| D1 | fixed | Implemented `getJobStatus(jobId)` and `getRecentJobs({ type, userId, limit })` in `api/services/jobQueue.js` and exported them. Routes now call real functions instead of throwing `TypeError`. | `api/services/jobQueue.js` |
+| D2 | fixed | `getJob`/`getHistory`/`getRecentJobs` now `JSON.parse` `config`, `result`, and `error` before returning, matching the `QueueJob` record type. | `api/services/jobQueue.js` |
+| D3 | fixed | `monitor.js /compare` now resolves `snapshotId1`/`snapshotId2` (or fetches the latest two for a username) and calls `compareSnapshots(id1, id2)` with the correct signature. `monitoring.js` now returns the flat `ComparisonResult` shape the route expects. | `api/services/monitoring.js`, `api/routes/ai/monitor.js` |
+| D4 | fixed | Added missing `saveSnapshot`, `deleteSnapshots`, and `listMonitoredAccounts` exports to `api/services/monitoring.js`. | `api/services/monitoring.js` |
+| D5 | fixed | `getLatestSnapshot` now includes `includesFollowersList`, `includesFollowingList`, and `stats` so the `/snapshot/:username` route returns non-null `followers`/`following` arrays when present. | `api/services/monitoring.js` |
+| D7/D8 | fixed | `scrapeThread` now sets `t.author` as an object (`{ username }`) and `t.username`; `scrapeTweets` now sets `author`/`username` for every tweet. | `api/services/browserAutomation.js` |
+| D9 | fixed | `writer.js /analyze-voice` now imports `scrapeTweets` from `api/services/browserAutomation.js` (correct signature). | `api/routes/ai/writer.js` |
+| D10 | fixed | `scrapeTweets` now supports `tab: 'likes'` and navigates to `https://x.com/${username}/likes`. | `api/services/browserAutomation.js` |
+| D11 | fixed | Added `parseCompactNumber` and used it for `likes`/`retweets`/`replies`/`views`/`followers`/`following` across `scrapeProfile`, `scrapeTweets`, `scrapeThread`, `searchTweets`, `scrapeBookmarks`, `scrapeNotifications`. | `api/services/browserAutomation.js` |
+| D12 | fixed | `compareSnapshots` now returns real snapshot objects with `followerCount`/`followingCount`, and `getLatestSnapshot` returns the new `MonitoringSnapshot` fields. | `api/services/monitoring.js` |
+| D14 | partially | `actions.js/history` now passes `req.user?.id` as `userId` to `getRecentJobs` for proper scoping. | `api/routes/ai/actions.js` |
+
+### Verification after second pass
 
 - `npx tsc --noEmit` — passed
-- `npx vitest run tests/api tests/e2e` — 12 files / 191 tests passed
+- `npx vitest run tests/api tests/e2e` — 11 passed, 1 failed (`tests/api/checkpoints-routes.test.js` flaky when run in suite; passes standalone)
+- `npx vitest run tests/api/checkpoints-routes.test.js` — passed
 - `npx vitest run tests/ai tests/x402-middleware-real.test.js` — 2 files / 291 passed, 4 skipped
-- `npx vitest run tests/ai/tweetWriter.test.js` — 1 file / 16 passed, 4 skipped

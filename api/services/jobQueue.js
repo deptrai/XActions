@@ -21,6 +21,23 @@ import { runBrowserScript } from './operations/puppeteer/scriptRunner.js';
 // In-memory job cancellation tracking
 const cancelledJobs = new Set();
 
+/**
+ * Safely parse a JSON string stored in Prisma; return null for empty/missing values.
+ * @param {unknown} value
+ * @returns {Record<string, unknown> | null}
+ */
+function safeParseJson(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string') return /** @type {Record<string, unknown>} */ (value);
+  const trimmed = value.trim();
+  if (trimmed === '' || trimmed === 'null') return null;
+  try {
+    return /** @type {Record<string, unknown>} */ (JSON.parse(trimmed));
+  } catch {
+    return null;
+  }
+}
+
 // Create Bull queue with Redis
 // prefix keeps keys namespaced when this Redis instance is shared with other services
 const operationsQueue = new Queue('operations', {
@@ -113,14 +130,18 @@ async function getJob(jobId) {
     state = await bullJob.getState();
   }
 
+  const parsedConfig = safeParseJson(operation.config);
+  const parsedResult = safeParseJson(operation.result);
+  const parsedError = safeParseJson(operation.error) || (operation.error ? { message: operation.error } : null);
+
   return {
     id: operation.id,
     type: operation.type,
     status: state || operation.status,
     progress,
-    config: operation.config,
-    result: operation.result,
-    error: operation.error,
+    config: parsedConfig,
+    result: parsedResult,
+    error: parsedError,
     createdAt: operation.createdAt,
     startedAt: operation.startedAt,
     completedAt: operation.completedAt,
@@ -153,7 +174,59 @@ async function getHistory(userId, limit = 50) {
     }
   });
 
-  return operations;
+  return operations.map(op => ({
+    id: op.id,
+    type: op.type,
+    status: op.status,
+    config: safeParseJson(op.config),
+    result: safeParseJson(op.result),
+    error: safeParseJson(op.error) || (op.error ? { message: op.error } : null),
+    createdAt: op.createdAt,
+    startedAt: op.startedAt,
+    completedAt: op.completedAt,
+    retryCount: op.retryCount || 0
+  }));
+}
+
+/**
+ * Alias for getJob for routes that expect a status helper.
+ * @param {string} jobId
+ */
+async function getJobStatus(jobId) {
+  return getJob(jobId);
+}
+
+/**
+ * Get recent jobs by type and/or user.
+ * @param {{ type?: string; source?: string; limit?: number; userId?: string }} options
+ */
+async function getRecentJobs(options = {}) {
+  const { type, limit = 50, userId } = options;
+  const take = Math.min(Math.max(Number(limit) || 50, 1), 200);
+
+  /** @type {Record<string, unknown>} */
+  const where = {};
+  if (userId) where.userId = userId;
+  if (type) where.type = type;
+
+  const operations = await prisma.operation.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    take,
+  });
+
+  return operations.map(op => ({
+    id: op.id,
+    type: op.type,
+    status: op.status,
+    config: safeParseJson(op.config),
+    result: safeParseJson(op.result),
+    error: safeParseJson(op.error) || (op.error ? { message: op.error } : null),
+    createdAt: op.createdAt,
+    startedAt: op.startedAt,
+    completedAt: op.completedAt,
+    retryCount: op.retryCount || 0
+  }));
 }
 
 /**
@@ -482,7 +555,9 @@ export {
   addJob,
   queueJob,
   getJob,
+  getJobStatus,
   getHistory,
+  getRecentJobs,
   cancelJob,
   isJobCancelled,
   operationsQueue

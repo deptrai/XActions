@@ -347,12 +347,31 @@ router.post('/compare', async (req, res) => {
   }
   
   try {
-    const { compareSnapshots } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/monitoring.js')));
-    const comparison = /** @type {ComparisonResult | null} */ (await compareSnapshots({
-      username: username?.replace(/^@/, '').toLowerCase(),
-      snapshotId1,
-      snapshotId2,
-    }));
+    const { compareSnapshots, listSnapshots } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/monitoring.js')));
+
+    let id1 = snapshotId1;
+    let id2 = snapshotId2;
+
+    if (username) {
+      const cleanUsername = username.replace(/^@/, '').toLowerCase();
+      const snapshots = /** @type {MonitoringSnapshot[]} */ (await listSnapshots(cleanUsername, 2));
+      if (snapshots.length < 2) {
+        return res.status(404).json({
+          error: 'NOT_FOUND',
+          message: 'Need at least two snapshots for this user to compare',
+        });
+      }
+      [id1, id2] = [snapshots[1].id, snapshots[0].id]; // older first, newer second
+    }
+
+    if (!id1 || !id2) {
+      return res.status(400).json({
+        error: 'INVALID_INPUT',
+        message: 'Both snapshotId1 and snapshotId2 are required when username is not provided',
+      });
+    }
+
+    const comparison = /** @type {ComparisonResult | null} */ (await compareSnapshots(id1, id2));
     
     if (!comparison) {
       return res.status(404).json({

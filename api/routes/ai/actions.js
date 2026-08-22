@@ -1191,8 +1191,10 @@ router.get('/history', async (req, res) => {
   
   try {
     const { getRecentJobs } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
+    const userId = /** @type {string | undefined} */ (req.user && typeof req.user === 'object' ? req.user.id : undefined);
     const jobs = /** @type {QueueJob[]} */ (await getRecentJobs({
       source: 'ai-api',
+      userId,
       limit: Math.min(parseInt(String(limit), 10) || 20, 100),
     }));
     

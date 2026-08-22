@@ -22,6 +22,25 @@ puppeteer.use(StealthPlugin());
 const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
 export const randomDelay = (/** @type {number} */ min = 1000, /** @type {number} */ max = 3000) => sleep(min + Math.random() * (max - min));
 
+/**
+ * Parse humanized X/Twitter counts like '1.2K', '12.5K', '1,234', '1M' into numbers.
+ * Returns 0 for missing/invalid values.
+ * @param {unknown} value
+ * @returns {number}
+ */
+export function parseCompactNumber(value) {
+  if (value === null || value === undefined) return 0;
+  const str = String(value).replace(/,/g, '').trim().toLowerCase();
+  if (!str || str === '0') return 0;
+  const match = str.match(/^([\d.]+)\s*([kmbt]?)$/);
+  if (!match) return 0;
+  const num = parseFloat(match[1]);
+  if (Number.isNaN(num)) return 0;
+  const suffix = match[2];
+  const multiplier = { k: 1000, m: 1000000, b: 1000000000, t: 1000000000000 }[suffix] || 1;
+  return Math.round(num * multiplier);
+}
+
 // Browser instance management (singleton)
 /** @type {import('puppeteer').Browser | null} */
 let browserInstance = null;
@@ -146,16 +165,21 @@ export async function scrapeProfile(sessionCookie, username) {
       const followingLink = document.querySelector('a[href$="/following"]');
       const followersLink = document.querySelector('a[href$="/verified_followers"], a[href$="/followers"]');
 
+      const followingText = followingLink?.querySelector('span')?.textContent || null;
+      const followersText = followersLink?.querySelector('span')?.textContent || null;
+
       return {
         name: fullText.split('@')[0]?.trim() || null,
+        displayName: fullText.split('@')[0]?.trim() || null,
         username: usernameMatch?.[1] || null,
         bio: getText('[data-testid="UserDescription"]'),
         location: getText('[data-testid="UserLocation"]'),
         website: getAttr('[data-testid="UserUrl"]', 'href') || getAttr('[data-testid="UserUrl"] a', 'href'),
         joinDate: getText('[data-testid="UserJoinDate"]'),
-        following: followingLink?.querySelector('span')?.textContent || null,
-        followers: followersLink?.querySelector('span')?.textContent || null,
+        following: followingText ? parseCompactNumber(followingText) : null,
+        followers: followersText ? parseCompactNumber(followersText) : null,
         profileImage: avatar || null,
+        profileImageUrl: avatar || null,
         verified: !!document.querySelector('[data-testid="UserName"] svg[aria-label*="Verified"]'),
         protected: !!document.querySelector('[data-testid="UserName"] svg[aria-label*="Protected"]'),
       };
@@ -322,13 +346,17 @@ export async function scrapeFollowing(sessionCookie, username, options = {}) {
 export async function scrapeTweets(sessionCookie, username, options = {}) {
   const limit = typeof options.limit === 'number' ? options.limit : 50;
   const includeReplies = typeof options.includeReplies === 'boolean' ? options.includeReplies : false;
+  const tab = typeof options.tab === 'string' ? options.tab : 'tweets';
   const cursor = options.cursor ? String(options.cursor) : undefined;
   const page = await getAuthenticatedPage(sessionCookie);
 
   try {
-    const url = includeReplies 
-      ? `https://x.com/${username}/with_replies`
-      : `https://x.com/${username}`;
+    let url = `https://x.com/${username}`;
+    if (tab === 'likes') {
+      url = `https://x.com/${username}/likes`;
+    } else if (includeReplies) {
+      url = `https://x.com/${username}/with_replies`;
+    }
       
     await page.goto(url, { waitUntil: 'networkidle2' });
     await randomDelay();
@@ -359,11 +387,16 @@ export async function scrapeTweets(sessionCookie, username, options = {}) {
           return {
             id: linkEl?.href?.match(/status\/(\d+)/)?.[1] || null,
             text: textEl?.textContent || null,
+            username,
+            author: {
+              username,
+              name: null,
+            },
             timestamp: timeEl?.getAttribute('datetime') || null,
-            likes: likesEl?.textContent || '0',
-            retweets: retweetsEl?.textContent || '0',
-            replies: repliesEl?.textContent || '0',
-            views: viewsEl?.textContent || null,
+            likes: parseCompactNumber(likesEl?.textContent),
+            retweets: parseCompactNumber(retweetsEl?.textContent),
+            replies: parseCompactNumber(repliesEl?.textContent),
+            views: parseCompactNumber(viewsEl?.textContent),
             url: linkEl?.href || null,
             media: [...images, ...(hasVideo ? [{ type: 'video', url: linkEl?.href }] : [])],
             isRetweet: !!article.querySelector('[data-testid="socialContext"]'),
@@ -454,10 +487,11 @@ export async function searchTweets(sessionCookie, query, options = {}) {
               username: authorLink?.href?.split('/')[3] || null,
               name: authorName?.split('@')[0]?.trim() || null,
             },
+            username: authorLink?.href?.split('/')[3] || null,
             timestamp: timeEl?.getAttribute('datetime') || null,
-            likes: likesEl?.textContent || '0',
-            retweets: retweetsEl?.textContent || '0',
-            replies: repliesEl?.textContent || '0',
+            likes: parseCompactNumber(likesEl?.textContent),
+            retweets: parseCompactNumber(retweetsEl?.textContent),
+            replies: parseCompactNumber(repliesEl?.textContent),
             url: linkEl?.href || null,
           };
         }).filter((t) => !!t.id);
@@ -529,18 +563,22 @@ export async function scrapeThread(sessionCookie, tweetId) {
           const retweetsEl = article.querySelector('[data-testid="retweet"] span span');
           const repliesEl = article.querySelector('[data-testid="reply"] span span');
           
-          const author = authorLink?.href?.split('/')[3];
+          const authorUsername = authorLink?.href?.split('/')[3];
           
           return {
             id: linkEl?.href?.match(/status\/(\d+)/)?.[1] || null,
             text: textEl?.textContent || null,
-            author,
+            username: authorUsername,
+            author: {
+              username: authorUsername,
+              name: null,
+            },
             timestamp: timeEl?.getAttribute('datetime') || null,
-            likes: likesEl?.textContent || '0',
-            retweets: retweetsEl?.textContent || '0',
-            replies: repliesEl?.textContent || '0',
+            likes: parseCompactNumber(likesEl?.textContent),
+            retweets: parseCompactNumber(retweetsEl?.textContent),
+            replies: parseCompactNumber(repliesEl?.textContent),
             url: linkEl?.href || null,
-            isMainAuthor: author === mainAuthor,
+            isMainAuthor: authorUsername === mainAuthor,
           };
         })
         .filter((t) => !!t.id && !!t.isMainAuthor);
@@ -842,10 +880,11 @@ export async function scrapeBookmarks(sessionCookie, options = {}) {
               username: authorLink?.href?.split('/')[3] || null,
               name: authorName?.split('@')[0]?.trim() || null,
             },
+            username: authorLink?.href?.split('/')[3] || null,
             timestamp: timeEl?.getAttribute('datetime') || null,
-            likes: likesEl?.textContent || '0',
-            retweets: retweetsEl?.textContent || '0',
-            replies: repliesEl?.textContent || '0',
+            likes: parseCompactNumber(likesEl?.textContent),
+            retweets: parseCompactNumber(retweetsEl?.textContent),
+            replies: parseCompactNumber(repliesEl?.textContent),
             url: linkEl?.href || null,
           };
         }).filter((t) => !!t.id);
@@ -918,10 +957,10 @@ export async function scrapeTweetDetails(sessionCookie, tweetId) {
           name: authorName?.split('@')[0]?.trim() || null,
         },
         timestamp: timeEl?.getAttribute('datetime') || null,
-        likes: likesEl?.textContent || '0',
-        retweets: retweetsEl?.textContent || '0',
-        replies: repliesEl?.textContent || '0',
-        views: viewsEl?.textContent || null,
+        likes: parseCompactNumber(likesEl?.textContent),
+        retweets: parseCompactNumber(retweetsEl?.textContent),
+        replies: parseCompactNumber(repliesEl?.textContent),
+        views: parseCompactNumber(viewsEl?.textContent),
         media: [...images, ...(hasVideo ? [{ type: 'video' }] : [])],
         isQuote: !!article.querySelector('[data-testid="quoteTweet"]'),
       };
