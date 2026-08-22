@@ -433,7 +433,7 @@ router.post('/alert/new-followers', async (req, res) => {
     
     // Get current followers (limited for speed)
     const current = /** @type {UserListResult} */ (await scrapeFollowers((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: 200 }));
-    const currentUsernames = new Set((current.users || []).map(u => u.username.toLowerCase()));
+    const currentUsernames = new Set((current.users || []).map(u => (u.username || '').toLowerCase()).filter(s => s));
     
     // Get previous snapshot
     const previous = /** @type {MonitoringSnapshot | null} */ (await getLatestSnapshot(cleanUsername));
@@ -446,9 +446,9 @@ router.post('/alert/new-followers', async (req, res) => {
       
       // Find new followers
       newFollowers = (current.users || [])
-        .filter(u => !previousUsernames.has(u.username.toLowerCase()))
+        .filter(u => u.username && !previousUsernames.has(u.username.toLowerCase()))
         .map(u => ({
-          username: u.username,
+          username: u.username || '',
           displayName: u.name || u.displayName,
           bio: u.bio || null,
           verified: u.verified || false,
@@ -462,7 +462,7 @@ router.post('/alert/new-followers', async (req, res) => {
     
     // Save new snapshot
     await saveSnapshot(cleanUsername, {
-      followers: (current.users || []).map(u => u.username.toLowerCase()),
+      followers: (current.users || []).map(u => (u.username || '').toLowerCase()).filter(s => s),
       followerCount: current.users?.length || 0,
     });
     

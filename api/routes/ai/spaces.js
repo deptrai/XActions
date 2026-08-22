@@ -259,7 +259,7 @@ router.post('/transcript', async (req, res) => {
 
     if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Space session not found' });
 
-    const transcript = /** @type {SpaceTranscriptEntry[] | null} */ (status.result?.transcript || null);
+    const transcript = Array.isArray(status.result?.transcript) ? /** @type {SpaceTranscriptEntry[]} */ (status.result.transcript) : null;
 
     return successResponse(res, {
       operationId: spaceOperationId,

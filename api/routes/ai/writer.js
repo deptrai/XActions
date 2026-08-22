@@ -85,7 +85,7 @@ router.post('/analyze-voice', generationLimiter, async (req, res) => {
   try {
     const username = /** @type {string | undefined} */ (req.body.username);
     const authToken = /** @type {string | undefined} */ (req.body.authToken);
-    const tweetLimit = /** @type {string | number | undefined} */ (req.body.tweetLimit) ?? 200;
+    const tweetLimit = Math.min(Math.max(parseInt(String(req.body.tweetLimit ?? '200'), 10) || 200, 10), 1000);
 
     if (!username) {
       return res.status(400).json({ error: 'username is required' });
@@ -99,8 +99,12 @@ router.post('/analyze-voice', generationLimiter, async (req, res) => {
     }
 
     // Step 1: Scrape tweets
-    const { scrapeTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../../src/scrapers/index.js')));
-    const tweets = /** @type {Record<string, unknown>[] | null} */ (await scrapeTweets(username, authToken, { limit: (/** @type {number} */ (tweetLimit)) }));
+    const { scrapeTweets } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/browserAutomation.js')));
+    const rawTweets = /** @type {Record<string, unknown>[] | Record<string, unknown> | null} */ (await scrapeTweets((/** @type {string} */ (authToken)), (/** @type {string} */ (username)), { limit: tweetLimit }));
+    const tweetItems = Array.isArray(rawTweets)
+      ? rawTweets
+      : (Array.isArray(rawTweets?.items) ? rawTweets.items : []);
+    const tweets = /** @type {Record<string, unknown>[]} */ (tweetItems.filter(t => t && typeof t === 'object'));
 
     if (!tweets || tweets.length === 0) {
       return res.status(404).json({

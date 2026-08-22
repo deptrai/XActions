@@ -259,9 +259,10 @@ router.post('/rss-drafts', async (req, res) => {
     const { getJobStatus } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     const feedStatus = /** @type {QueueJob | null} */ (await getJobStatus(feedId));
 
+    const drafts = Array.isArray(feedStatus?.result?.drafts) ? /** @type {unknown[]} */ (feedStatus.result.drafts) : [];
     return successResponse(res, {
       feedId,
-      drafts: (/** @type {unknown[] | undefined} */ (feedStatus?.result?.drafts) || []).slice(0, Math.min(parseInt(String(limit), 10) || 10, 50)),
+      drafts: drafts.slice(0, Math.min(parseInt(String(limit), 10) || 10, 50)),
     });
   } catch (error) {
     const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);

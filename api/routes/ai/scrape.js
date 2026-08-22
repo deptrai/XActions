@@ -1058,7 +1058,7 @@ router.post('/recommendations', async (req, res) => {
     const recommendations = [];
 
     for (const follower of (followers.users || []).slice(0, 5)) {
-      if (seen.has(follower.username)) continue;
+      if (!follower.username || seen.has(follower.username)) continue;
       seen.add(follower.username);
       recommendations.push({
         username: follower.username,

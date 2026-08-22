@@ -246,12 +246,13 @@ router.post('/status', async (req, res) => {
 
     if (!status) return res.status(404).json({ error: 'NOT_FOUND', message: 'Stream not found' });
 
+    const items = Array.isArray(status.result?.items) ? /** @type {ScrapedTweet[]} */ (status.result.items) : [];
     return successResponse(res, {
       streamId,
       status: status.status,
       progress: status.progress || null,
-      itemsCollected: (/** @type {ScrapedTweet[] | undefined} */ (status.result?.items))?.length || 0,
-      latestItems: (/** @type {ScrapedTweet[]} */ (status.result?.items || [])).slice(-10),
+      itemsCollected: items.length || 0,
+      latestItems: items.slice(-10),
       timing: { startedAt: status.startedAt, updatedAt: status.updatedAt },
     });
   } catch (error) {

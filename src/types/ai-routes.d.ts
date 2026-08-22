@@ -4,7 +4,7 @@ export {};
 
 declare global {
   interface ScrapedUser {
-    username: string;
+    username?: string;
     name?: string;
     displayName?: string;
     bio?: string;
@@ -19,7 +19,7 @@ declare global {
 
   interface ScrapedTweet {
     id?: string;
-    text: string;
+    text?: string;
     timestamp?: string;
     createdAt?: string;
     url?: string;
@@ -55,7 +55,7 @@ declare global {
 
   interface ScrapedBookmark {
     id?: string;
-    text: string;
+    text?: string;
     author?: ScrapedUser;
     timestamp?: string;
     createdAt?: string;
@@ -149,8 +149,49 @@ declare global {
   }
 
   interface VoiceProfile {
+    username?: string;
     tweetCount: number;
-    contentPillars: Array<{ topic: string }>;
+    totalTweetsAnalyzed?: number;
+    analyzedAt?: string;
+    style?: {
+      avgLength?: number;
+      medianLength?: number;
+      emojiRate?: number;
+      hashtagRate?: number;
+      questionRate?: number;
+      threadRate?: number;
+      urlRate?: number;
+      mentionRate?: number;
+    };
+    tone?: {
+      formality?: number;
+      humor?: number;
+      controversy?: number;
+      technicality?: number;
+    };
+    vocabulary?: {
+      topWords?: Array<{ word: string; count: number }>;
+      topPhrases?: Array<{ word: string; count: number }>;
+      sentenceStarters?: Array<{ word: string; count: number }>;
+    };
+    contentPillars: Array<{ topic: string; frequency?: number; matchScore?: number; tweetCount?: number; avgEngagement?: number }>;
+    bestPerforming?: {
+      commonTraits?: string[];
+      examples?: Array<{
+        text?: string;
+        engagement?: number;
+        likes?: number;
+        retweets?: number;
+        replies?: number;
+      }>;
+    };
+  }
+
+  interface VideoVariant {
+    url?: string;
+    quality?: string;
+    bitrate?: number;
+    contentType?: string;
   }
 
   interface SpaceTranscriptEntry {

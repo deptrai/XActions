@@ -227,8 +227,8 @@ router.post('/brand-monitor', async (req, res) => {
     ]));
 
     const all = [...(/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (topResults.items || []))), ...(/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (latestResults.items || [])))];
-    const positive = all.filter(t => /great|love|amazing|best|thanks|awesome|excellent/i.test(t.text)).length;
-    const negative = all.filter(t => /hate|worst|terrible|bad|awful|scam|awful|broken/i.test(t.text)).length;
+    const positive = all.filter(t => /great|love|amazing|best|thanks|awesome|excellent/i.test(t.text || '')).length;
+    const negative = all.filter(t => /hate|worst|terrible|bad|awful|scam|awful|broken/i.test(t.text || '')).length;
 
     return successResponse(res, {
       brand,
@@ -536,7 +536,7 @@ router.post('/analyze-voice', async (req, res) => {
     const tweets = /** @type {TweetListResult} */ (await scrapeTweets((/** @type {string} */ (req.sessionCookie)), cleanUsername, { limit: effectiveLimit }));
 
     const items = /** @type {ScrapedTweet[]} */ (tweets.items || []);
-    const texts = items.filter(t => !t.isRetweet).map(t => t.text).filter(Boolean);
+    const texts = items.filter(t => !t.isRetweet).map(t => t.text).filter((t) => typeof t === 'string');
 
     const wordCount = texts.reduce((s, t) => s + t.split(/\s+/).length, 0);
     const avgLength = texts.length > 0 ? Math.round(wordCount / texts.length) : 0;

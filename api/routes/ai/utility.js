@@ -461,7 +461,7 @@ router.post('/profile', async (req, res) => {
       .slice(0, 5)
       .map(t => ({
         id: t.id,
-        text: t.text?.slice(0, 100) + (t.text?.length > 100 ? '...' : ''),
+        text: (t.text || '').slice(0, 100) + ((t.text || '').length > 100 ? '...' : ''),
         likes: parseInt(String(t.likes), 10) || 0,
         retweets: parseInt(String(t.retweets), 10) || 0,
         url: t.url || `https://x.com/${cleanUsername}/status/${t.id}`,

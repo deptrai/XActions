@@ -792,8 +792,8 @@ router.post('/crypto-analyze', async (req, res) => {
     ]));
 
     const allTweets = [...(/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (topResults.items || []))), ...(/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (latestResults.items || [])))];
-    const bullish = allTweets.filter(t => /buy|bull|moon|pump|🚀|💎|gem/i.test(t.text)).length;
-    const bearish = allTweets.filter(t => /sell|bear|dump|crash|rug|scam|dead/i.test(t.text)).length;
+    const bullish = allTweets.filter(t => /buy|bull|moon|pump|🚀|💎|gem/i.test(t.text || '')).length;
+    const bearish = allTweets.filter(t => /sell|bear|dump|crash|rug|scam|dead/i.test(t.text || '')).length;
     const neutral = allTweets.length - bullish - bearish;
 
     return successResponse(res, {

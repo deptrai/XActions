@@ -78,6 +78,7 @@ router.use((req, res, next) => {
  * @param {string} text
  */
 function scoreSentiment(text) {
+  if (!text) return 0;
   const t = text.toLowerCase();
   const positive = ['great', 'love', 'amazing', 'excellent', 'best', 'awesome', 'good', 'thanks', 'happy', 'win', '🔥', '❤️', '✅', '💯', '🎉', '🙌'];
   const negative = ['hate', 'worst', 'terrible', 'awful', 'bad', 'broken', 'scam', 'fail', 'wrong', 'stupid', 'dumb', '💀', '🤬', '😡', '❌'];
@@ -109,14 +110,17 @@ router.post('/analyze', async (req, res) => {
 
   // Mode 1: analyze provided text(s)
   if (text || texts) {
-    const items = /** @type {string[]} */ (texts || [text]);
+    const items = /** @type {string[]} */ ((texts || [text]).filter(Boolean));
+    if (items.length === 0) {
+      return res.status(400).json({ error: 'NO_TEXT', message: 'text or texts array must contain a non-empty string' });
+    }
     const startTime = Date.now();
     const analyzed = items.map(t => {
       const score = scoreSentiment(t);
       return { text: t, score: parseFloat(score.toFixed(3)), label: labelScore(score) };
     });
 
-    const avgScore = analyzed.reduce((s, a) => s + a.score, 0) / analyzed.length;
+    const avgScore = analyzed.length ? analyzed.reduce((s, a) => s + a.score, 0) / analyzed.length : 0;
 
     return successResponse(res, {
       mode: 'text',
@@ -142,8 +146,8 @@ router.post('/analyze', async (req, res) => {
       const analyzed = (/** @type {ScrapedTweet[]} */ (/** @type {ScrapedTweet[]} */ (results.items || []))).map(t => ({
         text: t.text,
         author: t.author?.username || t.username,
-        score: parseFloat(scoreSentiment(t.text).toFixed(3)),
-        label: labelScore(scoreSentiment(t.text)),
+        score: parseFloat(scoreSentiment(t.text || '').toFixed(3)),
+        label: labelScore(scoreSentiment(t.text || '')),
         likes: parseInt(String(t.likes), 10) || 0,
       }));
 
@@ -271,7 +275,7 @@ router.post('/report', async (req, res) => {
     const scored = items.map(t => ({
       text: t.text,
       author: t.author?.username || t.username,
-      score: scoreSentiment(t.text),
+      score: scoreSentiment(t.text || ''),
       likes: parseInt(String(t.likes), 10) || 0,
       url: t.url,
     }));

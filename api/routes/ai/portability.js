@@ -202,9 +202,11 @@ router.post('/diff', async (req, res) => {
   }
 
   // If data objects provided, diff inline
-  if (exportA && exportB && typeof exportA === 'object' && typeof exportB === 'object') {
-    const followersA = new Set((exportA.followers || []).map(u => u.username));
-    const followersB = new Set((exportB.followers || []).map(u => u.username));
+  if (exportA && exportB && typeof exportA === 'object' && typeof exportB === 'object'
+      && !Array.isArray(exportA) && !Array.isArray(exportB)
+      && exportA !== null && exportB !== null) {
+    const followersA = new Set((exportA.followers || []).filter(u => u && typeof u === 'object' && u.username).map(u => u.username));
+    const followersB = new Set((exportB.followers || []).filter(u => u && typeof u === 'object' && u.username).map(u => u.username));
     const gained = [...followersB].filter(u => !followersA.has(u));
     const lost = [...followersA].filter(u => !followersB.has(u));
 
