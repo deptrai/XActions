@@ -18,8 +18,8 @@ import { scrapeFollowers } from './browserAutomation.js';
  * @param {string} userId - XActions user ID
  * @param {string} sessionCookie - X/Twitter auth_token
  * @param {string} username - Twitter username to scan
- * @param {Object} options - { limit: 5000 }
- * @returns {Object} Scan result with gained/lost arrays
+ * @param {Record<string, unknown>} options - { limit: 5000 }
+ * @returns {Promise<Record<string, unknown>>} Scan result with gained/lost arrays
  */
 export async function runFollowerScan(userId, sessionCookie, username, options = {}) {
   const { limit = 5000 } = options;
@@ -150,7 +150,7 @@ export async function runFollowerScan(userId, sessionCookie, username, options =
  * Get scan history for a user
  * @param {string} userId - XActions user ID
  * @param {number} limit - Number of scans to return
- * @returns {Array} Scan history with gained/lost counts
+ * @returns {Promise<unknown[]>} Scan history with gained/lost counts
  */
 export async function getScanHistory(userId, limit = 30) {
   const snapshots = await prisma.followerSnapshot.findMany({
@@ -200,7 +200,7 @@ export async function getScanHistory(userId, limit = 30) {
 /**
  * Get aggregated stats for a user
  * @param {string} userId - XActions user ID
- * @returns {Object} Aggregated follower stats
+ * @returns {Promise<Record<string, unknown>>} Aggregated follower stats
  */
 export async function getFollowerStats(userId) {
   const now = new Date();
@@ -279,7 +279,7 @@ export async function getFollowerStats(userId) {
  * @param {string} userId - XActions user ID
  * @param {string} type - 'gained', 'lost', or 'all'
  * @param {number} limit - Max records
- * @returns {Array} Recent follower changes
+ * @returns {Promise<unknown[]>} Recent follower changes
  */
 export async function getRecentChanges(userId, type = 'all', limit = 50) {
   const where = { userId };
@@ -309,7 +309,7 @@ export async function getRecentChanges(userId, type = 'all', limit = 50) {
  * Get follower count history for charting
  * @param {string} userId - XActions user ID
  * @param {number} days - Number of days to look back
- * @returns {Array} Daily follower counts
+ * @returns {Promise<unknown[]>} Daily follower counts
  */
 export async function getFollowerCountHistory(userId, days = 30) {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);

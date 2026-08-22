@@ -17,7 +17,7 @@ import { runBatch as poolRunBatch } from './facebookAccountPool.js';
  * Run a single Facebook scrape action.
  *
  * @param {string} action - One of VALID_ACTIONS (profile, posts, followers, search, etc.)
- * @param {Object} args - Action arguments including authCookie, browserOptions, and action-specific params.
+ * @param {Record<string, unknown>} args - Action arguments including authCookie, browserOptions, and action-specific params.
  * @returns {Promise<any>} Scraper result (array or object depending on action).
  */
 export async function run(action, args = {}) {
@@ -51,10 +51,10 @@ export async function run(action, args = {}) {
  * Run search with type: 'all' and parallel: true — fan out to 4 sub-tasks.
  * Uses FacebookAccountPool.runBatch for multi-account parallel execution.
  *
- * @param {Object} baseArgs - Base scrape args (authCookie, browserOptions, etc.)
- * @param {Object} rest - Action-specific params (query, location, limit, etc.)
+ * @param {Record<string, unknown>} baseArgs - Base scrape args (authCookie, browserOptions, etc.)
+ * @param {Record<string, unknown>} rest - Action-specific params (query, location, limit, etc.)
  * @param {string} [userId] - User ID for account resolution.
- * @param {Object} [browserOptions] - Browser options.
+ * @param {Record<string, unknown>} [browserOptions] - Browser options.
  * @returns {Promise<{ posts: any[], people: any[], pages: any[], groups: any[] }>}
  */
 async function runSearchAllParallel(baseArgs, rest, userId, browserOptions) {
@@ -106,7 +106,7 @@ async function runSearchAllParallel(baseArgs, rest, userId, browserOptions) {
  * Delegates to FacebookAccountPool.runBatch.
  *
  * @param {Function[]} tasks - Each task is `async (page, accountContext) => result`
- * @param {Object} options - { maxConcurrency, delayBetweenLaunches, accountIds }
+ * @param {Record<string, unknown>} options - { maxConcurrency, delayBetweenLaunches, accountIds }
  * @returns {Promise<{ results: any[], accountUsage: object }>}
  */
 export async function runBatch(tasks, options = {}) {

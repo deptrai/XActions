@@ -17,10 +17,10 @@ import prisma from '../lib/prisma.js';
  */
 /**
  * Check scan results for notable events and send alerts
- * @param {Object} io - Socket.IO server instance
+ * @param {Record<string, unknown>} io - Socket.IO server instance
  * @param {string} userId - XActions user ID
- * @param {Object} scanResult - Result from followerScanner.runFollowerScan()
- * @returns {Array} Generated alerts
+ * @param {Record<string, unknown>} scanResult - Result from followerScanner.runFollowerScan()
+ * @returns {Promise<unknown[]>} Generated alerts
  */
 export async function checkAndAlert(io, userId, scanResult) {
   const { gained, lost, totalFollowers, scanDate } = scanResult;
@@ -136,7 +136,7 @@ export async function checkAndAlert(io, userId, scanResult) {
 /**
  * Deliver alert to user-configured webhook URL
  * @param {string} userId - XActions user ID
- * @param {Object} payload - Alert payload
+ * @param {Record<string, unknown>} payload - Alert payload
  */
 async function deliverWebhook(userId, payload) {
   try {
@@ -183,7 +183,7 @@ const INTERVAL_MS = {
  * @param {string} userId - XActions user ID
  * @param {string} interval - 'hourly', 'every6h', 'daily'
  * @param {string} [webhookUrl] - Optional webhook URL for alerts
- * @returns {Object} Schedule record
+ * @returns {Promise<Record<string, unknown>>} Schedule record
  */
 export async function setSchedule(userId, interval, webhookUrl = null) {
   if (!INTERVAL_MS[interval]) {
@@ -246,7 +246,7 @@ export async function getSchedule(userId) {
 /**
  * Get all active schedules that are due to run
  * Used by the scheduler to find jobs to process
- * @returns {Array} Schedules due for execution
+ * @returns {Promise<unknown[]>} Schedules due for execution
  */
 export async function getDueSchedules() {
   return prisma.unfollowerSchedule.findMany({

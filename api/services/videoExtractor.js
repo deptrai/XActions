@@ -707,7 +707,7 @@ function getQualityLabel(width, height) {
  * 3. Puppeteer browser automation (heavy, last resort)
  * 
  * @param {string} tweetUrl — Full tweet URL (x.com or twitter.com)
- * @returns {Promise<Object>} — { videos, thumbnail, duration, author, text }
+ * @returns {Promise<Record<string, unknown>>} — { videos, thumbnail, duration, author, text }
  */
 export async function extractVideo(tweetUrl) {
   const parsed = parseTweetUrl(tweetUrl);

@@ -67,8 +67,8 @@ function buildCookieJar(initialCookies, setCookieHeaders = []) {
  * Determine Facebook account health by fetching the homepage and inspecting
  * the response HTML + cookie jar.
  *
- * @param {Object} account - FacebookAccount record (must have id + encryptedCookie)
- * @param {Object} [options]
+ * @param {Record<string, unknown>} account - FacebookAccount record (must have id + encryptedCookie)
+ * @param {Record<string, unknown>} [options]
  * @param {boolean} [options.force=false] - bypass 5-minute cache
  * @param {Function} [options.fetchImpl=defaultFetch] - HTTP fetch seam
  * @returns {Promise<{ status: 'active' | 'checkpoint' | 'dead', reason?: string, lastCheckAt: Date }>}

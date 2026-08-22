@@ -115,8 +115,8 @@ async function getAuthenticatedPage(sessionCookie) {
 /**
  * Scrape profile information for a user
  * @param {string} sessionCookie - X/Twitter auth token
- * @param {string} username - Twitter username (without @)
- * @returns {Object} Profile data
+ * @param {string} username - Twitter username (without the at symbol)
+ * @returns {Promise<Record<string, unknown>>} Profile data
  */
 export async function scrapeProfile(sessionCookie, username) {
   const page = await getAuthenticatedPage(sessionCookie);
@@ -170,8 +170,8 @@ export async function scrapeProfile(sessionCookie, username) {
  * Scrape followers for a user
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} username - Twitter username
- * @param {Object} options - Scraping options
- * @returns {Object} { users: [], nextCursor }
+ * @param {Record<string, unknown>} options - Scraping options
+ * @returns {Promise<Record<string, unknown>>} { users: [], nextCursor }
  */
 export async function scrapeFollowers(sessionCookie, username, options = {}) {
   const { limit = 100, cursor } = options;
@@ -239,8 +239,8 @@ export async function scrapeFollowers(sessionCookie, username, options = {}) {
  * Scrape accounts a user is following
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} username - Twitter username
- * @param {Object} options - Scraping options
- * @returns {Object} { users: [], nextCursor }
+ * @param {Record<string, unknown>} options - Scraping options
+ * @returns {Promise<Record<string, unknown>>} { users: [], nextCursor }
  */
 export async function scrapeFollowing(sessionCookie, username, options = {}) {
   const { limit = 100, cursor } = options;
@@ -309,8 +309,8 @@ export async function scrapeFollowing(sessionCookie, username, options = {}) {
  * Scrape tweets from a user's profile
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} username - Twitter username
- * @param {Object} options - Scraping options
- * @returns {Object} { items: [], nextCursor }
+ * @param {Record<string, unknown>} options - Scraping options
+ * @returns {Promise<Record<string, unknown>>} { items: [], nextCursor }
  */
 export async function scrapeTweets(sessionCookie, username, options = {}) {
   const { limit = 50, includeReplies = false, cursor } = options;
@@ -393,8 +393,8 @@ export async function scrapeTweets(sessionCookie, username, options = {}) {
  * Search tweets by query
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} query - Search query
- * @param {Object} options - Scraping options
- * @returns {Object} { items: [], nextCursor }
+ * @param {Record<string, unknown>} options - Scraping options
+ * @returns {Promise<Record<string, unknown>>} { items: [], nextCursor }
  */
 export async function searchTweets(sessionCookie, query, options = {}) {
   const { limit = 50, filter = 'latest', cursor } = options;
@@ -481,7 +481,7 @@ export async function searchTweets(sessionCookie, query, options = {}) {
  * Scrape a full tweet thread
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} tweetId - Tweet ID to scrape thread from
- * @returns {Object} { author, tweets: [] }
+ * @returns {Promise<Record<string, unknown>>} { author, tweets: [] }
  */
 export async function scrapeThread(sessionCookie, tweetId) {
   const page = await getAuthenticatedPage(sessionCookie);
@@ -556,8 +556,8 @@ export async function scrapeThread(sessionCookie, tweetId) {
  * Scrape tweets for a hashtag
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} hashtag - Hashtag to search (with or without #)
- * @param {Object} options - Scraping options
- * @returns {Object} { items: [], nextCursor }
+ * @param {Record<string, unknown>} options - Scraping options
+ * @returns {Promise<Record<string, unknown>>} { items: [], nextCursor }
  */
 export async function scrapeHashtag(sessionCookie, hashtag, options = {}) {
   const tag = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
@@ -572,8 +572,8 @@ export async function scrapeHashtag(sessionCookie, hashtag, options = {}) {
  * Scrape media (images/videos) from a user
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} username - Twitter username
- * @param {Object} options - Scraping options
- * @returns {Object} { items: [], nextCursor }
+ * @param {Record<string, unknown>} options - Scraping options
+ * @returns {Promise<Record<string, unknown>>} { items: [], nextCursor }
  */
 export async function scrapeMedia(sessionCookie, username, options = {}) {
   const { limit = 50, type = 'all', cursor } = options;
@@ -650,8 +650,8 @@ export async function scrapeMedia(sessionCookie, username, options = {}) {
  * Scrape users who liked a tweet
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} tweetId - Tweet ID
- * @param {Object} options - Scraping options
- * @returns {Object} { users: [], nextCursor }
+ * @param {Record<string, unknown>} options - Scraping options
+ * @returns {Promise<Record<string, unknown>>} { users: [], nextCursor }
  */
 export async function scrapeTweetLikes(sessionCookie, tweetId, options = {}) {
   const { limit = 100, cursor } = options;
@@ -719,8 +719,8 @@ export const scrapeLikes = scrapeTweetLikes;
  * Scrape users who retweeted a tweet
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} tweetId - Tweet ID
- * @param {Object} options - Scraping options
- * @returns {Object} { users: [], nextCursor }
+ * @param {Record<string, unknown>} options - Scraping options
+ * @returns {Promise<Record<string, unknown>>} { users: [], nextCursor }
  */
 export async function scrapeTweetRetweets(sessionCookie, tweetId, options = {}) {
   const { limit = 100, cursor } = options;
@@ -787,8 +787,8 @@ export const scrapeRetweets = scrapeTweetRetweets;
 /**
  * Scrape user's bookmarks
  * @param {string} sessionCookie - X/Twitter auth token
- * @param {Object} options - Scraping options
- * @returns {Object} { items: [], nextCursor }
+ * @param {Record<string, unknown>} options - Scraping options
+ * @returns {Promise<Record<string, unknown>>} { items: [], nextCursor }
  */
 export async function scrapeBookmarks(sessionCookie, options = {}) {
   const { limit = 100, cursor } = options;
@@ -861,7 +861,7 @@ export async function scrapeBookmarks(sessionCookie, options = {}) {
  * Scrape details of a specific tweet
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} tweetId - Tweet ID
- * @returns {Object} Tweet details
+ * @returns {Promise<Record<string, unknown>>} Tweet details
  */
 export async function scrapeTweetDetails(sessionCookie, tweetId) {
   const page = await getAuthenticatedPage(sessionCookie);
@@ -921,7 +921,7 @@ export async function scrapeTweetDetails(sessionCookie, tweetId) {
  * Extract video URLs from a tweet
  * @param {string} sessionCookie - X/Twitter auth token
  * @param {string} tweetId - Tweet ID containing video
- * @returns {Array} Array of video URLs with quality info
+ * @returns {Promise<unknown[]>} Array of video URLs with quality info
  */
 export async function extractVideoUrls(sessionCookie, tweetId) {
   const page = await getAuthenticatedPage(sessionCookie);

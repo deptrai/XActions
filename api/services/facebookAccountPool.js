@@ -51,7 +51,7 @@ export function buildUserDataDir(c_user) {
  * Resolve a stored FacebookAccount into the runtime context the pool needs.
  * Decrypts cookie and proxy, validates health, parses proxy.
  *
- * @param {Object} account - Prisma FacebookAccount
+ * @param {Record<string, unknown>} account - Prisma FacebookAccount
  * @returns {Promise<{ id, c_user, xs, userDataDir, proxyServer, proxyAuth }|null>}
  */
 export async function resolveAccountContext(account, options = {}) {
@@ -97,7 +97,7 @@ export async function resolveAccountContext(account, options = {}) {
  * Run an array of tasks in parallel across a pool of live Facebook accounts.
  *
  * @param {Function[]} tasks - Each task is `async (page, accountContext) => result`
- * @param {Object} options
+ * @param {Record<string, unknown>} options
  * @param {number} [options.maxConcurrency=4] - max concurrent browsers
  * @param {number|{min:number,max:number}} [options.delayBetweenLaunches=3-8s] - delay before each launch
  * @param {string[]} [options.accountIds] - account IDs to consider

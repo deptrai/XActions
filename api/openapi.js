@@ -23,6 +23,8 @@ import {
 /**
  * Build the x-payment-info extension for an operation.
  * Conforms to x402scan discovery spec.
+ * @param {string} operation
+ * @returns {Record<string, unknown> | undefined}
  */
 function paymentInfo(operation) {
   const price = AI_OPERATION_PRICES[operation];
@@ -39,8 +41,8 @@ function paymentInfo(operation) {
     network: NETWORK,
     payTo: PAY_TO_ADDRESS,
     facilitator: FACILITATOR_URL,
-    acceptedChains: productionNetworks.map((n) => n.network),
-    acceptedTestnets: testnetNetworks.map((n) => n.network),
+    acceptedChains: productionNetworks.map((n) => String(n.network)),
+    acceptedTestnets: testnetNetworks.map((n) => String(n.network)),
     acceptedTokens: ['USDC', 'USDT', 'DAI', 'WETH'],
   };
 }
@@ -48,6 +50,9 @@ function paymentInfo(operation) {
 /**
  * Build the x-bazaar extension for an operation.
  * Provides explicit input/output schemas for agent discovery tools.
+ * @param {Record<string, unknown>} inputSchema
+ * @param {string} [outputRef]
+ * @returns {Record<string, unknown>}
  */
 function bazaarExt(inputSchema, outputRef = '#/components/schemas/SuccessResponse') {
   return {
@@ -75,6 +80,8 @@ const payment402 = {
 
 /**
  * Helper — standard 200 success response with schema
+ * @param {string} description
+ * @returns {Record<string, unknown>}
  */
 function ok200(description) {
   return {
@@ -85,6 +92,8 @@ function ok200(description) {
 
 /**
  * Helper — async operation 200 response
+ * @param {string} description
+ * @returns {Record<string, unknown>}
  */
 function ok200Async(description) {
   return {

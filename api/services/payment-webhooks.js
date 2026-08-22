@@ -64,8 +64,8 @@ function generateSignature(payload, secret, timestamp) {
  * Create a payment event payload
  * 
  * @param {string} eventType - One of PAYMENT_EVENTS
- * @param {Object} payment - Payment details
- * @returns {Object} Formatted event payload
+ * @param {Record<string, unknown>} payment - Payment details
+ * @returns {Record<string, unknown>} Formatted event payload
  */
 function createEventPayload(eventType, payment) {
   const timestamp = new Date().toISOString();
@@ -130,7 +130,7 @@ function getNetworkName(network) {
  * Fetch with timeout support
  * 
  * @param {string} url - URL to fetch
- * @param {Object} options - Fetch options
+ * @param {Record<string, unknown>} options - Fetch options
  * @param {number} timeout - Timeout in milliseconds
  * @returns {Promise<Response>}
  */
@@ -153,8 +153,8 @@ async function fetchWithTimeout(url, options, timeout = WEBHOOK_TIMEOUT_MS) {
  * Send webhook with retry logic and exponential backoff
  * 
  * @param {string} url - Webhook URL
- * @param {Object} payload - Event payload
- * @param {Object} options - Additional options
+ * @param {Record<string, unknown>} payload - Event payload
+ * @param {Record<string, unknown>} options - Additional options
  * @returns {Promise<{success: boolean, attempts: number, error?: string}>}
  */
 async function sendWithRetry(url, payload, options = {}) {
@@ -219,8 +219,8 @@ async function sendWithRetry(url, payload, options = {}) {
  * Log delivery result
  * 
  * @param {string} destination - Webhook destination type
- * @param {Object} result - Delivery result
- * @param {Object} payload - Original payload
+ * @param {Record<string, unknown>} result - Delivery result
+ * @param {Record<string, unknown>} payload - Original payload
  */
 function logDelivery(destination, result, payload) {
   deliveryLog.total++;
@@ -252,7 +252,7 @@ function logDelivery(destination, result, payload) {
 /**
  * Send payment notification to custom webhook URL
  * 
- * @param {Object} payload - Event payload
+ * @param {Record<string, unknown>} payload - Event payload
  * @returns {Promise<{success: boolean}>}
  */
 async function sendCustomWebhook(payload) {
@@ -266,7 +266,7 @@ async function sendCustomWebhook(payload) {
 /**
  * Send payment notification to Discord webhook
  * 
- * @param {Object} payload - Event payload
+ * @param {Record<string, unknown>} payload - Event payload
  * @returns {Promise<{success: boolean}>}
  */
 async function sendDiscordNotification(payload) {
@@ -347,7 +347,7 @@ async function sendDiscordNotification(payload) {
 /**
  * Send payment notification to Slack webhook
  * 
- * @param {Object} payload - Event payload
+ * @param {Record<string, unknown>} payload - Event payload
  * @returns {Promise<{success: boolean}>}
  */
 async function sendSlackNotification(payload) {
@@ -448,7 +448,7 @@ function getExplorerUrl(network, txHash) {
 /**
  * Notify all configured endpoints about a payment event
  * 
- * @param {Object} payment - Payment details
+ * @param {Record<string, unknown>} payment - Payment details
  * @param {string} payment.price - Amount paid
  * @param {string} payment.operation - Operation that was paid for
  * @param {string} payment.payerAddress - Address that paid
@@ -488,7 +488,7 @@ export async function notifyPaymentReceived(payment, eventType = PAYMENT_EVENTS.
 /**
  * Notify about a failed payment (verification or settlement failure)
  * 
- * @param {Object} payment - Payment details
+ * @param {Record<string, unknown>} payment - Payment details
  * @param {string} reason - Failure reason
  */
 export async function notifyPaymentFailed(payment, reason) {
@@ -501,7 +501,7 @@ export async function notifyPaymentFailed(payment, reason) {
 /**
  * Notify about a successfully settled payment
  * 
- * @param {Object} payment - Payment details
+ * @param {Record<string, unknown>} payment - Payment details
  * @param {string} settlementId - Settlement transaction ID
  */
 export async function notifyPaymentSettled(payment, settlementId) {
@@ -523,7 +523,7 @@ export function hasWebhooksConfigured() {
 /**
  * Get webhook configuration status (for health checks)
  * 
- * @returns {Object} Configuration and delivery statistics
+ * @returns {Record<string, unknown>} Configuration and delivery statistics
  */
 export function getWebhookStatus() {
   return {
@@ -550,7 +550,7 @@ export function getWebhookStatus() {
  * Test webhook connectivity
  * Sends a test event to all configured webhooks
  * 
- * @returns {Promise<Object>} Test results for each destination
+ * @returns {Promise<Record<string, unknown>>} Test results for each destination
  */
 export async function testWebhooks() {
   const testPayment = {

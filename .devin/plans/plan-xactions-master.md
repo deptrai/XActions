@@ -107,7 +107,7 @@ Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 
   - Typed `src/workflows/{actions,conditions,engine,index,store,triggers}.js` with JSDoc.
   - `npm run typecheck` passes with **0 errors**; `npx vitest run tests/workflows` passes (137 tests).
 - [~] 4.10 — Type `api/` (Prisma, services, routes)
-  - 4.10a — In progress. Expanded `tsconfig.json` include for `api/config`, `api/lib`, `api/middleware`, `api/services`, `api/openapi.js`, and `api/realtime/socketHandler.js`; added minimal `.d.ts` declarations for `express`, `jsonwebtoken`, and `socket.io`; added JSDoc types and runtime fixes to `api/config/subscription-tiers.js`, `api/config/x402-config.js`, `api/middleware/auth.js`, and `api/middleware/ai-detector.js`; created `.d.ts` shims for `api/routes/twitter.d.ts`, `api/routes/facebookAccounts.d.ts`, `src/scraping/paginationEngine.d.ts`, and `src/streaming/index.d.ts`; fixed an error message mismatch in `api/services/facebookAutomation.js`. `npm run typecheck` currently **707 errors** (down from 929 after the include expansion). Targeted `npx vitest run tests/api/*.test.js tests/services/*.test.js` passes (611 tests).
+  - 4.10a — In progress. Expanded `tsconfig.json` include for `api/config`, `api/lib`, `api/middleware`, `api/services`, `api/openapi.js`, and `api/realtime/socketHandler.js`; added minimal `.d.ts` declarations for `express`, `jsonwebtoken`, and `socket.io`; added JSDoc types and runtime fixes to `api/config/subscription-tiers.js`, `api/config/x402-config.js`, `api/middleware/auth.js`, and `api/middleware/ai-detector.js`; created `.d.ts` shims for `api/routes/twitter.d.ts`, `api/routes/facebookAccounts.d.ts`, `src/scraping/paginationEngine.d.ts`, and `src/streaming/index.d.ts`; fixed an error message mismatch in `api/services/facebookAutomation.js`. `npm run typecheck` currently **624 errors** (down from 929 after the include expansion). Targeted `npx vitest run tests/api/*.test.js tests/services/*.test.js` passes (611 tests).
   - 4.10b — Type `api/routes/**/*.js`.
   - 4.10c — Type `api/server.js` and `api/serverless.js`.
 - [ ] 4.11 — Type `src/mcp` server and tools
@@ -115,7 +115,7 @@ Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 
 - [ ] 4.13 — Add missing `.d.ts` declarations for untyped dependencies
 - [ ] 4.14 — Final `npm run typecheck` (entire `src` + `api`) and full `npx vitest run`
 
-Status: Phase 4.10a in progress. `api/` base layer is partially typed; `npm run typecheck` reports 707 errors in the newly-included files. Targeted `npx vitest run tests/api/*.test.js tests/services/*.test.js` passes (611 tests).
+Status: Phase 4.10a in progress. `api/` base layer is partially typed; `npm run typecheck` reports 624 errors in the newly-included files. Targeted `npx vitest run tests/api/*.test.js tests/services/*.test.js` passes (611 tests).
 
 ## Verification baseline
 

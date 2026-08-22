@@ -8,6 +8,7 @@
  * @author nichxbt
  */
 
+/** @type {{ totalPayments: number; totalRevenue: number; byOperation: Record<string, number>; byHour: Record<string, number>; recentPayments: Record<string, unknown>[] }} */
 const stats = {
   totalPayments: 0,
   totalRevenue: 0, // in USD cents
@@ -22,14 +23,10 @@ const seenTxHashes = new Set();
 
 /**
  * Record a successful payment
- * @param {Object} payment - Payment details
- * @param {string} payment.operation - Operation name (e.g., 'scrape:profile')
- * @param {string} payment.price - Price string (e.g., '$0.05')
- * @param {string} [payment.paymentId] - Unique payment identifier
- * @param {string} [payment.network] - Blockchain network
+ * @param {Record<string, unknown>} payment - Payment details
  */
 export function recordPayment(payment) {
-  const txKey = payment.paymentId || payment.txHash || null;
+  const txKey = /** @type {string | null} */ (payment.paymentId || payment.txHash || null);
   if (txKey) {
     if (seenTxHashes.has(txKey)) {
       console.log(`⚠️  Duplicate payment ignored: ${txKey}`);
@@ -43,10 +40,10 @@ export function recordPayment(payment) {
   }
 
   stats.totalPayments++;
-  stats.totalRevenue += parseFloat(payment.price.replace('$', '')) * 100;
-  
+  stats.totalRevenue += parseFloat((/** @type {string} */ (payment.price)).replace('$', '')) * 100;
+
   // By operation
-  const op = payment.operation;
+  const op = /** @type {string} */ (payment.operation);
   stats.byOperation[op] = (stats.byOperation[op] || 0) + 1;
   
   // By hour
@@ -65,7 +62,7 @@ export function recordPayment(payment) {
 
 /**
  * Get current payment statistics
- * @returns {Object} Payment statistics including totals and breakdowns
+ * @returns {Record<string, unknown>} Payment statistics including totals and breakdowns
  */
 export function getStats() {
   return {

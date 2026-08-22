@@ -28,7 +28,7 @@ let isProcessing = false;
 
 /**
  * Process all due schedules
- * @param {Object} io - Socket.IO server instance
+ * @param {Record<string, unknown>} io - Socket.IO server instance
  */
 async function processDueSchedules(io) {
   if (isProcessing) return; // Prevent overlapping runs
@@ -94,7 +94,7 @@ async function processDueSchedules(io) {
 
 /**
  * Start the scheduler polling loop
- * @param {Object} io - Socket.IO server instance
+ * @param {Record<string, unknown>} io - Socket.IO server instance
  */
 export function startScheduler(io) {
   if (schedulerInterval) {

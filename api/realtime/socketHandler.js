@@ -6,11 +6,58 @@ import jwt from 'jsonwebtoken';
 // Payment routes archived - XActions is now 100% free and open-source
 // All credit checks have been removed - unlimited operations for all users
 // Store active sessions
+/** @type {Map<string, Record<string, unknown>>} */
 const activeSessions = new Map(); // odessId -> { odess, dashboard, user, status }
+/** @type {Set<import('socket.io').Socket>} */
 const adminSockets = new Set(); // Admin sockets watching all sessions
 
+/**
+ * @param {Record<string, unknown>} session
+ * @returns {Record<string, unknown> | undefined}
+ */
+function getSessionUser(session) {
+  return /** @type {Record<string, unknown> | undefined} */ (session.user);
+}
+
+/**
+ * @param {Record<string, unknown> | undefined} user
+ * @returns {string | undefined}
+ */
+function getUserId(user) {
+  if (!user || typeof user !== 'object' || typeof user.id !== 'string') return undefined;
+  return user.id;
+}
+
+/**
+ * @param {Record<string, unknown> | undefined} user
+ * @returns {string | undefined}
+ */
+function getUsername(user) {
+  if (!user || typeof user !== 'object' || typeof user.username !== 'string') return undefined;
+  return user.username;
+}
+
+/**
+ * @param {Record<string, unknown>} session
+ * @returns {import('socket.io').Socket | undefined}
+ */
+function getAgentSocket(session) {
+  return /** @type {import('socket.io').Socket | undefined} */ (session.agent);
+}
+
+/**
+ * @param {Record<string, unknown>} session
+ * @returns {import('socket.io').Socket | undefined}
+ */
+function getDashboardSocket(session) {
+  return /** @type {import('socket.io').Socket | undefined} */ (session.dashboard);
+}
+
+/**
+ * @param {import('http').Server} httpServer
+ */
 export function initializeSocketIO(httpServer) {
-  const configuredOrigins = [
+  const configuredOrigins = /** @type {string[]} */ ([
     'https://xactions.app',
     'https://x.com',
     'https://twitter.com',
@@ -19,7 +66,7 @@ export function initializeSocketIO(httpServer) {
     process.env.API_BASE_URL,
     process.env.LEGACY_FRONTEND_URL,
     ...(process.env.ADDITIONAL_FRONTEND_ORIGINS || '').split(',')
-  ].map(origin => origin?.trim()).filter(Boolean);
+  ].map(origin => (origin || '').trim()).filter(origin => origin.length > 0));
 
   const io = new Server(httpServer, {
     cors: {
@@ -39,9 +86,9 @@ export function initializeSocketIO(httpServer) {
         return next(new Error('Authentication required'));
       }
 
-      if (token) {
+      if (token && process.env.JWT_SECRET) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = resolveUserId(decoded);
+        const userId = resolveUserId(/** @type {Record<string, unknown>} */ (decoded));
         if (!userId) {
           return next(new Error('Invalid token'));
         }
@@ -57,10 +104,10 @@ export function initializeSocketIO(httpServer) {
         socket.user = user;
       }
 
-      socket.role = role || 'dashboard';
+      socket.role = String(role || 'dashboard');
       next();
     } catch (error) {
-      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      if (error instanceof Error && (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError')) {
         return next(new Error('Invalid token'));
       }
       console.error('❌ Socket auth error:', error);
@@ -74,7 +121,7 @@ export function initializeSocketIO(httpServer) {
     // Join a per-user room so server can target events to one user's sockets
     // (e.g. facebook:operation events from api/routes/facebook.js use io.to(`user:${id}`)).
     // Without this join, those per-user emits would reach no one.
-    if (socket.user?.id) {
+    if (socket.user && typeof socket.user.id === 'string') {
       socket.join(`user:${socket.user.id}`);
     }
 
@@ -127,6 +174,7 @@ export function initializeSocketIO(httpServer) {
 /**
  * Connect the real-time streaming engine to Socket.IO.
  * Lazy-loads src/streaming to avoid startup cost if not used.
+ * @param {import('socket.io').Server} io
  */
 async function initializeStreamIO(io) {
   try {
@@ -135,13 +183,17 @@ async function initializeStreamIO(io) {
     console.log('📡 Real-time stream engine connected to Socket.IO');
   } catch (err) {
     // Streaming module may not be available (e.g., missing Redis) — non-fatal
-    console.warn('⚠️ Stream engine not loaded:', err.message);
+    console.warn('⚠️ Stream engine not loaded:', err instanceof Error ? err.message : String(err));
   }
 }
 
 // ===== AGENT (x.com tab) =====
+/**
+ * @param {import('socket.io').Server} io
+ * @param {import('socket.io').Socket} socket
+ */
 function handleAgentConnection(io, socket) {
-  const sessionId = socket.handshake.auth.sessionId;
+  const sessionId = String(socket.handshake.auth.sessionId || '');
   
   if (!sessionId) {
     socket.emit('error', { message: 'Session ID required' });
@@ -156,9 +208,7 @@ function handleAgentConnection(io, socket) {
     session.status = 'connected';
     
     // Notify dashboard that agent connected
-    if (session.dashboard) {
-      session.dashboard.emit('agent:connected', { sessionId });
-    }
+    getDashboardSocket(session)?.emit('agent:connected', { sessionId });
     
     // Notify admins
     broadcastToAdmins(io, 'session:updated', getSessionInfo(sessionId));
@@ -171,15 +221,13 @@ function handleAgentConnection(io, socket) {
       session.progress = data;
       
       // Forward to dashboard
-      if (session.dashboard) {
-        session.dashboard.emit('progress', data);
-      }
+      getDashboardSocket(session)?.emit('progress', data);
       
       // Forward to admins
       broadcastToAdmins(io, 'session:progress', {
         sessionId,
-        userId: session.user?.id,
-        username: session.user?.username,
+        userId: getUserId(getSessionUser(session)),
+        username: getUsername(getSessionUser(session)),
         ...data
       });
     }
@@ -190,15 +238,13 @@ function handleAgentConnection(io, socket) {
     const session = activeSessions.get(sessionId);
     if (session) {
       // Forward to dashboard
-      if (session.dashboard) {
-        session.dashboard.emit('action', data);
-      }
+      getDashboardSocket(session)?.emit('action', data);
       
       // Forward to admins
       broadcastToAdmins(io, 'session:action', {
         sessionId,
-        userId: session.user?.id,
-        username: session.user?.username,
+        userId: getUserId(getSessionUser(session)),
+        username: getUsername(getSessionUser(session)),
         ...data
       });
     }
@@ -211,11 +257,13 @@ function handleAgentConnection(io, socket) {
       session.status = 'completed';
       
       // Record operation (XActions is now free - no credit deduction)
-      if (session.user && session.operation) {
+      const userId = getUserId(getSessionUser(session));
+      const operation = typeof session.operation === 'string' ? session.operation : '';
+      if (userId && operation) {
         await prisma.operation.create({
           data: {
-            userId: session.user.id,
-            type: session.operation,
+            userId,
+            type: operation,
             status: 'completed',
             result: JSON.stringify(data)
           }
@@ -223,15 +271,13 @@ function handleAgentConnection(io, socket) {
       }
       
       // Notify dashboard
-      if (session.dashboard) {
-        session.dashboard.emit('complete', data);
-      }
+      getDashboardSocket(session)?.emit('complete', data);
       
       // Notify admins
       broadcastToAdmins(io, 'session:complete', {
         sessionId,
-        userId: session.user?.id,
-        username: session.user?.username,
+        userId: getUserId(getSessionUser(session)),
+        username: getUsername(getSessionUser(session)),
         ...data
       });
     }
@@ -243,13 +289,11 @@ function handleAgentConnection(io, socket) {
     if (session) {
       session.status = 'error';
       
-      if (session.dashboard) {
-        session.dashboard.emit('error', data);
-      }
+      getDashboardSocket(session)?.emit('error', data);
       
       broadcastToAdmins(io, 'session:error', {
         sessionId,
-        userId: session.user?.id,
+        userId: getUserId(getSessionUser(session)),
         ...data
       });
     }
@@ -259,9 +303,13 @@ function handleAgentConnection(io, socket) {
 }
 
 // ===== DASHBOARD (user's control panel) =====
+/**
+ * @param {import('socket.io').Server} io
+ * @param {import('socket.io').Socket} socket
+ */
 function handleDashboardConnection(io, socket) {
   // Generate session ID for this user
-  const sessionId = `session_${socket.user.id}_${Date.now()}`;
+  const sessionId = `session_${getUserId(socket.user) || 'unknown'}_${Date.now()}`;
   
   // Create session
   activeSessions.set(sessionId, {
@@ -301,14 +349,14 @@ function handleDashboardConnection(io, socket) {
     session.status = 'running';
 
     // Send command to agent
-    if (session.agent) {
-      session.agent.emit('execute', { operation, config });
+    getAgentSocket(session)?.emit('execute', { operation, config });
+    if (getAgentSocket(session)) {
       socket.emit('operation:started', { operation });
       
       broadcastToAdmins(io, 'session:started', {
         sessionId,
-        userId: socket.user.id,
-        username: socket.user.username,
+        userId: getUserId(socket.user),
+        username: getUsername(socket.user),
         operation,
         config
       });
@@ -323,17 +371,21 @@ function handleDashboardConnection(io, socket) {
   // Dashboard requests to stop operation
   socket.on('stop:operation', () => {
     const session = activeSessions.get(sessionId);
-    if (session?.agent) {
-      session.agent.emit('stop');
+    if (session) {
+      getAgentSocket(session)?.emit('stop');
       session.status = 'stopped';
     }
   });
 }
 
 // ===== ADMIN (monitoring all sessions) =====
+/**
+ * @param {import('socket.io').Server} io
+ * @param {import('socket.io').Socket} socket
+ */
 function handleAdminConnection(io, socket) {
   // Verify admin status
-  if (!socket.user?.isAdmin) {
+  if (socket.user?.isAdmin !== true) {
     socket.emit('error', { message: 'Admin access required' });
     socket.disconnect();
     return;
@@ -344,42 +396,44 @@ function handleAdminConnection(io, socket) {
   // Send current active sessions
   const sessions = Array.from(activeSessions.entries()).map(([id, session]) => ({
     sessionId: id,
-    userId: session.user?.id,
-    username: session.user?.username,
+    userId: getUserId(getSessionUser(session)),
+    username: getUsername(getSessionUser(session)),
     status: session.status,
     operation: session.operation,
     progress: session.progress,
     createdAt: session.createdAt,
-    hasAgent: !!session.agent,
-    hasDashboard: !!session.dashboard
+    hasAgent: !!getAgentSocket(session),
+    hasDashboard: !!getDashboardSocket(session)
   }));
 
   socket.emit('sessions:list', sessions);
 }
 
 // ===== HELPERS =====
+/**
+ * @param {import('socket.io').Server} io
+ * @param {import('socket.io').Socket} socket
+ */
 function handleDisconnection(io, socket) {
   // Remove from admin sockets
   adminSockets.delete(socket);
 
   // Handle agent disconnection
   for (const [sessionId, session] of activeSessions) {
-    if (session.agent === socket) {
+    if (getAgentSocket(session) === socket) {
       session.agent = null;
       session.status = 'agent_disconnected';
       
-      if (session.dashboard) {
-        session.dashboard.emit('agent:disconnected');
-      }
+      getDashboardSocket(session)?.emit('agent:disconnected');
       
       broadcastToAdmins(io, 'session:updated', getSessionInfo(sessionId));
     }
     
-    if (session.dashboard === socket) {
+    if (getDashboardSocket(session) === socket) {
       session.dashboard = null;
       
       // If both disconnected, clean up session after a delay
-      if (!session.agent) {
+      if (!getAgentSocket(session)) {
         setTimeout(() => {
           if (!activeSessions.get(sessionId)?.dashboard && !activeSessions.get(sessionId)?.agent) {
             activeSessions.delete(sessionId);
@@ -391,29 +445,42 @@ function handleDisconnection(io, socket) {
   }
 }
 
+/**
+ * @param {import('socket.io').Server} io
+ * @param {string} event
+ * @param {unknown} data
+ */
 function broadcastToAdmins(io, event, data) {
   for (const socket of adminSockets) {
     socket.emit(event, data);
   }
 }
 
+/**
+ * @param {string} sessionId
+ * @returns {Record<string, unknown> | null}
+ */
 function getSessionInfo(sessionId) {
   const session = activeSessions.get(sessionId);
   if (!session) return null;
   
   return {
     sessionId,
-    userId: session.user?.id,
-    username: session.user?.username,
+    userId: getUserId(getSessionUser(session)),
+    username: getUsername(getSessionUser(session)),
     status: session.status,
     operation: session.operation,
     progress: session.progress,
     createdAt: session.createdAt,
-    hasAgent: !!session.agent,
-    hasDashboard: !!session.dashboard
+    hasAgent: !!getAgentSocket(session),
+    hasDashboard: !!getDashboardSocket(session)
   };
 }
 
+/**
+ * @param {string} sessionId
+ * @returns {string}
+ */
 function generateAgentScript(sessionId) {
   const wsUrl = process.env.API_URL || 'http://localhost:3001';
   

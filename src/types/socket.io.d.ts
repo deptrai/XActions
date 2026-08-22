@@ -10,7 +10,6 @@ declare module 'socket.io' {
   }
 
   interface Server {
-    on(event: string, listener: (...args: unknown[]) => void): Server;
     to(room: string): Server;
     emit(event: string, ...args: unknown[]): Server;
   }

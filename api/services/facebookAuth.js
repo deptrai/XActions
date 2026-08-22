@@ -16,7 +16,7 @@ import { decrypt } from '../routes/facebookAccounts.js';
 /**
  * Resolve a Facebook authCookie to a raw { c_user, xs } pair.
  *
- * @param {Object} authCookie - { c_user, xs } for raw cookie, or { accountId } for stored account.
+ * @param {Record<string, unknown>} authCookie - { c_user, xs } for raw cookie, or { accountId } for stored account.
  * @param {string} [userId] - Required when using accountId; validates account ownership.
  * @returns {Promise<{ c_user: string, xs: string, userId: string|null, accountId: string|null }>}
  * @throws {Error} with code ACCOUNT_NOT_FOUND or ACCOUNT_DECRYPT_FAILED

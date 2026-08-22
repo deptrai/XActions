@@ -65,10 +65,10 @@ function safeErrorString(err) {
  * Pure-ish — injectable `deps` for browser-free tests (no vi.mock needed).
  *
  * @param {Date} now - Current time (injected for testability)
- * @param {Object} [deps]
+ * @param {Record<string, unknown>} [deps]
  * @param {Function} [deps.postExecutor] - (page, content) => result; defaults to createFacebookPost
  * @param {Function} [deps.sessionFactory] - (schedule) => Promise<{page, browser}>; defaults to real browser flow
- * @param {Object} [deps.prismaClient] - Prisma instance; defaults to module-level singleton
+ * @param {Record<string, unknown>} [deps.prismaClient] - Prisma instance; defaults to module-level singleton
  */
 export async function runDueSchedules(now, deps = {}) {
   const {

@@ -35,9 +35,16 @@ const authMiddleware = async (req, res, next) => {
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not configured');
+    }
+    const decoded = jwt.verify(token, secret);
+    if (typeof decoded !== 'object' || decoded === null) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
 
-    const userId = resolveUserId(decoded);
+    const userId = resolveUserId(/** @type {Record<string, unknown>} */ (decoded));
     if (!userId) {
       return res.status(401).json({ error: 'Invalid token' });
     }
@@ -79,9 +86,17 @@ const optionalAuthMiddleware = async (req, res, next) => {
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      return next();
+    }
+    const decoded = jwt.verify(token, secret);
+    if (typeof decoded !== 'object' || decoded === null) {
+      req.user = null;
+      return next();
+    }
 
-    const userId = resolveUserId(decoded);
+    const userId = resolveUserId(/** @type {Record<string, unknown>} */ (decoded));
     const user = userId
       ? await prisma.user.findUnique({
           where: { id: userId }

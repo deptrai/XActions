@@ -152,7 +152,7 @@ function validateRecurrence(recurrenceCron) {
  * (api/services/tweetScheduler.js) acquires a Puppeteer session at execution time
  * and reuses postTweet / postThread from src/postComposer.js.
  *
- * @param {Object} input
+ * @param {Record<string, unknown>} input
  * @param {string} input.content - Tweet text (non-empty). First tweet of a thread.
  * @param {string[]?} input.mediaUrls - Optional media URL list (JSON-stringified on store).
  * @param {string|Date} input.scheduledAt - ISO-8601 datetime, ≥60s in the future.
@@ -160,11 +160,11 @@ function validateRecurrence(recurrenceCron) {
  * @param {string?} input.timezone - IANA tz name to interpret a wall-clock scheduledAt.
  * @param {string?} input.recurrenceCron - node-cron expression; re-arms after execution.
  * @param {number?} input.queueOrder - Queue priority (0 = highest); defaults to 0.
- * @param {Object} options
+ * @param {Record<string, unknown>} options
  * @param {boolean} [options.dryRun=true] - Preview without persisting.
  * @param {string} [options.userId] - Required when dryRun:false — scopes the row.
  * @param {Function} [options.now=Date.now] - Injectable clock for tests.
- * @returns {Promise<Object>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function scheduleTweet(input = {}, options = {}) {
   const {
