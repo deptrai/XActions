@@ -1,0 +1,11 @@
+export function readPluginsConfig(...args: unknown[]): unknown;
+export function writePluginsConfig(...args: unknown[]): unknown;
+export function isValidPluginName(...args: unknown[]): unknown;
+export function validatePlugin(...args: unknown[]): unknown;
+export function loadPlugin(...args: unknown[]): unknown;
+export function loadAllPlugins(...args: unknown[]): unknown;
+export function discoverPlugins(...args: unknown[]): unknown;
+export const PLUGINS_FILE: object;
+export const CONFIG_DIR: object;
+declare const _default: unknown;
+export default _default;

@@ -1,0 +1,15 @@
+export function checkPermission(...args: unknown[]): unknown;
+export function createTeam(...args: unknown[]): unknown;
+export function inviteUser(...args: unknown[]): unknown;
+export function acceptInvite(...args: unknown[]): unknown;
+export function removeUser(...args: unknown[]): unknown;
+export function updateRole(...args: unknown[]): unknown;
+export function listTeamMembers(...args: unknown[]): unknown;
+export function logActivity(...args: unknown[]): unknown;
+export function getActivityLog(...args: unknown[]): unknown;
+export function createUser(...args: unknown[]): unknown;
+export function getUser(...args: unknown[]): unknown;
+export function getUserTeams(...args: unknown[]): unknown;
+export function getUserRole(...args: unknown[]): unknown;
+declare const _default: unknown;
+export default _default;

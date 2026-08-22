@@ -1,0 +1,15 @@
+export const CONFIG_DIR: object;
+export const CONFIG_FILE: object;
+export function loadConfig(...args: unknown[]): unknown;
+export function saveConfig(...args: unknown[]): unknown;
+export function formatNumber(...args: unknown[]): unknown;
+export function createHttpScraper(...args: unknown[]): unknown;
+export function assertNotEmpty(...args: unknown[]): unknown;
+export const AUTH_HINT: unknown;
+export function smartOutput(...args: unknown[]): unknown;
+export function parseCliPositiveInt(...args: unknown[]): unknown;
+export function parseCliNonNegativeInt(...args: unknown[]): unknown;
+export function printCliError(...args: unknown[]): unknown;
+export function disconnectPrisma(...args: unknown[]): unknown;
+declare const _default: unknown;
+export default _default;

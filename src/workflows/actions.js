@@ -10,13 +10,36 @@
  * @license MIT
  */
 
-import scrapers from '../scrapers/index.js';
+import _scrapers from '../scrapers/index.js';
 
 /**
  * @typedef {import('../types/xactions.js').WorkflowAction} WorkflowAction
  * @typedef {import('../types/xactions.js').WorkflowContext} WorkflowContext
  * @typedef {import('../types/xactions.js').WorkflowStep} WorkflowStep
+ * @typedef {import('puppeteer').Browser} Browser
+ * @typedef {import('puppeteer').Page} Page
+ * @typedef {Object} Scrapers
+ * @property {() => Promise<Browser>} createBrowser
+ * @property {(browser: Browser, options?: Record<string, unknown>) => Promise<Page>} createPage
+ * @property {(page: Page, authToken: string) => Promise<void>} loginWithCookie
+ * @property {(page: Page, username: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>>} scrapeProfile
+ * @property {(page: Page, username: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>[]>} scrapeFollowers
+ * @property {(page: Page, username: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>[]>} scrapeFollowing
+ * @property {(page: Page, username: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>[]>} scrapeTweets
+ * @property {(page: Page, query: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>[]>} searchTweets
+ * @property {(page: Page, hashtag: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>[]>} scrapeHashtag
+ * @property {(page: Page, options?: Record<string, unknown>) => Promise<Record<string, unknown>[]>} scrapeTrending
+ * @property {(page: Page, url: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>>} scrapeThread
+ * @property {(page: Page, username: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>[]>} scrapeMedia
+ * @property {(page: Page, options?: Record<string, unknown>) => Promise<Record<string, unknown>[]>} scrapeBookmarks
+ * @property {(page: Page, options?: Record<string, unknown>) => Promise<Record<string, unknown>[]>} scrapeNotifications
+ * @property {(page: Page, url: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>[]>} scrapeListMembers
+ * @property {(page: Page, url: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>[]>} scrapeLikes
+ * @property {(data: unknown, filepath: string) => Promise<void>} exportToJSON
+ * @property {(data: Record<string, unknown>[], filepath: string) => Promise<void>} exportToCSV
  */
+/** @type {Scrapers} */
+const scrapers = /** @type {Scrapers} */ (/** @type {unknown} */ (_scrapers));
 
 // ============================================================================
 // Browser Pool (shared across action executions)

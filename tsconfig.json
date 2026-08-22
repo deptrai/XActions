@@ -29,6 +29,7 @@
     "src/index.js",
     "src/algorithmBuilder.js",
     "src/workflows/**/*.js",
+    "src/mcp/**/*.js",
     "src/**/*.d.ts",
     "api/lib/prisma.js",
     "api/services/facebookAutomation.js",
@@ -38,7 +39,9 @@
     "api/services/**/*.js",
     "api/routes/**/*.js",
     "api/openapi.js",
-    "api/realtime/socketHandler.js"
+    "api/realtime/socketHandler.js",
+    "api/server.js",
+    "api/serverless.js"
   ],
-  "exclude": ["node_modules", "dist", "archive", "api/routes/ai"]
+  "exclude": ["node_modules", "dist", "archive", "api/routes/ai/**/*.js"]
 }

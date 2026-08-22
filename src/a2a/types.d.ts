@@ -1,0 +1,18 @@
+export const TASK_STATES: object;
+export const VALID_TRANSITIONS: object;
+export const MESSAGE_ROLES: object;
+export const PART_TYPES: object;
+export const ERROR_CODES: object;
+export function createAgentCard(...args: unknown[]): unknown;
+export function createTask(...args: unknown[]): unknown;
+export function createMessage(...args: unknown[]): unknown;
+export function createTextPart(...args: unknown[]): unknown;
+export function createDataPart(...args: unknown[]): unknown;
+export function createFilePart(...args: unknown[]): unknown;
+export function validateAgentCard(...args: unknown[]): unknown;
+export function validateTask(...args: unknown[]): unknown;
+export function isValidTransition(...args: unknown[]): unknown;
+export function jsonRpcSuccess(...args: unknown[]): unknown;
+export function jsonRpcError(...args: unknown[]): unknown;
+declare const _default: unknown;
+export default _default;

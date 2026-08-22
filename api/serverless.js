@@ -30,7 +30,7 @@ app.use(helmet({ contentSecurityPolicy: false }));
 
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://xactions.app', 'https://x-actions.vercel.app', process.env.FRONTEND_URL].filter(Boolean)
+    ? /** @type {string[]} */ (['https://xactions.app', 'https://x-actions.vercel.app', process.env.FRONTEND_URL].filter((o) => typeof o === 'string'))
     : true,
   credentials: true
 }));
@@ -73,6 +73,10 @@ const USDC_ADDRESSES = {
 /**
  * Inline x402 payment gate — returns 402 for /api/ai/* paid routes
  * without requiring the full @x402/express SDK.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
  */
 function x402Gate(req, res, next) {
   const isAiPath = req.path.startsWith('/api/ai/');
@@ -102,7 +106,7 @@ function x402Gate(req, res, next) {
 
   const url = `https://xactions.app${req.path}`;
   const method = req.method;
-  const asset = USDC_ADDRESSES[NETWORK] || USDC_ADDRESSES['eip155:8453'];
+  const asset = /** @type {Record<string, string>} */ (USDC_ADDRESSES)[NETWORK] || USDC_ADDRESSES['eip155:8453'];
 
   const payload = {
     x402Version: 2,
@@ -136,7 +140,7 @@ function x402Gate(req, res, next) {
 }
 
 // AI API — free info endpoints
-app.get('/api/ai/health', (req, res) => {
+app.get('/api/ai/health', /** @type {import('express').RequestHandler} */ ((req, res) => {
   res.json({
     service: 'XActions AI API',
     status: 'operational',
@@ -148,22 +152,22 @@ app.get('/api/ai/health', (req, res) => {
       payTo: PAY_TO_ADDRESS,
     },
   });
-});
+}));
 
-app.get('/api/ai/pricing', (req, res) => {
+app.get('/api/ai/pricing', /** @type {import('express').RequestHandler} */ ((req, res) => {
   res.json({ pricing: AI_OPERATION_PRICES });
-});
+}));
 
 // x402 payment gate — intercepts unpaid POST requests to /api/ai/*
 app.use(x402Gate);
 
 // AI API — catch-all after x402 gate (payment verified, execution on Railway)
-app.use('/api/ai', (req, res) => {
+app.use('/api/ai', /** @type {import('express').RequestHandler} */ ((req, res) => {
   res.status(503).json({
     error: 'AI execution requires Railway deployment',
     message: 'Payment accepted. Connect to the Railway API for execution.',
   });
-});
+}));
 
 // Auth routes
 app.use('/api/auth/login', authLimiter);
@@ -183,8 +187,8 @@ app.use('/api/video', videoRoutes);
 app.use('/api/unfollowers', unfollowersRoutes);
 
 // 404 for unmatched API routes
-app.use('/api', (req, res) => {
+app.use('/api', /** @type {import('express').RequestHandler} */ ((req, res) => {
   res.status(404).json({ error: 'Route not found' });
-});
+}));
 
 export default app;

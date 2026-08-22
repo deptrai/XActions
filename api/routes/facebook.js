@@ -4,6 +4,15 @@ import prisma from '../lib/prisma.js';
 /**
  * @typedef {import('@prisma/client').User} User
  */
+/** @typedef {import('puppeteer').Page} Page */
+/** @typedef {import('puppeteer').Browser} Browser */
+/**
+ * @typedef {Object} MessengerCampaignDeps
+ * @property {(options?: FacebookOptions) => Promise<Browser>} createBrowser
+ * @property {(browser: Browser, options?: FacebookOptions) => Promise<Page>} createPage
+ * @property {(page: Page, cookies: FacebookLoginCookieOptions, options?: FacebookOptions) => Promise<Page | void>} loginWithCookie
+ * @property {(page: Page | null, campaign: { postUrl: string, recipients: string[], content?: string }, options?: FacebookOptions) => Promise<Record<string, unknown>>} messengerShareCampaign
+ */
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { resolveAccountCookie } from './facebookAccounts.js';
@@ -19,6 +28,9 @@ const C_USER_UID_RE = /^\d{10,20}$/;
  * Returns an error string if c_user/xs are provided and malformed, null if OK or not provided.
  * c_user must be a numeric Facebook UID (10-20 digits) and xs must be non-empty.
  * Cookie values are never logged (NFR3).
+ *
+ * @param {Record<string, unknown>} authCookie
+ * @returns {string|null}
  */
 function validateRawCookie(authCookie) {
   const cUser = String(authCookie?.c_user ?? '').trim();
@@ -39,16 +51,20 @@ function validateRawCookie(authCookie) {
  * (authCookie.accountId / accountIds[]) OR a raw session cookie ({ c_user, xs }).
  * Returns an error string if neither is present, null if OK.
  * Cookie values are never logged (NFR3).
+ *
+ * @param {Record<string, unknown>} body
+ * @returns {string|null}
  */
 function requireFacebookCookie(body) {
-  const { authCookie, accountIds } = body ?? {};
+  const authCookie = /** @type {Record<string, unknown> | undefined} */ (body.authCookie);
+  const accountIds = /** @type {unknown[] | undefined} */ (body.accountIds);
   // Stored-account path (Story 5.5 D1): accountId is an opaque id, resolved + decrypted server-side.
-  if (authCookie?.accountId || (Array.isArray(accountIds) && accountIds.length > 0)) {
+  if (authCookie?.accountId || (Array.isArray(accountIds) && (accountIds ?? []).length > 0)) {
     return null;
   }
   // Raw-cookie path. Coerce to string first — c_user is a numeric Facebook UID and may arrive as a
   // JSON number, which would crash on .trim() instead of giving a clean 400.
-  const cookieError = validateRawCookie(authCookie);
+  const cookieError = validateRawCookie(authCookie ?? {});
   if (cookieError) return cookieError;
   const cUser = String(authCookie?.c_user ?? '').trim();
   const xs = String(authCookie?.xs ?? '').trim();
@@ -62,33 +78,41 @@ function requireFacebookCookie(body) {
  * Resolve the set of accounts a messenger-share run executes under (Story 5.5 D1+D2).
  * Accepts accountIds[] (multi), authCookie.accountId (single stored), or raw authCookie.
  * Stored accounts are decrypted server-side — raw cookie never required from the client.
- * @returns {Promise<Array<{label: string, cookie: {c_user, xs}}>>}
+ *
+ * @param {string} userId
+ * @param {Record<string, unknown>} body
+ * @returns {Promise<Array<{label: string, cookie: FacebookLoginCookieOptions}>>}
  */
 async function resolveRunAccounts(userId, body) {
-  const { authCookie, accountIds } = body ?? {};
+  const authCookie = /** @type {Record<string, unknown> | undefined} */ (body.authCookie);
+  const accountIds = /** @type {unknown[] | undefined} */ (body.accountIds);
   if (Array.isArray(accountIds) && accountIds.length > 0) {
     const out = [];
-    for (const aid of accountIds) {
-      out.push({ label: String(aid), cookie: await resolveAccountCookie(userId, aid) });
+    for (const rawAid of accountIds) {
+      const aid = /** @type {string} */ (rawAid);
+      out.push({ label: aid, cookie: await resolveAccountCookie(userId, aid) });
     }
     return out;
   }
   if (authCookie?.accountId) {
-    return [{ label: String(authCookie.accountId), cookie: await resolveAccountCookie(userId, authCookie.accountId) }];
+    const accountId = /** @type {string} */ (authCookie.accountId);
+    return [{ label: accountId, cookie: await resolveAccountCookie(userId, accountId) }];
   }
-  return [{ label: 'raw', cookie: { c_user: authCookie.c_user, xs: authCookie.xs } }];
+  return [{ label: 'raw', cookie: /** @type {FacebookLoginCookieOptions} */ ({ c_user: String(authCookie?.c_user), xs: String(authCookie?.xs) }) }];
 }
 
 /**
  * Build default browserOptions from production environment variables.
  * Allows operators to set a Facebook scraping proxy without sending it in every request.
  * Request-level browserOptions override these defaults.
- * @returns {Object|null}
+ *
+ * @returns {Record<string, unknown> | null}
  */
 function defaultBrowserOptionsFromEnv() {
   const proxy = process.env.FACEBOOK_PROXY?.trim();
   if (!proxy) return null;
 
+  /** @type {Record<string, unknown>} */
   const opts = { proxy };
 
   const username = process.env.FACEBOOK_PROXY_AUTH_USERNAME?.trim();
@@ -122,35 +146,40 @@ function defaultBrowserOptionsFromEnv() {
  *   4. Auto-pick the most recently verified active stored account
  *
  * Cookie values are decrypted server-side and never logged (NFR3).
- * @returns {Promise<{label: string, cookie: Object}>}
+ *
+ * @param {string} userId
+ * @param {Record<string, unknown>} authCookie
+ * @param {unknown[]} [accountIds]
+ * @returns {Promise<{label: string, cookie: FacebookLoginCookieOptions}>}
  */
 async function resolveScrapeCookie(userId, authCookie, accountIds) {
-  const rawUser = String(authCookie?.c_user ?? '').trim();
-  const rawXs = String(authCookie?.xs ?? '').trim();
+  const cookie = /** @type {Record<string, unknown>} */ (authCookie);
+  const rawUser = String(cookie.c_user ?? '').trim();
+  const rawXs = String(cookie.xs ?? '').trim();
   if (rawUser || rawXs) {
     if (!rawUser || !/^\d{10,20}$/.test(rawUser)) {
-      const err = new Error('authCookie.c_user must be a numeric Facebook UID (10-20 digits).');
+      const err = /** @type {Error & Record<string, unknown>} */ (new Error('authCookie.c_user must be a numeric Facebook UID (10-20 digits).'));
       err.code = 'INVALID_RAW_COOKIE';
       throw err;
     }
     if (!rawXs) {
-      const err = new Error('authCookie.xs is required when c_user is provided.');
+      const err = /** @type {Error & Record<string, unknown>} */ (new Error('authCookie.xs is required when c_user is provided.'));
       err.code = 'INVALID_RAW_COOKIE';
       throw err;
     }
-    return { label: 'raw', cookie: authCookie };
+    return { label: 'raw', cookie: /** @type {FacebookLoginCookieOptions} */ (cookie) };
   }
 
-  const accountId = authCookie?.accountId;
+  const accountId = /** @type {string | undefined} */ (cookie.accountId);
   if (accountId && accountId !== 'auto') {
     const resolved = await resolveFacebookAuth({ accountId }, userId);
-    return { label: String(accountId), cookie: { c_user: resolved.c_user, xs: resolved.xs } };
+    return { label: accountId, cookie: { c_user: resolved.c_user, xs: resolved.xs } };
   }
 
   if (Array.isArray(accountIds) && accountIds.length > 0) {
-    const first = accountIds[0];
+    const first = /** @type {string} */ (accountIds[0]);
     const resolved = await resolveFacebookAuth({ accountId: first }, userId);
-    return { label: String(first), cookie: { c_user: resolved.c_user, xs: resolved.xs } };
+    return { label: first, cookie: { c_user: resolved.c_user, xs: resolved.xs } };
   }
 
   // Auto-pick a live, recently-verified stored account.
@@ -160,15 +189,15 @@ async function resolveScrapeCookie(userId, authCookie, accountIds) {
     orderBy: { lastCheckAt: 'desc' },
   });
   if (!activeHealth) {
-    const err = new Error(
+    const err = /** @type {Error & Record<string, unknown>} */ (new Error(
       'No active Facebook account found. Provide authCookie { c_user, xs }, authCookie.accountId, accountIds[], or add a stored account and run a health check.',
-    );
+    ));
     err.code = 'NO_ACTIVE_ACCOUNT';
     throw err;
   }
   return { label: activeHealth.account.label, cookie: await (async () => {
     const resolved = await resolveFacebookAuth({ accountId: activeHealth.account.id }, userId);
-    return { c_user: resolved.c_user, xs: resolved.xs };
+    return /** @type {FacebookLoginCookieOptions} */ ({ c_user: resolved.c_user, xs: resolved.xs });
   })() };
 }
 
@@ -176,20 +205,34 @@ async function resolveScrapeCookie(userId, authCookie, accountIds) {
  * Execute a messenger-share campaign across N accounts and M links (Story 5.5 D2).
  * Recipients are distributed round-robin across accounts; each account opens its own
  * browser session and runs messengerShareCampaign per link (FIFO). Dry-run launches
- * no browser. Per-account/​per-link results are aggregated.
+ * no browser. Per-account/per-link results are aggregated.
+ *
+ * @param {Object} params
+ * @param {Array<{label: string, cookie: FacebookLoginCookieOptions}>} params.accounts
+ * @param {string[]} params.links
+ * @param {string[]} params.recipients
+ * @param {string} params.content
+ * @param {boolean} params.dryRun
+ * @param {number | string | undefined} [params.maxBatch]
+ * @param {(min?: number, max?: number) => Promise<void>} [params.delay]
+ * @param {MessengerCampaignDeps} params.deps
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function runMessengerCampaign({ accounts, links, recipients, content, dryRun, maxBatch, delay, deps }) {
   // Round-robin recipient distribution: recipient i → accounts[i % N]
+  /** @type {string[][]} */
   const buckets = accounts.map(() => []);
-  recipients.forEach((r, i) => buckets[i % accounts.length].push(r));
+  recipients.forEach((/** @type {string} */ r, /** @type {number} */ i) => buckets[i % accounts.length].push(r));
 
   const { createBrowser, createPage, loginWithCookie, messengerShareCampaign } = deps;
+  /** @type {Record<string, unknown>[]} */
   const perRun = [];
 
   for (let a = 0; a < accounts.length; a++) {
     const mine = buckets[a];
     if (mine.length === 0) continue; // more accounts than recipients — skip idle account
 
+    /** @type {FacebookOptions} */
     const campaignOpts = { dryRun, delay, ...(maxBatch != null && { maxBatch: Number(maxBatch) }) };
 
     if (dryRun) {
@@ -200,6 +243,7 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
       continue;
     }
 
+    /** @type {Browser | undefined} */
     let browser;
     try {
       browser = await createBrowser({ headless: true, userDataDir: buildUserDataDir(accounts[a].cookie.c_user, dryRun) });
@@ -241,11 +285,22 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
  *   browserOptions?: { proxy, proxyAuth, proxyLocation, headless, skipWarmup }
  * }
  */
-router.post('/scrape', async (req, res) => {
+router.post('/scrape', async (/** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res) => {
   const reqUser = /** @type {User} */ (req.user);
 
   try {
-    const { action, url, query, type, parallel, location, limit, includeReplies, authCookie, browserOptions } = req.body ?? {};
+    const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
+    const action = /** @type {string | undefined} */ (body.action);
+    const url = /** @type {string | undefined} */ (body.url);
+    const query = /** @type {string | undefined} */ (body.query);
+    const type = /** @type {string | undefined} */ (body.type);
+    const parallel = /** @type {boolean | undefined} */ (body.parallel);
+    const location = /** @type {string | undefined} */ (body.location);
+    const limit = /** @type {number | string | undefined} */ (body.limit);
+    const includeReplies = /** @type {boolean | undefined} */ (body.includeReplies);
+    const authCookie = /** @type {Record<string, unknown> | undefined} */ (body.authCookie);
+    const browserOptions = /** @type {Record<string, unknown> | undefined} */ (body.browserOptions);
+    const accountIds = /** @type {unknown[] | undefined} */ (body.accountIds);
 
     const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace', 'post_comments', 'group_posts', 'group_comments', 'group_search'];
     if (!action || !VALID_ACTIONS.includes(action)) {
@@ -268,7 +323,7 @@ router.post('/scrape', async (req, res) => {
     }
 
     // group_search requires a facebook.com/groups/ URL — validate before browser launch.
-    if (action === 'group_search' && !/facebook\.com\/groups\//i.test(url)) {
+    if (action === 'group_search' && !/facebook\.com\/groups\//i.test(/** @type {string} */ (url))) {
       return res.status(400).json({ ok: false, error: 'group_search requires a facebook.com/groups/ URL' });
     }
 
@@ -321,9 +376,10 @@ router.post('/scrape', async (req, res) => {
     // Resolve the session: raw cookie, stored accountId/accountIds, or auto-pick a live one.
     let resolved;
     try {
-      resolved = await resolveScrapeCookie(reqUser.id, authCookie, req.body?.accountIds);
+      resolved = await resolveScrapeCookie(reqUser.id, authCookie ?? {}, accountIds);
     } catch (e) {
-      const code = e?.code;
+      const err = /** @type {Error & Record<string, unknown>} */ (e);
+      const code = err.code;
       if (code === 'INVALID_RAW_COOKIE') {
         return res.status(400).json({ ok: false, error: (e instanceof Error ? e.message : String(e)) });
       }
@@ -341,15 +397,17 @@ router.post('/scrape', async (req, res) => {
 
     // Merge request browserOptions with production env defaults (proxy, geo).
     const envBrowserOptions = defaultBrowserOptionsFromEnv() || {};
+    const requestBrowserOptions = /** @type {Record<string, unknown>} */ (browserOptions || {});
+    const proxyAuth = /** @type {Record<string, unknown>} */ ({ ...(/** @type {Record<string, unknown>} */ (envBrowserOptions.proxyAuth || {})), ...(/** @type {Record<string, unknown>} */ (requestBrowserOptions.proxyAuth || {})) });
+    const proxyLocation = /** @type {Record<string, unknown>} */ ({ ...(/** @type {Record<string, unknown>} */ (envBrowserOptions.proxyLocation || {})), ...(/** @type {Record<string, unknown>} */ (requestBrowserOptions.proxyLocation || {})) });
+
+    /** @type {Record<string, unknown>} */
     const mergedBrowserOptions = {
       ...envBrowserOptions,
-      ...browserOptions,
-      proxyAuth: { ...(envBrowserOptions.proxyAuth || {}), ...(browserOptions?.proxyAuth || {}) },
-      proxyLocation: { ...(envBrowserOptions.proxyLocation || {}), ...(browserOptions?.proxyLocation || {}) },
+      ...requestBrowserOptions,
     };
-    // Remove empty nested objects so downstream checks stay simple.
-    if (!Object.keys(mergedBrowserOptions.proxyAuth).length) delete mergedBrowserOptions.proxyAuth;
-    if (!Object.keys(mergedBrowserOptions.proxyLocation).length) delete mergedBrowserOptions.proxyLocation;
+    if (Object.keys(proxyAuth).length) mergedBrowserOptions.proxyAuth = proxyAuth;
+    if (Object.keys(proxyLocation).length) mergedBrowserOptions.proxyLocation = proxyLocation;
 
     // Dynamic import — avoids loading Puppeteer until needed
     const { run: facebookScrapeRun } = await import('../services/facebookScrape.js');
@@ -367,17 +425,17 @@ router.post('/scrape', async (req, res) => {
       ...options,
       ...(action === 'search'
         ? {
-            query: query.trim(),
+            query: /** @type {string} */ (query).trim(),
             ...(type !== undefined && type !== null && { type }),
             ...(parallel !== undefined && parallel !== null && { parallel }),
             ...(location !== undefined && location !== null && { location: location.trim() }),
             ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
           }
         : action === 'marketplace'
-          ? { query: query.trim() }
+          ? { query: /** @type {string} */ (query).trim() }
           : action === 'group_search'
-            ? { url: url.trim(), query: query.trim() }
-            : { url: url.trim() }),
+            ? { url: /** @type {string} */ (url).trim(), query: /** @type {string} */ (query).trim() }
+            : { url: /** @type {string} */ (url).trim() }),
       ...(limit !== undefined && limit !== null ? { limit: Number(limit) } : {}),
       ...(['post_comments', 'group_comments'].includes(action) && includeReplies !== undefined && includeReplies !== null
         ? { includeReplies }
@@ -395,7 +453,7 @@ router.post('/scrape', async (req, res) => {
     if (msg.includes('cookie authentication failed')) {
       return res.status(400).json({ ok: false, error: 'Facebook session expired or invalid cookies.', sessionExpired: true });
     }
-    if (msg.includes('security check') || msg.includes('checkpoint') || error?.code === 'FB_CHECKPOINT') {
+    if (msg.includes('security check') || msg.includes('checkpoint') || (/** @type {Error & Record<string, unknown>} */ (error)).code === 'FB_CHECKPOINT') {
       return res.status(400).json({ ok: false, error: 'Facebook security check / CAPTCHA detected. The account needs manual verification or a proxy in the cookie\'s home country.', checkpoint: true });
     }
     res.status(500).json({ ok: false, error: 'Facebook scrape failed. See server logs.' });
@@ -415,12 +473,23 @@ router.post('/scrape', async (req, res) => {
  *   maxBatch?: number
  * }
  */
-router.post('/automate', async (req, res) => {
+router.post('/automate', async (/** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res) => {
   const reqUser = /** @type {User} */ (req.user);
 
   try {
-    const { action: rawAction, urls = [], text = '', dryRun, authCookie, maxBatch,
-            recipients = [], content = '', postUrl = '', postUrls = [] } = req.body ?? {};
+    const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
+    const rawAction = /** @type {string | undefined} */ (body.action);
+    const urls = /** @type {string[]} */ (body.urls) ?? [];
+    const text = /** @type {string} */ (body.text) ?? '';
+    const dryRun = /** @type {boolean | undefined} */ (body.dryRun);
+    const authCookie = /** @type {FacebookLoginCookieOptions & Record<string, unknown>} */ (body.authCookie);
+    const maxBatch = /** @type {number | string | undefined} */ (body.maxBatch);
+    const recipients = /** @type {string[]} */ (body.recipients) ?? [];
+    const content = /** @type {string} */ (body.content) ?? '';
+    const postUrl = /** @type {string} */ (body.postUrl) ?? '';
+    const postUrls = /** @type {string[]} */ (body.postUrls) ?? [];
+    const groupUrls = /** @type {string[]} */ (body.groupUrls) ?? [];
+    const targets = /** @type {unknown[]} */ (body.targets) ?? [];
 
     // Hard auth guard — must come before any browser launch
     const cookieError = requireFacebookCookie(req.body);
@@ -484,19 +553,17 @@ router.post('/automate', async (req, res) => {
       if (!String(text ?? '').trim()) {
         return res.status(400).json({ ok: false, error: 'action "schedule" requires non-empty text (content)' });
       }
-      const { scheduledAt } = req.body ?? {};
-      if (!scheduledAt || isNaN(new Date(scheduledAt).getTime())) {
+      const scheduledAt = /** @type {string | undefined} */ (body.scheduledAt);
+      if (!scheduledAt || isNaN(new Date(/** @type {string | number | Date} */ (scheduledAt)).getTime())) {
         return res.status(400).json({ ok: false, error: 'action "schedule" requires a valid scheduledAt (ISO-8601)' });
       }
     }
     if (action === 'join-groups') {
-      const { groupUrls = [] } = req.body ?? {};
       if (!Array.isArray(groupUrls) || groupUrls.length === 0) {
         return res.status(400).json({ ok: false, error: 'action "join-groups" requires at least one URL in groupUrls' });
       }
     }
     if (action === 'batch-post-groups') {
-      const { groupUrls = [] } = req.body ?? {};
       if (!Array.isArray(groupUrls) || groupUrls.length === 0) {
         return res.status(400).json({ ok: false, error: 'action "batch-post-groups" requires at least one URL in groupUrls' });
       }
@@ -505,13 +572,12 @@ router.post('/automate', async (req, res) => {
       }
     }
     if (action === 'send-friend-requests') {
-      const { targets = [] } = req.body ?? {};
       if (!Array.isArray(targets) || targets.length === 0) {
         return res.status(400).json({ ok: false, error: 'action "send-friend-requests" requires at least one URL in targets' });
       }
     }
     if (action === 'warmup-scroll-feed') {
-      const { targetUrl } = req.body ?? {};
+      const targetUrl = /** @type {string | undefined} */ (body.targetUrl);
       if (!targetUrl || typeof targetUrl !== 'string' || !targetUrl.trim()) {
         return res.status(400).json({ ok: false, error: 'action "warmup-scroll-feed" requires a non-empty targetUrl' });
       }
@@ -522,10 +588,10 @@ router.post('/automate', async (req, res) => {
     const resolvedDryRun = dryRun === false ? false : true;
 
     // headless mode: default true (invisible browser). Set false to show browser window.
-    const isHeadless = req.body?.headless !== false;
+    const isHeadless = body.headless !== false;
 
     // Per-user Socket.IO room — never broadcast operation events to all clients (NFR3 / privacy)
-    const emit = (payload) => global.io?.to(`user:${reqUser.id}`).emit('facebook:operation', payload);
+    const emit = (/** @type {Record<string, unknown>} */ payload) => global.io?.to(`user:${reqUser.id}`).emit('facebook:operation', payload);
 
     // ========================================================================
     // messenger-share — dedicated path (Story 5.5 D1+D2): multi-account
@@ -536,7 +602,7 @@ router.post('/automate', async (req, res) => {
     if (action === 'messenger-share') {
       // ADR-012 delay floor: 5–15s jitter for messenger; no-op under dry-run.
       const messengerDelay = resolvedDryRun
-        ? () => {}
+        ? () => Promise.resolve()
         : (min = 5000, max = 15000) => new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
 
       let accounts;
@@ -544,17 +610,19 @@ router.post('/automate', async (req, res) => {
         accounts = await resolveRunAccounts(reqUser.id, req.body);
       } catch (e) {
         // accountId not found / decrypt failed — 400, never leak detail (NFR3)
-        const sessionExpired = e?.code === 'ACCOUNT_DECRYPT_FAILED';
-        const msg = e?.code === 'ACCOUNT_NOT_FOUND'
+        const err = /** @type {Error & Record<string, unknown>} */ (e);
+        const sessionExpired = err.code === 'ACCOUNT_DECRYPT_FAILED';
+        const msg = err.code === 'ACCOUNT_NOT_FOUND'
           ? 'Selected Facebook account not found'
           : 'Failed to load the selected Facebook account session';
         return res.status(400).json({ ok: false, error: msg, sessionExpired });
       }
 
       const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
-      const { messengerShareCampaign } = await import('../../src/scrapers/facebook/messengerShare.js');
+      const messengerShareModule = /** @type {{ messengerShareCampaign: MessengerCampaignDeps['messengerShareCampaign'] }} */ (await import('../../src/scrapers/facebook/messengerShare.js'));
+      const { messengerShareCampaign } = messengerShareModule;
       // Wrap createBrowser to pass headless option
-      const createBrowserWithHeadless = (opts) => createBrowser({ ...opts, headless: isHeadless });
+      const createBrowserWithHeadless = (/** @type {FacebookOptions | undefined} */ opts) => createBrowser({ ...opts, headless: isHeadless });
       const runArgs = {
         accounts, links: allLinks, recipients, content,
         dryRun: resolvedDryRun, maxBatch, delay: messengerDelay,
@@ -605,7 +673,14 @@ router.post('/automate', async (req, res) => {
     // share-link-uid — share post via direct Messenger URL (UID-based)
     // ========================================================================
     if (action === 'share-link-uid') {
-      const { postUrl = '', postUrls = [], content = '', message = '', recipientUid = '', recipientUids = [], headless: headlessParam } = req.body ?? {};
+      const shareBody = /** @type {Record<string, unknown>} */ (req.body ?? {});
+      const postUrl = /** @type {string} */ (shareBody.postUrl) ?? '';
+      const postUrls = /** @type {string[]} */ (shareBody.postUrls) ?? [];
+      const content = /** @type {string} */ (shareBody.content) ?? '';
+      const message = /** @type {string} */ (shareBody.message) ?? '';
+      const recipientUid = /** @type {string} */ (shareBody.recipientUid) ?? '';
+      const recipientUids = /** @type {string[]} */ (shareBody.recipientUids) ?? [];
+      const headlessParam = /** @type {boolean | undefined} */ (shareBody.headless);
       const url = postUrl || postUrls[0] || '';
       if (!url.trim()) {
         return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires postUrl or postUrls[]' });
@@ -641,7 +716,8 @@ router.post('/automate', async (req, res) => {
       }
 
       const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
-      const { shareLinkByUid } = await import('../../src/scrapers/facebook/shareLinkByUid.js');
+      const shareLinkModule = /** @type {{ shareLinkByUid: (page: Page, target: { postUrl: string, recipientUid: string, message?: string }, options?: FacebookOptions) => Promise<Record<string, unknown>> }} */ (await import('../../src/scrapers/facebook/shareLinkByUid.js'));
+      const { shareLinkByUid } = shareLinkModule;
 
       const browser = await createBrowser({ headless: isHeadless, userDataDir: buildUserDataDir(authCookie.c_user) });
       const page = await createPage(browser);
@@ -649,13 +725,14 @@ router.post('/automate', async (req, res) => {
         c_user: authCookie.c_user,
         xs: authCookie.xs,
         sb: authCookie.sb,
-        datar: authCookie.datatar || authCookie.datar,
+        datar: authCookie.datatar ? String(authCookie.datatar) : authCookie.datar,
         fr: authCookie.fr,
         fbl_st: authCookie.fbl_st,
         locale: authCookie.locale,
         headless: isHeadless,
       });
 
+      /** @type {Record<string, unknown>[]} */
       const results = [];
       try {
         for (const uid of allRecipients) {
@@ -709,29 +786,29 @@ router.post('/automate', async (req, res) => {
       ...(maxBatch != null && { maxBatch: Number(maxBatch) }),
     };
 
-    const dispatch = async (page) => {
+    const dispatch = /** @type {(page: Page) => Promise<Record<string, unknown>>} */ (async (page) => {
       if (action === 'like') return await likeFacebookPosts(page, urls, options);
       if (action === 'comment') return await commentOnFacebookPosts(page, urls, text, options);
       if (action === 'post') return await createFacebookPost(page, text, options);
       if (action === 'share') return await shareFacebookPosts(page, urls, options);
       if (action === 'schedule') {
-        const { scheduledAt, facebookAccountId } = req.body ?? {};
+        const scheduledAt = /** @type {string | undefined} */ (body.scheduledAt);
+        const facebookAccountId = /** @type {string | undefined} */ (body.facebookAccountId);
         return await scheduleFacebookPost(page, { content: text, scheduledAt, facebookAccountId }, { ...options, userId: reqUser.id });
       }
       if (action === 'join-groups') {
-        const { groupUrls = [], keyword, limit } = req.body ?? {};
+        const { keyword, limit } = body;
         return await joinFacebookGroups(page, { groupUrls, keyword, limit }, options);
       }
       if (action === 'batch-post-groups') {
-        const { groupUrls = [] } = req.body ?? {};
         return await postToFacebookGroups(page, { groupUrls, content: text }, options);
       }
       if (action === 'send-friend-requests') {
-        const { targets = [] } = req.body ?? {};
         return await sendFriendRequests(page, { mode: 'uid_list', targets }, options);
       }
       if (action === 'cancel-friend-requests') {
-        const { olderThanDays, limit = 10 } = req.body ?? {};
+        const olderThanDays = /** @type {number | string | undefined} */ (body.olderThanDays);
+        const limit = /** @type {number | string | undefined} */ (body.limit) ?? 10;
         return await cancelPendingFriendRequests(page, {
           ...options,
           ...(olderThanDays != null && { olderThanDays: Number(olderThanDays) }),
@@ -739,29 +816,32 @@ router.post('/automate', async (req, res) => {
         });
       }
       if (action === 'warmup-account') {
-        const { durationSeconds, allowReactions, reactProbability } = req.body ?? {};
+        const durationSeconds = /** @type {number | string | undefined} */ (body.durationSeconds);
+        const allowReactions = /** @type {boolean | undefined} */ (body.allowReactions);
+        const reactProbability = /** @type {number | string | undefined} */ (body.reactProbability);
         return await warmupAccount(page, {
           ...options,
           ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
-          ...(allowReactions != null && { allowReactions }),
+          ...(allowReactions !== undefined && { allowReactions }),
           ...(reactProbability != null && { reactProbability: Number(reactProbability) }),
         });
       }
       if (action === 'warmup-scroll-feed') {
-        const { targetUrl, durationSeconds } = req.body ?? {};
-        return await warmupScrollFeed(page, targetUrl, {
+        const targetUrl = /** @type {string | undefined} */ (body.targetUrl);
+        const durationSeconds = /** @type {number | string | undefined} */ (body.durationSeconds);
+        return await warmupScrollFeed(page, /** @type {string} */ (targetUrl), {
           ...options,
           ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
         });
       }
       return await createFacebookPost(page, text, options);
-    };
+    });
 
     // Dry-run never touches the DOM (runGuardedBatch skips actionFn) — no browser,
     // no real Facebook login, no Operation record. Avoids account risk for a preview.
     // Exception: cancel-friend-requests needs page access even in dryRun to collect pending requests.
     if (resolvedDryRun && action !== 'cancel-friend-requests') {
-      const result = await dispatch(null);
+      const result = await dispatch(/** @type {Page} */ (/** @type {unknown} */ (null)));
       return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
     }
 
@@ -785,19 +865,23 @@ router.post('/automate', async (req, res) => {
     emit({ event: 'start', operationId: operation.id, userId: reqUser.id, type: operation.type, status: 'running' });
 
     const envBrowserOptions = defaultBrowserOptionsFromEnv() || {};
-    const requestBrowserOptions = req.body?.browserOptions || {};
+    const requestBrowserOptions = /** @type {Record<string, unknown>} */ (body.browserOptions || {});
+    const proxyAuth = /** @type {Record<string, unknown>} */ ({ ...(/** @type {Record<string, unknown>} */ (envBrowserOptions.proxyAuth || {})), ...(/** @type {Record<string, unknown>} */ (requestBrowserOptions.proxyAuth || {})) });
+    const proxyLocation = /** @type {Record<string, unknown>} */ ({ ...(/** @type {Record<string, unknown>} */ (envBrowserOptions.proxyLocation || {})), ...(/** @type {Record<string, unknown>} */ (requestBrowserOptions.proxyLocation || {})) });
+
+    /** @type {Record<string, unknown>} */
     const runBrowserOptions = {
       ...envBrowserOptions,
       ...requestBrowserOptions,
-      proxyAuth: { ...(envBrowserOptions.proxyAuth || {}), ...(requestBrowserOptions.proxyAuth || {}) },
-      proxyLocation: { ...(envBrowserOptions.proxyLocation || {}), ...(requestBrowserOptions.proxyLocation || {}) },
       headless: isHeadless,
       userDataDir: buildUserDataDir(authCookie.c_user),
     };
-    if (!Object.keys(runBrowserOptions.proxyAuth).length) delete runBrowserOptions.proxyAuth;
-    if (!Object.keys(runBrowserOptions.proxyLocation).length) delete runBrowserOptions.proxyLocation;
+    if (Object.keys(proxyAuth).length) runBrowserOptions.proxyAuth = proxyAuth;
+    if (Object.keys(proxyLocation).length) runBrowserOptions.proxyLocation = proxyLocation;
 
+    /** @type {Record<string, unknown>} */
     let result;
+    /** @type {Browser | undefined} */
     let browser;
     try {
       // createBrowser INSIDE try — else a launch failure orphans the Operation as 'running' forever
@@ -808,7 +892,7 @@ router.post('/automate', async (req, res) => {
         c_user: authCookie.c_user,
         xs: authCookie.xs,
         sb: authCookie.sb,
-        datar: authCookie.datatar || authCookie.datar,
+        datar: authCookie.datatar ? String(authCookie.datatar) : authCookie.datar,
         fr: authCookie.fr,
         fbl_st: authCookie.fbl_st,
         locale: authCookie.locale,

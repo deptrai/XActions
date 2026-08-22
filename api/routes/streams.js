@@ -48,7 +48,10 @@ router.post('/', async (req, res) => {
   const reqUser = /** @type {User} */ (req.user);
 
   try {
-    const { type, username, interval } = req.body;
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const type = /** @type {string} */ (body.type);
+    const username = /** @type {string} */ (body.username);
+    const interval = /** @type {number | string | undefined} */ (body.interval);
 
     if (!type || !STREAM_TYPES.includes(type)) {
       return res.status(400).json({
@@ -67,8 +70,8 @@ router.post('/', async (req, res) => {
       type,
       username,
       interval: intervalMs,
-      authToken: req.body.authToken || reqUser?.sessionCookie || undefined,
-      userId: reqUser?.id,
+      authToken: /** @type {string | undefined} */ (body.authToken || reqUser?.sessionCookie || undefined),
+      userId: /** @type {string | undefined} */ (reqUser?.id),
     });
 
     res.status(201).json(stream);
@@ -145,9 +148,10 @@ router.get('/:id', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   try {
-    const updates = {};
-    if (req.body.interval !== undefined) {
-      updates.interval = Math.max(15, Number(req.body.interval)) * 1000;
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const updates = /** @type {Record<string, unknown>} */ ({});
+    if (body.interval !== undefined) {
+      updates.interval = Math.max(15, Number(body.interval)) * 1000;
     }
     const stream = await updateStream(req.params.id, updates);
     res.json(stream);

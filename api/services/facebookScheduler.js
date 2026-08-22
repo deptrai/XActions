@@ -67,10 +67,9 @@ function postFailureReason(result) {
  * @param {unknown} err
  */
 function safeErrorString(err) {
-  const e = /** @type {{ code?: unknown; name?: unknown }} */ (err);
-  // Stryker disable next-line OptionalChaining: err is always an Error object from catch block, never null
-  if (typeof e.code === 'string' && e.code) return e.code;
-  if (typeof e.name === 'string' && e.name && e.name !== 'Error') return e.name;
+  const e = /** @type {{ code?: unknown; name?: unknown } | null | undefined} */ (err);
+  if (e && typeof e.code === 'string' && e.code) return e.code;
+  if (e && typeof e.name === 'string' && e.name && e.name !== 'Error') return e.name;
   return 'execution error';
 }
 

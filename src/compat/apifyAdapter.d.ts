@@ -1,0 +1,11 @@
+export function importApifyDataset(...args: unknown[]): unknown;
+export function exportAsApifyDataset(...args: unknown[]): unknown;
+export function importPhantomResult(...args: unknown[]): unknown;
+export function exportAsPhantomResult(...args: unknown[]): unknown;
+export function exportAsSocialBlade(...args: unknown[]): unknown;
+export function autoDetectCSV(...args: unknown[]): unknown;
+export function importData(...args: unknown[]): unknown;
+export function exportData(...args: unknown[]): unknown;
+export function convertFormat(...args: unknown[]): unknown;
+declare const _default: unknown;
+export default _default;

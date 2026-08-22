@@ -1,0 +1,11 @@
+export const TOOLS: unknown[];
+export function main(...args: unknown[]): unknown;
+export function createMcpServer(...args: unknown[]): unknown;
+export function initializeBackend(...args: unknown[]): unknown;
+export function executeTool(...args: unknown[]): unknown;
+export function executeFacebookAutomateTool(...args: unknown[]): unknown;
+export function executeFacebookEpic4Tool(...args: unknown[]): unknown;
+export function executeFacebookScrapeTool(...args: unknown[]): unknown;
+export function executeFacebookListAccounts(...args: unknown[]): unknown;
+declare const _default: unknown;
+export default _default;

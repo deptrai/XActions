@@ -1,0 +1,12 @@
+export function buildAdjacency(...args: unknown[]): unknown;
+export function findMutualConnections(...args: unknown[]): unknown;
+export function getMutualConnectionsFor(...args: unknown[]): unknown;
+export function findBridgeAccounts(...args: unknown[]): unknown;
+export function detectClusters(...args: unknown[]): unknown;
+export function computeInfluenceScores(...args: unknown[]): unknown;
+export function getInfluenceRanking(...args: unknown[]): unknown;
+export function findGhostFollowers(...args: unknown[]): unknown;
+export function analyzeOrbits(...args: unknown[]): unknown;
+export function analyzeGraph(...args: unknown[]): unknown;
+declare const _default: Record<string, unknown>;
+export default _default;

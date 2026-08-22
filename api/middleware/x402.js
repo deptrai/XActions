@@ -173,16 +173,18 @@ async function onSettleFailureHook(context) {
   const price = String((/** @type {Record<string, unknown>} */ (requirements))?.maxAmountRequired || (/** @type {Record<string, unknown>} */ (requirements))?.price || 'unknown');
   const network = /** @type {string} */ ((/** @type {Record<string, unknown>} */ (requirements))?.network || NETWORK);
   const payerAddress = _getPayerAddress(paymentPayload);
-  const errorMessage = error instanceof Error ? error.message : String(error);
+  const hasMessage = error && typeof error === 'object' && 'message' in error && typeof (/** @type {Record<string, unknown>} */ (error)).message === 'string' && (/** @type {Record<string, unknown>} */ (error)).message;
+  const logMessage = hasMessage ? String((/** @type {Record<string, unknown>} */ (error)).message) : String(error);
+  const notifyMessage = hasMessage ? String((/** @type {Record<string, unknown>} */ (error)).message) : 'Settlement failed';
 
-  console.error(`🚨 x402: Settlement FAILED for ${operation}: ${errorMessage}`);
+  console.error(`🚨 x402: Settlement FAILED for ${operation}: ${logMessage}`);
 
   notifyPaymentFailed({
     price,
     operation,
     payerAddress,
     network,
-  }, errorMessage).catch(() => {});
+  }, notifyMessage).catch(() => {});
 }
 
 /**

@@ -37,14 +37,19 @@ let jobCounter = 0;
 
 router.post('/export', async (req, res) => {
   try {
-    const { username, formats, only, limit, authToken } = req.body;
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const username = /** @type {string} */ (body.username);
+    const formats = /** @type {string[] | undefined} */ (body.formats);
+    const only = /** @type {string[] | undefined} */ (body.only);
+    const limit = /** @type {number | undefined} */ (body.limit);
+    const authToken = /** @type {string | undefined} */ (body.authToken);
 
     if (!username) {
       return res.status(400).json({ error: 'username is required' });
     }
 
     const jobId = `export_${++jobCounter}_${Date.now()}`;
-    const job = {
+    const job = /** @type {Record<string, unknown>} */ ({
       id: jobId,
       type: 'export',
       username: username.replace(/^@/, ''),
@@ -53,22 +58,27 @@ router.post('/export', async (req, res) => {
       result: null,
       error: null,
       createdAt: new Date().toISOString(),
-    };
+    });
     jobs.set(jobId, job);
 
     // Run export in background
     (async () => {
       try {
         job.status = 'running';
-        const scrapers = (await import('../../src/scrapers/index.js')).default || await import('../../src/scrapers/index.js');
+        const {
+          createBrowser,
+          createPage,
+          loginWithCookie,
+          default: scrapers,
+        } = await import('../../src/scrapers/index.js');
         const { exportAccount } = await import('../../src/portability/exporter.js');
 
-        const browser = await scrapers.createBrowser();
-        const page = await scrapers.createPage(browser);
+        const browser = await createBrowser();
+        const page = await createPage(browser);
 
         const cookie = authToken;
         if (cookie) {
-          await scrapers.loginWithCookie(page, cookie);
+          await loginWithCookie(page, cookie);
         }
 
         const summary = await exportAccount({
@@ -78,7 +88,7 @@ router.post('/export', async (req, res) => {
           only,
           limit: limit || 500,
           scrapers,
-          onProgress: (progress) => {
+          onProgress: (/** @type {Record<string, unknown>} */ progress) => {
             job.progress = progress;
           },
         });
@@ -132,7 +142,7 @@ router.get('/export/:id/download', async (req, res) => {
     return res.status(400).json({ error: 'Export not ready for download' });
   }
 
-  const archivePath = path.join(job.result.dir, 'index.html');
+  const archivePath = path.join(/** @type {string} */ (job.result.dir), 'index.html');
   try {
     await fs.access(archivePath);
     res.sendFile(archivePath);
@@ -147,7 +157,12 @@ router.get('/export/:id/download', async (req, res) => {
 
 router.post('/migrate', async (req, res) => {
   try {
-    const { username, platform, dryRun, exportDir, credentials } = req.body;
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const username = /** @type {string} */ (body.username);
+    const platform = /** @type {string} */ (body.platform);
+    const dryRun = /** @type {boolean | undefined} */ (body.dryRun);
+    const exportDir = /** @type {string | undefined} */ (body.exportDir);
+    const credentials = /** @type {Record<string, unknown> | undefined} */ (body.credentials);
 
     if (!username || !platform) {
       return res.status(400).json({ error: 'username and platform are required' });
@@ -195,14 +210,18 @@ router.post('/migrate', async (req, res) => {
 
 router.post('/diff', async (req, res) => {
   try {
-    const { dirA, dirB } = req.body;
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const dirA = /** @type {string} */ (body.dirA);
+    const dirB = /** @type {string} */ (body.dirB);
 
     if (!dirA || !dirB) {
       return res.status(400).json({ error: 'dirA and dirB are required' });
     }
 
     const { diffAndReport } = await import('../../src/portability/differ.js');
-    const { diff, report } = await diffAndReport(dirA, dirB);
+    const { diff, report } = /** @type {{ diff: Record<string, unknown>, report: Record<string, unknown> }} */ (
+      await diffAndReport(dirA, dirB)
+    );
 
     res.json({ summary: diff.summary, diff, report });
   } catch (error) {

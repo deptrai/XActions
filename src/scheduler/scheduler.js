@@ -53,8 +53,13 @@ export class Scheduler extends EventEmitter {
   /**
    * Add a new scheduled job
    */
+  /**
+   * Add a new scheduled job
+   * @param {{ name: string; cron: string; command?: string; action?: string; args?: string[]; enabled?: boolean; maxRetries?: number; timeout?: number }} config
+   */
   addJob(config) {
-    const { name, cron: cronExpr, command, args = [], enabled = true, maxRetries = 2, timeout = 300000 } = config;
+    const command = config.command || config.action;
+    const { name, cron: cronExpr, args = [], enabled = true, maxRetries = 2, timeout = 300000 } = config;
 
     if (!name || !cronExpr || !command) {
       throw new Error('Job requires: name, cron, command');

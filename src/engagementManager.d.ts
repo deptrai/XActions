@@ -1,0 +1,10 @@
+export function likeTweet(...args: unknown[]): unknown;
+export function unlikeTweet(...args: unknown[]): unknown;
+export function replyToTweet(...args: unknown[]): unknown;
+export function bookmarkTweet(...args: unknown[]): unknown;
+export function unbookmarkTweet(...args: unknown[]): unknown;
+export function hideReply(...args: unknown[]): unknown;
+export function autoLikeByKeyword(...args: unknown[]): unknown;
+export function getEngagementAnalytics(...args: unknown[]): unknown;
+declare const _default: Record<string, unknown>;
+export default _default;

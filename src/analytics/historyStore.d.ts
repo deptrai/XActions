@@ -1,0 +1,12 @@
+export function saveAccountSnapshot(...args: unknown[]): unknown;
+export function saveTweetSnapshot(...args: unknown[]): unknown;
+export function saveDailyEngagement(...args: unknown[]): unknown;
+export function getAccountHistory(...args: unknown[]): unknown;
+export function getTweetHistory(...args: unknown[]): unknown;
+export function getGrowthRate(...args: unknown[]): unknown;
+export function compareAccounts(...args: unknown[]): unknown;
+export function exportHistory(...args: unknown[]): unknown;
+export function closeDb(...args: unknown[]): unknown;
+export function getDatabase(...args: unknown[]): unknown;
+declare const _default: unknown;
+export default _default;

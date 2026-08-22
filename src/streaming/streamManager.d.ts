@@ -1,0 +1,17 @@
+export function setIO(...args: unknown[]): unknown;
+export function createStream(...args: unknown[]): unknown;
+export function stopStream(...args: unknown[]): unknown;
+export function stopAllStreams(...args: unknown[]): unknown;
+export function pauseStream(...args: unknown[]): unknown;
+export function resumeStream(...args: unknown[]): unknown;
+export function updateStream(...args: unknown[]): unknown;
+export function listStreams(...args: unknown[]): unknown;
+export function getStreamHistory(...args: unknown[]): unknown;
+export function getStreamStatus(...args: unknown[]): unknown;
+export function getStreamStats(...args: unknown[]): unknown;
+export function isHealthy(...args: unknown[]): unknown;
+export function shutdown(...args: unknown[]): unknown;
+export const STREAM_TYPES: unknown[];
+export const getPoolStatus: unknown;
+declare const _default: unknown;
+export default _default;

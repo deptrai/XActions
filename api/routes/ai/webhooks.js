@@ -11,6 +11,19 @@ import crypto from 'crypto';
 const router = express.Router();
 
 /**
+ * @typedef {Object} JobStatus
+ * @property {string} [id]
+ * @property {string} [status]
+ * @property {string} [type]
+ * @property {number} [progress]
+ * @property {Record<string, unknown>} [result]
+ * @property {Record<string, unknown>} [error]
+ * @property {string} [createdAt]
+ * @property {string} [startedAt]
+ * @property {string} [completedAt]
+ */
+
+/**
  * @typedef {Object} ScrapedUser
  * @property {string} [username]
  * @property {string} [name]
@@ -45,6 +58,9 @@ const router = express.Router();
  * @property {string} [replyToUser]
  * @property {string} [quotedTweetId]
  * @property {ScrapedUser} [author]
+ * @property {string} [username]
+ * @property {string} [authorName]
+ * @property {Record<string, unknown>} [metrics]
  */
 
 /**
@@ -57,6 +73,7 @@ const router = express.Router();
  * @property {string} [timestamp]
  * @property {Record<string, unknown>} [dimensions]
  * @property {number} [duration]
+ * @property {string} [thumbnail]
  */
 
 /**
@@ -71,6 +88,8 @@ const router = express.Router();
  * @property {string} [replies]
  * @property {string} [url]
  * @property {string} [bookmarkedAt]
+ * @property {string} [username]
+ * @property {string} [authorName]
  */
 
 /**

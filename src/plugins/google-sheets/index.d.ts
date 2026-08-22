@@ -1,0 +1,14 @@
+export const name: unknown;
+export const version: unknown;
+export const description: unknown;
+export const tools: unknown[];
+export const routes: unknown[];
+export const hooks: Record<string, unknown>;
+export function exportToGoogleSheets(...args: unknown[]): unknown;
+export function readFromGoogleSheets(...args: unknown[]): unknown;
+export function createSpreadsheet(...args: unknown[]): unknown;
+export function getSheetsClient(...args: unknown[]): unknown;
+export function normalizeData(...args: unknown[]): unknown;
+export function toSheetRows(...args: unknown[]): unknown;
+declare const _default: Record<string, unknown>;
+export default _default;

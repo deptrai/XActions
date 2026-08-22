@@ -1,0 +1,15 @@
+export const WEEKDAYS: object;
+export function mean(...args: unknown[]): unknown;
+export function median(...args: unknown[]): unknown;
+export function round(...args: unknown[]): unknown;
+export function ratio(...args: unknown[]): unknown;
+export function tweetDate(...args: unknown[]): unknown;
+export function engagementOf(...args: unknown[]): unknown;
+export function classifyPost(...args: unknown[]): unknown;
+export function topValues(...args: unknown[]): unknown;
+export function medianGapHours(...args: unknown[]): unknown;
+export function formatCount(...args: unknown[]): unknown;
+export function buildAccountReport(...args: unknown[]): unknown;
+export function compareReports(...args: unknown[]): unknown;
+declare const _default: unknown;
+export default _default;

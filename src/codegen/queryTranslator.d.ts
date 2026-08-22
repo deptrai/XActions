@@ -1,0 +1,12 @@
+export const DEFAULT_API_BASE: unknown;
+export const QUERIES: object;
+export function normalizeUsername(...args: unknown[]): unknown;
+export function normalizeUsernames(...args: unknown[]): unknown;
+export function clampParam(...args: unknown[]): unknown;
+export function resolveQuery(...args: unknown[]): unknown;
+export function apiPathFor(...args: unknown[]): unknown;
+export function permalinkFor(...args: unknown[]): unknown;
+export function queryFromSearch(...args: unknown[]): unknown;
+export function translateQuery(...args: unknown[]): unknown;
+declare const _default: unknown;
+export default _default;

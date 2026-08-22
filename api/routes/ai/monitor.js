@@ -14,6 +14,19 @@ import crypto from 'crypto';
 const router = express.Router();
 
 /**
+ * @typedef {Object} JobStatus
+ * @property {string} [id]
+ * @property {string} [status]
+ * @property {string} [type]
+ * @property {number} [progress]
+ * @property {Record<string, unknown>} [result]
+ * @property {Record<string, unknown>} [error]
+ * @property {string} [createdAt]
+ * @property {string} [startedAt]
+ * @property {string} [completedAt]
+ */
+
+/**
  * @typedef {Object} ScrapedUser
  * @property {string} [username]
  * @property {string} [name]
@@ -48,6 +61,9 @@ const router = express.Router();
  * @property {string} [replyToUser]
  * @property {string} [quotedTweetId]
  * @property {ScrapedUser} [author]
+ * @property {string} [username]
+ * @property {string} [authorName]
+ * @property {Record<string, unknown>} [metrics]
  */
 
 /**
@@ -60,6 +76,7 @@ const router = express.Router();
  * @property {string} [timestamp]
  * @property {Record<string, unknown>} [dimensions]
  * @property {number} [duration]
+ * @property {string} [thumbnail]
  */
 
 /**
@@ -74,6 +91,8 @@ const router = express.Router();
  * @property {string} [replies]
  * @property {string} [url]
  * @property {string} [bookmarkedAt]
+ * @property {string} [username]
+ * @property {string} [authorName]
  */
 
 /**
@@ -85,9 +104,6 @@ const router = express.Router();
  */
 
 
-/**
- * Generate unique operation ID
- */
 const generateOperationId = () => {
   return `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 };
@@ -203,9 +219,9 @@ router.post('/account', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Monitor account error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Monitor account error:', error);
     return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   
   }
 });
@@ -264,8 +280,8 @@ router.post('/followers', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   
   }
 });
@@ -324,8 +340,8 @@ router.post('/following', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   
   }
 });
@@ -370,8 +386,8 @@ router.get('/snapshot/:username', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'SNAPSHOT_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'SNAPSHOT_FAILED', _errMessage);
+  
   
   }
 });
@@ -442,7 +458,7 @@ router.post('/compare', async (req, res) => {
             },
           },
           timeBetween: {
-            ms: Date.parse(comparison.snapshot2.createdAt) - Date.parse(comparison.snapshot1.createdAt),
+            ms: Date.parse(String(comparison.snapshot2.createdAt)) - Date.parse(String(comparison.snapshot1.createdAt)),
             human: comparison.timeBetweenHuman,
           },
         },
@@ -452,8 +468,8 @@ router.post('/compare', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'COMPARE_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'COMPARE_FAILED', _errMessage);
+  
   
   }
 });
@@ -543,9 +559,9 @@ router.post('/alert/new-followers', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ New followers alert error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ New followers alert error:', error);
     return errorResponse(res, 500, 'ALERT_FAILED', _errMessage);
+  
   
   }
 });
@@ -573,8 +589,8 @@ router.delete('/snapshot/:username', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'DELETE_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'DELETE_FAILED', _errMessage);
+  
   
   }
 });
@@ -609,8 +625,8 @@ router.get('/list', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'LIST_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'LIST_FAILED', _errMessage);
+  
   
   }
 });
@@ -659,8 +675,8 @@ router.post('/keyword', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   
   }
 });
@@ -707,8 +723,8 @@ router.post('/follower-alerts', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   
   }
 });
@@ -758,8 +774,8 @@ router.post('/track-engagement', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'MONITOR_FAILED', _errMessage);
+  
   
   }
 });

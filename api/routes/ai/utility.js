@@ -13,6 +13,19 @@ import crypto from 'crypto';
 const router = express.Router();
 
 /**
+ * @typedef {Object} JobStatus
+ * @property {string} [id]
+ * @property {string} [status]
+ * @property {string} [type]
+ * @property {number} [progress]
+ * @property {Record<string, unknown>} [result]
+ * @property {Record<string, unknown>} [error]
+ * @property {string} [createdAt]
+ * @property {string} [startedAt]
+ * @property {string} [completedAt]
+ */
+
+/**
  * @typedef {Object} ScrapedUser
  * @property {string} [username]
  * @property {string} [name]
@@ -47,6 +60,9 @@ const router = express.Router();
  * @property {string} [replyToUser]
  * @property {string} [quotedTweetId]
  * @property {ScrapedUser} [author]
+ * @property {string} [username]
+ * @property {string} [authorName]
+ * @property {Record<string, unknown>} [metrics]
  */
 
 /**
@@ -59,6 +75,7 @@ const router = express.Router();
  * @property {string} [timestamp]
  * @property {Record<string, unknown>} [dimensions]
  * @property {number} [duration]
+ * @property {string} [thumbnail]
  */
 
 /**
@@ -73,6 +90,8 @@ const router = express.Router();
  * @property {string} [replies]
  * @property {string} [url]
  * @property {string} [bookmarkedAt]
+ * @property {string} [username]
+ * @property {string} [authorName]
  */
 
 /**
@@ -84,9 +103,6 @@ const router = express.Router();
  */
 
 
-/**
- * Generate unique operation ID
- */
 const generateOperationId = () => {
   return `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 };
@@ -227,9 +243,9 @@ router.post('/video', async (req, res) => {
       note: 'Video URLs are temporary and may expire. Download promptly.',
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Video download error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Video download error:', error);
     return errorResponse(res, 500, 'DOWNLOAD_FAILED', _errMessage);
+  
   
   }
 });
@@ -316,9 +332,9 @@ router.post('/bookmarks', async (req, res) => {
       exportFormat: format,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Bookmark export error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Bookmark export error:', error);
     return errorResponse(res, 500, 'EXPORT_FAILED', _errMessage);
+  
   
   }
 });
@@ -446,9 +462,9 @@ router.post('/thread', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Thread unroll error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Thread unroll error:', error);
     return errorResponse(res, 500, 'UNROLL_FAILED', _errMessage);
+  
   
   }
 });
@@ -572,9 +588,9 @@ router.post('/profile', async (req, res) => {
       analyzedAt: new Date().toISOString(),
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Profile analysis error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Profile analysis error:', error);
     return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });
@@ -661,9 +677,9 @@ router.post('/tweet', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Tweet analysis error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Tweet analysis error:', error);
     return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });

@@ -30,6 +30,11 @@ const router = Router();
  * Dual-Channel Authentication & Authorization Middleware for Checkpoint Management.
  * Grants access to admin users (JWT) or A2A agents with 'checkpoint:manage' permission.
  */
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
 export async function requireCheckpointManage(req, res, next) {
   try {
     // Do not trust a pre-existing req.user/req.agent set by other middleware.
@@ -39,7 +44,8 @@ export async function requireCheckpointManage(req, res, next) {
     req.agent = null;
 
     // 1. Try A2A API Key Header (X-Agent-API-Key or X-API-Key)
-    const apiKey = req.headers['x-agent-api-key'] || req.headers['x-api-key'];
+    const rawApiKey = req.headers['x-agent-api-key'] || req.headers['x-api-key'];
+    const apiKey = /** @type {string | undefined} */ (Array.isArray(rawApiKey) ? rawApiKey[0] : rawApiKey);
     if (!authenticated && apiKey) {
       const apiResult = await validateApiKey(apiKey);
       if (apiResult?.valid) {
@@ -53,16 +59,20 @@ export async function requireCheckpointManage(req, res, next) {
     }
 
     // 2. Try Bearer Token (A2A JWT Token or User JWT)
-    const authHeader = req.headers.authorization;
+    const rawAuthHeader = req.headers.authorization;
+    const authHeader = /** @type {string | undefined} */ (Array.isArray(rawAuthHeader) ? rawAuthHeader[0] : rawAuthHeader);
     if (!authenticated && authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
 
       // Try as A2A Token first
       const a2aResult = await validateToken(token);
       if (a2aResult?.valid) {
+        const payload = /** @type {Record<string, unknown>} */ (a2aResult.payload || {});
+        const sub = /** @type {string | undefined} */ (payload.sub);
+        const permissions = /** @type {string[] | undefined} */ (payload.permissions);
         req.agent = {
-          id: a2aResult.payload?.sub || 'a2a-bearer',
-          permissions: a2aResult.payload?.permissions || [],
+          id: sub || 'a2a-bearer',
+          permissions: permissions || [],
           type: 'bearer',
         };
         authenticated = true;
@@ -98,7 +108,7 @@ export async function requireCheckpointManage(req, res, next) {
 
     // Authorization check
     const isUserAdmin = req.user?.isAdmin === true;
-    const isAgentPermitted = req.agent && checkPermission(req.agent, 'checkpoint:manage');
+    const isAgentPermitted = req.agent && checkPermission(/** @type {{ permissions: string[] }} */ (req.agent), 'checkpoint:manage');
 
     if (!isUserAdmin && !isAgentPermitted) {
       return res.status(403).json({
@@ -123,6 +133,12 @@ export async function requireCheckpointManage(req, res, next) {
 /**
  * GET /api/checkpoints
  * List checkpoints with pagination and filters.
+ */
+/**
+ * @param {string | number | undefined} value
+ * @param {number} defaultValue
+ * @param {string} fieldName
+ * @returns {number}
  */
 function parsePaginationNumber(value, defaultValue, fieldName) {
   if (value === undefined || value === null || value === '') {
@@ -235,7 +251,12 @@ router.post('/:id/retry', requireCheckpointManage, async (req, res, next) => {
 });
 
 // Error handling middleware for PlatformErrors
-router.use((err, _req, res, _next) => {
+router.use((
+  /** @type {unknown} */ err,
+  /** @type {import('express').Request} */ _req,
+  /** @type {import('express').Response} */ res,
+  /** @type {import('express').NextFunction} */ _next
+) => {
   if (err instanceof PlatformError) {
     return res.status(err.statusCode || 400).json({
       success: false,
@@ -248,11 +269,12 @@ router.use((err, _req, res, _next) => {
     });
   }
 
-  const statusCode = err.status || err.statusCode || 500;
+  const errObj = /** @type {Record<string, unknown>} */ (err);
+  const statusCode = Number(errObj.status || errObj.statusCode || 500);
   res.status(statusCode).json({
     success: false,
     error: {
-      message: err.message || 'Internal server error',
+      message: err instanceof Error ? err.message : 'Internal server error',
     },
   });
 });

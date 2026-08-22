@@ -1,0 +1,11 @@
+export function addFeed(...args: unknown[]): unknown;
+export function removeFeed(...args: unknown[]): unknown;
+export function listFeeds(...args: unknown[]): unknown;
+export function checkFeed(...args: unknown[]): unknown;
+export function checkAllFeeds(...args: unknown[]): unknown;
+export function getDrafts(...args: unknown[]): unknown;
+export function postDraft(...args: unknown[]): unknown;
+export function deleteDraft(...args: unknown[]): unknown;
+export function postAllDrafts(...args: unknown[]): unknown;
+declare const _default: unknown;
+export default _default;

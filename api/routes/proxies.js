@@ -17,15 +17,17 @@ router.get('/status', (req, res) => {
 
 // POST /api/proxies/add - Add proxies to pool
 router.post('/add', (req, res) => {
-  const { proxies, proxy } = req.body || {};
-  const list = proxies || (proxy ? [proxy] : []);
+  const body = /** @type {Record<string, unknown>} */ (req.body || {});
+  const proxies = /** @type {unknown[]} */ (body.proxies);
+  const proxy = /** @type {string | undefined} */ (body.proxy);
+  const list = (Array.isArray(proxies) ? proxies : (proxy ? [proxy] : []));
   if (!list.length) {
     return res.status(400).json({ error: 'No proxies provided in request body' });
   }
 
   try {
-    for (const p of list) {
-      globalProxyPool.add(p);
+    for (const raw of list) {
+      globalProxyPool.add(/** @type {import('../../src/proxy/proxy-pool.js').ProxyInput} */ (raw));
     }
     res.json({
       success: true,
@@ -59,7 +61,9 @@ router.get('/sticky/:accountId', (req, res) => {
 
 // POST /api/proxies/quarantine - Quarantine a proxy
 router.post('/quarantine', (req, res) => {
-  const { proxy, durationMs } = req.body || {};
+  const body = /** @type {Record<string, unknown>} */ (req.body || {});
+  const proxy = /** @type {import('../../src/proxy/proxy-pool.js').ProxyInput} */ (body.proxy);
+  const durationMs = typeof body.durationMs === 'number' ? body.durationMs : undefined;
   if (!proxy) {
     return res.status(400).json({ error: 'Proxy is required to quarantine' });
   }
@@ -75,11 +79,15 @@ router.post('/quarantine', (req, res) => {
 // Accounts endpoints
 // POST /api/proxies/accounts/register
 router.post('/accounts/register', (req, res) => {
-  const { platform, accountIds, credentials } = req.body || {};
+  const body = /** @type {Record<string, unknown>} */ (req.body || {});
+  const platform = /** @type {string} */ (body.platform);
+  const accountIds = /** @type {unknown[]} */ (body.accountIds);
+  const credentials = /** @type {Record<string, Record<string, unknown>> | undefined} */ (body.credentials);
   if (!platform || !accountIds || !Array.isArray(accountIds)) {
     return res.status(400).json({ error: 'platform and accountIds array are required' });
   }
-  globalAccountPool.registerAccounts(platform, accountIds, { credentials });
+  const options = credentials ? { credentials } : {};
+  globalAccountPool.registerAccounts(platform, /** @type {string[]} */ (accountIds), options);
   res.json({
     success: true,
     platform,
@@ -101,7 +109,9 @@ router.get('/accounts/next/:platform', (req, res) => {
 // POST /api/proxies/accounts/:id/unavailable
 router.post('/accounts/:id/unavailable', (req, res) => {
   const { id } = req.params;
-  const { reason, durationMs } = req.body || {};
+  const body = /** @type {Record<string, unknown>} */ (req.body || {});
+  const reason = /** @type {string | undefined} */ (body.reason);
+  const durationMs = typeof body.durationMs === 'number' ? body.durationMs : undefined;
   globalAccountPool.markUnavailable(id, reason, durationMs);
   res.json({ success: true, accountId: id, unavailable: true, reason, durationMs });
 });

@@ -1,0 +1,15 @@
+export function installPlugin(...args: unknown[]): unknown;
+export function removePlugin(...args: unknown[]): unknown;
+export function listPlugins(...args: unknown[]): unknown;
+export function enablePlugin(...args: unknown[]): unknown;
+export function disablePlugin(...args: unknown[]): unknown;
+export function executeHook(...args: unknown[]): unknown;
+export function initializePlugins(...args: unknown[]): unknown;
+export function getPluginTools(...args: unknown[]): unknown;
+export function getPluginScrapers(...args: unknown[]): unknown;
+export function getPluginRoutes(...args: unknown[]): unknown;
+export function getPluginActions(...args: unknown[]): unknown;
+export function getPlugin(...args: unknown[]): unknown;
+export function getLoadedCount(...args: unknown[]): unknown;
+declare const _default: Record<string, unknown>;
+export default _default;

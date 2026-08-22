@@ -44,6 +44,7 @@ if (process.env.NODE_ENV === 'production' && !ENCRYPTION_KEY) {
 // Single derivation source — falls back to a clearly-marked dev key only outside production.
 const KEY_MATERIAL = ENCRYPTION_KEY || 'dev-only-key';
 
+/** @param {string} text */
 export function encrypt(text) {
   const salt = crypto.randomBytes(16);
   const key = crypto.scryptSync(KEY_MATERIAL, salt, 32);
@@ -56,6 +57,7 @@ export function encrypt(text) {
   return salt.toString('hex') + ':' + iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
 }
 
+/** @param {string} encryptedData */
 export function decrypt(encryptedData) {
   try {
     const parts = encryptedData.split(':');
@@ -77,6 +79,7 @@ export function decrypt(encryptedData) {
   }
 }
 
+/** @param {string} accountId */
 async function invalidateHealthCache(accountId) {
   try {
     await prisma.facebookAccountHealth.deleteMany({ where: { accountId } });
@@ -93,6 +96,7 @@ const LABEL_MAX = 50;
 const XS_MAX = 4096; // upper bound — guards against storage-amplification abuse
 const C_USER_RE = /^\d{10,20}$/;
 
+/** @param {Record<string, unknown>} body */
 export function validateAccountBody(body) {
   const { label, c_user, xs, proxy } = body ?? {};
   if (!label || typeof label !== 'string' || label.trim().length === 0)
@@ -125,9 +129,10 @@ router.post('/', authenticate, async (req, res) => {
     const validationError = validateAccountBody(req.body);
     if (validationError) return res.status(400).json({ ok: false, error: validationError });
 
-    const label = req.body.label.trim();
-    const c_user = String(req.body.c_user).trim();
-    const xs = String(req.body.xs).trim();
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const label = String(body.label).trim();
+    const c_user = String(body.c_user).trim();
+    const xs = String(body.xs).trim();
 
     // Duplicate label check (AC1 #3)
     const existing = await prisma.facebookAccount.findFirst({
@@ -141,7 +146,8 @@ router.post('/', authenticate, async (req, res) => {
     // Encrypt cookie pair as JSON — c_user and xs never stored in plaintext
     const cookiePayload = JSON.stringify({ c_user, xs });
     const encryptedCookie = encrypt(cookiePayload);
-    const encryptedProxy = req.body.proxy ? encrypt(req.body.proxy.trim()) : null;
+    const proxy = /** @type {string | undefined} */ (body.proxy);
+    const encryptedProxy = proxy ? encrypt(proxy.trim()) : null;
 
     const account = await prisma.facebookAccount.create({
       data: { userId: reqUser.id, label, encryptedCookie, encryptedProxy },
@@ -153,11 +159,11 @@ router.post('/', authenticate, async (req, res) => {
   } catch (err) {
     // Prisma unique-constraint (userId+label) race: two concurrent POSTs both pass
     // the findFirst check, the second create hits @@unique → P2002. Return 409, not 500.
-    if (err?.code === 'P2002') {
+    if ((/** @type {Record<string, unknown>} */ (err))?.code === 'P2002') {
       return res.status(409).json({ ok: false, error: 'An account with that label already exists' });
     }
     // Log a code/type only — Prisma messages can echo field values (NFR3).
-    console.error('❌ POST /api/facebook/accounts error:', err?.code || err?.name || 'unknown');
+    console.error('❌ POST /api/facebook/accounts error:', (/** @type {Record<string, unknown>} */ (err))?.code || (/** @type {Record<string, unknown>} */ (err))?.name || 'unknown');
     return res.status(500).json({ ok: false, error: 'Failed to save account' });
   }
 });
@@ -178,7 +184,7 @@ router.get('/', authenticate, async (req, res) => {
     // NFR3: encryptedCookie never selected or returned
     return res.json({ ok: true, accounts });
   } catch (err) {
-    console.error('❌ GET /api/facebook/accounts error:', err?.code || err?.name || 'unknown');
+    console.error('❌ GET /api/facebook/accounts error:', (/** @type {Record<string, unknown>} */ (err))?.code || (/** @type {Record<string, unknown>} */ (err))?.name || 'unknown');
     return res.status(500).json({ ok: false, error: 'Failed to list accounts' });
   }
 });
@@ -221,7 +227,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     await invalidateHealthCache(id);
     return res.json({ ok: true });
   } catch (err) {
-    console.error('❌ DELETE /api/facebook/accounts error:', err?.code || err?.name || 'unknown');
+    console.error('❌ DELETE /api/facebook/accounts error:', (/** @type {Record<string, unknown>} */ (err))?.code || (/** @type {Record<string, unknown>} */ (err))?.name || 'unknown');
     return res.status(500).json({ ok: false, error: 'Failed to remove account' });
   }
 });
@@ -261,10 +267,10 @@ router.patch('/:id', authenticate, async (req, res) => {
     await invalidateHealthCache(id);
     return res.json({ ok: true });
   } catch (err) {
-    if (err?.code === 'P2025') {
+    if ((/** @type {Record<string, unknown>} */ (err))?.code === 'P2025') {
       return res.status(404).json({ ok: false, error: 'Account not found' });
     }
-    console.error('❌ PATCH /api/facebook/accounts/:id error:', err?.code || err?.name || 'unknown');
+    console.error('❌ PATCH /api/facebook/accounts/:id error:', (/** @type {Record<string, unknown>} */ (err))?.code || (/** @type {Record<string, unknown>} */ (err))?.name || 'unknown');
     return res.status(500).json({ ok: false, error: 'Failed to update account proxy' });
   }
 });
@@ -281,19 +287,23 @@ router.patch('/:id', authenticate, async (req, res) => {
  * @returns {Promise<{c_user: string, xs: string}>} decrypted cookie
  * @throws {Error} if not found, not owned, or decryption fails
  */
+/**
+ * @param {string} userId
+ * @param {string} accountId
+ */
 export async function resolveAccountCookie(userId, accountId) {
   const account = await prisma.facebookAccount.findFirst({
     where: { id: accountId, userId },
     select: { encryptedCookie: true },
   });
   if (!account) {
-    const err = new Error('Facebook account not found');
+    const err = /** @type {Error & Record<string, unknown>} */ (new Error('Facebook account not found'));
     err.code = 'ACCOUNT_NOT_FOUND';
     throw err;
   }
   const decrypted = decrypt(account.encryptedCookie);
   if (!decrypted) {
-    const err = new Error('Failed to decrypt stored account cookie');
+    const err = /** @type {Error & Record<string, unknown>} */ (new Error('Failed to decrypt stored account cookie'));
     err.code = 'ACCOUNT_DECRYPT_FAILED';
     throw err;
   }

@@ -1277,6 +1277,14 @@ class BrowserAutomation {
   }
 
   /**
+   * @param {import('puppeteer').Page} page
+   * @returns {Promise<boolean>}
+   */
+  async checkAuthentication(page) {
+    return checkAuthentication(page);
+  }
+
+  /**
    * @param {number} min
    * @param {number} max
    * @returns {Promise<number>}

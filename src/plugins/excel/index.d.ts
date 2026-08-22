@@ -1,0 +1,12 @@
+export const name: unknown;
+export const version: unknown;
+export const description: unknown;
+export const tools: unknown[];
+export const routes: unknown[];
+export const hooks: Record<string, unknown>;
+export function exportToExcel(...args: unknown[]): unknown;
+export function exportMultiSheet(...args: unknown[]): unknown;
+export function readFromExcel(...args: unknown[]): unknown;
+export function normalizeData(...args: unknown[]): unknown;
+declare const _default: Record<string, unknown>;
+export default _default;

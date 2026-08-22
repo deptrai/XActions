@@ -18,6 +18,19 @@ import { errorResponse } from '../../utils/errorResponse.js';
 const router = express.Router();
 
 /**
+ * @typedef {Object} JobStatus
+ * @property {string} [id]
+ * @property {string} [status]
+ * @property {string} [type]
+ * @property {number} [progress]
+ * @property {Record<string, unknown>} [result]
+ * @property {Record<string, unknown>} [error]
+ * @property {string} [createdAt]
+ * @property {string} [startedAt]
+ * @property {string} [completedAt]
+ */
+
+/**
  * @typedef {Object} ScrapedUser
  * @property {string} [username]
  * @property {string} [name]
@@ -52,6 +65,9 @@ const router = express.Router();
  * @property {string} [replyToUser]
  * @property {string} [quotedTweetId]
  * @property {ScrapedUser} [author]
+ * @property {string} [username]
+ * @property {string} [authorName]
+ * @property {Record<string, unknown>} [metrics]
  */
 
 /**
@@ -64,6 +80,7 @@ const router = express.Router();
  * @property {string} [timestamp]
  * @property {Record<string, unknown>} [dimensions]
  * @property {number} [duration]
+ * @property {string} [thumbnail]
  */
 
 /**
@@ -78,6 +95,8 @@ const router = express.Router();
  * @property {string} [replies]
  * @property {string} [url]
  * @property {string} [bookmarkedAt]
+ * @property {string} [username]
+ * @property {string} [authorName]
  */
 
 /**
@@ -129,14 +148,14 @@ router.post('/validate-session', async (req, res) => {
       ...(valid ? {} : { hint: 'Session cookie appears expired — log into x.com to refresh it' }),
     });
   } catch (err) {
-    const _errMessage = err instanceof Error ? err.message : String(err);
-    return res.json({
+    const _errMessage = err instanceof Error ? err.message : String(err);return res.json({
       success: true,
       valid: false,
       error: 'CHECK_FAILED',
       message: _errMessage,
       checkedAt: new Date().toISOString(),
     });
+  
   
   }
 });
@@ -231,9 +250,9 @@ router.post('/unfollow-non-followers', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Unfollow non-followers error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Unfollow non-followers error:', error);
     return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -295,8 +314,8 @@ router.post('/unfollow-everyone', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -354,8 +373,8 @@ router.post('/detect-unfollowers', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -435,8 +454,8 @@ router.post('/auto-like', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -533,8 +552,8 @@ router.post('/follow-engagers', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -617,8 +636,8 @@ router.post('/keyword-follow', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -710,8 +729,8 @@ router.post('/auto-comment', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -746,8 +765,8 @@ router.post('/follow', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -782,8 +801,8 @@ router.post('/unfollow', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -823,8 +842,8 @@ router.post('/like', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -864,8 +883,8 @@ router.post('/retweet', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -907,8 +926,8 @@ router.post('/quote-tweet', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -943,8 +962,8 @@ router.post('/post-tweet', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -997,8 +1016,8 @@ router.post('/auto-follow', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -1042,8 +1061,8 @@ router.post('/smart-unfollow', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -1095,8 +1114,8 @@ router.post('/auto-retweet', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -1142,8 +1161,8 @@ router.post('/bulk-execute', async (req, res) => {
       meta: { createdAt: new Date().toISOString() },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -1175,8 +1194,8 @@ router.post('/cancel/:operationId', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'CANCEL_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'CANCEL_FAILED', _errMessage);
+  
   
   }
 });
@@ -1215,7 +1234,7 @@ router.get('/status/:operationId', async (req, res) => {
           startedAt: status.startedAt || null,
           completedAt: status.completedAt || null,
           durationMs: status.completedAt && status.startedAt
-            ? Date.parse(status.completedAt) - Date.parse(status.startedAt)
+            ? Date.parse(String(status.completedAt)) - Date.parse(String(status.startedAt))
             : null,
         },
       },
@@ -1224,8 +1243,8 @@ router.get('/status/:operationId', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'STATUS_CHECK_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'STATUS_CHECK_FAILED', _errMessage);
+  
   
   }
 });
@@ -1261,8 +1280,8 @@ router.get('/history', async (req, res) => {
       },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'HISTORY_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'HISTORY_FAILED', _errMessage);
+  
   
   }
 });

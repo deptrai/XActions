@@ -25,7 +25,10 @@ router.post('/', async (req, res) => {
   try {
     const { getScheduler } = await import('../../src/scheduler/scheduler.js');
     const scheduler = getScheduler();
-    const { name, cron, action } = req.body;
+    const body = /** @type {Record<string, unknown>} */ (req.body);
+    const name = /** @type {string} */ (body.name);
+    const cron = /** @type {string} */ (body.cron);
+    const action = /** @type {string | undefined} */ (body.action);
     if (!name || !cron) return res.status(400).json({ error: 'name and cron required' });
     scheduler.addJob({ name, cron, action: action || name });
     res.json({ status: 'scheduled', name, cron });

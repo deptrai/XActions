@@ -14,6 +14,19 @@ import crypto from 'crypto';
 const router = express.Router();
 
 /**
+ * @typedef {Object} JobStatus
+ * @property {string} [id]
+ * @property {string} [status]
+ * @property {string} [type]
+ * @property {number} [progress]
+ * @property {Record<string, unknown>} [result]
+ * @property {Record<string, unknown>} [error]
+ * @property {string} [createdAt]
+ * @property {string} [startedAt]
+ * @property {string} [completedAt]
+ */
+
+/**
  * @typedef {Object} ScrapedUser
  * @property {string} [username]
  * @property {string} [name]
@@ -48,6 +61,9 @@ const router = express.Router();
  * @property {string} [replyToUser]
  * @property {string} [quotedTweetId]
  * @property {ScrapedUser} [author]
+ * @property {string} [username]
+ * @property {string} [authorName]
+ * @property {Record<string, unknown>} [metrics]
  */
 
 /**
@@ -60,6 +76,7 @@ const router = express.Router();
  * @property {string} [timestamp]
  * @property {Record<string, unknown>} [dimensions]
  * @property {number} [duration]
+ * @property {string} [thumbnail]
  */
 
 /**
@@ -74,6 +91,8 @@ const router = express.Router();
  * @property {string} [replies]
  * @property {string} [url]
  * @property {string} [bookmarkedAt]
+ * @property {string} [username]
+ * @property {string} [authorName]
  */
 
 /**
@@ -88,6 +107,13 @@ const router = express.Router();
 const generateOperationId = () =>
   `ai-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
+/**
+ * @param {import('express').Response} res
+ * @param {number} statusCode
+ * @param {string} error
+ * @param {string} message
+ * @param {Record<string, unknown> & { retryable?: boolean; retryAfterMs?: number }} [extras]
+ */
 const errorResponse = (res, statusCode, error, message, extras = {}) =>
   res.status(statusCode).json({
     success: false, error, message,
@@ -97,6 +123,11 @@ const errorResponse = (res, statusCode, error, message, extras = {}) =>
     ...extras,
   });
 
+/**
+ * @param {import('express').Response} res
+ * @param {Record<string, unknown>} data
+ * @param {Record<string, unknown>} [meta]
+ */
 const successResponse = (res, data, meta = {}) =>
   res.json({ success: true, data, meta: { processedAt: new Date().toISOString(), ...meta } });
 
@@ -162,8 +193,8 @@ router.post('/account', async (req, res) => {
         : null,
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });
@@ -207,8 +238,8 @@ router.post('/post', async (req, res) => {
       url: tweet.url || `https://x.com/i/status/${effectiveTweetId}`,
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });
@@ -237,8 +268,8 @@ router.post('/creator', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -288,8 +319,8 @@ router.post('/brand-monitor', async (req, res) => {
       })),
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });
@@ -345,8 +376,8 @@ router.post('/competitor', async (req, res) => {
       ),
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });
@@ -394,8 +425,8 @@ router.post('/audience-overlap', async (req, res) => {
       },
     }, { durationMs: Date.now() - startTime, sampleSize: effectiveSample });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });
@@ -429,8 +460,8 @@ router.post('/history', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -472,8 +503,8 @@ router.post('/snapshot', async (req, res) => {
 
     return successResponse(res, { snapshot, operationId }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });
@@ -507,8 +538,8 @@ router.post('/growth-rate', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 3000 },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -548,8 +579,8 @@ router.post('/compare-accounts', async (req, res) => {
       metrics,
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });
@@ -597,8 +628,8 @@ router.post('/analyze-voice', async (req, res) => {
 
     return successResponse(res, voiceProfile, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });
@@ -636,8 +667,8 @@ router.post('/generate-tweet', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -672,8 +703,8 @@ router.post('/rewrite-tweet', async (req, res) => {
       polling: { endpoint: `/api/ai/action/status/${operationId}`, recommendedIntervalMs: 5000 },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ACTION_FAILED', _errMessage);
+  
   
   }
 });
@@ -718,8 +749,8 @@ router.post('/summarize-thread', async (req, res) => {
       },
     }, { durationMs: Date.now() - startTime, note: 'Basic extractive summary — use writer/analyze-voice for LLM-enhanced version' });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });
@@ -780,8 +811,8 @@ router.post('/best-time', async (req, res) => {
       recommendation: hourlyAvg[0] ? `Post around ${hourlyAvg[0].hour}:00 UTC on ${dailyAvg[0]?.name}s for best engagement` : 'Insufficient data',
     }, { durationMs: Date.now() - startTime, timezone: 'UTC' });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+    const _errMessage = error instanceof Error ? error.message : String(error);return errorResponse(res, 500, 'ANALYSIS_FAILED', _errMessage);
+  
   
   }
 });

@@ -1,0 +1,18 @@
+export function syncFollowers(...args: unknown[]): unknown;
+export function tagContact(...args: unknown[]): unknown;
+export function untagContact(...args: unknown[]): unknown;
+export function addNote(...args: unknown[]): unknown;
+export function scoreContact(...args: unknown[]): unknown;
+export function autoScore(...args: unknown[]): unknown;
+export function searchContacts(...args: unknown[]): unknown;
+export function filterContacts(...args: unknown[]): unknown;
+export function createSegment(...args: unknown[]): unknown;
+export function getSegment(...args: unknown[]): unknown;
+export function listSegments(...args: unknown[]): unknown;
+export function bulkTag(...args: unknown[]): unknown;
+export function getContactTimeline(...args: unknown[]): unknown;
+export function exportSegment(...args: unknown[]): unknown;
+export function addAutoTagRule(...args: unknown[]): unknown;
+export const BUILT_IN_RULES: unknown[];
+declare const _default: unknown;
+export default _default;

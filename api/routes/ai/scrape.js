@@ -13,6 +13,19 @@ import express from 'express';
 const router = express.Router();
 
 /**
+ * @typedef {Object} JobStatus
+ * @property {string} [id]
+ * @property {string} [status]
+ * @property {string} [type]
+ * @property {number} [progress]
+ * @property {Record<string, unknown>} [result]
+ * @property {Record<string, unknown>} [error]
+ * @property {string} [createdAt]
+ * @property {string} [startedAt]
+ * @property {string} [completedAt]
+ */
+
+/**
  * @typedef {Object} ScrapedUser
  * @property {string} [username]
  * @property {string} [name]
@@ -47,6 +60,9 @@ const router = express.Router();
  * @property {string} [replyToUser]
  * @property {string} [quotedTweetId]
  * @property {ScrapedUser} [author]
+ * @property {string} [username]
+ * @property {string} [authorName]
+ * @property {Record<string, unknown>} [metrics]
  */
 
 /**
@@ -59,6 +75,7 @@ const router = express.Router();
  * @property {string} [timestamp]
  * @property {Record<string, unknown>} [dimensions]
  * @property {number} [duration]
+ * @property {string} [thumbnail]
  */
 
 /**
@@ -73,6 +90,8 @@ const router = express.Router();
  * @property {string} [replies]
  * @property {string} [url]
  * @property {string} [bookmarkedAt]
+ * @property {string} [username]
+ * @property {string} [authorName]
  */
 
 /**
@@ -194,8 +213,7 @@ router.post('/profile', async (req, res) => {
       requestedUsername: cleanUsername,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Profile scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Profile scrape error:', error);
     
     if (_errMessage?.includes('not found') || _errMessage?.includes('404')) {
       return errorResponse(res, 404, 'USER_NOT_FOUND', `User @${cleanUsername} not found`, {
@@ -216,6 +234,7 @@ router.post('/profile', async (req, res) => {
     }
     
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -275,9 +294,9 @@ router.post('/followers', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Followers scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Followers scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -337,9 +356,9 @@ router.post('/following', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Following scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Following scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -421,9 +440,9 @@ router.post('/tweets', async (req, res) => {
       filters: { includeReplies, includeRetweets },
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Tweets scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Tweets scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -504,9 +523,9 @@ router.post('/search', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Search scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Search scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -580,14 +599,14 @@ router.post('/thread', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Thread scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Thread scrape error:', error);
     
     if (_errMessage?.includes('not found')) {
       return errorResponse(res, 404, 'TWEET_NOT_FOUND', 'Tweet not found', { retryable: false });
     }
     
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -659,9 +678,9 @@ router.post('/hashtag', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Hashtag scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Hashtag scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -730,9 +749,9 @@ router.post('/media', async (req, res) => {
       filterType: type,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Media scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Media scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -791,9 +810,9 @@ router.post('/likes', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Likes scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Likes scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -852,9 +871,9 @@ router.post('/retweets', async (req, res) => {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Retweets scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Retweets scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -912,9 +931,9 @@ router.post('/replies', async (req, res) => {
       pagination: { count: replies.length, limit: effectiveLimit },
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Replies scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Replies scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -972,9 +991,9 @@ router.post('/quote-tweets', async (req, res) => {
       },
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Quote tweets scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Quote tweets scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -1021,9 +1040,9 @@ router.post('/user-likes', async (req, res) => {
       },
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ User likes scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ User likes scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -1075,9 +1094,9 @@ router.post('/mentions', async (req, res) => {
       },
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Mentions scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Mentions scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });
@@ -1124,9 +1143,9 @@ router.post('/recommendations', async (req, res) => {
       count: Math.min(recommendations.length, effectiveLimit),
     }, { durationMs: Date.now() - startTime });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Recommendations scrape error:', error);
+    const _errMessage = error instanceof Error ? error.message : String(error);console.error('❌ Recommendations scrape error:', error);
     return errorResponse(res, 500, 'SCRAPE_FAILED', _errMessage);
+  
   
   }
 });

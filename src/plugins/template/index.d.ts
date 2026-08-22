@@ -1,0 +1,10 @@
+export const name: unknown;
+export const version: unknown;
+export const description: unknown;
+export const actions: unknown[];
+export const scrapers: unknown[];
+export const tools: unknown[];
+export const routes: unknown[];
+export const hooks: Record<string, unknown>;
+declare const _default: Record<string, unknown>;
+export default _default;

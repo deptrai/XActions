@@ -140,7 +140,7 @@ app.use(compression({
 
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://xactions.app', process.env.FRONTEND_URL].filter(Boolean)
+    ? /** @type {string[]} */ (['https://xactions.app', process.env.FRONTEND_URL].filter((o) => typeof o === 'string'))
     : (process.env.DEV_ORIGINS || 'http://localhost:3000,http://localhost:3001,http://localhost:5173').split(','),
   credentials: true
 }));
@@ -207,10 +207,11 @@ app.use('/api/analytics', analyticsLimiter);
 
 // Logging — use custom format that redacts Authorization header
 morgan.token('safe-referrer', (req) => {
-  const ref = req.headers.referer || req.headers.referrer || '-';
+  const rawRef = req.headers.referer || req.headers.referrer || '-';
+  const ref = Array.isArray(rawRef) ? rawRef[0] : rawRef;
   // Strip any token query params from referrer
   try {
-    const url = new URL(ref, 'http://localhost');
+    const url = new URL(ref || '-', 'http://localhost');
     url.searchParams.delete('token');
     url.searchParams.delete('access_token');
     return url.pathname + url.search;
@@ -293,7 +294,7 @@ app.use(express.static(path.join(__dirname, '../dashboard'), {
   maxAge: '1h',
   etag: true,          // Enable ETag for conditional requests
   lastModified: true,
-  setHeaders: (res, filePath) => {
+  setHeaders: /** @type {(res: import('http').ServerResponse, filePath: string) => void} */ ((res, filePath) => {
     if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-cache, must-revalidate');
       return;
@@ -303,7 +304,7 @@ app.use(express.static(path.join(__dirname, '../dashboard'), {
     if (filePath.endsWith('.png') || filePath.endsWith('.jpg') || filePath.endsWith('.svg') || filePath.endsWith('.ico') || filePath.endsWith('.woff2')) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
-  }
+  })
 }));
 
 // Branding middleware - injects "Powered by XActions" if no license
@@ -356,13 +357,15 @@ app.use('/api/optimizer', optimizerRoutes);
 
 // Plugin routes — mounted under /api/plugins/<plugin-name>/
 function mountPluginRoutes() {
-  const routes = getPluginRoutes();
+  const routes = /** @type {{ _plugin?: string; path: string; method?: string; handler: import('express').RequestHandler }[]} */ (getPluginRoutes());
   for (const route of routes) {
     const pluginName = route._plugin || 'unknown';
     const mountPath = `/api/plugins/${pluginName}${route.path}`;
     const method = (route.method || 'get').toLowerCase();
-    if (typeof app[method] === 'function' && typeof route.handler === 'function') {
-      app[method](mountPath, route.handler);
+    const appRecord = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (app));
+    const appMethod = /** @type {((p: string, h: import('express').RequestHandler) => import('express').Application) | undefined} */ (appRecord[method]);
+    if (typeof appMethod === 'function' && typeof route.handler === 'function') {
+      appMethod(mountPath, route.handler);
     }
   }
 }
@@ -393,6 +396,10 @@ app.get('/graph', (req, res) => {
 // Documentation sub-pages — serves 167 auto-generated SEO pages
 const docsBasePath = path.resolve(__dirname, '../dashboard/docs');
 
+/**
+ * @param {string} filePath
+ * @param {import('express').Response} res
+ */
 function serveSafeDoc(filePath, res) {
   const resolved = path.resolve(filePath);
   if (!resolved.startsWith(docsBasePath)) {
@@ -561,26 +568,27 @@ app.get('/facebook', (req, res) => {
 });
 
 // Error handling middleware — never expose stack traces or internal details in production
-app.use((err, req, res, next) => {
-  console.error('❌ Unhandled error:', err.message);
+app.use((/** @type {unknown} */ err, /** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res, /** @type {import('express').NextFunction} */ next) => {
+  const e = /** @type {Error & Record<string, unknown>} */ (err);
+  console.error('❌ Unhandled error:', e.message);
   if (process.env.NODE_ENV !== 'production') {
-    console.error(err.stack);
+    console.error(e.stack);
   }
-  const status = err.status || 500;
+  const status = Number(e.status) || 500;
   res.status(status).json({
     error: {
       message: status >= 500 && process.env.NODE_ENV === 'production'
         ? 'Internal server error'
-        : err.message || 'Internal server error',
+        : e.message || 'Internal server error',
       status
     }
   });
 });
 
 // 404 handler
-app.use((req, res) => {
+app.use(/** @type {import('express').RequestHandler} */ ((req, res) => {
   res.status(404).json({ error: 'Route not found' });
-});
+}));
 
 // Use httpServer instead of app.listen for Socket.io support
 httpServer.listen(PORT, async () => {
@@ -590,13 +598,13 @@ httpServer.listen(PORT, async () => {
   
   // Initialize plugin system and mount plugin routes
   try {
-    const pluginCount = await initializePlugins();
+    const pluginCount = /** @type {number} */ (await initializePlugins());
     if (pluginCount > 0) {
       mountPluginRoutes();
       console.log(`📦 Plugins loaded: ${pluginCount}`);
     }
   } catch (error) {
-    console.warn('⚠️  Plugin system initialization warning:', error.message);
+    console.warn('⚠️  Plugin system initialization warning:', /** @type {Error} */ (error).message);
   }
   
   // Optional: Validate x402 micropayment config (only relevant if self-hosting with payments)
@@ -608,7 +616,7 @@ httpServer.listen(PORT, async () => {
     // Silently skip if not configured — x402 is optional
   } catch (error) {
     // x402 is optional — don't crash if not configured
-    if (process.env.DEBUG) console.warn('x402 config:', error.message);
+    if (process.env.DEBUG) console.warn('x402 config:', /** @type {Error} */ (error).message);
   }
   
   // Initialize licensing and telemetry

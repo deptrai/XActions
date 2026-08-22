@@ -18,6 +18,7 @@ if (!ENCRYPTION_KEY && process.env.NODE_ENV === 'production') {
 }
 const ALGORITHM = 'aes-256-gcm';
 
+/** @param {string} text */
 function encrypt(text) {
   const salt = crypto.randomBytes(16);
   const key = crypto.scryptSync(ENCRYPTION_KEY || 'dev-only-key', salt, 32);
@@ -29,6 +30,7 @@ function encrypt(text) {
   return salt.toString('hex') + ':' + iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
 }
 
+/** @param {string} encryptedData */
 function decrypt(encryptedData) {
   try {
     const parts = encryptedData.split(':');
@@ -71,7 +73,9 @@ router.post('/save-session',
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { sessionCookie, username } = req.body;
+      const body = /** @type {Record<string, unknown>} */ (req.body);
+      const sessionCookie = /** @type {string} */ (body.sessionCookie);
+      const username = /** @type {string | undefined} */ (body.username);
 
       // Test the session cookie by attempting to authenticate
       const page = await browserAutomation.createPage(sessionCookie);
@@ -146,6 +150,10 @@ router.get('/auth-method',
         }
       });
 
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
       const hasOAuth = !!user.twitterAccessToken;
       const hasSession = !!user.sessionCookie;
 
@@ -163,6 +171,9 @@ router.get('/auth-method',
 );
 
 // Helper function to get decrypted session cookie (for use in other services)
+/**
+ * @param {string} userId
+ */
 async function getDecryptedSessionCookie(userId) {
   const user = await prisma.user.findUnique({
     where: { id: userId },

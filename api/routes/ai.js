@@ -44,8 +44,8 @@ router.post('/scrape/profile', async (req, res) => {
     }
 
     // Import scraper dynamically
-    const { scrapeProfile } = await import('../../src/scrapers/index.js');
-    const profile = await scrapeProfile(username, authToken);
+    const { scrape } = await import('../../src/scrapers/index.js');
+    const profile = /** @type {Record<string, unknown>} */ (await scrape('twitter', 'profile', { username, authToken }));
 
     res.json({
       success: true,
@@ -77,8 +77,8 @@ router.post('/scrape/followers', async (req, res) => {
       return res.status(400).json({ error: 'username and authToken are required' });
     }
 
-    const { scrapeFollowers } = await import('../../src/scrapers/index.js');
-    const followers = await scrapeFollowers(username, authToken, { limit });
+    const { scrape } = await import('../../src/scrapers/index.js');
+    const followers = /** @type {Record<string, unknown>[]} */ (await scrape('twitter', 'followers', { username, authToken, limit }));
 
     res.json({
       success: true,
@@ -107,8 +107,8 @@ router.post('/scrape/following', async (req, res) => {
       return res.status(400).json({ error: 'username and authToken are required' });
     }
 
-    const { scrapeFollowing } = await import('../../src/scrapers/index.js');
-    const following = await scrapeFollowing(username, authToken, { limit });
+    const { scrape } = await import('../../src/scrapers/index.js');
+    const following = /** @type {Record<string, unknown>[]} */ (await scrape('twitter', 'following', { username, authToken, limit }));
 
     res.json({
       success: true,
@@ -137,8 +137,8 @@ router.post('/scrape/tweets', async (req, res) => {
       return res.status(400).json({ error: 'username and authToken are required' });
     }
 
-    const { scrapeTweets } = await import('../../src/scrapers/index.js');
-    const tweets = await scrapeTweets(username, authToken, { limit });
+    const { scrape } = await import('../../src/scrapers/index.js');
+    const tweets = /** @type {Record<string, unknown>[]} */ (await scrape('twitter', 'tweets', { username, authToken, limit }));
 
     res.json({
       success: true,
@@ -166,8 +166,8 @@ router.post('/scrape/thread', async (req, res) => {
       return res.status(400).json({ error: 'tweetUrl and authToken are required' });
     }
 
-    const { scrapeThread } = await import('../../src/scrapers/index.js');
-    const thread = await scrapeThread(tweetUrl, authToken);
+    const { scrape } = await import('../../src/scrapers/index.js');
+    const thread = /** @type {Record<string, unknown> & { tweets?: Array<Record<string, unknown>> }} */ (await scrape('twitter', 'thread', { url: tweetUrl, authToken }));
     const tweetCount = Array.isArray(thread.tweets) ? thread.tweets.length : 0;
 
     res.json({
@@ -197,8 +197,8 @@ router.post('/scrape/search', async (req, res) => {
       return res.status(400).json({ error: 'query and authToken are required' });
     }
 
-    const { searchTweets } = await import('../../src/scrapers/index.js');
-    const results = await searchTweets(query, authToken, { limit });
+    const { scrape } = await import('../../src/scrapers/index.js');
+    const results = /** @type {Record<string, unknown>[]} */ (await scrape('twitter', 'search', { query, authToken, limit }));
 
     res.json({
       success: true,
@@ -262,8 +262,8 @@ router.post('/action/detect-unfollowers', async (req, res) => {
       return res.status(400).json({ error: 'username and authToken are required' });
     }
 
-    const { scrapeFollowers } = await import('../../src/scrapers/index.js');
-    const currentFollowers = await scrapeFollowers(username, authToken, { limit: 5000 });
+    const { scrape } = await import('../../src/scrapers/index.js');
+    const currentFollowers = /** @type {Record<string, unknown>[]} */ (await scrape('twitter', 'followers', { username, authToken, limit: 5000 }));
     const currentUsernames = currentFollowers.map(f => String(f.username).toLowerCase());
     const currentSet = new Set(currentUsernames);
 
@@ -314,8 +314,8 @@ router.post('/monitor/account', async (req, res) => {
       return res.status(400).json({ error: 'username and authToken are required' });
     }
 
-    const { scrapeProfile } = await import('../../src/scrapers/index.js');
-    const currentState = await scrapeProfile(username, authToken);
+    const { scrape } = await import('../../src/scrapers/index.js');
+    const currentState = /** @type {Record<string, unknown>} */ (await scrape('twitter', 'profile', { username, authToken }));
 
     let changes = /** @type {Array<{ field: string; from: unknown; to: unknown }>} */ ([]);
     if (Object.keys(previousState).length) {
@@ -407,8 +407,8 @@ router.post('/unroll/thread', async (req, res) => {
       return res.status(400).json({ error: 'tweetUrl and authToken are required' });
     }
 
-    const { scrapeThread } = await import('../../src/scrapers/index.js');
-    const thread = /** @type {Record<string, unknown> & { tweets?: Array<Record<string, unknown>>; author?: string }} */ (await scrapeThread(tweetUrl, authToken));
+    const { scrape } = await import('../../src/scrapers/index.js');
+    const thread = /** @type {Record<string, unknown> & { tweets?: Array<Record<string, unknown>>; author?: string }} */ (await scrape('twitter', 'thread', { url: tweetUrl, authToken }));
     const tweets = /** @type {Array<Record<string, unknown>>} */ (thread.tweets || []);
     const author = String(thread.author);
 

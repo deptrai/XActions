@@ -24,6 +24,19 @@ import rateLimit from 'express-rate-limit';
 const router = express.Router();
 
 /**
+ * @typedef {Object} JobStatus
+ * @property {string} [id]
+ * @property {string} [status]
+ * @property {string} [type]
+ * @property {number} [progress]
+ * @property {Record<string, unknown>} [result]
+ * @property {Record<string, unknown>} [error]
+ * @property {string} [createdAt]
+ * @property {string} [startedAt]
+ * @property {string} [completedAt]
+ */
+
+/**
  * @typedef {Object} ScrapedUser
  * @property {string} [username]
  * @property {string} [name]
@@ -58,6 +71,9 @@ const router = express.Router();
  * @property {string} [replyToUser]
  * @property {string} [quotedTweetId]
  * @property {ScrapedUser} [author]
+ * @property {string} [username]
+ * @property {string} [authorName]
+ * @property {Record<string, unknown>} [metrics]
  */
 
 /**
@@ -70,6 +86,7 @@ const router = express.Router();
  * @property {string} [timestamp]
  * @property {Record<string, unknown>} [dimensions]
  * @property {number} [duration]
+ * @property {string} [thumbnail]
  */
 
 /**
@@ -84,6 +101,8 @@ const router = express.Router();
  * @property {string} [replies]
  * @property {string} [url]
  * @property {string} [bookmarkedAt]
+ * @property {string} [username]
+ * @property {string} [authorName]
  */
 
 /**
@@ -116,6 +135,7 @@ const generationLimiter = rateLimit({
 // ============================================================================
 
 /** @type {Map<string, { profile: Record<string, unknown>; savedAt: string }>} */
+/** @type {Map<string, { profile: Record<string, unknown>; savedAt: string }>} */
 const voiceProfiles = new Map();
 
 // ============================================================================
@@ -147,7 +167,7 @@ router.post('/analyze-voice', generationLimiter, async (req, res) => {
     }
 
     // Step 1: Scrape tweets
-    const { scrapeTweets } = await import('../../src/scrapers/index.js');
+    const { scrapeTweets } = await import('../../../src/scrapers/index.js');
     const tweets = await scrapeTweets(username, authToken, { limit: tweetLimit });
 
     if (!tweets || tweets.length === 0) {
@@ -158,7 +178,7 @@ router.post('/analyze-voice', generationLimiter, async (req, res) => {
     }
 
     // Step 2: Analyze voice
-    const { analyzeVoice, summarizeVoiceProfile } = await import('../../src/ai/voiceAnalyzer.js');
+    const { analyzeVoice, summarizeVoiceProfile } = await import('../../../src/ai/voiceAnalyzer.js');
     const profile = analyzeVoice(username, tweets);
     const summary = summarizeVoiceProfile(profile);
 
@@ -178,11 +198,11 @@ router.post('/analyze-voice', generationLimiter, async (req, res) => {
       tweetsScraped: tweets.length,
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    res.status(500).json({
+    const _errMessage = error instanceof Error ? error.message : String(error);res.status(500).json({
       error: 'Voice analysis failed',
       message: _errMessage,
     });
+  
   
   }
 });
@@ -231,7 +251,7 @@ router.post('/generate', generationLimiter, async (req, res) => {
       });
     }
 
-    const { generateTweet, generateThread } = await import('../../src/ai/tweetGenerator.js');
+    const { generateTweet, generateThread } = await import('../../../src/ai/tweetGenerator.js');
 
     let result;
     if (type === 'thread') {
@@ -250,11 +270,11 @@ router.post('/generate', generationLimiter, async (req, res) => {
       });
     }
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    res.status(500).json({
+    const _errMessage = error instanceof Error ? error.message : String(error);res.status(500).json({
       error: 'Generation failed',
       message: _errMessage,
     });
+  
   
   }
 });
@@ -296,7 +316,7 @@ router.post('/thread-from-text', generationLimiter, async (req, res) => {
       });
     }
 
-    const { generateThreadFromText } = await import('../../src/ai/tweetGenerator.js');
+    const { generateThreadFromText } = await import('../../../src/ai/tweetGenerator.js');
     const result = await generateThreadFromText(voiceProfile, {
       text, maxLength, hooks, tone, model, apiKey, provider, openaiApiKey, grokApiKey,
     });
@@ -307,11 +327,11 @@ router.post('/thread-from-text', generationLimiter, async (req, res) => {
       operation: 'ai:thread-from-text',
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    res.status(500).json({
+    const _errMessage = error instanceof Error ? error.message : String(error);res.status(500).json({
       error: 'Thread generation failed',
       message: _errMessage,
     });
+  
   
   }
 });
@@ -350,7 +370,7 @@ router.post('/bio', generationLimiter, async (req, res) => {
       });
     }
 
-    const { generateBio } = await import('../../src/ai/tweetGenerator.js');
+    const { generateBio } = await import('../../../src/ai/tweetGenerator.js');
     const result = await generateBio(voiceProfile, {
       topic, keywords, tone, count, maxLength, model, apiKey, provider, openaiApiKey, grokApiKey,
     });
@@ -361,11 +381,11 @@ router.post('/bio', generationLimiter, async (req, res) => {
       operation: 'ai:generate-bio',
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    res.status(500).json({
+    const _errMessage = error instanceof Error ? error.message : String(error);res.status(500).json({
       error: 'Bio generation failed',
       message: _errMessage,
     });
+  
   
   }
 });
@@ -403,7 +423,7 @@ router.post('/rewrite', generationLimiter, async (req, res) => {
       });
     }
 
-    const { rewriteTweet } = await import('../../src/ai/tweetGenerator.js');
+    const { rewriteTweet } = await import('../../../src/ai/tweetGenerator.js');
     const result = await rewriteTweet(voiceProfile, text, { goal, count, model, apiKey });
 
     res.json({
@@ -412,11 +432,11 @@ router.post('/rewrite', generationLimiter, async (req, res) => {
       operation: 'ai:rewrite-tweet',
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    res.status(500).json({
+    const _errMessage = error instanceof Error ? error.message : String(error);res.status(500).json({
       error: 'Rewrite failed',
       message: _errMessage,
     });
+  
   
   }
 });
@@ -450,7 +470,7 @@ router.post('/calendar', generationLimiter, async (req, res) => {
       });
     }
 
-    const { generateWeek } = await import('../../src/ai/tweetGenerator.js');
+    const { generateWeek } = await import('../../../src/ai/tweetGenerator.js');
     const result = await generateWeek(voiceProfile, { topics, postsPerDay, days, model, apiKey });
 
     res.json({
@@ -459,11 +479,11 @@ router.post('/calendar', generationLimiter, async (req, res) => {
       operation: 'ai:generate-calendar',
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    res.status(500).json({
+    const _errMessage = error instanceof Error ? error.message : String(error);res.status(500).json({
       error: 'Calendar generation failed',
       message: _errMessage,
     });
+  
   
   }
 });
@@ -501,7 +521,7 @@ router.post('/reply', generationLimiter, async (req, res) => {
       });
     }
 
-    const { generateReply } = await import('../../src/ai/tweetGenerator.js');
+    const { generateReply } = await import('../../../src/ai/tweetGenerator.js');
     const result = await generateReply(voiceProfile, originalTweet, { tone, count, model, apiKey });
 
     res.json({
@@ -510,11 +530,11 @@ router.post('/reply', generationLimiter, async (req, res) => {
       operation: 'ai:generate-reply',
     });
   } catch (error) {
-    const _errMessage = error instanceof Error ? error.message : String(error);
-    res.status(500).json({
+    const _errMessage = error instanceof Error ? error.message : String(error);res.status(500).json({
       error: 'Reply generation failed',
       message: _errMessage,
     });
+  
   
   }
 });
