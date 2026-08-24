@@ -94,7 +94,7 @@ function generateBezierPath(startX, startY, endX, endY, steps = 25) {
  * @returns {number}
  */
 export function gaussianRandom(mean = 0, stdev = 1) {
-  const u1 = Math.random();
+  const u1 = Math.max(Math.random(), Number.EPSILON);
   const u2 = Math.random();
   const z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
   return z * stdev + mean;

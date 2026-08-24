@@ -60,9 +60,9 @@ development_status:
   epic-11-retrospective: optional
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
-  epic-12: in-progress
+  epic-12: done
   12-1-terminal-ascii-qr-code-login-module: done
-  12-2-cdp-remote-attach-mode-chrome-devtools-protocol: review
+  12-2-cdp-remote-attach-mode-chrome-devtools-protocol: done
   epic-12-retrospective: optional
 
   # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---

@@ -89,6 +89,7 @@ export function buildChromeArgs(options = {}) {
 
   const args = [
     `--remote-debugging-port=${port}`,
+    '--remote-debugging-address=127.0.0.1',
     `--user-data-dir=${userDataDir}`,
     '--no-first-run',
     '--no-default-browser-check',
@@ -113,7 +114,8 @@ export function buildChromeArgs(options = {}) {
 export async function fetchCdpWsEndpoint(cdpUrl = 'http://127.0.0.1:9222', options = {}) {
   const retries = options.retries ?? 1;
   const delayMs = options.delayMs ?? 100;
-  const baseUrl = cdpUrl.replace(/\/+$/, '');
+  const normalizedUrl = /^https?:\/\//i.test(cdpUrl) ? cdpUrl : `http://${cdpUrl}`;
+  const baseUrl = normalizedUrl.replace(/\/+$/, '');
   const versionUrl = `${baseUrl}/json/version`;
 
   let lastError = null;
@@ -186,12 +188,18 @@ export async function launchChrome(options = {}) {
     detached: true,
     stdio: 'ignore',
   });
+  child.on('error', () => {});
   child.unref();
 
   // Poll until endpoint responds
   try {
     await fetchCdpWsEndpoint(cdpUrl, { retries: 25, delayMs: 400 });
   } catch (err) {
+    if (child && !child.killed) {
+      try {
+        child.kill();
+      } catch {}
+    }
     throw new PlatformError({
       code: 'XACT_5030',
       type: ErrorTypes.INTERNAL,
@@ -223,7 +231,7 @@ export async function launchBrowserWithCdp(cdpUrl = 'http://127.0.0.1:9222', opt
     let adapter = options.adapter;
     if (!adapter) {
       const { getAdapter } = await import('../scrapers/adapters/index.js');
-      adapter = getAdapter();
+      adapter = await getAdapter();
     }
 
     const browser = await adapter.connect(cdpUrl, {

@@ -2,7 +2,7 @@
 
 **Story ID:** 12.2  
 **Epic:** 12 — Frictionless Authentication (Terminal QR & CDP Attach)  
-**Status:** ready-for-dev  
+**Status:** done  
 **Owner:** DEV  
 **Source:** `epics.md` Story 12.2, `prd.md` FR-69, `ARCHITECTURE-SPINE.md` AD-5 & AD-15, `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` Flow R1, existing `src/scrapers/adapters/**` (BaseAdapter, PlaywrightAdapter, PuppeteerAdapter — `connect()` already defined), `src/core/base-crawler.js`, `src/core/base-login.js`, `src/cli/commands/login.js` (has `--cdp` stub from 12.1), `src/cli/commands/connect.js`, `src/agents/antiDetection.js`.
 
@@ -315,3 +315,13 @@ Devin (SWE-1.7 Max) + Serena LSP context.
 * `tests/cli/auth.test.js` (NEW)
 * `tests/scrapers/adapters/playwright.test.js` (UPDATE or NEW)
 * `tests/scrapers/adapters/puppeteer.test.js` (UPDATE or NEW)
+
+### Review Findings
+
+- [x] [Review][Patch] Await getAdapter() call in launchBrowserWithCdp [`src/core/cdp-launcher.js:226`]
+- [x] [Review][Patch] Box-Muller u1 === 0 guard against -Infinity [`src/utils/gaussian-delay.js:4-6`]
+- [x] [Review][Patch] Add min <= max normalization in gaussianRandom [`src/utils/gaussian-delay.js:14`]
+- [x] [Review][Patch] Prevent unhandled error event on spawned Chrome child process [`src/core/cdp-launcher.js:146`]
+- [x] [Review][Patch] Terminate spawned Chrome process on polling timeout [`src/core/cdp-launcher.js:160-170`]
+- [x] [Review][Patch] Safe protocol normalization for cdpUrl [`src/core/cdp-launcher.js:71`]
+- [x] [Review][Patch] Explicitly bind remote debugging to 127.0.0.1 [`src/core/cdp-launcher.js:56`]

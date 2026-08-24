@@ -84,7 +84,8 @@ export class PlaywrightAdapter extends BaseAdapter {
    */
   async newPage(browser, options = {}) {
     const b = /** @type {AdapterBrowser & { _native: import('playwright').Browser, _preserveProfile?: boolean }} */ (browser);
-    if (options.preserveProfile || b._preserveProfile) {
+    const preserveProfile = options.preserveProfile ?? b._preserveProfile ?? false;
+    if (preserveProfile) {
       const contexts = b._native.contexts();
       const context = contexts.length > 0 ? contexts[0] : await b._native.newContext();
       const pages = context.pages();

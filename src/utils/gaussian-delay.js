@@ -7,7 +7,7 @@
  * @returns {number}
  */
 function boxMuller(mean = 0, stdev = 1) {
-  const u1 = Math.random();
+  const u1 = Math.max(Math.random(), Number.EPSILON);
   const u2 = Math.random();
   const z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
   return z * stdev + mean;
@@ -22,9 +22,12 @@ function boxMuller(mean = 0, stdev = 1) {
  * @param {number} [stdDev] - Standard deviation (default covers ~99.7% of range in 3 sigma).
  * @returns {number} Delay in milliseconds clamped to [min, max].
  */
-export function gaussianRandom(min = 3000, max = 7000, mean = (min + max) / 2, stdDev = (max - min) / 6) {
-  const raw = boxMuller(mean, stdDev);
-  return Math.min(Math.max(raw, min), max);
+export function gaussianRandom(min = 3000, max = 7000, mean, stdDev) {
+  const [lo, hi] = min <= max ? [min, max] : [max, min];
+  const targetMean = mean ?? (lo + hi) / 2;
+  const targetStdDev = stdDev ?? (hi - lo) / 6;
+  const raw = boxMuller(targetMean, targetStdDev);
+  return Math.min(Math.max(raw, lo), hi);
 }
 
 /**
@@ -36,7 +39,7 @@ export function gaussianRandom(min = 3000, max = 7000, mean = (min + max) / 2, s
  * @param {number} [stdDev] - Standard deviation in ms.
  * @returns {Promise<number>} Resolves with the actual delay in ms.
  */
-export async function gaussianDelay(min = 3000, max = 7000, mean = (min + max) / 2, stdDev = (max - min) / 6) {
+export async function gaussianDelay(min = 3000, max = 7000, mean, stdDev) {
   const ms = Math.round(gaussianRandom(min, max, mean, stdDev));
   await new Promise((resolve) => setTimeout(resolve, ms));
   return ms;
