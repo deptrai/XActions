@@ -1,46 +1,67 @@
 // Copyright (c) 2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+/**
+ * Gaussian delay helpers for CDP human-behavior simulation.
+ * Reuses Box-Muller implementation from `antiDetection.js` and clamps the
+ * result to the requested [min, max] interval.
+ *
+ * @author nich (@nichxbt)
+ * @license Apache-2.0
+ */
+
+import { gaussianRandom as baseGaussianRandom } from '../agents/antiDetection.js';
 
 /**
- * Standard Gaussian random number using Box-Muller transform.
- * @param {number} [mean=0]
- * @param {number} [stdev=1]
- * @returns {number}
+ * Validate arguments shared by gaussianRandom and gaussianDelay.
+ *
+ * @param {number} min
+ * @param {number} max
+ * @param {number} [mean]
+ * @param {number} [stdDev]
  */
-function boxMuller(mean = 0, stdev = 1) {
-  const u1 = Math.max(Math.random(), Number.EPSILON);
-  const u2 = Math.random();
-  const z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
-  return z * stdev + mean;
+function validateJitterArgs(min, max, mean, stdDev) {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    throw new TypeError('gaussian jitter min and max must be finite numbers');
+  }
+  if (min < 0 || max < 0) {
+    throw new TypeError('gaussian jitter min and max must be non-negative');
+  }
+  if (mean !== undefined && !Number.isFinite(mean)) {
+    throw new TypeError('gaussian jitter mean must be a finite number');
+  }
+  if (stdDev !== undefined && (!Number.isFinite(stdDev) || stdDev < 0)) {
+    throw new TypeError('gaussian jitter stdDev must be a finite non-negative number');
+  }
 }
 
 /**
- * Generate a random number with Gaussian distribution clamped to [min, max].
+ * Generate a Gaussian-distributed random value clamped to [min, max].
  *
- * @param {number} [min=3000] - Minimum delay in milliseconds.
- * @param {number} [max=7000] - Maximum delay in milliseconds.
- * @param {number} [mean] - Target average delay.
- * @param {number} [stdDev] - Standard deviation (default covers ~99.7% of range in 3 sigma).
- * @returns {number} Delay in milliseconds clamped to [min, max].
+ * @param {number} [min=3000]
+ * @param {number} [max=7000]
+ * @param {number} [mean]
+ * @param {number} [stdDev]
+ * @returns {number}
  */
 export function gaussianRandom(min = 3000, max = 7000, mean, stdDev) {
+  validateJitterArgs(min, max, mean, stdDev);
   const [lo, hi] = min <= max ? [min, max] : [max, min];
   const targetMean = mean ?? (lo + hi) / 2;
   const targetStdDev = stdDev ?? (hi - lo) / 6;
-  const raw = boxMuller(targetMean, targetStdDev);
+  const raw = baseGaussianRandom(targetMean, targetStdDev);
   return Math.min(Math.max(raw, lo), hi);
 }
 
 /**
- * Asynchronously wait for a Gaussian-distributed delay.
+ * Sleep for a Gaussian-distributed duration.
  *
- * @param {number} [min=3000] - Minimum delay in ms.
- * @param {number} [max=7000] - Maximum delay in ms.
- * @param {number} [mean] - Mean delay in ms.
- * @param {number} [stdDev] - Standard deviation in ms.
- * @returns {Promise<number>} Resolves with the actual delay in ms.
+ * @param {number} [min=3000]
+ * @param {number} [max=7000]
+ * @param {number} [mean]
+ * @param {number} [stdDev]
+ * @returns {Promise<number>} milliseconds slept
  */
 export async function gaussianDelay(min = 3000, max = 7000, mean, stdDev) {
-  const ms = Math.round(gaussianRandom(min, max, mean, stdDev));
+  const ms = Math.max(0, Math.round(gaussianRandom(min, max, mean, stdDev)));
   await new Promise((resolve) => setTimeout(resolve, ms));
   return ms;
 }

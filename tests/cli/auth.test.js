@@ -29,6 +29,7 @@ describe('Story 12.2 — CLI Auth Command with Chrome Launch Helper (tests/cli/a
       expect(optionNames).toContain('--port');
       expect(optionNames).toContain('--user-data-dir');
       expect(optionNames).toContain('--headless');
+      expect(optionNames).toContain('--account-id');
     });
 
     it('[P0] should parse default port 9222 and default user-data-dir', async () => {
@@ -72,6 +73,29 @@ describe('Story 12.2 — CLI Auth Command with Chrome Launch Helper (tests/cli/a
       expect(capturedOptions).toBeDefined();
       expect(capturedOptions.port).toBe('9333');
       expect(capturedOptions.userDataDir).toBe('/custom/profile');
+    });
+
+    it('[P1] should parse --account-id when launching Chrome', async () => {
+      const { registerAuthCommand } = await import('../../src/cli/commands/auth.js');
+      let capturedOptions = null;
+
+      registerAuthCommand(program, {
+        actionOverride: (opts) => {
+          capturedOptions = opts;
+        },
+      });
+
+      program.parse([
+        'node',
+        'xactions',
+        'auth',
+        '--launch-chrome',
+        '--account-id',
+        'nichxbt',
+      ]);
+
+      expect(capturedOptions).toBeDefined();
+      expect(capturedOptions.accountId).toBe('nichxbt');
     });
   });
 });

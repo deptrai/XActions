@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-25T00:17:00.000Z
+last_updated: 2026-08-24T19:33:02Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -138,10 +138,11 @@ development_status:
 # Current Sprint Plan
 # ===================
 current_sprint:
-  name: "Sprint 2026-08-21 — Epic 11 Complete, Kick off Epic 12 Frictionless Authentication"
+  name: "Sprint 2026-08-21 — Epic 11 Complete, Epic 12 Frictionless Authentication"
   start: "2026-08-21"
   goals:
-    - "Begin Epic 12 (Story 12.1: Terminal ASCII QR Code Login Module)"
+    - "Complete Epic 12 (Stories 12.1 and 12.2: Terminal QR + CDP Remote Attach)"
   stories:
     - "12-1-terminal-ascii-qr-code-login-module"
+    - "12-2-cdp-remote-attach-mode-chrome-devtools-protocol"
   blocked: []

@@ -6,6 +6,48 @@ import path from 'node:path';
 import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
 
 /**
+ * Resolve a bare executable name against the process PATH.
+ * Returns the absolute path when found, otherwise null.
+ *
+ * @param {string} name
+ * @returns {string | null}
+ */
+function findExecutableInPath(name) {
+  const pathEnv = process.env.PATH || process.env.Path;
+  if (!pathEnv) return null;
+  for (const dir of pathEnv.split(path.delimiter)) {
+    if (!dir) continue;
+    const candidate = path.join(dir, name);
+    try {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        return candidate;
+      }
+    } catch {}
+  }
+  return null;
+}
+
+/**
+ * Validate and coerce a port value.
+ *
+ * @param {unknown} portValue
+ * @param {string} [fieldName='port']
+ * @returns {number}
+ */
+function resolvePort(portValue, fieldName = 'port') {
+  const port = Number(portValue);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new PlatformError({
+      type: ErrorTypes.INVALID_ARGS,
+      code: 'XACT_4001',
+      message: `[CDP ERROR] ${fieldName} must be an integer between 1 and 65535`,
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+    });
+  }
+  return port;
+}
+
+/**
  * Resolve Chrome executable path based on platform.
  *
  * @param {string} [platform=process.platform]
@@ -14,7 +56,7 @@ import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js
  */
 export function getChromeExecutablePath(platform = process.platform, customPath = null) {
   if (customPath) {
-    if (!fs.existsSync(customPath)) {
+    if (!fs.existsSync(customPath) || !fs.statSync(customPath).isFile()) {
       throw new PlatformError({
         code: 'XACT_5030',
         type: ErrorTypes.INTERNAL,
@@ -48,11 +90,13 @@ export function getChromeExecutablePath(platform = process.platform, customPath 
     return 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   }
 
-  // linux
+  // Linux: find the first available candidate in PATH.
   const linuxCandidates = ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser'];
   for (const cand of linuxCandidates) {
-    return cand; // in PATH
+    const found = findExecutableInPath(cand);
+    if (found) return found;
   }
+  // Fallback to the first candidate name; spawn will emit a clear error if not installed.
   return 'google-chrome';
 }
 
@@ -69,7 +113,14 @@ export function getDefaultUserDataDir(platform = process.platform) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
-  } catch {}
+  } catch (err) {
+    throw new PlatformError({
+      code: 'XACT_5030',
+      type: ErrorTypes.INTERNAL,
+      message: `[CDP ERROR] Cannot create user data dir ${dir}: ${err instanceof Error ? err.message : String(err)}`,
+      suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+    });
+  }
   return dir;
 }
 
@@ -83,7 +134,7 @@ export function getDefaultUserDataDir(platform = process.platform) {
  * @returns {string[]}
  */
 export function buildChromeArgs(options = {}) {
-  const port = options.port || 9222;
+  const port = resolvePort(options.port ?? 9222);
   const userDataDir = options.userDataDir || getDefaultUserDataDir();
   const headless = Boolean(options.headless);
 
@@ -112,10 +163,25 @@ export function buildChromeArgs(options = {}) {
  * @returns {Promise<string>}
  */
 export async function fetchCdpWsEndpoint(cdpUrl = 'http://127.0.0.1:9222', options = {}) {
-  const retries = options.retries ?? 1;
+  const retries = Math.max(1, options.retries ?? 1);
   const delayMs = options.delayMs ?? 100;
-  const normalizedUrl = /^https?:\/\//i.test(cdpUrl) ? cdpUrl : `http://${cdpUrl}`;
-  const baseUrl = normalizedUrl.replace(/\/+$/, '');
+  const rawUrl = String(cdpUrl).trim();
+  const normalizedUrl = /^https?:\/\//i.test(rawUrl)
+    ? rawUrl
+    : `http://${rawUrl.replace(/^\/+/, '')}`;
+
+  let baseUrl;
+  try {
+    baseUrl = new URL(normalizedUrl).href.replace(/\/+$/, '');
+  } catch (err) {
+    throw new PlatformError({
+      type: ErrorTypes.INVALID_ARGS,
+      code: 'XACT_4001',
+      message: `[CDP ERROR] Invalid CDP URL: ${cdpUrl}`,
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      cause: err,
+    });
+  }
   const versionUrl = `${baseUrl}/json/version`;
 
   let lastError = null;
@@ -124,20 +190,31 @@ export async function fetchCdpWsEndpoint(cdpUrl = 'http://127.0.0.1:9222', optio
       const res = await fetch(versionUrl, { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
         const data = await res.json();
-        if (data.webSocketDebuggerUrl) {
+        if (
+          data &&
+          typeof data.webSocketDebuggerUrl === 'string' &&
+          data.webSocketDebuggerUrl.length > 0
+        ) {
           return data.webSocketDebuggerUrl;
         }
+        lastError = new Error('CDP endpoint returned OK but missing webSocketDebuggerUrl');
+      } else {
+        lastError = new Error(`CDP endpoint returned ${res.status} ${res.statusText}`);
       }
     } catch (err) {
-      lastError = err;
+      lastError = err instanceof Error ? err : new Error(String(err));
     }
     if (attempt < retries - 1) {
       await new Promise((r) => setTimeout(r, delayMs));
     }
   }
 
-  const portMatch = baseUrl.match(/:(\d+)$/);
-  const port = portMatch ? portMatch[1] : '9222';
+  let port;
+  try {
+    port = new URL(baseUrl).port || '9222';
+  } catch {
+    port = '9222';
+  }
 
   throw new PlatformError({
     code: 'XACT_5030',
@@ -157,10 +234,10 @@ export async function fetchCdpWsEndpoint(cdpUrl = 'http://127.0.0.1:9222', optio
  * @param {string} [options.userDataDir]
  * @param {string} [options.chromePath]
  * @param {boolean} [options.headless=false]
- * @returns {Promise<{ port: number, cdpUrl: string, userDataDir: string, alreadyRunning?: boolean }>}
+ * @returns {Promise<{ port: number, cdpUrl: string, userDataDir: string, alreadyRunning?: boolean, kill: () => Promise<void> }>}
  */
 export async function launchChrome(options = {}) {
-  const port = Number(options.port) || 9222;
+  const port = resolvePort(options.port ?? 9222);
   const userDataDir = options.userDataDir || getDefaultUserDataDir();
   const cdpUrl = `http://127.0.0.1:${port}`;
 
@@ -173,6 +250,7 @@ export async function launchChrome(options = {}) {
         cdpUrl,
         userDataDir,
         alreadyRunning: true,
+        kill: () => Promise.resolve(),
       };
     }
   } catch {}
@@ -188,7 +266,40 @@ export async function launchChrome(options = {}) {
     detached: true,
     stdio: 'ignore',
   });
-  child.on('error', () => {});
+
+  // Capture spawn errors immediately so we don't wait for a timeout with a
+  // misleading message.
+  let spawnError = null;
+  const spawnReady = new Promise((resolve, reject) => {
+    const onError = (err) => {
+      spawnError = err;
+      cleanupListeners();
+      reject(err);
+    };
+    const onSpawn = () => {
+      cleanupListeners();
+      resolve();
+    };
+    const cleanupListeners = () => {
+      child.off('error', onError);
+      child.off('spawn', onSpawn);
+    };
+    child.once('error', onError);
+    child.once('spawn', onSpawn);
+  });
+
+  try {
+    await spawnReady;
+  } catch (err) {
+    throw new PlatformError({
+      code: 'XACT_5030',
+      type: ErrorTypes.INTERNAL,
+      message: `[CDP ERROR] Failed to spawn Chrome: ${err instanceof Error ? err.message : String(err)}`,
+      suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+      cause: err,
+    });
+  }
+
   child.unref();
 
   // Poll until endpoint responds
@@ -214,6 +325,13 @@ export async function launchChrome(options = {}) {
     cdpUrl,
     userDataDir,
     alreadyRunning: false,
+    kill: async () => {
+      if (child && !child.killed) {
+        try {
+          child.kill();
+        } catch {}
+      }
+    },
   };
 }
 

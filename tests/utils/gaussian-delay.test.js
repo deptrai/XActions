@@ -59,5 +59,19 @@ describe('Story 12.2 — Gaussian Jitter Delay (tests/utils/gaussian-delay.test.
       expect(val).toBeGreaterThanOrEqual(3000);
       expect(val).toBeLessThanOrEqual(7000);
     });
+
+    it('[P2] should reject invalid jitter arguments', async () => {
+      const { gaussianRandom } = await import('../../src/utils/gaussian-delay.js');
+      expect(() => gaussianRandom(NaN, 1000)).toThrow();
+      expect(() => gaussianRandom(1000, NaN)).toThrow();
+      expect(() => gaussianRandom(1000, 2000, NaN)).toThrow();
+      expect(() => gaussianRandom(1000, 2000, 1500, -10)).toThrow();
+      expect(() => gaussianRandom(-100, 2000)).toThrow();
+    });
+
+    it('[P2] should handle min === max as a constant', async () => {
+      const { gaussianRandom } = await import('../../src/utils/gaussian-delay.js');
+      expect(gaussianRandom(500, 500)).toBe(500);
+    });
   });
 });

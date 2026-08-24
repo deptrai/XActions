@@ -1,5 +1,8 @@
 // Copyright (c) 2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 
 // Note: In TDD Red Phase, these tests are scaffolded with it.skip().
 // Activate them task-by-task during dev-story implementation.
@@ -27,6 +30,32 @@ describe('Story 12.2 — CDP Launcher & Remote Attach (tests/core/cdp-launcher.t
     it('[P2] should throw PlatformError if custom executablePath does not exist', async () => {
       const { getChromeExecutablePath } = await import('../../src/core/cdp-launcher.js');
       expect(() => getChromeExecutablePath('darwin', '/invalid/path/chrome')).toThrow();
+    });
+
+    it('[P2] should throw PlatformError if custom executablePath is a directory', async () => {
+      const { getChromeExecutablePath } = await import('../../src/core/cdp-launcher.js');
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdp-chrome-'));
+      try {
+        expect(() => getChromeExecutablePath('linux', tmpDir)).toThrow();
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+
+    it('[P2] should prefer an executable found on Linux PATH', async () => {
+      const { getChromeExecutablePath } = await import('../../src/core/cdp-launcher.js');
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdp-bin-'));
+      const originalPath = process.env.PATH;
+      try {
+        const chromiumPath = path.join(tmpDir, 'chromium');
+        fs.writeFileSync(chromiumPath, '#!/bin/sh\necho ok\n', { mode: 0o755 });
+        process.env.PATH = tmpDir;
+        const p = getChromeExecutablePath('linux');
+        expect(p).toBe(chromiumPath);
+      } finally {
+        process.env.PATH = originalPath;
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
     });
   });
 
@@ -57,12 +86,28 @@ describe('Story 12.2 — CDP Launcher & Remote Attach (tests/core/cdp-launcher.t
       expect(args).toContain('--remote-debugging-port=9223');
       expect(args).toContain('--headless=new');
     });
+
+    it('[P2] should reject invalid ports', async () => {
+      const { buildChromeArgs } = await import('../../src/core/cdp-launcher.js');
+      expect(() => buildChromeArgs({ port: 0 })).toThrow();
+      expect(() => buildChromeArgs({ port: 70000 })).toThrow();
+      expect(() => buildChromeArgs({ port: 'not-a-port' })).toThrow();
+    });
   });
 
   describe('CDP WebSocket Endpoint Fetching (AC-2)', () => {
+    beforeEach(() => {
+      vi.stubGlobal('fetch', undefined);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
     it('[P0] should query /json/version and extract webSocketDebuggerUrl', async () => {
       const { fetchCdpWsEndpoint } = await import('../../src/core/cdp-launcher.js');
-      
+
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -79,10 +124,44 @@ describe('Story 12.2 — CDP Launcher & Remote Attach (tests/core/cdp-launcher.t
 
     it('[P1] should throw PlatformError when CDP endpoint is unreachable', async () => {
       const { fetchCdpWsEndpoint } = await import('../../src/core/cdp-launcher.js');
-      
+
       global.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
 
       await expect(fetchCdpWsEndpoint('http://127.0.0.1:9999', { retries: 1, delayMs: 10 })).rejects.toThrow();
+    });
+
+    it('[P2] should throw PlatformError when response is OK but webSocketDebuggerUrl is missing', async () => {
+      const { fetchCdpWsEndpoint } = await import('../../src/core/cdp-launcher.js');
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ 'Protocol-Version': '1.3' }),
+      });
+
+      await expect(fetchCdpWsEndpoint('http://127.0.0.1:9222', { retries: 1, delayMs: 10 })).rejects.toThrow();
+    });
+
+    it('[P2] should reject malformed or empty CDP URLs', async () => {
+      const { fetchCdpWsEndpoint } = await import('../../src/core/cdp-launcher.js');
+
+      await expect(fetchCdpWsEndpoint('   ')).rejects.toThrow(/Invalid CDP URL/);
+      await expect(fetchCdpWsEndpoint('not a url')).rejects.toThrow(/Invalid CDP URL/);
+    });
+
+    it('[P2] should trim whitespace and accept bare host:port inputs', async () => {
+      const { fetchCdpWsEndpoint } = await import('../../src/core/cdp-launcher.js');
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          webSocketDebuggerUrl: 'ws://127.0.0.1:9222/devtools/browser/abc-123',
+        }),
+      });
+      global.fetch = mockFetch;
+
+      const wsUrl = await fetchCdpWsEndpoint('  127.0.0.1:9222  ');
+      expect(wsUrl).toBe('ws://127.0.0.1:9222/devtools/browser/abc-123');
+      expect(mockFetch).toHaveBeenCalledWith('http://127.0.0.1:9222/json/version', expect.any(Object));
     });
   });
 

@@ -325,3 +325,17 @@ Devin (SWE-1.7 Max) + Serena LSP context.
 - [x] [Review][Patch] Terminate spawned Chrome process on polling timeout [`src/core/cdp-launcher.js:160-170`]
 - [x] [Review][Patch] Safe protocol normalization for cdpUrl [`src/core/cdp-launcher.js:71`]
 - [x] [Review][Patch] Explicitly bind remote debugging to 127.0.0.1 [`src/core/cdp-launcher.js:56`]
+- [x] [Review][Decision] Chrome process lifecycle after `auth --launch-chrome` — `child.unref()` in `src/core/cdp-launcher.js:191` intentionally leaves Chrome running after Node exits so the user can log in. Should we add SIGINT/beforeExit cleanup to kill spawned Chrome, or leave it as-is and document?
+- [x] [Review][Decision] `auth --launch-chrome` does not persist a `LoginResult` — AC-2 requires results storable as `{ accountId, cookies, tokens, expiresAt }`. The CLI only launches Chrome and does not capture session. Should it accept `--account-id` and save a `LoginResult` (with `cdpUrl`) to `SessionManager`, or should the spec clarify that `LoginResult` is produced later by the crawler?
+- [x] [Review][Patch] Linux Chrome path detection returns first candidate without checking PATH [`src/core/cdp-launcher.js:51-56`]
+- [x] [Review][Patch] Custom `--chrome-path` is not validated as a regular file [`src/core/cdp-launcher.js:16-25`]
+- [x] [Review][Patch] Silent `getDefaultUserDataDir` creation failure masks permission/disk errors [`src/core/cdp-launcher.js:66-74`]
+- [x] [Review][Patch] Silent `child.on('error')` handler masks Chrome spawn root cause [`src/core/cdp-launcher.js:187-192`]
+- [x] [Review][Patch] Port validation missing across CLI and launcher (0, non-numeric, out-of-range accepted) [`src/cli/commands/auth.js:39`; `src/core/cdp-launcher.js:85-86,163`]
+- [x] [Review][Patch] CDP URL normalization does not trim whitespace or guard shape [`src/core/cdp-launcher.js:117-118`]
+- [x] [Review][Patch] `fetchCdpWsEndpoint` loses error context when response is OK but missing `webSocketDebuggerUrl` [`src/core/cdp-launcher.js:122-137`]
+- [x] [Review][Patch] Facebook `createPage` loses adapter metadata (`_adapter`, `_native`) when using adapter browser [`src/scrapers/facebook/core.js:197-211`]
+- [x] [Review][Patch] `AbstractCrawler.start()` does not call `delayWithJitter()` despite AC-5 requiring Gaussian jitter before actions [`src/core/base-crawler.js:149-237`]
+- [x] [Review][Patch] `gaussian-delay.js` duplicates Box-Muller instead of reusing `antiDetection.gaussianRandom` [`src/utils/gaussian-delay.js:9-31`]
+- [x] [Review][Patch] Gaussian jitter utility lacks input validation (NaN, Infinity, out-of-order bounds) [`src/utils/gaussian-delay.js:25-45`]
+- [x] [Review][Patch] Tests missing for port validation, Linux Chrome path fallback, and spawn failure paths [`tests/core/cdp-launcher.test.js`; `tests/cli/auth.test.js`]

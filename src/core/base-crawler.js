@@ -234,6 +234,12 @@ export class AbstractCrawler {
     }
 
     const session = { ...(command.session || {}), ...(accountId ? { accountId } : {}) };
+
+    // Apply Gaussian jitter between actions when running in CDP attach mode.
+    if (this.cdpUrl || command.session?.cdpUrl) {
+      await this.delayWithJitter();
+    }
+
     return entry.handler(command.args, session);
   }
 

@@ -207,6 +207,8 @@ export async function createPage(browser, options = {}) {
       { preserveProfile: isCdp, ...options }
     );
     page = /** @type {import('puppeteer').Page} */ (adapterPage._native);
+    page._adapter = adapterPage._adapter;
+    page._native = adapterPage._native;
   } else {
     page = await browser.newPage();
   }

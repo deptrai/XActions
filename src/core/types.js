@@ -52,6 +52,8 @@
  * @property {string | Record<string, unknown>} cookies
  * @property {Record<string, unknown>} tokens
  * @property {Date | string} [expiresAt]
+ * @property {string} [cdpUrl]
+ * @property {Record<string, unknown>} [details]
  */
 
 /**

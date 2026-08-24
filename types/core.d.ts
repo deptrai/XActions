@@ -46,9 +46,11 @@ export interface CommentItem {
 
 export interface LoginResult {
   accountId: string;
-  cookies: string;
+  cookies: string | Record<string, unknown>;
   tokens: Record<string, unknown>;
   expiresAt?: Date;
+  cdpUrl?: string;
+  details?: Record<string, unknown>;
 }
 
 export interface CrawlerCommand {
