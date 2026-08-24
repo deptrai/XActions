@@ -247,6 +247,12 @@ types/
   * Error path: CDP endpoint unreachable, Chrome path not found.
 * **NFR**: full suite `npx vitest run` phải vẫn 0 failed; không regression ở `tests/core/crawler-governor.test.js` hay `tests/scrapers/**`.
 
+### ATDD Artifacts
+* Checklist: `_bmad-output/test-artifacts/atdd-checklist-12-2-cdp-remote-attach-mode-chrome-devtools-protocol.md`
+* Core Tests: `tests/core/cdp-launcher.test.js`
+* Delay Tests: `tests/utils/gaussian-delay.test.js`
+* CLI Tests: `tests/cli/auth.test.js`
+
 ### Project Structure Notes
 
 * `src/core/cdp-launcher.js` phải **zero npm deps** — không `import 'playwright'` tĩnh. Dùng dynamic `import('../scrapers/adapters/index.js')` trong runtime hoặc delegate `connect()` cho adapter.
