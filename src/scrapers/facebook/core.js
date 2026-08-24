@@ -195,12 +195,30 @@ export async function applyProxyLocation(page, proxyLocation) {
  * @returns {Promise<import('puppeteer').Page>} Puppeteer page instance with `page._fingerprint` set
  */
 export async function createPage(browser, options = {}) {
-  const page = await browser.newPage();
+  const bObj = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (browser));
+  const isCdp = Boolean(options.preserveProfile || bObj._cdp || bObj._preserveProfile);
+  /** @type {import('puppeteer').Page} */
+  let page;
+  if (bObj._adapter) {
+    const { getAdapter } = await import('../adapters/index.js');
+    const adapter = await getAdapter(String(bObj._adapter));
+    const adapterPage = await adapter.newPage(
+      /** @type {AdapterBrowser} */ (/** @type {unknown} */ (browser)),
+      { preserveProfile: isCdp, ...options }
+    );
+    page = /** @type {import('puppeteer').Page} */ (adapterPage._native);
+  } else {
+    page = await browser.newPage();
+  }
 
   // Apply proxy authentication before any navigation so the proxy accepts the browser connection.
   const proxyAuth = options.proxyAuth;
   if (proxyAuth && typeof proxyAuth.username === 'string' && typeof proxyAuth.password === 'string') {
     await page.authenticate({ username: proxyAuth.username, password: proxyAuth.password });
+  }
+
+  if (isCdp) {
+    return page;
   }
 
   const fingerprint = /** @type {FacebookFingerprint} */ (

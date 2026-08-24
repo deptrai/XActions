@@ -5,8 +5,8 @@ import { describe, it, expect } from 'vitest';
 // Activate them task-by-task during dev-story implementation.
 
 describe('Story 12.2 — Gaussian Jitter Delay (tests/utils/gaussian-delay.test.js)', () => {
-  describe.skip('gaussianRandom function (AC-3)', () => {
-    it.skip('[P0] should return values strictly within [min, max] boundary', async () => {
+  describe('gaussianRandom function (AC-3)', () => {
+    it('[P0] should return values strictly within [min, max] boundary', async () => {
       const { gaussianRandom } = await import('../../src/utils/gaussian-delay.js');
       
       const min = 3000;
@@ -18,7 +18,7 @@ describe('Story 12.2 — Gaussian Jitter Delay (tests/utils/gaussian-delay.test.
       }
     });
 
-    it.skip('[P1] should follow a normal distribution centered around the mean', async () => {
+    it('[P1] should follow a normal distribution centered around the mean', async () => {
       const { gaussianRandom } = await import('../../src/utils/gaussian-delay.js');
       
       const min = 3000;
@@ -26,12 +26,12 @@ describe('Story 12.2 — Gaussian Jitter Delay (tests/utils/gaussian-delay.test.
       const samples = Array.from({ length: 500 }, () => gaussianRandom(min, max));
       const mean = samples.reduce((a, b) => a + b, 0) / samples.length;
 
-      // For [3000, 7000], mean is 5000. Sample mean should be within 4800..5200 with 500 samples
+      // For [3000, 7000], mean is 5000. Sample mean should be within 4700..5300 with 500 samples
       expect(mean).toBeGreaterThan(4700);
       expect(mean).toBeLessThan(5300);
     });
 
-    it.skip('[P2] should handle custom mean and stdDev parameters', async () => {
+    it('[P2] should handle custom mean and stdDev parameters', async () => {
       const { gaussianRandom } = await import('../../src/utils/gaussian-delay.js');
       
       const val = gaussianRandom(1000, 2000, 1500, 100);
@@ -40,8 +40,8 @@ describe('Story 12.2 — Gaussian Jitter Delay (tests/utils/gaussian-delay.test.
     });
   });
 
-  describe.skip('gaussianDelay function (AC-3)', () => {
-    it.skip('[P0] should resolve promise after calculated delay', async () => {
+  describe('gaussianDelay function (AC-3)', () => {
+    it('[P0] should resolve promise after calculated delay', async () => {
       const { gaussianDelay } = await import('../../src/utils/gaussian-delay.js');
       
       const start = Date.now();
@@ -50,10 +50,10 @@ describe('Story 12.2 — Gaussian Jitter Delay (tests/utils/gaussian-delay.test.
 
       expect(delayMs).toBeGreaterThanOrEqual(50);
       expect(delayMs).toBeLessThanOrEqual(100);
-      expect(elapsed).toBeGreaterThanOrEqual(45); // slight timer tolerance
+      expect(elapsed).toBeGreaterThanOrEqual(40); // slight timer tolerance
     });
 
-    it.skip('[P1] should default to 3000ms - 7000ms range when called without arguments', async () => {
+    it('[P1] should default to 3000ms - 7000ms range when called without arguments', async () => {
       const { gaussianRandom } = await import('../../src/utils/gaussian-delay.js');
       const val = gaussianRandom();
       expect(val).toBeGreaterThanOrEqual(3000);

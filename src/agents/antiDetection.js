@@ -89,8 +89,11 @@ function generateBezierPath(startX, startY, endX, endY, steps = 25) {
 
 /**
  * Gaussian random number using Box-Muller transform.
+ * @param {number} [mean=0]
+ * @param {number} [stdev=1]
+ * @returns {number}
  */
-function gaussianRandom(mean = 0, stdev = 1) {
+export function gaussianRandom(mean = 0, stdev = 1) {
   const u1 = Math.random();
   const u2 = Math.random();
   const z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
@@ -103,7 +106,7 @@ const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 /**
  * Anti-detection module — simulates human behavior for Puppeteer pages.
  */
-class AntiDetection {
+export class AntiDetection {
   /**
    * Generate a randomized session fingerprint.
    * @returns {SessionFingerprint}
@@ -320,4 +323,4 @@ class AntiDetection {
   }
 }
 
-export { AntiDetection };
+export default AntiDetection;

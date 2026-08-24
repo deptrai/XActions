@@ -8,6 +8,8 @@
 import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
 import { globalActionRegistry } from './action-registry.js';
 import { isValidCategory, CATEGORY_VALUES } from './types.js';
+import { launchBrowserWithCdp } from './cdp-launcher.js';
+import { gaussianDelay } from '../utils/gaussian-delay.js';
 
 /** @typedef {import('./types.js').CrawlerCommand} CrawlerCommand */
 /** @typedef {import('./types.js').ActionDescriptor} ActionDescriptor */
@@ -22,6 +24,9 @@ export class AbstractCrawler {
 
   /** @type {boolean} */
   requiresAuth = false;
+
+  /** @type {string | null} */
+  cdpUrl = null;
 
   /** @type {AdaptiveRateGovernor | null} */
   governor = null;
@@ -40,6 +45,7 @@ export class AbstractCrawler {
    * @param {AdaptiveRateGovernor} [deps.governor]
    * @param {AccountPool} [deps.accountPool]
    * @param {boolean} [deps.requiresAuth]
+   * @param {string} [deps.cdpUrl]
    */
   constructor(deps = {}) {
     if (new.target === AbstractCrawler) {
@@ -50,6 +56,7 @@ export class AbstractCrawler {
     this.sessionManager = deps.sessionManager || null;
     this.governor = deps.governor || deps.client?.governor || null;
     this.accountPool = deps.accountPool || deps.client?.accountPool || null;
+    this.cdpUrl = deps.cdpUrl || null;
     if (deps.requiresAuth !== undefined) {
       this.requiresAuth = deps.requiresAuth;
     }
@@ -228,6 +235,34 @@ export class AbstractCrawler {
 
     const session = { ...(command.session || {}), ...(accountId ? { accountId } : {}) };
     return entry.handler(command.args, session);
+  }
+
+  /**
+   * Launch or connect browser using CDP mode.
+   * @param {string | null} [cdpUrl=this.cdpUrl]
+   * @param {Object} [options={}]
+   * @returns {Promise<any>}
+   */
+  async launchBrowserWithCdp(cdpUrl = this.cdpUrl, options = {}) {
+    if (!cdpUrl) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `[CDP ERROR] cdpUrl must be provided to launchBrowserWithCdp for crawler ${this.name}`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    return launchBrowserWithCdp(cdpUrl, options);
+  }
+
+  /**
+   * Apply Gaussian Jitter delay between actions.
+   * @param {number} [min=3000]
+   * @param {number} [max=7000]
+   * @returns {Promise<number>}
+   */
+  async delayWithJitter(min = 3000, max = 7000) {
+    return gaussianDelay(min, max);
   }
 
   /** @returns {Promise<void>} */

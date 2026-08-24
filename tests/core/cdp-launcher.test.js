@@ -5,33 +5,33 @@ import { describe, it, expect, vi } from 'vitest';
 // Activate them task-by-task during dev-story implementation.
 
 describe('Story 12.2 — CDP Launcher & Remote Attach (tests/core/cdp-launcher.test.js)', () => {
-  describe.skip('Chrome Path Detection (AC-1)', () => {
-    it.skip('[P0] should return macOS Chrome path on darwin platform', async () => {
+  describe('Chrome Path Detection (AC-1)', () => {
+    it('[P0] should return macOS Chrome path on darwin platform', async () => {
       const { getChromeExecutablePath } = await import('../../src/core/cdp-launcher.js');
       const p = getChromeExecutablePath('darwin');
       expect(p).toBe('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
     });
 
-    it.skip('[P1] should return Windows Chrome path on win32 platform', async () => {
+    it('[P1] should return Windows Chrome path on win32 platform', async () => {
       const { getChromeExecutablePath } = await import('../../src/core/cdp-launcher.js');
       const p = getChromeExecutablePath('win32');
       expect(p).toMatch(/Chrome\\Application\\chrome\.exe/i);
     });
 
-    it.skip('[P1] should resolve Linux Chrome or Chromium candidate binary from PATH', async () => {
+    it('[P1] should resolve Linux Chrome or Chromium candidate binary from PATH', async () => {
       const { getChromeExecutablePath } = await import('../../src/core/cdp-launcher.js');
       const p = getChromeExecutablePath('linux');
       expect(['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser']).toContain(p);
     });
 
-    it.skip('[P2] should throw PlatformError if custom executablePath does not exist', async () => {
+    it('[P2] should throw PlatformError if custom executablePath does not exist', async () => {
       const { getChromeExecutablePath } = await import('../../src/core/cdp-launcher.js');
       expect(() => getChromeExecutablePath('darwin', '/invalid/path/chrome')).toThrow();
     });
   });
 
-  describe.skip('Chrome Launch Arguments Builder (AC-1)', () => {
-    it.skip('[P0] should build correct arguments with remote debugging port and user data dir', async () => {
+  describe('Chrome Launch Arguments Builder (AC-1)', () => {
+    it('[P0] should build correct arguments with remote debugging port and user data dir', async () => {
       const { buildChromeArgs } = await import('../../src/core/cdp-launcher.js');
       const args = buildChromeArgs({
         port: 9222,
@@ -46,7 +46,7 @@ describe('Story 12.2 — CDP Launcher & Remote Attach (tests/core/cdp-launcher.t
       expect(args).not.toContain('--headless');
     });
 
-    it.skip('[P1] should append headless flag if explicitly requested', async () => {
+    it('[P1] should append headless flag if explicitly requested', async () => {
       const { buildChromeArgs } = await import('../../src/core/cdp-launcher.js');
       const args = buildChromeArgs({
         port: 9223,
@@ -59,8 +59,8 @@ describe('Story 12.2 — CDP Launcher & Remote Attach (tests/core/cdp-launcher.t
     });
   });
 
-  describe.skip('CDP WebSocket Endpoint Fetching (AC-2)', () => {
-    it.skip('[P0] should query /json/version and extract webSocketDebuggerUrl', async () => {
+  describe('CDP WebSocket Endpoint Fetching (AC-2)', () => {
+    it('[P0] should query /json/version and extract webSocketDebuggerUrl', async () => {
       const { fetchCdpWsEndpoint } = await import('../../src/core/cdp-launcher.js');
       
       const mockFetch = vi.fn().mockResolvedValue({
@@ -77,7 +77,7 @@ describe('Story 12.2 — CDP Launcher & Remote Attach (tests/core/cdp-launcher.t
       expect(mockFetch).toHaveBeenCalledWith('http://127.0.0.1:9222/json/version', expect.any(Object));
     });
 
-    it.skip('[P1] should throw PlatformError when CDP endpoint is unreachable', async () => {
+    it('[P1] should throw PlatformError when CDP endpoint is unreachable', async () => {
       const { fetchCdpWsEndpoint } = await import('../../src/core/cdp-launcher.js');
       
       global.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
@@ -86,8 +86,8 @@ describe('Story 12.2 — CDP Launcher & Remote Attach (tests/core/cdp-launcher.t
     });
   });
 
-  describe.skip('launchBrowserWithCdp Integration (AC-2)', () => {
-    it.skip('[P0] should connect adapter to CDP endpoint and preserve browser profile', async () => {
+  describe('launchBrowserWithCdp Integration (AC-2)', () => {
+    it('[P0] should connect adapter to CDP endpoint and preserve browser profile', async () => {
       const { launchBrowserWithCdp } = await import('../../src/core/cdp-launcher.js');
 
       const mockBrowser = {
@@ -109,7 +109,7 @@ describe('Story 12.2 — CDP Launcher & Remote Attach (tests/core/cdp-launcher.t
       expect(browser).toBe(mockBrowser);
     });
 
-    it.skip('[P1] should wrap connection failure into standard PlatformError envelope (AD-15)', async () => {
+    it('[P1] should wrap connection failure into standard PlatformError envelope (AD-15)', async () => {
       const { launchBrowserWithCdp } = await import('../../src/core/cdp-launcher.js');
 
       const mockAdapter = {

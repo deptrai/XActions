@@ -55,6 +55,8 @@ describe('PuppeteerAdapter', () => {
       _native: mockBrowser,
       _adapter: 'puppeteer',
       _browserType: 'chromium',
+      _cdp: true,
+      _preserveProfile: true,
     });
   });
 
@@ -102,5 +104,29 @@ describe('PuppeteerAdapter', () => {
       defaultViewport: null,
       slowMo: 100,
     });
+  });
+
+  it('uses existing pages and does not overwrite viewport/userAgent when preserveProfile is true', async () => {
+    const adapter = new PuppeteerAdapter();
+    const mockPage = {
+      setViewport: vi.fn(),
+      setUserAgent: vi.fn(),
+    };
+    const mockBrowser = {
+      pages: vi.fn().mockResolvedValue([mockPage]),
+      newPage: vi.fn(),
+    };
+
+    const adapterBrowser = {
+      _native: mockBrowser,
+      _adapter: 'puppeteer',
+      _preserveProfile: true,
+    };
+
+    const page = await adapter.newPage(adapterBrowser, { preserveProfile: true });
+    expect(mockBrowser.newPage).not.toHaveBeenCalled();
+    expect(mockPage.setViewport).not.toHaveBeenCalled();
+    expect(mockPage.setUserAgent).not.toHaveBeenCalled();
+    expect(page._native).toBe(mockPage);
   });
 });

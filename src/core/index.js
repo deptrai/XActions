@@ -9,6 +9,14 @@ export { AbstractCrawler } from './base-crawler.js';
 export { AbstractApiClient } from './base-client.js';
 export { AbstractLogin } from './base-login.js';
 export { TerminalQrLogin } from './login/terminal-qr.js';
+export {
+  launchBrowserWithCdp,
+  launchChrome,
+  getChromeExecutablePath,
+  buildChromeArgs,
+  fetchCdpWsEndpoint,
+  getDefaultUserDataDir,
+} from './cdp-launcher.js';
 export { AbstractStore } from './base-store.js';
 export {
   PlatformError,

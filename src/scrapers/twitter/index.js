@@ -121,12 +121,14 @@ export async function createBrowser(options = {}) {
  * @returns {Promise<import('puppeteer').Page>} Page instance
  */
 export async function createPage(browser, options = {}) {
-  if (browser._adapter) {
+  const bObj = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (browser));
+  const isCdp = Boolean(options.preserveProfile || bObj._cdp || bObj._preserveProfile);
+  if (bObj._adapter) {
     const { getAdapter } = await import('../adapters/index.js');
-    const adapter = await getAdapter(browser._adapter);
+    const adapter = await getAdapter(String(bObj._adapter));
     const adapterPage = await adapter.newPage(
       /** @type {AdapterBrowser} */ (/** @type {unknown} */ (browser)),
-      options
+      { preserveProfile: isCdp, ...options }
     );
     const page = /** @type {import('puppeteer').Page} */ (adapterPage._native);
     page._adapter = adapterPage._adapter;
@@ -135,10 +137,12 @@ export async function createPage(browser, options = {}) {
   }
 
   const page = await browser.newPage();
-  await page.setViewport({ width: 1280 + Math.floor(Math.random() * 100), height: 800 });
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-  );
+  if (!isCdp) {
+    await page.setViewport({ width: 1280 + Math.floor(Math.random() * 100), height: 800 });
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    );
+  }
   return page;
 }
 

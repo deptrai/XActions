@@ -42,11 +42,13 @@ interface LaunchOptions {
   maxRequestsPerCrawl?: number;
   userAgent?: string;
   timeout?: number;
+  preserveProfile?: boolean;
 }
 
 interface NewPageOptions {
   userAgent?: string;
   viewport?: { width: number; height: number };
+  preserveProfile?: boolean;
 }
 
 interface GotoOptions {

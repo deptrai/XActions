@@ -99,4 +99,18 @@ describe('AbstractCrawler contract', () => {
 
     expect(governor.getAccountVelocity('test-platform:noauth')).toBe(1);
   });
+
+  it('accepts cdpUrl in constructor and supports delayWithJitter', async () => {
+    const crawler = new TestCrawler({ cdpUrl: 'http://localhost:9222' });
+    expect(crawler.cdpUrl).toBe('http://localhost:9222');
+
+    const delay = await crawler.delayWithJitter(10, 20);
+    expect(delay).toBeGreaterThanOrEqual(10);
+    expect(delay).toBeLessThanOrEqual(20);
+  });
+
+  it('launchBrowserWithCdp throws PlatformError if cdpUrl is not set', async () => {
+    const crawler = new TestCrawler();
+    await expect(crawler.launchBrowserWithCdp()).rejects.toThrow(PlatformError);
+  });
 });

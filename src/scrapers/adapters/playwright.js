@@ -83,7 +83,15 @@ export class PlaywrightAdapter extends BaseAdapter {
    * @returns {Promise<AdapterPage>}
    */
   async newPage(browser, options = {}) {
-    const b = /** @type {AdapterBrowser & { _native: import('playwright').Browser }} */ (browser);
+    const b = /** @type {AdapterBrowser & { _native: import('playwright').Browser, _preserveProfile?: boolean }} */ (browser);
+    if (options.preserveProfile || b._preserveProfile) {
+      const contexts = b._native.contexts();
+      const context = contexts.length > 0 ? contexts[0] : await b._native.newContext();
+      const pages = context.pages();
+      const page = pages.length > 0 ? pages[0] : await context.newPage();
+      return { _native: page, _context: context, _adapter: this.name };
+    }
+
     const width = options.viewport?.width || 1280 + Math.floor(Math.random() * 100);
     const height = options.viewport?.height || 800;
 
@@ -305,7 +313,13 @@ export class PlaywrightAdapter extends BaseAdapter {
     const launcher = pwRecord[browserType] || pw.chromium;
     const connectOptions = /** @type {import('playwright').ConnectOptions} */ ({ ...options });
     const browser = await launcher.connectOverCDP(cdpUrl, connectOptions);
-    return { _native: browser, _adapter: this.name, _browserType: browserType };
+    return {
+      _native: browser,
+      _adapter: this.name,
+      _browserType: browserType,
+      _cdp: true,
+      _preserveProfile: options.preserveProfile ?? true,
+    };
   }
 }
 

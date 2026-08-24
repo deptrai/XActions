@@ -33,6 +33,8 @@ describe('PlaywrightAdapter', () => {
       _native: mockBrowser,
       _adapter: 'playwright',
       _browserType: 'chromium',
+      _cdp: true,
+      _preserveProfile: true,
     });
   });
 
@@ -59,5 +61,28 @@ describe('PlaywrightAdapter', () => {
     mockConnectOverCDP.mockRejectedValue(new Error('connect ECONNREFUSED'));
 
     await expect(adapter.connect('http://localhost:9222')).rejects.toThrow('connect ECONNREFUSED');
+  });
+
+  it('uses default context and does not overwrite profile when preserveProfile is true', async () => {
+    const adapter = new PlaywrightAdapter();
+    const mockPage = {};
+    const mockContext = {
+      pages: vi.fn().mockReturnValue([mockPage]),
+      newPage: vi.fn(),
+    };
+    const mockBrowser = {
+      contexts: vi.fn().mockReturnValue([mockContext]),
+      newContext: vi.fn(),
+    };
+
+    const adapterBrowser = {
+      _native: mockBrowser,
+      _adapter: 'playwright',
+      _preserveProfile: true,
+    };
+
+    const page = await adapter.newPage(adapterBrowser, { preserveProfile: true });
+    expect(mockBrowser.newContext).not.toHaveBeenCalled();
+    expect(page._native).toBe(mockPage);
   });
 });

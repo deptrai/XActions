@@ -28,7 +28,7 @@ export function registerLoginCommand(program) {
     .action(async (options = {}) => {
       if (options.cdp) {
         console.log(chalk.cyan('\n⚡ Switching to CDP Remote Attach Mode (Chrome DevTools Protocol on :9222)...'));
-        console.log(chalk.gray('Please make sure Chrome is running with: --remote-debugging-port=9222\n'));
+        console.log(chalk.gray('Run \'xactions auth --launch-chrome\' to open Chrome with remote debugging.\n'));
         return;
       }
 

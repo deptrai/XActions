@@ -63,6 +63,7 @@ export class PlatformError extends Error {
   constructor(opts = {}) {
     super(opts.message || 'Platform error');
     this.name = 'PlatformError';
+    this.isPlatformError = true;
     this.code = opts.code || 'XACT_0000';
     this.type = opts.type || ErrorTypes.INTERNAL;
     this.isRetryable = opts.isRetryable ?? isRetryableType(this.type);

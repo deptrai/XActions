@@ -170,6 +170,7 @@ export class ProxyDeadError extends PlatformError {
 export abstract class AbstractCrawler {
   name: string;
   requiresAuth: boolean;
+  cdpUrl: string | null;
   governor: AdaptiveRateGovernor | null;
   accountPool: AccountPool | null;
   constructor(deps?: {
@@ -179,12 +180,15 @@ export abstract class AbstractCrawler {
     governor?: AdaptiveRateGovernor;
     accountPool?: AccountPool;
     requiresAuth?: boolean;
+    cdpUrl?: string;
   });
   registerAction(action: string, handler: Function, descriptor?: Partial<Omit<ActionDescriptor, 'action'>>): void;
   registerAction(descriptor: Partial<ActionDescriptor> & { action: string; handler: Function }): void;
   listActions(): ActionDescriptor[];
   validateItem(item: PostItem | CommentItem): void;
   start(command: CrawlerCommand): Promise<unknown>;
+  launchBrowserWithCdp(cdpUrl?: string, options?: Record<string, unknown>): Promise<unknown>;
+  delayWithJitter(min?: number, max?: number): Promise<number>;
   abstract init(): Promise<void>;
   abstract search(args: Record<string, unknown>): Promise<PostItem[]>;
   abstract getPostDetail(args: Record<string, unknown>): Promise<PostItem>;

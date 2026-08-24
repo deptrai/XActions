@@ -74,7 +74,14 @@ export class PuppeteerAdapter extends BaseAdapter {
    * @returns {Promise<AdapterPage>}
    */
   async newPage(browser, options = {}) {
-    const nativeBrowser = /** @type {import('puppeteer').Browser} */ (browser._native);
+    const b = /** @type {AdapterBrowser & { _native: import('puppeteer').Browser, _preserveProfile?: boolean }} */ (browser);
+    const nativeBrowser = b._native;
+    if (options.preserveProfile || b._preserveProfile) {
+      const pages = await nativeBrowser.pages();
+      const page = pages.length > 0 ? pages[0] : await nativeBrowser.newPage();
+      return { _native: page, _adapter: this.name };
+    }
+
     const page = await nativeBrowser.newPage();
     const width = options.viewport?.width || 1280 + Math.floor(Math.random() * 100);
     const height = options.viewport?.height || 800;
@@ -254,7 +261,13 @@ export class PuppeteerAdapter extends BaseAdapter {
     });
     const browser = await puppeteer.connect(connectOptions);
 
-    return { _native: browser, _adapter: this.name, _browserType: 'chromium' };
+    return {
+      _native: browser,
+      _adapter: this.name,
+      _browserType: 'chromium',
+      _cdp: true,
+      _preserveProfile: options.preserveProfile ?? true,
+    };
   }
 }
 

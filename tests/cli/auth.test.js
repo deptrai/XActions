@@ -16,8 +16,8 @@ describe('Story 12.2 — CLI Auth Command with Chrome Launch Helper (tests/cli/a
     vi.restoreAllMocks();
   });
 
-  describe.skip('CLI Flag Parsing for auth command (AC-1)', () => {
-    it.skip('[P0] should register auth command with --launch-chrome, --port, --user-data-dir, --headless', async () => {
+  describe('CLI Flag Parsing for auth command (AC-1)', () => {
+    it('[P0] should register auth command with --launch-chrome, --port, --user-data-dir, --headless', async () => {
       const { registerAuthCommand } = await import('../../src/cli/commands/auth.js');
       registerAuthCommand(program);
 
@@ -31,7 +31,7 @@ describe('Story 12.2 — CLI Auth Command with Chrome Launch Helper (tests/cli/a
       expect(optionNames).toContain('--headless');
     });
 
-    it.skip('[P0] should parse default port 9222 and default user-data-dir', async () => {
+    it('[P0] should parse default port 9222 and default user-data-dir', async () => {
       const { registerAuthCommand } = await import('../../src/cli/commands/auth.js');
       let capturedOptions = null;
 
@@ -48,7 +48,7 @@ describe('Story 12.2 — CLI Auth Command with Chrome Launch Helper (tests/cli/a
       expect(capturedOptions.port).toBe('9222');
     });
 
-    it.skip('[P1] should allow overriding port and custom user-data-dir', async () => {
+    it('[P1] should allow overriding port and custom user-data-dir', async () => {
       const { registerAuthCommand } = await import('../../src/cli/commands/auth.js');
       let capturedOptions = null;
 

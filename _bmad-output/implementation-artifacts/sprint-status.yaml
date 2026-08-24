@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-24T08:30:00.000Z
+last_updated: 2026-08-25T00:17:00.000Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -62,7 +62,7 @@ development_status:
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
   epic-12: in-progress
   12-1-terminal-ascii-qr-code-login-module: done
-  12-2-cdp-remote-attach-mode-chrome-devtools-protocol: ready-for-dev
+  12-2-cdp-remote-attach-mode-chrome-devtools-protocol: review
   epic-12-retrospective: optional
 
   # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---
