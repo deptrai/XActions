@@ -1,8 +1,18 @@
+---
+story_id: "13.3"
+epic: 13
+story_key: "13-3-refactor-facebook-scraper-to-hybrid-architecture"
+status: "ready-for-dev"
+phase: "Phase 4"
+created: 2026-08-26
+updated: 2026-08-26
+owner: "DEV"
+reviewed: "Ready for implementation"
+---
+
 # Story 13.3: Refactor Facebook Scraper to Hybrid Architecture
 
-Status: ready-for-dev
-
-<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+<!-- Note: Validation completed 2026-08-26. Ready for dev-story / bmad-dev-auto. -->
 
 ## Story
 
@@ -18,7 +28,7 @@ so that **tôi có thể theo dõi cộng đồng với độ trễ thấp và k
 - **Given** `FacebookCrawler` được triển khai trong `src/scrapers/social/facebook/index.js`
 - **When** khởi tạo với `client`, `store`, `sessionManager`, `governor`, `accountPool`, `proxyProvider`
 - **Then** `FacebookCrawler` kế thừa `AbstractCrawler`
-- **And** đăng ký `ActionRegistry` với các action `group_posts`, `page_posts`, `search` (nếu khả thi)
+- **And** đăng ký `ActionRegistry` với các action `group_posts`, `page_posts` (không đăng ký `search` trong story này — xem Scope & Deprecation Marker)
 - **And** `requiresAuth = true`, `name = 'facebook'`, `platform = 'facebook'`
 - **And** `listActions()` trả về `ActionDescriptor[]` đúng shape theo AD-11
 
@@ -26,6 +36,7 @@ so that **tôi có thể theo dõi cộng đồng với độ trễ thấp và k
 - **Given** `FacebookClient` kế thừa `AbstractApiClient` trong `src/scrapers/social/facebook/client.js`
 - **When** gọi `client.request('POST', url, options)` hoặc `client.requestWithSign(...)`
 - **Then** request đi qua proxy từ `ProxyIpPool` / `proxyProvider`
+- **And** `FacebookClient` phải set `client = 'got'` vì `AbstractApiClient.client` mặc định là `'undici'` (`src/core/base-client.js:54`)
 - **And** sử dụng `got-scraping` (mặc định) hoặc `undici` theo `options.client`
 - **And** retry 429/403, quarantine proxy, rotate account theo pipeline sẵn có trong `AbstractApiClient`
 
@@ -79,13 +90,13 @@ so that **tôi có thể theo dõi cộng đồng với độ trễ thấp và k
   - [ ] T1.5: Tạo `src/scrapers/social/facebook/validator.js` (có thể tái sử dụng/adapt từ `src/scrapers/facebook/validator.js`)
   - [ ] T1.6: Cập nhật `src/index.js` để export `FacebookCrawler` từ `src/scrapers/social/index.js` (không sửa legacy `src/scrapers/index.js`)
 - [ ] T2: Triển khai `FacebookClient` (AC-2, AC-5, AC-6)
-  - [ ] T2.1: Constructor kế thừa `AbstractApiClient`, nhận `baseUrl`, `docIds`, `cookies`, `proxyProvider`, `governor`, `client='got'`
+  - [ ] T2.1: Constructor kế thừa `AbstractApiClient`, truyền `client: 'got'`, nhận `baseUrl`, `docIds`, `cookies`, `proxyProvider`, `governor`
   - [ ] T2.2: `warmup()` / `ensureTokens(accountId, cookieHeader)` — fetch home page HTML, parse tokens
   - [ ] T2.3: `buildGraphQlBody(docId, variables, tokens)` — trả về `application/x-www-form-urlencoded` string
   - [ ] T2.4: `requestGraphQl(docId, variables, options)` — wrap `this.request()` với đúng headers/body
   - [ ] T2.5: Cache tokens theo `accountId` với TTL (khuyến nghị 5 phút)
 - [ ] T3: Triển khai `FacebookCrawler` (AC-1, AC-3, AC-4)
-  - [ ] T3.1: Constructor đăng ký `group_posts`, `page_posts`, `search` (nếu khả thi)
+  - [ ] T3.1: Constructor đăng ký `group_posts`, `page_posts` (không đăng ký `search` trong phạm vi story này)
   - [ ] T3.2: `groupPosts(args, session)` handler
   - [ ] T3.3: `pagePosts(args, session)` handler
   - [ ] T3.4: Chuẩn hóa response thành `PostItem[]`
@@ -263,11 +274,11 @@ so that **tôi có thể theo dõi cộng đồng với độ trễ thấp và k
 ### Git Intelligence
 
 Recent commits (mới nhất trước story này):
+- `feb7d4e docs(readiness): Resolve Phase 4 implementation readiness blockers` — archive docs, UX final, deprecation plan, status READY.
+- `e25e191 docs(readiness): Add implementation readiness assessment report`
+- `a682aa2 docs(correct-course): apply Sprint Change Proposal 2026-08-26`
+- `17938da docs(story): create comprehensive context for Story 13.3 Facebook Hybrid Scraper`
 - `90a0f55 feat(test): add real Facebook API probe script for Story 13.1 Tiered Signer Engine`
-- `313c051 feat(test): add real API probe script for Story 13.1 Tiered Signer Engine`
-- `ef8cab3 Resolve Story 13.1 review findings and remove mock-based tests.`
-- `4fc1351 docs(sprint): mark Story 13.1 Tiered Signer Architecture as done`
-- `b999169 fix(core): apply code review refinements for Story 13.1 Tiered Signer Architecture`
 
 Patterns:
 - Commit messages theo format `type(scope): description`.
@@ -307,6 +318,33 @@ Patterns:
 3. **Pagination:** AC không yêu cầu phân trang. Optional dùng `CrawlCheckpoint` để lưu `cursor` nếu response có `page_info.end_cursor`.
 4. **Public exports:** Có nên cập nhật `src/scrapers/index.js` legacy để `scrape('facebook', 'group_posts', ...)` dùng `FacebookCrawler`? **Khuyến nghị:** Không trong story này để tránh breaking `scrape()` legacy; chỉ export qua `src/index.js` và `src/scrapers/social/index.js`.
 
+## Validation Report
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| User story + BDD acceptance criteria | Pass | Khớp `epics.md` Story 13.3. |
+| Architecture compliance (AD-1..AD-14) | Pass | Đã map AD-1, AD-2, AD-3, AD-4, AD-8, AD-9, AD-11, AD-12, AD-14. |
+| Technical requirements / stack | Pass | `got-scraping@^3.2.15`, `undici@^7.29.0`, `vitest@^4.0.18`, Node >= 20. |
+| File structure (CREATE/UPDATE/NO TOUCH) | Pass | Tách rõ legacy `src/scrapers/facebook/` vs mới `src/scrapers/social/facebook/`. |
+| Testing requirements | Pass | No mocks, local HTTP server, real proxy, typecheck. |
+| Previous story intelligence | Pass | Dựa trên 13.1 done; 13.2 chưa implement. |
+| Git intelligence | Updated | Đã cập nhật với 5 commit mới nhất. |
+| Core code state to preserve | Pass | Kiểm tra thực tế `base-client.js:54` default `client='undici'`, `base-client.js:534-536` ternary fallback, `base-client.js:359-469` `requestWithSign` không merge `body`, `base-client.js:746-757` body normalization. |
+| UX / experience flows | N/A | Story 13.3 là headless scraper; không có UI mới. |
+| Security (cookie/token, no logs) | Pass | NFR-4, NFR-7, AGENTS.md, CLAUDE.md: không log cookie/token. |
+
+### Fixes Applied During Validation
+
+1. Thêm YAML frontmatter với `story_id`, `epic`, `story_key`, `status`, `created`, `updated`, `owner`, `reviewed`.
+2. Xóa `search` khỏi action registration trong AC-1 và T3.1 để khớp Scope & Deprecation Marker (story chỉ làm group/page posts).
+3. Thêm yêu cầu `FacebookClient` phải truyền `client: 'got'` vì `AbstractApiClient.client` mặc định là `'undici'`.
+4. Cập nhật Git Intelligence với 5 commit mới nhất.
+
+### Outstanding Items (Dev Agent Owned)
+
+- Xác định `doc_id` thực tế cho group/page feed qua network inspection; giữ fallback khi doc_id xoay.
+- Quyết định chiến lược `lsd` (cache trong client state hoặc dùng `PreSignedTokenRing`).
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -315,9 +353,10 @@ Create Story Workflow — `bmad-create-story` skill, manual analysis bằng `vib
 
 ### Completion Notes
 
-- Story 13.3 được auto-discover từ `sprint-status.yaml` là story đầu tiên còn `backlog` trong Epic 13.
+- Story 13.3 được xác định từ user input `13.3` (Epic 13, Story 3).
 - Phân tích toàn bộ epics, architecture, PRD Facebook, code `base-client.js`, `base-crawler.js`, `signer-pool.js`, `prisma-store.js`, `facebook/legacy`, và gần nhất git log.
 - Đã ghi nhận user action gần đây trên `base-client.js` (fallback direct connection ternary) để dev agent không regress.
+- Validation passed; file sẵn sàng cho `dev-story` / `bmad-dev-auto`.
 
 ### File List
 
