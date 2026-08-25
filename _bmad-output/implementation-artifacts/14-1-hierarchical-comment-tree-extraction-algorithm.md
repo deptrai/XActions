@@ -280,6 +280,17 @@ Patterns:
 - `AbstractCrawler` action registry: `src/core/base-crawler.js:96-115`
 - `FacebookClient` GraphQL request: `src/scrapers/social/facebook/client.js:281-363`
 
+## Edge Cases & Validation Notes
+
+The following boundaries must be handled by the dev agent but are not fully detailed in the short epic AC:
+
+- **Post ID parsing:** `args.postId` may be a full URL (`https://www.facebook.com/.../posts/...`), a namespaced `facebook:${externalId}`, or a raw `externalId`. `getComments` must normalize to a clean `postExternalId` before building `CommentItem`.
+- **Missing parent / orphan reply:** If the API returns a reply whose `parentCommentId` points to a comment that was not returned (deleted, filtered, or beyond `maxComments`), skip the reply or re-attach it as a root with `depth = 0` and a `metadata.orphanOf` marker to avoid Foreign Key violation.
+- **Max depth / count clamping:** Clamp `args.maxDepth` to `[1, 5]` (default 3) and `args.maxComments` to `[1, 2000]` (default 500). Values outside this range must not crash the extractor.
+- **Empty result:** A post with zero comments returns `[]` without throwing.
+- **Concurrency guard:** `CommentTreeExtractor` should use `p-limit(2)` for reply-layer fetching and re-use the same `accountId` so `AbstractApiClient` proxy/governor accounting remains correct.
+- **Token guard change:** `FacebookClient.#fetchTokens` now throws only when both `lsd` and `fb_dtsg` are missing (commit `48841f9` — `fix(facebook): permit guest token extraction when lsd is present`). For authenticated comment endpoints, `fb_dtsg` is still expected in the GraphQL body; do not rely on this guard to enforce `fb_dtsg` and continue to pass `dtsg` to `buildGraphQlBody` when available.
+
 ## Outstanding Items (Dev Agent Owned)
 
 - Xác định `doc_id` thực tế cho Facebook comment tree (root + replies) qua network inspection; giữ fallback khi doc_id xoay.
