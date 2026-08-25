@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-24T19:33:02Z
+last_updated: 2026-08-24T20:17:00Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -56,7 +56,7 @@ development_status:
   11-5-end-to-end-request-pipeline-two-mode-ip: done
   11-6-rate-limit-bot-challenge-defense: done
   11-7-crawler-governor-integration-validator-contract: done
-  11-8-socksnode-dynamic-residential-proxy-provider: ready-for-dev
+  11-8-socksnode-dynamic-residential-proxy-provider: backlog
   epic-11-retrospective: optional
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
@@ -138,11 +138,10 @@ development_status:
 # Current Sprint Plan
 # ===================
 current_sprint:
-  name: "Sprint 2026-08-21 — Epic 11 Complete, Epic 12 Frictionless Authentication"
+  name: "Sprint 2026-08-21 — Epic 11 Closure (SocksNode Provider)"
   start: "2026-08-21"
   goals:
-    - "Complete Epic 12 (Stories 12.1 and 12.2: Terminal QR + CDP Remote Attach)"
+    - "Implement 11.8 SocksNode Dynamic Residential Proxy Provider to complete Epic 11"
   stories:
-    - "12-1-terminal-ascii-qr-code-login-module"
-    - "12-2-cdp-remote-attach-mode-chrome-devtools-protocol"
+    - "11-8-socksnode-dynamic-residential-proxy-provider"
   blocked: []

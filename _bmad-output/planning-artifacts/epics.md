@@ -287,6 +287,21 @@ So that **mỗi platform có thể định nghĩa riêng payload hợp lệ, WAF
 * **And** `src/core/platform-validator.js` định nghĩa `AbstractPlatformResponseValidator` với `isValidPayload(response)`, `isBotChallenge(response)`, `isRateLimit(response)`.
 * **And** ít nhất 2 scraper con (Twitter, Facebook) implement `PlatformResponseValidator` riêng.
 
+### Story 11.8: SocksNode Dynamic Residential Proxy Provider
+As a **Scale-Out Scraper**,
+I want **tích hợp nhà cung cấp proxy SocksNode để lấy residential / 4G-5G mobile proxy theo yêu cầu và xoay IP mỗi request hoặc giữ sticky session**,
+So that **tôi có thể dùng SocksNode trong `ProxyIpPool` / `DynamicTunnelProvider` như BrightData/IPRoyal mà không cần tự ghép proxy URL**.
+
+**Acceptance Criteria:**
+* **Given** tài khoản SocksNode với `apiKey` hoặc thông tin xác thực
+* **When** khởi tạo `SocksNodeProvider` trong `src/proxy/providers.js` (hoặc `src/proxy/providers/socksnode.js`)
+* **Then** hệ thống hỗ trợ lấy proxy từ SocksNode (qua API hoặc gateway tĩnh `socks5h://user:pass@gateway.socksnode.io:port`)
+* **And** `getProxy({ country, city, session, sticky })` trả về proxy URL hợp lệ
+* **And** tương thích với `DynamicTunnelProvider` (xoay IP mỗi request) và `ProxyIpPool.getNext()` / `getStickyProxy(accountId)` (sticky IP)
+* **And** sử dụng `socks5h://` để remote DNS resolution
+* **And** tự động refresh / rotate session khi proxy bị quarantine
+* **And** kiểm tra tính khả dụng của proxy (health check) trước khi trả về.
+
 ---
 
 ## Epic 12: Frictionless Authentication (Terminal QR & CDP Attach)
