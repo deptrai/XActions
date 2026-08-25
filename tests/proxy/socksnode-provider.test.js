@@ -44,10 +44,50 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
       expect(PROVIDER_SID_LIMITS.socksnode.regex.test('valid_session-123')).toBe(true);
       expect(PROVIDER_SID_LIMITS.socksnode.regex.test('invalid space sid')).toBe(false);
     });
+
+    it('[P1] should not auto-detect non-.com socksnode gateways without explicit provider', async () => {
+      const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
+
+      const provider = new DynamicTunnelProvider({
+        gatewayUrl: 'http://testuser:testpass@gate.socksnode.io:8080',
+        provider: 'socksnode',
+      });
+
+      expect(provider.provider).toBe('socksnode');
+    });
+
+    it('[P1] should expose exported provider constants as read-only', async () => {
+      const { PROVIDER_PRESETS, PROVIDER_SID_LIMITS } = await import('../../src/proxy/providers.js');
+
+      expect(() => PROVIDER_PRESETS.add('evil')).toThrow();
+      expect(() => PROVIDER_PRESETS.delete('socksnode')).toThrow();
+      expect(() => PROVIDER_PRESETS.clear()).toThrow();
+
+      expect(Object.isFrozen(PROVIDER_SID_LIMITS)).toBe(true);
+      expect(Object.isFrozen(PROVIDER_SID_LIMITS.socksnode)).toBe(true);
+      expect(() => {
+        PROVIDER_SID_LIMITS.socksnode.max = 1;
+      }).toThrow();
+    });
+
+    it('[P1] should redact credentials when provider is JSON-serialized', async () => {
+      const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
+
+      const provider = new DynamicTunnelProvider({
+        gatewayUrl: 'http://testuser:testpass@gate.socksnode.com:8080',
+        provider: 'socksnode',
+      });
+
+      const json = JSON.stringify(provider);
+      expect(json).not.toContain('testpass');
+      expect(json).not.toContain('testuser');
+      expect(json).toContain('"scheme":"http"');
+      expect(json).toContain('"host":"gate.socksnode.com"');
+    });
   });
 
   describe('Geo-Targeting & Session Parameter Formatting (AC-2)', () => {
-    it('[P0] should format username with country and city targeting', async () => {
+    it('[P0] should format username with country, state, city and session targeting', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
 
       const provider = new DynamicTunnelProvider({
@@ -57,15 +97,29 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
 
       const proxy = provider.getProxy({
         country: 'vn',
-        city: 'hanoi',
+        state: 'hanoi',
+        city: 'badinh',
         sessionId: 'sess01',
       });
 
-      expect(proxy.username).toContain('testuser');
-      expect(proxy.username).toContain('-country-vn');
-      expect(proxy.username).toContain('-city-hanoi');
-      expect(proxy.username).toContain('-session-sess01');
+      expect(proxy.username).toBe('user-testuser-country-vn-state-hanoi-city-badinh-session-sess01-duration-600');
       expect(proxy.server).toBe('socks5://gate.socksnode.com:1080');
+    });
+
+    it('[P0] should append asn token when provided', async () => {
+      const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
+
+      const provider = new DynamicTunnelProvider({
+        gatewayUrl: 'socks5://testuser:testpass@gate.socksnode.com:1080',
+        provider: 'socksnode',
+      });
+
+      const proxy = provider.getProxy({
+        country: 'us',
+        asn: '12345',
+      });
+
+      expect(proxy.username).toMatch(/^user-testuser-country-us-asn-12345-session-[a-z0-9]{20}-duration-600$/);
     });
 
     it('[P0] should generate deterministic sticky session ID per accountId', async () => {
@@ -82,10 +136,10 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
 
       expect(proxy1.username).toBe(proxy2.username);
       expect(proxy1.username).not.toBe(proxyOther.username);
-      expect(proxy1.username).toContain('-session-');
+      expect(proxy1.username).toMatch(/^user-testuser-session-[a-z0-9]{20}-duration-600$/);
     });
 
-    it('[P1] should include lifetime or session duration in username when provided', async () => {
+    it('[P1] should include lifetime token as a literal string', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
 
       const provider = new DynamicTunnelProvider({
@@ -98,7 +152,54 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
         lifetime: '15',
       });
 
-      expect(proxy.username).toContain('-lifetime-15');
+      expect(proxy.username).toMatch(/^user-testuser-country-vn-session-[a-z0-9]{20}-lifetime-15$/);
+    });
+
+    it('[P1] should convert sessionduration minutes to duration seconds', async () => {
+      const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
+
+      const provider = new DynamicTunnelProvider({
+        gatewayUrl: 'socks5://testuser:testpass@gate.socksnode.com:1080',
+        provider: 'socksnode',
+      });
+
+      const proxy = provider.getProxy({
+        country: 'vn',
+        sessionduration: 10,
+      });
+
+      expect(proxy.username).toMatch(/^user-testuser-country-vn-session-[a-z0-9]{20}-duration-600$/);
+    });
+
+    it('[P1] should prefer lifetime over sessionduration when both are provided', async () => {
+      const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
+
+      const provider = new DynamicTunnelProvider({
+        gatewayUrl: 'socks5://testuser:testpass@gate.socksnode.com:1080',
+        provider: 'socksnode',
+      });
+
+      const proxy = provider.getProxy({
+        country: 'vn',
+        lifetime: '30',
+        sessionduration: 5,
+      });
+
+      expect(proxy.username).toMatch(/^user-testuser-country-vn-session-[a-z0-9]{20}-lifetime-30$/);
+    });
+
+    it('[P1] should not produce dangling delimiters or empty tokens', async () => {
+      const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
+
+      const provider = new DynamicTunnelProvider({
+        gatewayUrl: 'socks5://testuser:testpass@gate.socksnode.com:1080',
+        provider: 'socksnode',
+      });
+
+      const proxy = provider.getNext();
+
+      expect(proxy.username).not.toMatch(/--/);
+      expect(proxy.username).not.toMatch(/-$/);
     });
   });
 
@@ -146,7 +247,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
 
       expect(pwProxy).toEqual({
         server: 'socks5://gate.socksnode.com:1080',
-        username: expect.stringContaining('-country-vn'),
+        username: expect.stringMatching(/^user-testuser-country-vn-session-[a-z0-9]{20}-duration-600$/),
         password: 'testpass',
       });
     });
