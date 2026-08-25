@@ -35,6 +35,7 @@ tmp/
 *.log
 *.cache
 .cache/
+.playwright-mcp/
 
 # Environment files
 .env
