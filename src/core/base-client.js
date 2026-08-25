@@ -5,7 +5,7 @@
  * and standby backoff request pipeline.
  *
  * @author nich (@nichxbt)
- * @license MIT
+ * @license Apache-2.0
  */
 
 import {
@@ -243,16 +243,29 @@ export class AbstractApiClient {
       const { gotScraping } = await import('got-scraping');
       return async (/** @type {Record<string, any>} */ reqOpts) => {
         const { method, url, headers, body, json, proxy, timeout } = reqOpts;
+        if (!/^https?:\/\//i.test(url)) {
+          throw new PlatformError({
+            type: ErrorTypes.INVALID_ARGS,
+            code: 'XACT_4001',
+            message: 'Absolute URL is required for default HTTP client',
+            statusCode: 400,
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+            platform: this.platform,
+          });
+        }
         /** @type {Record<string, any>} */
         const options = {
           method,
           url,
           headers: headers || {},
-          timeout: timeout || 30000,
+          timeout: { request: timeout === undefined ? 30000 : timeout },
           throwHttpErrors: false,
         };
-        if (json !== undefined) options.json = json;
-        else if (body !== undefined) options.body = body;
+        if (json !== undefined) {
+          options.json = json;
+        } else if (body !== undefined) {
+          options.body = this.#normalizeRequestBody(body, headers);
+        }
         if (proxy) {
           const { getProxyAgent } = await import('../proxy/index.js');
           const proxyUrl = getProxyAgent(proxy, { client: 'got' });
@@ -277,20 +290,38 @@ export class AbstractApiClient {
     const { fetch: undiciFetch } = await import('undici');
     return async (/** @type {Record<string, any>} */ reqOpts) => {
       const { method, url, headers, body, json, agent, timeout } = reqOpts;
+      if (!/^https?:\/\//i.test(url)) {
+        throw new PlatformError({
+          type: ErrorTypes.INVALID_ARGS,
+          code: 'XACT_4001',
+          message: 'Absolute URL is required for default HTTP client',
+          statusCode: 400,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: this.platform,
+        });
+      }
       /** @type {Record<string, any>} */
       const fetchOpts = {
         method,
         headers: { ...(headers || {}) },
-        signal: AbortSignal.timeout(timeout || 30000),
+        signal: AbortSignal.timeout(timeout === undefined ? 30000 : timeout),
       };
       if (agent) {
         fetchOpts.dispatcher = agent;
       }
       if (json !== undefined) {
-        fetchOpts.headers['content-type'] = 'application/json';
+        if (!this.#hasHeader(headers, 'content-type')) {
+          fetchOpts.headers['content-type'] = 'application/json';
+        }
         fetchOpts.body = JSON.stringify(json);
       } else if (body !== undefined) {
-        fetchOpts.body = body;
+        const normalized = this.#normalizeRequestBody(body, headers);
+        if (normalized !== body) {
+          if (!this.#hasHeader(headers, 'content-type')) {
+            fetchOpts.headers['content-type'] = 'application/json';
+          }
+        }
+        fetchOpts.body = normalized;
       }
       const resp = await undiciFetch(url, fetchOpts);
       let data;
@@ -330,7 +361,17 @@ export class AbstractApiClient {
     let signResult = null;
     const signType = payload.signType || 'token';
 
-    if (signType === 'token' && this.tokenRing && !this.tokenRing.isEmpty) {
+    if (signType === 'token' && this.tokenRing) {
+      if (this.tokenRing.isEmpty) {
+        throw new PlatformError({
+          type: ErrorTypes.INTERNAL,
+          code: 'XACT_5000',
+          message: 'Token ring is empty; no pre-signed token available',
+          statusCode: 500,
+          suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+          platform: this.platform,
+        });
+      }
       const token = this.tokenRing.next();
       if (token) {
         const location = payload.location || 'header';
@@ -345,6 +386,15 @@ export class AbstractApiClient {
           signResult.query = { [name]: value };
         } else if (location === 'cookie') {
           signResult.cookies = { [name]: value };
+        } else {
+          throw new PlatformError({
+            type: ErrorTypes.INVALID_ARGS,
+            code: 'XACT_4001',
+            message: `Unsupported sign location: "${location}"`,
+            statusCode: 400,
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+            platform: this.platform,
+          });
         }
       }
     } else if (signType === 'page' && this.signerPool && payload.script) {
@@ -397,16 +447,22 @@ export class AbstractApiClient {
     }
 
     if (Object.keys(this.cookies).length > 0) {
-      const cookieHeader = Object.entries(this.cookies)
-        .map(([k, v]) => `${k}=${v}`)
-        .join('; ');
-      const existingHeaders = { ...(mergedOptions.headers || {}) };
-      delete existingHeaders['Cookie'];
-      delete existingHeaders['cookie'];
-      mergedOptions.headers = {
-        ...existingHeaders,
-        cookie: cookieHeader,
-      };
+      const existingHeaders = /** @type {Record<string, string>} */ ({ ...(mergedOptions.headers || {}) });
+      let hasCookieHeader = false;
+      const cleanedHeaders = /** @type {Record<string, string>} */ ({});
+      for (const [key, value] of Object.entries(existingHeaders)) {
+        if (key.toLowerCase() === 'cookie') {
+          hasCookieHeader = true;
+        }
+        cleanedHeaders[key] = value;
+      }
+      if (!hasCookieHeader) {
+        const cookieHeader = Object.entries(this.cookies)
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+          .join('; ');
+        cleanedHeaders.cookie = cookieHeader;
+      }
+      mergedOptions.headers = cleanedHeaders;
     }
 
     return this.request(method, resolvedUrl, mergedOptions);
@@ -475,9 +531,7 @@ export class AbstractApiClient {
           });
         }
 
-        const proxy = provider || opts.requiresResidential
-          ? this.resolveProxy(currentAccountId, opts.requiresResidential)
-          : null;
+        const proxy = this.resolveProxy(currentAccountId, opts.requiresResidential);
 
         let agent = null;
         if (proxy && provider && typeof provider.getProxyAgent === 'function') {
@@ -669,12 +723,46 @@ export class AbstractApiClient {
   }
 
   /**
-   * @param {Record<string, string>} [cookies={}]
+   * Check whether a case-insensitive header name is already present.
+   * @param {Record<string, unknown>} [headers]
+   * @param {string} [name]
+   * @returns {boolean}
+   */
+  #hasHeader(headers = {}, name = '') {
+    if (!headers || typeof headers !== 'object') return false;
+    const lowerName = name.toLowerCase();
+    return Object.keys(headers).some((k) => k.toLowerCase() === lowerName);
+  }
+
+  /**
+   * Stringify a plain object body when the caller has set a JSON content-type.
+   * Leaves strings, Buffers, and streams untouched.
+   * @param {any} body
+   * @param {Record<string, unknown>} [headers]
+   * @returns {any}
+   */
+  #normalizeRequestBody(body, headers) {
+    if (body === undefined || body === null) return body;
+    if (typeof body !== 'object') return body;
+    if (Buffer.isBuffer(body)) return body;
+    if (typeof body.pipe === 'function') return body;
+    if (typeof body[Symbol.toStringTag] === 'string') return body;
+    const contentType = Object.entries(headers || {}).find(([k]) => k.toLowerCase() === 'content-type')?.[1];
+    if (String(contentType).toLowerCase().includes('json')) {
+      return JSON.stringify(body);
+    }
+    return body;
+  }
+
+  /**
+   * @param {Record<string, unknown>} [cookies={}]
    * @returns {void}
    */
   updateCookies(cookies = {}) {
     if (cookies && typeof cookies === 'object') {
-      Object.assign(this.cookies, cookies);
+      for (const [key, value] of Object.entries(cookies)) {
+        this.cookies[key] = value === undefined || value === null ? '' : String(value);
+      }
     }
   }
 

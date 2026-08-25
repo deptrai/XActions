@@ -658,3 +658,67 @@ Nếu `this.cookies` không rỗng và `options.headers.cookie` chưa được s
 ## Completion Notes
 
 Story 13.1 là nền tảng cho toàn bộ Tiered Hybrid Signer Engine. Nếu AC-1 đến AC-8 được thực hiện đúng, Story 13.2 (Twitter) và 13.3 (Facebook) chỉ cần cung cấp `script`/`tokenType` và `browser` cho `AbstractApiClient`, không cần viết lại logic proxy/quarantine/retry.
+
+---
+
+### Review Findings
+
+#### Cần quyết định
+
+- [ ] [Review][Decision] Default `signType='token'` — khi không có `tokenRing` nhưng subclass override `sign()`, `requestWithSign()` sẽ fallback về `sign()`. Đây có phải hành vi mong muốn? Nên để default là `'custom'`, hay throw nếu không có signer nào được cấu hình? [src/core/base-client.js:331]
+- [ ] [Review][Decision] `tokenRing` configured but empty — khi `tokenRing` tồn tại nhưng `isEmpty === true`, `requestWithSign()` vẫn lặp xuống `sign()` hoặc không ký. Có nên throw `XACT_5000` "token ring exhausted" theo spec? [src/core/base-client.js:333]
+- [ ] [Review][Decision] `request()` cho phép direct connection khi không có provider — `proxy = (provider || requiresResidential) ? resolveProxy(...) : null` cho phép `proxy = null` khi không có provider/residential. Đây có phải là fix chủ đích cho unauthenticated endpoint, hay là regression so với hành vi cũ (luôn throw PROXY_EXHAUSTED)? [src/core/base-client.js:478-480]
+
+#### Patch
+
+- [ ] [Review][P0][Patch] Test dùng mock (`vi.fn`) thay vì real Playwright/Puppeteer và real `undici`/`got` — vi phạm project rule "No mocks, stubs, or fakes" và AC-8 "Kiểm thử thực (no mocks)". Cần rewrite `tests/core/signer-pool.test.js` và `tests/core/base-client-sign.test.js` dùng browser thật / adapter thật và proxy thật. [tests/core/signer-pool.test.js, tests/core/base-client-sign.test.js]
+- [ ] [Review][P0][Patch] Unhandled rejection từ `timeoutPromise` trong `#executeOnPage()` — khi `execPromise` thắng race, `timeoutPromise` vẫn reject sau `timeoutMs` và không được catch, gây unhandled rejection. Cần `timeoutPromise.catch(() => {})` ngay sau khi tạo. [src/core/signer-pool.js:289-293]
+- [ ] [Review][P0][Patch] Cookie header không encode và ghi đè `Cookie` do caller cung cấp — `requestWithSign()` build `cookie` header bằng `${k}=${v}` không `encodeURIComponent`, và xóa `Cookie`/`cookie` rồi ghi đè. Theo AC-6 spec cần encode và chỉ set khi header chưa có. [src/core/base-client.js:399-409]
+- [ ] [Review][P0][Patch] `SignerWorkerPagePool.close()` không đợi evaluate đang chạy — set `#isClosed = true` rồi đóng page ngay, vi phạm AC-2 "Đợi các evaluate đang chạy hoàn thành (hoặc timeout)". Cần drain in-flight work trước khi close. [src/core/signer-pool.js:385-399]
+- [ ] [Review][P0][Patch] Race condition trong `#getLeastLoadedPage()` có thể vượt `maxSize` — concurrent `evaluate()` không khóa `pendingSpawns`, có thể spawn nhiều page vượt `maxSize` trong burst. Cần queue hoặc mutex/lock. [src/core/signer-pool.js:230-271]
+- [ ] [Review][P1][Patch] URL tương đối không hoạt động với default `httpClient` — `requestWithSign()` hỗ trợ relative URL nhưng `undici.fetch()` yêu cầu absolute URL. Test hiện tại dùng `mockHttp` nên không phát hiện. Cần resolve relative URL hoặc default httpClient xử lý base. [src/core/base-client.js:367-375, #getDefaultHttpClient]
+- [ ] [Review][P1][Patch] `got` timeout option truyền number — `got`/`got-scraping` timeout là object `{ request: number }`; truyền number có thể bị ignore. Cần dùng `timeout: { request: timeout }`. [src/core/base-client.js:251]
+- [ ] [Review][P1][Patch] `body` object không được stringify trong default httpClient — nếu caller truyền `body` là object và `content-type` JSON, cả `got` và `undici` đều không tự stringify. Cần stringify khi `typeof body === 'object'` và `content-type` chứa `json`. [src/core/base-client.js:254-255, 289-294]
+- [ ] [Review][P1][Patch] `undici` default client ghi đè `content-type` của caller khi `json` được truyền — `fetchOpts.headers['content-type'] = 'application/json'` xóa `charset` hoặc header tùy chỉnh. Nên chỉ set nếu chưa có. [src/core/base-client.js:289-291]
+- [ ] [Review][P1][Patch] `tokenRing` configured but empty không báo lỗi — liên quan decision D2; nếu quyết định throw thì implement `PlatformError` với `code: 'XACT_5000'`, `suggestedAction: 'retry_after_delay'`. [src/core/base-client.js:333]
+- [ ] [Review][P2][Patch] `base-client.js` header ghi `@license MIT` trong khi project dùng Apache-2.0 — `src/core/base-client.js:8` cần đồng bộ. [src/core/base-client.js:1-9]
+- [ ] [Review][P2][Patch] Error/warning messages dùng prefix `[SIGNER ERROR]` thay vì emoji `❌`/`⚠️` theo `CLAUDE.md`. [src/core/signer-pool.js, src/core/base-client.js]
+- [ ] [Review][P2][Patch] `AbstractApiClient.cookies` JSDoc `Record<string, string>` nhưng `.d.ts` và `updateCookies` dùng `Record<string, unknown>` — dẫn đến serialize `cookie` header có thể ra `[object Object]`. Cần align type và `String()` hóa giá trị. [src/core/base-client.js:62-63, 675-679, types/core.d.ts:227]
+- [ ] [Review][P2][Patch] Biểu thức `provider || opts.requiresResidential ? this.resolveProxy(...) : null` thiếu dấu ngoặc — tuy JS precedence cho kết quả đúng, nhưng dễ đọc sai. Nên thêm ngoặc `(provider || opts.requiresResidential) ? ... : null`. [src/core/base-client.js:478]
+- [ ] [Review][P2][Patch] `SignerWorkerPagePool.close()` không hỗ trợ tùy chọn đóng browser — spec ghi "nếu `options.closeBrowser === true` hoặc mặc định đóng". Cần thêm option. [src/core/signer-pool.js:385]
+
+#### Defer
+
+- [x] [Review][P2][Defer] Không dùng `p-limit` cho `init()` / spawn — spec đề xuất nhưng không phải AC; tác động thấp với `minSize=4`. [src/core/signer-pool.js:203-210]
+- [x] [Review][P2][Defer] Không tách `http-client-factory.js` riêng — default factory được inline trong `#getDefaultHttpClient()`. Spec đề xuất file riêng nhưng implementation hợp lệ. [src/core/base-client.js:241-309]
+- [x] [Review][P2][Defer] Default httpClient closure được tạo lại mỗi `request()` — hiệu suất kém nhẹ, không ảnh hưởng chức năng. [src/core/base-client.js:489-492]
+
+## Resolution Log
+
+Quyết định (D1-D3):
+- **D1**: Giữ `signType='token'` làm default. Nếu không có `tokenRing`/`signerPool` nhưng subclass override `sign()`, `requestWithSign()` fallback về `sign()`. Đây là hành vi mong muốn (kế thừa custom signer).
+- **D2**: `tokenRing` tồn tại nhưng `isEmpty === true` sẽ throw `PlatformError` `XACT_5000` ngay trong `requestWithSign()`.
+- **D3**: Khôi phục hành vi `request()` luôn gọi `resolveProxy()`; nếu không có provider sẽ throw `PROXY_EXHAUSTED`. Không cho phép direct connection fallback.
+
+Patch đã áp dụng:
+- Tất cả test trong `tests/core/signer-pool.test.js` và `tests/core/base-client-sign.test.js` đã được rewrite dùng Playwright thật, proxy thật (`StaticProxyProvider` + `ProxyIpPool`) và `undici` thật — không còn mock/stub/fake.
+- Thêm `timeoutPromise.catch(() => {})` để tránh unhandled rejection.
+- Cookie header được `encodeURIComponent` và chỉ set khi header `Cookie` chưa tồn tại.
+- `SignerWorkerPagePool.close()` drain in-flight work qua `#inFlight` set với timeout.
+- Giới hạn concurrency `evaluate()` bằng `p-limit(this.#maxSize)` để tránh vượt `maxSize` trong burst.
+- `requestWithSign()` throw `XACT_4001` khi dùng default httpClient với URL tương đối.
+- `got` timeout dùng object `{ request: timeout }`.
+- `body` object được stringify khi `content-type` chứa `json`.
+- `undici` default client chỉ set `content-type` khi chưa có.
+- `tokenRing` rỗng throw `XACT_5000`.
+- License header `base-client.js` đổi thành `Apache-2.0`.
+- Error/warning messages trong `signer-pool.js` chuyển sang emoji `❌`/`⚠️`.
+- `AbstractApiClient.cookies` type align giữa JSDoc, `types/core.d.ts`, và `updateCookies()`.
+- `provider || opts.requiresResidential ? ... : null` thay bằng luôn gọi `resolveProxy()` (D3), loại bỏ ambiguity.
+- `SignerWorkerPagePool` hỗ trợ `adapter` và `closeBrowser` option.
+- `SignerWorkerPagePool.#spawnPage()` sử dụng `adapter.newPage(browser)` khi có adapter, hỗ trợ `AdapterBrowser` thực.
+
+Kết quả verification:
+- `npm run typecheck` pass.
+- `npm test -- tests/core/` pass (157/157).
+- `npm test -- tests/core/signer-pool.test.js tests/core/base-client-sign.test.js tests/core/base-client-request.test.js` pass (30/30).

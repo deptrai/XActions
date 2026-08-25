@@ -224,7 +224,7 @@ export abstract class AbstractApiClient {
   requiresAuth: boolean;
   httpClient: unknown;
   responseValidator: AbstractPlatformResponseValidator | null;
-  cookies: Record<string, unknown>;
+  cookies: Record<string, string>;
   tokenRing: PreSignedTokenRing | null;
   signerPool: SignerWorkerPagePool | null;
   maxProxyRetries: number;
@@ -255,7 +255,7 @@ export abstract class AbstractApiClient {
     rateLimitHibernationMs?: number;
     standbyBackoffMs?: number;
   });
-  resolveProxy(accountId?: string, requiresResidential?: boolean): unknown;
+  resolveProxy(accountId?: string, requiresResidential?: boolean): string | Record<string, unknown> | null;
   init(session: Record<string, unknown>): Promise<void>;
   request(method: string, url: string, options?: Record<string, unknown>): Promise<unknown>;
   requestWithSign(method: string, url: string, payload?: SignPayload, options?: Record<string, unknown>): Promise<unknown>;

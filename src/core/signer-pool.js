@@ -11,6 +11,7 @@
  */
 
 import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
+import pLimit from 'p-limit';
 
 /**
  * Pre-Signed Token Ring for O(1) synchronous token allocation.
@@ -119,6 +120,15 @@ export class SignerWorkerPagePool {
   /** @type {number} */
   #nextId = 1;
 
+  /** @type {Set<Promise<unknown>>} */
+  #inFlight = new Set();
+
+  /** @type {boolean} */
+  #closeBrowser = true;
+
+  /** @type {import('p-limit').LimitFunction} */
+  #evaluateLimiter;
+
   /**
    * @param {Object} [options]
    * @param {number} [options.minSize=4]
@@ -126,15 +136,20 @@ export class SignerWorkerPagePool {
    * @param {number} [options.defaultTimeoutMs=3000]
    * @param {number} [options.warmupTimeoutMs=8000]
    * @param {any} [options.browser]
+   * @param {any} [options.adapter]
+   * @param {boolean} [options.closeBrowser=true]
    */
   constructor(options = {}) {
     const min = Number(options.minSize);
     const max = Number(options.maxSize);
     this.#minSize = Number.isInteger(min) && min > 0 ? min : 4;
     this.#maxSize = Number.isInteger(max) && max >= this.#minSize ? max : Math.max(8, this.#minSize);
-    this.#defaultTimeoutMs = Number(options.defaultTimeoutMs) || 3000;
-    this.#warmupTimeoutMs = Number(options.warmupTimeoutMs) || 8000;
+    this.#defaultTimeoutMs = options.defaultTimeoutMs === undefined ? 3000 : Number(options.defaultTimeoutMs);
+    this.#warmupTimeoutMs = options.warmupTimeoutMs === undefined ? 8000 : Number(options.warmupTimeoutMs);
     this.browser = options.browser || null;
+    this.adapter = options.adapter || null;
+    this.#closeBrowser = options.closeBrowser !== false;
+    this.#evaluateLimiter = pLimit(this.#maxSize);
   }
 
   /**
@@ -143,18 +158,23 @@ export class SignerWorkerPagePool {
    * @returns {Promise<WorkerPageRecord>}
    */
   async #spawnPage(skipWarmup = false) {
-    if (!this.browser || typeof this.browser.newPage !== 'function') {
+    const canSpawn =
+      (this.adapter && this.browser) ||
+      (this.browser && typeof this.browser.newPage === 'function');
+    if (!canSpawn) {
       throw new PlatformError({
         code: 'XACT_5000',
         type: ErrorTypes.INTERNAL,
-        message: '[SIGNER ERROR] Browser instance with newPage() is required to spawn signer worker page',
+        message: '❌ Browser instance with newPage() is required to spawn signer worker page',
         suggestedAction: SuggestedActions.RELOGIN,
       });
     }
 
     this.#pendingSpawns++;
     try {
-      const page = await this.browser.newPage();
+      const page = this.adapter
+        ? await this.adapter.newPage(this.browser)
+        : await this.browser.newPage();
       const record = {
         id: `worker_page_${this.#nextId++}`,
         page,
@@ -168,7 +188,7 @@ export class SignerWorkerPagePool {
           timeoutMs: this.#warmupTimeoutMs,
           warmup: true,
         }).catch((err) => {
-          console.warn(`[SIGNER WARNING] Warmup failed for page ${record.id}: ${err.message}`);
+          console.warn(`⚠️ Warmup failed for page ${record.id}: ${err.message}`);
         });
       }
 
@@ -190,7 +210,7 @@ export class SignerWorkerPagePool {
       throw new PlatformError({
         code: 'XACT_5000',
         type: ErrorTypes.INTERNAL,
-        message: '[SIGNER ERROR] Cannot init closed SignerWorkerPagePool',
+        message: '❌ Cannot init closed SignerWorkerPagePool',
         suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
       });
     }
@@ -216,7 +236,7 @@ export class SignerWorkerPagePool {
           timeoutMs: this.#warmupTimeoutMs,
           warmup: true,
         }).catch((err) => {
-          console.warn(`[SIGNER WARNING] Warmup failed for page ${p.id}: ${err.message}`);
+          console.warn(`⚠️ Warmup failed for page ${p.id}: ${err.message}`);
         })
       );
       await Promise.all(warmupPromises);
@@ -232,7 +252,7 @@ export class SignerWorkerPagePool {
       throw new PlatformError({
         code: 'XACT_5000',
         type: ErrorTypes.INTERNAL,
-        message: '[SIGNER ERROR] SignerWorkerPagePool is closed',
+        message: '❌ SignerWorkerPagePool is closed',
         suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
       });
     }
@@ -258,7 +278,7 @@ export class SignerWorkerPagePool {
       throw new PlatformError({
         code: 'XACT_5000',
         type: ErrorTypes.INTERNAL,
-        message: '[SIGNER ERROR] All worker pages are dead or exceeded maxSize',
+        message: '❌ All worker pages are dead or exceeded maxSize',
         suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
       });
     }
@@ -288,21 +308,23 @@ export class SignerWorkerPagePool {
     try {
       const timeoutPromise = new Promise((_, reject) => {
         timeoutTimer = setTimeout(() => {
-          reject(new Error(`[SIGNER TIMEOUT] Execution timed out after ${timeoutMs}ms on ${worker.id}`));
+          reject(new Error(`❌ Execution timed out after ${timeoutMs}ms on ${worker.id}`));
         }, timeoutMs);
       });
+      // Suppress unhandled rejection if execPromise wins the race
+      timeoutPromise.catch(() => {});
 
       const execPromise = (async () => {
         const page = worker.page;
         if (!script) {
-          throw new Error(`[SIGNER ERROR] Script must be provided to evaluate on ${worker.id}`);
+          throw new Error(`❌ Script must be provided to evaluate on ${worker.id}`);
         }
         if (typeof page.evaluate === 'function') {
           return await page.evaluate(script, ...args);
         } else if (page._native && typeof page._native.evaluate === 'function') {
           return await page._native.evaluate(script, ...args);
         }
-        throw new Error(`[SIGNER ERROR] Page ${worker.id} has no evaluate() method`);
+        throw new Error(`❌ Page ${worker.id} has no evaluate() method`);
       })();
 
       // Suppress unhandled rejection if timeoutPromise wins the race
@@ -341,6 +363,50 @@ export class SignerWorkerPagePool {
    * @returns {Promise<any>}
    */
   async evaluate(script, args = [], options = {}) {
+    if (this.#isClosed) {
+      throw new PlatformError({
+        code: 'XACT_5000',
+        type: ErrorTypes.INTERNAL,
+        message: '❌ SignerWorkerPagePool is closed',
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+      });
+    }
+    return this.#evaluateLimiter(() => this.#doEvaluate(script, args, options));
+  }
+
+  /**
+   * Internal evaluate with retry, concurrency limit, and in-flight tracking.
+   * @param {string | Function} script
+   * @param {any[]} args
+   * @param {Object} options
+   * @returns {Promise<any>}
+   */
+  async #doEvaluate(script, args, options) {
+    if (this.#isClosed) {
+      throw new PlatformError({
+        code: 'XACT_5000',
+        type: ErrorTypes.INTERNAL,
+        message: '❌ SignerWorkerPagePool is closed',
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+      });
+    }
+    const evaluationPromise = this.#evaluateInternal(script, args, options);
+    this.#inFlight.add(evaluationPromise);
+    try {
+      return await evaluationPromise;
+    } finally {
+      this.#inFlight.delete(evaluationPromise);
+    }
+  }
+
+  /**
+   * Retry circuit breaker for worker page evaluation.
+   * @param {string | Function} script
+   * @param {any[]} args
+   * @param {Object} options
+   * @returns {Promise<any>}
+   */
+  async #evaluateInternal(script, args, options) {
     let lastError = null;
 
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -372,18 +438,40 @@ export class SignerWorkerPagePool {
     throw new PlatformError({
       code: 'XACT_5000',
       type: ErrorTypes.INTERNAL,
-      message: `[SIGNER ERROR] Evaluation failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+      message: `❌ Evaluation failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
       suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
       cause: lastError,
     });
   }
 
   /**
-   * Close all worker pages and release pool resources.
+   * Close all worker pages, drain in-flight work, and release pool resources.
+   * @param {Object} [options]
+   * @param {number} [options.timeoutMs]
+   * @param {boolean} [options.closeBrowser]
    * @returns {Promise<void>}
    */
-  async close() {
+  async close(options = {}) {
+    if (this.#isClosed) return;
     this.#isClosed = true;
+
+    const closeBrowser = options.closeBrowser !== undefined ? options.closeBrowser : this.#closeBrowser;
+
+    if (this.#inFlight.size > 0) {
+      const timeoutMs = options.timeoutMs ?? 3000 + this.#maxSize * this.#defaultTimeoutMs;
+      try {
+        await Promise.race([
+          Promise.all([...this.#inFlight]),
+          new Promise((_, reject) => {
+            const t = setTimeout(() => reject(new Error('⚠️ SignerWorkerPagePool in-flight evaluations did not drain before close')), timeoutMs);
+            if (t && typeof t.unref === 'function') t.unref();
+          }),
+        ]);
+      } catch (err) {
+        console.warn(`⚠️ ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
     const closePromises = this.#pages.map(async (worker) => {
       worker.state = 'dead';
       try {
@@ -397,6 +485,12 @@ export class SignerWorkerPagePool {
 
     await Promise.all(closePromises);
     this.#pages = [];
+
+    if (closeBrowser && this.adapter && this.browser) {
+      try {
+        await this.adapter.closeBrowser(this.browser);
+      } catch {}
+    }
   }
 
   /** @returns {number} Total pages count in the pool */
