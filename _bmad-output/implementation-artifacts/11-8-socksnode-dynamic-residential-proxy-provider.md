@@ -24,20 +24,26 @@ So that **XActions can route traffic through the SocksNode gateway (`premium.soc
 * **Then** `#autoDetectProvider` identifies the host as `socksnode` when the SLD is `socksnode` and the TLD is `com` (or any `*.socksnode.com` hostname)
 * **And** `PROVIDER_PRESETS` in `src/proxy/providers.js:27` includes the string `'socksnode'`
 * **And** `ProviderPreset` in `types/proxy.d.ts:11` includes the literal `'socksnode'`
+* **And** `SUPPORTED_PROXY_SCHEMES` in `src/proxy/providers.js:13` remains `['http', 'https', 'socks5']` — `socks5h` is **not** a valid input scheme and does not need to be added
 * **And** an explicit `provider: 'socksnode'` is accepted even when the gateway hostname is not auto-detected
 * **And** `provider: 'notreal'` or an unknown preset continues to throw `PlatformError` (`XACT_4001`, `invalid_args`)
 
 ### AC-2: SocksNode credential formatting
 * **Given** a `DynamicTunnelProvider` with `provider === 'socksnode'`
-* **When** `getProxy({ country, state, city, asn, sessionId, lifetime })` is called
+* **When** `getProxy({ country, state, city, asn, sessionId, sid, sessionduration, lifetime, const })` is called
 * **Then** `#formatCredentials` (around `src/proxy/providers.js:848-930`) builds a username using SocksNode's public grammar:
   - Base prefix: `user-<baseUser>` (reuse `#baseUsername` at `src/proxy/providers.js:745-755`; it already prefixes `user-` when the raw username does not start with `user-`, `brd-`, or `lum-`)
   - Append `-country-<cc>` if `country` is present (two-letter lowercase ISO code)
   - Append `-state-<state>` if `state` is present
   - Append `-city-<city>` if `city` is present (lowercased, whitespace removed)
   - Append `-asn-<asn>` if `asn` is present
-  - Append `-session-<sessionId>` if a session ID is present
-  - Append `-ttl-<lifetime>` if `lifetime` is present (lifetime in seconds)
+  - Append `-session-<sessionId>` if a validated session ID is present
+  - Append `-ttl-<lifetimeValue>` if a sticky lifetime is present
+  - Append `-const` if `req.const === true`
+* **And** the lifetime value is resolved in this priority order:
+  1. `options.lifetime` (a string such as `"600"` or `"30m"`) → append `ttl-${options.lifetime}`
+  2. `options.sessionduration` (a positive number in **minutes**) → append `ttl-${options.sessionduration * 60}`
+  3. Neither → omit the `ttl` token entirely
 * **And** the password remains the raw gateway password, unchanged
 * **And** the final proxy URL is normalized by `normalizeProxy` and returned as a `NormalizedProxy`
 * **And** tokens are omitted entirely when their value is empty, with no trailing delimiters
@@ -45,19 +51,23 @@ So that **XActions can route traffic through the SocksNode gateway (`premium.soc
 ### AC-3: Sticky and rotating session behavior
 * **Given** a `DynamicTunnelProvider` configured with `provider: 'socksnode'`
 * **When** `getProxy({ accountId })` is called for an auth-required platform
-* **Then** it generates a deterministic, provider-compatible session ID for the account
+* **Then** it generates a deterministic, provider-compatible session ID for the account using the existing `hashBase36` path (`src/proxy/providers.js:476-481`)
 * **And** repeated calls within the same `sessionDurationMs` window return the **same** credentials and exit IP mapping
 * **And** calling `rotateSession(accountId)` or `quarantine(proxy)` on the returned proxy invalidates the cached session and returns a new one
 * **And** when no `accountId` is provided and `rotatePerRequest: true` (default), each `getProxy()` / `getNext()` call returns a fresh session tag, producing a fresh residential IP
 
 ### AC-4: Proxy health validation before return
 * **Given** the SocksNode preset
-* **When** `getProxy()` generates a proxy
-* **Then** it validates the proxy through the existing `normalizeProxy` + `formatProxyUrl` pipeline so that malformed URLs are never returned
-* **And** the generated proxy is checked against the provider's internal quarantine map; if the session is quarantined, the provider rotates the session once and tries again (existing behavior at `src/proxy/providers.js:979-1012`)
-* **And** if a healthy session cannot be allocated, it throws `PlatformError` (`XACT_5030`, `proxy_exhausted`, `suggestedAction: 'wait'`, `retryAfterMs: standbyBackoffMs`)
+* **When** `getProxy()` is called
+* **Then** "health validation" is performed synchronously through the existing `DynamicTunnelProvider` pipeline:
+  - Request options are resolved and sanitized by `#resolveRequestOptions`
+  - A session ID is generated or validated by `#resolveSessionId`
+  - Credentials are built by `#formatCredentials`
+  - The result is passed through `normalizeProxy` and `formatProxyUrl` to guarantee a well-formed proxy URL
+  - The generated URL is checked against the provider's quarantine map; if quarantined, the provider rotates the session once and tries again (existing behavior at `src/proxy/providers.js:979-1012`)
+  - If a healthy session cannot be allocated, it throws `PlatformError` (`XACT_5030`, `proxy_exhausted`, `suggestedAction: 'wait'`, `retryAfterMs: standbyBackoffMs`)
 * **And** `getProxy` itself remains synchronous to preserve the `ProxyProviderContract` used by `AbstractApiClient.resolveProxy` (`src/core/base-client.js:165-171`)
-* **And** an optional `async healthCheck(proxy)` method is exposed on `DynamicTunnelProvider` so that the request pipeline in Stories 11.5/11.6 can perform a lightweight TCP/HTTP reachability test when desired, without changing the synchronous `getProxy` contract
+* **And** no network I/O is performed inside `getProxy`; real reachability is verified by the request pipeline in Stories 11.3/11.5/11.6 through retry + quarantine on 429/403
 
 ### AC-5: Integration with `ProxyIpPool`, `AbstractApiClient`, and Playwright
 * **Given** any `NormalizedProxy` returned by the SocksNode preset
@@ -68,7 +78,7 @@ So that **XActions can route traffic through the SocksNode gateway (`premium.soc
   - `--proxy-server=<scheme://[host]:port>`
   - `--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE <proxyHost>`
 * **And** `getProxyAgent(proxy, { client: 'undici' | 'got' })` returns:
-  - `undici.Socks5ProxyAgent` when `scheme === 'socks5'`
+  - `undici.Socks5ProxyAgent` when `scheme === 'socks5'` — this agent performs remote DNS resolution, so `socks5://` input is sufficient; do **not** require or generate `socks5h://`
   - `undici.ProxyAgent` when `scheme === 'http' | 'https'`
   - a correctly formatted proxy URL string for `got-scraping`
 * **And** `AbstractApiClient.resolveProxy()` continues to call `proxyProvider.getProxy({ accountId })` without any SocksNode-specific code
@@ -80,7 +90,8 @@ So that **XActions can route traffic through the SocksNode gateway (`premium.soc
 * **And** the new tests cover:
   - auto-detection of `premium.socksnode.com:9000` (HTTP) and `socks5://user:pass@socksnode.com:1080`
   - explicit `provider: 'socksnode'` with a custom gateway hostname
-  - username token formatting for `country`, `state`, `city`, `asn`, `session`, and `ttl`
+  - username token formatting for `country`, `state`, `city`, `asn`, `session`, `ttl`, and `const`
+  - `lifetime` string and `sessionduration` (minutes) both mapping to `ttl`
   - sticky session determinism and rotation for the same `accountId`
   - quarantine, session invalidation, and standby backoff
   - `getBrowserArgs` and `getProxyAgent` (HTTP and SOCKS5)
@@ -137,7 +148,7 @@ So that **XActions can route traffic through the SocksNode gateway (`premium.soc
 
 **11.8 compliance:**
 - The SocksNode preset uses `DynamicTunnelProvider`'s existing sticky/rotation logic and `getBrowserArgs` / `getProxyAgent` to satisfy AD-3.
-- SOCKS5 gateways are normalized to `socks5h://` semantics through `getProxyAgent` (it returns `Socks5ProxyAgent` for `socks5` scheme).
+- For SOCKS5 gateways the normalized scheme is `socks5`; `undici.Socks5ProxyAgent` performs remote DNS resolution. The `--host-resolver-rules` in `getBrowserArgs` ensures Chrome does not leak local DNS.
 
 ### AD-13 — Adaptive Infrastructure-Aware Dynamic Rate Limiting & Account Protection Governor
 * **Binds:** `src/core/adaptive-governor.js`, `src/core/account-pool.js`, `src/proxy/proxy-pool.js`, `src/scrapers/**`
@@ -177,7 +188,7 @@ So that **XActions can route traffic through the SocksNode gateway (`premium.soc
 |---|---|
 | `src/proxy/providers.js` | Add `socksnode` to `PROVIDER_PRESETS`, `PROVIDER_SID_LIMITS`, `#autoDetectProvider`, `targetSessionLength`, and `#formatCredentials`. |
 | `types/proxy.d.ts` | Add `'socksnode'` to `ProviderPreset` union. |
-| `src/proxy/providers.d.ts` | Optional; generated/loose declarations may not require changes, but verify that `DynamicTunnelProvider` still exports. |
+| `src/proxy/providers.d.ts` | Generated/loose declarations; no change required unless the generator re-runs. |
 | `tests/proxy/providers-tunnel.test.js` | Add a new `describe` block for SocksNode AC coverage. |
 | `tests/proxy/providers.test.js` | If `ProviderPreset` or `PROVIDER_PRESETS` is tested there, update the positive list. |
 | `src/proxy/index.js` | No change needed unless a new standalone class is created (not recommended). |
@@ -191,8 +202,8 @@ So that **XActions can route traffic through the SocksNode gateway (`premium.soc
 
 ### No new package dependencies expected
 
-- `undici` already provides `ProxyAgent` and `Socks5ProxyAgent`.
-- `socks-proxy-agent` is **not** to be introduced; the project uses `undici` agents.
+- `undici` (v7.29.0) already provides `ProxyAgent` and `Socks5ProxyAgent`.
+- `socks-proxy-agent` exists in `package.json` for legacy paths; do **not** use it in this story. The provider factory must continue to use `undici` agents.
 
 ### SocksNode public docs summary (fetched 2026-08-24)
 
@@ -210,9 +221,70 @@ So that **XActions can route traffic through the SocksNode gateway (`premium.soc
 ## Latest Tech Information
 
 - **Provider grammar similarity:** SocksNode's username-token grammar is functionally similar to BrightData and Smartproxy, where targeting/session parameters are hyphen-appended to the username. This means the `DynamicTunnelProvider` preset model is the correct extension point.
-- **Token uncertainty:** The public homepage only shows `user-`, `country-`, and `city-` tokens. Additional tokens (`state-`, `asn-`, `session-`, `ttl-`) are inferred from the documentation line "Country, state, city, a specific ISP by ASN, or the device OS — set it in the dashboard or pass it inline in the username." The implementation must omit any token whose value is empty, and a `template` fallback must remain available for private/custom SocksNode gateways with a different grammar.
-- **Scheme support:** The same gateway can speak HTTP, HTTPS, and SOCKS5. The `scheme` is taken from the gateway URL; `getProxyAgent` dispatches to the correct `undici` agent. For SOCKS5, use `socks5h://` semantics by setting the normalized scheme to `socks5` and letting `undici.Socks5ProxyAgent` resolve DNS remotely.
+- **Token uncertainty:** The public homepage only shows `user-`, `country-`, and `city-` tokens. Additional tokens (`state-`, `asn-`, `session-`, `ttl-`, `const`) are inferred from the documentation line "Country, state, city, a specific ISP by ASN, or the device OS — set it in the dashboard or pass it inline in the username." The implementation must omit any token whose value is empty, and a `template` fallback must remain available for private/custom SocksNode gateways with a different grammar.
+- **Scheme support:** The same gateway can speak HTTP, HTTPS, and SOCKS5. The `scheme` is taken from the gateway URL; `getProxyAgent` dispatches to the correct `undici` agent. For SOCKS5 the scheme is `socks5` (not `socks5h`); `undici.Socks5ProxyAgent` resolves DNS through the proxy, and `getBrowserArgs` adds `--host-resolver-rules` to keep Chromium from making direct DNS lookups.
 - **Port:** The homepage example uses `9000`. Residential/SOCKS5 ports may differ per account; always use the port from the supplied `gatewayUrl`.
+- **Sticky lifetime:** Docs say sticky sessions up to 24h. Use `options.lifetime` (free-form string) or `options.sessionduration` (minutes) to produce a `ttl-` token in seconds. If neither is set, omit `ttl-` and rely on `sessionDurationMs` for the local cache window.
+
+---
+
+## Implementation Sketch
+
+### `src/proxy/providers.js` changes
+
+Add to `PROVIDER_PRESETS`:
+```js
+const PROVIDER_PRESETS = new Set(['brightdata', 'smartproxy', 'iproyal', 'kuaidaili', 'socksnode', 'custom']);
+```
+
+Add to `PROVIDER_SID_LIMITS`:
+```js
+socksnode: { max: 20, regex: /^[a-zA-Z0-9]+$/ },
+```
+
+Add to `targetSessionLength`:
+```js
+if (provider === 'socksnode') return 8;
+```
+
+Add to `#autoDetectProvider` (after the `kuaidaili` branch, before `return 'custom'`):
+```js
+if (sld === 'socksnode' && tld === 'com') {
+  return 'socksnode';
+}
+```
+
+Add a `socksnode` branch in `#formatCredentials` (after `kuaidaili` or before `custom`):
+```js
+if (preset === 'socksnode') {
+  const baseUser = this.#baseUsername(rawUser);
+  const parts = [baseUser];
+  if (req.country) parts.push(`country-${req.country}`);
+  if (req.state) parts.push(`state-${req.state}`);
+  if (req.city) parts.push(`city-${req.city}`);
+  if (req.asn) parts.push(`asn-${req.asn}`);
+
+  let lifetimeValue = '';
+  if (req.lifetime) {
+    lifetimeValue = String(req.lifetime);
+  } else if (typeof req.sessionduration === 'number' && req.sessionduration > 0) {
+    lifetimeValue = String(req.sessionduration * 60);
+  }
+  if (lifetimeValue) parts.push(`ttl-${lifetimeValue}`);
+
+  const sid = req.sid || req.sessionId;
+  if (sid) parts.push(`session-${sid}`);
+
+  if (req.const) parts.push('const');
+  return { username: parts.filter((p) => p !== '').join('-'), password: rawPass };
+}
+```
+
+### `types/proxy.d.ts` changes
+
+```ts
+export type ProviderPreset = 'brightdata' | 'smartproxy' | 'iproyal' | 'kuaidaili' | 'socksnode' | 'custom';
+```
 
 ---
 
@@ -236,13 +308,12 @@ So that **XActions can route traffic through the SocksNode gateway (`premium.soc
 ## Dev Notes
 
 - **Epic 11.8 mentions `SocksNodeProvider`.** The existing architecture does not have a separate class per provider; it has a `provider` preset string inside `DynamicTunnelProvider`. Implement 11.8 as a `socksnode` preset. If the product team later wants a standalone `SocksNodeProvider` wrapper, it can be a thin module that instantiates `new DynamicTunnelProvider({ provider: 'socksnode', ... })` and delegates all calls.
-- **Health check nuance.** The epic AC says "kiểm tra tính khả dụng của proxy (health check) trước khi trả về." The existing `getProxy` is synchronous and cannot perform network I/O without changing the `ProxyProviderContract` and every caller (`AbstractApiClient`, `ProxyIpPool`, tests). Therefore:
-  - `getProxy` health validation = syntactic normalization + quarantine check + session rotation (existing behavior).
-  - Optional `healthCheck(proxy)` async method is exposed on `DynamicTunnelProvider` for callers that can await (e.g., the request pipeline in Story 11.5/11.6).
-  - If the dev agent discovers that `ProxyProviderContract` is already being refactored to async in a parallel story, escalate to the PM via a review finding rather than silently changing the contract.
+- **Health check nuance.** The epic AC says "kiểm tra tính khả dụng của proxy (health check) trước khi trả về." The existing `getProxy` is synchronous and cannot perform network I/O without changing the `ProxyProviderContract` and every caller (`AbstractApiClient`, `ProxyIpPool`, tests). Therefore the health check in this story is defined as the existing synchronous validation pipeline (option sanitization → session ID validation → credential formatting → URL normalization → quarantine check → one rotation attempt → `proxy_exhausted` if still quarantined). Real network reachability is verified by the request pipeline's retry + quarantine logic in Stories 11.3/11.5/11.6.
+- **Session ID source.** `#resolveSessionId` resolves `req.sessionId` first (or `req.sid` as a fallback for `kuaidaili`); for `socksnode` use `req.sessionId || req.sid` and pass the validated result into `#formatCredentials` as `sessionId`.
 - **Session length.** SocksNode docs do not specify a max session tag length. Use the same 8-char default as IPRoyal to keep usernames compact and URL-safe. Allow user-supplied `sessionId` up to 20 chars if it passes the alphanumeric regex.
 - **City normalization.** City names must be lowercased and have whitespace removed before being appended, matching the `#resolveRequestOptions` behavior at `src/proxy/providers.js:768-770`.
 - **Password unchanged.** Unlike IPRoyal, which appends targeting tokens to the password, SocksNode keeps the password as the raw gateway password and puts all targeting in the username.
+- **No `socks5h` support.** `SUPPORTED_PROXY_SCHEMES` only contains `http`, `https`, `socks5`. Users must provide a `socks5://` gateway URL. Remote DNS is achieved by `undici.Socks5ProxyAgent` (for Node HTTP) and `--host-resolver-rules` (for Chromium). Do not attempt to add `socks5h` to the supported scheme list or to the normalized proxy URL.
 
 ---
 
