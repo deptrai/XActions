@@ -2,7 +2,7 @@
 
 **Story ID:** 13-1  
 **Epic:** 13 — High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor)  
-**Status:** ready-for-dev  
+**Status:** done  
 **Owner:** DEV  
 **Baseline commit:** `5cb22cf` (HEAD sau khi Story 11.8 SocksNode review patches được merge)  
 **Source:**
