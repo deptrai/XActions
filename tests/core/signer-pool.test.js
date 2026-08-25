@@ -148,6 +148,25 @@ describe('Story 13.1 — SignerWorkerPagePool (AC-2)', () => {
     await expect(pool.evaluate('() => sig')).rejects.toThrow(PlatformError);
   });
 
+  it('[P1] should handle burst concurrent evaluate requests without exceeding maxSize', async () => {
+    const pool = new SignerWorkerPagePool({
+      browser: mockBrowser,
+      minSize: 2,
+      maxSize: 4,
+    });
+
+    await pool.init();
+    const results = await Promise.all([
+      pool.evaluate('() => 1'),
+      pool.evaluate('() => 2'),
+      pool.evaluate('() => 3'),
+      pool.evaluate('() => 4'),
+    ]);
+
+    expect(results).toHaveLength(4);
+    expect(pool.size).toBeLessThanOrEqual(4);
+  });
+
   it('[P2] should close all worker pages and browser on close()', async () => {
     const pool = new SignerWorkerPagePool({
       browser: mockBrowser,

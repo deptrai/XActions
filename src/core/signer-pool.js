@@ -36,14 +36,16 @@ export class PreSignedTokenRing {
 
   /**
    * Refill the ring with an array of pre-signed tokens.
-   * Clamps to capacity and resets the pointer to 0.
+   * Clamps to capacity, discards empty tokens, and resets pointer to 0.
    * @param {string[]} tokens
    */
   refill(tokens) {
     if (!Array.isArray(tokens)) {
       this.#tokens = [];
     } else {
-      this.#tokens = tokens.slice(0, this.#capacity);
+      this.#tokens = tokens
+        .filter((t) => typeof t === 'string' && t.trim().length > 0)
+        .slice(0, this.#capacity);
     }
     this.#index = 0;
   }
@@ -102,6 +104,15 @@ export class SignerWorkerPagePool {
   /** @type {number} */
   #warmupTimeoutMs = 8000;
 
+  /** @type {string | Function | null} */
+  #warmupScript = null;
+
+  /** @type {any[]} */
+  #warmupArgs = [];
+
+  /** @type {number} */
+  #pendingSpawns = 0;
+
   /** @type {boolean} */
   #isClosed = false;
 
@@ -128,9 +139,10 @@ export class SignerWorkerPagePool {
 
   /**
    * Create and register a new worker page.
+   * @param {boolean} [skipWarmup=false]
    * @returns {Promise<WorkerPageRecord>}
    */
-  async #spawnPage() {
+  async #spawnPage(skipWarmup = false) {
     if (!this.browser || typeof this.browser.newPage !== 'function') {
       throw new PlatformError({
         code: 'XACT_5000',
@@ -140,15 +152,30 @@ export class SignerWorkerPagePool {
       });
     }
 
-    const page = await this.browser.newPage();
-    const record = {
-      id: `worker_page_${this.#nextId++}`,
-      page,
-      load: 0,
-      state: /** @type {'idle' | 'busy' | 'dead'} */ ('idle'),
-    };
-    this.#pages.push(record);
-    return record;
+    this.#pendingSpawns++;
+    try {
+      const page = await this.browser.newPage();
+      const record = {
+        id: `worker_page_${this.#nextId++}`,
+        page,
+        load: 0,
+        state: /** @type {'idle' | 'busy' | 'dead'} */ ('idle'),
+      };
+      this.#pages.push(record);
+
+      if (!skipWarmup && this.#warmupScript) {
+        await this.#executeOnPage(record, this.#warmupScript, this.#warmupArgs, {
+          timeoutMs: this.#warmupTimeoutMs,
+          warmup: true,
+        }).catch((err) => {
+          console.warn(`[SIGNER WARNING] Warmup failed for page ${record.id}: ${err.message}`);
+        });
+      }
+
+      return record;
+    } finally {
+      this.#pendingSpawns = Math.max(0, this.#pendingSpawns - 1);
+    }
   }
 
   /**
@@ -168,19 +195,24 @@ export class SignerWorkerPagePool {
       });
     }
 
+    if (options.warmupScript) {
+      this.#warmupScript = options.warmupScript;
+      this.#warmupArgs = options.warmupArgs || [];
+    }
+
     // Spawn up to minSize pages
     const aliveCount = this.#pages.filter((p) => p.state !== 'dead').length;
     const needed = Math.max(0, this.#minSize - aliveCount);
     const spawnPromises = [];
     for (let i = 0; i < needed; i++) {
-      spawnPromises.push(this.#spawnPage());
+      spawnPromises.push(this.#spawnPage(true));
     }
     await Promise.all(spawnPromises);
 
-    // Warmup pages if warmup script is provided
-    if (options.warmupScript) {
+    // Warmup initial batch of pages
+    if (this.#warmupScript) {
       const warmupPromises = this.#pages.map((p) =>
-        this.#executeOnPage(p, options.warmupScript, options.warmupArgs || [], {
+        this.#executeOnPage(p, this.#warmupScript, this.#warmupArgs, {
           timeoutMs: this.#warmupTimeoutMs,
           warmup: true,
         }).catch((err) => {
@@ -205,13 +237,18 @@ export class SignerWorkerPagePool {
       });
     }
 
-    // Filter alive pages
-    const alivePages = this.#pages.filter((p) => p.state !== 'dead');
+    // Clean dead pages
+    this.#pages = this.#pages.filter((p) => p.state !== 'dead');
+    const alivePages = this.#pages;
+    const currentTotal = alivePages.length + this.#pendingSpawns;
 
-    // If no idle pages and we can scale up to maxSize, spawn a new page
-    if ((alivePages.length === 0 || alivePages.every((p) => p.load > 0)) && this.#pages.length < this.#maxSize) {
+    // If all existing alive pages are busy and we are below maxSize, spawn a new page
+    if ((alivePages.length === 0 || alivePages.every((p) => p.load > 0)) && currentTotal < this.#maxSize) {
       try {
-        return await this.#spawnPage();
+        const newWorker = await this.#spawnPage(false);
+        newWorker.load++;
+        newWorker.state = 'busy';
+        return newWorker;
       } catch (err) {
         if (alivePages.length === 0) throw err;
       }
@@ -228,13 +265,16 @@ export class SignerWorkerPagePool {
 
     // Least-Connections sort
     alivePages.sort((a, b) => a.load - b.load);
-    return alivePages[0];
+    const chosen = alivePages[0];
+    chosen.load++;
+    chosen.state = 'busy';
+    return chosen;
   }
 
   /**
    * Execute evaluation on a specific page with timeout and error tracking.
    * @param {WorkerPageRecord} worker
-   * @param {string | Function | undefined} script
+   * @param {string | Function | null | undefined} script
    * @param {any[]} args
    * @param {Object} [options={}]
    * @param {number} [options.timeoutMs]
@@ -243,10 +283,8 @@ export class SignerWorkerPagePool {
    */
   async #executeOnPage(worker, script, args, options = {}) {
     const timeoutMs = options.timeoutMs || (options.warmup ? this.#warmupTimeoutMs : this.#defaultTimeoutMs);
-    worker.load++;
-    worker.state = 'busy';
-
     let timeoutTimer = null;
+
     try {
       const timeoutPromise = new Promise((_, reject) => {
         timeoutTimer = setTimeout(() => {
@@ -256,6 +294,9 @@ export class SignerWorkerPagePool {
 
       const execPromise = (async () => {
         const page = worker.page;
+        if (!script) {
+          throw new Error(`[SIGNER ERROR] Script must be provided to evaluate on ${worker.id}`);
+        }
         if (typeof page.evaluate === 'function') {
           return await page.evaluate(script, ...args);
         } else if (page._native && typeof page._native.evaluate === 'function') {
@@ -264,10 +305,13 @@ export class SignerWorkerPagePool {
         throw new Error(`[SIGNER ERROR] Page ${worker.id} has no evaluate() method`);
       })();
 
+      // Suppress unhandled rejection if timeoutPromise wins the race
+      execPromise.catch(() => {});
+
       const result = await Promise.race([execPromise, timeoutPromise]);
       return result;
     } catch (err) {
-      // Mark page dead on failure or timeout
+      // Mark page dead on failure or timeout and release resource
       worker.state = 'dead';
       try {
         if (typeof worker.page.close === 'function') {
@@ -276,6 +320,7 @@ export class SignerWorkerPagePool {
           await worker.page._native.close().catch(() => {});
         }
       } catch {}
+      this.#pages = this.#pages.filter((p) => p !== worker);
       throw err;
     } finally {
       if (timeoutTimer) clearTimeout(timeoutTimer);
@@ -312,9 +357,9 @@ export class SignerWorkerPagePool {
       } catch (err) {
         lastError = err;
         // Attempt to spawn replacement if below maxSize
-        if (this.#pages.filter((p) => p.state !== 'dead').length < this.#minSize && this.#pages.length < this.#maxSize) {
+        if (this.#pages.length < this.#minSize && (this.#pages.length + this.#pendingSpawns) < this.#maxSize) {
           try {
-            await this.#spawnPage();
+            await this.#spawnPage(false);
           } catch {}
         }
       }

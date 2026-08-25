@@ -146,6 +146,10 @@ export class AbstractApiClient {
     if (!headerValue) return 0;
     const num = Number(headerValue);
     if (!Number.isNaN(num) && num > 0) {
+      if (num > 1000000000) {
+        const diff = num * 1000 - Date.now();
+        return diff > 0 ? diff : 0;
+      }
       return num * 1000;
     }
     const dateMs = Date.parse(String(headerValue));
@@ -349,7 +353,7 @@ export class AbstractApiClient {
         warmup: payload.warmup,
       });
       signResult = typeof res === 'object' && res !== null ? res : { signature: res };
-    } else if (typeof this.sign === 'function') {
+    } else if (typeof this.sign === 'function' && this.sign !== AbstractApiClient.prototype.sign) {
       signResult = /** @type {Record<string, any>} */ (await this.sign(payload));
     }
 
@@ -361,11 +365,14 @@ export class AbstractApiClient {
         mergedOptions.headers = { ...mergedOptions.headers, ...signResult.headers };
       }
       if (signResult.query) {
-        const parsedUrl = new URL(resolvedUrl);
+        const isAbsolute = /^https?:\/\//i.test(resolvedUrl);
+        const parsedUrl = new URL(resolvedUrl, isAbsolute ? undefined : 'http://localhost');
         for (const [k, v] of Object.entries(signResult.query)) {
           parsedUrl.searchParams.set(k, String(v));
         }
-        resolvedUrl = parsedUrl.toString();
+        resolvedUrl = isAbsolute
+          ? parsedUrl.toString()
+          : `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
       }
       if (signResult.cookies) {
         for (const [k, v] of Object.entries(signResult.cookies)) {
@@ -373,15 +380,32 @@ export class AbstractApiClient {
         }
         this.updateCookies(this.cookies);
       }
+      if (signResult.signature && !signResult.headers && !signResult.query && !signResult.cookies) {
+        const location = payload.location || 'header';
+        const name = payload.name || 'x-client-transaction-id';
+        if (location === 'header') {
+          mergedOptions.headers = { ...mergedOptions.headers, [name]: String(signResult.signature) };
+        } else if (location === 'query') {
+          const isAbsolute = /^https?:\/\//i.test(resolvedUrl);
+          const parsedUrl = new URL(resolvedUrl, isAbsolute ? undefined : 'http://localhost');
+          parsedUrl.searchParams.set(name, String(signResult.signature));
+          resolvedUrl = isAbsolute
+            ? parsedUrl.toString()
+            : `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+        }
+      }
     }
 
     if (Object.keys(this.cookies).length > 0) {
       const cookieHeader = Object.entries(this.cookies)
         .map(([k, v]) => `${k}=${v}`)
         .join('; ');
+      const existingHeaders = { ...(mergedOptions.headers || {}) };
+      delete existingHeaders['Cookie'];
+      delete existingHeaders['cookie'];
       mergedOptions.headers = {
+        ...existingHeaders,
         cookie: cookieHeader,
-        ...(mergedOptions.headers || {}),
       };
     }
 

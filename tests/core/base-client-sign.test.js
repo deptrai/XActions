@@ -133,4 +133,43 @@ describe('Story 13.1 — AbstractApiClient.requestWithSign Integration (AC-3, AC
     expect(res.status).toBe(200);
     expect(receivedRequests[0].headers['x-custom-sig']).toBe('custom_signature_abc');
   });
+
+  it('[P1] should handle relative URLs without throwing Invalid URL error', async () => {
+    const ring = new PreSignedTokenRing();
+    ring.refill(['tok_rel_123']);
+
+    // Mock httpClient to inspect resolved relative URL
+    const mockHttp = vi.fn(async ({ url, headers }) => {
+      return { status: 200, headers: {}, data: { url } };
+    });
+
+    const client = new TestApiClient({ tokenRing: ring, httpClient: mockHttp });
+    const res = await client.requestWithSign('GET', '/api/relative/endpoint', {
+      signType: 'token',
+      location: 'query',
+      name: 'auth_token',
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockHttp).toHaveBeenCalledWith(expect.objectContaining({
+      url: '/api/relative/endpoint?auth_token=tok_rel_123',
+    }));
+  });
+
+  it('[P1] should map primitive signature string to header when signType is page', async () => {
+    const mockPool = {
+      evaluate: vi.fn(async () => 'raw_tx_string_999'),
+    };
+
+    const client = new TestApiClient({ signerPool: mockPool });
+    const res = await client.requestWithSign('POST', `${serverUrl}/api/tx`, {
+      signType: 'page',
+      script: '() => raw_tx',
+      location: 'header',
+      name: 'x-client-transaction-id',
+    });
+
+    expect(res.status).toBe(200);
+    expect(receivedRequests[0].headers['x-client-transaction-id']).toBe('raw_tx_string_999');
+  });
 });
