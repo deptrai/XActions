@@ -12,6 +12,29 @@ import { AbstractCrawler } from '../../../core/base-crawler.js';
 import { FacebookClient } from './client.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
+const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
+
+/**
+ * Percent-encode only characters that are illegal inside a Cookie header value.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function encodeCookieValue(value) {
+  if (value == null) return '';
+  return String(value).replace(FORBIDDEN_COOKIE_CHARS, (c) => encodeURIComponent(c));
+}
+
+/**
+ * Build a Cookie header from a record of cookie values.
+ * @param {Record<string, unknown>} cookies
+ * @returns {string}
+ */
+function buildCookieHeader(cookies) {
+  return Object.entries(cookies)
+    .map(([k, v]) => `${encodeCookieValue(k)}=${encodeCookieValue(v)}`)
+    .join('; ');
+}
+
 export const DEFAULT_FB_DOC_IDS = {
   GROUP_FEED: 'group_feed_doc_123',
   PAGE_FEED: 'page_feed_doc_456',
@@ -42,10 +65,11 @@ export class FacebookCrawler extends AbstractCrawler {
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
+   * @param {Record<string, string>} [deps.friendlyNames]
    */
   constructor(deps = {}) {
-    const { client: explicitClient, ...clientDeps } = deps;
-    const client = explicitClient || new FacebookClient(/** @type {any} */ (clientDeps));
+    const { client: explicitClient, friendlyNames, ...clientDeps } = deps;
+    const client = explicitClient || new FacebookClient({ ...clientDeps, friendlyNames });
     super({
       ...deps,
       client,
@@ -59,29 +83,23 @@ export class FacebookCrawler extends AbstractCrawler {
     };
 
     // Register standard actions in ActionRegistry
-    this.registerAction(/** @type {any} */ ({
+    this.registerAction({
       action: 'group_posts',
       description: 'Scrape posts and updates from a Facebook Group using GraphQL',
-      category: 'social',
-      args: {
-        groupId: { type: 'string', required: true, description: 'Facebook Group ID or vanity name' },
-        count: { type: 'number', required: false, default: 20, description: 'Max posts to retrieve' },
-        cursor: { type: 'string', required: false, description: 'Pagination end cursor' },
-      },
+      requiredArgs: ['groupId'],
+      optionalArgs: ['count', 'cursor'],
+      outputType: '{ posts: PostItem[], pageInfo?: any }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupPosts(args, session),
-    }));
+    });
 
-    this.registerAction(/** @type {any} */ ({
+    this.registerAction({
       action: 'page_posts',
       description: 'Scrape timeline posts from a Facebook Page using GraphQL',
-      category: 'social',
-      args: {
-        pageId: { type: 'string', required: true, description: 'Facebook Page ID or handle' },
-        count: { type: 'number', required: false, default: 20, description: 'Max posts to retrieve' },
-        cursor: { type: 'string', required: false, description: 'Pagination end cursor' },
-      },
+      requiredArgs: ['pageId'],
+      optionalArgs: ['count', 'cursor'],
+      outputType: '{ posts: PostItem[], pageInfo?: any }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.pagePosts(args, session),
-    }));
+    });
   }
 
   /**
@@ -164,9 +182,7 @@ export class FacebookCrawler extends AbstractCrawler {
     if (session?.cookies) {
       if (typeof session.cookies === 'string') return session.cookies;
       if (typeof session.cookies === 'object') {
-        return Object.entries(session.cookies)
-          .map(([k, v]) => `${k}=${v}`)
-          .join('; ');
+        return buildCookieHeader(session.cookies);
       }
     }
 
@@ -175,9 +191,20 @@ export class FacebookCrawler extends AbstractCrawler {
     const sess = this.sessionManager.get(accountId);
     if (!sess?.cookies) return '';
     if (typeof sess.cookies === 'string') return sess.cookies;
-    return Object.entries(sess.cookies)
-      .map(([k, v]) => `${k}=${v}`)
-      .join('; ');
+    return buildCookieHeader(sess.cookies);
+  }
+
+  /**
+   * Validate and normalize a count argument.
+   * @param {unknown} count
+   * @param {number} [defaultCount=20]
+   * @param {number} [maxCount=100]
+   * @returns {number}
+   */
+  #normalizeCount(count, defaultCount = 20, maxCount = 100) {
+    const n = typeof count === 'number' ? count : Number(count);
+    if (!Number.isFinite(n) || n <= 0) return defaultCount;
+    return Math.min(Math.floor(n), maxCount);
   }
 
   /**
@@ -204,8 +231,8 @@ export class FacebookCrawler extends AbstractCrawler {
 
     const variables = {
       groupId: args.groupId,
-      count: args.count || 20,
-      cursor: args.cursor || null,
+      count: this.#normalizeCount(args?.count),
+      cursor: args?.cursor || null,
     };
 
     const docId = this.docIds.GROUP_FEED;
@@ -260,8 +287,8 @@ export class FacebookCrawler extends AbstractCrawler {
 
     const variables = {
       pageId: args.pageId,
-      count: args.count || 20,
-      cursor: args.cursor || null,
+      count: this.#normalizeCount(args?.count),
+      cursor: args?.cursor || null,
     };
 
     const docId = this.docIds.PAGE_FEED;
@@ -296,6 +323,7 @@ export class FacebookCrawler extends AbstractCrawler {
    * Abstract Crawler lifecycle methods.
    */
   async init() {}
+
   /**
    * @param {Object} _args
    * @returns {Promise<import('../../../core/types.js').PostItem[]>}

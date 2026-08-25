@@ -14,6 +14,34 @@ import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error
 
 const MAX_TOKEN_CACHE_ENTRIES = 500;
 
+const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
+
+/**
+ * Percent-encode only characters that are illegal inside a Cookie header value.
+ * Leaves '=', '+', '/', and spaces untouched so real Facebook cookies keep their values.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function encodeCookieValue(value) {
+  if (value == null) return '';
+  return String(value).replace(FORBIDDEN_COOKIE_CHARS, (c) => encodeURIComponent(c));
+}
+
+/**
+ * Build a stable Cookie header string from a string or a record of cookie values.
+ * @param {string | Record<string, unknown>} cookies
+ * @returns {string}
+ */
+function buildCookieHeader(cookies) {
+  if (typeof cookies === 'string') return cookies;
+  if (cookies && typeof cookies === 'object') {
+    return Object.entries(cookies)
+      .map(([k, v]) => `${encodeCookieValue(k)}=${encodeCookieValue(v)}`)
+      .join('; ');
+  }
+  return '';
+}
+
 export class FacebookClient extends AbstractApiClient {
   /** @type {string} */
   name = 'facebook';
@@ -30,6 +58,9 @@ export class FacebookClient extends AbstractApiClient {
   /** @type {string} */
   baseUrl = 'https://www.facebook.com';
 
+  /** @type {Record<string, string>} */
+  friendlyNames = {};
+
   /** @type {Map<string, { tokens: Record<string, any>, expiresAt: number }>} */
   #tokenCache = new Map();
 
@@ -39,11 +70,15 @@ export class FacebookClient extends AbstractApiClient {
   /** @type {number} */
   #tokenTtlMs = 5 * 60 * 1000; // 5 minutes TTL
 
+  /** @type {number} */
+  #reqCounter = 0x1a;
+
   /**
    * @param {Object} [deps]
    * @param {string} [deps.baseUrl]
    * @param {'got' | 'undici'} [deps.client]
    * @param {Record<string, string>} [deps.docIds]
+   * @param {Record<string, string>} [deps.friendlyNames]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
@@ -61,6 +96,9 @@ export class FacebookClient extends AbstractApiClient {
     if (deps.baseUrl) {
       this.baseUrl = deps.baseUrl.replace(/\/+$/, '');
     }
+    if (deps.friendlyNames) {
+      this.friendlyNames = deps.friendlyNames;
+    }
   }
 
   /**
@@ -70,42 +108,41 @@ export class FacebookClient extends AbstractApiClient {
    * @returns {Promise<Record<string, any>>}
    */
   async ensureTokens(accountId = 'default', cookies = '') {
-    const cached = this.#tokenCache.get(accountId);
+    const cookieHeader = buildCookieHeader(cookies);
+    const cacheKey = this.#cacheKey(accountId, cookieHeader);
+
+    const cached = this.#tokenCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
+      // Touch the entry to keep it in LRU order.
+      this.#tokenCache.delete(cacheKey);
+      this.#tokenCache.set(cacheKey, cached);
       return cached.tokens;
     }
 
-    if (this.#pendingTokenFetches.has(accountId)) {
-      return /** @type {Promise<Record<string, any>>} */ (this.#pendingTokenFetches.get(accountId));
+    if (this.#pendingTokenFetches.has(cacheKey)) {
+      return /** @type {Promise<Record<string, any>>} */ (this.#pendingTokenFetches.get(cacheKey));
     }
 
-    const fetchPromise = this.#fetchTokens(accountId, cookies)
+    const fetchPromise = this.#fetchTokens(accountId, cookieHeader)
       .finally(() => {
-        this.#pendingTokenFetches.delete(accountId);
+        this.#pendingTokenFetches.delete(cacheKey);
       });
 
-    this.#pendingTokenFetches.set(accountId, fetchPromise);
+    this.#pendingTokenFetches.set(cacheKey, fetchPromise);
     return fetchPromise;
   }
 
   /**
    * Internal worker to fetch tokens from home page HTML.
    * @param {string} accountId
-   * @param {string | Record<string, string>} cookies
+   * @param {string} cookieHeader
    * @returns {Promise<Record<string, any>>}
    */
-  async #fetchTokens(accountId, cookies) {
-    let cookieHeader = '';
+  async #fetchTokens(accountId, cookieHeader) {
     let parsedUserId = '';
-    if (typeof cookies === 'string') {
-      cookieHeader = cookies;
-      const cUserMatch = cookies.match(/(?:^|;\s*)c_user=([^;]+)/);
-      if (cUserMatch) parsedUserId = cUserMatch[1];
-    } else if (cookies && typeof cookies === 'object') {
-      cookieHeader = Object.entries(cookies)
-        .map(([k, v]) => `${k}=${v}`)
-        .join('; ');
-      if (cookies['c_user']) parsedUserId = String(cookies['c_user']);
+    if (cookieHeader) {
+      const cUserMatch = cookieHeader.match(/(?:^|;\s*)c_user=([^;]+)/);
+      if (cUserMatch) parsedUserId = decodeURIComponent(cUserMatch[1]);
     }
 
     /** @type {Record<string, string>} */
@@ -144,7 +181,7 @@ export class FacebookClient extends AbstractApiClient {
     const hsiMatch = html.match(/"__hsi":"([^"]+)"/) || html.match(/window\.__hsi\s*=\s*"([^"]+)"/);
     const hsi = hsiMatch ? hsiMatch[1] : '';
 
-    if (!dtsg && !lsd) {
+    if (!dtsg || !lsd) {
       throw new PlatformError({
         code: 'XACT_4010',
         type: ErrorTypes.AUTH_EXPIRED,
@@ -156,7 +193,7 @@ export class FacebookClient extends AbstractApiClient {
     }
 
     const tokens = {
-      lsd: lsd || 'AVr_ChrToken',
+      lsd,
       jazoest,
       dtsg,
       spin_r,
@@ -164,6 +201,8 @@ export class FacebookClient extends AbstractApiClient {
       hsi,
       c_user: parsedUserId,
     };
+
+    const cacheKey = this.#cacheKey(accountId, cookieHeader);
 
     // Cache management with pruning
     if (this.#tokenCache.size >= MAX_TOKEN_CACHE_ENTRIES) {
@@ -179,7 +218,7 @@ export class FacebookClient extends AbstractApiClient {
       }
     }
 
-    this.#tokenCache.set(accountId, {
+    this.#tokenCache.set(cacheKey, {
       tokens,
       expiresAt: Date.now() + this.#tokenTtlMs,
     });
@@ -195,7 +234,17 @@ export class FacebookClient extends AbstractApiClient {
    * @returns {string}
    */
   buildGraphQlBody(docId, variables = {}, tokens = {}) {
-    const userId = tokens.c_user || tokens.userId || '0';
+    const userId = tokens.c_user || tokens.userId;
+    if (!userId) {
+      throw new PlatformError({
+        code: 'XACT_4010',
+        type: ErrorTypes.AUTH_EXPIRED,
+        message: 'Missing c_user token in GraphQL body',
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'facebook',
+      });
+    }
+
     const params = new URLSearchParams({
       doc_id: docId,
       variables: JSON.stringify(variables),
@@ -203,15 +252,21 @@ export class FacebookClient extends AbstractApiClient {
       fb_dtsg: tokens.dtsg || '',
       jazoest: tokens.jazoest || '2953',
       __a: '1',
-      __user: userId,
+      __user: String(userId),
       __comet_req: '15',
+      __req: this.#nextReq(),
+      __ccg: 'EXCELLENT',
       fb_api_caller_class: 'RelayModern',
       server_timestamps: 'true',
+      __aaid: '0',
+      av: String(userId),
     });
 
     if (tokens.spin_r) params.set('__spin_r', String(tokens.spin_r));
     if (tokens.spin_t) params.set('__spin_t', String(tokens.spin_t));
+    if (tokens.__rev) params.set('__rev', String(tokens.__rev));
     if (tokens.hsi) params.set('__hsi', String(tokens.hsi));
+    if (this.friendlyNames[docId]) params.set('fb_api_req_friendly_name', this.friendlyNames[docId]);
 
     return params.toString();
   }
@@ -239,9 +294,7 @@ export class FacebookClient extends AbstractApiClient {
     };
 
     if (rawCookies && !mergedHeaders['cookie']) {
-      mergedHeaders['cookie'] = typeof rawCookies === 'string'
-        ? rawCookies
-        : Object.entries(rawCookies).map(([k, v]) => `${k}=${v}`).join('; ');
+      mergedHeaders['cookie'] = buildCookieHeader(rawCookies);
     }
 
     const response = /** @type {any} */ (await this.request('POST', `${this.baseUrl}/api/graphql/`, {
@@ -315,5 +368,28 @@ export class FacebookClient extends AbstractApiClient {
   clearTokenCache() {
     this.#tokenCache.clear();
     this.#pendingTokenFetches.clear();
+  }
+
+  /**
+   * @param {string} accountId
+   * @param {string} cookieHeader
+   * @returns {string}
+   */
+  #cacheKey(accountId, cookieHeader) {
+    let h = 5381;
+    for (let i = 0; i < cookieHeader.length; i += 1) {
+      h = ((h << 5) + h) + cookieHeader.charCodeAt(i);
+      h >>>= 0;
+    }
+    return `${accountId}:${h.toString(16)}`;
+  }
+
+  /**
+   * @returns {string}
+   */
+  #nextReq() {
+    const value = this.#reqCounter.toString(16).padStart(2, '0');
+    this.#reqCounter += 1;
+    return value;
   }
 }

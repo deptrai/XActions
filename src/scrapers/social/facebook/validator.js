@@ -7,6 +7,30 @@
 
 import { AbstractPlatformResponseValidator } from '../../../core/platform-validator.js';
 
+const BOT_CHALLENGE_PHRASES = [
+  'security check',
+  'confirm your identity',
+  'please confirm your identity',
+  '/checkpoint/',
+  'captcha',
+  'vérification de sécurité',
+  'confirmez que vous',
+  'đăng nhập',
+  'iniciar sesión',
+  'entrar',
+  'se connecter',
+];
+
+const LOGIN_WALL_PHRASES = [
+  'log in to facebook',
+  'log into facebook',
+  'log in with your password',
+  'facebook - log in',
+  'facebook — log in',
+  'facebook – log in',
+  'facebook - log in',
+];
+
 export class FacebookPlatformResponseValidator extends AbstractPlatformResponseValidator {
   /** @type {string} */
   platform = 'facebook';
@@ -134,13 +158,20 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
     }
 
     const errorText = this.#getErrorText(response);
-    if (
-      errorText.includes('security check') ||
-      errorText.includes('confirm your identity') ||
-      errorText.includes('please confirm your identity') ||
-      errorText.includes('/checkpoint/') ||
-      errorText.includes('captcha')
-    ) {
+    if (BOT_CHALLENGE_PHRASES.some((phrase) => errorText.includes(phrase))) {
+      return true;
+    }
+
+    const body = this.#getBody(response).toLowerCase();
+    if (/<input[^>]+type=["']password["']/i.test(body)) {
+      return true;
+    }
+
+    if (LOGIN_WALL_PHRASES.some((phrase) => body.includes(phrase))) {
+      return true;
+    }
+
+    if (body.includes('log in') && body.includes('password')) {
       return true;
     }
 
