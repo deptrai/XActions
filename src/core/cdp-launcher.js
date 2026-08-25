@@ -20,6 +20,11 @@ function findExecutableInPath(name) {
     const candidate = path.join(dir, name);
     try {
       if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        try {
+          fs.accessSync(candidate, fs.constants.X_OK);
+        } catch {
+          if (process.platform !== 'win32') continue;
+        }
         return candidate;
       }
     } catch {}
@@ -63,6 +68,18 @@ export function getChromeExecutablePath(platform = process.platform, customPath 
         message: `[CDP ERROR] Chrome not found at ${customPath}. Install Chrome or set --chrome-path.`,
         suggestedAction: SuggestedActions.CONTACT_SUPPORT,
       });
+    }
+    try {
+      fs.accessSync(customPath, fs.constants.X_OK);
+    } catch {
+      if (process.platform !== 'win32') {
+        throw new PlatformError({
+          code: 'XACT_5030',
+          type: ErrorTypes.INTERNAL,
+          message: `[CDP ERROR] Chrome binary at ${customPath} is not executable.`,
+          suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+        });
+      }
     }
     return customPath;
   }

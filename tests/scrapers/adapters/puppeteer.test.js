@@ -46,7 +46,7 @@ describe('PuppeteerAdapter', () => {
 
     const browser = await adapter.connect('http://localhost:9222');
 
-    expect(mockFetch).toHaveBeenCalledWith('http://localhost:9222/json/version');
+    expect(mockFetch).toHaveBeenCalledWith('http://localhost:9222/json/version', expect.anything());
     expect(mockConnect).toHaveBeenCalledWith({
       browserWSEndpoint: 'ws://localhost:9222/devtools/browser/abc',
       defaultViewport: null,

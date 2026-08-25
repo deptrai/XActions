@@ -241,10 +241,13 @@ export class PuppeteerAdapter extends BaseAdapter {
    * @returns {Promise<AdapterBrowser>}
    */
   async connect(cdpUrl, options = {}) {
-    const url = new URL(cdpUrl);
+    const normalizedUrl = /^https?:\/\//i.test(String(cdpUrl).trim())
+      ? String(cdpUrl).trim()
+      : `http://${String(cdpUrl).trim().replace(/^\/+/, '')}`;
+    const url = new URL(normalizedUrl);
     const versionUrl = `${url.protocol}//${url.host}/json/version`;
 
-    const response = await fetch(versionUrl);
+    const response = await fetch(versionUrl, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) {
       throw new Error(`[CDP ERROR] Could not connect to Chrome on ${cdpUrl}: ${response.status} ${response.statusText}`);
     }

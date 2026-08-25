@@ -90,7 +90,7 @@ export class PlaywrightAdapter extends BaseAdapter {
       const context = contexts.length > 0 ? contexts[0] : await b._native.newContext();
       const pages = context.pages();
       const page = pages.length > 0 ? pages[0] : await context.newPage();
-      return { _native: page, _context: context, _adapter: this.name };
+      return { _native: page, _context: context, _adapter: this.name, _preserveProfile: true };
     }
 
     const width = options.viewport?.width || 1280 + Math.floor(Math.random() * 100);
@@ -222,7 +222,13 @@ export class PlaywrightAdapter extends BaseAdapter {
    * @returns {Promise<void>}
    */
   async closePage(page) {
-    const p = /** @type {AdapterPage & { _native: import('playwright').Page, _context?: import('playwright').BrowserContext }} */ (page);
+    const p = /** @type {AdapterPage & { _native: import('playwright').Page, _context?: import('playwright').BrowserContext, _preserveProfile?: boolean }} */ (page);
+    if (p._preserveProfile) {
+      if (p._native && typeof p._native.close === 'function') {
+        await p._native.close();
+      }
+      return;
+    }
     if (p._context) {
       await p._context.close();
     } else {

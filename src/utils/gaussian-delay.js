@@ -52,16 +52,26 @@ export function gaussianRandom(min = 3000, max = 7000, mean, stdDev) {
 }
 
 /**
- * Sleep for a Gaussian-distributed duration.
+ * Sleep for a Gaussian-distributed duration with optional cancellation signal.
  *
  * @param {number} [min=3000]
  * @param {number} [max=7000]
  * @param {number} [mean]
  * @param {number} [stdDev]
+ * @param {AbortSignal} [signal]
  * @returns {Promise<number>} milliseconds slept
  */
-export async function gaussianDelay(min = 3000, max = 7000, mean, stdDev) {
+export async function gaussianDelay(min = 3000, max = 7000, mean, stdDev, signal) {
   const ms = Math.max(0, Math.round(gaussianRandom(min, max, mean, stdDev)));
-  await new Promise((resolve) => setTimeout(resolve, ms));
+  if (signal?.aborted) return 0;
+  await new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+        resolve(undefined);
+      }, { once: true });
+    }
+  });
   return ms;
 }
