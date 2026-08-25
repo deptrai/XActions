@@ -122,12 +122,14 @@ development_status:
   epic-20-retrospective: optional
 
   # --- Epic 21: B2B Procurement, Corporate & Automotive Intelligence Engine ---
+  # NOTE: Epic 21 moved to future work backlog. See FUTURE-WORK.md and backlog-epics-21-22.md.
   epic-21: backlog
   21-1-b2b-tender-company-registry-crawler: backlog
   21-2-automotive-vehicles-market-crawler: backlog
   epic-21-retrospective: optional
 
   # --- Epic 22: Local F&B Merchant, Healthcare & Legal Intelligence Engine ---
+  # NOTE: Epic 22 moved to future work backlog. See FUTURE-WORK.md and backlog-epics-21-22.md.
   epic-22: backlog
   22-1-fnb-merchant-restaurant-directory-crawler: backlog
   22-2-healthcare-clinics-pharmacy-network-crawler: backlog

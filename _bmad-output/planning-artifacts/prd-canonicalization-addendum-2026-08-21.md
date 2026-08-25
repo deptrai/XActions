@@ -15,10 +15,10 @@ Tài liệu này giải quyết xung đột đánh số FR/NFR giữa các phiê
 
 | Phạm vi | Canonical | Deprecated / Reference |
 |---|---|---|
-| Epics 1–4 (Facebook scrape, automate, growth) | `epics-full.md` | `prds/prd-XActions-2026-06-08/prd.md`, `prds/prd-XActions-2026-06-10-epic4/prd.md` |
+| Epics 1–4 (Facebook scrape, automate, growth) | `archive/epics-1-9-legacy.md` | `archive/prds/prd-XActions-2026-06-08/prd.md`, `archive/prds/prd-XActions-2026-06-10-epic4/prd.md` |
 | Epics 5, 5b, 6 (Messenger, Marketplace, Anti-Detection) | `prd-facebook-epics-5-6-2026-08-21.md` | — |
-| Epic 7 (Facebook advanced scraping) | `epics-full.md` | `prds/prd-XActions-2026-08-14-epic7/prd.md` |
-| Epics 10–20 (Universal Scraping Engine) | `prd.md` | `prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md` |
+| Epic 7 (Facebook advanced scraping) | `archive/epics-1-9-legacy.md` | `archive/prds/prd-XActions-2026-08-14-epic7/prd.md` |
+| Epics 10–20 (Universal Scraping Engine) | `prd.md` | `archive/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md` |
 
 ---
 
@@ -34,11 +34,11 @@ Từ 2026-08-21, FR trong XActions được đánh số theo phạm vi (scope pr
 
 | Canonical ID | Source ID | Source Document | Description |
 |---|---|---|---|
-| FB-FR-1..FB-FR-14 | FR-1..FR-14 | `prds/prd-XActions-2026-06-08/prd.md` / `epics-full.md` | Facebook Platform Extension (Epics 1–3) |
-| FB-FR-15..FB-FR-23 | FR-15..FR-23 | `prds/prd-XActions-2026-06-10-epic4/prd.md` / `epics-full.md` | Facebook Growth Automation (Epic 4) |
+| FB-FR-1..FB-FR-14 | FR-1..FR-14 | `archive/prds/prd-XActions-2026-06-08/prd.md` / `archive/epics-1-9-legacy.md` | Facebook Platform Extension (Epics 1–3) |
+| FB-FR-15..FB-FR-23 | FR-15..FR-23 | `archive/prds/prd-XActions-2026-06-10-epic4/prd.md` / `archive/epics-1-9-legacy.md` | Facebook Growth Automation (Epic 4) |
 | FB-FR-24..FB-FR-54 | FR-24..FR-54 | `prd-facebook-epics-5-6-2026-08-21.md` | Messenger, Marketplace, Anti-Detection (Epics 5, 5b, 6) |
-| FB-FR-55..FB-FR-63 | FR-55..FR-63 | `prds/prd-XActions-2026-08-14-epic7/prd.md` / `epics-full.md` | Facebook Advanced Scraping (Epic 7) |
-| FUTURE-FR-62 | FR-62 | `prds/prd-XActions-2026-08-14-epic7/prd.md` | GraphQL replay — deferred to Phase 3 |
+| FB-FR-55..FB-FR-63 | FR-55..FR-63 | `archive/prds/prd-XActions-2026-08-14-epic7/prd.md` / `archive/epics-1-9-legacy.md` | Facebook Advanced Scraping (Epic 7) |
+| FUTURE-FR-62 | FR-62 | `archive/prds/prd-XActions-2026-08-14-epic7/prd.md` | GraphQL replay — deferred to Phase 3 |
 | U-FR-64..U-FR-84 | FR-64..FR-84 | `prd.md` | Universal Engine Epics 10–18 |
 | U-FR-85..U-FR-88 | FR-85..FR-88 | `prd.md` §7.1 | Operator Dashboard, Metadata Schema, Data Retention, 3-Tier Gap-Filling |
 
@@ -55,9 +55,9 @@ Tương tự FR, NFR sử dụng prefix phạm vi để tránh xung đột:
 
 | Canonical ID | Source ID | Source Document | Description |
 |---|---|---|---|
-| FB-NFR-1..FB-NFR-5 | (cross-cutting) | `prds/prd-XActions-2026-06-08/prd.md` §7 | Rate-limit, anti-detection, security, selector resilience, consistency |
-| FB-NFR-6..FB-NFR-10 | NFR-6..NFR-10 | `prds/prd-XActions-2026-06-10-epic4/prd.md` / `epics-full.md` | Delay floor, runGuardedBatch, risk warning, scheduling cap, no PII |
-| FB-NFR-11..FB-NFR-15 | NFR-11..NFR-15 | `prds/prd-XActions-2026-08-14-epic7/prd.md` / `epics-full.md` | No storage, health check <2s, concurrency cap, privacy, resilience, read velocity |
+| FB-NFR-1..FB-NFR-5 | (cross-cutting) | `archive/prds/prd-XActions-2026-06-08/prd.md` §7 | Rate-limit, anti-detection, security, selector resilience, consistency |
+| FB-NFR-6..FB-NFR-10 | NFR-6..NFR-10 | `archive/prds/prd-XActions-2026-06-10-epic4/prd.md` / `archive/epics-1-9-legacy.md` | Delay floor, runGuardedBatch, risk warning, scheduling cap, no PII |
+| FB-NFR-11..FB-NFR-15 | NFR-11..NFR-15 | `archive/prds/prd-XActions-2026-08-14-epic7/prd.md` / `archive/epics-1-9-legacy.md` | No storage, health check <2s, concurrency cap, privacy, resilience, read velocity |
 | U-NFR-11..U-NFR-16 | NFR-11..NFR-16 | `prd.md` | Resource optimization, throughput, resilience, security, clean architecture, license |
 | U-NFR-17 | NFR-17 | `prd.md` §7.2 | Operational observability |
 

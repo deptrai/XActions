@@ -13,7 +13,7 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 
 ## FR-62: GraphQL Replay (Facebook / Universal)
 
-**Nguồn:** `prd-XActions-2026-08-14-epic7/prd.md` §4.5, `epics-full.md` Epic 7.
+**Nguồn:** `archive/prds/prd-XActions-2026-08-14-epic7/prd.md` §4.5, `archive/epics-1-9-legacy.md` Epic 7.
 
 **Mô tả:** Capture `doc_id` từ `api/graphql` request trong Puppeteer và replay bằng HTTP client (`axios`/`undici`) với `fb_dtsg`, `lsd`, `__dyn`, `__csr`. Fallback sang hydration/DOM nếu `doc_id` rotate.
 
@@ -63,6 +63,25 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 **Mô tả:** Dashboard quản lý nhiều account, proxy assignment, hibernation queue.
 
 **Điều kiện mở lại:** Epic 19 operator dashboard hoàn thành, Epic 7 multi-account stable.
+
+---
+
+## Epic 21–22: B2B Procurement, Corporate & Automotive / Local F&B, Healthcare & Legal Intelligence
+
+**Nguồn:** `epics.md` §Epic 21–22 (moved 2026-08-26).
+
+**Mô tả:** Mở rộng XActions sang các vertical B2B & local services: đấu thầu/doanh nghiệp, ô tô, F&B, y tế, sở hữu trí tuệ.
+
+**Tại sao defer:**
+- Nằm ngoài PRD canonical hiện tại (Epics 10–20).
+- Chưa có PRD, UX personas/flows, hoặc architecture review cho các domain mới.
+- Cần review pháp lý cho dữ liệu chính phủ, y tế, IP.
+
+**Điều kiện mở lại:**
+1. Product Council approve PRD mới cho verticals này.
+2. UX documentation (personas, flows, mockups) được hoàn thiện.
+3. Architecture review xác nhận `AbstractCrawler`/`ProxyIpPool` sẵn sàng mở rộng.
+4. Xem chi tiết: `_bmad-output/planning-artifacts/backlog-epics-21-22.md`.
 
 ---
 

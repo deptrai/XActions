@@ -1,6 +1,6 @@
 ---
-status: draft
-updated: 2026-06-19
+status: final
+updated: 2026-08-26
 colors:
   primary: "#1a73e8"
   primary-hover: "#1557b0"
@@ -283,3 +283,115 @@ The primary interaction unit. One card per automation feature.
 - Don't use different layouts for Facebook vs X (unified)
 - Don't require cookie paste per-action (account selector handles it)
 - Don't show raw JSON by default (structured result panel; JSON in collapsible "Raw" section)
+
+## Operator Dashboard & Admin CLI Mockups
+
+> Bổ sung từ `EXPERIENCE-UNIVERSAL-2026-08-21.md` để mô tả giao diện vận hành nội bộ (Epic 19) và quy trình multi-platform (Epic 10–20).
+
+### M1: `/admin/proxies` — Proxy Pool Status Card
+
+```
+┌─ Proxy Pool ────────────────────────────────┐
+│  🛡️ Healthy: 12/15  [████████████░░░]       │
+│  ⚠️  Quarantined: 3   🟡 Standby: 0          │
+│  Throughput: 420 req/s  Throttle: L2        │
+│  [Add Proxies]  [Pause Bulk Jobs]            │
+└─────────────────────────────────────────────┘
+```
+
+### M2: `/admin/checkpoints` — Data Table
+
+```
+┌─ Checkpoints ───────────────────────────────────────────┐
+│ Platform │ Target        │ Status  │ Last Activity │ Actions      │
+├──────────┼───────────────┼─────────┼───────────────┼──────────────┤
+│ shopee   │ search:iphone │ failed  │ 2m ago        │ [Retry]      │
+│ facebook │ page:xyz      │ running │ 5s ago        │ [Pause]      │
+│ twitter  │ timeline:abc  │ done    │ 1h ago        │ [Export]     │
+└─────────────────────────────────────────────────────────┘
+```
+
+### M3: `/admin/streams` — Stream Metrics Line Chart
+
+```
+┌─ Stream Metrics ────────────────────────────┐
+│ events/sec  ████████████████████░░░░  520  │
+│ pending     ██████████████░░░░░░░░░░ 12.4k │
+│ ─── alert threshold ───────────── 50k ───  │
+│ [5m] [1h] [24h]                            │
+└─────────────────────────────────────────────┘
+```
+
+### M4: Terminal QR Login (TTY)
+
+```
+$ xactions login --qr --platform facebook
+
+Scan this QR code with your phone:
+█████████████████████████████
+██ ▄▄▄▄▄ █ █▄▀▀▄█ ▄▄▄▄▄ ██
+██ █   █ █▀ ▄▀▄█ █   █ ██
+██ █▄▄▄█ █▀ ▄▀ ▀█ █▄▄▄█ ██
+██▄▄▄▄▄▄▄█▄▄█▄▄█▄█▄▄▄▄▄▄▄██
+████  ▀ ▀ ▄▀ ▀ ▀ ▀ ▀ ▀▀████
+██▄█▄▄▄▄▄▄▀ ▀▄ ▀▄▀▄▄▄▄▄█▄██
+█████████████████████████████
+
+⏳ 60s remaining...   ✅ Account active
+```
+
+### M5: Multi-Platform New-User Flow (`/platforms`)
+
+```
+┌─ Select Platform ───────────────────────────┐
+│ [X/Twitter] [Facebook] [Threads] [TikTok]   │
+│ [Shopee]    [Batdongsan] [TopCV] [LinkedIn] │
+├─────────────────────────────────────────────┤
+│ Selected: Shopee                            │
+│ Account: No auth required                   │
+│ Query: [ iphone 15          ] [Preview]     │
+│ ☑ Dry-run                                   │
+│                                             │
+│ 🛡️ Preview: 50 products found               │
+│ [Run Live] [Export CSV] [Export JSONL]      │
+└─────────────────────────────────────────────┘
+```
+
+### M6: CDP Remote Attach Helper
+
+```
+$ xactions auth --launch-chrome
+
+Chrome launched on --remote-debugging-port=9222
+Please log in to LinkedIn manually.
+
+[✓] CDP attached  [✓] Cookie captured  [✓] Jitter 3–7s active
+
+Run: xactions crawl --platform linkedin --action search_jobs ...
+```
+
+### M7: MCP / AI Agent Response Envelope
+
+```
+{
+  "result": { "count": 50, "items": [...] },
+  "metadata": { "platform": "shopee", "action": "search_products", "artifactRef": null },
+  "artifactRef": null
+}
+```
+
+### M8: Non-TTY / CI Output
+
+```
+$ xactions status --json | jq .
+{
+  "proxyPool": "12/15 healthy",
+  "governorThrottle": 2,
+  "redisLag": 1240,
+  "hibernatingAccounts": ["fb:123 18m left"]
+}
+```
+
+## Scope Note
+
+- Epic 21–22 (B2B Procurement, F&B, Healthcare, Legal) đã chuyển sang `backlog-epics-21-22.md`; UX cho các domain này sẽ được thiết kế khi Product Council kích hoạt lại.

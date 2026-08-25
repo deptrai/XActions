@@ -7,27 +7,28 @@ selectedDocuments:
     primary: _bmad-output/planning-artifacts/prd.md
     supplemental:
       - _bmad-output/planning-artifacts/prd-canonicalization-addendum-2026-08-21.md
-      - _bmad-output/planning-artifacts/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md
+      - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md
   architecture:
     primary: _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
     supplemental:
-      - _bmad-output/planning-artifacts/architecture.md
+      - _bmad-output/planning-artifacts/archive/architecture-brownfield-2026-08-20.md
       - _bmad-output/planning-artifacts/architecture/xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md
       - _bmad-output/planning-artifacts/research/technical-mediacrawler-architecture-for-xactions-research-2026-08-18.md
   epics:
     primary: _bmad-output/planning-artifacts/epics.md
     supplemental:
-      - _bmad-output/planning-artifacts/epics-full.md
+      - _bmad-output/planning-artifacts/archive/epics-1-9-legacy.md
       - _bmad-output/planning-artifacts/test-design-epic-12.md
   ux:
     primary: _bmad-output/planning-artifacts/ux/DESIGN.md
     supplemental:
       - _bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md
       - _bmad-output/planning-artifacts/ux/EXPERIENCE.md
-unresolvedDuplicates:
-  - PRD: tồn tại whole prd.md + 4 sharded prd.md
-  - Architecture: tồn tại whole architecture.md + sharded ARCHITECTURE-SPINE.md
-  - Epics: tồn tại epics.md + epics-full.md
+unresolvedDuplicates: []
+resolvedDuplicates:
+  - PRD: sharded PRDs chuyển vào archive/prds/
+  - Architecture: whole architecture.md chuyển vào archive/architecture-brownfield-2026-08-20.md
+  - Epics: epics-full.md chuyển vào archive/epics-1-9-legacy.md
 ---
 
 # Implementation Readiness Assessment Report
@@ -58,7 +59,7 @@ unresolvedDuplicates:
 ### Architecture Documents
 
 **Whole Documents:**
-- `architecture.md` (46,618 bytes, 2026-08-20 14:37:04)
+- `archive/architecture-brownfield-2026-08-20.md` (46,618 bytes, 2026-08-20 14:37:04)
 
 **Sharded Documents:**
 - Folder `architecture/xactions-facebook-gateway-2026-08-23/`
@@ -85,7 +86,7 @@ unresolvedDuplicates:
 
 **Whole Documents:**
 - `epics.md` (64,302 bytes, 2026-08-26 02:19:48)
-- `epics-full.md` (50,662 bytes, 2026-08-21 04:00:51)
+- `archive/epics-1-9-legacy.md` (50,662 bytes, 2026-08-21 04:00:51)
 - `test-design-epic-12.md` (7,373 bytes, 2026-08-21 16:45:44)
 
 ### UX Design Documents
@@ -100,18 +101,18 @@ unresolvedDuplicates:
 
 ## 2. Duplicate & Missing Document Findings
 
-- **PRD**: Tồn tại cả whole `prd.md` và 4 folder sharded `prds/*`. Cần chọn bản chính.
-- **Architecture**: Tồn tại whole `architecture.md` và sharded `xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`.
-- **Epics**: Tồn tại `epics.md` (mới nhất) và `epics-full.md`.
+- **PRD**: Tồn tại cả whole `prd.md` và 4 folder sharded `archive/prds/*`. Các sharded đã deprecated và chuyển vào archive.
+- **Architecture**: Tồn tại whole `archive/architecture-brownfield-2026-08-20.md` và sharded `xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`.
+- **Epics**: `epics.md` (mới nhất, Epics 10–20) và `archive/epics-1-9-legacy.md` (Epics 1–9) là 2 phạm vi riêng biệt, không còn trùng lặp.
 - **UX**: Không có whole `*ux*.md` duy nhất; có 3 file trong `ux/`.
 
 ## 3. Selected Canonical Documents
 
 | Loại | Primary | Supplemental |
 |------|---------|--------------|
-| PRD | `prd.md` | `prd-canonicalization-addendum-2026-08-21.md`, `prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md` |
-| Architecture | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` | `architecture.md`, `xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md`, `research/...` |
-| Epics | `epics.md` | `epics-full.md`, `test-design-epic-12.md` |
+| PRD | `prd.md` | `prd-canonicalization-addendum-2026-08-21.md`, `archive/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md` |
+| Architecture | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` | `archive/architecture-brownfield-2026-08-20.md`, `xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md`, `research/...` |
+| Epics | `epics.md` | `archive/epics-1-9-legacy.md`, `test-design-epic-12.md` |
 | UX | `ux/DESIGN.md` | `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md`, `ux/EXPERIENCE.md` |
 
 ## 4. Epic Coverage Validation
@@ -338,25 +339,35 @@ unresolvedDuplicates:
 
 ### Overall Readiness Status
 
-**NEEDS WORK** — Implementation Readiness của XActions đã đạt mức **đủ cho Epics 10–20**, nhưng còn nhiều vấn đề critical liên quan đến tài liệu trùng lặp, Epic 21–22 ngoài PRD scope, và thiếu UX cập nhật. Không nên bắt đầu toàn bộ Phase 4 cho đến khi các vấn đề dưới đây được xử lý.
+**READY** — Sau khi áp dụng các biện pháp khắc phục trong cùng ngày, XActions Implementation Readiness đạt **READY** cho **Phase 4 — Epics 10–20**. Tài liệu trùng lặp đã được archive, Epic 21–22 chuyển sang backlog, UX đã cập nhật, và deprecation plan có rollback checklist.
 
-### Critical Issues Requiring Immediate Action
+> **Lịch sử:** Bản đánh giá ban đầu (trước khắc phục) xếp **NEEDS WORK**.
 
-1. **Epic 21–22 nằm ngoài PRD canonical.** Không có FR/NFR nguồn, không có UX, không rõ dependency. Nếu vẫn muốn triển khai, phải cập nhật PRD hoặc tách thành PRD riêng. Nếu không, chuyển sang backlog/future work.
-2. **Trùng lặp tài liệu chưa giải quyết.** PRD có whole + 4 sharded; Architecture có whole + sharded; Epics có `epics.md` + `epics-full.md`. Cần xác nhận canonical hoặc archive/delete deprecated versions.
-3. **`DESIGN.md` draft cũ (2026-06-19).** Chưa cập nhật kiến trúc mới, Admin components, và Epic 21–22.
-4. **Story 20.2 xóa code legacy là destructive.** Cần double-check `docs/deprecation-plan.md` và rollback strategy trước khi thực hiện.
-5. **Một số acceptance criteria còn mơ hồ.** "Stable", "parity ≥99%", "hibernation 15–30 phút" cần định lượng rõ trong AC.
+### Remediation Log (2026-08-26)
+
+| Vấn đề | Hành động | Trạng thái |
+|---|---|---|
+| Epic 21–22 ngoài PRD scope | Tách thành `backlog-epics-21-22.md`, thêm vào `FUTURE-WORK.md`, xóa khỏi `epics.md` | ✓ Resolved |
+| Trùng lặp tài liệu PRD | Chuyển `prds/` → `archive/prds/`, cập nhật `prd.md`, `prd-canonicalization-addendum`, `CANONICAL-DOCS.md` | ✓ Resolved |
+| Trùng lặp Architecture | Chuyển `architecture.md` → `archive/architecture-brownfield-2026-08-20.md`, cập nhật `ARCHITECTURE-SPINE.md` | ✓ Resolved |
+| `epics-full.md` gây nhầm lẫn | Chuyển → `archive/epics-1-9-legacy.md`, cập nhật `epics.md`, `CANONICAL-DOCS.md` | ✓ Resolved |
+| `DESIGN.md` draft cũ | Cập nhật `status: final`, thêm Operator Dashboard / QR / CDP / Multi-platform mockups | ✓ Resolved |
+| Story 20.2 destructive | Thêm Rollback Checklist trong `docs/deprecation-plan.md` | ✓ Resolved |
+
+### Residual Watch Items (Non-blocking)
+
+1. **EQ-2 / Foundation epics:** Epic 10/11 vẫn mang tính foundation; cần đảm bảo mỗi story mô tả user outcome rõ ràng.
+2. **EQ-3 / Legacy overlaps:** Theo dõi trong `sprint-change-proposal` và `deprecation-plan`.
+3. **EQ-4 / Epic 19 size:** Có thể tách nếu team lớn, hiện tại không bắt buộc.
+4. **EQ-5 / Story 20.2:** Tuân thủ rollback checklist trước khi thực hiện.
 
 ### Recommended Next Steps
 
-1. **Quyết định phạm vi Epic 21–22:** Cập nhật PRD hoặc loại bỏ khỏi sprint hiện tại.
-2. **Dọn dẹp tài liệu trùng lặp:** Mark archive/delete cho sharded PRD deprecated; merge `epics-full.md` vào `epics.md` nếu `epics-full` chỉ là nguồn cũ.
-3. **Cập nhật UX:** Nâng `DESIGN.md` lên canonical/final, bổ sung mockups cho QR/CDP/Multi-platform; thêm personas cho Epic 21–22 nếu giữ lại.
-4. **Hoàn thiện deprecation plan:** Đảm bảo mỗi AC trong 13.2/13.3/15.1/19.4 có mục "xác nhận legacy code deprecated" và 20.2 có rollback checklist.
-5. **Tái review Epic 19:** Cân nhắc tách thành 2 epic nếu team size cho phép; nếu không, giữ nguyên nhưng theo dõi closely.
-6. **Đo lường readiness cho Phase 4 (Epics 10–20):** Khi 4 issues trên được giải quyết, readiness có thể chuyển sang **READY**.
+1. **Bắt đầu Phase 4 implementation:** Khởi động `bmad-dev-auto` hoặc development loop cho Epic 13.1 / 13.2 / 13.3.
+2. **Cập nhật AC định lượng:** "parity ≥99%", "hibernation 15–30 phút" khi viết story file cụ thể.
+3. **Theo dõi Epic 21–22 backlog:** Kích hoạt khi có Product Council approval, PRD, và UX.
+4. **Chạy lại readiness trước mỗi sprint-planning** để đảm bảo tài liệu canonical không bị drift.
 
 ### Final Note
 
-Assessment này xác định **7 vấn đề chính** trên **5 hạng mục**: tài liệu (duplicates), PRD (scope gap), UX (outdated/missing), Epic quality (21–22), và Architecture alignment. Các vấn đề đều có thể khắc phục nhanh nếu được quyết định rõ ràng. Báo cáo này được lưu tại `_bmad-output/planning-artifacts/implementation-readiness-report-2026-08-26.md`.
+Re-assessment hoàn tất: các vấn đề critical đã được khắc phục. XActions Implementation Readiness đạt **READY** cho **Phase 4 (Epics 10–20)**. Báo cáo được lưu tại `_bmad-output/planning-artifacts/implementation-readiness-report-2026-08-26.md`.

@@ -1,6 +1,6 @@
 ---
-status: draft
-updated: 2026-08-21
+status: final
+updated: 2026-08-26
 sources:
   - ARCHITECTURE-UX-REVIEW-2026-08-18.md
   - architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md

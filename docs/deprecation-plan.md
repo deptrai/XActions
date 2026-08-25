@@ -82,9 +82,44 @@ Xoá theo thứ tự:
 | Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-planned` | Phase 2–3 | TBD |
 | `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
 
-## 7. Related Documents
+## 7. Rollback Checklist (Pre-Decommission)
+
+Trước khi thực hiện Story 20.2 (Legacy Scraper Code Decommissioning), team phải hoàn thành checklist sau:
+
+1. **Shadow-run parity ≥ 99% trong 7 ngày liên tiếp.**
+   - Xác nhận `20.1` done và `npm test` pass.
+   - Có diff report field-level giữa legacy và hybrid (ghi trong `20.1` artifact).
+
+2. **Backup & snapshot.**
+   - Tạo git tag `pre-decommission-YYYY-MM-DD` từ `main`.
+   - Export list legacy files, test files, và `package.json` trước khi xóa.
+
+3. **Caller migration verified.**
+   - Tất cả MCP/CLI/API callers đã chuyển sang hybrid hoặc có alias `suggestedAction`.
+   - Không còn `import` từ `src/client/Scraper.js`, `src/scrapers/twitter/http/`, `src/scrapers/facebook/`, `src/scrapers/threads/`.
+
+4. **Rollback trigger conditions.**
+   - Nếu trong vòng 48h sau decommission xuất hiện:
+     - Test failure > 5% trên CI
+     - Nowing data diff > 1% trong shadow-run
+     - MCP/CLI command regressions
+   - Thì `git revert` commit decommission và restore từ tag.
+
+5. **Post-decommission validation (24h sau merge).**
+   - `npm run typecheck` pass.
+   - `npm test` pass.
+   - `unfollowx` CLI smoke test pass.
+   - Docker image size < 500MB.
+   - Nowing shadow-run vẫn duy trì parity.
+
+6. **Communication.**
+   - Gửi alert cho team khi decommission merge.
+   - Cập nhật `docs/deprecation-plan.md` status tracker sang `removed`.
+
+## 8. Related Documents
 
 - `_bmad-output/planning-artifacts/epics.md` — Epic 13–20
+- `_bmad-output/planning-artifacts/backlog-epics-21-22.md` — Epic 21–22 backlog
 - `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-26.md` — Proposal gốc
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — Trạng thái story
 
