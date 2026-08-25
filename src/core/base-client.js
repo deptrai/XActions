@@ -531,7 +531,9 @@ export class AbstractApiClient {
           });
         }
 
-        const proxy = this.resolveProxy(currentAccountId, opts.requiresResidential);
+        const proxy = provider || opts.requiresResidential
+          ? this.resolveProxy(currentAccountId, opts.requiresResidential)
+          : null;
 
         let agent = null;
         if (proxy && provider && typeof provider.getProxyAgent === 'function') {
