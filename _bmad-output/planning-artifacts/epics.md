@@ -23,12 +23,12 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 | Epic 13-18 (crawlers) | Epic 10.1, 10.2, 10.5 | `AbstractCrawler`, `PrismaStore`, `metadata-schema` là nền tảng | Crawler không có interface/storage/schema để kế thừa. |
 | Epic 13-18 (crawlers) | Epic 11.1, 11.2, 11.3, 11.4 | `ProxyIpPool`, `AbstractApiClient`, `AdaptiveRateGovernor` | Không có proxy/retry/governor. |
 | Epic 15.2 (TikTok) | Epic 13.1 | `SignerWorkerPagePool` để giải mã `a_bogus`/`msToken` | Không thể sign TikTok request. |
-| Epic 18.3 (LinkedIn) | Epic 12.2 | CDP Remote Attach cho LinkedIn | **Blocked** — 12.2 còn backlog. |
+| Epic 18.3 (LinkedIn) | Epic 12.2 | CDP Remote Attach cho LinkedIn | **Unblocked** — 12.2 done; có thể lên lịch sau khi proxy pool & signer stable. |
 | Epic 19 (admin) | Epic 10.4, 11.4, 14.3 | Checkpoints, governor, stream metrics | Dashboard/CLI không có dữ liệu để hiển thị. |
 | Story 20.1 | Epics 13-18 | Crawler đa nền tảng phải stable trước shadow-run | Không có dữ liệu để đối soát. |
 | Story 20.2 | Story 20.1 | Shadow-run parity ≥ 99% trong 7 ngày | Xóa scraper cũ gây mất dữ liệu. |
 
-**Quy tắc dependency:** Không có forward reference theo số epic (Epic N không cần Epic N+1), nhưng **Epic 13–18 phải đợi Epic 10, 11 hoàn thành** và **Epic 20 phải đợi 13–18 + 20.1**. Epic 12.2 cần ưu tiên trước Epic 18.3.
+**Quy tắc dependency:** Không có forward reference theo số epic (Epic N không cần Epic N+1), nhưng **Epic 13–18 phải đợi Epic 10, 11 hoàn thành** và **Epic 20 phải đợi 13–18 + 20.1**. Epic 12.2 đã hoàn thành, Epic 18.3 không còn bị blocked.
 
 ## Requirements Inventory
 
@@ -359,6 +359,7 @@ So that **tôi có thể thu thập hàng ngàn tweet trong vài giây với lư
 * **Then** scraper sử dụng `TwitterHttpClient` kết hợp `SignerPagePool` để lấy GraphQL data
 * **And** chuẩn hóa dữ liệu trả về theo model `PostItem` với ID Namespaced `twitter:${tweetId}`
 * **And** tự động ghi vào `PrismaStore` lưu vào PostgreSQL.
+* **And (Deprecation Marker)** gắn `@deprecated` cho `src/client/Scraper.js`, `src/scrapers/twitter/http/index.js`, và `src/scrapers/twitter/index.js` (legacy); ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
 
 ### Story 13.3: Refactor Facebook Scraper to Hybrid Architecture
 As a **Facebook Community Marketer**,
@@ -371,6 +372,7 @@ So that **tôi có thể theo dõi cộng đồng với độ trễ thấp và k
 * **Then** scraper dispatch request qua GraphQL endpoints với `ProxyIpPool`
 * **And** chuẩn hóa dữ liệu trả về theo model `PostItem` với ID Namespaced `facebook:${postId}`
 * **And** tương thích hoàn toàn với session cookie đã mã hóa trong database.
+* **And (Scope & Deprecation Marker)** story này chỉ làm group/page posts; không làm search, comments, marketplace, messenger. Gắn `@deprecated` cho `src/scrapers/facebook/` (legacy) và ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
 
 ---
 
@@ -396,9 +398,10 @@ So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 **Acceptance Criteria:**
 
 #### Daemon server
-* **Given** `package.json` chưa có script MCP daemon
-* **When** thêm script `mcp:daemon` trỏ đến `src/mcp/server.js`
-* **Then** `npm run mcp:daemon` khởi động server lắng nghe trên `http://localhost:3001/mcp` và `GET /health` trả về 200
+* **Given** `src/mcp/server.js` đã có HTTP transport trên port 3001 với `/health` endpoint
+* **When** bổ sung 3-Layer JSON Envelope, action discovery, và auto-artifact vào cùng một server
+* **Then** không tạo thêm daemon process riêng; `src/mcp/server.js` tiếp tục lắng nghe trên `http://localhost:3001/mcp` và `GET /health` vẫn trả về 200
+* **And** script `npm run mcp` (nếu cần) khởi động HTTP transport khi `MCP_TRANSPORT=http`
 
 #### JSON Envelope & Artifact
 * **Given** Daemon MCP Server đang chạy
@@ -451,6 +454,7 @@ So that **tôi có thể nắm bắt các chủ đề nóng và drama thịnh h�
 * **Then** crawler sử dụng `ThreadsClient` dispatch request GraphQL với token `lsd` từ Token Ring và `doc_id` của Meta
 * **And** trích xuất danh sách bài viết chuẩn hóa theo schema `PostItem` (`platform: 'threads'`, `id: 'threads:${id}'`)
 * **And** lưu trữ thành công vào PostgreSQL.
+* **And (Deprecation Marker)** gắn `@deprecated` cho `src/scrapers/threads/index.js` (Puppeteer legacy); ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
 
 ### Story 15.2: TikTok Video, Hashtag & Comment Scraper with Anti-Bot Payload Validation
 As a **Short-Form Content Creator / E-commerce Researcher**,
@@ -598,45 +602,31 @@ So that **tôi phát hiện sớm khi Nowing consumer chậm hoặc stream bị 
 * **And** cập nhật real-time mỗi 5s.
 * **And** hỗ trợ cấu hình alert channel (`ALERT_WEBHOOK`, `ALERT_EMAIL`).
 
-### Story 19.4: Admin CLI — Governor, Proxies & Accounts
+### Story 19.4: Admin CLI — Unified
 As an **Internal Automation Operator**,
-I want **một nhóm lệnh CLI `xactions admin` để xem governor status, proxy pool, hibernating accounts, và thực hiện manual override**,
+I want **một nhóm lệnh CLI `xactions admin` để xem governor status, proxy pool, accounts, checkpoints, stream metrics và thực hiện manual override**,
 So that **tôi có thể vận hành hệ thống từ terminal mà không cần mở dashboard**.
 
 **Acceptance Criteria:**
-* **Given** CLI command `xactions admin status`
-* **When** chạy
+* **Given** `xactions admin` command group
+* **When** chạy `xactions admin status`
 * **Then** in ra `healthyProxyCount / totalProxyCount`, `currentReqPerSecond`, `redisConsumerLag`, `throttleLevel`, danh sách `hibernatingAccounts`
 * **And** `xactions admin proxies list` liệt kê proxy với trạng thái `healthy` / `quarantined` / `expiryAt`
+* **And** `xactions admin proxy quarantine <proxyKey>` và `xactions admin proxy release <proxyKey>` cách ly / bỏ cách ly proxy thủ công
 * **And** `xactions admin accounts list --platform <platform>` liệt kê account, `velocity`, `hibernatingUntil`, `assignedProxy`
-* **And** `xactions admin proxy quarantine <proxyKey>` cách ly proxy thủ công
-* **And** `xactions admin proxy release <proxyKey>` bỏ cách ly proxy thủ công
-* **And** `xactions admin account wake <accountId>` đánh thức account từ hibernation thủ công
-* **And** `xactions admin account rotate <accountId> <platform>` đổi account khác trong `AccountPool`.
+* **And** `xactions admin account wake <accountId>` đánh thức account từ hibernation
+* **And** `xactions admin account rotate <accountId> <platform>` đổi account khác trong `AccountPool`
+* **And** `xactions admin checkpoints list/resume/pause/retry` gọi `api/routes/checkpoints.js` tương ứng
+* **And** `xactions admin stream metrics/alerts/test` hiển thị stream metrics và kích hoạt test alert
+* **And** tất cả commands yêu cầu permission `admin` hoặc `checkpoint:manage` (cho checkpoint-only).
 
-### Story 19.5: Admin CLI — Checkpoints
-As a **Platform Operator**,
-I want **nhóm lệnh CLI `xactions checkpoints` để liệt kê, resume, pause, retry checkpoint từ terminal**,
-So that **tôi có thể quản lý tiến độ cào nhanh chóng khi target bị lỗi hoặc container restart**.
+> **Note:** Các lệnh `xactions checkpoints ...` và `xactions stream ...` hiện có (`src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`) sẽ được giữ lại dưới dạng alias hoặc redirect đến `xactions admin ...` trong quá trình chuyển đổi, và bị xoá ở Epic 20.2.
 
-**Acceptance Criteria:**
-* **Given** lệnh `xactions checkpoints list --platform <platform> --status running|paused|failed|completed`
-* **When** chạy
-* **Then** in ra bảng checkpoints với `platform`, `targetKey`, `status`, `lastCrawledAt`, `lastCursor`, `errorCount`
-* **And** `xactions checkpoints resume <id>`, `xactions checkpoints pause <id>`, `xactions checkpoints retry <id>` gọi API tương ứng và cập nhật trạng thái
-* **And** yêu cầu permission `checkpoint:manage` hoặc `admin`.
+### Story 19.5: (Merged into 19.4) — Reserved
+*Không còn story riêng. Tất cả CLI admin operations đã gộp vào Story 19.4.*
 
-### Story 19.6: Admin CLI — Stream Metrics & Alerts
-As a **Reliability Engineer**,
-I want **lệnh CLI `xactions stream` để xem throughput, consumer lag, và kích hoạt test alert**,
-So that **tôi debug kỹ thuật nhanh mà không cần dashboard**.
-
-**Acceptance Criteria:**
-* **Given** lệnh `xactions stream metrics`
-* **When** chạy
-* **Then** in ra `eventsPerSecond`, `pendingMessages`, `consumerLag`, `droppedEvents`, `lastAckTime`
-* **And** `xactions stream alerts` hiển thị active alerts với ngưỡng vượt
-* **And** `xactions stream alert test` gửi test alert qua `ALERT_WEBHOOK` hoặc `ALERT_EMAIL`.
+### Story 19.6: (Merged into 19.4) — Reserved
+*Không còn story riêng. Tất cả CLI admin operations đã gộp vào Story 19.4.*
 
 ### Story 19.7: Admin REST API for Proxy, Account & Checkpoint Management
 As an **Internal Operator & CLI Developer**,
@@ -644,12 +634,13 @@ I want **các endpoint REST `/admin/*` để dashboard và CLI lấy dữ liệu
 So that **admin surface không truy cập DB trực tiếp và sử dụng chung data source**.
 
 **Acceptance Criteria:**
-* **Given** API `/admin/proxies` (GET) trả về danh sách proxy + trạng thái
-* **And** POST `/admin/proxies/:key/quarantine` và `/admin/proxies/:key/release`
-* **And** GET `/admin/accounts?platform=...` trả về account + velocity + hibernation status
-* **And** POST `/admin/accounts/:id/wake` và POST `/admin/accounts/:id/rotate`
-* **And** GET/POST `/admin/checkpoints/...` wrap lại Story 10.4
-* **And** GET `/admin/stream/metrics` và `/admin/stream/alerts`
+* **Given** các route `api/routes/proxies.js`, `api/routes/checkpoints.js`, `api/routes/streams.js`, `api/routes/governor.js` đã tồn tại
+* **When** mount `/admin/*` namespace trong `api/server.js`
+* **Then** `/admin/proxies` (GET), POST `/admin/proxies/:key/quarantine|release` wrap `api/routes/proxies.js`
+* **And** GET `/admin/accounts?platform=...`, POST `/admin/accounts/:id/wake|rotate` wrap proxy/account logic
+* **And** GET/POST `/admin/checkpoints/...` wrap `api/routes/checkpoints.js`
+* **And** GET `/admin/stream/metrics` và `/admin/stream/alerts` wrap `api/routes/streams.js` và stream metrics reader
+* **And** không viết lại business logic; các endpoint hiện có vẫn hoạt động song song cho backward compatibility
 * **And** tất cả endpoints yêu cầu `admin` permission hoặc `checkpoint:manage` (cho checkpoint-only); auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth.
 
 ### Story 19.8: Admin MCP Tools for AI Agents
@@ -690,9 +681,11 @@ So that **codebase không còn chứa code cũ đã được thay thế, giảm 
 
 **Acceptance Criteria:**
 * **Given** shadow-run đạt ≥ 99% field parity trong 7 ngày liên tiếp
-* **When** xóa các thư mục `shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.
+* **When** xóa các thư mục legacy trong Nowing repo (`shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.)
+* **And** xóa các file/thư mục legacy trong XActions repo (`src/client/Scraper.js`, `src/scrapers/twitter/http/`, `src/scrapers/twitter/index.js`, `src/scrapers/facebook/`, `src/scrapers/threads/index.js`)
 * **Then** CI tests pass, Nowing Docker image < 500MB
 * **And** gỡ bỏ `selenium`, `playwright-python`, Chromium binaries khỏi Dockerfile Nowing
+* **And** XActions bundle size và dependency count giảm đáng kể
 
 ---
 
