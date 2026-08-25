@@ -74,11 +74,11 @@ export function registerAuthCommand(program, config = {}) {
 
         // Persist to global config so other CLI invocations can retrieve the CDP session.
         try {
-          const configData = await loadConfig();
+          const configData = /** @type {Record<string, any>} */ (await loadConfig());
           configData.cdpSessions = configData.cdpSessions || {};
           configData.cdpSessions[accountId] = loginResult;
           await saveConfig(configData);
-          await fs.chmod(CONFIG_FILE, 0o600).catch(() => {});
+          await fs.chmod(String(CONFIG_FILE), 0o600).catch(() => {});
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           console.warn(`[CDP WARNING] Could not persist session to config: ${msg}`);

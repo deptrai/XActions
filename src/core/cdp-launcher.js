@@ -270,8 +270,9 @@ export async function launchChrome(options = {}) {
   // Capture spawn errors immediately so we don't wait for a timeout with a
   // misleading message.
   let spawnError = null;
+  /** @type {Promise<void>} */
   const spawnReady = new Promise((resolve, reject) => {
-    const onError = (err) => {
+    const onError = (/** @type {any} */ err) => {
       spawnError = err;
       cleanupListeners();
       reject(err);
