@@ -11,6 +11,7 @@
 import { AbstractCrawler } from '../../../core/base-crawler.js';
 import { FacebookClient } from './client.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import { CommentTreeExtractor } from '../comment-tree.js';
 
 const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
 
@@ -38,6 +39,8 @@ function buildCookieHeader(cookies) {
 export const DEFAULT_FB_DOC_IDS = {
   GROUP_FEED: 'group_feed_doc_123',
   PAGE_FEED: 'page_feed_doc_456',
+  COMMENT_ROOTS: 'comment_roots_doc_000',
+  COMMENT_REPLIES: 'comment_replies_doc_000',
 };
 
 export class FacebookCrawler extends AbstractCrawler {
@@ -99,6 +102,15 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo?: any }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.pagePosts(args, session),
+    });
+
+    this.registerAction({
+      action: 'get_comments',
+      description: 'Scrape hierarchical comments from a Facebook post using GraphQL',
+      requiredArgs: ['postId'],
+      optionalArgs: ['maxDepth', 'maxComments', 'after'],
+      outputType: '{ comments: CommentItem[], pageInfo?: any }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getCommentsForPost(args, session),
     });
   }
 
@@ -171,6 +183,105 @@ export class FacebookCrawler extends AbstractCrawler {
     };
 
     return post;
+  }
+
+  /**
+   * Extract a clean post external id from a URL, namespaced id, or raw id.
+   * @param {string} input
+   * @returns {string}
+   */
+  #extractPostExternalId(input) {
+    if (typeof input !== 'string') return '';
+    if (input.startsWith('https://') || input.startsWith('http://')) {
+      try {
+        const url = new URL(input);
+        const parts = url.pathname.split('/').filter(Boolean);
+        return parts[parts.length - 1] || '';
+      } catch {
+        return '';
+      }
+    }
+    if (input.startsWith('facebook:')) {
+      return input.slice('facebook:'.length);
+    }
+    return input;
+  }
+
+  /**
+   * Clamp maxDepth to [0, 5] (default 3).
+   * @param {unknown} value
+   * @returns {number}
+   */
+  #clampMaxDepth(value) {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n) || n < 0) return 3;
+    return Math.min(Math.floor(n), 5);
+  }
+
+  /**
+   * Clamp maxComments to [1, 2000] (default 500).
+   * @param {unknown} value
+   * @returns {number}
+   */
+  #clampMaxComments(value) {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n) || n <= 0) return 500;
+    return Math.min(Math.floor(n), 2000);
+  }
+
+  /**
+   * Normalize a raw comment node from GraphQL into CommentItem.
+   * @param {Record<string, any>} raw
+   * @param {string} postId
+   * @returns {import('../../../core/types.js').CommentItem | null}
+   */
+  #normalizeComment(raw, postId) {
+    if (!raw || typeof raw !== 'object') return null;
+
+    const node = raw.node || raw;
+    const commentId = String(node.id || '');
+    if (!commentId) return null;
+
+    const authorActors = Array.isArray(node.actors) ? node.actors : (Array.isArray(node.author) ? [node.author] : []);
+    const authorActor = authorActors.length > 0 ? authorActors[0] : null;
+    const authorId = authorActor ? String(authorActor.id || '') : '';
+    const authorName = authorActor ? String(authorActor.name || '') : '';
+
+    const content = (typeof node.message === 'string' ? node.message : node.message?.text) ||
+                    node.text ||
+                    '';
+
+    const parentId = node.parentId ?? node.parent_comment_id ?? undefined;
+    const parentCommentId = parentId ? `facebook:${postId}:${parentId}` : undefined;
+
+    const likesCount = Number(node.feedback?.like_count?.count ?? node.like_count) || 0;
+    const subCommentsCount = Number(node.feedback?.comment_count?.total_count ?? node.comment_count) || 0;
+
+    const creationTime = node.created_time || null;
+
+    /** @type {import('../../../core/types.js').CommentItem} */
+    const comment = {
+      id: `facebook:${postId}:${commentId}`,
+      platform: 'facebook',
+      externalId: commentId,
+      postId: `facebook:${postId}`,
+      parentCommentId,
+      depth: 0,
+      authorId,
+      authorName,
+      authorAvatar: undefined,
+      content,
+      likesCount,
+      subCommentsCount,
+      metadata: {
+        rawId: commentId,
+        parentId,
+      },
+      publishedAt: creationTime ? new Date(Number(creationTime) * 1000) : undefined,
+      crawledAt: new Date(),
+    };
+
+    return comment;
   }
 
   /**
@@ -351,16 +462,101 @@ export class FacebookCrawler extends AbstractCrawler {
   }
 
   /**
-   * @param {Object} _args
-   * @returns {Promise<import('../../../core/types.js').CommentItem[]>}
+   * Scrape hierarchical comments from a Facebook post via GraphQL.
+   * @param {Object} args
+   * @param {string} args.postId
+   * @param {number} [args.maxDepth=3]
+   * @param {number} [args.maxComments=500]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ comments: import('../../../core/types.js').CommentItem[], pageInfo?: any }>}
    */
-  async getComments(_args) {
-    throw new PlatformError({
-      code: 'XACT_4001',
-      type: ErrorTypes.INVALID_ARGS,
-      message: 'getComments is not supported on FacebookCrawler',
-      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+  async getCommentsForPost(args, session = {}) {
+    if (!args?.postId) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: postId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const postExternalId = this.#extractPostExternalId(args.postId);
+    if (!postExternalId) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Invalid postId: could not extract post external id',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const maxDepth = this.#clampMaxDepth(args?.maxDepth);
+    const maxComments = this.#clampMaxComments(args?.maxComments);
+    const accountId = session?.accountId;
+    const cookies = this.#resolveCookies(session);
+
+    /**
+     * @param {import('../comment-tree.js').FetchLayerInput} input
+     * @returns {Promise<import('../comment-tree.js').FetchLayerPage>}
+     */
+    const fetchLayer = async ({ postId, parentCommentId, after, limit }) => {
+      const docId = parentCommentId ? this.docIds.COMMENT_REPLIES : this.docIds.COMMENT_ROOTS;
+      if (!docId) {
+        throw new PlatformError({
+          code: 'XACT_5000',
+          type: ErrorTypes.INTERNAL,
+          message: 'Facebook comment doc_id is not configured',
+          suggestedAction: 'retry_after_delay',
+        });
+      }
+
+      const variables = {
+        postId,
+        parentCommentId,
+        after,
+        first: limit,
+      };
+
+      const res = await this.client.requestGraphQl(docId, variables, {
+        accountId,
+        cookies,
+      });
+
+      const rawEdges = res?.data?.comments?.edges || [];
+      const comments = [];
+      for (const edge of rawEdges) {
+        const raw = edge?.node || edge;
+        if (!raw) continue;
+        if (parentCommentId && raw.parentId === undefined) {
+          raw.parentId = parentCommentId;
+        }
+        comments.push(raw);
+      }
+
+      const pageInfo = res?.data?.comments?.page_info || { has_next_page: false, end_cursor: null };
+      return { comments, pageInfo };
+    };
+
+    /** @type {function(Record<string, unknown>, string): import('../../../core/types.js').CommentItem | null} */
+    const normalizeFn = (raw, postId) => this.#normalizeComment(raw, postId);
+
+    const extractor = new CommentTreeExtractor(fetchLayer, normalizeFn, {
+      maxDepth,
+      maxComments,
+      concurrency: 2,
     });
+
+    const { comments, pageInfo } = await extractor.fetch(postExternalId);
+
+    for (const comment of comments) {
+      this.validateItem(comment);
+    }
+
+    if (this.store && comments.length > 0 && typeof this.store.storeCommentBatch === 'function') {
+      await this.store.storeCommentBatch(comments, { upsert: true });
+    }
+
+    return { comments, pageInfo };
   }
 
   /**

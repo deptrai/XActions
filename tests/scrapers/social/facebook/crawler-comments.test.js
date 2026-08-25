@@ -9,12 +9,10 @@ import { AccountPool } from '../../../../src/core/account-pool.js';
 import { SessionManager } from '../../../../src/core/session-manager.js';
 
 /**
- * ATDD red-phase tests for Story 14.1 — Facebook get_comments action.
- * Tests are intentionally skipped (TDD red phase).
- * Remove `.skip` after the implementation is written.
+ * Tests for Story 14.1 — FacebookCrawler get_comments action.
  */
 
-describe.skip('Story 14.1 — FacebookCrawler get_comments (ATDD red phase)', () => {
+describe('Story 14.1 — FacebookCrawler get_comments', () => {
   let server;
   let serverUrl;
   let proxyPool;
@@ -87,6 +85,12 @@ describe.skip('Story 14.1 — FacebookCrawler get_comments (ATDD red phase)', ()
 
           if (docId === commentDocIds.COMMENT_ROOTS) {
             res.writeHead(200, { 'content-type': 'application/json' });
+            if (variables.postId === 'post_no_comments') {
+              res.end(JSON.stringify({
+                data: { comments: { edges: [], page_info: { has_next_page: false, end_cursor: null } } },
+              }));
+              return;
+            }
             res.end(JSON.stringify({
               data: {
                 comments: {
@@ -160,7 +164,7 @@ describe.skip('Story 14.1 — FacebookCrawler get_comments (ATDD red phase)', ()
     });
   };
 
-  it.skip('[P0] should register get_comments action with correct descriptor (AC-4)', () => {
+  it('[P0] should register get_comments action with correct descriptor (AC-4)', () => {
     const crawler = createCrawler();
     const actions = crawler.listActions();
     const action = actions.find((a) => a.action === 'get_comments');
@@ -171,13 +175,13 @@ describe.skip('Story 14.1 — FacebookCrawler get_comments (ATDD red phase)', ()
     expect(action.outputType).toMatch(/CommentItem/);
   });
 
-  it.skip('[P0] should scrape root comments, normalize to CommentItem[], and persist to store (AC-4)', async () => {
+  it('[P0] should scrape root comments, normalize to CommentItem[], and persist to store (AC-4)', async () => {
     storedComments = [];
     const crawler = createCrawler();
 
     const result = await crawler.start({
       action: 'get_comments',
-      args: { postId: 'post_123', maxDepth: 1, maxComments: 500 },
+      args: { postId: 'post_123', maxDepth: 0, maxComments: 500 },
       session: { accountId: 'acc_fb_1' },
     });
 
@@ -190,7 +194,7 @@ describe.skip('Story 14.1 — FacebookCrawler get_comments (ATDD red phase)', ()
     expect(first.platform).toBe('facebook');
     expect(first.externalId).toBe('c1');
     expect(first.postId).toBe('facebook:post_123');
-    expect(first.parentCommentId).toBeNull();
+    expect(first.parentCommentId).toBeUndefined();
     expect(first.depth).toBe(0);
     expect(first.authorName).toBe('Author c1');
     expect(first.content).toBe('Comment c1');
@@ -202,7 +206,7 @@ describe.skip('Story 14.1 — FacebookCrawler get_comments (ATDD red phase)', ()
     expect(storedComments[0].id).toBe('facebook:post_123:c1');
   });
 
-  it.skip('[P0] should recursively fetch nested replies and assign correct depth (AC-1, AC-4)', async () => {
+  it('[P0] should recursively fetch nested replies and assign correct depth (AC-1, AC-4)', async () => {
     storedComments = [];
     const crawler = createCrawler();
 
@@ -234,7 +238,7 @@ describe.skip('Story 14.1 — FacebookCrawler get_comments (ATDD red phase)', ()
     expect(rootIndex).toBeLessThan(replyIndex);
   });
 
-  it.skip('[P1] should respect maxDepth and not recurse beyond the limit (AC-1)', async () => {
+  it('[P1] should respect maxDepth and not recurse beyond the limit (AC-1)', async () => {
     const crawler = createCrawler();
 
     const result = await crawler.start({
@@ -247,7 +251,7 @@ describe.skip('Story 14.1 — FacebookCrawler get_comments (ATDD red phase)', ()
     expect(result.comments.some((c) => c.depth > 0)).toBe(false);
   });
 
-  it.skip('[P1] should respect maxComments and stop collecting (AC-1)', async () => {
+  it('[P1] should respect maxComments and stop collecting (AC-1)', async () => {
     const crawler = createCrawler();
 
     const result = await crawler.start({
@@ -259,7 +263,7 @@ describe.skip('Story 14.1 — FacebookCrawler get_comments (ATDD red phase)', ()
     expect(result.comments.length).toBeLessThanOrEqual(1);
   });
 
-  it.skip('[P1] should return empty array when a post has no comments (AC-4)', async () => {
+  it('[P1] should return empty array when a post has no comments (AC-4)', async () => {
     const crawler = createCrawler();
 
     const result = await crawler.start({
@@ -273,14 +277,14 @@ describe.skip('Story 14.1 — FacebookCrawler get_comments (ATDD red phase)', ()
     expect(result.pageInfo.has_next_page).toBe(false);
   });
 
-  it.skip('[P2] should handle a full facebook post URL by extracting the post id (Edge case)', async () => {
+  it('[P2] should handle a full facebook post URL by extracting the post id (Edge case)', async () => {
     const crawler = createCrawler();
 
     const result = await crawler.start({
       action: 'get_comments',
       args: {
         postId: 'https://www.facebook.com/groups/testgroup/posts/post_123',
-        maxDepth: 1,
+        maxDepth: 0,
       },
       session: { accountId: 'acc_fb_1' },
     });

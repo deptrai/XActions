@@ -52,9 +52,11 @@ export class AbstractStore {
 
   /**
    * @param {CommentItem[]} comments
+   * @param {Object} [opts]
+   * @param {boolean} [opts.upsert=false]
    * @returns {Promise<void>}
    */
-  async storeCommentBatch(comments) {
+  async storeCommentBatch(comments, opts = {}) {
     throw new Error('Method not implemented: storeCommentBatch()');
   }
 
