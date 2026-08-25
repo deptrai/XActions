@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-24T21:30:00Z
+last_updated: 2026-08-24T22:00:00Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -66,8 +66,8 @@ development_status:
   epic-12-retrospective: optional
 
   # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---
-  epic-13: backlog
-  13-1-tiered-signer-architecture-token-ring-worker-pool: backlog
+  epic-13: in-progress
+  13-1-tiered-signer-architecture-token-ring-worker-pool: ready-for-dev
   13-2-refactor-twitter-scraper-to-hybrid-architecture: backlog
   13-3-refactor-facebook-scraper-to-hybrid-architecture: backlog
   epic-13-retrospective: optional
@@ -138,10 +138,10 @@ development_status:
 # Current Sprint Plan
 # ===================
 current_sprint:
-  name: "Sprint 2026-08-21 — Epic 11 Closure (SocksNode Provider)"
-  start: "2026-08-21"
+  name: "Sprint 2026-08-24 — Epic 13 Tiered Signer Foundation"
+  start: "2026-08-24"
   goals:
-    - "Implement 11.8 SocksNode Dynamic Residential Proxy Provider to complete Epic 11"
+    - "Implement Story 13.1 Tiered Signer Architecture (Token Ring & Worker Page Pool) to start Epic 13"
   stories:
-    - "11-8-socksnode-dynamic-residential-proxy-provider"
+    - "13-1-tiered-signer-architecture-token-ring-worker-pool"
   blocked: []
