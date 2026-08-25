@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-# Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 const path = require('path');
 console.log('XActions — the complete X/Twitter automation platform');
 console.log('This repository contains small scripts to paste into your browser console.');
