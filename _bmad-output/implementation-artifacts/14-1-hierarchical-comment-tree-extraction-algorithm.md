@@ -48,9 +48,9 @@ so that **tôi nắm bắt trọn vẹn ngữ cảnh tranh luận mà không b�
 - **When** gọi `crawler.start({ action: 'get_comments', args: { postId, maxDepth, maxComments }, session: { accountId } })`
 - **Then** crawler gọi GraphQL `https://www.facebook.com/api/graphql/` với `doc_id` tương ứng comment tree
 - **And** trích xuất toàn bộ root comments + sub-replies phân trang
-- **And** chuẩn hóa thành `CommentItem[]` với `id: 'facebook:${postId}:${commentId}'`, `platform: 'facebook'`, `postId: 'facebook:${postId}'`
-- **And** tự động lưu vào `PrismaStore` qua `storeCommentBatch` (nếu `store` được cung cấp)
-- **And** `listActions()` trả về `ActionDescriptor` cho `get_comments` với `requiredArgs: ['postId']`, `optionalArgs: ['maxDepth', 'maxComments', 'after']`, `outputType: 'CommentItem[]'`
+- **And** chuẩn hóa thành object `{ comments: CommentItem[], pageInfo: { has_next_page, end_cursor } }` với mỗi `CommentItem.id = 'facebook:${postId}:${commentId}'`, `platform: 'facebook'`, `postId: 'facebook:${postId}'`
+- **And** tự động lưu `comments` vào `PrismaStore` qua `storeCommentBatch` (nếu `store` được cung cấp)
+- **And** `listActions()` trả về `ActionDescriptor` cho `get_comments` với `requiredArgs: ['postId']`, `optionalArgs: ['maxDepth', 'maxComments', 'after']`, `outputType: '{ comments: CommentItem[], pageInfo?: any }'`
 
 ### AC-5: Token & Cookie Tương Thích
 - **Given** session cookies hợp lệ (`c_user`, `xs`)
@@ -227,7 +227,7 @@ so that **tôi nắm bắt trọn vẹn ngữ cảnh tranh luận mà không b�
   - `CommentTreeExtractor` BFS duyệt đúng depth và phân trang.
   - `CommentTreeExtractor` phát hiện cycle (`parentCommentId` trỏ về tổ tiên hoặc chính nó).
   - `FacebookCrawler.listActions()` trả về `get_comments` descriptor.
-  - `FacebookCrawler.start({ action: 'get_comments', ... })` trả về `CommentItem[]` với `id` đúng namespace.
+  - `FacebookCrawler.start({ action: 'get_comments', ... })` trả về `{ comments: CommentItem[], pageInfo }` với `id` đúng namespace.
   - Topological sort: parent comment `id` xuất hiện trước con trong batch gửi đến `storeCommentBatch`.
   - Response bot challenge / checkpoint được xử lý qua validator.
   - `cleanup()` không leak.
