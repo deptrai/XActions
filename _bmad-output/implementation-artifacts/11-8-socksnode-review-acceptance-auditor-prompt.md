@@ -1,3 +1,34 @@
+# Acceptance Auditor — Story 11.8 SocksNode Code Review Prompt
+
+**Story:** 11.8 — SocksNode Dynamic Residential Proxy Provider  
+**Role:** Acceptance Auditor  
+**Mission:** Compare the diff against the spec and architecture context. Find any violation of acceptance criteria, missing behavior, deviation from spec intent, or contradiction between spec and code.
+
+## Context documents
+
+- Spec (Story file) — see below.
+- Architecture context: `ARCHITECTURE-SPINE.md` AD-3 (Centralized Proxy IP Pool with Auto-Quarantine, Anti-Leak & Proxy Strategy by Auth Mode) and AD-15 (Operational Observability & Least-Privilege Infrastructure). Key constraints: SOCKS5 must use `undici.Socks5ProxyAgent`, never fallback to direct connection, no IP leak, quarantine 5 min, 429/403 → exponential backoff, 100% quarantined → 30s standby.
+
+## Instructions
+
+1. Read the spec and diff carefully.
+2. For every acceptance criterion (AC-1 through AC-5), verify the diff actually implements it.
+3. Flag any missing implementation, incorrect interpretation, or contradictions.
+4. Also check the diff for:
+   - Implementation of `asn` token (not in spec but in source hints; not required unless mentioned)
+   - `socks5h` or direct-connection fallbacks (must not exist)
+   - Export of `PROVIDER_PRESETS` / `PROVIDER_SID_LIMITS` as public API (was `const`, now `export`)
+   - Getter `healthyCount` / `isAllQuarantined` accuracy for a single shared gateway
+5. Output a Markdown list. Each finding must include:
+   - One-line title
+   - Which AC or constraint it violates
+   - Evidence from the diff (file/line or code snippet)
+   - Suggested fix or action
+6. If the diff fully satisfies the spec, say so explicitly and list any minor observations.
+
+## Spec
+
+```markdown
 # Story 11.8: SocksNode Dynamic Residential Proxy Provider
 
 **Story ID:** 11.8  
@@ -105,4 +136,92 @@ So that **các crawler cào dữ liệu tại Việt Nam và quốc tế có th�
 
 ## Change Log
 - 2026-08-25: Implemented SocksNode dynamic residential proxy provider preset, credential formatting, SOCKS5 agent integration, type declarations, and 12-test suite (Date: 2026-08-25).
+```
 
+## Diff
+
+```diff
+diff --git a/src/proxy/providers.js b/src/proxy/providers.js
+index 0a47286..fc16de3 100644
+--- a/src/proxy/providers.js
++++ b/src/proxy/providers.js
+@@ -24,14 +24,15 @@ const DEFAULT_STANDBY_BACKOFF_MS = 30000;
+ const DEFAULT_QUARANTINE_MS = 5 * 60 * 1000;
+ const MAX_ACCOUNT_SEEDS = 10000;
+ 
+-const PROVIDER_PRESETS = new Set(['brightdata', 'smartproxy', 'iproyal', 'kuaidaili', 'custom']);
++export const PROVIDER_PRESETS = new Set(['brightdata', 'smartproxy', 'iproyal', 'kuaidaili', 'socksnode', 'custom']);
+ 
+ /** @type {Record<string, { max?: number, exact?: number, regex: RegExp }>} */
+-const PROVIDER_SID_LIMITS = {
++export const PROVIDER_SID_LIMITS = {
+   brightdata: { max: 64, regex: /^[a-zA-Z0-9]+$/ },
+   smartproxy: { max: 32, regex: /^[a-zA-Z0-9_]+$/ },
+   iproyal: { exact: 8, regex: /^[a-zA-Z0-9]{8}$/ },
+   kuaidaili: { max: 6, regex: /^[a-zA-Z0-9]+$/ },
++  socksnode: { max: 32, regex: /^[a-zA-Z0-9_-]+$/ },
+ };
+ 
+ /**
+@@ -628,6 +629,9 @@ export class DynamicTunnelProvider {
+     if ((sld === 'kdlapi' && tld === 'com') || (sld === 'kuaidaili' && tld === 'com')) {
+       return 'kuaidaili';
+     }
++    if (sld === 'socksnode' && (tld === 'com' || tld === 'io' || tld === 'net')) {
++      return 'socksnode';
++    }
+ 
+     return 'custom';
+   }
+@@ -636,6 +640,26 @@ export class DynamicTunnelProvider {
+     return formatProxyUrl(this.rawGateway);
+   }
+ 
++  get scheme() {
++    return this.rawGateway.scheme;
++  }
++
++  get host() {
++    return this.rawGateway.host;
++  }
++
++  get port() {
++    return this.rawGateway.port;
++  }
++
++  get username() {
++    return this.rawGateway.username;
++  }
++
++  get password() {
++    return this.rawGateway.password;
++  }
++
+   get totalCount() {
+     this.pruneExpiredQuarantines();
+     return Math.max(1, this.#activeSessions.size + 1);
+@@ -902,6 +926,21 @@ export class DynamicTunnelProvider {
+       return { username: rawUser, password };
+     }
+ 
++    if (preset === 'socksnode') {
++      const baseUser = this.#baseUsername(rawUser);
++      const parts = [baseUser];
++      if (req.country) parts.push(`country-${req.country}`);
++      if (req.state) parts.push(`state-${req.state}`);
++      if (req.city) parts.push(`city-${req.city}`);
++      if (req.sessionId) parts.push(`session-${req.sessionId}`);
++      if (req.lifetime) {
++        parts.push(`lifetime-${req.lifetime}`);
++      } else if (typeof req.sessionduration === 'number' && Number.isFinite(req.sessionduration) && req.sessionduration > 0) {
++        parts.push(`sessionduration-${Math.floor(req.sessionduration)}`);
++      }
++      return { username: parts.filter((p) => p !== '').join('-'), password: rawPass };
++    }
++
+     if (preset === 'custom') {
+       let username = this.template;
+       const periodStr = req.period !== undefined && req.period !== null ? String(req.period) : '';
+```
+
+The test and type diff are included for completeness in `11-8-socksnode-review-diff.patch` in the same directory.

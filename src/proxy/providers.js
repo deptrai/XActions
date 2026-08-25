@@ -24,15 +24,32 @@ const DEFAULT_STANDBY_BACKOFF_MS = 30000;
 const DEFAULT_QUARANTINE_MS = 5 * 60 * 1000;
 const MAX_ACCOUNT_SEEDS = 10000;
 
-const PROVIDER_PRESETS = new Set(['brightdata', 'smartproxy', 'iproyal', 'kuaidaili', 'custom']);
+/**
+ * Create a read-only Set for provider presets.
+ * @param {Iterable<string>} values
+ * @returns {Set<string>}
+ */
+function freezeSet(values) {
+  const set = new Set(values);
+  // Prevent accidental mutation while preserving iteration, has, size, etc.
+  set.add = function () { throw new TypeError('PROVIDER_PRESETS is read-only'); };
+  set.delete = function () { throw new TypeError('PROVIDER_PRESETS is read-only'); };
+  set.clear = function () { throw new TypeError('PROVIDER_PRESETS is read-only'); };
+  return Object.freeze(set);
+}
+
+export const PROVIDER_PRESETS = freezeSet([
+  'brightdata', 'smartproxy', 'iproyal', 'kuaidaili', 'socksnode', 'custom'
+]);
 
 /** @type {Record<string, { max?: number, exact?: number, regex: RegExp }>} */
-const PROVIDER_SID_LIMITS = {
-  brightdata: { max: 64, regex: /^[a-zA-Z0-9]+$/ },
-  smartproxy: { max: 32, regex: /^[a-zA-Z0-9_]+$/ },
-  iproyal: { exact: 8, regex: /^[a-zA-Z0-9]{8}$/ },
-  kuaidaili: { max: 6, regex: /^[a-zA-Z0-9]+$/ },
-};
+export const PROVIDER_SID_LIMITS = Object.freeze({
+  brightdata: Object.freeze({ max: 64, regex: /^[a-zA-Z0-9]+$/ }),
+  smartproxy: Object.freeze({ max: 32, regex: /^[a-zA-Z0-9_]+$/ }),
+  iproyal: Object.freeze({ exact: 8, regex: /^[a-zA-Z0-9]{8}$/ }),
+  kuaidaili: Object.freeze({ max: 6, regex: /^[a-zA-Z0-9]+$/ }),
+  socksnode: Object.freeze({ max: 32, regex: /^[a-zA-Z0-9_-]+$/ }),
+});
 
 /**
  * @typedef {Object} NormalizedProxy
@@ -628,12 +645,61 @@ export class DynamicTunnelProvider {
     if ((sld === 'kdlapi' && tld === 'com') || (sld === 'kuaidaili' && tld === 'com')) {
       return 'kuaidaili';
     }
+    // SocksNode public docs only list .com gateways; keep auto-detection conservative.
+    // Other TLDs can still be used with explicit provider: 'socksnode'.
+    if (sld === 'socksnode' && tld === 'com') {
+      return 'socksnode';
+    }
 
     return 'custom';
   }
 
   get #gatewayKey() {
     return formatProxyUrl(this.rawGateway);
+  }
+
+  get scheme() {
+    return this.rawGateway.scheme;
+  }
+
+  get host() {
+    return this.rawGateway.host;
+  }
+
+  get port() {
+    return this.rawGateway.port;
+  }
+
+  /**
+   * Raw gateway username. Contains targeting/session tokens after getProxy().
+   * Do not log or serialize the provider object directly.
+   */
+  get username() {
+    return this.rawGateway.username;
+  }
+
+  /**
+   * Raw gateway password. Do not log or serialize the provider object directly.
+   */
+  get password() {
+    return this.rawGateway.password;
+  }
+
+  /**
+   * Redact sensitive fields when provider is serialized (e.g. JSON.stringify).
+   * @returns {Record<string, unknown>}
+   */
+  toJSON() {
+    return {
+      name: this.name,
+      provider: this.provider,
+      scheme: this.scheme,
+      host: this.host,
+      port: this.port,
+      healthyCount: this.healthyCount,
+      totalCount: this.totalCount,
+      isAllQuarantined: this.isAllQuarantined(),
+    };
   }
 
   get totalCount() {
@@ -900,6 +966,24 @@ export class DynamicTunnelProvider {
       // Normal tunnel: append :<sid> to password for a 30s IP lock.
       const password = sid ? `${rawPass}:${sid}` : rawPass;
       return { username: rawUser, password };
+    }
+
+    if (preset === 'socksnode') {
+      const baseUser = this.#baseUsername(rawUser);
+      const parts = [baseUser];
+      if (req.country) parts.push(`country-${req.country}`);
+      if (req.state) parts.push(`state-${req.state}`);
+      if (req.city) parts.push(`city-${req.city}`);
+      if (req.asn) parts.push(`asn-${req.asn}`);
+      if (req.sessionId) parts.push(`session-${req.sessionId}`);
+      if (req.lifetime) {
+        parts.push(`lifetime-${req.lifetime}`);
+      } else if (typeof req.sessionduration === 'number' && Number.isFinite(req.sessionduration) && req.sessionduration > 0) {
+        // ProxyRequestOptions.sessionduration is minutes; spec AC-2 expects `-duration-{seconds}`.
+        // Verify with SocksNode docs before relying on this token in production.
+        parts.push(`duration-${Math.floor(req.sessionduration * 60)}`);
+      }
+      return { username: parts.filter((p) => p !== '').join('-'), password: rawPass };
     }
 
     if (preset === 'custom') {

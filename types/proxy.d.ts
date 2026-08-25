@@ -8,7 +8,7 @@
 import type { ProxyAgent, Socks5ProxyAgent } from 'undici';
 
 export type SupportedProxyScheme = 'http' | 'https' | 'socks5';
-export type ProviderPreset = 'brightdata' | 'smartproxy' | 'iproyal' | 'kuaidaili' | 'custom';
+export type ProviderPreset = 'brightdata' | 'smartproxy' | 'iproyal' | 'kuaidaili' | 'socksnode' | 'custom';
 
 export interface NormalizedProxy {
   scheme: SupportedProxyScheme;
@@ -187,6 +187,11 @@ export declare class DynamicTunnelProvider implements ProxyProviderContract {
 
   constructor(options: DynamicTunnelOptions);
 
+  get scheme(): SupportedProxyScheme;
+  get host(): string;
+  get port(): number;
+  get username(): string | undefined;
+  get password(): string | undefined;
   get healthyCount(): number;
   get totalCount(): number;
   isAllQuarantined(): boolean;
