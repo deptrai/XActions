@@ -6,23 +6,15 @@ import { AbstractApiClient } from '../../../../src/core/base-client.js';
 import { ProxyIpPool } from '../../../../src/proxy/proxy-pool.js';
 import { AdaptiveRateGovernor } from '../../../../src/core/adaptive-governor.js';
 import { AccountPool } from '../../../../src/core/account-pool.js';
-import { PlatformError } from '../../../../src/core/error-envelope.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from '../../../../src/core/error-envelope.js';
 
 describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () => {
   let server;
   let serverUrl;
   let receivedRequests = [];
-  let proxyPool;
-  let governor;
-  let accountPool;
+  let homePageHits = 0;
 
   beforeAll(async () => {
-    proxyPool = new ProxyIpPool({
-      proxies: ['http://127.0.0.1:8080', 'http://127.0.0.1:8081'],
-    });
-    governor = new AdaptiveRateGovernor({ proxyPool });
-    accountPool = new AccountPool({ governor });
-
     server = http.createServer((req, res) => {
       let body = '';
       req.on('data', (chunk) => (body += chunk));
@@ -36,6 +28,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
 
         // 1. Mock Facebook Home Page HTML with Security Tokens
         if (req.url === '/' || req.url === '') {
+          homePageHits++;
           res.writeHead(200, {
             'content-type': 'text/html; charset=utf-8',
             'set-cookie': 'datr=test_datr_12345; Path=/; Domain=.facebook.com; HttpOnly',
@@ -68,6 +61,22 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({
               errors: [{ message: 'GraphQL query execution failed: Invalid doc_id', code: 1675004 }],
+            }));
+            return;
+          }
+
+          if (docId === 'expired_session_doc_id') {
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({
+              errors: [{ message: 'Error validating access token: Session has expired', code: 190 }],
+            }));
+            return;
+          }
+
+          if (docId === 'rate_limited_doc_id') {
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({
+              errors: [{ message: 'Action temporarily blocked', code: 368 }],
             }));
             return;
           }
@@ -145,6 +154,22 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
     expect(tokens.jazoest).toBe('2953');
     expect(tokens.dtsg).toBe('DTSG_Token_456');
     expect(tokens.spin_r).toBe(1016839210);
+    expect(tokens.c_user).toBe('10001');
+  });
+
+  it('[P1] should deduplicate concurrent in-flight token fetches for the same account', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const hitsBefore = homePageHits;
+
+    const [t1, t2, t3] = await Promise.all([
+      client.ensureTokens('acc_dedup_test', { c_user: '888', xs: 'secret' }),
+      client.ensureTokens('acc_dedup_test', { c_user: '888', xs: 'secret' }),
+      client.ensureTokens('acc_dedup_test', { c_user: '888', xs: 'secret' }),
+    ]);
+
+    expect(t1).toEqual(t2);
+    expect(t2).toEqual(t3);
+    expect(homePageHits - hitsBefore).toBe(1); // Only 1 HTTP request made despite 3 concurrent calls
   });
 
   it('[P0] should build application/x-www-form-urlencoded GraphQL body with doc_id and variables (AC-2, AC-3)', () => {
@@ -155,6 +180,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
       dtsg: 'DTSG_Token_456',
       spin_r: 1016839210,
       spin_t: 1787680000,
+      c_user: '10001',
     };
 
     const bodyString = client.buildGraphQlBody('group_feed_doc_123', { groupId: '123456', count: 10 }, tokens);
@@ -165,15 +191,46 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
     expect(parsed.get('fb_dtsg')).toBe('DTSG_Token_456');
     expect(parsed.get('jazoest')).toBe('2953');
     expect(parsed.get('__spin_r')).toBe('1016839210');
+    expect(parsed.get('__user')).toBe('10001');
     expect(JSON.parse(parsed.get('variables') || '{}')).toEqual({ groupId: '123456', count: 10 });
   });
 
-  it('[P1] should execute GraphQL request and handle graceful doc_id rotation failure (AC-7)', async () => {
+  it('[P1] should classify session expired GraphQL error as XACT_4010 (AUTH_EXPIRED)', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    
+    await expect(client.requestGraphQl('expired_session_doc_id', { id: '1' }, {
+      accountId: 'acc_fb_expired',
+      cookies: 'c_user=10001; xs=expired',
+    })).rejects.toMatchObject({
+      code: 'XACT_4010',
+      type: ErrorTypes.AUTH_EXPIRED,
+      suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
+    });
+  });
+
+  it('[P1] should classify rate limited GraphQL error as XACT_4290 (RATE_LIMIT)', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    
+    await expect(client.requestGraphQl('rate_limited_doc_id', { id: '1' }, {
+      accountId: 'acc_fb_rl',
+      cookies: 'c_user=10001; xs=limited',
+    })).rejects.toMatchObject({
+      code: 'XACT_4290',
+      type: ErrorTypes.RATE_LIMIT,
+      suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
+    });
+  });
+
+  it('[P1] should execute GraphQL request and handle graceful doc_id rotation failure as XACT_5000 (AC-7)', async () => {
     const client = new FacebookClient({ baseUrl: serverUrl });
     
     await expect(client.requestGraphQl('invalid_or_rotated_doc_id', { id: '1' }, {
       accountId: 'acc_fb_1',
-      cookies: 'c_user=10001; xs=sec_xs_123',
-    })).rejects.toThrow(PlatformError);
+      cookies: { c_user: '10001', xs: 'sec_xs_123' },
+    })).rejects.toMatchObject({
+      code: 'XACT_5000',
+      type: ErrorTypes.INTERNAL,
+      suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+    });
   });
 });

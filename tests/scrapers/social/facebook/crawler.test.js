@@ -90,6 +90,10 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
                         },
                       },
                     ],
+                    page_info: {
+                      has_next_page: true,
+                      end_cursor: 'cursor_grp_token_next',
+                    },
                   },
                 },
               },
@@ -97,7 +101,7 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
             return;
           }
 
-          // Page Feed Mock
+          // Page Feed Mock (with nested comet_sections)
           if (variables.pageId) {
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({
@@ -108,18 +112,28 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
                     edges: [
                       {
                         node: {
-                          id: 'post_page_888',
-                          creation_time: 1787681000,
-                          message: { text: 'Official Page Announcement' },
-                          actors: [{ id: 'page_456', name: 'Tech Brand Official' }],
-                          feedback: {
-                            reaction_count: { count: 500 },
-                            comment_count: { total_count: 80 },
-                            share_count: { count: 45 },
+                          comet_sections: {
+                            content_story: {
+                              story: {
+                                id: 'post_page_888',
+                                creation_time: 1787681000,
+                                message: { text: 'Official Page Announcement' },
+                                actors: [{ id: 'page_456', name: 'Tech Brand Official' }],
+                                feedback: {
+                                  reaction_count: { count: 500 },
+                                  comment_count: { total_count: 80 },
+                                  share_count: { count: 45 },
+                                },
+                              },
+                            },
                           },
                         },
                       },
                     ],
+                    page_info: {
+                      has_next_page: false,
+                      end_cursor: null,
+                    },
                   },
                 },
               },
@@ -169,7 +183,7 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
     expect(actionNames).toContain('page_posts');
   });
 
-  it('[P0] should scrape group posts, normalize to PostItem[], and persist to store (AC-3)', async () => {
+  it('[P0] should scrape group posts, normalize to PostItem[], parse publishedAt, and persist to store (AC-3)', async () => {
     storedItems = [];
     const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
@@ -182,7 +196,7 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
 
     const result = await crawler.start({
       action: 'group_posts',
-      args: { groupId: 'grp_12345' },
+      args: { groupId: 'grp_12345', count: 10, cursor: 'start_cursor' },
       session: { accountId: 'acc_fb_1' },
     });
 
@@ -192,6 +206,7 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
 
     const post = result.posts[0];
     expect(post.id).toBe('facebook:post_grp_999');
+    expect(post.externalId).toBe('post_grp_999');
     expect(post.platform).toBe('facebook');
     expect(post.category).toBe('social');
     expect(post.content).toBe('Post inside tech group');
@@ -201,13 +216,21 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
     expect(post.repliesCount).toBe(35);
     expect(post.repostsCount).toBe(8);
     expect(post.mediaUrls).toEqual(['https://cdn.fb.com/grp_pic.jpg']);
+    expect(post.publishedAt).toBeInstanceOf(Date);
+    expect(post.publishedAt?.getTime()).toBe(1787680000 * 1000);
+
+    // Verify pagination pageInfo
+    expect(result.pageInfo).toEqual({
+      has_next_page: true,
+      end_cursor: 'cursor_grp_token_next',
+    });
 
     // Verify stored in PrismaStore
     expect(storedItems).toHaveLength(1);
     expect(storedItems[0].id).toBe('facebook:post_grp_999');
   });
 
-  it('[P0] should scrape page posts, normalize to PostItem[], and persist to store (AC-4)', async () => {
+  it('[P0] should scrape page posts with nested comet_sections, normalize to PostItem[], and persist to store (AC-4)', async () => {
     storedItems = [];
     const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
@@ -218,10 +241,11 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
       store: mockStore,
     });
 
+    // Test direct cookies in session
     const result = await crawler.start({
       action: 'page_posts',
       args: { pageId: 'page_456' },
-      session: { accountId: 'acc_fb_1' },
+      session: { cookies: { c_user: '10001', xs: 'sec_xs_123' } },
     });
 
     expect(result).toBeDefined();
@@ -230,17 +254,19 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
 
     const post = result.posts[0];
     expect(post.id).toBe('facebook:post_page_888');
+    expect(post.externalId).toBe('post_page_888');
     expect(post.platform).toBe('facebook');
     expect(post.category).toBe('social');
     expect(post.content).toBe('Official Page Announcement');
     expect(post.authorName).toBe('Tech Brand Official');
     expect(post.likesCount).toBe(500);
+    expect(post.publishedAt).toBeInstanceOf(Date);
 
     expect(storedItems).toHaveLength(1);
     expect(storedItems[0].id).toBe('facebook:post_page_888');
   });
 
-  it('[P2] should execute cleanup() cleanly without errors', async () => {
+  it('[P2] should execute cleanup() and clear client token cache cleanly', async () => {
     const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
@@ -250,6 +276,7 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
       store: mockStore,
     });
 
+    await crawler.client.ensureTokens('acc_1', 'c_user=1');
     await expect(crawler.cleanup()).resolves.toBeUndefined();
   });
 });

@@ -34,20 +34,23 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
   }
 
   /**
+   * Extract error-only text from response payload.
    * @param {unknown} response
    * @returns {string}
    */
-  #getText(response) {
-    const body = this.#getBody(response);
-    if (body) return body.toLowerCase();
-
+  #getErrorText(response) {
     const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
     const data = record?.data && typeof record.data === 'object' ? /** @type {Record<string, unknown>} */ (record.data) : null;
-    const errors = data?.errors ?? record?.errors;
+    const errors = data?.errors ?? record?.errors ?? (data?.error ? [data.error] : (record?.error ? [record.error] : null));
     if (Array.isArray(errors) && errors.length > 0) {
       try {
         return JSON.stringify(errors).toLowerCase();
       } catch {}
+    }
+
+    const body = this.#getBody(response);
+    if (body && (body.includes('/checkpoint/') || body.includes('security check'))) {
+      return body.toLowerCase();
     }
 
     return '';
@@ -71,8 +74,31 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
     if (data && typeof data.data === 'object' && data.data) {
       data = /** @type {Record<string, unknown>} */ (data.data);
     }
-    if (data && (data.group || data.page || data.posts || data.profile || data.comments || data.nodes || data.viewer || data.user || data.name || data.id || data.feed || data.timeline_feed || data.node)) {
+
+    // Allow GraphQL error envelopes to pass so client can classify them accurately
+    if (data && (Array.isArray(data.errors) || Array.isArray(record?.errors))) {
       return true;
+    }
+
+    if (data && typeof data === 'object') {
+      if (
+        'group' in data ||
+        'page' in data ||
+        'node' in data ||
+        'viewer' in data ||
+        'feed' in data ||
+        'timeline_feed' in data ||
+        data.posts ||
+        data.profile ||
+        data.comments ||
+        data.nodes ||
+        data.user ||
+        data.name ||
+        data.id ||
+        data.success
+      ) {
+        return true;
+      }
     }
 
     if (record && (record.name || record.id || record.postUrl || record.content)) {
@@ -82,16 +108,15 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
     const body = this.#getBody(response);
     if (!body) return false;
 
-    // Login wall check
-    if (/log\s*in\s*to\s*facebook|create\s*new\s*account/i.test(body) && !/<article\b|data-ft=/i.test(body)) {
-      return false;
-    }
-
-    if (/<article\b|data-ft=|div class=".*story"/i.test(body)) {
+    // Real content or page tokens check
+    if (
+      /<article\b|data-ft=|div class=".*story"/i.test(body) ||
+      (body.includes('DTSGInitialData') || body.includes('__spin_r') || body.includes('name="lsd"'))
+    ) {
       return true;
     }
 
-    if (/<html/i.test(body) && (body.includes('role="main"') || body.includes('id="root"') || body.includes('DTSGInitialData') || body.includes('__spin_r'))) {
+    if (/<html/i.test(body) && (body.includes('role="main"') || body.includes('id="root"'))) {
       return true;
     }
 
@@ -108,20 +133,20 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
       return true;
     }
 
-    const text = this.#getText(response);
+    const errorText = this.#getErrorText(response);
     if (
-      text.includes('security check') ||
-      text.includes('confirm your identity') ||
-      text.includes('please confirm your identity') ||
-      text.includes('/checkpoint/') ||
-      text.includes('captcha') ||
-      /log\s*in\s*to\s*facebook|create\s*new\s*account|log\s*in\s*to\s*continue|you\s*must\s*log\s*in/.test(text)
+      errorText.includes('security check') ||
+      errorText.includes('confirm your identity') ||
+      errorText.includes('please confirm your identity') ||
+      errorText.includes('/checkpoint/') ||
+      errorText.includes('captcha')
     ) {
       return true;
     }
 
     const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
-    if (typeof record?.status === 'number' && record.status === 403) {
+    const status = typeof record?.status === 'number' ? record.status : (typeof record?.statusCode === 'number' ? record.statusCode : null);
+    if (status === 403) {
       return true;
     }
 
@@ -134,17 +159,19 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
    */
   isRateLimit(response) {
     const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
-    if (typeof record?.status === 'number' && record.status === 429) {
+    const status = typeof record?.status === 'number' ? record.status : (typeof record?.statusCode === 'number' ? record.statusCode : null);
+    if (status === 429) {
       return true;
     }
 
-    const text = this.#getText(response);
+    const errorText = this.#getErrorText(response);
     if (
-      text.includes("you're temporarily blocked") ||
-      text.includes('you are temporarily blocked') ||
-      text.includes('action blocked') ||
-      text.includes('too many requests') ||
-      text.includes('rate limit')
+      errorText.includes("you're temporarily blocked") ||
+      errorText.includes('you are temporarily blocked') ||
+      errorText.includes('action blocked') ||
+      errorText.includes('too many requests') ||
+      errorText.includes('"code":368') ||
+      errorText.includes('"code": 368')
     ) {
       return true;
     }

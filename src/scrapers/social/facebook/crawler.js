@@ -86,28 +86,50 @@ export class FacebookCrawler extends AbstractCrawler {
 
   /**
    * Normalize raw Facebook GraphQL node into uniform PostItem.
-   * @param {Record<string, any>} node
+   * @param {Record<string, any>} rawNode
    * @param {string} [parentContextUrl='']
-   * @returns {import('../../../core/types.js').PostItem}
+   * @returns {import('../../../core/types.js').PostItem | null}
    */
-  #normalizePostItem(node, parentContextUrl = '') {
-    const postId = String(node.id || node.post_id || '');
-    const authorActor = Array.isArray(node.actors) && node.actors.length > 0 ? node.actors[0] : null;
+  #normalizePostItem(rawNode, parentContextUrl = '') {
+    if (!rawNode || typeof rawNode !== 'object') return null;
+
+    // Support nested story structures
+    const node = rawNode.comet_sections?.content_story?.story || rawNode.story || rawNode;
+    const postId = String(node.id || node.post_id || rawNode.id || rawNode.post_id || '');
+    if (!postId) return null;
+
+    const authorActors = Array.isArray(node.actors) ? node.actors : (Array.isArray(rawNode.actors) ? rawNode.actors : []);
+    const authorActor = authorActors.length > 0 ? authorActors[0] : null;
     const authorId = authorActor ? String(authorActor.id || '') : '';
     const authorName = authorActor ? String(authorActor.name || '') : '';
 
-    const content = node.message?.text || node.story?.text || node.text || '';
-    const likesCount = Number(node.feedback?.reaction_count?.count || node.reaction_count || 0);
-    const repliesCount = Number(node.feedback?.comment_count?.total_count || node.comment_count || 0);
-    const repostsCount = Number(node.feedback?.share_count?.count || node.share_count || 0);
+    const content = (typeof node.message === 'string' ? node.message : node.message?.text) ||
+                    (typeof node.story === 'string' ? node.story : node.story?.text) ||
+                    node.text ||
+                    '';
+
+    /**
+     * @param {unknown} val
+     * @returns {number}
+     */
+    const parseCount = (val) => {
+      const n = Number(val);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const likesCount = parseCount(node.feedback?.reaction_count?.count ?? node.reaction_count);
+    const repliesCount = parseCount(node.feedback?.comment_count?.total_count ?? node.comment_count);
+    const repostsCount = parseCount(node.feedback?.share_count?.count ?? node.share_count);
 
     const mediaUrls = [];
-    if (Array.isArray(node.attachments)) {
-      for (const att of node.attachments) {
-        const uri = att.media?.image?.uri || att.media?.photo_image?.uri || att.url;
-        if (uri) mediaUrls.push(uri);
-      }
+    const attachments = Array.isArray(node.attachments) ? node.attachments : (Array.isArray(rawNode.attachments) ? rawNode.attachments : []);
+    for (const att of attachments) {
+      if (!att || typeof att !== 'object') continue;
+      const uri = att.media?.image?.uri || att.media?.photo_image?.uri || att.url;
+      if (uri && typeof uri === 'string') mediaUrls.push(uri);
     }
+
+    const creationTime = node.creation_time || rawNode.creation_time || null;
 
     /** @type {import('../../../core/types.js').PostItem} */
     const post = {
@@ -123,9 +145,10 @@ export class FacebookCrawler extends AbstractCrawler {
       repostsCount,
       mediaUrls,
       postUrl: parentContextUrl ? `${parentContextUrl}/posts/${postId}` : `https://www.facebook.com/${postId}`,
+      publishedAt: creationTime ? new Date(Number(creationTime) * 1000) : undefined,
       crawledAt: new Date(),
       metadata: {
-        creationTime: node.creation_time || null,
+        creationTime,
       },
     };
 
@@ -134,10 +157,20 @@ export class FacebookCrawler extends AbstractCrawler {
 
   /**
    * Extract cookie string from session or sessionManager.
-   * @param {string} [accountId]
+   * @param {Record<string, any>} [session]
    * @returns {string}
    */
-  #getCookiesForAccount(accountId) {
+  #resolveCookies(session = {}) {
+    if (session?.cookies) {
+      if (typeof session.cookies === 'string') return session.cookies;
+      if (typeof session.cookies === 'object') {
+        return Object.entries(session.cookies)
+          .map(([k, v]) => `${k}=${v}`)
+          .join('; ');
+      }
+    }
+
+    const accountId = session?.accountId;
     if (!accountId || !this.sessionManager) return '';
     const sess = this.sessionManager.get(accountId);
     if (!sess?.cookies) return '';
@@ -167,7 +200,7 @@ export class FacebookCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId;
-    const cookies = this.#getCookiesForAccount(accountId);
+    const cookies = this.#resolveCookies(session);
 
     const variables = {
       groupId: args.groupId,
@@ -181,12 +214,14 @@ export class FacebookCrawler extends AbstractCrawler {
       cookies,
     });
 
-    const edges = res?.data?.group?.feed?.edges || res?.data?.node?.feed?.edges || [];
+    const rawEdges = res?.data?.group?.feed?.edges || res?.data?.node?.feed?.edges;
+    const edges = Array.isArray(rawEdges) ? rawEdges : [];
     const posts = [];
 
     for (const edge of edges) {
       if (!edge?.node) continue;
       const post = this.#normalizePostItem(edge.node, `https://www.facebook.com/groups/${args.groupId}`);
+      if (!post) continue;
       this.validateItem(post);
       posts.push(post);
     }
@@ -197,7 +232,7 @@ export class FacebookCrawler extends AbstractCrawler {
 
     return {
       posts,
-      pageInfo: res?.data?.group?.feed?.page_info || null,
+      pageInfo: res?.data?.group?.feed?.page_info || res?.data?.node?.feed?.page_info || null,
     };
   }
 
@@ -221,7 +256,7 @@ export class FacebookCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId;
-    const cookies = this.#getCookiesForAccount(accountId);
+    const cookies = this.#resolveCookies(session);
 
     const variables = {
       pageId: args.pageId,
@@ -235,12 +270,14 @@ export class FacebookCrawler extends AbstractCrawler {
       cookies,
     });
 
-    const edges = res?.data?.page?.timeline_feed?.edges || res?.data?.node?.timeline_feed?.edges || [];
+    const rawEdges = res?.data?.page?.timeline_feed?.edges || res?.data?.node?.timeline_feed?.edges;
+    const edges = Array.isArray(rawEdges) ? rawEdges : [];
     const posts = [];
 
     for (const edge of edges) {
       if (!edge?.node) continue;
       const post = this.#normalizePostItem(edge.node, `https://www.facebook.com/${args.pageId}`);
+      if (!post) continue;
       this.validateItem(post);
       posts.push(post);
     }
@@ -251,7 +288,7 @@ export class FacebookCrawler extends AbstractCrawler {
 
     return {
       posts,
-      pageInfo: res?.data?.page?.timeline_feed?.page_info || null,
+      pageInfo: res?.data?.page?.timeline_feed?.page_info || res?.data?.node?.timeline_feed?.page_info || null,
     };
   }
 
@@ -303,6 +340,8 @@ export class FacebookCrawler extends AbstractCrawler {
    * @returns {Promise<void>}
    */
   async cleanup() {
-    // Release any allocated resources
+    if (this.client && typeof this.client.clearTokenCache === 'function') {
+      this.client.clearTokenCache();
+    }
   }
 }
