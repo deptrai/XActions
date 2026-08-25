@@ -255,11 +255,9 @@ describe('Signer pool', () => {
     expect(ring.next()).toBeNull();
   });
 
-  it('SignerWorkerPagePool abstract methods throw', async () => {
+  it('SignerWorkerPagePool validates browser instance', async () => {
     const pool = new SignerWorkerPagePool({ browser: {} });
-    await expect(pool.init()).rejects.toThrow(/Method not implemented/i);
-    await expect(pool.evaluate('1+1')).rejects.toThrow(/Method not implemented/i);
-    await expect(pool.close()).rejects.toThrow(/Method not implemented/i);
+    await expect(pool.init()).rejects.toThrow(/Browser instance with newPage\(\) is required/i);
   });
 });
 

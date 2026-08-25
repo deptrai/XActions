@@ -93,7 +93,10 @@ describe('Story 13.1 — SignerWorkerPagePool (AC-2)', () => {
 
   it('[P1] should handle evaluation timeout and retry on a healthy page', async () => {
     const hangingPage = {
-      evaluate: vi.fn(() => new Promise((resolve) => setTimeout(resolve, 5000))),
+      evaluate: vi.fn(() => new Promise((resolve) => {
+        const t = setTimeout(resolve, 500);
+        if (t && typeof t.unref === 'function') t.unref();
+      })),
       close: vi.fn(async () => {}),
     };
     const healthyPage = {

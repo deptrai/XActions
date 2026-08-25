@@ -198,6 +198,26 @@ export abstract class AbstractCrawler {
   abstract cleanup(): Promise<void>;
 }
 
+export interface SignPayload {
+  signType?: 'token' | 'page' | 'custom' | string;
+  location?: 'header' | 'query' | 'cookie';
+  name?: string;
+  prefix?: string;
+  script?: string | Function;
+  args?: unknown[];
+  timeoutMs?: number;
+  warmup?: boolean;
+  [key: string]: unknown;
+}
+
+export interface SignResult {
+  headers?: Record<string, string>;
+  query?: Record<string, unknown>;
+  cookies?: Record<string, string>;
+  signature?: unknown;
+  [key: string]: unknown;
+}
+
 export abstract class AbstractApiClient {
   name: string;
   platform: string;
@@ -205,6 +225,8 @@ export abstract class AbstractApiClient {
   httpClient: unknown;
   responseValidator: AbstractPlatformResponseValidator | null;
   cookies: Record<string, unknown>;
+  tokenRing: PreSignedTokenRing | null;
+  signerPool: SignerWorkerPagePool | null;
   maxProxyRetries: number;
   maxAccountRotations: number;
   backoffBaseMs: number;
@@ -219,6 +241,8 @@ export abstract class AbstractApiClient {
     accountPool?: AccountPool;
     governor?: AdaptiveRateGovernor;
     responseValidator?: AbstractPlatformResponseValidator;
+    tokenRing?: PreSignedTokenRing;
+    signerPool?: SignerWorkerPagePool;
     platform?: string;
     client?: 'undici' | 'got';
     httpClient?: Function;
@@ -234,8 +258,9 @@ export abstract class AbstractApiClient {
   resolveProxy(accountId?: string, requiresResidential?: boolean): unknown;
   init(session: Record<string, unknown>): Promise<void>;
   request(method: string, url: string, options?: Record<string, unknown>): Promise<unknown>;
-  sign(payload: Record<string, unknown>): Promise<unknown>;
-  updateCookies(cookies: Record<string, unknown>): void;
+  requestWithSign(method: string, url: string, payload?: SignPayload, options?: Record<string, unknown>): Promise<unknown>;
+  sign(payload: SignPayload): Promise<SignResult | unknown>;
+  updateCookies(cookies?: Record<string, unknown>): void;
   handleError(response: unknown, platform: string): never;
 }
 
@@ -345,11 +370,28 @@ export class PreSignedTokenRing {
   refill(tokens: string[]): void;
   next(): string | null;
   get size(): number;
+  get capacity(): number;
+  get isEmpty(): boolean;
 }
 
 export class SignerWorkerPagePool {
-  constructor(options?: { minSize?: number; maxSize?: number; browser?: unknown });
-  init(): Promise<void>;
-  evaluate(script: string, args?: unknown[]): Promise<unknown>;
+  constructor(options?: {
+    minSize?: number;
+    maxSize?: number;
+    defaultTimeoutMs?: number;
+    warmupTimeoutMs?: number;
+    browser?: unknown;
+  });
+  init(options?: { warmupScript?: string; warmupArgs?: unknown[] }): Promise<void>;
+  evaluate(
+    script: string | Function,
+    args?: unknown[],
+    options?: { timeoutMs?: number; warmup?: boolean }
+  ): Promise<unknown>;
   close(): Promise<void>;
+  get size(): number;
+  get activeCount(): number;
+  get idleCount(): number;
+  get minSize(): number;
+  get maxSize(): number;
 }

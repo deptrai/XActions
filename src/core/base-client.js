@@ -59,8 +59,14 @@ export class AbstractApiClient {
   /** @type {import('./platform-validator.js').AbstractPlatformResponseValidator | null} */
   responseValidator = null;
 
-  /** @type {Object} */
+  /** @type {Record<string, string>} */
   cookies = {};
+
+  /** @type {import('./signer-pool.js').PreSignedTokenRing | null} */
+  tokenRing = null;
+
+  /** @type {import('./signer-pool.js').SignerWorkerPagePool | null} */
+  signerPool = null;
 
   /** @type {number} */
   maxProxyRetries = 3;
@@ -91,6 +97,8 @@ export class AbstractApiClient {
    * @param {import('./account-pool.js').AccountPool} [options.accountPool]
    * @param {import('./adaptive-governor.js').AdaptiveRateGovernor} [options.governor]
    * @param {import('./platform-validator.js').AbstractPlatformResponseValidator} [options.responseValidator]
+   * @param {import('./signer-pool.js').PreSignedTokenRing} [options.tokenRing]
+   * @param {import('./signer-pool.js').SignerWorkerPagePool} [options.signerPool]
    * @param {string} [options.platform]
    * @param {'undici' | 'got'} [options.client]
    * @param {Function} [options.httpClient]
@@ -113,6 +121,8 @@ export class AbstractApiClient {
     this.accountPool = options.accountPool;
     this.governor = options.governor;
     this.responseValidator = options.responseValidator || null;
+    this.tokenRing = options.tokenRing || null;
+    this.signerPool = options.signerPool || null;
 
     if (options.platform !== undefined) this.platform = options.platform;
     if (options.client !== undefined) this.client = options.client;
@@ -160,7 +170,7 @@ export class AbstractApiClient {
    * Throws PROXY_EXHAUSTED if no proxy is available.
    * @param {string | AccountRecord | null} [accountId]
    * @param {boolean} [requiresResidential=false]
-   * @returns {string | Record<string, unknown>}
+   * @returns {string | Record<string, unknown> | null}
    */
   resolveProxy(accountId, requiresResidential = false) {
     const rawAccountId = typeof accountId === 'string' ? accountId : accountId?.accountId;
@@ -218,6 +228,164 @@ export class AbstractApiClient {
    */
   async init(session) {
     throw new Error('Method not implemented: init(session)');
+  }
+
+  /**
+   * Default HTTP transport factory for got-scraping or undici.fetch().
+   * @returns {Promise<Function>}
+   */
+  async #getDefaultHttpClient() {
+    if (this.client === 'got') {
+      const { gotScraping } = await import('got-scraping');
+      return async (/** @type {Record<string, any>} */ reqOpts) => {
+        const { method, url, headers, body, json, proxy, timeout } = reqOpts;
+        /** @type {Record<string, any>} */
+        const options = {
+          method,
+          url,
+          headers: headers || {},
+          timeout: timeout || 30000,
+          throwHttpErrors: false,
+        };
+        if (json !== undefined) options.json = json;
+        else if (body !== undefined) options.body = body;
+        if (proxy) {
+          const { getProxyAgent } = await import('../proxy/index.js');
+          const proxyUrl = getProxyAgent(proxy, { client: 'got' });
+          if (typeof proxyUrl === 'string') options.proxyUrl = proxyUrl;
+        }
+        const resp = await gotScraping(options);
+        let data = resp.body;
+        if (typeof resp.body === 'string') {
+          try {
+            data = JSON.parse(resp.body);
+          } catch {}
+        }
+        return {
+          status: resp.statusCode,
+          headers: resp.headers,
+          data,
+        };
+      };
+    }
+
+    // Default: undici
+    const { fetch: undiciFetch } = await import('undici');
+    return async (/** @type {Record<string, any>} */ reqOpts) => {
+      const { method, url, headers, body, json, agent, timeout } = reqOpts;
+      /** @type {Record<string, any>} */
+      const fetchOpts = {
+        method,
+        headers: { ...(headers || {}) },
+        signal: AbortSignal.timeout(timeout || 30000),
+      };
+      if (agent) {
+        fetchOpts.dispatcher = agent;
+      }
+      if (json !== undefined) {
+        fetchOpts.headers['content-type'] = 'application/json';
+        fetchOpts.body = JSON.stringify(json);
+      } else if (body !== undefined) {
+        fetchOpts.body = body;
+      }
+      const resp = await undiciFetch(url, fetchOpts);
+      let data;
+      const text = await resp.text();
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
+      return {
+        status: resp.status,
+        headers: Object.fromEntries(resp.headers.entries()),
+        data,
+      };
+    };
+  }
+
+  /**
+   * Execute request with tiered signing (PreSignedTokenRing, SignerWorkerPagePool, or custom sign()).
+   *
+   * @param {string} method
+   * @param {string} url
+   * @param {Object} [payload={}]
+   * @param {string} [payload.signType='token'] - 'token' | 'page' | 'custom'
+   * @param {'header' | 'query' | 'cookie'} [payload.location='header']
+   * @param {string} [payload.name='authorization']
+   * @param {string} [payload.prefix='']
+   * @param {string | Function} [payload.script]
+   * @param {any[]} [payload.args]
+   * @param {number} [payload.timeoutMs]
+   * @param {boolean} [payload.warmup]
+   * @param {RequestOptions} [options={}]
+   * @returns {Promise<unknown>}
+   */
+  async requestWithSign(method, url, payload = {}, options = {}) {
+    /** @type {Record<string, any> | null} */
+    let signResult = null;
+    const signType = payload.signType || 'token';
+
+    if (signType === 'token' && this.tokenRing && !this.tokenRing.isEmpty) {
+      const token = this.tokenRing.next();
+      if (token) {
+        const location = payload.location || 'header';
+        const name = payload.name || 'authorization';
+        const prefix = payload.prefix || '';
+        const value = `${prefix}${token}`;
+
+        signResult = {};
+        if (location === 'header') {
+          signResult.headers = { [name]: value };
+        } else if (location === 'query') {
+          signResult.query = { [name]: value };
+        } else if (location === 'cookie') {
+          signResult.cookies = { [name]: value };
+        }
+      }
+    } else if (signType === 'page' && this.signerPool && payload.script) {
+      const res = await this.signerPool.evaluate(payload.script, payload.args || [], {
+        timeoutMs: payload.timeoutMs,
+        warmup: payload.warmup,
+      });
+      signResult = typeof res === 'object' && res !== null ? res : { signature: res };
+    } else if (typeof this.sign === 'function') {
+      signResult = /** @type {Record<string, any>} */ (await this.sign(payload));
+    }
+
+    const mergedOptions = { ...options };
+    let resolvedUrl = url;
+
+    if (signResult) {
+      if (signResult.headers) {
+        mergedOptions.headers = { ...mergedOptions.headers, ...signResult.headers };
+      }
+      if (signResult.query) {
+        const parsedUrl = new URL(resolvedUrl);
+        for (const [k, v] of Object.entries(signResult.query)) {
+          parsedUrl.searchParams.set(k, String(v));
+        }
+        resolvedUrl = parsedUrl.toString();
+      }
+      if (signResult.cookies) {
+        for (const [k, v] of Object.entries(signResult.cookies)) {
+          this.cookies[k] = String(v);
+        }
+        this.updateCookies(this.cookies);
+      }
+    }
+
+    if (Object.keys(this.cookies).length > 0) {
+      const cookieHeader = Object.entries(this.cookies)
+        .map(([k, v]) => `${k}=${v}`)
+        .join('; ');
+      mergedOptions.headers = {
+        cookie: cookieHeader,
+        ...(mergedOptions.headers || {}),
+      };
+    }
+
+    return this.request(method, resolvedUrl, mergedOptions);
   }
 
   /**
@@ -283,7 +451,9 @@ export class AbstractApiClient {
           });
         }
 
-        const proxy = this.resolveProxy(currentAccountId, opts.requiresResidential);
+        const proxy = provider || opts.requiresResidential
+          ? this.resolveProxy(currentAccountId, opts.requiresResidential)
+          : null;
 
         let agent = null;
         if (proxy && provider && typeof provider.getProxyAgent === 'function') {
@@ -292,19 +462,14 @@ export class AbstractApiClient {
           agent = provider.createProxyAgent(proxy, this.client);
         }
 
-        if (typeof this.httpClient !== 'function') {
-          throw new PlatformError({
-            type: ErrorTypes.INTERNAL,
-            code: 'XACT_5000',
-            message: 'httpClient transport is not configured on client',
-            statusCode: 500,
-            suggestedAction: SuggestedActions.CONTACT_SUPPORT,
-          });
+        let transport = this.httpClient;
+        if (typeof transport !== 'function') {
+          transport = await this.#getDefaultHttpClient();
         }
 
         let response;
         try {
-          response = await this.httpClient({
+          response = await transport({
             ...opts,
             method,
             url,
@@ -395,7 +560,7 @@ export class AbstractApiClient {
 
         // Handle 429 (Rate Limit) or 403 (Bot Challenge)
         if (status === 429 || status === 403) {
-          if (provider && typeof provider.quarantine === 'function') {
+          if (proxy && provider && typeof provider.quarantine === 'function') {
             provider.quarantine(proxy, this.rateLimitHibernationMs);
           }
 
@@ -480,11 +645,13 @@ export class AbstractApiClient {
   }
 
   /**
-   * @param {Object} cookies
+   * @param {Record<string, string>} [cookies={}]
    * @returns {void}
    */
-  updateCookies(cookies) {
-    this.cookies = { ...this.cookies, ...cookies };
+  updateCookies(cookies = {}) {
+    if (cookies && typeof cookies === 'object') {
+      Object.assign(this.cookies, cookies);
+    }
   }
 
   /**

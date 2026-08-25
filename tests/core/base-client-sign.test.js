@@ -6,7 +6,7 @@ import { PreSignedTokenRing, SignerWorkerPagePool } from '../../src/core/signer-
 
 class TestApiClient extends AbstractApiClient {
   constructor(options = {}) {
-    super({ platform: 'test-platform', ...options });
+    super({ platform: 'test-platform', requiresAuth: false, ...options });
   }
 }
 
