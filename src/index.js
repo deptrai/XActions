@@ -25,6 +25,7 @@
 // ============================================================================
 
 export * from './scrapers/index.js';
+export * from './scrapers/social/index.js';
 import scrapers from './scrapers/index.js';
 export { scrapers };
 

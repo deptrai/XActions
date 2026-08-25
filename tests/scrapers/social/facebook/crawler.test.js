@@ -39,7 +39,7 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
       platform: 'facebook',
       cookies: { c_user: '10001', xs: 'sec_xs_123' },
     });
-    accountPool.registerAccounts(['acc_fb_1'], 'facebook');
+    accountPool.registerAccounts('facebook', ['acc_fb_1']);
 
     server = http.createServer((req, res) => {
       let body = '';
@@ -149,7 +149,7 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
   });
 
   it('[P0] should extend AbstractCrawler with requiresAuth=true and register group_posts & page_posts (AC-1)', () => {
-    const client = new FacebookClient({ baseUrl: serverUrl, proxyPool, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       governor,
@@ -164,14 +164,14 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
     expect(crawler.requiresAuth).toBe(true);
 
     const actions = crawler.listActions();
-    const actionNames = actions.map((a) => a.name);
+    const actionNames = actions.map((a) => a.action || a.name);
     expect(actionNames).toContain('group_posts');
     expect(actionNames).toContain('page_posts');
   });
 
   it('[P0] should scrape group posts, normalize to PostItem[], and persist to store (AC-3)', async () => {
     storedItems = [];
-    const client = new FacebookClient({ baseUrl: serverUrl, proxyPool, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       governor,
@@ -209,7 +209,7 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
 
   it('[P0] should scrape page posts, normalize to PostItem[], and persist to store (AC-4)', async () => {
     storedItems = [];
-    const client = new FacebookClient({ baseUrl: serverUrl, proxyPool, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       governor,
@@ -241,7 +241,7 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
   });
 
   it('[P2] should execute cleanup() cleanly without errors', async () => {
-    const client = new FacebookClient({ baseUrl: serverUrl, proxyPool, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       governor,

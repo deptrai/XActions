@@ -128,7 +128,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
   });
 
   it('[P0] should extend AbstractApiClient with client="got", requiresAuth=true, platform="facebook" (AC-2)', () => {
-    const client = new FacebookClient({ baseUrl: serverUrl, proxyPool, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     expect(client).toBeInstanceOf(AbstractApiClient);
     expect(client.name).toBe('facebook');
     expect(client.platform).toBe('facebook');
@@ -137,7 +137,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
   });
 
   it('[P0] should extract security tokens (lsd, fb_dtsg, jazoest, spin) during warmup/token fetch (AC-5)', async () => {
-    const client = new FacebookClient({ baseUrl: serverUrl, proxyPool, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     const tokens = await client.ensureTokens('acc_fb_1', 'c_user=10001; xs=sec_xs_123');
 
     expect(tokens).toBeDefined();
@@ -148,7 +148,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
   });
 
   it('[P0] should build application/x-www-form-urlencoded GraphQL body with doc_id and variables (AC-2, AC-3)', () => {
-    const client = new FacebookClient({ baseUrl: serverUrl, proxyPool, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     const tokens = {
       lsd: 'AVq_LsdToken123',
       jazoest: '2953',
@@ -169,7 +169,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
   });
 
   it('[P1] should execute GraphQL request and handle graceful doc_id rotation failure (AC-7)', async () => {
-    const client = new FacebookClient({ baseUrl: serverUrl, proxyPool, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     
     await expect(client.requestGraphQl('invalid_or_rotated_doc_id', { id: '1' }, {
       accountId: 'acc_fb_1',
