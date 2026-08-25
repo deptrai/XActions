@@ -2,7 +2,7 @@
 
 **Story ID:** 11.8  
 **Epic:** 11 — Resilient Network & Proxy Pool Management  
-**Status:** review  
+**Status:** done  
 **Owner:** TEA (ATDD) & DEV  
 **Source:** `epics.md` Epic 11, `ARCHITECTURE-SPINE.md` AD-3 & AD-15, existing `src/proxy/providers.js`, `src/proxy/proxy-pool.js`.
 
