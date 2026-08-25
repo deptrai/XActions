@@ -2,12 +2,12 @@
 story_id: "13.3"
 epic: 13
 story_key: "13-3-refactor-facebook-scraper-to-hybrid-architecture"
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-26
 updated: 2026-08-26
 owner: "DEV"
-reviewed: "Ready for implementation"
+reviewed: "Approved"
 ---
 
 # Story 13.3: Refactor Facebook Scraper to Hybrid Architecture
@@ -82,38 +82,38 @@ so that **tôi có thể theo dõi cộng đồng với độ trễ thấp và k
 
 ## Tasks / Subtasks
 
-- [ ] T1: Tạo cấu trúc thư mục `src/scrapers/social/facebook/` (AC-1, AC-2)
-  - [ ] T1.1: Tạo `src/scrapers/social/index.js` barrel
-  - [ ] T1.2: Tạo `src/scrapers/social/facebook/index.js` export `FacebookCrawler`, `FacebookClient`, `FacebookPlatformResponseValidator`
-  - [ ] T1.3: Tạo `src/scrapers/social/facebook/client.js`
-  - [ ] T1.4: Tạo `src/scrapers/social/facebook/crawler.js` (hoặc đặt trong `index.js`)
-  - [ ] T1.5: Tạo `src/scrapers/social/facebook/validator.js` (có thể tái sử dụng/adapt từ `src/scrapers/facebook/validator.js`)
-  - [ ] T1.6: Cập nhật `src/index.js` để export `FacebookCrawler` từ `src/scrapers/social/index.js` (không sửa legacy `src/scrapers/index.js`)
-- [ ] T2: Triển khai `FacebookClient` (AC-2, AC-5, AC-6)
-  - [ ] T2.1: Constructor kế thừa `AbstractApiClient`, truyền `client: 'got'`, nhận `baseUrl`, `docIds`, `cookies`, `proxyProvider`, `governor`
-  - [ ] T2.2: `warmup()` / `ensureTokens(accountId, cookieHeader)` — fetch home page HTML, parse tokens
-  - [ ] T2.3: `buildGraphQlBody(docId, variables, tokens)` — trả về `application/x-www-form-urlencoded` string
-  - [ ] T2.4: `requestGraphQl(docId, variables, options)` — wrap `this.request()` với đúng headers/body
-  - [ ] T2.5: Cache tokens theo `accountId` với TTL (khuyến nghị 5 phút)
-- [ ] T3: Triển khai `FacebookCrawler` (AC-1, AC-3, AC-4)
-  - [ ] T3.1: Constructor đăng ký `group_posts`, `page_posts` (không đăng ký `search` trong phạm vi story này)
-  - [ ] T3.2: `groupPosts(args, session)` handler
-  - [ ] T3.3: `pagePosts(args, session)` handler
-  - [ ] T3.4: Chuẩn hóa response thành `PostItem[]`
-  - [ ] T3.5: Gọi `this.store.storeBatch(posts, { upsert: true })` nếu có store
-  - [ ] T3.6: `cleanup()` đóng/release client resources
-- [ ] T4: Triển khai / tái sử dụng `FacebookPlatformResponseValidator` (AC-7)
-  - [ ] T4.1: Tạo `src/scrapers/social/facebook/validator.js`
-  - [ ] T4.2: Nhận diện HTML hợp lệ, JSON GraphQL hợp lệ, checkpoint/bot challenge, doc_id rotation
-- [ ] T5: Viết tests (AC-8)
-  - [ ] T5.1: Tạo `tests/scrapers/facebook/facebook-crawler.test.js` hoặc `tests/scrapers/social/facebook/crawler.test.js`
-  - [ ] T5.2: Local server trả về HTML home với tokens và GraphQL JSON
-  - [ ] T5.3: Test `group_posts`, `page_posts`, `listActions`, `cleanup`
-  - [ ] T5.4: Test proxy quarantine retry với real proxy provider
-- [ ] T6: Chạy verification
-  - [ ] T6.1: `npm run typecheck`
-  - [ ] T6.2: `npm test -- tests/scrapers/social/facebook/`
-  - [ ] T6.3: `npm test -- tests/core/` (regression)
+- [x] T1: Tạo cấu trúc thư mục `src/scrapers/social/facebook/` (AC-1, AC-2)
+  - [x] T1.1: Tạo `src/scrapers/social/index.js` barrel
+  - [x] T1.2: Tạo `src/scrapers/social/facebook/index.js` export `FacebookCrawler`, `FacebookClient`, `FacebookPlatformResponseValidator`
+  - [x] T1.3: Tạo `src/scrapers/social/facebook/client.js`
+  - [x] T1.4: Tạo `src/scrapers/social/facebook/crawler.js` (hoặc đặt trong `index.js`)
+  - [x] T1.5: Tạo `src/scrapers/social/facebook/validator.js` (có thể tái sử dụng/adapt từ `src/scrapers/facebook/validator.js`)
+  - [x] T1.6: Cập nhật `src/index.js` để export `FacebookCrawler` từ `src/scrapers/social/index.js` (không sửa legacy `src/scrapers/index.js`)
+- [x] T2: Triển khai `FacebookClient` (AC-2, AC-5, AC-6)
+  - [x] T2.1: Constructor kế thừa `AbstractApiClient`, truyền `client: 'got'`, nhận `baseUrl`, `docIds`, `cookies`, `proxyProvider`, `governor`
+  - [x] T2.2: `warmup()` / `ensureTokens(accountId, cookieHeader)` — fetch home page HTML, parse tokens
+  - [x] T2.3: `buildGraphQlBody(docId, variables, tokens)` — trả về `application/x-www-form-urlencoded` string
+  - [x] T2.4: `requestGraphQl(docId, variables, options)` — wrap `this.request()` với đúng headers/body
+  - [x] T2.5: Cache tokens theo `accountId` với TTL (khuyến nghị 5 phút)
+- [x] T3: Triển khai `FacebookCrawler` (AC-1, AC-3, AC-4)
+  - [x] T3.1: Constructor đăng ký `group_posts`, `page_posts` (không đăng ký `search` trong phạm vi story này)
+  - [x] T3.2: `groupPosts(args, session)` handler
+  - [x] T3.3: `pagePosts(args, session)` handler
+  - [x] T3.4: Chuẩn hóa response thành `PostItem[]`
+  - [x] T3.5: Gọi `this.store.storeBatch(posts, { upsert: true })` nếu có store
+  - [x] T3.6: `cleanup()` đóng/release client resources
+- [x] T4: Triển khai / tái sử dụng `FacebookPlatformResponseValidator` (AC-7)
+  - [x] T4.1: Tạo `src/scrapers/social/facebook/validator.js`
+  - [x] T4.2: Nhận diện HTML hợp lệ, JSON GraphQL hợp lệ, checkpoint/bot challenge, doc_id rotation
+- [x] T5: Viết tests (AC-8)
+  - [x] T5.1: Tạo `tests/scrapers/facebook/facebook-crawler.test.js` hoặc `tests/scrapers/social/facebook/crawler.test.js`
+  - [x] T5.2: Local server trả về HTML home với tokens và GraphQL JSON
+  - [x] T5.3: Test `group_posts`, `page_posts`, `listActions`, `cleanup`
+  - [x] T5.4: Test proxy quarantine retry với real proxy provider
+- [x] T6: Chạy verification
+  - [x] T6.1: `npm run typecheck`
+  - [x] T6.2: `npm test -- tests/scrapers/social/facebook/`
+  - [x] T6.3: `npm test -- tests/core/` (regression)
 
 ## Dev Notes
 
