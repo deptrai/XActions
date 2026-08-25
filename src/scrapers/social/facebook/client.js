@@ -181,7 +181,7 @@ export class FacebookClient extends AbstractApiClient {
     const hsiMatch = html.match(/"__hsi":"([^"]+)"/) || html.match(/window\.__hsi\s*=\s*"([^"]+)"/);
     const hsi = hsiMatch ? hsiMatch[1] : '';
 
-    if (!dtsg || !lsd) {
+    if (!lsd && !dtsg) {
       throw new PlatformError({
         code: 'XACT_4010',
         type: ErrorTypes.AUTH_EXPIRED,
