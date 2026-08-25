@@ -629,7 +629,7 @@ export class DynamicTunnelProvider {
     if ((sld === 'kdlapi' && tld === 'com') || (sld === 'kuaidaili' && tld === 'com')) {
       return 'kuaidaili';
     }
-    if ((sld === 'socksnode' && (tld === 'com' || tld === 'io' || tld === 'net')) || sld === 'socksnode') {
+    if (sld === 'socksnode' && (tld === 'com' || tld === 'io' || tld === 'net')) {
       return 'socksnode';
     }
 
@@ -933,8 +933,11 @@ export class DynamicTunnelProvider {
       if (req.state) parts.push(`state-${req.state}`);
       if (req.city) parts.push(`city-${req.city}`);
       if (req.sessionId) parts.push(`session-${req.sessionId}`);
-      if (req.lifetime) parts.push(`lifetime-${req.lifetime}`);
-      if (typeof req.sessionduration === 'number' && req.sessionduration > 0) parts.push(`sessionduration-${req.sessionduration}`);
+      if (req.lifetime) {
+        parts.push(`lifetime-${req.lifetime}`);
+      } else if (typeof req.sessionduration === 'number' && Number.isFinite(req.sessionduration) && req.sessionduration > 0) {
+        parts.push(`sessionduration-${Math.floor(req.sessionduration)}`);
+      }
       return { username: parts.filter((p) => p !== '').join('-'), password: rawPass };
     }
 

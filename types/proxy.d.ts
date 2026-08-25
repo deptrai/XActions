@@ -187,6 +187,11 @@ export declare class DynamicTunnelProvider implements ProxyProviderContract {
 
   constructor(options: DynamicTunnelOptions);
 
+  get scheme(): SupportedProxyScheme;
+  get host(): string;
+  get port(): number;
+  get username(): string | undefined;
+  get password(): string | undefined;
   get healthyCount(): number;
   get totalCount(): number;
   isAllQuarantined(): boolean;
