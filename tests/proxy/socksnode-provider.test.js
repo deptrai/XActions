@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 
 describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/proxy/socksnode-provider.test.js)', () => {
   describe('Preset Registration & Gateway Parsing (AC-1)', () => {
-    it.skip('[P0] should recognise socksnode provider and parse socks5 gateway URL', async () => {
+    it('[P0] should recognise socksnode provider and parse socks5 gateway URL', async () => {
       const { DynamicTunnelProvider, PROVIDER_PRESETS } = await import('../../src/proxy/providers.js');
 
       expect(PROVIDER_PRESETS.has('socksnode')).toBe(true);
@@ -24,7 +24,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
       expect(provider.password).toBe('testpass');
     });
 
-    it.skip('[P0] should support http scheme gateway for socksnode', async () => {
+    it('[P0] should support http scheme gateway for socksnode', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
 
       const provider = new DynamicTunnelProvider({
@@ -36,7 +36,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
       expect(provider.port).toBe(8080);
     });
 
-    it.skip('[P1] should enforce session ID length and character constraints', async () => {
+    it('[P1] should enforce session ID length and character constraints', async () => {
       const { PROVIDER_SID_LIMITS } = await import('../../src/proxy/providers.js');
 
       expect(PROVIDER_SID_LIMITS.socksnode).toBeDefined();
@@ -47,7 +47,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
   });
 
   describe('Geo-Targeting & Session Parameter Formatting (AC-2)', () => {
-    it.skip('[P0] should format username with country and city targeting', async () => {
+    it('[P0] should format username with country and city targeting', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
 
       const provider = new DynamicTunnelProvider({
@@ -68,7 +68,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
       expect(proxy.server).toBe('socks5://gate.socksnode.com:1080');
     });
 
-    it.skip('[P0] should generate deterministic sticky session ID per accountId', async () => {
+    it('[P0] should generate deterministic sticky session ID per accountId', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
 
       const provider = new DynamicTunnelProvider({
@@ -85,7 +85,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
       expect(proxy1.username).toContain('-session-');
     });
 
-    it.skip('[P1] should include lifetime or session duration in username when provided', async () => {
+    it('[P1] should include lifetime or session duration in username when provided', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
 
       const provider = new DynamicTunnelProvider({
@@ -103,7 +103,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
   });
 
   describe('Multi-Protocol Proxy Agent Integration (AC-3)', () => {
-    it.skip('[P0] should return Socks5ProxyAgent for socks5 scheme proxy', async () => {
+    it('[P0] should return Socks5ProxyAgent for socks5 scheme proxy', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
 
       const provider = new DynamicTunnelProvider({
@@ -117,7 +117,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
       expect(agent).toBeDefined();
     });
 
-    it.skip('[P0] should return ProxyAgent for http scheme proxy', async () => {
+    it('[P0] should return ProxyAgent for http scheme proxy', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
 
       const provider = new DynamicTunnelProvider({
@@ -133,7 +133,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
   });
 
   describe('Playwright & Browser Launch Arguments (AC-4)', () => {
-    it.skip('[P0] should convert to Playwright proxy configuration object', async () => {
+    it('[P0] should convert to Playwright proxy configuration object', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
 
       const provider = new DynamicTunnelProvider({
@@ -151,7 +151,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
       });
     });
 
-    it.skip('[P1] should generate browser launch flags with WebRTC policy', async () => {
+    it('[P1] should generate browser launch flags with WebRTC policy', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
 
       const provider = new DynamicTunnelProvider({
@@ -168,7 +168,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
   });
 
   describe('ProxyIpPool Integration & Quarantine (AC-5)', () => {
-    it.skip('[P0] should integrate seamlessly with ProxyIpPool', async () => {
+    it('[P0] should integrate seamlessly with ProxyIpPool', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
       const { ProxyIpPool } = await import('../../src/proxy/proxy-pool.js');
 
@@ -188,7 +188,7 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
       expect(stickyProxy).toBeDefined();
     });
 
-    it.skip('[P1] should quarantine failed proxy and report pool status', async () => {
+    it('[P1] should quarantine failed proxy and report pool status', async () => {
       const { DynamicTunnelProvider } = await import('../../src/proxy/providers.js');
 
       const provider = new DynamicTunnelProvider({
@@ -196,9 +196,18 @@ describe('Story 11.8 — SocksNode Dynamic Residential Proxy Provider (tests/pro
         provider: 'socksnode',
       });
 
+      expect(provider.healthyCount).toBe(1);
+      expect(provider.isAllQuarantined()).toBe(false);
+
       const proxy = provider.getNext();
       provider.quarantine(proxy, 1000);
 
+      // Quarantining a single per-request proxy session doesn't block the full gateway
+      expect(provider.healthyCount).toBe(1);
+
+      // Quarantining the raw gateway blocks the provider
+      provider.quarantine(provider.rawGateway, 1000);
+      expect(provider.healthyCount).toBe(0);
       expect(provider.isAllQuarantined()).toBe(true);
     });
   });

@@ -24,14 +24,15 @@ const DEFAULT_STANDBY_BACKOFF_MS = 30000;
 const DEFAULT_QUARANTINE_MS = 5 * 60 * 1000;
 const MAX_ACCOUNT_SEEDS = 10000;
 
-const PROVIDER_PRESETS = new Set(['brightdata', 'smartproxy', 'iproyal', 'kuaidaili', 'custom']);
+export const PROVIDER_PRESETS = new Set(['brightdata', 'smartproxy', 'iproyal', 'kuaidaili', 'socksnode', 'custom']);
 
 /** @type {Record<string, { max?: number, exact?: number, regex: RegExp }>} */
-const PROVIDER_SID_LIMITS = {
+export const PROVIDER_SID_LIMITS = {
   brightdata: { max: 64, regex: /^[a-zA-Z0-9]+$/ },
   smartproxy: { max: 32, regex: /^[a-zA-Z0-9_]+$/ },
   iproyal: { exact: 8, regex: /^[a-zA-Z0-9]{8}$/ },
   kuaidaili: { max: 6, regex: /^[a-zA-Z0-9]+$/ },
+  socksnode: { max: 32, regex: /^[a-zA-Z0-9_-]+$/ },
 };
 
 /**
@@ -628,12 +629,35 @@ export class DynamicTunnelProvider {
     if ((sld === 'kdlapi' && tld === 'com') || (sld === 'kuaidaili' && tld === 'com')) {
       return 'kuaidaili';
     }
+    if ((sld === 'socksnode' && (tld === 'com' || tld === 'io' || tld === 'net')) || sld === 'socksnode') {
+      return 'socksnode';
+    }
 
     return 'custom';
   }
 
   get #gatewayKey() {
     return formatProxyUrl(this.rawGateway);
+  }
+
+  get scheme() {
+    return this.rawGateway.scheme;
+  }
+
+  get host() {
+    return this.rawGateway.host;
+  }
+
+  get port() {
+    return this.rawGateway.port;
+  }
+
+  get username() {
+    return this.rawGateway.username;
+  }
+
+  get password() {
+    return this.rawGateway.password;
   }
 
   get totalCount() {
@@ -900,6 +924,18 @@ export class DynamicTunnelProvider {
       // Normal tunnel: append :<sid> to password for a 30s IP lock.
       const password = sid ? `${rawPass}:${sid}` : rawPass;
       return { username: rawUser, password };
+    }
+
+    if (preset === 'socksnode') {
+      const baseUser = this.#baseUsername(rawUser);
+      const parts = [baseUser];
+      if (req.country) parts.push(`country-${req.country}`);
+      if (req.state) parts.push(`state-${req.state}`);
+      if (req.city) parts.push(`city-${req.city}`);
+      if (req.sessionId) parts.push(`session-${req.sessionId}`);
+      if (req.lifetime) parts.push(`lifetime-${req.lifetime}`);
+      if (typeof req.sessionduration === 'number' && req.sessionduration > 0) parts.push(`sessionduration-${req.sessionduration}`);
+      return { username: parts.filter((p) => p !== '').join('-'), password: rawPass };
     }
 
     if (preset === 'custom') {

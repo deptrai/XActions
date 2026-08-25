@@ -8,7 +8,7 @@
 import type { ProxyAgent, Socks5ProxyAgent } from 'undici';
 
 export type SupportedProxyScheme = 'http' | 'https' | 'socks5';
-export type ProviderPreset = 'brightdata' | 'smartproxy' | 'iproyal' | 'kuaidaili' | 'custom';
+export type ProviderPreset = 'brightdata' | 'smartproxy' | 'iproyal' | 'kuaidaili' | 'socksnode' | 'custom';
 
 export interface NormalizedProxy {
   scheme: SupportedProxyScheme;
