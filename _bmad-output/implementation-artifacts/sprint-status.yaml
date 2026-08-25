@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-26T12:00:00Z
+last_updated: 2026-08-26T13:00:00Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -73,8 +73,8 @@ development_status:
   epic-13-retrospective: optional
 
   # --- Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream ---
-  epic-14: backlog
-  14-1-hierarchical-comment-tree-extraction-algorithm: backlog
+  epic-14: in-progress
+  14-1-hierarchical-comment-tree-extraction-algorithm: ready-for-dev
   14-2-mcp-tool-exporters-daemon-http-sse-server: backlog
   14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub: backlog
   epic-14-retrospective: optional
