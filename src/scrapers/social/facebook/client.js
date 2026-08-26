@@ -84,6 +84,7 @@ export class FacebookClient extends AbstractApiClient {
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../core/session-manager.js').SessionManager} [deps.sessionManager]
    * @param {import('../../../core/platform-validator.js').AbstractPlatformResponseValidator} [deps.responseValidator]
+   * @param {number} [deps.timeout]
    */
   constructor(deps = {}) {
     super(/** @type {any} */ ({
@@ -99,6 +100,7 @@ export class FacebookClient extends AbstractApiClient {
     if (deps.friendlyNames) {
       this.friendlyNames = deps.friendlyNames;
     }
+    this.timeout = deps.timeout ?? 120000;
   }
 
   /**

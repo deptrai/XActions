@@ -110,6 +110,7 @@ export class AbstractApiClient {
    * @param {number} [options.maxBackoffMs]
    * @param {number} [options.rateLimitHibernationMs]
    * @param {number} [options.standbyBackoffMs]
+   * @param {number} [options.timeout]
    */
   constructor(options = {}) {
     if (new.target === AbstractApiClient) {
@@ -135,6 +136,7 @@ export class AbstractApiClient {
     if (options.maxBackoffMs !== undefined) this.maxBackoffMs = options.maxBackoffMs;
     if (options.rateLimitHibernationMs !== undefined) this.rateLimitHibernationMs = options.rateLimitHibernationMs;
     if (options.standbyBackoffMs !== undefined) this.standbyBackoffMs = options.standbyBackoffMs;
+    this.timeout = options.timeout ?? 30000;
   }
 
   /**
@@ -547,10 +549,12 @@ export class AbstractApiClient {
           transport = await this.#getDefaultHttpClient();
         }
 
+        const requestTimeout = opts.timeout ?? this.timeout ?? 30000;
         let response;
         try {
           response = await transport({
             ...opts,
+            timeout: requestTimeout,
             method,
             url,
             proxy,
