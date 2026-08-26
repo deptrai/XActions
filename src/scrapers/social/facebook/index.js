@@ -23,4 +23,8 @@ export {
   normalizeFacebookGroupSearchResult,
   searchResultToPostItem,
 } from './normalize-search.js';
+export {
+  normalizeFacebookMarketplaceListing,
+  marketplaceListingToPostItem,
+} from './normalize-marketplace.js';
 

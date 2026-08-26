@@ -296,6 +296,12 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
     const type = /** @type {string | undefined} */ (body.type);
     const parallel = /** @type {boolean | undefined} */ (body.parallel);
     const location = /** @type {string | undefined} */ (body.location);
+    const category = /** @type {string | undefined} */ (body.category);
+    const categoryId = /** @type {string | number | undefined} */ (body.categoryId);
+    const minPrice = /** @type {number | string | undefined} */ (body.minPrice);
+    const maxPrice = /** @type {number | string | undefined} */ (body.maxPrice);
+    const priceMin = /** @type {number | string | undefined} */ (body.priceMin);
+    const priceMax = /** @type {number | string | undefined} */ (body.priceMax);
     const limit = /** @type {number | string | undefined} */ (body.limit);
     const includeReplies = /** @type {boolean | undefined} */ (body.includeReplies);
     const authCookie = /** @type {Record<string, unknown> | undefined} */ (body.authCookie);
@@ -432,7 +438,17 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
             ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
           }
         : action === 'marketplace'
-          ? { query: /** @type {string} */ (query).trim() }
+          ? {
+              query: /** @type {string} */ (query).trim(),
+              ...(location !== undefined && location !== null && { location: String(location).trim() }),
+              ...(category !== undefined && category !== null && { category: String(category).trim() }),
+              ...(categoryId !== undefined && categoryId !== null && { categoryId: String(categoryId).trim() }),
+              ...(minPrice !== undefined && minPrice !== null && { minPrice: Number(minPrice) }),
+              ...(maxPrice !== undefined && maxPrice !== null && { maxPrice: Number(maxPrice) }),
+              ...(priceMin !== undefined && priceMin !== null && { priceMin: Number(priceMin) }),
+              ...(priceMax !== undefined && priceMax !== null && { priceMax: Number(priceMax) }),
+              ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
+            }
           : action === 'group_search'
             ? { url: /** @type {string} */ (url).trim(), query: /** @type {string} */ (query).trim() }
             : { url: /** @type {string} */ (url).trim() }),

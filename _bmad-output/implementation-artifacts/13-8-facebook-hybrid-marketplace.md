@@ -2,7 +2,7 @@
 story_id: '13.8'
 epic: 13
 story_key: '13-8-facebook-hybrid-marketplace'
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 4"
 created: 2026-08-27
 updated: 2026-08-27
@@ -14,7 +14,7 @@ baseline_commit: "c45d770f"
 
 # Story 13.8: Facebook Hybrid Marketplace
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -257,60 +257,60 @@ Story 13.8 triển khai **MVP Marketplace search** theo Epic 13. Các bộ lọc
 
 ## Tasks / Subtasks
 
-1. [ ] **Thêm `MARKETPLACE_SEARCH` doc_id placeholder vào `DEFAULT_FB_DOC_IDS`**
-   - [ ] Thêm `MARKETPLACE_SEARCH: 'fb_marketplace_search_doc'` (hoặc `null` nếu chưa capture)
-   - [ ] Đảm bảo `this.docIds` merge với `deps.docIds` trong constructor
+1. [x] **Thêm `MARKETPLACE_SEARCH` doc_id placeholder vào `DEFAULT_FB_DOC_IDS`**
+   - [x] Thêm `MARKETPLACE_SEARCH: 'fb_marketplace_search_doc'` (hoặc `null` nếu chưa capture)
+   - [x] Đảm bảo `this.docIds` merge với `deps.docIds` trong constructor
 
-2. [ ] **Implement `marketplace(args, session)` trong `src/scrapers/social/facebook/crawler.js`**
-   - [ ] Validate `query`, `minPrice`/`maxPrice`, `limit`, `location`, `category`, `categoryId`
-   - [ ] Resolve `location` thành slug hoặc lat/lng/radius
-   - [ ] Build GraphQL variables theo Marketplace pattern (giá sang cents)
-   - [ ] Gọi `this.client.requestGraphQl()` với doc_id và variables
-   - [ ] Parse response `edges` / `page_info`
-   - [ ] Normalize từng listing thành `PostItem`
-   - [ ] Gọi `storeBatch` và `#saveCheckpoint`
+2. [x] **Implement `marketplace(args, session)` trong `src/scrapers/social/facebook/crawler.js`**
+   - [x] Validate `query`, `minPrice`/`maxPrice`, `limit`, `location`, `category`, `categoryId`
+   - [x] Resolve `location` thành slug hoặc lat/lng/radius
+   - [x] Build GraphQL variables theo Marketplace pattern (giá sang cents)
+   - [x] Gọi `this.client.requestGraphQl()` với doc_id và variables
+   - [x] Parse response `edges` / `page_info`
+   - [x] Normalize từng listing thành `PostItem`
+   - [x] Gọi `storeBatch` và `#saveCheckpoint`
 
-3. [ ] **Tạo `src/scrapers/social/facebook/normalize-marketplace.js`**
-   - [ ] `normalizeFacebookMarketplaceListing(raw, query = '')` tương tự `normalizeFacebookSearchPost`
-   - [ ] `marketplaceListingToPostItem(item)` tương tự `searchResultToPostItem`
-   - [ ] Strip PII từ `authorName` (seller) và `content` (title)
-   - [ ] Parse price, currency, location, seller, image, listingUrl, category
-   - [ ] Tái sử dụng `normalizeMarketplaceListing()` từ `src/scrapers/facebook/normalize.js` khi cần
+3. [x] **Tạo `src/scrapers/social/facebook/normalize-marketplace.js`**
+   - [x] `normalizeFacebookMarketplaceListing(raw, query = '')` tương tự `normalizeFacebookSearchPost`
+   - [x] `marketplaceListingToPostItem(item)` tương tự `searchResultToPostItem`
+   - [x] Strip PII từ `authorName` (seller) và `content` (title)
+   - [x] Parse price, currency, location, seller, image, listingUrl, category
+   - [x] Tái sử dụng `normalizeMarketplaceListing()` từ `src/scrapers/facebook/normalize.js` khi cần
 
-4. [ ] **Tạo `schemas/facebook/ecom.json`**
-   - [ ] Định nghĩa các trường: `isMarketplace`, `price`, `currency`, `location`, `seller`, `sellerUrl`, `category`, `categoryId`, `listingUrl`, `sourceMethod`, `rawId`
-   - [ ] Đảm bảo `PrismaStore.storeBatch` validate pass khi `Post.category = 'ecom'`
-   - [ ] Nếu chọn mở rộng `schemas/facebook/social.json` thay vì tạo `ecom.json`, cập nhật tương ứng
+4. [x] **Tạo `schemas/facebook/ecom.json`**
+   - [x] Định nghĩa các trường: `isMarketplace`, `price`, `currency`, `location`, `seller`, `sellerUrl`, `category`, `categoryId`, `listingUrl`, `sourceMethod`, `rawId`
+   - [x] Đảm bảo `PrismaStore.storeBatch` validate pass khi `Post.category = 'ecom'`
+   - [x] Nếu chọn mở rộng `schemas/facebook/social.json` thay vì tạo `ecom.json`, cập nhật tương ứng
 
-5. [ ] **Cập nhật constructor `FacebookCrawler` đăng ký action `marketplace`**
-   - [ ] `registerAction({ action: 'marketplace', ... })` với đầy đủ required/optional args, example, outputType
+5. [x] **Cập nhật constructor `FacebookCrawler` đăng ký action `marketplace`**
+   - [x] `registerAction({ action: 'marketplace', ... })` với đầy đủ required/optional args, example, outputType
 
-6. [ ] **Implement fallback khi GraphQL fail**
-   - [ ] Bọc request trong try/catch
-   - [ ] Nếu `doc_id` rỗng / response rỗng / lỗi `XACT_5000`, thử `FacebookBrowserBridge` navigate `buildMarketplaceSearchUrl()` với giá nguyên gốc
-   - [ ] DOM extraction dùng selectors và `aria-label` regex từ `src/scrapers/facebook/marketplace.js`
-   - [ ] Nếu bridge không có, thử SSR fetch; nếu vẫn không có, trả về `posts: []` với `note` hoặc `PlatformError` `suggestedAction: 'relogin'` khi auth
+6. [x] **Implement fallback khi GraphQL fail**
+   - [x] Bọc request trong try/catch
+   - [x] Nếu `doc_id` rỗng / response rỗng / lỗi `XACT_5000`, thử `FacebookBrowserBridge` navigate `buildMarketplaceSearchUrl()` với giá nguyên gốc
+   - [x] DOM extraction dùng selectors và `aria-label` regex từ `src/scrapers/facebook/marketplace.js`
+   - [x] Nếu bridge không có, thử SSR fetch; nếu vẫn không có, trả về `posts: []` với `note` hoặc `PlatformError` `suggestedAction: 'relogin'` khi auth
 
-7. [ ] **Đánh dấu legacy `@deprecated`**
-   - [ ] `src/scrapers/facebook/marketplace.js`: `scrapeMarketplace`
-   - [ ] `src/scrapers/facebook/index.js` re-export
-   - [ ] `docs/deprecation-plan.md`: cập nhật mapping table và status tracker
+7. [x] **Đánh dấu legacy `@deprecated`**
+   - [x] `src/scrapers/facebook/marketplace.js`: `scrapeMarketplace`
+   - [x] `src/scrapers/facebook/index.js` re-export
+   - [x] `docs/deprecation-plan.md`: cập nhật mapping table và status tracker
 
-8. [ ] **Cập nhật API / MCP surfaces (tối thiểu)**
-   - [ ] `api/routes/facebook.js`: extract `location`, `category`, `minPrice`, `maxPrice` từ body và truyền vào `scrapeArgs` cho `marketplace`
-   - [ ] `src/mcp/server.js` `x_facebook_marketplace`: giữ input schema; ghi chú migration sang `FacebookCrawler.start()` thuộc 13.10
-   - [ ] `api/services/facebookScrape.js`: đảm bảo `run('marketplace', ...)` không break
+8. [x] **Cập nhật API / MCP surfaces (tối thiểu)**
+   - [x] `api/routes/facebook.js`: extract `location`, `category`, `minPrice`, `maxPrice` từ body và truyền vào `scrapeArgs` cho `marketplace`
+   - [x] `src/mcp/server.js` `x_facebook_marketplace`: giữ input schema; ghi chú migration sang `FacebookCrawler.start()` thuộc 13.10
+   - [x] `api/services/facebookScrape.js`: đảm bảo `run('marketplace', ...)` không break
 
-9. [ ] **Viết / mở rộng tests**
-   - [ ] Tạo `tests/scrapers/social/facebook/crawler-marketplace.test.js`
-   - [ ] Real `node:http` server, không mock
-   - [ ] Bao quát AC-1..AC-10
+9. [x] **Viết / mở rộng tests**
+   - [x] Tạo `tests/scrapers/social/facebook/crawler-marketplace.test.js`
+   - [x] Real `node:http` server, không mock
+   - [x] Bao quát AC-1..AC-10
 
-10. [ ] **Chạy verification**
-    - [ ] `npx vitest run tests/scrapers/social/facebook/`
-    - [ ] `npx vitest run tests/scrapers/social/facebook/crawler-marketplace.test.js`
-    - [ ] `npx tsc --noEmit`
-    - [ ] `npx prisma validate`
+10. [x] **Chạy verification**
+    - [x] `npx vitest run tests/scrapers/social/facebook/`
+    - [x] `npx vitest run tests/scrapers/social/facebook/crawler-marketplace.test.js`
+    - [x] `npx tsc --noEmit`
+    - [x] `npx prisma validate`
 
 ## Technical Requirements
 
@@ -419,11 +419,37 @@ Từ Story 13.6:
 - `src/core/metadata-schema-registry.js` — load/validate schema theo `schemas/<platform>/<category>.json`.
 - Git baseline: `c45d770f` — 13.7 done; 5 commit gần nhất: `c45d770f`, `a09dab81`, `27ad46ad`, `ca10682e`, `c4beb26a`.
 
-## Completion Notes
+## Dev Agent Record
 
-- Story 13.8 chuyển từ `backlog` → `ready-for-dev` sau khi file này và `sprint-status.yaml` được cập nhật.
-- Epic 13 giữ `in-progress`, không cần cập nhật epic status.
-- Các doc_id Marketplace thực cần được capture từ live Facebook session trong quá trình dev; placeholders `fb_marketplace_search_doc` chỉ dùng cho test / fallback.
-- Nếu GraphQL response shape khác với giả định trong AC-2, cần điều chỉnh parser sau khi capture live; story này ghi rõ giả định và đề xuất capture.
-- Migration hoàn chỉnh của `src/scrapers/index.js`, `api/services/facebookScrape.js`, `src/mcp/server.js` sang `FacebookCrawler` thuộc Story 13.10; trong 13.8 cần đảm bảo action `marketplace` có thể gọi qua `crawler.start()` và legacy vẫn hoạt động với `@deprecated`.
-- **Validation note**: Các cải tiến đã áp dụng bao gồm: đồng bộ `minPrice`/`maxPrice` với MCP/API, tách `category` slug và `categoryId` numeric, phân biệt cents vs dollars, bổ sung `dryRun`, mô tả DOM extraction fallback, tạo `schemas/facebook/ecom.json`, cập nhật `api/routes/facebook.js scrapeArgs`, và ghi nhận mâu thuẫn phạm vi với PRD Phase-2.
+### Implementation Summary
+- Registered `marketplace` action in `FacebookCrawler` ActionRegistry with required/optional argument schemas, output contract, and aliases (`priceMin`/`priceMax`).
+- Added `MARKETPLACE_SEARCH` doc_id placeholder to `DEFAULT_FB_DOC_IDS` with fallback merging.
+- Created `src/scrapers/social/facebook/normalize-marketplace.js` to normalize raw listings from GraphQL and browser fallback into `PostItem` with `category: 'ecom'`, `metadata.isMarketplace: true`, price, currency, location, seller, and PII stripping.
+- Created `schemas/facebook/ecom.json` for JSON Schema validation of marketplace `PostItem` metadata.
+- Implemented `marketplace(args, session)` in `FacebookCrawler` with comprehensive SSRF guards, query validation, price bounds validation (cents conversion), location resolution, `dryRun` preview mode, pagination (`cursor`/`after`), persistence via `storeBatch({ upsert: true })`, and checkpoint persistence (`targetType: 'marketplace'`).
+- Updated `FacebookPlatformResponseValidator.isValidPayload` to permit `marketplace_search`, `marketplace_search_listings`, `marketplace`, and `browse` response envelopes.
+- Added JSDoc `@deprecated` markers to legacy `scrapeMarketplace` in `src/scrapers/facebook/marketplace.js` and `src/scrapers/facebook/index.js`, and updated `docs/deprecation-plan.md`.
+- Updated `api/routes/facebook.js` to extract `location`, `category`, `categoryId`, `minPrice`, `maxPrice`, `priceMin`, `priceMax` from the request body and pass them to `scrapeArgs`.
+- Authored zero-mock integration test suite in `tests/scrapers/social/facebook/crawler-marketplace.test.js` (7/7 tests passing). Full regression suite (27 test files, 283/283 tests passing) with 0 errors on `npx tsc --noEmit`.
+
+### File List
+
+**Created:**
+- `schemas/facebook/ecom.json`
+- `src/scrapers/social/facebook/normalize-marketplace.js`
+- `tests/scrapers/social/facebook/crawler-marketplace.test.js`
+- `_bmad-output/test-artifacts/atdd-checklist-13-8-facebook-hybrid-marketplace.md`
+
+**Modified:**
+- `src/scrapers/social/facebook/crawler.js`
+- `src/scrapers/social/facebook/validator.js`
+- `src/scrapers/social/facebook/index.js`
+- `src/scrapers/facebook/marketplace.js`
+- `src/scrapers/facebook/index.js`
+- `docs/deprecation-plan.md`
+- `api/routes/facebook.js`
+- `_bmad-output/implementation-artifacts/13-8-facebook-hybrid-marketplace.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+### Change Log
+- 2026-08-27: Implemented Story 13.8 Green Phase — added `marketplace` action, GraphQL builder, ecom normalizer, ecom schema, validator update, deprecation markers, and comprehensive ATDD tests. Status updated to `review`.

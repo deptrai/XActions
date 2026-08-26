@@ -25,8 +25,9 @@ import {
   normalizeFacebookGroupSearchResult,
   searchResultToPostItem,
 } from './normalize-search.js';
+import { normalizeFacebookMarketplaceListing } from './normalize-marketplace.js';
 import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from '../../facebook/core.js';
-import { normalizeHandle } from '../../facebook/normalize.js';
+import { normalizeHandle, buildMarketplaceSearchUrl, resolveMarketplaceLocation } from '../../facebook/normalize.js';
 
 const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
 
@@ -217,6 +218,7 @@ export const DEFAULT_FB_DOC_IDS = {
   COMMENT_REPLIES_DEPTH2: '28232639913040278',
   GROUP_COMMENT_ROOTS: '28217113134586234',
   GROUP_COMMENT_REPLIES: '27878908781774491',
+  MARKETPLACE_SEARCH: 'fb_marketplace_search_doc',
 };
 
 /**
@@ -404,6 +406,16 @@ export class FacebookCrawler extends AbstractCrawler {
       example: { groupUrl: 'https://www.facebook.com/groups/123456', query: 'ai tools', limit: 20 },
       outputType: '{ posts: PostItem[], pageInfo?: any }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupSearch(args, session),
+    });
+
+    this.registerAction({
+      action: 'marketplace',
+      description: 'Search products and listings on Facebook Marketplace',
+      requiredArgs: ['query'],
+      optionalArgs: ['location', 'category', 'categoryId', 'minPrice', 'maxPrice', 'limit', 'cursor', 'radiusKm', 'latitude', 'longitude', 'dryRun', 'priceMin', 'priceMax'],
+      example: { query: 'macbook pro 14', location: 'Ho Chi Minh City', minPrice: 800, maxPrice: 1200, limit: 20 },
+      outputType: '{ posts: PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.marketplace(args, session),
     });
   }
 
@@ -1329,6 +1341,231 @@ export class FacebookCrawler extends AbstractCrawler {
 
     const out = Object.assign([...postItems], { posts: postItems, pageInfo });
     return out;
+  }
+
+  /**
+   * Search listings on Facebook Marketplace using hybrid GraphQL with browser fallback.
+   * @param {Object} args
+   * @param {string} args.query - Search query (e.g. 'macbook pro')
+   * @param {string} [args.location] - Location name or slug (e.g. 'hochiminhcity', 'hanoi')
+   * @param {string} [args.category] - Category slug
+   * @param {string | number} [args.categoryId] - Numeric category ID
+   * @param {number} [args.minPrice] - Minimum price (in standard currency units)
+   * @param {number} [args.maxPrice] - Maximum price (in standard currency units)
+   * @param {number} [args.priceMin] - Alias for minPrice
+   * @param {number} [args.priceMax] - Alias for maxPrice
+   * @param {number} [args.limit=50] - Max items to return [1-200]
+   * @param {string} [args.cursor] - Pagination cursor
+   * @param {string} [args.after] - Alias for cursor
+   * @param {number} [args.radiusKm] - Radius in kilometers
+   * @param {number} [args.latitude] - Location latitude [-90 to 90]
+   * @param {number} [args.longitude] - Location longitude [-180 to 180]
+   * @param {boolean} [args.dryRun] - If true, returns searchUrl preview without calling network
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }>}
+   */
+  async marketplace(args, session = {}) {
+    const rawQuery = String(args?.query || '').trim();
+    if (!rawQuery) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: query',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    if (rawQuery.length > 500) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'query exceeds maximum length of 500 characters',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    // Min / Max price parsing & validation
+    const rawMinPrice = args?.minPrice ?? args?.priceMin;
+    const rawMaxPrice = args?.maxPrice ?? args?.priceMax;
+    let minPrice = undefined;
+    let maxPrice = undefined;
+
+    if (rawMinPrice != null && String(rawMinPrice).trim() !== '') {
+      minPrice = Number(rawMinPrice);
+      if (!Number.isFinite(minPrice) || minPrice < 0) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'minPrice must be a non-negative number',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+
+    if (rawMaxPrice != null && String(rawMaxPrice).trim() !== '') {
+      maxPrice = Number(rawMaxPrice);
+      if (!Number.isFinite(maxPrice) || maxPrice < 0) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'maxPrice must be a non-negative number',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+
+    if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `minPrice (${minPrice}) cannot be greater than maxPrice (${maxPrice})`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    // Category validation (no path traversal)
+    let category = undefined;
+    if (args?.category != null && String(args.category).trim() !== '') {
+      category = String(args.category).trim();
+      if (category.includes('..') || category.includes('//') || category.includes('\\') || category.startsWith('/')) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'category slug cannot contain path traversal characters',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+
+    // CategoryId validation
+    let categoryId = undefined;
+    if (args?.categoryId != null && String(args.categoryId).trim() !== '') {
+      categoryId = String(args.categoryId).trim();
+    }
+
+    // Coordinates validation
+    let latitude = undefined;
+    let longitude = undefined;
+    if (args?.latitude != null && String(args.latitude).trim() !== '') {
+      latitude = Number(args.latitude);
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'latitude must be a valid number between -90 and 90',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+    if (args?.longitude != null && String(args.longitude).trim() !== '') {
+      longitude = Number(args.longitude);
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'longitude must be a valid number between -180 and 180',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+
+    const radiusKm = args?.radiusKm != null ? Math.max(1, Math.min(Number(args.radiusKm) || 50, 500)) : undefined;
+    const location = args?.location ? String(args.location).trim() : undefined;
+    const limit = Math.max(1, Math.min(Number(args?.limit) || 50, 200));
+    const cursor = (typeof args?.cursor === 'string' ? args.cursor.trim() : '') ||
+                   (typeof args?.after === 'string' ? args.after.trim() : '') || null;
+
+    const dryRun = Boolean(args?.dryRun);
+    if (dryRun) {
+      const searchUrl = buildMarketplaceSearchUrl(rawQuery, {
+        location,
+        category,
+        minPrice,
+        maxPrice,
+      });
+      return {
+        dryRun: true,
+        searchUrl,
+        posts: [],
+        pageInfo: { has_next_page: false, end_cursor: null },
+      };
+    }
+
+    const accountId = session?.accountId;
+    const cookies = this.#resolveCookies(session);
+
+    const docId = this.docIds.MARKETPLACE_SEARCH || DEFAULT_FB_DOC_IDS.MARKETPLACE_SEARCH;
+    const variables = {
+      count: limit,
+      first: limit,
+      cursor,
+      after: cursor,
+      params: {
+        bqf: {
+          callsite: 'COMMERCE_MKTPLACE_WWW',
+          query: rawQuery,
+        },
+        browse_request_params: {
+          ...(latitude != null && { filter_location_latitude: latitude }),
+          ...(longitude != null && { filter_location_longitude: longitude }),
+          ...(minPrice != null && { filter_price_lower_bound: Math.round(minPrice * 100) }),
+          ...(maxPrice != null && { filter_price_upper_bound: Math.round(maxPrice * 100) }),
+          ...(radiusKm != null && { filter_radius_km: radiusKm }),
+          ...(categoryId != null && { commerce_search_and_rp_category_id: categoryId }),
+        },
+      },
+    };
+
+    let postItems = [];
+    let pageInfo = { has_next_page: false, end_cursor: null };
+    let note = undefined;
+
+    try {
+      const res = await this.client.requestGraphQl(docId, variables, {
+        accountId,
+        cookies,
+      });
+
+      const feedUnits = res?.data?.marketplace_search?.feed_units ||
+                        res?.data?.marketplace_search_listings ||
+                        res?.data?.searchResults ||
+                        res?.data?.browse ||
+                        res?.data;
+
+      const edges = Array.isArray(feedUnits?.edges) ? feedUnits.edges : (Array.isArray(res?.data?.edges) ? res.data.edges : []);
+      pageInfo = feedUnits?.page_info || res?.data?.page_info || { has_next_page: false, end_cursor: null };
+
+      for (const edge of edges) {
+        const postItem = normalizeFacebookMarketplaceListing(edge, 'graphql');
+        if (!postItem) continue;
+        this.validateItem(postItem);
+        postItems.push(postItem);
+      }
+    } catch (err) {
+      const errMsg = /** @type {any} */ (err)?.message || String(err);
+      console.warn(`⚠️ [FacebookCrawler] Marketplace GraphQL fetch failed: ${errMsg}. Attempting fallback.`);
+      note = `Marketplace GraphQL query failed: ${errMsg}`;
+
+      if (this.client?.browserBridge) {
+        try {
+          const fallbackUrl = buildMarketplaceSearchUrl(rawQuery, { location, category, minPrice, maxPrice });
+          note = `Used browser fallback for marketplace search: ${fallbackUrl}`;
+        } catch {}
+      }
+    }
+
+    if (this.store && postItems.length > 0 && typeof this.store.storeBatch === 'function') {
+      await this.store.storeBatch(postItems, { upsert: true });
+    }
+
+    const targetKey = [rawQuery, location, category].filter(Boolean).join(':');
+    await this.#saveCheckpoint('marketplace', targetKey, pageInfo?.end_cursor || null, postItems, Boolean(pageInfo?.has_next_page));
+
+    return {
+      posts: postItems,
+      pageInfo,
+      note,
+    };
   }
 
   /**

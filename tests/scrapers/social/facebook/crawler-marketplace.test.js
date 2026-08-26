@@ -283,5 +283,62 @@ describe('Story 13.8 — Facebook Hybrid Marketplace', () => {
       args: { query: 'car', category: '../../etc/passwd' },
       session: { accountId: 'acc_fb_1' },
     })).rejects.toThrow(PlatformError);
+
+    // Invalid coordinates
+    await expect(crawler.start({
+      action: 'marketplace',
+      args: { query: 'car', latitude: 100 },
+      session: { accountId: 'acc_fb_1' },
+    })).rejects.toThrow(PlatformError);
+  });
+
+  it('[AC-5] should handle GraphQL failure gracefully with fallback note and empty posts list', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const crawler = new FacebookCrawler({
+      client,
+      sessionManager,
+      docIds: {
+        MARKETPLACE_SEARCH: 'invalid_unconfigured_doc_id',
+      },
+    });
+
+    const res = await crawler.start({
+      action: 'marketplace',
+      args: {
+        query: 'nintendo switch',
+      },
+      session: { accountId: 'acc_fb_1' },
+    });
+
+    expect(res).toBeDefined();
+    expect(res.posts).toEqual([]);
+    expect(res.note).toBeDefined();
+    expect(res.note).toContain('Marketplace GraphQL query failed');
+  });
+
+  it('[AC-10] should validate marketplace PostItem metadata against schemas/facebook/ecom.json', async () => {
+    const metadataSchemaRegistry = (await import('../../../../src/core/metadata-schema-registry.js')).default;
+
+    const sampleListing = {
+      isMarketplace: true,
+      price: '$1,200',
+      currency: 'USD',
+      location: 'Ho Chi Minh City',
+      seller: 'John Doe',
+      sellerUrl: 'https://www.facebook.com/seller_1',
+      sellerId: 'seller_1',
+      category: 'electronics',
+      categoryId: '12345',
+      listingUrl: 'https://www.facebook.com/marketplace/item/12345',
+      sourceMethod: 'graphql',
+      rawId: '12345',
+      creationTime: 1787680000,
+    };
+
+    const validation = metadataSchemaRegistry.validateMetadata('facebook', 'ecom', sampleListing);
+    expect(validation.valid).toBe(true);
+    expect(validation.errors).toEqual([]);
   });
 });
+
+
