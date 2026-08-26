@@ -12,6 +12,7 @@ import { AbstractApiClient } from '../../../core/base-client.js';
 import { FacebookPlatformResponseValidator } from './validator.js';
 import { FacebookBrowserBridge } from './signer-bridge.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import crypto from 'node:crypto';
 
 const MAX_TOKEN_CACHE_ENTRIES = 500;
 const DEFAULT_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
@@ -116,6 +117,7 @@ export class FacebookClient extends AbstractApiClient {
    * @param {string} [deps.profileDir]
    * @param {boolean} [deps.httpFallback]
    * @param {number} [deps.tokenTtlMs]
+   * @param {any} [deps.proxy]
    * @param {number} [deps.timeout]
    */
   constructor(deps = {}) {
@@ -142,6 +144,7 @@ export class FacebookClient extends AbstractApiClient {
     this.userDataDir = deps.userDataDir || null;
     this.profileDir = deps.profileDir || null;
     this.httpFallback = deps.httpFallback ?? true;
+    this.proxy = deps.proxy || null;
     if (deps.tokenTtlMs) {
       this.#tokenTtlMs = deps.tokenTtlMs;
     }
@@ -160,6 +163,7 @@ export class FacebookClient extends AbstractApiClient {
       adapterName: this.adapterName,
       headless: this.headless,
       userDataDir: this.userDataDir || this.profileDir || undefined,
+      proxy: this.proxy,
     });
     return this.#ownedBrowserBridge;
   }
@@ -494,10 +498,6 @@ export class FacebookClient extends AbstractApiClient {
         await this.#ownedBrowserBridge.close();
       } catch {}
       this.#ownedBrowserBridge = null;
-    } else if (this.browserBridge && typeof this.browserBridge.close === 'function') {
-      try {
-        await this.browserBridge.close();
-      } catch {}
     }
   }
 
@@ -507,12 +507,8 @@ export class FacebookClient extends AbstractApiClient {
    * @returns {string}
    */
   #cacheKey(accountId, cookieHeader) {
-    let h = 5381;
-    for (let i = 0; i < cookieHeader.length; i += 1) {
-      h = ((h << 5) + h) + cookieHeader.charCodeAt(i);
-      h >>>= 0;
-    }
-    return `${accountId}:${h.toString(16)}`;
+    const hash = crypto.createHash('sha256').update(cookieHeader || '').digest('hex').slice(0, 16);
+    return `${accountId}:${hash}`;
   }
 
   /**

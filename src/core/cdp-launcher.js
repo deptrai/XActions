@@ -163,6 +163,7 @@ export function buildChromeArgs(options = {}) {
     `--user-data-dir=${userDataDir}`,
     '--no-first-run',
     '--no-default-browser-check',
+    '--disable-blink-features=AutomationControlled',
   ];
 
   if (headless) {
@@ -181,7 +182,6 @@ export function buildChromeArgs(options = {}) {
       proxyHost = typeof options.proxy === 'object' && options.proxy?.host ? options.proxy.host : '';
     }
     const hostExclude = proxyHost.includes(':') && !proxyHost.startsWith('[') ? `[${proxyHost}]` : proxyHost;
-
     args.push(
       '--force-webrtc-ip-handling-policy=disable_non_proxied_udp',
       `--proxy-server=${rawProxy}`,

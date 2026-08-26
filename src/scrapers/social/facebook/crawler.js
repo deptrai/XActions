@@ -668,6 +668,15 @@ export class FacebookCrawler extends AbstractCrawler {
   }
 
   /**
+   * @param {any} args
+   * @returns {Promise<import('../../../core/types.js').CommentItem[]>}
+   */
+  async getComments(args) {
+    const res = await this.getCommentsForPost(args);
+    return res.comments;
+  }
+
+  /**
    * Scrape hierarchical comments from a Facebook post via GraphQL.
    * @param {Object} args
    * @param {string} args.postId - Post URL, base64 feedback id, numeric post id, or namespaced/synthetic id

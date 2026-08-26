@@ -130,6 +130,9 @@ export class FacebookBrowserBridge {
   /** @type {boolean} */
   #isFirstCall = true;
 
+  /** @type {Promise<any> | null} */
+  #launchPromise = null;
+
   /**
    * @param {Object} [options={}]
    * @param {string} [options.baseUrl='https://www.facebook.com']
@@ -211,6 +214,7 @@ export class FacebookBrowserBridge {
       }
     } else if (Array.isArray(cookies)) {
       for (const c of cookies) {
+        if (!c || typeof c !== 'object') continue;
         const item = /** @type {any} */ (c);
         result.push({
           name: item.name,
@@ -228,7 +232,7 @@ export class FacebookBrowserBridge {
   }
 
   /**
-   * Ensure browser connection is ready.
+   * Ensure browser connection is ready with mutex protection against parallel launches.
    * @param {string} accountId
    * @returns {Promise<any>}
    */
@@ -236,39 +240,50 @@ export class FacebookBrowserBridge {
     if (this.#browser) {
       return this.#browser;
     }
-
-    const effectiveUserDataDir = this.#resolveUserDataDir(accountId);
-    const adapter = await this.#resolveAdapter();
-
-    if (this.cdpUrl) {
-      this.#browser = await launchBrowserWithCdp(this.cdpUrl, {
-        adapter,
-        preserveProfile: true,
-      });
-      return this.#browser;
+    if (this.#launchPromise) {
+      return this.#launchPromise;
     }
 
-    if (this.launchChrome) {
-      const launched = await launchChrome({
-        userDataDir: effectiveUserDataDir,
-        headless: this.headless,
-        proxy: this.proxy,
-      });
-      this.#chromeKiller = launched.kill;
-      this.#browser = await launchBrowserWithCdp(launched.cdpUrl, {
-        adapter,
-        preserveProfile: true,
-      });
-      return this.#browser;
-    }
+    this.#launchPromise = (async () => {
+      try {
+        const effectiveUserDataDir = this.#resolveUserDataDir(accountId);
+        const adapter = await this.#resolveAdapter();
 
-    // Default: launch fresh browser instance via adapter
-    this.#browser = await adapter.launch(/** @type {any} */ ({
-      headless: this.headless,
-      userDataDir: effectiveUserDataDir,
-      proxy: this.proxy,
-    }));
-    return this.#browser;
+        if (this.cdpUrl) {
+          this.#browser = await launchBrowserWithCdp(this.cdpUrl, {
+            adapter,
+            preserveProfile: true,
+          });
+          return this.#browser;
+        }
+
+        if (this.launchChrome) {
+          const launched = await launchChrome({
+            userDataDir: effectiveUserDataDir,
+            headless: this.headless,
+            proxy: this.proxy,
+          });
+          this.#chromeKiller = launched.kill;
+          this.#browser = await launchBrowserWithCdp(launched.cdpUrl, {
+            adapter,
+            preserveProfile: true,
+          });
+          return this.#browser;
+        }
+
+        // Default: launch fresh browser instance via adapter
+        this.#browser = await adapter.launch(/** @type {any} */ ({
+          headless: this.headless,
+          userDataDir: effectiveUserDataDir,
+          proxy: this.proxy,
+        }));
+        return this.#browser;
+      } finally {
+        this.#launchPromise = null;
+      }
+    })();
+
+    return this.#launchPromise;
   }
 
   /**
@@ -289,6 +304,7 @@ export class FacebookBrowserBridge {
     while (attempt < maxAttempts) {
       attempt++;
       let page = null;
+      let timeoutId = null;
       try {
         const adapter = await this.#resolveAdapter();
         const browser = await this.#getBrowser(effectiveAccountId);
@@ -309,7 +325,7 @@ export class FacebookBrowserBridge {
 
         const evalPromise = adapter.evaluate(page, extractFacebookTokensScript);
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Token extraction evaluate timed out')), evalTimeout);
+          timeoutId = setTimeout(() => reject(new Error('Token extraction evaluate timed out')), evalTimeout);
         });
 
         const rawTokens = /** @type {Record<string, any>} */ (await Promise.race([evalPromise, timeoutPromise]));
@@ -332,12 +348,21 @@ export class FacebookBrowserBridge {
         return rawTokens;
       } catch (err) {
         lastError = err;
+        if (page && this.adapter) {
+          try {
+            await this.adapter.closePage(page);
+          } catch {}
+          page = null;
+        }
         if (attempt >= maxAttempts) {
           break;
         }
         // Reset browser on failure before retry
         await this.close();
       } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
         if (page && this.adapter) {
           try {
             await this.adapter.closePage(page);
