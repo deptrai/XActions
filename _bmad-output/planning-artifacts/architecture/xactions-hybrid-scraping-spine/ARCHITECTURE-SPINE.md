@@ -4,11 +4,11 @@ type: architecture-spine
 purpose: build-substrate
 altitude: system-microservice
 paradigm: 'Hexagonal / Ports & Adapters + Tiered Hybrid Signer Pool + Dual-Channel High-Speed Microservice + Adaptive Infrastructure-Aware Rate Limiting'
-scope: 'XActions Universal Scraping Engine: Social Media, E-Commerce, Real Estate, Recruitment, Proxy Network, PostgreSQL Storage with JSONB GIN Indexes, MCP HTTP/SSE Daemon, Redis Streams, and Adaptive Account Protection'
+scope: 'XActions Universal Scraping Engine: Social Media (X, Facebook, Threads, TikTok, Bluesky, Mastodon), E-Commerce, Real Estate, Recruitment, Proxy Network, PostgreSQL Storage with JSONB GIN Indexes, MCP HTTP/SSE Daemon, Redis Streams, and Adaptive Account Protection'
 status: final
 canonical: true
 created: '2026-08-18'
-updated: '2026-08-21T00:00:00Z'
+updated: '2026-08-26T00:00:00Z'
 supersedes:
   - _bmad-output/planning-artifacts/archive/architecture-brownfield-2026-08-20.md
   - _bmad-output/planning-artifacts/architecture/xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md
@@ -76,6 +76,8 @@ flowchart TB
                 FB["Facebook"]
                 TH["Threads"]
                 TT["TikTok"]
+                BS["Bluesky (AT Protocol)"]
+                MD["Mastodon (REST API)"]
             end
             subgraph Ecom ["E-Commerce"]
                 SP["Shopee"]
@@ -133,7 +135,7 @@ flowchart TB
 * **Binds:** `src/core/base-crawler.js`, `src/core/base-client.js`, `src/core/base-login.js`, `src/core/base-store.js`
 * **Prevents:** Phân mảnh cấu trúc code giữa các nền tảng, khiến mỗi scraper có một API format, logic xử lý lỗi và cách cấu hình khác nhau.
 * **Rule:**
-  1. Mọi module nền tảng mới bắt buộc phải kế thừa `AbstractCrawler` (`start()`, `search()`, `getPostDetail()`, `getComments()`, `cleanup()`) và `AbstractApiClient` (`request()`, `sign()`, `updateCookies()`).
+  1. Mọi module nền tảng mới bắt buộc phải kế thừa `AbstractCrawler` (`start()`, `search()`, `getPostDetail()`, `getComments()`, `cleanup()`) và `AbstractApiClient` (`request()`, `sign()`, `updateCookies()`). `sign()` có thể là no-op đối với HTTP-only public platforms (Bluesky, Mastodon); `updateCookies()` chỉ cần thiết khi có optional auth.
   2. `start()` nhận một `CrawlerCommand` object `{ action, args, session }` và điều phối tới `ActionRegistry` của platform; `ActionRegistry` ánh xạ `action` string sang phương thức thực thi. CLI/MCP chỉ gọi `crawler.start(command)` và không gọi trực tiếp `getGroupPosts`, `searchProducts`, v.v.
   3. `src/client/` là legacy Twitter client giữ lại cho backward compatibility; mọi abstraction mới phải nằm trong `src/core/**`. Không import platform logic từ `src/client/**` vào `src/core/**`.
 
@@ -142,10 +144,11 @@ flowchart TB
 * **Prevents:** Rò rỉ IP thật qua WebRTC/DNS, tài khoản bị ban do IP nhảy liên tục, và sập toàn bộ pipeline khi proxy bị rate-limit (429) hoặc chặn (403).
 * **Rule:**
   1. Mọi browser session bắt buộc kích hoạt cờ chống rò rỉ: `--force-webrtc-ip-handling-policy=disable_non_proxied_udp` và cấu hình `remote DNS resolution`.
-  2. **Hai chế độ proxy:**
+  2. **Ba chế độ proxy:**
      - **Auth-Required Platforms** (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks): một tài khoản **gắn với một proxy duy nhất** (sticky IP) trong suốt session. Chỉ đổi proxy khi proxy bị quarantine. Điều này tránh trigger "suspicious login" do IP nhảy liên tục.
+     - **Optional-Auth Platforms** (Bluesky, Mastodon): public data endpoints không yêu cầu auth; proxy xoay per-request/per-batch. Nếu dùng optional auth (`identifier`/`password` hoặc `accessToken`), crawler chuyển sang sticky IP cho session đó.
      - **No-Auth Platforms** (Batdongsan.com.vn, Chotot.vn, v.v.): proxy có thể **xoay per-request/per-batch** (round-robin / residential rotation) để tránh IP bị ban.
-  3. `ProxyIpPool` hỗ trợ `getStickyProxy(accountId)` cho chế độ sticky và `getNext()` cho chế độ round-robin. Mỗi platform crawler khai báo `requiresAuth: boolean` để chọn chế độ.
+  3. `ProxyIpPool` hỗ trợ `getStickyProxy(accountId)` cho chế độ sticky và `getNext()` cho chế độ round-robin. Mỗi platform crawler khai báo `requiresAuth: boolean` để chọn chế độ. Đối với optional-auth (Bluesky, Mastodon), `requiresAuth = false` khi chạy public, và `requiresAuth = true` khi session có `accountId` (sticky IP được gán theo session).
   4. Khi gặp lỗi 429/403, proxy bị cách ly 5 phút, tự động đổi sang proxy mới và retry tối đa 3 lần với exponential backoff.
   5. Nếu 100% proxy trong pool bị cách ly ➔ Tự động chuyển sang trạng thái Standby Backoff (chờ 30s) và kích hoạt cảnh báo, không loop vô tận.
   6. *Proxy Agent:* SOCKS5 proxy yêu cầu `socks-proxy-agent` hoặc `undici` SOCKS agent được cấu hình rõ ràng; HTTP client không được fallback về direct connection khi proxy agent fail.
@@ -168,7 +171,7 @@ flowchart TB
   1. *Terminal QR Login:* Render mã QR ASCII tỷ lệ 1:1 chuẩn (`small: true`), có countdown timer 60s, timeout 120s và fallback URL. Phát hiện `process.stdout.isTTY`; nếu non-TTY (headless server/Docker/CI), in URL + short code kèm hướng dẫn quét trên thiết bị khác hoặc gửi push/webhook. Yêu cầu package `qrcode-terminal` trong `package.json`.
   2. *CDP Attach Mode:* Kết nối vào Chrome thật qua cổng 9222; Chrome phải được launch với `--remote-debugging-port=9222` và `--user-data-dir=<dedicated>` để tránh xung đột profile. Áp dụng độ trễ phân phối ngẫu nhiên Gaussian Jitter (3–7s) khi cào LinkedIn/TopCV để tránh bị phát hiện.
   3. *AbstractLogin Contract:* Mọi implementation QR/CDP/cookie phải trả về cùng shape `{ accountId, cookies, tokens, expiresAt }`. Một `SessionManager` duy nhất giữ trạng thái và cung cấp cho `AbstractApiClient` và MCP tools.
-  4. *Sticky IP per Account:* Auth-required platforms (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) buộc một tài khoản gắn với một proxy cố định trong suốt session. `SessionManager` lưu `accountId`; `ProxyIpPool.getStickyProxy(accountId)` trả về proxy được gán. Không được tự động xoay IP mỗi request cho tài khoản đã đăng nhập.
+  4. *Sticky IP per Account:* Auth-required platforms (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) và optional-auth platforms khi có account (Bluesky, Mastodon) buộc một tài khoản gắn với một proxy cố định trong suốt session. `SessionManager` lưu `accountId`; `ProxyIpPool.getStickyProxy(accountId)` trả về proxy được gán. Không được tự động xoay IP mỗi request cho tài khoản đã đăng nhập.
 
 ### AD-6 — Hierarchical Comment Tree Normalization & Topological Insertion [ADOPTED]
 * **Binds:** `src/store/**`, Entity Models, `prisma/schema.prisma`
@@ -190,8 +193,13 @@ flowchart TB
 ### AD-8 — Multi-Domain Expansion Blueprint [ADOPTED]
 * **Binds:** `src/scrapers/**`
 * **Prevents:** Mọi platform thêm mới đặt sai vị trí hoặc team implement các domain ngoài phạm vi Epic.
-* **Rule:** Tổ chức module theo Domain rõ ràng, giới hạn trong phạm vi Epics 10–20. Mỗi crawler khai báo `requiresAuth` để hệ thống chọn sticky IP + account rotation hoặc rotating residential IP:
-  - `src/scrapers/social/` (requires auth): Twitter, Facebook, Threads, TikTok.
+* **Rule:** Tổ chức module theo Domain rõ ràng, mở rộng phạm vi sang Epics 23–26. Mỗi crawler khai báo `requiresAuth` để hệ thống chọn sticky IP + account rotation hoặc rotating residential IP:
+  - `src/scrapers/social/twitter/` (requires auth): Twitter / X.
+  - `src/scrapers/social/facebook/` (requires auth): Facebook.
+  - `src/scrapers/social/threads/` (requires auth): Threads.
+  - `src/scrapers/social/tiktok/` (requires auth): TikTok.
+  - `src/scrapers/social/bluesky/` (optional auth): Bluesky (public `https://public.api.bsky.app` AT Protocol).
+  - `src/scrapers/social/mastodon/` (optional auth): Mastodon (public REST API trên bất kỳ instance nào).
   - `src/scrapers/ecom/` (requires auth): Shopee, TikTok Shop.
   - `src/scrapers/realestate/` (no auth): Chợ Tốt, Batdongsan.com.vn.
   - `src/scrapers/recruitment/` (mixed; LinkedIn requires auth for full profile, job listings may be no auth): TopCV, VietnamWorks, LinkedIn.
@@ -201,7 +209,8 @@ flowchart TB
 * **Prevents:** Lưu dữ liệu rác khi WAF trả về HTTP 200 kèm error code, ô nhiễm CRM do SĐT masked (`***`), hoặc vỡ định dạng JSONL do ký tự xuống dòng.
 * **Rule:**
   1. Mọi crawler phải đăng ký một `PlatformResponseValidator` gồm `isValidPayload(response)`, `isBotChallenge(response)`, `isRateLimit(response)`. Nếu validator trả về challenge/rate-limit:
-     - *No-auth platforms:* throw `RateLimitError` để xoay IP (rotate proxy) ngay cả khi HTTP status là 200.
+     - *No-auth platforms (Bluesky public, Mastodon public, Batdongsan, Chợ Tốt):* throw `RateLimitError` để xoay IP (rotate proxy) ngay cả khi HTTP status là 200.
+     - *Optional-auth platforms (Bluesky/Mastodon khi có auth):* nếu lỗi liên quan đến auth → chuyển `AccountPool`; nếu lỗi rate-limit từ public IP → xoay proxy.
      - *Auth-required platforms:* throw `BotChallengeError`/`RateLimitError`, quarantine proxy, hibernate tài khoản 15–30 phút, và chuyển `AccountPool` sang tài khoản tiếp theo. Không xoay IP liên tục cho cùng một tài khoản.
   2. Chợ Tốt SĐT: Bỏ qua các số chứa `*` và validate regex số điện thoại Việt Nam hợp lệ.
   3. JSONL Exporter: Tự động sanitize ký tự xuống dòng (`\r\n`) trong `content` trước khi ghi stream.
@@ -217,7 +226,7 @@ flowchart TB
 * **Binds:** `src/core/base-crawler.js`, `src/scrapers/**`
 * **Prevents:** Hai platform team tự định nghĩa phương thức public khác nhau (`getGroupPosts` vs `searchProducts`) khiến CLI/MCP không thể gọi thống nhất.
 * **Rule:**
-  1. Mỗi platform crawler khai báo `ActionRegistry: Map<string, (args: any) => Promise<PostItem[] | Comment[]>>` trong constructor. `AbstractCrawler.start({ action, args })` lookup registry và trả về kết quả chuẩn hóa. Tên `action` phải là snake_case: `search`, `post_detail`, `comments`, `timeline`, `group_posts`, `page_posts`, `search_products`, `search_jobs`, v.v.
+  1. Mỗi platform crawler khai báo `ActionRegistry: Map<string, (args: any) => Promise<PostItem[] | Comment[]>>` trong constructor. `AbstractCrawler.start({ action, args })` lookup registry và trả về kết quả chuẩn hóa. Tên `action` phải là snake_case: `search`, `post_detail`, `comments`, `timeline`, `group_posts`, `page_posts`, `search_products`, `search_jobs`, `profile`, `followers`, `following`, `get_user_feed`, `hashtag`, `trending`, v.v.
   2. `AbstractCrawler.listActions()` trả về `ActionDescriptor[]` với shape cố định: `{ action: string, description: string, requiredArgs: string[], example: object, category: string, requiresAuth: boolean }`. Không cho phép trường tên `args`, `params`, hoặc `inputs`; consumer (CLI/MCP/AI agent) parse theo `requiredArgs` và `example`.
 
 ### AD-12 — CrawlCheckpoint State for Idempotent Resume [ADOPTED]
@@ -414,6 +423,16 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_phone ON "Post" USING btree ((metad
 CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((metadata->>'salary'));
 ```
 
+### AD-21 — HTTP-Only Public API Platform Pattern (Bluesky & Mastodon) [ADOPTED]
+* **Binds:** `src/scrapers/social/bluesky/`, `src/scrapers/social/mastodon/`, `src/core/base-client.js`
+* **Prevents:** Implement riêng lẻ HTTP client, pagination, và ID namespacing cho Bluesky/Mastodon gây phân mảnh mã.
+* **Rule:**
+  1. `BlueskyClient` và `MastodonClient` kế thừa `AbstractApiClient`, không cần `sign()`. Default `service = 'https://public.api.bsky.app'` (Bluesky) hoặc `instance = 'https://mastodon.social'` (Mastodon), có thể override qua `args.instance`.
+  2. *Pagination:* Bluesky dùng `cursor` trong query; Mastodon dùng `max_id` trong query hoặc `Link` header. Cả hai đều wrap trong `AbstractCrawler` để trả về `PostItem[]` hoặc `ProfileItem[]` đầy đủ trước khi consumer thấy.
+  3. *Namespaced IDs:* Bluesky dùng `bluesky:${uri|handle}`; Mastodon dùng `mastodon:${instance}:${id}`. `Post.metadata` lưu `service` hoặc `instance` để truy vết nguồn.
+  4. *Auth optional:* Public endpoints không cần `accountId`. Optional auth được truyền qua `args.auth` (Bluesky `identifier`/`password`; Mastodon `accessToken`) và tạo sticky session trong `SessionManager` nếu có.
+  5. *Response validation:* `BlueskyPlatformResponseValidator` và `MastodonPlatformResponseValidator` implement `AbstractPlatformResponseValidator`, nhận diện `error` field (Bluesky) hoặc HTTP 401/403/429 + JSON error (Mastodon).
+
 ---
 
 ## 5. Deferred & Out-of-Scope
@@ -442,7 +461,8 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((meta
 * AD-5: Khôi phục `AbstractLogin` contract + `SessionManager`, yêu cầu `qrcode-terminal` package.
 * AD-6: Giữ depth topological sort.
 * AD-7: Nâng cấp thành Dual-Channel (HTTP/SSE daemon + Redis Stream), sửa `MAXLEN`/`MINID`, thêm integration contract.
-* AD-8: Giới hạn scope về các platform của Epics 10–20.
+* AD-8: Mở rộng scope sang các platform của Epics 23–26 (Bluesky, Mastodon).
+* AD-21: Thêm HTTP-Only Public API Platform Pattern cho Bluesky & Mastodon.
 * AD-9: Khôi phục `PlatformResponseValidator`.
 * AD-10: Khôi phục `CrawlCheckpoint` và retention enforcement.
 * AD-11: CrawlerCommand & ActionRegistry; pinned `ActionDescriptor` field names.

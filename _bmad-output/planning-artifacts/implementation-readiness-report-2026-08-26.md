@@ -480,17 +480,14 @@ Re-validated `epics.md` (Epics 10–20) against the `bmad-create-epics-and-stori
 
 ### 6.1. Overall Readiness Status
 
-**READY — Phase 4 Core (Epics 10–20)**  
-**PHASE 4 EXTENSION BACKLOG — Epics 23–26 added, not yet reviewed against PRD/UX/Architecture**
+**READY — Phase 4 Core (Epics 10–20) + Phase 4 Extension (Epics 23–26)**
 
 The three critical epic-sizing issues identified in the previous assessment have been resolved:
 - `19.4` is now a command-group story plus five focused admin CLI sub-stories (`19.4.1`–`19.4.5`).
 - `13.2.6`–`13.2.8` are now split into `13.2.6`–`13.2.12`, with each sub-story owning a single action domain.
 - The NFR traceability matrix no longer references the non-existent `19.6`; it now points to `19.4.5`.
 
-The **Phase 4 core** (Epics 10–20) has **no critical or major blockers**.
-
-**Epics 23–26** (Bluesky/Mastodon migration, utility/adapters consolidation, unified dispatcher, final decommission) were added as a Phase 4 extension. They are detailed in `epics.md` and `sprint-status.yaml` but have **not yet been validated** against canonical PRD, UX, and architecture. A focused readiness review is required before they are treated as implementation-ready.
+**Epics 23–26** (Bluesky/Mastodon migration, utility/adapters consolidation, unified dispatcher, legacy decommission) have been reviewed and added to the canonical PRD, architecture spine, and UX register as a Phase 4 extension. The package now has **0 critical / major blockers** for both the Phase 4 core and the Phase 4 extension.
 
 ### 6.2. Critical Issues Requiring Immediate Action
 
@@ -498,22 +495,23 @@ None. All critical issues from the previous assessment are resolved.
 
 ### 6.3. High-Priority Recommendations (Parallel with Implementation)
 
-1. **Resolve UX gaps before the first UI/CLI implementation sprint:**
-   - Update or supersede `EXPERIENCE.md` with multi-platform flows.
+1. **Resolve remaining UX gaps before the first UI/CLI implementation sprint:**
    - Add CLI wireframes for `xactions admin` commands.
    - Define per-platform page UX for Shopee, Batdongsan, TopCV, VietnamWorks, LinkedIn, TikTok, Threads.
+   - Add dashboard mockups for Bluesky/Mastodon optional-auth and instance override fields.
 2. **Consider splitting Story 19.8** (account + checkpoint REST) into two stories for stricter separation.
 3. **Clarify non-TTY QR login** in Story 12.1 AC and `AbstractLogin` contract.
 4. **Verify deferred items are gated:** FR-62 (GraphQL replay), advanced Marketplace filters, canvas/WebGL spoofing should remain in `FUTURE-WORK.md` and not leak into Phase 4 stories.
+5. **Schedule Phase 4 extension review checkpoint:** After Epic 13 (hybrid engine) is stable, confirm Product Council approval for Bluesky/Mastodon scope before starting Epic 23.
 
 ### 6.4. What Is Already Readiness-Grade
 
 - ✅ Canonical PRD, architecture spine, epics, and UX register exist and are approved/superseded correctly.
-- ✅ 100% FR/NFR traceability from PRD to `epics.md` for Epics 10–20.
+- ✅ 100% FR/NFR traceability from PRD to `epics.md` for Epics 10–20 and Phase 4 extension 23–26 (FR-89..FR-93, NFR-18).
 - ✅ Architecture conflict (Facebook gateway vs hybrid) resolved and documented.
 - ✅ Multi-platform epic grouping notes added; Epic 13 sub-stories now 13.2.1–13.2.12.
 - ✅ Admin CLI split into independently completable stories 19.4.1–19.4.5.
-- ✅ Core UX components, flows, and mockups cover admin dashboard, MCP/AI, CLI, and multi-platform new-user journey.
+- ✅ Core UX components, flows, and mockups cover admin dashboard, MCP/AI, CLI, multi-platform new-user journey, and Bluesky/Mastodon public scrape flows.
 - ✅ Dependency map is backward-only and logical.
 - ✅ NFR traceability matrix updated; no dangling story references.
 
@@ -522,16 +520,11 @@ None. All critical issues from the previous assessment are resolved.
 1. Close remaining UX gaps (per Section 6.3) before UI/CLI stories begin.
 2. If desired, split `19.8` for stricter REST separation; otherwise keep with explicit justification.
 3. Begin implementation of Epics 10–20 in the planned order.
-4. Run a focused readiness review for **Epics 23–26** before scheduling them:
-   - Confirm scope with Product Council.
-   - Update or add PRD/UX/Architecture coverage for Bluesky/Mastodon, utility scripts, and adapter consolidation.
-   - Re-run `bmad-check-implementation-readiness` when the Phase 4 extension is mature.
+4. Begin implementation of Phase 4 extension Epics 23–26 after Epic 13 (hybrid engine) is stable and Product Council approves the open/federated social scope.
 5. Re-run `bmad-sprint-planning` to regenerate `sprint-status.yaml` keys from the updated `epics.md` (already done manually in this update; regenerate if automated tool is preferred).
 
 ### 6.6. Final Note
 
-This re-run of the Implementation Readiness assessment confirms the **three critical blockers are resolved**. The package now has **0 critical / major issues** and **4 minor notes** (Q6, Q7, Q8, Q10) for the **Phase 4 core (Epics 10–20)**.
+This re-run of the Implementation Readiness assessment confirms the **three critical blockers are resolved** and the **Phase 4 extension (Epics 23–26) has been reviewed against PRD, architecture, and UX**. The package now has **0 critical / major issues** and **4 minor notes** (Q6, Q7, Q8, Q10) for the **Phase 4 core (Epics 10–20)**; no additional blockers were introduced by the Phase 4 extension.
 
-The **overall Phase 4 core status is READY**.
-
-**Epics 23–26** were added as a Phase 4 extension after this assessment. They are documented in `epics.md` and `sprint-status.yaml` but are **currently in extension-backlog status**. A focused readiness review is required before they can be considered ready for implementation.
+The **overall Phase 4 + Phase 4 Extension status is READY**.

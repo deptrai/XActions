@@ -7,6 +7,8 @@ colors:
   secondary: "#f8f9fa"
   accent-facebook: "#1877f2"
   accent-twitter: "#000000"
+  accent-bluesky: "#0066ff"
+  accent-mastodon: "#6364ff"
   success: "#34a853"
   warning: "#f9ab00"
   error: "#ea4335"
@@ -83,6 +85,8 @@ components:
   platform-badge:
     facebook: "bg: {colors.accent-facebook}; color: #fff; border-radius: {rounded.sm}"
     twitter: "bg: {colors.accent-twitter}; color: #fff; border-radius: {rounded.sm}"
+    bluesky: "bg: {colors.accent-bluesky}; color: #fff; border-radius: {rounded.sm}"
+    mastodon: "bg: {colors.accent-mastodon}; color: #fff; border-radius: {rounded.sm}"
 ---
 
 # DESIGN.md — XActions Unified Dashboard
@@ -104,6 +108,8 @@ The emoji system (`✅ ❌ ⚠️ 🛡️ 🚀`) is part of brand voice — reta
 | `primary` | #1a73e8 | Primary actions, active tabs, links |
 | `accent-facebook` | #1877f2 | Facebook platform badge only |
 | `accent-twitter` | #000000 | X/Twitter platform badge only |
+| `accent-bluesky` | #0066ff | Bluesky platform badge only |
+| `accent-mastodon` | #6364ff | Mastodon platform badge only |
 | `success` | #34a853 | Completed operations, success results |
 | `warning` | #f9ab00 | NFR-8 warnings, partial success |
 | `error` | #ea4335 | Failed operations, validation errors |

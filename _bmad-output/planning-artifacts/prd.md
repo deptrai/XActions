@@ -1,7 +1,7 @@
 ---
-title: "PRD: Epics 10–20 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform"
+title: "PRD: Epics 10–20 + 23–26 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform"
 created: 2026-08-18
-updated: 2026-08-21
+updated: 2026-08-26
 status: approved
 canonical: true
 supersedes:
@@ -9,29 +9,30 @@ supersedes:
   - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-06-10-epic4/prd.md
   - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-08-14-epic7/prd.md
   - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md
-note: "Canonical PRD cho Epics 10–20. Các PRD cũ trong `archive/prds/` được đánh dấu deprecated. FR-24..FR-54 xem `prd-facebook-epics-5-6-2026-08-21.md`. FR-62 xem `FUTURE-WORK.md`."
+note: "Canonical PRD cho Epics 10–20 và Phase 4 extension Epics 23–26 (Bluesky/Mastodon, utility/adapters consolidation, dispatcher unification, legacy decommission). Các PRD cũ trong `archive/prds/` được đánh dấu deprecated. FR-24..FR-54 xem `prd-facebook-epics-5-6-2026-08-21.md`. FR-62 xem `FUTURE-WORK.md`."
 author: "John (BMad Product Manager) & Winston (BMad System Architect)"
-epics: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+epics: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 23, 24, 25, 26]
 prd_ref:
   - prd-XActions-2026-06-08
   - prd-XActions-2026-06-10-epic4
   - prd-XActions-2026-08-14-epic7
 ---
 
-# PRD: Epics 10–20 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform
+# PRD: Epics 10–20 + 23–26 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform
 
-*Chuyển đổi toàn diện XActions thành Nền tảng Động cơ Cào Dữ liệu Toàn Năng (Universal Scraping Microservice) đa ngành: Mạng Xã Hội (X, Facebook, Threads, TikTok, Instagram), Thương Mại Điện Tử (Shopee, TikTok Shop), Bất Động Sản (Chợ Tốt bóc tách SĐT, Batdongsan.com.vn), và Tuyển Dụng (TopCV, VietnamWorks, LinkedIn).*
+*Chuyển đổi toàn diện XActions thành Nền tảng Động cơ Cào Dữ liệu Toàn Năng (Universal Scraping Microservice) đa ngành: Mạng Xã Hội (X, Facebook, Threads, TikTok, Instagram, **Bluesky, Mastodon**), Thương Mại Điện Tử (Shopee, TikTok Shop), Bất Động Sản (Chợ Tốt bóc tách SĐT, Batdongsan.com.vn), và Tuyển Dụng (TopCV, VietnamWorks, LinkedIn).*
 
 ---
 
 ## 0. Mục Đích & Bối Cảnh Tài Liệu
 
-Tài liệu PRD này là bước nhảy vọt chiến lược tiếp nối từ `prd-XActions-2026-08-14-epic7` (Epics 1–9). PRD này chính thức định nghĩa kiến trúc và yêu cầu sản phẩm cho **Epics 10 đến 18**:
+Tài liệu PRD này là bước nhảy vọt chiến lược tiếp nối từ `prd-XActions-2026-08-14-epic7` (Epics 1–9). PRD này chính thức định nghĩa kiến trúc và yêu cầu sản phẩm cho **Epics 10 đến 20**, cùng **Phase 4 extension Epics 23–26**:
 1. **Chuyển dịch sang mô hình Microservice Engine:** XActions trở thành Động cơ Cào dữ liệu chuyên trách (Dedicated Scraping Microservice) cho hệ sinh thái **Nowing (AI Lead & Research Hub)** và nền tảng SaaS / CLI / AI MCP độc lập.
 2. **Áp dụng Đột Phá Kỹ Thuật "Tiered Hybrid Browser-Signer Engine":** Kết hợp Pre-Signed Token Ring Buffer O(1) và Signer Worker Page Pool giải mã chữ ký JS (`a_bogus`, `x-client-transaction-id`), chuyển 100% việc fetch dữ liệu sang Async HTTP Client (`got-scraping`/`undici`), giúp giảm **85% RAM**, tăng tốc độ **5–10x**, và tiết kiệm 90% tài nguyên server.
 3. **Hợp Nhất Cơ Sở Dữ Liệu trên PostgreSQL (Prisma ORM):** Loại bỏ hoàn toàn sự phân mảnh của SQLite, quy chuẩn hóa dữ liệu đa ngành vào PostgreSQL với quy ước Namespaced ID `${platform}:${externalId}` và cột `metadata Json?` có GIN Index.
 4. **Cơ Chế Khai Thác Dữ Liệu 3 Tầng (3-Tier Incremental Gap-Filling):** Chỉ cào bù khoảng trống dữ liệu mới (Delta Gap), triệt tiêu 100% việc cào trùng lặp và tiết kiệm 90% chi phí proxy.
 5. **Kế Hoạch Bàn Giao & Dọn Dẹp (Nowing Cutover & Decommissioning):** Thay thế toàn bộ 20+ scraper cũ bên Nowing bằng XActions MCP Client, giảm dung lượng Docker image của Nowing từ 4GB xuống còn <500MB.
+6. **Hoàn thiện kiến trúc Universal AbstractCrawler (Epics 23–26):** Đưa Bluesky, Mastodon, utility scripts, adapter layer, và dispatcher về cùng một `AbstractCrawler` / `AbstractApiClient` / `CrawlerCommand`, sau đó xóa bỏ toàn bộ legacy scraper modules.
 
 ---
 
@@ -59,7 +60,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 ---
 
-## 3. Danh Mục Yêu Cầu Chức Năng (Functional Requirements FR-64 ➔ FR-84)
+## 3. Danh Mục Yêu Cầu Chức Năng (Functional Requirements FR-64 ➔ FR-93)
 
 ### Nhóm 1: Hạ Tầng Cốt Lõi & Lưu Trữ PostgreSQL (Epic 10)
 * **FR-64 (Core Domain Interfaces):** Cung cấp các cổng trừu tượng chuẩn hóa (`AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore`, `ISignerBridge`) thuần ESM, Zero-Dependency.
@@ -99,9 +100,16 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-81 (VietnamWorks Job Scraper):** Cào tin tuyển dụng IT và cấp cao trên VietnamWorks qua API public.
 * **FR-82 (LinkedIn B2B Lead & Job Scraper):** Cào thông tin nhân sự và bài đăng tuyển dụng trên LinkedIn qua CDP Remote Attach 9222.
 
+### Nhóm 9: Open/Federated Social Media & Universal Architecture Completion (Epics 23–26)
+* **FR-89 (Bluesky AT Protocol Scraper):** Cào profile, followers, following, user feed, search, và custom feeds trên Bluesky qua public AT Protocol API (`https://public.api.bsky.app`) với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional auth (`identifier`/`password`) cho non-public data.
+* **FR-90 (Mastodon REST API Scraper):** Cào profile, followers, following, timeline, search, hashtag, và trending trên bất kỳ Mastodon instance nào qua public REST API với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional `accessToken` cho authenticated endpoints.
+* **FR-91 (Utility Scripts & Adapters Consolidation):** Audit và quyết định deprecation cho `src/scrapers/*.js` độc lập và `src/scrapers/adapters/`. Convert các tính năng hữu ích (video download, bookmark export, thread unroll) thành `CrawlerCommand` action hoặc chuyển vào `archive/`. Thu gọn adapter layer về `http`, `playwright`, `puppeteer` provider duy nhất.
+* **FR-92 (Unified Dispatcher & Backward Compatibility):** `src/scrapers/index.js` trở thành thin dispatcher duy nhất cho mọi platform qua `scrape(platform, action, args)`. Tất cả MCP/CLI/API caller gọi `CrawlerCommand` thay vì import platform cụ thể. Giữ `package.json` exports backward-compatible cho ít nhất 1 release cycle.
+* **FR-93 (Legacy Decommission):** Xóa `src/client/Scraper.js`, `src/scrapers/twitter/`, `src/scrapers/facebook/`, `src/scrapers/threads/` (legacy), `src/scrapers/bluesky/` (legacy), `src/scrapers/mastodon/` (legacy), và `src/scrapers/adapters/` sau khi đạt shadow-run parity ≥ 99% trong 7 ngày.
+
 ---
 
-## 4. Danh Mục Yêu Cầu Phi Chức Năng (Non-Functional Requirements NFR-11 ➔ NFR-16)
+## 4. Danh Mục Yêu Cầu Phi Chức Năng (Non-Functional Requirements NFR-11 ➔ NFR-18)
 
 * **NFR-11 (Tối ưu Tài Nguyên):** Giảm ít nhất **85% RAM** (từ ~10GB xuống <300MB) và **70% CPU** so với mô hình Full Headless Browser.
 * **NFR-12 (Băng Thông & Tốc Độ):** Tăng tốc độ thu thập dữ liệu lên ít nhất **5x–10x (>500 requests/giây)** bằng Async HTTP Client với Connection Pool.
@@ -109,6 +117,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **NFR-14 (Bảo Mật Phi Mật Khẩu):** Không lưu trữ plain-text password; đăng nhập an toàn qua Terminal ASCII QR Code và Chrome CDP Attach.
 * **NFR-15 (Kiến Trúc Sạch & Khả Năng Mở Rộng):** Lớp `src/core/` hoàn toàn phi phụ thuộc (Zero-Dependency); thêm nền tảng mới chỉ cần viết thêm Adapter.
 * **NFR-16 (Bản Quyền & Tương Thích Ngược):** Mã nguồn 100% tuân thủ MIT / Apache 2.0; bảo toàn 100% tương thích ngược với CLI `unfollowx` và 80+ MCP tools.
+* **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
 
 ---
 
@@ -132,6 +141,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **Phase 2: Hybrid Signer, Social Flagships & Nowing Cutover (Stories 13.1 ➔ 13.3, 14.1 ➔ 14.4)** *(7 stories)*
 * **Phase 3: Viral Social & E-Commerce Expansion (Stories 15.1 ➔ 15.2, 16.1 ➔ 16.2)** *(4 stories)*
 * **Phase 4: High-Value Localized Leads & B2B Recruitment (Stories 17.1 ➔ 17.2, 18.1 ➔ 18.3)** *(5 stories)*
+* **Phase 5: Universalization & Legacy Decommission (Stories 23.1 ➔ 26.2)** *(14 stories) — Phase 4 extension*
 
 ---
 
@@ -141,7 +151,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 ## 7. Phụ Lục — Cập Nhật Sau Readiness Assessment (2026-08-19)
 
-### 7.1. Yêu cầu chức năng bổ sung (FR-85 ➔ FR-88)
+### 7.1. Yêu cầu chức năng bổ sung (FR-85 ➔ FR-93)
 
 *Các yêu cầu dưới đây xuất hiện trong kiến trúc và epic nhưng chưa được gán số FR cho đến khi re-assessment hoàn tất.*
 
@@ -149,10 +159,16 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-86 (Metadata Schema Contract for Consumers):** Mỗi platform/category phải publish JSON Schema hoặc TypeScript type cho `Post.metadata`; consumer có thể lấy schema qua API `GET /schemas/:platform/:category`, MCP tool `x_schema_get`, và CLI `xactions schema get`. `PrismaStore` validate `metadata` against schema khi ghi.
 * **FR-87 (Data Retention Policy):** Dữ liệu raw crawl (bản gốc thu thập) lưu trong XActions với TTL 30 ngày; dữ liệu lead/processed output đẩy sang Nowing được giữ vĩnh viễn. Lịch sử checkpoints và audit logs giữ 90 ngày.
 * **FR-88 (3-Tier Incremental Gap-Filling):** Cào theo mô hình 3 tầng: (1) full seed, (2) delta/gap fill theo `publishedAt`/`lastCrawledAt`, (3) on-demand refresh; loại bỏ 100% duplication và tiết kiệm 90% chi phí proxy so với full re-crawl.
+* **FR-89 (Bluesky AT Protocol Scraper):** Cào profile, followers, following, user feed, search, và custom feeds trên Bluesky qua public AT Protocol API (`https://public.api.bsky.app`) với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional auth cho non-public data.
+* **FR-90 (Mastodon REST API Scraper):** Cào profile, followers, following, timeline, search, hashtag, và trending trên bất kỳ Mastodon instance nào qua public REST API với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional `accessToken` cho authenticated endpoints.
+* **FR-91 (Utility Scripts & Adapters Consolidation):** Audit và quyết định deprecation cho `src/scrapers/*.js` độc lập và `src/scrapers/adapters/`; convert tính năng hữu ích thành `CrawlerCommand` action hoặc archive; thu gọn adapter layer.
+* **FR-92 (Unified Dispatcher & Backward Compatibility):** `src/scrapers/index.js` trở thành thin dispatcher duy nhất qua `scrape(platform, action, args)`; tất cả caller gọi `CrawlerCommand`; giữ `package.json` exports backward-compatible.
+* **FR-93 (Legacy Decommission):** Xóa legacy modules sau khi đạt shadow-run parity ≥ 99% trong 7 ngày.
 
-### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17)
+### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-18)
 
 * **NFR-17 (Operational Observability):** Hệ thống phải expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling mỗi 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`.
+* **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
 
 ### 7.3. Lộ trình phân kỳ cập nhật
 
@@ -162,7 +178,8 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 * **Phase 2: Hybrid Signer, Social Flagships & Event Stream (Stories 13.1 ➔ 13.3, 14.1 ➔ 14.3)**
 * **Phase 3: Viral Social & E-Commerce Expansion (Stories 15.1 ➔ 15.2, 16.1 ➔ 16.2)**
 * **Phase 4: High-Value Localized Leads & B2B Recruitment (Stories 17.1 ➔ 17.2, 18.1 ➔ 18.3)**
-* **Phase 5: Operational Observability & Nowing Cutover (Stories 19.1 ➔ 19.8, 20.1)**
+* **Phase 5: Operational Observability & Nowing Cutover (Stories 19.1 ➔ 19.10, 20.1)**
+* **Phase 6: Universalization & Legacy Decommission (Stories 23.1 ➔ 26.2)**
 
 ### 7.4. Traceability ngắn gọn
 
@@ -170,14 +187,19 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 |---|---|
 | Epic 19 | FR-85 |
 | Epic 20 | FR-84 |
+| Epic 23 | FR-89 |
+| Epic 24 | FR-91 |
+| Epic 25 | FR-92 |
+| Epic 26 | FR-93 |
 | Story 10.5 | FR-86 |
 | Data Retention | FR-87 |
 | 3-Tier Gap-Filling | FR-88 |
 | Stream Metrics / Alerts | NFR-17 |
+| Universal Architecture Compliance | NFR-18 |
 
 ### 7.5. Canonicalization & Related Documents
 
-- **Canonical PRD:** Tài liệu này (`prd.md`) là canonical cho Epics 10–20.
+- **Canonical PRD:** Tài liệu này (`prd.md`) là canonical cho Epics 10–20 và Phase 4 extension 23–26.
 - **Canonical UX Register:** `ux/README.md` là canonical pointer cho tất cả UX documents (DESIGN.md, EXPERIENCE.md, EXPERIENCE-UNIVERSAL-2026-08-21.md) dùng trong Epic 19 (Internal Operator Dashboard & Admin CLI).
 - **PRD liên quan khác:**
   - `prd-facebook-epics-5-6-2026-08-21.md` — PRD canonical cho Epics 5, 5b, 6 (FR-23–FR-54).

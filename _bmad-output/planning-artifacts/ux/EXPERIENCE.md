@@ -1,6 +1,6 @@
 ---
-status: draft
-updated: 2026-06-19
+status: final
+updated: 2026-08-26
 sources:
   - dashboard/facebook.html (current Facebook UI)
   - dashboard/index.html (current X/Twitter dashboard)
@@ -15,7 +15,7 @@ sources:
 - **Form-factor:** Web (desktop-first, responsive to tablet)
 - **UI system:** Vanilla CSS with CSS custom properties (current stack — no framework dependency)
 - **Visual identity:** See DESIGN.md
-- **Platform scope:** X/Twitter + Facebook unified in one dashboard
+- **Platform scope:** X/Twitter, Facebook, Threads, TikTok, Bluesky, Mastodon, and other domains unified in one dashboard. Bluesky/Mastodon are open/federated social platforms with optional auth and read-only Scrape/Monitor tabs.
 
 ## Information Architecture
 
@@ -27,7 +27,11 @@ sources:
 🏠 Home              → /
 📱 Platforms          → /platforms (expanded below)
   ├─ 𝕏 X/Twitter     → /platforms/x
-  └─ 📘 Facebook     → /platforms/facebook
+  ├─ 📘 Facebook     → /platforms/facebook
+  ├─ 🧵 Threads      → /platforms/threads
+  ├─ 🎵 TikTok       → /platforms/tiktok
+  ├─ 🦋 Bluesky      → /platforms/bluesky
+  └─ 🐘 Mastodon     → /platforms/mastodon
 ⚙️ Automations       → /automations
 📅 Scheduler         → /scheduler
 📊 Analytics         → /analytics
@@ -240,6 +244,16 @@ Linh wants to grow her network by connecting with people in a marketing group.
 5. Dry-run → Preview shows 50 pending requests
 6. **Climax:** Sets max batch to 10 (safety), unchecks dry-run → "⚡ Run Live"
 7. Progress: "✅ 10/10 sent (62s)" — remaining 40 shown as "remaining: 40"
+
+### Bluesky / Mastodon — Public Scrape Flow
+
+1. Opens `/platforms/bluesky` → no account selector (public by default).
+2. Optional auth section collapsible (identifier/password for Bluesky; accessToken + instance for Mastodon).
+3. Tabs: `[Scrape] [Monitor]` only (no Actions/Growth because open platforms are read-only in this phase).
+4. Scrape tab cards: `Search posts`, `Profile feed`, `Followers`, `Following`, `Hashtag`, `Trending` (Mastodon).
+5. User enters a Bluesky handle or search query → Dry-run preview.
+6. Result panel: posts/profiles with `bluesky` or `mastodon` platform badge.
+7. User exports JSONL or streams to Redis.
 
 ## Responsive & Platform
 

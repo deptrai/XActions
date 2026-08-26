@@ -1352,6 +1352,7 @@ So that **XActions chỉ còn một kiến trúc `AbstractCrawler` duy nhất**.
 - `package.json` exports ổn định, backward-compatible.
 - `npm test` + `npm run typecheck` pass.
 - `bmad-check-implementation-readiness` re-run → **READY**.
+
 ## NFR Traceability Matrix
 
 | NFR | Description | Primary Stories | Validation Approach |
@@ -1363,3 +1364,4 @@ So that **XActions chỉ còn một kiến trúc `AbstractCrawler` duy nhất**.
 | NFR15 | Clean Architecture & Extensibility | 10.1, 10.5, 11.1, 14.2 | `src/core/` has zero npm deps; new platform adds only `src/scrapers/<platform>/index.js` |
 | NFR16 | License & Backward Compatibility | 14.2, 20.1, 20.2 | License headers present; `unfollowx` commands mapped or return actionable error |
 | NFR17 | Operational Observability | 11.4, 14.3, 19.1, 19.2, 19.3, 19.4.5 | Verify endpoints return metrics; alert fires when thresholds exceeded |
+| NFR18 | Universal Architecture Compliance | 23.1, 23.3, 25.1, 25.3, 26.2 | 100% platforms on `AbstractCrawler`/`AbstractApiClient`; zero legacy imports; `npm run typecheck` and `unfollowx` smoke tests pass |
