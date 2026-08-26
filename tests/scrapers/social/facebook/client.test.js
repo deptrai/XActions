@@ -7,6 +7,7 @@ import { ProxyIpPool } from '../../../../src/proxy/proxy-pool.js';
 import { AdaptiveRateGovernor } from '../../../../src/core/adaptive-governor.js';
 import { AccountPool } from '../../../../src/core/account-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../../src/core/error-envelope.js';
+import { PreSignedTokenRing } from '../../../../src/core/signer-pool.js';
 
 describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () => {
   let server;
@@ -223,7 +224,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
 
   it('[P1] should execute GraphQL request and handle graceful doc_id rotation failure as XACT_5000 (AC-7)', async () => {
     const client = new FacebookClient({ baseUrl: serverUrl });
-    
+
     await expect(client.requestGraphQl('invalid_or_rotated_doc_id', { id: '1' }, {
       accountId: 'acc_fb_1',
       cookies: { c_user: '10001', xs: 'sec_xs_123' },
@@ -231,6 +232,47 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
       code: 'XACT_5000',
       type: ErrorTypes.INTERNAL,
       suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+    });
+  });
+
+  // ============================================================================
+  // Story 13.4 — Browser-as-Signer additions
+  // ============================================================================
+
+  it('[P1] should refill tokenRing with the extracted lsd string after token extraction (AC-9)', async () => {
+    const tokenRing = new PreSignedTokenRing();
+    const client = new FacebookClient({ baseUrl: serverUrl, tokenRing });
+    const tokens = await client.ensureTokens('acc_token_ring', 'c_user=10001; xs=sec_xs_123');
+
+    expect(tokens.lsd).toBe('AVq_LsdToken123');
+    expect(tokenRing.size).toBe(1);
+    expect(tokenRing.next()).toBe('AVq_LsdToken123');
+  });
+
+  it('[P1] should refresh tokens before a short TTL expires (AC-8)', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl, tokenTtlMs: 100 });
+    const hitsBefore = homePageHits;
+
+    await client.ensureTokens('acc_refresh_short_ttl', 'c_user=10001; xs=sec_xs_123');
+    expect(homePageHits - hitsBefore).toBe(1);
+
+    // Wait past the 100 ms TTL so the next call must refresh.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    await client.ensureTokens('acc_refresh_short_ttl', 'c_user=10001; xs=sec_xs_123');
+    expect(homePageHits - hitsBefore).toBe(2);
+  });
+
+  it('[P1] should throw XACT_5030 with relogin when cdpUrl is unreachable and httpFallback is false (AC-7)', async () => {
+    const client = new FacebookClient({
+      baseUrl: serverUrl,
+      cdpUrl: 'http://127.0.0.1:1',
+      httpFallback: false,
+    });
+
+    await expect(client.ensureTokens('acc_cdp_unreachable', 'c_user=10001; xs=sec_xs_123')).rejects.toMatchObject({
+      code: 'XACT_5030',
+      suggestedAction: SuggestedActions.RELOGIN,
     });
   });
 });
