@@ -8,7 +8,7 @@ created: 2026-08-27
 updated: 2026-08-27
 last_updated: 2026-08-27
 owner: "DEV"
-reviewed: ""
+reviewed: "validated"
 baseline_commit: "c45d770f"
 ---
 
@@ -21,6 +21,10 @@ Status: ready-for-dev
 As a **Facebook Marketplace Researcher**,  
 I want **tìm kiếm và cào danh sách sản phẩm trên Facebook Marketplace qua kiến trúc hybrid (HTTP GraphQL + browser bridge fallback)**,  
 So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị giới hạn bởi Puppeteer rendering, tốc độ chậm, và tiêu thụ tài nguyên cao**.
+
+## Scope Note
+
+Story 13.8 triển khai **MVP Marketplace search** theo Epic 13. Các bộ lọc nâng cao (`minPrice`/`maxPrice`, `category`) được Epic 13.8 đưa vào phạm vi dù PRD gốc (`prd-facebook-epics-5-6-2026-08-21.md`) đánh dấu `Marketplace advanced filters (price range, category drill-down)` là Phase 2. Điều này có nghĩa là Epic 13 ghi đè phạm vi PRD cũ; dev cần implement theo Epic và ghi nhận sự mâu thuẫn này trong comment/quyết định nếu có review từ PM.
 
 ## Sources
 
@@ -38,13 +42,14 @@ So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị
 - `src/scrapers/facebook/marketplace.js` — legacy `scrapeMarketplace()` Puppeteer DOM flow [dòng 1-147]
 - `src/scrapers/facebook/normalize.js` — `normalizeMarketplaceListing()`, `buildMarketplaceSearchUrl()`, `resolveMarketplaceLocation()`, `MARKETPLACE_KNOWN_LOCATIONS` [dòng 659-734]
 - `src/scrapers/facebook/index.js` — legacy re-exports [dòng 1-63]
-- `src/core/types.js` — `PostItem` typedef [dòng 9-28], `CATEGORIES` [dòng 127-135], `generatePostId()` [dòng 145-147]
+- `src/core/types.js` — `PostItem` typedef [dòng 9-28], `CATEGORIES`/`CATEGORY_VALUES` [dòng 127-138], `generatePostId()` [dòng 145-147]
 - `src/types/facebook.d.ts` — `FacebookMarketplaceListing` interface [dòng 219-231]
-- `src/store/prisma-store.js` — `storeBatch()` chunking [dòng 217-228], `saveCheckpoint()` [dòng 312-329]
+- `src/store/prisma-store.js` — `storeBatch()` chunking [dòng 217-228], `saveCheckpoint()` [dòng 312-329], metadata schema validation [dòng 197-207]
+- `src/core/metadata-schema-registry.js` — load/validate schema [dòng 152-303]
 - `prisma/schema.prisma` — `Post`, `CrawlCheckpoint` models
-- `schemas/facebook/social.json` — metadata schema cho search/profile (cần mở rộng cho marketplace)
+- `schemas/facebook/social.json` — metadata schema cho search/profile (cần tạo thêm `ecom.json` hoặc mở rộng)
 - `src/mcp/server.js` — `x_facebook_marketplace` tool definition [dòng 1572-1587], tool handler [dòng 3151-3200]
-- `api/routes/facebook.js` — `VALID_ACTIONS`, `scrapeArgs` cho marketplace [dòng 270-316, 434-435]
+- `api/routes/facebook.js` — `VALID_ACTIONS`, `scrapeArgs` cho marketplace [dòng 270-316, 434-438]
 - `api/services/facebookScrape.js` — `run()` dispatcher [dòng 23-56]
 - `docs/deprecation-plan.md` — legacy mapping table và status tracker [dòng 76-99]
 - `src/scrapers/social/facebook/crawler-search.test.js` — ATDD pattern với real `node:http` server [dòng 260-551]
@@ -67,12 +72,13 @@ So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị
 
 - baseline_commit: `c45d770f` — Story 13.7 done, `FacebookCrawler` đã có `search`, `group_search`, `post_comments`, `group_comments`, `get_comments`, `profile`, `followers`, `following`, `group_members`, `group_posts`, `page_posts`.
 - `FacebookClient.requestGraphQl()` / `buildGraphQlBody()` đã sẵn sàng với `lsd`, `fb_dtsg`, `jazoest`, `__user`, `__a`, `__comet_req`.
-- `DEFAULT_FB_DOC_IDS` chưa có `MARKETPLACE_SEARCH` / `MARKETPLACE_LOCATION`; cần placeholder + capture live doc_id hoặc SSR/browser fallback.
+- `DEFAULT_FB_DOC_IDS` chưa có `MARKETPLACE_SEARCH`; cần placeholder `fb_marketplace_search_doc` + capture live doc_id hoặc SSR/browser fallback.
 - `FacebookCrawler.search()` và `groupSearch()` đã có pattern dispatch GraphQL + parse `edges`/`page_info` + `storeBatch` + checkpoint.
-- Legacy `scrapeMarketplace()` trong `src/scrapers/facebook/marketplace.js` vẫn hoạt động qua Puppeteer DOM; `buildMarketplaceSearchUrl()` / `normalizeMarketplaceListing()` trong `src/scrapers/facebook/normalize.js` là baseline cho URL builder và normalization.
+- Legacy `scrapeMarketplace()` trong `src/scrapers/facebook/marketplace.js` vẫn hoạt động qua Puppeteer DOM; `buildMarketplaceSearchUrl()` / `normalizeMarketplaceListing()` / `MARKETPLACE_KNOWN_LOCATIONS` trong `src/scrapers/facebook/normalize.js` là baseline cho URL builder, location slug resolution, và normalization.
 - `PostItem` là storage contract chính; `FacebookMarketplaceListing` tồn tại trong `src/types/facebook.d.ts` nhưng không có trong `src/core/types.js`.
 - `src/scrapers/index.js` `platformActionMap.facebook` chưa mapping `marketplace` sang hybrid; `scrape('facebook','marketplace')` vẫn đi vào legacy `scrapeMarketplace`.
 - MCP `x_facebook_marketplace` hiện vẫn import `scrapeMarketplace` từ `src/scrapers/facebook/index.js`.
+- API route `api/routes/facebook.js` chỉ truyền `query` và `limit` cho `marketplace` trong `scrapeArgs`; `location`, `category`, `minPrice`, `maxPrice` bị bỏ qua [dòng 434-438].
 
 ## Acceptance Criteria
 
@@ -81,65 +87,109 @@ So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị
 - Given `FacebookCrawler` trong `src/scrapers/social/facebook/crawler.js`
 - When khởi tạo
 - Then đăng ký thêm action `marketplace` trong constructor với:
-  - `requiredArgs: ['query']`
-  - `optionalArgs: ['location', 'category', 'priceMin', 'priceMax', 'limit', 'cursor', 'radiusKm', 'latitude', 'longitude']`
-  - `example: { query: 'macbook pro 14', location: 'Ho Chi Minh City', priceMax: 1200, limit: 20 }`
-  - `outputType: '{ posts: PostItem[], pageInfo?: any }'`
-- And `listActions()` trả về `marketplace`
-- And `marketplace` là snake_case, không xung đột với `search` / `group_search`
+
+| Field | Value |
+|---|---|
+| `action` | `marketplace` |
+| `requiredArgs` | `['query']` |
+| `optionalArgs` | `['location', 'category', 'categoryId', 'minPrice', 'maxPrice', 'limit', 'cursor', 'radiusKm', 'latitude', 'longitude', 'dryRun']` |
+| `example` | `{ query: 'macbook pro 14', location: 'Ho Chi Minh City', minPrice: 800, maxPrice: 1200, limit: 20 }` |
+| `outputType` | `{ posts: PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string \| null }, note?: string }` |
+
+- And hỗ trợ alias `priceMin` → `minPrice`, `priceMax` → `maxPrice` để tương thích với epic text cũ.
+- And `listActions()` trả về `marketplace`.
+- And `marketplace` là snake_case, không xung đột với `search` / `group_search`.
 
 ### AC-2: `marketplace()` handler
 
-- Given args `{ query, location, category, priceMin, priceMax, limit, cursor, radiusKm, latitude, longitude }`
+- Given args `{ query, location, category, categoryId, minPrice, maxPrice, limit, cursor, radiusKm, latitude, longitude, dryRun }`
 - When gọi `crawler.start({ action: 'marketplace', args, session })`
 - Then `marketplace(args, session)` validate `query` non-empty, gọi `FacebookClient.requestGraphQl()` với `doc_id` từ `this.docIds.MARKETPLACE_SEARCH` hoặc `DEFAULT_FB_DOC_IDS.MARKETPLACE_SEARCH`
 - And xây dựng `variables` theo mẫu Marketplace GraphQL:
-  - `count`/`first` = `limit`
-  - `cursor` = `cursor` (hoặc `after`)
+
+```json
+{
+  "count": <limit>,
+  "first": <limit>,
+  "cursor": <cursor>,
+  "after": <cursor>,
+  "params": {
+    "bqf": {
+      "callsite": "COMMERCE_MKTPLACE_WWW",
+      "query": "<query>"
+    },
+    "browse_request_params": {
+      "filter_location_latitude": <latitude>,
+      "filter_location_longitude": <longitude>,
+      "filter_price_lower_bound": <minPrice * 100>,
+      "filter_price_upper_bound": <maxPrice * 100>,
+      "filter_radius_km": <radiusKm || 50>,
+      "commerce_search_and_rp_category_id": <categoryId>
+    }
+  }
+}
+```
+
+- Quy tắc build variables:
+  - `count`/`first` = `limit` clamped
+  - `cursor`/`after` = `cursor` (trim, null nếu rỗng)
   - `params.bqf.callsite = 'COMMERCE_MKTPLACE_WWW'`
   - `params.bqf.query = query`
-  - `params.browse_request_params.filter_location_latitude/longitude` (nếu có lat/lng hoặc resolved từ `location`)
-  - `params.browse_request_params.filter_price_lower_bound/upper_bound` (chuyển `priceMin`/`priceMax` sang cents, ví dụ `priceMin * 100`)
-  - `params.browse_request_params.filter_radius_km` (mặc định 50 nếu không truyền)
-  - `params.browse_request_params.commerce_search_and_rp_category_id` (nếu `category` là category ID)
-- And parse response từ `data.marketplace_search_listings` / `data.searchResults` / `data.browse` (tên connection có thể điều chỉnh sau khi capture live) để lấy `edges` và `page_info`
+  - `params.browse_request_params.filter_location_latitude/longitude` — chỉ thêm nếu có `latitude`/`longitude` hợp lệ
+  - `params.browse_request_params.filter_price_lower_bound/upper_bound` — chuyển `minPrice`/`maxPrice` (đơn vị tiền tệ gốc) sang **cents** (`* 100`). Ví dụ `minPrice = 800` → `80000`. Nếu không có thì bỏ qua.
+  - `params.browse_request_params.filter_radius_km` — mặc định `50` nếu không truyền (chỉ khi có lat/lng)
+  - `params.browse_request_params.commerce_search_and_rp_category_id` — chỉ thêm nếu `categoryId` là numeric string/id
+- And parse response từ `data.marketplace_search_listings` / `data.searchResults` / `data.browse` / `data.marketplaceSearch` (tên connection có thể điều chỉnh sau khi capture live) để lấy `edges` và `page_info`
 - And trả về `{ posts: PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, note?: string }`
 
-### AC-3: Chuẩn hóa listing thành `PostItem`/`MarketplaceItem`
+### AC-3: Chuẩn hóa listing thành `PostItem`
 
 - Given raw marketplace listing node từ GraphQL hoặc browser fallback
 - When normalize
 - Then mỗi listing trả về `PostItem` với:
   - `id = 'facebook:<listingId>'`, `externalId = <listingId>`, `platform = 'facebook'`
-  - `category` = `'ecom'` (ưu tiên) hoặc `'social'` nếu schema `ecom` chưa sẵn sàng
+  - `category = 'ecom'` (bắt buộc; `ecom` đã có trong `CATEGORY_VALUES`)
   - `authorId` = seller id (nếu có) hoặc seller name được hash/strip
   - `authorName` = tên seller sau khi strip PII
   - `content` = listing title (sau khi strip PII)
   - `mediaUrls` = `[image]` nếu có
   - `publishedAt` = listing creation time nếu có, ngược lại `null`
   - `postUrl` = `https://www.facebook.com/marketplace/item/<listingId>` hoặc `listingUrl`
-  - `metadata` chứa `price` (string hoặc number), `currency`, `location`, `seller`, `sellerUrl`, `category`, `categoryId`, `isMarketplace: true`, `sourceMethod: 'graphql'` / `'browser'`, `rawId`
+  - `metadata` chứa `isMarketplace: true`, `price` (number hoặc string), `currency` (string), `location` (string), `seller` (string), `sellerUrl` (string), `category` (slug), `categoryId` (numeric), `listingUrl` (string), `sourceMethod: 'graphql'` hoặc `'browser'`/`'ssr'`, `rawId`
 - And `validateItem(postItem)` pass trước khi lưu / trả về
-- And nếu team quyết định tạo `MarketplaceItem` typedef trong `src/core/types.js`, phải có `marketplaceToPostItem()` helper tương tự `searchResultToPostItem()`
+- And KHÔNG tạo `MarketplaceItem` typedef riêng trong `src/core/types.js`; dùng `PostItem` với `metadata.isMarketplace: true`
 
-### AC-4: `location`, `priceMin`, `priceMax`, `limit`, `cursor` mapping
+### AC-4: `location`, `minPrice`/`maxPrice`, `limit`, `cursor` mapping & validation
 
 - Given args cho `marketplace`
 - When normalize
-- Then `query` stripped whitespace, không rỗng, tối đa 512 ký tự
-- And `location` được resolve thành slug hoặc lat/lng (nếu `latitude`/`longitude` không được truyền) dùng logic từ `resolveMarketplaceLocation()`
-- And `priceMin`/`priceMax` là non-negative number, `priceMin <= priceMax`; chuyển sang cents khi gửi GraphQL
+- Then `query` stripped whitespace, không rỗng, tối đa **500** ký tự (khớp API route)
+- And `location` được resolve theo thứ tự ưu tiên:
+  1. Nếu `latitude`/`longitude` được truyền → dùng trực tiếp cho GraphQL
+  2. Nếu `location` là slug đã biết (`hochiminhcity`, `hanoi`, `danang`, v.v.) theo `MARKETPLACE_KNOWN_LOCATIONS` → dùng slug
+  3. Nếu `location` là chuỗi chỉ chứa alphanum → coi như slug
+  4. Ngược lại → truyền vào `buildMarketplaceSearchUrl` như free-form `location` query param
+- And `minPrice`/`maxPrice` là non-negative number, `minPrice <= maxPrice`; chuyển sang **cents** khi gửi GraphQL; giữ nguyên đơn vị gốc khi build URL fallback
 - And `limit` clamp [1, 200] (mặc định 50, tối đa 200 để khớp MCP hiện tại)
 - And `cursor` (hoặc `after`) được truyền vào GraphQL variables để phân trang
-- And `category` nếu có phải là string không chứa path traversal
+- And `category` nếu có phải là plain slug, không chứa path traversal (`../`, `//`)
+- And `categoryId` nếu có phải là numeric/string id, không chứa ký tự đặc biệt
+- And `dryRun` nếu `true` thì chỉ trả về `searchUrl` preview mà không gọi GraphQL/browser
 
 ### AC-5: Fallback khi GraphQL thất bại
 
 - Given `MARKETPLACE_SEARCH` doc_id không hợp lệ, response rỗng, hoặc `FacebookClient` trả lỗi doc_id rotated
 - When gọi `marketplace`
-- Then thử fallback về `FacebookBrowserBridge` (nếu `cdpUrl` / `launchChrome` được cấu hình) để navigate đến URL từ `buildMarketplaceSearchUrl(query, { location, category, minPrice: priceMin, maxPrice: priceMax })` và evaluate DOM
-- Or fallback về HTTP SSR fetch của trang `marketplace/<location>/search/?query=...` rồi parse embedded JSON (nếu bridge không có)
-- And nếu vẫn không có kết quả, trả về `{ posts: [], pageInfo: { has_next_page: false, end_cursor: null }, note?: string }` hoặc `PlatformError` với `suggestedAction: 'relogin'` khi auth hết hạn
+- Then thực hiện chuỗi fallback theo thứ tự:
+  1. **GraphQL retry** — nếu `doc_id` là placeholder hoặc rotated, ghi `note` và chuyển bước 2
+  2. **Browser bridge** — nếu `cdpUrl` / `launchChrome` được cấu hình, dùng `FacebookBrowserBridge` navigate đến `buildMarketplaceSearchUrl(query, { location: resolvedSlug, category, minPrice, maxPrice })` với **đơn vị gốc** (không nhân 100). Evaluate DOM với logic tương tự legacy `scrapeMarketplace()`:
+     - Query `a[href*="/marketplace/item/"], a[href*="/marketplace/listing/"]`
+     - Parse `id` từ pathname
+     - Ưu tiên `aria-label` regex: `/^(.*),\s*(Free\|(?:[A-Z]{0,3}[₫$€£¥₹₩]\s*[\d,\.]+(?:\s*(?:USD\|EUR\|VND\|ETB\|VNĐ))?)?)\s*,\s*(.+?)\s*,\s*listing\s+(\d+)$/is`
+     - Fallback parse text tương tự `scrapeMarketplace` [dòng 90-116]
+     - Tái sử dụng `normalizeMarketplaceListing()` từ `src/scrapers/facebook/normalize.js` rồi chuyển sang `PostItem` với `metadata.isMarketplace: true`
+  3. **HTTP SSR fetch** — nếu không có bridge, fetch URL trên bằng `FacebookClient.request('GET', ...)` hoặc `got-scraping`, parse embedded `require("MarketplaceSearchSchema")` / JSON hydration (best-effort)
+  4. **Empty result** — nếu vẫn không có kết quả, trả về `{ posts: [], pageInfo: { has_next_page: false, end_cursor: null }, note?: string }` hoặc `PlatformError` với `suggestedAction: 'relogin'` khi auth hết hạn
 - And KHÔNG throw panic error khi doc_id placeholder chưa capture
 
 ### AC-6: Phân trang và checkpoint
@@ -156,21 +206,27 @@ So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị
 - Given input không hợp lệ
 - When gọi `marketplace`
 - Then `query` không được rỗng, không phải URL độc hại
-- And `priceMin`/`priceMax` là number hoặc string parse được, `>= 0`, `priceMin <= priceMax`
+- And `minPrice`/`maxPrice` là number hoặc string parse được, `>= 0`, `minPrice <= maxPrice`
 - And `limit` positive integer, max 200
 - And `location` nếu là URL thì phải là `facebook.com/marketplace/*` hoặc reject; tốt hơn là chỉ chấp nhận free-form city/location string
-- And `category` chỉ là plain string (slug/id), không chứa `../`, `//`
-- And non-Facebook / invalid input throw `PlatformError` `XACT_4001`
+- And `category` chỉ là plain slug, không chứa `../`, `//`
+- And `categoryId` chỉ là numeric/string id hợp lệ
 - And `latitude`/`longitude` nếu có phải trong khoảng hợp lệ [-90,90] / [-180,180]
+- And non-Facebook / invalid input throw `PlatformError` `XACT_4001`
 
 ### AC-8: API / MCP / CLI caller migration (mức tối thiểu cho 13.8)
 
 - Given `FacebookCrawler` đã hỗ trợ action `marketplace`
 - When khởi tạo
-- Then `api/routes/facebook.js` vẫn chấp nhận `action: 'marketplace'` trong `VALID_ACTIONS` và truyền `query`, `location`, `category`, `priceMin`, `priceMax`, `limit` vào `scrapeArgs`
-- And `api/services/facebookScrape.js` không break với action `marketplace`
-- And `src/mcp/server.js` `x_facebook_marketplace` có thể gọi `FacebookCrawler.start()` thay vì legacy `scrapeMarketplace` (nếu 13.10 chưa hoàn thành thì tối thiểu đảm bảo action hoạt động qua `crawler.start()`)
-- And `src/scrapers/index.js` `platformActionMap.facebook` được cập nhật khi 13.10 diễn ra; trong 13.8 có thể thêm alias tạm thời nếu cần
+- Then `api/routes/facebook.js` vẫn chấp nhận `action: 'marketplace'` trong `VALID_ACTIONS` và **bắt buộc** `scrapeArgs` cho `marketplace` truyền đủ:
+  - `query` (trim, max 500 chars)
+  - `location` (nếu có)
+  - `category` (nếu có)
+  - `minPrice` / `maxPrice` (nếu có)
+  - `limit` (nếu có)
+- And `api/services/facebookScrape.js` không break với action `marketplace` (vẫn pass args vào `scrape()`)
+- And `src/mcp/server.js` `x_facebook_marketplace` vẫn hoạt động — trong 13.8 có thể giữ legacy `scrapeMarketplace` hoặc gọi `FacebookCrawler.start()`; nếu chưa chuyển thì ghi rõ migration thuộc 13.10
+- And `src/scrapers/index.js` `platformActionMap.facebook` được cập nhật khi 13.10 diễn ra; trong 13.8 có thể thêm alias tạm thời nếu cần smoke test
 
 ### AC-9: Deprecation markers
 
@@ -185,53 +241,64 @@ So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị
 
 - Given repo có Vitest
 - When triển khai
-- Then tạo / mở rộng `tests/scrapers/social/facebook/crawler-marketplace.test.js` với real `node:http` server
-- And cover: action registry, `marketplace` GraphQL dispatch, variable builder với `bqf`, price-to-cents, location resolution, pagination cursor, normalization, PII stripping (seller phone/email), invalid price/limit rejection, checkpoint lưu, PrismaStore batch, fallback khi doc_id rỗng
+- Then tạo `tests/scrapers/social/facebook/crawler-marketplace.test.js` với real `node:http` server
+- And cover:
+  - `[AC-1]` action `marketplace` được đăng ký với đúng required/optional args
+  - `[AC-2]` GraphQL dispatch với đúng `doc_id` và `variables` (có `bqf.callsite`, `filter_price_lower_bound` cents)
+  - `[AC-3]` normalized `PostItem` có `id: 'facebook:<listingId>'`, `category: 'ecom'`, `metadata.isMarketplace: true`, `price`, `location`, `seller`
+  - `[AC-4]` `limit` clamp, `minPrice`/`maxPrice` validation, `minPrice*100` trong GraphQL, cursor truyền vào variables, `dryRun` trả về `searchUrl`
+  - `[AC-5]` fallback khi doc_id trả empty / lỗi; browser DOM evaluate sử dụng selectors/regex từ legacy `scrapeMarketplace`
+  - `[AC-6]` `storeBatch` và `CrawlCheckpoint` được ghi; Thin Event emit nếu Redis mock/flag
+  - `[AC-7]` `PlatformError` `XACT_4001` cho query rỗng, price invalid, SSRF location URL
+  - `[AC-8]` API route `scrapeArgs` truyền đủ filter
+  - `[AC-9]` legacy `scrapeMarketplace` có `@deprecated` trong JSDoc
 - And chạy `npx vitest run tests/scrapers/social/facebook/` và `npx tsc --noEmit` pass
 - And test server mock trả về Marketplace-like response với `edges` / `page_info` tương tự pattern của `crawler-search.test.js`
 
 ## Tasks / Subtasks
 
-1. [ ] **Thêm `MARKETPLACE_SEARCH` doc_id placeholders vào `DEFAULT_FB_DOC_IDS`**
+1. [ ] **Thêm `MARKETPLACE_SEARCH` doc_id placeholder vào `DEFAULT_FB_DOC_IDS`**
    - [ ] Thêm `MARKETPLACE_SEARCH: 'fb_marketplace_search_doc'` (hoặc `null` nếu chưa capture)
-   - [ ] Thêm `MARKETPLACE_LOCATION: 'fb_marketplace_location_doc'` (nếu cần resolve location string → lat/lng)
    - [ ] Đảm bảo `this.docIds` merge với `deps.docIds` trong constructor
 
 2. [ ] **Implement `marketplace(args, session)` trong `src/scrapers/social/facebook/crawler.js`**
-   - [ ] Validate `query`, `priceMin`, `priceMax`, `limit`, `location`, `category`
+   - [ ] Validate `query`, `minPrice`/`maxPrice`, `limit`, `location`, `category`, `categoryId`
    - [ ] Resolve `location` thành slug hoặc lat/lng/radius
-   - [ ] Build GraphQL variables theo Marketplace pattern
+   - [ ] Build GraphQL variables theo Marketplace pattern (giá sang cents)
    - [ ] Gọi `this.client.requestGraphQl()` với doc_id và variables
    - [ ] Parse response `edges` / `page_info`
    - [ ] Normalize từng listing thành `PostItem`
    - [ ] Gọi `storeBatch` và `#saveCheckpoint`
 
-3. [ ] **Tạo / mở rộng `normalize-marketplace.js`**
+3. [ ] **Tạo `src/scrapers/social/facebook/normalize-marketplace.js`**
    - [ ] `normalizeFacebookMarketplaceListing(raw, query = '')` tương tự `normalizeFacebookSearchPost`
    - [ ] `marketplaceListingToPostItem(item)` tương tự `searchResultToPostItem`
    - [ ] Strip PII từ `authorName` (seller) và `content` (title)
    - [ ] Parse price, currency, location, seller, image, listingUrl, category
+   - [ ] Tái sử dụng `normalizeMarketplaceListing()` từ `src/scrapers/facebook/normalize.js` khi cần
 
-4. [ ] **Cập nhật `schemas/facebook/social.json` (hoặc tạo `schemas/facebook/ecom.json`)**
-   - [ ] Thêm marketplace metadata fields: `isMarketplace`, `price`, `currency`, `location`, `seller`, `listingUrl`, `categoryId`, `isMarketplace`
-   - [ ] Đảm bảo `PrismaStore.storeBatch` validate pass
+4. [ ] **Tạo `schemas/facebook/ecom.json`**
+   - [ ] Định nghĩa các trường: `isMarketplace`, `price`, `currency`, `location`, `seller`, `sellerUrl`, `category`, `categoryId`, `listingUrl`, `sourceMethod`, `rawId`
+   - [ ] Đảm bảo `PrismaStore.storeBatch` validate pass khi `Post.category = 'ecom'`
+   - [ ] Nếu chọn mở rộng `schemas/facebook/social.json` thay vì tạo `ecom.json`, cập nhật tương ứng
 
 5. [ ] **Cập nhật constructor `FacebookCrawler` đăng ký action `marketplace`**
    - [ ] `registerAction({ action: 'marketplace', ... })` với đầy đủ required/optional args, example, outputType
 
 6. [ ] **Implement fallback khi GraphQL fail**
    - [ ] Bọc request trong try/catch
-   - [ ] Nếu `doc_id` rỗng / response rỗng / lỗi `XACT_5000`, thử `FacebookBrowserBridge` navigate `buildMarketplaceSearchUrl()`
-   - [ ] Nếu bridge không có, trả về `posts: []` với `note` hoặc `PlatformError` `suggestedAction: 'relogin'` khi auth
+   - [ ] Nếu `doc_id` rỗng / response rỗng / lỗi `XACT_5000`, thử `FacebookBrowserBridge` navigate `buildMarketplaceSearchUrl()` với giá nguyên gốc
+   - [ ] DOM extraction dùng selectors và `aria-label` regex từ `src/scrapers/facebook/marketplace.js`
+   - [ ] Nếu bridge không có, thử SSR fetch; nếu vẫn không có, trả về `posts: []` với `note` hoặc `PlatformError` `suggestedAction: 'relogin'` khi auth
 
 7. [ ] **Đánh dấu legacy `@deprecated`**
    - [ ] `src/scrapers/facebook/marketplace.js`: `scrapeMarketplace`
-   - [ ] `src/scrapers/facebook/index.js` re-export nếu cần
+   - [ ] `src/scrapers/facebook/index.js` re-export
    - [ ] `docs/deprecation-plan.md`: cập nhật mapping table và status tracker
 
 8. [ ] **Cập nhật API / MCP surfaces (tối thiểu)**
-   - [ ] `api/routes/facebook.js`: đảm bảo `scrapeArgs` cho `marketplace` truyền đủ `query`, `location`, `category`, `priceMin`, `priceMax`, `limit`
-   - [ ] `src/mcp/server.js` `x_facebook_marketplace`: giữ input schema, cho phép gọi `FacebookCrawler.start()` (hoặc ghi chú migration sang 13.10)
+   - [ ] `api/routes/facebook.js`: extract `location`, `category`, `minPrice`, `maxPrice` từ body và truyền vào `scrapeArgs` cho `marketplace`
+   - [ ] `src/mcp/server.js` `x_facebook_marketplace`: giữ input schema; ghi chú migration sang `FacebookCrawler.start()` thuộc 13.10
    - [ ] `api/services/facebookScrape.js`: đảm bảo `run('marketplace', ...)` không break
 
 9. [ ] **Viết / mở rộng tests**
@@ -243,7 +310,7 @@ So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị
     - [ ] `npx vitest run tests/scrapers/social/facebook/`
     - [ ] `npx vitest run tests/scrapers/social/facebook/crawler-marketplace.test.js`
     - [ ] `npx tsc --noEmit`
-    - [ ] `npx prisma validate` (nếu thay đổi schema metadata thì cần migration hoặc raw SQL)
+    - [ ] `npx prisma validate`
 
 ## Technical Requirements
 
@@ -251,10 +318,13 @@ So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị
 - **JSDoc / TypeScript types**: Tất cả hàm mới có JSDoc `@param` / `@returns`; chạy `npx tsc --noEmit` pass. Không dùng `any` nếu có thể; dùng `Record<string, any>` hoặc `unknown` khi cần.
 - **No mocks trong production code**: Chỉ test file dùng `node:http` server real; không dùng `vi.mock()` / `sinon`.
 - **Không thêm runtime dependency mới**: Chỉ dùng `got-scraping`/`undici`, `puppeteer`/`playwright` đã có; không cài thêm package.
-- **PII stripping (NFR-11)**: Áp dụng regex phone/email từ `crawler.js` hoặc tốt hơn cho `authorName` và `content` của listing.
+- **Tái sử dụng legacy helpers**: Dùng `buildMarketplaceSearchUrl`, `resolveMarketplaceLocation`, `MARKETPLACE_KNOWN_LOCATIONS`, `normalizeMarketplaceListing` từ `src/scrapers/facebook/normalize.js` thay vì viết lại.
+- **PII stripping (NFR-11)**: Áp dụng regex phone/email từ `crawler.js` hoặc `stripPii` từ `src/scrapers/facebook/normalize.js` cho `authorName` và `content` của listing.
 - **Error envelope**: Mọi lỗi trả về `PlatformError` với `code`, `type`, `suggestedAction`.
 - **Checkpoint & Redis Stream**: Tích hợp `#saveCheckpoint` và emit Thin Event pointer theo pattern 13.7.
-- **Metadata schema contract (FR-86)**: Publish JSON Schema cho `Post.metadata` của marketplace.
+- **Metadata schema contract (FR-86)**: Publish JSON Schema `schemas/facebook/ecom.json` cho `Post.metadata` của marketplace.
+- **Price unit clarity**: GraphQL variables dùng cents (`minPrice * 100`), URL fallback dùng đơn vị tiền tệ gốc. Ghi rõ trong code comment.
+- **Dry-run parity**: Hỗ trợ `dryRun: true` để trả về `searchUrl` preview (không gọi network). MCP tool và API route có thể tận dụng.
 
 ## Architecture Compliance
 
@@ -266,6 +336,7 @@ So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị
 - **Anti-Bot Validation (AD-9)**: `FacebookPlatformResponseValidator` phát hiện challenge/rate-limit; `FacebookCrawler` throw `RateLimitError`/`BotChallengeError` khi cần.
 - **3-Tier Gap-Filling (AD-10)**: Hỗ trợ `cursor` / `after` để resume; checkpoint lưu `lastCursor`.
 - **Multi-Domain Blueprint (AD-8)**: Marketplace nằm trong `src/scrapers/social/facebook/`; không tạo thư mục `src/scrapers/ecom/facebook/` riêng trong Epic 13.
+- **Metadata Schema Contract (AD-4)**: Mọi `Post` với `category = 'ecom'` phải có schema tại `schemas/facebook/ecom.json` (hoặc `social.json` nếu quyết định dùng `category = 'social'`).
 
 ## Library & Framework Requirements
 
@@ -279,17 +350,16 @@ So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị
 ## File Structure Requirements
 
 **Cập nhật:**
-- `src/scrapers/social/facebook/crawler.js` — thêm `marketplace` action, `DEFAULT_FB_DOC_IDS` marketplace placeholders, `#normalizeMarketplaceListing` hoặc import
-- `src/scrapers/social/facebook/client.js` — không cần thay đổi nếu `requestGraphQl` đã đủ; có thể thêm helper `scrapeMarketplaceWithBrowser` tương tự `scrapeProfileWithBrowser` nếu cần
+- `src/scrapers/social/facebook/crawler.js` — thêm `marketplace` action, `DEFAULT_FB_DOC_IDS` marketplace placeholder, `#normalizeMarketplaceListing` hoặc import
+- `src/scrapers/social/facebook/client.js` — không cần thay đổi nếu `requestGraphQl` đã đủ
 - `src/scrapers/social/facebook/index.js` — export `normalizeFacebookMarketplaceListing`, `marketplaceListingToPostItem`
 - `src/scrapers/social/facebook/normalize-marketplace.js` — (file mới) normalizer cho marketplace
-- `schemas/facebook/social.json` — mở rộng metadata marketplace (hoặc tạo `schemas/facebook/ecom.json`)
+- `schemas/facebook/ecom.json` — (file mới) schema metadata marketplace
 - `src/types/facebook.d.ts` — cập nhật `FacebookMarketplaceListing` nếu cần
-- `src/core/types.js` — (tùy chọn) thêm `MarketplaceItem` typedef nếu team quyết định
 - `src/scrapers/facebook/marketplace.js` — gắn `@deprecated`
 - `src/scrapers/facebook/index.js` — gắn `@deprecated` re-export
 - `docs/deprecation-plan.md` — cập nhật mapping table, status tracker
-- `api/routes/facebook.js` — scrapeArgs cho marketplace
+- `api/routes/facebook.js` — extract `location`, `category`, `minPrice`, `maxPrice` từ body và truyền vào `scrapeArgs` cho `marketplace`
 - `src/mcp/server.js` — ghi chú / cập nhật `x_facebook_marketplace` handler
 - `tests/scrapers/social/facebook/crawler-marketplace.test.js` — (file mới) ATDD tests
 
@@ -304,11 +374,12 @@ So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị
 - **Test coverage bắt buộc**:
   - `[AC-1]` action `marketplace` được đăng ký với đúng required/optional args
   - `[AC-2]` GraphQL dispatch với đúng `doc_id` và `variables` (có `bqf.callsite`, `filter_price_lower_bound` cents)
-  - `[AC-3]` normalized `PostItem` có `id: 'facebook:<listingId>'`, `metadata.isMarketplace: true`, `price`, `location`, `seller`
-  - `[AC-4]` `limit` clamp, `priceMin`/`priceMax` validation, cursor truyền vào variables
-  - `[AC-5]` fallback khi doc_id trả empty / lỗi; trả về `posts: []` và `note`
+  - `[AC-3]` normalized `PostItem` có `id: 'facebook:<listingId>'`, `category: 'ecom'`, `metadata.isMarketplace: true`, `price`, `location`, `seller`
+  - `[AC-4]` `limit` clamp, `minPrice`/`maxPrice` validation, `minPrice*100` trong GraphQL, cursor truyền vào variables, `dryRun` trả về `searchUrl`
+  - `[AC-5]` fallback khi doc_id trả empty / lỗi; browser DOM evaluate sử dụng selectors/regex từ legacy `scrapeMarketplace`
   - `[AC-6]` `storeBatch` và `CrawlCheckpoint` được ghi; Thin Event emit nếu Redis mock/flag
   - `[AC-7]` `PlatformError` `XACT_4001` cho query rỗng, price invalid, SSRF location URL
+  - `[AC-8]` API route `scrapeArgs` truyền đủ filter
   - `[AC-9]` legacy `scrapeMarketplace` có `@deprecated` trong JSDoc
 - **Chạy verification**:
   - `npx vitest run tests/scrapers/social/facebook/crawler-marketplace.test.js`
@@ -325,7 +396,6 @@ Từ Story 13.7 (`13-7-facebook-hybrid-post-group-comments.md`):
 - **Pagination**: `after` cursor trim, kiểm tra whitespace, truyền vào GraphQL variables.
 - **PII stripping**: `PII_PHONE_RE` và `PII_EMAIL_RE` áp dụng cho `authorName` và `content`; có thể false-positive với date/price nên cần tighten.
 - **Checkpoint**: `#saveCheckpoint` với `targetType`, `targetKey`, `lastCursor`, items, `hasMore`; emit Redis Stream.
-- **Depth-aware doc_id**: `getCommentsForPost` chọn doc_id theo `feedLocation` và `replyDepth`; marketplace có thể cần tương tự nếu có nested levels.
 - **Review patches**: cần validate input shape up-front, tránh `null`/`''` bypass, dùng `pathname.startsWith('/groups/')` cho group URL.
 
 Từ Story 13.6:
@@ -339,6 +409,7 @@ Từ Story 13.6:
 - Marketplace cần variable builder riêng với `bqf` và `browse_request_params`.
 - Response parse cần linh hoạt vì tên connection có thể khác (`marketplace_search_listings`, `browse`, `searchResults`).
 - Cần location resolution nâng cao hơn: từ string → slug hoặc lat/lng.
+- Tái sử dụng legacy DOM extraction regex khi GraphQL/doc_id thất bại.
 
 ## Project Context Reference
 
@@ -355,3 +426,4 @@ Từ Story 13.6:
 - Các doc_id Marketplace thực cần được capture từ live Facebook session trong quá trình dev; placeholders `fb_marketplace_search_doc` chỉ dùng cho test / fallback.
 - Nếu GraphQL response shape khác với giả định trong AC-2, cần điều chỉnh parser sau khi capture live; story này ghi rõ giả định và đề xuất capture.
 - Migration hoàn chỉnh của `src/scrapers/index.js`, `api/services/facebookScrape.js`, `src/mcp/server.js` sang `FacebookCrawler` thuộc Story 13.10; trong 13.8 cần đảm bảo action `marketplace` có thể gọi qua `crawler.start()` và legacy vẫn hoạt động với `@deprecated`.
+- **Validation note**: Các cải tiến đã áp dụng bao gồm: đồng bộ `minPrice`/`maxPrice` với MCP/API, tách `category` slug và `categoryId` numeric, phân biệt cents vs dollars, bổ sung `dryRun`, mô tả DOM extraction fallback, tạo `schemas/facebook/ecom.json`, cập nhật `api/routes/facebook.js scrapeArgs`, và ghi nhận mâu thuẫn phạm vi với PRD Phase-2.
