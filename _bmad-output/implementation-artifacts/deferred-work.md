@@ -47,3 +47,8 @@
 ## Deferred from: code review of 13-4-facebook-browser-as-signer-bridge (2026-08-26)
 
 - [ ] [Review][P2][Defer] HTTP fallback `#fetchTokens` does not extract `__rev` — pre-existing behavior, browser path covers AC-2. [src/scrapers/social/facebook/client.js:319-337]
+
+## Deferred from: code review of 13-5-facebook-hybrid-profile-followers-group-members (2026-08-27)
+
+- [x] [Review][Defer] `#resolveCookies` branch `session.account.credentials.cookies` is not reachable from normal `AbstractCrawler.start` flow; requires `AccountPool`/`base-crawler` changes outside Story 13.5 scope. [src/scrapers/social/facebook/crawler.js:642-646, src/core/base-crawler.js:236]
+- [x] [Review][Defer] Content fallback for `profile` and `group_members` using `FacebookBrowserBridge` is not feasible here: 13.4 bridge is a signer token bridge (`extractTokens`), not a content scraper. Adding a real browser fallback needs a dedicated story to port legacy `scrapeProfile`/`scrapeGroupMembers` to the BaseAdapter or implement evaluate scripts. [src/scrapers/social/facebook/crawler.js:1058-1072, 1266-1338, src/scrapers/social/facebook/signer-bridge.js]

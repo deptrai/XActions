@@ -50,6 +50,7 @@ export abstract class AbstractStore {
   abstract storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
   abstract storeComment(comment: CommentItem): Promise<void>;
   abstract storeCommentBatch(comments: CommentItem[], opts?: { upsert?: boolean }): Promise<void>;
+  abstract saveCheckpoint(checkpoint: Record<string, unknown>): Promise<unknown>;
   abstract close(): Promise<void>;
 }
 
@@ -66,5 +67,6 @@ export class PrismaStore extends AbstractStore {
   storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
   storeComment(comment: CommentItem): Promise<void>;
   storeCommentBatch(comments: CommentItem[], opts?: { upsert?: boolean }): Promise<void>;
+  saveCheckpoint(checkpoint: Record<string, unknown>): Promise<unknown>;
   close(): Promise<void>;
 }

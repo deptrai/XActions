@@ -346,8 +346,10 @@ export class FacebookClient extends AbstractApiClient {
     const hsi = hsiMatch ? hsiMatch[1] : '';
 
     if (!parsedUserId) {
-      const userMatch = html.match(/"USER_ID"\s*:\s*"(\d+)"/) || html.match(/"actor_id"\s*:\s*"(\d+)"/);
-      if (userMatch) parsedUserId = userMatch[1];
+      const userMatch =
+        html.match(/["']?USER_ID["']?\s*:\s*(?:"(\d+)"|(\d+))/) ||
+        html.match(/["']?actor_id["']?\s*:\s*(?:"(\d+)"|(\d+))/);
+      if (userMatch) parsedUserId = userMatch[1] || userMatch[2];
     }
 
     if (!lsd && !dtsg) {

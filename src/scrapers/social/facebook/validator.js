@@ -112,6 +112,9 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
         'viewer' in data ||
         'feed' in data ||
         'timeline_feed' in data ||
+        'members' in data ||
+        'edges' in data ||
+        'page_info' in data ||
         data.posts ||
         data.profile ||
         data.comments ||

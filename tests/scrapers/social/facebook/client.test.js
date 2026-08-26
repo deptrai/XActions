@@ -46,6 +46,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
                   window.__spin_r = 1016839210;
                   window.__spin_t = 1787680000;
                   window.__hsi = "739281928371928";
+                  window.Env = { USER_ID : "10001", actor_id : 10001 };
                 </script>
               </body>
             </html>
@@ -156,6 +157,15 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
     expect(tokens.dtsg).toBe('DTSG_Token_456');
     expect(tokens.spin_r).toBe(1016839210);
     expect(tokens.c_user).toBe('10001');
+  });
+
+  it('[P1] should extract c_user from spaced/unquoted USER_ID or actor_id when no c_user cookie is present', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const tokens = await client.ensureTokens('acc_fb_no_cookie', '');
+
+    expect(tokens.c_user).toBe('10001');
+    expect(tokens.lsd).toBe('AVq_LsdToken123');
+    expect(tokens.dtsg).toBe('DTSG_Token_456');
   });
 
   it('[P1] should deduplicate concurrent in-flight token fetches for the same account', async () => {

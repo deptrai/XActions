@@ -33,24 +33,43 @@ function safeTimestampToIso(val) {
 }
 
 /**
+ * Coerce a count value to a non-negative integer.
+ * @param {unknown} v
+ * @returns {number}
+ */
+function parseCount(v) {
+  if (typeof v === 'number' && Number.isFinite(v)) return Math.max(0, Math.floor(v));
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+}
+
+/**
+ * Determine whether a raw value represents a verified account.
+ * Only `true` boolean values count; truthy strings (e.g. "false") are ignored.
+ * @param {unknown} v
+ * @returns {boolean}
+ */
+function parseVerified(v) {
+  return v === true;
+}
+
+/**
  * Normalize raw Facebook profile GraphQL payload into ProfileItem.
  * @param {Record<string, any>} raw
- * @returns {import('../../../core/types.js').ProfileItem}
+ * @param {string} [sourceMethod='graphql']
+ * @returns {import('../../../core/types.js').ProfileItem | null}
  */
-export function normalizeFacebookProfile(raw = {}) {
+export function normalizeFacebookProfile(raw = {}, sourceMethod = 'graphql') {
   const user = raw.user || raw;
-  const externalId = String(user.id || user.userID || user.username || user.actor_id || 'unknown');
+  const externalId = String(user.id || user.userID || user.username || user.actor_id || '');
+  if (!externalId) return null;
+
   const username = user.username || user.vanity || '';
   const name = user.name || user.title || username || 'Facebook User';
   const bio = user.bio_text?.text || user.bio || user.about || '';
   const avatar = user.profile_picture?.uri || user.profilePicture?.uri || user.profile_pic_url || '';
   const profileUrl = user.profile_url || user.url || (username ? `https://www.facebook.com/${username}` : '');
-
-  const followersCount = typeof user.follower_count === 'number'
-    ? user.follower_count
-    : (typeof user.followers_count === 'number' ? user.followers_count : (user.subscriber_count || 0));
-
-  const followingCount = typeof user.following_count === 'number' ? user.following_count : 0;
+  const coverPhoto = user.cover_photo?.uri || user.coverPhoto?.photo?.image?.uri || '';
 
   return {
     id: namespacedProfileId(externalId),
@@ -61,15 +80,17 @@ export function normalizeFacebookProfile(raw = {}) {
     bio,
     avatar,
     profileUrl,
-    followersCount,
-    followingCount,
+    followersCount: parseCount(user.follower_count ?? user.followers_count ?? user.subscriber_count),
+    followingCount: parseCount(user.following_count),
     metadata: {
       isProfile: true,
-      isVerified: Boolean(user.is_verified || user.verified),
+      sourceMethod,
+      profilePic: avatar,
+      coverPic: coverPhoto,
+      bio,
+      isVerified: parseVerified(user.is_verified) || parseVerified(user.verified),
       joinDate: safeTimestampToIso(user.join_time),
-      coverPhoto: user.cover_photo?.uri || user.coverPhoto?.photo?.image?.uri,
       location: user.location?.name || user.current_city?.name,
-      rawMetadata: user.metadata,
     },
     crawledAt: new Date(),
   };
@@ -78,11 +99,14 @@ export function normalizeFacebookProfile(raw = {}) {
 /**
  * Normalize raw Facebook follower edge or node into ProfileItem.
  * @param {Record<string, any>} raw
- * @returns {import('../../../core/types.js').ProfileItem}
+ * @param {string} [sourceMethod='graphql']
+ * @returns {import('../../../core/types.js').ProfileItem | null}
  */
-export function normalizeFacebookFollower(raw = {}) {
+export function normalizeFacebookFollower(raw = {}, sourceMethod = 'graphql') {
   const node = raw.node || raw;
-  const externalId = String(node.id || node.userID || node.username || 'unknown');
+  const externalId = String(node.id || node.userID || node.username || '');
+  if (!externalId) return null;
+
   const username = node.username || '';
   const name = node.name || username || 'Facebook User';
   const avatar = node.profile_picture?.uri || node.profilePicture?.uri || node.profile_pic_url || '';
@@ -97,12 +121,14 @@ export function normalizeFacebookFollower(raw = {}) {
     bio: node.bio_text?.text || node.bio || '',
     avatar,
     profileUrl,
-    followersCount: node.follower_count || 0,
-    followingCount: node.following_count || 0,
+    followersCount: parseCount(node.follower_count),
+    followingCount: parseCount(node.following_count),
     metadata: {
       isFollower: true,
-      isVerified: Boolean(node.is_verified || node.verified),
-      mutualCount: node.mutual_friends_count || 0,
+      sourceMethod,
+      profilePic: avatar,
+      isVerified: parseVerified(node.is_verified) || parseVerified(node.verified),
+      mutualCount: parseCount(node.mutual_friends_count),
     },
     crawledAt: new Date(),
   };
@@ -112,11 +138,14 @@ export function normalizeFacebookFollower(raw = {}) {
  * Normalize raw Facebook group member edge or node into ProfileItem.
  * @param {Record<string, any>} raw
  * @param {string} [groupId]
- * @returns {import('../../../core/types.js').ProfileItem}
+ * @param {string} [sourceMethod='graphql']
+ * @returns {import('../../../core/types.js').ProfileItem | null}
  */
-export function normalizeFacebookGroupMember(raw = {}, groupId = '') {
+export function normalizeFacebookGroupMember(raw = {}, groupId = '', sourceMethod = 'graphql') {
   const node = raw.node || raw;
-  const externalId = String(node.id || node.userID || node.username || 'unknown');
+  const externalId = String(node.id || node.userID || node.username || '');
+  if (!externalId) return null;
+
   const username = node.username || '';
   const name = node.name || username || 'Group Member';
   const avatar = node.profile_picture?.uri || node.profilePicture?.uri || node.profile_pic_url || '';
@@ -131,10 +160,12 @@ export function normalizeFacebookGroupMember(raw = {}, groupId = '') {
     bio: node.bio_text?.text || node.bio || '',
     avatar,
     profileUrl,
-    followersCount: node.follower_count || 0,
-    followingCount: node.following_count || 0,
+    followersCount: parseCount(node.follower_count),
+    followingCount: parseCount(node.following_count),
     metadata: {
       isGroupMember: true,
+      sourceMethod,
+      profilePic: avatar,
       groupId: groupId ? String(groupId) : undefined,
       memberType: node.member_type || node.role || 'MEMBER',
       joinedGroupTime: safeTimestampToIso(node.join_time),
@@ -168,19 +199,29 @@ export function profileItemToPostItem(profile) {
     postUrl: profile.profileUrl || undefined,
     content: profile.bio || profile.name || '',
     mediaUrls: profile.avatar ? [profile.avatar] : [],
-    likesCount: profile.followersCount || 0,
+    likesCount: parseCount(profile.followersCount),
     repostsCount: 0,
-    repliesCount: profile.followingCount || 0,
+    repliesCount: parseCount(profile.followingCount),
     viewsCount: 0,
     metadata: {
-      ...meta,
       isProfile,
       isFollower,
       isGroupMember,
       isFollowing,
+      sourceMethod: meta.sourceMethod || 'graphql',
       username: profile.username || undefined,
-      followersCount: profile.followersCount || 0,
-      followingCount: profile.followingCount || 0,
+      profilePic: meta.profilePic || profile.avatar || undefined,
+      coverPic: meta.coverPic || undefined,
+      bio: profile.bio || meta.bio || undefined,
+      location: meta.location,
+      joinDate: meta.joinDate,
+      followersCount: parseCount(profile.followersCount),
+      followingCount: parseCount(profile.followingCount),
+      isVerified: meta.isVerified,
+      mutualCount: meta.mutualCount,
+      groupId: meta.groupId,
+      memberType: meta.memberType,
+      joinedGroupTime: meta.joinedGroupTime,
     },
     publishedAt: null,
     crawledAt: profile.crawledAt || new Date(),

@@ -4,9 +4,11 @@ import http from 'node:http';
 import { FacebookClient } from '../../../../src/scrapers/social/facebook/client.js';
 import { FacebookCrawler } from '../../../../src/scrapers/social/facebook/crawler.js';
 import { buildChromeArgs, launchChrome } from '../../../../src/core/cdp-launcher.js';
+import { extractFacebookTokensScript } from '../../../../src/scrapers/social/facebook/signer-bridge.js';
 import { PreSignedTokenRing } from '../../../../src/core/signer-pool.js';
 import { PlaywrightAdapter } from '../../../../src/scrapers/adapters/playwright.js';
 import { SuggestedActions } from '../../../../src/core/error-envelope.js';
+import { JSDOM } from 'jsdom';
 
 describe('Story 13.4 — Facebook Browser-as-Signer Bridge', () => {
   let server;
@@ -472,6 +474,50 @@ describe('Story 13.4 — Facebook Browser-as-Signer Bridge', () => {
       } else {
         process.env.XACTIONS_SCRAPER_ADAPTER = previous;
       }
+    }
+  });
+
+  // ============================================================================
+  // Shared spaced/unquoted USER_ID fixture
+  // ============================================================================
+
+  it('[P1] extractFacebookTokensScript should read c_user from spaced/unquoted USER_ID or actor_id when no cookie exists', () => {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head><title>Facebook</title></head>
+        <body>
+          <input type="hidden" name="jazoest" value="2953" />
+          <input type="hidden" name="lsd" value="AVq_LsdToken123" />
+          <script>
+            requireLazy(["DTSGInitialData"], function(d) { d.token = "DTSG_Token_456"; });
+            window.__spin_r = 1016839210;
+            window.__spin_t = 1787680000;
+            window.__hsi = "739281928371928";
+            window.__rev = "123456789";
+            window.Env = { USER_ID : "10001", actor_id : 10001 };
+          </script>
+        </body>
+      </html>
+    `;
+
+    const dom = new JSDOM(html, { url: 'https://www.facebook.com/' });
+    const previousDocument = globalThis.document;
+    const previousWindow = globalThis.window;
+
+    try {
+      globalThis.document = dom.window.document;
+      globalThis.window = dom.window;
+
+      const tokens = extractFacebookTokensScript();
+      expect(tokens.c_user).toBe('10001');
+      expect(tokens.lsd).toBe('AVq_LsdToken123');
+      expect(tokens.jazoest).toBe('2953');
+      expect(tokens.fb_dtsg).toBe('DTSG_Token_456');
+      expect(tokens.spin_r).toBe(1016839210);
+    } finally {
+      globalThis.document = previousDocument;
+      globalThis.window = previousWindow;
     }
   });
 });

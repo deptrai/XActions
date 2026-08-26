@@ -307,7 +307,6 @@ export class PrismaStore extends AbstractStore {
    * @param {Date} [checkpoint.lastTimestamp]
    * @param {Date} [checkpoint.lastCrawledAt]
    * @param {string} [checkpoint.status='completed']
-   * @param {string} [checkpoint.storageRef]
    * @returns {Promise<any>}
    */
   async saveCheckpoint(checkpoint) {
@@ -339,7 +338,6 @@ export class PrismaStore extends AbstractStore {
       lastTimestamp: checkpoint.lastTimestamp ? new Date(checkpoint.lastTimestamp) : null,
       lastCrawledAt: checkpoint.lastCrawledAt ? new Date(checkpoint.lastCrawledAt) : new Date(),
       status: checkpoint.status || 'completed',
-      storageRef: checkpoint.storageRef || null,
     };
 
     return model.upsert({

@@ -109,10 +109,10 @@ export function extractFacebookTokensScript() {
   // 8. c_user / __user
   const cookieUserMatch = document.cookie ? document.cookie.match(/(?:^|;\s*)c_user=([^;]+)/) : null;
   const scriptUserMatch =
-    html.match(/"USER_ID":"(\d+)"/) ||
-    html.match(/"actor_id":"(\d+)"/) ||
-    html.match(/"ACCOUNT_ID":"(\d+)"/);
-  result.c_user = cookieUserMatch ? cookieUserMatch[1] : (scriptUserMatch ? scriptUserMatch[1] : '');
+    html.match(/["']?USER_ID["']?\s*:\s*(?:"(\d+)"|(\d+))/) ||
+    html.match(/["']?actor_id["']?\s*:\s*(?:"(\d+)"|(\d+))/) ||
+    html.match(/["']?ACCOUNT_ID["']?\s*:\s*(?:"(\d+)"|(\d+))/);
+  result.c_user = cookieUserMatch ? cookieUserMatch[1] : (scriptUserMatch ? (scriptUserMatch[1] || scriptUserMatch[2]) : '');
 
   return result;
 }

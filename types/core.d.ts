@@ -48,15 +48,15 @@ export interface ProfileItem {
   id: string;
   platform: string;
   externalId: string;
-  username?: string;
-  name?: string;
+  username: string;
+  name: string;
   bio?: string;
   avatar?: string;
   profileUrl?: string;
   followersCount?: number;
   followingCount?: number;
   metadata?: Record<string, unknown>;
-  crawledAt: Date;
+  crawledAt?: Date;
 }
 
 export interface LoginResult {
@@ -285,6 +285,17 @@ export abstract class AbstractLogin {
   abstract login(): Promise<LoginResult>;
   abstract refresh(): Promise<LoginResult>;
   abstract isAuthenticated(): Promise<boolean>;
+}
+
+export interface CrawlCheckpoint {
+  platform: string;
+  targetType: string;
+  targetKey: string;
+  lastCursor?: string | null;
+  lastTimestamp?: Date;
+  lastCrawledAt?: Date;
+  status?: string;
+  [key: string]: unknown;
 }
 
 export abstract class AbstractStore {

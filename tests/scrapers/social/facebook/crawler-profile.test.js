@@ -1,5 +1,5 @@
 // Copyright (c) 2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import http from 'node:http';
 import { FacebookCrawler } from '../../../../src/scrapers/social/facebook/crawler.js';
 import { FacebookClient } from '../../../../src/scrapers/social/facebook/client.js';
@@ -9,17 +9,20 @@ import { AdaptiveRateGovernor } from '../../../../src/core/adaptive-governor.js'
 import { AccountPool } from '../../../../src/core/account-pool.js';
 import { SessionManager } from '../../../../src/core/session-manager.js';
 import { PlatformError, ErrorTypes } from '../../../../src/core/error-envelope.js';
+import { PrismaStore } from '../../../../src/store/prisma-store.js';
+import { prisma, cleanupTestDatabase } from '../../../store/test-prisma-client.js';
+import metadataSchemaRegistry from '../../../../src/core/metadata-schema-registry.js';
 import {
   normalizeFacebookProfile,
   normalizeFacebookFollower,
   normalizeFacebookGroupMember,
+  profileItemToPostItem,
 } from '../../../../src/scrapers/social/facebook/normalize-profile.js';
 
 describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', () => {
   let server;
   let serverUrl;
-  let storedBatches = [];
-  let savedCheckpoints = [];
+  let receivedRequests = [];
 
   const governor = new AdaptiveRateGovernor();
   const sessionManager = new SessionManager();
@@ -34,22 +37,24 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
     },
   });
 
-  const mockStore = {
-    storeBatch: async (items, options) => {
-      storedBatches.push({ items, options });
-      return { inserted: items.length, updated: 0, skipped: 0, failed: 0 };
-    },
-    saveCheckpoint: async (checkpoint) => {
-      savedCheckpoints.push(checkpoint);
-      return checkpoint;
-    },
-  };
+  const createStore = () => new PrismaStore({ prisma });
+
+  beforeEach(async () => {
+    await cleanupTestDatabase();
+    receivedRequests = [];
+  });
 
   beforeAll(async () => {
     server = http.createServer((req, res) => {
       let body = '';
       req.on('data', (chunk) => (body += chunk));
       req.on('end', () => {
+        receivedRequests.push({
+          method: req.method,
+          url: req.url,
+          body,
+        });
+
         // Mock Home page for token extraction
         if (req.url === '/' || req.url === '') {
           res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -66,7 +71,7 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
                   window.__spin_t = 1787680000;
                   window.__hsi = "739281928371928";
                   window.__rev = "123456789";
-                  window.Env = { "USER_ID": "10001" };
+                  window.Env = { "USER_ID" : "10001" };
                 </script>
               </body>
             </html>
@@ -85,7 +90,7 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
           } catch {}
 
           // 1. Profile Query Mock
-          if (docId === 'fb_profile_doc_123' || variables.targetKey === 'zuck' || variables.userID === '4') {
+          if (docId === 'fb_profile_doc_123') {
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({
               data: {
@@ -107,9 +112,9 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
           }
 
           // 2. Followers Query Mock
-          if (docId === 'fb_followers_doc_123' || variables.targetKey === 'zuck_followers') {
-            const cursor = variables.cursor;
-            if (!cursor) {
+          if (docId === 'fb_followers_doc_123') {
+            const after = variables.after;
+            if (!after) {
               res.writeHead(200, { 'content-type': 'application/json' });
               res.end(JSON.stringify({
                 data: {
@@ -166,7 +171,7 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
           }
 
           // 3. Following Query Mock
-          if (docId === 'fb_following_doc_123' || variables.targetKey === 'zuck_following') {
+          if (docId === 'fb_following_doc_123') {
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({
               data: {
@@ -191,7 +196,7 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
           }
 
           // 4. Group Members Query Mock
-          if (docId === 'fb_group_members_doc_123' || variables.groupID === '123456' || variables.groupId === '123456') {
+          if (docId === 'fb_group_members_doc_123' || variables.groupId === '123456') {
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({
               data: {
@@ -260,7 +265,7 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
       governor,
       accountPool,
       sessionManager,
-      store: mockStore,
+      store: createStore(),
     });
 
     expect(crawler).toBeInstanceOf(AbstractCrawler);
@@ -286,6 +291,34 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
 
     const profileDesc = actions.find((a) => (a.action || a.name) === 'profile');
     expect(profileDesc).toBeDefined();
+    expect(profileDesc?.requiredArgs).toEqual([]);
+    expect(profileDesc?.optionalArgs).toEqual(expect.arrayContaining(['username', 'url']));
+  });
+
+  // ============================================================================
+  // AC-3: Dispatcher GraphQL Body
+  // ============================================================================
+
+  it('[P0] FacebookClient.requestGraphQl should POST the correct doc_id, lsd, fb_dtsg, jazoest and variables (AC-3)', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    await client.requestGraphQl('fb_profile_doc_123', { username: 'zuck', scale: 2 }, {
+      accountId: 'fb-user-1',
+      cookies: 'c_user=10001; xs=sec_123',
+    });
+
+    const graphqlRequests = receivedRequests.filter((r) => r.url?.startsWith('/api/graphql'));
+    expect(graphqlRequests.length).toBeGreaterThanOrEqual(1);
+
+    const last = graphqlRequests[graphqlRequests.length - 1];
+    const body = new URLSearchParams(last.body);
+
+    expect(body.get('doc_id')).toBe('fb_profile_doc_123');
+    expect(body.get('lsd')).toBe('AVq_ProfileLsd123');
+    expect(body.get('fb_dtsg')).toBe('DTSG_Token_Profile');
+    expect(body.get('jazoest')).toBe('2953');
+    expect(body.get('__user')).toBe('10001');
+    expect(body.get('av')).toBe('10001');
+    expect(JSON.parse(body.get('variables') || '{}')).toEqual({ username: 'zuck', scale: 2 });
   });
 
   // ============================================================================
@@ -293,14 +326,13 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
   // ============================================================================
 
   it('[P0] should crawl profile by username or URL and return normalized ProfileItem (AC-4, AC-7)', async () => {
-    storedBatches = [];
     const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       governor,
       accountPool,
       sessionManager,
-      store: mockStore,
+      store: createStore(),
       docIds: { PROFILE: 'fb_profile_doc_123' },
     });
 
@@ -324,6 +356,7 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
     expect(profile.followingCount).toBe(512);
     expect(profile.avatar).toBe('https://cdn.fb.com/zuck.jpg');
     expect(profile.metadata?.isProfile).toBe(true);
+    expect(profile.metadata?.sourceMethod).toBe('graphql');
 
     // URL resolution path
     const urlResult = await crawler.start({
@@ -338,18 +371,16 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
   // AC-5: Followers & Following Extraction
   // ============================================================================
 
-  it('[P0] should crawl followers with cursor pagination and handle following gracefully (AC-5, AC-7)', async () => {
-    storedBatches = [];
+  it('[P0] should crawl followers with cursor pagination and return ProfileItem[] (AC-5, AC-7)', async () => {
     const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       governor,
       accountPool,
       sessionManager,
-      store: mockStore,
+      store: createStore(),
       docIds: {
         FOLLOWERS: 'fb_followers_doc_123',
-        FOLLOWING: 'fb_following_doc_123',
       },
     });
 
@@ -367,15 +398,36 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
     expect(follower.id).toBe('facebook:1001');
     expect(follower.name).toBe('Alice Johnson');
     expect(follower.platform).toBe('facebook');
+    expect(follower.metadata?.isFollower).toBe(true);
+    expect(follower.metadata?.sourceMethod).toBe('graphql');
+  });
 
-    // Following test
+  it('[P0] should crawl following with pagination and return ProfileItem[] (AC-5, AC-7)', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const crawler = new FacebookCrawler({
+      client,
+      governor,
+      accountPool,
+      sessionManager,
+      store: createStore(),
+      docIds: {
+        FOLLOWING: 'fb_following_doc_123',
+      },
+    });
+
     const followingResult = await crawler.start({
       action: 'following',
-      args: { username: 'zuck' },
+      args: { username: 'zuck', limit: 10 },
       session: { accountId: 'fb-user-1' },
     });
+
     expect(followingResult).toBeDefined();
-    expect(Array.isArray(followingResult.following) || followingResult.note).toBeTruthy();
+    expect(Array.isArray(followingResult.following)).toBe(true);
+    expect(followingResult.following.length).toBe(1);
+    expect(followingResult.following[0].id).toBe('facebook:2001');
+    expect(followingResult.following[0].name).toBe('Priscilla Chan');
+    expect(followingResult.following[0].metadata?.isFollowing).toBe(true);
+    expect(followingResult.note).toBeUndefined();
   });
 
   // ============================================================================
@@ -383,14 +435,13 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
   // ============================================================================
 
   it('[P0] should crawl group_members with URL resolution and SSRF guard (AC-6, AC-7)', async () => {
-    storedBatches = [];
     const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       governor,
       accountPool,
       sessionManager,
-      store: mockStore,
+      store: createStore(),
       docIds: { GROUP_MEMBERS: 'fb_group_members_doc_123' },
     });
 
@@ -409,6 +460,7 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
     expect(member.name).toBe('Dev Lead One');
     expect(member.platform).toBe('facebook');
     expect(member.metadata?.memberType).toBe('ADMIN');
+    expect(member.metadata?.sourceMethod).toBe('graphql');
 
     // SSRF Guard test
     await expect(
@@ -417,7 +469,7 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
         args: { groupUrl: 'https://evil.attacker.com/groups/123456' },
         session: { accountId: 'fb-user-1' },
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow(PlatformError);
   });
 
   // ============================================================================
@@ -459,21 +511,45 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
     expect(normMember.metadata?.groupId).toBe('group_123');
   });
 
+  it('[P1] profileItemToPostItem should produce schema-valid PostItem metadata (AC-8)', () => {
+    const profile = normalizeFacebookProfile({
+      id: '4',
+      username: 'zuck',
+      name: 'Mark Zuckerberg',
+      bio_text: { text: 'Building the metaverse.' },
+      profile_picture: { uri: 'https://cdn.fb.com/zuck.jpg' },
+      follower_count: 119000000,
+      following_count: 512,
+      is_verified: true,
+    });
+    expect(profile).not.toBeNull();
+    const postItem = profileItemToPostItem(profile);
+
+    expect(postItem.id).toBe('facebook:4');
+    expect(postItem.category).toBe('social');
+    expect(postItem.publishedAt).toBeNull();
+    expect(postItem.metadata?.isProfile).toBe(true);
+    expect(postItem.metadata?.sourceMethod).toBe('graphql');
+    expect(postItem.metadata?.profilePic).toBe('https://cdn.fb.com/zuck.jpg');
+    expect(postItem.metadata?.bio).toBe('Building the metaverse.');
+
+    const validation = metadataSchemaRegistry.validateMetadata('facebook', 'social', postItem.metadata);
+    expect(validation.valid).toBe(true);
+    expect(validation.errors).toEqual([]);
+  });
+
   // ============================================================================
   // AC-8: PrismaStore & Checkpoint Persistence
   // ============================================================================
 
   it('[P0] should persist profiles as PostItem batches to PrismaStore and save crawl checkpoint (AC-8)', async () => {
-    storedBatches = [];
-    savedCheckpoints = [];
-
     const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       governor,
       accountPool,
       sessionManager,
-      store: mockStore,
+      store: createStore(),
       docIds: { PROFILE: 'fb_profile_doc_123' },
     });
 
@@ -483,16 +559,26 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
       session: { accountId: 'fb-user-1' },
     });
 
-    expect(storedBatches.length).toBeGreaterThanOrEqual(1);
-    const storedItem = storedBatches[0].items[0];
-    expect(storedItem.id).toBe('facebook:4');
-    expect(storedItem.category).toBe('social');
-    expect(storedItem.publishedAt).toBeNull();
+    const storedItem = await prisma.post.findUnique({ where: { id: 'facebook:4' } });
+    expect(storedItem).not.toBeNull();
+    expect(storedItem?.category).toBe('social');
+    expect(storedItem?.publishedAt).toBeNull();
+    expect(storedItem?.metadata?.isProfile).toBe(true);
+    expect(storedItem?.metadata?.sourceMethod).toBe('graphql');
 
-    expect(savedCheckpoints.length).toBeGreaterThanOrEqual(1);
-    const checkpoint = savedCheckpoints[0];
-    expect(checkpoint.platform).toBe('facebook');
-    expect(checkpoint.targetType).toBe('profile');
-    expect(checkpoint.targetKey).toBe('zuck');
+    const checkpoint = await prisma.crawlCheckpoint.findUnique({
+      where: {
+        platform_targetType_targetKey: {
+          platform: 'facebook',
+          targetType: 'profile',
+          targetKey: 'zuck',
+        },
+      },
+    });
+    expect(checkpoint).not.toBeNull();
+    expect(checkpoint?.platform).toBe('facebook');
+    expect(checkpoint?.targetType).toBe('profile');
+    expect(checkpoint?.targetKey).toBe('zuck');
+    expect(checkpoint?.lastCrawledAt).toBeInstanceOf(Date);
   });
 });

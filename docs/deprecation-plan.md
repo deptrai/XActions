@@ -84,6 +84,14 @@ Xoá theo thứ tự:
 | Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-marked` | Phase 1 (Epic 15.1) | DEV |
 | `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
 
+### Legacy Facebook Functions → Hybrid Actions
+
+| Legacy function | Hybrid action |
+|-----------------|---------------|
+| `scrapeProfile` | `facebook:profile` |
+| `scrapeFollowers` | `facebook:followers` |
+| `scrapeGroupMembers` | `facebook:group_members` |
+
 ## 7. Rollback Checklist (Pre-Decommission)
 
 Trước khi thực hiện Story 20.2 (Legacy Scraper Code Decommissioning), team phải hoàn thành checklist sau:

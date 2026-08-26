@@ -1,55 +1,95 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Facebook Social Metadata",
+  "title": "Facebook Social Post & Profile Metadata",
   "type": "object",
-  "properties": {
-    "isProfile": {
-      "type": "boolean"
+  "anyOf": [
+    {
+      "title": "ProfileItem Metadata",
+      "properties": {
+        "isProfile": {
+          "type": "boolean",
+          "enum": [true]
+        },
+        "sourceMethod": {
+          "type": "string"
+        },
+        "followersCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "followingCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "profilePic": {
+          "type": "string"
+        },
+        "coverPic": {
+          "type": "string"
+        },
+        "bio": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "joinDate": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "isVerified": {
+          "type": "boolean"
+        },
+        "isFollower": {
+          "type": "boolean"
+        },
+        "isFollowing": {
+          "type": "boolean"
+        },
+        "isGroupMember": {
+          "type": "boolean"
+        },
+        "mutualCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "groupId": {
+          "type": "string"
+        },
+        "memberType": {
+          "type": "string"
+        },
+        "joinedGroupTime": {
+          "type": "string"
+        }
+      },
+      "required": ["isProfile", "sourceMethod"]
     },
-    "isGroup": {
-      "type": "boolean"
-    },
-    "isPage": {
-      "type": "boolean"
-    },
-    "isFollower": {
-      "type": "boolean"
-    },
-    "isGroupMember": {
-      "type": "boolean"
-    },
-    "isFollowing": {
-      "type": "boolean"
-    },
-    "username": {
-      "type": "string"
-    },
-    "followersCount": {
-      "type": "integer"
-    },
-    "followingCount": {
-      "type": "integer"
-    },
-    "isVerified": {
-      "type": "boolean"
-    },
-    "mutualCount": {
-      "type": "integer"
-    },
-    "groupId": {
-      "type": "string"
-    },
-    "memberType": {
-      "type": "string"
-    },
-    "location": {
-      "type": "string"
-    },
-    "joinDate": {
-      "type": "string"
-    },
-    "joinedGroupTime": {
-      "type": "string"
+    {
+      "title": "General Social Post Metadata",
+      "properties": {
+        "isProfile": {
+          "type": "boolean",
+          "enum": [false]
+        },
+        "creationTime": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" }
+          ]
+        },
+        "sourceMethod": {
+          "type": "string"
+        },
+        "isGroup": {
+          "type": "boolean"
+        },
+        "isPage": {
+          "type": "boolean"
+        }
+      }
     }
-  }
+  ]
 }

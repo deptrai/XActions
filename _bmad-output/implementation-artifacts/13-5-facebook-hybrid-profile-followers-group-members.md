@@ -2,19 +2,19 @@
 story_id: "13.5"
 epic: 13
 story_key: "13-5-facebook-hybrid-profile-followers-group-members"
-status: "review"
+status: "in-progress"
 phase: "Phase 4"
 created: 2026-08-27
-updated: 2026-08-27
-last_updated: 2026-08-27
+updated: 2026-08-28
+last_updated: 2026-08-28
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "Completed"
 baseline_commit: "80f91a5"
 ---
 
 # Story 13.5: Facebook Hybrid Profile, Followers & Group Members
 
-Status: review
+Status: in-progress
 
 <!-- Validation: ultimate context engine analysis completed. Run dev-story for implementation. -->
 
@@ -890,3 +890,39 @@ Dưới đây là các payload mẫu để dùng trong test `http.createServer`.
 - `docs/deprecation-plan.md` (update)
 - `src/scrapers/facebook/profile.js` (deprecation JSDoc only)
 - `src/scrapers/facebook/followers.js` (deprecation JSDoc only)
+
+### Review Findings
+
+#### Decision Needed
+
+*All decision-needed findings below have been resolved by the reviewer.*
+
+- [x] ~~[Review][Decision] `profile` và `group_members` không có fallback `FacebookBrowserBridge` khi endpoint không ổn định hoặc riêng tư~~ → **Defer**: `FacebookBrowserBridge` trong 13.4 chỉ là signer token bridge (`extractTokens`), không phải content scraper. Việc tích hợp fallback nội dung cần một câu chuyện riêng để wrap adapter `goto`/`evaluate` hoặc port legacy `scrapeProfile`/`scrapeGroupMembers` sang BaseAdapter.
+- [x] ~~[Review][Decision] `group_members` không trả note/`PlatformError` khi nhóm private/restricted~~ → **Patch** (moved to Patch list below): return `note` object khi GraphQL phản hồi rỗng/không có `group` thay vì throw lỗi chung.
+- [x] ~~[Review][Decision] Trạng thái `story`, `sprint-status.yaml` và ATDD checklist mâu thuẫn~~ → **Patch** (moved to Patch list below): đồng bộ `status` sang `in-progress` và `sprint-status.yaml` sang `in-progress` vì còn unresolved findings.
+
+#### Patch
+
+- [x] [Review][Patch] `group_members` trả note object khi GraphQL phản hồi rỗng/không có `group` (private/restricted) thay vì throw lỗi chung — `src/scrapers/social/facebook/crawler.js:1266-1338`.
+- [x] [Review][Patch] Đồng bộ `status` story file và `sprint-status.yaml` sang `in-progress` vì còn deferred findings.
+- [x] [Review][Patch] `resolveTargetKey` và `resolveGroupId` tự triển khai parsing, xử lý sai URL không phải profile/nhóm và scheme chữ hoa — `src/scrapers/social/facebook/crawler.js:50-122`.
+- [x] [Review][Patch] `requiredArgs`/`optionalArgs` của `profile`/`followers`/`following`/`group_members` không khớp handler — `src/scrapers/social/facebook/crawler.js:223-261`.
+- [x] [Review][Patch] `following` chỉ gọi một request, không phân trang và che giấu lỗi thực — `src/scrapers/social/facebook/crawler.js:1187-1254`.
+- [x] [Review][Patch] Schema `facebook:social` và `profileItemToPostItem` thiếu `sourceMethod`, `profilePic`, `coverPic`, `bio`, `anyOf`/`required` — `src/scrapers/social/facebook/normalize-profile.js:152-188` và `schemas/facebook/social.json:1-55`.
+- [x] [Review][Patch] `PrismaStore.saveCheckpoint` và `FacebookCrawler.#saveCheckpoint` ghi field `storageRef` không có trong model — `src/store/prisma-store.js:342` và `src/scrapers/social/facebook/crawler.js:1003`.
+- [x] [Review][Patch] Test suite mới dùng fake store, thiếu AC-3, và che giấu lỗi thực — `tests/scrapers/social/facebook/crawler-profile.test.js:37-46, 341-379, 466-497`.
+- [x] [Review][Patch] Regex `USER_ID`/`actor_id` extraction không xử lý unquoted/khoảng trắng và bridge vẫn dùng regex cũ — `src/scrapers/social/facebook/client.js:349`, `src/scrapers/social/facebook/signer-bridge.js:112-113`.
+- [x] [Review][Patch] Variables GraphQL dùng `count`/`cursor` và thêm `targetKey`/`userID`/`groupID` thay vì `first`/`after` — `src/scrapers/social/facebook/crawler.js:1052-1056, 1132-1137, 1205-1209, 1295-1300`.
+- [x] [Review][Patch] Stream emission trong `#saveCheckpoint` thiếu bounding, parse env chặt và `crawledAt` string — `src/scrapers/social/facebook/crawler.js:1008-1021`.
+- [x] [Review][Patch] Vòng lặp follower/group member không kiểm tra `id` của node đã unwrap — `src/scrapers/social/facebook/crawler.js:1151-1160, 1314-1323` và `src/scrapers/social/facebook/normalize-profile.js:83-144`.
+- [x] [Review][Patch] Count fields không coerce từ string; `isVerified` coi `"false"` thành `true` — `src/scrapers/social/facebook/normalize-profile.js:49-144`.
+- [x] [Review][Patch] `maxPages` dựa trên giả định mỗi trang ≥ 10 edge — `src/scrapers/social/facebook/crawler.js:1125, 1288`.
+- [x] [Review][Patch] `docs/deprecation-plan.md` chưa có mapping table legacy → hybrid action — `docs/deprecation-plan.md:82`.
+- [x] [Review][Patch] Declaration TypeScript thiếu `CrawlCheckpoint` và `ProfileItem` không khớp spec — `types/core.d.ts:47-60, 297`.
+- [x] [Review][Patch] `FacebookPlatformResponseValidator` chưa nhận diện `members`/`edges`/`page_info` — `src/scrapers/social/facebook/validator.js:107-126`.
+- [x] [Review][Patch] SSRF guard cho `get_comments` không có test URL attacker — `src/scrapers/social/facebook/crawler.js:569-626` và `tests/scrapers/social/facebook/crawler-comments.test.js`.
+
+#### Deferred
+
+- [x] [Review][Defer] `profile` và `group_members` thiếu `FacebookBrowserBridge` fallback nội dung — `src/scrapers/social/facebook/crawler.js:1058-1072, 1266-1338` và `src/scrapers/social/facebook/signer-bridge.js`. `FacebookBrowserBridge` hiện tại chỉ là signer token bridge; fallback nội dung cần một câu chuyện/port riêng.
+- [x] [Review][Defer] `#resolveCookies` nhánh `session.account.credentials.cookies` không được chạy trong luồng thường — `src/scrapers/social/facebook/crawler.js:642-646` và `src/core/base-crawler.js:236`. Deferred, pre-existing / ngoài scope Story 13.5.
