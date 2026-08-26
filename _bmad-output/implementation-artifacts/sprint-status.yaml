@@ -166,6 +166,38 @@ development_status:
   22-3-legal-trademark-intellectual-property-crawler: backlog
   epic-22-retrospective: optional
 
+  # --- Epic 23: Bluesky & Mastodon on AbstractCrawler ---
+  epic-23: backlog
+  23-1-bluesky-at-protocol-client: backlog
+  23-2-bluesky-hybrid-crawler: backlog
+  23-3-mastodon-rest-api-client: backlog
+  23-4-mastodon-hybrid-crawler: backlog
+  23-5-bluesky-mastodon-response-validators: backlog
+  23-6-bluesky-mastodon-integration-caller-migration: backlog
+  epic-23-retrospective: optional
+
+  # --- Epic 24: Utility Scripts & Adapters Migration ---
+  epic-24: backlog
+  24-1-inventory-deprecation-decision-standalone-scripts: backlog
+  24-2-browser-utility-features-crawler-actions: backlog
+  24-3-adapter-layer-consolidation: backlog
+  24-4-archive-remove-unused-scraper-modules: backlog
+  epic-24-retrospective: optional
+
+  # --- Epic 25: Unified Dispatcher & Public API Finalization ---
+  epic-25: backlog
+  25-1-universal-scrape-dispatcher: backlog
+  25-2-package-json-exports-v2: backlog
+  25-3-mcp-cli-api-caller-migration: backlog
+  25-4-backward-compatibility-error-mapping: backlog
+  epic-25-retrospective: optional
+
+  # --- Epic 26: Legacy Decommission Final ---
+  epic-26: backlog
+  26-1-pre-decommission-parity-rollback-preparation: backlog
+  26-2-final-legacy-removal: backlog
+  epic-26-retrospective: optional
+
 # Current Sprint Plan
 # ===================
 current_sprint:
