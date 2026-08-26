@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-26T13:00:00Z
+last_updated: 2026-08-26T14:45:00Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -80,8 +80,8 @@ development_status:
   epic-14-retrospective: optional
 
   # --- Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine ---
-  epic-15: backlog
-  15-1-threads-scraper-adapter-meta-internal-graphql: backlog
+  epic-15: in-progress
+  15-1-threads-scraper-adapter-meta-internal-graphql: ready-for-dev
   15-2-tiktok-video-hashtag-comment-scraper: backlog
   epic-15-retrospective: optional
 
