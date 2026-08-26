@@ -55,7 +55,7 @@ export class PlaywrightAdapter extends BaseAdapter {
     const browserType = options.browser || 'chromium';
     const launcher = pwRecord[browserType] || pw.chromium;
 
-    const { proxy, ...rest } = options;
+    const { proxy, userDataDir, ...rest } = options;
     const launchOptions = /** @type {import('playwright').LaunchOptions} */ ({
       headless: options.headless !== false,
       args: [
