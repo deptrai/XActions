@@ -32,15 +32,22 @@ describe('Story 14.1 — FacebookCrawler get_comments', () => {
     COMMENT_REPLIES: 'comment_replies_doc_456',
   };
 
-  const makeCommentNode = (id, parentId = null) => ({
+  const makeCommentNode = (id, parentId = null, feedbackId = `fb_${id}`) => ({
     id,
     parentId,
     message: { text: `Comment ${id}` },
     actors: [{ id: `user_${id}`, name: `Author ${id}` }],
     created_time: 1787680000,
     feedback: {
+      id: feedbackId,
       like_count: { count: parentId ? 2 : 5 },
       comment_count: { total_count: id === 'c1' ? 2 : 0 },
+      expansion_info: {
+        expansion_token: `token_${id}`,
+      },
+      replies_fields: {
+        total_count: id === 'c1' ? 2 : 0,
+      },
     },
   });
 
@@ -85,20 +92,24 @@ describe('Story 14.1 — FacebookCrawler get_comments', () => {
 
           if (docId === commentDocIds.COMMENT_ROOTS) {
             res.writeHead(200, { 'content-type': 'application/json' });
-            if (variables.postId === 'post_no_comments') {
+            if (variables.id === Buffer.from('feedback:post_no_comments').toString('base64')) {
               res.end(JSON.stringify({
-                data: { comments: { edges: [], page_info: { has_next_page: false, end_cursor: null } } },
+                data: { node: { comment_rendering_instance_for_feed_location: { comments: { edges: [], page_info: { has_next_page: false, end_cursor: null } } } } },
               }));
               return;
             }
             res.end(JSON.stringify({
               data: {
-                comments: {
-                  edges: [
-                    { node: makeCommentNode('c1') },
-                    { node: makeCommentNode('c2') },
-                  ],
-                  page_info: { has_next_page: false, end_cursor: null },
+                node: {
+                  comment_rendering_instance_for_feed_location: {
+                    comments: {
+                      edges: [
+                        { node: makeCommentNode('c1') },
+                        { node: makeCommentNode('c2') },
+                      ],
+                      page_info: { has_next_page: false, end_cursor: null },
+                    },
+                  },
                 },
               },
             }));
@@ -107,22 +118,24 @@ describe('Story 14.1 — FacebookCrawler get_comments', () => {
 
           if (docId === commentDocIds.COMMENT_REPLIES) {
             res.writeHead(200, { 'content-type': 'application/json' });
-            if (variables.parentCommentId === 'c1') {
+            if (variables.id === 'fb_c1' && variables.expansionToken === 'token_c1') {
               res.end(JSON.stringify({
                 data: {
-                  comments: {
-                    edges: [
-                      { node: makeCommentNode('c1_1', 'c1') },
-                      { node: makeCommentNode('c1_2', 'c1') },
-                    ],
-                    page_info: { has_next_page: false, end_cursor: null },
+                  node: {
+                    replies_connection: {
+                      edges: [
+                        { node: makeCommentNode('c1_1', 'c1', 'fb_c1_1') },
+                        { node: makeCommentNode('c1_2', 'c1', 'fb_c1_2') },
+                      ],
+                      page_info: { has_next_page: false, end_cursor: null },
+                    },
                   },
                 },
               }));
               return;
             }
             res.end(JSON.stringify({
-              data: { comments: { edges: [], page_info: { has_next_page: false, end_cursor: null } } },
+              data: { node: { replies_connection: { edges: [], page_info: { has_next_page: false, end_cursor: null } } } },
             }));
             return;
           }
