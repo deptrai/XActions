@@ -93,7 +93,7 @@ development_status:
 
   # --- Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream ---
   epic-14: in-progress
-  14-1-hierarchical-comment-tree-extraction-algorithm: review
+  14-1-hierarchical-comment-tree-extraction-algorithm: ready-for-dev
   14-2-mcp-tool-exporters-daemon-http-sse-server: backlog
   14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub: backlog
   epic-14-retrospective: optional
