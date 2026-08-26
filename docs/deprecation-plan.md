@@ -79,7 +79,7 @@ Xoá theo thứ tự:
 | Twitter HTTP (`src/scrapers/twitter/http/`) | `deprecated-planned` | Phase 2–3 | TBD |
 | `src/client/Scraper.js` | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-planned` | Phase 2–3 | TBD |
-| Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-planned` | Phase 2–3 | TBD |
+| Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-marked` | Phase 1 (Epic 15.1) | DEV |
 | `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
 
 ## 7. Rollback Checklist (Pre-Decommission)

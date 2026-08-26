@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Threads Social Post Metadata",
+  "type": "object",
+  "properties": {
+    "postCode": {
+      "type": "string"
+    },
+    "mediaType": {
+      "type": ["string", "number", "null"]
+    },
+    "isReply": {
+      "type": "boolean"
+    },
+    "carousel": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "replyControl": {
+      "type": "string"
+    },
+    "sourceMethod": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "postCode",
+    "sourceMethod"
+  ]
+}

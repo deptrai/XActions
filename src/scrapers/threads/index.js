@@ -6,6 +6,7 @@
  * Uses the same Puppeteer stealth approach as Twitter scrapers.
  * Threads has limited public API, so we scrape the web interface.
  *
+ * @deprecated Marked for deprecation in Phase 1 (Epic 15.1); replaced by hybrid GraphQL ThreadsCrawler (`src/scrapers/social/threads/`). Decommission scheduled in Epic 20.2.
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license MIT
@@ -38,6 +39,7 @@ const THREADS_BASE = 'https://www.threads.net';
 /**
  * Create a browser instance for Threads scraping
  *
+ * @deprecated Use ThreadsClient and ThreadsCrawler from `src/scrapers/social/threads/` instead.
  * @param {import('puppeteer').LaunchOptions} [options]
  * @returns {Promise<import('puppeteer').Browser>}
  */
@@ -56,6 +58,7 @@ export async function createBrowser(options = {}) {
 /**
  * Create a page with realistic settings
  *
+ * @deprecated Use ThreadsClient from `src/scrapers/social/threads/` instead.
  * @param {import('puppeteer').Browser} browser
  * @returns {Promise<import('puppeteer').Page>}
  */
@@ -75,6 +78,7 @@ export async function createPage(browser) {
 /**
  * Scrape a Threads profile
  *
+ * @deprecated Use ThreadsCrawler.getUserFeed from `src/scrapers/social/threads/` instead.
  * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} username - Threads username (without the leading at symbol)
  * @returns {Promise<Record<string, unknown>>} Normalized profile data
@@ -144,6 +148,7 @@ export async function scrapeProfile(page, username) {
 /**
  * Scrape posts from a Threads user's profile
  *
+ * @deprecated Use ThreadsCrawler.getUserFeed from `src/scrapers/social/threads/` instead.
  * @param {import('puppeteer').Page} page
  * @param {string} username
  * @param {ThreadsScrapeOptions} [options]
@@ -160,52 +165,33 @@ export async function scrapeTweets(page, username, options = {}) {
   /** @type {Map<string, Record<string, unknown>>} */
   const posts = new Map();
   let retries = 0;
-  const maxRetries = 10;
+  const maxRetries = 5;
 
   while (posts.size < limit && retries < maxRetries) {
     const postData = /** @type {Record<string, unknown>[]} */ (
       await page.evaluate(() => {
-        // Threads uses article or div-based post containers
-        // Selectors may need updating as Threads evolves
         const articles = document.querySelectorAll(
           'article, [data-pressable-container="true"], div[role="article"]'
         );
 
         return Array.from(articles).map((article) => {
-          // Get post text
           const textEls = article.querySelectorAll('span[dir="auto"], div[dir="auto"]');
           const texts = Array.from(textEls)
             .map((el) => el.textContent?.trim())
             .filter((t) => t && t.length > 5);
           const text = texts[0] || null;
 
-          // Get timestamp
           const timeEl = article.querySelector('time');
           const timestamp = timeEl?.getAttribute('datetime') || timeEl?.textContent || null;
 
-          // Get post link
+          // Find post URL link
           const links = article.querySelectorAll('a[href*="/post/"]');
           const postLink = links[0]?.getAttribute('href') || null;
 
-          // Get engagement stats
-          const spans = article.querySelectorAll('span');
-          let likes = '0';
-          let replies = '0';
-          for (const span of spans) {
-            const t = span.textContent || '';
-            if (/like/i.test(span.parentElement?.textContent || '') && /^\d/.test(t)) {
-              likes = t;
-            }
-            if (/repl/i.test(span.parentElement?.textContent || '') && /^\d/.test(t)) {
-              replies = t;
-            }
-          }
-
-          // Get media
-          const images = Array.from(article.querySelectorAll('img[src*="scontent"]'))
-            .map((img) => /** @type {HTMLImageElement} */ (img).src)
-            .filter((src) => !src.includes('profile'));
-          const hasVideo = !!article.querySelector('video');
+          // Extract likes/replies if visible
+          const numbers = Array.from(article.querySelectorAll('span, button'))
+            .map((el) => el.textContent?.trim())
+            .filter((t) => t && /^\d+[\d,.]*[KkMm]?$/.test(t));
 
           const id = postLink || text?.slice(0, 50) || null;
 
@@ -213,13 +199,9 @@ export async function scrapeTweets(page, username, options = {}) {
             id,
             text,
             timestamp,
-            likes,
-            replies,
             url: postLink ? `https://www.threads.net${postLink}` : null,
-            media: {
-              images,
-              hasVideo,
-            },
+            likes: numbers[0] || '0',
+            replies: numbers[1] || '0',
             platform: 'threads',
           };
         }).filter((p) => p.id && p.text);
@@ -239,6 +221,7 @@ export async function scrapeTweets(page, username, options = {}) {
       retries = 0;
     }
 
+    // Scroll down
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await randomDelay(1500, 3000);
   }
@@ -253,6 +236,7 @@ export async function scrapeTweets(page, username, options = {}) {
 /**
  * Search Threads by query
  *
+ * @deprecated Use ThreadsCrawler.search from `src/scrapers/social/threads/` instead.
  * @param {import('puppeteer').Page} page
  * @param {string} query
  * @param {ThreadsScrapeOptions} [options]
@@ -340,6 +324,7 @@ export async function searchTweets(page, query, options = {}) {
  * Note: Threads doesn't expose follower lists publicly like Twitter.
  * This returns limited data from the profile page.
  *
+ * @deprecated Legacy Puppeteer scraper. Decommission scheduled in Epic 20.2.
  * @param {import('puppeteer').Page} page
  * @param {string} username
  * @param {ThreadsScrapeOptions} [options]
@@ -363,6 +348,7 @@ export async function scrapeFollowers(page, username, options = {}) {
  * Scrape following for a Threads user
  * Note: Same limitation as followers.
  *
+ * @deprecated Legacy Puppeteer scraper. Decommission scheduled in Epic 20.2.
  * @param {import('puppeteer').Page} page
  * @param {string} username
  * @param {ThreadsScrapeOptions} [options]
@@ -385,7 +371,10 @@ export async function scrapeFollowing(page, username, options = {}) {
 // Default Export
 // ============================================================================
 
-export default {
+/**
+ * @deprecated Use ThreadsClient and ThreadsCrawler from `src/scrapers/social/threads/` instead.
+ */
+const legacyThreadsScraper = {
   createBrowser,
   createPage,
   scrapeProfile,
@@ -394,3 +383,5 @@ export default {
   scrapeTweets,
   searchTweets,
 };
+
+export default legacyThreadsScraper;
