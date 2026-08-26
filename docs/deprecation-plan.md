@@ -21,11 +21,11 @@ Một module legacy chỉ được xoá khi thỏa mãn **tất cả** các đi�
 
 | Platform | Legacy Code | Hybrid Replacement | Scope of Hybrid | Notes |
 |----------|-------------|--------------------|-----------------|-------|
-| **Twitter/X** | `src/scrapers/twitter/index.js` (Puppeteer) | `src/scrapers/social/twitter/index.js` | `search(query)`, `getTimeline(username)` | Full profile/followers/DMs/media sẽ chuyển dần sau 13.2. |
+| **Twitter/X** | `src/scrapers/twitter/index.js` (Puppeteer) | `src/scrapers/social/twitter/index.js` | `search(query)`, `getTimeline(username)` | Hoàn thành ở Story 13.2; profile/followers/following → 13.2.1, thread/likes/bookmarks → 13.2.2, search/hashtag/trending → 13.2.3, media → 13.2.4, lists/communities/spaces → 13.2.5, social actions (write/engagement) → 13.2.6, integration → 13.2.7. |
 | **Twitter/X** | `src/scrapers/twitter/http/index.js` | `src/scrapers/social/twitter/client.js` | HTTP GraphQL client | Thay thế bằng `AbstractApiClient`. |
 | **Twitter/X** | `src/client/Scraper.js` | `src/scrapers/social/twitter/client.js` | HTTP-only Scraper class | `src/client/` được coi là legacy; logic chuyển vào `src/scrapers/social/twitter/`. |
 | **Facebook** | `src/scrapers/facebook/` | `src/scrapers/social/facebook/index.js` | `getGroupPosts(groupId)`, `getPagePosts(pageId)` | Hoàn thành ở Story 13.3; profile/followers/group-members → Story 13.5, search/group_search → Story 13.6, comments → Story 13.7, marketplace → Story 13.8, social actions (write/messenger) → Story 13.9, dispatcher/service migration → Story 13.10. |
-| **Threads** | `src/scrapers/threads/index.js` | `src/scrapers/social/threads/index.js` | `search(query)`, `getUserFeed(username)` | Thay Puppeteer bằng Meta GraphQL HTTP. |
+| **Threads** | `src/scrapers/threads/index.js` | `src/scrapers/social/threads/index.js` | `getUserFeed(username)`, `search(query)`, `get_post_comments(postId)` | Hoàn thành ở Story 15.1; profile/followers/following → 15.1.1, post detail → 15.1.2, search/comments doc_id hardening → 15.1.3, integration → 15.1.4. |
 | **Admin CLI** | `src/cli/commands/checkpoints.js` (partial) | `src/cli/commands/admin.js` | Unified `xactions admin ...` | Giữ `xactions checkpoints` như alias tạm thời, xoá ở Epic 20.2. |
 | **Admin CLI** | `src/cli/commands/stream.js` (partial) | `src/cli/commands/admin.js` | Unified `xactions admin stream ...` | Giữ `xactions stream` như alias tạm thời, xoá ở Epic 20.2. |
 

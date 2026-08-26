@@ -359,7 +359,92 @@ So that **tôi có thể thu thập hàng ngàn tweet trong vài giây với lư
 * **Then** scraper sử dụng `TwitterHttpClient` kết hợp `SignerPagePool` để lấy GraphQL data
 * **And** chuẩn hóa dữ liệu trả về theo model `PostItem` với ID Namespaced `twitter:${tweetId}`
 * **And** tự động ghi vào `PrismaStore` lưu vào PostgreSQL.
-* **And (Deprecation Marker)** gắn `@deprecated` cho `src/client/Scraper.js`, `src/scrapers/twitter/http/index.js`, và `src/scrapers/twitter/index.js` (legacy); ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
+* **And (Deprecation Marker)** gắn `@deprecated` cho toàn bộ `src/client/Scraper.js`, `src/scrapers/twitter/http/index.js`, và `src/scrapers/twitter/index.js` (legacy); ghi nhận trong `docs/deprecation-plan.md` chi tiết từng tính năng được thay thế ở Story 13.2 hoặc Story 13.2.1–13.2.7 để xoá ở Epic 20.2.
+
+### Story 13.2.1: Twitter Hybrid Profile & Relationships
+As a **Twitter Growth Marketer**,
+I want **cào hồ sơ, followers, following, likers, retweeters, non-followers và thành viên list bằng `TwitterClient`/`TwitterCrawler` kiến trúc hybrid**,
+So that **tôi có thể xây dựng audience graph và phân tích mối quan hệ mà không cần mở Puppeteer tab mới**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` đã có action `profile`, `followers`, `following`, `likers`, `retweeters`, `list_members`
+* **When** gọi action với `username`, `tweetId`, `listUrl` tương ứng
+* **Then** `TwitterCrawler` dispatch GraphQL request qua `TwitterClient` (HTTP hoặc Signer Page Pool) với sticky proxy
+* **And** dữ liệu trả về chuẩn hóa theo `ProfileItem` / `PostItem` với ID Namespaced `twitter:${externalId}`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeFollowing` trong `src/scrapers/twitter/index.js` và các hàm tương ứng trong `src/scrapers/twitter/http/relationships.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.2: Twitter Hybrid Thread, Likes & Bookmarks
+As a **Twitter Content Researcher**,
+I want **cào chi tiết một thread (conversation), danh sách likes của tweet, và bookmarks của tài khoản bằng kiến trúc hybrid**,
+So that **tôi có thể phân tích nội dung tweet, engagement và nội dung người dùng đã lưu**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` đã đăng ký action `thread`, `likes`, `bookmarks`
+* **When** gọi `thread({ tweetId/url })`, `likes({ tweetId })`, hoặc `bookmarks({ username, limit })`
+* **Then** crawler trích xuất conversation tree, likers, hoặc bookmarked tweets qua GraphQL/HTTP
+* **And** thread được chuẩn hóa thành `PostItem[]` với `parentId` đúng; likes/bookmarks trả về `PostItem[]` hoặc `ProfileItem[]`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeThread`, `scrapeLikes`, `scrapeBookmarks` trong `src/scrapers/twitter/index.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.3: Twitter Hybrid Search, Hashtag & Trending
+As a **Twitter Market Researcher**,
+I want **tìm kiếm toàn cục, theo hashtag, và trending topics bằng kiến trúc hybrid**,
+So that **tôi có thể theo dõi xu hướng và tìm nội dung theo keyword/hashtag với độ trễ thấp**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` đã có `search(args)` (từ Story 13.2) và action `hashtag`, `trending`
+* **When** gọi `search({ query, filter, limit })`, `hashtag({ hashtag, filter, limit })`, hoặc `trending({ limit })`
+* **Then** crawler sử dụng Twitter GraphQL endpoints với `filter` và pagination cursor
+* **And** dữ liệu trả về `PostItem[]` với `metadata.trending` / `metadata.hashtag` khi cần
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `searchTweets`, `scrapeHashtag`, `scrapeTrending` trong `src/scrapers/twitter/index.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.4: Twitter Hybrid Media Scraper
+As a **Twitter Media Collector**,
+I want **cào media (ảnh, video, GIF) từ profile hoặc tweet và tải xuống video Twitter bằng kiến trúc hybrid**,
+So that **tôi có thể thu thập và lưu trữ media mà không cần render timeline**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` đã đăng ký action `media`, `download_video`
+* **When** gọi `media({ username, tweetId, type, limit })` hoặc `download_video({ tweetId, quality })`
+* **Then** crawler trích xuất media URLs từ GraphQL/HTTP response và hỗ trợ tải về qua stream
+* **And** dữ liệu trả về `PostItem[]` với `metadata.media` chứa `type`, `url`, `variants`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeMedia`, các hàm `downloadMedia`/`getVideoUrl` trong `src/scrapers/twitter/http/media.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.5: Twitter Hybrid Lists, Communities & Spaces
+As a **Twitter Community Researcher**,
+I want **cào thành viên list, thành viên community và danh sách Spaces bằng kiến trúc hybrid**,
+So that **tôi có thể theo dõi nhóm người dùng và nội dung audio trực tiếp**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` đã đăng ký action `list_members`, `community_members`, `spaces`
+* **When** gọi `list_members({ listUrl, limit })`, `community_members({ communityUrl, limit })`, `spaces({ query, limit })`
+* **Then** crawler dispatch GraphQL request với pagination và chuẩn hóa `ProfileItem[]` / `PostItem[]`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeListMembers`, `scrapeCommunityMembers`, `scrapeSpaces` trong `src/scrapers/twitter/index.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.6: Twitter Hybrid Social Actions (Write & Engagement)
+As a **Twitter Automation Operator**,
+I want **thực hiện hành động viết (post, reply, quote, like, retweet, follow, DM, schedule) qua `TwitterClient` kiến trúc hybrid**,
+So that **tương tác X/Twitter được quản lý bởi sticky proxy, governor, dry-run gate và `PlatformError` chuẩn**.
+
+**Acceptance Criteria:**
+* **Given** `src/scrapers/social/twitter/` có `TwitterActions` (hoặc `TwitterClient` action methods) cho write/engagement
+* **When** gọi các action `post`, `reply`, `quote`, `like`, `retweet`, `follow`, `unfollow`, `dm`, `schedule`
+* **Then** mỗi action đi qua `TwitterClient` với `Signer Page Pool` hoặc HTTP GraphQL, tuân thủ delay floor và governor
+* **And** dry-run gate mặc định; cookie/token không bị log; error trả về `PlatformError` với `suggestedAction`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `actions.js`, `engagement.js`, `dm.js` trong `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.7: Twitter Hybrid Integration & Caller Migration
+As a **XActions Platform Engineer**,
+I want **`scrape('twitter'|'x', ...)`, MCP/CLI tools và `src/client/Scraper.js` chuyển sang dùng `TwitterCrawler`/`TwitterClient` mới**,
+So that **người dùng cuối và các service không còn phụ thuộc legacy Twitter modules**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` hỗ trợ đủ action (`profile`, `timeline`, `search`, `followers`, `following`, `thread`, `likes`, `bookmarks`, `hashtag`, `trending`, `media`, `list_members`, `community_members`, `spaces`, và social actions)
+* **When** kiểm tra `src/scrapers/index.js`
+* **Then** platform `twitter`/`x` import từ `src/scrapers/social/twitter/index.js` thay vì `src/scrapers/twitter/index.js`
+* **And** `package.json` exports thêm `./scrapers/social` hoặc `./scrapers/twitter` để consumer truy cập `TwitterClient`/`TwitterCrawler`
+* **And** `src/client/Scraper.js` được đánh dấu `@deprecated` hoặc redirect sang `TwitterClient`; các hàm legacy trong `src/scrapers/twitter/http/` và `src/scrapers/twitter/index.js` được ghi `@deprecated` toàn bộ
+* **And** `tests/scrapers/twitter-*.test.js` chuyển sang test `TwitterCrawler` tương ứng hoặc được đánh dấu `@deprecated`
+* **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Twitter legacy và ghi rõ dependency vào Story 13.2.7.
 
 ### Story 13.3: Refactor Facebook Scraper to Hybrid Architecture
 As a **Facebook Community Marketer**,
@@ -549,7 +634,57 @@ So that **tôi có thể nắm bắt các chủ đề nóng và drama thịnh h�
 * **Then** crawler sử dụng `ThreadsClient` dispatch request GraphQL với token `lsd` từ Token Ring và `doc_id` của Meta
 * **And** trích xuất danh sách bài viết chuẩn hóa theo schema `PostItem` (`platform: 'threads'`, `id: 'threads:${id}'`)
 * **And** lưu trữ thành công vào PostgreSQL.
-* **And (Deprecation Marker)** gắn `@deprecated` cho `src/scrapers/threads/index.js` (Puppeteer legacy); ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
+* **And (Scope & Deprecation Marker)** story này làm `getUserFeed(username)`, `search(query)` (với SSR fallback), và `get_post_comments(postId)`; profile/followers/following, post detail, search/comments doc_id thực, và dispatcher/service migration sẽ được chuyển sang Story 15.1.1–15.1.4. Gắn `@deprecated` cho `src/scrapers/threads/index.js` (Puppeteer legacy); ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
+
+### Story 15.1.1: Threads Hybrid Profile & Followers/Following
+As a **Threads Trend Researcher**,
+I want **cào hồ sơ, followers và following của một tài khoản Threads bằng `ThreadsCrawler` kiến trúc hybrid**,
+So that **tôi có thể phân tích mạng lưới người dùng và tìm influencer mà không cần Puppeteer**.
+
+**Acceptance Criteria:**
+* **Given** `ThreadsCrawler` đã đăng ký action `profile`, `followers`, `following`
+* **When** gọi `profile({ username })`, `followers({ username, count })`, hoặc `following({ username, count })`
+* **Then** crawler sử dụng `ThreadsClient` GraphQL (hoặc HTTP SSR fallback nếu doc_id chưa có) để lấy dữ liệu
+* **And** dữ liệu trả về chuẩn hóa theo `ProfileItem` với ID Namespaced `threads:${userId}`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeFollowing` trong `src/scrapers/threads/index.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 15.1.2: Threads Hybrid Post Detail & Comment Tree
+As a **Threads Content Analyst**,
+I want **cào chi tiết một thread (nội dung + cây trả lời) bằng kiến trúc hybrid**,
+So that **tôi có thể phân tích toàn bộ conversation mà không bị mất reply lồng nhau**.
+
+**Acceptance Criteria:**
+* **Given** `ThreadsCrawler` đã đăng ký action `post_detail` và `get_post_comments` (đã có từ 15.1)
+* **When** gọi `post_detail({ postId/url, includeReplies, maxDepth, maxComments })`
+* **Then** crawler trích xuất post content, thread chain và replies qua `ThreadsClient` GraphQL/HTTP
+* **And** dữ liệu trả về `PostItem` cho root post và `CommentItem[]` cho cây trả lời, với `parentCommentId` đúng
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho logic `scrapeThread` trong `src/scrapers/threads/index.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 15.1.3: Threads Hybrid DocID Hardening for Search & Comments
+As a **Threads Platform Engineer**,
+I want **thay thế SSR fallback của `search` và `get_post_comments` bằng GraphQL `doc_id` ổn định**,
+So that **crawler không phụ thuộc HTML parsing dễ vỡ và đạt throughput cao hơn**.
+
+**Acceptance Criteria:**
+* **Given** `ThreadsCrawler` đang sử dụng `DEFAULT_THREADS_DOC_IDS` với `SEARCH_POSTS`, `COMMENT_ROOTS`, `COMMENT_REPLIES` là `null`
+* **When** reverse-engineer hoặc cập nhật các doc_id từ Meta GraphQL endpoints
+* **Then** `searchPosts` ưu tiên GraphQL khi `SEARCH_POSTS` có giá trị; SSR fallback chỉ dùng khi GraphQL fail/quarantine
+* **And** `getPostComments` ưu tiên `COMMENT_ROOTS`/`COMMENT_REPLIES`; `POST_DETAIL` làm fallback cuối
+* **And** thêm test để xác nhận GraphQL path trả về kết quả đầy đủ, không rỗng
+* **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` ghi rõ `search` và `comments` đã harden.
+
+### Story 15.1.4: Threads Hybrid Integration & Package Exports
+As a **XActions Platform Engineer**,
+I want **`scrape('threads', ...)`, MCP/CLI tools và các caller cũ chuyển sang `ThreadsCrawler`/`ThreadsClient` mới**,
+So that **người dùng cuối không còn phụ thuộc `src/scrapers/threads/` legacy**.
+
+**Acceptance Criteria:**
+* **Given** `ThreadsCrawler` hỗ trợ đủ action (`get_user_feed`, `search`, `post_detail`, `get_post_comments`, `profile`, `followers`, `following`)
+* **When** kiểm tra `src/scrapers/index.js`
+* **Then** platform `threads` import từ `src/scrapers/social/threads/index.js` thay vì `src/scrapers/threads/index.js`
+* **And** `package.json` exports thêm `./scrapers/threads` hoặc `./scrapers/social` để consumer truy cập `ThreadsClient`/`ThreadsCrawler`
+* **And** `tests/scrapers/threads-*.test.js` chuyển sang test `ThreadsCrawler` tương ứng hoặc được đánh dấu `@deprecated`
+* **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Threads legacy và ghi rõ dependency vào Story 15.1.4.
 
 ### Story 15.2: TikTok Video, Hashtag & Comment Scraper with Anti-Bot Payload Validation
 As a **Short-Form Content Creator / E-commerce Researcher**,
