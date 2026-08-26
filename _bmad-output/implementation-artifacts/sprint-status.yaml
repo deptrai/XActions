@@ -83,7 +83,7 @@ development_status:
   13-2-12-twitter-hybrid-integration-caller-migration: backlog
   13-3-refactor-facebook-scraper-to-hybrid-architecture: done
   13-4-facebook-browser-as-signer-bridge: done
-  13-5-facebook-hybrid-profile-followers-group-members: ready-for-dev
+  13-5-facebook-hybrid-profile-followers-group-members: in-progress
   13-6-facebook-hybrid-search-global-group-search: backlog
   13-7-facebook-hybrid-post-group-comments: backlog
   13-8-facebook-hybrid-marketplace: backlog
