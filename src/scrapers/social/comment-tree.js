@@ -182,15 +182,8 @@ export class CommentTreeExtractor {
       return { pageInfo: lastPageInfo };
     };
 
-    try {
-      const root = await fetchLayerPaginated(null, 0, initialAfter);
-      rootPageInfo = root.pageInfo;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn(`⚠️ [CommentTreeExtractor] Root comment fetch failed: ${message}`);
-      notes.push(`Root comment fetch failed: ${message}`);
-      rootPageInfo = { has_next_page: false, end_cursor: null };
-    }
+    const root = await fetchLayerPaginated(null, 0, initialAfter);
+    rootPageInfo = root.pageInfo;
 
     for (let depth = 0; depth < this.#maxDepth; depth++) {
       const parents = Array.from(byId.values()).filter(
@@ -205,6 +198,9 @@ export class CommentTreeExtractor {
             try {
               await fetchLayerPaginated(parent.externalId, depth + 1);
             } catch (err) {
+              if (/** @type {any} */ (err)?.isPlatformError) {
+                throw err;
+              }
               const message = err instanceof Error ? err.message : String(err);
               const note = `Failed to fetch replies for ${parent.externalId}: ${message}`;
               console.warn(`⚠️ [CommentTreeExtractor] ${note}`);
