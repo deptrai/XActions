@@ -391,9 +391,11 @@ Run: xactions crawl --platform linkedin --action search_jobs ...
 ```
 $ xactions status --json | jq .
 {
-  "proxyPool": "12/15 healthy",
-  "governorThrottle": 2,
-  "redisLag": 1240,
+  "healthyProxyCount": 12,
+  "totalProxyCount": 15,
+  "currentReqPerSecond": 482,
+  "redisConsumerLag": 1240,
+  "throttleLevel": 2,
   "hibernatingAccounts": ["fb:123 18m left"]
 }
 ```

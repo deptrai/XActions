@@ -255,6 +255,85 @@ Linh wants to grow her network by connecting with people in a marketing group.
 6. Result panel: posts/profiles with `bluesky` or `mastodon` platform badge.
 7. User exports JSONL or streams to Redis.
 
+### Flow 4: Operator uses `xactions admin` CLI
+
+Hùng is an internal operator. He needs to monitor and control the scraper from a terminal without opening the web dashboard.
+
+```
+$ xactions admin --help
+status      → governor, proxy, account, stream overview
+proxies     → list / quarantine / release proxy
+accounts    → list / wake / rotate account
+checkpoints → list / resume / pause / retry
+stream      → metrics / alerts / test
+```
+
+#### Wireframe 4a: `xactions admin status`
+
+```
+$ xactions admin status
+Proxy pool:        12/15 healthy
+Current req/s:     482
+Redis consumer lag: 1,240
+Throttle level:    2
+Hibernating:       [fb:123 18m left]
+```
+
+#### Wireframe 4b: `xactions admin proxies`
+
+```
+$ xactions admin proxies list
+proxy-1   healthy    203.0.113.5   expiry: 2026-08-27 02:00
+proxy-2   quarantined  198.51.100.7  until: 2026-08-26 15:05
+
+$ xactions admin proxy quarantine proxy-2
+✅ proxy-2 quarantined for 5 minutes.
+
+$ xactions admin proxy release proxy-2
+✅ proxy-2 released.
+```
+
+#### Wireframe 4c: `xactions admin accounts`
+
+```
+$ xactions admin accounts list --platform facebook
+fb:123    active      velocity: 12/min  proxy: proxy-1
+fb:124    hibernating until 15:45       reason: bot_challenge
+
+$ xactions admin account wake fb:124
+✅ fb:124 woken.
+
+$ xactions admin account rotate fb:124 facebook
+✅ fb:124 rotated to fb:125.
+```
+
+#### Wireframe 4d: `xactions admin checkpoints`
+
+```
+$ xactions admin checkpoints list
+twitter:search:ai   running   cursor: 2026-08-26T10:00:00Z
+facebook:group:ml   failed    lastError: 429
+
+$ xactions admin checkpoint retry facebook:group:ml
+✅ facebook:group:ml retried, status: running.
+```
+
+#### Wireframe 4e: `xactions admin stream`
+
+```
+$ xactions admin stream metrics
+pendingMessages: 1,240
+lastAckTime:     12s
+consumers:       3
+
+$ xactions admin stream alerts
+checkpoint: pendingMessages > 50,000
+status:     OK
+
+$ xactions admin stream test
+✅ test alert fired to configured webhook.
+```
+
 ## Responsive & Platform
 
 - **Desktop (>1024px):** Full sidebar + content + optional right panel

@@ -201,10 +201,10 @@ development_status:
 # Current Sprint Plan
 # ===================
 current_sprint:
-  name: "Sprint 2026-08-24 — Epic 13 Tiered Signer Foundation"
+  name: "Sprint 2026-08-24 — Epic 13 Hybrid Engine"
   start: "2026-08-24"
   goals:
-    - "Implement Story 13.1 Tiered Signer Architecture (Token Ring & Worker Page Pool) to start Epic 13"
+    - "Refactor Twitter scraper to hybrid architecture (Story 13.2) and validate Tiered Signer foundation"
   stories:
-    - "13-1-tiered-signer-architecture-token-ring-worker-pool"
+    - "13-2-refactor-twitter-scraper-to-hybrid-architecture"
   blocked: []

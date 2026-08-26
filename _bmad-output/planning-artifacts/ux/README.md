@@ -21,7 +21,7 @@ This folder contains the user-experience design artifacts for the XActions Inter
 
 - **UI implementers** start with `DESIGN.md` for tokens and components, then read `EXPERIENCE.md` for flows.
 - **UX reviewers** focus on `EXPERIENCE.md` as the canonical flow document; use `EXPERIENCE-UNIVERSAL-2026-08-21.md` only when a flow explicitly references it.
-- **CLI authors** refer to `EXPERIENCE.md` for admin CLI command flows; note that CLI wireframes are not yet detailed here and should be added under Epic 19 as stories are implemented.
+- **CLI authors** refer to `EXPERIENCE.md` for admin CLI command flows and wireframes for `xactions admin` (status, proxies, accounts, checkpoints, stream) under Epic 19.
 
 ## Boundaries
 
