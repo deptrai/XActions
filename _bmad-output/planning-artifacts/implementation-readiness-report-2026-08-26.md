@@ -1,5 +1,11 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6]
+stepsCompleted:
+  - step-01-document-discovery
+  - step-02-prd-analysis
+  - step-03-epic-coverage-validation
+  - step-04-ux-alignment
+  - step-05-epic-quality-review
+  - step-06-final-assessment
 documentOutputLanguage: Việt Nam
 outputFile: _bmad-output/planning-artifacts/implementation-readiness-report-2026-08-26.md
 selectedDocuments:
@@ -7,28 +13,24 @@ selectedDocuments:
     primary: _bmad-output/planning-artifacts/prd.md
     supplemental:
       - _bmad-output/planning-artifacts/prd-canonicalization-addendum-2026-08-21.md
-      - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md
+      - _bmad-output/planning-artifacts/prd-facebook-epics-5-6-2026-08-21.md
   architecture:
     primary: _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
     supplemental:
-      - _bmad-output/planning-artifacts/archive/architecture-brownfield-2026-08-20.md
       - _bmad-output/planning-artifacts/architecture/xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md
+      - _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/EPIC10-DECISION-LOG-2026-08-18.md
       - _bmad-output/planning-artifacts/research/technical-mediacrawler-architecture-for-xactions-research-2026-08-18.md
   epics:
     primary: _bmad-output/planning-artifacts/epics.md
     supplemental:
       - _bmad-output/planning-artifacts/archive/epics-1-9-legacy.md
-      - _bmad-output/planning-artifacts/test-design-epic-12.md
+      - _bmad-output/planning-artifacts/backlog-epics-21-22.md
   ux:
-    primary: _bmad-output/planning-artifacts/ux/DESIGN.md
+    primary: _bmad-output/planning-artifacts/ux/README.md
     supplemental:
-      - _bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md
+      - _bmad-output/planning-artifacts/ux/DESIGN.md
       - _bmad-output/planning-artifacts/ux/EXPERIENCE.md
-unresolvedDuplicates: []
-resolvedDuplicates:
-  - PRD: sharded PRDs chuyển vào archive/prds/
-  - Architecture: whole architecture.md chuyển vào archive/architecture-brownfield-2026-08-20.md
-  - Epics: epics-full.md chuyển vào archive/epics-1-9-legacy.md
+      - _bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md
 ---
 
 # Implementation Readiness Assessment Report
@@ -36,338 +38,492 @@ resolvedDuplicates:
 **Date:** 2026-08-26
 **Project:** XActions
 
-## 1. Document Inventory
-
-### PRD Documents
-
-**Whole Documents:**
-- `prd.md` (16,975 bytes, 2026-08-20 14:32:32)
-- `prd-canonicalization-addendum-2026-08-21.md` (4,904 bytes, 2026-08-20 14:33:55)
-- `prd-facebook-epics-5-6-2026-08-21.md` (9,446 bytes, 2026-08-20 14:31:06)
-
-**Sharded Documents:**
-- Folder `prds/prd-XActions-2026-06-08/`
-  - `prd.md` (20,671 bytes, 2026-08-20 14:33:02)
-- Folder `prds/prd-XActions-2026-06-10-epic4/`
-  - `prd.md` (18,466 bytes, 2026-08-20 14:33:17)
-- Folder `prds/prd-XActions-2026-08-14-epic7/`
-  - `prd.md` (16,423 bytes, 2026-08-20 14:33:31)
-  - `validation-report.md` (9,586 bytes, 2026-08-15 01:26:52)
-- Folder `prds/prd-XActions-2026-08-18-universal-scraping-engine/`
-  - `prd.md` (13,342 bytes, 2026-08-20 14:32:44)
-
-### Architecture Documents
-
-**Whole Documents:**
-- `archive/architecture-brownfield-2026-08-20.md` (46,618 bytes, 2026-08-20 14:37:04)
-
-**Sharded Documents:**
-- Folder `architecture/xactions-facebook-gateway-2026-08-23/`
-  - `ARCHITECTURE-SPINE.md` (15,661 bytes, 2026-08-23 06:07:31)
-- Folder `architecture/xactions-hybrid-scraping-spine/`
-  - `ARCHITECTURE-SPINE.md` (41,826 bytes, 2026-08-23 05:33:38)
-  - `ARCHITECTURE-DEV-REVIEW-2026-08-18.md` (10,205 bytes, 2026-08-18 23:08:42)
-  - `ARCHITECTURE-EPIC10-PM-REVIEW-2026-08-18.md` (8,243 bytes, 2026-08-18 23:42:36)
-  - `ARCHITECTURE-EPIC10-REVIEW-2026-08-18.md` (11,984 bytes, 2026-08-18 23:29:19)
-  - `ARCHITECTURE-UPDATE-GATE-2026-08-18.md` (4,400 bytes, 2026-08-18 22:28:46)
-  - `ARCHITECTURE-UPDATE-GATE-2026-08-18-R3.md` (2,957 bytes, 2026-08-18 22:55:06)
-  - `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` (6,004 bytes, 2026-08-20 14:36:09)
-  - `ARCHITECTURE-UX-REVIEW-2026-08-18.md` (8,102 bytes, 2026-08-19 01:08:04)
-  - `ARCHITECTURE-VALIDATION-REPORT-2026-08-18.html` (40,119 bytes, 2026-08-18 22:23:43)
-  - `ARCHITECTURE-VALIDATION-REPORT-2026-08-18-R2.html` (14,721 bytes, 2026-08-18 22:51:48)
-  - `EPIC10-DECISION-LOG-2026-08-18.md` (6,866 bytes, 2026-08-18 23:42:26)
-  - Sub-folder `reviews/`
-    - `review-validate-dc8a3ed-vs-9ebc9c4-2026-08-21.md` (7,202 bytes, 2026-08-21 02:43:03)
-
-**Research:**
-- `research/technical-mediacrawler-architecture-for-xactions-research-2026-08-18.md` (27,937 bytes, 2026-08-18 21:01:13)
-
-### Epics & Stories Documents
-
-**Whole Documents:**
-- `epics.md` (64,302 bytes, 2026-08-26 02:19:48)
-- `archive/epics-1-9-legacy.md` (50,662 bytes, 2026-08-21 04:00:51)
-- `test-design-epic-12.md` (7,373 bytes, 2026-08-21 16:45:44)
-
-### UX Design Documents
-
-**Whole Documents:** Không tìm thấy `*ux*.md` ở root planning-artifacts.
-
-**Sharded Documents:**
-- Folder `ux/`
-  - `DESIGN.md` (11,140 bytes, 2026-08-20 14:36:20)
-  - `EXPERIENCE.md` (11,494 bytes, 2026-08-08 21:16:46)
-  - `EXPERIENCE-UNIVERSAL-2026-08-21.md` (4,664 bytes, 2026-08-20 14:36:42)
-
-## 2. Duplicate & Missing Document Findings
-
-- **PRD**: Tồn tại cả whole `prd.md` và 4 folder sharded `archive/prds/*`. Các sharded đã deprecated và chuyển vào archive.
-- **Architecture**: Tồn tại whole `archive/architecture-brownfield-2026-08-20.md` và sharded `xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`.
-- **Epics**: `epics.md` (mới nhất, Epics 10–20) và `archive/epics-1-9-legacy.md` (Epics 1–9) là 2 phạm vi riêng biệt, không còn trùng lặp.
-- **UX**: Không có whole `*ux*.md` duy nhất; có 3 file trong `ux/`.
-
-## 3. Selected Canonical Documents
-
-| Loại | Primary | Supplemental |
-|------|---------|--------------|
-| PRD | `prd.md` | `prd-canonicalization-addendum-2026-08-21.md`, `archive/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md` |
-| Architecture | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` | `archive/architecture-brownfield-2026-08-20.md`, `xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md`, `research/...` |
-| Epics | `epics.md` | `archive/epics-1-9-legacy.md`, `test-design-epic-12.md` |
-| UX | `ux/DESIGN.md` | `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md`, `ux/EXPERIENCE.md` |
-
-## 4. Epic Coverage Validation
-
-### Epic FR Coverage Extracted
-
-`epics.md` ánh xạ FR/NFR vào các epic/story qua **Requirements Inventory** (đầu tài liệu) và ma trận **NFR Traceability Matrix** (cuối tài liệu).
-
-| FR | Requirement (tóm tắt) | Epic / Story Coverage | Status |
-|---|---|---|---|
-| FR64 | Core Domain Interfaces | Epic 10.1 | ✓ Covered |
-| FR65 | Tiered Hybrid Signer Engine | Epic 13.1 | ✓ Covered |
-| FR66 | Anti-Leak Proxy Pool | Epic 11.1, 11.2, 11.3, 11.6 | ✓ Covered |
-| FR66B | Adaptive Rate Limiter/Governor | Epic 11.4, 11.7 | ✓ Covered |
-| FR67 | Namespaced PostgreSQL Storage | Epic 10.2 | ✓ Covered |
-| FR68 | Terminal QR Login | Epic 12.1 | ✓ Covered |
-| FR69 | CDP Remote Attach | Epic 12.2 | ✓ Covered |
-| FR70 | Topological Comment Tree | Epic 14.1 | ✓ Covered |
-| FR71 | Twitter Crawler Refactor | Epic 13.2 | ✓ Covered |
-| FR72 | Facebook Crawler Refactor | Epic 13.3 | ✓ Covered |
-| FR73 | MCP Daemon & CLI + Dataset Exporter | Story 10.3 (FR73A), Story 14.2 (FR73B) | ✓ Covered |
-| FR74 | Threads Scraper | Epic 15.1 | ✓ Covered |
-| FR75 | TikTok Scraper | Epic 15.2 | ✓ Covered |
-| FR76 | Shopee Scraper | Epic 16.1 | ✓ Covered |
-| FR77 | TikTok Shop Scraper | Epic 16.2 | ✓ Covered |
-| FR78 | Chợ Tốt Scraper | Epic 17.1 | ✓ Covered |
-| FR79 | Batdongsan Scraper | Epic 17.2 | ✓ Covered |
-| FR80 | TopCV Scraper | Epic 18.1 | ✓ Covered |
-| FR81 | VietnamWorks Scraper | Epic 18.2 | ✓ Covered |
-| FR82 | LinkedIn Scraper | Epic 18.3 | ✓ Covered |
-| FR83 | Redis Thin Event Stream | Epic 14.3 | ✓ Covered |
-| FR84 | Nowing Cutover & Decommission | Epic 20.1, 20.2 | ✓ Covered |
-| FR85 | Admin Dashboard & CLI | Epic 19.1–19.8 | ✓ Covered |
-| FR86 | Metadata Schema Contract | Story 10.5 | ✓ Covered |
-| FR87 | Data Retention Policy | Story 10.2, Epic 19 | ✓ Covered |
-| FR88 | 3-Tier Incremental Gap-Filling | Epic 10, 11 | ✓ Covered |
-
-### NFR Coverage
-
-| NFR | Requirement | Epic / Story Coverage | Status |
-|---|---|---|---|
-| NFR11 | Resource Optimization (85% RAM, 70% CPU) | 10.2, 13.1, 13.2, 13.3, 15.2, 16.1, 16.2, 17.1, 17.2, 18.1, 18.2, 18.3, 20.2, 21.1, 21.2, 22.1, 22.2, 22.3 | ✓ Mapped |
-| NFR12 | Throughput (>500 req/s, <2ms RPC) | 13.1, 13.2, 13.3, 14.2, 15.2, 16.1, 16.2, 17.1, 17.2, 18.1, 18.2, 18.3, 21.1, 21.2, 22.1, 22.2, 22.3 | ✓ Mapped |
-| NFR13 | Resilience & Auto-Failover (proxy retry 3x) | 11.1, 11.3, 11.4, 11.5, 11.6, 11.7 | ✓ Mapped |
-| NFR14 | Zero-Credential Security | 12.1, 12.2 | ✓ Mapped |
-| NFR15 | Clean Architecture & Extensibility | 10.1, 10.5, 11.1, 14.2, 21.1, 22.1 | ✓ Mapped |
-| NFR16 | License & Backward Compatibility | 14.2, 20.1, 20.2 | ✓ Mapped |
-| NFR17 | Operational Observability | 11.4, 14.3, 19.1, 19.2, 19.3, 19.6 | ✓ Mapped |
-
-### Coverage Gaps
-
-| GAP | Mô tả | Mức độ | Khuyến nghị |
-|---|---|---|---|
-| GAP-1 | **Epic 21–22 không có PRD / FR tương ứng.** `epics.md` thêm Epic 21 (B2B Procurement, Automotive) và Epic 22 (F&B, Healthcare, Legal) nhưng PRD canonical (prd.md) chỉ bao phủ Epics 10–20. | **Critical** | Cập nhật PRD hoặc tách Epic 21–22 thành PRD riêng; gán FR-89+ và NFR-18+ cho các domain mới. |
-| GAP-2 | **FUTURE-FR-62 (GraphQL replay)** bị deferred, không có trong `epics.md` và sprint-status.yaml. | Low | Giữ trong `FUTURE-WORK.md`; không cần cho phase hiện tại. |
-| GAP-3 | **FR-73 bị gộp chung trong PRD** nhưng tách thành 10.3 (Dataset Exporter) và 14.2 (MCP Envelope) trong `epics.md`; cần đảm bảo traceability. | Low | Giữ sub-label U-FR-73A / U-FR-73B trong addendum. |
-| GAP-4 | **FR66 / FR66B** có thể bị hiểu nhầm với các sub-label A/B trong deprecated PRD. | Low | Sử dụng canonical numbering FR66 + FR66B. |
-
-### Coverage Statistics
-
-- **Total PRD FRs:** 25
-- **FRs covered in epics:** 25 (100% cho phạm vi PRD)
-- **Total PRD NFRs:** 7
-- **NFRs mapped in epics:** 7 (100%)
-- **Phạm vi ngoài PRD:** Epic 21–22 (6 stories) chưa có FR/NFR nguồn trong PRD canonical.
-
-## 5. PRD Analysis
-
-### Source PRD
-
-- **Primary:** `prd.md` (canonical, approved, 2026-08-21)
-- **Supplemental:** `prd-canonicalization-addendum-2026-08-21.md` (canonical numbering, master register), `prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md` (deprecated status)
-- **Scope:** Epics 10–20
-
-### Functional Requirements Extracted
-
-| Canonical ID | Source ID | Requirement |
-|---|---|---|
-| U-FR-64 | FR-64 | Core Domain Interfaces: `AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore`, `ISignerBridge` thuần ESM, Zero-Dependency. |
-| U-FR-65 | FR-65 | Tiered Hybrid Signer Engine: Pre-Signed Token Ring Buffer O(1) + Signer Worker Page Pool (4–8 tabs, `Promise.race` 3s) + `got-scraping`/`undici` (TLS/JA4). |
-| U-FR-66 | FR-66 | Proxy Pool & Auto-Quarantine: quản lý Static/Dynamic Tunnel Proxy, chống rò rỉ WebRTC/DNS, buffer expiration 30s, quarantine 5 phút, retry 3 lần, standby 30s. |
-| U-FR-66B | FR-66B | Adaptive Rate Limiter & Governor: điều tốc theo healthy proxy ratio, Leaky Bucket, hibernation account 15–30 phút. |
-| U-FR-67 | FR-67 | Namespaced PostgreSQL Storage & JSONB GIN Indexes: `Post`/`Comment` với `${platform}:${externalId}`, `metadata Json?`, batch 500 records. |
-| U-FR-68 | FR-68 | Terminal ASCII QR Code Login: tỷ lệ 1:1 trên Terminal, countdown 60s, timeout 120s, polling cookie. |
-| U-FR-69 | FR-69 | CDP Remote Attach Mode: kết nối Chrome thật qua port 9222, Gaussian jitter 3–7s. |
-| U-FR-70 | FR-70 | Topological Comment Tree Extraction: cây bình luận đa tầng, chống vòng, topological sort. |
-| U-FR-71 | FR-71 | Twitter Crawler Refactor: GraphQL + Signer Page Pool + PrismaStore. |
-| U-FR-72 | FR-72 | Facebook Crawler Refactor: GraphQL DocID dispatch + Proxy Pool. |
-| U-FR-73 | FR-73 | MCP Daemon & CLI Integration + Streaming Dataset Exporter: Daemon HTTP/SSE port 3001, 80+ MCP tools, 3-Layer JSON Envelope, auto-artifact >100 records, JSONL/CSV export với backpressure. |
-| U-FR-73A | (sub-label) | AI Streaming Dataset Exporter (Story 10.3) — xuất JSONL/CSV. |
-| U-FR-73B | (sub-label) | MCP Tool Envelope & CLI Crawl (Story 14.2) — 3-Layer JSON Envelope. |
-| U-FR-74 | FR-74 | Threads Meta GraphQL Scraper: bài viết, timeline, replies qua LSD token + DocID. |
-| U-FR-75 | FR-75 | TikTok Video, Hashtag & Comment Scraper: `a_bogus`/`msToken` Signer Bridge, kiểm tra False 200 OK. |
-| U-FR-76 | FR-76 | Shopee Product, Price & Review Scraper: TLS Spoofing + Anti-Bot Validation. |
-| U-FR-77 | FR-77 | TikTok Shop Winning Products Scraper. |
-| U-FR-78 | FR-78 | Chợ Tốt Multi-Category Scraper with Phone Extractor. |
-| U-FR-79 | FR-79 | Batdongsan.com.vn Property Scraper. |
-| U-FR-80 | FR-80 | TopCV Recruitment Scraper. |
-| U-FR-81 | FR-81 | VietnamWorks Job Scraper. |
-| U-FR-82 | FR-82 | LinkedIn B2B Lead & Job Scraper via CDP 9222. |
-| U-FR-83 | FR-83 | Nowing Thin Event Redis Stream Ingest: `stream:social:raw_posts`, Thin Event Pointers. |
-| U-FR-84 | FR-84 | Nowing Scrapers Cutover & Legacy Decommissioning. |
-| U-FR-85 | FR-85 | Internal Operator Dashboard & Admin CLI. |
-| U-FR-86 | FR-86 | Metadata Schema Contract for Consumers. |
-| U-FR-87 | FR-87 | Data Retention Policy: raw 30 ngày, leads vĩnh viễn, checkpoints/audit 90 ngày. |
-| U-FR-88 | FR-88 | 3-Tier Incremental Gap-Filling: full seed → delta → on-demand refresh; 0% duplication; 90% proxy cost saving. |
-
-**Total PRD FRs: 25** (U-FR-64..U-FR-88)
-
-### Non-Functional Requirements Extracted
-
-| Canonical ID | Source ID | Requirement |
-|---|---|---|
-| U-NFR-11 | NFR-11 | Tối ưu tài nguyên: giảm ≥85% RAM, ≥70% CPU. |
-| U-NFR-12 | NFR-12 | Băng thông & tốc độ: 5x–10x (>500 req/s), RPC <2ms. |
-| U-NFR-13 | NFR-13 | Tự phục hồi & failover: proxy die/rate-limit, quarantine, replay 3 lần. |
-| U-NFR-14 | NFR-14 | Bảo mật phi mật khẩu: QR/CDP. |
-| U-NFR-15 | NFR-15 | Kiến trúc sạch: `src/core/` Zero-Dependency, adapters riêng biệt. |
-| U-NFR-16 | NFR-16 | License & backward compatibility: MIT/Apache 2.0, `unfollowx`, 80+ MCP tools. |
-| U-NFR-17 | NFR-17 | Operational observability: `/governor/status`, `/metrics/stream`, dashboard SSE 5–30s, alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`. |
-
-**Total PRD NFRs: 7** (U-NFR-11..U-NFR-17)
-
-### Additional Requirements / Constraints
-
-- **FUTURE-FR-62** — GraphQL replay: deferred (xem `FUTURE-WORK.md`).
-- **FR-24..FR-54** — Facebook Messenger/Marketplace/Anti-Detection (Epics 5, 5b, 6) nằm trong `prd-facebook-epics-5-6-2026-08-21.md`, không thuộc scope PRD này.
-- **Data Retention Policy:** raw 30 ngày trong XActions, leads vĩnh viễn trong Nowing.
-- **Phasing:** Phase 1–5 trong PRD appendix 7.3.
-
-### PRD Completeness Assessment
-
-- PRD đầy đủ cho Epics 10–20 với 25 FR, 7 NFR.
-- FR-73 được đánh dấu chung cả dataset exporter và MCP daemon; trong `epics.md` tách thành 10.3 và 14.2 — cần theo dõi traceability.
-- FR-66 và FR-66B có sub-label A/B; `epics.md` dùng FR66 + FR66B, tương đương.
-- **GAP chính:** PRD không bao gồm **Epic 21–22** (B2B Procurement, F&B/Healthcare/Legal), mặc dù `epics.md` đã thêm.
-
-## 6. UX Alignment Assessment
-
-### UX Document Status
-
-**Found:**
-- `ux/DESIGN.md` (draft, 2026-06-19) — Design system & dashboard components.
-- `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` (draft, 2026-08-21) — Personas và flows cho Epics 10–20.
-- `ux/EXPERIENCE.md` (draft, 2026-08-08) — Older experience doc.
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` — UX remediation notes.
-
-### UX ↔ PRD Alignment
-
-| PRD Requirement | UX Coverage | Đánh giá |
-|---|---|---|
-| FR-68 Terminal QR Login | Flow C1/C2 trong `EXPERIENCE-UNIVERSAL` | ✓ Khớp; thiếu mockup cụ thể. |
-| FR-69 CDP Attach | Flow R1 trong `EXPERIENCE-UNIVERSAL` | ✓ Khớp. |
-| FR-85 Admin Dashboard | `DESIGN.md` Admin Status Card, Data Table, Stream Metrics Chart, Alert Banner; `EXPERIENCE-UNIVERSAL` O1/O2 | ✓ Đầy đủ. |
-| FR-73B MCP / CLI | `EXPERIENCE-UNIVERSAL` A1/A2, C3/C4; `DESIGN.md` CLI Output Blocks | ✓ Khớp. |
-| FR-86 Schema Viewer | `DESIGN.md` Schema Viewer component | ✓ Khớp. |
-| FR-83 Stream Metrics | `DESIGN.md` Stream Metrics Line Chart | ✓ Khớp. |
-| Multi-platform flows N1 | `EXPERIENCE-UNIVERSAL` Flow N1 | ✓ Khớp. |
-
-### UX ↔ Architecture Alignment
-
-| Architecture Decision | UX Implication | Đánh giá |
-|---|---|---|
-| `GET /governor/status`, `/metrics/stream` (NFR-17) | Admin Status Card, Stream Metrics Chart cần real-time data. Architecture expose metrics. | ✓ Khớp. |
-| MCP over HTTP/SSE port 3001 | AI Agent flows cần 3-Layer JSON Envelope; architecture hỗ trợ. | ✓ Khớp. |
-| Redis Stream `stream:social:raw_posts` | Nowing Integrator persona nhận thin events; architecture hỗ trợ. | ✓ Khớp. |
-
-### UX Warnings
-
-| Mã | Mô tả | Mức độ | Khuyến nghị |
-|---|---|---|---|
-| UX-W1 | `DESIGN.md` vẫn ở `draft` từ 2026-06-19, trước nhiều thay đổi kiến trúc và Epic 21–22. | Medium | Cập nhật hoặc xác nhận canonical; bổ sung components cho Epic 21–22 nếu cần. |
-| UX-W2 | Không có wireframe/mockup cụ thể cho QR, CDP flow, Multi-platform new-user flow; chỉ có text flow. | Low | Bổ sung ASCII/text-based mockups. |
-| UX-W3 | Epic 21–22 chưa xuất hiện trong UX docs. | Medium | Nếu giữ lại Epic 21–22, cần personas/flows tương ứng. |
-
-## 7. Epic Quality Review
-
-### Scope & Method
-
-Đánh giá `epics.md` theo tiêu chuẩn create-epics-and-stories: user-value, độc lập, dependency, sizing, acceptance criteria, traceability.
-
-### Epic-by-Epic Summary
-
-| Epic | Tiêu đề | User Value | Independence | Quality Notes |
-|---|---|---|---|---|
-| 10 | Data & Platform Foundation | ✓ Foundation enabler; trừu tượng hóa cho toàn bộ crawler | ✓ Foundation | Có thể bị coi là technical; nhưng mô tả rõ vai trò enabler. |
-| 11 | Resilient Network & Proxy Pool | ✓ Operator và crawler tránh die hàng loạt | ✓ Network layer | 8 stories, có thể oversized; nhưng chia nhỏ hợp lý. |
-| 12 | Frictionless Authentication | ✓ QR/CDP login cho CLI users | ✓ Auth | 2 stories, rõ ràng. |
-| 13 | Hybrid Scraping Engine (Twitter/Facebook) | ✓ High-throughput social scraping | ⛓️ Cần Epic 10, 11 | 3 stories; 13.2/13.3 có overlap với legacy code đã ghi nhận. |
-| 14 | Deep Conversation, MCP, Event Stream | ✓ MCP/Redis stream cho AI/Nowing | ⛓️ Cần 10, 11, 13.1 | 3 stories; 14.2 MCP có overlap với `src/mcp/server.js`. |
-| 15 | Vietnam Viral Social | ✓ Threads/TikTok coverage | ⛓️ Cần 13.1 (TikTok signer) | 2 stories; 15.1 overlap với existing Threads. |
-| 16 | E-Commerce | ✓ Shopee/TikTok Shop data | ⛓️ Cần 10, 11 | 2 stories, mới. |
-| 17 | Real Estate | ✓ BĐS leads + SĐT | ⛓️ Cần 10, 11 | 2 stories, mới. |
-| 18 | HR & B2B Recruitment | ✓ Jobs/LinkedIn leads | ⛓️ Cần 10, 11, 12.2 | 3 stories; 18.3 unblocked sau 12.2 done. |
-| 19 | Operator Dashboard, Admin CLI | ✓ Internal ops surfaces | ⛓️ Cần 10.4, 11.4, 14.3 | 8 stories (19.4–19.6 merged), có overlap admin CLI hiện có. |
-| 20 | Nowing Cutover & Decommissioning | ✓ Cost/ops reduction | ⛓️ Cần 13–18 + 20.1 | 2 stories; 20.2 mở rộng xóa legacy code. |
-| 21 | B2B Procurement, Corporate & Automotive | ⚠️ Không có PRD/UX; user value mơ hồ | ⚠️ Không rõ dependency | 2 stories; ngoài scope PRD; có thể là placeholder. |
-| 22 | Local F&B, Healthcare, Legal | ⚠️ Không có PRD/UX | ⚠️ Không rõ dependency | 3 stories; ngoài scope PRD. |
-
-### Dependency Analysis
-
-- **Không có forward dependency theo số epic:** Epic N không cần Epic N+1.
-- **Các dependency hợp lệ:** 13–18 cần 10, 11; 20 cần 13–18; 19 cần 10.4, 11.4, 14.3.
-- **18.3 đã unblock:** 12.2 `done`; map đã cập nhật.
-- **21–22 không có dependency:** Có thể làm song song sau khi foundation xong, nhưng thiếu PRD nên rủi ro cao.
-
-### Acceptance Criteria Quality
-
-- Phần lớn AC dùng định dạng Given/When/Then, testable, có kèm đường dẫn file và lệnh kiểm tra.
-- Một số AC còn mơ hồ về "stable" hoặc "parity 99%" (Story 20.1, 20.2) cần định nghĩa rõ metric.
-- Epic 21–22 AC thiếu FR/NFR mapping và chưa có validation approach.
-
-### Quality Violations
-
-| Mã | Vi phạm | Mức độ | Ví dụ | Khuyến nghị |
-|---|---|---|---|---|
-| EQ-1 | **Epic 21–22 nằm ngoài PRD scope, thiếu user research.** | Critical | Không có FR/NFR nguồn; tiêu đề giống "domain expansion" nhưng không rõ user outcome. | Quyết định lấy/tách: hoặc cập nhật PRD, hoặc chuyển sang backlog tương lai. |
-| EQ-2 | **Một số epic foundation (10, 11) có tính technical.** | Major | "Data & Platform Foundation", "Resilient Network & Proxy Pool" không trực tiếp deliver end-user feature. | Giữ vì là enabler, nhưng đảm bảo mỗi story mô tả user outcome (operator, data scientist, AI agent). |
-| EQ-3 | **Overlap với legacy code chưa giải quyết hết trong epics.** | Major | 13.2/13.3/15.1 overlap; 19.4–19.7 overlap; đã được ghi nhận trong sprint-change-proposal. | Theo dõi AC deprecation và xóa code legacy trong 20.2. |
-| EQ-4 | **Epic 19 có 8 stories, có thể quá lớn cho một epic.** | Minor | Admin dashboard + CLI + REST API + MCP tools. | Cân nhắc tách thành Epic 19 (Observability) + Epic 19b (Admin Surface) nếu team lớn. |
-| EQ-5 | **Story 20.2 "Legacy Scraper Code Decommissioning" là destructive operation.** | Major | Xóa `src/client/Scraper.js`, `src/scrapers/twitter/http/`, v.v. | Cần double-check deprecation plan và rollback strategy trước khi thực hiện. |
-
-## 8. Summary and Recommendations
-
-### Overall Readiness Status
-
-**READY** — Sau khi áp dụng các biện pháp khắc phục trong cùng ngày, XActions Implementation Readiness đạt **READY** cho **Phase 4 — Epics 10–20**. Tài liệu trùng lặp đã được archive, Epic 21–22 chuyển sang backlog, UX đã cập nhật, và deprecation plan có rollback checklist.
-
-> **Lịch sử:** Bản đánh giá ban đầu (trước khắc phục) xếp **NEEDS WORK**.
-
-### Remediation Log (2026-08-26)
-
-| Vấn đề | Hành động | Trạng thái |
-|---|---|---|
-| Epic 21–22 ngoài PRD scope | Tách thành `backlog-epics-21-22.md`, thêm vào `FUTURE-WORK.md`, xóa khỏi `epics.md` | ✓ Resolved |
-| Trùng lặp tài liệu PRD | Chuyển `prds/` → `archive/prds/`, cập nhật `prd.md`, `prd-canonicalization-addendum`, `CANONICAL-DOCS.md` | ✓ Resolved |
-| Trùng lặp Architecture | Chuyển `architecture.md` → `archive/architecture-brownfield-2026-08-20.md`, cập nhật `ARCHITECTURE-SPINE.md` | ✓ Resolved |
-| `epics-full.md` gây nhầm lẫn | Chuyển → `archive/epics-1-9-legacy.md`, cập nhật `epics.md`, `CANONICAL-DOCS.md` | ✓ Resolved |
-| `DESIGN.md` draft cũ | Cập nhật `status: final`, thêm Operator Dashboard / QR / CDP / Multi-platform mockups | ✓ Resolved |
-| Story 20.2 destructive | Thêm Rollback Checklist trong `docs/deprecation-plan.md` | ✓ Resolved |
-
-### Residual Watch Items (Non-blocking)
-
-1. **EQ-2 / Foundation epics:** Epic 10/11 vẫn mang tính foundation; cần đảm bảo mỗi story mô tả user outcome rõ ràng.
-2. **EQ-3 / Legacy overlaps:** Theo dõi trong `sprint-change-proposal` và `deprecation-plan`.
-3. **EQ-4 / Epic 19 size:** Có thể tách nếu team lớn, hiện tại không bắt buộc.
-4. **EQ-5 / Story 20.2:** Tuân thủ rollback checklist trước khi thực hiện.
-
-### Recommended Next Steps
-
-1. **Bắt đầu Phase 4 implementation:** Khởi động `bmad-dev-auto` hoặc development loop cho Epic 13.1 / 13.2 / 13.3.
-2. **Cập nhật AC định lượng:** "parity ≥99%", "hibernation 15–30 phút" khi viết story file cụ thể.
-3. **Theo dõi Epic 21–22 backlog:** Kích hoạt khi có Product Council approval, PRD, và UX.
-4. **Chạy lại readiness trước mỗi sprint-planning** để đảm bảo tài liệu canonical không bị drift.
-
-### Final Note
-
-Re-assessment hoàn tất: các vấn đề critical đã được khắc phục. XActions Implementation Readiness đạt **READY** cho **Phase 4 (Epics 10–20)**. Báo cáo được lưu tại `_bmad-output/planning-artifacts/implementation-readiness-report-2026-08-26.md`.
+## 1. Document Discovery
+
+### 1.1. PRD Documents
+
+**Primary:**
+- `prd.md` (17,235 bytes, 2026-08-26 17:55) — PRD canonical cho Epics 10–20.
+
+**Supplemental:**
+- `prd-canonicalization-addendum-2026-08-21.md` (5,090 bytes) — bảng đăng ký FR/NFR.
+- `prd-facebook-epics-5-6-2026-08-21.md` (9,446 bytes) — PRD cho Epics 5, 5b, 6.
+
+**Archive (older):**
+- `archive/prds/prd-XActions-2026-06-08/prd.md`
+- `archive/prds/prd-XActions-2026-06-10-epic4/prd.md`
+- `archive/prds/prd-XActions-2026-08-14-epic7/prd.md`
+- `archive/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md`
+
+### 1.2. Architecture Documents
+
+**Primary:**
+- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (41,964 bytes, 2026-08-26 17:52) — kiến trúc active.
+
+**Supplemental:**
+- `architecture/xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` (16,804 bytes, 2026-08-26 17:52) — `superseded` bởi hybrid spine.
+- `architecture/xactions-hybrid-scraping-spine/EPIC10-DECISION-LOG-2026-08-18.md` — decision log.
+- `research/technical-mediacrawler-architecture-for-xactions-research-2026-08-18.md` — nghiên cứu tham khảo.
+
+**Related review/remediation files (not primary):**
+- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-EPIC10-PM-REVIEW-2026-08-18.md`
+- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-EPIC10-REVIEW-2026-08-18.md`
+- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18.md`
+- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md`
+- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md`
+- `archive/architecture-brownfield-2026-08-20.md`
+
+### 1.3. Epics & Stories Documents
+
+**Primary:**
+- `epics.md` (83,922 bytes, 2026-08-26 17:55) — epic/story canonical.
+
+**Supplemental:**
+- `archive/epics-1-9-legacy.md` (50,662 bytes) — legacy epics 1–9.
+- `backlog-epics-21-22.md` (7,835 bytes) — bản tóm tắt future work, nội dung Epic 21–22 đã có trong `epics.md`.
+
+**Note:** `test-design-epic-12.md` được tìm thấy nhưng là test design, không phải epic/story.
+
+### 1.4. UX Design Documents
+
+**Primary pointer:**
+- `ux/README.md` (1,577 bytes, 2026-08-26 17:55) — canonical register cho UX docs.
+
+**Canonical UX docs:**
+- `ux/DESIGN.md` (16,088 bytes)
+- `ux/EXPERIENCE.md` (11,494 bytes)
+- `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` (4,664 bytes)
+
+### 1.5. Duplicate & Conflict Resolution
+
+| Issue | Resolution |
+| --- | --- |
+| `epics.md` vs `backlog-epics-21-22.md` (cùng Epic 21–22) | `epics.md` là primary; `backlog-epics-21-22.md` là supplemental/archive. |
+| `xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` vs `xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` | Hybrid spine là active; gateway spine là `superseded` supplemental. |
+| Multiple older PRDs in `archive/prds/` | Không dùng làm primary; chỉ tham khảo nếu cần trace lịch sử. |
+
+## 2. PRD Analysis
+
+### 2.1. Functional Requirements (FRs)
+
+#### 2.1.1. Universal Engine (Epics 10–20) — `prd.md`
+
+| ID | Requirement |
+| --- | --- |
+| FR-64 | Cung cấp các cổng trừu tượng chuẩn hóa (`AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore`, `ISignerBridge`) thuần ESM, Zero-Dependency. |
+| FR-65 | Kết hợp Pre-Signed Token Ring Buffer O(1) và Signer Worker Page Pool (4–8 tabs ngầm có `Promise.race()` 3s timeout) cùng `got-scraping` (TLS/JA4 Spoofing). |
+| FR-66 | Quản lý tập trung Static & Dynamic Tunnel Proxy, tự động kích hoạt cờ chống rò rỉ WebRTC/DNS (`--force-webrtc-ip-handling-policy=disable_non_proxied_udp`) và kiểm tra buffer expiration 30s. Cách ly proxy lỗi 5 phút khi gặp mã `429/403`, tự động đổi IP và retry 3 lần với exponential backoff. Chuyển sang Standby Backoff 30s khi 100% proxy bị chặn. |
+| FR-66A | Anti-Leak Proxy Pool. |
+| FR-66B | Adaptive Rate Limiter & Governor (Story 11.4). |
+| FR-67 | Lưu trữ tập trung `Post` và `Comment` vào PostgreSQL qua Prisma ORM với khóa chính dạng `${platform}:${externalId}`, `metadata Json?` có GIN Index và batch chunking 500 records. |
+| FR-68 | Hiển thị mã QR tỷ lệ 1:1 chuẩn (`small: true`) trực tiếp trên Terminal console kèm đếm ngược 60s, timeout 120s và polling cookie ngầm. |
+| FR-69 | Kết nối trực tiếp vào Google Chrome thật qua cổng 9222 với helper command `unfollowx auth --launch-chrome` và độ trễ phân phối ngẫu nhiên Gaussian Jitter (3–7s). |
+| FR-70 | Trích xuất toàn bộ cây bình luận đa tầng (`maxDepth: 3`, `maxComments: 500`), chống tham chiếu vòng, và lưu vào DB theo thứ tự Topological Sort (Root trước, SubComments sau). |
+| FR-71 | Tái cấu trúc cào Twitter sang GraphQL kết hợp Signer Page Pool và PrismaStore. |
+| FR-72 | Tái cấu trúc cào Facebook qua GraphQL DocID dispatch kết hợp Proxy Pool. |
+| FR-73 | Cung cấp 80+ MCP tools trả về 3-Layer JSON Envelope có cơ chế Auto-Artifact khi payload >100 records. Hỗ trợ xuất dữ liệu ra định dạng JSONL/CSV stream với backpressure. |
+| FR-73A | AI Streaming Dataset Exporter (Story 10.3). |
+| FR-73B | MCP Tool Envelope & CLI Crawl (Story 14.2). |
+| FR-74 | Cào bài viết, timeline và replies trên Threads qua internal Meta GraphQL (LSD token + DocID). |
+| FR-75 | Cào video trending và hàng ngàn bình luận TikTok qua `a_bogus` Signer Bridge có kiểm tra mã chặn False 200 OK (`error !== 0`). |
+| FR-76 | Cào sản phẩm, flash sale, giá bán và đánh giá người mua trên Shopee VN qua Web API kết hợp TLS Spoofing và Anti-Bot Validation. |
+| FR-77 | Cào sản phẩm bán chạy, doanh số ước tính và đánh giá shop trên TikTok Shop. |
+| FR-78 | Cào tin đăng BĐS Chợ Tốt kèm giải mã SĐT chính chủ (loại bỏ SĐT masked `***` và validate regex VN). |
+| FR-79 | Cào tin rao BĐS dự án, diện tích và biến động giá đất trên Batdongsan.com.vn. |
+| FR-80 | Cào tin tuyển dụng, kỹ năng yêu cầu và dải lương (xử lý case "Thỏa thuận") trên TopCV. |
+| FR-81 | Cào tin tuyển dụng IT và cấp cao trên VietnamWorks qua API public. |
+| FR-82 | Cào thông tin nhân sự và bài đăng tuyển dụng trên LinkedIn qua CDP Remote Attach 9222. |
+| FR-83 | Phát luồng sự kiện tinh gọn (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 20000`). |
+| FR-84 | Nâng cấp adapter bên Nowing kết nối sang XActions MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend. |
+| FR-85 | Cung cấp giao diện vận hành nội bộ (web dashboard + CLI `xactions admin`) để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. Auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth. |
+| FR-86 | Mỗi platform/category phải publish JSON Schema hoặc TypeScript type cho `Post.metadata`; consumer có thể lấy schema qua API `GET /schemas/:platform/:category`, MCP tool `x_schema_get`, và CLI `xactions schema get`. `PrismaStore` validate `metadata` against schema khi ghi. |
+| FR-87 | Dữ liệu raw crawl (bản gốc thu thập) lưu trong XActions với TTL 30 ngày; dữ liệu lead/processed output đẩy sang Nowing được giữ vĩnh viễn. Lịch sử checkpoints và audit logs giữ 90 ngày. |
+| FR-88 | Cào theo mô hình 3 tầng: (1) full seed, (2) delta/gap fill theo `publishedAt`/`lastCrawledAt`, (3) on-demand refresh; loại bỏ 100% duplication và tiết kiệm 90% chi phí proxy so với full re-crawl. |
+
+**Total Universal FRs: 25 (FR-64..FR-88, including sub-labels).**
+
+#### 2.1.2. Facebook Module (Epics 5, 5b, 6) — `prd-facebook-epics-5-6-2026-08-21.md`
+
+| ID | Requirement |
+| --- | --- |
+| FR-23 | `src/scrapers/facebook/graphql.js` cung cấp layer gọi internal GraphQL với `doc_id`, `fb_dtsg`, `lsd`; check Messenger CTA + page list. |
+| FR-24 | `shareLinkByUid` (v1) mở Messenger share dialog, paste URL, gửi đến recipient. |
+| FR-25 | `--proxy-server=` launch arg + `page.authenticate()`; hỗ trợ proxy có auth. |
+| FR-26 | CLI/MCP/API accept share campaign params (`message`, `link`, `recipientUids[]`). |
+| FR-27 | Dashboard/UI quản lý share campaigns: tạo, pause, retry, xem progress. |
+| FR-28 | `scrapeMarketplace(page, query, options)` trả normalized listing. |
+| FR-29 | Hỗ trợ `$`, `CA$`, `ETB`, `₹`, v.v. |
+| FR-30 | Tách title từ concatenated text bằng camelCase heuristics. |
+| FR-31 | Extract location từ trailing capitalized word heuristics. |
+| FR-32 | Navigate `messages/t/{uid}`, paste URL via clipboard, Enter. |
+| FR-33 | Accept `recipientUid` hoặc `recipientUids[]`. |
+| FR-34 | Trả `{ uid, ok, sharesSent, method }` cho từng recipient. |
+| FR-35 | Tất cả Facebook endpoints accept `headless` boolean. |
+| FR-36 | Invisible browser, `networkidle2`, 30s timeout. |
+| FR-37 | Visible browser, `domcontentloaded`, 60s timeout, longer delays. |
+| FR-38 | Response include `headless: true/false`. |
+| FR-39 | `createBrowser()` tự resolve: explicit option → `PUPPETEER_EXECUTABLE_PATH` env → system Chrome path. |
+| FR-40 | ≥ 20 real Chrome UAs, random per session, consistent within session. |
+| FR-41 | Viewport match UA platform. |
+| FR-42 | Disable/override RTCPeerConnection. |
+| FR-43 | `navigator.webdriver`, `hardwareConcurrency`, `deviceMemory`, `platform`. |
+| FR-44 | Bezier curve + micro-jitter + overshoot+correction. |
+| FR-45 | Hover pause 100–400ms trước click. |
+| FR-46 | Typo rate 1–2%, variable speed. |
+| FR-47 | Variable speed, momentum, overshoot. |
+| FR-48 | Homepage → scroll → mouse → actions. |
+| FR-49 | Khớp proxy location. |
+| FR-50 | Khớp proxy location. |
+| FR-51 | `userDataDir` support. |
+| FR-52 | Không change mid-session. |
+| FR-53 | Likes ≤ 30/hr, comments ≤ 10/hr, friend requests ≤ 20/day. |
+| FR-54 | < 7 days = 50% limits, 1–4 weeks = 80%, > 1 month = 100%. |
+
+**Total Facebook FRs: 32 (FR-23..FR-54).**
+
+#### 2.1.3. Deferred / Future
+
+| ID | Requirement | Source |
+| --- | --- | --- |
+| FR-62 | GraphQL replay — deferred to Phase 3. | `prd.md` §7.5, `FUTURE-WORK.md` |
+
+### 2.2. Non-Functional Requirements (NFRs)
+
+#### 2.2.1. Universal Engine (Epics 10–20) — `prd.md`
+
+| ID | Requirement |
+| --- | --- |
+| NFR-11 | Giảm ít nhất 85% RAM (từ ~10GB xuống <300MB) và 70% CPU so với mô hình Full Headless Browser. |
+| NFR-12 | Tăng tốc độ thu thập dữ liệu lên ít nhất 5x–10x (>500 requests/giây) bằng Async HTTP Client với Connection Pool. |
+| NFR-13 | Tự động phát hiện proxy chết/rate-limit, cách ly 5 phút và replay request 3 lần với exponential backoff. |
+| NFR-14 | Không lưu trữ plain-text password; đăng nhập an toàn qua Terminal ASCII QR Code và Chrome CDP Attach. |
+| NFR-15 | Lớp `src/core/` hoàn toàn phi phụ thuộc (Zero-Dependency); thêm nền tảng mới chỉ cần viết thêm Adapter. |
+| NFR-16 | Mã nguồn 100% tuân thủ MIT / Apache 2.0; bảo toàn 100% tương thích ngược với CLI `unfollowx` và 80+ MCP tools. |
+| NFR-17 | Hệ thống phải expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling mỗi 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`. |
+
+**Total Universal NFRs: 7 (NFR-11..NFR-17).**
+
+#### 2.2.2. Facebook Module (Epics 5, 5b, 6) — `prd-facebook-epics-5-6-2026-08-21.md`
+
+| ID | Requirement |
+| --- | --- |
+| NFR-1 | Bezier mouse movement < 2s. |
+| NFR-2 | Fingerprint config centralized, dễ update. |
+| NFR-3 | Behavioral functions có injectable `delayFn` seam để test. |
+| NFR-4 | Không log cookie values trong error/API response. |
+| NFR-5 | Facebook delay floor cao hơn Twitter (ADR-012). |
+| NFR-6 | Mọi mutate action có dry-run default (ADR-007). |
+| NFR-7 | `doc_id` GraphQL hardcoded có fallback graceful, không throw. |
+| NFR-8 | Messenger mass-share dùng delay bảo thủ hơn default like/comment. |
+| NFR-9 | Scheduler throughput cap ≤ 5 posts/giờ/user. |
+| NFR-10 | Friend request delay 60–180s, không override được. |
+
+**Total Facebook NFRs: 10 (NFR-1..NFR-10).**
+
+### 2.3. Additional Requirements & Constraints
+
+#### 2.3.1. Architecture Requirements (from `prd-facebook-epics-5-6-2026-08-21.md`)
+
+- AR1: Stealth plugin tái dùng cho Facebook.
+- AR2: Facebook delay rộng hơn Twitter cho mutating actions.
+- AR3: Batch size ≤ 20/session cho friend requests.
+- AR4: Proxy rotation infrastructure đã có (`proxyfb`, `tmproxy`, `shoplike`).
+- AR5: `createBrowser()` support proxy via `--proxy-server=`.
+- AR6: `page.authenticate()` gọi trước `page.goto` đầu tiên.
+- AR7: Checkpoint detection: body text chứa `confirm that you` và `human`.
+- AR8: Facebook scraper clone structure từ `threads/index.js`.
+- AR9: GraphQL layer tại `graphql.js`, không trộn vào adapter DOM.
+- AR10: Fingerprint module tại `fingerprint.js`, behavioral tại `human.js`, limits tại `limits.js`.
+
+#### 2.3.2. Data Retention Policy (from `prd.md` §5)
+
+- Raw crawl data: 30-day TTL in XActions.
+- Lead/processed output pushed to Nowing: permanent.
+- Checkpoints and audit logs: 90 days.
+
+#### 2.3.3. Open Decisions / Deferred Work
+
+- **FR-62 (GraphQL replay):** deferred to Phase 3; condition: Story 5.1 & 7.1 stable, ≥80% doc_id mapping stable 30 days, replay cache storage available.
+- **Advanced Marketplace filters:** deferred (FR-28..FR-31 stable).
+- **Canvas/WebGL spoofing:** deferred (FR-40..FR-54 stable, checkpoint rate > 5%).
+- **FR-24..FR-54:** detailed in `prd-facebook-epics-5-6-2026-08-21.md`.
+
+### 2.4. PRD Completeness Assessment
+
+| Criterion | Assessment |
+| --- | --- |
+| **FR Coverage** | ✅ Canonical `prd.md` covers Epics 10–18 with FR-64..FR-84; §7.1 adds FR-85..FR-88. `prd-facebook-epics-5-6-2026-08-21.md` covers FR-23..FR-54. `prd-canonicalization-addendum-2026-08-21.md` provides master register with scope prefixes to avoid numbering conflicts. |
+| **NFR Coverage** | ✅ U-NFR-11..17 cover resource, throughput, resilience, security, architecture, license, observability. FB-NFR-1..10 cover anti-detection/behavioral/PII constraints. |
+| **Traceability** | ✅ PRD §7.4 maps Epics to FRs; `prd-canonicalization-addendum-2026-08-21.md` §2 provides canonical ID mapping. |
+| **Gaps / Open Items** | ⚠️ FR-62 (GraphQL replay) and advanced Marketplace filters / canvas spoofing are deferred with activation conditions in `FUTURE-WORK.md` — need to verify they are explicitly tracked and not accidentally picked up in Phase 4. |
+| **Clarity** | ✅ PRDs are `approved` and `canonical`; superseded PRDs are listed. UX canonical pointer was added to `prd.md` §7.5. Architecture conflict (gateway vs hybrid) is marked `superseded`. |
+
+## 3. Epic Coverage Validation
+
+### 3.1. Epic/Story Inventory
+
+The canonical `epics.md` contains **11 epics** and **60 stories** (Epics 10–20):
+
+| Epic | Stories |
+| --- | --- |
+| Epic 10 | 10.1, 10.2, 10.3, 10.4, 10.5 |
+| Epic 11 | 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8 |
+| Epic 12 | 12.1, 12.2 |
+| Epic 13 | 13.1, 13.2, 13.2.1–13.2.9, 13.3, 13.4, 13.5, 13.6, 13.7, 13.8, 13.9, 13.10 |
+| Epic 14 | 14.1, 14.2, 14.3 |
+| Epic 15 | 15.1, 15.1.1–15.1.4, 15.2 |
+| Epic 16 | 16.1, 16.2 |
+| Epic 17 | 17.1, 17.2 |
+| Epic 18 | 18.1, 18.2, 18.3 |
+| Epic 19 | 19.1, 19.2, 19.3, 19.4, 19.7, 19.8, 19.9, 19.10 |
+| Epic 20 | 20.1, 20.2 |
+
+### 3.2. Requirements Inventory in `epics.md`
+
+`epics.md` opens with a **Requirements Inventory** that explicitly enumerates the same FR-64..FR-88 and NFR-11..NFR-17 from the canonical PRD, confirming the product team has already mapped PRD requirements into the epic breakdown.
+
+### 3.3. FR Coverage Matrix (Universal Engine FR-64..FR-88)
+
+| FR | PRD Requirement | Epic / Story Coverage | Status |
+| --- | --- | --- | --- |
+| FR-64 | Core abstractions (`AbstractCrawler`, `AbstractApiClient`, `AbstractStore`, `AbstractLogin`, `ISignerBridge`) | Epic 10.1 — Core Domain Interfaces & Error Hierarchy | ✅ Covered |
+| FR-65 | Tiered Hybrid Signer Engine (Token Ring + Worker Page Pool + Async HTTP) | Epic 13.1 — Tiered Signer Architecture | ✅ Covered |
+| FR-66 | Proxy Pool, auto-quarantine, WebRTC/DNS leak prevention | Epic 11.1, 11.2, 11.3 | ✅ Covered |
+| FR-66A | Anti-Leak Proxy Pool | Epic 11.1, 11.2 | ✅ Covered |
+| FR-66B | Adaptive Rate Limiter & Governor | Epic 11.4 — Adaptive Infrastructure-Aware Rate Limiter | ✅ Covered |
+| FR-67 | Namespaced PostgreSQL Storage, JSONB GIN, batch chunking | Epic 10.2 — Prisma Post & Comment Schema | ✅ Covered |
+| FR-68 | Terminal ASCII QR Code Login | Epic 12.1 — Terminal QR Login | ✅ Covered |
+| FR-69 | CDP Remote Attach (Chrome port 9222, Gaussian jitter) | Epic 12.2 — CDP Remote Attach | ✅ Covered |
+| FR-70 | Topological Comment Tree Extraction | Epic 14.1 — Hierarchical Comment Tree Extraction | ✅ Covered |
+| FR-71 | Twitter Crawler Refactor (hybrid GraphQL) | Epic 13.2 + 13.2.1–13.2.9 | ✅ Covered |
+| FR-72 | Facebook Crawler Refactor (DocID dispatch) | Epic 13.3–13.10 | ✅ Covered |
+| FR-73 | MCP Daemon & 80+ MCP tools, 3-Layer JSON Envelope | Epic 14.2 — MCP Tool Exporters & Daemon | ✅ Covered |
+| FR-73A | AI Streaming Dataset Exporter | Story 10.3 — AI Dataset Export Utility | ✅ Covered |
+| FR-73B | MCP Tool/CLI Crawl integration | Story 14.2, Epic 19.4/19.10 | ✅ Covered |
+| FR-74 | Threads Meta GraphQL Scraper | Epic 15.1 + 15.1.1–15.1.4 | ✅ Covered |
+| FR-75 | TikTok Video, Hashtag & Comment Scraper | Epic 15.2 — TikTok Scraper | ✅ Covered |
+| FR-76 | Shopee Product, Price & Review Scraper | Epic 16.1 — Shopee Scraper | ✅ Covered |
+| FR-77 | TikTok Shop E-Commerce Scraper | Epic 16.2 — TikTok Shop Scraper | ✅ Covered |
+| FR-78 | Chợ Tốt Multi-Category Scraper with phone extraction | Epic 17.1 — Chợ Tốt Scraper | ✅ Covered |
+| FR-79 | Batdongsan.com.vn Property Scraper | Epic 17.2 — Batdongsan Scraper | ✅ Covered |
+| FR-80 | TopCV Recruitment Scraper | Epic 18.1 — TopCV Scraper | ✅ Covered |
+| FR-81 | VietnamWorks Job Scraper | Epic 18.2 — VietnamWorks Scraper | ✅ Covered |
+| FR-82 | LinkedIn B2B Lead & Job Scraper | Epic 18.3 — LinkedIn Scraper | ✅ Covered |
+| FR-83 | Nowing Thin Event Redis Stream Ingest | Epic 14.3 — Realtime Thin Event Stream | ✅ Covered |
+| FR-84 | Nowing Cutover & Legacy Scraper Decommissioning | Epic 20.1, 20.2 | ✅ Covered |
+| FR-85 | Internal Operator Dashboard & Admin CLI | Epic 19.1–19.10 | ✅ Covered |
+| FR-86 | Metadata Schema Contract for Consumers | Story 10.5 — Metadata Schema Contract & Registry | ✅ Covered |
+| FR-87 | Data Retention Policy (raw 30d, leads permanent, audit 90d) | Story 10.2, Epic 19 (admin/operational data) | ✅ Covered |
+| FR-88 | 3-Tier Incremental Gap-Filling | Epic 10.4 (checkpoints), Epic 11 (governor/resilience) | ✅ Covered |
+
+### 3.4. NFR Coverage Matrix (Universal NFR-11..NFR-17)
+
+| NFR | Requirement | Coverage | Status |
+| --- | --- | --- | --- |
+| NFR-11 | 85% RAM / 70% CPU reduction vs full headless | Across all hybrid-crawler stories (Epic 10–18) | ✅ Covered |
+| NFR-12 | 5x–10x throughput, >500 req/s, async HTTP | Epic 11.2, 11.4, 13.1, 15.2 | ✅ Covered |
+| NFR-13 | Auto-detect dead/rate-limit proxy, quarantine 5m, replay 3x | Epic 11.1, 11.3, 11.4, 11.6 | ✅ Covered |
+| NFR-14 | No plain-text password; QR/CDP auth | Epic 12.1, 12.2 | ✅ Covered |
+| NFR-15 | Clean architecture / zero-dependency core | Epic 10.1 — Core Domain Interfaces | ✅ Covered |
+| NFR-16 | MIT/Apache 2.0, backward compat with CLI/MCP | Cross-cutting (Epic 13.2.9, 13.10, 20.2) | ✅ Covered |
+| NFR-17 | Operational observability (governor/stream metrics + alerts) | Epic 19.3, 19.9 | ✅ Covered |
+
+### 3.5. Facebook Module (Epics 5, 5b, 6) Coverage
+
+| FR | Requirement | Epic / Story Coverage | Status |
+| --- | --- | --- | --- |
+| FR-23..FR-27 | Messenger Port (GraphQL, share, auth proxy, queue, UI) | `archive/epics-1-9-legacy.md` Epic 5 / 5.1–5.5 | ✅ Covered (legacy) |
+| FR-28..FR-39 | Marketplace & Infrastructure (headless, Chrome path, share-link-uid v2) | `archive/epics-1-9-legacy.md` Epic 5b / 5b.1–5b.4 | ✅ Covered (legacy) |
+| FR-40..FR-54 | Anti-Detection & Bot Countermeasures | `archive/epics-1-9-legacy.md` Epic 6 / 6.1–6.17 | ✅ Covered (legacy) |
+
+**Note:** FR-40..FR-54 are also referenced by Epic 13.3–13.10 (Facebook Hybrid Refactor), which reuses anti-detection behavior in the new social/facebook crawler. No gap.
+
+### 3.6. Coverage Statistics
+
+- **Total PRD FRs in scope (Epics 10–20):** 25 (FR-64..FR-88)
+- **FRs covered in `epics.md`:** 25 / 25
+- **Coverage percentage:** 100%
+- **Total PRD NFRs in scope (Epics 10–20):** 7 (NFR-11..NFR-17)
+- **NFRs covered in `epics.md`:** 7 / 7
+- **Facebook FR-23..FR-54:** covered in `archive/epics-1-9-legacy.md` / `prd-facebook-epics-5-6-2026-08-21.md`
+
+### 3.7. Missing Coverage
+
+No missing FRs or NFRs for the canonical Epics 10–20 scope. All requirements from `prd.md` are represented in `epics.md` either as dedicated stories or cross-cutting acceptance criteria.
+
+### 3.8. Coverage Assessment
+
+| Criterion | Assessment |
+| --- | --- |
+| **FR Traceability** | ✅ 100% of PRD FR-64..FR-88 trace to at least one epic/story in `epics.md`. |
+| **NFR Traceability** | ✅ All U-NFR-11..17 have clear implementation paths in Epics 10/11/12/19. |
+| **Legacy Coverage** | ✅ FR-23..FR-54 are covered in `archive/epics-1-9-legacy.md` and `prd-facebook-epics-5-6-2026-08-21.md`. |
+| **Gaps** | ⚠️ FR-88 (3-Tier Gap-Filling) is distributed across multiple epics; ensure acceptance criteria explicitly mention delta/gap-fill and on-demand refresh in Story 10.4 and Epic 11. |
+| **Risk** | ⚠️ Epic 13 is a platform suite with 14 sub-stories; while all FRs are covered, the epic is large and should be tracked as independent sub-threads (already addressed by grouping notes). |
+
+## 4. UX Alignment Assessment
+
+### 4.1. UX Document Status
+
+| Document | Path | Status | Notes |
+| --- | --- | --- | --- |
+| `ux/README.md` | `_bmad-output/planning-artifacts/ux/README.md` | ✅ final / canonical | Canonical index; points to DESIGN.md, EXPERIENCE.md, EXPERIENCE-UNIVERSAL-2026-08-21.md. |
+| `ux/DESIGN.md` | `_bmad-output/planning-artifacts/ux/DESIGN.md` | ✅ final | Design system tokens, components, mockups for operator dashboard, CLI output, multi-platform flows. |
+| `ux/EXPERIENCE.md` | `_bmad-output/planning-artifacts/ux/EXPERIENCE.md` | ⚠️ draft (frontmatter says `status: draft`) | Covers legacy unified dashboard (X/Twitter + Facebook). Does not include new platforms (Shopee, Batdongsan, TopCV, VietnamWorks, LinkedIn, TikTok, Threads). |
+| `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` | `_bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` | ✅ final | Extends EXPERIENCE.md with operator, AI/MCP, CLI, CDP, and multi-platform new-user flows. |
+| Architecture-UX Remediation | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` | ✅ approved | Maps 10 UX findings (F1–F10) to specific stories and acceptance criteria. |
+
+### 4.2. UX ↔ PRD Alignment
+
+| PRD Requirement | UX Coverage | Alignment |
+| --- | --- | --- |
+| FR-68 — Terminal QR Login | `EXPERIENCE-UNIVERSAL` Flow C1; `DESIGN.md` M4; `ARCHITECTURE-UX-REMEDIATION` F2 | ✅ Aligned. UX remediation adds non-TTY fallback not fully detailed in PRD. |
+| FR-69 — CDP Remote Attach | `EXPERIENCE-UNIVERSAL` Flow R1; `DESIGN.md` M6 | ✅ Aligned. |
+| FR-70 — Topological Comment Tree | `DESIGN.md` result panel (inline, hierarchical data display) | ✅ Aligned. Display pattern supports nested replies. |
+| FR-71..FR-82 — Platform crawlers (Twitter, Facebook, Threads, TikTok, Shopee, Batdongsan, TopCV, VietnamWorks, LinkedIn) | `EXPERIENCE-UNIVERSAL` Flow N1; `DESIGN.md` M5 | ⚠️ Partial. Multi-platform selection flow exists, but individual platform page UX is not detailed for most new platforms. |
+| FR-73 — MCP Daemon & 80+ tools | `EXPERIENCE-UNIVERSAL` Flows A1/A2; `DESIGN.md` M7 | ✅ Aligned. |
+| FR-85 — Internal Operator Dashboard & Admin CLI | `DESIGN.md` M1–M4; `EXPERIENCE-UNIVERSAL` Flows O1/O2/C3/C4 | ⚠️ Partial. Dashboard mockups exist for proxies, checkpoints, streams. CLI admin wireframes are noted as "should be added under Epic 19" in README. |
+| FR-86 — Metadata Schema Contract | `DESIGN.md` Schema Viewer | ✅ Aligned. |
+| FR-87 — Data Retention | `EXPERIENCE-UNIVERSAL` operator checkpoint flows | ✅ Aligned (operational visibility). |
+| FR-88 — 3-Tier Gap-Filling | `EXPERIENCE-UNIVERSAL` operator resume/pause/retry flows | ✅ Aligned. |
+| NFR-17 — Operational Observability | `DESIGN.md` M1–M3; `EXPERIENCE-UNIVERSAL` Flow O1 | ✅ Aligned. |
+
+### 4.3. UX ↔ Architecture Alignment
+
+| Architecture Decision / Rule | UX Need | Alignment |
+| --- | --- | --- |
+| AD-7 / MCP HTTP/SSE Daemon (`xactions daemon start|status|stop`, `GET /health`) | Operator needs to see daemon state and manage lifecycle | ✅ Aligned. `DESIGN.md` M1 and `ARCHITECTURE-UX-REMEDIATION` F1 cover dashboard tile and CLI commands. |
+| AD-10 / Checkpoint API (`GET /checkpoints`, resume/pause/retry) | Operator needs checkpoint table with inline actions | ✅ Aligned. `DESIGN.md` M2, `EXPERIENCE-UNIVERSAL` O2, `ARCHITECTURE-UX-REMEDIATION` F4. |
+| AD-11 / `AbstractCrawler.listActions()` & schema registry | AI agent / user needs action discovery and schema preview | ✅ Aligned. `DESIGN.md` Schema Viewer, `EXPERIENCE-UNIVERSAL` A1/N1, `ARCHITECTURE-UX-REMEDIATION` F5. |
+| AD-9 / Standardized Error Envelope with `suggestedAction` | UX requires actionable errors (inline, no modal) | ✅ Aligned. `DESIGN.md` Result Panel variants; `ARCHITECTURE-UX-REMEDIATION` F6. |
+| AD-13 / Governor Status API (`GET /governor/status`, `xactions status`) | Admin dashboard and CLI need live proxy/metrics/hibernation data | ✅ Aligned. `DESIGN.md` M1/M3, `EXPERIENCE-UNIVERSAL` O1/C3, `ARCHITECTURE-UX-REMEDIATION` F3. |
+| AD-5 / Terminal QR Login with timeout and polling | TTY QR display and non-TTY fallback | ⚠️ Partial. `EXPERIENCE-UNIVERSAL` C1/C2 cover both; architecture mentions QR/CDP/cookie shape but does not detail non-TTY flow. |
+
+### 4.4. UX Warnings
+
+| # | Warning | Severity | Recommended Action |
+| --- | --- | --- | --- |
+| W1 | `EXPERIENCE.md` is still `draft` and only covers Facebook/X. It does not reflect the multi-platform scope (Epics 10–20). | Medium | Either promote `EXPERIENCE-UNIVERSAL-2026-08-21.md` to canonical experience doc or update `EXPERIENCE.md` to include all platforms and admin flows. |
+| W2 | CLI wireframes for `xactions admin` are not yet detailed; README explicitly states they should be added under Epic 19 as stories are implemented. | Medium | Create CLI command wireframes for Epic 19 (proxy/account/checkpoint/stream management) before implementation starts. |
+| W3 | UX for individual new platform pages (Shopee, Batdongsan, TopCV, VietnamWorks, LinkedIn, TikTok, Threads) is absent beyond the multi-platform selector mockup. | Medium | Add per-platform action cards / result panels to `EXPERIENCE.md` or a new `EXPERIENCE-<platform>.md`. |
+| W4 | Non-TTY QR login (Flow C2) is described in UX but not explicitly in PRD or architecture. It requires `--qr-url`, webhook/push, and CI-friendly behavior. | Low | Add AC to Story 12.1 for non-TTY mode and ensure `AbstractLogin` contract supports URL-based confirmation. |
+
+### 4.5. UX Alignment Summary
+
+- **Found:** Canonical UX index, design system, and operator/AI/CLI/multi-platform flows exist and are referenced by PRD §7.5.
+- **Aligned with PRD:** Core user-facing requirements (QR login, CDP, MCP, admin dashboard, schema viewer, observability) are covered by UX artifacts.
+- **Aligned with Architecture:** Architecture spine and UX remediation document explicitly support the dashboard/admin/CLI/MCP surfaces needed by UX.
+- **Gaps:** Draft `EXPERIENCE.md` is out of date for multi-platform scope; CLI admin and per-platform page UX need more detail before implementation.
+
+## 5. Epic Quality Review
+
+### 5.1. Review Method
+
+Validated `epics.md` (Epics 10–20) against the `bmad-create-epics-and-stories` standards:
+
+- Epics must deliver user value (not pure technical milestones).
+- Epics must be independent and not require future epics.
+- Stories must be independently completable and not depend on future stories.
+- Acceptance criteria should be Given/When/Then, testable, specific.
+- Tables/entities should be created when first needed, not all upfront.
+
+### 5.2. Epic Independence & Dependency Analysis
+
+| Criterion | Findings |
+| --- | --- |
+| **Cross-epic dependencies** | ✅ All dependencies flow backward (Epics 13–18 depend on 10/11; Epic 19 depends on 10.4/11.4/14.3; Epic 20 depends on 13–18 + 20.1). No forward references. |
+| **Epic 20 pre-condition** | ✅ Story 20.2 requires Story 20.1 shadow-run parity ≥ 99% for 7 days — correct. |
+| **Epic 13 platform-suite** | ⚠️ Grouping note exists, but Epic 13 bundles 2 large platform refactors (Twitter 9 sub-stories + Facebook 8 sub-stories). Should be tracked as independent sub-threads. |
+| **Epic 15–18 platform suites** | ✅ Grouping notes added; each sub-story can ship independently. |
+| **Database creation timing** | ✅ Story 10.2 creates `Post`, `Comment`, `CrawlCheckpoint` as first needed. Other schema additions (metadata schema, schema registry) are in Story 10.5. |
+
+### 5.3. Story Quality Findings
+
+#### 5.3.1. Critical / Major Issues
+
+| # | Issue | Location | Evidence | Recommended Fix |
+| --- | --- | --- | --- | --- |
+| Q1 | **Story 19.4 is an epic-sized catch-all for admin CLI** | Epic 19, Story 19.4 | 8+ CLI subcommands (status, proxies list, proxy quarantine, proxy release, accounts list, account wake, account rotate, checkpoints list/resume/pause/retry, stream metrics/alerts/test) in one story with 10 AC bullets. | Split into `19.4 Admin CLI — Status`, `19.5 Admin CLI — Proxy Management`, `19.6 Admin CLI — Account Management`, `19.7 Admin CLI — Checkpoint Operations`, `19.8 Admin CLI — Stream Metrics & Alerts`. Re-number REST stories to 19.9+. |
+| Q2 | **NFR traceability matrix references non-existent Story 19.6** | NFR Traceability Matrix (line 989) | `NFR17 ... 19.1, 19.2, 19.3, 19.6` but only 19.1–19.4, 19.7–19.10 exist; note says 19.5/19.6 merged into 19.4. | Remove 19.6 from matrix or restore 19.5/19.6 as separate stories after splitting 19.4. |
+| Q3 | **Story 13.2.6 bundles four distinct write actions** | Epic 13, Story 13.2.6 | post, reply, quote, schedule in one story. | Split into `13.2.6a Post/Reply/Quote` and `13.2.6b Schedule`; or split per action. |
+| Q4 | **Story 13.2.7 bundles ~11 engagement/social-graph actions** | Epic 13, Story 13.2.7 | like, retweet, undoRetweet, follow, unfollow, block, unblock, mute, unmute, bookmark in one story. | Split into `13.2.7a Engagement (like/retweet)` and `13.2.7b Social Graph (follow/unfollow/block/mute/bookmark)`. |
+| Q5 | **Story 13.2.8 bundles direct messaging + list management** | Epic 13, Story 13.2.8 | sendDM, getConversations, createList, addListMembers, removeListMembers. | Split into `13.2.8a Direct Messaging` and `13.2.8b List Management`. |
+
+#### 5.3.2. Minor / Medium Issues
+
+| # | Issue | Location | Evidence | Recommended Fix |
+| --- | --- | --- | --- | --- |
+| Q6 | **Story 19.7 and 19.8 combine multiple REST concerns** | Epic 19, Stories 19.7/19.8 | 19.7 is proxies only (OK); 19.8 is accounts + checkpoints. | Split 19.8 into `Account Management` and `Checkpoint Management`; or keep if team accepts. |
+| Q7 | **Personas in Epic 11 are mostly technical/system roles** | Epic 11, Stories 11.2, 11.4, 11.7, 11.8 | "Scale-Out Scraper", "Platform Governor & Account Security Engineer", "Platform Scraper Developer". | Rephrase to human operators ("Automation Operator", "Reliability Engineer") or keep if the team has agreed these are internal platform users. |
+| Q8 | **Epic 10 is a foundation enabler with indirect end-user value** | Epic 10 | All stories are contracts/storage/schema with personas like "Scraper Developer" / "Data Platform Engineer". | Add explicit "Foundation enabler — user value realized through downstream epics" note (already partially present) and ensure it is not treated as a sprint deliverable to end users. |
+| Q9 | **Minor markdown formatting errors** | Epic 13, Stories 13.2.6, 13.2.7, 13.2.8 | "So that" lines are missing closing `**` markers (e.g., `mà không cần browser.`). | Fix bold markdown. |
+| Q10 | **Story 11.5 depends on stories 11.1, 11.2, 11.4, 11.7 but is numbered 11.5** | Epic 11 | Implementation order note says `11.1 → 11.2 → 11.4 → 11.7 → 11.5 → 11.6 → 11.3`. | Either renumber stories to match dependency order or keep the note but ensure the team understands the sequence; non-blocking. |
+
+### 5.4. Best-Practices Compliance Checklist
+
+| Epic | User Value | Independence | Story Sizing | No Forward Dependencies | Tables Created When Needed | Clear ACs | Traceability to FRs |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 10 | ⚠️ Enabler | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 11 | ✅ | ✅ | ⚠️ (personas) | ✅ | N/A | ✅ | ✅ |
+| 12 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
+| 13 | ⚠️ Suite (large) | ✅ | ❌ 13.2.6/7/8 too large | ✅ | N/A | ✅ | ✅ |
+| 14 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
+| 15 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
+| 16 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
+| 17 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
+| 18 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
+| 19 | ✅ | ✅ | ❌ 19.4 too large | ✅ | N/A | ✅ | ✅ |
+| 20 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
+
+### 5.5. Quality Review Summary
+
+- **Epic structure is sound:** No forward dependencies; cross-epic dependencies are backward and clearly documented in the `Cross-Epic Dependency & Sequence Map`.
+- **Multi-platform suite epics are well-managed:** Grouping notes for Epics 13, 15, 16, 17, 18 clarify independent sub-threads.
+- **Main sizing problems are in Epic 13 (Twitter/Facebook sub-stories) and Epic 19 (admin CLI catch-all).** These are the same structural issues flagged in previous readiness assessments and should be refined before implementation begins.
+- **NFR traceability matrix still references a non-existent Story 19.6**, creating a documentation inconsistency that must be fixed.
+- **Minor formatting and persona issues** do not block readiness but should be cleaned up for clarity.
+
+## 6. Summary and Recommendations
+
+### 6.1. Overall Readiness Status
+
+**NEEDS WORK**
+
+The XActions Phase 4 (Epics 10–20) specification package is **comprehensive and well-structured**, but it still has a handful of documentation and story-sizing issues that should be resolved before the implementation phase begins. The architecture conflict (gateway vs hybrid) and multi-platform epic grouping have already been resolved, and PRD/UX canonical pointers are now in place. The remaining issues are smaller and localized to Epic 13 and Epic 19.
+
+### 6.2. Critical Issues Requiring Immediate Action
+
+1. **Split oversized Story 19.4** — the admin CLI catch-all currently bundles 8+ commands and 10 AC bullets. Split into per-domain admin CLI stories and re-number REST stories accordingly.
+2. **Fix the dangling NFR traceability reference to Story 19.6** — the matrix lists 19.6 but the note says it was merged into 19.4.
+3. **Split oversized Twitter sub-stories 13.2.6, 13.2.7, 13.2.8** — each bundles multiple distinct action groups that should be independent stories.
+
+### 6.3. High-Priority Recommendations
+
+1. **Resolve UX gaps before implementation:**
+   - Update or supersede `EXPERIENCE.md` with multi-platform flows.
+   - Add CLI wireframes for `xactions admin` commands.
+   - Define per-platform page UX for Shopee, Batdongsan, TopCV, VietnamWorks, LinkedIn, TikTok, Threads.
+2. **Refine Epic 19 REST stories:** split 19.8 (account + checkpoint) or keep combined with explicit justification.
+3. **Clarify non-TTY QR login** in Story 12.1 AC and `AbstractLogin` contract.
+4. **Fix minor markdown formatting** in Stories 13.2.6–13.2.8.
+5. **Verify deferred items are gated:** FR-62 (GraphQL replay), advanced Marketplace filters, canvas/WebGL spoofing should remain in `FUTURE-WORK.md` and not leak into Phase 4 stories.
+
+### 6.4. What Is Already Readiness-Grade
+
+- ✅ Canonical PRD, architecture spine, epics, and UX register exist and are approved/superseded correctly.
+- ✅ 100% FR/NFR traceability from PRD to `epics.md` for Epics 10–20.
+- ✅ Architecture conflict (Facebook gateway vs hybrid) resolved and documented.
+- ✅ Multi-platform epic grouping notes added.
+- ✅ Core UX components, flows, and mockups cover admin dashboard, MCP/AI, CLI, and multi-platform new-user journey.
+- ✅ Dependency map is backward-only and logical.
+
+### 6.5. Recommended Next Steps
+
+1. Refine `epics.md` to split 19.4 and re-number dependent stories; remove 19.6 from NFR traceability matrix.
+2. Refine `epics.md` to split 13.2.6, 13.2.7, 13.2.8 into smaller, independently completable stories.
+3. Update UX docs: either merge `EXPERIENCE-UNIVERSAL-2026-08-21.md` into `EXPERIENCE.md` or promote it; add CLI and per-platform page wireframes.
+4. Re-run this Implementation Readiness assessment after the above changes to move status from **NEEDS WORK** to **READY**.
+
+### 6.6. Final Note
+
+This assessment identified **10 quality/alignment issues** across **5 categories**: document discovery/consistency (2), PRD completeness (1), epic coverage (1), UX alignment (4), and epic quality (2 critical + 3 major + 5 minor). Address the three critical issues (19.4 split, 19.6 dangling reference, 13.2.6/7/8 splits) before implementation begins.
