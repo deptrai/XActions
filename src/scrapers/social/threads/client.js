@@ -351,7 +351,12 @@ export class ThreadsClient extends AbstractApiClient {
   #isRetryableTransportError(err) {
     if (err instanceof ProxyDeadError) return true;
     if (err instanceof PlatformError) {
-      return err.code === 'XACT_5030' || err.code === 'XACT_5000';
+      if (err.code === 'XACT_5030' && err.statusCode >= 500) return true;
+      if (err.code === 'XACT_5000' && err.statusCode >= 500) {
+        const msg = err.message.toLowerCase();
+        return /upstream platform returned server error|transport|timeout|socket hang up|econnreset|etimedout/.test(msg);
+      }
+      return false;
     }
     if (err instanceof Error) {
       const msg = err.message.toLowerCase();
@@ -702,6 +707,7 @@ export class ThreadsClient extends AbstractApiClient {
               code: 'XACT_5000',
               type: ErrorTypes.INTERNAL,
               message: 'Unexpected non-JSON response payload from Threads GraphQL',
+              statusCode: response.status,
               suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
               platform: 'threads',
               details: responseLike,
@@ -712,6 +718,7 @@ export class ThreadsClient extends AbstractApiClient {
             code: 'XACT_5000',
             type: ErrorTypes.INTERNAL,
             message: 'Threads GraphQL returned a non-JSON payload',
+            statusCode: response.status,
             suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
             platform: 'threads',
             details: responseLike,
@@ -753,6 +760,7 @@ export class ThreadsClient extends AbstractApiClient {
           code: 'XACT_5000',
           type: ErrorTypes.INTERNAL,
           message: `Threads GraphQL error: ${primaryError.message || 'Invalid doc_id or query failure'}`,
+          statusCode: response.status,
           suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
           platform: 'threads',
           details: errorsList,
