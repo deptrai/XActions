@@ -415,49 +415,42 @@ No missing FRs or NFRs for the canonical Epics 10–20 scope. All requirements f
 - **Aligned with Architecture:** Architecture spine and UX remediation document explicitly support the dashboard/admin/CLI/MCP surfaces needed by UX.
 - **Gaps:** Draft `EXPERIENCE.md` is out of date for multi-platform scope; CLI admin and per-platform page UX need more detail before implementation.
 
-## 5. Epic Quality Review
+## 5. Epic Quality Review (Re-run)
 
 ### 5.1. Review Method
 
-Validated `epics.md` (Epics 10–20) against the `bmad-create-epics-and-stories` standards:
-
-- Epics must deliver user value (not pure technical milestones).
-- Epics must be independent and not require future epics.
-- Stories must be independently completable and not depend on future stories.
-- Acceptance criteria should be Given/When/Then, testable, specific.
-- Tables/entities should be created when first needed, not all upfront.
+Re-validated `epics.md` (Epics 10–20) against the `bmad-create-epics-and-stories` standards after the fixes requested by the team.
 
 ### 5.2. Epic Independence & Dependency Analysis
 
 | Criterion | Findings |
 | --- | --- |
-| **Cross-epic dependencies** | ✅ All dependencies flow backward (Epics 13–18 depend on 10/11; Epic 19 depends on 10.4/11.4/14.3; Epic 20 depends on 13–18 + 20.1). No forward references. |
+| **Cross-epic dependencies** | ✅ All dependencies flow backward. No forward references. |
 | **Epic 20 pre-condition** | ✅ Story 20.2 requires Story 20.1 shadow-run parity ≥ 99% for 7 days — correct. |
-| **Epic 13 platform-suite** | ⚠️ Grouping note exists, but Epic 13 bundles 2 large platform refactors (Twitter 9 sub-stories + Facebook 8 sub-stories). Should be tracked as independent sub-threads. |
+| **Epic 13 platform-suite** | ✅ Grouping note updated to `Stories 13.2 + 13.2.1–13.2.12`; each Twitter sub-story can ship independently. |
 | **Epic 15–18 platform suites** | ✅ Grouping notes added; each sub-story can ship independently. |
-| **Database creation timing** | ✅ Story 10.2 creates `Post`, `Comment`, `CrawlCheckpoint` as first needed. Other schema additions (metadata schema, schema registry) are in Story 10.5. |
+| **Database creation timing** | ✅ Story 10.2 creates `Post`, `Comment`, `CrawlCheckpoint` as first needed. Other schema additions are in Story 10.5. |
 
 ### 5.3. Story Quality Findings
 
-#### 5.3.1. Critical / Major Issues
+#### 5.3.1. Critical / Major Issues — All Resolved
+
+| # | Issue | Status | Evidence |
+| --- | --- | --- | --- |
+| Q1 | Story 19.4 was an epic-sized catch-all for admin CLI | ✅ Resolved | Split into `19.4` (command group) + `19.4.1`–`19.4.5` (status, proxies, accounts, checkpoints, stream). |
+| Q2 | NFR traceability matrix referenced non-existent Story 19.6 | ✅ Resolved | Matrix now references `19.4.5`; note about `19.5/19.6` removed. |
+| Q3 | Story 13.2.6 bundled four write actions | ✅ Resolved | Split into `13.2.6` (post/reply/quote) and `13.2.7` (schedule). |
+| Q4 | Story 13.2.7 bundled ~11 engagement/social-graph actions | ✅ Resolved | Split into `13.2.8` (like/retweet) and `13.2.9` (social graph). |
+| Q5 | Story 13.2.8 bundled direct messaging + list management | ✅ Resolved | Split into `13.2.10` (DM) and `13.2.11` (list management); integration remains `13.2.12`. |
+
+#### 5.3.2. Remaining Minor / Medium Issues
 
 | # | Issue | Location | Evidence | Recommended Fix |
 | --- | --- | --- | --- | --- |
-| Q1 | **Story 19.4 is an epic-sized catch-all for admin CLI** | Epic 19, Story 19.4 | 8+ CLI subcommands (status, proxies list, proxy quarantine, proxy release, accounts list, account wake, account rotate, checkpoints list/resume/pause/retry, stream metrics/alerts/test) in one story with 10 AC bullets. | Split into `19.4 Admin CLI — Status`, `19.5 Admin CLI — Proxy Management`, `19.6 Admin CLI — Account Management`, `19.7 Admin CLI — Checkpoint Operations`, `19.8 Admin CLI — Stream Metrics & Alerts`. Re-number REST stories to 19.9+. |
-| Q2 | **NFR traceability matrix references non-existent Story 19.6** | NFR Traceability Matrix (line 989) | `NFR17 ... 19.1, 19.2, 19.3, 19.6` but only 19.1–19.4, 19.7–19.10 exist; note says 19.5/19.6 merged into 19.4. | Remove 19.6 from matrix or restore 19.5/19.6 as separate stories after splitting 19.4. |
-| Q3 | **Story 13.2.6 bundles four distinct write actions** | Epic 13, Story 13.2.6 | post, reply, quote, schedule in one story. | Split into `13.2.6a Post/Reply/Quote` and `13.2.6b Schedule`; or split per action. |
-| Q4 | **Story 13.2.7 bundles ~11 engagement/social-graph actions** | Epic 13, Story 13.2.7 | like, retweet, undoRetweet, follow, unfollow, block, unblock, mute, unmute, bookmark in one story. | Split into `13.2.7a Engagement (like/retweet)` and `13.2.7b Social Graph (follow/unfollow/block/mute/bookmark)`. |
-| Q5 | **Story 13.2.8 bundles direct messaging + list management** | Epic 13, Story 13.2.8 | sendDM, getConversations, createList, addListMembers, removeListMembers. | Split into `13.2.8a Direct Messaging` and `13.2.8b List Management`. |
-
-#### 5.3.2. Minor / Medium Issues
-
-| # | Issue | Location | Evidence | Recommended Fix |
-| --- | --- | --- | --- | --- |
-| Q6 | **Story 19.7 and 19.8 combine multiple REST concerns** | Epic 19, Stories 19.7/19.8 | 19.7 is proxies only (OK); 19.8 is accounts + checkpoints. | Split 19.8 into `Account Management` and `Checkpoint Management`; or keep if team accepts. |
-| Q7 | **Personas in Epic 11 are mostly technical/system roles** | Epic 11, Stories 11.2, 11.4, 11.7, 11.8 | "Scale-Out Scraper", "Platform Governor & Account Security Engineer", "Platform Scraper Developer". | Rephrase to human operators ("Automation Operator", "Reliability Engineer") or keep if the team has agreed these are internal platform users. |
-| Q8 | **Epic 10 is a foundation enabler with indirect end-user value** | Epic 10 | All stories are contracts/storage/schema with personas like "Scraper Developer" / "Data Platform Engineer". | Add explicit "Foundation enabler — user value realized through downstream epics" note (already partially present) and ensure it is not treated as a sprint deliverable to end users. |
-| Q9 | **Minor markdown formatting errors** | Epic 13, Stories 13.2.6, 13.2.7, 13.2.8 | "So that" lines are missing closing `**` markers (e.g., `mà không cần browser.`). | Fix bold markdown. |
-| Q10 | **Story 11.5 depends on stories 11.1, 11.2, 11.4, 11.7 but is numbered 11.5** | Epic 11 | Implementation order note says `11.1 → 11.2 → 11.4 → 11.7 → 11.5 → 11.6 → 11.3`. | Either renumber stories to match dependency order or keep the note but ensure the team understands the sequence; non-blocking. |
+| Q6 | **Story 19.8 combines account + checkpoint REST concerns** | Epic 19, Story 19.8 | Single story covers both `/admin/accounts` and `/admin/checkpoints`. | Split into two stories if team wants stricter separation; non-blocking. |
+| Q7 | **Personas in Epic 11 are mostly technical/system roles** | Epic 11, Stories 11.2, 11.4, 11.7, 11.8 | "Scale-Out Scraper", "Platform Governor & Account Security Engineer", etc. | Keep if these are accepted internal platform personas; otherwise rephrase. |
+| Q8 | **Epic 10 is a foundation enabler with indirect end-user value** | Epic 10 | Contracts/schema stories. | Already labeled as foundation enabler; ensure not treated as end-user deliverable. |
+| Q10 | **Story 11.5 depends on earlier stories but is numbered 11.5** | Epic 11 | Implementation order note lists `11.1 → 11.2 → 11.4 → 11.7 → 11.5 → 11.6 → 11.3`. | Keep the note; non-blocking. |
 
 ### 5.4. Best-Practices Compliance Checklist
 
@@ -466,64 +459,68 @@ Validated `epics.md` (Epics 10–20) against the `bmad-create-epics-and-stories`
 | 10 | ⚠️ Enabler | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 11 | ✅ | ✅ | ⚠️ (personas) | ✅ | N/A | ✅ | ✅ |
 | 12 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
-| 13 | ⚠️ Suite (large) | ✅ | ❌ 13.2.6/7/8 too large | ✅ | N/A | ✅ | ✅ |
+| 13 | ⚠️ Suite (large) | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
 | 14 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
 | 15 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
 | 16 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
 | 17 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
 | 18 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
-| 19 | ✅ | ✅ | ❌ 19.4 too large | ✅ | N/A | ✅ | ✅ |
+| 19 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
 | 20 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ |
 
 ### 5.5. Quality Review Summary
 
-- **Epic structure is sound:** No forward dependencies; cross-epic dependencies are backward and clearly documented in the `Cross-Epic Dependency & Sequence Map`.
+- **Epic structure is sound:** No forward dependencies; cross-epic dependencies are backward and clearly documented.
 - **Multi-platform suite epics are well-managed:** Grouping notes for Epics 13, 15, 16, 17, 18 clarify independent sub-threads.
-- **Main sizing problems are in Epic 13 (Twitter/Facebook sub-stories) and Epic 19 (admin CLI catch-all).** These are the same structural issues flagged in previous readiness assessments and should be refined before implementation begins.
-- **NFR traceability matrix still references a non-existent Story 19.6**, creating a documentation inconsistency that must be fixed.
-- **Minor formatting and persona issues** do not block readiness but should be cleaned up for clarity.
+- **All three critical sizing problems (19.4, 13.2.6/7/8) and the NFR traceability dangling reference are resolved.**
+- **Remaining open items are minor:** 19.8 could be split, Epic 11/10 personas/role wording, 11.5 ordering note. None of these block implementation.
+- **Markdown formatting** in the split Twitter stories has been corrected.
 
-## 6. Summary and Recommendations
+## 6. Summary and Recommendations (Re-run)
 
 ### 6.1. Overall Readiness Status
 
-**NEEDS WORK**
+**READY**
 
-The XActions Phase 4 (Epics 10–20) specification package is **comprehensive and well-structured**, but it still has a handful of documentation and story-sizing issues that should be resolved before the implementation phase begins. The architecture conflict (gateway vs hybrid) and multi-platform epic grouping have already been resolved, and PRD/UX canonical pointers are now in place. The remaining issues are smaller and localized to Epic 13 and Epic 19.
+The three critical epic-sizing issues identified in the previous assessment have been resolved:
+- `19.4` is now a command-group story plus five focused admin CLI sub-stories (`19.4.1`–`19.4.5`).
+- `13.2.6`–`13.2.8` are now split into `13.2.6`–`13.2.12`, with each sub-story owning a single action domain.
+- The NFR traceability matrix no longer references the non-existent `19.6`; it now points to `19.4.5`.
+
+The XActions Phase 4 (Epics 10–20) specification package now has **no critical or major blockers**. Remaining issues are minor UX and wording gaps that can be closed in parallel with implementation.
 
 ### 6.2. Critical Issues Requiring Immediate Action
 
-1. **Split oversized Story 19.4** — the admin CLI catch-all currently bundles 8+ commands and 10 AC bullets. Split into per-domain admin CLI stories and re-number REST stories accordingly.
-2. **Fix the dangling NFR traceability reference to Story 19.6** — the matrix lists 19.6 but the note says it was merged into 19.4.
-3. **Split oversized Twitter sub-stories 13.2.6, 13.2.7, 13.2.8** — each bundles multiple distinct action groups that should be independent stories.
+None. All critical issues from the previous assessment are resolved.
 
-### 6.3. High-Priority Recommendations
+### 6.3. High-Priority Recommendations (Parallel with Implementation)
 
-1. **Resolve UX gaps before implementation:**
+1. **Resolve UX gaps before the first UI/CLI implementation sprint:**
    - Update or supersede `EXPERIENCE.md` with multi-platform flows.
    - Add CLI wireframes for `xactions admin` commands.
    - Define per-platform page UX for Shopee, Batdongsan, TopCV, VietnamWorks, LinkedIn, TikTok, Threads.
-2. **Refine Epic 19 REST stories:** split 19.8 (account + checkpoint) or keep combined with explicit justification.
+2. **Consider splitting Story 19.8** (account + checkpoint REST) into two stories for stricter separation.
 3. **Clarify non-TTY QR login** in Story 12.1 AC and `AbstractLogin` contract.
-4. **Fix minor markdown formatting** in Stories 13.2.6–13.2.8.
-5. **Verify deferred items are gated:** FR-62 (GraphQL replay), advanced Marketplace filters, canvas/WebGL spoofing should remain in `FUTURE-WORK.md` and not leak into Phase 4 stories.
+4. **Verify deferred items are gated:** FR-62 (GraphQL replay), advanced Marketplace filters, canvas/WebGL spoofing should remain in `FUTURE-WORK.md` and not leak into Phase 4 stories.
 
 ### 6.4. What Is Already Readiness-Grade
 
 - ✅ Canonical PRD, architecture spine, epics, and UX register exist and are approved/superseded correctly.
 - ✅ 100% FR/NFR traceability from PRD to `epics.md` for Epics 10–20.
 - ✅ Architecture conflict (Facebook gateway vs hybrid) resolved and documented.
-- ✅ Multi-platform epic grouping notes added.
+- ✅ Multi-platform epic grouping notes added; Epic 13 sub-stories now 13.2.1–13.2.12.
+- ✅ Admin CLI split into independently completable stories 19.4.1–19.4.5.
 - ✅ Core UX components, flows, and mockups cover admin dashboard, MCP/AI, CLI, and multi-platform new-user journey.
 - ✅ Dependency map is backward-only and logical.
+- ✅ NFR traceability matrix updated; no dangling story references.
 
 ### 6.5. Recommended Next Steps
 
-1. Refine `epics.md` to split 19.4 and re-number dependent stories; remove 19.6 from NFR traceability matrix.
-2. Refine `epics.md` to split 13.2.6, 13.2.7, 13.2.8 into smaller, independently completable stories.
-3. Update UX docs: either merge `EXPERIENCE-UNIVERSAL-2026-08-21.md` into `EXPERIENCE.md` or promote it; add CLI and per-platform page wireframes.
-4. Re-run this Implementation Readiness assessment after the above changes to move status from **NEEDS WORK** to **READY**.
+1. Close remaining UX gaps (per Section 6.3) before UI/CLI stories begin.
+2. If desired, split `19.8` for stricter REST separation; otherwise keep with explicit justification.
+3. Begin implementation of Epics 10–20 in the planned order.
+4. Re-run `bmad-sprint-planning` to regenerate `sprint-status.yaml` keys from the updated `epics.md` (already done manually in this update; regenerate if automated tool is preferred).
 
 ### 6.6. Final Note
 
-This assessment identified **10 quality/alignment issues** across **5 categories**: document discovery/consistency (2), PRD completeness (1), epic coverage (1), UX alignment (4), and epic quality (2 critical + 3 major + 5 minor). Address the three critical issues (19.4 split, 19.6 dangling reference, 13.2.6/7/8 splits) before implementation begins.
+This re-run of the Implementation Readiness assessment confirms the **three critical blockers are resolved**. The package now has **0 critical / major issues** and **4 minor notes** (Q6, Q7, Q8, Q10) that do not prevent Phase 4 implementation. The overall status is **READY**.
