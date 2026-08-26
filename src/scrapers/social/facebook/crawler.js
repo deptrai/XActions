@@ -39,8 +39,11 @@ function buildCookieHeader(cookies) {
 export const DEFAULT_FB_DOC_IDS = {
   GROUP_FEED: 'group_feed_doc_123',
   PAGE_FEED: 'page_feed_doc_456',
-  COMMENT_ROOTS: 'comment_roots_doc_000',
-  COMMENT_REPLIES: 'comment_replies_doc_000',
+  // Captured 2026-08-26 from authenticated Facebook web session
+  // CommentsListComponentsPaginationQuery_facebookRelayOperation
+  COMMENT_ROOTS: '28217113134586234',
+  // Depth1CommentsListPaginationQuery_facebookRelayOperation
+  COMMENT_REPLIES: '27878908781774491',
 };
 
 export class FacebookCrawler extends AbstractCrawler {
