@@ -32,6 +32,7 @@ import { extractHydrationJson } from './hydration.js';
  *
  * READ-ONLY scrape — NOT routed through runGuardedBatch.
  *
+ * @deprecated Replaced by `FacebookCrawler` action `group_search` (Story 13.6). Use `FacebookCrawler.start({ action: 'group_search', ... })` instead.
  * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} groupUrl - facebook.com/groups/<id> URL
  * @param {FacebookOptions} [options]

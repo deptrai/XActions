@@ -90,6 +90,66 @@
           "type": "boolean"
         }
       }
+    },
+    {
+      "title": "SearchResultItem Metadata",
+      "properties": {
+        "isSearchResult": {
+          "type": "boolean"
+        },
+        "searchType": {
+          "type": "string"
+        },
+        "resultType": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "sourceMethod": {
+          "type": "string"
+        },
+        "isProfile": {
+          "type": "boolean"
+        },
+        "isPage": {
+          "type": "boolean"
+        },
+        "isGroup": {
+          "type": "boolean"
+        },
+        "category": {
+          "type": "string"
+        },
+        "privacy": {
+          "type": "string"
+        },
+        "members": {
+          "type": "integer"
+        },
+        "membersCount": {
+          "type": "integer"
+        },
+        "likes": {
+          "type": "integer"
+        },
+        "likesCount": {
+          "type": "integer"
+        },
+        "pageUrl": {
+          "type": "string"
+        },
+        "groupUrl": {
+          "type": "string"
+        },
+        "groupId": {
+          "type": "string"
+        }
+      },
+      "required": ["isSearchResult"]
     }
   ]
 }

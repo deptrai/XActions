@@ -84,7 +84,7 @@ development_status:
   13-3-refactor-facebook-scraper-to-hybrid-architecture: done
   13-4-facebook-browser-as-signer-bridge: done
   13-5-facebook-hybrid-profile-followers-group-members: done
-  13-6-facebook-hybrid-search-global-group-search: in-progress
+  13-6-facebook-hybrid-search-global-group-search: review
   13-7-facebook-hybrid-post-group-comments: ready-for-dev
   13-8-facebook-hybrid-marketplace: backlog
   13-9-facebook-hybrid-social-actions-write-messenger: backlog

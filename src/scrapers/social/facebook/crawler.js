@@ -18,6 +18,13 @@ import {
   normalizeFacebookGroupMember,
   profileItemToPostItem,
 } from './normalize-profile.js';
+import {
+  normalizeFacebookSearchPost,
+  normalizeFacebookSearchProfile,
+  normalizeFacebookPageSearchResult,
+  normalizeFacebookGroupSearchResult,
+  searchResultToPostItem,
+} from './normalize-search.js';
 import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from '../../facebook/core.js';
 import { normalizeHandle } from '../../facebook/normalize.js';
 
@@ -195,6 +202,11 @@ export const DEFAULT_FB_DOC_IDS = {
   FOLLOWERS: 'followers_doc_101',
   FOLLOWING: 'following_doc_102',
   GROUP_MEMBERS: 'group_members_doc_103',
+  SEARCH_POSTS: 'fb_search_posts_doc',
+  SEARCH_PEOPLE: 'fb_search_people_doc',
+  SEARCH_PAGES: 'fb_search_pages_doc',
+  SEARCH_GROUPS: 'fb_search_groups_doc',
+  GROUP_SEARCH: 'fb_group_search_doc',
   // Captured 2026-08-26 from authenticated Facebook web session
   // CommentsListComponentsPaginationQuery_facebookRelayOperation
   COMMENT_ROOTS: '28217113134586234',
@@ -325,6 +337,26 @@ export class FacebookCrawler extends AbstractCrawler {
       example: { groupUrl: 'https://www.facebook.com/groups/123456', limit: 50 },
       outputType: '{ members: ProfileItem[], pageInfo?: any }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupMembers(args, session),
+    });
+
+    this.registerAction({
+      action: 'search',
+      description: 'Search Facebook global entities (posts, people, pages, groups, all)',
+      requiredArgs: ['query'],
+      optionalArgs: ['type', 'location', 'limit', 'cursor'],
+      example: { query: 'artificial intelligence', type: 'posts', limit: 20 },
+      outputType: '{ posts?: PostItem[], people?: PostItem[], pages?: PostItem[], groups?: PostItem[], pageInfo?: any }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.search(args, session),
+    });
+
+    this.registerAction({
+      action: 'group_search',
+      description: 'Search posts inside a specific Facebook group',
+      requiredArgs: ['groupUrl', 'query'],
+      optionalArgs: ['limit', 'cursor'],
+      example: { groupUrl: 'https://www.facebook.com/groups/123456', query: 'ai tools', limit: 20 },
+      outputType: '{ posts: PostItem[], pageInfo?: any }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupSearch(args, session),
     });
   }
 
@@ -872,16 +904,254 @@ export class FacebookCrawler extends AbstractCrawler {
   async init() {}
 
   /**
-   * @param {Object} _args
-   * @returns {Promise<import('../../../core/types.js').PostItem[]>}
+   * Search Facebook global entities (posts, people, pages, groups, all).
+   * @param {Object} args
+   * @param {string} args.query - Search keyword or query
+   * @param {'posts' | 'people' | 'pages' | 'groups' | 'all'} [args.type='posts']
+   * @param {string} [args.location]
+   * @param {number} [args.limit=30]
+   * @param {string} [args.cursor]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<any>}
    */
-  async search(_args) {
-    throw new PlatformError({
-      code: 'XACT_4001',
-      type: ErrorTypes.INVALID_ARGS,
-      message: 'Search is not supported on FacebookCrawler',
-      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+  async search(args, session = {}) {
+    const rawQuery = String(args?.query || '').trim();
+    if (!rawQuery) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: query',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const type = String(args?.type || 'posts').toLowerCase();
+    const VALID_SEARCH_TYPES = ['posts', 'people', 'pages', 'groups', 'all'];
+    if (!VALID_SEARCH_TYPES.includes(type)) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `Invalid search type: "${type}". Supported types: ${VALID_SEARCH_TYPES.join(', ')}`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const location = args?.location ? String(args.location).trim() : '';
+    const query = location ? `${rawQuery} near ${location}` : rawQuery;
+    const limit = this.#normalizeCount(args?.limit, 30, 500);
+    const cursor = args?.cursor || null;
+
+    if (type === 'all') {
+      return this.#searchAllTypes(query, { ...args, limit, cursor }, session);
+    }
+
+    return this.#searchByType(type, query, { ...args, limit, cursor }, session);
+  }
+
+  /**
+   * @param {string} type
+   * @param {string} query
+   * @param {Record<string, any>} options
+   * @param {Record<string, any>} session
+   * @returns {Promise<any>}
+   */
+  async #searchByType(type, query, options, session) {
+    const accountId = session?.accountId;
+    const cookies = this.#resolveCookies(session);
+
+    let docId = '';
+    if (type === 'posts') docId = this.docIds.SEARCH_POSTS || DEFAULT_FB_DOC_IDS.SEARCH_POSTS;
+    else if (type === 'people') docId = this.docIds.SEARCH_PEOPLE || DEFAULT_FB_DOC_IDS.SEARCH_PEOPLE;
+    else if (type === 'pages') docId = this.docIds.SEARCH_PAGES || DEFAULT_FB_DOC_IDS.SEARCH_PAGES;
+    else if (type === 'groups') docId = this.docIds.SEARCH_GROUPS || DEFAULT_FB_DOC_IDS.SEARCH_GROUPS;
+
+    const variables = {
+      query,
+      searchTerm: query,
+      queryString: query,
+      count: options.limit,
+      first: options.limit,
+      cursor: options.cursor,
+      after: options.cursor,
+    };
+
+    const res = await this.client.requestGraphQl(docId, variables, {
+      accountId,
+      cookies,
     });
+
+    const edges = res?.data?.serpResponse?.results?.edges ||
+                  res?.data?.searchResults?.edges ||
+                  res?.data?.edges || [];
+    const pageInfo = res?.data?.serpResponse?.results?.page_info ||
+                     res?.data?.searchResults?.page_info ||
+                     res?.data?.page_info || null;
+
+    const postItems = [];
+    for (const edge of edges) {
+      let postItem = null;
+      if (type === 'posts') {
+        postItem = normalizeFacebookSearchPost(edge, query);
+      } else if (type === 'people') {
+        const p = normalizeFacebookSearchProfile(edge, 'people', query);
+        postItem = p ? searchResultToPostItem(p, 'people', query) : null;
+      } else if (type === 'pages') {
+        const p = normalizeFacebookPageSearchResult(edge, query);
+        postItem = p ? searchResultToPostItem(p, 'pages', query) : null;
+      } else if (type === 'groups') {
+        const p = normalizeFacebookGroupSearchResult(edge, query);
+        postItem = p ? searchResultToPostItem(p, 'groups', query) : null;
+      }
+
+      if (!postItem) continue;
+      this.validateItem(postItem);
+      postItems.push(postItem);
+    }
+
+    if (this.store && postItems.length > 0 && typeof this.store.storeBatch === 'function') {
+      await this.store.storeBatch(postItems, { upsert: true });
+    }
+
+    await this.#saveCheckpoint('search', `${query}:${type}`, pageInfo?.end_cursor, postItems, pageInfo?.has_next_page);
+
+    const out = Object.assign([...postItems], { posts: postItems, pageInfo });
+    return out;
+  }
+
+  /**
+   * @param {string} query
+   * @param {Record<string, any>} options
+   * @param {Record<string, any>} session
+   * @returns {Promise<any>}
+   */
+  async #searchAllTypes(query, options, session) {
+    const types = ['posts', 'people', 'pages', 'groups'];
+    const results = /** @type {Record<string, any>} */ ({
+      posts: [],
+      people: [],
+      pages: [],
+      groups: [],
+      pageInfo: null,
+    });
+
+    for (const t of types) {
+      const res = await this.#searchByType(t, query, options, session);
+      const items = res?.posts || (Array.isArray(res) ? res : []);
+      results[t] = items;
+      if (!results.pageInfo && res.pageInfo) {
+        results.pageInfo = res.pageInfo;
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Search posts within a Facebook Group.
+   * @param {Object} args
+   * @param {string} [args.groupUrl]
+   * @param {string} [args.groupId]
+   * @param {string} args.query
+   * @param {number} [args.limit=30]
+   * @param {string} [args.cursor]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo?: any, note?: string }>}
+   */
+  async groupSearch(args, session = {}) {
+    const rawQuery = String(args?.query || '').trim();
+    if (!rawQuery) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: query',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const rawGroupInput = String(args?.groupUrl || args?.groupId || '').trim();
+    if (!rawGroupInput) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: groupUrl or groupId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    if (rawGroupInput.startsWith('http://') || rawGroupInput.startsWith('https://')) {
+      try {
+        const parsed = new URL(rawGroupInput);
+        const host = parsed.hostname.toLowerCase();
+        if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: `SSRF Guard: Target URL is not a facebook.com domain: ${rawGroupInput}`,
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          });
+        }
+      } catch (err) {
+        if (err instanceof PlatformError) throw err;
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: `Invalid group URL: ${rawGroupInput}`,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+
+    const groupId = resolveGroupId(rawGroupInput);
+    if (!groupId) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `Could not resolve numeric groupId from: ${rawGroupInput}`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const limit = this.#normalizeCount(args?.limit, 30, 500);
+    const cursor = args?.cursor || null;
+    const accountId = session?.accountId;
+    const cookies = this.#resolveCookies(session);
+    const docId = this.docIds.GROUP_SEARCH || DEFAULT_FB_DOC_IDS.GROUP_SEARCH;
+
+    const variables = {
+      groupID: groupId,
+      groupId,
+      query: rawQuery,
+      searchTerm: rawQuery,
+      count: limit,
+      cursor,
+    };
+
+    const res = await this.client.requestGraphQl(docId, variables, {
+      accountId,
+      cookies,
+    });
+
+    const group = res?.data?.group || res?.data?.node || res?.data;
+    const groupSearchConnection = group?.group_search_results || group?.search_results || res?.data?.searchResults;
+    const edges = Array.isArray(groupSearchConnection?.edges) ? groupSearchConnection.edges : [];
+    const pageInfo = groupSearchConnection?.page_info || null;
+
+    const postItems = [];
+    for (const edge of edges) {
+      const postItem = normalizeFacebookSearchPost(edge, rawQuery);
+      if (!postItem) continue;
+      this.validateItem(postItem);
+      postItems.push(postItem);
+    }
+
+    if (this.store && postItems.length > 0 && typeof this.store.storeBatch === 'function') {
+      await this.store.storeBatch(postItems, { upsert: true });
+    }
+
+    await this.#saveCheckpoint('search', `${groupId}:${rawQuery}`, pageInfo?.end_cursor, postItems, pageInfo?.has_next_page);
+
+    const out = Object.assign([...postItems], { posts: postItems, pageInfo });
+    return out;
   }
 
   /**

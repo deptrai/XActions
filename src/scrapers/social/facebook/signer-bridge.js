@@ -154,22 +154,22 @@ function resolveProfileHandle(input) {
 /**
  * Extract profile fields from a loaded mbasic/desktop page.
  * This is a standalone function so it can be passed to adapter.evaluate().
- * @param {unknown} _handle
- * @returns {Record<string, unknown> | null}
+ * @param {string} handle
+ * @returns {Record<string, any> | null}
  */
-function extractMbasicProfileFromDom(_handle) {
+function extractMbasicProfileFromDom(handle) {
   const body = document.body;
   if (!body) return null;
 
   const bodyText = (body.textContent || body.innerText || '').trim();
   const pageTitle = (document.title || '').trim();
 
-  const getMeta = /** @type {(prop: string) => string | null} */ ((prop) => {
+  const getMeta = (/** @type {string} */ prop) => {
     const el = document.querySelector('meta[property="' + prop + '"], meta[name="' + prop + '"]');
     return el?.getAttribute('content') || null;
-  });
+  };
 
-  const isGibberishName = /** @type {(n: string | null) => boolean} */ ((n) => {
+  const isGibberishName = (/** @type {string | null | undefined} */ n) => {
     if (!n) return true;
     const trimmed = n.trim();
     if (!trimmed) return true;
@@ -177,7 +177,7 @@ function extractMbasicProfileFromDom(_handle) {
     if (/\d+\s*(friends?|followers?|likes?)/i.test(trimmed)) return true;
     if (/^(facebook|log\s*in|home|search|messages?|notifications?|menu|find friends|add friends|friend requests|suggested for you|people you may know|add friend|edit profile|this browser isn\'t supported|add to story)$/i.test(trimmed)) return true;
     return false;
-  });
+  };
 
   // Detect a login wall before extracting content.
   const hasLoginForm = !!document.querySelector('form[action*="login"], [data-testid="royal_login_form"]');
@@ -272,16 +272,12 @@ function extractMbasicProfileFromDom(_handle) {
 }
 
 /**
- * @typedef {FacebookGroupMember & { id?: string }} BrowserGroupMember
- */
-
-/**
  * Extract group member links from a loaded group /members page.
  * This is a standalone function so it can be passed to adapter.evaluate().
- * @returns {BrowserGroupMember[]}
+ * @returns {Record<string, any>[]}
  */
 function extractGroupMembersFromDom() {
-  /** @type {BrowserGroupMember[]} */
+  /** @type {Record<string, any>[]} */
   const results = [];
   const seen = new Set();
   const links = document.querySelectorAll('a[href*="/groups/"][href*="/user/"]');
@@ -704,8 +700,8 @@ export class FacebookBrowserBridge {
   async #pollForSelector(adapter, page, selector, timeout) {
     const deadline = Date.now() + timeout;
     while (Date.now() < deadline) {
-      const found = /** @type {boolean} */ (await adapter.evaluate(page, (/** @type {unknown} */ sel) => {
-        return document.querySelector(/** @type {string} */ (sel)) !== null;
+      const found = /** @type {boolean} */ (await adapter.evaluate(page, (/** @type {any} */ sel) => {
+        return document.querySelector(sel) !== null;
       }, selector));
       if (found) return true;
       await this.#sleep(500);
@@ -757,7 +753,7 @@ export class FacebookBrowserBridge {
         timeout,
       });
 
-      const raw = /** @type {Record<string, unknown> | null} */ (await adapter.evaluate(page, extractMbasicProfileFromDom, handle));
+      const raw = /** @type {Record<string, any> | null} */ (await adapter.evaluate(page, /** @type {any} */ (extractMbasicProfileFromDom), handle));
 
       if (!raw || (!raw.ogTitle && !raw.ogDescription && !raw.ogImage)) {
         throw new PlatformError({
@@ -782,7 +778,7 @@ export class FacebookBrowserBridge {
         });
       }
 
-      const externalId = /** @type {string | undefined} */ (raw.userId) || handle;
+      const externalId = raw.userId || handle;
       const rawForProfile = {
         id: externalId,
         name: legacy.name,
@@ -888,7 +884,7 @@ export class FacebookBrowserBridge {
 
         for (const raw of rawMembers) {
           if (members.has(raw.profileUrl)) continue;
-          const legacy = normalizeGroupMember(raw);
+          const legacy = normalizeGroupMember(/** @type {any} */ (raw));
           const externalId = raw.id || legacy.username || '';
           if (!externalId) continue;
           const rawForMember = {

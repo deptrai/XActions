@@ -16,3 +16,11 @@ export {
   profileItemToPostItem,
   namespacedProfileId,
 } from './normalize-profile.js';
+export {
+  normalizeFacebookSearchPost,
+  normalizeFacebookSearchProfile,
+  normalizeFacebookPageSearchResult,
+  normalizeFacebookGroupSearchResult,
+  searchResultToPostItem,
+} from './normalize-search.js';
+

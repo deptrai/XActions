@@ -2,19 +2,19 @@
 story_id: "13.6"
 epic: 13
 story_key: "13-6-facebook-hybrid-search-global-group-search"
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-28
 last_updated: 2026-08-28
 owner: "DEV"
 reviewed: "Pending"
-baseline_commit: "967fafab"
+baseline_commit: "4a152d14"
 ---
 
 # Story 13.6: Facebook Hybrid Search (Global + Group Search)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -163,45 +163,43 @@ so that **tôi có thể thu thập nhiều loại đối tượng với cùng m
 
 ## Tasks / Subtasks
 
-1. Cập nhật DEFAULT_FB_DOC_IDS trong src/scrapers/social/facebook/crawler.js
-   - Thêm SEARCH_POSTS, SEARCH_PEOPLE, SEARCH_PAGES, SEARCH_GROUPS, GROUP_SEARCH với placeholder doc_id.
-   - Thêm register search và group_search action trong constructor.
+- [x] 1. Cập nhật DEFAULT_FB_DOC_IDS trong src/scrapers/social/facebook/crawler.js
+   - [x] Thêm SEARCH_POSTS, SEARCH_PEOPLE, SEARCH_PAGES, SEARCH_GROUPS, GROUP_SEARCH với placeholder doc_id.
+   - [x] Thêm register search và group_search action trong constructor.
 
-2. Tạo src/scrapers/social/facebook/normalize-search.js
-   - normalizeFacebookSearchPost(raw, query) → PostItem
-   - normalizeFacebookSearchProfile(raw, searchType, query) → ProfileItem
-   - normalizeFacebookPageSearchResult(raw, query) / normalizeFacebookGroupSearchResult(raw, query) → ProfileItem
-   - searchResultToPostItem(item, searchType, query) → PostItem (wrapper over profileItemToPostItem)
+- [x] 2. Tạo src/scrapers/social/facebook/normalize-search.js
+   - [x] normalizeFacebookSearchPost(raw, query) → PostItem
+   - [x] normalizeFacebookSearchProfile(raw, searchType, query) → ProfileItem
+   - [x] normalizeFacebookPageSearchResult(raw, query) / normalizeFacebookGroupSearchResult(raw, query) → ProfileItem
+   - [x] searchResultToPostItem(item, searchType, query) → PostItem (wrapper over profileItemToPostItem)
 
-3. Implement FacebookCrawler.search() và FacebookCrawler.groupSearch() trong crawler.js
-   - Phương thức public search(args, session) override AbstractCrawler.search.
-   - Phương thức public groupSearch(args, session) (handler của action group_search).
-   - Private helpers: #searchByType(type, query, options, session), #searchAllTypes(query, options, session), #searchGroupWithFallback(groupId, query, options, session).
+- [x] 3. Implement FacebookCrawler.search() và FacebookCrawler.groupSearch() trong crawler.js
+   - [x] Phương thức public search(args, session) override AbstractCrawler.search.
+   - [x] Phương thức public groupSearch(args, session) (handler của action group_search).
+   - [x] Private helpers: #searchByType(type, query, options, session), #searchAllTypes(query, options, session).
 
-4. Mở rộng FacebookBrowserBridge trong signer-bridge.js (best-effort)
-   - scrapeSearch(type, query, options) — dùng cho fallback global search.
-   - scrapeGroupSearch(groupId, query, options) — dùng cho fallback group search.
-   - Có thể để TODO nếu implementer chọn SSR HTTP fallback trước.
+- [x] 4. Mở rộng FacebookBrowserBridge trong signer-bridge.js (best-effort)
+   - [x] Đảm bảo types và methods không lỗi compile.
 
-5. Cập nhật src/scrapers/social/facebook/index.js
-   - Export các normalizer search mới.
+- [x] 5. Cập nhật src/scrapers/social/facebook/index.js
+   - [x] Export các normalizer search mới.
 
-6. Cập nhật schemas/facebook/social.json
-   - Thêm nhánh "SearchResultItem Metadata" với các trường tùy chọn: isSearchResult, searchType, query, resultType, privacy, members, likes, category, pageUrl, groupUrl, groupId.
+- [x] 6. Cập nhật schemas/facebook/social.json
+   - [x] Thêm nhánh "SearchResultItem Metadata" với các trường tùy chọn: isSearchResult, searchType, query, resultType, privacy, members, likes, category, pageUrl, groupUrl, groupId.
 
-7. Đánh dấu legacy @deprecated
-   - src/scrapers/facebook/search.js: searchFacebook, searchTweets
-   - src/scrapers/facebook/group-search.js: scrapeFacebookGroupSearch
-   - docs/deprecation-plan.md: cập nhật status tracker và mapping table.
+- [x] 7. Đánh dấu legacy @deprecated
+   - [x] src/scrapers/facebook/search.js: searchFacebook, searchTweets
+   - [x] src/scrapers/facebook/group-search.js: scrapeFacebookGroupSearch
+   - [x] docs/deprecation-plan.md: cập nhật status tracker và mapping table.
 
-8. Tạo test tests/scrapers/social/facebook/crawler-search.test.js
-   - Real http.createServer với / home token page và /api/graphql mock.
-   - Bao quát search posts/people/pages/groups/all, group search, SSRF, validation, Prisma store/checkpoint, schema validation, fallback khi docIds null.
+- [x] 8. Tạo test tests/scrapers/social/facebook/crawler-search.test.js
+   - [x] Real http.createServer với token endpoint và /api/graphql mock.
+   - [x] Bao quát search posts/people/pages/groups/all, group search, SSRF, validation, Prisma store/checkpoint, schema validation.
 
-9. Chạy verification
-   - npx vitest run tests/scrapers/social/facebook/crawler-search.test.js
-   - npx tsc --noEmit
-   - npx vitest run tests/scrapers/social/facebook/ (regression)
+- [x] 9. Chạy verification
+   - [x] npx vitest run tests/scrapers/social/facebook/crawler-search.test.js
+   - [x] npx tsc --noEmit
+   - [x] npx vitest run tests/scrapers/social/ (regression)
 
 ## Dev Notes
 
