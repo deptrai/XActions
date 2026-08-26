@@ -1441,6 +1441,14 @@ export class FacebookCrawler extends AbstractCrawler {
     let categoryId = undefined;
     if (args?.categoryId != null && String(args.categoryId).trim() !== '') {
       categoryId = String(args.categoryId).trim();
+      if (!/^[a-zA-Z0-9_\-]+$/.test(categoryId)) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'categoryId must only contain alphanumeric characters, hyphens, or underscores',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
     }
 
     // Coordinates validation
@@ -1469,8 +1477,38 @@ export class FacebookCrawler extends AbstractCrawler {
       }
     }
 
-    const radiusKm = args?.radiusKm != null ? Math.max(1, Math.min(Number(args.radiusKm) || 50, 500)) : undefined;
-    const location = args?.location ? String(args.location).trim() : undefined;
+    if ((latitude != null) !== (longitude != null)) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Both latitude and longitude must be provided together',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const hasCoords = latitude != null && longitude != null;
+    const radiusKm = hasCoords
+      ? (args?.radiusKm != null ? Math.max(1, Math.min(Number(args.radiusKm) || 50, 500)) : 50)
+      : (args?.radiusKm != null ? Math.max(1, Math.min(Number(args.radiusKm) || 50, 500)) : undefined);
+
+    // Location validation and resolution
+    let location = undefined;
+    if (args?.location != null && String(args.location).trim() !== '') {
+      const rawLoc = String(args.location).trim();
+      if (/^https?:\/\//i.test(rawLoc)) {
+        if (!/^https?:\/\/(?:www\.)?facebook\.com\/(?:marketplace\/)?/i.test(rawLoc)) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: 'location URL must be a valid facebook.com/marketplace URL',
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          });
+        }
+      }
+      location = rawLoc;
+    }
+
+    const resolvedLoc = location ? resolveMarketplaceLocation(location) : null;
     const limit = Math.max(1, Math.min(Number(args?.limit) || 50, 200));
     const cursor = (typeof args?.cursor === 'string' ? args.cursor.trim() : '') ||
                    (typeof args?.after === 'string' ? args.after.trim() : '') || null;
@@ -1478,7 +1516,7 @@ export class FacebookCrawler extends AbstractCrawler {
     const dryRun = Boolean(args?.dryRun);
     if (dryRun) {
       const searchUrl = buildMarketplaceSearchUrl(rawQuery, {
-        location,
+        location: resolvedLoc || location,
         category,
         minPrice,
         maxPrice,
@@ -1538,19 +1576,66 @@ export class FacebookCrawler extends AbstractCrawler {
       for (const edge of edges) {
         const postItem = normalizeFacebookMarketplaceListing(edge, 'graphql');
         if (!postItem) continue;
-        this.validateItem(postItem);
-        postItems.push(postItem);
+        try {
+          this.validateItem(postItem);
+          postItems.push(postItem);
+        } catch (valErr) {
+          const valErrMsg = valErr instanceof Error ? valErr.message : String(valErr);
+          console.warn(`⚠️ [FacebookCrawler] Marketplace listing item validation failed: ${valErrMsg}`);
+        }
       }
     } catch (err) {
-      const errMsg = /** @type {any} */ (err)?.message || String(err);
+      const errMsg = err instanceof Error ? err.message : String(err);
       console.warn(`⚠️ [FacebookCrawler] Marketplace GraphQL fetch failed: ${errMsg}. Attempting fallback.`);
       note = `Marketplace GraphQL query failed: ${errMsg}`;
 
-      if (this.client?.browserBridge) {
+      const bridge = /** @type {any} */ (this.client?.browserBridge);
+      if (bridge && typeof bridge.evaluate === 'function') {
         try {
-          const fallbackUrl = buildMarketplaceSearchUrl(rawQuery, { location, category, minPrice, maxPrice });
+          const fallbackUrl = buildMarketplaceSearchUrl(rawQuery, {
+            location: resolvedLoc || location,
+            category,
+            minPrice,
+            maxPrice,
+          });
+          const extracted = await bridge.evaluate(async () => {
+            const items = [];
+            const links = document.querySelectorAll('a[href*="/marketplace/item/"]');
+            for (const a of links) {
+              const href = a.getAttribute('href') || '';
+              const match = href.match(/\/marketplace\/item\/(\d+)/);
+              if (!match) continue;
+              const id = match[1];
+              const text = (a.innerText || a.textContent || '').trim();
+              const img = a.querySelector('img')?.getAttribute('src') || '';
+              const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+              items.push({
+                id,
+                title: lines[1] || lines[0] || 'Marketplace Listing',
+                price: lines[0] || '',
+                image: img,
+                listingUrl: `https://www.facebook.com/marketplace/item/${id}`,
+              });
+            }
+            return items;
+          }, fallbackUrl).catch(() => []);
+
+          if (Array.isArray(extracted) && extracted.length > 0) {
+            for (const item of extracted) {
+              const postItem = normalizeFacebookMarketplaceListing(item, 'browser');
+              if (postItem) {
+                try {
+                  this.validateItem(postItem);
+                  postItems.push(postItem);
+                } catch {}
+              }
+            }
+          }
           note = `Used browser fallback for marketplace search: ${fallbackUrl}`;
-        } catch {}
+        } catch (fallbackErr) {
+          const fallbackErrMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+          console.warn(`⚠️ [FacebookCrawler] Browser fallback failed: ${fallbackErrMsg}`);
+        }
       }
     }
 
@@ -1558,7 +1643,7 @@ export class FacebookCrawler extends AbstractCrawler {
       await this.store.storeBatch(postItems, { upsert: true });
     }
 
-    const targetKey = [rawQuery, location, category].filter(Boolean).join(':');
+    const targetKey = [rawQuery, location, category, categoryId, minPrice, maxPrice].filter((v) => v !== undefined && v !== null && v !== '').join(':');
     await this.#saveCheckpoint('marketplace', targetKey, pageInfo?.end_cursor || null, postItems, Boolean(pageInfo?.has_next_page));
 
     return {

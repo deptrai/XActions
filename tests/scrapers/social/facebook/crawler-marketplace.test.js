@@ -290,6 +290,27 @@ describe('Story 13.8 — Facebook Hybrid Marketplace', () => {
       args: { query: 'car', latitude: 100 },
       session: { accountId: 'acc_fb_1' },
     })).rejects.toThrow(PlatformError);
+
+    // Mismatched coordinates (lat provided without lng)
+    await expect(crawler.start({
+      action: 'marketplace',
+      args: { query: 'car', latitude: 10.5 },
+      session: { accountId: 'acc_fb_1' },
+    })).rejects.toThrow(PlatformError);
+
+    // Invalid categoryId with special chars
+    await expect(crawler.start({
+      action: 'marketplace',
+      args: { query: 'car', categoryId: '123; DROP TABLE' },
+      session: { accountId: 'acc_fb_1' },
+    })).rejects.toThrow(PlatformError);
+
+    // SSRF guard on location URL
+    await expect(crawler.start({
+      action: 'marketplace',
+      args: { query: 'car', location: 'http://malicious.com/exploit' },
+      session: { accountId: 'acc_fb_1' },
+    })).rejects.toThrow(PlatformError);
   });
 
   it('[AC-5] should handle GraphQL failure gracefully with fallback note and empty posts list', async () => {
@@ -316,6 +337,56 @@ describe('Story 13.8 — Facebook Hybrid Marketplace', () => {
     expect(res.note).toContain('Marketplace GraphQL query failed');
   });
 
+  it('[AC-5] should use browserBridge evaluate fallback when GraphQL fails and browserBridge is provided', async () => {
+    const mockBridge = {
+      evaluate: async (_fn, _url) => [
+        {
+          id: 'listing_dom_1',
+          title: 'MacBook Pro 16 M2 Max',
+          price: '$2,400',
+          image: 'https://scontent.xx.fbcdn.net/dom1.jpg',
+          seller: { id: 'seller_dom_1', name: 'DOM Seller' },
+          creationTime: 1787680500,
+        },
+      ],
+    };
+
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    client.browserBridge = mockBridge;
+
+    const crawler = new FacebookCrawler({
+      client,
+      sessionManager,
+      docIds: {
+        MARKETPLACE_SEARCH: 'invalid_unconfigured_doc_id',
+      },
+    });
+
+    const res = await crawler.start({
+      action: 'marketplace',
+      args: {
+        query: 'macbook pro 16',
+      },
+      session: { accountId: 'acc_fb_1' },
+    });
+
+    expect(res.posts).toBeDefined();
+    expect(res.posts.length).toBe(1);
+    expect(res.posts[0].id).toBe('facebook:listing_dom_1');
+    expect(res.posts[0].metadata?.sourceMethod).toBe('browser');
+    expect(res.note).toContain('Used browser fallback');
+  });
+
+  it('[AC-9] should mark legacy scrapeMarketplace as deprecated in JSDoc', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const legacyFile = path.resolve(process.cwd(), 'src/scrapers/facebook/marketplace.js');
+    const content = fs.readFileSync(legacyFile, 'utf8');
+
+    expect(content).toContain('@deprecated');
+    expect(content).toContain('FacebookCrawler');
+  });
+
   it('[AC-10] should validate marketplace PostItem metadata against schemas/facebook/ecom.json', async () => {
     const metadataSchemaRegistry = (await import('../../../../src/core/metadata-schema-registry.js')).default;
 
@@ -340,5 +411,6 @@ describe('Story 13.8 — Facebook Hybrid Marketplace', () => {
     expect(validation.errors).toEqual([]);
   });
 });
+
 
 

@@ -302,6 +302,12 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
     const maxPrice = /** @type {number | string | undefined} */ (body.maxPrice);
     const priceMin = /** @type {number | string | undefined} */ (body.priceMin);
     const priceMax = /** @type {number | string | undefined} */ (body.priceMax);
+    const latitude = /** @type {number | string | undefined} */ (body.latitude);
+    const longitude = /** @type {number | string | undefined} */ (body.longitude);
+    const radiusKm = /** @type {number | string | undefined} */ (body.radiusKm);
+    const dryRun = /** @type {boolean | undefined} */ (body.dryRun);
+    const cursor = /** @type {string | undefined} */ (body.cursor);
+    const after = /** @type {string | undefined} */ (body.after);
     const limit = /** @type {number | string | undefined} */ (body.limit);
     const includeReplies = /** @type {boolean | undefined} */ (body.includeReplies);
     const authCookie = /** @type {Record<string, unknown> | undefined} */ (body.authCookie);
@@ -439,7 +445,7 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
           }
         : action === 'marketplace'
           ? {
-              query: /** @type {string} */ (query).trim(),
+              query: /** @type {string} */ (query || '').trim(),
               ...(location !== undefined && location !== null && { location: String(location).trim() }),
               ...(category !== undefined && category !== null && { category: String(category).trim() }),
               ...(categoryId !== undefined && categoryId !== null && { categoryId: String(categoryId).trim() }),
@@ -447,6 +453,12 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
               ...(maxPrice !== undefined && maxPrice !== null && { maxPrice: Number(maxPrice) }),
               ...(priceMin !== undefined && priceMin !== null && { priceMin: Number(priceMin) }),
               ...(priceMax !== undefined && priceMax !== null && { priceMax: Number(priceMax) }),
+              ...(latitude !== undefined && latitude !== null && { latitude: Number(latitude) }),
+              ...(longitude !== undefined && longitude !== null && { longitude: Number(longitude) }),
+              ...(radiusKm !== undefined && radiusKm !== null && { radiusKm: Number(radiusKm) }),
+              ...(dryRun !== undefined && dryRun !== null && { dryRun: Boolean(dryRun) }),
+              ...(cursor !== undefined && cursor !== null && { cursor: String(cursor).trim() }),
+              ...(after !== undefined && after !== null && { after: String(after).trim() }),
               ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
             }
           : action === 'group_search'

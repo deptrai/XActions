@@ -2,7 +2,7 @@
 story_id: '13.8'
 epic: 13
 story_key: '13-8-facebook-hybrid-marketplace'
-status: "review"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-27
 updated: 2026-08-27
@@ -14,7 +14,7 @@ baseline_commit: "c45d770f"
 
 # Story 13.8: Facebook Hybrid Marketplace
 
-Status: review
+Status: done
 
 ## Story
 
@@ -311,6 +311,19 @@ Story 13.8 triển khai **MVP Marketplace search** theo Epic 13. Các bộ lọc
     - [x] `npx vitest run tests/scrapers/social/facebook/crawler-marketplace.test.js`
     - [x] `npx tsc --noEmit`
     - [x] `npx prisma validate`
+
+### Review Findings
+
+- [x] [Review][Patch] Enhance browser bridge fallback with real DOM evaluation/scraping when browserBridge is available [`src/scrapers/social/facebook/crawler.js:1549`]
+- [x] [Review][Patch] Integrate location resolution and coordinate validation (`(latitude != null) === (longitude != null)`) with default `radiusKm = 50` [`src/scrapers/social/facebook/crawler.js:1470`]
+- [x] [Review][Patch] Add SSRF validation for location URLs and alphanumeric check for categoryId [`src/scrapers/social/facebook/crawler.js:1440`]
+- [x] [Review][Patch] Refine PII stripping regex to prevent false positives on hardware specs and match codebase conventions [`src/scrapers/social/facebook/normalize-marketplace.js:4`]
+- [x] [Review][Patch] Safely parse creationTime (seconds/milliseconds) and guarantee schema-compliant numeric metadata [`src/scrapers/social/facebook/normalize-marketplace.js:53`]
+- [x] [Review][Patch] Ensure mediaUrls extracts string URLs from nested image objects and retain seller ID if seller name is empty [`src/scrapers/social/facebook/normalize-marketplace.js:30`]
+- [x] [Review][Patch] Include all active filter dimensions in checkpoint targetKey [`src/scrapers/social/facebook/crawler.js:1561`]
+- [x] [Review][Patch] Align ActionRegistry outputType descriptor to `{ posts: PostItem[], pageInfo: Object }` [`src/scrapers/social/facebook/crawler.js:420`]
+- [x] [Review][Patch] Expand test suite in crawler-marketplace.test.js to cover browser fallback, SSRF guards, and API route scrapeArgs [`tests/scrapers/social/facebook/crawler-marketplace.test.js:280`]
+
 
 ## Technical Requirements
 
