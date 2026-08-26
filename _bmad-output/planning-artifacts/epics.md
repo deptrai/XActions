@@ -336,7 +336,7 @@ So that **hệ thống sử dụng nguyên vẹn profile và fingerprint thật 
 
 ## Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor)
 
-> **Epic grouping note:** This epic is a *platform suite*. Stories 13.2 + 13.2.1–13.2.9 (Twitter) and Stories 13.3–13.10 (Facebook) are independent sub-threads that share the same Tiered Signer foundation (Story 13.1). Each sub-thread can be implemented, tested, and shipped independently; they are grouped here because they both validate the hybrid engine.
+> **Epic grouping note:** This epic is a *platform suite*. Stories 13.2 + 13.2.1–13.2.12 (Twitter) and Stories 13.3–13.10 (Facebook) are independent sub-threads that share the same Tiered Signer foundation (Story 13.1). Each sub-thread can be implemented, tested, and shipped independently; they are grouped here because they both validate the hybrid engine.
 
 ### Story 13.1: Tiered Signer Architecture (Pre-Signed Token Ring & Worker Page Pool)
 As a **Scraper Architect**,
@@ -361,7 +361,7 @@ So that **tôi có thể thu thập hàng ngàn tweet trong vài giây với lư
 * **Then** scraper sử dụng `TwitterHttpClient` kết hợp `SignerPagePool` để lấy GraphQL data
 * **And** chuẩn hóa dữ liệu trả về theo model `PostItem` với ID Namespaced `twitter:${tweetId}`
 * **And** tự động ghi vào `PrismaStore` lưu vào PostgreSQL.
-* **And (Deprecation Marker)** gắn `@deprecated` cho toàn bộ `src/client/Scraper.js`, `src/scrapers/twitter/http/index.js`, và `src/scrapers/twitter/index.js` (legacy); ghi nhận trong `docs/deprecation-plan.md` chi tiết từng tính năng được thay thế ở Story 13.2 hoặc Story 13.2.1–13.2.9 để xoá ở Epic 20.2.
+* **And (Deprecation Marker)** gắn `@deprecated` cho toàn bộ `src/client/Scraper.js`, `src/scrapers/twitter/http/index.js`, và `src/scrapers/twitter/index.js` (legacy); ghi nhận trong `docs/deprecation-plan.md` chi tiết từng tính năng được thay thế ở Story 13.2 hoặc Story 13.2.1–13.2.12 để xoá ở Epic 20.2.
 
 ### Story 13.2.1: Twitter Hybrid Profile & Relationships
 As a **Twitter Growth Marketer**,
@@ -422,44 +422,82 @@ So that **tôi có thể theo dõi nhóm người dùng và nội dung audio tr�
 * **Then** crawler dispatch GraphQL request với pagination và chuẩn hóa `ProfileItem[]` / `PostItem[]`
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeListMembers`, `scrapeCommunityMembers`, `scrapeSpaces` trong `src/scrapers/twitter/index.js`; cập nhật `docs/deprecation-plan.md`.
 
-### Story 13.2.6: Twitter Hybrid Content Composition & Scheduling
+### Story 13.2.6: Twitter Hybrid Content Composition (Post, Reply, Quote)
 As a **Twitter Content Operator**,
-I want **đăng tweet, reply, quote, và schedule nội dung qua `TwitterClient` kiến trúc hybrid**,
-So that **tôi có thể tự động hóa nội dung mà không cần browser.
+I want **đăng tweet, reply, và quote nội dung qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa nội dung mà không cần browser**.
 
 **Acceptance Criteria:**
-* **Given** `src/scrapers/social/twitter/` có `TwitterClient` action methods cho `post`, `reply`, `quote`, `schedule`
-* **When** gọi `post({ text, mediaIds })`, `reply({ tweetId, text })`, `quote({ tweetId, text })`, hoặc `schedule({ text, publishAt })`
+* **Given** `src/scrapers/social/twitter/` có `TwitterClient` action methods cho `post`, `reply`, `quote`
+* **When** gọi `post({ text, mediaIds })`, `reply({ tweetId, text })`, hoặc `quote({ tweetId, text })`
 * **Then** mỗi action đi qua `TwitterClient` với `Signer Page Pool` hoặc HTTP GraphQL, tuân thủ delay floor (write: 3–7s) và governor
 * **And** dry-run gate mặc định `dryRun=true` cho mọi write action; cookie/token không bị log
 * **And** error trả về `PlatformError` với `suggestedAction` (`hibernate_account`, `relogin`, `reduce_rate`)
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `postTweet`, `postThread`, `postReply` trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
 
-### Story 13.2.7: Twitter Hybrid Engagement & Social Graph Actions
-As a **Twitter Growth Operator**,
-I want **thực hiện like, retweet, follow, unfollow, block, mute, và bookmark qua `TwitterClient` kiến trúc hybrid**,
-So that **tôi có thể tự động hóa engagement theo chiến lược growth mà không cần browser.
+### Story 13.2.7: Twitter Hybrid Content Scheduling
+As a **Twitter Content Operator**,
+I want **schedule tweet để đăng tự động trong tương lai qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể lập lịch nội dung mà không cần giữ trình duyệt mở**.
 
 **Acceptance Criteria:**
-* **Given** `TwitterClient` hỗ trợ action `like`, `unlike`, `retweet`, `undoRetweet`, `follow`, `unfollow`, `block`, `unblock`, `mute`, `unmute`, `bookmark`
+* **Given** `TwitterClient` đã hỗ trợ `post` (Story 13.2.6)
+* **When** gọi `schedule({ text, mediaIds, publishAt })`
+* **Then** `TwitterClient` tạo draft tweet với lịch đăng, trả về `scheduledAt` và `tweetId` dự kiến
+* **And** tuân thủ delay floor (write: 3–7s) và governor
+* **And** dry-run gate mặc định `dryRun=true`; cookie/token không bị log
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scheduleTweet` trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.8: Twitter Hybrid Engagement (Like & Retweet)
+As a **Twitter Growth Operator**,
+I want **thực hiện like, retweet, undoRetweet, và unlike qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa tương tác cơ bản với nội dung theo chiến lược growth**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterClient` hỗ trợ action `like`, `unlike`, `retweet`, `undoRetweet`
 * **When** gọi các action với `targetId`/`username` và tùy chọn `dryRun`
 * **Then** mỗi action đi qua `TwitterClient` với delay floor (engagement: 1–3s giữa các tác vụ), sticky proxy và governor
-* **And** `follow`/`unfollow` tuân thủ daily limit (configurable) và anti-chain policy (không follow/unfollow cùng user trong 24h)
-* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `likeTweet`, `retweetTweet`, `followUser` trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
+* **And** dry-run gate mặc định `dryRun=true`; cookie/token không bị log
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `likeTweet`, `retweetTweet` trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
 
-### Story 13.2.8: Twitter Hybrid Direct Messaging & Lists
-As a **Twitter Community Manager**,
-I want **gửi DM và quản lý list membership qua `TwitterClient` kiến trúc hybrid**,
-So that **tôi có thể tự động hóa outreach và list curation một cách an toàn.
+### Story 13.2.9: Twitter Hybrid Social Graph (Follow, Block, Mute, Bookmark)
+As a **Twitter Growth Operator**,
+I want **quản lý mối quan hệ tài khoản (follow, unfollow, block, unblock, mute, unmute, bookmark) qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa growth và moderation tài khoản mà không cần browser**.
 
 **Acceptance Criteria:**
-* **Given** `TwitterClient` hỗ trợ action `sendDM`, `getConversations`, `createList`, `addListMembers`, `removeListMembers`
-* **When** gọi `sendDM({ userId, text })` hoặc `addListMembers({ listId, userIds })`
-* **Then** DM sử dụng HTTP GraphQL với delay floor 5–15s; list actions sử dụng GraphQL với batch chunking 100 userIds
-* **And** `sendDM` kiểm tra recipient cho phép tin nhắn từ陌生人 trước khi gửi, trả về `PlatformError` với `code: TWITTER_DM_NOT_ALLOWED` nếu bị chặn
-* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho DM/list helpers trong `src/client/Scraper.js`; cập nhật `docs/deprecation-plan.md`.
+* **Given** `TwitterClient` hỗ trợ action `follow`, `unfollow`, `block`, `unblock`, `mute`, `unmute`, `bookmark`
+* **When** gọi các action với `targetId`/`username` và tùy chọn `dryRun`
+* **Then** mỗi action đi qua `TwitterClient` với delay floor (social: 2–5s giữa các tác vụ), sticky proxy và governor
+* **And** `follow`/`unfollow` tuân thủ daily limit (configurable) và anti-chain policy (không follow/unfollow cùng user trong 24h)
+* **And** dry-run gate mặc định `dryRun=true`; cookie/token không bị log
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `followUser`, `blockUser`, `muteUser`, `bookmarkTweet` trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
 
-### Story 13.2.9: Twitter Hybrid Integration & Caller Migration
+### Story 13.2.10: Twitter Hybrid Direct Messaging
+As a **Twitter Community Manager**,
+I want **gửi và đọc direct message qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa outreach một cách an toàn**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterClient` hỗ trợ action `sendDM`, `getConversations`
+* **When** gọi `sendDM({ userId, text })` hoặc `getConversations({ limit })`
+* **Then** DM sử dụng HTTP GraphQL với delay floor 5–15s
+* **And** `sendDM` kiểm tra recipient cho phép tin nhắn từ陌生人 trước khi gửi, trả về `PlatformError` với `code: TWITTER_DM_NOT_ALLOWED` nếu bị chặn
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho DM helpers trong `src/client/Scraper.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.11: Twitter Hybrid List Management
+As a **Twitter Community Manager**,
+I want **tạo và quản lý list membership qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa list curation mà không cần browser**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterClient` hỗ trợ action `createList`, `addListMembers`, `removeListMembers`, `list_members`
+* **When** gọi `createList({ name, description })`, `addListMembers({ listId, userIds })`, hoặc `removeListMembers({ listId, userIds })`
+* **Then** list actions sử dụng GraphQL với batch chunking 100 userIds
+* **And** dry-run gate mặc định `dryRun=true` cho write actions; cookie/token không bị log
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho list helpers trong `src/client/Scraper.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.12: Twitter Hybrid Integration & Caller Migration
 As a **XActions Platform Engineer**,
 I want **`scrape('twitter'|'x', ...)`, MCP/CLI tools và `src/client/Scraper.js` chuyển sang dùng `TwitterCrawler`/`TwitterClient` mới**,
 So that **người dùng cuối và các service không còn phụ thuộc legacy Twitter modules**.
@@ -471,7 +509,7 @@ So that **người dùng cuối và các service không còn phụ thuộc legac
 * **And** `package.json` exports thêm `./scrapers/social` hoặc `./scrapers/twitter` để consumer truy cập `TwitterClient`/`TwitterCrawler`
 * **And** `src/client/Scraper.js` được đánh dấu `@deprecated` hoặc redirect sang `TwitterClient`; các hàm legacy trong `src/scrapers/twitter/http/` và `src/scrapers/twitter/index.js` được ghi `@deprecated` toàn bộ
 * **And** `tests/scrapers/twitter-*.test.js` chuyển sang test `TwitterCrawler` tương ứng hoặc được đánh dấu `@deprecated`
-* **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Twitter legacy và ghi rõ dependency vào Story 13.2.9.
+* **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Twitter legacy và ghi rõ dependency vào Story 13.2.12.
 
 ### Story 13.3: Refactor Facebook Scraper to Hybrid Architecture
 As a **Facebook Community Marketer**,
@@ -867,27 +905,73 @@ So that **tôi phát hiện sớm khi Nowing consumer chậm hoặc stream bị 
 * **And** cập nhật real-time mỗi 5s.
 * **And** hỗ trợ cấu hình alert channel (`ALERT_WEBHOOK`, `ALERT_EMAIL`).
 
-### Story 19.4: Admin CLI — Unified
+### Story 19.4: Admin CLI — Unified Command Group
 As an **Internal Automation Operator**,
-I want **một nhóm lệnh CLI `xactions admin` để xem governor status, proxy pool, accounts, checkpoints, stream metrics và thực hiện manual override**,
-So that **tôi có thể vận hành hệ thống từ terminal mà không cần mở dashboard**.
+I want **một nhóm lệnh CLI `xactions admin` tổng hợp để vận hành hệ thống từ terminal**,
+So that **tôi có thể tra cứu governor status, quản lý proxy/account/checkpoint, và xem stream metrics mà không cần mở dashboard**.
 
 **Acceptance Criteria:**
 * **Given** `xactions admin` command group
-* **When** chạy `xactions admin status`
-* **Then** in ra `healthyProxyCount / totalProxyCount`, `currentReqPerSecond`, `redisConsumerLag`, `throttleLevel`, danh sách `hibernatingAccounts`
-* **And** `xactions admin proxies list` liệt kê proxy với trạng thái `healthy` / `quarantined` / `expiryAt`
-* **And** `xactions admin proxy quarantine <proxyKey>` và `xactions admin proxy release <proxyKey>` cách ly / bỏ cách ly proxy thủ công
-* **And** `xactions admin accounts list --platform <platform>` liệt kê account, `velocity`, `hibernatingUntil`, `assignedProxy`
-* **And** `xactions admin account wake <accountId>` đánh thức account từ hibernation
-* **And** `xactions admin account rotate <accountId> <platform>` đổi account khác trong `AccountPool`
-* **And** `xactions admin checkpoints list/resume/pause/retry` gọi `api/routes/checkpoints.js` tương ứng
-* **And** `xactions admin stream metrics/alerts/test` hiển thị stream metrics và kích hoạt test alert
+* **When** chạy `xactions admin --help`
+* **Then** liệt kê các sub-commands: `status`, `proxies`, `accounts`, `checkpoints`, `stream`
 * **And** tất cả commands yêu cầu permission `admin` hoặc `checkpoint:manage` (cho checkpoint-only).
+
+### Story 19.4.1: Admin CLI — Status
+As an **Internal Automation Operator**,
+I want **lệnh `xactions admin status` hiển thị tổng quan governor, proxy pool, và hibernating accounts**,
+So that **tôi nắm nhanh tình trạng hệ thống từ terminal**.
+
+**Acceptance Criteria:**
+* **Given** `xactions admin` group
+* **When** chạy `xactions admin status`
+* **Then** in ra `healthyProxyCount / totalProxyCount`, `currentReqPerSecond`, `redisConsumerLag`, `throttleLevel`, danh sách `hibernatingAccounts`.
+
+### Story 19.4.2: Admin CLI — Proxy Management
+As an **Internal Automation Operator**,
+I want **lệnh `xactions admin proxies ...` để liệt kê, cách ly và bỏ cách ly proxy**,
+So that **tôi có thể kiểm soát proxy pool từ CLI khi phát hiện IP bị chặn hoặc cần bảo trì**.
+
+**Acceptance Criteria:**
+* **Given** `xactions admin` group
+* **When** chạy `xactions admin proxies list`
+* **Then** liệt kê proxy với trạng thái `healthy` / `quarantined` / `expiryAt`
+* **And** `xactions admin proxy quarantine <proxyKey>` và `xactions admin proxy release <proxyKey>` cách ly / bỏ cách ly proxy thủ công.
+
+### Story 19.4.3: Admin CLI — Account Management
+As an **Internal Automation Operator**,
+I want **lệnh `xactions admin accounts ...` để liệt kê, đánh thức, và xoay account đang hibernation**,
+So that **tôi quản lý vòng đời tài khoản auth-required mà không cần restart crawler**.
+
+**Acceptance Criteria:**
+* **Given** `xactions admin` group
+* **When** chạy `xactions admin accounts list --platform <platform>`
+* **Then** liệt kê account, `velocity`, `hibernatingUntil`, `assignedProxy`
+* **And** `xactions admin account wake <accountId>` đánh thức account từ hibernation
+* **And** `xactions admin account rotate <accountId> <platform>` đổi account khác trong `AccountPool`.
+
+### Story 19.4.4: Admin CLI — Checkpoint Management
+As an **Internal Automation Operator**,
+I want **lệnh `xactions admin checkpoints ...` để liệt kê, resume, pause, và retry checkpoint**,
+So that **tôi điều khiển pipeline cào từ terminal khi một target bị lỗi**.
+
+**Acceptance Criteria:**
+* **Given** `xactions admin` group
+* **When** chạy `xactions admin checkpoints list/resume/pause/retry`
+* **Then** gọi `api/routes/checkpoints.js` tương ứng và cập nhật trạng thái `CrawlCheckpoint`.
+
+### Story 19.4.5: Admin CLI — Stream Metrics & Alerts
+As an **Internal Automation Operator**,
+I want **lệnh `xactions admin stream ...` để xem metrics và kích hoạt test alert**,
+So that **tôi phát hiện khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s` từ CLI**.
+
+**Acceptance Criteria:**
+* **Given** `xactions admin` group
+* **When** chạy `xactions admin stream metrics/alerts/test`
+* **Then** hiển thị stream metrics và kích hoạt test alert.
 
 > **Note:** Các lệnh `xactions checkpoints ...` và `xactions stream ...` hiện có (`src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`) sẽ được giữ lại dưới dạng alias hoặc redirect đến `xactions admin ...` trong quá trình chuyển đổi, và bị xoá ở Epic 20.2.
 
-> **Note:** Story 19.5 và 19.6 đã được gộp vào Story 19.4 (Admin CLI — Unified) theo Sprint Change Proposal 2026-08-26. Không còn story riêng ở vị trí 19.5/19.6.
+> **Note:** Story 19.4 đã được tách thành 5 sub-stories 19.4.1–19.4.5. Các vị trí 19.5 và 19.6 không còn được sử dụng; NFR traceability đã được cập nhật để tham chiếu 19.4.5 thay vì 19.6.
 
 ### Story 19.7: Admin REST API — Proxy Management
 As an **Internal Operator & CLI Developer**,
@@ -986,4 +1070,4 @@ So that **codebase không còn chứa code cũ đã được thay thế, giảm 
 | NFR14 | Zero-Credential Security | 12.1, 12.2 | No plain-text password in DB; QR/CDP auth flows only |
 | NFR15 | Clean Architecture & Extensibility | 10.1, 10.5, 11.1, 14.2 | `src/core/` has zero npm deps; new platform adds only `src/scrapers/<platform>/index.js` |
 | NFR16 | License & Backward Compatibility | 14.2, 20.1, 20.2 | License headers present; `unfollowx` commands mapped or return actionable error |
-| NFR17 | Operational Observability | 11.4, 14.3, 19.1, 19.2, 19.3, 19.6 | Verify endpoints return metrics; alert fires when thresholds exceeded |
+| NFR17 | Operational Observability | 11.4, 14.3, 19.1, 19.2, 19.3, 19.4.5 | Verify endpoints return metrics; alert fires when thresholds exceeded |
