@@ -374,6 +374,21 @@ So that **tôi có thể theo dõi cộng đồng với độ trễ thấp và k
 * **And** tương thích hoàn toàn với session cookie đã mã hóa trong database.
 * **And (Scope & Deprecation Marker)** story này chỉ làm group/page posts; không làm search, comments, marketplace, messenger. Gắn `@deprecated` cho `src/scrapers/facebook/` (legacy) và ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
 
+### Story 13.4: Facebook Browser-as-Signer Integration
+As a **Facebook Scraper Operator**,  
+I want **`FacebookClient` to extract `lsd`, `fb_dtsg`, `jazoest`, and `spin` tokens from a real Chrome browser instead of only HTML regex**,  
+So that **token extraction is resilient to Facebook DOM/script changes, supports authenticated user profiles, and falls back to the existing HTTP path when no browser signer is configured**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookClient` accepts `signerPool`, `tokenRing`, `cdpUrl`, and `adapterName`
+* **When** `ensureTokens()` is called with a browser bridge configured
+* **Then** it attaches or launches Chrome (Playwright by default, Puppeteer via `XACTIONS_SCRAPER_ADAPTER`) using CDP, navigates to `https://www.facebook.com/`, and extracts tokens via `page.evaluate()`
+* **And** it caches tokens with a 5-minute TTL and supports refresh 30 seconds before expiry
+* **And** `requestGraphQl()` builds the GraphQL body using tokens from the signer bridge
+* **And** it falls back to HTTP-only regex extraction when `signerPool`/`cdpUrl` is not configured
+* **And** it launches Chrome with the per-account sticky proxy and anti-leak browser args
+* **And (Scope Marker)** all changes remain inside `src/scrapers/social/facebook/` and `src/core/cdp-launcher.js`; `src/core/base-client.js` and `src/core/signer-pool.js` are not modified.
+
 ---
 
 ## Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream

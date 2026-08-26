@@ -1,0 +1,454 @@
+---
+story_id: "13.4"
+epic: 13
+story_key: "13-4-facebook-browser-as-signer-bridge"
+status: "ready-for-dev"
+phase: "Phase 4"
+created: "2026-08-26"
+updated: "2026-08-26"
+owner: "DEV"
+reviewed: "Pending"
+baseline_commit: "e710906"
+---
+
+# Story 13.4: Facebook Browser-as-Signer Integration
+
+<!-- Note: Validation pending. Run validate-create-story before dev-story. -->
+
+## Story
+
+As a **Facebook Scraper Operator**,  
+I want **`FacebookClient` to extract `lsd`, `fb_dtsg`, `jazoest`, and `spin` tokens from a real Chrome browser instead of only HTML regex**,  
+so that **token extraction is resilient to Facebook DOM/script changes, supports authenticated user profiles, and falls back to the existing HTTP path when no browser signer is configured.**
+
+## Sources
+
+- `_bmad-output/planning-artifacts/epics.md` — Epic 13, Story 13.3 context and dependencies
+- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 (Tiered Hybrid Signer), AD-3 (Sticky IP / Proxy Anti-Leak), AD-5 (CDP Attach), AD-8 (Multi-Domain Expansion), AD-14 (Error Envelope)
+- `_bmad-output/implementation-artifacts/13-1-tiered-signer-architecture-token-ring-worker-pool.md` — `PreSignedTokenRing`, `SignerWorkerPagePool`, `requestWithSign`
+- `_bmad-output/implementation-artifacts/13-3-refactor-facebook-scraper-to-hybrid-architecture.md` — `FacebookClient`, `FacebookCrawler`, token cache
+- `/Users/luisphan/Documents/GitHub/MediaCrawler/requirements.txt` and `base/base_crawler.py`, `tools/cdp_browser.py`, `media_platform/xhs/core.py`, `media_platform/douyin/help.py` — MediaCrawler browser engine analysis
+- `src/scrapers/social/facebook/client.js`, `src/scrapers/social/facebook/crawler.js`, `src/scrapers/social/facebook/validator.js`
+- `src/core/base-client.js`, `src/core/signer-pool.js`, `src/core/cdp-launcher.js`, `src/core/base-crawler.js`
+- `src/scrapers/adapters/index.js`, `src/scrapers/adapters/playwright.js`, `src/scrapers/adapters/puppeteer.js`
+- `src/proxy/proxy-pool.js`, `src/proxy/providers.js`
+
+## Cross-Epic Dependencies
+
+- **Depends on** `13.1` (`PreSignedTokenRing`, `SignerWorkerPagePool`, `requestWithSign` are already implemented and exported from `src/core/signer-pool.js` and `src/core/base-client.js`).
+- **Depends on** `12.2` (`launchBrowserWithCdp`, `launchChrome`, `getDefaultUserDataDir`, adapter `connect()` contracts in `src/core/cdp-launcher.js`).
+- **Builds on** `13.3` (`FacebookClient.ensureTokens`, `requestGraphQl`, `FacebookCrawler` action registry and normalization in `src/scrapers/social/facebook/`).
+- **Unblocks** Epic 15.2 (TikTok `a_bogus` / `msToken` signer bridge patterns) and Epic 18.3 (LinkedIn CDP attach).
+
+---
+
+## Acceptance Criteria
+
+### AC-1: `FacebookClient` accepts Tiered Signer dependencies
+
+- **Given** `FacebookClient` in `src/scrapers/social/facebook/client.js` [Source: `src/scrapers/social/facebook/client.js:45-104`]
+- **When** the constructor is called with `signerPool`, `tokenRing`, `cdpUrl`, `adapterName`, `headless`, `userDataDir`, or `profileDir`
+- **Then** it passes `signerPool` and `tokenRing` through to `AbstractApiClient` (`src/core/base-client.js:125-126`)
+- **And** it stores `cdpUrl`, `adapterName`, `headless`, `userDataDir`, and `profileDir` as instance state
+- **And** it keeps `client = 'got'` and `requiresAuth = true` unchanged (`client.js:53-56`)
+
+### AC-2: Browser token extraction via `page.evaluate()`
+
+- **Given** `FacebookClient` is configured with a `signerPool` or `cdpUrl`
+- **When** `ensureTokens(accountId, cookies)` is called
+- **Then** it launches or attaches a Chrome browser (Playwright by default, Puppeteer via `XACTIONS_SCRAPER_ADAPTER`)
+- **And** it navigates to `https://www.facebook.com/` (or `this.baseUrl`) with the authenticated cookies/profile
+- **And** it extracts the following tokens from the live page context via `page.evaluate()`:
+  - `lsd` (from `document.querySelector('input[name="lsd"]')` or HTML regex)
+  - `jazoest` (from `document.querySelector('input[name="jazoest"]')`)
+  - `fb_dtsg` / `dtsg` (from `DTSGInitialData` token in scripts)
+  - `spin_r` (from `__spin_r`)
+  - `spin_t` (from `__spin_t` or `Date.now()/1000`)
+  - `hsi` (from `__hsi`)
+  - `__rev` (from `__rev` or script payload)
+  - `c_user` (from `document.cookie` or passed cookie header)
+- **And** it caches tokens with the same compound key (`accountId:cookieHash`) and 5-minute TTL used today (`client.js:64-71`, `client.js:207-226`)
+
+### AC-3: `requestGraphQl()` uses tokens from the signer bridge
+
+- **Given** a call to `FacebookClient.requestGraphQl(docId, variables, options)`
+- **When** it calls `await this.ensureTokens(accountId, rawCookies)`
+- **Then** it receives tokens produced by the browser path when a signer bridge is configured
+- **And** `buildGraphQlBody()` continues to produce an `application/x-www-form-urlencoded` body with `lsd`, `fb_dtsg`, `jazoest`, `__spin_r`, `__spin_t`, `__hsi`, `__rev`, and `__user` from those tokens (`client.js:238-274`)
+
+### AC-4: CDP attach / launch mode
+
+- **Given** `cdpUrl` (e.g. `http://127.0.0.1:9222`) or `launchChrome: true`
+- **When** the browser path initializes
+- **Then** it reuses an existing Chrome via CDP when one is available
+- **And** it can launch a new headful/headless Chrome with `--remote-debugging-port` and `--user-data-dir=<profile>` when none is available (`src/core/cdp-launcher.js:256-354`)
+- **And** it connects through the adapter's `connect()` method:
+  - `PlaywrightAdapter.connect(cdpUrl, { preserveProfile: true })` — `connectOverCDP` (`src/scrapers/adapters/playwright.js:316-330`)
+  - `PuppeteerAdapter.connect(cdpUrl, { preserveProfile: true })` — `browserWSEndpoint` (`src/scrapers/adapters/puppeteer.js:243-275`)
+
+### AC-5: Playwright is the default browser engine for CDP attach
+
+- **Given** the environment variable `XACTIONS_SCRAPER_ADAPTER` is unset or `playwright`
+- **When** `FacebookClient` needs a browser for the signer bridge
+- **Then** it uses `PlaywrightAdapter`
+- **And** if `XACTIONS_SCRAPER_ADAPTER=puppeteer`, it uses `PuppeteerAdapter`
+- **And** the story file documents the decision: **Playwright is the default for CDP attach** because:
+  1. `MediaCrawler` uses Playwright (`requirements.txt` line 3; `base/base_crawler.py` imports `playwright.async_api`)
+  2. XActions architecture explicitly wires CDP attach for real Chrome profiles (AD-5)
+  3. Playwright's `connectOverCDP` is purpose-built for attaching to existing Chromium/CDP instances and preserves the default browser context, which is exactly what we need for `.data/facebook-profiles/<c_user>`
+  4. Puppeteer with `puppeteer-extra-plugin-stealth` remains better for launching a *fresh* hidden browser (legacy `src/scrapers/facebook/`), not for attaching to a logged-in Chrome profile
+
+### AC-6: Per-account profile and sticky-proxy isolation
+
+- **Given** an authenticated account with `c_user` and `xs`
+- **When** Chrome is launched for token extraction
+- **Then** the user data directory is deterministic per `c_user`: `.data/facebook-profiles/<c_user>` (reuse pattern from `api/services/facebookAccountPool.js:40-48`)
+- **And** the browser is launched with the sticky proxy for that account (`ProxyIpPool.getStickyProxy(accountId)` or `proxyProvider.getProxy({ accountId })`)
+- **And** the launch args include anti-leak flags from `ProxyIpPool.getBrowserArgs()` / `getBrowserArgs()`:
+  - `--force-webrtc-ip-handling-policy=disable_non_proxied_udp`
+  - `--proxy-server=<server>`
+  - `--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE <host>`
+  - `--disable-features=WebRtcHideLocalIpsWithMdns`
+  [Source: `src/proxy/proxy-pool.js:310`, `src/proxy/providers.js:1163-1168`]
+- **And** two different accounts never share the same browser context
+
+### AC-7: HTTP extraction fallback
+
+- **Given** `FacebookClient` without a configured `signerPool` or `cdpUrl`
+- **When** `ensureTokens()` is called
+- **Then** it falls back to the existing HTTP-only `#fetchTokens()` that parses home-page HTML with regex (`client.js:143-229`)
+- **And** if the browser path throws `XACT_5030`/`XACT_5000` and `httpFallback: true` (default `true`), it retries once with HTTP extraction
+- **And** no real credentials are logged in either path
+
+### AC-8: Token refresh before expiry
+
+- **Given** tokens cached with `expiresAt`
+- **When** `ensureTokens()` is called
+- **Then** it returns cached tokens if `expiresAt > Date.now() + 30_000` (30 s refresh window)
+- **And** it refreshes via the browser bridge or HTTP fallback when within 30 s of expiry or cache miss
+- **And** concurrent calls for the same `accountId:cookieHash` are still de-duplicated (`client.js:124-135`)
+
+### AC-9: `PreSignedTokenRing` integration
+
+- **Given** a `tokenRing` is supplied to `FacebookClient`
+- **When** browser token extraction succeeds
+- **Then** the `lsd` token (or a serialized token payload) is pushed into `tokenRing.refill(...)` so `AbstractApiClient.requestWithSign()` can allocate it in O(1) (`src/core/signer-pool.js:43-52`, `src/core/base-client.js:361-471`)
+- **And** `requestGraphQl` still works even when `tokenRing` is not configured
+
+### AC-10: Preserve `FacebookCrawler` actions and normalization
+
+- **Given** `FacebookCrawler` in `src/scrapers/social/facebook/crawler.js`
+- **When** it runs `group_posts`, `page_posts`, or `get_comments`
+- **Then** it continues to use `client.requestGraphQl()` and the existing `#normalizePostItem()` / `#normalizeComment()` functions unchanged (`crawler.js:139-202`, `crawler.js:254-323`)
+- **And** `FacebookCrawler.cleanup()` closes the signer pool / browser if the client owns them (`crawler.js:829-832`)
+
+### AC-11: `cdp-launcher.js` proxy support
+
+- **Given** `src/core/cdp-launcher.js`
+- **When** `launchChrome()` and `buildChromeArgs()` are invoked for the Facebook signer bridge
+- **Then** they accept a `proxy` option and append proxy/anti-leak browser args
+- **And** they accept a `userDataDir` option that overrides the default `~/.xactions/chrome-profile`
+- **And** `launchBrowserWithCdp()` passes the selected `adapter` and `preserveProfile: true` (`cdp-launcher.js:365-392`)
+
+### AC-12: Tests
+
+- **Given** `vitest` and the no-mock policy (`AGENTS.md`, `CLAUDE.md`)
+- **When** `npm test` runs
+- **Then** `tests/scrapers/social/facebook/client.test.js` is updated to cover:
+  - `ensureTokens` still falls back to HTTP extraction when `signerPool` is absent
+  - `tokenRing` refill after token extraction
+  - token refresh before expiry (short TTL + second call)
+- **And** a new `tests/scrapers/social/facebook/client-signer.test.js` covers:
+  - Browser signer bridge token extraction using a real `PlaywrightAdapter` and a local HTTP server that serves Facebook-like HTML
+  - CDP attach mode: `launchChrome({ headless: true })` + `launchBrowserWithCdp(...)` + `page.evaluate()`
+  - Fallback to HTTP extraction when browser path is disabled
+  - Error envelope (`XACT_5030` / `suggestedAction: 'relogin'`) when CDP is unreachable
+- **And** `npm run typecheck` passes
+
+### AC-13: Deprecation documentation
+
+- **Given** `docs/deprecation-plan.md`
+- **When** the browser-as-signer bridge is implemented
+- **Then** the status tracker is updated to mark the HTTP-only token extraction path (`FacebookClient.#fetchTokens`) as `deprecated-planned`
+- **And** it notes the fallback remains available until Epic 20 parity is confirmed
+
+---
+
+## Tasks / Subtasks
+
+- [ ] T1: Extend `FacebookClient` constructor for signer bridge configuration (AC-1)
+  - [ ] T1.1: Add `signerPool`, `tokenRing`, `cdpUrl`, `adapterName`, `headless`, `userDataDir`, `profileDir`, `httpFallback` to constructor JSDoc and state
+  - [ ] T1.2: Pass `signerPool` / `tokenRing` through to `AbstractApiClient` super
+  - [ ] T1.3: Add `close()` method to release owned `signerPool`/browser
+- [ ] T2: Implement browser token extraction in `FacebookClient` (AC-2)
+  - [ ] T2.1: Add `#ensureTokensFromBrowser(accountId, cookieHeader)` that uses a real browser page
+  - [ ] T2.2: Define `extractFacebookTokens` `page.evaluate()` script that returns `{ lsd, jazoest, dtsg, spin_r, spin_t, hsi, __rev, c_user }`
+  - [ ] T2.3: Cache the extracted tokens using the existing `#tokenCache` with 5-minute TTL
+  - [ ] T2.4: Wrap `page.evaluate()` in `Promise.race` with a 3 s timeout (8 s for warmup/navigation) and retry once on page death
+- [ ] T3: Wire `ensureTokens()` to choose browser or HTTP path (AC-7, AC-8)
+  - [ ] T3.1: Refactor `ensureTokens()` to prefer the browser path when `signerPool`/`cdpUrl` present
+  - [ ] T3.2: Keep existing HTTP fallback via `#fetchTokens()`
+  - [ ] T3.3: Implement 30 s pre-expiry refresh window
+  - [ ] T3.4: Preserve in-flight de-duplication (`#pendingTokenFetches`)
+- [ ] T4: Integrate `PreSignedTokenRing` (AC-9)
+  - [ ] T4.1: Refill `tokenRing` with `lsd` (or a JSON token snapshot) after successful browser extraction
+  - [ ] T4.2: Update `buildGraphQlBody` to use `tokenRing.next()` for `lsd` if ring is non-empty
+- [ ] T5: CDP attach / launch support (AC-4, AC-5)
+  - [ ] T5.1: Use `getAdapter(process.env.XACTIONS_SCRAPER_ADAPTER || 'playwright')` by default
+  - [ ] T5.2: Support `cdpUrl` attach via `launchBrowserWithCdp`
+  - [ ] T5.3: Support auto-launch via `launchChrome({ userDataDir, headless, proxy })`
+- [ ] T6: Per-account profile and proxy isolation (AC-6)
+  - [ ] T6.1: Build deterministic user data dir from `c_user` (`buildUserDataDir` pattern)
+  - [ ] T6.2: Resolve sticky proxy via `this.proxyPool` or `this.proxyProvider`
+  - [ ] T6.3: Merge anti-leak browser args from `getBrowserArgs(proxy)`
+- [ ] T7: Update `cdp-launcher.js` (AC-11)
+  - [ ] T7.1: Add `proxy` option to `buildChromeArgs()` and `launchChrome()`
+  - [ ] T7.2: Accept `userDataDir` override in `buildChromeArgs()`
+  - [ ] T7.3: Ensure `launchBrowserWithCdp` preserves profile context
+- [ ] T8: Update `FacebookCrawler` cleanup (AC-10)
+  - [ ] T8.1: Accept `cdpUrl` in constructor and pass to `AbstractCrawler`
+  - [ ] T8.2: Call `client.close()` (if exists) inside `cleanup()`
+- [ ] T9: Add/update tests (AC-12)
+  - [ ] T9.1: Update `tests/scrapers/social/facebook/client.test.js`
+  - [ ] T9.2: Create `tests/scrapers/social/facebook/client-signer.test.js`
+  - [ ] T9.3: Ensure `npm test -- tests/scrapers/social/facebook/` and `npm run typecheck` pass
+- [ ] T10: Update `docs/deprecation-plan.md` (AC-13)
+  - [ ] T10.1: Add row for HTTP-only `FacebookClient.#fetchTokens`
+  - [ ] T10.2: Add note that fallback remains until Epic 20.2
+
+---
+
+## Dev Notes
+
+### Project Structure Notes
+
+- **Target folder:** `src/scrapers/social/facebook/` (the new hybrid Facebook scraper). Do not modify legacy `src/scrapers/facebook/` files.
+- **Legacy dispatcher:** `src/scrapers/index.js` remains untouched to preserve backward compatibility.
+- **Core contracts:** `src/core/base-client.js`, `src/core/signer-pool.js`, `src/core/base-crawler.js`, and `src/core/cdp-launcher.js` should be *extended*, not rewritten.
+- **No `any` / `@ts-ignore`:** Every new public property must be JSDoc-typed. Use `/** @type {...} */` casts for adapter objects, not `any`.
+- **No real credentials in logs or files:** Token values must never appear in error messages, test names, or console output.
+
+### Browser Engine Decision — Playwright vs Puppeteer
+
+**Decision: Use Playwright as the default adapter for the Facebook CDP signer bridge. Both Playwright and Puppeteer remain selectable via `XACTIONS_SCRAPER_ADAPTER`.**
+
+| Criterion | Playwright | Puppeteer (`puppeteer-extra` + stealth) | Winner |
+|---|---|---|---|
+| MediaCrawler reference pattern | `requirements.txt:3` uses `playwright>=1.61.0`; `base/base_crawler.py:23` imports `playwright.async_api` | not in `requirements.txt`; no first-class CDP helper | **Playwright** |
+| CDP attach to existing Chrome | `connectOverCDP(cdpUrl)` is native (`src/scrapers/adapters/playwright.js:322`) | must fetch `/json/version` and use `browserWSEndpoint` (`src/scrapers/adapters/puppeteer.js:260-267`) | **Playwright** |
+| Preserving default browser context | `connectOverCDP` keeps the existing profile context; `_preserveProfile: true` reuses it | connect can reuse default context but with extra indirection | **Playwright** |
+| Profile-per-account (`.data/facebook-profiles/<c_user>`) | natural with `launchChrome` + `connectOverCDP` | possible but more manual | **Playwright** |
+| Launching a fresh hidden/stealth browser | supported but stealth is not the primary goal here | `puppeteer-extra-plugin-stealth` is stronger for anti-detection on a fresh launch | **Puppeteer** (for future fresh-browser stories) |
+| Multi-browser support | Chromium, Firefox, WebKit | Chromium only | **Playwright** |
+
+Therefore:
+- `FacebookClient` calls `getAdapter(process.env.XACTIONS_SCRAPER_ADAPTER || 'playwright')`.
+- `XACTIONS_SCRAPER_ADAPTER=puppeteer` is honored for operators who need stealth on a fresh launch.
+- CDP attach mode defaults to Playwright because it aligns with MediaCrawler and the XActions architecture (AD-5: attach to real Chrome on port 9222).
+
+### Architecture Compliance
+
+| AD | Rule | Implementation |
+|---|---|---|
+| AD-1 | Tiered Hybrid Signer | `FacebookClient` uses `signerPool` for live `page.evaluate()` token extraction and `tokenRing` for fast `lsd` allocation. |
+| AD-3 | Sticky IP per account + anti-leak | Chrome launched with `ProxyIpPool.getStickyProxy(accountId)` and `getBrowserArgs(proxy)` flags. No direct connection. |
+| AD-5 | CDP attach to real Chrome | `cdp-launcher.js` + `PlaywrightAdapter.connectOverCDP` / `PuppeteerAdapter.connect` with `preserveProfile: true`. |
+| AD-8 | Multi-Domain Expansion | All changes stay in `src/scrapers/social/facebook/` and `src/core/cdp-launcher.js`. |
+| AD-9 | Anti-bot payload validation | `FacebookPlatformResponseValidator` unchanged; token extraction failures throw `PlatformError` with `suggestedAction`. |
+| AD-14 | Error envelope | Browser/CDP errors become `PlatformError` with `code`, `type`, `suggestedAction` (`relogin` / `retry_after_delay`). |
+
+### Token Extraction Script Specification
+
+The `page.evaluate()` function should return the following shape and be safe to run on both real Facebook and the local test server:
+
+```js
+() => {
+  const result = {};
+  const html = document.documentElement ? document.documentElement.innerHTML : '';
+
+  // lsd
+  const lsdInput = document.querySelector('input[name="lsd"]');
+  result.lsd = lsdInput?.value || '';
+
+  // jazoest
+  const jazoestInput = document.querySelector('input[name="jazoest"]');
+  result.jazoest = jazoestInput?.value || '2953';
+
+  // fb_dtsg from DTSGInitialData in scripts
+  const dtsgMatch = html.match(/\["DTSGInitialData",\[\],\{"token":"([^"]+)"/)
+    || html.match(/"DTSGInitialData",\[\],\{"token":"([^"]+)"/)
+    || html.match(/d\.token\s*=\s*"([^"]+)"/);
+  result.dtsg = dtsgMatch ? dtsgMatch[1] : '';
+
+  // spin
+  const spinRMatch = html.match(/"__spin_r":(\d+)/) || html.match(/window\.__spin_r\s*=\s*(\d+)/);
+  result.spin_r = spinRMatch ? Number(spinRMatch[1]) : 1016839210;
+  const spinTMatch = html.match(/"__spin_t":(\d+)/) || html.match(/window\.__spin_t\s*=\s*(\d+)/);
+  result.spin_t = spinTMatch ? Number(spinTMatch[1]) : Math.floor(Date.now() / 1000);
+
+  // hsi
+  const hsiMatch = html.match(/"__hsi":"([^"]+)"/);
+  result.hsi = hsiMatch ? hsiMatch[1] : '';
+
+  // rev
+  const revMatch = html.match(/"__rev":"([^"]+)"/);
+  result.__rev = revMatch ? revMatch[1] : '';
+
+  // c_user from cookie
+  const cUserMatch = document.cookie.match(/(?:^|;\s*)c_user=([^;]+)/);
+  result.c_user = cUserMatch ? decodeURIComponent(cUserMatch[1]) : '';
+
+  return result;
+}
+```
+
+This mirrors the existing HTTP regexes (`client.js:164-184`) but runs in a real browser DOM, so it survives script obfuscation and `innerHTML` differences.
+
+### Core Code State to Preserve
+
+- `AbstractApiClient.requestWithSign()` does **not** merge `signResult.body` into `mergedOptions.body` (`base-client.js:361-471`). Therefore `FacebookClient.requestGraphQl` must continue to build the form-urlencoded body string itself and pass it as `options.body`.
+- `AbstractApiClient.#normalizeRequestBody()` only stringifies body when `content-type` contains `json` (`base-client.js:750-761`). For form-urlencoded, keep passing a string.
+- `AbstractApiClient.request()` has a ternary that allows a direct connection when no `provider` and `!opts.requiresResidential` (`base-client.js:536-538`). `FacebookClient.requiresAuth = true` and Facebook is an auth-required platform, so always provide `proxyPool` / `proxyProvider`.
+- `FacebookCrawler` cleanup only clears the token cache today (`crawler.js:829-832`). Extend it to close the signer pool if the client is the owner.
+
+### Previous Story Intelligence
+
+#### Story 13.1 — Tiered Signer Architecture
+
+- `PreSignedTokenRing` holds string tokens and `next()` is O(1).
+- `SignerWorkerPagePool` spawns 4–8 pages, routes by least-connections, wraps `page.evaluate()` in `Promise.race` with 3 s / 8 s warmup timeout, and retries once on dead pages.
+- `AbstractApiClient` exposes `tokenRing` and `signerPool`; `requestWithSign` dispatches to ring/pool/subclass `sign()`.
+
+#### Story 13.3 — Facebook Hybrid Scraper
+
+- `FacebookClient` uses `client = 'got'`, `requiresAuth = true`.
+- `ensureTokens()` extracts tokens from a `GET /` HTML response using regex and caches with a 5-minute TTL.
+- `requestGraphQl()` builds the GraphQL body manually and uses `this.request()`.
+- `FacebookCrawler` registers `group_posts`, `page_posts`, `get_comments` and normalizes to `PostItem` / `CommentItem`.
+- `FacebookCrawler.cleanup()` currently only calls `client.clearTokenCache()`.
+
+#### Story 12.2 — CDP Attach
+
+- `launchChrome()` launches Chrome with `--remote-debugging-port` and returns `{ cdpUrl, kill }`.
+- `launchBrowserWithCdp()` fetches the adapter and calls `adapter.connect(cdpUrl, { preserveProfile: true })`.
+- `PlaywrightAdapter.connect` uses `connectOverCDP`.
+- `PuppeteerAdapter.connect` uses `browserWSEndpoint`.
+
+### Library & Framework Requirements
+
+| Package | Version | Purpose |
+|---|---|---|
+| `playwright` | `^1.62.1` (`package.json:129`) | Default browser engine for CDP attach and signer worker pages. |
+| `puppeteer` | `^24.34.0` (`package.json:132`) | Optional adapter when `XACTIONS_SCRAPER_ADAPTER=puppeteer`. |
+| `puppeteer-extra` + `puppeteer-extra-plugin-stealth` | existing | Only used if Puppeteer is selected; not imported by the Playwright path. |
+| `got-scraping` | `^3.2.15` (`package.json:119`) | Default HTTP client for `FacebookClient.request()` and fallback extraction. |
+| `undici` | `^7.29.0` (`package.json:141`) | Alternative HTTP client. |
+| `p-limit` | `^7.2.0` (`package.json:128`) | Concurrency limits inside `SignerWorkerPagePool` (already in place). |
+| `vitest` | `^4.0.18` (`package.json:161`) | Test runner. |
+| `typescript` | `^5.9.3` (`package.json:160`) | `npm run typecheck`. |
+
+### File Structure Requirements
+
+#### UPDATE
+
+| File | Description |
+|---|---|
+| `src/scrapers/social/facebook/client.js` | Extend constructor, add browser token extraction, integrate `signerPool` / `tokenRing`, add `close()`. |
+| `src/scrapers/social/facebook/crawler.js` | Accept `cdpUrl`, pass to `AbstractCrawler`, update `cleanup()` to close signer bridge. |
+| `src/core/cdp-launcher.js` | Add `proxy` and `userDataDir` options to `buildChromeArgs()` and `launchChrome()`. |
+| `tests/scrapers/social/facebook/client.test.js` | Add HTTP fallback, token ring, and refresh tests. |
+| `docs/deprecation-plan.md` | Mark HTTP-only token extraction as `deprecated-planned`. |
+| `types/core.d.ts` or `types/index.d.ts` | Add `FacebookClient` / `FacebookCrawler` signer-bridge options if they are not already covered by `AbstractApiClient`. |
+
+#### CREATE (optional but recommended)
+
+| File | Description |
+|---|---|
+| `src/scrapers/social/facebook/signer-bridge.js` | Encapsulate Playwright/Puppeteer page management, cookie setup, and token evaluation. Called by `FacebookClient` if the dev prefers a separate module over inline logic. |
+| `tests/scrapers/social/facebook/client-signer.test.js` | Browser/CDP signer bridge tests. |
+
+#### NO TOUCH
+
+| File | Reason |
+|---|---|
+| `src/core/base-client.js` | Already implements `tokenRing`, `signerPool`, `requestWithSign`, and the request pipeline. Only consume the API. |
+| `src/core/signer-pool.js` | Already implements `PreSignedTokenRing` and `SignerWorkerPagePool`. Reuse as-is. |
+| `src/core/base-crawler.js` | Already supports `cdpUrl` and `launchBrowserWithCdp`. Just pass `cdpUrl` through. |
+| `src/scrapers/facebook/*` | Legacy Puppeteer scraper; decommissioned in Epic 20. |
+| `src/scrapers/index.js` | Legacy dispatcher; keep untouched. |
+
+### Testing Requirements
+
+- **No mocks / no `vi.fn` / no fake HTTP clients.** Use real `http.createServer`, real `PlaywrightAdapter`, and real `launchChrome` for browser tests.
+- **Local server:** serve Facebook-like HTML with hidden `lsd`, `jazoest`, `DTSGInitialData`, `__spin_r`, `__spin_t`, `__hsi` values and a `/api/graphql/` endpoint.
+- **Browser test environment:** `npx playwright install chromium` (and `install-deps` if needed) must be available. Tests should skip gracefully with a clear message if Chromium cannot be found, but must not fake the browser.
+- **CDP attach test:** launch headless Chrome on a free port, connect with `launchBrowserWithCdp`, navigate to the local server, and assert extracted tokens.
+- **Fallback test:** `FacebookClient` with `signerPool: null`, `cdpUrl: null` must still pass `client.test.js` expectations.
+- **Refresh test:** set a short TTL (e.g., `100 ms`), call `ensureTokens` twice within TTL and verify only one browser navigation; call again after expiry and verify a refresh.
+- **Proxy args test:** assert `buildChromeArgs({ proxy })` includes `--proxy-server`, `--force-webrtc-ip-handling-policy=disable_non_proxied_udp`, and `--host-resolver-rules`.
+- **Type check:** `npm run typecheck` must pass.
+
+### Security & NFR Notes
+
+- **NFR-4 (Zero-Credential Security):** never log `c_user`, `xs`, `lsd`, `fb_dtsg`, or full cookie strings.
+- **NFR-7 (Graceful fallback):** browser extraction failures must not panic; fallback to HTTP or throw an actionable `PlatformError`.
+- **AD-3 (No direct IP leak):** every Chrome launch for Facebook must include the sticky proxy and anti-leak flags.
+- **AD-5 (Profile preservation):** do not delete user data directories or clear cookies when attaching to an existing Chrome; only close contexts/pages the client itself created.
+
+### Open Questions / Decisions
+
+1. **Should the browser bridge be a separate `FacebookSignerBridge` class or inline in `FacebookClient`?**  
+   *Recommendation:* Create `src/scrapers/social/facebook/signer-bridge.js` if the logic exceeds ~150 lines; otherwise keep it in `client.js` to minimize file count.
+2. **Should `FacebookClient` own a dedicated `SignerWorkerPagePool` or receive a shared one?**  
+   *Recommendation:* Accept `signerPool` from the caller when shared across platforms; lazily create a private pool (with `minSize: 1`, `maxSize: 2`) only when `cdpUrl`/`launchChrome` is provided and no pool is passed.
+3. **What is the `timeoutMs` for navigation?**  
+   *Recommendation:* `page.goto` timeout 30 s, `page.evaluate` timeout 3 s default / 8 s on first navigation (`warmup: true`).
+4. **Should the HTTP fallback be removed in a later epic?**  
+   *Recommendation:* Keep it as a fallback until Epic 20 shadow-run parity ≥ 99% is confirmed; then mark it `deprecated-planned` and eventually remove.
+
+---
+
+## References
+
+- `src/scrapers/social/facebook/client.js` — `FacebookClient.ensureTokens`, `#fetchTokens`, `buildGraphQlBody`, `requestGraphQl`
+- `src/scrapers/social/facebook/crawler.js` — `FacebookCrawler` actions, normalization, `cleanup()`
+- `src/core/base-client.js` — `AbstractApiClient.tokenRing`, `signerPool`, `requestWithSign`, `request`
+- `src/core/signer-pool.js` — `PreSignedTokenRing`, `SignerWorkerPagePool`
+- `src/core/cdp-launcher.js` — `launchChrome`, `buildChromeArgs`, `launchBrowserWithCdp`
+- `src/core/base-crawler.js` — `AbstractCrawler.cdpUrl`, `launchBrowserWithCdp`, `delayWithJitter`
+- `src/scrapers/adapters/playwright.js` — `PlaywrightAdapter.connect` (`connectOverCDP`)
+- `src/scrapers/adapters/puppeteer.js` — `PuppeteerAdapter.connect` (`browserWSEndpoint`)
+- `src/scrapers/adapters/index.js` — `getAdapter`, `XACTIONS_SCRAPER_ADAPTER` default is `puppeteer`
+- `src/proxy/proxy-pool.js` — `ProxyIpPool.getBrowserArgs`
+- `src/proxy/providers.js` — `getBrowserArgs` anti-leak flags
+- `package.json` — dependency versions for `playwright`, `puppeteer`, `got-scraping`, `undici`
+- `/Users/luisphan/Documents/GitHub/MediaCrawler/requirements.txt` — `playwright>=1.61.0`
+- `/Users/luisphan/Documents/GitHub/MediaCrawler/base/base_crawler.py` — `playwright.async_api` imports
+- `/Users/luisphan/Documents/GitHub/MediaCrawler/tools/cdp_browser.py` — `connect_over_cdp` pattern
+- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1, AD-3, AD-5, AD-8, AD-14
+- `docs/deprecation-plan.md` — legacy status tracker
+
+---
+
+## Dev Agent Record
+
+### Agent Model Used
+
+`bmad-create-story` skill — manual analysis using `vibervn-context-engine` MCP, `Read`, `grep`, and `find_file_by_name` tools.
+
+### Debug Log References
+
+- MediaCrawler source reviewed to confirm Playwright as the real browser engine (`requirements.txt`, `base/base_crawler.py`, `tools/cdp_browser.py`).
+- XActions `src/scrapers/adapters/playwright.js` and `puppeteer.js` compared for CDP attach behavior.
+- XActions `src/proxy/proxy-pool.js` and `src/proxy/providers.js` reviewed for anti-leak browser args.
+
+### Completion Notes
+
+- Story 13.4 derives from Epic 13 and builds directly on the `FacebookClient` / `FacebookCrawler` work completed in Story 13.3 and the signer engine from Story 13.1.
+- The Playwright-vs-Puppeteer decision is documented explicitly and tied to MediaCrawler evidence and XActions AD-5.
+- Core files to modify are `client.js`, `crawler.js`, and `cdp-launcher.js`; no changes to `base-client.js` or `signer-pool.js` are required.
+- `docs/deprecation-plan.md` and `sprint-status.yaml` must be updated as part of the acceptance criteria.
+
+### File List
+
+- `_bmad-output/implementation-artifacts/13-4-facebook-browser-as-signer-bridge.md`
