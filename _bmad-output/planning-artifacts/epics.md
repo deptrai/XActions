@@ -372,7 +372,7 @@ So that **tôi có thể theo dõi cộng đồng với độ trễ thấp và k
 * **Then** scraper dispatch request qua GraphQL endpoints với `ProxyIpPool`
 * **And** chuẩn hóa dữ liệu trả về theo model `PostItem` với ID Namespaced `facebook:${postId}`
 * **And** tương thích hoàn toàn với session cookie đã mã hóa trong database.
-* **And (Scope & Deprecation Marker)** story này chỉ làm group/page posts; không làm search, comments, marketplace, messenger. Gắn `@deprecated` cho `src/scrapers/facebook/` (legacy) và ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
+* **And (Scope & Deprecation Marker)** story này chỉ làm group/page posts; các tính năng còn lại (search, comments, marketplace, messenger, profile/followers/group-members, automation) sẽ được chuyển sang kiến trúc hybrid trong Story 13.5–13.10. Gắn `@deprecated` cho `src/scrapers/facebook/` (legacy) và ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
 
 ### Story 13.4: Facebook Browser-as-Signer Integration
 As a **Facebook Scraper Operator**,  
@@ -388,6 +388,86 @@ So that **token extraction is resilient to Facebook DOM/script changes, supports
 * **And** it falls back to HTTP-only regex extraction when `signerPool`/`cdpUrl` is not configured
 * **And** it launches Chrome with the per-account sticky proxy and anti-leak browser args
 * **And (Scope Marker)** all changes remain inside `src/scrapers/social/facebook/` and `src/core/cdp-launcher.js`; `src/core/base-client.js` and `src/core/signer-pool.js` are not modified.
+
+### Story 13.5: Facebook Hybrid Profile, Followers & Group Members
+As a **Facebook Growth Marketer**,
+I want **cào thông tin hồ sơ, danh sách followers, và thành viên nhóm Facebook qua kiến trúc hybrid mà không cần mở Puppeteer tab mới cho mỗi yêu cầu**,
+So that **tôi có thể thu thập dữ liệu cá nhân/cộng đồng với tốc độ cao và tiêu thụ tài nguyên thấp**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookCrawler` đã kế thừa `AbstractCrawler` trong `src/scrapers/social/facebook/index.js`
+* **When** thực hiện các action `profile`, `followers`, `group_members`
+* **Then** `FacebookCrawler` dispatch request qua `FacebookClient` (HTTP GraphQL) hoặc `FacebookBrowserBridge` (CDP) tùy theo endpoint ổn định
+* **And** dữ liệu trả về được chuẩn hóa theo model `PostItem` (profile) / `CommentItem` / `ProfileItem` với ID Namespaced `facebook:${externalId}`
+* **And** các tham số `url`/`username`/`groupUrl` được parse thành `targetKey` cho `CrawlerCommand`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeGroupMembers` trong `src/scrapers/facebook/legacy.js` (hoặc file tương ứng); cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.6: Facebook Hybrid Search (Global + Group Search)
+As a **Facebook Market Researcher**,
+I want **tìm kiếm toàn cục (posts/people/pages/groups) và tìm kiếm trong nhóm bằng kiến trúc hybrid**,
+So that **tôi có thể thu thập nhiều loại đối tượng với cùng một contract `search()` nhất quán trên mọi nền tảng**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookCrawler` đã có `search(args)` và `registerAction('group_search')`
+* **When** gọi `search({ query, type, location, limit })` với `type ∈ ['posts','people','pages','groups','all']` hoặc `group_search({ groupUrl, query, limit })`
+* **Then** `FacebookCrawler` chọn DocID GraphQL hoặc browser fallback phù hợp với từng `type`
+* **And** dữ liệu trả về được chuẩn hóa qua `normalizeSearchResult`, `normalizePostSearchResult`, `normalizePeopleSearchResult`, `normalizePageSearchResult`, `normalizeGroupSearchResult` (hoặc tương đương mới) với ID Namespaced
+* **And** hỗ trợ `limit` và pagination cursor như `AbstractCrawler` action output
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `searchFacebook`, `scrapeFacebookGroupSearch` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.7: Facebook Hybrid Post & Group Comments
+As a **Facebook Sentiment Researcher**,
+I want **cào cây bình luận từ bài viết cá nhân/trang và bài viết nhóm bằng kiến trúc hybrid**,
+So that **tôi có thể phân tích sentiment và cấu trúc hội thoại với dữ liệu đầy đủ, không bị mất reply lồng nhau**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookCrawler` đã đăng ký action `post_comments` và `group_comments`
+* **When** gọi `post_comments({ url, maxDepth, maxComments, includeReplies })` hoặc `group_comments({ url, maxDepth, maxComments, includeReplies })`
+* **Then** crawler trích xuất `postId`/`feedbackId` từ URL, gọi `FacebookClient` GraphQL hoặc `FacebookBrowserBridge` nếu cần
+* **And** dữ liệu trả về theo `CommentItem` với `parentCommentId` đúng, hỗ trợ topological sort và lưu batch qua `PrismaStore`
+* **And** `includeReplies` bật/tắt được xử lý đúng
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeFacebookComments`, `scrapeFacebookGroupComments` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.8: Facebook Hybrid Marketplace
+As a **Facebook Marketplace Researcher**,
+I want **tìm kiếm và cào danh sách sản phẩm trên Facebook Marketplace qua kiến trúc hybrid**,
+So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị giới hạn bởi Puppeteer rendering**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookCrawler` đã đăng ký action `marketplace`
+* **When** gọi `marketplace({ query, location, category, priceMin, priceMax, limit })`
+* **Then** crawler sử dụng `FacebookClient` hoặc `FacebookBrowserBridge` để lấy listing data
+* **And** dữ liệu được chuẩn hóa theo `PostItem`/`MarketplaceItem` với `metadata` JSON (price, location, seller, category)
+* **And** hỗ trợ `limit` và pagination
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeMarketplace` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.9: Facebook Hybrid Social Actions (Write & Messenger)
+As a **Facebook Automation Operator**,
+I want **thực hiện các hành động viết (like, comment, post, share, messenger-share) trên Facebook thông qua kiến trúc hybrid thay vì legacy Puppeteer**,
+So that **các hành động tương tác được quản lý bởi `FacebookClient`, sticky proxy, governor và error envelope chuẩn**.
+
+**Acceptance Criteria:**
+* **Given** `src/scrapers/social/facebook/` có thêm `FacebookActions` (hoặc `FacebookClient` action methods) cho các thao tác viết
+* **When** gọi các action `like`, `comment`, `post`, `share`, `messenger_share`, `share_link_uid`, `join_group`, `send_friend_request`
+* **Then** mỗi action đi qua `FacebookClient` với `cdpUrl`/`launchChrome` (nếu cần DOM) hoặc HTTP GraphQL (nếu endpoint ổn định)
+* **And** tất cả write action tuân thủ dry-run gate, delay floor, và `AdaptiveGovernor`
+* **And** cookie/token không bị log; error trả về `PlatformError` với `suggestedAction`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `shareLinkByUid.js`, `messengerQueue.js`, `messengerShare.js`, `graphqlSend.js` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.10: Facebook Hybrid Integration & Caller Migration
+As a **XActions Platform Engineer**,
+I want **`scrape('facebook', ...)` public API, MCP/CLI tools, và `api/services/*` chuyển sang sử dụng `FacebookCrawler`/`FacebookClient` mới**,
+So that **người dùng cuối và các service nội bộ không còn phụ thuộc `src/scrapers/facebook/` legacy**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookCrawler` hỗ trợ đủ action (`profile`, `posts`, `followers`, `search`, `marketplace`, `group_posts`, `group_comments`, `post_comments`, `group_search`, `group_members`, và social actions)
+* **When** kiểm tra `src/scrapers/index.js`
+* **Then** platform `facebook`/`fb` import từ `src/scrapers/social/facebook/index.js` (hoặc adapter tương đương) thay vì `src/scrapers/facebook/index.js`
+* **And** `package.json` exports thêm `./scrapers/social` hoặc `./scrapers/facebook` để consumer truy cập `FacebookClient`/`FacebookCrawler`
+* **And** `api/services/facebookScrape.js`, `facebookAutomation.js`, `facebookAccountPool.js`, `facebookHealth.js` được refactor để gọi `FacebookCrawler.start()` / `FacebookClient` thay vì các hàm legacy
+* **And** `api/routes/facebook.js` validation vẫn chấp nhận cùng action set; response shape không đổi với consumer
+* **And** toàn bộ test `tests/scrapers/facebook-index.test.js`, `tests/scrapers/facebook-*.test.js` chuyển sang test `FacebookCrawler` tương ứng hoặc được đánh dấu `@deprecated`
+* **And (Scope & Deprecation Marker)** `src/scrapers/facebook/` được đánh dấu `@deprecated` toàn bộ; `docs/deprecation-plan.md` status tracker cập nhật sang `deprecated-planned` và ghi rõ dependency vào Story 13.10.
 
 ---
 

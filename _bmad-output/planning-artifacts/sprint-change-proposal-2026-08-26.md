@@ -50,7 +50,7 @@ Dự án đang ở **Epic 13 — High-Throughput Hybrid Scraping Engine**. Story
 |-------|-----------|--------------|-----------------|---------|
 | **13.1** | done | Cần | Không | Foundation cho toàn bộ hybrid engine. |
 | **13.2** | ready-for-dev | Cần nhưng **phải scope chặt** | **Cao** — `src/client/Scraper.js` và `src/scrapers/twitter/http/index.js` đã có profile/tweets/followers/search/DMs/media. | Đây sẽ là implementation Twitter thứ 3. Cần kế hoạch decommission. |
-| **13.3** | ready-for-dev | Cần nhưng **phải scope chặt** | **Cao** — `src/scrapers/facebook/` đã có group posts, comments, search, marketplace, messenger. | 13.3 chỉ nên làm group/page posts; messenger/marketplace để sau. |
+| **13.3** | ready-for-dev | Cần nhưng **phải scope chặt** | **Cao** — `src/scrapers/facebook/` đã có group posts, comments, search, marketplace, messenger. | 13.3 chỉ làm group/page posts. Các tính năng còn lại được lên kế hoạch trong Story 13.5–13.10. |
 
 **Impact:** Nếu 13.2/13.3 không có điều kiện deprecation, dự án sẽ nuôi 3 Twitter clients và 2 Facebook scrapers. Tăng chi phí bảo trì, test, và nguy cơ drift giữa các implementation.
 
@@ -165,7 +165,7 @@ Lý do:
 
 **Story 13.2 (Twitter Hybrid):** Chỉ làm `search(query)` và `getTimeline(username)` theo `epics.md`. Không làm lại DMs, media upload, follower management, engagement. Các tính năng này đã có trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`.
 
-**Story 13.3 (Facebook Hybrid):** Chỉ làm `getGroupPosts(groupId)` và `getPagePosts(pageId)`. Không làm `search`, `comments`, `marketplace`, `messenger` trong story này.
+**Story 13.3 (Facebook Hybrid):** Chỉ làm `getGroupPosts(groupId)` và `getPagePosts(pageId)`. `search`, `comments`, `marketplace`, `messenger`, `profile/followers/group-members`, và integration/caller migration được tách ra thành Story 13.5–13.10 trong Epic 13.
 
 ---
 

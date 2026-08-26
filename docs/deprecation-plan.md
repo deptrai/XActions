@@ -24,7 +24,7 @@ Một module legacy chỉ được xoá khi thỏa mãn **tất cả** các đi�
 | **Twitter/X** | `src/scrapers/twitter/index.js` (Puppeteer) | `src/scrapers/social/twitter/index.js` | `search(query)`, `getTimeline(username)` | Full profile/followers/DMs/media sẽ chuyển dần sau 13.2. |
 | **Twitter/X** | `src/scrapers/twitter/http/index.js` | `src/scrapers/social/twitter/client.js` | HTTP GraphQL client | Thay thế bằng `AbstractApiClient`. |
 | **Twitter/X** | `src/client/Scraper.js` | `src/scrapers/social/twitter/client.js` | HTTP-only Scraper class | `src/client/` được coi là legacy; logic chuyển vào `src/scrapers/social/twitter/`. |
-| **Facebook** | `src/scrapers/facebook/` | `src/scrapers/social/facebook/index.js` | `getGroupPosts(groupId)`, `getPagePosts(pageId)` | Không xoá messenger/marketplace/search cho đến khi có story riêng. |
+| **Facebook** | `src/scrapers/facebook/` | `src/scrapers/social/facebook/index.js` | `getGroupPosts(groupId)`, `getPagePosts(pageId)` | Hoàn thành ở Story 13.3; profile/followers/group-members → Story 13.5, search/group_search → Story 13.6, comments → Story 13.7, marketplace → Story 13.8, social actions (write/messenger) → Story 13.9, dispatcher/service migration → Story 13.10. |
 | **Threads** | `src/scrapers/threads/index.js` | `src/scrapers/social/threads/index.js` | `search(query)`, `getUserFeed(username)` | Thay Puppeteer bằng Meta GraphQL HTTP. |
 | **Admin CLI** | `src/cli/commands/checkpoints.js` (partial) | `src/cli/commands/admin.js` | Unified `xactions admin ...` | Giữ `xactions checkpoints` như alias tạm thời, xoá ở Epic 20.2. |
 | **Admin CLI** | `src/cli/commands/stream.js` (partial) | `src/cli/commands/admin.js` | Unified `xactions admin stream ...` | Giữ `xactions stream` như alias tạm thời, xoá ở Epic 20.2. |
