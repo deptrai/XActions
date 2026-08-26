@@ -87,7 +87,7 @@ export class ThreadsClient extends AbstractApiClient {
   /**
    * Extract Threads security tokens (lsd, csrftoken, fb_dtsg) with in-flight deduplication.
    * @param {string} [proxyOrSessionKey='threads-guest']
-   * @param {string | Record<string, string>} [cookies='']
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [cookies='']
    * @returns {Promise<Record<string, any>>}
    */
   async ensureLsd(proxyOrSessionKey = 'threads-guest', cookies = '') {
@@ -112,16 +112,21 @@ export class ThreadsClient extends AbstractApiClient {
   /**
    * Internal worker to fetch tokens from Threads landing / profile page HTML.
    * @param {string} proxyOrSessionKey
-   * @param {string | Record<string, string>} cookies
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} cookies
    * @returns {Promise<Record<string, any>>}
    */
   async #fetchTokens(proxyOrSessionKey, cookies) {
     let cookieHeader = '';
     let parsedCsrf = '';
+
     if (typeof cookies === 'string') {
       cookieHeader = cookies;
       const csrfMatch = cookies.match(/(?:^|;\s*)csrftoken=([^;]+)/);
       if (csrfMatch) parsedCsrf = csrfMatch[1];
+    } else if (Array.isArray(cookies)) {
+      cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+      const csrfItem = cookies.find((c) => c.name === 'csrftoken');
+      if (csrfItem) parsedCsrf = String(csrfItem.value);
     } else if (cookies && typeof cookies === 'object') {
       cookieHeader = Object.entries(cookies)
         .map(([k, v]) => `${k}=${v}`)
@@ -142,11 +147,10 @@ export class ThreadsClient extends AbstractApiClient {
 
     const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
 
-    // Extract security tokens via regex
+    // Extract security tokens via targeted regexes
     const lsdMatch = html.match(/name="lsd"\s+value="([^"]+)"/) ||
                      html.match(/\["LSD",\[\],\{"token":"([^"]+)"\}/) ||
-                     html.match(/"LSD",\[\],\{"token":"([^"]+)"\}/) ||
-                     html.match(/"token":"([^"]+)"/);
+                     html.match(/"LSD",\[\],\{"token":"([^"]+)"\}/);
     const lsd = lsdMatch ? lsdMatch[1] : '';
 
     const dtsgMatch = html.match(/\["DTSGInitialData",\[\],\{"token":"([^"]+)"\}/) ||
@@ -178,8 +182,8 @@ export class ThreadsClient extends AbstractApiClient {
     }
 
     const tokens = {
-      lsd: lsd || 'AVr_ThreadsLsd',
-      csrftoken: parsedCsrf || 'mock_csrf_threads',
+      lsd,
+      csrftoken: parsedCsrf,
       fb_dtsg: dtsg,
       spin_r,
       spin_t,
@@ -235,7 +239,7 @@ export class ThreadsClient extends AbstractApiClient {
    */
   async requestGraphQl(docId, variables = {}, options = {}) {
     const accountId = options.accountId || 'threads-guest';
-    const rawCookies = options.cookies || options.headers?.cookie;
+    const rawCookies = options.cookies || options.headers?.cookie || options.headers?.Cookie;
     const tokens = await this.ensureLsd(accountId, rawCookies);
     const body = this.buildGraphQlBody(docId, variables, tokens);
 
@@ -251,14 +255,17 @@ export class ThreadsClient extends AbstractApiClient {
       ...(options.headers || {}),
     };
 
-    if (tokens.csrftoken && !mergedHeaders['x-csrftoken']) {
+    if (tokens.csrftoken && !mergedHeaders['x-csrftoken'] && !mergedHeaders['X-Csrftoken']) {
       mergedHeaders['x-csrftoken'] = tokens.csrftoken;
     }
 
-    if (rawCookies && !mergedHeaders['cookie']) {
+    const hasCookieHeader = Object.keys(mergedHeaders).some((k) => k.toLowerCase() === 'cookie');
+    if (rawCookies && !hasCookieHeader) {
       mergedHeaders['cookie'] = typeof rawCookies === 'string'
         ? rawCookies
-        : Object.entries(rawCookies).map(([k, v]) => `${k}=${v}`).join('; ');
+        : (Array.isArray(rawCookies)
+            ? rawCookies.map((c) => `${c.name}=${c.value}`).join('; ')
+            : Object.entries(rawCookies).map(([k, v]) => `${k}=${v}`).join('; '));
     }
 
     const response = /** @type {any} */ (await this.request('POST', `${this.baseUrl}/api/graphql`, {
@@ -276,7 +283,7 @@ export class ThreadsClient extends AbstractApiClient {
       } catch {
         throw new PlatformError({
           code: 'XACT_5000',
-          type: ErrorTypes.INVALID_ARGS,
+          type: ErrorTypes.INTERNAL,
           message: 'Unexpected non-JSON response payload from Threads GraphQL',
           suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
           platform: 'threads',
@@ -285,8 +292,9 @@ export class ThreadsClient extends AbstractApiClient {
     }
 
     // Check for GraphQL execution errors or rotated doc_id
-    if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
-      const primaryError = data.errors[0] || {};
+    const errorsList = Array.isArray(data?.errors) ? data.errors : (data?.error ? [data.error] : null);
+    if (errorsList && errorsList.length > 0) {
+      const primaryError = errorsList[0] || {};
       const errorCode = Number(primaryError.code || primaryError.error_subcode || 0);
 
       if (errorCode === 190 || errorCode === 1357004) {
@@ -297,7 +305,7 @@ export class ThreadsClient extends AbstractApiClient {
           suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
           platform: 'threads',
           accountId,
-          details: data.errors,
+          details: errorsList,
         });
       }
 
@@ -309,7 +317,7 @@ export class ThreadsClient extends AbstractApiClient {
           suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
           platform: 'threads',
           accountId,
-          details: data.errors,
+          details: errorsList,
         });
       }
 
@@ -320,7 +328,7 @@ export class ThreadsClient extends AbstractApiClient {
         message: `Threads GraphQL error: ${primaryError.message || 'Invalid doc_id or query failure'}`,
         suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
         platform: 'threads',
-        details: data.errors,
+        details: errorsList,
       });
     }
 

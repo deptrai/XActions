@@ -49,7 +49,7 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
     }
 
     const body = this.#getBody(response);
-    if (body && (body.includes('/checkpoint/') || body.includes('security check') || body.includes('challenge'))) {
+    if (body && (body.includes('/checkpoint/') || body.includes('security check') || body.includes('challenge') || body.includes('login_wall'))) {
       return body.toLowerCase();
     }
 
@@ -133,8 +133,15 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
    */
   isBotChallenge(response) {
     const url = this.#getUrl(response);
-    if (/(?:threads\.net\/checkpoint|instagram\.com\/checkpoint|\/checkpoint\/)/i.test(url)) {
+    if (/(?:threads\.net\/checkpoint|instagram\.com\/checkpoint|\/checkpoint\/|accounts\/login)/i.test(url)) {
       return true;
+    }
+
+    const body = this.#getBody(response);
+    if (body) {
+      if (/<form[^>]*action="[^"]*login/i.test(body) || (body.includes('Login • Threads') && !body.includes('role="main"'))) {
+        return true;
+      }
     }
 
     const errorText = this.#getErrorText(response);

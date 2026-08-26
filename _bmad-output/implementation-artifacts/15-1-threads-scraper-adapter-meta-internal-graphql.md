@@ -2,12 +2,12 @@
 story_id: "15.1"
 epic: 15
 story_key: "15-1-threads-scraper-adapter-meta-internal-graphql"
-status: "review"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-26
 updated: 2026-08-26
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "Passed"
 baseline_commit: 3a2e60bf764f693240212f43bceefb66804be47d
 ---
 
@@ -245,6 +245,20 @@ const normalizeFn = (raw, postId) => {
   - [x] T7.2: `npm test -- tests/scrapers/social/threads/`
   - [x] T7.3: `npm test -- tests/scrapers/social/facebook/` (regression)
   - [x] T7.4: `npm test -- tests/core/` (regression)
+
+### Review Findings
+- [x] [Review][Patch] Remove fake token fallbacks in ThreadsClient.#fetchTokens [src/scrapers/social/threads/client.js:118]
+- [x] [Review][Patch] Narrow overly broad regex for LSD token extraction [src/scrapers/social/threads/client.js:80]
+- [x] [Review][Patch] Refine target user ID extraction order to avoid session userId collision [src/scrapers/social/threads/crawler.js:199]
+- [x] [Review][Patch] Fix non-greedy nested JSON parsing in searchPosts fallback [src/scrapers/social/threads/crawler.js:283]
+- [x] [Review][Patch] Preserve nested reply comment parentId in getPostComments [src/scrapers/social/threads/crawler.js:338]
+- [x] [Review][Patch] Implement CrawlCheckpoint and Redis Stream emission in crawler actions [src/scrapers/social/threads/crawler.js]
+- [x] [Review][Patch] Update action registrations with standard AD-11 descriptors [src/scrapers/social/threads/crawler.js:38]
+- [x] [Review][Patch] Align schemas/threads/social.json required fields with spec [schemas/threads/social.json:28]
+- [x] [Review][Patch] Add shortcode and post URL resolution in getPostComments [src/scrapers/social/threads/crawler.js:320]
+- [x] [Review][Patch] Add authorUrl in PostItem normalization [src/scrapers/social/threads/crawler.js:121]
+- [x] [Review][Patch] Refine bot challenge & login wall detection in validator [src/scrapers/social/threads/validator.js:85]
+- [x] [Review][Patch] Enhance cookie handling, timestamp parsing, and ErrorTypes classification [src/scrapers/social/threads/client.js]
 
 ## Dev Notes
 

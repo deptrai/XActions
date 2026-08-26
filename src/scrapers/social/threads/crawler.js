@@ -2,7 +2,8 @@
 /**
  * ThreadsCrawler — High-throughput hybrid crawler for Threads (Meta Internal GraphQL).
  * Extends AbstractCrawler, registers get_user_feed, search, and get_post_comments,
- * normalizes data into PostItem/CommentItem schema, and persists to PrismaStore.
+ * normalizes data into PostItem/CommentItem schema, emits checkpoints & stream events,
+ * and persists to PrismaStore.
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0
@@ -63,16 +64,15 @@ export class ThreadsCrawler extends AbstractCrawler {
       ...(deps.docIds || {}),
     };
 
-    // Register standard actions in ActionRegistry
+    // Register standard actions in ActionRegistry conforming to AD-11
     this.registerAction(/** @type {any} */ ({
       action: 'get_user_feed',
       description: 'Scrape timeline threads and posts for a user profile by username',
       category: 'social',
-      args: {
-        username: { type: 'string', required: true, description: 'Threads username without @' },
-        count: { type: 'number', required: false, default: 20, description: 'Max threads to retrieve' },
-        cursor: { type: 'string', required: false, description: 'Pagination end cursor' },
-      },
+      requiredArgs: ['username'],
+      optionalArgs: ['count', 'cursor'],
+      outputType: 'PostItem[]',
+      example: { username: 'zuck', count: 20 },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getUserFeed(args, session),
     }));
 
@@ -80,12 +80,10 @@ export class ThreadsCrawler extends AbstractCrawler {
       action: 'search',
       description: 'Search viral posts and discussions on Threads',
       category: 'social',
-      args: {
-        query: { type: 'string', required: true, description: 'Search keyword or query' },
-        count: { type: 'number', required: false, default: 20, description: 'Max posts to retrieve' },
-        cursor: { type: 'string', required: false, description: 'Pagination cursor' },
-        searchType: { type: 'string', required: false, default: 'default', description: 'Search type (default, recent)' },
-      },
+      requiredArgs: ['query'],
+      optionalArgs: ['count', 'cursor', 'searchType'],
+      outputType: 'PostItem[]',
+      example: { query: 'artificial intelligence', count: 20 },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.searchPosts(args, session),
     }));
 
@@ -93,14 +91,56 @@ export class ThreadsCrawler extends AbstractCrawler {
       action: 'get_post_comments',
       description: 'Scrape hierarchical comment tree for a Threads post',
       category: 'social',
-      args: {
-        postId: { type: 'string', required: true, description: 'Threads post ID or code' },
-        maxDepth: { type: 'number', required: false, default: 3, description: 'Max comment nesting depth (0-5)' },
-        maxComments: { type: 'number', required: false, default: 500, description: 'Max comments limit (1-2000)' },
-        after: { type: 'string', required: false, description: 'Initial cursor' },
-      },
+      requiredArgs: ['postId'],
+      optionalArgs: ['maxDepth', 'maxComments', 'after'],
+      outputType: 'CommentItem[]',
+      example: { postId: 'CuZ7X9_sF9y', maxDepth: 3, maxComments: 100 },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostComments(args, session),
     }));
+  }
+
+  /**
+   * Helper to emit checkpoint and Redis stream pointer if available.
+   * @param {Object} params
+   * @param {string} params.targetType
+   * @param {string} params.targetKey
+   * @param {string | null} [params.cursor]
+   * @param {Array<import('../../../core/types.js').PostItem | import('../../../core/types.js').CommentItem>} params.items
+   */
+  async #emitCheckpointAndStream({ targetType, targetKey, cursor = null, items = [] }) {
+    try {
+      const storeWithCheckpoint = /** @type {any} */ (this.store);
+      if (storeWithCheckpoint && typeof storeWithCheckpoint.saveCheckpoint === 'function') {
+        await storeWithCheckpoint.saveCheckpoint({
+          platform: 'threads',
+          targetType,
+          targetKey,
+          lastCursor: cursor || undefined,
+          lastTimestamp: new Date(),
+          lastCrawledAt: new Date(),
+        });
+      }
+
+      const redisClient = /** @type {any} */ (this.store)?.redis || /** @type {any} */ (this.sessionManager)?.redis;
+      if (redisClient && process.env.REDIS_STREAM_ENABLED === 'true') {
+        for (const item of items) {
+          const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
+          await redisClient.xadd(
+            'stream:social:raw_posts',
+            '*',
+            'id', item.id,
+            'platform', 'threads',
+            'externalId', item.externalId,
+            'category', category,
+            'authorId', item.authorId || '',
+            'crawledAt', item.crawledAt ? item.crawledAt.toISOString() : new Date().toISOString()
+          );
+        }
+      }
+    } catch (err) {
+      // Non-blocking telemetry warning
+      console.warn(`⚠️ [THREADS TELEMETRY] Checkpoint/stream emission warning: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   /**
@@ -120,6 +160,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     const authorId = String(user.pk || user.id || '');
     const authorName = String(user.username || '');
     const authorAvatar = user.profile_pic_url || '';
+    const authorUrl = authorName ? `https://www.threads.net/@${authorName}` : undefined;
 
     const content = (typeof post.caption === 'string' ? post.caption : post.caption?.text) ||
                     post.text ||
@@ -154,6 +195,11 @@ export class ThreadsCrawler extends AbstractCrawler {
     const postCode = post.code || raw.code || postId;
     const postUrl = authorName ? `https://www.threads.net/@${authorName}/post/${postCode}` : `https://www.threads.net/t/${postCode}`;
     const takenAt = post.taken_at || raw.taken_at;
+    const publishedAt = takenAt
+      ? (Number.isFinite(Number(takenAt))
+          ? new Date(Number(takenAt) > 1e11 ? Number(takenAt) : Number(takenAt) * 1000)
+          : new Date(takenAt))
+      : undefined;
 
     /** @type {import('../../../core/types.js').PostItem} */
     const item = {
@@ -164,6 +210,7 @@ export class ThreadsCrawler extends AbstractCrawler {
       authorId,
       authorName,
       authorAvatar,
+      authorUrl,
       content,
       likesCount,
       repliesCount,
@@ -171,13 +218,14 @@ export class ThreadsCrawler extends AbstractCrawler {
       viewsCount,
       mediaUrls,
       postUrl,
-      publishedAt: takenAt ? new Date(Number(takenAt) * 1000) : undefined,
+      publishedAt,
       crawledAt: new Date(),
       metadata: {
         postCode: String(postCode),
-        mediaType: post.media_type ? String(post.media_type) : undefined,
+        mediaType: String(post.media_type || (mediaUrls.length > 0 ? 'image' : 'text')),
         isReply: Boolean(post.text_post_app_info?.is_reply),
         carousel: mediaUrls,
+        replyControl: post.text_post_app_info?.reply_control ? String(post.text_post_app_info.reply_control) : 'everyone',
         sourceMethod: 'graphql',
       },
     };
@@ -216,6 +264,11 @@ export class ThreadsCrawler extends AbstractCrawler {
     const likesCount = parseCount(replyPost.like_count);
     const subCommentsCount = parseCount(replyPost.text_post_app_info?.direct_reply_count ?? replyPost.comment_count);
     const takenAt = replyPost.taken_at;
+    const publishedAt = takenAt
+      ? (Number.isFinite(Number(takenAt))
+          ? new Date(Number(takenAt) > 1e11 ? Number(takenAt) : Number(takenAt) * 1000)
+          : new Date(takenAt))
+      : undefined;
 
     const parentExternalId = raw.parentId || replyPost.parentId;
 
@@ -233,17 +286,32 @@ export class ThreadsCrawler extends AbstractCrawler {
       content,
       likesCount,
       subCommentsCount,
-      publishedAt: takenAt ? new Date(Number(takenAt) * 1000) : undefined,
+      publishedAt,
       crawledAt: new Date(),
       metadata: {
         postCode: String(replyPost.code || commentId),
-        mediaType: replyPost.media_type ? String(replyPost.media_type) : undefined,
-        isReply: Boolean(replyPost.text_post_app_info?.is_reply),
+        mediaType: String(replyPost.media_type || 'comment'),
+        isReply: Boolean(replyPost.text_post_app_info?.is_reply ?? true),
         sourceMethod: 'graphql',
       },
     };
 
     return item;
+  }
+
+  /**
+   * Extract clean post ID or shortcode from URL or raw ID string.
+   * @param {string} input
+   * @returns {string}
+   */
+  #extractPostCodeOrId(input) {
+    if (!input) return '';
+    const clean = String(input).trim();
+    const urlMatch = clean.match(/(?:threads\.net\/(?:@[^/]+\/post|t)\/)([^/?#]+)/i);
+    if (urlMatch && urlMatch[1]) {
+      return urlMatch[1];
+    }
+    return clean.replace(/^threads:/, '');
   }
 
   /**
@@ -253,17 +321,28 @@ export class ThreadsCrawler extends AbstractCrawler {
    * @returns {Promise<string>}
    */
   async #resolveUserId(username, accountId) {
-    const cleanUser = username.replace(/^@/, '');
-    const resp = /** @type {any} */ (await this.client.request('GET', `${this.client.baseUrl}/@${cleanUser}`, {
+    const cleanUser = username.replace(/^@/, '').trim();
+    if (!cleanUser) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Username cannot be empty',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const resp = /** @type {any} */ (await this.client.request('GET', `${this.client.baseUrl}/@${encodeURIComponent(cleanUser)}`, {
       accountId,
     }));
 
     const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
 
-    const idMatch = html.match(/"user_id":"(\d+)"/) ||
-                    html.match(/window\.__user_id\s*=\s*"(\d+)"/) ||
-                    html.match(/window\.__userId\s*=\s*"(\d+)"/) ||
-                    html.match(/"pk":"(\d+)"/);
+    // Prioritize target profile user ID (user entity pk or owner id)
+    const idMatch = html.match(/"user":\{"pk":"(\d+)"/) ||
+                    html.match(/"user_id":"(\d+)"/) ||
+                    html.match(/"owner":\{"id":"(\d+)"/) ||
+                    html.match(/"pk":"(\d+)"/) ||
+                    html.match(/window\.__userId\s*=\s*"(\d+)"/);
 
     if (idMatch && idMatch[1]) {
       return idMatch[1];
@@ -326,9 +405,17 @@ export class ThreadsCrawler extends AbstractCrawler {
       await this.store.storeBatch(posts, { upsert: true });
     }
 
+    const pageInfo = res?.data?.mediaData?.page_info || null;
+    await this.#emitCheckpointAndStream({
+      targetType: 'user_feed',
+      targetKey: cleanUser,
+      cursor: pageInfo?.end_cursor || args.cursor || null,
+      items: posts,
+    });
+
     return {
       posts,
-      pageInfo: res?.data?.mediaData?.page_info || null,
+      pageInfo,
     };
   }
 
@@ -375,7 +462,15 @@ export class ThreadsCrawler extends AbstractCrawler {
         await this.store.storeBatch(posts, { upsert: true });
       }
 
-      return { posts, pageInfo: res?.data?.mediaData?.page_info || null };
+      const pageInfo = res?.data?.mediaData?.page_info || null;
+      await this.#emitCheckpointAndStream({
+        targetType: 'search',
+        targetKey: args.query,
+        cursor: pageInfo?.end_cursor || args.cursor || null,
+        items: posts,
+      });
+
+      return { posts, pageInfo };
     }
 
     // SSR HTTP Search Fallback
@@ -384,18 +479,23 @@ export class ThreadsCrawler extends AbstractCrawler {
     const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
 
     const posts = [];
-    const sharedDataMatch = html.match(/window\.__SHARED_DATA\s*=\s*({.*?});/s) ||
-                            html.match(/<script type="application\/json"[^>]*>(.*?)<\/script>/s);
-
-    if (sharedDataMatch && sharedDataMatch[1]) {
+    const scriptMatches = [...html.matchAll(/<script type="application\/json"[^>]*>(.*?)<\/script>/gs)];
+    for (const m of scriptMatches) {
+      if (!m[1]) continue;
       try {
-        const parsed = JSON.parse(sharedDataMatch[1]);
-        const threads = parsed?.raw_data?.searchResults?.edges || parsed?.mediaData?.threads || [];
-        for (const t of threads) {
-          const post = this.#normalizePostItem(t);
-          if (!post) continue;
-          this.validateItem(post);
-          posts.push(post);
+        const parsed = JSON.parse(m[1]);
+        const threads = parsed?.raw_data?.searchResults?.edges ||
+                        parsed?.mediaData?.threads ||
+                        parsed?.data?.searchResults?.edges ||
+                        [];
+        if (Array.isArray(threads) && threads.length > 0) {
+          for (const t of threads) {
+            const post = this.#normalizePostItem(t);
+            if (!post) continue;
+            this.validateItem(post);
+            posts.push(post);
+          }
+          break;
         }
       } catch {}
     }
@@ -403,6 +503,13 @@ export class ThreadsCrawler extends AbstractCrawler {
     if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
       await this.store.storeBatch(posts, { upsert: true });
     }
+
+    await this.#emitCheckpointAndStream({
+      targetType: 'search',
+      targetKey: args.query,
+      cursor: null,
+      items: posts,
+    });
 
     return {
       posts,
@@ -413,10 +520,11 @@ export class ThreadsCrawler extends AbstractCrawler {
   /**
    * Search method satisfying AbstractCrawler contract.
    * @param {Object} args
+   * @param {Record<string, any>} [session={}]
    * @returns {Promise<import('../../../core/types.js').PostItem[]>}
    */
-  async search(args) {
-    const res = await this.searchPosts(/** @type {any} */ (args));
+  async search(args, session = {}) {
+    const res = await this.searchPosts(/** @type {any} */ (args), session);
     return res.posts;
   }
 
@@ -441,7 +549,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId || 'threads-guest';
-    const rootPostId = String(args.postId);
+    const rootPostId = this.#extractPostCodeOrId(args.postId);
     const maxDepth = Math.max(0, Math.min(args.maxDepth ?? 3, 5));
     const maxComments = Math.max(1, Math.min(args.maxComments ?? 500, 2000));
 
@@ -465,7 +573,7 @@ export class ThreadsCrawler extends AbstractCrawler {
       const res = await this.client.requestGraphQl(docId, {
         postID: postId,
         post_id: postId,
-        after,
+        after: after || args.after || null,
         first: Math.min(limit || 20, 50),
       }, { accountId });
 
@@ -476,7 +584,12 @@ export class ThreadsCrawler extends AbstractCrawler {
         for (const t of replyThreads) {
           const items = t.thread_items || [t];
           for (const item of items) {
-            if (item?.post) comments.push(item.post);
+            if (item?.post) {
+              if (isReply && parentCommentId && item.post.parentId === undefined) {
+                item.post.parentId = parentCommentId;
+              }
+              comments.push(item.post);
+            }
           }
         }
         return {
@@ -514,6 +627,13 @@ export class ThreadsCrawler extends AbstractCrawler {
       await this.store.storeCommentBatch(comments, { upsert: true });
     }
 
+    await this.#emitCheckpointAndStream({
+      targetType: 'post_comments',
+      targetKey: rootPostId,
+      cursor: pageInfo?.end_cursor || null,
+      items: comments,
+    });
+
     return {
       comments,
       pageInfo,
@@ -531,8 +651,8 @@ export class ThreadsCrawler extends AbstractCrawler {
    */
   async getPostDetail(_args) {
     throw new PlatformError({
-      code: 'XACT_4001',
-      type: ErrorTypes.INVALID_ARGS,
+      code: 'XACT_5000',
+      type: ErrorTypes.INTERNAL,
       message: 'getPostDetail is not implemented; use getPostComments or get_user_feed',
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
     });
@@ -544,8 +664,8 @@ export class ThreadsCrawler extends AbstractCrawler {
    */
   async getComments(_args) {
     throw new PlatformError({
-      code: 'XACT_4001',
-      type: ErrorTypes.INVALID_ARGS,
+      code: 'XACT_5000',
+      type: ErrorTypes.INTERNAL,
       message: 'getComments is not implemented; use get_post_comments',
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
     });

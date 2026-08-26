@@ -7,7 +7,7 @@
       "type": "string"
     },
     "mediaType": {
-      "type": ["string", "number", "null"]
+      "type": "string"
     },
     "isReply": {
       "type": "boolean"
@@ -27,6 +27,7 @@
   },
   "required": [
     "postCode",
+    "mediaType",
     "sourceMethod"
   ]
 }
