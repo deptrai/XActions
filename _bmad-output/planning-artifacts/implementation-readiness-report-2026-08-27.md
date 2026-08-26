@@ -258,3 +258,37 @@ stepsCompleted:
 ### Final Note
 
 This assessment identified **7 issues** across **4 categories** (architecture conflict, epic bundling, story sizing, UX/PRD canonicalization). Coverage of the 26 PRD FRs is 100%, so the content is complete; the remaining concerns are structural and can be resolved with planning edits before implementation accelerates.
+
+## Resolutions Applied (2026-08-27)
+
+The following readiness issues have been resolved since the initial assessment:
+
+1. **Facebook architecture conflict resolved:**
+   - `xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` updated to list `xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` in `supersedes`.
+   - `xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` marked `status: superseded` and a `superseded_by` / `reason` block added. A callout at the top of the document explains that gateway concepts are absorbed into the hybrid engine (`AbstractCrawler` + `BaseHybridClient` + `CrawlerGovernor`) and the active implementation path is `src/scrapers/social/facebook/`.
+
+2. **Multi-platform epics clarified:**
+   - Epic 13, 15, 16, 17, 18 each received an **Epic grouping note** explaining they are *platform suites* and that the platform-specific stories are independent sub-threads that can ship independently. No renumbering was done in order to preserve stable `sprint-status.yaml` and branch references.
+
+3. **Large umbrella stories refined:**
+   - `Story 13.2.6` (Twitter write & engagement) split into:
+     - `13.2.6` — Content Composition & Scheduling
+     - `13.2.7` — Engagement & Social Graph Actions
+     - `13.2.8` — Direct Messaging & Lists
+     - `13.2.9` — Integration & Caller Migration (renumbered from former `13.2.7`)
+   - `Story 19.7` (Admin REST API) split into:
+     - `19.7` — Proxy Management
+     - `19.8` — Account & Checkpoint Management
+     - `19.9` — Stream Metrics & Alerts
+   - `Story 19.8` (Admin MCP Tools) renumbered to `19.10`.
+   - All `sprint-status.yaml`, `deprecation-plan.md`, and `sprint-change-proposal-2026-08-26.md` references updated accordingly.
+
+4. **UX canonical pointer added:**
+   - `ux/README.md` created as the canonical register for `DESIGN.md`, `EXPERIENCE.md`, and `EXPERIENCE-UNIVERSAL-2026-08-21.md`.
+   - `prd.md` section 7.5 updated to point to `ux/README.md` as the canonical UX register.
+
+### Updated Readiness Status
+
+**NEEDS WORK → READY PENDING VERIFICATION**
+
+All critical structural issues have been addressed. `sprint-status.yaml` has been regenerated/validated against `epics.md` (all 60 stories present) and `bmad-output/implementation-artifacts/sprint-status.yaml` now reflects the renumbered and split stories. The remaining step is to run the standard verification pipeline (lint/typecheck/tests) and then implementation can proceed.

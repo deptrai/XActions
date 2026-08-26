@@ -11,6 +11,7 @@ created: '2026-08-18'
 updated: '2026-08-21T00:00:00Z'
 supersedes:
   - _bmad-output/planning-artifacts/archive/architecture-brownfield-2026-08-20.md
+  - _bmad-output/planning-artifacts/architecture/xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md
 ux_review:
   - ARCHITECTURE-UX-REVIEW-2026-08-18.md
   - ARCHITECTURE-UX-REMEDIATION-2026-08-21.md

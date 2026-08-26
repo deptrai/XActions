@@ -178,6 +178,7 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 ### 7.5. Canonicalization & Related Documents
 
 - **Canonical PRD:** Tài liệu này (`prd.md`) là canonical cho Epics 10–20.
+- **Canonical UX Register:** `ux/README.md` là canonical pointer cho tất cả UX documents (DESIGN.md, EXPERIENCE.md, EXPERIENCE-UNIVERSAL-2026-08-21.md) dùng trong Epic 19 (Internal Operator Dashboard & Admin CLI).
 - **PRD liên quan khác:**
   - `prd-facebook-epics-5-6-2026-08-21.md` — PRD canonical cho Epics 5, 5b, 6 (FR-23–FR-54).
   - `FUTURE-WORK.md` — deferred scope: FR-62, advanced Marketplace filters, canvas/WebGL spoofing.

@@ -1,5 +1,5 @@
-# generated: 2026-08-18T21:53:00.000Z
-# last_updated: 2026-08-26T20:00:00.000Z
+# generated: 2026-08-27T06:00:00.000Z
+# last_updated: 2026-08-27T06:00:00.000Z
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -23,8 +23,8 @@
 #   - optional: Can be completed but not required
 #   - done: Retrospective has been completed
 
-generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-27T05:30:00Z
+generated: 2026-08-27T06:00:00.000Z
+last_updated: 2026-08-27T06:00:00.000Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -74,8 +74,10 @@ development_status:
   13-2-3-twitter-hybrid-search-hashtag-trending: backlog
   13-2-4-twitter-hybrid-media-scraper: backlog
   13-2-5-twitter-hybrid-lists-communities-spaces: backlog
-  13-2-6-twitter-hybrid-social-actions-write-engagement: backlog
-  13-2-7-twitter-hybrid-integration-caller-migration: backlog
+  13-2-6-twitter-hybrid-content-composition-scheduling: backlog
+  13-2-7-twitter-hybrid-engagement-social-graph-actions: backlog
+  13-2-8-twitter-hybrid-direct-messaging-lists: backlog
+  13-2-9-twitter-hybrid-integration-caller-migration: backlog
   13-3-refactor-facebook-scraper-to-hybrid-architecture: done
   13-4-facebook-browser-as-signer-bridge: done
   13-5-facebook-hybrid-profile-followers-group-members: backlog
@@ -129,8 +131,10 @@ development_status:
   19-3-dashboard-stream-metrics-alerts-view: backlog
   19-4-admin-cli-unified: backlog
   # NOTE: 19.5 and 19.6 merged into 19.4 (Admin CLI — Unified) per Sprint Change Proposal 2026-08-26.
-  19-7-admin-rest-api-proxy-account-checkpoint: backlog
-  19-8-admin-mcp-tools: backlog
+  19-7-admin-rest-api-proxy-management: backlog
+  19-8-admin-rest-api-account-checkpoint-management: backlog
+  19-9-admin-rest-api-stream-metrics-alerts: backlog
+  19-10-admin-mcp-tools: backlog
   epic-19-retrospective: optional
 
   # --- Epic 20: Nowing Cutover & Legacy Scraper Decommissioning ---

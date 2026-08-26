@@ -336,6 +336,8 @@ So that **hệ thống sử dụng nguyên vẹn profile và fingerprint thật 
 
 ## Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor)
 
+> **Epic grouping note:** This epic is a *platform suite*. Stories 13.2 + 13.2.1–13.2.9 (Twitter) and Stories 13.3–13.10 (Facebook) are independent sub-threads that share the same Tiered Signer foundation (Story 13.1). Each sub-thread can be implemented, tested, and shipped independently; they are grouped here because they both validate the hybrid engine.
+
 ### Story 13.1: Tiered Signer Architecture (Pre-Signed Token Ring & Worker Page Pool)
 As a **Scraper Architect**,
 I want **hệ thống Tiered Signer gồm Pre-Signed Token Ring cho session tokens và Worker Page Pool cho dynamic signatures có timeout 3s**,
@@ -359,7 +361,7 @@ So that **tôi có thể thu thập hàng ngàn tweet trong vài giây với lư
 * **Then** scraper sử dụng `TwitterHttpClient` kết hợp `SignerPagePool` để lấy GraphQL data
 * **And** chuẩn hóa dữ liệu trả về theo model `PostItem` với ID Namespaced `twitter:${tweetId}`
 * **And** tự động ghi vào `PrismaStore` lưu vào PostgreSQL.
-* **And (Deprecation Marker)** gắn `@deprecated` cho toàn bộ `src/client/Scraper.js`, `src/scrapers/twitter/http/index.js`, và `src/scrapers/twitter/index.js` (legacy); ghi nhận trong `docs/deprecation-plan.md` chi tiết từng tính năng được thay thế ở Story 13.2 hoặc Story 13.2.1–13.2.7 để xoá ở Epic 20.2.
+* **And (Deprecation Marker)** gắn `@deprecated` cho toàn bộ `src/client/Scraper.js`, `src/scrapers/twitter/http/index.js`, và `src/scrapers/twitter/index.js` (legacy); ghi nhận trong `docs/deprecation-plan.md` chi tiết từng tính năng được thay thế ở Story 13.2 hoặc Story 13.2.1–13.2.9 để xoá ở Epic 20.2.
 
 ### Story 13.2.1: Twitter Hybrid Profile & Relationships
 As a **Twitter Growth Marketer**,
@@ -420,19 +422,44 @@ So that **tôi có thể theo dõi nhóm người dùng và nội dung audio tr�
 * **Then** crawler dispatch GraphQL request với pagination và chuẩn hóa `ProfileItem[]` / `PostItem[]`
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeListMembers`, `scrapeCommunityMembers`, `scrapeSpaces` trong `src/scrapers/twitter/index.js`; cập nhật `docs/deprecation-plan.md`.
 
-### Story 13.2.6: Twitter Hybrid Social Actions (Write & Engagement)
-As a **Twitter Automation Operator**,
-I want **thực hiện hành động viết (post, reply, quote, like, retweet, follow, DM, schedule) qua `TwitterClient` kiến trúc hybrid**,
-So that **tương tác X/Twitter được quản lý bởi sticky proxy, governor, dry-run gate và `PlatformError` chuẩn**.
+### Story 13.2.6: Twitter Hybrid Content Composition & Scheduling
+As a **Twitter Content Operator**,
+I want **đăng tweet, reply, quote, và schedule nội dung qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa nội dung mà không cần browser.
 
 **Acceptance Criteria:**
-* **Given** `src/scrapers/social/twitter/` có `TwitterActions` (hoặc `TwitterClient` action methods) cho write/engagement
-* **When** gọi các action `post`, `reply`, `quote`, `like`, `retweet`, `follow`, `unfollow`, `dm`, `schedule`
-* **Then** mỗi action đi qua `TwitterClient` với `Signer Page Pool` hoặc HTTP GraphQL, tuân thủ delay floor và governor
-* **And** dry-run gate mặc định; cookie/token không bị log; error trả về `PlatformError` với `suggestedAction`
-* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `actions.js`, `engagement.js`, `dm.js` trong `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
+* **Given** `src/scrapers/social/twitter/` có `TwitterClient` action methods cho `post`, `reply`, `quote`, `schedule`
+* **When** gọi `post({ text, mediaIds })`, `reply({ tweetId, text })`, `quote({ tweetId, text })`, hoặc `schedule({ text, publishAt })`
+* **Then** mỗi action đi qua `TwitterClient` với `Signer Page Pool` hoặc HTTP GraphQL, tuân thủ delay floor (write: 3–7s) và governor
+* **And** dry-run gate mặc định `dryRun=true` cho mọi write action; cookie/token không bị log
+* **And** error trả về `PlatformError` với `suggestedAction` (`hibernate_account`, `relogin`, `reduce_rate`)
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `postTweet`, `postThread`, `postReply` trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
 
-### Story 13.2.7: Twitter Hybrid Integration & Caller Migration
+### Story 13.2.7: Twitter Hybrid Engagement & Social Graph Actions
+As a **Twitter Growth Operator**,
+I want **thực hiện like, retweet, follow, unfollow, block, mute, và bookmark qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa engagement theo chiến lược growth mà không cần browser.
+
+**Acceptance Criteria:**
+* **Given** `TwitterClient` hỗ trợ action `like`, `unlike`, `retweet`, `undoRetweet`, `follow`, `unfollow`, `block`, `unblock`, `mute`, `unmute`, `bookmark`
+* **When** gọi các action với `targetId`/`username` và tùy chọn `dryRun`
+* **Then** mỗi action đi qua `TwitterClient` với delay floor (engagement: 1–3s giữa các tác vụ), sticky proxy và governor
+* **And** `follow`/`unfollow` tuân thủ daily limit (configurable) và anti-chain policy (không follow/unfollow cùng user trong 24h)
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `likeTweet`, `retweetTweet`, `followUser` trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.8: Twitter Hybrid Direct Messaging & Lists
+As a **Twitter Community Manager**,
+I want **gửi DM và quản lý list membership qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa outreach và list curation một cách an toàn.
+
+**Acceptance Criteria:**
+* **Given** `TwitterClient` hỗ trợ action `sendDM`, `getConversations`, `createList`, `addListMembers`, `removeListMembers`
+* **When** gọi `sendDM({ userId, text })` hoặc `addListMembers({ listId, userIds })`
+* **Then** DM sử dụng HTTP GraphQL với delay floor 5–15s; list actions sử dụng GraphQL với batch chunking 100 userIds
+* **And** `sendDM` kiểm tra recipient cho phép tin nhắn từ陌生人 trước khi gửi, trả về `PlatformError` với `code: TWITTER_DM_NOT_ALLOWED` nếu bị chặn
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho DM/list helpers trong `src/client/Scraper.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.9: Twitter Hybrid Integration & Caller Migration
 As a **XActions Platform Engineer**,
 I want **`scrape('twitter'|'x', ...)`, MCP/CLI tools và `src/client/Scraper.js` chuyển sang dùng `TwitterCrawler`/`TwitterClient` mới**,
 So that **người dùng cuối và các service không còn phụ thuộc legacy Twitter modules**.
@@ -444,7 +471,7 @@ So that **người dùng cuối và các service không còn phụ thuộc legac
 * **And** `package.json` exports thêm `./scrapers/social` hoặc `./scrapers/twitter` để consumer truy cập `TwitterClient`/`TwitterCrawler`
 * **And** `src/client/Scraper.js` được đánh dấu `@deprecated` hoặc redirect sang `TwitterClient`; các hàm legacy trong `src/scrapers/twitter/http/` và `src/scrapers/twitter/index.js` được ghi `@deprecated` toàn bộ
 * **And** `tests/scrapers/twitter-*.test.js` chuyển sang test `TwitterCrawler` tương ứng hoặc được đánh dấu `@deprecated`
-* **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Twitter legacy và ghi rõ dependency vào Story 13.2.7.
+* **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Twitter legacy và ghi rõ dependency vào Story 13.2.9.
 
 ### Story 13.3: Refactor Facebook Scraper to Hybrid Architecture
 As a **Facebook Community Marketer**,
@@ -623,6 +650,8 @@ So that **Nowing backend có thể chạy background NLP Intent Extractor theo t
 
 ## Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine
 
+> **Epic grouping note:** This epic is a *platform suite*. Stories 15.1 + 15.1.1–15.1.4 (Threads) and Story 15.2 (TikTok) are independent sub-threads in the Vietnam viral-social domain. They share operational patterns (anti-bot, TLS/JA4 spoofing, PrismaStore) but can be implemented and shipped independently.
+
 ### Story 15.1: Threads Scraper Adapter (Meta Internal GraphQL)
 As a **Viral Marketer & Trend Researcher**,
 I want **cào bài viết, timeline và bình luận trên mạng xã hội Threads**,
@@ -702,6 +731,8 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 
 ## Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop)
 
+> **Epic grouping note:** This epic is a *platform suite*. Stories 16.1 (Shopee) and 16.2 (TikTok Shop) are independent e-commerce platform crawlers. They are grouped under one epic because they share the same e-commerce domain and operational rollout for Vietnam market intelligence.
+
 ### Story 16.1: Shopee Search, Product & Review Scraper with TLS Spoofing
 As an **E-Commerce Merchant / Data Analyst**,
 I want **cào danh mục sản phẩm, flash sale, giá bán và đánh giá từ Shopee Việt Nam qua TLS Spoofing**,
@@ -729,6 +760,8 @@ So that **tôi có thể phát hiện các sản phẩm Winning Products để c
 
 ## Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan)
 
+> **Epic grouping note:** This epic is a *platform suite*. Stories 17.1 (Chợ Tốt) and 17.2 (Batdongsan) are independent real-estate crawlers. They are grouped because both serve the Vietnam real-estate lead-intelligence domain.
+
 ### Story 17.1: Chợ Tốt Multi-Category Scraper with Phone Mask Detector
 As a **Real Estate Broker / Lead Generator**,
 I want **cào tin đăng BĐS trên Chợ Tốt kèm giải mã số điện thoại và loại bỏ số masked (`***`)**,
@@ -755,6 +788,8 @@ So that **tôi có thể theo dõi biến động thị trường theo từng qu
 ---
 
 ## Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn)
+
+> **Epic grouping note:** This epic is a *platform suite*. Stories 18.1 (TopCV), 18.2 (VietnamWorks), and 18.3 (LinkedIn) are independent recruitment crawlers. They are grouped because they serve the Vietnam HR and B2B lead-intelligence domain, but each platform can be implemented and shipped independently.
 
 ### Story 18.1: TopCV Job & Company Scraper
 As an **HR Tech Recruiter**,
@@ -852,28 +887,45 @@ So that **tôi có thể vận hành hệ thống từ terminal mà không cần
 
 > **Note:** Các lệnh `xactions checkpoints ...` và `xactions stream ...` hiện có (`src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`) sẽ được giữ lại dưới dạng alias hoặc redirect đến `xactions admin ...` trong quá trình chuyển đổi, và bị xoá ở Epic 20.2.
 
-### Story 19.5: (Merged into 19.4) — Reserved
-*Không còn story riêng. Tất cả CLI admin operations đã gộp vào Story 19.4.*
+> **Note:** Story 19.5 và 19.6 đã được gộp vào Story 19.4 (Admin CLI — Unified) theo Sprint Change Proposal 2026-08-26. Không còn story riêng ở vị trí 19.5/19.6.
 
-### Story 19.6: (Merged into 19.4) — Reserved
-*Không còn story riêng. Tất cả CLI admin operations đã gộp vào Story 19.4.*
-
-### Story 19.7: Admin REST API for Proxy, Account & Checkpoint Management
+### Story 19.7: Admin REST API — Proxy Management
 As an **Internal Operator & CLI Developer**,
-I want **các endpoint REST `/admin/*` để dashboard và CLI lấy dữ liệu + thực hiện actions vận hành**,
-So that **admin surface không truy cập DB trực tiếp và sử dụng chung data source**.
+I want **các endpoint REST `/admin/proxies` để quản lý proxy pool**,
+So that **admin surface không truy cập DB trực tiếp và có thể cách ly/khôi phục proxy kịp thời**.
 
 **Acceptance Criteria:**
-* **Given** các route `api/routes/proxies.js`, `api/routes/checkpoints.js`, `api/routes/streams.js`, `api/routes/governor.js` đã tồn tại
-* **When** mount `/admin/*` namespace trong `api/server.js`
-* **Then** `/admin/proxies` (GET), POST `/admin/proxies/:key/quarantine|release` wrap `api/routes/proxies.js`
-* **And** GET `/admin/accounts?platform=...`, POST `/admin/accounts/:id/wake|rotate` wrap proxy/account logic
-* **And** GET/POST `/admin/checkpoints/...` wrap `api/routes/checkpoints.js`
-* **And** GET `/admin/stream/metrics` và `/admin/stream/alerts` wrap `api/routes/streams.js` và stream metrics reader
-* **And** không viết lại business logic; các endpoint hiện có vẫn hoạt động song song cho backward compatibility
-* **And** tất cả endpoints yêu cầu `admin` permission hoặc `checkpoint:manage` (cho checkpoint-only); auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth.
+* **Given** route `api/routes/proxies.js` đã tồn tại
+* **When** mount `GET /admin/proxies` và `POST /admin/proxies/:key/quarantine|release` trong `api/server.js`
+* **Then** các endpoint wrap `api/routes/proxies.js`, trả về danh sách proxy, health, và kết quả quarantine/release
+* **And** không viết lại business logic; endpoint cũ vẫn hoạt động song song cho backward compatibility
+* **And** tất cả endpoints yêu cầu `admin` permission; auth dùng internal admin API key hoặc A2A token.
 
-### Story 19.8: Admin MCP Tools for AI Agents
+### Story 19.8: Admin REST API — Account & Checkpoint Management
+As an **Internal Operator & CLI Developer**,
+I want **các endpoint REST `/admin/accounts` và `/admin/checkpoints` để quản lý account lifecycle và checkpoints**,
+So that **operator có thể đánh thức, xoay account và quản lý checkpoint mà không cần DB access**.
+
+**Acceptance Criteria:**
+* **Given** các route `api/routes/checkpoints.js` và account logic đã tồn tại
+* **When** mount `GET /admin/accounts?platform=...`, `POST /admin/accounts/:id/wake|rotate`, và `GET/POST /admin/checkpoints/...`
+* **Then** các endpoint wrap account lifecycle và `api/routes/checkpoints.js`, trả về status/wake/rotate và checkpoint CRUD
+* **And** `POST /admin/accounts/:id/wake` chỉ hoạt động với account đang `hibernating`; trả về `409 Conflict` nếu account không đủ điều kiện
+* **And** tất cả endpoints yêu cầu `admin` permission hoặc `checkpoint:manage` (cho checkpoint-only); auth dùng internal admin API key hoặc A2A token.
+
+### Story 19.9: Admin REST API — Stream Metrics & Alerts
+As an **Internal Operator & CLI Developer**,
+I want **các endpoint REST `/admin/stream/metrics` và `/admin/stream/alerts` để giám sát Redis stream và governor**,
+So that **operator nhận cảnh báo khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`**.
+
+**Acceptance Criteria:**
+* **Given** route `api/routes/streams.js` và governor metrics reader đã tồn tại
+* **When** mount `GET /admin/stream/metrics` và `GET /admin/stream/alerts` trong `api/server.js`
+* **Then** các endpoint wrap `api/routes/streams.js` và trả về `pendingMessages`, `lastAckTime`, throughput, và alert flags
+* **And** alert tự động bật khi vượt ngưỡng (`pendingMessages > 50,000` hoặc `lastAckTime > 60s`) và gửi webhook/email nếu configured
+* **And** tất cả endpoints yêu cầu `admin` permission; auth dùng internal admin API key hoặc A2A token.
+
+### Story 19.10: Admin MCP Tools for AI Agents
 As an **AI Agent Operator**,
 I want **các MCP tool `x_admin_*` để AI agents có thể kiểm tra status và thực hiện vận hành cơ bản**,
 So that **Claude/Cursor/Antigravity có thể hỏi "tình trạng proxy pool thế nào" hoặc "đánh thức account fb:123"**.
