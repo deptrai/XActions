@@ -180,7 +180,14 @@ export class CommentTreeExtractor {
 
       await Promise.all(
         parents.map((parent) =>
-          this.#limit(() => fetchLayerPaginated(parent.externalId, depth + 1))
+          this.#limit(async () => {
+            if (total >= this.#maxComments) return;
+            try {
+              await fetchLayerPaginated(parent.externalId, depth + 1);
+            } catch (err) {
+              console.warn(`⚠️ [CommentTreeExtractor] Failed to fetch replies for comment ${parent.externalId}: ${/** @type {any} */ (err)?.message || String(err)}`);
+            }
+          })
         )
       );
     }

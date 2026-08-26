@@ -485,6 +485,8 @@ export class FacebookCrawler extends AbstractCrawler {
     if (input.startsWith('https://') || input.startsWith('http://')) {
       try {
         const url = new URL(input);
+        const fbid = url.searchParams.get('story_fbid') || url.searchParams.get('fbid') || url.searchParams.get('id');
+        if (fbid) return fbid;
         const parts = url.pathname.split('/').filter(Boolean);
         return parts[parts.length - 1] || '';
       } catch {
@@ -1282,10 +1284,10 @@ export class FacebookCrawler extends AbstractCrawler {
       });
     }
 
-    let maxDepth = 3;
-    if (args?.includeReplies === false) {
-      maxDepth = 0;
-    } else if (args?.maxDepth !== undefined) {
+    let maxDepth = 0;
+    if (args?.includeReplies === true) {
+      maxDepth = args?.maxDepth !== undefined ? this.#clampMaxDepth(args.maxDepth) : 3;
+    } else if (args?.maxDepth !== undefined && args?.includeReplies !== false) {
       maxDepth = this.#clampMaxDepth(args.maxDepth);
     }
 
@@ -1332,18 +1334,19 @@ export class FacebookCrawler extends AbstractCrawler {
       });
     }
 
-    if (!rawTarget.includes('/groups/') && !rawTarget.includes('groups/')) {
-      throw new PlatformError({
-        code: 'XACT_4001',
-        type: ErrorTypes.INVALID_ARGS,
-        message: 'Invalid group post URL: URL must contain "/groups/" path',
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-      });
-    }
+    if (rawTarget.includes('://') || rawTarget.startsWith('//')) {
+      if (!rawTarget.includes('/groups/') && !rawTarget.includes('groups/')) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'Invalid group post URL: URL must contain "/groups/" path',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
 
-    if (rawTarget.includes('://')) {
       try {
-        const parsed = new URL(rawTarget);
+        const normalizedUrl = rawTarget.startsWith('//') ? 'https:' + rawTarget : rawTarget;
+        const parsed = new URL(normalizedUrl);
         if (parsed.hostname !== 'facebook.com' && !parsed.hostname.endsWith('.facebook.com')) {
           throw new PlatformError({
             code: 'XACT_4001',
@@ -1373,10 +1376,10 @@ export class FacebookCrawler extends AbstractCrawler {
       });
     }
 
-    let maxDepth = 3;
-    if (args?.includeReplies === false) {
-      maxDepth = 0;
-    } else if (args?.maxDepth !== undefined) {
+    let maxDepth = 0;
+    if (args?.includeReplies === true) {
+      maxDepth = args?.maxDepth !== undefined ? this.#clampMaxDepth(args.maxDepth) : 3;
+    } else if (args?.maxDepth !== undefined && args?.includeReplies !== false) {
       maxDepth = this.#clampMaxDepth(args.maxDepth);
     }
 

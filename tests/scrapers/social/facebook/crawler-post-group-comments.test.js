@@ -346,4 +346,36 @@ describe('Story 13.7 — Facebook Hybrid Post & Group Comments', () => {
       session: { accountId: 'acc_fb_1' },
     })).rejects.toThrow(PlatformError);
   });
+
+  it('[Patch 2 & 4] should extract story_fbid from permalink.php and allow numeric postId in groupComments', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const crawler = new FacebookCrawler({
+      client,
+      sessionManager,
+      docIds: commentDocIds,
+    });
+
+    // permalink.php query param
+    const resPermalink = await crawler.start({
+      action: 'post_comments',
+      args: {
+        url: 'https://www.facebook.com/permalink.php?story_fbid=101010101&id=987654',
+      },
+      session: { accountId: 'acc_fb_1' },
+    });
+    expect(resPermalink.comments).toBeDefined();
+    expect(resPermalink.comments.length).toBeGreaterThanOrEqual(1);
+
+    // numeric postId in groupComments
+    const resGroupNum = await crawler.start({
+      action: 'group_comments',
+      args: {
+        postId: '999888777',
+      },
+      session: { accountId: 'acc_fb_1' },
+    });
+    expect(resGroupNum.comments).toBeDefined();
+    expect(resGroupNum.comments.length).toBeGreaterThanOrEqual(1);
+  });
 });
+

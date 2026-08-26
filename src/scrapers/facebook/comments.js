@@ -146,6 +146,7 @@ async function clickCommentExpanders(page) {
  * @param {FacebookOptions} [options]
  * @returns {Promise<Record<string, unknown>[] | { note: string, platform: 'facebook' }>}
  */
+// LEGACY — see docs/deprecation-plan.md
 export async function scrapeFacebookComments(page, postUrl, options = {}) {
   const {
     limit = 50,
@@ -233,6 +234,7 @@ export async function scrapeFacebookComments(page, postUrl, options = {}) {
  * @param {FacebookOptions} [options]
  * @returns {Promise<Record<string, unknown>[] | { note: string, platform: 'facebook' }>}
  */
+// LEGACY — see docs/deprecation-plan.md
 export async function scrapeFacebookGroupComments(page, groupPostUrl, options = {}) {
   if (typeof groupPostUrl !== 'string' || !groupPostUrl.includes('/groups/')) {
     throw new Error('❌ scrapeFacebookGroupComments requires a facebook.com/groups/ post URL');

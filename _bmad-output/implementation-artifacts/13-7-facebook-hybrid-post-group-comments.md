@@ -2,19 +2,19 @@
 story_id: '13.7'
 epic: 13
 story_key: '13-7-facebook-hybrid-post-group-comments'
-status: "review"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-28
 last_updated: 2026-08-28
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "Murat"
 baseline_commit: "c4beb26a"
 ---
 
 # Story 13.7: Facebook Hybrid Post & Group Comments
 
-Status: review
+Status: done
 
 ## Story
 
@@ -199,6 +199,14 @@ so that **tôi có thể phân tích sentiment và cấu trúc hội thoại v�
    - [x] `npx vitest run tests/scrapers/social/facebook/`
    - [x] `npx vitest run tests/scrapers/social/comment-tree.test.js`
    - [x] `npx tsc --noEmit`
+
+### Review Findings
+
+- [x] [Review][Patch] Sửa default `includeReplies` trong `postComments` & `groupComments` thành `maxDepth = 0` khi không truyền tham số [`src/scrapers/social/facebook/crawler.js:1285`]
+- [x] [Review][Patch] Hỗ trợ trích xuất `story_fbid` / `fbid` / `id` từ query params trong `#extractPostExternalId` cho URL `permalink.php` / `story.php` [`src/scrapers/social/facebook/crawler.js:485`]
+- [x] [Review][Patch] Bọc try/catch cho từng reply branch trong `CommentTreeExtractor` để không sập toàn bộ request khi 1 reply layer lỗi [`src/scrapers/social/comment-tree.js:181`]
+- [x] [Review][Patch] Hỗ trợ truyền trực tiếp `postId` số vào `groupComments` khi không có group URL [`src/scrapers/social/facebook/crawler.js:1335`]
+- [x] [Review][Patch] Thêm comment `// LEGACY — see docs/deprecation-plan.md` vào `src/scrapers/facebook/comments.js` [`src/scrapers/facebook/comments.js:140`]
 
 ## Dev Agent Record
 
