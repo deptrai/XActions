@@ -171,10 +171,6 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
       return true;
     }
 
-    if (body.includes('log in') && body.includes('password')) {
-      return true;
-    }
-
     const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
     const status = typeof record?.status === 'number' ? record.status : (typeof record?.statusCode === 'number' ? record.statusCode : null);
     if (status === 403) {

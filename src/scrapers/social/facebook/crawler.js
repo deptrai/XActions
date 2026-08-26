@@ -259,12 +259,15 @@ export class FacebookCrawler extends AbstractCrawler {
     const commentId = this.#extractCommentExternalId(rawId);
     if (!commentId) return null;
 
-    const authorActors = Array.isArray(node.actors) ? node.actors : (Array.isArray(node.author) ? [node.author] : []);
-    const authorActor = authorActors.length > 0 ? authorActors[0] : null;
+    const authorActor = Array.isArray(node.actors) && node.actors.length > 0
+      ? node.actors[0]
+      : (node.author && typeof node.author === 'object' ? node.author : null);
     const authorId = authorActor ? String(authorActor.id || '') : '';
     const authorName = authorActor ? String(authorActor.name || '') : '';
 
-    const content = (typeof node.message === 'string' ? node.message : node.message?.text) ||
+    const content = node.body?.text ||
+                    (typeof node.body === 'string' ? node.body : '') ||
+                    (typeof node.message === 'string' ? node.message : node.message?.text) ||
                     node.text ||
                     '';
 
@@ -272,14 +275,22 @@ export class FacebookCrawler extends AbstractCrawler {
     const parentCommentId = parentId ? `facebook:${postId}:${parentId}` : undefined;
 
     const feedback = node.feedback || {};
-    const likesCount = Number(feedback.like_count?.count ?? feedback.like_count ?? node.like_count) || 0;
+    const likesCount = Number(
+      node.reactors?.count_reduced ??
+      feedback.like_count?.count ??
+      feedback.like_count ??
+      node.like_count ??
+      0
+    ) || 0;
     const subCommentsCount = Number(
-      feedback.comment_count?.total_count ??
       feedback.replies_fields?.total_count ??
+      feedback.replies_fields?.count ??
+      feedback.comment_count?.total_count ??
       feedback.comment_count ??
+      node.replies_connection?.edges?.length ??
       node.comment_count ??
       0
-    );
+    ) || 0;
 
     const creationTime = node.created_time || null;
     const feedbackId = feedback.id || '';
@@ -292,7 +303,7 @@ export class FacebookCrawler extends AbstractCrawler {
       externalId: commentId,
       postId: `facebook:${postId}`,
       parentCommentId,
-      depth: 0,
+      depth: node.depth ?? 0,
       authorId,
       authorName,
       authorAvatar: authorActor?.profile_picture_depth_0?.uri || undefined,
@@ -391,7 +402,7 @@ export class FacebookCrawler extends AbstractCrawler {
    */
   #extractPostFeedbackIdFromHtml(html) {
     if (typeof html !== 'string' || !html.includes('data-content-len')) return null;
-    const re = /<script type="application\/json" data-content-len="[^"]*">\s*([\s\S]*?)\s*<\/script>/g;
+    const re = /<script type="application\/json"[^>]*data-content-len="[^"]*"[^>]*>\s*([\s\S]*?)\s*<\/script>/g;
     const typeSet = new Set(['Feedback']);
 
     let match;
