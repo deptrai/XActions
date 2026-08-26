@@ -26,7 +26,9 @@ describe('Story 13.4 — Facebook Browser-as-Signer Bridge', () => {
       req.on('data', (chunk) => (body += chunk));
       req.on('end', () => {
         if (req.url === '/' || req.url === '') {
-          homePageHits += 1;
+          if (req.headers['x-fb-fetch'] === 'http' || req.headers['sec-fetch-mode'] !== 'navigate') {
+            homePageHits += 1;
+          }
           res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
           res.end(`
             <!DOCTYPE html>

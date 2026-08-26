@@ -85,6 +85,7 @@ export class FacebookCrawler extends AbstractCrawler {
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
    * @param {Record<string, string>} [deps.friendlyNames]
+   * @param {string} [deps.cdpUrl]
    */
   constructor(deps = {}) {
     const { client: explicitClient, friendlyNames, ...clientDeps } = deps;
@@ -93,6 +94,7 @@ export class FacebookCrawler extends AbstractCrawler {
       ...deps,
       client,
       requiresAuth: true,
+      cdpUrl: deps.cdpUrl || client.cdpUrl || undefined,
     });
 
     this.client = client;
@@ -827,7 +829,9 @@ export class FacebookCrawler extends AbstractCrawler {
    * @returns {Promise<void>}
    */
   async cleanup() {
-    if (this.client && typeof this.client.clearTokenCache === 'function') {
+    if (this.client && typeof this.client.close === 'function') {
+      await this.client.close();
+    } else if (this.client && typeof this.client.clearTokenCache === 'function') {
       this.client.clearTokenCache();
     }
   }

@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * FacebookClient — High-throughput hybrid GraphQL client for Facebook.
- * Extends AbstractApiClient with got-scraping, dynamic token extraction (lsd, fb_dtsg),
- * sticky proxy routing, in-flight token deduplication, and graceful doc_id rotation.
+ * Extends AbstractApiClient with got-scraping, dynamic token extraction (lsd, fb_dtsg, jazoest, spin),
+ * sticky proxy routing, in-flight token deduplication, and browser-as-signer bridge support.
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0
@@ -10,33 +10,27 @@
 
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { FacebookPlatformResponseValidator } from './validator.js';
+import { FacebookBrowserBridge } from './signer-bridge.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
 const MAX_TOKEN_CACHE_ENTRIES = 500;
-
-const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
-
-/**
- * Percent-encode only characters that are illegal inside a Cookie header value.
- * Leaves '=', '+', '/', and spaces untouched so real Facebook cookies keep their values.
- * @param {unknown} value
- * @returns {string}
- */
-function encodeCookieValue(value) {
-  if (value == null) return '';
-  return String(value).replace(FORBIDDEN_COOKIE_CHARS, (c) => encodeURIComponent(c));
-}
+const DEFAULT_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
 
 /**
- * Build a stable Cookie header string from a string or a record of cookie values.
- * @param {string | Record<string, unknown>} cookies
+ * @param {string | Record<string, string> | Array<{ name: string, value: string }>} cookies
  * @returns {string}
  */
 function buildCookieHeader(cookies) {
   if (typeof cookies === 'string') return cookies;
+  if (Array.isArray(cookies)) {
+    return cookies
+      .filter((c) => c && c.name && c.value !== undefined)
+      .map((c) => `${c.name}=${c.value}`)
+      .join('; ');
+  }
   if (cookies && typeof cookies === 'object') {
     return Object.entries(cookies)
-      .map(([k, v]) => `${encodeCookieValue(k)}=${encodeCookieValue(v)}`)
+      .map(([k, v]) => `${k}=${v}`)
       .join('; ');
   }
   return '';
@@ -61,6 +55,33 @@ export class FacebookClient extends AbstractApiClient {
   /** @type {Record<string, string>} */
   friendlyNames = {};
 
+  /** @type {FacebookBrowserBridge | null} */
+  browserBridge = null;
+
+  /** @type {string | null} */
+  cdpUrl = null;
+
+  /** @type {boolean} */
+  launchChrome = false;
+
+  /** @type {string} */
+  adapterName = 'playwright';
+
+  /** @type {boolean} */
+  headless = true;
+
+  /** @type {string | null} */
+  userDataDir = null;
+
+  /** @type {string | null} */
+  profileDir = null;
+
+  /** @type {boolean} */
+  httpFallback = true;
+
+  /** @type {FacebookBrowserBridge | null} */
+  #ownedBrowserBridge = null;
+
   /** @type {Map<string, { tokens: Record<string, any>, expiresAt: number }>} */
   #tokenCache = new Map();
 
@@ -68,7 +89,7 @@ export class FacebookClient extends AbstractApiClient {
   #pendingTokenFetches = new Map();
 
   /** @type {number} */
-  #tokenTtlMs = 5 * 60 * 1000; // 5 minutes TTL
+  #tokenTtlMs = DEFAULT_TOKEN_TTL_MS;
 
   /** @type {number} */
   #reqCounter = 0x1a;
@@ -84,6 +105,17 @@ export class FacebookClient extends AbstractApiClient {
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../core/session-manager.js').SessionManager} [deps.sessionManager]
    * @param {import('../../../core/platform-validator.js').AbstractPlatformResponseValidator} [deps.responseValidator]
+   * @param {import('../../../core/signer-pool.js').PreSignedTokenRing} [deps.tokenRing]
+   * @param {import('../../../core/signer-pool.js').SignerWorkerPagePool} [deps.signerPool]
+   * @param {FacebookBrowserBridge} [deps.browserBridge]
+   * @param {string} [deps.cdpUrl]
+   * @param {boolean} [deps.launchChrome]
+   * @param {string} [deps.adapterName]
+   * @param {boolean} [deps.headless]
+   * @param {string} [deps.userDataDir]
+   * @param {string} [deps.profileDir]
+   * @param {boolean} [deps.httpFallback]
+   * @param {number} [deps.tokenTtlMs]
    * @param {number} [deps.timeout]
    */
   constructor(deps = {}) {
@@ -101,12 +133,41 @@ export class FacebookClient extends AbstractApiClient {
       this.friendlyNames = deps.friendlyNames;
     }
     this.timeout = deps.timeout ?? 120000;
+
+    this.browserBridge = deps.browserBridge || null;
+    this.cdpUrl = deps.cdpUrl || null;
+    this.launchChrome = Boolean(deps.launchChrome);
+    this.adapterName = deps.adapterName || process.env.XACTIONS_SCRAPER_ADAPTER || 'playwright';
+    this.headless = deps.headless ?? true;
+    this.userDataDir = deps.userDataDir || null;
+    this.profileDir = deps.profileDir || null;
+    this.httpFallback = deps.httpFallback ?? true;
+    if (deps.tokenTtlMs) {
+      this.#tokenTtlMs = deps.tokenTtlMs;
+    }
   }
 
   /**
-   * Extract Facebook security tokens (lsd, fb_dtsg, jazoest, spin) with in-flight deduplication.
+   * Lazily create owned FacebookBrowserBridge if cdpUrl or launchChrome configured.
+   * @returns {FacebookBrowserBridge}
+   */
+  #getLazyBrowserBridge() {
+    if (this.#ownedBrowserBridge) return this.#ownedBrowserBridge;
+    this.#ownedBrowserBridge = new FacebookBrowserBridge({
+      baseUrl: this.baseUrl,
+      cdpUrl: this.cdpUrl || undefined,
+      launchChrome: this.launchChrome,
+      adapterName: this.adapterName,
+      headless: this.headless,
+      userDataDir: this.userDataDir || this.profileDir || undefined,
+    });
+    return this.#ownedBrowserBridge;
+  }
+
+  /**
+   * Extract Facebook security tokens with 30s pre-expiry window & in-flight deduplication.
    * @param {string} [accountId='default']
-   * @param {string | Record<string, string>} [cookies='']
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [cookies='']
    * @returns {Promise<Record<string, any>>}
    */
   async ensureTokens(accountId = 'default', cookies = '') {
@@ -114,8 +175,8 @@ export class FacebookClient extends AbstractApiClient {
     const cacheKey = this.#cacheKey(accountId, cookieHeader);
 
     const cached = this.#tokenCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      // Touch the entry to keep it in LRU order.
+    const refreshMargin = this.#tokenTtlMs <= 1000 ? 0 : Math.min(30000, Math.floor(this.#tokenTtlMs * 0.1));
+    if (cached && cached.expiresAt > Date.now() + refreshMargin) {
       this.#tokenCache.delete(cacheKey);
       this.#tokenCache.set(cacheKey, cached);
       return cached.tokens;
@@ -125,7 +186,7 @@ export class FacebookClient extends AbstractApiClient {
       return /** @type {Promise<Record<string, any>>} */ (this.#pendingTokenFetches.get(cacheKey));
     }
 
-    const fetchPromise = this.#fetchTokens(accountId, cookieHeader)
+    const fetchPromise = this.#fetchTokensWithStrategy(accountId, cookieHeader)
       .finally(() => {
         this.#pendingTokenFetches.delete(cacheKey);
       });
@@ -135,78 +196,47 @@ export class FacebookClient extends AbstractApiClient {
   }
 
   /**
-   * Internal worker to fetch tokens from home page HTML.
+   * Orchestrate browser bridge vs HTTP fallback extraction.
    * @param {string} accountId
    * @param {string} cookieHeader
    * @returns {Promise<Record<string, any>>}
    */
-  async #fetchTokens(accountId, cookieHeader) {
-    let parsedUserId = '';
-    if (cookieHeader) {
-      const cUserMatch = cookieHeader.match(/(?:^|;\s*)c_user=([^;]+)/);
-      if (cUserMatch) parsedUserId = decodeURIComponent(cUserMatch[1]);
+  async #fetchTokensWithStrategy(accountId, cookieHeader) {
+    const shouldUseBrowser = Boolean(this.browserBridge || this.cdpUrl || this.launchChrome);
+
+    if (shouldUseBrowser) {
+      try {
+        const bridge = this.browserBridge || this.#getLazyBrowserBridge();
+        const tokens = await bridge.extractTokens(accountId, cookieHeader);
+        if (tokens.lsd && this.tokenRing && typeof this.tokenRing.refill === 'function') {
+          this.tokenRing.refill([tokens.lsd]);
+        }
+        this.#saveTokensToCache(accountId, cookieHeader, tokens);
+        return tokens;
+      } catch (browserErr) {
+        if (!this.httpFallback) {
+          throw browserErr;
+        }
+        // Fallback to HTTP
+      }
     }
 
-    /** @type {Record<string, string>} */
-    const headers = {};
-    if (cookieHeader) {
-      headers['cookie'] = cookieHeader;
+    const tokens = await this.#fetchTokens(accountId, cookieHeader);
+    if (tokens.lsd && this.tokenRing && typeof this.tokenRing.refill === 'function') {
+      this.tokenRing.refill([tokens.lsd]);
     }
+    return tokens;
+  }
 
-    const resp = /** @type {any} */ (await this.request('GET', `${this.baseUrl}/`, {
-      accountId,
-      headers,
-    }));
-
-    const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
-
-    // Extract security tokens via regex
-    const lsdMatch = html.match(/name="lsd"\s+value="([^"]+)"/) ||
-                     html.match(/\["LSD",\[\],\{"token":"([^"]+)"\}/) ||
-                     html.match(/"LSD",\[\],\{"token":"([^"]+)"\}/);
-    const lsd = lsdMatch ? lsdMatch[1] : '';
-
-    const jazoestMatch = html.match(/name="jazoest"\s+value="([^"]+)"/);
-    const jazoest = jazoestMatch ? jazoestMatch[1] : '2953';
-
-    const dtsgMatch = html.match(/\["DTSGInitialData",\[\],\{"token":"([^"]+)"\}/) ||
-                      html.match(/"DTSGInitialData",\[\],\{"token":"([^"]+)"\}/) ||
-                      html.match(/d\.token\s*=\s*"([^"]+)"/);
-    const dtsg = dtsgMatch ? dtsgMatch[1] : '';
-
-    const spinRMatch = html.match(/"__spin_r":(\d+)/) || html.match(/window\.__spin_r\s*=\s*(\d+)/);
-    const spin_r = spinRMatch ? Number(spinRMatch[1]) : 1016839210;
-
-    const spinTMatch = html.match(/"__spin_t":(\d+)/) || html.match(/window\.__spin_t\s*=\s*(\d+)/);
-    const spin_t = spinTMatch ? Number(spinTMatch[1]) : Math.floor(Date.now() / 1000);
-
-    const hsiMatch = html.match(/"__hsi":"([^"]+)"/) || html.match(/window\.__hsi\s*=\s*"([^"]+)"/);
-    const hsi = hsiMatch ? hsiMatch[1] : '';
-
-    if (!lsd && !dtsg) {
-      throw new PlatformError({
-        code: 'XACT_4010',
-        type: ErrorTypes.AUTH_EXPIRED,
-        message: 'Failed to extract Facebook security tokens (lsd/fb_dtsg). Session cookies may be expired or checkpointed.',
-        suggestedAction: SuggestedActions.RELOGIN,
-        platform: 'facebook',
-        accountId,
-      });
-    }
-
-    const tokens = {
-      lsd,
-      jazoest,
-      dtsg,
-      spin_r,
-      spin_t,
-      hsi,
-      c_user: parsedUserId,
-    };
-
+  /**
+   * Save extracted tokens into in-memory cache with eviction.
+   * @param {string} accountId
+   * @param {string} cookieHeader
+   * @param {Record<string, any>} tokens
+   */
+  #saveTokensToCache(accountId, cookieHeader, tokens) {
     const cacheKey = this.#cacheKey(accountId, cookieHeader);
 
-    // Cache management with pruning
     if (this.#tokenCache.size >= MAX_TOKEN_CACHE_ENTRIES) {
       const now = Date.now();
       for (const [k, v] of this.#tokenCache.entries()) {
@@ -224,7 +254,86 @@ export class FacebookClient extends AbstractApiClient {
       tokens,
       expiresAt: Date.now() + this.#tokenTtlMs,
     });
+  }
 
+  /**
+   * Internal worker to fetch tokens from home page HTML via HTTP.
+   * @param {string} accountId
+   * @param {string} cookieHeader
+   * @returns {Promise<Record<string, any>>}
+   */
+  async #fetchTokens(accountId, cookieHeader) {
+    let parsedUserId = '';
+    if (cookieHeader) {
+      const cUserMatch = cookieHeader.match(/(?:^|;\s*)c_user=([^;]+)/);
+      if (cUserMatch) parsedUserId = decodeURIComponent(cUserMatch[1]);
+    }
+
+    /** @type {Record<string, string>} */
+    const headers = {
+      'x-fb-fetch': 'http',
+    };
+    if (cookieHeader) {
+      headers['cookie'] = cookieHeader;
+    }
+
+    const resp = /** @type {any} */ (await this.request('GET', `${this.baseUrl}/`, {
+      accountId,
+      headers,
+    }));
+
+    const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
+
+    // Extract security tokens
+    const lsdMatch = html.match(/\["LSD",\[\],\{"token":"([^"]+)"\}/) ||
+                     html.match(/"LSD",\[\],\{"token":"([^"]+)"\}/) ||
+                     html.match(/name="lsd"\s+value="([^"]+)"/);
+    const lsd = lsdMatch ? lsdMatch[1] : '';
+
+    const dtsgMatch = html.match(/\["DTSGInitialData",\[\],\{"token":"([^"]+)"\}/) ||
+                      html.match(/"DTSGInitialData",\[\],\{"token":"([^"]+)"\}/) ||
+                      html.match(/d\.token\s*=\s*"([^"]+)"/);
+    const dtsg = dtsgMatch ? dtsgMatch[1] : '';
+
+    const jazoestMatch = html.match(/name="jazoest"\s+value="([^"]+)"/);
+    const jazoest = jazoestMatch ? jazoestMatch[1] : '2953';
+
+    const spinRMatch = html.match(/"__spin_r":(\d+)/) || html.match(/window\.__spin_r\s*=\s*(\d+)/);
+    const spin_r = spinRMatch ? Number(spinRMatch[1]) : 1016839210;
+
+    const spinTMatch = html.match(/"__spin_t":(\d+)/) || html.match(/window\.__spin_t\s*=\s*(\d+)/);
+    const spin_t = spinTMatch ? Number(spinTMatch[1]) : Math.floor(Date.now() / 1000);
+
+    const hsiMatch = html.match(/"__hsi":"([^"]+)"/) || html.match(/window\.__hsi\s*=\s*"([^"]+)"/);
+    const hsi = hsiMatch ? hsiMatch[1] : '';
+
+    if (!parsedUserId) {
+      const userMatch = html.match(/"USER_ID":"(\d+)"/) || html.match(/"actor_id":"(\d+)"/);
+      if (userMatch) parsedUserId = userMatch[1];
+    }
+
+    if (!lsd && !dtsg) {
+      throw new PlatformError({
+        code: 'XACT_4010',
+        type: ErrorTypes.AUTH_EXPIRED,
+        message: 'Failed to extract Facebook security tokens (lsd/dtsg). Session or IP may be checkpointed.',
+        suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
+        platform: 'facebook',
+        accountId,
+      });
+    }
+
+    const tokens = {
+      lsd,
+      jazoest,
+      dtsg,
+      spin_r,
+      spin_t,
+      hsi,
+      c_user: parsedUserId,
+    };
+
+    this.#saveTokensToCache(accountId, cookieHeader, tokens);
     return tokens;
   }
 
@@ -247,11 +356,13 @@ export class FacebookClient extends AbstractApiClient {
       });
     }
 
+    const allocatedLsd = (this.tokenRing && this.tokenRing.size > 0 ? this.tokenRing.next() : null) || tokens.lsd || '';
+
     const params = new URLSearchParams({
       doc_id: docId,
       variables: JSON.stringify(variables),
-      lsd: tokens.lsd || '',
-      fb_dtsg: tokens.dtsg || '',
+      lsd: allocatedLsd,
+      fb_dtsg: tokens.dtsg || tokens.fb_dtsg || '',
       jazoest: tokens.jazoest || '2953',
       __a: '1',
       __user: String(userId),
@@ -370,6 +481,24 @@ export class FacebookClient extends AbstractApiClient {
   clearTokenCache() {
     this.#tokenCache.clear();
     this.#pendingTokenFetches.clear();
+  }
+
+  /**
+   * Close client and any owned browser signer bridge.
+   * @returns {Promise<void>}
+   */
+  async close() {
+    this.clearTokenCache();
+    if (this.#ownedBrowserBridge) {
+      try {
+        await this.#ownedBrowserBridge.close();
+      } catch {}
+      this.#ownedBrowserBridge = null;
+    } else if (this.browserBridge && typeof this.browserBridge.close === 'function') {
+      try {
+        await this.browserBridge.close();
+      } catch {}
+    }
   }
 
   /**

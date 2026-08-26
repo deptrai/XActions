@@ -148,6 +148,8 @@ export function getDefaultUserDataDir(platform = process.platform) {
  * @param {number} [options.port=9222]
  * @param {string} [options.userDataDir]
  * @param {boolean} [options.headless=false]
+ * @param {any} [options.proxy]
+ * @param {string[]} [options.extraArgs]
  * @returns {string[]}
  */
 export function buildChromeArgs(options = {}) {
@@ -165,6 +167,31 @@ export function buildChromeArgs(options = {}) {
 
   if (headless) {
     args.push('--headless=new');
+  }
+
+  if (options.proxy) {
+    const rawProxy = typeof options.proxy === 'string'
+      ? options.proxy
+      : (options.proxy.server || `${options.proxy.scheme || 'http'}://${options.proxy.host}:${options.proxy.port}`);
+    let proxyHost = '';
+    try {
+      const u = new URL(rawProxy.includes('://') ? rawProxy : `http://${rawProxy}`);
+      proxyHost = u.hostname;
+    } catch {
+      proxyHost = typeof options.proxy === 'object' && options.proxy?.host ? options.proxy.host : '';
+    }
+    const hostExclude = proxyHost.includes(':') && !proxyHost.startsWith('[') ? `[${proxyHost}]` : proxyHost;
+
+    args.push(
+      '--force-webrtc-ip-handling-policy=disable_non_proxied_udp',
+      `--proxy-server=${rawProxy}`,
+      `--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE ${hostExclude || '127.0.0.1'}`,
+      '--disable-features=WebRtcHideLocalIpsWithMdns'
+    );
+  }
+
+  if (Array.isArray(options.extraArgs)) {
+    args.push(...options.extraArgs);
   }
 
   return args;
@@ -219,38 +246,33 @@ export async function fetchCdpWsEndpoint(cdpUrl = 'http://127.0.0.1:9222', optio
         lastError = new Error(`CDP endpoint returned ${res.status} ${res.statusText}`);
       }
     } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
+      lastError = err;
     }
     if (attempt < retries - 1) {
       await new Promise((r) => setTimeout(r, delayMs));
     }
   }
 
-  let port;
-  try {
-    port = new URL(baseUrl).port || '9222';
-  } catch {
-    port = '9222';
-  }
-
   throw new PlatformError({
     code: 'XACT_5030',
     type: ErrorTypes.INTERNAL,
-    message: `[CDP ERROR] Could not connect to Chrome on port ${port}. Run 'xactions auth --launch-chrome' first.`,
-    suggestedAction: SuggestedActions.RELOGIN,
+    message: `[CDP ERROR] Could not reach Chrome DevTools at ${versionUrl}. Ensure Chrome is launched with --remote-debugging-port.`,
+    suggestedAction: SuggestedActions.CONTACT_SUPPORT,
     cause: lastError,
     details: { cdpUrl, versionUrl },
   });
 }
 
 /**
- * Launch Chrome with remote debugging port.
+ * Launch Chrome with remote debugging enabled.
  *
  * @param {Object} [options={}]
  * @param {number} [options.port=9222]
  * @param {string} [options.userDataDir]
  * @param {string} [options.chromePath]
  * @param {boolean} [options.headless=false]
+ * @param {any} [options.proxy]
+ * @param {string[]} [options.extraArgs]
  * @returns {Promise<{ port: number, cdpUrl: string, userDataDir: string, alreadyRunning?: boolean, kill: () => Promise<void> }>}
  */
 export async function launchChrome(options = {}) {
@@ -277,6 +299,8 @@ export async function launchChrome(options = {}) {
     port,
     userDataDir,
     headless: options.headless,
+    proxy: options.proxy,
+    extraArgs: options.extraArgs,
   });
 
   const child = spawn(executablePath, args, {

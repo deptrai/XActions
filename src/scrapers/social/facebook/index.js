@@ -8,3 +8,4 @@
 export { FacebookClient } from './client.js';
 export { FacebookCrawler, DEFAULT_FB_DOC_IDS } from './crawler.js';
 export { FacebookPlatformResponseValidator } from './validator.js';
+export { FacebookBrowserBridge, extractFacebookTokensScript } from './signer-bridge.js';
