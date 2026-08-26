@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-27T06:00:00.000Z
-last_updated: 2026-08-28T14:00:00.000Z
+last_updated: 2026-08-28T17:00:00.000Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -85,7 +85,7 @@ development_status:
   13-4-facebook-browser-as-signer-bridge: done
   13-5-facebook-hybrid-profile-followers-group-members: done
   13-6-facebook-hybrid-search-global-group-search: ready-for-dev
-  13-7-facebook-hybrid-post-group-comments: backlog
+  13-7-facebook-hybrid-post-group-comments: ready-for-dev
   13-8-facebook-hybrid-marketplace: backlog
   13-9-facebook-hybrid-social-actions-write-messenger: backlog
   13-10-facebook-hybrid-integration-caller-migration: backlog
