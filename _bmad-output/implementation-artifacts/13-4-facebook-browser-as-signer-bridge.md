@@ -13,7 +13,7 @@ baseline_commit: "e710906"
 
 # Story 13.4: Facebook Browser-as-Signer Integration
 
-<!-- Note: Validation pending. Run validate-create-story before dev-story. -->
+<!-- Validation: manual review patches applied; `npm run typecheck` and `npx vitest run` pass. -->
 
 ## Story
 
@@ -497,3 +497,63 @@ This mirrors and extends the existing HTTP regexes (`client.js:164-184`) but run
 - `_bmad-output/implementation-artifacts/13-4-facebook-browser-as-signer-bridge.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `docs/deprecation-plan.md`
+
+### Review Findings
+
+> **Review note:** The parallel review subagents (Blind Hunter, Edge Case Hunter, Acceptance Auditor) could not be launched because the Devin weekly usage quota was exhausted. The findings below were produced by a manual, adversarial review of the same diff.
+
+#### Decision resolved
+
+I chose **option 3** for Playwright (the default adapter): `FacebookBrowserBridge` will call `adapter.newPage(browser, { preserveProfile: false })` for each `extractTokens` invocation. For Playwright this creates a fresh `BrowserContext` per call, and `PlaywrightAdapter.closePage` closes the context, so different accounts never share cookies. For Puppeteer, which does not expose per-context cookie isolation through the current adapter, the contract remains "one `FacebookClient` per account"; this will be documented in the bridge JSDoc.
+
+
+#### Patch
+
+- [x] [Review][Patch] Use a fresh `BrowserContext` per `extractTokens` call to prevent account context sharing [src/scrapers/social/facebook/signer-bridge.js:311]
+
+Per the decision above, change `adapter.newPage(browser, { preserveProfile: true })` to `adapter.newPage(browser, { preserveProfile: false })`. For Playwright this creates a new `BrowserContext` per account call; `PlaywrightAdapter.closePage` will close the context. Add a JSDoc note that callers using `XACTIONS_SCRAPER_ADAPTER=puppeteer` must use one `FacebookClient` per account because the current `PuppeteerAdapter` does not create incognito contexts.
+
+- [x] [Review][Patch] `buildCookieHeader` in `client.js` no longer percent-encodes cookie values [src/scrapers/social/facebook/client.js:24-37]
+
+The baseline implementation percent-encoded characters `; , " \` with `encodeCookieValue`. The current implementation in `client.js` builds `${k}=${v}` without encoding, so cookie values containing those characters produce a malformed `Cookie` header. This affects `ensureTokens`, `requestGraphQl`, and the HTTP fallback path. Fix: restore the `encodeCookieValue` helper and use it for both object and array forms.
+
+- [x] [Review][Patch] Browser path does not resolve the sticky proxy from `proxyPool`/`proxyProvider` [src/scrapers/social/facebook/client.js:157-169]
+
+`FacebookClient.#getLazyBrowserBridge()` passes `proxy: this.proxy` to `FacebookBrowserBridge`, but `this.proxy` is only set when an explicit `deps.proxy` is provided. `AbstractApiClient` already has `resolveProxy(accountId)` which uses `this.proxyPool.getStickyProxy(accountId)` or `this.proxyProvider.getProxy({ accountId })`. The browser bridge should use the same sticky proxy as the HTTP path. AC-6 requires the launched Chrome to be bound to the account's sticky proxy.
+
+- [x] [Review][Patch] `FacebookBrowserBridge` constructor does not accept `proxyProvider`, `proxyPool`, or `extraArgs` [src/scrapers/social/facebook/signer-bridge.js:96-158]
+
+The spec's responsibility list includes constructor options for `proxyProvider`, `proxyPool`, and `extraArgs`. They are not wired, which blocks sticky-proxy resolution and custom Chrome launch flags. Fix: add the options and pass them through to `launchChrome`/`#getBrowser`.
+
+- [x] [Review][Patch] `buildChromeArgs` manually builds anti-leak proxy flags instead of using `ProxyIpPool.getBrowserArgs` / provider `getBrowserArgs` [src/core/cdp-launcher.js:173-191]
+
+`cdp-launcher.buildChromeArgs` duplicates the logic already in `src/proxy/proxy-pool.js:309-329` and `src/proxy/providers.js:1150-1168`. This is a maintenance risk and may drift from provider-specific normalization. Fix: call `ProxyIpPool.getBrowserArgs(proxy)` (or the resolved provider's `getBrowserArgs`) when `proxy` is set, or extract the shared normalization helper.
+
+- [x] [Review][Patch] Token extraction failure throws `XACT_4010` / `ROTATE_ACCOUNT` instead of `XACT_5030`/`XACT_5000` with `relogin`/`retry_after_delay` [src/scrapers/social/facebook/signer-bridge.js:338-345]
+
+When the page loads but `lsd`/`fb_dtsg` are both empty, the bridge throws a `PlatformError` with `XACT_4010` and `SuggestedActions.ROTATE_ACCOUNT`. AC-2 and AD-14 expect `XACT_5030`/`XACT_5000` and `relogin` or `retry_after_delay`. The final `catch` block already wraps unknown errors as `XACT_5030` / `RELOGIN`, so the explicit "no tokens" branch should align with the spec.
+
+- [x] [Review][Patch] `FacebookClient.#getLazyBrowserBridge()` is not safe for concurrent calls [src/scrapers/social/facebook/client.js:157-169]
+
+Two parallel `ensureTokens()` calls can both see `this.#ownedBrowserBridge === null` and instantiate separate `FacebookBrowserBridge` objects. Use a promise mutex (`this.#bridgePromise`) to deduplicate bridge creation.
+
+- [x] [Review][Patch] Custom `userDataDir` may not exist before Chrome launch [src/scrapers/social/facebook/signer-bridge.js:184-189]
+
+`#resolveUserDataDir` returns `path.join(process.cwd(), '.data', 'facebook-profiles', cleanId)`. Chrome may fail to launch if the parent directory does not exist. `getDefaultUserDataDir()` handles this for the default path, but a per-account custom path should also be created. Fix: `fs.mkdirSync(effectiveUserDataDir, { recursive: true })` before launch.
+
+- [x] [Review][Patch] `FacebookBrowserBridge.#parseCookies` does not URL-decode cookie values [src/scrapers/social/facebook/signer-bridge.js:196-232]
+
+The bridge extracts `c_user` from a cookie string with a raw regex and uses it as the account ID for the user-data-dir and for `rawTokens.c_user`. If the incoming `cookies` string is URL-encoded (e.g. `c_user=1000%40foo`), the encoded form is used everywhere. `FacebookClient.#fetchTokens` decodes the cookie before extracting `parsedUserId`; the bridge should do the same.
+
+#### Deferred
+
+- [x] [Review][Defer] HTTP fallback `#fetchTokens` does not extract `__rev` [src/scrapers/social/facebook/client.js:319-337] — pre-existing, browser path covers AC-2
+
+The new browser `extractFacebookTokensScript` extracts `__rev`, and `buildGraphQlBody` includes it when present. The legacy HTTP-only `#fetchTokens()` does not extract `__rev` — this behavior is unchanged from the baseline and is acceptable for the HTTP fallback path.
+
+### Post-Patch Validation
+
+- `npm run typecheck` passes.
+- `npx vitest run` passes: **194 test files passed** (3 skipped), **4121 tests passed** (54 skipped).
+- `npx vitest run tests/scrapers/social/facebook/client-signer.test.js` passes.
+- `npx vitest run tests/proxy/providers-tunnel.test.js tests/proxy/socksnode-provider.test.js` passes.

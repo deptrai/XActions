@@ -12,6 +12,30 @@ import { getAdapter } from '../../adapters/index.js';
 import { launchBrowserWithCdp, launchChrome } from '../../../core/cdp-launcher.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import path from 'node:path';
+import fs from 'node:fs';
+
+/**
+ * Minimal proxy-resolver contract used by the bridge to pick a sticky proxy per account.
+ * @typedef {Object} ProxyResolverLike
+ * @property {(options?: Record<string, unknown>) => (string | Record<string, unknown> | null)} [getProxy]
+ * @property {(accountId: string) => (string | Record<string, unknown> | null)} [getStickyProxy]
+ * @property {() => (string | Record<string, unknown> | null)} [getNext]
+ * @property {() => (string | Record<string, unknown> | null)} [getRotatingProxy]
+ * @property {() => (string | Record<string, unknown> | null)} [getRoundRobinProxy]
+ */
+
+/**
+ * Decode a cookie value when it may be URL-encoded.
+ * @param {string} value
+ * @returns {string}
+ */
+function safeDecodeCookie(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
 
 /**
  * Script executed inside the browser page context to extract Facebook security tokens.
@@ -121,6 +145,15 @@ export class FacebookBrowserBridge {
   /** @type {any} */
   proxy;
 
+  /** @type {ProxyResolverLike | null} */
+  proxyPool = null;
+
+  /** @type {ProxyResolverLike | null} */
+  proxyProvider = null;
+
+  /** @type {string[]} */
+  extraArgs = [];
+
   /** @type {any} */
   #browser = null;
 
@@ -144,6 +177,9 @@ export class FacebookBrowserBridge {
    * @param {string} [options.userDataDir]
    * @param {string} [options.profileDir]
    * @param {any} [options.proxy]
+   * @param {ProxyResolverLike | null} [options.proxyPool]
+   * @param {ProxyResolverLike | null} [options.proxyProvider]
+   * @param {string[]} [options.extraArgs]
    */
   constructor(options = {}) {
     this.baseUrl = options.baseUrl ? options.baseUrl.replace(/\/+$/, '') : 'https://www.facebook.com';
@@ -155,6 +191,9 @@ export class FacebookBrowserBridge {
     this.userDataDir = options.userDataDir || null;
     this.profileDir = options.profileDir || null;
     this.proxy = options.proxy || null;
+    this.proxyPool = options.proxyPool || null;
+    this.proxyProvider = options.proxyProvider || null;
+    this.extraArgs = options.extraArgs || [];
   }
 
   /**
@@ -232,6 +271,47 @@ export class FacebookBrowserBridge {
   }
 
   /**
+   * Resolve the sticky proxy for an account using proxyProvider/proxyPool if present,
+   * falling back to the explicit `proxy` option.
+   * @param {string} accountId
+   * @returns {any}
+   */
+  #resolveProxy(accountId) {
+    if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
+      try {
+        const p = this.proxyProvider.getProxy({ accountId });
+        if (p) return p;
+      } catch {
+        // fallthrough
+      }
+    }
+    if (this.proxyPool) {
+      if (typeof this.proxyPool.getStickyProxy === 'function') {
+        try {
+          const p = this.proxyPool.getStickyProxy(accountId);
+          if (p) return p;
+        } catch {}
+      } else if (typeof this.proxyPool.getNext === 'function') {
+        try {
+          const p = this.proxyPool.getNext();
+          if (p) return p;
+        } catch {}
+      } else if (typeof this.proxyPool.getRotatingProxy === 'function') {
+        try {
+          const p = this.proxyPool.getRotatingProxy();
+          if (p) return p;
+        } catch {}
+      } else if (typeof this.proxyPool.getRoundRobinProxy === 'function') {
+        try {
+          const p = this.proxyPool.getRoundRobinProxy();
+          if (p) return p;
+        } catch {}
+      }
+    }
+    return this.proxy;
+  }
+
+  /**
    * Ensure browser connection is ready with mutex protection against parallel launches.
    * @param {string} accountId
    * @returns {Promise<any>}
@@ -247,7 +327,11 @@ export class FacebookBrowserBridge {
     this.#launchPromise = (async () => {
       try {
         const effectiveUserDataDir = this.#resolveUserDataDir(accountId);
+        try {
+          fs.mkdirSync(effectiveUserDataDir, { recursive: true });
+        } catch {}
         const adapter = await this.#resolveAdapter();
+        const proxy = this.#resolveProxy(accountId);
 
         if (this.cdpUrl) {
           this.#browser = await launchBrowserWithCdp(this.cdpUrl, {
@@ -261,7 +345,8 @@ export class FacebookBrowserBridge {
           const launched = await launchChrome({
             userDataDir: effectiveUserDataDir,
             headless: this.headless,
-            proxy: this.proxy,
+            proxy,
+            extraArgs: this.extraArgs,
           });
           this.#chromeKiller = launched.kill;
           this.#browser = await launchBrowserWithCdp(launched.cdpUrl, {
@@ -275,7 +360,8 @@ export class FacebookBrowserBridge {
         this.#browser = await adapter.launch(/** @type {any} */ ({
           headless: this.headless,
           userDataDir: effectiveUserDataDir,
-          proxy: this.proxy,
+          proxy,
+          extraArgs: this.extraArgs,
         }));
         return this.#browser;
       } finally {
@@ -288,13 +374,17 @@ export class FacebookBrowserBridge {
 
   /**
    * Extract Facebook tokens from the live page context.
+   * Creates a fresh BrowserContext per call (Playwright) so different accounts never share
+   * cookies. Callers using `XACTIONS_SCRAPER_ADAPTER=puppeteer` must use one bridge per account
+   * because the current PuppeteerAdapter does not create incognito contexts.
    * @param {string} [accountId='fb-guest']
    * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [cookies='']
    * @returns {Promise<Record<string, any>>}
    */
   async extractTokens(accountId = 'fb-guest', cookies = '') {
     const parsedCookies = this.#parseCookies(cookies);
-    const parsedCUser = parsedCookies.find((c) => c.name === 'c_user')?.value || '';
+    const rawCUser = parsedCookies.find((c) => c.name === 'c_user')?.value || '';
+    const parsedCUser = safeDecodeCookie(rawCUser);
     const effectiveAccountId = parsedCUser || accountId;
 
     let attempt = 0;
@@ -308,7 +398,8 @@ export class FacebookBrowserBridge {
       try {
         const adapter = await this.#resolveAdapter();
         const browser = await this.#getBrowser(effectiveAccountId);
-        page = await adapter.newPage(browser, { preserveProfile: true });
+        // Use a fresh context per extraction to prevent account cookie sharing (AC-6).
+        page = await adapter.newPage(browser, { preserveProfile: false });
 
         if (parsedCookies.length > 0) {
           await adapter.setCookies(page, parsedCookies);
@@ -334,12 +425,16 @@ export class FacebookBrowserBridge {
           rawTokens.c_user = parsedCUser;
         }
 
+        if (rawTokens.c_user) {
+          rawTokens.c_user = safeDecodeCookie(String(rawTokens.c_user));
+        }
+
         if (!rawTokens.lsd && !rawTokens.fb_dtsg) {
           throw new PlatformError({
-            code: 'XACT_4010',
-            type: ErrorTypes.AUTH_EXPIRED,
+            code: 'XACT_5030',
+            type: ErrorTypes.INTERNAL,
             message: 'Failed to extract Facebook tokens via browser bridge. Session or IP may be checkpointed.',
-            suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
+            suggestedAction: SuggestedActions.RELOGIN,
             platform: 'facebook',
             accountId: effectiveAccountId,
           });

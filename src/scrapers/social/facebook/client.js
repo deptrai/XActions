@@ -17,6 +17,18 @@ import crypto from 'node:crypto';
 const MAX_TOKEN_CACHE_ENTRIES = 500;
 const DEFAULT_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
 
+const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
+
+/**
+ * Percent-encode only characters that are illegal inside a Cookie header value.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function encodeCookieValue(value) {
+  if (value == null) return '';
+  return String(value).replace(FORBIDDEN_COOKIE_CHARS, (c) => encodeURIComponent(c));
+}
+
 /**
  * @param {string | Record<string, string> | Array<{ name: string, value: string }>} cookies
  * @returns {string}
@@ -26,12 +38,12 @@ function buildCookieHeader(cookies) {
   if (Array.isArray(cookies)) {
     return cookies
       .filter((c) => c && c.name && c.value !== undefined)
-      .map((c) => `${c.name}=${c.value}`)
+      .map((c) => `${encodeCookieValue(c.name)}=${encodeCookieValue(c.value)}`)
       .join('; ');
   }
   if (cookies && typeof cookies === 'object') {
     return Object.entries(cookies)
-      .map(([k, v]) => `${k}=${v}`)
+      .map(([k, v]) => `${encodeCookieValue(k)}=${encodeCookieValue(v)}`)
       .join('; ');
   }
   return '';
@@ -80,6 +92,9 @@ export class FacebookClient extends AbstractApiClient {
   /** @type {boolean} */
   httpFallback = true;
 
+  /** @type {string[]} */
+  extraArgs = [];
+
   /** @type {FacebookBrowserBridge | null} */
   #ownedBrowserBridge = null;
 
@@ -118,6 +133,7 @@ export class FacebookClient extends AbstractApiClient {
    * @param {boolean} [deps.httpFallback]
    * @param {number} [deps.tokenTtlMs]
    * @param {any} [deps.proxy]
+   * @param {string[]} [deps.extraArgs]
    * @param {number} [deps.timeout]
    */
   constructor(deps = {}) {
@@ -145,18 +161,23 @@ export class FacebookClient extends AbstractApiClient {
     this.profileDir = deps.profileDir || null;
     this.httpFallback = deps.httpFallback ?? true;
     this.proxy = deps.proxy || null;
+    this.extraArgs = deps.extraArgs || [];
     if (deps.tokenTtlMs) {
       this.#tokenTtlMs = deps.tokenTtlMs;
+    }
+
+    // Create the owned bridge synchronously so concurrent ensureTokens() calls
+    // cannot race to instantiate two separate bridges.
+    if (!this.browserBridge && (this.cdpUrl || this.launchChrome)) {
+      this.#ownedBrowserBridge = this.#createBrowserBridge();
     }
   }
 
   /**
-   * Lazily create owned FacebookBrowserBridge if cdpUrl or launchChrome configured.
    * @returns {FacebookBrowserBridge}
    */
-  #getLazyBrowserBridge() {
-    if (this.#ownedBrowserBridge) return this.#ownedBrowserBridge;
-    this.#ownedBrowserBridge = new FacebookBrowserBridge({
+  #createBrowserBridge() {
+    return new FacebookBrowserBridge({
       baseUrl: this.baseUrl,
       cdpUrl: this.cdpUrl || undefined,
       launchChrome: this.launchChrome,
@@ -164,7 +185,20 @@ export class FacebookClient extends AbstractApiClient {
       headless: this.headless,
       userDataDir: this.userDataDir || this.profileDir || undefined,
       proxy: this.proxy,
+      proxyPool: this.proxyPool ?? null,
+      proxyProvider: this.proxyProvider ?? null,
+      extraArgs: this.extraArgs,
     });
+  }
+
+  /**
+   * Return the owned FacebookBrowserBridge.
+   * @returns {FacebookBrowserBridge}
+   */
+  #getLazyBrowserBridge() {
+    if (!this.#ownedBrowserBridge) {
+      this.#ownedBrowserBridge = this.#createBrowserBridge();
+    }
     return this.#ownedBrowserBridge;
   }
 

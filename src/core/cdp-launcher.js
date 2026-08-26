@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
+import { globalProxyPool } from '../proxy/proxy-pool.js';
 
 /**
  * Resolve a bare executable name against the process PATH.
@@ -171,23 +172,9 @@ export function buildChromeArgs(options = {}) {
   }
 
   if (options.proxy) {
-    const rawProxy = typeof options.proxy === 'string'
-      ? options.proxy
-      : (options.proxy.server || `${options.proxy.scheme || 'http'}://${options.proxy.host}:${options.proxy.port}`);
-    let proxyHost = '';
-    try {
-      const u = new URL(rawProxy.includes('://') ? rawProxy : `http://${rawProxy}`);
-      proxyHost = u.hostname;
-    } catch {
-      proxyHost = typeof options.proxy === 'object' && options.proxy?.host ? options.proxy.host : '';
-    }
-    const hostExclude = proxyHost.includes(':') && !proxyHost.startsWith('[') ? `[${proxyHost}]` : proxyHost;
-    args.push(
-      '--force-webrtc-ip-handling-policy=disable_non_proxied_udp',
-      `--proxy-server=${rawProxy}`,
-      `--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE ${hostExclude || '127.0.0.1'}`,
-      '--disable-features=WebRtcHideLocalIpsWithMdns'
-    );
+    // Delegate anti-leak proxy flag generation to the shared ProxyIpPool normalizer.
+    const proxyArgs = globalProxyPool.getBrowserArgs(options.proxy);
+    args.push(...proxyArgs);
   }
 
   if (Array.isArray(options.extraArgs)) {

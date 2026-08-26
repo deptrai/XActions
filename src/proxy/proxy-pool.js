@@ -325,6 +325,9 @@ export class ProxyIpPool {
       : normalized.host;
     flags.push(`--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE ${proxyHost}`);
 
+    // Prevent WebRTC from leaking the real local IP when a proxy is used.
+    flags.push('--disable-features=WebRtcHideLocalIpsWithMdns');
+
     return flags;
   }
 

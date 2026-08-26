@@ -43,3 +43,7 @@
 - [ ] [Review][P2][Defer] No `comment-tree.test.js` for cycles, duplicate IDs, orphan re-parenting, or `subCommentsCount=0` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
 - [ ] [Review][P2][Defer] No concurrency / `p-limit` / shared-state race tests for `CommentTreeExtractor` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
 - [ ] [Review][P2][Defer] Legacy Puppeteer `scrapeTweets` / `searchTweets` still use post text fragment as fallback ID and lack proxy/cookie rotation and retry — only `@deprecated` markers were required for this story; defer to Epic 20.2. [src/scrapers/threads/index.js:196-213,245-316]
+
+## Deferred from: code review of 13-4-facebook-browser-as-signer-bridge (2026-08-26)
+
+- [ ] [Review][P2][Defer] HTTP fallback `#fetchTokens` does not extract `__rev` — pre-existing behavior, browser path covers AC-2. [src/scrapers/social/facebook/client.js:319-337]

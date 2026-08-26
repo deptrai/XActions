@@ -23,10 +23,11 @@ export class ProxyIpPool {
   isAllQuarantined(): boolean;
   pruneExpiredQuarantines(): void;
 
-  getProxy(): Proxy | null;
+  getProxy(options?: Record<string, unknown>): Proxy | null;
   getProxyAgent(proxy: Proxy, options?: Record<string, unknown>): unknown;
   release(proxy: Proxy): void;
-  toPlaywrightProxy(): Proxy & { bypass?: string };
+  toPlaywrightProxy(proxy: ProxyInput): (Proxy & { bypass?: string }) | null;
+  getBrowserArgs(proxy: ProxyInput): string[];
 }
 
 export const globalProxyPool: ProxyIpPool;
