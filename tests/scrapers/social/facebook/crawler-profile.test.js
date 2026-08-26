@@ -252,6 +252,7 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
     if (server) {
       await new Promise((resolve) => server.close(resolve));
     }
+    await cleanupTestDatabase();
   });
 
   // ============================================================================

@@ -11,6 +11,9 @@
 import { getAdapter } from '../../adapters/index.js';
 import { launchBrowserWithCdp, launchChrome } from '../../../core/cdp-launcher.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from '../../facebook/core.js';
+import { normalizeProfile, normalizeGroupMember, normalizeHandle } from '../../facebook/normalize.js';
+import { normalizeFacebookProfile, normalizeFacebookGroupMember } from './normalize-profile.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -115,6 +118,188 @@ export function extractFacebookTokensScript() {
   result.c_user = cookieUserMatch ? cookieUserMatch[1] : (scriptUserMatch ? (scriptUserMatch[1] || scriptUserMatch[2]) : '');
 
   return result;
+}
+
+/**
+ * Parse a human-readable count (e.g. "12.5K", "3M", "1,234") into a number.
+ * @param {unknown} input
+ * @returns {number}
+ */
+function parseHumanCount(input) {
+  if (input == null) return 0;
+  if (typeof input === 'number' && Number.isFinite(input)) return Math.max(0, Math.floor(input));
+  const str = String(input).trim();
+  if (!str) return 0;
+  const m = str.match(/^([\d,.]+)\s*([KkMmBb])?$/);
+  if (!m) return 0;
+  let value = parseFloat(m[1].replace(/,/g, ''));
+  if (Number.isNaN(value)) return 0;
+  const suffix = m[2]?.toUpperCase();
+  if (suffix === 'K') value *= 1_000;
+  if (suffix === 'M') value *= 1_000_000;
+  if (suffix === 'B') value *= 1_000_000_000;
+  return Math.max(0, Math.floor(value));
+}
+
+/**
+ * Resolve a Facebook handle input to a clean handle/path suitable for mbasic.
+ * @param {string} input
+ * @returns {string}
+ */
+function resolveProfileHandle(input) {
+  if (/^\d+$/.test(input)) return input;
+  return normalizeHandle(input);
+}
+
+/**
+ * Extract profile fields from a loaded mbasic/desktop page.
+ * This is a standalone function so it can be passed to adapter.evaluate().
+ * @param {string} handle
+ * @returns {Record<string, any> | null}
+ */
+function extractMbasicProfileFromDom(handle) {
+  const body = document.body;
+  if (!body) return null;
+
+  const bodyText = (body.textContent || body.innerText || '').trim();
+  const pageTitle = (document.title || '').trim();
+
+  const getMeta = (prop) => {
+    const el = document.querySelector('meta[property="' + prop + '"], meta[name="' + prop + '"]');
+    return el?.getAttribute('content') || null;
+  };
+
+  const isGibberishName = (n) => {
+    if (!n) return true;
+    const trimmed = n.trim();
+    if (!trimmed) return true;
+    if (/^[\d,.$\s]+$/.test(trimmed)) return true;
+    if (/\d+\s*(friends?|followers?|likes?)/i.test(trimmed)) return true;
+    if (/^(facebook|log\s*in|home|search|messages?|notifications?|menu|find friends|add friends|friend requests|suggested for you|people you may know|add friend|edit profile|this browser isn\'t supported|add to story)$/i.test(trimmed)) return true;
+    return false;
+  };
+
+  // Detect a login wall before extracting content.
+  const hasLoginForm = !!document.querySelector('form[action*="login"], [data-testid="royal_login_form"]');
+  const hasLoginIndicators = /log\s*in\s*(?:to\s*(?:view|facebook))?/i.test(bodyText) &&
+    (/forgot(?:ten)?\s*(?:account|password)/i.test(bodyText) ||
+     /create\s*new\s*account/i.test(bodyText) ||
+     /password/i.test(bodyText));
+  if (hasLoginForm || hasLoginIndicators || /^log\s*in\s*to\s*view/i.test(bodyText)) {
+    return null;
+  }
+
+  // Name: prefer document.title, then og:title, then h1, then other headings.
+  let name = null;
+  const ogTitle = getMeta('og:title');
+  for (const candidate of [pageTitle, ogTitle]) {
+    if (typeof candidate !== 'string') continue;
+    const stripped = candidate
+      .replace(/\s*[-\u00b7\u2014\u2013]\s*\d[\d,.]*\s*(?:friends?|followers?|likes?)\s*$/i, '')
+      .replace(/\s*\d[\d,.]*\s*(?:friends?|followers?|likes?)\s*$/i, '')
+      .replace(/\s*\|\s*Facebook\s*$/i, '')
+      .replace(/\s*-\s*Facebook\s*$/i, '')
+      .trim();
+    if (stripped && !isGibberishName(stripped)) {
+      name = stripped;
+      break;
+    }
+  }
+
+  if (isGibberishName(name)) {
+    const h1 = document.querySelector('h1');
+    const h1Text = h1?.textContent?.trim() || h1?.innerText?.trim() || null;
+    if (h1Text && !isGibberishName(h1Text)) name = h1Text;
+  }
+
+  if (isGibberishName(name)) {
+    const candidates = document.querySelectorAll('h2, strong, div[role="main"] h3, div#root h3, .actor, a[href*="/profile.php"]');
+    for (const el of candidates) {
+      const txt = el.textContent?.trim() || el.innerText?.trim();
+      if (txt && !isGibberishName(txt)) {
+        name = txt;
+        break;
+      }
+    }
+  }
+
+  // Avatar from Open Graph first, then DOM img fallbacks.
+  let avatar = getMeta('og:image');
+  if (!avatar) {
+    const avatarImg = document.querySelector('img[alt*="profile"], img[src*="scontent"], a[href*="photo.php"] img, img.profPic');
+    if (avatarImg) {
+      avatar = avatarImg.getAttribute('src') || avatarImg.getAttribute('data-src') || null;
+    }
+  }
+
+  // Followers / likes / friends counts from body text.
+  let followers = null;
+  const followerMatch = bodyText.match(/([\d,.]+[KkMmBb]?)\s*(followers?|people\s+follow|likes?|friends?)/i);
+  if (followerMatch) followers = followerMatch[1];
+
+  // Bio from og:description (strip counts) or first paragraph.
+  let bio = null;
+  const ogDescription = getMeta('og:description');
+  if (typeof ogDescription === 'string') {
+    bio = ogDescription.replace(/^[\d,.]+[KkMmBb]?\s*(followers?|friends?|people\s+follow|likes?)\b[^.]*[.\u00b7]/i, '').trim() || null;
+  }
+  if (!bio) {
+    const paragraphs = document.querySelectorAll('div[role="main"] p, div#root p, p');
+    for (const p of paragraphs) {
+      const txt = p.textContent?.trim() || p.innerText?.trim();
+      if (txt && txt !== name && !/\b(followers?|likes?)\b/i.test(txt)) {
+        bio = txt;
+        break;
+      }
+    }
+  }
+
+  // Numeric user id from the final URL for profile.php?id= inputs.
+  const pageUrl = window.location.href;
+  let userId = null;
+  const idMatch = pageUrl.match(/[?&]id=(\d+)/);
+  if (idMatch) userId = idMatch[1];
+
+  // Return raw meta/DOM fields so the legacy normalizeProfile can parse them.
+  return {
+    ogTitle: name || pageTitle,
+    ogDescription: typeof ogDescription === 'string' ? ogDescription : (bio || ''),
+    ogImage: avatar,
+    domFollowers: followers,
+    pageUrl,
+    userId,
+  };
+}
+
+/**
+ * Extract group member links from a loaded group /members page.
+ * This is a standalone function so it can be passed to adapter.evaluate().
+ * @returns {Record<string, any>[]}
+ */
+function extractGroupMembersFromDom() {
+  /** @type {Record<string, any>[]} */
+  const results = [];
+  const seen = new Set();
+  const links = document.querySelectorAll('a[href*="/groups/"][href*="/user/"]');
+  for (const a of links) {
+    const href = a.getAttribute('href') || '';
+    const name = a.textContent?.trim() || a.innerText?.trim() || '';
+    if (!name || name.length <= 1 || name.length >= 100) continue;
+    let fullUrl = href.startsWith('http') ? href : 'https://www.facebook.com' + href;
+    fullUrl = fullUrl.split('?')[0].replace(/\/$/, '');
+    if (seen.has(fullUrl)) continue;
+    seen.add(fullUrl);
+    const parts = fullUrl.split('/').filter(Boolean);
+    const userId = parts[parts.length - 1] || '';
+    results.push({
+      id: userId,
+      name,
+      username: userId,
+      profileUrl: fullUrl,
+      platform: 'facebook',
+    });
+  }
+  return results;
 }
 
 export class FacebookBrowserBridge {
@@ -479,6 +664,273 @@ export class FacebookBrowserBridge {
       accountId: effectiveAccountId,
       cause: lastError,
     });
+  }
+
+  /**
+   * Resolve a base URL for profile fallback. Defaults to mbasic because it is
+   * lighter and less bot-sensitive, but honors test/local overrides.
+   * @param {string} [baseUrl]
+   * @returns {string}
+   */
+  #resolveProfileBaseUrl(baseUrl) {
+    const input = (baseUrl || this.baseUrl || 'https://mbasic.facebook.com').replace(/\/+$/, '');
+    if (input === 'https://www.facebook.com' || input === 'http://www.facebook.com') {
+      return 'https://mbasic.facebook.com';
+    }
+    return input;
+  }
+
+  /**
+   * Small delay helper used between scroll/extraction iterations.
+   * @param {number} ms
+   * @returns {Promise<void>}
+   */
+  #sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Poll the DOM for a selector using repeated adapter.evaluate() calls.
+   * @param {import('../../adapters/base.js').BaseAdapter} adapter
+   * @param {any} page
+   * @param {string} selector
+   * @param {number} timeout
+   * @returns {Promise<boolean>}
+   */
+  async #pollForSelector(adapter, page, selector, timeout) {
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+      const found = /** @type {boolean} */ (await adapter.evaluate(page, (sel) => {
+        return document.querySelector(sel) !== null;
+      }, selector));
+      if (found) return true;
+      await this.#sleep(500);
+    }
+    return false;
+  }
+
+  /**
+   * Scrape a Facebook profile via the browser bridge (mbasic-first).
+   * @param {string} username
+   * @param {Object} [options={}]
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
+   * @param {string} [options.accountId]
+   * @param {string} [options.baseUrl]
+   * @param {number} [options.timeout]
+   * @returns {Promise<import('../../../core/types.js').ProfileItem>}
+   */
+  async scrapeProfile(username, options = {}) {
+    if (!username || typeof username !== 'string') {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Profile username is required',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const accountId = options.accountId || 'fb-guest';
+    const baseUrl = this.#resolveProfileBaseUrl(options.baseUrl);
+    const handle = resolveProfileHandle(username);
+    const isNumeric = /^\d+$/.test(handle);
+    const profilePath = isNumeric ? 'profile.php?id=' + handle : handle;
+    const profileUrl = baseUrl + '/' + profilePath + (profilePath.includes('?') ? '&' : '?') + 'v=timeline';
+    const timeout = options.timeout || 30000;
+
+    const adapter = await this.#resolveAdapter();
+    const browser = await this.#getBrowser(accountId);
+    let page = null;
+    try {
+      page = await adapter.newPage(browser, { preserveProfile: false });
+
+      const parsedCookies = this.#parseCookies(options.cookies || '');
+      if (parsedCookies.length > 0) {
+        await adapter.setCookies(page, parsedCookies);
+      }
+
+      await adapter.goto(page, profileUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout,
+      });
+
+      const raw = /** @type {Record<string, any> | null} */ (await adapter.evaluate(page, extractMbasicProfileFromDom, handle));
+
+      if (!raw || (!raw.ogTitle && !raw.ogDescription && !raw.ogImage)) {
+        throw new PlatformError({
+          code: 'XACT_4004',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'Profile not found via browser fallback',
+          suggestedAction: SuggestedActions.RELOGIN,
+          platform: 'facebook',
+          accountId,
+        });
+      }
+
+      const legacy = normalizeProfile(raw, handle);
+      if (!legacy.name && !legacy.bio && !legacy.avatar && !legacy.followers) {
+        throw new PlatformError({
+          code: 'XACT_4004',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'Profile not found via browser fallback',
+          suggestedAction: SuggestedActions.RELOGIN,
+          platform: 'facebook',
+          accountId,
+        });
+      }
+
+      const externalId = raw.userId || handle;
+      const rawForProfile = {
+        id: externalId,
+        name: legacy.name,
+        username: legacy.username,
+        bio_text: { text: legacy.bio || '' },
+        profile_picture: { uri: legacy.avatar || '' },
+        profile_url: legacy.url || profileUrl,
+        follower_count: parseHumanCount(legacy.followers),
+      };
+      const profile = normalizeFacebookProfile(rawForProfile, 'browser');
+      if (!profile) {
+        throw new PlatformError({
+          code: 'XACT_5000',
+          type: ErrorTypes.INTERNAL,
+          message: 'Failed to normalize profile from browser fallback',
+          suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+          platform: 'facebook',
+          accountId,
+        });
+      }
+      return profile;
+    } finally {
+      if (page && this.adapter) {
+        try {
+          await this.adapter.closePage(page);
+        } catch {}
+      }
+    }
+  }
+
+  /**
+   * Scrape the members of a Facebook group via the browser bridge.
+   * @param {string} groupUrl - Full group URL or group id/slug
+   * @param {Object} [options={}]
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
+   * @param {string} [options.accountId]
+   * @param {number} [options.limit]
+   * @param {string} [options.baseUrl]
+   * @param {number} [options.timeout]
+   * @returns {Promise<{ members: import('../../../core/types.js').ProfileItem[], note?: string, pageInfo?: any }>}
+   */
+  async scrapeGroupMembers(groupUrl, options = {}) {
+    if (!groupUrl || typeof groupUrl !== 'string') {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Group URL or groupId is required',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const accountId = options.accountId || 'fb-guest';
+    const limit = typeof options.limit === 'number' && Number.isFinite(options.limit) && options.limit > 0
+      ? Math.min(Math.floor(options.limit), 1000)
+      : 100;
+    const timeout = options.timeout || 30000;
+    const baseUrl = (options.baseUrl || this.baseUrl || 'https://www.facebook.com').replace(/\/+$/, '');
+
+    let resolvedGroupUrl = groupUrl.trim();
+    if (!/^https?:\/\//i.test(resolvedGroupUrl)) {
+      resolvedGroupUrl = baseUrl + '/groups/' + resolvedGroupUrl.replace(/^\/+/, '');
+    } else {
+      assertFacebookUrlLocal(resolvedGroupUrl, 'groupUrl');
+    }
+    const membersUrl = resolvedGroupUrl.replace(/\/$/, '') + '/members';
+    const groupMatch = resolvedGroupUrl.match(/\/groups\/([^/?#]+)/);
+    const groupId = groupMatch ? groupMatch[1] : groupUrl;
+
+    const adapter = await this.#resolveAdapter();
+    const browser = await this.#getBrowser(accountId);
+    let page = null;
+    try {
+      page = await adapter.newPage(browser, { preserveProfile: false });
+
+      const parsedCookies = this.#parseCookies(options.cookies || '');
+      if (parsedCookies.length > 0) {
+        await adapter.setCookies(page, parsedCookies);
+      }
+
+      await adapter.goto(page, membersUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout,
+      });
+
+      const memberSelector = 'a[href*="/groups/"][href*="/user/"]';
+      const hasMembers = await this.#pollForSelector(adapter, page, memberSelector, 10000);
+
+      if (!hasMembers) {
+        return {
+          members: [],
+          note: 'Group is private or members list is restricted. Please retry with relogin if you are a member.',
+          pageInfo: null,
+        };
+      }
+
+      const members = new Map();
+      let stalls = 0;
+      const maxStalls = 5;
+
+      while (members.size < limit && stalls < maxStalls) {
+        const prevSize = members.size;
+        const rawMembers = /** @type {Record<string, any>[]} */ (await adapter.evaluate(page, extractGroupMembersFromDom));
+
+        for (const raw of rawMembers) {
+          if (members.has(raw.profileUrl)) continue;
+          const legacy = normalizeGroupMember(raw);
+          const externalId = raw.id || legacy.username || '';
+          if (!externalId) continue;
+          const rawForMember = {
+            id: externalId,
+            name: legacy.name,
+            username: legacy.username,
+            profile_url: legacy.profileUrl,
+          };
+          const member = normalizeFacebookGroupMember(rawForMember, groupId, 'browser');
+          if (!member) continue;
+          members.set(raw.profileUrl, member);
+          if (members.size >= limit) break;
+        }
+
+        if (members.size === prevSize) {
+          stalls++;
+        } else {
+          stalls = 0;
+        }
+
+        if (members.size >= limit) break;
+
+        await adapter.scroll(page, { y: 1000 });
+        await this.#sleep(1000 + Math.floor(Math.random() * 1000));
+      }
+
+      const results = Array.from(members.values());
+      if (results.length === 0) {
+        return {
+          members: [],
+          note: 'Group is private or members list is restricted. Please retry with relogin if you are a member.',
+          pageInfo: null,
+        };
+      }
+
+      return {
+        members: results,
+        pageInfo: { has_next_page: false, end_cursor: null },
+      };
+    } finally {
+      if (page && this.adapter) {
+        try {
+          await this.adapter.closePage(page);
+        } catch {}
+      }
+    }
   }
 
   /**

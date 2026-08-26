@@ -170,6 +170,7 @@ export class FacebookClient extends AbstractApiClient {
     // cannot race to instantiate two separate bridges.
     if (!this.browserBridge && (this.cdpUrl || this.launchChrome)) {
       this.#ownedBrowserBridge = this.#createBrowserBridge();
+      this.browserBridge = this.#ownedBrowserBridge;
     }
   }
 
@@ -521,6 +522,44 @@ export class FacebookClient extends AbstractApiClient {
   clearTokenCache() {
     this.#tokenCache.clear();
     this.#pendingTokenFetches.clear();
+  }
+
+  /**
+   * Scrape a profile using the browser bridge when GraphQL has no data.
+   * @param {string} username
+   * @param {Object} [options={}]
+   * @returns {Promise<import('../../../core/types.js').ProfileItem>}
+   */
+  async scrapeProfileWithBrowser(username, options = {}) {
+    if (!this.browserBridge) {
+      throw new PlatformError({
+        code: 'XACT_5030',
+        type: 'NOT_AVAILABLE',
+        message: 'Browser bridge is not configured',
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'facebook',
+      });
+    }
+    return this.browserBridge.scrapeProfile(username, options);
+  }
+
+  /**
+   * Scrape group members using the browser bridge when GraphQL has no data.
+   * @param {string} groupUrl
+   * @param {Object} [options={}]
+   * @returns {Promise<{ members: import('../../../core/types.js').ProfileItem[], note?: string, pageInfo?: any }>}
+   */
+  async scrapeGroupMembersWithBrowser(groupUrl, options = {}) {
+    if (!this.browserBridge) {
+      throw new PlatformError({
+        code: 'XACT_5030',
+        type: 'NOT_AVAILABLE',
+        message: 'Browser bridge is not configured',
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'facebook',
+      });
+    }
+    return this.browserBridge.scrapeGroupMembers(groupUrl, options);
   }
 
   /**

@@ -176,7 +176,7 @@ describe('Story 13.4 — Facebook Browser-as-Signer Bridge', () => {
     expect(client.requiresAuth).toBe(true);
     expect(client.platform).toBe('facebook');
 
-    expect(client.browserBridge).toBeNull();
+    expect(client.browserBridge).not.toBeNull();
     expect(client.cdpUrl).toBe('http://127.0.0.1:9222');
     expect(client.launchChrome).toBe(true);
     expect(client.adapterName).toBe('playwright');

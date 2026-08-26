@@ -2,7 +2,7 @@
 story_id: "13.5"
 epic: 13
 story_key: "13-5-facebook-hybrid-profile-followers-group-members"
-status: "in-progress"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-27
 updated: 2026-08-28
@@ -14,7 +14,7 @@ baseline_commit: "80f91a5"
 
 # Story 13.5: Facebook Hybrid Profile, Followers & Group Members
 
-Status: in-progress
+Status: done
 
 <!-- Validation: ultimate context engine analysis completed. Run dev-story for implementation. -->
 
@@ -874,11 +874,13 @@ Dưới đây là các payload mẫu để dùng trong test `http.createServer`.
 - [x] Triển khai `PrismaStore.saveCheckpoint()` (hoặc fallback `prisma.crawlCheckpoint.upsert()`) và emit `stream:social:raw_posts`.
 - [x] Thêm `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeGroupMembers` và cập nhật `docs/deprecation-plan.md`.
 - [x] Viết tests thực (no mocks) cho các action mới.
+- [x] Triển khai `FacebookBrowserBridge` fallback nội dung cho `profile` và `group_members` khi GraphQL trả về rỗng hoặc nhóm private/restricted.
 
 ### File List
 
 - `src/scrapers/social/facebook/crawler.js` (update)
 - `src/scrapers/social/facebook/client.js` (update)
+- `src/scrapers/social/facebook/signer-bridge.js` (update — `scrapeProfile`, `scrapeGroupMembers` browser fallback)
 - `src/scrapers/social/facebook/index.js` (update)
 - `src/scrapers/social/facebook/validator.js` (update)
 - `src/core/types.js` (update)
@@ -887,6 +889,9 @@ Dưới đây là các payload mẫu để dùng trong test `http.createServer`.
 - `src/scrapers/social/facebook/normalize-profile.js` (create)
 - `schemas/facebook/social.json` (create)
 - `tests/scrapers/social/facebook/crawler-profile.test.js` (create)
+- `tests/scrapers/social/facebook/browser-bridge-content.test.js` (create)
+- `tests/scrapers/social/facebook/client-signer.test.js` (update — `browserBridge` constructor expectation)
+- `tests/cli/checkpoints-cli.test.js` (update — test isolation cleanup)
 - `docs/deprecation-plan.md` (update)
 - `src/scrapers/facebook/profile.js` (deprecation JSDoc only)
 - `src/scrapers/facebook/followers.js` (deprecation JSDoc only)

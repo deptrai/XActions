@@ -1064,6 +1064,33 @@ export class FacebookCrawler extends AbstractCrawler {
   }
 
   /**
+   * Persist and return a group-members result produced by the browser bridge.
+   * @param {string} groupId
+   * @param {{ members?: import('../../../core/types.js').ProfileItem[], note?: string, pageInfo?: any }} bridgeResult
+   * @returns {Promise<{ members: import('../../../core/types.js').ProfileItem[], note?: string, pageInfo?: any }>}
+   */
+  async #processGroupMembersBridgeResult(groupId, bridgeResult) {
+    const members = bridgeResult?.members || [];
+    const note = bridgeResult?.note;
+    const pageInfo = bridgeResult?.pageInfo || null;
+    const postItems = [];
+
+    for (const member of members) {
+      const postItem = profileItemToPostItem(member);
+      this.validateItem(postItem);
+      postItems.push(postItem);
+    }
+
+    if (this.store && typeof this.store.storeBatch === 'function' && postItems.length > 0) {
+      await this.store.storeBatch(postItems, { upsert: true });
+    }
+
+    await this.#saveCheckpoint('group_members', groupId, pageInfo?.end_cursor || null, postItems, Boolean(pageInfo?.has_next_page));
+
+    return { members, note, pageInfo };
+  }
+
+  /**
    * Internal checkpoint saver and thin-event stream emitter.
    * @param {string} targetType
    * @param {string} targetKey
@@ -1151,29 +1178,57 @@ export class FacebookCrawler extends AbstractCrawler {
     };
 
     const docId = this.docIds.PROFILE || DEFAULT_FB_DOC_IDS.PROFILE;
-    const res = await this.client.requestGraphQl(docId, variables, {
-      accountId,
-      cookies,
-    });
+    let res = null;
+    let graphQlErr = null;
+    try {
+      res = await this.client.requestGraphQl(docId, variables, {
+        accountId,
+        cookies,
+      });
+    } catch (err) {
+      if (err instanceof PlatformError && (err.type === ErrorTypes.AUTH_EXPIRED || err.type === ErrorTypes.RATE_LIMIT)) {
+        throw err;
+      }
+      graphQlErr = err;
+    }
 
     const profileData = res?.data?.user || res?.data?.node || res?.data?.page;
+
+    let profile = null;
     if (!profileData || typeof profileData !== 'object' || (!profileData.id && !profileData.userID && !profileData.username)) {
-      throw new PlatformError({
-        code: 'XACT_4004',
-        type: ErrorTypes.INVALID_ARGS,
-        message: `Profile not found for ${targetKey}`,
-        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
-      });
+      if (this.client?.browserBridge) {
+        try {
+          profile = await this.client.scrapeProfileWithBrowser(targetKey, {
+            cookies,
+            accountId,
+            baseUrl: this.client.baseUrl,
+          });
+        } catch (bridgeErr) {
+          if (bridgeErr instanceof PlatformError) {
+            throw bridgeErr;
+          }
+          throw graphQlErr || bridgeErr;
+        }
+      }
+      if (!profile) {
+        throw graphQlErr || new PlatformError({
+          code: 'XACT_4004',
+          type: ErrorTypes.INVALID_ARGS,
+          message: `Profile not found for ${targetKey}`,
+          suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        });
+      }
+    } else {
+      profile = normalizeFacebookProfile(profileData, 'graphql');
+      if (!profile) {
+        profile = normalizeFacebookProfile({
+          id: targetKey,
+          username: targetKey,
+          name: targetKey,
+        }, 'graphql');
+      }
     }
 
-    let profile = normalizeFacebookProfile(profileData, 'graphql');
-    if (!profile) {
-      profile = normalizeFacebookProfile({
-        id: targetKey,
-        username: targetKey,
-        name: targetKey,
-      }, 'graphql');
-    }
     if (!profile || (!profile.username && !profile.externalId)) {
       throw new PlatformError({
         code: 'XACT_5000',
@@ -1442,6 +1497,19 @@ export class FacebookCrawler extends AbstractCrawler {
 
         // A missing group object with placeholder doc_ids is a reasonable restricted signal.
         if (!group && members.length === 0) {
+          if (this.client?.browserBridge) {
+            try {
+              const bridgeResult = await this.client.scrapeGroupMembersWithBrowser(groupId, {
+                cookies,
+                accountId,
+                limit,
+                baseUrl: this.client.baseUrl,
+              });
+              return this.#processGroupMembersBridgeResult(groupId, bridgeResult);
+            } catch (bridgeErr) {
+              if (bridgeErr instanceof PlatformError) throw bridgeErr;
+            }
+          }
           return {
             members: [],
             pageInfo,
@@ -1478,6 +1546,19 @@ export class FacebookCrawler extends AbstractCrawler {
         throw err;
       }
       if (members.length === 0) {
+        if (this.client?.browserBridge) {
+          try {
+            const bridgeResult = await this.client.scrapeGroupMembersWithBrowser(groupId, {
+              cookies,
+              accountId,
+              limit,
+              baseUrl: this.client.baseUrl,
+            });
+            return this.#processGroupMembersBridgeResult(groupId, bridgeResult);
+          } catch (bridgeErr) {
+            if (bridgeErr instanceof PlatformError) throw bridgeErr;
+          }
+        }
         return {
           members: [],
           pageInfo,
