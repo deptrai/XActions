@@ -23,7 +23,7 @@
  * @property {number} [repliesCount]
  * @property {number} [viewsCount]
  * @property {Object} [metadata]
- * @property {Date} [publishedAt]
+ * @property {Date | null} [publishedAt]
  * @property {Date} crawledAt
  */
 
@@ -42,7 +42,23 @@
  * @property {number} [likesCount]
  * @property {number} [subCommentsCount]
  * @property {Object} [metadata]
- * @property {Date} [publishedAt]
+ * @property {Date | null} [publishedAt]
+ * @property {Date} crawledAt
+ */
+
+/**
+ * @typedef {Object} ProfileItem
+ * @property {string} id - Namespaced id: `${platform}:${externalId}`
+ * @property {string} platform
+ * @property {string} externalId
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [bio]
+ * @property {string} [avatar]
+ * @property {string} [profileUrl]
+ * @property {number} [followersCount]
+ * @property {number} [followingCount]
+ * @property {Object} [metadata]
  * @property {Date} crawledAt
  */
 

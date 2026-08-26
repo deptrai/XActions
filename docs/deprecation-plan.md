@@ -79,6 +79,7 @@ Xoá theo thứ tự:
 | Twitter HTTP (`src/scrapers/twitter/http/`) | `deprecated-planned` | Phase 2–3 | TBD |
 | `src/client/Scraper.js` | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-planned` | Phase 2–3 | TBD |
+| Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
 | FacebookClient HTTP-only token extraction (`src/scrapers/social/facebook/client.js`) | `deprecated-planned` | Phase 1 (Epic 13.4) | DEV |
 | Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-marked` | Phase 1 (Epic 15.1) | DEV |
 | `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |

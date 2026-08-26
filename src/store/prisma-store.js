@@ -297,6 +297,66 @@ export class PrismaStore extends AbstractStore {
     }
   }
 
+  /**
+   * Save or update crawl checkpoint in Prisma database.
+   * @param {Object} checkpoint
+   * @param {string} checkpoint.platform
+   * @param {string} checkpoint.targetType
+   * @param {string} checkpoint.targetKey
+   * @param {string} [checkpoint.lastCursor]
+   * @param {Date} [checkpoint.lastTimestamp]
+   * @param {Date} [checkpoint.lastCrawledAt]
+   * @param {string} [checkpoint.status='completed']
+   * @param {string} [checkpoint.storageRef]
+   * @returns {Promise<any>}
+   */
+  async saveCheckpoint(checkpoint) {
+    if (!checkpoint || !checkpoint.platform || !checkpoint.targetType || !checkpoint.targetKey) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Checkpoint must contain platform, targetType, and targetKey',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    await this.init();
+    const model = /** @type {any} */ (this.#prisma)?.crawlCheckpoint;
+    if (!model) return null;
+
+    const key = {
+      platform_targetType_targetKey: {
+        platform: checkpoint.platform,
+        targetType: checkpoint.targetType,
+        targetKey: checkpoint.targetKey,
+      },
+    };
+
+    const data = {
+      platform: checkpoint.platform,
+      targetType: checkpoint.targetType,
+      targetKey: checkpoint.targetKey,
+      lastCursor: checkpoint.lastCursor || null,
+      lastTimestamp: checkpoint.lastTimestamp ? new Date(checkpoint.lastTimestamp) : null,
+      lastCrawledAt: checkpoint.lastCrawledAt ? new Date(checkpoint.lastCrawledAt) : new Date(),
+      status: checkpoint.status || 'completed',
+      storageRef: checkpoint.storageRef || null,
+    };
+
+    return model.upsert({
+      where: key,
+      update: data,
+      create: data,
+    });
+  }
+
+  /**
+   * Return underlying PrismaClient instance.
+   * @returns {import('@prisma/client').PrismaClient | null}
+   */
+  get prisma() {
+    return this.#prisma;
+  }
+
   /** @returns {Promise<void>} */
   async close() {
     if (this.#prisma) {

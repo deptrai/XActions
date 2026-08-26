@@ -2,7 +2,7 @@
 story_id: "13.5"
 epic: 13
 story_key: "13-5-facebook-hybrid-profile-followers-group-members"
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 4"
 created: 2026-08-27
 updated: 2026-08-27
@@ -14,7 +14,7 @@ baseline_commit: "80f91a5"
 
 # Story 13.5: Facebook Hybrid Profile, Followers & Group Members
 
-Status: ready-for-dev
+Status: review
 
 <!-- Validation: ultimate context engine analysis completed. Run dev-story for implementation. -->
 
@@ -149,37 +149,37 @@ so that **tôi có thể thu thập dữ liệu cá nhân/cộng đồng với t
 
 ## Tasks / Subtasks
 
-- [ ] T1: Thêm `ProfileItem` type/normalizer và dispatcher (AC-3, AC-7)
-  - [ ] T1.1: Định nghĩa `ProfileItem` JSDoc/typedef (id, platform, externalId, username, name, bio, avatar, profileUrl, followersCount, followingCount, metadata, crawledAt) trong `src/core/types.js` và `ProfileItem` interface trong `types/core.d.ts`
-  - [ ] T1.2: Tạo `src/scrapers/social/facebook/normalize-profile.js` với `normalizeFacebookProfile`, `normalizeFacebookFollower`, `normalizeFacebookGroupMember`, `namespacedId`
-  - [ ] T1.3: Sử dụng `FacebookClient.requestGraphQl()` làm dispatcher; chỉ thêm alias `dispatch()` nếu cần, không tạo `graphql-dispatcher.js` riêng
-  - [ ] T1.4: Bổ sung `DEFAULT_FB_DOC_IDS` placeholders cho `PROFILE`, `FOLLOWERS`, `FOLLOWING`, `GROUP_MEMBERS` [dòng 39-49 crawler.js]
-- [ ] T2: Mở rộng `FacebookClient` (AC-3, AC-4, AC-6)
-  - [ ] T2.1: Thêm helper `resolveTargetKey(username|url)` sử dụng `normalizeHandle` pattern
-  - [ ] T2.2: Thêm `resolveGroupId(groupUrl)` với `assertFacebookUrlLocal` SSRF guard
-  - [ ] T2.3: Đảm bảo `requestGraphQl` hỗ trợ doc_id mới và graceful doc_id rotation
-- [ ] T3: Mở rộng `FacebookCrawler` với action mới (AC-2, AC-4, AC-5, AC-6)
-  - [ ] T3.1: `registerAction('profile', ...)` handler `profile(args, session)`
-  - [ ] T3.2: `registerAction('followers', ...)` handler với pagination
-  - [ ] T3.3: `registerAction('following', ...)` handler best-effort với fallback note/UNSUPPORTED_ACTION
-  - [ ] T3.4: `registerAction('group_members', ...)` handler với group URL parsing
-  - [ ] T3.5: `getGroupPosts`/`getPagePosts` hiện có giữ nguyên (không regression); nếu cập nhật metadata để phù hợp `schemas/facebook/social.json`, phải vẫn pass regression
-- [ ] T4: Lưu trữ, schema & Checkpoint (AC-8)
-  - [ ] T4.1: Tạo `schemas/facebook/social.json` với schema cho `ProfileItem` metadata (isProfile, sourceMethod, followersCount, followingCount, profilePic, coverPic, bio, location, joinDate)
-  - [ ] T4.2: Mapping `ProfileItem` → `PostItem` cho `store.storeBatch`; `publishedAt: null`
-  - [ ] T4.3: Triển khai `PrismaStore.saveCheckpoint()` hoặc expose `prisma` để gọi `prisma.crawlCheckpoint.upsert()`; ghi `lastCrawledAt` đúng Prisma field
-  - [ ] T4.4: Sau mỗi action gọi `saveCheckpoint` + emit `stream:social:raw_posts` (tham khảo `ThreadsCrawler.#emitCheckpointAndStream`)
-- [ ] T5: Deprecation markers (AC-9)
-  - [ ] T5.1: Thêm `@deprecated` JSDoc trong `src/scrapers/facebook/profile.js#scrapeProfile` [dòng 180]
-  - [ ] T5.2: Thêm `@deprecated` JSDoc trong `src/scrapers/facebook/followers.js#scrapeFollowers` [dòng 34]
-  - [ ] T5.3: Thêm `@deprecated` JSDoc trong `src/scrapers/facebook/followers.js#scrapeGroupMembers` [dòng 128]
-  - [ ] T5.4: Cập nhật `docs/deprecation-plan.md` với mapping table
-- [ ] T6: Tests (AC-10)
-  - [ ] T6.1: Tạo `tests/scrapers/social/facebook/crawler-profile.test.js`
-  - [ ] T6.2: Local server trả về tokens + JSON GraphQL cho profile/followers/following/group_members
-  - [ ] T6.3: Kiểm tra Namespaced ID `facebook:${externalId}`
-  - [ ] T6.4: Kiểm tra `listActions()` và deprecation marker tồn tại
-  - [ ] T6.5: `npm run typecheck` + `npm test -- tests/scrapers/social/facebook/`
+- [x] T1: Thêm `ProfileItem` type/normalizer và dispatcher (AC-3, AC-7)
+  - [x] T1.1: Định nghĩa `ProfileItem` JSDoc/typedef (id, platform, externalId, username, name, bio, avatar, profileUrl, followersCount, followingCount, metadata, crawledAt) trong `src/core/types.js` và `ProfileItem` interface trong `types/core.d.ts`
+  - [x] T1.2: Tạo `src/scrapers/social/facebook/normalize-profile.js` với `normalizeFacebookProfile`, `normalizeFacebookFollower`, `normalizeFacebookGroupMember`, `namespacedId`
+  - [x] T1.3: Sử dụng `FacebookClient.requestGraphQl()` làm dispatcher; chỉ thêm alias `dispatch()` nếu cần, không tạo `graphql-dispatcher.js` riêng
+  - [x] T1.4: Bổ sung `DEFAULT_FB_DOC_IDS` placeholders cho `PROFILE`, `FOLLOWERS`, `FOLLOWING`, `GROUP_MEMBERS` [dòng 39-49 crawler.js]
+- [x] T2: Mở rộng `FacebookClient` (AC-3, AC-4, AC-6)
+  - [x] T2.1: Thêm helper `resolveTargetKey(username|url)` sử dụng `normalizeHandle` pattern
+  - [x] T2.2: Thêm `resolveGroupId(groupUrl)` với `assertFacebookUrlLocal` SSRF guard
+  - [x] T2.3: Đảm bảo `requestGraphQl` hỗ trợ doc_id mới và graceful doc_id rotation
+- [x] T3: Mở rộng `FacebookCrawler` với action mới (AC-2, AC-4, AC-5, AC-6)
+  - [x] T3.1: `registerAction('profile', ...)` handler `profile(args, session)`
+  - [x] T3.2: `registerAction('followers', ...)` handler với pagination
+  - [x] T3.3: `registerAction('following', ...)` handler best-effort với fallback note/UNSUPPORTED_ACTION
+  - [x] T3.4: `registerAction('group_members', ...)` handler với group URL parsing
+  - [x] T3.5: `getGroupPosts`/`getPagePosts` hiện có giữ nguyên (không regression); nếu cập nhật metadata để phù hợp `schemas/facebook/social.json`, phải vẫn pass regression
+- [x] T4: Lưu trữ, schema & Checkpoint (AC-8)
+  - [x] T4.1: Tạo `schemas/facebook/social.json` với schema cho `ProfileItem` metadata (isProfile, sourceMethod, followersCount, followingCount, profilePic, coverPic, bio, location, joinDate)
+  - [x] T4.2: Mapping `ProfileItem` → `PostItem` cho `store.storeBatch`; `publishedAt: null`
+  - [x] T4.3: Triển khai `PrismaStore.saveCheckpoint()` hoặc expose `prisma` để gọi `prisma.crawlCheckpoint.upsert()`; ghi `lastCrawledAt` đúng Prisma field
+  - [x] T4.4: Sau mỗi action gọi `saveCheckpoint` + emit `stream:social:raw_posts` (tham khảo `ThreadsCrawler.#emitCheckpointAndStream`)
+- [x] T5: Deprecation markers (AC-9)
+  - [x] T5.1: Thêm `@deprecated` JSDoc trong `src/scrapers/facebook/profile.js#scrapeProfile` [dòng 180]
+  - [x] T5.2: Thêm `@deprecated` JSDoc trong `src/scrapers/facebook/followers.js#scrapeFollowers` [dòng 34]
+  - [x] T5.3: Thêm `@deprecated` JSDoc trong `src/scrapers/facebook/followers.js#scrapeGroupMembers` [dòng 128]
+  - [x] T5.4: Cập nhật `docs/deprecation-plan.md` với mapping table
+- [x] T6: Tests (AC-10)
+  - [x] T6.1: Tạo `tests/scrapers/social/facebook/crawler-profile.test.js`
+  - [x] T6.2: Local server trả về tokens + JSON GraphQL cho profile/followers/following/group_members
+  - [x] T6.3: Kiểm tra Namespaced ID `facebook:${externalId}`
+  - [x] T6.4: Kiểm tra `listActions()` và deprecation marker tồn tại
+  - [x] T6.5: `npm run typecheck` + `npm test -- tests/scrapers/social/facebook/`
 - [ ] T7: (Optional) Refactor `ActionDescriptor` global
   - [ ] T7.1: Nếu muốn include `category`/`requiresAuth` trong `listActions()` output chính thức, cập nhật `src/core/types.js`, `types/core.d.ts`, `base-crawler.js#listActions()`. **Đây là task optional, không bắt buộc cho Story 13.5.**
 
@@ -865,15 +865,15 @@ Dưới đây là các payload mẫu để dùng trong test `http.createServer`.
 
 ### Completion Notes List
 
-- [ ] Tạo `schemas/facebook/social.json` với ProfileItem metadata schema.
-- [ ] Tạo `src/scrapers/social/facebook/normalize-profile.js` với `normalizeFacebookProfile`, `normalizeFacebookFollower`, `normalizeFacebookGroupMember`.
-- [ ] Sử dụng `FacebookClient.requestGraphQl()` làm dispatcher; không tạo `graphql-dispatcher.js` riêng.
-- [ ] Thêm action `profile`, `followers`, `following`, `group_members` vào `FacebookCrawler`.
-- [ ] Đảm bảo namespaced ID `facebook:${externalId}` cho mọi output.
-- [ ] Lưu kết quả qua `PrismaStore` mapping `ProfileItem` → `PostItem` với `publishedAt: null`.
-- [ ] Triển khai `PrismaStore.saveCheckpoint()` (hoặc fallback `prisma.crawlCheckpoint.upsert()`) và emit `stream:social:raw_posts`.
-- [ ] Thêm `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeGroupMembers` và cập nhật `docs/deprecation-plan.md`.
-- [ ] Viết tests thực (no mocks) cho các action mới.
+- [x] Tạo `schemas/facebook/social.json` với ProfileItem metadata schema.
+- [x] Tạo `src/scrapers/social/facebook/normalize-profile.js` với `normalizeFacebookProfile`, `normalizeFacebookFollower`, `normalizeFacebookGroupMember`.
+- [x] Sử dụng `FacebookClient.requestGraphQl()` làm dispatcher; không tạo `graphql-dispatcher.js` riêng.
+- [x] Thêm action `profile`, `followers`, `following`, `group_members` vào `FacebookCrawler`.
+- [x] Đảm bảo namespaced ID `facebook:${externalId}` cho mọi output.
+- [x] Lưu kết quả qua `PrismaStore` mapping `ProfileItem` → `PostItem` với `publishedAt: null`.
+- [x] Triển khai `PrismaStore.saveCheckpoint()` (hoặc fallback `prisma.crawlCheckpoint.upsert()`) và emit `stream:social:raw_posts`.
+- [x] Thêm `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeGroupMembers` và cập nhật `docs/deprecation-plan.md`.
+- [x] Viết tests thực (no mocks) cho các action mới.
 
 ### File List
 

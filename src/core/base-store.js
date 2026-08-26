@@ -60,6 +60,14 @@ export class AbstractStore {
     throw new Error('Method not implemented: storeCommentBatch()');
   }
 
+  /**
+   * @param {Object} checkpoint
+   * @returns {Promise<any>}
+   */
+  async saveCheckpoint(checkpoint) {
+    throw new Error('Method not implemented: saveCheckpoint()');
+  }
+
   /** @returns {Promise<void>} */
   async close() {
     throw new Error('Method not implemented: close()');

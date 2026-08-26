@@ -12,6 +12,12 @@ import { AbstractCrawler } from '../../../core/base-crawler.js';
 import { FacebookClient } from './client.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { CommentTreeExtractor } from '../comment-tree.js';
+import {
+  normalizeFacebookProfile,
+  normalizeFacebookFollower,
+  normalizeFacebookGroupMember,
+  profileItemToPostItem,
+} from './normalize-profile.js';
 
 const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
 
@@ -36,9 +42,92 @@ function buildCookieHeader(cookies) {
     .join('; ');
 }
 
+/**
+ * Resolve target handle or ID from username or Facebook URL.
+ * @param {string} [input]
+ * @returns {string}
+ */
+export function resolveTargetKey(input) {
+  if (!input || typeof input !== 'string') return '';
+  const trimmed = input.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    try {
+      const parsed = new URL(trimmed);
+      const host = parsed.hostname.toLowerCase();
+      if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
+        return '';
+      }
+      const idParam = parsed.searchParams.get('id');
+      if (idParam) return idParam;
+      const segments = parsed.pathname.split('/').filter(Boolean);
+      if (segments.length > 0) {
+        if (segments[0] === 'profile.php') {
+          return idParam || '';
+        }
+        return segments[0];
+      }
+    } catch {
+      return '';
+    }
+    return '';
+  }
+  return trimmed.replace(/^@/, '');
+}
+
+/**
+ * Resolve group ID from group URL or ID string with SSRF protection.
+ * @param {string} [input]
+ * @returns {string}
+ */
+export function resolveGroupId(input) {
+  if (!input || typeof input !== 'string') return '';
+  const trimmed = input.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    let parsed;
+    try {
+      parsed = new URL(trimmed);
+    } catch {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Invalid group URL provided',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `Group URL must be on facebook.com (got: ${host})`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    const groupsIdx = segments.indexOf('groups');
+    if (groupsIdx !== -1 && segments[groupsIdx + 1] && segments[groupsIdx + 1] !== 'groups') {
+      return segments[groupsIdx + 1];
+    }
+    if (segments.length > 0 && segments[segments.length - 1] !== 'groups') {
+      return segments[segments.length - 1];
+    }
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: 'Group URL does not contain a valid group ID or slug',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+    });
+  }
+  return trimmed;
+}
+
 export const DEFAULT_FB_DOC_IDS = {
   GROUP_FEED: 'group_feed_doc_123',
   PAGE_FEED: 'page_feed_doc_456',
+  PROFILE: 'profile_doc_789',
+  FOLLOWERS: 'followers_doc_101',
+  FOLLOWING: 'following_doc_102',
+  GROUP_MEMBERS: 'group_members_doc_103',
   // Captured 2026-08-26 from authenticated Facebook web session
   // CommentsListComponentsPaginationQuery_facebookRelayOperation
   COMMENT_ROOTS: '28217113134586234',
@@ -129,6 +218,46 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['maxDepth', 'maxComments', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo?: any }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getCommentsForPost(args, session),
+    });
+
+    this.registerAction({
+      action: 'profile',
+      description: 'Scrape user or page profile information using GraphQL',
+      requiredArgs: ['username'],
+      optionalArgs: ['url'],
+      example: { username: 'zuck' },
+      outputType: '{ profile: ProfileItem }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.profile(args, session),
+    });
+
+    this.registerAction({
+      action: 'followers',
+      description: 'Scrape followers list with pagination cursor using GraphQL',
+      requiredArgs: ['username'],
+      optionalArgs: ['url', 'limit', 'cursor'],
+      example: { username: 'zuck', limit: 20 },
+      outputType: '{ followers: ProfileItem[], pageInfo?: any }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.followers(args, session),
+    });
+
+    this.registerAction({
+      action: 'following',
+      description: 'Scrape following list using GraphQL (best-effort / restricted)',
+      requiredArgs: ['username'],
+      optionalArgs: ['url', 'limit', 'cursor'],
+      example: { username: 'zuck' },
+      outputType: '{ following?: ProfileItem[], note?: string, pageInfo?: any }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.following(args, session),
+    });
+
+    this.registerAction({
+      action: 'group_members',
+      description: 'Scrape members from a Facebook Group using GraphQL',
+      requiredArgs: ['groupUrl'],
+      optionalArgs: ['groupId', 'limit', 'cursor'],
+      example: { groupUrl: 'https://www.facebook.com/groups/123456', limit: 50 },
+      outputType: '{ members: ProfileItem[], pageInfo?: any }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupMembers(args, session),
     });
   }
 
@@ -460,7 +589,13 @@ export class FacebookCrawler extends AbstractCrawler {
     if (isFacebookClient) {
       const candidateUrls = [];
       if (/^https?:\/\//i.test(input)) {
-        candidateUrls.push(input);
+        try {
+          const parsed = new URL(input);
+          const host = parsed.hostname.toLowerCase();
+          if (host === 'facebook.com' || host.endsWith('.facebook.com')) {
+            candidateUrls.push(input);
+          }
+        } catch {}
       } else {
         // Short share token or pfbid — try the share endpoint first
         candidateUrls.push(`https://www.facebook.com/share/p/${input}/`);
@@ -504,11 +639,21 @@ export class FacebookCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId;
-    if (!accountId || !this.sessionManager) return '';
-    const sess = this.sessionManager.get(accountId);
-    if (!sess?.cookies) return '';
-    if (typeof sess.cookies === 'string') return sess.cookies;
-    return buildCookieHeader(sess.cookies);
+    if (session?.account?.credentials?.cookies) {
+      const c = session.account.credentials.cookies;
+      if (typeof c === 'string') return c;
+      if (typeof c === 'object') return buildCookieHeader(c);
+    }
+
+    if (accountId && this.sessionManager) {
+      const sess = this.sessionManager.get(accountId);
+      if (sess?.cookies) {
+        if (typeof sess.cookies === 'string') return sess.cookies;
+        return buildCookieHeader(sess.cookies);
+      }
+    }
+
+    return '';
   }
 
   /**
@@ -831,6 +976,365 @@ export class FacebookCrawler extends AbstractCrawler {
     }
 
     return { comments, pageInfo };
+  }
+
+  /**
+   * Internal checkpoint saver and thin-event stream emitter.
+   * @param {string} targetType
+   * @param {string} targetKey
+   * @param {string | null} [cursor=null]
+   * @param {Array<import('../../../core/types.js').PostItem>} [items=[]]
+   * @param {boolean} [hasMore=false]
+   * @returns {Promise<void>}
+   */
+  async #saveCheckpoint(targetType, targetKey, cursor = null, items = [], hasMore = false) {
+    try {
+      const storeWithCheckpoint = /** @type {any} */ (this.store);
+      if (storeWithCheckpoint && typeof storeWithCheckpoint.saveCheckpoint === 'function') {
+        const storageRef = items[0]?.id || items[0]?.externalId || '';
+        await storeWithCheckpoint.saveCheckpoint({
+          platform: 'facebook',
+          targetType,
+          targetKey,
+          lastCursor: cursor || undefined,
+          lastTimestamp: new Date(),
+          lastCrawledAt: new Date(),
+          status: hasMore ? 'has_more' : 'completed',
+          storageRef,
+        });
+      }
+
+      const redisClient = /** @type {any} */ (this.store)?.redis || /** @type {any} */ (this.sessionManager)?.redis;
+      if (redisClient && process.env.REDIS_STREAM_ENABLED === 'true') {
+        for (const item of items) {
+          const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
+          await redisClient.xadd(
+            'stream:social:raw_posts',
+            '*',
+            'id', item.id,
+            'platform', 'facebook',
+            'externalId', item.externalId,
+            'category', category,
+            'authorId', item.authorId || '',
+            'crawledAt', item.crawledAt ? item.crawledAt.toISOString() : new Date().toISOString(),
+            'storageRef', item.id
+          );
+        }
+      }
+    } catch (err) {
+      console.warn(`⚠️ [FB TELEMETRY] Checkpoint/stream emission warning: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  /**
+   * Scrape user or page profile via GraphQL.
+   * @param {Object} args
+   * @param {string} [args.username]
+   * @param {string} [args.url]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ profile: import('../../../core/types.js').ProfileItem }>}
+   */
+  async profile(args, session = {}) {
+    const rawTarget = args?.username || args?.url;
+    const targetKey = resolveTargetKey(rawTarget);
+    if (!targetKey) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: username or url',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const accountId = session?.accountId;
+    const cookies = this.#resolveCookies(session);
+
+    const variables = {
+      username: targetKey,
+      targetKey,
+      userID: targetKey,
+    };
+
+    const docId = this.docIds.PROFILE || DEFAULT_FB_DOC_IDS.PROFILE;
+    const res = await this.client.requestGraphQl(docId, variables, {
+      accountId,
+      cookies,
+    });
+
+    const profileData = res?.data?.user || res?.data?.node || res?.data?.page;
+    if (!profileData || typeof profileData !== 'object' || (!profileData.id && !profileData.userID && !profileData.username)) {
+      throw new PlatformError({
+        code: 'XACT_4004',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `Profile not found for ${targetKey}`,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+      });
+    }
+
+    const profile = normalizeFacebookProfile(profileData);
+    if (!profile.username && !profile.externalId) {
+      profile.username = targetKey;
+      profile.externalId = targetKey;
+      profile.id = `facebook:${targetKey}`;
+    }
+
+    const postItem = profileItemToPostItem(profile);
+    this.validateItem(postItem);
+
+    if (this.store && typeof this.store.storeBatch === 'function') {
+      await this.store.storeBatch([postItem], { upsert: true });
+    }
+
+    await this.#saveCheckpoint('profile', targetKey, null, [postItem], false);
+
+    return { profile };
+  }
+
+  /**
+   * Scrape followers list with cursor pagination via GraphQL.
+   * @param {Object} args
+   * @param {string} [args.username]
+   * @param {string} [args.url]
+   * @param {number} [args.limit=20]
+   * @param {string} [args.cursor]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ followers: import('../../../core/types.js').ProfileItem[], pageInfo?: any }>}
+   */
+  async followers(args, session = {}) {
+    const rawTarget = args?.username || args?.url;
+    const targetKey = resolveTargetKey(rawTarget);
+    if (!targetKey) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: username or url',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const limit = this.#normalizeCount(args?.limit, 20, 500);
+    const accountId = session?.accountId;
+    const cookies = this.#resolveCookies(session);
+    const docId = this.docIds.FOLLOWERS || DEFAULT_FB_DOC_IDS.FOLLOWERS;
+
+    const followers = [];
+    const postItems = [];
+    let cursor = args?.cursor || null;
+    let pageInfo = null;
+    let pageCount = 0;
+    const maxPages = Math.ceil(limit / 10) + 10;
+
+    while (followers.length < limit) {
+      if (++pageCount > maxPages) break;
+      const remaining = limit - followers.length;
+      const count = Math.min(remaining, 50);
+
+      const variables = {
+        targetKey: `${targetKey}_followers`,
+        username: targetKey,
+        count,
+        cursor,
+      };
+
+      const res = await this.client.requestGraphQl(docId, variables, {
+        accountId,
+        cookies,
+      });
+
+      const user = res?.data?.user || res?.data?.node || res?.data;
+      const connection = user?.followers || user?.subscribers || res?.data?.followers;
+      const edges = Array.isArray(connection?.edges) ? connection.edges : [];
+      pageInfo = connection?.page_info || null;
+
+      if (edges.length === 0) break;
+
+      for (const edge of edges) {
+        if (!edge?.node && !edge?.id) continue;
+        const follower = normalizeFacebookFollower(edge);
+        followers.push(follower);
+        const postItem = profileItemToPostItem(follower);
+        this.validateItem(postItem);
+        postItems.push(postItem);
+
+        if (followers.length >= limit) break;
+      }
+
+      if (!pageInfo?.has_next_page || !pageInfo?.end_cursor || pageInfo.end_cursor === cursor) {
+        break;
+      }
+      cursor = pageInfo.end_cursor;
+    }
+
+    if (this.store && typeof this.store.storeBatch === 'function' && postItems.length > 0) {
+      await this.store.storeBatch(postItems, { upsert: true });
+    }
+
+    await this.#saveCheckpoint('followers', targetKey, cursor, postItems, Boolean(pageInfo?.has_next_page));
+
+    return { followers, pageInfo };
+  }
+
+  /**
+   * Scrape following list via GraphQL (best-effort / restricted).
+   * @param {Object} args
+   * @param {string} [args.username]
+   * @param {string} [args.url]
+   * @param {number} [args.limit=20]
+   * @param {string} [args.cursor]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ following?: import('../../../core/types.js').ProfileItem[], note?: string, pageInfo?: any }>}
+   */
+  async following(args, session = {}) {
+    const rawTarget = args?.username || args?.url;
+    const targetKey = resolveTargetKey(rawTarget);
+    if (!targetKey) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: username or url',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const limit = this.#normalizeCount(args?.limit, 20, 500);
+    const accountId = session?.accountId;
+    const cookies = this.#resolveCookies(session);
+    const docId = this.docIds.FOLLOWING || DEFAULT_FB_DOC_IDS.FOLLOWING;
+
+    try {
+      const variables = {
+        targetKey: `${targetKey}_following`,
+        username: targetKey,
+        count: limit,
+        cursor: args?.cursor || null,
+      };
+
+      const res = await this.client.requestGraphQl(docId, variables, {
+        accountId,
+        cookies,
+      });
+
+      const user = res?.data?.user || res?.data?.node || res?.data;
+      const connection = user?.following || user?.friends || res?.data?.following;
+      const edges = Array.isArray(connection?.edges) ? connection.edges : [];
+      const pageInfo = connection?.page_info || null;
+
+      if (edges.length > 0) {
+        const following = [];
+        const postItems = [];
+        for (const edge of edges) {
+          if (!edge?.node && !edge?.id) continue;
+          const member = normalizeFacebookFollower(edge);
+          member.metadata = { ...(member.metadata || {}), isFollower: false, isFollowing: true };
+          following.push(member);
+          const postItem = profileItemToPostItem(member);
+          this.validateItem(postItem);
+          postItems.push(postItem);
+        }
+
+        if (this.store && typeof this.store.storeBatch === 'function' && postItems.length > 0) {
+          await this.store.storeBatch(postItems, { upsert: true });
+        }
+
+        await this.#saveCheckpoint('following', targetKey, pageInfo?.end_cursor || null, postItems, Boolean(pageInfo?.has_next_page));
+
+        return { following, pageInfo };
+      }
+    } catch (err) {
+      if (err instanceof PlatformError && (err.type === ErrorTypes.AUTH_EXPIRED || err.type === ErrorTypes.RATE_LIMIT)) {
+        throw err;
+      }
+      // Fallback for restricted following on Facebook web
+    }
+
+    return {
+      following: [],
+      note: 'Following list is restricted or private on Facebook',
+    };
+  }
+
+  /**
+   * Scrape members from a Facebook Group via GraphQL.
+   * @param {Object} args
+   * @param {string} [args.groupUrl]
+   * @param {string} [args.groupId]
+   * @param {number} [args.limit=20]
+   * @param {string} [args.cursor]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ members: import('../../../core/types.js').ProfileItem[], pageInfo?: any }>}
+   */
+  async groupMembers(args, session = {}) {
+    const rawTarget = args?.groupUrl || args?.groupId;
+    const groupId = resolveGroupId(rawTarget);
+    if (!groupId) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: groupUrl or groupId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const limit = this.#normalizeCount(args?.limit, 20, 500);
+    const accountId = session?.accountId;
+    const cookies = this.#resolveCookies(session);
+    const docId = this.docIds.GROUP_MEMBERS || DEFAULT_FB_DOC_IDS.GROUP_MEMBERS;
+
+    const members = [];
+    const postItems = [];
+    let cursor = args?.cursor || null;
+    let pageInfo = null;
+    let pageCount = 0;
+    const maxPages = Math.ceil(limit / 10) + 10;
+
+    while (members.length < limit) {
+      if (++pageCount > maxPages) break;
+      const remaining = limit - members.length;
+      const count = Math.min(remaining, 50);
+
+      const variables = {
+        groupID: groupId,
+        groupId,
+        count,
+        cursor,
+      };
+
+      const res = await this.client.requestGraphQl(docId, variables, {
+        accountId,
+        cookies,
+      });
+
+      const group = res?.data?.group || res?.data?.node || res?.data;
+      const connection = group?.members || group?.group_members || res?.data?.members;
+      const edges = Array.isArray(connection?.edges) ? connection.edges : [];
+      pageInfo = connection?.page_info || null;
+
+      if (edges.length === 0) break;
+
+      for (const edge of edges) {
+        if (!edge?.node && !edge?.id) continue;
+        const member = normalizeFacebookGroupMember(edge, groupId);
+        members.push(member);
+        const postItem = profileItemToPostItem(member);
+        this.validateItem(postItem);
+        postItems.push(postItem);
+
+        if (members.length >= limit) break;
+      }
+
+      if (!pageInfo?.has_next_page || !pageInfo?.end_cursor || pageInfo.end_cursor === cursor) {
+        break;
+      }
+      cursor = pageInfo.end_cursor;
+    }
+
+    if (this.store && typeof this.store.storeBatch === 'function' && postItems.length > 0) {
+      await this.store.storeBatch(postItems, { upsert: true });
+    }
+
+    await this.#saveCheckpoint('group_members', groupId, cursor, postItems, Boolean(pageInfo?.has_next_page));
+
+    return { members, pageInfo };
   }
 
   /**

@@ -26,6 +26,7 @@ import { normalizeHandle, normalizeFollower, normalizeGroupMember } from './norm
  * Returns an array when the list is publicly accessible (Pages),
  * or a note object when restricted (personal profiles).
  *
+ * @deprecated Use `FacebookCrawler.start({ action: 'followers', args: { username, limit } })` from `src/scrapers/social/facebook/crawler.js` instead.
  * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} username - Handle, @handle, or full facebook.com URL
  * @param {FacebookOptions} options
@@ -120,6 +121,7 @@ export async function scrapeFollowers(page, username, options = {}) {
  * Returns an array of normalized members when the list is accessible,
  * or a { note, platform } object when the list is restricted/unavailable.
  *
+ * @deprecated Use `FacebookCrawler.start({ action: 'group_members', args: { groupUrl, limit } })` from `src/scrapers/social/facebook/crawler.js` instead.
  * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} groupUrl - facebook.com group URL
  * @param {FacebookOptions} [options]

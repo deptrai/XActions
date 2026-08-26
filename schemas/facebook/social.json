@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Facebook Social Metadata",
+  "type": "object",
+  "properties": {
+    "isProfile": {
+      "type": "boolean"
+    },
+    "isGroup": {
+      "type": "boolean"
+    },
+    "isPage": {
+      "type": "boolean"
+    },
+    "isFollower": {
+      "type": "boolean"
+    },
+    "isGroupMember": {
+      "type": "boolean"
+    },
+    "isFollowing": {
+      "type": "boolean"
+    },
+    "username": {
+      "type": "string"
+    },
+    "followersCount": {
+      "type": "integer"
+    },
+    "followingCount": {
+      "type": "integer"
+    },
+    "isVerified": {
+      "type": "boolean"
+    },
+    "mutualCount": {
+      "type": "integer"
+    },
+    "groupId": {
+      "type": "string"
+    },
+    "memberType": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "joinDate": {
+      "type": "string"
+    },
+    "joinedGroupTime": {
+      "type": "string"
+    }
+  }
+}

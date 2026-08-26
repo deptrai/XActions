@@ -22,7 +22,7 @@ export interface PostItem {
   repliesCount?: number;
   viewsCount?: number;
   metadata?: Record<string, unknown>;
-  publishedAt?: Date;
+  publishedAt?: Date | null;
   crawledAt: Date;
 }
 
@@ -40,7 +40,22 @@ export interface CommentItem {
   likesCount?: number;
   subCommentsCount?: number;
   metadata?: Record<string, unknown>;
-  publishedAt?: Date;
+  publishedAt?: Date | null;
+  crawledAt: Date;
+}
+
+export interface ProfileItem {
+  id: string;
+  platform: string;
+  externalId: string;
+  username?: string;
+  name?: string;
+  bio?: string;
+  avatar?: string;
+  profileUrl?: string;
+  followersCount?: number;
+  followingCount?: number;
+  metadata?: Record<string, unknown>;
   crawledAt: Date;
 }
 
@@ -279,6 +294,7 @@ export abstract class AbstractStore {
   abstract storeBatch(posts: PostItem[]): Promise<void>;
   abstract storeComment(comment: CommentItem): Promise<void>;
   abstract storeCommentBatch(comments: CommentItem[]): Promise<void>;
+  abstract saveCheckpoint(checkpoint: CrawlCheckpoint | Record<string, unknown>): Promise<unknown>;
   abstract close(): Promise<void>;
 }
 

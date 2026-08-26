@@ -23,8 +23,15 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
 
   const governor = new AdaptiveRateGovernor();
   const sessionManager = new SessionManager();
-  const accountPool = new AccountPool({
-    accounts: [{ id: 'fb-user-1', platform: 'facebook', credentials: { cookies: 'c_user=10001; xs=sec_123' } }],
+  sessionManager.set('fb-user-1', {
+    accountId: 'fb-user-1',
+    cookies: 'c_user=10001; xs=sec_123',
+  });
+  const accountPool = new AccountPool();
+  accountPool.registerAccounts('facebook', ['fb-user-1'], {
+    credentials: {
+      'fb-user-1': { cookies: 'c_user=10001; xs=sec_123' },
+    },
   });
 
   const mockStore = {
@@ -59,6 +66,7 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
                   window.__spin_t = 1787680000;
                   window.__hsi = "739281928371928";
                   window.__rev = "123456789";
+                  window.Env = { "USER_ID": "10001" };
                 </script>
               </body>
             </html>
@@ -77,7 +85,7 @@ describe('Story 13.5 — Facebook Hybrid Profile, Followers & Group Members', ()
           } catch {}
 
           // 1. Profile Query Mock
-          if (docId === 'fb_profile_doc_123' || variables.userID === '4' || variables.username === 'zuck' || variables.targetKey === 'zuck') {
+          if (docId === 'fb_profile_doc_123' || variables.targetKey === 'zuck' || variables.userID === '4') {
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({
               data: {

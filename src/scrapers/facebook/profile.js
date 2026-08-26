@@ -172,6 +172,7 @@ async function scrapeMbasicProfile(page, handle) {
 
 /**
  * Scrape a public Facebook profile or page
+ * @deprecated Use `FacebookCrawler.start({ action: 'profile', args: { username } })` from `src/scrapers/social/facebook/crawler.js` instead.
  * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} username - Handle (zuck), @handle, or full facebook.com URL
  * @param {FacebookOptions} [options]
