@@ -10,13 +10,67 @@
 
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { ThreadsPlatformResponseValidator } from './validator.js';
-import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import {
+  PlatformError,
+  BotChallengeError,
+  RateLimitError,
+  AuthSessionExpiredError,
+  ErrorTypes,
+  SuggestedActions,
+} from '../../../core/error-envelope.js';
 
 const MAX_TOKEN_CACHE_ENTRIES = 500;
 const DEFAULT_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes TTL
+const TOKEN_FAILURE_COOLDOWN_MS = 1500;
+
+/** @type {Set<number>} */
+const AUTH_EXPIRED_CODES = new Set([190, 1357004, 1357001, 1357006, 1357010, 1357013]);
+/** @type {Set<number>} */
+const RATE_LIMIT_CODES = new Set([368]);
+
+/** @type {RegExp[]} */
+const LSD_REGEXES = [
+  /name="lsd"\s+value="([^"]+)"/,
+  /\[\s*"LSD"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*\]/,
+  /"LSD"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*\]/,
+];
+
+/** @type {RegExp[]} */
+const DTSG_REGEXES = [
+  /\[\s*"DTSGInitialData"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*\]/,
+  /"DTSGInitialData"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*\]/,
+  /d\.token\s*=\s*"([^"]+)"/,
+];
+
+/** @type {RegExp[]} */
+const SPIN_R_REGEXES = [
+  /"__spin_r"\s*:\s*(\d+)/,
+  /window\.__spin_r\s*=\s*(\d+)/,
+];
+
+/** @type {RegExp[]} */
+const SPIN_T_REGEXES = [
+  /"__spin_t"\s*:\s*(\d+)/,
+  /window\.__spin_t\s*=\s*(\d+)/,
+];
+
+/** @type {RegExp[]} */
+const HSI_REGEXES = [
+  /"__hsi"\s*:\s*"([^"]+)"/,
+  /window\.__hsi\s*=\s*"([^"]+)"/,
+];
+
+/** @type {RegExp[]} */
+const USER_ID_REGEXES = [
+  /window\.__user_id\s*=\s*"([^"]+)"/,
+  /window\.__userId\s*=\s*"([^"]+)"/,
+  /"user_id"\s*:\s*"([^"]+)"/,
+];
 
 export const DEFAULT_THREADS_APP_ID = '238260118697367';
 export const DEFAULT_THREADS_ASBD_ID = '359341';
+
+const sleep = (/** @type {number} */ ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export class ThreadsClient extends AbstractApiClient {
   /** @type {string} */
@@ -27,9 +81,6 @@ export class ThreadsClient extends AbstractApiClient {
 
   /** @type {boolean} */
   requiresAuth = true;
-
-  /** @type {'got' | 'undici'} */
-  client = 'got';
 
   /** @type {string} */
   baseUrl = 'https://www.threads.net';
@@ -45,6 +96,9 @@ export class ThreadsClient extends AbstractApiClient {
 
   /** @type {Map<string, Promise<Record<string, any>>>} */
   #pendingTokenFetches = new Map();
+
+  /** @type {Map<string, number>} */
+  #tokenFailures = new Map();
 
   /** @type {number} */
   #tokenTtlMs = DEFAULT_TOKEN_TTL_MS;
@@ -85,37 +139,142 @@ export class ThreadsClient extends AbstractApiClient {
   }
 
   /**
+   * Build a cache key that is sensitive to the resolved proxy and the supplied cookies.
+   * @param {string} accountId
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [cookies='']
+   * @returns {string}
+   */
+  #buildCacheKey(accountId, cookies = '') {
+    const proxyKey = this.#resolveProxyKey(accountId);
+    const cookieKey = this.#stableCookieKey(cookies);
+    return `${accountId}::${proxyKey}::${cookieKey}`;
+  }
+
+  /**
+   * Resolve a stable, canonical key for the proxy bound to an account.
+   * @param {string} accountId
+   * @returns {string}
+   */
+  #resolveProxyKey(accountId) {
+    try {
+      const proxy = this.resolveProxy(accountId);
+      if (typeof proxy === 'string') return proxy;
+      if (proxy && typeof proxy === 'object') {
+        const p = /** @type {any} */ (proxy);
+        if (typeof p.server === 'string') return p.server;
+        const scheme = typeof p.scheme === 'string' ? p.scheme : 'http';
+        const host = typeof p.host === 'string' ? p.host : '';
+        const port = Number.isFinite(Number(p.port)) ? Number(p.port) : (scheme === 'https' ? 443 : 80);
+        return `${scheme}://${host}:${port}`;
+      }
+    } catch {
+      // No healthy proxy or provider unavailable; still cache under a deterministic key.
+    }
+    return 'no-proxy';
+  }
+
+  /**
+   * Create a stable, sorted string representation of the supplied cookies.
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} cookies
+   * @returns {string}
+   */
+  #stableCookieKey(cookies) {
+    /** @type {string[]} */
+    let segments = [];
+
+    if (typeof cookies === 'string') {
+      segments = cookies.split(';').map((s) => s.trim()).filter(Boolean);
+    } else if (Array.isArray(cookies)) {
+      segments = cookies
+        .filter((c) => c && typeof c === 'object')
+        .map((c) => `${c.name}=${c.value}`)
+        .sort();
+    } else if (cookies && typeof cookies === 'object') {
+      segments = Object.entries(cookies)
+        .map(([k, v]) => `${k}=${v === undefined || v === null ? '' : `${v}`}`)
+        .sort();
+    }
+
+    return segments.sort().join(';');
+  }
+
+  /**
+   * Extract a token from the first matching regex.
+   * @param {RegExp[]} patterns
+   * @param {string} html
+   * @returns {string}
+   */
+  #extractToken(patterns, html) {
+    for (const re of patterns) {
+      const m = html.match(re);
+      if (m && m[1]) return m[1];
+    }
+    return '';
+  }
+
+  /**
+   * Parse `csrftoken` out of one or more `Set-Cookie` header values.
+   * @param {string | string[] | unknown} setCookie
+   * @returns {string}
+   */
+  #parseCsrftokenFromSetCookie(setCookie) {
+    if (!setCookie) return '';
+    /** @type {string[]} */
+    const values = Array.isArray(setCookie) ? setCookie.map(String) : String(setCookie).split(/,\s*|\r?\n/);
+    for (const value of values) {
+      const m = value.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+      if (m && m[1]) return m[1].trim();
+    }
+    return '';
+  }
+
+  /**
    * Extract Threads security tokens (lsd, csrftoken, fb_dtsg) with in-flight deduplication.
    * @param {string} [proxyOrSessionKey='threads-guest']
    * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [cookies='']
    * @returns {Promise<Record<string, any>>}
    */
   async ensureLsd(proxyOrSessionKey = 'threads-guest', cookies = '') {
-    const cached = this.#tokenCache.get(proxyOrSessionKey);
+    const cacheKey = this.#buildCacheKey(proxyOrSessionKey, cookies);
+
+    const cached = this.#tokenCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.tokens;
     }
 
-    if (this.#pendingTokenFetches.has(proxyOrSessionKey)) {
-      return /** @type {Promise<Record<string, any>>} */ (this.#pendingTokenFetches.get(proxyOrSessionKey));
+    const lastFailure = this.#tokenFailures.get(cacheKey);
+    if (lastFailure) {
+      const elapsed = Date.now() - lastFailure;
+      if (elapsed < TOKEN_FAILURE_COOLDOWN_MS) {
+        await sleep(TOKEN_FAILURE_COOLDOWN_MS - elapsed);
+      }
     }
 
-    const fetchPromise = this.#fetchTokens(proxyOrSessionKey, cookies)
+    if (this.#pendingTokenFetches.has(cacheKey)) {
+      return /** @type {Promise<Record<string, any>>} */ (this.#pendingTokenFetches.get(cacheKey));
+    }
+
+    const fetchPromise = this.#fetchTokens(cacheKey, proxyOrSessionKey, cookies)
       .finally(() => {
-        this.#pendingTokenFetches.delete(proxyOrSessionKey);
+        this.#pendingTokenFetches.delete(cacheKey);
+      })
+      .catch((err) => {
+        this.#tokenFailures.set(cacheKey, Date.now());
+        throw err;
       });
 
-    this.#pendingTokenFetches.set(proxyOrSessionKey, fetchPromise);
+    this.#pendingTokenFetches.set(cacheKey, fetchPromise);
     return fetchPromise;
   }
 
   /**
    * Internal worker to fetch tokens from Threads landing / profile page HTML.
-   * @param {string} proxyOrSessionKey
+   * @param {string} cacheKey
+   * @param {string} accountId
    * @param {string | Record<string, string> | Array<{ name: string, value: string }>} cookies
    * @returns {Promise<Record<string, any>>}
    */
-  async #fetchTokens(proxyOrSessionKey, cookies) {
+  async #fetchTokens(cacheKey, accountId, cookies) {
     let cookieHeader = '';
     let parsedCsrf = '';
 
@@ -141,50 +300,46 @@ export class ThreadsClient extends AbstractApiClient {
     }
 
     const resp = /** @type {any} */ (await this.request('GET', `${this.baseUrl}/`, {
-      accountId: proxyOrSessionKey,
+      accountId,
       headers,
     }));
 
     const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
 
-    // Extract security tokens via targeted regexes
-    const lsdMatch = html.match(/name="lsd"\s+value="([^"]+)"/) ||
-                     html.match(/\["LSD",\[\],\{"token":"([^"]+)"\}/) ||
-                     html.match(/"LSD",\[\],\{"token":"([^"]+)"\}/);
-    const lsd = lsdMatch ? lsdMatch[1] : '';
+    // Prefer a fresh csrftoken returned by the server.
+    const setCookie = resp?.headers?.['set-cookie'] ?? resp?.headers?.['Set-Cookie'];
+    const csrfFromResponse = this.#parseCsrftokenFromSetCookie(setCookie);
+    if (csrfFromResponse) {
+      parsedCsrf = csrfFromResponse;
+    }
 
-    const dtsgMatch = html.match(/\["DTSGInitialData",\[\],\{"token":"([^"]+)"\}/) ||
-                      html.match(/"DTSGInitialData",\[\],\{"token":"([^"]+)"\}/) ||
-                      html.match(/d\.token\s*=\s*"([^"]+)"/);
-    const dtsg = dtsgMatch ? dtsgMatch[1] : '';
+    const lsd = this.#extractToken(LSD_REGEXES, html);
+    const fb_dtsg = this.#extractToken(DTSG_REGEXES, html);
 
-    const spinRMatch = html.match(/"__spin_r":(\d+)/) || html.match(/window\.__spin_r\s*=\s*(\d+)/);
-    const spin_r = spinRMatch ? Number(spinRMatch[1]) : 1016839210;
+    const spin_rMatch = this.#extractToken(SPIN_R_REGEXES, html);
+    const spin_r = spin_rMatch ? Number(spin_rMatch) : 1016839210;
 
-    const spinTMatch = html.match(/"__spin_t":(\d+)/) || html.match(/window\.__spin_t\s*=\s*(\d+)/);
-    const spin_t = spinTMatch ? Number(spinTMatch[1]) : Math.floor(Date.now() / 1000);
+    const spin_tMatch = this.#extractToken(SPIN_T_REGEXES, html);
+    const spin_t = spin_tMatch ? Number(spin_tMatch) : Math.floor(Date.now() / 1000);
 
-    const hsiMatch = html.match(/"__hsi":"([^"]+)"/) || html.match(/window\.__hsi\s*=\s*"([^"]+)"/);
-    const hsi = hsiMatch ? hsiMatch[1] : '';
+    const hsi = this.#extractToken(HSI_REGEXES, html);
+    const userId = this.#extractToken(USER_ID_REGEXES, html);
 
-    const userIdMatch = html.match(/window\.__user_id\s*=\s*"([^"]+)"/) || html.match(/"user_id":"(\d+)"/);
-    const userId = userIdMatch ? userIdMatch[1] : '';
-
-    if (!lsd && !dtsg) {
+    if (!lsd) {
       throw new PlatformError({
         code: 'XACT_4010',
         type: ErrorTypes.AUTH_EXPIRED,
         message: 'Failed to extract Threads security tokens (lsd). Session or IP may be checkpointed.',
         suggestedAction: SuggestedActions.ROTATE_PROXY,
         platform: 'threads',
-        accountId: proxyOrSessionKey,
+        accountId,
       });
     }
 
     const tokens = {
       lsd,
       csrftoken: parsedCsrf,
-      fb_dtsg: dtsg,
+      fb_dtsg,
       spin_r,
       spin_t,
       hsi,
@@ -205,7 +360,7 @@ export class ThreadsClient extends AbstractApiClient {
       }
     }
 
-    this.#tokenCache.set(proxyOrSessionKey, {
+    this.#tokenCache.set(cacheKey, {
       tokens,
       expiresAt: Date.now() + this.#tokenTtlMs,
     });
@@ -221,13 +376,64 @@ export class ThreadsClient extends AbstractApiClient {
    * @returns {string}
    */
   buildGraphQlBody(docId, variables = {}, tokens = {}) {
-    const params = new URLSearchParams({
-      doc_id: docId,
-      variables: JSON.stringify(variables),
-      lsd: tokens.lsd || '',
-    });
-
+    const params = new URLSearchParams();
+    params.set('doc_id', docId);
+    params.set('variables', JSON.stringify(variables));
+    params.set('lsd', tokens.lsd || '');
+    if (tokens.fb_dtsg) {
+      params.set('fb_dtsg', tokens.fb_dtsg);
+    }
     return params.toString();
+  }
+
+  /**
+   * Merge base and user-supplied headers with normalized lowercase keys.
+   * @param {Record<string, any>} options
+   * @param {Record<string, any>} tokens
+   * @returns {Record<string, string>}
+   */
+  #buildRequestHeaders(options, tokens) {
+    /** @type {Record<string, string>} */
+    const headers = {};
+
+    /** @type {Record<string, string>} */
+    const base = {
+      'content-type': 'application/x-www-form-urlencoded',
+      'origin': this.baseUrl,
+      'referer': `${this.baseUrl}/`,
+      'x-ig-app-id': this.igAppId,
+      'x-asbd-id': this.asbdId,
+      'x-fb-lsd': tokens.lsd || '',
+      'sec-fetch-site': 'same-origin',
+      'sec-fetch-mode': 'cors',
+    };
+
+    if (tokens.fb_dtsg) {
+      base['x-fb-dtsg'] = tokens.fb_dtsg;
+    }
+    if (tokens.csrftoken) {
+      base['x-csrftoken'] = tokens.csrftoken;
+    }
+
+    for (const [k, v] of Object.entries(base)) {
+      headers[k.toLowerCase()] = v;
+    }
+
+    const optionHeaders = options.headers || {};
+    for (const [k, v] of Object.entries(optionHeaders)) {
+      headers[k.toLowerCase()] = typeof v === 'string' ? v : String(v);
+    }
+
+    const rawCookies = options.cookies || headers['cookie'] || '';
+    if (rawCookies && !headers['cookie']) {
+      headers['cookie'] = typeof rawCookies === 'string'
+        ? rawCookies
+        : (Array.isArray(rawCookies)
+            ? rawCookies.map((c) => `${c.name}=${c.value}`).join('; ')
+            : Object.entries(rawCookies).map(([k, v]) => `${k}=${v}`).join('; '));
+    }
+
+    return headers;
   }
 
   /**
@@ -242,31 +448,7 @@ export class ThreadsClient extends AbstractApiClient {
     const rawCookies = options.cookies || options.headers?.cookie || options.headers?.Cookie;
     const tokens = await this.ensureLsd(accountId, rawCookies);
     const body = this.buildGraphQlBody(docId, variables, tokens);
-
-    const mergedHeaders = {
-      'content-type': 'application/x-www-form-urlencoded',
-      'origin': this.baseUrl,
-      'referer': `${this.baseUrl}/`,
-      'x-ig-app-id': this.igAppId,
-      'x-asbd-id': this.asbdId,
-      'x-fb-lsd': tokens.lsd || '',
-      'sec-fetch-site': 'same-origin',
-      'sec-fetch-mode': 'cors',
-      ...(options.headers || {}),
-    };
-
-    if (tokens.csrftoken && !mergedHeaders['x-csrftoken'] && !mergedHeaders['X-Csrftoken']) {
-      mergedHeaders['x-csrftoken'] = tokens.csrftoken;
-    }
-
-    const hasCookieHeader = Object.keys(mergedHeaders).some((k) => k.toLowerCase() === 'cookie');
-    if (rawCookies && !hasCookieHeader) {
-      mergedHeaders['cookie'] = typeof rawCookies === 'string'
-        ? rawCookies
-        : (Array.isArray(rawCookies)
-            ? rawCookies.map((c) => `${c.name}=${c.value}`).join('; ')
-            : Object.entries(rawCookies).map(([k, v]) => `${k}=${v}`).join('; '));
-    }
+    const mergedHeaders = this.#buildRequestHeaders(options, tokens);
 
     const response = /** @type {any} */ (await this.request('POST', `${this.baseUrl}/api/graphql`, {
       ...options,
@@ -281,12 +463,41 @@ export class ThreadsClient extends AbstractApiClient {
       try {
         data = JSON.parse(clean);
       } catch {
+        const responseLike = {
+          data: clean,
+          headers: response?.headers || {},
+          status: typeof response?.status === 'number' ? response.status : 200,
+        };
+
+        if (this.responseValidator && this.responseValidator.isBotChallenge(responseLike)) {
+          this.clearTokenCacheForAccount(accountId);
+          throw new BotChallengeError({
+            code: 'XACT_4030',
+            message: 'Threads GraphQL returned a bot challenge page',
+            accountId,
+            platform: 'threads',
+            details: responseLike,
+          });
+        }
+
+        if (this.responseValidator && !this.responseValidator.isValidPayload(responseLike)) {
+          throw new PlatformError({
+            code: 'XACT_5000',
+            type: ErrorTypes.INTERNAL,
+            message: 'Unexpected non-JSON response payload from Threads GraphQL',
+            suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+            platform: 'threads',
+            details: responseLike,
+          });
+        }
+
         throw new PlatformError({
           code: 'XACT_5000',
           type: ErrorTypes.INTERNAL,
-          message: 'Unexpected non-JSON response payload from Threads GraphQL',
+          message: 'Threads GraphQL returned a non-JSON payload',
           suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
           platform: 'threads',
+          details: responseLike,
         });
       }
     }
@@ -297,31 +508,30 @@ export class ThreadsClient extends AbstractApiClient {
       const primaryError = errorsList[0] || {};
       const errorCode = Number(primaryError.code || primaryError.error_subcode || 0);
 
-      if (errorCode === 190 || errorCode === 1357004) {
-        throw new PlatformError({
+      if (AUTH_EXPIRED_CODES.has(errorCode)) {
+        this.clearTokenCacheForAccount(accountId);
+        throw new AuthSessionExpiredError({
           code: 'XACT_4010',
           type: ErrorTypes.AUTH_EXPIRED,
           message: `Threads session expired or challenge required: ${primaryError.message}`,
           suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
-          platform: 'threads',
           accountId,
+          platform: 'threads',
           details: errorsList,
         });
       }
 
-      if (errorCode === 368) {
-        throw new PlatformError({
+      if (RATE_LIMIT_CODES.has(errorCode)) {
+        throw new RateLimitError({
           code: 'XACT_4290',
-          type: ErrorTypes.RATE_LIMIT,
           message: `Threads action blocked or rate limited: ${primaryError.message}`,
           suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
-          platform: 'threads',
           accountId,
+          platform: 'threads',
           details: errorsList,
         });
       }
 
-      console.warn(`⚠️ [THREADS WARNING] Threads doc_id may be rotated or query failed for ${docId}: ${primaryError.message}`);
       throw new PlatformError({
         code: 'XACT_5000',
         type: ErrorTypes.INTERNAL,
@@ -329,10 +539,28 @@ export class ThreadsClient extends AbstractApiClient {
         suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
         platform: 'threads',
         details: errorsList,
+        accountId,
       });
     }
 
     return data;
+  }
+
+  /**
+   * Remove all cached and in-flight tokens for a given account.
+   * @param {string} accountId
+   */
+  clearTokenCacheForAccount(accountId) {
+    const prefix = `${accountId}::`;
+    for (const key of this.#tokenCache.keys()) {
+      if (key.startsWith(prefix)) this.#tokenCache.delete(key);
+    }
+    for (const key of this.#pendingTokenFetches.keys()) {
+      if (key.startsWith(prefix)) this.#pendingTokenFetches.delete(key);
+    }
+    for (const key of this.#tokenFailures.keys()) {
+      if (key.startsWith(prefix)) this.#tokenFailures.delete(key);
+    }
   }
 
   /**
@@ -341,5 +569,6 @@ export class ThreadsClient extends AbstractApiClient {
   clearTokenCache() {
     this.#tokenCache.clear();
     this.#pendingTokenFetches.clear();
+    this.#tokenFailures.clear();
   }
 }

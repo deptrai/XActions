@@ -7,6 +7,26 @@
 
 import { AbstractPlatformResponseValidator } from '../../../core/platform-validator.js';
 
+/** @type {string[]} */
+const SOFT_CHALLENGE_MARKERS = [
+  'suspicious activity',
+  'unusual activity',
+  'verify your account',
+  'log in to continue',
+  'login to continue',
+  "confirm it's you",
+  'your account has been locked',
+  'your account has been suspended',
+  'help us confirm',
+  'suspicious login',
+  'unusual login',
+  'confirm your identity',
+  'please confirm your identity',
+  'please verify your account',
+  'relogin to continue',
+  'session expired',
+];
+
 export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseValidator {
   /** @type {string} */
   platform = 'threads';
@@ -72,9 +92,19 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
     const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
     let data = record?.data && typeof record.data === 'object' ? /** @type {Record<string, unknown>} */ (record.data) : null;
     
-    // Unwrap nested data layers if any
-    while (data && typeof data.data === 'object' && data.data && !Array.isArray(data.data)) {
+    // Unwrap nested data layers if any, with depth and cycle guard.
+    const seen = new WeakSet();
+    let depth = 0;
+    while (data && typeof data === 'object' && data.data && !Array.isArray(data.data) && depth < 5) {
+      if (seen.has(data)) break;
+      seen.add(data);
       data = /** @type {Record<string, unknown>} */ (data.data);
+      depth++;
+    }
+
+    // An explicit false success flag is not a valid payload.
+    if (data && typeof data === 'object' && data.success === false) {
+      return false;
     }
 
     // Allow GraphQL error envelopes to pass so client can classify them accurately
@@ -124,6 +154,11 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
       return true;
     }
 
+    // SSR search/profile pages embed their payload in an application/json script tag.
+    if (/<script\s+type="application\/json"/i.test(body) && (body.includes('searchResults') || body.includes('mediaData') || body.includes('raw_data'))) {
+      return true;
+    }
+
     return false;
   }
 
@@ -139,6 +174,10 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
 
     const body = this.#getBody(response);
     if (body) {
+      const lower = body.toLowerCase();
+      for (const marker of SOFT_CHALLENGE_MARKERS) {
+        if (lower.includes(marker)) return true;
+      }
       if (/<form[^>]*action="[^"]*login/i.test(body) || (body.includes('Login • Threads') && !body.includes('role="main"'))) {
         return true;
       }

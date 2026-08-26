@@ -31,3 +31,15 @@
 - [ ] [Review][P2][Defer] Không dùng `p-limit` cho `init()` / spawn — spec đề xuất nhưng không phải AC; tác động thấp với `minSize=4`. [src/core/signer-pool.js:203-210]
 - [ ] [Review][P2][Defer] Không tách `http-client-factory.js` riêng — default factory được inline trong `#getDefaultHttpClient()`. Spec đề xuất file riêng nhưng implementation hợp lệ. [src/core/base-client.js:241-309]
 - [ ] [Review][P2][Defer] Default httpClient closure được tạo lại mỗi `request()` — hiệu suất kém nhẹ, không ảnh hưởng chức năng. [src/core/base-client.js:489-492]
+
+## Deferred from: code review of 15-1-threads-scraper-adapter-meta-internal-graphql (2026-08-26)
+
+- [ ] [Review][P1][Defer] CommentTreeExtractor exits on empty/null `end_cursor` even when `has_next_page` is true — `fetchLayerPaginated` stops on an empty cursor. [src/scrapers/social/comment-tree.js:155-158]
+- [ ] [Review][P2][Defer] Comments with `subCommentsCount` missing or `0` are never expanded — only parents with positive counts are fetched. [src/scrapers/social/comment-tree.js:167-169]
+- [ ] [Review][P1][Defer] Cycle detector can re-attach to an existing cycle — `#wouldCreateCycle` returns false on already-visited IDs. [src/scrapers/social/comment-tree.js:190-201]
+- [ ] [Review][P2][Defer] Orphan comments are not re-parented when the parent later arrives — no second-pass re-parenting. [src/scrapers/social/comment-tree.js:113-121]
+- [ ] [Review][P2][Defer] Shared `byId`/`seen`/`total` state is mutated under `pLimit` without atomic guards — BFS state accessed concurrently. [src/scrapers/social/comment-tree.js:67-79,134-176]
+- [ ] [Review][P2][Defer] Single child `fetchLayer` failure rejects the entire comment tree — `Promise.all` has no per-parent error isolation. [src/scrapers/social/comment-tree.js:172-176]
+- [ ] [Review][P2][Defer] No `comment-tree.test.js` for cycles, duplicate IDs, orphan re-parenting, or `subCommentsCount=0` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
+- [ ] [Review][P2][Defer] No concurrency / `p-limit` / shared-state race tests for `CommentTreeExtractor` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
+- [ ] [Review][P2][Defer] Legacy Puppeteer `scrapeTweets` / `searchTweets` still use post text fragment as fallback ID and lack proxy/cookie rotation and retry — only `@deprecated` markers were required for this story; defer to Epic 20.2. [src/scrapers/threads/index.js:196-213,245-316]

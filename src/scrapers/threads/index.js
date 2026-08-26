@@ -165,33 +165,52 @@ export async function scrapeTweets(page, username, options = {}) {
   /** @type {Map<string, Record<string, unknown>>} */
   const posts = new Map();
   let retries = 0;
-  const maxRetries = 5;
+  const maxRetries = 10;
 
   while (posts.size < limit && retries < maxRetries) {
     const postData = /** @type {Record<string, unknown>[]} */ (
       await page.evaluate(() => {
+        // Threads uses article or div-based post containers
+        // Selectors may need updating as Threads evolves
         const articles = document.querySelectorAll(
           'article, [data-pressable-container="true"], div[role="article"]'
         );
 
         return Array.from(articles).map((article) => {
+          // Get post text
           const textEls = article.querySelectorAll('span[dir="auto"], div[dir="auto"]');
           const texts = Array.from(textEls)
             .map((el) => el.textContent?.trim())
             .filter((t) => t && t.length > 5);
           const text = texts[0] || null;
 
+          // Get timestamp
           const timeEl = article.querySelector('time');
           const timestamp = timeEl?.getAttribute('datetime') || timeEl?.textContent || null;
 
-          // Find post URL link
+          // Get post link
           const links = article.querySelectorAll('a[href*="/post/"]');
           const postLink = links[0]?.getAttribute('href') || null;
 
-          // Extract likes/replies if visible
-          const numbers = Array.from(article.querySelectorAll('span, button'))
-            .map((el) => el.textContent?.trim())
-            .filter((t) => t && /^\d+[\d,.]*[KkMm]?$/.test(t));
+          // Get engagement stats
+          const spans = article.querySelectorAll('span');
+          let likes = '0';
+          let replies = '0';
+          for (const span of spans) {
+            const t = span.textContent || '';
+            if (/like/i.test(span.parentElement?.textContent || '') && /^\d/.test(t)) {
+              likes = t;
+            }
+            if (/repl/i.test(span.parentElement?.textContent || '') && /^\d/.test(t)) {
+              replies = t;
+            }
+          }
+
+          // Get media
+          const images = Array.from(article.querySelectorAll('img[src*="scontent"]'))
+            .map((img) => /** @type {HTMLImageElement} */ (img).src)
+            .filter((src) => !src.includes('profile'));
+          const hasVideo = !!article.querySelector('video');
 
           const id = postLink || text?.slice(0, 50) || null;
 
@@ -199,9 +218,13 @@ export async function scrapeTweets(page, username, options = {}) {
             id,
             text,
             timestamp,
+            likes,
+            replies,
             url: postLink ? `https://www.threads.net${postLink}` : null,
-            likes: numbers[0] || '0',
-            replies: numbers[1] || '0',
+            media: {
+              images,
+              hasVideo,
+            },
             platform: 'threads',
           };
         }).filter((p) => p.id && p.text);
@@ -221,7 +244,6 @@ export async function scrapeTweets(page, username, options = {}) {
       retries = 0;
     }
 
-    // Scroll down
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await randomDelay(1500, 3000);
   }

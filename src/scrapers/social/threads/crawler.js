@@ -23,6 +23,9 @@ export const DEFAULT_THREADS_DOC_IDS = {
   COMMENT_REPLIES: null,
 };
 
+/** @type {string} */
+const SHORTCODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
 export class ThreadsCrawler extends AbstractCrawler {
   /** @type {string} */
   name = 'threads';
@@ -82,9 +85,9 @@ export class ThreadsCrawler extends AbstractCrawler {
       category: 'social',
       requiredArgs: ['query'],
       optionalArgs: ['count', 'cursor', 'searchType'],
-      outputType: 'PostItem[]',
+      outputType: 'PostItem[] | { posts: PostItem[], pageInfo: any }',
       example: { query: 'artificial intelligence', count: 20 },
-      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.searchPosts(args, session),
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.search(args, session),
     }));
 
     this.registerAction(/** @type {any} */ ({
@@ -106,11 +109,13 @@ export class ThreadsCrawler extends AbstractCrawler {
    * @param {string} params.targetKey
    * @param {string | null} [params.cursor]
    * @param {Array<import('../../../core/types.js').PostItem | import('../../../core/types.js').CommentItem>} params.items
+   * @param {boolean} [params.hasMore]
    */
-  async #emitCheckpointAndStream({ targetType, targetKey, cursor = null, items = [] }) {
+  async #emitCheckpointAndStream({ targetType, targetKey, cursor = null, items = [], hasMore = false }) {
     try {
       const storeWithCheckpoint = /** @type {any} */ (this.store);
       if (storeWithCheckpoint && typeof storeWithCheckpoint.saveCheckpoint === 'function') {
+        const storageRef = items[0]?.id || items[0]?.externalId || '';
         await storeWithCheckpoint.saveCheckpoint({
           platform: 'threads',
           targetType,
@@ -118,6 +123,8 @@ export class ThreadsCrawler extends AbstractCrawler {
           lastCursor: cursor || undefined,
           lastTimestamp: new Date(),
           lastCrawledAt: new Date(),
+          status: hasMore ? 'has_more' : 'completed',
+          storageRef,
         });
       }
 
@@ -133,7 +140,8 @@ export class ThreadsCrawler extends AbstractCrawler {
             'externalId', item.externalId,
             'category', category,
             'authorId', item.authorId || '',
-            'crawledAt', item.crawledAt ? item.crawledAt.toISOString() : new Date().toISOString()
+            'crawledAt', item.crawledAt ? item.crawledAt.toISOString() : new Date().toISOString(),
+            'storageRef', item.id,
           );
         }
       }
@@ -144,6 +152,151 @@ export class ThreadsCrawler extends AbstractCrawler {
   }
 
   /**
+   * Clamp `count` to a sensible range.
+   * @param {unknown} value
+   * @param {number} [min=1]
+   * @param {number} [max=100]
+   * @returns {number}
+   */
+  #clampCount(value, min = 1, max = 100) {
+    const n = Number(value);
+    const parsed = Number.isFinite(n) ? n : 20;
+    return Math.max(min, Math.min(parsed, max));
+  }
+
+  /**
+   * Normalize an empty end_cursor to null and ensure a stable pageInfo shape.
+   * @param {any} pageInfo
+   * @returns {{ has_next_page: boolean, end_cursor: string | null }}
+   */
+  #normalizePageInfo(pageInfo) {
+    if (!pageInfo || typeof pageInfo !== 'object') {
+      return { has_next_page: false, end_cursor: null };
+    }
+    const has_next_page = Boolean(pageInfo.has_next_page);
+    const end_cursor = (pageInfo.end_cursor && typeof pageInfo.end_cursor === 'string') ? pageInfo.end_cursor : null;
+    return { has_next_page, end_cursor };
+  }
+
+  /**
+   * Flatten a thread wrapper into its contained post nodes.
+   * @param {Record<string, any>} raw
+   * @returns {Record<string, any>[]}
+   */
+  #flattenThreadItems(raw) {
+    if (!raw || typeof raw !== 'object') return [];
+
+    // Unwrap an edge wrapper (e.g. search results).
+    let wrapper = raw;
+    if (raw.node && typeof raw.node === 'object' && !Array.isArray(raw.node)) {
+      wrapper = raw.node;
+    }
+
+    if (wrapper.post) return [wrapper.post];
+    if (Array.isArray(wrapper.thread_items)) {
+      return wrapper.thread_items
+        .filter((/** @type {any} */ item) => item && typeof item === 'object')
+        .map((/** @type {any} */ item) => item.post || item)
+        .filter(Boolean);
+    }
+    return [wrapper];
+  }
+
+  /**
+   * Parse a timestamp value robustly.
+   * @param {unknown} takenAt
+   * @returns {Date | undefined}
+   */
+  #parseTakenAt(takenAt) {
+    if (takenAt === undefined || takenAt === null) return undefined;
+    const n = Number(takenAt);
+    if (Number.isFinite(n)) {
+      if (n <= 0) return undefined;
+      const ms = n > 1e12 ? n : (n > 1e9 ? n * 1000 : n);
+      return new Date(ms);
+    }
+    const d = new Date(String(takenAt));
+    return Number.isNaN(d.getTime()) ? undefined : d;
+  }
+
+  /**
+   * Pick the largest candidate by width*height.
+   * @param {Record<string, any>[]} candidates
+   * @returns {string | null}
+   */
+  #bestCandidateUrl(candidates) {
+    if (!Array.isArray(candidates) || candidates.length === 0) return null;
+    const sorted = [...candidates].sort((a, b) => {
+      const aw = Number(a?.width) || 0;
+      const ah = Number(a?.height) || 0;
+      const bw = Number(b?.width) || 0;
+      const bh = Number(b?.height) || 0;
+      return (bw * bh) - (aw * ah);
+    });
+    return sorted[0]?.url || null;
+  }
+
+  /**
+   * Extract media URLs and determine the media type.
+   * @param {Record<string, any>} post
+   * @returns {{ mediaUrls: string[], mediaType: string, carousel: string[] }}
+   */
+  #extractMedia(post) {
+    /** @type {string[]} */
+    const mediaUrls = [];
+    /** @type {string[]} */
+    const carousel = [];
+    let mediaType = 'text';
+
+    const hasVideo = Array.isArray(post.video_versions) && post.video_versions.length > 0;
+    const hasCarousel = Array.isArray(post.carousel_media) && post.carousel_media.length > 0;
+    const hasImage = Array.isArray(post.image_versions2?.candidates) && post.image_versions2.candidates.length > 0;
+
+    if (post.media_type === 2 || post.media_type === 'video' || (post.media_type === undefined && hasVideo)) {
+      mediaType = 'video';
+      const video = this.#bestCandidateUrl(post.video_versions);
+      if (video) mediaUrls.push(video);
+      // Fallback to a still thumbnail if the video list is empty.
+      if (mediaUrls.length === 0 && hasImage) {
+        const thumb = this.#bestCandidateUrl(post.image_versions2.candidates);
+        if (thumb) mediaUrls.push(thumb);
+      }
+    } else if (post.media_type === 8 || post.media_type === 'carousel' || (post.media_type === undefined && hasCarousel)) {
+      mediaType = 'carousel';
+      for (const item of post.carousel_media) {
+        const url = this.#bestCandidateUrl(item?.image_versions2?.candidates);
+        if (url) {
+          mediaUrls.push(url);
+          carousel.push(url);
+        }
+      }
+    } else if (post.media_type === 1 || post.media_type === 'image' || (post.media_type === undefined && hasImage)) {
+      mediaType = 'image';
+      const image = this.#bestCandidateUrl(post.image_versions2.candidates);
+      if (image) mediaUrls.push(image);
+    }
+
+    return { mediaUrls, mediaType, carousel };
+  }
+
+  /**
+   * Convert a numeric media id to a Threads shortcode.
+   * @param {bigint} id
+   * @returns {string}
+   */
+  #numericIdToShortcode(id) {
+    if (id === 0n) return SHORTCODE_ALPHABET[0];
+    let s = '';
+    let n = id;
+    while (n > 0n) {
+      const r = Number(n % 64n);
+      s = SHORTCODE_ALPHABET[r] + s;
+      n = n / 64n;
+    }
+    return s;
+  }
+
+  /**
    * Normalize raw Threads GraphQL / SSR post node into uniform PostItem.
    * @param {Record<string, any>} raw
    * @returns {import('../../../core/types.js').PostItem | null}
@@ -151,7 +304,7 @@ export class ThreadsCrawler extends AbstractCrawler {
   #normalizePostItem(raw) {
     if (!raw || typeof raw !== 'object') return null;
 
-    const post = raw.post || raw.thread_items?.[0]?.post || raw;
+    const post = raw.post || raw;
     const rawPk = post.pk || post.id || raw.pk || raw.id;
     const postId = rawPk ? String(rawPk) : '';
     if (!postId) return null;
@@ -162,9 +315,8 @@ export class ThreadsCrawler extends AbstractCrawler {
     const authorAvatar = user.profile_pic_url || '';
     const authorUrl = authorName ? `https://www.threads.net/@${authorName}` : undefined;
 
-    const content = (typeof post.caption === 'string' ? post.caption : post.caption?.text) ||
-                    post.text ||
-                    '';
+    const rawContent = (typeof post.caption === 'string' ? post.caption : post.caption?.text) ?? post.text ?? '';
+    const content = rawContent == null ? '' : String(rawContent);
 
     const parseCount = (/** @type {unknown} */ val) => {
       const n = Number(val);
@@ -176,30 +328,24 @@ export class ThreadsCrawler extends AbstractCrawler {
     const repostsCount = parseCount(post.media_repost_count);
     const viewsCount = parseCount(post.play_count);
 
-    const mediaUrls = [];
-    if (Array.isArray(post.image_versions2?.candidates) && post.image_versions2.candidates.length > 0) {
-      const candidate = post.image_versions2.candidates[0];
-      if (candidate?.url) mediaUrls.push(candidate.url);
-    }
-    if (Array.isArray(post.video_versions) && post.video_versions.length > 0) {
-      const video = post.video_versions[0];
-      if (video?.url) mediaUrls.push(video.url);
-    }
-    if (Array.isArray(post.carousel_media)) {
-      for (const item of post.carousel_media) {
-        const candidate = item.image_versions2?.candidates?.[0];
-        if (candidate?.url) mediaUrls.push(candidate.url);
+    const { mediaUrls, mediaType, carousel } = this.#extractMedia(post);
+
+    let postCode = post.code || raw.code;
+    if (!postCode) {
+      if (/^[0-9]+$/.test(postId)) {
+        try {
+          postCode = this.#numericIdToShortcode(BigInt(postId));
+        } catch {
+          postCode = postId;
+        }
+      } else {
+        postCode = postId;
       }
     }
 
-    const postCode = post.code || raw.code || postId;
     const postUrl = authorName ? `https://www.threads.net/@${authorName}/post/${postCode}` : `https://www.threads.net/t/${postCode}`;
     const takenAt = post.taken_at || raw.taken_at;
-    const publishedAt = takenAt
-      ? (Number.isFinite(Number(takenAt))
-          ? new Date(Number(takenAt) > 1e11 ? Number(takenAt) : Number(takenAt) * 1000)
-          : new Date(takenAt))
-      : undefined;
+    const publishedAt = this.#parseTakenAt(takenAt);
 
     /** @type {import('../../../core/types.js').PostItem} */
     const item = {
@@ -222,9 +368,9 @@ export class ThreadsCrawler extends AbstractCrawler {
       crawledAt: new Date(),
       metadata: {
         postCode: String(postCode),
-        mediaType: String(post.media_type || (mediaUrls.length > 0 ? 'image' : 'text')),
+        mediaType: String(mediaType),
         isReply: Boolean(post.text_post_app_info?.is_reply),
-        carousel: mediaUrls,
+        carousel: mediaType === 'carousel' ? carousel : undefined,
         replyControl: post.text_post_app_info?.reply_control ? String(post.text_post_app_info.reply_control) : 'everyone',
         sourceMethod: 'graphql',
       },
@@ -252,9 +398,8 @@ export class ThreadsCrawler extends AbstractCrawler {
     const authorName = String(user.username || '');
     const authorAvatar = user.profile_pic_url || '';
 
-    const content = (typeof replyPost.caption === 'string' ? replyPost.caption : replyPost.caption?.text) ||
-                    replyPost.text ||
-                    '';
+    const rawContent = (typeof replyPost.caption === 'string' ? replyPost.caption : replyPost.caption?.text) ?? replyPost.text ?? '';
+    const content = rawContent == null ? '' : String(rawContent);
 
     const parseCount = (/** @type {unknown} */ val) => {
       const n = Number(val);
@@ -264,11 +409,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     const likesCount = parseCount(replyPost.like_count);
     const subCommentsCount = parseCount(replyPost.text_post_app_info?.direct_reply_count ?? replyPost.comment_count);
     const takenAt = replyPost.taken_at;
-    const publishedAt = takenAt
-      ? (Number.isFinite(Number(takenAt))
-          ? new Date(Number(takenAt) > 1e11 ? Number(takenAt) : Number(takenAt) * 1000)
-          : new Date(takenAt))
-      : undefined;
+    const publishedAt = this.#parseTakenAt(takenAt);
 
     const parentExternalId = raw.parentId || replyPost.parentId;
 
@@ -291,7 +432,7 @@ export class ThreadsCrawler extends AbstractCrawler {
       metadata: {
         postCode: String(replyPost.code || commentId),
         mediaType: String(replyPost.media_type || 'comment'),
-        isReply: Boolean(replyPost.text_post_app_info?.is_reply ?? true),
+        isReply: !!replyPost.text_post_app_info?.is_reply,
         sourceMethod: 'graphql',
       },
     };
@@ -337,12 +478,14 @@ export class ThreadsCrawler extends AbstractCrawler {
 
     const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
 
-    // Prioritize target profile user ID (user entity pk or owner id)
-    const idMatch = html.match(/"user":\{"pk":"(\d+)"/) ||
-                    html.match(/"user_id":"(\d+)"/) ||
-                    html.match(/"owner":\{"id":"(\d+)"/) ||
-                    html.match(/"pk":"(\d+)"/) ||
-                    html.match(/window\.__userId\s*=\s*"(\d+)"/);
+    // Prioritize target profile user ID, then scoped user JSON, then fallbacks.
+    const idMatch =
+      html.match(/window\.__user_id\s*=\s*"([^"]+)"/) ||
+      html.match(/window\.__userId\s*=\s*"([^"]+)"/) ||
+      html.match(/"user"\s*:\s*\{\s*"pk"\s*:\s*"([^"]+)"/) ||
+      html.match(/"owner"\s*:\s*\{\s*"id"\s*:\s*"([^"]+)"/) ||
+      html.match(/"user_id"\s*:\s*"([^"]+)"/) ||
+      html.match(/"pk"\s*:\s*"([^"]+)"/);
 
     if (idMatch && idMatch[1]) {
       return idMatch[1];
@@ -364,7 +507,7 @@ export class ThreadsCrawler extends AbstractCrawler {
    * @param {number} [args.count=20]
    * @param {string} [args.cursor]
    * @param {Record<string, any>} [session={}]
-   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo?: any }>}
+   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
    */
   async getUserFeed(args, session = {}) {
     if (!args?.username) {
@@ -381,9 +524,10 @@ export class ThreadsCrawler extends AbstractCrawler {
     const numericUserId = await this.#resolveUserId(cleanUser, accountId);
 
     const docId = this.docIds.PROFILE_FEED || DEFAULT_THREADS_DOC_IDS.PROFILE_FEED;
+    const count = this.#clampCount(args.count, 1, 100);
     const variables = {
       userID: numericUserId,
-      first: args.count || 20,
+      first: count,
       after: args.cursor || null,
     };
 
@@ -395,22 +539,29 @@ export class ThreadsCrawler extends AbstractCrawler {
     const posts = [];
 
     for (const thread of rawThreads) {
-      const post = this.#normalizePostItem(thread);
-      if (!post) continue;
-      this.validateItem(post);
-      posts.push(post);
+      for (const rawPost of this.#flattenThreadItems(thread)) {
+        try {
+          const post = this.#normalizePostItem(rawPost);
+          if (!post) continue;
+          this.validateItem(post);
+          posts.push(post);
+        } catch {
+          // Skip invalid posts instead of aborting the whole batch.
+        }
+      }
     }
 
     if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
       await this.store.storeBatch(posts, { upsert: true });
     }
 
-    const pageInfo = res?.data?.mediaData?.page_info || null;
+    const pageInfo = this.#normalizePageInfo(res?.data?.mediaData?.page_info);
     await this.#emitCheckpointAndStream({
       targetType: 'user_feed',
       targetKey: cleanUser,
-      cursor: pageInfo?.end_cursor || args.cursor || null,
+      cursor: pageInfo.end_cursor,
       items: posts,
+      hasMore: pageInfo.has_next_page,
     });
 
     return {
@@ -427,7 +578,7 @@ export class ThreadsCrawler extends AbstractCrawler {
    * @param {string} [args.cursor]
    * @param {string} [args.searchType='default']
    * @param {Record<string, any>} [session={}]
-   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo?: any }>}
+   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
    */
   async searchPosts(args, session = {}) {
     if (!args?.query) {
@@ -440,11 +591,12 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId || 'threads-guest';
+    const count = this.#clampCount(args.count, 1, 100);
 
     if (this.docIds.SEARCH_POSTS) {
       const res = await this.client.requestGraphQl(this.docIds.SEARCH_POSTS, {
         query: args.query,
-        first: args.count || 20,
+        first: count,
         after: args.cursor || null,
         serp_type: args.searchType || 'default',
       }, { accountId });
@@ -452,22 +604,29 @@ export class ThreadsCrawler extends AbstractCrawler {
       const rawThreads = res?.data?.mediaData?.threads || res?.data?.searchResults?.edges || [];
       const posts = [];
       for (const t of rawThreads) {
-        const post = this.#normalizePostItem(t);
-        if (!post) continue;
-        this.validateItem(post);
-        posts.push(post);
+        for (const rawPost of this.#flattenThreadItems(t)) {
+          try {
+            const post = this.#normalizePostItem(rawPost);
+            if (!post) continue;
+            this.validateItem(post);
+            posts.push(post);
+          } catch {
+            // Skip invalid posts instead of aborting the whole batch.
+          }
+        }
       }
 
       if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
         await this.store.storeBatch(posts, { upsert: true });
       }
 
-      const pageInfo = res?.data?.mediaData?.page_info || null;
+      const pageInfo = this.#normalizePageInfo(res?.data?.mediaData?.page_info || res?.data?.searchResults?.page_info);
       await this.#emitCheckpointAndStream({
         targetType: 'search',
         targetKey: args.query,
-        cursor: pageInfo?.end_cursor || args.cursor || null,
+        cursor: pageInfo.end_cursor,
         items: posts,
+        hasMore: pageInfo.has_next_page,
       });
 
       return { posts, pageInfo };
@@ -479,6 +638,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
 
     const posts = [];
+    let nextCursor = null;
     const scriptMatches = [...html.matchAll(/<script type="application\/json"[^>]*>(.*?)<\/script>/gs)];
     for (const m of scriptMatches) {
       if (!m[1]) continue;
@@ -488,44 +648,67 @@ export class ThreadsCrawler extends AbstractCrawler {
                         parsed?.mediaData?.threads ||
                         parsed?.data?.searchResults?.edges ||
                         [];
+        const pageInfo =
+          parsed?.raw_data?.searchResults?.page_info ||
+          parsed?.mediaData?.page_info ||
+          parsed?.data?.searchResults?.page_info ||
+          null;
         if (Array.isArray(threads) && threads.length > 0) {
           for (const t of threads) {
-            const post = this.#normalizePostItem(t);
-            if (!post) continue;
-            this.validateItem(post);
-            posts.push(post);
+            for (const rawPost of this.#flattenThreadItems(t)) {
+              try {
+                const post = this.#normalizePostItem(rawPost);
+                if (!post) continue;
+                this.validateItem(post);
+                posts.push(post);
+              } catch {
+                // Skip invalid SSR posts.
+              }
+            }
           }
+          nextCursor = pageInfo?.end_cursor || null;
           break;
         }
       } catch {}
     }
 
-    if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-      await this.store.storeBatch(posts, { upsert: true });
+    const sliced = posts.slice(0, count);
+    for (const post of sliced) {
+      if (post.metadata && typeof post.metadata === 'object') {
+        /** @type {Record<string, any>} */ (post.metadata).sourceMethod = 'ssr';
+      }
     }
+
+    if (this.store && typeof this.store.storeBatch === 'function' && sliced.length > 0) {
+      await this.store.storeBatch(sliced, { upsert: true });
+    }
+
+    const pageInfo = nextCursor
+      ? { has_next_page: true, end_cursor: nextCursor }
+      : { has_next_page: false, end_cursor: null };
 
     await this.#emitCheckpointAndStream({
       targetType: 'search',
       targetKey: args.query,
-      cursor: null,
-      items: posts,
+      cursor: pageInfo.end_cursor,
+      items: sliced,
+      hasMore: pageInfo.has_next_page,
     });
 
     return {
-      posts,
-      pageInfo: null,
+      posts: sliced,
+      pageInfo,
     };
   }
 
   /**
-   * Search method satisfying AbstractCrawler contract.
+   * Search method satisfying AbstractCrawler contract while preserving pageInfo.
    * @param {Object} args
    * @param {Record<string, any>} [session={}]
    * @returns {Promise<import('../../../core/types.js').PostItem[]>}
    */
   async search(args, session = {}) {
-    const res = await this.searchPosts(/** @type {any} */ (args), session);
-    return res.posts;
+    return /** @type {any} */ (this.searchPosts(/** @type {any} */ (args), session));
   }
 
   /**
@@ -536,7 +719,7 @@ export class ThreadsCrawler extends AbstractCrawler {
    * @param {number} [args.maxComments=500]
    * @param {string} [args.after]
    * @param {Record<string, any>} [session={}]
-   * @returns {Promise<{ comments: import('../../../core/types.js').CommentItem[], pageInfo?: any }>}
+   * @returns {Promise<{ comments: import('../../../core/types.js').CommentItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
    */
   async getPostComments(args, session = {}) {
     if (!args?.postId) {
@@ -570,18 +753,30 @@ export class ThreadsCrawler extends AbstractCrawler {
         });
       }
 
-      const res = await this.client.requestGraphQl(docId, {
+      /** @type {Record<string, any>} */
+      const variables = {
         postID: postId,
         post_id: postId,
-        after: after || args.after || null,
-        first: Math.min(limit || 20, 50),
-      }, { accountId });
+        after: after || null,
+        first: this.#clampCount(limit, 1, 50),
+      };
 
-      // Support BarcelonaPostPageQuery format and connection format
-      const replyThreads = res?.data?.data?.reply_threads || res?.data?.reply_threads;
-      if (Array.isArray(replyThreads)) {
+      if (isReply) {
+        variables.parentCommentId = parentCommentId;
+        variables.parent_id = parentCommentId;
+        variables.parentId = parentCommentId;
+      }
+
+      const res = await this.client.requestGraphQl(docId, variables, { accountId });
+
+      // Support BarcelonaPostPageQuery format and connection format.
+      const topData = res?.data?.data && (res.data.data.reply_threads || res.data.data.node)
+        ? res.data.data
+        : res?.data;
+
+      if (Array.isArray(topData?.reply_threads)) {
         const comments = [];
-        for (const t of replyThreads) {
+        for (const t of topData.reply_threads) {
           const items = t.thread_items || [t];
           for (const item of items) {
             if (item?.post) {
@@ -599,19 +794,39 @@ export class ThreadsCrawler extends AbstractCrawler {
       }
 
       const connection = isReply
-        ? res?.data?.node?.replies_connection
-        : res?.data?.node?.comment_rendering_instance_for_feed_location?.comments;
+        ? (topData?.node?.replies_connection || topData?.replies_connection)
+        : (topData?.node?.comment_rendering_instance_for_feed_location?.comments || topData?.comments);
 
-      const comments = (connection?.edges || []).map((/** @type {any} */ edge) => edge?.node).filter(Boolean);
+      /**
+       * Defensively unwrap nested `edge.node` wrappers.
+       * @param {any} edge
+       * @returns {any}
+       */
+      const unwrapNode = (edge) => {
+        let n = edge?.node;
+        while (
+          n &&
+          typeof n === 'object' &&
+          n.node &&
+          !Array.isArray(n.node) &&
+          n.pk === undefined &&
+          n.id === undefined
+        ) {
+          n = n.node;
+        }
+        return n;
+      };
+
+      const comments = (connection?.edges || []).map(unwrapNode).filter(Boolean);
       if (isReply && parentCommentId) {
         for (const raw of comments) {
-          if (raw.parentId === undefined) raw.parentId = parentCommentId;
+          if (raw && raw.parentId === undefined) raw.parentId = parentCommentId;
         }
       }
 
       return {
         comments,
-        pageInfo: connection?.page_info || { has_next_page: false, end_cursor: null },
+        pageInfo: this.#normalizePageInfo(connection?.page_info),
       };
     };
 
@@ -627,16 +842,18 @@ export class ThreadsCrawler extends AbstractCrawler {
       await this.store.storeCommentBatch(comments, { upsert: true });
     }
 
+    const normalizedPageInfo = this.#normalizePageInfo(pageInfo);
     await this.#emitCheckpointAndStream({
       targetType: 'post_comments',
       targetKey: rootPostId,
-      cursor: pageInfo?.end_cursor || null,
+      cursor: normalizedPageInfo.end_cursor,
       items: comments,
+      hasMore: normalizedPageInfo.has_next_page,
     });
 
     return {
       comments,
-      pageInfo,
+      pageInfo: normalizedPageInfo,
     };
   }
 
