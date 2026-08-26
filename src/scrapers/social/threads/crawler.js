@@ -166,15 +166,33 @@ export class ThreadsCrawler extends AbstractCrawler {
 
   /**
    * Normalize an empty end_cursor to null and ensure a stable pageInfo shape.
+   * When a `seenCursors` set is supplied, deduplicate repeated cursors and
+   * clamp empty cursors that falsely claim more pages.
    * @param {any} pageInfo
+   * @param {Set<string>} [seenCursors]
    * @returns {{ has_next_page: boolean, end_cursor: string | null }}
    */
-  #normalizePageInfo(pageInfo) {
+  #normalizePageInfo(pageInfo, seenCursors = undefined) {
     if (!pageInfo || typeof pageInfo !== 'object') {
       return { has_next_page: false, end_cursor: null };
     }
-    const has_next_page = Boolean(pageInfo.has_next_page);
-    const end_cursor = (pageInfo.end_cursor && typeof pageInfo.end_cursor === 'string') ? pageInfo.end_cursor : null;
+    let has_next_page = Boolean(pageInfo.has_next_page);
+    let end_cursor = (pageInfo.end_cursor && typeof pageInfo.end_cursor === 'string') ? pageInfo.end_cursor : null;
+
+    if (has_next_page && !end_cursor) {
+      has_next_page = false;
+      end_cursor = null;
+    }
+
+    if (end_cursor && seenCursors) {
+      if (seenCursors.has(end_cursor)) {
+        has_next_page = false;
+        end_cursor = null;
+      } else {
+        seenCursors.add(end_cursor);
+      }
+    }
+
     return { has_next_page, end_cursor };
   }
 
@@ -453,6 +471,88 @@ export class ThreadsCrawler extends AbstractCrawler {
       return urlMatch[1];
     }
     return clean.replace(/^threads:/, '');
+  }
+
+  /**
+   * Extract only the root/top-level comments from a BarcelonaPostPageQuery-style
+   * post detail bundle. Nested reply threads inside each thread are intentionally
+   * ignored so the fallback does not mis-parent or duplicate children.
+   * @param {Record<string, any>} bundle
+   * @returns {{ comments: Record<string, any>[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }}
+   */
+  #extractFallbackRootComments(bundle) {
+    const data = bundle?.data?.data ?? bundle?.data ?? bundle;
+    /** @type {Record<string, any>[]} */
+    const comments = [];
+    const seen = new Set();
+
+    const push = (/** @type {Record<string, any> | undefined} */ post) => {
+      if (!post || typeof post !== 'object') return;
+      const key = post.id || post.pk || post.externalId;
+      if (key && seen.has(key)) return;
+      if (key) seen.add(key);
+      comments.push(post);
+    };
+
+    /**
+     * @param {unknown} thread
+     */
+    const extractFromThread = (thread) => {
+      if (!thread || typeof thread !== 'object') return;
+      const record = /** @type {Record<string, any>} */ (thread);
+
+      const itemList = Array.isArray(record.items)
+        ? record.items
+        : (Array.isArray(record.thread_items) ? record.thread_items : null);
+
+      if (Array.isArray(itemList)) {
+        const first = itemList[0];
+        if (first?.post) {
+          push(first.post);
+        } else if (first && (first.pk || first.id)) {
+          push(first);
+        }
+        return;
+      }
+
+      // Direct post object in a thread wrapper.
+      if (record.post && (record.post.pk || record.post.id)) {
+        push(record.post);
+      } else if (record.pk || record.id) {
+        push(record);
+      }
+    };
+
+    const topReplyThreads = data?.containing_thread?.thread_items?.[0]?.post?.reply_threads;
+    if (Array.isArray(topReplyThreads)) {
+      for (const thread of topReplyThreads) {
+        extractFromThread(thread);
+      }
+    }
+
+    const topComments = data?.containing_thread?.thread_items?.[0]?.post?.comments;
+    if (topComments && typeof topComments === 'object') {
+      const list = Array.isArray(topComments.items)
+        ? topComments.items
+        : (Array.isArray(topComments.edges) ? topComments.edges : (Array.isArray(topComments) ? topComments : []));
+      for (const item of list) {
+        if (item?.post) {
+          push(item.post);
+        } else if (item?.node) {
+          push(item.node);
+        } else if (item && (item.pk || item.id)) {
+          push(item);
+        }
+      }
+    }
+
+    if (Array.isArray(data?.reply_threads)) {
+      for (const thread of data.reply_threads) {
+        extractFromThread(thread);
+      }
+    }
+
+    return { comments, pageInfo: { has_next_page: false, end_cursor: null } };
   }
 
   /**
@@ -736,21 +836,37 @@ export class ThreadsCrawler extends AbstractCrawler {
     const maxDepth = Math.max(0, Math.min(args.maxDepth ?? 3, 5));
     const maxComments = Math.max(1, Math.min(args.maxComments ?? 500, 2000));
 
+    // Per-call cursor set to prevent empty/stuck-cursor infinite loops.
+    const seenCursors = new Set();
+
     /**
      * @param {import('../comment-tree.js').FetchLayerInput} input
      * @returns {Promise<import('../comment-tree.js').FetchLayerPage>}
      */
     const fetchLayer = async ({ postId, parentCommentId, after, limit }) => {
       const isReply = parentCommentId != null;
-      const docId = isReply ? (this.docIds.COMMENT_REPLIES || this.docIds.POST_DETAIL) : (this.docIds.COMMENT_ROOTS || this.docIds.POST_DETAIL);
 
-      if (!docId) {
-        throw new PlatformError({
-          code: 'XACT_5000',
-          type: ErrorTypes.INTERNAL,
-          message: 'Threads comment doc_id is not configured',
-          suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
-        });
+      let docId = null;
+      if (isReply) {
+        docId = this.docIds.COMMENT_REPLIES;
+        if (!docId) {
+          throw new PlatformError({
+            code: 'XACT_5000',
+            type: ErrorTypes.INTERNAL,
+            message: 'COMMENT_REPLIES doc_id not configured; cannot fetch reply layer',
+            suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+          });
+        }
+      } else {
+        docId = this.docIds.COMMENT_ROOTS || this.docIds.POST_DETAIL;
+        if (!docId) {
+          throw new PlatformError({
+            code: 'XACT_5000',
+            type: ErrorTypes.INTERNAL,
+            message: 'Threads comment doc_id is not configured',
+            suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+          });
+        }
       }
 
       /** @type {Record<string, any>} */
@@ -768,6 +884,12 @@ export class ThreadsCrawler extends AbstractCrawler {
       }
 
       const res = await this.client.requestGraphQl(docId, variables, { accountId });
+
+      // POST_DETAIL (BarcelonaPostPageQuery) is a flat fallback for root comments only.
+      if (!isReply && docId === (this.docIds.POST_DETAIL || DEFAULT_THREADS_DOC_IDS.POST_DETAIL)) {
+        const { comments, pageInfo } = this.#extractFallbackRootComments(res);
+        return { comments, pageInfo: this.#normalizePageInfo(pageInfo, seenCursors) };
+      }
 
       // Support BarcelonaPostPageQuery format and connection format.
       const topData = res?.data?.data && (res.data.data.reply_threads || res.data.data.node)
@@ -789,7 +911,7 @@ export class ThreadsCrawler extends AbstractCrawler {
         }
         return {
           comments,
-          pageInfo: { has_next_page: false, end_cursor: null },
+          pageInfo: this.#normalizePageInfo({ has_next_page: false, end_cursor: null }, seenCursors),
         };
       }
 
@@ -826,7 +948,7 @@ export class ThreadsCrawler extends AbstractCrawler {
 
       return {
         comments,
-        pageInfo: this.#normalizePageInfo(connection?.page_info),
+        pageInfo: this.#normalizePageInfo(connection?.page_info, seenCursors),
       };
     };
 

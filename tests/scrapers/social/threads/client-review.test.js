@@ -4,25 +4,47 @@ import http from 'node:http';
 import { ThreadsClient } from '../../../../src/scrapers/social/threads/client.js';
 import { ThreadsPlatformResponseValidator } from '../../../../src/scrapers/social/threads/validator.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../../src/core/error-envelope.js';
+import { getProxyAgent } from '../../../../src/proxy/providers.js';
 
 describe('Story 15.1 — ThreadsClient review patches', () => {
   let server;
   let serverUrl;
+  let noLsdServer;
+  let noLsdServerUrl;
   let receivedRequests = [];
+  let noLsdRequests = [];
+  let transportRetryHits = 0;
+  let proxyRotationHits = 0;
+
+  /**
+   * @param {string} url
+   * @returns {string}
+   */
+  const normalizePath = (url) => {
+    if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
+      try {
+        return new URL(url).pathname;
+      } catch {
+        return url;
+      }
+    }
+    return url;
+  };
 
   beforeAll(async () => {
     server = http.createServer((req, res) => {
       let body = '';
       req.on('data', (chunk) => (body += chunk));
       req.on('end', () => {
+        const urlPath = normalizePath(req.url);
         receivedRequests.push({
           method: req.method,
-          url: req.url,
+          url: urlPath,
           headers: req.headers,
           body,
         });
 
-        if (req.url === '/' || req.url?.startsWith('/@')) {
+        if (urlPath === '/' || urlPath?.startsWith('/@')) {
           res.writeHead(200, {
             'content-type': 'text/html; charset=utf-8',
             'set-cookie': 'csrftoken=mock_csrf_threads; Path=/; Domain=.threads.net; Secure',
@@ -46,7 +68,7 @@ describe('Story 15.1 — ThreadsClient review patches', () => {
           return;
         }
 
-        if (req.url?.startsWith('/api/graphql')) {
+        if (urlPath?.startsWith('/api/graphql')) {
           const params = new URLSearchParams(body);
           const docId = params.get('doc_id');
 
@@ -72,6 +94,25 @@ describe('Story 15.1 — ThreadsClient review patches', () => {
             return;
           }
 
+          if (docId === 'transport_retry_doc') {
+            transportRetryHits++;
+            if (transportRetryHits <= 2) {
+              res.writeHead(503, { 'content-type': 'text/plain' });
+              res.end('Service Unavailable');
+              return;
+            }
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({ data: { success: true, doc_id: 'transport_retry_doc' } }));
+            return;
+          }
+
+          if (docId === 'proxy_rotation_doc') {
+            proxyRotationHits++;
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({ data: { success: true, doc_id: 'proxy_rotation_doc', hit: proxyRotationHits } }));
+            return;
+          }
+
           res.writeHead(200, { 'content-type': 'application/json' });
           res.end(JSON.stringify({ data: { success: true } }));
           return;
@@ -89,16 +130,48 @@ describe('Story 15.1 — ThreadsClient review patches', () => {
         resolve();
       });
     });
+
+    noLsdServer = http.createServer((req, res) => {
+      noLsdRequests.push({
+        method: req.method,
+        url: normalizePath(req.url),
+        headers: req.headers,
+      });
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(`
+        <!DOCTYPE html>
+        <html>
+          <body>
+            <div data-pressable-container="true"></div>
+            <script>window.__user_id = "123456";</script>
+          </body>
+        </html>
+      `);
+    });
+
+    await new Promise((resolve) => {
+      noLsdServer.listen(0, '127.0.0.1', () => {
+        const addr = noLsdServer.address();
+        noLsdServerUrl = `http://127.0.0.1:${addr.port}`;
+        resolve();
+      });
+    });
   });
 
   afterAll(async () => {
     if (server) {
       await new Promise((resolve) => server.close(resolve));
     }
+    if (noLsdServer) {
+      await new Promise((resolve) => noLsdServer.close(resolve));
+    }
   });
 
   beforeEach(() => {
     receivedRequests = [];
+    noLsdRequests = [];
+    transportRetryHits = 0;
+    proxyRotationHits = 0;
   });
 
   it('[P1] should honor deps.client and not hard-code got', () => {
@@ -215,5 +288,74 @@ describe('Story 15.1 — ThreadsClient review patches', () => {
     expect(validator.isBotChallenge({ data: '<!DOCTYPE html><html><body>verify your account</body></html>' })).toBe(true);
     expect(validator.isBotChallenge({ data: '<!DOCTYPE html><html><body>log in to continue</body></html>' })).toBe(true);
     expect(validator.isBotChallenge({ data: '<!DOCTYPE html><html><body>role="main" id="root"</body></html>' })).toBe(false);
+  });
+
+  it('[P1] should retry transport errors and eventually succeed', async () => {
+    const client = new ThreadsClient({ baseUrl: serverUrl });
+    client.backoffBaseMs = 10;
+    client.maxBackoffMs = 50;
+
+    const result = await client.requestGraphQl('transport_retry_doc', { id: '1' }, { accountId: 'transport-retry' });
+
+    expect(result).toMatchObject({ data: { success: true, doc_id: 'transport_retry_doc' } });
+
+    const graphqlReqs = receivedRequests.filter((r) => r.url?.startsWith('/api/graphql') && r.body.includes('transport_retry_doc'));
+    expect(graphqlReqs.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('[P1] should rotate proxy and quarantine on transport error', async () => {
+    const proxyCalls = [];
+    const quarantined = [];
+
+    const proxyProvider = {
+      isAllQuarantined: () => false,
+      getProxyAgent: (proxy, options) => getProxyAgent(proxy, options),
+      getProxy: (opts = {}) => {
+        proxyCalls.push(opts);
+        if (opts.forceRotate) {
+          return `http://127.0.0.1:${new URL(serverUrl).port}`;
+        }
+        return 'http://127.0.0.1:65535';
+      },
+      quarantine: (proxy, _duration) => {
+        quarantined.push(proxy);
+      },
+      getNext: () => `http://127.0.0.1:${new URL(serverUrl).port}`,
+    };
+
+    const client = new ThreadsClient({
+      baseUrl: 'http://127.0.0.1:65534',
+      proxyProvider,
+      timeout: 3000,
+    });
+    client.backoffBaseMs = 10;
+    client.maxBackoffMs = 50;
+
+    const result = await client.requestGraphQl('proxy_rotation_doc', { id: '1' }, { accountId: 'proxy-rotate' });
+
+    expect(result).toMatchObject({ data: { success: true, doc_id: 'proxy_rotation_doc' } });
+    expect(proxyCalls.some((opts) => opts.forceRotate === true)).toBe(true);
+    expect(quarantined.length).toBeGreaterThanOrEqual(1);
+    expect(quarantined[0]).toBe('http://127.0.0.1:65535');
+  });
+
+  it('[P1] should clear token cache on extraction failure and not cache empty tokens', async () => {
+    const client = new ThreadsClient({ baseUrl: noLsdServerUrl, maxTokenFetchRetries: 1 });
+
+    await expect(client.ensureLsd('bad-token', '')).rejects.toMatchObject({
+      code: 'XACT_4010',
+      type: ErrorTypes.AUTH_EXPIRED,
+    });
+
+    expect(noLsdRequests.length).toBeGreaterThanOrEqual(1);
+
+    const previousCount = noLsdRequests.length;
+
+    await expect(client.ensureLsd('bad-token', '')).rejects.toMatchObject({
+      code: 'XACT_4010',
+      type: ErrorTypes.AUTH_EXPIRED,
+    });
+
+    expect(noLsdRequests.length).toBeGreaterThan(previousCount);
   });
 });

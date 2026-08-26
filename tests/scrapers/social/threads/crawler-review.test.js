@@ -8,11 +8,13 @@ import { AdaptiveRateGovernor } from '../../../../src/core/adaptive-governor.js'
 import { AccountPool } from '../../../../src/core/account-pool.js';
 import { SessionManager } from '../../../../src/core/session-manager.js';
 import { AbstractCrawler } from '../../../../src/core/base-crawler.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from '../../../../src/core/error-envelope.js';
 
 describe('Story 15.1 — ThreadsCrawler review patches', () => {
   let server;
   let serverUrl;
   let receivedRequests = [];
+  let repeatCursorHits = 0;
   let proxyPool;
   let governor;
   let accountPool;
@@ -264,6 +266,133 @@ describe('Story 15.1 — ThreadsCrawler review patches', () => {
             return;
           }
 
+          if (docId === 'comment_roots_bad_cursor_doc') {
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({
+              data: {
+                node: {
+                  comment_rendering_instance_for_feed_location: {
+                    comments: {
+                      edges: [
+                        {
+                          node: {
+                            post: {
+                              id: 'bad_cursor_comment_1',
+                              pk: 'bad_cursor_comment_1',
+                              taken_at: 1787680000,
+                              caption: { text: 'Bad cursor comment' },
+                              like_count: 1,
+                              user: { pk: '111', username: 'commenter' },
+                            },
+                          },
+                        },
+                      ],
+                      page_info: { has_next_page: true, end_cursor: null },
+                    },
+                  },
+                },
+              },
+            }));
+            return;
+          }
+
+          if (docId === 'comment_roots_repeat_cursor_doc') {
+            repeatCursorHits++;
+            if (variables.after === null) {
+              res.writeHead(200, { 'content-type': 'application/json' });
+              res.end(JSON.stringify({
+                data: {
+                  node: {
+                    comment_rendering_instance_for_feed_location: {
+                      comments: {
+                        edges: [
+                          {
+                            node: {
+                              post: {
+                                id: 'repeat_cursor_1',
+                                pk: 'repeat_cursor_1',
+                                taken_at: 1787680000,
+                                caption: { text: 'Repeat cursor comment' },
+                                like_count: 1,
+                                user: { pk: '222', username: 'commenter' },
+                                text_post_app_info: { direct_reply_count: 0 },
+                              },
+                            },
+                          },
+                        ],
+                        page_info: { has_next_page: true, end_cursor: 'same_cursor' },
+                      },
+                    },
+                  },
+                },
+              }));
+              return;
+            }
+
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({
+              data: {
+                node: {
+                  comment_rendering_instance_for_feed_location: {
+                    comments: {
+                      edges: [],
+                      page_info: { has_next_page: true, end_cursor: 'same_cursor' },
+                    },
+                  },
+                },
+              },
+            }));
+            return;
+          }
+
+          if (docId === 'post_detail_nested_doc') {
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({
+              data: {
+                data: {
+                  containing_thread: {
+                    thread_items: [
+                      {
+                        post: {
+                          id: 'root_post_nested',
+                          pk: 'root_post_nested',
+                          caption: { text: 'Main root post' },
+                        },
+                      },
+                    ],
+                  },
+                  reply_threads: [
+                    {
+                      thread_items: [
+                        {
+                          post: {
+                            id: 'nested_root_comment',
+                            pk: 'nested_root_comment',
+                            taken_at: 1787680000,
+                            caption: { text: 'Nested root comment' },
+                            like_count: 3,
+                            user: { pk: '333', username: 'commenter' },
+                          },
+                        },
+                        {
+                          post: {
+                            id: 'nested_child_reply',
+                            pk: 'nested_child_reply',
+                            taken_at: 1787680100,
+                            caption: { text: 'Nested child reply' },
+                            like_count: 1,
+                            user: { pk: '334', username: 'replier' },
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+            }));
+            return;
+          }
+
           res.writeHead(200, { 'content-type': 'application/json' });
           res.end(JSON.stringify({ data: { success: true } }));
           return;
@@ -291,6 +420,7 @@ describe('Story 15.1 — ThreadsCrawler review patches', () => {
 
   beforeEach(() => {
     receivedRequests = [];
+    repeatCursorHits = 0;
   });
 
   it('[P1] should clamp count to a sensible range', async () => {
@@ -476,5 +606,106 @@ describe('Story 15.1 — ThreadsCrawler review patches', () => {
     // the crawler returns valid posts even if the server data is partially bad.
     const result = await crawler.getUserFeed({ username: 'vietnam_trendsetter', count: 20 }, { accountId: 'threads-guest' });
     expect(result.posts.length).toBeGreaterThan(0);
+  });
+
+  it('[P1] should guard empty end_cursor and not infinite loop', async () => {
+    const client = new ThreadsClient({ baseUrl: serverUrl });
+    const crawler = new ThreadsCrawler({
+      client,
+      governor,
+      accountPool,
+      sessionManager,
+      store: mockStore,
+      docIds: { COMMENT_ROOTS: 'comment_roots_bad_cursor_doc' },
+    });
+
+    const result = await crawler.getPostComments(
+      { postId: 'bad_cursor_post', maxDepth: 0, maxComments: 50 },
+      { accountId: 'threads-guest' },
+    );
+
+    expect(result.comments.length).toBe(1);
+    expect(result.comments[0].externalId).toBe('bad_cursor_comment_1');
+    expect(result.pageInfo?.has_next_page).toBe(false);
+    expect(result.pageInfo?.end_cursor).toBeNull();
+
+    const rootReqs = receivedRequests.filter((r) => r.url?.startsWith('/api/graphql') && r.body.includes('comment_roots_bad_cursor_doc'));
+    expect(rootReqs.length).toBe(1);
+  });
+
+  it('[P1] should stop paginating when a cursor repeats', async () => {
+    const client = new ThreadsClient({ baseUrl: serverUrl });
+    const crawler = new ThreadsCrawler({
+      client,
+      governor,
+      accountPool,
+      sessionManager,
+      store: mockStore,
+      docIds: { COMMENT_ROOTS: 'comment_roots_repeat_cursor_doc' },
+    });
+
+    const result = await crawler.getPostComments(
+      { postId: 'repeat_cursor_post', maxDepth: 0, maxComments: 50 },
+      { accountId: 'threads-guest' },
+    );
+
+    expect(result.comments.length).toBe(1);
+    expect(result.comments[0].externalId).toBe('repeat_cursor_1');
+    expect(result.pageInfo?.has_next_page).toBe(false);
+    expect(result.pageInfo?.end_cursor).toBeNull();
+
+    const rootReqs = receivedRequests.filter((r) => r.url?.startsWith('/api/graphql') && r.body.includes('comment_roots_repeat_cursor_doc'));
+    expect(rootReqs.length).toBeLessThanOrEqual(2);
+  });
+
+  it('[P1] POST_DETAIL fallback should only return top-level comments', async () => {
+    const client = new ThreadsClient({ baseUrl: serverUrl });
+    const crawler = new ThreadsCrawler({
+      client,
+      governor,
+      accountPool,
+      sessionManager,
+      store: mockStore,
+      docIds: {
+        COMMENT_ROOTS: null,
+        POST_DETAIL: 'post_detail_nested_doc',
+      },
+    });
+
+    const result = await crawler.getPostComments(
+      { postId: 'nested_post', maxDepth: 0, maxComments: 50 },
+      { accountId: 'threads-guest' },
+    );
+
+    expect(result.comments.length).toBe(1);
+    expect(result.comments[0].externalId).toBe('nested_root_comment');
+    expect(result.comments[0].content).toBe('Nested root comment');
+    expect(result.comments.find((c) => c.externalId === 'nested_child_reply')).toBeUndefined();
+    expect(result.pageInfo?.has_next_page).toBe(false);
+    expect(result.pageInfo?.end_cursor).toBeNull();
+  });
+
+  it('[P1] should throw when COMMENT_REPLIES doc_id is missing', async () => {
+    const client = new ThreadsClient({ baseUrl: serverUrl });
+    const crawler = new ThreadsCrawler({
+      client,
+      governor,
+      accountPool,
+      sessionManager,
+      store: mockStore,
+      docIds: {
+        COMMENT_ROOTS: 'comment_roots_doc',
+        // COMMENT_REPLIES intentionally omitted
+      },
+    });
+
+    await expect(crawler.getPostComments(
+      { postId: 'root_post_1', maxDepth: 1, maxComments: 50 },
+      { accountId: 'threads-guest' },
+    )).rejects.toMatchObject({
+      code: 'XACT_5000',
+      type: ErrorTypes.INTERNAL,
+      suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+    });
   });
 });
