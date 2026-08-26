@@ -65,6 +65,36 @@ describe('Story 13.7 — Facebook Hybrid Post & Group Comments', () => {
     });
     accountPool.registerAccounts('facebook', ['acc_fb_1']);
 
+    await prisma.post.upsert({
+      where: { id: 'facebook:101010101' },
+      update: {},
+      create: {
+        id: 'facebook:101010101',
+        externalId: '101010101',
+        platform: 'facebook',
+        category: 'social',
+        content: 'Test Post',
+        authorId: 'user_1',
+        authorName: 'Test Author',
+        crawledAt: new Date(),
+      },
+    });
+
+    await prisma.post.upsert({
+      where: { id: 'facebook:999888777' },
+      update: {},
+      create: {
+        id: 'facebook:999888777',
+        externalId: '999888777',
+        platform: 'facebook',
+        category: 'social',
+        content: 'Test Group Post',
+        authorId: 'user_2',
+        authorName: 'Group Author',
+        crawledAt: new Date(),
+      },
+    });
+
     server = http.createServer((req, res) => {
       let body = '';
       req.on('data', (chunk) => (body += chunk));
@@ -93,17 +123,22 @@ describe('Story 13.7 — Facebook Hybrid Post & Group Comments', () => {
 
           if (docId === commentDocIds.COMMENT_ROOTS) {
             res.writeHead(200, { 'content-type': 'application/json' });
+            const isPaginated = Boolean(variables.commentsAfterCursor);
             res.end(JSON.stringify({
               data: {
                 node: {
                   comment_rendering_instance_for_feed_location: {
                     comments: {
-                      edges: [
-                        { node: makeCommentNode('root_1') },
-                        { node: makeCommentNode('root_2') },
-                      ],
+                      edges: isPaginated
+                        ? [
+                            { node: makeCommentNode('root_3') },
+                          ]
+                        : [
+                            { node: makeCommentNode('root_1') },
+                            { node: makeCommentNode('root_2') },
+                          ],
                       page_info: {
-                        has_next_page: true,
+                        has_next_page: !isPaginated,
                         end_cursor: 'cursor_root_page_1',
                       },
                     },
@@ -151,7 +186,7 @@ describe('Story 13.7 — Facebook Hybrid Post & Group Comments', () => {
   });
 
   it('[AC-1] should register post_comments and group_comments actions in FacebookCrawler', () => {
-    const client = new FacebookClient({ baseUrl: serverUrl, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({ client, sessionManager });
 
     const actions = crawler.listActions();
@@ -169,7 +204,7 @@ describe('Story 13.7 — Facebook Hybrid Post & Group Comments', () => {
   });
 
   it('[AC-2 & AC-6] should crawl post comments, strip PII, normalize to CommentItem[], and save checkpoint', async () => {
-    const client = new FacebookClient({ baseUrl: serverUrl, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       store,
@@ -215,7 +250,7 @@ describe('Story 13.7 — Facebook Hybrid Post & Group Comments', () => {
   });
 
   it('[AC-3 & AC-7] should crawl group comments and reject non-group URLs', async () => {
-    const client = new FacebookClient({ baseUrl: serverUrl, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       store,
@@ -248,7 +283,7 @@ describe('Story 13.7 — Facebook Hybrid Post & Group Comments', () => {
   });
 
   it('[AC-4] should respect includeReplies=false and return only root comments', async () => {
-    const client = new FacebookClient({ baseUrl: serverUrl, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       sessionManager,
@@ -273,7 +308,7 @@ describe('Story 13.7 — Facebook Hybrid Post & Group Comments', () => {
   });
 
   it('[AC-5] should support initial pagination cursor with after parameter', async () => {
-    const client = new FacebookClient({ baseUrl: serverUrl, governor, accountPool });
+    const client = new FacebookClient({ baseUrl: serverUrl });
     const crawler = new FacebookCrawler({
       client,
       sessionManager,

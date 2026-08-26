@@ -139,6 +139,8 @@ async function clickCommentExpanders(page) {
  * Scrape comments from a Facebook post (FR-58).
  * READ-ONLY scrape — NOT routed through runGuardedBatch.
  *
+ * @deprecated Replaced by `FacebookCrawler` action `post_comments` (Story 13.7).
+ *
  * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} postUrl - facebook.com post URL
  * @param {FacebookOptions} [options]
@@ -223,6 +225,8 @@ export async function scrapeFacebookComments(page, postUrl, options = {}) {
 /**
  * Scrape comments from a post inside a Facebook group (FR-60).
  * Thin wrapper around scrapeFacebookComments; no duplicated extraction logic.
+ *
+ * @deprecated Replaced by `FacebookCrawler` action `group_comments` (Story 13.7).
  *
  * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} groupPostUrl - facebook.com/groups/ post URL

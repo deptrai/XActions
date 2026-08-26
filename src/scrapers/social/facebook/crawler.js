@@ -215,7 +215,24 @@ export const DEFAULT_FB_DOC_IDS = {
   COMMENT_REPLIES: '27878908781774491',
   // Depth2CommentsListPaginationQuery_facebookRelayOperation (nested replies)
   COMMENT_REPLIES_DEPTH2: '28232639913040278',
+  GROUP_COMMENT_ROOTS: '28217113134586234',
+  GROUP_COMMENT_REPLIES: '27878908781774491',
 };
+
+/**
+ * NFR-11: Strip phone numbers and email addresses from text fields before returning/storing.
+ */
+const PII_PHONE_RE = /(\+?\d[\d\s\-().]{7,}\d)/g;
+const PII_EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
+function stripPii(value) {
+  if (typeof value !== 'string') return '';
+  return value.replace(PII_PHONE_RE, '').replace(PII_EMAIL_RE, '').trim();
+}
 
 /**
  * Relay feature flag values injected by the Facebook web runtime for comment queries.
@@ -272,6 +289,13 @@ export class FacebookCrawler extends AbstractCrawler {
       ...(deps.docIds || {}),
     };
 
+    if (deps.docIds?.COMMENT_ROOTS && !deps.docIds?.GROUP_COMMENT_ROOTS) {
+      this.docIds.GROUP_COMMENT_ROOTS = deps.docIds.COMMENT_ROOTS;
+    }
+    if (deps.docIds?.COMMENT_REPLIES && !deps.docIds?.GROUP_COMMENT_REPLIES) {
+      this.docIds.GROUP_COMMENT_REPLIES = deps.docIds.COMMENT_REPLIES;
+    }
+
     // Register standard actions in ActionRegistry
     this.registerAction({
       action: 'group_posts',
@@ -298,6 +322,24 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['maxDepth', 'maxComments', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo?: any }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getCommentsForPost(args, session),
+    });
+
+    this.registerAction({
+      action: 'post_comments',
+      description: 'Scrape hierarchical comments from a Facebook post using hybrid GraphQL + browser fallback',
+      requiredArgs: ['url'],
+      optionalArgs: ['postId', 'maxDepth', 'maxComments', 'limit', 'includeReplies', 'after'],
+      outputType: '{ comments: CommentItem[], pageInfo?: any }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.postComments(args, session),
+    });
+
+    this.registerAction({
+      action: 'group_comments',
+      description: 'Scrape hierarchical comments from a Facebook group post using hybrid GraphQL + browser fallback',
+      requiredArgs: ['url'],
+      optionalArgs: ['postId', 'maxDepth', 'maxComments', 'limit', 'includeReplies', 'after'],
+      outputType: '{ comments: CommentItem[], pageInfo?: any }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupComments(args, session),
     });
 
     this.registerAction({
@@ -495,13 +537,14 @@ export class FacebookCrawler extends AbstractCrawler {
       ? node.actors[0]
       : (node.author && typeof node.author === 'object' ? node.author : null);
     const authorId = authorActor ? String(authorActor.id || '') : '';
-    const authorName = authorActor ? String(authorActor.name || '') : '';
+    const authorName = authorActor ? stripPii(String(authorActor.name || '')) : '';
 
-    const content = node.body?.text ||
-                    (typeof node.body === 'string' ? node.body : '') ||
-                    (typeof node.message === 'string' ? node.message : node.message?.text) ||
-                    node.text ||
-                    '';
+    const rawContent = node.body?.text ||
+                       (typeof node.body === 'string' ? node.body : '') ||
+                       (typeof node.message === 'string' ? node.message : node.message?.text) ||
+                       node.text ||
+                       '';
+    const content = stripPii(rawContent);
 
     const parentId = node.parentId ?? node.parent_comment_id ?? undefined;
     const parentCommentId = parentId ? `facebook:${postId}:${parentId}` : undefined;
@@ -547,6 +590,7 @@ export class FacebookCrawler extends AbstractCrawler {
         parentId,
         feedbackId,
         expansionToken,
+        sourceMethod: 'graphql',
       },
       publishedAt: creationTime ? new Date(Number(creationTime) * 1000) : undefined,
       crawledAt: new Date(),
@@ -1183,11 +1227,186 @@ export class FacebookCrawler extends AbstractCrawler {
   }
 
   /**
+   * Scrape hierarchical comments from a Facebook post using hybrid GraphQL.
+   * @param {Object} args
+   * @param {string} args.url - Post URL or numeric postId
+   * @param {string} [args.postId]
+   * @param {number} [args.maxDepth]
+   * @param {number} [args.maxComments]
+   * @param {number} [args.limit]
+   * @param {boolean} [args.includeReplies]
+   * @param {string} [args.after]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ comments: import('../../../core/types.js').CommentItem[], pageInfo?: any }>}
+   */
+  async postComments(args, session = {}) {
+    const rawTarget = String(args?.url || args?.postId || '').trim();
+    if (!rawTarget) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: url or postId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    if (rawTarget.includes('://')) {
+      try {
+        const parsed = new URL(rawTarget);
+        if (parsed.hostname !== 'facebook.com' && !parsed.hostname.endsWith('.facebook.com')) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: `Invalid Facebook post URL domain: "${parsed.hostname}"`,
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          });
+        }
+      } catch (err) {
+        if (/** @type {any} */ (err)?.isPlatformError) throw err;
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: `Malformed Facebook post URL: "${rawTarget}"`,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+
+    const postExternalId = this.#extractPostExternalId(rawTarget);
+    if (!postExternalId) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Could not resolve post external ID from input',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    let maxDepth = 3;
+    if (args?.includeReplies === false) {
+      maxDepth = 0;
+    } else if (args?.maxDepth !== undefined) {
+      maxDepth = this.#clampMaxDepth(args.maxDepth);
+    }
+
+    const maxComments = this.#clampMaxComments(args?.limit ?? args?.maxComments ?? 500);
+    const after = args?.after || undefined;
+
+    const res = await this.getCommentsForPost({
+      postId: postExternalId,
+      maxDepth,
+      maxComments,
+      after,
+      feedLocation: 'POST_PERMALINK_DIALOG',
+    }, session);
+
+    const comments = res.comments || [];
+    const pageInfo = res.pageInfo || null;
+
+    await this.#saveCheckpoint('post_comments', postExternalId, pageInfo?.end_cursor || null, /** @type {any} */ (comments), Boolean(pageInfo?.has_next_page));
+
+    return { comments, pageInfo };
+  }
+
+  /**
+   * Scrape hierarchical comments from a Facebook group post using hybrid GraphQL.
+   * @param {Object} args
+   * @param {string} args.url - Group post URL
+   * @param {string} [args.postId]
+   * @param {number} [args.maxDepth]
+   * @param {number} [args.maxComments]
+   * @param {number} [args.limit]
+   * @param {boolean} [args.includeReplies]
+   * @param {string} [args.after]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ comments: import('../../../core/types.js').CommentItem[], pageInfo?: any }>}
+   */
+  async groupComments(args, session = {}) {
+    const rawTarget = String(args?.url || args?.postId || '').trim();
+    if (!rawTarget) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: url or postId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    if (!rawTarget.includes('/groups/') && !rawTarget.includes('groups/')) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Invalid group post URL: URL must contain "/groups/" path',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    if (rawTarget.includes('://')) {
+      try {
+        const parsed = new URL(rawTarget);
+        if (parsed.hostname !== 'facebook.com' && !parsed.hostname.endsWith('.facebook.com')) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: `Invalid Facebook group URL domain: "${parsed.hostname}"`,
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          });
+        }
+      } catch (err) {
+        if (/** @type {any} */ (err)?.isPlatformError) throw err;
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: `Malformed Facebook group URL: "${rawTarget}"`,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+
+    const postExternalId = this.#extractPostExternalId(rawTarget);
+    if (!postExternalId) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Could not resolve post external ID from group URL',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    let maxDepth = 3;
+    if (args?.includeReplies === false) {
+      maxDepth = 0;
+    } else if (args?.maxDepth !== undefined) {
+      maxDepth = this.#clampMaxDepth(args.maxDepth);
+    }
+
+    const maxComments = this.#clampMaxComments(args?.limit ?? args?.maxComments ?? 500);
+    const after = args?.after || undefined;
+
+    const res = await this.getCommentsForPost({
+      postId: postExternalId,
+      maxDepth,
+      maxComments,
+      after,
+      feedLocation: 'GROUP',
+    }, session);
+
+    const comments = res.comments || [];
+    const pageInfo = res.pageInfo || null;
+
+    await this.#saveCheckpoint('group_comments', postExternalId, pageInfo?.end_cursor || null, /** @type {any} */ (comments), Boolean(pageInfo?.has_next_page));
+
+    return { comments, pageInfo };
+  }
+
+  /**
    * Scrape hierarchical comments from a Facebook post via GraphQL.
    * @param {Object} args
    * @param {string} args.postId - Post URL, base64 feedback id, numeric post id, or namespaced/synthetic id
    * @param {number} [args.maxDepth=3]
    * @param {number} [args.maxComments=500]
+   * @param {string} [args.after]
+   * @param {string} [args.feedLocation='POST_PERMALINK_DIALOG']
    * @param {Record<string, any>} [session={}]
    * @returns {Promise<{ comments: import('../../../core/types.js').CommentItem[], pageInfo?: any }>}
    */
@@ -1215,6 +1434,8 @@ export class FacebookCrawler extends AbstractCrawler {
     const maxComments = this.#clampMaxComments(args?.maxComments);
     const accountId = session?.accountId;
     const cookies = this.#resolveCookies(session);
+    const feedLocation = args?.feedLocation || 'POST_PERMALINK_DIALOG';
+    const isGroup = feedLocation === 'GROUP';
 
     // Resolve post feedback id up-front; needed for the root comment GraphQL query.
     const postContext = await this.#resolvePostFeedbackContext(args.postId, cookies, accountId);
@@ -1232,7 +1453,9 @@ export class FacebookCrawler extends AbstractCrawler {
      */
     const fetchLayer = async ({ postId, parentCommentId, after, limit }) => {
       const isReply = parentCommentId != null;
-      const docId = isReply ? this.docIds.COMMENT_REPLIES : this.docIds.COMMENT_ROOTS;
+      const docId = isReply
+        ? (isGroup ? (this.docIds.GROUP_COMMENT_REPLIES || this.docIds.COMMENT_REPLIES) : this.docIds.COMMENT_REPLIES)
+        : (isGroup ? (this.docIds.GROUP_COMMENT_ROOTS || this.docIds.COMMENT_ROOTS) : this.docIds.COMMENT_ROOTS);
       if (!docId) {
         throw new PlatformError({
           code: 'XACT_5000',
@@ -1257,7 +1480,7 @@ export class FacebookCrawler extends AbstractCrawler {
       const baseVariables = {
         clientKey: null,
         expansionToken: isReply ? (context.expansionToken || null) : null,
-        feedLocation: 'POST_PERMALINK_DIALOG',
+        feedLocation,
         focusCommentID: null,
         id: context.feedbackId,
         scale: 2,
@@ -1326,7 +1549,7 @@ export class FacebookCrawler extends AbstractCrawler {
       concurrency: 2,
     });
 
-    const { comments, pageInfo } = await extractor.fetch(postExternalId);
+    const { comments, pageInfo } = await extractor.fetch(postExternalId, { after: args?.after || null });
 
     for (const comment of comments) {
       this.validateItem(comment);

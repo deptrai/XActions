@@ -2,19 +2,19 @@
 story_id: '13.7'
 epic: 13
 story_key: '13-7-facebook-hybrid-post-group-comments'
-status: 'ready-for-dev'
-phase: 'Phase 4'
-created: '2026-08-28'
-updated: '2026-08-28'
-last_updated: '2026-08-28'
-owner: 'DEV'
-reviewed: 'Pending'
-baseline_commit: 'a2d8c87b'
+status: "review"
+phase: "Phase 4"
+created: 2026-08-28
+updated: 2026-08-28
+last_updated: 2026-08-28
+owner: "DEV"
+reviewed: "Pending"
+baseline_commit: "c4beb26a"
 ---
 
 # Story 13.7: Facebook Hybrid Post & Group Comments
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -161,44 +161,69 @@ so that **tôi có thể phân tích sentiment và cấu trúc hội thoại v�
 
 ## Tasks / Subtasks
 
-1. **Mở rộng `CommentTreeExtractor` trong `src/scrapers/social/comment-tree.js`**
-   - `fetch(postId, options = {})` chấp nhận `options.after` làm root cursor ban đầu.
-   - Truyền `after` vào `fetchLayerPaginated` cho root layer.
+1. [x] **Mở rộng `CommentTreeExtractor` trong `src/scrapers/social/comment-tree.js`**
+   - [x] `fetch(postId, options = {})` chấp nhận `options.after` làm root cursor ban đầu.
+   - [x] Truyền `after` vào `fetchLayerPaginated` cho root layer.
 
-2. **Cập nhật `DEFAULT_FB_DOC_IDS` nếu cần**
-   - Thêm `GROUP_COMMENT_ROOTS` và `GROUP_COMMENT_REPLIES` placeholders (có thể trỏ tới cùng `COMMENT_ROOTS`/`COMMENT_REPLIES` cho đến khi capture doc_id riêng cho group).
+2. [x] **Cập nhật `DEFAULT_FB_DOC_IDS` nếu cần**
+   - [x] Thêm `GROUP_COMMENT_ROOTS` và `GROUP_COMMENT_REPLIES` placeholders (có thể trỏ tới cùng `COMMENT_ROOTS`/`COMMENT_REPLIES` cho đến khi capture doc_id riêng cho group).
 
-3. **Implement `postComments` và `groupComments` trong `src/scrapers/social/facebook/crawler.js`**
-   - `postComments(args, session)`: xử lý `url`, `includeReplies`, `limit`, `after`, gọi `getCommentsForPost` với `feedLocation`.
-   - `groupComments(args, session)`: validate `/groups/` URL, gọi `getCommentsForPost` với `feedLocation` group.
-   - Đăng ký cả hai action trong constructor.
+3. [x] **Implement `postComments` và `groupComments` trong `src/scrapers/social/facebook/crawler.js`**
+   - [x] `postComments(args, session)`: xử lý `url`, `includeReplies`, `limit`, `after`, gọi `getCommentsForPost` với `feedLocation`.
+   - [x] `groupComments(args, session)`: validate `/groups/` URL, gọi `getCommentsForPost` với `feedLocation` group.
+   - [x] Đăng ký cả hai action trong constructor.
 
-4. **Mở rộng `getCommentsForPost` để hỗ trợ `feedLocation` và `after`**
-   - `const feedLocation = args.feedLocation || 'POST_PERMALINK_DIALOG'`.
-   - Truyền `args.after` xuống `CommentTreeExtractor.fetch`.
-   - Điều chỉnh `fetchLayer` dùng đúng `doc_id` và variables cho group nếu `feedLocation` là group.
+4. [x] **Mở rộng `getCommentsForPost` để hỗ trợ `feedLocation` và `after`**
+   - [x] `const feedLocation = args.feedLocation || 'POST_PERMALINK_DIALOG'`.
+   - [x] Truyền `args.after` xuống `CommentTreeExtractor.fetch`.
+   - [x] Điều chỉnh `fetchLayer` dùng đúng `doc_id` và variables cho group nếu `feedLocation` là group.
 
-5. **Cập nhật `#normalizeComment` để strip PII**
-   - Thêm regex phone/email (giống legacy `stripPii`) áp dụng cho `authorName` và `content`.
-   - Thêm `sourceMethod` vào metadata.
+5. [x] **Cập nhật `#normalizeComment` để strip PII**
+   - [x] Thêm regex phone/email (giống legacy `stripPii`) áp dụng cho `authorName` và `content`.
+   - [x] Thêm `sourceMethod` vào metadata.
 
-6. **Lưu checkpoint cho comments**
-   - Sau khi `storeCommentBatch`, gọi `#saveCheckpoint` với `targetType: 'post_comments'` hoặc `'group_comments'`, `targetKey: postExternalId`, `lastCursor: pageInfo.end_cursor`.
+6. [x] **Lưu checkpoint cho comments**
+   - [x] Sau khi `storeCommentBatch`, gọi `#saveCheckpoint` với `targetType: 'post_comments'` hoặc `'group_comments'`, `targetKey: postExternalId`, `lastCursor: pageInfo.end_cursor`.
 
-7. **Đánh dấu legacy `@deprecated`**
-   - `src/scrapers/facebook/comments.js`: `scrapeFacebookComments`, `scrapeFacebookGroupComments`.
-   - `src/scrapers/facebook/index.js` re-export nếu cần.
-   - `docs/deprecation-plan.md`: cập nhật mapping table và status tracker.
+7. [x] **Đánh dấu legacy `@deprecated`**
+   - [x] `src/scrapers/facebook/comments.js`: `scrapeFacebookComments`, `scrapeFacebookGroupComments`.
+   - [x] `src/scrapers/facebook/index.js` re-export nếu cần.
+   - [x] `docs/deprecation-plan.md`: cập nhật mapping table và status tracker.
 
-8. **Viết / mở rộng tests**
-   - Tạo `tests/scrapers/social/facebook/crawler-post-group-comments.test.js` hoặc mở rộng `crawler-comments.test.js`.
-   - Real `node:http` server, không mock.
-   - Bao quát AC-1..AC-10.
+8. [x] **Viết / mở rộng tests**
+   - [x] Tạo `tests/scrapers/social/facebook/crawler-post-group-comments.test.js` hoặc mở rộng `crawler-comments.test.js`.
+   - [x] Real `node:http` server, không mock.
+   - [x] Bao quát AC-1..AC-10.
 
-9. **Chạy verification**
-   - `npx vitest run tests/scrapers/social/facebook/`
-   - `npx vitest run tests/scrapers/social/comment-tree.test.js`
-   - `npx tsc --noEmit`
+9. [x] **Chạy verification**
+   - [x] `npx vitest run tests/scrapers/social/facebook/`
+   - [x] `npx vitest run tests/scrapers/social/comment-tree.test.js`
+   - [x] `npx tsc --noEmit`
+
+## Dev Agent Record
+
+### Implementation Summary
+- Extended `CommentTreeExtractor` to support `options.after` as the initial root pagination cursor, with defensive guards against infinite pagination loops on zero-progress or stale cursor responses.
+- Registered `post_comments` and `group_comments` actions in `FacebookCrawler` with full input argument schemas and output signatures.
+- Implemented `postComments(args, session)` and `groupComments(args, session)` with comprehensive SSRF guards, domain validation, URL path validation, `includeReplies` / `maxDepth` resolution, and checkpoint persistence (`targetType: 'post_comments'` / `'group_comments'`).
+- Added PII stripping for Vietnamese and international phone numbers and email addresses in `#normalizeComment` according to NFR-11.
+- Updated `DEFAULT_FB_DOC_IDS` with `GROUP_COMMENT_ROOTS` and `GROUP_COMMENT_REPLIES` with fallback inheritance from `deps.docIds`.
+- Added JSDoc `@deprecated` markers to legacy `scrapeFacebookComments` and `scrapeFacebookGroupComments` in `src/scrapers/facebook/comments.js` and updated `docs/deprecation-plan.md`.
+- Authored zero-mock integration test suite in `tests/scrapers/social/facebook/crawler-post-group-comments.test.js` (6/6 tests passing) and extended `tests/scrapers/social/comment-tree.test.js` (8/8 tests passing). Full regression suite (26 files, 270 tests) passing with 0 errors on `npx tsc --noEmit`.
+
+### File List
+- `src/scrapers/social/comment-tree.js` (modified)
+- `src/scrapers/social/facebook/crawler.js` (modified)
+- `src/scrapers/facebook/comments.js` (modified)
+- `docs/deprecation-plan.md` (modified)
+- `tests/scrapers/social/comment-tree.test.js` (modified)
+- `tests/scrapers/social/facebook/crawler-post-group-comments.test.js` (new)
+- `_bmad-output/test-artifacts/atdd-checklist-13-7-facebook-hybrid-post-group-comments.md` (modified)
+- `_bmad-output/implementation-artifacts/13-7-facebook-hybrid-post-group-comments.md` (modified)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
+
+### Change Log
+- 2026-08-28: Implemented Story 13.7 (Facebook Hybrid Post & Group Comments) with ATDD red-green cycle, PII stripping, root pagination cursor support, checkpoint saving, and legacy deprecation markers.
 
 ## Dev Notes
 

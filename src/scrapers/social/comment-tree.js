@@ -62,9 +62,12 @@ export class CommentTreeExtractor {
   /**
    * Fetch the full comment tree for a post.
    * @param {string} postId
+   * @param {Object} [options]
+   * @param {string | null} [options.after] - Initial root pagination cursor
    * @returns {Promise<{ comments: CommentItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
    */
-  async fetch(postId) {
+  async fetch(postId, options = {}) {
+    const initialAfter = options?.after || null;
     const byId = new Map();
     const seen = new Set();
     let total = 0;
@@ -129,10 +132,11 @@ export class CommentTreeExtractor {
      * Fetch one layer, paginating until done or the global cap is reached.
      * @param {string | null} parentCommentId
      * @param {number} depth
+     * @param {string | null} [initialCursor=null]
      * @returns {Promise<{ pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
      */
-    const fetchLayerPaginated = async (parentCommentId, depth) => {
-      let after = /** @type {string | null} */ (null);
+    const fetchLayerPaginated = async (parentCommentId, depth, initialCursor = null) => {
+      let after = /** @type {string | null} */ (initialCursor);
       let lastPageInfo = { has_next_page: false, end_cursor: /** @type {string | null} */ (null) };
 
       do {
@@ -146,6 +150,7 @@ export class CommentTreeExtractor {
           limit: remaining,
         });
 
+        const prevTotal = total;
         const rawComments = Array.isArray(page?.comments) ? page.comments : [];
         for (const raw of rawComments) {
           if (total >= this.#maxComments) break;
@@ -154,13 +159,17 @@ export class CommentTreeExtractor {
 
         const pageInfo = page?.pageInfo || { has_next_page: false, end_cursor: null };
         lastPageInfo = pageInfo;
-        after = pageInfo.has_next_page ? pageInfo.end_cursor : null;
+        const nextCursor = pageInfo.has_next_page ? pageInfo.end_cursor : null;
+        if (nextCursor === after || total === prevTotal) {
+          break;
+        }
+        after = nextCursor;
       } while (after && total < this.#maxComments);
 
       return { pageInfo: lastPageInfo };
     };
 
-    const root = await fetchLayerPaginated(null, 0);
+    const root = await fetchLayerPaginated(null, 0, initialAfter);
     rootPageInfo = root.pageInfo;
 
     for (let depth = 0; depth < this.#maxDepth; depth++) {
