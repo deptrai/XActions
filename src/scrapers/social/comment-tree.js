@@ -74,6 +74,7 @@ export class CommentTreeExtractor {
     const seen = new Set();
     let total = 0;
     let rootPageInfo = { has_next_page: false, end_cursor: /** @type {string | null} */ (null) };
+    /** @type {string[]} */
     const notes = [];
 
     /**
