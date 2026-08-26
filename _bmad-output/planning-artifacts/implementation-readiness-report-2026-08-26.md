@@ -480,14 +480,17 @@ Re-validated `epics.md` (Epics 10–20) against the `bmad-create-epics-and-stori
 
 ### 6.1. Overall Readiness Status
 
-**READY**
+**READY — Phase 4 Core (Epics 10–20)**  
+**PHASE 4 EXTENSION BACKLOG — Epics 23–26 added, not yet reviewed against PRD/UX/Architecture**
 
 The three critical epic-sizing issues identified in the previous assessment have been resolved:
 - `19.4` is now a command-group story plus five focused admin CLI sub-stories (`19.4.1`–`19.4.5`).
 - `13.2.6`–`13.2.8` are now split into `13.2.6`–`13.2.12`, with each sub-story owning a single action domain.
 - The NFR traceability matrix no longer references the non-existent `19.6`; it now points to `19.4.5`.
 
-The XActions Phase 4 (Epics 10–20) specification package now has **no critical or major blockers**. Remaining issues are minor UX and wording gaps that can be closed in parallel with implementation.
+The **Phase 4 core** (Epics 10–20) has **no critical or major blockers**.
+
+**Epics 23–26** (Bluesky/Mastodon migration, utility/adapters consolidation, unified dispatcher, final decommission) were added as a Phase 4 extension. They are detailed in `epics.md` and `sprint-status.yaml` but have **not yet been validated** against canonical PRD, UX, and architecture. A focused readiness review is required before they are treated as implementation-ready.
 
 ### 6.2. Critical Issues Requiring Immediate Action
 
@@ -519,8 +522,16 @@ None. All critical issues from the previous assessment are resolved.
 1. Close remaining UX gaps (per Section 6.3) before UI/CLI stories begin.
 2. If desired, split `19.8` for stricter REST separation; otherwise keep with explicit justification.
 3. Begin implementation of Epics 10–20 in the planned order.
-4. Re-run `bmad-sprint-planning` to regenerate `sprint-status.yaml` keys from the updated `epics.md` (already done manually in this update; regenerate if automated tool is preferred).
+4. Run a focused readiness review for **Epics 23–26** before scheduling them:
+   - Confirm scope with Product Council.
+   - Update or add PRD/UX/Architecture coverage for Bluesky/Mastodon, utility scripts, and adapter consolidation.
+   - Re-run `bmad-check-implementation-readiness` when the Phase 4 extension is mature.
+5. Re-run `bmad-sprint-planning` to regenerate `sprint-status.yaml` keys from the updated `epics.md` (already done manually in this update; regenerate if automated tool is preferred).
 
 ### 6.6. Final Note
 
-This re-run of the Implementation Readiness assessment confirms the **three critical blockers are resolved**. The package now has **0 critical / major issues** and **4 minor notes** (Q6, Q7, Q8, Q10) that do not prevent Phase 4 implementation. The overall status is **READY**.
+This re-run of the Implementation Readiness assessment confirms the **three critical blockers are resolved**. The package now has **0 critical / major issues** and **4 minor notes** (Q6, Q7, Q8, Q10) for the **Phase 4 core (Epics 10–20)**.
+
+The **overall Phase 4 core status is READY**.
+
+**Epics 23–26** were added as a Phase 4 extension after this assessment. They are documented in `epics.md` and `sprint-status.yaml` but are **currently in extension-backlog status**. A focused readiness review is required before they can be considered ready for implementation.
