@@ -10,19 +10,26 @@ import { namespacedProfileId, profileItemToPostItem } from './normalize-profile.
  */
 export function normalizeFacebookSearchPost(raw, query = '') {
   if (!raw || typeof raw !== 'object') return null;
-  const node = raw.node?.story || raw.story || raw.node || raw;
+  const node = raw.comet_sections?.content_story?.story ||
+               raw.node?.comet_sections?.content_story?.story ||
+               raw.node?.story ||
+               raw.story ||
+               raw.node ||
+               raw;
   const rawId = node.post_id || node.id || node.postId || raw.id;
   const postId = rawId ? String(rawId).trim() : '';
   if (!postId) return null;
 
-  const actor = Array.isArray(node.actors) && node.actors.length > 0 ? node.actors[0] : (node.actor || {});
+  const actor = (Array.isArray(node.actors) && node.actors[0] && typeof node.actors[0] === 'object')
+    ? node.actors[0]
+    : (node.actor && typeof node.actor === 'object' ? node.actor : {});
   const authorId = String(actor.id || actor.profile_id || '');
   const authorName = String(actor.name || actor.text || 'Facebook User');
   const authorAvatar = actor.profile_picture?.uri || actor.avatar || undefined;
 
   const content = (typeof node.message === 'string' ? node.message : node.message?.text) ||
                   (typeof node.text === 'string' ? node.text : node.text?.text) ||
-                  node.content || '';
+                  (typeof node.content === 'string' ? node.content : node.content?.text) || '';
 
   const parseCount = (/** @type {any} */ val) => {
     const n = Number(val);
@@ -38,13 +45,27 @@ export function normalizeFacebookSearchPost(raw, query = '') {
   const mediaUrls = [];
   if (Array.isArray(node.attachments)) {
     for (const att of node.attachments) {
+      if (!att || typeof att !== 'object') continue;
       const media = att.media?.image?.uri || att.media?.uri || att.url;
       if (media && typeof media === 'string') mediaUrls.push(media);
     }
   }
 
-  const creationTime = Number(node.creation_time || node.creationTime || node.published_time);
-  const publishedAt = Number.isFinite(creationTime) && creationTime > 0 ? new Date(creationTime * 1000) : undefined;
+  const rawTime = node.creation_time || node.creationTime || node.published_time;
+  let publishedAt = undefined;
+  if (rawTime) {
+    if (typeof rawTime === 'number' && Number.isFinite(rawTime) && rawTime > 0) {
+      publishedAt = new Date(rawTime > 1e11 ? rawTime : rawTime * 1000);
+    } else if (typeof rawTime === 'string') {
+      const parsedNum = Number(rawTime);
+      if (Number.isFinite(parsedNum) && parsedNum > 0) {
+        publishedAt = new Date(parsedNum > 1e11 ? parsedNum : parsedNum * 1000);
+      } else {
+        const d = new Date(rawTime);
+        if (!isNaN(d.getTime())) publishedAt = d;
+      }
+    }
+  }
 
   return {
     id: generatePostId('facebook', postId),
@@ -88,7 +109,7 @@ export function normalizeFacebookSearchProfile(raw, searchType = 'people', query
   const externalId = rawId ? String(rawId).trim() : '';
   if (!externalId) return null;
 
-  const name = String(node.name || node.title?.text || node.title || '');
+  const name = typeof node.name === 'string' ? node.name : (node.name?.text || node.title?.text || (typeof node.title === 'string' ? node.title : ''));
   const username = node.username ? String(node.username).trim() : undefined;
   const bio = (typeof node.bio_text === 'string' ? node.bio_text : node.bio_text?.text) ||
               (typeof node.snippet === 'string' ? node.snippet : node.snippet?.text) ||
@@ -134,7 +155,7 @@ export function normalizeFacebookPageSearchResult(raw, query = '') {
   const externalId = rawId ? String(rawId).trim() : '';
   if (!externalId) return null;
 
-  const name = String(node.name || node.title?.text || node.title || '');
+  const name = typeof node.name === 'string' ? node.name : (node.name?.text || node.title?.text || (typeof node.title === 'string' ? node.title : ''));
   const avatar = node.profile_picture?.uri || node.profilePicture?.uri || node.avatar || undefined;
   const pageUrl = node.url || `https://www.facebook.com/${externalId}`;
   const category = node.category_name || node.category || undefined;
@@ -176,7 +197,7 @@ export function normalizeFacebookGroupSearchResult(raw, query = '') {
   const externalId = rawId ? String(rawId).trim() : '';
   if (!externalId) return null;
 
-  const name = String(node.name || node.title?.text || node.title || '');
+  const name = typeof node.name === 'string' ? node.name : (node.name?.text || node.title?.text || (typeof node.title === 'string' ? node.title : ''));
   const avatar = node.profile_picture?.uri || node.profilePicture?.uri || node.avatar || undefined;
   const groupUrl = node.url || `https://www.facebook.com/groups/${externalId}`;
   const privacy = node.privacy_setting || node.privacy || undefined;
@@ -231,13 +252,26 @@ export function searchResultToPostItem(item, searchType = 'posts', query = '') {
   }
 
   const postItem = profileItemToPostItem(item);
-  postItem.metadata = {
+  const metadata = /** @type {Record<string, any>} */ ({
+    ...(item.metadata || {}),
     ...(postItem.metadata || {}),
     isSearchResult: true,
     searchType,
     resultType: searchType,
     query: String(query || item.metadata?.query || ''),
-  };
+    sourceMethod: item.metadata?.sourceMethod || 'graphql',
+  });
+
+  if (item.metadata?.isPage) {
+    metadata.isPage = true;
+    metadata.isProfile = false;
+  }
+  if (item.metadata?.isGroup) {
+    metadata.isGroup = true;
+    metadata.isProfile = false;
+  }
+
+  postItem.metadata = metadata;
   postItem.publishedAt = null;
   return postItem;
 }

@@ -527,4 +527,30 @@ describe('Story 13.6 — Facebook Hybrid Search (Global + Group Search)', () => 
       session: { accountId: 'fb-search-user' },
     })).rejects.toThrow(PlatformError);
   });
+
+  it('[AC-10] should validate search result metadata against schema registry', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl, governor, accountPool });
+    const crawler = new FacebookCrawler({
+      client,
+      sessionManager,
+      docIds: {
+        SEARCH_POSTS: 'fb_search_posts_doc',
+        SEARCH_PEOPLE: 'fb_search_people_doc',
+        SEARCH_PAGES: 'fb_search_pages_doc',
+        SEARCH_GROUPS: 'fb_search_groups_doc',
+      }
+    });
+
+    const res = await crawler.start({
+      action: 'search',
+      args: { query: 'AI Innovation', type: 'all' },
+      session: { accountId: 'fb-search-user' },
+    });
+
+    for (const item of [...res.posts, ...res.people, ...res.pages, ...res.groups]) {
+      expect(item.metadata?.isSearchResult).toBe(true);
+      const validation = metadataSchemaRegistry.validateMetadata('facebook', 'social', item.metadata);
+      expect(validation.valid).toBe(true);
+    }
+  });
 });

@@ -115,9 +115,9 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
         'members' in data ||
         'edges' in data ||
         'page_info' in data ||
-        'serpResponse' in data ||
-        'searchResults' in data ||
-        'results' in data ||
+        data.serpResponse ||
+        data.searchResults ||
+        (data.results && typeof data.results === 'object') ||
         data.posts ||
         data.profile ||
         data.comments ||

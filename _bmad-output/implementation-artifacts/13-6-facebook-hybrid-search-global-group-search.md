@@ -2,19 +2,19 @@
 story_id: "13.6"
 epic: 13
 story_key: "13-6-facebook-hybrid-search-global-group-search"
-status: "review"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-28
 last_updated: 2026-08-28
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "2026-08-28"
 baseline_commit: "4a152d14"
 ---
 
 # Story 13.6: Facebook Hybrid Search (Global + Group Search)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -200,6 +200,17 @@ so that **tôi có thể thu thập nhiều loại đối tượng với cùng m
    - [x] npx vitest run tests/scrapers/social/facebook/crawler-search.test.js
    - [x] npx tsc --noEmit
    - [x] npx vitest run tests/scrapers/social/ (regression)
+
+### Review Findings
+
+- [x] [Review][Patch] Preserve all entity-specific metadata in searchResultToPostItem [src/scrapers/social/facebook/normalize-search.js:254]
+- [x] [Review][Patch] Harden null guards for actors and attachments [src/scrapers/social/facebook/normalize-search.js:18-44]
+- [x] [Review][Patch] Extract Comet Relay AST content_story node [src/scrapers/social/facebook/normalize-search.js:13]
+- [x] [Review][Patch] Add protocol-relative SSRF prevention in groupSearch and resolveGroupId [src/scrapers/social/facebook/crawler.js:180, 1080]
+- [x] [Review][Patch] Isolate cursor across entity types in #searchAllTypes [src/scrapers/social/facebook/crawler.js:1038]
+- [x] [Review][Patch] Harden isValidPayload search results object check [src/scrapers/social/facebook/validator.js:120]
+- [x] [Review][Patch] Add AC-10 metadata schema registry validation test [tests/scrapers/social/facebook/crawler-search.test.js:531]
+- [x] [Review][Defer] FacebookBrowserBridge search fallback — deferred, non-blocking for GraphQL/SSR engine
 
 ## Dev Notes
 

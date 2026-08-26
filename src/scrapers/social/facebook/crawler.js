@@ -177,9 +177,10 @@ export function resolveGroupId(input) {
 
   if (/^\d+$/.test(trimmed)) return trimmed;
 
-  if (/^https?:\/\//i.test(trimmed)) {
-    assertFacebookUrl(trimmed, 'group url');
-    const url = new URL(trimmed);
+  if (/^(?:https?:)?\/\//i.test(trimmed)) {
+    const fullUrl = trimmed.startsWith('//') ? `https:${trimmed}` : trimmed;
+    assertFacebookUrl(fullUrl, 'group url');
+    const url = new URL(fullUrl);
     const match = url.pathname.match(/\/groups\/([^/?#]+)/);
     if (!match) {
       throw new PlatformError({
@@ -980,9 +981,10 @@ export class FacebookCrawler extends AbstractCrawler {
       cookies,
     });
 
-    const edges = res?.data?.serpResponse?.results?.edges ||
-                  res?.data?.searchResults?.edges ||
-                  res?.data?.edges || [];
+    const rawEdges = res?.data?.serpResponse?.results?.edges ||
+                     res?.data?.searchResults?.edges ||
+                     res?.data?.edges || [];
+    const edges = Array.isArray(rawEdges) ? rawEdges : [];
     const pageInfo = res?.data?.serpResponse?.results?.page_info ||
                      res?.data?.searchResults?.page_info ||
                      res?.data?.page_info || null;
@@ -1035,10 +1037,11 @@ export class FacebookCrawler extends AbstractCrawler {
     });
 
     for (const t of types) {
-      const res = await this.#searchByType(t, query, options, session);
+      const typeOptions = t === 'posts' ? options : { ...options, cursor: null };
+      const res = await this.#searchByType(t, query, typeOptions, session);
       const items = res?.posts || (Array.isArray(res) ? res : []);
       results[t] = items;
-      if (!results.pageInfo && res.pageInfo) {
+      if (!results.pageInfo && res?.pageInfo) {
         results.pageInfo = res.pageInfo;
       }
     }
@@ -1078,9 +1081,10 @@ export class FacebookCrawler extends AbstractCrawler {
       });
     }
 
-    if (rawGroupInput.startsWith('http://') || rawGroupInput.startsWith('https://')) {
+    if (/^(?:https?:)?\/\//i.test(rawGroupInput)) {
+      const fullUrl = rawGroupInput.startsWith('//') ? `https:${rawGroupInput}` : rawGroupInput;
       try {
-        const parsed = new URL(rawGroupInput);
+        const parsed = new URL(fullUrl);
         const host = parsed.hostname.toLowerCase();
         if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
           throw new PlatformError({
@@ -1123,7 +1127,9 @@ export class FacebookCrawler extends AbstractCrawler {
       query: rawQuery,
       searchTerm: rawQuery,
       count: limit,
+      first: limit,
       cursor,
+      after: cursor,
     };
 
     const res = await this.client.requestGraphQl(docId, variables, {
