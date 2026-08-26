@@ -41,6 +41,7 @@ Từ 2026-08-21, FR trong XActions được đánh số theo phạm vi (scope pr
 | FUTURE-FR-62 | FR-62 | `archive/prds/prd-XActions-2026-08-14-epic7/prd.md` | GraphQL replay — deferred to Phase 3 |
 | U-FR-64..U-FR-84 | FR-64..FR-84 | `prd.md` | Universal Engine Epics 10–18 |
 | U-FR-85..U-FR-88 | FR-85..FR-88 | `prd.md` §7.1 | Operator Dashboard, Metadata Schema, Data Retention, 3-Tier Gap-Filling |
+| U-FR-89..U-FR-93 | FR-89..FR-93 | `prd.md` §7.1 | Bluesky/Mastodon, Utility/Adapters, Unified Dispatcher, Legacy Decommission (Phase 4 extension 23–26) |
 
 ---
 
@@ -60,6 +61,7 @@ Tương tự FR, NFR sử dụng prefix phạm vi để tránh xung đột:
 | FB-NFR-11..FB-NFR-15 | NFR-11..NFR-15 | `archive/prds/prd-XActions-2026-08-14-epic7/prd.md` / `archive/epics-1-9-legacy.md` | No storage, health check <2s, concurrency cap, privacy, resilience, read velocity |
 | U-NFR-11..U-NFR-16 | NFR-11..NFR-16 | `prd.md` | Resource optimization, throughput, resilience, security, clean architecture, license |
 | U-NFR-17 | NFR-17 | `prd.md` §7.2 | Operational observability |
+| U-NFR-18 | NFR-18 | `prd.md` §7.2 | Universal Architecture Compliance |
 
 > **Chú ý:** Trong tài liệu nguồn, `NFR-10..NFR-15` bị dùng lại ở cả Epic 4, Epic 7 và Epics 10–20 với nghĩa khác nhau. Khi traceability, **dùng canonical ID có prefix** (`FB-NFR-10` vs `U-NFR-10` nếu cần) hoặc `FB-NFR-6..10` / `FB-NFR-11..15` / `U-NFR-11..17`.
 
