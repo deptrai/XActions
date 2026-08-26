@@ -128,7 +128,34 @@ describe('Story 13.8 — Facebook Hybrid Marketplace', () => {
 
           res.writeHead(400, { 'content-type': 'application/json' });
           res.end(JSON.stringify({ errors: [{ message: `Unknown doc_id in test: ${docId}` }] }));
+          return;
         }
+
+        // SSR fallback route for Story 13.8
+        if (req.method === 'GET' && req.url?.startsWith('/marketplace/')) {
+          const url = new URL(req.url, `http://127.0.0.1:${server.address().port}`);
+          const query = url.searchParams.get('query') || '';
+
+          if (query.toLowerCase().includes('macbook')) {
+            res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+            res.end(`
+              <!DOCTYPE html>
+              <html>
+                <body>
+                  <a href="/marketplace/item/listing_dom_1">MacBook Pro 16 M2 Max</a>
+                </body>
+              </html>
+            `);
+          } else {
+            res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+            res.end(`<!DOCTYPE html><html><body></body></html>`);
+          }
+          return;
+        }
+
+        // Catch-all for unhandled paths
+        res.writeHead(404, { 'content-type': 'text/plain' });
+        res.end('Not found');
       });
     });
 
@@ -337,22 +364,8 @@ describe('Story 13.8 — Facebook Hybrid Marketplace', () => {
     expect(res.note).toContain('Marketplace GraphQL query failed');
   });
 
-  it('[AC-5] should use browserBridge evaluate fallback when GraphQL fails and browserBridge is provided', async () => {
-    const mockBridge = {
-      evaluate: async (_fn, _url) => [
-        {
-          id: 'listing_dom_1',
-          title: 'MacBook Pro 16 M2 Max',
-          price: '$2,400',
-          image: 'https://scontent.xx.fbcdn.net/dom1.jpg',
-          seller: { id: 'seller_dom_1', name: 'DOM Seller' },
-          creationTime: 1787680500,
-        },
-      ],
-    };
-
+  it('[AC-5] should use HTTP SSR fallback when GraphQL fails', async () => {
     const client = new FacebookClient({ baseUrl: serverUrl });
-    client.browserBridge = mockBridge;
 
     const crawler = new FacebookCrawler({
       client,
@@ -373,8 +386,8 @@ describe('Story 13.8 — Facebook Hybrid Marketplace', () => {
     expect(res.posts).toBeDefined();
     expect(res.posts.length).toBe(1);
     expect(res.posts[0].id).toBe('facebook:listing_dom_1');
-    expect(res.posts[0].metadata?.sourceMethod).toBe('browser');
-    expect(res.note).toContain('Used browser fallback');
+    expect(res.posts[0].metadata?.sourceMethod).toBe('ssr');
+    expect(res.note).toContain('SSR fallback');
   });
 
   it('[AC-9] should mark legacy scrapeMarketplace as deprecated in JSDoc', async () => {

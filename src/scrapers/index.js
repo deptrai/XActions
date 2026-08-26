@@ -179,7 +179,7 @@ export async function scrape(platform, action, options = {}) {
     spaces: 'scrapeSpaces',
     feed: 'scrapeFeed',
     'group-members': 'scrapeGroupMembers',
-    marketplace: 'scrapeMarketplace',
+    marketplace: 'scrapeMarketplace', // TODO(13.10): migrate to FacebookCrawler action 'marketplace'
   };
 
   // Platform-specific action map for Facebook (Story 7.2). Prefer this over the

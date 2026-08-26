@@ -20,6 +20,59 @@ export function stripPii(value) {
 }
 
 /**
+ * Resolve a scalar listing id, handling object ids safely.
+ * @param {unknown} rawId
+ * @returns {string | null}
+ */
+function resolveListingId(rawId) {
+  if (rawId == null) return null;
+  if (typeof rawId === 'string' || typeof rawId === 'number') {
+    const s = String(rawId).trim();
+    return s || null;
+  }
+  if (typeof rawId === 'object') {
+    const obj = /** @type {Record<string, unknown>} */ (rawId);
+    for (const key of ['id', 'listingId', 'postId']) {
+      const v = obj[key];
+      if (v != null && (typeof v === 'string' || typeof v === 'number')) {
+        const s = String(v).trim();
+        if (s) return s;
+      }
+    }
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Extract a human-readable price and currency from common Marketplace price shapes.
+ * Objects without a known scalar field are treated as unknown (null), never coerced to '[object Object]'.
+ * @param {unknown} raw
+ * @returns {{ price: string | null, currency: string | null }}
+ */
+function extractPrice(raw) {
+  if (raw == null) return { price: null, currency: null };
+  if (typeof raw === 'string' || typeof raw === 'number') {
+    return { price: String(raw), currency: null };
+  }
+  if (typeof raw === 'object') {
+    const obj = /** @type {Record<string, unknown>} */ (raw);
+    const currency = typeof obj.currency === 'string' ? obj.currency : null;
+    if (typeof obj.formatted_amount === 'string' || typeof obj.formatted_amount === 'number') {
+      return { price: String(obj.formatted_amount), currency };
+    }
+    if (typeof obj.amount === 'string' || typeof obj.amount === 'number') {
+      return { price: String(obj.amount), currency };
+    }
+    if (typeof obj.value === 'string' || typeof obj.value === 'number') {
+      return { price: String(obj.value), currency };
+    }
+    return { price: null, currency };
+  }
+  return { price: null, currency: null };
+}
+
+/**
  * Parse creation time into safe Date and epoch timestamp (seconds).
  * @param {unknown} raw
  * @returns {{ publishedAt: Date | undefined, ts: number | null }}
@@ -50,17 +103,13 @@ export function normalizeFacebookMarketplaceListing(raw, sourceMethod = 'graphql
 
   const node = raw.listing || raw.node?.listing || raw.node || raw;
   const rawId = node.id || node.listing_id || node.target_id || raw.id;
-  const listingId = rawId ? String(rawId).trim() : '';
+  const listingId = resolveListingId(rawId);
   if (!listingId) return null;
 
   const rawTitle = node.marketplace_listing_title || node.title || node.name || '';
   const title = stripPii(rawTitle);
 
-  const priceObj = node.listing_price || node.price || {};
-  let price = typeof priceObj === 'string'
-    ? priceObj
-    : (priceObj.formatted_amount || (priceObj.amount != null ? String(priceObj.amount) : null) || (typeof node.price === 'string' ? node.price : (node.price != null ? String(node.price) : null)));
-  let currency = priceObj.currency || null;
+  const { price, currency } = extractPrice(node.listing_price || node.price);
 
   const locationObj = node.location || {};
   const location = locationObj.reverse_geocode?.city || locationObj.name || (typeof node.location === 'string' ? node.location : null);

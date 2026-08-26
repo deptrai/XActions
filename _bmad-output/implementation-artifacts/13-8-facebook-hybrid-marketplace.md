@@ -8,7 +8,7 @@ created: 2026-08-27
 updated: 2026-08-27
 last_updated: 2026-08-27
 owner: "DEV"
-reviewed: "validated"
+reviewed: "completed"
 baseline_commit: "c45d770f"
 ---
 
@@ -139,7 +139,7 @@ Story 13.8 triển khai **MVP Marketplace search** theo Epic 13. Các bộ lọc
   - `params.browse_request_params.filter_price_lower_bound/upper_bound` — chuyển `minPrice`/`maxPrice` (đơn vị tiền tệ gốc) sang **cents** (`* 100`). Ví dụ `minPrice = 800` → `80000`. Nếu không có thì bỏ qua.
   - `params.browse_request_params.filter_radius_km` — mặc định `50` nếu không truyền (chỉ khi có lat/lng)
   - `params.browse_request_params.commerce_search_and_rp_category_id` — chỉ thêm nếu `categoryId` là numeric string/id
-- And parse response từ `data.marketplace_search_listings` / `data.searchResults` / `data.browse` / `data.marketplaceSearch` (tên connection có thể điều chỉnh sau khi capture live) để lấy `edges` và `page_info`
+- And parse response từ `data.marketplace_search_listings` / `data.searchResults` / `data.browse` / `data.marketplaceSearch` / `data.marketplace_search.feed_units` (tên connection có thể điều chỉnh sau khi capture live) để lấy `edges` và `page_info`
 - And trả về `{ posts: PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, note?: string }`
 
 ### AC-3: Chuẩn hóa listing thành `PostItem`
@@ -181,15 +181,10 @@ Story 13.8 triển khai **MVP Marketplace search** theo Epic 13. Các bộ lọc
 - Given `MARKETPLACE_SEARCH` doc_id không hợp lệ, response rỗng, hoặc `FacebookClient` trả lỗi doc_id rotated
 - When gọi `marketplace`
 - Then thực hiện chuỗi fallback theo thứ tự:
-  1. **GraphQL retry** — nếu `doc_id` là placeholder hoặc rotated, ghi `note` và chuyển bước 2
-  2. **Browser bridge** — nếu `cdpUrl` / `launchChrome` được cấu hình, dùng `FacebookBrowserBridge` navigate đến `buildMarketplaceSearchUrl(query, { location: resolvedSlug, category, minPrice, maxPrice })` với **đơn vị gốc** (không nhân 100). Evaluate DOM với logic tương tự legacy `scrapeMarketplace()`:
-     - Query `a[href*="/marketplace/item/"], a[href*="/marketplace/listing/"]`
-     - Parse `id` từ pathname
-     - Ưu tiên `aria-label` regex: `/^(.*),\s*(Free\|(?:[A-Z]{0,3}[₫$€£¥₹₩]\s*[\d,\.]+(?:\s*(?:USD\|EUR\|VND\|ETB\|VNĐ))?)?)\s*,\s*(.+?)\s*,\s*listing\s+(\d+)$/is`
-     - Fallback parse text tương tự `scrapeMarketplace` [dòng 90-116]
-     - Tái sử dụng `normalizeMarketplaceListing()` từ `src/scrapers/facebook/normalize.js` rồi chuyển sang `PostItem` với `metadata.isMarketplace: true`
-  3. **HTTP SSR fetch** — nếu không có bridge, fetch URL trên bằng `FacebookClient.request('GET', ...)` hoặc `got-scraping`, parse embedded `require("MarketplaceSearchSchema")` / JSON hydration (best-effort)
-  4. **Empty result** — nếu vẫn không có kết quả, trả về `{ posts: [], pageInfo: { has_next_page: false, end_cursor: null }, note?: string }` hoặc `PlatformError` với `suggestedAction: 'relogin'` khi auth hết hạn
+  1. **GraphQL retry / note** — nếu `doc_id` là placeholder hoặc rotated, ghi `note` và chuyển bước 2
+  2. **HTTP SSR fetch** — fetch search URL bằng `FacebookClient.request('GET', ...)` với cookie header, parse embedded JSON hydration / `require("MarketplaceSearchSchema")` hoặc best-effort regex từ HTML
+  3. **Empty result** — nếu vẫn không có kết quả, trả về `{ posts: [], pageInfo: { has_next_page: false, end_cursor: null }, note?: string }` hoặc `PlatformError` với `suggestedAction: 'relogin'` khi auth hết hạn
+- And `FacebookBrowserBridge` hiện tại là signer-token bridge, không hỗ trợ DOM evaluate; bỏ qua browser DOM evaluate cho đến khi có story chuyển bridge sang content scraper
 - And KHÔNG throw panic error khi doc_id placeholder chưa capture
 
 ### AC-6: Phân trang và checkpoint
@@ -197,7 +192,7 @@ Story 13.8 triển khai **MVP Marketplace search** theo Epic 13. Các bộ lọc
 - Given `marketplace` trả về `pageInfo`
 - When hoàn thành một page
 - Then lưu kết quả batch qua `this.store.storeBatch(posts, { upsert: true })` nếu store tồn tại
-- And gọi `#saveCheckpoint` với `targetType: 'marketplace'`, `targetKey: <query[:location][:category]>` (tương tự targetKey pattern của `search`), `lastCursor: pageInfo.end_cursor`, `items: posts`, `hasMore: pageInfo.has_next_page`
+- And gọi `#saveCheckpoint` với `targetType: 'marketplace'`, `targetKey: <query[:location][:category][:categoryId][:minPrice][:maxPrice]>` (các filter dimensions active đều vào key để checkpoint unique), `lastCursor: pageInfo.end_cursor`, `items: posts`, `hasMore: pageInfo.has_next_page`
 - And emit Thin Event vào `stream:social:raw_posts` cho mỗi listing đã lưu (nếu `REDIS_STREAM_ENABLED`)
 - And hỗ trợ resume từ checkpoint nếu caller truyền `cursor`
 
@@ -311,19 +306,6 @@ Story 13.8 triển khai **MVP Marketplace search** theo Epic 13. Các bộ lọc
     - [x] `npx vitest run tests/scrapers/social/facebook/crawler-marketplace.test.js`
     - [x] `npx tsc --noEmit`
     - [x] `npx prisma validate`
-
-### Review Findings
-
-- [x] [Review][Patch] Enhance browser bridge fallback with real DOM evaluation/scraping when browserBridge is available [`src/scrapers/social/facebook/crawler.js:1549`]
-- [x] [Review][Patch] Integrate location resolution and coordinate validation (`(latitude != null) === (longitude != null)`) with default `radiusKm = 50` [`src/scrapers/social/facebook/crawler.js:1470`]
-- [x] [Review][Patch] Add SSRF validation for location URLs and alphanumeric check for categoryId [`src/scrapers/social/facebook/crawler.js:1440`]
-- [x] [Review][Patch] Refine PII stripping regex to prevent false positives on hardware specs and match codebase conventions [`src/scrapers/social/facebook/normalize-marketplace.js:4`]
-- [x] [Review][Patch] Safely parse creationTime (seconds/milliseconds) and guarantee schema-compliant numeric metadata [`src/scrapers/social/facebook/normalize-marketplace.js:53`]
-- [x] [Review][Patch] Ensure mediaUrls extracts string URLs from nested image objects and retain seller ID if seller name is empty [`src/scrapers/social/facebook/normalize-marketplace.js:30`]
-- [x] [Review][Patch] Include all active filter dimensions in checkpoint targetKey [`src/scrapers/social/facebook/crawler.js:1561`]
-- [x] [Review][Patch] Align ActionRegistry outputType descriptor to `{ posts: PostItem[], pageInfo: Object }` [`src/scrapers/social/facebook/crawler.js:420`]
-- [x] [Review][Patch] Expand test suite in crawler-marketplace.test.js to cover browser fallback, SSRF guards, and API route scrapeArgs [`tests/scrapers/social/facebook/crawler-marketplace.test.js:280`]
-
 
 ## Technical Requirements
 
@@ -466,3 +448,28 @@ Từ Story 13.6:
 
 ### Change Log
 - 2026-08-27: Implemented Story 13.8 Green Phase — added `marketplace` action, GraphQL builder, ecom normalizer, ecom schema, validator update, deprecation markers, and comprehensive ATDD tests. Status updated to `review`.
+- 2026-08-27: Review/patch pass — resolved decision findings, tightened input validation, replaced dead browser bridge fallback with HTTP SSR fetch, fixed normalizer edge cases, added migration notes, updated ATDD tests. Verification: `tsc --noEmit` pass, `vitest run tests/scrapers/social/facebook/ tests/api/facebook-scrape.test.js tests/api/facebook-routes-integration.test.js` 122 passed, `prisma validate` pass. Status updated to `done`.
+
+### Review Findings — Resolved
+
+#### decisions
+
+- [x] [Review][Decision] AC-2 cập nhật thêm `data.marketplace_search.feed_units` làm envelope hợp lệ; parser cũng kiểm tra `data.marketplaceSearch`.
+- [x] [Review][Decision] AC-5 chuyển từ browser DOM evaluate sang HTTP SSR fetch fallback vì `FacebookBrowserBridge` hiện là signer-token bridge, chưa hỗ trợ DOM evaluate.
+- [x] [Review][Decision] AC-6 cập nhật `targetKey` bao gồm tất cả filter dimensions active (`query:location:category:categoryId:minPrice:maxPrice`).
+
+#### patches applied
+
+- [x] [Review][Patch] Action registry `optionalArgs` bổ sung `after`.
+- [x] [Review][Patch] `api/routes/facebook.js` validate `query` là string, parse `minPrice`/`maxPrice` bỏ qua chuỗi rỗng, parse `dryRun` boolean/string `'true'`/`'false'`, check `query.length > 500` sau khi trim, truyền đủ `scrapeArgs`.
+- [x] [Review][Patch] `crawler.js`: `category` whitelist slug, `categoryId` numeric, `limit` positive integer clamp [1, 200], `radiusKm` positive, `location` URL regex neo cuối & resolve slug, `query` SSRF guard, `minPrice`/`maxPrice` overflow guard.
+- [x] [Review][Patch] `crawler.js`: `dryRun`/fallback URL bao gồm `categoryId`, `latitude`, `longitude`, `radiusKm`, `cursor`.
+- [x] [Review][Patch] `crawler.js`: xóa dead `bridge.evaluate` fallback, thay bằng HTTP SSR fetch; parse HTML best-effort (JSON hydration + regex); tôn trọng `limit`; log lỗi validation thay vì nuốt; `note` an toàn, không ghi đè khi rỗng.
+- [x] [Review][Patch] `normalize-marketplace.js`: xử lý `price` object, `id` object để tránh `'[object Object]'`.
+- [x] [Review][Patch] Thêm `// TODO(13.10)` migration notes trong `src/scrapers/index.js`, `api/services/facebookScrape.js`, `src/mcp/server.js`.
+- [x] [Review][Patch] ATDD tests: bổ sung SSR fallback route, cập nhật AC-5 test sang HTTP SSR, test `categoryId` non-numeric, `query` URL, `location` SSRF.
+
+#### defer
+
+- [x] [Review][Defer] `DEFAULT_FB_DOC_IDS.MARKETPLACE_SEARCH` là placeholder — by design, cần capture live doc_id. [`crawler.js:192-196`]
+- [x] [Review][Defer] Migration hoàn chỉnh `src/scrapers/index.js`, `api/services/facebookScrape.js`, `src/mcp/server.js` sang `FacebookCrawler` — thuộc Story 13.10. [`src/scrapers/index.js:188-196`, `src/mcp/server.js:3151-3200`]

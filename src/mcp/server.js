@@ -3149,6 +3149,7 @@ async function executeFacebookEpic4Tool(name, args) {
   }
 
   if (name === 'x_facebook_marketplace') {
+    // TODO(13.10): switch to FacebookCrawler.start({ action: 'marketplace' }) for hybrid filters (categoryId, lat/lng, radius, price, cursor)
     const { query, location, limit, minPrice, maxPrice, category } = rest;
     if (typeof query !== 'string' || !query.trim()) {
       throw new Error('❌ x_facebook_marketplace: query is required');

@@ -51,6 +51,7 @@ export async function run(action, args = {}) {
   }
 
   // Default: delegate to scrape() from src/scrapers/index.js.
+  // TODO(13.10): route to FacebookCrawler.start({ action: 'marketplace' }) to use hybrid filters
   const { scrape } = await import('../../src/scrapers/index.js');
   return /** @type {Record<string, unknown>} */ (await scrape('facebook', action, /** @type {import('../../src/types/xactions.js').XActionsOptions} */ (scrapeArgs)));
 }

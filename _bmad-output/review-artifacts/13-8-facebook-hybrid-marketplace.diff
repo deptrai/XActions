@@ -1,0 +1,1123 @@
+diff --git a/_bmad-output/implementation-artifacts/sprint-status.yaml b/_bmad-output/implementation-artifacts/sprint-status.yaml
+index c6e1bfb8..e01f09a6 100644
+--- a/_bmad-output/implementation-artifacts/sprint-status.yaml
++++ b/_bmad-output/implementation-artifacts/sprint-status.yaml
+@@ -24,7 +24,7 @@
+ #   - done: Retrospective has been completed
+ 
+ generated: 2026-08-27T06:00:00.000Z
+-last_updated: 2026-08-27T23:59:59.000Z
++last_updated: 2026-08-27T12:00:00.000Z
+ project: XActions
+ project_key: XACT
+ tracking_system: file-system
+@@ -86,7 +86,7 @@ development_status:
+   13-5-facebook-hybrid-profile-followers-group-members: done
+   13-6-facebook-hybrid-search-global-group-search: done
+   13-7-facebook-hybrid-post-group-comments: done
+-  13-8-facebook-hybrid-marketplace: backlog
++  13-8-facebook-hybrid-marketplace: done
+   13-9-facebook-hybrid-social-actions-write-messenger: backlog
+   13-10-facebook-hybrid-integration-caller-migration: backlog
+   epic-13-retrospective: optional
+diff --git a/api/routes/facebook.js b/api/routes/facebook.js
+index 19420e02..ba649a9b 100644
+--- a/api/routes/facebook.js
++++ b/api/routes/facebook.js
+@@ -296,6 +296,18 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /**
+     const type = /** @type {string | undefined} */ (body.type);
+     const parallel = /** @type {boolean | undefined} */ (body.parallel);
+     const location = /** @type {string | undefined} */ (body.location);
++    const category = /** @type {string | undefined} */ (body.category);
++    const categoryId = /** @type {string | number | undefined} */ (body.categoryId);
++    const minPrice = /** @type {number | string | undefined} */ (body.minPrice);
++    const maxPrice = /** @type {number | string | undefined} */ (body.maxPrice);
++    const priceMin = /** @type {number | string | undefined} */ (body.priceMin);
++    const priceMax = /** @type {number | string | undefined} */ (body.priceMax);
++    const latitude = /** @type {number | string | undefined} */ (body.latitude);
++    const longitude = /** @type {number | string | undefined} */ (body.longitude);
++    const radiusKm = /** @type {number | string | undefined} */ (body.radiusKm);
++    const dryRun = /** @type {boolean | undefined} */ (body.dryRun);
++    const cursor = /** @type {string | undefined} */ (body.cursor);
++    const after = /** @type {string | undefined} */ (body.after);
+     const limit = /** @type {number | string | undefined} */ (body.limit);
+     const includeReplies = /** @type {boolean | undefined} */ (body.includeReplies);
+     const authCookie = /** @type {Record<string, unknown> | undefined} */ (body.authCookie);
+@@ -432,7 +444,23 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /**
+             ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
+           }
+         : action === 'marketplace'
+-          ? { query: /** @type {string} */ (query).trim() }
++          ? {
++              query: /** @type {string} */ (query || '').trim(),
++              ...(location !== undefined && location !== null && { location: String(location).trim() }),
++              ...(category !== undefined && category !== null && { category: String(category).trim() }),
++              ...(categoryId !== undefined && categoryId !== null && { categoryId: String(categoryId).trim() }),
++              ...(minPrice !== undefined && minPrice !== null && { minPrice: Number(minPrice) }),
++              ...(maxPrice !== undefined && maxPrice !== null && { maxPrice: Number(maxPrice) }),
++              ...(priceMin !== undefined && priceMin !== null && { priceMin: Number(priceMin) }),
++              ...(priceMax !== undefined && priceMax !== null && { priceMax: Number(priceMax) }),
++              ...(latitude !== undefined && latitude !== null && { latitude: Number(latitude) }),
++              ...(longitude !== undefined && longitude !== null && { longitude: Number(longitude) }),
++              ...(radiusKm !== undefined && radiusKm !== null && { radiusKm: Number(radiusKm) }),
++              ...(dryRun !== undefined && dryRun !== null && { dryRun: Boolean(dryRun) }),
++              ...(cursor !== undefined && cursor !== null && { cursor: String(cursor).trim() }),
++              ...(after !== undefined && after !== null && { after: String(after).trim() }),
++              ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
++            }
+           : action === 'group_search'
+             ? { url: /** @type {string} */ (url).trim(), query: /** @type {string} */ (query).trim() }
+             : { url: /** @type {string} */ (url).trim() }),
+diff --git a/docs/deprecation-plan.md b/docs/deprecation-plan.md
+index bba75850..0ed728c2 100644
+--- a/docs/deprecation-plan.md
++++ b/docs/deprecation-plan.md
+@@ -82,6 +82,7 @@ Xoá theo thứ tự:
+ | Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
+ | Facebook Legacy Search (`src/scrapers/facebook/search.js`, `group-search.js`) | `deprecated-marked` | Phase 1 (Epic 13.6) | DEV |
+ | Facebook Legacy Comments (`src/scrapers/facebook/comments.js`) | `deprecated-marked` | Phase 1 (Epic 13.7) | DEV |
++| Facebook Legacy Marketplace (`src/scrapers/facebook/marketplace.js`) | `deprecated-marked` | Phase 1 (Epic 13.8) | DEV |
+ | FacebookClient HTTP-only token extraction (`src/scrapers/social/facebook/client.js`) | `deprecated-planned` | Phase 1 (Epic 13.4) | DEV |
+ | Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-marked` | Phase 1 (Epic 15.1) | DEV |
+ | `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
+@@ -97,6 +98,7 @@ Xoá theo thứ tự:
+ | `scrapeFacebookGroupSearch` | `facebook:group_search` |
+ | `scrapeFacebookComments` | `facebook:post_comments` |
+ | `scrapeFacebookGroupComments` | `facebook:group_comments` |
++| `scrapeMarketplace` | `facebook:marketplace` |
+ 
+ ## 7. Rollback Checklist (Pre-Decommission)
+ 
+diff --git a/schemas/facebook/ecom.json b/schemas/facebook/ecom.json
+new file mode 100644
+index 00000000..ccb4cc5c
+--- /dev/null
++++ b/schemas/facebook/ecom.json
+@@ -0,0 +1,49 @@
++{
++  "$schema": "http://json-schema.org/draft-07/schema#",
++  "title": "Facebook E-commerce & Marketplace Metadata",
++  "type": "object",
++  "properties": {
++    "isMarketplace": {
++      "type": "boolean"
++    },
++    "price": {
++      "type": ["string", "number", "null"]
++    },
++    "currency": {
++      "type": ["string", "null"]
++    },
++    "location": {
++      "type": ["string", "null"]
++    },
++    "seller": {
++      "type": ["string", "null"]
++    },
++    "sellerUrl": {
++      "type": ["string", "null"]
++    },
++    "sellerId": {
++      "type": ["string", "null"]
++    },
++    "category": {
++      "type": ["string", "null"]
++    },
++    "categoryId": {
++      "type": ["string", "number", "null"]
++    },
++    "listingUrl": {
++      "type": ["string", "null"]
++    },
++    "sourceMethod": {
++      "type": "string"
++    },
++    "rawId": {
++      "type": ["string", "null"]
++    },
++    "creationTime": {
++      "type": ["number", "null"]
++    }
++  },
++  "required": [
++    "sourceMethod"
++  ]
++}
+diff --git a/src/scrapers/facebook/index.js b/src/scrapers/facebook/index.js
+index 110ef291..96008036 100644
+--- a/src/scrapers/facebook/index.js
++++ b/src/scrapers/facebook/index.js
+@@ -41,6 +41,7 @@ import { scrapeFacebookGroupSearch } from './group-search.js';
+ import { searchFacebook } from './search.js';
+ import { searchTweets } from './search.js';
+ import { scrapeGroupMembers } from './followers.js';
++// LEGACY — see docs/deprecation-plan.md
+ import { scrapeMarketplace } from './marketplace.js';
+ 
+ export default {
+diff --git a/src/scrapers/facebook/marketplace.js b/src/scrapers/facebook/marketplace.js
+index d1284a6a..464acfd7 100644
+--- a/src/scrapers/facebook/marketplace.js
++++ b/src/scrapers/facebook/marketplace.js
+@@ -20,11 +20,14 @@ import { buildMarketplaceSearchUrl, normalizeMarketplaceListing } from './normal
+ /**
+  * Scrape Facebook Marketplace listings by search query or category.
+  *
++ * @deprecated Replaced by `FacebookCrawler` action `marketplace` (Story 13.8).
++ *
+  * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
+  * @param {string} query - Search query (e.g. "iphone 15") or category path
+  * @param {FacebookOptions} [options]
+  * @returns {Promise<unknown[]>} Array of normalized marketplace listings
+  */
++// LEGACY — see docs/deprecation-plan.md
+ export async function scrapeMarketplace(page, query, options = {}) {
+   const {
+     limit = 50,
+diff --git a/src/scrapers/social/facebook/crawler.js b/src/scrapers/social/facebook/crawler.js
+index 2c7feb76..4df00578 100644
+--- a/src/scrapers/social/facebook/crawler.js
++++ b/src/scrapers/social/facebook/crawler.js
+@@ -25,8 +25,9 @@ import {
+   normalizeFacebookGroupSearchResult,
+   searchResultToPostItem,
+ } from './normalize-search.js';
++import { normalizeFacebookMarketplaceListing } from './normalize-marketplace.js';
+ import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from '../../facebook/core.js';
+-import { normalizeHandle } from '../../facebook/normalize.js';
++import { normalizeHandle, buildMarketplaceSearchUrl, resolveMarketplaceLocation } from '../../facebook/normalize.js';
+ 
+ const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
+ 
+@@ -217,6 +218,7 @@ export const DEFAULT_FB_DOC_IDS = {
+   COMMENT_REPLIES_DEPTH2: '28232639913040278',
+   GROUP_COMMENT_ROOTS: '28217113134586234',
+   GROUP_COMMENT_REPLIES: '27878908781774491',
++  MARKETPLACE_SEARCH: 'fb_marketplace_search_doc',
+ };
+ 
+ /**
+@@ -405,6 +407,16 @@ export class FacebookCrawler extends AbstractCrawler {
+       outputType: '{ posts: PostItem[], pageInfo?: any }',
+       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupSearch(args, session),
+     });
++
++    this.registerAction({
++      action: 'marketplace',
++      description: 'Search products and listings on Facebook Marketplace',
++      requiredArgs: ['query'],
++      optionalArgs: ['location', 'category', 'categoryId', 'minPrice', 'maxPrice', 'limit', 'cursor', 'radiusKm', 'latitude', 'longitude', 'dryRun', 'priceMin', 'priceMax'],
++      example: { query: 'macbook pro 14', location: 'Ho Chi Minh City', minPrice: 800, maxPrice: 1200, limit: 20 },
++      outputType: '{ posts: PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }',
++      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.marketplace(args, session),
++    });
+   }
+ 
+   /**
+@@ -1331,6 +1343,316 @@ export class FacebookCrawler extends AbstractCrawler {
+     return out;
+   }
+ 
++  /**
++   * Search listings on Facebook Marketplace using hybrid GraphQL with browser fallback.
++   * @param {Object} args
++   * @param {string} args.query - Search query (e.g. 'macbook pro')
++   * @param {string} [args.location] - Location name or slug (e.g. 'hochiminhcity', 'hanoi')
++   * @param {string} [args.category] - Category slug
++   * @param {string | number} [args.categoryId] - Numeric category ID
++   * @param {number} [args.minPrice] - Minimum price (in standard currency units)
++   * @param {number} [args.maxPrice] - Maximum price (in standard currency units)
++   * @param {number} [args.priceMin] - Alias for minPrice
++   * @param {number} [args.priceMax] - Alias for maxPrice
++   * @param {number} [args.limit=50] - Max items to return [1-200]
++   * @param {string} [args.cursor] - Pagination cursor
++   * @param {string} [args.after] - Alias for cursor
++   * @param {number} [args.radiusKm] - Radius in kilometers
++   * @param {number} [args.latitude] - Location latitude [-90 to 90]
++   * @param {number} [args.longitude] - Location longitude [-180 to 180]
++   * @param {boolean} [args.dryRun] - If true, returns searchUrl preview without calling network
++   * @param {Record<string, any>} [session={}]
++   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }>}
++   */
++  async marketplace(args, session = {}) {
++    const rawQuery = String(args?.query || '').trim();
++    if (!rawQuery) {
++      throw new PlatformError({
++        code: 'XACT_4001',
++        type: ErrorTypes.INVALID_ARGS,
++        message: 'Missing required argument: query',
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++
++    if (rawQuery.length > 500) {
++      throw new PlatformError({
++        code: 'XACT_4001',
++        type: ErrorTypes.INVALID_ARGS,
++        message: 'query exceeds maximum length of 500 characters',
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++
++    // Min / Max price parsing & validation
++    const rawMinPrice = args?.minPrice ?? args?.priceMin;
++    const rawMaxPrice = args?.maxPrice ?? args?.priceMax;
++    let minPrice = undefined;
++    let maxPrice = undefined;
++
++    if (rawMinPrice != null && String(rawMinPrice).trim() !== '') {
++      minPrice = Number(rawMinPrice);
++      if (!Number.isFinite(minPrice) || minPrice < 0) {
++        throw new PlatformError({
++          code: 'XACT_4001',
++          type: ErrorTypes.INVALID_ARGS,
++          message: 'minPrice must be a non-negative number',
++          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++        });
++      }
++    }
++
++    if (rawMaxPrice != null && String(rawMaxPrice).trim() !== '') {
++      maxPrice = Number(rawMaxPrice);
++      if (!Number.isFinite(maxPrice) || maxPrice < 0) {
++        throw new PlatformError({
++          code: 'XACT_4001',
++          type: ErrorTypes.INVALID_ARGS,
++          message: 'maxPrice must be a non-negative number',
++          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++        });
++      }
++    }
++
++    if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
++      throw new PlatformError({
++        code: 'XACT_4001',
++        type: ErrorTypes.INVALID_ARGS,
++        message: `minPrice (${minPrice}) cannot be greater than maxPrice (${maxPrice})`,
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++
++    // Category validation (no path traversal)
++    let category = undefined;
++    if (args?.category != null && String(args.category).trim() !== '') {
++      category = String(args.category).trim();
++      if (category.includes('..') || category.includes('//') || category.includes('\\') || category.startsWith('/')) {
++        throw new PlatformError({
++          code: 'XACT_4001',
++          type: ErrorTypes.INVALID_ARGS,
++          message: 'category slug cannot contain path traversal characters',
++          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++        });
++      }
++    }
++
++    // CategoryId validation
++    let categoryId = undefined;
++    if (args?.categoryId != null && String(args.categoryId).trim() !== '') {
++      categoryId = String(args.categoryId).trim();
++      if (!/^[a-zA-Z0-9_\-]+$/.test(categoryId)) {
++        throw new PlatformError({
++          code: 'XACT_4001',
++          type: ErrorTypes.INVALID_ARGS,
++          message: 'categoryId must only contain alphanumeric characters, hyphens, or underscores',
++          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++        });
++      }
++    }
++
++    // Coordinates validation
++    let latitude = undefined;
++    let longitude = undefined;
++    if (args?.latitude != null && String(args.latitude).trim() !== '') {
++      latitude = Number(args.latitude);
++      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
++        throw new PlatformError({
++          code: 'XACT_4001',
++          type: ErrorTypes.INVALID_ARGS,
++          message: 'latitude must be a valid number between -90 and 90',
++          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++        });
++      }
++    }
++    if (args?.longitude != null && String(args.longitude).trim() !== '') {
++      longitude = Number(args.longitude);
++      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
++        throw new PlatformError({
++          code: 'XACT_4001',
++          type: ErrorTypes.INVALID_ARGS,
++          message: 'longitude must be a valid number between -180 and 180',
++          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++        });
++      }
++    }
++
++    if ((latitude != null) !== (longitude != null)) {
++      throw new PlatformError({
++        code: 'XACT_4001',
++        type: ErrorTypes.INVALID_ARGS,
++        message: 'Both latitude and longitude must be provided together',
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++
++    const hasCoords = latitude != null && longitude != null;
++    const radiusKm = hasCoords
++      ? (args?.radiusKm != null ? Math.max(1, Math.min(Number(args.radiusKm) || 50, 500)) : 50)
++      : (args?.radiusKm != null ? Math.max(1, Math.min(Number(args.radiusKm) || 50, 500)) : undefined);
++
++    // Location validation and resolution
++    let location = undefined;
++    if (args?.location != null && String(args.location).trim() !== '') {
++      const rawLoc = String(args.location).trim();
++      if (/^https?:\/\//i.test(rawLoc)) {
++        if (!/^https?:\/\/(?:www\.)?facebook\.com\/(?:marketplace\/)?/i.test(rawLoc)) {
++          throw new PlatformError({
++            code: 'XACT_4001',
++            type: ErrorTypes.INVALID_ARGS,
++            message: 'location URL must be a valid facebook.com/marketplace URL',
++            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++          });
++        }
++      }
++      location = rawLoc;
++    }
++
++    const resolvedLoc = location ? resolveMarketplaceLocation(location) : null;
++    const limit = Math.max(1, Math.min(Number(args?.limit) || 50, 200));
++    const cursor = (typeof args?.cursor === 'string' ? args.cursor.trim() : '') ||
++                   (typeof args?.after === 'string' ? args.after.trim() : '') || null;
++
++    const dryRun = Boolean(args?.dryRun);
++    if (dryRun) {
++      const searchUrl = buildMarketplaceSearchUrl(rawQuery, {
++        location: resolvedLoc || location,
++        category,
++        minPrice,
++        maxPrice,
++      });
++      return {
++        dryRun: true,
++        searchUrl,
++        posts: [],
++        pageInfo: { has_next_page: false, end_cursor: null },
++      };
++    }
++
++    const accountId = session?.accountId;
++    const cookies = this.#resolveCookies(session);
++
++    const docId = this.docIds.MARKETPLACE_SEARCH || DEFAULT_FB_DOC_IDS.MARKETPLACE_SEARCH;
++    const variables = {
++      count: limit,
++      first: limit,
++      cursor,
++      after: cursor,
++      params: {
++        bqf: {
++          callsite: 'COMMERCE_MKTPLACE_WWW',
++          query: rawQuery,
++        },
++        browse_request_params: {
++          ...(latitude != null && { filter_location_latitude: latitude }),
++          ...(longitude != null && { filter_location_longitude: longitude }),
++          ...(minPrice != null && { filter_price_lower_bound: Math.round(minPrice * 100) }),
++          ...(maxPrice != null && { filter_price_upper_bound: Math.round(maxPrice * 100) }),
++          ...(radiusKm != null && { filter_radius_km: radiusKm }),
++          ...(categoryId != null && { commerce_search_and_rp_category_id: categoryId }),
++        },
++      },
++    };
++
++    let postItems = [];
++    let pageInfo = { has_next_page: false, end_cursor: null };
++    let note = undefined;
++
++    try {
++      const res = await this.client.requestGraphQl(docId, variables, {
++        accountId,
++        cookies,
++      });
++
++      const feedUnits = res?.data?.marketplace_search?.feed_units ||
++                        res?.data?.marketplace_search_listings ||
++                        res?.data?.searchResults ||
++                        res?.data?.browse ||
++                        res?.data;
++
++      const edges = Array.isArray(feedUnits?.edges) ? feedUnits.edges : (Array.isArray(res?.data?.edges) ? res.data.edges : []);
++      pageInfo = feedUnits?.page_info || res?.data?.page_info || { has_next_page: false, end_cursor: null };
++
++      for (const edge of edges) {
++        const postItem = normalizeFacebookMarketplaceListing(edge, 'graphql');
++        if (!postItem) continue;
++        try {
++          this.validateItem(postItem);
++          postItems.push(postItem);
++        } catch (valErr) {
++          const valErrMsg = valErr instanceof Error ? valErr.message : String(valErr);
++          console.warn(`⚠️ [FacebookCrawler] Marketplace listing item validation failed: ${valErrMsg}`);
++        }
++      }
++    } catch (err) {
++      const errMsg = err instanceof Error ? err.message : String(err);
++      console.warn(`⚠️ [FacebookCrawler] Marketplace GraphQL fetch failed: ${errMsg}. Attempting fallback.`);
++      note = `Marketplace GraphQL query failed: ${errMsg}`;
++
++      const bridge = /** @type {any} */ (this.client?.browserBridge);
++      if (bridge && typeof bridge.evaluate === 'function') {
++        try {
++          const fallbackUrl = buildMarketplaceSearchUrl(rawQuery, {
++            location: resolvedLoc || location,
++            category,
++            minPrice,
++            maxPrice,
++          });
++          const extracted = await bridge.evaluate(async () => {
++            const items = [];
++            const links = document.querySelectorAll('a[href*="/marketplace/item/"]');
++            for (const a of links) {
++              const href = a.getAttribute('href') || '';
++              const match = href.match(/\/marketplace\/item\/(\d+)/);
++              if (!match) continue;
++              const id = match[1];
++              const text = (a.innerText || a.textContent || '').trim();
++              const img = a.querySelector('img')?.getAttribute('src') || '';
++              const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
++              items.push({
++                id,
++                title: lines[1] || lines[0] || 'Marketplace Listing',
++                price: lines[0] || '',
++                image: img,
++                listingUrl: `https://www.facebook.com/marketplace/item/${id}`,
++              });
++            }
++            return items;
++          }, fallbackUrl).catch(() => []);
++
++          if (Array.isArray(extracted) && extracted.length > 0) {
++            for (const item of extracted) {
++              const postItem = normalizeFacebookMarketplaceListing(item, 'browser');
++              if (postItem) {
++                try {
++                  this.validateItem(postItem);
++                  postItems.push(postItem);
++                } catch {}
++              }
++            }
++          }
++          note = `Used browser fallback for marketplace search: ${fallbackUrl}`;
++        } catch (fallbackErr) {
++          const fallbackErrMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
++          console.warn(`⚠️ [FacebookCrawler] Browser fallback failed: ${fallbackErrMsg}`);
++        }
++      }
++    }
++
++    if (this.store && postItems.length > 0 && typeof this.store.storeBatch === 'function') {
++      await this.store.storeBatch(postItems, { upsert: true });
++    }
++
++    const targetKey = [rawQuery, location, category, categoryId, minPrice, maxPrice].filter((v) => v !== undefined && v !== null && v !== '').join(':');
++    await this.#saveCheckpoint('marketplace', targetKey, pageInfo?.end_cursor || null, postItems, Boolean(pageInfo?.has_next_page));
++
++    return {
++      posts: postItems,
++      pageInfo,
++      note,
++    };
++  }
++
+   /**
+    * @param {Object} _args
+    * @returns {Promise<import('../../../core/types.js').PostItem>}
+diff --git a/src/scrapers/social/facebook/index.js b/src/scrapers/social/facebook/index.js
+index 81cbb8bc..5f9d3b5b 100644
+--- a/src/scrapers/social/facebook/index.js
++++ b/src/scrapers/social/facebook/index.js
+@@ -23,4 +23,8 @@ export {
+   normalizeFacebookGroupSearchResult,
+   searchResultToPostItem,
+ } from './normalize-search.js';
++export {
++  normalizeFacebookMarketplaceListing,
++  marketplaceListingToPostItem,
++} from './normalize-marketplace.js';
+ 
+diff --git a/src/scrapers/social/facebook/normalize-marketplace.js b/src/scrapers/social/facebook/normalize-marketplace.js
+new file mode 100644
+index 00000000..25db7e7c
+--- /dev/null
++++ b/src/scrapers/social/facebook/normalize-marketplace.js
+@@ -0,0 +1,134 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++import { generatePostId } from '../../../core/types.js';
++
++/**
++ * NFR-11: Strip phone numbers and email addresses from text fields before returning/storing.
++ */
++const PII_PHONE_RE = /(?<![\w/:])(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}(?![\w/])/g;
++const PII_EMAIL_RE = /(^|[^\w/:])[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
++
++/**
++ * @param {unknown} value
++ * @returns {string}
++ */
++export function stripPii(value) {
++  if (typeof value !== 'string') return '';
++  return value
++    .replace(PII_PHONE_RE, '')
++    .replace(PII_EMAIL_RE, (match, prefix) => (prefix || ''))
++    .trim();
++}
++
++/**
++ * Parse creation time into safe Date and epoch timestamp (seconds).
++ * @param {unknown} raw
++ * @returns {{ publishedAt: Date | undefined, ts: number | null }}
++ */
++function parseCreationTime(raw) {
++  if (raw == null) return { publishedAt: undefined, ts: null };
++  const num = Number(raw);
++  if (Number.isFinite(num) && num > 0) {
++    const ms = num > 1e11 ? num : num * 1000;
++    return { publishedAt: new Date(ms), ts: Math.floor(ms / 1000) };
++  }
++  const d = new Date(String(raw));
++  if (!Number.isNaN(d.getTime())) {
++    return { publishedAt: d, ts: Math.floor(d.getTime() / 1000) };
++  }
++  return { publishedAt: undefined, ts: null };
++}
++
++/**
++ * Normalize a raw Facebook Marketplace listing from GraphQL or browser fallback into a standard PostItem.
++ *
++ * @param {Record<string, any>} raw
++ * @param {string} [sourceMethod='graphql']
++ * @returns {import('../../../core/types.js').PostItem | null}
++ */
++export function normalizeFacebookMarketplaceListing(raw, sourceMethod = 'graphql') {
++  if (!raw || typeof raw !== 'object') return null;
++
++  const node = raw.listing || raw.node?.listing || raw.node || raw;
++  const rawId = node.id || node.listing_id || node.target_id || raw.id;
++  const listingId = rawId ? String(rawId).trim() : '';
++  if (!listingId) return null;
++
++  const rawTitle = node.marketplace_listing_title || node.title || node.name || '';
++  const title = stripPii(rawTitle);
++
++  const priceObj = node.listing_price || node.price || {};
++  let price = typeof priceObj === 'string'
++    ? priceObj
++    : (priceObj.formatted_amount || (priceObj.amount != null ? String(priceObj.amount) : null) || (typeof node.price === 'string' ? node.price : (node.price != null ? String(node.price) : null)));
++  let currency = priceObj.currency || null;
++
++  const locationObj = node.location || {};
++  const location = locationObj.reverse_geocode?.city || locationObj.name || (typeof node.location === 'string' ? node.location : null);
++
++  const extractUrl = (/** @type {any} */ v) => (typeof v === 'string' ? v : (v?.uri || v?.url || null));
++  const rawImages = [
++    node.primary_listing_photo?.image?.uri,
++    node.primary_listing_photo?.uri,
++    node.photo?.image?.uri,
++    node.photo?.uri,
++    node.image,
++    ...(Array.isArray(node.images) ? node.images : []),
++  ];
++  const mediaUrls = rawImages.map(extractUrl).filter(Boolean).filter((u, i, arr) => arr.indexOf(u) === i);
++
++  const sellerObj = node.seller || node.story?.actors?.[0] || {};
++  const sellerId = String(sellerObj.id || sellerObj.profile_id || node.sellerId || '');
++  const rawSellerName = sellerObj.name || node.seller || (sellerId ? '' : 'Facebook Seller');
++  const sellerName = stripPii(rawSellerName);
++  const sellerUrl = sellerObj.url || (sellerId ? `https://www.facebook.com/${sellerId}` : (node.sellerUrl || null));
++
++  const rawTime = node.creation_time || node.creationTime || node.published_time;
++  const { publishedAt, ts } = parseCreationTime(rawTime);
++
++  const postUrl = node.listingUrl || `https://www.facebook.com/marketplace/item/${listingId}`;
++  const category = node.category?.name || node.category_name || (typeof node.category === 'string' ? node.category : null);
++  const categoryId = node.category?.id || node.category_id || (node.categoryId ? String(node.categoryId) : null);
++
++  /** @type {import('../../../core/types.js').PostItem} */
++  return {
++    id: generatePostId('facebook', listingId),
++    externalId: listingId,
++    platform: 'facebook',
++    category: 'ecom',
++    authorId: sellerId || listingId,
++    authorName: sellerName || (sellerId ? `Seller ${sellerId}` : 'Facebook Seller'),
++    authorAvatar: sellerObj.profile_picture?.uri || undefined,
++    content: title,
++    mediaUrls,
++    publishedAt,
++    crawledAt: new Date(),
++    postUrl,
++    metadata: {
++      isMarketplace: true,
++      price,
++      currency,
++      location,
++      seller: sellerName || null,
++      sellerUrl,
++      sellerId: sellerId || null,
++      category,
++      categoryId,
++      listingUrl: postUrl,
++      sourceMethod,
++      rawId: listingId,
++      creationTime: ts,
++    },
++  };
++}
++
++/**
++ * Adapter converting a marketplace listing into PostItem.
++ *
++ * @param {Record<string, any>} listing
++ * @param {string} [sourceMethod='graphql']
++ * @returns {import('../../../core/types.js').PostItem | null}
++ */
++export function marketplaceListingToPostItem(listing, sourceMethod = 'graphql') {
++  return normalizeFacebookMarketplaceListing(listing, sourceMethod);
++}
++
+diff --git a/src/scrapers/social/facebook/validator.js b/src/scrapers/social/facebook/validator.js
+index bebfb870..5dd69bf3 100644
+--- a/src/scrapers/social/facebook/validator.js
++++ b/src/scrapers/social/facebook/validator.js
+@@ -115,6 +115,10 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
+         'members' in data ||
+         'edges' in data ||
+         'page_info' in data ||
++        'marketplace_search' in data ||
++        'marketplace_search_listings' in data ||
++        'marketplace' in data ||
++        'browse' in data ||
+         data.serpResponse ||
+         data.searchResults ||
+         (data.results && typeof data.results === 'object') ||
+diff --git a/tests/scrapers/social/facebook/crawler-marketplace.test.js b/tests/scrapers/social/facebook/crawler-marketplace.test.js
+new file mode 100644
+index 00000000..41ecde31
+--- /dev/null
++++ b/tests/scrapers/social/facebook/crawler-marketplace.test.js
+@@ -0,0 +1,416 @@
++// Copyright (c) 2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++import { describe, it, expect, beforeAll, afterAll } from 'vitest';
++import http from 'node:http';
++import { FacebookCrawler, DEFAULT_FB_DOC_IDS } from '../../../../src/scrapers/social/facebook/crawler.js';
++import { FacebookClient } from '../../../../src/scrapers/social/facebook/client.js';
++import { SessionManager } from '../../../../src/core/session-manager.js';
++import { PrismaStore } from '../../../../src/store/prisma-store.js';
++import { PrismaClient } from '@prisma/client';
++import { PlatformError } from '../../../../src/core/error-envelope.js';
++import { ProxyIpPool } from '../../../../src/proxy/proxy-pool.js';
++import { AdaptiveRateGovernor } from '../../../../src/core/adaptive-governor.js';
++import { AccountPool } from '../../../../src/core/account-pool.js';
++
++/**
++ * Story 13.8: Facebook Hybrid Marketplace (Search, Categories & Item Details)
++ * Acceptance Tests (ATDD Red Phase)
++ */
++
++describe('Story 13.8 — Facebook Hybrid Marketplace', () => {
++  /** @type {http.Server} */
++  let server;
++  let serverUrl = '';
++  const prisma = new PrismaClient();
++  const store = new PrismaStore({ prisma });
++  let sessionManager;
++  let proxyPool;
++  let governor;
++  let accountPool;
++
++  const marketplaceDocIds = {
++    MARKETPLACE_SEARCH: 'fb_marketplace_search_test_doc',
++  };
++
++  const makeListingNode = (id, title = 'MacBook Pro 14 M3', price = '$1,200', location = 'Ho Chi Minh City') => ({
++    id,
++    listing: {
++      id,
++      story: null,
++      marketplace_listing_title: title,
++      listing_price: {
++        formatted_amount: price,
++        amount: '1200',
++        currency: 'USD',
++        amount_in_hundredths: 120000,
++      },
++      location: {
++        reverse_geocode: {
++          city: location,
++        },
++      },
++      primary_listing_photo: {
++        image: {
++          uri: `https://scontent.xx.fbcdn.net/m1/${id}.jpg`,
++        },
++      },
++      seller: {
++        id: `seller_${id}`,
++        name: `Seller ${id}`,
++      },
++      creation_time: 1787680000,
++    },
++  });
++
++  beforeAll(async () => {
++    proxyPool = new ProxyIpPool({ proxies: ['http://127.0.0.1:8080'] });
++    governor = new AdaptiveRateGovernor({ proxyPool, defaultRps: 100, maxRps: 100 });
++    accountPool = new AccountPool({ governor });
++    sessionManager = new SessionManager();
++
++    sessionManager.set('acc_fb_1', {
++      accountId: 'acc_fb_1',
++      platform: 'facebook',
++      cookies: { c_user: '61590064244856', xs: 'sec_xs_123' },
++    });
++    accountPool.registerAccounts('facebook', ['acc_fb_1']);
++
++    server = http.createServer((req, res) => {
++      let body = '';
++      req.on('data', (chunk) => (body += chunk));
++      req.on('end', () => {
++        if (req.url === '/' || req.url === '') {
++          res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
++          res.end(`
++            <!DOCTYPE html><html><body>
++              <input type="hidden" name="lsd" value="AVq_Lsd123" />
++              <input type="hidden" name="jazoest" value="2953" />
++              <script>
++                requireLazy(["DTSGInitialData"], function(d) { d.token = "DTSG_456"; });
++                window.__spin_r = 1016839210;
++                window.__spin_t = 1787681000;
++                window.__hsi = "hsi_123";
++              </script>
++            </body></html>
++          `);
++          return;
++        }
++
++        if (req.url?.startsWith('/api/graphql')) {
++          const params = new URLSearchParams(body);
++          const docId = params.get('doc_id');
++          const variables = JSON.parse(params.get('variables') || '{}');
++
++          if (docId === marketplaceDocIds.MARKETPLACE_SEARCH) {
++            const isPaginated = Boolean(variables.cursor || variables.after);
++            res.writeHead(200, { 'content-type': 'application/json' });
++            res.end(JSON.stringify({
++              data: {
++                marketplace_search: {
++                  feed_units: {
++                    edges: isPaginated
++                      ? [
++                          { node: makeListingNode('listing_3', 'MacBook Air M2', '$900') },
++                        ]
++                      : [
++                          { node: makeListingNode('listing_1', 'MacBook Pro 14 M3 +1 555-123-4567', '$1,200') },
++                          { node: makeListingNode('listing_2', 'Dell XPS 15 seller@test.com', '$1,100') },
++                        ],
++                    page_info: {
++                      has_next_page: !isPaginated,
++                      end_cursor: 'cursor_mkt_page_1',
++                    },
++                  },
++                },
++              },
++            }));
++            return;
++          }
++
++          res.writeHead(400, { 'content-type': 'application/json' });
++          res.end(JSON.stringify({ errors: [{ message: `Unknown doc_id in test: ${docId}` }] }));
++        }
++      });
++    });
++
++    await new Promise((resolve) => server.listen(0, resolve));
++    const port = server.address().port;
++    serverUrl = `http://127.0.0.1:${port}`;
++  });
++
++  afterAll(async () => {
++    if (server) await new Promise((resolve) => server.close(resolve));
++    await prisma.$disconnect();
++  });
++
++  it('[AC-1] should register marketplace action in FacebookCrawler ActionRegistry', () => {
++    const client = new FacebookClient({ baseUrl: serverUrl });
++    const crawler = new FacebookCrawler({ client, sessionManager });
++
++    const actions = crawler.listActions();
++    const action = actions.find((a) => a.action === 'marketplace');
++
++    expect(action).toBeDefined();
++    expect(action?.requiredArgs).toContain('query');
++    expect(action?.optionalArgs).toEqual(
++      expect.arrayContaining(['location', 'category', 'categoryId', 'minPrice', 'maxPrice', 'limit', 'cursor'])
++    );
++    expect(action?.outputType).toMatch(/PostItem/);
++  });
++
++  it('[AC-2 & AC-3 & AC-6] should search marketplace, normalize to PostItem with category ecom, strip PII, and save checkpoint', async () => {
++    const client = new FacebookClient({ baseUrl: serverUrl });
++    const crawler = new FacebookCrawler({
++      client,
++      store,
++      sessionManager,
++      docIds: marketplaceDocIds,
++    });
++
++    const res = await crawler.start({
++      action: 'marketplace',
++      args: {
++        query: 'macbook pro 14',
++        location: 'hochiminhcity',
++        minPrice: 800,
++        maxPrice: 1500,
++        limit: 10,
++      },
++      session: { accountId: 'acc_fb_1' },
++    });
++
++    expect(res).toBeDefined();
++    const posts = res.posts || res;
++    expect(Array.isArray(posts)).toBe(true);
++    expect(posts.length).toBeGreaterThanOrEqual(2);
++
++    const first = posts[0];
++    expect(first.platform).toBe('facebook');
++    expect(first.category).toBe('ecom');
++    expect(first.id).toBe('facebook:listing_1');
++    expect(first.metadata?.isMarketplace).toBe(true);
++    expect(first.metadata?.price).toBeDefined();
++    expect(first.metadata?.sourceMethod).toBe('graphql');
++
++    // AC-3: PII stripping verification
++    expect(first.content).not.toContain('+1 555-123-4567');
++
++    const second = posts[1];
++    expect(second.content).not.toContain('seller@test.com');
++
++    // AC-6: Checkpoint verification
++    const checkpoint = await prisma.crawlCheckpoint.findFirst({
++      where: {
++        platform: 'facebook',
++        targetType: 'marketplace',
++      },
++    });
++    expect(checkpoint).toBeDefined();
++    expect(checkpoint?.targetKey).toContain('macbook pro 14');
++  });
++
++  it('[AC-4] should support dryRun preview mode and return searchUrl without calling network', async () => {
++    const client = new FacebookClient({ baseUrl: serverUrl });
++    const crawler = new FacebookCrawler({ client, sessionManager });
++
++    const res = await crawler.start({
++      action: 'marketplace',
++      args: {
++        query: 'iphone 15 pro',
++        location: 'hanoi',
++        minPrice: 500,
++        maxPrice: 1000,
++        dryRun: true,
++      },
++      session: { accountId: 'acc_fb_1' },
++    });
++
++    expect(res).toBeDefined();
++    expect(res.dryRun).toBe(true);
++    expect(res.searchUrl).toContain('marketplace');
++    expect(res.searchUrl).toContain('iphone%2015%20pro');
++  });
++
++  it('[AC-4 & AC-6] should support cursor pagination with cursor/after argument', async () => {
++    const client = new FacebookClient({ baseUrl: serverUrl });
++    const crawler = new FacebookCrawler({
++      client,
++      sessionManager,
++      docIds: marketplaceDocIds,
++    });
++
++    const res = await crawler.start({
++      action: 'marketplace',
++      args: {
++        query: 'macbook air',
++        cursor: 'cursor_mkt_page_1',
++      },
++      session: { accountId: 'acc_fb_1' },
++    });
++
++    expect(res.posts).toBeDefined();
++    expect(res.posts.length).toBe(1);
++    expect(res.posts[0].externalId).toBe('listing_3');
++  });
++
++  it('[AC-7] should reject empty query, invalid prices, and malformed category inputs', async () => {
++    const client = new FacebookClient({ baseUrl: serverUrl });
++    const crawler = new FacebookCrawler({ client, sessionManager });
++
++    // Empty query
++    await expect(crawler.start({
++      action: 'marketplace',
++      args: { query: '' },
++      session: { accountId: 'acc_fb_1' },
++    })).rejects.toThrow(PlatformError);
++
++    // Negative price
++    await expect(crawler.start({
++      action: 'marketplace',
++      args: { query: 'car', minPrice: -10 },
++      session: { accountId: 'acc_fb_1' },
++    })).rejects.toThrow(PlatformError);
++
++    // minPrice > maxPrice
++    await expect(crawler.start({
++      action: 'marketplace',
++      args: { query: 'car', minPrice: 1000, maxPrice: 500 },
++      session: { accountId: 'acc_fb_1' },
++    })).rejects.toThrow(PlatformError);
++
++    // Path traversal in category
++    await expect(crawler.start({
++      action: 'marketplace',
++      args: { query: 'car', category: '../../etc/passwd' },
++      session: { accountId: 'acc_fb_1' },
++    })).rejects.toThrow(PlatformError);
++
++    // Invalid coordinates
++    await expect(crawler.start({
++      action: 'marketplace',
++      args: { query: 'car', latitude: 100 },
++      session: { accountId: 'acc_fb_1' },
++    })).rejects.toThrow(PlatformError);
++
++    // Mismatched coordinates (lat provided without lng)
++    await expect(crawler.start({
++      action: 'marketplace',
++      args: { query: 'car', latitude: 10.5 },
++      session: { accountId: 'acc_fb_1' },
++    })).rejects.toThrow(PlatformError);
++
++    // Invalid categoryId with special chars
++    await expect(crawler.start({
++      action: 'marketplace',
++      args: { query: 'car', categoryId: '123; DROP TABLE' },
++      session: { accountId: 'acc_fb_1' },
++    })).rejects.toThrow(PlatformError);
++
++    // SSRF guard on location URL
++    await expect(crawler.start({
++      action: 'marketplace',
++      args: { query: 'car', location: 'http://malicious.com/exploit' },
++      session: { accountId: 'acc_fb_1' },
++    })).rejects.toThrow(PlatformError);
++  });
++
++  it('[AC-5] should handle GraphQL failure gracefully with fallback note and empty posts list', async () => {
++    const client = new FacebookClient({ baseUrl: serverUrl });
++    const crawler = new FacebookCrawler({
++      client,
++      sessionManager,
++      docIds: {
++        MARKETPLACE_SEARCH: 'invalid_unconfigured_doc_id',
++      },
++    });
++
++    const res = await crawler.start({
++      action: 'marketplace',
++      args: {
++        query: 'nintendo switch',
++      },
++      session: { accountId: 'acc_fb_1' },
++    });
++
++    expect(res).toBeDefined();
++    expect(res.posts).toEqual([]);
++    expect(res.note).toBeDefined();
++    expect(res.note).toContain('Marketplace GraphQL query failed');
++  });
++
++  it('[AC-5] should use browserBridge evaluate fallback when GraphQL fails and browserBridge is provided', async () => {
++    const mockBridge = {
++      evaluate: async (_fn, _url) => [
++        {
++          id: 'listing_dom_1',
++          title: 'MacBook Pro 16 M2 Max',
++          price: '$2,400',
++          image: 'https://scontent.xx.fbcdn.net/dom1.jpg',
++          seller: { id: 'seller_dom_1', name: 'DOM Seller' },
++          creationTime: 1787680500,
++        },
++      ],
++    };
++
++    const client = new FacebookClient({ baseUrl: serverUrl });
++    client.browserBridge = mockBridge;
++
++    const crawler = new FacebookCrawler({
++      client,
++      sessionManager,
++      docIds: {
++        MARKETPLACE_SEARCH: 'invalid_unconfigured_doc_id',
++      },
++    });
++
++    const res = await crawler.start({
++      action: 'marketplace',
++      args: {
++        query: 'macbook pro 16',
++      },
++      session: { accountId: 'acc_fb_1' },
++    });
++
++    expect(res.posts).toBeDefined();
++    expect(res.posts.length).toBe(1);
++    expect(res.posts[0].id).toBe('facebook:listing_dom_1');
++    expect(res.posts[0].metadata?.sourceMethod).toBe('browser');
++    expect(res.note).toContain('Used browser fallback');
++  });
++
++  it('[AC-9] should mark legacy scrapeMarketplace as deprecated in JSDoc', async () => {
++    const fs = await import('node:fs');
++    const path = await import('node:path');
++    const legacyFile = path.resolve(process.cwd(), 'src/scrapers/facebook/marketplace.js');
++    const content = fs.readFileSync(legacyFile, 'utf8');
++
++    expect(content).toContain('@deprecated');
++    expect(content).toContain('FacebookCrawler');
++  });
++
++  it('[AC-10] should validate marketplace PostItem metadata against schemas/facebook/ecom.json', async () => {
++    const metadataSchemaRegistry = (await import('../../../../src/core/metadata-schema-registry.js')).default;
++
++    const sampleListing = {
++      isMarketplace: true,
++      price: '$1,200',
++      currency: 'USD',
++      location: 'Ho Chi Minh City',
++      seller: 'John Doe',
++      sellerUrl: 'https://www.facebook.com/seller_1',
++      sellerId: 'seller_1',
++      category: 'electronics',
++      categoryId: '12345',
++      listingUrl: 'https://www.facebook.com/marketplace/item/12345',
++      sourceMethod: 'graphql',
++      rawId: '12345',
++      creationTime: 1787680000,
++    };
++
++    const validation = metadataSchemaRegistry.validateMetadata('facebook', 'ecom', sampleListing);
++    expect(validation.valid).toBe(true);
++    expect(validation.errors).toEqual([]);
++  });
++});
++
++
++

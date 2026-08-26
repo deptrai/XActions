@@ -58,3 +58,8 @@
 - [ ] [Review][P2][Defer] `CommentTreeExtractor` racy shared state under `p-limit` — pre-existing concurrency issue already deferred from 15-1. [src/scrapers/social/comment-tree.js:175-179]
 - [ ] [Review][P2][Defer] Orphaned replies re-attached to depth 0 never have children fetched — pre-existing `CommentTreeExtractor` behavior already deferred from 15-1. [src/scrapers/social/comment-tree.js:116-123]
 - [ ] [Review][P2][Defer] Group-specific `doc_id` placeholders are unverified — implementation acknowledges this; needs live Facebook capture. [src/scrapers/social/facebook/crawler.js:218-219]
+
+## Deferred from: code review of 13-8-facebook-hybrid-marketplace (2026-08-27)
+
+- [x] [Review][Defer] `DEFAULT_FB_DOC_IDS.MARKETPLACE_SEARCH` là placeholder — by design, cần capture live doc_id. [src/scrapers/social/facebook/crawler.js:192-196]
+- [x] [Review][Defer] Migration hoàn chỉnh `src/scrapers/index.js`, `api/services/facebookScrape.js`, `src/mcp/server.js` sang `FacebookCrawler` — thuộc Story 13.10. [src/scrapers/index.js:188-196, src/mcp/server.js:3151-3200]
