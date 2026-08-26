@@ -52,3 +52,9 @@
 
 - [x] [Review][Defer] `#resolveCookies` branch `session.account.credentials.cookies` is not reachable from normal `AbstractCrawler.start` flow; requires `AccountPool`/`base-crawler` changes outside Story 13.5 scope. [src/scrapers/social/facebook/crawler.js:642-646, src/core/base-crawler.js:236]
 - [x] [Review][Defer] Content fallback for `profile` and `group_members` using `FacebookBrowserBridge` is not feasible here: 13.4 bridge is a signer token bridge (`extractTokens`), not a content scraper. Adding a real browser fallback needs a dedicated story to port legacy `scrapeProfile`/`scrapeGroupMembers` to the BaseAdapter or implement evaluate scripts. [src/scrapers/social/facebook/crawler.js:1058-1072, 1266-1338, src/scrapers/social/facebook/signer-bridge.js]
+
+## Deferred from: code review of 13-7-facebook-hybrid-post-group-comments (2026-08-27)
+
+- [ ] [Review][P2][Defer] `CommentTreeExtractor` racy shared state under `p-limit` — pre-existing concurrency issue already deferred from 15-1. [src/scrapers/social/comment-tree.js:175-179]
+- [ ] [Review][P2][Defer] Orphaned replies re-attached to depth 0 never have children fetched — pre-existing `CommentTreeExtractor` behavior already deferred from 15-1. [src/scrapers/social/comment-tree.js:116-123]
+- [ ] [Review][P2][Defer] Group-specific `doc_id` placeholders are unverified — implementation acknowledges this; needs live Facebook capture. [src/scrapers/social/facebook/crawler.js:218-219]

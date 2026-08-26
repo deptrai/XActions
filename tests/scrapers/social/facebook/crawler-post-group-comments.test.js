@@ -377,5 +377,109 @@ describe('Story 13.7 — Facebook Hybrid Post & Group Comments', () => {
     expect(resGroupNum.comments).toBeDefined();
     expect(resGroupNum.comments.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('[Patch 18 & 19] should reject bare string, protocol-relative URL, and non-post URL', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const crawler = new FacebookCrawler({
+      client,
+      sessionManager,
+      docIds: commentDocIds,
+    });
+
+    await expect(crawler.start({
+      action: 'post_comments',
+      args: { url: 'not a url' },
+      session: { accountId: 'acc_fb_1' },
+    })).rejects.toThrow(PlatformError);
+
+    await expect(crawler.start({
+      action: 'post_comments',
+      args: { url: '//attacker.com/posts/123' },
+      session: { accountId: 'acc_fb_1' },
+    })).rejects.toThrow(PlatformError);
+
+    await expect(crawler.start({
+      action: 'post_comments',
+      args: { url: 'https://www.facebook.com/profile.php?id=123' },
+      session: { accountId: 'acc_fb_1' },
+    })).rejects.toThrow(PlatformError);
+  });
+
+  it('[Patch 19] should treat limit: 0 as default 50', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const crawler = new FacebookCrawler({
+      client,
+      sessionManager,
+      docIds: commentDocIds,
+    });
+
+    const res = await crawler.start({
+      action: 'post_comments',
+      args: {
+        url: 'https://www.facebook.com/zuck/posts/101010101',
+        limit: 0,
+      },
+      session: { accountId: 'acc_fb_1' },
+    });
+
+    expect(res.comments).toBeDefined();
+    expect(res.comments.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('[Patch 19] should reject group post URL not under /groups/', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const crawler = new FacebookCrawler({
+      client,
+      sessionManager,
+      docIds: commentDocIds,
+    });
+
+    await expect(crawler.start({
+      action: 'group_comments',
+      args: { url: 'https://www.facebook.com/notgroups/posts/123' },
+      session: { accountId: 'acc_fb_1' },
+    })).rejects.toThrow(PlatformError);
+  });
+
+  it('[Patch 19] should trim whitespace from after cursor', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const crawler = new FacebookCrawler({
+      client,
+      sessionManager,
+      docIds: commentDocIds,
+    });
+
+    const res = await crawler.start({
+      action: 'post_comments',
+      args: {
+        url: 'https://www.facebook.com/zuck/posts/101010101',
+        after: '  cursor_offset_123  ',
+      },
+      session: { accountId: 'acc_fb_1' },
+    });
+
+    expect(res.comments).toBeDefined();
+    expect(res.comments.some((c) => c.externalId === 'root_3')).toBe(true);
+    expect(res.pageInfo?.end_cursor).toBe('cursor_root_page_1');
+  });
+
+  it('[Patch 19] should resolve facebook:<id> with get_comments', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const crawler = new FacebookCrawler({
+      client,
+      sessionManager,
+      docIds: commentDocIds,
+    });
+
+    const res = await crawler.start({
+      action: 'get_comments',
+      args: { postId: 'facebook:101010101' },
+      session: { accountId: 'acc_fb_1' },
+    });
+
+    expect(res.comments).toBeDefined();
+    expect(res.comments.length).toBeGreaterThanOrEqual(1);
+    expect(res.comments[0].postId).toBe('facebook:101010101');
+  });
 });
 

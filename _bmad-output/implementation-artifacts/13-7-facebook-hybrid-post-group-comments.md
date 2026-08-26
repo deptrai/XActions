@@ -6,7 +6,7 @@ status: "done"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-28
-last_updated: 2026-08-28
+last_updated: 2026-08-27
 owner: "DEV"
 reviewed: "Murat"
 baseline_commit: "c4beb26a"
@@ -207,6 +207,37 @@ so that **tôi có thể phân tích sentiment và cấu trúc hội thoại v�
 - [x] [Review][Patch] Bọc try/catch cho từng reply branch trong `CommentTreeExtractor` để không sập toàn bộ request khi 1 reply layer lỗi [`src/scrapers/social/comment-tree.js:181`]
 - [x] [Review][Patch] Hỗ trợ truyền trực tiếp `postId` số vào `groupComments` khi không có group URL [`src/scrapers/social/facebook/crawler.js:1335`]
 - [x] [Review][Patch] Thêm comment `// LEGACY — see docs/deprecation-plan.md` vào `src/scrapers/facebook/comments.js` [`src/scrapers/facebook/comments.js:140`]
+
+#### Code Review Round (Post-Implementation)
+
+**Decision needed**
+- [x] $1[Decision] Group comments fallback strategy — when `feedLocation: 'GROUP'` returns empty or a rotated doc_id, `getCommentsForPost` does not retry with `POST_PERMALINK_DIALOG` or invoke `FacebookBrowserBridge`. The spec and action descriptions claim a hybrid fallback. Decide whether to implement retry/bridge or relax the spec. [`crawler.js:1394`, `crawler.js:1513-1518`]
+- [x] $1[Decision] Phone-number PII stripping — the regex `/(\+?\d[\d\s\-().]{7,}\d)/g` is broad (strips dates/prices/IDs) and misses 7-8 digit local numbers. Decide whether to tighten the regex, add a dedicated phone-number library, or accept best-effort and update the spec. [`crawler.js:225-226`]
+
+**Patch**
+- [x] $1[Patch] `post_comments`/`group_comments` pass a numeric `postId` and lose the URL/share-token feedback-id fallback — call `getCommentsForPost({ postId: rawTarget })` and let it extract/resolve. [`crawler.js:1298`, `crawler.js:1390`]
+- [x] $1[Patch] Replies deeper than depth 1 still use `COMMENT_REPLIES` doc_id — `COMMENT_REPLIES_DEPTH2` placeholder exists but is unused. Add depth-aware doc_id selection. [`crawler.js:1459-1461`]
+- [x] $1[Patch] Root `fetchLayerPaginated` has no try/catch — a single root-layer error aborts the whole request. [`comment-tree.js:172`]
+- [x] $1[Patch] Bare invalid input is not rejected with `XACT_4001` — a value like `not a url` (no `://` and not all digits) bypasses validation and becomes a synthetic feedback id. Validate input shape up-front. [`crawler.js:1245-1277`, `crawler.js:1327-1369`]
+- [x] $1[Patch] Default `maxComments` is 500 but the spec says 50 — change wrappers to default to `50` to match legacy `scrapeFacebookComments`. [`crawler.js:1294`, `crawler.js:1386`]
+- [x] $1[Patch] Group URL guard is loose and accepts `notgroups/` substrings and query fragments — use `pathname.startsWith('/groups/')` and validate protocol/hostname. [`crawler.js:1337-1345`]
+- [x] $1[Patch] `limit: 0` or `limit: ''` clamps to 500 and ignores `maxComments` — nullish coalescing does not treat them as missing. [`crawler.js:1294`, `crawler.js:1386`]
+- [x] $1[Patch] `includeReplies` and `maxDepth` are not coerced/validated — `maxDepth: null` yields 0 replies; string `includeReplies: 'true'` is ignored. Normalize to boolean/number before clamping. [`crawler.js:1287-1292`]
+- [x] $1[Patch] `after` cursor is not trimmed or type-checked — whitespace or objects are forwarded to GraphQL. Validate/trim. [`crawler.js:1295`, `crawler.js:1387`]
+- [x] $1[Patch] `get_comments` with `postId: 'facebook:<id>'` cannot resolve feedback id — `#resolvePostFeedbackContext` does not strip the `facebook:` prefix. [`crawler.js:716`]
+- [x] $1[Patch] `#extractPostExternalId` returns the last path segment, producing wrong ids for URLs with trailing paths (e.g. `.../posts/123/comments` → `comments`). [`crawler.js:490-491`]
+- [x] $1[Patch] PII email regex strips URL userinfo like `user:pass@example.com` — add word boundaries or a more conservative regex. [`crawler.js:226`]
+- [x] $1[Patch] `creationTime` of `0` or `'0'` drops `publishedAt` — `node.created_time || null` converts `0` to `null`. Use a nullish check. [`crawler.js:572`]
+- [x] $1[Patch] Stale pagination can return `has_next_page: true` with an empty cursor — `nextCursor === ''` stops the loop but leaves optimistic `pageInfo`. Treat empty cursor as null. [`comment-tree.js:160-167`]
+- [x] $1[Patch] Reply-layer errors are swallowed without caller visibility — the tree is incomplete but no `note` or `errors` are returned. Collect them. [`comment-tree.js:185-189`]
+- [x] $1[Patch] `getCommentsForPost` returns empty comments silently when `data.node` is missing — no `note` distinguishes a restricted post from a post with no comments. [`crawler.js:1518-1521`]
+- [x] $1[Patch] `post_comments` accepts non-post Facebook URLs (e.g. `profile.php`, `photo.php`) and extracts arbitrary ids — validate path is a post/permalink. [`crawler.js:1255-1275`]
+- [x] $1[Patch] Test suite misses key edge cases — add tests for protocol-relative URLs, `limit: 0`, `maxDepth: null`, `after` whitespace, non-post URLs, `facebook:<id>`, depth > 1, group fallback, and PII false positives. [`tests/scrapers/social/facebook/crawler-post-group-comments.test.js`]
+
+**Deferred**
+- [x] [Review][Defer] `CommentTreeExtractor` racy shared state under `p-limit` — pre-existing concurrency issue already deferred from 15-1. [`comment-tree.js:175-179`]
+- [x] [Review][Defer] Orphaned replies re-attached to depth 0 never have children fetched — pre-existing `CommentTreeExtractor` behavior already deferred from 15-1. [`comment-tree.js:116-123`]
+- [x] [Review][Defer] Group-specific `doc_id` placeholders are unverified — implementation acknowledges this; needs live Facebook capture. [`crawler.js:218-219`]
 
 ## Dev Agent Record
 
