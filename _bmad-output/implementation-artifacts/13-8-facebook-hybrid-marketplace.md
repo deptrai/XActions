@@ -449,6 +449,7 @@ Từ Story 13.6:
 ### Change Log
 - 2026-08-27: Implemented Story 13.8 Green Phase — added `marketplace` action, GraphQL builder, ecom normalizer, ecom schema, validator update, deprecation markers, and comprehensive ATDD tests. Status updated to `review`.
 - 2026-08-27: Review/patch pass — resolved decision findings, tightened input validation, replaced dead browser bridge fallback with HTTP SSR fetch, fixed normalizer edge cases, added migration notes, updated ATDD tests. Verification: `tsc --noEmit` pass, `vitest run tests/scrapers/social/facebook/ tests/api/facebook-scrape.test.js tests/api/facebook-routes-integration.test.js` 122 passed, `prisma validate` pass. Status updated to `done`.
+- 2026-08-27: Second `swe-1.7-max` review/patch pass — fixed account-id sentinel leakage in base-client, added auth/guest token ring partition, normalized `requiresAuth` derivation, defaulted public action handlers to no-auth. Verification: `npx tsc --noEmit` pass, `npx vitest run tests/core tests/scrapers/social/facebook` 252 tests pass.
 
 ### Review Findings — Resolved
 
@@ -468,6 +469,20 @@ Từ Story 13.6:
 - [x] [Review][Patch] `normalize-marketplace.js`: xử lý `price` object, `id` object để tránh `'[object Object]'`.
 - [x] [Review][Patch] Thêm `// TODO(13.10)` migration notes trong `src/scrapers/index.js`, `api/services/facebookScrape.js`, `src/mcp/server.js`.
 - [x] [Review][Patch] ATDD tests: bổ sung SSR fallback route, cập nhật AC-5 test sang HTTP SSR, test `categoryId` non-numeric, `query` URL, `location` SSRF.
+
+#### swe-max subagent review & patch pass
+
+- [x] [Review][Patch] `FacebookClient.#fetchTokensWithStrategy` browser bridge path now guards token-ring refill with `isAuthAccount`, preventing guest tokens from leaking into the account-bound PreSignedTokenRing.
+- [x] [Review][Patch] `AbstractApiClient.request` now computes `concreteAccountId` early and uses it for governor checks, auth-guard, and `resolveProxy`, so `'guest'`/`'default'` sentinels cannot trigger sticky proxies or governor hibernation.
+- [x] [Review][Patch] `FacebookClient.requestGraphQl` now derives `requiresAuth` from `isNamedAccount` rather than raw `accountId`, preventing `'guest'`/`'default'` from being routed through the authenticated token path.
+- [x] [Review][Patch] `FacebookClient.buildGraphQlBody` forces `__user` and `av` to `'0'` in guest mode and consumes from a dedicated `guestTokenRing`, isolating guest `lsd` from the auth ring.
+- [x] [Review][Patch] Added a default `guestTokenRing` in `FacebookClient` constructor (capacity 50) and refills the correct ring based on `isAuthAccount` in both browser and HTTP token paths.
+- [x] [Review][Patch] Public `FacebookCrawler` handlers (`marketplace`, `search`, `pagePosts`, `profile`) now default `session.requiresAuth` to `false` when called directly without an explicit `session`.
+- [x] [Review][Patch] `ActionRegistry` descriptor change detection uses direct `!==` for `requiresAuth` instead of `Boolean()` normalization, catching `undefined` vs `false` drift.
+- [x] [Review][False Positive] `base-crawler.test.js` regex `/No available account/` matches the thrown message at `src/core/base-crawler.js:189`; no test fix needed.
+- [x] [Review][False Positive] `AbstractApiClient.request` `isLastProxyAttempt` 429/403 account rotation is correct for opt-in auth accounts; it does not trigger on generic errors and is not an issue.
+
+Verification: `npx tsc --noEmit` pass; `npx vitest run tests/core tests/scrapers/social/facebook` 252 tests pass.
 
 #### defer
 
