@@ -1802,6 +1802,9 @@ export class FacebookCrawler extends AbstractCrawler {
         return null;
       }
       const obj = /** @type {Record<string, unknown>} */ (value);
+      if (Array.isArray(obj.edges)) {
+        return obj;
+      }
       for (const key of targetKeys) {
         const candidate = obj[key];
         if (candidate && typeof candidate === 'object') {

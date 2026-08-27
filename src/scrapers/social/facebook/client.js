@@ -335,6 +335,7 @@ export class FacebookClient extends AbstractApiClient {
       ...options,
       accountId: effectiveAccountId ?? undefined,
       requiresAuth,
+      skipResponseValidation: true,
       headers,
     }));
 

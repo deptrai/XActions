@@ -489,6 +489,7 @@ export class AbstractApiClient {
         : null;
     const effectiveRequiresAuth =
       typeof opts.requiresAuth === 'boolean' ? opts.requiresAuth : this.requiresAuth;
+    const skipResponseValidation = opts.skipResponseValidation === true;
 
     if (effectiveRequiresAuth && !concreteAccountId && !this.accountPool) {
       throw new AuthSessionExpiredError({
@@ -621,7 +622,32 @@ export class AbstractApiClient {
                 details: response?.data || response,
               });
             }
-            if (!this.responseValidator.isValidPayload(response)) {
+
+            if (typeof this.responseValidator.isLoginWall === 'function' && this.responseValidator.isLoginWall(response)) {
+              if (effectiveRequiresAuth) {
+                throw new AuthSessionExpiredError({
+                  code: 'XACT_4010',
+                  message: 'Authentication expired on upstream platform (login wall)',
+                  statusCode: 401,
+                  suggestedAction: SuggestedActions.RELOGIN,
+                  accountId: concreteAccountId,
+                  platform: this.platform,
+                });
+              }
+
+              if (!skipResponseValidation && !this.responseValidator.isValidPayload(response)) {
+                throw new PlatformError({
+                  type: ErrorTypes.INVALID_ARGS,
+                  code: 'XACT_4001',
+                  message: 'Response payload is invalid or corrupted',
+                  statusCode: 400,
+                  suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+                  accountId: currentAccountId,
+                  platform: this.platform,
+                  details: response?.data || response,
+                });
+              }
+            } else if (!skipResponseValidation && !this.responseValidator.isValidPayload(response)) {
               throw new PlatformError({
                 type: ErrorTypes.INVALID_ARGS,
                 code: 'XACT_4001',
