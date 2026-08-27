@@ -486,12 +486,16 @@ Verification: `npx tsc --noEmit` pass; `npx vitest run tests/core tests/scrapers
 
 #### real-data smoke test (Sentinel)
 
-Infra profile: cookie from `~/.xactions/facebook-cookies.json` for auth tests; no cookie for guest tests. No proxy. Low volume (`limit=2`).
+Infra profile:
+- Cookie from `~/.xactions/facebook-cookies.json` for auth tests.
+- No cookie for guest tests.
+- Residential proxy from `PROXY_URL` / `FACEBOOK_PROXY` in `.env` via `ProxyIpPool`.
+- Low volume (`limit=2`).
 
 - [x] Guest `FacebookClient.ensureTokens(null, '')` extracts `c_user=0` and an `lsd` token from the Facebook home page; `buildGraphQlBody` forces `__user=0` and consumes from `guestTokenRing`.
 - [x] Auth `FacebookClient.ensureTokens('real_account', cookie)` correctly throws `XACT_4010` because the stored cookie hits a login wall from this environment/IP (cookie invalid/expired).
-- [x] Guest `FacebookCrawler.marketplace({ query: 'macbook', location: 'hochiminhcity', limit: 2 })` returns 2 real PostItems with title, price, and location (SSR fallback).
-- [x] Auth `FacebookCrawler.marketplace(...)` with the invalid cookie falls back to the public SSR page and still returns 2 real PostItems (the cookie did not authenticate, but the action is public).
+- [x] Guest `FacebookCrawler.marketplace({ query: 'macbook', location: 'hochiminhcity', limit: 2 })` returns 2 real PostItems with title, price, and location (SSR fallback via residential proxy).
+- [x] Auth `FacebookCrawler.marketplace(...)` with the invalid cookie falls back to the public SSR page and still returns 2 real PostItems (cookie did not authenticate, but action is public and residential proxy is used).
 - [ ] Guest `FacebookCrawler.search`/`profile`/`page_posts` fail as expected: doc_ids are placeholders (`DEFAULT_FB_DOC_IDS`) and no SSR fallback is implemented for these actions.
 - [ ] Auth `FacebookCrawler.group_members` and `profile` fail as expected with `XACT_4010` (invalid cookie) or `XACT_4001` (invalid GraphQL response with placeholder doc_id).
 

@@ -1,12 +1,26 @@
 // Sentinel real-data smoke test for the recent auth/guest/token-ring commit.
 // Exercises FacebookClient and FacebookCrawler against live facebook.com.
 // Reads cookie from ~/.xactions/facebook-cookies.json when an auth profile is requested.
-// Logs only result counts and health signals; never prints cookie values.
+// Loads a rotating residential proxy from PROXY_URL (or FACEBOOK_PROXY).
+// Logs only result counts and health signals; never prints cookie or proxy credentials.
 
+import 'dotenv/config';
 import { FacebookClient, FacebookCrawler } from '../src/scrapers/social/facebook/index.js';
+import { ProxyIpPool } from '../src/proxy/proxy-pool.js';
 import { readFileSync } from 'node:fs';
 
 const COOKIE_PATH = `${process.env.HOME}/.xactions/facebook-cookies.json`;
+const PROXY_URL = process.env.PROXY_URL
+  || (process.env.FACEBOOK_PROXY && process.env.FACEBOOK_PROXY_AUTH_USERNAME
+    ? `http://${process.env.FACEBOOK_PROXY_AUTH_USERNAME}:${process.env.FACEBOOK_PROXY_AUTH_PASSWORD}@${process.env.FACEBOOK_PROXY.replace(/^https?:\/\//, '')}`
+    : '');
+
+if (!PROXY_URL) {
+  console.error('No PROXY_URL or FACEBOOK_PROXY in environment. Smoke test needs a residential proxy.');
+  process.exit(1);
+}
+
+const proxyPool = new ProxyIpPool({ proxies: [PROXY_URL] });
 
 function loadCookieHeader() {
   const raw = JSON.parse(readFileSync(COOKIE_PATH, 'utf8'));
@@ -24,7 +38,7 @@ function redactToken(tok) {
 
 async function runGuestClientSmoke() {
   console.log('\n[GUEST CLIENT SMOKE] Fetching www.facebook.com with no cookie');
-  const client = new FacebookClient({ timeout: 30000, httpFallback: true });
+  const client = new FacebookClient({ timeout: 30000, httpFallback: true, proxyPool });
   const tokens = await client.ensureTokens(null, '');
   console.log(`  guest tokens: c_user=${tokens.c_user} lsd=${redactToken(tokens.lsd)} jazoest=${redactToken(tokens.jazoest)}`);
   if (tokens.c_user !== '0') throw new Error('Guest token extraction returned non-zero c_user');
@@ -38,7 +52,7 @@ async function runGuestClientSmoke() {
 async function runAuthClientSmoke() {
   console.log('\n[AUTH CLIENT SMOKE] Fetching www.facebook.com with real cookie');
   const cookieHeader = loadCookieHeader();
-  const client = new FacebookClient({ timeout: 30000, httpFallback: true });
+  const client = new FacebookClient({ timeout: 30000, httpFallback: true, proxyPool });
   const tokens = await client.ensureTokens('real_account', cookieHeader);
   const cUserIsZero = tokens.c_user === '0';
   console.log(`  auth tokens: c_user=${cUserIsZero ? '0' : '[redacted]'} lsd=${redactToken(tokens.lsd)}`);
@@ -52,7 +66,7 @@ async function runAuthClientSmoke() {
 
 async function runCrawler(name, command, opts = {}) {
   console.log(`\n[CRAWLER: ${name}] action=${command.action} args=${JSON.stringify(command.args)}`);
-  const crawler = new FacebookCrawler({ timeout: 45000, ...opts });
+  const crawler = new FacebookCrawler({ timeout: 45000, proxyPool, ...opts });
   try {
     const result = await crawler.start(command);
     const count = result?.posts?.length ?? 0;
