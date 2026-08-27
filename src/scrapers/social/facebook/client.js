@@ -388,6 +388,18 @@ export class FacebookClient extends AbstractApiClient {
     const hsiMatch = html.match(/"__hsi":"([^"]+)"/) || html.match(/window\.__hsi\s*=\s*"([^"]+)"/);
     const hsi = hsiMatch ? hsiMatch[1] : '';
 
+    // Extract anti-bot / anti-abuse fields when present in the HTML.
+    const __dyn = (html.match(/"__dyn":"([^"]+)"/) || html.match(/"__dyn":\s*"([^"]+)"/) || [])[1] || '';
+    const __csr = (html.match(/"__csr":"([^"]+)"/) || html.match(/"__csr":\s*"([^"]+)"/) || [])[1] || '';
+    const __hs = (html.match(/"__hs":"([^"]+)"/) || html.match(/"__hs":\s*"([^"]+)"/) || [])[1] || '';
+    const __hsdp = (html.match(/"__hsdp":"([^"]+)"/) || html.match(/"__hsdp":\s*"([^"]+)"/) || [])[1] || '';
+    const __hblp = (html.match(/"__hblp":"([^"]+)"/) || html.match(/"__hblp":\s*"([^"]+)"/) || [])[1] || '';
+    const __s = (html.match(/"__s":"([^"]+)"/) || html.match(/"__s":\s*"([^"]+)"/) || html.match(/"__s":\["([^"]+)"\]/) || [])[1] || '';
+    const dprMatch = html.match(/"dpr":(\d+(?:\.\d+)?)/) || html.match(/"device_pixel_ratio":(\d+(?:\.\d+)?)/);
+    const dpr = dprMatch ? dprMatch[1] : '1';
+    const fbFriendlyMatch = html.match(/"fb_api_req_friendly_name":"([^"]+)"/);
+    const fb_api_req_friendly_name = fbFriendlyMatch ? fbFriendlyMatch[1] : '';
+
     if (!parsedUserId) {
       const userMatch =
         html.match(/["']?USER_ID["']?\s*:\s*(?:"(\d+)"|(\d+))/) ||
@@ -414,6 +426,15 @@ export class FacebookClient extends AbstractApiClient {
       spin_t,
       hsi,
       c_user: parsedUserId,
+      __dyn,
+      __csr,
+      __hs,
+      __hsdp,
+      __hblp,
+      __s,
+      dpr,
+      x_fb_lsd: lsd,
+      fb_api_req_friendly_name,
     };
 
     this.#saveTokensToCache(accountId, cookieHeader, tokens);
@@ -470,19 +491,29 @@ export class FacebookClient extends AbstractApiClient {
     if (tokens.spin_t) params.set('__spin_t', String(tokens.spin_t));
     if (tokens.__rev) params.set('__rev', String(tokens.__rev));
     if (tokens.hsi) params.set('__hsi', String(tokens.hsi));
-    if (this.friendlyNames[docId]) params.set('fb_api_req_friendly_name', this.friendlyNames[docId]);
+    if (tokens.__dyn) params.set('__dyn', String(tokens.__dyn));
+    if (tokens.__csr) params.set('__csr', String(tokens.__csr));
+    if (tokens.__hs) params.set('__hs', String(tokens.__hs));
+    if (tokens.__hsdp) params.set('__hsdp', String(tokens.__hsdp));
+    if (tokens.__hblp) params.set('__hblp', String(tokens.__hblp));
+    if (tokens.__s) params.set('__s', String(tokens.__s));
+    if (tokens.dpr) params.set('dpr', String(tokens.dpr));
+    if (tokens.x_fb_lsd) params.set('x_fb_lsd', String(tokens.x_fb_lsd));
+    if (tokens.fb_api_req_friendly_name || this.friendlyNames[docId]) {
+      params.set('fb_api_req_friendly_name', tokens.fb_api_req_friendly_name || this.friendlyNames[docId]);
+    }
 
     return params.toString();
   }
 
   /**
-   * Send a Facebook GraphQL request with automatic token extraction and error checking.
+   * Send a single Facebook GraphQL request.
    * @param {string} docId
    * @param {Record<string, any>} variables
-   * @param {Record<string, any>} [options={}]
+   * @param {Record<string, any>} options
    * @returns {Promise<any>}
    */
-  async requestGraphQl(docId, variables = {}, options = {}) {
+  async #requestGraphQlSingle(docId, variables, options) {
     const accountId = options.accountId || null;
     const rawCookies = options.cookies || options.headers?.cookie;
     const isNamedAccount = Boolean(accountId && accountId !== 'guest' && accountId !== 'default');
@@ -507,6 +538,7 @@ export class FacebookClient extends AbstractApiClient {
       ...options,
       accountId,
       requiresAuth,
+      requiresResidential: options.requiresResidential,
       headers: mergedHeaders,
       body,
     }));
@@ -571,6 +603,41 @@ export class FacebookClient extends AbstractApiClient {
   }
 
   /**
+   * Send a Facebook GraphQL request with automatic token extraction and error checking.
+   * Supports fallback doc_id rotation.
+   * @param {string} docId
+   * @param {Record<string, any>} variables
+   * @param {Record<string, any>} [options={}]
+   * @returns {Promise<any>}
+   */
+  async requestGraphQl(docId, variables = {}, options = {}) {
+    const fallbackDocIds = Array.isArray(options.fallbackDocIds) ? options.fallbackDocIds : [];
+    const docIds = [docId, ...fallbackDocIds].filter((d, i, a) => a.indexOf(d) === i);
+    /** @type {Error | null} */
+    let lastError = null;
+
+    for (const id of docIds) {
+      try {
+        return await this.#requestGraphQlSingle(id, variables, options);
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        if (err instanceof PlatformError && (err.code === 'XACT_4010' || err.code === 'XACT_4290')) {
+          throw err;
+        }
+      }
+    }
+
+    throw lastError || new PlatformError({
+      code: 'XACT_5000',
+      type: ErrorTypes.INTERNAL,
+      message: 'All GraphQL doc_ids failed for the request.',
+      suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+      platform: 'facebook',
+      accountId: options.accountId,
+    });
+  }
+
+  /**
    * Clear in-memory token cache.
    */
   clearTokenCache() {
@@ -629,12 +696,13 @@ export class FacebookClient extends AbstractApiClient {
         launchChrome: this.launchChrome,
         adapterName: this.adapterName,
         headless: this.headless,
-        userDataDir: this.userDataDir || undefined,
+        userDataDir: this.userDataDir || this.profileDir || undefined,
         profileDir: this.profileDir || undefined,
         proxy: this.proxy,
         proxyPool: this.proxyPool,
         proxyProvider: this.proxyProvider,
         extraArgs: this.extraArgs,
+        requiresResidential: true,
       });
       this.browserBridge = this.#ownedBrowserBridge;
     }

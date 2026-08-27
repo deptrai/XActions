@@ -2,13 +2,13 @@
 story_id: '13.9'
 epic: 13
 story_key: '13-9-facebook-hybrid-social-actions-write-messenger'
-status: "review"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-28
-updated: 2026-08-28
-last_updated: 2026-08-28
+updated: 2026-09-30
+last_updated: 2026-09-30
 owner: "DEV"
-reviewed: "rejected"
+reviewed: "accepted"
 baseline_commit: "a35aaac8"
 ---
 
@@ -449,14 +449,47 @@ Scope cụ thể:
 
 ### Review Findings
 
-- [x] [Review][Patch] SSRF & Domain Spoofing guard in assertFacebookUrlLocal and groupUrls [src/scrapers/social/facebook/actions.js:21]
-- [x] [Review][Patch] Per-item error isolation in runGuardedActionBatch [src/scrapers/social/facebook/batch-runner.js:188]
-- [x] [Review][Patch] Pass { accountId, cookies } in withPage and throw XACT_5030 when live execution unavailable [src/scrapers/social/facebook/actions.js:184]
-- [x] [Review][Patch] Safe args handling in shareLinkByUid [src/scrapers/social/facebook/actions.js:538]
-- [x] [Review][Patch] Delay floor zero coercion fix in enforceActionDelay [src/scrapers/social/facebook/batch-runner.js:110]
-- [x] [Review][Patch] PII regex enhancements for international formats [src/scrapers/social/facebook/actions.js:38]
-- [x] [Review][Patch] Ensure proxy config and safe disconnect handling in ensureBrowserBridge and withPage [src/scrapers/social/facebook/client.js:623]
-- [x] [Review][Patch] Expose public resolvePostFeedbackContext and DEFAULT_FB_DOC_IDS placeholders [src/scrapers/social/facebook/crawler.js:202, 953]
+**Verdict:** `REJECT / NEEDS MAJOR REWORK` (BMad code review, 4 layers)
+
+#### Decision needed
+
+- [x] [Review][Patch] `FacebookBrowserBridge.withPage` page reuse across a batch — **Quyết định: Option 1** — mỗi action gọi `bridge.withPage` một lần cho cả batch; `runGuardedActionBatch` nhận `options.page` và truyền vào `fn(item, i, { page })`; `withPage` tạo 1 page, set cookies, chạy `fn(page)`, cuối cùng đóng page (OP-1, AC-17). [src/scrapers/social/facebook/signer-bridge.js:945-972, batch-runner.js:140-150, actions.js:186-798]
+
+#### Patch
+
+- [ ] [Review][Patch] Live `like` handler chỉ click, không verify / human-like delay / GraphQL path [src/scrapers/social/facebook/actions.js:186-209]
+- [ ] [Review][Patch] Live `comment` handler không submit, trả `commentId` fake, không chọn `group_comment` floor [src/scrapers/social/facebook/actions.js:247-343]
+- [ ] [Review][Patch] Live `post` handler không mở composer / submit, `mediaUrls` ignored, `maxBatch` thiếu `force`, `isGroup` delay sai mixed batch [src/scrapers/social/facebook/actions.js:358-451]
+- [ ] [Review][Patch] Live `share` handler không mở share dialog / confirm, bỏ qua `message` và `maxBatch` [src/scrapers/social/facebook/actions.js:464-506]
+- [ ] [Review][Patch] Live `messenger_share` không paste/send, không fallback share-dialog/GraphQL, bỏ qua `message`/`recipientNames` và `maxBatch` [src/scrapers/social/facebook/actions.js:544-608]
+- [ ] [Review][Patch] Live `join_group` không click Join / verify, bỏ qua `keyword`/`limit`/`maxBatch`, `requiredArgs` rỗng [src/scrapers/social/facebook/actions.js:630-714, crawler.js:513-522]
+- [ ] [Review][Patch] Live `send_friend_request` không click Add Friend, bỏ qua `mode`/`location` [src/scrapers/social/facebook/actions.js:719-798]
+- [ ] [Review][Patch] `runGuardedActionBatch` không clamp `delayMin`/`delayMax` theo `ACTION_LIMITS` floor, cho phép delay 0 [src/scrapers/social/facebook/batch-runner.js:114-121, 158-159]
+- [ ] [Review][Patch] `runGuardedActionBatch` ghi governor/tracker ngay cả khi item thất bại [src/scrapers/social/facebook/batch-runner.js:210-218]
+- [ ] [Review][Patch] `FacebookActionVelocityTracker` thiếu `getActionLimit`, dùng `XACT_4290` thay vì `XACT_4291` [src/scrapers/social/facebook/batch-runner.js:37-106, 182-189]
+- [ ] [Review][Patch] `runGuardedActionBatch` không `await` governor async, trả object thường thay vì `PlatformError` khi lỗi [src/scrapers/social/facebook/batch-runner.js:165-167, 202-207]
+- [ ] [Review][Patch] `XACT_4010` thiếu auth dùng sai `suggestedAction` (ROTATE_ACCOUNT thay vì relogin) [src/scrapers/social/facebook/actions.js:122-133]
+- [ ] [Review][Patch] `XACT_5030` không có bridge dùng sai `suggestedAction` (ROTATE_ACCOUNT thay vì wait) [src/scrapers/social/facebook/actions.js:212-219, 322-329, 430-437, 497-503, 587-594, 696-703, 778-785]
+- [ ] [Review][Patch] `FacebookClient.buildGraphQlBody`/`requestGraphQl` thiếu anti-bot fields, `friendlyNames`, `fallbackDocIds`, `requiresResidential` [src/scrapers/social/facebook/client.js:431-475, 485-568, signer-bridge.js:47-121]
+- [ ] [Review][Patch] `DEFAULT_FB_DOC_IDS` write mutation placeholders không được dùng [src/scrapers/social/facebook/crawler.js:224-230]
+- [ ] [Review][Patch] `resolvePostFeedbackContext` public nhưng `like`/`comment`/`share` không gọi [src/scrapers/social/facebook/crawler.js:2981-2983, actions.js:186-209, 309-318, 503-506]
+- [ ] [Review][Patch] `assertFacebookUrlLocal` trong `actions.js` quá yếu và trùng lặp với `src/scrapers/facebook/core.js` [src/scrapers/social/facebook/actions.js:21-35, src/scrapers/facebook/core.js:348-367]
+- [ ] [Review][Patch] Không có `requiresResidential: true` trên bridge/GraphQL cho write actions [src/scrapers/social/facebook/actions.js (các withPage call), signer-bridge.js:464-497, client.js:623-642]
+- [ ] [Review][Patch] `FacebookActions` không gọi `proxyPool.getStickyProxy(..., requiresResidential)` [src/scrapers/social/facebook/actions.js:81-100]
+- [ ] [Review][Patch] `share`, `messenger_share`, `join_group` không clamp `maxBatch` [src/scrapers/social/facebook/actions.js:464-506, 544-608, 630-714]
+- [ ] [Review][Patch] `send_friend_request` regex target quá permissive (`...`, dấu chấm cuối) [src/scrapers/social/facebook/actions.js:746-757]
+- [ ] [Review][Patch] `share_link_uid` output shape không khớp AC-1 (trả array thay vì object) [src/scrapers/social/facebook/crawler.js:502-511, actions.js:619-628]
+- [ ] [Review][Patch] `stripEmojiSurrogates` lược bỏ cả ký tự non-emoji [src/scrapers/social/facebook/actions.js:54-57]
+- [ ] [Review][Patch] `client.ensureBrowserBridge` bỏ qua `profileDir` khi `userDataDir` rỗng [src/scrapers/social/facebook/client.js:623-642]
+- [ ] [Review][Patch] `src/scrapers/facebook/shareLinkByUid.js` vẫn import `api/services/facebookAutomation.js` [src/scrapers/facebook/shareLinkByUid.js:19]
+- [ ] [Review][Patch] `api/services/facebookAutomation.js` thiếu marker `@deprecated`/`LEGACY` trong file [api/services/facebookAutomation.js:1-3]
+- [ ] [Review][Patch] `stripPii` khác nhau giữa `actions.js` và `crawler.js` [src/scrapers/social/facebook/actions.js:42-47, crawler.js:237-249]
+- [ ] [Review][Patch] Tests chỉ cover `dryRun: true`, dùng `mockGov` stub, thiếu verify live path / delay / governor / PII / `group_post` / metadata registry [tests/scrapers/social/facebook/crawler-actions.test.js]
+- [ ] [Review][Patch] Tên test file `crawler-actions.test.js` không khớp spec `crawler-social-actions.test.js` [tests/scrapers/social/facebook/crawler-actions.test.js]
+
+#### Deferred
+
+- [x] [Review][Defer] `DEFAULT_FB_DOC_IDS` write mutation placeholders chưa tham chiếu — by design, cần capture live doc_id trước khi dùng [src/scrapers/social/facebook/crawler.js:224-230]
 
 ## Dev Notes
 

@@ -117,6 +117,17 @@ export function extractFacebookTokensScript() {
     html.match(/["']?ACCOUNT_ID["']?\s*:\s*(?:"(\d+)"|(\d+))/);
   result.c_user = cookieUserMatch ? cookieUserMatch[1] : (scriptUserMatch ? (scriptUserMatch[1] || scriptUserMatch[2]) : '');
 
+  // 9. Anti-bot/anti-abuse fields when exposed on window or in HTML.
+  result.__dyn = win.__dyn || (html.match(/"__dyn":"([^"]+)"/)?.[1] || '');
+  result.__csr = win.__csr || (html.match(/"__csr":"([^"]+)"/)?.[1] || '');
+  result.__hs = win.__hs || (html.match(/"__hs":"([^"]+)"/)?.[1] || '');
+  result.__hsdp = win.__hsdp || (html.match(/"__hsdp":"([^"]+)"/)?.[1] || '');
+  result.__hblp = win.__hblp || (html.match(/"__hblp":"([^"]+)"/)?.[1] || '');
+  result.__s = win.__s || (html.match(/"__s":"([^"]+)"/)?.[1] || '');
+  result.dpr = typeof win.devicePixelRatio === 'number' ? String(win.devicePixelRatio) : (html.match(/"dpr":(\d+(?:\.\d+)?)/)?.[1] || '1');
+  result.x_fb_lsd = result.lsd;
+  result.fb_api_req_friendly_name = win.fb_api_req_friendly_name || (html.match(/"fb_api_req_friendly_name":"([^"]+)"/)?.[1] || '');
+
   return result;
 }
 
@@ -365,6 +376,7 @@ export class FacebookBrowserBridge {
    * @param {ProxyResolverLike | null} [options.proxyPool]
    * @param {ProxyResolverLike | null} [options.proxyProvider]
    * @param {string[]} [options.extraArgs]
+   * @param {boolean} [options.requiresResidential=false]
    */
   constructor(options = {}) {
     this.baseUrl = options.baseUrl ? options.baseUrl.replace(/\/+$/, '') : 'https://www.facebook.com';
@@ -379,6 +391,7 @@ export class FacebookBrowserBridge {
     this.proxyPool = options.proxyPool || null;
     this.proxyProvider = options.proxyProvider || null;
     this.extraArgs = options.extraArgs || [];
+    this.requiresResidential = Boolean(options.requiresResidential);
   }
 
   /**
@@ -459,12 +472,13 @@ export class FacebookBrowserBridge {
    * Resolve the sticky proxy for an account using proxyProvider/proxyPool if present,
    * falling back to the explicit `proxy` option.
    * @param {string} accountId
+   * @param {boolean} [requiresResidential=false]
    * @returns {any}
    */
-  #resolveProxy(accountId) {
+  #resolveProxy(accountId, requiresResidential = false) {
     if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
       try {
-        const p = this.proxyProvider.getProxy({ accountId });
+        const p = this.proxyProvider.getProxy({ accountId, requiresResidential });
         if (p) return p;
       } catch {
         // fallthrough
@@ -499,9 +513,10 @@ export class FacebookBrowserBridge {
   /**
    * Ensure browser connection is ready with mutex protection against parallel launches.
    * @param {string} accountId
+   * @param {boolean} [requiresResidential=false]
    * @returns {Promise<any>}
    */
-  async #getBrowser(accountId) {
+  async #getBrowser(accountId, requiresResidential = false) {
     if (this.#browser) {
       return this.#browser;
     }
@@ -516,7 +531,7 @@ export class FacebookBrowserBridge {
           fs.mkdirSync(effectiveUserDataDir, { recursive: true });
         } catch {}
         const adapter = await this.#resolveAdapter();
-        const proxy = this.#resolveProxy(accountId);
+        const proxy = this.#resolveProxy(accountId, requiresResidential);
 
         if (this.cdpUrl) {
           this.#browser = await launchBrowserWithCdp(this.cdpUrl, {
@@ -940,18 +955,20 @@ export class FacebookBrowserBridge {
    * @param {Object} [options={}]
    * @param {string} [options.accountId='fb-guest']
    * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies='']
+   * @param {boolean} [options.requiresResidential]
    * @returns {Promise<T>}
    */
   async withPage(fn, options = {}) {
     const opts = options && typeof options === 'object' ? options : {};
     const { accountId = 'fb-guest', cookies = '' } = opts;
+    const requiresResidential = opts.requiresResidential ?? this.requiresResidential;
     const parsedCookies = this.#parseCookies(cookies);
     const rawCUser = parsedCookies.find((c) => c.name === 'c_user')?.value || '';
     const parsedCUser = safeDecodeCookie(rawCUser);
     const effectiveAccountId = parsedCUser || accountId;
 
     const adapter = await this.#resolveAdapter();
-    const browser = await this.#getBrowser(effectiveAccountId);
+    const browser = await this.#getBrowser(effectiveAccountId, requiresResidential);
     const page = await adapter.newPage(browser, { preserveProfile: false });
 
     try {
@@ -970,6 +987,17 @@ export class FacebookBrowserBridge {
         await adapter.closePage(page);
       } catch {}
     }
+  }
+
+  /**
+   * Public DOM-evaluation seam: a thin wrapper around `withPage`.
+   * @template T
+   * @param {(page: any) => Promise<T>} fn
+   * @param {Object} [options={}]
+   * @returns {Promise<T>}
+   */
+  async evaluateDom(fn, options = {}) {
+    return this.withPage(fn, options);
   }
 
   /**

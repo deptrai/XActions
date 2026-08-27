@@ -28,6 +28,7 @@ import {
 import { normalizeFacebookMarketplaceListing } from './normalize-marketplace.js';
 import { FacebookActions } from './actions.js';
 import { FacebookActionVelocityTracker } from './batch-runner.js';
+import { stripPii } from './pii.js';
 import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from '../../facebook/core.js';
 import { normalizeHandle, buildMarketplaceSearchUrl, resolveMarketplaceLocation } from '../../facebook/normalize.js';
 
@@ -229,25 +230,6 @@ export const DEFAULT_FB_DOC_IDS = {
   JOIN_GROUP_MUTATION: 'fb_join_group_mutation_doc',
   SEND_FRIEND_REQUEST_MUTATION: 'fb_send_friend_request_mutation_doc',
 };
-
-/**
- * NFR-11: Strip phone numbers and email addresses from text fields before returning/storing.
- * Phone stripping is best-effort and may miss some formats or over-match long numeric sequences.
- */
-const PII_PHONE_RE = /(?<![\w/:])(?:\+?\d[\d\s\-().]{6,}\d)(?![\w/])/g;
-const PII_EMAIL_RE = /(^|[^\w/:])[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-
-/**
- * @param {unknown} value
- * @returns {string}
- */
-function stripPii(value) {
-  if (typeof value !== 'string') return '';
-  return value
-    .replace(PII_PHONE_RE, '')
-    .replace(PII_EMAIL_RE, '$1')
-    .trim();
-}
 
 /**
  * Relay feature flag values injected by the Facebook web runtime for comment queries.
@@ -470,7 +452,7 @@ export class FacebookCrawler extends AbstractCrawler {
       action: 'post',
       description: 'Create a post on timeline or Facebook group(s)',
       requiredArgs: ['text'],
-      optionalArgs: ['mediaUrls', 'groupUrls', 'groupIds', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
+      optionalArgs: ['mediaUrls', 'groupUrl', 'groupUrls', 'groupIds', 'profileUrl', 'profileUrls', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
       example: { text: 'Hello Facebook from XActions Hybrid Crawler!' },
       outputType: '{ results: { targetUrl: string, postId?: string, error?: string }[], dryRun: boolean }',
       requiresAuth: true,
@@ -505,7 +487,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: ['postUrl', 'recipientUid'],
       optionalArgs: ['message', 'dryRun', 'delayMin', 'delayMax'],
       example: { postUrl: 'https://www.facebook.com/zuck/posts/1011565502', recipientUid: '100001234567890' },
-      outputType: '{ results: { recipientUid: string, ok: boolean, method?: string, error?: string }[], dryRun: boolean }',
+      outputType: '{ ok: boolean, postUrl: string, recipientUid: string, method?: string, error?: string, dryRun: boolean }',
       requiresAuth: true,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.shareLinkByUid(args, session),
     });
@@ -516,7 +498,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: [],
       optionalArgs: ['groupUrls', 'groupIds', 'keyword', 'limit', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
       example: { groupUrls: ['https://www.facebook.com/groups/123456'] },
-      outputType: '{ results: { groupUrl: string, joined: boolean, error?: string }[], dryRun: boolean }',
+      outputType: '{ results: { groupUrl: string, joined: boolean, pending?: boolean, error?: string }[], dryRun: boolean }',
       requiresAuth: true,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.joinGroup(args, session),
     });

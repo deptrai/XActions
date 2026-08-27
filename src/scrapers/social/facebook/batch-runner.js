@@ -32,6 +32,15 @@ export const ACTION_LIMITS = {
 };
 
 /**
+ * Return the configured limit ceiling/floor for an action.
+ * @param {string} action
+ * @returns {{ perHour?: number, perDay?: number, delayMin: number, delayMax: number }}
+ */
+export function getActionLimit(action) {
+  return ACTION_LIMITS[action] || { delayMin: 1000, delayMax: 3000 };
+}
+
+/**
  * Sliding window action velocity tracker.
  */
 export class FacebookActionVelocityTracker {
@@ -54,8 +63,8 @@ export class FacebookActionVelocityTracker {
    * @param {string} action
    * @returns {boolean}
    */
-  canExecute(accountId, action) {
-    const limits = ACTION_LIMITS[action] || { perHour: 30, perDay: 200 };
+  canDoAction(accountId, action) {
+    const limits = getActionLimit(action);
     const key = this.#getKey(accountId, action);
     const history = this.#actionHistory.get(key) || [];
     const now = Date.now();
@@ -85,7 +94,7 @@ export class FacebookActionVelocityTracker {
    * @param {string} accountId
    * @param {string} action
    */
-  record(accountId, action) {
+  recordAction(accountId, action) {
     const key = this.#getKey(accountId, action);
     const history = this.#actionHistory.get(key) || [];
     const now = Date.now();
@@ -95,6 +104,34 @@ export class FacebookActionVelocityTracker {
     const pruned = history.filter((ts) => ts > oneDayAgo);
     pruned.push(now);
     this.#actionHistory.set(key, pruned);
+  }
+
+  /**
+   * Return limit configuration for an action.
+   * @param {string} action
+   * @returns {{ perHour?: number, perDay?: number, delayMin: number, delayMax: number }}
+   */
+  getActionLimit(action) {
+    return getActionLimit(action);
+  }
+
+  /**
+   * Legacy alias for canDoAction.
+   * @param {string} accountId
+   * @param {string} action
+   * @returns {boolean}
+   */
+  canExecute(accountId, action) {
+    return this.canDoAction(accountId, action);
+  }
+
+  /**
+   * Legacy alias for recordAction.
+   * @param {string} accountId
+   * @param {string} action
+   */
+  record(accountId, action) {
+    this.recordAction(accountId, action);
   }
 
   /**
@@ -121,11 +158,57 @@ export async function enforceActionDelay(minMs, maxMs) {
 }
 
 /**
+ * Clamp caller-supplied delay to the action's hard floor/ceiling.
+ * @param {string} actionName
+ * @param {number} [delayMin]
+ * @param {number} [delayMax]
+ * @returns {{ delayMin: number, delayMax: number }}
+ */
+function clampActionDelay(actionName, delayMin, delayMax) {
+  const limits = getActionLimit(actionName);
+  const callerMin = Number(delayMin);
+  const callerMax = Number(delayMax);
+  const effectiveMin = Number.isFinite(callerMin) ? Math.max(limits.delayMin, callerMin) : limits.delayMin;
+  const effectiveMax = Number.isFinite(callerMax)
+    ? Math.max(effectiveMin, Math.min(limits.delayMax, callerMax))
+    : limits.delayMax;
+  return { delayMin: effectiveMin, delayMax: effectiveMax };
+}
+
+/**
+ * @param {unknown} err
+ * @param {unknown} item
+ * @param {string} actionName
+ * @param {string} [accountId]
+ * @returns {PlatformError}
+ */
+function wrapItemError(err, item, actionName, accountId = '') {
+  if (err instanceof PlatformError) {
+    const anyErr = /** @type {any} */ (err);
+    if (!('item' in anyErr)) anyErr.item = item;
+    return err;
+  }
+  const message = err instanceof Error ? err.message : String(err);
+  const wrapped = new PlatformError({
+    code: 'XACT_5000',
+    type: ErrorTypes.INTERNAL,
+    message: `${actionName} item failed: ${message}`,
+    suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+    platform: 'facebook',
+    accountId,
+    details: { item, originalError: message },
+    cause: err,
+  });
+  Object.assign(wrapped, { ok: false, item, error: wrapped.message });
+  return wrapped;
+}
+
+/**
  * Run a guarded batch of social actions with per-item governor check and jitter.
  *
  * @template T, R
  * @param {T[]} items
- * @param {(item: T, index: number) => Promise<R>} fn
+ * @param {(item: T, index: number, ctx: { page?: any }) => Promise<R>} fn
  * @param {Object} [options={}]
  * @param {string} [options.actionName='like']
  * @param {string} [options.accountId='default']
@@ -134,6 +217,8 @@ export async function enforceActionDelay(minMs, maxMs) {
  * @param {number} [options.delayMin]
  * @param {number} [options.delayMax]
  * @param {boolean} [options.dryRun=true]
+ * @param {number} [options.maxBatch]
+ * @param {any} [options.page]
  * @param {(progress: { current: number, total: number, result: R }) => void} [options.progressCallback]
  * @returns {Promise<R[]>}
  */
@@ -146,6 +231,8 @@ export async function runGuardedActionBatch(items, fn, options = {}) {
     delayMin,
     delayMax,
     dryRun = true,
+    maxBatch,
+    page,
     progressCallback,
   } = options;
 
@@ -153,21 +240,28 @@ export async function runGuardedActionBatch(items, fn, options = {}) {
     return [];
   }
 
+  const { delayMin: effectiveDelayMin, delayMax: effectiveDelayMax } = clampActionDelay(actionName, delayMin, delayMax);
+
+  let batch = items.slice();
+  if (maxBatch != null) {
+    const n = Number(maxBatch);
+    if (Number.isFinite(n) && n > 0) {
+      batch = batch.slice(0, Math.max(1, Math.floor(n)));
+    }
+  }
+
   const results = [];
-  const defaultLimits = ACTION_LIMITS[actionName] || { delayMin: 1000, delayMax: 3000 };
-  const effectiveDelayMin = delayMin != null ? Number(delayMin) : defaultLimits.delayMin;
-  const effectiveDelayMax = delayMax != null ? Number(delayMax) : defaultLimits.delayMax;
 
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
+  for (let i = 0; i < batch.length; i++) {
+    const item = batch[i];
 
-    // Check governor per item
+    // Check governor per item (await if async)
     if (governor && typeof governor.canAccountRequest === 'function') {
-      const allowed = governor.canAccountRequest(accountId, 'facebook');
+      const allowed = await Promise.resolve(governor.canAccountRequest(accountId, 'facebook'));
       if (!allowed) {
         throw new PlatformError({
           code: 'XACT_4291',
-          type: ErrorTypes.RATE_LIMIT,
+          type: ErrorTypes.HIBERNATION,
           message: `Account ${accountId} is hibernating or restricted by rate governor.`,
           suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
           platform: 'facebook',
@@ -177,10 +271,10 @@ export async function runGuardedActionBatch(items, fn, options = {}) {
     }
 
     // Check velocity tracker per action
-    if (velocityTracker && typeof velocityTracker.canExecute === 'function') {
-      if (!velocityTracker.canExecute(accountId, actionName)) {
+    if (velocityTracker && typeof velocityTracker.canDoAction === 'function') {
+      if (!velocityTracker.canDoAction(accountId, actionName)) {
         throw new PlatformError({
-          code: 'XACT_4290',
+          code: 'XACT_4291',
           type: ErrorTypes.RATE_LIMIT,
           message: `Action velocity limit exceeded for ${actionName} on account ${accountId}. ${ACCOUNT_RISK_WARNING}`,
           suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
@@ -193,41 +287,39 @@ export async function runGuardedActionBatch(items, fn, options = {}) {
     // Execute item handler with per-item error isolation
     let result;
     try {
-      result = await fn(item, i);
+      if (page && typeof page === 'object') {
+        page.__actionName = actionName;
+      }
+      result = await fn(item, i, { page });
       results.push(result);
     } catch (err) {
-      if (err instanceof PlatformError && (err.code === 'XACT_4290' || err.code === 'XACT_4291' || err.code === 'XACT_4010')) {
-        throw err;
-      }
-      result = /** @type {any} */ ({
-        item,
-        ok: false,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      results.push(result);
+      const wrapped = wrapItemError(err, item, actionName, accountId);
+      results.push(/** @type {any} */ (wrapped));
+      continue;
     }
 
-    // Record request in governor and tracker if not dry-run
-    if (!dryRun) {
+    // Record request in governor and tracker only on success (no throw, no explicit error)
+    const anyResult = /** @type {any} */ (result);
+    if (!dryRun && result && !anyResult.error && anyResult.ok !== false) {
       if (governor && typeof governor.recordRequest === 'function') {
-        governor.recordRequest(accountId, 'facebook');
+        await Promise.resolve(governor.recordRequest(accountId, 'facebook'));
       }
-      if (velocityTracker && typeof velocityTracker.record === 'function') {
-        velocityTracker.record(accountId, actionName);
+      if (velocityTracker && typeof velocityTracker.recordAction === 'function') {
+        velocityTracker.recordAction(accountId, actionName);
       }
     }
 
     if (typeof progressCallback === 'function') {
       try {
-        const res = /** @type {any} */ (progressCallback({ current: i + 1, total: items.length, result }));
-        if (res && typeof res.catch === 'function') {
+        const res = /** @type {any} */ (progressCallback({ current: i + 1, total: batch.length, result }));
+        if (res && typeof res === 'object' && typeof res.catch === 'function') {
           res.catch(() => {});
         }
       } catch {}
     }
 
     // Apply inter-item delay if more items remain and not dry-run
-    if (i < items.length - 1 && !dryRun) {
+    if (i < batch.length - 1 && !dryRun) {
       await enforceActionDelay(effectiveDelayMin, effectiveDelayMax);
     }
   }
