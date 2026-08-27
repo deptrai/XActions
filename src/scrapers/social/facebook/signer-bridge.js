@@ -958,7 +958,8 @@ export class FacebookBrowserBridge {
       if (parsedCookies.length > 0) {
         await adapter.setCookies(page, parsedCookies);
       }
-      return await fn(page);
+      const nativePage = page?._native || page;
+      return await fn(nativePage);
     } catch (err) {
       if (this.#browser && typeof this.#browser.isConnected === 'function' && !this.#browser.isConnected()) {
         await this.close();

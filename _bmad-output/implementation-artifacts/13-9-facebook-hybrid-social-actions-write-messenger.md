@@ -2,13 +2,13 @@
 story_id: '13.9'
 epic: 13
 story_key: '13-9-facebook-hybrid-social-actions-write-messenger'
-status: "done"
+status: "review"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-28
 last_updated: 2026-08-28
 owner: "DEV"
-reviewed: "validated"
+reviewed: "rejected"
 baseline_commit: "a35aaac8"
 ---
 
