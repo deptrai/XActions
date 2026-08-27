@@ -916,6 +916,8 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
     };
 
     // Legacy dispatch for schedule, cancel, warmup (no hybrid action yet).
+    // Defer to Epic 20.2 when FacebookCrawler adds warmup_account,
+    // warmup_scroll, and cancel_friend_requests actions.
     const dispatch = /** @type {(page: Page) => Promise<Record<string, unknown>>} */ (async (page) => {
       if (action === 'schedule') {
         const scheduledAt = /** @type {string | undefined} */ (body.scheduledAt);

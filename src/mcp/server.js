@@ -3147,6 +3147,9 @@ async function executeFacebookEpic4Tool(name, args) {
   }
 
   // --- Legacy / not-yet-hybrid tools keep their original implementations ---
+  // These actions (schedule, warmup_*, cancel_friend_requests) have no
+  // FacebookCrawler equivalent yet; defer to Epic 20.2 (Legacy Scraper
+  // Decommissioning) when hybrid actions are added.
   const {
     scheduleFacebookPost,
     warmupScrollFeed,

@@ -2,7 +2,7 @@
 
 ## Deferred from: code review of 13-10-facebook-hybrid-integration-caller-migration (2026-08-28)
 
-- [x] [Review][Defer] Migrate remaining legacy CLI/MCP calls (warmup/cancel) to hybrid when actions are available — thuộc Epic 20.2 cleanup / follow-up [src/cli/commands/automate.js, src/mcp/server.js]
+- [x] [Review][Triage] `warmup`/`cancel` tools (`x_facebook_warmup_scroll`, `x_facebook_warmup_account`, `x_facebook_cancel_friend_requests`) cannot migrate to `FacebookCrawler` in 13.10 because `FacebookCrawler` has no `warmup_account` / `warmup_scroll` / `cancel_friend_requests` actions. They stay on the legacy Puppeteer path in `src/mcp/server.js` and `api/routes/facebook.js`; CLI `src/cli/commands/automate.js` does not expose them. Officially deferred to Epic 20.2 (Legacy Scraper Decommissioning).
 - [x] [Review][Done] POST /api/facebook/automate (like/comment/post/share/join-groups/batch-post-groups/send-friend-requests/messenger-share) now routes through `scrape()` to `FacebookCrawler` [api/routes/facebook.js, api/services/facebookAutomation.js]
 - [x] [Review][Done] CLI `xactions automate` now routes like/comment/post/share/join-group/send-friend-request through `scrape()` [src/cli/commands/automate.js]
 - [x] [Review][Done] MCP `executeFacebookAutomateTool` / `executeFacebookEpic4Tool` now dispatch to `FacebookCrawler` for like/comment/post/messenger/share/join/post_to_groups/friend_requests [src/mcp/server.js]

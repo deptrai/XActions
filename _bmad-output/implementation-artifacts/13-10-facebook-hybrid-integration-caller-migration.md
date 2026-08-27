@@ -53,7 +53,7 @@ Story 13.10 là **story cắt chuyển / tích hợp** cho nhánh Facebook hybri
 
 - **Đặc biệt:**
   - Action `posts` là **mơ hồ**: có thể là `page_posts` (profile/page) hoặc `group_posts` (nhóm). Caller phải resolve dựa trên `url` chứa `/groups/` hay không, hoặc mặc định `page_posts`.
-  - `marketplace` đã được implement trong 13.8 nhưng vẫn còn `// TODO(13.10)` trong 3 nơi; story này phải cắt chuyển nó.
+  - `marketplace` đã được implement trong 13.8 và đã cắt chuyển sang `FacebookCrawler` trong 13.10.
   - `x_facebook_automate` hiện hỗ trợ `like | comment | post | messenger`; 13.10 ánh xạ sang `facebook:like`, `facebook:comment`, `facebook:post`, `facebook:messenger_share`.
   - Epic 4 growth tools (`x_facebook_share_posts`, `x_facebook_join_groups`, `x_facebook_post_to_groups`, `x_facebook_send_friend_requests`) ánh xạ sang `facebook:share`, `facebook:join_group`, `facebook:post`, `facebook:send_friend_request`.
 
@@ -496,16 +496,21 @@ Trong `src/scrapers/index.js` [dòng 157-328]:
 
 ## Migration Checklist / TODO(13.10) Map
 
-Các `TODO(13.10)` hiện có trong baseline cần được xóa hoặc hoàn thành:
+Các `TODO(13.10)` hiện có trong baseline đã được xử lý:
 
-1. `src/scrapers/index.js:182` — `marketplace: 'scrapeMarketplace', // TODO(13.10): migrate to FacebookCrawler action 'marketplace'`
-   - **Action:** thay `marketplace` mapping để dispatch sang `FacebookCrawler` action `marketplace`.
+1. `src/scrapers/index.js` — `marketplace` mapping legacy đã bị xóa; `scrape('facebook', 'marketplace', options)` giờ dispatch sang `FacebookCrawler` action `marketplace`.
+2. `api/services/facebookScrape.js:run()` — đã gọi `dispatchFacebookHybrid()` với `FacebookClient`/`FacebookCrawler` thay vì `scrape()`.
+3. `src/mcp/server.js` — `x_facebook_marketplace` đã gọi hybrid qua `executeFacebookScrapeTool`.
 
-2. `api/services/facebookScrape.js:54` — `// TODO(13.10): route to FacebookCrawler.start({ action: 'marketplace' })`
-   - **Action:** refactor `run()` để gọi `FacebookCrawler.start()` thay vì `scrape()`.
+Các tool sau **KHÔNG** thể migrate trong 13.10 vì `FacebookCrawler` chưa có action tương ứng; chúng giữ legacy path:
 
-3. `src/mcp/server.js:3152` — `// TODO(13.10): switch to FacebookCrawler.start({ action: 'marketplace' })`
-   - **Action:** `x_facebook_marketplace` gọi hybrid với đầy đủ filter.
+- `x_facebook_warmup_scroll`
+- `x_facebook_warmup_account`
+- `x_facebook_cancel_friend_requests`
+- `x_facebook_schedule_post` (DB-only)
+- `x_facebook_list_accounts` (DB-only)
+
+Hướng xử lý: giữ nguyên implementation legacy trong `api/services/facebookAutomation.js` và `src/mcp/server.js`; defer sang Epic 20.2 (Legacy Scraper Decommissioning) khi các action được bổ sung.
 
 Các caller surface cần migrate:
 
