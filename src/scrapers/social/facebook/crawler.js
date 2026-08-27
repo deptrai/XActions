@@ -221,6 +221,13 @@ export const DEFAULT_FB_DOC_IDS = {
   GROUP_COMMENT_ROOTS: '28217113134586234',
   GROUP_COMMENT_REPLIES: '27878908781774491',
   MARKETPLACE_SEARCH: 'fb_marketplace_search_doc',
+  LIKE_MUTATION: 'fb_like_mutation_doc',
+  COMMENT_MUTATION: 'fb_comment_mutation_doc',
+  POST_MUTATION: 'fb_post_mutation_doc',
+  SHARE_MUTATION: 'fb_share_mutation_doc',
+  MESSENGER_SHARE_MUTATION: 'fb_messenger_share_mutation_doc',
+  JOIN_GROUP_MUTATION: 'fb_join_group_mutation_doc',
+  SEND_FRIEND_REQUEST_MUTATION: 'fb_send_friend_request_mutation_doc',
 };
 
 /**
@@ -238,7 +245,7 @@ function stripPii(value) {
   if (typeof value !== 'string') return '';
   return value
     .replace(PII_PHONE_RE, '')
-    .replace(PII_EMAIL_RE, (match, prefix) => (prefix || ''))
+    .replace(PII_EMAIL_RE, '$1')
     .trim();
 }
 
@@ -253,6 +260,9 @@ const FB_COMMENT_RELAY_PROVIDERS = {
   __relay_internal__pv__IsWorkUserrelayprovider: false,
 };
 
+/**
+ * High-throughput hybrid crawler for Facebook Groups and Pages.
+ */
 export class FacebookCrawler extends AbstractCrawler {
   /** @type {string} */
   name = 'facebook';
@@ -2958,6 +2968,18 @@ export class FacebookCrawler extends AbstractCrawler {
    */
   async sendFriendRequest(args, session = {}) {
     return this.actions.sendFriendRequest(args, session);
+  }
+
+  /**
+   * Resolve post feedback context (feedback ID, story ID).
+   * @param {string} input
+   * @param {string | Record<string, unknown>} [cookies='']
+   * @param {string} [accountId]
+   * @param {Record<string, any>} [session]
+   * @returns {Promise<{ feedbackId: string }>}
+   */
+  async resolvePostFeedbackContext(input, cookies = '', accountId, session = {}) {
+    return this.#resolvePostFeedbackContext(input, cookies, accountId, session);
   }
 
   /**

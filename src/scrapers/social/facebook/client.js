@@ -631,6 +631,7 @@ export class FacebookClient extends AbstractApiClient {
         headless: this.headless,
         userDataDir: this.userDataDir || undefined,
         profileDir: this.profileDir || undefined,
+        proxy: this.proxy,
         proxyPool: this.proxyPool,
         proxyProvider: this.proxyProvider,
         extraArgs: this.extraArgs,

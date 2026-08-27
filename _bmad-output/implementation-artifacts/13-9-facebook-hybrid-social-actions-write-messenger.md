@@ -2,7 +2,7 @@
 story_id: '13.9'
 epic: 13
 story_key: '13-9-facebook-hybrid-social-actions-write-messenger'
-status: "review"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-28
@@ -14,7 +14,7 @@ baseline_commit: "a35aaac8"
 
 # Story 13.9: Facebook Hybrid Social Actions (Write & Messenger)
 
-Status: review
+Status: done
 
 <!-- Note: Validation completed. Run validate-create-story for final check before dev-story. -->
 
@@ -446,6 +446,17 @@ Scope cụ thể:
     - [x] `npx vitest run tests/scrapers/social/facebook/`
     - [x] `npx tsc --noEmit`
     - [x] `npx prisma validate`
+
+### Review Findings
+
+- [x] [Review][Patch] SSRF & Domain Spoofing guard in assertFacebookUrlLocal and groupUrls [src/scrapers/social/facebook/actions.js:21]
+- [x] [Review][Patch] Per-item error isolation in runGuardedActionBatch [src/scrapers/social/facebook/batch-runner.js:188]
+- [x] [Review][Patch] Pass { accountId, cookies } in withPage and throw XACT_5030 when live execution unavailable [src/scrapers/social/facebook/actions.js:184]
+- [x] [Review][Patch] Safe args handling in shareLinkByUid [src/scrapers/social/facebook/actions.js:538]
+- [x] [Review][Patch] Delay floor zero coercion fix in enforceActionDelay [src/scrapers/social/facebook/batch-runner.js:110]
+- [x] [Review][Patch] PII regex enhancements for international formats [src/scrapers/social/facebook/actions.js:38]
+- [x] [Review][Patch] Ensure proxy config and safe disconnect handling in ensureBrowserBridge and withPage [src/scrapers/social/facebook/client.js:623]
+- [x] [Review][Patch] Expose public resolvePostFeedbackContext and DEFAULT_FB_DOC_IDS placeholders [src/scrapers/social/facebook/crawler.js:202, 953]
 
 ## Dev Notes
 

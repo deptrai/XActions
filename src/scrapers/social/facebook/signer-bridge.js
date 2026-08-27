@@ -943,7 +943,8 @@ export class FacebookBrowserBridge {
    * @returns {Promise<T>}
    */
   async withPage(fn, options = {}) {
-    const { accountId = 'fb-guest', cookies = '' } = options;
+    const opts = options && typeof options === 'object' ? options : {};
+    const { accountId = 'fb-guest', cookies = '' } = opts;
     const parsedCookies = this.#parseCookies(cookies);
     const rawCUser = parsedCookies.find((c) => c.name === 'c_user')?.value || '';
     const parsedCUser = safeDecodeCookie(rawCUser);
@@ -958,6 +959,11 @@ export class FacebookBrowserBridge {
         await adapter.setCookies(page, parsedCookies);
       }
       return await fn(page);
+    } catch (err) {
+      if (this.#browser && typeof this.#browser.isConnected === 'function' && !this.#browser.isConnected()) {
+        await this.close();
+      }
+      throw err;
     } finally {
       try {
         await adapter.closePage(page);

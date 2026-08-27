@@ -14,17 +14,21 @@ import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error
 import { runGuardedActionBatch, FacebookActionVelocityTracker } from './batch-runner.js';
 
 /**
- * Validate that a URL belongs to facebook.com.
+ * Validate that a URL belongs to facebook.com safely without SSRF / domain spoofing.
  * @param {string} url
  * @returns {boolean}
  */
 export function assertFacebookUrlLocal(url) {
   if (!url || typeof url !== 'string') return false;
   const trimmed = url.trim();
-  if (trimmed.startsWith('/')) return true;
+  if (trimmed.startsWith('//')) return false;
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true;
   try {
     const u = new URL(trimmed);
-    return u.hostname.includes('facebook.com') || u.hostname.includes('fb.com') || u.hostname.includes('messenger.com');
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+    const host = u.hostname.toLowerCase();
+    const validSuffixes = ['facebook.com', 'fb.com', 'messenger.com', 'fb.watch', 'm.facebook.com', 'mbasic.facebook.com'];
+    return validSuffixes.some((domain) => host === domain || host.endsWith('.' + domain));
   } catch {
     return false;
   }
@@ -38,7 +42,7 @@ export function assertFacebookUrlLocal(url) {
 export function stripPii(text) {
   if (typeof text !== 'string') return '';
   return text
-    .replace(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/g, '[REDACTED_PHONE]')
+    .replace(/(?:\+?\d{1,4}[-.\s]?)?(?:\(?\d{2,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{3,4}(?:[-.\s]?\d{1,4})?/g, '[REDACTED_PHONE]')
     .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED_EMAIL]');
 }
 
@@ -179,8 +183,9 @@ export class FacebookActions {
         }
 
         // Live execution via browser bridge
-        const bridge = /** @type {any} */ (this.client?.browserBridge);
+        const bridge = /** @type {any} */ (this.client?.browserBridge || this.client?.ensureBrowserBridge?.());
         if (bridge && typeof bridge.withPage === 'function') {
+          const cookies = session?.cookies || this.crawler?.sessionManager?.get?.(accountId)?.cookies;
           return bridge.withPage(async (/** @type {any} */ page) => {
             await page.goto(postUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
             // Evaluate like button
@@ -201,10 +206,17 @@ export class FacebookActions {
               liked: Boolean(state.clicked),
               alreadyLiked: Boolean(state.alreadyLiked),
             };
-          });
+          }, { accountId, cookies });
         }
 
-        return { postUrl, liked: true, alreadyLiked: false };
+        throw new PlatformError({
+          code: 'XACT_5030',
+          type: ErrorTypes.INTERNAL,
+          message: 'Live Facebook like execution requires an active browser bridge.',
+          suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
+          platform: 'facebook',
+          accountId,
+        });
       },
       {
         actionName: 'like',
@@ -291,8 +303,9 @@ export class FacebookActions {
           return { postUrl, commentId: null, previewText: stripPii(text), dryRun: true };
         }
 
-        const bridge = /** @type {any} */ (this.client?.browserBridge);
+        const bridge = /** @type {any} */ (this.client?.browserBridge || this.client?.ensureBrowserBridge?.());
         if (bridge && typeof bridge.withPage === 'function') {
+          const cookies = session?.cookies || this.crawler?.sessionManager?.get?.(accountId)?.cookies;
           return bridge.withPage(async (/** @type {any} */ page) => {
             await page.goto(postUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
             await page.evaluate((/** @type {string} */ msg) => {
@@ -303,10 +316,17 @@ export class FacebookActions {
               }
             }, text);
             return { postUrl, commentId: `comment_${Date.now()}` };
-          });
+          }, { accountId, cookies });
         }
 
-        return { postUrl, commentId: `comment_${Date.now()}` };
+        throw new PlatformError({
+          code: 'XACT_5030',
+          type: ErrorTypes.INTERNAL,
+          message: 'Live Facebook comment execution requires an active browser bridge.',
+          suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
+          platform: 'facebook',
+          accountId,
+        });
       },
       {
         actionName: 'comment',
@@ -365,11 +385,21 @@ export class FacebookActions {
       const rawGroups = args.groupUrls || args.groupIds;
       const groups = (Array.isArray(rawGroups) ? rawGroups : [rawGroups]).filter(Boolean).map(String);
       for (const g of groups) {
-        if (!g.includes('/groups/') && !/^\d+$/.test(g)) {
+        if (g.startsWith('http://') || g.startsWith('https://')) {
+          if (!assertFacebookUrlLocal(g) || !g.includes('/groups/')) {
+            throw new PlatformError({
+              code: 'XACT_4001',
+              type: ErrorTypes.INVALID_ARGS,
+              message: `Invalid Facebook group URL: ${g}`,
+              suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+              platform: 'facebook',
+            });
+          }
+        } else if (!/^\d+$/.test(g) && !/^[a-zA-Z0-9._-]+$/.test(g)) {
           throw new PlatformError({
             code: 'XACT_4001',
             type: ErrorTypes.INVALID_ARGS,
-            message: `Invalid Facebook group URL or ID: ${g}`,
+            message: `Invalid Facebook group ID or slug: ${g}`,
             suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
             platform: 'facebook',
           });
@@ -387,7 +417,24 @@ export class FacebookActions {
         if (dryRun) {
           return { targetUrl, postId: null, previewText: stripPii(text), dryRun: true };
         }
-        return { targetUrl, postId: `post_${Date.now()}` };
+
+        const bridge = /** @type {any} */ (this.client?.browserBridge || this.client?.ensureBrowserBridge?.());
+        if (bridge && typeof bridge.withPage === 'function') {
+          const cookies = session?.cookies || this.crawler?.sessionManager?.get?.(accountId)?.cookies;
+          return bridge.withPage(async (/** @type {any} */ page) => {
+            await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            return { targetUrl, postId: `post_${Date.now()}` };
+          }, { accountId, cookies });
+        }
+
+        throw new PlatformError({
+          code: 'XACT_5030',
+          type: ErrorTypes.INTERNAL,
+          message: 'Live Facebook post execution requires an active browser bridge.',
+          suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
+          platform: 'facebook',
+          accountId,
+        });
       },
       {
         actionName: isGroup ? 'group_post' : 'post',
@@ -449,7 +496,24 @@ export class FacebookActions {
         if (dryRun) {
           return { postUrl, shared: false, method: 'share-dialog-timeline', dryRun: true };
         }
-        return { postUrl, shared: true, method: 'share-dialog-timeline' };
+
+        const bridge = /** @type {any} */ (this.client?.browserBridge || this.client?.ensureBrowserBridge?.());
+        if (bridge && typeof bridge.withPage === 'function') {
+          const cookies = session?.cookies || this.crawler?.sessionManager?.get?.(accountId)?.cookies;
+          return bridge.withPage(async (/** @type {any} */ page) => {
+            await page.goto(postUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            return { postUrl, shared: true, method: 'share-dialog-timeline' };
+          }, { accountId, cookies });
+        }
+
+        throw new PlatformError({
+          code: 'XACT_5030',
+          type: ErrorTypes.INTERNAL,
+          message: 'Live Facebook share execution requires an active browser bridge.',
+          suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
+          platform: 'facebook',
+          accountId,
+        });
       },
       {
         actionName: 'share',
@@ -510,7 +574,24 @@ export class FacebookActions {
         if (dryRun) {
           return { recipientUid, ok: true, method: 'direct-messenger-url', dryRun: true };
         }
-        return { recipientUid, ok: true, method: 'direct-messenger-url' };
+
+        const bridge = /** @type {any} */ (this.client?.browserBridge || this.client?.ensureBrowserBridge?.());
+        if (bridge && typeof bridge.withPage === 'function') {
+          const cookies = session?.cookies || this.crawler?.sessionManager?.get?.(accountId)?.cookies;
+          return bridge.withPage(async (/** @type {any} */ page) => {
+            await page.goto(`https://www.facebook.com/messages/t/${recipientUid}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            return { recipientUid, ok: true, method: 'direct-messenger-url' };
+          }, { accountId, cookies });
+        }
+
+        throw new PlatformError({
+          code: 'XACT_5030',
+          type: ErrorTypes.INTERNAL,
+          message: 'Live Facebook Messenger share requires an active browser bridge.',
+          suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
+          platform: 'facebook',
+          accountId,
+        });
       },
       {
         actionName: 'messenger_share',
@@ -528,18 +609,19 @@ export class FacebookActions {
 
   /**
    * Alias for sharing a link to a single recipient UID.
-   * @param {Object} args
+   * @param {Object} [args={}]
    * @param {string} args.postUrl
    * @param {string} args.recipientUid
    * @param {string} [args.message]
    * @param {boolean} [args.dryRun=true]
    * @param {any} [session]
    */
-  async shareLinkByUid(args, session = {}) {
+  async shareLinkByUid(args = /** @type {any} */ ({}), session = {}) {
+    const safeArgs = args && typeof args === 'object' ? args : /** @type {any} */ ({});
     return this.messengerShare(
       {
-        ...args,
-        recipientUids: [args.recipientUid],
+        ...safeArgs,
+        recipientUids: safeArgs.recipientUid ? [safeArgs.recipientUid] : [],
       },
       session
     );
@@ -573,11 +655,21 @@ export class FacebookActions {
     }
 
     for (const g of groups) {
-      if (!g.includes('/groups/') && !/^\d+$/.test(g)) {
+      if (g.startsWith('http://') || g.startsWith('https://')) {
+        if (!assertFacebookUrlLocal(g) || !g.includes('/groups/')) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: `Invalid Facebook group URL: ${g}`,
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+            platform: 'facebook',
+          });
+        }
+      } else if (!/^\d+$/.test(g) && !/^[a-zA-Z0-9._-]+$/.test(g)) {
         throw new PlatformError({
           code: 'XACT_4001',
           type: ErrorTypes.INVALID_ARGS,
-          message: `Invalid Facebook group URL or ID: ${g}`,
+          message: `Invalid Facebook group ID or slug: ${g}`,
           suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
           platform: 'facebook',
         });
@@ -591,7 +683,24 @@ export class FacebookActions {
         if (dryRun) {
           return { groupUrl, joined: false, dryRun: true };
         }
-        return { groupUrl, joined: true };
+
+        const bridge = /** @type {any} */ (this.client?.browserBridge || this.client?.ensureBrowserBridge?.());
+        if (bridge && typeof bridge.withPage === 'function') {
+          const cookies = session?.cookies || this.crawler?.sessionManager?.get?.(accountId)?.cookies;
+          return bridge.withPage(async (/** @type {any} */ page) => {
+            await page.goto(groupUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            return { groupUrl, joined: true };
+          }, { accountId, cookies });
+        }
+
+        throw new PlatformError({
+          code: 'XACT_5030',
+          type: ErrorTypes.INTERNAL,
+          message: 'Live Facebook join group requires an active browser bridge.',
+          suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
+          platform: 'facebook',
+          accountId,
+        });
       },
       {
         actionName: 'join_group',
@@ -655,7 +764,25 @@ export class FacebookActions {
         if (dryRun) {
           return { target, ok: true, dryRun: true };
         }
-        return { target, ok: true };
+
+        const bridge = /** @type {any} */ (this.client?.browserBridge || this.client?.ensureBrowserBridge?.());
+        if (bridge && typeof bridge.withPage === 'function') {
+          const cookies = session?.cookies || this.crawler?.sessionManager?.get?.(accountId)?.cookies;
+          const targetUrl = target.startsWith('http') ? target : `https://www.facebook.com/${target}`;
+          return bridge.withPage(async (/** @type {any} */ page) => {
+            await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            return { target, ok: true };
+          }, { accountId, cookies });
+        }
+
+        throw new PlatformError({
+          code: 'XACT_5030',
+          type: ErrorTypes.INTERNAL,
+          message: 'Live Facebook friend request requires an active browser bridge.',
+          suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
+          platform: 'facebook',
+          accountId,
+        });
       },
       {
         actionName: 'send_friend_request',

@@ -4,7 +4,7 @@ import http from 'node:http';
 import { FacebookCrawler } from '../../../../src/scrapers/social/facebook/crawler.js';
 import { FacebookClient } from '../../../../src/scrapers/social/facebook/client.js';
 import { FacebookActions } from '../../../../src/scrapers/social/facebook/actions.js';
-import { FacebookActionVelocityTracker, runGuardedActionBatch } from '../../../../src/scrapers/social/facebook/batch-runner.js';
+import { FacebookActionVelocityTracker, runGuardedActionBatch, enforceActionDelay } from '../../../../src/scrapers/social/facebook/batch-runner.js';
 import { SessionManager } from '../../../../src/core/session-manager.js';
 import { PlatformError, ErrorTypes } from '../../../../src/core/error-envelope.js';
 import { ProxyIpPool } from '../../../../src/proxy/proxy-pool.js';
@@ -378,5 +378,56 @@ describe('Story 13.9 — Facebook Hybrid Social Actions (Write & Messenger)', ()
       const content = fs.readFileSync(fullPath, 'utf8');
       expect(content).toContain('@deprecated');
     }
+  });
+
+  it('[Review Patches] should validate SSRF/spoofing, error isolation, delay floor zero, and feedback context', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const crawler = new FacebookCrawler({ client, sessionManager, governor, accountPool });
+
+    // 1. SSRF / Domain spoofing rejection
+    await expect(
+      crawler.start({
+        action: 'like',
+        args: { postUrl: 'https://evil-facebook.com/post/123' },
+        session: { accountId: 'acc_fb_write_1' },
+      })
+    ).rejects.toThrow(PlatformError);
+
+    await expect(
+      crawler.start({
+        action: 'like',
+        args: { postUrl: '//evil.com/phish' },
+        session: { accountId: 'acc_fb_write_1' },
+      })
+    ).rejects.toThrow(PlatformError);
+
+    // 2. Delay floor zero coercion test
+    const delayWaited = await enforceActionDelay(0, 0);
+    expect(delayWaited).toBe(0);
+
+    // 3. Error isolation in runGuardedActionBatch
+    const batchItems = ['item1', 'item2', 'item3'];
+    const isolatedResults = await runGuardedActionBatch(
+      batchItems,
+      async (item, idx) => {
+        if (idx === 1) throw new Error('Simulated network timeout');
+        return { item, ok: true };
+      },
+      { actionName: 'like', accountId: 'acc_fb_write_1', dryRun: true }
+    );
+    expect(isolatedResults).toHaveLength(3);
+    expect(isolatedResults[0].ok).toBe(true);
+    expect(isolatedResults[1].ok).toBe(false);
+    expect(isolatedResults[1].error).toContain('Simulated network timeout');
+    expect(isolatedResults[2].ok).toBe(true);
+
+    // 4. Safe args handling in shareLinkByUid
+    const nullArgsRes = await crawler.actions.shareLinkByUid(null, { accountId: 'acc_fb_write_1' }).catch((e) => e);
+    expect(nullArgsRes).toBeInstanceOf(PlatformError);
+
+    // 5. Public resolvePostFeedbackContext
+    const fbCtx = await crawler.resolvePostFeedbackContext('123456789', '');
+    expect(fbCtx).toBeDefined();
+    expect(fbCtx.feedbackId).toBeDefined();
   });
 });

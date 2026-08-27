@@ -87,8 +87,8 @@ development_status:
   13-6-facebook-hybrid-search-global-group-search: done
   13-7-facebook-hybrid-post-group-comments: done
   13-8-facebook-hybrid-marketplace: done
-  13-9-facebook-hybrid-social-actions-write-messenger: review
-  13-10-facebook-hybrid-integration-caller-migration: backlog
+  13-9-facebook-hybrid-social-actions-write-messenger: done
+  13-10-facebook-hybrid-integration-caller-migration: ready-for-dev
   epic-13-retrospective: optional
 
   # --- Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream ---

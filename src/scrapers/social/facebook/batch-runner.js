@@ -63,8 +63,13 @@ export class FacebookActionVelocityTracker {
     const oneHourAgo = now - 60 * 60 * 1000;
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
 
-    const countLastHour = history.filter((ts) => ts > oneHourAgo).length;
-    const countLastDay = history.filter((ts) => ts > oneDayAgo).length;
+    const pruned = history.filter((ts) => ts > oneDayAgo);
+    if (pruned.length !== history.length) {
+      this.#actionHistory.set(key, pruned);
+    }
+
+    const countLastHour = pruned.filter((ts) => ts > oneHourAgo).length;
+    const countLastDay = pruned.length;
 
     if (limits.perHour != null && countLastHour >= limits.perHour) {
       return false;
@@ -102,13 +107,14 @@ export class FacebookActionVelocityTracker {
 
 /**
  * Enforce human-like delay between actions.
- * @param {number} minMs
- * @param {number} maxMs
+ * @param {number} [minMs]
+ * @param {number} [maxMs]
  * @returns {Promise<number>} Actual delay waited in ms
  */
 export async function enforceActionDelay(minMs, maxMs) {
-  const min = Math.max(0, Number(minMs) || 1000);
-  const max = Math.max(min, Number(maxMs) || min * 2);
+  const min = minMs != null && !Number.isNaN(Number(minMs)) ? Math.max(0, Number(minMs)) : 1000;
+  const max = maxMs != null && !Number.isNaN(Number(maxMs)) ? Math.max(min, Number(maxMs)) : Math.max(min, min * 2);
+  if (max === 0) return 0;
   const delay = Math.floor(Math.random() * (max - min + 1)) + min;
   await new Promise((resolve) => setTimeout(resolve, delay));
   return delay;
@@ -184,9 +190,22 @@ export async function runGuardedActionBatch(items, fn, options = {}) {
       }
     }
 
-    // Execute item handler
-    const result = await fn(item, i);
-    results.push(result);
+    // Execute item handler with per-item error isolation
+    let result;
+    try {
+      result = await fn(item, i);
+      results.push(result);
+    } catch (err) {
+      if (err instanceof PlatformError && (err.code === 'XACT_4290' || err.code === 'XACT_4291' || err.code === 'XACT_4010')) {
+        throw err;
+      }
+      result = /** @type {any} */ ({
+        item,
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      results.push(result);
+    }
 
     // Record request in governor and tracker if not dry-run
     if (!dryRun) {
@@ -200,7 +219,10 @@ export async function runGuardedActionBatch(items, fn, options = {}) {
 
     if (typeof progressCallback === 'function') {
       try {
-        progressCallback({ current: i + 1, total: items.length, result });
+        const res = /** @type {any} */ (progressCallback({ current: i + 1, total: items.length, result }));
+        if (res && typeof res.catch === 'function') {
+          res.catch(() => {});
+        }
       } catch {}
     }
 
