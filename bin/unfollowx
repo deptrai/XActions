@@ -1,9 +1,87 @@
 #!/usr/bin/env node
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
-const path = require('path');
-console.log('XActions — the complete X/Twitter automation platform');
-console.log('This repository contains small scripts to paste into your browser console.');
-console.log('See the usage docs: docs/usage.md');
-console.log('Examples: examples/README.md');
-console.log(`Scripts are in: ${path.join(__dirname, '..', 'src')}`);
+/**
+ * Legacy `unfollowx` CLI entry point (ESM).
+ *
+ * Maps known read-only legacy commands to the unified `scrape('twitter', ...)`
+ * dispatcher. Unsupported commands return the standard 3-Layer JSON Envelope
+ * with `suggestedAction: 'use_x_actions_list'`.
+ *
+ * @author nich (@nichxbt)
+ * @license MIT
+ */
 
+import { scrape } from '../src/scrapers/index.js';
+import { wrapToolResult, wrapToolError } from '../src/mcp/envelope.js';
+
+const LEGACY_READ_COMMANDS = new Set([
+  'profile',
+  'followers',
+  'following',
+  'tweets',
+  'likes',
+  'media',
+  'search',
+  'hashtag',
+  'thread',
+  'bookmarks',
+  'trending',
+]);
+
+/**
+ * @param {string[]} argv
+ * @returns {Promise<void>}
+ */
+async function main(argv) {
+  const [command, ...rest] = argv.slice(2);
+  const startedAt = Date.now();
+
+  if (!command || command === 'help' || command === '--help' || command === '-h') {
+    console.log(JSON.stringify({
+      message: 'Legacy unfollowx dispatcher. Usage: unfollowx <command> [arg]',
+      supported: Array.from(LEGACY_READ_COMMANDS),
+    }, null, 2));
+    return;
+  }
+
+  if (!LEGACY_READ_COMMANDS.has(command)) {
+    const envelope = wrapToolError(
+      new Error(`Legacy command "${command}" is not supported. Use the new xactions CLI or MCP tools.`),
+      `unfollowx_${command}`,
+      { args: { command } }
+    );
+    envelope.error.suggestedAction = 'use_x_actions_list';
+    console.log(JSON.stringify(envelope, null, 2));
+    process.exitCode = 1;
+    return;
+  }
+
+  try {
+    /** @type {Record<string, unknown>} */
+    const options = { platform: 'twitter' };
+    const rawArg = rest.join(' ').trim();
+
+    if (command === 'search' || command === 'hashtag') {
+      options.query = rawArg;
+      if (command === 'hashtag') options.hashtag = rawArg.replace(/^#/, '');
+    } else if (command === 'thread') {
+      options.url = rawArg;
+    } else if (command !== 'bookmarks' && command !== 'trending') {
+      options.username = rawArg;
+    }
+
+    const result = await scrape('twitter', command, options);
+    const envelope = await wrapToolResult(`unfollowx_${command}`, result, startedAt, { args: options });
+    console.log(JSON.stringify(envelope, null, 2));
+  } catch (error) {
+    const envelope = wrapToolError(error, `unfollowx_${command}`, { args: { platform: 'twitter' } });
+    console.log(JSON.stringify(envelope, null, 2));
+    process.exitCode = 1;
+  }
+}
+
+main(process.argv).catch((error) => {
+  const envelope = wrapToolError(error, 'unfollowx', {});
+  console.error(JSON.stringify(envelope, null, 2));
+  process.exitCode = 1;
+});
