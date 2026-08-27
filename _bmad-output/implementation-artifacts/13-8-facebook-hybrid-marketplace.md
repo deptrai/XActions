@@ -482,7 +482,14 @@ Từ Story 13.6:
 - [x] [Review][False Positive] `base-crawler.test.js` regex `/No available account/` matches the thrown message at `src/core/base-crawler.js:189`; no test fix needed.
 - [x] [Review][False Positive] `AbstractApiClient.request` `isLastProxyAttempt` 429/403 account rotation is correct for opt-in auth accounts; it does not trigger on generic errors and is not an issue.
 
-Verification: `npx tsc --noEmit` pass; `npx vitest run tests/core tests/scrapers/social/facebook` 252 tests pass.
+Verification: `npx tsc --noEmit` pass; `npx vitest run tests/core tests/scrapers/social/facebook` 252 tests pass; `FacebookClient` with no proxy and real `baseUrl` throws `XACT_5030` before network.
+
+#### Proxy Requirement
+
+- `FacebookClient` now defaults to `requiresProxy=true` for any non-localhost/non-private `baseUrl`.
+- If no `proxyPool` / `proxyProvider` is supplied and `baseUrl` is `https://www.facebook.com` (or any real domain), the client throws `XACT_5030` (`proxy_exhausted`) **before making the request**.
+- Tests that run against a local `http://127.0.0.1:*` server remain allowed because the base URL is detected as loopback/private; this is the only exception.
+- The residential proxy used in real-data smoke tests is loaded from `PROXY_URL` / `FACEBOOK_PROXY` in `.env` and passed as a `ProxyIpPool`.
 
 #### real-data smoke test (Sentinel)
 
@@ -493,7 +500,8 @@ Infra profile:
 - Low volume (`limit=2`).
 
 - [x] Guest `FacebookClient.ensureTokens(null, '')` extracts `c_user=0` and an `lsd` token from the Facebook home page; `buildGraphQlBody` forces `__user=0` and consumes from `guestTokenRing`.
-- [x] Auth `FacebookClient.ensureTokens('real_account', cookie)` correctly throws `XACT_4010` because the stored cookie hits a login wall from this environment/IP (cookie invalid/expired).
+- [x] No-proxy `FacebookClient` (no `proxyPool`/`proxyProvider`, real `baseUrl`) throws `XACT_5030` (`proxy_exhausted`) before any network request.
+- [x] Auth `FacebookClient.ensureTokens('real_account', cookie)` fails because the stored cookie is invalid for the current residential-proxy IP; observed codes vary between `XACT_4010` (login wall) and `XACT_5000`/`XACT_4001` (bad request), confirming the session is not valid.
 - [x] Guest `FacebookCrawler.marketplace({ query: 'macbook', location: 'hochiminhcity', limit: 2 })` returns 2 real PostItems with title, price, and location (SSR fallback via residential proxy).
 - [x] Auth `FacebookCrawler.marketplace(...)` with the invalid cookie falls back to the public SSR page and still returns 2 real PostItems (cookie did not authenticate, but action is public and residential proxy is used).
 - [ ] Guest `FacebookCrawler.search`/`profile`/`page_posts` fail as expected: doc_ids are placeholders (`DEFAULT_FB_DOC_IDS`) and no SSR fallback is implemented for these actions.

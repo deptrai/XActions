@@ -15,6 +15,27 @@ import { PreSignedTokenRing } from '../../../core/signer-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import crypto from 'node:crypto';
 
+/**
+ * Check whether a URL points to a loopback or local/private host.
+ * Used to decide whether a FacebookClient defaults to requiresProxy=false
+ * (e.g. unit tests against a local http server) or requiresProxy=true (real facebook.com).
+ * @param {string} url
+ * @returns {boolean}
+ */
+function isLocalUrl(url) {
+  if (typeof url !== 'string') return false;
+  try {
+    const { hostname } = new URL(url);
+    const host = hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0') return true;
+    if (host.startsWith('10.') || host.startsWith('192.168.')) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) return true;
+    if (host.startsWith('fc00:') || host.startsWith('fd00:') || host === 'fe80::1') return true;
+    if (/^\[?::1\]?$/.test(host)) return true;
+  } catch {}
+  return false;
+}
+
 const MAX_TOKEN_CACHE_ENTRIES = 500;
 const DEFAULT_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
 
@@ -140,18 +161,21 @@ export class FacebookClient extends AbstractApiClient {
    * @param {any} [deps.proxy]
    * @param {string[]} [deps.extraArgs]
    * @param {number} [deps.timeout]
+   * @param {boolean} [deps.requiresProxy]
    */
   constructor(deps = {}) {
+    const baseUrl = (deps.baseUrl || 'https://www.facebook.com').replace(/\/+$/, '');
+    const requiresProxy = deps.requiresProxy !== undefined ? deps.requiresProxy : !isLocalUrl(baseUrl);
+
     super(/** @type {any} */ ({
       ...deps,
       platform: 'facebook',
       client: deps.client || 'got',
+      requiresProxy,
       responseValidator: deps.responseValidator || new FacebookPlatformResponseValidator(),
     }));
 
-    if (deps.baseUrl) {
-      this.baseUrl = deps.baseUrl.replace(/\/+$/, '');
-    }
+    this.baseUrl = baseUrl;
     if (deps.friendlyNames) {
       this.friendlyNames = deps.friendlyNames;
     }

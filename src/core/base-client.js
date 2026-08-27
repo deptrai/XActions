@@ -111,6 +111,7 @@ export class AbstractApiClient {
    * @param {number} [options.rateLimitHibernationMs]
    * @param {number} [options.standbyBackoffMs]
    * @param {number} [options.timeout]
+   * @param {boolean} [options.requiresProxy]
    */
   constructor(options = {}) {
     if (new.target === AbstractApiClient) {
@@ -137,6 +138,7 @@ export class AbstractApiClient {
     if (options.rateLimitHibernationMs !== undefined) this.rateLimitHibernationMs = options.rateLimitHibernationMs;
     if (options.standbyBackoffMs !== undefined) this.standbyBackoffMs = options.standbyBackoffMs;
     this.timeout = options.timeout ?? 30000;
+    this.requiresProxy = options.requiresProxy ?? false;
   }
 
   /**
@@ -520,6 +522,19 @@ export class AbstractApiClient {
     }
 
     const provider = this.proxyProvider || this.proxyPool;
+
+    if (this.requiresProxy && !provider) {
+      throw new PlatformError({
+        type: ErrorTypes.PROXY_EXHAUSTED,
+        code: 'XACT_5030',
+        message: 'Proxy is required for platform requests and no proxy pool is configured',
+        statusCode: 503,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        accountId: concreteAccountId,
+        platform: this.platform,
+      });
+    }
+
     let accountRotationCount = 0;
 
     while (accountRotationCount <= this.maxAccountRotations) {

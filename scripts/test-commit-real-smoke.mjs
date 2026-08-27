@@ -74,10 +74,10 @@ async function runCrawler(name, command, opts = {}) {
     for (const p of (result?.posts || []).slice(0, 2)) {
       console.log(`    post: id=${p.id} title=${(p.content || '').slice(0, 40)} price=${p.metadata?.price || 'n/a'} location=${p.metadata?.location || 'n/a'}`);
     }
-    return { ok: true, count, result };
+    return { test: name, ok: true, count, result };
   } catch (err) {
     console.log(`  status: error  code=${err.code || 'N/A'} type=${err.type || 'N/A'} message=${err.message || String(err)}`);
-    return { ok: false, err };
+    return { test: name, ok: false, err };
   } finally {
     await crawler.cleanup?.();
   }
