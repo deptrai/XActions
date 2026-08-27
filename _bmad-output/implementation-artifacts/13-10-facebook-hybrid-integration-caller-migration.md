@@ -37,6 +37,7 @@ Story 13.10 là **story cắt chuyển / tích hợp** cho nhánh Facebook hybri
 - **Trong phạm vi 13.10:**
   - Cập nhật `src/scrapers/index.js` unified `scrape()` để khi `platform === 'facebook'/'fb'` thì chuyển sang `FacebookCrawler.start()` thay vì gọi legacy `scrapeProfile` / `scrapeTweets` / `scrapeMarketplace` / v.v.
   - Cập nhật `api/services/facebookScrape.js` để `run()` và `runSearchAllParallel()` gọi `FacebookCrawler.start()`.
+  - Cập nhật `api/services/facebookAutomation.js` (các helper social action), `api/services/facebookAccountPool.js` và `api/services/facebookHealth.js` để loại bỏ dependency `src/scrapers/facebook/` — dùng `FacebookCrawler` / `FacebookClient` / `AccountPool` chung khi có thể.
   - Cập nhật `api/routes/facebook.js` (`/scrape` và `/automate`) để validation giữ nguyên, nhưng bên dưới gọi hybrid.
   - Cập nhật `src/mcp/server.js` để tất cả Facebook tools chuyển sang hybrid cho các action đã có trong `FacebookCrawler`.
   - Cập nhật `src/cli/commands/scrape.js` và `src/cli/commands/automate.js` để hỗ trợ nhiều action hơn và route sang hybrid.
@@ -239,6 +240,7 @@ Story 13.10 là **story cắt chuyển / tích hợp** cho nhánh Facebook hybri
   - `[AC-5]` `executeFacebookScrapeTool` / `executeFacebookEpic4Tool` mapping đúng action
   - `[AC-7]` CLI `scrape`/`automate` parse args và route sang hybrid
   - `[AC-9]` `package.json` `exports` chứa `./scrapers/social`
+  - `[AC-13]` `api/services/facebookAutomation.js`, `facebookAccountPool.js`, `facebookHealth.js` và `/api/facebook/automate` route sang hybrid hoặc đánh dấu deprecated
 - **And** chạy `npx vitest run tests/scrapers/social/facebook/`, `npx tsc --noEmit`, `npm run typecheck` pass
 
 ### AC-12: Backward compatibility & dry-run
@@ -248,6 +250,16 @@ Story 13.10 là **story cắt chuyển / tích hợp** cho nhánh Facebook hybri
 - **Then** response JSON shape, field names, `dryRun` default `true`, và error message prefix `❌` giữ nguyên
 - **And** `authCookie` values không bao giờ log (NFR-3)
 - **And** `x_facebook_*` tool names không đổi (NFR-16)
+
+### AC-13: `api/services/facebookAutomation.js`, `facebookAccountPool.js`, `facebookHealth.js` và `/automate` route chuyển sang hybrid hoặc đánh dấu deprecated
+
+- **Given** các service hỗ trợ Facebook hiện tại vẫn import từ `src/scrapers/facebook/`
+- **When** 13.10 hoàn thành
+- **Then** `api/routes/facebook.js` `POST /automate` với `action` đã có trong `FacebookCrawler` (`like`, `comment`, `post`, `share`, `join-groups`, `batch-post-groups`, `send-friend-requests`, `messenger-share`) gọi `FacebookCrawler.start()` thay vì `api/services/facebookAutomation.js`.
+- **And** `api/services/facebookAutomation.js` các helper tương ứng được đánh dấu `@deprecated` hoặc refactor thành thin wrapper gọi `FacebookCrawler`; `schedule`, `warmup-account`, `warmup-scroll-feed`, `cancel-friend-requests` giữ legacy tạm thời.
+- **And** `api/services/facebookAccountPool.js` `runBatch` hỗ trợ `FacebookCrawler` sessions (ít nhất cho `runSearchAllParallel`) và không tạo Puppeteer page khi tất cả task là hybrid.
+- **And** `api/services/facebookHealth.js` chuyển sang dùng `FacebookClient` (hoặc `FacebookCrawler`) cho HTTP health check, loại bỏ import `src/scrapers/facebook/graphql.js`.
+- **And** tất cả service trên được thêm vào `docs/deprecation-plan.md` status tracker.
 
 ## Technical Requirements
 
@@ -332,6 +344,13 @@ Trong `src/scrapers/index.js` [dòng 157-328]:
 - `src/scrapers/facebook/index.js`: thêm `@deprecated` header.
 - `api/services/facebookAutomation.js`: giữ `// @deprecated Use FacebookCrawler hybrid actions (Story 13.9) instead.`; không xóa.
 
+### TR-8: Service-layer cleanup
+
+- `api/routes/facebook.js` `/automate`: chuyển `like/comment/post/share/join-groups/batch-post-groups/send-friend-requests/messenger-share` sang `FacebookCrawler`. Giữ `schedule`, `warmup*`, `cancel-friend-requests` legacy tạm thời.
+- `api/services/facebookAutomation.js`: đánh dấu helper social action `@deprecated`; nếu cần giữ backward compat, tạo thin wrapper gọi `FacebookCrawler.start()`.
+- `api/services/facebookAccountPool.js`: cập nhật `runBatch` để hỗ trợ `FacebookCrawler` sessions (cho `runSearchAllParallel` và multi-account messenger nếu cần).
+- `api/services/facebookHealth.js`: dùng `FacebookClient` để fetch homepage và extract tokens cho health status thay vì `src/scrapers/facebook/graphql.js`.
+
 ## Architecture Compliance
 
 - **AbstractCrawler / ActionRegistry (AD-2):** `FacebookCrawler` kế thừa `AbstractCrawler`; tất cả action đã đăng ký. Caller gọi `start({ action, args, session })`.
@@ -350,7 +369,10 @@ Trong `src/scrapers/index.js` [dòng 157-328]:
 - `src/scrapers/index.js` — thêm hybrid dispatch branch; có thể đổi import `facebook` sang `src/scrapers/social/facebook/index.js` hoặc thêm adapter.
 - `src/scrapers/social/facebook/index.js` — (tùy chọn) export `scrapeFacebook(action, options)` adapter nếu `src/scrapers/index.js` cần giao diện cũ.
 - `api/services/facebookScrape.js` — `run()` và `runSearchAllParallel()` chuyển sang `FacebookCrawler.start()`.
-- `api/routes/facebook.js` — giữ validation, đảm bảo `scrapeArgs` truyền đủ filter; không thay đổi response shape.
+- `api/services/facebookAutomation.js` — đánh dấu `@deprecated` hoặc refactor thành thin wrapper gọi `FacebookCrawler.start()`.
+- `api/services/facebookAccountPool.js` — cập nhật `runBatch` để hỗ trợ `FacebookCrawler` sessions khi tất cả task là hybrid.
+- `api/services/facebookHealth.js` — chuyển health check sang `FacebookClient`/`FacebookCrawler`, loại bỏ dependency `src/scrapers/facebook/graphql.js`.
+- `api/routes/facebook.js` — `/scrape` và `/automate` giữ validation, đảm bảo `scrapeArgs` truyền đủ filter; `/automate` route các action đã có trong `FacebookCrawler` sang hybrid.
 - `src/mcp/server.js` — `executeFacebookScrapeTool`, `executeFacebookEpic4Tool`, `executeFacebookAutomateTool` route sang hybrid.
 - `src/cli/commands/scrape.js` — mở rộng action/option list.
 - `src/cli/commands/automate.js` — mở rộng action/option list.
@@ -363,7 +385,7 @@ Trong `src/scrapers/index.js` [dòng 157-328]:
 ### Tạo mới (tùy chọn)
 
 - `src/scrapers/social/facebook/adapter.js` — adapter `scrapeFacebook(action, options)` để `src/scrapers/index.js` gọi mà không đụng logic legacy.
-- `tests/scrapers/social/facebook/caller-migration.test.js` — ATDD tests cho AC-1..AC-12.
+- `tests/scrapers/social/facebook/caller-migration.test.js` — ATDD tests cho AC-1..AC-13.
 - `src/cli/commands/actions.js` — (nếu chưa có) `xactions actions --platform facebook` để list action (tùy CLI roadmap).
 
 ## Testing Requirements
@@ -492,7 +514,10 @@ Các caller surface cần migrate:
 | Unified `scrape()` | `src/scrapers/index.js` | 42, 104-114, 157-328, 188-196 | Thêm hybrid branch; đổi `platforms.facebook` sang social module hoặc adapter |
 | Scrape service | `api/services/facebookScrape.js` | 23-57, 69-114 | Gọi `FacebookCrawler.start()`; fan-out search dùng crawler |
 | API route /scrape | `api/routes/facebook.js` | 335-589 | Validation giữ nguyên; scrapeArgs truyền đủ; delegate service |
-| API route /automate | `api/routes/facebook.js` | 604-1066 | Messenger-share giữ multi-account; các action khác route qua service |
+| API route /automate | `api/routes/facebook.js` | 604-1066 | Các action có trong `FacebookCrawler` route sang hybrid; messenger-share giữ multi-account tạm thời; schedule/warmup/cancel giữ legacy |
+| API service automation | `api/services/facebookAutomation.js` | 1-5, 412-1837 | Đánh dấu `@deprecated` hoặc refactor thành thin wrapper gọi `FacebookCrawler` cho các action đã có |
+| API account pool | `api/services/facebookAccountPool.js` | 142-267 | `runBatch` hỗ trợ `FacebookCrawler` sessions cho search multi-account; vẫn giữ backward compat cho legacy messenger-share tạm thời |
+| API health check | `api/services/facebookHealth.js` | 85-164 | Chuyển sang `FacebookClient` để fetch homepage + extract tokens; loại bỏ `src/scrapers/facebook/graphql.js` |
 | MCP automate | `src/mcp/server.js` | 2773-2949 | Map `like/comment/post/messenger` sang hybrid actions |
 | MCP Epic 4 | `src/mcp/server.js` | 3002-3204 | `share/join/post_to_groups/friend_requests` sang hybrid |
 | MCP scrape | `src/mcp/server.js` | 3214-3258 | `search/post_comments/group_posts/group_comments/posts` sang hybrid |
