@@ -205,13 +205,15 @@ export class FacebookClient extends AbstractApiClient {
 
   /**
    * Extract Facebook security tokens with 30s pre-expiry window & in-flight deduplication.
-   * @param {string} [accountId='default']
+   * @param {string | null} [accountId=null]
    * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [cookies='']
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<Record<string, any>>}
    */
-  async ensureTokens(accountId = 'default', cookies = '') {
+  async ensureTokens(accountId = null, cookies = '', options = {}) {
+    const effectiveAccountId = accountId || 'guest';
     const cookieHeader = buildCookieHeader(cookies);
-    const cacheKey = this.#cacheKey(accountId, cookieHeader);
+    const cacheKey = this.#cacheKey(effectiveAccountId, cookieHeader);
 
     const cached = this.#tokenCache.get(cacheKey);
     const refreshMargin = this.#tokenTtlMs <= 1000 ? 0 : Math.min(30000, Math.floor(this.#tokenTtlMs * 0.1));
@@ -225,7 +227,7 @@ export class FacebookClient extends AbstractApiClient {
       return /** @type {Promise<Record<string, any>>} */ (this.#pendingTokenFetches.get(cacheKey));
     }
 
-    const fetchPromise = this.#fetchTokensWithStrategy(accountId, cookieHeader)
+    const fetchPromise = this.#fetchTokensWithStrategy(effectiveAccountId, cookieHeader, options)
       .finally(() => {
         this.#pendingTokenFetches.delete(cacheKey);
       });
@@ -238,9 +240,10 @@ export class FacebookClient extends AbstractApiClient {
    * Orchestrate browser bridge vs HTTP fallback extraction.
    * @param {string} accountId
    * @param {string} cookieHeader
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<Record<string, any>>}
    */
-  async #fetchTokensWithStrategy(accountId, cookieHeader) {
+  async #fetchTokensWithStrategy(accountId, cookieHeader, options = {}) {
     const shouldUseBrowser = Boolean(this.browserBridge || this.cdpUrl || this.launchChrome);
 
     if (shouldUseBrowser) {
@@ -260,8 +263,9 @@ export class FacebookClient extends AbstractApiClient {
       }
     }
 
-    const tokens = await this.#fetchTokens(accountId, cookieHeader);
-    if (tokens.lsd && this.tokenRing && typeof this.tokenRing.refill === 'function') {
+    const isAuthAccount = Boolean(accountId && accountId !== 'guest' && accountId !== 'default');
+    const tokens = await this.#fetchTokens(accountId, cookieHeader, options);
+    if (isAuthAccount && tokens.lsd && this.tokenRing && typeof this.tokenRing.refill === 'function') {
       this.tokenRing.refill([tokens.lsd]);
     }
     return tokens;
@@ -299,9 +303,10 @@ export class FacebookClient extends AbstractApiClient {
    * Internal worker to fetch tokens from home page HTML via HTTP.
    * @param {string} accountId
    * @param {string} cookieHeader
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<Record<string, any>>}
    */
-  async #fetchTokens(accountId, cookieHeader) {
+  async #fetchTokens(accountId, cookieHeader, options = {}) {
     let parsedUserId = '';
     if (cookieHeader) {
       const cUserMatch = cookieHeader.match(/(?:^|;\s*)c_user=([^;]+)/);
@@ -311,13 +316,18 @@ export class FacebookClient extends AbstractApiClient {
     /** @type {Record<string, string>} */
     const headers = {
       'x-fb-fetch': 'http',
+      ...(options.headers || {}),
     };
-    if (cookieHeader) {
+    if (cookieHeader && !headers['cookie']) {
       headers['cookie'] = cookieHeader;
     }
 
+    const effectiveAccountId = (accountId && accountId !== 'guest' && accountId !== 'default') ? accountId : null;
+    const requiresAuth = options.requiresAuth !== undefined ? options.requiresAuth : Boolean(effectiveAccountId);
     const resp = /** @type {any} */ (await this.request('GET', `${this.baseUrl}/`, {
-      accountId,
+      ...options,
+      accountId: effectiveAccountId ?? undefined,
+      requiresAuth,
       headers,
     }));
 
@@ -383,11 +393,14 @@ export class FacebookClient extends AbstractApiClient {
    * @param {string} docId
    * @param {Record<string, any>} variables
    * @param {Record<string, any>} tokens
+   * @param {Record<string, any>} [options={}]
    * @returns {string}
    */
-  buildGraphQlBody(docId, variables = {}, tokens = {}) {
-    const userId = tokens.c_user || tokens.userId;
-    if (!userId) {
+  buildGraphQlBody(docId, variables = {}, tokens = {}, options = {}) {
+    const isNamedAccount = Boolean(options.accountId && options.accountId !== 'guest' && options.accountId !== 'default');
+    const requiresAuth = options.requiresAuth !== undefined ? options.requiresAuth : isNamedAccount;
+    const userId = tokens.c_user || tokens.userId || '0';
+    if (requiresAuth && (!userId || userId === '0')) {
       throw new PlatformError({
         code: 'XACT_4010',
         type: ErrorTypes.AUTH_EXPIRED,
@@ -397,7 +410,11 @@ export class FacebookClient extends AbstractApiClient {
       });
     }
 
-    const allocatedLsd = (this.tokenRing && this.tokenRing.size > 0 ? this.tokenRing.next() : null) || tokens.lsd || '';
+    // Only consume the pre-signed token ring for authenticated requests.
+    // The ring is refilled with account-bound lsd in #fetchTokensWithStrategy,
+    // so no-auth/guest requests must not pull from it to avoid leaking
+    // account session tokens onto rotating residential proxies.
+    const allocatedLsd = (requiresAuth && this.tokenRing && this.tokenRing.size > 0 ? this.tokenRing.next() : null) || tokens.lsd || '';
 
     const params = new URLSearchParams({
       doc_id: docId,
@@ -433,10 +450,11 @@ export class FacebookClient extends AbstractApiClient {
    * @returns {Promise<any>}
    */
   async requestGraphQl(docId, variables = {}, options = {}) {
-    const accountId = options.accountId || 'default';
+    const accountId = options.accountId || null;
     const rawCookies = options.cookies || options.headers?.cookie;
-    const tokens = await this.ensureTokens(accountId, rawCookies);
-    const body = this.buildGraphQlBody(docId, variables, tokens);
+    const requiresAuth = options.requiresAuth !== undefined ? options.requiresAuth : Boolean(accountId);
+    const tokens = await this.ensureTokens(accountId, rawCookies, { ...options, requiresAuth, accountId });
+    const body = this.buildGraphQlBody(docId, variables, tokens, { ...options, requiresAuth, accountId });
 
     const mergedHeaders = {
       'content-type': 'application/x-www-form-urlencoded',
@@ -453,6 +471,8 @@ export class FacebookClient extends AbstractApiClient {
 
     const response = /** @type {any} */ (await this.request('POST', `${this.baseUrl}/api/graphql/`, {
       ...options,
+      accountId,
+      requiresAuth,
       headers: mergedHeaders,
       body,
     }));

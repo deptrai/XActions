@@ -285,4 +285,42 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
       suggestedAction: SuggestedActions.RELOGIN,
     });
   });
+
+  // ============================================================================
+  // Action-Level Granular Auth & Guest Mode tests (2026-08-27)
+  // ============================================================================
+
+  it('[P1] buildGraphQlBody supports guest mode when requiresAuth is false', () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const bodyStr = client.buildGraphQlBody('marketplace_doc_1', { query: 'macbook' }, { lsd: 'guest_lsd_123' }, { requiresAuth: false });
+    const params = new URLSearchParams(bodyStr);
+
+    expect(params.get('__user')).toBe('0');
+    expect(params.get('av')).toBe('0');
+    expect(params.get('lsd')).toBe('guest_lsd_123');
+    expect(params.get('doc_id')).toBe('marketplace_doc_1');
+  });
+
+  it('[P1] buildGraphQlBody throws XACT_4010 when requiresAuth is true and userId is missing', () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    expect(() => {
+      client.buildGraphQlBody('private_doc_1', {}, { lsd: 'lsd_123' }, { requiresAuth: true });
+    }).toThrow(PlatformError);
+  });
+
+  it('[P1] requestGraphQl executes with accountId=null in guest mode without throwing XACT_4010', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const res = await client.requestGraphQl('group_feed_doc_123', { groupId: '123456', count: 10 }, {
+      accountId: null,
+      requiresAuth: false,
+    });
+
+    expect(res).toBeDefined();
+    expect(res?.data?.group?.id).toBe('123456');
+
+    const lastReq = receivedRequests[receivedRequests.length - 1];
+    const parsed = new URLSearchParams(lastReq.body);
+    expect(parsed.get('doc_id')).toBe('group_feed_doc_123');
+    expect(parsed.get('__user')).toBe('10001'); // HTML mock returned Env.USER_ID = 10001
+  });
 });

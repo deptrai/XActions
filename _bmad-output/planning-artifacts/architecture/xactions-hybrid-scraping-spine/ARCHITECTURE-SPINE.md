@@ -8,7 +8,7 @@ scope: 'XActions Universal Scraping Engine: Social Media (X, Facebook, Threads, 
 status: final
 canonical: true
 created: '2026-08-18'
-updated: '2026-08-26T00:00:00Z'
+updated: '2026-08-27T00:00:00Z'
 supersedes:
   - _bmad-output/planning-artifacts/archive/architecture-brownfield-2026-08-20.md
   - _bmad-output/planning-artifacts/architecture/xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md
@@ -139,16 +139,24 @@ flowchart TB
   2. `start()` nhận một `CrawlerCommand` object `{ action, args, session }` và điều phối tới `ActionRegistry` của platform; `ActionRegistry` ánh xạ `action` string sang phương thức thực thi. CLI/MCP chỉ gọi `crawler.start(command)` và không gọi trực tiếp `getGroupPosts`, `searchProducts`, v.v.
   3. `src/client/` là legacy Twitter client giữ lại cho backward compatibility; mọi abstraction mới phải nằm trong `src/core/**`. Không import platform logic từ `src/client/**` vào `src/core/**`.
 
-### AD-3 — Centralized Proxy IP Pool with Auto-Quarantine, Anti-Leak & Proxy Strategy by Auth Mode [ADOPTED]
+### AD-3 — Centralized Proxy IP Pool with Auto-Quarantine, Anti-Leak & Proxy Strategy by Auth Mode (Platform + Action Level) [ADOPTED]
 * **Binds:** `src/proxy/**`, toàn bộ Network Interceptors
 * **Prevents:** Rò rỉ IP thật qua WebRTC/DNS, tài khoản bị ban do IP nhảy liên tục, và sập toàn bộ pipeline khi proxy bị rate-limit (429) hoặc chặn (403).
 * **Rule:**
   1. Mọi browser session bắt buộc kích hoạt cờ chống rò rỉ: `--force-webrtc-ip-handling-policy=disable_non_proxied_udp` và cấu hình `remote DNS resolution`.
-  2. **Ba chế độ proxy:**
-     - **Auth-Required Platforms** (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks): một tài khoản **gắn với một proxy duy nhất** (sticky IP) trong suốt session. Chỉ đổi proxy khi proxy bị quarantine. Điều này tránh trigger "suspicious login" do IP nhảy liên tục.
-     - **Optional-Auth Platforms** (Bluesky, Mastodon): public data endpoints không yêu cầu auth; proxy xoay per-request/per-batch. Nếu dùng optional auth (`identifier`/`password` hoặc `accessToken`), crawler chuyển sang sticky IP cho session đó.
-     - **No-Auth Platforms** (Batdongsan.com.vn, Chotot.vn, v.v.): proxy có thể **xoay per-request/per-batch** (round-robin / residential rotation) để tránh IP bị ban.
-  3. `ProxyIpPool` hỗ trợ `getStickyProxy(accountId)` cho chế độ sticky và `getNext()` cho chế độ round-robin. Mỗi platform crawler khai báo `requiresAuth: boolean` để chọn chế độ. Đối với optional-auth (Bluesky, Mastodon), `requiresAuth = false` khi chạy public, và `requiresAuth = true` khi session có `accountId` (sticky IP được gán theo session).
+  2. **Ba chế độ proxy** (chế độ được quyết định theo `requiresAuth` **hiệu dụng của action** — mặc định theo platform, xem rule 3b):
+     - **Auth-Required** (mặc định: Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks): một tài khoản **gắn với một proxy duy nhất** (sticky IP) trong suốt session. Chỉ đổi proxy khi proxy bị quarantine. Điều này tránh trigger "suspicious login" do IP nhảy liên tục.
+     - **Optional-Auth** (Bluesky, Mastodon): public data endpoints không yêu cầu auth; proxy xoay per-request/per-batch. Nếu dùng optional auth (`identifier`/`password` hoặc `accessToken`), crawler chuyển sang sticky IP cho session đó.
+     - **No-Auth** (Batdongsan.com.vn, Chotot.vn, v.v.): proxy có thể **xoay per-request/per-batch** (round-robin / residential rotation) để tránh IP bị ban.
+  3. `ProxyIpPool` hỗ trợ `getStickyProxy(accountId)` cho chế độ sticky và `getNext()` cho chế độ round-robin. Chế độ được chọn theo `requiresAuth` **hiệu dụng của action** (rule 3b), mặc định là cờ `requiresAuth` của platform crawler. Đối với optional-auth (Bluesky, Mastodon), `requiresAuth = false` khi chạy public, và `requiresAuth = true` khi session có `accountId` (sticky IP được gán theo session).
+  3b. **Action-Level Auth Granularity:** `ActionDescriptor` cho phép khai báo `requiresAuth?: boolean` override cờ cấp platform:
+      - *Precedence:* `actionRequiresAuth = descriptor.requiresAuth ?? crawler.requiresAuth`.
+      - *`actionRequiresAuth === true`:* bắt buộc resolve `accountId` từ `AccountPool` (hoặc từ caller); gắn **Sticky Residential Proxy** qua `proxyPool.getStickyProxy(accountId)` trong suốt session; chịu account velocity limit của governor (AD-13).
+      - *`actionRequiresAuth === false`:* không rút `AccountPool`; nếu caller không truyền `accountId` thì `accountId = null`, bỏ qua `governor.canAccountRequest`; API client truyền `accountId: null` khiến `DynamicTunnelProvider` sinh session ngẫu nhiên và **xoay IP dân cư trên từng request (`rotatePerRequest`)**. Guest tokens (anonymous `lsd`/`jazoest`) lấy từ Pre-Signed Token Ring. Caller truyền `accountId` rõ ràng vẫn được tôn trọng (opt-in auth, sticky theo accountId).
+      - *Opt-in auth vẫn chịu governor:* caller truyền `accountId` rõ ràng trên action `requiresAuth: false` vẫn phải qua `governor.canAccountRequest(accountId)` và account velocity limit (AD-13); vi phạm ➔ error envelope `XACT_4291` (`hibernation`, `suggestedAction: 'rotate_account'`).
+      - *Token affinity theo auth mode:* Pre-Signed Token Ring (AD-1 Tier 1) **phân vùng theo auth mode** — anonymous guest token (`lsd`/`jazoest`) tách khỏi account-bound token (`fb_dtsg`/`c_user`); account-bound token chỉ được phát cho request đi qua sticky proxy của đúng `accountId`, không bao giờ phát cho request xoay IP per-request.
+      - *Phân bổ Dual-Pool (AD-20):* no-auth rotating request mặc định thuộc **Bulk Pool**; chỉ được rút từ Realtime Pool khi đến từ MCP on-demand query của consumer (Nowing/ChainLens).
+      - *Invariant điều phối Sticky ↔ Rotating:* một request thuộc đúng MỘT chế độ; tài khoản đã đăng nhập không bao giờ bị gán IP xoay per-request; request công khai không giữ sticky session; không trộn proxy mode trong cùng một `CrawlerCommand`.
   4. Khi gặp lỗi 429/403, proxy bị cách ly 5 phút, tự động đổi sang proxy mới và retry tối đa 3 lần với exponential backoff.
   5. Nếu 100% proxy trong pool bị cách ly ➔ Tự động chuyển sang trạng thái Standby Backoff (chờ 30s) và kích hoạt cảnh báo, không loop vô tận.
   6. *Proxy Agent:* SOCKS5 proxy yêu cầu `socks-proxy-agent` hoặc `undici` SOCKS agent được cấu hình rõ ràng; HTTP client không được fallback về direct connection khi proxy agent fail.
@@ -171,7 +179,7 @@ flowchart TB
   1. *Terminal QR Login:* Render mã QR ASCII tỷ lệ 1:1 chuẩn (`small: true`), có countdown timer 60s, timeout 120s và fallback URL. Phát hiện `process.stdout.isTTY`; nếu non-TTY (headless server/Docker/CI), in URL + short code kèm hướng dẫn quét trên thiết bị khác hoặc gửi push/webhook. Yêu cầu package `qrcode-terminal` trong `package.json`.
   2. *CDP Attach Mode:* Kết nối vào Chrome thật qua cổng 9222; Chrome phải được launch với `--remote-debugging-port=9222` và `--user-data-dir=<dedicated>` để tránh xung đột profile. Áp dụng độ trễ phân phối ngẫu nhiên Gaussian Jitter (3–7s) khi cào LinkedIn/TopCV để tránh bị phát hiện.
   3. *AbstractLogin Contract:* Mọi implementation QR/CDP/cookie phải trả về cùng shape `{ accountId, cookies, tokens, expiresAt }`. Một `SessionManager` duy nhất giữ trạng thái và cung cấp cho `AbstractApiClient` và MCP tools.
-  4. *Sticky IP per Account:* Auth-required platforms (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) và optional-auth platforms khi có account (Bluesky, Mastodon) buộc một tài khoản gắn với một proxy cố định trong suốt session. `SessionManager` lưu `accountId`; `ProxyIpPool.getStickyProxy(accountId)` trả về proxy được gán. Không được tự động xoay IP mỗi request cho tài khoản đã đăng nhập.
+  4. *Sticky IP per Account:* Auth-required requests — theo mặc định platform (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) hoặc action-level override `requiresAuth: true` (AD-3 rule 3b) — và optional-auth platforms khi có account (Bluesky, Mastodon) buộc một tài khoản gắn với một proxy cố định trong suốt session. `SessionManager` lưu `accountId`; `ProxyIpPool.getStickyProxy(accountId)` trả về proxy được gán. Không được tự động xoay IP mỗi request cho tài khoản đã đăng nhập.
 
 ### AD-6 — Hierarchical Comment Tree Normalization & Topological Insertion [ADOPTED]
 * **Binds:** `src/store/**`, Entity Models, `prisma/schema.prisma`
@@ -193,7 +201,7 @@ flowchart TB
 ### AD-8 — Multi-Domain Expansion Blueprint [ADOPTED]
 * **Binds:** `src/scrapers/**`
 * **Prevents:** Mọi platform thêm mới đặt sai vị trí hoặc team implement các domain ngoài phạm vi Epic.
-* **Rule:** Tổ chức module theo Domain rõ ràng, mở rộng phạm vi sang Epics 23–26. Mỗi crawler khai báo `requiresAuth` để hệ thống chọn sticky IP + account rotation hoặc rotating residential IP:
+* **Rule:** Tổ chức module theo Domain rõ ràng, mở rộng phạm vi sang Epics 23–26. Mỗi crawler khai báo `requiresAuth` **mặc định ở cấp platform**; từng action có thể override qua `ActionDescriptor.requiresAuth` (xem AD-3 rule 3b, AD-11 rule 3) để hệ thống chọn sticky IP + account rotation hay rotating residential IP:
   - `src/scrapers/social/twitter/` (requires auth): Twitter / X.
   - `src/scrapers/social/facebook/` (requires auth): Facebook.
   - `src/scrapers/social/threads/` (requires auth): Threads.
@@ -209,9 +217,9 @@ flowchart TB
 * **Prevents:** Lưu dữ liệu rác khi WAF trả về HTTP 200 kèm error code, ô nhiễm CRM do SĐT masked (`***`), hoặc vỡ định dạng JSONL do ký tự xuống dòng.
 * **Rule:**
   1. Mọi crawler phải đăng ký một `PlatformResponseValidator` gồm `isValidPayload(response)`, `isBotChallenge(response)`, `isRateLimit(response)`. Nếu validator trả về challenge/rate-limit:
-     - *No-auth platforms (Bluesky public, Mastodon public, Batdongsan, Chợ Tốt):* throw `RateLimitError` để xoay IP (rotate proxy) ngay cả khi HTTP status là 200.
-     - *Optional-auth platforms (Bluesky/Mastodon khi có auth):* nếu lỗi liên quan đến auth → chuyển `AccountPool`; nếu lỗi rate-limit từ public IP → xoay proxy.
-     - *Auth-required platforms:* throw `BotChallengeError`/`RateLimitError`, quarantine proxy, hibernate tài khoản 15–30 phút, và chuyển `AccountPool` sang tài khoản tiếp theo. Không xoay IP liên tục cho cùng một tài khoản.
+     - *No-auth requests (platform no-auth hoặc action `requiresAuth: false` — AD-3 rule 3b; ví dụ Bluesky/Mastodon public, Batdongsan, Chợ Tốt, Facebook `marketplace`/`search`/`page_posts`/`profile`):* throw `RateLimitError` để xoay IP (rotate proxy) ngay cả khi HTTP status là 200; không hibernate account.
+     - *Optional-auth requests (Bluesky/Mastodon khi có auth):* nếu lỗi liên quan đến auth → chuyển `AccountPool`; nếu lỗi rate-limit từ public IP → xoay proxy.
+     - *Auth-required requests (action `requiresAuth: true` hoặc opt-in accountId):* throw `BotChallengeError`/`RateLimitError`, quarantine proxy, hibernate tài khoản 15–30 phút, và chuyển `AccountPool` sang tài khoản tiếp theo. Không xoay IP liên tục cho cùng một tài khoản.
   2. Chợ Tốt SĐT: Bỏ qua các số chứa `*` và validate regex số điện thoại Việt Nam hợp lệ.
   3. JSONL Exporter: Tự động sanitize ký tự xuống dòng (`\r\n`) trong `content` trước khi ghi stream.
 
@@ -227,7 +235,12 @@ flowchart TB
 * **Prevents:** Hai platform team tự định nghĩa phương thức public khác nhau (`getGroupPosts` vs `searchProducts`) khiến CLI/MCP không thể gọi thống nhất.
 * **Rule:**
   1. Mỗi platform crawler khai báo `ActionRegistry: Map<string, (args: any) => Promise<PostItem[] | Comment[]>>` trong constructor. `AbstractCrawler.start({ action, args })` lookup registry và trả về kết quả chuẩn hóa. Tên `action` phải là snake_case: `search`, `post_detail`, `comments`, `timeline`, `group_posts`, `page_posts`, `search_products`, `search_jobs`, `profile`, `followers`, `following`, `get_user_feed`, `hashtag`, `trending`, v.v.
-  2. `AbstractCrawler.listActions()` trả về `ActionDescriptor[]` với shape cố định: `{ action: string, description: string, requiredArgs: string[], example: object, category: string, requiresAuth: boolean }`. Không cho phép trường tên `args`, `params`, hoặc `inputs`; consumer (CLI/MCP/AI agent) parse theo `requiredArgs` và `example`.
+  2. `AbstractCrawler.listActions()` trả về `ActionDescriptor[]` với shape cố định: `{ action: string, description: string, requiredArgs: string[], optionalArgs: string[], example: object, outputType: string, requiresAuth: boolean }` — trong đó `requiresAuth` là giá trị **đã phân giải** (`descriptor.requiresAuth ?? crawler.requiresAuth`). Không cho phép trường tên `args`, `params`, hoặc `inputs`; consumer (CLI/MCP/AI agent) parse theo `requiredArgs` và `example`.
+  3. **Action-Level Auth Resolution trong `start()`:** `AbstractCrawler.start(command)` tính `actionRequiresAuth = entry.descriptor.requiresAuth ?? this.requiresAuth` và dùng giá trị này cho toàn bộ account resolution:
+     - `actionRequiresAuth === false` và caller không truyền `accountId` ➔ chạy với `accountId = null`, bỏ qua `AccountPool` và governor account check; proxy xoay per-request (Rotating Residential, xem AD-3 rule 3b).
+     - Caller truyền `accountId` rõ ràng trên action `requiresAuth: false` (opt-in auth) ➔ vẫn chịu `governor.canAccountRequest` và gán Sticky Residential Proxy theo accountId (xem AD-3 rule 3b).
+     - `actionRequiresAuth === true` ➔ resolve `accountId` từ `AccountPool`; thiếu account ➔ error envelope `XACT_4010` (`auth_expired`, `suggestedAction: 'relogin'`); Sticky Residential Proxy theo accountId.
+     - Action không khai báo `requiresAuth` ➔ fallback crawler-level (backward compatibility 100% cho các platform chưa phân loại action).
 
 ### AD-12 — CrawlCheckpoint State for Idempotent Resume [ADOPTED]
 * **Binds:** `src/store/**`, `prisma/schema.prisma`, `src/scrapers/**`
@@ -265,7 +278,7 @@ flowchart TB
      - `suggestedAction` là một trong: `retry_after_delay`, `rotate_proxy`, `rotate_account`, `hibernate_account`, `relogin`, `wait`, `reduce_rate`, `contact_support`.
      - Auth-required example: `{ code: 42901, type: 'bot_challenge', message: 'Facebook returned WAF challenge for acct fb:123', retryAfter: 1200, suggestedAction: 'hibernate_account', accountId: 'fb:123', platform: 'facebook' }`.
      - No-auth example: `{ code: 42902, type: 'rate_limit', message: 'Chotot returned 429 on IP 1.2.3.4', retryAfter: 300, suggestedAction: 'rotate_proxy', platform: 'chotot' }`.
-  2. **Action Discovery Contract:** Mỗi platform crawler phải implement `listActions(): ActionDescriptor[]` trả về `{ action, description, requiredArgs, optionalArgs, example, outputType }`. MCP cung cấp tool `x_actions_list` và CLI cung cấp `xactions actions --platform <platform>`.
+  2. **Action Discovery Contract:** Mỗi platform crawler phải implement `listActions(): ActionDescriptor[]` trả về `{ action, description, requiredArgs, optionalArgs, example, outputType, requiresAuth }` (requiresAuth đã phân giải theo AD-11 rule 3). MCP cung cấp tool `x_actions_list` và CLI cung cấp `xactions actions --platform <platform>`.
   3. **Governor Status API:** `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
   4. **Legacy CLI Mapping:** Các lệnh cũ của `unfollowx` (`x_get_followers`, `x_unfollow_non_followers`, v.v.) được map vào `CrawlerCommand` với `{ action: '<mapped>', platform: 'twitter' }`. Nếu lệnh cũ không còn hỗ trợ, trả về error envelope với `suggestedAction: 'use_x_actions_list'`.
 
@@ -496,3 +509,11 @@ Spine r3 đã hấp thụ 10 UX findings từ `ARCHITECTURE-UX-REVIEW-2026-08-18
 | F10 — Legacy CLI mapping | AD-2 | CrawlerCommand mapping, `unfollowx` alias | Adopted |
 
 Tất cả AD UX đã được chuyển thành story acceptance criteria trong `epics.md` và `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md`.
+
+### Decision Changelog bổ sung (2026-08-27 — Action-Level Granular Auth & Proxy)
+
+* AD-3: Đổi tiêu đề thành "Proxy Strategy by Auth Mode (Platform + Action Level)"; thêm rule 3b — **Action-Level Auth Granularity** (`ActionDescriptor.requiresAuth` override cờ platform), **Token Ring Partition by Auth Mode** (tách guest lsd/jazoest khỏi account-bound fb_dtsg/c_user chống leak token qua IP xoay - F1), **Opt-in Auth Governor Gate** (accountId truyền trên no-auth action vẫn chịu governor velocity/hibernation - F2), **Dual-Pool Assignment** (no-auth rotating mặc định Bulk Pool - F6), và **invariant điều phối Sticky ↔ Rotating Residential Proxy** (một request thuộc đúng một chế độ; account đã đăng nhập không bao giờ bị xoay IP per-request).
+* AD-11: Thêm rule 3 — **Action-Level Auth Resolution trong `start()`** (`actionRequiresAuth = entry.descriptor.requiresAuth ?? this.requiresAuth`) bao gồm nhánh xử lý opt-in auth (F2); pin `requiresAuth` đã phân giải vào shape `listActions()` (thay `category` bằng `optionalArgs`/`outputType` cho khớp implementation).
+* AD-8 + AD-14: Đồng bộ ngôn ngữ action-level ("mặc định ở cấp platform, override theo action") và bổ sung `requiresAuth` vào Action Discovery Contract.
+* AD-5 rule 4 + AD-9 rule 1: Đồng bộ hóa wording từ platform-level sang action-level request auth state (F10, F11).
+* Tham chiếu: `sprint-change-proposal-2026-08-27.md` & `reviews/GATE-REPORT-2026-08-27.md`.

@@ -318,6 +318,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: ['pageId'],
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.pagePosts(args, session),
     });
 
@@ -355,6 +356,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['username', 'url'],
       example: { username: 'zuck' },
       outputType: '{ profile: ProfileItem }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.profile(args, session),
     });
 
@@ -395,6 +397,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['type', 'location', 'limit', 'cursor'],
       example: { query: 'artificial intelligence', type: 'posts', limit: 20 },
       outputType: '{ posts?: PostItem[], people?: PostItem[], pages?: PostItem[], groups?: PostItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.search(args, session),
     });
 
@@ -415,6 +418,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['location', 'category', 'categoryId', 'minPrice', 'maxPrice', 'limit', 'cursor', 'after', 'radiusKm', 'latitude', 'longitude', 'dryRun', 'priceMin', 'priceMax'],
       example: { query: 'macbook pro 14', location: 'Ho Chi Minh City', minPrice: 800, maxPrice: 1200, limit: 20 },
       outputType: '{ posts: PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.marketplace(args, session),
     });
   }
@@ -843,9 +847,10 @@ export class FacebookCrawler extends AbstractCrawler {
    * @param {string} input
    * @param {string | Record<string, unknown>} cookies
    * @param {string} [accountId]
+   * @param {Record<string, any>} [session]
    * @returns {Promise<{ feedbackId: string }>}
    */
-  async #resolvePostFeedbackContext(input, cookies, accountId) {
+  async #resolvePostFeedbackContext(input, cookies, accountId, session = {}) {
     // Strip optional facebook: namespacing so "facebook:<id>" behaves like a numeric id.
     if (typeof input === 'string' && input.startsWith('facebook:')) {
       input = input.slice('facebook:'.length);
@@ -908,6 +913,7 @@ export class FacebookCrawler extends AbstractCrawler {
         try {
           const res = /** @type {{ data?: unknown }} */ (await this.client.request('GET', url, {
             accountId,
+            requiresAuth: session?.requiresAuth,
             headers: { cookie: cookieHeader },
             timeout: 60000,
           }));
@@ -1002,6 +1008,7 @@ export class FacebookCrawler extends AbstractCrawler {
     const res = await this.client.requestGraphQl(docId, variables, {
       accountId,
       cookies,
+      requiresAuth: session?.requiresAuth,
     });
 
     const rawEdges = res?.data?.group?.feed?.edges || res?.data?.node?.feed?.edges;
@@ -1058,6 +1065,7 @@ export class FacebookCrawler extends AbstractCrawler {
     const res = await this.client.requestGraphQl(docId, variables, {
       accountId,
       cookies,
+      requiresAuth: session?.requiresAuth,
     });
 
     const rawEdges = res?.data?.page?.timeline_feed?.edges || res?.data?.node?.timeline_feed?.edges;
@@ -1162,6 +1170,7 @@ export class FacebookCrawler extends AbstractCrawler {
     const res = await this.client.requestGraphQl(docId, variables, {
       accountId,
       cookies,
+      requiresAuth: session?.requiresAuth,
     });
 
     const rawEdges = res?.data?.serpResponse?.results?.edges ||
@@ -1318,6 +1327,7 @@ export class FacebookCrawler extends AbstractCrawler {
     const res = await this.client.requestGraphQl(docId, variables, {
       accountId,
       cookies,
+      requiresAuth: session?.requiresAuth,
     });
 
     const group = res?.data?.group || res?.data?.node || res?.data;
@@ -1643,6 +1653,7 @@ export class FacebookCrawler extends AbstractCrawler {
       const res = await this.client.requestGraphQl(docId, variables, {
         accountId,
         cookies,
+        requiresAuth: session?.requiresAuth,
       });
 
       const feedUnits = res?.data?.marketplace_search?.feed_units ||
@@ -1688,6 +1699,7 @@ export class FacebookCrawler extends AbstractCrawler {
       try {
         const ssrResponse = await this.client.request('GET', fallbackUrl, {
           accountId,
+          requiresAuth: session?.requiresAuth,
           headers: cookies ? { cookie: cookies } : {},
           timeout: 60000,
         });
@@ -2100,7 +2112,7 @@ export class FacebookCrawler extends AbstractCrawler {
     const triedFallback = Boolean(args?.triedFallback);
 
     // Resolve post feedback id up-front; needed for the root comment GraphQL query.
-    const postContext = await this.#resolvePostFeedbackContext(args.postId, cookies, accountId);
+    const postContext = await this.#resolvePostFeedbackContext(args.postId, cookies, accountId, session);
 
     /**
      * Map of comment / post external id -> GraphQL context needed for pagination.
@@ -2179,6 +2191,7 @@ export class FacebookCrawler extends AbstractCrawler {
       const res = await this.client.requestGraphQl(docId, variables, {
         accountId,
         cookies,
+        requiresAuth: session?.requiresAuth,
       });
 
       if (!res?.data?.node) {
@@ -2372,6 +2385,7 @@ export class FacebookCrawler extends AbstractCrawler {
       res = await this.client.requestGraphQl(docId, variables, {
         accountId,
         cookies,
+        requiresAuth: session?.requiresAuth,
       });
     } catch (err) {
       if (err instanceof PlatformError && (err.type === ErrorTypes.AUTH_EXPIRED || err.type === ErrorTypes.RATE_LIMIT)) {
@@ -2478,6 +2492,7 @@ export class FacebookCrawler extends AbstractCrawler {
       const res = await this.client.requestGraphQl(docId, variables, {
         accountId,
         cookies,
+        requiresAuth: session?.requiresAuth,
       });
 
       const user = res?.data?.user || res?.data?.node || res?.data;
@@ -2574,6 +2589,7 @@ export class FacebookCrawler extends AbstractCrawler {
         const res = await this.client.requestGraphQl(docId, variables, {
           accountId,
           cookies,
+          requiresAuth: session?.requiresAuth,
         });
 
         const user = res?.data?.user || res?.data?.node || res?.data;
@@ -2679,6 +2695,7 @@ export class FacebookCrawler extends AbstractCrawler {
         const res = await this.client.requestGraphQl(docId, variables, {
           accountId,
           cookies,
+          requiresAuth: session?.requiresAuth,
         });
 
         const group = res?.data?.group || res?.data?.node || res?.data;

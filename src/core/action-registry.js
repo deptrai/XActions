@@ -32,6 +32,7 @@ export class ActionRegistry {
         if (
           existing.description !== descriptor.description ||
           existing.outputType !== descriptor.outputType ||
+          Boolean(existing.requiresAuth) !== Boolean(descriptor.requiresAuth) ||
           JSON.stringify(existing.requiredArgs) !== JSON.stringify(descriptor.requiredArgs) ||
           JSON.stringify(existing.optionalArgs) !== JSON.stringify(descriptor.optionalArgs) ||
           JSON.stringify(existing.example) !== JSON.stringify(descriptor.example)

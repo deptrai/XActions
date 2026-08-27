@@ -176,9 +176,10 @@ export class AbstractApiClient {
    * Throws PROXY_EXHAUSTED if no proxy is available.
    * @param {string | AccountRecord | null} [accountId]
    * @param {boolean} [requiresResidential=false]
+   * @param {boolean} [requiresAuth] - Effective auth mode for this specific request/action; defaults to instance requiresAuth.
    * @returns {string | Record<string, unknown> | null}
    */
-  resolveProxy(accountId, requiresResidential = false) {
+  resolveProxy(accountId, requiresResidential = false, requiresAuth = this.requiresAuth) {
     const rawAccountId = typeof accountId === 'string' ? accountId : accountId?.accountId;
     let proxy = null;
 
@@ -194,11 +195,11 @@ export class AbstractApiClient {
           statusCode: 503,
           suggestedAction: SuggestedActions.WAIT,
           retryAfterMs: this.standbyBackoffMs,
-          accountId: rawAccountId,
+          accountId: rawAccountId || null,
           platform: this.platform,
         });
       }
-      if (this.requiresAuth && rawAccountId && typeof this.proxyPool.getStickyProxy === 'function') {
+      if (requiresAuth && rawAccountId && typeof this.proxyPool.getStickyProxy === 'function') {
         proxy = this.proxyPool.getStickyProxy(rawAccountId);
       } else if (typeof this.proxyPool.getNext === 'function') {
         proxy = this.proxyPool.getNext();
@@ -210,7 +211,7 @@ export class AbstractApiClient {
     }
 
     if (!proxy) {
-      if (this.requiresAuth && rawAccountId && this.accountPool) {
+      if (requiresAuth && rawAccountId && this.accountPool) {
         this.accountPool.markUnavailable(rawAccountId, 'proxy_exhausted', this.standbyBackoffMs, this.platform);
       }
       throw new PlatformError({
@@ -220,7 +221,7 @@ export class AbstractApiClient {
         statusCode: 503,
         suggestedAction: SuggestedActions.WAIT,
         retryAfterMs: this.standbyBackoffMs,
-        accountId: rawAccountId,
+        accountId: rawAccountId || null,
         platform: this.platform,
       });
     }
@@ -482,8 +483,10 @@ export class AbstractApiClient {
   async request(method, url, options = {}) {
     const opts = options || {};
     let currentAccountId = opts.accountId;
+    const effectiveRequiresAuth =
+      typeof opts.requiresAuth === 'boolean' ? opts.requiresAuth : this.requiresAuth;
 
-    if (this.requiresAuth && !currentAccountId && !this.accountPool) {
+    if (effectiveRequiresAuth && !currentAccountId && !this.accountPool) {
       throw new AuthSessionExpiredError({
         code: 'XACT_4010',
         message: `No account or account pool configured for authenticated ${this.platform} request`,
@@ -493,8 +496,8 @@ export class AbstractApiClient {
       });
     }
 
-    // Check governor before request for auth-required platforms
-    if (this.requiresAuth && currentAccountId && this.governor) {
+    // Check governor before request for auth-required platforms or opt-in accountId
+    if (currentAccountId && this.governor) {
       if (typeof this.governor.canAccountRequest === 'function') {
         const canRequest = this.governor.canAccountRequest(currentAccountId, this.platform);
         if (!canRequest) {
@@ -512,14 +515,18 @@ export class AbstractApiClient {
     }
 
     const provider = this.proxyProvider || this.proxyPool;
+    let concreteAccountId =
+      currentAccountId && currentAccountId !== 'guest' && currentAccountId !== 'default'
+        ? currentAccountId
+        : null;
     let accountRotationCount = 0;
 
     while (accountRotationCount <= this.maxAccountRotations) {
       for (let attempt = 0; attempt < this.maxProxyRetries; attempt++) {
         // Check if pool is completely quarantined before attempting
         if (provider && typeof provider.isAllQuarantined === 'function' && provider.isAllQuarantined()) {
-          if (currentAccountId && this.accountPool) {
-            this.accountPool.markUnavailable(currentAccountId, 'proxy_exhausted', this.standbyBackoffMs, this.platform);
+          if (concreteAccountId && this.accountPool) {
+            this.accountPool.markUnavailable(concreteAccountId, 'proxy_exhausted', this.standbyBackoffMs, this.platform);
           }
           throw new PlatformError({
             type: ErrorTypes.PROXY_EXHAUSTED,
@@ -528,13 +535,13 @@ export class AbstractApiClient {
             statusCode: 503,
             suggestedAction: SuggestedActions.WAIT,
             retryAfterMs: this.standbyBackoffMs,
-            accountId: currentAccountId,
+            accountId: concreteAccountId,
             platform: this.platform,
           });
         }
 
         const proxy = provider || opts.requiresResidential
-          ? this.resolveProxy(currentAccountId, opts.requiresResidential)
+          ? this.resolveProxy(currentAccountId, opts.requiresResidential, effectiveRequiresAuth)
           : null;
 
         let agent = null;
@@ -580,36 +587,36 @@ export class AbstractApiClient {
             if (this.responseValidator.isRateLimit(response)) {
               const retryAfterHeader = response?.headers?.['retry-after'] || response?.headers?.['Retry-After'];
               const retryAfterMs = this.#parseRetryAfter(retryAfterHeader) || this.backoffBaseMs;
-              if (this.requiresAuth && currentAccountId && this.accountPool) {
-                this.accountPool.markUnavailable(currentAccountId, 'rate_limit', this.rateLimitHibernationMs, this.platform);
+              if (concreteAccountId && this.accountPool) {
+                this.accountPool.markUnavailable(concreteAccountId, 'rate_limit', this.rateLimitHibernationMs, this.platform);
                 if (this.governor && typeof this.governor.recordRateLimit === 'function') {
-                  this.governor.recordRateLimit(currentAccountId, this.platform, this.rateLimitHibernationMs);
+                  this.governor.recordRateLimit(concreteAccountId, this.platform, this.rateLimitHibernationMs);
                 }
               }
               throw new RateLimitError({
                 code: 'XACT_4290',
                 message: 'Rate limit payload detected from upstream platform',
                 statusCode: 429,
-                suggestedAction: this.requiresAuth ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
+                suggestedAction: concreteAccountId ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
                 retryAfterMs,
-                accountId: currentAccountId,
+                accountId: concreteAccountId,
                 platform: this.platform,
                 details: response?.data || response,
               });
             }
             if (this.responseValidator.isBotChallenge(response)) {
-              if (this.requiresAuth && currentAccountId && this.accountPool) {
-                this.accountPool.markUnavailable(currentAccountId, 'bot_challenge', this.rateLimitHibernationMs, this.platform);
+              if (concreteAccountId && this.accountPool) {
+                this.accountPool.markUnavailable(concreteAccountId, 'bot_challenge', this.rateLimitHibernationMs, this.platform);
                 if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
-                  this.governor.recordBotChallenge(currentAccountId, this.platform);
+                  this.governor.recordBotChallenge(concreteAccountId, this.platform);
                 }
               }
               throw new BotChallengeError({
                 code: 'XACT_4030',
                 message: 'Bot challenge detected on upstream platform',
                 statusCode: 403,
-                suggestedAction: this.requiresAuth ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
-                accountId: currentAccountId,
+                suggestedAction: concreteAccountId ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
+                accountId: concreteAccountId,
                 platform: this.platform,
                 details: response?.data || response,
               });
@@ -628,7 +635,7 @@ export class AbstractApiClient {
             }
           }
 
-          const trackingKey = this.requiresAuth && currentAccountId ? currentAccountId : 'noauth';
+          const trackingKey = concreteAccountId || 'noauth';
           if (this.accountPool) {
             this.accountPool.recordRequest(trackingKey, this.platform);
           }
@@ -649,8 +656,8 @@ export class AbstractApiClient {
           }
 
           if (provider && typeof provider.isAllQuarantined === 'function' && provider.isAllQuarantined()) {
-            if (currentAccountId && this.accountPool) {
-              this.accountPool.markUnavailable(currentAccountId, 'proxy_exhausted', this.standbyBackoffMs, this.platform);
+            if (concreteAccountId && this.accountPool) {
+              this.accountPool.markUnavailable(concreteAccountId, 'proxy_exhausted', this.standbyBackoffMs, this.platform);
             }
             throw new PlatformError({
               type: ErrorTypes.PROXY_EXHAUSTED,
@@ -659,7 +666,7 @@ export class AbstractApiClient {
               statusCode: 503,
               suggestedAction: SuggestedActions.WAIT,
               retryAfterMs: this.standbyBackoffMs,
-              accountId: currentAccountId,
+              accountId: concreteAccountId,
               platform: this.platform,
             });
           }
@@ -674,15 +681,19 @@ export class AbstractApiClient {
           const isLastProxyAttempt = attempt === this.maxProxyRetries - 1;
 
           if (isLastProxyAttempt) {
-            if (this.requiresAuth && currentAccountId && this.accountPool) {
-              this.accountPool.markUnavailable(currentAccountId, 'rate_limit', this.rateLimitHibernationMs, this.platform);
+            if (concreteAccountId && this.accountPool) {
+              this.accountPool.markUnavailable(concreteAccountId, 'rate_limit', this.rateLimitHibernationMs, this.platform);
               if (this.governor && typeof this.governor.recordRateLimit === 'function') {
-                this.governor.recordRateLimit(currentAccountId, this.platform, this.rateLimitHibernationMs);
+                this.governor.recordRateLimit(concreteAccountId, this.platform, this.rateLimitHibernationMs);
               }
 
               const nextAccount = this.accountPool.getNextAvailable(this.platform);
               if (nextAccount && nextAccount !== currentAccountId) {
                 currentAccountId = nextAccount;
+                concreteAccountId =
+                  currentAccountId && currentAccountId !== 'guest' && currentAccountId !== 'default'
+                    ? currentAccountId
+                    : null;
                 break; // Break inner proxy loop to start with new rotated account
               }
             }
@@ -691,9 +702,9 @@ export class AbstractApiClient {
             throw new errorClass({
               code: status === 429 ? 'XACT_4290' : 'XACT_4030',
               message: status === 429 ? 'Rate limit exceeded on upstream platform' : 'Bot challenge detected on upstream platform',
-              suggestedAction: SuggestedActions.ROTATE_PROXY,
+              suggestedAction: concreteAccountId ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
               retryAfterMs: chosenDelay,
-              accountId: currentAccountId,
+              accountId: concreteAccountId,
               platform: this.platform,
               details: response?.data || response,
             });
@@ -715,7 +726,7 @@ export class AbstractApiClient {
       message: 'Request pipeline exhausted all retry and account rotation attempts',
       statusCode: 500,
       suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
-      accountId: currentAccountId,
+      accountId: concreteAccountId,
       platform: this.platform,
     });
   }

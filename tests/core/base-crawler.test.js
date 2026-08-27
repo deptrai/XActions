@@ -8,6 +8,7 @@ import { AccountPool } from '../../src/core/account-pool.js';
 import { AdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
 import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../src/core/error-envelope.js';
+import { globalActionRegistry } from '../../src/core/action-registry.js';
 
 class TestCrawler extends AbstractCrawler {
   name = 'test-platform';
@@ -20,7 +21,7 @@ class TestClient extends AbstractApiClient {
 
 describe('AbstractCrawler contract', () => {
   beforeEach(() => {
-    // Prevent any global state leak from other tests
+    globalActionRegistry.clear();
   });
 
   it('cannot be instantiated directly', () => {
@@ -112,5 +113,67 @@ describe('AbstractCrawler contract', () => {
   it('launchBrowserWithCdp throws PlatformError if cdpUrl is not set', async () => {
     const crawler = new TestCrawler();
     await expect(crawler.launchBrowserWithCdp()).rejects.toThrow(PlatformError);
+  });
+
+  describe('Action-Level Granular Auth & Proxy Strategy', () => {
+    it('listActions() returns resolved requiresAuth', () => {
+      const crawler = new TestCrawler({ requiresAuth: true });
+      crawler.registerAction('public_action', async () => [], { description: 'Public', requiresAuth: false });
+      crawler.registerAction('private_action', async () => [], { description: 'Private' });
+      crawler.registerAction('explicit_private', async () => [], { description: 'Explicit Private', requiresAuth: true });
+
+      const actions = crawler.listActions();
+      const publicAct = actions.find(a => a.action === 'public_action');
+      const privateAct = actions.find(a => a.action === 'private_action');
+      const explicitAct = actions.find(a => a.action === 'explicit_private');
+
+      expect(publicAct?.requiresAuth).toBe(false);
+      expect(privateAct?.requiresAuth).toBe(true);
+      expect(explicitAct?.requiresAuth).toBe(true);
+    });
+
+    it('start() executes requiresAuth:false action without accountPool on authenticated platform', async () => {
+      let receivedSession = null;
+      const crawler = new TestCrawler({ requiresAuth: true }); // Platform is auth-required
+      crawler.registerAction('marketplace', async (args, session) => {
+        receivedSession = session;
+        return [{ id: 'test-platform:item1', platform: 'test-platform', category: 'social' }];
+      }, { requiresAuth: false });
+
+      // No accountPool, no account in session -> should NOT throw AUTH_EXPIRED
+      const res = await crawler.start({ action: 'marketplace', args: { query: 'laptop' } });
+      expect(res).toHaveLength(1);
+      expect(receivedSession.accountId).toBeNull();
+      expect(receivedSession.requiresAuth).toBe(false);
+    });
+
+    it('start() throws AUTH_EXPIRED for requiresAuth:true action on no-auth platform when pool is empty', async () => {
+      const crawler = new TestCrawler({ requiresAuth: false }); // Platform is no-auth by default
+      crawler.registerAction('private_group', async () => [], { requiresAuth: true });
+
+      await expect(
+        crawler.start({ action: 'private_group', args: {} })
+      ).rejects.toThrow(/No available account/);
+    });
+
+    it('start() with opt-in accountId on requiresAuth:false action checks governor', async () => {
+      const proxyPool = new ProxyIpPool({ proxies: ['http://localhost:8080'] });
+      const governor = new AdaptiveRateGovernor({ proxyPool });
+      const accountPool = new AccountPool({ governor });
+      accountPool.registerAccounts('test-platform', ['opt_in_acc']);
+      governor.hibernateAccount('opt_in_acc', 'rate_limit', 60000, 'test-platform');
+
+      const crawler = new TestCrawler({ governor, accountPool, requiresAuth: false });
+      crawler.registerAction('search', async () => [], { requiresAuth: false });
+
+      // Opt-in account is hibernating -> must throw HIBERNATION
+      await expect(
+        crawler.start({
+          action: 'search',
+          args: {},
+          session: { accountId: 'opt_in_acc' }
+        })
+      ).rejects.toThrow(PlatformError);
+    });
   });
 });

@@ -89,4 +89,19 @@ describe('AbstractApiClient Proxy Resolution Contract', () => {
     expect(() => client.resolveProxy('exhausted_acc')).toThrow(PlatformError);
     expect(accountPool.getNextAvailable('twitter')).toBeNull();
   });
+
+  test('resolveProxy uses effective requiresAuth instead of instance default', () => {
+    const client = new MockNoAuthClient({ proxyPool, accountPool, governor });
+
+    // Platform default is no-auth, but an action declares requiresAuth=true with account
+    const p1 = client.resolveProxy('acc_1', false, true);
+    const p2 = client.resolveProxy('acc_1', false, true);
+    expect(p1.host).toBe(p2.host);
+
+    // Conversely, auth platform with requiresAuth=false and no account should rotate
+    const authClient = new MockAuthClient({ proxyPool, accountPool, governor });
+    const r1 = authClient.resolveProxy(null, false, false);
+    const r2 = authClient.resolveProxy(null, false, false);
+    expect(r1.host).not.toBe(r2.host);
+  });
 });

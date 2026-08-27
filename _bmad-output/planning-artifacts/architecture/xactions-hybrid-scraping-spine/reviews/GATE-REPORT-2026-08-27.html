@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reviewer Gate Report — Action-Level Auth (2026-08-27)</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e2e5ec; line-height: 1.55; padding: 32px 20px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header { border-bottom: 1px solid #2a2f3d; padding-bottom: 20px; margin-bottom: 24px; }
+  h1 { font-size: 22px; color: #fff; margin-bottom: 6px; }
+  .sub { color: #8b93a7; font-size: 13px; }
+  .verdict { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; background: rgba(255,171,0,.12); border: 1px solid rgba(255,171,0,.4); color: #ffb300; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 12px; margin: 20px 0 28px; }
+  .stat { background: #171b26; border: 1px solid #2a2f3d; border-radius: 10px; padding: 14px 16px; }
+  .stat .n { font-size: 26px; font-weight: 700; }
+  .stat .l { font-size: 12px; color: #8b93a7; }
+  .crit .n { color: #ff5252; } .high .n { color: #ff9800; } .med .n { color: #ffd54f; } .ok .n { color: #4caf50; }
+  h2 { font-size: 15px; color: #fff; margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #2a2f3d; text-transform: uppercase; letter-spacing: .06em; }
+  .card { background: #171b26; border: 1px solid #2a2f3d; border-left: 3px solid #666; border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; }
+  .card.crit { border-left-color: #ff5252; } .card.high { border-left-color: #ff9800; } .card.med { border-left-color: #ffd54f; }
+  .card .id { font-size: 11px; font-weight: 700; letter-spacing: .05em; color: #8b93a7; }
+  .card.crit .id { color: #ff8a80; } .card.high .id { color: #ffb74d; } .card.med .id { color: #ffe082; }
+  .card .title { font-size: 14.5px; font-weight: 600; color: #fff; margin: 3px 0 6px; }
+  .card p { font-size: 13px; color: #b8bfce; }
+  .fix { margin-top: 8px; font-size: 12.5px; color: #a5d6a7; background: rgba(76,175,80,.08); border-radius: 6px; padding: 8px 10px; }
+  .fix b { color: #81c784; }
+  .src { font-size: 11px; color: #6b7386; font-style: italic; margin-top: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 24px; }
+  th { text-align: left; color: #8b93a7; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 1px solid #2a2f3d; }
+  td { padding: 8px 10px; border-bottom: 1px solid #20242f; color: #c8cedb; vertical-align: top; }
+  td:first-child { white-space: nowrap; font-weight: 600; color: #fff; }
+  .yes { color: #4caf50; font-weight: 600; } .no { color: #ff5252; font-weight: 600; } .warn { color: #ffb300; font-weight: 600; }
+  .concl { background: #171b26; border: 1px solid #2a2f3d; border-radius: 10px; padding: 18px 20px; margin-top: 8px; }
+  .concl p { font-size: 13.5px; color: #c8cedb; margin-bottom: 8px; }
+  footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid #2a2f3d; font-size: 11.5px; color: #6b7386; }
+  code { background: #232838; color: #ffd54f; padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: 'SF Mono', Menlo, monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Reviewer Gate Report — Action-Level Granular Auth &amp; Proxy Strategy</h1>
+  <div class="sub">XActions · Validate intent · 2026-08-27 · Target: ARCHITECTURE-SPINE.md (AD-3 3b, AD-11 rule 3, AD-8, AD-14) + epics.md (9 stories) + sprint-change-proposal-2026-08-27.md</div>
+  <div class="verdict">⚠️ PASS-WITH-FINDINGS — 4/4 reviewer đồng thuận về hướng kiến trúc; plan triển khai chưa đủ</div>
+</header>
+
+<div class="summary-grid">
+  <div class="stat crit"><div class="n">3</div><div class="l">Critical</div></div>
+  <div class="stat high"><div class="n">6</div><div class="l">High</div></div>
+  <div class="stat med"><div class="n">2</div><div class="l">Medium</div></div>
+  <div class="stat ok"><div class="n">12</div><div class="l">Pre-existing lint (0 liên quan)</div></div>
+</div>
+
+<h2>Critical</h2>
+
+<div class="card crit">
+  <div class="id">F1 · AD-1 × AD-3 3b</div>
+  <div class="title">Token Ring không tách bạch guest vs account tokens</div>
+  <p>Ring gộp <code>lsd</code>/<code>fb_dtsg</code>/<code>msToken</code>; AD-3 3b nói no-auth action lấy guest token từ ring nhưng không có quy tắc affinity. Account-bound <code>fb_dtsg</code> có thể bị phát cho request xoay IP → checkpoint/ban tức thì.</p>
+  <div class="fix"><b>Fix:</b> 1 câu vào AD-3 3b — Token Ring phân vùng theo auth mode; account-bound token chỉ phát qua sticky proxy của đúng accountId.</div>
+  <div class="src">rubric-walker + adversarial</div>
+</div>
+
+<div class="card crit">
+  <div class="id">F2 · AD-3 3b × AD-11 rule 3 × AD-13</div>
+  <div class="title">Opt-in accountId bỏ qua governor check</div>
+  <p>AD-11 rule 3: <code>requiresAuth === false</code> → "bỏ qua governor account check". AD-3 3b: "caller truyền accountId vẫn được tôn trọng". Kết hợp: hibernating account vẫn chạy được qua opt-in → ban.</p>
+  <div class="fix"><b>Fix:</b> 1 câu — Opt-in accountId trên action no-auth vẫn chịu <code>governor.canAccountRequest</code> + velocity limit; vi phạm → <code>XACT_4291</code>.</div>
+  <div class="src">rubric-walker + adversarial + cross-artifact</div>
+</div>
+
+<div class="card crit">
+  <div class="id">F3 · CODE — client.js:436 (đã verify)</div>
+  <div class="title">FacebookClient: <code>options.accountId || 'default'</code></div>
+  <p>accountId=null bị thành chuỗi <code>'default'</code> → <code>resolveProxy('default')</code> gán sticky session → <b>rotating không bao giờ xảy ra</b> cho no-auth action. Phản bác claim "không cần sửa client" trong proposal.</p>
+  <div class="fix"><b>Fix:</b> Dev task mới <b>T7</b> — bỏ fallback 'default', truyền null xuyên suốt.</div>
+  <div class="src">reality-check</div>
+</div>
+
+<h2>High</h2>
+
+<div class="card high">
+  <div class="id">F4 · CODE — client.js:389</div>
+  <div class="title">buildGraphQlBody hard-require <code>c_user</code> → guest mode crash</div>
+  <p>Throw <code>XACT_4010</code> khi thiếu token auth, nhưng guest GraphQL cần <code>__user: '0'</code>/<code>av: '0'</code>. Mọi no-auth action sẽ crash ở tầng token dù T1–T6 xong.</p>
+  <div class="fix"><b>Fix:</b> Mở rộng T7 — guest body mode khi actionRequiresAuth === false.</div>
+  <div class="src">reality-check (đã verify trên code)</div>
+</div>
+
+<div class="card high">
+  <div class="id">F5 · CODE — base-client.js:486</div>
+  <div class="title">Client-level <code>requiresAuth = true</code> + guard 4010 ở standalone setup</div>
+  <p>Không có accountPool: no-auth action vẫn throw <code>XACT_4010</code> vì flag cấp client không nhận signal action-level.</p>
+  <div class="fix"><b>Fix:</b> Dev task mới <b>T8</b> — truyền auth-mode xuống client qua <code>options.requiresAuth</code> và nới guard.</div>
+  <div class="src">adversarial + reality-check</div>
+</div>
+
+<div class="card high">
+  <div class="id">F6 · AD-3 3b × AD-20</div>
+  <div class="title">Ma trận Realtime/Bulk × Sticky/Rotating chưa định nghĩa</div>
+  <p>Rotating bulk action (marketplace) có hút Realtime Pool không? Nguy cơ starve on-demand queries — đúng điều AD-20 tồn tại để ngăn.</p>
+  <div class="fix"><b>Fix:</b> 1 câu — no-auth rotating request mặc định thuộc Bulk Pool; vào Realtime Pool chỉ khi gọi qua MCP on-demand.</div>
+  <div class="src">rubric-walker + adversarial</div>
+</div>
+
+<div class="card high">
+  <div class="id">F7 · AD-12 × AD-16</div>
+  <div class="title">CrawlCheckpoint thiếu <code>authMode</code>/<code>accountId</code></div>
+  <p>Resume sau restart có thể replay auth cursor bằng guest mode (hoặc ngược lại) → pagination cursor bị reject <code>XACT_4001</code>.</p>
+  <div class="fix"><b>Fix:</b> Thêm authMode + accountId vào checkpoint state (AD-12 rule 1 + note schema Story 10.2).</div>
+  <div class="src">rubric-walker + adversarial</div>
+</div>
+
+<div class="card high">
+  <div class="id">F8 · epics.md Story 14.2</div>
+  <div class="title">Action discovery AC còn shape cũ thiếu <code>requiresAuth</code></div>
+  <p>Story 14.2 không nằm trong danh sách 9 story được sửa — stale text gây lệch cho dev.</p>
+  <div class="fix"><b>Fix:</b> Sửa 1 dòng AC.</div>
+  <div class="src">cross-artifact</div>
+</div>
+
+<div class="card high">
+  <div class="id">F9 · epics.md Story 11.5 step 2</div>
+  <div class="title">Step 2 còn ngôn ngữ platform-level ("Auth-required platforms (Facebook...) sticky")</div>
+  <p>Mâu thuẫn trực tiếp với step 1 vừa sửa sang action-level.</p>
+  <div class="fix"><b>Fix:</b> Sửa wording step 2 theo action-level.</div>
+  <div class="src">cross-artifact</div>
+</div>
+
+<div class="card high">
+  <div class="id">F10 · AD-9 rule 1</div>
+  <div class="title">Anti-bot validation branch theo platform, không theo auth state</div>
+  <p>Facebook <code>marketplace</code> gặp WAF → đi nhánh "Auth-required" (hibernate account) hay "No-auth" (xoay IP)? Hai team đọc hai kiểu.</p>
+  <div class="fix"><b>Fix:</b> Đổi "No-auth platforms" → "no-auth requests (action-level, AD-3 3b)".</div>
+  <div class="src">cross-artifact</div>
+</div>
+
+<h2>Medium</h2>
+
+<div class="card med">
+  <div class="id">F11 · AD-5 rule 4</div>
+  <div class="title">Facebook vẫn trong blanket "Auth-required platforms"</div>
+  <div class="fix"><b>Fix:</b> Thêm "(mặc định platform; action-level override xem AD-3 3b)".</div>
+</div>
+
+<div class="card med">
+  <div class="id">F12 · base-crawler.js:100-102</div>
+  <div class="title">globalActionRegistry nhận descriptor chưa resolve <code>requiresAuth</code></div>
+  <div class="fix"><b>Fix:</b> Ghi rõ trong T3 — resolve trước khi register hoặc resolve tại list-time; xác minh nguồn MCP <code>x_actions_list</code>.</div>
+</div>
+
+<h2>Kết luận cho plan</h2>
+<div class="concl">
+  <table>
+    <tr><th style="width:32%">Khía cạnh</th><th>Đánh giá</th></tr>
+    <tr><td>Hướng kiến trúc</td><td class="yes">✅ Đúng — 4/4 reviewer nhất trí; fallback <code>??</code> giữ backward compat chuẩn xác</td></tr>
+    <tr><td>Sửa tài liệu đã áp dụng</td><td class="warn">⚠️ 85% đúng — còn 4 chỗ stale (F8–F11) + 3 câu AD cần bổ sung (F1, F2, F6)</td></tr>
+    <tr><td>Dev tasks T1–T6</td><td class="no">❌ Chưa đủ — cần thêm <b>T7</b> (FacebookClient guest mode + bỏ 'default', F3+F4) và <b>T8</b> (base-client guard, F5)</td></tr>
+    <tr><td>Effort / Risk</td><td>Tăng từ ~1 → <b>~1.5–2 dev-days</b>; risk tổng vẫn Low-Medium, không finding nào bác bỏ hướng đi</td></tr>
+  </table>
+  <p><b>Đề xuất:</b> chạy <b>Update intent</b> (bmad-architecture) — áp F1/F2/F6/F10/F11 vào spine, F8/F9 vào epics.md, cập nhật proposal thêm T7/T8. Ước tính ~30 phút.</p>
+</div>
+
+<footer>
+  Reviewer Gate · 4 subagent song song (rubric-walker, adversarial, reality-check, cross-artifact) + lint_spine.py · Chi tiết đầy đủ trong <code>reviews/review-*-2026-08-27.md</code> · Báo cáo này thuộc Validate intent — không thay đổi tài liệu.
+</footer>
+
+</div>
+</body>
+</html>
