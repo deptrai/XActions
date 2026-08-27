@@ -1,5 +1,11 @@
 # Deferred Work
 
+## Deferred from: code review of 13-9-facebook-hybrid-social-actions-write-messenger re-review (2026-08-28)
+
+- [x] [Review][Defer] `DEFAULT_FB_DOC_IDS` write mutation placeholders không phải doc_id thật — by design, cần capture từ live session [src/scrapers/social/facebook/crawler.js:225-231; actions.js:275-280]
+- [x] [Review][Defer] `FacebookActionVelocityTracker` lưu in-memory, không chia sẻ across workers/restarts — vượt phạm vi AC-14 [src/scrapers/social/facebook/batch-runner.js:47-48]
+- [x] [Review][Defer] `shareLinkByUid` legacy campaign vẫn dùng plain loop không batch safety — file đã deprecated, thuộc Epic 20.2 cleanup [src/scrapers/facebook/shareLinkByUid.js:208-232]
+
 ## Deferred from: code review of 13-9-facebook-hybrid-social-actions-write-messenger (2026-08-28)
 
 - [x] [Review][Defer] `DEFAULT_FB_DOC_IDS` write mutation placeholders chưa tham chiếu trong action code hay tests — by design, cần capture live doc_id từ real Facebook session trước khi dùng [src/scrapers/social/facebook/crawler.js:224-230]

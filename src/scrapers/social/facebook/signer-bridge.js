@@ -21,10 +21,10 @@ import fs from 'node:fs';
  * Minimal proxy-resolver contract used by the bridge to pick a sticky proxy per account.
  * @typedef {Object} ProxyResolverLike
  * @property {(options?: Record<string, unknown>) => (string | Record<string, unknown> | null)} [getProxy]
- * @property {(accountId: string) => (string | Record<string, unknown> | null)} [getStickyProxy]
- * @property {() => (string | Record<string, unknown> | null)} [getNext]
- * @property {() => (string | Record<string, unknown> | null)} [getRotatingProxy]
- * @property {() => (string | Record<string, unknown> | null)} [getRoundRobinProxy]
+ * @property {(accountId: string, requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getStickyProxy]
+ * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getNext]
+ * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getRotatingProxy]
+ * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getRoundRobinProxy]
  */
 
 /**
@@ -487,22 +487,22 @@ export class FacebookBrowserBridge {
     if (this.proxyPool) {
       if (typeof this.proxyPool.getStickyProxy === 'function') {
         try {
-          const p = this.proxyPool.getStickyProxy(accountId);
+          const p = this.proxyPool.getStickyProxy(accountId, requiresResidential);
           if (p) return p;
         } catch {}
       } else if (typeof this.proxyPool.getNext === 'function') {
         try {
-          const p = this.proxyPool.getNext();
+          const p = this.proxyPool.getNext(requiresResidential);
           if (p) return p;
         } catch {}
       } else if (typeof this.proxyPool.getRotatingProxy === 'function') {
         try {
-          const p = this.proxyPool.getRotatingProxy();
+          const p = this.proxyPool.getRotatingProxy(requiresResidential);
           if (p) return p;
         } catch {}
       } else if (typeof this.proxyPool.getRoundRobinProxy === 'function') {
         try {
-          const p = this.proxyPool.getRoundRobinProxy();
+          const p = this.proxyPool.getRoundRobinProxy(requiresResidential);
           if (p) return p;
         } catch {}
       }

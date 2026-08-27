@@ -39,6 +39,21 @@ function isLocalUrl(url) {
 const MAX_TOKEN_CACHE_ENTRIES = 500;
 const DEFAULT_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
 
+/**
+ * Default friendly names for Facebook GraphQL write mutations.
+ * Callers that override docIds are expected to also override or extend this map.
+ * @type {Record<string, string>}
+ */
+const DEFAULT_FB_FRIENDLY_NAMES = {
+  LIKE_MUTATION: 'CometUFIFeedbackMutation',
+  COMMENT_MUTATION: 'CometUFICommentCreateMutation',
+  POST_MUTATION: 'ComposerStoryCreateMutation',
+  SHARE_MUTATION: 'CometFeedStoryShareMutation',
+  MESSENGER_SHARE_MUTATION: 'MWChatBusinessCTAAdsSenderMutation',
+  JOIN_GROUP_MUTATION: 'GroupAcceptJoinRequestMutation',
+  SEND_FRIEND_REQUEST_MUTATION: 'FriendRequestSendMutation',
+};
+
 const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
 
 /**
@@ -176,9 +191,10 @@ export class FacebookClient extends AbstractApiClient {
     }));
 
     this.baseUrl = baseUrl;
-    if (deps.friendlyNames) {
-      this.friendlyNames = deps.friendlyNames;
-    }
+    this.friendlyNames = {
+      ...DEFAULT_FB_FRIENDLY_NAMES,
+      ...(deps.friendlyNames || {}),
+    };
     this.timeout = deps.timeout ?? 120000;
 
     this.browserBridge = deps.browserBridge || null;
@@ -499,8 +515,9 @@ export class FacebookClient extends AbstractApiClient {
     if (tokens.__s) params.set('__s', String(tokens.__s));
     if (tokens.dpr) params.set('dpr', String(tokens.dpr));
     if (tokens.x_fb_lsd) params.set('x_fb_lsd', String(tokens.x_fb_lsd));
-    if (tokens.fb_api_req_friendly_name || this.friendlyNames[docId]) {
-      params.set('fb_api_req_friendly_name', tokens.fb_api_req_friendly_name || this.friendlyNames[docId]);
+    const friendlyName = tokens.fb_api_req_friendly_name || options.friendlyName || this.friendlyNames[docId];
+    if (friendlyName) {
+      params.set('fb_api_req_friendly_name', friendlyName);
     }
 
     return params.toString();
@@ -581,7 +598,7 @@ export class FacebookClient extends AbstractApiClient {
           code: 'XACT_4290',
           type: ErrorTypes.RATE_LIMIT,
           message: `Facebook temporary block / rate limit: ${primaryError.message}`,
-          suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+          suggestedAction: SuggestedActions.ROTATE_PROXY,
           platform: 'facebook',
           accountId,
           details: data.errors,
@@ -612,9 +629,22 @@ export class FacebookClient extends AbstractApiClient {
    */
   async requestGraphQl(docId, variables = {}, options = {}) {
     const fallbackDocIds = Array.isArray(options.fallbackDocIds) ? options.fallbackDocIds : [];
-    const docIds = [docId, ...fallbackDocIds].filter((d, i, a) => a.indexOf(d) === i);
+    const allDocIds = [docId, ...fallbackDocIds]
+      .filter((d) => typeof d === 'string' && d.length > 0 && !d.startsWith('fb_') && d !== 'null');
+    const docIds = allDocIds.filter((d, i, a) => a.indexOf(d) === i);
     /** @type {Error | null} */
     let lastError = null;
+
+    if (docIds.length === 0) {
+      throw new PlatformError({
+        code: 'XACT_5000',
+        type: ErrorTypes.INTERNAL,
+        message: 'No valid GraphQL doc_id available for the request.',
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'facebook',
+        accountId: options.accountId,
+      });
+    }
 
     for (const id of docIds) {
       try {

@@ -30,10 +30,10 @@ import {
  * @property {(proxy: string | Record<string, unknown>, options?: Record<string, unknown>) => unknown} getProxyAgent
  * @property {(proxy?: string | Record<string, unknown>, durationMs?: number) => void} quarantine
  * @property {(options?: Record<string, unknown>) => (string | Record<string, unknown> | null)} [getProxy]
- * @property {(accountId: string) => (string | Record<string, unknown> | null)} [getStickyProxy]
- * @property {() => (string | Record<string, unknown> | null)} [getNext]
- * @property {() => (string | Record<string, unknown> | null)} [getRotatingProxy]
- * @property {() => (string | Record<string, unknown> | null)} [getRoundRobinProxy]
+ * @property {(accountId: string, requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getStickyProxy]
+ * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getNext]
+ * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getRotatingProxy]
+ * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getRoundRobinProxy]
  * @property {(proxy: string | Record<string, unknown>, client?: string) => unknown} [createProxyAgent]
  */
 
@@ -189,26 +189,14 @@ export class AbstractApiClient {
       const opts = { accountId: rawAccountId, requiresResidential };
       proxy = this.proxyProvider.getProxy(opts);
     } else if (this.proxyPool) {
-      if (requiresResidential) {
-        throw new PlatformError({
-          type: ErrorTypes.PROXY_EXHAUSTED,
-          code: 'XACT_5030',
-          message: `Residential proxy requested but proxyPool has no residential support on ${this.platform}`,
-          statusCode: 503,
-          suggestedAction: SuggestedActions.WAIT,
-          retryAfterMs: this.standbyBackoffMs,
-          accountId: rawAccountId || null,
-          platform: this.platform,
-        });
-      }
       if (requiresAuth && rawAccountId && typeof this.proxyPool.getStickyProxy === 'function') {
-        proxy = this.proxyPool.getStickyProxy(rawAccountId);
+        proxy = this.proxyPool.getStickyProxy(rawAccountId, requiresResidential);
       } else if (typeof this.proxyPool.getNext === 'function') {
-        proxy = this.proxyPool.getNext();
+        proxy = this.proxyPool.getNext(requiresResidential);
       } else if (typeof this.proxyPool.getRotatingProxy === 'function') {
-        proxy = this.proxyPool.getRotatingProxy();
+        proxy = this.proxyPool.getRotatingProxy(requiresResidential);
       } else if (typeof this.proxyPool.getRoundRobinProxy === 'function') {
-        proxy = this.proxyPool.getRoundRobinProxy();
+        proxy = this.proxyPool.getRoundRobinProxy(requiresResidential);
       }
     }
 

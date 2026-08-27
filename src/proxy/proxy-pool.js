@@ -135,9 +135,10 @@ export class ProxyIpPool {
 
   /**
    * Get the next healthy proxy using round-robin rotation against the total pool.
+   * @param {boolean} [requiresResidential=false]
    * @returns {any | null}
    */
-  getNext() {
+  getNext(requiresResidential = false) {
     const total = this.#proxies.length;
     if (total === 0) return null;
 
@@ -147,6 +148,7 @@ export class ProxyIpPool {
       const p = this.#proxies[idx];
       const normalized = this.#normalize(p);
       if (this.#isQuarantined(normalized, now)) continue;
+      if (requiresResidential && !normalized.residential) continue;
 
       this.#roundRobinIndex = (idx + 1) % total;
       return { ...normalized };
@@ -156,26 +158,29 @@ export class ProxyIpPool {
 
   /**
    * Alias for getNext() to satisfy round-robin proxy contract.
+   * @param {boolean} [requiresResidential=false]
    * @returns {any | null}
    */
-  getRoundRobinProxy() {
-    return this.getNext();
+  getRoundRobinProxy(requiresResidential = false) {
+    return this.getNext(requiresResidential);
   }
 
   /**
    * Alias for getNext() to satisfy rotating proxy contract.
+   * @param {boolean} [requiresResidential=false]
    * @returns {any | null}
    */
-  getRotatingProxy() {
-    return this.getNext();
+  getRotatingProxy(requiresResidential = false) {
+    return this.getNext(requiresResidential);
   }
 
   /**
    * Get a deterministic sticky proxy for an account ID.
    * @param {string} accountId
+   * @param {boolean} [requiresResidential=false]
    * @returns {any | null}
    */
-  getStickyProxy(accountId) {
+  getStickyProxy(accountId, requiresResidential = false) {
     const total = this.#proxies.length;
     if (total === 0) return null;
 
@@ -183,8 +188,8 @@ export class ProxyIpPool {
     const boundKey = this.#stickyMap.get(accountKey);
     if (boundKey) {
       const existing = this.#findHealthyByKey(boundKey);
-      if (existing) return { ...existing };
-      this.#stickyMap.delete(accountKey);
+      if (existing && (!requiresResidential || existing.residential)) return { ...existing };
+      if (existing && requiresResidential && !existing.residential) this.#stickyMap.delete(accountKey);
     }
 
     const now = Date.now();
@@ -194,6 +199,7 @@ export class ProxyIpPool {
       const p = this.#proxies[idx];
       const normalized = this.#normalize(p);
       if (this.#isQuarantined(normalized, now)) continue;
+      if (requiresResidential && !normalized.residential) continue;
 
       this.#stickyMap.set(accountKey, this.#key(normalized));
       return { ...normalized };

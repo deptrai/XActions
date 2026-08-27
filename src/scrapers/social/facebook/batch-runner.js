@@ -15,6 +15,12 @@ export const ACCOUNT_RISK_WARNING =
   '⚠️ Performing automated social actions carries account suspension risk. Follow recommended velocity limits and delays.';
 
 /**
+ * Hard upper bound on any single batch, independent of per-hour velocity.
+ * @type {number}
+ */
+export const MAX_BATCH_SIZE = 20;
+
+/**
  * Standard delay floors and velocity ceilings per action.
  * @type {Record<string, { perHour?: number, perDay?: number, delayMin: number, delayMax: number }>}
  */
@@ -245,9 +251,11 @@ export async function runGuardedActionBatch(items, fn, options = {}) {
   let batch = items.slice();
   if (maxBatch != null) {
     const n = Number(maxBatch);
+    let effective = 0;
     if (Number.isFinite(n) && n > 0) {
-      batch = batch.slice(0, Math.max(1, Math.floor(n)));
+      effective = Math.min(MAX_BATCH_SIZE, Math.floor(n));
     }
+    batch = batch.slice(0, Math.max(1, effective));
   }
 
   const results = [];
@@ -255,9 +263,14 @@ export async function runGuardedActionBatch(items, fn, options = {}) {
   for (let i = 0; i < batch.length; i++) {
     const item = batch[i];
 
-    // Check governor per item (await if async)
+    // Check governor per item (await if async), catching promise rejections
     if (governor && typeof governor.canAccountRequest === 'function') {
-      const allowed = await Promise.resolve(governor.canAccountRequest(accountId, 'facebook'));
+      let allowed;
+      try {
+        allowed = await Promise.resolve(governor.canAccountRequest(accountId, 'facebook'));
+      } catch (err) {
+        throw wrapItemError(err, item, actionName, accountId);
+      }
       if (!allowed) {
         throw new PlatformError({
           code: 'XACT_4291',
@@ -287,20 +300,22 @@ export async function runGuardedActionBatch(items, fn, options = {}) {
     // Execute item handler with per-item error isolation
     let result;
     try {
-      if (page && typeof page === 'object') {
-        page.__actionName = actionName;
-      }
       result = await fn(item, i, { page });
       results.push(result);
     } catch (err) {
+      // Non-retryable auth / platform rate-limit errors short-circuit the whole batch
+      if (err instanceof PlatformError && (err.code === 'XACT_4010' || err.code === 'XACT_4290')) {
+        throw err;
+      }
       const wrapped = wrapItemError(err, item, actionName, accountId);
+      result = wrapped;
       results.push(/** @type {any} */ (wrapped));
-      continue;
     }
 
-    // Record request in governor and tracker only on success (no throw, no explicit error)
+    // Record request in governor and tracker for every non-validation item
     const anyResult = /** @type {any} */ (result);
-    if (!dryRun && result && !anyResult.error && anyResult.ok !== false) {
+    const isValidation = anyResult?.code === 'XACT_4001' || anyResult?.error === 'XACT_4001';
+    if (!dryRun && result && !isValidation) {
       if (governor && typeof governor.recordRequest === 'function') {
         await Promise.resolve(governor.recordRequest(accountId, 'facebook'));
       }
@@ -311,7 +326,7 @@ export async function runGuardedActionBatch(items, fn, options = {}) {
 
     if (typeof progressCallback === 'function') {
       try {
-        const res = /** @type {any} */ (progressCallback({ current: i + 1, total: batch.length, result }));
+        const res = /** @type {any} */ (progressCallback({ current: i + 1, total: batch.length, result: /** @type {any} */ (result) }));
         if (res && typeof res === 'object' && typeof res.catch === 'function') {
           res.catch(() => {});
         }

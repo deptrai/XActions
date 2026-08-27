@@ -5,10 +5,10 @@ story_key: '13-9-facebook-hybrid-social-actions-write-messenger'
 status: "done"
 phase: "Phase 4"
 created: 2026-08-28
-updated: 2026-08-27
-last_updated: 2026-08-27
+updated: 2026-08-28
+last_updated: 2026-08-28
 owner: "DEV"
-reviewed: "accepted"
+reviewed: "validated"
 baseline_commit: "a35aaac8"
 ---
 
@@ -449,7 +449,7 @@ Scope cụ thể:
 
 ### Review Findings
 
-**Verdict:** `ACCEPTED` (all review findings patched; verification passed)
+**Verdict:** `REJECT / NEEDS REWORK` (re-review found 27 new findings: 1 decision-needed, 23 patch, 3 defer)
 
 #### Decision needed
 
@@ -490,6 +490,48 @@ Scope cụ thể:
 #### Deferred
 
 - [x] [Review][Defer] `DEFAULT_FB_DOC_IDS` write mutation placeholders chưa tham chiếu — by design, cần capture live doc_id trước khi dùng [src/scrapers/social/facebook/crawler.js:224-230]
+
+#### Re-review Findings (2nd pass)
+
+**Decision needed**
+
+- [x] [Review][Decision] `messenger_share` đăng ký `recipientUids`/`recipientUid` là optional nhưng lại throw `XACT_4001` khi không có recipient ngay cả trong dry-run — **Quyết định: Option 1** — chuyển `recipientUids`/`recipientUid` thành `requiredArgs` cho `messenger_share` và `share_link_uid` [src/scrapers/social/facebook/crawler.js:473-482, src/scrapers/social/facebook/actions.js:892-901]
+
+**Patch (từ quyết định đã chuyển đổi)**
+
+- [ ] [Review][Patch] Cập nhật registry `messenger_share` / `share_link_uid` để `recipientUids`/`recipientUid` là requiredArgs theo quyết định Option 1 [src/scrapers/social/facebook/crawler.js:473-482, 484-493; actions.js:892-901]
+
+**Patch**
+
+- [ ] [Review][Patch] Default maxBatch cho `post`/`join_group`/`like` vượt per-hour velocity ceiling (post=5, group_post=3, join_group=5, like=30) [src/scrapers/social/facebook/actions.js:292,424,584,1180; batch-runner.js:246-251]
+- [ ] [Review][Patch] Live write actions dùng `textContent`/synthetic `InputEvent`/`ClipboardEvent`, không verify kết quả post/sent [src/scrapers/social/facebook/actions.js:455-490, 669-686, 700-715, 797-803, 992-1023]
+- [ ] [Review][Patch] `messenger_share` không verify gửi; GraphQL fallback dùng sai `actor_id`, throw thay vì return error [src/scrapers/social/facebook/actions.js:984-1023, 1045-1098, 1109-1138]
+- [ ] [Review][Patch] `send_friend_request` suggestions/location mode bỏ qua `runGuardedActionBatch`, không có delay/governor/velocity [src/scrapers/social/facebook/actions.js:1349-1352, 1459-1493, 1505-1537]
+- [ ] [Review][Patch] `runGuardedActionBatch` ghi governor/tracker chỉ khi success, mutate `page.__actionName` test seam, không short-circuit lỗi non-retryable [src/scrapers/social/facebook/batch-runner.js:259-310, 291-299]
+- [ ] [Review][Patch] Test suite dùng `FakePage`/`FakeFacebookBrowserBridge` stub, không verify real DOM/GraphQL/bridge [tests/scrapers/social/facebook/crawler-social-actions.test.js:22-133]
+- [ ] [Review][Patch] `join_group` không validate hostname Facebook, trả `joined:true` bất kể verification [src/scrapers/social/facebook/actions.js:1163-1173, 1251-1295]
+- [ ] [Review][Patch] GraphQL write fallbacks throw `XACT_5000` khi doc_id placeholder thiếu; `friendlyNames` map rỗng [src/scrapers/social/facebook/crawler.js:225-231; client.js:91, 178-180; actions.js:275-280, 376-402, 524-551, 843-870, 1109-1139]
+- [ ] [Review][Patch] Residential proxy không được enforce khi chỉ có `proxyPool` [src/core/base-client.js:191-203; signer-bridge.js:487-510; proxy/proxy-pool.js:178-202]
+- [ ] [Review][Patch] `join_group` / `send_friend_request` metadata không khớp runtime contract [src/scrapers/social/facebook/crawler.js:495-515]
+- [ ] [Review][Patch] `post` từ chối `mediaUrls` bằng lỗi thay vì reserved note; không resolve numeric `groupIds` [src/scrapers/social/facebook/actions.js:572-575, 584, 612-613]
+- [ ] [Review][Patch] `comment` thiếu giới hạn 8000 ký tự, dùng `textContent` tức thì [src/scrapers/social/facebook/actions.js:410-421, 455-490]
+- [ ] [Review][Patch] `send_friend_request` target và location search chấp nhận non-profile paths [src/scrapers/social/facebook/actions.js:1374-1398, 1514-1533]
+- [ ] [Review][Patch] `post` regex lấy `postId` thiếu group-post URL shapes [src/scrapers/social/facebook/actions.js:729-734]
+- [ ] [Review][Patch] `requestGraphQl` không sanitize `fallbackDocIds` invalid/placeholder [src/scrapers/social/facebook/client.js:613-638]
+- [ ] [Review][Patch] GraphQL code 368 rate-limit dùng `RETRY_AFTER_DELAY` thay vì `ROTATE_PROXY` [src/scrapers/social/facebook/client.js:579-589]
+- [ ] [Review][Patch] `share` không chọn destination trước khi click final Share [src/scrapers/social/facebook/actions.js:777-828]
+- [ ] [Review][Patch] `resolvePostFeedbackContext` HTTP extraction và `runGuardedActionBatch` recording/velocity edge cases chưa được test [tests/scrapers/social/facebook/crawler-social-actions.test.js:620-635, 693-713, 732-747; crawler.js:994-1018]
+- [ ] [Review][Patch] `runGuardedActionBatch` bỏ qua `maxBatch` âm hoặc 0 [src/scrapers/social/facebook/batch-runner.js:246-251]
+- [ ] [Review][Patch] `like` `maxBatch` có thể vượt `MAX_BATCH_SIZE` 20 [src/scrapers/social/facebook/actions.js:25, 292-303; batch-runner.js:246-251]
+- [ ] [Review][Patch] `messenger_share` và `share_link_uid` dry-run trả `ok:true` không nhất quán với các action khác [src/scrapers/social/facebook/actions.js:907-912, 957-965]
+- [ ] [Review][Patch] `pickRandomSegment`/`composeMessage` không áp dụng cho live messages [src/scrapers/social/facebook/actions.js:61-67, 903, 990-991, 1126]
+- [ ] [Review][Patch] `runGuardedActionBatch` không wrap lỗi promise rejection từ governor [src/scrapers/social/facebook/batch-runner.js:259-270]
+
+**Defer**
+
+- [x] [Review][Defer] `DEFAULT_FB_DOC_IDS` write mutation placeholders không phải doc_id thật — by design, cần capture từ live session [src/scrapers/social/facebook/crawler.js:225-231; actions.js:275-280]
+- [x] [Review][Defer] `FacebookActionVelocityTracker` lưu in-memory, không chia sẻ across workers/restarts — vượt phạm vi AC-14 [src/scrapers/social/facebook/batch-runner.js:47-48]
+- [x] [Review][Defer] `shareLinkByUid` legacy campaign vẫn dùng plain loop không batch safety — file đã deprecated, thuộc Epic 20.2 cleanup [src/scrapers/facebook/shareLinkByUid.js:208-232]
 
 ## Dev Notes
 
