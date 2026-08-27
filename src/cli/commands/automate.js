@@ -9,6 +9,7 @@
 import fs from 'fs/promises';
 import chalk from 'chalk';
 import ora from 'ora';
+import { scrape } from '../../scrapers/index.js';
 
 /**
  * Register the automate command.
@@ -46,14 +47,6 @@ export function registerAutomateCommand(program) {
       }
 
       const { loginWithCookie, createBrowser, createPage } = await import('../../scrapers/facebook/index.js');
-      const {
-        likeFacebookPosts,
-        commentOnFacebookPosts,
-        createFacebookPost,
-        shareFacebookPosts,
-        joinFacebookGroups,
-        sendFriendRequests,
-      } = await import('../../../api/services/facebookAutomation.js');
       const { parseRecipientsFile, buildCampaignQueue } = await import('../../scrapers/facebook/messengerQueue.js');
       const { messengerShareCampaign } = await import('../../scrapers/facebook/messengerShare.js');
 
@@ -164,45 +157,55 @@ export function registerAutomateCommand(program) {
       const dryRun = options.dryRun !== false;
       const spinner = ora(`${dryRun ? '[DRY RUN] ' : ''}Running ${options.action} on ${platform}...`).start();
 
-      let browser, page;
+      let browser;
+      let page;
       try {
-        browser = await createBrowser();
-        page = await createPage(browser);
-        await loginWithCookie(page, authCookie);
-
-        const guardedOptions = {
-          dryRun,
-          maxBatch: parseInt(options.maxBatch, 10),
-          delay: dryRun ? () => {} : undefined,
-        };
-
         let result;
 
-        if (action === 'like') {
-          result = await likeFacebookPosts(page, urls, guardedOptions);
-        } else if (action === 'share') {
-          result = await shareFacebookPosts(page, urls, guardedOptions);
-        } else if (action === 'comment') {
-          result = await commentOnFacebookPosts(page, urls, options.text, guardedOptions);
-        } else if (action === 'post') {
-          result = await createFacebookPost(page, options.text, guardedOptions);
-        } else if (action === 'join-group') {
-          const input = groupUrls.length ? { groupUrls } : { keyword: options.keyword, limit: Number(options.limit) };
-          result = await joinFacebookGroups(page, input, guardedOptions);
-        } else if (action === 'send-friend-request') {
-          const input = { mode: options.mode || 'uid_list', targets, location: options.location, limit: Number(options.limit) };
-          result = await sendFriendRequests(page, input, guardedOptions);
-        } else if (action === 'messenger-share') {
+        if (action === 'messenger-share') {
+          // Legacy multi-link multi-recipient campaign still needs a Puppeteer page.
+          browser = await createBrowser();
+          page = await createPage(browser);
+          await loginWithCookie(page, authCookie);
+
           const messengerDelay = dryRun
             ? () => {}
             : (min = 5000, max = 15000) =>
                 new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
-          const campaignOpts = { ...guardedOptions, delay: messengerDelay };
+          const campaignOpts = { dryRun, maxBatch: parseInt(options.maxBatch, 10), delay: messengerDelay };
           const runs = [];
           for (const campaign of campaigns) {
             runs.push(await messengerShareCampaign(page, campaign, campaignOpts));
           }
           result = { campaigns: runs.length, runs };
+        } else {
+          /** @type {Record<string, unknown>} */
+          const scrapeArgs = {
+            dryRun,
+            ...(options.maxBatch && { maxBatch: parseInt(options.maxBatch, 10) }),
+            authCookie,
+          };
+          if (action === 'like' || action === 'comment' || action === 'share') {
+            scrapeArgs.urls = urls;
+          }
+          if (action === 'comment' || action === 'post') {
+            scrapeArgs.text = options.text;
+          }
+          if (action === 'join-group') {
+            if (groupUrls.length) scrapeArgs.groupUrls = groupUrls;
+            else {
+              scrapeArgs.keyword = options.keyword;
+              scrapeArgs.limit = Number(options.limit);
+            }
+          }
+          if (action === 'send-friend-request') {
+            scrapeArgs.targets = targets;
+            scrapeArgs.mode = options.mode || 'uid_list';
+            if (options.location) scrapeArgs.location = options.location;
+            scrapeArgs.limit = Number(options.limit);
+          }
+
+          result = await scrape('facebook', action, scrapeArgs);
         }
 
         spinner.succeed(`${dryRun ? '[DRY RUN] ' : ''}${action} complete`);

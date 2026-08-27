@@ -193,11 +193,19 @@ async function dispatchFacebookHybrid(action, options = {}) {
     share: 'share',
     messenger: 'messenger_share',
     messenger_share: 'messenger_share',
+    'messenger-share': 'messenger_share',
     share_link_uid: 'share_link_uid',
+    'share-link-uid': 'share_link_uid',
     join_group: 'join_group',
     join_groups: 'join_group',
+    'join-group': 'join_group',
+    'join-groups': 'join_group',
+    'batch-post-groups': 'post',
+    batch_post_groups: 'post',
     send_friend_request: 'send_friend_request',
     send_friend_requests: 'send_friend_request',
+    'send-friend-request': 'send_friend_request',
+    'send-friend-requests': 'send_friend_request',
   };
 
   let mappedAction = ACTION_MAPPING[normalizedAction];
@@ -228,6 +236,8 @@ async function dispatchFacebookHybrid(action, options = {}) {
       accountPool: browserOpts.accountPool,
       headless: browserOpts.headless !== false,
       cdpUrl: browserOpts.cdpUrl || process.env.FACEBOOK_CDP_URL,
+      userDataDir: browserOpts.userDataDir || browserOpts.profileDir,
+      profileDir: browserOpts.profileDir || browserOpts.userDataDir,
     });
     crawler = new FacebookCrawler({
       client,
@@ -293,6 +303,57 @@ async function dispatchFacebookHybrid(action, options = {}) {
       }
     }
 
+    // Normalize legacy arg shapes to FacebookCrawler canonical args
+    if (['like', 'comment', 'share'].includes(mappedAction)) {
+      const rawUrls = args.urls || args.postUrl || args.postUrls;
+      const postUrls = Array.isArray(rawUrls) ? rawUrls : (typeof rawUrls === 'string' ? rawUrls.split(',').map((u) => u.trim()).filter(Boolean) : []);
+      if (postUrls.length) {
+        args.postUrls = postUrls;
+        args.postUrl = postUrls[0];
+      }
+      delete args.urls;
+      if (mappedAction === 'post' || mappedAction === 'comment') {
+        args.text = typeof args.text === 'string' ? args.text : (typeof args.content === 'string' ? args.content : args.text);
+      }
+    }
+    if (mappedAction === 'post') {
+      const rawText = args.text || args.content;
+      if (typeof rawText === 'string') args.text = rawText;
+      const rawGroups = args.groupUrls || args.groupUrl || args.groups;
+      if (rawGroups) {
+        args.groupUrls = Array.isArray(rawGroups) ? rawGroups : (typeof rawGroups === 'string' ? rawGroups.split(',').map((u) => u.trim()).filter(Boolean) : []);
+      }
+    }
+    if (mappedAction === 'join_group') {
+      const rawGroups = args.groupUrls || args.groupUrl || args.groups;
+      if (rawGroups) {
+        args.groupUrls = Array.isArray(rawGroups) ? rawGroups : (typeof rawGroups === 'string' ? rawGroups.split(',').map((u) => u.trim()).filter(Boolean) : []);
+      }
+      if (typeof args.keyword === 'string') args.keyword = args.keyword.trim();
+      if (args.limit != null) args.limit = Number(args.limit);
+    }
+    if (mappedAction === 'send_friend_request') {
+      const rawTargets = args.targets || args.target;
+      if (rawTargets) {
+        args.targets = Array.isArray(rawTargets) ? rawTargets : (typeof rawTargets === 'string' ? rawTargets.split(',').map((u) => u.trim()).filter(Boolean) : []);
+      }
+      if (args.limit != null) args.limit = Number(args.limit);
+    }
+    if (mappedAction === 'messenger_share' || mappedAction === 'share_link_uid') {
+      const rawMessage = args.message || args.content;
+      if (typeof rawMessage === 'string') args.message = rawMessage;
+      const rawRecipients = args.recipientUids || args.recipients;
+      if (rawRecipients) {
+        const arr = Array.isArray(rawRecipients) ? rawRecipients : (typeof rawRecipients === 'string' ? rawRecipients.split(',').map((u) => u.trim()).filter(Boolean) : []);
+        args.recipientUids = arr;
+      }
+      const rawPostUrl = args.postUrl || (Array.isArray(args.postUrls) ? args.postUrls[0] : args.postUrl);
+      if (typeof rawPostUrl === 'string') args.postUrl = rawPostUrl;
+      if (mappedAction === 'share_link_uid' && Array.isArray(args.recipientUids) && args.recipientUids.length) {
+        args.recipientUid = args.recipientUids[0];
+      }
+    }
+
     const result = await crawler.start({
       action: mappedAction,
       args,
@@ -309,8 +370,25 @@ async function dispatchFacebookHybrid(action, options = {}) {
 export async function scrape(platform, action, options = {}) {
   const platformName = platform?.toLowerCase();
 
-  // Facebook Hybrid Dispatch (Story 13.10, AC-1)
+  // Facebook Hybrid Dispatch (Story 13.10, AC-1).
+  // If the caller already provides a Puppeteer page, keep the legacy page-based path
+  // for search/group_search so existing unit tests and browser-bridged callers still work.
   if (platformName === 'facebook' || platformName === 'fb') {
+    if (options.page && (action === 'search' || action === 'group_search')) {
+      const mod = getPlatform(platform);
+      const legacyMap = {
+        search: 'searchFacebook',
+        group_search: 'scrapeFacebookGroupSearch',
+      };
+      const fnName = legacyMap[action];
+      const fn = /** @type {(...args: unknown[]) => Promise<Record<string, unknown>>} */ (mod[fnName]);
+      if (typeof fn === 'function') {
+        const target = action === 'group_search'
+          ? options.url
+          : (options.query || options.username || options.hashtag);
+        return await fn(options.page, target, options);
+      }
+    }
     return await dispatchFacebookHybrid(action, options);
   }
 
@@ -432,7 +510,7 @@ export async function scrape(platform, action, options = {}) {
 
     // Actions that only take page + options (no target)
     const noTargetActions = ['scrapeBookmarks', 'scrapeNotifications', 'scrapeTrending'];
-    
+
     let result;
     try {
       if (noTargetActions.includes(fnName)) {

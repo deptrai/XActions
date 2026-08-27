@@ -18,6 +18,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { resolveAccountCookie } from './facebookAccounts.js';
 import { resolve as resolveFacebookAuth } from '../services/facebookAuth.js';
 import { buildUserDataDir } from '../services/facebookAutomation.js';
+import { scrape } from '../../src/scrapers/index.js';
 const router = express.Router();
 router.use(authMiddleware);
 
@@ -799,6 +800,7 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
 
     // ========================================================================
     // share-link-uid — share post via direct Messenger URL (UID-based)
+    // Now routed through FacebookCrawler.messenger_share (hybrid).
     // ========================================================================
     if (action === 'share-link-uid') {
       const shareBody = /** @type {Record<string, unknown>} */ (req.body ?? {});
@@ -809,12 +811,11 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
       const recipientUid = /** @type {string} */ (shareBody.recipientUid) ?? '';
       const recipientUids = /** @type {string[]} */ (shareBody.recipientUids) ?? [];
       const headlessParam = /** @type {boolean | undefined} */ (shareBody.headless);
-      const url = postUrl || postUrls[0] || '';
+      const url = postUrl || (Array.isArray(postUrls) ? postUrls[0] : '') || '';
       if (!url.trim()) {
         return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires postUrl or postUrls[]' });
       }
 
-      // Normalize recipients: single uid or array
       const allRecipients = [
         ...(recipientUid ? [recipientUid] : []),
         ...(Array.isArray(recipientUids) ? recipientUids : []),
@@ -823,64 +824,26 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
         return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires recipientUid or recipientUids[]' });
       }
 
-      // headless mode: default true (invisible browser). Set false to show browser window.
       const isHeadless = headlessParam !== false;
 
-      // Dry-run: validate inputs, return preview without launching browser
-      if (resolvedDryRun) {
-        return res.json({
-          ok: true,
-          action,
-          dryRun: true,
-          userId: reqUser.id,
-          operationId: null,
+      try {
+        const result = /** @type {Record<string, unknown>} */ (await scrape('facebook', 'messenger_share', {
           postUrl: url,
           recipients: allRecipients,
-          recipientsCount: allRecipients.length,
-          content: content || message || '',
-          headless: isHeadless,
-          method: 'direct-messenger-url',
-        });
-      }
-
-      const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
-      const shareLinkModule = /** @type {{ shareLinkByUid: (page: Page, target: { postUrl: string, recipientUid: string, message?: string }, options?: FacebookOptions) => Promise<Record<string, unknown>> }} */ (await import('../../src/scrapers/facebook/shareLinkByUid.js'));
-      const { shareLinkByUid } = shareLinkModule;
-
-      const browser = await createBrowser({ headless: isHeadless, userDataDir: buildUserDataDir(authCookie.c_user) });
-      const page = await createPage(browser);
-      await loginWithCookie(page, {
-        c_user: authCookie.c_user,
-        xs: authCookie.xs,
-        sb: authCookie.sb,
-        datar: authCookie.datatar ? String(authCookie.datatar) : authCookie.datar,
-        fr: authCookie.fr,
-        fbl_st: authCookie.fbl_st,
-        locale: authCookie.locale,
-        headless: isHeadless,
-      });
-
-      /** @type {Record<string, unknown>[]} */
-      const results = [];
-      try {
-        for (const uid of allRecipients) {
-          const result = await shareLinkByUid(page, {
-            postUrl: url,
-            recipientUid: uid,
-            message: content || message,
-          }, {
-            dryRun: false,
-            headless: isHeadless,
-          });
-          results.push({ uid, ...result });
-        }
-        await browser.close().catch(() => {});
-        const successCount = results.filter((r) => r.ok).length;
+          content: content || message,
+          dryRun: resolvedDryRun,
+          authCookie,
+          browserOptions: { headless: isHeadless },
+        }));
+        const rawResults = result?.results;
+        const results = Array.isArray(rawResults) ? /** @type {Record<string, unknown>[]} */ (rawResults) : [];
+        const successCount = results.filter((r) => Boolean(r.ok)).length;
         return res.json({
           ok: true,
           action,
-          dryRun: false,
+          dryRun: resolvedDryRun,
           userId: reqUser.id,
+          operationId: null,
           postUrl: url,
           results,
           successCount,
@@ -889,108 +852,26 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
           method: 'direct-messenger-url',
         });
       } catch (runError) {
-        await browser.close().catch(() => {});
         return res.status(500).json({ ok: false, error: 'Share link by UID failed. See server logs.' });
       }
     }
 
     const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
     const {
-      likeFacebookPosts,
-      commentOnFacebookPosts,
-      createFacebookPost,
-      shareFacebookPosts,
       scheduleFacebookPost,
-      joinFacebookGroups,
-      postToFacebookGroups,
-      sendFriendRequests,
       cancelPendingFriendRequests,
       warmupAccount,
       warmupScrollFeed,
     } = await import('../services/facebookAutomation.js');
 
-    const options = {
+    const baseOptions = {
       dryRun: resolvedDryRun,
       ...(maxBatch != null && { maxBatch: Number(maxBatch) }),
     };
 
-    const dispatch = /** @type {(page: Page) => Promise<Record<string, unknown>>} */ (async (page) => {
-      if (action === 'like') return await likeFacebookPosts(page, urls, options);
-      if (action === 'comment') return await commentOnFacebookPosts(page, urls, text, options);
-      if (action === 'post') return await createFacebookPost(page, text, options);
-      if (action === 'share') return await shareFacebookPosts(page, urls, options);
-      if (action === 'schedule') {
-        const scheduledAt = /** @type {string | undefined} */ (body.scheduledAt);
-        const facebookAccountId = /** @type {string | undefined} */ (body.facebookAccountId);
-        return await scheduleFacebookPost(page, { content: text, scheduledAt, facebookAccountId }, { ...options, userId: reqUser.id });
-      }
-      if (action === 'join-groups') {
-        const { keyword, limit } = body;
-        return await joinFacebookGroups(page, { groupUrls, keyword, limit }, options);
-      }
-      if (action === 'batch-post-groups') {
-        return await postToFacebookGroups(page, { groupUrls, content: text }, options);
-      }
-      if (action === 'send-friend-requests') {
-        return await sendFriendRequests(page, { mode: 'uid_list', targets }, options);
-      }
-      if (action === 'cancel-friend-requests') {
-        const olderThanDays = /** @type {number | string | undefined} */ (body.olderThanDays);
-        const limit = /** @type {number | string | undefined} */ (body.limit) ?? 10;
-        return await cancelPendingFriendRequests(page, {
-          ...options,
-          ...(olderThanDays != null && { olderThanDays: Number(olderThanDays) }),
-          limit: Number(limit),
-        });
-      }
-      if (action === 'warmup-account') {
-        const durationSeconds = /** @type {number | string | undefined} */ (body.durationSeconds);
-        const allowReactions = /** @type {boolean | undefined} */ (body.allowReactions);
-        const reactProbability = /** @type {number | string | undefined} */ (body.reactProbability);
-        return await warmupAccount(page, {
-          ...options,
-          ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
-          ...(allowReactions !== undefined && { allowReactions }),
-          ...(reactProbability != null && { reactProbability: Number(reactProbability) }),
-        });
-      }
-      if (action === 'warmup-scroll-feed') {
-        const targetUrl = /** @type {string | undefined} */ (body.targetUrl);
-        const durationSeconds = /** @type {number | string | undefined} */ (body.durationSeconds);
-        return await warmupScrollFeed(page, /** @type {string} */ (targetUrl), {
-          ...options,
-          ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
-        });
-      }
-      return await createFacebookPost(page, text, options);
-    });
-
-    // Dry-run never touches the DOM (runGuardedBatch skips actionFn) — no browser,
-    // no real Facebook login, no Operation record. Avoids account risk for a preview.
-    // Exception: cancel-friend-requests needs page access even in dryRun to collect pending requests.
-    if (resolvedDryRun && action !== 'cancel-friend-requests') {
-      const result = await dispatch(/** @type {Page} */ (/** @type {unknown} */ (null)));
-      return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
-    }
-
-    // Real run — create Operation record (config excludes authCookie; never persist cookie values, NFR3)
-    // Bound persisted sizes so a huge urls[]/text can't bloat the Operation row.
-    const MAX_URLS = 100;
-    const MAX_TEXT = 5000;
-    const configUrls = Array.isArray(urls) ? urls.slice(0, MAX_URLS) : [];
-    const configText = String(text ?? '').slice(0, MAX_TEXT);
-    // messenger-share is handled in its own path above; only like/comment/post reach here.
-    const operationConfig = { action, urls: configUrls, text: configText, maxBatch: maxBatch ?? null };
-    const operation = await prisma.operation.create({
-      data: {
-        userId: reqUser.id,
-        type: `facebook_${action}`,
-        status: 'running',
-        startedAt: new Date(),
-        config: JSON.stringify(operationConfig),
-      },
-    });
-    emit({ event: 'start', operationId: operation.id, userId: reqUser.id, type: operation.type, status: 'running' });
+    // Actions migrated to FacebookCrawler hybrid engine.
+    const HYBRID_ACTIONS = ['like', 'comment', 'post', 'share', 'join-groups', 'batch-post-groups', 'send-friend-requests'];
+    const isHybrid = HYBRID_ACTIONS.includes(action);
 
     const envBrowserOptions = defaultBrowserOptionsFromEnv() || {};
     const requestBrowserOptions = /** @type {Record<string, unknown>} */ (body.browserOptions || {});
@@ -1007,26 +888,124 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
     if (Object.keys(proxyAuth).length) runBrowserOptions.proxyAuth = proxyAuth;
     if (Object.keys(proxyLocation).length) runBrowserOptions.proxyLocation = proxyLocation;
 
+    /** @returns {Record<string, unknown>} */
+    const buildHybridScrapeArgs = () => {
+      /** @type {Record<string, unknown>} */
+      const scrapeArgs = { ...baseOptions, authCookie, browserOptions: runBrowserOptions };
+      if (['like', 'comment', 'share'].includes(action)) {
+        scrapeArgs.urls = urls;
+      }
+      if (['comment', 'post', 'batch-post-groups'].includes(action)) {
+        scrapeArgs.text = text;
+      }
+      if (action === 'join-groups') {
+        scrapeArgs.groupUrls = groupUrls;
+        if (body.keyword) scrapeArgs.keyword = String(body.keyword).trim();
+        if (body.limit != null) scrapeArgs.limit = Number(body.limit);
+      }
+      if (action === 'batch-post-groups') {
+        scrapeArgs.groupUrls = groupUrls;
+      }
+      if (action === 'send-friend-requests') {
+        scrapeArgs.targets = targets;
+        scrapeArgs.mode = /** @type {string} */ (body.mode) || 'uid_list';
+        if (body.location) scrapeArgs.location = String(body.location).trim();
+        if (body.limit != null) scrapeArgs.limit = Number(body.limit);
+      }
+      return scrapeArgs;
+    };
+
+    // Legacy dispatch for schedule, cancel, warmup (no hybrid action yet).
+    const dispatch = /** @type {(page: Page) => Promise<Record<string, unknown>>} */ (async (page) => {
+      if (action === 'schedule') {
+        const scheduledAt = /** @type {string | undefined} */ (body.scheduledAt);
+        const facebookAccountId = /** @type {string | undefined} */ (body.facebookAccountId);
+        return await scheduleFacebookPost(page, { content: text, scheduledAt, facebookAccountId }, { ...baseOptions, userId: reqUser.id });
+      }
+      if (action === 'cancel-friend-requests') {
+        const olderThanDays = /** @type {number | string | undefined} */ (body.olderThanDays);
+        const limit = /** @type {number | string | undefined} */ (body.limit) ?? 10;
+        return await cancelPendingFriendRequests(page, {
+          ...baseOptions,
+          ...(olderThanDays != null && { olderThanDays: Number(olderThanDays) }),
+          limit: Number(limit),
+        });
+      }
+      if (action === 'warmup-account') {
+        const durationSeconds = /** @type {number | string | undefined} */ (body.durationSeconds);
+        const allowReactions = /** @type {boolean | undefined} */ (body.allowReactions);
+        const reactProbability = /** @type {number | string | undefined} */ (body.reactProbability);
+        return await warmupAccount(page, {
+          ...baseOptions,
+          ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
+          ...(allowReactions !== undefined && { allowReactions }),
+          ...(reactProbability != null && { reactProbability: Number(reactProbability) }),
+        });
+      }
+      if (action === 'warmup-scroll-feed') {
+        const targetUrl = /** @type {string | undefined} */ (body.targetUrl);
+        const durationSeconds = /** @type {number | string | undefined} */ (body.durationSeconds);
+        return await warmupScrollFeed(page, /** @type {string} */ (targetUrl), {
+          ...baseOptions,
+          ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
+        });
+      }
+      throw new Error(`Unsupported legacy action: ${action}`);
+    });
+
+    // Dry-run preview for hybrid: no browser, no Operation record.
+    // Legacy cancel-friend-requests still needs a page to collect pending requests.
+    if (resolvedDryRun) {
+      if (isHybrid) {
+        const result = /** @type {Record<string, unknown>} */ (await scrape('facebook', action, buildHybridScrapeArgs()));
+        return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
+      }
+      if (action !== 'cancel-friend-requests') {
+        const result = await dispatch(/** @type {Page} */ (/** @type {unknown} */ (null)));
+        return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
+      }
+    }
+
+    // Real run — create Operation record (config excludes authCookie; NFR3)
+    const MAX_URLS = 100;
+    const MAX_TEXT = 5000;
+    const configUrls = Array.isArray(urls) ? urls.slice(0, MAX_URLS) : [];
+    const configGroupUrls = Array.isArray(groupUrls) ? groupUrls.slice(0, MAX_URLS) : [];
+    const configTargets = Array.isArray(targets) ? targets.slice(0, MAX_URLS) : [];
+    const configText = String(text ?? '').slice(0, MAX_TEXT);
+    const operationConfig = { action, urls: configUrls, groupUrls: configGroupUrls, targets: configTargets, text: configText, maxBatch: maxBatch ?? null };
+    const operation = await prisma.operation.create({
+      data: {
+        userId: reqUser.id,
+        type: `facebook_${action}`,
+        status: 'running',
+        startedAt: new Date(),
+        config: JSON.stringify(operationConfig),
+      },
+    });
+    emit({ event: 'start', operationId: operation.id, userId: reqUser.id, type: operation.type, status: 'running' });
+
     /** @type {Record<string, unknown>} */
     let result;
     /** @type {Browser | undefined} */
     let browser;
     try {
-      // createBrowser INSIDE try — else a launch failure orphans the Operation as 'running' forever
-      browser = await createBrowser(runBrowserOptions);
-      const page = await createPage(browser);
-      // Cookie values are never logged (NFR3)
-      await loginWithCookie(page, {
-        c_user: authCookie.c_user,
-        xs: authCookie.xs,
-        sb: authCookie.sb,
-        datar: authCookie.datatar ? String(authCookie.datatar) : authCookie.datar,
-        fr: authCookie.fr,
-        fbl_st: authCookie.fbl_st,
-        locale: authCookie.locale,
-      });
-
-      result = await dispatch(page);
+      if (isHybrid) {
+        result = /** @type {Record<string, unknown>} */ (await scrape('facebook', action, buildHybridScrapeArgs()));
+      } else {
+        browser = await createBrowser(runBrowserOptions);
+        const page = await createPage(browser);
+        await loginWithCookie(page, {
+          c_user: authCookie.c_user,
+          xs: authCookie.xs,
+          sb: authCookie.sb,
+          datar: authCookie.datatar ? String(authCookie.datatar) : authCookie.datar,
+          fr: authCookie.fr,
+          fbl_st: authCookie.fbl_st,
+          locale: authCookie.locale,
+        });
+        result = await dispatch(page);
+      }
 
       await prisma.operation.update({
         where: { id: operation.id },
