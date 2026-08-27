@@ -2,7 +2,7 @@
 story_id: '13.10'
 epic: 13
 story_key: '13-10-facebook-hybrid-integration-caller-migration'
-status: "ready-for-dev"
+status: "in-progress"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-28
