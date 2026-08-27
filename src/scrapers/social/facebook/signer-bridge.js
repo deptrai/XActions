@@ -934,6 +934,45 @@ export class FacebookBrowserBridge {
   }
 
   /**
+   * Execute an operation inside a browser page context with cookie setup and cleanup.
+   * @template T
+   * @param {(page: any) => Promise<T>} fn
+   * @param {Object} [options={}]
+   * @param {string} [options.accountId='fb-guest']
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies='']
+   * @returns {Promise<T>}
+   */
+  async withPage(fn, options = {}) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const { accountId = 'fb-guest', cookies = '' } = opts;
+    const parsedCookies = this.#parseCookies(cookies);
+    const rawCUser = parsedCookies.find((c) => c.name === 'c_user')?.value || '';
+    const parsedCUser = safeDecodeCookie(rawCUser);
+    const effectiveAccountId = parsedCUser || accountId;
+
+    const adapter = await this.#resolveAdapter();
+    const browser = await this.#getBrowser(effectiveAccountId);
+    const page = await adapter.newPage(browser, { preserveProfile: false });
+
+    try {
+      if (parsedCookies.length > 0) {
+        await adapter.setCookies(page, parsedCookies);
+      }
+      const nativePage = page?._native || page;
+      return await fn(nativePage);
+    } catch (err) {
+      if (this.#browser && typeof this.#browser.isConnected === 'function' && !this.#browser.isConnected()) {
+        await this.close();
+      }
+      throw err;
+    } finally {
+      try {
+        await adapter.closePage(page);
+      } catch {}
+    }
+  }
+
+  /**
    * Close any open browser sessions and kill auto-launched Chrome processes.
    * @returns {Promise<void>}
    */

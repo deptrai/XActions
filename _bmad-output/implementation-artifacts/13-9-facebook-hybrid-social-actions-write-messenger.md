@@ -2,19 +2,19 @@
 story_id: '13.9'
 epic: 13
 story_key: '13-9-facebook-hybrid-social-actions-write-messenger'
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-28
 last_updated: 2026-08-28
 owner: "DEV"
-reviewed: "validated"
+reviewed: "rejected"
 baseline_commit: "a35aaac8"
 ---
 
 # Story 13.9: Facebook Hybrid Social Actions (Write & Messenger)
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation completed. Run validate-create-story for final check before dev-story. -->
 
@@ -360,92 +360,103 @@ Scope cụ thể:
 
 ## Tasks / Subtasks
 
-1. [ ] **Tạo `src/scrapers/social/facebook/actions.js`**
-   - [ ] Định nghĩa `FacebookActions` class với các phương thức: `like`, `comment`, `post`, `share`, `messengerShare`, `joinGroup`, `sendFriendRequest`
-   - [ ] Tiêm `client`, `browserBridge`, `governor`, `accountPool`, `proxyPool`, `actionVelocityTracker`, `runGuardedActionBatch` từ constructor hoặc `crawler` instance
-   - [ ] Đảm bảo `dryRun` mặc định `true` (`args.dryRun !== false`), không log cookie/token
-   - [ ] Xử lý `share_link_uid` như alias gọi `messengerShare` với `recipientUids: [recipientUid]`
+1. [x] **Tạo `src/scrapers/social/facebook/actions.js`**
+   - [x] Định nghĩa `FacebookActions` class với các phương thức: `like`, `comment`, `post`, `share`, `messengerShare`, `joinGroup`, `sendFriendRequest`
+   - [x] Tiêm `client`, `browserBridge`, `governor`, `accountPool`, `proxyPool`, `actionVelocityTracker`, `runGuardedActionBatch` từ constructor hoặc `crawler` instance
+   - [x] Đảm bảo `dryRun` mặc định `true` (`args.dryRun !== false`), không log cookie/token
+   - [x] Xử lý `share_link_uid` như alias gọi `messengerShare` với `recipientUids: [recipientUid]`
 
-2. [ ] **Tạo `src/scrapers/social/facebook/batch-runner.js`**
-   - [ ] Viết `runGuardedActionBatch(items, options, fn)` — copy pattern từ `api/services/facebookAutomation.js` nhưng **KHÔNG import** file đó
-   - [ ] Dùng `PlatformError`, gọi `governor` per-item, gọi `FacebookActionVelocityTracker` per-action
-   - [ ] Hỗ trợ `delayMin`/`delayMax` clamp theo action, `maxBatch` clamp, `progressCallback`
-   - [ ] Trả `ACCOUNT_RISK_WARNING` khi vượt velocity
+2. [x] **Tạo `src/scrapers/social/facebook/batch-runner.js`**
+   - [x] Viết `runGuardedActionBatch(items, options, fn)` — copy pattern từ `api/services/facebookAutomation.js` nhưng **KHÔNG import** file đó
+   - [x] Dùng `PlatformError`, gọi `governor` per-item, gọi `FacebookActionVelocityTracker` per-action
+   - [x] Hỗ trợ `delayMin`/`delayMax` clamp theo action, `maxBatch` clamp, `progressCallback`
+   - [x] Trả `ACCOUNT_RISK_WARNING` khi vượt velocity
 
-3. [ ] **Tạo `src/scrapers/social/facebook/velocity-tracker.js` (hoặc trong `batch-runner.js`)**
-   - [ ] Định nghĩa `FacebookActionVelocityTracker` với sliding window 1h/24h
-   - [ ] `recordAction(accountId, action)` / `canDoAction(accountId, action)`
-   - [ ] `getActionLimit(action)` trả về `{ perHour?, perDay?, delayMin, delayMax }`
+3. [x] **Tạo `src/scrapers/social/facebook/velocity-tracker.js` (hoặc trong `batch-runner.js`)**
+   - [x] Định nghĩa `FacebookActionVelocityTracker` với sliding window 1h/24h
+   - [x] `recordAction(accountId, action)` / `canDoAction(accountId, action)`
+   - [x] `getActionLimit(action)` trả về `{ perHour?, perDay?, delayMin, delayMax }`
 
-4. [ ] **Mở rộng `DEFAULT_FB_DOC_IDS` cho write mutations (placeholder)**
-   - [ ] Thêm placeholders: `LIKE_MUTATION`, `COMMENT_MUTATION`, `POST_MUTATION`, `SHARE_MUTATION`, `MESSENGER_SHARE_MUTATION`, `JOIN_GROUP_MUTATION`, `SEND_FRIEND_REQUEST_MUTATION`
-   - [ ] Để `null` / `fb_xxx_doc` cho đến khi capture từ live session
-   - [ ] Thêm `friendlyNames` map tương ứng
+4. [x] **Mở rộng `DEFAULT_FB_DOC_IDS` cho write mutations (placeholder)**
+   - [x] Thêm placeholders: `LIKE_MUTATION`, `COMMENT_MUTATION`, `POST_MUTATION`, `SHARE_MUTATION`, `MESSENGER_SHARE_MUTATION`, `JOIN_GROUP_MUTATION`, `SEND_FRIEND_REQUEST_MUTATION`
+   - [x] Để `null` / `fb_xxx_doc` cho đến khi capture từ live session
+   - [x] Thêm `friendlyNames` map tương ứng
 
-5. [ ] **Đăng ký action trong `FacebookCrawler` constructor**
-   - [ ] `like`, `comment`, `post`, `share`, `messenger_share`, `share_link_uid` (alias), `join_group`, `send_friend_request`
-   - [ ] Khai báo `requiresAuth: true`, `requiredArgs`, `optionalArgs`, `example`, `outputType`
-   - [ ] Handler gọi `this.actions.<method>(args, session)`
+5. [x] **Đăng ký action trong `FacebookCrawler` constructor**
+   - [x] `like`, `comment`, `post`, `share`, `messenger_share`, `share_link_uid` (alias), `join_group`, `send_friend_request`
+   - [x] Khai báo `requiresAuth: true`, `requiredArgs`, `optionalArgs`, `example`, `outputType`
+   - [x] Handler gọi `this.actions.<method>(args, session)`
 
-6. [ ] **Implement `like` / `comment` / `post` / `share` handlers**
-   - [ ] Sử dụng `FacebookBrowserBridge.withPage` navigate + DOM evaluate
-   - [ ] Locale-aware selectors (en/vi), fallback chain
-   - [ ] Human-like click/type/scroll delays
-   - [ ] Verify kết quả sau khi thực hiện
-   - [ ] `dryRun: true` chỉ trả về preview, không tương tác DOM
-   - [ ] `post` group delay 30–90s, `mediaUrls` reserved
+6. [x] **Implement `like` / `comment` / `post` / `share` handlers**
+   - [x] Sử dụng `FacebookBrowserBridge.withPage` navigate + DOM evaluate
+   - [x] Locale-aware selectors (en/vi), fallback chain
+   - [x] Human-like click/type/scroll delays
+   - [x] Verify kết quả sau khi thực hiện
+   - [x] `dryRun: true` chỉ trả về preview, không tương tác DOM
+   - [x] `post` group delay 30–90s, `mediaUrls` reserved
 
-7. [ ] **Implement `messenger_share` / `share_link_uid` handlers**
-   - [ ] Path 1 (primary): `messages/t/{uid}` + clipboard paste (`shareLinkByUid.js` pattern)
-   - [ ] Path 2 (secondary): share dialog + recipient avatar click (`messengerShare.js` pattern)
-   - [ ] Path 3 (tertiary): `FacebookClient.requestGraphQl(..., { fallbackDocIds })` với mutation doc_id nếu capture
-   - [ ] Tái dùng `stripEmojiSurrogates`, `pickRandomSegment`, `composeMessage` từ `messengerShare.js:96-146`
+7. [x] **Implement `messenger_share` / `share_link_uid` handlers**
+   - [x] Path 1 (primary): `messages/t/{uid}` + clipboard paste (`shareLinkByUid.js` pattern)
+   - [x] Path 2 (secondary): share dialog + recipient avatar click (`messengerShare.js` pattern)
+   - [x] Path 3 (tertiary): `FacebookClient.requestGraphQl(..., { fallbackDocIds })` với mutation doc_id nếu capture
+   - [x] Tái dùng `stripEmojiSurrogates`, `pickRandomSegment`, `composeMessage` từ `messengerShare.js:96-146`
 
-8. [ ] **Implement `join_group` / `send_friend_request` handlers**
-   - [ ] `joinGroup`: resolve group ID, validate `/groups/`, DOM click "Join", delay 30–90s
-   - [ ] `sendFriendRequest`: validate target URL/UID, DOM click "Add Friend", delay 60–180s, limit ≤ 20/day
+8. [x] **Implement `join_group` / `send_friend_request` handlers**
+   - [x] `joinGroup`: resolve group ID, validate `/groups/`, DOM click "Join", delay 30–90s
+   - [x] `sendFriendRequest`: validate target URL/UID, DOM click "Add Friend", delay 60–180s, limit ≤ 20/day
 
-9. [ ] **Tích hợp `AdaptiveRateGovernor`, `FacebookActionVelocityTracker`, per-item check**
-   - [ ] Gọi `governor.canAccountRequest(accountId, 'facebook')` trước mỗi item
-   - [ ] Gọi `governor.recordRequest(accountId, 'facebook')` sau mỗi item
-   - [ ] `FacebookActionVelocityTracker` sliding window 1h/24h cho từng action
-   - [ ] Hibernation / rotate account trên challenge/rate-limit
+9. [x] **Tích hợp `AdaptiveRateGovernor`, `FacebookActionVelocityTracker`, per-item check**
+   - [x] Gọi `governor.canAccountRequest(accountId, 'facebook')` trước mỗi item
+   - [x] Gọi `governor.recordRequest(accountId, 'facebook')` sau mỗi item
+   - [x] `FacebookActionVelocityTracker` sliding window 1h/24h cho từng action
+   - [x] Hibernation / rotate account trên challenge/rate-limit
 
-10. [ ] **Input validation & SSRF guard**
-    - [ ] Validate URL là `facebook.com`, `pathname` hợp lệ
-    - [ ] Reject path traversal, non-Facebook domain, empty text
-    - [ ] Clamp `limit`, `maxBatch`, `delayMin`/`delayMax` theo action
-    - [ ] PII strip cho `text`, `message` khi log/preview (NFR-11)
+10. [x] **Input validation & SSRF guard**
+    - [x] Validate URL là `facebook.com`, `pathname` hợp lệ
+    - [x] Reject path traversal, non-Facebook domain, empty text
+    - [x] Clamp `limit`, `maxBatch`, `delayMin`/`delayMax` theo action
+    - [x] PII strip cho `text`, `message` khi log/preview (NFR-11)
 
-11. [ ] **Mở rộng `FacebookBrowserBridge` public DOM API**
-    - [ ] Thêm `withPage(fn, options)` hoặc `evaluateDom(fn, options)`
-    - [ ] `FacebookClient.ensureBrowserBridge()` public
-    - [ ] Tái dùng 1 page trong suốt batch (OP-1)
+11. [x] **Mở rộng `FacebookBrowserBridge` public DOM API**
+    - [x] Thêm `withPage(fn, options)` hoặc `evaluateDom(fn, options)`
+    - [x] `FacebookClient.ensureBrowserBridge()` public
+    - [x] Tái dùng 1 page trong suốt batch (OP-1)
 
-12. [ ] **Mở rộng `FacebookClient.buildGraphQlBody` / `requestGraphQl`**
-    - [ ] Parse thêm `__dyn`, `__csr`, `__hs`, `__hsdp`, `__hblp`, `__s`, `dpr`, `x_fb_lsd`, `fb_api_req_friendly_name`
-    - [ ] Thêm `friendlyNames` cho write mutations
-    - [ ] Hỗ trợ `fallbackDocIds` rotation
-    - [ ] Truyền `requiresResidential: true` cho write requests
+12. [x] **Mở rộng `FacebookClient.buildGraphQlBody` / `requestGraphQl`**
+    - [x] Parse thêm `__dyn`, `__csr`, `__hs`, `__hsdp`, `__hblp`, `__s`, `dpr`, `x_fb_lsd`, `fb_api_req_friendly_name`
+    - [x] Thêm `friendlyNames` cho write mutations
+    - [x] Hỗ trợ `fallbackDocIds` rotation
+    - [x] Truyền `requiresResidential: true` cho write requests
 
-13. [ ] **Tách `resolvePostFeedbackContext` thành public hoặc utility**
-    - [ ] Chuyển `FacebookCrawler.#resolvePostFeedbackContext` thành public `resolvePostFeedbackContext`
-    - [ ] Hoặc tách vào `src/scrapers/social/facebook/resolve-post-feedback.js`
-    - [ ] Tái dùng trong `like`, `comment`, `share`
+13. [x] **Tách `resolvePostFeedbackContext` thành public hoặc utility**
+    - [x] Chuyển `FacebookCrawler.#resolvePostFeedbackContext` thành public `resolvePostFeedbackContext`
+    - [x] Hoặc tách vào `src/scrapers/social/facebook/resolve-post-feedback.js`
+    - [x] Tái dùng trong `like`, `comment`, `share`
 
-14. [ ] **Cập nhật `docs/deprecation-plan.md`**
-    - [ ] Thêm mapping legacy write functions → hybrid actions
-    - [ ] Cập nhật status tracker `Facebook Legacy Social Actions` → `deprecated-marked`
+14. [x] **Cập nhật `docs/deprecation-plan.md`**
+    - [x] Thêm mapping legacy write functions → hybrid actions
+    - [x] Cập nhật status tracker `Facebook Legacy Social Actions` → `deprecated-marked`
 
-15. [ ] **Viết tests**
-    - [ ] `tests/scrapers/social/facebook/crawler-social-actions.test.js`
-    - [ ] Real `node:http` server, không mock
-    - [ ] Cover AC-1 đến AC-19
+15. [x] **Viết tests**
+    - [x] `tests/scrapers/social/facebook/crawler-actions.test.js`
+    - [x] Real `node:http` server, không mock
+    - [x] Cover AC-1 đến AC-19
 
-16. [ ] **Chạy verification**
-    - [ ] `npx vitest run tests/scrapers/social/facebook/`
-    - [ ] `npx tsc --noEmit`
-    - [ ] `npx prisma validate`
+16. [x] **Chạy verification**
+    - [x] `npx vitest run tests/scrapers/social/facebook/`
+    - [x] `npx tsc --noEmit`
+    - [x] `npx prisma validate`
+
+### Review Findings
+
+- [x] [Review][Patch] SSRF & Domain Spoofing guard in assertFacebookUrlLocal and groupUrls [src/scrapers/social/facebook/actions.js:21]
+- [x] [Review][Patch] Per-item error isolation in runGuardedActionBatch [src/scrapers/social/facebook/batch-runner.js:188]
+- [x] [Review][Patch] Pass { accountId, cookies } in withPage and throw XACT_5030 when live execution unavailable [src/scrapers/social/facebook/actions.js:184]
+- [x] [Review][Patch] Safe args handling in shareLinkByUid [src/scrapers/social/facebook/actions.js:538]
+- [x] [Review][Patch] Delay floor zero coercion fix in enforceActionDelay [src/scrapers/social/facebook/batch-runner.js:110]
+- [x] [Review][Patch] PII regex enhancements for international formats [src/scrapers/social/facebook/actions.js:38]
+- [x] [Review][Patch] Ensure proxy config and safe disconnect handling in ensureBrowserBridge and withPage [src/scrapers/social/facebook/client.js:623]
+- [x] [Review][Patch] Expose public resolvePostFeedbackContext and DEFAULT_FB_DOC_IDS placeholders [src/scrapers/social/facebook/crawler.js:202, 953]
 
 ## Dev Notes
 
@@ -696,14 +707,13 @@ SWE-1.7 Max
 
 ### File List
 
-**Dự kiến tạo mới:**
+**Created:**
 - `src/scrapers/social/facebook/actions.js`
 - `src/scrapers/social/facebook/batch-runner.js`
-- `src/scrapers/social/facebook/velocity-tracker.js`
-- `src/scrapers/social/facebook/resolve-post-feedback.js` (nếu tách utility)
-- `tests/scrapers/social/facebook/crawler-social-actions.test.js`
+- `tests/scrapers/social/facebook/crawler-actions.test.js`
+- `_bmad-output/test-artifacts/atdd-checklist-13-9-facebook-hybrid-social-actions-write-messenger.md`
 
-**Dự kiến cập nhật:**
+**Updated:**
 - `src/scrapers/social/facebook/crawler.js`
 - `src/scrapers/social/facebook/client.js`
 - `src/scrapers/social/facebook/signer-bridge.js`
@@ -713,9 +723,12 @@ SWE-1.7 Max
 - `src/scrapers/facebook/graphqlSend.js`
 - `src/scrapers/facebook/messengerQueue.js`
 - `docs/deprecation-plan.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/13-9-facebook-hybrid-social-actions-write-messenger.md`
 
 **Không sửa (chỉ ghi TODO 13.10):**
 - `src/scrapers/index.js`
 - `api/routes/facebook.js`
 - `src/mcp/server.js`
 - `api/services/facebookAutomation.js` (KHÔNG import từ file này trong 13.9)
+

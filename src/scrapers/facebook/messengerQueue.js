@@ -1,27 +1,9 @@
-
-/** @typedef {import('puppeteer').Page} Page */
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// LEGACY — see docs/deprecation-plan.md (Replaced by batch handling in FacebookCrawler Story 13.9)
 /**
  * Facebook Messenger-share input/queue parser (Story 5.4 — Messenger Port, Epic 5).
  *
- * Pure, browser-free port of SST_TOOL_FB Main.cs:Post() file-queue (P10). The C#
- * tool drove campaigns from flat text files popped FIFO across a worker pool:
- *   - recipients list — target Pages a post is shared to via Messenger
- *   - content file     — message body (may contain `**`-delimited segments)
- *   - txtlinkss.txt    — the post URL(s) to share
- *
- * XActions is single-campaign-per-invocation, so the FIFO here means
- * **deterministic ordering + no double-send within a run**, not cross-process
- * locking. This module ONLY parses + pairs inputs; it routes to the already-
- * implemented `messengerShareCampaign` (Story 5.2) — no automation logic here.
- *
- * Design notes:
- *  - All functions pure + synchronous; null/empty/whitespace-safe (never throw).
- *  - De-dup preserves first-seen order (FIFO) per AC2/AC3.
- *  - Pairing rule (AC4): ONE campaign per link, each sharing the same full
- *    recipients array + content (mirrors C# — every link → every target page).
- *  - Links must match facebook.com; bad lines are dropped + tallied, not thrown.
- *
+ * @deprecated Use FacebookCrawler batch actions (Story 13.9) instead.
  * @author nich (@nichxbt)
  * @license BSL 1.1
  * @see SST_TOOL_FB/Main.cs:Post() (file-queue / P10)

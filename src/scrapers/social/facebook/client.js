@@ -617,6 +617,31 @@ export class FacebookClient extends AbstractApiClient {
   }
 
   /**
+   * Ensure and return a browser bridge instance.
+   * @returns {FacebookBrowserBridge}
+   */
+  ensureBrowserBridge() {
+    if (this.browserBridge) return this.browserBridge;
+    if (!this.#ownedBrowserBridge) {
+      this.#ownedBrowserBridge = new FacebookBrowserBridge({
+        baseUrl: this.baseUrl,
+        cdpUrl: this.cdpUrl || undefined,
+        launchChrome: this.launchChrome,
+        adapterName: this.adapterName,
+        headless: this.headless,
+        userDataDir: this.userDataDir || undefined,
+        profileDir: this.profileDir || undefined,
+        proxy: this.proxy,
+        proxyPool: this.proxyPool,
+        proxyProvider: this.proxyProvider,
+        extraArgs: this.extraArgs,
+      });
+      this.browserBridge = this.#ownedBrowserBridge;
+    }
+    return this.#ownedBrowserBridge;
+  }
+
+  /**
    * Close client and any owned browser signer bridge.
    * @returns {Promise<void>}
    */

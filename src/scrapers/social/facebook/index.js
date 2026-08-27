@@ -27,4 +27,6 @@ export {
   normalizeFacebookMarketplaceListing,
   marketplaceListingToPostItem,
 } from './normalize-marketplace.js';
+export { FacebookActions, assertFacebookUrlLocal, stripPii, stripEmojiSurrogates, pickRandomSegment } from './actions.js';
+export { FacebookActionVelocityTracker, runGuardedActionBatch, enforceActionDelay, ACTION_LIMITS, ACCOUNT_RISK_WARNING } from './batch-runner.js';
 

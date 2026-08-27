@@ -1,7 +1,10 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// LEGACY — see docs/deprecation-plan.md (Replaced by FacebookClient.requestGraphQl / facebook:messenger_share in Story 13.9)
 /**
  * Send message to UID via GraphQL - Server-side HTTP request (C# Main.cs:579)
  * Uses full session state params required by Facebook.
+ *
+ * @deprecated Use FacebookCrawler with action 'messenger_share' or FacebookClient (Story 13.9) instead.
  */
 
 import axios from 'axios';
