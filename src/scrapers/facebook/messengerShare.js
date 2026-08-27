@@ -1,4 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// LEGACY — see docs/deprecation-plan.md (Replaced by facebook:messenger_share in Story 13.9)
 /**
  * XActions Facebook Messenger Share Automation (Story 5.2)
  *
@@ -11,6 +12,7 @@
  * - Delay seam injectable for browser-free unit tests.
  * - Selectors are UNVERIFIED — see docs/agents/selectors-facebook.md.
  *
+ * @deprecated Use FacebookCrawler with action 'messenger_share' (Story 13.9) instead.
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license BSL 1.1

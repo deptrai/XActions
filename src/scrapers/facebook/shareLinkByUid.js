@@ -1,4 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// LEGACY — see docs/deprecation-plan.md (Replaced by facebook:messenger_share / share_link_uid in Story 13.9)
 /**
  * Share link via UID - Direct Messenger URL approach (VERIFIED 2026-08).
  *
@@ -11,6 +12,8 @@
  * - Works with UIDs directly (no need for display names)
  * - Doesn't require recipients to be in the share dialog's friend list
  * - One-click send vs multi-step share dialog flow
+ *
+ * @deprecated Use FacebookCrawler with action 'messenger_share' or 'share_link_uid' (Story 13.9) instead.
  */
 
 import { runGuardedBatch } from '../../../api/services/facebookAutomation.js';

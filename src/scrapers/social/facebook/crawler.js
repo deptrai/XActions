@@ -26,6 +26,8 @@ import {
   searchResultToPostItem,
 } from './normalize-search.js';
 import { normalizeFacebookMarketplaceListing } from './normalize-marketplace.js';
+import { FacebookActions } from './actions.js';
+import { FacebookActionVelocityTracker } from './batch-runner.js';
 import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from '../../facebook/core.js';
 import { normalizeHandle, buildMarketplaceSearchUrl, resolveMarketplaceLocation } from '../../facebook/normalize.js';
 
@@ -411,6 +413,16 @@ export class FacebookCrawler extends AbstractCrawler {
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupSearch(args, session),
     });
 
+    this.velocityTracker = /** @type {any} */ (deps).velocityTracker || new FacebookActionVelocityTracker();
+    this.actions = new FacebookActions({
+      client: this.client,
+      crawler: this,
+      governor: this.governor,
+      accountPool: this.accountPool,
+      proxyPool: /** @type {any} */ (deps).proxyPool || this.client?.proxyPool || null,
+      velocityTracker: this.velocityTracker,
+    });
+
     this.registerAction({
       action: 'marketplace',
       description: 'Search products and listings on Facebook Marketplace',
@@ -420,6 +432,94 @@ export class FacebookCrawler extends AbstractCrawler {
       outputType: '{ posts: PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }',
       requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.marketplace(args, session),
+    });
+
+    this.registerAction({
+      action: 'like',
+      description: 'Like or unlike Facebook posts with human-like delay and rate limits',
+      requiredArgs: ['postUrl'],
+      optionalArgs: ['postUrls', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
+      example: { postUrl: 'https://www.facebook.com/zuck/posts/1011565502' },
+      outputType: '{ results: { postUrl: string, liked: boolean, alreadyLiked: boolean, error?: string }[], dryRun: boolean }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.like(args, session),
+    });
+
+    this.registerAction({
+      action: 'comment',
+      description: 'Comment on Facebook posts with human-like typing and PII safety',
+      requiredArgs: ['postUrl', 'text'],
+      optionalArgs: ['postUrls', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
+      example: { postUrl: 'https://www.facebook.com/zuck/posts/1011565502', text: 'Great update!' },
+      outputType: '{ results: { postUrl: string, commentId?: string, error?: string }[], dryRun: boolean }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.comment(args, session),
+    });
+
+    this.registerAction({
+      action: 'post',
+      description: 'Create a post on timeline or Facebook group(s)',
+      requiredArgs: ['text'],
+      optionalArgs: ['mediaUrls', 'groupUrls', 'groupIds', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
+      example: { text: 'Hello Facebook from XActions Hybrid Crawler!' },
+      outputType: '{ results: { targetUrl: string, postId?: string, error?: string }[], dryRun: boolean }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.post(args, session),
+    });
+
+    this.registerAction({
+      action: 'share',
+      description: 'Share a Facebook post to timeline',
+      requiredArgs: ['postUrl'],
+      optionalArgs: ['postUrls', 'message', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
+      example: { postUrl: 'https://www.facebook.com/zuck/posts/1011565502' },
+      outputType: '{ results: { postUrl: string, shared: boolean, error?: string }[], dryRun: boolean }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.share(args, session),
+    });
+
+    this.registerAction({
+      action: 'messenger_share',
+      description: 'Share a post or message to one or more recipient UIDs via Messenger',
+      requiredArgs: ['postUrl'],
+      optionalArgs: ['recipientUids', 'recipientNames', 'recipientUid', 'message', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
+      example: { postUrl: 'https://www.facebook.com/zuck/posts/1011565502', recipientUids: ['100001234567890'] },
+      outputType: '{ results: { recipientUid: string, ok: boolean, method?: string, error?: string }[], dryRun: boolean }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.messengerShare(args, session),
+    });
+
+    this.registerAction({
+      action: 'share_link_uid',
+      description: 'Alias for sharing a link to a single recipient UID via Messenger',
+      requiredArgs: ['postUrl', 'recipientUid'],
+      optionalArgs: ['message', 'dryRun', 'delayMin', 'delayMax'],
+      example: { postUrl: 'https://www.facebook.com/zuck/posts/1011565502', recipientUid: '100001234567890' },
+      outputType: '{ results: { recipientUid: string, ok: boolean, method?: string, error?: string }[], dryRun: boolean }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.shareLinkByUid(args, session),
+    });
+
+    this.registerAction({
+      action: 'join_group',
+      description: 'Join Facebook group(s) with human-like delays',
+      requiredArgs: [],
+      optionalArgs: ['groupUrls', 'groupIds', 'keyword', 'limit', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
+      example: { groupUrls: ['https://www.facebook.com/groups/123456'] },
+      outputType: '{ results: { groupUrl: string, joined: boolean, error?: string }[], dryRun: boolean }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.joinGroup(args, session),
+    });
+
+    this.registerAction({
+      action: 'send_friend_request',
+      description: 'Send Facebook friend request(s) to targets with safety limits',
+      requiredArgs: ['targets'],
+      optionalArgs: ['mode', 'location', 'limit', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
+      example: { targets: ['https://www.facebook.com/zuck'] },
+      outputType: '{ results: { target: string, ok: boolean, error?: string }[], dryRun: boolean }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.sendFriendRequest(args, session),
     });
   }
 
@@ -2789,6 +2889,78 @@ export class FacebookCrawler extends AbstractCrawler {
   }
 
   /**
+   * Like a Facebook post.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async like(args, session = {}) {
+    return this.actions.like(args, session);
+  }
+
+  /**
+   * Comment on a Facebook post.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async comment(args, session = {}) {
+    return this.actions.comment(args, session);
+  }
+
+  /**
+   * Create a post on timeline or group(s).
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async post(args, session = {}) {
+    return this.actions.post(args, session);
+  }
+
+  /**
+   * Share a Facebook post to timeline.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async share(args, session = {}) {
+    return this.actions.share(args, session);
+  }
+
+  /**
+   * Share a post or message to one or more recipient UIDs via Messenger.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async messengerShare(args, session = {}) {
+    return this.actions.messengerShare(args, session);
+  }
+
+  /**
+   * Alias for sharing a link to a single recipient UID via Messenger.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async shareLinkByUid(args, session = {}) {
+    return this.actions.shareLinkByUid(args, session);
+  }
+
+  /**
+   * Join Facebook group(s).
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async joinGroup(args, session = {}) {
+    return this.actions.joinGroup(args, session);
+  }
+
+  /**
+   * Send Facebook friend request(s) to targets.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async sendFriendRequest(args, session = {}) {
+    return this.actions.sendFriendRequest(args, session);
+  }
+
+  /**
    * Cleanup crawler and client resources.
    * @returns {Promise<void>}
    */
@@ -2800,3 +2972,4 @@ export class FacebookCrawler extends AbstractCrawler {
     }
   }
 }
+
