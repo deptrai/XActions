@@ -2,19 +2,19 @@
 story_id: '13.10'
 epic: 13
 story_key: '13-10-facebook-hybrid-integration-caller-migration'
-status: "done"
+status: "needs-rework"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-28
-last_updated: 2026-08-28T22:15:00Z
+last_updated: 2026-08-28T23:15:00Z
 owner: "DEV"
-reviewed: "approved"
+reviewed: "needs-rework"
 baseline_commit: "fddb8ba62e9b438a539df4a67f30bf1a41dc1592"
 ---
 
 # Story 13.10: Facebook Hybrid Integration & Caller Migration
 
-Status: done
+Status: needs-rework (review 2026-08-28)
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

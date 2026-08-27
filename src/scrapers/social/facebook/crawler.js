@@ -303,6 +303,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: ['groupId'],
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupPosts(args, session),
     });
 
@@ -322,6 +323,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: ['postId'],
       optionalArgs: ['maxDepth', 'maxComments', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getCommentsForPost(args, session),
     });
 
@@ -331,6 +333,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: ['url'],
       optionalArgs: ['postId', 'maxDepth', 'maxComments', 'limit', 'includeReplies', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.postComments(args, session),
     });
 
@@ -340,6 +343,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: ['url'],
       optionalArgs: ['postId', 'maxDepth', 'maxComments', 'limit', 'includeReplies', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupComments(args, session),
     });
 
@@ -361,6 +365,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['username', 'url', 'limit', 'cursor'],
       example: { username: 'zuck', limit: 20 },
       outputType: '{ followers: ProfileItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.followers(args, session),
     });
 
@@ -371,6 +376,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['username', 'url', 'limit', 'cursor'],
       example: { username: 'zuck' },
       outputType: '{ following?: ProfileItem[], note?: string, pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.following(args, session),
     });
 
@@ -381,6 +387,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['groupUrl', 'groupId', 'limit', 'cursor'],
       example: { groupUrl: 'https://www.facebook.com/groups/123456', limit: 50 },
       outputType: '{ members: ProfileItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupMembers(args, session),
     });
 
@@ -402,6 +409,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['limit', 'cursor'],
       example: { groupUrl: 'https://www.facebook.com/groups/123456', query: 'ai tools', limit: 20 },
       outputType: '{ posts: PostItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupSearch(args, session),
     });
 

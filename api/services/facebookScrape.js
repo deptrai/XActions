@@ -118,13 +118,19 @@ export async function runSearchAllParallel(baseArgs = {}, rest = {}, userId, bro
     )
   );
 
+  /**
+   * Extract an array result from a settled promise by output key.
+   * @param {PromiseSettledResult<Record<string, unknown> | Record<string, unknown>[]>} res
+   * @param {string} key
+   * @returns {unknown[]}
+   */
   const getArrayResult = (res, key) => {
     if (res.status !== 'fulfilled' || !res.value) return [];
     const val = res.value;
     if (Array.isArray(val)) return val;
     if (Array.isArray(val[key])) return val[key];
     if (key === 'people' && Array.isArray(val.users)) return val.users;
-    if (Array.isArray(val.posts)) return val.posts;
+    if (key === 'posts' && Array.isArray(val.posts)) return val.posts;
     if (Array.isArray(val.items)) return val.items;
     return [];
   };

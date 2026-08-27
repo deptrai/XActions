@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-27T06:00:00.000Z
-last_updated: 2026-08-28T21:00:00Z
+last_updated: 2026-08-28T23:15:00Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -88,7 +88,7 @@ development_status:
   13-7-facebook-hybrid-post-group-comments: done
   13-8-facebook-hybrid-marketplace: done
   13-9-facebook-hybrid-social-actions-write-messenger: done
-  13-10-facebook-hybrid-integration-caller-migration: done
+  13-10-facebook-hybrid-integration-caller-migration: needs-rework
   epic-13-retrospective: optional
 
   # --- Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream ---

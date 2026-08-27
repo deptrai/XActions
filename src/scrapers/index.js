@@ -41,6 +41,7 @@ import mastodon from './mastodon/index.js';
 import threads from './threads/index.js';
 import facebook from './facebook/index.js';
 import { FacebookCrawler, FacebookClient, FacebookActions } from './social/facebook/index.js';
+import { resolveTargetKey, resolveGroupId } from './social/facebook/crawler.js';
 
 export { FacebookCrawler, FacebookClient, FacebookActions };
 
@@ -271,6 +272,26 @@ async function dispatchFacebookHybrid(action, options = {}) {
     delete args.client;
     delete args.crawler;
     delete args.authToken;
+
+    // Resolve page/group identifiers from URL aliases (AC-2)
+    if (mappedAction === 'page_posts' && !args.pageId) {
+      const raw = args.url || args.username || args.targetUrl;
+      if (typeof raw === 'string' && raw.trim()) {
+        args.pageId = resolveTargetKey(raw.trim());
+      }
+    }
+    if (mappedAction === 'group_posts' && !args.groupId) {
+      const raw = args.url || args.groupUrl || args.groupId;
+      if (typeof raw === 'string' && raw.trim()) {
+        args.groupId = resolveGroupId(raw.trim());
+      }
+    }
+    if ((mappedAction === 'group_search' || mappedAction === 'group_members') && !args.groupUrl && !args.groupId) {
+      const raw = args.url || args.groupUrl;
+      if (typeof raw === 'string' && raw.trim()) {
+        args.groupUrl = raw.trim();
+      }
+    }
 
     const result = await crawler.start({
       action: mappedAction,
