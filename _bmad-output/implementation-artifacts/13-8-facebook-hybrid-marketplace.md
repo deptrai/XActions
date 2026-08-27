@@ -484,6 +484,21 @@ Từ Story 13.6:
 
 Verification: `npx tsc --noEmit` pass; `npx vitest run tests/core tests/scrapers/social/facebook` 252 tests pass.
 
+#### real-data smoke test (Sentinel)
+
+Infra profile: cookie from `~/.xactions/facebook-cookies.json` for auth tests; no cookie for guest tests. No proxy. Low volume (`limit=2`).
+
+- [x] Guest `FacebookClient.ensureTokens(null, '')` extracts `c_user=0` and an `lsd` token from the Facebook home page; `buildGraphQlBody` forces `__user=0` and consumes from `guestTokenRing`.
+- [x] Auth `FacebookClient.ensureTokens('real_account', cookie)` correctly throws `XACT_4010` because the stored cookie hits a login wall from this environment/IP (cookie invalid/expired).
+- [x] Guest `FacebookCrawler.marketplace({ query: 'macbook', location: 'hochiminhcity', limit: 2 })` returns 2 real PostItems with title, price, and location (SSR fallback).
+- [x] Auth `FacebookCrawler.marketplace(...)` with the invalid cookie falls back to the public SSR page and still returns 2 real PostItems (the cookie did not authenticate, but the action is public).
+- [ ] Guest `FacebookCrawler.search`/`profile`/`page_posts` fail as expected: doc_ids are placeholders (`DEFAULT_FB_DOC_IDS`) and no SSR fallback is implemented for these actions.
+- [ ] Auth `FacebookCrawler.group_members` and `profile` fail as expected with `XACT_4010` (invalid cookie) or `XACT_4001` (invalid GraphQL response with placeholder doc_id).
+
+Known real-data blockers not caused by this commit:
+- `DEFAULT_FB_DOC_IDS.MARKETPLACE_SEARCH/SEARCH_*` are placeholders; live doc_ids must be captured for GraphQL-first actions.
+- The stored `~/.xactions/facebook-cookies.json` is not valid from the current IP; auth-only actions cannot be verified until a fresh cookie is supplied.
+
 #### defer
 
 - [x] [Review][Defer] `DEFAULT_FB_DOC_IDS.MARKETPLACE_SEARCH` là placeholder — by design, cần capture live doc_id. [`crawler.js:192-196`]
