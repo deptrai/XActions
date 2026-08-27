@@ -97,6 +97,7 @@
  * @property {string[]} [optionalArgs]
  * @property {Object} [example]
  * @property {string} [outputType]
+ * @property {boolean} [requiresAuth]
  */
 
 /**

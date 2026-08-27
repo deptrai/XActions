@@ -702,11 +702,20 @@ const MARKETPLACE_KNOWN_LOCATIONS = new Map([
  */
 export function resolveMarketplaceLocation(input) {
   if (typeof input !== 'string' || !input.trim()) return null;
-  const key = input.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const trimmed = input.trim();
+
+  // Accept only full facebook.com/marketplace/<slug> URLs and extract the slug.
+  if (/^https?:\/\//i.test(trimmed)) {
+    const match = trimmed.match(/^https?:\/\/(?:www\.)?facebook\.com\/marketplace\/([a-zA-Z0-9_-]+)(?:\/?|[/?#].*)$/i);
+    if (!match) return null;
+    return resolveMarketplaceLocation(match[1]);
+  }
+
+  const key = trimmed.toLowerCase().replace(/[^a-z0-9]/g, '');
   const mapped = MARKETPLACE_KNOWN_LOCATIONS.get(key);
   if (mapped) return mapped;
-  const trimmed = input.trim().toLowerCase();
-  if (/^[a-z0-9]+$/.test(trimmed)) return trimmed;
+  const lower = trimmed.toLowerCase();
+  if (/^[a-z0-9]+$/.test(lower)) return lower;
   return null;
 }
 
@@ -716,9 +725,24 @@ export function resolveMarketplaceLocation(input) {
  * @returns {string}
  */
 export function buildMarketplaceSearchUrl(query, options = {}) {
-  const { location, category, minPrice, maxPrice } = options;
+  const {
+    location,
+    category,
+    minPrice,
+    maxPrice,
+    categoryId,
+    radius,
+    radiusKm,
+    latitude,
+    lat,
+    longitude,
+    lng,
+    cursor,
+    baseUrl,
+  } = options;
+  const base = typeof baseUrl === 'string' && baseUrl.trim() ? baseUrl.trim() : FACEBOOK_BASE;
   const locationSlug = resolveMarketplaceLocation(location);
-  let basePath = `${FACEBOOK_BASE}/marketplace`;
+  let basePath = `${base}/marketplace`;
   if (locationSlug) {
     basePath += `/${locationSlug}`;
   }
@@ -726,10 +750,23 @@ export function buildMarketplaceSearchUrl(query, options = {}) {
     basePath += `/category/${encodeURIComponent(category.trim())}`;
   }
   const params = [`query=${encodeURIComponent(query.trim())}`];
+
+  const resolvedRadius = typeof radiusKm === 'number' && Number.isFinite(radiusKm)
+    ? radiusKm
+    : (typeof radius === 'number' && Number.isFinite(radius) ? radius : null);
+  const resolvedLat = typeof latitude === 'number' ? latitude : (typeof lat === 'number' ? lat : null);
+  const resolvedLng = typeof longitude === 'number' ? longitude : (typeof lng === 'number' ? lng : null);
+
   if (typeof minPrice === 'number' && Number.isFinite(minPrice)) params.push(`minPrice=${minPrice}`);
   if (typeof maxPrice === 'number' && Number.isFinite(maxPrice)) params.push(`maxPrice=${maxPrice}`);
   if (typeof location === 'string' && !locationSlug) {
     params.push(`location=${encodeURIComponent(location)}`);
   }
+  if (typeof categoryId === 'string' && /^\d+$/.test(categoryId)) params.push(`categoryId=${encodeURIComponent(categoryId)}`);
+  if (resolvedLat != null) params.push(`lat=${resolvedLat}`);
+  if (resolvedLng != null) params.push(`lng=${resolvedLng}`);
+  if (resolvedRadius != null) params.push(`radius=${resolvedRadius}`);
+  if (typeof cursor === 'string' && cursor.trim()) params.push(`cursor=${encodeURIComponent(cursor.trim())}`);
+
   return `${basePath}/search/?${params.join('&')}`;
 }

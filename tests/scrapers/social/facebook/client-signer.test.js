@@ -290,12 +290,31 @@ describe('Story 13.4 — Facebook Browser-as-Signer Bridge', () => {
       dtsg: 'DTSG_Token_456',
       jazoest: '2953',
       c_user: '10001',
-    });
+    }, { accountId: '10001' });
     const parsed = new URLSearchParams(body);
 
     expect(parsed.get('lsd')).toBe('ring_lsd_value');
     expect(parsed.get('fb_dtsg')).toBe('DTSG_Token_456');
     expect(parsed.get('__user')).toBe('10001');
+  });
+
+  it('[P1] buildGraphQlBody should not consume tokenRing for guest requests (requiresAuth:false)', () => {
+    const tokenRing = new PreSignedTokenRing();
+    tokenRing.refill(['auth_ring_lsd_value']);
+
+    const client = new FacebookClient({ baseUrl: serverUrl, tokenRing });
+    const body = client.buildGraphQlBody('marketplace_doc_1', { query: 'macbook' }, {
+      lsd: 'guest_lsd_value',
+      dtsg: '',
+      jazoest: '2953',
+      c_user: '',
+    }, { requiresAuth: false, accountId: null });
+    const parsed = new URLSearchParams(body);
+
+    expect(parsed.get('lsd')).toBe('guest_lsd_value');
+    expect(parsed.get('__user')).toBe('0');
+    expect(parsed.get('av')).toBe('0');
+    expect(tokenRing.size).toBe(1); // ring left intact for auth requests
   });
 
   // ============================================================================

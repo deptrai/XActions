@@ -11,8 +11,30 @@
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { FacebookPlatformResponseValidator } from './validator.js';
 import { FacebookBrowserBridge } from './signer-bridge.js';
+import { PreSignedTokenRing } from '../../../core/signer-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import crypto from 'node:crypto';
+
+/**
+ * Check whether a URL points to a loopback or local/private host.
+ * Used to decide whether a FacebookClient defaults to requiresProxy=false
+ * (e.g. unit tests against a local http server) or requiresProxy=true (real facebook.com).
+ * @param {string} url
+ * @returns {boolean}
+ */
+function isLocalUrl(url) {
+  if (typeof url !== 'string') return false;
+  try {
+    const { hostname } = new URL(url);
+    const host = hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0') return true;
+    if (host.startsWith('10.') || host.startsWith('192.168.')) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) return true;
+    if (host.startsWith('fc00:') || host.startsWith('fd00:') || host === 'fe80::1') return true;
+    if (/^\[?::1\]?$/.test(host)) return true;
+  } catch {}
+  return false;
+}
 
 const MAX_TOKEN_CACHE_ENTRIES = 500;
 const DEFAULT_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
@@ -92,6 +114,9 @@ export class FacebookClient extends AbstractApiClient {
   /** @type {boolean} */
   httpFallback = true;
 
+  /** @type {PreSignedTokenRing | null} */
+  guestTokenRing = null;
+
   /** @type {string[]} */
   extraArgs = [];
 
@@ -122,6 +147,7 @@ export class FacebookClient extends AbstractApiClient {
    * @param {import('../../../core/session-manager.js').SessionManager} [deps.sessionManager]
    * @param {import('../../../core/platform-validator.js').AbstractPlatformResponseValidator} [deps.responseValidator]
    * @param {import('../../../core/signer-pool.js').PreSignedTokenRing} [deps.tokenRing]
+   * @param {import('../../../core/signer-pool.js').PreSignedTokenRing} [deps.guestTokenRing]
    * @param {import('../../../core/signer-pool.js').SignerWorkerPagePool} [deps.signerPool]
    * @param {FacebookBrowserBridge} [deps.browserBridge]
    * @param {string} [deps.cdpUrl]
@@ -135,18 +161,21 @@ export class FacebookClient extends AbstractApiClient {
    * @param {any} [deps.proxy]
    * @param {string[]} [deps.extraArgs]
    * @param {number} [deps.timeout]
+   * @param {boolean} [deps.requiresProxy]
    */
   constructor(deps = {}) {
+    const baseUrl = (deps.baseUrl || 'https://www.facebook.com').replace(/\/+$/, '');
+    const requiresProxy = deps.requiresProxy !== undefined ? deps.requiresProxy : !isLocalUrl(baseUrl);
+
     super(/** @type {any} */ ({
       ...deps,
       platform: 'facebook',
       client: deps.client || 'got',
+      requiresProxy,
       responseValidator: deps.responseValidator || new FacebookPlatformResponseValidator(),
     }));
 
-    if (deps.baseUrl) {
-      this.baseUrl = deps.baseUrl.replace(/\/+$/, '');
-    }
+    this.baseUrl = baseUrl;
     if (deps.friendlyNames) {
       this.friendlyNames = deps.friendlyNames;
     }
@@ -162,6 +191,7 @@ export class FacebookClient extends AbstractApiClient {
     this.httpFallback = deps.httpFallback ?? true;
     this.proxy = deps.proxy || null;
     this.extraArgs = deps.extraArgs || [];
+    this.guestTokenRing = deps.guestTokenRing || new PreSignedTokenRing({ capacity: 50 });
     if (deps.tokenTtlMs) {
       this.#tokenTtlMs = deps.tokenTtlMs;
     }
@@ -205,13 +235,15 @@ export class FacebookClient extends AbstractApiClient {
 
   /**
    * Extract Facebook security tokens with 30s pre-expiry window & in-flight deduplication.
-   * @param {string} [accountId='default']
+   * @param {string | null} [accountId=null]
    * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [cookies='']
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<Record<string, any>>}
    */
-  async ensureTokens(accountId = 'default', cookies = '') {
+  async ensureTokens(accountId = null, cookies = '', options = {}) {
+    const effectiveAccountId = accountId || 'guest';
     const cookieHeader = buildCookieHeader(cookies);
-    const cacheKey = this.#cacheKey(accountId, cookieHeader);
+    const cacheKey = this.#cacheKey(effectiveAccountId, cookieHeader);
 
     const cached = this.#tokenCache.get(cacheKey);
     const refreshMargin = this.#tokenTtlMs <= 1000 ? 0 : Math.min(30000, Math.floor(this.#tokenTtlMs * 0.1));
@@ -225,7 +257,7 @@ export class FacebookClient extends AbstractApiClient {
       return /** @type {Promise<Record<string, any>>} */ (this.#pendingTokenFetches.get(cacheKey));
     }
 
-    const fetchPromise = this.#fetchTokensWithStrategy(accountId, cookieHeader)
+    const fetchPromise = this.#fetchTokensWithStrategy(effectiveAccountId, cookieHeader, options)
       .finally(() => {
         this.#pendingTokenFetches.delete(cacheKey);
       });
@@ -238,17 +270,20 @@ export class FacebookClient extends AbstractApiClient {
    * Orchestrate browser bridge vs HTTP fallback extraction.
    * @param {string} accountId
    * @param {string} cookieHeader
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<Record<string, any>>}
    */
-  async #fetchTokensWithStrategy(accountId, cookieHeader) {
+  async #fetchTokensWithStrategy(accountId, cookieHeader, options = {}) {
+    const isAuthAccount = Boolean(accountId && accountId !== 'guest' && accountId !== 'default');
     const shouldUseBrowser = Boolean(this.browserBridge || this.cdpUrl || this.launchChrome);
+    const tokenRing = isAuthAccount ? this.tokenRing : this.guestTokenRing;
 
     if (shouldUseBrowser) {
       try {
         const bridge = this.browserBridge || this.#getLazyBrowserBridge();
         const tokens = await bridge.extractTokens(accountId, cookieHeader);
-        if (tokens.lsd && this.tokenRing && typeof this.tokenRing.refill === 'function') {
-          this.tokenRing.refill([tokens.lsd]);
+        if (tokens.lsd && tokenRing && typeof tokenRing.refill === 'function') {
+          tokenRing.refill([tokens.lsd]);
         }
         this.#saveTokensToCache(accountId, cookieHeader, tokens);
         return tokens;
@@ -260,9 +295,9 @@ export class FacebookClient extends AbstractApiClient {
       }
     }
 
-    const tokens = await this.#fetchTokens(accountId, cookieHeader);
-    if (tokens.lsd && this.tokenRing && typeof this.tokenRing.refill === 'function') {
-      this.tokenRing.refill([tokens.lsd]);
+    const tokens = await this.#fetchTokens(accountId, cookieHeader, options);
+    if (tokens.lsd && tokenRing && typeof tokenRing.refill === 'function') {
+      tokenRing.refill([tokens.lsd]);
     }
     return tokens;
   }
@@ -299,9 +334,10 @@ export class FacebookClient extends AbstractApiClient {
    * Internal worker to fetch tokens from home page HTML via HTTP.
    * @param {string} accountId
    * @param {string} cookieHeader
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<Record<string, any>>}
    */
-  async #fetchTokens(accountId, cookieHeader) {
+  async #fetchTokens(accountId, cookieHeader, options = {}) {
     let parsedUserId = '';
     if (cookieHeader) {
       const cUserMatch = cookieHeader.match(/(?:^|;\s*)c_user=([^;]+)/);
@@ -311,13 +347,19 @@ export class FacebookClient extends AbstractApiClient {
     /** @type {Record<string, string>} */
     const headers = {
       'x-fb-fetch': 'http',
+      ...(options.headers || {}),
     };
-    if (cookieHeader) {
+    if (cookieHeader && !headers['cookie']) {
       headers['cookie'] = cookieHeader;
     }
 
+    const effectiveAccountId = (accountId && accountId !== 'guest' && accountId !== 'default') ? accountId : null;
+    const requiresAuth = options.requiresAuth !== undefined ? options.requiresAuth : Boolean(effectiveAccountId);
     const resp = /** @type {any} */ (await this.request('GET', `${this.baseUrl}/`, {
-      accountId,
+      ...options,
+      accountId: effectiveAccountId ?? undefined,
+      requiresAuth,
+      skipResponseValidation: true,
       headers,
     }));
 
@@ -383,11 +425,14 @@ export class FacebookClient extends AbstractApiClient {
    * @param {string} docId
    * @param {Record<string, any>} variables
    * @param {Record<string, any>} tokens
+   * @param {Record<string, any>} [options={}]
    * @returns {string}
    */
-  buildGraphQlBody(docId, variables = {}, tokens = {}) {
-    const userId = tokens.c_user || tokens.userId;
-    if (!userId) {
+  buildGraphQlBody(docId, variables = {}, tokens = {}, options = {}) {
+    const isNamedAccount = Boolean(options.accountId && options.accountId !== 'guest' && options.accountId !== 'default');
+    const requiresAuth = options.requiresAuth !== undefined ? options.requiresAuth : isNamedAccount;
+    const userId = requiresAuth ? (tokens.c_user || tokens.userId || '0') : '0';
+    if (requiresAuth && (!userId || userId === '0')) {
       throw new PlatformError({
         code: 'XACT_4010',
         type: ErrorTypes.AUTH_EXPIRED,
@@ -397,7 +442,12 @@ export class FacebookClient extends AbstractApiClient {
       });
     }
 
-    const allocatedLsd = (this.tokenRing && this.tokenRing.size > 0 ? this.tokenRing.next() : null) || tokens.lsd || '';
+    // Consume from the appropriate pre-signed token ring based on auth mode.
+    // Auth and guest rings are refilled in #fetchTokensWithStrategy, keeping
+    // account-bound tokens isolated from rotating residential proxy requests.
+    const authLsd = requiresAuth && this.tokenRing && this.tokenRing.size > 0 ? this.tokenRing.next() : null;
+    const guestLsd = !requiresAuth && this.guestTokenRing && this.guestTokenRing.size > 0 ? this.guestTokenRing.next() : null;
+    const allocatedLsd = authLsd || guestLsd || tokens.lsd || '';
 
     const params = new URLSearchParams({
       doc_id: docId,
@@ -433,10 +483,12 @@ export class FacebookClient extends AbstractApiClient {
    * @returns {Promise<any>}
    */
   async requestGraphQl(docId, variables = {}, options = {}) {
-    const accountId = options.accountId || 'default';
+    const accountId = options.accountId || null;
     const rawCookies = options.cookies || options.headers?.cookie;
-    const tokens = await this.ensureTokens(accountId, rawCookies);
-    const body = this.buildGraphQlBody(docId, variables, tokens);
+    const isNamedAccount = Boolean(accountId && accountId !== 'guest' && accountId !== 'default');
+    const requiresAuth = options.requiresAuth !== undefined ? (Boolean(options.requiresAuth) && isNamedAccount) : isNamedAccount;
+    const tokens = await this.ensureTokens(accountId, rawCookies, { ...options, requiresAuth, accountId });
+    const body = this.buildGraphQlBody(docId, variables, tokens, { ...options, requiresAuth, accountId });
 
     const mergedHeaders = {
       'content-type': 'application/x-www-form-urlencoded',
@@ -453,6 +505,8 @@ export class FacebookClient extends AbstractApiClient {
 
     const response = /** @type {any} */ (await this.request('POST', `${this.baseUrl}/api/graphql/`, {
       ...options,
+      accountId,
+      requiresAuth,
       headers: mergedHeaders,
       body,
     }));

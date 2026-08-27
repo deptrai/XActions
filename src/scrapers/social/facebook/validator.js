@@ -115,6 +115,10 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
         'members' in data ||
         'edges' in data ||
         'page_info' in data ||
+        'marketplace_search' in data ||
+        'marketplace_search_listings' in data ||
+        'marketplace' in data ||
+        'browse' in data ||
         data.serpResponse ||
         data.searchResults ||
         (data.results && typeof data.results === 'object') ||
@@ -168,18 +172,26 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
       return true;
     }
 
+    const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
+    const status = typeof record?.status === 'number' ? record.status : (typeof record?.statusCode === 'number' ? record.statusCode : null);
+    if (status === 403) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * @param {unknown} response
+   * @returns {boolean}
+   */
+  isLoginWall(response) {
     const body = this.#getBody(response).toLowerCase();
     if (/<input[^>]+type=["']password["']/i.test(body)) {
       return true;
     }
 
     if (LOGIN_WALL_PHRASES.some((phrase) => body.includes(phrase))) {
-      return true;
-    }
-
-    const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
-    const status = typeof record?.status === 'number' ? record.status : (typeof record?.statusCode === 'number' ? record.statusCode : null);
-    if (status === 403) {
       return true;
     }
 

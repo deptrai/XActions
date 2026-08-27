@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Facebook E-commerce & Marketplace Metadata",
+  "type": "object",
+  "properties": {
+    "isMarketplace": {
+      "type": "boolean"
+    },
+    "price": {
+      "type": ["string", "number", "null"]
+    },
+    "currency": {
+      "type": ["string", "null"]
+    },
+    "location": {
+      "type": ["string", "null"]
+    },
+    "seller": {
+      "type": ["string", "null"]
+    },
+    "sellerUrl": {
+      "type": ["string", "null"]
+    },
+    "sellerId": {
+      "type": ["string", "null"]
+    },
+    "category": {
+      "type": ["string", "null"]
+    },
+    "categoryId": {
+      "type": ["string", "number", "null"]
+    },
+    "listingUrl": {
+      "type": ["string", "null"]
+    },
+    "sourceMethod": {
+      "type": "string"
+    },
+    "rawId": {
+      "type": ["string", "null"]
+    },
+    "creationTime": {
+      "type": ["number", "null"]
+    }
+  },
+  "required": [
+    "sourceMethod"
+  ]
+}

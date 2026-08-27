@@ -42,6 +42,11 @@ Thêm `@deprecated` JSDoc và comment `// LEGACY — see docs/deprecation-plan.m
 - `src/scrapers/threads/index.js`
 - `src/cli/commands/checkpoints.js` (redirect note)
 - `src/cli/commands/stream.js` (redirect note)
+- `src/scrapers/facebook/messengerShare.js` (Story 13.9)
+- `src/scrapers/facebook/shareLinkByUid.js` (Story 13.9)
+- `src/scrapers/facebook/graphqlSend.js` (Story 13.9)
+- `src/scrapers/facebook/messengerQueue.js` (Story 13.9)
+- `src/api/services/facebookAutomation.js` social action helpers (Story 13.9)
 
 ### Phase 2 — Cutover & Shadow-Run (Epic 20.1)
 
@@ -77,11 +82,15 @@ Xoá theo thứ tự:
 |----------|--------|-----------------|-------|
 | Twitter Puppeteer (`src/scrapers/twitter/index.js`) | `deprecated-planned` | Phase 2–3 | TBD |
 | Twitter HTTP (`src/scrapers/twitter/http/`) | `deprecated-planned` | Phase 2–3 | TBD |
+| Twitter Legacy Profile/Followers/Following (`src/scrapers/twitter/index.js` profile/followers/following) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
+| Twitter HTTP Relationships (`src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
 | `src/client/Scraper.js` | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
 | Facebook Legacy Search (`src/scrapers/facebook/search.js`, `group-search.js`) | `deprecated-marked` | Phase 1 (Epic 13.6) | DEV |
 | Facebook Legacy Comments (`src/scrapers/facebook/comments.js`) | `deprecated-marked` | Phase 1 (Epic 13.7) | DEV |
+| Facebook Legacy Marketplace (`src/scrapers/facebook/marketplace.js`) | `deprecated-marked` | Phase 1 (Epic 13.8) | DEV |
+| Facebook Legacy Social Actions (`src/scrapers/facebook/messengerShare.js`, `shareLinkByUid.js`, `graphqlSend.js`, `messengerQueue.js`, `api/services/facebookAutomation.js` like/comment/post/share/join/friend helpers) | `deprecated-marked` | Phase 1 (Epic 13.9) | DEV |
 | FacebookClient HTTP-only token extraction (`src/scrapers/social/facebook/client.js`) | `deprecated-planned` | Phase 1 (Epic 13.4) | DEV |
 | Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-marked` | Phase 1 (Epic 15.1) | DEV |
 | `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
@@ -90,6 +99,13 @@ Xoá theo thứ tự:
 
 | Legacy function | Hybrid action |
 |-----------------|---------------|
+| `scrapeProfile` (Twitter) | `twitter:profile` |
+| `scrapeFollowers` (Twitter) | `twitter:followers` |
+| `scrapeFollowing` (Twitter) | `twitter:following` |
+| `scrapeNonFollowers` (Twitter) | `twitter:non_followers` |
+| `scrapeLikers` (Twitter) | `twitter:likers` |
+| `scrapeRetweeters` (Twitter) | `twitter:retweeters` |
+| `scrapeListMembers` (Twitter) | `twitter:list_members` |
 | `scrapeProfile` | `facebook:profile` |
 | `scrapeFollowers` | `facebook:followers` |
 | `scrapeGroupMembers` | `facebook:group_members` |
@@ -97,6 +113,17 @@ Xoá theo thứ tự:
 | `scrapeFacebookGroupSearch` | `facebook:group_search` |
 | `scrapeFacebookComments` | `facebook:post_comments` |
 | `scrapeFacebookGroupComments` | `facebook:group_comments` |
+| `scrapeMarketplace` | `facebook:marketplace` |
+| `shareToMessenger` / `messengerShareCampaign` (messengerShare.js) | `facebook:messenger_share` |
+| `shareLinkByUid` / `shareLinkByUidCampaign` (shareLinkByUid.js) | `facebook:share_link_uid` |
+| `sendMessageToUidServerSide` / `sendMessageToUid` (graphqlSend.js, graphql.js) | `facebook:messenger_share` |
+| `buildCampaignQueue` / `parseRecipientsFile` / `parseLinksFile` (messengerQueue.js) | `facebook:messenger_share` |
+| `likeFacebookPosts` (facebookAutomation.js) | `facebook:like` |
+| `commentOnFacebookPosts` (facebookAutomation.js) | `facebook:comment` |
+| `createFacebookPost` (facebookAutomation.js) | `facebook:post` |
+| `shareFacebookPosts` (facebookAutomation.js) | `facebook:share` |
+| `joinGroups` (facebookAutomation.js) | `facebook:join_group` |
+| `sendFriendRequests` (facebookAutomation.js) | `facebook:send_friend_request` |
 
 ## 7. Rollback Checklist (Pre-Decommission)
 
@@ -137,8 +164,9 @@ Trước khi thực hiện Story 20.2 (Legacy Scraper Code Decommissioning), tea
 - `_bmad-output/planning-artifacts/epics.md` — Epic 13–20
 - `_bmad-output/planning-artifacts/backlog-epics-21-22.md` — Epic 21–22 backlog
 - `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-26.md` — Proposal gốc
+- `_bmad-output/implementation-artifacts/13-9-facebook-hybrid-social-actions-write-messenger.md` — Story 13.9 social actions scope
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — Trạng thái story
 
 ---
 
-*Last updated: 2026-08-26*
+*Last updated: 2026-08-28*

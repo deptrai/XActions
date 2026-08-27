@@ -25,8 +25,9 @@ import {
   normalizeFacebookGroupSearchResult,
   searchResultToPostItem,
 } from './normalize-search.js';
+import { normalizeFacebookMarketplaceListing } from './normalize-marketplace.js';
 import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from '../../facebook/core.js';
-import { normalizeHandle } from '../../facebook/normalize.js';
+import { normalizeHandle, buildMarketplaceSearchUrl, resolveMarketplaceLocation } from '../../facebook/normalize.js';
 
 const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
 
@@ -217,6 +218,7 @@ export const DEFAULT_FB_DOC_IDS = {
   COMMENT_REPLIES_DEPTH2: '28232639913040278',
   GROUP_COMMENT_ROOTS: '28217113134586234',
   GROUP_COMMENT_REPLIES: '27878908781774491',
+  MARKETPLACE_SEARCH: 'fb_marketplace_search_doc',
 };
 
 /**
@@ -316,6 +318,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: ['pageId'],
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.pagePosts(args, session),
     });
 
@@ -353,6 +356,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['username', 'url'],
       example: { username: 'zuck' },
       outputType: '{ profile: ProfileItem }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.profile(args, session),
     });
 
@@ -393,6 +397,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['type', 'location', 'limit', 'cursor'],
       example: { query: 'artificial intelligence', type: 'posts', limit: 20 },
       outputType: '{ posts?: PostItem[], people?: PostItem[], pages?: PostItem[], groups?: PostItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.search(args, session),
     });
 
@@ -404,6 +409,17 @@ export class FacebookCrawler extends AbstractCrawler {
       example: { groupUrl: 'https://www.facebook.com/groups/123456', query: 'ai tools', limit: 20 },
       outputType: '{ posts: PostItem[], pageInfo?: any }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupSearch(args, session),
+    });
+
+    this.registerAction({
+      action: 'marketplace',
+      description: 'Search products and listings on Facebook Marketplace',
+      requiredArgs: ['query'],
+      optionalArgs: ['location', 'category', 'categoryId', 'minPrice', 'maxPrice', 'limit', 'cursor', 'after', 'radiusKm', 'latitude', 'longitude', 'dryRun', 'priceMin', 'priceMax'],
+      example: { query: 'macbook pro 14', location: 'Ho Chi Minh City', minPrice: 800, maxPrice: 1200, limit: 20 },
+      outputType: '{ posts: PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }',
+      requiresAuth: false,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.marketplace(args, session),
     });
   }
 
@@ -831,9 +847,10 @@ export class FacebookCrawler extends AbstractCrawler {
    * @param {string} input
    * @param {string | Record<string, unknown>} cookies
    * @param {string} [accountId]
+   * @param {Record<string, any>} [session]
    * @returns {Promise<{ feedbackId: string }>}
    */
-  async #resolvePostFeedbackContext(input, cookies, accountId) {
+  async #resolvePostFeedbackContext(input, cookies, accountId, session = {}) {
     // Strip optional facebook: namespacing so "facebook:<id>" behaves like a numeric id.
     if (typeof input === 'string' && input.startsWith('facebook:')) {
       input = input.slice('facebook:'.length);
@@ -896,6 +913,7 @@ export class FacebookCrawler extends AbstractCrawler {
         try {
           const res = /** @type {{ data?: unknown }} */ (await this.client.request('GET', url, {
             accountId,
+            requiresAuth: session?.requiresAuth,
             headers: { cookie: cookieHeader },
             timeout: 60000,
           }));
@@ -990,6 +1008,7 @@ export class FacebookCrawler extends AbstractCrawler {
     const res = await this.client.requestGraphQl(docId, variables, {
       accountId,
       cookies,
+      requiresAuth: session?.requiresAuth,
     });
 
     const rawEdges = res?.data?.group?.feed?.edges || res?.data?.node?.feed?.edges;
@@ -1024,6 +1043,7 @@ export class FacebookCrawler extends AbstractCrawler {
    * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo?: any }>}
    */
   async pagePosts(args, session = {}) {
+    session = { requiresAuth: false, ...(session || {}) };
     if (!args?.pageId) {
       throw new PlatformError({
         code: 'XACT_4001',
@@ -1046,6 +1066,7 @@ export class FacebookCrawler extends AbstractCrawler {
     const res = await this.client.requestGraphQl(docId, variables, {
       accountId,
       cookies,
+      requiresAuth: session?.requiresAuth,
     });
 
     const rawEdges = res?.data?.page?.timeline_feed?.edges || res?.data?.node?.timeline_feed?.edges;
@@ -1087,6 +1108,7 @@ export class FacebookCrawler extends AbstractCrawler {
    * @returns {Promise<any>}
    */
   async search(args, session = {}) {
+    session = { requiresAuth: false, ...(session || {}) };
     const rawQuery = String(args?.query || '').trim();
     if (!rawQuery) {
       throw new PlatformError({
@@ -1150,6 +1172,7 @@ export class FacebookCrawler extends AbstractCrawler {
     const res = await this.client.requestGraphQl(docId, variables, {
       accountId,
       cookies,
+      requiresAuth: session?.requiresAuth,
     });
 
     const rawEdges = res?.data?.serpResponse?.results?.edges ||
@@ -1306,6 +1329,7 @@ export class FacebookCrawler extends AbstractCrawler {
     const res = await this.client.requestGraphQl(docId, variables, {
       accountId,
       cookies,
+      requiresAuth: session?.requiresAuth,
     });
 
     const group = res?.data?.group || res?.data?.node || res?.data;
@@ -1329,6 +1353,573 @@ export class FacebookCrawler extends AbstractCrawler {
 
     const out = Object.assign([...postItems], { posts: postItems, pageInfo });
     return out;
+  }
+
+  /**
+   * Search listings on Facebook Marketplace using hybrid GraphQL with browser fallback.
+   * @param {Object} args
+   * @param {string} args.query - Search query (e.g. 'macbook pro')
+   * @param {string} [args.location] - Location name or slug (e.g. 'hochiminhcity', 'hanoi')
+   * @param {string} [args.category] - Category slug
+   * @param {string | number} [args.categoryId] - Numeric category ID
+   * @param {number} [args.minPrice] - Minimum price (in standard currency units)
+   * @param {number} [args.maxPrice] - Maximum price (in standard currency units)
+   * @param {number} [args.priceMin] - Alias for minPrice
+   * @param {number} [args.priceMax] - Alias for maxPrice
+   * @param {number} [args.limit=50] - Max items to return [1-200]
+   * @param {string} [args.cursor] - Pagination cursor
+   * @param {string} [args.after] - Alias for cursor
+   * @param {number} [args.radiusKm] - Radius in kilometers
+   * @param {number} [args.latitude] - Location latitude [-90 to 90]
+   * @param {number} [args.longitude] - Location longitude [-180 to 180]
+   * @param {boolean} [args.dryRun] - If true, returns searchUrl preview without calling network
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }>}
+   */
+  async marketplace(args, session = {}) {
+    session = { requiresAuth: false, ...(session || {}) };
+    const rawQuery = String(args?.query || '').trim();
+    if (!rawQuery) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: query',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    if (rawQuery.length > 500) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'query exceeds maximum length of 500 characters',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    // Reject queries that look like URLs or contain obvious injection patterns.
+    const qLower = rawQuery.toLowerCase();
+    if (
+      qLower.includes('://') ||
+      qLower.includes('http') ||
+      qLower.includes('https') ||
+      qLower.includes('//') ||
+      qLower.startsWith('www.')
+    ) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'query cannot contain URL patterns',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    // Min / Max price parsing & validation
+    const rawMinPrice = args?.minPrice ?? args?.priceMin;
+    const rawMaxPrice = args?.maxPrice ?? args?.priceMax;
+    let minPrice = undefined;
+    let maxPrice = undefined;
+
+    const SAFE_PRICE_LIMIT = Number.MAX_SAFE_INTEGER / 100;
+
+    /**
+     * @param {unknown} raw
+     * @param {string} name
+     * @returns {number | undefined}
+     */
+    const parsePrice = (raw, name) => {
+      if (raw == null) return undefined;
+      const s = String(raw).trim();
+      if (s === '') return undefined;
+      const n = Number(s);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: `${name} must be a non-negative number`,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+      if (n > SAFE_PRICE_LIMIT) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: `${name} is too large`,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+      return n;
+    };
+
+    minPrice = parsePrice(rawMinPrice, 'minPrice');
+    maxPrice = parsePrice(rawMaxPrice, 'maxPrice');
+
+    if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `minPrice (${minPrice}) cannot be greater than maxPrice (${maxPrice})`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    // Category validation (strict slug whitelist)
+    let category = undefined;
+    if (args?.category != null && String(args.category).trim() !== '') {
+      category = String(args.category).trim();
+      if (!/^[a-zA-Z0-9_-]+$/.test(category)) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'category must be a plain slug (alphanumeric, hyphen, underscore)',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+
+    // CategoryId validation (numeric string or positive integer)
+    let categoryId = undefined;
+    if (args?.categoryId != null) {
+      const rawCatId = args.categoryId;
+      if (typeof rawCatId === 'number') {
+        if (!Number.isInteger(rawCatId) || rawCatId <= 0) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: 'categoryId must be a positive integer',
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          });
+        }
+        categoryId = String(rawCatId);
+      } else {
+        const s = String(rawCatId).trim();
+        if (s === '' || !/^\d+$/.test(s)) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: 'categoryId must be a numeric id',
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          });
+        }
+        categoryId = s;
+      }
+    }
+
+    // Coordinates validation
+    let latitude = undefined;
+    let longitude = undefined;
+    if (args?.latitude != null && String(args.latitude).trim() !== '') {
+      latitude = Number(args.latitude);
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'latitude must be a valid number between -90 and 90',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+    if (args?.longitude != null && String(args.longitude).trim() !== '') {
+      longitude = Number(args.longitude);
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'longitude must be a valid number between -180 and 180',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+
+    if ((latitude != null) !== (longitude != null)) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Both latitude and longitude must be provided together',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    // Radius validation (default 50 only when lat/lng are provided; reject 0/NaN/empty)
+    const hasCoords = latitude != null && longitude != null;
+    let radiusKm = undefined;
+    if (args?.radiusKm != null && String(args.radiusKm).trim() !== '') {
+      const r = Number(String(args.radiusKm).trim());
+      if (!Number.isFinite(r) || r <= 0) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'radiusKm must be a positive number',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+      radiusKm = r;
+    }
+    if (hasCoords && radiusKm == null) {
+      radiusKm = 50;
+    }
+
+    // Location validation and resolution
+    let location = undefined;
+    if (args?.location != null && String(args.location).trim() !== '') {
+      const rawLoc = String(args.location).trim();
+      const resolvedSlug = resolveMarketplaceLocation(rawLoc);
+      if (resolvedSlug) {
+        location = resolvedSlug;
+      } else if (/^https?:\/\//i.test(rawLoc)) {
+        if (!/^https?:\/\/(?:www\.)?facebook\.com\/marketplace\/[a-zA-Z0-9_-]+(?:\/?)$/i.test(rawLoc)) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: 'location URL must be a valid facebook.com/marketplace URL',
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          });
+        }
+        location = rawLoc;
+      } else {
+        location = rawLoc;
+      }
+    }
+
+    // Limit: positive integer, clamped [1, 200], default 50
+    const DEFAULT_LIMIT = 50;
+    const MAX_LIMIT = 200;
+    let limit = DEFAULT_LIMIT;
+    if (args?.limit != null && String(args.limit).trim() !== '') {
+      const n = Number(String(args.limit).trim());
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'limit must be a positive integer',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+      limit = Math.min(n, MAX_LIMIT);
+    }
+
+    const cursor = (typeof args?.cursor === 'string' ? args.cursor.trim() : '') ||
+                   (typeof args?.after === 'string' ? args.after.trim() : '') || null;
+
+    const dryRun = Boolean(args?.dryRun);
+    if (dryRun) {
+      const searchUrl = buildMarketplaceSearchUrl(rawQuery, {
+        baseUrl: this.client.baseUrl,
+        location,
+        category,
+        minPrice,
+        maxPrice,
+        categoryId,
+        latitude,
+        longitude,
+        radiusKm,
+        cursor,
+      });
+      return {
+        dryRun: true,
+        searchUrl,
+        posts: [],
+        pageInfo: { has_next_page: false, end_cursor: null },
+      };
+    }
+
+    const accountId = session?.accountId;
+    const cookies = this.#resolveCookies(session);
+
+    const docId = this.docIds.MARKETPLACE_SEARCH || DEFAULT_FB_DOC_IDS.MARKETPLACE_SEARCH;
+    const variables = {
+      count: limit,
+      first: limit,
+      cursor,
+      after: cursor,
+      params: {
+        bqf: {
+          callsite: 'COMMERCE_MKTPLACE_WWW',
+          query: rawQuery,
+        },
+        browse_request_params: {
+          ...(latitude != null && { filter_location_latitude: latitude }),
+          ...(longitude != null && { filter_location_longitude: longitude }),
+          ...(minPrice != null && { filter_price_lower_bound: Math.round(minPrice * 100) }),
+          ...(maxPrice != null && { filter_price_upper_bound: Math.round(maxPrice * 100) }),
+          ...(radiusKm != null && { filter_radius_km: radiusKm }),
+          ...(categoryId != null && { commerce_search_and_rp_category_id: categoryId }),
+        },
+      },
+    };
+
+    let postItems = [];
+    let pageInfo = { has_next_page: false, end_cursor: null };
+    let note = undefined;
+
+    try {
+      const res = await this.client.requestGraphQl(docId, variables, {
+        accountId,
+        cookies,
+        requiresAuth: session?.requiresAuth,
+      });
+
+      const feedUnits = res?.data?.marketplace_search?.feed_units ||
+                        res?.data?.marketplace_search_listings ||
+                        res?.data?.searchResults ||
+                        res?.data?.browse ||
+                        res?.data?.marketplaceSearch ||
+                        res?.data;
+
+      const edges = Array.isArray(feedUnits?.edges) ? feedUnits.edges : (Array.isArray(res?.data?.edges) ? res.data.edges : []);
+      pageInfo = feedUnits?.page_info || res?.data?.page_info || { has_next_page: false, end_cursor: null };
+
+      for (const edge of edges) {
+        const postItem = normalizeFacebookMarketplaceListing(edge, 'graphql');
+        if (!postItem) continue;
+        try {
+          this.validateItem(postItem);
+          postItems.push(postItem);
+        } catch (valErr) {
+          const valErrMsg = valErr instanceof Error ? valErr.message : String(valErr);
+          console.warn(`⚠️ [FacebookCrawler] Marketplace listing item validation failed: ${valErrMsg}`);
+        }
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.warn(`⚠️ [FacebookCrawler] Marketplace GraphQL fetch failed: ${errMsg}. Attempting SSR fallback.`);
+      note = 'Marketplace GraphQL query failed; attempting SSR fallback';
+
+      const fallbackUrl = buildMarketplaceSearchUrl(rawQuery, {
+        baseUrl: this.client.baseUrl,
+        location,
+        category,
+        minPrice,
+        maxPrice,
+        categoryId,
+        latitude,
+        longitude,
+        radiusKm,
+        cursor,
+      });
+
+      let html = '';
+      try {
+        const ssrResponse = await this.client.request('GET', fallbackUrl, {
+          accountId,
+          requiresAuth: session?.requiresAuth,
+          headers: cookies ? { cookie: cookies } : {},
+          timeout: 60000,
+        });
+
+        const ssrResponseRecord = ssrResponse && typeof ssrResponse === 'object'
+          ? /** @type {Record<string, any>} */ (ssrResponse)
+          : null;
+        html = typeof ssrResponseRecord?.data === 'string'
+          ? ssrResponseRecord.data
+          : (typeof ssrResponse === 'string' ? ssrResponse : '');
+      } catch (ssrErr) {
+        // FacebookClient validates the payload and rejects HTML as invalid.
+        // The raw HTML is still useful for best-effort parsing, so extract it
+        // from the error details when available.
+        if (ssrErr instanceof PlatformError && ssrErr.details) {
+          if (typeof ssrErr.details === 'string') {
+            html = ssrErr.details;
+          } else if (typeof ssrErr.details === 'object' && typeof ssrErr.details.data === 'string') {
+            html = ssrErr.details.data;
+          }
+        }
+        if (!html) {
+          const ssrErrMsg = ssrErr instanceof Error ? ssrErr.message : String(ssrErr);
+          console.warn(`⚠️ [FacebookCrawler] SSR fallback failed: ${ssrErrMsg}`);
+        }
+      }
+
+      if (html) {
+        const fallbackItems = this.#parseMarketplaceSsrHtml(html, limit);
+        for (const item of fallbackItems) {
+          try {
+            this.validateItem(item);
+            postItems.push(item);
+          } catch (valErr) {
+            const valErrMsg = valErr instanceof Error ? valErr.message : String(valErr);
+            console.warn(`⚠️ [FacebookCrawler] SSR fallback item validation failed: ${valErrMsg}`);
+          }
+        }
+      }
+
+      if (postItems.length > 0) {
+        pageInfo = { has_next_page: false, end_cursor: null };
+      }
+
+      note = postItems.length > 0
+        ? `SSR fallback returned ${postItems.length} result(s)`
+        : 'Marketplace GraphQL query failed; attempted SSR fallback: no results found';
+    }
+
+    // Enforce the requested limit before storage.
+    if (postItems.length > limit) {
+      postItems = postItems.slice(0, limit);
+    }
+
+    if (this.store && postItems.length > 0 && typeof this.store.storeBatch === 'function') {
+      await this.store.storeBatch(postItems, { upsert: true });
+    }
+
+    const targetKey = [rawQuery, location, category, categoryId, minPrice, maxPrice].filter((v) => v !== undefined && v !== null && v !== '').join(':');
+    await this.#saveCheckpoint('marketplace', targetKey, pageInfo?.end_cursor || null, postItems, Boolean(pageInfo?.has_next_page));
+
+    return {
+      posts: postItems,
+      pageInfo,
+      note,
+    };
+  }
+
+  /**
+   * Best-effort parse marketplace listings from Facebook Marketplace search HTML (SSR fallback).
+   * @param {string} html
+   * @param {number} limit
+   * @returns {import('../../../core/types.js').PostItem[]}
+   */
+  #parseMarketplaceSsrHtml(html, limit) {
+    const items = [];
+
+    const targetKeys = [
+      'MarketplaceSearchSchema',
+      'marketplace_search_listings',
+      'marketplaceSearch',
+      'searchResults',
+      'browse',
+    ];
+
+    /**
+     * @param {unknown} value
+     * @returns {Record<string, unknown> | null}
+     */
+    const findConnection = (value) => {
+      if (!value || typeof value !== 'object') return null;
+      if (Array.isArray(value)) {
+        for (const el of value) {
+          const c = findConnection(el);
+          if (c) return c;
+        }
+        return null;
+      }
+      const obj = /** @type {Record<string, unknown>} */ (value);
+      if (Array.isArray(obj.edges)) {
+        return obj;
+      }
+      for (const key of targetKeys) {
+        const candidate = obj[key];
+        if (candidate && typeof candidate === 'object') {
+          const c = /** @type {Record<string, unknown>} */ (candidate);
+          if (Array.isArray(c.edges)) return c;
+        }
+      }
+      for (const v of Object.values(obj)) {
+        const c = findConnection(v);
+        if (c) return c;
+      }
+      return null;
+    };
+
+    /**
+     * @param {string} text
+     * @param {number} start
+     * @returns {string | null}
+     */
+    const tryExtractJson = (text, start) => {
+      if (text[start] !== '{') return null;
+      let depth = 0;
+      let inString = false;
+      let escape = false;
+      for (let i = start; i < text.length; i++) {
+        const c = text[i];
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (c === '\\') {
+          escape = true;
+          continue;
+        }
+        if (c === '"') {
+          inString = !inString;
+          continue;
+        }
+        if (inString) continue;
+        if (c === '{') depth++;
+        else if (c === '}') {
+          depth--;
+          if (depth === 0) return text.slice(start, i + 1);
+        }
+      }
+      return null;
+    };
+
+    // 1. JSON script tags
+    const scriptRe = /<script[^>]*type=["']application\/json["'][^>]*>([^]*?)<\/script>/gi;
+    /** @type {RegExpExecArray | null} */
+    let match = null;
+    const scriptContents = [];
+    while ((match = scriptRe.exec(html)) !== null) {
+      scriptContents.push(match[1].trim());
+    }
+
+    for (const script of scriptContents) {
+      try {
+        const parsed = JSON.parse(script);
+        const conn = findConnection(parsed);
+        if (conn && Array.isArray(conn.edges)) {
+          const edges = conn.edges.slice(0, limit);
+          for (const edge of edges) {
+            const postItem = normalizeFacebookMarketplaceListing(
+              /** @type {Record<string, any>} */ (edge),
+              'ssr'
+            );
+            if (postItem) items.push(postItem);
+          }
+          if (items.length > 0) return items;
+        }
+      } catch {}
+    }
+
+    // 2. Raw JSON around target keys
+    for (const key of targetKeys) {
+      const idx = html.indexOf(key);
+      if (idx === -1) continue;
+      const braceIdx = html.indexOf('{', idx);
+      if (braceIdx === -1) continue;
+      const candidate = tryExtractJson(html, braceIdx);
+      if (!candidate) continue;
+      try {
+        const parsed = JSON.parse(candidate);
+        const conn = findConnection(parsed);
+        if (conn && Array.isArray(conn.edges)) {
+          const edges = conn.edges.slice(0, limit);
+          for (const edge of edges) {
+            const postItem = normalizeFacebookMarketplaceListing(
+              /** @type {Record<string, any>} */ (edge),
+              'ssr'
+            );
+            if (postItem) items.push(postItem);
+          }
+          if (items.length > 0) return items;
+        }
+      } catch {}
+    }
+
+    // 3. Regex fallback for listing ids
+    const itemRe = /href=["'][^"']*\/marketplace\/(?:item|listing)\/([a-zA-Z0-9_-]+)/gi;
+    const seen = new Set();
+    while ((match = itemRe.exec(html)) !== null && items.length < limit) {
+      const id = match[1];
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const postItem = normalizeFacebookMarketplaceListing(
+        { id, listingUrl: 'https://www.facebook.com/marketplace/item/' + id },
+        'ssr'
+      );
+      if (postItem) items.push(postItem);
+    }
+
+    return items;
   }
 
   /**
@@ -1527,7 +2118,7 @@ export class FacebookCrawler extends AbstractCrawler {
     const triedFallback = Boolean(args?.triedFallback);
 
     // Resolve post feedback id up-front; needed for the root comment GraphQL query.
-    const postContext = await this.#resolvePostFeedbackContext(args.postId, cookies, accountId);
+    const postContext = await this.#resolvePostFeedbackContext(args.postId, cookies, accountId, session);
 
     /**
      * Map of comment / post external id -> GraphQL context needed for pagination.
@@ -1606,6 +2197,7 @@ export class FacebookCrawler extends AbstractCrawler {
       const res = await this.client.requestGraphQl(docId, variables, {
         accountId,
         cookies,
+        requiresAuth: session?.requiresAuth,
       });
 
       if (!res?.data?.node) {
@@ -1781,6 +2373,7 @@ export class FacebookCrawler extends AbstractCrawler {
    * @returns {Promise<{ profile: import('../../../core/types.js').ProfileItem }>}
    */
   async profile(args, session = {}) {
+    session = { requiresAuth: false, ...(session || {}) };
     const rawTarget = args?.username || args?.url;
     const targetKey = resolveTargetKey(rawTarget);
 
@@ -1799,6 +2392,7 @@ export class FacebookCrawler extends AbstractCrawler {
       res = await this.client.requestGraphQl(docId, variables, {
         accountId,
         cookies,
+        requiresAuth: session?.requiresAuth,
       });
     } catch (err) {
       if (err instanceof PlatformError && (err.type === ErrorTypes.AUTH_EXPIRED || err.type === ErrorTypes.RATE_LIMIT)) {
@@ -1905,6 +2499,7 @@ export class FacebookCrawler extends AbstractCrawler {
       const res = await this.client.requestGraphQl(docId, variables, {
         accountId,
         cookies,
+        requiresAuth: session?.requiresAuth,
       });
 
       const user = res?.data?.user || res?.data?.node || res?.data;
@@ -2001,6 +2596,7 @@ export class FacebookCrawler extends AbstractCrawler {
         const res = await this.client.requestGraphQl(docId, variables, {
           accountId,
           cookies,
+          requiresAuth: session?.requiresAuth,
         });
 
         const user = res?.data?.user || res?.data?.node || res?.data;
@@ -2106,6 +2702,7 @@ export class FacebookCrawler extends AbstractCrawler {
         const res = await this.client.requestGraphQl(docId, variables, {
           accountId,
           cookies,
+          requiresAuth: session?.requiresAuth,
         });
 
         const group = res?.data?.group || res?.data?.node || res?.data;

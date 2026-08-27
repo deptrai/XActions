@@ -41,6 +41,7 @@ import { scrapeFacebookGroupSearch } from './group-search.js';
 import { searchFacebook } from './search.js';
 import { searchTweets } from './search.js';
 import { scrapeGroupMembers } from './followers.js';
+// LEGACY — see docs/deprecation-plan.md
 import { scrapeMarketplace } from './marketplace.js';
 
 export default {

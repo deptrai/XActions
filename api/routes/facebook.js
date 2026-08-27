@@ -202,6 +202,43 @@ async function resolveScrapeCookie(userId, authCookie, accountIds) {
 }
 
 /**
+ * Parse an optional price value. Treats undefined, null, and '' as absent.
+ * Returns an error for non-finite or negative numbers.
+ *
+ * @param {unknown} value
+ * @returns {{ value?: number, error?: string }}
+ */
+function parseOptionalPrice(value) {
+  if (value === undefined || value === null || value === '') {
+    return {};
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) {
+    return { error: 'must be a non-negative number' };
+  }
+  return { value: n };
+}
+
+/**
+ * Parse a dryRun value. Accepts boolean or case-insensitive 'true'/'false' strings.
+ * Rejects all other values.
+ *
+ * @param {unknown} value
+ * @returns {{ value?: boolean, error?: string }}
+ */
+function parseDryRun(value) {
+  if (typeof value === 'boolean') {
+    return { value };
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') return { value: true };
+    if (normalized === 'false') return { value: false };
+  }
+  return { error: 'dryRun must be a boolean or the string "true" / "false"' };
+}
+
+/**
  * Execute a messenger-share campaign across N accounts and M links (Story 5.5 D2).
  * Recipients are distributed round-robin across accounts; each account opens its own
  * browser session and runs messengerShareCampaign per link (FIFO). Dry-run launches
@@ -277,8 +314,18 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
  *   query?: string,     // required for search / marketplace
  *   type?: 'posts' | 'people' | 'pages' | 'groups' | 'all', // search only
  *   parallel?: boolean, // search only, accepted and ignored in Story 7.2
- *   location?: string,  // search only
+ *   location?: string,  // search and marketplace
+ *   category?: string,  // marketplace only
+ *   categoryId?: string | number, // marketplace only
+ *   minPrice?: number | string,  // marketplace only (priceMin alias accepted)
+ *   maxPrice?: number | string,  // marketplace only (priceMax alias accepted)
+ *   latitude?: number,
+ *   longitude?: number,
+ *   radiusKm?: number,
+ *   cursor?: string,
+ *   after?: string,
  *   limit?: number,     // positive integer
+ *   dryRun?: boolean,   // marketplace only
  *   includeReplies?: boolean, // post_comments/group_comments only
  *   authCookie?: { c_user, xs } | { accountId: string }, // optional; auto-picks active stored account if omitted
  *   accountIds?: string[],                                 // optional; uses first for single-page scrape
@@ -292,15 +339,30 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
     const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
     const action = /** @type {string | undefined} */ (body.action);
     const url = /** @type {string | undefined} */ (body.url);
-    const query = /** @type {string | undefined} */ (body.query);
+    const query = /** @type {string | null | undefined} */ (body.query);
     const type = /** @type {string | undefined} */ (body.type);
     const parallel = /** @type {boolean | undefined} */ (body.parallel);
     const location = /** @type {string | undefined} */ (body.location);
+    const category = /** @type {string | undefined} */ (body.category);
+    const categoryId = /** @type {string | number | undefined} */ (body.categoryId);
+    const minPrice = /** @type {number | string | null | undefined} */ (body.minPrice);
+    const maxPrice = /** @type {number | string | null | undefined} */ (body.maxPrice);
+    const priceMin = /** @type {number | string | null | undefined} */ (body.priceMin);
+    const priceMax = /** @type {number | string | null | undefined} */ (body.priceMax);
+    const latitude = /** @type {number | string | undefined} */ (body.latitude);
+    const longitude = /** @type {number | string | undefined} */ (body.longitude);
+    const radiusKm = /** @type {number | string | undefined} */ (body.radiusKm);
+    const dryRun = /** @type {boolean | string | null | undefined} */ (body.dryRun);
+    const cursor = /** @type {string | undefined} */ (body.cursor);
+    const after = /** @type {string | undefined} */ (body.after);
     const limit = /** @type {number | string | undefined} */ (body.limit);
     const includeReplies = /** @type {boolean | undefined} */ (body.includeReplies);
     const authCookie = /** @type {Record<string, unknown> | undefined} */ (body.authCookie);
     const browserOptions = /** @type {Record<string, unknown> | undefined} */ (body.browserOptions);
     const accountIds = /** @type {unknown[] | undefined} */ (body.accountIds);
+
+    /** @type {string} */
+    let trimmedQuery = '';
 
     const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace', 'post_comments', 'group_posts', 'group_comments', 'group_search'];
     if (!action || !VALID_ACTIONS.includes(action)) {
@@ -314,10 +376,17 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
       return res.status(400).json({ ok: false, error: `action "${action}" requires url` });
     }
     if (['search', 'marketplace', 'group_search'].includes(action)) {
-      if (typeof query !== 'string' || !query.trim()) {
+      if (query === undefined || query === null) {
         return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
       }
-      if (query.length > 500) {
+      if (typeof query !== 'string') {
+        return res.status(400).json({ ok: false, error: 'query must be a string' });
+      }
+      trimmedQuery = query.trim();
+      if (!trimmedQuery) {
+        return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
+      }
+      if (trimmedQuery.length > 500) {
         return res.status(400).json({ ok: false, error: 'query must be at most 500 characters' });
       }
     }
@@ -373,6 +442,48 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
       return res.status(400).json({ ok: false, error: 'browserOptions must be an object' });
     }
 
+    /** @type {number | undefined} */
+    let resolvedMinPrice;
+    /** @type {number | undefined} */
+    let resolvedMaxPrice;
+    /** @type {boolean | undefined} */
+    let resolvedDryRun;
+
+    if (action === 'marketplace') {
+      const rawMin = (minPrice !== undefined && minPrice !== null && minPrice !== '')
+        ? minPrice
+        : (priceMin !== undefined && priceMin !== null && priceMin !== '' ? priceMin : undefined);
+      const rawMax = (maxPrice !== undefined && maxPrice !== null && maxPrice !== '')
+        ? maxPrice
+        : (priceMax !== undefined && priceMax !== null && priceMax !== '' ? priceMax : undefined);
+
+      if (rawMin !== undefined) {
+        const parsed = parseOptionalPrice(rawMin);
+        if (parsed.error) {
+          return res.status(400).json({ ok: false, error: `minPrice ${parsed.error}` });
+        }
+        resolvedMinPrice = parsed.value;
+      }
+      if (rawMax !== undefined) {
+        const parsed = parseOptionalPrice(rawMax);
+        if (parsed.error) {
+          return res.status(400).json({ ok: false, error: `maxPrice ${parsed.error}` });
+        }
+        resolvedMaxPrice = parsed.value;
+      }
+      if (resolvedMinPrice !== undefined && resolvedMaxPrice !== undefined && resolvedMinPrice > resolvedMaxPrice) {
+        return res.status(400).json({ ok: false, error: 'minPrice must not be greater than maxPrice' });
+      }
+
+      if (dryRun !== undefined && dryRun !== null) {
+        const parsed = parseDryRun(dryRun);
+        if (parsed.error) {
+          return res.status(400).json({ ok: false, error: parsed.error });
+        }
+        resolvedDryRun = parsed.value;
+      }
+    }
+
     // Resolve the session: raw cookie, stored accountId/accountIds, or auto-pick a live one.
     let resolved;
     try {
@@ -425,16 +536,30 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
       ...options,
       ...(action === 'search'
         ? {
-            query: /** @type {string} */ (query).trim(),
+            query: trimmedQuery,
             ...(type !== undefined && type !== null && { type }),
             ...(parallel !== undefined && parallel !== null && { parallel }),
             ...(location !== undefined && location !== null && { location: location.trim() }),
             ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
           }
         : action === 'marketplace'
-          ? { query: /** @type {string} */ (query).trim() }
+          ? {
+              query: trimmedQuery,
+              ...(location !== undefined && location !== null && { location: String(location).trim() }),
+              ...(category !== undefined && category !== null && { category: String(category).trim() }),
+              ...(categoryId !== undefined && categoryId !== null && { categoryId: String(categoryId).trim() }),
+              ...(resolvedMinPrice !== undefined && { minPrice: resolvedMinPrice }),
+              ...(resolvedMaxPrice !== undefined && { maxPrice: resolvedMaxPrice }),
+              ...(latitude !== undefined && latitude !== null && { latitude: Number(latitude) }),
+              ...(longitude !== undefined && longitude !== null && { longitude: Number(longitude) }),
+              ...(radiusKm !== undefined && radiusKm !== null && { radiusKm: Number(radiusKm) }),
+              ...(resolvedDryRun !== undefined && { dryRun: resolvedDryRun }),
+              ...(cursor !== undefined && cursor !== null && { cursor: String(cursor).trim() }),
+              ...(after !== undefined && after !== null && { after: String(after).trim() }),
+              ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
+            }
           : action === 'group_search'
-            ? { url: /** @type {string} */ (url).trim(), query: /** @type {string} */ (query).trim() }
+            ? { url: /** @type {string} */ (url).trim(), query: trimmedQuery }
             : { url: /** @type {string} */ (url).trim() }),
       ...(limit !== undefined && limit !== null ? { limit: Number(limit) } : {}),
       ...(['post_comments', 'group_comments'].includes(action) && includeReplies !== undefined && includeReplies !== null

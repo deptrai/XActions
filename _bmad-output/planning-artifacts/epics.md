@@ -103,6 +103,8 @@ So that **tôi có thể thêm nền tảng mới (Shopee, LinkedIn, v.v.) mà k
 * **And** toàn bộ error classes kế thừa từ `PlatformError` cung cấp các trường: `statusCode`, `platform`, `isRetryable` (boolean), `retryAfterMs` (number), `suggestedAction`.
 * **And** `AbstractErrorEnvelope` / `PlatformError.toEnvelope()` chuẩn hóa shape trả về: `{ code, type, message, statusCode, isRetryable, retryAfterMs, retryAfter, suggestedAction, accountId?, platform }`.
 * **And** `AbstractCrawler` tự động đăng ký action vào `ActionRegistry`, validate `category` trước khi lưu, và đảm bảo `action` là snake_case.
+* **And** `ActionDescriptor` hỗ trợ trường tùy chọn `requiresAuth?: boolean`; `AbstractCrawler.start(command)` tính `actionRequiresAuth = entry.descriptor.requiresAuth ?? this.requiresAuth` và dùng giá trị này cho account resolution (rút `AccountPool`, throw `XACT_4010`, governor account check).
+* **And** action có `requiresAuth: false` chạy với `accountId = null` khi caller không truyền accountId: không rút `AccountPool`, không kiểm tra `governor.canAccountRequest`; `listActions()` trả về `requiresAuth` đã phân giải cho từng action.
 * **And** `GovernorStatusApi` định nghĩa shape `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 * **And** `node src/core/index.js` parse thành công và `npx prisma validate` pass.
 
@@ -260,13 +262,13 @@ So that **mọi request đều đi qua proxy đúng chế độ mà không bao g
 * **Given** `AbstractApiClient` được khởi tạo với `proxyPool`, `governor`, `accountPool`, `sessionManager` và platform-specific `PlatformResponseValidator`
 * **When** gọi `request(method, url, options)`
 * **Then** hệ thống thực hiện tuần tự:
-  1. Xác định `requiresAuth` của platform. Nếu `true` → lấy `accountId` từ `accountPool.getNextAvailable(platform)`; kiểm tra `governor.canAccountRequest(accountId, platform)`; nếu hibernation thì chuyển account.
-  2. Nếu `requiresAuth` → `proxyPool.getStickyProxy(accountId)` (sticky IP cho tài khoản). Nếu `!requiresAuth` → `proxyPool.getNext()` (round-robin / residential rotation per request).
+  1. Xác định `requiresAuth` **hiệu dụng của action** (`ActionDescriptor.requiresAuth ?? crawler.requiresAuth`). Nếu `true` → lấy `accountId` từ `accountPool.getNextAvailable(platform)`; kiểm tra `governor.canAccountRequest(accountId, platform)`; nếu hibernation thì chuyển account. Nếu `false` → `accountId = null`, bỏ qua `AccountPool` và account velocity check (caller truyền accountId rõ ràng vẫn được tôn trọng — opt-in auth).
+  2. Nếu `requiresAuth` hiệu dụng của action → `proxyPool.getStickyProxy(accountId)` (sticky IP cho tài khoản). Nếu `!requiresAuth` → `proxyPool.getNext()` (round-robin / residential rotation per request).
   3. Nếu proxy bị quarantine hoặc `isAllQuarantined()` → Standby Backoff 30s và throw `ProxyDeadError`.
   4. Gửi request qua proxy agent (`undici.ProxyAgent` / `socks-proxy-agent` / Playwright browser context tùy platform).
   5. `governor.recordRequest(accountId)` — ghi nhận request vào sliding window.
   6. `PlatformResponseValidator.isValidPayload(response)` / `isBotChallenge(response)` / `isRateLimit(response)` — parse body dù HTTP status là 200.
-* **And** Auth-required platforms (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) sử dụng sticky IP; no-auth platforms (Batdongsan, Chotot, v.v.) sử dụng rotating residential proxy.
+* **And** Auth-required requests (theo action-level — ví dụ Facebook `group_posts`/social actions — hoặc platform mặc định như TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) sử dụng sticky IP; no-auth requests (Batdongsan, Chotot, và các action public như Facebook `marketplace`/`search`/`page_posts`/`profile`) sử dụng rotating residential proxy.
 * **And** không bao giờ fallback về direct connection khi proxy fail; mọi request phải qua `ProxyIpPool`.
 
 ### Story 11.6: Rate-Limit & Bot-Challenge Defense (Quarantine, Retry, Hibernation)
@@ -528,6 +530,7 @@ So that **tôi có thể theo dõi cộng đồng với độ trễ thấp và k
 * **Then** scraper dispatch request qua GraphQL endpoints với `ProxyIpPool`
 * **And** chuẩn hóa dữ liệu trả về theo model `PostItem` với ID Namespaced `facebook:${postId}`
 * **And** tương thích hoàn toàn với session cookie đã mã hóa trong database.
+* **And** action `group_posts` khai báo `requiresAuth: true` (nhóm kín — account từ pool + Sticky Residential Proxy cố định suốt session); action `page_posts` khai báo `requiresAuth: false` (fanpage public — guest token `lsd`/`jazoest` từ Pre-Signed Ring + Rotating Residential Proxy xoay per-request, không rút account pool).
 * **And (Scope & Deprecation Marker)** story này chỉ làm group/page posts; các tính năng còn lại (search, comments, marketplace, messenger, profile/followers/group-members, automation) sẽ được chuyển sang kiến trúc hybrid trong Story 13.5–13.10. Gắn `@deprecated` cho `src/scrapers/facebook/` (legacy) và ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
 
 ### Story 13.4: Facebook Browser-as-Signer Integration
@@ -556,6 +559,7 @@ So that **tôi có thể thu thập dữ liệu cá nhân/cộng đồng với t
 * **Then** `FacebookCrawler` dispatch request qua `FacebookClient` (HTTP GraphQL) hoặc `FacebookBrowserBridge` (CDP) tùy theo endpoint ổn định
 * **And** dữ liệu trả về được chuẩn hóa theo model `PostItem` (profile) / `CommentItem` / `ProfileItem` với ID Namespaced `facebook:${externalId}`
 * **And** các tham số `url`/`username`/`groupUrl` được parse thành `targetKey` cho `CrawlerCommand`
+* **And** action `profile` (public) khai báo `requiresAuth: false` — chạy guest token + rotating residential proxy xoay per-request; `group_members` và `followers`/`following` giữ `requiresAuth: true` (fallback platform) — account từ pool + sticky residential proxy.
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeGroupMembers` trong `src/scrapers/facebook/legacy.js` (hoặc file tương ứng); cập nhật `docs/deprecation-plan.md`.
 
 ### Story 13.6: Facebook Hybrid Search (Global + Group Search)
@@ -569,6 +573,7 @@ So that **tôi có thể thu thập nhiều loại đối tượng với cùng m
 * **Then** `FacebookCrawler` chọn DocID GraphQL hoặc browser fallback phù hợp với từng `type`
 * **And** dữ liệu trả về được chuẩn hóa qua `normalizeSearchResult`, `normalizePostSearchResult`, `normalizePeopleSearchResult`, `normalizePageSearchResult`, `normalizeGroupSearchResult` (hoặc tương đương mới) với ID Namespaced
 * **And** hỗ trợ `limit` và pagination cursor như `AbstractCrawler` action output
+* **And** action `search` (global) khai báo `requiresAuth: false` — guest token + rotating residential proxy xoay per-request; `group_search` giữ `requiresAuth: true` (ngữ cảnh nhóm kín, fallback platform).
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `searchFacebook`, `scrapeFacebookGroupSearch` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
 
 ### Story 13.7: Facebook Hybrid Post & Group Comments
@@ -582,6 +587,7 @@ So that **tôi có thể phân tích sentiment và cấu trúc hội thoại v�
 * **Then** crawler trích xuất `postId`/`feedbackId` từ URL, gọi `FacebookClient` GraphQL hoặc `FacebookBrowserBridge` nếu cần
 * **And** dữ liệu trả về theo `CommentItem` với `parentCommentId` đúng, hỗ trợ topological sort và lưu batch qua `PrismaStore`
 * **And** `includeReplies` bật/tắt được xử lý đúng
+* **And** `post_comments` và `group_comments` giữ `requiresAuth: true` (fallback platform — use case chính là bài viết trong nhóm kín): account từ pool + sticky residential proxy.
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeFacebookComments`, `scrapeFacebookGroupComments` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
 
 ### Story 13.8: Facebook Hybrid Marketplace
@@ -595,6 +601,7 @@ So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị
 * **Then** crawler sử dụng `FacebookClient` hoặc `FacebookBrowserBridge` để lấy listing data
 * **And** dữ liệu được chuẩn hóa theo `PostItem`/`MarketplaceItem` với `metadata` JSON (price, location, seller, category)
 * **And** hỗ trợ `limit` và pagination
+* **And** action `marketplace` khai báo `requiresAuth: false`: chỉ dùng guest token `lsd`/`jazoest` từ Pre-Signed Token Ring + Rotating Residential Proxy xoay per-request (`DynamicTunnelProvider` sinh session ngẫu nhiên cho từng request); KHÔNG rút tài khoản từ `AccountPool`, không kiểm tra `governor.canAccountRequest` cho action này.
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeMarketplace` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
 
 ### Story 13.9: Facebook Hybrid Social Actions (Write & Messenger)
@@ -608,6 +615,7 @@ So that **các hành động tương tác được quản lý bởi `FacebookCli
 * **Then** mỗi action đi qua `FacebookClient` với `cdpUrl`/`launchChrome` (nếu cần DOM) hoặc HTTP GraphQL (nếu endpoint ổn định)
 * **And** tất cả write action tuân thủ dry-run gate, delay floor, và `AdaptiveGovernor`
 * **And** cookie/token không bị log; error trả về `PlatformError` với `suggestedAction`
+* **And** toàn bộ social actions (`like`, `comment`, `post`, `share`, `messenger_share`, `share_link_uid`, `join_group`, `send_friend_request`) khai báo/tự fallback `requiresAuth: true`: BẮT BUỘC account từ `AccountPool` + Sticky Residential Proxy cố định theo accountId trong suốt session (chống checkpoint do IP nhảy); thiếu account trả error envelope `XACT_4010` với `suggestedAction: 'relogin'`.
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `shareLinkByUid.js`, `messengerQueue.js`, `messengerShare.js`, `graphqlSend.js` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
 
 ### Story 13.10: Facebook Hybrid Integration & Caller Migration
@@ -622,6 +630,7 @@ So that **người dùng cuối và các service nội bộ không còn phụ th
 * **And** `package.json` exports thêm `./scrapers/social` hoặc `./scrapers/facebook` để consumer truy cập `FacebookClient`/`FacebookCrawler`
 * **And** `api/services/facebookScrape.js`, `facebookAutomation.js`, `facebookAccountPool.js`, `facebookHealth.js` được refactor để gọi `FacebookCrawler.start()` / `FacebookClient` thay vì các hàm legacy
 * **And** `api/routes/facebook.js` validation vẫn chấp nhận cùng action set; response shape không đổi với consumer
+* **And** action discovery qua `FacebookCrawler.listActions()`, MCP `x_actions_list` và CLI `xactions actions --platform facebook` trả về `requiresAuth` đã phân giải cho từng action (additive, không break consumer hiện có).
 * **And** toàn bộ test `tests/scrapers/facebook-index.test.js`, `tests/scrapers/facebook-*.test.js` chuyển sang test `FacebookCrawler` tương ứng hoặc được đánh dấu `@deprecated`
 * **And (Scope & Deprecation Marker)** `src/scrapers/facebook/` được đánh dấu `@deprecated` toàn bộ; `docs/deprecation-plan.md` status tracker cập nhật sang `deprecated-planned` và ghi rõ dependency vào Story 13.10.
 
@@ -663,7 +672,7 @@ So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 #### Action discovery
 * **Given** `AbstractCrawler.listActions()` đã tồn tại
 * **When** gọi tool `x_actions_list`
-* **Then** trả về `ActionDescriptor[]` với `{ action, description, requiredArgs, optionalArgs, example, outputType }`.
+* **Then** trả về `ActionDescriptor[]` với `{ action, description, requiredArgs, optionalArgs, example, outputType, requiresAuth }`.
 
 #### Error envelope
 * **Given** bất kỳ tool nào gặp lỗi
