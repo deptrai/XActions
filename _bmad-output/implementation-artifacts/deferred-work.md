@@ -1,5 +1,9 @@
 # Deferred Work
 
+## Deferred from: code review of 13-9-facebook-hybrid-social-actions-write-messenger (2026-08-28)
+
+- [x] [Review][Defer] `DEFAULT_FB_DOC_IDS` write mutation placeholders chưa tham chiếu trong action code hay tests — by design, cần capture live doc_id từ real Facebook session trước khi dùng [src/scrapers/social/facebook/crawler.js:224-230]
+
 ## Deferred from: code review of 10-3-ai-dataset-export-utility-streaming-jsonl-csv (2026-08-19)
 
 - [ ] [Review][P2][Defer] `outputPath` has no path traversal or directory/symlink validation; out of scope for current AC [src/utils/exporter.js:256-266]
