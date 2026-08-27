@@ -3,8 +3,8 @@
  * MCP 3-Layer JSON Envelope — direct unit tests (Story 14.2)
  *
  * Tests wrapToolResult and wrapToolError without mocks, covering platform
- * detection, record extraction, 30-record preview, artifact export, and
- * error-envelope shape.
+ * detection, record extraction, 30-record preview, artifact export, sampleId
+ * priority, and error-envelope shape.
  */
 
 import { describe, it, beforeAll, afterAll } from 'vitest';
@@ -42,10 +42,11 @@ describe('wrapToolResult', () => {
     assert.equal(envelope.success, true);
     assert.equal(envelope.platform, 'twitter');
     assert.equal(envelope.meta.tool, 'x_get_tweets');
-    assert.equal(typeof envelope.meta.generatedAt, 'string');
-    assert.equal(typeof envelope.meta.startedAt, 'string');
     assert.equal(typeof envelope.meta.durationMs, 'number');
     assert.equal(envelope.meta.totalRecords, 5);
+    assert.equal(envelope.meta.platform, undefined);
+    assert.equal(envelope.meta.generatedAt, undefined);
+    assert.equal(envelope.meta.startedAt, undefined);
     assert.equal(envelope.summary.count, 5);
     assert.equal(envelope.summary.hasMore, false);
     assert.ok(Array.isArray(envelope.summary.sampleIds));
@@ -103,6 +104,7 @@ describe('wrapToolResult', () => {
   it('extracts records from the comments field of an object', async () => {
     const comments = makeRecords(5, 'comment');
     const envelope = await wrapToolResult('x_crawl_comments_tree', { comments, extra: 'ignored' }, 0);
+    assert.equal(envelope.meta.totalRecords, 5);
     assert.equal(envelope.summary.count, 5);
     assert.equal(envelope.data.length, 5);
   });
@@ -110,6 +112,7 @@ describe('wrapToolResult', () => {
   it('extracts records from the posts field of an object', async () => {
     const posts = makeRecords(5, 'post');
     const envelope = await wrapToolResult('x_crawl_post', { posts }, 0);
+    assert.equal(envelope.meta.totalRecords, 5);
     assert.equal(envelope.summary.count, 5);
     assert.equal(envelope.data.length, 5);
   });
@@ -117,6 +120,7 @@ describe('wrapToolResult', () => {
   it('extracts records from the items field of an object', async () => {
     const items = makeRecords(5, 'item');
     const envelope = await wrapToolResult('x_get_tweets', { items }, 0);
+    assert.equal(envelope.meta.totalRecords, 5);
     assert.equal(envelope.summary.count, 5);
     assert.equal(envelope.data.length, 5);
   });
@@ -124,12 +128,14 @@ describe('wrapToolResult', () => {
   it('extracts records from the data field of an object', async () => {
     const data = makeRecords(5, 'item');
     const envelope = await wrapToolResult('x_get_tweets', { data }, 0);
+    assert.equal(envelope.meta.totalRecords, 5);
     assert.equal(envelope.summary.count, 5);
     assert.equal(envelope.data.length, 5);
   });
 
   it('wraps a single non-array object as one record', async () => {
     const envelope = await wrapToolResult('x_crawl_post', { id: '1', content: 'hello' }, 0);
+    assert.equal(envelope.meta.totalRecords, 1);
     assert.equal(envelope.summary.count, 1);
     assert.equal(envelope.data.length, 1);
     assert.equal(envelope.data[0].id, '1');
@@ -138,7 +144,8 @@ describe('wrapToolResult', () => {
   it('limits preview to 30 records and reports hasMore', async () => {
     const records = makeRecords(50);
     const envelope = await wrapToolResult('x_get_tweets', records, 0);
-    assert.equal(envelope.summary.count, 50);
+    assert.equal(envelope.meta.totalRecords, 50);
+    assert.equal(envelope.summary.count, 30);
     assert.equal(envelope.data.length, 30);
     assert.equal(envelope.summary.hasMore, true);
   });
@@ -147,6 +154,7 @@ describe('wrapToolResult', () => {
     const records = makeRecords(30);
     const envelope = await wrapToolResult('x_get_tweets', records, 0);
     assert.equal(envelope.data.length, 30);
+    assert.equal(envelope.summary.count, 30);
     assert.equal(envelope.summary.hasMore, false);
   });
 
@@ -154,7 +162,8 @@ describe('wrapToolResult', () => {
     const records = makeRecords(105);
     const envelope = await wrapToolResult('x_get_tweets', records, 0, { args: { platform: 'twitter' } });
 
-    assert.equal(envelope.summary.count, 105);
+    assert.equal(envelope.meta.totalRecords, 105);
+    assert.equal(envelope.summary.count, 30);
     assert.equal(envelope.data.length, 30);
     assert.equal(envelope.summary.hasMore, true);
     assert.ok(typeof envelope.meta.datasetArtifactPath === 'string');
@@ -184,6 +193,66 @@ describe('wrapToolResult', () => {
     assert.ok(lines[0].split(',').includes('id'));
     assert.ok(lines[0].split(',').includes('content'));
   });
+
+  it('builds sampleIds from the identifier priority list', async () => {
+    const records = [
+      { externalId: 'ext-1' },
+      { postId: 'post-2' },
+      { username: 'user-3' },
+      { handle: 'handle-4' },
+      { url: 'https://example.com/5' },
+      { query: 'query-6' },
+    ];
+    const envelope = await wrapToolResult('x_crawl_post', records, 0);
+    assert.ok(Array.isArray(envelope.summary.sampleIds));
+    assert.equal(envelope.summary.sampleIds.length, 5);
+    assert.equal(envelope.summary.sampleIds[0], 'ext-1');
+    assert.equal(envelope.summary.sampleIds[1], 'post-2');
+    assert.equal(envelope.summary.sampleIds[2], 'user-3');
+    assert.equal(envelope.summary.sampleIds[3], 'handle-4');
+    assert.equal(envelope.summary.sampleIds[4], 'https://example.com/5');
+  });
+
+  it('omits records with no string identifier from sampleIds', async () => {
+    const records = [
+      { id: 'has-id' },
+      { foo: 'no-identifier' },
+      { id: 'has-id-2' },
+      { bar: 123 },
+      { id: 'has-id-3' },
+    ];
+    const envelope = await wrapToolResult('x_get_tweets', records, 0);
+    assert.equal(envelope.summary.sampleIds.length, 3);
+    assert.equal(envelope.summary.sampleIds[0], 'has-id');
+    assert.equal(envelope.summary.sampleIds[1], 'has-id-2');
+    assert.equal(envelope.summary.sampleIds[2], 'has-id-3');
+  });
+
+  it('returns a graceful XACT_5002 envelope when artifact export fails', async () => {
+    const records = makeRecords(105);
+    // Point the artifact directory at an existing file so fs.mkdir rejects.
+    const staleFile = path.join(artifactDir, 'not-a-dir');
+    await fs.writeFile(staleFile, 'stale');
+    process.env.XACTIONS_ARTIFACT_DIR = staleFile;
+
+    const envelope = await wrapToolResult('x_get_tweets', records, 0, { args: { platform: 'twitter' } });
+
+    assert.equal(envelope.success, false);
+    assert.equal(envelope.platform, 'twitter');
+    assert.equal(envelope.meta.totalRecords, 105);
+    assert.equal(envelope.data.length, 30);
+    assert.equal(envelope.summary.count, 30);
+    assert.equal(envelope.summary.hasMore, true);
+    assert.ok(envelope.error);
+    assert.equal(envelope.error.code, 'XACT_5002');
+    assert.equal(envelope.error.type, 'internal');
+    assert.equal(envelope.error.suggestedAction, 'contact_support');
+    assert.equal(typeof envelope.error.message, 'string');
+
+    // Restore the temp directory for subsequent tests.
+    process.env.XACTIONS_ARTIFACT_DIR = artifactDir;
+    await fs.unlink(staleFile);
+  });
 });
 
 describe('wrapToolError', () => {
@@ -207,6 +276,7 @@ describe('wrapToolError', () => {
     assert.equal(typeof envelope.error.retryAfter, 'number');
     assert.equal(envelope.error.suggestedAction, 'contact_support');
     assert.equal(envelope.error.platform, 'twitter');
+    assert.equal(envelope.meta.totalRecords, 0);
   });
 
   it('preserves error.code when present on the Error', () => {

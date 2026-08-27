@@ -14,6 +14,7 @@ import {
   getDaemonStatus,
   waitForHealth,
   isProcessAlive,
+  getProcessCommand,
   waitForProcessExit,
 } from '../../src/cli/commands/daemon.js';
 
@@ -109,6 +110,19 @@ describe('isProcessAlive', () => {
 
   it('returns false for a non-existent PID', () => {
     assert.equal(isProcessAlive(999999999), false);
+  });
+});
+
+describe('getProcessCommand', () => {
+  it('returns a non-empty command line for the current process', () => {
+    const command = getProcessCommand(process.pid);
+    assert.equal(typeof command, 'string');
+    assert.ok(command.length > 0, 'expected a non-empty command line');
+  });
+
+  it('returns an empty string for a non-existent PID', () => {
+    const command = getProcessCommand(999999999);
+    assert.equal(command, '');
   });
 });
 

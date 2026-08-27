@@ -24,13 +24,17 @@ import { exportArtifact } from './artifact-exporter.js';
  */
 
 /**
+ * Success/error meta. For successful envelopes only {@link tool}, {@link durationMs},
+ * {@link totalRecords} and optional {@link datasetArtifactPath} are present.
+ * Error envelopes may keep additional diagnostic fields for backwards compatibility.
+ *
  * @typedef {Object} ToolMeta
  * @property {string} tool
- * @property {string} platform
- * @property {string} generatedAt
- * @property {string} startedAt
  * @property {number} durationMs
- * @property {number} [totalRecords]
+ * @property {number} totalRecords
+ * @property {string} [platform]
+ * @property {string} [generatedAt]
+ * @property {string} [startedAt]
  * @property {string} [datasetArtifactPath]
  */
 
@@ -43,6 +47,17 @@ import { exportArtifact } from './artifact-exporter.js';
 
 const PREVIEW_LIMIT = 30;
 const ARTIFACT_THRESHOLD = 100;
+
+/** @type {string[]} */
+const IDENTIFIER_PRIORITY = [
+  'id',
+  'externalId',
+  'postId',
+  'username',
+  'handle',
+  'url',
+  'query',
+];
 
 /**
  * Detect the platform from tool arguments, raw result, or tool-name prefix.
@@ -114,6 +129,35 @@ function extractRecords(rawResult) {
 }
 
 /**
+ * Build sampleIds from the preview records. Up to 5 string identifiers are
+ * collected, one per record, using the identifier priority list. Records with
+ * no string identifier are omitted and not padded.
+ *
+ * @param {unknown[]} previewRecords
+ * @returns {string[]}
+ */
+function buildSampleIds(previewRecords) {
+  /** @type {string[]} */
+  const sampleIds = [];
+
+  for (const record of previewRecords) {
+    if (sampleIds.length >= 5) break;
+    if (!record || typeof record !== 'object') continue;
+
+    const obj = /** @type {Record<string, unknown>} */ (record);
+    for (const key of IDENTIFIER_PRIORITY) {
+      const value = obj[key];
+      if (typeof value === 'string' && value.length > 0) {
+        sampleIds.push(value);
+        break;
+      }
+    }
+  }
+
+  return sampleIds;
+}
+
+/**
  * Wrap a successful tool result in the 3-Layer JSON Envelope.
  *
  * @param {string} toolName
@@ -131,29 +175,22 @@ export async function wrapToolResult(toolName, rawResult, startedAt, options = {
   const data = records.slice(0, PREVIEW_LIMIT);
   const hasMore = totalRecords > data.length;
 
-  const generatedAt = new Date().toISOString();
-  const startedAtIso = new Date(startedAt).toISOString();
   const durationMs = Math.max(0, Date.now() - startedAt);
 
-  // AC-2: sampleIds from first 5 records that have an `id` field.
-  const sampleIds = records
-    .slice(0, 5)
-    .filter((r) => r && typeof r === 'object' && 'id' in /** @type {object} */ (r))
-    .map((r) => String(/** @type {Record<string, unknown>} */ (r).id));
+  // AC-2: summary.count is the number of records returned in data; sampleIds
+  // are taken from the preview records using the identifier priority list.
+  const sampleIds = buildSampleIds(data);
 
   /** @type {ToolMeta} */
   const meta = {
     tool: toolName,
-    platform,
-    generatedAt,
-    startedAt: startedAtIso,
     durationMs,
     totalRecords,
   };
 
   /** @type {ToolSummary} */
   const summary = {
-    count: totalRecords,
+    count: data.length,
     hasMore,
     ...(sampleIds.length > 0 ? { sampleIds } : {}),
   };
@@ -169,23 +206,26 @@ export async function wrapToolResult(toolName, rawResult, startedAt, options = {
       });
     } catch (artifactErr) {
       // Edge Case: artifact write failure → XACT_5002, preserve data preview.
+      /** @type {import('../core/types.js').ErrorEnvelope} */
+      const errorEnvelope = {
+        code: 'XACT_5002',
+        type: ErrorTypes.INTERNAL,
+        message: artifactErr instanceof Error ? artifactErr.message : String(artifactErr),
+        statusCode: 500,
+        isRetryable: false,
+        retryAfterMs: 0,
+        retryAfter: 0,
+        suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+        platform,
+      };
+
       return {
         success: false,
         platform,
         meta,
         data,
         summary,
-        error: {
-          code: 'XACT_5002',
-          type: ErrorTypes.INTERNAL,
-          message: `Artifact export failed: ${artifactErr instanceof Error ? artifactErr.message : String(artifactErr)}`,
-          statusCode: 500,
-          isRetryable: false,
-          retryAfterMs: 0,
-          retryAfter: 0,
-          suggestedAction: SuggestedActions.CONTACT_SUPPORT,
-          platform,
-        },
+        error: errorEnvelope,
       };
     }
   }
@@ -206,6 +246,7 @@ export async function wrapToolResult(toolName, rawResult, startedAt, options = {
  * @param {string} toolName
  * @param {Object} [options]
  * @param {Record<string, unknown>} [options.args]
+ * @param {number} [options.totalRecords]
  * @returns {ToolEnvelope}
  */
 export function wrapToolError(error, toolName, options = {}) {
@@ -277,6 +318,7 @@ export function wrapToolError(error, toolName, options = {}) {
       generatedAt: now,
       startedAt: now,
       durationMs: 0,
+      totalRecords: options.totalRecords ?? 0,
     },
     data: [],
     summary: {

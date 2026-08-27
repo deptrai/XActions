@@ -10,6 +10,7 @@
 
 import { spawn, execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import chalk from 'chalk';
 import { CONFIG_DIR } from '../shared.js';
@@ -73,7 +74,7 @@ export function registerDaemonCommand(program) {
       const ready = await waitForHealth(port, 10000);
       if (!ready) {
         // Kill the orphaned daemon process to prevent port leak.
-        try { process.kill(/** @type {number} */ (proc.pid), 'SIGKILL'); } catch {}
+        try { proc.kill('SIGKILL'); } catch {}
         await fs.unlink(DAEMON_FILE).catch(() => {});
         console.error(chalk.red(`❌ Daemon did not become ready on port ${port}`));
         process.exitCode = 1;
@@ -123,7 +124,8 @@ export function registerDaemonCommand(program) {
       }
 
       // Verify the PID actually belongs to our daemon before killing.
-      if (!isOurDaemon(pid)) {
+      const command = getProcessCommand(pid);
+      if (!command.includes('src/mcp/server.js') && !command.includes('mcp/server.js')) {
         console.log(chalk.yellow(`⚠️  PID ${pid} is not an XActions daemon. Cleaning up stale state.`));
         await fs.unlink(DAEMON_FILE).catch(() => {});
         return;
@@ -210,22 +212,47 @@ function isProcessAlive(pid) {
 }
 
 /**
- * Verify the PID belongs to an XActions daemon by checking its command line.
- * Returns true if verification succeeds or is unavailable (Windows fallback).
+ * Return the command line for a running process in a cross-platform way.
+ *
+ * - macOS: `ps -p <pid> -o command=`
+ * - Linux: read `/proc/<pid>/cmdline`
+ * - Windows: `wmic process where "ProcessId=<pid>" get CommandLine`
+ *
+ * Returns an empty string if the command line cannot be determined.
  *
  * @param {number} pid
- * @returns {boolean}
+ * @returns {string}
  */
-function isOurDaemon(pid) {
-  if (process.platform === 'win32') return true; // Skip on Windows.
+function getProcessCommand(pid) {
+  if (process.platform === 'win32') {
+    try {
+      return execFileSync(
+        'wmic',
+        ['process', 'where', `ProcessId=${pid}`, 'get', 'CommandLine'],
+        { encoding: 'utf-8', timeout: 3000 }
+      );
+    } catch {
+      return '';
+    }
+  }
+
+  if (process.platform === 'darwin') {
+    try {
+      return execFileSync('ps', ['-p', String(pid), '-o', 'command='], {
+        encoding: 'utf-8',
+        timeout: 3000,
+      });
+    } catch {
+      return '';
+    }
+  }
+
+  // Linux and most other Unix-like systems.
   try {
-    const output = execFileSync('ps', ['-p', String(pid), '-o', 'args='], {
-      encoding: 'utf-8',
-      timeout: 3000,
-    });
-    return output.includes('src/mcp/server.js');
+    const raw = readFileSync(`/proc/${pid}/cmdline`, 'utf-8');
+    return raw.replace(/\0/g, ' ');
   } catch {
-    return false;
+    return '';
   }
 }
 
@@ -245,4 +272,4 @@ async function waitForProcessExit(pid, timeoutMs) {
 
 // Exported for unit tests that exercise daemon lifecycle helpers without
 // spawning a real server process.
-export { getDaemonStatus, waitForHealth, isProcessAlive, isOurDaemon, waitForProcessExit };
+export { getDaemonStatus, waitForHealth, isProcessAlive, getProcessCommand, waitForProcessExit };

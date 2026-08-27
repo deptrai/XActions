@@ -33,7 +33,28 @@ import { sanitizeContent, escapeCsvCell } from '../utils/exporter.js';
 async function writeWithDrain(stream, line) {
   const ok = stream.write(line);
   if (!ok) {
-    await new Promise((resolve) => stream.once('drain', resolve));
+    await /** @type {Promise<void>} */ (new Promise((resolve, reject) => {
+      const onDrain = () => {
+        cleanup();
+        resolve();
+      };
+      const onError = (/** @type {Error} */ err) => {
+        cleanup();
+        reject(err);
+      };
+      const onClose = () => {
+        cleanup();
+        reject(new Error('Stream closed prematurely'));
+      };
+      const cleanup = () => {
+        stream.removeListener('drain', onDrain);
+        stream.removeListener('error', onError);
+        stream.removeListener('close', onClose);
+      };
+      stream.once('drain', onDrain);
+      stream.once('error', onError);
+      stream.once('close', onClose);
+    }));
   }
 }
 
@@ -44,10 +65,23 @@ async function writeWithDrain(stream, line) {
  * @returns {Promise<void>}
  */
 function closeStream(stream) {
-  return new Promise((resolve, reject) => {
-    stream.on('error', reject);
-    stream.end(() => resolve());
-  });
+  return /** @type {Promise<void>} */ (new Promise((resolve, reject) => {
+    const onError = (/** @type {Error} */ err) => {
+      cleanup();
+      reject(err);
+    };
+    const onFinish = () => {
+      cleanup();
+      resolve();
+    };
+    const cleanup = () => {
+      stream.removeListener('error', onError);
+      stream.removeListener('finish', onFinish);
+    };
+    stream.once('error', onError);
+    stream.once('finish', onFinish);
+    stream.end();
+  }));
 }
 
 /**
