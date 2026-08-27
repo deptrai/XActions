@@ -8,7 +8,7 @@ created: 2026-08-28
 updated: 2026-08-28
 last_updated: 2026-08-28
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "validated"
 baseline_commit: "a35aaac8"
 ---
 
@@ -16,24 +16,35 @@ baseline_commit: "a35aaac8"
 
 Status: ready-for-dev
 
-<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+<!-- Note: Validation completed. Run validate-create-story for final check before dev-story. -->
 
 ## Story
 
 As a **Facebook Automation Operator**,  
 I want **thực hiện các hành động viết (like, comment, post, share, messenger-share, share_link_uid, join_group, send_friend_request) trên Facebook thông qua kiến trúc hybrid thay vì legacy Puppeteer**,  
-So that **các hành động tương tác được quản lý bởi `FacebookClient`, sticky proxy, governor và error envelope chuẩn, giảm rủi ro checkpoint và tăng khả năng tái sử dụng cho MCP/CLI/API**.
+So that **các hành động tương tác được quản lý bởi `FacebookClient`, sticky proxy, governor, velocity tracker và error envelope chuẩn, giảm rủi ro checkpoint và tăng khả năng tái sử dụng cho MCP/CLI/API**.
 
 ## Scope Note
 
 Story 13.9 triển khai **Facebook social write actions** trong `FacebookCrawler`/`FacebookClient` thay vì các hàm legacy `src/scrapers/facebook/` (Puppeteer-only). Các action này là **write/mutating** nên bắt buộc `requiresAuth: true`, `dryRun` mặc định `true`, và phải tuân thủ rate limit / delay floor của Epic 6 (FR-53, NFR-5, NFR-6, NFR-8, NFR-10).
 
-Vì Facebook write mutations chủ yếu là **browser-facing DOM hoặc GraphQL mutation bảo mật cao, dễ xoay doc_id**, phương án mặc định sử dụng `FacebookBrowserBridge` (CDP/Playwright) cho các thao tác DOM (như `like`, `comment`, `post`, `join_group`, `send_friend_request`, `messenger_share`), kết hợp `FacebookClient.requestGraphQl()` cho các mutation endpoint đã biết (ví dụ `MWChatBusinessCTAAdsSenderMutation` để gửi Messenger link qua UID). Tất cả write actions phải đi qua `runGuardedBatch`-style bounded batch với delay jitter.
+Vì Facebook write mutations chủ yếu là **browser-facing DOM hoặc GraphQL mutation bảo mật cao, dễ xoay doc_id**, phương án mặc định sử dụng `FacebookBrowserBridge` (CDP/Playwright) cho các thao tác DOM (như `like`, `comment`, `post`, `join_group`, `send_friend_request`, `messenger_share`), kết hợp `FacebookClient.requestGraphQl()` cho các mutation endpoint đã biết khi capture được doc_id hợp lệ. Tất cả write actions phải đi qua `runGuardedActionBatch`-style bounded batch với delay jitter và **per-item governor check**.
 
 Scope cụ thể:
+
 - **Trong phạm vi 13.9:** đăng ký action, định nghĩa input/output, dry-run gate, delay/velocity guard, fallback an toàn, gắn `@deprecated` cho legacy files liên quan.
 - **Không trong phạm vi:** chuyển hướng toàn bộ MCP/CLI/API caller sang hybrid — thuộc Story 13.10 (Integration & Caller Migration). Tuy nhiên 13.9 **có thể** thêm `TODO(13.10)` notes tại caller surfaces.
-- **Đặc biệt:** `share_link_uid` có thể được triển khai như action riêng hoặc alias/fallback của `messenger_share` tùy theo kết quả phân tích live DOM.
+- **Đặc biệt `messenger_share`:** ưu tiên thực thi theo thứ tự — **primary = direct Messenger URL (`https://www.facebook.com/messages/t/{uid}`)**, **secondary = share dialog recipient avatar** (`messengerShare.js` pattern), **tertiary = GraphQL CTA mutation** (`MWChatBusinessCTAAdsSenderMutation`-style). Direct Messenger URL đáng tin cậy nhất do không phụ thuộc doc_id và không yêu cầu business/ad permission.
+- **Đặc biệt `share_link_uid`:** không triển khai như action độc lập; **merge vào `messenger_share`**. `share_link_uid` chỉ là alias handler gọi `messengerShare` với `recipientUids` là mảng một phần tử. Nếu caller truyền `recipientUid` (string), `FacebookCrawler` tự chuyển thành `recipientUids: [recipientUid]`.
+- **Delay floor theo action (ràng buộc cứng, override giá trị cũ trong story nếu mâu thuẫn):**
+  - `like`: **1–3s**
+  - `comment`: **3–7s** (timeline/profile); **5–15s** (group)
+  - `post` (profile/timeline): **3–7s**
+  - `post` (group): **30–90s**
+  - `share`: **5–15s**
+  - `messenger_share` / `share_link_uid`: **5–15s**
+  - `join_group`: **30–90s** (per group)
+  - `send_friend_request`: **60–180s**
 
 ## Sources
 
@@ -46,8 +57,10 @@ Scope cụ thể:
 - `_bmad-output/implementation-artifacts/13-5-facebook-hybrid-profile-followers-group-members.md` — `resolveTargetKey`, `resolveGroupId`, `saveCheckpoint`, `requiresAuth` derivation
 - `_bmad-output/implementation-artifacts/13-7-facebook-hybrid-post-group-comments.md` — input validation `XACT_4001`, PII stripping, `after`/pagination patterns, review patches
 - `_bmad-output/implementation-artifacts/13-8-facebook-hybrid-marketplace.md` — `DEFAULT_FB_DOC_IDS` placeholder strategy, `requiresAuth: false` public action pattern, guest/auth token ring partition, action-level auth resolution, residential proxy requirement
+- `_bmad-output/validation-reports/13-9-story-validation-report.md` — critical/enhancement/optimization fixes applied
 - `src/scrapers/social/facebook/crawler.js` — `FacebookCrawler` constructor, `DEFAULT_FB_DOC_IDS` [dòng 200-222], `registerAction` pattern [dòng 305-423], `resolveTargetKey` [dòng 104-158], `resolveGroupId` [dòng 167-195], `#normalizePostItem` [dòng 432-496], `marketplace()` handler pattern [dòng 1600-1700]
 - `src/scrapers/social/facebook/client.js` — `requestGraphQl()` [dòng 485-545], `buildGraphQlBody()` [dòng 431-476], `ensureTokens()` / token cache [dòng 212-421], auth/guest token ring partition [dòng 448-451]
+- `src/scrapers/social/facebook/signer-bridge.js` — `extractFacebookTokensScript` [dòng 47-121], `#resolveProxy` [dòng 464-497], public API [dòng 569-]
 - `src/scrapers/social/facebook/index.js` — exports [dòng 1-30]
 - `src/scrapers/facebook/messengerShare.js` — `shareToMessenger`, `sendMessageToThread`, SELECTORS, verified share dialog flow [dòng 57-450]
 - `src/scrapers/facebook/shareLinkByUid.js` — `shareLinkByUid`, `shareLinkByUidCampaign`, direct `messages/t/{uid}` approach [dòng 1-237]
@@ -55,9 +68,12 @@ Scope cụ thể:
 - `src/scrapers/facebook/messengerQueue.js` — `buildCampaignQueue`, `parseRecipientsFile`, `parseLinksFile` [dòng 1-179]
 - `src/scrapers/facebook/graphql.js` — `MESSENGER_CTA_DOC_ID = '29460155383630960'` [dòng 47], `checkMessengerCTA` [dòng 353-438], `sendMessageToUid` [dòng 461-545]
 - `src/scrapers/facebook/index.js` — legacy re-exports, `// LEGACY — see docs/deprecation-plan.md` pattern [dòng 1-64]
-- `api/services/facebookAutomation.js` — `runGuardedBatch`, `likeFacebookPosts`, `commentOnFacebookPosts` (AC2.2/2.3), `createFacebookPost`, `shareFacebookPosts`, `ACCOUNT_RISK_WARNING`, delay validation [dòng 43-500]
+- `src/scrapers/facebook/limits.js` — `LIMITS`, `getActionLimit`, `enforceDelay` [dòng 67-79, 161-172, 189-195]
+- `api/services/facebookAutomation.js` — `runGuardedBatch` legacy pattern, `likeFacebookPosts`, `commentOnFacebookPosts`, `createFacebookPost`, `shareFacebookPosts`, `ACCOUNT_RISK_WARNING`, delay validation [dòng 43-500, 1225, 1472-1548, 1603-1609, 1654]
 - `src/mcp/server.js` — `x_facebook_automate` (like/comment/post/messenger), `x_facebook_share_posts`, `x_facebook_join_groups`, `x_facebook_send_friend_requests`, `x_facebook_post_to_groups` tool definitions [dòng 1386-1540, 2772-2870, 3230-3236]
 - `src/core/base-crawler.js` — `start()` action auth resolution, account pool resolution, governor, jitter [dòng 151-251]
+- `src/core/base-client.js` — `AbstractApiClient`, `resolveProxy` with `requiresResidential` [dòng 184-232, 506-522, 612-619]
+- `src/core/adaptive-governor.js` — `recordRequest()` / `canAccountRequest()` [dòng 202-242]
 - `src/core/types.js` — `PostItem`, `ProfileItem`, `ActionDescriptor`, `CrawlerCommand` [dòng 9-102]
 - `docs/deprecation-plan.md` — Legacy-to-Hybrid mapping, status tracker, Phase 1 marker instructions [dòng 1-155]
 
@@ -77,15 +93,15 @@ Scope cụ thể:
 
 - `baseline_commit: a35aaac8` — Story 13.2.1 artifact created; 13.8 done, 13.7 done.
 - `FacebookCrawler` đã có các action `group_posts`, `page_posts`, `get_comments`, `post_comments`, `group_comments`, `profile`, `followers`, `following`, `group_members`, `search`, `group_search`, `marketplace` tại `src/scrapers/social/facebook/crawler.js`.
-- `FacebookClient.requestGraphQl` / `buildGraphQlBody` đã sẵn sàng với auth/guest token ring partition, sticky proxy, residential proxy requirement.
-- `FacebookBrowserBridge` (Playwright default, Puppeteer fallback) đã triển khai token extraction; DOM evaluate cho write actions chưa được sử dụng (13.8 chuyển SSR fallback thay vì DOM evaluate).
+- `FacebookClient.requestGraphQl` / `buildGraphQlBody` đã sẵn sàng với auth/guest token ring partition, sticky proxy, residential proxy requirement. Tuy nhiên body chưa đầy đủ các trường anti-bot (`__dyn`, `__csr`, `__hs`, `x_fb_lsd`) và chưa hỗ trợ multi-`doc_id` fallback/rotation.
+- `FacebookBrowserBridge` (Playwright default, Puppeteer fallback) đã triển khai token extraction; DOM evaluate cho write actions chưa được sử dụng (13.8 chuyển SSR fallback thay vì DOM evaluate). Cần thêm public `withPage`/`evaluateDom` seam.
 - Legacy write modules còn nguyên vẹn trong `src/scrapers/facebook/`:
   - `messengerShare.js` — share post qua Messenger dialog
   - `shareLinkByUid.js` — share link trực tiếp qua `messages/t/{uid}`
   - `graphqlSend.js` — server-side `sendMessageToUidServerSide`
   - `messengerQueue.js` — parse recipients/links/content
   - `graphql.js` — `MESSENGER_CTA_DOC_ID`, `checkMessengerCTA`, `sendMessageToUid`
-  - `api/services/facebookAutomation.js` — `likeFacebookPosts`, `commentOnFacebookPosts`, `createFacebookPost`, `shareFacebookPosts`, `runGuardedBatch`
+  - `api/services/facebookAutomation.js` — `runGuardedBatch`, `likeFacebookPosts`, `commentOnFacebookPosts`, `createFacebookPost`, `shareFacebookPosts`
 - `docs/deprecation-plan.md` chưa có mapping cho các hàm write legacy → hybrid actions; cần cập nhật.
 - MCP tools `x_facebook_automate`, `x_facebook_share_posts`, `x_facebook_join_groups`, `x_facebook_send_friend_requests`, `x_facebook_post_to_groups` hiện vẫn gọi legacy automation service.
 
@@ -97,46 +113,51 @@ Scope cụ thể:
 - **When** khởi tạo
 - **Then** đăng ký thêm các action trong constructor:
 
-| action | requiredArgs | optionalArgs | outputType | requiresAuth | delay floor |
-|---|---|---|---|---|---|
-| `like` | `postUrl` | `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { postUrl, liked, alreadyLiked, error? }[], dryRun: boolean }` | `true` | 1–3s |
-| `comment` | `postUrl`, `text` | `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { postUrl, commentId?, error? }[], dryRun: boolean }` | `true` | 1–3s |
-| `post` | `text` | `mediaUrls`, `groupUrls`, `groupIds`, `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { targetUrl, postId?, error? }[], dryRun: boolean }` | `true` | 3–7s |
-| `share` | `postUrl` | `dryRun`, `delayMin`, `delayMax`, `maxBatch`, `message` | `{ results: { postUrl, shared, error? }[], dryRun: boolean }` | `true` | 3–7s |
-| `messenger_share` | `postUrl` | `recipientUids`, `recipientNames`, `message`, `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { recipientUid, ok, method?, error? }[], dryRun: boolean }` | `true` | 5–15s |
-| `share_link_uid` | `postUrl`, `recipientUid` | `message`, `dryRun`, `delayMin`, `delayMax` | `{ ok, postUrl, recipientUid, method?, error? }` | `true` | 5–15s |
-| `join_group` | `groupUrls` hoặc `groupIds` | `keyword`, `limit`, `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { groupUrl, joined, error? }[], dryRun: boolean }` | `true` | 2–5s (per group min 30s theo PRD Cluster-1) |
-| `send_friend_request` | `targets` | `mode`, `location`, `limit`, `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { target, ok, error? }[], dryRun: boolean }` | `true` | 60–180s (NFR-10) |
+| action | requiredArgs | optionalArgs | outputType | requiresAuth | delay floor | velocity |
+|---|---|---|---|---|---|---|
+| `like` | `postUrl` | `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { postUrl, liked, alreadyLiked, error? }[], dryRun: boolean }` | `true` | 1–3s | ≤30/hr |
+| `comment` | `postUrl`, `text` | `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { postUrl, commentId?, error? }[], dryRun: boolean }` | `true` | 3–7s (timeline) / 5–15s (group) | ≤10/hr |
+| `post` | `text` | `mediaUrls`, `groupUrls`, `groupIds`, `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { targetUrl, postId?, error? }[], dryRun: boolean }` | `true` | 3–7s (profile) / 30–90s (group) | ≤5/hr |
+| `share` | `postUrl` | `dryRun`, `delayMin`, `delayMax`, `maxBatch`, `message` | `{ results: { postUrl, shared, error? }[], dryRun: boolean }` | `true` | 5–15s | conservative |
+| `messenger_share` | `postUrl` | `recipientUids`, `recipientNames`, `message`, `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { recipientUid, ok, method?, error? }[], dryRun: boolean }` | `true` | 5–15s | conservative (NFR-8) |
+| `share_link_uid` | `postUrl`, `recipientUid` | `message`, `dryRun`, `delayMin`, `delayMax` | `{ ok, postUrl, recipientUid, method?, error? }` | `true` | 5–15s (alias) | alias of `messenger_share` |
+| `join_group` | `groupUrls` hoặc `groupIds` | `keyword`, `limit`, `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { groupUrl, joined, error? }[], dryRun: boolean }` | `true` | 30–90s | conservative |
+| `send_friend_request` | `targets` | `mode`, `location`, `limit`, `dryRun`, `delayMin`, `delayMax`, `maxBatch` | `{ results: { target, ok, error? }[], dryRun: boolean }` | `true` | 60–180s | ≤20/day |
 
 - **And** tất cả action trên khai báo `requiresAuth: true` (override cấp platform `FacebookCrawler.requiresAuth = true`)
 - **And** `listActions()` trả về đầy đủ action với `requiredArgs`, `optionalArgs`, `example`, `outputType`, `requiresAuth`
-- **And** `postUrls` / `groupUrls` / `groupIds` chấp nhận `string` hoặc `string[]` để batch
+- **And** `postUrls` / `groupUrls` / `groupIds` / `recipientUids` chấp nhận `string` hoặc `string[]` để batch
 
-### AC-2: `FacebookActions` module (hoặc `FacebookClient` action methods)
+### AC-2: `FacebookActions` / `batch-runner.js` / `FacebookActionVelocityTracker`
 
 - **Given** `src/scrapers/social/facebook/` cần thêm logic write
 - **When** triển khai
-- **Then** tạo `src/scrapers/social/facebook/actions.js` (hoặc mở rộng `FacebookClient` / `FacebookCrawler`) chứa các phương thức write
+- **Then** tạo các module sau:
+  - `src/scrapers/social/facebook/actions.js` — chứa `FacebookActions` class với các phương thức `like`, `comment`, `post`, `share`, `messengerShare`, `joinGroup`, `sendFriendRequest`
+  - `src/scrapers/social/facebook/batch-runner.js` — chứa `runGuardedActionBatch`, `enforceActionDelay`, `getActionLimit`
+  - `src/scrapers/social/facebook/velocity-tracker.js` (hoặc nằm trong `batch-runner.js`) — `FacebookActionVelocityTracker` với sliding window 1h/24h
 - **And** mỗi phương thức:
   - Nhận `args` và `session` (có `accountId`, `cookies`, `cdpUrl` tùy chọn)
   - Resolve account từ `AccountPool` nếu thiếu
   - Gắn **sticky residential proxy** theo `accountId` suốt session
-  - Đảm bảo `dryRun: true` mặc định
+  - Đảm bảo `dryRun: true` mặc định (`args.dryRun !== false`)
   - Không log cookie/token
   - Trả về `PlatformError` chuẩn với `suggestedAction` khi lỗi
+- **And** **KHÔNG** import từ `api/services/facebookAutomation.js`; chỉ "copy pattern" logic `runGuardedBatch` cũ vào `runGuardedActionBatch` mới, dùng `PlatformError` và gọi `governor`/`FacebookActionVelocityTracker`
 
 ### AC-3: Like action
 
 - **Given** `postUrl` là URL bài viết Facebook hợp lệ
 - **When** gọi `crawler.start({ action: 'like', args: { postUrl, dryRun: false }, session })`
 - **Then** `FacebookCrawler.like(args, session)`:
-  1. Validate `postUrl` bằng `assertFacebookUrlLocal` / `resolveTargetKey` style, reject nếu không phải `facebook.com` URL → `XACT_4001`
-  2. `FacebookBrowserBridge` navigate đến `postUrl` với sticky proxy, anti-leak browser args
-  3. Tìm Like button theo locale-aware selectors (`[aria-label*="Like"]`, `[aria-label*="Thích"]`, `[aria-label*="Bỏ thích"]`)
-  4. Nếu đã like → trả `{ alreadyLiked: true, liked: false }`; nếu chưa → click với human-like delay 1–3s
-  5. Verify bằng Unlike button xuất hiện
-  6. Trả `{ postUrl, liked: true, alreadyLiked: false }` (hoặc `dryRun: true` preview)
-- **And** nếu GraphQL `like` mutation doc_id đã capture, có thể dùng `requestGraphQl` làm primary path, DOM làm fallback
+  1. Validate `postUrl` bằng `assertFacebookUrlLocal` / `resolveTargetKey` / `resolvePostFeedbackContext` style, reject nếu không phải `facebook.com` URL → `XACT_4001`
+  2. Gọi `FacebookBrowserBridge.withPage()` hoặc `FacebookClient.withPage()` để lấy page + sticky residential proxy
+  3. `FacebookBrowserBridge` navigate đến `postUrl` với anti-leak browser args
+  4. Tìm Like button theo locale-aware selectors (`[aria-label*="Like"]`, `[aria-label*="Thích"]`, `[aria-label*="Bỏ thích"]`)
+  5. Nếu đã like → trả `{ alreadyLiked: true, liked: false }`; nếu chưa → click với human-like delay 1–3s
+  6. Verify bằng Unlike button xuất hiện
+  7. Trả `{ postUrl, liked: true, alreadyLiked: false }` (hoặc `dryRun: true` preview)
+- **And** nếu GraphQL `like` mutation doc_id đã capture, dùng `requestGraphQl` làm **optional path**, DOM làm primary
 - **And** tuân thủ velocity limit `likes ≤ 30/hr` theo FR-53
 
 ### AC-4: Comment action
@@ -145,11 +166,11 @@ Scope cụ thể:
 - **When** gọi `crawler.start({ action: 'comment', args: { postUrl, text }, session })`
 - **Then** `FacebookCrawler.comment(args, session)`:
   1. Validate `postUrl` và `text` (non-empty, `text.length ≤ 8000`)
-  2. Navigate đến `postUrl`, tìm comment input (`[role="textbox"][contenteditable="true"]`, aria-label chứa "Viết..." / "Write...")
+  2. Dùng `withPage` navigate đến `postUrl`, tìm comment input (`[role="textbox"][contenteditable="true"]`, aria-label chứa "Viết..." / "Write...")
   3. Type `text` với human-like typing delay (tham khảo `typeMessage` trong `messengerShare.js`)
   4. Nếu `dryRun: true` → preview text và dừng
   5. Nếu `dryRun: false` → gửi comment (Enter hoặc nút gửi), chờ phản hồi, trả `commentId` nếu parse được
-  6. Strip PII từ `text` trước khi lưu/log (NFR-11)
+  6. Strip PII từ `text` trước khi lưu/log (NFR-11); text gốc vẫn được gửi lên Facebook
 - **And** tuân thủ `comments ≤ 10/hr` theo FR-53
 
 ### AC-5: Post action
@@ -157,13 +178,13 @@ Scope cụ thể:
 - **Given** `text` và tùy chọn `mediaUrls`, `groupUrls`/`groupIds`
 - **When** gọi `crawler.start({ action: 'post', args: { text, groupUrls: ['https://www.facebook.com/groups/xxx'] }, session })`
 - **Then** `FacebookCrawler.post(args, session)`:
-  1. Validate `text` non-empty, `mediaUrls` là array URL hợp lệ, `groupUrls` chứa `/groups/`
+  1. Validate `text` non-empty, `mediaUrls` là array URL hợp lệ (nhưng **chỉ validate, chưa upload** — `mediaUrls` reserved trong MVP, xem EN-3), `groupUrls` chứa `/groups/`
   2. Với mỗi target (profile timeline hoặc group), navigate đến composer URL
   3. Mở composer (`[role="button"][aria-label*="Tạo bài viết"]` / `"Create post"`)
   4. Nhập `text` và attachment (nếu có) qua `FacebookBrowserBridge`
   5. `dryRun: true` → preview, không submit
   6. `dryRun: false` → submit, trả `postId` hoặc `postUrl` nếu parse được
-  7. Delay floor 3–7s, max batch 10 group posts (20 với `force: true`) theo NFR-6 / Cluster-1
+  7. Delay floor **3–7s (profile) / 30–90s (group)**, max batch 10 group posts (20 với `force: true`) theo NFR-6 / Cluster-1
 
 ### AC-6: Share action (chia sẻ lên timeline)
 
@@ -178,16 +199,17 @@ Scope cụ thể:
 
 ### AC-7: Messenger share & `share_link_uid`
 
-- **Given** `postUrl` và danh sách `recipientUids` / `recipientNames`
+- **Given** `postUrl` và danh sách `recipientUids` / `recipientNames` (hoặc `recipientUid` cho alias)
 - **When** gọi `crawler.start({ action: 'messenger_share', args: { postUrl, recipientUids, message }, session })`
-- **Then** `FacebookCrawler.messengerShare(args, session)` hỗ trợ **hai phương thức chính**:
-  1. **GraphQL mutation path** (nếu doc_id hợp lệ): dùng `FacebookClient.requestGraphQl()` với `doc_id` tương đương `MWChatBusinessCTAAdsSenderMutation` (legacy `29460155383630960` tại `src/scrapers/facebook/graphql.js:47` hoặc doc_id mới), gửi link đến từng `recipientUid`
-  2. **Direct Messenger URL path** (fallback DOM): navigate `https://www.facebook.com/messages/t/{recipientUid}`, paste `postUrl` (và `message` nếu có) vào compose box, press Enter / click send button (`shareLinkByUid.js` pattern)
-  3. **Share dialog path** (cuối cùng): mở share dialog trên bài viết, chọn recipient avatar có aria-label chứa `via Messenger` / `qua Messenger` (`messengerShare.js` pattern)
-- **And** `share_link_uid` có thể là alias hoặc variant của `messenger_share` khi chỉ có 1 `recipientUid`
+- **Then** `FacebookCrawler.messengerShare(args, session)` hỗ trợ **ba phương thức theo ưu tiên giảm dần**:
+  1. **Primary: direct Messenger URL** — navigate `https://www.facebook.com/messages/t/{recipientUid}` với `withPage`, paste `postUrl` (và `message` nếu có) vào compose box, press Enter / click send button (`shareLinkByUid.js` pattern)
+  2. **Secondary: share dialog recipient avatar** — mở share dialog trên bài viết, chọn recipient avatar có aria-label chứa `via Messenger` / `qua Messenger` (`messengerShare.js` pattern)
+  3. **Tertiary: GraphQL CTA mutation** — nếu capture được doc_id hợp lệ, dùng `FacebookClient.requestGraphQl(..., { fallbackDocIds: [...] })` với `MWChatBusinessCTAAdsSenderMutation`-style variables; nếu fail thì fallback về path 1/2 thay vì throw panic
+- **And** `share_link_uid` là alias của `messenger_share` khi chỉ có 1 `recipientUid`; handler gọi `messengerShare({ ...args, recipientUids: [recipientUid] })`
 - **And** delay floor 5–15s giữa các recipient (NFR-8)
 - **And** message compose strip emoji nếu cấu hình (tái dùng `stripEmojiSurrogates`, `pickRandomSegment` từ `messengerShare.js:104-126`)
 - **And** kết quả mỗi recipient `{ recipientUid, ok, method, error? }`
+- **And** mọi request write / bridge sử dụng `requiresResidential: true`
 
 ### AC-8: Join group action
 
@@ -198,7 +220,7 @@ Scope cụ thể:
   2. Navigate đến group page hoặc `facebook.com/groups/{groupId}`
   3. Tìm nút "Join Group" / "Tham gia nhóm" theo locale-aware selector
   4. `dryRun: true` → preview; `dryRun: false` → click, verify trạng thái pending/member
-  5. Delay **min 30s** giữa các group theo PRD Cluster-1, max batch 20
+  5. Delay **30–90s** giữa các group theo PRD Cluster-1, max batch 20
 
 ### AC-9: Send friend request action
 
@@ -211,32 +233,37 @@ Scope cụ thể:
   4. Delay **60–180s** giữa các request (NFR-10), `limit ≤ 20/day`
   5. Trả `{ results: { target, ok, error? }[], dryRun: boolean }`
 
-### AC-10: Dry-run gate, delay floor và governor
+### AC-10: Dry-run gate, delay floor, governor và velocity tracker
 
 - **Given** bất kỳ write action
 - **When** gọi `crawler.start(...)`
 - **Then** `dryRun` mặc định `true` (NFR-6); muốn thực thi phải truyền `dryRun: false` rõ ràng
 - **And** cookie/token không bị log
-- **And** mỗi action đi qua `AdaptiveRateGovernor` với velocity limit tương ứng:
+- **And** `runGuardedActionBatch` gọi `governor.canAccountRequest(accountId, 'facebook')` / `governor.recordRequest(accountId, 'facebook')` **trước/sau mỗi item** (per-item governor check)
+- **And** `FacebookActionVelocityTracker` theo dõi per-action per-account với sliding window 1h/24h:
   - `like`: ≤ 30/hr
   - `comment`: ≤ 10/hr
-  - `post`: ≤ 5/hr (theo NFR-9 scheduler cap, có thể điều chỉnh)
-  - `messenger_share`: bảo thủ hơn default like/comment (NFR-8)
+  - `post`: ≤ 5/hr (theo NFR-9 scheduler cap)
+  - `share`: conservative
+  - `messenger_share`: conservative hơn default like/comment (NFR-8)
   - `send_friend_request`: ≤ 20/day, 60–180s delay
+  - `join_group`: conservative, min delay 30–90s
 - **And** nếu thiếu account từ `AccountPool` → `XACT_4010` với `suggestedAction: 'relogin'`
 - **And** action `requiresAuth: true` bắt buộc account + sticky residential proxy (AD-3 rule 3b)
+- **And** mọi request GraphQL / bridge cho write action truyền `requiresResidential: true`
 
 ### AC-11: Error envelope và fallback
 
 - **Given** bất kỳ write action gặp lỗi
 - **When** thực thi
 - **Then** trả về `PlatformError` với `code`, `type`, `message`, `retryAfter`, `suggestedAction` (AD-14)
-- **And** phân loại lỗi:
+- **And** phân loại lỗi theo convention hiện tại:
   - Challenge/Captcha/Login wall → `XACT_4010` / `suggestedAction: 'hibernate_account'`
-  - Rate limit 429 → `XACT_4291` / `suggestedAction: 'rotate_account'`
+  - Upstream rate limit 429 / GraphQL code 368 → `XACT_4290` / `suggestedAction: 'rotate_proxy'` (hoặc `rotate_account` nếu proxy pool cạn)
+  - Account hibernation / governor hibernation → `XACT_4291` / `suggestedAction: 'rotate_account'`
   - Proxy hết → `XACT_5030` / `suggestedAction: 'wait'`
   - Invalid args → `XACT_4001` / `suggestedAction: 'use_x_actions_list'`
-- **And** KHÔNG throw panic khi doc_id rotated hoặc DOM selector thất bại; ghi `note` và thử fallback path
+- **And** KHÔNG throw panic khi doc_id rotated hoặc DOM selector thất bại; ghi `note` và thử fallback path / doc_id tiếp theo
 
 ### AC-12: Deprecation markers
 
@@ -244,13 +271,14 @@ Scope cụ thể:
 - **When** triển khai Story 13.9
 - **Then** gắn JSDoc `@deprecated` và comment `// LEGACY — see docs/deprecation-plan.md` cho:
   - `src/scrapers/facebook/messengerShare.js` (replaced by `facebook:messenger_share`)
-  - `src/scrapers/facebook/shareLinkByUid.js` (replaced by `facebook:share_link_uid` / `facebook:messenger_share`)
+  - `src/scrapers/facebook/shareLinkByUid.js` (replaced by `facebook:messenger_share`)
   - `src/scrapers/facebook/graphqlSend.js` (replaced by `FacebookClient.requestGraphQl` / `facebook:messenger_share`)
   - `src/scrapers/facebook/messengerQueue.js` (replaced by batch handling trong `FacebookCrawler`)
+- **And** KHÔNG import từ `api/services/facebookAutomation.js`; file này đã được đánh dấu `deprecated-marked` trong `docs/deprecation-plan.md` Phase 1. Chỉ "copy pattern" sang `batch-runner.js`/`actions.js`.
 - **And** cập nhật `docs/deprecation-plan.md`:
   - Thêm vào bảng `Legacy Facebook Functions → Hybrid Actions`:
     - `shareToMessenger` / `messengerShareCampaign` → `facebook:messenger_share`
-    - `shareLinkByUid` / `shareLinkByUidCampaign` → `facebook:share_link_uid`
+    - `shareLinkByUid` / `shareLinkByUidCampaign` → `facebook:messenger_share`
     - `sendMessageToUidServerSide` / `sendMessageToUid` → `facebook:messenger_share`
     - `buildCampaignQueue` / `parseRecipientsFile` / `parseLinksFile` → `facebook:messenger_share`
     - `likeFacebookPosts` → `facebook:like`
@@ -268,74 +296,153 @@ Scope cụ thể:
 - **Then** tạo `tests/scrapers/social/facebook/crawler-social-actions.test.js` với real `node:http` server
 - **And** cover:
   - `[AC-1]` action registration với đúng `requiresAuth: true` và `dryRun` default
-  - `[AC-2]` `FacebookActions` / client action methods load
+  - `[AC-2]` `FacebookActions` / `batch-runner.js` / `FacebookActionVelocityTracker` load
   - `[AC-3]` `like` input validation, `XACT_4001` cho non-Facebook URL, dry-run preview
   - `[AC-4]` `comment` text validation, PII strip, dry-run
-  - `[AC-5]` `post` group URL validation, max batch clamp, dry-run
+  - `[AC-5]` `post` group URL validation, max batch clamp, dry-run, `mediaUrls` reserved
   - `[AC-6]` `share` postUrl validation, dry-run
-  - `[AC-7]` `messenger_share` recipient list validation, GraphQL body build với `MWChatBusinessCTAAdsSenderMutation`-style variables, direct-URL fallback
-  - `[AC-8]` `join_group` non-group URL rejection, delay min
+  - `[AC-7]` `messenger_share` recipient list validation, direct-URL primary, GraphQL fallback với multi-`doc_id`
+  - `[AC-8]` `join_group` non-group URL rejection, delay 30–90s
   - `[AC-9]` `send_friend_request` limit ≤ 20, delay floor 60–180s
-  - `[AC-10]` no account → `XACT_4010`
-  - `[AC-11]` error envelope shape
+  - `[AC-10]` no account → `XACT_4010`, per-item governor, `FacebookActionVelocityTracker` sliding window
+  - `[AC-11]` error envelope shape, `XACT_4290` upstream rate limit, `XACT_4291` hibernation
   - `[AC-12]` `@deprecated` JSDoc tồn tại trong legacy files
+  - `[AC-14..AC-19]` velocity tracker, per-item governor, no-legacy-import, bridge public seam, GraphQL anti-bot fields, multi-doc_id fallback, `resolvePostFeedbackContext`
 - **And** chạy `npx vitest run tests/scrapers/social/facebook/` và `npx tsc --noEmit` pass
+
+### AC-14: `FacebookActionVelocityTracker` / per-action sliding window
+
+- **Given** write action batch với nhiều item
+- **When** thực thi
+- **Then** `FacebookActionVelocityTracker` (hoặc mở rộng `AdaptiveRateGovernor`) ghi nhận mỗi `recordAction(accountId, action)` với sliding window **1h và 24h**
+- **And** `canDoAction(accountId, action)` kiểm tra trước khi thực thi item; nếu vượt ngưỡng → `XACT_4291` / `suggestedAction: 'rotate_account'`
+- **And** tracker hỗ trợ các action `like`, `comment`, `post`, `share`, `messenger_share`, `join_group`, `send_friend_request`
+
+### AC-15: Per-item governor check
+
+- **Given** bất kỳ write action batch
+- **When** lặp qua từng item
+- **Then** gọi `governor.canAccountRequest(accountId, 'facebook')` trước mỗi item
+- **And** gọi `governor.recordRequest(accountId, 'facebook')` sau mỗi item (thành công hoặc lỗi không phải validation)
+- **And** nếu governor từ chối → `XACT_4291` / `suggestedAction: 'rotate_account'`, dừng batch
+
+### AC-16: Không import từ `api/services/facebookAutomation.js`
+
+- **Given** `batch-runner.js` / `actions.js` cần logic `runGuardedBatch`-style
+- **When** triển khai
+- **Then** **KHÔNG** dùng `import { runGuardedBatch } from '../../../api/services/facebookAutomation.js'` hay tương tự
+- **And** chỉ "copy pattern" từ legacy `runGuardedBatch` (delay clamp, `ACCOUNT_RISK_WARNING`, progress callback) và viết lại bằng `PlatformError`, `governor`, `FacebookActionVelocityTracker`
+
+### AC-17: `FacebookBrowserBridge` public `withPage` / `evaluateDom` seam
+
+- **Given** `FacebookActions` cần evaluate DOM cho like/comment/post/share/join/friend
+- **When** triển khai
+- **Then** mở rộng `FacebookBrowserBridge` với public method `withPage(fn, options)` hoặc `evaluateDom(fn, options)`
+- **And** `FacebookClient` cung cấp `ensureBrowserBridge()` public để `FacebookActions` lấy bridge mà không truy cập private fields
+- **And** `withPage` tái sử dụng 1 page trong suốt batch (OP-1), set cookies, chạy `fn(page)`, cuối cùng đóng page
+
+### AC-18: `FacebookClient.buildGraphQlBody` anti-bot fields, `friendlyNames`, multi-doc_id fallback
+
+- **Given** write mutation qua GraphQL
+- **When** triển khai
+- **Then** mở rộng `extractFacebookTokensScript` / `#fetchTokens` để parse thêm `__dyn`, `__csr`, `__hs`, `__hsdp`, `__hblp`, `__s`, `dpr`, `x_fb_lsd`, `fb_api_req_friendly_name` (với fallback rỗng)
+- **And** `FacebookClient.buildGraphQlBody` bao gồm các trường anti-bot trên khi khả dụng
+- **And** thêm `friendlyNames` map cho write mutations: `LIKE_MUTATION`, `COMMENT_MUTATION`, `POST_MUTATION`, `SHARE_MUTATION`, `MESSENGER_SHARE_MUTATION`, `JOIN_GROUP_MUTATION`, `SEND_FRIEND_REQUEST_MUTATION`
+- **And** `requestGraphQl` hỗ trợ `fallbackDocIds: string[]` để thử doc_id tiếp theo khi nhận `XACT_5000` / malformed response
+- **And** mọi write request gọi `client.requestGraphQl(..., { requiresResidential: true })`
+
+### AC-19: `resolvePostFeedbackContext` public/utility
+
+- **Given** `FacebookCrawler.#resolvePostFeedbackContext` private hiện tại
+- **When** triển khai
+- **Then** chuyển `resolvePostFeedbackContext` thành public method của `FacebookCrawler` hoặc tách vào `src/scrapers/social/facebook/resolve-post-feedback.js`
+- **And** `FacebookActions.like` / `FacebookActions.comment` / `FacebookActions.share` tái dùng hàm này để lấy `feedback_id` / `story_id` nếu cần GraphQL path
 
 ## Tasks / Subtasks
 
 1. [ ] **Tạo `src/scrapers/social/facebook/actions.js`**
-   - [ ] Định nghĩa `FacebookActions` class (hoặc module) với các phương thức: `like`, `comment`, `post`, `share`, `messengerShare`, `shareLinkByUid`, `joinGroup`, `sendFriendRequest`
-   - [ ] Tiêm `client`, `browserBridge`, `governor`, `accountPool`, `proxyPool` từ constructor
-   - [ ] Tái dùng `runGuardedBatch` pattern từ `api/services/facebookAutomation.js:88-280`
-   - [ ] Đảm bảo `dryRun` mặc định `true`, không log cookie/token
+   - [ ] Định nghĩa `FacebookActions` class với các phương thức: `like`, `comment`, `post`, `share`, `messengerShare`, `joinGroup`, `sendFriendRequest`
+   - [ ] Tiêm `client`, `browserBridge`, `governor`, `accountPool`, `proxyPool`, `actionVelocityTracker`, `runGuardedActionBatch` từ constructor hoặc `crawler` instance
+   - [ ] Đảm bảo `dryRun` mặc định `true` (`args.dryRun !== false`), không log cookie/token
+   - [ ] Xử lý `share_link_uid` như alias gọi `messengerShare` với `recipientUids: [recipientUid]`
 
-2. [ ] **Mở rộng `DEFAULT_FB_DOC_IDS` cho write mutations (placeholder)**
+2. [ ] **Tạo `src/scrapers/social/facebook/batch-runner.js`**
+   - [ ] Viết `runGuardedActionBatch(items, options, fn)` — copy pattern từ `api/services/facebookAutomation.js` nhưng **KHÔNG import** file đó
+   - [ ] Dùng `PlatformError`, gọi `governor` per-item, gọi `FacebookActionVelocityTracker` per-action
+   - [ ] Hỗ trợ `delayMin`/`delayMax` clamp theo action, `maxBatch` clamp, `progressCallback`
+   - [ ] Trả `ACCOUNT_RISK_WARNING` khi vượt velocity
+
+3. [ ] **Tạo `src/scrapers/social/facebook/velocity-tracker.js` (hoặc trong `batch-runner.js`)**
+   - [ ] Định nghĩa `FacebookActionVelocityTracker` với sliding window 1h/24h
+   - [ ] `recordAction(accountId, action)` / `canDoAction(accountId, action)`
+   - [ ] `getActionLimit(action)` trả về `{ perHour?, perDay?, delayMin, delayMax }`
+
+4. [ ] **Mở rộng `DEFAULT_FB_DOC_IDS` cho write mutations (placeholder)**
    - [ ] Thêm placeholders: `LIKE_MUTATION`, `COMMENT_MUTATION`, `POST_MUTATION`, `SHARE_MUTATION`, `MESSENGER_SHARE_MUTATION`, `JOIN_GROUP_MUTATION`, `SEND_FRIEND_REQUEST_MUTATION`
    - [ ] Để `null` / `fb_xxx_doc` cho đến khi capture từ live session
+   - [ ] Thêm `friendlyNames` map tương ứng
 
-3. [ ] **Đăng ký action trong `FacebookCrawler` constructor**
-   - [ ] `like`, `comment`, `post`, `share`, `messenger_share`, `share_link_uid`, `join_group`, `send_friend_request`
+5. [ ] **Đăng ký action trong `FacebookCrawler` constructor**
+   - [ ] `like`, `comment`, `post`, `share`, `messenger_share`, `share_link_uid` (alias), `join_group`, `send_friend_request`
    - [ ] Khai báo `requiresAuth: true`, `requiredArgs`, `optionalArgs`, `example`, `outputType`
    - [ ] Handler gọi `this.actions.<method>(args, session)`
 
-4. [ ] **Implement `like` / `comment` / `post` / `share` handlers**
-   - [ ] Sử dụng `FacebookBrowserBridge` navigate + DOM evaluate
+6. [ ] **Implement `like` / `comment` / `post` / `share` handlers**
+   - [ ] Sử dụng `FacebookBrowserBridge.withPage` navigate + DOM evaluate
    - [ ] Locale-aware selectors (en/vi), fallback chain
    - [ ] Human-like click/type/scroll delays
    - [ ] Verify kết quả sau khi thực hiện
    - [ ] `dryRun: true` chỉ trả về preview, không tương tác DOM
+   - [ ] `post` group delay 30–90s, `mediaUrls` reserved
 
-5. [ ] **Implement `messenger_share` / `share_link_uid` handlers**
-   - [ ] Path 1: `FacebookClient.requestGraphQl()` với mutation doc_id placeholder
-   - [ ] Path 2: `messages/t/{uid}` + clipboard paste (`shareLinkByUid.js` pattern)
-   - [ ] Path 3: share dialog + recipient avatar click (`messengerShare.js` pattern)
+7. [ ] **Implement `messenger_share` / `share_link_uid` handlers**
+   - [ ] Path 1 (primary): `messages/t/{uid}` + clipboard paste (`shareLinkByUid.js` pattern)
+   - [ ] Path 2 (secondary): share dialog + recipient avatar click (`messengerShare.js` pattern)
+   - [ ] Path 3 (tertiary): `FacebookClient.requestGraphQl(..., { fallbackDocIds })` với mutation doc_id nếu capture
    - [ ] Tái dùng `stripEmojiSurrogates`, `pickRandomSegment`, `composeMessage` từ `messengerShare.js:96-146`
 
-6. [ ] **Implement `join_group` / `send_friend_request` handlers**
-   - [ ] `joinGroup`: resolve group ID, validate `/groups/`, DOM click "Join", delay min 30s
-   - [ ] `sendFriendRequest`: validate target URL/UID, DOM click "Add Friend", delay 60–180s, limit ≤ 20
+8. [ ] **Implement `join_group` / `send_friend_request` handlers**
+   - [ ] `joinGroup`: resolve group ID, validate `/groups/`, DOM click "Join", delay 30–90s
+   - [ ] `sendFriendRequest`: validate target URL/UID, DOM click "Add Friend", delay 60–180s, limit ≤ 20/day
 
-7. [ ] **Tích hợp `AdaptiveRateGovernor` và `AccountPool`**
-   - [ ] Gọi `governor.canAccountRequest(accountId, 'facebook')` trước mỗi action
-   - [ ] Velocity limit theo action type (like/comment/post/share/messenger/friend)
+9. [ ] **Tích hợp `AdaptiveRateGovernor`, `FacebookActionVelocityTracker`, per-item check**
+   - [ ] Gọi `governor.canAccountRequest(accountId, 'facebook')` trước mỗi item
+   - [ ] Gọi `governor.recordRequest(accountId, 'facebook')` sau mỗi item
+   - [ ] `FacebookActionVelocityTracker` sliding window 1h/24h cho từng action
    - [ ] Hibernation / rotate account trên challenge/rate-limit
 
-8. [ ] **Input validation & SSRF guard**
-   - [ ] Validate URL là `facebook.com`, `pathname` hợp lệ
-   - [ ] Reject path traversal, non-Facebook domain, empty text
-   - [ ] Clamp `limit`, `maxBatch`, `delayMin`/`delayMax` hợp lý
-   - [ ] PII strip cho `text`, `message` (NFR-11)
+10. [ ] **Input validation & SSRF guard**
+    - [ ] Validate URL là `facebook.com`, `pathname` hợp lệ
+    - [ ] Reject path traversal, non-Facebook domain, empty text
+    - [ ] Clamp `limit`, `maxBatch`, `delayMin`/`delayMax` theo action
+    - [ ] PII strip cho `text`, `message` khi log/preview (NFR-11)
 
-9. [ ] **Cập nhật `docs/deprecation-plan.md`**
-   - [ ] Thêm mapping legacy write functions → hybrid actions
-   - [ ] Cập nhật status tracker `Facebook Legacy Social Actions` → `deprecated-marked`
+11. [ ] **Mở rộng `FacebookBrowserBridge` public DOM API**
+    - [ ] Thêm `withPage(fn, options)` hoặc `evaluateDom(fn, options)`
+    - [ ] `FacebookClient.ensureBrowserBridge()` public
+    - [ ] Tái dùng 1 page trong suốt batch (OP-1)
 
-10. [ ] **Viết tests**
+12. [ ] **Mở rộng `FacebookClient.buildGraphQlBody` / `requestGraphQl`**
+    - [ ] Parse thêm `__dyn`, `__csr`, `__hs`, `__hsdp`, `__hblp`, `__s`, `dpr`, `x_fb_lsd`, `fb_api_req_friendly_name`
+    - [ ] Thêm `friendlyNames` cho write mutations
+    - [ ] Hỗ trợ `fallbackDocIds` rotation
+    - [ ] Truyền `requiresResidential: true` cho write requests
+
+13. [ ] **Tách `resolvePostFeedbackContext` thành public hoặc utility**
+    - [ ] Chuyển `FacebookCrawler.#resolvePostFeedbackContext` thành public `resolvePostFeedbackContext`
+    - [ ] Hoặc tách vào `src/scrapers/social/facebook/resolve-post-feedback.js`
+    - [ ] Tái dùng trong `like`, `comment`, `share`
+
+14. [ ] **Cập nhật `docs/deprecation-plan.md`**
+    - [ ] Thêm mapping legacy write functions → hybrid actions
+    - [ ] Cập nhật status tracker `Facebook Legacy Social Actions` → `deprecated-marked`
+
+15. [ ] **Viết tests**
     - [ ] `tests/scrapers/social/facebook/crawler-social-actions.test.js`
     - [ ] Real `node:http` server, không mock
-    - [ ] Cover AC-1 đến AC-13
+    - [ ] Cover AC-1 đến AC-19
 
-11. [ ] **Chạy verification**
+16. [ ] **Chạy verification**
     - [ ] `npx vitest run tests/scrapers/social/facebook/`
     - [ ] `npx tsc --noEmit`
     - [ ] `npx prisma validate`
@@ -345,17 +452,38 @@ Scope cụ thể:
 ### Relevant architecture patterns and constraints
 
 - **Action-Level Auth (AD-3 rule 3b, AD-11 rule 3):** Mọi write action khai báo `requiresAuth: true` để `AbstractCrawler.start()` resolve `accountId` từ `AccountPool`, gắn sticky proxy, và không bao giờ rơi vào guest token ring. `FacebookClient.buildGraphQlBody` sẽ buộc `__user` lấy từ token cache.
-- **Dry-Run Default (NFR-6):** Tất cả write actions mặc định `dryRun: true`. Real writes yêu cầu explicit `dryRun: false`.
-- **Delay Floor (NFR-5, NFR-8, NFR-10):** Facebook write actions phải có delay rộng hơn Twitter. Sử dụng `delayMin`/`delayMax` injectable để test dễ dàng.
-- **No Cookie/Token Logging:** Không log `c_user`, `xs`, `fb_dtsg`, `lsd` trong bất kỳ error/console nào.
-- **Browser Bridge Scope:** `FacebookBrowserBridge` hiện là signer-token bridge; 13.8 đã ghi note "KHÔNG hỗ trợ DOM evaluate". Story 13.9 **mở rộng bridge** để hỗ trợ DOM evaluate cho write actions, hoặc tạo helper `evaluateDom` riêng trong `actions.js`.
-- **Residential Proxy Mandatory:** Sau 13.8, `FacebookClient` mặc định `requiresProxy=true` cho real domain. Action 13.9 phải truyền `ProxyIpPool` residential.
+- **Dry-Run Default (NFR-6):** Tất cả write actions mặc định `dryRun: true`. Real writes yêu cầu explicit `dryRun: false`. Dùng `args.dryRun !== false` thay vì `args.dryRun ?? true` để `null`/`undefined` cũng là dry-run.
+- **Delay Floor (NFR-5, NFR-8, NFR-10, Cluster-1):**
+  - `like`: 1–3s
+  - `comment`: 3–7s (timeline) / 5–15s (group)
+  - `post` (profile): 3–7s
+  - `post` (group): 30–90s
+  - `share`: 5–15s
+  - `messenger_share` / `share_link_uid`: 5–15s
+  - `join_group`: 30–90s
+  - `send_friend_request`: 60–180s
+  Sử dụng `delayMin`/`delayMax` injectable để test dễ dàng, nhưng `batch-runner.js` phải clamp theo floor trên.
+- **No Cookie/Token Logging:** Không log `c_user`, `xs`, `fb_dtsg`, `lsd`, `__dyn`, `__csr` trong bất kỳ error/console nào.
+- **Browser Bridge Scope:** `FacebookBrowserBridge` hiện là signer-token bridge; 13.8 đã ghi note "KHÔNG hỗ trợ DOM evaluate". Story 13.9 **bắt buộc** thêm public `withPage`/`evaluateDom` để `FacebookActions` thực hiện write DOM mà không chạm private fields.
+- **Residential Proxy Mandatory:** Sau 13.8, `FacebookClient` mặc định `requiresProxy=true` cho real domain. `FacebookBrowserBridge.#resolveProxy` cần truyền `requiresResidential` cho write sessions. Action 13.9 phải truyền `ProxyIpPool` residential và `requiresResidential: true` cho mọi write request/bridge.
+- **Per-Action Velocity Tracking:** `AdaptiveRateGovernor` hiện tại chỉ track 60s toàn platform. Bắt buộc thêm `FacebookActionVelocityTracker` sliding window 1h/24h cho `like`, `comment`, `post`, `share`, `messenger_share`, `join_group`, `send_friend_request`.
+- **Per-Item Governor Check:** `AbstractCrawler.start()` chỉ gọi governor 1 lần cho cả batch. `batch-runner.js` phải gọi `governor.canAccountRequest`/`recordRequest` trước/sau **mỗi item**.
+- **No Legacy Import:** `api/services/facebookAutomation.js` đã `deprecated-marked`. `batch-runner.js`/`actions.js` **KHÔNG** import từ đây; chỉ copy pattern.
+- **PII Strip chỉ log/preview, không strip trước khi gửi:** `text`/`message` gửi lên Facebook phải nguyên vẹn; chỉ strip khi lưu `CrawlCheckpoint`, Redis stream, hoặc trả về `dryRun` preview.
+- **Multi-doc_id fallback:** Mọi GraphQL write path phải chấp nhận `fallbackDocIds` và thử doc_id tiếp theo trước khi fallback DOM. Không throw panic khi doc_id rotated.
+- **Anti-Bot Fields:** `FacebookClient.buildGraphQlBody` cần bổ sung `__dyn`, `__csr`, `__hs`, `__hsdp`, `__hblp`, `__s`, `dpr`, `x_fb_lsd`, `fb_api_req_friendly_name` (khi khả dụng) để giảm khả năng bị reject.
+- **`resolvePostFeedbackContext` public:** Cần tái dùng để lấy feedback context từ post URL cho like/comment/share; chuyển thành public hoặc utility.
+- **`mediaUrls` reserved:** Upload media qua Facebook composer phức tạp (GraphQL file upload). Trong MVP `post` chỉ text-only; `mediaUrls` được accept/validate nhưng ghi `note` rõ ràng.
 
 ### Source tree components to touch
 
-- `src/scrapers/social/facebook/crawler.js` — đăng ký action, handlers delegate
+- `src/scrapers/social/facebook/crawler.js` — đăng ký action, handlers delegate, `resolvePostFeedbackContext` public
 - `src/scrapers/social/facebook/actions.js` — (file mới) write action logic
-- `src/scrapers/social/facebook/client.js` — `requestGraphQl` cho mutation path
+- `src/scrapers/social/facebook/batch-runner.js` — (file mới) `runGuardedActionBatch`, `enforceActionDelay`, `getActionLimit`
+- `src/scrapers/social/facebook/velocity-tracker.js` — (file mới hoặc trong `batch-runner.js`) `FacebookActionVelocityTracker`
+- `src/scrapers/social/facebook/resolve-post-feedback.js` — (file mới nếu tách utility)
+- `src/scrapers/social/facebook/client.js` — `buildGraphQlBody` anti-bot fields, `requestGraphQl` fallback doc_ids, `requiresResidential`, `ensureBrowserBridge`
+- `src/scrapers/social/facebook/signer-bridge.js` — public `withPage`/`evaluateDom`, `requiresResidential` proxy
 - `src/scrapers/social/facebook/index.js` — export `FacebookActions`
 - `src/scrapers/facebook/messengerShare.js`, `shareLinkByUid.js`, `graphqlSend.js`, `messengerQueue.js` — gắn `@deprecated`
 - `docs/deprecation-plan.md` — mapping table + status tracker
@@ -373,16 +501,21 @@ Scope cụ thể:
 - **ESM 100%:** `.js` ESM, `import`/`export`, không `require`.
 - **JSDoc / TypeScript types:** Tất cả hàm mới có `@param` / `@returns`. Chạy `npx tsc --noEmit` pass. Không dùng `any`.
 - **No runtime dependency mới:** Chỉ dùng `puppeteer`/`playwright`, `got-scraping`/`undici`, `@prisma/client` đã có.
-- **Tái dùng legacy logic:** Tái dùng selectors, delay utilities, message composer từ `messengerShare.js`, `shareLinkByUid.js`, `facebookAutomation.js` thay vì viết lại.
+- **Tái dùng legacy logic (copy pattern, không import):** Tái dụng selectors, delay utilities, message composer từ `messengerShare.js`, `shareLinkByUid.js` **qua clipboard**, không import từ `api/services/facebookAutomation.js`.
 - **Error Envelope:** Mọi lỗi trả về `PlatformError` với `code`, `type`, `message`, `suggestedAction`.
-- **PII Stripping (NFR-11):** Strip phone/email từ `text`, `message`, `authorName` trước khi trả về/lưu.
+- **PII Stripping (NFR-11):** Strip phone/email từ `text`, `message`, `authorName` trước khi trả về/lưu; gốc vẫn gửi lên Facebook.
 - **Metadata Schema (AD-18):** Nếu lưu kết quả write action vào `Post`/`Comment` thì phải validate với schema tại `schemas/facebook/social.json`.
 - **Velocity Limit:**
-  - `like`: 30/hr
-  - `comment`: 10/hr
-  - `post`: 5/hr
-  - `friend_request`: 20/day, 60–180s delay
-  - `join_group`: 30s min delay
+  - `like`: ≤30/hr, delay 1–3s
+  - `comment`: ≤10/hr, delay 3–7s hoặc 5–15s
+  - `post`: ≤5/hr, delay 3–7s (profile) / 30–90s (group)
+  - `share`: conservative, delay 5–15s
+  - `messenger_share`: conservative (NFR-8), delay 5–15s
+  - `friend_request`: ≤20/day, delay 60–180s
+  - `join_group`: conservative, delay 30–90s
+- **Sliding Window:** `FacebookActionVelocityTracker` theo dõi 1h/24h per-action per-account.
+- **Residential Proxy:** Mọi write request/bridge truyền `requiresResidential: true`.
+- **Multi-doc_id Fallback:** `requestGraphQl` nhận `fallbackDocIds: string[]` và thử lần lượt.
 
 ## Architecture Compliance
 
@@ -393,6 +526,10 @@ Scope cụ thể:
 - **Anti-Bot Validation (AD-9):** `FacebookPlatformResponseValidator` phát hiện challenge/rate-limit; `FacebookCrawler` throw `RateLimitError`/`BotChallengeError` khi cần.
 - **3-Tier Gap-Filling (AD-10):** Ghi `CrawlCheckpoint` với `targetType` là tên action và `targetKey` là URL/UID để hỗ trợ resume/retry.
 - **Metadata Schema Contract (AD-18):** Mọi output dữ liệu lưu vào `Post`/`Comment` phải tuân thủ `schemas/facebook/social.json`.
+- **Governor/Velocity (AD-13):** `AdaptiveRateGovernor` + `FacebookActionVelocityTracker` đảm bảo per-item và per-action velocity limit. Governor gọi per-item; tracker sliding window 1h/24h.
+- **Browser Bridge Contract:** `FacebookBrowserBridge` phải cung cấp public `withPage(fn, options)`/`evaluateDom(fn, options)`; `FacebookClient` cung cấp `ensureBrowserBridge()`. Write actions không truy cập private fields (`#browser`, `#getLazyBrowserBridge`).
+- **GraphQL Write Body:** `FacebookClient.buildGraphQlBody` phải bao gồm các trường anti-bot (`__dyn`, `__csr`, `__hs`, `__hsdp`, `__hblp`, `__s`, `dpr`, `x_fb_lsd`, `fb_api_req_friendly_name`) khi token extraction cung cấp, và `friendlyNames` map cho write mutations.
+- **No Legacy Import:** `batch-runner.js` và `actions.js` tuân thủ AD-14 / deprecation-plan: không import `api/services/facebookAutomation.js`; chỉ copy pattern.
 
 ## Library & Framework Requirements
 
@@ -406,8 +543,13 @@ Scope cụ thể:
 ## File Structure Requirements
 
 **Cập nhật / Tạo mới:**
-- `src/scrapers/social/facebook/crawler.js` — thêm 8 action trong constructor
+- `src/scrapers/social/facebook/crawler.js` — thêm 8 action trong constructor, `resolvePostFeedbackContext` public
 - `src/scrapers/social/facebook/actions.js` — (mới) write action methods
+- `src/scrapers/social/facebook/batch-runner.js` — (mới) `runGuardedActionBatch`, `enforceActionDelay`, `getActionLimit`
+- `src/scrapers/social/facebook/velocity-tracker.js` — (mới hoặc merge vào `batch-runner.js`) `FacebookActionVelocityTracker`
+- `src/scrapers/social/facebook/resolve-post-feedback.js` — (mới nếu tách utility)
+- `src/scrapers/social/facebook/client.js` — `buildGraphQlBody` anti-bot fields, `requestGraphQl` `fallbackDocIds`, `requiresResidential`, `ensureBrowserBridge`
+- `src/scrapers/social/facebook/signer-bridge.js` — public `withPage`/`evaluateDom`, `requiresResidential` proxy
 - `src/scrapers/social/facebook/index.js` — export `FacebookActions`
 - `tests/scrapers/social/facebook/crawler-social-actions.test.js` — (mới) ATDD tests
 - `docs/deprecation-plan.md` — cập nhật mapping table + status tracker
@@ -423,26 +565,34 @@ Scope cụ thể:
 - `src/scrapers/index.js` — dispatcher migration thuộc 13.10
 - `api/routes/facebook.js` — caller surface migration thuộc 13.10
 - `src/mcp/server.js` — tool handler chuyển sang hybrid thuộc 13.10
-- `src/api/services/facebookAutomation.js` — logic legacy giữ nguyên sau khi gắn `@deprecated`; chuyển hướng trong 13.10
+- `api/services/facebookAutomation.js` — logic legacy giữ nguyên sau khi gắn `@deprecated`; chuyển hướng trong 13.10 (KHÔNG import trong 13.9)
 
 ## Testing Requirements
 
 - **Real `node:http` server:** Test phải tạo server local, mock `GET /` cho token extraction, `POST /api/graphql/` cho mutation responses.
-- **No mocks/stubs:** Không dùng `vi.fn()`, `sinon`, `nock`.
+- **No mocks/stubs:** Không dùng `vi.fn()`, `sinon`, `nock`. Chỉ dùng real `node:http` server và `FacebookClient.httpClient` seam.
 - **Browser-free unit tests cho pure utilities:**
   - `stripEmojiSurrogates`, `pickRandomSegment`, `composeMessage` nếu tái dùng từ `messengerShare.js`
-  - Input validation, URL parsing, limit clamp, delay validation
+  - Input validation, URL parsing, limit clamp, delay validation, `FacebookActionVelocityTracker` sliding window
 - **Integration tests bắt buộc:**
   - `[AC-1]` action registration
-  - `[AC-3]` `like` dry-run + invalid URL
+  - `[AC-2]` `FacebookActions` / `batch-runner.js` / `velocity-tracker.js` load, KHÔNG import từ `api/services/facebookAutomation.js`
+  - `[AC-3]` `like` dry-run + invalid URL + per-item governor
   - `[AC-4]` `comment` dry-run + PII strip
-  - `[AC-5]` `post` group URL validation + max batch
+  - `[AC-5]` `post` group URL validation + max batch + `mediaUrls` reserved
   - `[AC-6]` `share` dry-run
-  - `[AC-7]` `messenger_share` GraphQL body build + direct-URL fallback
-  - `[AC-8]` `join_group` non-group URL rejection
-  - `[AC-9]` `send_friend_request` delay floor + limit
-  - `[AC-10]` no account → `XACT_4010`
+  - `[AC-7]` `messenger_share` direct-URL primary + GraphQL fallback với `fallbackDocIds`
+  - `[AC-8]` `join_group` non-group URL rejection + delay 30–90s
+  - `[AC-9]` `send_friend_request` delay floor 60–180s + limit ≤20/day
+  - `[AC-10]` no account → `XACT_4010`, velocity tracker 1h/24h, `requiresResidential: true`
+  - `[AC-11]` `XACT_4290` upstream rate limit, `XACT_4291` hibernation
   - `[AC-12]` `@deprecated` JSDoc tồn tại
+  - `[AC-17]` `FacebookBrowserBridge.withPage` / `evaluateDom` public seam hoạt động
+  - `[AC-18]` `buildGraphQlBody` chứa anti-bot fields + `friendlyNames`, multi-doc_id fallback
+  - `[AC-19]` `resolvePostFeedbackContext` public/utility
+- **Dry-run tests:** Đảm bảo real writes không chạy khi `dryRun` mặc định hoặc `dryRun: true`.
+- **Velocity tests:** `FacebookActionVelocityTracker` reject vượt `perHour`/`perDay`; `batch-runner` gọi governor per-item.
+- **Account hibernation tests:** Governor/tracker trả `XACT_4291` / `suggestedAction: 'rotate_account'` khi vượt giới hạn hoặc hibernation.
 - **Chạy verification:**
   - `npx vitest run tests/scrapers/social/facebook/crawler-social-actions.test.js`
   - `npx vitest run tests/scrapers/social/facebook/`
@@ -455,7 +605,7 @@ Scope cụ thể:
 
 - **Action-level auth resolution:** `FacebookCrawler` constructor khai báo `requiresAuth` per action; `AbstractCrawler.start()` tính `actionRequiresAuth = descriptor.requiresAuth ?? this.requiresAuth` [dòng 174]. Write action phải set `requiresAuth: true` explicit.
 - **Token ring partition:** `FacebookClient.buildGraphQlBody` phân biệt `authLsd` (account-bound) và `guestLsd` (guest token ring) [dòng 448-451]. Write action với account phải đảm bảo lấy từ auth ring.
-- **Residential proxy requirement:** `FacebookClient` mặc định `requiresProxy=true` cho real domain; thiếu proxy throw `XACT_5030` [project context / 13.8 swe-max review]. Tests local `127.0.0.1` được miễn.
+- **Residential proxy requirement:** `FacebookClient` mặc định `requiresProxy=true` cho real domain; thiếu proxy throw `XACT_5030` [project context / 13.8 swe-max review]. Tests local `127.0.0.1` được miễn. `FacebookBrowserBridge.#resolveProxy` cần truyền `requiresResidential` cho write sessions.
 - **Placeholder doc_id strategy:** `DEFAULT_FB_DOC_IDS` dùng placeholder, fallback khi doc_id rotated không throw panic, ghi `note` [dòng 75-76, AC-5 13.8].
 - **Scope note override PRD:** 13.8 ghi rõ Epic 13 override PRD cũ về advanced filters [dòng 25-27]. Tương tự, 13.9 là Epic 13 scope, override phần PRD Phase 2 nếu cần.
 
@@ -475,21 +625,26 @@ Scope cụ thể:
 
 ### Áp dụng cho 13.9
 
-- Write actions cần DOM evaluate path chính (do Facebook write mutations volatile).
-- GraphQL path là optional optimization khi doc_id được capture.
+- Write actions cần DOM evaluate path chính (do Facebook write mutations volatile). `FacebookBrowserBridge.withPage` là seam bắt buộc.
+- GraphQL path là optional optimization khi doc_id được capture; phải có multi-`doc_id` fallback.
 - Input validation phải chặt chẽ như 13.7 (`URL`, `pathname`, `XACT_4001`).
-- Tất cả write actions `requiresAuth: true`, sticky proxy, account pool.
-- Delay floor và velocity limit là ràng buộc cứng (PRD Epic 6).
+- Tất cả write actions `requiresAuth: true`, sticky proxy, account pool, `requiresResidential: true`.
+- Delay floor và velocity limit là ràng buộc cứng (PRD Epic 6); `post` group và `join_group` là 30–90s, không phải 3–7s/2–5s cũ.
+- `FacebookActionVelocityTracker` sliding window 1h/24h là yêu cầu mới để đáp ứng FR-53 (per-hour, per-day limits).
+- `batch-runner.js` phải gọi governor per-item, không chỉ một lần cho cả batch.
 
 ## Latest Technical Information
 
 - **Facebook GraphQL doc_id pattern:** Facebook Comet sử dụng persisted query `doc_id` + `variables` object, gửi đến `https://www.facebook.com/api/graphql/` dạng `application/x-www-form-urlencoded` [web research: deepwiki.com/fb-aio].
-- **Known messenger doc_id:** Legacy `MWChatBusinessCTAAdsSenderMutation` sử dụng `doc_id = 29460155383630960` tại `src/scrapers/facebook/graphql.js:47` và `graphqlSend.js:104`. Đây là điểm khởi đầu cho `messenger_share` GraphQL path; khả năng cao doc_id này đã/xoay nên cần capture mới từ live session.
+- **Known messenger doc_id:** Legacy `MWChatBusinessCTAAdsSenderMutation` sử dụng `doc_id = 29460155383630960` tại `src/scrapers/facebook/graphql.js:47` và `graphqlSend.js:104`. Đây là điểm khởi đầu cho `messenger_share` **tertiary** path; khả năng cao doc_id này đã/xoay nên cần capture mới từ live session.
+- **Messenger direct URL:** `https://www.facebook.com/messages/t/{uid}` mở conversation trực tiếp, có thể paste URL qua clipboard API và gửi [verified trong `shareLinkByUid.js`]. Đây là **primary** path đáng tin cậy khi GraphQL mutation không ổn định.
+- **Facebook share dialog:** Recipient avatar có aria-label chứa `"via Messenger"` / `"qua Messenger"` là one-click send; caption bị discard [xác nhận live trong `messengerShare.js:30-55`]. Đây là **secondary** path.
 - **Graph API v26.0:** `/{object-id}/likes` và `/{post-id}/comments` hỗ trợ POST để like/comment, nhưng yêu cầu Page access token — không áp dụng trực tiếp cho user automation. Do đó 13.9 dùng internal GraphQL / DOM thay vì Graph API.
-- **Messenger direct URL:** `https://www.facebook.com/messages/t/{uid}` mở conversation trực tiếp, có thể paste URL qua clipboard API và gửi [verified trong `shareLinkByUid.js`]. Đây là fallback đáng tin cậy khi GraphQL mutation không ổn định.
-- **Facebook share dialog:** Recipient avatar có aria-label chứa `"via Messenger"` / `"qua Messenger"` là one-click send; caption bị discard [xác nhận live trong `messengerShare.js:30-55`].
 - **Doc_id volatility:** Instaloader/Instagram research cho thấy Meta GraphQL doc_id thay đổi thường xuyên; cần fallback và không throw panic khi doc_id rotated [web research: instaloader commit 8fb0b20].
-- **Rate limits from PRD (real project context):** Likes ≤ 30/hr, comments ≤ 10/hr, friend requests ≤ 20/day [FR-53]. Messenger mass-share cần delay bảo thủ hơn [NFR-8]. Friend request delay 60–180s không override [NFR-10].
+- **Rate limits from PRD (real project context):** Likes ≤ 30/hr, comments ≤ 10/hr, friend requests ≤ 20/day [FR-53]. Messenger mass-share cần delay bảo thủ hơn [NFR-8]. Friend request delay 60–180s không override [NFR-10]. `post` group và `join_group` cần floor 30–90s theo legacy `api/services/facebookAutomation.js` Cluster-1.
+- **Anti-bot form fields:** Legacy `graphqlSend.js:80-110` gửi thêm `__hs`, `__hsi`, `__dyn`, `__csr`, `__hsdp`, `__hblp`, `__s`, `dpr`, `__spin_b`, `x_fb_lsd`, `fb_api_req_friendly_name`. `FacebookClient.buildGraphQlBody` cần bổ sung các trường này khi token extraction cung cấp.
+- **Governor per-item gap:** `AbstractCrawler.start()` hiện chỉ gọi `governor.canAccountRequest`/`recordRequest` một lần trước khi gọi handler. `batch-runner.js` phải gọi per-item để tránh vượt `safeRequestsPerMinute`.
+- **`resolvePostFeedbackContext` private:** `FacebookCrawler.#resolvePostFeedbackContext` (`crawler.js:853-933`) cần chuyển public/utility để `FacebookActions` tái dùng.
 
 ## Git Intelligence Summary
 
@@ -510,11 +665,12 @@ Scope cụ thể:
 ## Project Context Reference
 
 - `AGENTS.md` / `CLAUDE.md` — ESM, `const` over `let`, async/await, error emoji prefixes, no mocks, always commit/push as `nirholas`.
-- `docs/deprecation-plan.md` — gắn `@deprecated` JSDoc, cập nhật status tracker, không xóa legacy cho đến Epic 20.2.
+- `docs/deprecation-plan.md` — gắn `@deprecated` JSDoc, cập nhật status tracker, không xóa legacy cho đến Epic 20.2. `api/services/facebookAutomation.js` đã `deprecated-marked` — không import.
 - `prisma/schema.prisma` — `Post.id` namespaced, `metadata Json?`, `CrawlCheckpoint` unique key.
 - `src/core/metadata-schema-registry.js` — load/validate schema theo `schemas/<platform>/<category>.json`.
-- `src/core/base-crawler.js` — `start()`, account resolution, governor, action-level auth.
-- `src/core/base-client.js` — `AbstractApiClient`, proxy resolution, `XACT_5030` / `XACT_4010`.
+- `src/core/base-crawler.js` — `start()`, account resolution, governor, action-level auth. Governor gọi 1 lần cho batch; `batch-runner.js` gọi per-item.
+- `src/core/base-client.js` — `AbstractApiClient`, proxy resolution, `XACT_5030` / `XACT_4010`, `XACT_4290` upstream rate limit.
+- `src/core/adaptive-governor.js` — `recordRequest()` / `canAccountRequest()` 60s platform-wide; cần `FacebookActionVelocityTracker` cho per-action 1h/24h.
 
 ## Dev Agent Record
 
@@ -526,14 +682,31 @@ SWE-1.7 Max
 
 ### Completion Notes List
 
+- Applied all critical/enhancement/optimization fixes from `13-9-story-validation-report.md`.
+- Delay floors updated to match PRD/legacy: post group / join_group 30–90s, friend request 60–180s.
+- `messenger_share` priority reordered: direct Messenger URL → share dialog → GraphQL CTA.
+- `share_link_uid` merged into `messenger_share` as alias.
+- Error code convention fixed: `XACT_4290` upstream rate limit, `XACT_4291` hibernation.
+- Added `FacebookActionVelocityTracker` sliding window 1h/24h, per-item governor check, no import from `api/services/facebookAutomation.js`.
+- Added `FacebookBrowserBridge` public `withPage`/`evaluateDom` seam, `FacebookClient.ensureBrowserBridge()`.
+- Added `FacebookClient.buildGraphQlBody` anti-bot fields, `friendlyNames`, multi-`doc_id` fallback, `requiresResidential: true`.
+- Added `resolvePostFeedbackContext` public/utility requirement.
+- Created tasks for `batch-runner.js`, `velocity-tracker.js`, `resolve-post-feedback.js`.
+- Marked `reviewed: validated`.
+
 ### File List
 
 **Dự kiến tạo mới:**
 - `src/scrapers/social/facebook/actions.js`
+- `src/scrapers/social/facebook/batch-runner.js`
+- `src/scrapers/social/facebook/velocity-tracker.js`
+- `src/scrapers/social/facebook/resolve-post-feedback.js` (nếu tách utility)
 - `tests/scrapers/social/facebook/crawler-social-actions.test.js`
 
 **Dự kiến cập nhật:**
 - `src/scrapers/social/facebook/crawler.js`
+- `src/scrapers/social/facebook/client.js`
+- `src/scrapers/social/facebook/signer-bridge.js`
 - `src/scrapers/social/facebook/index.js`
 - `src/scrapers/facebook/messengerShare.js`
 - `src/scrapers/facebook/shareLinkByUid.js`
@@ -545,4 +718,4 @@ SWE-1.7 Max
 - `src/scrapers/index.js`
 - `api/routes/facebook.js`
 - `src/mcp/server.js`
-- `src/api/services/facebookAutomation.js` (chỉ gắn `@deprecated` / comment)
+- `api/services/facebookAutomation.js` (KHÔNG import từ file này trong 13.9)
