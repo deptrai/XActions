@@ -273,6 +273,12 @@ export async function dispatchFacebookHybrid(action, options = {}) {
     send_friend_requests: 'send_friend_request',
     'send-friend-request': 'send_friend_request',
     'send-friend-requests': 'send_friend_request',
+    warmup_scroll: 'warmup_scroll',
+    'warmup-scroll-feed': 'warmup_scroll',
+    warmup_account: 'warmup_account',
+    'warmup-account': 'warmup_account',
+    cancel_friend_requests: 'cancel_friend_requests',
+    'cancel-friend-requests': 'cancel_friend_requests',
   };
 
   let mappedAction = ACTION_MAPPING[normalizedAction];
@@ -402,6 +408,19 @@ export async function dispatchFacebookHybrid(action, options = {}) {
       if (mappedAction === 'share_link_uid' && Array.isArray(args.recipientUids) && args.recipientUids.length) {
         args.recipientUid = args.recipientUids[0];
       }
+    }
+    if (mappedAction === 'warmup_scroll') {
+      if (args.durationSeconds != null) args.durationSeconds = Number(args.durationSeconds);
+    }
+    if (mappedAction === 'warmup_account') {
+      if (args.durationSeconds != null) args.durationSeconds = Number(args.durationSeconds);
+      if (args.reactProbability != null) args.reactProbability = Number(args.reactProbability);
+      if (args.allowReactions != null) args.allowReactions = args.allowReactions === true || args.allowReactions === 'true' || args.allowReactions === 1;
+    }
+    if (mappedAction === 'cancel_friend_requests') {
+      if (args.limit != null) args.limit = Number(args.limit);
+      if (args.olderThanDays != null) args.olderThanDays = Number(args.olderThanDays);
+      if (args.maxBatch != null) args.maxBatch = Number(args.maxBatch);
     }
 
     const result = await crawler.start({

@@ -2978,23 +2978,6 @@ async function executeFacebookListAccounts(args) {
 }
 
 // by nichxbt
-async function runWithFacebookBrowser(authCookie, fn) {
-  const { createBrowser, createPage, loginWithCookie } =
-    await import('../scrapers/facebook/index.js');
-  const browser = await createBrowser({ headless: true });
-  try {
-    const page = await createPage(browser);
-    await loginWithCookie(page, {
-      c_user: String(authCookie.c_user).trim(),
-      xs: String(authCookie.xs).trim(),
-    });
-    return await fn(page);
-  } finally {
-    await browser.close().catch(() => {});
-  }
-}
-
-// by nichxbt
 async function executeFacebookEpic4Tool(name, args) {
   const { authCookie, dryRun, ...rest } = args;
 
@@ -3147,14 +3130,9 @@ async function executeFacebookEpic4Tool(name, args) {
   }
 
   // --- Legacy / not-yet-hybrid tools keep their original implementations ---
-  // These actions (schedule, warmup_*, cancel_friend_requests) have no
-  // FacebookCrawler equivalent yet; defer to Epic 20.2 (Legacy Scraper
-  // Decommissioning) when hybrid actions are added.
+  // schedule remains DB-only and has no hybrid equivalent yet.
   const {
     scheduleFacebookPost,
-    warmupScrollFeed,
-    cancelPendingFriendRequests,
-    warmupAccount,
   } = await import('../../api/services/facebookAutomation.js');
 
   if (name === 'x_facebook_schedule_post') {
@@ -3169,42 +3147,37 @@ async function executeFacebookEpic4Tool(name, args) {
 
   if (name === 'x_facebook_warmup_scroll') {
     const { targetUrl, durationSeconds } = rest;
-    const options = {
-      dryRun: resolvedDryRun,
+    const { scrape } = await import('../scrapers/index.js');
+    return await scrape('facebook', 'warmup_scroll', {
+      targetUrl,
       ...(durationSeconds != null && { durationSeconds }),
-      ...(resolvedUserId && { userId: resolvedUserId }),
-    };
-    if (resolvedDryRun) return await warmupScrollFeed(null, targetUrl, options);
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      warmupScrollFeed(page, targetUrl, options),
-    );
+      dryRun: resolvedDryRun,
+      authCookie: { c_user: cUser, xs },
+    });
   }
 
   if (name === 'x_facebook_cancel_friend_requests') {
     const { limit, olderThanDays, maxBatch } = rest;
-    const options = {
-      dryRun: resolvedDryRun,
+    const { scrape } = await import('../scrapers/index.js');
+    return await scrape('facebook', 'cancel_friend_requests', {
       limit,
       ...(olderThanDays != null && { olderThanDays }),
       ...(maxBatch != null && { maxBatch }),
-    };
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      cancelPendingFriendRequests(page, options),
-    );
+      dryRun: resolvedDryRun,
+      authCookie: { c_user: cUser, xs },
+    });
   }
 
   if (name === 'x_facebook_warmup_account') {
     const { durationSeconds, allowReactions, reactProbability } = rest;
-    const options = {
-      dryRun: resolvedDryRun,
+    const { scrape } = await import('../scrapers/index.js');
+    return await scrape('facebook', 'warmup_account', {
       ...(durationSeconds != null && { durationSeconds }),
       ...(allowReactions != null && { allowReactions }),
       ...(reactProbability != null && { reactProbability }),
-    };
-    if (resolvedDryRun) return await warmupAccount(null, options);
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      warmupAccount(page, options),
-    );
+      dryRun: resolvedDryRun,
+      authCookie: { c_user: cUser, xs },
+    });
   }
 
   if (name === 'x_facebook_group_members') {

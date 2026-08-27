@@ -859,9 +859,6 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
     const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
     const {
       scheduleFacebookPost,
-      cancelPendingFriendRequests,
-      warmupAccount,
-      warmupScrollFeed,
     } = await import('../services/facebookAutomation.js');
 
     const baseOptions = {
@@ -870,7 +867,7 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
     };
 
     // Actions migrated to FacebookCrawler hybrid engine.
-    const HYBRID_ACTIONS = ['like', 'comment', 'post', 'share', 'join-groups', 'batch-post-groups', 'send-friend-requests'];
+    const HYBRID_ACTIONS = ['like', 'comment', 'post', 'share', 'join-groups', 'batch-post-groups', 'send-friend-requests', 'warmup-account', 'warmup-scroll-feed', 'cancel-friend-requests'];
     const isHybrid = HYBRID_ACTIONS.includes(action);
 
     const envBrowserOptions = defaultBrowserOptionsFromEnv() || {};
@@ -912,60 +909,41 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
         if (body.location) scrapeArgs.location = String(body.location).trim();
         if (body.limit != null) scrapeArgs.limit = Number(body.limit);
       }
+      if (action === 'warmup-scroll-feed') {
+        scrapeArgs.targetUrl = /** @type {string} */ (body.targetUrl).trim();
+        if (body.durationSeconds != null) scrapeArgs.durationSeconds = Number(body.durationSeconds);
+      }
+      if (action === 'warmup-account') {
+        if (body.durationSeconds != null) scrapeArgs.durationSeconds = Number(body.durationSeconds);
+        if (body.allowReactions != null) scrapeArgs.allowReactions = body.allowReactions === true;
+        if (body.reactProbability != null) scrapeArgs.reactProbability = Number(body.reactProbability);
+      }
+      if (action === 'cancel-friend-requests') {
+        const cancelLimit = /** @type {number | string | undefined} */ (body.limit) ?? 10;
+        scrapeArgs.limit = Number(cancelLimit);
+        if (body.olderThanDays != null) scrapeArgs.olderThanDays = Number(body.olderThanDays);
+      }
       return scrapeArgs;
     };
 
-    // Legacy dispatch for schedule, cancel, warmup (no hybrid action yet).
-    // Defer to Epic 20.2 when FacebookCrawler adds warmup_account,
-    // warmup_scroll, and cancel_friend_requests actions.
+    // Legacy dispatch for schedule only (DB-only, no hybrid equivalent yet).
     const dispatch = /** @type {(page: Page) => Promise<Record<string, unknown>>} */ (async (page) => {
       if (action === 'schedule') {
         const scheduledAt = /** @type {string | undefined} */ (body.scheduledAt);
         const facebookAccountId = /** @type {string | undefined} */ (body.facebookAccountId);
         return await scheduleFacebookPost(page, { content: text, scheduledAt, facebookAccountId }, { ...baseOptions, userId: reqUser.id });
       }
-      if (action === 'cancel-friend-requests') {
-        const olderThanDays = /** @type {number | string | undefined} */ (body.olderThanDays);
-        const limit = /** @type {number | string | undefined} */ (body.limit) ?? 10;
-        return await cancelPendingFriendRequests(page, {
-          ...baseOptions,
-          ...(olderThanDays != null && { olderThanDays: Number(olderThanDays) }),
-          limit: Number(limit),
-        });
-      }
-      if (action === 'warmup-account') {
-        const durationSeconds = /** @type {number | string | undefined} */ (body.durationSeconds);
-        const allowReactions = /** @type {boolean | undefined} */ (body.allowReactions);
-        const reactProbability = /** @type {number | string | undefined} */ (body.reactProbability);
-        return await warmupAccount(page, {
-          ...baseOptions,
-          ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
-          ...(allowReactions !== undefined && { allowReactions }),
-          ...(reactProbability != null && { reactProbability: Number(reactProbability) }),
-        });
-      }
-      if (action === 'warmup-scroll-feed') {
-        const targetUrl = /** @type {string | undefined} */ (body.targetUrl);
-        const durationSeconds = /** @type {number | string | undefined} */ (body.durationSeconds);
-        return await warmupScrollFeed(page, /** @type {string} */ (targetUrl), {
-          ...baseOptions,
-          ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
-        });
-      }
       throw new Error(`Unsupported legacy action: ${action}`);
     });
 
     // Dry-run preview for hybrid: no browser, no Operation record.
-    // Legacy cancel-friend-requests still needs a page to collect pending requests.
     if (resolvedDryRun) {
       if (isHybrid) {
         const result = /** @type {Record<string, unknown>} */ (await scrape('facebook', action, buildHybridScrapeArgs()));
         return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
       }
-      if (action !== 'cancel-friend-requests') {
-        const result = await dispatch(/** @type {Page} */ (/** @type {unknown} */ (null)));
-        return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
-      }
+      const result = await dispatch(/** @type {Page} */ (/** @type {unknown} */ (null)));
+      return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
     }
 
     // Real run — create Operation record (config excludes authCookie; NFR3)

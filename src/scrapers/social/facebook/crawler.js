@@ -521,6 +521,39 @@ export class FacebookCrawler extends AbstractCrawler {
       requiresAuth: true,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.sendFriendRequest(args, session),
     });
+
+    this.registerAction({
+      action: 'warmup_scroll',
+      description: 'Simulate human scrolling on a Facebook feed URL for a bounded duration',
+      requiredArgs: ['targetUrl'],
+      optionalArgs: ['durationSeconds', 'dryRun'],
+      example: { targetUrl: 'https://www.facebook.com/zuck/posts/1011565502', durationSeconds: 120 },
+      outputType: '{ dryRun: boolean, targetUrl: string, durationSeconds: number, scrolls: number }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.warmupScroll(args, session),
+    });
+
+    this.registerAction({
+      action: 'warmup_account',
+      description: 'Warm up a Facebook account with natural home-feed scrolling and optional Like reactions',
+      requiredArgs: [],
+      optionalArgs: ['durationSeconds', 'allowReactions', 'reactProbability', 'dryRun'],
+      example: { durationSeconds: 120, allowReactions: false },
+      outputType: '{ dryRun: boolean, durationSeconds: number, scrolls: number }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.warmupAccount(args, session),
+    });
+
+    this.registerAction({
+      action: 'cancel_friend_requests',
+      description: 'Cancel pending outgoing Facebook friend requests',
+      requiredArgs: ['limit'],
+      optionalArgs: ['olderThanDays', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
+      example: { limit: 10, olderThanDays: 7 },
+      outputType: '{ dryRun: boolean, pending?: any[], count?: number, cancelled?: number, failed?: number, remaining?: number }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.cancelFriendRequests(args, session),
+    });
   }
 
   /**
@@ -2958,6 +2991,33 @@ export class FacebookCrawler extends AbstractCrawler {
    */
   async sendFriendRequest(args, session = {}) {
     return this.actions.sendFriendRequest(args, session);
+  }
+
+  /**
+   * Simulate human scrolling on a Facebook feed URL.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async warmupScroll(args, session = {}) {
+    return this.actions.warmupScroll(args, session);
+  }
+
+  /**
+   * Warm up a Facebook account with natural home-feed scrolling.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async warmupAccount(args, session = {}) {
+    return this.actions.warmupAccount(args, session);
+  }
+
+  /**
+   * Cancel pending outgoing friend requests.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async cancelFriendRequests(args, session = {}) {
+    return this.actions.cancelFriendRequests(args, session);
   }
 
   /**
