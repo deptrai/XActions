@@ -85,7 +85,7 @@ Xoá theo thứ tự:
 | Twitter Legacy Profile/Followers/Following (`src/scrapers/twitter/index.js` profile/followers/following) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
 | Twitter HTTP Relationships (`src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
 | `src/client/Scraper.js` | `deprecated-planned` | Phase 2–3 | TBD |
-| Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-planned` | Phase 2–3 | TBD |
+| Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-marked` | Phase 1 (Epic 13.10) | DEV |
 | Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
 | Facebook Legacy Search (`src/scrapers/facebook/search.js`, `group-search.js`) | `deprecated-marked` | Phase 1 (Epic 13.6) | DEV |
 | Facebook Legacy Comments (`src/scrapers/facebook/comments.js`) | `deprecated-marked` | Phase 1 (Epic 13.7) | DEV |

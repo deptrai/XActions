@@ -40,6 +40,9 @@ import bluesky from './bluesky/index.js';
 import mastodon from './mastodon/index.js';
 import threads from './threads/index.js';
 import facebook from './facebook/index.js';
+import { FacebookCrawler, FacebookClient, FacebookActions } from './social/facebook/index.js';
+
+export { FacebookCrawler, FacebookClient, FacebookActions };
 
 // ============================================================================
 // HTTP Scraper (Direct GraphQL — no browser required)
@@ -154,9 +157,144 @@ export function getPlatform(platform) {
  *   // Threads (Puppeteer)
  *   const posts = await scrape('threads', 'tweets', { page, username: 'zuck', limit: 20 });
  */
+/**
+ * Dispatch to FacebookCrawler hybrid engine (Story 13.10)
+ * @param {string} action
+ * @param {import('../types/xactions.js').XActionsOptions & Record<string, unknown>} options
+ * @returns {Promise<Record<string, unknown>>}
+ */
+async function dispatchFacebookHybrid(action, options = {}) {
+  // Facebook uses a cookie-object ({ c_user, xs }) via authCookie, not a string authToken.
+  if (options.authToken) {
+    throw new Error(
+      '❌ Facebook uses options.authCookie ({ c_user, xs }), not options.authToken'
+    );
+  }
+
+  // 1. Map action names (AC-2)
+  /** @type {Record<string, string>} */
+  const ACTION_MAPPING = {
+    profile: 'profile',
+    followers: 'followers',
+    following: 'following',
+    search: 'search',
+    marketplace: 'marketplace',
+    post_comments: 'post_comments',
+    group_posts: 'group_posts',
+    group_comments: 'group_comments',
+    group_search: 'group_search',
+    'group-members': 'group_members',
+    group_members: 'group_members',
+    like: 'like',
+    comment: 'comment',
+    post: 'post',
+    share: 'share',
+    messenger: 'messenger_share',
+    messenger_share: 'messenger_share',
+    share_link_uid: 'share_link_uid',
+    join_group: 'join_group',
+    join_groups: 'join_group',
+    send_friend_request: 'send_friend_request',
+    send_friend_requests: 'send_friend_request',
+  };
+
+  let mappedAction = ACTION_MAPPING[action];
+  if (action === 'posts' || action === 'tweets' || action === 'feed') {
+    const rawUrl = options.url || options.targetUrl || '';
+    if (typeof rawUrl === 'string' && (rawUrl.includes('/groups/') || rawUrl.includes('/group/'))) {
+      mappedAction = 'group_posts';
+    } else {
+      mappedAction = 'page_posts';
+    }
+  }
+
+  if (!mappedAction) {
+    mappedAction = action;
+  }
+
+  // 2. Build or obtain crawler instance
+  let crawler = /** @type {FacebookCrawler | undefined} */ (options.crawler);
+  let ownsCrawler = false;
+  if (!crawler) {
+    ownsCrawler = true;
+    const browserOpts = options.browserOptions || {};
+    const client = options.client || new FacebookClient({
+      baseUrl: browserOpts.baseUrl,
+      proxy: browserOpts.proxy,
+      proxyPool: browserOpts.proxyPool,
+      governor: browserOpts.governor,
+      accountPool: browserOpts.accountPool,
+      headless: browserOpts.headless !== false,
+      cdpUrl: browserOpts.cdpUrl || process.env.FACEBOOK_CDP_URL,
+    });
+    crawler = new FacebookCrawler({
+      client,
+      docIds: browserOpts.docIds,
+      store: browserOpts.store,
+      governor: browserOpts.governor,
+      accountPool: browserOpts.accountPool,
+      sessionManager: browserOpts.sessionManager,
+    });
+  }
+
+  // Validate action exists in crawler
+  const validActions = crawler.listActions().map((a) => a.action);
+  if (!validActions.includes(mappedAction)) {
+    throw new Error(
+      `Action "${action}" not available on platform "facebook". Available: ${validActions.join(', ')}`
+    );
+  }
+
+  // 3. Build session
+  let accountId = options.authCookie?.accountId || options.userId || null;
+  let cookies = options.authCookie;
+  if (!accountId && typeof options.authCookie === 'object' && options.authCookie?.c_user) {
+    accountId = String(options.authCookie.c_user);
+  } else if (!accountId && typeof options.authCookie === 'string') {
+    const match = options.authCookie.match(/(?:^|;\s*)c_user=([^;]+)/);
+    if (match) accountId = match[1];
+  }
+
+  const session = {
+    accountId: accountId || 'fb_default_session',
+    cookies,
+    cdpUrl: options.browserOptions?.cdpUrl || process.env.FACEBOOK_CDP_URL,
+    page: options.page,
+  };
+
+  // 4. Build args
+  const args = { ...options };
+  delete args.page;
+  delete args.autoClose;
+  delete args.authCookie;
+  delete args.browserOptions;
+  delete args.client;
+  delete args.crawler;
+  delete args.authToken;
+
+  try {
+    const result = await crawler.start({
+      action: mappedAction,
+      args,
+      session,
+    });
+    return result;
+  } finally {
+    if (ownsCrawler && options.autoClose !== false && typeof crawler.cleanup === 'function') {
+      await crawler.cleanup().catch(() => {});
+    }
+  }
+}
+
 export async function scrape(platform, action, options = {}) {
+  const platformName = platform?.toLowerCase();
+
+  // Facebook Hybrid Dispatch (Story 13.10, AC-1)
+  if (platformName === 'facebook' || platformName === 'fb') {
+    return await dispatchFacebookHybrid(action, options);
+  }
+
   const mod = getPlatform(platform);
-  const platformName = platform.toLowerCase();
 
   // Action name mapping
   /** @type {Record<string, string>} */

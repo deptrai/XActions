@@ -66,14 +66,14 @@ export async function run(action, args = {}) {
  * @param {Record<string, unknown>} [browserOptions] - Browser options.
  * @returns {Promise<Record<string, unknown>>}
  */
-async function runSearchAllParallel(baseArgs, rest, userId, browserOptions) {
-  const query = /** @type {string} */ (rest.query ?? '');
-  const location = /** @type {string | undefined} */ (rest.location);
-  const limit = /** @type {number | undefined} */ (rest.limit);
+export async function runSearchAllParallel(baseArgs, rest = {}, userId, browserOptions) {
+  const query = /** @type {string} */ (rest.query ?? baseArgs.query ?? '');
+  const location = /** @type {string | undefined} */ (rest.location ?? baseArgs.location);
+  const limit = /** @type {number | undefined} */ (rest.limit ?? baseArgs.limit);
   const types = ['posts', 'people', 'pages', 'groups'];
 
   // If we have accountIds, use runBatch for true parallelism.
-  const accountIds = /** @type {string[]} */ (rest.accountIds);
+  const accountIds = /** @type {string[]} */ (rest.accountIds ?? baseArgs.accountIds);
   if (Array.isArray(accountIds) && accountIds.length > 0) {
     const tasks = types.map((type) => /** @param {import('puppeteer').Page} page */ async (page) => {
       const { scrape } = await import('../../src/scrapers/index.js');
@@ -83,6 +83,7 @@ async function runSearchAllParallel(baseArgs, rest, userId, browserOptions) {
         type,
         ...(location != null && { location }),
         ...(limit != null && { limit }),
+        ...(browserOptions ? { browserOptions } : {}),
         page, // reuse the pool's page — skip auto-create
         autoClose: false, // pool manages browser lifecycle
       }));
@@ -102,15 +103,27 @@ async function runSearchAllParallel(baseArgs, rest, userId, browserOptions) {
     };
   }
 
-  // Fallback: sequential on a single account (same as parallel: false).
+  // Fallback: query all 4 categories via scrape()
   const { scrape } = await import('../../src/scrapers/index.js');
-  return /** @type {Record<string, unknown>} */ (await scrape('facebook', 'search', {
-    ...baseArgs,
-    query,
-    type: 'all',
-    ...(location != null && { location }),
-    ...(limit != null && { limit }),
-  }));
+  const results = await Promise.all(
+    types.map((type) =>
+      scrape('facebook', 'search', {
+        ...baseArgs,
+        query,
+        type,
+        ...(location != null && { location }),
+        ...(limit != null && { limit }),
+        ...(browserOptions ? { browserOptions } : {}),
+      })
+    )
+  );
+
+  return {
+    posts: results[0]?.posts || results[0] || [],
+    people: results[1]?.people || results[1]?.users || results[1] || [],
+    pages: results[2]?.pages || results[2] || [],
+    groups: results[3]?.groups || results[3] || [],
+  };
 }
 
 /**

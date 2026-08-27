@@ -3138,19 +3138,16 @@ async function executeFacebookEpic4Tool(name, args) {
     if (limit != null && (!Number.isFinite(limit) || limit < 1 || limit > 500)) {
       throw new Error('❌ x_facebook_group_members: limit must be a number between 1 and 500');
     }
-    const options = { ...(limit != null && { limit }) };
+    const options = { url: groupUrl, groupUrl, ...(limit != null && { limit }), dryRun: resolvedDryRun };
     if (resolvedDryRun) {
       return { dryRun: true, platform: 'facebook', preview: { groupUrl, ...options } };
     }
-    const { scrapeGroupMembers } = await import('../scrapers/facebook/index.js');
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      scrapeGroupMembers(page, groupUrl, options),
-    );
+    const { run } = await import('../../api/services/facebookScrape.js');
+    return await run('group_members', { ...options, authCookie: { c_user: cUser, xs }, userId: resolvedUserId });
   }
 
   if (name === 'x_facebook_marketplace') {
-    // TODO(13.10): switch to FacebookCrawler.start({ action: 'marketplace' }) for hybrid filters (categoryId, lat/lng, radius, price, cursor)
-    const { query, location, limit, minPrice, maxPrice, category } = rest;
+    const { query, location, limit, minPrice, maxPrice, category, categoryId, latitude, longitude, radiusKm, cursor } = rest;
     if (typeof query !== 'string' || !query.trim()) {
       throw new Error('❌ x_facebook_marketplace: query is required');
     }
@@ -3167,37 +3164,27 @@ async function executeFacebookEpic4Tool(name, args) {
       throw new Error('❌ x_facebook_marketplace: minPrice cannot be greater than maxPrice');
     }
     const options = {
+      query: query.trim(),
       ...(limit != null && { limit }),
-      ...(location && { location }),
+      ...(location && { location: String(location).trim() }),
       ...(minPrice != null && { minPrice }),
       ...(maxPrice != null && { maxPrice }),
-      ...(category && { category }),
+      ...(category && { category: String(category).trim() }),
+      ...(categoryId && { categoryId: String(categoryId).trim() }),
+      ...(latitude != null && { latitude: Number(latitude) }),
+      ...(longitude != null && { longitude: Number(longitude) }),
+      ...(radiusKm != null && { radiusKm: Number(radiusKm) }),
+      ...(cursor && { cursor: String(cursor).trim() }),
+      dryRun: resolvedDryRun,
     };
-    const { buildMarketplaceSearchUrl, createBrowser, createPage, loginWithCookie, scrapeMarketplace } =
-      await import('../scrapers/facebook/index.js');
+    const { buildMarketplaceSearchUrl } = await import('../scrapers/facebook/normalize.js');
     const searchUrl = buildMarketplaceSearchUrl(query, options);
     if (resolvedDryRun) {
-      return { dryRun: true, platform: 'facebook', preview: { query, ...options, searchUrl } };
+      return { dryRun: true, platform: 'facebook', preview: { ...options, searchUrl } };
     }
-    const browser = await createBrowser({ headless: true });
-    let warning = authResolutionError ? `auth resolution failed: ${authResolutionError}. Searching anonymously.` : null;
-    try {
-      const page = await createPage(browser);
-      if (cUser && xs) {
-        try {
-          await loginWithCookie(page, { c_user: cUser, xs });
-        } catch (err) {
-          warning = `Facebook login failed: ${err.message}. Searching anonymously.`;
-        }
-      }
-      const listings = await scrapeMarketplace(page, query, options);
-      const result = { listings, platform: 'facebook', count: listings.length };
-      if (resolvedUserId) result.userId = resolvedUserId;
-      if (warning) result.warning = warning;
-      return result;
-    } finally {
-      await browser.close().catch(() => {});
-    }
+    const { run } = await import('../../api/services/facebookScrape.js');
+    const authPayload = (cUser && xs) ? { c_user: cUser, xs } : (authCookie || { c_user: 'guest', xs: 'guest' });
+    return await run('marketplace', { ...options, authCookie: authPayload, userId: resolvedUserId });
   }
 
   throw new Error(`❌ executeFacebookEpic4Tool: unhandled tool name "${name}"`);

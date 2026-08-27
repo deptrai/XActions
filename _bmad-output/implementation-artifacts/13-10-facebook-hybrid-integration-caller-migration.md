@@ -2,11 +2,11 @@
 story_id: '13.10'
 epic: 13
 story_key: '13-10-facebook-hybrid-integration-caller-migration'
-status: "in-progress"
+status: "review"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-28
-last_updated: 2026-08-28T21:00:00Z
+last_updated: 2026-08-28T22:00:00Z
 owner: "DEV"
 reviewed: "pending"
 baseline_commit: "fddb8ba62e9b438a539df4a67f30bf1a41dc1592"
@@ -14,7 +14,7 @@ baseline_commit: "fddb8ba62e9b438a539df4a67f30bf1a41dc1592"
 
 # Story 13.10: Facebook Hybrid Integration & Caller Migration
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -539,3 +539,32 @@ Các caller surface cần migrate:
 - `marketplace` action hỗ trợ nhiều filter hơn MCP schema hiện tại; cân nhắc bổ sung `categoryId`, `latitude`, `longitude`, `radiusKm` vào `x_facebook_marketplace` input schema nếu consumer cần.
 - Multi-account messenger-share hiện tại dùng `runMessengerCampaign` với nhiều browser session; khi chuyển sang `FacebookCrawler`, cần đảm bảo `FacebookActions.messengerShare` hỗ trợ multi-recipient hoặc giữ `runMessengerCampaign` tạm thời.
 - Sau khi 13.10 done, Epic 20.1 (Nowing shadow-run) sẽ so sánh output giữa legacy và hybrid để đạt parity ≥ 99% trước khi decommission.
+
+## Dev Agent Record
+
+### Completion Notes (2026-08-28)
+- Migrated unified `scrape()` dispatcher (`src/scrapers/index.js`) to route `facebook`/`fb` calls to `FacebookCrawler.start()`.
+- Added re-exports for `FacebookCrawler`, `FacebookClient`, `FacebookActions` in `src/scrapers/index.js`.
+- Refactored `api/services/facebookScrape.js` to dispatch all Facebook scrape actions via `FacebookCrawler`.
+- Refactored `api/services/facebookHealth.js` to eliminate dependency on legacy `src/scrapers/facebook/graphql.js`.
+- Enhanced MCP tools (`src/mcp/server.js`) to support extended filters and dryRun preview for `x_facebook_marketplace` and `x_facebook_group_members`.
+- Extended CLI commands (`src/cli/commands/scrape.js` and `src/cli/commands/automate.js`) with new actions and options.
+- Added package exports for `./scrapers/social` and `./scrapers/social/facebook` in `package.json`.
+- Marked `src/scrapers/facebook/index.js` with `@deprecated`.
+- Updated `docs/deprecation-plan.md` tracker to mark Facebook Puppeteer as `deprecated-marked`.
+- All 17/17 tests in `tests/scrapers/social/facebook/caller-migration.test.js` pass.
+- All 790/790 tests across 38 test suites in `tests/scrapers/social/facebook/`, `tests/api/`, `tests/mcp/`, and `tests/services/` pass.
+
+### File List
+- `src/scrapers/index.js`
+- `api/services/facebookScrape.js`
+- `api/services/facebookHealth.js`
+- `src/mcp/server.js`
+- `src/cli/commands/scrape.js`
+- `src/cli/commands/automate.js`
+- `package.json`
+- `src/scrapers/facebook/index.js`
+- `docs/deprecation-plan.md`
+- `src/scrapers/social/facebook/client.js`
+- `tests/scrapers/social/facebook/caller-migration.test.js`
+

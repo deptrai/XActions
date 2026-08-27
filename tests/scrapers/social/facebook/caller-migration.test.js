@@ -152,7 +152,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
   });
 
   describe('AC-1 & TR-1: Unified scrape("facebook", action, options) Hybrid Dispatch', () => {
-    it.skip('[AC-1] scrape("facebook", "marketplace", options) dispatches to FacebookCrawler without launching Puppeteer page', async () => {
+    it('[AC-1] scrape("facebook", "marketplace", options) dispatches to FacebookCrawler without launching Puppeteer page', async () => {
       const res = await scrape('facebook', 'marketplace', {
         query: 'MacBook M3',
         location: 'San Jose',
@@ -168,7 +168,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
       expect(Array.isArray(res.posts) || Array.isArray(res.items) || Array.isArray(res)).toBe(true);
     });
 
-    it.skip('[AC-1] scrape("facebook", "search", options) dispatches to FacebookCrawler.search()', async () => {
+    it('[AC-1] scrape("facebook", "search", options) dispatches to FacebookCrawler.search()', async () => {
       const res = await scrape('facebook', 'search', {
         query: 'developer',
         type: 'posts',
@@ -186,7 +186,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
   });
 
   describe('AC-2: Action Name Resolution & Mapping in scrape()', () => {
-    it.skip('[AC-2] scrape("facebook", "posts", { url: "https://facebook.com/groups/tech" }) resolves to group_posts', async () => {
+    it('[AC-2] scrape("facebook", "posts", { url: "https://facebook.com/groups/tech" }) resolves to group_posts', async () => {
       let resolvedAction = '';
       const customCrawler = new FacebookCrawler({
         client: new FacebookClient({ baseUrl: serverUrl }),
@@ -204,7 +204,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
       expect(resolvedAction).toBe('group_posts');
     });
 
-    it.skip('[AC-2] scrape("facebook", "posts", { url: "https://facebook.com/zuck" }) resolves to page_posts', async () => {
+    it('[AC-2] scrape("facebook", "posts", { url: "https://facebook.com/zuck" }) resolves to page_posts', async () => {
       let resolvedAction = '';
       const customCrawler = new FacebookCrawler({
         client: new FacebookClient({ baseUrl: serverUrl }),
@@ -222,7 +222,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
       expect(resolvedAction).toBe('page_posts');
     });
 
-    it.skip('[AC-2] scrape("facebook", "unknown_action") throws informative error listing registered actions', async () => {
+    it('[AC-2] scrape("facebook", "unknown_action") throws informative error listing registered actions', async () => {
       await expect(
         scrape('facebook', 'invalid_unsupported_action', { authCookie: rawCookies })
       ).rejects.toThrow(/invalid_unsupported_action|supported/i);
@@ -230,7 +230,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
   });
 
   describe('AC-3 & TR-2: api/services/facebookScrape.js Hybrid Service Migration', () => {
-    it.skip('[AC-3] facebookScrape.run("marketplace", args) calls FacebookCrawler.start() directly', async () => {
+    it('[AC-3] facebookScrape.run("marketplace", args) calls FacebookCrawler.start() directly', async () => {
       const result = await facebookScrapeService.run('marketplace', {
         query: 'MacBook M3',
         authCookie: rawCookies,
@@ -244,12 +244,20 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
       expect(result.posts || result.items || result).toBeDefined();
     });
 
-    it.skip('[AC-3] facebookScrape.runSearchAllParallel() fans out 4 search categories using FacebookCrawler', async () => {
+    it('[AC-3] facebookScrape.runSearchAllParallel() fans out 4 search categories using FacebookCrawler', async () => {
       const result = await facebookScrapeService.runSearchAllParallel(
         { query: 'test query', limit: 5 },
         { authCookie: rawCookies },
         'user_123',
-        { baseUrl: serverUrl, docIds: { SEARCH_POSTS: 'doc_search' } }
+        {
+          baseUrl: serverUrl,
+          docIds: {
+            SEARCH_POSTS: 'doc_search',
+            SEARCH_PEOPLE: 'doc_search',
+            SEARCH_PAGES: 'doc_search',
+            SEARCH_GROUPS: 'doc_search',
+          },
+        }
       );
 
       expect(result).toBeDefined();
@@ -261,31 +269,31 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
   });
 
   describe('AC-5 & AC-6: MCP Tool Mapping to FacebookCrawler Hybrid Actions', () => {
-    it.skip('[AC-5] MCP executeFacebookScrapeTool routes x_facebook_marketplace to FacebookCrawler action "marketplace"', async () => {
+    it('[AC-5] MCP executeFacebookScrapeTool routes x_facebook_marketplace to FacebookCrawler action "marketplace"', async () => {
       const serverModule = await import('../../../../src/mcp/server.js');
       expect(serverModule).toBeDefined();
     });
 
-    it.skip('[AC-6] MCP executeFacebookEpic4Tool routes share, join_groups, post_to_groups, send_friend_requests to hybrid actions', async () => {
+    it('[AC-6] MCP executeFacebookEpic4Tool routes share, join_groups, post_to_groups, send_friend_requests to hybrid actions', async () => {
       const serverModule = await import('../../../../src/mcp/server.js');
       expect(serverModule).toBeDefined();
     });
   });
 
   describe('AC-7 & TR-4: CLI Commands Route to Hybrid Scrapers', () => {
-    it.skip('[AC-7] CLI scrape command supports extended facebook actions: marketplace, group_posts, group_comments', async () => {
+    it('[AC-7] CLI scrape command supports extended facebook actions: marketplace, group_posts, group_comments', async () => {
       const scrapeCmd = await import('../../../../src/cli/commands/scrape.js');
       expect(scrapeCmd).toBeDefined();
     });
 
-    it.skip('[AC-7] CLI automate command supports share, join-group, send-friend-request, messenger-share', async () => {
+    it('[AC-7] CLI automate command supports share, join-group, send-friend-request, messenger-share', async () => {
       const autoCmd = await import('../../../../src/cli/commands/automate.js');
       expect(autoCmd).toBeDefined();
     });
   });
 
   describe('AC-8: Action Discovery via FacebookCrawler.listActions()', () => {
-    it.skip('[AC-8] FacebookCrawler.listActions() exposes complete action registry with requiresAuth resolution', () => {
+    it('[AC-8] FacebookCrawler.listActions() exposes complete action registry with requiresAuth resolution', () => {
       const crawler = new FacebookCrawler({
         client: new FacebookClient({ baseUrl: serverUrl }),
       });
@@ -316,7 +324,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
   });
 
   describe('AC-9 & TR-5: Package Exports & Type Declarations', () => {
-    it.skip('[AC-9] package.json exports include "./scrapers/social" and "./scrapers/social/facebook"', () => {
+    it('[AC-9] package.json exports include "./scrapers/social" and "./scrapers/social/facebook"', () => {
       const pkgPath = path.resolve(process.cwd(), 'package.json');
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 
@@ -327,7 +335,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
   });
 
   describe('AC-10 & TR-7: Deprecation Markers & Deprecation Plan Update', () => {
-    it.skip('[AC-10] Legacy src/scrapers/facebook/index.js has @deprecated banner', () => {
+    it('[AC-10] Legacy src/scrapers/facebook/index.js has @deprecated banner', () => {
       const legacyPath = path.resolve(process.cwd(), 'src/scrapers/facebook/index.js');
       if (fs.existsSync(legacyPath)) {
         const content = fs.readFileSync(legacyPath, 'utf8');
@@ -335,7 +343,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
       }
     });
 
-    it.skip('[AC-10] docs/deprecation-plan.md status tracker marks Facebook legacy as deprecated-marked', () => {
+    it('[AC-10] docs/deprecation-plan.md status tracker marks Facebook legacy as deprecated-marked', () => {
       const deprPath = path.resolve(process.cwd(), 'docs/deprecation-plan.md');
       const content = fs.readFileSync(deprPath, 'utf8');
       expect(content).toContain('Facebook');
@@ -343,7 +351,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
   });
 
   describe('AC-12: Backward Compatibility & Dry-Run Guarantees', () => {
-    it.skip('[AC-12] Write actions enforce dryRun: true default and do not mutate without explicit dryRun: false', async () => {
+    it('[AC-12] Write actions enforce dryRun: true default and do not mutate without explicit dryRun: false', async () => {
       const crawler = new FacebookCrawler({
         client: new FacebookClient({ baseUrl: serverUrl }),
       });
@@ -360,7 +368,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
   });
 
   describe('AC-13 & TR-8: Service-Layer Cleanup & Legacy Routing', () => {
-    it.skip('[AC-13] api/services/facebookHealth.js uses FacebookClient instead of legacy graphql.js', async () => {
+    it('[AC-13] api/services/facebookHealth.js uses FacebookClient instead of legacy graphql.js', async () => {
       const healthModule = await import('../../../../api/services/facebookHealth.js');
       expect(healthModule).toBeDefined();
     });

@@ -13,10 +13,45 @@ import prisma from '../lib/prisma.js';
  */
 
 import axios from 'axios';
-import { buildCookieString, parseFacebookTokens } from '../../src/scrapers/facebook/graphql.js';
 import { decrypt } from '../routes/facebookAccounts.js';
 const FACEBOOK_HOME = 'https://www.facebook.com/';
 const TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Build cookie header string from cookie map or object.
+ * @param {Record<string, string>} cookieObj
+ * @returns {string}
+ */
+function buildCookieString(cookieObj) {
+  if (!cookieObj || typeof cookieObj !== 'object') return '';
+  return Object.entries(cookieObj)
+    .filter(([_, v]) => v != null && v !== '')
+    .map(([k, v]) => `${k}=${v}`)
+    .join('; ');
+}
+
+/**
+ * Extract Facebook security tokens from HTML page source.
+ * @param {string} html
+ * @returns {{ fb_dtsg: string | null; lsd: string | null }}
+ */
+function parseFacebookTokens(html) {
+  if (!html || typeof html !== 'string') return { fb_dtsg: null, lsd: null };
+  const dtsgMatch =
+    html.match(/\["DTSGInitialData",\[\],\{"token":"([^"]+)"\}/) ||
+    html.match(/"DTSGInitialData",\[\],\{"token":"([^"]+)"\}/) ||
+    html.match(/name="fb_dtsg"\s+value="([^"]+)"/) ||
+    html.match(/"token":"([^"]+)"/);
+  const fb_dtsg = dtsgMatch ? dtsgMatch[1] : null;
+
+  const lsdMatch =
+    html.match(/name="lsd"\s+value="([^"]+)"/) ||
+    html.match(/\["LSD",\[\],\{"token":"([^"]+)"\}/) ||
+    html.match(/"LSD",\[\],\{"token":"([^"]+)"\}/);
+  const lsd = lsdMatch ? lsdMatch[1] : null;
+
+  return { fb_dtsg, lsd };
+}
 
 /**
  * @typedef {object} HealthCheckOptions
