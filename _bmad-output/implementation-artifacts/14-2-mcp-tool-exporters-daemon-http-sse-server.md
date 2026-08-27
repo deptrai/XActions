@@ -81,7 +81,7 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 ### AC-4: Action Discovery (`x_actions_list`)
 - **Given** `AbstractCrawler.listActions()` đã tồn tại và trả về `ActionDescriptor[]`
 - **When** gọi MCP tool `x_actions_list` hoặc CLI `xactions actions list`
-- **Then** trả về danh sách `ActionDescriptor` với shape chuẩn hóa:
+- **Then** trả về danh sách descriptor, mỗi entry chứa đầy đủ trường `ActionDescriptor` theo AD-11 và bổ sung `platform` để phân biệt nguồn:
 
 ```ts
 {
@@ -92,7 +92,7 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
   example: object,
   outputType: string,
   requiresAuth: boolean,        // giá trị đã phân giải theo AD-11 rule 3
-  platform: string,
+  platform: string,             // bổ sung từ MCP/CLI discovery, không thay đổi AbstractCrawler.listActions
 }
 ```
 
@@ -121,8 +121,8 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 - **Given** MCP daemon chạy ổn định
 - **When** gọi `x_crawl_post({ platform, url, postId, limit })` hoặc `x_crawl_comments_tree({ platform, url, postId, maxDepth, maxComments })`
 - **Then** tool dispatch đến `scrape(platform, action, args)` với action tương ứng:
-  - `x_crawl_post` → `scrape(platform, 'post_detail' | 'posts', { url, limit })` (ưu tiên `post_detail` nếu crawler đã hỗ trợ)
-  - `x_crawl_comments_tree` → `scrape(platform, 'get_comments', { postId, maxDepth, maxComments })`
+  - `x_crawl_post` → thử `scrape(platform, 'post_detail', { url, limit })` nếu action `post_detail` có trong `listActions()` của crawler; nếu không thì fallback `scrape(platform, 'posts', { url, limit })` (với Facebook sẽ map thành `page_posts`/`group_posts` dựa trên URL)
+  - `x_crawl_comments_tree` → `scrape(platform, 'get_comments', { postId, maxDepth, maxComments })` nếu crawler có action `get_comments` (hiện tại chỉ `FacebookCrawler`)
 - **And** kết quả được bọc trong 3-Layer JSON Envelope và auto-artifact nếu >100 records
 - **And** nếu platform chưa hỗ trợ action đó, trả error `XACT_4001` với `suggestedAction: 'use_x_actions_list'`
 
@@ -150,6 +150,8 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
   - [ ] T3.2: Thêm MCP tool `x_actions_list` vào `TOOLS` trong `src/mcp/server.js`
   - [ ] T3.3: Thêm handler `executeActionListTool(args)` dùng `globalActionRegistry` / instantiate `FacebookCrawler` (và các crawler có sẵn) để lấy descriptors
   - [ ] T3.4: Đảm bảo `requiredArgs`, `optionalArgs`, `example`, `outputType`, `requiresAuth` đầy đủ
+  - [ ] T3.5: Tạo `src/cli/commands/actions.js` với `xactions actions list [--platform <platform>]`
+  - [ ] T3.6: Register `actions` command trong `src/cli/index.js`
 - [ ] T4: Generic `x_crawl_post` & `x_crawl_comments_tree` (AC-7)
   - [ ] T4.1: Thêm tool definitions vào `TOOLS`
   - [ ] T4.2: Thêm handlers dispatch đến `scrape()` với action mapping
@@ -164,7 +166,8 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
   - [ ] T6.2: `tests/mcp/server-artifact.test.js` — >100 records trigger artifact path, file tồn tại, JSONL valid
   - [ ] T6.3: `tests/mcp/server-action-discovery.test.js` — `x_actions_list` trả về `ActionDescriptor[]` với `requiresAuth`
   - [ ] T6.4: `tests/cli/daemon.test.js` — `xactions daemon status/start/stop` (có thể skip nếu khó chạy thực)
-  - [ ] T6.5: Chạy `npm run typecheck` và `npm test -- tests/mcp/`
+  - [ ] T6.5: `tests/cli/actions.test.js` — `xactions actions list` trả về descriptors
+  - [ ] T6.6: Chạy `npm run typecheck` và `npm test -- tests/mcp/`
 
 ## Dev Notes
 
@@ -262,10 +265,12 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 | `src/mcp/envelope.js` | 3-Layer JSON Envelope builder + error wrapper |
 | `src/mcp/artifact-exporter.js` | Ghi artifact JSONL/CSV khi >100 records |
 | `src/cli/commands/daemon.js` | CLI `xactions daemon status/start/stop` |
+| `src/cli/commands/actions.js` | CLI `xactions actions list [--platform <p>]` |
 | `tests/mcp/server-envelope.test.js` | Test envelope shape, platform detection, error wrap |
 | `tests/mcp/server-artifact.test.js` | Test auto-artifact >100 records |
 | `tests/mcp/server-action-discovery.test.js` | Test `x_actions_list` trả về descriptors có `requiresAuth` |
 | `tests/cli/daemon.test.js` | Test daemon CLI lifecycle |
+| `tests/cli/actions.test.js` | Test `xactions actions list` |
 
 ### UPDATE
 
@@ -372,12 +377,14 @@ Patterns:
 - `src/mcp/envelope.js` — 3-Layer JSON Envelope builder.
 - `src/mcp/artifact-exporter.js` — JSONL/CSV artifact writer for >100 records.
 - `src/cli/commands/daemon.js` — CLI daemon lifecycle commands.
+- `src/cli/commands/actions.js` — CLI action discovery.
 - `tests/mcp/server-envelope.test.js`
 - `tests/mcp/server-artifact.test.js`
 - `tests/mcp/server-action-discovery.test.js`
 - `tests/cli/daemon.test.js`
+- `tests/cli/actions.test.js`
 
 ### Updated files
 - `src/mcp/server.js` — tool handlers, envelope wrap.
-- `src/cli/index.js` — register daemon command.
+- `src/cli/index.js` — register `daemon` and `actions` command groups.
 - `bin/unfollowx` — legacy CLI mapping / error.
