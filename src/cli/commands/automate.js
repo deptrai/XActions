@@ -27,6 +27,7 @@ export function registerAutomateCommand(program) {
     .option('--keyword <keyword>', 'Keyword to search groups (for join-group)')
     .option('--targets <targets>', 'Comma-separated profile URLs or UIDs (for send-friend-request)')
     .option('--mode <mode>', 'Friend request mode: uid_list, suggestions, location', 'uid_list')
+    .option('--location <location>', 'Location filter (for send-friend-request in location mode)')
     .option('--limit <number>', 'Limit count (for join-group, friend requests)', '10')
     .option('--auth-cookie <json>', 'Auth cookie JSON: \'{"c_user":"...","xs":"..."}\'')
     .option('--no-dry-run', 'Execute real writes (default: dry-run enabled)')
@@ -189,7 +190,7 @@ export function registerAutomateCommand(program) {
           const input = groupUrls.length ? { groupUrls } : { keyword: options.keyword, limit: Number(options.limit) };
           result = await joinFacebookGroups(page, input, guardedOptions);
         } else if (action === 'send-friend-request') {
-          const input = { mode: options.mode || 'uid_list', targets, limit: Number(options.limit) };
+          const input = { mode: options.mode || 'uid_list', targets, location: options.location, limit: Number(options.limit) };
           result = await sendFriendRequests(page, input, guardedOptions);
         } else if (action === 'messenger-share') {
           const messengerDelay = dryRun

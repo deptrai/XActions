@@ -66,7 +66,7 @@ export async function run(action, args = {}) {
  * @param {Record<string, unknown>} [browserOptions] - Browser options.
  * @returns {Promise<Record<string, unknown>>}
  */
-export async function runSearchAllParallel(baseArgs, rest = {}, userId, browserOptions) {
+export async function runSearchAllParallel(baseArgs = {}, rest = {}, userId, browserOptions) {
   const query = /** @type {string} */ (rest.query ?? baseArgs.query ?? '');
   const location = /** @type {string | undefined} */ (rest.location ?? baseArgs.location);
   const limit = /** @type {number | undefined} */ (rest.limit ?? baseArgs.limit);
@@ -103,9 +103,9 @@ export async function runSearchAllParallel(baseArgs, rest = {}, userId, browserO
     };
   }
 
-  // Fallback: query all 4 categories via scrape()
+  // Fallback: query all 4 categories via scrape() with error isolation
   const { scrape } = await import('../../src/scrapers/index.js');
-  const results = await Promise.all(
+  const settled = await Promise.allSettled(
     types.map((type) =>
       scrape('facebook', 'search', {
         ...baseArgs,
@@ -118,11 +118,22 @@ export async function runSearchAllParallel(baseArgs, rest = {}, userId, browserO
     )
   );
 
+  const getArrayResult = (res, key) => {
+    if (res.status !== 'fulfilled' || !res.value) return [];
+    const val = res.value;
+    if (Array.isArray(val)) return val;
+    if (Array.isArray(val[key])) return val[key];
+    if (key === 'people' && Array.isArray(val.users)) return val.users;
+    if (Array.isArray(val.posts)) return val.posts;
+    if (Array.isArray(val.items)) return val.items;
+    return [];
+  };
+
   return {
-    posts: results[0]?.posts || results[0] || [],
-    people: results[1]?.people || results[1]?.users || results[1] || [],
-    pages: results[2]?.pages || results[2] || [],
-    groups: results[3]?.groups || results[3] || [],
+    posts: getArrayResult(settled[0], 'posts'),
+    people: getArrayResult(settled[1], 'people'),
+    pages: getArrayResult(settled[2], 'pages'),
+    groups: getArrayResult(settled[3], 'groups'),
   };
 }
 

@@ -1,5 +1,9 @@
 # Deferred Work
 
+## Deferred from: code review of 13-10-facebook-hybrid-integration-caller-migration (2026-08-28)
+
+- [x] [Review][Defer] Migrate remaining legacy CLI/MCP calls (warmup/cancel) to hybrid when actions are available — thuộc Epic 20.2 cleanup / follow-up [src/cli/commands/automate.js, src/mcp/server.js]
+
 ## Deferred from: code review of 13-9-facebook-hybrid-social-actions-write-messenger re-review (2026-08-28)
 
 - [x] [Review][Defer] `DEFAULT_FB_DOC_IDS` write mutation placeholders không phải doc_id thật — by design, cần capture từ live session [src/scrapers/social/facebook/crawler.js:225-231; actions.js:275-280]

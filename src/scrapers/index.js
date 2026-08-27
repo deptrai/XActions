@@ -172,6 +172,7 @@ async function dispatchFacebookHybrid(action, options = {}) {
   }
 
   // 1. Map action names (AC-2)
+  const normalizedAction = String(action || '').trim().toLowerCase();
   /** @type {Record<string, string>} */
   const ACTION_MAPPING = {
     profile: 'profile',
@@ -198,8 +199,8 @@ async function dispatchFacebookHybrid(action, options = {}) {
     send_friend_requests: 'send_friend_request',
   };
 
-  let mappedAction = ACTION_MAPPING[action];
-  if (action === 'posts' || action === 'tweets' || action === 'feed') {
+  let mappedAction = ACTION_MAPPING[normalizedAction];
+  if (normalizedAction === 'posts' || normalizedAction === 'tweets' || normalizedAction === 'feed') {
     const rawUrl = options.url || options.targetUrl || '';
     if (typeof rawUrl === 'string' && (rawUrl.includes('/groups/') || rawUrl.includes('/group/'))) {
       mappedAction = 'group_posts';
@@ -209,7 +210,7 @@ async function dispatchFacebookHybrid(action, options = {}) {
   }
 
   if (!mappedAction) {
-    mappedAction = action;
+    mappedAction = normalizedAction;
   }
 
   // 2. Build or obtain crawler instance
@@ -237,42 +238,40 @@ async function dispatchFacebookHybrid(action, options = {}) {
     });
   }
 
-  // Validate action exists in crawler
-  const validActions = crawler.listActions().map((a) => a.action);
-  if (!validActions.includes(mappedAction)) {
-    throw new Error(
-      `Action "${action}" not available on platform "facebook". Available: ${validActions.join(', ')}`
-    );
-  }
-
-  // 3. Build session
-  let accountId = options.authCookie?.accountId || options.userId || null;
-  let cookies = options.authCookie;
-  if (!accountId && typeof options.authCookie === 'object' && options.authCookie?.c_user) {
-    accountId = String(options.authCookie.c_user);
-  } else if (!accountId && typeof options.authCookie === 'string') {
-    const match = options.authCookie.match(/(?:^|;\s*)c_user=([^;]+)/);
-    if (match) accountId = match[1];
-  }
-
-  const session = {
-    accountId: accountId || 'fb_default_session',
-    cookies,
-    cdpUrl: options.browserOptions?.cdpUrl || process.env.FACEBOOK_CDP_URL,
-    page: options.page,
-  };
-
-  // 4. Build args
-  const args = { ...options };
-  delete args.page;
-  delete args.autoClose;
-  delete args.authCookie;
-  delete args.browserOptions;
-  delete args.client;
-  delete args.crawler;
-  delete args.authToken;
-
+  // 3. Build session & args under resource-safe try/finally
   try {
+    const validActions = crawler.listActions().map((a) => a.action);
+    if (!validActions.includes(mappedAction)) {
+      throw new Error(
+        `Action "${action}" not available on platform "facebook". Available: ${validActions.join(', ')}`
+      );
+    }
+
+    let accountId = options.authCookie?.accountId || options.userId || null;
+    let cookies = options.authCookie;
+    if (!accountId && typeof options.authCookie === 'object' && options.authCookie?.c_user) {
+      accountId = String(options.authCookie.c_user);
+    } else if (!accountId && typeof options.authCookie === 'string') {
+      const match = options.authCookie.match(/(?:^|;\s*)c_user=([^;]+)/);
+      if (match) accountId = match[1];
+    }
+
+    const session = {
+      ...(accountId ? { accountId } : {}),
+      cookies,
+      cdpUrl: options.browserOptions?.cdpUrl || process.env.FACEBOOK_CDP_URL,
+      page: options.page,
+    };
+
+    const args = { ...options };
+    delete args.page;
+    delete args.autoClose;
+    delete args.authCookie;
+    delete args.browserOptions;
+    delete args.client;
+    delete args.crawler;
+    delete args.authToken;
+
     const result = await crawler.start({
       action: mappedAction,
       args,

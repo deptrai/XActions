@@ -3183,8 +3183,8 @@ async function executeFacebookEpic4Tool(name, args) {
       return { dryRun: true, platform: 'facebook', preview: { ...options, searchUrl } };
     }
     const { run } = await import('../../api/services/facebookScrape.js');
-    const authPayload = (cUser && xs) ? { c_user: cUser, xs } : (authCookie || { c_user: 'guest', xs: 'guest' });
-    return await run('marketplace', { ...options, authCookie: authPayload, userId: resolvedUserId });
+    const authPayload = (cUser && xs) ? { c_user: cUser, xs } : (authCookie || undefined);
+    return await run('marketplace', { ...options, ...(authPayload ? { authCookie: authPayload } : {}), userId: resolvedUserId });
   }
 
   throw new Error(`❌ executeFacebookEpic4Tool: unhandled tool name "${name}"`);

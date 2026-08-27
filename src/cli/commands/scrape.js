@@ -28,6 +28,9 @@ export function registerScrapeCommand(program) {
     .option('--category-id <id>', 'Category ID (for marketplace)')
     .option('--min-price <number>', 'Minimum price filter (for marketplace)')
     .option('--max-price <number>', 'Maximum price filter (for marketplace)')
+    .option('--latitude <lat>', 'Latitude (for marketplace)')
+    .option('--longitude <lng>', 'Longitude (for marketplace)')
+    .option('--radius-km <km>', 'Radius in km (for marketplace)')
     .option('--location <location>', 'Location filter (for search or marketplace)')
     .option('--cursor <cursor>', 'Pagination cursor')
     .option('--include-replies', 'Include nested replies (for comments)')
@@ -43,7 +46,7 @@ export function registerScrapeCommand(program) {
 
       try {
         // Facebook requires authCookie object, not authToken string
-        if ((platform === 'facebook' || platform === 'fb') && !options.authCookie) {
+        if ((platform === 'facebook' || platform === 'fb') && !options.authCookie && action !== 'marketplace') {
           spinner.fail('Facebook requires --auth-cookie \'{"c_user":"...","xs":"..."}\' (not --auth-token)');
           process.exit(1);
         }
@@ -59,15 +62,24 @@ export function registerScrapeCommand(program) {
           }
         }
 
+        const parseNum = (val) => {
+          if (val == null) return undefined;
+          const n = Number(val);
+          return Number.isFinite(n) ? n : undefined;
+        };
+
         const scrapeOptions = {
           username: options.username,
           url: options.url,
           query: options.query,
-          limit: parseInt(options.limit, 10),
+          limit: parseInt(options.limit, 10) || 20,
           category: options.category,
           categoryId: options.categoryId,
-          minPrice: options.minPrice != null ? Number(options.minPrice) : undefined,
-          maxPrice: options.maxPrice != null ? Number(options.maxPrice) : undefined,
+          minPrice: parseNum(options.minPrice),
+          maxPrice: parseNum(options.maxPrice),
+          latitude: parseNum(options.latitude),
+          longitude: parseNum(options.longitude),
+          radiusKm: parseNum(options.radiusKm),
           location: options.location,
           cursor: options.cursor,
           includeReplies: options.includeReplies,

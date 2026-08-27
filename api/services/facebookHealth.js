@@ -23,10 +23,13 @@ const TTL_MS = 5 * 60 * 1000;
  * @returns {string}
  */
 function buildCookieString(cookieObj) {
-  if (!cookieObj || typeof cookieObj !== 'object') return '';
+  if (!cookieObj || typeof cookieObj !== 'object' || Array.isArray(cookieObj)) return '';
   return Object.entries(cookieObj)
     .filter(([_, v]) => v != null && v !== '')
-    .map(([k, v]) => `${k}=${v}`)
+    .map(([k, v]) => {
+      const safe = /[;=]/.test(String(v)) ? encodeURIComponent(String(v)) : String(v);
+      return `${k}=${safe}`;
+    })
     .join('; ');
 }
 
@@ -38,16 +41,16 @@ function buildCookieString(cookieObj) {
 function parseFacebookTokens(html) {
   if (!html || typeof html !== 'string') return { fb_dtsg: null, lsd: null };
   const dtsgMatch =
-    html.match(/\["DTSGInitialData",\[\],\{"token":"([^"]+)"\}/) ||
-    html.match(/"DTSGInitialData",\[\],\{"token":"([^"]+)"\}/) ||
+    html.match(/\["DTSGInitialData",\s*\[\],\s*\{"token":"([^"]+)"\}/) ||
+    html.match(/"DTSGInitialData",\s*\[\],\s*\{"token":"([^"]+)"\}/) ||
     html.match(/name="fb_dtsg"\s+value="([^"]+)"/) ||
-    html.match(/"token":"([^"]+)"/);
+    html.match(/d\.token\s*=\s*"([^"]+)"/);
   const fb_dtsg = dtsgMatch ? dtsgMatch[1] : null;
 
   const lsdMatch =
     html.match(/name="lsd"\s+value="([^"]+)"/) ||
-    html.match(/\["LSD",\[\],\{"token":"([^"]+)"\}/) ||
-    html.match(/"LSD",\[\],\{"token":"([^"]+)"\}/);
+    html.match(/\["LSD",\s*\[\],\s*\{"token":"([^"]+)"\}/) ||
+    html.match(/"LSD",\s*\[\],\s*\{"token":"([^"]+)"\}/);
   const lsd = lsdMatch ? lsdMatch[1] : null;
 
   return { fb_dtsg, lsd };
