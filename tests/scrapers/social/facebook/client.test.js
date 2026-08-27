@@ -194,7 +194,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
       c_user: '10001',
     };
 
-    const bodyString = client.buildGraphQlBody('group_feed_doc_123', { groupId: '123456', count: 10 }, tokens);
+    const bodyString = client.buildGraphQlBody('group_feed_doc_123', { groupId: '123456', count: 10 }, tokens, { accountId: '10001' });
     const parsed = new URLSearchParams(bodyString);
 
     expect(parsed.get('doc_id')).toBe('group_feed_doc_123');
@@ -321,6 +321,6 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
     const lastReq = receivedRequests[receivedRequests.length - 1];
     const parsed = new URLSearchParams(lastReq.body);
     expect(parsed.get('doc_id')).toBe('group_feed_doc_123');
-    expect(parsed.get('__user')).toBe('10001'); // HTML mock returned Env.USER_ID = 10001
+    expect(parsed.get('__user')).toBe('0'); // guest mode forces USER_ID to 0
   });
 });

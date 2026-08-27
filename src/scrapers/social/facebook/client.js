@@ -11,6 +11,7 @@
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { FacebookPlatformResponseValidator } from './validator.js';
 import { FacebookBrowserBridge } from './signer-bridge.js';
+import { PreSignedTokenRing } from '../../../core/signer-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import crypto from 'node:crypto';
 
@@ -92,6 +93,9 @@ export class FacebookClient extends AbstractApiClient {
   /** @type {boolean} */
   httpFallback = true;
 
+  /** @type {PreSignedTokenRing | null} */
+  guestTokenRing = null;
+
   /** @type {string[]} */
   extraArgs = [];
 
@@ -122,6 +126,7 @@ export class FacebookClient extends AbstractApiClient {
    * @param {import('../../../core/session-manager.js').SessionManager} [deps.sessionManager]
    * @param {import('../../../core/platform-validator.js').AbstractPlatformResponseValidator} [deps.responseValidator]
    * @param {import('../../../core/signer-pool.js').PreSignedTokenRing} [deps.tokenRing]
+   * @param {import('../../../core/signer-pool.js').PreSignedTokenRing} [deps.guestTokenRing]
    * @param {import('../../../core/signer-pool.js').SignerWorkerPagePool} [deps.signerPool]
    * @param {FacebookBrowserBridge} [deps.browserBridge]
    * @param {string} [deps.cdpUrl]
@@ -162,6 +167,7 @@ export class FacebookClient extends AbstractApiClient {
     this.httpFallback = deps.httpFallback ?? true;
     this.proxy = deps.proxy || null;
     this.extraArgs = deps.extraArgs || [];
+    this.guestTokenRing = deps.guestTokenRing || new PreSignedTokenRing({ capacity: 50 });
     if (deps.tokenTtlMs) {
       this.#tokenTtlMs = deps.tokenTtlMs;
     }
@@ -244,14 +250,16 @@ export class FacebookClient extends AbstractApiClient {
    * @returns {Promise<Record<string, any>>}
    */
   async #fetchTokensWithStrategy(accountId, cookieHeader, options = {}) {
+    const isAuthAccount = Boolean(accountId && accountId !== 'guest' && accountId !== 'default');
     const shouldUseBrowser = Boolean(this.browserBridge || this.cdpUrl || this.launchChrome);
+    const tokenRing = isAuthAccount ? this.tokenRing : this.guestTokenRing;
 
     if (shouldUseBrowser) {
       try {
         const bridge = this.browserBridge || this.#getLazyBrowserBridge();
         const tokens = await bridge.extractTokens(accountId, cookieHeader);
-        if (tokens.lsd && this.tokenRing && typeof this.tokenRing.refill === 'function') {
-          this.tokenRing.refill([tokens.lsd]);
+        if (tokens.lsd && tokenRing && typeof tokenRing.refill === 'function') {
+          tokenRing.refill([tokens.lsd]);
         }
         this.#saveTokensToCache(accountId, cookieHeader, tokens);
         return tokens;
@@ -263,10 +271,9 @@ export class FacebookClient extends AbstractApiClient {
       }
     }
 
-    const isAuthAccount = Boolean(accountId && accountId !== 'guest' && accountId !== 'default');
     const tokens = await this.#fetchTokens(accountId, cookieHeader, options);
-    if (isAuthAccount && tokens.lsd && this.tokenRing && typeof this.tokenRing.refill === 'function') {
-      this.tokenRing.refill([tokens.lsd]);
+    if (tokens.lsd && tokenRing && typeof tokenRing.refill === 'function') {
+      tokenRing.refill([tokens.lsd]);
     }
     return tokens;
   }
@@ -399,7 +406,7 @@ export class FacebookClient extends AbstractApiClient {
   buildGraphQlBody(docId, variables = {}, tokens = {}, options = {}) {
     const isNamedAccount = Boolean(options.accountId && options.accountId !== 'guest' && options.accountId !== 'default');
     const requiresAuth = options.requiresAuth !== undefined ? options.requiresAuth : isNamedAccount;
-    const userId = tokens.c_user || tokens.userId || '0';
+    const userId = requiresAuth ? (tokens.c_user || tokens.userId || '0') : '0';
     if (requiresAuth && (!userId || userId === '0')) {
       throw new PlatformError({
         code: 'XACT_4010',
@@ -410,11 +417,12 @@ export class FacebookClient extends AbstractApiClient {
       });
     }
 
-    // Only consume the pre-signed token ring for authenticated requests.
-    // The ring is refilled with account-bound lsd in #fetchTokensWithStrategy,
-    // so no-auth/guest requests must not pull from it to avoid leaking
-    // account session tokens onto rotating residential proxies.
-    const allocatedLsd = (requiresAuth && this.tokenRing && this.tokenRing.size > 0 ? this.tokenRing.next() : null) || tokens.lsd || '';
+    // Consume from the appropriate pre-signed token ring based on auth mode.
+    // Auth and guest rings are refilled in #fetchTokensWithStrategy, keeping
+    // account-bound tokens isolated from rotating residential proxy requests.
+    const authLsd = requiresAuth && this.tokenRing && this.tokenRing.size > 0 ? this.tokenRing.next() : null;
+    const guestLsd = !requiresAuth && this.guestTokenRing && this.guestTokenRing.size > 0 ? this.guestTokenRing.next() : null;
+    const allocatedLsd = authLsd || guestLsd || tokens.lsd || '';
 
     const params = new URLSearchParams({
       doc_id: docId,
@@ -452,7 +460,8 @@ export class FacebookClient extends AbstractApiClient {
   async requestGraphQl(docId, variables = {}, options = {}) {
     const accountId = options.accountId || null;
     const rawCookies = options.cookies || options.headers?.cookie;
-    const requiresAuth = options.requiresAuth !== undefined ? options.requiresAuth : Boolean(accountId);
+    const isNamedAccount = Boolean(accountId && accountId !== 'guest' && accountId !== 'default');
+    const requiresAuth = options.requiresAuth !== undefined ? (Boolean(options.requiresAuth) && isNamedAccount) : isNamedAccount;
     const tokens = await this.ensureTokens(accountId, rawCookies, { ...options, requiresAuth, accountId });
     const body = this.buildGraphQlBody(docId, variables, tokens, { ...options, requiresAuth, accountId });
 

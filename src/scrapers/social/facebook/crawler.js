@@ -1043,6 +1043,7 @@ export class FacebookCrawler extends AbstractCrawler {
    * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo?: any }>}
    */
   async pagePosts(args, session = {}) {
+    session = { requiresAuth: false, ...(session || {}) };
     if (!args?.pageId) {
       throw new PlatformError({
         code: 'XACT_4001',
@@ -1107,6 +1108,7 @@ export class FacebookCrawler extends AbstractCrawler {
    * @returns {Promise<any>}
    */
   async search(args, session = {}) {
+    session = { requiresAuth: false, ...(session || {}) };
     const rawQuery = String(args?.query || '').trim();
     if (!rawQuery) {
       throw new PlatformError({
@@ -1375,6 +1377,7 @@ export class FacebookCrawler extends AbstractCrawler {
    * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }>}
    */
   async marketplace(args, session = {}) {
+    session = { requiresAuth: false, ...(session || {}) };
     const rawQuery = String(args?.query || '').trim();
     if (!rawQuery) {
       throw new PlatformError({
@@ -2367,6 +2370,7 @@ export class FacebookCrawler extends AbstractCrawler {
    * @returns {Promise<{ profile: import('../../../core/types.js').ProfileItem }>}
    */
   async profile(args, session = {}) {
+    session = { requiresAuth: false, ...(session || {}) };
     const rawTarget = args?.username || args?.url;
     const targetKey = resolveTargetKey(rawTarget);
 

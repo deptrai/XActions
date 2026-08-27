@@ -483,10 +483,14 @@ export class AbstractApiClient {
   async request(method, url, options = {}) {
     const opts = options || {};
     let currentAccountId = opts.accountId;
+    let concreteAccountId =
+      currentAccountId && currentAccountId !== 'guest' && currentAccountId !== 'default'
+        ? currentAccountId
+        : null;
     const effectiveRequiresAuth =
       typeof opts.requiresAuth === 'boolean' ? opts.requiresAuth : this.requiresAuth;
 
-    if (effectiveRequiresAuth && !currentAccountId && !this.accountPool) {
+    if (effectiveRequiresAuth && !concreteAccountId && !this.accountPool) {
       throw new AuthSessionExpiredError({
         code: 'XACT_4010',
         message: `No account or account pool configured for authenticated ${this.platform} request`,
@@ -497,17 +501,17 @@ export class AbstractApiClient {
     }
 
     // Check governor before request for auth-required platforms or opt-in accountId
-    if (currentAccountId && this.governor) {
+    if (concreteAccountId && this.governor) {
       if (typeof this.governor.canAccountRequest === 'function') {
-        const canRequest = this.governor.canAccountRequest(currentAccountId, this.platform);
+        const canRequest = this.governor.canAccountRequest(concreteAccountId, this.platform);
         if (!canRequest) {
           throw new PlatformError({
             type: ErrorTypes.HIBERNATION,
             code: 'XACT_4291',
-            message: `Account "${currentAccountId}" is hibernating or exceeded velocity limit`,
+            message: `Account "${concreteAccountId}" is hibernating or exceeded velocity limit`,
             statusCode: 429,
             suggestedAction: SuggestedActions.ROTATE_ACCOUNT,
-            accountId: currentAccountId,
+            accountId: concreteAccountId,
             platform: this.platform,
           });
         }
@@ -515,10 +519,6 @@ export class AbstractApiClient {
     }
 
     const provider = this.proxyProvider || this.proxyPool;
-    let concreteAccountId =
-      currentAccountId && currentAccountId !== 'guest' && currentAccountId !== 'default'
-        ? currentAccountId
-        : null;
     let accountRotationCount = 0;
 
     while (accountRotationCount <= this.maxAccountRotations) {
@@ -541,7 +541,7 @@ export class AbstractApiClient {
         }
 
         const proxy = provider || opts.requiresResidential
-          ? this.resolveProxy(currentAccountId, opts.requiresResidential, effectiveRequiresAuth)
+          ? this.resolveProxy(concreteAccountId, opts.requiresResidential, effectiveRequiresAuth)
           : null;
 
         let agent = null;
