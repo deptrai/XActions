@@ -8,11 +8,15 @@ import prisma from '../lib/prisma.js';
  * active, checkpointed, or dead. Results are cached in Prisma for 5 minutes
  * (NFR-11) and cookie values are never logged (NFR-13).
  *
+ * This implementation uses the hybrid FacebookClient for the HTTP request so
+ * that proxy, cookie, and retry handling are consistent with the rest of the
+ * Facebook scraper (Story 13.10 / AC-13).
+ *
  * @author nich (@nichxbt)
  * @license BSL 1.1
  */
 
-import axios from 'axios';
+import { FacebookClient } from '../../src/scrapers/social/facebook/client.js';
 import { decrypt } from '../routes/facebookAccounts.js';
 const FACEBOOK_HOME = 'https://www.facebook.com/';
 const TTL_MS = 5 * 60 * 1000;
@@ -44,45 +48,18 @@ function parseFacebookTokens(html) {
     html.match(/\["DTSGInitialData",\s*\[\],\s*\{"token":"([^"]+)"\}/) ||
     html.match(/"DTSGInitialData",\s*\[\],\s*\{"token":"([^"]+)"\}/) ||
     html.match(/name="fb_dtsg"\s+value="([^"]+)"/) ||
-    html.match(/d\.token\s*=\s*"([^"]+)"/);
+    html.match(/d\.token\s*=\s*"([^"]+)"/) ||
+    html.match(/"token"\s*:\s*"([^"]+)"/);
   const fb_dtsg = dtsgMatch ? dtsgMatch[1] : null;
 
   const lsdMatch =
     html.match(/name="lsd"\s+value="([^"]+)"/) ||
     html.match(/\["LSD",\s*\[\],\s*\{"token":"([^"]+)"\}/) ||
-    html.match(/"LSD",\s*\[\],\s*\{"token":"([^"]+)"\}/);
+    html.match(/"LSD",\s*\[\],\s*\{"token":"([^"]+)"\}/) ||
+    html.match(/"lsd"\s*:\s*"([^"]+)"/);
   const lsd = lsdMatch ? lsdMatch[1] : null;
 
   return { fb_dtsg, lsd };
-}
-
-/**
- * @typedef {object} HealthCheckOptions
- * @property {boolean} [force]
- * @property {typeof defaultFetch} [fetchImpl]
- */
-
-// Internal fetch seam: tests may override with a fake fetch.
-/**
- * @param {string} url
- * @param {Record<string, unknown>} [options]
- * @returns {Promise<{ status: number; data: string; headers: Record<string, unknown> }>}
- */
-async function defaultFetch(url, options = {}) {
-  const res = await axios.request({
-    url,
-    method: /** @type {string} */ (options.method) || 'GET',
-    headers: /** @type {Record<string, string> | undefined} */ (options.headers),
-    responseType: 'text',
-    transformResponse: [(d) => d],
-    maxRedirects: 5,
-    validateStatus: () => true,
-  });
-  return {
-    status: res.status,
-    data: typeof res.data === 'string' ? res.data : String(res.data ?? ''),
-    headers: { 'set-cookie': res.headers['set-cookie'] || [] },
-  };
 }
 
 /**
@@ -113,6 +90,79 @@ function buildCookieJar(initialCookies, setCookieHeaders = []) {
 }
 
 /**
+ * @typedef {object} HealthCheckOptions
+ * @property {boolean} [force]
+ * @property {(url: string, options?: Record<string, unknown>) => Promise<{ status: number; data: string; headers: Record<string, unknown> }>} [fetchImpl]
+ * @property {FacebookClient} [clientImpl]
+ */
+
+/**
+ * Build or inject a FacebookClient for the health check.
+ * @param {Record<string, unknown>} account
+ * @param {Partial<HealthCheckOptions>} [options]
+ * @returns {{ client: FacebookClient; injected: boolean }}
+ */
+function buildClient(account, options = {}) {
+  if (options.clientImpl instanceof FacebookClient) {
+    return { client: options.clientImpl, injected: true };
+  }
+  const client = new FacebookClient({
+    requiresProxy: false,
+    timeout: 30000,
+    httpFallback: true,
+  });
+  const fetchImpl = options.fetchImpl;
+  if (typeof fetchImpl === 'function') {
+    client.httpClient = async (/** @type {Record<string, unknown>} */ reqOpts) => {
+      const res = await fetchImpl(
+        /** @type {string} */ (reqOpts.url || FACEBOOK_HOME),
+        reqOpts,
+      );
+      return res;
+    };
+  }
+  return { client, injected: false };
+}
+
+/**
+ * Determine whether the response indicates a Facebook checkpoint / challenge.
+ * @param {string} html
+ * @param {number} status
+ * @returns {boolean}
+ */
+function isCheckpoint(html, status) {
+  const lowerHtml = html.toLowerCase();
+  return (
+    status >= 400 ||
+    html.includes('/checkpoint/') ||
+    lowerHtml.includes('confirm that you\'re human') ||
+    lowerHtml.includes('confirm you\'re human') ||
+    (lowerHtml.includes('confirm that you') && lowerHtml.includes('human')) ||
+    lowerHtml.includes('security check')
+  );
+}
+
+/**
+ * Map a FacebookClient request error to a health status.
+ * @param {unknown} err
+ * @returns {{ status: 'checkpoint' | 'dead', reason: string }}
+ */
+function mapHealthError(err) {
+  const e = /** @type {Record<string, unknown>} */ (err);
+  const code = typeof e.code === 'string' ? e.code : '';
+  const suggested = typeof e.suggestedAction === 'string' ? e.suggestedAction : '';
+  const message = typeof e.message === 'string' ? e.message : '';
+  const isAuth =
+    code === 'XACT_4010' ||
+    suggested === 'RELOGIN' ||
+    /login|auth|session|checkpoint/i.test(message);
+  if (isAuth) {
+    return { status: 'checkpoint', reason: 'checkpoint_or_captcha' };
+  }
+  return { status: 'dead', reason: 'network_error' };
+}
+
+/**
  * Determine Facebook account health by fetching the homepage and inspecting
  * the response HTML + cookie jar.
  *
@@ -125,7 +175,6 @@ export async function checkAccountHealth(account, options = {}) {
     throw new Error('❌ checkAccountHealth requires an account with id');
   }
   const force = options.force === true;
-  const fetchImpl = options.fetchImpl ?? defaultFetch;
 
   const existing = await prisma.facebookAccountHealth.findUnique({
     where: { accountId: String(account.id) },
@@ -156,30 +205,41 @@ export async function checkAccountHealth(account, options = {}) {
 
   const cookie = buildCookieString({ c_user: String(c_user), xs: String(xs) });
 
+  const { client, injected } = buildClient(account, options);
+
+  /** @type {{ status: number; data: string; headers: Record<string, unknown> } | undefined} */
   let res;
   try {
-    res = await fetchImpl(FACEBOOK_HOME, { headers: { Cookie: cookie } });
-  } catch {
-    const record = await upsertHealth(String(account.id), 'dead', 'network_error');
-    return { status: 'dead', reason: record.reason, lastCheckAt: record.lastCheckAt };
+    res = /** @type {{ status: number; data: string; headers: Record<string, unknown> }} */ (
+      await client.request('GET', FACEBOOK_HOME, {
+        requiresAuth: true,
+        accountId: String(account.id),
+        skipResponseValidation: true,
+        headers: { cookie },
+      })
+    );
+  } catch (err) {
+    const { status, reason } = mapHealthError(err);
+    if (!injected) {
+      await client.close().catch(() => {});
+    }
+    const record = await upsertHealth(String(account.id), status, reason);
+    return { status, reason: record.reason, lastCheckAt: record.lastCheckAt };
   }
 
-  const html = res.data || '';
-  const setCookie = /** @type {string[]} */ (res.headers?.['set-cookie'] || []);
+  if (!injected) {
+    await client.close().catch(() => {});
+  }
+
+  const html = typeof res.data === 'string' ? res.data : String(res.data ?? '');
+  const rawSetCookie = res.headers?.['set-cookie'];
+  const setCookie = Array.isArray(rawSetCookie) ? rawSetCookie : typeof rawSetCookie === 'string' ? [rawSetCookie] : [];
   const jar = buildCookieJar(cookie, setCookie);
 
   const hasCUser = /^\d+$/.test(jar.get('c_user') || '');
   const hasXs = (jar.get('xs') || '').length > 0;
   const tokens = parseFacebookTokens(html);
-
-  const checkpoint =
-    res.status >= 400 ||
-    html.includes('/checkpoint/') ||
-    html.toLowerCase().includes('confirm that you\'re human') ||
-    html.toLowerCase().includes('confirm you\'re human') ||
-    (html.toLowerCase().includes('confirm that you') && html.toLowerCase().includes('human')) ||
-    html.toLowerCase().includes('security check');
-
+  const checkpoint = isCheckpoint(html, res.status);
   const dead = !tokens.fb_dtsg || !hasCUser || !hasXs;
 
   /** @type {'active' | 'checkpoint' | 'dead'} */

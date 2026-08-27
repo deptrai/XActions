@@ -42,8 +42,7 @@ import threads from './threads/index.js';
 import facebook from './facebook/index.js';
 import { FacebookCrawler, FacebookClient, FacebookActions } from './social/facebook/index.js';
 import { resolveTargetKey, resolveGroupId } from './social/facebook/crawler.js';
-
-export { FacebookCrawler, FacebookClient, FacebookActions };
+import { ProxyIpPool } from '../proxy/proxy-pool.js';
 
 // ============================================================================
 // HTTP Scraper (Direct GraphQL — no browser required)
@@ -159,12 +158,80 @@ export function getPlatform(platform) {
  *   const posts = await scrape('threads', 'tweets', { page, username: 'zuck', limit: 20 });
  */
 /**
+ * Build a ProxyIpPool from loose browserOptions.proxy / proxyAuth.
+ * @param {Record<string, unknown>} browserOptions
+ * @returns {ProxyIpPool | undefined}
+ */
+function buildFacebookProxyPool(browserOptions = {}) {
+  const existing = browserOptions?.proxyPool;
+  if (existing) return /** @type {ProxyIpPool} */ (existing);
+  const raw = browserOptions?.proxy;
+  if (!raw) return undefined;
+
+  if (typeof raw === 'string') {
+    const proxyAuth = /** @type {{ username?: string; password?: string } | undefined} */ (browserOptions?.proxyAuth);
+    if (proxyAuth?.username) {
+      const scheme = /^https:/i.test(raw) ? 'https' : 'http';
+      const hostPort = raw.replace(/^https?:\/\//, '');
+      const user = encodeURIComponent(proxyAuth.username);
+      const pass = encodeURIComponent(proxyAuth.password || '');
+      return new ProxyIpPool({
+        proxies: [`${scheme}://${user}:${pass}@${hostPort}`],
+        validateOnAdd: false,
+      });
+    }
+    return new ProxyIpPool({ proxies: [raw], validateOnAdd: false });
+  }
+
+  return new ProxyIpPool({ proxies: [raw], validateOnAdd: false });
+}
+
+/**
+ * Create a FacebookClient from browser options, honoring proxy/auth/location.
+ * @param {Record<string, unknown>} browserOptions
+ * @returns {FacebookClient}
+ */
+export function createFacebookClient(browserOptions = {}) {
+  return new FacebookClient({
+    baseUrl: browserOptions?.baseUrl,
+    proxyPool: buildFacebookProxyPool(browserOptions),
+    proxyAuth: browserOptions?.proxyAuth,
+    proxyLocation: browserOptions?.proxyLocation,
+    governor: browserOptions?.governor,
+    accountPool: browserOptions?.accountPool,
+    headless: browserOptions?.headless !== false,
+    cdpUrl: browserOptions?.cdpUrl || process.env.FACEBOOK_CDP_URL,
+    userDataDir: browserOptions?.userDataDir || browserOptions?.profileDir,
+    profileDir: browserOptions?.profileDir || browserOptions?.userDataDir,
+    httpFallback: true,
+    requiresProxy: false,
+  });
+}
+
+/**
+ * Create a FacebookCrawler around an existing FacebookClient.
+ * @param {FacebookClient} client
+ * @param {Record<string, unknown>} [browserOptions]
+ * @returns {FacebookCrawler}
+ */
+export function createFacebookCrawler(client, browserOptions = {}) {
+  return new FacebookCrawler({
+    client,
+    docIds: browserOptions?.docIds,
+    store: browserOptions?.store,
+    governor: browserOptions?.governor,
+    accountPool: browserOptions?.accountPool,
+    cdpUrl: browserOptions?.cdpUrl || process.env.FACEBOOK_CDP_URL,
+  });
+}
+
+/**
  * Dispatch to FacebookCrawler hybrid engine (Story 13.10)
  * @param {string} action
  * @param {import('../types/xactions.js').XActionsOptions & Record<string, unknown>} options
  * @returns {Promise<Record<string, unknown>>}
  */
-async function dispatchFacebookHybrid(action, options = {}) {
+export async function dispatchFacebookHybrid(action, options = {}) {
   // Facebook uses a cookie-object ({ c_user, xs }) via authCookie, not a string authToken.
   if (options.authToken) {
     throw new Error(
@@ -227,26 +294,9 @@ async function dispatchFacebookHybrid(action, options = {}) {
   let ownsCrawler = false;
   if (!crawler) {
     ownsCrawler = true;
-    const browserOpts = options.browserOptions || {};
-    const client = options.client || new FacebookClient({
-      baseUrl: browserOpts.baseUrl,
-      proxy: browserOpts.proxy,
-      proxyPool: browserOpts.proxyPool,
-      governor: browserOpts.governor,
-      accountPool: browserOpts.accountPool,
-      headless: browserOpts.headless !== false,
-      cdpUrl: browserOpts.cdpUrl || process.env.FACEBOOK_CDP_URL,
-      userDataDir: browserOpts.userDataDir || browserOpts.profileDir,
-      profileDir: browserOpts.profileDir || browserOpts.userDataDir,
-    });
-    crawler = new FacebookCrawler({
-      client,
-      docIds: browserOpts.docIds,
-      store: browserOpts.store,
-      governor: browserOpts.governor,
-      accountPool: browserOpts.accountPool,
-      sessionManager: browserOpts.sessionManager,
-    });
+    const browserOpts = /** @type {Record<string, unknown>} */ (options.browserOptions || {});
+    const client = /** @type {FacebookClient | undefined} */ (options.client) || createFacebookClient(browserOpts);
+    crawler = createFacebookCrawler(client, browserOpts);
   }
 
   // 3. Build session & args under resource-safe try/finally
@@ -371,23 +421,56 @@ export async function scrape(platform, action, options = {}) {
   const platformName = platform?.toLowerCase();
 
   // Facebook Hybrid Dispatch (Story 13.10, AC-1).
-  // If the caller already provides a Puppeteer page, keep the legacy page-based path
-  // for search/group_search so existing unit tests and browser-bridged callers still work.
+  // When the caller provides a Puppeteer page, keep the legacy page-based path
+  // so existing unit tests and browser-bridged callers still work.
+  // All production callers (api/services, MCP, CLI) now pass client/crawler or
+  // use FacebookScrapeService/FacebookCrawler directly. See docs/deprecation-plan.md.
   if (platformName === 'facebook' || platformName === 'fb') {
-    if (options.page && (action === 'search' || action === 'group_search')) {
+    if (options.page) {
       const mod = getPlatform(platform);
       const legacyMap = {
+        profile: 'scrapeProfile',
+        followers: 'scrapeFollowers',
+        following: 'scrapeFollowing',
+        tweets: 'scrapeTweets',
+        posts: 'scrapeTweets',
         search: 'searchFacebook',
         group_search: 'scrapeFacebookGroupSearch',
+        post_comments: 'scrapeFacebookComments',
+        group_posts: 'scrapeFacebookGroupPosts',
+        group_comments: 'scrapeFacebookGroupComments',
+        group_members: 'scrapeGroupMembers',
+        'group-members': 'scrapeGroupMembers',
+        marketplace: 'scrapeMarketplace',
       };
-      const fnName = legacyMap[action];
-      const fn = /** @type {(...args: unknown[]) => Promise<Record<string, unknown>>} */ (mod[fnName]);
-      if (typeof fn === 'function') {
-        const target = action === 'group_search'
-          ? options.url
-          : (options.query || options.username || options.hashtag);
-        return await fn(options.page, target, options);
+      const fnName = legacyMap[action] || action;
+      const platformMod = /** @type {Record<string, Function>} */ (mod);
+      const fn = /** @type {(...args: unknown[]) => Promise<Record<string, unknown>>} */ (platformMod[fnName]);
+
+      if (typeof fn !== 'function') {
+        const available = Object.keys(platformMod).filter(
+          (k) => typeof platformMod[k] === 'function' && (k.startsWith('scrape') || k.startsWith('search'))
+        );
+        throw new Error(
+          `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+        );
       }
+
+      if (options.authCookie && platformMod.loginWithCookie) {
+        await platformMod.loginWithCookie(options.page, options.authCookie, options.browserOptions || {});
+      }
+
+      const target = action === 'group_search'
+        ? options.url
+        : (options.username || options.query || options.hashtag || options.url || options.listUrl || options.communityUrl);
+
+      // Actions that only take page + options (no target)
+      const noTargetActions = ['scrapeBookmarks', 'scrapeNotifications', 'scrapeTrending'];
+      if (noTargetActions.includes(fnName)) {
+        return await fn(options.page, options);
+      }
+
+      return await fn(options.page, target, options);
     }
     return await dispatchFacebookHybrid(action, options);
   }
@@ -415,7 +498,6 @@ export async function scrape(platform, action, options = {}) {
     spaces: 'scrapeSpaces',
     feed: 'scrapeFeed',
     'group-members': 'scrapeGroupMembers',
-    marketplace: 'scrapeMarketplace', // TODO(13.10): migrate to FacebookCrawler action 'marketplace'
   };
 
   // Platform-specific action map for Facebook (Story 7.2). Prefer this over the

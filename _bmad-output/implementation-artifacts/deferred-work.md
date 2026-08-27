@@ -3,14 +3,14 @@
 ## Deferred from: code review of 13-10-facebook-hybrid-integration-caller-migration (2026-08-28)
 
 - [x] [Review][Defer] Migrate remaining legacy CLI/MCP calls (warmup/cancel) to hybrid when actions are available — thuộc Epic 20.2 cleanup / follow-up [src/cli/commands/automate.js, src/mcp/server.js]
-- [ ] [Review][Defer] POST /api/facebook/automate (like/comment/post/share/join-groups/batch-post-groups/send-friend-requests/messenger-share) still routes to legacy `api/services/facebookAutomation.js` and `src/scrapers/facebook/*` — defer to Epic 20.2 or a 13.10 follow-up [api/routes/facebook.js:604-1066, api/services/facebookAutomation.js]
-- [ ] [Review][Defer] CLI `xactions automate` still imports and runs legacy `src/scrapers/facebook/index.js` and `api/services/facebookAutomation.js` — defer to Epic 20.2 or a 13.10 follow-up [src/cli/commands/automate.js:48-58, 181-206]
-- [ ] [Review][Defer] MCP `executeFacebookAutomateTool` / `executeFacebookEpic4Tool` still use legacy `api/services/facebookAutomation.js` for like/comment/post/share/join/post_to_groups/send_friend_requests — defer to Epic 20.2 or a 13.10 follow-up [src/mcp/server.js:2865-3190]
-- [ ] [Review][Defer] `api/services/facebookAccountPool.js:runBatch` still launches Puppeteer pages and does not support `FacebookCrawler` sessions for hybrid tasks — defer to Epic 20.2 or 13.10 follow-up [api/services/facebookAccountPool.js:23, 142-266]
-- [ ] [Review][Defer] `api/services/facebookHealth.js` removed `graphql.js` but still does not use `FacebookClient`/`FacebookCrawler` for HTTP health check — defer to Epic 20.2 or 13.10 follow-up [api/services/facebookHealth.js:15-57, 123-202]
-- [ ] [Review][Defer] Add `FacebookCrawler`/`FacebookClient`/`FacebookActions` type declarations to `types/index.d.ts` and `src/types/xactions.d.ts` [AC-9]
-- [ ] [Review][Defer] Add `@deprecated` headers to remaining legacy `src/scrapers/facebook/*.js` files (marketplace.js, posts.js, comments.js, search.js, group-search.js, followers.js, profile.js) [AC-10]
-- [ ] [Review][Defer] Remove dead-code Puppeteer branch for `facebook`/`fb` in `src/scrapers/index.js` and switch `platforms.facebook` / default export to `src/scrapers/social/facebook/index.js` adapter — scope/product decision [src/scrapers/index.js:42, 319-333, 529]
+- [x] [Review][Done] POST /api/facebook/automate (like/comment/post/share/join-groups/batch-post-groups/send-friend-requests/messenger-share) now routes through `scrape()` to `FacebookCrawler` [api/routes/facebook.js, api/services/facebookAutomation.js]
+- [x] [Review][Done] CLI `xactions automate` now routes like/comment/post/share/join-group/send-friend-request through `scrape()` [src/cli/commands/automate.js]
+- [x] [Review][Done] MCP `executeFacebookAutomateTool` / `executeFacebookEpic4Tool` now dispatch to `FacebookCrawler` for like/comment/post/messenger/share/join/post_to_groups/friend_requests [src/mcp/server.js]
+- [x] [Review][Done] `api/services/facebookAccountPool.js:runBatch` now supports `hybrid: true` mode using `FacebookClient`/`FacebookCrawler` per account context [api/services/facebookAccountPool.js:23, 142-337]
+- [x] [Review][Done] `api/services/facebookHealth.js` now uses `FacebookClient` for HTTP health checks [api/services/facebookHealth.js]
+- [x] [Review][Done] Added `FacebookCrawler`/`FacebookClient`/`FacebookActions` type declarations to `types/index.d.ts` and `src/types/xactions.d.ts` [AC-9]
+- [x] [Review][Done] Added `@deprecated` headers to legacy `src/scrapers/facebook/*.js` files (marketplace.js, posts.js, comments.js, search.js, group-search.js, followers.js, profile.js) [AC-10]
+- [x] [Review][Done] Triaged `src/scrapers/index.js` `facebook`/`fb` branch: removed `marketplace` dead-code mapping, restored legacy page-based fallback for callers that pass `options.page`, and documented the hybrid production path [src/scrapers/index.js:420-476]
 
 ## Deferred from: code review of 13-9-facebook-hybrid-social-actions-write-messenger re-review (2026-08-28)
 

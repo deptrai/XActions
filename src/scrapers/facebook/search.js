@@ -5,6 +5,7 @@
  *
  * Uses the same Puppeteer stealth approach as Twitter and Threads scrapers.
  *
+ * @deprecated Use `src/scrapers/social/facebook/index.js` (`FacebookCrawler`, `FacebookClient`) instead. See docs/deprecation-plan.md.
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license BSL 1.1
