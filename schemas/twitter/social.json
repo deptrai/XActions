@@ -52,6 +52,59 @@
     },
     "conversationId": {
       "type": "string"
+    },
+    "profileId": {
+      "type": "string"
+    },
+    "isProfile": {
+      "type": "boolean"
+    },
+    "isFollower": {
+      "type": "boolean"
+    },
+    "isFollowing": {
+      "type": "boolean"
+    },
+    "isLiker": {
+      "type": "boolean"
+    },
+    "isRetweeter": {
+      "type": "boolean"
+    },
+    "isListMember": {
+      "type": "boolean"
+    },
+    "isNonFollower": {
+      "type": "boolean"
+    },
+    "username": {
+      "type": "string"
+    },
+    "followersCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "followingCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "isVerified": {
+      "type": "boolean"
+    },
+    "protected": {
+      "type": "boolean"
+    },
+    "avatar": {
+      "type": "string"
+    },
+    "sourceMethod": {
+      "type": "string"
+    },
+    "listId": {
+      "type": "string"
+    },
+    "cursor": {
+      "type": "string"
     }
   },
   "required": [

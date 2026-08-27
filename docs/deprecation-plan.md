@@ -77,6 +77,8 @@ Xoá theo thứ tự:
 |----------|--------|-----------------|-------|
 | Twitter Puppeteer (`src/scrapers/twitter/index.js`) | `deprecated-planned` | Phase 2–3 | TBD |
 | Twitter HTTP (`src/scrapers/twitter/http/`) | `deprecated-planned` | Phase 2–3 | TBD |
+| Twitter Legacy Profile/Followers/Following (`src/scrapers/twitter/index.js` profile/followers/following) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
+| Twitter HTTP Relationships (`src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
 | `src/client/Scraper.js` | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
@@ -91,6 +93,13 @@ Xoá theo thứ tự:
 
 | Legacy function | Hybrid action |
 |-----------------|---------------|
+| `scrapeProfile` (Twitter) | `twitter:profile` |
+| `scrapeFollowers` (Twitter) | `twitter:followers` |
+| `scrapeFollowing` (Twitter) | `twitter:following` |
+| `scrapeNonFollowers` (Twitter) | `twitter:non_followers` |
+| `scrapeLikers` (Twitter) | `twitter:likers` |
+| `scrapeRetweeters` (Twitter) | `twitter:retweeters` |
+| `scrapeListMembers` (Twitter) | `twitter:list_members` |
 | `scrapeProfile` | `facebook:profile` |
 | `scrapeFollowers` | `facebook:followers` |
 | `scrapeGroupMembers` | `facebook:group_members` |
@@ -143,4 +152,4 @@ Trước khi thực hiện Story 20.2 (Legacy Scraper Code Decommissioning), tea
 
 ---
 
-*Last updated: 2026-08-26*
+*Last updated: 2026-08-28*
