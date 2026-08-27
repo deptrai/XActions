@@ -85,3 +85,8 @@
 
 - [x] [Review][Defer] `DEFAULT_FB_DOC_IDS.MARKETPLACE_SEARCH` là placeholder — by design, cần capture live doc_id. [src/scrapers/social/facebook/crawler.js:192-196]
 - [x] [Review][Defer] Migration hoàn chỉnh `src/scrapers/index.js`, `api/services/facebookScrape.js`, `src/mcp/server.js` sang `FacebookCrawler` — thuộc Story 13.10. [src/scrapers/index.js:188-196, src/mcp/server.js:3151-3200]
+
+## Deferred from: code review of 14-2-mcp-tool-exporters-daemon-http-sse-server (2026-08-28)
+
+- [x] [Review][Defer] `extractRecords` heuristic ưu tiên `comments` over `posts` khi object có cả hai — pre-existing design choice, sẽ cần revisit khi thêm mixed-payload crawlers
+- [x] [Review][Defer] `x_actions_list` chỉ cover Facebook + Threads — spec ghi rõ skip platform chưa migrate; sẽ mở rộng khi Twitter/Bluesky/Mastodon crawlers migrate sang AbstractCrawler

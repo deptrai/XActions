@@ -363,6 +363,21 @@ Patterns:
 - **Error in artifact writer:** Nếu ghi artifact lỗi, trả `success: false` với `code: 'XACT_5002'` và vẫn giữ `data` preview.
 - **CLI daemon process reuse:** `xactions daemon start` không khởi động nhiều instance — check `CONFIG_DIR/daemon.json` trước spawn.
 
+### Review Findings
+
+- [x] [Review][Patch] Envelope shape sai spec AC-2: `returnedCount` phải là `count`, thiếu `sampleIds`, thiếu `meta.totalRecords` [`src/mcp/envelope.js:137-160`]
+- [x] [Review][Patch] Artifact export failure crash tool — thiếu try/catch quanh `exportArtifact()`, spec yêu cầu graceful degradation `XACT_5002` [`src/mcp/envelope.js:152`]
+- [x] [Review][Patch] Artifact exporter không stream — `records.map().join()` sẽ OOM cho >100k records; spec yêu cầu `for...of` + `writeWithDrain` [`src/mcp/artifact-exporter.js:48-58`]
+- [x] [Review][Patch] `structuredClone` crash cho un-cloneable objects (functions, class instances) — cần try/catch fallback [`src/mcp/artifact-exporter.js:50`]
+- [x] [Review][Patch] CSV `buildCsvHeader` chỉ lấy keys từ record[0] — records có sparse keys sẽ mất cột [`src/mcp/artifact-exporter.js:70`]
+- [x] [Review][Patch] Daemon start: orphan process khi `waitForHealth` timeout — không kill spawned child [`src/cli/commands/daemon.js:73-76`]
+- [x] [Review][Patch] PID file write không atomic — risk corruption nếu CLI crash mid-write [`src/cli/commands/daemon.js:68`]
+- [x] [Review][Patch] `isProcessAlive` trả false sai khi EPERM (process owned by root) [`src/cli/commands/daemon.js:184-189`]
+- [x] [Review][Patch] PID reuse risk — `daemon stop` nên verify command trước khi kill [`src/cli/commands/daemon.js:106`]
+- [x] [Review][Patch] Crawl fallback string matching fragile — `err.message.includes('not available')` quá rộng [`src/mcp/server.js:3039-3041`]
+- [x] [Review][Defer] `extractRecords` heuristic ưu tiên `comments` over `posts` khi object có cả hai — deferred, pre-existing design choice
+- [x] [Review][Defer] `x_actions_list` chỉ cover Facebook + Threads — deferred, spec ghi rõ skip platform chưa migrate
+
 ## Outstanding Items (Dev Agent Owned)
 
 - Quyết định cách triển khai `xactions daemon start/stop` — dùng `child_process.spawn` + lưu PID, `pm2`, hay chỉ in command hướng dẫn.

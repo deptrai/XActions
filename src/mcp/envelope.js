@@ -30,14 +30,15 @@ import { exportArtifact } from './artifact-exporter.js';
  * @property {string} generatedAt
  * @property {string} startedAt
  * @property {number} durationMs
+ * @property {number} [totalRecords]
  * @property {string} [datasetArtifactPath]
  */
 
 /**
  * @typedef {Object} ToolSummary
- * @property {number} totalRecords
- * @property {number} returnedCount
+ * @property {number} count
  * @property {boolean} hasMore
+ * @property {string[]} [sampleIds]
  */
 
 const PREVIEW_LIMIT = 30;
@@ -134,6 +135,12 @@ export async function wrapToolResult(toolName, rawResult, startedAt, options = {
   const startedAtIso = new Date(startedAt).toISOString();
   const durationMs = Math.max(0, Date.now() - startedAt);
 
+  // AC-2: sampleIds from first 5 records that have an `id` field.
+  const sampleIds = records
+    .slice(0, 5)
+    .filter((r) => r && typeof r === 'object' && 'id' in /** @type {object} */ (r))
+    .map((r) => String(/** @type {Record<string, unknown>} */ (r).id));
+
   /** @type {ToolMeta} */
   const meta = {
     tool: toolName,
@@ -141,24 +148,47 @@ export async function wrapToolResult(toolName, rawResult, startedAt, options = {
     generatedAt,
     startedAt: startedAtIso,
     durationMs,
+    totalRecords,
+  };
+
+  /** @type {ToolSummary} */
+  const summary = {
+    count: totalRecords,
+    hasMore,
+    ...(sampleIds.length > 0 ? { sampleIds } : {}),
   };
 
   if (totalRecords > ARTIFACT_THRESHOLD) {
     const artifactFormat =
       options.format || options.args?.artifactFormat || 'jsonl';
-    meta.datasetArtifactPath = await exportArtifact(records, {
-      tool: toolName,
-      platform,
-      format: /** @type {'jsonl' | 'csv'} */ (artifactFormat),
-    });
+    try {
+      meta.datasetArtifactPath = await exportArtifact(records, {
+        tool: toolName,
+        platform,
+        format: /** @type {'jsonl' | 'csv'} */ (artifactFormat),
+      });
+    } catch (artifactErr) {
+      // Edge Case: artifact write failure → XACT_5002, preserve data preview.
+      return {
+        success: false,
+        platform,
+        meta,
+        data,
+        summary,
+        error: {
+          code: 'XACT_5002',
+          type: ErrorTypes.INTERNAL,
+          message: `Artifact export failed: ${artifactErr instanceof Error ? artifactErr.message : String(artifactErr)}`,
+          statusCode: 500,
+          isRetryable: false,
+          retryAfterMs: 0,
+          retryAfter: 0,
+          suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+          platform,
+        },
+      };
+    }
   }
-
-  /** @type {ToolSummary} */
-  const summary = {
-    totalRecords,
-    returnedCount: data.length,
-    hasMore,
-  };
 
   return {
     success: true,
@@ -250,8 +280,7 @@ export function wrapToolError(error, toolName, options = {}) {
     },
     data: [],
     summary: {
-      totalRecords: 0,
-      returnedCount: 0,
+      count: 0,
       hasMore: false,
     },
     error: errorEnvelope,

@@ -8,7 +8,7 @@
  * @license MIT
  */
 
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import chalk from 'chalk';
@@ -63,12 +63,18 @@ export function registerDaemonCommand(program) {
         startedAt: new Date().toISOString(),
       };
 
+      // Atomic PID file write: write to .tmp then rename to avoid corruption.
       await fs.mkdir(configDir, { recursive: true });
-      await fs.writeFile(DAEMON_FILE, JSON.stringify(daemonState, null, 2));
+      const tmpFile = DAEMON_FILE + '.tmp';
+      await fs.writeFile(tmpFile, JSON.stringify(daemonState, null, 2));
+      await fs.rename(tmpFile, DAEMON_FILE);
 
       // Wait for /health to respond.
       const ready = await waitForHealth(port, 10000);
       if (!ready) {
+        // Kill the orphaned daemon process to prevent port leak.
+        try { process.kill(/** @type {number} */ (proc.pid), 'SIGKILL'); } catch {}
+        await fs.unlink(DAEMON_FILE).catch(() => {});
         console.error(chalk.red(`❌ Daemon did not become ready on port ${port}`));
         process.exitCode = 1;
         return;
@@ -107,15 +113,24 @@ export function registerDaemonCommand(program) {
         return;
       }
 
-      const alive = isProcessAlive(/** @type {number} */ (state.pid));
+      const pid = /** @type {number} */ (state.pid);
+
+      const alive = isProcessAlive(pid);
       if (!alive) {
-        console.log(chalk.yellow(`⚠️  Daemon PID ${state.pid} is not running.`));
+        console.log(chalk.yellow(`⚠️  Daemon PID ${pid} is not running.`));
+        await fs.unlink(DAEMON_FILE).catch(() => {});
+        return;
+      }
+
+      // Verify the PID actually belongs to our daemon before killing.
+      if (!isOurDaemon(pid)) {
+        console.log(chalk.yellow(`⚠️  PID ${pid} is not an XActions daemon. Cleaning up stale state.`));
         await fs.unlink(DAEMON_FILE).catch(() => {});
         return;
       }
 
       try {
-        process.kill(/** @type {number} */ (state.pid), 'SIGTERM');
+        process.kill(pid, 'SIGTERM');
       } catch (err) {
         console.error(chalk.red(`❌ Failed to stop daemon: ${err instanceof Error ? err.message : String(err)}`));
         process.exitCode = 1;
@@ -123,12 +138,12 @@ export function registerDaemonCommand(program) {
       }
 
       // Wait briefly for the process to disappear.
-      const stopped = await waitForProcessExit(/** @type {number} */ (state.pid), 5000);
+      const stopped = await waitForProcessExit(pid, 5000);
       if (stopped) {
-        console.log(chalk.green(`✅ Daemon stopped (PID ${state.pid})`));
+        console.log(chalk.green(`✅ Daemon stopped (PID ${pid})`));
         await fs.unlink(DAEMON_FILE).catch(() => {});
       } else {
-        console.error(chalk.red(`❌ Daemon did not stop within 5s (PID ${state.pid})`));
+        console.error(chalk.red(`❌ Daemon did not stop within 5s (PID ${pid})`));
         process.exitCode = 1;
       }
     });
@@ -177,6 +192,9 @@ async function waitForHealth(port, timeoutMs) {
 }
 
 /**
+ * Check whether a process with the given PID is alive.
+ * Handles EPERM (process exists but owned by another user) as alive.
+ *
  * @param {number} pid
  * @returns {boolean}
  */
@@ -184,6 +202,28 @@ function isProcessAlive(pid) {
   try {
     process.kill(pid, 0);
     return true;
+  } catch (err) {
+    // EPERM means the process exists but we lack permission to signal it.
+    if (/** @type {NodeJS.ErrnoException} */ (err).code === 'EPERM') return true;
+    return false;
+  }
+}
+
+/**
+ * Verify the PID belongs to an XActions daemon by checking its command line.
+ * Returns true if verification succeeds or is unavailable (Windows fallback).
+ *
+ * @param {number} pid
+ * @returns {boolean}
+ */
+function isOurDaemon(pid) {
+  if (process.platform === 'win32') return true; // Skip on Windows.
+  try {
+    const output = execFileSync('ps', ['-p', String(pid), '-o', 'args='], {
+      encoding: 'utf-8',
+      timeout: 3000,
+    });
+    return output.includes('src/mcp/server.js');
   } catch {
     return false;
   }
@@ -205,4 +245,4 @@ async function waitForProcessExit(pid, timeoutMs) {
 
 // Exported for unit tests that exercise daemon lifecycle helpers without
 // spawning a real server process.
-export { getDaemonStatus, waitForHealth, isProcessAlive, waitForProcessExit };
+export { getDaemonStatus, waitForHealth, isProcessAlive, isOurDaemon, waitForProcessExit };

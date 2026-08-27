@@ -3029,8 +3029,9 @@ async function executeCrawlPostTool(args) {
   try {
     return await scrape(String(platform), 'post_detail', scrapeArgs);
   } catch (firstErr) {
+    // Only fallback for "action not available" errors, not arbitrary failures.
     const message = firstErr instanceof Error ? firstErr.message : String(firstErr);
-    if (message.includes('not available') || message.includes('post_detail')) {
+    if (/^Action ".*" not available on platform/.test(message)) {
       return await scrape(String(platform), 'posts', scrapeArgs);
     }
     throw firstErr;
@@ -3068,7 +3069,7 @@ async function executeCrawlCommentsTreeTool(args) {
     return await scrape(String(platform), 'get_comments', scrapeArgs);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    if (message.includes('not available')) {
+    if (/^Action ".*" not available on platform/.test(message)) {
       throw new PlatformError({
         code: 'XACT_4001',
         type: ErrorTypes.INVALID_ARGS,
