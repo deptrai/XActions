@@ -92,8 +92,18 @@ Xoá theo thứ tự:
 | Facebook Legacy Marketplace (`src/scrapers/facebook/marketplace.js`) | `deprecated-marked` | Phase 1 (Epic 13.8) | DEV |
 | Facebook Legacy Social Actions (`src/scrapers/facebook/messengerShare.js`, `shareLinkByUid.js`, `graphqlSend.js`, `messengerQueue.js`, `api/services/facebookAutomation.js` like/comment/post/share/join/friend helpers) | `deprecated-marked` | Phase 1 (Epic 13.9) | DEV |
 | FacebookClient HTTP-only token extraction (`src/scrapers/social/facebook/client.js`) | `deprecated-planned` | Phase 1 (Epic 13.4) | DEV |
-| Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-marked` | Phase 1 (Epic 15.1) | DEV |
+| Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-marked` | Phase 1 (Epic 15.1, 15.1.1, 15.1.2) | DEV |
 | `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
+
+### Legacy Threads Functions → Hybrid Actions
+
+| Legacy function | Hybrid action |
+|-----------------|---------------|
+| `scrapeProfile` (Threads) | `threads:profile` |
+| `scrapeFollowers` (Threads) | `threads:followers` |
+| `scrapeFollowing` (Threads) | `threads:following` |
+| `scrapeTweets` (Threads) | `threads:post_detail` / `threads:get_user_feed` |
+| `searchTweets` (Threads) | `threads:search` |
 
 ### Legacy Facebook Functions → Hybrid Actions
 

@@ -121,6 +121,18 @@ export class ThreadsCrawler extends AbstractCrawler {
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostComments(args, session),
     }));
 
+    // ── Story 15.1.2 Action: post_detail ──
+    this.registerAction(/** @type {any} */ ({
+      action: 'post_detail',
+      description: 'Scrape thread post detail and optional comment tree',
+      category: 'social',
+      requiredArgs: ['postId'],
+      optionalArgs: ['includeReplies', 'maxDepth', 'maxComments', 'after'],
+      outputType: '{ post: PostItem, comments?: CommentItem[], pageInfo?: any }',
+      example: { postId: 'CuZ7X9_sF9y', includeReplies: true, maxDepth: 3, maxComments: 100 },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostDetail(args, session),
+    }));
+
     // ── Story 15.1.1 Actions: profile, followers, following ──
     this.registerAction(/** @type {any} */ ({
       action: 'profile',
@@ -369,6 +381,25 @@ export class ThreadsCrawler extends AbstractCrawler {
   }
 
   /**
+   * Convert a Threads shortcode back to a numeric post id.
+   * Reverse of #numericIdToShortcode.
+   * @param {string} shortcode
+   * @returns {string | null}
+   */
+  #shortcodeToNumericId(shortcode) {
+    if (!shortcode || typeof shortcode !== 'string') return null;
+    const clean = shortcode.trim();
+    let n = 0n;
+    for (let i = 0; i < clean.length; i++) {
+      const char = clean[i];
+      const idx = SHORTCODE_ALPHABET.indexOf(char);
+      if (idx === -1) return null;
+      n = n * 64n + BigInt(idx);
+    }
+    return n.toString();
+  }
+
+  /**
    * Normalize raw Threads GraphQL / SSR post node into uniform PostItem.
    * @param {Record<string, any>} raw
    * @returns {import('../../../core/types.js').PostItem | null}
@@ -525,6 +556,111 @@ export class ThreadsCrawler extends AbstractCrawler {
       return urlMatch[1];
     }
     return clean.replace(/^threads:/, '');
+  }
+
+  /**
+   * Resolve any post ID, shortcode, or URL to a canonical numeric post ID.
+   * @param {string} input
+   * @param {string} [accountId='threads-guest']
+   * @param {string | Record<string, string>} [cookies='']
+   * @returns {Promise<string>}
+   */
+  async #resolvePostId(input, accountId = 'threads-guest', cookies = '') {
+    if (!input || typeof input !== 'string') {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing or invalid postId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const clean = input.trim();
+    if (/^\d+$/.test(clean)) {
+      return clean;
+    }
+
+    const extracted = this.#extractPostCodeOrId(clean);
+    if (/^\d+$/.test(extracted)) {
+      return extracted;
+    }
+
+    // Try decoding base64 shortcode to numeric ID
+    const decoded = this.#shortcodeToNumericId(extracted);
+    if (decoded && decoded !== '0') {
+      return decoded;
+    }
+
+    // SSR fallback: fetch post page and parse embedded JSON
+    const targetUrl = clean.startsWith('http://') || clean.startsWith('https://')
+      ? clean
+      : `${this.client.baseUrl}/t/${extracted}`;
+
+    try {
+      const resp = /** @type {any} */ (await this.client.request('GET', targetUrl, {
+        accountId,
+        headers: {
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        },
+        cookies,
+      }));
+
+      const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
+
+      // Check for post ID in script tags
+      const scriptRegex = /<script\s+type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi;
+      let match;
+      while ((match = scriptRegex.exec(html)) !== null) {
+        try {
+          const json = JSON.parse(match[1]);
+          /**
+           * @param {any} obj
+           * @returns {string | null}
+           */
+          const findPostPk = (obj) => {
+            if (!obj || typeof obj !== 'object') return null;
+            if ((obj.code === extracted || !extracted) && (obj.pk || obj.id)) {
+              return String(obj.pk || obj.id);
+            }
+            if (obj.post && (obj.post.code === extracted || !extracted) && (obj.post.pk || obj.post.id)) {
+              return String(obj.post.pk || obj.post.id);
+            }
+            for (const key of Object.keys(obj)) {
+              if (typeof obj[key] === 'object') {
+                const found = findPostPk(obj[key]);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+
+          const pk = findPostPk(json);
+          if (pk && /^\d+$/.test(pk)) {
+            return pk;
+          }
+        } catch {}
+      }
+
+      // Check regex patterns in HTML
+      const pkMatch = html.match(/"post_id":"(\d+)"/) ||
+                      html.match(/"pk":"(\d+)"/) ||
+                      html.match(/threads:\/\/post\?id=(\d+)/);
+      if (pkMatch && pkMatch[1]) {
+        return pkMatch[1];
+      }
+    } catch (err) {
+      if (err instanceof PlatformError && err.code === 'XACT_4041') throw err;
+    }
+
+    throw new PlatformError({
+      code: 'XACT_4041',
+      type: 'not_found',
+      message: `Post not found: ${input}`,
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      platform: 'threads',
+      accountId,
+    });
   }
 
   /**
@@ -886,7 +1022,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId || 'threads-guest';
-    const rootPostId = this.#extractPostCodeOrId(args.postId);
+    const rootPostId = await this.#resolvePostId(args.postId, accountId);
     const maxDepth = Math.max(0, Math.min(args.maxDepth ?? 3, 5));
     const maxComments = Math.max(1, Math.min(args.maxComments ?? 500, 2000));
 
@@ -1039,29 +1175,156 @@ export class ThreadsCrawler extends AbstractCrawler {
   async init() {}
 
   /**
-   * @param {Object} _args
-   * @returns {Promise<import('../../../core/types.js').PostItem>}
+   * Scrape thread post detail and optional comment tree for a post by ID, shortcode, or URL.
+   * @param {Object} args
+   * @param {string} [args.postId]
+   * @param {boolean} [args.includeReplies=false]
+   * @param {number} [args.maxDepth=3]
+   * @param {number} [args.maxComments=500]
+   * @param {string} [args.after]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<any>}
    */
-  async getPostDetail(_args) {
-    throw new PlatformError({
-      code: 'XACT_5000',
-      type: ErrorTypes.INTERNAL,
-      message: 'getPostDetail is not implemented; use getPostComments or get_user_feed',
-      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+  async getPostDetail(args, session = {}) {
+    if (!args?.postId) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: postId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const accountId = session?.accountId || 'threads-guest';
+    const cookies = session?.cookies || '';
+    const numericPostId = await this.#resolvePostId(args.postId, accountId, cookies);
+
+    const docId = this.docIds.POST_DETAIL || DEFAULT_THREADS_DOC_IDS.POST_DETAIL;
+    if (!docId) {
+      throw new PlatformError({
+        code: 'XACT_5000',
+        type: ErrorTypes.INTERNAL,
+        message: 'POST_DETAIL doc_id is not configured',
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'threads',
+        accountId,
+      });
+    }
+
+    const variables = {
+      postID: numericPostId,
+      post_id: numericPostId,
+    };
+
+    const res = await this.client.requestGraphQl(docId, variables, { accountId, cookies });
+    const topData = res?.data?.data && (res.data.data.containing_thread || res.data.data.reply_threads)
+      ? res.data.data
+      : (res?.data || {});
+
+    // Search containing_thread first
+    let rawRootPost = null;
+    if (topData.containing_thread) {
+      const items = Array.isArray(topData.containing_thread.thread_items)
+        ? topData.containing_thread.thread_items
+        : (Array.isArray(topData.containing_thread.items) ? topData.containing_thread.items : [topData.containing_thread]);
+      for (const item of items) {
+        const p = item?.post || (item?.pk || item?.id ? item : null);
+        if (p) {
+          if (String(p.pk || p.id) === numericPostId) {
+            rawRootPost = p;
+            break;
+          }
+          if (!rawRootPost) {
+            rawRootPost = p;
+          }
+        }
+      }
+    }
+
+    // Search reply_threads if not found in containing_thread
+    if (!rawRootPost && Array.isArray(topData.reply_threads)) {
+      for (const thread of topData.reply_threads) {
+        const items = Array.isArray(thread.thread_items) ? thread.thread_items : [thread];
+        for (const item of items) {
+          const p = item?.post || (item?.pk || item?.id ? item : null);
+          if (p && String(p.pk || p.id) === numericPostId) {
+            rawRootPost = p;
+            break;
+          }
+        }
+        if (rawRootPost) break;
+      }
+    }
+
+    if (!rawRootPost) {
+      throw new PlatformError({
+        code: 'XACT_4041',
+        type: 'not_found',
+        message: `Post ${numericPostId} not found in GraphQL response`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+        accountId,
+      });
+    }
+
+    const post = this.#normalizePostItem(rawRootPost);
+    if (!post) {
+      throw new PlatformError({
+        code: 'XACT_4041',
+        type: 'not_found',
+        message: `Failed to normalize post ${numericPostId}`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+        accountId,
+      });
+    }
+
+    if (post.metadata && typeof post.metadata === 'object') {
+      /** @type {Record<string, any>} */ (post.metadata).sourceMethod = 'post_detail';
+    }
+    this.validateItem(post);
+
+    if (this.store && typeof this.store.storeBatch === 'function') {
+      await this.store.storeBatch([post], { upsert: true });
+    }
+
+    await this.#emitCheckpointAndStream({
+      targetType: 'post_detail',
+      targetKey: numericPostId,
+      items: [post],
+      hasMore: false,
     });
+
+    if (args.includeReplies) {
+      const effectiveMaxDepth = this.docIds.COMMENT_REPLIES ? (args.maxDepth ?? 3) : 0;
+      if (!this.docIds.COMMENT_REPLIES && (args.maxDepth ?? 3) > 0) {
+        console.warn('⚠️ [THREADS] Nested replies deferred to Story 15.1.3; returning root-level comments only.');
+      }
+
+      const commentsResult = await this.getPostComments({
+        ...args,
+        postId: numericPostId,
+        maxDepth: effectiveMaxDepth,
+      }, session);
+
+      return {
+        post,
+        comments: commentsResult.comments,
+        pageInfo: commentsResult.pageInfo,
+      };
+    }
+
+    return { post };
   }
 
   /**
-   * @param {Object} _args
+   * @param {Object} args
    * @returns {Promise<import('../../../core/types.js').CommentItem[]>}
    */
-  async getComments(_args) {
-    throw new PlatformError({
-      code: 'XACT_5000',
-      type: ErrorTypes.INTERNAL,
-      message: 'getComments is not implemented; use get_post_comments',
-      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-    });
+  async getComments(args) {
+    const res = await this.getPostComments(/** @type {any} */ (args));
+    return res.comments;
   }
 
   /**
