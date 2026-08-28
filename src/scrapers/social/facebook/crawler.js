@@ -303,6 +303,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: ['groupId'],
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupPosts(args, session),
     });
 
@@ -322,6 +323,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: ['postId'],
       optionalArgs: ['maxDepth', 'maxComments', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getCommentsForPost(args, session),
     });
 
@@ -331,6 +333,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: ['url'],
       optionalArgs: ['postId', 'maxDepth', 'maxComments', 'limit', 'includeReplies', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.postComments(args, session),
     });
 
@@ -340,6 +343,7 @@ export class FacebookCrawler extends AbstractCrawler {
       requiredArgs: ['url'],
       optionalArgs: ['postId', 'maxDepth', 'maxComments', 'limit', 'includeReplies', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupComments(args, session),
     });
 
@@ -361,6 +365,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['username', 'url', 'limit', 'cursor'],
       example: { username: 'zuck', limit: 20 },
       outputType: '{ followers: ProfileItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.followers(args, session),
     });
 
@@ -371,6 +376,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['username', 'url', 'limit', 'cursor'],
       example: { username: 'zuck' },
       outputType: '{ following?: ProfileItem[], note?: string, pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.following(args, session),
     });
 
@@ -381,6 +387,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['groupUrl', 'groupId', 'limit', 'cursor'],
       example: { groupUrl: 'https://www.facebook.com/groups/123456', limit: 50 },
       outputType: '{ members: ProfileItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupMembers(args, session),
     });
 
@@ -402,6 +409,7 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['limit', 'cursor'],
       example: { groupUrl: 'https://www.facebook.com/groups/123456', query: 'ai tools', limit: 20 },
       outputType: '{ posts: PostItem[], pageInfo?: any }',
+      requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupSearch(args, session),
     });
 
@@ -512,6 +520,39 @@ export class FacebookCrawler extends AbstractCrawler {
       outputType: '{ results: { target: string, ok: boolean, error?: string }[], dryRun: boolean }',
       requiresAuth: true,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.sendFriendRequest(args, session),
+    });
+
+    this.registerAction({
+      action: 'warmup_scroll',
+      description: 'Simulate human scrolling on a Facebook feed URL for a bounded duration',
+      requiredArgs: ['targetUrl'],
+      optionalArgs: ['durationSeconds', 'dryRun'],
+      example: { targetUrl: 'https://www.facebook.com/zuck/posts/1011565502', durationSeconds: 120 },
+      outputType: '{ dryRun: boolean, targetUrl: string, durationSeconds: number, scrolls: number }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.warmupScroll(args, session),
+    });
+
+    this.registerAction({
+      action: 'warmup_account',
+      description: 'Warm up a Facebook account with natural home-feed scrolling and optional Like reactions',
+      requiredArgs: [],
+      optionalArgs: ['durationSeconds', 'allowReactions', 'reactProbability', 'dryRun'],
+      example: { durationSeconds: 120, allowReactions: false },
+      outputType: '{ dryRun: boolean, durationSeconds: number, scrolls: number }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.warmupAccount(args, session),
+    });
+
+    this.registerAction({
+      action: 'cancel_friend_requests',
+      description: 'Cancel pending outgoing Facebook friend requests',
+      requiredArgs: ['limit'],
+      optionalArgs: ['olderThanDays', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
+      example: { limit: 10, olderThanDays: 7 },
+      outputType: '{ dryRun: boolean, pending?: any[], count?: number, cancelled?: number, failed?: number, remaining?: number }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.cancelFriendRequests(args, session),
     });
   }
 
@@ -2950,6 +2991,33 @@ export class FacebookCrawler extends AbstractCrawler {
    */
   async sendFriendRequest(args, session = {}) {
     return this.actions.sendFriendRequest(args, session);
+  }
+
+  /**
+   * Simulate human scrolling on a Facebook feed URL.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async warmupScroll(args, session = {}) {
+    return this.actions.warmupScroll(args, session);
+  }
+
+  /**
+   * Warm up a Facebook account with natural home-feed scrolling.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async warmupAccount(args, session = {}) {
+    return this.actions.warmupAccount(args, session);
+  }
+
+  /**
+   * Cancel pending outgoing friend requests.
+   * @param {any} args
+   * @param {any} [session]
+   */
+  async cancelFriendRequests(args, session = {}) {
+    return this.actions.cancelFriendRequests(args, session);
   }
 
   /**

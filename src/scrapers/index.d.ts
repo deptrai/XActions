@@ -1,5 +1,41 @@
 import type { Browser, Page } from 'puppeteer';
 
+declare class FacebookClient {
+  constructor(deps?: Record<string, unknown>);
+  request(method: string, url: string, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  ensureTokens(accountId?: string | null, cookies?: string | Record<string, string>, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  requestGraphQl(docId: string, variables?: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown>;
+  clearTokenCache(): void;
+  close(): Promise<void>;
+}
+
+declare class FacebookCrawler {
+  client: FacebookClient;
+  constructor(deps?: Record<string, unknown>);
+  start(command: { action: string; args?: Record<string, unknown> }): Promise<Record<string, unknown>>;
+  init(): Promise<void>;
+  cleanup(): Promise<void>;
+  search(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  listActions(): Array<{ action: string; [key: string]: unknown }>;
+  registerAction(action: string | Record<string, unknown>, handler?: unknown, descriptor?: Record<string, unknown>): void;
+}
+
+declare class FacebookActions {
+  constructor(deps?: Record<string, unknown>);
+  like(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  comment(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  post(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  share(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  messengerShare(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  shareLinkByUid(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  joinGroup(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  sendFriendRequest(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+}
+
+export function createFacebookClient(browserOptions?: Record<string, unknown>): FacebookClient;
+export function createFacebookCrawler(client: FacebookClient, browserOptions?: Record<string, unknown>): FacebookCrawler;
+export function dispatchFacebookHybrid(action: string, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+
 export function createBrowser(
   options?: Record<string, unknown> & { adapter?: string | 'puppeteer' | 'playwright' }
 ): Promise<Browser>;

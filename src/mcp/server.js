@@ -2866,8 +2866,7 @@ async function executeFacebookAutomateTool(args) {
   const { action, urls = [], text = '', dryRun, authCookie, maxBatch,
           recipients = [], content = '', postUrl = '' } = args;
 
-  // Action allowlist BEFORE browser launch (fail-fast — was previously thrown
-  // only after createBrowser+login, wasting a full session on a bad action).
+  // Action allowlist BEFORE dispatch (fail-fast — no wasted browser launch)
   const VALID_ACTIONS = ['like', 'comment', 'post', 'messenger'];
   if (!VALID_ACTIONS.includes(action)) {
     throw new Error(`❌ x_facebook_automate: unknown action "${action}". Valid values: like, comment, post, messenger.`);
@@ -2876,11 +2875,10 @@ async function executeFacebookAutomateTool(args) {
   // Resolve raw cookie or stored accountId (AC3.7, NFR3). authCookie values are never logged.
   const { c_user: cUser, xs } = await resolveMcpFacebookAuth(authCookie);
 
-  // Fail-fast arg validation before browser launch (AC3.8)
+  // Fail-fast arg validation before dispatch (AC3.8)
   if ((action === 'like' || action === 'comment') && (!Array.isArray(urls) || urls.length === 0)) {
     throw new Error(`❌ action "${action}" requires at least one URL in the urls array.`);
   }
-  // Every url entry must be a Facebook post/permalink URL (string)
   if ((action === 'like' || action === 'comment') &&
       !urls.every((u) => typeof u === 'string' && /facebook\.com\//i.test(u))) {
     throw new Error('❌ each url must be a facebook.com post URL (string).');
@@ -2888,7 +2886,6 @@ async function executeFacebookAutomateTool(args) {
   if ((action === 'comment' || action === 'post') && !String(text ?? '').trim()) {
     throw new Error(`❌ action "${action}" requires non-empty text.`);
   }
-  // messenger: requires a facebook.com postUrl, ≥1 recipient, non-empty content
   if (action === 'messenger') {
     if (typeof postUrl !== 'string' || !/facebook\.com\//i.test(postUrl)) {
       throw new Error('❌ action "messenger" requires a facebook.com postUrl (string).');
@@ -2900,7 +2897,6 @@ async function executeFacebookAutomateTool(args) {
       throw new Error('❌ action "messenger" requires non-empty content.');
     }
   }
-  // maxBatch (if provided) must be a positive finite number — validate before browser launch
   if (maxBatch != null && (!Number.isFinite(Number(maxBatch)) || Number(maxBatch) < 1)) {
     throw new Error(`❌ maxBatch must be a positive number, got ${maxBatch}`);
   }
@@ -2908,45 +2904,45 @@ async function executeFacebookAutomateTool(args) {
   // Strict dryRun gate — only explicit false enables real writes (ADR-007, SM-2)
   const resolvedDryRun = dryRun === false ? false : true;
 
-  const { likeFacebookPosts, commentOnFacebookPosts, createFacebookPost } = await import('../../api/services/facebookAutomation.js');
-  const options = { dryRun: resolvedDryRun, ...(maxBatch != null && { maxBatch }) };
+  const { scrape } = await import('../scrapers/index.js');
 
-  // messenger campaign shape (Story 5.2) + ADR-012 delay floor (5–15s jitter, NOT
-  // the 1–3s like/comment default). Dry-run passes a no-op delay (never sleeps).
-  const messengerCampaign = { postUrl, recipients, content };
-  const messengerDelay = resolvedDryRun
-    ? () => {}
-    : (min = 5000, max = 15000) =>
-        new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
+  /** @type {Record<string, unknown>} */
+  const scrapeArgs = { dryRun: resolvedDryRun };
+  if (maxBatch != null) scrapeArgs.maxBatch = Number(maxBatch);
 
-  const dispatch = async (page) => {
-    if (action === 'like') return await likeFacebookPosts(page, urls, options);
-    if (action === 'comment') return await commentOnFacebookPosts(page, urls, text, options);
-    if (action === 'messenger') {
-      const { messengerShareCampaign } = await import('../scrapers/facebook/messengerShare.js');
-      return await messengerShareCampaign(page, messengerCampaign, { ...options, delay: messengerDelay });
-    }
-    return await createFacebookPost(page, text, options);
-  };
+  if (action === 'like' || action === 'comment') {
+    scrapeArgs.urls = urls;
+  }
+  if (action === 'comment' || action === 'post') {
+    scrapeArgs.text = text;
+  }
+  if (action === 'messenger') {
+    scrapeArgs.postUrl = postUrl;
+    scrapeArgs.recipients = recipients;
+    scrapeArgs.content = content;
 
-  // Dry-run never touches the DOM (runGuardedBatch skips actionFn), so do NOT
-  // launch a browser or perform a real Facebook login for a preview — that would
-  // incur account risk + latency with no benefit.
-  if (resolvedDryRun) {
-    return await dispatch(null);
+    // messenger_share returns one result per recipient; preserve legacy preview shape.
+    const result = /** @type {Record<string, unknown>} */ (await scrape('facebook', 'messenger', {
+      ...scrapeArgs,
+      authCookie: { c_user: cUser, xs },
+    }));
+    const rawResults = result?.results;
+    const results = Array.isArray(rawResults) ? /** @type {Record<string, unknown>[]} */ (rawResults) : [];
+    const okCount = results.filter((r) => Boolean(r.ok)).length;
+    return {
+      dryRun: resolvedDryRun,
+      attempted: resolvedDryRun ? 0 : okCount,
+      preview: results,
+      postUrl,
+      results,
+    };
   }
 
-  const { createBrowser, createPage, loginWithCookie } = await import('../scrapers/facebook/index.js');
-  const browser = await createBrowser({ headless: true });
-  try {
-    const page = await createPage(browser);
-    // authCookie values are never logged (NFR3)
-    await loginWithCookie(page, { c_user: cUser, xs });
-    return await dispatch(page);
-  } finally {
-    // Swallow close errors so they never mask the original failure
-    await browser.close().catch(() => {});
-  }
+  // FacebookCrawler handles dry-run and real execution; no legacy browser launch needed.
+  return await scrape('facebook', action, {
+    ...scrapeArgs,
+    authCookie: { c_user: cUser, xs },
+  });
 }
 
 // by nichxbt
@@ -2982,23 +2978,6 @@ async function executeFacebookListAccounts(args) {
 }
 
 // by nichxbt
-async function runWithFacebookBrowser(authCookie, fn) {
-  const { createBrowser, createPage, loginWithCookie } =
-    await import('../scrapers/facebook/index.js');
-  const browser = await createBrowser({ headless: true });
-  try {
-    const page = await createPage(browser);
-    await loginWithCookie(page, {
-      c_user: String(authCookie.c_user).trim(),
-      xs: String(authCookie.xs).trim(),
-    });
-    return await fn(page);
-  } finally {
-    await browser.close().catch(() => {});
-  }
-}
-
-// by nichxbt
 async function executeFacebookEpic4Tool(name, args) {
   const { authCookie, dryRun, ...rest } = args;
 
@@ -3026,15 +3005,134 @@ async function executeFacebookEpic4Tool(name, args) {
     throw new Error('❌ requires authCookie: provide { c_user, xs } or { accountId }');
   }
 
+  const { scrape } = await import('../scrapers/index.js');
+
+  if (name === 'x_facebook_share_posts') {
+    let { postUrls, maxBatch } = rest;
+    if (typeof postUrls === 'string') postUrls = postUrls.split(',').map((u) => u.trim()).filter(Boolean);
+    if (!Array.isArray(postUrls) || postUrls.length === 0) {
+      throw new Error('❌ x_facebook_share_posts: postUrls must be a non-empty array');
+    }
+    const result = /** @type {Record<string, unknown>} */ (await scrape('facebook', 'share', {
+      postUrls,
+      dryRun: resolvedDryRun,
+      ...(maxBatch != null && { maxBatch: Number(maxBatch) }),
+      authCookie: { c_user: cUser, xs },
+    }));
+    return {
+      dryRun: resolvedDryRun,
+      preview: { postUrls, dryRun: resolvedDryRun },
+      ...result,
+    };
+  }
+
+  if (name === 'x_facebook_join_groups') {
+    const { groupUrls, keyword, limit, maxBatch } = rest;
+    if (!groupUrls && !keyword) {
+      throw new Error('❌ x_facebook_join_groups: groupUrls or keyword required');
+    }
+    /** @type {Record<string, unknown>} */
+    const joinArgs = {
+      dryRun: resolvedDryRun,
+      ...(maxBatch != null && { maxBatch: Number(maxBatch) }),
+      authCookie: { c_user: cUser, xs },
+    };
+    const parsedGroupUrls = typeof groupUrls === 'string'
+      ? groupUrls.split(',').map((u) => u.trim()).filter(Boolean)
+      : groupUrls;
+    if (parsedGroupUrls?.length) joinArgs.groupUrls = parsedGroupUrls;
+    if (keyword) joinArgs.keyword = String(keyword).trim();
+    if (limit != null) joinArgs.limit = Number(limit);
+
+    const result = /** @type {Record<string, unknown>} */ (await scrape('facebook', 'join_group', joinArgs));
+    if (keyword && !parsedGroupUrls?.length) {
+      return {
+        dryRun: resolvedDryRun,
+        warning: 'keyword mode uses Facebook search and is browser-driven',
+        preview: { keyword, limit: joinArgs.limit },
+        ...result,
+      };
+    }
+    return {
+      dryRun: resolvedDryRun,
+      preview: { groupUrls: parsedGroupUrls, dryRun: resolvedDryRun },
+      ...result,
+    };
+  }
+
+  if (name === 'x_facebook_post_to_groups') {
+    const { groupUrls, content, mediaUrls, force, maxBatch } = rest;
+    if (!groupUrls) {
+      throw new Error('❌ x_facebook_post_to_groups: groupUrls is required');
+    }
+    if (typeof content !== 'string' || !content.trim()) {
+      throw new Error('❌ x_facebook_post_to_groups: content is required');
+    }
+    const parsedGroupUrls = typeof groupUrls === 'string'
+      ? groupUrls.split(',').map((u) => u.trim()).filter(Boolean)
+      : groupUrls;
+    const result = /** @type {Record<string, unknown>} */ (await scrape('facebook', 'post', {
+      text: content,
+      groupUrls: parsedGroupUrls,
+      ...(mediaUrls && { mediaUrls }),
+      dryRun: resolvedDryRun,
+      ...(force != null && { force }),
+      ...(maxBatch != null && { maxBatch: Number(maxBatch) }),
+      authCookie: { c_user: cUser, xs },
+    }));
+    return {
+      dryRun: resolvedDryRun,
+      previewContent: content,
+      ...result,
+    };
+  }
+
+  if (name === 'x_facebook_send_friend_requests') {
+    const { mode, targets, location, limit, maxBatch } = rest;
+    const parsedMode = (typeof mode === 'string' ? mode.trim().toLowerCase() : 'uid_list') || 'uid_list';
+    const specialModeWithoutTargets = parsedMode === 'suggestions' || (parsedMode === 'location' && location);
+    if (!targets && !specialModeWithoutTargets) {
+      throw new Error('❌ x_facebook_send_friend_requests: targets is required');
+    }
+    const parsedTargets = typeof targets === 'string'
+      ? targets.split(',').map((u) => u.trim()).filter(Boolean)
+      : (Array.isArray(targets) ? targets : []);
+    const result = /** @type {Record<string, unknown>} */ (await scrape('facebook', 'send_friend_request', {
+      mode: parsedMode,
+      targets: parsedTargets,
+      ...(location && { location: String(location).trim() }),
+      ...(limit != null && { limit: Number(limit) }),
+      dryRun: resolvedDryRun,
+      ...(maxBatch != null && { maxBatch: Number(maxBatch) }),
+      authCookie: { c_user: cUser, xs },
+    }));
+    if (parsedMode === 'suggestions') {
+      return {
+        dryRun: resolvedDryRun,
+        warning: 'suggestions mode uses Facebook friend-suggestions page',
+        preview: { mode: parsedMode, limit: limit ?? null },
+        ...result,
+      };
+    }
+    if (parsedMode === 'location') {
+      return {
+        dryRun: resolvedDryRun,
+        warning: 'location mode uses Facebook people-search page',
+        preview: { mode: parsedMode, location, limit: limit ?? null },
+        ...result,
+      };
+    }
+    return {
+      dryRun: resolvedDryRun,
+      preview: { mode: parsedMode, targets: parsedTargets, limit: limit ?? null },
+      ...result,
+    };
+  }
+
+  // --- Legacy / not-yet-hybrid tools keep their original implementations ---
+  // schedule remains DB-only and has no hybrid equivalent yet.
   const {
     scheduleFacebookPost,
-    shareFacebookPosts,
-    warmupScrollFeed,
-    joinFacebookGroups,
-    postToFacebookGroups,
-    sendFriendRequests,
-    cancelPendingFriendRequests,
-    warmupAccount,
   } = await import('../../api/services/facebookAutomation.js');
 
   if (name === 'x_facebook_schedule_post') {
@@ -3047,87 +3145,39 @@ async function executeFacebookEpic4Tool(name, args) {
     );
   }
 
-  if (name === 'x_facebook_share_posts') {
-    const { postUrls, maxBatch } = rest;
-    const options = { dryRun: resolvedDryRun, ...(maxBatch != null && { maxBatch }) };
-    if (resolvedDryRun) return await shareFacebookPosts(null, postUrls, options);
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      shareFacebookPosts(page, postUrls, options),
-    );
-  }
-
   if (name === 'x_facebook_warmup_scroll') {
     const { targetUrl, durationSeconds } = rest;
-    const options = {
-      dryRun: resolvedDryRun,
+    const { scrape } = await import('../scrapers/index.js');
+    return await scrape('facebook', 'warmup_scroll', {
+      targetUrl,
       ...(durationSeconds != null && { durationSeconds }),
-      ...(resolvedUserId && { userId: resolvedUserId }),
-    };
-    if (resolvedDryRun) return await warmupScrollFeed(null, targetUrl, options);
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      warmupScrollFeed(page, targetUrl, options),
-    );
-  }
-
-  if (name === 'x_facebook_join_groups') {
-    const { groupUrls, keyword, limit, maxBatch } = rest;
-    const input = groupUrls ? { groupUrls } : { keyword, limit };
-    const options = { dryRun: resolvedDryRun, ...(maxBatch != null && { maxBatch }) };
-    if (resolvedDryRun) return await joinFacebookGroups(null, input, options);
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      joinFacebookGroups(page, input, options),
-    );
-  }
-
-  if (name === 'x_facebook_post_to_groups') {
-    const { groupUrls, content, mediaUrls, force, maxBatch } = rest;
-    const input = { groupUrls, content, ...(mediaUrls && { mediaUrls }) };
-    const options = {
       dryRun: resolvedDryRun,
-      ...(force != null && { force }),
-      ...(maxBatch != null && { maxBatch }),
-    };
-    if (resolvedDryRun) return await postToFacebookGroups(null, input, options);
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      postToFacebookGroups(page, input, options),
-    );
-  }
-
-  if (name === 'x_facebook_send_friend_requests') {
-    const { mode, targets, location, limit, maxBatch } = rest;
-    const input = { mode, ...(targets && { targets }), ...(location && { location }), ...(limit != null && { limit }) };
-    const options = { dryRun: resolvedDryRun, ...(maxBatch != null && { maxBatch }) };
-    if (resolvedDryRun) return await sendFriendRequests(null, input, options);
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      sendFriendRequests(page, input, options),
-    );
+      authCookie: { c_user: cUser, xs },
+    });
   }
 
   if (name === 'x_facebook_cancel_friend_requests') {
     const { limit, olderThanDays, maxBatch } = rest;
-    const options = {
-      dryRun: resolvedDryRun,
+    const { scrape } = await import('../scrapers/index.js');
+    return await scrape('facebook', 'cancel_friend_requests', {
       limit,
       ...(olderThanDays != null && { olderThanDays }),
       ...(maxBatch != null && { maxBatch }),
-    };
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      cancelPendingFriendRequests(page, options),
-    );
+      dryRun: resolvedDryRun,
+      authCookie: { c_user: cUser, xs },
+    });
   }
 
   if (name === 'x_facebook_warmup_account') {
     const { durationSeconds, allowReactions, reactProbability } = rest;
-    const options = {
-      dryRun: resolvedDryRun,
+    const { scrape } = await import('../scrapers/index.js');
+    return await scrape('facebook', 'warmup_account', {
       ...(durationSeconds != null && { durationSeconds }),
       ...(allowReactions != null && { allowReactions }),
       ...(reactProbability != null && { reactProbability }),
-    };
-    if (resolvedDryRun) return await warmupAccount(null, options);
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      warmupAccount(page, options),
-    );
+      dryRun: resolvedDryRun,
+      authCookie: { c_user: cUser, xs },
+    });
   }
 
   if (name === 'x_facebook_group_members') {
@@ -3138,19 +3188,16 @@ async function executeFacebookEpic4Tool(name, args) {
     if (limit != null && (!Number.isFinite(limit) || limit < 1 || limit > 500)) {
       throw new Error('❌ x_facebook_group_members: limit must be a number between 1 and 500');
     }
-    const options = { ...(limit != null && { limit }) };
+    const options = { url: groupUrl, groupUrl, ...(limit != null && { limit }), dryRun: resolvedDryRun };
     if (resolvedDryRun) {
       return { dryRun: true, platform: 'facebook', preview: { groupUrl, ...options } };
     }
-    const { scrapeGroupMembers } = await import('../scrapers/facebook/index.js');
-    return await runWithFacebookBrowser({ c_user: cUser, xs }, (page) =>
-      scrapeGroupMembers(page, groupUrl, options),
-    );
+    const { run } = await import('../../api/services/facebookScrape.js');
+    return await run('group_members', { ...options, authCookie: { c_user: cUser, xs }, userId: resolvedUserId });
   }
 
   if (name === 'x_facebook_marketplace') {
-    // TODO(13.10): switch to FacebookCrawler.start({ action: 'marketplace' }) for hybrid filters (categoryId, lat/lng, radius, price, cursor)
-    const { query, location, limit, minPrice, maxPrice, category } = rest;
+    const { query, location, limit, minPrice, maxPrice, category, categoryId, latitude, longitude, radiusKm, cursor } = rest;
     if (typeof query !== 'string' || !query.trim()) {
       throw new Error('❌ x_facebook_marketplace: query is required');
     }
@@ -3167,37 +3214,27 @@ async function executeFacebookEpic4Tool(name, args) {
       throw new Error('❌ x_facebook_marketplace: minPrice cannot be greater than maxPrice');
     }
     const options = {
+      query: query.trim(),
       ...(limit != null && { limit }),
-      ...(location && { location }),
+      ...(location && { location: String(location).trim() }),
       ...(minPrice != null && { minPrice }),
       ...(maxPrice != null && { maxPrice }),
-      ...(category && { category }),
+      ...(category && { category: String(category).trim() }),
+      ...(categoryId && { categoryId: String(categoryId).trim() }),
+      ...(latitude != null && { latitude: Number(latitude) }),
+      ...(longitude != null && { longitude: Number(longitude) }),
+      ...(radiusKm != null && { radiusKm: Number(radiusKm) }),
+      ...(cursor && { cursor: String(cursor).trim() }),
+      dryRun: resolvedDryRun,
     };
-    const { buildMarketplaceSearchUrl, createBrowser, createPage, loginWithCookie, scrapeMarketplace } =
-      await import('../scrapers/facebook/index.js');
+    const { buildMarketplaceSearchUrl } = await import('../scrapers/facebook/normalize.js');
     const searchUrl = buildMarketplaceSearchUrl(query, options);
     if (resolvedDryRun) {
-      return { dryRun: true, platform: 'facebook', preview: { query, ...options, searchUrl } };
+      return { dryRun: true, platform: 'facebook', preview: { ...options, searchUrl } };
     }
-    const browser = await createBrowser({ headless: true });
-    let warning = authResolutionError ? `auth resolution failed: ${authResolutionError}. Searching anonymously.` : null;
-    try {
-      const page = await createPage(browser);
-      if (cUser && xs) {
-        try {
-          await loginWithCookie(page, { c_user: cUser, xs });
-        } catch (err) {
-          warning = `Facebook login failed: ${err.message}. Searching anonymously.`;
-        }
-      }
-      const listings = await scrapeMarketplace(page, query, options);
-      const result = { listings, platform: 'facebook', count: listings.length };
-      if (resolvedUserId) result.userId = resolvedUserId;
-      if (warning) result.warning = warning;
-      return result;
-    } finally {
-      await browser.close().catch(() => {});
-    }
+    const { run } = await import('../../api/services/facebookScrape.js');
+    const authPayload = (cUser && xs) ? { c_user: cUser, xs } : (authCookie || undefined);
+    return await run('marketplace', { ...options, ...(authPayload ? { authCookie: authPayload } : {}), userId: resolvedUserId });
   }
 
   throw new Error(`❌ executeFacebookEpic4Tool: unhandled tool name "${name}"`);

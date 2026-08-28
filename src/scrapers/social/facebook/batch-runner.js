@@ -35,6 +35,9 @@ export const ACTION_LIMITS = {
   share_link_uid: { perHour: 20, perDay: 100, delayMin: 5000, delayMax: 15000 },
   join_group: { perHour: 5, perDay: 20, delayMin: 30000, delayMax: 90000 },
   send_friend_request: { perHour: 20, perDay: 20, delayMin: 60000, delayMax: 180000 },
+  cancel_friend_request: { perHour: 20, perDay: 50, delayMin: 2000, delayMax: 5000 },
+  warmup_scroll: { perHour: 60, perDay: 240, delayMin: 800, delayMax: 2500 },
+  warmup_account: { perHour: 60, perDay: 240, delayMin: 800, delayMax: 2500 },
 };
 
 /**

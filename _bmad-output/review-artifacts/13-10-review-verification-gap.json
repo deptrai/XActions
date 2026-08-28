@@ -1,0 +1,146 @@
+[
+  {
+    "id": "VG-13-10-01",
+    "location": "api/services/facebookScrape.js:121-122",
+    "title": "TypeScript type-check fails in runSearchAllParallel fallback",
+    "detail": "npx tsc --noEmit fails because the getArrayResult helper in runSearchAllParallel has untyped parameters: 'res' implicitly has type 'any' and 'key' implicitly has type 'any'. This prevents the typecheck gate from passing even though the unit tests pass.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-02",
+    "location": "src/scrapers/index.js:160-286; tests/scrapers/social/facebook/caller-migration.test.js:154-230",
+    "title": "Most scrape() action-name mappings are not exercised by caller-migration tests",
+    "detail": "dispatchFacebookHybrid maps many actions (profile, followers, following, post_comments, group_posts, group_comments, group_search, group_members, like, comment, post, share, messenger_share, share_link_uid, join_group, send_friend_request) but the new ATDD file only tests marketplace, search, and the 'posts' -> page_posts/group_posts resolution. Aliases such as 'tweets', 'feed', 'group-members', 'join_groups', and 'send_friend_requests' are also untested.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-03",
+    "location": "src/scrapers/index.js:166-172,250-264,281-283; tests/scrapers/social/facebook/caller-migration.test.js:154-230",
+    "title": "Session/auth/cookie extraction paths and authToken guard not tested",
+    "detail": "dispatchFacebookHybrid has several branches that are not verified: the authToken rejection, accountId extraction from a string authCookie, accountId fallback from userId/c_user, cdpUrl resolution, page reuse, and the autoClose -> cleanup() lifecycle. No test proves cleanup() is invoked for an owned crawler or skipped for an injected one.",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-04",
+    "location": "api/services/facebookScrape.js:23-57,69-137,148-150; tests/scrapers/social/facebook/caller-migration.test.js:232-268",
+    "title": "facebookScrape.run still routes through scrape() and runSearchAllParallel branches are incomplete",
+    "detail": "AC-3 expects facebookScrape.run() to create a FacebookCrawler once and call start() directly, but it still delegates to scrape() from src/scrapers/index.js (the TODO on line 54 remains). runSearchAllParallel's multi-account runBatch path (lines 77-103) and the runBatch helper (line 148) are not tested. The Promise.allSettled fallback mapping (lines 121-130) is covered only by the success path.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-05",
+    "location": "api/services/facebookScrape.js:121-130; tests/scrapers/social/facebook/caller-migration.test.js:247-268",
+    "title": "runSearchAllParallel result mapping uses weak assertions and is not tested for partial failures",
+    "detail": "The test only checks that the returned object has the keys 'posts', 'people', 'pages', and 'groups'. It does not assert non-empty/valid arrays, the 'users' -> 'people' fallback, the 'items' fallback, or the behavior when one or more of the four search sub-tasks reject. With a generic doc_search response the test could pass even if people/pages/groups parsing is broken.",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-06",
+    "location": "src/mcp/server.js:2865-2949; tests/scrapers/social/facebook/caller-migration.test.js:271-281",
+    "title": "MCP x_facebook_automate still uses legacy helpers and is not functionally tested",
+    "detail": "executeFacebookAutomateTool dispatches like/comment/post/messenger to the deprecated api/services/facebookAutomation.js helpers, and does not support the AC-6 mappings for share, join_group, or send_friend_request. The test only imports src/mcp/server.js and does not invoke the handler.",
+    "severity": "high",
+    "bucket": "decision_needed"
+  },
+  {
+    "id": "VG-13-10-07",
+    "location": "src/mcp/server.js:3002-3188; tests/scrapers/social/facebook/caller-migration.test.js:271-281",
+    "title": "MCP Epic 4 tools not fully migrated and not tested",
+    "detail": "Only x_facebook_group_members and x_facebook_marketplace route through facebookScrape.run; x_facebook_share_posts, x_facebook_join_groups, x_facebook_post_to_groups, x_facebook_send_friend_requests, x_facebook_warmup_*, and x_facebook_cancel_friend_requests still call legacy api/services/facebookAutomation.js. No test calls executeFacebookEpic4Tool for any name.",
+    "severity": "high",
+    "bucket": "decision_needed"
+  },
+  {
+    "id": "VG-13-10-08",
+    "location": "src/mcp/server.js:3201-3245; tests/scrapers/social/facebook/caller-migration.test.js:271-281",
+    "title": "MCP scrape tools (executeFacebookScrapeTool) not exercised",
+    "detail": "The ACTION_MAP maps x_facebook_search/post_comments/group_posts/group_comments/posts to actions, but no test invokes executeFacebookScrapeTool. Missing coverage: dry-run response, x_facebook_posts -> page_posts/group_posts resolution, missing authCookie error, and unknown tool name error.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-09",
+    "location": "src/cli/commands/scrape.js:17-104; tests/scrapers/social/facebook/caller-migration.test.js:283-293",
+    "title": "CLI scrape command is only an import smoke test",
+    "detail": "The AC-7 test imports the module and checks it is defined, but never runs the command action. Untested: option parsing for --url, --category-id, --min-price, --max-price, --latitude, --longitude, --radius-km, --cursor, --include-replies, --dry-run, the marketplace auth-cookie skip, JSON auth-cookie parsing failure, and the actual hybrid dispatch.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-10",
+    "location": "src/cli/commands/automate.js:17-217; tests/scrapers/social/facebook/caller-migration.test.js:283-293",
+    "title": "CLI automate command still uses legacy Puppeteer automation and is untested",
+    "detail": "xactions automate still imports createBrowser/createPage/loginWithCookie from src/scrapers/facebook/index.js and calls likeFacebookPosts/shareFacebookPosts/joinFacebookGroups/sendFriendRequests from api/services/facebookAutomation.js. It does not route to FacebookCrawler for the new actions. The test only imports the module.",
+    "severity": "high",
+    "bucket": "decision_needed"
+  },
+  {
+    "id": "VG-13-10-11",
+    "location": "api/routes/facebook.js:335-589,604-1066",
+    "title": "REST API /scrape and /automate routes have no integration tests",
+    "detail": "There are no supertest/ATDD tests for POST /api/facebook/scrape (marketplace filters, posts resolution, search parallel, auth resolution, dryRun) or POST /api/facebook/automate (like/comment/post/share/join/send-friend-request dryRun, messenger-share, error responses).",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-12",
+    "location": "api/services/facebookHealth.js:20-57,123-202; tests/scrapers/social/facebook/caller-migration.test.js:370-375",
+    "title": "facebookHealth does not use FacebookClient and is not functionally tested",
+    "detail": "AC-13/TR-8 expect facebookHealth.js to switch to FacebookClient/FacebookCrawler, but it still uses raw axios and re-implements buildCookieString/parseFacebookTokens. The test only imports the module. Missing: active/checkpoint/dead status, cache hit/miss, decrypt failure, network error, and token extraction behavior.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-13",
+    "location": "tests/scrapers/social/facebook/caller-migration.test.js:188-230; src/scrapers/index.js:202-209",
+    "title": "AC-2 posts mapping test relies on a stubbed crawler and covers only two URLs",
+    "detail": "The test creates a custom FacebookCrawler and overrides its start() method, so it never validates that the real scrape() flow creates a FacebookClient, builds the correct session, and dispatches group_posts vs page_posts. It also does not test the default page_posts case when url is omitted, the /group/ alias, or the 'tweets'/'feed' aliases.",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-14",
+    "location": "package.json:16-34; tests/scrapers/social/facebook/caller-migration.test.js:326-335; types/index.d.ts",
+    "title": "Package exports are only string-checked; type declarations not updated",
+    "detail": "AC-9 test parses package.json and asserts the export paths, but does not resolve the module (e.g., import { FacebookCrawler } from 'xactions/scrapers/social/facebook'). No type declaration for the new public exports was found in types/index.d.ts, so consumers may get missing-declaration errors.",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-15",
+    "location": "tests/scrapers/social/facebook/caller-migration.test.js:353-368; src/scrapers/social/facebook/crawler.js:430-515",
+    "title": "Dry-run default only verified for the 'like' write action",
+    "detail": "AC-12 says all write actions enforce dryRun: true default. The only test in this suite uses action 'like'. Missing: comment, post, share, messenger_share, join_group, send_friend_request, share_link_uid. Also missing the explicit dryRun: false negative path.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-16",
+    "location": "tests/scrapers/social/facebook/caller-migration.test.js:295-324",
+    "title": "listActions() test has incomplete assertions",
+    "detail": "The test verifies action names and requiresAuth for only two actions (marketplace, like). It does not assert requiredArgs, optionalArgs, example, outputType, or the correct requiresAuth for all write vs read actions.",
+    "severity": "low",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-17",
+    "location": "tests/scrapers/social/facebook/caller-migration.test.js:1-376",
+    "title": "No negative/error handling tests in caller-migration suite",
+    "detail": "Missing test cases: invalid Facebook action, missing authCookie for auth-required actions, invalid authCookie string, authToken rejection, marketplace with malformed filters, network/GraphQL failures, invalid doc_id fallback, crawler cleanup on throw, and dryRun preview for scrape/search/marketplace. The 17/17 passing tests are all success-path.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "VG-13-10-18",
+    "location": "api/services/facebookAutomation.js:1-2404; src/cli/commands/automate.js:48-56; src/mcp/server.js:2911,3039",
+    "title": "Legacy facebookAutomation.js is still a production dependency with no migration/deprecation tests",
+    "detail": "api/services/facebookAutomation.js is still imported and used by the CLI, MCP, and /automate route for like/comment/post/share/join/friend actions. There is no test in the suite verifying that these callers are now thin wrappers over FacebookCrawler or that the service is no longer reached by the new hybrid surface.",
+    "severity": "high",
+    "bucket": "decision_needed"
+  }
+]

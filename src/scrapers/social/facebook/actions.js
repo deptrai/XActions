@@ -14,6 +14,19 @@ import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error
 import { runGuardedActionBatch, FacebookActionVelocityTracker, getActionLimit } from './batch-runner.js';
 import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from '../../facebook/core.js';
 import { stripPii } from './pii.js';
+import {
+  resolveScrollDuration,
+  resolveWarmupDuration,
+  resolveReactProbability,
+  parseRequestAgeDays,
+  resolveCancelLimit,
+  resolveOlderThanDays,
+  runWarmupScroll,
+  runWarmupAccount,
+  collectSentRequests,
+  cancelSingleRequest,
+  countCancelResults,
+} from './warmup-cancel.js';
 
 export { assertFacebookUrlLocal } from '../../facebook/core.js';
 export { stripPii } from './pii.js';
@@ -1684,5 +1697,142 @@ export class FacebookActions {
     return runGuardedActionBatch(profileUrls.slice(0, limit), async (target, _i, { page: p }) => {
       return this.#sendFriendRequest(target, p);
     }, { ...batchOptions, page });
+  }
+
+  /**
+   * Simulate human scrolling on a Facebook feed URL for a bounded duration.
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ dryRun: boolean, platform: 'facebook', preview?: any, targetUrl?: string, durationSeconds?: number, scrolls?: number }>}
+   */
+  async warmupScroll(args = {}, session = {}) {
+    const targetUrl = typeof args?.targetUrl === 'string' ? args.targetUrl.trim() : '';
+    if (!targetUrl) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'warmupScroll: targetUrl is required',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'facebook',
+      });
+    }
+
+    const { effectiveDuration, clamped } = resolveScrollDuration(args?.durationSeconds);
+    const dryRun = args?.dryRun !== false;
+
+    if (dryRun) {
+      return {
+        dryRun: true,
+        platform: 'facebook',
+        preview: {
+          targetUrl,
+          durationSeconds: effectiveDuration,
+          clamped,
+        },
+      };
+    }
+
+    return this.#withSharedPage(async (page) => {
+      return runWarmupScroll(page, targetUrl, effectiveDuration);
+    }, session);
+  }
+
+  /**
+   * Warm up a Facebook account with natural home-feed scrolling and optional
+   * probabilistic Like reactions.
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ dryRun: boolean, platform: 'facebook', preview?: any, durationSeconds?: number, scrolls?: number }>}
+   */
+  async warmupAccount(args = {}, session = {}) {
+    const { effectiveDuration, clamped } = resolveWarmupDuration(args?.durationSeconds);
+    const dryRun = args?.dryRun !== false;
+    const allowReactions = args?.allowReactions === true;
+    const rawReactProbability = args?.reactProbability;
+    const { normalized: reactProbability, clamped: reactProbabilityClamped } = resolveReactProbability(rawReactProbability);
+
+    if (dryRun) {
+      return {
+        dryRun: true,
+        platform: 'facebook',
+        preview: {
+          durationSeconds: effectiveDuration,
+          clamped,
+          allowReactions,
+          reactProbability,
+          reactProbabilityClamped,
+        },
+      };
+    }
+
+    console.warn('⚠️ Account warming does not guarantee avoiding checkpoint. Use a test account before using your main account.');
+
+    return this.#withSharedPage(async (page) => {
+      return runWarmupAccount(page, {
+        durationSeconds: effectiveDuration,
+        allowReactions,
+        reactProbability,
+      });
+    }, session);
+  }
+
+  /**
+   * Cancel pending outgoing Facebook friend requests.
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ dryRun: boolean, platform: 'facebook', pending?: any[], count?: number, cancelled?: number, failed?: number, remaining?: number }>}
+   */
+  async cancelFriendRequests(args = {}, session = {}) {
+    const dryRun = args?.dryRun !== false;
+    const limit = resolveCancelLimit(
+      args?.limit ?? args?.maxBatch,
+      typeof args?.maxBatch === 'number' && Number.isFinite(args.maxBatch) ? args.maxBatch : 20,
+    );
+    const olderThanDays = resolveOlderThanDays(args?.olderThanDays);
+
+    return this.#withSharedPage(async (page) => {
+      const pending = await collectSentRequests(page, limit);
+
+      let filtered = pending;
+      if (olderThanDays > 0) {
+        filtered = pending.filter((r) => {
+          const age = parseRequestAgeDays(r.dateSent);
+          return age === null || age >= olderThanDays;
+        });
+      }
+      filtered = filtered.slice(0, limit);
+
+      if (dryRun) {
+        return {
+          dryRun: true,
+          platform: 'facebook',
+          pending: filtered.map((r) => ({ name: r.name, profileUrl: r.profileUrl, dateSent: r.dateSent })),
+          count: filtered.length,
+        };
+      }
+
+      const totalPending = filtered.length;
+      if (totalPending === 0) {
+        return { dryRun: false, platform: 'facebook', cancelled: 0, failed: 0, remaining: 0 };
+      }
+
+      const actionName = 'cancel_friend_request';
+      const batchOptions = this.#batchOptions(actionName, session, args);
+      batchOptions.maxBatch = limit;
+
+      const targets = filtered.map((r) => r.profileUrl);
+      const results = await runGuardedActionBatch(targets, async (profileUrl, _i, { page: p }) => {
+        return cancelSingleRequest(p, profileUrl);
+      }, { ...batchOptions, page });
+
+      const counts = countCancelResults(results, totalPending);
+      return {
+        dryRun: false,
+        platform: 'facebook',
+        cancelled: counts.cancelled,
+        failed: counts.failed,
+        remaining: counts.remaining,
+      };
+    }, session);
   }
 }

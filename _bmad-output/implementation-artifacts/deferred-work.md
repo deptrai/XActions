@@ -1,5 +1,17 @@
 # Deferred Work
 
+## Deferred from: code review of 13-10-facebook-hybrid-integration-caller-migration (2026-08-28)
+
+- [x] [Done] `warmup`/`cancel` tools (`x_facebook_warmup_scroll`, `x_facebook_warmup_account`, `x_facebook_cancel_friend_requests`) migrated to `FacebookCrawler` hybrid actions `warmup_scroll`, `warmup_account`, `cancel_friend_requests`. Callers in `src/mcp/server.js` and `api/routes/facebook.js` now route through `scrape('facebook', ...)`; legacy `runWithFacebookBrowser` and `facebookAutomation.js` paths removed for these actions.
+- [x] [Review][Done] POST /api/facebook/automate (like/comment/post/share/join-groups/batch-post-groups/send-friend-requests/messenger-share) now routes through `scrape()` to `FacebookCrawler` [api/routes/facebook.js, api/services/facebookAutomation.js]
+- [x] [Review][Done] CLI `xactions automate` now routes like/comment/post/share/join-group/send-friend-request through `scrape()` [src/cli/commands/automate.js]
+- [x] [Review][Done] MCP `executeFacebookAutomateTool` / `executeFacebookEpic4Tool` now dispatch to `FacebookCrawler` for like/comment/post/messenger/share/join/post_to_groups/friend_requests [src/mcp/server.js]
+- [x] [Review][Done] `api/services/facebookAccountPool.js:runBatch` now supports `hybrid: true` mode using `FacebookClient`/`FacebookCrawler` per account context [api/services/facebookAccountPool.js:23, 142-337]
+- [x] [Review][Done] `api/services/facebookHealth.js` now uses `FacebookClient` for HTTP health checks [api/services/facebookHealth.js]
+- [x] [Review][Done] Added `FacebookCrawler`/`FacebookClient`/`FacebookActions` type declarations to `types/index.d.ts` and `src/types/xactions.d.ts` [AC-9]
+- [x] [Review][Done] Added `@deprecated` headers to legacy `src/scrapers/facebook/*.js` files (marketplace.js, posts.js, comments.js, search.js, group-search.js, followers.js, profile.js) [AC-10]
+- [x] [Review][Done] Triaged `src/scrapers/index.js` `facebook`/`fb` branch: removed `marketplace` dead-code mapping, restored legacy page-based fallback for callers that pass `options.page`, and documented the hybrid production path [src/scrapers/index.js:420-476]
+
 ## Deferred from: code review of 13-9-facebook-hybrid-social-actions-write-messenger re-review (2026-08-28)
 
 - [x] [Review][Defer] `DEFAULT_FB_DOC_IDS` write mutation placeholders không phải doc_id thật — by design, cần capture từ live session [src/scrapers/social/facebook/crawler.js:225-231; actions.js:275-280]
