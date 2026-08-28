@@ -2,18 +2,18 @@
 story_id: "15.1.2"
 epic: 15
 story_key: "15-1-2-threads-hybrid-post-detail-comment-tree"
-status: "review"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-29
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "Approved"
 baseline_commit: 2c5e7e33
 ---
 
 # Story 15.1.2: Threads Hybrid Post Detail & Comment Tree
 
-Status: review
+Status: done
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
@@ -382,6 +382,7 @@ Implement Story Workflow — `bmad-dev-story` skill with `gemini-3.7-flash-high`
 - Updated `docs/deprecation-plan.md` tracker row for Threads post/thread detail.
 - Created `tests/scrapers/social/threads/crawler-post-detail.test.js` (7 test cases across 5 suites), all passing without mocks.
 - Verified full test suite (52 tests across 6 files) and TypeScript typecheck pass with zero errors.
+- Code review follow-up applied: SSRF URL guard, bounded BFS node search, pure-numeric/all-digit shortcode guard, contextual post id regex fallback, added `ErrorTypes.NOT_FOUND`, removed unsafe first-containing-item fallback, added `validateItem` calls for post and comment normalization, and refined comment depth warning logic.
 
 ### File List
 
@@ -396,5 +397,6 @@ Implement Story Workflow — `bmad-dev-story` skill with `gemini-3.7-flash-high`
 
 ### Open Decisions / Outstanding Items
 
+- Reviewed and approved. All review follow-up patches applied and verified (52 Threads tests + `npm run typecheck`).
 - `doc_id` values for `COMMENT_ROOTS` and `COMMENT_REPLIES` must be captured from a live Threads web session (Story 15.1.3).
 - Exact GraphQL response shape for `BarcelonaPostPageQuery` nested replies must be confirmed; use existing fallback until then.

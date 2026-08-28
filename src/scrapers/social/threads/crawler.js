@@ -380,6 +380,77 @@ export class ThreadsCrawler extends AbstractCrawler {
   }
 
   /**
+   * Find an object node in a tree that contains `value` as one of its string fields.
+   * Iterative BFS to avoid stack issues; used only for exact matching, not traversal.
+   * @param {any} root
+   * @param {string} value
+   * @param {number} [maxDepth=12]
+   * @returns {any | null}
+   */
+  #findNodeByValue(root, value, maxDepth = 12) {
+    if (!root || !value) return null;
+    const queue = [{ node: root, depth: 0 }];
+    const seen = new WeakSet();
+
+    while (queue.length > 0) {
+      const entry = queue.shift();
+      if (!entry) continue;
+      const { node, depth } = entry;
+      if (depth > maxDepth) continue;
+      if (!node || typeof node !== 'object') continue;
+      if (seen.has(node)) continue;
+      seen.add(node);
+
+      const matchKeys = ['code', 'pk', 'id', 'shortcode'];
+      if (matchKeys.some((key) => String(node[key] ?? '') === value)) {
+        return node;
+      }
+
+      for (const child of Array.isArray(node) ? node : Object.values(node)) {
+        if (child != null && typeof child === 'object') {
+          queue.push({ node: child, depth: depth + 1 });
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find the first node in a tree whose `pk` or `id` is a numeric string.
+   * BFS with bounded depth to avoid picking arbitrary ids from unrelated nodes.
+   * @param {any} root
+   * @param {number} [maxDepth=12]
+   * @returns {string | null}
+   */
+  #findNumericPostId(root, maxDepth = 12) {
+    if (!root) return null;
+    const queue = [{ node: root, depth: 0 }];
+    const seen = new WeakSet();
+
+    while (queue.length > 0) {
+      const entry = queue.shift();
+      if (!entry) continue;
+      const { node, depth } = entry;
+      if (depth > maxDepth) continue;
+      if (!node || typeof node !== 'object') continue;
+      if (seen.has(node)) continue;
+      seen.add(node);
+
+      const id = node.pk || node.id;
+      if (id != null && /^\d+$/.test(String(id))) {
+        return String(id);
+      }
+
+      for (const child of Array.isArray(node) ? node : Object.values(node)) {
+        if (child != null && typeof child === 'object') {
+          queue.push({ node: child, depth: depth + 1 });
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
    * Convert a Threads shortcode to numeric post id.
    * Reverse base64 decoder using SHORTCODE_ALPHABET.
    * @param {string} shortcode
@@ -387,6 +458,8 @@ export class ThreadsCrawler extends AbstractCrawler {
    */
   #shortcodeToNumericId(shortcode) {
     if (!shortcode || typeof shortcode !== 'string') return null;
+    if (/^\d+$/.test(shortcode)) return null; // pure numeric is not a shortcode
+    if (shortcode.length < 4) return null; // too short to be a real encoded id
     let n = 0n;
     for (let i = 0; i < shortcode.length; i++) {
       const char = shortcode[i];
@@ -538,22 +611,36 @@ export class ThreadsCrawler extends AbstractCrawler {
       },
     };
 
+    this.validateItem(item);
+
     return item;
   }
 
   /**
    * Extract clean post ID or shortcode from URL or raw ID string.
+   * Rejects non-Threads domains to prevent SSRF, but allows the configured baseUrl
+   * (used in local tests / mock servers).
    * @param {string} input
-   * @returns {string}
+   * @returns {{ code: string, isUrl: boolean }}
    */
   #extractPostCodeOrId(input) {
-    if (!input) return '';
+    if (!input) return { code: '', isUrl: false };
     const clean = String(input).trim();
-    const urlMatch = clean.match(/(?:threads\.net\/(?:@[^/]+\/post|t)\/)([^/?#]+)/i);
+
+    const urlMatch = clean.match(/^https?:\/\/(?:www\.)?threads\.net\/(?:@[^/]+\/post|t)\/([^/?#]+)/i);
     if (urlMatch && urlMatch[1]) {
-      return urlMatch[1];
+      return { code: urlMatch[1], isUrl: true };
     }
-    return clean.replace(/^threads:/, '');
+
+    const localBase = this.client.baseUrl || '';
+    if (localBase && clean.startsWith(localBase)) {
+      const localMatch = clean.slice(localBase.length).match(/^\/(?:@[^/]+\/post|t)\/([^/?#]+)/i);
+      if (localMatch && localMatch[1]) {
+        return { code: localMatch[1], isUrl: true };
+      }
+    }
+
+    return { code: clean.replace(/^threads:/, ''), isUrl: false };
   }
 
   /**
@@ -590,7 +677,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     // 2. Extract code from URL or shortcode
-    const code = this.#extractPostCodeOrId(clean);
+    const { code, isUrl } = this.#extractPostCodeOrId(clean);
     if (/^\d+$/.test(code)) {
       return code;
     }
@@ -603,7 +690,12 @@ export class ThreadsCrawler extends AbstractCrawler {
 
     // 4. SSR HTML fallback via /t/<code or path>
     try {
-      const fetchPath = clean.startsWith('http') ? clean : `${this.client.baseUrl}/t/${encodeURIComponent(code)}`;
+      let fetchPath;
+      if (isUrl) {
+        fetchPath = clean;
+      } else {
+        fetchPath = `${this.client.baseUrl}/t/${encodeURIComponent(code)}`;
+      }
       const resp = /** @type {any} */ (await this.client.request('GET', fetchPath, {
         accountId,
       }));
@@ -613,7 +705,7 @@ export class ThreadsCrawler extends AbstractCrawler {
       if (html.includes("Sorry, this page isn't available") || html.includes('Page Not Found')) {
         throw new PlatformError({
           code: 'XACT_4041',
-          type: ErrorTypes.INTERNAL,
+          type: ErrorTypes.NOT_FOUND,
           message: `Threads post ${code} not found`,
           statusCode: 404,
           suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
@@ -628,41 +720,37 @@ export class ThreadsCrawler extends AbstractCrawler {
           const jsonText = sm[1];
           if (jsonText.includes(code) || jsonText.includes('"pk"') || jsonText.includes('"post"')) {
             const parsed = JSON.parse(jsonText);
-            /**
-             * @param {any} obj
-             * @returns {string | null}
-             */
-            const findPostId = (obj) => {
-              if (!obj || typeof obj !== 'object') return null;
-              if ((obj.code === code || obj.pk || obj.id) && (obj.pk || obj.id)) {
-                return String(obj.pk || obj.id);
-              }
-              for (const key of Object.keys(obj)) {
-                const res = findPostId(obj[key]);
-                if (res) return res;
-              }
-              return null;
-            };
-            const foundId = findPostId(parsed);
-            if (foundId) return foundId;
+
+            // Try fast exact match first: find a node whose `code` or `pk` equals `code`.
+            const matchingNode = this.#findNodeByValue(parsed, code);
+            if (matchingNode?.pk || matchingNode?.id) {
+              return String(matchingNode.pk || matchingNode.id);
+            }
+
+            // Fallback: find any Barcelona node with a numeric post id.
+            const numericPost = this.#findNumericPostId(parsed);
+            if (numericPost) return numericPost;
           }
         } catch {}
       }
 
-      const idMatch =
-        html.match(/"post_id"\s*:\s*"([^"]+)"/) ||
-        html.match(/"pk"\s*:\s*"([^"]+)"/) ||
-        html.match(/"id"\s*:\s*"([^"]+)"/);
+      // Contextual regex fallback: require a nearby post marker so we don't grab
+      // a random user / thread / media id.
+      const postIdMatch = html.match(/"post_id"\s*:\s*"(\d+)"/);
+      if (postIdMatch && postIdMatch[1]) {
+        return postIdMatch[1];
+      }
 
-      if (idMatch && idMatch[1]) {
-        return idMatch[1];
+      const pkMatch = html.match(/"pk"\s*:\s*"(\d+)"/);
+      if (pkMatch && pkMatch[1]) {
+        return pkMatch[1];
       }
     } catch (err) {
       const anyErr = /** @type {any} */ (err);
       if (anyErr?.statusCode === 404 || anyErr?.code === 'XACT_4041') {
         throw new PlatformError({
           code: 'XACT_4041',
-          type: ErrorTypes.INTERNAL,
+          type: ErrorTypes.NOT_FOUND,
           message: `Threads post ${code} not found`,
           statusCode: 404,
           suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
@@ -674,7 +762,7 @@ export class ThreadsCrawler extends AbstractCrawler {
 
     throw new PlatformError({
       code: 'XACT_4041',
-      type: ErrorTypes.INTERNAL,
+      type: ErrorTypes.NOT_FOUND,
       message: `Threads post ${code} could not be resolved to a numeric ID`,
       statusCode: 404,
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
@@ -1266,15 +1354,10 @@ export class ThreadsCrawler extends AbstractCrawler {
       }
     }
 
-    // 3. Fallback to the first containing item post if any exists
-    if (!rootRawPost && containingItems.length > 0) {
-      rootRawPost = containingItems[0]?.post || containingItems[0];
-    }
-
     if (!rootRawPost) {
       throw new PlatformError({
         code: 'XACT_4041',
-        type: ErrorTypes.INTERNAL,
+        type: ErrorTypes.NOT_FOUND,
         message: `Threads post ${args.postId} not found in GraphQL response`,
         statusCode: 404,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
@@ -1292,6 +1375,8 @@ export class ThreadsCrawler extends AbstractCrawler {
         platform: 'threads',
       });
     }
+
+    this.validateItem(post);
 
     if (post.metadata && typeof post.metadata === 'object') {
       /** @type {Record<string, any>} */ (post.metadata).sourceMethod = 'post_detail';
@@ -1317,8 +1402,17 @@ export class ThreadsCrawler extends AbstractCrawler {
     if (args.includeReplies) {
       let maxDepth = Math.max(0, Math.min(args.maxDepth ?? 3, 5));
       if (!this.docIds.COMMENT_REPLIES && maxDepth > 0) {
-        console.warn('⚠️ [THREADS] Nested replies deferred to Story 15.1.3; returning root-level comments only.');
+        console.warn('⚠️ [THREADS] Nested replies deferred to Story 15.1.3; limiting to root-level comments.');
         maxDepth = 0;
+      }
+
+      if (!this.docIds.COMMENT_REPLIES && this.docIds.COMMENT_ROOTS) {
+        // maxDepth 0 still fetches root-level comments via the root comment doc_id.
+      } else if (!this.docIds.COMMENT_REPLIES && !this.docIds.COMMENT_ROOTS && !this.docIds.POST_DETAIL) {
+        console.warn('⚠️ [THREADS] No comment doc_ids configured; comments unavailable in this environment.');
+        result.comments = [];
+        result.pageInfo = { has_next_page: false, end_cursor: null };
+        return result;
       }
 
       const commentsResult = await this.getPostComments(

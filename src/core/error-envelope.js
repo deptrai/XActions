@@ -14,6 +14,7 @@ export const ErrorTypes = Object.freeze({
   PROXY_EXHAUSTED: 'proxy_exhausted',
   HIBERNATION: 'hibernation',
   INVALID_ARGS: 'invalid_args',
+  NOT_FOUND: 'not_found',
   INTERNAL: 'internal',
 });
 
