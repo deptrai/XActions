@@ -14,6 +14,65 @@ inputDocuments:
 
 Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ thống **XActions Universal Hybrid Scraping & Automation Microservice** (tiếp nối Epics 1–9 trong `archive/epics-1-9-legacy.md`). Hệ thống được thiết kế theo chuẩn **Hexagonal Architecture + Tiered Hybrid Signer Engine + Dual-Channel Microservice Daemon + Adaptive Rate Limiter**, hợp nhất 100% cơ sở dữ liệu trên **PostgreSQL (Prisma ORM với JSONB GIN Indexes)** và đóng vai trò là Scraping Engine toàn năng cho hệ sinh thái **Nowing (AI Lead & Research Hub)** cũng như nền tảng SaaS/CLI/AI MCP độc lập.
 
+## Backlog Status & Legacy Code Overlap (Audit 2026-08-21)
+
+> Được cập nhật sau khi so sánh toàn bộ backlog Epics 12–20 với source code hiện có.
+
+### Consolidated / Absorbed
+- **Story 11.5** (End-to-End Request Pipeline) và **Story 11.6** (Rate-Limit/Bot-Challenge Defense) đã được hấp thụ vào **Story 11.3** (End-to-End Request Pipeline with 429/403 Auto-Quarantine, Exponential Backoff & Two-Mode IP Strategy). Xem `src/core/base-client.js`.
+- **Story 11.4** được thu nhỏ thành "Governor Surface & Backpressure" vì core `AdaptiveRateGovernor` đã implement trong `src/core/adaptive-governor.js`.
+
+### Partial Overlap — Refactor / Wrap Recommended
+| Story | Existing Code | Gap |
+|---|---|---|
+| 12.1 | `src/utils/qrcode.js` (`renderTerminalQr`, `isTty`) | countdown, `checkLoginState`, CLI flags, non-TTY fallback |
+| 13.1 | `src/core/signer-pool.js` (`PreSignedTokenRing`) | `SignerWorkerPagePool.init/evaluate/close` + 3s timeout |
+| 13.2 | `src/scrapers/twitter/index.js`, `src/scrapers/twitter/http/`, `src/client/Scraper.js`, `src/scrapers/index.js` | `TwitterCrawler extends AbstractCrawler` in `src/scrapers/social/twitter/` |
+| 13.3 | `src/scrapers/facebook/index.js`, `src/scrapers/facebook/graphql.js` | `FacebookCrawler extends AbstractCrawler` in `src/scrapers/social/facebook/` |
+| 14.1 | `src/scrapers/twitter/http/thread.js` (conversation/thread) | topological sort + Prisma batch save by depth |
+| 14.2 | `package.json` `mcp:daemon`, `src/mcp/server.js` `startHttpTransport()` (port 3001) | 3-layer JSON envelope, `x_crawl_*`, `x_actions_list`, artifact export |
+| 14.3 | `src/streaming/streamManager.js` (Redis/Bull/Socket.IO) | `stream:social:raw_posts` thin events, metrics endpoint, alerts |
+| 15.1 | `src/scrapers/threads/index.js` (Puppeteer) | `ThreadsCrawler extends AbstractCrawler` in `src/scrapers/social/threads/` |
+| 19.1–19.3 | `/api/checkpoints`, `/api/proxies`, `/api/streams` routes exist | dashboard views in `dashboard/admin.html` |
+| 19.5 | `xactions checkpoints list/show/resume/pause/retry` | done |
+| 19.6 | `xactions stream start/stop/list/history/pause/resume` | Nowing `stream:social:raw_posts` metrics + alerts |
+| 19.7 | `/api/proxies`, `/api/streams`, `/api/checkpoints` | mount under `/admin/*` with admin auth |
+
+### New / No Code in Repo
+| Epic | Stories | Note |
+|---|---|---|
+| 12.2 | CDP attach | no `launchBrowserWithCdp` or Playwright CDP connect |
+| 15.2 | TikTok scraper | no code |
+| 16.x | Shopee, TikTok Shop | legacy lives in Nowing repo, not here |
+| 17.x | Chotot, Batdongsan | legacy lives in Nowing repo |
+| 18.1–18.2 | TopCV, VietnamWorks | no code |
+| 18.3 | LinkedIn via CDP | blocked by 12.2 |
+| 19.4, 19.8 | `xactions admin` CLI, `x_admin_*` MCP tools | no code |
+
+### Decommission Plan (Epic 20.1)
+After new hybrid crawlers (Epics 13–18) are stable, the following legacy modules will be removed:
+- `src/client/Scraper.js` and `src/client/`
+- `src/scrapers/twitter/index.js` and `src/scrapers/twitter/http/`
+- `src/scrapers/facebook/index.js`
+- `src/scrapers/threads/index.js`
+
+`src/scrapers/index.js` will be refactored to delegate to `AbstractCrawler` instances rather than legacy function modules.
+
+---
+
+## Cross-Epic Dependency & Sequence Map
+
+| Epic/Story | Cần output từ | Lý do | Rủi ro nếu chưa xong |
+|---|---|---|---|
+| Epic 13-18 (crawlers) | Epic 10.1, 10.2, 10.5 | `AbstractCrawler`, `PrismaStore`, `metadata-schema` là nền tảng | Crawler không có interface/storage/schema để kế thừa. |
+| Epic 13-18 (crawlers) | Epic 11.3, 11.4, 11.7 | `AbstractApiClient`, `AdaptiveRateGovernor`, `Crawler-Governor Integration` | Không có proxy/retry/governor/validator. |
+| Epic 15.2 | Epic 13.1 | `SignerWorkerPagePool` để giải mã `a_bogus`/`msToken` | Không thể sign TikTok request. |
+| Epic 18.3 | Epic 12.2 | CDP Remote Attach cho LinkedIn | **Blocked** — 12.2 còn backlog. |
+| Epic 19 (admin) | Epic 10.4, 11.4, 14.3 | Checkpoints, governor, stream metrics | Dashboard/CLI không có dữ liệu để hiển thị. |
+| Epic 20 | Epics 13-18 | Tất cả crawler đa nền tảng phải stable trước khi decommission | Không thể shadow-run hoặc xóa scraper cũ an toàn. |
+
+**Quy tắc dependency:** Không có forward reference theo số epic (Epic N không cần Epic N+1), nhưng **Epic 13–18 phải đợi Epic 10, 11 hoàn thành** và **Epic 20 phải đợi 13–18**. Epic 12.2 cần ưu tiên trước Epic 18.3.
+
 ---
 
 ## Cross-Epic Dependency & Sequence Map
@@ -225,23 +284,32 @@ So that **tôi có thể linh hoạt sử dụng các nhà cung cấp proxy ph�
 * **And** `DynamicTunnelProvider` phù hợp cho no-auth platforms (residential IP xoay per-request) hoặc khi cần đổi IP mỗi request.
 * **And** tích hợp tương thích với `undici.ProxyAgent` và `playwright.chromium.launch({ proxy })`.
 
-### Story 11.3: 429/403 Auto-Quarantine, Standby Backoff & Exponential Replay Interceptor
+### Story 11.3: End-to-End Request Pipeline with 429/403 Auto-Quarantine, Exponential Backoff & Two-Mode IP Strategy
 As a **Reliability Engineer**,
-I want **hệ thống tự động cách ly proxy bị chặn và replay request với proxy mới kèm cơ chế Standby Backoff khi toàn bộ pool bị rate-limit**,
-So that **toàn bộ pipeline không bao giờ bị crash khi nền tảng kích hoạt bảo vệ diện rộng**.
+I want **`AbstractApiClient` wire `ProxyIpPool`/`ProxyProvider`, `AdaptiveRateGovernor` và `AccountPool` thành một pipeline rõ ràng: sticky IP cho tài khoản auth-required và rotating IP cho no-auth platforms, tự động cách ly proxy bị chặn và replay request với exponential backoff**,
+So that **mọi request đều đi qua proxy đúng chế độ, pipeline không bao giờ bị crash khi nền tảng kích hoạt bảo vệ diện rộng, và không bao giờ fallback về direct connection**.
+
+> **Scope consolidation:** Story này đã hấp thụ Story 11.5 (Two-Mode IP Strategy) và Story 11.6 (Rate-Limit/Bot-Challenge Defense) vì cả hai đều là một phần của pipeline `AbstractApiClient.request()`. Toàn bộ logic quarantine, retry, exponential backoff, account hibernation, standby backoff, governor record/check nằm trong `src/core/base-client.js`.
 
 **Acceptance Criteria:**
-* **Given** một HTTP request trả về mã trạng thái `429 Too Many Requests` hoặc `403 Forbidden`
-* **When** interceptor bắt được lỗi
-* **Then** proxy hiện tại bị đưa vào `failedProxies` cách ly trong 5 phút
-* **And** cho no-auth platforms: rút proxy mới từ pool (`getNext()`) và retry request tối đa 3 lần với exponential backoff (1s, 2s, 4s)
-* **And** cho auth-required platforms: giữ nguyên account, lấy proxy mới (`getStickyProxy(accountId)` với proxy fallback), hoặc nếu rate-limit do account thì chuyển `AccountPool.getNextAvailable(platform)` và retry với account mới
-* **And** nếu toàn bộ proxy trong pool bị cách ly ➔ Chuyển sang trạng thái Standby Backoff (chờ 30s) và cảnh báo thay vì loop vô tận.
+* **Given** `AbstractApiClient` được khởi tạo với `proxyPool`/`proxyProvider`, `governor`, `accountPool`, `sessionManager`, `platform`, `requiresAuth`, pluggable `httpClient`
+* **When** gọi `request(method, url, options)`
+* **Then** hệ thống thực hiện tuần tự:
+  1. Xác định `requiresAuth` của platform. Nếu `true` → lấy `accountId`; kiểm tra `governor.canAccountRequest(accountId, platform)`; nếu hibernation thì chuyển account.
+  2. Nếu `requiresAuth` → `resolveProxy(accountId)` dùng sticky IP (hoặc `proxyProvider.getProxy({ accountId })`). Nếu `!requiresAuth` → rotating IP (`getNext()` / `getProxy()`).
+  3. Gửi request qua proxy agent (`undici.ProxyAgent` / `socks-proxy-agent` / Playwright browser context tùy platform) — không bao giờ direct fallback.
+  4. Trả về response 2xx/3xx; ghi nhận `accountPool.recordRequest()` và `governor.recordRequest()`.
+  5. Khi gặp HTTP 429 hoặc 403 → `proxyPool.quarantine(proxy, 5 phút)`, exponential backoff (1s, 2s, 4s...) với jitter, retry tối đa `maxProxyRetries`.
+  6. Nếu retry hết và platform auth-required → `accountPool.markUnavailable(..., 'rate_limit', ...)` + `governor.hibernateAccount(...)`, sau đó xoay account và retry với account mới (tối đa `maxAccountRotations`).
+  7. Nếu toàn bộ proxy bị cách ly → Standby Backoff 30s và throw `ProxyDeadError` thay vì loop vô tận.
+* **And** `types/core.d.ts` đồng bộ với constructor/options/properties của `AbstractApiClient`.
 
-### Story 11.4: Adaptive Infrastructure-Aware Rate Limiter & Account Protection Governor
+### Story 11.4: Adaptive Infrastructure-Aware Rate Limiter & Account Protection Governor (Surface & Backpressure)
 As a **Platform Governor & Account Security Engineer**,
-I want **hệ thống tự động tính toán Throughput cào dựa trên số lượng Proxy sống và đưa tài khoản vào trạng thái Ngủ đông khi gặp thử thách bảo vệ**,
+I want **hệ thống tự động tính toán Throughput cào dựa trên số lượng Proxy sống, đưa tài khoản vào trạng thái Ngủ đông khi gặp thử thách bảo vệ, và expose trạng thái governor qua API/CLI**,
 So that **hệ thống không bị quá tải khi Proxy xoay không kịp và triệt tiêu 100% nguy cơ die tài khoản hàng loạt**.
+
+> **Scope consolidation:** Core `AdaptiveRateGovernor`, `PlatformRateLimit`, `StatusApi`, `AccountPool` integration đã được implement trong `src/core/adaptive-governor.js` và `src/core/account-pool.js`. Story 11.4 còn lại chủ yếu là lớp surface: REST API, CLI, và Redis lag backpressure wiring.
 
 **Acceptance Criteria:**
 * **Given** module `AdaptiveRateGovernor` trong `src/core/adaptive-governor.js`

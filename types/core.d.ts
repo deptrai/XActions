@@ -5,6 +5,8 @@
  * @license MIT
  */
 
+import type { ProxyIpPool, ProxyProviderContract } from './proxy.js';
+
 export interface PostItem {
   id: string;
   platform: string;
@@ -339,15 +341,28 @@ export class SessionManager {
 
 export const globalSessionManager: SessionManager;
 
+export interface AccountRecord {
+  platform: string;
+  accountId: string;
+  credentials?: Record<string, unknown> | null;
+  assignedProxy?: unknown;
+  hibernatingUntil?: number | null;
+  velocity?: number;
+}
+
 export class AccountPool {
   constructor(deps?: { governor?: AdaptiveRateGovernor });
-  registerAccounts(platform: string, accountIds: string[]): void;
+  registerAccounts(platform: string, accountIds: string[], options?: { credentials?: Record<string, unknown> }): void;
   getNextAvailable(platform: string): string | null;
   hasAvailable(platform: string): boolean;
-  markUnavailable(accountId: string): void;
-  markAvailable(accountId: string): void;
+  markUnavailable(accountId: string, reason?: string, durationMs?: number, platform?: string): void;
+  markAvailable(accountId: string, platform?: string): void;
+  getAccountVelocity(accountId: string, platform?: string): number;
+  recordRequest(accountId: string, platform?: string): void;
+  setAssignedProxy(accountId: string, proxy: unknown, platform?: string): void;
   listPlatforms(): string[];
   listAccounts(platform: string): string[];
+  getAccount(accountId: string, platform?: string): AccountRecord | null;
 }
 
 export const globalAccountPool: AccountPool;

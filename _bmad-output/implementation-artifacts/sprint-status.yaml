@@ -121,9 +121,10 @@ development_status:
   epic-17-retrospective: optional
 
   # --- Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn) ---
-  epic-18: backlog
-  18-1-topcv-job-company-scraper: backlog
-  18-2-vietnamworks-job-scraper: backlog
+  # 18.1/18.2 story files created; 18.3 blocked by 12.2 CDP attach.
+  epic-18: in-progress
+  18-1-topcv-job-company-scraper: ready-for-dev
+  18-2-vietnamworks-job-scraper: ready-for-dev
   18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: backlog
   epic-18-retrospective: optional
 
@@ -146,6 +147,8 @@ development_status:
   epic-19-retrospective: optional
 
   # --- Epic 20: Nowing Cutover & Legacy Scraper Decommissioning ---
+  # Blocked until Epics 13-18 are complete. Will decommission src/client/, src/scrapers/twitter/,
+  # src/scrapers/facebook/, src/scrapers/threads/ and src/scrapers/twitter/http/ once new crawlers stable.
   epic-20: backlog
   20-1-nowing-shadow-run-adapter-over-xactions-daemon: backlog
   20-2-legacy-scraper-code-decommissioning: backlog

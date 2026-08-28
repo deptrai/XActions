@@ -7,6 +7,7 @@ supersededBy: _bmad-output/planning-artifacts/epics-full.md
 note: "Nội dung FR-15..FR-23 đã được hợp nhất vào epics-full.md. Giữ lại để tham khảo lịch sử."
 epic: 4
 prd_ref: prd-XActions-2026-06-08
+note: Nội dung FR15–23 đã được hợp nhất vào epics-full.md và prd.md (canonical). Giữ lại để tham khảo lịch sử.
 ---
 
 # PRD: Epic 4 — Facebook Growth Automation

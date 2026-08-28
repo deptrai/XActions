@@ -11,6 +11,7 @@ prd_ref:
   - prd-XActions-2026-06-08
   - prd-XActions-2026-06-10-epic4
   - prd-XActions-2026-08-14-epic7
+note: Là bản nháp trước khi prd.md được bổ sung appendix FR-85..88 / NFR-17. Giữ lại để tham khảo lịch sử.
 ---
 
 # PRD: Epics 10–18 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform

@@ -1,0 +1,1289 @@
+--- _bmad-output/implementation-artifacts/10-5-metadata-schema-contract-registry-for-consumers.md (status:  M)
+diff --git a/_bmad-output/implementation-artifacts/10-5-metadata-schema-contract-registry-for-consumers.md b/_bmad-output/implementation-artifacts/10-5-metadata-schema-contract-registry-for-consumers.md
+index 0a0fadc..80bfdd0 100644
+--- a/_bmad-output/implementation-artifacts/10-5-metadata-schema-contract-registry-for-consumers.md
++++ b/_bmad-output/implementation-artifacts/10-5-metadata-schema-contract-registry-for-consumers.md
+@@ -2,7 +2,8 @@
+ story_id: 10.5
+ story_key: 10-5-metadata-schema-contract-registry-for-consumers
+ epic: 10 — Unified PostgreSQL Storage (Prisma) & Core Interfaces
+-status: ready-for-dev
++status: in-progress
++baseline_commit: NO_VCS
+ ---
+ 
+ # 10.5 — Metadata Schema Contract & Registry for Consumers
+@@ -134,41 +135,43 @@ status: ready-for-dev
+ 
+ ## Tasks / Subtasks
+ 
+-- [ ] **Task 1: Pilot JSON Schema Files (AC: AC2)**
+-  - [ ] Create directory `schemas/twitter/` and file `schemas/twitter/social.json`.
+-  - [ ] Create directory `schemas/shopee/` and file `schemas/shopee/ecom.json`.
+-  - [ ] Ensure valid JSON Schema Draft-07 format with proper titles, types, properties, and constraints.
+-
+-- [ ] **Task 2: Metadata Schema Registry Service (AC: AC1)**
+-  - [ ] Create `src/core/metadata-schema-registry.js`.
+-  - [ ] Implement lightweight, zero-dependency JSON Schema validator supporting `type`, `required`, `properties`, `items`, `enum`, `minimum`, `maximum`, `pattern`.
+-  - [ ] Implement `MetadataSchemaRegistry` class with singleton default export `metadataSchemaRegistry`.
+-  - [ ] Auto-load `schemas/` directory on module load.
+-  - [ ] Re-export in `src/core/index.js`.
+-
+-- [ ] **Task 3: PrismaStore Validation Integration (AC: AC6)**
+-  - [ ] Update `src/store/prisma-store.js` to validate `post.metadata` against `metadataSchemaRegistry` during `storeContent` and `storeBatch`.
+-  - [ ] Throw `PlatformError` (`XACT_4001`) with clear error message when validation fails.
+-  - [ ] Support `{ validateSchema: false }` option in `PrismaStore` constructor and method options.
+-  - [ ] Update `src/core/base-store.js` `AbstractStore` method signatures and `types/store.d.ts` to include `validateSchema?: boolean` in options.
+-  - [ ] If no schema is registered for a `(platform, category)` pair, allow the write to proceed unchanged (opt-in validation).
+-
+-- [ ] **Task 4: REST API Endpoints (AC: AC3)**
+-  - [ ] Create `api/routes/schemas.js` with `GET /` and `GET /:platform/:category`.
+-  - [ ] Mount `/api/schemas` in `api/server.js`.
+-
+-- [ ] **Task 5: CLI & MCP Integration (AC: AC4, AC5)**
+-  - [ ] Add `schema` command group in `src/cli/index.js` (`list`, `get <platform> <category>`, `--json`).
+-  - [ ] Add `x_schema_list` and `x_schema_get` tools in `src/mcp/server.js`.
+-
+-- [ ] **Task 6: TypeScript Definitions & Test Suites (AC: AC7, all)**
+-  - [ ] Create `types/metadata-schema.d.ts` and update `types/index.d.ts`.
+-  - [ ] Create `tests/core/metadata-schema-registry.test.js` (unit tests for registry, validator, disk loading).
+-  - [ ] Create `tests/api/schemas-routes.test.js` (integration tests for `/api/schemas` endpoints).
+-  - [ ] Create `tests/store/prisma-store-schema-validation.test.js` (integration tests for PrismaStore validation). Must test:
++- [x] **Task 1: Pilot JSON Schema Files (AC: AC2)**
++  - [x] Create directory `schemas/twitter/` and file `schemas/twitter/social.json`.
++  - [x] Create directory `schemas/shopee/` and file `schemas/shopee/ecom.json`.
++  - [x] Ensure valid JSON Schema Draft-07 format with proper titles, types, properties, and constraints.
++
++- [x] **Task 2: Metadata Schema Registry Service (AC: AC1)**
++  - [x] Create `src/core/metadata-schema-registry.js`.
++  - [x] Implement lightweight, zero-dependency JSON Schema validator supporting `type`, `required`, `properties`, `items`, `enum`, `minimum`, `maximum`, `pattern`.
++  - [x] Implement `MetadataSchemaRegistry` class with singleton default export `metadataSchemaRegistry`.
++  - [x] Auto-load `schemas/` directory on module load.
++  - [x] Re-export in `src/core/index.js`.
++
++- [x] **Task 3: PrismaStore Validation Integration (AC: AC6)**
++  - [x] Update `src/store/prisma-store.js` to validate `post.metadata` against `metadataSchemaRegistry` during `storeContent` and `storeBatch`.
++  - [x] Throw `PlatformError` (`XACT_4001`) with clear error message when validation fails.
++  - [x] Support `{ validateSchema: false }` option in `PrismaStore` constructor and method options.
++  - [x] Update `src/core/base-store.js` `AbstractStore` method signatures and `types/store.d.ts` to include `validateSchema?: boolean` in options.
++  - [x] If no schema is registered for a `(platform, category)` pair, allow the write to proceed unchanged (opt-in validation).
++
++- [x] **Task 4: REST API Endpoints (AC: AC3)**
++  - [x] Create `api/routes/schemas.js` with `GET /` and `GET /:platform/:category`.
++  - [x] Mount `/api/schemas` in `api/server.js`.
++
++- [x] **Task 5: CLI & MCP Integration (AC: AC4, AC5)**
++  - [x] Add `schema` command group in `src/cli/index.js` (`list`, `get <platform> <category>`, `--json`).
++  - [x] Expose MCP tools in `src/mcp/server.js`:
++    - [x] `x_schema_list`: List registered schemas
++    - [x] `x_schema_get`: Get schema definition by platform and category.
++
++- [x] **Task 6: TypeScript Definitions & Test Suites (AC: AC7, all)**
++  - [x] Create `types/metadata-schema.d.ts` and update `types/index.d.ts`.
++  - [x] Unskip ATDD test files in `tests/core/metadata-schema-registry.test.js`, `tests/store/prisma-store-schema-validation.test.js`, and `tests/api/schemas-routes.test.js`.
++  - [x] Ensure all tests pass (`vitest run` on affected files).
++  - [x] Create `tests/store/prisma-store-schema-validation.test.js` (integration tests for PrismaStore validation). Must test:
+     - `{ validateSchema: false }` bypass option.
+     - `storeBatch` containing 1 invalid item among valid ones (must fail the whole batch with correct error).
+-  - [ ] Run full test suite and verify 100% green.
++  - [x] Run full test suite and verify 100% green.
+ 
+ ---
+ 
+@@ -184,6 +187,12 @@ status: ready-for-dev
+ - **Category Validation Order:** `PrismaStore.storeBatch` already validates `category` before writing. Add `metadata` validation **after** `category` validation and **before** normalizing/writing. This keeps error ordering predictable.
+ - **Error Shape:** All validation failures must be surfaced as `PlatformError({ type: ErrorTypes.INVALID_ARGS, code: 'XACT_4001', statusCode: 400, message, suggestedAction: SuggestedActions.USE_ACTIONS_LIST, details: { index, errors } })`. Routes should use `error.toEnvelope()` for the response body.
+ 
++### ATDD Artifacts
++- Checklist: `_bmad-output/test-artifacts/atdd-checklist-10-5-metadata-schema-contract-registry-for-consumers.md`
++- API Tests: `tests/api/schemas-routes.test.js`
++- Core Tests: `tests/core/metadata-schema-registry.test.js`
++- Store Tests: `tests/store/prisma-store-schema-validation.test.js`
++
+ ### General Implementation Details
+ 
+ - **Registry Key:** Use `${platform}:${category}` as the in-memory cache key. It mirrors `Post.id` namespacing and is easy to search.
+@@ -333,7 +342,7 @@ status: ready-for-dev
+ 
+ ## Story Completion Status
+ 
+-- **Status:** `ready-for-dev`
++- **Status:** `done`
+ - **Context engine analysis completed:** comprehensive developer guide created.
+ - **Dev implementation:** not started.
+ - **Code Review:** not started.
+@@ -359,3 +368,27 @@ status: ready-for-dev
+ 
+ - **2026-08-19:** Created Story 10.5 context file and updated sprint status to `ready-for-dev`.
+ - **2026-08-19:** Validated story against `checklist.md`: fixed `PlatformError` type for 404, clarified multi-type and reserved `location` fields, added `schemas/` packaging and missing-directory guards, and documented `/api/schemas` route prefix decision.
++
++### Review Findings
++- [x] [Review][Patch] Missing `oneOf`/`anyOf` Validation Support [src/core/metadata-schema-registry.js]
++- [x] [Review][Patch] Incorrect `location` Structure in Shopee Schema [schemas/shopee/ecom.json]
++- [x] [Review][Patch] Deviating Type Constraints for `itemId` and `shopId` [schemas/shopee/ecom.json]
++- [x] [Review][Patch] Missing Payload Fields in `GET /api/schemas/:platform/:category` [api/routes/schemas.js]
++- [x] [Review][Patch] Incomplete Error Envelope for 404 Route Response [api/routes/schemas.js]
++- [x] [Review][Patch] Missing `schemas` Directory Export in `package.json` [package.json]
++- [x] [Review][Patch] Invalid ESM Path Resolution in Registry Tests [tests/core/metadata-schema-registry.test.js]
++- [x] [Review][Patch] Broken Import Causing Store Test Failure [tests/store/prisma-store-schema-validation.test.js]
++- [x] [Review][Patch] Missing and Incomplete Interface Types [types/metadata-schema.d.ts]
++- [x] [Review][Patch] `schema get` Command Brutal Kill [src/cli/index.js]
++- [x] [Review][Defer] Synchronous Validation in 500-item Loop [src/store/prisma-store.js] — deferred, pre-existing
++
++### Review Findings (Round 2)
++- [x] [Review][Patch] Bypass Validation via Undefined Metadata [src/store/prisma-store.js]
++- [x] [Review][Patch] Complete Ignorance of `null` Types [src/core/metadata-schema-registry.js]
++- [x] [Review][Patch] Missing `statusCode: 400` in Validation Errors [src/store/prisma-store.js]
++- [x] [Review][Patch] Incorrect Error Type for 404 in API Routes [api/routes/schemas.js]
++- [x] [Review][Patch] Incomplete `MetadataSchemaRegistry` Interface in Typings [types/metadata-schema.d.ts]
++- [x] [Review][Patch] Inclusion of Unrelated Test File [tests/core/core-automation.test.js]
++- [x] [Review][Patch] `schemasDir` is a file instead of a directory [src/core/metadata-schema-registry.js]
++- [x] [Review][Patch] Invalid `schema.pattern` SyntaxError [src/core/metadata-schema-registry.js]
++- [x] [Review][Patch] `data is null` throws TypeError on object validation [src/core/metadata-schema-registry.js]
+
+--- _bmad-output/implementation-artifacts/deferred-work.md (status:  M)
+diff --git a/_bmad-output/implementation-artifacts/deferred-work.md b/_bmad-output/implementation-artifacts/deferred-work.md
+index 91f82d5..852776f 100644
+--- a/_bmad-output/implementation-artifacts/deferred-work.md
++++ b/_bmad-output/implementation-artifacts/deferred-work.md
+@@ -12,3 +12,6 @@
+ - [ ] [Review][P2][Defer] `prisma.$disconnect()` errors in CLI `finally` blocks are silently swallowed. Project pattern in other CLI commands; logging a warning is a nice-to-have. [src/cli/index.js]
+ - [ ] [Review][P2][Defer] Test JWT secret hardcoded in `tests/api/checkpoints-routes.test.js`. Pre-existing test pattern; not a production secret. [tests/api/checkpoints-routes.test.js:20-21]
+ - [ ] [Review][P2][Defer] No enum validation for `platform` and `targetType` values — the Prisma schema stores them as free strings. Platform discovery/validation belongs to later epics. [src/store/checkpoint-manager.js:67-68]
++
++## Deferred from: code review 10-5-metadata-schema-contract-registry-for-consumers.md (2026-08-19)
++- Synchronous Validation in 500-item Loop [src/store/prisma-store.js] - Could marginally stall event loop
+
+--- _bmad-output/implementation-artifacts/sprint-status.yaml (status:  M)
+diff --git a/_bmad-output/implementation-artifacts/sprint-status.yaml b/_bmad-output/implementation-artifacts/sprint-status.yaml
+index 11d33bb..d804e3f 100644
+--- a/_bmad-output/implementation-artifacts/sprint-status.yaml
++++ b/_bmad-output/implementation-artifacts/sprint-status.yaml
+@@ -37,7 +37,7 @@ development_status:
+   10-2-prisma-post-comment-relational-schema-migration: done
+   10-3-ai-dataset-export-utility-streaming-jsonl-csv: ready-for-dev
+   10-4-crawlcheckpoint-operational-api-resume-pause-retry: ready-for-dev
+-  10-5-metadata-schema-contract-registry-for-consumers: ready-for-dev
++  10-5-metadata-schema-contract-registry-for-consumers: done
+   epic-10-retrospective: optional
+ 
+   # --- Epic 11: Resilient Network & Proxy Pool Management ---
+
+--- _bmad-output/test-artifacts/atdd-checklist-10-5-metadata-schema-contract-registry-for-consumers.md (status:  A)
+diff --git a/_bmad-output/test-artifacts/atdd-checklist-10-5-metadata-schema-contract-registry-for-consumers.md b/_bmad-output/test-artifacts/atdd-checklist-10-5-metadata-schema-contract-registry-for-consumers.md
+new file mode 100644
+index 0000000..10c3ba8
+--- /dev/null
++++ b/_bmad-output/test-artifacts/atdd-checklist-10-5-metadata-schema-contract-registry-for-consumers.md
+@@ -0,0 +1,54 @@
++---
++stepsCompleted:
++  - step-01-preflight-and-context
++  - step-02-generation-mode
++  - step-03-test-strategy
++  - step-04c-aggregate
++lastStep: step-04c-aggregate
++lastSaved: 2026-08-19T12:18:29+07:00
++storyId: '10.5'
++storyKey: 10-5-metadata-schema-contract-registry-for-consumers
++storyFile: _bmad-output/implementation-artifacts/10-5-metadata-schema-contract-registry-for-consumers.md
++atddChecklistPath: _bmad-output/test-artifacts/atdd-checklist-10-5-metadata-schema-contract-registry-for-consumers.md
++generatedTestFiles:
++  - tests/api/schemas-routes.test.js
++  - tests/core/metadata-schema-registry.test.js
++  - tests/store/prisma-store-schema-validation.test.js
++---
++
++# ATDD Checklist: 10.5 — Metadata Schema Contract & Registry for Consumers
++
++## TDD Red Phase (Current)
++
++✅ Red-phase test scaffolds generated
++
++- API / Core Tests: 11 tests (all skipped)
++- E2E Tests: 0 tests (Backend only)
++
++## Acceptance Criteria Coverage
++
++- **AC1** (MetadataSchemaRegistry Service): Covered in `tests/core/metadata-schema-registry.test.js`
++- **AC3** (REST API Endpoints): Covered in `tests/api/schemas-routes.test.js`
++- **AC6** (PrismaStore Validation): Covered in `tests/store/prisma-store-schema-validation.test.js`
++
++## Next Steps (Task-by-Task Activation)
++
++During implementation of each task:
++
++1. Remove `test.skip()` from the current test file or scenario
++2. Run tests: `npm test`
++3. Verify the activated test fails first, then passes after implementation (green phase)
++4. If any activated tests still fail unexpectedly:
++   - Either fix implementation (feature bug)
++   - Or fix test (test bug)
++5. Commit passing tests
++
++## Implementation Guidance
++
++Feature endpoints to implement:
++- GET /api/schemas
++- GET /api/schemas/:platform/:category
++
++Core modules to implement:
++- `src/core/metadata-schema-registry.js`
++- `PrismaStore` validation modifications
+
+--- api/routes/schemas.js (status:  A)
+diff --git a/api/routes/schemas.js b/api/routes/schemas.js
+new file mode 100644
+index 0000000..896a1e8
+--- /dev/null
++++ b/api/routes/schemas.js
+@@ -0,0 +1,59 @@
++import { Router } from 'express';
++import { metadataSchemaRegistry } from '../../src/core/index.js';
++import { PlatformError, ErrorTypes, SuggestedActions } from '../../src/core/error-envelope.js';
++
++const router = Router();
++
++/**
++ * @route GET /api/schemas
++ * @desc Get a list of all registered metadata schemas
++ * @access Public
++ */
++router.get('/', (req, res) => {
++  try {
++    const schemas = metadataSchemaRegistry.listSchemas();
++    res.json({
++      success: true,
++      data: { schemas }
++    });
++  } catch (error) {
++    res.status(500).json({ success: false, error: error.message });
++  }
++});
++
++/**
++ * @route GET /api/schemas/:platform/:category
++ * @desc Get the JSON schema definition for a specific platform and category
++ * @access Public
++ */
++router.get('/:platform/:category', (req, res) => {
++  const { platform, category } = req.params;
++  
++  try {
++    const schema = metadataSchemaRegistry.getSchema(platform, category);
++    
++    if (!schema) {
++      throw new PlatformError({
++        type: ErrorTypes.NOT_FOUND,
++        code: 'XACT_4041',
++        message: `Schema not found for platform: ${platform}, category: ${category}`,
++        statusCode: 404,
++        platform,
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST
++      });
++    }
++
++    res.json({
++      success: true,
++      data: { platform, category, schema }
++    });
++  } catch (error) {
++    if (error instanceof PlatformError) {
++      res.status(error.statusCode || 400).json({ success: false, error: error.toEnvelope() });
++    } else {
++      res.status(500).json({ success: false, error: error.message });
++    }
++  }
++});
++
++export default router;
+
+--- api/server.js (status:  M)
+diff --git a/api/server.js b/api/server.js
+index 35b94a8..597354f 100644
+--- a/api/server.js
++++ b/api/server.js
+@@ -66,6 +66,7 @@ import scheduleRoutes from './routes/schedule.js';
+ import crmRoutes from './routes/crm.js';
+ import datasetsRoutes from './routes/datasets.js';
+ import checkpointsRoutes from './routes/checkpoints.js';
++import schemasRoutes from './routes/schemas.js';
+ import notificationsRoutes from './routes/notifications.js';
+ import teamsRoutes from './routes/teams.js';
+ import optimizerRoutes from './routes/optimizer.js';
+@@ -343,6 +344,7 @@ app.use('/api/tweet-schedule', tweetScheduleRoutes);
+ app.use('/api/crm', crmRoutes);
+ app.use('/api/datasets', datasetsRoutes);
+ app.use('/api/checkpoints', checkpointsRoutes);
++app.use('/api/schemas', schemasRoutes);
+ app.use('/api/notifications', notificationsRoutes);
+ app.use('/api/teams', teamsRoutes);
+ app.use('/api/optimizer', optimizerRoutes);
+
+--- package.json (status:  M)
+diff --git a/package.json b/package.json
+index f3dbabb..6003a2a 100644
+--- a/package.json
++++ b/package.json
+@@ -213,6 +213,7 @@
+   "files": [
+     "src",
+     "types",
++    "schemas",
+     "api/config/x402-config.js"
+   ],
+   "mcpName": "io.github.nirholas/xactions",
+
+--- schemas/shopee/ecom.json (status:  A)
+diff --git a/schemas/shopee/ecom.json b/schemas/shopee/ecom.json
+new file mode 100644
+index 0000000..9bc4ac6
+--- /dev/null
++++ b/schemas/shopee/ecom.json
+@@ -0,0 +1,71 @@
++{
++  "$schema": "http://json-schema.org/draft-07/schema#",
++  "title": "Shopee Ecommerce Product Metadata",
++  "type": "object",
++  "properties": {
++    "itemId": {
++      "oneOf": [
++        { "type": "string" },
++        { "type": "number" }
++      ]
++    },
++    "shopId": {
++      "oneOf": [
++        { "type": "string" },
++        { "type": "number" }
++      ]
++    },
++    "price": {
++      "type": "number",
++      "minimum": 0
++    },
++    "currency": {
++      "type": "string",
++      "default": "VND"
++    },
++    "originalPrice": {
++      "type": "number",
++      "minimum": 0
++    },
++    "discountPercent": {
++      "type": "number",
++      "minimum": 0,
++      "maximum": 100
++    },
++    "rating": {
++      "type": "number",
++      "minimum": 0,
++      "maximum": 5
++    },
++    "soldCount": {
++      "type": "integer",
++      "minimum": 0
++    },
++    "stock": {
++      "type": "integer",
++      "minimum": 0
++    },
++    "location": {
++      "type": "object",
++      "properties": {
++        "region": { "type": "string" },
++        "district": { "type": "string" },
++        "locationRaw": { "type": "string" }
++      }
++    },
++    "sellerName": {
++      "type": "string"
++    },
++    "categoryName": {
++      "type": "string"
++    },
++    "brand": {
++      "type": "string"
++    }
++  },
++  "required": [
++    "itemId",
++    "shopId",
++    "price"
++  ]
++}
+
+--- schemas/twitter/social.json (status:  A)
+diff --git a/schemas/twitter/social.json b/schemas/twitter/social.json
+new file mode 100644
+index 0000000..ca87da3
+--- /dev/null
++++ b/schemas/twitter/social.json
+@@ -0,0 +1,60 @@
++{
++  "$schema": "http://json-schema.org/draft-07/schema#",
++  "title": "Twitter Social Post Metadata",
++  "type": "object",
++  "properties": {
++    "tweetId": {
++      "type": "string"
++    },
++    "replyCount": {
++      "type": "integer",
++      "minimum": 0
++    },
++    "retweetCount": {
++      "type": "integer",
++      "minimum": 0
++    },
++    "likeCount": {
++      "type": "integer",
++      "minimum": 0
++    },
++    "quoteCount": {
++      "type": "integer",
++      "minimum": 0
++    },
++    "bookmarkCount": {
++      "type": "integer",
++      "minimum": 0
++    },
++    "isRetweet": {
++      "type": "boolean"
++    },
++    "isReply": {
++      "type": "boolean"
++    },
++    "isQuote": {
++      "type": "boolean"
++    },
++    "hashtags": {
++      "type": "array",
++      "items": {
++        "type": "string"
++      }
++    },
++    "mentions": {
++      "type": "array",
++      "items": {
++        "type": "string"
++      }
++    },
++    "lang": {
++      "type": "string"
++    },
++    "conversationId": {
++      "type": "string"
++    }
++  },
++  "required": [
++    "tweetId"
++  ]
++}
+
+--- src/cli/index.js (status:  M)
+diff --git a/src/cli/index.js b/src/cli/index.js
+index c399d7c..020819d 100755
+--- a/src/cli/index.js
++++ b/src/cli/index.js
+@@ -3372,6 +3372,65 @@ checkpointsCmd.command('retry <id>')
+     }
+   });
+ 
++// ============================================================================
++// 10-5: Schema Contract Registry (Metadata)
++// ============================================================================
++
++const schemaCmd = program.command('schema')
++  .description('Manage JSON metadata schemas');
++
++schemaCmd.command('list')
++  .description('List all registered schemas')
++  .option('--json', 'Output as JSON')
++  .action(async (options) => {
++    try {
++      const { metadataSchemaRegistry } = await import('../core/index.js');
++      const schemas = metadataSchemaRegistry.listSchemas();
++      if (options.json) {
++        console.log(JSON.stringify(schemas, null, 2));
++      } else {
++        if (schemas.length === 0) {
++          console.log(chalk.dim('No schemas registered.'));
++          return;
++        }
++        console.log(chalk.bold(`Registered Schemas (${schemas.length}):`));
++        schemas.forEach(s => {
++          console.log(`  • ${chalk.cyan(s.platform)} / ${chalk.green(s.category)}`);
++        });
++      }
++    } catch (error) {
++      printCliError(error, options);
++    }
++  });
++
++schemaCmd.command('get <platform> <category>')
++  .description('Get JSON schema definition for a platform and category')
++  .option('--json', 'Output as JSON')
++  .action(async (platform, category, options) => {
++    try {
++      const { metadataSchemaRegistry } = await import('../core/index.js');
++      const schema = metadataSchemaRegistry.getSchema(platform, category);
++      if (!schema) {
++        const { PlatformError, ErrorTypes } = await import('../core/error-envelope.js');
++        throw new PlatformError({
++          type: ErrorTypes.NOT_FOUND,
++          code: 'XACT_4041',
++          message: `Schema not found for platform: ${platform}, category: ${category}`,
++          statusCode: 404
++        });
++      }
++      
++      if (options.json) {
++        console.log(JSON.stringify(schema, null, 2));
++      } else {
++        console.log(chalk.bold(`Schema: ${platform} / ${category}`));
++        console.log(JSON.stringify(schema, null, 2));
++      }
++    } catch (error) {
++      printCliError(error, options);
++    }
++  });
++
+ // ============================================================================
+ // 09-N: Team Management
+ // ============================================================================
+
+--- src/core/base-store.js (status:  M)
+diff --git a/src/core/base-store.js b/src/core/base-store.js
+index 1102e74..b012f57 100644
+--- a/src/core/base-store.js
++++ b/src/core/base-store.js
+@@ -22,17 +22,23 @@ export class AbstractStore {
+ 
+   /**
+    * @param {PostItem} post
++   * @param {Object} [opts]
++   * @param {boolean} [opts.upsert=false]
++   * @param {boolean} [opts.validateSchema=true]
+    * @returns {Promise<void>}
+    */
+-  async storeContent(post) {
++  async storeContent(post, opts = {}) {
+     throw new Error('Method not implemented: storeContent()');
+   }
+ 
+   /**
+    * @param {PostItem[]} posts
++   * @param {Object} [opts]
++   * @param {boolean} [opts.upsert=false]
++   * @param {boolean} [opts.validateSchema=true]
+    * @returns {Promise<void>}
+    */
+-  async storeBatch(posts) {
++  async storeBatch(posts, opts = {}) {
+     throw new Error('Method not implemented: storeBatch()');
+   }
+ 
+
+--- src/core/index.js (status:  M)
+diff --git a/src/core/index.js b/src/core/index.js
+index 51327a6..ca6a5ba 100644
+--- a/src/core/index.js
++++ b/src/core/index.js
+@@ -32,3 +32,4 @@ export {
+   generateCommentId,
+   isValidCategory,
+ } from './types.js';
++export { default as metadataSchemaRegistry } from './metadata-schema-registry.js';
+
+--- src/core/metadata-schema-registry.js (status:  A)
+diff --git a/src/core/metadata-schema-registry.js b/src/core/metadata-schema-registry.js
+new file mode 100644
+index 0000000..598f338
+--- /dev/null
++++ b/src/core/metadata-schema-registry.js
+@@ -0,0 +1,251 @@
++import fs from 'fs';
++import path from 'path';
++import { fileURLToPath } from 'url';
++
++const __filename = fileURLToPath(import.meta.url);
++const __dirname = path.dirname(__filename);
++
++/**
++ * Validates data against a simple JSON schema
++ * Supports type, required, properties, items, enum, minimum, maximum, pattern
++ */
++function validateSchemaNode(schema, data, dataPath = 'metadata') {
++  const errors = [];
++
++  if (schema === undefined || schema === null) return errors;
++  if (data === undefined) return errors; // Missing data is handled by 'required' check in parent
++
++  // Check type
++  if (schema.type) {
++    const types = Array.isArray(schema.type) ? schema.type : [schema.type];
++    let typeValid = false;
++    for (const t of types) {
++      if (t === 'string' && typeof data === 'string') typeValid = true;
++      else if (t === 'number' && typeof data === 'number') typeValid = true;
++      else if (t === 'integer' && typeof data === 'number' && Number.isInteger(data)) typeValid = true;
++      else if (t === 'boolean' && typeof data === 'boolean') typeValid = true;
++      else if (t === 'object' && typeof data === 'object' && data !== null && !Array.isArray(data)) typeValid = true;
++      else if (t === 'array' && Array.isArray(data)) typeValid = true;
++      else if (t === 'null' && data === null) typeValid = true;
++    }
++    if (!typeValid) {
++      errors.push(`${dataPath} must be of type ${types.join(' or ')}`);
++      return errors; // Stop validating deeper if type is wrong
++    }
++  }
++
++  // Check enum
++  if (schema.enum && !schema.enum.includes(data)) {
++    errors.push(`${dataPath} must be one of [${schema.enum.join(', ')}]`);
++  }
++
++  // Number checks
++  if (typeof data === 'number') {
++    if (schema.minimum !== undefined && data < schema.minimum) {
++      errors.push(`${dataPath} must be >= ${schema.minimum}`);
++    }
++    if (schema.maximum !== undefined && data > schema.maximum) {
++      errors.push(`${dataPath} must be <= ${schema.maximum}`);
++    }
++  }
++
++  // String checks
++  if (typeof data === 'string') {
++    if (schema.pattern) {
++      try {
++        const regex = new RegExp(schema.pattern);
++        if (!regex.test(data)) {
++          errors.push(`${dataPath} must match pattern ${schema.pattern}`);
++        }
++      } catch (e) {
++        errors.push(`${dataPath} has invalid regex pattern in schema`);
++      }
++    }
++  }
++
++  // Object checks
++  if (schema.type === 'object' || schema.properties) {
++    if (data === null || (typeof data !== 'object' && typeof data !== 'undefined')) {
++      errors.push(`${dataPath} must be an object`);
++      return errors;
++    }
++    if (schema.required && Array.isArray(schema.required)) {
++      for (const req of schema.required) {
++        if (data[req] === undefined) {
++          errors.push(`${dataPath}.${req} is required`);
++        }
++      }
++    }
++    if (schema.properties && typeof data === 'object' && data !== null) {
++      for (const [key, propSchema] of Object.entries(schema.properties)) {
++        if (data[key] !== undefined) {
++          errors.push(...validateSchemaNode(propSchema, data[key], `${dataPath}.${key}`));
++        }
++      }
++    }
++  }
++
++  // Array checks
++  if ((schema.type === 'array' || schema.items) && Array.isArray(data)) {
++    if (schema.items) {
++      for (let i = 0; i < data.length; i++) {
++        errors.push(...validateSchemaNode(schema.items, data[i], `${dataPath}[${i}]`));
++      }
++    }
++  }
++
++  // oneOf checks
++  if (schema.oneOf && Array.isArray(schema.oneOf)) {
++    let validCount = 0;
++    for (const subSchema of schema.oneOf) {
++      const subErrors = validateSchemaNode(subSchema, data, dataPath);
++      if (subErrors.length === 0) validCount++;
++    }
++    if (validCount !== 1) {
++      errors.push(`${dataPath} must match exactly one of the schemas in oneOf`);
++    }
++  }
++
++  // anyOf checks
++  if (schema.anyOf && Array.isArray(schema.anyOf)) {
++    let anyValid = false;
++    for (const subSchema of schema.anyOf) {
++      const subErrors = validateSchemaNode(subSchema, data, dataPath);
++      if (subErrors.length === 0) {
++        anyValid = true;
++        break;
++      }
++    }
++    if (!anyValid) {
++      errors.push(`${dataPath} must match at least one of the schemas in anyOf`);
++    }
++  }
++
++  return errors;
++}
++
++class MetadataSchemaRegistry {
++  constructor() {
++    this.schemas = new Map();
++  }
++
++  /**
++   * Register a JSON schema for a specific platform and category
++   */
++  registerSchema(platform, category, schema) {
++    if (!platform || !category || !schema) {
++      throw new Error('platform, category, and schema are required');
++    }
++    const key = `${platform}:${category}`;
++    this.schemas.set(key, schema);
++  }
++
++  /**
++   * Get a registered JSON schema
++   */
++  getSchema(platform, category) {
++    const key = `${platform}:${category}`;
++    return this.schemas.get(key) || null;
++  }
++
++  /**
++   * Check if a schema is registered
++   */
++  hasSchema(platform, category) {
++    const key = `${platform}:${category}`;
++    return this.schemas.has(key);
++  }
++
++  /**
++   * Recursively discover and register all .json files in a directory
++   */
++  loadSchemasFromDisk(schemasDir) {
++    if (!fs.existsSync(schemasDir) || !fs.statSync(schemasDir).isDirectory()) return;
++
++    const platforms = fs.readdirSync(schemasDir, { withFileTypes: true });
++    
++    for (const platformDirent of platforms) {
++      if (!platformDirent.isDirectory()) continue;
++      
++      const platform = platformDirent.name;
++      const platformPath = path.join(schemasDir, platform);
++      const schemaFiles = fs.readdirSync(platformPath, { withFileTypes: true });
++      
++      for (const fileDirent of schemaFiles) {
++        if (!fileDirent.isFile() || !fileDirent.name.endsWith('.json')) continue;
++        
++        const category = path.basename(fileDirent.name, '.json');
++        const schemaPath = path.join(platformPath, fileDirent.name);
++        
++        try {
++          const content = fs.readFileSync(schemaPath, 'utf8');
++          const schema = JSON.parse(content);
++          this.registerSchema(platform, category, schema);
++        } catch (error) {
++          console.error(`Failed to load schema from ${schemaPath}:`, error);
++        }
++      }
++    }
++  }
++
++  /**
++   * List all available schemas
++   */
++  listSchemas() {
++    const result = [];
++    for (const [key, schema] of this.schemas.entries()) {
++      const [platform, category] = key.split(':');
++      let propertiesCount = 0;
++      if (schema.properties) {
++        propertiesCount = Object.keys(schema.properties).length;
++      }
++      
++      result.push({
++        platform,
++        category,
++        title: schema.title || '',
++        description: schema.description || '',
++        version: schema.$schema || '',
++        propertiesCount
++      });
++    }
++    return result;
++  }
++
++  /**
++   * Validate a metadata object against the registered schema
++   * Returns { valid: boolean, errors: string[] }
++   */
++  validateMetadata(platform, category, metadata) {
++    const schema = this.getSchema(platform, category);
++    
++    if (!schema) {
++      // If no schema registered, we consider it valid (unbounded fallback)
++      return { valid: true, errors: [] };
++    }
++    
++    // Check if metadata is an object when schema expects one
++    if (schema.type === 'object' && (typeof metadata !== 'object' || metadata === null || Array.isArray(metadata))) {
++      return { valid: false, errors: ['metadata must be of type object'] };
++    }
++    
++    const errors = validateSchemaNode(schema, metadata, 'metadata');
++    
++    return {
++      valid: errors.length === 0,
++      errors
++    };
++  }
++}
++
++const metadataSchemaRegistry = new MetadataSchemaRegistry();
++
++// Auto-load schemas/ directory on module load
++const defaultSchemasDir = path.resolve(__dirname, '../../schemas');
++try {
++  metadataSchemaRegistry.loadSchemasFromDisk(defaultSchemasDir);
++} catch (error) {
++  // Ignore missing directory during initialization (e.g., in some test environments)
++}
++
++export default metadataSchemaRegistry;
+
+--- src/mcp/server.js (status:  M)
+diff --git a/src/mcp/server.js b/src/mcp/server.js
+index b5ef83e..78922c0 100755
+--- a/src/mcp/server.js
++++ b/src/mcp/server.js
+@@ -2613,6 +2613,27 @@ const TOOLS = [
+       },
+     },
+   },
++  {
++    name: 'x_schema_list',
++    description: 'List all registered metadata schemas and their descriptions.',
++    inputSchema: {
++      type: 'object',
++      properties: {},
++      required: [],
++    },
++  },
++  {
++    name: 'x_schema_get',
++    description: 'Get JSON schema definition for a specific platform and category.',
++    inputSchema: {
++      type: 'object',
++      properties: {
++        platform: { type: 'string', description: 'Platform identifier (e.g. "twitter", "shopee")' },
++        category: { type: 'string', description: 'Category identifier (e.g. "social", "ecom")' },
++      },
++      required: ['platform', 'category'],
++    },
++  },
+ ];
+ 
+ // ============================================================================
+@@ -4775,6 +4796,21 @@ async function executeAITool(name, args) {
+       return { topic: args.topic, ...result };
+     }
+ 
++    case 'x_schema_list': {
++      const { metadataSchemaRegistry } = await import('../core/index.js');
++      return { schemas: metadataSchemaRegistry.listSchemas() };
++    }
++
++    case 'x_schema_get': {
++      const { metadataSchemaRegistry } = await import('../core/index.js');
++      const { platform, category } = args;
++      const schema = metadataSchemaRegistry.getSchema(platform, category);
++      if (!schema) {
++        return { error: `Schema not found for platform: ${platform}, category: ${category}` };
++      }
++      return { schema };
++    }
++
+     default:
+       throw new Error(`Unknown AI tool: ${name}`);
+   }
+
+--- src/store/prisma-store.js (status:  M)
+diff --git a/src/store/prisma-store.js b/src/store/prisma-store.js
+index dd4d019..0f1fd5b 100644
+--- a/src/store/prisma-store.js
++++ b/src/store/prisma-store.js
+@@ -8,6 +8,7 @@
+ import { AbstractStore } from '../core/base-store.js';
+ import { generatePostId, generateCommentId, isValidCategory, CATEGORY_VALUES } from '../core/types.js';
+ import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
++import metadataSchemaRegistry from '../core/metadata-schema-registry.js';
+ 
+ export class PrismaStore extends AbstractStore {
+   /** @type {import('@prisma/client').PrismaClient | null} */
+@@ -16,10 +17,14 @@ export class PrismaStore extends AbstractStore {
+   /** @type {number} */
+   #chunkSize = 500;
+ 
++  /** @type {boolean} */
++  #validateSchema = true;
++
+   /**
+    * @param {Object} [options]
+    * @param {import('@prisma/client').PrismaClient} [options.prisma]
+-   * @param {number} [options.chunkSize]
++   * @param {number} [options.chunkSize=500]
++   * @param {boolean} [options.validateSchema=true]
+    */
+   constructor(options = {}) {
+     super();
+@@ -28,6 +33,7 @@ export class PrismaStore extends AbstractStore {
+       typeof options.chunkSize === 'number' && options.chunkSize > 0
+         ? Math.floor(options.chunkSize)
+         : 500;
++    this.#validateSchema = options.validateSchema !== false;
+   }
+ 
+   /** @returns {Promise<void>} */
+@@ -158,10 +164,11 @@ export class PrismaStore extends AbstractStore {
+ 
+   /**
+    * @param {import('../core/types.js').PostItem} post
++   * @param {Object} [opts]
+    * @returns {Promise<void>}
+    */
+-  async storeContent(post) {
+-    await this.storeBatch([post]);
++  async storeContent(post, opts = {}) {
++    await this.storeBatch([post], opts);
+   }
+ 
+   /**
+@@ -173,16 +180,35 @@ export class PrismaStore extends AbstractStore {
+   async storeBatch(posts, opts = {}) {
+     if (!Array.isArray(posts) || !posts.length) return;
+ 
+-    for (const post of posts) {
++    const shouldValidateSchema = opts.validateSchema ?? this.#validateSchema;
++
++    for (let i = 0; i < posts.length; i++) {
++      const post = posts[i];
+       if (!post.category || !isValidCategory(post.category)) {
+         throw new PlatformError({
+           type: ErrorTypes.INVALID_ARGS,
+           code: 'XACT_4001',
+-          message: `Invalid or missing category "${post.category}". Allowed: ${CATEGORY_VALUES.join(', ')}`,
++          message: `Invalid or missing category "${post.category}" at index ${i}. Allowed: ${CATEGORY_VALUES.join(', ')}`,
+           suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+           platform: post.platform,
++          details: { index: i },
+         });
+       }
++
++      if (shouldValidateSchema) {
++        const validation = metadataSchemaRegistry.validateMetadata(post.platform, post.category, post.metadata);
++        if (!validation.valid) {
++          throw new PlatformError({
++            type: ErrorTypes.INVALID_ARGS,
++            code: 'XACT_4001',
++            message: `Metadata schema validation failed at index ${i}`,
++            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++            platform: post.platform,
++            statusCode: 400,
++            details: { index: i, errors: validation.errors },
++          });
++        }
++      }
+     }
+ 
+     await this.init();
+
+--- tests/api/schemas-routes.test.js (status:  A)
+diff --git a/tests/api/schemas-routes.test.js b/tests/api/schemas-routes.test.js
+new file mode 100644
+index 0000000..9731772
+--- /dev/null
++++ b/tests/api/schemas-routes.test.js
+@@ -0,0 +1,30 @@
++import { describe, test, expect } from 'vitest';
++import request from 'supertest';
++import express from 'express';
++import schemasRoutes from '../../api/routes/schemas.js';
++
++const app = express();
++app.use(express.json());
++app.use('/api/schemas', schemasRoutes);
++
++describe('Schemas API Routes', () => {
++  test('GET /api/schemas should return list of registered schemas', async () => {
++    const response = await request(app).get('/api/schemas');
++    expect(response.status).toBe(200);
++    expect(response.body.success).toBe(true);
++    expect(Array.isArray(response.body.data.schemas)).toBe(true);
++  });
++
++  test('GET /api/schemas/:platform/:category should return schema definition', async () => {
++    const response = await request(app).get('/api/schemas/twitter/social');
++    expect(response.status).toBe(200);
++    expect(response.body.success).toBe(true);
++    expect(response.body.data.schema).toBeDefined();
++  });
++
++  test('GET /api/schemas/:platform/:category should return 404 for unknown schema', async () => {
++    const response = await request(app).get('/api/schemas/unknown/unknown');
++    expect(response.status).toBe(404);
++    expect(response.body.error.code).toBe('XACT_4041');
++  });
++});
+
+--- tests/core/metadata-schema-registry.test.js (status:  A)
+diff --git a/tests/core/metadata-schema-registry.test.js b/tests/core/metadata-schema-registry.test.js
+new file mode 100644
+index 0000000..7a4735c
+--- /dev/null
++++ b/tests/core/metadata-schema-registry.test.js
+@@ -0,0 +1,48 @@
++import { describe, test, expect } from 'vitest';
++import metadataSchemaRegistry from '../../src/core/metadata-schema-registry.js';
++import path from 'path';
++
++import { fileURLToPath } from 'url';
++
++const __filename = fileURLToPath(import.meta.url);
++const __dirname = path.dirname(__filename);
++
++describe('MetadataSchemaRegistry Service', () => {
++  test('loadSchemasFromDisk should recursively discover and register .json files synchronously', () => {
++    const schemasDir = path.resolve(__dirname, '../../schemas');
++    metadataSchemaRegistry.loadSchemasFromDisk(schemasDir);
++    const schemas = metadataSchemaRegistry.listSchemas();
++    expect(schemas.length).toBeGreaterThan(0);
++    expect(schemas.some(s => s.platform === 'twitter' && s.category === 'social')).toBe(true);
++  });
++
++  test('registerSchema should cache schema in memory', () => {
++    const dummySchema = { type: 'object', properties: { test: { type: 'string' } } };
++    metadataSchemaRegistry.registerSchema('dummy', 'test', dummySchema);
++    const retrieved = metadataSchemaRegistry.getSchema('dummy', 'test');
++    expect(retrieved).toEqual(dummySchema);
++  });
++
++  test('getSchema should return null if not found', () => {
++    expect(metadataSchemaRegistry.getSchema('unknown', 'unknown')).toBeNull();
++  });
++
++  test('hasSchema should return true if registered', () => {
++    metadataSchemaRegistry.registerSchema('dummy', 'test2', {});
++    expect(metadataSchemaRegistry.hasSchema('dummy', 'test2')).toBe(true);
++    expect(metadataSchemaRegistry.hasSchema('unknown', 'unknown')).toBe(false);
++  });
++
++  test('validateMetadata should accumulate errors with exact JSON paths', () => {
++    const dummySchema = { 
++      type: 'object', 
++      properties: { user: { type: 'object', properties: { age: { type: 'integer', minimum: 0 } } } } 
++    };
++    metadataSchemaRegistry.registerSchema('dummy', 'validate', dummySchema);
++    
++    const result = metadataSchemaRegistry.validateMetadata('dummy', 'validate', { user: { age: -5 } });
++    expect(result.valid).toBe(false);
++    expect(result.errors.length).toBeGreaterThan(0);
++    expect(result.errors[0]).toContain('user.age');
++  });
++});
+
+--- tests/store/prisma-store-schema-validation.test.js (status:  A)
+diff --git a/tests/store/prisma-store-schema-validation.test.js b/tests/store/prisma-store-schema-validation.test.js
+new file mode 100644
+index 0000000..fef015c
+--- /dev/null
++++ b/tests/store/prisma-store-schema-validation.test.js
+@@ -0,0 +1,61 @@
++import { describe, test, expect, beforeEach } from 'vitest';
++import { PrismaStore } from '../../src/store/prisma-store.js';
++import metadataSchemaRegistry from '../../src/core/metadata-schema-registry.js';
++import { PlatformError } from '../../src/core/error-envelope.js';
++
++describe('PrismaStore Metadata Validation Hook', () => {
++  let store;
++
++  beforeEach(() => {
++    store = new PrismaStore({ tenantId: 'test' });
++    metadataSchemaRegistry.registerSchema('dummy', 'social', {
++      type: 'object',
++      properties: { count: { type: 'integer' } },
++      required: ['count']
++    });
++  });
++
++  test('storeContent should throw XACT_4001 if metadata violates schema', async () => {
++    const invalidItem = {
++      platform: 'dummy',
++      category: 'social',
++      externalId: '123',
++      type: 'post',
++      content: 'test',
++      metadata: { count: 'not-a-number' }
++    };
++    
++    await expect(store.storeContent(invalidItem)).rejects.toThrow(PlatformError);
++    await expect(store.storeContent(invalidItem)).rejects.toHaveProperty('code', 'XACT_4001');
++  });
++
++  test('storeBatch should throw XACT_4001 before transaction if any item is invalid', async () => {
++    const items = [
++      { platform: 'dummy', category: 'social', externalId: '1', type: 'post', content: 'valid', metadata: { count: 1 } },
++      { platform: 'dummy', category: 'social', externalId: '2', type: 'post', content: 'invalid', metadata: { count: 'bad' } }
++    ];
++    
++    await expect(store.storeBatch(items)).rejects.toThrow(PlatformError);
++    await expect(store.storeBatch(items)).rejects.toMatchObject({
++      code: 'XACT_4001',
++      message: expect.stringContaining('index 1')
++    });
++  });
++
++  test('storeContent should allow insertion if validateSchema bypass is used', async () => {
++    store = new PrismaStore({
++      tenantId: 'test',
++      prisma: { post: { createMany: async () => {} }, $connect: async () => {} }
++    });
++    const invalidItem = {
++      platform: 'dummy',
++      category: 'social',
++      externalId: '123',
++      type: 'post',
++      content: 'test',
++      metadata: { count: 'not-a-number' }
++    };
++    
++    await expect(store.storeContent(invalidItem, { validateSchema: false })).resolves.not.toThrow();
++  });
++});
+
+--- types/index.d.ts (status:  M)
+diff --git a/types/index.d.ts b/types/index.d.ts
+index 128652f..47d03b6 100644
+--- a/types/index.d.ts
++++ b/types/index.d.ts
+@@ -765,3 +765,4 @@ export * as checkpointManager from './checkpoint-manager';
+ 
+ 
+ 
++export * as metadataSchema from './metadata-schema';
+
+--- types/metadata-schema.d.ts (status:  A)
+diff --git a/types/metadata-schema.d.ts b/types/metadata-schema.d.ts
+new file mode 100644
+index 0000000..416e6f2
+--- /dev/null
++++ b/types/metadata-schema.d.ts
+@@ -0,0 +1,70 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * TypeScript Type Declarations for Metadata Schema Registry
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++export interface JsonSchema {
++  $schema?: string;
++  title?: string;
++  description?: string;
++  type?: string | string[];
++  properties?: Record<string, JsonSchema>;
++  required?: string[];
++  items?: JsonSchema;
++  enum?: unknown[];
++  minimum?: number;
++  maximum?: number;
++  pattern?: string;
++  oneOf?: JsonSchema[];
++  anyOf?: JsonSchema[];
++}
++
++export interface ValidationResult {
++  valid: boolean;
++  errors?: string[];
++}
++
++export interface SchemaDescriptor {
++  platform: string;
++  category: string;
++  title: string;
++  description: string;
++  version: string;
++  propertiesCount: number;
++}
++
++export interface MetadataSchemaRegistry {
++  /**
++   * Register a JSON schema for a specific platform and category
++   */
++  registerSchema(platform: string, category: string, schema: JsonSchema): void;
++
++  /**
++   * Get the JSON schema definition for a specific platform and category
++   */
++  getSchema(platform: string, category: string): JsonSchema | null;
++
++  /**
++   * Check if a schema is registered
++   */
++  hasSchema(platform: string, category: string): boolean;
++
++  /**
++   * Recursively discover and register all .json files in a directory
++   */
++  loadSchemasFromDisk(schemasDir: string): void;
++
++  /**
++   * Validate a metadata object against the registered schema for its platform and category
++   */
++  validateMetadata(platform: string, category: string, metadata: object): ValidationResult;
++
++  /**
++   * List all registered schemas
++   */
++  listSchemas(): SchemaDescriptor[];
++}
++
++export const metadataSchemaRegistry: MetadataSchemaRegistry;
+
+--- types/store.d.ts (status:  M)
+diff --git a/types/store.d.ts b/types/store.d.ts
+index ef56d5f..b0c1395 100644
+--- a/types/store.d.ts
++++ b/types/store.d.ts
+@@ -46,8 +46,8 @@ export interface CommentItem {
+ 
+ export abstract class AbstractStore {
+   abstract init(): Promise<void>;
+-  abstract storeContent(post: PostItem): Promise<void>;
+-  abstract storeBatch(posts: PostItem[], opts?: { upsert?: boolean }): Promise<void>;
++  abstract storeContent(post: PostItem, opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
++  abstract storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
+   abstract storeComment(comment: CommentItem): Promise<void>;
+   abstract storeCommentBatch(comments: CommentItem[], opts?: { upsert?: boolean }): Promise<void>;
+   abstract close(): Promise<void>;
+@@ -56,13 +56,14 @@ export abstract class AbstractStore {
+ export interface PrismaStoreOptions {
+   prisma?: unknown;
+   chunkSize?: number;
++  validateSchema?: boolean;
+ }
+ 
+ export class PrismaStore extends AbstractStore {
+   constructor(options?: PrismaStoreOptions);
+   init(): Promise<void>;
+-  storeContent(post: PostItem): Promise<void>;
+-  storeBatch(posts: PostItem[], opts?: { upsert?: boolean }): Promise<void>;
++  storeContent(post: PostItem, opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
++  storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
+   storeComment(comment: CommentItem): Promise<void>;
+   storeCommentBatch(comments: CommentItem[], opts?: { upsert?: boolean }): Promise<void>;
+   close(): Promise<void>;
+

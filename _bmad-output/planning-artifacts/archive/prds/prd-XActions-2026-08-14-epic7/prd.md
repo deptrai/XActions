@@ -9,6 +9,7 @@ epic: 7
 prd_ref:
   - prd-XActions-2026-06-08
   - prd-XActions-2026-06-10-epic4
+note: Nội dung FR-55..63 đã được cập nhật trong epics-full.md; FR-62 deferred. Giữ lại để tham khảo lịch sử.
 ---
 
 # PRD: Epic 7 — Facebook Advanced Scraping & Multi-Account Parallel Execution
