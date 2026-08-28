@@ -21,9 +21,20 @@ The following decisions are non-negotiable and override any earlier language in 
 
 1. **Do not break Story 15.1 / 15.1.1 / 15.1.2 behavior.** `get_user_feed`, `profile`, `followers`, `following`, and `post_detail` must keep working with their existing `doc_id`s. Only `search` and `get_post_comments` are in scope for hardening.
 2. **`DEFAULT_THREADS_DOC_IDS` is the single source of truth.** Update `src/scrapers/social/threads/crawler.js:30-42` with verified/candidate `SEARCH_POSTS`, `COMMENT_ROOTS`, and `COMMENT_REPLIES` values. Preserve the ability to override via `deps.docIds`.
-3. **SSR fallbacks must remain intact but secondary.** When a hardened `doc_id` is configured, the GraphQL path is tried first. If GraphQL fails with `XACT_5000` / rate-limit / bot-challenge, or the `doc_id` is `null`, fall back to the existing SSR HTML path already implemented in `searchPosts` and `getPostComments`.
+   - Defaults are **non-null candidate/verified strings** so GraphQL path runs by default.
+   - Operators can force SSR fallback at runtime by passing `deps.docIds: { SEARCH_POSTS: null, COMMENT_ROOTS: null, COMMENT_REPLIES: null }`.
+3. **SSR fallbacks must remain intact but secondary.** When a hardened `doc_id` is configured, the GraphQL path is tried first. If GraphQL fails with `XACT_5000` / `XACT_4290` / `XACT_4030`, or the `doc_id` is `null`, fall back to the existing SSR HTML path already implemented in `searchPosts` and `getPostComments`.
 4. **No schema or Prisma changes.** Search and comments still normalize to `PostItem[]` and `CommentItem[]` using the existing `#normalizePostItem` / `#normalizeCommentItem` helpers.
-5. **Doc IDs are reverse-engineered from live Meta GraphQL traffic.** Story 15.1 and 15.1.2 left `SEARCH_POSTS`, `COMMENT_ROOTS`, `COMMENT_REPLIES` as `null`. This story provides the operational pipeline to capture, verify, and harden them. If live capture is not available in the test environment, use documented candidate `doc_id`s and clearly mark them as `candidate` vs `verified`.
+5. **Doc IDs must be captured from live Meta GraphQL traffic.** Story 15.1 and 15.1.2 left them as `null`. The capture process is:
+   1. Open a real browser to `https://www.threads.net`, log in if needed (use test account).
+   2. Open DevTools → Network → filter `doc_id`.
+   3. Trigger the action:
+      - `search`: type a query in the search box or load `https://www.threads.net/search?q=<query>`.
+      - `COMMENT_ROOTS`: open a post and click "View all comments" / scroll comments.
+      - `COMMENT_REPLIES`: expand a reply thread under any comment.
+   4. Copy the `doc_id` and `variables` payload from the `POST /api/graphql` request.
+   5. Verify the response contains the expected shape (see sections below) and save the value in `DEFAULT_THREADS_DOC_IDS` with a `verified` or `candidate` marker comment.
+   - If live capture is unavailable, use documented candidate values and mark them `candidate`.
 6. **Token/cookie values never logged.** `lsd`, `csrftoken`, `fb_dtsg`, and any cookie must not appear in logs, errors, or envelopes (NFR-4).
 
 ## Story
@@ -39,12 +50,13 @@ So that **crawler không phụ thuộc HTML parsing dễ vỡ và đạt through
 ### AC-1: `DEFAULT_THREADS_DOC_IDS` gets hardened/candidate doc_id values for search and comments
 - **Given** `src/scrapers/social/threads/crawler.js`
 - **When** the `DEFAULT_THREADS_DOC_IDS` map is loaded
-- **Then** it contains:
-  - `SEARCH_POSTS`: a non-null `doc_id` string for `BarcelonaSearchPostsQuery` (candidate or verified)
-  - `COMMENT_ROOTS`: a non-null `doc_id` string for root/top-level comments query
-  - `COMMENT_REPLIES`: a non-null `doc_id` string for nested reply comments query
-- **And** constructor `deps.docIds` still overrides these values [Source: `src/scrapers/social/threads/crawler.js:84-88`]
-- **And** the values can be `null` at runtime to force SSR fallback for degraded environments
+- **Then** it contains non-null `doc_id` strings for:
+  - `SEARCH_POSTS`: `BarcelonaSearchPostsQuery` (candidate/verified)
+  - `COMMENT_ROOTS`: root/top-level comments query (candidate/verified)
+  - `COMMENT_REPLIES`: nested reply comments query (candidate/verified)
+- **And** each value is annotated with an inline comment marking it `verified` or `candidate`
+- **And** `deps.docIds` overrides `DEFAULT_THREADS_DOC_IDS` in the constructor [Source: `src/scrapers/social/threads/crawler.js:84-88`]
+- **And** passing `null` via `deps.docIds` (or after override) forces the SSR fallback path
 
 ### AC-2: `search(query)` prefers GraphQL when `SEARCH_POSTS` is configured
 - **Given** `searchPosts(args, session)` in `src/scrapers/social/threads/crawler.js:980-1099`
@@ -53,7 +65,9 @@ So that **crawler không phụ thuộc HTML parsing dễ vỡ và đạt through
 - **And** it extracts `PostItem[]` from the GraphQL response shape:
   - `res.data.mediaData.threads[]` (thread wrappers)
   - `res.data.searchResults.edges[].node` (edge wrappers)
-  - `res.data.data.searchResults` (nested relay envelope)
+  - `res.data.data.searchResults.edges[].node` (nested relay envelope)
+  - `res.data.data.searchResults.page_info` for pagination
+- **And** it sets `post.metadata.sourceMethod = 'graphql'` for every post returned from the GraphQL path
 - **And** it validates each post with `this.validateItem(post)`
 - **And** it persists via `storeBatch`, emits checkpoint/stream exactly as the SSR path does
 - **And** it returns `{ posts, pageInfo }` with `pageInfo.end_cursor` / `has_next_page` from `page_info` if present
@@ -61,28 +75,40 @@ So that **crawler không phụ thuộc HTML parsing dễ vỡ và đạt through
 ### AC-3: `search` falls back to SSR only when GraphQL is unavailable or fails
 - **Given** `this.docIds.SEARCH_POSTS` is `null`, or the GraphQL request throws `XACT_5000`/`XACT_4290`/`XACT_4030`
 - **When** `searchPosts` runs
-- **Then** it falls back to the existing SSR HTTP `GET /search?q=...` path [Source: `src/scrapers/social/threads/crawler.js:1032-1098`]
+- **Then** it catches the `PlatformError`, logs a warning with the error `code` (never token values), and falls back to the existing SSR HTTP `GET /search?q=...` path [Source: `src/scrapers/social/threads/crawler.js:1032-1098`]
 - **And** it does not double-persist or double-emit when both paths are attempted
-- **And** if both fail, it throws the last `PlatformError` with `suggestedAction: 'retry_after_delay'` or `rotate_account` as appropriate
+- **And** if the SSR path also fails, it throws the last `PlatformError` with:
+  - `suggestedAction: 'rotate_account'` for `XACT_4290`/`XACT_4030`
+  - `suggestedAction: 'retry_after_delay'` for `XACT_5000`
+  - `suggestedAction: 'use_actions_list'` for `XACT_4001`
 
 ### AC-4: `get_post_comments` prefers dedicated `COMMENT_ROOTS` and `COMMENT_REPLIES` doc_ids
 - **Given** `getPostComments(args, session)` in `src/scrapers/social/threads/crawler.js:1121-1277`
 - **When** fetching the root comment layer (`parentCommentId == null`)
-- **Then** it uses `this.docIds.COMMENT_ROOTS` first, falls back to `this.docIds.POST_DETAIL`, and only then to SSR parsing
+- **Then** it follows this precedence:
+  1. `this.docIds.COMMENT_ROOTS` if non-null
+  2. `this.docIds.POST_DETAIL` (`5587632691339264`) and use `#extractFallbackRootComments` [Source: `src/scrapers/social/threads/crawler.js:780-853`]
+  3. SSR HTML parse of the post page
 - **And** when fetching a nested reply layer (`parentCommentId != null`)
-- **Then** it uses `this.docIds.COMMENT_REPLIES` and throws `XACT_5000` only if that `doc_id` is `null`
+- **Then** it uses `this.docIds.COMMENT_REPLIES`
+- **And** if `COMMENT_REPLIES` is `null`, it clamps the remaining depth to `0`, logs a warning, and does **not** throw
 - **And** it continues to clamp `maxDepth` to `[0, 5]` (default `3`) and `maxComments` to `[1, 2000]` (default `500`)
 
 ### AC-5: GraphQL comment extraction supports relay connection shape
 - **Given** a dedicated `COMMENT_ROOTS` or `COMMENT_REPLIES` `doc_id`
 - **When** `getPostComments` receives the GraphQL response
-- **Then** it correctly unwraps the following response shapes:
-  - `data.data.node.comment_rendering_instance_for_feed_location.comments.edges[].node` (root comments)
-  - `data.data.node.replies_connection.edges[].node` (nested replies)
-  - `data.data.comments.edges[].node` (flat connection)
-  - `data.data.replies_connection.edges[].node` (flat connection)
+- **Then** it correctly unwraps the following response shapes (reuse existing `unwrapNode` helper):
+  - **Root comments:**
+    - `res.data.data.node.comment_rendering_instance_for_feed_location.comments.edges[].node`
+    - `res.data.data.node.comments.edges[].node`
+    - `res.data.data.comments.edges[].node`
+    - `res.data.data.reply_threads[].thread_items[].post` (POST_DETAIL fallback)
+  - **Nested replies:**
+    - `res.data.data.node.replies_connection.edges[].node`
+    - `res.data.data.replies_connection.edges[].node`
+- **And** it passes `parentCommentId` into the raw node as `parentId` when missing [Source: `src/scrapers/social/threads/crawler.js:1240-1244`]
 - **And** it returns `{ comments, pageInfo }` with pagination cursor from `connection.page_info`
-- **And** `CommentTreeExtractor` receives the same `CommentItem[]` shape it receives today
+- **And** `CommentTreeExtractor` receives the same raw node shape it receives today
 
 ### AC-6: `post_detail` still uses `POST_DETAIL` and optionally delegates to `get_post_comments`
 - **Given** `post_detail` action in `src/scrapers/social/threads/crawler.js:1280-1420`
@@ -102,40 +128,51 @@ So that **crawler không phụ thuộc HTML parsing dễ vỡ và đạt through
 - **When** running `npm test`
 - **Then** no `vi.fn`, mocks, stubs, or fakes are used
 - **And** a local `http.createServer` serves:
-  - `POST /api/graphql` returning `BarcelonaSearchPostsQuery`, `COMMENT_ROOTS`, and `COMMENT_REPLIES` payloads
+  - `POST /api/graphql` that routes by `doc_id` to return:
+    - `BarcelonaSearchPostsQuery` payload for `SEARCH_POSTS`
+    - Root comment connection for `COMMENT_ROOTS`
+    - Nested reply connection for `COMMENT_REPLIES`
+    - `POST_DETAIL` (`5587632691339264`) payload for fallback
   - `GET /search?q=...` returning SSR HTML (to verify fallback)
-- **And** `search` returns `PostItem[]` with `metadata.sourceMethod === 'graphql'` when `SEARCH_POSTS` is configured
-- **And** `get_post_comments` returns `CommentItem[]` with correct depth and `parentCommentId` when `COMMENT_ROOTS`/`COMMENT_REPLIES` are configured
-- **And** SSR fallback is exercised when `SEARCH_POSTS` or `COMMENT_ROOTS` is `null`
+- **And** `search` returns `PostItem[]` with `metadata.sourceMethod === 'graphql'` when `SEARCH_POSTS` is configured and `sourceMethod === 'ssr'` when SSR fallback triggers
+- **And** `get_post_comments` returns `CommentItem[]` with correct `depth` and `parentCommentId` when `COMMENT_ROOTS`/`COMMENT_REPLIES` are configured
+- **And** SSR fallback is exercised when `SEARCH_POSTS` or `COMMENT_ROOTS`/`COMMENT_REPLIES` is `null`
+- **And** GraphQL failure (invalid/rotated `doc_id`) causes a fallback to SSR for `search` and `POST_DETAIL` for `get_post_comments`
 - **And** `npm run typecheck` passes
 - **And** regression `tests/scrapers/social/threads/` passes
 
 ## Tasks / Subtasks
 
 - [ ] T1: Capture and harden `SEARCH_POSTS`, `COMMENT_ROOTS`, `COMMENT_REPLIES` doc_ids
-  - [ ] T1.1: Add candidate/verified `doc_id` values to `DEFAULT_THREADS_DOC_IDS` [Source: `src/scrapers/social/threads/crawler.js:30-42`]
-  - [ ] T1.2: Document how to override via `deps.docIds` and how to force SSR fallback by setting `null`
-  - [ ] T1.3: Add doc_id verification script or capture notes under `docs/` or `_bmad-output/research/`
+  - [ ] T1.1: Capture live doc_ids from `https://www.threads.net/api/graphql` (see Critical Constraints #5)
+  - [ ] T1.2: Add candidate/verified `doc_id` values to `DEFAULT_THREADS_DOC_IDS` with `verified`/`candidate` comments [Source: `src/scrapers/social/threads/crawler.js:30-42`]
+  - [ ] T1.3: Document override via `deps.docIds` and how to force SSR fallback by setting `null`
+  - [ ] T1.4: Add doc_id verification script or capture notes under `_bmad-output/research/threads-docid-capture-notes.md`
 - [ ] T2: Harden `searchPosts` GraphQL path
-  - [ ] T2.1: Move GraphQL-first logic to top of `searchPosts`; keep existing SSR fallback block [Source: `src/scrapers/social/threads/crawler.js:993-1099`]
-  - [ ] T2.2: Extract `PostItem[]` from `mediaData.threads[]`, `searchResults.edges[]`, and nested `data.data.searchResults`
-  - [ ] T2.3: Ensure `validateItem`, `storeBatch`, checkpoint, and thin event are called for GraphQL results
-  - [ ] T2.4: Preserve `sourceMethod` tagging: `graphql` for GraphQL, `ssr` for SSR
+  - [ ] T2.1: Ensure GraphQL-first logic at top of `searchPosts`; keep existing SSR fallback block [Source: `src/scrapers/social/threads/crawler.js:993-1099`]
+  - [ ] T2.2: Extract `PostItem[]` from `mediaData.threads[]`, `searchResults.edges[]`, and nested `data.data.searchResults.edges[]`
+  - [ ] T2.3: Set `post.metadata.sourceMethod = 'graphql'` for every post from the GraphQL path
+  - [ ] T2.4: Ensure `validateItem`, `storeBatch`, checkpoint, and thin event are called for GraphQL results
+  - [ ] T2.5: Wrap GraphQL call in `try/catch`; on `XACT_5000`/`XACT_4290`/`XACT_4030`, log warning and fall back to SSR
+  - [ ] T2.6: Preserve `sourceMethod` tagging: `graphql` for GraphQL, `ssr` for SSR
 - [ ] T3: Harden `getPostComments` GraphQL path
-  - [ ] T3.1: Update `fetchLayer` in `getPostComments` to select `COMMENT_ROOTS` before `POST_DETAIL` for root layer [Source: `src/scrapers/social/threads/crawler.js:1146-1167`]
-  - [ ] T3.2: Use `COMMENT_REPLIES` for nested reply layer; keep `XACT_5000` only when it is `null`
+  - [ ] T3.1: Ensure `fetchLayer` selects `COMMENT_ROOTS` → `POST_DETAIL` → SSR for root layer [Source: `src/scrapers/social/threads/crawler.js:1146-1167`]
+  - [ ] T3.2: Use `COMMENT_REPLIES` for nested reply layer; if `null`, clamp remaining depth to `0` and log warning (do not throw)
   - [ ] T3.3: Add extraction for `node.comment_rendering_instance_for_feed_location.comments` and `node.replies_connection` shapes
   - [ ] T3.4: Keep `POST_DETAIL` fallback for root comments and SSR parsing as last resort
+  - [ ] T3.5: Try common variable shapes when calling `COMMENT_ROOTS` / `COMMENT_REPLIES`: `postID`, `post_id`, `after`, `first`, and (for reply layer) `parentCommentId`, `parent_comment_id`, `parent_id`, `parentId`
 - [ ] T4: Update `docs/deprecation-plan.md`
   - [ ] T4.1: Add note in `Threads Puppeteer` row that search and comments are hardened with GraphQL doc_ids
   - [ ] T4.2: Ensure status remains `deprecated-marked` (not `removed` — integration is Story 15.1.4)
 - [ ] T5: Write tests
   - [ ] T5.1: Create `tests/scrapers/social/threads/crawler-docid-hardening.test.js`
-  - [ ] T5.2: Test GraphQL `search` returns full `PostItem[]` with `sourceMethod: 'graphql'`
-  - [ ] T5.3: Test GraphQL `get_post_comments` root + nested returns `CommentItem[]` with correct depth
+  - [ ] T5.2: Test GraphQL `search` returns full `PostItem[]` with `metadata.sourceMethod === 'graphql'`
+  - [ ] T5.3: Test GraphQL `get_post_comments` root + nested returns `CommentItem[]` with correct `depth` and `parentCommentId`
   - [ ] T5.4: Test SSR fallback triggers when `SEARCH_POSTS` / `COMMENT_ROOTS` / `COMMENT_REPLIES` is `null`
-  - [ ] T5.5: Test GraphQL failure (rate limit / invalid doc_id) falls back to SSR
-  - [ ] T5.6: Run `npm run typecheck` and regression suites
+  - [ ] T5.5: Test GraphQL failure (rate limit / invalid doc_id) falls back to SSR for `search` and to `POST_DETAIL`/SSR for `get_post_comments`
+  - [ ] T5.6: Test GraphQL `search` pagination returns `pageInfo.end_cursor`
+  - [ ] T5.7: Test `post_detail` with `includeReplies=true` and `COMMENT_ROOTS`/`COMMENT_REPLIES` configured returns full comment tree
+  - [ ] T5.8: Run `npm run typecheck` and regression suites
 
 ## Dev Notes
 
@@ -175,8 +212,16 @@ So that **crawler không phụ thuộc HTML parsing dễ vỡ và đạt through
 | `get_post_comments` root | (capture in T1) | `COMMENT_ROOTS` | `{ "postID": "<id>", "after", "first" }` | Harden target |
 | `get_post_comments` reply | (capture in T1) | `COMMENT_REPLIES` | `{ "postID": "<id>", "parentCommentId": "...", "after", "first" }` | Harden target |
 
-- If a hardened `doc_id` is rotated and returns GraphQL errors, throw `XACT_5000` `suggestedAction: 'retry_after_delay'` and fall back to SSR if available. Log a warning without exposing token values.
-- Candidate values (not verified, to be confirmed from live network):
+- **Status legend:**
+  - `verified` — tested against live `/api/graphql` response and confirmed correct shape.
+  - `candidate` — captured from network traffic but not fully validated; may rotate.
+  - `fallback` — existing fallback behavior, no dedicated `doc_id`.
+- If a hardened `doc_id` is rotated and returns GraphQL errors, log a warning (no token values), fall back to SSR/`POST_DETAIL` if available, and re-throw only if **all** paths fail.
+- Candidate variable shapes to try when capturing:
+  - `SEARCH_POSTS`: `{ query, first, after, serp_type }`
+  - `COMMENT_ROOTS`: `{ postID, post_id, after, first }`
+  - `COMMENT_REPLIES`: `{ postID, post_id, parentCommentId, parent_comment_id, parent_id, parentId, after, first }`
+- Capture sources:
   - `SEARCH_POSTS`: capture from `https://www.threads.net/api/graphql` when typing in search box or loading `/search?q=...`.
   - `COMMENT_ROOTS`: capture when clicking "View all comments" or loading a post page root comments pagination.
   - `COMMENT_REPLIES`: capture when expanding a reply thread in the UI.
@@ -186,8 +231,8 @@ So that **crawler không phụ thuộc HTML parsing dễ vỡ và đạt through
 - `PostItem.id` = `generatePostId('threads', post.pk)` [Source: `src/core/types.js:190-192`].
 - `CommentItem.id` = `generateCommentId('threads', postId, replyPost.pk)` [Source: `src/core/types.js:200-202`].
 - `#normalizePostItem` and `#normalizeCommentItem` already handle all field mapping [Source: `src/scrapers/social/threads/crawler.js:324-461`].
-- For search, set `metadata.sourceMethod = 'graphql'` or `'ssr'` depending on the active path.
-- For comments, `metadata.sourceMethod` is set to `'graphql'` by the normalizer already.
+- **Critical:** For search, explicitly set `post.metadata.sourceMethod = 'graphql'` after extracting from GraphQL path, and `'ssr'` after extracting from SSR path. The normalizer default is `'graphql'`, so the GraphQL path needs no change unless posts are re-normalized.
+- For comments, `metadata.sourceMethod` is `'graphql'` by default from the normalizer; keep as-is.
 
 ### Search GraphQL Response Shapes
 
@@ -232,19 +277,26 @@ The `fetchLayer` already has an `unwrapNode` helper to drill through nested `edg
 ### Anti-Bot & Error Handling
 
 - Reuse `ThreadsPlatformResponseValidator` [Source: `src/scrapers/social/threads/validator.js:1-233`].
-- `AbstractApiClient.request()` throws `PlatformError` with appropriate codes; the existing `searchPosts` and `getPostComments` should catch these and route to SSR fallback.
-- If a dedicated comment `doc_id` is `null`, the existing logic throws `XACT_5000` with `suggestedAction: 'retry_after_delay'`.
+- `AbstractApiClient.request()` throws `PlatformError` with appropriate codes; `searchPosts` and `getPostComments` must catch these and route to SSR/`POST_DETAIL` fallback.
+- GraphQL `errors` array with `code` 1675004 / 1357001 / similar indicates a rotated/invalid `doc_id` — treat as `XACT_5000` and fall back, never log token values.
+- For `get_post_comments`, if `COMMENT_REPLIES` is `null`, do **not** throw `XACT_5000`; clamp depth to `0` and log warning exactly as Story 15.1.2 does.
 
 ### Testing Strategy
 
 - **No mocks, no `vi.fn`, no fake HTTP clients** [Source: `AGENTS.md`, `CLAUDE.md`].
 - Use `http.createServer` to serve:
-  - `POST /api/graphql` returning `BarcelonaSearchPostsQuery`, root comment, and reply payloads.
+  - `POST /api/graphql` routing by `doc_id` to return:
+    - `BarcelonaSearchPostsQuery` (`SEARCH_POSTS`) with `searchResults.edges[].node` + `page_info`
+    - `COMMENT_ROOTS` with `node.comment_rendering_instance_for_feed_location.comments.edges[].node` + `page_info`
+    - `COMMENT_REPLIES` with `node.replies_connection.edges[].node` + `page_info`
+    - `POST_DETAIL` (`5587632691339264`) with `containing_thread` + `reply_threads`
+    - Invalid `doc_id` response with `errors: [{ code: 1675004, message: 'Invalid doc_id' }]`
   - `GET /search?q=...` returning SSR HTML with embedded JSON search results.
-- Test that `search` with `SEARCH_POSTS` configured returns `PostItem[]` and `pageInfo` from GraphQL.
-- Test that `get_post_comments` with `COMMENT_ROOTS` and `COMMENT_REPLIES` configured returns a full hierarchical `CommentItem[]` tree.
-- Test that setting `SEARCH_POSTS: null` or `COMMENT_REPLIES: null` triggers the SSR / fallback path.
-- Test that an invalid/rotated `doc_id` (GraphQL returns `errors`) falls back to SSR for `search`.
+- Test that `search` with `SEARCH_POSTS` configured returns `PostItem[]` with `metadata.sourceMethod === 'graphql'` and `pageInfo` from GraphQL.
+- Test that `search` with `SEARCH_POSTS: null` or invalid `doc_id` returns `PostItem[]` with `metadata.sourceMethod === 'ssr'`.
+- Test that `get_post_comments` with `COMMENT_ROOTS` and `COMMENT_REPLIES` configured returns a full hierarchical `CommentItem[]` tree with correct `depth`.
+- Test that `get_post_comments` with `COMMENT_REPLIES: null` clamps to depth `0` and logs a warning.
+- Test that `post_detail({ includeReplies: true })` uses `COMMENT_ROOTS`/`COMMENT_REPLIES` when configured.
 - Test `npm run typecheck` and full Threads regression.
 
 ## Technical Requirements
@@ -392,4 +444,15 @@ Create Story Workflow — `bmad-create-story` skill.
 
 ### Open Decisions / Outstanding Items
 
-- Actual `SEARCH_POSTS`, `COMMENT_ROOTS`, `COMMENT_REPLIES` `doc_id` values must be captured from a live Threads web session during implementation. If not available, the story should use well-documented candidate values and mark them as `candidate` in code comments and tests.
+- None — capture methodology and candidate/verified markers are documented in Critical Constraints #5 and GraphQL doc_id Strategy sections.
+
+### Implementation Checklist (Quick Scan)
+
+- [ ] `DEFAULT_THREADS_DOC_IDS.SEARCH_POSTS`, `COMMENT_ROOTS`, `COMMENT_REPLIES` populated with candidate/verified values and inline status comments.
+- [ ] `searchPosts` tries GraphQL first, falls back to SSR on `XACT_5000`/`XACT_4290`/`XACT_4030`, sets correct `metadata.sourceMethod`.
+- [ ] `getPostComments` root layer uses `COMMENT_ROOTS` → `POST_DETAIL` → SSR; reply layer uses `COMMENT_REPLIES` or clamps to depth `0`.
+- [ ] Response-shape extraction covers `searchResults.edges[].node`, `mediaData.threads[]`, `comment_rendering_instance_for_feed_location.comments.edges[].node`, `replies_connection.edges[].node`.
+- [ ] Pagination variables (`postID`, `post_id`, `after`, `first`, `parentCommentId`, `parent_comment_id`, `parent_id`, `parentId`) are tried defensively.
+- [ ] `docs/deprecation-plan.md` updated to note search/comments are hardened.
+- [ ] Tests use `http.createServer` with `doc_id`-based routing, no mocks.
+- [ ] `npm run typecheck` and full Threads regression pass.
