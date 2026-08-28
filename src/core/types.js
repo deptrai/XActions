@@ -125,6 +125,50 @@
  * @property {string} [platform]
  */
 
+/**
+ * @typedef {Object} ThinEvent
+ * @property {string} id - Namespaced id, e.g. "facebook:123" or "threads:abc:456"
+ * @property {string} platform - Platform name, e.g. "facebook" | "threads"
+ * @property {string} externalId - Platform-native id
+ * @property {string} category - Category string, e.g. "social" | "ecom" | "realestate" | "recruitment" | "b2b"
+ * @property {string} authorId - Author ID
+ * @property {string} crawledAt - ISO 8601 timestamp string
+ * @property {string} storageRef - Pointer to the stored row / item id
+ */
+
+/**
+ * @typedef {Object} StreamMetrics
+ * @property {number} eventsPerSecond - New entries per second over the last refresh interval
+ * @property {number} pendingMessages - Total entries in the stream (XLEN)
+ * @property {number} consumerLag - Unacknowledged / pending messages in consumer group (XPENDING)
+ * @property {number} droppedEvents - Cumulative trimmed / dropped events (entries-added - length or best-effort)
+ * @property {number} lastAckTime - Seconds since the last consumer ack or idle
+ * @property {number} maxLen - Configured MAXLEN / MINID threshold
+ * @property {string | null} minId - ID of oldest entry in stream
+ */
+
+/**
+ * Minimal duck-typed interface matching redis/ioredis clients for stream operations
+ * @typedef {Object} RedisClientLike
+ * @property {Function} [xAdd]
+ * @property {Function} [xadd]
+ * @property {Function} [xLen]
+ * @property {Function} [xlen]
+ * @property {Function} [xInfoStream]
+ * @property {Function} [xInfo]
+ * @property {Function} [xinfo]
+ * @property {Function} [xInfoConsumers]
+ * @property {Function} [xGroupCreate]
+ * @property {Function} [xgroup]
+ * @property {Function} [xPending]
+ * @property {Function} [xpending]
+ * @property {Function} [sendCommand]
+ * @property {boolean | Function} [isOpen]
+ * @property {Function} [quit]
+ * @property {Function} [disconnect]
+ * @property {string} [status]
+ */
+
 export const CATEGORIES = Object.freeze({
   SOCIAL: 'social',
   ECOMMERCE: 'ecom',

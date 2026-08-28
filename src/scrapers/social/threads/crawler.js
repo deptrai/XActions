@@ -14,6 +14,11 @@ import { ThreadsClient } from './client.js';
 import { CommentTreeExtractor } from '../comment-tree.js';
 import { generatePostId, generateCommentId } from '../../../core/types.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import {
+  defaultRedisStreamPublisher,
+  isEnvTruthy,
+  toIsoDate,
+} from '../../../utils/redis-stream-publisher.js';
 
 export const DEFAULT_THREADS_DOC_IDS = {
   PROFILE_FEED: '6232751443445612',
@@ -128,21 +133,18 @@ export class ThreadsCrawler extends AbstractCrawler {
         });
       }
 
-      const redisClient = /** @type {any} */ (this.store)?.redis || /** @type {any} */ (this.sessionManager)?.redis;
-      if (redisClient && process.env.REDIS_STREAM_ENABLED === 'true') {
+      if (isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
         for (const item of items) {
           const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
-          await redisClient.xadd(
-            'stream:social:raw_posts',
-            '*',
-            'id', item.id,
-            'platform', 'threads',
-            'externalId', item.externalId,
-            'category', category,
-            'authorId', item.authorId || '',
-            'crawledAt', item.crawledAt ? item.crawledAt.toISOString() : new Date().toISOString(),
-            'storageRef', item.id,
-          );
+          await defaultRedisStreamPublisher.publish({
+            id: item.id,
+            platform: 'threads',
+            externalId: item.externalId,
+            category,
+            authorId: item.authorId || '',
+            crawledAt: item.crawledAt ? toIsoDate(item.crawledAt) : new Date().toISOString(),
+            storageRef: item.id,
+          });
         }
       }
     } catch (err) {

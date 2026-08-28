@@ -50,11 +50,14 @@ import { registerTeamCommand } from './commands/team.js';
 import { registerCompatCommands } from './commands/compat.js';
 import { registerAgentCommand } from './commands/agent.js';
 import { registerClientCommand } from './commands/client.js';
-import { registerDaemonCommand } from './commands/daemon.js';
-import { registerActionsCommand } from './commands/actions.js';
+import { registerAdminCommand } from './commands/admin.js';
 import { renderRootHelp } from './help-groups.js';
 
 const program = new Command();
+
+// ============================================================================
+// Helpers (moved to ./shared.js)
+// ============================================================================
 
 // ============================================================================
 // CLI Setup
@@ -112,8 +115,14 @@ registerTeamCommand(program);
 registerCompatCommands(program);
 registerAgentCommand(program);
 registerClientCommand(program);
-registerDaemonCommand(program);
-registerActionsCommand(program);
+registerAdminCommand(program);
+
+
+
+
+
+
+
 
 // ============================================================================
 // Parse and Run
