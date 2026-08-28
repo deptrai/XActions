@@ -2,7 +2,7 @@
 story_id: 15.1.1
 epic: 15
 story_key: 15-1-1-threads-hybrid-profile-followers-following
-status: review
+status: done
 created: 2026-08-28T16:16:25Z
 updated: 2026-08-29T00:00:00Z
 owner: luisphan
@@ -11,7 +11,7 @@ baseline_commit: e2318550
 
 # Story 15.1.1: Threads Hybrid Profile & Followers/Following
 
-Status: ready-for-dev
+Status: done
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
