@@ -92,6 +92,7 @@
 /**
  * @typedef {Object} ActionDescriptor
  * @property {string} action
+ * @property {string} [category]
  * @property {string} [description]
  * @property {string[]} [requiredArgs]
  * @property {string[]} [optionalArgs]

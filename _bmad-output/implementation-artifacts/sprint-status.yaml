@@ -1,5 +1,5 @@
 # generated: 2026-08-27T06:00:00.000Z
-# last_updated: 2026-08-29T03:23:00Z
+# last_updated: 2026-08-29T05:44:00Z
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-27T06:00:00.000Z
-last_updated: 2026-08-29T03:23:00Z
+last_updated: 2026-08-29T05:44:00Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -102,8 +102,8 @@ development_status:
   epic-15: in-progress
   15-1-threads-scraper-adapter-meta-internal-graphql: done
   15-1-1-threads-hybrid-profile-followers-following: done
-  15-1-2-threads-hybrid-post-detail-comment-tree: ready-for-dev
-  15-1-3-threads-hybrid-docid-hardening-search-comments: backlog
+  15-1-2-threads-hybrid-post-detail-comment-tree: done
+  15-1-3-threads-hybrid-docid-hardening-search-comments: ready-for-dev
   15-1-4-threads-hybrid-integration-package-exports: backlog
   15-2-tiktok-video-hashtag-comment-scraper: backlog
   epic-15-retrospective: optional

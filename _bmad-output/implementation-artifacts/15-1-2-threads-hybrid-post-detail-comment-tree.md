@@ -2,18 +2,18 @@
 story_id: "15.1.2"
 epic: 15
 story_key: "15-1-2-threads-hybrid-post-detail-comment-tree"
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-28
-updated: 2026-08-28
+updated: 2026-08-29
 owner: "DEV"
-reviewed: "Pending"
-baseline_commit: 7b61ab26
+reviewed: "Approved"
+baseline_commit: 2c5e7e33
 ---
 
 # Story 15.1.2: Threads Hybrid Post Detail & Comment Tree
 
-Status: ready-for-dev
+Status: done
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
@@ -118,37 +118,42 @@ So that **tôi có thể phân tích toàn bộ conversation mà không bị m�
 
 ## Tasks / Subtasks
 
-- [ ] T1: Add `post_detail` to `ActionRegistry` and scaffold `getPostDetail`
-  - [ ] T1.1: Register `post_detail` action in `ThreadsCrawler` constructor [Source: `src/scrapers/social/threads/crawler.js:76-108`]
-  - [ ] T1.2: Replace unimplemented `getPostDetail(_args)` stub with working `getPostDetail(args, session)` [Source: `src/scrapers/social/threads/crawler.js:993-1000`]
-  - [ ] T1.3: Keep `getComments(_args)` throwing `XACT_5000` or optionally map it to `get_post_comments`
-- [ ] T2: Implement shared post ID resolution
-  - [ ] T2.1: Add `#shortcodeToNumericId(shortcode)` (base64 reverse decoder) using `SHORTCODE_ALPHABET`
-  - [ ] T2.2: Add `#resolvePostId(input, accountId)` that tries shortcode decode → numeric → SSR HTML fallback
-  - [ ] T2.3: Reuse `#resolvePostId` in `getPostDetail` and `getPostComments`
-  - [ ] T2.4: Parse `/t/<shortcode>` and `/@<user>/post/<shortcode>` HTML for `window.__sharedData`, `window.__INITIAL_STATE__`, and `<script type="application/json">` blocks containing the matching `code`/`pk`
-- [ ] T3: Implement root post extraction from `POST_DETAIL`
-  - [ ] T3.1: Call `client.requestGraphQl(POST_DETAIL, { postID: numericId }, { accountId })`
-  - [ ] T3.2: Walk `data.data.containing_thread` and `data.data.reply_threads` to find the post matching `numericId`
-  - [ ] T3.3: Normalize with `#normalizePostItem`, set `metadata.sourceMethod: 'post_detail'`
-  - [ ] T3.4: Persist via `storeBatch`, write `CrawlCheckpoint`, emit thin event
-- [ ] T4: Wire optional `includeReplies` to `get_post_comments`
-  - [ ] T4.1: When `args.includeReplies`, call `this.getPostComments(args, session)` after root post extraction
-  - [ ] T4.2: Clamp `maxDepth`/`maxComments` in `getPostComments` (already done) [Source: `src/scrapers/social/threads/crawler.js:838-839`]
-  - [ ] T4.3: When `COMMENT_REPLIES` is `null` and `maxDepth > 0`, override `args.maxDepth = 0` and log a warning
-  - [ ] T4.4: Return `{ post, comments, pageInfo }`
-- [ ] T5: Update `schemas/threads/social.json` (if needed)
-  - [ ] T5.1: Add `postDetail: boolean` or reuse `sourceMethod: 'post_detail'` (no schema change required; use existing `sourceMethod`)
-- [ ] T6: Update `docs/deprecation-plan.md`
-  - [ ] T6.1: Add/update status tracker row for Threads post/thread detail as `deprecated-marked`
-- [ ] T7: Write tests
-  - [ ] T7.1: Create `tests/scrapers/social/threads/crawler-post-detail.test.js`
-  - [ ] T7.2: Test numeric, shortcode, and URL postId inputs
-  - [ ] T7.3: Test `includeReplies=true` and `includeReplies=false`
-  - [ ] T7.4: Test missing `COMMENT_REPLIES` fallback to root-level comments
-  - [ ] T7.5: Run `npm run typecheck` and regression suites
+- [x] T1: Add `post_detail` to `ActionRegistry` and scaffold `getPostDetail`
+  - [x] T1.1: Register `post_detail` action in `ThreadsCrawler` constructor [Source: `src/scrapers/social/threads/crawler.js:76-108`]
+  - [x] T1.2: Replace unimplemented `getPostDetail(_args)` stub with working `getPostDetail(args, session)` [Source: `src/scrapers/social/threads/crawler.js:993-1000`]
+  - [x] T1.3: Keep `getComments(_args)` throwing `XACT_5000` or optionally map it to `get_post_comments`
+- [x] T2: Implement shared post ID resolution
+  - [x] T2.1: Add `#shortcodeToNumericId(shortcode)` (base64 reverse decoder) using `SHORTCODE_ALPHABET`
+  - [x] T2.2: Add `#resolvePostId(input, accountId)` that tries shortcode decode → numeric → SSR HTML fallback
+  - [x] T2.3: Reuse `#resolvePostId` in `getPostDetail` and `getPostComments`
+  - [x] T2.4: Parse `/t/<shortcode>` and `/@<user>/post/<shortcode>` HTML for `window.__sharedData`, `window.__INITIAL_STATE__`, and `<script type="application/json">` blocks containing the matching `code`/`pk`
+- [x] T3: Implement root post extraction from `POST_DETAIL`
+  - [x] T3.1: Call `client.requestGraphQl(POST_DETAIL, { postID: numericId }, { accountId })`
+  - [x] T3.2: Walk `data.data.containing_thread` and `data.data.reply_threads` to find the post matching `numericId`
+  - [x] T3.3: Normalize with `#normalizePostItem`, set `metadata.sourceMethod: 'post_detail'`
+  - [x] T3.4: Persist via `storeBatch`, write `CrawlCheckpoint`, emit thin event
+- [x] T4: Wire optional `includeReplies` to `get_post_comments`
+  - [x] T4.1: When `args.includeReplies`, call `this.getPostComments(args, session)` after root post extraction
+  - [x] T4.2: Clamp `maxDepth`/`maxComments` in `getPostComments` (already done) [Source: `src/scrapers/social/threads/crawler.js:838-839`]
+  - [x] T4.3: When `COMMENT_REPLIES` is `null` and `maxDepth > 0`, override `args.maxDepth = 0` and log a warning
+  - [x] T4.4: Return `{ post, comments, pageInfo }`
+- [x] T5: Update `schemas/threads/social.json` (if needed)
+  - [x] T5.1: Add `postDetail: boolean` or reuse `sourceMethod: 'post_detail'` (no schema change required; use existing `sourceMethod`)
+- [x] T6: Update `docs/deprecation-plan.md`
+  - [x] T6.1: Add/update status tracker row for Threads post/thread detail as `deprecated-marked`
+- [x] T7: Write tests
+  - [x] T7.1: Create `tests/scrapers/social/threads/crawler-post-detail.test.js`
+  - [x] T7.2: Test numeric, shortcode, and URL postId inputs
+  - [x] T7.3: Test `includeReplies=true` and `includeReplies=false`
+  - [x] T7.4: Test missing `COMMENT_REPLIES` fallback to root-level comments
+  - [x] T7.5: Run `npm run typecheck` and regression suites
 
 ## Dev Notes
+
+### ATDD Artifacts
+
+- **Checklist:** `_bmad-output/test-artifacts/atdd-checklist-15-1-2-threads-hybrid-post-detail-comment-tree.md`
+- **Scaffold Tests:** `tests/scrapers/social/threads/crawler-post-detail.test.js`
 
 ### Project Structure Notes
 
@@ -365,22 +370,33 @@ Patterns:
 
 ### Agent Model Used
 
-Create Story Workflow — `bmad-create-story` skill, manual analysis with `Read` and `Bash` tools.
+Implement Story Workflow — `bmad-dev-story` skill with `gemini-3.7-flash-high`.
 
 ### Completion Notes
 
-- Story 15.1.2 derived from Epic 15.1.2 in `epics.md`.
-- Analyzed existing `ThreadsClient`, `ThreadsCrawler`, `schemas/threads/social.json`, `CommentTreeExtractor`, and the current unimplemented `getPostDetail` stub.
-- Decided `post_detail` is a new action that returns `{ post: PostItem, comments?: CommentItem[], pageInfo?: any }` and delegates to `get_post_comments` when `includeReplies=true`.
-- Documented shortcode↔numeric post id conversion and SSR HTML fallback.
-- Documented graceful degradation when `COMMENT_REPLIES` doc_id is not yet captured.
-- Marked `src/scrapers/threads/index.js:scrapeTweets` deprecation and `docs/deprecation-plan.md` update.
+- Registered `post_detail` action in `ThreadsCrawler` with `requiredArgs: ['postId']`, `optionalArgs: ['includeReplies', 'maxDepth', 'maxComments', 'after']`.
+- Implemented `#shortcodeToNumericId` (reverse base64 alphabet decode) and unified `#resolvePostId` supporting numeric, shortcode, and SSR HTML fallback.
+- Implemented `getPostDetail(args, session)` requesting `POST_DETAIL` GraphQL doc_id, extracting root post from `containing_thread` / `reply_threads`, persisting via `storeBatch`, recording checkpoint, and emitting thin event.
+- Supported `includeReplies=true` delegating to `get_post_comments` with graceful degradation to depth=0 when `COMMENT_REPLIES` is not configured.
+- Updated `ActionDescriptor` typedef in `src/core/types.js` to include `category?: string`.
+- Updated `docs/deprecation-plan.md` tracker row for Threads post/thread detail.
+- Created `tests/scrapers/social/threads/crawler-post-detail.test.js` (7 test cases across 5 suites), all passing without mocks.
+- Verified full test suite (52 tests across 6 files) and TypeScript typecheck pass with zero errors.
+- Code review follow-up applied: SSRF URL guard, bounded BFS node search, pure-numeric/all-digit shortcode guard, contextual post id regex fallback, added `ErrorTypes.NOT_FOUND`, removed unsafe first-containing-item fallback, added `validateItem` calls for post and comment normalization, and refined comment depth warning logic.
 
 ### File List
 
-- `_bmad-output/implementation-artifacts/15-1-2-threads-hybrid-post-detail-comment-tree.md`
+- `src/scrapers/social/threads/crawler.js` (modified)
+- `src/core/base-crawler.js` (modified)
+- `src/core/types.js` (modified)
+- `docs/deprecation-plan.md` (modified)
+- `tests/scrapers/social/threads/crawler-post-detail.test.js` (created)
+- `_bmad-output/test-artifacts/atdd-checklist-15-1-2-threads-hybrid-post-detail-comment-tree.md` (created)
+- `_bmad-output/implementation-artifacts/15-1-2-threads-hybrid-post-detail-comment-tree.md` (modified)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
 
 ### Open Decisions / Outstanding Items
 
+- Reviewed and approved. All review follow-up patches applied and verified (52 Threads tests + `npm run typecheck`).
 - `doc_id` values for `COMMENT_ROOTS` and `COMMENT_REPLIES` must be captured from a live Threads web session (Story 15.1.3).
 - Exact GraphQL response shape for `BarcelonaPostPageQuery` nested replies must be confirmed; use existing fallback until then.
