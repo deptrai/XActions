@@ -91,7 +91,7 @@ export class ThreadsClient extends AbstractApiClient {
       return /** @type {Promise<Record<string, string>>} */ (this.#pendingTokenFetches.get(key));
     }
 
-    const fetchPromise = this.#fetchTokens(accountId)
+    const fetchPromise = this.#fetchTokens(accountId, proxyKey)
       .then((tokens) => {
         this.#tokenCache.set(key, {
           tokens,
@@ -110,11 +110,13 @@ export class ThreadsClient extends AbstractApiClient {
   /**
    * Internal worker to fetch tokens from home/profile page HTML.
    * @param {string} accountId
+   * @param {string} [proxyKey='default']
    * @returns {Promise<Record<string, string>>}
    */
-  async #fetchTokens(accountId) {
+  async #fetchTokens(accountId, proxyKey = 'default') {
     const resp = /** @type {any} */ (await this.request('GET', `${this.baseUrl}/`, {
       accountId,
+      proxyKey,
     }));
 
     const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
@@ -131,7 +133,7 @@ export class ThreadsClient extends AbstractApiClient {
       html.match(/d\.token\s*=\s*"([^"]+)"/);
     const dtsg = dtsgMatch ? dtsgMatch[1] : '';
 
-    if (!lsd && !html.includes('threads')) {
+    if (!lsd) {
       throw new PlatformError({
         code: 'XACT_4010',
         type: ErrorTypes.AUTH_EXPIRED,
@@ -142,7 +144,7 @@ export class ThreadsClient extends AbstractApiClient {
     }
 
     return {
-      lsd: lsd || 'LSD_FALLBACK_DEFAULT',
+      lsd,
       csrftoken: '',
       dtsg,
     };

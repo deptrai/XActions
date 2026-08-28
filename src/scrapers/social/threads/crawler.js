@@ -71,7 +71,9 @@ export class ThreadsCrawler extends AbstractCrawler {
     this.client = client;
     this.docIds = {
       ...DEFAULT_THREADS_DOC_IDS,
-      ...(deps.docIds || {}),
+      ...Object.fromEntries(
+        Object.entries(deps.docIds || {}).filter(([_, v]) => v !== undefined)
+      ),
     };
 
     // ── Story 15.1.1 Actions: profile, followers, following ──
@@ -122,8 +124,7 @@ export class ThreadsCrawler extends AbstractCrawler {
         html.match(/window\.__user_id\s*=\s*"([^"]+)"/) ||
         html.match(/window\.__userId\s*=\s*"([^"]+)"/) ||
         html.match(/"user_id":"(\d+)"/) ||
-        html.match(/"pk":"(\d+)"/) ||
-        html.match(/"id":"(\d+)"/);
+        html.match(/"pk":"(\d+)"/);
 
       if (idMatch) {
         return idMatch[1];
@@ -131,7 +132,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     } catch (err) {
       const anyErr = /** @type {any} */ (err);
       const status = anyErr?.statusCode || anyErr?.status;
-      if (status === 404) {
+      if (status === 404 || anyErr?.code === 'XACT_4041') {
         throw new PlatformError({
           code: 'XACT_4041',
           type: ErrorTypes.INTERNAL,
@@ -141,9 +142,27 @@ export class ThreadsCrawler extends AbstractCrawler {
           platform: 'threads',
         });
       }
+      throw err;
     }
 
     return cleanUser;
+  }
+
+  /**
+   * Decode common HTML entities in meta tag content.
+   * @param {string} str
+   * @returns {string}
+   */
+  #decodeHtmlEntities(str) {
+    if (typeof str !== 'string') return String(str);
+    return str
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
   }
 
   /**
@@ -166,6 +185,15 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     const username = String(args.username).replace(/^@/, '').trim();
+    if (!username) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing or empty username argument',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
     const accountId = session?.accountId || 'threads-guest';
     let profile = null;
 
@@ -184,8 +212,9 @@ export class ThreadsCrawler extends AbstractCrawler {
           profile = normalizeThreadsProfile(rawUser, 'graphql');
         }
       } catch (err) {
-        // Safe ignore to allow SSR fallback unless it's a permanent 404
-        if ((/** @type {any} */ (err))?.statusCode === 404 || (/** @type {any} */ (err))?.code === 'XACT_4041') {
+        // 404 is final; other errors (rate limit, network, 5xx) allow SSR fallback
+        const anyErr = /** @type {any} */ (err);
+        if (anyErr?.statusCode === 404 || anyErr?.code === 'XACT_4041') {
           throw err;
         }
       }
@@ -222,14 +251,19 @@ export class ThreadsCrawler extends AbstractCrawler {
         accountId,
       }));
     } catch (err) {
-      throw new PlatformError({
-        code: 'XACT_4041',
-        type: ErrorTypes.INTERNAL,
-        message: `Threads user @${cleanUser} not found or inaccessible`,
-        statusCode: 404,
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: 'threads',
-      });
+      const anyErr = /** @type {any} */ (err);
+      const status = anyErr?.statusCode || anyErr?.status;
+      if (status === 404 || anyErr?.code === 'XACT_4041') {
+        throw new PlatformError({
+          code: 'XACT_4041',
+          type: ErrorTypes.INTERNAL,
+          message: `Threads user @${cleanUser} not found`,
+          statusCode: 404,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'threads',
+        });
+      }
+      throw err;
     }
 
     const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
@@ -245,12 +279,15 @@ export class ThreadsCrawler extends AbstractCrawler {
       });
     }
 
-    const titleMatch = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i);
-    const descMatch = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i);
-    const imageMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
+    const titleMatch = html.match(/<meta\s+[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
+    const descMatch = html.match(/<meta\s+[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:description["']/i);
+    const imageMatch = html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
 
-    const title = titleMatch ? titleMatch[1] : '';
-    const desc = descMatch ? descMatch[1] : '';
+    const title = titleMatch ? this.#decodeHtmlEntities(titleMatch[1]) : '';
+    const desc = descMatch ? this.#decodeHtmlEntities(descMatch[1]) : '';
     const avatar = imageMatch ? imageMatch[1] : null;
 
     const userInTitleMatch = title.match(/@([a-zA-Z0-9._]+)/);
@@ -262,9 +299,15 @@ export class ThreadsCrawler extends AbstractCrawler {
     const followerMatch = desc.match(/([\d.,]+[KkMmBb]?)\s*followers?/i);
     const followersCount = followerMatch ? parseHumanCount(followerMatch[1]) : 0;
 
+    const followingMatch = desc.match(/([\d.,]+[KkMmBb]?)\s*following?/i);
+    const followingCount = followingMatch ? parseHumanCount(followingMatch[1]) : 0;
+
     let bio = desc;
-    if (followerMatch) {
-      bio = desc.replace(followerMatch[0], '').replace(/^[.\s]+/, '').trim();
+    const countPrefix = followerMatch && followingMatch
+      ? `${followerMatch[0]}, ${followingMatch[0]}`
+      : (followerMatch ? followerMatch[0] : (followingMatch ? followingMatch[0] : ''));
+    if (countPrefix) {
+      bio = desc.replace(countPrefix, '').replace(/^[.,\s]+/, '').trim();
     }
 
     const idMatch =
@@ -284,7 +327,7 @@ export class ThreadsCrawler extends AbstractCrawler {
       avatar,
       profileUrl: `https://www.threads.net/@${usernameFromTitle}`,
       followersCount,
-      followingCount: 0,
+      followingCount,
       metadata: {
         isProfile: true,
         isFollower: false,
@@ -344,12 +387,22 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     const username = String(args.username).replace(/^@/, '').trim();
+    if (!username) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing or empty username argument',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
     const accountId = session?.accountId || 'threads-guest';
     const limit = Math.max(1, Math.min(100, Number(args.count) || 20));
     const docId = connectionType === 'follower' ? this.docIds.FOLLOWERS : this.docIds.FOLLOWING;
 
     let profiles = [];
     let pageInfo = { has_next_page: false, end_cursor: null };
+    let connectionResolved = false;
 
     if (docId) {
       try {
@@ -370,19 +423,53 @@ export class ThreadsCrawler extends AbstractCrawler {
             ? (node?.followers_connection || res?.data?.followers_connection || res?.followers_connection)
             : (node?.following_connection || res?.data?.following_connection || res?.following_connection);
 
-        const edges = Array.isArray(connection?.edges) ? connection.edges : [];
-        for (const edge of edges) {
-          if (!edge?.node) continue;
-          profiles.push(normalizeThreadsConnection(edge.node, 'graphql', connectionType));
+        connectionResolved = !!connection;
+
+        let currentConnection = connection;
+        while (currentConnection) {
+          const edges = Array.isArray(currentConnection?.edges) ? currentConnection.edges : [];
+          for (const edge of edges) {
+            if (!edge?.node) continue;
+            profiles.push(normalizeThreadsConnection(edge.node, 'graphql', connectionType));
+          }
+
+          if (
+            profiles.length >= limit ||
+            !currentConnection?.page_info?.has_next_page ||
+            !currentConnection?.page_info?.end_cursor
+          ) {
+            pageInfo = currentConnection.page_info || pageInfo;
+            break;
+          }
+
+          const nextRes = await this.client.requestGraphQl(
+            docId,
+            {
+              userID: userId,
+              first: limit - profiles.length,
+              after: currentConnection.page_info.end_cursor,
+            },
+            { accountId }
+          );
+          const nextNode = nextRes?.data?.node || nextRes?.node || nextRes?.data || nextRes;
+          const nextConnection =
+            connectionType === 'follower'
+              ? (nextNode?.followers_connection || nextRes?.data?.followers_connection || nextRes?.followers_connection)
+              : (nextNode?.following_connection || nextRes?.data?.following_connection || nextRes?.following_connection);
+          if (!nextConnection) break;
+          currentConnection = nextConnection;
         }
-        pageInfo = connection?.page_info || pageInfo;
-      } catch {
-        // Fall back to limitation response
+      } catch (err) {
+        const anyErr = /** @type {any} */ (err);
+        if (anyErr?.statusCode === 404 || anyErr?.code === 'XACT_4041') {
+          throw err;
+        }
+        // Non-404 GraphQL errors fall through to limitation fallback
       }
     }
 
-    // Public list limitation fallback (AC-4)
-    if (profiles.length === 0) {
+    // Public list limitation fallback (AC-4) — only when connection was not resolved
+    if (profiles.length === 0 && !connectionResolved) {
       const profile = await this.getProfile({ username }, session);
       return {
         profiles: [],
@@ -406,8 +493,8 @@ export class ThreadsCrawler extends AbstractCrawler {
     return {
       profiles,
       counts: {
-        followersCount: profiles.length,
-        followingCount: 0,
+        followersCount: connectionType === 'follower' ? profiles.length : 0,
+        followingCount: connectionType === 'following' ? profiles.length : 0,
       },
       pageInfo,
     };

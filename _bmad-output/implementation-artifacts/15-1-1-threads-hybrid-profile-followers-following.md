@@ -457,6 +457,69 @@ Patterns:
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `_bmad-output/implementation-artifacts/15-1-1-threads-hybrid-profile-followers-following.md`
 
+### Review Findings
+
+#### Decision Needed
+
+*No decision-needed findings.*
+
+#### Patch (Resolved)
+
+- [x] [Review][Patch] `crawler.js` `#fetchConnections` returns inverted `counts` for `following` action [src/scrapers/social/threads/crawler.js:406-413]
+  - **Detail**: `followersCount` is always set to `profiles.length` and `followingCount` to `0`, regardless of `connectionType`. For `following`, the count is wrong.
+  - **Fix**: Map `profiles.length` to the correct count field based on `connectionType`.
+- [x] [Review][Patch] `crawler.js` `#resolveUserId` uses overly broad `"id":"(\\d+)"` fallback regex [src/scrapers/social/threads/crawler.js:126]
+  - **Detail**: The regex can match an app/asset ID, stylesheet ID, or the first numeric `id` in the HTML before the actual user ID.
+  - **Fix**: Remove the generic fallback or scope it to a user object context (e.g. `"user":\s*\{\s*"id":"(\\d+)"`).
+- [x] [Review][Patch] `crawler.js` `getProfile` and `#fetchConnections` do not reject whitespace-only or bare `@` usernames [src/scrapers/social/threads/crawler.js:157,335]
+  - **Detail**: After `String(args.username).replace(/^@/, '').trim()`, an empty string passes silently and requests `https://www.threads.net/@`.
+  - **Fix**: Validate `username` after cleaning; throw `XACT_4001` if empty.
+- [x] [Review][Patch] `crawler.js` SSR meta tag regexes are brittle to attribute order and single quotes [src/scrapers/social/threads/crawler.js:248-250]
+  - **Detail**: Regexes assume `property` precedes `content` with double quotes. Meta tags with `content` first or single quotes fail to parse.
+  - **Fix**: Use attribute-order-agnostic regexes supporting single and double quotes.
+- [x] [Review][Patch] `crawler.js` SSR fallback masks all request errors as `XACT_4041` [src/scrapers/social/threads/crawler.js:224-233]
+  - **Detail**: Network, proxy, 5xx, and 429 errors thrown by `client.request` are converted to a `404 Not Found` error. Callers misinterpret rate limits and outages as missing profiles.
+  - **Fix**: Only convert to `XACT_4041` when `err.statusCode === 404` or `err.code === 'XACT_4041'`; re-throw other errors.
+- [x] [Review][Patch] `crawler.js` `#resolveUserId` swallows non-404 errors and returns username as user ID [src/scrapers/social/threads/crawler.js:131-146]
+  - **Detail**: When `client.request` fails with 429, 5xx, or network error, the catch falls through and returns `cleanUser` (the username string) as the user ID, causing a subsequent GraphQL request with `userID: <username>`.
+  - **Fix**: Throw non-404 errors and let `getProfile` / `#fetchConnections` fallback to SSR instead of making a doomed GraphQL call.
+- [x] [Review][Patch] `normalizer.js` `parseHumanCount` mis-parses European thousands separators and can overflow [src/scrapers/social/threads/normalizer.js:26-49]
+  - **Detail**: `12.500` in European format is parsed as `12.5`, and extreme values may exceed `Number.MAX_SAFE_INTEGER`.
+  - **Fix**: Detect dots followed by three digits as thousands separators; clamp result to `Number.MAX_SAFE_INTEGER`.
+- [x] [Review][Patch] `normalizer.js` `profileItemToPostItem` does not sanitize null bytes from strings [src/scrapers/social/threads/normalizer.js:140-145]
+  - **Detail**: ` ` in `bio` or `authorName` can abort PostgreSQL `text` inserts.
+  - **Fix**: Strip `\0` characters from all string fields before constructing `PostItem`.
+- [x] [Review][Patch] `client.js` `#fetchTokens` returns a fake `LSD_FALLBACK_DEFAULT` token [src/scrapers/social/threads/client.js:134-148]
+  - **Detail**: When `lsd` is not found but `html.includes('threads')` is true, the client returns a placeholder token, causing GraphQL requests to fail authentication.
+  - **Fix**: Throw `XACT_4010` whenever `!lsd`.
+- [x] [Review][Patch] `client.js` `ensureLsd` does not pass `proxyKey` to `#fetchTokens` [src/scrapers/social/threads/client.js:94]
+  - **Detail**: The cache key includes `proxyKey`, but the actual token fetch ignores it, so tokens extracted through one proxy may be reused for another.
+  - **Fix**: Pass `proxyKey` into `#fetchTokens(accountId, proxyKey)` and use it for the initial request.
+- [x] [Review][Patch] `crawler.js` `docIds` merge does not filter `undefined` overrides [src/scrapers/social/threads/crawler.js:72-75]
+  - **Detail**: `deps.docIds = { PROFILE: undefined }` overrides the default with `undefined`.
+  - **Fix**: Filter out `undefined` values when merging overrides.
+- [x] [Review][Patch] `crawler.js` checkpoint `targetKey` may collide across platforms [src/scrapers/social/threads/crawler.js:432]
+  - **Detail**: `targetKey` is the bare `username`; if `AbstractStore` indexes by `(targetType, targetKey)` only, a Threads profile checkpoint collides with X/Twitter or Facebook.
+  - **Fix**: Namespace `targetKey` with `threads:` or rely on `platform` field in the store index.
+- [x] [Review][Patch] `crawler.js` `#fetchConnections` does not paginate when `page_info.has_next_page` is true [src/scrapers/social/threads/crawler.js:350-414]
+  - **Detail**: AC-3 requires pagination with `after` cursor; only one GraphQL page is requested.
+  - **Fix**: Add a loop that fetches while `profiles.length < limit && pageInfo.has_next_page`.
+- [x] [Review][Patch] `crawler.js` `#fetchProfileSsr` does not unescape HTML entities in `name` and `bio` [src/scrapers/social/threads/crawler.js:252-268]
+  - **Detail**: `og:title` and `og:description` may contain encoded entities (`&amp;`, `&#x27;`, `&quot;`) that are stored as raw text.
+  - **Fix**: Decode HTML entities before assigning to `name` and `bio`.
+- [x] [Review][Patch] `crawler.js` `followingCount` not extracted from SSR `og:description` [src/scrapers/social/threads/crawler.js:262-263]
+  - **Detail**: Only `followersCount` is parsed; the fallback profile never reports `followingCount` even if `og:description` contains it.
+  - **Fix**: Parse both `followers` and `following` counts from the description.
+
+#### Defer
+
+- [x] [Review][Defer] `validator.js` blanket `403` bot-challenge classification [src/scrapers/social/threads/validator.js:134-137]
+  - **Detail**: 403 may also signal stale LSD/CSRF. Distinguishing requires real error payload capture; this is pre-existing `ThreadsPlatformResponseValidator` behavior and not introduced by Story 15.1.1.
+- [x] [Review][Defer] `redis-stream-publisher.js` `ensureClient` race condition under concurrent `publish` calls [src/utils/redis-stream-publisher.js:91-115]
+  - **Detail**: Multiple concurrent calls can open redundant Redis connections before the first completes. Affects all stream publishers, not only 15.1.1; pre-existing shared utility.
+- [x] [Review][Defer] `profile.test.js` missing boundary and concurrency test coverage [tests/scrapers/social/threads/profile.test.js]
+  - **Detail**: Tests do not cover whitespace usernames, alternative meta tag formats, rate-limit propagation, multi-page pagination, or stream-publisher concurrency. These are hardening items, not AC regressions.
+
 ## Change Log
 
 - 2026-08-29: Implemented Story 15.1.1 — Threads Hybrid Profile & Followers/Following.
