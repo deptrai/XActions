@@ -40,6 +40,12 @@ export class StreamAlertEngine {
   /** @type {string | null} */
   #lastAlertTimestamp = null;
 
+  /** @type {Promise<{ triggered: boolean, alerts: Object[], suppressedByCooldown?: boolean }> | null} */
+  #inFlightCheck = null;
+
+  /** @type {import('nodemailer').Transporter | null} */
+  #transporter = null;
+
   /**
    * @param {Object} [options]
    * @param {number} [options.pendingMessagesThreshold=50000]
@@ -75,6 +81,22 @@ export class StreamAlertEngine {
       return { triggered: false, alerts: [] };
     }
 
+    // Skip if a previous check is still in flight to avoid alert storms.
+    if (this.#inFlightCheck) {
+      return { triggered: false, alerts: [] };
+    }
+
+    this.#inFlightCheck = this.#runCheckAndAlert(metrics).finally(() => {
+      this.#inFlightCheck = null;
+    });
+    return this.#inFlightCheck;
+  }
+
+  /**
+   * @param {import('../core/types.js').StreamMetrics} metrics
+   * @returns {Promise<{ triggered: boolean, alerts: Array<Object>, suppressedByCooldown?: boolean }>}
+   */
+  async #runCheckAndAlert(metrics) {
     const now = Date.now();
     const candidateAlerts = [];
 
@@ -155,6 +177,7 @@ export class StreamAlertEngine {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(alertPayload),
+            signal: AbortSignal.timeout(5000),
           });
         }
       } catch (err) {
@@ -169,21 +192,23 @@ export class StreamAlertEngine {
         if (typeof this.#emailSender === 'function') {
           await this.#emailSender(emailRecipients, alertPayload);
         } else if (emailRecipients) {
-          const { default: nodemailer } = await import('nodemailer');
-          const transporter = nodemailer.createTransport({
-            host: process.env.ALERT_SMTP_HOST || 'localhost',
-            port: Number(process.env.ALERT_SMTP_PORT) || 587,
-            secure: process.env.ALERT_SMTP_SECURE === 'true',
-            auth: process.env.ALERT_SMTP_USER
-              ? {
-                  user: process.env.ALERT_SMTP_USER,
-                  pass: process.env.ALERT_SMTP_PASS || '',
-                }
-              : undefined,
-          });
+          if (!this.#transporter) {
+            const { default: nodemailer } = await import('nodemailer');
+            this.#transporter = nodemailer.createTransport({
+              host: process.env.ALERT_SMTP_HOST || 'localhost',
+              port: Number(process.env.ALERT_SMTP_PORT) || 587,
+              secure: process.env.ALERT_SMTP_SECURE === 'true',
+              auth: process.env.ALERT_SMTP_USER
+                ? {
+                    user: process.env.ALERT_SMTP_USER,
+                    pass: process.env.ALERT_SMTP_PASS || '',
+                  }
+                : undefined,
+            });
+          }
 
           const typedAlert = /** @type {{ alert: string }} */ (alertPayload);
-          await transporter.sendMail({
+          await this.#transporter.sendMail({
             from: process.env.ALERT_EMAIL_FROM || 'alerts@xactions.app',
             to: emailRecipients,
             subject: `[XActions Alert] ${typedAlert.alert.toUpperCase()} breached threshold`,

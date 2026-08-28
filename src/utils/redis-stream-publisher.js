@@ -26,9 +26,14 @@ export function isEnvTruthy(val) {
  */
 export function toIsoDate(val) {
   if (!val) return new Date().toISOString();
-  if (val instanceof Date) return val.toISOString();
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return new Date().toISOString();
+    return val.toISOString();
+  }
   try {
-    return new Date(val).toISOString();
+    const parsed = new Date(val);
+    if (isNaN(parsed.getTime())) return new Date().toISOString();
+    return parsed.toISOString();
   } catch {
     return new Date().toISOString();
   }
@@ -328,15 +333,15 @@ export class RedisStreamPublisher {
 
     try {
       if (typeof client.xGroupCreate === 'function') {
-        await client.xGroupCreate(streamKey, groupName, '$', { MKSTREAM: true });
+        await client.xGroupCreate(streamKey, groupName, '0', { MKSTREAM: true });
         return true;
       }
       if (typeof client.xgroup === 'function') {
-        await client.xgroup('CREATE', streamKey, groupName, '$', 'MKSTREAM');
+        await client.xgroup('CREATE', streamKey, groupName, '0', 'MKSTREAM');
         return true;
       }
       if (typeof client.sendCommand === 'function') {
-        await client.sendCommand(['XGROUP', 'CREATE', streamKey, groupName, '$', 'MKSTREAM']);
+        await client.sendCommand(['XGROUP', 'CREATE', streamKey, groupName, '0', 'MKSTREAM']);
         return true;
       }
       return false;

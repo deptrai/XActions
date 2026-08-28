@@ -73,7 +73,7 @@ export function registerAdminCommand(program) {
     .option('--json', 'Output raw JSON')
     .action(async (options) => {
       try {
-        const baseUrl = options.url || process.env.API_URL || 'http://localhost:3000';
+        const baseUrl = options.url || process.env.API_URL || process.env.MCP_SERVER_URL || 'http://localhost:3001';
         let alertStatus;
 
         try {

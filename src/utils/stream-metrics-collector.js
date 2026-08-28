@@ -7,6 +7,7 @@
  */
 
 import { extractPendingCount } from './stream-metrics.js';
+import { globalAdaptiveRateGovernor } from '../core/adaptive-governor.js';
 
 export class StreamMetricsCollector {
   /** @type {import('../core/types.js').RedisClientLike | null} */
@@ -247,7 +248,23 @@ export class StreamMetricsCollector {
         } else if (typeof anyClient.sendCommand === 'function') {
           const rawConsumers = await anyClient.sendCommand(['XINFO', 'CONSUMERS', this.#streamKey, this.#groupName]);
           if (Array.isArray(rawConsumers) && rawConsumers.length > 0) {
-            lastAckTime = 0;
+            // XINFO CONSUMERS returns an array of consumer records. Each record is
+            // a flat array of [name, ..., idle, <ms>, ...]. Find the minimum idle value.
+            const idleValues = [];
+            for (const consumer of rawConsumers) {
+              if (Array.isArray(consumer)) {
+                const idleIndex = consumer.indexOf('idle');
+                if (idleIndex !== -1 && idleIndex + 1 < consumer.length) {
+                  idleValues.push(Number(consumer[idleIndex + 1]) || 0);
+                }
+              } else if (consumer && typeof consumer === 'object') {
+                idleValues.push(Number(consumer.idle) || 0);
+              }
+            }
+            if (idleValues.length > 0) {
+              const minIdleMs = Math.min(...idleValues);
+              lastAckTime = Math.max(0, Math.floor(minIdleMs / 1000));
+            }
           }
         }
       } catch {
@@ -263,6 +280,13 @@ export class StreamMetricsCollector {
         maxLen: this.#maxLen,
         minId,
       };
+
+      // Sync consumer lag to the adaptive governor so crawl throughput can react.
+      try {
+        globalAdaptiveRateGovernor.updateRedisConsumerLag(result.consumerLag);
+      } catch (governorErr) {
+        console.warn('[StreamMetricsCollector] Failed to update governor:', (governorErr instanceof Error ? governorErr.message : String(governorErr)));
+      }
 
       this.#cachedMetrics = result;
       this.#lastFetchedAt = now;

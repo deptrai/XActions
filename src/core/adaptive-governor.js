@@ -57,6 +57,9 @@ export class AdaptiveRateGovernor {
   /** @type {boolean} */
   #isBackpressureActive = false;
 
+  /** @type {boolean} */
+  #loggedThrottleThisSession = false;
+
   /** @type {Map<string, number[]>} */
   #accountRequestTimestamps = new Map();
 
@@ -156,10 +159,12 @@ export class AdaptiveRateGovernor {
           reduced_to_percent: 25,
           redisConsumerLag: this.#redisConsumerLag,
         });
+        this.#loggedThrottleThisSession = true;
       }
       this.#isBackpressureActive = true;
     } else if (this.#redisConsumerLag < 5000) {
       this.#isBackpressureActive = false;
+      this.#loggedThrottleThisSession = false;
     }
   }
 
@@ -197,12 +202,15 @@ export class AdaptiveRateGovernor {
     }
     if (this.#isBackpressureActive || this.#redisConsumerLag > 10000) {
       factor *= 0.25;
-      console.warn('[AdaptiveRateGovernor] Throttling bulk throughput due to Redis stream consumer lag:', {
-        throttle_reason: 'redis_lag',
-        reduced_to_percent: 25,
-        redisConsumerLag: this.#redisConsumerLag,
-        platform,
-      });
+      if (!this.#loggedThrottleThisSession) {
+        console.warn('[AdaptiveRateGovernor] Throttling bulk throughput due to Redis stream consumer lag:', {
+          throttle_reason: 'redis_lag',
+          reduced_to_percent: 25,
+          redisConsumerLag: this.#redisConsumerLag,
+          platform,
+        });
+        this.#loggedThrottleThisSession = true;
+      }
     }
 
     return healthy * limit.baseReqPerSecondPerProxy * limit.throttleFactor * factor;

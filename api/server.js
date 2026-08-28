@@ -374,7 +374,7 @@ function mountPluginRoutes() {
 app.use('/api/automations', automationsRoutes);
 app.use('/api/streams', streamRoutes);
 
-// Story 14.3 — Stream Metrics & Alert Endpoints
+// Story 14.3 — Public stream metrics endpoint (alerts fire in the background)
 app.get('/metrics/stream', async (_req, res) => {
   try {
     const metrics = await defaultStreamMetricsCollector.getMetrics();
@@ -384,24 +384,6 @@ app.get('/metrics/stream', async (_req, res) => {
     res.json(metrics);
   } catch (err) {
     res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) });
-  }
-});
-
-app.get('/admin/stream/metrics', async (_req, res) => {
-  try {
-    const metrics = await defaultStreamMetricsCollector.getMetrics();
-    res.json({ success: true, metrics });
-  } catch (err) {
-    res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
-  }
-});
-
-app.get('/admin/stream/alerts', async (_req, res) => {
-  try {
-    const status = defaultStreamAlertEngine.getAlertStatus();
-    res.json({ success: true, alerts: status });
-  } catch (err) {
-    res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
   }
 });
 

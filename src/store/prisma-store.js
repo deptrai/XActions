@@ -341,15 +341,21 @@ export class PrismaStore extends AbstractStore {
 
     await this.init();
 
+    const parseSafeDate = (d, fallback = null) => {
+      if (!d) return fallback;
+      const parsed = d instanceof Date ? d : new Date(d);
+      return isNaN(parsed.getTime()) ? fallback : parsed;
+    };
+
     const data = {
       platform: String(platform),
       targetType: String(targetType),
       targetKey: String(targetKey),
       status: checkpoint.status ? String(checkpoint.status) : 'running',
       lastCursor: checkpoint.lastCursor ? String(checkpoint.lastCursor) : null,
-      lastTimestamp: checkpoint.lastTimestamp ? new Date(checkpoint.lastTimestamp) : null,
-      lastCrawledAt: checkpoint.lastCrawledAt ? new Date(checkpoint.lastCrawledAt) : new Date(),
-      nextScheduledAt: checkpoint.nextScheduledAt ? new Date(checkpoint.nextScheduledAt) : null,
+      lastTimestamp: parseSafeDate(checkpoint.lastTimestamp, null),
+      lastCrawledAt: parseSafeDate(checkpoint.lastCrawledAt, new Date()),
+      nextScheduledAt: parseSafeDate(checkpoint.nextScheduledAt, null),
       storageRef: checkpoint.storageRef ? String(checkpoint.storageRef) : null,
       errorCount: typeof checkpoint.errorCount === 'number' ? checkpoint.errorCount : 0,
     };
