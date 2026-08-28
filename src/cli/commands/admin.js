@@ -24,7 +24,8 @@ export function registerAdminCommand(program) {
   streamCmd
     .command('metrics')
     .description('Display real-time stream metrics (events/sec, consumer lag, pending messages)')
-    .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001 or http://localhost:3000)')
+    .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+    .option('--token <token>', 'Optional Bearer token if the endpoint requires auth')
     .option('--json', 'Output raw JSON')
     .action(async (options) => {
       try {
@@ -32,7 +33,9 @@ export function registerAdminCommand(program) {
         let metrics;
 
         try {
-          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/metrics/stream`);
+          const headers = /** @type {Record<string, string>} */ ({ });
+          if (options.token) headers.Authorization = `Bearer ${options.token}`;
+          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/metrics/stream`, { headers });
           if (resp.ok) {
             metrics = await resp.json();
           }
@@ -69,7 +72,8 @@ export function registerAdminCommand(program) {
   streamCmd
     .command('alerts')
     .description('Display recent stream alerts and threshold status')
-    .option('--url <url>', 'Base API / Daemon URL')
+    .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+    .option('--token <token>', 'Bearer token for admin authentication')
     .option('--json', 'Output raw JSON')
     .action(async (options) => {
       try {
@@ -77,7 +81,9 @@ export function registerAdminCommand(program) {
         let alertStatus;
 
         try {
-          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/admin/stream/alerts`);
+          const headers = /** @type {Record<string, string>} */ ({});
+          if (options.token) headers.Authorization = `Bearer ${options.token}`;
+          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/api/admin/stream/alerts`, { headers });
           if (resp.ok) {
             const data = await resp.json();
             alertStatus = data.alerts || data;
