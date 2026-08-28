@@ -107,6 +107,7 @@ export class AbstractCrawler {
   listActions() {
     return Array.from(this.#registry.entries()).map(([action, { descriptor }]) => ({
       action,
+      category: descriptor.category || 'social',
       description: descriptor.description || `${action} for ${this.name}`,
       requiredArgs: descriptor.requiredArgs || [],
       optionalArgs: descriptor.optionalArgs || [],
@@ -290,7 +291,7 @@ export class AbstractCrawler {
 
   /**
    * @param {Object} args
-   * @returns {Promise<PostItem>}
+   * @returns {Promise<any>}
    */
   async getPostDetail(args) { throw new Error('Method not implemented: getPostDetail()'); }
 
