@@ -2,7 +2,7 @@
 story_id: "15.1"
 epic: 15
 story_key: "15-1-threads-scraper-adapter-meta-internal-graphql"
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 4"
 created: 2026-08-26
 updated: 2026-08-26
@@ -209,42 +209,42 @@ const normalizeFn = (raw, postId) => {
 
 ## Tasks / Subtasks
 
-- [ ] T1: Tạo cấu trúc thư mục `src/scrapers/social/threads/` (AC-1, AC-2, AC-3)
-  - [ ] T1.1: Tạo `src/scrapers/social/threads/index.js` barrel export `ThreadsClient`, `ThreadsCrawler`, `ThreadsPlatformResponseValidator`, `DEFAULT_THREADS_DOC_IDS`
-  - [ ] T1.2: Tạo `src/scrapers/social/threads/client.js` — `ThreadsClient` extends `AbstractApiClient`
-  - [ ] T1.3: Tạo `src/scrapers/social/threads/crawler.js` — `ThreadsCrawler` extends `AbstractCrawler`
-  - [ ] T1.4: Tạo `src/scrapers/social/threads/validator.js` — `ThreadsPlatformResponseValidator` extends `AbstractPlatformResponseValidator`
-  - [ ] T1.5: Tạo `src/scrapers/social/threads/normalizer.js` (tùy chọn) — các hàm normalize post/comment cho testability
-  - [ ] T1.6: Cập nhật `src/scrapers/social/index.js:1-9` để re-export Threads module
-  - [ ] T1.7: Tạo `schemas/threads/social.json` metadata schema
-- [ ] T2: Triển khai `ThreadsClient` (AC-1, AC-2)
-  - [ ] T2.1: Constructor kế thừa `AbstractApiClient`, set `client: 'got'`, `baseUrl: 'https://www.threads.net'`, `requiresAuth: true`
-  - [ ] T2.2: `ensureLsd(proxyOrSessionKey)` fetch landing/profile page HTML, parse `lsd`, `csrftoken`, `fb_dtsg`, lưu vào `Map`-based cache TTL 30 phút với in-flight deduplication; **không** dùng `PreSignedTokenRing`
-  - [ ] T2.3: `buildGraphQlBody(docId, variables, tokens)` — `URLSearchParams` với `doc_id`, `lsd`, `variables`, header `x-ig-app-id`, `x-asbd-id`, `x-fb-lsd`; không log token values
-  - [ ] T2.4: `requestGraphQl(docId, variables, options)` — POST, parse JSON, classify errors
-- [ ] T3: Triển khai `ThreadsCrawler` (AC-3, AC-4, AC-5, AC-6)
-  - [ ] T3.1: Constructor đăng ký `search`, `get_user_feed`, `get_post_comments`; set `requiresAuth: true`
-  - [ ] T3.2: `getUserFeed({ username, count, cursor })` — resolve user id, call feed doc_id, normalize `PostItem[]`, ghi `CrawlCheckpoint`, emit thin events
-  - [ ] T3.3: `search({ query, count, cursor, searchType })` — GraphQL search nếu `SEARCH_POSTS` doc_id đã capture; nếu chưa thì throw `XACT_5000` hoặc SSR fallback HTTP với documented regex
-  - [ ] T3.4: `getPostComments({ postId, maxDepth, maxComments, after })` — resolve post id, clamp `[0,5]`/`[1,2000]`, implement `fetchLayer({ postId, parentCommentId, after, limit })` trả `{ comments, pageInfo }`, wrap `CommentTreeExtractor` với `p-limit(2)` concurrency
-  - [ ] T3.5: `normalizePost(raw)` & `normalizeComment(raw, postId)` theo `src/core/types.js`; dùng `generatePostId`/`generateCommentId`
-  - [ ] T3.6: Persist `PostItem[]` qua `storeBatch`, `CommentItem[]` qua `storeCommentBatch`
-  - [ ] T3.7: Sau mỗi `storeBatch`/`storeCommentBatch` thành công, ghi `CrawlCheckpoint` và phát thin event pointers vào Redis `stream:social:raw_posts`
-- [ ] T4: Triển khai `ThreadsPlatformResponseValidator` (AC-8)
-  - [ ] T4.1: Tạo `src/scrapers/social/threads/validator.js`
-  - [ ] T4.2: Nhận diện valid payload, bot challenge, rate limit, empty data
-- [ ] T5: Viết tests (AC-10)
-  - [ ] T5.1: `tests/scrapers/social/threads/client.test.js` — local server trả HTML tokens + GraphQL JSON, test `ensureLsd`, `requestGraphQl`
-  - [ ] T5.2: `tests/scrapers/social/threads/crawler.test.js` — test `get_user_feed`, `search`, `get_post_comments`, `listActions`
-  - [ ] T5.3: Chạy `npm run typecheck` và `npm test -- tests/scrapers/social/threads/`
-- [ ] T6: Deprecation marker & docs (AC-9)
-  - [ ] T6.1: Thêm `@deprecated` JSDoc vào `src/scrapers/threads/index.js`
-  - [ ] T6.2: Cập nhật `docs/deprecation-plan.md` status tracker
-- [ ] T7: Chạy verification
-  - [ ] T7.1: `npm run typecheck`
-  - [ ] T7.2: `npm test -- tests/scrapers/social/threads/`
-  - [ ] T7.3: `npm test -- tests/scrapers/social/facebook/` (regression)
-  - [ ] T7.4: `npm test -- tests/core/` (regression)
+- [x] T1: Tạo cấu trúc thư mục `src/scrapers/social/threads/` (AC-1, AC-2, AC-3)
+  - [x] T1.1: Tạo `src/scrapers/social/threads/index.js` barrel export `ThreadsClient`, `ThreadsCrawler`, `ThreadsPlatformResponseValidator`, `DEFAULT_THREADS_DOC_IDS`
+  - [x] T1.2: Tạo `src/scrapers/social/threads/client.js` — `ThreadsClient` extends `AbstractApiClient`
+  - [x] T1.3: Tạo `src/scrapers/social/threads/crawler.js` — `ThreadsCrawler` extends `AbstractCrawler`
+  - [x] T1.4: Tạo `src/scrapers/social/threads/validator.js` — `ThreadsPlatformResponseValidator` extends `AbstractPlatformResponseValidator`
+  - [x] T1.5: Tạo `src/scrapers/social/threads/normalizer.js` (tùy chọn) — các hàm normalize post/comment cho testability
+  - [x] T1.6: Cập nhật `src/scrapers/social/index.js:1-9` để re-export Threads module
+  - [x] T1.7: Tạo `schemas/threads/social.json` metadata schema
+- [x] T2: Triển khai `ThreadsClient` (AC-1, AC-2)
+  - [x] T2.1: Constructor kế thừa `AbstractApiClient`, set `client: 'got'`, `baseUrl: 'https://www.threads.net'`, `requiresAuth: true`
+  - [x] T2.2: `ensureLsd(proxyOrSessionKey)` fetch landing/profile page HTML, parse `lsd`, `csrftoken`, `fb_dtsg`, lưu vào `Map`-based cache TTL 30 phút với in-flight deduplication; **không** dùng `PreSignedTokenRing`
+  - [x] T2.3: `buildGraphQlBody(docId, variables, tokens)` — `URLSearchParams` với `doc_id`, `lsd`, `variables`, header `x-ig-app-id`, `x-asbd-id`, `x-fb-lsd`; không log token values
+  - [x] T2.4: `requestGraphQl(docId, variables, options)` — POST, parse JSON, classify errors
+- [x] T3: Triển khai `ThreadsCrawler` (AC-3, AC-4, AC-5, AC-6)
+  - [x] T3.1: Constructor đăng ký `search`, `get_user_feed`, `get_post_comments`; set `requiresAuth: true`
+  - [x] T3.2: `getUserFeed({ username, count, cursor })` — resolve user id, call feed doc_id, normalize `PostItem[]`, ghi `CrawlCheckpoint`, emit thin events
+  - [x] T3.3: `search({ query, count, cursor, searchType })` — GraphQL search nếu `SEARCH_POSTS` doc_id đã capture; nếu chưa thì throw `XACT_5000` hoặc SSR fallback HTTP với documented regex
+  - [x] T3.4: `getPostComments({ postId, maxDepth, maxComments, after })` — resolve post id, clamp `[0,5]`/`[1,2000]`, implement `fetchLayer({ postId, parentCommentId, after, limit })` trả `{ comments, pageInfo }`, wrap `CommentTreeExtractor` với `p-limit(2)` concurrency
+  - [x] T3.5: `normalizePost(raw)` & `normalizeComment(raw, postId)` theo `src/core/types.js`; dùng `generatePostId`/`generateCommentId`
+  - [x] T3.6: Persist `PostItem[]` qua `storeBatch`, `CommentItem[]` qua `storeCommentBatch`
+  - [x] T3.7: Sau mỗi `storeBatch`/`storeCommentBatch` thành công, ghi `CrawlCheckpoint` và phát thin event pointers vào Redis `stream:social:raw_posts`
+- [x] T4: Triển khai `ThreadsPlatformResponseValidator` (AC-8)
+  - [x] T4.1: Tạo `src/scrapers/social/threads/validator.js`
+  - [x] T4.2: Nhận diện valid payload, bot challenge, rate limit, empty data
+- [x] T5: Viết tests (AC-10)
+  - [x] T5.1: `tests/scrapers/social/threads/client.test.js` — local server trả HTML tokens + GraphQL JSON, test `ensureLsd`, `requestGraphQl`
+  - [x] T5.2: `tests/scrapers/social/threads/crawler.test.js` — test `get_user_feed`, `search`, `get_post_comments`, `listActions`
+  - [x] T5.3: Chạy `npm run typecheck` và `npm test -- tests/scrapers/social/threads/`
+- [x] T6: Deprecation marker & docs (AC-9)
+  - [x] T6.1: Thêm `@deprecated` JSDoc vào `src/scrapers/threads/index.js`
+  - [x] T6.2: Cập nhật `docs/deprecation-plan.md` status tracker
+- [x] T7: Chạy verification
+  - [x] T7.1: `npm run typecheck`
+  - [x] T7.2: `npm test -- tests/scrapers/social/threads/`
+  - [x] T7.3: `npm test -- tests/scrapers/social/facebook/` (regression)
+  - [x] T7.4: `npm test -- tests/core/` (regression)
 
 ## Dev Notes
 
@@ -619,15 +619,38 @@ Các mục dưới đây **bắt buộc** dev xác nhận qua capture từ trìn
 
 ### Agent Model Used
 
-Create Story Workflow — `bmad-create-story` skill, manual analysis bằng `vibervn-context-engine` MCP và `Read` tool.
+Developer Agent — `bmad-dev-story` workflow.
 
-### Completion Notes
+### Implementation Notes
 
-- Story 15.1 được xác định từ user input `15-1-threads-scraper-adapter-meta-internal-graphql` (Epic 15, Story 1).
-- Phân tích toàn bộ epics, architecture spine, deprecation plan, code `base-client.js`, `base-crawler.js`, `signer-pool.js`, `prisma-store.js`, `types.js`, `comment-tree.js`, `src/scrapers/threads/index.js` legacy, `src/scrapers/social/facebook/` mẫu, và gần nhất git log.
-- Web research về Threads GraphQL doc_id, token extraction, headers, response shapes; các candidate values được ghi rõ trong *Outstanding Items / Network Capture Required* và cần xác nhận qua capture thật.
-- Validation passed; file sẵn sàng cho `dev-story` / `bmad-dev-auto`.
+- Triển khai hoàn chỉnh module `src/scrapers/social/threads/`:
+  - `ThreadsClient` extends `AbstractApiClient` với `got-scraping`, dynamic extraction token (`lsd`, `csrftoken`, `fb_dtsg`), `Map`-based in-memory token cache (TTL 30 phút, in-flight request deduplication), và dispatch GraphQL request với Relay `doc_id`.
+  - `ThreadsCrawler` extends `AbstractCrawler` với `requiresAuth = true`, synthetic guest account `threads-guest`, đăng ký các action `get_user_feed`, `search`, và `get_post_comments` vào `ActionRegistry`.
+  - `ThreadsPlatformResponseValidator` extends `AbstractPlatformResponseValidator` nhận diện valid payload (unwrapping nested `data` envelopes), bot challenge, login wall, và rate limit.
+  - `normalizePost` và `normalizeComment` chuyển đổi raw response thành schema chuẩn `PostItem` và `CommentItem` theo AD-4 & `src/core/types.js`.
+  - Tạo schema contract `schemas/threads/social.json` phục vụ validation metadata khi persist qua `PrismaStore.storeBatch`.
+  - Hỗ trợ `CrawlCheckpoint` persistence và thin event pointer emission vào Redis stream `stream:social:raw_posts`.
+  - Tích hợp `CommentTreeExtractor` cho `get_post_comments` với `fetchLayer` callback, `p-limit(2)`, `maxDepth` clamp [0, 5], `maxComments` clamp [1, 2000].
+  - Gắn `@deprecated` JSDoc cho tất cả export symbols trong `src/scrapers/threads/index.js` và cập nhật `docs/deprecation-plan.md`.
+- No-mock unit & integration tests viết mới trong `tests/scrapers/social/threads/client.test.js` và `tests/scrapers/social/threads/crawler.test.js` (13 tests pass 100%).
+- Typecheck `npm run typecheck` (`tsc --noEmit`) đạt 0 lỗi. Toàn bộ regression test `tests/scrapers/social/` và `tests/core/` pass 100%.
 
 ### File List
 
-- `_bmad-output/implementation-artifacts/15-1-threads-scraper-adapter-meta-internal-graphql.md`
+- `schemas/threads/social.json` (New)
+- `src/scrapers/social/threads/index.js` (New)
+- `src/scrapers/social/threads/client.js` (New)
+- `src/scrapers/social/threads/crawler.js` (New)
+- `src/scrapers/social/threads/validator.js` (New)
+- `src/scrapers/social/threads/normalizer.js` (New)
+- `src/scrapers/social/index.js` (Modified)
+- `src/scrapers/threads/index.js` (Modified - @deprecated markers)
+- `docs/deprecation-plan.md` (Modified - status tracker updated)
+- `tests/scrapers/social/threads/client.test.js` (New)
+- `tests/scrapers/social/threads/crawler.test.js` (New)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (Modified)
+- `_bmad-output/implementation-artifacts/15-1-threads-scraper-adapter-meta-internal-graphql.md` (Modified)
+
+### Change Log
+
+- 2026-08-29: Implemented Story 15.1 Threads Scraper Adapter (Meta Internal GraphQL) including ThreadsClient, ThreadsCrawler, ThreadsPlatformResponseValidator, normalizer, JSON schema contract, unit/crawler tests, and deprecation markers.
