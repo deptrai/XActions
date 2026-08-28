@@ -118,6 +118,7 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
         'containing_thread' in data ||
         'reply_threads' in data ||
         'user' in data ||
+        'userData' in data ||
         'node' in data ||
         'threads' in data ||
         'posts' in data ||

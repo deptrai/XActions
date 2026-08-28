@@ -101,7 +101,7 @@ development_status:
   # --- Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine ---
   epic-15: in-progress
   15-1-threads-scraper-adapter-meta-internal-graphql: done
-  15-1-1-threads-hybrid-profile-followers-following: ready-for-dev
+  15-1-1-threads-hybrid-profile-followers-following: done
   15-1-2-threads-hybrid-post-detail-comment-tree: ready-for-dev
   15-1-3-threads-hybrid-docid-hardening-search-comments: backlog
   15-1-4-threads-hybrid-integration-package-exports: backlog

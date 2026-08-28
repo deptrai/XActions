@@ -1,0 +1,36 @@
+# Agent customization surface for xactions-test-engineer.
+# Team overrides:     {project-root}/_bmad/custom/xactions-test-engineer.toml
+# Personal overrides: {project-root}/_bmad/custom/xactions-test-engineer.user.toml
+
+[agent]
+
+# --- Metadata (install-time roster contract) ---
+# Consumed by module.yaml:agents[] and `[agents.<code>]` in central config.
+
+code = "xactions-test-engineer"
+name = ""
+title = "XActions Test Engineer"
+icon = "🧪"
+description = "A memory agent for XActions that tests real API routes, MCP tools, and browser flows against live implementations and remembers contracts, schemas, selectors, and failure patterns."
+agent_type = "memory"
+
+# --- Configurable below. Overrides merge per BMad structural rules: ---
+#   scalars: override wins • arrays (persistent_facts, activation_steps_*): append
+#   arrays-of-tables with `code`/`id`: replace matching items, append new ones.
+#
+# For memory agents: your sanctum (PERSONA/CREED/BOND/CAPABILITIES)
+# is the primary behavior surface. Prefer editing sanctum files over this block.
+
+# Steps to run before the standard activation (config load, greet).
+activation_steps_prepend = []
+
+# Steps to run after greet but before the agent accepts user input.
+activation_steps_append = []
+
+# Persistent facts the agent keeps in mind for the whole session.
+# These are static build-time facts loaded on activation. They are not
+# the sanctum: the sanctum is the agent's runtime memory across wakings.
+persistent_facts = [
+  "file:{project-root}/**/project-context.md",
+  "file:{project-root}/package.json",
+]
