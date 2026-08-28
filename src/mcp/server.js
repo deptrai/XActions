@@ -46,6 +46,8 @@ import { fileURLToPath } from 'node:url';
 
 import { initializePlugins, getPluginTools } from '../plugins/index.js';
 import { resolveMcpFacebookAuth } from './facebook-auth.js';
+import { wrapToolResult, wrapToolError } from './envelope.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -2643,6 +2645,89 @@ const TOOLS = [
       required: [],
     },
   },
+  {
+    name: 'x_actions_list',
+    description: 'List all available crawler actions across supported platforms. Optionally filter by platform.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: {
+          type: 'string',
+          description: 'Filter by platform: facebook, threads, bluesky, mastodon, twitter',
+        },
+      },
+    },
+  },
+  {
+    name: 'x_crawl_post',
+    description: 'Crawl a single post or page/group feed by URL. Tries post_detail first, then falls back to posts.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: {
+          type: 'string',
+          description: 'Platform: facebook, threads, twitter, bluesky, mastodon',
+        },
+        url: {
+          type: 'string',
+          description: 'Post or page/group URL',
+        },
+        postId: {
+          type: 'string',
+          description: 'Platform-specific post id',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum records to return (default: 50)',
+        },
+        artifactFormat: {
+          type: 'string',
+          enum: ['jsonl', 'csv'],
+          description: 'Artifact format when totalRecords > 100 (default: jsonl)',
+        },
+      },
+      required: ['platform'],
+    },
+  },
+  {
+    name: 'x_crawl_comments_tree',
+    description: 'Crawl the full comment tree for a post. Dispatches to get_comments when the crawler supports it.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: {
+          type: 'string',
+          description: 'Platform: facebook, threads, twitter, bluesky, mastodon',
+        },
+        postId: {
+          type: 'string',
+          description: 'Post id to crawl comments for',
+        },
+        url: {
+          type: 'string',
+          description: 'Post URL (alternative to postId)',
+        },
+        maxDepth: {
+          type: 'number',
+          description: 'Maximum comment nesting depth',
+        },
+        maxComments: {
+          type: 'number',
+          description: 'Maximum total comments to collect',
+        },
+        limit: {
+          type: 'number',
+          description: 'Alias for maxComments',
+        },
+        artifactFormat: {
+          type: 'string',
+          enum: ['jsonl', 'csv'],
+          description: 'Artifact format when totalRecords > 100 (default: jsonl)',
+        },
+      },
+      required: ['platform', 'postId'],
+    },
+  },
 ];
 
 // ============================================================================
@@ -2769,6 +2854,20 @@ async function executeTool(name, args) {
     return await pluginTool.handler(args, { localTools, SESSION_COOKIE });
   }
 
+  // Generic cross-platform action discovery
+  if (name === 'x_actions_list') {
+    return await executeActionListTool(args);
+  }
+
+  // Generic cross-platform post/comment crawlers
+  if (name === 'x_crawl_post') {
+    return await executeCrawlPostTool(args);
+  }
+
+  if (name === 'x_crawl_comments_tree') {
+    return await executeCrawlCommentsTreeTool(args);
+  }
+
   // Handle Facebook automation
   if (name === 'x_facebook_automate') {
     if (MODE === 'remote') {
@@ -2855,6 +2954,131 @@ async function executeTool(name, args) {
       };
     }
     return await toolFn(args);
+  }
+}
+
+/**
+ * Execute the x_actions_list tool.
+ * Instantiates available social crawlers, calls listActions(), appends
+ * the platform field, and cleans up. Optionally filters by platform.
+ *
+ * @param {Record<string, unknown>} args
+ * @returns {Promise<Record<string, unknown>[]>}
+ */
+async function executeActionListTool(args) {
+  const { FacebookCrawler } = await import('../scrapers/social/facebook/crawler.js');
+  const { ThreadsCrawler } = await import('../scrapers/social/threads/crawler.js');
+
+  const crawlers = [
+    new FacebookCrawler(),
+    new ThreadsCrawler(),
+  ];
+
+  try {
+    /** @type {Record<string, unknown>[]} */
+    const allActions = [];
+
+    for (const crawler of crawlers) {
+      const platform = crawler.platform || crawler.name;
+      const actions = crawler.listActions().map((desc) => ({
+        ...desc,
+        platform,
+      }));
+      allActions.push(...actions);
+    }
+
+    if (args?.platform && typeof args.platform === 'string') {
+      return allActions.filter((a) => a.platform === args.platform);
+    }
+
+    return allActions;
+  } finally {
+    for (const crawler of crawlers) {
+      if (typeof crawler.cleanup === 'function') {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+}
+
+/**
+ * Execute the x_crawl_post tool.
+ * Tries post_detail, then falls back to posts (which Facebook maps to
+ * page_posts or group_posts based on the URL).
+ *
+ * @param {Record<string, unknown>} args
+ * @returns {Promise<unknown>}
+ */
+async function executeCrawlPostTool(args) {
+  const { platform, url, postId, limit } = args;
+  if (!platform || typeof platform !== 'string') {
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: 'x_crawl_post requires a platform argument',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+    });
+  }
+
+  const { scrape } = await import('../scrapers/index.js');
+  const scrapeArgs = { url, postId, limit };
+  if (url) scrapeArgs.url = url;
+  if (postId) scrapeArgs.postId = postId;
+  if (limit != null) scrapeArgs.limit = Number(limit);
+
+  try {
+    return await scrape(String(platform), 'post_detail', scrapeArgs);
+  } catch (firstErr) {
+    // Only fallback for "action not available" errors, not arbitrary failures.
+    const message = firstErr instanceof Error ? firstErr.message : String(firstErr);
+    if (/^Action ".*" not available on platform/.test(message)) {
+      return await scrape(String(platform), 'posts', scrapeArgs);
+    }
+    throw firstErr;
+  }
+}
+
+/**
+ * Execute the x_crawl_comments_tree tool.
+ * Dispatches to scrape(platform, 'get_comments', ...) when the crawler
+ * registers it; otherwise returns XACT_4001.
+ *
+ * @param {Record<string, unknown>} args
+ * @returns {Promise<unknown>}
+ */
+async function executeCrawlCommentsTreeTool(args) {
+  const { platform, postId, url, maxDepth, maxComments, limit } = args;
+  if (!platform || typeof platform !== 'string' || !postId || typeof postId !== 'string') {
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: 'x_crawl_comments_tree requires platform and postId arguments',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      platform: typeof platform === 'string' ? platform : undefined,
+    });
+  }
+
+  const { scrape } = await import('../scrapers/index.js');
+  const scrapeArgs = { postId, url, maxDepth, maxComments, limit };
+  if (url) scrapeArgs.url = url;
+  if (maxDepth != null) scrapeArgs.maxDepth = Number(maxDepth);
+  if (maxComments != null) scrapeArgs.maxComments = Number(maxComments);
+  if (limit != null && maxComments == null) scrapeArgs.maxComments = Number(limit);
+
+  try {
+    return await scrape(String(platform), 'get_comments', scrapeArgs);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/^Action ".*" not available on platform/.test(message)) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `Action "get_comments" not available on platform "${platform}"`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: String(platform),
+      });
+    }
+    throw err;
   }
 }
 
@@ -4912,22 +5136,25 @@ function createMcpServer() {
   // Execute tools
   srv.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+    const startedAt = Date.now();
 
     try {
       const result = await executeTool(name, args || {});
 
-      // If executeTool already produced an MCP error result, propagate it as-is
+      // Legacy internal error shape from executeTool (e.g. uninitialized backend).
+      // Wrap it into the standard 3-Layer JSON Envelope.
       if (result && result.isError === true) {
-        return result;
+        const envelope = wrapToolError(result, name, { args });
+        return {
+          content: [{ type: 'text', text: JSON.stringify(envelope, null, 2) }],
+          isError: true,
+        };
       }
 
+      const envelope = await wrapToolResult(name, result, startedAt, { args });
       return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
+        content: [{ type: 'text', text: JSON.stringify(envelope, null, 2) }],
+        isError: !envelope.success,
       };
 
     } catch (error) {
@@ -4965,17 +5192,9 @@ function createMcpServer() {
         };
       }
 
-      // Generic error
+      const envelope = wrapToolError(error, name, { args });
       return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              error: error.message,
-              ...(process.env.DEBUG ? { stack: error.stack } : {}),
-            }, null, 2),
-          },
-        ],
+        content: [{ type: 'text', text: JSON.stringify(envelope, null, 2) }],
         isError: true,
       };
     }
@@ -5241,4 +5460,4 @@ if (isEntryPoint()) {
 
 // Exported so the tool list can be inspected without starting a transport.
 // Also export Facebook automation tools for direct programmatic use.
-export { TOOLS, main, createMcpServer, initializeBackend, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts };
+export { TOOLS, main, createMcpServer, initializeBackend, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts, executeActionListTool, executeCrawlPostTool, executeCrawlCommentsTreeTool };
