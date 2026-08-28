@@ -1,4 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// LEGACY — see docs/deprecation-plan.md (Replaced by facebook:messenger_share / share_link_uid in Story 13.9)
 /**
  * Share link via UID - Direct Messenger URL approach (VERIFIED 2026-08).
  *
@@ -11,10 +12,9 @@
  * - Works with UIDs directly (no need for display names)
  * - Doesn't require recipients to be in the share dialog's friend list
  * - One-click send vs multi-step share dialog flow
+ *
+ * @deprecated Use FacebookCrawler with action 'messenger_share' or 'share_link_uid' (Story 13.9) instead.
  */
-
-import { runGuardedBatch } from '../../../api/services/facebookAutomation.js';
-
 
 /** @typedef {{ postUrl: string; recipientUid: string; message?: string }} ShareLinkTarget */
 /** @typedef {{ postUrl: string; recipients: string[]; message?: string }} ShareCampaignTarget */
@@ -215,23 +215,20 @@ export async function shareLinkByUidCampaign(page, campaign, options = {}) {
     throw new Error('❌ shareLinkByUidCampaign: recipients must be a non-empty array');
   }
 
-  const items = recipients.map((uid) => ({
-    postUrl,
-    recipientUid: uid,
-    message,
-    toString: () => uid,
-  }));
+  const results = [];
+  const delay = options.delay || ((min = 3000, max = 8000) => new Promise((r) => setTimeout(r, min + Math.random() * (max - min))));
 
-  const actionFn = /** @type {(item: unknown) => Promise<Record<string, unknown>>} */ (async (item) => {
-    const target = /** @type {ShareLinkTarget} */ (item);
+  for (let i = 0; i < recipients.length; i++) {
+    const recipientUid = recipients[i];
+    const target = { postUrl, recipientUid, message };
     const result = await shareLinkByUid(page, target, options);
-    return result;
-  });
+    results.push(result);
+    if (i < recipients.length - 1) {
+      await delay();
+    }
+  }
 
-  return runGuardedBatch(items, actionFn, {
-    ...options,
-    delay: options.delay || ((min = 3000, max = 8000) => new Promise(r => setTimeout(r, min + Math.random() * (max - min)))),
-  });
+  return { ok: results.every((r) => r.ok), results };
 }
 
 export default { shareLinkByUid, shareLinkByUidCampaign };

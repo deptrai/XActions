@@ -5,6 +5,7 @@
  *
  * Uses the same Puppeteer stealth approach as Twitter and Threads scrapers.
  *
+ * @deprecated Use `src/scrapers/social/facebook/index.js` (`FacebookCrawler`, `FacebookClient`) instead. See docs/deprecation-plan.md.
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license BSL 1.1
@@ -139,11 +140,14 @@ async function clickCommentExpanders(page) {
  * Scrape comments from a Facebook post (FR-58).
  * READ-ONLY scrape — NOT routed through runGuardedBatch.
  *
+ * @deprecated Replaced by `FacebookCrawler` action `post_comments` (Story 13.7).
+ *
  * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} postUrl - facebook.com post URL
  * @param {FacebookOptions} [options]
  * @returns {Promise<Record<string, unknown>[] | { note: string, platform: 'facebook' }>}
  */
+// LEGACY — see docs/deprecation-plan.md
 export async function scrapeFacebookComments(page, postUrl, options = {}) {
   const {
     limit = 50,
@@ -224,11 +228,14 @@ export async function scrapeFacebookComments(page, postUrl, options = {}) {
  * Scrape comments from a post inside a Facebook group (FR-60).
  * Thin wrapper around scrapeFacebookComments; no duplicated extraction logic.
  *
+ * @deprecated Replaced by `FacebookCrawler` action `group_comments` (Story 13.7).
+ *
  * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} groupPostUrl - facebook.com/groups/ post URL
  * @param {FacebookOptions} [options]
  * @returns {Promise<Record<string, unknown>[] | { note: string, platform: 'facebook' }>}
  */
+// LEGACY — see docs/deprecation-plan.md
 export async function scrapeFacebookGroupComments(page, groupPostUrl, options = {}) {
   if (typeof groupPostUrl !== 'string' || !groupPostUrl.includes('/groups/')) {
     throw new Error('❌ scrapeFacebookGroupComments requires a facebook.com/groups/ post URL');

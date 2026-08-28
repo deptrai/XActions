@@ -1,6 +1,6 @@
 ---
-status: draft
-updated: 2026-06-19
+status: final
+updated: 2026-08-26
 sources:
   - dashboard/facebook.html (current Facebook UI)
   - dashboard/index.html (current X/Twitter dashboard)
@@ -15,7 +15,7 @@ sources:
 - **Form-factor:** Web (desktop-first, responsive to tablet)
 - **UI system:** Vanilla CSS with CSS custom properties (current stack — no framework dependency)
 - **Visual identity:** See DESIGN.md
-- **Platform scope:** X/Twitter + Facebook unified in one dashboard
+- **Platform scope:** X/Twitter, Facebook, Threads, TikTok, Bluesky, Mastodon, and other domains unified in one dashboard. Bluesky/Mastodon are open/federated social platforms with optional auth and read-only Scrape/Monitor tabs.
 
 ## Information Architecture
 
@@ -27,7 +27,11 @@ sources:
 🏠 Home              → /
 📱 Platforms          → /platforms (expanded below)
   ├─ 𝕏 X/Twitter     → /platforms/x
-  └─ 📘 Facebook     → /platforms/facebook
+  ├─ 📘 Facebook     → /platforms/facebook
+  ├─ 🧵 Threads      → /platforms/threads
+  ├─ 🎵 TikTok       → /platforms/tiktok
+  ├─ 🦋 Bluesky      → /platforms/bluesky
+  └─ 🐘 Mastodon     → /platforms/mastodon
 ⚙️ Automations       → /automations
 📅 Scheduler         → /scheduler
 📊 Analytics         → /analytics
@@ -240,6 +244,95 @@ Linh wants to grow her network by connecting with people in a marketing group.
 5. Dry-run → Preview shows 50 pending requests
 6. **Climax:** Sets max batch to 10 (safety), unchecks dry-run → "⚡ Run Live"
 7. Progress: "✅ 10/10 sent (62s)" — remaining 40 shown as "remaining: 40"
+
+### Bluesky / Mastodon — Public Scrape Flow
+
+1. Opens `/platforms/bluesky` → no account selector (public by default).
+2. Optional auth section collapsible (identifier/password for Bluesky; accessToken + instance for Mastodon).
+3. Tabs: `[Scrape] [Monitor]` only (no Actions/Growth because open platforms are read-only in this phase).
+4. Scrape tab cards: `Search posts`, `Profile feed`, `Followers`, `Following`, `Hashtag`, `Trending` (Mastodon).
+5. User enters a Bluesky handle or search query → Dry-run preview.
+6. Result panel: posts/profiles with `bluesky` or `mastodon` platform badge.
+7. User exports JSONL or streams to Redis.
+
+### Flow 4: Operator uses `xactions admin` CLI
+
+Hùng is an internal operator. He needs to monitor and control the scraper from a terminal without opening the web dashboard.
+
+```
+$ xactions admin --help
+status      → governor, proxy, account, stream overview
+proxies     → list / quarantine / release proxy
+accounts    → list / wake / rotate account
+checkpoints → list / resume / pause / retry
+stream      → metrics / alerts / test
+```
+
+#### Wireframe 4a: `xactions admin status`
+
+```
+$ xactions admin status
+Proxy pool:        12/15 healthy
+Current req/s:     482
+Redis consumer lag: 1,240
+Throttle level:    2
+Hibernating:       [fb:123 18m left]
+```
+
+#### Wireframe 4b: `xactions admin proxies`
+
+```
+$ xactions admin proxies list
+proxy-1   healthy    203.0.113.5   expiry: 2026-08-27 02:00
+proxy-2   quarantined  198.51.100.7  until: 2026-08-26 15:05
+
+$ xactions admin proxy quarantine proxy-2
+✅ proxy-2 quarantined for 5 minutes.
+
+$ xactions admin proxy release proxy-2
+✅ proxy-2 released.
+```
+
+#### Wireframe 4c: `xactions admin accounts`
+
+```
+$ xactions admin accounts list --platform facebook
+fb:123    active      velocity: 12/min  proxy: proxy-1
+fb:124    hibernating until 15:45       reason: bot_challenge
+
+$ xactions admin account wake fb:124
+✅ fb:124 woken.
+
+$ xactions admin account rotate fb:124 facebook
+✅ fb:124 rotated to fb:125.
+```
+
+#### Wireframe 4d: `xactions admin checkpoints`
+
+```
+$ xactions admin checkpoints list
+twitter:search:ai   running   cursor: 2026-08-26T10:00:00Z
+facebook:group:ml   failed    lastError: 429
+
+$ xactions admin checkpoint retry facebook:group:ml
+✅ facebook:group:ml retried, status: running.
+```
+
+#### Wireframe 4e: `xactions admin stream`
+
+```
+$ xactions admin stream metrics
+pendingMessages: 1,240
+lastAckTime:     12s
+consumers:       3
+
+$ xactions admin stream alerts
+checkpoint: pendingMessages > 50,000
+status:     OK
+
+$ xactions admin stream test
+✅ test alert fired to configured webhook.
+```
 
 ## Responsive & Platform
 

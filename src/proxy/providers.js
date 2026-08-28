@@ -275,6 +275,7 @@ export function normalizeProxy(input) {
 
     if (record.username !== undefined && record.username !== '') result.username = String(record.username);
     if (record.password !== undefined) result.password = String(record.password);
+    if (record.residential !== undefined) result.residential = Boolean(record.residential);
 
     return result;
   }
@@ -401,26 +402,29 @@ export class StaticProxyProvider {
    */
   getProxy(options = {}) {
     const opts = options || {};
+    const requiresResidential = Boolean(opts.requiresResidential);
     if (opts.accountId) {
       const accountId = /** @type {string} */ (opts.accountId);
-      return this.pool.getStickyProxy(accountId);
+      return this.pool.getStickyProxy(accountId, requiresResidential);
     }
-    return this.pool.getNext();
+    return this.pool.getNext(requiresResidential);
   }
 
   /**
    * @param {string} accountId
+   * @param {boolean} [requiresResidential=false]
    * @returns {NormalizedProxy | string | null}
    */
-  getStickyProxy(accountId) {
-    return this.pool.getStickyProxy(accountId);
+  getStickyProxy(accountId, requiresResidential = false) {
+    return this.pool.getStickyProxy(accountId, requiresResidential);
   }
 
   /**
+   * @param {boolean} [requiresResidential=false]
    * @returns {NormalizedProxy | string | null}
    */
-  getNext() {
-    return this.pool.getNext();
+  getNext(requiresResidential = false) {
+    return this.pool.getNext(requiresResidential);
   }
 
   /**
@@ -1108,17 +1112,19 @@ export class DynamicTunnelProvider {
 
   /**
    * @param {string} accountId
+   * @param {boolean} [requiresResidential=false]
    * @returns {NormalizedProxy | null}
    */
-  getStickyProxy(accountId) {
-    return this.getProxy({ accountId });
+  getStickyProxy(accountId, requiresResidential = false) {
+    return this.getProxy({ accountId, requiresResidential });
   }
 
   /**
+   * @param {boolean} [requiresResidential=false]
    * @returns {NormalizedProxy | null}
    */
-  getNext() {
-    return this.getProxy();
+  getNext(requiresResidential = false) {
+    return this.getProxy({ requiresResidential });
   }
 
   /**

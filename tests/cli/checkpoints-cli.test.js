@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { prisma } from '../store/test-prisma-client.js';
+import { prisma, cleanupTestDatabase } from '../store/test-prisma-client.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -40,9 +40,7 @@ async function seedCheckpoint(overrides = {}) {
 }
 
 async function cleanupCheckpoints() {
-  await prisma.crawlCheckpoint.deleteMany({
-    where: { targetKey: { startsWith: 'cli_e2e_' } },
-  });
+  await cleanupTestDatabase();
 }
 
 describe('E2E CLI: xactions checkpoints (Story 10.4)', () => {

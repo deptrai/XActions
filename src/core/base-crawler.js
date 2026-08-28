@@ -97,7 +97,8 @@ export class AbstractCrawler {
       });
     }
 
-    const fullDescriptor = { action: actionName, ...actionDesc };
+    const resolvedRequiresAuth = actionDesc.requiresAuth !== undefined ? actionDesc.requiresAuth : this.requiresAuth;
+    const fullDescriptor = { ...actionDesc, action: actionName, requiresAuth: resolvedRequiresAuth };
     this.#registry.set(actionName, { handler: actionHandler.bind(this), descriptor: fullDescriptor });
     globalActionRegistry.registerPlatformActions(this.name, [fullDescriptor]);
   }
@@ -106,11 +107,13 @@ export class AbstractCrawler {
   listActions() {
     return Array.from(this.#registry.entries()).map(([action, { descriptor }]) => ({
       action,
+      category: descriptor.category || 'social',
       description: descriptor.description || `${action} for ${this.name}`,
       requiredArgs: descriptor.requiredArgs || [],
       optionalArgs: descriptor.optionalArgs || [],
       example: descriptor.example || {},
       outputType: descriptor.outputType || 'PostItem[]',
+      requiresAuth: descriptor.requiresAuth !== undefined ? descriptor.requiresAuth : this.requiresAuth,
     }));
   }
 
@@ -169,16 +172,18 @@ export class AbstractCrawler {
       });
     }
 
+    const actionRequiresAuth = entry.descriptor.requiresAuth !== undefined ? entry.descriptor.requiresAuth : this.requiresAuth;
+
     // Resolve account ID
     let accountId = command.session?.accountId || command.args?.accountId || null;
-    if (this.requiresAuth && !accountId && this.accountPool) {
+    if (actionRequiresAuth && !accountId && this.accountPool) {
       const account = this.accountPool.getNextAvailable(this.name);
       if (account) {
         accountId = account;
       }
     }
 
-    if (this.requiresAuth && !accountId) {
+    if (actionRequiresAuth && !accountId) {
       throw new PlatformError({
         type: ErrorTypes.AUTH_EXPIRED,
         code: 'XACT_4010',
@@ -191,7 +196,7 @@ export class AbstractCrawler {
 
     // Consult governor
     if (this.governor) {
-      if (this.requiresAuth && accountId) {
+      if (accountId) {
         if (!this.governor.canAccountRequest(accountId, this.name)) {
           throw new PlatformError({
             type: ErrorTypes.HIBERNATION,
@@ -233,7 +238,11 @@ export class AbstractCrawler {
       }
     }
 
-    const session = { ...(command.session || {}), ...(accountId ? { accountId } : {}) };
+    const session = {
+      ...(command.session || {}),
+      requiresAuth: actionRequiresAuth,
+      ...(accountId ? { accountId } : { accountId: null }),
+    };
 
     // Apply Gaussian jitter between actions when running in CDP attach mode.
     if (this.cdpUrl || command.session?.cdpUrl) {
@@ -282,7 +291,7 @@ export class AbstractCrawler {
 
   /**
    * @param {Object} args
-   * @returns {Promise<PostItem>}
+   * @returns {Promise<any>}
    */
   async getPostDetail(args) { throw new Error('Method not implemented: getPostDetail()'); }
 

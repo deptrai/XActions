@@ -19,10 +19,22 @@ export function registerScrapeCommand(program) {
     .command('scrape')
     .description('Scrape data from any platform (facebook, threads, bluesky, mastodon, twitter)')
     .requiredOption('--platform <platform>', 'Platform: facebook/fb, threads, bluesky, mastodon, twitter/x')
-    .requiredOption('--action <action>', 'Action: profile, posts, followers, search')
+    .requiredOption('--action <action>', 'Action: profile, posts, followers, following, search, marketplace, post_comments, group_posts, group_comments, group_search, group_members')
     .option('--username <username>', 'Target username or handle')
-    .option('--query <query>', 'Search query (for search action)')
+    .option('--url <url>', 'Target URL (for posts, comments, group members, marketplace)')
+    .option('--query <query>', 'Search query (for search or marketplace action)')
     .option('--limit <number>', 'Maximum results', '20')
+    .option('--category <category>', 'Category slug (for marketplace)')
+    .option('--category-id <id>', 'Category ID (for marketplace)')
+    .option('--min-price <number>', 'Minimum price filter (for marketplace)')
+    .option('--max-price <number>', 'Maximum price filter (for marketplace)')
+    .option('--latitude <lat>', 'Latitude (for marketplace)')
+    .option('--longitude <lng>', 'Longitude (for marketplace)')
+    .option('--radius-km <km>', 'Radius in km (for marketplace)')
+    .option('--location <location>', 'Location filter (for search or marketplace)')
+    .option('--cursor <cursor>', 'Pagination cursor')
+    .option('--include-replies', 'Include nested replies (for comments)')
+    .option('--dry-run', 'Preview without making network requests')
     .option('--auth-cookie <json>', 'Auth cookie as JSON — required for facebook: \'{"c_user":"...","xs":"..."}\'')
     .option('--auth-token <token>', 'Auth token string (for twitter/threads)')
     .option('-o, --output <file>', 'Output file (.json or .csv)')
@@ -34,7 +46,7 @@ export function registerScrapeCommand(program) {
 
       try {
         // Facebook requires authCookie object, not authToken string
-        if ((platform === 'facebook' || platform === 'fb') && !options.authCookie) {
+        if ((platform === 'facebook' || platform === 'fb') && !options.authCookie && action !== 'marketplace') {
           spinner.fail('Facebook requires --auth-cookie \'{"c_user":"...","xs":"..."}\' (not --auth-token)');
           process.exit(1);
         }
@@ -50,10 +62,28 @@ export function registerScrapeCommand(program) {
           }
         }
 
+        const parseNum = (val) => {
+          if (val == null) return undefined;
+          const n = Number(val);
+          return Number.isFinite(n) ? n : undefined;
+        };
+
         const scrapeOptions = {
           username: options.username,
+          url: options.url,
           query: options.query,
-          limit: parseInt(options.limit, 10),
+          limit: parseInt(options.limit, 10) || 20,
+          category: options.category,
+          categoryId: options.categoryId,
+          minPrice: parseNum(options.minPrice),
+          maxPrice: parseNum(options.maxPrice),
+          latitude: parseNum(options.latitude),
+          longitude: parseNum(options.longitude),
+          radiusKm: parseNum(options.radiusKm),
+          location: options.location,
+          cursor: options.cursor,
+          includeReplies: options.includeReplies,
+          dryRun: options.dryRun,
           authToken: options.authToken,
           authCookie,
         };

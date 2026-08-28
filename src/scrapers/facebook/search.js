@@ -5,6 +5,7 @@
  *
  * Uses the same Puppeteer stealth approach as Twitter and Threads scrapers.
  *
+ * @deprecated Use `src/scrapers/social/facebook/index.js` (`FacebookCrawler`, `FacebookClient`) instead. See docs/deprecation-plan.md.
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license BSL 1.1
@@ -237,6 +238,7 @@ async function searchByType(page, query, type, options = {}) {
 
 /**
  * Search Facebook by multiple types (posts, people, pages, groups) or all.
+ * @deprecated Replaced by `FacebookCrawler` action `search` (Story 13.6). Use `FacebookCrawler.search()` instead.
  * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} query - Search query string
  * @param {FacebookOptions} options
@@ -269,6 +271,7 @@ export async function searchFacebook(page, query, options = {}) {
 
 /**
  * Backward-compatible thin wrapper around searchFacebook for existing callers.
+ * @deprecated Replaced by `FacebookCrawler` action `search` (Story 13.6).
  * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} query - Search query string
  * @param {FacebookOptions} options

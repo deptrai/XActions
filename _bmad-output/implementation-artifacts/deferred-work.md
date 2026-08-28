@@ -1,5 +1,27 @@
 # Deferred Work
 
+## Deferred from: code review of 13-10-facebook-hybrid-integration-caller-migration (2026-08-28)
+
+- [x] [Done] `warmup`/`cancel` tools (`x_facebook_warmup_scroll`, `x_facebook_warmup_account`, `x_facebook_cancel_friend_requests`) migrated to `FacebookCrawler` hybrid actions `warmup_scroll`, `warmup_account`, `cancel_friend_requests`. Callers in `src/mcp/server.js` and `api/routes/facebook.js` now route through `scrape('facebook', ...)`; legacy `runWithFacebookBrowser` and `facebookAutomation.js` paths removed for these actions.
+- [x] [Review][Done] POST /api/facebook/automate (like/comment/post/share/join-groups/batch-post-groups/send-friend-requests/messenger-share) now routes through `scrape()` to `FacebookCrawler` [api/routes/facebook.js, api/services/facebookAutomation.js]
+- [x] [Review][Done] CLI `xactions automate` now routes like/comment/post/share/join-group/send-friend-request through `scrape()` [src/cli/commands/automate.js]
+- [x] [Review][Done] MCP `executeFacebookAutomateTool` / `executeFacebookEpic4Tool` now dispatch to `FacebookCrawler` for like/comment/post/messenger/share/join/post_to_groups/friend_requests [src/mcp/server.js]
+- [x] [Review][Done] `api/services/facebookAccountPool.js:runBatch` now supports `hybrid: true` mode using `FacebookClient`/`FacebookCrawler` per account context [api/services/facebookAccountPool.js:23, 142-337]
+- [x] [Review][Done] `api/services/facebookHealth.js` now uses `FacebookClient` for HTTP health checks [api/services/facebookHealth.js]
+- [x] [Review][Done] Added `FacebookCrawler`/`FacebookClient`/`FacebookActions` type declarations to `types/index.d.ts` and `src/types/xactions.d.ts` [AC-9]
+- [x] [Review][Done] Added `@deprecated` headers to legacy `src/scrapers/facebook/*.js` files (marketplace.js, posts.js, comments.js, search.js, group-search.js, followers.js, profile.js) [AC-10]
+- [x] [Review][Done] Triaged `src/scrapers/index.js` `facebook`/`fb` branch: removed `marketplace` dead-code mapping, restored legacy page-based fallback for callers that pass `options.page`, and documented the hybrid production path [src/scrapers/index.js:420-476]
+
+## Deferred from: code review of 13-9-facebook-hybrid-social-actions-write-messenger re-review (2026-08-28)
+
+- [x] [Review][Defer] `DEFAULT_FB_DOC_IDS` write mutation placeholders không phải doc_id thật — by design, cần capture từ live session [src/scrapers/social/facebook/crawler.js:225-231; actions.js:275-280]
+- [x] [Review][Defer] `FacebookActionVelocityTracker` lưu in-memory, không chia sẻ across workers/restarts — vượt phạm vi AC-14 [src/scrapers/social/facebook/batch-runner.js:47-48]
+- [x] [Review][Defer] `shareLinkByUid` legacy campaign vẫn dùng plain loop không batch safety — file đã deprecated, thuộc Epic 20.2 cleanup [src/scrapers/facebook/shareLinkByUid.js:208-232]
+
+## Deferred from: code review of 13-9-facebook-hybrid-social-actions-write-messenger (2026-08-28)
+
+- [x] [Review][Defer] `DEFAULT_FB_DOC_IDS` write mutation placeholders chưa tham chiếu trong action code hay tests — by design, cần capture live doc_id từ real Facebook session trước khi dùng [src/scrapers/social/facebook/crawler.js:224-230]
+
 ## Deferred from: code review of 10-3-ai-dataset-export-utility-streaming-jsonl-csv (2026-08-19)
 
 - [ ] [Review][P2][Defer] `outputPath` has no path traversal or directory/symlink validation; out of scope for current AC [src/utils/exporter.js:256-266]
@@ -19,7 +41,7 @@
 ## Deferred from: code review of 11-1-proxyippool-accountpool-sticky-round-robin.md (2026-08-19)
 
 - [ ] [Review][P2][Defer] `hibernation` and `quarantine` depend on `Date.now()` and are sensitive to clock skew; monotonic timing is out of scope for Story 11.1 [src/core/account-pool.js:87, src/proxy/proxy-pool.js:161]
-- [ ] [Review][P2][Defer] No transaction / checkout between proxy selection and actual request use; checkout/checkin belongs to the request pipeline (Story 11.5/11.7) [src/proxy/proxy-pool.js:111-140]
+- [ ] [Review][P2][Defer] No transaction / checkout between proxy selection and actual request use; checkout/checkin belongs to the request pipeline (Story 11.3 / 11.7) [src/proxy/proxy-pool.js:111-140]
 
 ## Deferred from: code review of 11-2-static-dynamic-residential-tunnel-proxy-providers (2026-08-20)
 
@@ -43,3 +65,28 @@
 - [ ] [Review][P2][Defer] No `comment-tree.test.js` for cycles, duplicate IDs, orphan re-parenting, or `subCommentsCount=0` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
 - [ ] [Review][P2][Defer] No concurrency / `p-limit` / shared-state race tests for `CommentTreeExtractor` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
 - [ ] [Review][P2][Defer] Legacy Puppeteer `scrapeTweets` / `searchTweets` still use post text fragment as fallback ID and lack proxy/cookie rotation and retry — only `@deprecated` markers were required for this story; defer to Epic 20.2. [src/scrapers/threads/index.js:196-213,245-316]
+
+## Deferred from: code review of 13-4-facebook-browser-as-signer-bridge (2026-08-26)
+
+- [ ] [Review][P2][Defer] HTTP fallback `#fetchTokens` does not extract `__rev` — pre-existing behavior, browser path covers AC-2. [src/scrapers/social/facebook/client.js:319-337]
+
+## Deferred from: code review of 13-5-facebook-hybrid-profile-followers-group-members (2026-08-27)
+
+- [x] [Review][Defer] `#resolveCookies` branch `session.account.credentials.cookies` is not reachable from normal `AbstractCrawler.start` flow; requires `AccountPool`/`base-crawler` changes outside Story 13.5 scope. [src/scrapers/social/facebook/crawler.js:642-646, src/core/base-crawler.js:236]
+- [x] [Review][Defer] Content fallback for `profile` and `group_members` using `FacebookBrowserBridge` is not feasible here: 13.4 bridge is a signer token bridge (`extractTokens`), not a content scraper. Adding a real browser fallback needs a dedicated story to port legacy `scrapeProfile`/`scrapeGroupMembers` to the BaseAdapter or implement evaluate scripts. [src/scrapers/social/facebook/crawler.js:1058-1072, 1266-1338, src/scrapers/social/facebook/signer-bridge.js]
+
+## Deferred from: code review of 13-7-facebook-hybrid-post-group-comments (2026-08-27)
+
+- [ ] [Review][P2][Defer] `CommentTreeExtractor` racy shared state under `p-limit` — pre-existing concurrency issue already deferred from 15-1. [src/scrapers/social/comment-tree.js:175-179]
+- [ ] [Review][P2][Defer] Orphaned replies re-attached to depth 0 never have children fetched — pre-existing `CommentTreeExtractor` behavior already deferred from 15-1. [src/scrapers/social/comment-tree.js:116-123]
+- [ ] [Review][P2][Defer] Group-specific `doc_id` placeholders are unverified — implementation acknowledges this; needs live Facebook capture. [src/scrapers/social/facebook/crawler.js:218-219]
+
+## Deferred from: code review of 13-8-facebook-hybrid-marketplace (2026-08-27)
+
+- [x] [Review][Defer] `DEFAULT_FB_DOC_IDS.MARKETPLACE_SEARCH` là placeholder — by design, cần capture live doc_id. [src/scrapers/social/facebook/crawler.js:192-196]
+- [x] [Review][Defer] Migration hoàn chỉnh `src/scrapers/index.js`, `api/services/facebookScrape.js`, `src/mcp/server.js` sang `FacebookCrawler` — thuộc Story 13.10. [src/scrapers/index.js:188-196, src/mcp/server.js:3151-3200]
+
+## Deferred from: code review of 14-2-mcp-tool-exporters-daemon-http-sse-server (2026-08-28)
+
+- [x] [Review][Defer] `extractRecords` heuristic ưu tiên `comments` over `posts` khi object có cả hai — pre-existing design choice, sẽ cần revisit khi thêm mixed-payload crawlers
+- [x] [Review][Defer] `x_actions_list` chỉ cover Facebook + Threads — spec ghi rõ skip platform chưa migrate; sẽ mở rộng khi Twitter/Bluesky/Mastodon crawlers migrate sang AbstractCrawler

@@ -40,6 +40,7 @@ import bluesky from './bluesky/index.js';
 import mastodon from './mastodon/index.js';
 import threads from './threads/index.js';
 import facebook from './facebook/index.js';
+import { defaultStore } from '../store/index.js';
 
 // ============================================================================
 // HTTP Scraper (Direct GraphQL — no browser required)
@@ -155,6 +156,8 @@ export function getPlatform(platform) {
  *   const posts = await scrape('threads', 'tweets', { page, username: 'zuck', limit: 20 });
  */
 export async function scrape(platform, action, options = {}) {
+  const store = options.store || defaultStore;
+  const normalizedOptions = { ...options, store };
   const mod = getPlatform(platform);
   const platformName = platform.toLowerCase();
 
@@ -278,9 +281,9 @@ export async function scrape(platform, action, options = {}) {
     let result;
     try {
       if (noTargetActions.includes(fnName)) {
-        result = await fn(page, options);
+        result = await fn(page, normalizedOptions);
       } else {
-        result = await fn(page, target, options);
+        result = await fn(page, target, normalizedOptions);
       }
     } finally {
       // Auto-close browser if we created it — runs even if fn throws (goto timeout,
@@ -294,7 +297,7 @@ export async function scrape(platform, action, options = {}) {
   }
 
   if (needsClient) {
-    let client = options.client;
+    let client = normalizedOptions.client;
 
     // Auto-create client if not provided
     if (!client) {

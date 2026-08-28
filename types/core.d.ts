@@ -44,6 +44,46 @@ export interface CommentItem {
   crawledAt: Date;
 }
 
+export interface ThinEvent {
+  id: string;
+  platform: string;
+  externalId: string;
+  category: string;
+  authorId: string;
+  crawledAt: string;
+  storageRef: string;
+}
+
+export interface StreamMetrics {
+  eventsPerSecond: number;
+  pendingMessages: number;
+  consumerLag: number;
+  droppedEvents: number;
+  lastAckTime: number;
+  maxLen: number;
+  minId: string | null;
+}
+
+export interface RedisClientLike {
+  xAdd?: Function;
+  xadd?: Function;
+  xLen?: Function;
+  xlen?: Function;
+  xInfoStream?: Function;
+  xInfo?: Function;
+  xinfo?: Function;
+  xInfoConsumers?: Function;
+  xGroupCreate?: Function;
+  xgroup?: Function;
+  xPending?: Function;
+  xpending?: Function;
+  sendCommand?: Function;
+  isOpen?: boolean | Function;
+  quit?: Function;
+  disconnect?: Function;
+  status?: string;
+}
+
 export interface LoginResult {
   accountId: string;
   cookies: string | Record<string, unknown>;

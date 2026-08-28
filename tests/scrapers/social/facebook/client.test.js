@@ -7,6 +7,7 @@ import { ProxyIpPool } from '../../../../src/proxy/proxy-pool.js';
 import { AdaptiveRateGovernor } from '../../../../src/core/adaptive-governor.js';
 import { AccountPool } from '../../../../src/core/account-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../../src/core/error-envelope.js';
+import { PreSignedTokenRing } from '../../../../src/core/signer-pool.js';
 
 describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () => {
   let server;
@@ -45,6 +46,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
                   window.__spin_r = 1016839210;
                   window.__spin_t = 1787680000;
                   window.__hsi = "739281928371928";
+                  window.Env = { USER_ID : "10001", actor_id : 10001 };
                 </script>
               </body>
             </html>
@@ -157,6 +159,15 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
     expect(tokens.c_user).toBe('10001');
   });
 
+  it('[P1] should extract c_user from spaced/unquoted USER_ID or actor_id when no c_user cookie is present', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const tokens = await client.ensureTokens('acc_fb_no_cookie', '');
+
+    expect(tokens.c_user).toBe('10001');
+    expect(tokens.lsd).toBe('AVq_LsdToken123');
+    expect(tokens.dtsg).toBe('DTSG_Token_456');
+  });
+
   it('[P1] should deduplicate concurrent in-flight token fetches for the same account', async () => {
     const client = new FacebookClient({ baseUrl: serverUrl });
     const hitsBefore = homePageHits;
@@ -183,7 +194,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
       c_user: '10001',
     };
 
-    const bodyString = client.buildGraphQlBody('group_feed_doc_123', { groupId: '123456', count: 10 }, tokens);
+    const bodyString = client.buildGraphQlBody('group_feed_doc_123', { groupId: '123456', count: 10 }, tokens, { accountId: '10001' });
     const parsed = new URLSearchParams(bodyString);
 
     expect(parsed.get('doc_id')).toBe('group_feed_doc_123');
@@ -223,7 +234,7 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
 
   it('[P1] should execute GraphQL request and handle graceful doc_id rotation failure as XACT_5000 (AC-7)', async () => {
     const client = new FacebookClient({ baseUrl: serverUrl });
-    
+
     await expect(client.requestGraphQl('invalid_or_rotated_doc_id', { id: '1' }, {
       accountId: 'acc_fb_1',
       cookies: { c_user: '10001', xs: 'sec_xs_123' },
@@ -232,5 +243,84 @@ describe('Story 13.3 — FacebookClient Contract & Hybrid GraphQL Engine', () =>
       type: ErrorTypes.INTERNAL,
       suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
     });
+  });
+
+  // ============================================================================
+  // Story 13.4 — Browser-as-Signer additions
+  // ============================================================================
+
+  it('[P1] should refill tokenRing with the extracted lsd string after token extraction (AC-9)', async () => {
+    const tokenRing = new PreSignedTokenRing();
+    const client = new FacebookClient({ baseUrl: serverUrl, tokenRing });
+    const tokens = await client.ensureTokens('acc_token_ring', 'c_user=10001; xs=sec_xs_123');
+
+    expect(tokens.lsd).toBe('AVq_LsdToken123');
+    expect(tokenRing.size).toBe(1);
+    expect(tokenRing.next()).toBe('AVq_LsdToken123');
+  });
+
+  it('[P1] should refresh tokens before a short TTL expires (AC-8)', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl, tokenTtlMs: 100 });
+    const hitsBefore = homePageHits;
+
+    await client.ensureTokens('acc_refresh_short_ttl', 'c_user=10001; xs=sec_xs_123');
+    expect(homePageHits - hitsBefore).toBe(1);
+
+    // Wait past the 100 ms TTL so the next call must refresh.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    await client.ensureTokens('acc_refresh_short_ttl', 'c_user=10001; xs=sec_xs_123');
+    expect(homePageHits - hitsBefore).toBe(2);
+  });
+
+  it('[P1] should throw XACT_5030 with relogin when cdpUrl is unreachable and httpFallback is false (AC-7)', async () => {
+    const client = new FacebookClient({
+      baseUrl: serverUrl,
+      cdpUrl: 'http://127.0.0.1:1',
+      httpFallback: false,
+    });
+
+    await expect(client.ensureTokens('acc_cdp_unreachable', 'c_user=10001; xs=sec_xs_123')).rejects.toMatchObject({
+      code: 'XACT_5030',
+      suggestedAction: SuggestedActions.RELOGIN,
+    });
+  });
+
+  // ============================================================================
+  // Action-Level Granular Auth & Guest Mode tests (2026-08-27)
+  // ============================================================================
+
+  it('[P1] buildGraphQlBody supports guest mode when requiresAuth is false', () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const bodyStr = client.buildGraphQlBody('marketplace_doc_1', { query: 'macbook' }, { lsd: 'guest_lsd_123' }, { requiresAuth: false });
+    const params = new URLSearchParams(bodyStr);
+
+    expect(params.get('__user')).toBe('0');
+    expect(params.get('av')).toBe('0');
+    expect(params.get('lsd')).toBe('guest_lsd_123');
+    expect(params.get('doc_id')).toBe('marketplace_doc_1');
+  });
+
+  it('[P1] buildGraphQlBody throws XACT_4010 when requiresAuth is true and userId is missing', () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    expect(() => {
+      client.buildGraphQlBody('private_doc_1', {}, { lsd: 'lsd_123' }, { requiresAuth: true });
+    }).toThrow(PlatformError);
+  });
+
+  it('[P1] requestGraphQl executes with accountId=null in guest mode without throwing XACT_4010', async () => {
+    const client = new FacebookClient({ baseUrl: serverUrl });
+    const res = await client.requestGraphQl('group_feed_doc_123', { groupId: '123456', count: 10 }, {
+      accountId: null,
+      requiresAuth: false,
+    });
+
+    expect(res).toBeDefined();
+    expect(res?.data?.group?.id).toBe('123456');
+
+    const lastReq = receivedRequests[receivedRequests.length - 1];
+    const parsed = new URLSearchParams(lastReq.body);
+    expect(parsed.get('doc_id')).toBe('group_feed_doc_123');
+    expect(parsed.get('__user')).toBe('0'); // guest mode forces USER_ID to 0
   });
 });

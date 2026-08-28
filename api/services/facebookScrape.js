@@ -12,6 +12,7 @@
 
 import { resolve as resolveFacebookAuth } from './facebookAuth.js';
 import { runBatch as poolRunBatch } from './facebookAccountPool.js';
+import { defaultStore } from '../../src/store/store-with-redis.js';
 
 /**
  * Run a single Facebook scrape action.
@@ -24,9 +25,10 @@ export async function run(action, args = {}) {
   const authCookie = /** @type {Record<string, unknown>} */ (args.authCookie);
   const userId = /** @type {string | undefined} */ (args.userId);
   const browserOptions = /** @type {Record<string, unknown> | undefined} */ (args.browserOptions);
+  const store = args.store || defaultStore;
   const rest = /** @type {Record<string, unknown>} */ ({});
   for (const [k, v] of Object.entries(args)) {
-    if (!['authCookie', 'userId', 'browserOptions'].includes(k)) {
+    if (!['authCookie', 'userId', 'browserOptions', 'store'].includes(k)) {
       rest[k] = v;
     }
   }
@@ -38,9 +40,10 @@ export async function run(action, args = {}) {
   // Resolve authCookie to { c_user, xs } via FacebookAuthResolver.
   const resolved = await resolveFacebookAuth(authCookie, userId);
 
-  // Build the scrape args — pass resolved cookie + browserOptions + action-specific params.
+  // Build the scrape args — pass resolved cookie + browserOptions + action-specific params + store.
   const scrapeArgs = {
     ...rest,
+    store,
     authCookie: { c_user: resolved.c_user, xs: resolved.xs },
     ...(browserOptions ? { browserOptions } : {}),
   };

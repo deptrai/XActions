@@ -14,8 +14,26 @@ import { ThreadsClient } from './client.js';
 import { CommentTreeExtractor } from '../comment-tree.js';
 import { generatePostId, generateCommentId } from '../../../core/types.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import {
+  namespacedProfileId,
+  parseHumanCount,
+  normalizeThreadsProfile,
+  normalizeThreadsConnection,
+  profileItemToPostItem,
+} from './normalizer.js';
+import {
+  defaultRedisStreamPublisher,
+  isEnvTruthy,
+  toIsoDate,
+} from '../../../utils/redis-stream-publisher.js';
 
 export const DEFAULT_THREADS_DOC_IDS = {
+  // Profile & Connection doc_ids (Story 15.1.1)
+  PROFILE: '23996318473300828', // BarcelonaProfileRootQuery (candidate)
+  FOLLOWERS: null, // BarcelonaFollowersTabQuery (capture required)
+  FOLLOWING: null, // BarcelonaFollowingTabQuery (capture required)
+
+  // Feed, Post & Comments doc_ids (Story 15.1)
   PROFILE_FEED: '6232751443445612',
   POST_DETAIL: '5587632691339264',
   SEARCH_POSTS: null,
@@ -51,6 +69,7 @@ export class ThreadsCrawler extends AbstractCrawler {
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
+   * @param {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher} [deps.redisPublisher]
    */
   constructor(deps = {}) {
     const { client: explicitClient, ...clientDeps } = deps;
@@ -62,6 +81,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     });
 
     this.client = client;
+    this.redisPublisher = deps.redisPublisher;
     this.docIds = {
       ...DEFAULT_THREADS_DOC_IDS,
       ...(deps.docIds || {}),
@@ -100,6 +120,51 @@ export class ThreadsCrawler extends AbstractCrawler {
       example: { postId: 'CuZ7X9_sF9y', maxDepth: 3, maxComments: 100 },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostComments(args, session),
     }));
+
+    this.registerAction(/** @type {any} */ ({
+      action: 'post_detail',
+      description: 'Scrape a single Threads post detail and optional comment tree',
+      category: 'social',
+      requiredArgs: ['postId'],
+      optionalArgs: ['includeReplies', 'maxDepth', 'maxComments', 'after'],
+      outputType: '{ post: PostItem, comments?: CommentItem[], pageInfo?: any }',
+      example: { postId: 'CuZ7X9_sF9y', includeReplies: true, maxDepth: 3, maxComments: 100 },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostDetail(args, session),
+    }));
+
+    // ── Story 15.1.1 Actions: profile, followers, following ──
+    this.registerAction(/** @type {any} */ ({
+      action: 'profile',
+      description: 'Fetch and normalize a Threads user profile via GraphQL or SSR fallback',
+      category: 'social',
+      requiredArgs: ['username'],
+      optionalArgs: [],
+      outputType: 'ProfileItem',
+      example: { username: 'zuck' },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getProfile(args, session),
+    }));
+
+    this.registerAction(/** @type {any} */ ({
+      action: 'followers',
+      description: 'Fetch follower connection profiles for a Threads user with limitation fallback',
+      category: 'social',
+      requiredArgs: ['username'],
+      optionalArgs: ['count', 'cursor'],
+      outputType: '{ profiles: ProfileItem[], counts: object, note?: string }',
+      example: { username: 'zuck', count: 50 },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getFollowers(args, session),
+    }));
+
+    this.registerAction(/** @type {any} */ ({
+      action: 'following',
+      description: 'Fetch following connection profiles for a Threads user with limitation fallback',
+      category: 'social',
+      requiredArgs: ['username'],
+      optionalArgs: ['count', 'cursor'],
+      outputType: '{ profiles: ProfileItem[], counts: object, note?: string }',
+      example: { username: 'zuck', count: 50 },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getFollowing(args, session),
+    }));
   }
 
   /**
@@ -128,21 +193,21 @@ export class ThreadsCrawler extends AbstractCrawler {
         });
       }
 
-      const redisClient = /** @type {any} */ (this.store)?.redis || /** @type {any} */ (this.sessionManager)?.redis;
-      if (redisClient && process.env.REDIS_STREAM_ENABLED === 'true') {
-        for (const item of items) {
-          const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
-          await redisClient.xadd(
-            'stream:social:raw_posts',
-            '*',
-            'id', item.id,
-            'platform', 'threads',
-            'externalId', item.externalId,
-            'category', category,
-            'authorId', item.authorId || '',
-            'crawledAt', item.crawledAt ? item.crawledAt.toISOString() : new Date().toISOString(),
-            'storageRef', item.id,
-          );
+      if (isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
+        const publisher = this.redisPublisher || (this.store && /** @type {any} */ (this.store).publisher) || defaultRedisStreamPublisher;
+        if (publisher && typeof publisher.publish === 'function') {
+          for (const item of items) {
+            const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
+            await publisher.publish({
+              id: item.id,
+              platform: 'threads',
+              externalId: item.externalId,
+              category,
+              authorId: item.authorId || '',
+              crawledAt: item.crawledAt ? toIsoDate(item.crawledAt) : new Date().toISOString(),
+              storageRef: item.id,
+            });
+          }
         }
       }
     } catch (err) {
@@ -315,6 +380,97 @@ export class ThreadsCrawler extends AbstractCrawler {
   }
 
   /**
+   * Find an object node in a tree that contains `value` as one of its string fields.
+   * Iterative BFS to avoid stack issues; used only for exact matching, not traversal.
+   * @param {any} root
+   * @param {string} value
+   * @param {number} [maxDepth=12]
+   * @returns {any | null}
+   */
+  #findNodeByValue(root, value, maxDepth = 12) {
+    if (!root || !value) return null;
+    const queue = [{ node: root, depth: 0 }];
+    const seen = new WeakSet();
+
+    while (queue.length > 0) {
+      const entry = queue.shift();
+      if (!entry) continue;
+      const { node, depth } = entry;
+      if (depth > maxDepth) continue;
+      if (!node || typeof node !== 'object') continue;
+      if (seen.has(node)) continue;
+      seen.add(node);
+
+      const matchKeys = ['code', 'pk', 'id', 'shortcode'];
+      if (matchKeys.some((key) => String(node[key] ?? '') === value)) {
+        return node;
+      }
+
+      for (const child of Array.isArray(node) ? node : Object.values(node)) {
+        if (child != null && typeof child === 'object') {
+          queue.push({ node: child, depth: depth + 1 });
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find the first node in a tree whose `pk` or `id` is a numeric string.
+   * BFS with bounded depth to avoid picking arbitrary ids from unrelated nodes.
+   * @param {any} root
+   * @param {number} [maxDepth=12]
+   * @returns {string | null}
+   */
+  #findNumericPostId(root, maxDepth = 12) {
+    if (!root) return null;
+    const queue = [{ node: root, depth: 0 }];
+    const seen = new WeakSet();
+
+    while (queue.length > 0) {
+      const entry = queue.shift();
+      if (!entry) continue;
+      const { node, depth } = entry;
+      if (depth > maxDepth) continue;
+      if (!node || typeof node !== 'object') continue;
+      if (seen.has(node)) continue;
+      seen.add(node);
+
+      const id = node.pk || node.id;
+      if (id != null && /^\d+$/.test(String(id))) {
+        return String(id);
+      }
+
+      for (const child of Array.isArray(node) ? node : Object.values(node)) {
+        if (child != null && typeof child === 'object') {
+          queue.push({ node: child, depth: depth + 1 });
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Convert a Threads shortcode to numeric post id.
+   * Reverse base64 decoder using SHORTCODE_ALPHABET.
+   * @param {string} shortcode
+   * @returns {string | null}
+   */
+  #shortcodeToNumericId(shortcode) {
+    if (!shortcode || typeof shortcode !== 'string') return null;
+    if (/^\d+$/.test(shortcode)) return null; // pure numeric is not a shortcode
+    if (shortcode.length < 4) return null; // too short to be a real encoded id
+    let n = 0n;
+    for (let i = 0; i < shortcode.length; i++) {
+      const char = shortcode[i];
+      const idx = SHORTCODE_ALPHABET.indexOf(char);
+      if (idx === -1) return null;
+      n = (n * 64n) + BigInt(idx);
+    }
+    return n > 0n ? n.toString() : null;
+  }
+
+  /**
    * Normalize raw Threads GraphQL / SSR post node into uniform PostItem.
    * @param {Record<string, any>} raw
    * @returns {import('../../../core/types.js').PostItem | null}
@@ -455,22 +611,163 @@ export class ThreadsCrawler extends AbstractCrawler {
       },
     };
 
+    this.validateItem(item);
+
     return item;
   }
 
   /**
    * Extract clean post ID or shortcode from URL or raw ID string.
+   * Rejects non-Threads domains to prevent SSRF, but allows the configured baseUrl
+   * (used in local tests / mock servers).
    * @param {string} input
-   * @returns {string}
+   * @returns {{ code: string, isUrl: boolean }}
    */
   #extractPostCodeOrId(input) {
-    if (!input) return '';
+    if (!input) return { code: '', isUrl: false };
     const clean = String(input).trim();
-    const urlMatch = clean.match(/(?:threads\.net\/(?:@[^/]+\/post|t)\/)([^/?#]+)/i);
+
+    const urlMatch = clean.match(/^https?:\/\/(?:www\.)?threads\.net\/(?:@[^/]+\/post|t)\/([^/?#]+)/i);
     if (urlMatch && urlMatch[1]) {
-      return urlMatch[1];
+      return { code: urlMatch[1], isUrl: true };
     }
-    return clean.replace(/^threads:/, '');
+
+    const localBase = this.client.baseUrl || '';
+    if (localBase && clean.startsWith(localBase)) {
+      const localMatch = clean.slice(localBase.length).match(/^\/(?:@[^/]+\/post|t)\/([^/?#]+)/i);
+      if (localMatch && localMatch[1]) {
+        return { code: localMatch[1], isUrl: true };
+      }
+    }
+
+    return { code: clean.replace(/^threads:/, ''), isUrl: false };
+  }
+
+  /**
+   * Resolve numeric Threads post ID from URL, shortcode, or raw ID.
+   * @param {string} input
+   * @param {string} accountId
+   * @returns {Promise<string>}
+   */
+  async #resolvePostId(input, accountId) {
+    if (!input) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: postId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const clean = String(input).trim().replace(/^threads:/, '');
+    if (!clean) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing or empty postId argument',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    // 1. Direct numeric ID
+    if (/^\d+$/.test(clean)) {
+      return clean;
+    }
+
+    // 2. Extract code from URL or shortcode
+    const { code, isUrl } = this.#extractPostCodeOrId(clean);
+    if (/^\d+$/.test(code)) {
+      return code;
+    }
+
+    // 3. Try mathematical decode from shortcode
+    const decodedNumeric = this.#shortcodeToNumericId(code);
+    if (decodedNumeric) {
+      return decodedNumeric;
+    }
+
+    // 4. SSR HTML fallback via /t/<code or path>
+    try {
+      let fetchPath;
+      if (isUrl) {
+        fetchPath = clean;
+      } else {
+        fetchPath = `${this.client.baseUrl}/t/${encodeURIComponent(code)}`;
+      }
+      const resp = /** @type {any} */ (await this.client.request('GET', fetchPath, {
+        accountId,
+      }));
+
+      const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
+
+      if (html.includes("Sorry, this page isn't available") || html.includes('Page Not Found')) {
+        throw new PlatformError({
+          code: 'XACT_4041',
+          type: ErrorTypes.NOT_FOUND,
+          message: `Threads post ${code} not found`,
+          statusCode: 404,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'threads',
+        });
+      }
+
+      // Parse application/json script tags or regex matches
+      const scriptMatches = html.matchAll(/<script\s+type="application\/json"[^>]*>(.*?)<\/script>/gis);
+      for (const sm of scriptMatches) {
+        try {
+          const jsonText = sm[1];
+          if (jsonText.includes(code) || jsonText.includes('"pk"') || jsonText.includes('"post"')) {
+            const parsed = JSON.parse(jsonText);
+
+            // Try fast exact match first: find a node whose `code` or `pk` equals `code`.
+            const matchingNode = this.#findNodeByValue(parsed, code);
+            if (matchingNode?.pk || matchingNode?.id) {
+              return String(matchingNode.pk || matchingNode.id);
+            }
+
+            // Fallback: find any Barcelona node with a numeric post id.
+            const numericPost = this.#findNumericPostId(parsed);
+            if (numericPost) return numericPost;
+          }
+        } catch {}
+      }
+
+      // Contextual regex fallback: require a nearby post marker so we don't grab
+      // a random user / thread / media id.
+      const postIdMatch = html.match(/"post_id"\s*:\s*"(\d+)"/);
+      if (postIdMatch && postIdMatch[1]) {
+        return postIdMatch[1];
+      }
+
+      const pkMatch = html.match(/"pk"\s*:\s*"(\d+)"/);
+      if (pkMatch && pkMatch[1]) {
+        return pkMatch[1];
+      }
+    } catch (err) {
+      const anyErr = /** @type {any} */ (err);
+      if (anyErr?.statusCode === 404 || anyErr?.code === 'XACT_4041') {
+        throw new PlatformError({
+          code: 'XACT_4041',
+          type: ErrorTypes.NOT_FOUND,
+          message: `Threads post ${code} not found`,
+          statusCode: 404,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'threads',
+        });
+      }
+      throw err;
+    }
+
+    throw new PlatformError({
+      code: 'XACT_4041',
+      type: ErrorTypes.NOT_FOUND,
+      message: `Threads post ${code} could not be resolved to a numeric ID`,
+      statusCode: 404,
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      platform: 'threads',
+    });
   }
 
   /**
@@ -832,7 +1129,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId || 'threads-guest';
-    const rootPostId = this.#extractPostCodeOrId(args.postId);
+    const rootPostId = await this.#resolvePostId(args.postId, accountId);
     const maxDepth = Math.max(0, Math.min(args.maxDepth ?? 3, 5));
     const maxComments = Math.max(1, Math.min(args.maxComments ?? 500, 2000));
 
@@ -985,16 +1282,154 @@ export class ThreadsCrawler extends AbstractCrawler {
   async init() {}
 
   /**
-   * @param {Object} _args
-   * @returns {Promise<import('../../../core/types.js').PostItem>}
+   * Scrape a single Threads post detail and optional comment tree.
+   * @param {Object} args
+   * @param {string} args.postId
+   * @param {boolean} [args.includeReplies=false]
+   * @param {number} [args.maxDepth=3]
+   * @param {number} [args.maxComments=500]
+   * @param {string} [args.after]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ post: import('../../../core/types.js').PostItem, comments?: import('../../../core/types.js').CommentItem[], pageInfo?: any }>}
    */
-  async getPostDetail(_args) {
-    throw new PlatformError({
-      code: 'XACT_5000',
-      type: ErrorTypes.INTERNAL,
-      message: 'getPostDetail is not implemented; use getPostComments or get_user_feed',
-      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+  async getPostDetail(args, session = {}) {
+    if (!args?.postId) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: postId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const accountId = session?.accountId || 'threads-guest';
+    const numericPostId = await this.#resolvePostId(args.postId, accountId);
+
+    const docId = this.docIds.POST_DETAIL || DEFAULT_THREADS_DOC_IDS.POST_DETAIL;
+    if (!docId) {
+      throw new PlatformError({
+        code: 'XACT_5000',
+        type: ErrorTypes.INTERNAL,
+        message: 'POST_DETAIL doc_id is not configured',
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'threads',
+      });
+    }
+
+    const res = await this.client.requestGraphQl(
+      docId,
+      { postID: numericPostId, post_id: numericPostId },
+      { accountId }
+    );
+
+    const topData = res?.data?.data && typeof res.data.data === 'object'
+      ? res.data.data
+      : res?.data;
+
+    let rootRawPost = null;
+
+    // 1. Search containing_thread
+    const containingItems = topData?.containing_thread?.thread_items || [];
+    for (const item of containingItems) {
+      const p = item?.post || item;
+      if (p && (String(p.pk || p.id) === numericPostId || p.code === args.postId)) {
+        rootRawPost = p;
+        break;
+      }
+    }
+
+    // 2. Search reply_threads if not found in containing_thread
+    if (!rootRawPost && Array.isArray(topData?.reply_threads)) {
+      for (const t of topData.reply_threads) {
+        const items = t.thread_items || [t];
+        for (const item of items) {
+          const p = item?.post || item;
+          if (p && (String(p.pk || p.id) === numericPostId || p.code === args.postId)) {
+            rootRawPost = p;
+            break;
+          }
+        }
+        if (rootRawPost) break;
+      }
+    }
+
+    if (!rootRawPost) {
+      throw new PlatformError({
+        code: 'XACT_4041',
+        type: ErrorTypes.NOT_FOUND,
+        message: `Threads post ${args.postId} not found in GraphQL response`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const post = this.#normalizePostItem(rootRawPost);
+    if (!post) {
+      throw new PlatformError({
+        code: 'XACT_5000',
+        type: ErrorTypes.INTERNAL,
+        message: `Failed to normalize Threads post ${args.postId}`,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'threads',
+      });
+    }
+
+    this.validateItem(post);
+
+    if (post.metadata && typeof post.metadata === 'object') {
+      /** @type {Record<string, any>} */ (post.metadata).sourceMethod = 'post_detail';
+    }
+
+    // Persist root post
+    if (this.store && typeof this.store.storeBatch === 'function') {
+      await this.store.storeBatch([post], { upsert: true });
+    }
+
+    // Checkpoint & thin event for root post
+    await this.#emitCheckpointAndStream({
+      targetType: 'post_detail',
+      targetKey: numericPostId,
+      items: [post],
+      hasMore: false,
     });
+
+    /** @type {{ post: import('../../../core/types.js').PostItem, comments?: import('../../../core/types.js').CommentItem[], pageInfo?: any }} */
+    const result = { post };
+
+    // 4. Optional reply tree
+    if (args.includeReplies) {
+      let maxDepth = Math.max(0, Math.min(args.maxDepth ?? 3, 5));
+      if (!this.docIds.COMMENT_REPLIES && maxDepth > 0) {
+        console.warn('⚠️ [THREADS] Nested replies deferred to Story 15.1.3; limiting to root-level comments.');
+        maxDepth = 0;
+      }
+
+      if (!this.docIds.COMMENT_REPLIES && this.docIds.COMMENT_ROOTS) {
+        // maxDepth 0 still fetches root-level comments via the root comment doc_id.
+      } else if (!this.docIds.COMMENT_REPLIES && !this.docIds.COMMENT_ROOTS && !this.docIds.POST_DETAIL) {
+        console.warn('⚠️ [THREADS] No comment doc_ids configured; comments unavailable in this environment.');
+        result.comments = [];
+        result.pageInfo = { has_next_page: false, end_cursor: null };
+        return result;
+      }
+
+      const commentsResult = await this.getPostComments(
+        {
+          postId: numericPostId,
+          maxDepth,
+          maxComments: args.maxComments,
+          after: args.after,
+        },
+        session
+      );
+
+      result.comments = commentsResult.comments;
+      result.pageInfo = commentsResult.pageInfo;
+    }
+
+    return result;
   }
 
   /**
@@ -1008,6 +1443,445 @@ export class ThreadsCrawler extends AbstractCrawler {
       message: 'getComments is not implemented; use get_post_comments',
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
     });
+  }
+
+  /**
+   * Decode common HTML entities in meta tag content.
+   * @param {string} str
+   * @returns {string}
+   */
+  #decodeHtmlEntities(str) {
+    if (typeof str !== 'string') return String(str);
+    return str
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+  }
+
+  /**
+   * Scrape a Threads user profile.
+   * Tries GraphQL first if docIds.PROFILE is configured, otherwise falls back to HTML SSR parsing.
+   * @param {Object} args
+   * @param {string} args.username
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<Record<string, any>>} Normalized ProfileItem
+   */
+  async getProfile(args, session = {}) {
+    if (!args?.username) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: username',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const username = String(args.username).replace(/^@/, '').trim();
+    if (!username) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing or empty username argument',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+    const accountId = session?.accountId || 'threads-guest';
+    let profile = null;
+
+    // 1. Try GraphQL if docIds.PROFILE is available
+    if (this.docIds.PROFILE) {
+      try {
+        const userId = await this.#resolveUserId(username, accountId);
+        const res = await this.client.requestGraphQl(
+          this.docIds.PROFILE,
+          { userID: userId, username },
+          { accountId }
+        );
+
+        const rawUser = res?.data?.userData?.user || res?.data?.user || res?.data?.node;
+        if (rawUser) {
+          profile = normalizeThreadsProfile(rawUser, 'graphql');
+        }
+      } catch (err) {
+        // 404 is final; other errors (rate limit, network, 5xx) allow SSR fallback
+        const anyErr = /** @type {any} */ (err);
+        if (anyErr?.statusCode === 404 || anyErr?.code === 'XACT_4041') {
+          throw err;
+        }
+      }
+    }
+
+    // 2. SSR Fallback if GraphQL was not configured or returned null
+    if (!profile) {
+      profile = await this.#fetchProfileSsr(username, accountId);
+    }
+
+    // 3. Persist as PostItem to store
+    if (this.store && typeof this.store.storeBatch === 'function') {
+      const postItem = profileItemToPostItem(profile);
+      await this.store.storeBatch([postItem], { upsert: true });
+    }
+
+    // 4. Save Checkpoint & emit thin event
+    await this.#emitProfileCheckpointAndStream([profile], 'profile', username, null, 'completed');
+
+    return profile;
+  }
+
+  /**
+   * SSR HTML fallback parser for Threads profile page.
+   * @param {string} username
+   * @param {string} accountId
+   * @returns {Promise<Record<string, any>>}
+   */
+  async #fetchProfileSsr(username, accountId) {
+    const cleanUser = username.replace(/^@/, '').trim();
+    let resp;
+    try {
+      resp = /** @type {any} */ (await this.client.request('GET', `${this.client.baseUrl}/@${cleanUser}`, {
+        accountId,
+      }));
+    } catch (err) {
+      const anyErr = /** @type {any} */ (err);
+      const status = anyErr?.statusCode || anyErr?.status;
+      if (status === 404 || anyErr?.code === 'XACT_4041') {
+        throw new PlatformError({
+          code: 'XACT_4041',
+          type: ErrorTypes.INTERNAL,
+          message: `Threads user @${cleanUser} not found`,
+          statusCode: 404,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'threads',
+        });
+      }
+      throw err;
+    }
+
+    const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
+
+    if (html.includes("Sorry, this page isn't available") || html.includes('Page Not Found')) {
+      throw new PlatformError({
+        code: 'XACT_4041',
+        type: ErrorTypes.INTERNAL,
+        message: `Threads user @${cleanUser} not found`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const titleMatch = html.match(/<meta\s+[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
+    const descMatch = html.match(/<meta\s+[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:description["']/i);
+    const imageMatch = html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
+
+    const title = titleMatch ? this.#decodeHtmlEntities(titleMatch[1]) : '';
+    const desc = descMatch ? this.#decodeHtmlEntities(descMatch[1]) : '';
+    const avatar = imageMatch ? imageMatch[1] : null;
+
+    const userInTitleMatch = title.match(/@([a-zA-Z0-9._]+)/);
+    const usernameFromTitle = userInTitleMatch ? userInTitleMatch[1] : cleanUser;
+
+    const nameMatch = title.match(/^(.+?)\s*\(/);
+    const name = nameMatch ? nameMatch[1].trim() : usernameFromTitle;
+
+    const followerMatch = desc.match(/([\d.,]+[KkMmBb]?)\s*followers?/i);
+    const followersCount = followerMatch ? parseHumanCount(followerMatch[1]) : 0;
+
+    const followingMatch = desc.match(/([\d.,]+[KkMmBb]?)\s*following?/i);
+    const followingCount = followingMatch ? parseHumanCount(followingMatch[1]) : 0;
+
+    let bio = desc;
+    const countPrefix = followerMatch && followingMatch
+      ? `${followerMatch[0]}, ${followingMatch[0]}`
+      : (followerMatch ? followerMatch[0] : (followingMatch ? followingMatch[0] : ''));
+    if (countPrefix) {
+      bio = desc.replace(countPrefix, '').replace(/^[.,\s]+/, '').trim();
+    }
+
+    const idMatch =
+      html.match(/window\.__user_id\s*=\s*"([^"]+)"/) ||
+      html.match(/window\.__userId\s*=\s*"([^"]+)"/) ||
+      html.match(/"user_id":"(\d+)"/) ||
+      html.match(/"pk":"(\d+)"/);
+    const userId = idMatch ? idMatch[1] : usernameFromTitle;
+
+    return {
+      id: namespacedProfileId(userId),
+      platform: 'threads',
+      externalId: userId,
+      name,
+      username: usernameFromTitle,
+      bio,
+      avatar,
+      profileUrl: `https://www.threads.net/@${usernameFromTitle}`,
+      followersCount,
+      followingCount,
+      metadata: {
+        isProfile: true,
+        isFollower: false,
+        isFollowing: false,
+        sourceMethod: 'ssr',
+        isVerified: false,
+        userId,
+        username: usernameFromTitle,
+        followersCount,
+        followingCount: 0,
+      },
+    };
+  }
+
+  /**
+   * Scrape followers of a Threads account.
+   * @param {Object} args
+   * @param {string} args.username
+   * @param {number} [args.count=20]
+   * @param {string} [args.cursor]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ profiles: Record<string, any>[], counts: { followersCount: number, followingCount: number }, note?: string, pageInfo?: any }>}
+   */
+  async getFollowers(args, session = {}) {
+    return this.#fetchConnections(args, session, 'follower');
+  }
+
+  /**
+   * Scrape following of a Threads account.
+   * @param {Object} args
+   * @param {string} args.username
+   * @param {number} [args.count=20]
+   * @param {string} [args.cursor]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ profiles: Record<string, any>[], counts: { followersCount: number, followingCount: number }, note?: string, pageInfo?: any }>}
+   */
+  async getFollowing(args, session = {}) {
+    return this.#fetchConnections(args, session, 'following');
+  }
+
+  /**
+   * Internal connection scraper for followers and following.
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @param {'follower' | 'following'} connectionType
+   * @returns {Promise<{ profiles: Record<string, any>[], counts: { followersCount: number, followingCount: number }, note?: string, pageInfo?: any }>}
+   */
+  async #fetchConnections(args, session, connectionType) {
+    if (!args?.username) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: username',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const username = String(args.username).replace(/^@/, '').trim();
+    if (!username) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing or empty username argument',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const accountId = session?.accountId || 'threads-guest';
+    const userId = await this.#resolveUserId(username, accountId);
+
+    const docIdKey = connectionType === 'follower' ? 'FOLLOWERS' : 'FOLLOWING';
+    const docId = this.docIds[docIdKey];
+
+    const profiles = [];
+    let counts = { followersCount: 0, followingCount: 0 };
+    let note;
+    let pageInfo = { has_next_page: false, end_cursor: null };
+
+    if (!docId) {
+      note = `${docIdKey} doc_id is not configured; returning SSR-fallback counts only`;
+
+      const profile = await this.#fetchProfileSsr(username, accountId);
+      counts = {
+        followersCount: profile.followersCount ?? 0,
+        followingCount: profile.followingCount ?? 0,
+      };
+
+      // Persist the seed profile so callers have some data
+      if (this.store && typeof this.store.storeBatch === 'function') {
+        const postItem = profileItemToPostItem(profile);
+        await this.store.storeBatch([postItem], { upsert: true });
+      }
+
+      await this.#emitProfileCheckpointAndStream(
+        [profile],
+        connectionType,
+        username,
+        pageInfo.end_cursor,
+        'completed'
+      );
+
+      return {
+        profiles: [profile],
+        counts,
+        note,
+        pageInfo,
+      };
+    }
+
+    // Fetch profile counts first for accurate totals
+    try {
+      const profile = this.docIds.PROFILE
+        ? await this.getProfile({ username }, session)
+        : await this.#fetchProfileSsr(username, accountId);
+      counts = {
+        followersCount: profile.followersCount ?? 0,
+        followingCount: profile.followingCount ?? 0,
+      };
+
+      // Persist the seed profile
+      if (this.store && typeof this.store.storeBatch === 'function') {
+        const postItem = profileItemToPostItem(profile);
+        await this.store.storeBatch([postItem], { upsert: true });
+      }
+    } catch (err) {
+      // SSR/GraphQL may fail for private/suspended accounts; keep counts zero
+      counts = { followersCount: 0, followingCount: 0 };
+    }
+
+    const targetCount = this.#clampCount(args.count, 1, 100);
+    let after = args.cursor || null;
+    let fetched = 0;
+    let hasMore = true;
+
+    // Loop to satisfy count across multiple GraphQL pages
+    while (fetched < targetCount && hasMore) {
+      const pageSize = Math.min(targetCount - fetched, 50);
+      const variables = {
+        userID: userId,
+        username,
+        first: pageSize,
+        after,
+      };
+
+      const res = await this.client.requestGraphQl(docId, variables, { accountId });
+
+      const connection =
+        res?.data?.node?.[`${connectionType === 'follower' ? 'followers' : 'following'}_connection`] ||
+        res?.data?.userData?.user?.[`${connectionType === 'follower' ? 'followers' : 'following'}_connection`] ||
+        res?.data?.[connectionType === 'follower' ? 'followers_connection' : 'following_connection'];
+
+      const edges = Array.isArray(connection?.edges) ? connection.edges : [];
+      const nodes = Array.isArray(connection?.nodes) ? connection.nodes : [];
+      const rawItems = edges.length ? edges : nodes;
+
+      // If GraphQL returns an empty/null connection, switch to limitation fallback
+      if (!connection || rawItems.length === 0) {
+        note = 'Threads does not expose public follower/following lists; returned counts only.';
+
+        const profile = this.docIds.PROFILE
+          ? await this.getProfile({ username }, session)
+          : await this.#fetchProfileSsr(username, accountId);
+        counts = {
+          followersCount: profile.followersCount ?? 0,
+          followingCount: profile.followingCount ?? 0,
+        };
+
+        if (this.store && typeof this.store.storeBatch === 'function') {
+          const postItem = profileItemToPostItem(profile);
+          await this.store.storeBatch([postItem], { upsert: true });
+        }
+
+        await this.#emitProfileCheckpointAndStream(
+          [profile],
+          connectionType,
+          username,
+          null,
+          'completed'
+        );
+
+        return { profiles: [], counts, note, pageInfo: { has_next_page: false, end_cursor: null } };
+      }
+
+      for (const raw of rawItems) {
+        const node = raw?.node || raw;
+        const profile = normalizeThreadsConnection(node, 'graphql', connectionType);
+
+        if (this.store && typeof this.store.storeBatch === 'function') {
+          const postItem = profileItemToPostItem(profile);
+          await this.store.storeBatch([postItem], { upsert: true });
+        }
+
+        profiles.push(profile);
+      }
+
+      fetched += rawItems.length;
+      pageInfo = {
+        has_next_page: Boolean(connection?.page_info?.has_next_page || connection?.pageInfo?.has_next_page),
+        end_cursor: connection?.page_info?.end_cursor || connection?.pageInfo?.end_cursor || null,
+      };
+      after = pageInfo.end_cursor;
+      hasMore = pageInfo.has_next_page && Boolean(after);
+
+      if (!hasMore) break;
+    }
+
+    await this.#emitProfileCheckpointAndStream(profiles, connectionType, username, after);
+
+    return { profiles, counts, pageInfo };
+  }
+
+  /**
+   * Emit checkpoint and Redis stream pointer for profile / connection actions.
+   * @param {Record<string, any>[]} items
+   * @param {string} targetType
+   * @param {string} targetKey
+   * @param {string | null} [cursor]
+   * @param {string} [status='running']
+   */
+  async #emitProfileCheckpointAndStream(items, targetType, targetKey, cursor, status = 'running') {
+    try {
+      const storeWithCheckpoint = /** @type {any} */ (this.store);
+      if (storeWithCheckpoint && typeof storeWithCheckpoint.saveCheckpoint === 'function') {
+        const storageRef = items[0]?.id || items[0]?.externalId || '';
+        await storeWithCheckpoint.saveCheckpoint({
+          platform: 'threads',
+          action: targetType,
+          targetType,
+          targetKey,
+          cursor,
+          status,
+          itemsCount: items.length,
+          storageRef,
+          completedAt: status === 'completed' ? toIsoDate(new Date()) : null,
+        });
+      }
+
+      if (items.length > 0 && isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
+        const publisher = this.redisPublisher || (this.store && /** @type {any} */ (this.store).publisher) || defaultRedisStreamPublisher;
+        if (publisher && typeof publisher.publish === 'function') {
+          for (const item of items) {
+            const postItem = profileItemToPostItem(item);
+            await publisher.publish({
+              id: postItem.id,
+              platform: 'threads',
+              externalId: postItem.externalId,
+              category: 'social',
+              authorId: postItem.authorId,
+              crawledAt: toIsoDate(postItem.crawledAt),
+              storageRef: postItem.id,
+            });
+          }
+        }
+      }
+    } catch {}
   }
 
   /**

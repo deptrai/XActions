@@ -23,7 +23,7 @@
  * @property {number} [repliesCount]
  * @property {number} [viewsCount]
  * @property {Object} [metadata]
- * @property {Date} [publishedAt]
+ * @property {Date | null} [publishedAt]
  * @property {Date} crawledAt
  */
 
@@ -42,7 +42,23 @@
  * @property {number} [likesCount]
  * @property {number} [subCommentsCount]
  * @property {Object} [metadata]
- * @property {Date} [publishedAt]
+ * @property {Date | null} [publishedAt]
+ * @property {Date} crawledAt
+ */
+
+/**
+ * @typedef {Object} ProfileItem
+ * @property {string} id - Namespaced id: `${platform}:${externalId}`
+ * @property {string} platform
+ * @property {string} externalId
+ * @property {string} [username]
+ * @property {string} [name]
+ * @property {string} [bio]
+ * @property {string} [avatar]
+ * @property {string} [profileUrl]
+ * @property {number} [followersCount]
+ * @property {number} [followingCount]
+ * @property {Object} [metadata]
  * @property {Date} crawledAt
  */
 
@@ -76,11 +92,13 @@
 /**
  * @typedef {Object} ActionDescriptor
  * @property {string} action
+ * @property {string} [category]
  * @property {string} [description]
  * @property {string[]} [requiredArgs]
  * @property {string[]} [optionalArgs]
  * @property {Object} [example]
  * @property {string} [outputType]
+ * @property {boolean} [requiresAuth]
  */
 
 /**
@@ -106,6 +124,50 @@
  * @property {string} suggestedAction
  * @property {string | null} [accountId]
  * @property {string} [platform]
+ */
+
+/**
+ * @typedef {Object} ThinEvent
+ * @property {string} id - Namespaced id, e.g. "facebook:123" or "threads:abc:456"
+ * @property {string} platform - Platform name, e.g. "facebook" | "threads"
+ * @property {string} externalId - Platform-native id
+ * @property {string} category - Category string, e.g. "social" | "ecom" | "realestate" | "recruitment" | "b2b"
+ * @property {string} authorId - Author ID
+ * @property {string} crawledAt - ISO 8601 timestamp string
+ * @property {string} storageRef - Pointer to the stored row / item id
+ */
+
+/**
+ * @typedef {Object} StreamMetrics
+ * @property {number} eventsPerSecond - New entries per second over the last refresh interval
+ * @property {number} pendingMessages - Total entries in the stream (XLEN)
+ * @property {number} consumerLag - Unacknowledged / pending messages in consumer group (XPENDING)
+ * @property {number} droppedEvents - Cumulative trimmed / dropped events (entries-added - length or best-effort)
+ * @property {number} lastAckTime - Seconds since the last consumer ack or idle
+ * @property {number} maxLen - Configured MAXLEN / MINID threshold
+ * @property {string | null} minId - ID of oldest entry in stream
+ */
+
+/**
+ * Minimal duck-typed interface matching redis/ioredis clients for stream operations
+ * @typedef {Object} RedisClientLike
+ * @property {Function} [xAdd]
+ * @property {Function} [xadd]
+ * @property {Function} [xLen]
+ * @property {Function} [xlen]
+ * @property {Function} [xInfoStream]
+ * @property {Function} [xInfo]
+ * @property {Function} [xinfo]
+ * @property {Function} [xInfoConsumers]
+ * @property {Function} [xGroupCreate]
+ * @property {Function} [xgroup]
+ * @property {Function} [xPending]
+ * @property {Function} [xpending]
+ * @property {Function} [sendCommand]
+ * @property {boolean | Function} [isOpen]
+ * @property {Function} [quit]
+ * @property {Function} [disconnect]
+ * @property {string} [status]
  */
 
 export const CATEGORIES = Object.freeze({

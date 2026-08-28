@@ -18,6 +18,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { resolveAccountCookie } from './facebookAccounts.js';
 import { resolve as resolveFacebookAuth } from '../services/facebookAuth.js';
 import { buildUserDataDir } from '../services/facebookAutomation.js';
+import { scrape } from '../../src/scrapers/index.js';
 const router = express.Router();
 router.use(authMiddleware);
 
@@ -202,6 +203,43 @@ async function resolveScrapeCookie(userId, authCookie, accountIds) {
 }
 
 /**
+ * Parse an optional price value. Treats undefined, null, and '' as absent.
+ * Returns an error for non-finite or negative numbers.
+ *
+ * @param {unknown} value
+ * @returns {{ value?: number, error?: string }}
+ */
+function parseOptionalPrice(value) {
+  if (value === undefined || value === null || value === '') {
+    return {};
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) {
+    return { error: 'must be a non-negative number' };
+  }
+  return { value: n };
+}
+
+/**
+ * Parse a dryRun value. Accepts boolean or case-insensitive 'true'/'false' strings.
+ * Rejects all other values.
+ *
+ * @param {unknown} value
+ * @returns {{ value?: boolean, error?: string }}
+ */
+function parseDryRun(value) {
+  if (typeof value === 'boolean') {
+    return { value };
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') return { value: true };
+    if (normalized === 'false') return { value: false };
+  }
+  return { error: 'dryRun must be a boolean or the string "true" / "false"' };
+}
+
+/**
  * Execute a messenger-share campaign across N accounts and M links (Story 5.5 D2).
  * Recipients are distributed round-robin across accounts; each account opens its own
  * browser session and runs messengerShareCampaign per link (FIFO). Dry-run launches
@@ -277,8 +315,18 @@ async function runMessengerCampaign({ accounts, links, recipients, content, dryR
  *   query?: string,     // required for search / marketplace
  *   type?: 'posts' | 'people' | 'pages' | 'groups' | 'all', // search only
  *   parallel?: boolean, // search only, accepted and ignored in Story 7.2
- *   location?: string,  // search only
+ *   location?: string,  // search and marketplace
+ *   category?: string,  // marketplace only
+ *   categoryId?: string | number, // marketplace only
+ *   minPrice?: number | string,  // marketplace only (priceMin alias accepted)
+ *   maxPrice?: number | string,  // marketplace only (priceMax alias accepted)
+ *   latitude?: number,
+ *   longitude?: number,
+ *   radiusKm?: number,
+ *   cursor?: string,
+ *   after?: string,
  *   limit?: number,     // positive integer
+ *   dryRun?: boolean,   // marketplace only
  *   includeReplies?: boolean, // post_comments/group_comments only
  *   authCookie?: { c_user, xs } | { accountId: string }, // optional; auto-picks active stored account if omitted
  *   accountIds?: string[],                                 // optional; uses first for single-page scrape
@@ -292,15 +340,30 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
     const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
     const action = /** @type {string | undefined} */ (body.action);
     const url = /** @type {string | undefined} */ (body.url);
-    const query = /** @type {string | undefined} */ (body.query);
+    const query = /** @type {string | null | undefined} */ (body.query);
     const type = /** @type {string | undefined} */ (body.type);
     const parallel = /** @type {boolean | undefined} */ (body.parallel);
     const location = /** @type {string | undefined} */ (body.location);
+    const category = /** @type {string | undefined} */ (body.category);
+    const categoryId = /** @type {string | number | undefined} */ (body.categoryId);
+    const minPrice = /** @type {number | string | null | undefined} */ (body.minPrice);
+    const maxPrice = /** @type {number | string | null | undefined} */ (body.maxPrice);
+    const priceMin = /** @type {number | string | null | undefined} */ (body.priceMin);
+    const priceMax = /** @type {number | string | null | undefined} */ (body.priceMax);
+    const latitude = /** @type {number | string | undefined} */ (body.latitude);
+    const longitude = /** @type {number | string | undefined} */ (body.longitude);
+    const radiusKm = /** @type {number | string | undefined} */ (body.radiusKm);
+    const dryRun = /** @type {boolean | string | null | undefined} */ (body.dryRun);
+    const cursor = /** @type {string | undefined} */ (body.cursor);
+    const after = /** @type {string | undefined} */ (body.after);
     const limit = /** @type {number | string | undefined} */ (body.limit);
     const includeReplies = /** @type {boolean | undefined} */ (body.includeReplies);
     const authCookie = /** @type {Record<string, unknown> | undefined} */ (body.authCookie);
     const browserOptions = /** @type {Record<string, unknown> | undefined} */ (body.browserOptions);
     const accountIds = /** @type {unknown[] | undefined} */ (body.accountIds);
+
+    /** @type {string} */
+    let trimmedQuery = '';
 
     const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace', 'post_comments', 'group_posts', 'group_comments', 'group_search'];
     if (!action || !VALID_ACTIONS.includes(action)) {
@@ -314,10 +377,17 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
       return res.status(400).json({ ok: false, error: `action "${action}" requires url` });
     }
     if (['search', 'marketplace', 'group_search'].includes(action)) {
-      if (typeof query !== 'string' || !query.trim()) {
+      if (query === undefined || query === null) {
         return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
       }
-      if (query.length > 500) {
+      if (typeof query !== 'string') {
+        return res.status(400).json({ ok: false, error: 'query must be a string' });
+      }
+      trimmedQuery = query.trim();
+      if (!trimmedQuery) {
+        return res.status(400).json({ ok: false, error: `action "${action}" requires query` });
+      }
+      if (trimmedQuery.length > 500) {
         return res.status(400).json({ ok: false, error: 'query must be at most 500 characters' });
       }
     }
@@ -373,6 +443,48 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
       return res.status(400).json({ ok: false, error: 'browserOptions must be an object' });
     }
 
+    /** @type {number | undefined} */
+    let resolvedMinPrice;
+    /** @type {number | undefined} */
+    let resolvedMaxPrice;
+    /** @type {boolean | undefined} */
+    let resolvedDryRun;
+
+    if (action === 'marketplace') {
+      const rawMin = (minPrice !== undefined && minPrice !== null && minPrice !== '')
+        ? minPrice
+        : (priceMin !== undefined && priceMin !== null && priceMin !== '' ? priceMin : undefined);
+      const rawMax = (maxPrice !== undefined && maxPrice !== null && maxPrice !== '')
+        ? maxPrice
+        : (priceMax !== undefined && priceMax !== null && priceMax !== '' ? priceMax : undefined);
+
+      if (rawMin !== undefined) {
+        const parsed = parseOptionalPrice(rawMin);
+        if (parsed.error) {
+          return res.status(400).json({ ok: false, error: `minPrice ${parsed.error}` });
+        }
+        resolvedMinPrice = parsed.value;
+      }
+      if (rawMax !== undefined) {
+        const parsed = parseOptionalPrice(rawMax);
+        if (parsed.error) {
+          return res.status(400).json({ ok: false, error: `maxPrice ${parsed.error}` });
+        }
+        resolvedMaxPrice = parsed.value;
+      }
+      if (resolvedMinPrice !== undefined && resolvedMaxPrice !== undefined && resolvedMinPrice > resolvedMaxPrice) {
+        return res.status(400).json({ ok: false, error: 'minPrice must not be greater than maxPrice' });
+      }
+
+      if (dryRun !== undefined && dryRun !== null) {
+        const parsed = parseDryRun(dryRun);
+        if (parsed.error) {
+          return res.status(400).json({ ok: false, error: parsed.error });
+        }
+        resolvedDryRun = parsed.value;
+      }
+    }
+
     // Resolve the session: raw cookie, stored accountId/accountIds, or auto-pick a live one.
     let resolved;
     try {
@@ -425,16 +537,30 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
       ...options,
       ...(action === 'search'
         ? {
-            query: /** @type {string} */ (query).trim(),
+            query: trimmedQuery,
             ...(type !== undefined && type !== null && { type }),
             ...(parallel !== undefined && parallel !== null && { parallel }),
             ...(location !== undefined && location !== null && { location: location.trim() }),
             ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
           }
         : action === 'marketplace'
-          ? { query: /** @type {string} */ (query).trim() }
+          ? {
+              query: trimmedQuery,
+              ...(location !== undefined && location !== null && { location: String(location).trim() }),
+              ...(category !== undefined && category !== null && { category: String(category).trim() }),
+              ...(categoryId !== undefined && categoryId !== null && { categoryId: String(categoryId).trim() }),
+              ...(resolvedMinPrice !== undefined && { minPrice: resolvedMinPrice }),
+              ...(resolvedMaxPrice !== undefined && { maxPrice: resolvedMaxPrice }),
+              ...(latitude !== undefined && latitude !== null && { latitude: Number(latitude) }),
+              ...(longitude !== undefined && longitude !== null && { longitude: Number(longitude) }),
+              ...(radiusKm !== undefined && radiusKm !== null && { radiusKm: Number(radiusKm) }),
+              ...(resolvedDryRun !== undefined && { dryRun: resolvedDryRun }),
+              ...(cursor !== undefined && cursor !== null && { cursor: String(cursor).trim() }),
+              ...(after !== undefined && after !== null && { after: String(after).trim() }),
+              ...(limit !== undefined && limit !== null && { limit: Number(limit) }),
+            }
           : action === 'group_search'
-            ? { url: /** @type {string} */ (url).trim(), query: /** @type {string} */ (query).trim() }
+            ? { url: /** @type {string} */ (url).trim(), query: trimmedQuery }
             : { url: /** @type {string} */ (url).trim() }),
       ...(limit !== undefined && limit !== null ? { limit: Number(limit) } : {}),
       ...(['post_comments', 'group_comments'].includes(action) && includeReplies !== undefined && includeReplies !== null
@@ -674,6 +800,7 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
 
     // ========================================================================
     // share-link-uid — share post via direct Messenger URL (UID-based)
+    // Now routed through FacebookCrawler.messenger_share (hybrid).
     // ========================================================================
     if (action === 'share-link-uid') {
       const shareBody = /** @type {Record<string, unknown>} */ (req.body ?? {});
@@ -684,12 +811,11 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
       const recipientUid = /** @type {string} */ (shareBody.recipientUid) ?? '';
       const recipientUids = /** @type {string[]} */ (shareBody.recipientUids) ?? [];
       const headlessParam = /** @type {boolean | undefined} */ (shareBody.headless);
-      const url = postUrl || postUrls[0] || '';
+      const url = postUrl || (Array.isArray(postUrls) ? postUrls[0] : '') || '';
       if (!url.trim()) {
         return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires postUrl or postUrls[]' });
       }
 
-      // Normalize recipients: single uid or array
       const allRecipients = [
         ...(recipientUid ? [recipientUid] : []),
         ...(Array.isArray(recipientUids) ? recipientUids : []),
@@ -698,64 +824,26 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
         return res.status(400).json({ ok: false, error: 'action "share-link-uid" requires recipientUid or recipientUids[]' });
       }
 
-      // headless mode: default true (invisible browser). Set false to show browser window.
       const isHeadless = headlessParam !== false;
 
-      // Dry-run: validate inputs, return preview without launching browser
-      if (resolvedDryRun) {
-        return res.json({
-          ok: true,
-          action,
-          dryRun: true,
-          userId: reqUser.id,
-          operationId: null,
+      try {
+        const result = /** @type {Record<string, unknown>} */ (await scrape('facebook', 'messenger_share', {
           postUrl: url,
           recipients: allRecipients,
-          recipientsCount: allRecipients.length,
-          content: content || message || '',
-          headless: isHeadless,
-          method: 'direct-messenger-url',
-        });
-      }
-
-      const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
-      const shareLinkModule = /** @type {{ shareLinkByUid: (page: Page, target: { postUrl: string, recipientUid: string, message?: string }, options?: FacebookOptions) => Promise<Record<string, unknown>> }} */ (await import('../../src/scrapers/facebook/shareLinkByUid.js'));
-      const { shareLinkByUid } = shareLinkModule;
-
-      const browser = await createBrowser({ headless: isHeadless, userDataDir: buildUserDataDir(authCookie.c_user) });
-      const page = await createPage(browser);
-      await loginWithCookie(page, {
-        c_user: authCookie.c_user,
-        xs: authCookie.xs,
-        sb: authCookie.sb,
-        datar: authCookie.datatar ? String(authCookie.datatar) : authCookie.datar,
-        fr: authCookie.fr,
-        fbl_st: authCookie.fbl_st,
-        locale: authCookie.locale,
-        headless: isHeadless,
-      });
-
-      /** @type {Record<string, unknown>[]} */
-      const results = [];
-      try {
-        for (const uid of allRecipients) {
-          const result = await shareLinkByUid(page, {
-            postUrl: url,
-            recipientUid: uid,
-            message: content || message,
-          }, {
-            dryRun: false,
-            headless: isHeadless,
-          });
-          results.push({ uid, ...result });
-        }
-        await browser.close().catch(() => {});
-        const successCount = results.filter((r) => r.ok).length;
+          content: content || message,
+          dryRun: resolvedDryRun,
+          authCookie,
+          browserOptions: { headless: isHeadless },
+        }));
+        const rawResults = result?.results;
+        const results = Array.isArray(rawResults) ? /** @type {Record<string, unknown>[]} */ (rawResults) : [];
+        const successCount = results.filter((r) => Boolean(r.ok)).length;
         return res.json({
           ok: true,
           action,
-          dryRun: false,
+          dryRun: resolvedDryRun,
           userId: reqUser.id,
+          operationId: null,
           postUrl: url,
           results,
           successCount,
@@ -764,108 +852,23 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
           method: 'direct-messenger-url',
         });
       } catch (runError) {
-        await browser.close().catch(() => {});
         return res.status(500).json({ ok: false, error: 'Share link by UID failed. See server logs.' });
       }
     }
 
     const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
     const {
-      likeFacebookPosts,
-      commentOnFacebookPosts,
-      createFacebookPost,
-      shareFacebookPosts,
       scheduleFacebookPost,
-      joinFacebookGroups,
-      postToFacebookGroups,
-      sendFriendRequests,
-      cancelPendingFriendRequests,
-      warmupAccount,
-      warmupScrollFeed,
     } = await import('../services/facebookAutomation.js');
 
-    const options = {
+    const baseOptions = {
       dryRun: resolvedDryRun,
       ...(maxBatch != null && { maxBatch: Number(maxBatch) }),
     };
 
-    const dispatch = /** @type {(page: Page) => Promise<Record<string, unknown>>} */ (async (page) => {
-      if (action === 'like') return await likeFacebookPosts(page, urls, options);
-      if (action === 'comment') return await commentOnFacebookPosts(page, urls, text, options);
-      if (action === 'post') return await createFacebookPost(page, text, options);
-      if (action === 'share') return await shareFacebookPosts(page, urls, options);
-      if (action === 'schedule') {
-        const scheduledAt = /** @type {string | undefined} */ (body.scheduledAt);
-        const facebookAccountId = /** @type {string | undefined} */ (body.facebookAccountId);
-        return await scheduleFacebookPost(page, { content: text, scheduledAt, facebookAccountId }, { ...options, userId: reqUser.id });
-      }
-      if (action === 'join-groups') {
-        const { keyword, limit } = body;
-        return await joinFacebookGroups(page, { groupUrls, keyword, limit }, options);
-      }
-      if (action === 'batch-post-groups') {
-        return await postToFacebookGroups(page, { groupUrls, content: text }, options);
-      }
-      if (action === 'send-friend-requests') {
-        return await sendFriendRequests(page, { mode: 'uid_list', targets }, options);
-      }
-      if (action === 'cancel-friend-requests') {
-        const olderThanDays = /** @type {number | string | undefined} */ (body.olderThanDays);
-        const limit = /** @type {number | string | undefined} */ (body.limit) ?? 10;
-        return await cancelPendingFriendRequests(page, {
-          ...options,
-          ...(olderThanDays != null && { olderThanDays: Number(olderThanDays) }),
-          limit: Number(limit),
-        });
-      }
-      if (action === 'warmup-account') {
-        const durationSeconds = /** @type {number | string | undefined} */ (body.durationSeconds);
-        const allowReactions = /** @type {boolean | undefined} */ (body.allowReactions);
-        const reactProbability = /** @type {number | string | undefined} */ (body.reactProbability);
-        return await warmupAccount(page, {
-          ...options,
-          ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
-          ...(allowReactions !== undefined && { allowReactions }),
-          ...(reactProbability != null && { reactProbability: Number(reactProbability) }),
-        });
-      }
-      if (action === 'warmup-scroll-feed') {
-        const targetUrl = /** @type {string | undefined} */ (body.targetUrl);
-        const durationSeconds = /** @type {number | string | undefined} */ (body.durationSeconds);
-        return await warmupScrollFeed(page, /** @type {string} */ (targetUrl), {
-          ...options,
-          ...(durationSeconds != null && { durationSeconds: Number(durationSeconds) }),
-        });
-      }
-      return await createFacebookPost(page, text, options);
-    });
-
-    // Dry-run never touches the DOM (runGuardedBatch skips actionFn) — no browser,
-    // no real Facebook login, no Operation record. Avoids account risk for a preview.
-    // Exception: cancel-friend-requests needs page access even in dryRun to collect pending requests.
-    if (resolvedDryRun && action !== 'cancel-friend-requests') {
-      const result = await dispatch(/** @type {Page} */ (/** @type {unknown} */ (null)));
-      return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
-    }
-
-    // Real run — create Operation record (config excludes authCookie; never persist cookie values, NFR3)
-    // Bound persisted sizes so a huge urls[]/text can't bloat the Operation row.
-    const MAX_URLS = 100;
-    const MAX_TEXT = 5000;
-    const configUrls = Array.isArray(urls) ? urls.slice(0, MAX_URLS) : [];
-    const configText = String(text ?? '').slice(0, MAX_TEXT);
-    // messenger-share is handled in its own path above; only like/comment/post reach here.
-    const operationConfig = { action, urls: configUrls, text: configText, maxBatch: maxBatch ?? null };
-    const operation = await prisma.operation.create({
-      data: {
-        userId: reqUser.id,
-        type: `facebook_${action}`,
-        status: 'running',
-        startedAt: new Date(),
-        config: JSON.stringify(operationConfig),
-      },
-    });
-    emit({ event: 'start', operationId: operation.id, userId: reqUser.id, type: operation.type, status: 'running' });
+    // Actions migrated to FacebookCrawler hybrid engine.
+    const HYBRID_ACTIONS = ['like', 'comment', 'post', 'share', 'join-groups', 'batch-post-groups', 'send-friend-requests', 'warmup-account', 'warmup-scroll-feed', 'cancel-friend-requests'];
+    const isHybrid = HYBRID_ACTIONS.includes(action);
 
     const envBrowserOptions = defaultBrowserOptionsFromEnv() || {};
     const requestBrowserOptions = /** @type {Record<string, unknown>} */ (body.browserOptions || {});
@@ -882,26 +885,107 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
     if (Object.keys(proxyAuth).length) runBrowserOptions.proxyAuth = proxyAuth;
     if (Object.keys(proxyLocation).length) runBrowserOptions.proxyLocation = proxyLocation;
 
+    /** @returns {Record<string, unknown>} */
+    const buildHybridScrapeArgs = () => {
+      /** @type {Record<string, unknown>} */
+      const scrapeArgs = { ...baseOptions, authCookie, browserOptions: runBrowserOptions };
+      if (['like', 'comment', 'share'].includes(action)) {
+        scrapeArgs.urls = urls;
+      }
+      if (['comment', 'post', 'batch-post-groups'].includes(action)) {
+        scrapeArgs.text = text;
+      }
+      if (action === 'join-groups') {
+        scrapeArgs.groupUrls = groupUrls;
+        if (body.keyword) scrapeArgs.keyword = String(body.keyword).trim();
+        if (body.limit != null) scrapeArgs.limit = Number(body.limit);
+      }
+      if (action === 'batch-post-groups') {
+        scrapeArgs.groupUrls = groupUrls;
+      }
+      if (action === 'send-friend-requests') {
+        scrapeArgs.targets = targets;
+        scrapeArgs.mode = /** @type {string} */ (body.mode) || 'uid_list';
+        if (body.location) scrapeArgs.location = String(body.location).trim();
+        if (body.limit != null) scrapeArgs.limit = Number(body.limit);
+      }
+      if (action === 'warmup-scroll-feed') {
+        scrapeArgs.targetUrl = /** @type {string} */ (body.targetUrl).trim();
+        if (body.durationSeconds != null) scrapeArgs.durationSeconds = Number(body.durationSeconds);
+      }
+      if (action === 'warmup-account') {
+        if (body.durationSeconds != null) scrapeArgs.durationSeconds = Number(body.durationSeconds);
+        if (body.allowReactions != null) scrapeArgs.allowReactions = body.allowReactions === true;
+        if (body.reactProbability != null) scrapeArgs.reactProbability = Number(body.reactProbability);
+      }
+      if (action === 'cancel-friend-requests') {
+        const cancelLimit = /** @type {number | string | undefined} */ (body.limit) ?? 10;
+        scrapeArgs.limit = Number(cancelLimit);
+        if (body.olderThanDays != null) scrapeArgs.olderThanDays = Number(body.olderThanDays);
+      }
+      return scrapeArgs;
+    };
+
+    // Legacy dispatch for schedule only (DB-only, no hybrid equivalent yet).
+    const dispatch = /** @type {(page: Page) => Promise<Record<string, unknown>>} */ (async (page) => {
+      if (action === 'schedule') {
+        const scheduledAt = /** @type {string | undefined} */ (body.scheduledAt);
+        const facebookAccountId = /** @type {string | undefined} */ (body.facebookAccountId);
+        return await scheduleFacebookPost(page, { content: text, scheduledAt, facebookAccountId }, { ...baseOptions, userId: reqUser.id });
+      }
+      throw new Error(`Unsupported legacy action: ${action}`);
+    });
+
+    // Dry-run preview for hybrid: no browser, no Operation record.
+    if (resolvedDryRun) {
+      if (isHybrid) {
+        const result = /** @type {Record<string, unknown>} */ (await scrape('facebook', action, buildHybridScrapeArgs()));
+        return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
+      }
+      const result = await dispatch(/** @type {Page} */ (/** @type {unknown} */ (null)));
+      return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
+    }
+
+    // Real run — create Operation record (config excludes authCookie; NFR3)
+    const MAX_URLS = 100;
+    const MAX_TEXT = 5000;
+    const configUrls = Array.isArray(urls) ? urls.slice(0, MAX_URLS) : [];
+    const configGroupUrls = Array.isArray(groupUrls) ? groupUrls.slice(0, MAX_URLS) : [];
+    const configTargets = Array.isArray(targets) ? targets.slice(0, MAX_URLS) : [];
+    const configText = String(text ?? '').slice(0, MAX_TEXT);
+    const operationConfig = { action, urls: configUrls, groupUrls: configGroupUrls, targets: configTargets, text: configText, maxBatch: maxBatch ?? null };
+    const operation = await prisma.operation.create({
+      data: {
+        userId: reqUser.id,
+        type: `facebook_${action}`,
+        status: 'running',
+        startedAt: new Date(),
+        config: JSON.stringify(operationConfig),
+      },
+    });
+    emit({ event: 'start', operationId: operation.id, userId: reqUser.id, type: operation.type, status: 'running' });
+
     /** @type {Record<string, unknown>} */
     let result;
     /** @type {Browser | undefined} */
     let browser;
     try {
-      // createBrowser INSIDE try — else a launch failure orphans the Operation as 'running' forever
-      browser = await createBrowser(runBrowserOptions);
-      const page = await createPage(browser);
-      // Cookie values are never logged (NFR3)
-      await loginWithCookie(page, {
-        c_user: authCookie.c_user,
-        xs: authCookie.xs,
-        sb: authCookie.sb,
-        datar: authCookie.datatar ? String(authCookie.datatar) : authCookie.datar,
-        fr: authCookie.fr,
-        fbl_st: authCookie.fbl_st,
-        locale: authCookie.locale,
-      });
-
-      result = await dispatch(page);
+      if (isHybrid) {
+        result = /** @type {Record<string, unknown>} */ (await scrape('facebook', action, buildHybridScrapeArgs()));
+      } else {
+        browser = await createBrowser(runBrowserOptions);
+        const page = await createPage(browser);
+        await loginWithCookie(page, {
+          c_user: authCookie.c_user,
+          xs: authCookie.xs,
+          sb: authCookie.sb,
+          datar: authCookie.datatar ? String(authCookie.datatar) : authCookie.datar,
+          fr: authCookie.fr,
+          fbl_st: authCookie.fbl_st,
+          locale: authCookie.locale,
+        });
+        result = await dispatch(page);
+      }
 
       await prisma.operation.update({
         where: { id: operation.id },

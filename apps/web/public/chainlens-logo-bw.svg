@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360" fill="none">
+  <!-- === LEFT: THE CHAIN-LENS MARK (B&W) === -->
+  <g transform="translate(0, 0)">
+    <!-- Outer Focus Grid Ring -->
+    <circle cx="170" cy="180" r="130" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 6" opacity="0.35"/>
+
+    <!-- Left Chain Loop -->
+    <g transform="rotate(-28 170 180)">
+      <rect x="70" y="140" width="120" height="80" rx="40" 
+            stroke="currentColor" stroke-width="18" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- Right Chain Loop -->
+    <g transform="rotate(28 170 180)">
+      <rect x="150" y="140" width="120" height="80" rx="40" 
+            stroke="currentColor" stroke-width="18" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- Center Overlap Lens -->
+    <circle cx="170" cy="180" r="44" fill="none" stroke="currentColor" stroke-width="8" />
+    <circle cx="170" cy="180" r="30" fill="none" stroke="currentColor" stroke-width="3" opacity="0.8"/>
+    
+    <!-- Central Focal Pupil -->
+    <circle cx="170" cy="180" r="13" fill="currentColor" />
+
+    <!-- Reticle Marks -->
+    <line x1="170" y1="120" x2="170" y2="130" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    <line x1="170" y1="230" x2="170" y2="240" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    <line x1="110" y1="180" x2="120" y2="180" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    <line x1="220" y1="180" x2="230" y2="180" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <!-- === RIGHT: WORDMARK === -->
+  <g transform="translate(360, 0)">
+    <text x="0" y="195" 
+          font-family="system-ui, -apple-system, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif" 
+          font-size="124" 
+          font-weight="800" 
+          letter-spacing="-1.5"
+          fill="currentColor">
+      ChainLens
+    </text>
+    <text x="6" y="252" 
+          font-family="system-ui, -apple-system, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif" 
+          font-size="28" 
+          font-weight="600" 
+          fill="currentColor" 
+          opacity="0.6"
+          letter-spacing="9">RESEARCH</text>
+  </g>
+</svg>

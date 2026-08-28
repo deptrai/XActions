@@ -5,9 +5,11 @@ purpose: build-substrate
 altitude: epic
 paradigm: 'Gateway + Session Factory + Account Pool + Adaptive Governor'
 scope: 'All Facebook scrape and automate operations in XActions: profile, posts, search, comments, groups, like, comment, post, share, friend, join, messenger.'
-status: final
+status: superseded
 created: '2026-08-23'
-updated: '2026-08-23'
+updated: '2026-08-27'
+superseded_by: '_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
+reason: 'The gateway/session-factory/account-pool concepts have been subsumed into the Hybrid Scraping Spine AbstractCrawler + BaseHybridClient + CrawlerGovernor integration. The active implementation path is now src/scrapers/social/facebook/ (see Epic 13, Stories 13.3-13.10).'
 binds:
   - 'api/routes/facebook.js'
   - 'api/services/facebookScrape.js'
@@ -25,6 +27,10 @@ companions: []
 ---
 
 # Architecture Spine — XActions Unified Facebook Execution Gateway
+
+> **STATUS: SUPERSEDED — 2026-08-27**
+>
+> This architecture spine is **superseded by** `xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`. The gateway/session-factory/account-pool ideas are being absorbed into the hybrid engine: `FacebookCrawler` extends `AbstractCrawler`, `FacebookClient` extends `BaseHybridClient`, and `CrawlerGovernor` + `AccountPool` provide the rate-limit and account-lifecycle controls. The active implementation path for Facebook is `src/scrapers/social/facebook/` under Epic 13 (Stories 13.3–13.10). This document is preserved as a reference for the high-level invariants (account lifecycle, sticky proxy, error envelope, read-vs-write risk profiles) that must still be honored by the hybrid implementation.
 
 ## 1. Design Paradigm
 

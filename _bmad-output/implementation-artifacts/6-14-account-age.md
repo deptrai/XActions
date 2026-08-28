@@ -4,7 +4,7 @@ baseline_commit: 0e99d46b00c3e28adf7d0c4d27201cfa09295056
 
 # Story 6.14: Account Age Awareness
 
-Status: review
+Status: done
 
 ## Story
 

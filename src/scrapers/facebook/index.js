@@ -1,10 +1,11 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 /**
- * XActions Facebook Scrapers
+ * XActions Facebook Scrapers (Legacy)
  * Puppeteer-based scrapers for Facebook (facebook.com)
  *
  * Uses the same Puppeteer stealth approach as Twitter and Threads scrapers.
  *
+ * @deprecated Use `src/scrapers/social/facebook/index.js` (`FacebookCrawler`, `FacebookClient`) instead. See docs/deprecation-plan.md.
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license BSL 1.1
@@ -41,6 +42,7 @@ import { scrapeFacebookGroupSearch } from './group-search.js';
 import { searchFacebook } from './search.js';
 import { searchTweets } from './search.js';
 import { scrapeGroupMembers } from './followers.js';
+// LEGACY — see docs/deprecation-plan.md
 import { scrapeMarketplace } from './marketplace.js';
 
 export default {
