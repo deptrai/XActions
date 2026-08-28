@@ -437,6 +437,30 @@ export class FacebookCrawler extends AbstractCrawler {
    * @returns {Promise<{ feedbackId: string }>}
    */
   async #resolvePostFeedbackContext(input, cookies, accountId) {
+    // 0. SSRF guard: reject non-Facebook absolute URLs
+    if (/^https?:\/\//i.test(input)) {
+      try {
+        const parsed = new URL(input);
+        const host = parsed.hostname.toLowerCase();
+        if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: 'postId URL must be a facebook.com URL',
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          });
+        }
+      } catch (err) {
+        if (err instanceof PlatformError) throw err;
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'Invalid postId URL',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+
     // 1. Already a GraphQL feedback id
     if (typeof input === 'string' && input.startsWith('ZmVlZGJhY2s6')) {
       const decoded = this.#decodeFeedbackId(input);
