@@ -61,7 +61,7 @@ export function registerAdminCommand(program) {
         console.log(`  • ${chalk.cyan('Max Length')}:        ${chalk.dim((metrics.maxLen ?? 0).toLocaleString())}`);
         console.log(`  • ${chalk.cyan('Oldest Min ID')}:     ${chalk.dim(metrics.minId || 'none')}\n`);
       } catch (err) {
-        printCliError(err, 'Failed to fetch stream metrics');
+        printCliError(err instanceof Error ? err : new Error(String(err)));
       }
     });
 
@@ -113,7 +113,7 @@ export function registerAdminCommand(program) {
           console.log();
         }
       } catch (err) {
-        printCliError(err, 'Failed to fetch stream alerts');
+        printCliError(err instanceof Error ? err : new Error(String(err)));
       }
     });
 }
