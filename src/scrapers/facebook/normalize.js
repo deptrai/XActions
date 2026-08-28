@@ -20,6 +20,22 @@ import { FACEBOOK_BASE } from './core.js';
 // Profile Normalizer (pure — testable without Puppeteer)
 // ============================================================================
 
+/**
+ * Coerce a raw entity id to string. Facebook hydration JSON emits legacy ids
+ * (`legacy_fbid`, older Comment/People ids) as numbers on some surfaces; the
+ * previous monolith passed them through uncoerced and every consumer keyed or
+ * filtered on the value, so narrowing to `typeof === 'string'` silently drops
+ * those results. Numbers are stringified; everything else becomes null.
+ *
+ * @param {unknown} value
+ * @returns {string|null}
+ */
+function idToString(value) {
+  if (typeof value === 'string') return value.trim() ? value : null;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return null;
+}
+
 // ============================================================================
 // Handle Normalization (shared — used by scrapeProfile and scrapeTweets)
 // ============================================================================
@@ -271,13 +287,13 @@ export function normalizeComment(raw, fallbackParentId = null) {
 
   /** @type {FacebookComment} */
   const result = {
-    id: typeof resolvedId === 'string' ? resolvedId : null,
+    id: idToString(resolvedId),
     authorName: stripPii(resolvedAuthorName),
     authorUrl: typeof resolvedAuthorUrl === 'string' ? resolvedAuthorUrl : null,
     text: stripPii(resolvedText),
-    timestamp: typeof resolvedTimestamp === 'string' ? resolvedTimestamp : null,
+    timestamp: idToString(resolvedTimestamp),
     likes: parseEngagementCount(resolvedLikes) ?? 0,
-    parentId: typeof resolvedParentId === 'string' ? resolvedParentId : null,
+    parentId: idToString(resolvedParentId),
   };
 
   const rawReplies = replies || comment_replies || childComments;
@@ -333,7 +349,7 @@ export function normalizeFollower(raw) {
 export function normalizeSearchResult(raw) {
   const { id, text, author, timestamp, url } = raw;
   return {
-    id: typeof id === 'string' && id.trim() ? id : null,
+    id: idToString(id),
     text: typeof text === 'string' && text.trim() ? text : null,
     author: typeof author === 'string' && author.trim()
       ? author
@@ -406,7 +422,7 @@ export function normalizePostSearchResult(raw) {
     : undefined;
 
   return {
-    id: typeof resolvedId === 'string' ? resolvedId : null,
+    id: idToString(resolvedId),
     text: resolvedText,
     author: /** @type {string | Record<string, unknown> | null} */ (
       (typeof author === 'string' ? author : null) ||
@@ -437,7 +453,7 @@ export function normalizePeopleSearchResult(raw) {
     image,
   } = raw || {};
 
-  const idStr = typeof id === 'string' ? id : null;
+  const idStr = idToString(id);
   const resolvedUrlRaw = url || profileUrl || (idStr && /^\d+$/.test(idStr) ? `${FACEBOOK_BASE}/profile.php?id=${idStr}` : null);
   const resolvedUrl = typeof resolvedUrlRaw === 'string' ? resolvedUrlRaw : null;
   const derivedUsername = extractHandleFromUrl(resolvedUrl);
@@ -450,7 +466,7 @@ export function normalizePeopleSearchResult(raw) {
   const resolvedId = id || resolvedUsername || resolvedUrl || null;
 
   return {
-    id: typeof resolvedId === 'string' ? resolvedId : null,
+    id: idToString(resolvedId),
     name: typeof name === 'string' ? name : null,
     username: resolvedUsername,
     profileUrl: resolvedUrl,
@@ -481,14 +497,14 @@ export function normalizePageSearchResult(raw) {
     image,
   } = raw || {};
 
-  const idStr = typeof id === 'string' ? id : null;
+  const idStr = idToString(id);
   const resolvedUrlRaw = url || pageUrl || (idStr && /^\d+$/.test(idStr) ? `${FACEBOOK_BASE}/pages/${idStr}` : null);
   const resolvedUrl = typeof resolvedUrlRaw === 'string' ? resolvedUrlRaw : null;
   const resolvedId = id || resolvedUrl || null;
   const resolvedLikes = likes || fan_count || fanCount || null;
 
   return {
-    id: typeof resolvedId === 'string' ? resolvedId : null,
+    id: idToString(resolvedId),
     name: typeof name === 'string' ? name : null,
     category: typeof (category || category_name || categoryName) === 'string'
       ? /** @type {string} */ (category || category_name || categoryName)
@@ -522,14 +538,14 @@ export function normalizeGroupSearchResult(raw) {
     image,
   } = raw || {};
 
-  const idStr = typeof id === 'string' ? id : null;
+  const idStr = idToString(id);
   const resolvedUrlRaw = url || groupUrl || (idStr && /^\d+$/.test(idStr) ? `${FACEBOOK_BASE}/groups/${idStr}` : null);
   const resolvedUrl = typeof resolvedUrlRaw === 'string' ? resolvedUrlRaw : null;
   const resolvedId = id || resolvedUrl || null;
   const resolvedMembers = members || member_count || memberCount || null;
 
   return {
-    id: typeof resolvedId === 'string' ? resolvedId : null,
+    id: idToString(resolvedId),
     name: typeof name === 'string' ? name : null,
     members: typeof resolvedMembers === 'string' || typeof resolvedMembers === 'number'
       ? resolvedMembers
@@ -670,7 +686,7 @@ export function normalizeGroupMember(raw) {
 export function normalizeMarketplaceListing(raw) {
   const { id, title, price, location, image, listingUrl, seller, sellerUrl, category } = raw;
   return {
-    id: typeof id === 'string' ? id : null,
+    id: idToString(id),
     title: typeof title === 'string' ? title : null,
     price: typeof price === 'string' ? price : null,
     location: typeof location === 'string' ? location : null,

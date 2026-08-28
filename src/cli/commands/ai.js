@@ -27,9 +27,9 @@ ai
   .option('--json', 'Output as JSON')
   .action(async (username, options) => {
     const config = await loadConfig();
-    const token = config.auth_token || process.env.TWITTER_AUTH_TOKEN;
+    const token = config.authToken || process.env.TWITTER_AUTH_TOKEN;
     if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions config --token <auth_token>'));
+      console.error(chalk.red('✗ Auth token required. Run: xactions login (paste your auth_token cookie)'));
       process.exit(1);
     }
     const spinner = ora(`Analyzing @${username}'s writing voice...`).start();
@@ -37,10 +37,13 @@ ai
       const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
       const { analyzeVoice, summarizeVoiceProfile } = await import('../../ai/index.js');
       const browser = await createBrowser();
-      const page = await createPage(browser);
-      await loginWithCookie(page, token);
-      const tweets = await scrapeTweets(page, username, { limit: parseInt(options.limit) });
-      await browser.close();
+      try {
+        const page = await createPage(browser);
+        await loginWithCookie(page, token);
+        const tweets = await scrapeTweets(page, username, { limit: parseInt(options.limit) });
+      } finally {
+        await browser.close().catch(() => {});
+      }
       if (!tweets || tweets.length === 0) {
         spinner.fail(`No tweets found for @${username}`);
         return;
@@ -82,10 +85,10 @@ ai
       process.exit(1);
     }
     const config = await loadConfig();
-    const token = config.auth_token || process.env.TWITTER_AUTH_TOKEN;
+    const token = config.authToken || process.env.TWITTER_AUTH_TOKEN;
     const apiKey = options.apiKey || config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
     if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions config --token <auth_token>'));
+      console.error(chalk.red('✗ Auth token required. Run: xactions login (paste your auth_token cookie)'));
       process.exit(1);
     }
     if (!apiKey) {
@@ -100,10 +103,13 @@ ai
       const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
       const { analyzeVoice, generateTweet, generateThread } = await import('../../ai/index.js');
       const browser = await createBrowser();
-      const page = await createPage(browser);
-      await loginWithCookie(page, token);
-      const tweets = await scrapeTweets(page, options.voice, { limit: 100 });
-      await browser.close();
+      try {
+        const page = await createPage(browser);
+        await loginWithCookie(page, token);
+        const tweets = await scrapeTweets(page, options.voice, { limit: 100 });
+      } finally {
+        await browser.close().catch(() => {});
+      }
       if (!tweets || tweets.length === 0) {
         spinner.fail(`No tweets found for @${options.voice}`);
         return;
@@ -152,10 +158,10 @@ ai
       process.exit(1);
     }
     const config = await loadConfig();
-    const token = config.auth_token || process.env.TWITTER_AUTH_TOKEN;
+    const token = config.authToken || process.env.TWITTER_AUTH_TOKEN;
     const apiKey = options.apiKey || config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
     if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions config --token <auth_token>'));
+      console.error(chalk.red('✗ Auth token required. Run: xactions login (paste your auth_token cookie)'));
       process.exit(1);
     }
     if (!apiKey) {
@@ -170,10 +176,13 @@ ai
       const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
       const { analyzeVoice, rewriteTweet } = await import('../../ai/index.js');
       const browser = await createBrowser();
-      const page = await createPage(browser);
-      await loginWithCookie(page, token);
-      const tweets = await scrapeTweets(page, options.voice, { limit: 100 });
-      await browser.close();
+      try {
+        const page = await createPage(browser);
+        await loginWithCookie(page, token);
+        const tweets = await scrapeTweets(page, options.voice, { limit: 100 });
+      } finally {
+        await browser.close().catch(() => {});
+      }
       if (!tweets || tweets.length === 0) {
         spinner.fail(`No tweets found for @${options.voice}`);
         return;
@@ -208,10 +217,10 @@ ai
   .option('-k, --api-key <key>', 'OpenRouter API key (or set OPENROUTER_API_KEY)')
   .action(async (username, options) => {
     const config = await loadConfig();
-    const token = config.auth_token || process.env.TWITTER_AUTH_TOKEN;
+    const token = config.authToken || process.env.TWITTER_AUTH_TOKEN;
     const apiKey = options.apiKey || config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
     if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions config --token <auth_token>'));
+      console.error(chalk.red('✗ Auth token required. Run: xactions login (paste your auth_token cookie)'));
       process.exit(1);
     }
     if (!apiKey) {
@@ -226,10 +235,13 @@ ai
       const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
       const { analyzeVoice, generateWeek } = await import('../../ai/index.js');
       const browser = await createBrowser();
-      const page = await createPage(browser);
-      await loginWithCookie(page, token);
-      const tweets = await scrapeTweets(page, username, { limit: 100 });
-      await browser.close();
+      try {
+        const page = await createPage(browser);
+        await loginWithCookie(page, token);
+        const tweets = await scrapeTweets(page, username, { limit: 100 });
+      } finally {
+        await browser.close().catch(() => {});
+      }
       if (!tweets || tweets.length === 0) {
         spinner.fail(`No tweets found for @${username}`);
         return;

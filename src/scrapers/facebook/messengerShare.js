@@ -434,7 +434,9 @@ export async function shareToMessenger(page, target, options = {}) {
       shareBtn = /** @type {import('puppeteer').ElementHandle|null} */ (await page.evaluate((xpath) => {
         const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
         const node = result.singleNodeValue;
-        return node || null;
+        // Only an ELEMENT can be clicked — a text/comment node match would blow up
+        // later at el.click() with an opaque TypeError.
+        return node && node.nodeType === 1 ? node : null;
       }, SELECTORS.shareButtonXPath));
       if (!shareBtn) return { ok: false, recipientName, error: 'Share button not found' };
     }

@@ -1,6 +1,7 @@
-export const SUPPORTED_SHELLS: unknown[];
-export function collectCommands(...args: unknown[]): unknown;
-export function generateCompletion(...args: unknown[]): unknown;
-export function registerCompletionCommand(...args: unknown[]): unknown;
-declare const _default: unknown;
-export default _default;
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+/** Type declarations for the `completion` CLI command module. */
+
+export const SUPPORTED_SHELLS: string[];
+export function collectCommands(program: import("commander").Command): { name: string; description: string }[];
+export function generateCompletion(program: import("commander").Command, shell: string): string;
+export function registerCompletionCommand(program: import("commander").Command): void;

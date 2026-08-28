@@ -28,7 +28,7 @@ export const GROUPS = [
   {
     title: 'Start here',
     hint: 'Set up and verify the install',
-    commands: ['quickstart', 'doctor', 'connect', 'login', 'logout', 'mcp-config', 'info'],
+    commands: ['quickstart', 'doctor', 'connect', 'login', 'logout', 'mcp-config', 'info', 'status'],
   },
   {
     title: 'Read an account',
@@ -63,12 +63,12 @@ export const GROUPS = [
   {
     title: 'Automate',
     hint: 'Run it without you',
-    commands: ['workflow', 'agent', 'notify', 'plugin', 'team', 'dataset'],
+    commands: ['automate', 'workflow', 'agent', 'notify', 'plugin', 'team', 'dataset', 'checkpoints'],
   },
   {
     title: 'Move data',
     hint: 'Export, import, convert, migrate, diff',
-    commands: ['export', 'export-data', 'import', 'convert', 'migrate', 'diff'],
+    commands: ['export', 'export-data', 'import', 'convert', 'migrate', 'diff', 'schema'],
   },
   {
     title: 'Low level',

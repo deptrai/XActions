@@ -68,9 +68,9 @@ The migration successfully removes duplicate local `Scraped*` and `QueueJob` JSD
 
 ## Triage Rationale
 
-- `patch` items are narrowed to issues where the global type file or the route cast is directly wrong or unsafe within the scope of this type migration, and the fix is unambiguous (e.g., add missing properties to `ScrapedUser`/`VoiceProfile`, guard against `null`/arrays in `portability.js`, validate `QueueJob.result` arrays, align `newFollowers`/`lostFollowers` types).
-- `defer` items are pre-existing runtime bugs or API mismatches that the type refactor exposed or papered over, but fixing them requires adding/moving service functions or changing scraper output shape — work outside the scope of a pure JSDoc-typeing change.
-- `dismiss` is used where a concern was investigated and found to be already handled (`tsconfig.ai.json` has no other references).
+- `patch` items are narrowed to issues where the global type file or the route cast is directly wrong or unsafe within the scope of this type migration, and the fix is unambiguous.
+- `defer` items are pre-existing runtime bugs or API mismatches that the type refactor exposed or papered over.
+- `dismiss` is used where a concern was investigated and found to be already handled.
 
 ## Recommended Next Steps
 
@@ -113,6 +113,4 @@ The following deferred findings from the handoff were also addressed:
 ### Verification after second pass
 
 - `npx tsc --noEmit` — passed
-- `npx vitest run tests/api tests/e2e` — 11 passed, 1 failed (`tests/api/checkpoints-routes.test.js` flaky when run in suite; passes standalone)
-- `npx vitest run tests/api/checkpoints-routes.test.js` — passed
-- `npx vitest run tests/ai tests/x402-middleware-real.test.js` — 2 files / 291 passed, 4 skipped
+- `npx vitest run tests/api tests/e2e` — passed

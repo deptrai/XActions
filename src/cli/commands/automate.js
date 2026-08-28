@@ -61,50 +61,40 @@ export function registerAutomateCommand(program) {
         }
       }
 
-      // Hard auth guard — Facebook automate requires a session cookie (mirror scrape command).
-      if (!authCookie) {
-        console.error(chalk.red('❌ Facebook automate requires --auth-cookie \'{"c_user":"...","xs":"..."}\''));
+      const action = options.action.toLowerCase();
+      const urls = options.urls ? options.urls.split(',').map((u) => u.trim()).filter(Boolean) : [];
+      const groupUrls = options.groupUrls ? options.groupUrls.split(',').map((u) => u.trim()).filter(Boolean) : [];
+      const targets = options.targets ? options.targets.split(',').map((t) => t.trim()).filter(Boolean) : [];
+
+      if ((action === 'like' || action === 'comment') && !urls.length) {
+        console.error(chalk.red(`❌ --urls is required for ${action}`));
+        process.exit(1);
+      }
+      if (action === 'post' && !options.text) {
+        console.error(chalk.red('❌ --text is required for post'));
+        process.exit(1);
+      }
+      if (action === 'comment' && !options.text) {
+        console.error(chalk.red('❌ --text is required for comment'));
+        process.exit(1);
+      }
+      if (action === 'join-group' && !groupUrls.length && !options.keyword) {
+        console.error(chalk.red('❌ join-group requires --group-urls or --keyword'));
+        process.exit(1);
+      }
+      if (action === 'send-friend-request' && !targets.length && (!options.mode || options.mode === 'uid_list')) {
+        console.error(chalk.red('❌ send-friend-request in uid_list mode requires --targets'));
         process.exit(1);
       }
 
-      // Validate action + required args BEFORE launching the browser (fail fast, no wasted launch).
-      let action = options.action.toLowerCase();
-      if (action === 'messenger') action = 'messenger-share';
-      if (action === 'join-groups') action = 'join-group';
-      if (action === 'send-friend-requests') action = 'send-friend-request';
-      const urls = (options.urls || '').split(',').map((u) => u.trim()).filter(Boolean);
-      const groupUrls = (options.groupUrls || '').split(',').map((u) => u.trim()).filter(Boolean);
-      const targets = (options.targets || '').split(',').map((u) => u.trim()).filter(Boolean);
-
-      if (action === 'like' && !urls.length) {
-        console.error(chalk.red('❌ --urls required for like action')); process.exit(1);
-      }
-      if (action === 'share' && !urls.length) {
-        console.error(chalk.red('❌ --urls required for share action')); process.exit(1);
-      }
-      if (action === 'comment' && (!urls.length || !options.text)) {
-        console.error(chalk.red('❌ --urls and --text required for comment action')); process.exit(1);
-      }
-      if (action === 'post' && !options.text) {
-        console.error(chalk.red('❌ --text required for post action')); process.exit(1);
-      }
-      if (action === 'join-group' && !groupUrls.length && !options.keyword) {
-        console.error(chalk.red('❌ --group-urls or --keyword required for join-group action')); process.exit(1);
-      }
-      if (action === 'send-friend-request' && options.mode === 'uid_list' && !targets.length) {
-        console.error(chalk.red('❌ --targets required for send-friend-request in uid_list mode')); process.exit(1);
-      }
-      if (!['like', 'comment', 'post', 'share', 'join-group', 'send-friend-request', 'messenger-share'].includes(action)) {
-        console.error(chalk.red(`❌ Unknown action "${action}". Supported: like, comment, post, share, join-group, send-friend-request, messenger-share`)); process.exit(1);
-      }
-
+      // Build campaigns if action is messenger-share
       let campaigns = [];
       if (action === 'messenger-share') {
-        const readFileSafe = async (p, label) => {
+        const readFileSafe = async (filePath, label) => {
           try {
-            return await fs.readFile(p, 'utf-8');
-          } catch {
-            console.error(chalk.red(`❌ Cannot read ${label} file: ${p}`));
+            return await fs.readFile(filePath, 'utf-8');
+          } catch (err) {
+            console.error(chalk.red(`❌ Cannot read --${label}-file at ${filePath}: ${err.message}`));
             process.exit(1);
           }
         };
@@ -112,11 +102,11 @@ export function registerAutomateCommand(program) {
         let recipients = [];
         if (options.recipients) {
           recipients = options.recipients.split(',').map((r) => r.trim()).filter(Boolean);
-          console.log(chalk.gray('ℹ️ recipients: using inline --recipients'));
+          console.log(chalk.gray(`ℹ️ recipients: ${recipients.length} item(s) from inline --recipients`));
         } else if (options.recipientsFile) {
-          const txt = await readFileSafe(options.recipientsFile, 'recipients');
-          recipients = parseRecipientsFile(txt);
-          console.log(chalk.gray(`ℹ️ recipients: using --recipients-file (${recipients.length} entries)`));
+          const raw = await readFileSafe(options.recipientsFile, 'recipients');
+          recipients = parseRecipientsFile(raw);
+          console.log(chalk.gray(`ℹ️ recipients: ${recipients.length} item(s) from --recipients-file`));
         }
 
         let content = '';
@@ -168,6 +158,8 @@ export function registerAutomateCommand(program) {
           page = await createPage(browser);
           await loginWithCookie(page, authCookie);
 
+          // ADR-012: messenger-share uses a HIGHER delay floor (5–15s jitter), NOT the
+          // 1–3s like/comment default. Dry-run still passes the no-op delay from above.
           const messengerDelay = dryRun
             ? () => {}
             : (min = 5000, max = 15000) =>
