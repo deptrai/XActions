@@ -48,10 +48,6 @@
 - [ ] [Review][P2][Defer] Session time-bucket and quarantine expirations depend on `Date.now()` and are sensitive to clock skew; monotonic clock is out of scope for Story 11.2 [src/proxy/providers.js:429, src/proxy/providers.js:529]
 - [ ] [Review][P2][Defer] No checkout/checkin between dynamic proxy session selection and the actual HTTP request; request-pipeline transaction belongs to Story 11.5/11.7 [src/proxy/providers.js:520-551]
 
-## Deferred from: code review of 14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub (2026-08-28)
-
-- [x] [Review][Defer] **Race condition checkpoint trước stream publish** — `src/scrapers/social/facebook/crawler.js:859-896` — Checkpoint được lưu trước khi lặp `publisher.publish()`; process crash giữa chừng có thể mất một số message. Trade-off chấp nhận được theo AC-2; giảm thiểu hoàn toàn cần transaction hoặc batch publish phức tạp hơn, ngoài scope hiện tại.
-
 ## Deferred from: code review of 13-1-tiered-signer-architecture-token-ring-worker-pool (2026-08-25)
 
 - [ ] [Review][P2][Defer] Không dùng `p-limit` cho `init()` / spawn — spec đề xuất nhưng không phải AC; tác động thấp với `minSize=4`. [src/core/signer-pool.js:203-210]
