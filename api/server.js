@@ -72,6 +72,8 @@ import governorRoutes from './routes/governor.js';
 import notificationsRoutes from './routes/notifications.js';
 import teamsRoutes from './routes/teams.js';
 import optimizerRoutes from './routes/optimizer.js';
+import { defaultStreamMetricsCollector } from '../src/utils/stream-metrics-collector.js';
+import { defaultStreamAlertEngine } from '../src/utils/stream-alerts.js';
 import { startScheduler } from './services/unfollowerScheduler.js';
 import { initializeSocketIO } from './realtime/socketHandler.js';
 import { initializeLicensing, brandingMiddleware } from './services/licensing.js';
@@ -371,6 +373,37 @@ function mountPluginRoutes() {
 }
 app.use('/api/automations', automationsRoutes);
 app.use('/api/streams', streamRoutes);
+
+// Story 14.3 — Stream Metrics & Alert Endpoints
+app.get('/metrics/stream', async (_req, res) => {
+  try {
+    const metrics = await defaultStreamMetricsCollector.getMetrics();
+    defaultStreamAlertEngine.checkAndAlert(metrics).catch((err) => {
+      console.warn('[Alert Engine] Error checking alerts:', (err instanceof Error ? err.message : String(err)));
+    });
+    res.json(metrics);
+  } catch (err) {
+    res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) });
+  }
+});
+
+app.get('/admin/stream/metrics', async (_req, res) => {
+  try {
+    const metrics = await defaultStreamMetricsCollector.getMetrics();
+    res.json({ success: true, metrics });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
+  }
+});
+
+app.get('/admin/stream/alerts', async (_req, res) => {
+  try {
+    const status = defaultStreamAlertEngine.getAlertStatus();
+    res.json({ success: true, alerts: status });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
+  }
+});
 
 // Dashboard routes
 // '/' serves the main dashboard — login.html is at /login

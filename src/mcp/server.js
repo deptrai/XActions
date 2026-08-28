@@ -5328,6 +5328,20 @@ async function startHttpTransport() {
     res.json({ status: 'ok', transport: 'http', tools: TOOLS.length, sessions: sessions.size });
   });
 
+  // Stream Metrics endpoint (Story 14.3)
+  app.get('/metrics/stream', async (_req, res) => {
+    try {
+      const { defaultStreamMetricsCollector } = await import('../utils/stream-metrics-collector.js');
+      const metrics = await defaultStreamMetricsCollector.getMetrics();
+      res.json(metrics);
+    } catch (err) {
+      res.status(500).json({
+        error: 'Failed to collect stream metrics',
+        message: err?.message || String(err),
+      });
+    }
+  });
+
   // x402 pricing discovery (free endpoint — no payment required)
   app.get('/mcp/pricing', mcpPricingHandler);
 

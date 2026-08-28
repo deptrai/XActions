@@ -150,6 +150,13 @@ export class AdaptiveRateGovernor {
   updateRedisConsumerLag(lag) {
     this.#redisConsumerLag = Math.max(0, Number(lag) || 0);
     if (this.#redisConsumerLag > 10000) {
+      if (!this.#isBackpressureActive) {
+        console.warn('[AdaptiveRateGovernor] Redis stream consumer lag threshold exceeded:', {
+          throttle_reason: 'redis_lag',
+          reduced_to_percent: 25,
+          redisConsumerLag: this.#redisConsumerLag,
+        });
+      }
       this.#isBackpressureActive = true;
     } else if (this.#redisConsumerLag < 5000) {
       this.#isBackpressureActive = false;
@@ -190,6 +197,12 @@ export class AdaptiveRateGovernor {
     }
     if (this.#isBackpressureActive || this.#redisConsumerLag > 10000) {
       factor *= 0.25;
+      console.warn('[AdaptiveRateGovernor] Throttling bulk throughput due to Redis stream consumer lag:', {
+        throttle_reason: 'redis_lag',
+        reduced_to_percent: 25,
+        redisConsumerLag: this.#redisConsumerLag,
+        platform,
+      });
     }
 
     return healthy * limit.baseReqPerSecondPerProxy * limit.throttleFactor * factor;

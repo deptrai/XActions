@@ -5,8 +5,6 @@
  * @license MIT
  */
 
-import type { ProxyIpPool, ProxyProviderContract } from './proxy.js';
-
 export interface PostItem {
   id: string;
   platform: string;
@@ -24,7 +22,7 @@ export interface PostItem {
   repliesCount?: number;
   viewsCount?: number;
   metadata?: Record<string, unknown>;
-  publishedAt?: Date | null;
+  publishedAt?: Date;
   crawledAt: Date;
 }
 
@@ -42,23 +40,48 @@ export interface CommentItem {
   likesCount?: number;
   subCommentsCount?: number;
   metadata?: Record<string, unknown>;
-  publishedAt?: Date | null;
+  publishedAt?: Date;
   crawledAt: Date;
 }
 
-export interface ProfileItem {
+export interface ThinEvent {
   id: string;
   platform: string;
   externalId: string;
-  username: string;
-  name: string;
-  bio?: string;
-  avatar?: string;
-  profileUrl?: string;
-  followersCount?: number;
-  followingCount?: number;
-  metadata?: Record<string, unknown>;
-  crawledAt?: Date;
+  category: string;
+  authorId: string;
+  crawledAt: string;
+  storageRef: string;
+}
+
+export interface StreamMetrics {
+  eventsPerSecond: number;
+  pendingMessages: number;
+  consumerLag: number;
+  droppedEvents: number;
+  lastAckTime: number;
+  maxLen: number;
+  minId: string | null;
+}
+
+export interface RedisClientLike {
+  xAdd?: Function;
+  xadd?: Function;
+  xLen?: Function;
+  xlen?: Function;
+  xInfoStream?: Function;
+  xInfo?: Function;
+  xinfo?: Function;
+  xInfoConsumers?: Function;
+  xGroupCreate?: Function;
+  xgroup?: Function;
+  xPending?: Function;
+  xpending?: Function;
+  sendCommand?: Function;
+  isOpen?: boolean | Function;
+  quit?: Function;
+  disconnect?: Function;
+  status?: string;
 }
 
 export interface LoginResult {
@@ -289,17 +312,6 @@ export abstract class AbstractLogin {
   abstract isAuthenticated(): Promise<boolean>;
 }
 
-export interface CrawlCheckpoint {
-  platform: string;
-  targetType: string;
-  targetKey: string;
-  lastCursor?: string | null;
-  lastTimestamp?: Date;
-  lastCrawledAt?: Date;
-  status?: string;
-  [key: string]: unknown;
-}
-
 export abstract class AbstractStore {
   constructor();
   abstract init(): Promise<void>;
@@ -307,7 +319,6 @@ export abstract class AbstractStore {
   abstract storeBatch(posts: PostItem[]): Promise<void>;
   abstract storeComment(comment: CommentItem): Promise<void>;
   abstract storeCommentBatch(comments: CommentItem[]): Promise<void>;
-  abstract saveCheckpoint(checkpoint: CrawlCheckpoint | Record<string, unknown>): Promise<unknown>;
   abstract close(): Promise<void>;
 }
 
@@ -341,28 +352,15 @@ export class SessionManager {
 
 export const globalSessionManager: SessionManager;
 
-export interface AccountRecord {
-  platform: string;
-  accountId: string;
-  credentials?: Record<string, unknown> | null;
-  assignedProxy?: unknown;
-  hibernatingUntil?: number | null;
-  velocity?: number;
-}
-
 export class AccountPool {
   constructor(deps?: { governor?: AdaptiveRateGovernor });
-  registerAccounts(platform: string, accountIds: string[], options?: { credentials?: Record<string, unknown> }): void;
+  registerAccounts(platform: string, accountIds: string[]): void;
   getNextAvailable(platform: string): string | null;
   hasAvailable(platform: string): boolean;
-  markUnavailable(accountId: string, reason?: string, durationMs?: number, platform?: string): void;
-  markAvailable(accountId: string, platform?: string): void;
-  getAccountVelocity(accountId: string, platform?: string): number;
-  recordRequest(accountId: string, platform?: string): void;
-  setAssignedProxy(accountId: string, proxy: unknown, platform?: string): void;
+  markUnavailable(accountId: string): void;
+  markAvailable(accountId: string): void;
   listPlatforms(): string[];
   listAccounts(platform: string): string[];
-  getAccount(accountId: string, platform?: string): AccountRecord | null;
 }
 
 export const globalAccountPool: AccountPool;

@@ -44,29 +44,54 @@ export interface CommentItem {
   crawledAt?: Date | string;
 }
 
+export interface CrawlCheckpointData {
+  platform: string;
+  targetType: string;
+  targetKey: string;
+  status?: string;
+  lastCursor?: string | null;
+  lastTimestamp?: Date | string | null;
+  lastCrawledAt?: Date | string | null;
+  nextScheduledAt?: Date | string | null;
+  storageRef?: string | null;
+  errorCount?: number;
+}
+
 export abstract class AbstractStore {
   abstract init(): Promise<void>;
   abstract storeContent(post: PostItem, opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
   abstract storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
   abstract storeComment(comment: CommentItem): Promise<void>;
   abstract storeCommentBatch(comments: CommentItem[], opts?: { upsert?: boolean }): Promise<void>;
-  abstract saveCheckpoint(checkpoint: Record<string, unknown>): Promise<unknown>;
+  abstract saveCheckpoint(checkpoint: CrawlCheckpointData): Promise<unknown>;
+  abstract getCheckpoint(platform: string, targetType: string, targetKey: string): Promise<unknown>;
   abstract close(): Promise<void>;
 }
 
 export interface PrismaStoreOptions {
   prisma?: unknown;
+  redisClient?: unknown;
+  redis?: unknown;
   chunkSize?: number;
   validateSchema?: boolean;
 }
 
 export class PrismaStore extends AbstractStore {
+  redis: unknown | null;
   constructor(options?: PrismaStoreOptions);
   init(): Promise<void>;
   storeContent(post: PostItem, opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
   storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
   storeComment(comment: CommentItem): Promise<void>;
   storeCommentBatch(comments: CommentItem[], opts?: { upsert?: boolean }): Promise<void>;
-  saveCheckpoint(checkpoint: Record<string, unknown>): Promise<unknown>;
+  saveCheckpoint(checkpoint: CrawlCheckpointData): Promise<unknown>;
+  getCheckpoint(platform: string, targetType: string, targetKey: string): Promise<unknown>;
   close(): Promise<void>;
 }
+
+export class StoreWithRedis extends PrismaStore {
+  publisher: unknown;
+  constructor(options?: PrismaStoreOptions & { publisher?: unknown });
+}
+
+export const defaultStore: StoreWithRedis;

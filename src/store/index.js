@@ -7,6 +7,7 @@
 
 export { AbstractStore } from '../core/base-store.js';
 export { PrismaStore } from './prisma-store.js';
+export { defaultStore, StoreWithRedis } from './store-with-redis.js';
 export {
   CHECKPOINT_STATUSES,
   listCheckpoints,

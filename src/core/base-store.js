@@ -62,10 +62,30 @@ export class AbstractStore {
 
   /**
    * @param {Object} checkpoint
+   * @param {string} checkpoint.platform
+   * @param {string} checkpoint.targetType
+   * @param {string} checkpoint.targetKey
+   * @param {string} [checkpoint.lastCursor]
+   * @param {Date | string} [checkpoint.lastTimestamp]
+   * @param {Date | string} [checkpoint.lastCrawledAt]
+   * @param {string} [checkpoint.status]
+   * @param {string} [checkpoint.storageRef]
+   * @param {Date | string} [checkpoint.nextScheduledAt]
+   * @param {number} [checkpoint.errorCount]
    * @returns {Promise<any>}
    */
   async saveCheckpoint(checkpoint) {
     throw new Error('Method not implemented: saveCheckpoint()');
+  }
+
+  /**
+   * @param {string} platform
+   * @param {string} targetType
+   * @param {string} targetKey
+   * @returns {Promise<any>}
+   */
+  async getCheckpoint(platform, targetType, targetKey) {
+    throw new Error('Method not implemented: getCheckpoint()');
   }
 
   /** @returns {Promise<void>} */

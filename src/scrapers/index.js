@@ -40,9 +40,7 @@ import bluesky from './bluesky/index.js';
 import mastodon from './mastodon/index.js';
 import threads from './threads/index.js';
 import facebook from './facebook/index.js';
-import { FacebookCrawler, FacebookClient, FacebookActions } from './social/facebook/index.js';
-import { resolveTargetKey, resolveGroupId } from './social/facebook/crawler.js';
-import { ProxyIpPool } from '../proxy/proxy-pool.js';
+import { defaultStore } from '../store/index.js';
 
 // ============================================================================
 // HTTP Scraper (Direct GraphQL — no browser required)
@@ -157,344 +155,11 @@ export function getPlatform(platform) {
  *   // Threads (Puppeteer)
  *   const posts = await scrape('threads', 'tweets', { page, username: 'zuck', limit: 20 });
  */
-/**
- * Build a ProxyIpPool from loose browserOptions.proxy / proxyAuth.
- * @param {Record<string, unknown>} browserOptions
- * @returns {ProxyIpPool | undefined}
- */
-function buildFacebookProxyPool(browserOptions = {}) {
-  const existing = browserOptions?.proxyPool;
-  if (existing) return /** @type {ProxyIpPool} */ (existing);
-  const raw = browserOptions?.proxy;
-  if (!raw) return undefined;
-
-  if (typeof raw === 'string') {
-    const proxyAuth = /** @type {{ username?: string; password?: string } | undefined} */ (browserOptions?.proxyAuth);
-    if (proxyAuth?.username) {
-      const scheme = /^https:/i.test(raw) ? 'https' : 'http';
-      const hostPort = raw.replace(/^https?:\/\//, '');
-      const user = encodeURIComponent(proxyAuth.username);
-      const pass = encodeURIComponent(proxyAuth.password || '');
-      return new ProxyIpPool({
-        proxies: [`${scheme}://${user}:${pass}@${hostPort}`],
-        validateOnAdd: false,
-      });
-    }
-    return new ProxyIpPool({ proxies: [raw], validateOnAdd: false });
-  }
-
-  return new ProxyIpPool({ proxies: [raw], validateOnAdd: false });
-}
-
-/**
- * Create a FacebookClient from browser options, honoring proxy/auth/location.
- * @param {Record<string, unknown>} browserOptions
- * @returns {FacebookClient}
- */
-export function createFacebookClient(browserOptions = {}) {
-  return new FacebookClient({
-    baseUrl: browserOptions?.baseUrl,
-    proxyPool: buildFacebookProxyPool(browserOptions),
-    proxyAuth: browserOptions?.proxyAuth,
-    proxyLocation: browserOptions?.proxyLocation,
-    governor: browserOptions?.governor,
-    accountPool: browserOptions?.accountPool,
-    headless: browserOptions?.headless !== false,
-    cdpUrl: browserOptions?.cdpUrl || process.env.FACEBOOK_CDP_URL,
-    userDataDir: browserOptions?.userDataDir || browserOptions?.profileDir,
-    profileDir: browserOptions?.profileDir || browserOptions?.userDataDir,
-    httpFallback: true,
-    requiresProxy: false,
-  });
-}
-
-/**
- * Create a FacebookCrawler around an existing FacebookClient.
- * @param {FacebookClient} client
- * @param {Record<string, unknown>} [browserOptions]
- * @returns {FacebookCrawler}
- */
-export function createFacebookCrawler(client, browserOptions = {}) {
-  return new FacebookCrawler({
-    client,
-    docIds: browserOptions?.docIds,
-    store: browserOptions?.store,
-    governor: browserOptions?.governor,
-    accountPool: browserOptions?.accountPool,
-    cdpUrl: browserOptions?.cdpUrl || process.env.FACEBOOK_CDP_URL,
-  });
-}
-
-/**
- * Dispatch to FacebookCrawler hybrid engine (Story 13.10)
- * @param {string} action
- * @param {import('../types/xactions.js').XActionsOptions & Record<string, unknown>} options
- * @returns {Promise<Record<string, unknown>>}
- */
-export async function dispatchFacebookHybrid(action, options = {}) {
-  // Facebook uses a cookie-object ({ c_user, xs }) via authCookie, not a string authToken.
-  if (options.authToken) {
-    throw new Error(
-      '❌ Facebook uses options.authCookie ({ c_user, xs }), not options.authToken'
-    );
-  }
-
-  // 1. Map action names (AC-2)
-  const normalizedAction = String(action || '').trim().toLowerCase();
-  /** @type {Record<string, string>} */
-  const ACTION_MAPPING = {
-    profile: 'profile',
-    followers: 'followers',
-    following: 'following',
-    search: 'search',
-    marketplace: 'marketplace',
-    post_comments: 'post_comments',
-    group_posts: 'group_posts',
-    group_comments: 'group_comments',
-    group_search: 'group_search',
-    'group-members': 'group_members',
-    group_members: 'group_members',
-    like: 'like',
-    comment: 'comment',
-    post: 'post',
-    share: 'share',
-    messenger: 'messenger_share',
-    messenger_share: 'messenger_share',
-    'messenger-share': 'messenger_share',
-    share_link_uid: 'share_link_uid',
-    'share-link-uid': 'share_link_uid',
-    join_group: 'join_group',
-    join_groups: 'join_group',
-    'join-group': 'join_group',
-    'join-groups': 'join_group',
-    'batch-post-groups': 'post',
-    batch_post_groups: 'post',
-    send_friend_request: 'send_friend_request',
-    send_friend_requests: 'send_friend_request',
-    'send-friend-request': 'send_friend_request',
-    'send-friend-requests': 'send_friend_request',
-    warmup_scroll: 'warmup_scroll',
-    'warmup-scroll-feed': 'warmup_scroll',
-    warmup_account: 'warmup_account',
-    'warmup-account': 'warmup_account',
-    cancel_friend_requests: 'cancel_friend_requests',
-    'cancel-friend-requests': 'cancel_friend_requests',
-  };
-
-  let mappedAction = ACTION_MAPPING[normalizedAction];
-  if (normalizedAction === 'posts' || normalizedAction === 'tweets' || normalizedAction === 'feed') {
-    const rawUrl = options.url || options.targetUrl || '';
-    if (typeof rawUrl === 'string' && (rawUrl.includes('/groups/') || rawUrl.includes('/group/'))) {
-      mappedAction = 'group_posts';
-    } else {
-      mappedAction = 'page_posts';
-    }
-  }
-
-  if (!mappedAction) {
-    mappedAction = normalizedAction;
-  }
-
-  // 2. Build or obtain crawler instance
-  let crawler = /** @type {FacebookCrawler | undefined} */ (options.crawler);
-  let ownsCrawler = false;
-  if (!crawler) {
-    ownsCrawler = true;
-    const browserOpts = /** @type {Record<string, unknown>} */ (options.browserOptions || {});
-    const client = /** @type {FacebookClient | undefined} */ (options.client) || createFacebookClient(browserOpts);
-    crawler = createFacebookCrawler(client, browserOpts);
-  }
-
-  // 3. Build session & args under resource-safe try/finally
-  try {
-    const validActions = crawler.listActions().map((a) => a.action);
-    if (!validActions.includes(mappedAction)) {
-      throw new Error(
-        `Action "${action}" not available on platform "facebook". Available: ${validActions.join(', ')}`
-      );
-    }
-
-    let accountId = options.authCookie?.accountId || options.userId || null;
-    let cookies = options.authCookie;
-    if (!accountId && typeof options.authCookie === 'object' && options.authCookie?.c_user) {
-      accountId = String(options.authCookie.c_user);
-    } else if (!accountId && typeof options.authCookie === 'string') {
-      const match = options.authCookie.match(/(?:^|;\s*)c_user=([^;]+)/);
-      if (match) accountId = match[1];
-    }
-
-    const session = {
-      ...(accountId ? { accountId } : {}),
-      cookies,
-      cdpUrl: options.browserOptions?.cdpUrl || process.env.FACEBOOK_CDP_URL,
-      page: options.page,
-    };
-
-    const args = { ...options };
-    delete args.page;
-    delete args.autoClose;
-    delete args.authCookie;
-    delete args.browserOptions;
-    delete args.client;
-    delete args.crawler;
-    delete args.authToken;
-
-    // Resolve page/group identifiers from URL aliases (AC-2)
-    if (mappedAction === 'page_posts' && !args.pageId) {
-      const raw = args.url || args.username || args.targetUrl;
-      if (typeof raw === 'string' && raw.trim()) {
-        args.pageId = resolveTargetKey(raw.trim());
-      }
-    }
-    if (mappedAction === 'group_posts' && !args.groupId) {
-      const raw = args.url || args.groupUrl || args.groupId;
-      if (typeof raw === 'string' && raw.trim()) {
-        args.groupId = resolveGroupId(raw.trim());
-      }
-    }
-    if ((mappedAction === 'group_search' || mappedAction === 'group_members') && !args.groupUrl && !args.groupId) {
-      const raw = args.url || args.groupUrl;
-      if (typeof raw === 'string' && raw.trim()) {
-        args.groupUrl = raw.trim();
-      }
-    }
-
-    // Normalize legacy arg shapes to FacebookCrawler canonical args
-    if (['like', 'comment', 'share'].includes(mappedAction)) {
-      const rawUrls = args.urls || args.postUrl || args.postUrls;
-      const postUrls = Array.isArray(rawUrls) ? rawUrls : (typeof rawUrls === 'string' ? rawUrls.split(',').map((u) => u.trim()).filter(Boolean) : []);
-      if (postUrls.length) {
-        args.postUrls = postUrls;
-        args.postUrl = postUrls[0];
-      }
-      delete args.urls;
-      if (mappedAction === 'post' || mappedAction === 'comment') {
-        args.text = typeof args.text === 'string' ? args.text : (typeof args.content === 'string' ? args.content : args.text);
-      }
-    }
-    if (mappedAction === 'post') {
-      const rawText = args.text || args.content;
-      if (typeof rawText === 'string') args.text = rawText;
-      const rawGroups = args.groupUrls || args.groupUrl || args.groups;
-      if (rawGroups) {
-        args.groupUrls = Array.isArray(rawGroups) ? rawGroups : (typeof rawGroups === 'string' ? rawGroups.split(',').map((u) => u.trim()).filter(Boolean) : []);
-      }
-    }
-    if (mappedAction === 'join_group') {
-      const rawGroups = args.groupUrls || args.groupUrl || args.groups;
-      if (rawGroups) {
-        args.groupUrls = Array.isArray(rawGroups) ? rawGroups : (typeof rawGroups === 'string' ? rawGroups.split(',').map((u) => u.trim()).filter(Boolean) : []);
-      }
-      if (typeof args.keyword === 'string') args.keyword = args.keyword.trim();
-      if (args.limit != null) args.limit = Number(args.limit);
-    }
-    if (mappedAction === 'send_friend_request') {
-      const rawTargets = args.targets || args.target;
-      if (rawTargets) {
-        args.targets = Array.isArray(rawTargets) ? rawTargets : (typeof rawTargets === 'string' ? rawTargets.split(',').map((u) => u.trim()).filter(Boolean) : []);
-      }
-      if (args.limit != null) args.limit = Number(args.limit);
-    }
-    if (mappedAction === 'messenger_share' || mappedAction === 'share_link_uid') {
-      const rawMessage = args.message || args.content;
-      if (typeof rawMessage === 'string') args.message = rawMessage;
-      const rawRecipients = args.recipientUids || args.recipients;
-      if (rawRecipients) {
-        const arr = Array.isArray(rawRecipients) ? rawRecipients : (typeof rawRecipients === 'string' ? rawRecipients.split(',').map((u) => u.trim()).filter(Boolean) : []);
-        args.recipientUids = arr;
-      }
-      const rawPostUrl = args.postUrl || (Array.isArray(args.postUrls) ? args.postUrls[0] : args.postUrl);
-      if (typeof rawPostUrl === 'string') args.postUrl = rawPostUrl;
-      if (mappedAction === 'share_link_uid' && Array.isArray(args.recipientUids) && args.recipientUids.length) {
-        args.recipientUid = args.recipientUids[0];
-      }
-    }
-    if (mappedAction === 'warmup_scroll') {
-      if (args.durationSeconds != null) args.durationSeconds = Number(args.durationSeconds);
-    }
-    if (mappedAction === 'warmup_account') {
-      if (args.durationSeconds != null) args.durationSeconds = Number(args.durationSeconds);
-      if (args.reactProbability != null) args.reactProbability = Number(args.reactProbability);
-      if (args.allowReactions != null) args.allowReactions = args.allowReactions === true || args.allowReactions === 'true' || args.allowReactions === 1;
-    }
-    if (mappedAction === 'cancel_friend_requests') {
-      if (args.limit != null) args.limit = Number(args.limit);
-      if (args.olderThanDays != null) args.olderThanDays = Number(args.olderThanDays);
-      if (args.maxBatch != null) args.maxBatch = Number(args.maxBatch);
-    }
-
-    const result = await crawler.start({
-      action: mappedAction,
-      args,
-      session,
-    });
-    return result;
-  } finally {
-    if (ownsCrawler && options.autoClose !== false && typeof crawler.cleanup === 'function') {
-      await crawler.cleanup().catch(() => {});
-    }
-  }
-}
-
 export async function scrape(platform, action, options = {}) {
-  const platformName = platform?.toLowerCase();
-
-  // Facebook Hybrid Dispatch (Story 13.10, AC-1).
-  // When the caller provides a Puppeteer page, keep the legacy page-based path
-  // so existing unit tests and browser-bridged callers still work.
-  // All production callers (api/services, MCP, CLI) now pass client/crawler or
-  // use FacebookScrapeService/FacebookCrawler directly. See docs/deprecation-plan.md.
-  if (platformName === 'facebook' || platformName === 'fb') {
-    if (options.page) {
-      const mod = getPlatform(platform);
-      const legacyMap = {
-        profile: 'scrapeProfile',
-        followers: 'scrapeFollowers',
-        following: 'scrapeFollowing',
-        tweets: 'scrapeTweets',
-        posts: 'scrapeTweets',
-        search: 'searchFacebook',
-        group_search: 'scrapeFacebookGroupSearch',
-        post_comments: 'scrapeFacebookComments',
-        group_posts: 'scrapeFacebookGroupPosts',
-        group_comments: 'scrapeFacebookGroupComments',
-        group_members: 'scrapeGroupMembers',
-        'group-members': 'scrapeGroupMembers',
-        marketplace: 'scrapeMarketplace',
-      };
-      const fnName = legacyMap[action] || action;
-      const platformMod = /** @type {Record<string, Function>} */ (mod);
-      const fn = /** @type {(...args: unknown[]) => Promise<Record<string, unknown>>} */ (platformMod[fnName]);
-
-      if (typeof fn !== 'function') {
-        const available = Object.keys(platformMod).filter(
-          (k) => typeof platformMod[k] === 'function' && (k.startsWith('scrape') || k.startsWith('search'))
-        );
-        throw new Error(
-          `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-        );
-      }
-
-      if (options.authCookie && platformMod.loginWithCookie) {
-        await platformMod.loginWithCookie(options.page, options.authCookie, options.browserOptions || {});
-      }
-
-      const target = action === 'group_search'
-        ? options.url
-        : (options.username || options.query || options.hashtag || options.url || options.listUrl || options.communityUrl);
-
-      // Actions that only take page + options (no target)
-      const noTargetActions = ['scrapeBookmarks', 'scrapeNotifications', 'scrapeTrending'];
-      if (noTargetActions.includes(fnName)) {
-        return await fn(options.page, options);
-      }
-
-      return await fn(options.page, target, options);
-    }
-    return await dispatchFacebookHybrid(action, options);
-  }
-
+  const store = options.store || defaultStore;
+  const normalizedOptions = { ...options, store };
   const mod = getPlatform(platform);
+  const platformName = platform.toLowerCase();
 
   // Action name mapping
   /** @type {Record<string, string>} */
@@ -517,6 +182,7 @@ export async function scrape(platform, action, options = {}) {
     spaces: 'scrapeSpaces',
     feed: 'scrapeFeed',
     'group-members': 'scrapeGroupMembers',
+    marketplace: 'scrapeMarketplace',
   };
 
   // Platform-specific action map for Facebook (Story 7.2). Prefer this over the
@@ -611,13 +277,13 @@ export async function scrape(platform, action, options = {}) {
 
     // Actions that only take page + options (no target)
     const noTargetActions = ['scrapeBookmarks', 'scrapeNotifications', 'scrapeTrending'];
-
+    
     let result;
     try {
       if (noTargetActions.includes(fnName)) {
-        result = await fn(page, options);
+        result = await fn(page, normalizedOptions);
       } else {
-        result = await fn(page, target, options);
+        result = await fn(page, target, normalizedOptions);
       }
     } finally {
       // Auto-close browser if we created it — runs even if fn throws (goto timeout,
@@ -631,7 +297,7 @@ export async function scrape(platform, action, options = {}) {
   }
 
   if (needsClient) {
-    let client = options.client;
+    let client = normalizedOptions.client;
 
     // Auto-create client if not provided
     if (!client) {
