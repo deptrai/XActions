@@ -5,7 +5,7 @@ story_key: "14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub"
 status: "ready-for-dev"
 phase: "Phase 2"
 created: 2026-08-27
-updated: 2026-08-27
+updated: 2026-08-28
 owner: "DEV"
 reviewed: "Pending"
 baseline_commit: 1c0c9abe
@@ -80,10 +80,10 @@ so that **Nowing backend can run the background NLP Intent Extractor in near rea
 
 ### AC-5: Alerts and governor backpressure logging
 - **Given** the metrics reader is refreshing on a 5–30s cadence
-- **When** `consumerLag > 50,000` **or** `lastAckTime > 60s`
+- **When** `pendingMessages > 50,000` **or** `consumerLag > 50,000` **or** `lastAckTime > 60s`
 - **Then** the system triggers an alert via `ALERT_WEBHOOK` (POST JSON) and/or `ALERT_EMAIL` if either is configured
 - **And** the alert includes the metric snapshot, threshold crossed, and a timestamp
-- **And** the `AdaptiveRateGovernor` logs `throttle_reason: redis_lag` with `reduced_to_percent: 25` whenever `consumerLag > 10,000` and bulk throughput is reduced
+- **And** the `AdaptiveRateGovernor` logs `throttle_reason: redis_lag` with `reduced_to_percent: 25` whenever `redisConsumerLag > 10,000` and bulk throughput is reduced
 - **Ref:** `AdaptiveRateGovernor.updateRedisConsumerLag` / `getMaxThroughput` at `src/core/adaptive-governor.js:150-196`; `StreamMetricsReader` at `src/utils/stream-metrics.js:25-135`; `nodemailer` in `package.json:127`
 
 ### AC-6: Store and Redis client wired into all production callers
@@ -112,24 +112,28 @@ so that **Nowing backend can run the background NLP Intent Extractor in near rea
 - [ ] T1: Add `ThinEvent` type and `RedisStreamEvent` shape
   - [ ] T1.1: Add JSDoc typedef `ThinEvent` to `src/core/types.js`
   - [ ] T1.2: Add JSDoc typedef `StreamMetrics` to `src/core/types.js` (eventsPerSecond, pendingMessages, consumerLag, droppedEvents, lastAckTime, maxLen, minId)
+  - [ ] T1.3: Add a `RedisClientLike` typedef in `src/core/types.js` so `this.store.redis` and the publisher have a typed contract without `any`
 - [ ] T2: Create a reusable `RedisStreamPublisher`
   - [ ] T2.1: Create `src/utils/redis-stream-publisher.js` (or `src/store/redis-stream-publisher.js`) with `connect(options)`, `publish(key, thinEvent, opts)`, `xlen(key)`, `xinfo(key)`, `xgroupEnsure(key, groupName)`
   - [ ] T2.2: Support both `redis` (`xAdd` with `TRIM`) and `ioredis` (`xadd` flat args)
   - [ ] T2.3: Support `MAXLEN ~ <n>` and `MINID ~ <id>` via `REDIS_STREAM_TRIM_STRATEGY` / `REDIS_STREAM_MAXLEN` / `REDIS_STREAM_MINID`
   - [ ] T2.4: Never throw on publish; log warning and return `{ ok: false }` on error
 - [ ] T3: Wire Redis client into the store layer
-  - [ ] T3.1: Extend `PrismaStore` constructor to accept an optional `redisClient` and expose `this.redis` (or create a `RedisStoreDecorator` if keeping `PrismaStore` pure)
-  - [ ] T3.2: Create a singleton `defaultStore` in `src/store/index.js` (or `src/core/index.js`) that combines `PrismaStore` + `RedisStreamPublisher`
-  - [ ] T3.3: Ensure `this.store.saveCheckpoint` and `this.store.redis` are both available to crawlers
+  - [ ] T3.1: Add `storageRef String?` to the `CrawlCheckpoint` model in `prisma/schema.prisma` and create a migration so `saveCheckpoint` can persist it
+  - [ ] T3.2: Extend `PrismaStore` constructor to accept an optional `redisClient` and expose `this.redis` (or create a `RedisStoreDecorator` if keeping `PrismaStore` pure)
+  - [ ] T3.3: Update `PrismaStore.saveCheckpoint` to write `checkpoint.storageRef` into the Prisma `data` object
+  - [ ] T3.4: Create a singleton `defaultStore` in `src/store/index.js` (or `src/core/index.js`) that combines `PrismaStore` + `RedisStreamPublisher`
+  - [ ] T3.5: Ensure `this.store.saveCheckpoint` and `this.store.redis` are both available to crawlers
 - [ ] T4: Update `FacebookCrawler` stream emission
-  - [ ] T4.1: Add `storageRef: item.id` to the thin event payload in `#saveCheckpoint`
-  - [ ] T4.2: Call `#saveCheckpoint` from `pagePosts` and `groupPosts` (currently only `storeBatch` is called at `src/scrapers/social/facebook/crawler.js:1159-1167` / `1217-1225`)
+  - [ ] T4.1: Add `storageRef: items[0]?.id` to the `saveCheckpoint` call and `storageRef: item.id` to each thin-event `XADD` payload in `#saveCheckpoint`
+  - [ ] T4.2: Call `#saveCheckpoint` from `pagePosts` and `groupPosts` after `storeBatch` (currently only `storeBatch` is called at `src/scrapers/social/facebook/crawler.js:1159-1167` / `1217-1225`)
   - [ ] T4.3: Use `isEnvTruthy` consistently (replace `process.env.REDIS_STREAM_ENABLED === 'true'` if present, but current code already uses `isEnvTruthy`)
   - [ ] T4.4: Route all `#saveCheckpoint` calls through the new `RedisStreamPublisher` so `xAdd`/`xadd` differences are handled in one place
 - [ ] T5: Update `ThreadsCrawler` stream emission
   - [ ] T5.1: Use the shared `RedisStreamPublisher` (or `this.store.redis`) instead of raw `redisClient.xadd`
   - [ ] T5.2: Use `isEnvTruthy(process.env.REDIS_STREAM_ENABLED)` instead of `=== 'true'` to support `1` / `yes`
   - [ ] T5.3: Keep `storageRef` already present in the payload
+  - [ ] T5.4: Apply `MAXLEN ~ 1000000` / `MINID` trimming through the shared publisher (current raw `xadd` is un-capped)
 - [ ] T6: Implement `StreamMetricsCollector`
   - [ ] T6.1: Create `src/utils/stream-metrics-collector.js` that wraps `StreamMetricsReader` and adds `getMetrics()` returning the full `StreamMetrics` shape
   - [ ] T6.2: Read `XLEN` for `pendingMessages`, `XPENDING` for `consumerLag`, `XINFO STREAM` / `XINFO GROUPS` for `lastAckTime`, `first-entry` for `minId`, and cache previous `entries-added` to compute `eventsPerSecond`
@@ -141,7 +145,7 @@ so that **Nowing backend can run the background NLP Intent Extractor in near rea
   - [ ] T7.3: Cache metrics for 5s to avoid hammering Redis; refresh on demand if stale
 - [ ] T8: Implement stream alert engine
   - [ ] T8.1: Create `src/utils/stream-alerts.js` with `checkAndAlert(metrics, config)`
-  - [ ] T8.2: Trigger when `consumerLag > 50,000` or `lastAckTime > 60s`
+  - [ ] T8.2: Trigger when `pendingMessages > 50,000` or `consumerLag > 50,000` or `lastAckTime > 60s`
   - [ ] T8.3: Send `ALERT_WEBHOOK` via `fetch` and `ALERT_EMAIL` via `nodemailer`
   - [ ] T8.4: Implement cooldown (e.g., 5 minutes) and per-threshold state to avoid spam
   - [ ] T8.5: Add `GET /admin/stream/alerts` that returns current alert status and last alert timestamp
@@ -150,9 +154,10 @@ so that **Nowing backend can run the background NLP Intent Extractor in near rea
   - [ ] T9.2: Ensure `refreshGovernorConsumerLag` is called from the metrics collector or metrics endpoint so the governor stays current
 - [ ] T10: Wire store into production callers
   - [ ] T10.1: Update `src/scrapers/index.js` `createFacebookCrawler` and `dispatchFacebookHybrid` to use the singleton `defaultStore` when no `store` is passed
-  - [ ] T10.2: Update `api/services/facebookScrape.js` to pass `store` through `browserOptions`
-  - [ ] T10.3: Update `src/mcp/server.js` `executeFacebookScrapeTool` / `executeCrawlPostTool` to pass `store`
+  - [ ] T10.2: Update `api/services/facebookScrape.js` to pass `store` through `browserOptions`/`crawlerOptions`
+  - [ ] T10.3: Update `src/mcp/server.js` `executeFacebookScrapeTool` / `executeCrawlPostTool` / `executeCrawlCommentsTreeTool` to pass `store`
   - [ ] T10.4: Update `src/scrapers/index.js` generic `scrape()` to accept `store` and forward it to platform-specific crawlers
+  - [ ] T10.5: Update `api/routes/facebook.js` to construct or receive a `store` and pass it to `FacebookScrapeService`
 - [ ] T11: Tests
   - [ ] T11.1: `tests/store/redis-stream-publisher.test.js` — publish thin event, verify `xadd` / `xAdd` works, trim cap, env toggle
   - [ ] T11.2: `tests/utils/stream-metrics-collector.test.js` — metrics shape, fallback to 0 when Redis down
@@ -171,7 +176,8 @@ so that **Nowing backend can run the background NLP Intent Extractor in near rea
 
 - `FacebookCrawler.#saveCheckpoint` at `src/scrapers/social/facebook/crawler.js:2441-2498` already emits to `stream:social:raw_posts` when `this.store.redis` or `this.sessionManager.redis` is present and `REDIS_STREAM_ENABLED` is truthy.
 - The Facebook payload is missing `storageRef`; add it as `storageRef: item.id`.
-- `ThreadsCrawler.#emitCheckpointAndStream` at `src/scrapers/social/threads/crawler.js:114-152` already emits `storageRef` and uses `xadd` (ioredis style), but it checks `REDIS_STREAM_ENABLED === 'true'` literally; switch to `isEnvTruthy`.
+- The `saveCheckpoint` call in `FacebookCrawler.#saveCheckpoint` is also missing `storageRef` in its `data` object and the `CrawlCheckpoint` Prisma schema has no `storageRef` column; add both.
+- `ThreadsCrawler.#emitCheckpointAndStream` at `src/scrapers/social/threads/crawler.js:114-152` already emits `storageRef` and uses `xadd`, but it checks `process.env.REDIS_STREAM_ENABLED === 'true'` literally and has no stream trimming; switch to `isEnvTruthy` and route through the shared `RedisStreamPublisher`.
 - Both crawlers rely on a `redis` property being present on the store or session manager; `PrismaStore` does not expose one yet.
 - `pagePosts` and `groupPosts` in `FacebookCrawler` (`src/scrapers/social/facebook/crawler.js:1121-1225`) call `storeBatch` but do **not** call `#saveCheckpoint`, so they will not emit events.
 
@@ -179,14 +185,15 @@ so that **Nowing backend can run the background NLP Intent Extractor in near rea
 
 - The project has `redis: ^4.6.11` in `package.json:138`.
 - `src/streaming/streamManager.js` dynamically imports `ioredis` for the legacy Socket.IO stream manager, but `ioredis` is **not** declared in `package.json` dependencies (it is likely a transitive dep of `bull`).
-- Use the `redis` package for all new Nowing stream code; support `ioredis` only where existing callers already depend on it (`ThreadsCrawler` currently does, via `this.store?.redis`).
+- Use the `redis` package for all new Nowing stream code. Do **not** add `ioredis` to `package.json`; the `RedisStreamPublisher` should expose a `RedisClientLike` interface and normalize both `xAdd` (node-redis) and `xadd` (ioredis) shapes internally.
+- Refactor `ThreadsCrawler` to call `publisher.publish()` so it does not depend on raw `xadd`.
 
 ### Store wiring strategy (Dev Agent decision)
 
-Two valid options; pick one and document it:
+Two valid options; pick one and document it. **Prerequisite for both:** add `storageRef String?` to `prisma/schema.prisma` `CrawlCheckpoint` and run `npx prisma migrate dev` so `PrismaStore.saveCheckpoint` can persist it.
 
-1. **Extend `PrismaStore`**: add `redisClient` to the constructor and expose `this.redis`. Keep `saveCheckpoint` as-is. This is the smallest change.
-2. **Decorator pattern**: keep `PrismaStore` untouched and create a `PersistentStoreWithStream` wrapper that owns a `PrismaStore` + a `RedisStreamPublisher`, implements `saveCheckpoint`, `storeBatch`, `storeCommentBatch`, and exposes `this.redis`. This keeps DB and stream concerns separated.
+1. **Extend `PrismaStore`**: add `redisClient` to the constructor and expose `this.redis`; update `saveCheckpoint` to write `storageRef`. This is the smallest change.
+2. **Decorator pattern**: keep `PrismaStore` pure and create a `PersistentStoreWithStream` wrapper that owns a `PrismaStore` + a `RedisStreamPublisher`, implements `saveCheckpoint` (including `storageRef`), `storeBatch`, `storeCommentBatch`, and exposes `this.redis`.
 
 The singleton used by production callers (`FacebookScrapeService`, `src/scrapers/index.js`, `src/mcp/server.js`) should be created once and reused.
 
@@ -202,6 +209,7 @@ The singleton used by production callers (`FacebookScrapeService`, `src/scrapers
 
 - Use `ALERT_WEBHOOK` (HTTP POST) and `ALERT_EMAIL` (SMTP via `nodemailer`) from environment variables.
 - Maintain in-memory alert state with a cooldown (suggested `ALERT_COOLDOWN_MS=300000`).
+- Primary thresholds per AD-17: `pendingMessages > 50,000` or `lastAckTime > 60s`. The dev agent may also react to `consumerLag > 50,000` as an additional signal.
 - Alert payload shape:
   ```ts
   {
@@ -222,7 +230,7 @@ The singleton used by production callers (`FacebookScrapeService`, `src/scrapers
 
 - **Language & Runtime:** ESM Node.js >= 18, JSDoc + `npm run typecheck` (`tsc --noEmit`).
 - **No `any` / `@ts-ignore`**: TypeScript strict mode.
-- **Redis package:** `redis: ^4.6.11` (primary). Support `ioredis` only because `ThreadsCrawler` already depends on a `redis` property.
+- **Redis package:** `redis: ^4.6.11` (primary). Do not add `ioredis` to `package.json`; the `RedisStreamPublisher` normalizes both `xAdd` and `xadd` callers.
 - **Email library:** `nodemailer: ^9.0.3` (`package.json:127`) for `ALERT_EMAIL`.
 - **HTTP:** built-in `node:fetch` / `undici` for webhook alerts and CLI calls.
 - **Testing:** Vitest, no mocks, real Redis or graceful skip when unavailable.
@@ -234,6 +242,7 @@ The singleton used by production callers (`FacebookScrapeService`, `src/scrapers
   - `REDIS_URL` or `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` (existing)
   - `ALERT_WEBHOOK` — optional webhook URL
   - `ALERT_EMAIL` — optional comma-separated email addresses
+  - `ALERT_EMAIL_FROM`, `ALERT_SMTP_HOST`, `ALERT_SMTP_PORT`, `ALERT_SMTP_USER`, `ALERT_SMTP_PASS` — optional SMTP config for `nodemailer`
   - `ALERT_COOLDOWN_MS` — default `300000`
   - `NOWING_CONSUMER_GROUP` — default `nowing_nlp_workers`
 
@@ -266,7 +275,9 @@ The singleton used by production callers (`FacebookScrapeService`, `src/scrapers
 | `src/utils/redis-stream-publisher.js` | Thin `XADD` publisher supporting `redis` / `ioredis` and `MAXLEN` / `MINID` trim |
 | `src/utils/stream-metrics-collector.js` | Collects full `StreamMetrics` from Redis with caching and consumer-group creation |
 | `src/utils/stream-alerts.js` | Alert engine: thresholds, webhook, email, cooldown |
-| `src/store/index.js` or `src/store/store-with-redis.js` | Singleton `defaultStore` combining `PrismaStore` + `RedisStreamPublisher` (or decorator) |
+| `src/store/store-with-redis.js` | New singleton `defaultStore` combining `PrismaStore` + `RedisStreamPublisher` (or decorator) |
+| `api/routes/streams.js` | REST routes for `GET /admin/stream/metrics` and `GET /admin/stream/alerts` (or extend `governor.js` if it already owns admin routes) |
+| `src/cli/commands/admin.js` | `xactions admin stream metrics|alerts` command surface; can alias under existing `stream.js` later |
 | `tests/store/redis-stream-publisher.test.js` | Test publisher with real Redis or graceful skip |
 | `tests/utils/stream-metrics-collector.test.js` | Test metrics shape and fallbacks |
 | `tests/utils/stream-alerts.test.js` | Test threshold, webhook, email, cooldown |
@@ -277,8 +288,10 @@ The singleton used by production callers (`FacebookScrapeService`, `src/scrapers
 
 | File | Description |
 |------|-------------|
-| `src/core/types.js` | Add `ThinEvent` and `StreamMetrics` typedefs |
-| `src/store/prisma-store.js` | Accept `redisClient` and expose `this.redis`, OR become a decorator target |
+| `prisma/schema.prisma` | Add `storageRef String?` to `CrawlCheckpoint` model |
+| `prisma/migrations/` | New migration for `CrawlCheckpoint.storageRef` |
+| `src/core/types.js` | Add `ThinEvent`, `StreamMetrics`, and `RedisClientLike` typedefs |
+| `src/store/prisma-store.js` | Accept `redisClient` and expose `this.redis`, OR become a decorator target; persist `storageRef` in `saveCheckpoint` |
 | `src/scrapers/social/facebook/crawler.js` | Add `storageRef`; call `#saveCheckpoint` in `pagePosts`/`groupPosts`; use shared publisher |
 | `src/scrapers/social/threads/crawler.js` | Use `isEnvTruthy`; use shared publisher |
 | `src/scrapers/index.js` | `createFacebookCrawler` / `scrape()` default to the singleton `store` |
@@ -287,7 +300,7 @@ The singleton used by production callers (`FacebookScrapeService`, `src/scrapers
 | `src/mcp/server.js` | Add `GET /metrics/stream`; pass `store` in Facebook / crawl tools |
 | `api/server.js` | Mount `GET /metrics/stream` and `/admin/stream/metrics` / `/admin/stream/alerts` |
 | `src/core/adaptive-governor.js` | Log `throttle_reason: redis_lag` with `reduced_to_percent` when backpressure active |
-| `src/cli/commands/stream.js` | Add `metrics` / `alerts` subcommands (or create `src/cli/commands/admin.js` for `admin stream`) |
+| `src/cli/commands/admin.js` (new) or `src/cli/commands/stream.js` | Add `xactions admin stream metrics|alerts` (recommended); only overload `stream` if aliases are acceptable |
 | `_bmad-output/implementation-artifacts/sprint-status.yaml` | Set `14-3` to `ready-for-dev` and update `last_updated` |
 
 ### NO TOUCH
@@ -310,7 +323,7 @@ The singleton used by production callers (`FacebookScrapeService`, `src/scrapers
   - Thin event payload shape matches AC-1 (including `storageRef`)
   - `page_posts` and `group_posts` emit checkpoint + stream event
   - `GET /metrics/stream` returns all 7 fields
-  - Alert engine triggers when `consumerLag > 50000` or `lastAckTime > 60s` and respects cooldown
+  - Alert engine triggers when `pendingMessages > 50000` or `consumerLag > 50000` or `lastAckTime > 60s` and respects cooldown
   - Governor logs `throttle_reason: redis_lag` when `redisConsumerLag > 10000`
   - `npm run typecheck` passes
 
@@ -390,7 +403,8 @@ Patterns:
 - **Checkpoint before stream:** If `saveCheckpoint` throws, do not call `XADD`; log the error and continue returning the crawl result.
 - **Stream XADD failure:** If `XADD` fails, do not roll back the checkpoint; log and continue.
 - **Alert spam:** Alert engine must use a cooldown (default 5 minutes) and per-threshold last-fired timestamp.
-- **Typecheck:** No `any` or `@ts-ignore`; use JSDoc `@type` imports for `RedisClientType`.
+- **CrawlCheckpoint `storageRef`:** Must be added to the Prisma model and persisted in `PrismaStore.saveCheckpoint`; without it the `storageRef` field in `saveCheckpoint` calls is dropped.
+- **Typecheck:** No `any` or `@ts-ignore`; use the new `RedisClientLike` typedef and JSDoc `@type` imports for `RedisClientType`.
 
 ### Review Findings
 
@@ -401,12 +415,9 @@ Patterns:
 1. Choose the store wiring pattern: extend `PrismaStore` with `redisClient` or create a `PersistentStoreWithStream` decorator.
 2. Decide whether `/metrics/stream` lives on the MCP daemon (`src/mcp/server.js`) only, the API only, or both. Recommendation: both, sharing the same collector.
 3. Decide the exact algorithm and fallback for `droppedEvents` and `lastAckTime` based on the Redis server version available in the target environment.
-4. Decide the CLI command surface for stream metrics/alerts. Existing `xactions stream` is used for Twitter Socket.IO streams, so a name collision exists. Options:
-   - Add `metrics` / `alerts` subcommands under the existing `stream` group.
-   - Create `xactions nowing stream metrics` / `xactions nowing stream alerts`.
-   - Defer CLI to Epic 19.4.5 (`xactions admin stream ...`) and only implement the HTTP endpoints in 14.3.
+4. Decide the CLI command surface for stream metrics/alerts. Existing `xactions stream` is used for Twitter Socket.IO streams, so a name collision exists. **Recommended:** Use `xactions admin stream metrics|alerts` (matches Story 19.4.5 and `src/cli/commands/admin.js`) and optionally add `xactions stream metrics|alerts` as deprecated aliases in Epic 20.
 5. Decide how to provide the store/redis to non-Facebook crawlers in `src/scrapers/index.js:439-494` generic `scrape()` without breaking backward compatibility for callers that pass `page`.
-6. Confirm whether `ioredis` must be added to `package.json` dependencies because `ThreadsCrawler` currently expects a `xadd`-style client, or whether the new publisher normalizes everything to node-redis and `ThreadsCrawler` is updated accordingly.
+6. Confirm Redis client strategy. `ioredis` is **not** a declared dependency; the `RedisStreamPublisher` should use the `redis` package and expose a `RedisClientLike` interface. `ThreadsCrawler` should be refactored to call `publisher.publish()` instead of raw `redisClient.xadd`; do NOT add `ioredis` to `package.json`.
 7. Confirm the alert email transport: use direct `nodemailer` SMTP or a preconfigured `ALERT_SMTP_*` env set.
 
 ## File List
@@ -415,7 +426,9 @@ Patterns:
 - `src/utils/redis-stream-publisher.js` — thin `XADD` publisher with MAXLEN/MINID and client normalization.
 - `src/utils/stream-metrics-collector.js` — full `StreamMetrics` collector with caching and consumer-group creation.
 - `src/utils/stream-alerts.js` — threshold alert engine (webhook/email).
-- `src/store/index.js` or `src/store/store-with-redis.js` — singleton/default store with Redis.
+- `src/store/store-with-redis.js` — singleton/default store with Redis (re-export from `src/store/index.js`).
+- `api/routes/streams.js` — `/admin/stream/metrics` and `/admin/stream/alerts` route handlers (or extend `governor.js`).
+- `src/cli/commands/admin.js` — `xactions admin stream metrics|alerts`.
 - `tests/store/redis-stream-publisher.test.js`
 - `tests/utils/stream-metrics-collector.test.js`
 - `tests/utils/stream-alerts.test.js`
@@ -423,8 +436,11 @@ Patterns:
 - `tests/mcp/metrics-stream.test.js` or `tests/api/metrics-stream.test.js`
 
 ### Updated files
-- `src/core/types.js` — `ThinEvent` + `StreamMetrics` typedefs.
-- `src/store/prisma-store.js` — optional `redisClient` / `this.redis`.
+- `prisma/schema.prisma` — add `storageRef` to `CrawlCheckpoint`.
+- `prisma/migrations/` — new migration for `CrawlCheckpoint.storageRef`.
+- `src/core/types.js` — `ThinEvent` + `StreamMetrics` + `RedisClientLike` typedefs.
+- `src/store/prisma-store.js` — optional `redisClient` / `this.redis`; persist `storageRef`.
+- `src/store/index.js` — re-export `defaultStore` from `store-with-redis.js`.
 - `src/scrapers/social/facebook/crawler.js` — add `storageRef`, emit from `pagePosts`/`groupPosts`, use shared publisher.
 - `src/scrapers/social/threads/crawler.js` — `isEnvTruthy` + shared publisher.
 - `src/scrapers/index.js` — default store wiring.
@@ -433,5 +449,5 @@ Patterns:
 - `src/mcp/server.js` — `GET /metrics/stream` + store injection.
 - `api/server.js` — mount metrics/admin stream routes.
 - `src/core/adaptive-governor.js` — `throttle_reason: redis_lag` log.
-- `src/cli/commands/stream.js` (or new `admin.js`) — CLI stream metrics/alerts.
+- `src/cli/commands/admin.js` — `xactions admin stream metrics|alerts` (new; can alias under `stream.js` in Epic 20).
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — status update.
