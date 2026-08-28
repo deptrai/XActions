@@ -1055,7 +1055,7 @@ So that I can reach all Facebook capabilities already implemented in the codebas
 
 **NFRs:** NFR10-NFR15
 
-**Additional Requirements relevant:** ADR-006 (adapter pattern), ADR-011 (GraphQL HTTP layer) — chỉ áp dụng nếu Phase 3 (GraphQL replay) được lên lịch, Epic 6 anti-detection infrastructure.
+**Additional Requirements relevant:** ADR-006 (adapter pattern), ADR-011 (GraphQL HTTP layer). ADR-011 chỉ áp dụng đầy đủ khi Phase 3 (FR-62 GraphQL replay) được lên lịch — xem `FUTURE-WORK.md`.
 
 ### Story 7.1: Foundation — Health, Pool, Hydration & Schema
 
@@ -1195,11 +1195,11 @@ So that the surface is consistent and maintainable.
 
 ---
 
-## Epic 8: Facebook Backend Reliability
+## Epic 8: Facebook Backend Stability for Operators & MCP Clients
 
 **Status:** 🆕 backlog
 
-**Epic Goal:** Harden backend infrastructure: database connection pooling, MCP error contract, auth token handling.
+**Epic Goal:** Ensure the Facebook automation backend remains reliable and predictable for operators, MCP clients, and developers by hardening database connection pooling, MCP error contracts, and auth token handling.
 
 **FRs/PCRs covered:** PCR2, PCR6, PCR7
 

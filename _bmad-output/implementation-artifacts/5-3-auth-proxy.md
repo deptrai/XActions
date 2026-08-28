@@ -4,7 +4,7 @@ baseline_commit: c7e7d44197443f8afc0ed837581471f0d9654cc4
 
 # Story 5.3: Auth modes & proxy rotation
 
-Status: review
+Status: done
 
 <!-- Port from SST_TOOL_FB Main.cs:Post() 294-425 (login), MNST_DT1.cs (2FA seed parse), proxyfb.cs/proxyTM.cs/shopLike.cs (proxy). Plan: facebook-messenger-port-plan.md (Epic 5, Story 5.3, features P6/P7/P8). FRs: FR30, FR31, FR32. -->
 

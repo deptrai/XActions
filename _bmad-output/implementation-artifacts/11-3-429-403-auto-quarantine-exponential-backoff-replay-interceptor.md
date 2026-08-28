@@ -1,10 +1,10 @@
-# Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential Replay Interceptor
+# Story 11.3 — End-to-End Request Pipeline with 429/403 Auto-Quarantine, Exponential Backoff & Two-Mode IP Strategy
 
 **Story ID:** 11.3  
 **Epic:** 11 — Resilient Network & Proxy Pool Management  
 **Status:** done  
 **Owner:** DEV  
-**Source:** `epics.md` Story 11.3, `ARCHITECTURE-SPINE.md` AD-3, AD-9, AD-13, AD-14, AD-2, AD-8; PRD FR-66B, NFR-13; previous stories 11.1 and 11.2; current `src/core/base-client.js`, `src/proxy/**`, `src/core/account-pool.js`, `src/core/adaptive-governor.js`, `src/core/error-envelope.js`.
+**Source:** `epics.md` Story 11.3 (consolidated with Story 11.5 and Story 11.6), `ARCHITECTURE-SPINE.md` AD-3, AD-9, AD-13, AD-14, AD-2, AD-8; PRD FR-66B, NFR-13; previous stories 11.1 and 11.2; current `src/core/base-client.js`, `src/proxy/**`, `src/core/account-pool.js`, `src/core/adaptive-governor.js`, `src/core/error-envelope.js`.
 
 ---
 
@@ -13,6 +13,8 @@
 As a **Reliability Engineer**,  
 I want **the request pipeline to automatically quarantine a proxy that returns 429/403, replay the request with a fresh proxy, and fall back to a Standby Backoff when the whole pool is exhausted**,  
 so that **the scraping pipeline never hard-crashes when a platform turns on wide-area rate limiting or bot challenges**.
+
+> **Scope consolidation (2026-08-21):** Story 11.3 now also absorbs the scope of **Story 11.5** (end-to-end request pipeline, two-mode IP strategy, no direct connection fallback) and **Story 11.6** (rate-limit & bot-challenge defense, quarantine/retry/hibernation). These capabilities are all implemented in the same `AbstractApiClient.request()` pipeline in `src/core/base-client.js`, so the separate 11.5 and 11.6 stories were removed from the backlog.
 
 ---
 
@@ -78,13 +80,14 @@ so that **the scraping pipeline never hard-crashes when a platform turns on wide
 * **And** on a successful request, it calls `governor.recordRequest(accountId, this.platform)` and `accountPool.recordRequest(accountId, this.platform)`
 * **And** on 429/403, the account hibernation triggered by `accountPool.markUnavailable(..., 'rate_limit', ...)` is forwarded to the governor (no separate `governor.recordRateLimit` call is required)
 
-### AC-8: Request pipeline is implemented inside `AbstractApiClient`
+### AC-8: End-to-end request pipeline with two-mode IP strategy is implemented inside `AbstractApiClient`
 * **Given** `src/core/base-client.js`
 * **When** `AbstractApiClient.request(method, url, options)` is called
 * **Then** it no longer throws "Method not implemented"
 * **And** it performs the proxy/account resolution, HTTP dispatch, error classification, quarantine, retry, and backoff described in AC-1..AC-7
 * **And** it delegates the actual HTTP transport to a pluggable `httpClient` (or `requestFn`) so `src/core` does not need to depend on `undici` or `got-scraping` at runtime
 * **And** it uses `provider.getProxyAgent(proxy, { client: this.client })` to obtain the correct agent shape (`undici` `ProxyAgent`/`Socks5ProxyAgent` or `got` URL string) before passing it to `httpClient`
+* **And** it implements the two-mode IP strategy: auth-required platforms use sticky IP (`getStickyProxy(accountId)` / `getProxy({ accountId })`), no-auth platforms use rotating IP (`getNext()` / `getProxy()`), and it never falls back to a direct connection
 
 ### AC-9: No direct connection fallback
 * **Given** proxy resolution fails or the pool is exhausted
@@ -140,7 +143,7 @@ so that **the scraping pipeline never hard-crashes when a platform turns on wide
 3. **No direct connection fallback.** `AbstractApiClient.resolveProxy` throws if no proxy is available. `request()` must never call an HTTP client without an agent or proxy. [`src/core/base-client.js:57-123`]
 4. **Per-request vs. sticky session modes.** Auth-required platforms must use `accountId` to keep a sticky session; no-auth platforms must not pass `accountId`. The interceptor's retry proxy selection must mirror this. [`src/proxy/providers.js:835-921`]
 5. **Account hibernation and proxy quarantine are separate but related.** Quarantine is for the proxy (5 minutes). Hibernation is for the account (15 minutes). The interceptor must do both when an auth account hits a rate limit. [`src/core/adaptive-governor.js:212-227`, `src/core/account-pool.js:182-209`]
-6. **Clock skew and the proxy-selection/request-use transaction gap remain deferred to 11.5/11.7.** Story 11.3 does not need to solve the multi-worker check-in/check-out gap, but must document it. [`deferred-work.md`]
+6. **Clock skew and the proxy-selection/request-use transaction gap remain deferred to Story 11.7** (Crawler-Governor Integration & Platform Response Validator). Story 11.3 does not need to solve the multi-worker check-in/check-out gap, but must document it. [`deferred-work.md`]
 
 ### 11.2 test approach to mirror
 
@@ -530,7 +533,7 @@ npx vitest run tests/proxy/providers-tunnel.test.js tests/proxy/proxy-pool.test.
 
 - **Full jitter** (AWS recommendation): `delay = Math.floor(Math.random() * baseDelay)` reduces contention and prevents synchronized retries.
 - **Retry-After honor:** Parse both integer seconds and HTTP-date formats. Clamp to `maxBackoffMs` to avoid stalls.
-- **Retry budget / circuit breaker:** The project does not currently use a global retry budget. Story 11.3 bounds retries with `maxProxyRetries` and `maxAccountRotations`; a global retry budget belongs to Story 11.4/11.5 if needed.
+- **Retry budget / circuit breaker:** The project does not currently use a global retry budget. Story 11.3 bounds retries with `maxProxyRetries` and `maxAccountRotations`; a global retry budget belongs to Story 11.4 if needed.
 
 ---
 

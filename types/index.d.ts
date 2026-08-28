@@ -783,3 +783,56 @@ export {
   createProxyProvider,
   globalProxyPool,
 } from './proxy';
+
+// ── Facebook Hybrid Scraper (Story 13.10 / AC-9) ──────────────────────────────
+
+/**
+ * Facebook HTTP client (Story 13.4, 13.9, 13.10).
+ * Handles token extraction, GraphQL signing, and resilient proxy rotation.
+ */
+export declare class FacebookClient {
+  constructor(deps?: Record<string, unknown>);
+  request(method: string, url: string, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  ensureTokens(accountId?: string | null, cookies?: string | Record<string, string>, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  requestGraphQl(docId: string, variables?: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown>;
+  clearTokenCache(): void;
+  close(): Promise<void>;
+}
+
+/**
+ * Hybrid Facebook scraper engine (Story 13.3, 13.5, 13.6, 13.7, 13.8, 13.9).
+ * Dispatches read/write actions through FacebookClient or browser bridge.
+ */
+export declare class FacebookCrawler {
+  client: FacebookClient;
+  constructor(deps?: Record<string, unknown>);
+  start(command: { action: string; args?: Record<string, unknown> }): Promise<unknown>;
+  init(): Promise<void>;
+  cleanup(): Promise<void>;
+  search(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  listActions(): Array<{ action: string; [key: string]: unknown }>;
+  registerAction(action: string | Record<string, unknown>, handler?: unknown, descriptor?: Record<string, unknown>): void;
+}
+
+export declare function createFacebookClient(browserOptions?: Record<string, unknown>): FacebookClient;
+export declare function createFacebookCrawler(client: FacebookClient, browserOptions?: Record<string, unknown>): FacebookCrawler;
+export declare function dispatchFacebookHybrid(action: string, options?: Record<string, unknown>): Promise<unknown>;
+
+/**
+ * Facebook browser automation actions (Story 13.9).
+ * Provides like, comment, post, share, join, friend-request and messenger-share.
+ */
+export declare class FacebookActions {
+  constructor(deps?: Record<string, unknown>);
+  like(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  comment(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  post(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  share(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  messengerShare(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  shareLinkByUid(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  joinGroup(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  sendFriendRequest(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+}
+
+
+

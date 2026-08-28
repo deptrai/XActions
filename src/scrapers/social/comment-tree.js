@@ -13,6 +13,7 @@ import pLimit from 'p-limit';
  * @typedef {Object} FetchLayerPage
  * @property {Record<string, unknown>[]} comments
  * @property {{ has_next_page: boolean, end_cursor: string | null }} [pageInfo]
+ * @property {string} [note]
  */
 
 /**
@@ -21,6 +22,7 @@ import pLimit from 'p-limit';
  * @property {string | null} [parentCommentId]
  * @property {string | null} [after]
  * @property {number} [limit]
+ * @property {number} [depth]
  */
 
 /**
@@ -62,13 +64,18 @@ export class CommentTreeExtractor {
   /**
    * Fetch the full comment tree for a post.
    * @param {string} postId
-   * @returns {Promise<{ comments: CommentItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
+   * @param {Object} [options]
+   * @param {string | null} [options.after] - Initial root pagination cursor
+   * @returns {Promise<{ comments: CommentItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null }, note?: string }>}
    */
-  async fetch(postId) {
+  async fetch(postId, options = {}) {
+    const initialAfter = options?.after || null;
     const byId = new Map();
     const seen = new Set();
     let total = 0;
     let rootPageInfo = { has_next_page: false, end_cursor: /** @type {string | null} */ (null) };
+    /** @type {string[]} */
+    const notes = [];
 
     /**
      * @param {Record<string, unknown>} raw
@@ -129,10 +136,11 @@ export class CommentTreeExtractor {
      * Fetch one layer, paginating until done or the global cap is reached.
      * @param {string | null} parentCommentId
      * @param {number} depth
+     * @param {string | null} [initialCursor=null]
      * @returns {Promise<{ pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
      */
-    const fetchLayerPaginated = async (parentCommentId, depth) => {
-      let after = /** @type {string | null} */ (null);
+    const fetchLayerPaginated = async (parentCommentId, depth, initialCursor = null) => {
+      let after = /** @type {string | null} */ (initialCursor);
       let lastPageInfo = { has_next_page: false, end_cursor: /** @type {string | null} */ (null) };
 
       do {
@@ -144,8 +152,14 @@ export class CommentTreeExtractor {
           parentCommentId,
           after,
           limit: remaining,
+          depth,
         });
 
+        if (page?.note) {
+          notes.push(page.note);
+        }
+
+        const prevTotal = total;
         const rawComments = Array.isArray(page?.comments) ? page.comments : [];
         for (const raw of rawComments) {
           if (total >= this.#maxComments) break;
@@ -154,13 +168,22 @@ export class CommentTreeExtractor {
 
         const pageInfo = page?.pageInfo || { has_next_page: false, end_cursor: null };
         lastPageInfo = pageInfo;
-        after = pageInfo.has_next_page ? pageInfo.end_cursor : null;
+        let nextCursor = pageInfo.has_next_page ? pageInfo.end_cursor : null;
+        if (nextCursor === '') {
+          nextCursor = null;
+          pageInfo.has_next_page = false;
+          pageInfo.end_cursor = null;
+        }
+        if (nextCursor === after || total === prevTotal) {
+          break;
+        }
+        after = nextCursor;
       } while (after && total < this.#maxComments);
 
       return { pageInfo: lastPageInfo };
     };
 
-    const root = await fetchLayerPaginated(null, 0);
+    const root = await fetchLayerPaginated(null, 0, initialAfter);
     rootPageInfo = root.pageInfo;
 
     for (let depth = 0; depth < this.#maxDepth; depth++) {
@@ -171,13 +194,27 @@ export class CommentTreeExtractor {
 
       await Promise.all(
         parents.map((parent) =>
-          this.#limit(() => fetchLayerPaginated(parent.externalId, depth + 1))
+          this.#limit(async () => {
+            if (total >= this.#maxComments) return;
+            try {
+              await fetchLayerPaginated(parent.externalId, depth + 1);
+            } catch (err) {
+              if (/** @type {any} */ (err)?.isPlatformError) {
+                throw err;
+              }
+              const message = err instanceof Error ? err.message : String(err);
+              const note = `Failed to fetch replies for ${parent.externalId}: ${message}`;
+              console.warn(`⚠️ [CommentTreeExtractor] ${note}`);
+              notes.push(note);
+            }
+          })
         )
       );
     }
 
     const comments = Array.from(byId.values()).sort((a, b) => a.depth - b.depth);
-    return { comments, pageInfo: rootPageInfo };
+    const note = notes.length > 0 ? notes.join('; ') : undefined;
+    return { comments, pageInfo: rootPageInfo, note };
   }
 
   /**

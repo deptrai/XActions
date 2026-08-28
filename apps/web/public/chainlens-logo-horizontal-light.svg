@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360" fill="none">
+  <defs>
+    <linearGradient id="lightChainGrad1" x1="40" y1="80" x2="240" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="lightChainGrad2" x1="300" y1="80" x2="100" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+    <radialGradient id="lightLensGlow" cx="170" cy="180" r="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0284C7" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- === LEFT: THE CHAIN-LENS MARK === -->
+  <g transform="translate(0, 0)">
+    <!-- Background Glow -->
+    <circle cx="170" cy="180" r="120" fill="url(#lightLensGlow)" />
+
+    <!-- Outer Focus Grid Ring -->
+    <circle cx="170" cy="180" r="130" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="3 6" opacity="0.3"/>
+    <circle cx="170" cy="180" r="95" stroke="#0284C7" stroke-width="1.5" opacity="0.2"/>
+
+    <!-- Left Chain Loop (Tilted -28 deg) -->
+    <g transform="rotate(-28 170 180)">
+      <rect x="70" y="140" width="120" height="80" rx="40" 
+            stroke="url(#lightChainGrad1)" stroke-width="18" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- Right Chain Loop (Tilted +28 deg) -->
+    <g transform="rotate(28 170 180)">
+      <rect x="150" y="140" width="120" height="80" rx="40" 
+            stroke="url(#lightChainGrad2)" stroke-width="18" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- Center Overlap Lens (The Focusing Optical Aperture) -->
+    <circle cx="170" cy="180" r="44" fill="none" stroke="#0284C7" stroke-width="8" />
+    <circle cx="170" cy="180" r="30" fill="none" stroke="#2563EB" stroke-width="3" opacity="0.85"/>
+    
+    <!-- Central Focal Pupil / Truth Node -->
+    <circle cx="170" cy="180" r="13" fill="#0284C7" />
+    <circle cx="166" cy="176" r="3.5" fill="#FFFFFF" opacity="0.9" />
+
+    <!-- Precision Reticle Marks -->
+    <line x1="170" y1="120" x2="170" y2="130" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/>
+    <line x1="170" y1="230" x2="170" y2="240" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/>
+    <line x1="110" y1="180" x2="120" y2="180" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/>
+    <line x1="220" y1="180" x2="230" y2="180" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <!-- === RIGHT: TYPOGRAPHY WORDMARK === -->
+  <g transform="translate(360, 0)">
+    <!-- Primary Wordmark: CHAIN + LENS -->
+    <text x="0" y="195" 
+          font-family="system-ui, -apple-system, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif" 
+          font-size="124" 
+          font-weight="800" 
+          letter-spacing="-1.5">
+      <tspan fill="#0F172A">Chain</tspan><tspan fill="#0284C7">Lens</tspan>
+    </text>
+
+    <!-- Subtitle: RESEARCH & AI ENGINE -->
+    <text x="6" y="252" 
+          font-family="system-ui, -apple-system, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif" 
+          font-size="28" 
+          font-weight="600" 
+          fill="#64748B" 
+          letter-spacing="9">RESEARCH</text>
+
+    <!-- Optical Accent Point on the Subtitle -->
+    <circle cx="280" cy="242" r="3.5" fill="#0284C7" />
+    <text x="300" y="252" 
+          font-family="system-ui, -apple-system, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif" 
+          font-size="22" 
+          font-weight="500" 
+          fill="#64748B" 
+          letter-spacing="5" opacity="0.8">AI ENGINE</text>
+  </g>
+</svg>

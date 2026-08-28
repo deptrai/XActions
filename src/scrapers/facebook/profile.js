@@ -5,6 +5,7 @@
  *
  * Uses the same Puppeteer stealth approach as Twitter and Threads scrapers.
  *
+ * @deprecated Use `src/scrapers/social/facebook/index.js` (`FacebookCrawler`, `FacebookClient`) instead. See docs/deprecation-plan.md.
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license BSL 1.1
@@ -172,6 +173,7 @@ async function scrapeMbasicProfile(page, handle) {
 
 /**
  * Scrape a public Facebook profile or page
+ * @deprecated Use `FacebookCrawler.start({ action: 'profile', args: { username } })` from `src/scrapers/social/facebook/crawler.js` instead.
  * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} username - Handle (zuck), @handle, or full facebook.com URL
  * @param {FacebookOptions} [options]

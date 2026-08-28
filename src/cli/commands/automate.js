@@ -9,6 +9,7 @@
 import fs from 'fs/promises';
 import chalk from 'chalk';
 import ora from 'ora';
+import { scrape } from '../../scrapers/index.js';
 
 /**
  * Register the automate command.
@@ -20,9 +21,15 @@ export function registerAutomateCommand(program) {
     .command('automate')
     .description('Automate write actions on Facebook (dry-run on by default)')
     .requiredOption('--platform <platform>', 'Platform: facebook/fb')
-    .requiredOption('--action <action>', 'Action: like, comment, post, messenger-share')
-    .option('--urls <urls>', 'Comma-separated post URLs (for like/comment)')
+    .requiredOption('--action <action>', 'Action: like, comment, post, share, join-group, send-friend-request, messenger-share')
+    .option('--urls <urls>', 'Comma-separated post URLs (for like/comment/share)')
     .option('--text <text>', 'Comment text or post content (for comment/post)')
+    .option('--group-urls <urls>', 'Comma-separated Facebook group URLs (for join-group)')
+    .option('--keyword <keyword>', 'Keyword to search groups (for join-group)')
+    .option('--targets <targets>', 'Comma-separated profile URLs or UIDs (for send-friend-request)')
+    .option('--mode <mode>', 'Friend request mode: uid_list, suggestions, location', 'uid_list')
+    .option('--location <location>', 'Location filter (for send-friend-request in location mode)')
+    .option('--limit <number>', 'Limit count (for join-group, friend requests)', '10')
     .option('--auth-cookie <json>', 'Auth cookie JSON: \'{"c_user":"...","xs":"..."}\'')
     .option('--no-dry-run', 'Execute real writes (default: dry-run enabled)')
     .option('--max-batch <number>', 'Max items per batch', '20')
@@ -40,7 +47,6 @@ export function registerAutomateCommand(program) {
       }
 
       const { loginWithCookie, createBrowser, createPage } = await import('../../scrapers/facebook/index.js');
-      const { likeFacebookPosts, commentOnFacebookPosts, createFacebookPost } = await import('../../../api/services/facebookAutomation.js');
       const { parseRecipientsFile, buildCampaignQueue } = await import('../../scrapers/facebook/messengerQueue.js');
       const { messengerShareCampaign } = await import('../../scrapers/facebook/messengerShare.js');
 
@@ -55,36 +61,40 @@ export function registerAutomateCommand(program) {
         }
       }
 
-      // Hard auth guard — Facebook automate requires a session cookie (mirror scrape command).
-      if (!authCookie) {
-        console.error(chalk.red('❌ Facebook automate requires --auth-cookie \'{"c_user":"...","xs":"..."}\''));
+      const action = options.action.toLowerCase();
+      const urls = options.urls ? options.urls.split(',').map((u) => u.trim()).filter(Boolean) : [];
+      const groupUrls = options.groupUrls ? options.groupUrls.split(',').map((u) => u.trim()).filter(Boolean) : [];
+      const targets = options.targets ? options.targets.split(',').map((t) => t.trim()).filter(Boolean) : [];
+
+      if ((action === 'like' || action === 'comment') && !urls.length) {
+        console.error(chalk.red(`❌ --urls is required for ${action}`));
+        process.exit(1);
+      }
+      if (action === 'post' && !options.text) {
+        console.error(chalk.red('❌ --text is required for post'));
+        process.exit(1);
+      }
+      if (action === 'comment' && !options.text) {
+        console.error(chalk.red('❌ --text is required for comment'));
+        process.exit(1);
+      }
+      if (action === 'join-group' && !groupUrls.length && !options.keyword) {
+        console.error(chalk.red('❌ join-group requires --group-urls or --keyword'));
+        process.exit(1);
+      }
+      if (action === 'send-friend-request' && !targets.length && (!options.mode || options.mode === 'uid_list')) {
+        console.error(chalk.red('❌ send-friend-request in uid_list mode requires --targets'));
         process.exit(1);
       }
 
-      // Validate action + required args BEFORE launching the browser (fail fast, no wasted launch).
-      let action = options.action.toLowerCase();
-      if (action === 'messenger') action = 'messenger-share';
-      const urls = (options.urls || '').split(',').map((u) => u.trim()).filter(Boolean);
-      if (action === 'like' && !urls.length) {
-        console.error(chalk.red('❌ --urls required for like action')); process.exit(1);
-      }
-      if (action === 'comment' && (!urls.length || !options.text)) {
-        console.error(chalk.red('❌ --urls and --text required for comment action')); process.exit(1);
-      }
-      if (action === 'post' && !options.text) {
-        console.error(chalk.red('❌ --text required for post action')); process.exit(1);
-      }
-      if (!['like', 'comment', 'post', 'messenger-share'].includes(action)) {
-        console.error(chalk.red(`❌ Unknown action "${action}". Supported: like, comment, post, messenger-share`)); process.exit(1);
-      }
-
+      // Build campaigns if action is messenger-share
       let campaigns = [];
       if (action === 'messenger-share') {
-        const readFileSafe = async (p, label) => {
+        const readFileSafe = async (filePath, label) => {
           try {
-            return await fs.readFile(p, 'utf-8');
-          } catch {
-            console.error(chalk.red(`❌ Cannot read ${label} file: ${p}`));
+            return await fs.readFile(filePath, 'utf-8');
+          } catch (err) {
+            console.error(chalk.red(`❌ Cannot read --${label}-file at ${filePath}: ${err.message}`));
             process.exit(1);
           }
         };
@@ -92,11 +102,11 @@ export function registerAutomateCommand(program) {
         let recipients = [];
         if (options.recipients) {
           recipients = options.recipients.split(',').map((r) => r.trim()).filter(Boolean);
-          console.log(chalk.gray('ℹ️ recipients: using inline --recipients'));
+          console.log(chalk.gray(`ℹ️ recipients: ${recipients.length} item(s) from inline --recipients`));
         } else if (options.recipientsFile) {
-          const txt = await readFileSafe(options.recipientsFile, 'recipients');
-          recipients = parseRecipientsFile(txt);
-          console.log(chalk.gray(`ℹ️ recipients: using --recipients-file (${recipients.length} entries)`));
+          const raw = await readFileSafe(options.recipientsFile, 'recipients');
+          recipients = parseRecipientsFile(raw);
+          console.log(chalk.gray(`ℹ️ recipients: ${recipients.length} item(s) from --recipients-file`));
         }
 
         let content = '';
@@ -137,37 +147,57 @@ export function registerAutomateCommand(program) {
       const dryRun = options.dryRun !== false;
       const spinner = ora(`${dryRun ? '[DRY RUN] ' : ''}Running ${options.action} on ${platform}...`).start();
 
-      let browser, page;
+      let browser;
+      let page;
       try {
-        browser = await createBrowser();
-        page = await createPage(browser);
-        await loginWithCookie(page, authCookie);
-
-        const guardedOptions = {
-          dryRun,
-          maxBatch: parseInt(options.maxBatch, 10),
-          delay: dryRun ? () => {} : undefined,
-        };
-
         let result;
 
-        if (action === 'like') {
-          result = await likeFacebookPosts(page, urls, guardedOptions);
-        } else if (action === 'comment') {
-          result = await commentOnFacebookPosts(page, urls, options.text, guardedOptions);
-        } else if (action === 'post') {
-          result = await createFacebookPost(page, options.text, guardedOptions);
-        } else if (action === 'messenger-share') {
+        if (action === 'messenger-share') {
+          // Legacy multi-link multi-recipient campaign still needs a Puppeteer page.
+          browser = await createBrowser();
+          page = await createPage(browser);
+          await loginWithCookie(page, authCookie);
+
+          // ADR-012: messenger-share uses a HIGHER delay floor (5–15s jitter), NOT the
+          // 1–3s like/comment default. Dry-run still passes the no-op delay from above.
           const messengerDelay = dryRun
             ? () => {}
             : (min = 5000, max = 15000) =>
                 new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
-          const campaignOpts = { ...guardedOptions, delay: messengerDelay };
+          const campaignOpts = { dryRun, maxBatch: parseInt(options.maxBatch, 10), delay: messengerDelay };
           const runs = [];
           for (const campaign of campaigns) {
             runs.push(await messengerShareCampaign(page, campaign, campaignOpts));
           }
           result = { campaigns: runs.length, runs };
+        } else {
+          /** @type {Record<string, unknown>} */
+          const scrapeArgs = {
+            dryRun,
+            ...(options.maxBatch && { maxBatch: parseInt(options.maxBatch, 10) }),
+            authCookie,
+          };
+          if (action === 'like' || action === 'comment' || action === 'share') {
+            scrapeArgs.urls = urls;
+          }
+          if (action === 'comment' || action === 'post') {
+            scrapeArgs.text = options.text;
+          }
+          if (action === 'join-group') {
+            if (groupUrls.length) scrapeArgs.groupUrls = groupUrls;
+            else {
+              scrapeArgs.keyword = options.keyword;
+              scrapeArgs.limit = Number(options.limit);
+            }
+          }
+          if (action === 'send-friend-request') {
+            scrapeArgs.targets = targets;
+            scrapeArgs.mode = options.mode || 'uid_list';
+            if (options.location) scrapeArgs.location = options.location;
+            scrapeArgs.limit = Number(options.limit);
+          }
+
+          result = await scrape('facebook', action, scrapeArgs);
         }
 
         spinner.succeed(`${dryRun ? '[DRY RUN] ' : ''}${action} complete`);

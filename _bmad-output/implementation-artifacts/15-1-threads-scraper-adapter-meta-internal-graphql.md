@@ -2,13 +2,13 @@
 story_id: "15.1"
 epic: 15
 story_key: "15-1-threads-scraper-adapter-meta-internal-graphql"
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-26
 updated: 2026-08-26
 owner: "DEV"
-reviewed: "Pending"
-baseline_commit: e9ae115744371f8b74f43f7adb6861c436237ed2
+reviewed: "Passed"
+baseline_commit: 3a2e60bf764f693240212f43bceefb66804be47d
 ---
 
 # Story 15.1: Threads Scraper Adapter (Meta Internal GraphQL)
@@ -209,42 +209,56 @@ const normalizeFn = (raw, postId) => {
 
 ## Tasks / Subtasks
 
-- [ ] T1: Tạo cấu trúc thư mục `src/scrapers/social/threads/` (AC-1, AC-2, AC-3)
-  - [ ] T1.1: Tạo `src/scrapers/social/threads/index.js` barrel export `ThreadsClient`, `ThreadsCrawler`, `ThreadsPlatformResponseValidator`, `DEFAULT_THREADS_DOC_IDS`
-  - [ ] T1.2: Tạo `src/scrapers/social/threads/client.js` — `ThreadsClient` extends `AbstractApiClient`
-  - [ ] T1.3: Tạo `src/scrapers/social/threads/crawler.js` — `ThreadsCrawler` extends `AbstractCrawler`
-  - [ ] T1.4: Tạo `src/scrapers/social/threads/validator.js` — `ThreadsPlatformResponseValidator` extends `AbstractPlatformResponseValidator`
-  - [ ] T1.5: Tạo `src/scrapers/social/threads/normalizer.js` (tùy chọn) — các hàm normalize post/comment cho testability
-  - [ ] T1.6: Cập nhật `src/scrapers/social/index.js:1-9` để re-export Threads module
-  - [ ] T1.7: Tạo `schemas/threads/social.json` metadata schema
-- [ ] T2: Triển khai `ThreadsClient` (AC-1, AC-2)
-  - [ ] T2.1: Constructor kế thừa `AbstractApiClient`, set `client: 'got'`, `baseUrl: 'https://www.threads.net'`, `requiresAuth: true`
-  - [ ] T2.2: `ensureLsd(proxyOrSessionKey)` fetch landing/profile page HTML, parse `lsd`, `csrftoken`, `fb_dtsg`, lưu vào `Map`-based cache TTL 30 phút với in-flight deduplication; **không** dùng `PreSignedTokenRing`
-  - [ ] T2.3: `buildGraphQlBody(docId, variables, tokens)` — `URLSearchParams` với `doc_id`, `lsd`, `variables`, header `x-ig-app-id`, `x-asbd-id`, `x-fb-lsd`; không log token values
-  - [ ] T2.4: `requestGraphQl(docId, variables, options)` — POST, parse JSON, classify errors
-- [ ] T3: Triển khai `ThreadsCrawler` (AC-3, AC-4, AC-5, AC-6)
-  - [ ] T3.1: Constructor đăng ký `search`, `get_user_feed`, `get_post_comments`; set `requiresAuth: true`
-  - [ ] T3.2: `getUserFeed({ username, count, cursor })` — resolve user id, call feed doc_id, normalize `PostItem[]`, ghi `CrawlCheckpoint`, emit thin events
-  - [ ] T3.3: `search({ query, count, cursor, searchType })` — GraphQL search nếu `SEARCH_POSTS` doc_id đã capture; nếu chưa thì throw `XACT_5000` hoặc SSR fallback HTTP với documented regex
-  - [ ] T3.4: `getPostComments({ postId, maxDepth, maxComments, after })` — resolve post id, clamp `[0,5]`/`[1,2000]`, implement `fetchLayer({ postId, parentCommentId, after, limit })` trả `{ comments, pageInfo }`, wrap `CommentTreeExtractor` với `p-limit(2)` concurrency
-  - [ ] T3.5: `normalizePost(raw)` & `normalizeComment(raw, postId)` theo `src/core/types.js`; dùng `generatePostId`/`generateCommentId`
-  - [ ] T3.6: Persist `PostItem[]` qua `storeBatch`, `CommentItem[]` qua `storeCommentBatch`
-  - [ ] T3.7: Sau mỗi `storeBatch`/`storeCommentBatch` thành công, ghi `CrawlCheckpoint` và phát thin event pointers vào Redis `stream:social:raw_posts`
-- [ ] T4: Triển khai `ThreadsPlatformResponseValidator` (AC-8)
-  - [ ] T4.1: Tạo `src/scrapers/social/threads/validator.js`
-  - [ ] T4.2: Nhận diện valid payload, bot challenge, rate limit, empty data
-- [ ] T5: Viết tests (AC-10)
-  - [ ] T5.1: `tests/scrapers/social/threads/client.test.js` — local server trả HTML tokens + GraphQL JSON, test `ensureLsd`, `requestGraphQl`
-  - [ ] T5.2: `tests/scrapers/social/threads/crawler.test.js` — test `get_user_feed`, `search`, `get_post_comments`, `listActions`
-  - [ ] T5.3: Chạy `npm run typecheck` và `npm test -- tests/scrapers/social/threads/`
-- [ ] T6: Deprecation marker & docs (AC-9)
-  - [ ] T6.1: Thêm `@deprecated` JSDoc vào `src/scrapers/threads/index.js`
-  - [ ] T6.2: Cập nhật `docs/deprecation-plan.md` status tracker
-- [ ] T7: Chạy verification
-  - [ ] T7.1: `npm run typecheck`
-  - [ ] T7.2: `npm test -- tests/scrapers/social/threads/`
-  - [ ] T7.3: `npm test -- tests/scrapers/social/facebook/` (regression)
-  - [ ] T7.4: `npm test -- tests/core/` (regression)
+- [x] T1: Tạo cấu trúc thư mục `src/scrapers/social/threads/` (AC-1, AC-2, AC-3)
+  - [x] T1.1: Tạo `src/scrapers/social/threads/index.js` barrel export `ThreadsClient`, `ThreadsCrawler`, `ThreadsPlatformResponseValidator`, `DEFAULT_THREADS_DOC_IDS`
+  - [x] T1.2: Tạo `src/scrapers/social/threads/client.js` — `ThreadsClient` extends `AbstractApiClient`
+  - [x] T1.3: Tạo `src/scrapers/social/threads/crawler.js` — `ThreadsCrawler` extends `AbstractCrawler`
+  - [x] T1.4: Tạo `src/scrapers/social/threads/validator.js` — `ThreadsPlatformResponseValidator` extends `AbstractPlatformResponseValidator`
+  - [x] T1.5: Tạo `src/scrapers/social/threads/normalizer.js` (tùy chọn) — các hàm normalize post/comment cho testability
+  - [x] T1.6: Cập nhật `src/scrapers/social/index.js:1-9` để re-export Threads module
+  - [x] T1.7: Tạo `schemas/threads/social.json` metadata schema
+- [x] T2: Triển khai `ThreadsClient` (AC-1, AC-2)
+  - [x] T2.1: Constructor kế thừa `AbstractApiClient`, set `client: 'got'`, `baseUrl: 'https://www.threads.net'`, `requiresAuth: true`
+  - [x] T2.2: `ensureLsd(proxyOrSessionKey)` fetch landing/profile page HTML, parse `lsd`, `csrftoken`, `fb_dtsg`, lưu vào `Map`-based cache TTL 30 phút với in-flight deduplication; **không** dùng `PreSignedTokenRing`
+  - [x] T2.3: `buildGraphQlBody(docId, variables, tokens)` — `URLSearchParams` với `doc_id`, `lsd`, `variables`, header `x-ig-app-id`, `x-asbd-id`, `x-fb-lsd`; không log token values
+  - [x] T2.4: `requestGraphQl(docId, variables, options)` — POST, parse JSON, classify errors
+- [x] T3: Triển khai `ThreadsCrawler` (AC-3, AC-4, AC-5, AC-6)
+  - [x] T3.1: Constructor đăng ký `search`, `get_user_feed`, `get_post_comments`; set `requiresAuth: true`
+  - [x] T3.2: `getUserFeed({ username, count, cursor })` — resolve user id, call feed doc_id, normalize `PostItem[]`, ghi `CrawlCheckpoint`, emit thin events
+  - [x] T3.3: `search({ query, count, cursor, searchType })` — GraphQL search nếu `SEARCH_POSTS` doc_id đã capture; nếu chưa thì throw `XACT_5000` hoặc SSR fallback HTTP với documented regex
+  - [x] T3.4: `getPostComments({ postId, maxDepth, maxComments, after })` — resolve post id, clamp `[0,5]`/`[1,2000]`, implement `fetchLayer({ postId, parentCommentId, after, limit })` trả `{ comments, pageInfo }`, wrap `CommentTreeExtractor` với `p-limit(2)` concurrency
+  - [x] T3.5: `normalizePost(raw)` & `normalizeComment(raw, postId)` theo `src/core/types.js`; dùng `generatePostId`/`generateCommentId`
+  - [x] T3.6: Persist `PostItem[]` qua `storeBatch`, `CommentItem[]` qua `storeCommentBatch`
+  - [x] T3.7: Sau mỗi `storeBatch`/`storeCommentBatch` thành công, ghi `CrawlCheckpoint` và phát thin event pointers vào Redis `stream:social:raw_posts`
+- [x] T4: Triển khai `ThreadsPlatformResponseValidator` (AC-8)
+  - [x] T4.1: Tạo `src/scrapers/social/threads/validator.js`
+  - [x] T4.2: Nhận diện valid payload, bot challenge, rate limit, empty data
+- [x] T5: Viết tests (AC-10)
+  - [x] T5.1: `tests/scrapers/social/threads/client.test.js` — local server trả HTML tokens + GraphQL JSON, test `ensureLsd`, `requestGraphQl`
+  - [x] T5.2: `tests/scrapers/social/threads/crawler.test.js` — test `get_user_feed`, `search`, `get_post_comments`, `listActions`
+  - [x] T5.3: Chạy `npm run typecheck` và `npm test -- tests/scrapers/social/threads/`
+- [x] T6: Deprecation marker & docs (AC-9)
+  - [x] T6.1: Thêm `@deprecated` JSDoc vào `src/scrapers/threads/index.js`
+  - [x] T6.2: Cập nhật `docs/deprecation-plan.md` status tracker
+- [x] T7: Chạy verification
+  - [x] T7.1: `npm run typecheck`
+  - [x] T7.2: `npm test -- tests/scrapers/social/threads/`
+  - [x] T7.3: `npm test -- tests/scrapers/social/facebook/` (regression)
+  - [x] T7.4: `npm test -- tests/core/` (regression)
+
+### Review Findings
+- [x] [Review][Patch] Remove fake token fallbacks in ThreadsClient.#fetchTokens [src/scrapers/social/threads/client.js:118]
+- [x] [Review][Patch] Narrow overly broad regex for LSD token extraction [src/scrapers/social/threads/client.js:80]
+- [x] [Review][Patch] Refine target user ID extraction order to avoid session userId collision [src/scrapers/social/threads/crawler.js:199]
+- [x] [Review][Patch] Fix non-greedy nested JSON parsing in searchPosts fallback [src/scrapers/social/threads/crawler.js:283]
+- [x] [Review][Patch] Preserve nested reply comment parentId in getPostComments [src/scrapers/social/threads/crawler.js:338]
+- [x] [Review][Patch] Implement CrawlCheckpoint and Redis Stream emission in crawler actions [src/scrapers/social/threads/crawler.js]
+- [x] [Review][Patch] Update action registrations with standard AD-11 descriptors [src/scrapers/social/threads/crawler.js:38]
+- [x] [Review][Patch] Align schemas/threads/social.json required fields with spec [schemas/threads/social.json:28]
+- [x] [Review][Patch] Add shortcode and post URL resolution in getPostComments [src/scrapers/social/threads/crawler.js:320]
+- [x] [Review][Patch] Add authorUrl in PostItem normalization [src/scrapers/social/threads/crawler.js:121]
+- [x] [Review][Patch] Refine bot challenge & login wall detection in validator [src/scrapers/social/threads/validator.js:85]
+- [x] [Review][Patch] Enhance cookie handling, timestamp parsing, and ErrorTypes classification [src/scrapers/social/threads/client.js]
 
 ## Dev Notes
 
@@ -631,3 +645,45 @@ Create Story Workflow — `bmad-create-story` skill, manual analysis bằng `vib
 ### File List
 
 - `_bmad-output/implementation-artifacts/15-1-threads-scraper-adapter-meta-internal-graphql.md`
+
+### Review Findings
+
+Generated: 2026-08-26T05:31:30Z
+
+#### Decision needed
+
+- [x] [Review][Decision] THR-DEC-01: AbstractApiClient 5xx and transport-error retry/quarantine ownership — Implemented a `ThreadsClient`-level `#withTransportRetry` wrapper for `ensureLsd` and `requestGraphQl` that retries `ProxyDeadError`, `XACT_5030`, `XACT_5000`, and generic transport errors with exponential backoff + jitter, quarantines dead proxies, and rotates proxies via `getProxy({ forceRotate: true })` / `getNext()` without touching `base-client.js`. (edge)
+- [x] [Review][Decision] THR-DEC-02: CommentTreeExtractor cursor-deduplication and empty-cursor guard — Implemented the guard in `ThreadsCrawler.fetchLayer` using a per-call `seenCursors` set; `#normalizePageInfo` now clamps empty end_cursors with `has_next_page=true` and deduplicates repeated cursors before `CommentTreeExtractor` sees them. (edge)
+- [x] [Review][Decision] THR-DEC-03: get_post_comments BarcelonaPostPageQuery fallback for comment pagination — Kept the short-term `POST_DETAIL` fallback and clamped/flattened it: the fallback now only extracts the top-level post from each reply thread and returns a single layer with `has_next_page=false` and `end_cursor=null`; reply layers without `COMMENT_REPLIES` now throw `XACT_5000`. (edge)
+- [x] [Review][Decision] THR-DEC-04: Token cache and token-extraction failure need a proxy-aware contract — `ThreadsClient.#buildCacheKey` already uses `${accountId}::${proxyKey}::${cookieKey}`; token fetch now retries `maxTokenFetchRetries` times with short delay, clears the specific cache key on extraction failure, and `requestGraphQl` clears all tokens for the account on any `XACT_4010` error. (edge)
+
+#### Patches
+
+- [x] [Review][Patch] THR-P01: Child comment fetches do not pass the parent comment ID in GraphQL variables — `fetchLayer` receives `parentCommentId` but only sets `postID`, `post_id`, `after`, and `first` in the request body (`src/scrapers/social/threads/crawler.js:573-578`). When captured reply `doc_id`s are used this causes the wrong/missing parent scope and the same root bundle to be fetched for every parent. (edge)
+- [x] [Review][Patch] THR-P02: Root `args.after` cursor leaks into child comment fetches — `fetchLayer` uses `after: after || args.after || null` (`src/scrapers/social/threads/crawler.js:576`), so a child layer with `after` unset reuses the root input cursor instead of starting at the top of the child list. (edge)
+- [x] [Review][Patch] THR-P03: getUserFeed / searchPosts do not validate `count` — `first: args.count || 20` (`src/scrapers/social/threads/crawler.js:386,447`) forwards `0`, negative numbers, and `NaN` to the GraphQL request. Validate and clamp to a sensible range before building variables. (edge)
+- [x] [Review][Patch] THR-P04: normalizePostItem only keeps the first post of a multi-post thread — `const post = raw.post || raw.thread_items?.[0]?.post || raw` (`src/scrapers/social/threads/crawler.js:154`) drops additional `thread_items` in a single Threads thread. Flatten `thread_items` so each contained post becomes a separate `PostItem`. (edge)
+- [x] [Review][Patch] THR-P05: Post/comment `content` is not coerced to string — the normalizer falls back to `post.text`/`replyPost.text` without `String()` (`src/scrapers/social/threads/crawler.js:165-167,255-257`), so numeric or object values can leak into `PostItem.content`/`CommentItem.content`. (edge)
+- [x] [Review][Patch] THR-P06: `taken_at` timestamp heuristic mis-handles edge values — `Number(takenAt) > 1e11` (`src/scrapers/social/threads/crawler.js:198-202,268-271`) treats far-future second timestamps as milliseconds and does not guard against strings like `'0'`. Use a more robust ms-vs-s check (e.g., length, `> 1e12` threshold, or explicit parsing). (edge)
+- [x] [Review][Patch] THR-P07: `search()` discards `pageInfo` — the registered action handler `search()` calls `this.searchPosts()` and returns only `res.posts` (`src/scrapers/social/threads/crawler.js:527-528`), so callers cannot resume from a search cursor. Return the `{ posts, pageInfo }` object or expose `pageInfo` to `start()`. (edge)
+- [x] [Review][Patch] THR-P08: getUserFeed / searchPosts checkpoint and pageInfo do not normalize empty `end_cursor` — the methods return `pageInfo` directly and the checkpoint uses `pageInfo?.end_cursor || args.cursor || null` (`src/scrapers/social/threads/crawler.js:408-419,465-473`). Empty/undefined `end_cursor` should be normalized to `null` instead of reusing the input cursor. (edge)
+- [x] [Review][Patch] THR-P09: searchPosts SSR fallback returns `pageInfo: null` — the HTTP fallback builds a single result list and returns `{ posts, pageInfo: null }` (`src/scrapers/social/threads/crawler.js:514-517`) with no pagination, so `SEARCH_POSTS` doc_id capture is effectively required for any resumable search. Either parse a next cursor from the SSR HTML or document the limitation. (edge)
+- [x] [Review][Patch] THR-P10: Missing `lsd` is accepted if `fb_dtsg` is present — `#fetchTokens` only throws when both `lsd` and `dtsg` are missing (`src/scrapers/social/threads/client.js:173-182`), allowing a token set with empty `lsd` to be sent as `x-fb-lsd: ''`. Require `lsd` to be present and non-empty. (edge)
+- [x] [Review][Patch] THR-P11: Other Meta session-invalid codes are not mapped to auth rotation — only `190` and `1357004` are treated as `AUTH_EXPIRED` (`src/scrapers/social/threads/client.js:300-322`). Other common codes (e.g., `1357001`, `1675004`, `368` only maps to rate-limit) are wrapped as `XACT_5000`. Maintain a mapped set of session-invalid codes that rotate the account. (edge)
+- [x] [Review][Patch] THR-P12: HTML responses that slip past the validator fail opaquely — `requestGraphQl` tries to JSON-parse string payloads and throws `XACT_5000` "Unexpected non-JSON response" (`src/scrapers/social/threads/client.js:278-292`). When the response is HTML (soft checkpoint or login wall), classify it with `ThreadsPlatformResponseValidator` and throw a `BotChallengeError`/rotatable `PlatformError` instead. (edge)
+- [x] [Review][Patch] THR-P13: Soft 200 checkpoint pages may be missed by the validator — `isBotChallenge` (`src/scrapers/social/threads/validator.js:134-165`) only matches a narrow set of HTML/URL/error patterns. Soft 200 challenge strings like `"suspicious activity"`, `"unusual activity"`, `"verify your account"`, and `"log in to continue"` are not detected. Expand the heuristic set and add tests. (edge)
+- [x] [Review][Patch] THR-P14: Connection-format child fetches may not unwrap nested `edge.node` wrappers — `comments = (connection?.edges || []).map((edge) => edge?.node).filter(Boolean)` (`src/scrapers/social/threads/crawler.js:605`) drops deeper wrapper shapes such as `edge.node.node`. Add a defensive unwrap helper. (edge)
+- [x] [Review][Patch] THR-P15: ensureLsd in-flight dedup can amplify token endpoint load on failure — when the token fetch promise rejects, all waiters fail simultaneously and the next request immediately creates a new fetch (`src/scrapers/social/threads/client.js:99-109`). Add a short cooldown/backoff and quarantine the proxy on repeated token extraction failures. (edge)
+- [x] [Review][Patch] THR-P16: Threads test coverage gaps — missing boundary tests for `getUserFeed` (`tests/scrapers/social/threads/crawler.test.js:239-276`), `getPostComments` (`tests/scrapers/social/threads/crawler.test.js:302-328`), network/proxy failure paths and 5xx/transport behavior for the client (`tests/scrapers/social/threads/client.test.js`), token extraction failure / TTL / in-flight-dedup failure (`tests/scrapers/social/threads/client.test.js:150-163`), `searchPosts` SSR fallback with malformed/empty HTML (`tests/scrapers/social/threads/crawler.test.js:278-300), and URL/shortcode normalization for `postId`/`username` (`tests/scrapers/social/threads/crawler.test.js:239-328`). Add targeted tests. (edge)
+
+#### Deferred
+
+- [x] [Review][Defer] THR-D01: CommentTreeExtractor exits on empty/null `end_cursor` even when `has_next_page` is true — `fetchLayerPaginated` sets `after` to `pageInfo.end_cursor` but does not continue when it is an empty string (`src/scrapers/social/comment-tree.js:155-158`). Pre-existing in shared `comment-tree.js` (Story 14.1); defer to that owner. (edge)
+- [x] [Review][Defer] THR-D02: Comments with `subCommentsCount` missing or `0` are never expanded — the depth loop only expands parents where `(c.subCommentsCount ?? 0) > 0` (`src/scrapers/social/comment-tree.js:167-169`), which skips replies if the API omits the count or reports `0` with actual children. Pre-existing in `comment-tree.js`. (edge)
+- [x] [Review][Defer] THR-D03: Cycle detector can re-attach to an existing cycle — `#wouldCreateCycle` returns `false` when it re-encounters an already-visited ID in the parent chain (`src/scrapers/social/comment-tree.js:190-201`), potentially allowing a cycle to be added. Pre-existing in `comment-tree.js`. (edge)
+- [x] [Review][Defer] THR-D04: Orphan comments are not re-parented when the parent later arrives — missing parents are made into orphan roots (`src/scrapers/social/comment-tree.js:113-121`), but there is no second-pass re-parenting if the parent shows up in a later layer. Pre-existing in `comment-tree.js`. (edge)
+- [x] [Review][Defer] THR-D05: Shared `byId`/`seen`/`total` state is mutated under `pLimit` without atomic guards — the BFS state is accessed from multiple concurrent `fetchLayerPaginated` calls (`src/scrapers/social/comment-tree.js:67-79,134-176`). Pre-existing in `comment-tree.js` (Story 14.1). (edge)
+- [x] [Review][Defer] THR-D06: Single child `fetchLayer` failure rejects the entire comment tree — `Promise.all` over parent fetches has no per-parent error isolation (`src/scrapers/social/comment-tree.js:172-176`). Pre-existing in `comment-tree.js`. (edge)
+- [x] [Review][Defer] THR-D07: No `comment-tree.test.js` for cycles, duplicate IDs, orphan re-parenting, or `subCommentsCount=0` — the project has no `tests/scrapers/social/comment-tree.test.js`. Out of scope for 15.1. (edge)
+- [x] [Review][Defer] THR-D08: No concurrency / `p-limit` / shared-state race tests for `CommentTreeExtractor` — same missing `tests/scrapers/social/comment-tree.test.js` coverage. Out of scope for 15.1. (edge)
+- [x] [Review][Defer] THR-D09: Legacy Puppeteer `scrapeTweets` / `searchTweets` still use post text fragment as fallback ID and lack proxy/cookie rotation and retry — only `@deprecated` markers were required for this story. Defer to Epic 20.2 deprecation work. (`src/scrapers/threads/index.js:196-213,245-316`) (edge)

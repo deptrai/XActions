@@ -1,0 +1,227 @@
+[
+  {
+    "id": "1",
+    "location": "src/scrapers/index.js:202-210",
+    "trigger_condition": "scrape('facebook','posts') receives url or username",
+    "guard_snippet": "if (mappedAction === 'page_posts') args.pageId = resolveTargetKey(options.url || options.username); else args.groupId = resolveGroupId(options.url);",
+    "potential_consequence": "page_posts/group_posts throws missing pageId or groupId",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "2",
+    "location": "src/scrapers/index.js:266-279",
+    "trigger_condition": "group_posts, group_search, or group_members receive url",
+    "guard_snippet": "if (['group_posts','group_search','group_members'].includes(mappedAction)) args.groupUrl = options.url || options.groupUrl;",
+    "potential_consequence": "group actions fail with missing groupUrl",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "3",
+    "location": "src/scrapers/index.js:250-262",
+    "trigger_condition": "authCookie contains only accountId, not c_user/xs",
+    "guard_snippet": "if (options.authCookie?.accountId && !options.authCookie?.c_user) { const resolved = await resolveAuth(options.authCookie, userId); cookies = { c_user: resolved.c_user, xs: resolved.xs }; }",
+    "potential_consequence": "invalid cookie header, authenticated actions fail",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "4",
+    "location": "src/scrapers/index.js:263",
+    "trigger_condition": "scrape called with page and autoClose:false",
+    "guard_snippet": "if (options.page) { session.page = options.page; client.browserBridge = new FacebookBrowserBridge({ page: options.page }); }",
+    "potential_consequence": "legacy page wasted, new browser launched, session mismatch",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "5",
+    "location": "api/services/facebookScrape.js:77-104",
+    "trigger_condition": "search all parallel with non-empty accountIds",
+    "guard_snippet": "const task = (ctx) => scrape('facebook','search',{...baseArgs, authCookie:{c_user:ctx.c_user,xs:ctx.xs}, page:undefined, autoClose:true});",
+    "potential_consequence": "all tasks use same cookie, pool round-robin ignored",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "6",
+    "location": "api/services/facebookScrape.js:108-130",
+    "trigger_condition": "one or more search types reject in fallback",
+    "guard_snippet": "collect errors and pageInfo, return { posts, people, pages, groups, errors, pageInfo }",
+    "potential_consequence": "partial failures hidden, cursors lost",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "7",
+    "location": "api/services/facebookScrape.js:34-36",
+    "trigger_condition": "run('marketplace', {query}) called without authCookie",
+    "guard_snippet": "if (!authCookie && action !== 'marketplace') throw new Error('requires authCookie');",
+    "potential_consequence": "anonymous marketplace via MCP/API fails",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "8",
+    "location": "src/mcp/server.js:3174-3177",
+    "trigger_condition": "latitude, longitude, or radiusKm are non-numeric strings",
+    "guard_snippet": "if (Number.isFinite(Number(latitude))) options.latitude = Number(latitude);",
+    "potential_consequence": "NaN values reach crawler, throw later",
+    "severity": "low",
+    "bucket": "patch"
+  },
+  {
+    "id": "9",
+    "location": "src/mcp/server.js:3217-3223",
+    "trigger_condition": "x_facebook_group_posts or x_facebook_posts receive url",
+    "guard_snippet": "resolve groupId/groupUrl for group actions and pageId for page posts before run",
+    "potential_consequence": "group and page post scrapes fail",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "10",
+    "location": "src/mcp/server.js:2911-2939",
+    "trigger_condition": "x_facebook_automate like/comment/post/messenger called",
+    "guard_snippet": "map to hybrid actions and call facebookScrape.run(action, {authCookie, dryRun, ...})",
+    "potential_consequence": "bypasses hybrid rate/velocity governance",
+    "severity": "high",
+    "bucket": "decision_needed"
+  },
+  {
+    "id": "11",
+    "location": "src/mcp/server.js:3050-3104",
+    "trigger_condition": "x_facebook_share_posts/join_groups/post_to_groups/send_friend_requests called",
+    "guard_snippet": "route through facebookScrape.run(action, {authCookie, dryRun, ...})",
+    "potential_consequence": "growth actions not using hybrid engine",
+    "severity": "high",
+    "bucket": "decision_needed"
+  },
+  {
+    "id": "12",
+    "location": "src/cli/commands/automate.js:48-56,179-205",
+    "trigger_condition": "xactions automate for any Facebook action",
+    "guard_snippet": "import { scrape } and dispatch scrape('facebook', action, {authCookie, dryRun, ...})",
+    "potential_consequence": "CLI automation bypasses hybrid engine",
+    "severity": "high",
+    "bucket": "decision_needed"
+  },
+  {
+    "id": "13",
+    "location": "src/cli/commands/scrape.js:75",
+    "trigger_condition": "--limit is negative, zero, or non-numeric",
+    "guard_snippet": "const limit = Math.max(1, Number(options.limit)); if (!Number.isFinite(limit)) throw new Error('invalid limit');",
+    "potential_consequence": "invalid limit reaches crawler, clamps silently",
+    "severity": "low",
+    "bucket": "patch"
+  },
+  {
+    "id": "14",
+    "location": "src/cli/commands/scrape.js:78-79",
+    "trigger_condition": "minPrice negative or greater than maxPrice",
+    "guard_snippet": "if (minPrice < 0 || maxPrice < 0 || minPrice > maxPrice) throw new Error('invalid price');",
+    "potential_consequence": "bad price filters reach marketplace, late error",
+    "severity": "low",
+    "bucket": "patch"
+  },
+  {
+    "id": "15",
+    "location": "src/scrapers/social/facebook/client.js:182",
+    "trigger_condition": "browserOptions.baseUrl is a non-facebook non-local host",
+    "guard_snippet": "if (!isLocalUrl(baseUrl) && !/\\.facebook\\.com$/i.test(baseUrl)) throw new PlatformError({code:'XACT_4001'});",
+    "potential_consequence": "requests and token fetches sent to arbitrary host",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "16",
+    "location": "src/scrapers/social/facebook/client.js:632-634",
+    "trigger_condition": "fallbackDocIds contain `fb_` placeholder strings",
+    "guard_snippet": "filter out placeholder docIds unless explicitly overridden by caller",
+    "potential_consequence": "wasted GraphQL calls and confusing errors",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "17",
+    "location": "api/services/facebookHealth.js:150-157",
+    "trigger_condition": "decrypted JSON is missing c_user or xs",
+    "guard_snippet": "if (!c_user || !xs) return upsertHealth(accountId, 'dead', 'missing_cookie_fields');",
+    "potential_consequence": "invalid cookie sent, account misclassified",
+    "severity": "low",
+    "bucket": "patch"
+  },
+  {
+    "id": "18",
+    "location": "api/services/facebookHealth.js:142-145",
+    "trigger_condition": "decrypt throws on malformed encrypted cookie",
+    "guard_snippet": "try { cookiePayload = decrypt(account.encryptedCookie); } catch { cookiePayload = null; }",
+    "potential_consequence": "unhandled exception from health check",
+    "severity": "low",
+    "bucket": "patch"
+  },
+  {
+    "id": "19",
+    "location": "src/scrapers/index.js:281-284",
+    "trigger_condition": "scrape called with client and autoClose true or error",
+    "guard_snippet": "track client ownership and only close client if crawler created it",
+    "potential_consequence": "caller-owned client closed unexpectedly",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "20",
+    "location": "api/services/facebookScrape.js:88-89",
+    "trigger_condition": "search all parallel with accountIds creates per-task crawlers",
+    "guard_snippet": "use a shared crawler or call cleanup per task after result",
+    "potential_consequence": "leaked FacebookClient/bridge processes",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "21",
+    "location": "api/routes/facebook.js:561-563",
+    "trigger_condition": "POST /scrape with group_posts/group_search/group-members",
+    "guard_snippet": "case 'group_search': { groupUrl: url.trim(), query }; default group: { groupUrl: url.trim() }",
+    "potential_consequence": "group scrapes fail after hybrid cutover",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "22",
+    "location": "api/routes/facebook.js:897-965",
+    "trigger_condition": "POST /automate with like/comment/post/share/join/etc",
+    "guard_snippet": "route available actions through facebookScrape.run or dispatchFacebookHybrid",
+    "potential_consequence": "REST automation bypasses hybrid engine",
+    "severity": "high",
+    "bucket": "decision_needed"
+  },
+  {
+    "id": "23",
+    "location": "src/scrapers/index.js:266-274",
+    "trigger_condition": "authCookie contains accountId or userId is provided",
+    "guard_snippet": "delete args.accountId; delete args.userId; before calling crawler.start",
+    "potential_consequence": "extra fields may confuse handlers or leak into logs",
+    "severity": "low",
+    "bucket": "patch"
+  },
+  {
+    "id": "24",
+    "location": "src/mcp/server.js:3019-3020,3186",
+    "trigger_condition": "marketplace authCookie resolution fails",
+    "guard_snippet": "if (authResolutionError) return { dryRun: resolvedDryRun, warning: authResolutionError, preview: options };",
+    "potential_consequence": "warning lost, silent fallback to resolve/run",
+    "severity": "low",
+    "bucket": "patch"
+  },
+  {
+    "id": "25",
+    "location": "api/services/facebookScrape.js:108-119",
+    "trigger_condition": "search all parallel without accountIds runs 4 tasks",
+    "guard_snippet": "use p-limit(maxConcurrency) before Promise.allSettled on 4 searches",
+    "potential_consequence": "same account hit with 4 concurrent token/GraphQL calls",
+    "severity": "medium",
+    "bucket": "patch"
+  }
+]

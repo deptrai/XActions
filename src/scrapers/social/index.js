@@ -6,4 +6,6 @@
  */
 
 export * from './facebook/index.js';
+export * from './threads/index.js';
+// TODO(Story 13.2.1): export * from './twitter/index.js' when TwitterCrawler/TwitterClient are created
 export { CommentTreeExtractor } from './comment-tree.js';

@@ -50,6 +50,7 @@ import { registerTeamCommand } from './commands/team.js';
 import { registerCompatCommands } from './commands/compat.js';
 import { registerAgentCommand } from './commands/agent.js';
 import { registerClientCommand } from './commands/client.js';
+import { registerAdminCommand } from './commands/admin.js';
 import { renderRootHelp } from './help-groups.js';
 
 const program = new Command();
@@ -114,6 +115,7 @@ registerTeamCommand(program);
 registerCompatCommands(program);
 registerAgentCommand(program);
 registerClientCommand(program);
+registerAdminCommand(program);
 
 
 

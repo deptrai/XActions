@@ -304,4 +304,19 @@ describe('Story 14.1 — FacebookCrawler get_comments', () => {
 
     expect(result.comments[0].postId).toBe('facebook:post_123');
   });
+
+  it('[P1] should reject non-Facebook postId URLs to prevent SSRF', async () => {
+    const crawler = createCrawler();
+
+    await expect(
+      crawler.start({
+        action: 'get_comments',
+        args: {
+          postId: 'https://evil.attacker.com/share/p/post_123',
+          maxDepth: 0,
+        },
+        session: { accountId: 'acc_fb_1' },
+      })
+    ).rejects.toThrow();
+  });
 });

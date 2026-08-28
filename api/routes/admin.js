@@ -18,11 +18,13 @@ import {
 } from '../services/licenseManager.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { getStats as getPaymentStats } from '../services/payment-stats.js';
-import { 
-  getWebhookStatus, 
-  testWebhooks, 
-  hasWebhooksConfigured 
+import {
+  getWebhookStatus,
+  testWebhooks,
+  hasWebhooksConfigured
 } from '../services/payment-webhooks.js';
+import { defaultStreamMetricsCollector } from '../../src/utils/stream-metrics-collector.js';
+import { defaultStreamAlertEngine } from '../../src/utils/stream-alerts.js';
 
 const router = Router();
 
@@ -279,6 +281,32 @@ router.post('/x402/webhooks/test', async (req, res) => {
       error: 'Failed to test webhooks',
       message: (error instanceof Error ? error.message : String(error))
     });
+  }
+});
+
+/**
+ * GET /api/admin/stream/metrics
+ * Stream metrics for operator dashboard (Story 14.3)
+ */
+router.get('/stream/metrics', authenticateToken, requireAdmin, async (_req, res) => {
+  try {
+    const metrics = await defaultStreamMetricsCollector.getMetrics();
+    res.json({ success: true, metrics });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
+  }
+});
+
+/**
+ * GET /api/admin/stream/alerts
+ * Stream alert status for operator dashboard (Story 14.3)
+ */
+router.get('/stream/alerts', authenticateToken, requireAdmin, async (_req, res) => {
+  try {
+    const status = defaultStreamAlertEngine.getAlertStatus();
+    res.json({ success: true, alerts: status });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
   }
 });
 

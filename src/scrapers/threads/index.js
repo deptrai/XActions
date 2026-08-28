@@ -6,6 +6,7 @@
  * Uses the same Puppeteer stealth approach as Twitter scrapers.
  * Threads has limited public API, so we scrape the web interface.
  *
+ * @deprecated Marked for deprecation in Phase 1 (Epic 15.1); replaced by hybrid GraphQL ThreadsCrawler (`src/scrapers/social/threads/`). Decommission scheduled in Epic 20.2.
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license MIT
@@ -38,6 +39,7 @@ const THREADS_BASE = 'https://www.threads.net';
 /**
  * Create a browser instance for Threads scraping
  *
+ * @deprecated Use ThreadsClient and ThreadsCrawler from `src/scrapers/social/threads/` instead.
  * @param {import('puppeteer').LaunchOptions} [options]
  * @returns {Promise<import('puppeteer').Browser>}
  */
@@ -56,6 +58,7 @@ export async function createBrowser(options = {}) {
 /**
  * Create a page with realistic settings
  *
+ * @deprecated Use ThreadsClient from `src/scrapers/social/threads/` instead.
  * @param {import('puppeteer').Browser} browser
  * @returns {Promise<import('puppeteer').Page>}
  */
@@ -75,6 +78,7 @@ export async function createPage(browser) {
 /**
  * Scrape a Threads profile
  *
+ * @deprecated Use ThreadsCrawler.getUserFeed from `src/scrapers/social/threads/` instead.
  * @param {import('puppeteer').Page} page - Puppeteer page instance
  * @param {string} username - Threads username (without the leading at symbol)
  * @returns {Promise<Record<string, unknown>>} Normalized profile data
@@ -144,6 +148,7 @@ export async function scrapeProfile(page, username) {
 /**
  * Scrape posts from a Threads user's profile
  *
+ * @deprecated Use ThreadsCrawler.getUserFeed from `src/scrapers/social/threads/` instead.
  * @param {import('puppeteer').Page} page
  * @param {string} username
  * @param {ThreadsScrapeOptions} [options]
@@ -253,6 +258,7 @@ export async function scrapeTweets(page, username, options = {}) {
 /**
  * Search Threads by query
  *
+ * @deprecated Use ThreadsCrawler.search from `src/scrapers/social/threads/` instead.
  * @param {import('puppeteer').Page} page
  * @param {string} query
  * @param {ThreadsScrapeOptions} [options]
@@ -340,6 +346,7 @@ export async function searchTweets(page, query, options = {}) {
  * Note: Threads doesn't expose follower lists publicly like Twitter.
  * This returns limited data from the profile page.
  *
+ * @deprecated Legacy Puppeteer scraper. Decommission scheduled in Epic 20.2.
  * @param {import('puppeteer').Page} page
  * @param {string} username
  * @param {ThreadsScrapeOptions} [options]
@@ -363,6 +370,7 @@ export async function scrapeFollowers(page, username, options = {}) {
  * Scrape following for a Threads user
  * Note: Same limitation as followers.
  *
+ * @deprecated Legacy Puppeteer scraper. Decommission scheduled in Epic 20.2.
  * @param {import('puppeteer').Page} page
  * @param {string} username
  * @param {ThreadsScrapeOptions} [options]
@@ -385,7 +393,10 @@ export async function scrapeFollowing(page, username, options = {}) {
 // Default Export
 // ============================================================================
 
-export default {
+/**
+ * @deprecated Use ThreadsClient and ThreadsCrawler from `src/scrapers/social/threads/` instead.
+ */
+const legacyThreadsScraper = {
   createBrowser,
   createPage,
   scrapeProfile,
@@ -394,3 +405,5 @@ export default {
   scrapeTweets,
   searchTweets,
 };
+
+export default legacyThreadsScraper;

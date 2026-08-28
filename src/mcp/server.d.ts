@@ -7,5 +7,8 @@ export function executeFacebookAutomateTool(...args: unknown[]): unknown;
 export function executeFacebookEpic4Tool(...args: unknown[]): unknown;
 export function executeFacebookScrapeTool(...args: unknown[]): unknown;
 export function executeFacebookListAccounts(...args: unknown[]): unknown;
+export function executeActionListTool(...args: unknown[]): unknown;
+export function executeCrawlPostTool(...args: unknown[]): unknown;
+export function executeCrawlCommentsTreeTool(...args: unknown[]): unknown;
 declare const _default: unknown;
 export default _default;

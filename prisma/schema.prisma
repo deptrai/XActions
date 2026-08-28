@@ -396,6 +396,7 @@ model CrawlCheckpoint {
   lastTimestamp   DateTime?
   lastCrawledAt   DateTime?
   nextScheduledAt DateTime?
+  storageRef      String?   // Pointer to latest stored PostItem / CommentItem row id
   errorCount      Int       @default(0)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

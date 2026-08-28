@@ -186,4 +186,26 @@ describe('Story 14.1 — CommentTreeExtractor', () => {
     expect(comments).toHaveLength(1);
     expect(comments[0].externalId).toBe('r1');
   });
+
+  it('[P0] should support options.after pagination for root cursor', async () => {
+    const { CommentTreeExtractor } = await import('../../../src/scrapers/social/comment-tree.js');
+
+    /** @type {string | null | undefined} */
+    let receivedCursor;
+    const fetchLayer = async ({ parentCommentId, after }) => {
+      if (!parentCommentId) {
+        receivedCursor = after;
+        return { comments: [makeRaw('r_paginated')], pageInfo: { has_next_page: false, end_cursor: null } };
+      }
+      return { comments: [], pageInfo: { has_next_page: false, end_cursor: null } };
+    };
+
+    const extractor = new CommentTreeExtractor(fetchLayer, normalizeFn, { maxDepth: 1, maxComments: 500 });
+    const { comments } = await extractor.fetch('post_123', { after: 'initial_root_cursor_999' });
+
+    expect(receivedCursor).toBe('initial_root_cursor_999');
+    expect(comments).toHaveLength(1);
+    expect(comments[0].externalId).toBe('r_paginated');
+  });
 });
+

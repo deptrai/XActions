@@ -1,0 +1,1024 @@
+diff --git a/src/core/base-client.js b/src/core/base-client.js
+index ad6fe3f..4a78a37 100644
+--- a/src/core/base-client.js
++++ b/src/core/base-client.js
+@@ -38,6 +38,7 @@ export class AbstractApiClient {
+     }
+     this.sessionManager = options.sessionManager;
+     this.proxyPool = options.proxyPool;
++    this.proxyProvider = options.proxyProvider;
+     this.accountPool = options.accountPool;
+     this.governor = options.governor;
+   }
+@@ -54,11 +55,19 @@ export class AbstractApiClient {
+    * @returns {any}
+    */
+   resolveProxy(accountId) {
+-    if (!this.proxyPool) return null;
+-
+-    const proxy = this.requiresAuth && accountId
+-      ? this.proxyPool.getStickyProxy(accountId)
+-      : this.proxyPool.getNext();
++    const provider = this.proxyProvider || this.proxyPool;
++    if (!provider) return null;
++
++    let proxy;
++    if (typeof provider.getProxy === 'function') {
++      proxy = this.requiresAuth && accountId
++        ? provider.getProxy({ accountId })
++        : provider.getProxy();
++    } else {
++      proxy = this.requiresAuth && accountId
++        ? provider.getStickyProxy(accountId)
++        : provider.getNext();
++    }
+ 
+     if (!proxy) {
+       // Enter standby backoff for the account, if registered, before throwing.
+diff --git a/src/proxy/index.js b/src/proxy/index.js
+index 2eed432..ec4eaac 100644
+--- a/src/proxy/index.js
++++ b/src/proxy/index.js
+@@ -1,8 +1,18 @@
+ // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+ /**
+- * XActions Proxy — proxy pool and anti-leak utilities.
++ * XActions Proxy — proxy pool, providers, and anti-leak utilities.
+  * @author nich (@nichxbt)
+  * @license MIT
+  */
+ 
+ export { ProxyIpPool, globalProxyPool } from './proxy-pool.js';
++export {
++  SUPPORTED_PROXY_SCHEMES,
++  parseProxyUrl,
++  normalizeProxy,
++  formatProxyUrl,
++  getProxyAgent,
++  StaticProxyProvider,
++  DynamicTunnelProvider,
++  createProxyProvider,
++} from './providers.js';
+diff --git a/src/proxy/providers.js b/src/proxy/providers.js
+index cc2c677..a74cefe 100644
+--- a/src/proxy/providers.js
++++ b/src/proxy/providers.js
+@@ -1,12 +1,13 @@
+ // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+ /**
+- * Proxy normalization and URL parser utilities for ProxyIpPool.
++ * Proxy normalization, URL parser utilities, StaticProxyProvider, and DynamicTunnelProvider for ProxyIpPool.
+  * @author nich (@nichxbt)
+  * @license MIT
+  */
+ 
+ import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
+ import { ProxyAgent, Socks5ProxyAgent } from 'undici';
++import { ProxyIpPool } from './proxy-pool.js';
+ 
+ export const SUPPORTED_PROXY_SCHEMES = ['http', 'https', 'socks5'];
+ 
+@@ -16,6 +17,8 @@ const DEFAULT_SCHEME_PORTS = {
+   socks5: 1080,
+ };
+ 
++const MAX_ACCOUNT_SEEDS = 10000;
++
+ /**
+  * @typedef {Object} NormalizedProxy
+  * @property {string} scheme
+@@ -88,6 +91,7 @@ export function parseProxyUrl(urlString) {
+       code: 'XACT_4001',
+       message: `Malformed proxy URL: "${urlString}"`,
+       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      cause: err,
+     });
+   }
+ 
+@@ -258,3 +262,380 @@ export function getProxyAgent(proxy, options = {}) {
+     suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+   });
+ }
++
++/**
++ * Static Proxy Provider implementation wrapping ProxyIpPool.
++ */
++export class StaticProxyProvider {
++  name = 'static';
++
++  /**
++   * @param {Object} [options]
++   * @param {ProxyIpPool} [options.pool]
++   * @param {Array<string | Object>} [options.proxies]
++   * @param {boolean} [options.validateOnAdd]
++   */
++  constructor(options = {}) {
++    if (!options || typeof options !== 'object') {
++      throw new PlatformError({
++        type: ErrorTypes.INVALID_ARGS,
++        code: 'XACT_4001',
++        message: 'StaticProxyProvider options must be an object',
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++
++    if (options.pool instanceof ProxyIpPool) {
++      this.pool = options.pool;
++    } else if (Array.isArray(options.proxies)) {
++      this.pool = new ProxyIpPool({
++        proxies: options.proxies,
++        validateOnAdd: options.validateOnAdd,
++      });
++    } else {
++      throw new PlatformError({
++        type: ErrorTypes.INVALID_ARGS,
++        code: 'XACT_4001',
++        message: 'StaticProxyProvider requires options.pool or options.proxies array',
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++  }
++
++  get healthyCount() {
++    return this.pool.healthyCount;
++  }
++
++  get totalCount() {
++    return this.pool.totalCount;
++  }
++
++  isAllQuarantined() {
++    return this.pool.isAllQuarantined();
++  }
++
++  getProxy(options = {}) {
++    const opts = options || {};
++    if (opts.accountId) {
++      return this.pool.getStickyProxy(opts.accountId);
++    }
++    return this.pool.getNext();
++  }
++
++  getStickyProxy(accountId) {
++    return this.pool.getStickyProxy(accountId);
++  }
++
++  getNext() {
++    return this.pool.getNext();
++  }
++
++  quarantine(proxy, durationMs) {
++    this.pool.quarantine(proxy, durationMs);
++  }
++
++  toPlaywrightProxy(proxy) {
++    return this.pool.toPlaywrightProxy(proxy);
++  }
++
++  getProxyAgent(proxy, options = {}) {
++    return getProxyAgent(proxy, options);
++  }
++
++  getBrowserArgs(proxy) {
++    return this.pool.getBrowserArgs(proxy);
++  }
++}
++
++/**
++ * Dynamic Tunnel Residential Proxy Provider with multi-provider presets and rotation.
++ */
++export class DynamicTunnelProvider {
++  name = 'dynamic';
++  #accountSeeds = new Map();
++  #quarantinedSessions = new Map();
++  #globalSeed = 0;
++
++  /**
++   * @param {Object} options
++   * @param {string} options.gatewayUrl
++   * @param {'brightdata' | 'smartproxy' | 'iproyal' | 'kuaidaili' | 'custom'} [options.provider]
++   * @param {string} [options.template]
++   * @param {boolean} [options.rotatePerRequest=true]
++   * @param {number} [options.sessionDurationMs=600000]
++   * @param {string} [options.country]
++   * @param {string} [options.city]
++   */
++  constructor(options = {}) {
++    if (!options || typeof options !== 'object') {
++      throw new PlatformError({
++        type: ErrorTypes.INVALID_ARGS,
++        code: 'XACT_4001',
++        message: 'DynamicTunnelProvider options must be an object',
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++
++    if (!options.gatewayUrl || typeof options.gatewayUrl !== 'string') {
++      throw new PlatformError({
++        type: ErrorTypes.INVALID_ARGS,
++        code: 'XACT_4001',
++        message: 'DynamicTunnelProvider requires a non-empty gatewayUrl string',
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++
++    this.rawGateway = parseProxyUrl(options.gatewayUrl);
++    this.provider = options.provider || this.#autoDetectProvider(this.rawGateway.host);
++    this.template = options.template || '{username}:country={country}:session={sessionId}';
++    this.rotatePerRequest = options.rotatePerRequest !== false;
++    this.sessionDurationMs = options.sessionDurationMs || 600000;
++    this.defaultCountry = options.country;
++    this.defaultCity = options.city;
++  }
++
++  #autoDetectProvider(host) {
++    const h = (host || '').toLowerCase();
++    if (h.endsWith('superproxy.io') || h.endsWith('luminati.io') || h.includes('superproxy.') || h.includes('luminati.')) {
++      return 'brightdata';
++    }
++    if (h.endsWith('smartproxy.com') || h.endsWith('smartproxy.io') || h.endsWith('decodo.com') || h.includes('smartproxy.') || h.includes('decodo.')) {
++      return 'smartproxy';
++    }
++    if (h.endsWith('iproyal.com') || h.endsWith('royalproxy.io') || h.includes('iproyal.') || h.includes('royalproxy.')) {
++      return 'iproyal';
++    }
++    if (h.endsWith('kdlapi.com') || h.endsWith('kuaidaili.com') || h.includes('kdlapi.') || h.includes('kuaidaili.')) {
++      return 'kuaidaili';
++    }
++    return 'custom';
++  }
++
++  get healthyCount() {
++    this.pruneExpiredQuarantines();
++    return 1;
++  }
++
++  get totalCount() {
++    return 1;
++  }
++
++  isAllQuarantined() {
++    this.pruneExpiredQuarantines();
++    return false;
++  }
++
++  pruneExpiredQuarantines() {
++    const now = Date.now();
++    for (const [key, expiresAt] of this.#quarantinedSessions.entries()) {
++      if (now >= expiresAt) {
++        this.#quarantinedSessions.delete(key);
++      }
++    }
++  }
++
++  rotateSession(accountId) {
++    if (accountId) {
++      const current = this.#accountSeeds.get(accountId) || 0;
++      if (this.#accountSeeds.size >= MAX_ACCOUNT_SEEDS) {
++        const firstKey = this.#accountSeeds.keys().next().value;
++        if (firstKey) this.#accountSeeds.delete(firstKey);
++      }
++      this.#accountSeeds.set(accountId, current + 1);
++    } else {
++      this.#globalSeed++;
++    }
++  }
++
++  clearAccount(accountId) {
++    if (accountId) {
++      this.#accountSeeds.delete(accountId);
++    }
++  }
++
++  reset() {
++    this.#accountSeeds.clear();
++    this.#quarantinedSessions.clear();
++    this.#globalSeed = 0;
++  }
++
++  quarantine(proxy, durationMs = 300000) {
++    if (proxy) {
++      const norm = normalizeProxy(proxy);
++      const key = formatProxyUrl(norm);
++      this.#quarantinedSessions.set(key, Date.now() + durationMs);
++    }
++
++    for (const [accId] of this.#accountSeeds.entries()) {
++      const current = this.#accountSeeds.get(accId) || 0;
++      this.#accountSeeds.set(accId, current + 1);
++    }
++    this.#globalSeed++;
++  }
++
++  #formatUsername({ country, city, sessionId }) {
++    const rawUser = this.rawGateway.username || '';
++    const cleanCountry = country ? String(country).toLowerCase().trim() : '';
++    const cleanCity = city ? String(city).toLowerCase().replace(/\s+/g, '').trim() : '';
++    const preset = this.provider;
++
++    const baseUser = (rawUser.startsWith('user-') || rawUser.startsWith('brd-') || rawUser.startsWith('lum-'))
++      ? rawUser
++      : (rawUser ? `user-${rawUser}` : '');
++
++    if (preset === 'brightdata') {
++      const parts = [baseUser];
++      if (cleanCountry) parts.push(`country-${cleanCountry}`);
++      if (cleanCity) parts.push(`city-${cleanCity}`);
++      if (sessionId) parts.push(`session-${sessionId}`);
++      return parts.filter(Boolean).join('-');
++    }
++
++    if (preset === 'smartproxy' || preset === 'iproyal') {
++      const parts = [baseUser];
++      if (cleanCountry) parts.push(`country-${cleanCountry}`);
++      if (cleanCity) parts.push(`city-${cleanCity}`);
++      if (sessionId) parts.push(`session-${sessionId}`);
++      return parts.filter(Boolean).join('_');
++    }
++
++    if (preset === 'kuaidaili') {
++      const parts = [baseUser];
++      if (sessionId) parts.push(`session-${sessionId}`);
++      return parts.filter(Boolean).join('_');
++    }
++
++    if (preset === 'custom') {
++      let tpl = this.template;
++      tpl = tpl.replaceAll('{username}', rawUser);
++      tpl = tpl.replaceAll('{country}', cleanCountry);
++      tpl = tpl.replaceAll('{city}', cleanCity);
++      tpl = tpl.replaceAll('{sessionId}', sessionId || '');
++      return tpl;
++    }
++
++    return rawUser;
++  }
++
++  getProxy(options = {}) {
++    const opts = options || {};
++    const accountId = opts.accountId;
++    const country = opts.country || this.defaultCountry;
++    const city = opts.city || this.defaultCity;
++    let sessionId = opts.sessionId;
++
++    if (!sessionId) {
++      if (accountId) {
++        const bucket = Math.floor(Date.now() / this.sessionDurationMs);
++        const seed = (this.#accountSeeds.get(accountId) || 0) + this.#globalSeed;
++        sessionId = `${accountId}_${bucket}_${seed}`;
++      } else if (this.rotatePerRequest) {
++        const rnd = Math.random().toString(36).slice(2, 10);
++        const ts = Date.now().toString(36);
++        sessionId = `sess_${rnd}${ts}_${this.#globalSeed}`;
++      } else {
++        sessionId = `sess_static_${this.#globalSeed}`;
++      }
++    }
++
++    const username = this.#formatUsername({ country, city, sessionId });
++    const password = this.rawGateway.password;
++
++    return normalizeProxy({
++      scheme: this.rawGateway.scheme,
++      host: this.rawGateway.host,
++      port: this.rawGateway.port,
++      username,
++      password,
++    });
++  }
++
++  getStickyProxy(accountId) {
++    return this.getProxy({ accountId });
++  }
++
++  getNext() {
++    return this.getProxy();
++  }
++
++  toPlaywrightProxy(proxy) {
++    if (!proxy) return null;
++    const norm = normalizeProxy(proxy);
++    const result = {
++      server: norm.server,
++    };
++    if (norm.username !== undefined) result.username = norm.username;
++    if (norm.password !== undefined) result.password = norm.password;
++    return result;
++  }
++
++  getProxyAgent(proxy, options = {}) {
++    return getProxyAgent(proxy, options);
++  }
++
++  getBrowserArgs(proxy) {
++    if (!proxy) {
++      throw new PlatformError({
++        type: ErrorTypes.INVALID_ARGS,
++        code: 'XACT_4001',
++        message: 'Proxy is required to generate browser args',
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++    const norm = normalizeProxy(proxy);
++    return [
++      '--force-webrtc-ip-handling-policy=disable_non_proxied_udp',
++      '--disable-features=WebRtcHideLocalIpsWithMdns',
++      `--host-resolver-rules="MAP * ~NOTFOUND , EXCLUDE ${norm.host}"`,
++      `--proxy-server=${norm.server}`,
++    ];
++  }
++}
++
++/**
++ * Unified factory for creating proxy providers.
++ * @param {Object} config
++ * @returns {StaticProxyProvider | DynamicTunnelProvider}
++ */
++export function createProxyProvider(config) {
++  if (!config || typeof config !== 'object') {
++    throw new PlatformError({
++      type: ErrorTypes.INVALID_ARGS,
++      code: 'XACT_4001',
++      message: 'Provider configuration object is required',
++      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++    });
++  }
++
++  if (config.gatewayUrl && (config.proxies || config.pool) && !config.type) {
++    throw new PlatformError({
++      type: ErrorTypes.INVALID_ARGS,
++      code: 'XACT_4001',
++      message: 'Ambiguous proxy configuration: both gatewayUrl and static proxies provided without explicit type',
++      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++    });
++  }
++
++  if (config.type === 'dynamic') {
++    return new DynamicTunnelProvider(config);
++  }
++
++  if (config.type === 'static') {
++    return new StaticProxyProvider(config);
++  }
++
++  if (config.gatewayUrl) {
++    return new DynamicTunnelProvider(config);
++  }
++
++  if (config.proxies || config.pool) {
++    return new StaticProxyProvider(config);
++  }
++
++  throw new PlatformError({
++    type: ErrorTypes.INVALID_ARGS,
++    code: 'XACT_4001',
++    message: `Unknown or unsupported proxy provider configuration: "${JSON.stringify(config)}"`,
++    suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++  });
++}
+diff --git a/tests/proxy/providers-tunnel.test.js b/tests/proxy/providers-tunnel.test.js
+new file mode 100644
+index 0000000..2a86f5e
+--- /dev/null
++++ b/tests/proxy/providers-tunnel.test.js
+@@ -0,0 +1,421 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
++import {
++  StaticProxyProvider,
++  DynamicTunnelProvider,
++  createProxyProvider,
++  parseProxyUrl,
++  normalizeProxy,
++  getProxyAgent,
++} from '../../src/proxy/providers.js';
++import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
++import { PlatformError } from '../../src/core/error-envelope.js';
++import { ProxyAgent, Socks5ProxyAgent } from 'undici';
++
++describe('Story 11.2 - Static & Dynamic Residential Tunnel Proxy Providers', () => {
++  describe('AC-1: StaticProxyProvider Implementation & Unified Contract', () => {
++    test('should instantiate with a list of proxy strings and wrap an internal ProxyIpPool', () => {
++      const provider = new StaticProxyProvider({
++        proxies: [
++          'http://proxy1.example.com:8080',
++          'http://proxy2.example.com:8080',
++        ],
++      });
++
++      expect(provider.name).toBe('static');
++      expect(provider.totalCount).toBe(2);
++      expect(provider.healthyCount).toBe(2);
++      expect(provider.isAllQuarantined()).toBe(false);
++    });
++
++    test('should accept an existing ProxyIpPool instance in options', () => {
++      const pool = new ProxyIpPool({
++        proxies: ['http://pool-proxy.example.com:8080'],
++      });
++      const provider = new StaticProxyProvider({ pool });
++
++      expect(provider.totalCount).toBe(1);
++      expect(provider.getNext().host).toBe('pool-proxy.example.com');
++    });
++
++    test('should return sticky proxy for accountId and round-robin when accountId is omitted', () => {
++      const provider = new StaticProxyProvider({
++        proxies: [
++          'http://proxy1.example.com:8080',
++          'http://proxy2.example.com:8080',
++        ],
++      });
++
++      const p1 = provider.getProxy({ accountId: 'acc_1' });
++      const p2 = provider.getProxy({ accountId: 'acc_1' });
++      expect(p1.server).toBe(p2.server);
++
++      const rr1 = provider.getProxy();
++      const rr2 = provider.getProxy();
++      expect(rr1.server).not.toBe(rr2.server);
++    });
++
++    test('should provide getStickyProxy, getNext, and quarantine methods adhering to contract', () => {
++      const provider = new StaticProxyProvider({
++        proxies: ['http://proxy1.example.com:8080'],
++      });
++
++      const sticky = provider.getStickyProxy('acc_x');
++      expect(sticky.host).toBe('proxy1.example.com');
++
++      const next = provider.getNext();
++      expect(next.host).toBe('proxy1.example.com');
++
++      provider.quarantine(sticky, 5000);
++      expect(provider.healthyCount).toBe(0);
++      expect(provider.isAllQuarantined()).toBe(true);
++    });
++
++    test('should generate Playwright proxy config, agents, and browser launch args', () => {
++      const provider = new StaticProxyProvider({
++        proxies: ['http://user:pass@proxy1.example.com:8080'],
++      });
++
++      const proxy = provider.getNext();
++      const pwConfig = provider.toPlaywrightProxy(proxy);
++      expect(pwConfig).toEqual({
++        server: 'http://proxy1.example.com:8080',
++        username: 'user',
++        password: 'pass',
++      });
++
++      const browserArgs = provider.getBrowserArgs(proxy);
++      expect(browserArgs).toContain('--proxy-server=http://proxy1.example.com:8080');
++      expect(browserArgs).toContain('--force-webrtc-ip-handling-policy=disable_non_proxied_udp');
++
++      const agent = provider.getProxyAgent(proxy);
++      expect(agent).toBeInstanceOf(ProxyAgent);
++    });
++  });
++
++  describe('AC-2: DynamicTunnelProvider Gateway Parsing & Auto-Detection', () => {
++    test('should parse gateway URL and auto-detect provider presets from hostname', () => {
++      const brightdata = new DynamicTunnelProvider({
++        gatewayUrl: 'http://user:pass@brd.superproxy.io:22225',
++      });
++      expect(brightdata.provider).toBe('brightdata');
++      expect(brightdata.name).toBe('dynamic');
++
++      const smartproxy = new DynamicTunnelProvider({
++        gatewayUrl: 'http://user:pass@gate.smartproxy.com:7000',
++      });
++      expect(smartproxy.provider).toBe('smartproxy');
++
++      const decodo = new DynamicTunnelProvider({
++        gatewayUrl: 'http://user:pass@gate.decodo.com:7000',
++      });
++      expect(decodo.provider).toBe('smartproxy');
++
++      const iproyal = new DynamicTunnelProvider({
++        gatewayUrl: 'socks5://user:pass@geo.iproyal.com:12321',
++      });
++      expect(iproyal.provider).toBe('iproyal');
++
++      const kuaidaili = new DynamicTunnelProvider({
++        gatewayUrl: 'http://user:pass@open.kdlapi.com:10000',
++      });
++      expect(kuaidaili.provider).toBe('kuaidaili');
++
++      const custom = new DynamicTunnelProvider({
++        gatewayUrl: 'http://user:pass@unknown-proxy.com:8080',
++      });
++      expect(custom.provider).toBe('custom');
++    });
++
++    test('should allow explicit provider override regardless of gateway hostname', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://user:pass@custom-domain.com:8080',
++        provider: 'brightdata',
++      });
++      expect(provider.provider).toBe('brightdata');
++    });
++
++    test('should throw PlatformError XACT_4001 on missing or invalid gatewayUrl', () => {
++      expect(() => new DynamicTunnelProvider({})).toThrow(PlatformError);
++      expect(() => new DynamicTunnelProvider({ gatewayUrl: '' })).toThrow(PlatformError);
++      expect(() => new DynamicTunnelProvider({ gatewayUrl: 'invalid://url' })).toThrow(PlatformError);
++    });
++  });
++
++  describe('AC-3: Per-Request Residential IP Rotation', () => {
++    test('should generate unique per-request session tag and credentials on each getProxy() call', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
++        rotatePerRequest: true,
++      });
++
++      const p1 = provider.getProxy();
++      const p2 = provider.getProxy();
++
++      expect(p1.host).toBe('gate.smartproxy.com');
++      expect(p1.port).toBe(7000);
++      expect(p1.username).toContain('myuser');
++      expect(p1.username).toContain('session-');
++      expect(p2.username).toContain('myuser');
++
++      // Credentials must differ to force fresh residential exit IP
++      expect(p1.username).not.toBe(p2.username);
++    });
++
++    test('should maintain static session when rotatePerRequest is false and accountId is omitted', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
++        rotatePerRequest: false,
++      });
++
++      const p1 = provider.getProxy();
++      const p2 = provider.getProxy();
++      expect(p1.username).toBe(p2.username);
++    });
++
++    test('should provide getNext() as an alias for per-request rotation', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://myuser:mypass@brd.superproxy.io:22225',
++      });
++
++      const p1 = provider.getNext();
++      const p2 = provider.getNext();
++      expect(p1.username).not.toBe(p2.username);
++    });
++
++    test('should safely handle null options passed to getProxy', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://myuser:mypass@brd.superproxy.io:22225',
++      });
++
++      expect(() => provider.getProxy(null)).not.toThrow();
++    });
++  });
++
++  describe('AC-4: Sticky Residential Session per Account & Expiration Lifecycle', () => {
++    beforeEach(() => {
++      vi.useFakeTimers();
++    });
++
++    afterEach(() => {
++      vi.useRealTimers();
++    });
++
++    test('should maintain deterministic session credentials for the same accountId within session window', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
++        sessionDurationMs: 600000, // 10 mins
++      });
++
++      const p1 = provider.getProxy({ accountId: 'acc_target' });
++      const p2 = provider.getProxy({ accountId: 'acc_target' });
++
++      expect(p1.username).toBe(p2.username);
++      expect(p1.server).toBe(p2.server);
++    });
++
++    test('should automatically roll over to a new session tag when sessionDurationMs elapses', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
++        sessionDurationMs: 600000,
++      });
++
++      const p1 = provider.getProxy({ accountId: 'acc_target' });
++
++      // Advance time beyond session duration (10m + 1s)
++      vi.advanceTimersByTime(600001);
++
++      const p2 = provider.getProxy({ accountId: 'acc_target' });
++      expect(p1.username).not.toBe(p2.username);
++    });
++
++    test('should immediately invalidate session tag on rotateSession(accountId) or quarantine(proxy)', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
++        sessionDurationMs: 600000,
++      });
++
++      const p1 = provider.getProxy({ accountId: 'acc_target' });
++      provider.rotateSession('acc_target');
++
++      const p2 = provider.getProxy({ accountId: 'acc_target' });
++      expect(p1.username).not.toBe(p2.username);
++
++      provider.quarantine(p2);
++      const p3 = provider.getProxy({ accountId: 'acc_target' });
++      expect(p2.username).not.toBe(p3.username);
++    });
++
++    test('should support clearAccount and reset for cache cleanup', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://myuser:mypass@gate.smartproxy.com:7000',
++      });
++
++      provider.getProxy({ accountId: 'acc_cleanup' });
++      provider.clearAccount('acc_cleanup');
++      provider.reset();
++      expect(provider.healthyCount).toBe(1);
++    });
++  });
++
++  describe('AC-5: Geo-Targeting Formatting Presets & Custom Template', () => {
++    test('should format BrightData username with country, city, and session correctly', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://lum_user:lum_pass@brd.superproxy.io:22225',
++        provider: 'brightdata',
++      });
++
++      const proxy = provider.getProxy({
++        country: 'US',
++        city: 'New York',
++        sessionId: 'sess123',
++      });
++
++      expect(proxy.username).toBe('user-lum_user-country-us-city-newyork-session-sess123');
++    });
++
++    test('should avoid duplicate user- prefix if baseUser already has user-, brd-, or lum-', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://brd-customer-123-zone-res:pass@brd.superproxy.io:22225',
++        provider: 'brightdata',
++      });
++
++      const proxy = provider.getProxy({ sessionId: 's1' });
++      expect(proxy.username).toBe('brd-customer-123-zone-res-session-s1');
++    });
++
++    test('should format Smartproxy and IPRoyal with underscore delimited tags', () => {
++      const sp = new DynamicTunnelProvider({
++        gatewayUrl: 'http://sp_user:sp_pass@gate.smartproxy.com:7000',
++        provider: 'smartproxy',
++      });
++
++      const spProxy = sp.getProxy({
++        country: 'gb',
++        sessionId: 'sess456',
++      });
++      expect(spProxy.username).toBe('user-sp_user_country-gb_session-sess456');
++
++      const ipr = new DynamicTunnelProvider({
++        gatewayUrl: 'http://ipr_user:ipr_pass@geo.iproyal.com:12321',
++        provider: 'iproyal',
++      });
++
++      const iprProxy = ipr.getProxy({
++        country: 'de',
++        city: 'berlin',
++        sessionId: 'sess789',
++      });
++      expect(iprProxy.username).toBe('user-ipr_user_country-de_city-berlin_session-sess789');
++    });
++
++    test('should format Kuaidaili with user and session tags', () => {
++      const kdl = new DynamicTunnelProvider({
++        gatewayUrl: 'http://kdl_user:kdl_pass@open.kdlapi.com:10000',
++        provider: 'kuaidaili',
++      });
++
++      const proxy = kdl.getProxy({ sessionId: 'sess999' });
++      expect(proxy.username).toBe('user-kdl_user_session-sess999');
++    });
++
++    test('should render custom template pattern string accurately with replaceAll', () => {
++      const custom = new DynamicTunnelProvider({
++        gatewayUrl: 'http://baseuser:basepass@custom.proxy:8080',
++        provider: 'custom',
++        template: '{username}:country={country}:session={sessionId}:s={sessionId}',
++      });
++
++      const proxy = custom.getProxy({
++        country: 'vn',
++        sessionId: 'sessVN',
++      });
++
++      expect(proxy.username).toBe('baseuser:country=vn:session=sessVN:s=sessVN');
++    });
++
++    test('should cleanly omit optional geo segments without creating dangling delimiters', () => {
++      const provider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://user:pass@brd.superproxy.io:22225',
++        provider: 'brightdata',
++      });
++
++      const proxy = provider.getProxy({ sessionId: 'sess1' });
++      expect(proxy.username).toBe('user-user-session-sess1');
++      expect(proxy.username).not.toContain('country-');
++      expect(proxy.username).not.toContain('city-');
++      expect(proxy.username).not.toContain('--');
++    });
++  });
++
++  describe('AC-6: Unified Provider Factory (createProxyProvider)', () => {
++    test('should instantiate DynamicTunnelProvider when type is dynamic or gatewayUrl is provided', () => {
++      const p1 = createProxyProvider({
++        type: 'dynamic',
++        gatewayUrl: 'http://user:pass@gate.smartproxy.com:7000',
++      });
++      expect(p1).toBeInstanceOf(DynamicTunnelProvider);
++
++      const p2 = createProxyProvider({
++        gatewayUrl: 'http://user:pass@brd.superproxy.io:22225',
++      });
++      expect(p2).toBeInstanceOf(DynamicTunnelProvider);
++    });
++
++    test('should instantiate StaticProxyProvider when type is static or proxies list is provided', () => {
++      const p1 = createProxyProvider({
++        type: 'static',
++        proxies: ['http://proxy1.example.com:8080'],
++      });
++      expect(p1).toBeInstanceOf(StaticProxyProvider);
++
++      const p2 = createProxyProvider({
++        proxies: ['http://proxy1.example.com:8080'],
++      });
++      expect(p2).toBeInstanceOf(StaticProxyProvider);
++    });
++
++    test('should prioritize explicit type when both gatewayUrl and proxies are provided', () => {
++      const p1 = createProxyProvider({
++        type: 'static',
++        gatewayUrl: 'http://user:pass@gate.smartproxy.com:7000',
++        proxies: ['http://proxy1.example.com:8080'],
++      });
++      expect(p1).toBeInstanceOf(StaticProxyProvider);
++    });
++
++    test('should throw PlatformError XACT_4001 on ambiguous or unknown provider configuration', () => {
++      expect(() => createProxyProvider({ type: 'unknown' })).toThrow(PlatformError);
++      expect(() => createProxyProvider(null)).toThrow(PlatformError);
++      expect(() => createProxyProvider({})).toThrow(PlatformError);
++      expect(() => createProxyProvider({
++        gatewayUrl: 'http://user:pass@gate.smartproxy.com:7000',
++        proxies: ['http://proxy1.example.com:8080'],
++      })).toThrow(PlatformError);
++    });
++  });
++
++  describe('AC-7: Anti-Leak Browser & Protocol Compatibility', () => {
++    test('should create valid undici ProxyAgent / Socks5ProxyAgent and anti-leak Chromium flags including DNS rules', () => {
++      const httpProvider = new DynamicTunnelProvider({
++        gatewayUrl: 'http://user:pass@brd.superproxy.io:22225',
++      });
++      const httpProxy = httpProvider.getProxy();
++      const httpAgent = httpProvider.getProxyAgent(httpProxy);
++      expect(httpAgent).toBeInstanceOf(ProxyAgent);
++
++      const socksProvider = new DynamicTunnelProvider({
++        gatewayUrl: 'socks5://user:pass@geo.iproyal.com:12321',
++      });
++      const socksProxy = socksProvider.getProxy();
++      const socksAgent = socksProvider.getProxyAgent(socksProxy);
++      expect(socksAgent).toBeInstanceOf(Socks5ProxyAgent);
++
++      const browserArgs = socksProvider.getBrowserArgs(socksProxy);
++      expect(browserArgs).toContain('--force-webrtc-ip-handling-policy=disable_non_proxied_udp');
++      expect(browserArgs).toContain('--disable-features=WebRtcHideLocalIpsWithMdns');
++      expect(browserArgs).toContain(`--host-resolver-rules="MAP * ~NOTFOUND , EXCLUDE ${socksProxy.host}"`);
++      expect(browserArgs).toContain(`--proxy-server=${socksProxy.server}`);
++    });
++  });
++});
+diff --git a/types/proxy.d.ts b/types/proxy.d.ts
+index bc36050..26497dd 100644
+--- a/types/proxy.d.ts
++++ b/types/proxy.d.ts
+@@ -7,8 +7,11 @@
+ 
+ import type { ProxyAgent, Socks5ProxyAgent } from 'undici';
+ 
++export type SupportedProxyScheme = 'http' | 'https' | 'socks5';
++export type ProviderPreset = 'brightdata' | 'smartproxy' | 'iproyal' | 'kuaidaili' | 'custom';
++
+ export interface NormalizedProxy {
+-  scheme: 'http' | 'https' | 'socks5';
++  scheme: SupportedProxyScheme;
+   host: string;
+   port: number;
+   username?: string;
+@@ -31,6 +34,44 @@ export interface ProxyAgentOptions {
+   client?: 'undici' | 'got';
+ }
+ 
++export interface ProxyRequestOptions {
++  accountId?: string;
++  platform?: string;
++  country?: string;
++  city?: string;
++  sessionId?: string;
++}
++
++export interface ProxyProviderContract {
++  name: string;
++  get healthyCount(): number;
++  get totalCount(): number;
++  isAllQuarantined(): boolean;
++  getProxy(options?: ProxyRequestOptions): NormalizedProxy | null;
++  getStickyProxy(accountId: string): NormalizedProxy | null;
++  getNext(): NormalizedProxy | null;
++  quarantine(proxy?: string | Partial<NormalizedProxy>, durationMs?: number): void;
++  toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
++  getProxyAgent(proxy: string | NormalizedProxy, options?: ProxyAgentOptions): ProxyAgent | Socks5ProxyAgent | string;
++  getBrowserArgs(proxy: string | Partial<NormalizedProxy>): string[];
++}
++
++export interface StaticProxyOptions {
++  pool?: ProxyIpPool;
++  proxies?: Array<string | Partial<NormalizedProxy>>;
++  validateOnAdd?: boolean;
++}
++
++export interface DynamicTunnelOptions {
++  gatewayUrl: string;
++  provider?: ProviderPreset;
++  template?: string;
++  rotatePerRequest?: boolean;
++  sessionDurationMs?: number;
++  country?: string;
++  city?: string;
++}
++
+ export interface AccountRecord {
+   platform: string;
+   accountId: string;
+@@ -89,6 +130,56 @@ export declare class AccountPool {
+ 
+ export declare const globalAccountPool: AccountPool;
+ 
++export declare class StaticProxyProvider implements ProxyProviderContract {
++  name: string;
++  pool: ProxyIpPool;
++
++  constructor(options?: StaticProxyOptions);
++
++  get healthyCount(): number;
++  get totalCount(): number;
++  isAllQuarantined(): boolean;
++  getProxy(options?: ProxyRequestOptions): NormalizedProxy | null;
++  getStickyProxy(accountId: string): NormalizedProxy | null;
++  getNext(): NormalizedProxy | null;
++  quarantine(proxy?: string | Partial<NormalizedProxy>, durationMs?: number): void;
++  toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
++  getProxyAgent(proxy: string | NormalizedProxy, options?: ProxyAgentOptions): ProxyAgent | Socks5ProxyAgent | string;
++  getBrowserArgs(proxy: string | Partial<NormalizedProxy>): string[];
++}
++
++export declare class DynamicTunnelProvider implements ProxyProviderContract {
++  name: string;
++  provider: ProviderPreset;
++  template: string;
++  rotatePerRequest: boolean;
++  sessionDurationMs: number;
++  defaultCountry?: string;
++  defaultCity?: string;
++
++  constructor(options: DynamicTunnelOptions);
++
++  get healthyCount(): number;
++  get totalCount(): number;
++  isAllQuarantined(): boolean;
++  rotateSession(accountId?: string): void;
++  clearAccount(accountId: string): void;
++  reset(): void;
++  pruneExpiredQuarantines(): void;
++  quarantine(proxy?: string | Partial<NormalizedProxy>, durationMs?: number): void;
++  getProxy(options?: ProxyRequestOptions): NormalizedProxy;
++  getStickyProxy(accountId: string): NormalizedProxy;
++  getNext(): NormalizedProxy;
++  toPlaywrightProxy(proxy: string | NormalizedProxy): PlaywrightProxyConfig | null;
++  getProxyAgent(proxy: string | NormalizedProxy, options?: ProxyAgentOptions): ProxyAgent | Socks5ProxyAgent | string;
++  getBrowserArgs(proxy: string | Partial<NormalizedProxy>): string[];
++}
++
++export declare function createProxyProvider(
++  config: (StaticProxyOptions & { type?: 'static' }) | (DynamicTunnelOptions & { type?: 'dynamic' }) | Record<string, unknown>
++): StaticProxyProvider | DynamicTunnelProvider;
++
++export declare const SUPPORTED_PROXY_SCHEMES: string[];
+ export declare function parseProxyUrl(urlString: string): NormalizedProxy;
+ export declare function normalizeProxy(input: string | Partial<NormalizedProxy>): NormalizedProxy;
+ export declare function formatProxyUrl(proxy: string | Partial<NormalizedProxy>): string;

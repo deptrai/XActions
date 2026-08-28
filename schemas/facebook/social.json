@@ -1,0 +1,155 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Facebook Social Post & Profile Metadata",
+  "type": "object",
+  "anyOf": [
+    {
+      "title": "ProfileItem Metadata",
+      "properties": {
+        "isProfile": {
+          "type": "boolean",
+          "enum": [true]
+        },
+        "sourceMethod": {
+          "type": "string"
+        },
+        "followersCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "followingCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "profilePic": {
+          "type": "string"
+        },
+        "coverPic": {
+          "type": "string"
+        },
+        "bio": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "joinDate": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "isVerified": {
+          "type": "boolean"
+        },
+        "isFollower": {
+          "type": "boolean"
+        },
+        "isFollowing": {
+          "type": "boolean"
+        },
+        "isGroupMember": {
+          "type": "boolean"
+        },
+        "mutualCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "groupId": {
+          "type": "string"
+        },
+        "memberType": {
+          "type": "string"
+        },
+        "joinedGroupTime": {
+          "type": "string"
+        }
+      },
+      "required": ["isProfile", "sourceMethod"]
+    },
+    {
+      "title": "General Social Post Metadata",
+      "properties": {
+        "isProfile": {
+          "type": "boolean",
+          "enum": [false]
+        },
+        "creationTime": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" }
+          ]
+        },
+        "sourceMethod": {
+          "type": "string"
+        },
+        "isGroup": {
+          "type": "boolean"
+        },
+        "isPage": {
+          "type": "boolean"
+        }
+      }
+    },
+    {
+      "title": "SearchResultItem Metadata",
+      "properties": {
+        "isSearchResult": {
+          "type": "boolean"
+        },
+        "searchType": {
+          "type": "string"
+        },
+        "resultType": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "sourceMethod": {
+          "type": "string"
+        },
+        "isProfile": {
+          "type": "boolean"
+        },
+        "isPage": {
+          "type": "boolean"
+        },
+        "isGroup": {
+          "type": "boolean"
+        },
+        "category": {
+          "type": "string"
+        },
+        "privacy": {
+          "type": "string"
+        },
+        "members": {
+          "type": "integer"
+        },
+        "membersCount": {
+          "type": "integer"
+        },
+        "likes": {
+          "type": "integer"
+        },
+        "likesCount": {
+          "type": "integer"
+        },
+        "pageUrl": {
+          "type": "string"
+        },
+        "groupUrl": {
+          "type": "string"
+        },
+        "groupId": {
+          "type": "string"
+        }
+      },
+      "required": ["isSearchResult"]
+    }
+  ]
+}

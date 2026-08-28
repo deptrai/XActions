@@ -5,6 +5,7 @@
  *
  * Uses the same Puppeteer stealth approach as Twitter and Threads scrapers.
  *
+ * @deprecated Use `src/scrapers/social/facebook/index.js` (`FacebookCrawler`, `FacebookClient`) instead. See docs/deprecation-plan.md.
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license BSL 1.1
@@ -20,11 +21,14 @@ import { buildMarketplaceSearchUrl, normalizeMarketplaceListing } from './normal
 /**
  * Scrape Facebook Marketplace listings by search query or category.
  *
+ * @deprecated Replaced by `FacebookCrawler` action `marketplace` (Story 13.8).
+ *
  * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} query - Search query (e.g. "iphone 15") or category path
  * @param {FacebookOptions} [options]
  * @returns {Promise<unknown[]>} Array of normalized marketplace listings
  */
+// LEGACY — see docs/deprecation-plan.md
 export async function scrapeMarketplace(page, query, options = {}) {
   const {
     limit = 50,
