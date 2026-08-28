@@ -15,18 +15,19 @@ export class ProxyIpPool {
   get antiLeakFlags(): string[];
 
   add(proxy: ProxyInput): void;
-  getNext(): Proxy | null;
-  getRoundRobinProxy(): Proxy | null;
-  getRotatingProxy(): Proxy | null;
-  getStickyProxy(accountId: string): Proxy | null;
+  getNext(requiresResidential?: boolean): Proxy | null;
+  getRoundRobinProxy(requiresResidential?: boolean): Proxy | null;
+  getRotatingProxy(requiresResidential?: boolean): Proxy | null;
+  getStickyProxy(accountId: string, requiresResidential?: boolean): Proxy | null;
   quarantine(proxy: ProxyInput, durationMs?: number): void;
   isAllQuarantined(): boolean;
   pruneExpiredQuarantines(): void;
 
-  getProxy(): Proxy | null;
+  getProxy(options?: Record<string, unknown>): Proxy | null;
   getProxyAgent(proxy: Proxy, options?: Record<string, unknown>): unknown;
   release(proxy: Proxy): void;
-  toPlaywrightProxy(): Proxy & { bypass?: string };
+  toPlaywrightProxy(proxy: ProxyInput): (Proxy & { bypass?: string }) | null;
+  getBrowserArgs(proxy: ProxyInput): string[];
 }
 
 export const globalProxyPool: ProxyIpPool;

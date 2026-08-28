@@ -537,3 +537,37 @@ export interface WorkflowStore {
   listRuns(workflowId: string, limit?: number): Promise<Record<string, unknown>[]>;
   updateRun(run: Record<string, unknown>): Promise<Record<string, unknown>>;
 }
+
+/** Facebook HTTP client (Story 13.4, 13.9, 13.10). */
+export declare class FacebookClient {
+  constructor(deps?: Record<string, unknown>);
+  request(method: string, url: string, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  ensureTokens(accountId?: string | null, cookies?: string | Record<string, string>, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  requestGraphQl(docId: string, variables?: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown>;
+  clearTokenCache(): void;
+  close(): Promise<void>;
+}
+
+/** Hybrid Facebook scraper engine (Story 13.3, 13.5–13.10). */
+export declare class FacebookCrawler {
+  constructor(deps?: Record<string, unknown>);
+  start(command: { action: string; args?: Record<string, unknown> }): Promise<unknown>;
+  init(): Promise<void>;
+  cleanup(): Promise<void>;
+  search(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  listActions(): Array<{ action: string; [key: string]: unknown }>;
+  registerAction(action: string | Record<string, unknown>, handler?: unknown, descriptor?: Record<string, unknown>): void;
+}
+
+/** Facebook browser automation actions (Story 13.9). */
+export declare class FacebookActions {
+  constructor(deps?: Record<string, unknown>);
+  like(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  comment(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  post(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  share(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  messengerShare(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  shareLinkByUid(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  joinGroup(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+  sendFriendRequest(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
+}

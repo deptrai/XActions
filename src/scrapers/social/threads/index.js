@@ -5,13 +5,13 @@
  * @license Apache-2.0
  */
 
-export { ThreadsClient } from './client.js';
+export { ThreadsClient, DEFAULT_THREADS_APP_ID, DEFAULT_THREADS_ASBD_ID } from './client.js';
 export { ThreadsCrawler, DEFAULT_THREADS_DOC_IDS } from './crawler.js';
 export { ThreadsPlatformResponseValidator } from './validator.js';
 export {
-  namespacedProfileId,
+  namespacedProfileId as threadsNamespacedProfileId,
   parseHumanCount,
   normalizeThreadsProfile,
   normalizeThreadsConnection,
-  profileItemToPostItem,
+  profileItemToPostItem as threadsProfileItemToPostItem,
 } from './normalizer.js';

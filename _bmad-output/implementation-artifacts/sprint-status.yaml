@@ -1,5 +1,5 @@
-# generated: 2026-08-18T21:53:00.000Z
-# last_updated: 2026-08-24T08:30:00.000Z
+# generated: 2026-08-27T06:00:00.000Z
+# last_updated: 2026-08-29T03:23:00Z
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -23,8 +23,8 @@
 #   - optional: Can be completed but not required
 #   - done: Retrospective has been completed
 
-generated: 2026-08-18T21:53:00.000Z
-last_updated: 2026-08-26T14:45:00Z
+generated: 2026-08-27T06:00:00.000Z
+last_updated: 2026-08-29T03:23:00Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -34,8 +34,8 @@ development_status:
   # --- Epic 6: Facebook Anti-Detection & Bot Countermeasures ---
   epic-6: done
   6-1-browser-fingerprint-and-session-stealth: done
-  6-2-human-behavioral-simulation: done
-  6-3-velocity-and-account-age-controls: done
+  6-2-consistent-fingerprint: done
+  6-3-ua-pool-viewport: done
   epic-6-retrospective: optional
 
   # --- Epic 10: Data & Platform Foundation for Universal Scraping ---
@@ -69,21 +69,40 @@ development_status:
   epic-13: in-progress
   13-1-tiered-signer-architecture-token-ring-worker-pool: done
   13-2-refactor-twitter-scraper-to-hybrid-architecture: ready-for-dev
+  13-2-1-twitter-hybrid-profile-relationships: ready-for-dev
+  13-2-2-twitter-hybrid-thread-likes-bookmarks: backlog
+  13-2-3-twitter-hybrid-search-hashtag-trending: backlog
+  13-2-4-twitter-hybrid-media-scraper: backlog
+  13-2-5-twitter-hybrid-lists-communities-spaces: backlog
+  13-2-6-twitter-hybrid-content-composition-post-reply-quote: backlog
+  13-2-7-twitter-hybrid-content-scheduling: backlog
+  13-2-8-twitter-hybrid-engagement-like-retweet: backlog
+  13-2-9-twitter-hybrid-social-graph-follow-block-mute-bookmark: backlog
+  13-2-10-twitter-hybrid-direct-messaging: backlog
+  13-2-11-twitter-hybrid-list-management: backlog
+  13-2-12-twitter-hybrid-integration-caller-migration: backlog
   13-3-refactor-facebook-scraper-to-hybrid-architecture: done
+  13-4-facebook-browser-as-signer-bridge: done
+  13-5-facebook-hybrid-profile-followers-group-members: done
+  13-6-facebook-hybrid-search-global-group-search: done
+  13-7-facebook-hybrid-post-group-comments: done
+  13-8-facebook-hybrid-marketplace: done
+  13-9-facebook-hybrid-social-actions-write-messenger: done
+  13-10-facebook-hybrid-integration-caller-migration: done
   epic-13-retrospective: optional
 
   # --- Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream ---
   epic-14: in-progress
-  14-1-hierarchical-comment-tree-extraction-algorithm: review
-  14-2-mcp-tool-exporters-daemon-http-sse-server: backlog
-  14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub: backlog
+  14-1-hierarchical-comment-tree-extraction-algorithm: done
+  14-2-mcp-tool-exporters-daemon-http-sse-server: done
+  14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub: ready-for-dev
   epic-14-retrospective: optional
 
   # --- Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine ---
   epic-15: in-progress
   15-1-threads-scraper-adapter-meta-internal-graphql: done
   15-1-1-threads-hybrid-profile-followers-following: done
-  15-1-2-threads-hybrid-post-detail-comment-tree: backlog
+  15-1-2-threads-hybrid-post-detail-comment-tree: ready-for-dev
   15-1-3-threads-hybrid-docid-hardening-search-comments: backlog
   15-1-4-threads-hybrid-integration-package-exports: backlog
   15-2-tiktok-video-hashtag-comment-scraper: backlog
@@ -102,9 +121,10 @@ development_status:
   epic-17-retrospective: optional
 
   # --- Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn) ---
-  epic-18: backlog
-  18-1-topcv-job-company-scraper: backlog
-  18-2-vietnamworks-job-scraper: backlog
+  # 18.1/18.2 story files created; 18.3 blocked by 12.2 CDP attach.
+  epic-18: in-progress
+  18-1-topcv-job-company-scraper: ready-for-dev
+  18-2-vietnamworks-job-scraper: ready-for-dev
   18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: backlog
   epic-18-retrospective: optional
 
@@ -113,13 +133,22 @@ development_status:
   19-1-dashboard-jobs-checkpoints-view: backlog
   19-2-dashboard-proxies-accounts-view: backlog
   19-3-dashboard-stream-metrics-alerts-view: backlog
-  19-4-admin-cli-unified: backlog
-  # NOTE: 19.5 and 19.6 merged into 19.4 (Admin CLI — Unified) per Sprint Change Proposal 2026-08-26.
-  19-7-admin-rest-api-proxy-account-checkpoint: backlog
-  19-8-admin-mcp-tools: backlog
+  19-4-admin-cli-unified-command-group: backlog
+  19-4-1-admin-cli-status: backlog
+  19-4-2-admin-cli-proxy-management: backlog
+  19-4-3-admin-cli-account-management: backlog
+  19-4-4-admin-cli-checkpoint-management: backlog
+  19-4-5-admin-cli-stream-metrics-alerts: backlog
+  # NOTE: 19.5 and 19.6 are no longer used; 19.4 has been split into 19.4.1–19.4.5.
+  19-7-admin-rest-api-proxy-management: backlog
+  19-8-admin-rest-api-account-checkpoint-management: backlog
+  19-9-admin-rest-api-stream-metrics-alerts: backlog
+  19-10-admin-mcp-tools: backlog
   epic-19-retrospective: optional
 
   # --- Epic 20: Nowing Cutover & Legacy Scraper Decommissioning ---
+  # Blocked until Epics 13-18 are complete. Will decommission src/client/, src/scrapers/twitter/,
+  # src/scrapers/facebook/, src/scrapers/threads/ and src/scrapers/twitter/http/ once new crawlers stable.
   epic-20: backlog
   20-1-nowing-shadow-run-adapter-over-xactions-daemon: backlog
   20-2-legacy-scraper-code-decommissioning: backlog
@@ -140,13 +169,47 @@ development_status:
   22-3-legal-trademark-intellectual-property-crawler: backlog
   epic-22-retrospective: optional
 
+  # --- Epic 23: Bluesky & Mastodon on AbstractCrawler ---
+  epic-23: backlog
+  23-1-bluesky-at-protocol-client: backlog
+  23-2-bluesky-hybrid-crawler: backlog
+  23-3-mastodon-rest-api-client: backlog
+  23-4-mastodon-hybrid-crawler: backlog
+  23-5-bluesky-mastodon-response-validators: backlog
+  23-6-bluesky-mastodon-integration-caller-migration: backlog
+  epic-23-retrospective: optional
+
+  # --- Epic 24: Utility Scripts & Adapters Migration ---
+  epic-24: backlog
+  24-1-inventory-deprecation-decision-standalone-scripts: backlog
+  24-2-browser-utility-features-crawler-actions: backlog
+  24-3-adapter-layer-consolidation: backlog
+  24-4-archive-remove-unused-scraper-modules: backlog
+  epic-24-retrospective: optional
+
+  # --- Epic 25: Unified Dispatcher & Public API Finalization ---
+  epic-25: backlog
+  25-1-universal-scrape-dispatcher: backlog
+  25-2-package-json-exports-v2: backlog
+  25-3-mcp-cli-api-caller-migration: backlog
+  25-4-backward-compatibility-error-mapping: backlog
+  epic-25-retrospective: optional
+
+  # --- Epic 26: Legacy Decommission Final ---
+  epic-26: backlog
+  26-1-pre-decommission-parity-rollback-preparation: backlog
+  26-2-final-legacy-removal: backlog
+  epic-26-retrospective: optional
+
 # Current Sprint Plan
 # ===================
 current_sprint:
-  name: "Sprint 2026-08-24 — Epic 13 Tiered Signer Foundation"
+  name: "Sprint 2026-08-24 — Epic 13 Hybrid Engine"
   start: "2026-08-24"
   goals:
-    - "Implement Story 13.1 Tiered Signer Architecture (Token Ring & Worker Page Pool) to start Epic 13"
+    - "Refactor Twitter scraper to hybrid architecture (Story 13.2) and validate Tiered Signer foundation"
+    - "Deliver Twitter hybrid profile & relationships ready-for-dev (Story 13.2.1)"
   stories:
-    - "13-1-tiered-signer-architecture-token-ring-worker-pool"
+    - "13-2-refactor-twitter-scraper-to-hybrid-architecture"
+    - "13-2-1-twitter-hybrid-profile-relationships"
   blocked: []

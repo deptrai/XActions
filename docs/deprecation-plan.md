@@ -21,11 +21,11 @@ Một module legacy chỉ được xoá khi thỏa mãn **tất cả** các đi�
 
 | Platform | Legacy Code | Hybrid Replacement | Scope of Hybrid | Notes |
 |----------|-------------|--------------------|-----------------|-------|
-| **Twitter/X** | `src/scrapers/twitter/index.js` (Puppeteer) | `src/scrapers/social/twitter/index.js` | `search(query)`, `getTimeline(username)` | Full profile/followers/DMs/media sẽ chuyển dần sau 13.2. |
+| **Twitter/X** | `src/scrapers/twitter/index.js` (Puppeteer) | `src/scrapers/social/twitter/index.js` | `search(query)`, `getTimeline(username)` | Hoàn thành ở Story 13.2; profile/followers/following → 13.2.1, thread/likes/bookmarks → 13.2.2, search/hashtag/trending → 13.2.3, media → 13.2.4, lists/communities/spaces → 13.2.5, content composition (post/reply/quote) → 13.2.6, schedule → 13.2.7, engagement (like/retweet) → 13.2.8, social graph (follow/block/mute/bookmark) → 13.2.9, direct messaging → 13.2.10, list management → 13.2.11, integration → 13.2.12. |
 | **Twitter/X** | `src/scrapers/twitter/http/index.js` | `src/scrapers/social/twitter/client.js` | HTTP GraphQL client | Thay thế bằng `AbstractApiClient`. |
 | **Twitter/X** | `src/client/Scraper.js` | `src/scrapers/social/twitter/client.js` | HTTP-only Scraper class | `src/client/` được coi là legacy; logic chuyển vào `src/scrapers/social/twitter/`. |
-| **Facebook** | `src/scrapers/facebook/` | `src/scrapers/social/facebook/index.js` | `getGroupPosts(groupId)`, `getPagePosts(pageId)` | Không xoá messenger/marketplace/search cho đến khi có story riêng. |
-| **Threads** | `src/scrapers/threads/index.js` | `src/scrapers/social/threads/index.js` | `search(query)`, `getUserFeed(username)` | Thay Puppeteer bằng Meta GraphQL HTTP. |
+| **Facebook** | `src/scrapers/facebook/` | `src/scrapers/social/facebook/index.js` | `getGroupPosts(groupId)`, `getPagePosts(pageId)` | Hoàn thành ở Story 13.3; profile/followers/group-members → Story 13.5, search/group_search → Story 13.6, comments → Story 13.7, marketplace → Story 13.8, social actions (write/messenger) → Story 13.9, dispatcher/service migration → Story 13.10. |
+| **Threads** | `src/scrapers/threads/index.js` | `src/scrapers/social/threads/index.js` | `getUserFeed(username)`, `search(query)`, `get_post_comments(postId)` | Hoàn thành ở Story 15.1; profile/followers/following → 15.1.1, post detail → 15.1.2, search/comments doc_id hardening → 15.1.3, integration → 15.1.4. |
 | **Admin CLI** | `src/cli/commands/checkpoints.js` (partial) | `src/cli/commands/admin.js` | Unified `xactions admin ...` | Giữ `xactions checkpoints` như alias tạm thời, xoá ở Epic 20.2. |
 | **Admin CLI** | `src/cli/commands/stream.js` (partial) | `src/cli/commands/admin.js` | Unified `xactions admin stream ...` | Giữ `xactions stream` như alias tạm thời, xoá ở Epic 20.2. |
 
@@ -42,6 +42,11 @@ Thêm `@deprecated` JSDoc và comment `// LEGACY — see docs/deprecation-plan.m
 - `src/scrapers/threads/index.js`
 - `src/cli/commands/checkpoints.js` (redirect note)
 - `src/cli/commands/stream.js` (redirect note)
+- `src/scrapers/facebook/messengerShare.js` (Story 13.9)
+- `src/scrapers/facebook/shareLinkByUid.js` (Story 13.9)
+- `src/scrapers/facebook/graphqlSend.js` (Story 13.9)
+- `src/scrapers/facebook/messengerQueue.js` (Story 13.9)
+- `src/api/services/facebookAutomation.js` social action helpers (Story 13.9)
 
 ### Phase 2 — Cutover & Shadow-Run (Epic 20.1)
 
@@ -77,10 +82,48 @@ Xoá theo thứ tự:
 |----------|--------|-----------------|-------|
 | Twitter Puppeteer (`src/scrapers/twitter/index.js`) | `deprecated-planned` | Phase 2–3 | TBD |
 | Twitter HTTP (`src/scrapers/twitter/http/`) | `deprecated-planned` | Phase 2–3 | TBD |
+| Twitter Legacy Profile/Followers/Following (`src/scrapers/twitter/index.js` profile/followers/following) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
+| Twitter HTTP Relationships (`src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
 | `src/client/Scraper.js` | `deprecated-planned` | Phase 2–3 | TBD |
-| Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-planned` | Phase 2–3 | TBD |
-| Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-marked` | Phase 2–3 | TBD |
+| Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-marked` | Phase 1 (Epic 13.10) | DEV |
+| Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
+| Facebook Legacy Search (`src/scrapers/facebook/search.js`, `group-search.js`) | `deprecated-marked` | Phase 1 (Epic 13.6) | DEV |
+| Facebook Legacy Comments (`src/scrapers/facebook/comments.js`) | `deprecated-marked` | Phase 1 (Epic 13.7) | DEV |
+| Facebook Legacy Marketplace (`src/scrapers/facebook/marketplace.js`) | `deprecated-marked` | Phase 1 (Epic 13.8) | DEV |
+| Facebook Legacy Social Actions (`src/scrapers/facebook/messengerShare.js`, `shareLinkByUid.js`, `graphqlSend.js`, `messengerQueue.js`, `api/services/facebookAutomation.js` like/comment/post/share/join/friend helpers) | `deprecated-marked` | Phase 1 (Epic 13.9) | DEV |
+| FacebookClient HTTP-only token extraction (`src/scrapers/social/facebook/client.js`) | `deprecated-planned` | Phase 1 (Epic 13.4) | DEV |
+| Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-marked` | Phase 1 (Epic 15.1) | DEV |
 | `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
+
+### Legacy Facebook Functions → Hybrid Actions
+
+| Legacy function | Hybrid action |
+|-----------------|---------------|
+| `scrapeProfile` (Twitter) | `twitter:profile` |
+| `scrapeFollowers` (Twitter) | `twitter:followers` |
+| `scrapeFollowing` (Twitter) | `twitter:following` |
+| `scrapeNonFollowers` (Twitter) | `twitter:non_followers` |
+| `scrapeLikers` (Twitter) | `twitter:likers` |
+| `scrapeRetweeters` (Twitter) | `twitter:retweeters` |
+| `scrapeListMembers` (Twitter) | `twitter:list_members` |
+| `scrapeProfile` | `facebook:profile` |
+| `scrapeFollowers` | `facebook:followers` |
+| `scrapeGroupMembers` | `facebook:group_members` |
+| `searchFacebook` / `searchTweets` | `facebook:search` |
+| `scrapeFacebookGroupSearch` | `facebook:group_search` |
+| `scrapeFacebookComments` | `facebook:post_comments` |
+| `scrapeFacebookGroupComments` | `facebook:group_comments` |
+| `scrapeMarketplace` | `facebook:marketplace` |
+| `shareToMessenger` / `messengerShareCampaign` (messengerShare.js) | `facebook:messenger_share` |
+| `shareLinkByUid` / `shareLinkByUidCampaign` (shareLinkByUid.js) | `facebook:share_link_uid` |
+| `sendMessageToUidServerSide` / `sendMessageToUid` (graphqlSend.js, graphql.js) | `facebook:messenger_share` |
+| `buildCampaignQueue` / `parseRecipientsFile` / `parseLinksFile` (messengerQueue.js) | `facebook:messenger_share` |
+| `likeFacebookPosts` (facebookAutomation.js) | `facebook:like` |
+| `commentOnFacebookPosts` (facebookAutomation.js) | `facebook:comment` |
+| `createFacebookPost` (facebookAutomation.js) | `facebook:post` |
+| `shareFacebookPosts` (facebookAutomation.js) | `facebook:share` |
+| `joinGroups` (facebookAutomation.js) | `facebook:join_group` |
+| `sendFriendRequests` (facebookAutomation.js) | `facebook:send_friend_request` |
 
 ## 7. Rollback Checklist (Pre-Decommission)
 
@@ -121,8 +164,9 @@ Trước khi thực hiện Story 20.2 (Legacy Scraper Code Decommissioning), tea
 - `_bmad-output/planning-artifacts/epics.md` — Epic 13–20
 - `_bmad-output/planning-artifacts/backlog-epics-21-22.md` — Epic 21–22 backlog
 - `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-26.md` — Proposal gốc
+- `_bmad-output/implementation-artifacts/13-9-facebook-hybrid-social-actions-write-messenger.md` — Story 13.9 social actions scope
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — Trạng thái story
 
 ---
 
-*Last updated: 2026-08-26*
+*Last updated: 2026-08-28*

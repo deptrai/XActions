@@ -13,6 +13,10 @@ import prisma from '../lib/prisma.js';
  *   - Per-c_user userDataDir
  *   - Checkpoint retry on another live account
  *
+ * Story 13.10 — AC-13:
+ *   - Hybrid mode uses FacebookClient + FacebookCrawler per account context
+ *     instead of launching a Puppeteer page.
+ *
  * @author nich (@nichxbt)
  * @license BSL 1.1
  */
@@ -21,6 +25,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import pLimit from 'p-limit';
 import { createBrowser, createPage, loginWithCookie } from '../../src/scrapers/facebook/index.js';
+import { createFacebookClient, createFacebookCrawler } from '../../src/scrapers/index.js';
 import { parseFlatProxy } from '../../src/scrapers/facebook/proxy.js';
 import { decrypt } from '../routes/facebookAccounts.js';
 import { checkAccountHealth } from './facebookHealth.js';
@@ -119,6 +124,8 @@ export async function resolveAccountContext(account, options = {}) {
  * @property {number} [maxConcurrency]
  * @property {number | { min: number; max: number }} [delayBetweenLaunches]
  * @property {string[]} [accountIds]
+ * @property {boolean} [hybrid]
+ * @property {Record<string, unknown>} [browserOptions]
  * @property {(opts: Record<string, unknown>) => Promise<import('puppeteer').Browser>} [launchImpl]
  * @property {(page: import('puppeteer').Page, cookie: { c_user: string; xs: string }, options?: Record<string, unknown>) => Promise<void>} [loginImpl]
  * @property {Record<string, unknown>} [loginOptions]
@@ -133,9 +140,54 @@ export async function resolveAccountContext(account, options = {}) {
  */
 
 /**
+ * Build per-account browserOptions for hybrid mode.
+ * @param {AccountContext} ctx
+ * @param {Record<string, unknown>} [baseOptions]
+ * @returns {Record<string, unknown>}
+ */
+function buildHybridBrowserOptions(ctx, baseOptions = {}) {
+  /** @type {Record<string, unknown>} */
+  const opts = {
+    ...baseOptions,
+    userDataDir: ctx.userDataDir,
+    profileDir: ctx.userDataDir,
+  };
+  if (ctx.proxyServer) {
+    opts.proxy = ctx.proxyServer;
+    if (ctx.proxyAuth) {
+      opts.proxyAuth = ctx.proxyAuth;
+    }
+  }
+  return opts;
+}
+
+/**
+ * Detect whether an error is a Facebook checkpoint / challenge.
+ * @param {unknown} err
+ * @param {string} [pageUrl]
+ * @returns {boolean}
+ */
+function isCheckpoint(err, pageUrl = '') {
+  const message = err instanceof Error ? err.message : '';
+  const lowerMessage = message.toLowerCase();
+  const lowerUrl = pageUrl.toLowerCase();
+  return (
+    lowerMessage.includes('checkpoint') ||
+    lowerMessage.includes('security check') ||
+    lowerMessage.includes('captcha') ||
+    lowerUrl.includes('/checkpoint/') ||
+    lowerUrl.includes('facebook.com/checkpoint') ||
+    lowerUrl.includes('help/1865253247038416')
+  );
+}
+
+/**
  * Run an array of tasks in parallel across a pool of live Facebook accounts.
  *
- * @param {((page: import('puppeteer').Page, ctx: AccountContext) => Promise<Record<string, unknown>>)[]} tasks
+ * Legacy mode: task is `async (page, ctx) => result`.
+ * Hybrid mode: task is `async (crawler, ctx) => result` (set `options.hybrid = true`).
+ *
+ * @param {((...args: any[]) => Promise<Record<string, unknown>>)[]} tasks
  * @param {Partial<BatchOptions>} [options]
  * @returns {Promise<{ results: Record<string, unknown>[]; accountUsage: Record<string, AccountUsage> }>}
  */
@@ -144,6 +196,8 @@ export async function runBatch(tasks, options = {}) {
     maxConcurrency = DEFAULT_MAX_CONCURRENCY,
     delayBetweenLaunches,
     accountIds,
+    hybrid = false,
+    browserOptions = {},
     launchImpl,
     loginImpl,
     loginOptions = {},
@@ -201,18 +255,38 @@ export async function runBatch(tasks, options = {}) {
 
         for (let i = 0; i < attempts; i++) {
           const ctx = contexts[(startIndex + i) % contexts.length];
-          const browserOptions = /** @type {Record<string, unknown>} */ ({ userDataDir: ctx.userDataDir });
-          if (ctx.proxyServer) browserOptions.proxy = ctx.proxyServer;
-          if (launchImpl) browserOptions.launchImpl = launchImpl;
 
           /** @type {import('puppeteer').Browser | undefined} */
           let browser;
           /** @type {import('puppeteer').Page | undefined} */
           let page;
+          let crawler;
+          let client;
+
           try {
             await randomDelay(delayMin, delayMax);
+
+            if (hybrid) {
+              const opts = buildHybridBrowserOptions(ctx, browserOptions);
+              client = createFacebookClient(opts);
+              crawler = createFacebookCrawler(client, opts);
+              const result = await task(crawler, ctx);
+
+              usage[ctx.id].tasks += 1;
+
+              if (crawler && typeof crawler.cleanup === 'function') {
+                await crawler.cleanup().catch(() => {});
+              }
+
+              return result;
+            }
+
+            const launchOptions = /** @type {Record<string, unknown>} */ ({ userDataDir: ctx.userDataDir });
+            if (ctx.proxyServer) launchOptions.proxy = ctx.proxyServer;
+            if (launchImpl) launchOptions.launchImpl = launchImpl;
+
             const launchFn = launchImpl || createBrowser;
-            browser = await launchFn(/** @type {Record<string, unknown>} */ (browserOptions));
+            browser = await launchFn(/** @type {Record<string, unknown>} */ (launchOptions));
             page = await createPage(browser);
 
             if (ctx.proxyAuth) {
@@ -233,21 +307,13 @@ export async function runBatch(tasks, options = {}) {
             return result;
           } catch (err) {
             if (browser) await browser.close().catch(() => {});
+            if (crawler && typeof crawler.cleanup === 'function') {
+              await crawler.cleanup().catch(() => {});
+            }
 
             let pageUrl = '';
             try { pageUrl = page?.url?.() || ''; } catch { pageUrl = ''; }
-            const message = err instanceof Error ? err.message : '';
-            const lowerMessage = message.toLowerCase();
-            const lowerUrl = pageUrl.toLowerCase();
-            const isCheckpoint =
-              lowerMessage.includes('checkpoint') ||
-              lowerMessage.includes('security check') ||
-              lowerMessage.includes('captcha') ||
-              lowerUrl.includes('/checkpoint/') ||
-              lowerUrl.includes('facebook.com/checkpoint') ||
-              lowerUrl.includes('help/1865253247038416');
-
-            if (isCheckpoint) {
+            if (isCheckpoint(err, pageUrl)) {
               usage[ctx.id].checkpoints += 1;
               // try next live account
               continue;

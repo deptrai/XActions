@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" fill="none">
+  <defs>
+    <linearGradient id="lightSquareGrad1" x1="60" y1="120" x2="340" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="lightSquareGrad2" x1="450" y1="120" x2="170" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+    <radialGradient id="lightSquareGlow" cx="256" cy="256" r="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0284C7" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background Glow -->
+  <circle cx="256" cy="256" r="180" fill="url(#lightSquareGlow)" />
+
+  <!-- === ICON MARK: THE CHAIN-LENS === -->
+  <g transform="translate(0, 0)">
+    <!-- Outer Focus Grid Ring -->
+    <circle cx="256" cy="256" r="200" stroke="#0284C7" stroke-width="2" stroke-dasharray="4 8" opacity="0.3"/>
+    <circle cx="256" cy="256" r="150" stroke="#0284C7" stroke-width="2" opacity="0.2"/>
+
+    <!-- Left Chain Loop (Tilted -28 deg) -->
+    <g transform="rotate(-28 256 256)">
+      <rect x="110" y="196" width="180" height="120" rx="60" 
+            stroke="url(#lightSquareGrad1)" stroke-width="28" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- Right Chain Loop (Tilted +28 deg) -->
+    <g transform="rotate(28 256 256)">
+      <rect x="222" y="196" width="180" height="120" rx="60" 
+            stroke="url(#lightSquareGrad2)" stroke-width="28" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- Center Overlap Lens Chamber (Aperture / Optical Lens) -->
+    <circle cx="256" cy="256" r="68" fill="none" stroke="#0284C7" stroke-width="12" />
+    <circle cx="256" cy="256" r="48" fill="none" stroke="#2563EB" stroke-width="4" opacity="0.85"/>
+    
+    <!-- Central Pupil of Truth / Focal Node -->
+    <circle cx="256" cy="256" r="20" fill="#0284C7" />
+    <circle cx="249" cy="249" r="5" fill="#FFFFFF" opacity="0.9" />
+
+    <!-- Optical Crosshairs / Reticle Marks -->
+    <line x1="256" y1="164" x2="256" y2="180" stroke="#0284C7" stroke-width="4" stroke-linecap="round"/>
+    <line x1="256" y1="332" x2="256" y2="348" stroke="#0284C7" stroke-width="4" stroke-linecap="round"/>
+    <line x1="164" y1="256" x2="180" y2="256" stroke="#0284C7" stroke-width="4" stroke-linecap="round"/>
+    <line x1="332" y1="256" x2="348" y2="256" stroke="#0284C7" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

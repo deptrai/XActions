@@ -35,28 +35,31 @@ export function registerPortabilityCommands(program) {
 
       try {
         const browser = await scrapers.createBrowser();
-        const page = await scrapers.createPage(browser);
+        let summary;
+        try {
+          const page = await scrapers.createPage(browser);
 
-        const config = await loadConfig();
-        if (config.authToken) {
-          await scrapers.loginWithCookie(page, config.authToken);
+          const config = await loadConfig();
+          if (config.authToken) {
+            await scrapers.loginWithCookie(page, config.authToken);
+          }
+
+          const { exportAccount } = await import('../../portability/exporter.js');
+          summary = await exportAccount({
+            page,
+            username: user,
+            formats,
+            only,
+            limit,
+            outputDir: options.output,
+            scrapers,
+            onProgress: ({ phase, completed, total, currentItem }) => {
+              spinner.text = `[${phase}] ${currentItem || ''} (${completed}/${total})`;
+            },
+          });
+        } finally {
+          await browser.close().catch(() => {});
         }
-
-        const { exportAccount } = await import('../../portability/exporter.js');
-        const summary = await exportAccount({
-          page,
-          username: user,
-          formats,
-          only,
-          limit,
-          outputDir: options.output,
-          scrapers,
-          onProgress: ({ phase, completed, total, currentItem }) => {
-            spinner.text = `[${phase}] ${currentItem || ''} (${completed}/${total})`;
-          },
-        });
-
-        await browser.close();
 
         spinner.succeed(`Export complete → ${summary.dir}`);
 

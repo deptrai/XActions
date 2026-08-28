@@ -1,0 +1,62 @@
+[
+  {
+    "location": "src/scrapers/social/facebook/crawler.js:1592-1621",
+    "trigger_condition": "GraphQL fetch fails with browser bridge configured",
+    "guard_snippet": "const extracted = await this.client.browserBridge.scrapeMarketplaceSearch(fallbackUrl).catch(() => []);",
+    "potential_consequence": "fallback never runs, returns empty posts"
+  },
+  {
+    "location": "src/scrapers/social/facebook/normalize-marketplace.js:59-63",
+    "trigger_condition": "listing_price missing and node.price is an object",
+    "guard_snippet": "const priceObj = node.listing_price || (typeof node.price === 'object' && node.price != null ? node.price : { formatted_amount: node.price }) || {};",
+    "potential_consequence": "price becomes literal '[object Object]' string"
+  },
+  {
+    "location": "src/scrapers/social/facebook/crawler.js:1516-1529",
+    "trigger_condition": "dryRun with categoryId or geo filters",
+    "guard_snippet": "const searchUrl = buildMarketplaceSearchUrl(rawQuery, { location: resolvedLoc || location, category, minPrice, maxPrice }) + (categoryId ? '&categoryId=${encodeURIComponent(categoryId)}' : '') + (latitude != null ? '&lat=${latitude}&lng=${longitude}&radius=${radiusKm}' : '');",
+    "potential_consequence": "dry-run URL omits category and location filters"
+  },
+  {
+    "location": "src/scrapers/social/facebook/crawler.js:1489-1492",
+    "trigger_condition": "radiusKm is 0, NaN, or empty string",
+    "guard_snippet": "const radiusValue = Number.isFinite(Number(args?.radiusKm)) ? Number(args?.radiusKm) : 50;",
+    "potential_consequence": "invalid radius ignored and defaults to 50km"
+  },
+  {
+    "location": "src/scrapers/social/facebook/crawler.js:1494-1511",
+    "trigger_condition": "location is a full facebook marketplace URL",
+    "guard_snippet": "const resolvedLoc = resolveMarketplaceLocation(location) || location.match(/facebook\\.com\\/marketplace\\/([^\\/?#]+)/)?.[1] || null;",
+    "potential_consequence": "location ignored, search targets wrong market"
+  },
+  {
+    "location": "api/routes/facebook.js:459",
+    "trigger_condition": "dryRun is a non-boolean truthy string",
+    "guard_snippet": "if (dryRun !== undefined && dryRun !== null && typeof dryRun !== 'boolean') return res.status(400).json({ ok: false, error: 'dryRun must be a boolean' });",
+    "potential_consequence": "string 'false' enables dryRun mode"
+  },
+  {
+    "location": "src/scrapers/social/facebook/crawler.js:1548-1550",
+    "trigger_condition": "minPrice or maxPrice exceeds safe integer range",
+    "guard_snippet": "if ((minPrice != null && minPrice * 100 > Number.MAX_SAFE_INTEGER) || (maxPrice != null && maxPrice * 100 > Number.MAX_SAFE_INTEGER)) throw new PlatformError({ code: 'XACT_4001', type: ErrorTypes.INVALID_ARGS, message: 'price is too large', suggestedAction: SuggestedActions.USE_ACTIONS_LIST });",
+    "potential_consequence": "price filter overflows to null in JSON"
+  },
+  {
+    "location": "api/routes/facebook.js:332-334",
+    "trigger_condition": "query has leading or trailing spaces",
+    "guard_snippet": "const trimmedQuery = query.trim(); if (trimmedQuery.length > 500) return res.status(400).json({ ok: false, error: 'query must be at most 500 characters' });",
+    "potential_consequence": "valid trimmed queries are rejected"
+  },
+  {
+    "location": "src/scrapers/social/facebook/crawler.js:1623-1634",
+    "trigger_condition": "browser fallback returns empty array",
+    "guard_snippet": "if (Array.isArray(extracted) && extracted.length > 0) { note = 'Used browser fallback for marketplace search: ' + fallbackUrl; }",
+    "potential_consequence": "note claims fallback success with no results"
+  },
+  {
+    "location": "src/scrapers/social/facebook/normalize-marketplace.js:51-54",
+    "trigger_condition": "id field is an object instead of scalar",
+    "guard_snippet": "if (typeof rawId !== 'string' && typeof rawId !== 'number') return null;",
+    "potential_consequence": "post id becomes 'facebook:[object Object]'"
+  }
+]

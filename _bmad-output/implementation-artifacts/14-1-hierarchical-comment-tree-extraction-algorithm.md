@@ -2,12 +2,12 @@
 story_id: "14.1"
 epic: 14
 story_key: "14-1-hierarchical-comment-tree-extraction-algorithm"
-status: "review"
+status: "done"
 phase: "Phase 2"
 created: 2026-08-26
-updated: 2026-08-26
+updated: 2026-08-27
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "Tests passed (7/7)"
 baseline_commit: 923466f9b938e4f076146cd2e30bbd9dcec6af14
 ---
 

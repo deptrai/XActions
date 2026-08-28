@@ -1,0 +1,182 @@
+[
+  {
+    "id": "13.10-FIND-001",
+    "ac": "AC-3",
+    "location": "api/services/facebookScrape.js:23-56,69-138",
+    "title": "facebookScrape.run/runSearchAllParallel still route through scrape() instead of directly calling FacebookCrawler.start()",
+    "detail": "run() at lines 53-56 calls scrape('facebook', action, ...) from src/scrapers/index.js rather than creating a single FacebookCrawler and calling crawler.start(). runSearchAllParallel() (lines 69-138) still uses FacebookAccountPool.runBatch with Puppeteer pages and falls back to Promise.allSettled(scrape('facebook','search',...)), not 4 direct FacebookCrawler.start() calls. This means each parallel search builds a fresh FacebookClient/Crawler, bypassing the intended single-instance, session-reuse design.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-002",
+    "ac": "AC-3",
+    "location": "api/services/facebookScrape.js:121-130",
+    "title": "runSearchAllParallel getArrayResult() fallback mis-maps 'pages' results to 'posts'",
+    "detail": "The fallback in getArrayResult() checks key==='people' -> val.users, then falls through to 'if (Array.isArray(val.posts)) return val.posts' for any key including 'pages'. This can cause the 'pages' bucket to be filled with post results. It also has untyped parameters (res, key) causing `tsc --noEmit` to fail at line 121.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-003",
+    "ac": "AC-3 / TR-1",
+    "location": "src/scrapers/index.js:221-229",
+    "title": "FacebookClient construction does not forward proxyAuth/proxyLocation from browserOptions",
+    "detail": "dispatchFacebookHybrid() passes proxy, proxyPool, governor, accountPool, headless, cdpUrl to new FacebookClient() but omits proxyAuth and proxyLocation. The AC-3 / TR-1 list explicitly requires these to be passed. If a caller supplies an authenticated proxy, auth credentials are silently ignored.",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-004",
+    "ac": "AC-4 / AC-13",
+    "location": "api/routes/facebook.js:604-997",
+    "title": "POST /api/facebook/automate is not migrated to FacebookCrawler",
+    "detail": "The /automate route still imports src/scrapers/facebook/index.js (line 897-899) and api/services/facebookAutomation.js (lines 898-910). All hybrid actions (like, comment, post, share, join-groups, batch-post-groups, send-friend-requests, messenger-share) dispatch to legacy helpers. In particular messenger-share (lines 730-798) keeps runMessengerCampaign using legacy messengerShare.js, even though FacebookCrawler.messenger_share supports recipientUids arrays.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-005",
+    "ac": "AC-5",
+    "location": "src/mcp/server.js:3201-3245",
+    "title": "MCP scrape tools use facebookScrape.run() indirection; x_facebook_posts maps to 'posts' not 'page_posts'",
+    "detail": "executeFacebookScrapeTool() routes through api/services/facebookScrape.js -> scrape() rather than invoking FacebookCrawler.start() directly. The ACTION_MAP (lines 3217-3223) maps x_facebook_posts: 'posts' instead of 'page_posts'. scrape() does resolve 'posts' to page_posts/group_posts, but the direct ACTION_MAP does not match the AC-5 requirement. x_facebook_marketplace and x_facebook_group_members live in executeFacebookEpic4Tool and also go through facebookScrape.run(), not direct FacebookCrawler.start().",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-006",
+    "ac": "AC-6",
+    "location": "src/mcp/server.js:2865-3190",
+    "title": "MCP automation/Epic-4 tools still call legacy facebookAutomation.js and src/scrapers/facebook/*",
+    "detail": "executeFacebookAutomateTool() (like/comment/post/messenger) imports api/services/facebookAutomation.js and src/scrapers/facebook/messengerShare.js. executeFacebookEpic4Tool() uses api/services/facebookAutomation.js for x_facebook_share_posts, x_facebook_join_groups, x_facebook_post_to_groups, x_facebook_send_friend_requests and src/scrapers/facebook/index.js via runWithFacebookBrowser(). None of these hybrid actions are dispatched through FacebookCrawler.start().",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-007",
+    "ac": "AC-7",
+    "location": "src/cli/commands/automate.js:48-58,181-206",
+    "title": "CLI 'xactions automate' still runs legacy Puppeteer automation",
+    "detail": "src/cli/commands/automate.js imports src/scrapers/facebook/index.js, api/services/facebookAutomation.js, src/scrapers/facebook/messengerShare.js and src/scrapers/facebook/messengerQueue.js. All actions (like, comment, post, share, join-group, send-friend-request, messenger-share) call these legacy modules instead of dispatching to FacebookCrawler.start().",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-008",
+    "ac": "AC-8",
+    "location": "src/scrapers/social/facebook/crawler.js:300-515; src/core/base-crawler.js:100,115",
+    "title": "FacebookCrawler.listActions() returns requiresAuth:true for public read actions",
+    "detail": "AbstractCrawler.registerAction() resolves requiresAuth from descriptor or crawler default. FacebookCrawler.requiresAuth is true and many read action descriptors (group_posts, get_comments, post_comments, group_comments, followers, following, group_members, group_search) do NOT set requiresAuth:false. Consequently listActions() reports them as authenticated, and AbstractCrawler.start() will throw XACT_4010 when no accountId is supplied. This contradicts the AC-8 expectation that read actions are discoverable with correct requiresAuth.",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-009",
+    "ac": "AC-8",
+    "location": "src/cli/",
+    "title": "No 'xactions actions --platform facebook' command implemented",
+    "detail": "AC-8 requires CLI 'xactions actions --platform facebook' (or equivalent) to list actions with requiredArgs, optionalArgs, example, outputType and requiresAuth. No such command exists in src/cli/commands/.",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-010",
+    "ac": "AC-9",
+    "location": "types/index.d.ts; src/types/xactions.d.ts",
+    "title": "Type declarations missing for FacebookCrawler / FacebookClient / FacebookActions",
+    "detail": "Neither types/index.d.ts nor src/types/xactions.d.ts contains declarations for the exported FacebookCrawler, FacebookClient or FacebookActions. package.json exports are correct (lines 24-25), but consumers using TypeScript will have no types. AC-9 requires type declarations be updated.",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-011",
+    "ac": "AC-10",
+    "location": "src/scrapers/facebook/marketplace.js,posts.js,comments.js,search.js,group-search.js,followers.js,profile.js",
+    "title": "Legacy src/scrapers/facebook/ files other than index.js lack @deprecated headers",
+    "detail": "Only src/scrapers/facebook/index.js and api/services/facebookAutomation.js carry @deprecated markers. The other legacy files listed in AC-10 (marketplace.js, posts.js, comments.js, search.js, group-search.js, followers.js, profile.js) have no @deprecated banner or LEGACY comment, so callers/editors cannot see the migration status at file level.",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-012",
+    "ac": "AC-11",
+    "location": "tests/scrapers/facebook-*.test.js; tests/scrapers/social/facebook/caller-migration.test.js:271-293; api/services/facebookScrape.js:121",
+    "title": "Legacy tests not deprecated; new tests are weak; typecheck fails",
+    "detail": "All tests/scrapers/facebook-*.test.js files still exist without @deprecated or migration notes. tests/scrapers/social/facebook/caller-migration.test.js tests for AC-5/6, AC-7 and AC-13 only assert the modules are defined/importable, not that they route to FacebookCrawler. npm run typecheck fails at api/services/facebookScrape.js:121 due to untyped parameters in getArrayResult.",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-013",
+    "ac": "AC-12 / AC-4",
+    "location": "api/routes/facebook.js:730-798",
+    "title": "messenger-share API route keeps legacy runMessengerCampaign",
+    "detail": "The /automate messenger-share path still imports and uses src/scrapers/facebook/index.js and src/scrapers/facebook/messengerShare.js via runMessengerCampaign. FacebookCrawler.messenger_share already accepts recipientUids (array), so the AC-4 preference to use FacebookCrawler is not realized.",
+    "severity": "medium",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-014",
+    "ac": "AC-13",
+    "location": "api/services/facebookAutomation.js:1-5 and body",
+    "title": "facebookAutomation.js only marked deprecated, not refactored to thin wrapper",
+    "detail": "api/services/facebookAutomation.js has a @deprecated header but still contains full Puppeteer-based social helpers and does not call FacebookCrawler.start(). AC-13 expects these helpers to be thin wrappers or marked deprecated with legacy kept only for schedule/warmup/cancel.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-015",
+    "ac": "AC-13",
+    "location": "api/services/facebookAccountPool.js:23,142-266",
+    "title": "facebookAccountPool.runBatch still launches Puppeteer pages for all tasks",
+    "detail": "The pool imports createBrowser/createPage/loginWithCookie from src/scrapers/facebook/index.js (line 23) and runBatch() opens a Puppeteer page for each task. It does not support FacebookCrawler sessions; when runSearchAllParallel passes hybrid search tasks, the multi-account branch still creates browser pages. AC-13 requires it not create Puppeteer pages when all tasks are hybrid.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-016",
+    "ac": "AC-13",
+    "location": "api/services/facebookHealth.js:15-57,123-178",
+    "title": "facebookHealth.js removed graphql.js but still does not use FacebookClient",
+    "detail": "The service removed the src/scrapers/facebook/graphql.js import and reimplemented buildCookieString() / parseFacebookTokens() inline (lines 15-57), then uses axios directly to fetch the homepage. AC-13 explicitly requires using FacebookClient or FacebookCrawler for HTTP health checks.",
+    "severity": "high",
+    "bucket": "patch"
+  },
+  {
+    "id": "13.10-FIND-017",
+    "ac": "Epic-13 / AC-1 (residual)",
+    "location": "src/scrapers/index.js:42,107-116,319-333,529",
+    "title": "src/scrapers/index.js still imports and exports legacy facebook module",
+    "detail": "The platform import at line 42 is still 'import facebook from \"./facebook/index.js\"'. The platforms registry and default export still point to this legacy module (lines 107-116, 529). Although scrape() intercepts facebook/fb early, the public platforms/default export still exposes legacy Puppeteer code. This is scope bleed against the epic AC that the platform module should come from src/scrapers/social/facebook/index.js or an equivalent adapter.",
+    "severity": "medium",
+    "bucket": "decision_needed"
+  },
+  {
+    "id": "13.10-FIND-018",
+    "ac": "AC-1 / TR-1 (residual)",
+    "location": "src/scrapers/index.js:319-333,352,360-400",
+    "title": "Dead-code Puppeteer branch for facebook/fb still present in scrape()",
+    "detail": "After dispatchFacebookHybrid() returns, the rest of scrape() still contains a needsPuppeteer branch that lists 'facebook','fb' (line 352) and a platformActionMap.facebook (lines 325-333) that maps to legacy functions. This code is unreachable for facebook but still references legacy src/scrapers/facebook/index.js and can confuse future maintainers.",
+    "severity": "low",
+    "bucket": "defer"
+  },
+  {
+    "id": "13.10-FIND-019",
+    "ac": "AC-6",
+    "location": "src/mcp/server.js:1391-1394",
+    "title": "x_facebook_automate enum still only supports like/comment/post/messenger; share missing",
+    "detail": "The inputSchema for x_facebook_automate lists enum ['like','comment','post','messenger']. AC-6 mapping table also maps x_facebook_automate 'post' and 'messenger' correctly, but does not expose 'share' through this tool (share is an Epic-4 tool). This is acceptable by AC-6's tool table, but note that no hybrid dispatch happens for any of them.",
+    "severity": "low",
+    "bucket": "defer"
+  },
+  {
+    "id": "13.10-FIND-020",
+    "ac": "AC-7",
+    "location": "src/cli/commands/scrape.js:49",
+    "title": "CLI scrape allows marketplace without authCookie, but marketplace action still receives undefined session.cookies",
+    "detail": "src/cli/commands/scrape.js correctly skips the authCookie guard for marketplace (line 49). However, dispatchFacebookHybrid builds session.cookies = options.authCookie, which is undefined when no cookie is supplied. FacebookClient should fall back to guest token ring, but this has not been explicitly verified in the tests. Residual risk for no-auth marketplace invocation.",
+    "severity": "low",
+    "bucket": "defer"
+  }
+]

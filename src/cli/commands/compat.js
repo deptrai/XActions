@@ -3,11 +3,7 @@
  * `xactions compat` command group.
  */
 import chalk from 'chalk';
-import ora from 'ora';
-import inquirer from 'inquirer';
 import fs from 'fs/promises';
-import path from 'path';
-import { CONFIG_DIR, CONFIG_FILE, loadConfig, saveConfig, formatNumber, parseCliPositiveInt, parseCliNonNegativeInt, printCliError, disconnectPrisma } from '../shared.js';
 
 export function registerCompatCommands(program) {
 // ============================================================================

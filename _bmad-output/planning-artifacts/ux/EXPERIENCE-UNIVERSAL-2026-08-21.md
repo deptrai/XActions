@@ -8,7 +8,7 @@ sources:
 
 # EXPERIENCE-UNIVERSAL-2026-08-21.md — Universal Operator, AI & Multi-Platform Flows
 
-Tài liệu này bổ sung `EXPERIENCE.md` để cover các persona và flows mới trong Epics 10–20: **Platform Operator**, **AI Agent / MCP Consumer**, **Nowing Integrator**, và **Data Scientist**.
+Tài liệu này bổ sung `EXPERIENCE.md` để cover các persona và flows mới trong Epics 10–20 và Phase 4 extension 23–26: **Platform Operator**, **AI Agent / MCP Consumer**, **Nowing Integrator**, **Data Scientist**, và **Open/Federated Social Analyst**.
 
 ---
 
@@ -19,6 +19,7 @@ Tài liệu này bổ sung `EXPERIENCE.md` để cover các persona và flows m�
 3. **Nowing Integrator** — nhận thin events từ Redis Stream, query schema, đối soát dữ liệu.
 4. **Data Scientist** — xuất dataset JSONL/CSV, resume/pause checkpoints.
 5. **CLI Power User** — chạy `xactions login --qr`, `xactions status`, `xactions admin`.
+6. **Open/Federated Social Analyst** — cào và phân tích dữ liệu Bluesky/Mastodon công khai mà không cần auth, hoặc với optional auth để truy cập nội dung riêng tư hơn.
 
 ---
 
@@ -109,12 +110,23 @@ Tài liệu này bổ sung `EXPERIENCE.md` để cover các persona và flows m�
 ### Flow N1: First crawl across 3 platforms
 
 1. New user opens `/platforms`.
-2. Sidebar lists: X/Twitter, Facebook, Threads, TikTok, Shopee, Batdongsan, TopCV.
+2. Sidebar lists: X/Twitter, Facebook, Threads, TikTok, Bluesky, Mastodon, Shopee, Batdongsan, TopCV.
 3. User selects `Shopee` → Account selector (no auth required).
 4. User enters query `iphone 15` → Dry-run preview.
 5. User unchecks dry-run → `Run Live`.
 6. Result panel: 50 products with price, image, link.
 7. User exports to CSV / JSONL.
+
+### Flow N2: First crawl on an open public platform (Bluesky / Mastodon)
+
+1. New user opens `/platforms`.
+2. Sidebar lists Bluesky or Mastodon; no Account selector (public, optional auth).
+3. User selects `Bluesky` → optional `auth` section collapsed; default `service = https://public.api.bsky.app`.
+4. User enters query `ai ethics` or a Bluesky handle → Dry-run preview.
+5. Result panel: profile feed or search results with platform badge `bluesky`.
+6. User exports to JSONL / Redis stream.
+
+*Mastodon variant:* user can override `instance` (e.g., `https://mastodon.social`, `https://hachyderm.io`) in a text input; default `https://mastodon.social`.
 
 ---
 

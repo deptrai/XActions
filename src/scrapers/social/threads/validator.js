@@ -1,26 +1,30 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * ThreadsPlatformResponseValidator — Hybrid GraphQL & HTML response validator for Meta Threads.
+ * ThreadsPlatformResponseValidator — Response validator for Threads (Meta GraphQL & SSR HTML).
  * @author nich (@nichxbt)
  * @license Apache-2.0
  */
 
 import { AbstractPlatformResponseValidator } from '../../../core/platform-validator.js';
 
-const BOT_CHALLENGE_PHRASES = [
-  'security check',
-  'challenge',
-  'checkpoint',
-  'captcha',
-  'please verify your account',
+/** @type {string[]} */
+const SOFT_CHALLENGE_MARKERS = [
+  'suspicious activity',
   'unusual activity',
-];
-
-const LOGIN_WALL_PHRASES = [
-  'log in to threads',
-  'log into threads',
-  'sign up for threads',
-  'threads - log in',
+  'verify your account',
+  'log in to continue',
+  'login to continue',
+  "confirm it's you",
+  'your account has been locked',
+  'your account has been suspended',
+  'help us confirm',
+  'suspicious login',
+  'unusual login',
+  'confirm your identity',
+  'please confirm your identity',
+  'please verify your account',
+  'relogin to continue',
+  'session expired',
 ];
 
 export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseValidator {
@@ -50,6 +54,29 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
   }
 
   /**
+   * Extract error-only text from response payload.
+   * @param {unknown} response
+   * @returns {string}
+   */
+  #getErrorText(response) {
+    const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
+    const data = record?.data && typeof record.data === 'object' ? /** @type {Record<string, unknown>} */ (record.data) : null;
+    const errors = data?.errors ?? record?.errors ?? (data?.error ? [data.error] : (record?.error ? [record.error] : null));
+    if (Array.isArray(errors) && errors.length > 0) {
+      try {
+        return JSON.stringify(errors).toLowerCase();
+      } catch {}
+    }
+
+    const body = this.#getBody(response);
+    if (body && (body.includes('/checkpoint/') || body.includes('security check') || body.includes('challenge') || body.includes('login_wall'))) {
+      return body.toLowerCase();
+    }
+
+    return '';
+  }
+
+  /**
    * @param {unknown} response
    * @returns {boolean}
    */
@@ -64,8 +91,20 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
 
     const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
     let data = record?.data && typeof record.data === 'object' ? /** @type {Record<string, unknown>} */ (record.data) : null;
-    if (data && typeof data.data === 'object' && data.data) {
+    
+    // Unwrap nested data layers if any, with depth and cycle guard.
+    const seen = new WeakSet();
+    let depth = 0;
+    while (data && typeof data === 'object' && data.data && !Array.isArray(data.data) && depth < 5) {
+      if (seen.has(data)) break;
+      seen.add(data);
       data = /** @type {Record<string, unknown>} */ (data.data);
+      depth++;
+    }
+
+    // An explicit false success flag is not a valid payload.
+    if (data && typeof data === 'object' && data.success === false) {
+      return false;
     }
 
     // Allow GraphQL error envelopes to pass so client can classify them accurately
@@ -75,23 +114,24 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
 
     if (data && typeof data === 'object') {
       if (
+        'mediaData' in data ||
+        'containing_thread' in data ||
+        'reply_threads' in data ||
+        'user' in data ||
         'userData' in data ||
         'node' in data ||
-        'user' in data ||
-        'mediaData' in data ||
+        'threads' in data ||
+        'posts' in data ||
+        'edges' in data ||
         'feed' in data ||
         'searchResults' in data ||
-        data.profiles ||
-        data.posts ||
-        data.comments ||
-        data.id ||
-        data.username
+        data.success !== undefined
       ) {
         return true;
       }
     }
 
-    if (record && (record.name || record.id || record.username || record.profileUrl)) {
+    if (record && (record.id || record.pk || record.postUrl || record.content || record.caption)) {
       return true;
     }
 
@@ -100,11 +140,23 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
 
     // Real content or page tokens check
     if (
-      body.includes('window.__user_id') ||
-      body.includes('window.__LSD__') ||
+      body.includes('["LSD"') ||
+      body.includes('"LSD"') ||
       body.includes('name="lsd"') ||
-      body.includes('og:title')
+      body.includes('window.__user_id') ||
+      body.includes('BarcelonaProfileThreadsTabQuery') ||
+      body.includes('BarcelonaPostPageQuery') ||
+      /<article\b|div data-pressable-container=/i.test(body)
     ) {
+      return true;
+    }
+
+    if (/<html/i.test(body) && (body.includes('role="main"') || body.includes('id="root"'))) {
+      return true;
+    }
+
+    // SSR search/profile pages embed their payload in an application/json script tag.
+    if (/<script\s+type="application\/json"/i.test(body) && (body.includes('searchResults') || body.includes('mediaData') || body.includes('raw_data'))) {
       return true;
     }
 
@@ -117,16 +169,30 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
    */
   isBotChallenge(response) {
     const url = this.#getUrl(response);
-    if (/(?:checkpoint|challenge|captcha)/i.test(url)) {
+    if (/(?:threads\.net\/checkpoint|instagram\.com\/checkpoint|\/checkpoint\/|accounts\/login)/i.test(url)) {
       return true;
     }
 
-    const body = this.#getBody(response).toLowerCase();
-    if (BOT_CHALLENGE_PHRASES.some((phrase) => body.includes(phrase))) {
-      return true;
+    const body = this.#getBody(response);
+    if (body) {
+      const lower = body.toLowerCase();
+      for (const marker of SOFT_CHALLENGE_MARKERS) {
+        if (lower.includes(marker)) return true;
+      }
+      if (/<form[^>]*action="[^"]*login/i.test(body) || (body.includes('Login • Threads') && !body.includes('role="main"'))) {
+        return true;
+      }
     }
 
-    if (LOGIN_WALL_PHRASES.some((phrase) => body.includes(phrase)) && !body.includes('og:description')) {
+    const errorText = this.#getErrorText(response);
+    if (
+      errorText.includes('security check') ||
+      errorText.includes('confirm your identity') ||
+      errorText.includes('please confirm your identity') ||
+      errorText.includes('/checkpoint/') ||
+      errorText.includes('captcha') ||
+      errorText.includes('checkpoint_required')
+    ) {
       return true;
     }
 
@@ -150,11 +216,15 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
       return true;
     }
 
-    const body = this.#getBody(response).toLowerCase();
+    const errorText = this.#getErrorText(response);
     if (
-      body.includes('please wait a few minutes') ||
-      body.includes('rate limit exceeded') ||
-      body.includes('too many requests')
+      errorText.includes("you're temporarily blocked") ||
+      errorText.includes('you are temporarily blocked') ||
+      errorText.includes('action blocked') ||
+      errorText.includes('too many requests') ||
+      errorText.includes('"code":368') ||
+      errorText.includes('"code": 368') ||
+      errorText.includes('rate_limit')
     ) {
       return true;
     }

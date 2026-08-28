@@ -1,0 +1,350 @@
+[
+    {
+        "id": 8,
+        "source": [
+            "blind-hunter",
+            "acceptance-auditor"
+        ],
+        "title": "messenger_share registers recipients as optional but throws when none are supplied",
+        "detail": "`messenger_share` lists `recipientUids` and `recipientUid` in `optionalArgs`, but `FacebookActions.messengerShare` throws `XACT_4001` when `recipientUids.length === 0`, even in dry-run.",
+        "location": "src/scrapers/social/facebook/crawler.js:473-482; src/scrapers/social/facebook/actions.js:892-901",
+        "severity": "medium",
+        "bucket": "decision_needed",
+        "reasoning": "AC-1 says `recipientUids` is optional, but a Messenger share is meaningless without a recipient. A product decision is needed: either require at least one recipient in the metadata, or define a no-recipient dry-run preview."
+    },
+    {
+        "id": 1,
+        "source": [
+            "blind-hunter",
+            "edge-case-hunter"
+        ],
+        "title": "Default maxBatch for post/join_group/like exceeds per-hour velocity ceilings",
+        "detail": "`like` clamps maxBatch to 30, `post` to 10/20, and `join_group` to 20. The ACTION_LIMITS per-hour ceilings are post=5, group_post=3, join_group=5. runGuardedActionBatch slices to the maxBatch and then checks canDoAction per item, so the 6th item throws XACT_4291 and aborts the batch after partial progress.",
+        "location": "src/scrapers/social/facebook/actions.js:292,424,584,1180; src/scrapers/social/facebook/batch-runner.js:246-251",
+        "severity": "high",
+        "bucket": "patch",
+        "reasoning": "Unambiguous fix: default maxBatch should be min(perHour, MAX_BATCH_SIZE), and runGuardedActionBatch should clamp the effective maxBatch to the per-hour ceiling before slicing."
+    },
+    {
+        "id": 2,
+        "source": [
+            "blind-hunter",
+            "edge-case-hunter",
+            "acceptance-auditor",
+            "verification-gap"
+        ],
+        "title": "Live write actions use textContent/ClipboardEvent injection and do not verify outcomes",
+        "detail": "comment, post, and share set `el.textContent` and dispatch a synthetic `InputEvent`; messenger_share uses a `ClipboardEvent` paste. None wait for a specific rendered element, use human-like keypress delays, or verify post-submit/sent indicators. post does not check for error alerts after clicking the submit button.",
+        "location": "src/scrapers/social/facebook/actions.js:455-490, 669-686, 700-715, 797-803, 992-1023",
+        "severity": "high",
+        "bucket": "patch",
+        "reasoning": "Violates AC-4 (human-like typing), AC-5/AC-6/AC-7 (result verification) and makes the live paths flaky and detectable. The fix is to type with delay and verify the expected post-submit/sent UI state."
+    },
+    {
+        "id": 3,
+        "source": [
+            "blind-hunter",
+            "edge-case-hunter",
+            "acceptance-auditor"
+        ],
+        "title": "messenger_share never verifies delivery and GraphQL fallback is wrong",
+        "detail": "Direct Messenger path returns `ok:true` after paste+Enter without checking a sent indicator. Share-dialog path clicks a recipient option but not the final Send. GraphQL path uses `actor_id: recipientUid` instead of the sending account, does not inspect the GraphQL response, and throws `XACT_5000` when the doc_id is missing instead of returning an error.",
+        "location": "src/scrapers/social/facebook/actions.js:984-1023, 1045-1098, 1109-1138",
+        "severity": "high",
+        "bucket": "patch",
+        "reasoning": "AC-7 requires reliable ok/method output. The fixes are unambiguous: verify a sent message in the DOM, use `resolveAccountId(session)` for actor_id, inspect `requestGraphQl` response, and return an error object rather than throwing."
+    },
+    {
+        "id": 4,
+        "source": [
+            "blind-hunter",
+            "edge-case-hunter",
+            "acceptance-auditor"
+        ],
+        "title": "send_friend_request suggestions/location modes bypass batch safety controls",
+        "detail": "`#sendFriendRequestsFromSuggestions` runs an ad-hoc while loop with ~0.8-1.2s pauses and never calls `runGuardedActionBatch`, so it skips per-item governor checks, velocity tracking, and the 60-180s delay floor. Location search extracts profile links without a non-profile denylist and only runs found URLs through `runGuardedActionBatch`, leaving the initial search ungoverned.",
+        "location": "src/scrapers/social/facebook/actions.js:1349-1352, 1459-1493, 1505-1537",
+        "severity": "high",
+        "bucket": "patch",
+        "reasoning": "Violates AC-9, AC-10, AC-15 and NFR-10. The fix is to dispatch suggestion/location results through `runGuardedActionBatch` with the correct actionName and delay floor."
+    },
+    {
+        "id": 5,
+        "source": [
+            "blind-hunter",
+            "acceptance-auditor",
+            "verification-gap",
+            "edge-case-hunter"
+        ],
+        "title": "runGuardedActionBatch records governor/tracker only on success, hides test seam, and does not short-circuit non-retryable errors",
+        "detail": "The runner mutates the page object with `page.__actionName = actionName`, a test-only seam. It catches per-item errors and continues, including XACT_4010/XACT_4290, instead of rethrowing non-retryable failures. It records `governor.recordRequest` and `velocityTracker.recordAction` only when `result.error` is absent and `result.ok !== false`, contradicting AC-15 which says record after every non-validation item.",
+        "location": "src/scrapers/social/facebook/batch-runner.js:259-310, 291-299",
+        "severity": "high",
+        "bucket": "patch",
+        "reasoning": "Unambiguous fixes: remove the `__actionName` mutation; rethrow XACT_4010/XACT_4290 to short-circuit the batch; record for every item whose code is not XACT_4001."
+    },
+    {
+        "id": 6,
+        "source": [
+            "blind-hunter",
+            "verification-gap",
+            "acceptance-auditor"
+        ],
+        "title": "Live action tests use FakePage/FakeFacebookBrowserBridge stubs and miss real DOM/GraphQL/bridge verification",
+        "detail": "`FakePage.evaluate` ignores the actual scripts and returns pre-canned values keyed by `__actionName`. `FakeFacebookBrowserBridge` ignores `withPage` options and never runs the real bridge. AC-9..AC-16 pass without exercising DOM selectors, typing, fallback ordering, GraphQL variables, anti-bot token extraction, `requiresResidential`, `ensureBrowserBridge`, or `resolvePostFeedbackContext` HTTP extraction.",
+        "location": "tests/scrapers/social/facebook/crawler-social-actions.test.js:22-133; src/scrapers/social/facebook/client.js:391-401; src/scrapers/social/facebook/signer-bridge.js:121-128, 961-1001",
+        "severity": "high",
+        "bucket": "patch",
+        "reasoning": "AC-13 and project testing standards forbid mocks/stubs. The fix is to add realistic `node:http` HTML fixtures and a real (or jsdom-backed) page/bridge, asserting actual selectors, GraphQL variables, and proxy/bridge flags."
+    },
+    {
+        "id": 11,
+        "source": [
+            "blind-hunter",
+            "edge-case-hunter"
+        ],
+        "title": "join_group does not validate the Facebook hostname and returns joined:true regardless of verification",
+        "detail": "`joinGroup` checks only that the URL contains `/groups/` and never calls `assertFacebookUrl`, so non-`facebook.com` URLs with `/groups/` reach `page.goto`. After clicking Join, `#joinGroup` returns the literal `{ joined: true, pending: joined }` even when the pending/joined verification selector is not found.",
+        "location": "src/scrapers/social/facebook/actions.js:1163-1173, 1251-1295",
+        "severity": "high",
+        "bucket": "patch",
+        "reasoning": "SSRF risk and false success reports. Unambiguous: call `assertFacebookUrl` on group URLs and return `joined: joined` (the actual boolean from verification)."
+    },
+    {
+        "id": 16,
+        "source": [
+            "blind-hunter",
+            "edge-case-hunter",
+            "acceptance-auditor"
+        ],
+        "title": "GraphQL write fallbacks throw XACT_5000 on missing/placeholder doc_id and friendlyNames map is empty",
+        "detail": "`DEFAULT_FB_DOC_IDS` write doc IDs are `fb_*_mutation_doc` placeholders, and `#resolveDocId` rejects them. `FacebookClient.friendlyNames` is empty. When DOM fails, `#likeViaGraphQL`, `#commentViaGraphQL`, `#shareViaGraphQL`, and `#messengerShareViaGraphQL` throw `XACT_5000` instead of returning an error with a note.",
+        "location": "src/scrapers/social/facebook/crawler.js:225-231; src/scrapers/social/facebook/client.js:91, 178-180; src/scrapers/social/facebook/actions.js:275-280, 376-402, 524-551, 843-870, 1109-1139",
+        "severity": "high",
+        "bucket": "patch",
+        "reasoning": "Unambiguous: do not panic when doc_id/context is missing; return an error object. Populate `friendlyNames` for the write-mutation map and filter invalid doc_ids before calling `requestGraphQl`."
+    },
+    {
+        "id": 19,
+        "source": [
+            "verification-gap",
+            "edge-case-hunter"
+        ],
+        "title": "Residential proxy is not enforced when only proxyPool is configured",
+        "detail": "`FacebookClient` passes `requiresResidential: true` and `FacebookBrowserBridge.#resolveProxy` receives the flag, but `AbstractApiClient.resolveProxy` throws `XACT_5030` when `requiresResidential` is true and only `proxyPool` is set, and `FacebookBrowserBridge.#resolveProxy` calls `proxyPool.getStickyProxy(accountId)` with no residential filter. `ProxyIpPool.getStickyProxy` has no `requiresResidential` parameter.",
+        "location": "src/core/base-client.js:191-203; src/scrapers/social/facebook/signer-bridge.js:487-510; src/proxy/proxy-pool.js:178-202",
+        "severity": "high",
+        "bucket": "patch",
+        "reasoning": "Real production blocker for write sessions. Unambiguous: add residential filtering to `ProxyIpPool`/`proxyProvider` and ensure both client and bridge can resolve a residential proxy when only `proxyPool` is configured."
+    },
+    {
+        "id": 7,
+        "source": [
+            "blind-hunter",
+            "acceptance-auditor"
+        ],
+        "title": "join_group and send_friend_request action metadata do not match runtime contract or AC-1",
+        "detail": "`join_group` registers `requiredArgs: []` even though the handler requires `groupUrls` or `groupIds` or `keyword`. `send_friend_request` registers `requiredArgs: ['targets']` but the `suggestions` and `location` modes are designed to run with no targets.",
+        "location": "src/scrapers/social/facebook/crawler.js:495-515",
+        "severity": "medium",
+        "bucket": "patch",
+        "reasoning": "Unambiguous: update `join_group` requiredArgs to reflect `groupUrls`/`groupIds`/`keyword`, and make `targets` optional or add `mode` as a required/conditional arg."
+    },
+    {
+        "id": 9,
+        "source": [
+            "blind-hunter",
+            "acceptance-auditor"
+        ],
+        "title": "post rejects mediaUrls as an error and fails to resolve numeric groupIds",
+        "detail": "When `mediaUrls` is present, the live path returns `error: 'mediaUrls not supported'`, making the result look like a failure. AC-5 says `mediaUrls` is reserved, not an error. Also, `groupIds` are collected into `groupUrls` and passed to `assertFacebookUrl`, which rejects numeric IDs instead of resolving `https://www.facebook.com/groups/{id}`.",
+        "location": "src/scrapers/social/facebook/actions.js:572-575, 584, 612-613",
+        "severity": "medium",
+        "bucket": "patch",
+        "reasoning": "Unambiguous: create a text post with a `note` when media is reserved, and resolve numeric `groupIds` to group URLs before validation."
+    },
+    {
+        "id": 10,
+        "source": [
+            "edge-case-hunter",
+            "acceptance-auditor"
+        ],
+        "title": "comment skips 8000-char limit and uses instantaneous textContent injection",
+        "detail": "`comment` only checks that `rawText` is non-empty. It does not enforce `text.length <= 8000` as required by AC-4. It sets `textContent` and dispatches one `InputEvent` instead of human-like typing.",
+        "location": "src/scrapers/social/facebook/actions.js:410-421, 455-490",
+        "severity": "medium",
+        "bucket": "patch",
+        "reasoning": "AC-4 explicitly requires length validation and human-like typing. The fix is unambiguous."
+    },
+    {
+        "id": 12,
+        "source": [
+            "blind-hunter",
+            "edge-case-hunter"
+        ],
+        "title": "send_friend_request target and location-search extraction accept non-profile paths",
+        "detail": "`#normalizeFriendTarget` accepts any `[a-zA-Z0-9_.-]{1,100}` and turns it into `https://www.facebook.com/${t}`; inputs like `photo.php`, `about`, or `people` pass through. Location search regex has no denylist for non-profile segments.",
+        "location": "src/scrapers/social/facebook/actions.js:1374-1398, 1514-1533",
+        "severity": "medium",
+        "bucket": "patch",
+        "reasoning": "Unambiguous: add a non-profile denylist (photo, about, people, help, login, etc.) or require numeric UID/verified URL for username and `mode` results."
+    },
+    {
+        "id": 13,
+        "source": [
+            "blind-hunter",
+            "edge-case-hunter"
+        ],
+        "title": "post postId regex misses common group-post URL shapes",
+        "detail": "`#createPost` extracts `postId` only from `/posts/{id}`, `story_fbid`, and `story.php`. It does not match `/groups/{groupId}/permalink/{id}` or `/groups/{groupId}/posts/{id}`, so `postId` is often undefined for group posts.",
+        "location": "src/scrapers/social/facebook/actions.js:729-734",
+        "severity": "medium",
+        "bucket": "patch",
+        "reasoning": "Unambiguous: add group permalink and group-post URL patterns to the regex set."
+    },
+    {
+        "id": 18,
+        "source": [
+            "edge-case-hunter"
+        ],
+        "title": "requestGraphQl does not sanitize invalid/placeholder values in fallbackDocIds",
+        "detail": "`requestGraphQl` only deduplicates `fallbackDocIds`; `null`, empty strings, `'null'`, and `fb_`-prefixed values can leak through and be attempted.",
+        "location": "src/scrapers/social/facebook/client.js:613-638",
+        "severity": "medium",
+        "bucket": "patch",
+        "reasoning": "Unambiguous: apply the same `typeof string && length > 0 && !startsWith('fb_') && !== 'null'` filter in `requestGraphQl` that `FacebookActions` applies before calling it."
+    },
+    {
+        "id": 20,
+        "source": [
+            "acceptance-auditor"
+        ],
+        "title": "GraphQL code 368 rate-limit uses RETRY_AFTER_DELAY instead of ROTATE_PROXY",
+        "detail": "When `requestGraphQl` receives GraphQL error code 368 (upstream rate limit), it throws `XACT_4290` with `suggestedAction: SuggestedActions.RETRY_AFTER_DELAY`. AC-11 says this should be `rotate_proxy`.",
+        "location": "src/scrapers/social/facebook/client.js:579-589",
+        "severity": "medium",
+        "bucket": "patch",
+        "reasoning": "Unambiguous fix per AC-11."
+    },
+    {
+        "id": 25,
+        "source": [
+            "acceptance-auditor"
+        ],
+        "title": "share action does not explicitly select the destination before clicking final Share",
+        "detail": "After opening the share dialog and optionally typing a message, the code searches for any button whose aria-label matches `share now` and clicks it, without first selecting the 'Share to your own timeline' or equivalent destination.",
+        "location": "src/scrapers/social/facebook/actions.js:777-828",
+        "severity": "medium",
+        "bucket": "patch",
+        "reasoning": "AC-6 step 3 requires selecting the destination. Unambiguous: click the destination option before the final share confirmation."
+    },
+    {
+        "id": 27,
+        "source": [
+            "verification-gap"
+        ],
+        "title": "resolvePostFeedbackContext HTTP extraction and runGuardedActionBatch recording/velocity edge cases are not tested",
+        "detail": "`AC-17` uses a local baseUrl so `isFacebookClient` is false and returns a synthetic feedback id; no test returns realistic post HTML and asserts extraction. No test pre-fills the velocity tracker to the per-hour/day limit and then calls `runGuardedActionBatch` with `dryRun: false` expecting `XACT_4291`, or asserts that failed items are not recorded.",
+        "location": "tests/scrapers/social/facebook/crawler-social-actions.test.js:620-635, 693-713, 732-747; src/scrapers/social/facebook/crawler.js:994-1018",
+        "severity": "medium",
+        "bucket": "patch",
+        "reasoning": "Unambiguous: add a test with realistic post HTML and assert `resolvePostFeedbackContext` extracts the feedback_id; pre-fill the tracker and assert `XACT_4291` and non-recording on failure."
+    },
+    {
+        "id": 14,
+        "source": [
+            "edge-case-hunter"
+        ],
+        "title": "runGuardedActionBatch ignores non-positive maxBatch",
+        "detail": "When `maxBatch` is 0 or negative, the `Number.isFinite(n) && n > 0` guard silently fails and the full input array is processed.",
+        "location": "src/scrapers/social/facebook/batch-runner.js:246-251",
+        "severity": "low",
+        "bucket": "patch",
+        "reasoning": "Unambiguous: clamp to at least 1 or throw `XACT_4001` for an invalid maxBatch."
+    },
+    {
+        "id": 15,
+        "source": [
+            "blind-hunter"
+        ],
+        "title": "like maxBatch can exceed the MAX_BATCH_SIZE constant",
+        "detail": "`MAX_BATCH_SIZE` is 20, but `like` clamps `maxBatch` up to 30 and `runGuardedActionBatch` does not enforce the constant.",
+        "location": "src/scrapers/social/facebook/actions.js:25, 292-303; src/scrapers/social/facebook/batch-runner.js:246-251",
+        "severity": "low",
+        "bucket": "patch",
+        "reasoning": "Unambiguous: clamp `maxBatch` to `MAX_BATCH_SIZE` in `#batchOptions` or `runGuardedActionBatch`."
+    },
+    {
+        "id": 21,
+        "source": [
+            "blind-hunter"
+        ],
+        "title": "messenger_share and share_link_uid dry-run return ok:true while other actions return false",
+        "detail": "In dry-run, `messenger_share` returns `ok: true` and `share_link_uid` returns `ok: true`, whereas `like`, `comment`, `post`, etc. return the action outcome as `false` in dry-run.",
+        "location": "src/scrapers/social/facebook/actions.js:907-912, 957-965",
+        "severity": "low",
+        "bucket": "patch",
+        "reasoning": "Inconsistent dry-run output contract. Unambiguous: align to `ok: false`/`posted: false` semantics and use `dryRun: true` to indicate preview."
+    },
+    {
+        "id": 22,
+        "source": [
+            "blind-hunter"
+        ],
+        "title": "pickRandomSegment/composeMessage are not applied to live messages",
+        "detail": "`composeMessage` (which handles `**`/`||` variant selection and emoji stripping) is only used for dry-run/log previews. In live `messengerShare`, the raw `postUrl` and `message` are sent without segment selection or emoji stripping.",
+        "location": "src/scrapers/social/facebook/actions.js:61-67, 903, 990-991, 1126",
+        "severity": "low",
+        "bucket": "patch",
+        "reasoning": "AC-7 says `message compose strip emoji n\u1ebfu c\u1ea5u h\u00ecnh (t\u00e1i d\u1ee5ng ... pickRandomSegment)`. Unambiguous: apply `composeMessage` to live text when configured."
+    },
+    {
+        "id": 26,
+        "source": [
+            "edge-case-hunter"
+        ],
+        "title": "runGuardedActionBatch does not handle governor promise rejection",
+        "detail": "`governor.canAccountRequest` is awaited with `await Promise.resolve(...)`, but if the underlying promise rejects, the error propagates and aborts the batch without being wrapped.",
+        "location": "src/scrapers/social/facebook/batch-runner.js:259-270",
+        "severity": "low",
+        "bucket": "patch",
+        "reasoning": "Unambiguous: wrap the governor call in a try/catch or use the existing `wrapItemError` so a governor failure is treated as a batch-level rate/auth error rather than an unhandled exception."
+    },
+    {
+        "id": 17,
+        "source": [
+            "blind-hunter",
+            "edge-case-hunter"
+        ],
+        "title": "DEFAULT_FB_DOC_IDS write mutation placeholders are not real production doc_ids",
+        "detail": "All write-mutation doc IDs (`LIKE_MUTATION`, `COMMENT_MUTATION`, `POST_MUTATION`, `SHARE_MUTATION`, `MESSENGER_SHARE_MUTATION`, etc.) are `fb_*_mutation_doc` placeholders. Real GraphQL write paths require capturing live doc_ids from an authenticated session.",
+        "location": "src/scrapers/social/facebook/crawler.js:225-231; src/scrapers/social/facebook/actions.js:275-280",
+        "severity": "medium",
+        "bucket": "defer",
+        "reasoning": "Real but out of current AC scope: the spec and Dev Notes explicitly state placeholders are by design until captured from a live session. The code correctly rejects them rather than sending invalid doc_ids."
+    },
+    {
+        "id": 23,
+        "source": [
+            "blind-hunter"
+        ],
+        "title": "FacebookActionVelocityTracker history is in-memory only and not shared across workers/restarts",
+        "detail": "The sliding-window history is stored in a private `Map`. Velocity limits reset on process restart and are not shared across workers or CLI invocations.",
+        "location": "src/scrapers/social/facebook/batch-runner.js:47-48",
+        "severity": "medium",
+        "bucket": "defer",
+        "reasoning": "Real but out of AC-14 scope, which only requires an in-process sliding window. Adding a shared persistent store is a larger infrastructure change."
+    },
+    {
+        "id": 24,
+        "source": [
+            "edge-case-hunter"
+        ],
+        "title": "Legacy shareLinkByUid campaign still uses a plain loop without batch safety",
+        "detail": "`shareLinkByUidCampaign` in the deprecated `src/scrapers/facebook/shareLinkByUid.js` uses a `for` loop with arbitrary 3-8s delays instead of `runGuardedActionBatch`/velocity tracking.",
+        "location": "src/scrapers/facebook/shareLinkByUid.js:208-232",
+        "severity": "low",
+        "bucket": "defer",
+        "reasoning": "The file is deprecated and not used by the new `FacebookActions`. Addressing it belongs to the Epic 20.2 cleanup, not 13.9."
+    }
+]

@@ -14,6 +14,65 @@ inputDocuments:
 
 Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ thống **XActions Universal Hybrid Scraping & Automation Microservice** (tiếp nối Epics 1–9 trong `archive/epics-1-9-legacy.md`). Hệ thống được thiết kế theo chuẩn **Hexagonal Architecture + Tiered Hybrid Signer Engine + Dual-Channel Microservice Daemon + Adaptive Rate Limiter**, hợp nhất 100% cơ sở dữ liệu trên **PostgreSQL (Prisma ORM với JSONB GIN Indexes)** và đóng vai trò là Scraping Engine toàn năng cho hệ sinh thái **Nowing (AI Lead & Research Hub)** cũng như nền tảng SaaS/CLI/AI MCP độc lập.
 
+## Backlog Status & Legacy Code Overlap (Audit 2026-08-21)
+
+> Được cập nhật sau khi so sánh toàn bộ backlog Epics 12–20 với source code hiện có.
+
+### Consolidated / Absorbed
+- **Story 11.5** (End-to-End Request Pipeline) và **Story 11.6** (Rate-Limit/Bot-Challenge Defense) đã được hấp thụ vào **Story 11.3** (End-to-End Request Pipeline with 429/403 Auto-Quarantine, Exponential Backoff & Two-Mode IP Strategy). Xem `src/core/base-client.js`.
+- **Story 11.4** được thu nhỏ thành "Governor Surface & Backpressure" vì core `AdaptiveRateGovernor` đã implement trong `src/core/adaptive-governor.js`.
+
+### Partial Overlap — Refactor / Wrap Recommended
+| Story | Existing Code | Gap |
+|---|---|---|
+| 12.1 | `src/utils/qrcode.js` (`renderTerminalQr`, `isTty`) | countdown, `checkLoginState`, CLI flags, non-TTY fallback |
+| 13.1 | `src/core/signer-pool.js` (`PreSignedTokenRing`) | `SignerWorkerPagePool.init/evaluate/close` + 3s timeout |
+| 13.2 | `src/scrapers/twitter/index.js`, `src/scrapers/twitter/http/`, `src/client/Scraper.js`, `src/scrapers/index.js` | `TwitterCrawler extends AbstractCrawler` in `src/scrapers/social/twitter/` |
+| 13.3 | `src/scrapers/facebook/index.js`, `src/scrapers/facebook/graphql.js` | `FacebookCrawler extends AbstractCrawler` in `src/scrapers/social/facebook/` |
+| 14.1 | `src/scrapers/twitter/http/thread.js` (conversation/thread) | topological sort + Prisma batch save by depth |
+| 14.2 | `package.json` `mcp:daemon`, `src/mcp/server.js` `startHttpTransport()` (port 3001) | 3-layer JSON envelope, `x_crawl_*`, `x_actions_list`, artifact export |
+| 14.3 | `src/streaming/streamManager.js` (Redis/Bull/Socket.IO) | `stream:social:raw_posts` thin events, metrics endpoint, alerts |
+| 15.1 | `src/scrapers/threads/index.js` (Puppeteer) | `ThreadsCrawler extends AbstractCrawler` in `src/scrapers/social/threads/` |
+| 19.1–19.3 | `/api/checkpoints`, `/api/proxies`, `/api/streams` routes exist | dashboard views in `dashboard/admin.html` |
+| 19.5 | `xactions checkpoints list/show/resume/pause/retry` | done |
+| 19.6 | `xactions stream start/stop/list/history/pause/resume` | Nowing `stream:social:raw_posts` metrics + alerts |
+| 19.7 | `/api/proxies`, `/api/streams`, `/api/checkpoints` | mount under `/admin/*` with admin auth |
+
+### New / No Code in Repo
+| Epic | Stories | Note |
+|---|---|---|
+| 12.2 | CDP attach | no `launchBrowserWithCdp` or Playwright CDP connect |
+| 15.2 | TikTok scraper | no code |
+| 16.x | Shopee, TikTok Shop | legacy lives in Nowing repo, not here |
+| 17.x | Chotot, Batdongsan | legacy lives in Nowing repo |
+| 18.1–18.2 | TopCV, VietnamWorks | no code |
+| 18.3 | LinkedIn via CDP | blocked by 12.2 |
+| 19.4, 19.8 | `xactions admin` CLI, `x_admin_*` MCP tools | no code |
+
+### Decommission Plan (Epic 20.1)
+After new hybrid crawlers (Epics 13–18) are stable, the following legacy modules will be removed:
+- `src/client/Scraper.js` and `src/client/`
+- `src/scrapers/twitter/index.js` and `src/scrapers/twitter/http/`
+- `src/scrapers/facebook/index.js`
+- `src/scrapers/threads/index.js`
+
+`src/scrapers/index.js` will be refactored to delegate to `AbstractCrawler` instances rather than legacy function modules.
+
+---
+
+## Cross-Epic Dependency & Sequence Map
+
+| Epic/Story | Cần output từ | Lý do | Rủi ro nếu chưa xong |
+|---|---|---|---|
+| Epic 13-18 (crawlers) | Epic 10.1, 10.2, 10.5 | `AbstractCrawler`, `PrismaStore`, `metadata-schema` là nền tảng | Crawler không có interface/storage/schema để kế thừa. |
+| Epic 13-18 (crawlers) | Epic 11.3, 11.4, 11.7 | `AbstractApiClient`, `AdaptiveRateGovernor`, `Crawler-Governor Integration` | Không có proxy/retry/governor/validator. |
+| Epic 15.2 | Epic 13.1 | `SignerWorkerPagePool` để giải mã `a_bogus`/`msToken` | Không thể sign TikTok request. |
+| Epic 18.3 | Epic 12.2 | CDP Remote Attach cho LinkedIn | **Blocked** — 12.2 còn backlog. |
+| Epic 19 (admin) | Epic 10.4, 11.4, 14.3 | Checkpoints, governor, stream metrics | Dashboard/CLI không có dữ liệu để hiển thị. |
+| Epic 20 | Epics 13-18 | Tất cả crawler đa nền tảng phải stable trước khi decommission | Không thể shadow-run hoặc xóa scraper cũ an toàn. |
+
+**Quy tắc dependency:** Không có forward reference theo số epic (Epic N không cần Epic N+1), nhưng **Epic 13–18 phải đợi Epic 10, 11 hoàn thành** và **Epic 20 phải đợi 13–18**. Epic 12.2 cần ưu tiên trước Epic 18.3.
+
 ---
 
 ## Cross-Epic Dependency & Sequence Map
@@ -60,6 +119,11 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 * **FR86 (Metadata Schema Contract for Consumers):** Mỗi platform/category publish JSON Schema cho `Post.metadata` và API/CLI/MCP discovery. (Story 10.5)
 * **FR87 (Data Retention Policy):** Dữ liệu raw crawl TTL 30 ngày; leads/processed output vĩnh viễn; checkpoints/audit logs 90 ngày. (Story 10.2, Epic 19)
 * **FR88 (3-Tier Incremental Gap-Filling):** Cào theo mô hình full seed → delta/gap fill → on-demand refresh; 0% duplication; 90% proxy cost saving. (Epic 10, 11)
+* **FR89 (Bluesky AT Protocol Scraper):** Cào profile, followers, following, user feed, search, và custom feeds trên Bluesky qua public AT Protocol API với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional auth. (Epic 23)
+* **FR90 (Mastodon REST API Scraper):** Cào profile, followers, following, timeline, search, hashtag, và trending trên bất kỳ Mastodon instance nào qua public REST API với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional `accessToken`. (Epic 23)
+* **FR91 (Utility Scripts & Adapters Consolidation):** Audit và quyết định deprecation cho `src/scrapers/*.js` độc lập và `src/scrapers/adapters/`; convert tính năng hữu ích thành `CrawlerCommand` action hoặc archive; thu gọn adapter layer. (Epic 24)
+* **FR92 (Unified Dispatcher & Backward Compatibility):** `src/scrapers/index.js` trở thành thin dispatcher duy nhất qua `scrape(platform, action, args)`; tất cả caller gọi `CrawlerCommand`; giữ `package.json` exports backward-compatible. (Epic 25)
+* **FR93 (Legacy Decommission):** Xóa legacy modules sau khi đạt shadow-run parity ≥ 99% trong 7 ngày. (Epic 26)
 
 ### NonFunctional Requirements
 
@@ -70,6 +134,7 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 * **NFR15 (Clean Architecture & Extensibility):** Tách biệt 100% giữa Core domain contracts và Implementation adapters; việc thêm nền tảng mới không làm thay đổi core logic.
 * **NFR16 (License & Backward Compatibility):** 100% mã nguồn tuân thủ giấy phép tự do (MIT / Apache 2.0); giữ nguyên khả năng tương thích ngược với CLI `unfollowx` và toàn bộ 80+ MCP tools hiện có.
 * **NFR17 (Operational Observability):** Hệ thống expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`.
+* **NFR18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
 
 ---
 
@@ -97,6 +162,8 @@ So that **tôi có thể thêm nền tảng mới (Shopee, LinkedIn, v.v.) mà k
 * **And** toàn bộ error classes kế thừa từ `PlatformError` cung cấp các trường: `statusCode`, `platform`, `isRetryable` (boolean), `retryAfterMs` (number), `suggestedAction`.
 * **And** `AbstractErrorEnvelope` / `PlatformError.toEnvelope()` chuẩn hóa shape trả về: `{ code, type, message, statusCode, isRetryable, retryAfterMs, retryAfter, suggestedAction, accountId?, platform }`.
 * **And** `AbstractCrawler` tự động đăng ký action vào `ActionRegistry`, validate `category` trước khi lưu, và đảm bảo `action` là snake_case.
+* **And** `ActionDescriptor` hỗ trợ trường tùy chọn `requiresAuth?: boolean`; `AbstractCrawler.start(command)` tính `actionRequiresAuth = entry.descriptor.requiresAuth ?? this.requiresAuth` và dùng giá trị này cho account resolution (rút `AccountPool`, throw `XACT_4010`, governor account check).
+* **And** action có `requiresAuth: false` chạy với `accountId = null` khi caller không truyền accountId: không rút `AccountPool`, không kiểm tra `governor.canAccountRequest`; `listActions()` trả về `requiresAuth` đã phân giải cho từng action.
 * **And** `GovernorStatusApi` định nghĩa shape `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 * **And** `node src/core/index.js` parse thành công và `npx prisma validate` pass.
 
@@ -217,23 +284,32 @@ So that **tôi có thể linh hoạt sử dụng các nhà cung cấp proxy ph�
 * **And** `DynamicTunnelProvider` phù hợp cho no-auth platforms (residential IP xoay per-request) hoặc khi cần đổi IP mỗi request.
 * **And** tích hợp tương thích với `undici.ProxyAgent` và `playwright.chromium.launch({ proxy })`.
 
-### Story 11.3: 429/403 Auto-Quarantine, Standby Backoff & Exponential Replay Interceptor
+### Story 11.3: End-to-End Request Pipeline with 429/403 Auto-Quarantine, Exponential Backoff & Two-Mode IP Strategy
 As a **Reliability Engineer**,
-I want **hệ thống tự động cách ly proxy bị chặn và replay request với proxy mới kèm cơ chế Standby Backoff khi toàn bộ pool bị rate-limit**,
-So that **toàn bộ pipeline không bao giờ bị crash khi nền tảng kích hoạt bảo vệ diện rộng**.
+I want **`AbstractApiClient` wire `ProxyIpPool`/`ProxyProvider`, `AdaptiveRateGovernor` và `AccountPool` thành một pipeline rõ ràng: sticky IP cho tài khoản auth-required và rotating IP cho no-auth platforms, tự động cách ly proxy bị chặn và replay request với exponential backoff**,
+So that **mọi request đều đi qua proxy đúng chế độ, pipeline không bao giờ bị crash khi nền tảng kích hoạt bảo vệ diện rộng, và không bao giờ fallback về direct connection**.
+
+> **Scope consolidation:** Story này đã hấp thụ Story 11.5 (Two-Mode IP Strategy) và Story 11.6 (Rate-Limit/Bot-Challenge Defense) vì cả hai đều là một phần của pipeline `AbstractApiClient.request()`. Toàn bộ logic quarantine, retry, exponential backoff, account hibernation, standby backoff, governor record/check nằm trong `src/core/base-client.js`.
 
 **Acceptance Criteria:**
-* **Given** một HTTP request trả về mã trạng thái `429 Too Many Requests` hoặc `403 Forbidden`
-* **When** interceptor bắt được lỗi
-* **Then** proxy hiện tại bị đưa vào `failedProxies` cách ly trong 5 phút
-* **And** cho no-auth platforms: rút proxy mới từ pool (`getNext()`) và retry request tối đa 3 lần với exponential backoff (1s, 2s, 4s)
-* **And** cho auth-required platforms: giữ nguyên account, lấy proxy mới (`getStickyProxy(accountId)` với proxy fallback), hoặc nếu rate-limit do account thì chuyển `AccountPool.getNextAvailable(platform)` và retry với account mới
-* **And** nếu toàn bộ proxy trong pool bị cách ly ➔ Chuyển sang trạng thái Standby Backoff (chờ 30s) và cảnh báo thay vì loop vô tận.
+* **Given** `AbstractApiClient` được khởi tạo với `proxyPool`/`proxyProvider`, `governor`, `accountPool`, `sessionManager`, `platform`, `requiresAuth`, pluggable `httpClient`
+* **When** gọi `request(method, url, options)`
+* **Then** hệ thống thực hiện tuần tự:
+  1. Xác định `requiresAuth` của platform. Nếu `true` → lấy `accountId`; kiểm tra `governor.canAccountRequest(accountId, platform)`; nếu hibernation thì chuyển account.
+  2. Nếu `requiresAuth` → `resolveProxy(accountId)` dùng sticky IP (hoặc `proxyProvider.getProxy({ accountId })`). Nếu `!requiresAuth` → rotating IP (`getNext()` / `getProxy()`).
+  3. Gửi request qua proxy agent (`undici.ProxyAgent` / `socks-proxy-agent` / Playwright browser context tùy platform) — không bao giờ direct fallback.
+  4. Trả về response 2xx/3xx; ghi nhận `accountPool.recordRequest()` và `governor.recordRequest()`.
+  5. Khi gặp HTTP 429 hoặc 403 → `proxyPool.quarantine(proxy, 5 phút)`, exponential backoff (1s, 2s, 4s...) với jitter, retry tối đa `maxProxyRetries`.
+  6. Nếu retry hết và platform auth-required → `accountPool.markUnavailable(..., 'rate_limit', ...)` + `governor.hibernateAccount(...)`, sau đó xoay account và retry với account mới (tối đa `maxAccountRotations`).
+  7. Nếu toàn bộ proxy bị cách ly → Standby Backoff 30s và throw `ProxyDeadError` thay vì loop vô tận.
+* **And** `types/core.d.ts` đồng bộ với constructor/options/properties của `AbstractApiClient`.
 
-### Story 11.4: Adaptive Infrastructure-Aware Rate Limiter & Account Protection Governor
+### Story 11.4: Adaptive Infrastructure-Aware Rate Limiter & Account Protection Governor (Surface & Backpressure)
 As a **Platform Governor & Account Security Engineer**,
-I want **hệ thống tự động tính toán Throughput cào dựa trên số lượng Proxy sống và đưa tài khoản vào trạng thái Ngủ đông khi gặp thử thách bảo vệ**,
+I want **hệ thống tự động tính toán Throughput cào dựa trên số lượng Proxy sống, đưa tài khoản vào trạng thái Ngủ đông khi gặp thử thách bảo vệ, và expose trạng thái governor qua API/CLI**,
 So that **hệ thống không bị quá tải khi Proxy xoay không kịp và triệt tiêu 100% nguy cơ die tài khoản hàng loạt**.
+
+> **Scope consolidation:** Core `AdaptiveRateGovernor`, `PlatformRateLimit`, `StatusApi`, `AccountPool` integration đã được implement trong `src/core/adaptive-governor.js` và `src/core/account-pool.js`. Story 11.4 còn lại chủ yếu là lớp surface: REST API, CLI, và Redis lag backpressure wiring.
 
 **Acceptance Criteria:**
 * **Given** module `AdaptiveRateGovernor` trong `src/core/adaptive-governor.js`
@@ -254,13 +330,13 @@ So that **mọi request đều đi qua proxy đúng chế độ mà không bao g
 * **Given** `AbstractApiClient` được khởi tạo với `proxyPool`, `governor`, `accountPool`, `sessionManager` và platform-specific `PlatformResponseValidator`
 * **When** gọi `request(method, url, options)`
 * **Then** hệ thống thực hiện tuần tự:
-  1. Xác định `requiresAuth` của platform. Nếu `true` → lấy `accountId` từ `accountPool.getNextAvailable(platform)`; kiểm tra `governor.canAccountRequest(accountId, platform)`; nếu hibernation thì chuyển account.
-  2. Nếu `requiresAuth` → `proxyPool.getStickyProxy(accountId)` (sticky IP cho tài khoản). Nếu `!requiresAuth` → `proxyPool.getNext()` (round-robin / residential rotation per request).
+  1. Xác định `requiresAuth` **hiệu dụng của action** (`ActionDescriptor.requiresAuth ?? crawler.requiresAuth`). Nếu `true` → lấy `accountId` từ `accountPool.getNextAvailable(platform)`; kiểm tra `governor.canAccountRequest(accountId, platform)`; nếu hibernation thì chuyển account. Nếu `false` → `accountId = null`, bỏ qua `AccountPool` và account velocity check (caller truyền accountId rõ ràng vẫn được tôn trọng — opt-in auth).
+  2. Nếu `requiresAuth` hiệu dụng của action → `proxyPool.getStickyProxy(accountId)` (sticky IP cho tài khoản). Nếu `!requiresAuth` → `proxyPool.getNext()` (round-robin / residential rotation per request).
   3. Nếu proxy bị quarantine hoặc `isAllQuarantined()` → Standby Backoff 30s và throw `ProxyDeadError`.
   4. Gửi request qua proxy agent (`undici.ProxyAgent` / `socks-proxy-agent` / Playwright browser context tùy platform).
   5. `governor.recordRequest(accountId)` — ghi nhận request vào sliding window.
   6. `PlatformResponseValidator.isValidPayload(response)` / `isBotChallenge(response)` / `isRateLimit(response)` — parse body dù HTTP status là 200.
-* **And** Auth-required platforms (Facebook, TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) sử dụng sticky IP; no-auth platforms (Batdongsan, Chotot, v.v.) sử dụng rotating residential proxy.
+* **And** Auth-required requests (theo action-level — ví dụ Facebook `group_posts`/social actions — hoặc platform mặc định như TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) sử dụng sticky IP; no-auth requests (Batdongsan, Chotot, và các action public như Facebook `marketplace`/`search`/`page_posts`/`profile`) sử dụng rotating residential proxy.
 * **And** không bao giờ fallback về direct connection khi proxy fail; mọi request phải qua `ProxyIpPool`.
 
 ### Story 11.6: Rate-Limit & Bot-Challenge Defense (Quarantine, Retry, Hibernation)
@@ -336,6 +412,8 @@ So that **hệ thống sử dụng nguyên vẹn profile và fingerprint thật 
 
 ## Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor)
 
+> **Epic grouping note:** This epic is a *platform suite*. Stories 13.2 + 13.2.1–13.2.12 (Twitter) and Stories 13.3–13.10 (Facebook) are independent sub-threads that share the same Tiered Signer foundation (Story 13.1). Each sub-thread can be implemented, tested, and shipped independently; they are grouped here because they both validate the hybrid engine.
+
 ### Story 13.1: Tiered Signer Architecture (Pre-Signed Token Ring & Worker Page Pool)
 As a **Scraper Architect**,
 I want **hệ thống Tiered Signer gồm Pre-Signed Token Ring cho session tokens và Worker Page Pool cho dynamic signatures có timeout 3s**,
@@ -359,7 +437,155 @@ So that **tôi có thể thu thập hàng ngàn tweet trong vài giây với lư
 * **Then** scraper sử dụng `TwitterHttpClient` kết hợp `SignerPagePool` để lấy GraphQL data
 * **And** chuẩn hóa dữ liệu trả về theo model `PostItem` với ID Namespaced `twitter:${tweetId}`
 * **And** tự động ghi vào `PrismaStore` lưu vào PostgreSQL.
-* **And (Deprecation Marker)** gắn `@deprecated` cho `src/client/Scraper.js`, `src/scrapers/twitter/http/index.js`, và `src/scrapers/twitter/index.js` (legacy); ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
+* **And (Deprecation Marker)** gắn `@deprecated` cho toàn bộ `src/client/Scraper.js`, `src/scrapers/twitter/http/index.js`, và `src/scrapers/twitter/index.js` (legacy); ghi nhận trong `docs/deprecation-plan.md` chi tiết từng tính năng được thay thế ở Story 13.2 hoặc Story 13.2.1–13.2.12 để xoá ở Epic 20.2.
+
+### Story 13.2.1: Twitter Hybrid Profile & Relationships
+As a **Twitter Growth Marketer**,
+I want **cào hồ sơ, followers, following, likers, retweeters, non-followers và thành viên list bằng `TwitterClient`/`TwitterCrawler` kiến trúc hybrid**,
+So that **tôi có thể xây dựng audience graph và phân tích mối quan hệ mà không cần mở Puppeteer tab mới**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` đã có action `profile`, `followers`, `following`, `likers`, `retweeters`, `list_members`
+* **When** gọi action với `username`, `tweetId`, `listUrl` tương ứng
+* **Then** `TwitterCrawler` dispatch GraphQL request qua `TwitterClient` (HTTP hoặc Signer Page Pool) với sticky proxy
+* **And** dữ liệu trả về chuẩn hóa theo `ProfileItem` / `PostItem` với ID Namespaced `twitter:${externalId}`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeFollowing` trong `src/scrapers/twitter/index.js` và các hàm tương ứng trong `src/scrapers/twitter/http/relationships.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.2: Twitter Hybrid Thread, Likes & Bookmarks
+As a **Twitter Content Researcher**,
+I want **cào chi tiết một thread (conversation), danh sách likes của tweet, và bookmarks của tài khoản bằng kiến trúc hybrid**,
+So that **tôi có thể phân tích nội dung tweet, engagement và nội dung người dùng đã lưu**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` đã đăng ký action `thread`, `likes`, `bookmarks`
+* **When** gọi `thread({ tweetId/url })`, `likes({ tweetId })`, hoặc `bookmarks({ username, limit })`
+* **Then** crawler trích xuất conversation tree, likers, hoặc bookmarked tweets qua GraphQL/HTTP
+* **And** thread được chuẩn hóa thành `PostItem[]` với `parentId` đúng; likes/bookmarks trả về `PostItem[]` hoặc `ProfileItem[]`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeThread`, `scrapeLikes`, `scrapeBookmarks` trong `src/scrapers/twitter/index.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.3: Twitter Hybrid Search, Hashtag & Trending
+As a **Twitter Market Researcher**,
+I want **tìm kiếm toàn cục, theo hashtag, và trending topics bằng kiến trúc hybrid**,
+So that **tôi có thể theo dõi xu hướng và tìm nội dung theo keyword/hashtag với độ trễ thấp**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` đã có `search(args)` (từ Story 13.2) và action `hashtag`, `trending`
+* **When** gọi `search({ query, filter, limit })`, `hashtag({ hashtag, filter, limit })`, hoặc `trending({ limit })`
+* **Then** crawler sử dụng Twitter GraphQL endpoints với `filter` và pagination cursor
+* **And** dữ liệu trả về `PostItem[]` với `metadata.trending` / `metadata.hashtag` khi cần
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `searchTweets`, `scrapeHashtag`, `scrapeTrending` trong `src/scrapers/twitter/index.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.4: Twitter Hybrid Media Scraper
+As a **Twitter Media Collector**,
+I want **cào media (ảnh, video, GIF) từ profile hoặc tweet và tải xuống video Twitter bằng kiến trúc hybrid**,
+So that **tôi có thể thu thập và lưu trữ media mà không cần render timeline**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` đã đăng ký action `media`, `download_video`
+* **When** gọi `media({ username, tweetId, type, limit })` hoặc `download_video({ tweetId, quality })`
+* **Then** crawler trích xuất media URLs từ GraphQL/HTTP response và hỗ trợ tải về qua stream
+* **And** dữ liệu trả về `PostItem[]` với `metadata.media` chứa `type`, `url`, `variants`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeMedia`, các hàm `downloadMedia`/`getVideoUrl` trong `src/scrapers/twitter/http/media.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.5: Twitter Hybrid Lists, Communities & Spaces
+As a **Twitter Community Researcher**,
+I want **cào thành viên list, thành viên community và danh sách Spaces bằng kiến trúc hybrid**,
+So that **tôi có thể theo dõi nhóm người dùng và nội dung audio trực tiếp**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` đã đăng ký action `list_members`, `community_members`, `spaces`
+* **When** gọi `list_members({ listUrl, limit })`, `community_members({ communityUrl, limit })`, `spaces({ query, limit })`
+* **Then** crawler dispatch GraphQL request với pagination và chuẩn hóa `ProfileItem[]` / `PostItem[]`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeListMembers`, `scrapeCommunityMembers`, `scrapeSpaces` trong `src/scrapers/twitter/index.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.6: Twitter Hybrid Content Composition (Post, Reply, Quote)
+As a **Twitter Content Operator**,
+I want **đăng tweet, reply, và quote nội dung qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa nội dung mà không cần browser**.
+
+**Acceptance Criteria:**
+* **Given** `src/scrapers/social/twitter/` có `TwitterClient` action methods cho `post`, `reply`, `quote`
+* **When** gọi `post({ text, mediaIds })`, `reply({ tweetId, text })`, hoặc `quote({ tweetId, text })`
+* **Then** mỗi action đi qua `TwitterClient` với `Signer Page Pool` hoặc HTTP GraphQL, tuân thủ delay floor (write: 3–7s) và governor
+* **And** dry-run gate mặc định `dryRun=true` cho mọi write action; cookie/token không bị log
+* **And** error trả về `PlatformError` với `suggestedAction` (`hibernate_account`, `relogin`, `reduce_rate`)
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `postTweet`, `postThread`, `postReply` trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.7: Twitter Hybrid Content Scheduling
+As a **Twitter Content Operator**,
+I want **schedule tweet để đăng tự động trong tương lai qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể lập lịch nội dung mà không cần giữ trình duyệt mở**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterClient` đã hỗ trợ `post` (Story 13.2.6)
+* **When** gọi `schedule({ text, mediaIds, publishAt })`
+* **Then** `TwitterClient` tạo draft tweet với lịch đăng, trả về `scheduledAt` và `tweetId` dự kiến
+* **And** tuân thủ delay floor (write: 3–7s) và governor
+* **And** dry-run gate mặc định `dryRun=true`; cookie/token không bị log
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scheduleTweet` trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.8: Twitter Hybrid Engagement (Like & Retweet)
+As a **Twitter Growth Operator**,
+I want **thực hiện like, retweet, undoRetweet, và unlike qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa tương tác cơ bản với nội dung theo chiến lược growth**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterClient` hỗ trợ action `like`, `unlike`, `retweet`, `undoRetweet`
+* **When** gọi các action với `targetId`/`username` và tùy chọn `dryRun`
+* **Then** mỗi action đi qua `TwitterClient` với delay floor (engagement: 1–3s giữa các tác vụ), sticky proxy và governor
+* **And** dry-run gate mặc định `dryRun=true`; cookie/token không bị log
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `likeTweet`, `retweetTweet` trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.9: Twitter Hybrid Social Graph (Follow, Block, Mute, Bookmark)
+As a **Twitter Growth Operator**,
+I want **quản lý mối quan hệ tài khoản (follow, unfollow, block, unblock, mute, unmute, bookmark) qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa growth và moderation tài khoản mà không cần browser**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterClient` hỗ trợ action `follow`, `unfollow`, `block`, `unblock`, `mute`, `unmute`, `bookmark`
+* **When** gọi các action với `targetId`/`username` và tùy chọn `dryRun`
+* **Then** mỗi action đi qua `TwitterClient` với delay floor (social: 2–5s giữa các tác vụ), sticky proxy và governor
+* **And** `follow`/`unfollow` tuân thủ daily limit (configurable) và anti-chain policy (không follow/unfollow cùng user trong 24h)
+* **And** dry-run gate mặc định `dryRun=true`; cookie/token không bị log
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `followUser`, `blockUser`, `muteUser`, `bookmarkTweet` trong `src/client/Scraper.js` và `src/scrapers/twitter/http/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.10: Twitter Hybrid Direct Messaging
+As a **Twitter Community Manager**,
+I want **gửi và đọc direct message qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa outreach một cách an toàn**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterClient` hỗ trợ action `sendDM`, `getConversations`
+* **When** gọi `sendDM({ userId, text })` hoặc `getConversations({ limit })`
+* **Then** DM sử dụng HTTP GraphQL với delay floor 5–15s
+* **And** `sendDM` kiểm tra recipient cho phép tin nhắn từ陌生人 trước khi gửi, trả về `PlatformError` với `code: TWITTER_DM_NOT_ALLOWED` nếu bị chặn
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho DM helpers trong `src/client/Scraper.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.11: Twitter Hybrid List Management
+As a **Twitter Community Manager**,
+I want **tạo và quản lý list membership qua `TwitterClient` kiến trúc hybrid**,
+So that **tôi có thể tự động hóa list curation mà không cần browser**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterClient` hỗ trợ action `createList`, `addListMembers`, `removeListMembers`, `list_members`
+* **When** gọi `createList({ name, description })`, `addListMembers({ listId, userIds })`, hoặc `removeListMembers({ listId, userIds })`
+* **Then** list actions sử dụng GraphQL với batch chunking 100 userIds
+* **And** dry-run gate mặc định `dryRun=true` cho write actions; cookie/token không bị log
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho list helpers trong `src/client/Scraper.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.2.12: Twitter Hybrid Integration & Caller Migration
+As a **XActions Platform Engineer**,
+I want **`scrape('twitter'|'x', ...)`, MCP/CLI tools và `src/client/Scraper.js` chuyển sang dùng `TwitterCrawler`/`TwitterClient` mới**,
+So that **người dùng cuối và các service không còn phụ thuộc legacy Twitter modules**.
+
+**Acceptance Criteria:**
+* **Given** `TwitterCrawler` hỗ trợ đủ action (`profile`, `timeline`, `search`, `followers`, `following`, `thread`, `likes`, `bookmarks`, `hashtag`, `trending`, `media`, `list_members`, `community_members`, `spaces`, và social actions)
+* **When** kiểm tra `src/scrapers/index.js`
+* **Then** platform `twitter`/`x` import từ `src/scrapers/social/twitter/index.js` thay vì `src/scrapers/twitter/index.js`
+* **And** `package.json` exports thêm `./scrapers/social` hoặc `./scrapers/twitter` để consumer truy cập `TwitterClient`/`TwitterCrawler`
+* **And** `src/client/Scraper.js` được đánh dấu `@deprecated` hoặc redirect sang `TwitterClient`; các hàm legacy trong `src/scrapers/twitter/http/` và `src/scrapers/twitter/index.js` được ghi `@deprecated` toàn bộ
+* **And** `tests/scrapers/twitter-*.test.js` chuyển sang test `TwitterCrawler` tương ứng hoặc được đánh dấu `@deprecated`
+* **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Twitter legacy và ghi rõ dependency vào Story 13.2.12.
 
 ### Story 13.3: Refactor Facebook Scraper to Hybrid Architecture
 As a **Facebook Community Marketer**,
@@ -372,7 +598,109 @@ So that **tôi có thể theo dõi cộng đồng với độ trễ thấp và k
 * **Then** scraper dispatch request qua GraphQL endpoints với `ProxyIpPool`
 * **And** chuẩn hóa dữ liệu trả về theo model `PostItem` với ID Namespaced `facebook:${postId}`
 * **And** tương thích hoàn toàn với session cookie đã mã hóa trong database.
-* **And (Scope & Deprecation Marker)** story này chỉ làm group/page posts; không làm search, comments, marketplace, messenger. Gắn `@deprecated` cho `src/scrapers/facebook/` (legacy) và ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
+* **And** action `group_posts` khai báo `requiresAuth: true` (nhóm kín — account từ pool + Sticky Residential Proxy cố định suốt session); action `page_posts` khai báo `requiresAuth: false` (fanpage public — guest token `lsd`/`jazoest` từ Pre-Signed Ring + Rotating Residential Proxy xoay per-request, không rút account pool).
+* **And (Scope & Deprecation Marker)** story này chỉ làm group/page posts; các tính năng còn lại (search, comments, marketplace, messenger, profile/followers/group-members, automation) sẽ được chuyển sang kiến trúc hybrid trong Story 13.5–13.10. Gắn `@deprecated` cho `src/scrapers/facebook/` (legacy) và ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
+
+### Story 13.4: Facebook Browser-as-Signer Integration
+As a **Facebook Scraper Operator**,  
+I want **`FacebookClient` to extract `lsd`, `fb_dtsg`, `jazoest`, and `spin` tokens from a real Chrome browser instead of only HTML regex**,  
+So that **token extraction is resilient to Facebook DOM/script changes, supports authenticated user profiles, and falls back to the existing HTTP path when no browser signer is configured**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookClient` accepts `signerPool`, `tokenRing`, `cdpUrl`, and `adapterName`
+* **When** `ensureTokens()` is called with a browser bridge configured
+* **Then** it attaches or launches Chrome (Playwright by default, Puppeteer via `XACTIONS_SCRAPER_ADAPTER`) using CDP, navigates to `https://www.facebook.com/`, and extracts tokens via `page.evaluate()`
+* **And** it caches tokens with a 5-minute TTL and supports refresh 30 seconds before expiry
+* **And** `requestGraphQl()` builds the GraphQL body using tokens from the signer bridge
+* **And** it falls back to HTTP-only regex extraction when `signerPool`/`cdpUrl` is not configured
+* **And** it launches Chrome with the per-account sticky proxy and anti-leak browser args
+* **And (Scope Marker)** all changes remain inside `src/scrapers/social/facebook/` and `src/core/cdp-launcher.js`; `src/core/base-client.js` and `src/core/signer-pool.js` are not modified.
+
+### Story 13.5: Facebook Hybrid Profile, Followers & Group Members
+As a **Facebook Growth Marketer**,
+I want **cào thông tin hồ sơ, danh sách followers, và thành viên nhóm Facebook qua kiến trúc hybrid mà không cần mở Puppeteer tab mới cho mỗi yêu cầu**,
+So that **tôi có thể thu thập dữ liệu cá nhân/cộng đồng với tốc độ cao và tiêu thụ tài nguyên thấp**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookCrawler` đã kế thừa `AbstractCrawler` trong `src/scrapers/social/facebook/index.js`
+* **When** thực hiện các action `profile`, `followers`, `group_members`
+* **Then** `FacebookCrawler` dispatch request qua `FacebookClient` (HTTP GraphQL) hoặc `FacebookBrowserBridge` (CDP) tùy theo endpoint ổn định
+* **And** dữ liệu trả về được chuẩn hóa theo model `PostItem` (profile) / `CommentItem` / `ProfileItem` với ID Namespaced `facebook:${externalId}`
+* **And** các tham số `url`/`username`/`groupUrl` được parse thành `targetKey` cho `CrawlerCommand`
+* **And** action `profile` (public) khai báo `requiresAuth: false` — chạy guest token + rotating residential proxy xoay per-request; `group_members` và `followers`/`following` giữ `requiresAuth: true` (fallback platform) — account từ pool + sticky residential proxy.
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeGroupMembers` trong `src/scrapers/facebook/legacy.js` (hoặc file tương ứng); cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.6: Facebook Hybrid Search (Global + Group Search)
+As a **Facebook Market Researcher**,
+I want **tìm kiếm toàn cục (posts/people/pages/groups) và tìm kiếm trong nhóm bằng kiến trúc hybrid**,
+So that **tôi có thể thu thập nhiều loại đối tượng với cùng một contract `search()` nhất quán trên mọi nền tảng**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookCrawler` đã có `search(args)` và `registerAction('group_search')`
+* **When** gọi `search({ query, type, location, limit })` với `type ∈ ['posts','people','pages','groups','all']` hoặc `group_search({ groupUrl, query, limit })`
+* **Then** `FacebookCrawler` chọn DocID GraphQL hoặc browser fallback phù hợp với từng `type`
+* **And** dữ liệu trả về được chuẩn hóa qua `normalizeSearchResult`, `normalizePostSearchResult`, `normalizePeopleSearchResult`, `normalizePageSearchResult`, `normalizeGroupSearchResult` (hoặc tương đương mới) với ID Namespaced
+* **And** hỗ trợ `limit` và pagination cursor như `AbstractCrawler` action output
+* **And** action `search` (global) khai báo `requiresAuth: false` — guest token + rotating residential proxy xoay per-request; `group_search` giữ `requiresAuth: true` (ngữ cảnh nhóm kín, fallback platform).
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `searchFacebook`, `scrapeFacebookGroupSearch` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.7: Facebook Hybrid Post & Group Comments
+As a **Facebook Sentiment Researcher**,
+I want **cào cây bình luận từ bài viết cá nhân/trang và bài viết nhóm bằng kiến trúc hybrid**,
+So that **tôi có thể phân tích sentiment và cấu trúc hội thoại với dữ liệu đầy đủ, không bị mất reply lồng nhau**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookCrawler` đã đăng ký action `post_comments` và `group_comments`
+* **When** gọi `post_comments({ url, maxDepth, maxComments, includeReplies })` hoặc `group_comments({ url, maxDepth, maxComments, includeReplies })`
+* **Then** crawler trích xuất `postId`/`feedbackId` từ URL, gọi `FacebookClient` GraphQL hoặc `FacebookBrowserBridge` nếu cần
+* **And** dữ liệu trả về theo `CommentItem` với `parentCommentId` đúng, hỗ trợ topological sort và lưu batch qua `PrismaStore`
+* **And** `includeReplies` bật/tắt được xử lý đúng
+* **And** `post_comments` và `group_comments` giữ `requiresAuth: true` (fallback platform — use case chính là bài viết trong nhóm kín): account từ pool + sticky residential proxy.
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeFacebookComments`, `scrapeFacebookGroupComments` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.8: Facebook Hybrid Marketplace
+As a **Facebook Marketplace Researcher**,
+I want **tìm kiếm và cào danh sách sản phẩm trên Facebook Marketplace qua kiến trúc hybrid**,
+So that **tôi có thể theo dõi giá, sản phẩm và seller mà không bị giới hạn bởi Puppeteer rendering**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookCrawler` đã đăng ký action `marketplace`
+* **When** gọi `marketplace({ query, location, category, priceMin, priceMax, limit })`
+* **Then** crawler sử dụng `FacebookClient` hoặc `FacebookBrowserBridge` để lấy listing data
+* **And** dữ liệu được chuẩn hóa theo `PostItem`/`MarketplaceItem` với `metadata` JSON (price, location, seller, category)
+* **And** hỗ trợ `limit` và pagination
+* **And** action `marketplace` khai báo `requiresAuth: false`: chỉ dùng guest token `lsd`/`jazoest` từ Pre-Signed Token Ring + Rotating Residential Proxy xoay per-request (`DynamicTunnelProvider` sinh session ngẫu nhiên cho từng request); KHÔNG rút tài khoản từ `AccountPool`, không kiểm tra `governor.canAccountRequest` cho action này.
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeMarketplace` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.9: Facebook Hybrid Social Actions (Write & Messenger)
+As a **Facebook Automation Operator**,
+I want **thực hiện các hành động viết (like, comment, post, share, messenger-share) trên Facebook thông qua kiến trúc hybrid thay vì legacy Puppeteer**,
+So that **các hành động tương tác được quản lý bởi `FacebookClient`, sticky proxy, governor và error envelope chuẩn**.
+
+**Acceptance Criteria:**
+* **Given** `src/scrapers/social/facebook/` có thêm `FacebookActions` (hoặc `FacebookClient` action methods) cho các thao tác viết
+* **When** gọi các action `like`, `comment`, `post`, `share`, `messenger_share`, `share_link_uid`, `join_group`, `send_friend_request`
+* **Then** mỗi action đi qua `FacebookClient` với `cdpUrl`/`launchChrome` (nếu cần DOM) hoặc HTTP GraphQL (nếu endpoint ổn định)
+* **And** tất cả write action tuân thủ dry-run gate, delay floor, và `AdaptiveGovernor`
+* **And** cookie/token không bị log; error trả về `PlatformError` với `suggestedAction`
+* **And** toàn bộ social actions (`like`, `comment`, `post`, `share`, `messenger_share`, `share_link_uid`, `join_group`, `send_friend_request`) khai báo/tự fallback `requiresAuth: true`: BẮT BUỘC account từ `AccountPool` + Sticky Residential Proxy cố định theo accountId trong suốt session (chống checkpoint do IP nhảy); thiếu account trả error envelope `XACT_4010` với `suggestedAction: 'relogin'`.
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `shareLinkByUid.js`, `messengerQueue.js`, `messengerShare.js`, `graphqlSend.js` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 13.10: Facebook Hybrid Integration & Caller Migration
+As a **XActions Platform Engineer**,
+I want **`scrape('facebook', ...)` public API, MCP/CLI tools, và `api/services/*` chuyển sang sử dụng `FacebookCrawler`/`FacebookClient` mới**,
+So that **người dùng cuối và các service nội bộ không còn phụ thuộc `src/scrapers/facebook/` legacy**.
+
+**Acceptance Criteria:**
+* **Given** `FacebookCrawler` hỗ trợ đủ action (`profile`, `posts`, `followers`, `search`, `marketplace`, `group_posts`, `group_comments`, `post_comments`, `group_search`, `group_members`, và social actions)
+* **When** kiểm tra `src/scrapers/index.js`
+* **Then** platform `facebook`/`fb` import từ `src/scrapers/social/facebook/index.js` (hoặc adapter tương đương) thay vì `src/scrapers/facebook/index.js`
+* **And** `package.json` exports thêm `./scrapers/social` hoặc `./scrapers/facebook` để consumer truy cập `FacebookClient`/`FacebookCrawler`
+* **And** `api/services/facebookScrape.js`, `facebookAutomation.js`, `facebookAccountPool.js`, `facebookHealth.js` được refactor để gọi `FacebookCrawler.start()` / `FacebookClient` thay vì các hàm legacy
+* **And** `api/routes/facebook.js` validation vẫn chấp nhận cùng action set; response shape không đổi với consumer
+* **And** action discovery qua `FacebookCrawler.listActions()`, MCP `x_actions_list` và CLI `xactions actions --platform facebook` trả về `requiresAuth` đã phân giải cho từng action (additive, không break consumer hiện có).
+* **And** toàn bộ test `tests/scrapers/facebook-index.test.js`, `tests/scrapers/facebook-*.test.js` chuyển sang test `FacebookCrawler` tương ứng hoặc được đánh dấu `@deprecated`
+* **And (Scope & Deprecation Marker)** `src/scrapers/facebook/` được đánh dấu `@deprecated` toàn bộ; `docs/deprecation-plan.md` status tracker cập nhật sang `deprecated-planned` và ghi rõ dependency vào Story 13.10.
 
 ---
 
@@ -412,7 +740,7 @@ So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 #### Action discovery
 * **Given** `AbstractCrawler.listActions()` đã tồn tại
 * **When** gọi tool `x_actions_list`
-* **Then** trả về `ActionDescriptor[]` với `{ action, description, requiredArgs, optionalArgs, example, outputType }`.
+* **Then** trả về `ActionDescriptor[]` với `{ action, description, requiredArgs, optionalArgs, example, outputType, requiresAuth }`.
 
 #### Error envelope
 * **Given** bất kỳ tool nào gặp lỗi
@@ -443,6 +771,8 @@ So that **Nowing backend có thể chạy background NLP Intent Extractor theo t
 
 ## Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine
 
+> **Epic grouping note:** This epic is a *platform suite*. Stories 15.1 + 15.1.1–15.1.4 (Threads) and Story 15.2 (TikTok) are independent sub-threads in the Vietnam viral-social domain. They share operational patterns (anti-bot, TLS/JA4 spoofing, PrismaStore) but can be implemented and shipped independently.
+
 ### Story 15.1: Threads Scraper Adapter (Meta Internal GraphQL)
 As a **Viral Marketer & Trend Researcher**,
 I want **cào bài viết, timeline và bình luận trên mạng xã hội Threads**,
@@ -454,7 +784,57 @@ So that **tôi có thể nắm bắt các chủ đề nóng và drama thịnh h�
 * **Then** crawler sử dụng `ThreadsClient` dispatch request GraphQL với token `lsd` từ Token Ring và `doc_id` của Meta
 * **And** trích xuất danh sách bài viết chuẩn hóa theo schema `PostItem` (`platform: 'threads'`, `id: 'threads:${id}'`)
 * **And** lưu trữ thành công vào PostgreSQL.
-* **And (Deprecation Marker)** gắn `@deprecated` cho `src/scrapers/threads/index.js` (Puppeteer legacy); ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
+* **And (Scope & Deprecation Marker)** story này làm `getUserFeed(username)`, `search(query)` (với SSR fallback), và `get_post_comments(postId)`; profile/followers/following, post detail, search/comments doc_id thực, và dispatcher/service migration sẽ được chuyển sang Story 15.1.1–15.1.4. Gắn `@deprecated` cho `src/scrapers/threads/index.js` (Puppeteer legacy); ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
+
+### Story 15.1.1: Threads Hybrid Profile & Followers/Following
+As a **Threads Trend Researcher**,
+I want **cào hồ sơ, followers và following của một tài khoản Threads bằng `ThreadsCrawler` kiến trúc hybrid**,
+So that **tôi có thể phân tích mạng lưới người dùng và tìm influencer mà không cần Puppeteer**.
+
+**Acceptance Criteria:**
+* **Given** `ThreadsCrawler` đã đăng ký action `profile`, `followers`, `following`
+* **When** gọi `profile({ username })`, `followers({ username, count })`, hoặc `following({ username, count })`
+* **Then** crawler sử dụng `ThreadsClient` GraphQL (hoặc HTTP SSR fallback nếu doc_id chưa có) để lấy dữ liệu
+* **And** dữ liệu trả về chuẩn hóa theo `ProfileItem` với ID Namespaced `threads:${userId}`
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeFollowing` trong `src/scrapers/threads/index.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 15.1.2: Threads Hybrid Post Detail & Comment Tree
+As a **Threads Content Analyst**,
+I want **cào chi tiết một thread (nội dung + cây trả lời) bằng kiến trúc hybrid**,
+So that **tôi có thể phân tích toàn bộ conversation mà không bị mất reply lồng nhau**.
+
+**Acceptance Criteria:**
+* **Given** `ThreadsCrawler` đã đăng ký action `post_detail` và `get_post_comments` (đã có từ 15.1)
+* **When** gọi `post_detail({ postId/url, includeReplies, maxDepth, maxComments })`
+* **Then** crawler trích xuất post content, thread chain và replies qua `ThreadsClient` GraphQL/HTTP
+* **And** dữ liệu trả về `PostItem` cho root post và `CommentItem[]` cho cây trả lời, với `parentCommentId` đúng
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho logic `scrapeThread` trong `src/scrapers/threads/index.js`; cập nhật `docs/deprecation-plan.md`.
+
+### Story 15.1.3: Threads Hybrid DocID Hardening for Search & Comments
+As a **Threads Platform Engineer**,
+I want **thay thế SSR fallback của `search` và `get_post_comments` bằng GraphQL `doc_id` ổn định**,
+So that **crawler không phụ thuộc HTML parsing dễ vỡ và đạt throughput cao hơn**.
+
+**Acceptance Criteria:**
+* **Given** `ThreadsCrawler` đang sử dụng `DEFAULT_THREADS_DOC_IDS` với `SEARCH_POSTS`, `COMMENT_ROOTS`, `COMMENT_REPLIES` là `null`
+* **When** reverse-engineer hoặc cập nhật các doc_id từ Meta GraphQL endpoints
+* **Then** `searchPosts` ưu tiên GraphQL khi `SEARCH_POSTS` có giá trị; SSR fallback chỉ dùng khi GraphQL fail/quarantine
+* **And** `getPostComments` ưu tiên `COMMENT_ROOTS`/`COMMENT_REPLIES`; `POST_DETAIL` làm fallback cuối
+* **And** thêm test để xác nhận GraphQL path trả về kết quả đầy đủ, không rỗng
+* **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` ghi rõ `search` và `comments` đã harden.
+
+### Story 15.1.4: Threads Hybrid Integration & Package Exports
+As a **XActions Platform Engineer**,
+I want **`scrape('threads', ...)`, MCP/CLI tools và các caller cũ chuyển sang `ThreadsCrawler`/`ThreadsClient` mới**,
+So that **người dùng cuối không còn phụ thuộc `src/scrapers/threads/` legacy**.
+
+**Acceptance Criteria:**
+* **Given** `ThreadsCrawler` hỗ trợ đủ action (`get_user_feed`, `search`, `post_detail`, `get_post_comments`, `profile`, `followers`, `following`)
+* **When** kiểm tra `src/scrapers/index.js`
+* **Then** platform `threads` import từ `src/scrapers/social/threads/index.js` thay vì `src/scrapers/threads/index.js`
+* **And** `package.json` exports thêm `./scrapers/threads` hoặc `./scrapers/social` để consumer truy cập `ThreadsClient`/`ThreadsCrawler`
+* **And** `tests/scrapers/threads-*.test.js` chuyển sang test `ThreadsCrawler` tương ứng hoặc được đánh dấu `@deprecated`
+* **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Threads legacy và ghi rõ dependency vào Story 15.1.4.
 
 ### Story 15.2: TikTok Video, Hashtag & Comment Scraper with Anti-Bot Payload Validation
 As a **Short-Form Content Creator / E-commerce Researcher**,
@@ -471,6 +851,8 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 ---
 
 ## Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop)
+
+> **Epic grouping note:** This epic is a *platform suite*. Stories 16.1 (Shopee) and 16.2 (TikTok Shop) are independent e-commerce platform crawlers. They are grouped under one epic because they share the same e-commerce domain and operational rollout for Vietnam market intelligence.
 
 ### Story 16.1: Shopee Search, Product & Review Scraper with TLS Spoofing
 As an **E-Commerce Merchant / Data Analyst**,
@@ -499,6 +881,8 @@ So that **tôi có thể phát hiện các sản phẩm Winning Products để c
 
 ## Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan)
 
+> **Epic grouping note:** This epic is a *platform suite*. Stories 17.1 (Chợ Tốt) and 17.2 (Batdongsan) are independent real-estate crawlers. They are grouped because both serve the Vietnam real-estate lead-intelligence domain.
+
 ### Story 17.1: Chợ Tốt Multi-Category Scraper with Phone Mask Detector
 As a **Real Estate Broker / Lead Generator**,
 I want **cào tin đăng BĐS trên Chợ Tốt kèm giải mã số điện thoại và loại bỏ số masked (`***`)**,
@@ -525,6 +909,8 @@ So that **tôi có thể theo dõi biến động thị trường theo từng qu
 ---
 
 ## Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn)
+
+> **Epic grouping note:** This epic is a *platform suite*. Stories 18.1 (TopCV), 18.2 (VietnamWorks), and 18.3 (LinkedIn) are independent recruitment crawlers. They are grouped because they serve the Vietnam HR and B2B lead-intelligence domain, but each platform can be implemented and shipped independently.
 
 ### Story 18.1: TopCV Job & Company Scraper
 As an **HR Tech Recruiter**,
@@ -602,48 +988,111 @@ So that **tôi phát hiện sớm khi Nowing consumer chậm hoặc stream bị 
 * **And** cập nhật real-time mỗi 5s.
 * **And** hỗ trợ cấu hình alert channel (`ALERT_WEBHOOK`, `ALERT_EMAIL`).
 
-### Story 19.4: Admin CLI — Unified
+### Story 19.4: Admin CLI — Unified Command Group
 As an **Internal Automation Operator**,
-I want **một nhóm lệnh CLI `xactions admin` để xem governor status, proxy pool, accounts, checkpoints, stream metrics và thực hiện manual override**,
-So that **tôi có thể vận hành hệ thống từ terminal mà không cần mở dashboard**.
+I want **một nhóm lệnh CLI `xactions admin` tổng hợp để vận hành hệ thống từ terminal**,
+So that **tôi có thể tra cứu governor status, quản lý proxy/account/checkpoint, và xem stream metrics mà không cần mở dashboard**.
 
 **Acceptance Criteria:**
 * **Given** `xactions admin` command group
-* **When** chạy `xactions admin status`
-* **Then** in ra `healthyProxyCount / totalProxyCount`, `currentReqPerSecond`, `redisConsumerLag`, `throttleLevel`, danh sách `hibernatingAccounts`
-* **And** `xactions admin proxies list` liệt kê proxy với trạng thái `healthy` / `quarantined` / `expiryAt`
-* **And** `xactions admin proxy quarantine <proxyKey>` và `xactions admin proxy release <proxyKey>` cách ly / bỏ cách ly proxy thủ công
-* **And** `xactions admin accounts list --platform <platform>` liệt kê account, `velocity`, `hibernatingUntil`, `assignedProxy`
-* **And** `xactions admin account wake <accountId>` đánh thức account từ hibernation
-* **And** `xactions admin account rotate <accountId> <platform>` đổi account khác trong `AccountPool`
-* **And** `xactions admin checkpoints list/resume/pause/retry` gọi `api/routes/checkpoints.js` tương ứng
-* **And** `xactions admin stream metrics/alerts/test` hiển thị stream metrics và kích hoạt test alert
+* **When** chạy `xactions admin --help`
+* **Then** liệt kê các sub-commands: `status`, `proxies`, `accounts`, `checkpoints`, `stream`
 * **And** tất cả commands yêu cầu permission `admin` hoặc `checkpoint:manage` (cho checkpoint-only).
+
+### Story 19.4.1: Admin CLI — Status
+As an **Internal Automation Operator**,
+I want **lệnh `xactions admin status` hiển thị tổng quan governor, proxy pool, và hibernating accounts**,
+So that **tôi nắm nhanh tình trạng hệ thống từ terminal**.
+
+**Acceptance Criteria:**
+* **Given** `xactions admin` group
+* **When** chạy `xactions admin status`
+* **Then** in ra `healthyProxyCount / totalProxyCount`, `currentReqPerSecond`, `redisConsumerLag`, `throttleLevel`, danh sách `hibernatingAccounts`.
+
+### Story 19.4.2: Admin CLI — Proxy Management
+As an **Internal Automation Operator**,
+I want **lệnh `xactions admin proxies ...` để liệt kê, cách ly và bỏ cách ly proxy**,
+So that **tôi có thể kiểm soát proxy pool từ CLI khi phát hiện IP bị chặn hoặc cần bảo trì**.
+
+**Acceptance Criteria:**
+* **Given** `xactions admin` group
+* **When** chạy `xactions admin proxies list`
+* **Then** liệt kê proxy với trạng thái `healthy` / `quarantined` / `expiryAt`
+* **And** `xactions admin proxy quarantine <proxyKey>` và `xactions admin proxy release <proxyKey>` cách ly / bỏ cách ly proxy thủ công.
+
+### Story 19.4.3: Admin CLI — Account Management
+As an **Internal Automation Operator**,
+I want **lệnh `xactions admin accounts ...` để liệt kê, đánh thức, và xoay account đang hibernation**,
+So that **tôi quản lý vòng đời tài khoản auth-required mà không cần restart crawler**.
+
+**Acceptance Criteria:**
+* **Given** `xactions admin` group
+* **When** chạy `xactions admin accounts list --platform <platform>`
+* **Then** liệt kê account, `velocity`, `hibernatingUntil`, `assignedProxy`
+* **And** `xactions admin account wake <accountId>` đánh thức account từ hibernation
+* **And** `xactions admin account rotate <accountId> <platform>` đổi account khác trong `AccountPool`.
+
+### Story 19.4.4: Admin CLI — Checkpoint Management
+As an **Internal Automation Operator**,
+I want **lệnh `xactions admin checkpoints ...` để liệt kê, resume, pause, và retry checkpoint**,
+So that **tôi điều khiển pipeline cào từ terminal khi một target bị lỗi**.
+
+**Acceptance Criteria:**
+* **Given** `xactions admin` group
+* **When** chạy `xactions admin checkpoints list/resume/pause/retry`
+* **Then** gọi `api/routes/checkpoints.js` tương ứng và cập nhật trạng thái `CrawlCheckpoint`.
+
+### Story 19.4.5: Admin CLI — Stream Metrics & Alerts
+As an **Internal Automation Operator**,
+I want **lệnh `xactions admin stream ...` để xem metrics và kích hoạt test alert**,
+So that **tôi phát hiện khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s` từ CLI**.
+
+**Acceptance Criteria:**
+* **Given** `xactions admin` group
+* **When** chạy `xactions admin stream metrics/alerts/test`
+* **Then** hiển thị stream metrics và kích hoạt test alert.
 
 > **Note:** Các lệnh `xactions checkpoints ...` và `xactions stream ...` hiện có (`src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`) sẽ được giữ lại dưới dạng alias hoặc redirect đến `xactions admin ...` trong quá trình chuyển đổi, và bị xoá ở Epic 20.2.
 
-### Story 19.5: (Merged into 19.4) — Reserved
-*Không còn story riêng. Tất cả CLI admin operations đã gộp vào Story 19.4.*
+> **Note:** Story 19.4 đã được tách thành 5 sub-stories 19.4.1–19.4.5. Các vị trí 19.5 và 19.6 không còn được sử dụng; NFR traceability đã được cập nhật để tham chiếu 19.4.5 thay vì 19.6.
 
-### Story 19.6: (Merged into 19.4) — Reserved
-*Không còn story riêng. Tất cả CLI admin operations đã gộp vào Story 19.4.*
-
-### Story 19.7: Admin REST API for Proxy, Account & Checkpoint Management
+### Story 19.7: Admin REST API — Proxy Management
 As an **Internal Operator & CLI Developer**,
-I want **các endpoint REST `/admin/*` để dashboard và CLI lấy dữ liệu + thực hiện actions vận hành**,
-So that **admin surface không truy cập DB trực tiếp và sử dụng chung data source**.
+I want **các endpoint REST `/admin/proxies` để quản lý proxy pool**,
+So that **admin surface không truy cập DB trực tiếp và có thể cách ly/khôi phục proxy kịp thời**.
 
 **Acceptance Criteria:**
-* **Given** các route `api/routes/proxies.js`, `api/routes/checkpoints.js`, `api/routes/streams.js`, `api/routes/governor.js` đã tồn tại
-* **When** mount `/admin/*` namespace trong `api/server.js`
-* **Then** `/admin/proxies` (GET), POST `/admin/proxies/:key/quarantine|release` wrap `api/routes/proxies.js`
-* **And** GET `/admin/accounts?platform=...`, POST `/admin/accounts/:id/wake|rotate` wrap proxy/account logic
-* **And** GET/POST `/admin/checkpoints/...` wrap `api/routes/checkpoints.js`
-* **And** GET `/admin/stream/metrics` và `/admin/stream/alerts` wrap `api/routes/streams.js` và stream metrics reader
-* **And** không viết lại business logic; các endpoint hiện có vẫn hoạt động song song cho backward compatibility
-* **And** tất cả endpoints yêu cầu `admin` permission hoặc `checkpoint:manage` (cho checkpoint-only); auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth.
+* **Given** route `api/routes/proxies.js` đã tồn tại
+* **When** mount `GET /admin/proxies` và `POST /admin/proxies/:key/quarantine|release` trong `api/server.js`
+* **Then** các endpoint wrap `api/routes/proxies.js`, trả về danh sách proxy, health, và kết quả quarantine/release
+* **And** không viết lại business logic; endpoint cũ vẫn hoạt động song song cho backward compatibility
+* **And** tất cả endpoints yêu cầu `admin` permission; auth dùng internal admin API key hoặc A2A token.
 
-### Story 19.8: Admin MCP Tools for AI Agents
+### Story 19.8: Admin REST API — Account & Checkpoint Management
+As an **Internal Operator & CLI Developer**,
+I want **các endpoint REST `/admin/accounts` và `/admin/checkpoints` để quản lý account lifecycle và checkpoints**,
+So that **operator có thể đánh thức, xoay account và quản lý checkpoint mà không cần DB access**.
+
+**Acceptance Criteria:**
+* **Given** các route `api/routes/checkpoints.js` và account logic đã tồn tại
+* **When** mount `GET /admin/accounts?platform=...`, `POST /admin/accounts/:id/wake|rotate`, và `GET/POST /admin/checkpoints/...`
+* **Then** các endpoint wrap account lifecycle và `api/routes/checkpoints.js`, trả về status/wake/rotate và checkpoint CRUD
+* **And** `POST /admin/accounts/:id/wake` chỉ hoạt động với account đang `hibernating`; trả về `409 Conflict` nếu account không đủ điều kiện
+* **And** tất cả endpoints yêu cầu `admin` permission hoặc `checkpoint:manage` (cho checkpoint-only); auth dùng internal admin API key hoặc A2A token.
+
+### Story 19.9: Admin REST API — Stream Metrics & Alerts
+As an **Internal Operator & CLI Developer**,
+I want **các endpoint REST `/admin/stream/metrics` và `/admin/stream/alerts` để giám sát Redis stream và governor**,
+So that **operator nhận cảnh báo khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`**.
+
+**Acceptance Criteria:**
+* **Given** route `api/routes/streams.js` và governor metrics reader đã tồn tại
+* **When** mount `GET /admin/stream/metrics` và `GET /admin/stream/alerts` trong `api/server.js`
+* **Then** các endpoint wrap `api/routes/streams.js` và trả về `pendingMessages`, `lastAckTime`, throughput, và alert flags
+* **And** alert tự động bật khi vượt ngưỡng (`pendingMessages > 50,000` hoặc `lastAckTime > 60s`) và gửi webhook/email nếu configured
+* **And** tất cả endpoints yêu cầu `admin` permission; auth dùng internal admin API key hoặc A2A token.
+
+### Story 19.10: Admin MCP Tools for AI Agents
 As an **AI Agent Operator**,
 I want **các MCP tool `x_admin_*` để AI agents có thể kiểm tra status và thực hiện vận hành cơ bản**,
 So that **Claude/Cursor/Antigravity có thể hỏi "tình trạng proxy pool thế nào" hoặc "đánh thức account fb:123"**.
@@ -690,9 +1139,302 @@ So that **codebase không còn chứa code cũ đã được thay thế, giảm 
 ---
 
 > **Epic 21 & 22 đã được chuyển sang backlog:** `_bmad-output/planning-artifacts/backlog-epics-21-22.md`.  
-> Lý do: nằm ngoài PRD canonical (Epics 10–20), chưa có PRD/UX/validation. Sẽ kích hoạt lại khi có Product Council approval, PRD, và UX.
+> Lý do: nằm ngoài PRD canonical (Epics 10–20), chưa có PRD/UX/validation. Sẽ kích hoạt lại khi có Product Council approval, PRD, và UX.  
+> **Epics 23–26 được thêm vào đây như Phase 4 extension:** universal AbstractCrawler migration, dispatcher unification, và legacy decommission.
 
 ---
+
+## Phase 4 Extension — Epics 23–26: Universal AbstractCrawler Migration
+
+> **Scope:** hoàn thiện kiến trúc `AbstractCrawler` cho toàn bộ XActions (Bluesky, Mastodon, utility scripts, adapters, dispatcher, legacy decommission).
+
+
+## Cross-Epic Dependency Map
+
+```
+Epic 20.2 (Legacy decommission) ─┐
+                                 ├──→ Epic 26 (Final legacy removal)
+Epic 23 (Bluesky/Mastodon) ──────┤
+Epic 24 (Utility/Adapters) ──────┤
+                                 │
+                                 ↓
+                         Epic 25 (Unified dispatcher)
+```
+
+- **Epic 23** and **Epic 24** can run in parallel after Epic 13.1 (Tiered Signer) and 13.3 (Facebook hybrid) are done.
+- **Epic 25** depends on 23, 24, and Phase 4 integration stories (13.2.12, 13.10, 15.1.4).
+- **Epic 26** depends on 25 and the original Epic 20.2 decommission conditions (shadow-run parity ≥ 99% for 7 days).
+
+---
+
+## Epic 23: Bluesky & Mastodon on AbstractCrawler
+
+> **Epic grouping note:** This is a *platform suite* for two HTTP-only, no-JS platforms. Both use public REST/AT Protocol APIs and require no Puppeteer, making them ideal candidates to validate the `AbstractApiClient` + `AbstractCrawler` pattern for lightweight platforms.
+
+### Story 23.1: Bluesky AT Protocol Client
+As a **Platform Scraper Developer**,  
+I want **a `BlueskyClient` in `src/scrapers/social/bluesky/client.js` that extends `AbstractApiClient`**,  
+So that **all Bluesky HTTP calls go through the same resilient request pipeline (proxy, governor, 429/403 handling, TLS spoofing) as Twitter and Facebook**.
+
+**Acceptance Criteria:**
+* **Given** `AbstractApiClient` in `src/core/base-client.js`
+* **When** implementing `BlueskyClient extends AbstractApiClient`
+* **Then** `BlueskyClient` sets `name = 'bluesky'`, `platform = 'bluesky'`, `requiresAuth = false`
+* **And** default `service = 'https://public.api.bsky.app'`
+* **And** supports optional auth (`identifier`/`password`) for non-public data
+* **And** all `request()` calls pass through `governor.recordRequest()` and proxy rotation
+* **And** response is validated by a `BlueskyPlatformResponseValidator` (Story 23.5)
+* **And** reuses `ProxyIpPool` and `AccountPool` contracts without platform-specific side-loading
+
+### Story 23.2: Bluesky Hybrid Crawler
+As a **Bluesky Growth Marketer**,  
+I want **cào profile, followers, following, user feed, search, và feed của Bluesky qua `BlueskyCrawler` kiến trúc hybrid**,  
+So that **tôi có thể phân tích audience và nội dung trên Bluesky với cùng một `CrawlerCommand` interface như Twitter/X**.
+
+**Acceptance Criteria:**
+* **Given** `BlueskyCrawler` in `src/scrapers/social/bluesky/crawler.js` extends `AbstractCrawler`
+* **When** gọi `profile({ username })`, `followers({ username, limit })`, `following({ username, limit })`, `get_user_feed({ username, limit })`, `search({ query, limit })`, `scrape_feed({ feedUri, limit })`
+* **Then** crawler dispatches through `BlueskyClient` and paginates with `cursor`
+* **And** dữ liệu trả về chuẩn hóa theo `ProfileItem` / `PostItem` với ID Namespaced `bluesky:${uri|handle}`
+* **And** supports `onProgress` callback
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeFollowing`, `scrapeTweets`, `searchTweets`, `scrapeFeed` trong `src/scrapers/bluesky/index.js` (legacy); cập nhật `docs/deprecation-plan.md`.
+
+### Story 23.3: Mastodon REST API Client
+As a **Platform Scraper Developer**,  
+I want **a `MastodonClient` in `src/scrapers/social/mastodon/client.js` that extends `AbstractApiClient`**,  
+So that **Mastodon scraping uses the same governor, proxy, and retry pipeline as every other platform**.
+
+**Acceptance Criteria:**
+* **Given** `AbstractApiClient` in `src/core/base-client.js`
+* **When** implementing `MastodonClient extends AbstractApiClient`
+* **Then** `MastodonClient` sets `name = 'mastodon'`, `platform = 'mastodon'`, `requiresAuth = false`
+* **And** default `instance = 'https://mastodon.social'` nhưng configurable
+* **And** supports optional `accessToken` cho authenticated endpoints
+* **And** all REST calls pass through `governor.recordRequest()` and proxy rotation
+* **And** response is validated by a `MastodonPlatformResponseValidator` (Story 23.5)
+* **And** HTML-to-plain-text decoding logic (`toPlainText`) is moved to `MastodonClient` normalization helper, not duplicated
+
+### Story 23.4: Mastodon Hybrid Crawler
+As a **Mastodon Instance Analyst**,  
+I want **cào profile, followers, following, timeline, search, hashtag, và trending của Mastodon qua `MastodonCrawler` kiến trúc hybrid**,  
+So that **tôi theo dõi nội dung và mối quan hệ trên bất kỳ Mastodon instance nào từ một interface thống nhất**.
+
+**Acceptance Criteria:**
+* **Given** `MastodonCrawler` in `src/scrapers/social/mastodon/crawler.js` extends `AbstractCrawler`
+* **When** gọi `profile({ username, instance })`, `followers({ username, limit, instance })`, `following({ username, limit, instance })`, `get_user_feed({ username, limit, instance })`, `search({ query, limit, instance })`, `hashtag({ hashtag, limit, instance })`, `trending({ limit, instance })`
+* **Then** crawler dispatches through `MastodonClient` với `instance` parameter
+* **And** dữ liệu trả về chuẩn hóa theo `ProfileItem` / `PostItem` với ID Namespaced `mastodon:${instance}:${id}`
+* **And** supports `onProgress` callback
+* **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `scrapeProfile`, `scrapeFollowers`, `scrapeFollowing`, `scrapeTweets`, `searchTweets`, `scrapeHashtag`, `scrapeTrending` trong `src/scrapers/mastodon/index.js` (legacy); cập nhật `docs/deprecation-plan.md`.
+
+### Story 23.5: Bluesky & Mastodon Response Validators
+As a **Reliability Engineer**,  
+I want **`BlueskyPlatformResponseValidator` và `MastodonPlatformResponseValidator` implement `AbstractPlatformResponseValidator`**,  
+So that **crawler biết phân biệt lỗi mạng, rate-limit, auth failure, và payload không hợp lệ cho từng platform**.
+
+**Acceptance Criteria:**
+* **Given** `AbstractPlatformResponseValidator` trong `src/core/platform-validator.js`
+* **When** tạo `BlueskyPlatformResponseValidator` và `MastodonPlatformResponseValidator`
+* **Then** mỗi validator implement `isValidPayload(response)`, `isBotChallenge(response)`, `isRateLimit(response)`, `isAuthExpired(response)`
+* **And** Mastodon validator nhận diện HTTP 401/403/429 và JSON error body
+* **And** Bluesky validator nhận diện `error` field trong AT Protocol response
+* **And** cả hai trả về `SuggestedActions` phù hợp (`ROTATE_PROXY`, `WAIT`, `RELOGIN`, `SKIP`)
+
+### Story 23.6: Bluesky & Mastodon Integration & Caller Migration
+As a **XActions Platform Engineer**,  
+I want **`scrape('bluesky'|'mastodon', ...)` và tất cả caller chuyển sang `BlueskyCrawler`/`MastodonCrawler` mới**,  
+So that **người dùng cuối không còn phụ thuộc `src/scrapers/bluesky/index.js` và `src/scrapers/mastodon/index.js` cũ**.
+
+**Acceptance Criteria:**
+* **Given** `BlueskyCrawler` và `MastodonCrawler` hỗ trợ đủ action (profile, followers, following, feed, search, hashtag, trending)
+* **When** kiểm tra `src/scrapers/index.js`
+* **Then** platform `bluesky`/`mastodon` import từ `src/scrapers/social/bluesky/index.js` / `src/scrapers/social/mastodon/index.js` thay vì legacy
+* **And** `package.json` exports thêm `./scrapers/social` hoặc cập nhật `./scrapers/bluesky` / `./scrapers/mastodon` để consumer truy cập `BlueskyClient`/`BlueskyCrawler` / `MastodonClient`/`MastodonCrawler`
+* **And** MCP tools / CLI commands gọi `scrape('bluesky'|'mastodon', action, args)` thay vì import trực tiếp
+* **And** `tests/scrapers/bluesky-*.test.js` và `tests/scrapers/mastodon-*.test.js` chuyển sang test `BlueskyCrawler`/`MastodonCrawler`
+* **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho Bluesky/Mastodon legacy.
+
+---
+
+## Epic 24: Utility Scripts & Adapters Migration
+
+> **Epic grouping note:** This epic is a *cleanup & consolidation* epic. It does not add user-facing features; it removes technical debt and aligns leftover `src/scrapers/` modules with the single architecture.
+
+### Story 24.1: Inventory & Deprecation Decision for Standalone Scripts
+As a **Platform Scraper Developer**,  
+I want **một inventory đầy đủ các file `src/scrapers/*.js` độc lập và `src/scrapers/adapters/`**,  
+So that **team quyết định rõ ràng: convert thành action, archive, hoặc xoá từng file**.
+
+**Acceptance Criteria:**
+* **Given** các file: `bookmarkExporter.js`, `showMoreExpander.js`, `threadUnroller.js`, `videoDownloader.js`, `viralTweets.js`, `index.js`, `index.d.ts`, và toàn bộ `src/scrapers/adapters/`
+* **When** chạy audit
+* **Then** đầu ra là `docs/utility-script-audit-23-24.md` với bảng:
+  - Tên file
+  - Mô tả chức năng
+  - Context dùng (browser console / Node.js / CLI / MCP)
+  - Quyết định: `convert-to-action` / `archive` / `delete` / `keep`
+  - Story chịu trách nhiệm (24.2 hoặc 24.4)
+
+### Story 24.2: Browser Utility Features as Crawler Actions
+As a **Content Operator**,  
+I want **các tính năng từ `videoDownloader.js`, `bookmarkExporter.js`, `threadUnroller.js` có sẵn dưới dạng `CrawlerCommand` trong `TwitterCrawler`**,  
+So that **tôi có thể gọi chúng từ CLI/MCP thay vì dán script vào console**.
+
+**Acceptance Criteria:**
+* **Given** quyết định từ Story 24.1
+* **When** triển khai
+* **Then** `TwitterCrawler` thêm các action: `download_video({ tweetId, quality })`, `export_bookmarks({ username, limit })`, `unroll_thread({ tweetId })`
+* **And** mỗi action trả về `PostItem[]` hoặc `Buffer`/`ReadableStream` cho download
+* **And** legacy file được gắn `@deprecated` với ghi chú thay thế
+* **And** CLI/MCP expose `xactions download video <tweetId>` và `xactions export bookmarks <username>`
+
+### Story 24.3: Adapter Layer Consolidation
+As a **Platform Scraper Developer**,  
+I want **`src/scrapers/adapters/` được thu gọn thành adapter provider cho `AbstractApiClient`**,  
+So that **không còn 7 adapter khác nhau mà chỉ còn những cái thực sự cần cho CDP/HTTP/Playwright**.
+
+**Acceptance Criteria:**
+* **Given** `src/scrapers/adapters/` gồm: `base.js`, `cheerio.js`, `crawlee.js`, `got-jsdom.js`, `http.js`, `playwright.js`, `puppeteer.js`, `selenium.js`
+* **When** audit từ Story 24.1
+* **Then** giữ lại tối đa 3 adapter: `http.js` (`undici`/`got-scraping` + TLS spoofing), `playwright.js`/`puppeteer.js` (CDP attach), `base.js` (contract)
+* **And** `AbstractApiClient` chọn adapter qua config `adapter: 'http' | 'playwright' | 'puppeteer'`
+* **And** các adapter cũ (`selenium`, `cheerio`, `crawlee`, `got-jsdom`) được chuyển vào `archive/` hoặc xoá nếu không còn import
+* **And** `npm run typecheck` pass sau khi xoá
+
+### Story 24.4: Archive or Remove Unused Scraper Modules
+As a **Codebase Maintainer**,  
+I want **các file được đánh dấu `archive` trong audit đã được chuyển ra khỏi `src/scrapers/`**,  
+So that **`src/scrapers/` chỉ còn `social/` dispatcher và platform crawlers**.
+
+**Acceptance Criteria:**
+* **Given** `docs/utility-script-audit-23-24.md`
+* **When** thực hiện Story 24.4
+* **Then** các file được chuyển vào `archive/scrapers/` hoặc `scripts/`
+* **And** `package.json` exports không còn trỏ tới các file đã archive
+* **And** `README.md` cập nhật vị trí mới của các script dán console
+* **And** `npm test` pass; không còn dead imports
+
+---
+
+## Epic 25: Unified Dispatcher & Public API Finalization
+
+> **Epic grouping note:** This is the *glue* epic. It makes `scrape(platform, action, args)` the single entry point for all internal and external callers.
+
+### Story 25.1: Universal `scrape()` Dispatcher
+As a **XActions Platform Engineer**,  
+I want **`src/scrapers/index.js` trở thành một thin dispatcher duy nhất cho mọi platform**,  
+So that **không còn logic scraper nào nằm ngoài `src/scrapers/social/<platform>/`**.
+
+**Acceptance Criteria:**
+* **Given** các crawler trong `src/scrapers/social/twitter/`, `src/scrapers/social/facebook/`, `src/scrapers/social/threads/`, `src/scrapers/social/bluesky/`, `src/scrapers/social/mastodon/`
+* **When** gọi `scrape('twitter'|'facebook'|'threads'|'bluesky'|'mastodon', action, args)`
+* **Then** dispatcher resolve platform → `AbstractCrawler` instance → gọi `.start({ action, args })`
+* **And** dispatcher hỗ trợ dependency injection (`client`, `store`, `governor`, `accountPool`, `proxyPool`)
+* **And** legacy `import twitter from './twitter/index.js'` trong `src/scrapers/index.js` bị xoá
+* **And** `src/scrapers/social/index.js` export all platform crawlers/clients/validators
+
+### Story 25.2: `package.json` Exports v2
+As a **Library Consumer**,  
+I want **mọi `package.json` export trỏ tới `src/scrapers/social/` thay vì legacy platform folders**,  
+So that **tôi import một kiến trúc ổn định dù tên file legacy đã bị xoá**.
+
+**Acceptance Criteria:**
+* **Given** `package.json` hiện tại có `./scrapers/twitter`, `./scrapers/bluesky`, `./scrapers/mastodon`, `./scrapers/threads`
+* **When** cập nhật
+* **Then** `./scrapers` trỏ tới `src/scrapers/index.js` (dispatcher)
+* **And** `./scrapers/social` trỏ tới `src/scrapers/social/index.js`
+* **And** `./scrapers/<platform>` redirect tới `src/scrapers/social/<platform>/index.js` (nếu giữ tên export)
+* **And** `./scrapers/twitter/http` bị xoá hoặc redirect sang `./scrapers/social/twitter/client.js`
+* **And** `npm run typecheck` pass
+
+### Story 25.3: MCP / CLI / API Caller Migration
+As a **XActions Platform Engineer**,  
+I want **tất cả MCP tools, CLI commands, và API routes gọi `scrape()` hoặc `CrawlerCommand` thay vì import scraper cụ thể**,  
+So that **không còn coupling trực tiếp với legacy modules**.
+
+**Acceptance Criteria:**
+* **Given** `src/mcp/server.js`, `src/cli/commands/`, `api/routes/`
+* **When** grep/import audit
+* **Then** không còn `import` từ `src/client/Scraper.js`, `src/scrapers/twitter/`, `src/scrapers/facebook/`, `src/scrapers/threads/`, `src/scrapers/bluesky/`, `src/scrapers/mastodon/`
+* **And** tất cả caller gọi `scrape(platform, action, args)` hoặc `CrawlerCommand`
+* **And** `unfollowx` commands được map vào `CrawlerCommand` hoặc trả `suggestedAction` (NFR-16)
+* **And** tests E2E cho MCP/CLI pass với dispatcher mới
+
+### Story 25.4: Backward Compatibility & Error Mapping
+As a **Library Consumer**,  
+I want **mã cũ gọi `scrape('twitter', ...)` vẫn hoạt động với `suggestedAction` rõ ràng khi action không còn hỗ trợ**,  
+So that **migrations không gây breaking change đột ngột**.
+
+**Acceptance Criteria:**
+* **Given** dispatcher mới
+* **When** gọi action đã bị loại bỏ hoặc tên platform cũ
+* **Then** trả `PlatformError` với `type: ErrorTypes.DEPRECATED`, `suggestedAction` chỉ rõ action/platform thay thế
+* **And** `package.json` exports giữ mapping cho ít nhất 1 release cycle
+* **And** `docs/deprecation-plan.md` liệt kê mapping đầy đủ từ legacy API → new API
+
+---
+
+## Epic 26: Legacy Decommission Final
+
+> **Epic grouping note:** This is the *decommission* epic. It should only start after shadow-run parity is proven for all migrated platforms.
+
+### Story 26.1: Pre-Decommission Parity & Rollback Preparation
+As a **Reliability Engineer**,  
+I want **một parity report đầy đủ cho Bluesky/Mastodon/Adapters trước khi xóa legacy code**,  
+So that **decommission không gây regression cho consumer cũ**.
+
+**Acceptance Criteria:**
+* **Given** Epic 23, 24, 25 done
+* **When** chạy shadow-run trong 7 ngày
+* **Then** field-level diff giữa legacy (`src/scrapers/bluesky/`, `src/scrapers/mastodon/`, utility scripts) và hybrid (`src/scrapers/social/`) ≤ 1%
+* **And** `npm test` pass trên toàn bộ test suite
+* **And** `npm run typecheck` pass
+* **And** tạo git tag `pre-decommission-YYYY-MM-DD` từ `main`
+* **And** `docs/decommission-plan-26.md` ghi rõ danh sách file sẽ xóa và rollback conditions
+
+### Story 26.2: Final Legacy Removal
+As a **Codebase Maintainer**,  
+I want **xoá toàn bộ legacy scraper modules sau khi parity đạt**,  
+So that **XActions chỉ còn một kiến trúc `AbstractCrawler` duy nhất**.
+
+**Acceptance Criteria:**
+* **Given** parity ≥ 99% và tag backup đã tạo
+* **When** chạy Story 26.2
+* **Then** xóa:
+  - `src/client/Scraper.js`
+  - `src/scrapers/twitter/` (toàn bộ)
+  - `src/scrapers/twitter/http/` (toàn bộ)
+  - `src/scrapers/facebook/` (toàn bộ)
+  - `src/scrapers/threads/index.js` (legacy)
+  - `src/scrapers/bluesky/index.js` (legacy)
+  - `src/scrapers/mastodon/index.js` (legacy)
+  - `src/scrapers/adapters/` (nếu đã consolidate)
+  - các utility scripts đã archive
+* **And** `package.json` exports cập nhật
+* **And** `docs/deprecation-plan.md` status tracker chuyển sang `removed`
+* **And** `npm test` pass, `npm run typecheck` pass
+* **And** `unfollowx` CLI smoke test pass
+* **And** Nowing shadow-run vẫn duy trì parity trong 24h sau merge
+
+---
+
+## Conditions to Start / Reactivate
+
+1. **Epic 13.1 (Tiered Signer)** và **Epic 13.3 (Facebook hybrid)** đã ổn định — `AbstractApiClient` + `AbstractCrawler` pattern đã chứng minh.
+2. **Epic 20.1 (Nowing shadow-run)** đang chạy — để có môi trường so sánh parity cho Bluesky/Mastodon.
+3. Product Council phê duyệt scope expansion sang Bluesky/Mastodon hoặc chấp nhận để ở backlog.
+4. Architecture review xác nhận `AbstractCrawler` không cần thay đổi core để hỗ trợ nền tảng HTTP-only.
+5. Legal/compliance review xác nhận public data scraping trên Bluesky/Mastodon tuân thủ Terms of Service.
+
+## Definition of Done for Epics 23–26
+
+- `src/scrapers/social/` chứa tất cả platform crawlers.
+- `src/scrapers/index.js` chỉ là dispatcher.
+- `src/client/Scraper.js` không còn tồn tại.
+- `src/scrapers/twitter/`, `src/scrapers/facebook/`, `src/scrapers/threads/`, `src/scrapers/bluesky/`, `src/scrapers/mastodon/`, `src/scrapers/adapters/` không còn legacy code.
+- `package.json` exports ổn định, backward-compatible.
+- `npm test` + `npm run typecheck` pass.
+- `bmad-check-implementation-readiness` re-run → **READY**.
 
 ## NFR Traceability Matrix
 
@@ -704,4 +1446,5 @@ So that **codebase không còn chứa code cũ đã được thay thế, giảm 
 | NFR14 | Zero-Credential Security | 12.1, 12.2 | No plain-text password in DB; QR/CDP auth flows only |
 | NFR15 | Clean Architecture & Extensibility | 10.1, 10.5, 11.1, 14.2 | `src/core/` has zero npm deps; new platform adds only `src/scrapers/<platform>/index.js` |
 | NFR16 | License & Backward Compatibility | 14.2, 20.1, 20.2 | License headers present; `unfollowx` commands mapped or return actionable error |
-| NFR17 | Operational Observability | 11.4, 14.3, 19.1, 19.2, 19.3, 19.6 | Verify endpoints return metrics; alert fires when thresholds exceeded |
+| NFR17 | Operational Observability | 11.4, 14.3, 19.1, 19.2, 19.3, 19.4.5 | Verify endpoints return metrics; alert fires when thresholds exceeded |
+| NFR18 | Universal Architecture Compliance | 23.1, 23.3, 25.1, 25.3, 26.2 | 100% platforms on `AbstractCrawler`/`AbstractApiClient`; zero legacy imports; `npm run typecheck` and `unfollowx` smoke tests pass |

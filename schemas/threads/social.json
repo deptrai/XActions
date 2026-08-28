@@ -2,24 +2,36 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Threads Social Post & Profile Metadata",
   "type": "object",
-  "properties": {
-    "postCode": { "type": "string" },
-    "mediaType": { "type": "string" },
-    "isReply": { "type": "boolean" },
-    "carousel": {
-      "type": "array",
-      "items": { "type": "string" }
+  "anyOf": [
+    {
+      "title": "Threads Post Metadata",
+      "properties": {
+        "postCode": { "type": "string" },
+        "mediaType": { "type": "string" },
+        "isReply": { "type": "boolean" },
+        "carousel": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "replyControl": { "type": "string" },
+        "sourceMethod": { "type": "string" }
+      },
+      "required": ["postCode", "mediaType", "sourceMethod"]
     },
-    "replyControl": { "type": "string" },
-    "sourceMethod": { "type": "string" },
-    "isProfile": { "type": "boolean" },
-    "isFollower": { "type": "boolean" },
-    "isFollowing": { "type": "boolean" },
-    "isVerified": { "type": "boolean" },
-    "userId": { "type": "string" },
-    "username": { "type": "string" },
-    "followersCount": { "type": "number" },
-    "followingCount": { "type": "number" }
-  },
-  "required": ["sourceMethod"]
+    {
+      "title": "Threads Profile Metadata",
+      "properties": {
+        "sourceMethod": { "type": "string" },
+        "isProfile": { "type": "boolean" },
+        "isFollower": { "type": "boolean" },
+        "isFollowing": { "type": "boolean" },
+        "isVerified": { "type": "boolean" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "followersCount": { "type": "number" },
+        "followingCount": { "type": "number" }
+      },
+      "required": ["sourceMethod", "isProfile"]
+    }
+  ]
 }

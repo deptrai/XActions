@@ -1,0 +1,2422 @@
+diff --git a/api/server.js b/api/server.js
+index e1bc82ab..286f5d9a 100644
+--- a/api/server.js
++++ b/api/server.js
+@@ -72,6 +72,8 @@ import governorRoutes from './routes/governor.js';
+ import notificationsRoutes from './routes/notifications.js';
+ import teamsRoutes from './routes/teams.js';
+ import optimizerRoutes from './routes/optimizer.js';
++import { defaultStreamMetricsCollector } from '../src/utils/stream-metrics-collector.js';
++import { defaultStreamAlertEngine } from '../src/utils/stream-alerts.js';
+ import { startScheduler } from './services/unfollowerScheduler.js';
+ import { initializeSocketIO } from './realtime/socketHandler.js';
+ import { initializeLicensing, brandingMiddleware } from './services/licensing.js';
+@@ -372,6 +374,37 @@ function mountPluginRoutes() {
+ app.use('/api/automations', automationsRoutes);
+ app.use('/api/streams', streamRoutes);
+ 
++// Story 14.3 — Stream Metrics & Alert Endpoints
++app.get('/metrics/stream', async (_req, res) => {
++  try {
++    const metrics = await defaultStreamMetricsCollector.getMetrics();
++    defaultStreamAlertEngine.checkAndAlert(metrics).catch((err) => {
++      console.warn('[Alert Engine] Error checking alerts:', (err instanceof Error ? err.message : String(err)));
++    });
++    res.json(metrics);
++  } catch (err) {
++    res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) });
++  }
++});
++
++app.get('/admin/stream/metrics', async (_req, res) => {
++  try {
++    const metrics = await defaultStreamMetricsCollector.getMetrics();
++    res.json({ success: true, metrics });
++  } catch (err) {
++    res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
++  }
++});
++
++app.get('/admin/stream/alerts', async (_req, res) => {
++  try {
++    const status = defaultStreamAlertEngine.getAlertStatus();
++    res.json({ success: true, alerts: status });
++  } catch (err) {
++    res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
++  }
++});
++
+ // Dashboard routes
+ // '/' serves the main dashboard — login.html is at /login
+ // Auth check happens client-side (config.js requireAuth)
+diff --git a/api/services/facebookScrape.js b/api/services/facebookScrape.js
+index 2cd070ab..db1905aa 100644
+--- a/api/services/facebookScrape.js
++++ b/api/services/facebookScrape.js
+@@ -12,6 +12,7 @@
+ 
+ import { resolve as resolveFacebookAuth } from './facebookAuth.js';
+ import { runBatch as poolRunBatch } from './facebookAccountPool.js';
++import { defaultStore } from '../../src/store/store-with-redis.js';
+ 
+ /**
+  * Run a single Facebook scrape action.
+@@ -24,9 +25,10 @@ export async function run(action, args = {}) {
+   const authCookie = /** @type {Record<string, unknown>} */ (args.authCookie);
+   const userId = /** @type {string | undefined} */ (args.userId);
+   const browserOptions = /** @type {Record<string, unknown> | undefined} */ (args.browserOptions);
++  const store = args.store || defaultStore;
+   const rest = /** @type {Record<string, unknown>} */ ({});
+   for (const [k, v] of Object.entries(args)) {
+-    if (!['authCookie', 'userId', 'browserOptions'].includes(k)) {
++    if (!['authCookie', 'userId', 'browserOptions', 'store'].includes(k)) {
+       rest[k] = v;
+     }
+   }
+@@ -38,9 +40,10 @@ export async function run(action, args = {}) {
+   // Resolve authCookie to { c_user, xs } via FacebookAuthResolver.
+   const resolved = await resolveFacebookAuth(authCookie, userId);
+ 
+-  // Build the scrape args — pass resolved cookie + browserOptions + action-specific params.
++  // Build the scrape args — pass resolved cookie + browserOptions + action-specific params + store.
+   const scrapeArgs = {
+     ...rest,
++    store,
+     authCookie: { c_user: resolved.c_user, xs: resolved.xs },
+     ...(browserOptions ? { browserOptions } : {}),
+   };
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 246c7025..bb7cb449 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -396,6 +396,7 @@ model CrawlCheckpoint {
+   lastTimestamp   DateTime?
+   lastCrawledAt   DateTime?
+   nextScheduledAt DateTime?
++  storageRef      String?   // Pointer to latest stored PostItem / CommentItem row id
+   errorCount      Int       @default(0)
+   createdAt       DateTime  @default(now())
+   updatedAt       DateTime  @updatedAt
+diff --git a/src/cli/commands/admin.js b/src/cli/commands/admin.js
+new file mode 100644
+index 00000000..7bc4ffdc
+--- /dev/null
++++ b/src/cli/commands/admin.js
+@@ -0,0 +1,119 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * `xactions admin` command group — stream metrics, alerts & operational management.
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++import chalk from 'chalk';
++import { printCliError } from '../shared.js';
++
++/**
++ * @param {import('commander').Command} program
++ */
++export function registerAdminCommand(program) {
++  const adminCmd = program
++    .command('admin')
++    .description('Operator administration, observability, and stream metrics (Epic 19 / Story 14.3)');
++
++  const streamCmd = adminCmd
++    .command('stream')
++    .description('Manage and inspect Nowing Redis Stream and NLP workers');
++
++  // xactions admin stream metrics
++  streamCmd
++    .command('metrics')
++    .description('Display real-time stream metrics (events/sec, consumer lag, pending messages)')
++    .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001 or http://localhost:3000)')
++    .option('--json', 'Output raw JSON')
++    .action(async (options) => {
++      try {
++        const baseUrl = options.url || process.env.MCP_SERVER_URL || process.env.API_URL || 'http://localhost:3001';
++        let metrics;
++
++        try {
++          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/metrics/stream`);
++          if (resp.ok) {
++            metrics = await resp.json();
++          }
++        } catch {
++          // Direct in-process fallback
++          const { defaultStreamMetricsCollector } = await import('../../utils/stream-metrics-collector.js');
++          metrics = await defaultStreamMetricsCollector.getMetrics();
++        }
++
++        if (!metrics) {
++          const { defaultStreamMetricsCollector } = await import('../../utils/stream-metrics-collector.js');
++          metrics = await defaultStreamMetricsCollector.getMetrics();
++        }
++
++        if (options.json) {
++          console.log(JSON.stringify(metrics, null, 2));
++          return;
++        }
++
++        console.log(chalk.bold('\n📊 Nowing Social Redis Stream Metrics (stream:social:raw_posts)\n'));
++        console.log(`  • ${chalk.cyan('Events / Sec')}:      ${chalk.green(metrics.eventsPerSecond ?? 0)}`);
++        console.log(`  • ${chalk.cyan('Pending Messages')}:  ${chalk.yellow((metrics.pendingMessages ?? 0).toLocaleString())}`);
++        console.log(`  • ${chalk.cyan('Consumer Lag')}:      ${metrics.consumerLag > 10000 ? chalk.red((metrics.consumerLag ?? 0).toLocaleString()) : chalk.green((metrics.consumerLag ?? 0).toLocaleString())}`);
++        console.log(`  • ${chalk.cyan('Dropped Events')}:    ${chalk.dim(metrics.droppedEvents ?? 0)}`);
++        console.log(`  • ${chalk.cyan('Last Ack Idle')}:     ${metrics.lastAckTime > 60 ? chalk.red(`${metrics.lastAckTime}s`) : chalk.green(`${metrics.lastAckTime}s`)}`);
++        console.log(`  • ${chalk.cyan('Max Length')}:        ${chalk.dim((metrics.maxLen ?? 0).toLocaleString())}`);
++        console.log(`  • ${chalk.cyan('Oldest Min ID')}:     ${chalk.dim(metrics.minId || 'none')}\n`);
++      } catch (err) {
++        printCliError(err, 'Failed to fetch stream metrics');
++      }
++    });
++
++  // xactions admin stream alerts
++  streamCmd
++    .command('alerts')
++    .description('Display recent stream alerts and threshold status')
++    .option('--url <url>', 'Base API / Daemon URL')
++    .option('--json', 'Output raw JSON')
++    .action(async (options) => {
++      try {
++        const baseUrl = options.url || process.env.API_URL || 'http://localhost:3000';
++        let alertStatus;
++
++        try {
++          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/admin/stream/alerts`);
++          if (resp.ok) {
++            const data = await resp.json();
++            alertStatus = data.alerts || data;
++          }
++        } catch {
++          // Direct fallback
++          const { defaultStreamAlertEngine } = await import('../../utils/stream-alerts.js');
++          alertStatus = defaultStreamAlertEngine.getAlertStatus();
++        }
++
++        if (!alertStatus) {
++          const { defaultStreamAlertEngine } = await import('../../utils/stream-alerts.js');
++          alertStatus = defaultStreamAlertEngine.getAlertStatus();
++        }
++
++        if (options.json) {
++          console.log(JSON.stringify(alertStatus, null, 2));
++          return;
++        }
++
++        console.log(chalk.bold('\n🚨 Nowing Stream Alerts & Threshold Status\n'));
++        console.log(`  • ${chalk.cyan('Total Alerts Triggered')}: ${alertStatus.totalAlertsTriggered ?? 0}`);
++        console.log(`  • ${chalk.cyan('Last Alert Timestamp')}:   ${chalk.dim(alertStatus.lastAlertTimestamp || 'Never')}\n`);
++
++        const active = /** @type {Array<{ alert: string, value: number, threshold: number, timestamp: string }>} */ (alertStatus.activeAlerts || []);
++        if (active.length === 0) {
++          console.log(`  ${chalk.green('✔ No recent threshold breaches detected.')}\n`);
++        } else {
++          console.log(chalk.bold('Recent Alerts:'));
++          active.forEach((a, idx) => {
++            console.log(`  ${idx + 1}. [${chalk.red(a.alert)}] Value: ${chalk.yellow(a.value)} (Threshold: ${a.threshold}) at ${chalk.dim(a.timestamp)}`);
++          });
++          console.log();
++        }
++      } catch (err) {
++        printCliError(err, 'Failed to fetch stream alerts');
++      }
++    });
++}
+diff --git a/src/core/adaptive-governor.js b/src/core/adaptive-governor.js
+index 9e54965d..5f245035 100644
+--- a/src/core/adaptive-governor.js
++++ b/src/core/adaptive-governor.js
+@@ -150,6 +150,13 @@ export class AdaptiveRateGovernor {
+   updateRedisConsumerLag(lag) {
+     this.#redisConsumerLag = Math.max(0, Number(lag) || 0);
+     if (this.#redisConsumerLag > 10000) {
++      if (!this.#isBackpressureActive) {
++        console.warn('[AdaptiveRateGovernor] Redis stream consumer lag threshold exceeded:', {
++          throttle_reason: 'redis_lag',
++          reduced_to_percent: 25,
++          redisConsumerLag: this.#redisConsumerLag,
++        });
++      }
+       this.#isBackpressureActive = true;
+     } else if (this.#redisConsumerLag < 5000) {
+       this.#isBackpressureActive = false;
+@@ -190,6 +197,12 @@ export class AdaptiveRateGovernor {
+     }
+     if (this.#isBackpressureActive || this.#redisConsumerLag > 10000) {
+       factor *= 0.25;
++      console.warn('[AdaptiveRateGovernor] Throttling bulk throughput due to Redis stream consumer lag:', {
++        throttle_reason: 'redis_lag',
++        reduced_to_percent: 25,
++        redisConsumerLag: this.#redisConsumerLag,
++        platform,
++      });
+     }
+ 
+     return healthy * limit.baseReqPerSecondPerProxy * limit.throttleFactor * factor;
+diff --git a/src/core/types.js b/src/core/types.js
+index e5f638d4..f186c575 100644
+--- a/src/core/types.js
++++ b/src/core/types.js
+@@ -108,6 +108,50 @@
+  * @property {string} [platform]
+  */
+ 
++/**
++ * @typedef {Object} ThinEvent
++ * @property {string} id - Namespaced id, e.g. "facebook:123" or "threads:abc:456"
++ * @property {string} platform - Platform name, e.g. "facebook" | "threads"
++ * @property {string} externalId - Platform-native id
++ * @property {string} category - Category string, e.g. "social" | "ecom" | "realestate" | "recruitment" | "b2b"
++ * @property {string} authorId - Author ID
++ * @property {string} crawledAt - ISO 8601 timestamp string
++ * @property {string} storageRef - Pointer to the stored row / item id
++ */
++
++/**
++ * @typedef {Object} StreamMetrics
++ * @property {number} eventsPerSecond - New entries per second over the last refresh interval
++ * @property {number} pendingMessages - Total entries in the stream (XLEN)
++ * @property {number} consumerLag - Unacknowledged / pending messages in consumer group (XPENDING)
++ * @property {number} droppedEvents - Cumulative trimmed / dropped events (entries-added - length or best-effort)
++ * @property {number} lastAckTime - Seconds since the last consumer ack or idle
++ * @property {number} maxLen - Configured MAXLEN / MINID threshold
++ * @property {string | null} minId - ID of oldest entry in stream
++ */
++
++/**
++ * Minimal duck-typed interface matching redis/ioredis clients for stream operations
++ * @typedef {Object} RedisClientLike
++ * @property {Function} [xAdd]
++ * @property {Function} [xadd]
++ * @property {Function} [xLen]
++ * @property {Function} [xlen]
++ * @property {Function} [xInfoStream]
++ * @property {Function} [xInfo]
++ * @property {Function} [xinfo]
++ * @property {Function} [xInfoConsumers]
++ * @property {Function} [xGroupCreate]
++ * @property {Function} [xgroup]
++ * @property {Function} [xPending]
++ * @property {Function} [xpending]
++ * @property {Function} [sendCommand]
++ * @property {boolean | Function} [isOpen]
++ * @property {Function} [quit]
++ * @property {Function} [disconnect]
++ * @property {string} [status]
++ */
++
+ export const CATEGORIES = Object.freeze({
+   SOCIAL: 'social',
+   ECOMMERCE: 'ecom',
+diff --git a/src/mcp/server.js b/src/mcp/server.js
+index 525013fc..3bda25fa 100755
+--- a/src/mcp/server.js
++++ b/src/mcp/server.js
+@@ -5071,6 +5071,20 @@ async function startHttpTransport() {
+     res.json({ status: 'ok', transport: 'http', tools: TOOLS.length, sessions: sessions.size });
+   });
+ 
++  // Stream Metrics endpoint (Story 14.3)
++  app.get('/metrics/stream', async (_req, res) => {
++    try {
++      const { defaultStreamMetricsCollector } = await import('../utils/stream-metrics-collector.js');
++      const metrics = await defaultStreamMetricsCollector.getMetrics();
++      res.json(metrics);
++    } catch (err) {
++      res.status(500).json({
++        error: 'Failed to collect stream metrics',
++        message: err?.message || String(err),
++      });
++    }
++  });
++
+   // x402 pricing discovery (free endpoint — no payment required)
+   app.get('/mcp/pricing', mcpPricingHandler);
+ 
+diff --git a/src/scrapers/index.js b/src/scrapers/index.js
+index 4e67304e..44f25245 100644
+--- a/src/scrapers/index.js
++++ b/src/scrapers/index.js
+@@ -40,6 +40,7 @@ import bluesky from './bluesky/index.js';
+ import mastodon from './mastodon/index.js';
+ import threads from './threads/index.js';
+ import facebook from './facebook/index.js';
++import { defaultStore } from '../store/index.js';
+ 
+ // ============================================================================
+ // HTTP Scraper (Direct GraphQL — no browser required)
+@@ -155,6 +156,8 @@ export function getPlatform(platform) {
+  *   const posts = await scrape('threads', 'tweets', { page, username: 'zuck', limit: 20 });
+  */
+ export async function scrape(platform, action, options = {}) {
++  const store = options.store || defaultStore;
++  const normalizedOptions = { ...options, store };
+   const mod = getPlatform(platform);
+   const platformName = platform.toLowerCase();
+ 
+@@ -278,9 +281,9 @@ export async function scrape(platform, action, options = {}) {
+     let result;
+     try {
+       if (noTargetActions.includes(fnName)) {
+-        result = await fn(page, options);
++        result = await fn(page, normalizedOptions);
+       } else {
+-        result = await fn(page, target, options);
++        result = await fn(page, target, normalizedOptions);
+       }
+     } finally {
+       // Auto-close browser if we created it — runs even if fn throws (goto timeout,
+@@ -294,7 +297,7 @@ export async function scrape(platform, action, options = {}) {
+   }
+ 
+   if (needsClient) {
+-    let client = options.client;
++    let client = normalizedOptions.client;
+ 
+     // Auto-create client if not provided
+     if (!client) {
+diff --git a/src/scrapers/social/facebook/crawler.js b/src/scrapers/social/facebook/crawler.js
+index 1b91dc36..173915e0 100644
+--- a/src/scrapers/social/facebook/crawler.js
++++ b/src/scrapers/social/facebook/crawler.js
+@@ -12,6 +12,7 @@ import { AbstractCrawler } from '../../../core/base-crawler.js';
+ import { FacebookClient } from './client.js';
+ import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+ import { CommentTreeExtractor } from '../comment-tree.js';
++import { defaultRedisStreamPublisher, toIsoDate } from '../../../utils/redis-stream-publisher.js';
+ 
+ const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
+ 
+@@ -572,9 +573,17 @@ export class FacebookCrawler extends AbstractCrawler {
+       await this.store.storeBatch(posts, { upsert: true });
+     }
+ 
++    const groupPageInfo = res?.data?.group?.feed?.page_info || res?.data?.node?.feed?.page_info || null;
++    await this.#saveCheckpoint({
++      targetType: 'group',
++      targetKey: String(args.groupId),
++      items: posts,
++      cursor: groupPageInfo?.end_cursor || args?.cursor || null,
++    });
++
+     return {
+       posts,
+-      pageInfo: res?.data?.group?.feed?.page_info || res?.data?.node?.feed?.page_info || null,
++      pageInfo: groupPageInfo,
+     };
+   }
+ 
+@@ -628,9 +637,17 @@ export class FacebookCrawler extends AbstractCrawler {
+       await this.store.storeBatch(posts, { upsert: true });
+     }
+ 
++    const pageTimelinePageInfo = res?.data?.page?.timeline_feed?.page_info || res?.data?.node?.timeline_feed?.page_info || null;
++    await this.#saveCheckpoint({
++      targetType: 'page',
++      targetKey: String(args.pageId),
++      items: posts,
++      cursor: pageTimelinePageInfo?.end_cursor || args?.cursor || null,
++    });
++
+     return {
+       posts,
+-      pageInfo: res?.data?.page?.timeline_feed?.page_info || res?.data?.node?.timeline_feed?.page_info || null,
++      pageInfo: pageTimelinePageInfo,
+     };
+   }
+ 
+@@ -819,9 +836,65 @@ export class FacebookCrawler extends AbstractCrawler {
+       await this.store.storeCommentBatch(comments, { upsert: true });
+     }
+ 
++    await this.#saveCheckpoint({
++      targetType: 'post',
++      targetKey: postExternalId,
++      items: comments,
++      cursor: pageInfo?.end_cursor || null,
++    });
++
+     return { comments, pageInfo };
+   }
+ 
++  /**
++   * Helper to persist checkpoint and emit thin event pointers to Redis Stream.
++   * @param {Object} params
++   * @param {string} params.targetType - 'group' | 'page' | 'post'
++   * @param {string} params.targetKey - groupId | pageId | postId
++   * @param {Array<import('../../../core/types.js').PostItem | import('../../../core/types.js').CommentItem>} params.items
++   * @param {string | null} [params.cursor]
++   * @param {string} [params.status='running']
++   * @returns {Promise<void>}
++   */
++  async #saveCheckpoint({ targetType, targetKey, items, cursor, status = 'running' }) {
++    if (!items || items.length === 0) return;
++
++    const firstItem = items[0];
++    const storageRef = firstItem?.id || null;
++
++    // 1. Save checkpoint in store first if supported
++    if (this.store && typeof this.store.saveCheckpoint === 'function') {
++      try {
++        await this.store.saveCheckpoint({
++          platform: this.platform,
++          targetType,
++          targetKey,
++          lastCursor: cursor || undefined,
++          lastTimestamp: firstItem?.publishedAt || undefined,
++          lastCrawledAt: new Date(),
++          status,
++          storageRef: storageRef || undefined,
++        });
++      } catch (err) {
++        console.warn(`[${this.platform} TELEMETRY] Failed to save checkpoint for ${targetType}:${targetKey}:`, (err instanceof Error ? err.message : String(err)));
++      }
++    }
++
++    // 2. Emit thin event pointers to Redis Stream for each item
++    const publisher = (this.store && /** @type {any} */ (this.store).publisher) || defaultRedisStreamPublisher;
++    for (const item of items) {
++      await publisher.publish({
++        id: item.id,
++        platform: item.platform || this.platform,
++        externalId: item.externalId,
++        category: (/** @type {any} */ (item)).category || 'social',
++        authorId: item.authorId,
++        crawledAt: item.crawledAt ? toIsoDate(item.crawledAt) : new Date().toISOString(),
++        storageRef: item.id,
++      });
++    }
++  }
++
+   /**
+    * Cleanup crawler and client resources.
+    * @returns {Promise<void>}
+diff --git a/src/store/index.js b/src/store/index.js
+index 296e4ccc..295f14bd 100644
+--- a/src/store/index.js
++++ b/src/store/index.js
+@@ -7,6 +7,7 @@
+ 
+ export { AbstractStore } from '../core/base-store.js';
+ export { PrismaStore } from './prisma-store.js';
++export { defaultStore, StoreWithRedis } from './store-with-redis.js';
+ export {
+   CHECKPOINT_STATUSES,
+   listCheckpoints,
+diff --git a/src/store/prisma-store.js b/src/store/prisma-store.js
+index 0f1fd5b9..4fb6f750 100644
+--- a/src/store/prisma-store.js
++++ b/src/store/prisma-store.js
+@@ -20,15 +20,21 @@ export class PrismaStore extends AbstractStore {
+   /** @type {boolean} */
+   #validateSchema = true;
+ 
++  /** @type {import('../core/types.js').RedisClientLike | null} */
++  redis = null;
++
+   /**
+    * @param {Object} [options]
+    * @param {import('@prisma/client').PrismaClient} [options.prisma]
++   * @param {import('../core/types.js').RedisClientLike} [options.redisClient]
++   * @param {import('../core/types.js').RedisClientLike} [options.redis]
+    * @param {number} [options.chunkSize=500]
+    * @param {boolean} [options.validateSchema=true]
+    */
+   constructor(options = {}) {
+     super();
+     this.#prisma = options.prisma || null;
++    this.redis = options.redisClient || options.redis || null;
+     this.#chunkSize =
+       typeof options.chunkSize === 'number' && options.chunkSize > 0
+         ? Math.floor(options.chunkSize)
+@@ -297,6 +303,90 @@ export class PrismaStore extends AbstractStore {
+     }
+   }
+ 
++  /**
++   * Upsert a crawl checkpoint with state and storage reference.
++   * @param {Object} checkpoint
++   * @param {string} checkpoint.platform
++   * @param {string} checkpoint.targetType
++   * @param {string} checkpoint.targetKey
++   * @param {string} [checkpoint.lastCursor]
++   * @param {Date | string} [checkpoint.lastTimestamp]
++   * @param {Date | string} [checkpoint.lastCrawledAt]
++   * @param {string} [checkpoint.status]
++   * @param {string} [checkpoint.storageRef]
++   * @param {Date | string} [checkpoint.nextScheduledAt]
++   * @param {number} [checkpoint.errorCount]
++   * @returns {Promise<any>}
++   */
++  async saveCheckpoint(checkpoint) {
++    if (!checkpoint || typeof checkpoint !== 'object') {
++      throw new PlatformError({
++        type: ErrorTypes.INVALID_ARGS,
++        code: 'XACT_4001',
++        message: 'Checkpoint must be a valid non-null object',
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++      });
++    }
++
++    const { platform, targetType, targetKey } = checkpoint;
++    if (!platform || !targetType || !targetKey) {
++      throw new PlatformError({
++        type: ErrorTypes.INVALID_ARGS,
++        code: 'XACT_4001',
++        message: 'Checkpoint must contain platform, targetType, and targetKey',
++        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
++        platform,
++      });
++    }
++
++    await this.init();
++
++    const data = {
++      platform: String(platform),
++      targetType: String(targetType),
++      targetKey: String(targetKey),
++      status: checkpoint.status ? String(checkpoint.status) : 'running',
++      lastCursor: checkpoint.lastCursor ? String(checkpoint.lastCursor) : null,
++      lastTimestamp: checkpoint.lastTimestamp ? new Date(checkpoint.lastTimestamp) : null,
++      lastCrawledAt: checkpoint.lastCrawledAt ? new Date(checkpoint.lastCrawledAt) : new Date(),
++      nextScheduledAt: checkpoint.nextScheduledAt ? new Date(checkpoint.nextScheduledAt) : null,
++      storageRef: checkpoint.storageRef ? String(checkpoint.storageRef) : null,
++      errorCount: typeof checkpoint.errorCount === 'number' ? checkpoint.errorCount : 0,
++    };
++
++    return await this.#prisma.crawlCheckpoint.upsert({
++      where: {
++        platform_targetType_targetKey: {
++          platform: data.platform,
++          targetType: data.targetType,
++          targetKey: data.targetKey,
++        },
++      },
++      update: data,
++      create: data,
++    });
++  }
++
++  /**
++   * Retrieve a crawl checkpoint by composite key.
++   * @param {string} platform
++   * @param {string} targetType
++   * @param {string} targetKey
++   * @returns {Promise<any>}
++   */
++  async getCheckpoint(platform, targetType, targetKey) {
++    await this.init();
++    return await this.#prisma.crawlCheckpoint.findUnique({
++      where: {
++        platform_targetType_targetKey: {
++          platform: String(platform),
++          targetType: String(targetType),
++          targetKey: String(targetKey),
++        },
++      },
++    });
++  }
++
+   /** @returns {Promise<void>} */
+   async close() {
+     if (this.#prisma) {
+diff --git a/src/store/store-with-redis.js b/src/store/store-with-redis.js
+new file mode 100644
+index 00000000..ed1a9780
+--- /dev/null
++++ b/src/store/store-with-redis.js
+@@ -0,0 +1,52 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * Singleton Default Store configured with Prisma and Redis stream publisher.
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++import { PrismaStore } from './prisma-store.js';
++import { defaultRedisStreamPublisher } from '../utils/redis-stream-publisher.js';
++
++class StoreWithRedis extends PrismaStore {
++  /** @type {import('../utils/redis-stream-publisher.js').RedisStreamPublisher} */
++  publisher;
++
++  /** @type {import('../core/types.js').RedisClientLike | null} */
++  #redisClient = null;
++
++  /**
++   * @param {Object} [options]
++   * @param {import('../utils/redis-stream-publisher.js').RedisStreamPublisher} [options.publisher]
++   * @param {import('../core/types.js').RedisClientLike} [options.redisClient]
++   * @param {import('../core/types.js').RedisClientLike} [options.redis]
++   * @param {import('@prisma/client').PrismaClient} [options.prisma]
++   * @param {number} [options.chunkSize]
++   * @param {boolean} [options.validateSchema]
++   */
++  constructor(options = {}) {
++    super(options);
++    this.publisher = options.publisher || defaultRedisStreamPublisher;
++    this.#redisClient = options.redisClient || options.redis || null;
++  }
++
++  /**
++   * Lazy accessor for redis client from publisher
++   * @returns {import('../core/types.js').RedisClientLike | null}
++   */
++  get redis() {
++    return this.#redisClient;
++  }
++
++  set redis(client) {
++    this.#redisClient = client;
++    if (this.publisher && typeof this.publisher.setClient === 'function') {
++      this.publisher.setClient(client);
++    }
++  }
++}
++
++/** @type {StoreWithRedis} */
++export const defaultStore = new StoreWithRedis();
++
++export { StoreWithRedis };
+diff --git a/src/utils/redis-stream-publisher.js b/src/utils/redis-stream-publisher.js
+new file mode 100644
+index 00000000..dde63bab
+--- /dev/null
++++ b/src/utils/redis-stream-publisher.js
+@@ -0,0 +1,376 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * RedisStreamPublisher — Reusable publisher for Nowing Redis Streams thin events.
++ * Normalizes node-redis (xAdd) and ioredis (xadd) APIs, applies configurable trimming (MAXLEN/MINID),
++ * and guarantees non-blocking, non-throwing emissions for scrapers.
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++/**
++ * Check if an environment variable string represents a truthy flag (true, 1, yes, on).
++ * @param {string | boolean | undefined | null} val
++ * @returns {boolean}
++ */
++export function isEnvTruthy(val) {
++  if (typeof val === 'boolean') return val;
++  if (!val) return false;
++  const normalized = String(val).trim().toLowerCase();
++  return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on';
++}
++
++/**
++ * Format any date/timestamp into ISO 8601 string.
++ * @param {Date | string | number | undefined | null} val
++ * @returns {string}
++ */
++export function toIsoDate(val) {
++  if (!val) return new Date().toISOString();
++  if (val instanceof Date) return val.toISOString();
++  try {
++    return new Date(val).toISOString();
++  } catch {
++    return new Date().toISOString();
++  }
++}
++
++export class RedisStreamPublisher {
++  /** @type {import('../core/types.js').RedisClientLike | null} */
++  #redisClient = null;
++
++  /** @type {string} */
++  #streamKey;
++
++  /** @type {string} */
++  #groupName;
++
++  /** @type {'maxlen' | 'minid'} */
++  #trimStrategy;
++
++  /** @type {number} */
++  #maxLen;
++
++  /** @type {string | null} */
++  #minId;
++
++  /** @type {boolean | null} */
++  #enabled = null;
++
++  /** @type {boolean} */
++  #isOwnedClient = false;
++
++  /**
++   * @param {Object} [options]
++   * @param {import('../core/types.js').RedisClientLike} [options.redisClient]
++   * @param {string} [options.streamKey]
++   * @param {string} [options.groupName]
++   * @param {'maxlen' | 'minid'} [options.trimStrategy]
++   * @param {number} [options.maxLen]
++   * @param {string} [options.minId]
++   * @param {boolean} [options.enabled]
++   */
++  constructor(options = {}) {
++    this.#redisClient = options.redisClient || null;
++    this.#streamKey = options.streamKey || 'stream:social:raw_posts';
++    this.#groupName = options.groupName || process.env.NOWING_CONSUMER_GROUP || 'nowing_nlp_workers';
++    this.#enabled = options.enabled !== undefined ? Boolean(options.enabled) : null;
++
++    const rawStrategy = (options.trimStrategy || process.env.REDIS_STREAM_TRIM_STRATEGY || 'maxlen').toLowerCase();
++    this.#trimStrategy = rawStrategy === 'minid' ? 'minid' : 'maxlen';
++
++    const parsedMaxLen = Number(options.maxLen ?? process.env.REDIS_STREAM_MAXLEN);
++    this.#maxLen = Number.isFinite(parsedMaxLen) && parsedMaxLen > 0 ? parsedMaxLen : 1000000;
++
++    this.#minId = options.minId ?? process.env.REDIS_STREAM_MINID ?? null;
++  }
++
++  /**
++   * Ensure Redis client is available and connected.
++   * @returns {Promise<import('../core/types.js').RedisClientLike | null>}
++   */
++  async ensureClient() {
++    if (this.#redisClient) {
++      return this.#redisClient;
++    }
++
++    try {
++      const { createClient } = await import('redis');
++      const url =
++        process.env.REDIS_URL ||
++        (process.env.REDIS_HOST
++          ? `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`
++          : 'redis://localhost:6379');
++      const client = createClient({ url });
++      client.on('error', (err) => {
++        console.warn('[RedisStreamPublisher] Redis client error:', (err instanceof Error ? err.message : String(err)));
++      });
++      await client.connect();
++      this.#redisClient = /** @type {import('../core/types.js').RedisClientLike} */ (client);
++      this.#isOwnedClient = true;
++      return this.#redisClient;
++    } catch (err) {
++      console.warn('[RedisStreamPublisher] Failed to connect to Redis:', (err instanceof Error ? err.message : String(err)));
++      return null;
++    }
++  }
++
++  /**
++   * Sets or replaces the active redis client.
++   * @param {import('../core/types.js').RedisClientLike | null} client
++   */
++  setClient(client) {
++    this.#redisClient = client;
++  }
++
++  /**
++   * Format a PostItem, CommentItem, or ThinEvent into the required string-only key-value record for XADD.
++   * @param {Partial<import('../core/types.js').ThinEvent> & Record<string, unknown>} item
++   * @returns {Record<string, string>}
++   */
++  formatPayload(item) {
++    if (!item) return {};
++
++    const id = String(item.id || (item.platform && item.externalId ? `${item.platform}:${item.externalId}` : ''));
++    const platform = String(item.platform || '');
++    const externalId = String(item.externalId || '');
++    const category = String(item.category || 'social');
++    const authorId = String(item.authorId || '');
++    const crawledAt = toIsoDate(/** @type {any} */ (item.crawledAt));
++    const storageRef = String(item.storageRef || id);
++
++    return {
++      id,
++      platform,
++      externalId,
++      category,
++      authorId,
++      crawledAt,
++      storageRef,
++    };
++  }
++
++  /**
++   * Publish a thin event pointer to the Redis stream.
++   * Non-blocking and non-throwing: returns { ok: true, id } or { ok: false, error }
++   *
++   * @param {string | (Partial<import('../core/types.js').ThinEvent> & Record<string, unknown>)} keyOrItem
++   * @param {Partial<import('../core/types.js').ThinEvent> & Record<string, unknown>} [maybeItem]
++   * @param {Object} [opts]
++   * @returns {Promise<{ ok: boolean, id?: string, skipped?: boolean, error?: string }>}
++   */
++  async publish(keyOrItem, maybeItem, opts = {}) {
++    const isEnabled = this.#enabled !== null ? this.#enabled : isEnvTruthy(process.env.REDIS_STREAM_ENABLED);
++    if (!isEnabled) {
++      return { ok: false, skipped: true };
++    }
++
++    let streamKey = this.#streamKey;
++    let item = maybeItem;
++
++    if (typeof keyOrItem === 'string') {
++      streamKey = keyOrItem;
++    } else if (keyOrItem && typeof keyOrItem === 'object') {
++      item = keyOrItem;
++    }
++
++    if (!item) {
++      return { ok: false, error: 'No payload provided to publish' };
++    }
++
++    const payload = this.formatPayload(item);
++    if (!payload.id) {
++      return { ok: false, error: 'Payload missing id' };
++    }
++
++    const client = await this.ensureClient();
++    if (!client) {
++      return { ok: false, error: 'Redis client unavailable' };
++    }
++
++    try {
++      // Determine trimming strategy
++      const strategy = this.#trimStrategy;
++      const useMinId = strategy === 'minid' && this.#minId;
++
++      // 1. node-redis v4+ API: xAdd(key, '*', fields, options)
++      if (typeof client.xAdd === 'function') {
++        /** @type {any} */
++        const trimOptions = useMinId
++          ? {
++              TRIM: {
++                strategy: 'MINID',
++                strategyModifier: '~',
++                threshold: this.#minId,
++              },
++            }
++          : {
++              TRIM: {
++                strategy: 'MAXLEN',
++                strategyModifier: '~',
++                threshold: this.#maxLen,
++              },
++            };
++
++        const eventId = await client.xAdd(streamKey, '*', payload, trimOptions);
++        return { ok: true, id: typeof eventId === 'string' ? eventId : String(eventId) };
++      }
++
++      // 2. ioredis / flat API: xadd(key, 'MAXLEN', '~', maxLen, '*', field1, val1, ...)
++      if (typeof client.xadd === 'function') {
++        const trimType = useMinId ? 'MINID' : 'MAXLEN';
++        const trimThreshold = useMinId ? this.#minId : this.#maxLen;
++        const flatPayload = Object.entries(payload).flat();
++
++        const eventId = await client.xadd(
++          streamKey,
++          trimType,
++          '~',
++          trimThreshold,
++          '*',
++          ...flatPayload
++        );
++        return { ok: true, id: typeof eventId === 'string' ? eventId : String(eventId) };
++      }
++
++      // 3. Fallback to generic sendCommand if available
++      if (typeof client.sendCommand === 'function') {
++        const trimType = useMinId ? 'MINID' : 'MAXLEN';
++        const trimThreshold = String(useMinId ? this.#minId : this.#maxLen);
++        const flatPayload = Object.entries(payload).flat();
++        const commandArgs = ['XADD', streamKey, trimType, '~', trimThreshold, '*', ...flatPayload];
++        const eventId = await client.sendCommand(commandArgs);
++        return { ok: true, id: typeof eventId === 'string' ? eventId : String(eventId) };
++      }
++
++      return { ok: false, error: 'No compatible XADD method found on Redis client' };
++    } catch (err) {
++      const errMsg = err instanceof Error ? err.message : String(err);
++      console.warn(`[${payload.platform || 'STREAM'} TELEMETRY] Failed to publish thin event to ${streamKey}:`, errMsg);
++      return { ok: false, error: errMsg };
++    }
++  }
++
++  /**
++   * Query total message count (XLEN) for a stream.
++   * @param {string} [streamKey]
++   * @returns {Promise<number>}
++   */
++  async xlen(streamKey = this.#streamKey) {
++    const client = await this.ensureClient();
++    if (!client) return 0;
++
++    try {
++      if (typeof client.xLen === 'function') {
++        return Number(await client.xLen(streamKey)) || 0;
++      }
++      if (typeof client.xlen === 'function') {
++        return Number(await client.xlen(streamKey)) || 0;
++      }
++      if (typeof client.sendCommand === 'function') {
++        return Number(await client.sendCommand(['XLEN', streamKey])) || 0;
++      }
++      return 0;
++    } catch (err) {
++      console.warn(`[RedisStreamPublisher] Failed to query XLEN for ${streamKey}:`, (err instanceof Error ? err.message : String(err)));
++      return 0;
++    }
++  }
++
++  /**
++   * Query stream info (XINFO STREAM) for a stream.
++   * @param {string} [streamKey]
++   * @returns {Promise<Record<string, unknown> | null>}
++   */
++  async xinfo(streamKey = this.#streamKey) {
++    const client = await this.ensureClient();
++    if (!client) return null;
++
++    try {
++      const anyClient = /** @type {Record<string, any>} */ (client);
++      if (typeof anyClient.xInfoStream === 'function') {
++        return await anyClient.xInfoStream(streamKey);
++      }
++      if (typeof anyClient.xInfo === 'function') {
++        return await anyClient.xInfo('STREAM', streamKey);
++      }
++      if (typeof anyClient.xinfo === 'function') {
++        return await anyClient.xinfo('STREAM', streamKey);
++      }
++      if (typeof anyClient.sendCommand === 'function') {
++        const raw = await anyClient.sendCommand(['XINFO', 'STREAM', streamKey]);
++        if (Array.isArray(raw)) {
++          /** @type {Record<string, unknown>} */
++          const map = {};
++          for (let i = 0; i < raw.length; i += 2) {
++            map[raw[i]] = raw[i + 1];
++          }
++          return map;
++        }
++        return raw;
++      }
++      return null;
++    } catch (err) {
++      console.warn(`[RedisStreamPublisher] Failed to query XINFO for ${streamKey}:`, (err instanceof Error ? err.message : String(err)));
++      return null;
++    }
++  }
++
++  /**
++   * Ensure a consumer group exists on the stream with MKSTREAM.
++   * Idempotent: ignores BUSYGROUP errors.
++   * @param {string} [streamKey]
++   * @param {string} [groupName]
++   * @returns {Promise<boolean>}
++   */
++  async xgroupEnsure(streamKey = this.#streamKey, groupName = this.#groupName) {
++    const client = await this.ensureClient();
++    if (!client) return false;
++
++    try {
++      if (typeof client.xGroupCreate === 'function') {
++        await client.xGroupCreate(streamKey, groupName, '$', { MKSTREAM: true });
++        return true;
++      }
++      if (typeof client.xgroup === 'function') {
++        await client.xgroup('CREATE', streamKey, groupName, '$', 'MKSTREAM');
++        return true;
++      }
++      if (typeof client.sendCommand === 'function') {
++        await client.sendCommand(['XGROUP', 'CREATE', streamKey, groupName, '$', 'MKSTREAM']);
++        return true;
++      }
++      return false;
++    } catch (err) {
++      const errMsg = err instanceof Error ? err.message : String(err);
++      if (errMsg.includes('BUSYGROUP')) {
++        return true; // Already exists
++      }
++      console.warn(`[RedisStreamPublisher] Failed to create consumer group "${groupName}" on "${streamKey}":`, errMsg);
++      return false;
++    }
++  }
++
++  /**
++   * Close owned client.
++   * @returns {Promise<void>}
++   */
++  async close() {
++    if (this.#isOwnedClient && this.#redisClient) {
++      try {
++        const client = /** @type {any} */ (this.#redisClient);
++        if (typeof client.quit === 'function') {
++          await client.quit();
++        } else if (typeof client.disconnect === 'function') {
++          await client.disconnect();
++        }
++      } catch {
++        // Safe ignore
++      } finally {
++        this.#redisClient = null;
++      }
++    }
++  }
++}
++
++/** @type {RedisStreamPublisher} */
++export const defaultRedisStreamPublisher = new RedisStreamPublisher();
+diff --git a/src/utils/stream-alerts.js b/src/utils/stream-alerts.js
+new file mode 100644
+index 00000000..a3f8438f
+--- /dev/null
++++ b/src/utils/stream-alerts.js
+@@ -0,0 +1,213 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * StreamAlertEngine — Monitors StreamMetrics and triggers webhooks and emails on threshold breaches.
++ * Implements cooldown guards (default 5m) and structured alert payloads.
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++export class StreamAlertEngine {
++  /** @type {number} */
++  #pendingMessagesThreshold;
++
++  /** @type {number} */
++  #consumerLagThreshold;
++
++  /** @type {number} */
++  #lastAckTimeThreshold;
++
++  /** @type {number} */
++  #cooldownMs;
++
++  /** @type {string | null} */
++  #webhookUrl;
++
++  /** @type {string | null} */
++  #emailRecipients;
++
++  /** @type {Function | null} */
++  #webhookSender;
++
++  /** @type {Function | null} */
++  #emailSender;
++
++  /** @type {Map<string, number>} */
++  #lastAlertTimes = new Map();
++
++  /** @type {Array<Object>} */
++  #alertHistory = [];
++
++  /** @type {string | null} */
++  #lastAlertTimestamp = null;
++
++  /**
++   * @param {Object} [options]
++   * @param {number} [options.pendingMessagesThreshold=50000]
++   * @param {number} [options.consumerLagThreshold=50000]
++   * @param {number} [options.lastAckTimeThreshold=60]
++   * @param {number} [options.cooldownMs=300000]
++   * @param {string} [options.webhookUrl]
++   * @param {string} [options.emailRecipients]
++   * @param {Function} [options.webhookSender]
++   * @param {Function} [options.emailSender]
++   */
++  constructor(options = {}) {
++    this.#pendingMessagesThreshold = options.pendingMessagesThreshold ?? 50000;
++    this.#consumerLagThreshold = options.consumerLagThreshold ?? 50000;
++    this.#lastAckTimeThreshold = options.lastAckTimeThreshold ?? 60;
++
++    const envCooldown = Number(process.env.ALERT_COOLDOWN_MS);
++    this.#cooldownMs = options.cooldownMs ?? (Number.isFinite(envCooldown) && envCooldown > 0 ? envCooldown : 300000);
++
++    this.#webhookUrl = options.webhookUrl ?? process.env.ALERT_WEBHOOK ?? null;
++    this.#emailRecipients = options.emailRecipients ?? process.env.ALERT_EMAIL ?? null;
++    this.#webhookSender = options.webhookSender || null;
++    this.#emailSender = options.emailSender || null;
++  }
++
++  /**
++   * Check metrics against alert rules and trigger notifications if thresholds breached.
++   * @param {import('../core/types.js').StreamMetrics} metrics
++   * @returns {Promise<{ triggered: boolean, alerts: Array<Object>, suppressedByCooldown?: boolean }>}
++   */
++  async checkAndAlert(metrics) {
++    if (!metrics || typeof metrics !== 'object') {
++      return { triggered: false, alerts: [] };
++    }
++
++    const now = Date.now();
++    const candidateAlerts = [];
++
++    // 1. Pending Messages Threshold (50k)
++    if (metrics.pendingMessages > this.#pendingMessagesThreshold) {
++      candidateAlerts.push({
++        alert: 'redis_stream_lag',
++        threshold: this.#pendingMessagesThreshold,
++        value: metrics.pendingMessages,
++        timestamp: new Date().toISOString(),
++        metrics,
++      });
++    }
++
++    // 2. Consumer Lag Threshold (50k)
++    if (metrics.consumerLag > this.#consumerLagThreshold) {
++      candidateAlerts.push({
++        alert: 'redis_stream_consumer_lag',
++        threshold: this.#consumerLagThreshold,
++        value: metrics.consumerLag,
++        timestamp: new Date().toISOString(),
++        metrics,
++      });
++    }
++
++    // 3. Last Ack Idle Time Threshold (60s)
++    if (metrics.lastAckTime > this.#lastAckTimeThreshold) {
++      candidateAlerts.push({
++        alert: 'redis_stream_ack',
++        threshold: this.#lastAckTimeThreshold,
++        value: metrics.lastAckTime,
++        timestamp: new Date().toISOString(),
++        metrics,
++      });
++    }
++
++    if (candidateAlerts.length === 0) {
++      return { triggered: false, alerts: [] };
++    }
++
++    // Filter by cooldown
++    const actionableAlerts = candidateAlerts.filter((item) => {
++      const lastTime = this.#lastAlertTimes.get(item.alert) || 0;
++      return now - lastTime >= this.#cooldownMs;
++    });
++
++    if (actionableAlerts.length === 0) {
++      return { triggered: false, alerts: candidateAlerts, suppressedByCooldown: true };
++    }
++
++    for (const alert of actionableAlerts) {
++      this.#lastAlertTimes.set(alert.alert, now);
++      this.#alertHistory.push(alert);
++      if (this.#alertHistory.length > 100) {
++        this.#alertHistory.shift();
++      }
++      this.#lastAlertTimestamp = alert.timestamp;
++
++      await this.#dispatchAlert(alert);
++    }
++
++    return { triggered: true, alerts: actionableAlerts };
++  }
++
++  /**
++   * Dispatch single alert via Webhook and Email.
++   * @param {Object} alertPayload
++   */
++  async #dispatchAlert(alertPayload) {
++    // 1. Webhook Dispatch
++    const webhookUrl = this.#webhookUrl;
++    if (webhookUrl || this.#webhookSender) {
++      try {
++        if (typeof this.#webhookSender === 'function') {
++          await this.#webhookSender(webhookUrl, alertPayload);
++        } else if (webhookUrl) {
++          await fetch(webhookUrl, {
++            method: 'POST',
++            headers: { 'Content-Type': 'application/json' },
++            body: JSON.stringify(alertPayload),
++          });
++        }
++      } catch (err) {
++        console.warn('[StreamAlertEngine] Failed to deliver webhook alert:', (err instanceof Error ? err.message : String(err)));
++      }
++    }
++
++    // 2. Email Dispatch
++    const emailRecipients = this.#emailRecipients;
++    if (emailRecipients || this.#emailSender) {
++      try {
++        if (typeof this.#emailSender === 'function') {
++          await this.#emailSender(emailRecipients, alertPayload);
++        } else if (emailRecipients) {
++          const { default: nodemailer } = await import('nodemailer');
++          const transporter = nodemailer.createTransport({
++            host: process.env.ALERT_SMTP_HOST || 'localhost',
++            port: Number(process.env.ALERT_SMTP_PORT) || 587,
++            secure: process.env.ALERT_SMTP_SECURE === 'true',
++            auth: process.env.ALERT_SMTP_USER
++              ? {
++                  user: process.env.ALERT_SMTP_USER,
++                  pass: process.env.ALERT_SMTP_PASS || '',
++                }
++              : undefined,
++          });
++
++          const typedAlert = /** @type {{ alert: string }} */ (alertPayload);
++          await transporter.sendMail({
++            from: process.env.ALERT_EMAIL_FROM || 'alerts@xactions.app',
++            to: emailRecipients,
++            subject: `[XActions Alert] ${typedAlert.alert.toUpperCase()} breached threshold`,
++            text: JSON.stringify(alertPayload, null, 2),
++          });
++        }
++      } catch (err) {
++        console.warn('[StreamAlertEngine] Failed to deliver email alert:', (err instanceof Error ? err.message : String(err)));
++      }
++    }
++  }
++
++  /**
++   * Get summary status of stream alerts.
++   * @returns {{ activeAlerts: Array<Object>, lastAlertTimestamp: string | null, totalAlertsTriggered: number }}
++   */
++  getAlertStatus() {
++    return {
++      activeAlerts: this.#alertHistory.slice(-5),
++      lastAlertTimestamp: this.#lastAlertTimestamp,
++      totalAlertsTriggered: this.#alertHistory.length,
++    };
++  }
++}
++
++/** @type {StreamAlertEngine} */
++export const defaultStreamAlertEngine = new StreamAlertEngine();
+diff --git a/src/utils/stream-metrics-collector.js b/src/utils/stream-metrics-collector.js
+new file mode 100644
+index 00000000..36dcf9d5
+--- /dev/null
++++ b/src/utils/stream-metrics-collector.js
+@@ -0,0 +1,299 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * StreamMetricsCollector — Collects full StreamMetrics from Redis Streams with in-memory caching.
++ * Measures events/sec, pending messages, consumer lag, dropped events, and ack idle time.
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++import { extractPendingCount } from './stream-metrics.js';
++
++export class StreamMetricsCollector {
++  /** @type {import('../core/types.js').RedisClientLike | null} */
++  #redisClient = null;
++
++  /** @type {string} */
++  #streamKey;
++
++  /** @type {string} */
++  #groupName;
++
++  /** @type {number} */
++  #maxLen;
++
++  /** @type {number} */
++  #cacheTtlMs;
++
++  /** @type {import('../core/types.js').StreamMetrics | null} */
++  #cachedMetrics = null;
++
++  /** @type {number} */
++  #lastFetchedAt = 0;
++
++  /** @type {number} */
++  #prevEntriesAdded = 0;
++
++  /** @type {number} */
++  #prevSampleTime = 0;
++
++  /** @type {boolean} */
++  #groupInitialized = false;
++
++  /** @type {boolean} */
++  #isOwnedClient = false;
++
++  /**
++   * @param {Object} [options]
++   * @param {import('../core/types.js').RedisClientLike} [options.redisClient]
++   * @param {string} [options.streamKey]
++   * @param {string} [options.groupName]
++   * @param {number} [options.maxLen]
++   * @param {number} [options.cacheTtlMs]
++   */
++  constructor(options = {}) {
++    this.#redisClient = options.redisClient || null;
++    this.#streamKey = options.streamKey || 'stream:social:raw_posts';
++    this.#groupName = options.groupName || process.env.NOWING_CONSUMER_GROUP || 'nowing_nlp_workers';
++
++    const parsedMaxLen = Number(options.maxLen ?? process.env.REDIS_STREAM_MAXLEN);
++    this.#maxLen = Number.isFinite(parsedMaxLen) && parsedMaxLen > 0 ? parsedMaxLen : 1000000;
++
++    this.#cacheTtlMs = options.cacheTtlMs ?? 5000;
++  }
++
++  /**
++   * Ensure Redis client is initialized.
++   * @returns {Promise<import('../core/types.js').RedisClientLike | null>}
++   */
++  async #ensureClient() {
++    if (this.#redisClient) {
++      return this.#redisClient;
++    }
++
++    try {
++      const { createClient } = await import('redis');
++      const url =
++        process.env.REDIS_URL ||
++        (process.env.REDIS_HOST
++          ? `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`
++          : 'redis://localhost:6379');
++      const client = createClient({ url });
++      client.on('error', (err) => {
++        console.warn('[StreamMetricsCollector] Redis client error:', (err instanceof Error ? err.message : String(err)));
++      });
++      await client.connect();
++      this.#redisClient = /** @type {import('../core/types.js').RedisClientLike} */ (client);
++      this.#isOwnedClient = true;
++      return this.#redisClient;
++    } catch {
++      return null;
++    }
++  }
++
++  /**
++   * Ensure consumer group exists with MKSTREAM.
++   * @param {import('../core/types.js').RedisClientLike} client
++   */
++  async #ensureConsumerGroup(client) {
++    if (this.#groupInitialized) return;
++    try {
++      if (typeof client.xGroupCreate === 'function') {
++        await client.xGroupCreate(this.#streamKey, this.#groupName, '$', { MKSTREAM: true });
++      } else if (typeof client.xgroup === 'function') {
++        await client.xgroup('CREATE', this.#streamKey, this.#groupName, '$', 'MKSTREAM');
++      } else if (typeof client.sendCommand === 'function') {
++        await client.sendCommand(['XGROUP', 'CREATE', this.#streamKey, this.#groupName, '$', 'MKSTREAM']);
++      }
++      this.#groupInitialized = true;
++    } catch (err) {
++      const msg = err instanceof Error ? err.message : String(err);
++      if (msg.includes('BUSYGROUP')) {
++        this.#groupInitialized = true;
++      }
++    }
++  }
++
++  /**
++   * Collect fresh metrics from Redis or return cached metrics if valid.
++   * @param {Object} [options]
++   * @param {boolean} [options.forceRefresh=false]
++   * @returns {Promise<import('../core/types.js').StreamMetrics>}
++   */
++  async getMetrics(options = {}) {
++    const now = Date.now();
++    if (
++      !options.forceRefresh &&
++      this.#cachedMetrics &&
++      now - this.#lastFetchedAt < this.#cacheTtlMs
++    ) {
++      return this.#cachedMetrics;
++    }
++
++    const defaultMetrics = {
++      eventsPerSecond: 0,
++      pendingMessages: 0,
++      consumerLag: 0,
++      droppedEvents: 0,
++      lastAckTime: 0,
++      maxLen: this.#maxLen,
++      minId: null,
++    };
++
++    const client = await this.#ensureClient();
++    if (!client) {
++      this.#cachedMetrics = defaultMetrics;
++      this.#lastFetchedAt = now;
++      return defaultMetrics;
++    }
++
++    try {
++      await this.#ensureConsumerGroup(client);
++
++      // 1. Pending Messages (XLEN)
++      let pendingMessages = 0;
++      if (typeof client.xLen === 'function') {
++        pendingMessages = Number(await client.xLen(this.#streamKey)) || 0;
++      } else if (typeof client.xlen === 'function') {
++        pendingMessages = Number(await client.xlen(this.#streamKey)) || 0;
++      } else if (typeof client.sendCommand === 'function') {
++        pendingMessages = Number(await client.sendCommand(['XLEN', this.#streamKey])) || 0;
++      }
++
++      // 2. Consumer Lag (XPENDING)
++      let consumerLag = 0;
++      try {
++        if (typeof client.xPending === 'function') {
++          const info = await client.xPending(this.#streamKey, this.#groupName);
++          consumerLag = Number(extractPendingCount(info)) || 0;
++        } else if (typeof client.xpending === 'function') {
++          const info = await client.xpending(this.#streamKey, this.#groupName);
++          consumerLag = Number(extractPendingCount(info)) || 0;
++        } else if (typeof client.sendCommand === 'function') {
++          const info = await client.sendCommand(['XPENDING', this.#streamKey, this.#groupName]);
++          consumerLag = Number(extractPendingCount(info)) || 0;
++        }
++      } catch {
++        consumerLag = 0;
++      }
++
++      // 3. XINFO STREAM (minId, entries-added, length)
++      let minId = null;
++      let entriesAdded = pendingMessages;
++      try {
++        let streamInfo = null;
++        const anyClient = /** @type {Record<string, any>} */ (client);
++        if (typeof anyClient.xInfoStream === 'function') {
++          streamInfo = await anyClient.xInfoStream(this.#streamKey);
++        } else if (typeof anyClient.xInfo === 'function') {
++          streamInfo = await anyClient.xInfo('STREAM', this.#streamKey);
++        } else if (typeof anyClient.xinfo === 'function') {
++          streamInfo = await anyClient.xinfo('STREAM', this.#streamKey);
++        } else if (typeof anyClient.sendCommand === 'function') {
++          const raw = await anyClient.sendCommand(['XINFO', 'STREAM', this.#streamKey]);
++          if (Array.isArray(raw)) {
++            /** @type {Record<string, unknown>} */
++            const parsedMap = {};
++            for (let i = 0; i < raw.length; i += 2) {
++              const k = String(raw[i]);
++              parsedMap[k] = raw[i + 1];
++            }
++            streamInfo = parsedMap;
++          }
++        }
++
++        if (streamInfo && typeof streamInfo === 'object') {
++          const typedStreamInfo = /** @type {Record<string, unknown>} */ (streamInfo);
++          const rawAdded = typedStreamInfo.entriesAdded ?? typedStreamInfo['entries-added'];
++          if (rawAdded !== undefined) {
++            entriesAdded = Number(rawAdded) || pendingMessages;
++          }
++          const rawFirst = typedStreamInfo.firstEntry ?? typedStreamInfo['first-entry'];
++          if (Array.isArray(rawFirst) && rawFirst.length > 0) {
++            minId = typeof rawFirst[0] === 'string' ? rawFirst[0] : String(rawFirst[0]);
++          } else if (rawFirst && typeof rawFirst === 'object') {
++            const firstObj = /** @type {Record<string, unknown>} */ (rawFirst);
++            if (firstObj.id) {
++              minId = String(firstObj.id);
++            }
++          }
++        }
++      } catch {
++        // Fallback
++      }
++
++      // 4. Dropped Events
++      const droppedEvents = Math.max(0, entriesAdded - pendingMessages);
++
++      // 5. Events per second calculation
++      let eventsPerSecond = 0;
++      if (this.#prevSampleTime > 0 && now > this.#prevSampleTime) {
++        const deltaSec = (now - this.#prevSampleTime) / 1000;
++        const deltaAdded = Math.max(0, entriesAdded - this.#prevEntriesAdded);
++        eventsPerSecond = Number((deltaAdded / deltaSec).toFixed(2));
++      }
++      this.#prevSampleTime = now;
++      this.#prevEntriesAdded = entriesAdded;
++
++      // 6. Last Ack Time / Idle calculation
++      let lastAckTime = 0;
++      try {
++        const anyClient = /** @type {Record<string, any>} */ (client);
++        if (typeof anyClient.xInfoConsumers === 'function') {
++          const consumers = await anyClient.xInfoConsumers(this.#streamKey, this.#groupName);
++          if (Array.isArray(consumers) && consumers.length > 0) {
++            const minIdleMs = Math.min(...consumers.map((c) => Number(c?.idle) || 0));
++            lastAckTime = Math.max(0, Math.floor(minIdleMs / 1000));
++          }
++        } else if (typeof anyClient.sendCommand === 'function') {
++          const rawConsumers = await anyClient.sendCommand(['XINFO', 'CONSUMERS', this.#streamKey, this.#groupName]);
++          if (Array.isArray(rawConsumers) && rawConsumers.length > 0) {
++            lastAckTime = 0;
++          }
++        }
++      } catch {
++        lastAckTime = 0;
++      }
++
++      const result = {
++        eventsPerSecond,
++        pendingMessages,
++        consumerLag,
++        droppedEvents,
++        lastAckTime,
++        maxLen: this.#maxLen,
++        minId,
++      };
++
++      this.#cachedMetrics = result;
++      this.#lastFetchedAt = now;
++      return result;
++    } catch (err) {
++      console.warn('[StreamMetricsCollector] Failed to collect metrics:', (err instanceof Error ? err.message : String(err)));
++      this.#cachedMetrics = defaultMetrics;
++      this.#lastFetchedAt = now;
++      return defaultMetrics;
++    }
++  }
++
++  /**
++   * Close owned client.
++   * @returns {Promise<void>}
++   */
++  async close() {
++    if (this.#isOwnedClient && this.#redisClient) {
++      try {
++        const anyClient = /** @type {Record<string, any>} */ (this.#redisClient);
++        if (typeof anyClient.quit === 'function') {
++          await anyClient.quit();
++        }
++      } catch {
++        // Safe ignore
++      } finally {
++        this.#redisClient = null;
++      }
++    }
++  }
++}
++
++/** @type {StreamMetricsCollector} */
++export const defaultStreamMetricsCollector = new StreamMetricsCollector();
+diff --git a/tests/mcp/metrics-stream.test.js b/tests/mcp/metrics-stream.test.js
+new file mode 100644
+index 00000000..12af3a81
+--- /dev/null
++++ b/tests/mcp/metrics-stream.test.js
+@@ -0,0 +1,91 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * Tests for GET /metrics/stream endpoint (Story 14.3)
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++import { describe, it, expect, beforeAll, afterAll } from 'vitest';
++import express from 'express';
++import http from 'node:http';
++import { StreamMetricsCollector } from '../../src/utils/stream-metrics-collector.js';
++
++describe('Story 14.3: GET /metrics/stream API Endpoint Tests', () => {
++  let server;
++  let serverUrl;
++
++  const mockCollector = new StreamMetricsCollector({
++    redisClient: {
++      xLen: async () => 4200,
++      xPending: async () => ({ pending: 15 }),
++      xInfoStream: async () => ({
++        length: 4200,
++        entriesAdded: 4500,
++        firstEntry: ['1700000000000-0'],
++      }),
++      xInfoConsumers: async () => [{ name: 'c1', idle: 12000 }],
++    },
++    maxLen: 1000000,
++  });
++
++  beforeAll(async () => {
++    const app = express();
++    app.use(express.json());
++
++    app.get('/metrics/stream', async (_req, res) => {
++      try {
++        const metrics = await mockCollector.getMetrics({ forceRefresh: true });
++        res.json(metrics);
++      } catch (err) {
++        res.status(500).json({ error: String(err) });
++      }
++    });
++
++    app.get('/admin/stream/metrics', async (_req, res) => {
++      try {
++        const metrics = await mockCollector.getMetrics({ forceRefresh: true });
++        res.json({ success: true, metrics });
++      } catch (err) {
++        res.status(500).json({ success: false, error: String(err) });
++      }
++    });
++
++    server = http.createServer(app);
++    await new Promise((resolve) => server.listen(0, resolve));
++    const port = server.address().port;
++    serverUrl = `http://127.0.0.1:${port}`;
++  });
++
++  afterAll(async () => {
++    await new Promise((resolve) => server.close(resolve));
++  });
++
++  it('GET /metrics/stream returns 200 OK with full StreamMetrics JSON body', async () => {
++    const resp = await fetch(`${serverUrl}/metrics/stream`);
++    expect(resp.status).toBe(200);
++
++    const body = await resp.json();
++    expect(body).toHaveProperty('eventsPerSecond');
++    expect(body).toHaveProperty('pendingMessages');
++    expect(body).toHaveProperty('consumerLag');
++    expect(body).toHaveProperty('droppedEvents');
++    expect(body).toHaveProperty('lastAckTime');
++    expect(body).toHaveProperty('maxLen');
++    expect(body).toHaveProperty('minId');
++
++    expect(body.pendingMessages).toBe(4200);
++    expect(body.consumerLag).toBe(15);
++    expect(body.droppedEvents).toBe(300); // 4500 - 4200
++    expect(body.lastAckTime).toBe(12);
++    expect(body.minId).toBe('1700000000000-0');
++  });
++
++  it('GET /admin/stream/metrics returns 200 OK with envelope and metrics', async () => {
++    const resp = await fetch(`${serverUrl}/admin/stream/metrics`);
++    expect(resp.status).toBe(200);
++
++    const body = await resp.json();
++    expect(body.success).toBe(true);
++    expect(body.metrics.pendingMessages).toBe(4200);
++  });
++});
+diff --git a/tests/scrapers/social/facebook/redis-stream.test.js b/tests/scrapers/social/facebook/redis-stream.test.js
+new file mode 100644
+index 00000000..e2493298
+--- /dev/null
++++ b/tests/scrapers/social/facebook/redis-stream.test.js
+@@ -0,0 +1,230 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * Tests for Story 14.3: FacebookCrawler Checkpoint & Redis Stream Emission
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
++import http from 'node:http';
++import { FacebookCrawler } from '../../../../src/scrapers/social/facebook/crawler.js';
++import { FacebookClient } from '../../../../src/scrapers/social/facebook/client.js';
++import { RedisStreamPublisher } from '../../../../src/utils/redis-stream-publisher.js';
++
++describe('Story 14.3: FacebookCrawler Checkpoint & Redis Stream Emission', () => {
++  let server;
++  let serverUrl;
++  const originalEnv = process.env.REDIS_STREAM_ENABLED;
++
++  beforeAll(async () => {
++    server = http.createServer((req, res) => {
++      let body = '';
++      req.on('data', (chunk) => (body += chunk));
++      req.on('end', () => {
++        // Home HTML for tokens
++        if (req.url === '/' || req.url === '') {
++          res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
++          res.end(`
++            <!DOCTYPE html><html><body>
++              <input type="hidden" name="lsd" value="AVq_Lsd123" />
++              <input type="hidden" name="jazoest" value="2953" />
++              <script>
++                requireLazy(["DTSGInitialData"], function(d) { d.token = "DTSG_456"; });
++                window.__spin_r = 1016839210;
++              </script>
++            </body></html>
++          `);
++          return;
++        }
++
++        if (req.url === '/api/graphql/') {
++          let variables = {};
++          try {
++            const parsed = new URLSearchParams(body);
++            variables = JSON.parse(parsed.get('variables') || '{}');
++          } catch {
++            variables = {};
++          }
++
++          if (variables.groupId) {
++            res.writeHead(200, { 'content-type': 'application/json' });
++            res.end(
++              JSON.stringify({
++                data: {
++                  group: {
++                    id: variables.groupId,
++                    feed: {
++                      edges: [
++                        {
++                          node: {
++                            id: 'fb_post_group_1',
++                            post_id: 'fb_post_group_1',
++                            actors: [{ id: 'user_1', name: 'User One' }],
++                            comet_sections: {
++                              content_story: {
++                                story: {
++                                  message: { text: 'Group post content' },
++                                },
++                              },
++                            },
++                          },
++                        },
++                      ],
++                      page_info: { end_cursor: 'cursor_grp_end', has_next_page: false },
++                    },
++                  },
++                },
++              })
++            );
++            return;
++          }
++
++          if (variables.pageId) {
++            res.writeHead(200, { 'content-type': 'application/json' });
++            res.end(
++              JSON.stringify({
++                data: {
++                  page: {
++                    timeline_feed: {
++                      edges: [
++                        {
++                          node: {
++                            id: 'fb_post_page_1',
++                            post_id: 'fb_post_page_1',
++                            actors: [{ id: 'page_admin', name: 'Page Admin' }],
++                            message: { text: 'Page post content' },
++                          },
++                        },
++                      ],
++                      page_info: { end_cursor: 'cursor_page_end', has_next_page: false },
++                    },
++                  },
++                },
++              })
++            );
++            return;
++          }
++        }
++
++        // Fallback
++        res.writeHead(200, { 'content-type': 'application/json' });
++        res.end('{}');
++      });
++    });
++
++    await new Promise((resolve) => server.listen(0, resolve));
++    const port = server.address().port;
++    serverUrl = `http://127.0.0.1:${port}`;
++  });
++
++  afterAll(async () => {
++    if (originalEnv !== undefined) {
++      process.env.REDIS_STREAM_ENABLED = originalEnv;
++    } else {
++      delete process.env.REDIS_STREAM_ENABLED;
++    }
++    await new Promise((resolve) => server.close(resolve));
++  });
++
++  beforeEach(() => {
++    process.env.REDIS_STREAM_ENABLED = 'true';
++  });
++
++  it('groupPosts calls saveCheckpoint and emits thin event pointer with storageRef', async () => {
++    const savedCheckpoints = [];
++    const publishedEvents = [];
++
++    const mockPublisher = {
++      publish: async (item) => {
++        publishedEvents.push(item);
++        return { ok: true, id: '1700000000000-0' };
++      },
++    };
++
++    const mockStore = {
++      publisher: mockPublisher,
++      storeBatch: async () => {},
++      saveCheckpoint: async (checkpoint) => {
++        savedCheckpoints.push(checkpoint);
++        return checkpoint;
++      },
++    };
++
++    const client = new FacebookClient({
++      baseUrl: serverUrl,
++      graphqlEndpoint: `${serverUrl}/api/graphql/`,
++    });
++
++    const crawler = new FacebookCrawler({
++      client,
++      store: mockStore,
++    });
++
++    const result = await crawler.groupPosts(
++      { groupId: 'group_999' },
++      { accountId: 'acc_test', cookies: { c_user: '123' } }
++    );
++
++    expect(result.posts.length).toBe(1);
++    expect(savedCheckpoints.length).toBe(1);
++    expect(savedCheckpoints[0].targetType).toBe('group');
++    expect(savedCheckpoints[0].targetKey).toBe('group_999');
++    expect(savedCheckpoints[0].storageRef).toBe('facebook:fb_post_group_1');
++    expect(savedCheckpoints[0].lastCursor).toBe('cursor_grp_end');
++
++    expect(publishedEvents.length).toBe(1);
++    expect(publishedEvents[0].id).toBe('facebook:fb_post_group_1');
++    expect(publishedEvents[0].platform).toBe('facebook');
++    expect(publishedEvents[0].externalId).toBe('fb_post_group_1');
++    expect(publishedEvents[0].storageRef).toBe('facebook:fb_post_group_1');
++  });
++
++  it('pagePosts calls saveCheckpoint and emits thin event pointer with storageRef', async () => {
++    const savedCheckpoints = [];
++    const publishedEvents = [];
++
++    const mockPublisher = {
++      publish: async (item) => {
++        publishedEvents.push(item);
++        return { ok: true, id: '1700000000000-1' };
++      },
++    };
++
++    const mockStore = {
++      publisher: mockPublisher,
++      storeBatch: async () => {},
++      saveCheckpoint: async (checkpoint) => {
++        savedCheckpoints.push(checkpoint);
++        return checkpoint;
++      },
++    };
++
++    const client = new FacebookClient({
++      baseUrl: serverUrl,
++      graphqlEndpoint: `${serverUrl}/api/graphql/`,
++    });
++
++    const crawler = new FacebookCrawler({
++      client,
++      store: mockStore,
++    });
++
++    const result = await crawler.pagePosts(
++      { pageId: 'page_777' },
++      { accountId: 'acc_test', cookies: { c_user: '123' } }
++    );
++
++    expect(result.posts.length).toBe(1);
++    expect(savedCheckpoints.length).toBe(1);
++    expect(savedCheckpoints[0].targetType).toBe('page');
++    expect(savedCheckpoints[0].targetKey).toBe('page_777');
++    expect(savedCheckpoints[0].storageRef).toBe('facebook:fb_post_page_1');
++    expect(savedCheckpoints[0].lastCursor).toBe('cursor_page_end');
++
++    expect(publishedEvents.length).toBe(1);
++    expect(publishedEvents[0].id).toBe('facebook:fb_post_page_1');
++    expect(publishedEvents[0].platform).toBe('facebook');
++    expect(publishedEvents[0].externalId).toBe('fb_post_page_1');
++    expect(publishedEvents[0].storageRef).toBe('facebook:fb_post_page_1');
++  });
++});
+diff --git a/tests/store/redis-stream-publisher.test.js b/tests/store/redis-stream-publisher.test.js
+new file mode 100644
+index 00000000..58b64dde
+--- /dev/null
++++ b/tests/store/redis-stream-publisher.test.js
+@@ -0,0 +1,224 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * Tests for RedisStreamPublisher (Story 14.3)
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
++import { RedisStreamPublisher } from '../../src/utils/redis-stream-publisher.js';
++
++describe('Story 14.3: RedisStreamPublisher Unit & Contract Tests', () => {
++  const origEnv = process.env.REDIS_STREAM_ENABLED;
++
++  beforeEach(() => {
++    process.env.REDIS_STREAM_ENABLED = 'true';
++  });
++
++  afterAll(() => {
++    if (origEnv !== undefined) {
++      process.env.REDIS_STREAM_ENABLED = origEnv;
++    } else {
++      delete process.env.REDIS_STREAM_ENABLED;
++    }
++  });
++
++  const sampleEvent = {
++    id: 'facebook:123456789',
++    platform: 'facebook',
++    externalId: '123456789',
++    category: 'social',
++    authorId: 'user_999',
++    crawledAt: '2026-08-28T00:00:00.000Z',
++    storageRef: 'facebook:123456789',
++  };
++
++  it('exports RedisStreamPublisher class and default singleton', () => {
++    expect(typeof RedisStreamPublisher).toBe('function');
++    const publisher = new RedisStreamPublisher();
++    expect(publisher).toBeDefined();
++    expect(typeof publisher.publish).toBe('function');
++    expect(typeof publisher.xlen).toBe('function');
++    expect(typeof publisher.xinfo).toBe('function');
++    expect(typeof publisher.xgroupEnsure).toBe('function');
++  });
++
++  it('formats thin event to string-valued record correctly for XADD', () => {
++    const publisher = new RedisStreamPublisher();
++    const formatted = publisher.formatPayload(sampleEvent);
++    expect(formatted).toEqual({
++      id: 'facebook:123456789',
++      platform: 'facebook',
++      externalId: '123456789',
++      category: 'social',
++      authorId: 'user_999',
++      crawledAt: '2026-08-28T00:00:00.000Z',
++      storageRef: 'facebook:123456789',
++    });
++    // Ensure all values are strings
++    for (const val of Object.values(formatted)) {
++      expect(typeof val).toBe('string');
++    }
++  });
++
++  it('handles node-redis xAdd API with MAXLEN trimming', async () => {
++    let capturedKey = '';
++    let capturedId = '';
++    let capturedFields = {};
++    let capturedOptions = {};
++
++    const mockNodeRedis = {
++      xAdd: async (key, id, fields, options) => {
++        capturedKey = key;
++        capturedId = id;
++        capturedFields = fields;
++        capturedOptions = options;
++        return '1700000000000-0';
++      },
++    };
++
++    const publisher = new RedisStreamPublisher({
++      redisClient: mockNodeRedis,
++      trimStrategy: 'maxlen',
++      maxLen: 500000,
++    });
++
++    const res = await publisher.publish('stream:social:raw_posts', sampleEvent);
++    expect(res.ok).toBe(true);
++    expect(res.id).toBe('1700000000000-0');
++    expect(capturedKey).toBe('stream:social:raw_posts');
++    expect(capturedId).toBe('*');
++    expect(capturedFields.storageRef).toBe('facebook:123456789');
++    expect(capturedOptions).toEqual({
++      TRIM: {
++        strategy: 'MAXLEN',
++        strategyModifier: '~',
++        threshold: 500000,
++      },
++    });
++  });
++
++  it('handles node-redis xAdd API with MINID trimming', async () => {
++    let capturedOptions = {};
++    const mockNodeRedis = {
++      xAdd: async (key, id, fields, options) => {
++        capturedOptions = options;
++        return '1700000000000-1';
++      },
++    };
++
++    const publisher = new RedisStreamPublisher({
++      redisClient: mockNodeRedis,
++      trimStrategy: 'minid',
++      minId: '1690000000000-0',
++    });
++
++    const res = await publisher.publish('stream:social:raw_posts', sampleEvent);
++    expect(res.ok).toBe(true);
++    expect(capturedOptions).toEqual({
++      TRIM: {
++        strategy: 'MINID',
++        strategyModifier: '~',
++        threshold: '1690000000000-0',
++      },
++    });
++  });
++
++  it('handles ioredis-like flat xadd API with MAXLEN trimming', async () => {
++    let capturedArgs = [];
++    const mockIoRedis = {
++      xadd: async (...args) => {
++        capturedArgs = args;
++        return '1700000000000-2';
++      },
++    };
++
++    const publisher = new RedisStreamPublisher({
++      redisClient: mockIoRedis,
++      trimStrategy: 'maxlen',
++      maxLen: 1000000,
++    });
++
++    const res = await publisher.publish('stream:social:raw_posts', sampleEvent);
++    expect(res.ok).toBe(true);
++    expect(res.id).toBe('1700000000000-2');
++    expect(capturedArgs[0]).toBe('stream:social:raw_posts');
++    expect(capturedArgs[1]).toBe('MAXLEN');
++    expect(capturedArgs[2]).toBe('~');
++    expect(capturedArgs[3]).toBe(1000000);
++    expect(capturedArgs[4]).toBe('*');
++  });
++
++  it('never throws on publish failure, logs warning and returns { ok: false }', async () => {
++    const mockFailingRedis = {
++      xAdd: async () => {
++        throw new Error('Connection refused');
++      },
++    };
++
++    const publisher = new RedisStreamPublisher({
++      redisClient: mockFailingRedis,
++    });
++
++    const res = await publisher.publish('stream:social:raw_posts', sampleEvent);
++    expect(res.ok).toBe(false);
++    expect(res.error).toContain('Connection refused');
++  });
++
++  it('respects REDIS_STREAM_ENABLED environment variable', async () => {
++    let callCount = 0;
++    const mockRedis = {
++      xAdd: async () => {
++        callCount++;
++        return '1700000000000-0';
++      },
++    };
++
++    const publisher = new RedisStreamPublisher({ redisClient: mockRedis });
++
++    // Disabled test
++    const origEnv = process.env.REDIS_STREAM_ENABLED;
++    try {
++      process.env.REDIS_STREAM_ENABLED = 'false';
++      const disabledRes = await publisher.publish('stream:social:raw_posts', sampleEvent);
++      expect(disabledRes.ok).toBe(false);
++      expect(disabledRes.skipped).toBe(true);
++      expect(callCount).toBe(0);
++
++      // Enabled test
++      process.env.REDIS_STREAM_ENABLED = 'true';
++      const enabledRes = await publisher.publish('stream:social:raw_posts', sampleEvent);
++      expect(enabledRes.ok).toBe(true);
++      expect(callCount).toBe(1);
++    } finally {
++      if (origEnv !== undefined) {
++        process.env.REDIS_STREAM_ENABLED = origEnv;
++      } else {
++        delete process.env.REDIS_STREAM_ENABLED;
++      }
++    }
++  });
++
++  it('runs real Redis integration if available, otherwise skips gracefully', async () => {
++    const publisher = new RedisStreamPublisher({ streamKey: 'stream:test:raw_posts' });
++    const client = await publisher.ensureClient();
++    if (!client) {
++      // Redis server not running locally, graceful skip
++      return;
++    }
++
++    try {
++      const res = await publisher.publish('stream:test:raw_posts', sampleEvent);
++      expect(res.ok).toBe(true);
++      expect(typeof res.id).toBe('string');
++
++      const count = await publisher.xlen('stream:test:raw_posts');
++      expect(count).toBeGreaterThan(0);
++
++      const ensured = await publisher.xgroupEnsure('stream:test:raw_posts', 'test_group');
++      expect(ensured).toBe(true);
++    } finally {
++      await publisher.close();
++    }
++  });
++});
+diff --git a/tests/utils/stream-alerts.test.js b/tests/utils/stream-alerts.test.js
+new file mode 100644
+index 00000000..b78dc170
+--- /dev/null
++++ b/tests/utils/stream-alerts.test.js
+@@ -0,0 +1,145 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * Tests for Stream Alert Engine (Story 14.3)
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++import { describe, it, expect, beforeEach, afterEach } from 'vitest';
++import { StreamAlertEngine } from '../../src/utils/stream-alerts.js';
++
++describe('Story 14.3: StreamAlertEngine Unit & Contract Tests', () => {
++  it('does not trigger alerts when metrics are within healthy thresholds', async () => {
++    let webhookCalled = false;
++    const engine = new StreamAlertEngine({
++      webhookSender: async () => {
++        webhookCalled = true;
++      },
++    });
++
++    const healthyMetrics = {
++      eventsPerSecond: 10,
++      pendingMessages: 1000,
++      consumerLag: 50,
++      droppedEvents: 0,
++      lastAckTime: 5,
++      maxLen: 1000000,
++      minId: '1-0',
++    };
++
++    const result = await engine.checkAndAlert(healthyMetrics);
++    expect(result.triggered).toBe(false);
++    expect(result.alerts).toEqual([]);
++    expect(webhookCalled).toBe(false);
++  });
++
++  it('triggers alert when pendingMessages exceeds 50,000 threshold', async () => {
++    let capturedPayload = null;
++    const engine = new StreamAlertEngine({
++      webhookUrl: 'https://webhook.test/alerts',
++      webhookSender: async (url, payload) => {
++        capturedPayload = payload;
++      },
++    });
++
++    const highPendingMetrics = {
++      eventsPerSecond: 50,
++      pendingMessages: 55000,
++      consumerLag: 100,
++      droppedEvents: 0,
++      lastAckTime: 10,
++      maxLen: 1000000,
++      minId: '1-0',
++    };
++
++    const result = await engine.checkAndAlert(highPendingMetrics);
++    expect(result.triggered).toBe(true);
++    expect(result.alerts.some((a) => a.alert === 'redis_stream_lag')).toBe(true);
++    expect(capturedPayload).toBeDefined();
++    expect(capturedPayload.alert).toBe('redis_stream_lag');
++    expect(capturedPayload.value).toBe(55000);
++    expect(capturedPayload.threshold).toBe(50000);
++  });
++
++  it('triggers alert when lastAckTime exceeds 60s threshold', async () => {
++    let capturedPayload = null;
++    const engine = new StreamAlertEngine({
++      webhookUrl: 'https://webhook.test/alerts',
++      webhookSender: async (url, payload) => {
++        capturedPayload = payload;
++      },
++    });
++
++    const highAckMetrics = {
++      eventsPerSecond: 0,
++      pendingMessages: 500,
++      consumerLag: 50,
++      droppedEvents: 0,
++      lastAckTime: 75,
++      maxLen: 1000000,
++      minId: '1-0',
++    };
++
++    const result = await engine.checkAndAlert(highAckMetrics);
++    expect(result.triggered).toBe(true);
++    expect(result.alerts.some((a) => a.alert === 'redis_stream_ack')).toBe(true);
++    expect(capturedPayload.alert).toBe('redis_stream_ack');
++    expect(capturedPayload.value).toBe(75);
++    expect(capturedPayload.threshold).toBe(60);
++  });
++
++  it('enforces cooldown period between alerts of the same type', async () => {
++    let callCount = 0;
++    const engine = new StreamAlertEngine({
++      cooldownMs: 300000, // 5 min
++      webhookUrl: 'https://webhook.test/alerts',
++      webhookSender: async () => {
++        callCount++;
++      },
++    });
++
++    const highPendingMetrics = {
++      eventsPerSecond: 50,
++      pendingMessages: 60000,
++      consumerLag: 100,
++      droppedEvents: 0,
++      lastAckTime: 10,
++      maxLen: 1000000,
++      minId: '1-0',
++    };
++
++    const res1 = await engine.checkAndAlert(highPendingMetrics);
++    expect(res1.triggered).toBe(true);
++    expect(callCount).toBe(1);
++
++    // Immediate second call should be suppressed by cooldown
++    const res2 = await engine.checkAndAlert(highPendingMetrics);
++    expect(res2.triggered).toBe(false);
++    expect(res2.suppressedByCooldown).toBe(true);
++    expect(callCount).toBe(1);
++  });
++
++  it('provides getAlertStatus() with latest alert state', async () => {
++    const engine = new StreamAlertEngine({
++      webhookSender: async () => {},
++    });
++
++    const status1 = engine.getAlertStatus();
++    expect(status1.activeAlerts.length).toBe(0);
++
++    await engine.checkAndAlert({
++      eventsPerSecond: 10,
++      pendingMessages: 65000,
++      consumerLag: 100,
++      droppedEvents: 0,
++      lastAckTime: 10,
++      maxLen: 1000000,
++      minId: '1-0',
++    });
++
++    const status2 = engine.getAlertStatus();
++    expect(status2.activeAlerts.length).toBe(1);
++    expect(status2.activeAlerts[0].alert).toBe('redis_stream_lag');
++    expect(status2.lastAlertTimestamp).toBeDefined();
++  });
++});
+diff --git a/tests/utils/stream-metrics-collector.test.js b/tests/utils/stream-metrics-collector.test.js
+new file mode 100644
+index 00000000..d6574702
+--- /dev/null
++++ b/tests/utils/stream-metrics-collector.test.js
+@@ -0,0 +1,116 @@
++// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
++/**
++ * Tests for StreamMetricsCollector (Story 14.3)
++ * @author nich (@nichxbt)
++ * @license MIT
++ */
++
++import { describe, it, expect, beforeEach, afterEach } from 'vitest';
++import { StreamMetricsCollector } from '../../src/utils/stream-metrics-collector.js';
++
++describe('Story 14.3: StreamMetricsCollector Unit & Contract Tests', () => {
++  it('exports StreamMetricsCollector class and default instance', () => {
++    expect(typeof StreamMetricsCollector).toBe('function');
++    const collector = new StreamMetricsCollector();
++    expect(collector).toBeDefined();
++    expect(typeof collector.getMetrics).toBe('function');
++  });
++
++  it('returns default zeroed metrics when Redis is unavailable or fails', async () => {
++    const mockFailingRedis = {
++      xLen: async () => {
++        throw new Error('Connection refused');
++      },
++    };
++
++    const collector = new StreamMetricsCollector({
++      redisClient: mockFailingRedis,
++      maxLen: 1000000,
++    });
++
++    const metrics = await collector.getMetrics({ forceRefresh: true });
++    expect(metrics).toEqual({
++      eventsPerSecond: 0,
++      pendingMessages: 0,
++      consumerLag: 0,
++      droppedEvents: 0,
++      lastAckTime: 0,
++      maxLen: 1000000,
++      minId: null,
++    });
++  });
++
++  it('collects full stream metrics correctly from Redis client responses', async () => {
++    const mockRedis = {
++      xLen: async (key) => 1250,
++      xPending: async (key, group) => ({
++        pending: 45,
++        count: 45,
++      }),
++      xInfoStream: async (key) => ({
++        length: 1250,
++        entriesAdded: 1300,
++        firstEntry: ['1700000000000-0', ['id', 'facebook:1']],
++        lastGeneratedId: '1700000060000-0',
++      }),
++      xInfoGroups: async (key) => [
++        {
++          name: 'nowing_nlp_workers',
++          pending: 45,
++          lastDeliveredId: '1700000055000-0',
++        },
++      ],
++      xInfoConsumers: async (key, group) => [
++        {
++          name: 'worker_1',
++          pending: 45,
++          idle: 5000, // 5s idle in ms
++        },
++      ],
++    };
++
++    const collector = new StreamMetricsCollector({
++      redisClient: mockRedis,
++      maxLen: 1000000,
++    });
++
++    const metrics = await collector.getMetrics({ forceRefresh: true });
++    expect(metrics.pendingMessages).toBe(1250);
++    expect(metrics.consumerLag).toBe(45);
++    expect(metrics.droppedEvents).toBe(50); // 1300 - 1250
++    expect(metrics.minId).toBe('1700000000000-0');
++    expect(metrics.maxLen).toBe(1000000);
++    expect(typeof metrics.lastAckTime).toBe('number');
++  });
++
++  it('caches metrics for configured TTL (default 5s) unless forceRefresh is true', async () => {
++    let callCount = 0;
++    const mockRedis = {
++      xLen: async () => {
++        callCount++;
++        return 100 * callCount;
++      },
++      xPending: async () => ({ count: 10 }),
++      xInfoStream: async () => ({ length: 100 }),
++    };
++
++    const collector = new StreamMetricsCollector({
++      redisClient: mockRedis,
++      cacheTtlMs: 5000,
++    });
++
++    const m1 = await collector.getMetrics({ forceRefresh: true });
++    expect(m1.pendingMessages).toBe(100);
++    expect(callCount).toBe(1);
++
++    // Call again within cache TTL
++    const m2 = await collector.getMetrics({ forceRefresh: false });
++    expect(m2.pendingMessages).toBe(100);
++    expect(callCount).toBe(1);
++
++    // Call with forceRefresh = true
++    const m3 = await collector.getMetrics({ forceRefresh: true });
++    expect(m3.pendingMessages).toBe(200);
++    expect(callCount).toBe(2);
++  });
++});

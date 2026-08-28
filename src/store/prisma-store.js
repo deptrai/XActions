@@ -20,15 +20,21 @@ export class PrismaStore extends AbstractStore {
   /** @type {boolean} */
   #validateSchema = true;
 
+  /** @type {import('../core/types.js').RedisClientLike | null} */
+  redis = null;
+
   /**
    * @param {Object} [options]
    * @param {import('@prisma/client').PrismaClient} [options.prisma]
+   * @param {import('../core/types.js').RedisClientLike} [options.redisClient]
+   * @param {import('../core/types.js').RedisClientLike} [options.redis]
    * @param {number} [options.chunkSize=500]
    * @param {boolean} [options.validateSchema=true]
    */
   constructor(options = {}) {
     super();
     this.#prisma = options.prisma || null;
+    this.redis = options.redisClient || options.redis || null;
     this.#chunkSize =
       typeof options.chunkSize === 'number' && options.chunkSize > 0
         ? Math.floor(options.chunkSize)
@@ -295,6 +301,96 @@ export class PrismaStore extends AbstractStore {
         }
       }
     }
+  }
+
+  /**
+   * Upsert a crawl checkpoint with state and storage reference.
+   * @param {Object} checkpoint
+   * @param {string} checkpoint.platform
+   * @param {string} checkpoint.targetType
+   * @param {string} checkpoint.targetKey
+   * @param {string} [checkpoint.lastCursor]
+   * @param {Date | string} [checkpoint.lastTimestamp]
+   * @param {Date | string} [checkpoint.lastCrawledAt]
+   * @param {string} [checkpoint.status]
+   * @param {string} [checkpoint.storageRef]
+   * @param {Date | string} [checkpoint.nextScheduledAt]
+   * @param {number} [checkpoint.errorCount]
+   * @returns {Promise<any>}
+   */
+  async saveCheckpoint(checkpoint) {
+    if (!checkpoint || typeof checkpoint !== 'object') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Checkpoint must be a valid non-null object',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const { platform, targetType, targetKey } = checkpoint;
+    if (!platform || !targetType || !targetKey) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Checkpoint must contain platform, targetType, and targetKey',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform,
+      });
+    }
+
+    await this.init();
+
+    const parseSafeDate = (d, fallback = null) => {
+      if (!d) return fallback;
+      const parsed = d instanceof Date ? d : new Date(d);
+      return isNaN(parsed.getTime()) ? fallback : parsed;
+    };
+
+    const data = {
+      platform: String(platform),
+      targetType: String(targetType),
+      targetKey: String(targetKey),
+      status: checkpoint.status ? String(checkpoint.status) : 'running',
+      lastCursor: checkpoint.lastCursor ? String(checkpoint.lastCursor) : null,
+      lastTimestamp: parseSafeDate(checkpoint.lastTimestamp, null),
+      lastCrawledAt: parseSafeDate(checkpoint.lastCrawledAt, new Date()),
+      nextScheduledAt: parseSafeDate(checkpoint.nextScheduledAt, null),
+      storageRef: checkpoint.storageRef ? String(checkpoint.storageRef) : null,
+      errorCount: typeof checkpoint.errorCount === 'number' ? checkpoint.errorCount : 0,
+    };
+
+    return await this.#prisma.crawlCheckpoint.upsert({
+      where: {
+        platform_targetType_targetKey: {
+          platform: data.platform,
+          targetType: data.targetType,
+          targetKey: data.targetKey,
+        },
+      },
+      update: data,
+      create: data,
+    });
+  }
+
+  /**
+   * Retrieve a crawl checkpoint by composite key.
+   * @param {string} platform
+   * @param {string} targetType
+   * @param {string} targetKey
+   * @returns {Promise<any>}
+   */
+  async getCheckpoint(platform, targetType, targetKey) {
+    await this.init();
+    return await this.#prisma.crawlCheckpoint.findUnique({
+      where: {
+        platform_targetType_targetKey: {
+          platform: String(platform),
+          targetType: String(targetType),
+          targetKey: String(targetKey),
+        },
+      },
+    });
   }
 
   /** @returns {Promise<void>} */

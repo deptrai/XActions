@@ -5,6 +5,7 @@
  *
  * Uses the same Puppeteer stealth approach as Twitter and Threads scrapers.
  *
+ * @deprecated Use `src/scrapers/social/facebook/index.js` (`FacebookCrawler`, `FacebookClient`) instead. See docs/deprecation-plan.md.
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license BSL 1.1
@@ -32,6 +33,7 @@ import { extractHydrationJson } from './hydration.js';
  *
  * READ-ONLY scrape — NOT routed through runGuardedBatch.
  *
+ * @deprecated Replaced by `FacebookCrawler` action `group_search` (Story 13.6). Use `FacebookCrawler.start({ action: 'group_search', ... })` instead.
  * @param {import('puppeteer').Page} page - Puppeteer page (authenticated)
  * @param {string} groupUrl - facebook.com/groups/<id> URL
  * @param {FacebookOptions} [options]

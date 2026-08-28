@@ -20,6 +20,22 @@ import { FACEBOOK_BASE } from './core.js';
 // Profile Normalizer (pure — testable without Puppeteer)
 // ============================================================================
 
+/**
+ * Coerce a raw entity id to string. Facebook hydration JSON emits legacy ids
+ * (`legacy_fbid`, older Comment/People ids) as numbers on some surfaces; the
+ * previous monolith passed them through uncoerced and every consumer keyed or
+ * filtered on the value, so narrowing to `typeof === 'string'` silently drops
+ * those results. Numbers are stringified; everything else becomes null.
+ *
+ * @param {unknown} value
+ * @returns {string|null}
+ */
+function idToString(value) {
+  if (typeof value === 'string') return value.trim() ? value : null;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return null;
+}
+
 // ============================================================================
 // Handle Normalization (shared — used by scrapeProfile and scrapeTweets)
 // ============================================================================
@@ -271,13 +287,13 @@ export function normalizeComment(raw, fallbackParentId = null) {
 
   /** @type {FacebookComment} */
   const result = {
-    id: typeof resolvedId === 'string' ? resolvedId : null,
+    id: idToString(resolvedId),
     authorName: stripPii(resolvedAuthorName),
     authorUrl: typeof resolvedAuthorUrl === 'string' ? resolvedAuthorUrl : null,
     text: stripPii(resolvedText),
-    timestamp: typeof resolvedTimestamp === 'string' ? resolvedTimestamp : null,
+    timestamp: idToString(resolvedTimestamp),
     likes: parseEngagementCount(resolvedLikes) ?? 0,
-    parentId: typeof resolvedParentId === 'string' ? resolvedParentId : null,
+    parentId: idToString(resolvedParentId),
   };
 
   const rawReplies = replies || comment_replies || childComments;
@@ -333,7 +349,7 @@ export function normalizeFollower(raw) {
 export function normalizeSearchResult(raw) {
   const { id, text, author, timestamp, url } = raw;
   return {
-    id: typeof id === 'string' && id.trim() ? id : null,
+    id: idToString(id),
     text: typeof text === 'string' && text.trim() ? text : null,
     author: typeof author === 'string' && author.trim()
       ? author
@@ -406,7 +422,7 @@ export function normalizePostSearchResult(raw) {
     : undefined;
 
   return {
-    id: typeof resolvedId === 'string' ? resolvedId : null,
+    id: idToString(resolvedId),
     text: resolvedText,
     author: /** @type {string | Record<string, unknown> | null} */ (
       (typeof author === 'string' ? author : null) ||
@@ -437,7 +453,7 @@ export function normalizePeopleSearchResult(raw) {
     image,
   } = raw || {};
 
-  const idStr = typeof id === 'string' ? id : null;
+  const idStr = idToString(id);
   const resolvedUrlRaw = url || profileUrl || (idStr && /^\d+$/.test(idStr) ? `${FACEBOOK_BASE}/profile.php?id=${idStr}` : null);
   const resolvedUrl = typeof resolvedUrlRaw === 'string' ? resolvedUrlRaw : null;
   const derivedUsername = extractHandleFromUrl(resolvedUrl);
@@ -450,7 +466,7 @@ export function normalizePeopleSearchResult(raw) {
   const resolvedId = id || resolvedUsername || resolvedUrl || null;
 
   return {
-    id: typeof resolvedId === 'string' ? resolvedId : null,
+    id: idToString(resolvedId),
     name: typeof name === 'string' ? name : null,
     username: resolvedUsername,
     profileUrl: resolvedUrl,
@@ -481,14 +497,14 @@ export function normalizePageSearchResult(raw) {
     image,
   } = raw || {};
 
-  const idStr = typeof id === 'string' ? id : null;
+  const idStr = idToString(id);
   const resolvedUrlRaw = url || pageUrl || (idStr && /^\d+$/.test(idStr) ? `${FACEBOOK_BASE}/pages/${idStr}` : null);
   const resolvedUrl = typeof resolvedUrlRaw === 'string' ? resolvedUrlRaw : null;
   const resolvedId = id || resolvedUrl || null;
   const resolvedLikes = likes || fan_count || fanCount || null;
 
   return {
-    id: typeof resolvedId === 'string' ? resolvedId : null,
+    id: idToString(resolvedId),
     name: typeof name === 'string' ? name : null,
     category: typeof (category || category_name || categoryName) === 'string'
       ? /** @type {string} */ (category || category_name || categoryName)
@@ -522,14 +538,14 @@ export function normalizeGroupSearchResult(raw) {
     image,
   } = raw || {};
 
-  const idStr = typeof id === 'string' ? id : null;
+  const idStr = idToString(id);
   const resolvedUrlRaw = url || groupUrl || (idStr && /^\d+$/.test(idStr) ? `${FACEBOOK_BASE}/groups/${idStr}` : null);
   const resolvedUrl = typeof resolvedUrlRaw === 'string' ? resolvedUrlRaw : null;
   const resolvedId = id || resolvedUrl || null;
   const resolvedMembers = members || member_count || memberCount || null;
 
   return {
-    id: typeof resolvedId === 'string' ? resolvedId : null,
+    id: idToString(resolvedId),
     name: typeof name === 'string' ? name : null,
     members: typeof resolvedMembers === 'string' || typeof resolvedMembers === 'number'
       ? resolvedMembers
@@ -670,7 +686,7 @@ export function normalizeGroupMember(raw) {
 export function normalizeMarketplaceListing(raw) {
   const { id, title, price, location, image, listingUrl, seller, sellerUrl, category } = raw;
   return {
-    id: typeof id === 'string' ? id : null,
+    id: idToString(id),
     title: typeof title === 'string' ? title : null,
     price: typeof price === 'string' ? price : null,
     location: typeof location === 'string' ? location : null,
@@ -702,11 +718,20 @@ const MARKETPLACE_KNOWN_LOCATIONS = new Map([
  */
 export function resolveMarketplaceLocation(input) {
   if (typeof input !== 'string' || !input.trim()) return null;
-  const key = input.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const trimmed = input.trim();
+
+  // Accept only full facebook.com/marketplace/<slug> URLs and extract the slug.
+  if (/^https?:\/\//i.test(trimmed)) {
+    const match = trimmed.match(/^https?:\/\/(?:www\.)?facebook\.com\/marketplace\/([a-zA-Z0-9_-]+)(?:\/?|[/?#].*)$/i);
+    if (!match) return null;
+    return resolveMarketplaceLocation(match[1]);
+  }
+
+  const key = trimmed.toLowerCase().replace(/[^a-z0-9]/g, '');
   const mapped = MARKETPLACE_KNOWN_LOCATIONS.get(key);
   if (mapped) return mapped;
-  const trimmed = input.trim().toLowerCase();
-  if (/^[a-z0-9]+$/.test(trimmed)) return trimmed;
+  const lower = trimmed.toLowerCase();
+  if (/^[a-z0-9]+$/.test(lower)) return lower;
   return null;
 }
 
@@ -716,9 +741,24 @@ export function resolveMarketplaceLocation(input) {
  * @returns {string}
  */
 export function buildMarketplaceSearchUrl(query, options = {}) {
-  const { location, category, minPrice, maxPrice } = options;
+  const {
+    location,
+    category,
+    minPrice,
+    maxPrice,
+    categoryId,
+    radius,
+    radiusKm,
+    latitude,
+    lat,
+    longitude,
+    lng,
+    cursor,
+    baseUrl,
+  } = options;
+  const base = typeof baseUrl === 'string' && baseUrl.trim() ? baseUrl.trim() : FACEBOOK_BASE;
   const locationSlug = resolveMarketplaceLocation(location);
-  let basePath = `${FACEBOOK_BASE}/marketplace`;
+  let basePath = `${base}/marketplace`;
   if (locationSlug) {
     basePath += `/${locationSlug}`;
   }
@@ -726,10 +766,23 @@ export function buildMarketplaceSearchUrl(query, options = {}) {
     basePath += `/category/${encodeURIComponent(category.trim())}`;
   }
   const params = [`query=${encodeURIComponent(query.trim())}`];
+
+  const resolvedRadius = typeof radiusKm === 'number' && Number.isFinite(radiusKm)
+    ? radiusKm
+    : (typeof radius === 'number' && Number.isFinite(radius) ? radius : null);
+  const resolvedLat = typeof latitude === 'number' ? latitude : (typeof lat === 'number' ? lat : null);
+  const resolvedLng = typeof longitude === 'number' ? longitude : (typeof lng === 'number' ? lng : null);
+
   if (typeof minPrice === 'number' && Number.isFinite(minPrice)) params.push(`minPrice=${minPrice}`);
   if (typeof maxPrice === 'number' && Number.isFinite(maxPrice)) params.push(`maxPrice=${maxPrice}`);
   if (typeof location === 'string' && !locationSlug) {
     params.push(`location=${encodeURIComponent(location)}`);
   }
+  if (typeof categoryId === 'string' && /^\d+$/.test(categoryId)) params.push(`categoryId=${encodeURIComponent(categoryId)}`);
+  if (resolvedLat != null) params.push(`lat=${resolvedLat}`);
+  if (resolvedLng != null) params.push(`lng=${resolvedLng}`);
+  if (resolvedRadius != null) params.push(`radius=${resolvedRadius}`);
+  if (typeof cursor === 'string' && cursor.trim()) params.push(`cursor=${encodeURIComponent(cursor.trim())}`);
+
   return `${basePath}/search/?${params.join('&')}`;
 }

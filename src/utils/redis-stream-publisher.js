@@ -26,9 +26,14 @@ export function isEnvTruthy(val) {
  */
 export function toIsoDate(val) {
   if (!val) return new Date().toISOString();
-  if (val instanceof Date) return val.toISOString();
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return new Date().toISOString();
+    return val.toISOString();
+  }
   try {
-    return new Date(val).toISOString();
+    const parsed = new Date(val);
+    if (isNaN(parsed.getTime())) return new Date().toISOString();
+    return parsed.toISOString();
   } catch {
     return new Date().toISOString();
   }
@@ -188,9 +193,11 @@ export class RedisStreamPublisher {
     }
 
     try {
+      // Determine trimming strategy
       const strategy = this.#trimStrategy;
       const useMinId = strategy === 'minid' && this.#minId;
 
+      // 1. node-redis v4+ API: xAdd(key, '*', fields, options)
       if (typeof client.xAdd === 'function') {
         /** @type {any} */
         const trimOptions = useMinId
@@ -213,6 +220,7 @@ export class RedisStreamPublisher {
         return { ok: true, id: typeof eventId === 'string' ? eventId : String(eventId) };
       }
 
+      // 2. ioredis / flat API: xadd(key, 'MAXLEN', '~', maxLen, '*', field1, val1, ...)
       if (typeof client.xadd === 'function') {
         const trimType = useMinId ? 'MINID' : 'MAXLEN';
         const trimThreshold = useMinId ? this.#minId : this.#maxLen;
@@ -229,6 +237,7 @@ export class RedisStreamPublisher {
         return { ok: true, id: typeof eventId === 'string' ? eventId : String(eventId) };
       }
 
+      // 3. Fallback to generic sendCommand if available
       if (typeof client.sendCommand === 'function') {
         const trimType = useMinId ? 'MINID' : 'MAXLEN';
         const trimThreshold = String(useMinId ? this.#minId : this.#maxLen);
@@ -324,15 +333,15 @@ export class RedisStreamPublisher {
 
     try {
       if (typeof client.xGroupCreate === 'function') {
-        await client.xGroupCreate(streamKey, groupName, '$', { MKSTREAM: true });
+        await client.xGroupCreate(streamKey, groupName, '0', { MKSTREAM: true });
         return true;
       }
       if (typeof client.xgroup === 'function') {
-        await client.xgroup('CREATE', streamKey, groupName, '$', 'MKSTREAM');
+        await client.xgroup('CREATE', streamKey, groupName, '0', 'MKSTREAM');
         return true;
       }
       if (typeof client.sendCommand === 'function') {
-        await client.sendCommand(['XGROUP', 'CREATE', streamKey, groupName, '$', 'MKSTREAM']);
+        await client.sendCommand(['XGROUP', 'CREATE', streamKey, groupName, '0', 'MKSTREAM']);
         return true;
       }
       return false;

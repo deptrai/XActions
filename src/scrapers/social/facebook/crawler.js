@@ -12,6 +12,7 @@ import { AbstractCrawler } from '../../../core/base-crawler.js';
 import { FacebookClient } from './client.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { CommentTreeExtractor } from '../comment-tree.js';
+import { defaultRedisStreamPublisher, toIsoDate } from '../../../utils/redis-stream-publisher.js';
 
 const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
 
@@ -436,6 +437,30 @@ export class FacebookCrawler extends AbstractCrawler {
    * @returns {Promise<{ feedbackId: string }>}
    */
   async #resolvePostFeedbackContext(input, cookies, accountId) {
+    // 0. SSRF guard: reject non-Facebook absolute URLs
+    if (/^https?:\/\//i.test(input)) {
+      try {
+        const parsed = new URL(input);
+        const host = parsed.hostname.toLowerCase();
+        if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: 'postId URL must be a facebook.com URL',
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          });
+        }
+      } catch (err) {
+        if (err instanceof PlatformError) throw err;
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'Invalid postId URL',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+    }
+
     // 1. Already a GraphQL feedback id
     if (typeof input === 'string' && input.startsWith('ZmVlZGJhY2s6')) {
       const decoded = this.#decodeFeedbackId(input);
@@ -572,9 +597,17 @@ export class FacebookCrawler extends AbstractCrawler {
       await this.store.storeBatch(posts, { upsert: true });
     }
 
+    const groupPageInfo = res?.data?.group?.feed?.page_info || res?.data?.node?.feed?.page_info || null;
+    await this.#saveCheckpoint({
+      targetType: 'group',
+      targetKey: String(args.groupId),
+      items: posts,
+      cursor: groupPageInfo?.end_cursor || args?.cursor || null,
+    });
+
     return {
       posts,
-      pageInfo: res?.data?.group?.feed?.page_info || res?.data?.node?.feed?.page_info || null,
+      pageInfo: groupPageInfo,
     };
   }
 
@@ -628,9 +661,17 @@ export class FacebookCrawler extends AbstractCrawler {
       await this.store.storeBatch(posts, { upsert: true });
     }
 
+    const pageTimelinePageInfo = res?.data?.page?.timeline_feed?.page_info || res?.data?.node?.timeline_feed?.page_info || null;
+    await this.#saveCheckpoint({
+      targetType: 'page',
+      targetKey: String(args.pageId),
+      items: posts,
+      cursor: pageTimelinePageInfo?.end_cursor || args?.cursor || null,
+    });
+
     return {
       posts,
-      pageInfo: res?.data?.page?.timeline_feed?.page_info || res?.data?.node?.timeline_feed?.page_info || null,
+      pageInfo: pageTimelinePageInfo,
     };
   }
 
@@ -819,7 +860,63 @@ export class FacebookCrawler extends AbstractCrawler {
       await this.store.storeCommentBatch(comments, { upsert: true });
     }
 
+    await this.#saveCheckpoint({
+      targetType: 'post',
+      targetKey: postExternalId,
+      items: comments,
+      cursor: pageInfo?.end_cursor || null,
+    });
+
     return { comments, pageInfo };
+  }
+
+  /**
+   * Helper to persist checkpoint and emit thin event pointers to Redis Stream.
+   * @param {Object} params
+   * @param {string} params.targetType - 'group' | 'page' | 'post'
+   * @param {string} params.targetKey - groupId | pageId | postId
+   * @param {Array<import('../../../core/types.js').PostItem | import('../../../core/types.js').CommentItem>} params.items
+   * @param {string | null} [params.cursor]
+   * @param {string} [params.status='running']
+   * @returns {Promise<void>}
+   */
+  async #saveCheckpoint({ targetType, targetKey, items, cursor, status = 'running' }) {
+    if (!items || items.length === 0) return;
+
+    const firstItem = items[0];
+    const storageRef = firstItem?.id || null;
+
+    // 1. Save checkpoint in store first if supported
+    if (this.store && typeof this.store.saveCheckpoint === 'function') {
+      try {
+        await this.store.saveCheckpoint({
+          platform: this.platform,
+          targetType,
+          targetKey,
+          lastCursor: cursor || undefined,
+          lastTimestamp: firstItem?.publishedAt || undefined,
+          lastCrawledAt: new Date(),
+          status,
+          storageRef: storageRef || undefined,
+        });
+      } catch (err) {
+        console.warn(`[${this.platform} TELEMETRY] Failed to save checkpoint for ${targetType}:${targetKey}:`, (err instanceof Error ? err.message : String(err)));
+      }
+    }
+
+    // 2. Emit thin event pointers to Redis Stream for each item
+    const publisher = (this.store && /** @type {any} */ (this.store).publisher) || defaultRedisStreamPublisher;
+    for (const item of items) {
+      await publisher.publish({
+        id: item.id,
+        platform: item.platform || this.platform,
+        externalId: item.externalId,
+        category: (/** @type {any} */ (item)).category || 'social',
+        authorId: item.authorId,
+        crawledAt: item.crawledAt ? toIsoDate(item.crawledAt) : new Date().toISOString(),
+        storageRef: item.id,
+      });
+    }
   }
 
   /**

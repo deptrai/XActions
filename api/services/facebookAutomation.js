@@ -1,5 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 // by nichxbt
+// LEGACY — see docs/deprecation-plan.md
+/** @deprecated Use FacebookCrawler hybrid actions (Story 13.9) instead. */
 
 import prisma from '../lib/prisma.js';
 import {

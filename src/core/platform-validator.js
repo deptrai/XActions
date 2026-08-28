@@ -40,4 +40,12 @@ export class AbstractPlatformResponseValidator {
   isRateLimit(response) {
     throw new Error('Method not implemented: isRateLimit()');
   }
+
+  /**
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isLoginWall(response) {
+    return false;
+  }
 }
