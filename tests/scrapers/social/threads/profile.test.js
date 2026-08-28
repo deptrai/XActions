@@ -88,31 +88,6 @@ describe('Story 15.1.1: Threads Hybrid Profile & Connections ATDD Test Suite', (
             variables = {};
           }
 
-          // Profile Query mock
-          if (docId === 'doc_profile_123' || variables.userID === '987654321') {
-            res.writeHead(200, { 'content-type': 'application/json' });
-            res.end(
-              JSON.stringify({
-                data: {
-                  userData: {
-                    user: {
-                      id: '987654321',
-                      pk: '987654321',
-                      username: 'testuser',
-                      full_name: 'Test User Display',
-                      biography: 'Tech enthusiast and AI builder.',
-                      profile_pic_url: 'https://cdn.threads.net/avatar_test.jpg',
-                      follower_count: 12500,
-                      following_count: 350,
-                      is_verified: true,
-                    },
-                  },
-                },
-              })
-            );
-            return;
-          }
-
           // Followers List Query mock
           if (docId === 'doc_followers_123') {
             res.writeHead(200, { 'content-type': 'application/json' });
@@ -184,6 +159,31 @@ describe('Story 15.1.1: Threads Hybrid Profile & Connections ATDD Test Suite', (
               JSON.stringify({
                 data: {
                   node: null,
+                },
+              })
+            );
+            return;
+          }
+
+          // Profile Query mock
+          if (docId === 'doc_profile_123' || variables.userID === '987654321') {
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(
+              JSON.stringify({
+                data: {
+                  userData: {
+                    user: {
+                      id: '987654321',
+                      pk: '987654321',
+                      username: 'testuser',
+                      full_name: 'Test User Display',
+                      biography: 'Tech enthusiast and AI builder.',
+                      profile_pic_url: 'https://cdn.threads.net/avatar_test.jpg',
+                      follower_count: 12500,
+                      following_count: 350,
+                      is_verified: true,
+                    },
+                  },
                 },
               })
             );

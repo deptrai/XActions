@@ -6,4 +6,5 @@
  */
 
 export * from './facebook/index.js';
+export * from './threads/index.js';
 export { CommentTreeExtractor } from './comment-tree.js';
