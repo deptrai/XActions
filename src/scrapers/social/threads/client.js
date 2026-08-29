@@ -32,14 +32,14 @@ const RATE_LIMIT_CODES = new Set([368]);
 /** @type {RegExp[]} */
 const LSD_REGEXES = [
   /name="lsd"\s+value="([^"]+)"/,
-  /\[\s*"LSD"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*\]/,
-  /"LSD"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*\]/,
+  /\[\s*"LSD"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*(?:,\s*[^[\]]+)?\]/,
+  /"LSD"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*(?:,\s*[^[\]]+)?\]/,
 ];
 
 /** @type {RegExp[]} */
 const DTSG_REGEXES = [
-  /\[\s*"DTSGInitialData"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*\]/,
-  /"DTSGInitialData"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*\]/,
+  /\[\s*"DTSGInitialData"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*(?:,\s*[^[\]]+)?\]/,
+  /"DTSGInitialData"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*(?:,\s*[^[\]]+)?\]/,
   /d\.token\s*=\s*"([^"]+)"/,
 ];
 
