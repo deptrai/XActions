@@ -576,6 +576,32 @@ export class ThreadsCrawler extends AbstractCrawler {
       });
     }
 
+    // SSRF guard for absolute URLs
+    if (/^https?:\/\//i.test(input)) {
+      try {
+        const parsed = new URL(input);
+        const host = parsed.hostname.toLowerCase();
+        if (host !== 'threads.net' && !host.endsWith('.threads.net')) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: 'postId URL must be a threads.net URL',
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+            platform: 'threads',
+          });
+        }
+      } catch (err) {
+        if (err instanceof PlatformError) throw err;
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'Invalid postId URL',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'threads',
+        });
+      }
+    }
+
     const clean = input.trim();
     if (/^\d+$/.test(clean)) {
       return clean;
@@ -620,10 +646,10 @@ export class ThreadsCrawler extends AbstractCrawler {
            */
           const findPostPk = (obj) => {
             if (!obj || typeof obj !== 'object') return null;
-            if ((obj.code === extracted || !extracted) && (obj.pk || obj.id)) {
+            if (extracted && obj.code === extracted && (obj.pk || obj.id)) {
               return String(obj.pk || obj.id);
             }
-            if (obj.post && (obj.post.code === extracted || !extracted) && (obj.post.pk || obj.post.id)) {
+            if (extracted && obj.post && obj.post.code === extracted && (obj.post.pk || obj.post.id)) {
               return String(obj.post.pk || obj.post.id);
             }
             for (const key of Object.keys(obj)) {
@@ -650,12 +676,12 @@ export class ThreadsCrawler extends AbstractCrawler {
         return pkMatch[1];
       }
     } catch (err) {
-      if (err instanceof PlatformError && err.code === 'XACT_4041') throw err;
+      if (err instanceof PlatformError) throw err;
     }
 
     throw new PlatformError({
       code: 'XACT_4041',
-      type: 'not_found',
+      type: ErrorTypes.INVALID_ARGS,
       message: `Post not found: ${input}`,
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
       platform: 'threads',
@@ -1022,7 +1048,8 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId || 'threads-guest';
-    const rootPostId = await this.#resolvePostId(args.postId, accountId);
+    const cookies = session?.cookies || '';
+    const rootPostId = await this.#resolvePostId(args.postId, accountId, cookies);
     const maxDepth = Math.max(0, Math.min(args.maxDepth ?? 3, 5));
     const maxComments = Math.max(1, Math.min(args.maxComments ?? 500, 2000));
 
@@ -1073,7 +1100,7 @@ export class ThreadsCrawler extends AbstractCrawler {
         variables.parentId = parentCommentId;
       }
 
-      const res = await this.client.requestGraphQl(docId, variables, { accountId });
+      const res = await this.client.requestGraphQl(docId, variables, { accountId, cookies });
 
       // POST_DETAIL (BarcelonaPostPageQuery) is a flat fallback for root comments only.
       if (!isReply && docId === (this.docIds.POST_DETAIL || DEFAULT_THREADS_DOC_IDS.POST_DETAIL)) {
@@ -1224,6 +1251,8 @@ export class ThreadsCrawler extends AbstractCrawler {
 
     // Search containing_thread first
     let rawRootPost = null;
+    let fallbackPost = null;
+
     if (topData.containing_thread) {
       const items = Array.isArray(topData.containing_thread.thread_items)
         ? topData.containing_thread.thread_items
@@ -1235,14 +1264,14 @@ export class ThreadsCrawler extends AbstractCrawler {
             rawRootPost = p;
             break;
           }
-          if (!rawRootPost) {
-            rawRootPost = p;
+          if (!fallbackPost) {
+            fallbackPost = p;
           }
         }
       }
     }
 
-    // Search reply_threads if not found in containing_thread
+    // Search reply_threads if exact match not found in containing_thread
     if (!rawRootPost && Array.isArray(topData.reply_threads)) {
       for (const thread of topData.reply_threads) {
         const items = Array.isArray(thread.thread_items) ? thread.thread_items : [thread];
@@ -1255,6 +1284,10 @@ export class ThreadsCrawler extends AbstractCrawler {
         }
         if (rawRootPost) break;
       }
+    }
+
+    if (!rawRootPost && fallbackPost) {
+      rawRootPost = fallbackPost;
     }
 
     if (!rawRootPost) {
@@ -1322,8 +1355,13 @@ export class ThreadsCrawler extends AbstractCrawler {
    * @param {Object} args
    * @returns {Promise<import('../../../core/types.js').CommentItem[]>}
    */
-  async getComments(args) {
-    const res = await this.getPostComments(/** @type {any} */ (args));
+  /**
+   * @param {Object} args
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<import('../../../core/types.js').CommentItem[]>}
+   */
+  async getComments(args, session = {}) {
+    const res = await this.getPostComments(/** @type {any} */ (args), session);
     return res.comments;
   }
 

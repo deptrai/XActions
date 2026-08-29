@@ -125,7 +125,7 @@ describe('Story 15.1.2 — Threads Hybrid Post Detail & Comment Tree', () => {
           // BarcelonaPostPageQuery
           if (docId === '5587632691339264' || docId === DEFAULT_THREADS_DOC_IDS.POST_DETAIL) {
             const requestedId = String(variables.postID || '');
-            if (requestedId === '3141592653589793' || requestedId === '3141803346926526322') {
+            if (requestedId === '3141592653589793' || requestedId === '3141803346926526322' || requestedId === '99881122') {
               res.writeHead(200, { 'content-type': 'application/json' });
               res.end(JSON.stringify({
                 data: {
@@ -134,8 +134,8 @@ describe('Story 15.1.2 — Threads Hybrid Post Detail & Comment Tree', () => {
                       thread_items: [
                         {
                           post: {
-                            id: requestedId,
-                            pk: requestedId,
+                            id: requestedId === '99881122' ? '3141592653589793' : requestedId,
+                            pk: requestedId === '99881122' ? '3141592653589793' : requestedId,
                             code: requestedId === '3141803346926526322' ? 'CuZ7X9_sF9y' : 'LKUMKJW0h',
                             caption: { text: 'Deep conversation on Threads Vietnam!' },
                             user: {
@@ -165,8 +165,8 @@ describe('Story 15.1.2 — Threads Hybrid Post Detail & Comment Tree', () => {
                         thread_items: [
                           {
                             post: {
-                              id: 'reply_item_101',
-                              pk: 'reply_item_101',
+                              id: '99881122',
+                              pk: '99881122',
                               code: 'RPLY101',
                               caption: { text: 'Great thread topic!' },
                               user: { pk: '112233', username: 'replier_one' },
@@ -329,7 +329,7 @@ describe('Story 15.1.2 — Threads Hybrid Post Detail & Comment Tree', () => {
     expect(result.comments?.length).toBeGreaterThanOrEqual(1);
 
     const reply = result.comments?.[0];
-    expect(reply?.id).toBe('threads:3141592653589793:reply_item_101');
+    expect(reply?.id).toBe('threads:3141592653589793:99881122');
     expect(reply?.content).toBe('Great thread topic!');
     expect(reply?.depth).toBe(0); // Clamped to 0 because COMMENT_REPLIES is null
     expect(storedComments.length).toBeGreaterThanOrEqual(1);
@@ -352,5 +352,43 @@ describe('Story 15.1.2 — Threads Hybrid Post Detail & Comment Tree', () => {
       type: 'not_found',
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
     });
+  });
+
+  it('[P1] should reject external / invalid URL to prevent SSRF', async () => {
+    const crawler = new ThreadsCrawler({
+      client: new ThreadsClient({ baseUrl: serverUrl }),
+      governor,
+      accountPool,
+      sessionManager,
+    });
+
+    await expect(crawler.start({
+      action: 'post_detail',
+      args: { postId: 'http://attacker.com/exploit' },
+      session: { accountId: 'threads-guest' },
+    })).rejects.toMatchObject({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+    });
+  });
+
+  it('[P0] should extract post matching numericPostId even when located in reply_threads', async () => {
+    const crawler = new ThreadsCrawler({
+      client: new ThreadsClient({ baseUrl: serverUrl }),
+      store: mockStore,
+      governor,
+      accountPool,
+      sessionManager,
+    });
+
+    const result = await crawler.start({
+      action: 'post_detail',
+      args: { postId: '99881122' },
+      session: { accountId: 'threads-guest' },
+    });
+
+    expect(result.post).toBeDefined();
+    expect(result.post.id).toBe('threads:99881122');
+    expect(result.post.content).toBe('Great thread topic!');
   });
 });
