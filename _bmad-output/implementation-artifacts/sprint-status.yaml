@@ -103,7 +103,7 @@ development_status:
   15-1-threads-scraper-adapter-meta-internal-graphql: done
   15-1-1-threads-hybrid-profile-followers-following: done
   15-1-2-threads-hybrid-post-detail-comment-tree: done
-  15-1-3-threads-hybrid-docid-hardening-search-comments: ready-for-dev
+  15-1-3-threads-hybrid-docid-hardening-search-comments: review
   15-1-4-threads-hybrid-integration-package-exports: backlog
   15-2-tiktok-video-hashtag-comment-scraper: backlog
   epic-15-retrospective: optional

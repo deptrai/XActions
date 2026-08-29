@@ -36,9 +36,9 @@ export const DEFAULT_THREADS_DOC_IDS = {
   // Feed, Post & Comments doc_ids (Story 15.1)
   PROFILE_FEED: '6232751443445612',
   POST_DETAIL: '5587632691339264',
-  SEARCH_POSTS: null,
-  COMMENT_ROOTS: null,
-  COMMENT_REPLIES: null,
+  SEARCH_POSTS: '1314198888521447147', // BarcelonaSearchPostsQuery (candidate — capture required)
+  COMMENT_ROOTS: '1343493212639512438', // root comments query (candidate — capture required)
+  COMMENT_REPLIES: '1377060551033072606', // nested reply comments query (candidate — capture required)
 };
 
 /** @type {string} */
@@ -121,9 +121,10 @@ export class ThreadsCrawler extends AbstractCrawler {
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostComments(args, session),
     }));
 
+    // ── Story 15.1.2 Action: post_detail ──
     this.registerAction(/** @type {any} */ ({
       action: 'post_detail',
-      description: 'Scrape a single Threads post detail and optional comment tree',
+      description: 'Scrape thread post detail and optional comment tree',
       category: 'social',
       requiredArgs: ['postId'],
       optionalArgs: ['includeReplies', 'maxDepth', 'maxComments', 'after'],
@@ -380,94 +381,22 @@ export class ThreadsCrawler extends AbstractCrawler {
   }
 
   /**
-   * Find an object node in a tree that contains `value` as one of its string fields.
-   * Iterative BFS to avoid stack issues; used only for exact matching, not traversal.
-   * @param {any} root
-   * @param {string} value
-   * @param {number} [maxDepth=12]
-   * @returns {any | null}
-   */
-  #findNodeByValue(root, value, maxDepth = 12) {
-    if (!root || !value) return null;
-    const queue = [{ node: root, depth: 0 }];
-    const seen = new WeakSet();
-
-    while (queue.length > 0) {
-      const entry = queue.shift();
-      if (!entry) continue;
-      const { node, depth } = entry;
-      if (depth > maxDepth) continue;
-      if (!node || typeof node !== 'object') continue;
-      if (seen.has(node)) continue;
-      seen.add(node);
-
-      const matchKeys = ['code', 'pk', 'id', 'shortcode'];
-      if (matchKeys.some((key) => String(node[key] ?? '') === value)) {
-        return node;
-      }
-
-      for (const child of Array.isArray(node) ? node : Object.values(node)) {
-        if (child != null && typeof child === 'object') {
-          queue.push({ node: child, depth: depth + 1 });
-        }
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Find the first node in a tree whose `pk` or `id` is a numeric string.
-   * BFS with bounded depth to avoid picking arbitrary ids from unrelated nodes.
-   * @param {any} root
-   * @param {number} [maxDepth=12]
-   * @returns {string | null}
-   */
-  #findNumericPostId(root, maxDepth = 12) {
-    if (!root) return null;
-    const queue = [{ node: root, depth: 0 }];
-    const seen = new WeakSet();
-
-    while (queue.length > 0) {
-      const entry = queue.shift();
-      if (!entry) continue;
-      const { node, depth } = entry;
-      if (depth > maxDepth) continue;
-      if (!node || typeof node !== 'object') continue;
-      if (seen.has(node)) continue;
-      seen.add(node);
-
-      const id = node.pk || node.id;
-      if (id != null && /^\d+$/.test(String(id))) {
-        return String(id);
-      }
-
-      for (const child of Array.isArray(node) ? node : Object.values(node)) {
-        if (child != null && typeof child === 'object') {
-          queue.push({ node: child, depth: depth + 1 });
-        }
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Convert a Threads shortcode to numeric post id.
-   * Reverse base64 decoder using SHORTCODE_ALPHABET.
+   * Convert a Threads shortcode back to a numeric post id.
+   * Reverse of #numericIdToShortcode.
    * @param {string} shortcode
    * @returns {string | null}
    */
   #shortcodeToNumericId(shortcode) {
     if (!shortcode || typeof shortcode !== 'string') return null;
-    if (/^\d+$/.test(shortcode)) return null; // pure numeric is not a shortcode
-    if (shortcode.length < 4) return null; // too short to be a real encoded id
+    const clean = shortcode.trim();
     let n = 0n;
-    for (let i = 0; i < shortcode.length; i++) {
-      const char = shortcode[i];
+    for (let i = 0; i < clean.length; i++) {
+      const char = clean[i];
       const idx = SHORTCODE_ALPHABET.indexOf(char);
       if (idx === -1) return null;
-      n = (n * 64n) + BigInt(idx);
+      n = n * 64n + BigInt(idx);
     }
-    return n > 0n ? n.toString() : null;
+    return n.toString();
   }
 
   /**
@@ -611,162 +540,153 @@ export class ThreadsCrawler extends AbstractCrawler {
       },
     };
 
-    this.validateItem(item);
-
     return item;
   }
 
   /**
    * Extract clean post ID or shortcode from URL or raw ID string.
-   * Rejects non-Threads domains to prevent SSRF, but allows the configured baseUrl
-   * (used in local tests / mock servers).
    * @param {string} input
-   * @returns {{ code: string, isUrl: boolean }}
+   * @returns {string}
    */
   #extractPostCodeOrId(input) {
-    if (!input) return { code: '', isUrl: false };
+    if (!input) return '';
     const clean = String(input).trim();
-
-    const urlMatch = clean.match(/^https?:\/\/(?:www\.)?threads\.net\/(?:@[^/]+\/post|t)\/([^/?#]+)/i);
+    const urlMatch = clean.match(/(?:threads\.net\/(?:@[^/]+\/post|t)\/)([^/?#]+)/i);
     if (urlMatch && urlMatch[1]) {
-      return { code: urlMatch[1], isUrl: true };
+      return urlMatch[1];
     }
-
-    const localBase = this.client.baseUrl || '';
-    if (localBase && clean.startsWith(localBase)) {
-      const localMatch = clean.slice(localBase.length).match(/^\/(?:@[^/]+\/post|t)\/([^/?#]+)/i);
-      if (localMatch && localMatch[1]) {
-        return { code: localMatch[1], isUrl: true };
-      }
-    }
-
-    return { code: clean.replace(/^threads:/, ''), isUrl: false };
+    return clean.replace(/^threads:/, '');
   }
 
   /**
-   * Resolve numeric Threads post ID from URL, shortcode, or raw ID.
+   * Resolve any post ID, shortcode, or URL to a canonical numeric post ID.
    * @param {string} input
-   * @param {string} accountId
+   * @param {string} [accountId='threads-guest']
+   * @param {string | Record<string, string>} [cookies='']
    * @returns {Promise<string>}
    */
-  async #resolvePostId(input, accountId) {
-    if (!input) {
+  async #resolvePostId(input, accountId = 'threads-guest', cookies = '') {
+    if (!input || typeof input !== 'string') {
       throw new PlatformError({
         code: 'XACT_4001',
         type: ErrorTypes.INVALID_ARGS,
-        message: 'Missing required argument: postId',
+        message: 'Missing or invalid postId',
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         platform: 'threads',
       });
     }
 
-    const clean = String(input).trim().replace(/^threads:/, '');
-    if (!clean) {
-      throw new PlatformError({
-        code: 'XACT_4001',
-        type: ErrorTypes.INVALID_ARGS,
-        message: 'Missing or empty postId argument',
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: 'threads',
-      });
+    // SSRF guard for absolute URLs
+    if (/^https?:\/\//i.test(input)) {
+      try {
+        const parsed = new URL(input);
+        const host = parsed.hostname.toLowerCase();
+        const baseHost = new URL(this.client.baseUrl).hostname.toLowerCase();
+        if (host !== baseHost && host !== 'threads.net' && !host.endsWith('.threads.net')) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: 'postId URL must be a threads.net URL',
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+            platform: 'threads',
+          });
+        }
+      } catch (err) {
+        if (err instanceof PlatformError) throw err;
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'Invalid postId URL',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'threads',
+        });
+      }
     }
 
-    // 1. Direct numeric ID
+    const clean = input.trim();
     if (/^\d+$/.test(clean)) {
       return clean;
     }
 
-    // 2. Extract code from URL or shortcode
-    const { code, isUrl } = this.#extractPostCodeOrId(clean);
-    if (/^\d+$/.test(code)) {
-      return code;
+    const extracted = this.#extractPostCodeOrId(clean);
+    if (/^\d+$/.test(extracted)) {
+      return extracted;
     }
 
-    // 3. Try mathematical decode from shortcode
-    const decodedNumeric = this.#shortcodeToNumericId(code);
-    if (decodedNumeric) {
-      return decodedNumeric;
+    // Try decoding base64 shortcode to numeric ID
+    const decoded = this.#shortcodeToNumericId(extracted);
+    if (decoded && decoded !== '0') {
+      return decoded;
     }
 
-    // 4. SSR HTML fallback via /t/<code or path>
+    // SSR fallback: fetch post page and parse embedded JSON
+    const targetUrl = clean.startsWith('http://') || clean.startsWith('https://')
+      ? clean
+      : `${this.client.baseUrl}/t/${extracted}`;
+
     try {
-      let fetchPath;
-      if (isUrl) {
-        fetchPath = clean;
-      } else {
-        fetchPath = `${this.client.baseUrl}/t/${encodeURIComponent(code)}`;
-      }
-      const resp = /** @type {any} */ (await this.client.request('GET', fetchPath, {
+      const resp = /** @type {any} */ (await this.client.request('GET', targetUrl, {
         accountId,
+        headers: {
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        },
+        cookies,
       }));
 
       const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
 
-      if (html.includes("Sorry, this page isn't available") || html.includes('Page Not Found')) {
-        throw new PlatformError({
-          code: 'XACT_4041',
-          type: ErrorTypes.NOT_FOUND,
-          message: `Threads post ${code} not found`,
-          statusCode: 404,
-          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-          platform: 'threads',
-        });
-      }
-
-      // Parse application/json script tags or regex matches
-      const scriptMatches = html.matchAll(/<script\s+type="application\/json"[^>]*>(.*?)<\/script>/gis);
-      for (const sm of scriptMatches) {
+      // Check for post ID in script tags
+      const scriptRegex = /<script\s+type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi;
+      let match;
+      while ((match = scriptRegex.exec(html)) !== null) {
         try {
-          const jsonText = sm[1];
-          if (jsonText.includes(code) || jsonText.includes('"pk"') || jsonText.includes('"post"')) {
-            const parsed = JSON.parse(jsonText);
-
-            // Try fast exact match first: find a node whose `code` or `pk` equals `code`.
-            const matchingNode = this.#findNodeByValue(parsed, code);
-            if (matchingNode?.pk || matchingNode?.id) {
-              return String(matchingNode.pk || matchingNode.id);
+          const json = JSON.parse(match[1]);
+          /**
+           * @param {any} obj
+           * @returns {string | null}
+           */
+          const findPostPk = (obj) => {
+            if (!obj || typeof obj !== 'object') return null;
+            if (extracted && obj.code === extracted && (obj.pk || obj.id)) {
+              return String(obj.pk || obj.id);
             }
+            if (extracted && obj.post && obj.post.code === extracted && (obj.post.pk || obj.post.id)) {
+              return String(obj.post.pk || obj.post.id);
+            }
+            for (const key of Object.keys(obj)) {
+              if (typeof obj[key] === 'object') {
+                const found = findPostPk(obj[key]);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
 
-            // Fallback: find any Barcelona node with a numeric post id.
-            const numericPost = this.#findNumericPostId(parsed);
-            if (numericPost) return numericPost;
+          const pk = findPostPk(json);
+          if (pk && /^\d+$/.test(pk)) {
+            return pk;
           }
         } catch {}
       }
 
-      // Contextual regex fallback: require a nearby post marker so we don't grab
-      // a random user / thread / media id.
-      const postIdMatch = html.match(/"post_id"\s*:\s*"(\d+)"/);
-      if (postIdMatch && postIdMatch[1]) {
-        return postIdMatch[1];
-      }
-
-      const pkMatch = html.match(/"pk"\s*:\s*"(\d+)"/);
+      // Check regex patterns in HTML
+      const pkMatch = html.match(/"post_id":"(\d+)"/) ||
+                      html.match(/"pk":"(\d+)"/) ||
+                      html.match(/threads:\/\/post\?id=(\d+)/);
       if (pkMatch && pkMatch[1]) {
         return pkMatch[1];
       }
     } catch (err) {
-      const anyErr = /** @type {any} */ (err);
-      if (anyErr?.statusCode === 404 || anyErr?.code === 'XACT_4041') {
-        throw new PlatformError({
-          code: 'XACT_4041',
-          type: ErrorTypes.NOT_FOUND,
-          message: `Threads post ${code} not found`,
-          statusCode: 404,
-          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-          platform: 'threads',
-        });
-      }
-      throw err;
+      if (err instanceof PlatformError) throw err;
     }
 
     throw new PlatformError({
       code: 'XACT_4041',
-      type: ErrorTypes.NOT_FOUND,
-      message: `Threads post ${code} could not be resolved to a numeric ID`,
-      statusCode: 404,
+      type: ErrorTypes.INVALID_ARGS,
+      message: `Post not found: ${input}`,
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
       platform: 'threads',
+      accountId,
     });
   }
 
@@ -988,67 +908,86 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId || 'threads-guest';
+    const cookies = session?.cookies || '';
     const count = this.#clampCount(args.count, 1, 100);
 
     if (this.docIds.SEARCH_POSTS) {
-      const res = await this.client.requestGraphQl(this.docIds.SEARCH_POSTS, {
-        query: args.query,
-        first: count,
-        after: args.cursor || null,
-        serp_type: args.searchType || 'default',
-      }, { accountId });
+      try {
+        const res = await this.client.requestGraphQl(this.docIds.SEARCH_POSTS, {
+          query: args.query,
+          first: count,
+          after: args.cursor || null,
+          serp_type: args.searchType || 'default',
+        }, { accountId, cookies });
 
-      const rawThreads = res?.data?.mediaData?.threads || res?.data?.searchResults?.edges || [];
-      const posts = [];
-      for (const t of rawThreads) {
-        for (const rawPost of this.#flattenThreadItems(t)) {
-          try {
-            const post = this.#normalizePostItem(rawPost);
-            if (!post) continue;
-            this.validateItem(post);
-            posts.push(post);
-          } catch {
-            // Skip invalid posts instead of aborting the whole batch.
+        const rawThreads = res?.data?.searchResults?.threads ||
+                          res?.data?.searchResults?.edges ||
+                          res?.data?.mediaData?.threads ||
+                          res?.data?.edges ||
+                          [];
+        const posts = [];
+        for (const t of rawThreads) {
+          for (const rawPost of this.#flattenThreadItems(t)) {
+            try {
+              const post = this.#normalizePostItem(rawPost);
+              if (!post) continue;
+              if (post.metadata && typeof post.metadata === 'object') {
+                /** @type {Record<string, any>} */ (post.metadata).sourceMethod = 'graphql';
+              }
+              this.validateItem(post);
+              posts.push(post);
+            } catch {
+              // Skip invalid posts instead of aborting the whole batch.
+            }
           }
         }
+
+        const pageInfo = this.#normalizePageInfo(res?.data?.searchResults?.page_info || res?.data?.mediaData?.page_info);
+        if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
+          await this.store.storeBatch(posts, { upsert: true });
+        }
+
+        await this.#emitCheckpointAndStream({
+          targetType: 'search',
+          targetKey: args.query,
+          cursor: pageInfo.end_cursor,
+          items: posts,
+          hasMore: pageInfo.has_next_page,
+        });
+
+        return { posts, pageInfo };
+      } catch (err) {
+        console.warn(`⚠️ [THREADS] GraphQL search failed, falling back to SSR: ${err instanceof Error ? err.message : String(err)}`);
       }
-
-      if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-        await this.store.storeBatch(posts, { upsert: true });
-      }
-
-      const pageInfo = this.#normalizePageInfo(res?.data?.mediaData?.page_info || res?.data?.searchResults?.page_info);
-      await this.#emitCheckpointAndStream({
-        targetType: 'search',
-        targetKey: args.query,
-        cursor: pageInfo.end_cursor,
-        items: posts,
-        hasMore: pageInfo.has_next_page,
-      });
-
-      return { posts, pageInfo };
     }
 
     // SSR HTTP Search Fallback
     const searchUrl = `${this.client.baseUrl}/search?q=${encodeURIComponent(args.query)}&serp_type=${encodeURIComponent(args.searchType || 'default')}`;
-    const resp = /** @type {any} */ (await this.client.request('GET', searchUrl, { accountId }));
+    const resp = /** @type {any} */ (await this.client.request('GET', searchUrl, { accountId, cookies }));
     const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
 
     const posts = [];
     let nextCursor = null;
+    /** @type {any} */
+    let ssrPageInfo = null;
     const scriptMatches = [...html.matchAll(/<script type="application\/json"[^>]*>(.*?)<\/script>/gs)];
     for (const m of scriptMatches) {
       if (!m[1]) continue;
       try {
         const parsed = JSON.parse(m[1]);
         const threads = parsed?.raw_data?.searchResults?.edges ||
+                        parsed?.raw_data?.searchResults?.threads ||
                         parsed?.mediaData?.threads ||
                         parsed?.data?.searchResults?.edges ||
+                        parsed?.data?.searchResults?.threads ||
+                        parsed?.searchResults?.threads ||
+                        parsed?.searchResults?.edges ||
                         [];
         const pageInfo =
           parsed?.raw_data?.searchResults?.page_info ||
           parsed?.mediaData?.page_info ||
           parsed?.data?.searchResults?.page_info ||
+          parsed?.searchResults?.page_info ||
           null;
         if (Array.isArray(threads) && threads.length > 0) {
           for (const t of threads) {
@@ -1064,6 +1003,7 @@ export class ThreadsCrawler extends AbstractCrawler {
             }
           }
           nextCursor = pageInfo?.end_cursor || null;
+          ssrPageInfo = pageInfo;
           break;
         }
       } catch {}
@@ -1080,9 +1020,7 @@ export class ThreadsCrawler extends AbstractCrawler {
       await this.store.storeBatch(sliced, { upsert: true });
     }
 
-    const pageInfo = nextCursor
-      ? { has_next_page: true, end_cursor: nextCursor }
-      : { has_next_page: false, end_cursor: null };
+    const pageInfo = this.#normalizePageInfo(ssrPageInfo);
 
     await this.#emitCheckpointAndStream({
       targetType: 'search',
@@ -1129,9 +1067,17 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId || 'threads-guest';
-    const rootPostId = await this.#resolvePostId(args.postId, accountId);
-    const maxDepth = Math.max(0, Math.min(args.maxDepth ?? 3, 5));
+    const cookies = session?.cookies || '';
+    const rootPostId = await this.#resolvePostId(args.postId, accountId, cookies);
+    const requestedDepth = Math.max(0, Math.min(args.maxDepth ?? 3, 5));
     const maxComments = Math.max(1, Math.min(args.maxComments ?? 500, 2000));
+
+    // Clamp depth when reply doc_id is not available; this matches the graceful
+    // degradation contract in AC-3/AC-4 so callers never crash on missing replies.
+    const maxDepth = this.docIds.COMMENT_REPLIES ? requestedDepth : 0;
+    if (!this.docIds.COMMENT_REPLIES && requestedDepth > 0) {
+      console.warn('⚠️ [THREADS] COMMENT_REPLIES doc_id not configured; clamping maxDepth to 0.');
+    }
 
     // Per-call cursor set to prevent empty/stuck-cursor infinite loops.
     const seenCursors = new Set();
@@ -1147,12 +1093,8 @@ export class ThreadsCrawler extends AbstractCrawler {
       if (isReply) {
         docId = this.docIds.COMMENT_REPLIES;
         if (!docId) {
-          throw new PlatformError({
-            code: 'XACT_5000',
-            type: ErrorTypes.INTERNAL,
-            message: 'COMMENT_REPLIES doc_id not configured; cannot fetch reply layer',
-            suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
-          });
+          console.warn('⚠️ [THREADS] COMMENT_REPLIES doc_id not configured; skipping reply layer.');
+          return { comments: [], pageInfo: { has_next_page: false, end_cursor: null }, note: 'COMMENT_REPLIES not configured; reply layer skipped.' };
         }
       } else {
         docId = this.docIds.COMMENT_ROOTS || this.docIds.POST_DETAIL;
@@ -1180,73 +1122,106 @@ export class ThreadsCrawler extends AbstractCrawler {
         variables.parentId = parentCommentId;
       }
 
-      const res = await this.client.requestGraphQl(docId, variables, { accountId });
+      /**
+       * Execute a GraphQL request and, for root-level failures, fall back to
+       * POST_DETAIL once. This preserves the AC-4 graceful-degradation contract
+       * without mutating `this.docIds` or looping on the same failing doc_id.
+       * @param {string} docId
+       * @returns {Promise<any>}
+       */
+      const doGraphQl = async (docId) => {
+        try {
+          return await this.client.requestGraphQl(docId, variables, { accountId, cookies });
+        } catch (err) {
+          if (!isReply && docId !== this.docIds.POST_DETAIL && this.docIds.POST_DETAIL) {
+            console.warn('⚠️ [THREADS] COMMENT_ROOTS GraphQL failed; falling back to POST_DETAIL.');
+            return this.client.requestGraphQl(this.docIds.POST_DETAIL, variables, { accountId, cookies });
+          }
+          throw err;
+        }
+      };
 
-      // POST_DETAIL (BarcelonaPostPageQuery) is a flat fallback for root comments only.
-      if (!isReply && docId === (this.docIds.POST_DETAIL || DEFAULT_THREADS_DOC_IDS.POST_DETAIL)) {
-        const { comments, pageInfo } = this.#extractFallbackRootComments(res);
-        return { comments, pageInfo: this.#normalizePageInfo(pageInfo, seenCursors) };
-      }
+      try {
+        const res = await doGraphQl(docId);
 
-      // Support BarcelonaPostPageQuery format and connection format.
-      const topData = res?.data?.data && (res.data.data.reply_threads || res.data.data.node)
-        ? res.data.data
-        : res?.data;
+        // POST_DETAIL (BarcelonaPostPageQuery) is a flat fallback for root comments only.
+        if (!isReply && docId === (this.docIds.POST_DETAIL || DEFAULT_THREADS_DOC_IDS.POST_DETAIL)) {
+          const { comments, pageInfo } = this.#extractFallbackRootComments(res);
+          return {
+            comments,
+            pageInfo: this.#normalizePageInfo(pageInfo, seenCursors),
+            note: 'Using POST_DETAIL fallback; only root-level comments returned.',
+          };
+        }
 
-      if (Array.isArray(topData?.reply_threads)) {
-        const comments = [];
-        for (const t of topData.reply_threads) {
-          const items = t.thread_items || [t];
-          for (const item of items) {
-            if (item?.post) {
-              if (isReply && parentCommentId && item.post.parentId === undefined) {
-                item.post.parentId = parentCommentId;
+        // Support BarcelonaPostPageQuery format and connection format.
+        const topData = res?.data?.data && (res.data.data.reply_threads || res.data.data.node)
+          ? res.data.data
+          : res?.data;
+
+        if (Array.isArray(topData?.reply_threads)) {
+          const comments = [];
+          for (const t of topData.reply_threads) {
+            const items = t.thread_items || [t];
+            for (const item of items) {
+              if (item?.post) {
+                if (isReply && parentCommentId && item.post.parentId === undefined) {
+                  item.post.parentId = parentCommentId;
+                }
+                comments.push(item.post);
               }
-              comments.push(item.post);
             }
           }
+          return {
+            comments,
+            pageInfo: this.#normalizePageInfo({ has_next_page: false, end_cursor: null }, seenCursors),
+          };
         }
+
+        const connection = isReply
+          ? (topData?.node?.replies_connection || topData?.replies_connection)
+          : (topData?.node?.comment_rendering_instance_for_feed_location?.comments || topData?.comments);
+
+        /**
+         * Defensively unwrap nested `edge.node` wrappers.
+         * @param {any} edge
+         * @returns {any}
+         */
+        const unwrapNode = (edge) => {
+          let n = edge?.node;
+          while (
+            n &&
+            typeof n === 'object' &&
+            n.node &&
+            !Array.isArray(n.node) &&
+            n.pk === undefined &&
+            n.id === undefined
+          ) {
+            n = n.node;
+          }
+          return n;
+        };
+
+        const comments = (connection?.edges || []).map(unwrapNode).filter(Boolean);
+        if (isReply && parentCommentId) {
+          for (const raw of comments) {
+            if (raw && raw.parentId === undefined) raw.parentId = parentCommentId;
+          }
+        }
+
         return {
           comments,
-          pageInfo: this.#normalizePageInfo({ has_next_page: false, end_cursor: null }, seenCursors),
+          pageInfo: this.#normalizePageInfo(connection?.page_info, seenCursors),
         };
-      }
-
-      const connection = isReply
-        ? (topData?.node?.replies_connection || topData?.replies_connection)
-        : (topData?.node?.comment_rendering_instance_for_feed_location?.comments || topData?.comments);
-
-      /**
-       * Defensively unwrap nested `edge.node` wrappers.
-       * @param {any} edge
-       * @returns {any}
-       */
-      const unwrapNode = (edge) => {
-        let n = edge?.node;
-        while (
-          n &&
-          typeof n === 'object' &&
-          n.node &&
-          !Array.isArray(n.node) &&
-          n.pk === undefined &&
-          n.id === undefined
-        ) {
-          n = n.node;
+      } catch (err) {
+        if (isReply) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn(`⚠️ [THREADS] GraphQL reply layer failed for ${parentCommentId}: ${message}`);
+          return { comments: [], pageInfo: { has_next_page: false, end_cursor: null }, note: `Reply layer failed: ${message}` };
         }
-        return n;
-      };
 
-      const comments = (connection?.edges || []).map(unwrapNode).filter(Boolean);
-      if (isReply && parentCommentId) {
-        for (const raw of comments) {
-          if (raw && raw.parentId === undefined) raw.parentId = parentCommentId;
-        }
+        throw err;
       }
-
-      return {
-        comments,
-        pageInfo: this.#normalizePageInfo(connection?.page_info, seenCursors),
-      };
     };
 
     const extractor = new CommentTreeExtractor(
@@ -1282,15 +1257,15 @@ export class ThreadsCrawler extends AbstractCrawler {
   async init() {}
 
   /**
-   * Scrape a single Threads post detail and optional comment tree.
+   * Scrape thread post detail and optional comment tree for a post by ID, shortcode, or URL.
    * @param {Object} args
-   * @param {string} args.postId
+   * @param {string} [args.postId]
    * @param {boolean} [args.includeReplies=false]
    * @param {number} [args.maxDepth=3]
    * @param {number} [args.maxComments=500]
    * @param {string} [args.after]
    * @param {Record<string, any>} [session={}]
-   * @returns {Promise<{ post: import('../../../core/types.js').PostItem, comments?: import('../../../core/types.js').CommentItem[], pageInfo?: any }>}
+   * @returns {Promise<any>}
    */
   async getPostDetail(args, session = {}) {
     if (!args?.postId) {
@@ -1304,7 +1279,8 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId || 'threads-guest';
-    const numericPostId = await this.#resolvePostId(args.postId, accountId);
+    const cookies = session?.cookies || '';
+    const numericPostId = await this.#resolvePostId(args.postId, accountId, cookies);
 
     const docId = this.docIds.POST_DETAIL || DEFAULT_THREADS_DOC_IDS.POST_DETAIL;
     if (!docId) {
@@ -1314,80 +1290,93 @@ export class ThreadsCrawler extends AbstractCrawler {
         message: 'POST_DETAIL doc_id is not configured',
         suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
         platform: 'threads',
+        accountId,
       });
     }
 
-    const res = await this.client.requestGraphQl(
-      docId,
-      { postID: numericPostId, post_id: numericPostId },
-      { accountId }
-    );
+    const variables = {
+      postID: numericPostId,
+      post_id: numericPostId,
+    };
 
-    const topData = res?.data?.data && typeof res.data.data === 'object'
+    const res = await this.client.requestGraphQl(docId, variables, { accountId, cookies });
+    const topData = res?.data?.data && (res.data.data.containing_thread || res.data.data.reply_threads)
       ? res.data.data
-      : res?.data;
+      : (res?.data || {});
 
-    let rootRawPost = null;
+    // Search containing_thread first
+    let rawRootPost = null;
+    let fallbackPost = null;
 
-    // 1. Search containing_thread
-    const containingItems = topData?.containing_thread?.thread_items || [];
-    for (const item of containingItems) {
-      const p = item?.post || item;
-      if (p && (String(p.pk || p.id) === numericPostId || p.code === args.postId)) {
-        rootRawPost = p;
-        break;
+    if (topData.containing_thread) {
+      const items = Array.isArray(topData.containing_thread.thread_items)
+        ? topData.containing_thread.thread_items
+        : (Array.isArray(topData.containing_thread.items) ? topData.containing_thread.items : [topData.containing_thread]);
+      for (const item of items) {
+        const p = item?.post || (item?.pk || item?.id ? item : null);
+        if (p) {
+          if (String(p.pk || p.id) === numericPostId) {
+            rawRootPost = p;
+            break;
+          }
+          if (!fallbackPost) {
+            fallbackPost = p;
+          }
+        }
       }
     }
 
-    // 2. Search reply_threads if not found in containing_thread
-    if (!rootRawPost && Array.isArray(topData?.reply_threads)) {
-      for (const t of topData.reply_threads) {
-        const items = t.thread_items || [t];
+    // Search reply_threads if exact match not found in containing_thread
+    if (!rawRootPost && Array.isArray(topData.reply_threads)) {
+      for (const thread of topData.reply_threads) {
+        const items = Array.isArray(thread.thread_items) ? thread.thread_items : [thread];
         for (const item of items) {
-          const p = item?.post || item;
-          if (p && (String(p.pk || p.id) === numericPostId || p.code === args.postId)) {
-            rootRawPost = p;
+          const p = item?.post || (item?.pk || item?.id ? item : null);
+          if (p && String(p.pk || p.id) === numericPostId) {
+            rawRootPost = p;
             break;
           }
         }
-        if (rootRawPost) break;
+        if (rawRootPost) break;
       }
     }
 
-    if (!rootRawPost) {
+    if (!rawRootPost && fallbackPost) {
+      rawRootPost = fallbackPost;
+    }
+
+    if (!rawRootPost) {
       throw new PlatformError({
         code: 'XACT_4041',
-        type: ErrorTypes.NOT_FOUND,
-        message: `Threads post ${args.postId} not found in GraphQL response`,
-        statusCode: 404,
+        type: 'not_found',
+        message: `Post ${numericPostId} not found in GraphQL response`,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         platform: 'threads',
+        accountId,
       });
     }
 
-    const post = this.#normalizePostItem(rootRawPost);
+    const post = this.#normalizePostItem(rawRootPost);
     if (!post) {
       throw new PlatformError({
-        code: 'XACT_5000',
-        type: ErrorTypes.INTERNAL,
-        message: `Failed to normalize Threads post ${args.postId}`,
-        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        code: 'XACT_4041',
+        type: 'not_found',
+        message: `Failed to normalize post ${numericPostId}`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         platform: 'threads',
+        accountId,
       });
     }
-
-    this.validateItem(post);
 
     if (post.metadata && typeof post.metadata === 'object') {
       /** @type {Record<string, any>} */ (post.metadata).sourceMethod = 'post_detail';
     }
+    this.validateItem(post);
 
-    // Persist root post
     if (this.store && typeof this.store.storeBatch === 'function') {
       await this.store.storeBatch([post], { upsert: true });
     }
 
-    // Checkpoint & thin event for root post
     await this.#emitCheckpointAndStream({
       targetType: 'post_detail',
       targetKey: numericPostId,
@@ -1395,54 +1384,40 @@ export class ThreadsCrawler extends AbstractCrawler {
       hasMore: false,
     });
 
-    /** @type {{ post: import('../../../core/types.js').PostItem, comments?: import('../../../core/types.js').CommentItem[], pageInfo?: any }} */
-    const result = { post };
-
-    // 4. Optional reply tree
     if (args.includeReplies) {
-      let maxDepth = Math.max(0, Math.min(args.maxDepth ?? 3, 5));
-      if (!this.docIds.COMMENT_REPLIES && maxDepth > 0) {
-        console.warn('⚠️ [THREADS] Nested replies deferred to Story 15.1.3; limiting to root-level comments.');
-        maxDepth = 0;
+      const effectiveMaxDepth = this.docIds.COMMENT_REPLIES ? (args.maxDepth ?? 3) : 0;
+      if (!this.docIds.COMMENT_REPLIES && (args.maxDepth ?? 3) > 0) {
+        console.warn('⚠️ [THREADS] COMMENT_REPLIES doc_id not configured; returning root-level comments only.');
       }
 
-      if (!this.docIds.COMMENT_REPLIES && this.docIds.COMMENT_ROOTS) {
-        // maxDepth 0 still fetches root-level comments via the root comment doc_id.
-      } else if (!this.docIds.COMMENT_REPLIES && !this.docIds.COMMENT_ROOTS && !this.docIds.POST_DETAIL) {
-        console.warn('⚠️ [THREADS] No comment doc_ids configured; comments unavailable in this environment.');
-        result.comments = [];
-        result.pageInfo = { has_next_page: false, end_cursor: null };
-        return result;
-      }
+      const commentsResult = await this.getPostComments({
+        ...args,
+        postId: numericPostId,
+        maxDepth: effectiveMaxDepth,
+      }, session);
 
-      const commentsResult = await this.getPostComments(
-        {
-          postId: numericPostId,
-          maxDepth,
-          maxComments: args.maxComments,
-          after: args.after,
-        },
-        session
-      );
-
-      result.comments = commentsResult.comments;
-      result.pageInfo = commentsResult.pageInfo;
+      return {
+        post,
+        comments: commentsResult.comments,
+        pageInfo: commentsResult.pageInfo,
+      };
     }
 
-    return result;
+    return { post };
   }
 
   /**
-   * @param {Object} _args
+   * @param {Object} args
    * @returns {Promise<import('../../../core/types.js').CommentItem[]>}
    */
-  async getComments(_args) {
-    throw new PlatformError({
-      code: 'XACT_5000',
-      type: ErrorTypes.INTERNAL,
-      message: 'getComments is not implemented; use get_post_comments',
-      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-    });
+  /**
+   * @param {Object} args
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<import('../../../core/types.js').CommentItem[]>}
+   */
+  async getComments(args, session = {}) {
+    const res = await this.getPostComments(/** @type {any} */ (args), session);
+    return res.comments;
   }
 
   /**
