@@ -2,4 +2,4 @@
 description: Deprecated — forwards to bmad-review.
 ---
 
-@skills/bmad-editorial-review-structure
+@skills/bmad-editorial-review
