@@ -16,6 +16,17 @@ baseline_commit: "51f006bd"
 
 Status: ready-for-dev
 
+## ⚠️ Critical Constraints / Architecture Variance
+
+The following decisions are non-negotiable and override any earlier language in this story or external references:
+
+1. **Build on top of Stories 15.1, 15.1.1, 15.1.2, and 15.1.3 (all implemented).** `ThreadsClient` and `ThreadsCrawler` already exist in `src/scrapers/social/threads/`. This story *only* performs caller migration, unified dispatcher wiring, package exports, MCP/CLI tool cutover, and deprecation marking. Do not rewrite or restructure crawler actions.
+2. **Unified `scrape('threads', ...)` Must Use Hybrid `ThreadsCrawler`.** `src/scrapers/index.js` must dispatch `threads` calls directly to `ThreadsCrawler.start({ action, args, session })` without launching Puppeteer browser instances, following the same pattern established for `facebook` in Story 13.10.
+3. **Backward Compatibility & Action Mapping.** Existing action aliases (`tweets`, `timeline`, `feed`, `user_feed`, `posts`, `post`, `post_detail`, `comments`, `post_comments`, `profile`, `followers`, `following`, `search`) must be mapped to corresponding `ThreadsCrawler` actions seamlessly.
+4. **Zero Mocks Testing (AD-10).** All integration test suites in `tests/scrapers/social/threads/` must use local `node:http` servers and real HTTP request pipelines (`got-scraping`). No `vi.fn`, stubs, or fake HTTP clients.
+5. **Telemetry & Security (NFR-4).** Security tokens (`lsd`, `csrftoken`, `fb_dtsg`) and raw cookies must never be logged or exposed in error envelopes.
+6. **Legacy Code Retention (Epic 20.2).** Do NOT delete `src/scrapers/threads/` directory in this story. Mark it as `@deprecated` and update `docs/deprecation-plan.md` to `deprecated-planned` for Phase 1. Physical file deletion is scheduled for Epic 20.2.
+
 ## Story
 
 As a **XActions Platform Engineer**,  
@@ -32,63 +43,122 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
 
 - **Trong phạm vi 15.1.4:**
   - Cập nhật `src/scrapers/index.js` unified `scrape()` để khi `platform === 'threads'` thì chuyển sang `ThreadsCrawler.start()` (tương tự như `facebook` trong Story 13.10) thay vì gọi legacy Puppeteer `scrapeProfile` / `scrapeTweets` / `scrapeFollowers` / `scrapeFollowing` / `scrapeSearch` / `scrapePost`.
-  - Cập nhật `package.json` `exports` để expose `./scrapers/social/threads` (hoặc đảm bảo `./scrapers/threads` và `./scrapers/social` trỏ đúng vào hybrid barrel).
+  - Cập nhật `package.json` `exports` để expose `./scrapers/social/threads` và `./scrapers/social`.
   - Cập nhật `src/mcp/server.js` cho tất cả các tools (`x_crawl_post`, `x_crawl_user_timeline`, `x_crawl_comments`, `x_crawl_profile`, `x_crawl_search`, `x_actions_list`) để khi `platform === 'threads'` thì dispatch thẳng vào `ThreadsCrawler`.
   - Cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Threads legacy `src/scrapers/threads/` và ghi rõ dependency vào Story 15.1.4.
+  - Gắn `@deprecated` JSDoc và `// LEGACY — see docs/deprecation-plan.md` cho `src/scrapers/threads/index.js`.
   - Thêm test suite integration `tests/scrapers/social/threads/caller-migration.test.js` để xác thực `scrape('threads', ...)` và package exports dispatch đúng sang hybrid `ThreadsCrawler` mà không khởi chạy Puppeteer.
 
 - **Không trong phạm vi 15.1.4:**
   - Xóa vật lý thư mục `src/scrapers/threads/` (thuộc Epic 20.2 Legacy Scraper Code Decommissioning).
   - Thay đổi schema Prisma hay Redis Stream protocols.
 
+## Sources
+
+- `_bmad-output/planning-artifacts/epics.md` — Epic 15, Story 15.1.4 [dòng 826-838]
+- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 (Tiered Signer), AD-2 (AbstractCrawler/ActionRegistry), AD-3 (Proxy Strategy), AD-10 (No Mocks Testing), AD-14 (Error Envelope)
+- `_bmad-output/implementation-artifacts/15-1-threads-scraper-adapter-meta-internal-graphql.md` — Story 15.1 base hybrid engine
+- `_bmad-output/implementation-artifacts/15-1-1-threads-hybrid-profile-followers-following.md` — Story 15.1.1 profile & connection actions
+- `_bmad-output/implementation-artifacts/15-1-2-threads-hybrid-post-detail-comment-tree.md` — Story 15.1.2 post_detail & shortcode resolution
+- `_bmad-output/implementation-artifacts/15-1-3-threads-hybrid-docid-hardening-search-comments.md` — Story 15.1.3 search & comments doc_id hardening
+- `_bmad-output/implementation-artifacts/13-10-facebook-hybrid-integration-caller-migration.md` — Model implementation pattern for hybrid caller migration
+- `src/scrapers/social/threads/crawler.js` — `ThreadsCrawler` class & action registry
+- `src/scrapers/social/threads/client.js` — `ThreadsClient` Meta GraphQL client
+- `src/scrapers/social/threads/index.js` — Social Threads barrel
+- `src/scrapers/index.js` — Unified `scrape()` dispatcher
+- `package.json` — Package exports definition
+- `docs/deprecation-plan.md` — Deprecation status tracking
+
 ## Acceptance Criteria
 
-### AC-1: Unified `scrape("threads", action, options)` Dispatches to `ThreadsCrawler`
+### AC-1: Unified `scrape("threads", action, options)` Hybrid Dispatch
 - **Given** `scrape(platform, action, options)` trong `src/scrapers/index.js`
 - **When** `platform === 'threads'`
-- **Then** `scrape()` chuyển hướng trực tiếp sang `ThreadsCrawler.start({ action, args, session })` mà không khởi chạy Puppeteer browser
-- **And** các action mapping được hỗ trợ:
-  - `profile` ➔ `ThreadsCrawler.getProfile({ username })`
-  - `feed` / `user_feed` / `timeline` / `tweets` ➔ `ThreadsCrawler.getUserFeed({ username, count, cursor })`
-  - `post` / `post_detail` ➔ `ThreadsCrawler.getPostDetail({ postId, includeReplies, maxDepth, maxComments })`
-  - `comments` / `post_comments` ➔ `ThreadsCrawler.getPostComments({ postId, maxDepth, maxComments, after })`
-  - `search` ➔ `ThreadsCrawler.searchPosts({ query, count, cursor, searchType })`
-  - `followers` ➔ `ThreadsCrawler.getFollowers({ username, count, cursor })`
-  - `following` ➔ `ThreadsCrawler.getFollowing({ username, count, cursor })`
-- **And** trả về kết quả chuẩn hóa tương thích `ProfileItem`, `PostItem`, hoặc `{ post, comments }`
+- **Then** `src/scrapers/index.js` KHÔNG tạo Puppeteer page qua `createBrowser`/`createPage`
+- **And** nó khởi tạo `ThreadsCrawler` (với `ThreadsClient` + proxy/governor/accountPool nếu có)
+- **And** gọi `crawler.start({ action: mappedAction, args, session })` với `session: { accountId: options.accountId || 'threads-guest', cookies: options.authCookie || options.cookies }`
+- **And** `crawler.cleanup()` được gọi khi hoàn thành nếu `options.autoClose !== false`
+- **And** trả về kết quả chuẩn hóa tương thích `ProfileItem`, `PostItem[]`, `CommentItem[]`, hoặc `{ post, comments }`
 
-### AC-2: Package.json Exports & Module Resolution
+### AC-2: Action Name Mapping Matrix for `scrape('threads', ...)`
+
+| `scrape()` action | `ThreadsCrawler` action | Tham số chuyển đổi (`args`) | Ghi chú |
+|---|---|---|---|
+| `profile` | `profile` | `{ username: options.username \|\| target }` | Hỗ trợ username có/không có `@` |
+| `feed` / `user_feed` / `timeline` / `tweets` | `get_user_feed` | `{ username: options.username \|\| target, count: options.limit \|\| options.count, cursor: options.cursor }` | Mặc định count = 20 |
+| `post` / `post_detail` | `post_detail` | `{ postId: options.postId \|\| options.url \|\| target, includeReplies: options.includeReplies !== false, maxDepth: options.maxDepth, maxComments: options.maxComments }` | Hỗ trợ numeric ID, shortcode, URL |
+| `comments` / `post_comments` | `get_post_comments` | `{ postId: options.postId \|\| options.url \|\| target, maxDepth: options.maxDepth, maxComments: options.maxComments, after: options.cursor }` | Multi-depth comment tree |
+| `search` | `search` | `{ query: options.query \|\| target, count: options.limit \|\| options.count, cursor: options.cursor, searchType: options.searchType }` | GraphQL-first + SSR fallback |
+| `followers` | `followers` | `{ username: options.username \|\| target, count: options.limit \|\| options.count, cursor: options.cursor }` | Trả về danh sách profiles & limitation note |
+| `following` | `following` | `{ username: options.username \|\| target, count: options.limit \|\| options.count, cursor: options.cursor }` | Trả về danh sách profiles & limitation note |
+
+### AC-3: Package.json Exports & Module Resolution
 - **Given** `package.json` của project XActions
 - **When** consumer import từ `xactions/scrapers/social/threads` hoặc `xactions/scrapers/social`
-- **Then** `package.json` chứa exports field `./scrapers/social/threads` map tới `./src/scrapers/social/threads/index.js`
-- **And** `DEFAULT_THREADS_DOC_IDS`, `ThreadsCrawler`, `ThreadsClient`, `ThreadsPlatformResponseValidator` và normalizer helpers được export đầy đủ
+- **Then** `package.json` chứa exports field:
+  - `"./scrapers/social/threads": "./src/scrapers/social/threads/index.js"`
+  - `"./scrapers/social": "./src/scrapers/social/index.js"`
+- **And** `DEFAULT_THREADS_DOC_IDS`, `ThreadsCrawler`, `ThreadsClient`, `ThreadsPlatformResponseValidator`, `threadsNamespacedProfileId`, `normalizeThreadsProfile`, `profileItemToPostItem` được export đầy đủ
 
-### AC-3: Deprecation Tracking & Markers
+### AC-4: Deprecation Tracking & Markers
 - **Given** `docs/deprecation-plan.md` và `src/scrapers/threads/index.js`
 - **When** Story 15.1.4 hoàn thành
-- **Then** `docs/deprecation-plan.md` được cập nhật status `deprecated-planned` cho Threads legacy
+- **Then** `docs/deprecation-plan.md` cập nhật status `deprecated-planned` cho toàn bộ `src/scrapers/threads/`
 - **And** `src/scrapers/threads/index.js` có `@deprecated` JSDoc và `// LEGACY — see docs/deprecation-plan.md`
+- **And** ghi rõ dependency vào Story 15.1.4 trong bảng mapping
 
-### AC-4: Integration Test Suite (No-Mocks ATDD)
+### AC-5: Integration Test Suite (No-Mocks ATDD)
 - **Given** `tests/scrapers/social/threads/caller-migration.test.js`
 - **When** chạy qua `npx vitest run tests/scrapers/social/threads/caller-migration.test.js`
 - **Then** tất cả các test cases xác nhận:
-  - `scrape('threads', 'profile', ...)` gọi `ThreadsCrawler`
-  - `scrape('threads', 'search', ...)` gọi `ThreadsCrawler`
-  - `scrape('threads', 'post_detail', ...)` gọi `ThreadsCrawler`
-  - `scrape('threads', 'comments', ...)` gọi `ThreadsCrawler`
-  - `scrape('threads', 'followers', ...)` gọi `ThreadsCrawler`
-  - Không có process Puppeteer nào được spawn khi thực hiện các action trên
+  - `scrape('threads', 'profile', ...)` dispatches to `ThreadsCrawler.getProfile`
+  - `scrape('threads', 'timeline', ...)` dispatches to `ThreadsCrawler.getUserFeed`
+  - `scrape('threads', 'post_detail', ...)` dispatches to `ThreadsCrawler.getPostDetail`
+  - `scrape('threads', 'comments', ...)` dispatches to `ThreadsCrawler.getPostComments`
+  - `scrape('threads', 'search', ...)` dispatches to `ThreadsCrawler.searchPosts`
+  - `scrape('threads', 'followers', ...)` dispatches to `ThreadsCrawler.getFollowers`
+  - `scrape('threads', 'following', ...)` dispatches to `ThreadsCrawler.getFollowing`
+  - Không có Puppeteer browser process nào được launch khi chạy `scrape('threads', ...)`
 
 ## Developer Context & Implementation Guidance
 
 ### Key Files to Modify / Create:
-1. `src/scrapers/index.js` (UPDATE): Thêm nhánh xử lý `platform === 'threads'` trong `scrape()`, khởi tạo `ThreadsCrawler` hoặc gọi `start()` trực tiếp tương tự nhánh `facebook` (xem `src/scrapers/index.js:150-240`).
-2. `package.json` (UPDATE): Thêm `"./scrapers/social/threads": "./src/scrapers/social/threads/index.js"` vào `exports`.
-3. `docs/deprecation-plan.md` (UPDATE): Cập nhật bảng và mục Threads sang trạng thái `deprecated-planned`.
-4. `src/scrapers/threads/index.js` (UPDATE): Đảm bảo đầy đủ chú thích `@deprecated`.
-5. `tests/scrapers/social/threads/caller-migration.test.js` (NEW): Bộ test tích hợp kiểm tra toàn bộ luồng caller migration.
 
-### Testing Standard:
-- Tuân thủ **No Mocks (AD-10)**: Sử dụng `node:http` servers local để test real HTTP pipeline của client/crawler.
-- Run test: `npx vitest run tests/scrapers/social/threads`
+#### 1. `src/scrapers/index.js` (UPDATE)
+- Import `ThreadsCrawler` from `./social/threads/crawler.js` and `ThreadsClient` from `./social/threads/client.js`.
+- In `scrape(platform, action, options)`:
+  - Add `threads` handling branch (similar to `facebook` at `src/scrapers/index.js:150-240`).
+  - Map incoming `action` via `THREADS_ACTION_MAP`.
+  - Instantiate `ThreadsCrawler` with `client`, `accountPool`, `proxyPool`, `governor`.
+  - Pass `session: { accountId: options.accountId || 'threads-guest', cookies: options.authCookie || options.cookies }`.
+  - Execute `await crawler.start({ action: mappedAction, args: mappedArgs, session })`.
+  - Cleanup crawler if `options.autoClose !== false`.
+
+#### 2. `package.json` (UPDATE)
+- Add `"./scrapers/social/threads": "./src/scrapers/social/threads/index.js"` to `exports`.
+- Ensure `"./scrapers/social": "./src/scrapers/social/index.js"` is present.
+
+#### 3. `src/mcp/server.js` (UPDATE)
+- Verify `executeActionListTool` and all crawl tools (`x_crawl_profile`, `x_crawl_user_timeline`, `x_crawl_post`, `x_crawl_comments`, `x_crawl_search`) dispatch cleanly to `ThreadsCrawler` when `platform === 'threads'`.
+
+#### 4. `docs/deprecation-plan.md` (UPDATE)
+- Update Threads row in legacy-to-hybrid mapping table:
+  - Set status to `deprecated-planned`.
+  - Reference Story 15.1.4 as the caller migration baseline.
+
+#### 5. `src/scrapers/threads/index.js` (UPDATE)
+- Add top-level comment: `// LEGACY — see docs/deprecation-plan.md`.
+- Add `@deprecated` JSDoc to `createBrowser`, `scrapeProfile`, `scrapeTweets`, `scrapeFollowers`, `scrapeFollowing`, `scrapeSearch`, `scrapePost`.
+
+#### 6. `tests/scrapers/social/threads/caller-migration.test.js` (NEW)
+- Implement ATDD test suite using `node:http` mock servers.
+- Cover all action dispatches through `scrape('threads', action, options)`.
+- Verify absence of Puppeteer browser launch.
+
+## Testing Standards & Commands
+- **No Mocks Rule**: Do NOT use `vi.fn()` or fake HTTP clients. Build local `node:http` servers to return realistic HTML and GraphQL responses.
+- **Run Tests**:
+  ```bash
+  npx vitest run tests/scrapers/social/threads
+  npx vitest run tests/scrapers/social/threads/caller-migration.test.js
+  ```
