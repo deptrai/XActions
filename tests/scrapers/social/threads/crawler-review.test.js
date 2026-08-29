@@ -685,7 +685,7 @@ describe('Story 15.1 — ThreadsCrawler review patches', () => {
     expect(result.pageInfo?.end_cursor).toBeNull();
   });
 
-  it('[P1] should throw when COMMENT_REPLIES doc_id is missing', async () => {
+  it('[P1] should clamp depth to 0 when COMMENT_REPLIES doc_id is missing', async () => {
     const client = new ThreadsClient({ baseUrl: serverUrl });
     const crawler = new ThreadsCrawler({
       client,
@@ -699,13 +699,13 @@ describe('Story 15.1 — ThreadsCrawler review patches', () => {
       },
     });
 
-    await expect(crawler.getPostComments(
+    const result = await crawler.getPostComments(
       { postId: 'root_post_1', maxDepth: 1, maxComments: 50 },
       { accountId: 'threads-guest' },
-    )).rejects.toMatchObject({
-      code: 'XACT_5000',
-      type: ErrorTypes.INTERNAL,
-      suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
-    });
+    );
+
+    expect(result.comments.length).toBeGreaterThanOrEqual(1);
+    expect(result.comments.some((c) => c.depth === 0)).toBe(true);
+    expect(result.comments.some((c) => c.depth > 0)).toBe(false);
   });
 });
