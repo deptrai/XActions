@@ -284,6 +284,12 @@ function hashTrendId(woeid, name) {
 - Mỗi AC phải có ít nhất 1 test case.
 - Smoke test live tùy chọn: `scripts/test-twitter-search-live.mjs`.
 
+### ATDD Artifacts
+
+- **Red-phase test file:** `tests/scrapers/social/twitter/crawler-search-hashtag-trending.test.js` — 14 `it.skip()` test cases bao phủ AC-1..AC-9, sử dụng `node:http` fake server cho GraphQL SearchTimeline và REST `/1.1/trends/place.json`.
+- **ATDD checklist:** `_bmad-output/test-artifacts/atdd-checklist-13-2-3-twitter-hybrid-search-hashtag-trending.md` — checklists theo AC, test cases, TDD compliance, validation steps.
+- **TDD status:** red phase. Các test import `src/scrapers/social/twitter/crawler.js` và `client.js` (chưa tồn tại) nên sẽ fail ở mức module resolution cho đến khi dev hoàn thành green phase.
+
 ---
 
 ## Dev Agent Record
