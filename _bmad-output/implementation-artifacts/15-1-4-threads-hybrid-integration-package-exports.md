@@ -44,10 +44,15 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
 - **Trong phạm vi 15.1.4:**
   - Cập nhật `src/scrapers/index.js` unified `scrape()` để khi `platform === 'threads'` thì chuyển sang `ThreadsCrawler.start()` (tương tự như `facebook` trong Story 13.10) thay vì gọi legacy Puppeteer `scrapeProfile` / `scrapeTweets` / `scrapeFollowers` / `scrapeFollowing` / `scrapeSearch` / `scrapePost`.
   - Cập nhật `package.json` `exports` để expose `./scrapers/social/threads` và `./scrapers/social`.
-  - Cập nhật `src/mcp/server.js` cho tất cả các tools (`x_crawl_post`, `x_crawl_user_timeline`, `x_crawl_comments`, `x_crawl_profile`, `x_crawl_search`, `x_actions_list`) để khi `platform === 'threads'` thì dispatch thẳng vào `ThreadsCrawler`.
+  - Cập nhật `src/mcp/server.js`:
+    - `x_crawl_post` và `x_crawl_comments_tree` (các tool cross-platform thực sự tồn tại) dispatch qua `scrape('threads', ...)`.
+    - `x_actions_list` đã import `ThreadsCrawler`; giữ nguyên và verify không khởi chạy Puppeteer.
+    - Bổ sung `x_get_profile_multiplatform`, `x_get_tweets_multiplatform`, `x_search_tweets_multiplatform` trong `src/mcp/local-tools.js` để khi `args.platform === 'threads'` thì gọi `scrape('threads', 'profile'|'get_user_feed'|'search', options)` thay vì Twitter-only path. Các tên `x_crawl_profile`, `x_crawl_user_timeline`, `x_crawl_search`, `x_crawl_comments` không tồn tại trong codebase.
   - Cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Threads legacy `src/scrapers/threads/` và ghi rõ dependency vào Story 15.1.4.
   - Gắn `@deprecated` JSDoc và `// LEGACY — see docs/deprecation-plan.md` cho `src/scrapers/threads/index.js`.
   - Thêm test suite integration `tests/scrapers/social/threads/caller-migration.test.js` để xác thực `scrape('threads', ...)` và package exports dispatch đúng sang hybrid `ThreadsCrawler` mà không khởi chạy Puppeteer.
+
+- **Known Issue / Live Test Note:** Khi chạy với real data, `ThreadsClient.ensureLsd()` có thể fail nếu Meta HTML trả về JSON array `["LSD",[],{"token":"..."},<integer>]` thay vì pattern regex hiện tại trong `src/scrapers/social/threads/client.js:32-37`. Dev agent cần kiểm tra và mở rộng `LSD_REGEXES` nếu live test còn lỗi (đã phát hiện trong smoke test trước khi validate story này).
 
 - **Không trong phạm vi 15.1.4:**
   - Xóa vật lý thư mục `src/scrapers/threads/` (thuộc Epic 20.2 Legacy Scraper Code Decommissioning).
@@ -111,13 +116,13 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
 - **Given** `tests/scrapers/social/threads/caller-migration.test.js`
 - **When** chạy qua `npx vitest run tests/scrapers/social/threads/caller-migration.test.js`
 - **Then** tất cả các test cases xác nhận:
-  - `scrape('threads', 'profile', ...)` dispatches to `ThreadsCrawler.getProfile`
-  - `scrape('threads', 'timeline', ...)` dispatches to `ThreadsCrawler.getUserFeed`
-  - `scrape('threads', 'post_detail', ...)` dispatches to `ThreadsCrawler.getPostDetail`
-  - `scrape('threads', 'comments', ...)` dispatches to `ThreadsCrawler.getPostComments`
-  - `scrape('threads', 'search', ...)` dispatches to `ThreadsCrawler.searchPosts`
-  - `scrape('threads', 'followers', ...)` dispatches to `ThreadsCrawler.getFollowers`
-  - `scrape('threads', 'following', ...)` dispatches to `ThreadsCrawler.getFollowing`
+  - `scrape('threads', 'profile', ...)` dispatches to `ThreadsCrawler` action `profile` (handler `getProfile`)
+  - `scrape('threads', 'timeline' | 'tweets' | 'feed' | 'user_feed', ...)` maps to action `get_user_feed` (handler `getUserFeed`)
+  - `scrape('threads', 'post' | 'post_detail', ...)` maps to action `post_detail` (handler `getPostDetail`)
+  - `scrape('threads', 'comments' | 'post_comments', ...)` maps to action `get_post_comments` (handler `getPostComments`)
+  - `scrape('threads', 'search', ...)` maps to action `search` (handler `searchPosts` / `search`)
+  - `scrape('threads', 'followers', ...)` maps to action `followers` (handler `getFollowers`)
+  - `scrape('threads', 'following', ...)` maps to action `following` (handler `getFollowing`)
   - Không có Puppeteer browser process nào được launch khi chạy `scrape('threads', ...)`
 
 ## Developer Context & Implementation Guidance
@@ -137,9 +142,16 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
 #### 2. `package.json` (UPDATE)
 - Add `"./scrapers/social/threads": "./src/scrapers/social/threads/index.js"` to `exports`.
 - Ensure `"./scrapers/social": "./src/scrapers/social/index.js"` is present.
+- Keep legacy `"./scrapers/threads": "./src/scrapers/threads/index.js"` for backward compatibility until Epic 20.2.
 
-#### 3. `src/mcp/server.js` (UPDATE)
-- Verify `executeActionListTool` and all crawl tools (`x_crawl_profile`, `x_crawl_user_timeline`, `x_crawl_post`, `x_crawl_comments`, `x_crawl_search`) dispatch cleanly to `ThreadsCrawler` when `platform === 'threads'`.
+#### 3. `src/mcp/server.js` & `src/mcp/local-tools.js` (UPDATE)
+- `src/mcp/server.js`:
+  - `x_crawl_post` (`executeCrawlPostTool`) gọi `scrape(platform, 'post_detail' | 'posts', ...)` — khi `platform === 'threads'` phải dispatch vào `ThreadsCrawler` qua `src/scrapers/index.js`.
+  - `x_crawl_comments_tree` (`executeCrawlCommentsTreeTool`) gọi `scrape(platform, 'get_comments', ...)` — map sang `get_post_comments` trong `THREADS_ACTION_MAP`.
+  - `x_actions_list` đã import `ThreadsCrawler`; verify `cleanup()` không leak Puppeteer.
+- `src/mcp/local-tools.js`:
+  - Thêm `x_get_profile_multiplatform`, `x_get_tweets_multiplatform`, `x_search_tweets_multiplatform` để khi `args.platform === 'threads'` thì gọi `scrape('threads', 'profile' | 'get_user_feed' | 'search', options)`.
+  - `x_get_thread` hiện là Twitter-only; không đổi tên trong 15.1.4. Nếu cần hỗ trợ Threads post detail qua tool này, mở rộng sau.
 
 #### 4. `docs/deprecation-plan.md` (UPDATE)
 - Update Threads row in legacy-to-hybrid mapping table:
@@ -152,8 +164,12 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
 
 #### 6. `tests/scrapers/social/threads/caller-migration.test.js` (NEW)
 - Implement ATDD test suite using `node:http` mock servers.
-- Cover all action dispatches through `scrape('threads', action, options)`.
-- Verify absence of Puppeteer browser launch.
+- Cover all action dispatches through `scrape('threads', action, options)`:
+  - `'profile'`, `'feed'`, `'user_feed'`, `'timeline'`, `'tweets'`, `'post'`, `'post_detail'`, `'comments'`, `'post_comments'`, `'search'`, `'followers'`, `'following'`.
+- Verify absence of Puppeteer browser launch (assert no `puppeteer.launch` calls, no `Chromium` process spawned).
+- Verify package exports:
+  - `xactions/scrapers/social/threads` resolves to `src/scrapers/social/threads/index.js`.
+  - `xactions/scrapers/social` resolves and re-exports Threads public symbols.
 
 ## Testing Standards & Commands
 - **No Mocks Rule**: Do NOT use `vi.fn()` or fake HTTP clients. Build local `node:http` servers to return realistic HTML and GraphQL responses.
@@ -162,3 +178,8 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
   npx vitest run tests/scrapers/social/threads
   npx vitest run tests/scrapers/social/threads/caller-migration.test.js
   ```
+- **Live Smoke Test**:
+  ```bash
+  node scripts/test-threads-live.js
+  ```
+  Nếu `ensureLsd` fail vì Meta HTML thay đổi JSON pattern, kiểm tra `LSD_REGEXES` trong `src/scrapers/social/threads/client.js`.
