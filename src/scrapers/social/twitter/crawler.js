@@ -1,9 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * TwitterCrawler — High-throughput hybrid crawler for Twitter/X Web GraphQL API.
- * Extends AbstractCrawler, registers thread, likes, bookmarks, and profile/relationship actions,
- * normalizes data into PostItem/ProfileItem schema, emits checkpoints & telemetry,
- * and persists to PrismaStore.
+ * TwitterCrawler — High-throughput hybrid crawler for Twitter/X GraphQL and REST APIs.
+ * Extends AbstractCrawler, registers search, hashtag, trending, thread, likes, bookmarks,
+ * profile, and relationship actions.
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0
@@ -11,7 +10,8 @@
 
 import { AbstractCrawler } from '../../../core/base-crawler.js';
 import { TwitterClient, resolveTweetId, resolveUsername } from './client.js';
-import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import { parseSearchTimeline, parseSearchUsers } from './normalize-search.js';
+import { parseTrends } from './normalize-trending.js';
 import { normalizeThreadResponse } from './normalize-thread.js';
 import { normalizeBookmarksResponse } from './normalize-bookmarks.js';
 import {
@@ -19,7 +19,9 @@ import {
   profileItemToPostItem,
   normalizeUserProfile,
 } from './normalize-relationships.js';
+import { buildAdvancedQuery } from '../../twitter/http/search.js';
 import { DEFAULT_FEATURES } from '../../twitter/http/endpoints.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
 
 export const TWITTER_GRAPHQL_QUERY_IDS = {
@@ -34,6 +36,22 @@ export const TWITTER_GRAPHQL_QUERY_IDS = {
   ListMembers: 'BQp2IEYkgxuSxqbTAr1e1g',
 };
 
+const VALID_SEARCH_TYPES = new Set(['top', 'latest', 'live', 'photos', 'videos', 'people', 'user', 'all']);
+const PRODUCT_MAP = /** @type {Record<string, string>} */ ({
+  top: 'Top',
+  latest: 'Latest',
+  live: 'Latest',
+  photos: 'Photos',
+  images: 'Photos',
+  videos: 'Videos',
+  video: 'Videos',
+  people: 'People',
+  user: 'People',
+  all: 'Latest',
+});
+
+const SEARCH_FILTER_VALUES = new Set(['links', 'images', 'videos', 'media', 'native_video']);
+
 export class TwitterCrawler extends AbstractCrawler {
   /** @type {string} */
   name = 'twitter';
@@ -42,7 +60,7 @@ export class TwitterCrawler extends AbstractCrawler {
   platform = 'twitter';
 
   /** @type {boolean} */
-  requiresAuth = false;
+  requiresAuth = true;
 
   /** @type {TwitterClient} */
   client;
@@ -51,24 +69,55 @@ export class TwitterCrawler extends AbstractCrawler {
    * @param {Record<string, any>} [deps]
    */
   constructor(deps = {}) {
-    const client = deps.client || new TwitterClient({
-      baseUrl: deps.baseUrl,
-      bearerToken: deps.bearerToken,
-      cookies: deps.cookies,
-      sessionManager: deps.sessionManager,
-      governor: deps.governor,
-      accountPool: deps.accountPool,
-    });
-    super(/** @type {any} */ ({
+    const { client: explicitClient, ...clientDeps } = deps;
+    const client = explicitClient || new TwitterClient(clientDeps);
+    super({
       ...deps,
       client,
-      requiresAuth: deps.requiresAuth ?? false,
-    }));
+      requiresAuth: deps.requiresAuth !== undefined ? deps.requiresAuth : true,
+    });
 
     this.client = client;
     this.redisPublisher = deps.redisPublisher || null;
 
-    // Register Story 13.2.2 Actions (thread, likes, bookmarks)
+    // ── Story 13.2.3 Actions: search, hashtag, trending ──
+    this.registerAction({
+      action: 'search',
+      description: 'Search global tweets or users by query',
+      category: 'social',
+      requiresAuth: false,
+      requiredArgs: ['query'],
+      optionalArgs: ['type', 'filter', 'since', 'until', 'from', 'to', 'minLikes', 'minRetweets', 'lang', 'limit', 'cursor'],
+      outputType: '{ posts: PostItem[], users: ProfileItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
+      example: { query: 'javascript', type: 'Latest', limit: 20 },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.search(args, session),
+    });
+
+    this.registerAction({
+      action: 'hashtag',
+      description: 'Search tweets for a hashtag',
+      category: 'social',
+      requiresAuth: false,
+      requiredArgs: ['tag'],
+      optionalArgs: ['hashtag', 'type', 'filter', 'since', 'until', 'minLikes', 'minRetweets', 'lang', 'limit', 'cursor'],
+      outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
+      example: { tag: 'AI', type: 'Latest', limit: 50 },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.hashtag(args, session),
+    });
+
+    this.registerAction({
+      action: 'trending',
+      description: 'Fetch trending topics for a WOEID',
+      category: 'social',
+      requiresAuth: false,
+      requiredArgs: [],
+      optionalArgs: ['woeid', 'limit', 'includePromoted'],
+      outputType: '{ trends: PostItem[], pageInfo: { has_next_page: false, end_cursor: null } }',
+      example: { woeid: 1, limit: 30 },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.trending(args, session),
+    });
+
+    // ── Story 13.2.2 Actions: thread, likes, bookmarks ──
     this.registerAction({
       action: 'thread',
       description: 'Scrape Twitter conversation thread with tree reconstruction',
@@ -113,7 +162,7 @@ export class TwitterCrawler extends AbstractCrawler {
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.bookmarks(args, session),
     });
 
-    // Register Story 13.2.1 Actions (profile, followers, following, retweeters, list_members, non_followers)
+    // ── Story 13.2.1 Actions: profile, followers, following, retweeters, list_members, non_followers ──
     this.registerAction({
       action: 'profile',
       description: 'Scrape user profile by username or URL',
@@ -182,8 +231,20 @@ export class TwitterCrawler extends AbstractCrawler {
   }
 
   /**
+   * Clamp a numeric value to [min, max].
+   * @param {unknown} value
+   * @param {number} min
+   * @param {number} max
+   * @returns {number}
+   */
+  #clamp(value, min, max) {
+    const n = Number(value);
+    const parsed = Number.isFinite(n) ? n : min;
+    return Math.max(min, Math.min(parsed, max));
+  }
+
+  /**
    * Emit checkpoint to store and optional Redis Stream telemetry.
-   *
    * @param {Object} params
    * @param {string} params.targetType
    * @param {string} params.targetKey
@@ -195,7 +256,8 @@ export class TwitterCrawler extends AbstractCrawler {
     try {
       const storeWithCheckpoint = /** @type {any} */ (this.store);
       if (storeWithCheckpoint && typeof storeWithCheckpoint.saveCheckpoint === 'function') {
-        const storageRef = items[0]?.id || items[0]?.externalId || '';
+        const firstItem = /** @type {any} */ (items[0]);
+        const storageRef = firstItem?.id || firstItem?.externalId || '';
         await storeWithCheckpoint.saveCheckpoint({
           platform: 'twitter',
           targetType,
@@ -236,7 +298,6 @@ export class TwitterCrawler extends AbstractCrawler {
 
   /**
    * Chunk storeBatch writes into chunks of at most 500 records.
-   *
    * @param {Array<import('../../../core/types.js').PostItem>} posts
    */
   async #persistPostItems(posts) {
@@ -251,17 +312,191 @@ export class TwitterCrawler extends AbstractCrawler {
   }
 
   /**
-   * Action Handler: thread (AC-2)
-   *
+   * Action Handler: search (AC-2, AC-3)
    * @param {Record<string, any>} args
    * @param {any} [session]
-   * @returns {Promise<{
-   *   posts: import('../../../core/types.js').PostItem[],
-   *   rootTweet: import('../../../core/types.js').PostItem | null,
-   *   authorReplies: import('../../../core/types.js').PostItem[],
-   *   conversation: import('../../../core/types.js').PostItem[],
-   *   pageInfo: any
-   * }>}
+   */
+  async search(args = {}, session = {}) {
+    const rawQuery = String(args.query || '').trim();
+    if (!rawQuery) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing or empty search query',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const rawType = String(args.type || 'Latest').toLowerCase();
+    if (!VALID_SEARCH_TYPES.has(rawType)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Invalid search type: "${args.type}". Supported: top, latest, live, photos, videos, people`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    if (args.filter && !SEARCH_FILTER_VALUES.has(String(args.filter).toLowerCase())) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Invalid search filter: "${args.filter}". Supported: links, images, videos, media, native_video`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const query = buildAdvancedQuery(rawQuery, args);
+    const product = PRODUCT_MAP[rawType] || 'Latest';
+    const limit = this.#clamp(args.limit ?? 20, 1, 100);
+
+    const variables = {
+      rawQuery: query,
+      count: limit,
+      querySource: 'typed_query',
+      product,
+      ...(args.cursor ? { cursor: args.cursor } : {}),
+    };
+
+    const isPeopleSearch = product === 'People';
+    const operationName = isPeopleSearch ? 'SearchTimeline#People' : 'SearchTimeline';
+
+    const resp = await this.client.requestSearchTimeline(operationName, variables, {
+      ...args,
+      ...session,
+      requiresAuth: false,
+    });
+
+    if (isPeopleSearch) {
+      const { users, pageInfo } = parseSearchUsers(resp, {
+        searchQuery: rawQuery,
+        searchType: product,
+      });
+
+      if (this.store && typeof this.store.storeBatch === 'function' && users.length > 0) {
+        const posts = users.map((u) => profileItemToPostItem(u));
+        await this.#persistPostItems(posts);
+      }
+
+      await this.#emitCheckpointAndStream({
+        targetType: 'search',
+        targetKey: `search:people:${rawQuery}`,
+        cursor: pageInfo.end_cursor,
+        items: users,
+        hasMore: pageInfo.has_next_page,
+      });
+
+      return { posts: [], users, pageInfo };
+    }
+
+    const { posts, pageInfo } = parseSearchTimeline(resp, {
+      searchQuery: rawQuery,
+      searchType: product,
+      searchFilter: args.filter ? String(args.filter).toLowerCase() : undefined,
+    });
+
+    await this.#persistPostItems(posts);
+    await this.#emitCheckpointAndStream({
+      targetType: 'search',
+      targetKey: `search:${product}:${rawQuery}`,
+      cursor: pageInfo.end_cursor,
+      items: posts,
+      hasMore: pageInfo.has_next_page,
+    });
+
+    return { posts, users: [], pageInfo };
+  }
+
+  /**
+   * Action Handler: hashtag (AC-4)
+   * @param {Record<string, any>} args
+   * @param {any} [session]
+   */
+  async hashtag(args = {}, session = {}) {
+    const rawTag = String(args.tag || args.hashtag || '').trim();
+    if (!rawTag) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing or empty hashtag parameter (tag or hashtag required)',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const cleanTag = rawTag.replace(/^#+/, '');
+    if (!cleanTag) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Invalid hashtag string',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const query = `#${cleanTag}`;
+    const searchRes = await this.search({ ...args, query }, session);
+
+    const hashtagPosts = (searchRes.posts || []).map((p) => ({
+      ...p,
+      metadata: {
+        ...(p.metadata || {}),
+        isHashtag: true,
+        hashtag: cleanTag,
+        sourceMethod: 'hashtag',
+      },
+    }));
+
+    return {
+      posts: hashtagPosts,
+      pageInfo: searchRes.pageInfo,
+    };
+  }
+
+  /**
+   * Action Handler: trending (AC-5)
+   * @param {Record<string, any>} [args={}]
+   * @param {any} [session]
+   */
+  async trending(args = {}, session = {}) {
+    const woeid = Number.isInteger(Number(args.woeid)) ? Number(args.woeid) : 1;
+    const limit = this.#clamp(args.limit ?? 50, 1, 100);
+    const includePromoted = Boolean(args.includePromoted);
+
+    const resp = await this.client.requestTrendsPlace(woeid, { ...args, ...session, requiresAuth: false });
+    const { trends } = parseTrends(resp, { woeid, limit, includePromoted });
+
+    await this.#persistPostItems(trends);
+    await this.#emitCheckpointAndStream({
+      targetType: 'trending',
+      targetKey: `trending:${woeid}`,
+      cursor: null,
+      items: trends,
+      hasMore: false,
+    });
+
+    return {
+      trends,
+      pageInfo: {
+        has_next_page: false,
+        end_cursor: null,
+      },
+    };
+  }
+
+  /**
+   * Action Handler: thread (Story 13.2.2)
+   * @param {Record<string, any>} args
+   * @param {any} [session]
    */
   async thread(args, session) {
     if (!args || (!args.tweetId && !args.url)) {
@@ -277,7 +512,6 @@ export class TwitterCrawler extends AbstractCrawler {
 
     let targetTweetId = resolveTweetId(args.tweetId || args.url);
 
-    // Optional: walk up reply chain if requested
     if (args.walkToRoot) {
       let currentId = targetTweetId;
       const visited = new Set();
@@ -372,14 +606,9 @@ export class TwitterCrawler extends AbstractCrawler {
   }
 
   /**
-   * Action Handler: likes (AC-3)
-   *
+   * Action Handler: likes (Story 13.2.2)
    * @param {Record<string, any>} args
    * @param {any} [session]
-   * @returns {Promise<{
-   *   likers: import('../../../core/types.js').ProfileItem[],
-   *   pageInfo: any
-   * }>}
    */
   async likes(args, session) {
     if (!args || (!args.tweetId && !args.url)) {
@@ -417,8 +646,6 @@ export class TwitterCrawler extends AbstractCrawler {
     );
 
     const normalized = normalizeLikersResponse(response, tweetId);
-
-    // Convert ProfileItem[] to PostItem[] for persistent store
     const posts = normalized.likers.map((p) => profileItemToPostItem(p));
     await this.#persistPostItems(posts);
 
@@ -434,14 +661,9 @@ export class TwitterCrawler extends AbstractCrawler {
   }
 
   /**
-   * Action Handler: bookmarks (AC-4)
-   *
+   * Action Handler: bookmarks (Story 13.2.2)
    * @param {Record<string, any>} [args={}]
    * @param {any} [session]
-   * @returns {Promise<{
-   *   posts: import('../../../core/types.js').PostItem[],
-   *   pageInfo: any
-   * }>}
    */
   async bookmarks(args = {}, session) {
     const count = Math.min(Number(args.limit) || 20, 100);
@@ -481,10 +703,8 @@ export class TwitterCrawler extends AbstractCrawler {
 
   /**
    * Action Handler: profile
-   *
    * @param {Record<string, any>} args
    * @param {any} [session]
-   * @returns {Promise<{ profile: import('../../../core/types.js').ProfileItem }>}
    */
   async profile(args = {}, session) {
     const username = resolveUsername(args.username || args.url || '');
@@ -548,7 +768,6 @@ export class TwitterCrawler extends AbstractCrawler {
 
   /**
    * Action Handler: followers
-   *
    * @param {Record<string, any>} args
    * @param {any} [session]
    */
@@ -600,7 +819,6 @@ export class TwitterCrawler extends AbstractCrawler {
 
   /**
    * Action Handler: following
-   *
    * @param {Record<string, any>} args
    * @param {any} [session]
    */
@@ -652,7 +870,6 @@ export class TwitterCrawler extends AbstractCrawler {
 
   /**
    * Action Handler: retweeters
-   *
    * @param {Record<string, any>} args
    * @param {any} [session]
    */
@@ -701,7 +918,6 @@ export class TwitterCrawler extends AbstractCrawler {
 
   /**
    * Action Handler: list_members
-   *
    * @param {Record<string, any>} args
    * @param {any} [session]
    */
@@ -759,7 +975,6 @@ export class TwitterCrawler extends AbstractCrawler {
 
   /**
    * Action Handler: non_followers
-   *
    * @param {Record<string, any>} args
    * @param {any} [session]
    */

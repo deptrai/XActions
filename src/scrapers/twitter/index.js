@@ -461,6 +461,8 @@ export async function scrapeTweets(page, username, options = {}) {
  * @param {string} query
  * @param {TwitterScrapeOptions} [options]
  * @returns {Promise<Array<Record<string, unknown>>>}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `search` instead.
  */
 export async function searchTweets(page, query, options = {}) {
   const { limit = 100, filter = 'latest', onProgress } = options;
@@ -654,6 +656,8 @@ export async function scrapeLikes(page, tweetUrl, options = {}) {
  * @param {string} hashtag
  * @param {TwitterScrapeOptions} [options]
  * @returns {Promise<Array<Record<string, unknown>>>}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `hashtag` instead.
  */
 export async function scrapeHashtag(page, hashtag, options = {}) {
   const { limit = 100, filter = 'latest' } = options;
@@ -901,6 +905,8 @@ export async function scrapeNotifications(page, options = {}) {
  * @param {import('puppeteer').Page} page
  * @param {TwitterScrapeOptions} [options]
  * @returns {Promise<Array<Record<string, unknown>>>}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `trending` instead.
  */
 export async function scrapeTrending(page, options = {}) {
   const { limit = 30 } = options;
