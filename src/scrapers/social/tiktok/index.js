@@ -14,6 +14,8 @@ export * from './normalizer.js';
 
 import { TikTokClient } from './client.js';
 import { TikTokCrawler } from './crawler.js';
+import { TikTokBrowserBridge } from './signer-bridge.js';
+import { TikTokPlatformResponseValidator } from './validator.js';
 
 /**
  * Convenience helper: scrape a TikTok action through the unified interface.
@@ -38,3 +40,11 @@ export async function scrapeTikTok(action, args, options = {}) {
     }
   }
 }
+
+export default {
+  TikTokClient,
+  TikTokCrawler,
+  TikTokBrowserBridge,
+  TikTokPlatformResponseValidator,
+  scrapeTikTok,
+};

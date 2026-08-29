@@ -71,7 +71,7 @@ export class TikTokPlatformResponseValidator extends AbstractPlatformResponseVal
     if (statusCode !== 0) return false;
 
     const statusMsg = typeof data?.status_msg === 'string' ? data.status_msg.toLowerCase() : '';
-    if (statusMsg && (statusMsg.includes('error') || statusMsg.includes('fail') || statusMsg.includes('invalid'))) {
+    if (statusMsg && (statusMsg.includes('error:') || statusMsg.includes('fail:') || statusMsg.includes('invalid request'))) {
       return false;
     }
 
@@ -81,14 +81,11 @@ export class TikTokPlatformResponseValidator extends AbstractPlatformResponseVal
       return false;
     }
 
-    // Feed/list endpoints should have non-empty item_list or comments.
+    // Empty item_list or comments are valid results (e.g. no matching posts,
+    // no comments). Do not reject them; rely on status_code/ status_msg for
+    // genuine error states.
     const itemList = Array.isArray(data?.item_list) ? data.item_list : null;
     const comments = Array.isArray(data?.comments) ? data.comments : null;
-
-    if (itemList !== null && itemList.length === 0) {
-      // Empty list may indicate a shadow block or malformed request.
-      return false;
-    }
     if (comments !== null && comments.length === 0) {
       // Empty comments is valid if there are no comments, but we require callers
       // to validate with maxComments context. Here we only reject if the payload
@@ -129,9 +126,11 @@ export class TikTokPlatformResponseValidator extends AbstractPlatformResponseVal
     const statusMsg = typeof data?.status_msg === 'string' ? data.status_msg.toLowerCase() : '';
     if (statusMsg && BOT_CHALLENGE_MARKERS.some((m) => statusMsg.includes(m))) return true;
 
-    // Empty item list after a successful 200 can be a soft block.
+    // An empty item list is valid when status_code === 0; only flag it as a
+    // soft block if the payload is otherwise degenerate or has a non-zero code.
     const itemList = data?.item_list;
-    if (Array.isArray(itemList) && itemList.length === 0 && Object.keys(data).length <= 3) {
+    const botStatusCode = typeof data?.status_code === 'number' ? data.status_code : 0;
+    if (botStatusCode !== 0 && Array.isArray(itemList) && itemList.length === 0) {
       return true;
     }
 

@@ -356,6 +356,10 @@ export async function scrape(platform, action, options = {}) {
       guestTokenRing: options.guestTokenRing,
       signerPool: options.signerPool,
       signerBridge: options.signerBridge,
+      adapterName: options.adapterName,
+      deviceContext: options.deviceContext,
+      clientAbVersions: options.clientAbVersions,
+      deviceId: options.deviceId,
       requiresProxy: options.requiresProxy,
       requiresAuth: options.requiresAuth,
       timeout: options.timeout,
@@ -371,6 +375,7 @@ export async function scrape(platform, action, options = {}) {
       governor: options.governor,
       accountPool: options.accountPool,
       sessionManager: options.sessionManager,
+      responseValidator: options.responseValidator,
       requiresProxy: options.requiresProxy,
       requiresAuth: options.requiresAuth,
       timeout: options.timeout,
@@ -619,7 +624,8 @@ export default {
   mastodon,
   threads,
   facebook,
-  
+  tiktok,
+
   // Plugin scrapers lookup
   getPluginScraper,
 

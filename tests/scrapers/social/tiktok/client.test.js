@@ -142,6 +142,7 @@ describe('Story 15.2 — TikTokClient Contract & Web API Engine', () => {
   afterAll(async () => {
     await new Promise((resolve) => server.close(resolve));
     receivedRequests = [];
+    delete process.env.TIKTOK_BROWSER_SIGN;
   });
 
   beforeAll(() => {

@@ -306,3 +306,26 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 - 2026-08-29 — Story created from Epic 15.2 with comprehensive architecture, ACs, tasks, and dev notes.
 - 2026-08-29 — Validated against BMAD checklist: fixed error codes (`XACT_4030`/`XACT_4290`), aligned action names with `AbstractCrawler` conventions (`search`, `post_detail`, `get_post_comments`), added `TIKTOK_ACTION_MAP`, added `schemas/tiktok/social.json` requirement, promoted capture-required items to Task 0, and clarified signer/proxy/auth setup.
 - 2026-08-29 — Implemented all non-capture tasks: client, crawler, normalizer, validator, index, dispatcher wiring, package exports, and red-phase ATDD tests. Marked ready-for-review.
+- 2026-08-29 — Applied second-pass review patches: fixed default export, dispatcher wiring, schema comment/post split, package export, validator empty-list handling, cookie preservation, per-layer cursor tracking, and added caller-migration tests. All 16 TikTok tests pass; TikTok-specific TypeScript is clean.
+
+### Review Findings (Second Pass)
+
+- [x] [Review][Patch] Add default export to `src/scrapers/social/tiktok/index.js` so `platforms.tiktok` and `getPlatform('tiktok')` resolve correctly
+- [x] [Review][Patch] Add `tiktok` to `src/scrapers/index.js` default export object
+- [x] [Review][Patch] Forward `adapterName`, `deviceContext`, `clientAbVersions`, `deviceId`, and `responseValidator` through `scrape('tiktok', ...)` dispatcher
+- [x] [Review][Patch] Convert `schemas/tiktok/social.json` to `anyOf` with Post and Comment metadata variants so `awemeId` is not required for comments
+- [x] [Review][Patch] Add package.json export `"./scrapers/tiktok"` as shorthand for `src/scrapers/social/tiktok/index.js`
+- [x] [Review][Patch] Fix `TikTokPlatformResponseValidator` so empty `item_list`/`comments` with `status_code: 0` are treated as valid results
+- [x] [Review][Patch] Preserve full original cookie header in `TikTokClient.request()` instead of rebuilding only `ttwid` + `msToken`
+- [x] [Review][Patch] Scope `seenCursors` per `(postId, parentCommentId)` in `CommentTreeExtractor` fetch layer to avoid sibling reply pagination starvation
+- [x] [Review][Patch] Fix undefined `statusCode` in `TikTokPlatformResponseValidator.isBotChallenge`
+- [x] [Review][Patch] Restore `process.env.TIKTOK_BROWSER_SIGN` in `client.test.js` and `crawler.test.js` `afterAll`
+- [x] [Review][Patch] Create `tests/scrapers/social/tiktok/caller-migration.test.js` covering dispatcher, aliases, package exports, and schema validation
+- [ ] [Review][Defer] Real-API red-phase tests / live TikTok Web API session capture (Task 0 items: endpoints, `a_bogus` algorithm, `msToken` refresh)
+- [ ] [Review][LOW] `signer-bridge.js`: guard concurrent `signUrl()` calls with per-page queue to prevent `onRequest` listener cross-assignment on `#warmedPage`
+- [ ] [Review][LOW] `signer-bridge.js`: null out `#browser` on `extractSession()` crash to avoid reusing dead instances
+- [ ] [Review][LOW] `signer-bridge.js`: add per-instance nonce to `#resolveUserDataDir()` to avoid parallel guest profile lock collisions
+- [ ] [Review][MEDIUM] `crawler.js`: classify missing hashtag/post as `ErrorTypes.NOT_FOUND` instead of `ErrorTypes.INTERNAL`
+- [ ] [Review][LOW] `client.js`: avoid repeated query param re-encoding in `buildApiUrl` -> `sign` -> `#mergeSignedQuery` chain
+- [ ] [Review][MEDIUM] `normalizer.js`: support TikTok photo carousel (`imagePost` / `item.images`) in `extractTikTokMedia`
+- [ ] [Review][LOW] `normalizer.js`: handle microsecond timestamps (> 1e15) in `parseTimestamp`

@@ -455,7 +455,10 @@ export class TikTokCrawler extends AbstractCrawler {
 
     await this.client.init({ accountId, cookies: session?.cookies });
 
-    const seenCursors = new Set();
+    // Track cursors per layer (postId + parentCommentId) to avoid siblings
+    // sharing the same cursor values and prematurely terminating pagination.
+    /** @type {Map<string, Set<string>>} */
+    const seenCursorsByLayer = new Map();
 
     /**
      * @param {import('../comment-tree.js').FetchLayerInput} input
@@ -493,7 +496,14 @@ export class TikTokCrawler extends AbstractCrawler {
         end_cursor: resp?.cursor !== undefined ? String(resp.cursor) : null,
       };
 
-      // Deduplicate cursors to avoid empty/stuck pagination loops.
+      // Deduplicate cursors per layer to avoid empty/stuck pagination loops
+      // without sharing state across unrelated reply threads.
+      const layerKey = `${postId}:${parentCommentId || 'root'}`;
+      if (!seenCursorsByLayer.has(layerKey)) {
+        seenCursorsByLayer.set(layerKey, new Set());
+      }
+      const seenCursors = /** @type {Set<string>} */ (seenCursorsByLayer.get(layerKey));
+
       if (pageInfo.end_cursor) {
         if (seenCursors.has(pageInfo.end_cursor)) {
           pageInfo.has_next_page = false;

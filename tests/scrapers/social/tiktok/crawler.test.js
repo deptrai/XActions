@@ -140,6 +140,7 @@ describe('Story 15.2 — TikTokCrawler Actions', () => {
 
   afterAll(async () => {
     await new Promise((resolve) => server.close(resolve));
+    delete process.env.TIKTOK_BROWSER_SIGN;
   });
 
   function createCrawler() {

@@ -365,12 +365,18 @@ export class TikTokClient extends AbstractApiClient {
     };
 
     const rawCookies = buildCookieHeader(opts.cookies || this.cookies);
+    // Preserve the original cookie header (including sessionid, uid_tt, etc.)
+    // while ensuring ttwid/msToken are present if they were parsed separately.
     const tiktokCookies = parseTikTokCookies(rawCookies);
-    if (tiktokCookies.ttwid || tiktokCookies.msToken) {
-      const parts = [];
-      if (tiktokCookies.ttwid) parts.push(`ttwid=${tiktokCookies.ttwid}`);
-      if (tiktokCookies.msToken) parts.push(`msToken=${tiktokCookies.msToken}`);
-      mergedHeaders.cookie = parts.join('; ');
+    const cookieParts = rawCookies ? [rawCookies] : [];
+    if (tiktokCookies.ttwid && !rawCookies.includes('ttwid=')) {
+      cookieParts.push(`ttwid=${tiktokCookies.ttwid}`);
+    }
+    if (tiktokCookies.msToken && !rawCookies.includes('msToken=')) {
+      cookieParts.push(`msToken=${tiktokCookies.msToken}`);
+    }
+    if (cookieParts.length > 0) {
+      mergedHeaders.cookie = cookieParts.join('; ');
     }
 
     // Do not demand a residential proxy if the client is running without a proxy pool

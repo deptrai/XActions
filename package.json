@@ -21,6 +21,7 @@
     "./scrapers/bluesky": "./src/scrapers/bluesky/index.js",
     "./scrapers/mastodon": "./src/scrapers/mastodon/index.js",
     "./scrapers/threads": "./src/scrapers/threads/index.js",
+    "./scrapers/tiktok": "./src/scrapers/social/tiktok/index.js",
     "./scrapers/social": "./src/scrapers/social/index.js",
     "./scrapers/social/threads": "./src/scrapers/social/threads/index.js",
     "./scrapers/social/tiktok": "./src/scrapers/social/tiktok/index.js",
