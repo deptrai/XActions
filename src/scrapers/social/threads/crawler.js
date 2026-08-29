@@ -991,42 +991,55 @@ export class ThreadsCrawler extends AbstractCrawler {
     const count = this.#clampCount(args.count, 1, 100);
 
     if (this.docIds.SEARCH_POSTS) {
-      const res = await this.client.requestGraphQl(this.docIds.SEARCH_POSTS, {
-        query: args.query,
-        first: count,
-        after: args.cursor || null,
-        serp_type: args.searchType || 'default',
-      }, { accountId });
+      try {
+        const res = await this.client.requestGraphQl(this.docIds.SEARCH_POSTS, {
+          query: args.query,
+          first: count,
+          after: args.cursor || null,
+          serp_type: args.searchType || 'default',
+        }, { accountId });
 
-      const rawThreads = res?.data?.mediaData?.threads || res?.data?.searchResults?.edges || [];
-      const posts = [];
-      for (const t of rawThreads) {
-        for (const rawPost of this.#flattenThreadItems(t)) {
-          try {
-            const post = this.#normalizePostItem(rawPost);
-            if (!post) continue;
-            this.validateItem(post);
-            posts.push(post);
-          } catch {
-            // Skip invalid posts instead of aborting the whole batch.
+        const rawThreads = res?.data?.searchResults?.threads ||
+                          res?.data?.searchResults?.edges ||
+                          res?.data?.mediaData?.threads ||
+                          res?.data?.edges ||
+                          [];
+        const posts = [];
+        for (const t of rawThreads) {
+          for (const rawPost of this.#flattenThreadItems(t)) {
+            try {
+              const post = this.#normalizePostItem(rawPost);
+              if (!post) continue;
+              if (post.metadata && typeof post.metadata === 'object') {
+                /** @type {Record<string, any>} */ (post.metadata).sourceMethod = 'graphql';
+              }
+              this.validateItem(post);
+              posts.push(post);
+            } catch {
+              // Skip invalid posts instead of aborting the whole batch.
+            }
           }
         }
+
+        const pageInfo = this.#normalizePageInfo(res?.data?.searchResults?.page_info || res?.data?.mediaData?.page_info);
+        if (posts.length > 0) {
+          if (this.store && typeof this.store.storeBatch === 'function') {
+            await this.store.storeBatch(posts, { upsert: true });
+          }
+
+          await this.#emitCheckpointAndStream({
+            targetType: 'search',
+            targetKey: args.query,
+            cursor: pageInfo.end_cursor,
+            items: posts,
+            hasMore: pageInfo.has_next_page,
+          });
+
+          return { posts, pageInfo };
+        }
+      } catch (err) {
+        console.warn(`⚠️ [THREADS] GraphQL search failed, falling back to SSR: ${err instanceof Error ? err.message : String(err)}`);
       }
-
-      if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-        await this.store.storeBatch(posts, { upsert: true });
-      }
-
-      const pageInfo = this.#normalizePageInfo(res?.data?.mediaData?.page_info || res?.data?.searchResults?.page_info);
-      await this.#emitCheckpointAndStream({
-        targetType: 'search',
-        targetKey: args.query,
-        cursor: pageInfo.end_cursor,
-        items: posts,
-        hasMore: pageInfo.has_next_page,
-      });
-
-      return { posts, pageInfo };
     }
 
     // SSR HTTP Search Fallback
@@ -1042,8 +1055,12 @@ export class ThreadsCrawler extends AbstractCrawler {
       try {
         const parsed = JSON.parse(m[1]);
         const threads = parsed?.raw_data?.searchResults?.edges ||
+                        parsed?.raw_data?.searchResults?.threads ||
                         parsed?.mediaData?.threads ||
                         parsed?.data?.searchResults?.edges ||
+                        parsed?.data?.searchResults?.threads ||
+                        parsed?.searchResults?.threads ||
+                        parsed?.searchResults?.edges ||
                         [];
         const pageInfo =
           parsed?.raw_data?.searchResults?.page_info ||
