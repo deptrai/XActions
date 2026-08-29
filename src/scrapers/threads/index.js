@@ -1,4 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+// LEGACY — see docs/deprecation-plan.md
 /**
  * XActions Threads Scrapers
  * Puppeteer-based scrapers for Meta Threads (threads.net)
