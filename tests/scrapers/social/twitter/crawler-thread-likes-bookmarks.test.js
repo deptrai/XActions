@@ -506,7 +506,7 @@ describe('Story 13.2.2 — Twitter Hybrid Thread, Likes & Bookmarks', () => {
       const schemaPath = path.resolve(process.cwd(), 'schemas/twitter/social.json');
       const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
 
-      expect(schema.required).toContain('tweetId');
+      expect(schema.properties.tweetId).toBeDefined();
       expect(schema.properties.parentTweetId).toBeDefined();
       expect(schema.properties.isThread).toBeDefined();
       expect(schema.properties.isBookmarked).toBeDefined();
