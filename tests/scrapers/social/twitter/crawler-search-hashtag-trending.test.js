@@ -254,7 +254,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     }
   });
 
-  it.skip('[AC-1] should inherit AbstractCrawler and register search, hashtag, and trending actions', () => {
+  it('[AC-1] should inherit AbstractCrawler and register search, hashtag, and trending actions', () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 
@@ -291,7 +291,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     expect(trendingAction?.optionalArgs).toContain('limit');
   });
 
-  it.skip('[AC-2] should execute global tweet search and return normalized PostItems', async () => {
+  it('[AC-2] should execute global tweet search and return normalized PostItems', async () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 
@@ -321,7 +321,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     expect(result.pageInfo?.endCursor).toBe('cursor_search_next');
   });
 
-  it.skip('[AC-3] should build advanced query with operators and filters', async () => {
+  it('[AC-3] should build advanced query with operators and filters', async () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 
@@ -359,7 +359,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     expect(rawQuery).toContain('filter:links');
   });
 
-  it.skip('[AC-4] should search users and return normalized account profiles', async () => {
+  it('[AC-4] should search users and return normalized account profiles', async () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 
@@ -384,7 +384,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     expect(user.metadata?.resultType).toBe('people');
   });
 
-  it.skip('[AC-5] should scrape hashtag tweets by convenience action', async () => {
+  it('[AC-5] should scrape hashtag tweets by convenience action', async () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 
@@ -412,7 +412,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     expect(posts[0].metadata?.searchType).toBe('Top');
   });
 
-  it.skip('[AC-5] should support hashtag with and without hash prefix', async () => {
+  it('[AC-5] should support hashtag with and without hash prefix', async () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 
@@ -434,7 +434,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     expect(rawQuery.match(/#/g).length).toBe(1);
   });
 
-  it.skip('[AC-6] should scrape trending topics by WOEID with promoted filter', async () => {
+  it('[AC-6] should scrape trending topics by WOEID with promoted filter', async () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 
@@ -456,7 +456,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     expect(trends.some((t) => t.name === 'Promoted Trend')).toBe(false);
   });
 
-  it.skip('[AC-6] should support custom WOEID and include promoted trends when requested', async () => {
+  it('[AC-6] should support custom WOEID and include promoted trends when requested', async () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 
@@ -477,7 +477,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     expect(restReq.url).toContain('id=23424977');
   });
 
-  it.skip('[AC-7] should reject invalid search arguments with PlatformError', async () => {
+  it('[AC-7] should reject invalid search arguments with PlatformError', async () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 
@@ -506,7 +506,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     ).rejects.toThrow(PlatformError);
   });
 
-  it.skip('[AC-2] should paginate tweet search with cursor', async () => {
+  it('[AC-2] should paginate tweet search with cursor', async () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 
@@ -540,7 +540,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     expect(Array.isArray(secondPage.posts || secondPage)).toBe(true);
   });
 
-  it.skip('[AC-8] should persist search results and save crawl checkpoint', async () => {
+  it('[AC-8] should persist search results and save crawl checkpoint', async () => {
     const store = createStore();
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, store, sessionManager });
@@ -565,7 +565,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     expect(checkpoint?.lastCursor).toBe('cursor_search_next');
   });
 
-  it.skip('[AC-8] should persist trending results without publishedAt', async () => {
+  it('[AC-8] should persist trending results without publishedAt', async () => {
     const store = createStore();
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, store, sessionManager });
@@ -583,7 +583,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     expect(checkpoint?.targetKey).toContain('woeid:1');
   });
 
-  it.skip('[AC-9] should validate search result metadata against schema registry', async () => {
+  it('[AC-9] should validate search result metadata against schema registry', async () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 
@@ -606,7 +606,7 @@ describe('Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending', () => {
     }
   });
 
-  it.skip('[AC-9] should validate hashtag and trending metadata', async () => {
+  it('[AC-9] should validate hashtag and trending metadata', async () => {
     const client = new TwitterClient({ baseUrl: serverUrl, governor, accountPool });
     const crawler = new TwitterCrawler({ client, sessionManager });
 

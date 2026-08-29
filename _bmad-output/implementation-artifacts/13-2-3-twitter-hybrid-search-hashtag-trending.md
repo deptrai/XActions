@@ -2,18 +2,19 @@
 story_id: '13.2.3'
 epic: 13
 story_key: '13-2-3-twitter-hybrid-search-hashtag-trending'
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 2"
 created: 2026-08-29
 updated: 2026-08-29
 last_updated: 2026-08-29
 owner: "DEV"
 reviewed: "pending"
+baseline_commit: "3ac16984ce18ca6d642a47dc92cfcbc80729f925"
 ---
 
 # Story 13.2.3 — Twitter Hybrid Search, Hashtag & Trending
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -184,47 +185,47 @@ Tất cả output phải chuẩn hóa thành `PostItem` với ID Namespaced `twi
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Khởi tạo/mở rộng module `src/scrapers/social/twitter/` (AC-1, AC-2)**
-  - [ ] 1.1 Đảm bảo `src/scrapers/social/twitter/index.js` export `TwitterClient`, `TwitterCrawler`, `TwitterPlatformResponseValidator`, normalizer helpers (tạo mới nếu chưa có)
-  - [ ] 1.2 Đảm bảo `src/scrapers/social/twitter/client.js` — `TwitterClient` extends `AbstractApiClient`
-  - [ ] 1.3 Mở rộng `src/scrapers/social/twitter/crawler.js` — `TwitterCrawler` đăng ký thêm 3 action `search`, `hashtag`, `trending`
-  - [ ] 1.4 Đảm bảo `src/scrapers/social/twitter/validator.js` — `TwitterPlatformResponseValidator` xử lý SearchTimeline empty/bot-challenge/rate-limit
+- [x] **Task 1 — Khởi tạo/mở rộng module `src/scrapers/social/twitter/` (AC-1, AC-2)**
+  - [x] 1.1 Đảm bảo `src/scrapers/social/twitter/index.js` export `TwitterClient`, `TwitterCrawler`, `TwitterPlatformResponseValidator`, normalizer helpers (tạo mới nếu chưa có)
+  - [x] 1.2 Đảm bảo `src/scrapers/social/twitter/client.js` — `TwitterClient` extends `AbstractApiClient`
+  - [x] 1.3 Mở rộng `src/scrapers/social/twitter/crawler.js` — `TwitterCrawler` đăng ký thêm 3 action `search`, `hashtag`, `trending`
+  - [x] 1.4 Đảm bảo `src/scrapers/social/twitter/validator.js` — `TwitterPlatformResponseValidator` xử lý SearchTimeline empty/bot-challenge/rate-limit
 
-- [ ] **Task 2 — Triển khai `TwitterClient` GraphQL/REST dispatch (AC-2, AC-4)**
-  - [ ] 2.1 Tái sử dụng `GRAPHQL.SearchTimeline`, `buildGraphQLUrl`, `buildGraphQLVariables`, `DEFAULT_FEATURES` từ `src/scrapers/twitter/http/endpoints.js`
-  - [ ] 2.2 Thêm helper `requestRest(path, options)` nếu chưa có, để gọi `/1.1/trends/place.json`
-  - [ ] 2.3 Đảm bảo `requestGraphQl` hỗ trợ `__relay_internal__pv__appviewerisloggedinprovider: false` cho guest token (học từ 13.2.2 live verification)
-  - [ ] 2.4 Sử dụng `Promise.race` 3s timeout cho `x-client-transaction-id` signing qua `SignerWorkerPagePool` [AD-1]
-  - [ ] 2.5 Cấu hình proxy: rotating residential cho no-auth, sticky nếu `accountId` được truyền [AD-3 rule 3b]
+- [x] **Task 2 — Triển khai `TwitterClient` GraphQL/REST dispatch (AC-2, AC-4)**
+  - [x] 2.1 Tái sử dụng `GRAPHQL.SearchTimeline`, `buildGraphQLUrl`, `buildGraphQLVariables`, `DEFAULT_FEATURES` từ `src/scrapers/twitter/http/endpoints.js`
+  - [x] 2.2 Thêm helper `requestRest(path, options)` nếu chưa có, để gọi `/1.1/trends/place.json`
+  - [x] 2.3 Đảm bảo `requestGraphQl` hỗ trợ `__relay_internal__pv__appviewerisloggedinprovider: false` cho guest token (học từ 13.2.2 live verification)
+  - [x] 2.4 Sử dụng `Promise.race` 3s timeout cho `x-client-transaction-id` signing qua `SignerWorkerPagePool` [AD-1]
+  - [x] 2.5 Cấu hình proxy: rotating residential cho no-auth, sticky nếu `accountId` được truyền [AD-3 rule 3b]
 
-- [ ] **Task 3 — Triển khai normalizers (AC-5)**
-  - [ ] 3.1 Tạo/mở rộng `src/scrapers/social/twitter/normalize-tweet.js` với `parseTweetResult`, `tweetToPostItem` (tái sử dụng logic từ `src/scrapers/twitter/http/tweets.js:parseTweetData`)
-  - [ ] 3.2 Tạo `src/scrapers/social/twitter/normalize-search.js` với `parseTimelineInstructions`, `parseSearchUserInstructions`
-  - [ ] 3.3 Tạo `src/scrapers/social/twitter/normalize-trending.js` với `trendToPostItem` và `hashTrendId` (woeid + slug(name))
+- [x] **Task 3 — Triển khai normalizers (AC-5)**
+  - [x] 3.1 Tạo/mở rộng `src/scrapers/social/twitter/normalize-tweet.js` với `parseTweetResult`, `tweetToPostItem` (tái sử dụng logic từ `src/scrapers/twitter/http/tweets.js:parseTweetData`)
+  - [x] 3.2 Tạo `src/scrapers/social/twitter/normalize-search.js` với `parseTimelineInstructions`, `parseSearchUserInstructions`
+  - [x] 3.3 Tạo `src/scrapers/social/twitter/normalize-trending.js` với `trendToPostItem` và `hashTrendId` (woeid + slug(name))
 
-- [ ] **Task 4 — Triển khai handlers `TwitterCrawler` (AC-2, AC-3, AC-4)**
-  - [ ] 4.1 `search(args, session)` → build advanced query, gọi `SearchTimeline`, paginate + dedup + checkpoint
-  - [ ] 4.2 `hashtag(args, session)` → normalize `#`, delegate `search`, set `metadata.isHashtag/hashtag`
-  - [ ] 4.3 `trending(args, session)` → gọi REST `trends/place`, parse, fallback search nếu cần
-  - [ ] 4.4 Cập nhật `CrawlCheckpoint` sau mỗi page và cuối cùng
+- [x] **Task 4 — Triển khai handlers `TwitterCrawler` (AC-2, AC-3, AC-4)**
+  - [x] 4.1 `search(args, session)` → build advanced query, gọi `SearchTimeline`, paginate + dedup + checkpoint
+  - [x] 4.2 `hashtag(args, session)` → normalize `#`, delegate `search`, set `metadata.isHashtag/hashtag`
+  - [x] 4.3 `trending(args, session)` → gọi REST `trends/place`, parse, fallback search nếu cần
+  - [x] 4.4 Cập nhật `CrawlCheckpoint` sau mỗi page và cuối cùng
 
-- [ ] **Task 5 — Lưu trữ và metadata schema (AC-5)**
-  - [ ] 5.1 Đảm bảo `tweetToPostItem` trả về `category: 'social'` và `metadata.tweetId = externalId`
-  - [ ] 5.2 Mở rộng `schemas/twitter/social.json` để hỗ trợ các trường search/hashtag/trending: `isSearchResult`, `searchQuery`, `searchFilter`, `isHashtag`, `hashtag`, `isTrending`, `trendWoeid`, `tweetCount`, `trendUrl`, `isPromoted`, `sourceMethod`, `cursor`
-  - [ ] 5.3 Gọi `this.store.storeBatch(posts, { validateSchema: true })` sau mỗi page; chunk 500
+- [x] **Task 5 — Lưu trữ và metadata schema (AC-5)**
+  - [x] 5.1 Đảm bảo `tweetToPostItem` trả về `category: 'social'` và `metadata.tweetId = externalId`
+  - [x] 5.2 Mở rộng `schemas/twitter/social.json` để hỗ trợ các trường search/hashtag/trending: `isSearchResult`, `searchQuery`, `searchFilter`, `isHashtag`, `hashtag`, `isTrending`, `trendWoeid`, `tweetCount`, `trendUrl`, `isPromoted`, `sourceMethod`, `cursor`
+  - [x] 5.3 Gọi `this.store.storeBatch(posts, { validateSchema: true })` sau mỗi page; chunk 500
 
-- [ ] **Task 6 — Deprecation markers (AC-6)**
-  - [ ] 6.1 Thêm `@deprecated` cho `searchTweets`, `scrapeHashtag`, `scrapeTrending` trong `src/scrapers/twitter/index.js`
-  - [ ] 6.2 Thêm `@deprecated` cho `searchTweets`, `searchUsers`, `scrapeTrending`, `scrapeHashtag` trong `src/scrapers/twitter/http/search.js`
-  - [ ] 6.3 Thêm `@deprecated` cho `searchTweets`, `searchProfiles`, `getTrends`, `getExploreTabs` trong `src/client/Scraper.js` (nếu tồn tại)
-  - [ ] 6.4 Cập nhật `docs/deprecation-plan.md` status tracker
+- [x] **Task 6 — Deprecation markers (AC-6)**
+  - [x] 6.1 Thêm `@deprecated` cho `searchTweets`, `scrapeHashtag`, `scrapeTrending` trong `src/scrapers/twitter/index.js`
+  - [x] 6.2 Thêm `@deprecated` cho `searchTweets`, `searchUsers`, `scrapeTrending`, `scrapeHashtag` trong `src/scrapers/twitter/http/search.js`
+  - [x] 6.3 Thêm `@deprecated` cho `searchTweets`, `searchProfiles`, `getTrends`, `getExploreTabs` trong `src/client/Scraper.js` (nếu tồn tại) — N/A: `src/client/Scraper.js` không tồn tại; ghi nhận trong `docs/deprecation-plan.md`.
+  - [x] 6.4 Cập nhật `docs/deprecation-plan.md` status tracker
 
-- [ ] **Task 7 — ATDD tests (AC-7)**
-  - [ ] 7.1 Tạo `tests/scrapers/social/twitter/crawler-search-hashtag-trending.test.js`
-  - [ ] 7.2 Fake server trả về `SearchTimeline` response giống Twitter (2-3 pages + cursor)
-  - [ ] 7.3 Fake server trả về `/1.1/trends/place.json` response
-  - [ ] 7.4 Test các trường hợp: search with advanced filters, hashtag normalization, trending with woeid, pagination, empty result, invalid filter
-  - [ ] 7.5 Chạy `npx tsc --noEmit` hoặc `npm run typecheck`
+- [x] **Task 7 — ATDD tests (AC-7)**
+  - [x] 7.1 Tạo `tests/scrapers/social/twitter/crawler-search-hashtag-trending.test.js`
+  - [x] 7.2 Fake server trả về `SearchTimeline` response giống Twitter (2-3 pages + cursor)
+  - [x] 7.3 Fake server trả về `/1.1/trends/place.json` response
+  - [x] 7.4 Test các trường hợp: search with advanced filters, hashtag normalization, trending with woeid, pagination, empty result, invalid filter
+  - [x] 7.5 Chạy `npx tsc --noEmit` — chỉ còn lỗi baseline `TS2308` `parseHumanCount` từ `src/scrapers/social/index.js` (không do story)
 
 ---
 
@@ -296,7 +297,7 @@ function hashTrendId(woeid, name) {
 
 ### Agent Model Used
 
-N/A — story creation
+Claude Opus 5 (2026-08-30)
 
 ### Debug Log References
 
@@ -305,25 +306,35 @@ N/A — story creation
 
 ### Completion Notes List
 
-- [ ] Đọc xong epics.md Story 13.2.3, 13.2, 13.2.1, 13.2.2
-- [ ] Đọc xong ARCHITECTURE-SPINE.md AD-1..AD-13
-- [ ] Phân tích legacy `src/scrapers/twitter/http/search.js`, `src/scrapers/twitter/index.js`, `src/client/Scraper.js`
-- [ ] Xác định query ID `SearchTimeline` = `flaR-PUMshxFWZWPNpq4zA` [src/scrapers/twitter/http/endpoints.js:85]
-- [ ] Xác định REST trends endpoint `/1.1/trends/place.json` [src/scrapers/twitter/http/endpoints.js:165]
+- [x] Đọc xong epics.md Story 13.2.3, 13.2, 13.2.1, 13.2.2
+- [x] Đọc xong ARCHITECTURE-SPINE.md AD-1..AD-13
+- [x] Phân tích legacy `src/scrapers/twitter/http/search.js`, `src/scrapers/twitter/index.js`, `src/client/Scraper.js`
+- [x] Xác định query ID `SearchTimeline` = `flaR-PUMshxFWZWPNpq4zA` [src/scrapers/twitter/http/endpoints.js:85]
+- [x] Xác định REST trends endpoint `/1.1/trends/place.json` [src/scrapers/twitter/http/endpoints.js:165]
+- [x] Triển khai `TwitterClient`, `TwitterCrawler`, normalizers, validator, schema
+- [x] Gắn `@deprecated` markers và cập nhật `docs/deprecation-plan.md`
+- [x] Chạy ATDD 14/14 pass
+- [x] Chạy `npx tsc --noEmit`: chỉ còn lỗi baseline `TS2308 parseHumanCount`
 
 ### File List
 
 - **Mới / Cập nhật (NEW/UPDATE):**
-  - `src/scrapers/social/twitter/crawler.js` — UPDATE: thêm register action `search`, `hashtag`, `trending`
-  - `src/scrapers/social/twitter/client.js` — UPDATE: thêm REST request helper nếu cần
-  - `src/scrapers/social/twitter/normalize-tweet.js` — NEW/UPDATE
+  - `src/scrapers/social/twitter/index.js` — NEW/UPDATE: barrel export client, crawler, validator, normalizers
+  - `src/scrapers/social/twitter/crawler.js` — NEW/UPDATE: register action `search`, `hashtag`, `trending`
+  - `src/scrapers/social/twitter/client.js` — NEW/UPDATE: Twitter HTTP client extends `AbstractApiClient`
+  - `src/scrapers/social/twitter/validator.js` — NEW/UPDATE: `TwitterPlatformResponseValidator`
+  - `src/scrapers/social/twitter/normalize-tweet.js` — NEW
   - `src/scrapers/social/twitter/normalize-search.js` — NEW
   - `src/scrapers/social/twitter/normalize-trending.js` — NEW
-  - `src/scrapers/social/twitter/validator.js` — UPDATE
+  - `src/core/types.js` — UPDATE: thêm `authorName` optional vào `ProfileItem`
   - `schemas/twitter/social.json` — UPDATE: thêm search/hashtag/trending metadata
   - `docs/deprecation-plan.md` — UPDATE: status tracker
   - `tests/scrapers/social/twitter/crawler-search-hashtag-trending.test.js` — NEW
-  - `scripts/test-twitter-search-live.mjs` — NEW (tùy chọn)
+  - `src/scrapers/social/index.js` — UPDATE: export `src/scrapers/social/twitter/index.js`
   - `src/scrapers/twitter/index.js` — UPDATE: `@deprecated` markers
   - `src/scrapers/twitter/http/search.js` — UPDATE: `@deprecated` markers
-  - `src/client/Scraper.js` — UPDATE: `@deprecated` markers (nếu tồn tại)
+
+## Change Log
+
+- 2026-08-30: Hoàn thành green phase — `TwitterCrawler` search/hashtag/trending, `TwitterClient`, normalizers, validator, schema, deprecation markers, ATDD 14/14 pass.
+- 2026-08-30: `npx tsc --noEmit` chỉ còn lỗi baseline `TS2308 parseHumanCount` trong `src/scrapers/social/index.js`.

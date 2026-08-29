@@ -53,6 +53,7 @@
  * @property {string} externalId
  * @property {string} [username]
  * @property {string} [name]
+ * @property {string} [authorName]
  * @property {string} [bio]
  * @property {string} [avatar]
  * @property {string} [profileUrl]
