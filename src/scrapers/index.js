@@ -297,9 +297,9 @@ export async function scrape(platform, action, options = {}) {
       );
     }
 
-    const query = options.query || options.target;
+    const query = options.query || options.keyword || options.q || options.target;
     const tag = options.hashtag || options.tag || options.target;
-    const videoId = options.videoId || options.postId || options.url || options.target;
+    const videoId = options.videoId || options.postId || options.id || options.url || options.target;
 
     /** @type {Record<string, unknown>} */
     const mappedArgs = {};
@@ -320,6 +320,9 @@ export async function scrape(platform, action, options = {}) {
     }
     if (options.cursor != null) {
       mappedArgs.cursor = options.cursor;
+    }
+    if (options.after != null) {
+      mappedArgs.after = options.after;
     }
     if (options.maxDepth != null) {
       mappedArgs.maxDepth = Number(options.maxDepth);
@@ -344,19 +347,33 @@ export async function scrape(platform, action, options = {}) {
       baseUrl: options.baseUrl,
       proxy: options.proxy,
       proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
       governor: options.governor,
       accountPool: options.accountPool,
       sessionManager: options.sessionManager,
+      responseValidator: options.responseValidator,
+      tokenRing: options.tokenRing,
+      guestTokenRing: options.guestTokenRing,
+      signerPool: options.signerPool,
+      signerBridge: options.signerBridge,
+      requiresProxy: options.requiresProxy,
+      requiresAuth: options.requiresAuth,
+      timeout: options.timeout,
       headless: options.headless !== false,
     });
 
     const crawler = new TikTokCrawler({
       client,
       store,
+      redisPublisher: options.redisPublisher,
       proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
       governor: options.governor,
       accountPool: options.accountPool,
       sessionManager: options.sessionManager,
+      requiresProxy: options.requiresProxy,
+      requiresAuth: options.requiresAuth,
+      timeout: options.timeout,
     });
 
     try {

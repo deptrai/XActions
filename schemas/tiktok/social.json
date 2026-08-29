@@ -14,7 +14,8 @@
     "awemeId": { "type": "string" },
     "videoHeight": { "type": "number" },
     "videoWidth": { "type": "number" },
-    "sourceMethod": { "type": "string" }
+    "sourceMethod": { "type": "string" },
+    "coverUrl": { "type": "string" }
   },
   "required": ["sourceMethod", "awemeId"]
 }

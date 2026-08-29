@@ -162,6 +162,8 @@ describe('Story 15.2 — TikTokClient Contract & Web API Engine', () => {
     // buildSearchUrl does not sign; msToken is added by sign() before the request.
     const signed = await client.sign({ url });
     expect(signed.query).toHaveProperty('msToken');
+    expect(typeof signed.query.msToken).toBe('string');
+    expect(signed.query.a_bogus).toBeTruthy();
   });
 
   it('executes search and normalizes results against a real local endpoint', async () => {

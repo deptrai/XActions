@@ -62,7 +62,7 @@ const DEFAULT_DEVICE_CONTEXT = Object.freeze({
 /**
  * Default set of client AB versions observed in live capture.
  * These are best-effort and may be rotated by TikTok.
- * @type {string[]}
+ * @type {readonly string[]}
  */
 const DEFAULT_CLIENT_AB_VERSIONS = Object.freeze([
   '76963944', '70508271', '73720541', '75843653', '76424653', '76464659',
@@ -155,8 +155,9 @@ export class TikTokClient extends AbstractApiClient {
    * @param {Object} [deps]
    * @param {string} [deps.baseUrl]
    * @param {Record<string, any>} [deps.deviceContext]
-   * @param {string[]} [deps.clientAbVersions]
-   * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
+   * @param {readonly string[]} [deps.clientAbVersions]
+   * @param {import('../../../core/base-client.js').ProxyProviderLike} [deps.proxyPool]
+   * @param {import('../../../core/base-client.js').ProxyProviderLike} [deps.proxyProvider]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../core/session-manager.js').SessionManager} [deps.sessionManager]
@@ -169,6 +170,7 @@ export class TikTokClient extends AbstractApiClient {
    * @param {boolean} [deps.headless]
    * @param {string} [deps.proxy]
    * @param {number} [deps.timeout]
+   * @param {boolean} [deps.requiresAuth]
    * @param {boolean} [deps.requiresProxy]
    */
   constructor(deps = {}) {
@@ -188,7 +190,7 @@ export class TikTokClient extends AbstractApiClient {
       ...DEFAULT_DEVICE_CONTEXT,
       ...(deps.deviceContext || {}),
     };
-    this.clientAbVersions = deps.clientAbVersions || [...DEFAULT_CLIENT_AB_VERSIONS];
+    this.clientAbVersions = /** @type {string[]} */ (deps.clientAbVersions ? [...deps.clientAbVersions] : [...DEFAULT_CLIENT_AB_VERSIONS]);
     this.timeout = deps.timeout ?? 60000;
 
     this.guestTokenRing = deps.guestTokenRing || new PreSignedTokenRing({ capacity: 50 });
@@ -348,7 +350,7 @@ export class TikTokClient extends AbstractApiClient {
    * @param {string} method
    * @param {string} url
    * @param {import('../../../core/base-client.js').RequestOptions & TikTokRequestOptions} [options]
-   * @returns {Promise<Record<string, any>>}
+   * @returns {Promise<any>}
    */
   async request(method, url, options = {}) {
     const opts = /** @type {any} */ (options) || {};
@@ -387,7 +389,7 @@ export class TikTokClient extends AbstractApiClient {
    * @param {string} endpointPath
    * @param {Record<string, any>} params
    * @param {import('../../../core/base-client.js').RequestOptions & TikTokRequestOptions} [options]
-   * @returns {Promise<Record<string, any>>}
+   * @returns {Promise<any>}
    */
   async requestTikTokApi(method, endpointPath, params = {}, options = {}) {
     const url = this.buildApiUrl(endpointPath, params);
@@ -397,13 +399,14 @@ export class TikTokClient extends AbstractApiClient {
     const finalUrl = this.#mergeSignedQuery(url, signed.query);
 
     const resp = await this.request(method, finalUrl, {
-      accountId: 'tiktok-guest',
+      accountId: options.accountId || 'tiktok-guest',
       ...options,
     });
 
     // If the anti-bot token was rejected, the validator will throw inside request().
     // Surface the parsed payload for the caller.
-    return resp?.data ?? resp;
+    const payload = resp?.data ?? resp;
+    return /** @type {Record<string, any>} */ (payload);
   }
 
   /**

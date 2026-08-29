@@ -62,6 +62,7 @@ export class TikTokCrawler extends AbstractCrawler {
       action: 'search',
       description: 'Search TikTok videos by keyword',
       category: 'social',
+      requiresAuth: true,
       requiredArgs: ['query'],
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
@@ -73,6 +74,7 @@ export class TikTokCrawler extends AbstractCrawler {
       action: 'hashtag_feed',
       description: 'Fetch TikTok videos for a hashtag',
       category: 'social',
+      requiresAuth: true,
       requiredArgs: ['tag'],
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
@@ -84,6 +86,7 @@ export class TikTokCrawler extends AbstractCrawler {
       action: 'post_detail',
       description: 'Fetch TikTok video detail by ID or URL',
       category: 'social',
+      requiresAuth: true,
       requiredArgs: ['videoId'],
       optionalArgs: ['includeComments', 'maxDepth', 'maxComments'],
       outputType: '{ post: PostItem, comments?: CommentItem[], pageInfo?: any }',
@@ -95,6 +98,7 @@ export class TikTokCrawler extends AbstractCrawler {
       action: 'get_post_comments',
       description: 'Scrape hierarchical comment tree for a TikTok video',
       category: 'social',
+      requiresAuth: true,
       requiredArgs: ['videoId'],
       optionalArgs: ['maxDepth', 'maxComments', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
@@ -508,7 +512,7 @@ export class TikTokCrawler extends AbstractCrawler {
       { maxDepth, maxComments, concurrency: 2 }
     );
 
-    const { comments, pageInfo } = await extractor.fetch(videoId);
+    const { comments, pageInfo } = await extractor.fetch(videoId, { after: args.after || null });
 
     if (this.store && typeof this.store.storeCommentBatch === 'function' && comments.length > 0) {
       await this.store.storeCommentBatch(comments, { upsert: true });

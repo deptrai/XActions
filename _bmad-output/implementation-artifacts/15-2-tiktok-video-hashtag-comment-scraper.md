@@ -289,6 +289,18 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 - `package.json` (to be updated)
 - `tests/scrapers/social/tiktok/*.test.js` (to be created)
 
+### Review Findings
+
+- [x] [Review][Patch] Forward `options.after` to `mappedArgs.after` and pass `after` to `CommentTreeExtractor.fetch()` so comment pagination resumes correctly [src/scrapers/index.js:316, src/scrapers/social/tiktok/crawler.js:511]
+- [x] [Review][Patch] Forward `requiresProxy`, `responseValidator`, `redisPublisher`, `timeout`, `requiresAuth` through `scrape('tiktok', ...)` dispatcher [src/scrapers/index.js:338-360]
+- [x] [Review][Patch] Add `coverUrl` to `schemas/tiktok/social.json` to match `normalizeTikTokPost` output [schemas/tiktok/social.json]
+- [x] [Review][Patch] Add `requiresAuth: true` to each `ActionRegistry` descriptor in `TikTokCrawler` [src/scrapers/social/tiktok/crawler.js:61-103]
+- [x] [Review][Patch] Strengthen `msToken` and `a_bogus` test assertions to verify non-empty values [tests/scrapers/social/tiktok/client.test.js:164]
+- [x] [Review][Patch] Add common dispatcher aliases `keyword`, `q` (search) and `id` (post) to `TIKTOK_ACTION_MAP` option resolution [src/scrapers/index.js:285-295]
+- [x] [Review][Patch] Fix TypeScript errors in `client.js`, `crawler.js`, `signer-bridge.js` reported by `tsc --noEmit`
+- [x] [Review][Patch] Exclude captured `signer-scripts/webmssdk-1.0.0.388.js` from `tsc` strict checks or add `// @ts-nocheck` since it is a verbatim captured artifact
+- [ ] [Review][Defer] Real-API red-phase tests / live TikTok Web API session capture (Task 0 items: endpoints, `a_bogus` algorithm, `msToken` refresh)
+
 ## Change Log
 
 - 2026-08-29 — Story created from Epic 15.2 with comprehensive architecture, ACs, tasks, and dev notes.

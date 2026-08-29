@@ -28,32 +28,36 @@ import fs from 'node:fs';
  */
 
 /**
+ * @typedef {Record<string, any> & { server: string, username?: string, password?: string }} NormalizedPlaywrightProxy
+ */
+
+/**
  * Resolve a proxy string into a Playwright-compatible proxy object.
  * @param {string | Record<string, unknown> | null} proxy
- * @returns {Record<string, string> | null}
+ * @returns {NormalizedPlaywrightProxy | null}
  */
 function normalizeProxy(proxy) {
   if (!proxy) return null;
   if (typeof proxy === 'string') {
     try {
       const url = new URL(proxy);
-      const result = { server: `${url.protocol}//${url.host}` };
+      const result = /** @type {NormalizedPlaywrightProxy} */ ({ server: `${url.protocol}//${url.host}` });
       if (url.username) result.username = decodeURIComponent(url.username);
       if (url.password) result.password = decodeURIComponent(url.password);
       return result;
     } catch {
-      return { server: proxy };
+      return /** @type {NormalizedPlaywrightProxy} */ ({ server: proxy });
     }
   }
   if (typeof proxy === 'object') {
-    const p = /** @type {Record<string, string>} */ (proxy);
-    if (p.server) return p;
+    const p = /** @type {Record<string, any>} */ (proxy);
+    if (p.server) return /** @type {NormalizedPlaywrightProxy} */ (p);
     if (p.host && p.port) {
-      return {
+      return /** @type {NormalizedPlaywrightProxy} */ ({
         server: `${p.scheme || 'http'}://${p.host}:${p.port}`,
         username: p.username,
         password: p.password,
-      };
+      });
     }
   }
   return null;
@@ -281,7 +285,7 @@ export class TikTokBrowserBridge {
         const adapter = await this.#resolveAdapter();
         const proxy = this.#resolveProxy(accountId, requiresResidential);
 
-        this.#browser = await adapter.launch({
+        this.#browser = await adapter.launch(/** @type {Record<string, any>} */ ({
           headless: this.headless,
           userDataDir,
           proxy,
@@ -289,7 +293,7 @@ export class TikTokBrowserBridge {
             '--no-sandbox',
             '--disable-blink-features=AutomationControlled',
           ],
-        });
+        }));
         return this.#browser;
       } finally {
         this.#launchPromise = null;
@@ -337,7 +341,7 @@ export class TikTokBrowserBridge {
       if (!tokens.ttwid && !tokens.msToken) {
         throw new PlatformError({
           code: 'XACT_4010',
-          type: ErrorTypes.AUTH,
+          type: ErrorTypes.AUTH_EXPIRED,
           message: 'TikTok session cookies could not be extracted from the browser. Proxy or IP may be blocked.',
           suggestedAction: SuggestedActions.RELOGIN,
           platform: 'tiktok',
@@ -414,7 +418,7 @@ export class TikTokBrowserBridge {
     try {
       // Trigger a fetch so TikTok's webmssdk hook rewrites the URL with tokens.
       const init = JSON.stringify({ credentials: 'include', mode: 'cors' });
-      const fetchResult = await adapter.evaluate(page, triggerSignedFetch, url, init);
+      const fetchResult = await adapter.evaluate(page, /** @type {(...args: unknown[]) => unknown} */ (/** @type {unknown} */ (triggerSignedFetch)), url, init);
 
       // Give the runtime a moment to complete the request and fire the listener.
       const deadline = Date.now() + 3000;

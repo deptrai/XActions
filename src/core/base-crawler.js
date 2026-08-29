@@ -285,9 +285,10 @@ export class AbstractCrawler {
 
   /**
    * @param {Object} args
-   * @returns {Promise<PostItem[]>}
+   * @param {Record<string, any>} [session]
+   * @returns {Promise<PostItem[] | { posts: PostItem[], pageInfo: Record<string, any> }>}
    */
-  async search(args) { throw new Error('Method not implemented: search()'); }
+  async search(args, session) { throw new Error('Method not implemented: search()'); }
 
   /**
    * @param {Object} args
