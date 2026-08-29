@@ -2,18 +2,18 @@
 story_id: '13.2.2'
 epic: 13
 story_key: '13-2-2-twitter-hybrid-thread-likes-bookmarks'
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 2"
 created: 2026-08-29
 updated: 2026-08-29
 last_updated: 2026-08-29
 owner: "DEV"
-reviewed: "pending"
+reviewed: "completed"
 ---
 
 # Story 13.2.2 — Twitter Hybrid Thread, Likes & Bookmarks
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
