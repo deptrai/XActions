@@ -142,15 +142,19 @@ npm run typecheck
 
 ### Initial Scaffold Review / RED Verification
 
-**Command:** `npx vitest run tests/scrapers/social/threads/caller-migration.test.js`
+**Command:** `npx vitest run tests/scrapers/social/threads`
 
 **Results:**
 
 ```
-Test Files  1 skipped (1)
-     Tests  13 skipped (13)
-  Duration  768ms
+Test Files  7 passed | 1 skipped (8)
+     Tests  57 passed | 13 skipped (70)
+  Duration  4.60s
 ```
+
+- 57 existing Threads tests continue to pass (regression-safe).
+- 13 new `caller-migration` scaffolds are skipped (RED phase).
+- `npm run typecheck` passes.
 
 **Summary:**
 
