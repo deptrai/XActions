@@ -534,6 +534,8 @@ export async function searchTweets(page, query, options = {}) {
 /**
  * Scrape a full tweet thread
  *
+ * @deprecated Use TwitterCrawler.thread ({ action: 'thread' }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl
  * @returns {Promise<Array<Record<string, unknown>>>}
@@ -588,6 +590,8 @@ export async function scrapeThread(page, tweetUrl) {
 /**
  * Scrape users who liked a tweet
  *
+ * @deprecated Use TwitterCrawler.likes ({ action: 'likes' }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl
  * @param {TwitterScrapeOptions} [options]
@@ -789,6 +793,8 @@ export async function scrapeListMembers(page, listUrl, options = {}) {
 /**
  * Scrape bookmarked tweets (requires login)
  *
+ * @deprecated Use TwitterCrawler.bookmarks ({ action: 'bookmarks' }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {TwitterScrapeOptions} [options]
  * @returns {Promise<Array<Record<string, unknown>>>}

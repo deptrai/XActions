@@ -2,58 +2,32 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Twitter Social Post Metadata",
   "type": "object",
+  "required": [
+    "tweetId"
+  ],
   "properties": {
     "tweetId": {
       "type": "string"
     },
-    "replyCount": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "retweetCount": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "likeCount": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "quoteCount": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "bookmarkCount": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "isRetweet": {
-      "type": "boolean"
-    },
-    "isReply": {
-      "type": "boolean"
-    },
-    "isQuote": {
-      "type": "boolean"
-    },
-    "hashtags": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "mentions": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "lang": {
-      "type": "string"
+    "parentTweetId": {
+      "type": ["string", "null"]
     },
     "conversationId": {
+      "type": ["string", "null"]
+    },
+    "isThread": {
+      "type": "boolean"
+    },
+    "isBookmarked": {
+      "type": "boolean"
+    },
+    "username": {
       "type": "string"
     },
     "profileId": {
+      "type": "string"
+    },
+    "avatar": {
       "type": "string"
     },
     "isProfile": {
@@ -77,8 +51,20 @@
     "isNonFollower": {
       "type": "boolean"
     },
-    "username": {
-      "type": "string"
+    "isReply": {
+      "type": "boolean"
+    },
+    "isRetweet": {
+      "type": "boolean"
+    },
+    "isQuote": {
+      "type": "boolean"
+    },
+    "isVerified": {
+      "type": "boolean"
+    },
+    "protected": {
+      "type": "boolean"
     },
     "followersCount": {
       "type": "integer",
@@ -88,26 +74,49 @@
       "type": "integer",
       "minimum": 0
     },
-    "isVerified": {
-      "type": "boolean"
+    "likeCount": {
+      "type": "integer",
+      "minimum": 0
     },
-    "protected": {
-      "type": "boolean"
+    "retweetCount": {
+      "type": "integer",
+      "minimum": 0
     },
-    "avatar": {
+    "replyCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "quoteCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bookmarkCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lang": {
       "type": "string"
     },
-    "sourceMethod": {
-      "type": "string"
+    "hashtags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "mentions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "listId": {
       "type": "string"
     },
     "cursor": {
       "type": "string"
+    },
+    "sourceMethod": {
+      "type": "string"
     }
-  },
-  "required": [
-    "tweetId"
-  ]
+  }
 }
