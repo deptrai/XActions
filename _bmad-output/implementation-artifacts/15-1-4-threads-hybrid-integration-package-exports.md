@@ -171,6 +171,12 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
   - `xactions/scrapers/social/threads` resolves to `src/scrapers/social/threads/index.js`.
   - `xactions/scrapers/social` resolves and re-exports Threads public symbols.
 
+### ATDD Artifacts
+
+- **Checklist:** `_bmad-output/test-artifacts/atdd-checklist-15-1-4-threads-hybrid-integration-package-exports.md`
+- **Red-Phase Test Scaffold:** `tests/scrapers/social/threads/caller-migration.test.js` (13 tests, currently `describe.skip()`)
+- **TDD Phase:** RED — remove `describe.skip()` task-by-task during `dev-story`
+
 ## Testing Standards & Commands
 - **No Mocks Rule**: Do NOT use `vi.fn()` or fake HTTP clients. Build local `node:http` servers to return realistic HTML and GraphQL responses.
 - **Run Tests**:
