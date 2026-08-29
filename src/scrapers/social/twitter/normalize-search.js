@@ -37,11 +37,21 @@ export function parseSearchTimeline(response, context = {}) {
       }
       if (entry.entryId?.startsWith('cursor-top-')) continue;
 
-      const tweetResult =
-        entry?.content?.itemContent?.tweet_results?.result ??
-        entry?.content?.tweet_results?.result ??
-        null;
-      if (tweetResult) {
+      // Tweet result may live directly in the entry or inside a module's items list.
+      const candidates = [
+        entry?.content?.itemContent?.tweet_results?.result,
+        entry?.content?.tweet_results?.result,
+      ];
+      if (Array.isArray(entry?.content?.items)) {
+        for (const moduleItem of entry.content.items) {
+          candidates.push(
+            moduleItem?.item?.itemContent?.tweet_results?.result,
+            moduleItem?.itemContent?.tweet_results?.result,
+          );
+        }
+      }
+      for (const tweetResult of candidates) {
+        if (!tweetResult) continue;
         const post = tweetToPostItem(tweetResult, context);
         if (post) posts.push(post);
       }
@@ -125,8 +135,19 @@ export function parseSearchUsers(response, context = {}) {
       }
       if (entry.entryId?.startsWith('cursor-top-')) continue;
 
-      const profile = userEntryToProfileItem(entry, context);
-      if (profile) users.push(profile);
+      // User result may live directly in the entry or inside a module's items list.
+      const candidates = [
+        entry,
+      ];
+      if (Array.isArray(entry?.content?.items)) {
+        for (const moduleItem of entry.content.items) {
+          candidates.push(moduleItem?.item ?? moduleItem);
+        }
+      }
+      for (const candidate of candidates) {
+        const profile = userEntryToProfileItem(candidate, context);
+        if (profile) users.push(profile);
+      }
     }
   }
 

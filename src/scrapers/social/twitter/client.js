@@ -9,11 +9,13 @@
 
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { TwitterPlatformResponseValidator } from './validator.js';
-import { BEARER_TOKEN, GRAPHQL, REST, DEFAULT_FEATURES } from '../../twitter/http/endpoints.js';
+import { BEARER_TOKEN, GRAPHQL, REST, REST_BASE, DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES } from '../../twitter/http/endpoints.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
 /**
  * Check whether a URL points to a loopback or local/private host.
+ * Treats loopback 127/8, link-local IPv6, private IPv4 ranges, and
+ * *.localhost / *.local hosts as local for testing.
  * @param {string} url
  * @returns {boolean}
  */
@@ -22,11 +24,12 @@ function isLocalUrl(url) {
   try {
     const { hostname } = new URL(url);
     const host = hostname.toLowerCase();
-    if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0') return true;
+    if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
+    if (host === '::1' || /^\[?::1\]?$/.test(host) || host === 'fe80::1') return true;
+    if (/^127\./.test(host) || host === '0.0.0.0') return true;
     if (host.startsWith('10.') || host.startsWith('192.168.')) return true;
     if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) return true;
-    if (host.startsWith('fc00:') || host.startsWith('fd00:') || host === 'fe80::1') return true;
-    if (/^\[?::1\]?$/.test(host)) return true;
+    if (host.startsWith('fc00:') || host.startsWith('fd00:')) return true;
   } catch {}
   return false;
 }
@@ -196,17 +199,22 @@ export class TwitterClient extends AbstractApiClient {
    */
   async #signTransactionId(options = {}) {
     if (!this.signerPool || typeof this.signerPool.evaluate !== 'function') return null;
+    let timer = null;
     try {
-      const result = await Promise.race([
-        this.signerPool.evaluate('xClientTransactionId', [options], { timeoutMs: 3000 }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('signer timeout')), 3000)),
+      return await Promise.race([
+        this.signerPool.evaluate('xClientTransactionId', [options], { timeoutMs: 3000 }).then((result) => {
+          if (typeof result === 'string') return result;
+          if (result && typeof result === 'object') return result.signature || result.xClientTransactionId || null;
+          return null;
+        }),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('signer timeout')), 3000); }),
       ]);
-      if (typeof result === 'string') return result;
-      if (result && typeof result === 'object') return result.signature || result.xClientTransactionId || null;
     } catch {
       // Swallow signing failures for guest/no-auth requests.
+      return null;
+    } finally {
+      if (timer) clearTimeout(timer);
     }
-    return null;
   }
 
   /**
@@ -219,6 +227,7 @@ export class TwitterClient extends AbstractApiClient {
     const body = new URLSearchParams();
     body.set('variables', JSON.stringify(variables));
     body.set('features', JSON.stringify(features));
+    body.set('fieldToggles', JSON.stringify(DEFAULT_FIELD_TOGGLES));
     return body;
   }
 
@@ -284,7 +293,9 @@ export class TwitterClient extends AbstractApiClient {
     const isAuth = options.requiresAuth !== undefined ? options.requiresAuth : this.requiresAuth;
     const accountId = isAuth ? (options.accountId || null) : null;
 
-    const url = new URL(`${this.baseUrl}${path.startsWith('/') ? path : `/${path}`}`, this.baseUrl);
+    const needsApiPrefix = !isLocalUrl(this.baseUrl) && /^\/(1\.1|2)\//.test(path);
+    const fullPath = needsApiPrefix ? `/i/api${path}` : path;
+    const url = new URL(`${this.baseUrl}${fullPath.startsWith('/') ? fullPath : `/${fullPath}`}`, this.baseUrl);
     if (options.query && typeof options.query === 'object') {
       for (const [k, v] of Object.entries(options.query)) {
         if (v !== undefined && v !== null) url.searchParams.set(k, String(v));

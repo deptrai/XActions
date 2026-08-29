@@ -30,8 +30,8 @@ export function trendToPostItem(trend, woeid) {
   const name = String(trend.name || '');
   if (!name) return null;
 
-  const externalId = crypto.createHash('sha256').update(`${woeid}:${name}`).digest('hex').slice(0, 16);
-  const id = `twitter:trend:${woeid}:${externalId}`;
+  const id = hashTrendId(woeid, name);
+  const externalId = id.replace(/^twitter:trend:[^:]+:/, '');
   const isPromoted = Boolean(trend.promoted_content);
 
   /** @type {import('../../../core/types.js').PostItem} */

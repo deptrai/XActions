@@ -13,6 +13,7 @@ import { parseSearchTimeline, parseSearchUsers } from './normalize-search.js';
 import { parseTrends } from './normalize-trending.js';
 import { buildAdvancedQuery } from '../../twitter/http/search.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import { isValidCategory } from '../../../core/types.js';
 import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
 
 const VALID_SEARCH_TYPES = new Set(['top', 'latest', 'live', 'photos', 'videos', 'people', 'user', 'all']);
@@ -83,10 +84,10 @@ export class TwitterCrawler extends AbstractCrawler {
       description: 'Search tweets for a hashtag',
       category: 'social',
       requiresAuth: false,
-      requiredArgs: ['hashtag', 'tag'],
-      optionalArgs: ['tag', 'type', 'filter', 'since', 'until', 'minLikes', 'minRetweets', 'lang', 'limit', 'cursor'],
+      requiredArgs: ['tag'],
+      optionalArgs: ['hashtag', 'type', 'filter', 'since', 'until', 'minLikes', 'minRetweets', 'lang', 'limit', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
-      example: { hashtag: 'AI', tag: 'AI', type: 'Latest', limit: 50 },
+      example: { tag: 'AI', type: 'Latest', limit: 50 },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.hashtag(args, session),
     });
 
@@ -175,6 +176,9 @@ export class TwitterCrawler extends AbstractCrawler {
    * @param {string} [args.type]
    * @param {string} [args.from]
    * @param {string} [args.to]
+   * @param {string} [args.mentioning]
+   * @param {string} [args.url]
+   * @param {string} [args.listId]
    * @param {string} [args.since]
    * @param {string} [args.until]
    * @param {number} [args.minLikes]
@@ -182,6 +186,9 @@ export class TwitterCrawler extends AbstractCrawler {
    * @param {number} [args.minReplies]
    * @param {string} [args.lang]
    * @param {string} [args.filter]
+   * @param {string|string[]} [args.exclude]
+   * @param {string} [args.near]
+   * @param {string} [args.within]
    * @param {boolean} [args.isHashtag]
    * @returns {{ rawQuery: string, product: string, searchType: string }}
    */
@@ -191,14 +198,20 @@ export class TwitterCrawler extends AbstractCrawler {
       keywords: args.query || '',
       from: args.from,
       to: args.to,
+      mentioning: args.mentioning,
+      url: args.url,
+      listId: args.listId,
       since: args.since,
       until: args.until,
       minLikes: args.minLikes,
       minRetweets: args.minRetweets,
       minReplies: args.minReplies,
       lang: args.lang,
+      near: args.near,
+      within: args.within,
     });
     if (searchFilter) queryOptions.filter = searchFilter;
+    if (args.exclude) queryOptions.exclude = args.exclude;
 
     const rawQuery = buildAdvancedQuery(queryOptions);
     return { rawQuery, product, searchType };
@@ -242,7 +255,7 @@ export class TwitterCrawler extends AbstractCrawler {
               platform: 'twitter',
               externalId: anyItem.externalId,
               category,
-              authorId: anyItem.authorId || '',
+              authorId: anyItem.authorId || anyItem.externalId || '',
               crawledAt: anyItem.crawledAt ? toIsoDate(anyItem.crawledAt) : new Date().toISOString(),
               storageRef: anyItem.id,
             });
@@ -255,15 +268,116 @@ export class TwitterCrawler extends AbstractCrawler {
   }
 
   /**
+   * Ensure a PostItem-compatible object has the minimum fields required by
+   * PrismaStore.storeBatch. ProfileItem search results are mapped on the fly
+   * before storage while keeping their public API shape unchanged.
+   * @param {import('../../../core/types.js').PostItem | import('../../../core/types.js').ProfileItem} item
+   * @returns {import('../../../core/types.js').PostItem}
+   */
+  #toStoreablePostItem(item) {
+    const anyItem = /** @type {any} */ (item);
+    const storeableCategory = isValidCategory(anyItem.category) ? anyItem.category : 'social';
+
+    return /** @type {import('../../../core/types.js').PostItem} */ ({
+      ...anyItem,
+      category: storeableCategory,
+      authorId: anyItem.authorId || anyItem.externalId || '',
+      authorName: anyItem.authorName || anyItem.name || '',
+      content: anyItem.content || anyItem.bio || anyItem.name || anyItem.authorName || '',
+    });
+  }
+
+  /**
    * Store a batch of items and validate.
-   * @param {import('../../../core/types.js').PostItem[]} items
+   * @param {Array<import('../../../core/types.js').PostItem | import('../../../core/types.js').ProfileItem>} items
    */
   async #storeItems(items) {
     if (!this.store || typeof this.store.storeBatch !== 'function' || items.length === 0) return;
-    for (const item of items) {
+    const storeable = items.map((item) => this.#toStoreablePostItem(item));
+    for (const item of storeable) {
       this.validateItem(item);
     }
-    await this.store.storeBatch(items, { upsert: true, validateSchema: true });
+    await this.store.storeBatch(storeable, { upsert: true, validateSchema: true });
+  }
+
+  /**
+   * Paginated SearchTimeline fetcher. Follows cursors until limit is reached
+   * or there are no more pages, de-duplicating by id.
+   * @param {Object} params
+   * @param {string} params.rawQuery
+   * @param {string} params.product
+   * @param {string} params.searchType
+   * @param {string} [params.accountId]
+   * @param {number} [params.limit=20]
+   * @param {string|null} [params.cursor]
+   * @param {Record<string, unknown>} [params.extraMetadata]
+   * @returns {Promise<{ items: import('../../../core/types.js').PostItem[] | import('../../../core/types.js').ProfileItem[], cursor: string | null, hasMore: boolean }>}
+   */
+  async #paginateSearch({ rawQuery, product, searchType, accountId, limit = 20, cursor = null, extraMetadata = {} }) {
+    const maxPerRequest = 50;
+    const seen = new Set();
+    const allItems = /** @type {Array<import('../../../core/types.js').PostItem | import('../../../core/types.js').ProfileItem>} */ ([]);
+    let nextCursor = cursor;
+    let hasMore = false;
+
+    while (allItems.length < limit) {
+      const pageLimit = Math.min(limit - allItems.length, maxPerRequest);
+      /** @type {Record<string, unknown>} */
+      const variables = {
+        rawQuery,
+        count: pageLimit,
+        querySource: 'typed_query',
+        product,
+      };
+      if (nextCursor) variables.cursor = nextCursor;
+
+      const resp = await this.client.requestSearchTimeline('SearchTimeline', variables, {
+        accountId,
+        requiresAuth: false,
+      });
+
+      let pageItems = /** @type {Array<import('../../../core/types.js').PostItem | import('../../../core/types.js').ProfileItem>} */ ([]);
+      if (product === 'People') {
+        const { users, cursor: userCursor } = parseSearchUsers(resp, {
+          extraMetadata: { isSearchResult: true, searchQuery: rawQuery, searchFilter: product, searchType, sourceMethod: 'search', ...extraMetadata },
+        });
+        pageItems = users;
+        nextCursor = userCursor;
+      } else {
+        const { posts, cursor: postCursor } = parseSearchTimeline(resp, {
+          sourceMethod: 'search',
+          extraMetadata: { isSearchResult: true, searchQuery: rawQuery, searchFilter: product, searchType, sourceMethod: 'search', ...extraMetadata },
+        });
+        pageItems = posts;
+        nextCursor = postCursor;
+      }
+
+      let added = 0;
+      for (const item of pageItems) {
+        if (!item || !item.id || seen.has(item.id)) continue;
+        seen.add(item.id);
+        allItems.push(item);
+        added += 1;
+        if (allItems.length >= limit) break;
+      }
+
+      if (allItems.length >= limit) {
+        hasMore = Boolean(nextCursor);
+        break;
+      }
+      if (!nextCursor) {
+        hasMore = false;
+        break;
+      }
+      if (added === 0) {
+        // Current page had no new results, but the cursor says another page
+        // may exist. Keep hasMore true so consumers can continue pagination.
+        hasMore = Boolean(nextCursor);
+        break;
+      }
+    }
+
+    return { items: allItems.slice(0, limit), cursor: nextCursor, hasMore };
   }
 
   /**
@@ -285,56 +399,36 @@ export class TwitterCrawler extends AbstractCrawler {
         message: 'Missing or empty required argument: query',
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         platform: 'twitter',
+        isRetryable: false,
       });
     }
 
     const { accountId } = await this.#resolveSession(session);
-    const limit = this.#clamp(args.limit, 1, 50);
+    const limit = this.#clamp(args.limit, 1, 1000);
     const { rawQuery, product, searchType } = this.#buildRawQuery(args);
 
-    /** @type {Record<string, unknown>} */
-    const variables = {
+    const { items, cursor, hasMore } = await this.#paginateSearch({
       rawQuery,
-      count: limit,
-      querySource: 'typed_query',
       product,
-    };
-    if (args.cursor) variables.cursor = String(args.cursor);
-
-    const resp = await this.client.requestSearchTimeline('SearchTimeline', variables, {
+      searchType,
       accountId,
-      requiresAuth: false,
+      limit,
+      cursor: args.cursor || null,
+      extraMetadata: { searchQuery: args.query },
     });
 
-    /** @type {import('../../../core/types.js').PostItem[] | import('../../../core/types.js').ProfileItem[]} */
-    let items = [];
-    /** @type {string | null} */
-    let cursor = null;
-
-    if (product === 'People') {
-      const { users, cursor: userCursor } = parseSearchUsers(resp, { extraMetadata: { isSearchResult: true, searchQuery: args.query, searchFilter: product, searchType, sourceMethod: 'search' } });
-      items = users;
-      cursor = userCursor;
-    } else {
-      const { posts, cursor: postCursor } = parseSearchTimeline(resp, {
-        sourceMethod: 'search',
-        extraMetadata: { isSearchResult: true, searchQuery: args.query, searchFilter: product, searchType, sourceMethod: 'search' },
-      });
-      items = posts;
-      cursor = postCursor;
-    }
-
+    await this.#storeItems(items);
     await this.#emitCheckpointAndStream({
       targetType: 'search',
       targetKey: rawQuery,
       cursor,
       items,
-      hasMore: Boolean(cursor),
+      hasMore,
     });
 
     const pageInfo = {
-      hasNextPage: Boolean(cursor),
-      has_next_page: Boolean(cursor),
+      hasNextPage: hasMore,
+      has_next_page: hasMore,
       endCursor: cursor,
       end_cursor: cursor,
     };
@@ -342,7 +436,6 @@ export class TwitterCrawler extends AbstractCrawler {
     if (product === 'People') {
       return { posts: [], users: /** @type {import('../../../core/types.js').ProfileItem[]} */ (items), pageInfo };
     }
-    await this.#storeItems(/** @type {import('../../../core/types.js').PostItem[]} */ (items));
     return { posts: /** @type {import('../../../core/types.js').PostItem[]} */ (items), pageInfo };
   }
 
@@ -367,6 +460,7 @@ export class TwitterCrawler extends AbstractCrawler {
         message: 'Missing or empty required argument: hashtag / tag',
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         platform: 'twitter',
+        isRetryable: false,
       });
     }
 
@@ -374,42 +468,34 @@ export class TwitterCrawler extends AbstractCrawler {
     const searchArgs = { ...args, query: `#${cleanTag}` };
 
     const { accountId } = await this.#resolveSession(session);
-    const limit = this.#clamp(args.limit, 1, 50);
+    const limit = this.#clamp(args.limit, 1, 1000);
     const { rawQuery, product, searchType } = this.#buildRawQuery(searchArgs);
 
-    /** @type {Record<string, unknown>} */
-    const variables = {
+    const { items, cursor, hasMore } = await this.#paginateSearch({
       rawQuery,
-      count: limit,
-      querySource: 'typed_query',
       product,
-    };
-    if (args.cursor) variables.cursor = String(args.cursor);
-
-    const resp = await this.client.requestSearchTimeline('SearchTimeline', variables, {
+      searchType,
       accountId,
-      requiresAuth: false,
+      limit,
+      cursor: args.cursor || null,
+      extraMetadata: { isHashtag: true, hashtag: cleanTag },
     });
 
-    const { posts, cursor } = parseSearchTimeline(resp, {
-      sourceMethod: 'hashtag',
-      extraMetadata: { isSearchResult: true, isHashtag: true, hashtag: cleanTag, searchQuery: rawQuery, searchFilter: product, searchType, sourceMethod: 'hashtag' },
-    });
-
+    const posts = /** @type {import('../../../core/types.js').PostItem[]} */ (items);
     await this.#storeItems(posts);
     await this.#emitCheckpointAndStream({
       targetType: 'hashtag',
       targetKey: cleanTag,
       cursor,
       items: posts,
-      hasMore: Boolean(cursor),
+      hasMore,
     });
 
     return {
       posts,
       pageInfo: {
-        hasNextPage: Boolean(cursor),
-        has_next_page: Boolean(cursor),
+        hasNextPage: hasMore,
+        has_next_page: hasMore,
         endCursor: cursor,
         end_cursor: cursor,
       },
@@ -431,9 +517,38 @@ export class TwitterCrawler extends AbstractCrawler {
     const includePromoted = args?.includePromoted !== false;
 
     const { accountId } = await this.#resolveSession(session);
-    const resp = await this.client.requestTrendsPlace(woeid, { accountId, requiresAuth: false });
+    let resp;
+    let usedFallback = false;
 
-    let trends = parseTrends(resp, woeid);
+    try {
+      resp = await this.client.requestTrendsPlace(woeid, { accountId, requiresAuth: false });
+    } catch (err) {
+      const statusCode = /** @type {any} */ (err)?.statusCode || /** @type {any} */ (err)?.httpStatus || 0;
+      if (statusCode === 404 || statusCode === 403 || statusCode === 401) {
+        usedFallback = true;
+      } else {
+        throw err;
+      }
+    }
+
+    let trends = [];
+    if (usedFallback || !resp || (Array.isArray(resp) && resp.length === 0)) {
+      const { items } = await this.#paginateSearch({
+        rawQuery: 'trending',
+        product: 'Top',
+        searchType: 'Top',
+        accountId,
+        limit,
+        extraMetadata: { isTrend: true, sourceMethod: 'trending' },
+      });
+      trends = items.slice(0, limit).map((/** @type {any} */ item) => ({
+        ...item,
+        metadata: { ...item.metadata, woeid, isTrend: true },
+      }));
+    } else {
+      trends = parseTrends(resp, woeid);
+    }
+
     if (!includePromoted) {
       trends = trends.filter((t) => !(/** @type {any} */ (t.metadata)?.isPromoted));
     }
@@ -444,13 +559,7 @@ export class TwitterCrawler extends AbstractCrawler {
 
     // Trend results expose `category` as promoted/null for consumers,
     // but Prisma storage requires a valid PostItem category.
-    if (this.store && typeof this.store.storeBatch === 'function') {
-      const storeableTrends = trends.map((t) => ({ ...t, category: 'social' }));
-      for (const item of storeableTrends) {
-        this.validateItem(item);
-      }
-      await this.store.storeBatch(storeableTrends, { upsert: true, validateSchema: true });
-    }
+    await this.#storeItems(trends);
 
     await this.#emitCheckpointAndStream({
       targetType: 'trending',
