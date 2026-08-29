@@ -22,6 +22,7 @@
     "./scrapers/mastodon": "./src/scrapers/mastodon/index.js",
     "./scrapers/threads": "./src/scrapers/threads/index.js",
     "./scrapers/social": "./src/scrapers/social/index.js",
+    "./scrapers/social/threads": "./src/scrapers/social/threads/index.js",
     "./scrapers/social/facebook": "./src/scrapers/social/facebook/index.js",
     "./streaming": "./src/streaming/index.js",
     "./analytics": "./src/analytics/index.js",

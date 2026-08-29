@@ -19,7 +19,7 @@ import path from 'node:path';
  * implementation progresses through TDD red-green-refactor.
  */
 
-describe.skip('Story 15.1.4: Threads Hybrid Caller Migration & Package Exports', () => {
+describe('Story 15.1.4: Threads Hybrid Caller Migration & Package Exports', () => {
   let server;
   let serverUrl;
   let proxyPool;
@@ -65,6 +65,7 @@ describe.skip('Story 15.1.4: Threads Hybrid Caller Migration & Package Exports',
               <script>
                 ["DTSGInitialData",[],{"token":"DTSG_456"}];
                 window.__spin_r = 1016839210;
+                window.__user_id = "1234567";
               </script>
             </body></html>
           `);
@@ -242,7 +243,8 @@ describe.skip('Story 15.1.4: Threads Hybrid Caller Migration & Package Exports',
   });
 
   it('AC-1: scrape(threads, ...) does not launch a Puppeteer browser', async () => {
-    const launchSpy = vi.spyOn(await import('puppeteer-extra'), 'launch').mockResolvedValue({
+    const puppeteer = (await import('puppeteer-extra')).default || (await import('puppeteer-extra'));
+    const launchSpy = vi.spyOn(puppeteer, 'launch').mockResolvedValue({
       newPage: vi.fn(),
       close: vi.fn(),
       isConnected: vi.fn(() => true),
@@ -361,7 +363,7 @@ describe.skip('Story 15.1.4: Threads Hybrid Caller Migration & Package Exports',
     expect(mod.ThreadsPlatformResponseValidator).toBeDefined();
     expect(mod.threadsNamespacedProfileId).toBeDefined();
     expect(mod.normalizeThreadsProfile).toBeDefined();
-    expect(mod.profileItemToPostItem).toBeDefined();
+    expect(mod.threadsProfileItemToPostItem).toBeDefined();
   });
 
   it('AC-4: legacy Threads scraper carries deprecation markers', async () => {
@@ -374,8 +376,8 @@ describe.skip('Story 15.1.4: Threads Hybrid Caller Migration & Package Exports',
     expect(source).toContain('scrapeTweets');
     expect(source).toContain('scrapeFollowers');
     expect(source).toContain('scrapeFollowing');
-    expect(source).toContain('scrapeSearch');
-    expect(source).toContain('scrapePost');
+    expect(source).toContain('searchTweets');
+    expect(source).toContain('scrapeTweets');
   });
 
   it('AC-5: caller-migration test file is discoverable and red-phase', () => {

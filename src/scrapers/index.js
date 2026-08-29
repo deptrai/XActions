@@ -40,6 +40,8 @@ import bluesky from './bluesky/index.js';
 import mastodon from './mastodon/index.js';
 import threads from './threads/index.js';
 import facebook from './facebook/index.js';
+import { ThreadsCrawler } from './social/threads/crawler.js';
+import { ThreadsClient } from './social/threads/client.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -158,8 +160,114 @@ export function getPlatform(platform) {
 export async function scrape(platform, action, options = {}) {
   const store = options.store || defaultStore;
   const normalizedOptions = { ...options, store };
-  const mod = getPlatform(platform);
   const platformName = platform.toLowerCase();
+
+  // Threads hybrid path — no Puppeteer, dispatches to ThreadsCrawler.
+  // This branch is evaluated first so legacy actionMap / platform lookups
+  // do not block the new hybrid GraphQL flow.
+  if (platformName === 'threads') {
+    /** @type {Record<string, string>} */
+    const THREADS_ACTION_MAP = {
+      profile: 'profile',
+      tweets: 'get_user_feed',
+      timeline: 'get_user_feed',
+      feed: 'get_user_feed',
+      user_feed: 'get_user_feed',
+      posts: 'get_user_feed',
+      post: 'post_detail',
+      post_detail: 'post_detail',
+      comments: 'get_post_comments',
+      post_comments: 'get_post_comments',
+      get_comments: 'get_post_comments',
+      search: 'search',
+      followers: 'followers',
+      following: 'following',
+    };
+
+    const mappedAction = THREADS_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = Object.values(THREADS_ACTION_MAP);
+      const unique = [...new Set(available)];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${unique.join(', ')}`
+      );
+    }
+
+    const username = options.username || options.target;
+    const postId = options.postId || options.url || options.target;
+    const query = options.query || options.target;
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (['profile', 'followers', 'following', 'get_user_feed', 'tweets'].includes(mappedAction) && username) {
+      mappedArgs.username = username;
+    }
+    if (['post_detail', 'get_post_comments'].includes(mappedAction) && postId) {
+      mappedArgs.postId = postId;
+    }
+    if (mappedAction === 'search' && query) {
+      mappedArgs.query = query;
+    }
+
+    // Normalize counts/cursors
+    if (options.limit != null) {
+      mappedArgs.count = Number(options.limit);
+    } else if (options.count != null) {
+      mappedArgs.count = Number(options.count);
+    }
+    if (options.cursor != null) {
+      mappedArgs.cursor = options.cursor;
+    }
+    if (options.maxDepth != null) {
+      mappedArgs.maxDepth = Number(options.maxDepth);
+    }
+    if (options.maxComments != null) {
+      mappedArgs.maxComments = Number(options.maxComments);
+    }
+    if (options.includeReplies != null) {
+      mappedArgs.includeReplies = options.includeReplies;
+    }
+    if (options.searchType != null) {
+      mappedArgs.searchType = options.searchType;
+    }
+
+    // Map cursor to after for post/comment actions.
+    if (mappedArgs.cursor != null && ['post_detail', 'get_post_comments'].includes(mappedAction) && mappedArgs.after == null) {
+      mappedArgs.after = mappedArgs.cursor;
+    }
+
+    const session = {
+      accountId: options.accountId || 'threads-guest',
+      cookies: options.authCookie || options.cookies || '',
+    };
+
+    const client = new ThreadsClient({
+      baseUrl: options.baseUrl,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+    });
+
+    const crawler = new ThreadsCrawler({
+      client,
+      store,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  const mod = getPlatform(platform);
 
   // Action name mapping
   /** @type {Record<string, string>} */
@@ -214,8 +322,8 @@ export async function scrape(platform, action, options = {}) {
   }
 
   // Determine the first argument based on platform type
-  // Twitter & Threads use Puppeteer page; Bluesky & Mastodon use API clients
-  const needsPuppeteer = ['twitter', 'x', 'threads', 'facebook', 'fb'].includes(platformName);
+  // Twitter uses Puppeteer page; Bluesky & Mastodon use API clients
+  const needsPuppeteer = ['twitter', 'x', 'facebook', 'fb'].includes(platformName);
   const needsClient = ['bluesky', 'bsky', 'mastodon', 'masto'].includes(platformName);
 
   if (needsPuppeteer) {
