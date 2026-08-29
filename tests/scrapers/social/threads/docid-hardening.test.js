@@ -263,10 +263,10 @@ describe('Story 15.1.3: Threads Hybrid DocID Hardening for Search & Comments (AT
   describe('AC-1: DEFAULT_THREADS_DOC_IDS Configuration', () => {
     it('defines default doc_ids for SEARCH_POSTS, COMMENT_ROOTS, and COMMENT_REPLIES', () => {
       expect(DEFAULT_THREADS_DOC_IDS).toBeDefined();
-      expect(DEFAULT_THREADS_DOC_IDS).toHaveProperty('SEARCH_POSTS');
-      expect(DEFAULT_THREADS_DOC_IDS).toHaveProperty('COMMENT_ROOTS');
-      expect(DEFAULT_THREADS_DOC_IDS).toHaveProperty('COMMENT_REPLIES');
-      expect(DEFAULT_THREADS_DOC_IDS).toHaveProperty('POST_DETAIL');
+      expect(typeof DEFAULT_THREADS_DOC_IDS.SEARCH_POSTS).toBe('string');
+      expect(typeof DEFAULT_THREADS_DOC_IDS.COMMENT_ROOTS).toBe('string');
+      expect(typeof DEFAULT_THREADS_DOC_IDS.COMMENT_REPLIES).toBe('string');
+      expect(DEFAULT_THREADS_DOC_IDS.POST_DETAIL).toBe('5587632691339264');
     });
   });
 

@@ -2,7 +2,7 @@
 story_id: "15.1.3"
 epic: 15
 story_key: "15-1-3-threads-hybrid-docid-hardening-search-comments"
-status: "review"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-29
 updated: 2026-08-29
@@ -102,9 +102,25 @@ Developer Agent — `bmad-dev-story` workflow.
 - Hardened `searchPosts` in `ThreadsCrawler` to prioritize GraphQL when `SEARCH_POSTS` is configured and seamlessly fallback to SSR HTTP without throwing `XACT_5000`.
 - Hardened `getPostComments` with multi-layer doc_ids (`COMMENT_ROOTS` and `COMMENT_REPLIES`) with graceful degradation to flat `POST_DETAIL` fallback.
 - Added comprehensive ATDD test suite in `tests/scrapers/social/threads/docid-hardening.test.js` (5/5 tests passing 100% with real HTTP server).
+- Applied BMad review patches: filled `DEFAULT_THREADS_DOC_IDS` with candidate doc_ids, fixed `searchPosts` empty-result and SSR pagination handling, hardened `getPostComments` fallback and error handling, updated `docs/deprecation-plan.md` and sprint status.
 - Passed TypeScript strict typecheck (`tsc --noEmit`) and all 57 tests in `tests/scrapers/social/threads/`.
 
 ### File List
+
+### Review Findings
+
+- [x] [Review][Patch] `DEFAULT_THREADS_DOC_IDS` keeps `SEARCH_POSTS`, `COMMENT_ROOTS`, and `COMMENT_REPLIES` as `null` instead of candidate doc_id strings [`src/scrapers/social/threads/crawler.js:39-41`] — violates AC-1; fill with captured/candidate doc_ids and update AC-1 test to assert non-null string values.
+- [x] [Review][Patch] `searchPosts` falls through to SSR when a valid GraphQL search returns zero matching posts instead of returning the empty GraphQL result [`src/scrapers/social/threads/crawler.js:944`] — causes unnecessary SSR round-trip and breaks empty-result semantics.
+- [x] [Review][Patch] `getPostComments` `fetchLayer` throws `XACT_5000` when `COMMENT_REPLIES` is missing for nested layers instead of clamping depth and logging a warning [`src/scrapers/social/threads/crawler.js:1087-1092`] — violates AC-3/AC-4; callers that invoke `get_post_comments` directly with `maxDepth > 0` will crash.
+- [x] [Review][Patch] `getPostComments` `fetchLayer` does not catch GraphQL/transport errors for `COMMENT_ROOTS` requests, so a rotated doc_id aborts the entire comment extraction instead of falling back to `POST_DETAIL` or SSR [`src/scrapers/social/threads/crawler.js:1120`] — violates AC-4.
+- [x] [Review][Patch] `docs/deprecation-plan.md` was not updated to note that `search` and `comments` GraphQL paths are hardened in Story 15.1.3 [`docs/deprecation-plan.md`] — violates AC-5.
+- [x] [Review][Patch] `getPostDetail` still logs the outdated warning "Nested replies deferred to Story 15.1.3" now that this story implements nested replies [`src/scrapers/social/threads/crawler.js:1352`] — misleading telemetry.
+- [x] [Review][Patch] `sprint-status.yaml` was left as `in-progress` while the story file says `status: review` [`_bmad-output/implementation-artifacts/sprint-status.yaml:106`] — sync to `review`.
+- [x] [Review][Patch] `searchPosts` does not pass `cookies` to GraphQL or SSR requests, relying only on `accountId` [`src/scrapers/social/threads/crawler.js:914,966`] — may break authenticated sessions; pass `{ accountId, cookies }` consistently.
+- [x] [Review][Patch] `searchPosts` catch-all swallowing in `catch (err)` can mask non-retryable errors and does not preserve `PlatformError` `suggestedAction` codes per AC-4 [`src/scrapers/social/threads/crawler.js:959-961`] — rethrow `XACT_4001`/session errors, map 429/403/500 correctly.
+- [x] [Review][Patch] `getPostComments` SSR parsing in fallback is not present, but `POST_DETAIL` fallback only extracts root-level comments and silently drops nested replies without a `note` [`src/scrapers/social/threads/crawler.js:1124-1149`] — add a fallback note so consumers know the tree is partial.
+- [x] [Review][Patch] `tests/scrapers/social/threads/docid-hardening.test.js` AC-1 test only asserts property presence, not that `SEARCH_POSTS`/`COMMENT_ROOTS`/`COMMENT_REPLIES` are non-null string doc_ids [`tests/scrapers/social/threads/docid-hardening.test.js:547-553`] — strengthen assertions.
+- [x] [Review][Patch] `searchPosts` SSR fallback does not persist `pageInfo.end_cursor` from the SSR HTML `page_info`, hardcoding pagination to `has_next_page: false` when `nextCursor` is empty even if the embedded JSON reports a cursor [`src/scrapers/social/threads/crawler.js:1019-1021`] — preserve `pageInfo.has_next_page` and `end_cursor` from parsed SSR payload.
 
 - `_bmad-output/implementation-artifacts/15-1-3-threads-hybrid-docid-hardening-search-comments.md` (Created)
 - `_bmad-output/implementation-artifacts/atdd-checklist-15-1-3-threads-hybrid-docid-hardening-search-comments.md` (Created)
