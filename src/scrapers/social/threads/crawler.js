@@ -581,7 +581,8 @@ export class ThreadsCrawler extends AbstractCrawler {
       try {
         const parsed = new URL(input);
         const host = parsed.hostname.toLowerCase();
-        if (host !== 'threads.net' && !host.endsWith('.threads.net')) {
+        const baseHost = new URL(this.client.baseUrl).hostname.toLowerCase();
+        if (host !== baseHost && host !== 'threads.net' && !host.endsWith('.threads.net')) {
           throw new PlatformError({
             code: 'XACT_4001',
             type: ErrorTypes.INVALID_ARGS,
