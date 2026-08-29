@@ -32,5 +32,5 @@
     "api/server.js",
     "api/serverless.js"
   ],
-  "exclude": ["node_modules", "dist", "archive"]
+  "exclude": ["node_modules", "dist", "archive", "src/scrapers/social/tiktok/signer-scripts"]
 }
