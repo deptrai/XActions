@@ -22,6 +22,7 @@ import {
 import { buildAdvancedQuery } from '../../twitter/http/search.js';
 import { DEFAULT_FEATURES } from '../../twitter/http/endpoints.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import { isValidCategory } from '../../../core/types.js';
 import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
 
 export const TWITTER_GRAPHQL_QUERY_IDS = {
@@ -244,6 +245,105 @@ export class TwitterCrawler extends AbstractCrawler {
   }
 
   /**
+   * Resolve session with optional cookies.
+   * @param {Record<string, any>} session
+   * @returns {Promise<Record<string, any>>}
+   */
+  async #resolveSession(session = {}) {
+    const accountId = session?.accountId || null;
+    const cookies = session?.cookies || (accountId && this.sessionManager?.get(accountId)?.cookies) || null;
+    await this.client.init(accountId && cookies ? { accountId, cookies } : {});
+    return { accountId, cookies };
+  }
+
+  /**
+   * Map user-facing type/filter to GraphQL product.
+   * @param {string} [type]
+   * @param {string} [filter]
+   * @returns {{ product: string, searchFilter: string | null, searchType: string }}
+   */
+  #resolveProduct(type, filter) {
+    const typeInput = String(type || '').toLowerCase();
+    const filterInput = String(filter || '').toLowerCase();
+
+    if (PRODUCT_MAP[typeInput]) {
+      return { product: PRODUCT_MAP[typeInput], searchFilter: null, searchType: PRODUCT_MAP[typeInput] };
+    }
+
+    if (typeInput && !VALID_SEARCH_TYPES.has(typeInput)) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `Invalid search type "${type}". Allowed: Top, Latest, Photos, Videos, People`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    if (PRODUCT_MAP[filterInput]) {
+      return { product: PRODUCT_MAP[filterInput], searchFilter: null, searchType: PRODUCT_MAP[filterInput] };
+    }
+
+    if (filterInput && SEARCH_FILTER_VALUES.has(filterInput)) {
+      return { product: 'Latest', searchFilter: filterInput, searchType: 'Latest' };
+    }
+
+    if (filterInput && !SEARCH_FILTER_VALUES.has(filterInput) && filterInput !== '') {
+      return { product: 'Latest', searchFilter: null, searchType: 'Latest' };
+    }
+
+    return { product: 'Latest', searchFilter: null, searchType: 'Latest' };
+  }
+
+  /**
+   * Build raw search query from args.
+   * @param {Object} args
+   * @param {string} [args.query]
+   * @param {string} [args.type]
+   * @param {string} [args.from]
+   * @param {string} [args.to]
+   * @param {string} [args.mentioning]
+   * @param {string} [args.url]
+   * @param {string} [args.listId]
+   * @param {string} [args.since]
+   * @param {string} [args.until]
+   * @param {number} [args.minLikes]
+   * @param {number} [args.minRetweets]
+   * @param {number} [args.minReplies]
+   * @param {string} [args.lang]
+   * @param {string} [args.filter]
+   * @param {string|string[]} [args.exclude]
+   * @param {string} [args.near]
+   * @param {string} [args.within]
+   * @param {boolean} [args.isHashtag]
+   * @returns {{ rawQuery: string, product: string, searchType: string }}
+   */
+  #buildRawQuery(args) {
+    const { product, searchFilter, searchType } = this.#resolveProduct(args.type, args.filter);
+    const queryOptions = /** @type {Record<string, any>} */ ({
+      keywords: args.query || '',
+      from: args.from,
+      to: args.to,
+      mentioning: args.mentioning,
+      url: args.url,
+      listId: args.listId,
+      since: args.since,
+      until: args.until,
+      minLikes: args.minLikes,
+      minRetweets: args.minRetweets,
+      minReplies: args.minReplies,
+      lang: args.lang,
+      near: args.near,
+      within: args.within,
+    });
+    if (searchFilter) queryOptions.filter = searchFilter;
+    if (args.exclude) queryOptions.exclude = args.exclude;
+
+    const rawQuery = buildAdvancedQuery(queryOptions);
+    return { rawQuery, product, searchType };
+  }
+
+  /**
    * Emit checkpoint to store and optional Redis Stream telemetry.
    * @param {Object} params
    * @param {string} params.targetType
@@ -278,15 +378,16 @@ export class TwitterCrawler extends AbstractCrawler {
 
         if (publisher && typeof publisher.publish === 'function') {
           for (const item of items) {
-            const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
+            const anyItem = /** @type {any} */ (item);
+            const category = 'category' in anyItem && typeof anyItem.category === 'string' ? anyItem.category : 'social';
             await publisher.publish({
-              id: item.id,
+              id: anyItem.id,
               platform: 'twitter',
-              externalId: item.externalId,
+              externalId: anyItem.externalId,
               category,
-              authorId: item.authorId || item.externalId || '',
-              crawledAt: item.crawledAt ? toIsoDate(item.crawledAt) : new Date().toISOString(),
-              storageRef: item.id,
+              authorId: anyItem.authorId || anyItem.externalId || '',
+              crawledAt: anyItem.crawledAt ? toIsoDate(anyItem.crawledAt) : new Date().toISOString(),
+              storageRef: anyItem.id,
             });
           }
         }
@@ -297,189 +398,295 @@ export class TwitterCrawler extends AbstractCrawler {
   }
 
   /**
-   * Chunk storeBatch writes into chunks of at most 500 records.
-   * @param {Array<import('../../../core/types.js').PostItem>} posts
+   * Ensure a PostItem-compatible object has the minimum fields required by PrismaStore.
+   * @param {import('../../../core/types.js').PostItem | import('../../../core/types.js').ProfileItem} item
+   * @returns {import('../../../core/types.js').PostItem}
    */
-  async #persistPostItems(posts) {
-    if (!this.store || !Array.isArray(posts) || posts.length === 0) return;
+  #toStoreablePostItem(item) {
+    const anyItem = /** @type {any} */ (item);
+    const storeableCategory = isValidCategory(anyItem.category) ? anyItem.category : 'social';
+
+    return /** @type {import('../../../core/types.js').PostItem} */ ({
+      ...anyItem,
+      category: storeableCategory,
+      authorId: anyItem.authorId || anyItem.externalId || '',
+      authorName: anyItem.authorName || anyItem.name || '',
+      content: anyItem.content || anyItem.bio || anyItem.name || anyItem.authorName || '',
+    });
+  }
+
+  /**
+   * Store a batch of items.
+   * @param {Array<any>} items
+   */
+  async #persistPostItems(items) {
+    if (!this.store || typeof this.store.storeBatch !== 'function' || items.length === 0) return;
+    const storeable = items.map((item) => this.#toStoreablePostItem(item));
+    for (const item of storeable) {
+      this.validateItem(item);
+    }
     const CHUNK_SIZE = 500;
-    for (let i = 0; i < posts.length; i += CHUNK_SIZE) {
-      const chunk = posts.slice(i, i + CHUNK_SIZE);
-      if (typeof this.store.storeBatch === 'function') {
-        await this.store.storeBatch(chunk, { upsert: true });
-      }
+    for (let i = 0; i < storeable.length; i += CHUNK_SIZE) {
+      const chunk = storeable.slice(i, i + CHUNK_SIZE);
+      await this.store.storeBatch(chunk, { upsert: true, validateSchema: true });
     }
   }
 
   /**
-   * Action Handler: search (AC-2, AC-3)
-   * @param {Record<string, any>} args
-   * @param {any} [session]
+   * Paginated SearchTimeline fetcher.
+   * @param {Object} params
+   * @param {string} params.rawQuery
+   * @param {string} params.product
+   * @param {string} params.searchType
+   * @param {string} [params.accountId]
+   * @param {number} [params.limit=20]
+   * @param {string|null} [params.cursor]
+   * @param {Record<string, unknown>} [params.extraMetadata]
+   * @returns {Promise<{ items: Array<any>, cursor: string | null, hasMore: boolean }>}
    */
-  async search(args = {}, session = {}) {
-    const rawQuery = String(args.query || '').trim();
-    if (!rawQuery) {
-      throw new PlatformError({
-        type: ErrorTypes.INVALID_ARGS,
-        code: 'XACT_4001',
-        message: 'Missing or empty search query',
-        statusCode: 400,
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: 'twitter',
-      });
-    }
+  async #paginateSearch({ rawQuery, product, searchType, accountId, limit = 20, cursor = null, extraMetadata = {} }) {
+    const maxPerRequest = 50;
+    const seen = new Set();
+    const allItems = [];
+    let nextCursor = cursor;
+    let hasMore = false;
 
-    const rawType = String(args.type || 'Latest').toLowerCase();
-    if (!VALID_SEARCH_TYPES.has(rawType)) {
-      throw new PlatformError({
-        type: ErrorTypes.INVALID_ARGS,
-        code: 'XACT_4001',
-        message: `Invalid search type: "${args.type}". Supported: top, latest, live, photos, videos, people`,
-        statusCode: 400,
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: 'twitter',
-      });
-    }
+    while (allItems.length < limit) {
+      const pageLimit = Math.min(limit - allItems.length, maxPerRequest);
+      /** @type {Record<string, unknown>} */
+      const variables = {
+        rawQuery,
+        count: pageLimit,
+        querySource: 'typed_query',
+        product,
+      };
+      if (nextCursor) variables.cursor = nextCursor;
 
-    if (args.filter && !SEARCH_FILTER_VALUES.has(String(args.filter).toLowerCase())) {
-      throw new PlatformError({
-        type: ErrorTypes.INVALID_ARGS,
-        code: 'XACT_4001',
-        message: `Invalid search filter: "${args.filter}". Supported: links, images, videos, media, native_video`,
-        statusCode: 400,
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: 'twitter',
-      });
-    }
-
-    const query = buildAdvancedQuery(rawQuery, args);
-    const product = PRODUCT_MAP[rawType] || 'Latest';
-    const limit = this.#clamp(args.limit ?? 20, 1, 100);
-
-    const variables = {
-      rawQuery: query,
-      count: limit,
-      querySource: 'typed_query',
-      product,
-      ...(args.cursor ? { cursor: args.cursor } : {}),
-    };
-
-    const isPeopleSearch = product === 'People';
-    const operationName = isPeopleSearch ? 'SearchTimeline#People' : 'SearchTimeline';
-
-    const resp = await this.client.requestSearchTimeline(operationName, variables, {
-      ...args,
-      ...session,
-      requiresAuth: false,
-    });
-
-    if (isPeopleSearch) {
-      const { users, pageInfo } = parseSearchUsers(resp, {
-        searchQuery: rawQuery,
-        searchType: product,
+      const resp = await this.client.requestSearchTimeline('SearchTimeline', variables, {
+        accountId,
+        requiresAuth: false,
       });
 
-      if (this.store && typeof this.store.storeBatch === 'function' && users.length > 0) {
-        const posts = users.map((u) => profileItemToPostItem(u));
-        await this.#persistPostItems(posts);
+      let pageItems = [];
+      if (product === 'People') {
+        const { users, cursor: userCursor } = parseSearchUsers(resp, {
+          extraMetadata: { isSearchResult: true, searchQuery: rawQuery, searchFilter: product, searchType, sourceMethod: 'search', ...extraMetadata },
+        });
+        pageItems = users;
+        nextCursor = userCursor;
+      } else {
+        const { posts, cursor: postCursor } = parseSearchTimeline(resp, {
+          sourceMethod: 'search',
+          extraMetadata: { isSearchResult: true, searchQuery: rawQuery, searchFilter: product, searchType, sourceMethod: 'search', ...extraMetadata },
+        });
+        pageItems = posts;
+        nextCursor = postCursor;
       }
 
-      await this.#emitCheckpointAndStream({
-        targetType: 'search',
-        targetKey: `search:people:${rawQuery}`,
-        cursor: pageInfo.end_cursor,
-        items: users,
-        hasMore: pageInfo.has_next_page,
-      });
+      let added = 0;
+      for (const item of pageItems) {
+        if (!item || !item.id || seen.has(item.id)) continue;
+        seen.add(item.id);
+        allItems.push(item);
+        added += 1;
+        if (allItems.length >= limit) break;
+      }
 
-      return { posts: [], users, pageInfo };
+      if (allItems.length >= limit) {
+        hasMore = Boolean(nextCursor);
+        break;
+      }
+      if (!nextCursor) {
+        hasMore = false;
+        break;
+      }
+      if (added === 0) {
+        hasMore = Boolean(nextCursor);
+        break;
+      }
     }
 
-    const { posts, pageInfo } = parseSearchTimeline(resp, {
-      searchQuery: rawQuery,
-      searchType: product,
-      searchFilter: args.filter ? String(args.filter).toLowerCase() : undefined,
+    return { items: allItems.slice(0, limit), cursor: nextCursor, hasMore };
+  }
+
+  /**
+   * Action Handler: search
+   * @param {Object} args
+   * @param {string} args.query
+   * @param {string} [args.type]
+   * @param {string} [args.filter]
+   * @param {number} [args.limit]
+   * @param {string} [args.cursor]
+   * @param {Record<string, any>} [session={}]
+   */
+  async search(args, session = {}) {
+    if (!args?.query || typeof args.query !== 'string' || args.query.trim() === '') {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing or empty required argument: query',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+        isRetryable: false,
+      });
+    }
+
+    const { accountId } = await this.#resolveSession(session);
+    const limit = this.#clamp(args.limit, 1, 1000);
+    const { rawQuery, product, searchType } = this.#buildRawQuery(args);
+
+    const { items, cursor, hasMore } = await this.#paginateSearch({
+      rawQuery,
+      product,
+      searchType,
+      accountId,
+      limit,
+      cursor: args.cursor || null,
+      extraMetadata: { searchQuery: args.query },
     });
 
-    await this.#persistPostItems(posts);
+    await this.#persistPostItems(items);
     await this.#emitCheckpointAndStream({
       targetType: 'search',
-      targetKey: `search:${product}:${rawQuery}`,
-      cursor: pageInfo.end_cursor,
-      items: posts,
-      hasMore: pageInfo.has_next_page,
+      targetKey: rawQuery,
+      cursor,
+      items,
+      hasMore,
     });
 
-    return { posts, users: [], pageInfo };
+    const pageInfo = {
+      hasNextPage: hasMore,
+      has_next_page: hasMore,
+      endCursor: cursor,
+      end_cursor: cursor,
+    };
+
+    if (product === 'People') {
+      return { posts: [], users: items, pageInfo };
+    }
+    return { posts: items, pageInfo };
   }
 
   /**
-   * Action Handler: hashtag (AC-4)
-   * @param {Record<string, any>} args
-   * @param {any} [session]
+   * Action Handler: hashtag
+   * @param {Object} args
+   * @param {string} [args.hashtag]
+   * @param {string} [args.tag]
+   * @param {string} [args.type]
+   * @param {string} [args.filter]
+   * @param {number} [args.limit]
+   * @param {string} [args.cursor]
+   * @param {Record<string, any>} [session={}]
    */
-  async hashtag(args = {}, session = {}) {
-    const rawTag = String(args.tag || args.hashtag || '').trim();
-    if (!rawTag) {
+  async hashtag(args, session = {}) {
+    const tag = String(args?.tag ?? args?.hashtag ?? '').trim();
+    if (!tag) {
       throw new PlatformError({
-        type: ErrorTypes.INVALID_ARGS,
         code: 'XACT_4001',
-        message: 'Missing or empty hashtag parameter (tag or hashtag required)',
-        statusCode: 400,
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing or empty required argument: hashtag / tag',
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         platform: 'twitter',
+        isRetryable: false,
       });
     }
 
-    const cleanTag = rawTag.replace(/^#+/, '');
-    if (!cleanTag) {
-      throw new PlatformError({
-        type: ErrorTypes.INVALID_ARGS,
-        code: 'XACT_4001',
-        message: 'Invalid hashtag string',
-        statusCode: 400,
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: 'twitter',
-      });
-    }
+    const cleanTag = tag.replace(/^#+/, '');
+    const searchArgs = { ...args, query: `#${cleanTag}` };
 
-    const query = `#${cleanTag}`;
-    const searchRes = await this.search({ ...args, query }, session);
+    const { accountId } = await this.#resolveSession(session);
+    const limit = this.#clamp(args.limit, 1, 1000);
+    const { rawQuery, product, searchType } = this.#buildRawQuery(searchArgs);
 
-    const hashtagPosts = (searchRes.posts || []).map((p) => ({
-      ...p,
-      metadata: {
-        ...(p.metadata || {}),
-        isHashtag: true,
-        hashtag: cleanTag,
-        sourceMethod: 'hashtag',
-      },
-    }));
+    const { items, cursor, hasMore } = await this.#paginateSearch({
+      rawQuery,
+      product,
+      searchType,
+      accountId,
+      limit,
+      cursor: args.cursor || null,
+      extraMetadata: { isHashtag: true, hashtag: cleanTag },
+    });
+
+    const posts = items;
+    await this.#persistPostItems(posts);
+    await this.#emitCheckpointAndStream({
+      targetType: 'hashtag',
+      targetKey: cleanTag,
+      cursor,
+      items: posts,
+      hasMore,
+    });
 
     return {
-      posts: hashtagPosts,
-      pageInfo: searchRes.pageInfo,
+      posts,
+      pageInfo: {
+        hasNextPage: hasMore,
+        has_next_page: hasMore,
+        endCursor: cursor,
+        end_cursor: cursor,
+      },
     };
   }
 
   /**
-   * Action Handler: trending (AC-5)
-   * @param {Record<string, any>} [args={}]
-   * @param {any} [session]
+   * Fetch trending topics by WOEID.
+   * @param {Object} args
+   * @param {number} [args.woeid=1]
+   * @param {number} [args.limit]
+   * @param {boolean} [args.includePromoted=false]
+   * @param {Record<string, any>} [session={}]
    */
-  async trending(args = {}, session = {}) {
-    const woeid = Number.isInteger(Number(args.woeid)) ? Number(args.woeid) : 1;
-    const limit = this.#clamp(args.limit ?? 50, 1, 100);
-    const includePromoted = Boolean(args.includePromoted);
+  async trending(args, session = {}) {
+    const woeid = Number(args?.woeid) || 1;
+    const limit = args?.limit === undefined ? 100 : this.#clamp(args.limit, 1, 100);
+    const includePromoted = args?.includePromoted !== false;
 
-    const resp = await this.client.requestTrendsPlace(woeid, { ...args, ...session, requiresAuth: false });
-    const { trends } = parseTrends(resp, { woeid, limit, includePromoted });
+    const { accountId } = await this.#resolveSession(session);
+    let resp;
+    let usedFallback = false;
+
+    try {
+      resp = await this.client.requestTrendsPlace(woeid, { accountId, requiresAuth: false });
+    } catch (err) {
+      const statusCode = /** @type {any} */ (err)?.statusCode || /** @type {any} */ (err)?.httpStatus || 0;
+      if (statusCode === 404 || statusCode === 403 || statusCode === 401) {
+        usedFallback = true;
+      } else {
+        throw err;
+      }
+    }
+
+    let trends = [];
+    if (usedFallback || !resp || (Array.isArray(resp) && resp.length === 0)) {
+      const { items } = await this.#paginateSearch({
+        rawQuery: 'trending',
+        product: 'Top',
+        searchType: 'Top',
+        accountId,
+        limit,
+        extraMetadata: { isTrend: true, sourceMethod: 'trending' },
+      });
+      trends = items.slice(0, limit).map((item) => ({
+        ...item,
+        metadata: { ...item.metadata, woeid, isTrend: true },
+      }));
+    } else {
+      trends = parseTrends(resp, woeid);
+    }
+
+    if (!includePromoted) {
+      trends = trends.filter((t) => !(t.metadata?.isPromoted));
+    }
+
+    if (limit < trends.length) {
+      trends = trends.slice(0, limit);
+    }
 
     await this.#persistPostItems(trends);
     await this.#emitCheckpointAndStream({
       targetType: 'trending',
-      targetKey: `trending:${woeid}`,
-      cursor: null,
+      targetKey: `woeid:${woeid}`,
       items: trends,
       hasMore: false,
     });
@@ -487,7 +694,9 @@ export class TwitterCrawler extends AbstractCrawler {
     return {
       trends,
       pageInfo: {
+        hasNextPage: false,
         has_next_page: false,
+        endCursor: null,
         end_cursor: null,
       },
     };
@@ -1011,5 +1220,18 @@ export class TwitterCrawler extends AbstractCrawler {
     });
 
     return { nonFollowers, mutuals, stats };
+  }
+
+  /** @returns {Promise<void>} */
+  async init() {}
+
+  /**
+   * Cleanup crawler and client resources.
+   * @returns {Promise<void>}
+   */
+  async cleanup() {
+    if (this.client && typeof this.client.close === 'function') {
+      await this.client.close();
+    }
   }
 }

@@ -2,208 +2,169 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Twitter Social Post & Profile Metadata",
   "type": "object",
-  "anyOf": [
-    {
-      "title": "ProfileItem Metadata",
-      "properties": {
-        "tweetId": {
-          "type": "string"
-        },
-        "isProfile": {
-          "type": "boolean"
-        },
-        "isFollower": {
-          "type": "boolean"
-        },
-        "isFollowing": {
-          "type": "boolean"
-        },
-        "isLiker": {
-          "type": "boolean"
-        },
-        "isRetweeter": {
-          "type": "boolean"
-        },
-        "isListMember": {
-          "type": "boolean"
-        },
-        "isNonFollower": {
-          "type": "boolean"
-        },
-        "isSearchResult": {
-          "type": "boolean"
-        },
-        "resultType": {
-          "type": "string"
-        },
-        "searchQuery": {
-          "type": "string"
-        },
-        "searchFilter": {
-          "type": "string"
-        },
-        "searchType": {
-          "type": "string"
-        },
-        "username": {
-          "type": "string"
-        },
-        "followersCount": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "followingCount": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "isVerified": {
-          "type": "boolean"
-        },
-        "protected": {
-          "type": "boolean"
-        },
-        "sourceMethod": {
-          "type": "string"
-        },
-        "avatar": {
-          "type": "string"
-        },
-        "bio": {
-          "type": "string"
-        },
-        "listId": {
-          "type": "string"
-        }
-      },
-      "required": ["tweetId"]
+  "required": [
+    "tweetId"
+  ],
+  "properties": {
+    "tweetId": {
+      "type": "string"
     },
-    {
-      "title": "General Social Post Metadata",
-      "properties": {
-        "tweetId": {
-          "type": "string"
-        },
-        "parentTweetId": {
-          "type": ["string", "null"]
-        },
-        "conversationId": {
-          "type": ["string", "null"]
-        },
-        "isThread": {
-          "type": "boolean"
-        },
-        "isBookmarked": {
-          "type": "boolean"
-        },
-        "replyCount": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "retweetCount": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "likeCount": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "quoteCount": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "bookmarkCount": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "isRetweet": {
-          "type": "boolean"
-        },
-        "isReply": {
-          "type": "boolean"
-        },
-        "isQuote": {
-          "type": "boolean"
-        },
-        "hashtags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "mentions": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "lang": {
-          "type": "string"
-        },
-        "isProfile": {
-          "type": "boolean"
-        },
-        "sourceMethod": {
-          "type": "string"
-        },
-        "cursor": {
-          "type": "string"
-        }
-      },
-      "required": ["tweetId"]
+    "parentTweetId": {
+      "type": ["string", "null"]
     },
-    {
-      "title": "SearchResultItem Metadata",
-      "properties": {
-        "tweetId": {
-          "type": "string"
-        },
-        "isSearchResult": {
-          "type": "boolean"
-        },
-        "searchType": {
-          "type": "string"
-        },
-        "searchFilter": {
-          "type": "string"
-        },
-        "searchQuery": {
-          "type": "string"
-        },
-        "isHashtag": {
-          "type": "boolean"
-        },
-        "hashtag": {
-          "type": "string"
-        },
-        "resultType": {
-          "type": "string"
-        },
-        "sourceMethod": {
-          "type": "string"
-        },
-        "isTrending": {
-          "type": "boolean"
-        },
-        "trendWoeid": {
-          "type": "integer"
-        },
-        "tweetCount": {
-          "type": ["integer", "null"]
-        },
-        "trendUrl": {
-          "type": ["string", "null"]
-        },
-        "category": {
-          "type": ["string", "null"]
-        },
-        "isPromoted": {
-          "type": "boolean"
-        },
-        "cursor": {
-          "type": "string"
-        }
-      },
-      "required": ["tweetId", "isSearchResult"]
+    "conversationId": {
+      "type": ["string", "null"]
+    },
+    "isThread": {
+      "type": "boolean"
+    },
+    "isBookmarked": {
+      "type": "boolean"
+    },
+    "username": {
+      "type": "string"
+    },
+    "profileId": {
+      "type": "string"
+    },
+    "avatar": {
+      "type": "string"
+    },
+    "bio": {
+      "type": "string"
+    },
+    "isProfile": {
+      "type": "boolean"
+    },
+    "isFollower": {
+      "type": "boolean"
+    },
+    "isFollowing": {
+      "type": "boolean"
+    },
+    "isLiker": {
+      "type": "boolean"
+    },
+    "isRetweeter": {
+      "type": "boolean"
+    },
+    "isListMember": {
+      "type": "boolean"
+    },
+    "isNonFollower": {
+      "type": "boolean"
+    },
+    "isReply": {
+      "type": "boolean"
+    },
+    "isRetweet": {
+      "type": "boolean"
+    },
+    "isQuote": {
+      "type": "boolean"
+    },
+    "isVerified": {
+      "type": "boolean"
+    },
+    "protected": {
+      "type": "boolean"
+    },
+    "isSearchResult": {
+      "type": "boolean"
+    },
+    "searchType": {
+      "type": "string"
+    },
+    "searchFilter": {
+      "type": "string"
+    },
+    "searchQuery": {
+      "type": "string"
+    },
+    "isHashtag": {
+      "type": "boolean"
+    },
+    "hashtag": {
+      "type": "string"
+    },
+    "isTrending": {
+      "type": "boolean"
+    },
+    "isTrend": {
+      "type": "boolean"
+    },
+    "trendWoeid": {
+      "type": "integer"
+    },
+    "woeid": {
+      "type": "integer"
+    },
+    "tweetCount": {
+      "type": ["integer", "null"]
+    },
+    "trendUrl": {
+      "type": ["string", "null"]
+    },
+    "category": {
+      "type": ["string", "null"]
+    },
+    "isPromoted": {
+      "type": "boolean"
+    },
+    "resultType": {
+      "type": "string"
+    },
+    "followersCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "followingCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "likeCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "retweetCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "replyCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "quoteCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bookmarkCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lang": {
+      "type": "string"
+    },
+    "hashtags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "mentions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "listId": {
+      "type": "string"
+    },
+    "cursor": {
+      "type": "string"
+    },
+    "sourceMethod": {
+      "type": "string"
     }
-  ]
+  }
 }

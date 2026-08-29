@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * TwitterClient — Hybrid HTTP client for Twitter/X GraphQL and REST APIs.
- * Extends AbstractApiClient with form-encoded GraphQL dispatch, GET query support, and REST helpers.
+ * Extends AbstractApiClient with form-encoded GraphQL dispatch and REST helpers.
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0
@@ -64,28 +64,26 @@ export function parseCookies(cookies) {
 
 /**
  * Build a cookie header string from a record or array.
- * @param {string | Record<string, string> | Array<{name: string, value: string}>} cookies
+ * @param {Record<string, string> | string | Array<{name: string, value: string}>} cookies
  * @returns {string}
  */
 export function buildCookieHeader(cookies) {
+  if (!cookies) return '';
   if (typeof cookies === 'string') return cookies;
   if (Array.isArray(cookies)) {
     return cookies
-      .filter((c) => c && typeof c === 'object' && c.name && c.value !== undefined)
+      .filter((c) => c && c.name && c.value !== undefined)
       .map((c) => `${encodeURIComponent(c.name)}=${encodeURIComponent(c.value)}`)
       .join('; ');
   }
-  if (cookies && typeof cookies === 'object') {
-    return Object.entries(cookies)
-      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v === undefined || v === null ? '' : String(v))}`)
-      .join('; ');
-  }
-  return '';
+  return Object.entries(cookies)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('; ');
 }
 
 /**
  * Extract csrf token and auth token from cookies.
- * @param {string | Record<string, string> | Array<{name: string, value: string}>} cookies
+ * @param {Record<string, string> | string | Array<{name: string, value: string}>} cookies
  * @returns {{ ct0: string, authToken: string }}
  */
 export function parseTwitterCookies(cookies) {
@@ -230,12 +228,6 @@ export class TwitterClient extends AbstractApiClient {
     this.bearerToken = deps.bearerToken || BEARER_TOKEN;
     this.guestToken = deps.guestToken || null;
     this.timeout = deps.timeout ?? 30000;
-
-    if (deps.cookies) {
-      this.cookies = typeof deps.cookies === 'string'
-        ? parseCookies(deps.cookies)
-        : deps.cookies;
-    }
   }
 
   /**
@@ -324,48 +316,61 @@ export class TwitterClient extends AbstractApiClient {
    * Build GraphQL form-encoded body.
    * @param {Record<string, unknown>} variables
    * @param {Record<string, boolean>} [features]
+   * @param {Record<string, unknown>} [fieldToggles]
    * @returns {URLSearchParams}
    */
-  #buildGraphQLBody(variables, features = DEFAULT_FEATURES) {
+  #buildGraphQLBody(variables, features = DEFAULT_FEATURES, fieldToggles = DEFAULT_FIELD_TOGGLES) {
     const body = new URLSearchParams();
     body.set('variables', JSON.stringify(variables));
     body.set('features', JSON.stringify(features));
-    body.set('fieldToggles', JSON.stringify(DEFAULT_FIELD_TOGGLES));
+    body.set('fieldToggles', JSON.stringify(fieldToggles || DEFAULT_FIELD_TOGGLES));
     return body;
   }
 
   /**
-   * Send a Twitter GraphQL request (supports POST form-encoded and GET query).
+   * Send a Twitter GraphQL request.
+   * Supports both (queryId, op, vars, options) and (queryId, op, vars, features, fieldToggles, options).
    * @param {string} queryId
    * @param {string} operationName
-   * @param {Record<string, unknown>} variables
-   * @param {Record<string, boolean>} [features=DEFAULT_FEATURES]
-   * @param {Record<string, unknown>} [fieldToggles]
-   * @param {Object} [options]
-   * @param {string} [options.accountId]
-   * @param {string | Record<string, string>} [options.cookies]
-   * @param {boolean} [options.requiresAuth]
-   * @param {Record<string, string>} [options.headers]
-   * @param {'GET' | 'POST'} [options.method]
+   * @param {Record<string, unknown>} [variables={}]
+   * @param {any} [featuresOrOptions]
+   * @param {any} [fieldToggles]
+   * @param {any} [options]
    * @returns {Promise<any>}
    */
-  async requestGraphQl(queryId, operationName, variables = {}, features = DEFAULT_FEATURES, fieldToggles = undefined, options = {}) {
-    // Normalise overload where 4th argument is options
-    let actualFeatures = features;
-    let actualFieldToggles = fieldToggles;
-    let actualOptions = options;
+  async requestGraphQl(queryId, operationName, variables = {}, featuresOrOptions, fieldToggles, options) {
+    let actualFeatures = DEFAULT_FEATURES;
+    let actualFieldToggles = DEFAULT_FIELD_TOGGLES;
+    /** @type {Record<string, any>} */
+    let actualOptions = {};
 
-    if (features && typeof features === 'object' && ('accountId' in features || 'cookies' in features || 'requiresAuth' in features || 'headers' in features)) {
-      actualOptions = /** @type {any} */ (features);
-      actualFeatures = DEFAULT_FEATURES;
-      actualFieldToggles = undefined;
+    if (featuresOrOptions && typeof featuresOrOptions === 'object') {
+      if (
+        'accountId' in featuresOrOptions ||
+        'cookies' in featuresOrOptions ||
+        'requiresAuth' in featuresOrOptions ||
+        'headers' in featuresOrOptions ||
+        'method' in featuresOrOptions ||
+        'session' in featuresOrOptions
+      ) {
+        actualOptions = featuresOrOptions;
+      } else {
+        actualFeatures = featuresOrOptions;
+        actualFieldToggles = fieldToggles || DEFAULT_FIELD_TOGGLES;
+        actualOptions = options || {};
+      }
+    } else {
+      actualOptions = options || {};
     }
 
     const isAuth = actualOptions.requiresAuth !== undefined ? actualOptions.requiresAuth : this.requiresAuth;
     const accountId = isAuth ? (actualOptions.accountId || null) : null;
-    const method = actualOptions.method || 'GET';
+    const method = actualOptions.method || 'POST';
 
     const transactionId = isAuth ? await this.#signTransactionId({ url: `${this.baseUrl}/i/api/graphql/${queryId}/${operationName}`, method }) : null;
+
+    const headers = /** @type {Record<string, string>} */ ({ 'content-type': 'application/x-www-form-urlencoded', ...(actualOptions.headers || {}) });
+    if (transactionId) headers['x-client-transaction-id'] = transactionId;
 
     const relayAwareVariables = { ...variables };
     if (!isAuth && relayAwareVariables.__relay_internal__pv__appviewerisloggedinprovider === undefined) {
@@ -374,12 +379,9 @@ export class TwitterClient extends AbstractApiClient {
 
     let url = `${this.baseUrl}/i/api/graphql/${queryId}/${operationName}`;
     let body = undefined;
-    const headers = /** @type {Record<string, string>} */ ({ ...(actualOptions.headers || {}) });
-    if (transactionId) headers['x-client-transaction-id'] = transactionId;
 
     if (method === 'POST') {
-      headers['content-type'] = 'application/x-www-form-urlencoded';
-      body = this.#buildGraphQLBody(relayAwareVariables, actualFeatures).toString();
+      body = this.#buildGraphQLBody(relayAwareVariables, actualFeatures, actualFieldToggles).toString();
     } else {
       const params = new URLSearchParams();
       params.set('variables', JSON.stringify(relayAwareVariables));
@@ -412,7 +414,7 @@ export class TwitterClient extends AbstractApiClient {
    */
   async requestSearchTimeline(operationName, variables, options = {}) {
     const endpoint = GRAPHQL.SearchTimeline;
-    return this.requestGraphQl(endpoint.queryId, operationName, variables, DEFAULT_FEATURES, undefined, { ...options, method: 'POST' });
+    return this.requestGraphQl(endpoint.queryId, operationName, variables, options);
   }
 
   /**
