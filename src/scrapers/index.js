@@ -40,8 +40,11 @@ import bluesky from './bluesky/index.js';
 import mastodon from './mastodon/index.js';
 import threads from './threads/index.js';
 import facebook from './facebook/index.js';
+import tiktok from './social/tiktok/index.js';
 import { ThreadsCrawler } from './social/threads/crawler.js';
 import { ThreadsClient } from './social/threads/client.js';
+import { TikTokCrawler } from './social/tiktok/crawler.js';
+import { TikTokClient } from './social/tiktok/client.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -114,6 +117,7 @@ export const platforms = {
   threads,
   facebook,
   fb: facebook, // alias
+  tiktok,
 };
 
 /**
@@ -257,6 +261,102 @@ export async function scrape(platform, action, options = {}) {
       accountPool: options.accountPool,
       sessionManager: options.sessionManager,
       docIds: options.docIds,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // TikTok hybrid path — uses browser-as-signer bridge and got-scraping HTTP client.
+  if (platformName === 'tiktok') {
+    /** @type {Record<string, string>} */
+    const TIKTOK_ACTION_MAP = {
+      search: 'search',
+      search_videos: 'search',
+      hashtag: 'hashtag_feed',
+      hashtag_feed: 'hashtag_feed',
+      video_detail: 'post_detail',
+      post_detail: 'post_detail',
+      post: 'post_detail',
+      video_comments: 'get_post_comments',
+      comments: 'get_post_comments',
+      get_post_comments: 'get_post_comments',
+    };
+
+    const mappedAction = TIKTOK_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = Object.values(TIKTOK_ACTION_MAP);
+      const unique = [...new Set(available)];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${unique.join(', ')}`
+      );
+    }
+
+    const query = options.query || options.target;
+    const tag = options.hashtag || options.tag || options.target;
+    const videoId = options.videoId || options.postId || options.url || options.target;
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (mappedAction === 'search' && query) {
+      mappedArgs.query = query;
+    }
+    if (mappedAction === 'hashtag_feed' && tag) {
+      mappedArgs.tag = tag;
+    }
+    if (['post_detail', 'get_post_comments'].includes(mappedAction) && videoId) {
+      mappedArgs.videoId = videoId;
+    }
+
+    if (options.limit != null) {
+      mappedArgs.count = Number(options.limit);
+    } else if (options.count != null) {
+      mappedArgs.count = Number(options.count);
+    }
+    if (options.cursor != null) {
+      mappedArgs.cursor = options.cursor;
+    }
+    if (options.maxDepth != null) {
+      mappedArgs.maxDepth = Number(options.maxDepth);
+    }
+    if (options.maxComments != null) {
+      mappedArgs.maxComments = Number(options.maxComments);
+    }
+    if (options.includeComments != null) {
+      mappedArgs.includeComments = options.includeComments;
+    }
+
+    if (mappedArgs.cursor != null && ['post_detail', 'get_post_comments'].includes(mappedAction) && mappedArgs.after == null) {
+      mappedArgs.after = mappedArgs.cursor;
+    }
+
+    const session = {
+      accountId: options.accountId || 'tiktok-guest',
+      cookies: options.authCookie || options.cookies || '',
+    };
+
+    const client = new TikTokClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+      headless: options.headless !== false,
+    });
+
+    const crawler = new TikTokCrawler({
+      client,
+      store,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
     });
 
     try {

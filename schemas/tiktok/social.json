@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TikTok Social Post Metadata",
+  "type": "object",
+  "properties": {
+    "duration": { "type": "number" },
+    "hashtags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "musicId": { "type": "string" },
+    "musicTitle": { "type": "string" },
+    "region": { "type": "string" },
+    "awemeId": { "type": "string" },
+    "videoHeight": { "type": "number" },
+    "videoWidth": { "type": "number" },
+    "sourceMethod": { "type": "string" }
+  },
+  "required": ["sourceMethod", "awemeId"]
+}
