@@ -691,6 +691,171 @@ export class ThreadsCrawler extends AbstractCrawler {
   }
 
   /**
+   * Extract every inline `application/json` script payload from an HTML string.
+   * @param {string} html
+   * @yields {any}
+   */
+  *#parseSsrJsonScripts(html) {
+    const scriptRegex = /<script\s+type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi;
+    let match;
+    while ((match = scriptRegex.exec(html)) !== null) {
+      try {
+        yield JSON.parse(match[1]);
+      } catch {}
+    }
+  }
+
+  /**
+   * Recursively walk a Meta SSR `require` tree and extract every `result.data`
+   * payload found inside `__bbox` blocks (RelayPrefetchedStreamCache, etc.).
+   * @param {any} node
+   * @returns {Generator<Record<string, any>, void, unknown>}
+   */
+  *#walkBboxForData(node) {
+    if (!node || typeof node !== 'object') return;
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        yield* this.#walkBboxForData(item);
+      }
+      return;
+    }
+
+    const record = /** @type {Record<string, any>} */ (node);
+
+    if (record.__bbox && typeof record.__bbox === 'object') {
+      const bbox = record.__bbox;
+      if (bbox.result && typeof bbox.result === 'object' && bbox.result.data) {
+        yield bbox.result.data;
+      }
+      if (Array.isArray(bbox.require)) {
+        for (const r of bbox.require) {
+          yield* this.#walkBboxForData(r);
+        }
+      }
+      if (Array.isArray(bbox.define)) {
+        for (const d of bbox.define) {
+          if (Array.isArray(d)) {
+            for (const entry of d) {
+              if (entry && typeof entry === 'object') yield* this.#walkBboxForData(entry);
+            }
+          }
+        }
+      }
+    }
+
+    if (Array.isArray(record.require)) {
+      for (const r of record.require) {
+        yield* this.#walkBboxForData(r);
+      }
+    }
+
+    for (const key of Object.keys(record)) {
+      if (key !== '__bbox' && key !== 'require') {
+        const val = record[key];
+        if (val && typeof val === 'object') {
+          yield* this.#walkBboxForData(val);
+        }
+      }
+    }
+  }
+
+  /**
+   * Fetch a single post page and extract the embedded post payload (SSR fallback).
+   * Meta serves the BarcelonaPostPageQuery as a dehydrated Relay JSON script with
+   * `__bbox.result.data`. We collect all data payloads and prefer the node whose
+   * `pk` matches the requested numeric post id or whose `code` matches the shortcode.
+   * @param {string} input
+   * @param {string} numericPostId
+   * @param {string} accountId
+   * @param {string | Record<string, string>} [cookies='']
+   * @returns {Promise<Record<string, any> | null>}
+   */
+  async #fetchPostDetailSsr(input, numericPostId, accountId, cookies = '') {
+    const extracted = this.#extractPostCodeOrId(input);
+    const shortcode = /^\d+$/.test(extracted) ? this.#numericIdToShortcode(BigInt(extracted)) : extracted;
+    if (!shortcode) return null;
+
+    const targetUrl = input.startsWith('http://') || input.startsWith('https://')
+      ? input
+      : `${this.client.baseUrl}/t/${shortcode}`;
+
+    try {
+      const resp = /** @type {any} */ (await this.client.request('GET', targetUrl, {
+        accountId,
+        headers: {
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        },
+        cookies,
+      }));
+
+      const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
+
+      for (const parsed of this.#parseSsrJsonScripts(html)) {
+        for (const data of this.#walkBboxForData(parsed)) {
+          const found = this.#findPostNode(data, numericPostId, shortcode);
+          if (found) return found;
+        }
+      }
+    } catch (err) {
+      if (err instanceof PlatformError) throw err;
+    }
+
+    return null;
+  }
+
+  /**
+   * Recursively locate a post object in a parsed SSR payload.
+   * @param {any} obj
+   * @param {string} numericPostId
+   * @param {string} shortcode
+   * @returns {Record<string, any> | null}
+   */
+  #findPostNode(obj, numericPostId, shortcode) {
+    if (!obj || typeof obj !== 'object') return null;
+
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        const found = this.#findPostNode(item, numericPostId, shortcode);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    const direct = /** @type {Record<string, any>} */ (obj);
+    const pk = String(direct.pk ?? direct.id ?? '');
+    const code = String(direct.code ?? direct.shortcode ?? '');
+
+    // A Threads post object has `pk` and `text_post_app_info` or `caption`.
+    if ((pk === numericPostId || code === shortcode) && (direct.pk || direct.id)) {
+      if (direct.text_post_app_info || direct.caption || direct.user) {
+        return direct;
+      }
+    }
+
+    // Post is often wrapped in `thread_items[0].post` inside a `text_post_app_thread`.
+    if (direct.thread_items && Array.isArray(direct.thread_items)) {
+      for (const item of direct.thread_items) {
+        const post = item?.post;
+        if (post) {
+          const postPk = String(post.pk ?? post.id ?? '');
+          const postCode = String(post.code ?? post.shortcode ?? '');
+          if ((postPk === numericPostId || postCode === shortcode) && (post.pk || post.id)) {
+            return post;
+          }
+        }
+      }
+    }
+
+    for (const key of Object.keys(direct)) {
+      const found = this.#findPostNode(direct[key], numericPostId, shortcode);
+      if (found) return found;
+    }
+
+    return null;
+  }
+
+  /**
    * Extract only the root/top-level comments from a BarcelonaPostPageQuery-style
    * post detail bundle. Nested reply threads inside each thread are intentionally
    * ignored so the fallback does not mis-parent or duplicate children.
@@ -770,6 +935,58 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     return { comments, pageInfo: { has_next_page: false, end_cursor: null } };
+  }
+
+  /**
+   * Extract root comments from a post SSR payload (the raw post object found by
+   * #findPostNode).  Relies on `reply_threads` or `comments` arrays inside the
+   * post, matching the structure returned by Meta's dehydrated HTML payloads.
+   * @param {Record<string, any>} post
+   * @param {number} limit
+   * @returns {{ comments: Record<string, any>[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }}
+   */
+  #extractSsrRootComments(post, limit) {
+    /** @type {Record<string, any>[]} */
+    const comments = [];
+    const seen = new Set();
+
+    const push = (/** @type {Record<string, any> | undefined} */ item) => {
+      if (!item || typeof item !== 'object') return;
+      const p = item.post || item;
+      const key = p.id || p.pk;
+      if (key && seen.has(key)) return;
+      if (key) seen.add(key);
+      comments.push(p);
+    };
+
+    const topReplyThreads = post?.reply_threads;
+    if (Array.isArray(topReplyThreads)) {
+      for (const thread of topReplyThreads) {
+        const items = thread?.thread_items || thread?.items || [thread];
+        for (const item of items) {
+          push(item);
+        }
+      }
+    }
+
+    const topComments = post?.comments;
+    if (topComments && typeof topComments === 'object') {
+      const list = Array.isArray(topComments.items)
+        ? topComments.items
+        : (Array.isArray(topComments.edges) ? topComments.edges : (Array.isArray(topComments) ? topComments : []));
+      for (const item of list) {
+        if (item?.post) {
+          push(item.post);
+        } else if (item?.node) {
+          push(item.node);
+        } else if (item) {
+          push(item);
+        }
+      }
+    }
+
+    const limited = comments.slice(0, limit);
+    return { comments: limited, pageInfo: { has_next_page: false, end_cursor: null } };
   }
 
   /**
@@ -970,28 +1187,20 @@ export class ThreadsCrawler extends AbstractCrawler {
     let nextCursor = null;
     /** @type {any} */
     let ssrPageInfo = null;
-    const scriptMatches = [...html.matchAll(/<script type="application\/json"[^>]*>(.*?)<\/script>/gs)];
-    for (const m of scriptMatches) {
-      if (!m[1]) continue;
-      try {
-        const parsed = JSON.parse(m[1]);
-        const threads = parsed?.raw_data?.searchResults?.edges ||
-                        parsed?.raw_data?.searchResults?.threads ||
-                        parsed?.mediaData?.threads ||
-                        parsed?.data?.searchResults?.edges ||
-                        parsed?.data?.searchResults?.threads ||
-                        parsed?.searchResults?.threads ||
-                        parsed?.searchResults?.edges ||
-                        [];
-        const pageInfo =
-          parsed?.raw_data?.searchResults?.page_info ||
-          parsed?.mediaData?.page_info ||
-          parsed?.data?.searchResults?.page_info ||
-          parsed?.searchResults?.page_info ||
-          null;
-        if (Array.isArray(threads) && threads.length > 0) {
-          for (const t of threads) {
-            for (const rawPost of this.#flattenThreadItems(t)) {
+
+    // First try the new Relay/SSR `__bbox` dehydrated script format.
+    for (const parsed of this.#parseSsrJsonScripts(html)) {
+      for (const data of this.#walkBboxForData(parsed)) {
+        const searchResults = data?.searchResults;
+        if (!searchResults || typeof searchResults !== 'object') continue;
+        const edges = Array.isArray(searchResults.edges)
+          ? searchResults.edges
+          : (Array.isArray(searchResults.threads) ? searchResults.threads : []);
+        if (edges.length > 0) {
+          for (const edge of edges) {
+            const node = edge?.node || edge;
+            const thread = node?.thread || node?.text_post_app_thread || node;
+            for (const rawPost of this.#flattenThreadItems(thread)) {
               try {
                 const post = this.#normalizePostItem(rawPost);
                 if (!post) continue;
@@ -1002,11 +1211,54 @@ export class ThreadsCrawler extends AbstractCrawler {
               }
             }
           }
-          nextCursor = pageInfo?.end_cursor || null;
-          ssrPageInfo = pageInfo;
-          break;
+          ssrPageInfo = searchResults.page_info || null;
+          nextCursor = ssrPageInfo?.end_cursor || null;
+          if (posts.length > 0) break;
         }
-      } catch {}
+      }
+      if (posts.length > 0) break;
+    }
+
+    // Legacy direct script fallback.
+    if (posts.length === 0) {
+      const scriptMatches = [...html.matchAll(/<script type="application\/json"[^>]*>(.*?)<\/script>/gs)];
+      for (const m of scriptMatches) {
+        if (!m[1]) continue;
+        try {
+          const parsed = JSON.parse(m[1]);
+          const threads = parsed?.raw_data?.searchResults?.edges ||
+                          parsed?.raw_data?.searchResults?.threads ||
+                          parsed?.mediaData?.threads ||
+                          parsed?.data?.searchResults?.edges ||
+                          parsed?.data?.searchResults?.threads ||
+                          parsed?.searchResults?.threads ||
+                          parsed?.searchResults?.edges ||
+                          [];
+          const pageInfo =
+            parsed?.raw_data?.searchResults?.page_info ||
+            parsed?.mediaData?.page_info ||
+            parsed?.data?.searchResults?.page_info ||
+            parsed?.searchResults?.page_info ||
+            null;
+          if (Array.isArray(threads) && threads.length > 0) {
+            for (const t of threads) {
+              for (const rawPost of this.#flattenThreadItems(t)) {
+                try {
+                  const post = this.#normalizePostItem(rawPost);
+                  if (!post) continue;
+                  this.validateItem(post);
+                  posts.push(post);
+                } catch {
+                  // Skip invalid SSR posts.
+                }
+              }
+            }
+            nextCursor = pageInfo?.end_cursor || null;
+            ssrPageInfo = pageInfo;
+            break;
+          }
+        } catch {}
+      }
     }
 
     const sliced = posts.slice(0, count);
@@ -1079,6 +1331,10 @@ export class ThreadsCrawler extends AbstractCrawler {
       console.warn('⚠️ [THREADS] COMMENT_REPLIES doc_id not configured; clamping maxDepth to 0.');
     }
 
+    const rootPostSsr = !this.docIds.COMMENT_ROOTS && !this.docIds.POST_DETAIL
+      ? await this.#fetchPostDetailSsr(args.postId, rootPostId, accountId, cookies)
+      : null;
+
     // Per-call cursor set to prevent empty/stuck-cursor infinite loops.
     const seenCursors = new Set();
 
@@ -1099,6 +1355,15 @@ export class ThreadsCrawler extends AbstractCrawler {
       } else {
         docId = this.docIds.COMMENT_ROOTS || this.docIds.POST_DETAIL;
         if (!docId) {
+          // SSR-only: extract top-level replies from the pre-fetched post page payload.
+          if (rootPostSsr) {
+            const { comments, pageInfo } = this.#extractSsrRootComments(rootPostSsr, this.#clampCount(limit, 1, 50));
+            return {
+              comments,
+              pageInfo: this.#normalizePageInfo(pageInfo, seenCursors),
+              note: 'SSR-only mode; using post page reply threads.',
+            };
+          }
           throw new PlatformError({
             code: 'XACT_5000',
             type: ErrorTypes.INTERNAL,
@@ -1282,74 +1547,76 @@ export class ThreadsCrawler extends AbstractCrawler {
     const cookies = session?.cookies || '';
     const numericPostId = await this.#resolvePostId(args.postId, accountId, cookies);
 
-    const docId = this.docIds.POST_DETAIL || DEFAULT_THREADS_DOC_IDS.POST_DETAIL;
-    if (!docId) {
-      throw new PlatformError({
-        code: 'XACT_5000',
-        type: ErrorTypes.INTERNAL,
-        message: 'POST_DETAIL doc_id is not configured',
-        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
-        platform: 'threads',
-        accountId,
-      });
-    }
+    const docId = this.docIds.POST_DETAIL;
 
-    const variables = {
-      postID: numericPostId,
-      post_id: numericPostId,
-    };
-
-    const res = await this.client.requestGraphQl(docId, variables, { accountId, cookies });
-    const topData = res?.data?.data && (res.data.data.containing_thread || res.data.data.reply_threads)
-      ? res.data.data
-      : (res?.data || {});
-
-    // Search containing_thread first
+    /** @type {Record<string, any> | null} */
     let rawRootPost = null;
-    let fallbackPost = null;
 
-    if (topData.containing_thread) {
-      const items = Array.isArray(topData.containing_thread.thread_items)
-        ? topData.containing_thread.thread_items
-        : (Array.isArray(topData.containing_thread.items) ? topData.containing_thread.items : [topData.containing_thread]);
-      for (const item of items) {
-        const p = item?.post || (item?.pk || item?.id ? item : null);
-        if (p) {
-          if (String(p.pk || p.id) === numericPostId) {
-            rawRootPost = p;
-            break;
-          }
-          if (!fallbackPost) {
-            fallbackPost = p;
+    if (docId) {
+      const variables = {
+        postID: numericPostId,
+        post_id: numericPostId,
+      };
+
+      try {
+        const res = await this.client.requestGraphQl(docId, variables, { accountId, cookies });
+        const topData = res?.data?.data && (res.data.data.containing_thread || res.data.data.reply_threads)
+          ? res.data.data
+          : (res?.data || {});
+
+        // Search containing_thread first
+        let fallbackPost = null;
+
+        if (topData.containing_thread) {
+          const items = Array.isArray(topData.containing_thread.thread_items)
+            ? topData.containing_thread.thread_items
+            : (Array.isArray(topData.containing_thread.items) ? topData.containing_thread.items : [topData.containing_thread]);
+          for (const item of items) {
+            const p = item?.post || (item?.pk || item?.id ? item : null);
+            if (p) {
+              if (String(p.pk || p.id) === numericPostId) {
+                rawRootPost = p;
+                break;
+              }
+              if (!fallbackPost) {
+                fallbackPost = p;
+              }
+            }
           }
         }
+
+        // Search reply_threads if exact match not found in containing_thread
+        if (!rawRootPost && Array.isArray(topData.reply_threads)) {
+          for (const thread of topData.reply_threads) {
+            const items = Array.isArray(thread.thread_items) ? thread.thread_items : [thread];
+            for (const item of items) {
+              const p = item?.post || (item?.pk || item?.id ? item : null);
+              if (p && String(p.pk || p.id) === numericPostId) {
+                rawRootPost = p;
+                break;
+              }
+            }
+            if (rawRootPost) break;
+          }
+        }
+
+        if (!rawRootPost && fallbackPost) {
+          rawRootPost = fallbackPost;
+        }
+      } catch (err) {
+        console.warn(`⚠️ [THREADS] POST_DETAIL GraphQL failed, falling back to SSR: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 
-    // Search reply_threads if exact match not found in containing_thread
-    if (!rawRootPost && Array.isArray(topData.reply_threads)) {
-      for (const thread of topData.reply_threads) {
-        const items = Array.isArray(thread.thread_items) ? thread.thread_items : [thread];
-        for (const item of items) {
-          const p = item?.post || (item?.pk || item?.id ? item : null);
-          if (p && String(p.pk || p.id) === numericPostId) {
-            rawRootPost = p;
-            break;
-          }
-        }
-        if (rawRootPost) break;
-      }
-    }
-
-    if (!rawRootPost && fallbackPost) {
-      rawRootPost = fallbackPost;
+    if (!rawRootPost) {
+      rawRootPost = await this.#fetchPostDetailSsr(args.postId, numericPostId, accountId, cookies);
     }
 
     if (!rawRootPost) {
       throw new PlatformError({
         code: 'XACT_4041',
         type: 'not_found',
-        message: `Post ${numericPostId} not found in GraphQL response`,
+        message: `Post ${numericPostId} not found`,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         platform: 'threads',
         accountId,

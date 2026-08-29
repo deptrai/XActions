@@ -314,6 +314,51 @@ export async function x_search_tweets({ query, limit = 50 }) {
 }
 
 // ============================================================================
+// Multi-Platform Scraping (Story 15.1.4)
+// Delegates to scrape() so Threads/Bluesky/Mastodon can use the same tools.
+// ============================================================================
+
+/**
+ * Get a profile on any supported platform.
+ * @param {{ username: string, platform: string, instance?: string, limit?: number }} args
+ */
+export async function x_get_profile_multiplatform({ username, platform = 'twitter', instance, limit }) {
+  return dispatchScrape(platform, 'profile', { username, instance, limit: limit ?? 50 });
+}
+
+/**
+ * Get posts/tweets on any supported platform.
+ * @param {{ username: string, platform: string, instance?: string, limit?: number }} args
+ */
+export async function x_get_tweets_multiplatform({ username, platform = 'twitter', instance, limit }) {
+  return dispatchScrape(platform, 'tweets', { username, instance, limit: limit ?? 50 });
+}
+
+/**
+ * Search posts on any supported platform.
+ * @param {{ query: string, platform: string, instance?: string, limit?: number }} args
+ */
+export async function x_search_tweets_multiplatform({ query, platform = 'twitter', instance, limit }) {
+  return dispatchScrape(platform, 'search', { query, instance, limit: limit ?? 50 });
+}
+
+/**
+ * Get followers on any supported platform.
+ * @param {{ username: string, platform: string, instance?: string, limit?: number }} args
+ */
+export async function x_get_followers_multiplatform({ username, platform = 'twitter', instance, limit }) {
+  return dispatchScrape(platform, 'followers', { username, instance, limit: limit ?? 100 });
+}
+
+/**
+ * Get following on any supported platform.
+ * @param {{ username: string, platform: string, instance?: string, limit?: number }} args
+ */
+export async function x_get_following_multiplatform({ username, platform = 'twitter', instance, limit }) {
+  return dispatchScrape(platform, 'following', { username, instance, limit: limit ?? 100 });
+}
+
+// ============================================================================
 // 7b. Thread / Best Time to Post
 // ============================================================================
 
@@ -1609,11 +1654,16 @@ export const toolMap = {
   x_login,
   // Scraping (delegated to scrapers/index.js — single source of truth)
   x_get_profile,
+  x_get_profile_multiplatform,
   x_get_followers,
+  x_get_followers_multiplatform,
   x_get_following,
+  x_get_following_multiplatform,
   x_get_non_followers,
   x_get_tweets,
+  x_get_tweets_multiplatform,
   x_search_tweets,
+  x_search_tweets_multiplatform,
   x_get_thread,
   x_best_time_to_post,
   x_account_report,
