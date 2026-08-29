@@ -256,6 +256,7 @@ export async function scrape(platform, action, options = {}) {
       governor: options.governor,
       accountPool: options.accountPool,
       sessionManager: options.sessionManager,
+      docIds: options.docIds,
     });
 
     try {
