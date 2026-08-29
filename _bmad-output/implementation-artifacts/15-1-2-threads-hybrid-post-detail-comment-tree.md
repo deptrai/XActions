@@ -2,18 +2,18 @@
 story_id: "15.1.2"
 epic: 15
 story_key: "15-1-2-threads-hybrid-post-detail-comment-tree"
-status: "review"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-28
 updated: 2026-08-29
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "2026-08-29"
 baseline_commit: 2c5e7e3338129261c8b34409df3e04aa63eefe3b
 ---
 
 # Story 15.1.2: Threads Hybrid Post Detail & Comment Tree
 
-Status: review
+Status: done
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
@@ -360,6 +360,17 @@ Patterns:
   - `src/store/prisma-store.js` (`storeBatch`, `storeCommentBatch`, `saveCheckpoint`).
   - `src/utils/redis-stream-publisher.js` (`defaultRedisStreamPublisher`).
 - Comment tree: `src/scrapers/social/comment-tree.js`.
+
+## Senior Developer Review (AI)
+
+- **Review Date:** 2026-08-29
+- **Reviewers:** Blind Hunter, Edge Case Hunter, Acceptance Auditor
+- **Outcome:** Approved (with auto-applied patches)
+- **Findings Applied:**
+  1. `[Security][Patch]` Added SSRF hostname guard for absolute `postId` URLs in `#resolvePostId` (`threads.net`).
+  2. `[Bug][Patch]` Corrected `rawRootPost` fallback in `containing_thread` to search both `containing_thread` and `reply_threads` accurately for the target post without premature greedy assignment.
+  3. `[Feature][Patch]` Forwarded session cookies to `#resolvePostId` and `getComments` for authenticated sessions.
+  4. `[Reliability][Patch]` Re-threw upstream `PlatformError`s (rate limits, bot challenges, session expirations) in `#resolvePostId` instead of unconditionally masking them as 404s.
 
 ## Dev Agent Record
 
