@@ -62,6 +62,7 @@ Legacy functions `postTweet`, `postThread`, `postReply`, `sendTweet`, `sendQuote
 - `src/scrapers/twitter/http/actions.js` — legacy `postTweet`, `replyToTweet`, `quoteTweet` [dòng 86-254]
 - `src/client/Scraper.js` — legacy `sendTweet`, `sendQuoteTweet`, `deleteTweet` [dòng 489-525]
 - `src/client/api/tweets.js` — legacy `sendTweet`, `sendQuoteTweet` [dòng 267-347]
+- `src/utils/gaussian-delay.js` — delay helper
 - `docs/deprecation-plan.md` — Status tracker [dòng 79-97]
 
 ---
@@ -88,9 +89,9 @@ Legacy functions `postTweet`, `postThread`, `postReply`, `sendTweet`, `sendQuote
 
 | action | requiredArgs | optionalArgs | example | outputType | requiresAuth |
 |---|---|---|---|---|---|
-| `post` | `['text']` | `['mediaIds', 'dryRun']` | `{ text: 'Hello XActions', mediaIds: ['123'], dryRun: false }` | `{ tweet: PostItem }` | `true` |
-| `reply` | `['tweetId', 'text']` | `['mediaIds', 'dryRun']` | `{ tweetId: '1900000000000000000', text: 'Nice', dryRun: false }` | `{ tweet: PostItem }` | `true` |
-| `quote` | `['tweetId', 'text']` | `['mediaIds', 'dryRun']` | `{ tweetId: '1900000000000000000', text: 'Agree', dryRun: false }` | `{ tweet: PostItem }` | `true` |
+| `post` | `['text']` | `['mediaIds', 'premium', 'sensitive', 'dryRun']` | `{ text: 'Hello XActions', mediaIds: ['123'], dryRun: false }` | `{ tweet: PostItem }` | `true` |
+| `reply` | `['tweetId', 'text']` | `['mediaIds', 'premium', 'sensitive', 'dryRun']` | `{ tweetId: '1900000000000000000', text: 'Nice', dryRun: false }` | `{ tweet: PostItem }` | `true` |
+| `quote` | `['tweetId', 'text']` | `['mediaIds', 'premium', 'sensitive', 'dryRun']` | `{ tweetId: '1900000000000000000', text: 'Agree', dryRun: false }` | `{ tweet: PostItem }` | `true` |
 
 * **And** action names phải `snake_case` theo regex `/^[a-z0-9_]+$/`.
 * **And** `tweetId` có thể là numeric ID hoặc URL `https://x.com/username/status/1900000000000000000`.
@@ -131,7 +132,7 @@ Legacy functions `postTweet`, `postThread`, `postReply`, `sendTweet`, `sendQuote
 * **Given** action `quote` đã đăng ký
 * **When** gọi `crawler.start({ action: 'quote', args: { tweetId: '1900000000000000000', text: 'Agree' } })`
 * **Then** resolve `tweetId` từ URL hoặc numeric ID
-* **And** gọi `CreateTweet` với `attachment_url: https://x.com/i/web/status/${tweetId}`
+* **And** gọi `CreateTweet` với `attachment_url: https://x.com/i/status/${tweetId}`
 * **And** trả về `PostItem` với `metadata.quotedTweetId: tweetId`, `metadata.sourceMethod: 'quote'`
 
 ### AC-5: Write safety — delay floor và governor
@@ -153,6 +154,7 @@ Legacy functions `postTweet`, `postThread`, `postReply`, `sendTweet`, `sendQuote
   - 429 → `code: XACT_4290`, `suggestedAction: 'rotate_account'` hoặc `retry_after_delay`
   - 5xx → `code: XACT_5030`, `suggestedAction: 'retry_after_delay'`
 * **And** log KHÔNG bao gồm cookie, token, hoặc `authorization` header
+* **And** write action phải kiểm tra `governor.canAccountRequest(accountId, 'twitter')` trước khi gửi; nếu từ chối throw `PlatformError` với `code: XACT_4291`, `suggestedAction: 'rotate_account'`
 
 ### AC-7: Deprecation markers
 
@@ -164,7 +166,7 @@ Legacy functions `postTweet`, `postThread`, `postReply`, `sendTweet`, `sendQuote
   - `sendTweet` / `postTweet` → `TwitterCrawler.start({ action: 'post' })`
   - `sendQuoteTweet` / `quoteTweet` → `TwitterCrawler.start({ action: 'quote' })`
   - `postThread` → chuỗi `post` hoặc `reply` tùy use-case
-  - `replyToTweet` → `TwitterCrawler.start({ action: 'reply' })`
+  - `replyToTweet` / `sendReply` → `TwitterCrawler.start({ action: 'reply' })`
 
 ### AC-8: Tests
 
@@ -238,10 +240,10 @@ Legacy functions `postTweet`, `postThread`, `postReply`, `sendTweet`, `sendQuote
 
 ## Open Questions / TBD
 
-1. **Thread support:** Story này có triển khai `post` với single tweet, còn thread là nhiều `post` liên tiếp tự reply. Có nên thêm action `thread` trong AC-1 tùy chọn không?
-2. **Media upload:** `mediaIds` giả định đã upload trước qua `media` action hoặc một uploader riêng. Có cần tích hợp media upload trong `post` không?
-3. **Quote URL format:** Dùng `https://x.com/i/web/status/${tweetId}` (legacy `actions.js` dòng 134) hay `https://x.com/i/status/${tweetId}` (`src/client/api/tweets.js` dòng 321)?
-4. **Sensitive/premium flags:** Có cần hỗ trợ `sensitive` và `premium` trong args không, hay giữ cho Story 13.2.7?
+1. **Thread support:** Giữ ngoài scope Story 13.2.6; thread có thể thực hiện bằng cách gọi nhiều `post`/`reply` liên tiếp từ caller. Nếu cần, tạo action `thread` trong Story 13.2.7 hoặc 13.2.11.
+2. **Media upload:** `mediaIds` giả định đã upload trước qua media uploader hoặc action `media` (Story 13.2.4). Không tích hợp upload mới trong Story 13.2.6.
+3. **Quote URL format:** Dùng `https://x.com/i/status/${tweetId}` để nhất quán với `src/client/api/tweets.js`.
+4. **Sensitive/premium flags:** Hỗ trợ tùy chọn `sensitive` (boolean, mặc định false) và `premium` (boolean, mặc định false) trong `optionalArgs` cho cả `post`/`reply`/`quote`.
 
 ---
 
