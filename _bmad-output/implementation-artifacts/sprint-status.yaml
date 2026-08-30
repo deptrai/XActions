@@ -111,7 +111,7 @@ development_status:
   # --- Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop) ---
   epic-16: in-progress
   16-1-shopee-search-product-review-scraper-tls-spoofing: done
-  16-2-tiktok-shop-product-sales-scraper: backlog
+  16-2-tiktok-shop-product-sales-scraper: ready-for-dev
   epic-16-retrospective: optional
 
   # --- Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan) ---
