@@ -2,19 +2,34 @@
 story_id: '13.2.8'
 epic: 13
 story_key: '13-2-8-twitter-hybrid-engagement-like-retweet'
-status: "review"
+status: "done"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
 last_updated: 2026-08-30
 owner: "DEV"
-reviewed: "pending"
+reviewed: "approved"
 baseline_commit: "b7c667761906a1833e8ecd82ce65fa0c80243bb6"
 ---
 
 # Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)
 
-Status: review
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review)  
+**Date:** 2026-08-30  
+**Summary:**
+- 4 actions engagement (`like`, `unlike`, `retweet`, `undo_retweet`) được triển khai đúng chuẩn `AbstractCrawler` và `ActionDescriptor`.
+- Tích hợp write safety đầy đủ: Gaussian delay floor (1–3s), `dryRun=true` mặc định, rate governor check `canAccountRequest`.
+- Cơ chế xử lý idempotent errors hoàn chỉnh cho cả mutations yêu cầu.
+- Gắn `@deprecated` annotations đầy đủ cho toàn bộ legacy functions trong `src/client/Scraper.js`, `src/client/api/tweets.js`, `src/scrapers/twitter/http/engagement.js`.
+- Test suite đạt độ bao phủ 13/13 tests pass, không gây regression (89/89 tests pass).
+
+#### Action Items (Resolved)
+- [x] [Review][Patch] Đảm bảo action names tuân thủ snake_case (`undo_retweet`).
+- [x] [Review][Patch] Mở rộng validator nhận diện mutation responses và GraphQL errors.
 
 ## Story
 

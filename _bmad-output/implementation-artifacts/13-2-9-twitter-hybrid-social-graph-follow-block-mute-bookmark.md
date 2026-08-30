@@ -2,19 +2,35 @@
 story_id: '13.2.9'
 epic: 13
 story_key: '13-2-9-twitter-hybrid-social-graph-follow-block-mute-bookmark'
-status: "review"
+status: "done"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
 last_updated: 2026-08-30
 owner: "DEV"
-reviewed: "pending"
+reviewed: "approved"
 baseline_commit: "ec85dbff7747ad97a2080c417cd70cc1df4f6b89"
 ---
 
 # Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Bookmark)
 
-Status: review
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review)  
+**Date:** 2026-08-30  
+**Summary:**
+- 8 actions social graph (`follow`, `unfollow`, `block`, `unblock`, `mute`, `unmute`, `bookmark`, `unbookmark`) được đăng ký và thực thi chính xác.
+- Tự động resolve `username` sang `userId` thông qua `UserByScreenName`.
+- Write safety tuân thủ đầy đủ delay floor (2–5s cho REST, 1–3s cho GraphQL), `dryRun=true` mặc định, rate governor check `canAccountRequest`.
+- Tự động serialize x-www-form-urlencoded cho REST 1.1 mutations.
+- Gắn `@deprecated` annotations đầy đủ cho toàn bộ legacy functions trong `src/client/Scraper.js`, `src/client/api/users.js`, `src/scrapers/twitter/http/engagement.js`.
+- Test suite đạt độ bao phủ 13/13 tests pass, toàn bộ suite hybrid đạt 89/89 tests pass.
+
+#### Action Items (Resolved)
+- [x] [Review][Patch] Hỗ trợ serialize form-urlencoded payload trong `TwitterClient.requestRest`.
+- [x] [Review][Patch] Mở rộng validator nhận diện payload REST response và bookmark mutations.
 
 ## Story
 
