@@ -2,19 +2,33 @@
 story_id: '13.2.12'
 epic: 13
 story_key: '13-2-12-twitter-hybrid-integration-caller-migration'
-status: "review"
+status: "done"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
 last_updated: 2026-08-30
 owner: "DEV"
-reviewed: "pending"
+reviewed: "approved"
 baseline_commit: "3b4841358889e4fb636570c1a2144a29e22d0c60"
 ---
 
 # Story 13.2.12 — Twitter Hybrid Integration & Caller Migration
 
-Status: review
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review)  
+**Date:** 2026-08-30  
+**Summary:**
+- Unified dispatcher `src/scrapers/index.js` đã hỗ trợ toàn diện `scrape('twitter'|'x', action, options)`, định tuyến tới `TwitterCrawler` + `TwitterClient` với hơn 35 action aliases.
+- Đã khai báo export `./scrapers/social/twitter` trong `package.json`.
+- Gắn `@deprecated` annotations toàn diện cho `src/scrapers/twitter/index.js` và đồng bộ `docs/deprecation-plan.md` sang trạng thái `deprecated-marked`.
+- Toàn bộ 11 test files của Twitter hybrid crawler đều pass 100% (117/117 tests passed), hoàn tất Epic 13.2 Twitter Scraper Hybrid Refactor.
+
+#### Action Items (Resolved)
+- [x] [Review][Patch] Đảm bảo nhánh `twitter`/`x` được kiểm tra ưu tiên ở đầu hàm `scrape()`.
+- [x] [Review][Patch] Map đầy đủ các tùy chọn đầu vào (`options.username`, `options.target`, `options.limit`, `options.cursor`, `options.dryRun`).
 
 ## Story
 

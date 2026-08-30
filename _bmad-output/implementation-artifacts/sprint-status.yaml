@@ -80,7 +80,7 @@ development_status:
   13-2-9-twitter-hybrid-social-graph-follow-block-mute-bookmark: done
   13-2-10-twitter-hybrid-direct-messaging: done
   13-2-11-twitter-hybrid-list-management: done
-  13-2-12-twitter-hybrid-integration-caller-migration: review
+  13-2-12-twitter-hybrid-integration-caller-migration: done
   13-3-refactor-facebook-scraper-to-hybrid-architecture: done
   13-4-facebook-browser-as-signer-bridge: done
   13-5-facebook-hybrid-profile-followers-group-members: done
