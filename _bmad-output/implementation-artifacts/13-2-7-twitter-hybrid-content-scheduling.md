@@ -2,7 +2,7 @@
 story_id: '13.2.7'
 epic: 13
 story_key: '13-2-7-twitter-hybrid-content-scheduling'
-status: "ready-for-dev"
+status: "in-progress"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
@@ -279,6 +279,45 @@ function normalizePublishAt(input) {
 | `Scraper.scheduleTweet(text, options)` (nếu tồn tại) | `src/client/Scraper.js` | `TwitterCrawler.start({ action: 'schedule', ... })` |
 
 ---
+
+## Tasks / Subtasks
+
+- [ ] Task 1 (AC-1, AC-8): Đăng ký action `schedule` trong `TwitterCrawler` với descriptor đúng
+  - [ ] 1.1 Thêm `schedule` action với `requiredArgs: ['text', 'publishAt']`, `optionalArgs: ['mediaIds', 'premium', 'sensitive', 'dryRun']`, `requiresAuth: true`, `outputType: '{ tweet: PostItem }'`
+  - [ ] 1.2 Đảm bảo `listActions()` trả về `schedule` với `requiresAuth: true`
+  - [ ] 1.3 Thêm `CreateScheduledTweet` vào `GRAPHQL` object trong `src/scrapers/twitter/http/endpoints.js`
+- [ ] Task 2 (AC-2, AC-4, AC-5): Implement `scheduleContent(args, session)` handler
+  - [ ] 2.1 Validate `text` (non-empty, không whitespace-only, ≤ 280/25,000)
+  - [ ] 2.2 Validate `publishAt` và normalize về Unix seconds; reject thời điểm quá khứ
+  - [ ] 2.3 Validate `mediaIds.length ≤ 4`
+  - [ ] 2.4 Build `CreateScheduledTweet` variables với `post_tweet_request` + `execute_at`
+  - [ ] 2.5 Implement dry-run gate trả về `PostItem` với `metadata.dryRun: true`
+  - [ ] 2.6 Gọi `gaussianDelay(3000, 7000)` và kiểm tra `governor.canAccountRequest` trước live call
+  - [ ] 2.7 Gọi `TwitterClient.requestGraphQl` với `method: 'POST'`, `requiresAuth: true`, `DEFAULT_FEATURES` + `DEFAULT_FIELD_TOGGLES`
+  - [ ] 2.8 Parse response thành `PostItem` với `metadata.scheduledAt`, `scheduledTweetId`, `sourceMethod: 'schedule'`; xử lý `response.errors`
+  - [ ] 2.9 Persist `PostItem` và checkpoint
+- [ ] Task 3 (AC-7): Cập nhật `TwitterPlatformResponseValidator` nhận diện `create_scheduled_tweet`
+  - [ ] 3.1 Thêm `create_scheduled_tweet` / `data.tweet` / `data.id` vào `isValidPayload`
+- [ ] Task 4 (AC-6): Deprecation markers
+  - [ ] 4.1 Thêm `@deprecated` JSDoc cho `schedulePost` trong `src/scrapers/twitter/http/actions.js`
+  - [ ] 4.2 Thêm `@deprecated` JSDoc cho `schedulePost` wrapper trong `src/scrapers/twitter/http/index.js`
+  - [ ] 4.3 Kiểm tra `src/client/Scraper.js` và `src/client/api/tweets.js` có hàm lập lịch; nếu có thì gắn `@deprecated`
+  - [ ] 4.4 Cập nhật `docs/deprecation-plan.md` mapping `schedulePost` → `twitter:schedule`
+- [ ] Task 5 (AC-8): Red-phase TDD tests
+  - [ ] 5.1 Tạo `tests/scrapers/social/twitter/crawler-content-scheduling.test.js`
+  - [ ] 5.2 Viết test kiểm tra action descriptor `schedule`
+  - [ ] 5.3 Viết test validate text, publishAt, mediaIds
+  - [ ] 5.4 Viết test dry-run không gọi API
+  - [ ] 5.5 Viết test live call với đúng variables
+  - [ ] 5.6 Viết test parse response thành PostItem
+  - [ ] 5.7 Viết test governor từ chối trả `XACT_4291`
+  - [ ] 5.8 Viết test `@deprecated` tag trên `schedulePost`
+  - [ ] 5.9 Viết test `docs/deprecation-plan.md` mapping
+- [ ] Task 6: Chạy full suite và cập nhật story file
+  - [ ] 6.1 Chạy `vitest run tests/scrapers/social/twitter/crawler-content-scheduling.test.js` pass
+  - [ ] 6.2 Chạy `vitest run tests/scrapers/social/twitter/` không regression
+  - [ ] 6.3 Chạy full suite nếu cần
+  - [ ] 6.4 Cập nhật `File List`, `Change Log`, `Completion Notes`, `Status`
 
 ## Dev Agent Record
 

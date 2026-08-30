@@ -326,6 +326,19 @@ export class TwitterCrawler extends AbstractCrawler {
       outputType: '{ tweet: PostItem }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.composeContent(args, session, 'quote'),
     });
+
+    // ── Story 13.2.7 Action: schedule ──
+    this.registerAction({
+      action: 'schedule',
+      description: 'Schedule a tweet for future publication via the CreateScheduledTweet GraphQL mutation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['text', 'publishAt'],
+      optionalArgs: ['mediaIds', 'premium', 'sensitive', 'dryRun'],
+      example: { text: 'Hello future XActions', publishAt: '2026-09-01T12:00:00Z', dryRun: false },
+      outputType: '{ tweet: PostItem }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.schedule(args, session),
+    });
   }
 
   /**
@@ -2284,6 +2297,247 @@ export class TwitterCrawler extends AbstractCrawler {
         dryRun: true,
         sourceMethod,
         ...extraMetadata,
+      },
+    });
+  }
+
+  /**
+   * Normalize a publishAt value to Unix seconds.
+   * Accepts ISO string, Date, milliseconds, or seconds.
+   * @param {string | number | Date} publishAt
+   * @returns {{ executeAt: number, publishAtDate: Date, publishAtIso: string }}
+   */
+  #normalizePublishAt(publishAt) {
+    let ms;
+    if (publishAt instanceof Date) {
+      ms = publishAt.getTime();
+    } else if (typeof publishAt === 'number') {
+      ms = publishAt < 1e10 ? publishAt * 1000 : publishAt;
+    } else if (typeof publishAt === 'string') {
+      const trimmed = publishAt.trim();
+      if (/^\d+$/.test(trimmed)) {
+        const n = Number(trimmed);
+        ms = n < 1e10 ? n * 1000 : n;
+      } else {
+        ms = Date.parse(trimmed);
+      }
+    } else {
+      ms = NaN;
+    }
+
+    if (!Number.isFinite(ms) || ms <= 0) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Invalid publishAt value: ${publishAt}`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const publishAtDate = new Date(ms);
+    const executeAt = Math.floor(ms / 1000);
+    const publishAtIso = publishAtDate.toISOString();
+    return { executeAt, publishAtDate, publishAtIso };
+  }
+
+  /**
+   * Validate scheduled tweet payload before dispatch.
+   * @param {string} text
+   * @param {string | number | Date} publishAt
+   * @param {string[]} mediaIds
+   * @param {{ premium?: boolean }} [options]
+   */
+  #validateSchedulePayload(text, publishAt, mediaIds, options = {}) {
+    this.#validateTweetText(text, { premium: options.premium });
+
+    if (mediaIds.length > 4) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Too many media IDs (${mediaIds.length}/4)`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const { executeAt, publishAtDate, publishAtIso } = this.#normalizePublishAt(publishAt);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const graceSeconds = 5;
+    if (executeAt < nowSeconds + graceSeconds) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `publishAt must be in the future (${publishAtDate.toISOString()})`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    return { executeAt, publishAtDate, publishAtIso };
+  }
+
+  /**
+   * Action Handler: schedule (Story 13.2.7)
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ tweet: import('../../../core/types.js').PostItem }>}
+   */
+  async schedule(args, session) {
+    const text = typeof args.text === 'string' ? args.text : '';
+    const premium = Boolean(args.premium);
+    const sensitive = Boolean(args.sensitive);
+    const dryRun = args.dryRun !== false;
+    const mediaIds = Array.isArray(args.mediaIds) ? args.mediaIds : [];
+
+    const { executeAt, publishAtDate, publishAtIso } = this.#validateSchedulePayload(text, args.publishAt, mediaIds, { premium });
+
+    const { accountId } = await this.#resolveSession(session);
+
+    const variables = {
+      post_tweet_request: {
+        auto_populate_reply_metadata: false,
+        status: text,
+        exclude_reply_user_ids: [],
+        media_ids: mediaIds.map((id) => String(id)),
+      },
+      execute_at: executeAt,
+    };
+
+    if (dryRun) {
+      console.log(`🔄 [DRY RUN] schedule: ${JSON.stringify({ text, publishAt: publishAtIso, mediaIds: mediaIds.length })}`);
+      const dryPost = this.#createScheduleDryRunPostItem({ text, publishAt: publishAtIso });
+      return { tweet: dryPost };
+    }
+
+    await gaussianDelay(3000, 7000);
+
+    console.log(`🔄 [WRITE] schedule: ${JSON.stringify({ accountId, textLength: text.length, hasMedia: mediaIds.length > 0, publishAt: publishAtIso })}`);
+
+    const response = await this.client.requestGraphQl(
+      GRAPHQL.CreateScheduledTweet.queryId,
+      GRAPHQL.CreateScheduledTweet.operationName,
+      variables,
+      DEFAULT_FEATURES,
+      DEFAULT_FIELD_TOGGLES,
+      {
+        accountId,
+        requiresAuth: true,
+        method: 'POST',
+        cookies: session?.cookies,
+      }
+    );
+
+    const graphQLErrors = Array.isArray(response?.errors) ? response.errors : (Array.isArray(response?.data?.errors) ? response.data.errors : null);
+    if (graphQLErrors) {
+      const firstError = graphQLErrors[0] || {};
+      const upstreamMessage = firstError.message || String(firstError);
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5000',
+        message: `Twitter CreateScheduledTweet error: ${upstreamMessage}`,
+        statusCode: firstError.code ? Number(firstError.code) : 500,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'twitter',
+        details: { sourceMethod: 'schedule', errors: graphQLErrors },
+      });
+    }
+
+    const scheduledRoot =
+      response?.data?.create_scheduled_tweet ??
+      response?.create_scheduled_tweet ??
+      response?.data ??
+      response;
+
+    const scheduledId =
+      scheduledRoot?.id ??
+      scheduledRoot?.rest_id ??
+      scheduledRoot?.tweet_results?.result?.rest_id ??
+      null;
+
+    if (!scheduledId) {
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5000',
+        message: 'Could not parse CreateScheduledTweet response: missing scheduled id',
+        statusCode: 500,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'twitter',
+      });
+    }
+
+    const externalId = String(scheduledId);
+    const now = new Date();
+
+    const post = /** @type {import('../../../core/types.js').PostItem} */ ({
+      id: `twitter:${externalId}`,
+      platform: 'twitter',
+      externalId,
+      category: 'social',
+      authorId: accountId || '',
+      authorName: '',
+      content: text,
+      mediaUrls: [],
+      likesCount: 0,
+      repostsCount: 0,
+      repliesCount: 0,
+      viewsCount: 0,
+      publishedAt: publishAtDate,
+      crawledAt: now,
+      metadata: {
+        tweetId: externalId,
+        scheduledAt: publishAtIso,
+        scheduledTweetId: externalId,
+        sourceMethod: 'schedule',
+        mediaIds: mediaIds.length > 0 ? mediaIds.map(String) : undefined,
+      },
+    });
+
+    console.log(`✅ [WRITE] schedule ok: ${JSON.stringify({ accountId, scheduledTweetId: externalId, textLength: text.length, hasMedia: mediaIds.length > 0 })}`);
+
+    await this.#persistPostItems([post]);
+    await this.#emitCheckpointAndStream({
+      targetType: 'schedule',
+      targetKey: externalId,
+      items: [post],
+      hasMore: false,
+    });
+
+    return { tweet: post };
+  }
+
+  /**
+   * Create a preview PostItem for dry-run schedule action.
+   * @param {Record<string, any>} params
+   * @returns {import('../../../core/types.js').PostItem}
+   */
+  #createScheduleDryRunPostItem({ text, publishAt }) {
+    const now = new Date();
+    const externalId = `schedule-dryrun-${now.getTime()}`;
+
+    return /** @type {import('../../../core/types.js').PostItem} */ ({
+      id: `twitter:${externalId}`,
+      platform: 'twitter',
+      externalId,
+      category: 'social',
+      authorId: '',
+      authorName: '',
+      content: text,
+      mediaUrls: [],
+      likesCount: 0,
+      repostsCount: 0,
+      repliesCount: 0,
+      viewsCount: 0,
+      publishedAt: new Date(publishAt),
+      crawledAt: now,
+      metadata: {
+        tweetId: externalId,
+        dryRun: true,
+        sourceMethod: 'schedule',
+        scheduledAt: publishAt,
       },
     });
   }

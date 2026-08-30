@@ -260,7 +260,7 @@ export async function quoteTweet(client, tweetId, text, options = {}) {
 /**
  * Schedule a tweet for future publication via CreateScheduledTweet.
  *
- * @deprecated schedulePost — use Story 13.2.7 TwitterCrawler.start({ action: 'schedule', ... }) when available.
+ * @deprecated schedulePost — use TwitterCrawler.start({ action: 'schedule', args: { text, publishAt, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} text
  * @param {Date|number} scheduledAt - Date object or Unix epoch in seconds

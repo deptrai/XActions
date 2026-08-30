@@ -88,7 +88,9 @@ Xoá theo thứ tự:
 | Twitter Legacy Search/Hashtag/Trending (`src/scrapers/twitter/index.js` searchTweets/scrapeHashtag/scrapeTrending; `src/scrapers/twitter/http/search.js` searchTweets/searchUsers/scrapeTrending/scrapeHashtag) | `deprecated-marked` | Phase 1 (Story 13.2.3) | DEV |
 | Twitter Legacy Media (`src/scrapers/twitter/http/media.js`, `src/scrapers/twitter/index.js` scrapeMedia) | `deprecated-marked` | Phase 1 (Story 13.2.4) | DEV |
 | Twitter Legacy Lists/Communities/Spaces (`src/scrapers/twitter/index.js` scrapeListMembers/scrapeCommunityMembers/scrapeSpaces; `src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Story 13.2.5) | DEV |
-| Twitter Legacy Content Composition (`src/client/Scraper.js` sendTweet/sendQuoteTweet; `src/client/api/tweets.js` sendTweet/sendQuoteTweet; `src/scrapers/twitter/http/actions.js` postTweet/postThread/replyToTweet/quoteTweet/schedulePost) | `deprecated-marked` | Phase 1 (Story 13.2.6) | DEV |
+| Twitter Legacy Content Composition (`src/client/Scraper.js` sendTweet/sendQuoteTweet; `src/client/api/tweets.js` sendTweet/sendQuoteTweet; `src/scrapers/twitter/http/actions.js` postTweet/postThread/replyToTweet/quoteTweet/schedulePost) | `deprecated-marked` | Phase 1 (Story 13.2.6 / 13.2.7) | DEV |
+| `src/scrapers/twitter/http/actions.js` `schedulePost` → `twitter:schedule` | `deprecated-marked` | Phase 1 (Story 13.2.7) | DEV |
+| `src/scrapers/twitter/http/index.js` `schedulePost` → `twitter:schedule` | `deprecated-marked` | Phase 1 (Story 13.2.7) | DEV |
 | `src/client/Scraper.js` (search/getTrends/getExploreTabs and all methods) | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-marked` | Phase 1 (Epic 13.10) | DEV |
 | Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
