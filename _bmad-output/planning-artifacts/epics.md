@@ -378,6 +378,20 @@ So that **tôi có thể dùng SocksNode trong `ProxyIpPool` / `DynamicTunnelPro
 * **And** tự động refresh / rotate session khi proxy bị quarantine
 * **And** kiểm tra tính khả dụng của proxy (health check) trước khi trả về.
 
+### Story 11.9: Proactive Proxy TTL Buffer & Auto-Refresh Interceptor
+As a **Reliability Engineer**,
+I want **`ProxyIpPool` chủ động kiểm tra TTL `expiresAt` và tự động đổi proxy trước khi hết hạn 30s (`expiresAt` buffer)**,
+So that **triệt tiêu 100% tình trạng đứt gãy kết nối `ECONNRESET` giữa chừng khi cào dữ liệu lớn**.
+
+**Acceptance Criteria:**
+* **Given** cấu trúc `NormalizedProxy` trong `src/proxy/providers.js`
+* **When** nhận thông tin proxy từ các dynamic/residential providers
+* **Then** bổ sung trường `expiresAt: number | null` (timestamp hết hạn của IP proxy)
+* **And** `ProxyIpPool` cung cấp phương thức `isExpired(proxy, bufferMs = 30000)` trả về `true` nếu thời gian sống còn lại $\le 30\text{s}$
+* **And** `ProxyIpPool` cung cấp phương thức `getOrRefreshProxy(accountId, options)` tự động lấy IP mới nếu IP hiện tại sắp hết hạn
+* **And** `AbstractApiClient` trong `src/core/base-client.js` gọi `getOrRefreshProxy()` trước khi dispatch request
+* **And** kiểm tra và xoá sạch bộ đệm proxy đã hết hạn qua `pruneExpiredProxies()`.
+
 ---
 
 ## Epic 12: Frictionless Authentication (Terminal QR & CDP Attach)
@@ -408,6 +422,29 @@ So that **hệ thống sử dụng nguyên vẹn profile và fingerprint thật 
 * **Then** Playwright kết nối thành công tới browser instance đang mở mà không spawn process mới
 * **And** áp dụng độ trễ phân phối ngẫu nhiên Gaussian Jitter (3–7s) giữa các thao tác cào.
 
+### Story 12.3: Multi-Browser Path Resolution & Advanced Anti-Automation Flags
+As a **Power User / Automation Engineer**,
+I want **`src/core/cdp-launcher.js` tự động nhận diện Microsoft Edge, Brave, Chromium Canary, Snap Chromium trên Windows, macOS, Linux kèm các cờ bypass anti-bot**,
+So that **XActions có thể khởi chạy và kết nối CDP thành công trên mọi máy trạm của người dùng mà không bị WAF phát hiện automation control**.
+
+**Acceptance Criteria:**
+* **Given** môi trường hệ điều hành Windows, macOS hoặc Linux
+* **When** gọi `resolveBrowserExecutablePath(customPath)` trong `src/core/cdp-launcher.js`
+* **Then** tự động quét và kiểm tra tính khả thi của:
+  - macOS: `/Applications/Google Chrome.app`, `/Applications/Microsoft Edge.app`, `/Applications/Brave Browser.app`, `/Applications/Google Chrome Canary.app`
+  - Windows: `%PROGRAMFILES%`, `%LOCALAPPDATA%` của Chrome, Edge, Brave, Canary
+  - Linux: `/usr/bin/google-chrome-stable`, `/usr/bin/chromium-browser`, `/snap/bin/chromium`, `/usr/bin/microsoft-edge-stable`
+* **And** tự động quét tìm port debug rảnh từ `startPort = 9222` đến `9322` nếu port 9222 đã bị chiếm
+* **And** thêm các cờ khởi chạy anti-detection:
+  `--disable-blink-features=AutomationControlled`, `--exclude-switches=enable-automation`, `--disable-infobars`, `--disable-background-timer-throttling`, `--disable-renderer-backgrounding`, `--headless=new`
+* **And** dọn dẹp tiến trình an toàn khi có tín hiệu `SIGINT`/`SIGTERM` hoặc process exit.
+
+**Acceptance Criteria:**
+* **Given** lệnh `unfollowx auth --launch-chrome` hoặc Chrome đang mở cổng 9222
+* **When** gọi `launchBrowserWithCdp('http://localhost:9222')` trong `src/core/base-crawler.js`
+* **Then** Playwright kết nối thành công tới browser instance đang mở mà không spawn process mới
+* **And** áp dụng độ trễ phân phối ngẫu nhiên Gaussian Jitter (3–7s) giữa các thao tác cào.
+
 ---
 
 ## Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor)
@@ -425,6 +462,19 @@ So that **các request cần chữ ký mã hóa phức tạp đạt throughput >
 * **Then** client lấy token phiên O(1) từ `PreSignedTokenRing` hoặc phân phối tác vụ ký tới `SignerPagePool`
 * **And** mọi lệnh evaluate bọc trong `Promise.race()` với timeout 3,000ms
 * **And** dispatch HTTP request bằng `got-scraping` (TLS Spoofing) hoặc `undici.fetch()`.
+
+### Story 13.1.2: Tier 0 Pure-Algorithm Crypto Signer Bridge
+As a **Scraper Architect / Core Developer**,
+I want **bổ sung tầng ký chữ ký thuần thuật toán (Tier 0 Zero-Browser Pure Crypto) vào `src/core/signer-pool.js`**,
+So that **các request Twitter, Facebook, Bilibili có thể sinh chữ ký trực tiếp bằng Node.js với tốc độ gấp 100 lần và không tốn RAM chạy headless browser**.
+
+**Acceptance Criteria:**
+* **Given** `SignerWorkerPagePool` và `PreSignedTokenRing` trong `src/core/signer-pool.js`
+* **When** `AbstractApiClient.requestWithSign` nhận `signType: 'pure_algorithm'` (hoặc auto-detected)
+* **Then** hệ thống ưu tiên gọi pure crypto functions viết bằng `node:crypto` / WebAssembly mà không dispatch tới Worker Page
+* **And** tích hợp thuật toán sinh `x-client-transaction-id` thuần cho Twitter và hash token thuần cho Facebook
+* **And** tự động fallback về Tier 2 (Worker Page Pool) nếu thuật toán pure crypto không hỗ trợ hoặc trả về null
+* **And** độ trễ sinh chữ ký Tier 0 đạt $<0.1\text{ms}$ và không tiêu tốn thêm RAM.
 
 ### Story 13.2: Refactor Twitter Scraper to Hybrid Architecture
 As a **Twitter Growth Marketer**,
@@ -766,6 +816,19 @@ So that **Nowing backend có thể chạy background NLP Intent Extractor theo t
 * **And** `GET /metrics/stream` trả về `{ eventsPerSecond, pendingMessages, consumerLag, droppedEvents, lastAckTime, maxLen, minId }`.
 * **And** cảnh báo khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s` qua webhook/email.
 * **And** log `throttle_reason: redis_lag` khi governor giảm nhịp do consumer lag.
+
+### Story 14.4: Real-Time N-Gram Keyword & Hashtag Frequency Analytics Engine
+As an **AI Agent / Market Researcher**,
+I want **module `src/analytics/word-frequency.js` và MCP tool `x_analytics_buzzwords`**,
+So that **tôi nhận được ngay bảng phân tích Top từ khóa/hashtag thịnh hành từ các bài viết và bình luận vừa cào mà không cần chờ downstream NLP pipeline**.
+
+**Acceptance Criteria:**
+* **Given** tập dữ liệu `PostItem[]` hoặc `CommentItem[]` vừa được trích xuất
+* **When** gọi `extractKeywordFrequency(items, { minLength, topN, lang, removeStopwords })`
+* **Then** hệ thống thực hiện tokenize, lọc stopwords đa ngôn ngữ (hỗ trợ Tiếng Việt & Tiếng Anh từ `src/analytics/stopwords/`)
+* **And** tính toán phân phối tần suất N-gram (Unigram, Bigram) và trích xuất danh sách Hashtags
+* **And** cung cấp MCP tool `x_analytics_buzzwords` và CLI `xactions analytics buzzwords` trả về Top N keywords/hashtags có số lần xuất hiện cao nhất
+* **And** tích hợp tùy chọn `includeBuzzwords: true` trong `AbstractCrawler` output summary.
 
 ---
 
