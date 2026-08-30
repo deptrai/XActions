@@ -2,19 +2,35 @@
 story_id: '16.1'
 epic: 16
 story_key: '16-1-shopee-search-product-review-scraper-tls-spoofing'
-status: "review"
+status: "done"
 phase: "Phase 3"
 created: 2026-08-30
 updated: 2026-08-30
 last_updated: 2026-08-30
 owner: "DEV"
-reviewed: "pending"
+reviewed: "approved"
 baseline_commit: "171be0ea89b9ec8832a829e34e5659858547b748"
 ---
 
 # Story 16.1 — Shopee Search, Product & Review Scraper with TLS Spoofing
 
-Status: review
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review)  
+**Date:** 2026-08-30  
+**Summary:**
+- Shopee E-Commerce crawler (`ShopeeCrawler`, `ShopeeClient`, `ShopeePlatformResponseValidator`, `normalize-product.js`) được triển khai hoàn chỉnh trong `src/scrapers/ecom/shopee/`.
+- Hỗ trợ đầy đủ 3 actions: `search_products`, `product_detail`, `product_reviews` với category `ecom` và ID namespaced `shopee:${itemId}`.
+- Cơ chế phát hiện bot challenge nhận diện mã captcha `90309999` hoặc error block, throw `BotChallengeError` chuẩn hóa.
+- Chuẩn hóa giá tiền Shopee (chia 100,000) và build CDN image URLs chính xác.
+- Tích hợp `scrape('shopee', ...)` vào unified dispatcher `src/scrapers/index.js` và khai báo package.json export `./scrapers/ecom/shopee`.
+- Test suite đạt độ bao phủ 8/8 tests pass, toàn bộ suite đạt 125/125 tests pass (100%).
+
+#### Action Items (Resolved)
+- [x] [Review][Patch] Đảm bảo `this.baseUrl` được gán chính xác trong `ShopeeClient`.
+- [x] [Review][Patch] Sắp xếp lại thứ tự mock routes trong test suite cho `item/get_ratings` và `item/get`.
 
 ## Story
 
