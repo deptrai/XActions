@@ -93,6 +93,8 @@ Xoá theo thứ tự:
 | `src/scrapers/twitter/http/index.js` `schedulePost` → `twitter:schedule` | `deprecated-marked` | Phase 1 (Story 13.2.7) | DEV |
 | Twitter Legacy Engagement (`src/client/Scraper.js` likeTweet/unlikeTweet/retweet/unretweet; `src/client/api/tweets.js`; `src/scrapers/twitter/http/engagement.js` likeTweet/unlikeTweet/retweet/unretweet) | `deprecated-marked` | Phase 1 (Story 13.2.8) | DEV |
 | `src/scrapers/twitter/http/engagement.js` like/unlike/retweet/unretweet → `twitter:like` / `twitter:unlike` / `twitter:retweet` / `twitter:undo_retweet` | `deprecated-marked` | Phase 1 (Story 13.2.8) | DEV |
+| Twitter Legacy Social Graph (`src/client/Scraper.js` followUser/unfollowUser; `src/client/api/users.js`; `src/scrapers/twitter/http/engagement.js` followUser/unfollowUser/blockUser/unblockUser/muteUser/unmuteUser/bookmarkTweet/unbookmarkTweet) | `deprecated-marked` | Phase 1 (Story 13.2.9) | DEV |
+| `src/scrapers/twitter/http/engagement.js` social graph & bookmarks → `twitter:follow` / `twitter:unfollow` / `twitter:block` / `twitter:unblock` / `twitter:mute` / `twitter:unmute` / `twitter:bookmark` / `twitter:unbookmark` | `deprecated-marked` | Phase 1 (Story 13.2.9) | DEV |
 | `src/client/Scraper.js` (search/getTrends/getExploreTabs and all methods) | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-marked` | Phase 1 (Epic 13.10) | DEV |
 | Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
@@ -124,6 +126,14 @@ Xoá theo thứ tự:
 | `unlikeTweet` / `unlike` (Twitter) | `twitter:unlike` |
 | `retweet` (Twitter) | `twitter:retweet` |
 | `unretweet` / `undoRetweet` (Twitter) | `twitter:undo_retweet` |
+| `followUser` / `followByUsername` (Twitter) | `twitter:follow` |
+| `unfollowUser` (Twitter) | `twitter:unfollow` |
+| `blockUser` (Twitter) | `twitter:block` |
+| `unblockUser` (Twitter) | `twitter:unblock` |
+| `muteUser` (Twitter) | `twitter:mute` |
+| `unmuteUser` (Twitter) | `twitter:unmute` |
+| `bookmarkTweet` (Twitter) | `twitter:bookmark` |
+| `unbookmarkTweet` (Twitter) | `twitter:unbookmark` |
 | `scrapeProfile` | `facebook:profile` |
 | `scrapeFollowers` | `facebook:followers` |
 | `scrapeGroupMembers` | `facebook:group_members` |

@@ -436,8 +436,20 @@ export class TwitterClient extends AbstractApiClient {
       }
     }
 
+    const headers = {
+      'content-type': 'application/x-www-form-urlencoded',
+      ...(options.headers || {}),
+    };
+
+    let body = options.body;
+    if (body && typeof body === 'object' && !Buffer.isBuffer(body) && typeof body.pipe !== 'function') {
+      body = new URLSearchParams(body).toString();
+    }
+
     const resp = /** @type {any} */ (await this.request(options.method || 'GET', url.toString(), {
       ...options,
+      headers,
+      body,
       accountId: accountId || undefined,
       requiresAuth: isAuth,
     }));

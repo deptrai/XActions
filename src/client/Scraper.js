@@ -398,6 +398,7 @@ export class Scraper {
   /**
    * Follow a user.
    *
+   * @deprecated followUser — use TwitterCrawler.start({ action: 'follow', args: { username, dryRun: false } }) instead.
    * @param {string} username - Twitter handle
    * @returns {Promise<void>}
    */
@@ -410,6 +411,7 @@ export class Scraper {
   /**
    * Unfollow a user.
    *
+   * @deprecated unfollowUser — use TwitterCrawler.start({ action: 'unfollow', args: { username, dryRun: false } }) instead.
    * @param {string} username - Twitter handle
    * @returns {Promise<void>}
    */

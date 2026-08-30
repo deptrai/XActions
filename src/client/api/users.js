@@ -197,6 +197,7 @@ export async function* getFollowing(http, userId, count = 100) {
 /**
  * Follow a user.
  *
+ * @deprecated followUser — use TwitterCrawler.start({ action: 'follow', args: { userId, dryRun: false } }) instead.
  * @param {HttpClient} http
  * @param {string} userId - Numeric user ID
  * @returns {Promise<void>}
@@ -225,6 +226,7 @@ export async function followUser(http, userId) {
 /**
  * Unfollow a user.
  *
+ * @deprecated unfollowUser — use TwitterCrawler.start({ action: 'unfollow', args: { userId, dryRun: false } }) instead.
  * @param {HttpClient} http
  * @param {string} userId - Numeric user ID
  * @returns {Promise<void>}

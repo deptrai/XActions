@@ -67,9 +67,15 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
       if (['Tweet', 'TweetWithVisibilityResults'].includes(data.delete_tweet?.tweet_results?.result?.__typename)) return true;
       if (data.create_scheduled_tweet?.id || data.create_scheduled_tweet?.rest_id) return true;
       if (data.create_scheduled_tweet?.tweet_results?.result?.rest_id || data.create_scheduled_tweet?.tweet_results?.result?.__typename === 'Tweet') return true;
-      // Engagement mutations (FavoriteTweet / UnfavoriteTweet / CreateRetweet / DeleteRetweet)
+      // Engagement mutations (FavoriteTweet / UnfavoriteTweet / CreateRetweet / DeleteRetweet / CreateBookmark / DeleteBookmark)
       if (data.favorite_tweet !== undefined || data.unfavorite_tweet !== undefined) return true;
       if (data.create_retweet !== undefined || data.delete_retweet !== undefined) return true;
+      if (data.create_bookmark !== undefined || data.delete_bookmark !== undefined) return true;
+      if (data.bookmark_tweet !== undefined || data.unbookmark_tweet !== undefined) return true;
+      // REST 1.1 / 2 responses (friendships, blocks, mutes, user objects)
+      if (data.id_str !== undefined || data.screen_name !== undefined) return true;
+      if (data.following !== undefined || data.blocking !== undefined || data.muting !== undefined) return true;
+      if (data.ok !== undefined || data.success !== undefined) return true;
       // GraphQL error responses
       if (Array.isArray(data.errors) || Array.isArray(root?.errors)) return true;
       // SearchTimeline results

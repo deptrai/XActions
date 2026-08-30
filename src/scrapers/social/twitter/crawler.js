@@ -26,7 +26,7 @@ import {
 } from './normalize-list-community-space.js';
 import { buildAdvancedQuery } from '../../twitter/http/search.js';
 import { parseTweetData } from '../../twitter/http/tweets.js';
-import { DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES, GRAPHQL } from '../../twitter/http/endpoints.js';
+import { DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES, GRAPHQL, REST } from '../../twitter/http/endpoints.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { isValidCategory } from '../../../core/types.js';
 import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
@@ -387,6 +387,103 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { tweetId: '1900000000000000000', dryRun: false },
       outputType: '{ success: boolean }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.undoRetweet(args, session),
+    });
+
+    // ── Story 13.2.9 Actions: follow, unfollow, block, unblock, mute, unmute, bookmark, unbookmark ──
+    this.registerAction({
+      action: 'follow',
+      description: 'Follow a user by username, URL, or userId',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: [],
+      optionalArgs: ['userId', 'username', 'dryRun'],
+      example: { username: 'elonmusk', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.follow(args, session),
+    });
+
+    this.registerAction({
+      action: 'unfollow',
+      description: 'Unfollow a user by username, URL, or userId',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: [],
+      optionalArgs: ['userId', 'username', 'dryRun'],
+      example: { username: 'elonmusk', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.unfollow(args, session),
+    });
+
+    this.registerAction({
+      action: 'block',
+      description: 'Block a user by username, URL, or userId',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: [],
+      optionalArgs: ['userId', 'username', 'dryRun'],
+      example: { username: 'spammer', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.block(args, session),
+    });
+
+    this.registerAction({
+      action: 'unblock',
+      description: 'Unblock a user by username, URL, or userId',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: [],
+      optionalArgs: ['userId', 'username', 'dryRun'],
+      example: { username: 'spammer', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.unblock(args, session),
+    });
+
+    this.registerAction({
+      action: 'mute',
+      description: 'Mute a user by username, URL, or userId',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: [],
+      optionalArgs: ['userId', 'username', 'dryRun'],
+      example: { username: 'noisy_account', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.mute(args, session),
+    });
+
+    this.registerAction({
+      action: 'unmute',
+      description: 'Unmute a user by username, URL, or userId',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: [],
+      optionalArgs: ['userId', 'username', 'dryRun'],
+      example: { username: 'noisy_account', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.unmute(args, session),
+    });
+
+    this.registerAction({
+      action: 'bookmark',
+      description: 'Bookmark a tweet by tweetId via GraphQL CreateBookmark mutation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['tweetId'],
+      optionalArgs: ['dryRun'],
+      example: { tweetId: '1900000000000000000', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.bookmark(args, session),
+    });
+
+    this.registerAction({
+      action: 'unbookmark',
+      description: 'Remove a bookmark from a tweet by tweetId via GraphQL DeleteBookmark mutation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['tweetId'],
+      optionalArgs: ['dryRun'],
+      example: { tweetId: '1900000000000000000', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.unbookmark(args, session),
     });
   }
 
@@ -2728,6 +2825,256 @@ export class TwitterCrawler extends AbstractCrawler {
       queryId: GRAPHQL.DeleteRetweet.queryId,
       operationName: 'DeleteRetweet',
       buildVariables: (tweetId) => ({ source_tweet_id: tweetId, dark_request: false }),
+    });
+  }
+
+  /**
+   * Helper to resolve userId from arguments (userId, username, or profile URL).
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<string>}
+   */
+  async #resolveTargetUserId(args = {}, session = {}) {
+    if (args.userId && typeof args.userId === 'string' && /^\d{1,30}$/.test(args.userId.trim())) {
+      return args.userId.trim();
+    }
+
+    const usernameOrUrl = args.username || args.url;
+    if (!usernameOrUrl || typeof usernameOrUrl !== 'string') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: userId or username',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const cleanUsername = resolveUsername(usernameOrUrl);
+    const { accountId } = await this.#resolveSession(session);
+
+    const response = await this.client.requestGraphQl(
+      TWITTER_GRAPHQL_QUERY_IDS.UserByScreenName,
+      'UserByScreenName',
+      {
+        screen_name: cleanUsername,
+        withSafetyModeUserFields: false,
+      },
+      DEFAULT_FEATURES,
+      undefined,
+      {
+        accountId,
+        requiresAuth: false,
+        cookies: session?.cookies,
+      }
+    );
+
+    const userResult = response?.user?.result;
+    if (!userResult || userResult.__typename === 'UserUnavailable' || !userResult.rest_id) {
+      throw new PlatformError({
+        type: ErrorTypes.NOT_FOUND,
+        code: 'XACT_4040',
+        message: `Twitter user not found: "${cleanUsername}"`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    return String(userResult.rest_id);
+  }
+
+  /**
+   * Generic handler for Twitter REST social actions (follow, unfollow, block, unblock, mute, unmute).
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @param {'follow' | 'unfollow' | 'block' | 'unblock' | 'mute' | 'unmute'} actionName
+   * @param {string} endpointPath
+   * @param {(userId: string) => Record<string, any>} buildBody
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async #performRestSocialAction(args, session, actionName, endpointPath, buildBody) {
+    const dryRun = args?.dryRun !== false;
+    const usernameOrUrl = args?.username || args?.url;
+    const directUserId = args?.userId;
+
+    if (!directUserId && !usernameOrUrl) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: userId or username',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    if (dryRun) {
+      console.log(`🔄 [DRY RUN] ${actionName}: ${JSON.stringify({ userId: directUserId, username: usernameOrUrl })}`);
+      return { success: true };
+    }
+
+    const userId = await this.#resolveTargetUserId(args, session);
+    const { accountId } = await this.#resolveSession(session);
+
+    await gaussianDelay(2000, 5000);
+
+    console.log(`🔄 [WRITE] ${actionName}: ${JSON.stringify({ accountId, userId })}`);
+
+    const IDEMPOTENT_SOCIAL_MESSAGES = [
+      'already following',
+      'already requested',
+      'you are already following',
+      'cannot find specified user',
+      'not found in list',
+    ];
+
+    const body = buildBody(userId);
+
+    let response;
+    try {
+      response = await this.client.requestRest(endpointPath, {
+        method: 'POST',
+        body,
+        accountId,
+        requiresAuth: true,
+        cookies: session?.cookies,
+      });
+    } catch (err) {
+      const msg = String(err?.message || '').toLowerCase();
+      if (IDEMPOTENT_SOCIAL_MESSAGES.some((needle) => msg.includes(needle))) {
+        console.log(`ℹ️ [WRITE] ${actionName} idempotent hit: "${msg}"`);
+        return { success: true };
+      }
+      throw err;
+    }
+
+    const errors = response?.errors;
+    if (Array.isArray(errors) && errors.length > 0) {
+      for (const err of errors) {
+        const msg = String(err?.message || '').toLowerCase();
+        if (IDEMPOTENT_SOCIAL_MESSAGES.some((needle) => msg.includes(needle))) {
+          console.log(`ℹ️ [WRITE] ${actionName} idempotent hit: "${msg}"`);
+          return { success: true };
+        }
+      }
+
+      const firstError = errors[0];
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5000',
+        message: firstError?.message || `Twitter REST error while performing ${actionName}`,
+        statusCode: firstError?.code ? Number(firstError.code) : 500,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'twitter',
+        details: { action: actionName, userId, errors },
+      });
+    }
+
+    console.log(`✅ [WRITE] ${actionName} ok: ${JSON.stringify({ accountId, userId })}`);
+    return { success: true };
+  }
+
+  /**
+   * Action Handler: follow
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async follow(args, session) {
+    return this.#performRestSocialAction(args, session, 'follow', REST.friendshipsCreate, (userId) => ({
+      user_id: userId,
+      skip_status: 'true',
+    }));
+  }
+
+  /**
+   * Action Handler: unfollow
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async unfollow(args, session) {
+    return this.#performRestSocialAction(args, session, 'unfollow', REST.friendshipsDestroy, (userId) => ({
+      user_id: userId,
+      skip_status: 'true',
+    }));
+  }
+
+  /**
+   * Action Handler: block
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async block(args, session) {
+    return this.#performRestSocialAction(args, session, 'block', REST.blocksCreate, (userId) => ({
+      user_id: userId,
+    }));
+  }
+
+  /**
+   * Action Handler: unblock
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async unblock(args, session) {
+    return this.#performRestSocialAction(args, session, 'unblock', REST.blocksDestroy, (userId) => ({
+      user_id: userId,
+    }));
+  }
+
+  /**
+   * Action Handler: mute
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async mute(args, session) {
+    return this.#performRestSocialAction(args, session, 'mute', REST.mutesCreate, (userId) => ({
+      user_id: userId,
+    }));
+  }
+
+  /**
+   * Action Handler: unmute
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async unmute(args, session) {
+    return this.#performRestSocialAction(args, session, 'unmute', REST.mutesDestroy, (userId) => ({
+      user_id: userId,
+    }));
+  }
+
+  /**
+   * Action Handler: bookmark (CreateBookmark mutation)
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async bookmark(args, session) {
+    return this.#performEngagement(args, session, 'bookmark', {
+      queryId: GRAPHQL.CreateBookmark.queryId,
+      operationName: 'CreateBookmark',
+      buildVariables: (tweetId) => ({ tweet_id: tweetId }),
+    });
+  }
+
+  /**
+   * Action Handler: unbookmark (DeleteBookmark mutation)
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async unbookmark(args, session) {
+    return this.#performEngagement(args, session, 'unbookmark', {
+      queryId: GRAPHQL.DeleteBookmark.queryId,
+      operationName: 'DeleteBookmark',
+      buildVariables: (tweetId) => ({ tweet_id: tweetId }),
     });
   }
 
