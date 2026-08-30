@@ -28,6 +28,7 @@ export {
   normalizeUserProfile,
 } from './normalize-relationships.js';
 export { tweetToPostItem, entryToPostItem } from './normalize-tweet.js';
+export { tweetMediaToPostItem, parseMediaEntity, mediaObjectsToUrls } from './normalize-media.js';
 export { parseSearchTimeline, parseSearchUsers, userEntryToProfileItem } from './normalize-search.js';
 export { parseTrends, trendToPostItem, hashTrendId } from './normalize-trending.js';
 

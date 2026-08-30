@@ -131,9 +131,17 @@ export function parseTweetData(rawTweet) {
     return {
       type: m.type || 'photo', // 'photo' | 'video' | 'animated_gif'
       url: m.media_url_https || m.media_url || '',
+      media_url_https: m.media_url_https || m.media_url || '',
+      media_url: m.media_url || m.media_url_https || '',
+      id_str: m.id_str || '',
+      media_key: m.media_key || '',
       width: originalInfo.width ?? m.sizes?.large?.w ?? 0,
       height: originalInfo.height ?? m.sizes?.large?.h ?? 0,
       videoUrl: m.video_info ? pickBestVideoUrl(m.video_info.variants || []) : null,
+      video_info: m.video_info || undefined,
+      original_info: originalInfo,
+      sizes: m.sizes,
+      ext_alt_text: m.ext_alt_text || undefined,
     };
   });
 

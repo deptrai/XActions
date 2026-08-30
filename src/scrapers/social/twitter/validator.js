@@ -58,8 +58,11 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
       if (Array.isArray(data.bookmark_timeline?.timeline?.instructions)) return true;
       if (Array.isArray(data.retweeters_timeline?.timeline?.instructions)) return true;
       if (Array.isArray(data.list?.members_timeline?.timeline?.instructions)) return true;
+      if (Array.isArray(data.list_members_timeline?.timeline?.instructions)) return true;
+      if (Array.isArray(data.community_members_timeline?.timeline?.instructions)) return true;
       // SearchTimeline results
       if (data.search_by_raw_query?.search_timeline?.timeline?.instructions) return true;
+      if (data.search_spaces?.search_timeline?.timeline?.instructions) return true;
       if (Array.isArray(data.instructions)) return true;
 
       // General fallback for GraphQL timeline objects with instructions

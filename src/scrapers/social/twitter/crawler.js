@@ -11,6 +11,7 @@
 import { AbstractCrawler } from '../../../core/base-crawler.js';
 import { TwitterClient, resolveTweetId, resolveUsername } from './client.js';
 import { parseSearchTimeline, parseSearchUsers } from './normalize-search.js';
+import { tweetMediaToPostItem, parseMediaEntity, mediaObjectsToUrls } from './normalize-media.js';
 import { parseTrends } from './normalize-trending.js';
 import { normalizeThreadResponse } from './normalize-thread.js';
 import { normalizeBookmarksResponse } from './normalize-bookmarks.js';
@@ -19,7 +20,12 @@ import {
   profileItemToPostItem,
   normalizeUserProfile,
 } from './normalize-relationships.js';
+import {
+  normalizeListOrCommunityMembersResponse,
+  normalizeSpacesResponse,
+} from './normalize-list-community-space.js';
 import { buildAdvancedQuery } from '../../twitter/http/search.js';
+import { parseTweetData } from '../../twitter/http/tweets.js';
 import { DEFAULT_FEATURES } from '../../twitter/http/endpoints.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { isValidCategory } from '../../../core/types.js';
@@ -31,10 +37,16 @@ export const TWITTER_GRAPHQL_QUERY_IDS = {
   Bookmarks: 'qToeLeMs43Q8cr7tRYXmaQ',
   UserByScreenName: 'NimuplG1OB7Fd2btCLdBOw',
   UserByRestId: 'tD8zKvQzwY3kdx5yz6YmOw',
+  UserMedia: '2tLOJWwGuCTytDrGBg8VwQ',
+  TweetResultByRestId: 'Xl5pC_lBk_gcO2ItU39DQw',
   Followers: 'gC_lyAxZOptAMLCJX5UhWw',
   Following: '2vUj-_Ek-UmBVDNtd8OnQA',
   Retweeters: 'X-XEqG5qHQSAwmvy00xfyQ',
   ListMembers: 'BQp2IEYkgxuSxqbTAr1e1g',
+  // TBD: replace with real GraphQL query IDs when reverse-engineered.
+  CommunityMembers: 'TBD_COMMUNITY_MEMBERS',
+  SearchSpaces: 'TBD_SEARCH_SPACES',
+  SearchTimeline: 'flaR-PUMshxFWZWPNpq4zA',
 };
 
 const VALID_SEARCH_TYPES = new Set(['top', 'latest', 'live', 'photos', 'videos', 'people', 'user', 'all']);
@@ -209,17 +221,6 @@ export class TwitterCrawler extends AbstractCrawler {
     });
 
     this.registerAction({
-      action: 'list_members',
-      description: 'Scrape members of a Twitter list using GraphQL',
-      requiredArgs: ['listUrl'],
-      optionalArgs: ['listId', 'limit', 'cursor'],
-      example: { listUrl: 'https://x.com/i/lists/123456', limit: 100 },
-      outputType: '{ members: ProfileItem[], pageInfo: any }',
-      requiresAuth: true,
-      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.listMembers(args, session),
-    });
-
-    this.registerAction({
       action: 'non_followers',
       description: 'Identify users you follow who do not follow you back',
       requiredArgs: ['username'],
@@ -229,6 +230,72 @@ export class TwitterCrawler extends AbstractCrawler {
       requiresAuth: true,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.nonFollowers(args, session),
     });
+
+    // ── Story 13.2.5 Actions: list_members, community_members, spaces ──
+    this.registerAction({
+      action: 'list_members',
+      description: 'Scrape members of a Twitter list using GraphQL',
+      requiredArgs: ['listUrl'],
+      optionalArgs: ['listId', 'limit', 'cursor'],
+      example: { listUrl: 'https://x.com/i/lists/1234567890123456789', limit: 100 },
+      outputType: '{ members: ProfileItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.listMembers(args, session),
+    });
+
+    this.registerAction({
+      action: 'community_members',
+      description: 'Scrape members of a Twitter community using GraphQL or browser-as-signer bridge',
+      requiredArgs: ['communityUrl'],
+      optionalArgs: ['communityId', 'limit', 'cursor'],
+      example: { communityUrl: 'https://x.com/i/communities/1234567890123456789', limit: 100 },
+      outputType: '{ members: ProfileItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
+      requiresAuth: true,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.communityMembers(args, session),
+    });
+
+    this.registerAction({
+      action: 'spaces',
+      description: 'Scrape Twitter Spaces matching a query using GraphQL or browser-as-signer bridge',
+      requiredArgs: ['query'],
+      optionalArgs: ['limit', 'cursor', 'state'],
+      example: { query: 'crypto', limit: 20 },
+      outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
+      requiresAuth: false,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.spaces(args, session),
+    });
+
+    // ── Story 13.2.4 Actions: media, download_video ──
+    this.registerAction({
+      action: 'media',
+      description: 'Scrape media (photos, videos, GIFs) from a user profile or a single tweet',
+      requiredArgs: [],
+      optionalArgs: ['username', 'tweetId', 'type', 'limit', 'cursor'],
+      example: { username: 'elonmusk', type: 'video', limit: 20 },
+      outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
+      requiresAuth: false,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.media(args, session),
+    });
+
+    this.registerAction({
+      action: 'download_video',
+      description: 'Extract and optionally download the best MP4 video variant from a tweet',
+      requiredArgs: ['tweetId'],
+      optionalArgs: ['quality', 'destPath'],
+      example: { tweetId: '1234567890123456789', destPath: '/tmp/video.mp4' },
+      outputType: '{ url: string, destPath: string | null, bytes: number, width: number, height: number, bitrate: number, contentType: string, durationMs: number | null, variants: Array<{bitrate, contentType, url}> }',
+      requiresAuth: false,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.downloadVideo(args, session),
+    });
+  }
+
+  /**
+   * Convenience accessor for post metadata as an untyped record.
+   * @param {import('../../../core/types.js').PostItem} post
+   * @returns {Record<string, any>}
+   */
+  #getMetadata(post) {
+    return /** @type {Record<string, any>} */ (post.metadata || {});
   }
 
   /**
@@ -935,7 +1002,7 @@ export class TwitterCrawler extends AbstractCrawler {
       }
     );
 
-    const userResult = response?.data?.user?.result;
+    const userResult = response?.user?.result;
     if (!userResult || userResult.__typename === 'UserUnavailable') {
       throw new PlatformError({
         type: ErrorTypes.NOT_FOUND,
@@ -1163,8 +1230,8 @@ export class TwitterCrawler extends AbstractCrawler {
       }
     );
 
-    const normalized = normalizeLikersResponse(response, listId);
-    const members = normalized.likers.map((p) => (/** @type {import('../../../core/types.js').ProfileItem} */ ({
+    const normalized = normalizeListOrCommunityMembersResponse(response, { sourceMethod: 'list_members', groupId: listId });
+    const members = normalized.members.map((p) => (/** @type {import('../../../core/types.js').ProfileItem} */ ({
       ...p,
       metadata: { ...p.metadata, isListMember: true, isLiker: false, listId, sourceMethod: 'list_members' },
     })));
@@ -1173,13 +1240,194 @@ export class TwitterCrawler extends AbstractCrawler {
     await this.#persistPostItems(posts);
     await this.#emitCheckpointAndStream({
       targetType: 'list_members',
-      targetKey: listId,
+      targetKey: `twitter:list:${listId}`,
       cursor: normalized.pageInfo.end_cursor,
       items: members,
       hasMore: normalized.pageInfo.has_next_page,
     });
 
     return { members, pageInfo: normalized.pageInfo };
+  }
+
+  /**
+   * Action Handler: community_members
+   * @param {Record<string, any>} args
+   * @param {any} [session]
+   */
+  async communityMembers(args, session) {
+    const communityId = args.communityId || (args.communityUrl ? args.communityUrl.match(/communities\/(\d+)/)?.[1] : null);
+    if (!communityId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: communityId or valid communityUrl',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const count = Math.min(Number(args.limit) || 20, 100);
+
+    // TODO: Add real CommunityMembers GraphQL queryId when discovered.
+    // For now, attempt a generic timeline fallback by reusing ListMembers structure.
+    const hasRealCommunityQuery = TWITTER_GRAPHQL_QUERY_IDS.CommunityMembers && !TWITTER_GRAPHQL_QUERY_IDS.CommunityMembers.startsWith('TBD_');
+    const queryId = hasRealCommunityQuery ? TWITTER_GRAPHQL_QUERY_IDS.CommunityMembers : TWITTER_GRAPHQL_QUERY_IDS.ListMembers;
+    const operationName = hasRealCommunityQuery ? 'CommunityMembers' : 'ListMembers';
+
+    const variables = {
+      listId: communityId,
+      count,
+      ...(args.cursor ? { cursor: args.cursor } : {}),
+    };
+
+    const response = await this.client.requestGraphQl(
+      queryId,
+      operationName,
+      variables,
+      DEFAULT_FEATURES,
+      undefined,
+      {
+        accountId: session?.accountId || args.accountId,
+        requiresAuth: true,
+        cookies: session?.cookies,
+      }
+    );
+
+    // If the platform reports a private community, translate to a PlatformError.
+    const errors = response?.errors || response?.data?.errors;
+    if (errors && JSON.stringify(errors).match(/private|unauthorized|not allowed/i)) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_EXPIRED,
+        code: 'TWITTER_COMMUNITY_PRIVATE',
+        message: `Community ${communityId} is private or requires membership`,
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'twitter',
+      });
+    }
+
+    const normalized = normalizeListOrCommunityMembersResponse(response, { sourceMethod: 'community_members', groupId: communityId });
+    const members = normalized.members.map((p) => (/** @type {import('../../../core/types.js').ProfileItem} */ ({
+      ...p,
+      metadata: { ...p.metadata, isCommunityMember: true, isListMember: false, isLiker: false, communityId, sourceMethod: 'community_members' },
+    })));
+
+    const posts = members.map((m) => profileItemToPostItem(m));
+    await this.#persistPostItems(posts);
+    await this.#emitCheckpointAndStream({
+      targetType: 'community_members',
+      targetKey: `twitter:community:${communityId}`,
+      cursor: normalized.pageInfo.end_cursor,
+      items: members,
+      hasMore: normalized.pageInfo.has_next_page,
+    });
+
+    return { members, pageInfo: normalized.pageInfo };
+  }
+
+  /**
+   * Action Handler: spaces
+   * @param {Record<string, any>} args
+   * @param {any} [session]
+   */
+  async spaces(args, session) {
+    const query = String(args.query || '');
+    if (!query) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: query',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const limit = this.#clamp(args.limit, 1, 1000);
+    const state = String(args.state || 'all').toLowerCase();
+
+    // TODO: Add real SearchSpaces/LiveEventTimeline GraphQL queryId when discovered.
+    // For now, use SearchTimeline as a public no-auth fallback to demonstrate the action.
+    const searchQuery = `${query} filter:spaces`;
+    const { rawQuery, product, searchType } = this.#buildRawQuery({ query: searchQuery, type: 'Latest' });
+
+    const variables = {
+      rawQuery,
+      count: Math.min(limit, 100),
+      querySource: 'typed_query',
+      product,
+      ...(args.cursor ? { cursor: args.cursor } : {}),
+    };
+
+    const response = await this.client.requestGraphQl(
+      TWITTER_GRAPHQL_QUERY_IDS.SearchTimeline,
+      'SearchTimeline',
+      variables,
+      DEFAULT_FEATURES,
+      undefined,
+      {
+        accountId: session?.accountId || args.accountId,
+        requiresAuth: false,
+        cookies: session?.cookies,
+      }
+    );
+
+    // Try audio space-specific response shape first, then generic search spaces fallback.
+    let normalized;
+    if (response && (response.search_spaces || response.data?.search_spaces)) {
+      normalized = normalizeSpacesResponse(response);
+    } else {
+      normalized = this.#extractSpacesFromSearchTimeline(response, { state });
+    }
+
+    const allPosts = [];
+    const seen = new Set();
+    for (const post of normalized.posts) {
+      if (seen.has(post.id)) continue;
+      seen.add(post.id);
+      if (state && state !== 'all' && post.metadata?.spaceState && post.metadata.spaceState !== state) continue;
+      allPosts.push(post);
+      if (allPosts.length >= limit) break;
+    }
+
+    await this.#persistPostItems(allPosts);
+    await this.#emitCheckpointAndStream({
+      targetType: 'spaces',
+      targetKey: `twitter:spaces:${query}`,
+      cursor: normalized.pageInfo.end_cursor,
+      items: allPosts,
+      hasMore: normalized.pageInfo.has_next_page,
+    });
+
+    return { posts: allPosts, pageInfo: normalized.pageInfo };
+  }
+
+  /**
+   * Extract AudioSpace results from a generic SearchTimeline response.
+   * @param {Record<string, any>} response
+   * @param {Object} [context={}]
+   * @returns {{ posts: import('../../../core/types.js').PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }}
+   */
+  #extractSpacesFromSearchTimeline(response, context = {}) {
+    const parsed = parseSearchTimeline(response, { sourceMethod: 'spaces' });
+    const posts = [];
+    for (const post of parsed.posts) {
+      const meta = /** @type {Record<string, any>} */ (post.metadata || {});
+      if (meta.isSpace || post.postUrl?.includes('/i/spaces/')) {
+        posts.push({
+          ...post,
+          metadata: {
+            ...meta,
+            isSpace: true,
+            spaceState: meta.spaceState || context.state || 'live',
+            participantCount: meta.participantCount || 0,
+            sourceMethod: 'spaces',
+          },
+        });
+      }
+    }
+    return { posts, pageInfo: { end_cursor: parsed.cursor, has_next_page: Boolean(parsed.cursor) } };
   }
 
   /**
@@ -1220,6 +1468,557 @@ export class TwitterCrawler extends AbstractCrawler {
     });
 
     return { nonFollowers, mutuals, stats };
+  }
+
+  /**
+   * Extract tweet result objects from a UserMedia / search timeline response.
+   * Handles direct TimelineTimelineItem and TimelineTimelineModule wrappers.
+   * @param {Record<string, any>} entry
+   * @returns {Record<string, any>[]}
+   */
+  #extractTweetResultsFromMediaResponse(entry) {
+    const results = [];
+
+    const itemContent = entry?.content?.itemContent ?? entry?.content;
+    if (itemContent?.tweet_results?.result) {
+      const r = itemContent.tweet_results.result;
+      const target = r.__typename === 'TweetWithVisibilityResults' ? r.tweet : r;
+      if (target) results.push(target);
+    }
+
+    const moduleItems = entry?.content?.items ?? [];
+    for (const item of moduleItems) {
+      const inner = item?.item?.itemContent?.tweet_results?.result;
+      if (inner) {
+        const r = inner;
+        const target = r.__typename === 'TweetWithVisibilityResults' ? r.tweet : r;
+        if (target) results.push(target);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Build media filter predicate from args.type.
+   * @param {string} [type]
+   * @returns {(m: Record<string, any>) => boolean}
+   */
+  #mediaTypeFilter(type) {
+    if (!type) return () => true;
+    const normalized = String(type).toLowerCase();
+    if (normalized === 'gif') return (/** @type {Record<string, any>} */ m) => m.type === 'animated_gif';
+    return (/** @type {Record<string, any>} */ m) => m.type === normalized;
+  }
+
+  /**
+   * Paginated UserMedia fetcher.
+   * @param {Object} params
+   * @param {string} params.userId
+   * @param {number} [params.limit]
+   * @param {string|null} [params.cursor]
+   * @param {string} [params.type]
+   * @param {string} [params.username]
+   * @param {string|null} [params.accountId]
+   * @returns {Promise<{ items: import('../../../core/types.js').PostItem[], cursor: string|null, hasMore: boolean }>}
+   */
+  async #paginateUserMedia({ userId, limit = 20, cursor = null, type, username, accountId }) {
+    const maxPerRequest = 20;
+    const seen = new Set();
+    const allItems = [];
+    let nextCursor = cursor;
+    let hasMore = false;
+    const filterFn = this.#mediaTypeFilter(type);
+
+    let emptyPageCount = 0;
+    const MAX_EMPTY_PAGES = 5;
+
+    while (allItems.length < limit) {
+      const pageLimit = Math.min(limit - allItems.length, maxPerRequest);
+      const variables = {
+        userId,
+        count: pageLimit,
+        includePromotedContent: false,
+        withClientEventToken: false,
+        withBirdwatchNotes: false,
+        withVoice: true,
+        withV2Timeline: true,
+        ...(nextCursor ? { cursor: nextCursor } : {}),
+      };
+
+      const resp = await this.client.requestGraphQl(
+        TWITTER_GRAPHQL_QUERY_IDS.UserMedia,
+        'UserMedia',
+        variables,
+        DEFAULT_FEATURES,
+        undefined,
+        {
+          accountId,
+          requiresAuth: false,
+          cookies: undefined,
+        }
+      );
+
+      const instructions = resp?.user?.result?.timeline_v2?.timeline?.instructions ?? [];
+      let foundTweets = false;
+      nextCursor = null;
+
+      for (const instruction of instructions) {
+        const entries = instruction.entries ?? [];
+        for (const entry of entries) {
+          if (entry.entryId?.startsWith('cursor-bottom-')) {
+            nextCursor = entry.content?.value ?? null;
+            continue;
+          }
+
+          const tweetResults = this.#extractTweetResultsFromMediaResponse(entry);
+          for (const tweetResult of tweetResults) {
+            const post = tweetMediaToPostItem(tweetResult, {
+              sourceMethod: 'media',
+              extraMetadata: { isMedia: true },
+            });
+            if (!post) continue;
+
+            const meta = this.#getMetadata(post);
+            const mediaMatchesType = (meta.media || []).some(filterFn);
+            if (type && !mediaMatchesType) continue;
+
+            if (seen.has(post.id)) continue;
+            seen.add(post.id);
+            allItems.push(post);
+            foundTweets = true;
+            if (allItems.length >= limit) break;
+          }
+          if (allItems.length >= limit) break;
+        }
+        if (allItems.length >= limit) break;
+      }
+
+      if (allItems.length >= limit) {
+        hasMore = Boolean(nextCursor);
+        break;
+      }
+      if (!nextCursor) {
+        hasMore = false;
+        break;
+      }
+      if (!foundTweets) {
+        emptyPageCount += 1;
+        if (emptyPageCount >= MAX_EMPTY_PAGES) {
+          hasMore = false;
+          break;
+        }
+        // Continue to next page; a type-filtered timeline may skip many pages.
+        continue;
+      }
+      emptyPageCount = 0;
+    }
+
+    return { items: allItems.slice(0, limit), cursor: nextCursor, hasMore };
+  }
+
+  /**
+   * Action Handler: media
+   * @param {Record<string, any>} args
+   * @param {any} [session]
+   */
+  async media(args = {}, session) {
+    const hasUsername = Boolean(args.username);
+    const hasTweetId = Boolean(args.tweetId);
+
+    if (!hasUsername && !hasTweetId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: username or tweetId',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const { accountId } = await this.#resolveSession(session);
+
+    if (hasTweetId) {
+      const tweetId = resolveTweetId(args.tweetId);
+
+      const variables = {
+        tweetId,
+        includePromotedContent: false,
+        withCommunity: false,
+        withVoice: false,
+      };
+
+      const response = await this.client.requestGraphQl(
+        TWITTER_GRAPHQL_QUERY_IDS.TweetResultByRestId,
+        'TweetResultByRestId',
+        variables,
+        DEFAULT_FEATURES,
+        undefined,
+        {
+          accountId,
+          requiresAuth: false,
+          cookies: session?.cookies,
+        }
+      );
+
+      const tweetResult = response?.tweetResult?.result;
+      if (!tweetResult) {
+        throw new PlatformError({
+          type: ErrorTypes.NOT_FOUND,
+          code: 'XACT_4040',
+          message: `Tweet not found: "${tweetId}"`,
+          statusCode: 404,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'twitter',
+        });
+      }
+
+      const post = tweetMediaToPostItem(tweetResult, {
+        sourceMethod: 'media',
+        extraMetadata: { isMedia: true },
+      });
+
+      if (!post) {
+        throw new PlatformError({
+          type: ErrorTypes.NOT_FOUND,
+          code: 'XACT_4040',
+          message: `Could not parse tweet media: "${tweetId}"`,
+          statusCode: 404,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'twitter',
+        });
+      }
+
+      const filterFn = this.#mediaTypeFilter(args.type);
+      const meta = this.#getMetadata(post);
+      if (args.type) {
+        meta.media = (meta.media || []).filter(filterFn);
+        post.mediaUrls = mediaObjectsToUrls(meta.media);
+        if (meta.media.length === 0) {
+          return {
+            posts: [],
+            pageInfo: {
+              hasNextPage: false,
+              has_next_page: false,
+              endCursor: null,
+              end_cursor: null,
+            },
+          };
+        }
+      }
+
+      await this.#persistPostItems([post]);
+      await this.#emitCheckpointAndStream({
+        targetType: 'media',
+        targetKey: `twitter:tweet:${tweetId}`,
+        items: [post],
+        hasMore: false,
+      });
+
+      return {
+        posts: [post],
+        pageInfo: {
+          hasNextPage: false,
+          has_next_page: false,
+          endCursor: null,
+          end_cursor: null,
+        },
+      };
+    }
+
+    const username = resolveUsername(args.username || args.url || '');
+    const userProfile = await this.profile({ username }, session);
+    const userId = userProfile.profile?.externalId;
+    if (!userId) {
+      throw new PlatformError({
+        type: ErrorTypes.NOT_FOUND,
+        code: 'XACT_4040',
+        message: `Could not resolve user ID for "${username}"`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const limit = this.#clamp(args.limit, 1, 1000);
+    const { items, cursor, hasMore } = await this.#paginateUserMedia({
+      userId,
+      limit,
+      cursor: args.cursor || null,
+      type: args.type,
+      username,
+      accountId,
+    });
+
+    await this.#persistPostItems(items);
+    await this.#emitCheckpointAndStream({
+      targetType: 'media',
+      targetKey: `twitter:user:${username}`,
+      cursor,
+      items,
+      hasMore,
+    });
+
+    return {
+      posts: items,
+      pageInfo: {
+        hasNextPage: hasMore,
+        has_next_page: hasMore,
+        endCursor: cursor,
+        end_cursor: cursor,
+      },
+    };
+  }
+
+  /**
+   * Action Handler: download_video
+   * @param {Record<string, any>} args
+   * @param {any} [session]
+   */
+  async downloadVideo(args, session) {
+    if (!args || (!args.tweetId && !args.url)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: tweetId',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const tweetId = resolveTweetId(args.tweetId || args.url);
+    const quality = String(args.quality || 'highest').toLowerCase();
+    if (!['highest', 'lowest', 'all'].includes(quality)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Invalid quality "${args.quality}". Allowed: highest, lowest, all`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const { accountId } = await this.#resolveSession(session);
+
+    const variables = {
+      tweetId,
+      includePromotedContent: false,
+      withCommunity: false,
+      withVoice: false,
+    };
+
+    const response = await this.client.requestGraphQl(
+      TWITTER_GRAPHQL_QUERY_IDS.TweetResultByRestId,
+      'TweetResultByRestId',
+      variables,
+      DEFAULT_FEATURES,
+      undefined,
+      {
+        accountId,
+        requiresAuth: false,
+        cookies: session?.cookies,
+      }
+    );
+
+    const tweetResult = response?.tweetResult?.result;
+    if (!tweetResult) {
+      throw new PlatformError({
+        type: ErrorTypes.NOT_FOUND,
+        code: 'XACT_4040',
+        message: `Tweet not found: "${tweetId}"`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const parsed = parseTweetData(tweetResult);
+    if (!parsed || !parsed.id) {
+      throw new PlatformError({
+        type: ErrorTypes.NOT_FOUND,
+        code: 'XACT_4040',
+        message: `Could not parse tweet: "${tweetId}"`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const mediaRaw = Array.isArray(parsed.media) ? parsed.media : [];
+    const video = mediaRaw.find((m) => m.type === 'video' || m.type === 'animated_gif');
+
+    if (!video) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Tweet "${tweetId}" does not contain a video or GIF`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const mediaObj = parseMediaEntity(video);
+    const variants = mediaObj.variants || [];
+
+    if (quality === 'all') {
+      if (args.destPath) {
+        throw new PlatformError({
+          type: ErrorTypes.INVALID_ARGS,
+          code: 'XACT_4001',
+          message: 'Cannot use destPath with quality "all" — multiple variants would overwrite the same file',
+          statusCode: 400,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'twitter',
+        });
+      }
+      return {
+        url: mediaObj.url,
+        destPath: null,
+        bytes: 0,
+        width: mediaObj.width,
+        height: mediaObj.height,
+        bitrate: mediaObj.bitrate ?? 0,
+        contentType: mediaObj.contentType,
+        durationMs: mediaObj.durationMs,
+        variants,
+      };
+    }
+
+    const variant = quality === 'highest' ? variants[0] : variants[variants.length - 1];
+    if (!variant) {
+      throw new PlatformError({
+        type: ErrorTypes.NOT_FOUND,
+        code: 'XACT_4040',
+        message: `No downloadable video variant found for tweet "${tweetId}"`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    let destPath = args.destPath || null;
+    let bytes = 0;
+
+    if (destPath) {
+      const { pipeline } = await import('node:stream/promises');
+      const { createWriteStream } = await import('node:fs');
+      const { Readable } = await import('node:stream');
+      const fs = await import('node:fs/promises');
+      const path = await import('node:path');
+
+      const MAX_VIDEO_BYTES = 512 * 1024 * 1024;
+      const outputDir = /** @type {string} */ (destPath ? path.dirname(destPath) : '');
+      if (outputDir) await fs.mkdir(outputDir, { recursive: true });
+
+      let downloaded = 0;
+      /** @type {number | null} */
+      let total = null;
+      const fileStream = createWriteStream(/** @type {string} */ (destPath));
+
+      const cleanup = async () => {
+        try {
+          fileStream.destroy();
+          await fs.unlink(destPath);
+        } catch {
+          // ignore cleanup errors
+        }
+      };
+
+      try {
+        const { status, headers, body } = await this.client.requestStream(variant.url, {
+          requiresAuth: false,
+          timeout: 300000,
+        });
+
+        if (status < 200 || status >= 400) {
+          await cleanup();
+          throw new PlatformError({
+            type: ErrorTypes.INTERNAL,
+            code: 'XACT_5000',
+            message: `Download failed: HTTP ${status} for ${variant.url}`,
+            statusCode: status,
+            suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+            platform: 'twitter',
+          });
+        }
+
+        const totalHeader = headers?.['content-length'] || headers?.['Content-Length'];
+        const parsedTotal = totalHeader ? parseInt(String(totalHeader), 10) : null;
+        if (parsedTotal && parsedTotal > MAX_VIDEO_BYTES) {
+          await cleanup();
+          throw new PlatformError({
+            type: ErrorTypes.INVALID_ARGS,
+            code: 'XACT_4001',
+            message: 'Video exceeds 512 MB limit',
+            statusCode: 400,
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+            platform: 'twitter',
+          });
+        }
+        total = parsedTotal;
+
+        if (!body) {
+          await cleanup();
+          throw new PlatformError({
+            type: ErrorTypes.INTERNAL,
+            code: 'XACT_5000',
+            message: `Download response has no body for ${variant.url}`,
+            statusCode: 500,
+            suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+            platform: 'twitter',
+          });
+        }
+
+        await pipeline(
+          Readable.fromWeb(/** @type {any} */ (body)),
+          new (await import('node:stream')).Writable({
+            write(chunk, encoding, callback) {
+              downloaded += chunk.length;
+              if (downloaded > MAX_VIDEO_BYTES) {
+                callback(new PlatformError({
+                  type: ErrorTypes.INVALID_ARGS,
+                  code: 'XACT_4001',
+                  message: 'Video exceeds 512 MB limit while streaming',
+                  statusCode: 400,
+                  suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+                  platform: 'twitter',
+                }));
+                return;
+              }
+              args.onProgress?.({ downloaded, total });
+              fileStream.write(chunk, encoding, callback);
+            },
+            final(callback) {
+              fileStream.end(callback);
+            },
+            destroy(error, callback) {
+              if (error) cleanup().finally(() => callback(error));
+              else callback(error);
+            },
+          })
+        );
+        bytes = downloaded;
+      } catch (err) {
+        await cleanup();
+        throw err;
+      }
+    }
+
+    return {
+      url: variant.url,
+      destPath,
+      bytes,
+      width: mediaObj.width,
+      height: mediaObj.height,
+      bitrate: variant.bitrate,
+      contentType: variant.contentType,
+      durationMs: mediaObj.durationMs,
+      variants,
+    };
   }
 
   /** @returns {Promise<void>} */

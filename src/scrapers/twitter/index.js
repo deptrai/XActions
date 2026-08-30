@@ -677,6 +677,8 @@ export async function scrapeHashtag(page, hashtag, options = {}) {
  * @param {string} username
  * @param {TwitterScrapeOptions} [options]
  * @returns {Promise<MediaItem[]>}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `media` instead.
  */
 export async function scrapeMedia(page, username, options = {}) {
   const { limit = 100 } = options;
@@ -739,6 +741,8 @@ export async function scrapeMedia(page, username, options = {}) {
 /**
  * Scrape members of a Twitter list
  *
+ * @deprecated Use TwitterCrawler.start({ action: 'list_members', args: { listUrl } }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {string} listUrl
  * @param {TwitterScrapeOptions} [options]
@@ -940,6 +944,8 @@ export async function scrapeTrending(page, options = {}) {
 /**
  * Scrape members of an X Community
  *
+ * @deprecated Use TwitterCrawler.start({ action: 'community_members', args: { communityUrl } }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {string} communityUrl
  * @param {TwitterScrapeOptions} [options]
@@ -992,6 +998,8 @@ export async function scrapeCommunityMembers(page, communityUrl, options = {}) {
 /**
  * Scrape X Spaces from search results
  *
+ * @deprecated Use TwitterCrawler.start({ action: 'spaces', args: { query } }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {string} query
  * @param {TwitterScrapeOptions} [options]

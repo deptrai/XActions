@@ -165,6 +165,41 @@
     },
     "sourceMethod": {
       "type": "string"
+    },
+    "isMedia": {
+      "type": "boolean"
+    },
+    "mediaType": {
+      "type": ["string", "null"]
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "url": { "type": "string" },
+          "thumbnailUrl": { "type": "string" },
+          "width": { "type": "integer" },
+          "height": { "type": "integer" },
+          "durationMs": { "type": ["integer", "null"] },
+          "bitrate": { "type": ["integer", "null"] },
+          "contentType": { "type": "string" },
+          "variants": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "properties": {
+                "bitrate": { "type": "integer" },
+                "contentType": { "type": "string" },
+                "url": { "type": "string" }
+              }
+            }
+          },
+          "altText": { "type": ["string", "null"] },
+          "mediaKey": { "type": "string" }
+        }
+      }
     }
   }
 }

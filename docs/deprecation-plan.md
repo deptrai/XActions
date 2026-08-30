@@ -86,6 +86,8 @@ Xoá theo thứ tự:
 | Twitter Legacy Thread/Likes/Bookmarks (`src/scrapers/twitter/index.js`, `thread.js`, `relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.2) | DEV |
 | Twitter HTTP Relationships (`src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
 | Twitter Legacy Search/Hashtag/Trending (`src/scrapers/twitter/index.js` searchTweets/scrapeHashtag/scrapeTrending; `src/scrapers/twitter/http/search.js` searchTweets/searchUsers/scrapeTrending/scrapeHashtag) | `deprecated-marked` | Phase 1 (Story 13.2.3) | DEV |
+| Twitter Legacy Media (`src/scrapers/twitter/http/media.js`, `src/scrapers/twitter/index.js` scrapeMedia) | `deprecated-marked` | Phase 1 (Story 13.2.4) | DEV |
+| Twitter Legacy Lists/Communities/Spaces (`src/scrapers/twitter/index.js` scrapeListMembers/scrapeCommunityMembers/scrapeSpaces; `src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Story 13.2.5) | DEV |
 | `src/client/Scraper.js` (search/getTrends/getExploreTabs and all methods) | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-marked` | Phase 1 (Epic 13.10) | DEV |
 | Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
@@ -111,6 +113,8 @@ Xoá theo thứ tự:
 | `scrapeThread` (Twitter) | `twitter:thread` |
 | `scrapeLikes` (Twitter) | `twitter:likes` |
 | `scrapeBookmarks` (Twitter) | `twitter:bookmarks` |
+| `scrapeMedia` (Twitter) | `twitter:media` |
+| `downloadMedia` / `getVideoUrl` (Twitter) | `twitter:download_video` |
 | `scrapeProfile` | `facebook:profile` |
 | `scrapeFollowers` | `facebook:followers` |
 | `scrapeGroupMembers` | `facebook:group_members` |

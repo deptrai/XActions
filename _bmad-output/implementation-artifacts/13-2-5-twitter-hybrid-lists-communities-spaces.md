@@ -2,19 +2,34 @@
 story_id: '13.2.5'
 epic: 13
 story_key: '13-2-5-twitter-hybrid-lists-communities-spaces'
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
 last_updated: 2026-08-30
 owner: "DEV"
 reviewed: "pending"
-baseline_commit: ""
+baseline_commit: "e62dd7d1a6dab699fd1ce60bfe529f886e3385fb"
 ---
 
 # Story 13.2.5 — Twitter Hybrid Lists, Communities & Spaces
 
-Status: ready-for-dev
+Status: review
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- Green Phase: Sửa lỗi mock server và normalizer để 8/8 test trong `crawler-lists-communities-spaces.test.js` pass.
+- Thêm `SearchTimeline` vào `TWITTER_GRAPHQL_QUERY_IDS` để `spaces` action có queryId hợp lệ.
+- Thêm `hasRealCommunityQuery` check cho `community_members` để fallback về `ListMembers` khi `CommunityMembers` queryId còn TBD.
+- Thêm `search_spaces`, `list_members_timeline`, `community_members_timeline` vào `TwitterPlatformResponseValidator.isValidPayload`.
+- Sửa `audioSpaceToPostItem` biến `authorAvatar` và `spaces` state mặc định `all` để trả về đủ spaces.
+- Cập nhật `docs/deprecation-plan.md` đánh dấu legacy lists/communities/spaces `deprecated-marked`.
+
+### Completion Notes
+
+- Story 13.2.5 đã hoàn thành green phase TDD, còn chờ full test suite regression.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

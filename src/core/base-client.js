@@ -235,7 +235,7 @@ export class AbstractApiClient {
     if (this.client === 'got') {
       const { gotScraping } = await import('got-scraping');
       return async (/** @type {Record<string, any>} */ reqOpts) => {
-        const { method, url, headers, body, json, proxy, timeout } = reqOpts;
+        const { method, url, headers, body, json, proxy, timeout, raw } = reqOpts;
         if (!/^https?:\/\//i.test(url)) {
           throw new PlatformError({
             type: ErrorTypes.INVALID_ARGS,
@@ -254,6 +254,10 @@ export class AbstractApiClient {
           timeout: { request: timeout === undefined ? 30000 : timeout },
           throwHttpErrors: false,
         };
+        if (raw) {
+          options.responseType = 'buffer';
+          options.resolveBodyOnly = false;
+        }
         if (json !== undefined) {
           options.json = json;
         } else if (body !== undefined) {
@@ -265,6 +269,14 @@ export class AbstractApiClient {
           if (typeof proxyUrl === 'string') options.proxyUrl = proxyUrl;
         }
         const resp = await gotScraping(options);
+        if (raw) {
+          return {
+            status: resp.statusCode,
+            headers: resp.headers,
+            data: undefined,
+            body: resp.body,
+          };
+        }
         let data = resp.body;
         if (typeof resp.body === 'string') {
           try {
@@ -282,7 +294,7 @@ export class AbstractApiClient {
     // Default: undici
     const { fetch: undiciFetch } = await import('undici');
     return async (/** @type {Record<string, any>} */ reqOpts) => {
-      const { method, url, headers, body, json, agent, timeout } = reqOpts;
+      const { method, url, headers, body, json, agent, timeout, raw } = reqOpts;
       if (!/^https?:\/\//i.test(url)) {
         throw new PlatformError({
           type: ErrorTypes.INVALID_ARGS,
@@ -317,6 +329,14 @@ export class AbstractApiClient {
         fetchOpts.body = normalized;
       }
       const resp = await undiciFetch(url, fetchOpts);
+      if (raw) {
+        return {
+          status: resp.status,
+          headers: Object.fromEntries(resp.headers.entries()),
+          data: undefined,
+          body: resp.body,
+        };
+      }
       let data;
       const text = await resp.text();
       try {
@@ -480,6 +500,7 @@ export class AbstractApiClient {
     const effectiveRequiresAuth =
       typeof opts.requiresAuth === 'boolean' ? opts.requiresAuth : this.requiresAuth;
     const skipResponseValidation = opts.skipResponseValidation === true;
+    const isRaw = opts.raw === true;
 
     if (effectiveRequiresAuth && !concreteAccountId && !this.accountPool) {
       throw new AuthSessionExpiredError({
@@ -587,6 +608,21 @@ export class AbstractApiClient {
 
         // Success condition (2xx / 3xx)
         if (status >= 200 && status < 400) {
+          if (isRaw) {
+            const trackingKey = concreteAccountId || 'noauth';
+            if (this.accountPool) {
+              this.accountPool.recordRequest(trackingKey, this.platform);
+            }
+            if (
+              this.governor &&
+              typeof this.governor.recordRequest === 'function' &&
+              (!this.accountPool || this.accountPool.governor !== this.governor)
+            ) {
+              this.governor.recordRequest(trackingKey, this.platform);
+            }
+            return response;
+          }
+
           if (this.responseValidator) {
             if (this.responseValidator.isRateLimit(response)) {
               const retryAfterHeader = response?.headers?.['retry-after'] || response?.headers?.['Retry-After'];

@@ -457,6 +457,98 @@ export class TwitterClient extends AbstractApiClient {
   }
 
   /**
+   * Convenience wrapper for UserMedia timeline.
+   * @param {string} userId
+   * @param {Object} [options]
+   * @param {number} [options.count]
+   * @param {string|null} [options.cursor]
+   * @returns {Promise<any>}
+   */
+  async requestUserMedia(userId, options = {}) {
+    const count = options.count ?? 20;
+    const variables = {
+      userId,
+      count,
+      includePromotedContent: false,
+      withClientEventToken: false,
+      withBirdwatchNotes: false,
+      withVoice: true,
+      withV2Timeline: true,
+      ...(options.cursor ? { cursor: options.cursor } : {}),
+    };
+    return this.requestGraphQl(GRAPHQL.UserMedia.queryId, 'UserMedia', variables, options);
+  }
+
+  /**
+   * Convenience wrapper for single tweet lookup.
+   * @param {string} tweetId
+   * @param {Object} [options]
+   * @returns {Promise<any>}
+   */
+  async requestTweetByRestId(tweetId, options = {}) {
+    const variables = {
+      tweetId,
+      includePromotedContent: false,
+      withCommunity: false,
+      withVoice: false,
+    };
+    return this.requestGraphQl(GRAPHQL.TweetResultByRestId.queryId, 'TweetResultByRestId', variables, options);
+  }
+
+  /**
+   * Stream download a raw URL (e.g. video variant) through the resilient
+   * proxy/account/retry pipeline. Returns a Node.js-style response with a
+   * Web ReadableStream body. Caller is responsible for consuming the stream.
+   *
+   * @param {string} url
+   * @param {Object} [options]
+   * @param {string} [options.accountId]
+   * @param {boolean} [options.requiresAuth]
+   * @param {number} [options.timeout]
+   * @param {Record<string, string>} [options.headers]
+   * @returns {Promise<{ status: number, headers: Record<string, string>, body: ReadableStream | null }>}
+   */
+  async requestStream(url, options = {}) {
+    const resp = /** @type {any} */ (await this.request('GET', url, {
+      ...options,
+      raw: true,
+      skipResponseValidation: true,
+      // Strip Twitter-specific auth headers for CDN requests; keep cookies if any.
+      headers: { accept: '*/*', ...(options.headers || {}) },
+    }));
+
+    if (resp?.status < 200 || resp?.status >= 400) {
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5000',
+        message: `Download failed: HTTP ${resp?.status} for ${url}`,
+        statusCode: resp?.status || 500,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'twitter',
+      });
+    }
+
+    let body = resp.body || null;
+    if (body && !(typeof body.getReader === 'function')) {
+      // got-scraping and similar transports may return a Buffer/string.
+      // Wrap it in a Web ReadableStream so callers always use Readable.fromWeb.
+      const chunk = Buffer.isBuffer(body) ? body : Buffer.from(String(body));
+      body = new ReadableStream({
+        start(controller) {
+          controller.enqueue(chunk);
+          controller.close();
+        },
+      });
+    }
+
+    return {
+      status: resp.status,
+      headers: resp.headers || {},
+      body,
+    };
+  }
+
+  /**
    * Cleanup resources.
    * @returns {Promise<void>}
    */
