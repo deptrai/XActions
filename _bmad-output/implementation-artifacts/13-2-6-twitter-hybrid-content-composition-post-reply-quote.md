@@ -2,7 +2,7 @@
 story_id: '13.2.6'
 epic: 13
 story_key: '13-2-6-twitter-hybrid-content-composition-post-reply-quote'
-status: "review"
+status: "done"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
@@ -14,7 +14,7 @@ baseline_commit: "1894ff49d575f6c34f6f30e8e742251c83e02bd7"
 
 # Story 13.2.6 — Twitter Hybrid Content Composition (Post, Reply, Quote)
 
-Status: review
+Status: done
 
 ## Story
 
