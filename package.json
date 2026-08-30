@@ -26,6 +26,7 @@
     "./scrapers/social/threads": "./src/scrapers/social/threads/index.js",
     "./scrapers/social/tiktok": "./src/scrapers/social/tiktok/index.js",
     "./scrapers/social/facebook": "./src/scrapers/social/facebook/index.js",
+    "./scrapers/social/twitter": "./src/scrapers/social/twitter/index.js",
     "./streaming": "./src/streaming/index.js",
     "./analytics": "./src/analytics/index.js",
     "./plugins": "./src/plugins/index.js",

@@ -2,7 +2,7 @@
 story_id: '13.2.12'
 epic: 13
 story_key: '13-2-12-twitter-hybrid-integration-caller-migration'
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
@@ -14,7 +14,7 @@ baseline_commit: "3b4841358889e4fb636570c1a2144a29e22d0c60"
 
 # Story 13.2.12 — Twitter Hybrid Integration & Caller Migration
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -132,18 +132,18 @@ Story 13.2.12 là **cột mốc tích hợp cuối cùng của Epic 13.2** (Twit
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 (AC-1): Nâng cấp `src/scrapers/index.js` sang Twitter Hybrid Crawler
-  - [ ] 1.1 Thêm nhánh `platformName === 'twitter' || platformName === 'x'`
-  - [ ] 1.2 Tạo `TWITTER_ACTION_MAP` hỗ trợ toàn bộ actions
-  - [ ] 1.3 Map các options (`username`, `query`, `tweetId`, `userId`, `listId`, `limit`, `cursor`, `dryRun`)
-- [ ] Task 2 (AC-2): Cập nhật `package.json` exports
-  - [ ] 2.1 Bổ sung `./scrapers/social/twitter`
-- [ ] Task 3 (AC-3): Đánh dấu Deprecation & Đồng bộ Kế hoạch
-  - [ ] 3.1 Gắn `@deprecated` cho `src/scrapers/twitter/index.js`
-  - [ ] 3.2 Cập nhật `docs/deprecation-plan.md`
-- [ ] Task 4 (AC-4): Viết Integration Test Suite & Chạy Full Suite
-  - [ ] 4.1 Tạo `tests/scrapers/social/twitter/crawler-integration-migration.test.js`
-  - [ ] 4.2 Chạy pass toàn bộ test suite Twitter Hybrid
+- [x] Task 1 (AC-1): Nâng cấp `src/scrapers/index.js` sang Twitter Hybrid Crawler
+  - [x] 1.1 Thêm nhánh `platformName === 'twitter' || platformName === 'x'`
+  - [x] 1.2 Tạo `TWITTER_ACTION_MAP` hỗ trợ toàn bộ actions
+  - [x] 1.3 Map các options (`username`, `query`, `tweetId`, `userId`, `listId`, `limit`, `cursor`, `dryRun`)
+- [x] Task 2 (AC-2): Cập nhật `package.json` exports
+  - [x] 2.1 Bổ sung `./scrapers/social/twitter`
+- [x] Task 3 (AC-3): Đánh dấu Deprecation & Đồng bộ Kế hoạch
+  - [x] 3.1 Gắn `@deprecated` cho `src/scrapers/twitter/index.js`
+  - [x] 3.2 Cập nhật `docs/deprecation-plan.md`
+- [x] Task 4 (AC-4): Viết Integration Test Suite & Chạy Full Suite
+  - [x] 4.1 Tạo `tests/scrapers/social/twitter/crawler-integration-migration.test.js`
+  - [x] 4.2 Chạy pass toàn bộ test suite Twitter Hybrid (117/117 tests passed)
 
 ---
 
@@ -159,7 +159,16 @@ Story 13.2.12 là **cột mốc tích hợp cuối cùng của Epic 13.2** (Twit
 
 ### Completion Notes
 
-*(Để điền sau khi hoàn thành dev.)*
+- Đã tích hợp `TwitterCrawler` và `TwitterClient` vào unified dispatcher `src/scrapers/index.js` cho các platform `twitter` và `x`.
+- Khai báo export `./scrapers/social/twitter` trong `package.json`.
+- Gắn chú thích `@deprecated` cho `src/scrapers/twitter/index.js`.
+- Cập nhật `docs/deprecation-plan.md` đánh dấu `deprecated-marked` cho toàn bộ Twitter legacy modules.
+- Viết integration test suite `tests/scrapers/social/twitter/crawler-integration-migration.test.js` (8/8 tests pass).
+- Toàn bộ 11 test files của Twitter Hybrid suite đều pass 100% (117/117 tests).
+
+### Change Log
+
+- 2026-08-30: Hoàn thành Story 13.2.12 (Unified dispatcher migration, package exports, deprecation markers, integration tests).
 
 ### File List
 

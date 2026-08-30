@@ -45,6 +45,8 @@ import { ThreadsCrawler } from './social/threads/crawler.js';
 import { ThreadsClient } from './social/threads/client.js';
 import { TikTokCrawler } from './social/tiktok/crawler.js';
 import { TikTokClient } from './social/tiktok/client.js';
+import { TwitterCrawler } from './social/twitter/crawler.js';
+import { TwitterClient } from './social/twitter/client.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -165,6 +167,132 @@ export async function scrape(platform, action, options = {}) {
   const store = options.store || defaultStore;
   const normalizedOptions = { ...options, store };
   const platformName = platform.toLowerCase();
+
+  // ── Twitter/X hybrid path — dispatches to TwitterCrawler (Story 13.2.12) ──
+  if (platformName === 'twitter' || platformName === 'x') {
+    /** @type {Record<string, string>} */
+    const TWITTER_ACTION_MAP = {
+      profile: 'profile',
+      tweets: 'search', timeline: 'search', feed: 'search', user_feed: 'search', posts: 'search',
+      search: 'search',
+      hashtag: 'hashtag',
+      trending: 'trending',
+      thread: 'thread',
+      likes: 'likes', likers: 'likes',
+      bookmarks: 'bookmarks',
+      media: 'media',
+      download_video: 'download_video', video: 'download_video',
+      followers: 'followers',
+      following: 'following',
+      non_followers: 'non_followers',
+      retweeters: 'retweeters',
+      listMembers: 'list_members', list_members: 'list_members',
+      communityMembers: 'community_members', community_members: 'community_members',
+      spaces: 'spaces',
+      post: 'post',
+      reply: 'reply',
+      quote: 'quote',
+      schedule: 'schedule',
+      like: 'like',
+      unlike: 'unlike',
+      retweet: 'retweet',
+      unretweet: 'undo_retweet', undo_retweet: 'undo_retweet',
+      follow: 'follow',
+      unfollow: 'unfollow',
+      block: 'block',
+      unblock: 'unblock',
+      mute: 'mute',
+      unmute: 'unmute',
+      bookmark: 'bookmark',
+      unbookmark: 'unbookmark',
+      send_dm: 'send_dm', sendDm: 'send_dm',
+      dm_conversations: 'dm_conversations', getInbox: 'dm_conversations',
+      dm_messages: 'dm_messages', getConversation: 'dm_messages',
+      create_list: 'create_list', createList: 'create_list',
+      add_list_members: 'add_list_members', addListMembers: 'add_list_members',
+      remove_list_members: 'remove_list_members', removeListMembers: 'remove_list_members',
+    };
+
+    const mappedAction = TWITTER_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(TWITTER_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (options.username) mappedArgs.username = options.username;
+    if (options.target && !options.username) mappedArgs.username = options.target;
+    if (options.query) mappedArgs.query = options.query;
+    if (options.hashtag || options.tag) mappedArgs.tag = options.hashtag || options.tag;
+    if (options.tweetId) mappedArgs.tweetId = options.tweetId;
+    if (options.url) mappedArgs.url = options.url;
+    if (options.userId) mappedArgs.userId = options.userId;
+    if (options.listId || options.listUrl) mappedArgs.listUrl = options.listId || options.listUrl;
+    if (options.communityUrl) mappedArgs.communityUrl = options.communityUrl;
+    if (options.conversationId) mappedArgs.conversationId = options.conversationId;
+    if (options.text) mappedArgs.text = options.text;
+    if (options.mediaIds) mappedArgs.mediaIds = options.mediaIds;
+    if (options.mediaId) mappedArgs.mediaId = options.mediaId;
+    if (options.publishAt) mappedArgs.publishAt = options.publishAt;
+    if (options.name) mappedArgs.name = options.name;
+    if (options.description) mappedArgs.description = options.description;
+    if (options.isPrivate != null) mappedArgs.isPrivate = options.isPrivate;
+    if (options.userIds) mappedArgs.userIds = options.userIds;
+    if (options.usernames) mappedArgs.usernames = options.usernames;
+    if (options.dryRun != null) mappedArgs.dryRun = options.dryRun;
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.count != null && options.limit == null) mappedArgs.limit = Number(options.count);
+    if (options.cursor) mappedArgs.cursor = options.cursor;
+    if (options.type) mappedArgs.type = options.type;
+    if (options.filter) mappedArgs.filter = options.filter;
+    if (options.woeid != null) mappedArgs.woeid = options.woeid;
+    if (options.quality) mappedArgs.quality = options.quality;
+    if (options.destPath) mappedArgs.destPath = options.destPath;
+    if (options.premium != null) mappedArgs.premium = options.premium;
+    if (options.sensitive != null) mappedArgs.sensitive = options.sensitive;
+    if (options.walkToRoot != null) mappedArgs.walkToRoot = options.walkToRoot;
+
+    const session = {
+      accountId: options.accountId || 'twitter-guest',
+      cookies: options.authCookie || options.cookies || options.authToken || '',
+    };
+
+    const client = new TwitterClient({
+      baseUrl: options.baseUrl,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+      responseValidator: options.responseValidator,
+      tokenRing: options.tokenRing,
+      signerPool: options.signerPool,
+      requiresAuth: options.requiresAuth,
+      timeout: options.timeout,
+    });
+
+    const crawler = new TwitterCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+      requiresAuth: options.requiresAuth,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
 
   // Threads hybrid path — no Puppeteer, dispatches to ThreadsCrawler.
   // This branch is evaluated first so legacy actionMap / platform lookups

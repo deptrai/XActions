@@ -80,8 +80,8 @@ Xoá theo thứ tự:
 
 | Platform | Status | Estimated Phase | Owner |
 |----------|--------|-----------------|-------|
-| Twitter Puppeteer (`src/scrapers/twitter/index.js`) | `deprecated-planned` | Phase 2–3 | TBD |
-| Twitter HTTP (`src/scrapers/twitter/http/`) | `deprecated-planned` | Phase 2–3 | TBD |
+| Twitter Puppeteer (`src/scrapers/twitter/index.js`) | `deprecated-marked` | Phase 1 (Story 13.2.12) | DEV |
+| Twitter HTTP (`src/scrapers/twitter/http/`) | `deprecated-marked` | Phase 1 (Story 13.2.12) | DEV |
 | Twitter Legacy Profile/Followers/Following (`src/scrapers/twitter/index.js` profile/followers/following) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
 | Twitter Legacy Thread/Likes/Bookmarks (`src/scrapers/twitter/index.js`, `thread.js`, `relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.2) | DEV |
 | Twitter HTTP Relationships (`src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
