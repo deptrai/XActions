@@ -47,6 +47,8 @@ import { TikTokCrawler } from './social/tiktok/crawler.js';
 import { TikTokClient } from './social/tiktok/client.js';
 import { TwitterCrawler } from './social/twitter/crawler.js';
 import { TwitterClient } from './social/twitter/client.js';
+import { ShopeeCrawler } from './ecom/shopee/crawler.js';
+import { ShopeeClient } from './ecom/shopee/client.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -289,6 +291,77 @@ export async function scrape(platform, action, options = {}) {
 
     try {
       return await crawler.start({ action: mappedAction, args: mappedArgs, session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── Shopee E-commerce path (Story 16.1) ──
+  if (platformName === 'shopee') {
+    /** @type {Record<string, string>} */
+    const SHOPEE_ACTION_MAP = {
+      search_products: 'search_products',
+      search: 'search_products',
+      products: 'search_products',
+      product_detail: 'product_detail',
+      product: 'product_detail',
+      item: 'product_detail',
+      detail: 'product_detail',
+      product_reviews: 'product_reviews',
+      reviews: 'product_reviews',
+      ratings: 'product_reviews',
+    };
+
+    const mappedAction = SHOPEE_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(SHOPEE_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (options.keyword || options.query || options.q || options.target) {
+      mappedArgs.keyword = options.keyword || options.query || options.q || options.target;
+    }
+    if (options.itemId || options.itemid || options.id) {
+      mappedArgs.itemId = options.itemId || options.itemid || options.id;
+    }
+    if (options.shopId || options.shopid) {
+      mappedArgs.shopId = options.shopId || options.shopid;
+    }
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.page != null) mappedArgs.page = Number(options.page);
+    if (options.offset != null) mappedArgs.offset = Number(options.offset);
+    if (options.sortBy) mappedArgs.sortBy = options.sortBy;
+    if (options.category) mappedArgs.category = options.category;
+    if (options.filterRating != null) mappedArgs.filterRating = options.filterRating;
+
+    const client = new ShopeeClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new ShopeeCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
     } finally {
       if (options.autoClose !== false) {
         await crawler.cleanup().catch(() => {});

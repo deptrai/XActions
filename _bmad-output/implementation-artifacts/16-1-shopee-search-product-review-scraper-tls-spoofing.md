@@ -2,7 +2,7 @@
 story_id: '16.1'
 epic: 16
 story_key: '16-1-shopee-search-product-review-scraper-tls-spoofing'
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 3"
 created: 2026-08-30
 updated: 2026-08-30
@@ -14,7 +14,7 @@ baseline_commit: "171be0ea89b9ec8832a829e34e5659858547b748"
 
 # Story 16.1 — Shopee Search, Product & Review Scraper with TLS Spoofing
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -137,22 +137,22 @@ Story 16.1 triển khai Shopee E-Commerce crawler đầu tiên trong Epic 16 tr�
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 (AC-1, AC-2): Xây dựng `ShopeeClient` & `ShopeePlatformResponseValidator`
-  - [ ] 1.1 Tạo `src/scrapers/ecom/shopee/client.js` với các headers đặc thù của Shopee
-  - [ ] 1.2 Tạo `src/scrapers/ecom/shopee/validator.js` nhận diện mã captcha `90309999`
-- [ ] Task 2 (AC-1, AC-4): Xây dựng `normalize-product.js`
-  - [ ] 2.1 Chuẩn hóa sản phẩm Shopee thành `PostItem` (`category: 'ecom'`)
-  - [ ] 2.2 Chuẩn hóa đánh giá Shopee thành `CommentItem`
-- [ ] Task 3 (AC-1, AC-2, AC-3): Xây dựng `ShopeeCrawler`
-  - [ ] 3.1 Đăng ký 3 actions `search_products`, `product_detail`, `product_reviews`
-  - [ ] 3.2 Triển khai handlers gọi API Shopee v4 (`/api/v4/search/search_items`, `/api/v4/item/get`, `/api/v4/item/get_ratings`)
-- [ ] Task 4 (AC-5): Tích hợp Dispatcher & Package Exports
-  - [ ] 4.1 Tạo `src/scrapers/ecom/shopee/index.js`
-  - [ ] 4.2 Thêm nhánh `shopee` trong `src/scrapers/index.js`
-  - [ ] 4.3 Khai báo export `"./scrapers/ecom/shopee"` trong `package.json`
-- [ ] Task 5 (AC-6): TDD Test Suite & Hoàn thiện
-  - [ ] 5.1 Viết `tests/scrapers/ecom/shopee/crawler-shopee.test.js`
-  - [ ] 5.2 Chạy pass test suite và sync sprint-status
+- [x] Task 1 (AC-1, AC-2): Xây dựng `ShopeeClient` & `ShopeePlatformResponseValidator`
+  - [x] 1.1 Tạo `src/scrapers/ecom/shopee/client.js` với các headers đặc thù của Shopee
+  - [x] 1.2 Tạo `src/scrapers/ecom/shopee/validator.js` nhận diện mã captcha `90309999`
+- [x] Task 2 (AC-1, AC-4): Xây dựng `normalize-product.js`
+  - [x] 2.1 Chuẩn hóa sản phẩm Shopee thành `PostItem` (`category: 'ecom'`)
+  - [x] 2.2 Chuẩn hóa đánh giá Shopee thành `CommentItem`
+- [x] Task 3 (AC-1, AC-2, AC-3): Xây dựng `ShopeeCrawler`
+  - [x] 3.1 Đăng ký 3 actions `search_products`, `product_detail`, `product_reviews`
+  - [x] 3.2 Triển khai handlers gọi API Shopee v4 (`/api/v4/search/search_items`, `/api/v4/item/get`, `/api/v4/item/get_ratings`)
+- [x] Task 4 (AC-5): Tích hợp Dispatcher & Package Exports
+  - [x] 4.1 Tạo `src/scrapers/ecom/shopee/index.js`
+  - [x] 4.2 Thêm nhánh `shopee` trong `src/scrapers/index.js`
+  - [x] 4.3 Khai báo export `"./scrapers/ecom/shopee"` trong `package.json`
+- [x] Task 5 (AC-6): TDD Test Suite & Hoàn thiện
+  - [x] 5.1 Viết `tests/scrapers/ecom/shopee/crawler-shopee.test.js`
+  - [x] 5.2 Chạy pass test suite và sync sprint-status (8/8 tests pass)
 
 ---
 
@@ -170,14 +170,23 @@ Story 16.1 triển khai Shopee E-Commerce crawler đầu tiên trong Epic 16 tr�
 
 ### Completion Notes
 
-*(Để điền sau khi hoàn thành dev.)*
+- Đã triển khai đầy đủ `ShopeeCrawler`, `ShopeeClient`, `ShopeePlatformResponseValidator`, và `normalize-product.js`.
+- Hỗ trợ 3 actions: `search_products`, `product_detail`, `product_reviews` với category `ecom` và ID namespaced `shopee:${itemId}`.
+- Cơ chế phát hiện bot challenge nhận diện mã captcha `90309999` và throw `BotChallengeError`.
+- Chuẩn hóa giá tiền Shopee (chia 100,000) và build CDN image URLs.
+- Tích hợp `scrape('shopee', ...)` vào unified dispatcher `src/scrapers/index.js` và khai báo package.json export `./scrapers/ecom/shopee`.
+- Chạy test suite `crawler-shopee.test.js` đạt 8/8 tests pass (100%).
+
+### Change Log
+
+- 2026-08-30: Hoàn thành triển khai Story 16.1 (Shopee Search, Product & Review Scraper with TLS Spoofing).
 
 ### File List
 
 #### UPDATE
 - `src/scrapers/index.js` — bổ sung dispatcher cho Shopee
 - `package.json` — export `./scrapers/ecom/shopee`
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — cập nhật status `16-1` sang `ready-for-dev`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — cập nhật status `16-1` sang `review`
 
 #### NEW
 - `src/scrapers/ecom/shopee/crawler.js`
