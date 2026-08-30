@@ -97,6 +97,8 @@ Xoá theo thứ tự:
 | `src/scrapers/twitter/http/engagement.js` social graph & bookmarks → `twitter:follow` / `twitter:unfollow` / `twitter:block` / `twitter:unblock` / `twitter:mute` / `twitter:unmute` / `twitter:bookmark` / `twitter:unbookmark` | `deprecated-marked` | Phase 1 (Story 13.2.9) | DEV |
 | Twitter Legacy Direct Messaging (`src/client/Scraper.js` sendDm/sendDmToUser/getDmConversations/getDmMessages; `src/client/api/dms.js`; `src/scrapers/twitter/http/dm.js` sendDM/getInbox/getConversation) | `deprecated-marked` | Phase 1 (Story 13.2.10) | DEV |
 | `src/scrapers/twitter/http/dm.js` direct messaging → `twitter:send_dm` / `twitter:dm_conversations` / `twitter:dm_messages` | `deprecated-marked` | Phase 1 (Story 13.2.10) | DEV |
+| Twitter Legacy List Management (`src/client/Scraper.js` getListTweets/getListMembers/getListById; `src/client/api/lists.js` getListTweets/getListMembers/getListById) | `deprecated-marked` | Phase 1 (Story 13.2.11) | DEV |
+| `src/client/api/lists.js` list operations → `twitter:list_members` / `twitter:create_list` / `twitter:add_list_members` / `twitter:remove_list_members` | `deprecated-marked` | Phase 1 (Story 13.2.11) | DEV |
 | `src/client/Scraper.js` (search/getTrends/getExploreTabs and all methods) | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-marked` | Phase 1 (Epic 13.10) | DEV |
 | Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
@@ -139,6 +141,10 @@ Xoá theo thứ tự:
 | `sendDm` / `sendDM` / `sendDmToUser` / `sendDMByUsername` (Twitter) | `twitter:send_dm` |
 | `getDmConversations` / `getInbox` (Twitter) | `twitter:dm_conversations` |
 | `getDmMessages` / `getConversation` (Twitter) | `twitter:dm_messages` |
+| `getListTweets` / `getListMembers` / `getListById` (Twitter) | `twitter:list_members` |
+| `createList` / `create_list` (Twitter) | `twitter:create_list` |
+| `addListMembers` / `add_list_members` (Twitter) | `twitter:add_list_members` |
+| `removeListMembers` / `remove_list_members` (Twitter) | `twitter:remove_list_members` |
 | `scrapeProfile` | `facebook:profile` |
 | `scrapeFollowers` | `facebook:followers` |
 | `scrapeGroupMembers` | `facebook:group_members` |

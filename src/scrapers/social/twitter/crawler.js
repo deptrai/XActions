@@ -522,6 +522,43 @@ export class TwitterCrawler extends AbstractCrawler {
       outputType: '{ messages: object[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.dmMessages(args, session),
     });
+
+    // ── Story 13.2.11 Actions: create_list, add_list_members, remove_list_members ──
+    this.registerAction({
+      action: 'create_list',
+      description: 'Create a new Twitter list',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['name'],
+      optionalArgs: ['description', 'isPrivate', 'dryRun'],
+      example: { name: 'Tech Leaders', description: 'Curated list', isPrivate: false, dryRun: false },
+      outputType: '{ success: boolean, listId?: string, name?: string }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.createList(args, session),
+    });
+
+    this.registerAction({
+      action: 'add_list_members',
+      description: 'Add members to a Twitter list in batches of up to 100',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['listId'],
+      optionalArgs: ['userIds', 'usernames', 'dryRun'],
+      example: { listId: '12345678', usernames: ['elonmusk', 'sama'], dryRun: false },
+      outputType: '{ success: boolean, listId: string, addedCount: number, batchCount: number }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.addListMembers(args, session),
+    });
+
+    this.registerAction({
+      action: 'remove_list_members',
+      description: 'Remove members from a Twitter list in batches of up to 100',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['listId'],
+      optionalArgs: ['userIds', 'usernames', 'dryRun'],
+      example: { listId: '12345678', usernames: ['spammer'], dryRun: false },
+      outputType: '{ success: boolean, listId: string, removedCount: number, batchCount: number }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.removeListMembers(args, session),
+    });
   }
 
   /**
@@ -3447,6 +3484,238 @@ export class TwitterCrawler extends AbstractCrawler {
         has_next_page: Boolean(minEntryId && messages.length > 0),
         end_cursor: minEntryId,
       },
+    };
+  }
+
+  /**
+   * Helper to split an array into chunks.
+   * @template T
+   * @param {T[]} array
+   * @param {number} [size=100]
+   * @returns {T[][]}
+   */
+  #chunkArray(array, size = 100) {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+  }
+
+  /**
+   * Action Handler: create_list
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean, listId?: string, name?: string, isPrivate?: boolean, dryRun?: boolean }>}
+   */
+  async createList(args = {}, session = {}) {
+    const name = typeof args?.name === 'string' ? args.name.trim() : '';
+    if (!name || name.length > 25) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'List name is required and must be 1-25 characters',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const description = typeof args?.description === 'string' ? args.description.trim().slice(0, 100) : '';
+    const isPrivate = Boolean(args?.isPrivate);
+    const dryRun = args?.dryRun !== false;
+
+    if (dryRun) {
+      console.log(`🔄 [DRY RUN] create_list: ${JSON.stringify({ name, description, isPrivate })}`);
+      return { success: true, dryRun: true };
+    }
+
+    const { accountId } = await this.#resolveSession(session);
+
+    await gaussianDelay(2000, 5000);
+
+    console.log(`🔄 [WRITE] create_list: ${JSON.stringify({ accountId, name, isPrivate })}`);
+
+    const response = await this.client.requestRest(REST.listsCreate, {
+      method: 'POST',
+      body: {
+        name,
+        description,
+        mode: isPrivate ? 'private' : 'public',
+      },
+      accountId,
+      requiresAuth: true,
+      cookies: session?.cookies,
+    });
+
+    const listId = String(response?.id_str || response?.id || '');
+    console.log(`✅ [WRITE] create_list ok: ${JSON.stringify({ accountId, listId, name })}`);
+
+    return {
+      success: true,
+      listId,
+      name,
+      isPrivate,
+    };
+  }
+
+  /**
+   * Action Handler: add_list_members
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean, listId: string, addedCount: number, batchCount: number, dryRun?: boolean, count?: number }>}
+   */
+  async addListMembers(args = {}, session = {}) {
+    const listId = args?.listId;
+    if (!listId || typeof listId !== 'string') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: listId',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const dryRun = args?.dryRun !== false;
+    let userIds = Array.isArray(args?.userIds) ? [...args.userIds] : (args?.userId ? [args.userId] : []);
+    const usernames = Array.isArray(args?.usernames) ? [...args.usernames] : (args?.username ? [args.username] : []);
+
+    if (userIds.length === 0 && usernames.length === 0) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Must provide userIds or usernames to add to list',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    if (dryRun) {
+      const count = userIds.length + usernames.length;
+      console.log(`🔄 [DRY RUN] add_list_members: ${JSON.stringify({ listId, count })}`);
+      return { success: true, dryRun: true, listId, count };
+    }
+
+    const { accountId } = await this.#resolveSession(session);
+
+    // Resolve any usernames to userIds
+    for (const u of usernames) {
+      try {
+        const uid = await this.#resolveTargetUserId({ username: u }, session);
+        if (uid) userIds.push(uid);
+      } catch (err) {
+        console.warn(`⚠️ [WRITE] Could not resolve username "${u}" for list: ${err.message}`);
+      }
+    }
+
+    userIds = Array.from(new Set(userIds.map(String)));
+    const batches = this.#chunkArray(userIds, 100);
+
+    for (const batch of batches) {
+      await gaussianDelay(2000, 5000);
+      console.log(`🔄 [WRITE] add_list_members batch: ${JSON.stringify({ accountId, listId, batchSize: batch.length })}`);
+
+      await this.client.requestRest(REST.listsMembersCreateAll, {
+        method: 'POST',
+        body: {
+          list_id: listId,
+          user_id: batch.join(','),
+        },
+        accountId,
+        requiresAuth: true,
+        cookies: session?.cookies,
+      });
+    }
+
+    console.log(`✅ [WRITE] add_list_members ok: ${JSON.stringify({ accountId, listId, addedCount: userIds.length, batchCount: batches.length })}`);
+    return {
+      success: true,
+      listId,
+      addedCount: userIds.length,
+      batchCount: batches.length,
+    };
+  }
+
+  /**
+   * Action Handler: remove_list_members
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean, listId: string, removedCount: number, batchCount: number, dryRun?: boolean, count?: number }>}
+   */
+  async removeListMembers(args = {}, session = {}) {
+    const listId = args?.listId;
+    if (!listId || typeof listId !== 'string') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: listId',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const dryRun = args?.dryRun !== false;
+    let userIds = Array.isArray(args?.userIds) ? [...args.userIds] : (args?.userId ? [args.userId] : []);
+    const usernames = Array.isArray(args?.usernames) ? [...args.usernames] : (args?.username ? [args.username] : []);
+
+    if (userIds.length === 0 && usernames.length === 0) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Must provide userIds or usernames to remove from list',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    if (dryRun) {
+      const count = userIds.length + usernames.length;
+      console.log(`🔄 [DRY RUN] remove_list_members: ${JSON.stringify({ listId, count })}`);
+      return { success: true, dryRun: true, listId, count };
+    }
+
+    const { accountId } = await this.#resolveSession(session);
+
+    // Resolve any usernames to userIds
+    for (const u of usernames) {
+      try {
+        const uid = await this.#resolveTargetUserId({ username: u }, session);
+        if (uid) userIds.push(uid);
+      } catch (err) {
+        console.warn(`⚠️ [WRITE] Could not resolve username "${u}" for list: ${err.message}`);
+      }
+    }
+
+    userIds = Array.from(new Set(userIds.map(String)));
+    const batches = this.#chunkArray(userIds, 100);
+
+    for (const batch of batches) {
+      await gaussianDelay(2000, 5000);
+      console.log(`🔄 [WRITE] remove_list_members batch: ${JSON.stringify({ accountId, listId, batchSize: batch.length })}`);
+
+      await this.client.requestRest(REST.listsMembersDestroyAll, {
+        method: 'POST',
+        body: {
+          list_id: listId,
+          user_id: batch.join(','),
+        },
+        accountId,
+        requiresAuth: true,
+        cookies: session?.cookies,
+      });
+    }
+
+    console.log(`✅ [WRITE] remove_list_members ok: ${JSON.stringify({ accountId, listId, removedCount: userIds.length, batchCount: batches.length })}`);
+    return {
+      success: true,
+      listId,
+      removedCount: userIds.length,
+      batchCount: batches.length,
     };
   }
 

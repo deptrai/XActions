@@ -638,6 +638,7 @@ export class Scraper {
   /**
    * Get tweets from a list.
    *
+   * @deprecated getListTweets — use TwitterCrawler.start({ action: 'list_members', args: { listId } }) instead.
    * @param {string} listId - Twitter list ID
    * @param {number} [count=100] - Maximum number of tweets
    * @returns {AsyncGenerator<import('./models/Tweet.js').Tweet>}
@@ -649,6 +650,7 @@ export class Scraper {
   /**
    * Get members of a list.
    *
+   * @deprecated getListMembers — use TwitterCrawler.start({ action: 'list_members', args: { listId, limit: count } }) instead.
    * @param {string} listId - Twitter list ID
    * @param {number} [count=100] - Maximum number of members
    * @returns {AsyncGenerator<import('./models/Profile.js').Profile>}
@@ -660,6 +662,7 @@ export class Scraper {
   /**
    * Get list details by ID.
    *
+   * @deprecated getListById — use TwitterCrawler.start({ action: 'list_members', args: { listId } }) instead.
    * @param {string} listId - Twitter list ID
    * @returns {Promise<{id: string, name: string, description: string, memberCount: number, subscriberCount: number, createdAt: string}|null>}
    */

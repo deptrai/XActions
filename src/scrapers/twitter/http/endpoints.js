@@ -164,6 +164,11 @@ export const REST = {
   guide:           '/2/guide.json',
   trendsAvailable: '/1.1/trends/available.json',
   trendsPlace:     '/1.1/trends/place.json',
+
+  // Lists Management
+  listsCreate:            '/1.1/lists/create.json',
+  listsMembersCreateAll:  '/1.1/lists/members/create_all.json',
+  listsMembersDestroyAll: '/1.1/lists/members/destroy_all.json',
 };
 
 // ---------------------------------------------------------------------------

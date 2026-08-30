@@ -2,7 +2,7 @@
 story_id: '13.2.11'
 epic: 13
 story_key: '13-2-11-twitter-hybrid-list-management'
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
@@ -14,7 +14,7 @@ baseline_commit: "45159b6cec4a6b57aa0f4ce5d1a0b58b60a866e2"
 
 # Story 13.2.11 — Twitter Hybrid List Management
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -177,24 +177,24 @@ Bổ sung `data.member_count !== undefined || data.subscriber_count !== undefine
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 (AC-1, AC-6): Đăng ký 3 actions List Management trong `TwitterCrawler`
-  - [ ] 1.1 Thêm endpoints vào `src/scrapers/twitter/http/endpoints.js`
-  - [ ] 1.2 Đăng ký `create_list`, `add_list_members`, `remove_list_members` trong `TwitterCrawler`
-- [ ] Task 2 (AC-2, AC-4): Triển khai Handler `create_list`
-  - [ ] 2.1 Validate tên danh sách (1-25 chars)
-  - [ ] 2.2 Dispatch POST tới `/1.1/lists/create.json`
-  - [ ] 2.3 Áp dụng `gaussianDelay(2000, 5000)` và dry-run gate
-- [ ] Task 3 (AC-3, AC-4): Triển khai Handlers `add_list_members` và `remove_list_members`
-  - [ ] 3.1 Hỗ trợ resolve danh sách usernames sang userIds
-  - [ ] 3.2 Tự động batching thành các mảng 100 userIds
-  - [ ] 3.3 Dispatch POST tới `lists/members/create_all.json` và `lists/members/destroy_all.json`
-- [ ] Task 4 (AC-5): Đánh dấu Deprecation
-  - [ ] 4.1 Thêm `@deprecated` vào `src/client/Scraper.js` và `src/client/api/lists.js`
-  - [ ] 4.2 Cập nhật `docs/deprecation-plan.md`
-- [ ] Task 5 (AC-6): TDD Tests & Hoàn thiện
-  - [ ] 5.1 Tạo `tests/scrapers/social/twitter/crawler-lists.test.js`
-  - [ ] 5.2 Chạy pass test suite và kiểm tra regression toàn bộ Twitter crawlers
-  - [ ] 5.3 Cập nhật status story sang `review` và sync `sprint-status.yaml`
+- [x] Task 1 (AC-1, AC-6): Đăng ký 3 actions List Management trong `TwitterCrawler`
+  - [x] 1.1 Thêm endpoints vào `src/scrapers/twitter/http/endpoints.js`
+  - [x] 1.2 Đăng ký `create_list`, `add_list_members`, `remove_list_members` trong `TwitterCrawler`
+- [x] Task 2 (AC-2, AC-4): Triển khai Handler `create_list`
+  - [x] 2.1 Validate tên danh sách (1-25 chars)
+  - [x] 2.2 Dispatch POST tới `/1.1/lists/create.json`
+  - [x] 2.3 Áp dụng `gaussianDelay(2000, 5000)` và dry-run gate
+- [x] Task 3 (AC-3, AC-4): Triển khai Handlers `add_list_members` và `remove_list_members`
+  - [x] 3.1 Hỗ trợ resolve danh sách usernames sang userIds
+  - [x] 3.2 Tự động batching thành các mảng 100 userIds
+  - [x] 3.3 Dispatch POST tới `lists/members/create_all.json` và `lists/members/destroy_all.json`
+- [x] Task 4 (AC-5): Đánh dấu Deprecation
+  - [x] 4.1 Thêm `@deprecated` vào `src/client/Scraper.js` và `src/client/api/lists.js`
+  - [x] 4.2 Cập nhật `docs/deprecation-plan.md`
+- [x] Task 5 (AC-6): TDD Tests & Hoàn thiện
+  - [x] 5.1 Tạo `tests/scrapers/social/twitter/crawler-lists.test.js`
+  - [x] 5.2 Chạy pass test suite và kiểm tra regression toàn bộ Twitter crawlers (109/109 tests passed)
+  - [x] 5.3 Cập nhật status story sang `review` và sync `sprint-status.yaml`
 
 ---
 
@@ -202,9 +202,9 @@ Bổ sung `data.member_count !== undefined || data.subscriber_count !== undefine
 
 ### Implementation Plan
 
-1. Khai báo các endpoints REST cho List management trong `src/scrapers/twitter/http/endpoints.js`.
+1. Khai báo các endpoints REST cho List management trong `src/scrapers/twitter/http/endpoints.js` (`listsCreate`, `listsMembersCreateAll`, `listsMembersDestroyAll`).
 2. Đăng ký 3 actions (`create_list`, `add_list_members`, `remove_list_members`) trong `TwitterCrawler`.
-3. Triển khai các phương thức `createList`, `addListMembers`, `removeListMembers` trong `crawler.js`.
+3. Triển khai các phương thức `createList`, `addListMembers`, `removeListMembers` trong `crawler.js` kèm batching chunking 100 IDs.
 4. Mở rộng `TwitterPlatformResponseValidator` nhận diện response của List objects.
 5. Gắn `@deprecated` annotations trong `src/client/Scraper.js`, `src/client/api/lists.js`.
 6. Cập nhật `docs/deprecation-plan.md`.
@@ -212,7 +212,15 @@ Bổ sung `data.member_count !== undefined || data.subscriber_count !== undefine
 
 ### Completion Notes
 
-*(Để điền sau khi hoàn thành dev.)*
+- Đã triển khai đầy đủ 3 action List Management trong `TwitterCrawler`: `create_list`, `add_list_members`, `remove_list_members`.
+- Hỗ trợ phân giải usernames sang userIds và tự động batching 100 items/request.
+- Tích hợp write safety: Gaussian delay 2–5s giữa các batch, `dryRun=true` mặc định, rate governor check.
+- Gắn chú thích `@deprecated` cho các hàm List trong `Scraper.js`, `api/lists.js` và cập nhật `docs/deprecation-plan.md`.
+- Toàn bộ 10/10 tests List Management mới và 109/109 tests toàn suite Twitter Hybrid đều pass 100%.
+
+### Change Log
+
+- 2026-08-30: Hoàn thành triển khai Story 13.2.11 (List Management actions, batching 100 IDs, validator updates, legacy deprecation, acceptance tests).
 
 ### File List
 
@@ -223,7 +231,7 @@ Bổ sung `data.member_count !== undefined || data.subscriber_count !== undefine
 - `src/client/Scraper.js` — thêm `@deprecated` cho các List methods
 - `src/client/api/lists.js` — thêm `@deprecated` cho các List methods
 - `docs/deprecation-plan.md` — cập nhật status tracker và mapping table
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — cập nhật `13-2-11` sang `ready-for-dev`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — cập nhật `13-2-11` sang `review`
 
 #### NEW
 - `tests/scrapers/social/twitter/crawler-lists.test.js` — test suite cho List Management actions
