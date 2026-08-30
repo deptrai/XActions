@@ -173,6 +173,7 @@ async function restMutation(client, path, body) {
 
 /**
  * Like a tweet.
+ * @deprecated likeTweet — use TwitterCrawler.start({ action: 'like', args: { tweetId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
  * @returns {Promise<{ success: boolean }>}
@@ -183,6 +184,7 @@ export async function likeTweet(client, tweetId) {
 
 /**
  * Unlike a tweet.
+ * @deprecated unlikeTweet — use TwitterCrawler.start({ action: 'unlike', args: { tweetId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
  * @returns {Promise<{ success: boolean }>}
@@ -197,6 +199,7 @@ export async function unlikeTweet(client, tweetId) {
 
 /**
  * Retweet a tweet.
+ * @deprecated retweet — use TwitterCrawler.start({ action: 'retweet', args: { tweetId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
  * @returns {Promise<{ success: boolean }>}
@@ -207,6 +210,7 @@ export async function retweet(client, tweetId) {
 
 /**
  * Undo a retweet.
+ * @deprecated unretweet — use TwitterCrawler.start({ action: 'undo_retweet', args: { tweetId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
  * @returns {Promise<{ success: boolean }>}

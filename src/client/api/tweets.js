@@ -371,6 +371,7 @@ export async function deleteTweet(http, tweetId) {
 /**
  * Like a tweet.
  *
+ * @deprecated likeTweet — use TwitterCrawler.start({ action: 'like', args: { tweetId, dryRun: false } }) instead.
  * @param {HttpClient} http
  * @param {string} tweetId
  * @returns {Promise<void>}
@@ -389,6 +390,7 @@ export async function likeTweet(http, tweetId) {
 /**
  * Unlike a tweet.
  *
+ * @deprecated unlikeTweet — use TwitterCrawler.start({ action: 'unlike', args: { tweetId, dryRun: false } }) instead.
  * @param {HttpClient} http
  * @param {string} tweetId
  * @returns {Promise<void>}
@@ -407,6 +409,7 @@ export async function unlikeTweet(http, tweetId) {
 /**
  * Retweet a tweet.
  *
+ * @deprecated retweet — use TwitterCrawler.start({ action: 'retweet', args: { tweetId, dryRun: false } }) instead.
  * @param {HttpClient} http
  * @param {string} tweetId
  * @returns {Promise<void>}
@@ -425,6 +428,7 @@ export async function retweet(http, tweetId) {
 /**
  * Unretweet (undo retweet).
  *
+ * @deprecated unretweet — use TwitterCrawler.start({ action: 'undo_retweet', args: { tweetId, dryRun: false } }) instead.
  * @param {HttpClient} http
  * @param {string} tweetId
  * @returns {Promise<void>}

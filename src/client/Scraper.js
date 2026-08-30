@@ -530,6 +530,7 @@ export class Scraper {
   /**
    * Like a tweet.
    *
+   * @deprecated likeTweet — use TwitterCrawler.start({ action: 'like', args: { tweetId: id, dryRun: false } }) instead.
    * @param {string} id - Tweet ID
    * @returns {Promise<void>}
    */
@@ -542,6 +543,7 @@ export class Scraper {
   /**
    * Unlike a tweet.
    *
+   * @deprecated unlikeTweet — use TwitterCrawler.start({ action: 'unlike', args: { tweetId: id, dryRun: false } }) instead.
    * @param {string} id - Tweet ID
    * @returns {Promise<void>}
    */
@@ -554,6 +556,7 @@ export class Scraper {
   /**
    * Retweet a tweet.
    *
+   * @deprecated retweet — use TwitterCrawler.start({ action: 'retweet', args: { tweetId: id, dryRun: false } }) instead.
    * @param {string} id - Tweet ID
    * @returns {Promise<void>}
    */
@@ -566,6 +569,7 @@ export class Scraper {
   /**
    * Unretweet a tweet.
    *
+   * @deprecated unretweet — use TwitterCrawler.start({ action: 'undo_retweet', args: { tweetId: id, dryRun: false } }) instead.
    * @param {string} id - Tweet ID
    * @returns {Promise<void>}
    */

@@ -339,6 +339,55 @@ export class TwitterCrawler extends AbstractCrawler {
       outputType: '{ tweet: PostItem }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.schedule(args, session),
     });
+
+    // ── Story 13.2.8 Actions: like, unlike, retweet, undo_retweet ──
+    this.registerAction({
+      action: 'like',
+      description: 'Favorite (like) a tweet via the FavoriteTweet GraphQL mutation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['tweetId'],
+      optionalArgs: ['dryRun'],
+      example: { tweetId: '1900000000000000000', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.like(args, session),
+    });
+
+    this.registerAction({
+      action: 'unlike',
+      description: 'Unfavorite (unlike) a tweet via the UnfavoriteTweet GraphQL mutation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['tweetId'],
+      optionalArgs: ['dryRun'],
+      example: { tweetId: '1900000000000000000', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.unlike(args, session),
+    });
+
+    this.registerAction({
+      action: 'retweet',
+      description: 'Retweet a tweet via the CreateRetweet GraphQL mutation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['tweetId'],
+      optionalArgs: ['dryRun'],
+      example: { tweetId: '1900000000000000000', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.retweet(args, session),
+    });
+
+    this.registerAction({
+      action: 'undo_retweet',
+      description: 'Delete (undo) a retweet via the DeleteRetweet GraphQL mutation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['tweetId'],
+      optionalArgs: ['dryRun'],
+      example: { tweetId: '1900000000000000000', dryRun: false },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.undoRetweet(args, session),
+    });
   }
 
   /**
@@ -2539,6 +2588,146 @@ export class TwitterCrawler extends AbstractCrawler {
         sourceMethod: 'schedule',
         scheduledAt: publishAt,
       },
+    });
+  }
+
+  /**
+   * Generic handler for Twitter engagement mutations (like, unlike, retweet, undo_retweet).
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @param {'like' | 'unlike' | 'retweet' | 'undo_retweet'} actionName
+   * @param {{ queryId: string, operationName: string, buildVariables: (tweetId: string) => Record<string, any> }} mutationConfig
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async #performEngagement(args, session, actionName, mutationConfig) {
+    if (!args || (!args.tweetId && !args.url)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: tweetId',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const tweetId = resolveTweetId(args.tweetId || args.url);
+    const dryRun = args.dryRun !== false;
+
+    if (dryRun) {
+      console.log(`🔄 [DRY RUN] ${actionName}: ${JSON.stringify({ tweetId })}`);
+      return { success: true };
+    }
+
+    const { accountId } = await this.#resolveSession(session);
+
+    await gaussianDelay(1000, 3000);
+
+    console.log(`🔄 [WRITE] ${actionName}: ${JSON.stringify({ accountId, tweetId })}`);
+
+    const IDEMPOTENT_ENGAGEMENT_MESSAGES = [
+      'already favorited',
+      'already retweeted',
+      'already bookmarked',
+      'you have already',
+      'not found in list of retweets',
+    ];
+
+    const variables = mutationConfig.buildVariables(tweetId);
+
+    const response = await this.client.requestGraphQl(
+      mutationConfig.queryId,
+      mutationConfig.operationName,
+      variables,
+      DEFAULT_FEATURES,
+      DEFAULT_FIELD_TOGGLES,
+      {
+        accountId,
+        requiresAuth: true,
+        method: 'POST',
+        cookies: session?.cookies,
+      }
+    );
+
+    const graphQLErrors = response?.errors || response?.data?.errors;
+    if (Array.isArray(graphQLErrors) && graphQLErrors.length > 0) {
+      for (const err of graphQLErrors) {
+        const msg = String(err?.message || '').toLowerCase();
+        if (IDEMPOTENT_ENGAGEMENT_MESSAGES.some((needle) => msg.includes(needle))) {
+          console.log(`ℹ️ [WRITE] ${actionName} idempotent hit: "${msg}"`);
+          return { success: true };
+        }
+      }
+
+      const firstError = graphQLErrors[0];
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5000',
+        message: firstError?.message || `GraphQL error while performing ${actionName}`,
+        statusCode: firstError?.code ? Number(firstError.code) : 500,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'twitter',
+        details: { action: actionName, tweetId, errors: graphQLErrors },
+      });
+    }
+
+    console.log(`✅ [WRITE] ${actionName} ok: ${JSON.stringify({ accountId, tweetId })}`);
+    return { success: true };
+  }
+
+  /**
+   * Action Handler: like (FavoriteTweet mutation)
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async like(args, session) {
+    return this.#performEngagement(args, session, 'like', {
+      queryId: GRAPHQL.FavoriteTweet.queryId,
+      operationName: 'FavoriteTweet',
+      buildVariables: (tweetId) => ({ tweet_id: tweetId }),
+    });
+  }
+
+  /**
+   * Action Handler: unlike (UnfavoriteTweet mutation)
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async unlike(args, session) {
+    return this.#performEngagement(args, session, 'unlike', {
+      queryId: GRAPHQL.UnfavoriteTweet.queryId,
+      operationName: 'UnfavoriteTweet',
+      buildVariables: (tweetId) => ({ tweet_id: tweetId }),
+    });
+  }
+
+  /**
+   * Action Handler: retweet (CreateRetweet mutation)
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async retweet(args, session) {
+    return this.#performEngagement(args, session, 'retweet', {
+      queryId: GRAPHQL.CreateRetweet.queryId,
+      operationName: 'CreateRetweet',
+      buildVariables: (tweetId) => ({ tweet_id: tweetId, dark_request: false }),
+    });
+  }
+
+  /**
+   * Action Handler: undo_retweet (DeleteRetweet mutation)
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean }>}
+   */
+  async undoRetweet(args, session) {
+    return this.#performEngagement(args, session, 'undo_retweet', {
+      queryId: GRAPHQL.DeleteRetweet.queryId,
+      operationName: 'DeleteRetweet',
+      buildVariables: (tweetId) => ({ source_tweet_id: tweetId, dark_request: false }),
     });
   }
 

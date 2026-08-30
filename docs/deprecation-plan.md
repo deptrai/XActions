@@ -91,6 +91,8 @@ Xoá theo thứ tự:
 | Twitter Legacy Content Composition (`src/client/Scraper.js` sendTweet/sendQuoteTweet; `src/client/api/tweets.js` sendTweet/sendQuoteTweet; `src/scrapers/twitter/http/actions.js` postTweet/postThread/replyToTweet/quoteTweet/schedulePost) | `deprecated-marked` | Phase 1 (Story 13.2.6 / 13.2.7) | DEV |
 | `src/scrapers/twitter/http/actions.js` `schedulePost` → `twitter:schedule` | `deprecated-marked` | Phase 1 (Story 13.2.7) | DEV |
 | `src/scrapers/twitter/http/index.js` `schedulePost` → `twitter:schedule` | `deprecated-marked` | Phase 1 (Story 13.2.7) | DEV |
+| Twitter Legacy Engagement (`src/client/Scraper.js` likeTweet/unlikeTweet/retweet/unretweet; `src/client/api/tweets.js`; `src/scrapers/twitter/http/engagement.js` likeTweet/unlikeTweet/retweet/unretweet) | `deprecated-marked` | Phase 1 (Story 13.2.8) | DEV |
+| `src/scrapers/twitter/http/engagement.js` like/unlike/retweet/unretweet → `twitter:like` / `twitter:unlike` / `twitter:retweet` / `twitter:undo_retweet` | `deprecated-marked` | Phase 1 (Story 13.2.8) | DEV |
 | `src/client/Scraper.js` (search/getTrends/getExploreTabs and all methods) | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-marked` | Phase 1 (Epic 13.10) | DEV |
 | Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
@@ -118,6 +120,10 @@ Xoá theo thứ tự:
 | `scrapeBookmarks` (Twitter) | `twitter:bookmarks` |
 | `scrapeMedia` (Twitter) | `twitter:media` |
 | `downloadMedia` / `getVideoUrl` (Twitter) | `twitter:download_video` |
+| `likeTweet` / `like` (Twitter) | `twitter:like` |
+| `unlikeTweet` / `unlike` (Twitter) | `twitter:unlike` |
+| `retweet` (Twitter) | `twitter:retweet` |
+| `unretweet` / `undoRetweet` (Twitter) | `twitter:undo_retweet` |
 | `scrapeProfile` | `facebook:profile` |
 | `scrapeFollowers` | `facebook:followers` |
 | `scrapeGroupMembers` | `facebook:group_members` |

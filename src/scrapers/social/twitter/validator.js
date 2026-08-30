@@ -67,6 +67,11 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
       if (['Tweet', 'TweetWithVisibilityResults'].includes(data.delete_tweet?.tweet_results?.result?.__typename)) return true;
       if (data.create_scheduled_tweet?.id || data.create_scheduled_tweet?.rest_id) return true;
       if (data.create_scheduled_tweet?.tweet_results?.result?.rest_id || data.create_scheduled_tweet?.tweet_results?.result?.__typename === 'Tweet') return true;
+      // Engagement mutations (FavoriteTweet / UnfavoriteTweet / CreateRetweet / DeleteRetweet)
+      if (data.favorite_tweet !== undefined || data.unfavorite_tweet !== undefined) return true;
+      if (data.create_retweet !== undefined || data.delete_retweet !== undefined) return true;
+      // GraphQL error responses
+      if (Array.isArray(data.errors) || Array.isArray(root?.errors)) return true;
       // SearchTimeline results
       if (data.search_by_raw_query?.search_timeline?.timeline?.instructions) return true;
       if (data.search_spaces?.search_timeline?.timeline?.instructions) return true;
