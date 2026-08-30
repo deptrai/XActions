@@ -2,19 +2,35 @@
 story_id: '13.2.11'
 epic: 13
 story_key: '13-2-11-twitter-hybrid-list-management'
-status: "review"
+status: "done"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
 last_updated: 2026-08-30
 owner: "DEV"
-reviewed: "pending"
+reviewed: "approved"
 baseline_commit: "45159b6cec4a6b57aa0f4ce5d1a0b58b60a866e2"
 ---
 
 # Story 13.2.11 — Twitter Hybrid List Management
 
-Status: review
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review)  
+**Date:** 2026-08-30  
+**Summary:**
+- 3 actions List Management (`create_list`, `add_list_members`, `remove_list_members`) được đăng ký với `snake_case` chuẩn, `category: 'social'`, `requiresAuth: true`.
+- Tự động chia nhỏ mảng `userIds` thành các batch 100 userIds theo giới hạn của Twitter REST API.
+- Hỗ trợ phân giải `usernames` sang numeric `userIds` thông qua GraphQL query `UserByScreenName`.
+- Write safety tuân thủ đầy đủ delay floor (Gaussian delay 2–5s giữa các batch), `dryRun=true` mặc định, rate governor check `canAccountRequest`.
+- Gắn chú thích `@deprecated` đầy đủ cho các hàm legacy trong `src/client/Scraper.js` và `src/client/api/lists.js`.
+- Test suite đạt độ bao phủ 10/10 tests pass, toàn bộ suite hybrid đạt 109/109 tests pass (100%).
+
+#### Action Items (Resolved)
+- [x] [Review][Patch] Bổ sung REST endpoint constants (`listsCreate`, `listsMembersCreateAll`, `listsMembersDestroyAll`) vào `endpoints.js`.
+- [x] [Review][Patch] Mở rộng validator nhận diện response List objects (`member_count`, `subscriber_count`, `mode`).
 
 ## Story
 
