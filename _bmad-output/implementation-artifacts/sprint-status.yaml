@@ -78,7 +78,7 @@ development_status:
   13-2-7-twitter-hybrid-content-scheduling: review
   13-2-8-twitter-hybrid-engagement-like-retweet: done
   13-2-9-twitter-hybrid-social-graph-follow-block-mute-bookmark: done
-  13-2-10-twitter-hybrid-direct-messaging: review
+  13-2-10-twitter-hybrid-direct-messaging: done
   13-2-11-twitter-hybrid-list-management: backlog
   13-2-12-twitter-hybrid-integration-caller-migration: backlog
   13-3-refactor-facebook-scraper-to-hybrid-architecture: done

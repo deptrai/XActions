@@ -2,19 +2,35 @@
 story_id: '13.2.10'
 epic: 13
 story_key: '13-2-10-twitter-hybrid-direct-messaging'
-status: "review"
+status: "done"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
 last_updated: 2026-08-30
 owner: "DEV"
-reviewed: "pending"
+reviewed: "approved"
 baseline_commit: "9817e8ceb137f5881ac500fa02c08129745415a1"
 ---
 
 # Story 13.2.10 — Twitter Hybrid Direct Messaging
 
-Status: review
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review)  
+**Date:** 2026-08-30  
+**Summary:**
+- 3 actions DM (`send_dm`, `dm_conversations`, `dm_messages`) được triển khai đúng chuẩn `AbstractCrawler` và `ActionDescriptor`.
+- Tự động kiểm tra cờ `can_dm` của recipient và ném lỗi bảo vệ `TWITTER_DM_NOT_ALLOWED` khi bị chặn nhận tin nhắn.
+- Tích hợp write safety đầy đủ: Gaussian delay floor (5–15s cho send_dm, 1–3s cho read), `dryRun=true` mặc định, rate governor check `canAccountRequest`.
+- Hỗ trợ JSON payload formatting trong `TwitterClient.requestRest` cho `dm/new2.json`.
+- Gắn `@deprecated` annotations đầy đủ cho toàn bộ legacy functions trong `src/client/Scraper.js`, `src/client/api/dms.js`, `src/scrapers/twitter/http/dm.js`.
+- Test suite đạt độ bao phủ 10/10 tests pass, toàn bộ suite hybrid đạt 99/99 tests pass.
+
+#### Action Items (Resolved)
+- [x] [Review][Patch] Hỗ trợ serialize JSON payload trong `TwitterClient.requestRest` cho endpoint DM.
+- [x] [Review][Patch] Mở rộng validator nhận diện response DM payloads.
 
 ## Story
 
