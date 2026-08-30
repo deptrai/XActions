@@ -67,9 +67,10 @@ export class TikTokShopPlatformResponseValidator extends AbstractPlatformRespons
       return false;
     }
 
-    // TikTok Shop APIs return a numeric `code`; 0 means success.
-    const code = typeof data?.code === 'number' ? data.code : 0;
-    if (code !== 0) return false;
+    // TikTok Shop APIs return a numeric or string `code`; 0 / "0" / 200 mean success.
+    const rawCode = data?.code;
+    const code = typeof rawCode === 'number' ? rawCode : (typeof rawCode === 'string' ? Number(rawCode) : 0);
+    if (code !== 0 && code !== 200) return false;
 
     const message = typeof data?.message === 'string' ? data.message.toLowerCase() : '';
     if (message && (message.includes('error:') || message.includes('fail:') || message.includes('invalid request'))) {
@@ -104,10 +105,11 @@ export class TikTokShopPlatformResponseValidator extends AbstractPlatformRespons
     const message = typeof data?.message === 'string' ? data.message.toLowerCase() : '';
     if (message && BOT_CHALLENGE_MARKERS.some((m) => message.includes(m))) return true;
 
-    const code = typeof data?.code === 'number' ? data.code : 0;
-    if (code !== 0) {
+    const rawCode = data?.code;
+    const code = typeof rawCode === 'number' ? rawCode : (typeof rawCode === 'string' ? Number(rawCode) : 0);
+    if (code !== 0 && code !== 200) {
       const status = response?.status ?? response?.statusCode ?? 200;
-      // Non-zero code on an otherwise HTTP 200 is treated as a soft block/challenge.
+      // Non-zero/non-200 code on an otherwise HTTP 200 is treated as a soft block/challenge.
       if (status === 200 || status === 0) {
         return true;
       }
@@ -129,7 +131,8 @@ export class TikTokShopPlatformResponseValidator extends AbstractPlatformRespons
     const status = response?.status ?? response?.statusCode;
     if (status === 429) return true;
 
-    const code = typeof data?.code === 'number' ? data.code : 0;
+    const rawCode = data?.code;
+    const code = typeof rawCode === 'number' ? rawCode : (typeof rawCode === 'string' ? Number(rawCode) : 0);
     // TikTok Shop rate-limit codes are usually in the 3xxx/4xxx range.
     if (code >= 3000 && code < 5000) {
       const message = typeof data?.message === 'string' ? data.message.toLowerCase() : '';

@@ -20,7 +20,15 @@ export function normalizeTikTokShopPrice(rawPrice) {
   }
   if (!rawPrice || typeof rawPrice !== 'string') return 0;
 
-  const cleaned = rawPrice.replace(/[^\d.]/g, '');
+  // Vietnamese-style prices may use dots as thousand separators (e.g., "149.000").
+  // Remove all non-digit characters, then treat dots as thousand separators if present.
+  const dotCount = (rawPrice.match(/\./g) || []).length;
+  let cleaned;
+  if (dotCount >= 1) {
+    cleaned = rawPrice.replace(/[^\d.]/g, '').replace(/\./g, '');
+  } else {
+    cleaned = rawPrice.replace(/[^\d.]/g, '');
+  }
   const n = Number(cleaned);
   return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
 }

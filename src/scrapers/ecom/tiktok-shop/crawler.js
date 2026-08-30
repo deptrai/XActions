@@ -46,7 +46,7 @@ export class TikTokShopCrawler extends AbstractCrawler {
       category: 'ecom',
       requiresAuth: false,
       requiredArgs: [],
-      optionalArgs: ['category', 'limit', 'page', 'sortBy'],
+      optionalArgs: ['category', 'limit', 'page'],
       example: { category: 'fashion', limit: 20 },
       outputType: '{ products: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.topProducts(args, session),
@@ -84,8 +84,8 @@ export class TikTokShopCrawler extends AbstractCrawler {
    * @returns {Promise<{ products: import('../../../core/types.js').PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
    */
   async topProducts(args = {}, session = {}) {
-    const limit = Math.max(1, Math.min(Number(args.limit || 20), 100));
-    const page = Math.max(0, Number(args.page || 0));
+    const limit = Math.max(1, Math.min(Number(args.limit || 20) || 0, 100));
+    const page = Math.max(0, Number(args.page || 0) || 0);
 
     const response = await this.client.getTopProducts({
       category: args.category,
@@ -96,7 +96,8 @@ export class TikTokShopCrawler extends AbstractCrawler {
       requiresAuth: false,
     });
 
-    const productsRaw = response?.data?.products || response?.products || [];
+    let productsRaw = response?.data?.products || response?.products || [];
+    if (!Array.isArray(productsRaw)) productsRaw = [];
     const products = [];
 
     for (const raw of productsRaw) {
@@ -108,8 +109,8 @@ export class TikTokShopCrawler extends AbstractCrawler {
       if (products.length >= limit) break;
     }
 
-    if (this.store && typeof /** @type {any} */ (this.store).savePosts === 'function' && products.length > 0) {
-      await /** @type {any} */ (this.store).savePosts(products).catch(() => {});
+    if (this.store && typeof this.store.storeBatch === 'function' && products.length > 0) {
+      await this.store.storeBatch(products, { upsert: true }).catch(() => {});
     }
 
     const pageInfo = buildTikTokShopPageInfo(response, products.length);
@@ -156,8 +157,8 @@ export class TikTokShopCrawler extends AbstractCrawler {
       });
     }
 
-    if (this.store && typeof /** @type {any} */ (this.store).savePosts === 'function') {
-      await /** @type {any} */ (this.store).savePosts([product]).catch(() => {});
+    if (this.store && typeof this.store.storeBatch === 'function') {
+      await this.store.storeBatch([product], { upsert: true }).catch(() => {});
     }
 
     return { product };
@@ -170,7 +171,7 @@ export class TikTokShopCrawler extends AbstractCrawler {
    * @returns {Promise<{ products: import('../../../core/types.js').PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
    */
   async searchProducts(args = {}, session = {}) {
-    const keyword = typeof args?.keyword === 'string' ? args.keyword.trim() : '';
+    const keyword = args?.keyword !== undefined && args?.keyword !== null ? String(args.keyword).trim() : '';
     if (!keyword) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
@@ -182,8 +183,8 @@ export class TikTokShopCrawler extends AbstractCrawler {
       });
     }
 
-    const limit = Math.max(1, Math.min(Number(args.limit || 20), 100));
-    const page = Math.max(0, Number(args.page || 0));
+    const limit = Math.max(1, Math.min(Number(args.limit || 20) || 0, 100));
+    const page = Math.max(0, Number(args.page || 0) || 0);
 
     const response = await this.client.searchProducts({
       keyword,
@@ -194,7 +195,8 @@ export class TikTokShopCrawler extends AbstractCrawler {
       requiresAuth: false,
     });
 
-    const productsRaw = response?.data?.products || response?.products || [];
+    let productsRaw = response?.data?.products || response?.products || [];
+    if (!Array.isArray(productsRaw)) productsRaw = [];
     const products = [];
 
     for (const raw of productsRaw) {
@@ -206,8 +208,8 @@ export class TikTokShopCrawler extends AbstractCrawler {
       if (products.length >= limit) break;
     }
 
-    if (this.store && typeof /** @type {any} */ (this.store).savePosts === 'function' && products.length > 0) {
-      await /** @type {any} */ (this.store).savePosts(products).catch(() => {});
+    if (this.store && typeof this.store.storeBatch === 'function' && products.length > 0) {
+      await this.store.storeBatch(products, { upsert: true }).catch(() => {});
     }
 
     const pageInfo = buildTikTokShopPageInfo(response, products.length);

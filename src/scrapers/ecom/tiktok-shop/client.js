@@ -72,16 +72,6 @@ export class TikTokShopClient extends AbstractApiClient {
   }
 
   /**
-   * @returns {TikTokBrowserBridge}
-   */
-  #getLazyBridge() {
-    if (!this.#ownedBridge) {
-      this.#ownedBridge = this.#createBridge();
-    }
-    return this.#ownedBridge;
-  }
-
-  /**
    * Sign a TikTok Shop request through the browser-as-signer bridge.
    * Falls back to a stub when the bridge is unavailable.
    *
@@ -103,10 +93,22 @@ export class TikTokShopClient extends AbstractApiClient {
     }
 
     if (this.signerBridge) {
-      const signed = await this.signerBridge.signUrl(url, {
-        userAgent: this.#defaultUserAgent(),
-        cookies: this.cookies,
-      });
+      let signed;
+      try {
+        signed = await this.signerBridge.signUrl(url, {
+          userAgent: this.#defaultUserAgent(),
+          cookies: this.cookies,
+        });
+      } catch (err) {
+        throw new PlatformError({
+          type: ErrorTypes.AUTH_EXPIRED,
+          code: 'XACT_4030',
+          message: `TikTok Shop signing failed: ${err?.message || err}`,
+          suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+          platform: 'tiktokshop',
+          cause: err,
+        });
+      }
       return {
         query: {
           ...signed.query,
@@ -179,6 +181,13 @@ export class TikTokShopClient extends AbstractApiClient {
   buildApiUrl(endpointPath, params = {}) {
     const path = endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`;
     const parsed = new URL(`${this.baseUrl}${path}`);
+
+    // The browser-as-signer bridge matches requests by `aid` (app/device id).
+    // Include a default aid so signUrl can intercept the outbound request.
+    if (!parsed.searchParams.has('aid')) {
+      parsed.searchParams.set('aid', '1988');
+    }
+
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined || v === null) continue;
       parsed.searchParams.set(k, String(v));
@@ -195,8 +204,8 @@ export class TikTokShopClient extends AbstractApiClient {
   async getTopProducts(params = {}, options = {}) {
     const query = {
       category: params.category || '',
-      limit: String(Math.max(1, Math.min(Number(params.limit || 20), 100))),
-      page: String(Math.max(0, Number(params.page || 0))),
+      limit: String(Math.max(1, Math.min(Number(params.limit || 20) || 0, 100))),
+      page: String(Math.max(0, Number(params.page || 0) || 0)),
       sort_by: params.sortBy || 'sales',
     };
     return this.requestTikTokShopApi('GET', '/api/v1/oec/affiliate/product/list', query, options);
@@ -223,8 +232,8 @@ export class TikTokShopClient extends AbstractApiClient {
   async searchProducts(params = {}, options = {}) {
     const query = {
       keyword: params.keyword || '',
-      limit: String(Math.max(1, Math.min(Number(params.limit || 20), 100))),
-      page: String(Math.max(0, Number(params.page || 0))),
+      limit: String(Math.max(1, Math.min(Number(params.limit || 20) || 0, 100))),
+      page: String(Math.max(0, Number(params.page || 0) || 0)),
       sort_by: params.sortBy || 'relevance',
     };
     return this.requestTikTokShopApi('GET', '/api/v1/oec/affiliate/product/search', query, options);

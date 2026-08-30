@@ -27,7 +27,7 @@ import { TikTokShopCrawler } from './crawler.js';
  */
 export async function scrapeTikTokShop(action, args, options = {}) {
   const client = new TikTokShopClient(options);
-  const crawler = new TikTokShopCrawler({ client, ...options });
+  const crawler = new TikTokShopCrawler({ client, store: options.store, ...options });
 
   try {
     return await crawler.start({ action, args, session: options.session });

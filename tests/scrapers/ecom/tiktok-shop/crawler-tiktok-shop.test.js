@@ -310,4 +310,26 @@ describe('Story 16.2 — TikTok Shop Product & Sales Scraper', () => {
     const pkg = JSON.parse(await fs.readFile('package.json', 'utf8'));
     expect(pkg.exports['./scrapers/ecom/tiktok-shop']).toBe('./src/scrapers/ecom/tiktok-shop/index.js');
   });
+
+  it('scrapeTikTokShop convenience helper works end-to-end', async () => {
+    process.env.TIKTOK_BROWSER_SIGN = 'false';
+    const { scrapeTikTokShop } = await import('../../../../src/scrapers/ecom/tiktok-shop/index.js');
+
+    const result = await scrapeTikTokShop(
+      'top_products',
+      { category: 'fashion', limit: 5 },
+      {
+        baseUrl: serverUrl,
+        store: createStore(),
+        requiresProxy: false,
+        autoClose: true,
+      }
+    );
+
+    expect(result).toHaveProperty('products');
+    expect(Array.isArray(result.products)).toBe(true);
+    expect(result.products.length).toBeGreaterThan(0);
+    expect(result.products[0].platform).toBe('tiktokshop');
+    expect(result.products[0].category).toBe('ecom');
+  });
 });

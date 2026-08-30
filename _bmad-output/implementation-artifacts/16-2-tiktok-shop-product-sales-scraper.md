@@ -154,6 +154,56 @@ Story 16.2 triển khai TikTok Shop E-Commerce crawler trên nền tảng `Abstr
 
 ---
 
+### Review Findings
+
+- [x] [Review][Patch] Validator treats `code: 200` as a bot challenge [src/scrapers/ecom/tiktok-shop/validator.js:107-112]
+  `isBotChallenge()` returns `true` for any non-zero `code` on HTTP 200. AC-3 explicitly requires `code !== 0 && code !== 200`; a success payload with `code: 200` therefore throws `XACT_4030` instead of being accepted. **Fixed**: validator now treats `0` and `200` as success, and coerces string codes to numbers.
+
+- [x] [Review][Patch] Crawler calls `savePosts()` which does not exist on the store [src/scrapers/ecom/tiktok-shop/crawler.js:111-112,159-160,209-210]
+  `AbstractStore` and `PrismaStore` implement `storeBatch`/`storeContent`, not `savePosts`. The persistence branch is silently skipped and `PostItem` records are never saved to PostgreSQL, violating AC-4. **Fixed**: replaced all `savePosts` calls with `storeBatch(products, { upsert: true })`.
+
+- [x] [Review][Patch] TikTok Shop URLs lack `aid` device param so the signer bridge cannot match them [src/scrapers/social/tiktok/signer-bridge.js:411, src/scrapers/ecom/tiktok-shop/client.js:179-186]
+  `TikTokBrowserBridge.signUrl()` waits for a request whose URL contains the `aid` query value. `TikTokShopClient.buildApiUrl()` does not attach `aid`, so the listener never fires and signing either times out or returns no tokens. **Fixed**: `buildApiUrl` now injects `aid=1988` when not present.
+
+- [x] [Review][Patch] `top_products` descriptor lists an unapproved `sortBy` optional arg [src/scrapers/ecom/tiktok-shop/crawler.js:49]
+  AC-1 table defines `top_products` `optionalArgs` as `['category', 'limit', 'page']`; the code adds `sortBy`. **Fixed**: removed `sortBy` from `top_products` optionalArgs.
+
+- [x] [Review][Patch] Price parser fails on dot thousand separators [src/scrapers/ecom/tiktok-shop/normalize-product.js:23]
+  `rawPrice.replace(/[^\d.]/g, '')` keeps all dots. For Vietnamese prices like `"149.000"` it returns `149` instead of `149000`; for `"149.000.000"` it returns `NaN` and falls back to `0`. **Fixed**: treats dots as thousand separators when present, then removes them before parsing.
+
+- [x] [Review][Patch] String API `code` values bypass validation [src/scrapers/ecom/tiktok-shop/validator.js:71,107,132]
+  `typeof data?.code === 'number'` is `false` for `"40001"`, so the validator falls back to `code = 0` and treats error payloads as valid. **Fixed**: coerces string codes to `Number` consistently across `isValidPayload`, `isBotChallenge`, and `isRateLimit`.
+
+- [x] [Review][Patch] `productsRaw` is not guaranteed to be an array [src/scrapers/ecom/tiktok-shop/crawler.js:99,197]
+  If the upstream API returns `products: null` or `products: {}`, `for (const raw of productsRaw)` throws an unhandled `TypeError`. **Fixed**: wraps `productsRaw` with `Array.isArray` fallback to `[]`.
+
+- [x] [Review][Patch] Numeric search keywords are rejected [src/scrapers/ecom/tiktok-shop/crawler.js:173]
+  `typeof args?.keyword === 'string'` discards numeric product IDs such as `12345`. The keyword should be coerced with `String()`. **Fixed**: coerces keyword with `String()`.
+
+- [x] [Review][Patch] Non-numeric `page` argument becomes the string `"NaN"` [src/scrapers/ecom/tiktok-shop/client.js:199,227, src/scrapers/ecom/tiktok-shop/crawler.js:88,186]
+  `Number('abc')` is `NaN`; `Math.max(0, NaN)` is `NaN`, which `String()` converts to `"NaN"` and sends to the API. **Fixed**: added `|| 0` fallback after `Number()` for `limit` and `page` in both client and crawler.
+
+- [x] [Review][Patch] `TikTokShopClient.sign()` does not wrap bridge errors [src/scrapers/ecom/tiktok-shop/client.js:105-116]
+  If `signerBridge.signUrl()` throws, the raw error propagates rather than being converted into a `PlatformError` or falling back to stub signing. **Fixed**: wrapped `signerBridge.signUrl()` in try/catch and throws a `PlatformError` with `XACT_4030`.
+
+- [x] [Review][Patch] `#getLazyBridge()` is dead code [src/scrapers/ecom/tiktok-shop/client.js:77-82]
+  The private method is defined but never referenced elsewhere in the class. **Fixed**: removed `#getLazyBridge()`.
+
+- [x] [Review][Patch] Missing `schemas/tiktokshop/ecom.json` for metadata validation [schemas/tiktokshop/ecom.json missing]
+  No schema is registered for `platform: 'tiktokshop', category: 'ecom'`. `MetadataSchemaRegistry` falls back to `{ valid: true }`, so `PrismaStore` cannot enforce the TikTok Shop metadata contract. **Fixed**: added `schemas/tiktokshop/ecom.json`.
+
+- [x] [Review][Patch] `scrapeTikTokShop` helper is untested [src/scrapers/ecom/tiktok-shop/index.js:28-39]
+  The package subpath export convenience function has zero direct test coverage; a regression in lifecycle or delegation would not be caught. **Fixed**: added dedicated test, fixed `scrapeTikTokShop` to forward `store` to crawler.
+
+- [x] [Review][Defer] Missing TypeScript declarations for TikTok Shop classes [types/index.d.ts]
+  `TikTokShopClient`, `TikTokShopCrawler`, and `scrapeTikTokShop` are not declared. The project as a whole has not yet exported e-commerce scraper types, so this is pre-existing/out-of-scope for this story.
+
+- [x] [Review][Defer] No telemetry, checkpoint, or Redis stream publishing in `TikTokShopCrawler` [src/scrapers/ecom/tiktok-shop/crawler.js]
+  Other crawlers publish crawl events and save checkpoints. This is not required by any AC of Story 16.2 and can be added when the operational observability layer is standardized.
+
+- [x] [Review][Defer] No cursor-based pagination support [src/scrapers/ecom/tiktok-shop/crawler.js, client.js]
+  `pageInfo.end_cursor` is returned but `cursor`/`next_cursor` cannot be passed back into `getTopProducts`/`searchProducts`. AC-1 only requires `page`/`limit` pagination.
+
 ## Dev Agent Record
 
 ### Implementation Plan
