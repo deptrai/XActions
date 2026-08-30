@@ -262,6 +262,7 @@ export async function scrape(platform, action, options = {}) {
 
     const client = new TwitterClient({
       baseUrl: options.baseUrl,
+      proxy: options.proxy,
       proxyPool: options.proxyPool,
       proxyProvider: options.proxyProvider,
       governor: options.governor,
@@ -271,6 +272,7 @@ export async function scrape(platform, action, options = {}) {
       tokenRing: options.tokenRing,
       signerPool: options.signerPool,
       requiresAuth: options.requiresAuth,
+      requiresProxy: options.requiresProxy,
       timeout: options.timeout,
     });
 
