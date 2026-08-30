@@ -1,5 +1,5 @@
 # generated: 2026-08-27T06:00:00.000Z
-# last_updated: 2026-08-30T07:22:44Z
+# last_updated: 2026-08-30T09:53:44Z
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-27T06:00:00.000Z
-last_updated: 2026-08-30T07:22:44Z
+last_updated: 2026-08-30T09:53:44Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -111,7 +111,7 @@ development_status:
   # --- Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop) ---
   epic-16: in-progress
   16-1-shopee-search-product-review-scraper-tls-spoofing: done
-  16-2-tiktok-shop-product-sales-scraper: ready-for-dev
+  16-2-tiktok-shop-product-sales-scraper: review
   epic-16-retrospective: optional
 
   # --- Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan) ---

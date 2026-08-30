@@ -2,7 +2,7 @@
 story_id: '16.2'
 epic: 16
 story_key: '16-2-tiktok-shop-product-sales-scraper'
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 3"
 created: 2026-08-30
 updated: 2026-08-30
@@ -14,7 +14,7 @@ baseline_commit: "3bf943541a7a3a49cc0f1cbfd726a99175d2748e"
 
 # Story 16.2 — TikTok Shop Product & Sales Scraper
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -136,21 +136,21 @@ Story 16.2 triển khai TikTok Shop E-Commerce crawler trên nền tảng `Abstr
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 (AC-1, AC-2): Xây dựng `TikTokShopClient` & `TikTokShopPlatformResponseValidator`
-  - [ ] 1.1 Tạo `src/scrapers/ecom/tiktok-shop/client.js` kết nối `TikTokBrowserBridge`
-  - [ ] 1.2 Tạo `src/scrapers/ecom/tiktok-shop/validator.js`
-- [ ] Task 2 (AC-1, AC-4): Xây dựng `normalize-product.js`
-  - [ ] 2.1 Chuẩn hóa sản phẩm TikTok Shop thành `PostItem` (`category: 'ecom'`)
-- [ ] Task 3 (AC-1, AC-2, AC-3): Xây dựng `TikTokShopCrawler`
-  - [ ] 3.1 Đăng ký 3 actions `top_products`, `product_detail`, `search_products`
-  - [ ] 3.2 Triển khai handlers gọi TikTok Shop APIs
-- [ ] Task 4 (AC-5): Tích hợp Dispatcher & Package Exports
-  - [ ] 4.1 Tạo `src/scrapers/ecom/tiktok-shop/index.js`
-  - [ ] 4.2 Bổ sung nhánh `tiktokshop`/`tiktok_shop` vào `src/scrapers/index.js`
-  - [ ] 4.3 Khai báo export `"./scrapers/ecom/tiktok-shop"` trong `package.json`
-- [ ] Task 5 (AC-6): TDD Test Suite & Hoàn thiện
-  - [ ] 5.1 Viết `tests/scrapers/ecom/tiktok-shop/crawler-tiktok-shop.test.js`
-  - [ ] 5.2 Chạy pass test suite và sync sprint-status
+- [x] Task 1 (AC-1, AC-2): Xây dựng `TikTokShopClient` & `TikTokShopPlatformResponseValidator`
+  - [x] 1.1 Tạo `src/scrapers/ecom/tiktok-shop/client.js` kết nối `TikTokBrowserBridge`
+  - [x] 1.2 Tạo `src/scrapers/ecom/tiktok-shop/validator.js`
+- [x] Task 2 (AC-1, AC-4): Xây dựng `normalize-product.js`
+  - [x] 2.1 Chuẩn hóa sản phẩm TikTok Shop thành `PostItem` (`category: 'ecom'`)
+- [x] Task 3 (AC-1, AC-2, AC-3): Xây dựng `TikTokShopCrawler`
+  - [x] 3.1 Đăng ký 3 actions `top_products`, `product_detail`, `search_products`
+  - [x] 3.2 Triển khai handlers gọi TikTok Shop APIs
+- [x] Task 4 (AC-5): Tích hợp Dispatcher & Package Exports
+  - [x] 4.1 Tạo `src/scrapers/ecom/tiktok-shop/index.js`
+  - [x] 4.2 Bổ sung nhánh `tiktokshop`/`tiktok_shop` vào `src/scrapers/index.js`
+  - [x] 4.3 Khai báo export `"./scrapers/ecom/tiktok-shop"` trong `package.json`
+- [x] Task 5 (AC-6): TDD Test Suite & Hoàn thiện
+  - [x] 5.1 Viết `tests/scrapers/ecom/tiktok-shop/crawler-tiktok-shop.test.js`
+  - [x] 5.2 Chạy pass test suite và sync sprint-status
 
 ---
 
@@ -168,7 +168,16 @@ Story 16.2 triển khai TikTok Shop E-Commerce crawler trên nền tảng `Abstr
 
 ### Completion Notes
 
-*(Để điền sau khi hoàn thành dev.)*
+- Implemented `TikTokShopClient` extending `AbstractApiClient` with `got-scraping` transport and `TikTokBrowserBridge` signing fallback.
+- Implemented `TikTokShopPlatformResponseValidator` to detect `code !== 0`, captcha/verify challenge, rate-limit, and HTML responses.
+- Implemented `normalize-product.js` to map TikTok Shop products to canonical `PostItem` with `category: 'ecom'` and namespaced IDs (`tiktokshop:${productId}`).
+- Implemented `TikTokShopCrawler` with 3 actions: `top_products`, `product_detail`, `search_products`.
+- Integrated `tiktokshop` / `tiktok_shop` into `src/scrapers/index.js` unified dispatcher.
+- Added `package.json` export `"./scrapers/ecom/tiktok-shop"`.
+- Wrote red-phase test suite `tests/scrapers/ecom/tiktok-shop/crawler-tiktok-shop.test.js`; 9/9 pass.
+- Fixed type-check issues introduced by TikTok Shop code (`proxy`, `resp.data`, `savePosts`, `authorAvatar` typing).
+- Targeted scraper tests pass (33/33) for `tests/scrapers/ecom` and `tests/scrapers/social/tiktok`.
+- Full `npx vitest run` still times out on unrelated `tests/scrapers/facebook-index.test.js`.
 
 ### File List
 
@@ -176,6 +185,7 @@ Story 16.2 triển khai TikTok Shop E-Commerce crawler trên nền tảng `Abstr
 - `src/scrapers/index.js`
 - `package.json`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `src/core/types.js` (`authorAvatar` JSDoc allows `string | null`)
 
 #### NEW
 - `src/scrapers/ecom/tiktok-shop/crawler.js`
@@ -184,3 +194,12 @@ Story 16.2 triển khai TikTok Shop E-Commerce crawler trên nền tảng `Abstr
 - `src/scrapers/ecom/tiktok-shop/normalize-product.js`
 - `src/scrapers/ecom/tiktok-shop/index.js`
 - `tests/scrapers/ecom/tiktok-shop/crawler-tiktok-shop.test.js`
+
+---
+
+## Change Log
+
+| Date | Author | Change |
+|---|---|---|
+| 2026-08-30 | nich (@nichxbt) | Initial implementation of Story 16.2 TikTok Shop Product & Sales Scraper |
+| 2026-08-30 | nich (@nichxbt) | Fix type-check issues and mark story `review` |
