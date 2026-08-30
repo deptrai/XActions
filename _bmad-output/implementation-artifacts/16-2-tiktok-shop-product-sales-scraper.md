@@ -2,7 +2,7 @@
 story_id: '16.2'
 epic: 16
 story_key: '16-2-tiktok-shop-product-sales-scraper'
-status: "review"
+status: "done"
 phase: "Phase 3"
 created: 2026-08-30
 updated: 2026-08-30
@@ -14,7 +14,7 @@ baseline_commit: "3bf943541a7a3a49cc0f1cbfd726a99175d2748e"
 
 # Story 16.2 — TikTok Shop Product & Sales Scraper
 
-Status: review
+Status: done
 
 ## Story
 
