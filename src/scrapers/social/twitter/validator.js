@@ -61,10 +61,10 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
       if (Array.isArray(data.list_members_timeline?.timeline?.instructions)) return true;
       if (Array.isArray(data.community_members_timeline?.timeline?.instructions)) return true;
       // CreateTweet / DeleteTweet mutations
-      if (data.create_tweet?.tweet_results?.result?.__typename === 'Tweet') return true;
-      if (data.create_tweet?.tweet_result?.result?.__typename === 'Tweet') return true;
+      if (['Tweet', 'TweetWithVisibilityResults'].includes(data.create_tweet?.tweet_results?.result?.__typename)) return true;
+      if (['Tweet', 'TweetWithVisibilityResults'].includes(data.create_tweet?.tweet_result?.result?.__typename)) return true;
       if (data.create_tweet?.rest_id || data.create_tweet?.legacy?.id_str) return true;
-      if (data.delete_tweet?.tweet_results?.result?.__typename === 'Tweet') return true;
+      if (['Tweet', 'TweetWithVisibilityResults'].includes(data.delete_tweet?.tweet_results?.result?.__typename)) return true;
       // SearchTimeline results
       if (data.search_by_raw_query?.search_timeline?.timeline?.instructions) return true;
       if (data.search_spaces?.search_timeline?.timeline?.instructions) return true;

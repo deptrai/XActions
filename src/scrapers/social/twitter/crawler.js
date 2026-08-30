@@ -26,7 +26,7 @@ import {
 } from './normalize-list-community-space.js';
 import { buildAdvancedQuery } from '../../twitter/http/search.js';
 import { parseTweetData } from '../../twitter/http/tweets.js';
-import { DEFAULT_FEATURES, GRAPHQL } from '../../twitter/http/endpoints.js';
+import { DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES, GRAPHQL } from '../../twitter/http/endpoints.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { isValidCategory } from '../../../core/types.js';
 import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
@@ -2076,7 +2076,22 @@ export class TwitterCrawler extends AbstractCrawler {
 
     this.#validateTweetText(text, { premium });
 
+    if (mediaIds.length > 4) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Too many media IDs (${mediaIds.length}/4)`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
     const { accountId } = await this.#resolveSession(session);
+
+    const targetTweetId = sourceMethod !== 'post'
+      ? resolveTweetId(args.tweetId || args.url || '')
+      : undefined;
 
     const baseVariables = {
       tweet_text: text,
@@ -2088,22 +2103,25 @@ export class TwitterCrawler extends AbstractCrawler {
       semantic_annotation_ids: [],
     };
 
-    const variables = this.#buildComposeVariables(baseVariables, args, sourceMethod);
+    const variables = this.#buildComposeVariables(baseVariables, sourceMethod, targetTweetId);
+    const extraMetadata = this.#buildComposeMetadata(sourceMethod, targetTweetId, mediaIds);
 
     if (dryRun) {
-      console.log(`🔄 [DRY RUN] ${sourceMethod}: ${JSON.stringify({ text, mediaIds, sourceMethod })}`);
-      const dryPost = this.#createDryRunPostItem({ text, sourceMethod, args });
+      console.log(`🔄 [DRY RUN] ${sourceMethod}: ${JSON.stringify({ text, mediaIds: mediaIds.length, sourceMethod, targetTweetId })}`);
+      const dryPost = this.#createDryRunPostItem({ text, sourceMethod, extraMetadata });
       return { tweet: dryPost };
     }
 
     await gaussianDelay(3000, 7000);
+
+    console.log(`🔄 [WRITE] ${sourceMethod}: ${JSON.stringify({ accountId, textLength: text.length, hasMedia: mediaIds.length > 0, dryRun })}`);
 
     const response = await this.client.requestGraphQl(
       GRAPHQL.CreateTweet.queryId,
       GRAPHQL.CreateTweet.operationName,
       variables,
       DEFAULT_FEATURES,
-      undefined,
+      DEFAULT_FIELD_TOGGLES,
       {
         accountId,
         requiresAuth: true,
@@ -2111,6 +2129,21 @@ export class TwitterCrawler extends AbstractCrawler {
         cookies: session?.cookies,
       }
     );
+
+    const graphQLErrors = Array.isArray(response?.errors) ? response.errors : (Array.isArray(response?.data?.errors) ? response.data.errors : null);
+    if (graphQLErrors) {
+      const firstError = graphQLErrors[0] || {};
+      const upstreamMessage = firstError.message || String(firstError);
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5000',
+        message: `Twitter CreateTweet error: ${upstreamMessage}`,
+        statusCode: firstError.code ? Number(firstError.code) : 500,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'twitter',
+        details: { sourceMethod, errors: graphQLErrors },
+      });
+    }
 
     const rawResult =
       response?.data?.create_tweet?.tweet_results?.result ??
@@ -2120,7 +2153,7 @@ export class TwitterCrawler extends AbstractCrawler {
 
     const post = tweetToPostItem(rawResult, {
       sourceMethod,
-      extraMetadata: this.#buildComposeMetadata(args, sourceMethod),
+      extraMetadata,
     });
 
     if (!post) {
@@ -2133,6 +2166,8 @@ export class TwitterCrawler extends AbstractCrawler {
         platform: 'twitter',
       });
     }
+
+    console.log(`✅ [WRITE] ${sourceMethod} ok: ${JSON.stringify({ accountId, tweetId: post.externalId, textLength: text.length, hasMedia: mediaIds.length > 0 })}`);
 
     await this.#persistPostItems([post]);
     await this.#emitCheckpointAndStream({
@@ -2153,7 +2188,7 @@ export class TwitterCrawler extends AbstractCrawler {
   #validateTweetText(text, options = {}) {
     const premium = Boolean(options.premium);
     const limit = premium ? 25_000 : 280;
-    if (typeof text !== 'string' || text.length === 0) {
+    if (typeof text !== 'string' || text.trim().length === 0) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
         code: 'XACT_4001',
@@ -2178,24 +2213,22 @@ export class TwitterCrawler extends AbstractCrawler {
   /**
    * Build CreateTweet variables for post / reply / quote.
    * @param {Record<string, any>} baseVariables
-   * @param {Record<string, any>} args
    * @param {'post' | 'reply' | 'quote'} sourceMethod
+   * @param {string | undefined} targetTweetId
    * @returns {Record<string, any>}
    */
-  #buildComposeVariables(baseVariables, args, sourceMethod) {
+  #buildComposeVariables(baseVariables, sourceMethod, targetTweetId) {
     const variables = { ...baseVariables };
 
-    if (sourceMethod === 'reply') {
-      const tweetId = resolveTweetId(args.tweetId || args.url || '');
+    if (sourceMethod === 'reply' && targetTweetId) {
       variables.reply = {
-        in_reply_to_tweet_id: tweetId,
+        in_reply_to_tweet_id: targetTweetId,
         exclude_reply_user_ids: [],
       };
     }
 
-    if (sourceMethod === 'quote') {
-      const tweetId = resolveTweetId(args.tweetId || args.url || '');
-      variables.attachment_url = `https://x.com/i/status/${tweetId}`;
+    if (sourceMethod === 'quote' && targetTweetId) {
+      variables.attachment_url = `https://x.com/i/status/${targetTweetId}`;
     }
 
     return variables;
@@ -2203,20 +2236,21 @@ export class TwitterCrawler extends AbstractCrawler {
 
   /**
    * Build extra metadata for post / reply / quote PostItem.
-   * @param {Record<string, any>} args
    * @param {'post' | 'reply' | 'quote'} sourceMethod
+   * @param {string | undefined} targetTweetId
+   * @param {string[]} mediaIds
    * @returns {Record<string, any>}
    */
-  #buildComposeMetadata(args, sourceMethod) {
+  #buildComposeMetadata(sourceMethod, targetTweetId, mediaIds) {
     const metadata = {};
-    if (sourceMethod === 'reply') {
-      metadata.replyToTweetId = resolveTweetId(args.tweetId || args.url || '');
+    if (sourceMethod === 'reply' && targetTweetId) {
+      metadata.replyToTweetId = targetTweetId;
     }
-    if (sourceMethod === 'quote') {
-      metadata.quotedTweetId = resolveTweetId(args.tweetId || args.url || '');
+    if (sourceMethod === 'quote' && targetTweetId) {
+      metadata.quotedTweetId = targetTweetId;
     }
-    if (Array.isArray(args.mediaIds) && args.mediaIds.length > 0) {
-      metadata.mediaIds = args.mediaIds;
+    if (mediaIds.length > 0) {
+      metadata.mediaIds = mediaIds;
     }
     return metadata;
   }
@@ -2226,10 +2260,9 @@ export class TwitterCrawler extends AbstractCrawler {
    * @param {Record<string, any>} params
    * @returns {import('../../../core/types.js').PostItem}
    */
-  #createDryRunPostItem({ text, sourceMethod, args }) {
+  #createDryRunPostItem({ text, sourceMethod, extraMetadata }) {
     const now = new Date();
     const externalId = `dry-run-${sourceMethod}-${now.getTime()}`;
-    const metadata = this.#buildComposeMetadata(args, sourceMethod);
 
     return /** @type {import('../../../core/types.js').PostItem} */ ({
       id: `twitter:${externalId}`,
@@ -2239,7 +2272,7 @@ export class TwitterCrawler extends AbstractCrawler {
       authorId: '',
       authorName: '',
       content: text,
-      mediaUrls: Array.isArray(args.mediaIds) ? [] : undefined,
+      mediaUrls: [],
       likesCount: 0,
       repostsCount: 0,
       repliesCount: 0,
@@ -2250,7 +2283,7 @@ export class TwitterCrawler extends AbstractCrawler {
         tweetId: externalId,
         dryRun: true,
         sourceMethod,
-        ...metadata,
+        ...extraMetadata,
       },
     });
   }

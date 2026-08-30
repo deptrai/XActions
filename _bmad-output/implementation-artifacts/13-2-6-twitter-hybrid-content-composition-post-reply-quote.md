@@ -283,10 +283,16 @@ Legacy functions `postTweet`, `postThread`, `postReply`, `sendTweet`, `sendQuote
 
 - `post`, `reply`, `quote` actions registered with correct descriptors.
 - `composeContent` handles post, reply, quote, dry-run, text validation, 3–7s delay, and `CreateTweet` GraphQL mutation.
-- `TwitterPlatformResponseValidator.isValidPayload` now recognizes CreateTweet/DeleteTweet mutation responses.
+- `TwitterPlatformResponseValidator.isValidPayload` now recognizes CreateTweet/DeleteTweet mutation responses, including `TweetWithVisibilityResults`.
 - `normalize-tweet.js` defaults `metadata.lang` to `'und'` to satisfy `schemas/twitter/social.json`.
 - `@deprecated` markers added for `sendTweet`, `sendQuoteTweet`, `postTweet`, `postThread`, `replyToTweet`, `quoteTweet`, `schedulePost`.
 - `docs/deprecation-plan.md` updated.
 - Target test file `tests/scrapers/social/twitter/crawler-content-composition.test.js` passes 8/8.
 - All `tests/scrapers/social/twitter/` tests pass 50/50.
-- Full suite has 15 pre-existing failures (Facebook/API/CLI); no new Twitter regressions.
+- Post-review patches applied:
+  - `DEFAULT_FIELD_TOGGLES` passed explicitly to `requestGraphQl`.
+  - Added structured write telemetry logs with `{ action, accountId, textLength, hasMedia, dryRun }`.
+  - Enforced max 4 media IDs and whitespace-only text rejection.
+  - Resolved `tweetId` once and reused in variables + metadata.
+  - Surfaced `response.errors` as `PlatformError` instead of generic parse error.
+  - Validator accepts `TweetWithVisibilityResults` for mutation responses.
