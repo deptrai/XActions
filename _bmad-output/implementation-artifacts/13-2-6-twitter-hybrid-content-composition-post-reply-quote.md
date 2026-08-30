@@ -2,19 +2,19 @@
 story_id: '13.2.6'
 epic: 13
 story_key: '13-2-6-twitter-hybrid-content-composition-post-reply-quote'
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
 last_updated: 2026-08-30
 owner: "DEV"
 reviewed: "pending"
-baseline_commit: "b541ec78"
+baseline_commit: "1894ff49d575f6c34f6f30e8e742251c83e02bd7"
 ---
 
 # Story 13.2.6 — Twitter Hybrid Content Composition (Post, Reply, Quote)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -267,8 +267,26 @@ Legacy functions `postTweet`, `postThread`, `postReply`, `sendTweet`, `sendQuote
 
 ### Implementation Plan
 
-(TBD — to be filled during dev-story)
+1. Register `post`, `reply`, `quote` actions in `TwitterCrawler` with correct `ActionDescriptor` (requiresAuth: true, dryRun default true, optional mediaIds/premium/sensitive).
+2. Implement `composeContent(args, session, sourceMethod)` handler:
+   - Validate tweet text (non-empty, ≤ 280 / 25,000 for premium).
+   - Build `CreateTweet` variables; add `reply` or `attachment_url` for reply/quote.
+   - Dry-run gate returns preview `PostItem` without network call and logs `[DRY RUN]`.
+   - For real calls, apply `gaussianDelay(3000, 7000)` then call `TwitterClient.requestGraphQl` with `GRAPHQL.CreateTweet`.
+   - Parse response via `tweetToPostItem` and enrich metadata with `sourceMethod`, `tweetId`, `replyToTweetId`/`quotedTweetId`, `dryRun`.
+3. Update `TwitterPlatformResponseValidator` to recognize `create_tweet.tweet_results.result` as a valid payload.
+4. Update `normalize-tweet.js` to default `lang` to `'und'` so schema validation passes for synthetic/created tweets.
+5. Add `@deprecated` JSDoc tags to legacy functions in `src/client/Scraper.js`, `src/client/api/tweets.js`, and `src/scrapers/twitter/http/actions.js`.
+6. Update `docs/deprecation-plan.md` with the new content-composition mapping and status.
 
 ### Completion Notes
 
-(TBD — to be filled during dev-story)
+- `post`, `reply`, `quote` actions registered with correct descriptors.
+- `composeContent` handles post, reply, quote, dry-run, text validation, 3–7s delay, and `CreateTweet` GraphQL mutation.
+- `TwitterPlatformResponseValidator.isValidPayload` now recognizes CreateTweet/DeleteTweet mutation responses.
+- `normalize-tweet.js` defaults `metadata.lang` to `'und'` to satisfy `schemas/twitter/social.json`.
+- `@deprecated` markers added for `sendTweet`, `sendQuoteTweet`, `postTweet`, `postThread`, `replyToTweet`, `quoteTweet`, `schedulePost`.
+- `docs/deprecation-plan.md` updated.
+- Target test file `tests/scrapers/social/twitter/crawler-content-composition.test.js` passes 8/8.
+- All `tests/scrapers/social/twitter/` tests pass 50/50.
+- Full suite has 15 pre-existing failures (Facebook/API/CLI); no new Twitter regressions.

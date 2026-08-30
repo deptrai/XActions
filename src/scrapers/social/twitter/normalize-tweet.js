@@ -53,7 +53,7 @@ export function tweetToPostItem(rawTweet, context = {}) {
       bookmarkCount: Number(metrics.bookmarks) || 0,
       hashtags,
       mentions,
-      lang: parsed.lang || null,
+      lang: parsed.lang || 'und',
       isRetweet: Boolean(parsed.isRetweet),
       isReply: Boolean(parsed.isReply),
       isQuote: Boolean(parsed.quotedTweet),

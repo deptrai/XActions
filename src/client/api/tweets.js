@@ -259,6 +259,7 @@ export async function getLatestTweet(http, userId) {
 /**
  * Post a new tweet.
  *
+ * @deprecated sendTweet — use TwitterCrawler.start({ action: 'post', args: { text, mediaIds, dryRun: false } }) instead.
  * @param {HttpClient} http
  * @param {string} text - Tweet text
  * @param {Record<string, unknown>} [options={}] - Optional mediaIds (string[]) and replyTo (string)
@@ -307,6 +308,7 @@ export async function sendTweet(http, text, options = {}) {
 /**
  * Post a quote tweet.
  *
+ * @deprecated sendQuoteTweet — use TwitterCrawler.start({ action: 'quote', args: { tweetId: quotedTweetId, text, mediaIds, dryRun: false } }) instead.
  * @param {HttpClient} http
  * @param {string} text
  * @param {string} quotedTweetId

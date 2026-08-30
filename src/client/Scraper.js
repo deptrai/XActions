@@ -488,6 +488,7 @@ export class Scraper {
   /**
    * Send a tweet.
    *
+   * @deprecated sendTweet — use TwitterCrawler.start({ action: 'post', args: { text, mediaIds, dryRun: false } }) instead.
    * @param {string} text - Tweet text
    * @param {Record<string, unknown>} [options={}] - Optional mediaIds (string[]) and replyTo (string)
    * @returns {Promise<import('./models/Tweet.js').Tweet>}
@@ -501,6 +502,7 @@ export class Scraper {
   /**
    * Send a quote tweet.
    *
+   * @deprecated sendQuoteTweet — use TwitterCrawler.start({ action: 'quote', args: { tweetId: quotedTweetId, text, mediaIds, dryRun: false } }) instead.
    * @param {string} text - Tweet text
    * @param {string} quotedTweetId - ID of tweet to quote
    * @param {string[]} [mediaIds] - Media entity IDs to attach

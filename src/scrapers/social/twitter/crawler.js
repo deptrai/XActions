@@ -26,10 +26,12 @@ import {
 } from './normalize-list-community-space.js';
 import { buildAdvancedQuery } from '../../twitter/http/search.js';
 import { parseTweetData } from '../../twitter/http/tweets.js';
-import { DEFAULT_FEATURES } from '../../twitter/http/endpoints.js';
+import { DEFAULT_FEATURES, GRAPHQL } from '../../twitter/http/endpoints.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { isValidCategory } from '../../../core/types.js';
 import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
+import { gaussianDelay } from '../../../utils/gaussian-delay.js';
+import { tweetToPostItem } from './normalize-tweet.js';
 
 export const TWITTER_GRAPHQL_QUERY_IDS = {
   TweetDetail: 'U0HTv-bAWTBYylwEMT7x5A',
@@ -286,6 +288,43 @@ export class TwitterCrawler extends AbstractCrawler {
       outputType: '{ url: string, destPath: string | null, bytes: number, width: number, height: number, bitrate: number, contentType: string, durationMs: number | null, variants: Array<{bitrate, contentType, url}> }',
       requiresAuth: false,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.downloadVideo(args, session),
+    });
+
+    // ── Story 13.2.6 Actions: post, reply, quote ──
+    this.registerAction({
+      action: 'post',
+      description: 'Create a new tweet via the CreateTweet GraphQL mutation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['text'],
+      optionalArgs: ['mediaIds', 'premium', 'sensitive', 'dryRun'],
+      example: { text: 'Hello XActions', mediaIds: ['123'], dryRun: false },
+      outputType: '{ tweet: PostItem }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.composeContent(args, session, 'post'),
+    });
+
+    this.registerAction({
+      action: 'reply',
+      description: 'Create a reply tweet via the CreateTweet GraphQL mutation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['tweetId', 'text'],
+      optionalArgs: ['mediaIds', 'premium', 'sensitive', 'dryRun'],
+      example: { tweetId: '1900000000000000000', text: 'Nice', dryRun: false },
+      outputType: '{ tweet: PostItem }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.composeContent(args, session, 'reply'),
+    });
+
+    this.registerAction({
+      action: 'quote',
+      description: 'Create a quote tweet via the CreateTweet GraphQL mutation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['tweetId', 'text'],
+      optionalArgs: ['mediaIds', 'premium', 'sensitive', 'dryRun'],
+      example: { tweetId: '1900000000000000000', text: 'Agree', dryRun: false },
+      outputType: '{ tweet: PostItem }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.composeContent(args, session, 'quote'),
     });
   }
 
@@ -2019,6 +2058,201 @@ export class TwitterCrawler extends AbstractCrawler {
       durationMs: mediaObj.durationMs,
       variants,
     };
+  }
+
+  /**
+   * Action Handler: post / reply / quote
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @param {'post' | 'reply' | 'quote'} sourceMethod
+   * @returns {Promise<{ tweet: import('../../../core/types.js').PostItem }>}
+   */
+  async composeContent(args, session, sourceMethod) {
+    const text = typeof args.text === 'string' ? args.text : '';
+    const premium = Boolean(args.premium);
+    const sensitive = Boolean(args.sensitive);
+    const dryRun = args.dryRun !== false;
+    const mediaIds = Array.isArray(args.mediaIds) ? args.mediaIds : [];
+
+    this.#validateTweetText(text, { premium });
+
+    const { accountId } = await this.#resolveSession(session);
+
+    const baseVariables = {
+      tweet_text: text,
+      dark_request: false,
+      media: {
+        media_entities: mediaIds.map((id) => ({ media_id: String(id), tagged_users: [] })),
+        possibly_sensitive: sensitive,
+      },
+      semantic_annotation_ids: [],
+    };
+
+    const variables = this.#buildComposeVariables(baseVariables, args, sourceMethod);
+
+    if (dryRun) {
+      console.log(`🔄 [DRY RUN] ${sourceMethod}: ${JSON.stringify({ text, mediaIds, sourceMethod })}`);
+      const dryPost = this.#createDryRunPostItem({ text, sourceMethod, args });
+      return { tweet: dryPost };
+    }
+
+    await gaussianDelay(3000, 7000);
+
+    const response = await this.client.requestGraphQl(
+      GRAPHQL.CreateTweet.queryId,
+      GRAPHQL.CreateTweet.operationName,
+      variables,
+      DEFAULT_FEATURES,
+      undefined,
+      {
+        accountId,
+        requiresAuth: true,
+        method: 'POST',
+        cookies: session?.cookies,
+      }
+    );
+
+    const rawResult =
+      response?.data?.create_tweet?.tweet_results?.result ??
+      response?.create_tweet?.tweet_results?.result ??
+      response?.tweet_results?.result ??
+      response;
+
+    const post = tweetToPostItem(rawResult, {
+      sourceMethod,
+      extraMetadata: this.#buildComposeMetadata(args, sourceMethod),
+    });
+
+    if (!post) {
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5000',
+        message: `Could not parse created tweet response for ${sourceMethod}`,
+        statusCode: 500,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'twitter',
+      });
+    }
+
+    await this.#persistPostItems([post]);
+    await this.#emitCheckpointAndStream({
+      targetType: sourceMethod,
+      targetKey: post.id,
+      items: [post],
+      hasMore: false,
+    });
+
+    return { tweet: post };
+  }
+
+  /**
+   * Validate tweet text length.
+   * @param {string} text
+   * @param {{ premium?: boolean }} [options]
+   */
+  #validateTweetText(text, options = {}) {
+    const premium = Boolean(options.premium);
+    const limit = premium ? 25_000 : 280;
+    if (typeof text !== 'string' || text.length === 0) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Tweet text must be a non-empty string',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+    if (text.length > limit) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Tweet text exceeds maximum length (${text.length}/${limit})`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+  }
+
+  /**
+   * Build CreateTweet variables for post / reply / quote.
+   * @param {Record<string, any>} baseVariables
+   * @param {Record<string, any>} args
+   * @param {'post' | 'reply' | 'quote'} sourceMethod
+   * @returns {Record<string, any>}
+   */
+  #buildComposeVariables(baseVariables, args, sourceMethod) {
+    const variables = { ...baseVariables };
+
+    if (sourceMethod === 'reply') {
+      const tweetId = resolveTweetId(args.tweetId || args.url || '');
+      variables.reply = {
+        in_reply_to_tweet_id: tweetId,
+        exclude_reply_user_ids: [],
+      };
+    }
+
+    if (sourceMethod === 'quote') {
+      const tweetId = resolveTweetId(args.tweetId || args.url || '');
+      variables.attachment_url = `https://x.com/i/status/${tweetId}`;
+    }
+
+    return variables;
+  }
+
+  /**
+   * Build extra metadata for post / reply / quote PostItem.
+   * @param {Record<string, any>} args
+   * @param {'post' | 'reply' | 'quote'} sourceMethod
+   * @returns {Record<string, any>}
+   */
+  #buildComposeMetadata(args, sourceMethod) {
+    const metadata = {};
+    if (sourceMethod === 'reply') {
+      metadata.replyToTweetId = resolveTweetId(args.tweetId || args.url || '');
+    }
+    if (sourceMethod === 'quote') {
+      metadata.quotedTweetId = resolveTweetId(args.tweetId || args.url || '');
+    }
+    if (Array.isArray(args.mediaIds) && args.mediaIds.length > 0) {
+      metadata.mediaIds = args.mediaIds;
+    }
+    return metadata;
+  }
+
+  /**
+   * Create a preview PostItem for dry-run write actions.
+   * @param {Record<string, any>} params
+   * @returns {import('../../../core/types.js').PostItem}
+   */
+  #createDryRunPostItem({ text, sourceMethod, args }) {
+    const now = new Date();
+    const externalId = `dry-run-${sourceMethod}-${now.getTime()}`;
+    const metadata = this.#buildComposeMetadata(args, sourceMethod);
+
+    return /** @type {import('../../../core/types.js').PostItem} */ ({
+      id: `twitter:${externalId}`,
+      platform: 'twitter',
+      externalId,
+      category: 'social',
+      authorId: '',
+      authorName: '',
+      content: text,
+      mediaUrls: Array.isArray(args.mediaIds) ? [] : undefined,
+      likesCount: 0,
+      repostsCount: 0,
+      repliesCount: 0,
+      viewsCount: 0,
+      publishedAt: now,
+      crawledAt: now,
+      metadata: {
+        tweetId: externalId,
+        dryRun: true,
+        sourceMethod,
+        ...metadata,
+      },
+    });
   }
 
   /** @returns {Promise<void>} */
