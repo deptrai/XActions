@@ -14,6 +14,7 @@ import { Message } from '../models/Message.js';
 /**
  * Send a DM in an existing conversation.
  *
+ * @deprecated sendDm — use TwitterCrawler.start({ action: 'send_dm', args: { conversationId, text, dryRun: false } }) instead.
  * @param {HttpClient} http
  * @param {string} conversationId
  * @param {string} text
@@ -45,6 +46,7 @@ export async function sendDm(http, conversationId, text) {
 /**
  * Send a DM to a user by their ID (creates a new conversation if needed).
  *
+ * @deprecated sendDmToUser — use TwitterCrawler.start({ action: 'send_dm', args: { userId, text, dryRun: false } }) instead.
  * @param {HttpClient} http
  * @param {string} userId
  * @param {string} text
@@ -81,6 +83,7 @@ export async function sendDmToUser(http, userId, text) {
 /**
  * Get DM conversations.
  *
+ * @deprecated getDmConversations — use TwitterCrawler.start({ action: 'dm_conversations', args: { limit: count } }) instead.
  * @param {HttpClient} http
  * @param {number} [count=50]
  * @returns {AsyncGenerator<{id: string, type: string, participants: string[], lastMessage: string, updatedAt: string}>}
@@ -139,6 +142,7 @@ export async function* getDmConversations(http, count = 50) {
 /**
  * Get messages in a DM conversation.
  *
+ * @deprecated getDmMessages — use TwitterCrawler.start({ action: 'dm_messages', args: { conversationId, limit: count } }) instead.
  * @param {HttpClient} http
  * @param {string} conversationId
  * @param {number} [count=50]

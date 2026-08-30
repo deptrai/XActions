@@ -443,7 +443,11 @@ export class TwitterClient extends AbstractApiClient {
 
     let body = options.body;
     if (body && typeof body === 'object' && !Buffer.isBuffer(body) && typeof body.pipe !== 'function') {
-      body = new URLSearchParams(body).toString();
+      if (headers['content-type'] === 'application/json' || headers['Content-Type'] === 'application/json') {
+        body = JSON.stringify(body);
+      } else {
+        body = new URLSearchParams(body).toString();
+      }
     }
 
     const resp = /** @type {any} */ (await this.request(options.method || 'GET', url.toString(), {

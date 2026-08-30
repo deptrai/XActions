@@ -485,6 +485,43 @@ export class TwitterCrawler extends AbstractCrawler {
       outputType: '{ success: boolean }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.unbookmark(args, session),
     });
+
+    // ── Story 13.2.10 Actions: send_dm, dm_conversations, dm_messages ──
+    this.registerAction({
+      action: 'send_dm',
+      description: 'Send a direct message to a user or conversation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: [],
+      optionalArgs: ['userId', 'username', 'text', 'mediaId', 'conversationId', 'dryRun'],
+      example: { username: 'elonmusk', text: 'Hello', dryRun: false },
+      outputType: '{ success: boolean, messageId?: string, createdAt?: string }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.sendDm(args, session),
+    });
+
+    this.registerAction({
+      action: 'dm_conversations',
+      description: 'Get list of DM conversations in inbox',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: [],
+      optionalArgs: ['limit', 'cursor'],
+      example: { limit: 20 },
+      outputType: '{ conversations: object[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.dmConversations(args, session),
+    });
+
+    this.registerAction({
+      action: 'dm_messages',
+      description: 'Get message history for a specific DM conversation',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['conversationId'],
+      optionalArgs: ['limit', 'cursor'],
+      example: { conversationId: '123-456', limit: 50 },
+      outputType: '{ messages: object[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.dmMessages(args, session),
+    });
   }
 
   /**
@@ -3076,6 +3113,341 @@ export class TwitterCrawler extends AbstractCrawler {
       operationName: 'DeleteBookmark',
       buildVariables: (tweetId) => ({ tweet_id: tweetId }),
     });
+  }
+
+  /**
+   * Resolve DM recipient userId and check can_dm capability.
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<string>}
+   */
+  async #resolveDmRecipient(args = {}, session = {}) {
+    if (args.userId && typeof args.userId === 'string' && /^\d{1,30}$/.test(args.userId.trim())) {
+      return args.userId.trim();
+    }
+
+    const usernameOrUrl = args.username || args.url;
+    if (!usernameOrUrl || typeof usernameOrUrl !== 'string') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing recipient: provide userId, username, or conversationId',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const cleanUsername = resolveUsername(usernameOrUrl);
+    const { accountId } = await this.#resolveSession(session);
+
+    const response = await this.client.requestGraphQl(
+      TWITTER_GRAPHQL_QUERY_IDS.UserByScreenName,
+      'UserByScreenName',
+      {
+        screen_name: cleanUsername,
+        withSafetyModeUserFields: false,
+      },
+      DEFAULT_FEATURES,
+      undefined,
+      {
+        accountId,
+        requiresAuth: false,
+        cookies: session?.cookies,
+      }
+    );
+
+    const userResult = response?.user?.result;
+    if (!userResult || userResult.__typename === 'UserUnavailable' || !userResult.rest_id) {
+      throw new PlatformError({
+        type: ErrorTypes.NOT_FOUND,
+        code: 'XACT_4040',
+        message: `Twitter user not found: "${cleanUsername}"`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const canDm = userResult?.legacy?.can_dm ?? userResult?.can_dm ?? true;
+    if (canDm === false) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'TWITTER_DM_NOT_ALLOWED',
+        message: `User @${cleanUsername} does not accept direct messages from you`,
+        statusCode: 403,
+        suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+        platform: 'twitter',
+      });
+    }
+
+    return String(userResult.rest_id);
+  }
+
+  /**
+   * Action Handler: send_dm
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ success: boolean, messageId?: string, createdAt?: string, dryRun?: boolean }>}
+   */
+  async sendDm(args = {}, session = {}) {
+    const text = typeof args?.text === 'string' ? args.text.trim() : '';
+    if (!text) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Direct message text must be a non-empty string',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const dryRun = args?.dryRun !== false;
+    const conversationId = args?.conversationId;
+    const directUserId = args?.userId;
+    const usernameOrUrl = args?.username || args?.url;
+
+    if (!conversationId && !directUserId && !usernameOrUrl) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Recipient target is required: provide userId, username, or conversationId',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    if (dryRun) {
+      console.log(`🔄 [DRY RUN] send_dm: ${JSON.stringify({ conversationId, userId: directUserId, username: usernameOrUrl, textLength: text.length })}`);
+      return { success: true, dryRun: true };
+    }
+
+    const targetUserId = !conversationId ? await this.#resolveDmRecipient(args, session) : null;
+    const { accountId } = await this.#resolveSession(session);
+
+    await gaussianDelay(5000, 15000);
+
+    console.log(`🔄 [WRITE] send_dm: ${JSON.stringify({ accountId, targetUserId, conversationId, textLength: text.length })}`);
+
+    const requestId = typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+
+    let payload;
+    if (conversationId) {
+      payload = {
+        conversation_id: String(conversationId),
+        text,
+        cards_platform: 'Web-12',
+        include_cards: 1,
+        include_quote_count: true,
+        dm_users: false,
+        request_id: requestId,
+      };
+    } else {
+      payload = {
+        conversation_id: `${targetUserId}`,
+        recipient_ids: [targetUserId],
+        text,
+        cards_platform: 'Web-12',
+        include_cards: 1,
+        include_quote_count: true,
+        dm_users: false,
+        request_id: requestId,
+      };
+    }
+
+    if (args.mediaId) {
+      payload.attachment = {
+        type: 'media',
+        media: { id: String(args.mediaId) },
+      };
+    }
+
+    const response = await this.client.requestRest(REST.dmNew, {
+      method: 'POST',
+      body: payload,
+      headers: { 'content-type': 'application/json' },
+      accountId,
+      requiresAuth: true,
+      cookies: session?.cookies,
+    });
+
+    const event = response?.event || response?.entries?.[0]?.message || {};
+    const messageId = String(event.id || response?.entries?.[0]?.message?.id || requestId);
+    const createdAt = event.created_timestamp
+      ? new Date(Number(event.created_timestamp)).toISOString()
+      : (event.time ? new Date(Number(event.time)).toISOString() : new Date().toISOString());
+
+    console.log(`✅ [WRITE] send_dm ok: ${JSON.stringify({ accountId, messageId })}`);
+    return {
+      success: true,
+      messageId,
+      createdAt,
+    };
+  }
+
+  /**
+   * Action Handler: dm_conversations (list inbox conversations)
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ conversations: object[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
+   */
+  async dmConversations(args = {}, session = {}) {
+    const limit = args?.limit === undefined ? 50 : this.#clamp(args.limit, 1, 100);
+    const cursor = args?.cursor || null;
+    const { accountId } = await this.#resolveSession(session);
+
+    await gaussianDelay(1000, 3000);
+
+    const query = {
+      nsfw_filtering_enabled: 'false',
+      filter_low_quality: 'false',
+      include_quality: 'all',
+      dm_secret_conversations_enabled: 'false',
+      krs_registration_enabled: 'true',
+      cards_platform: 'Web-12',
+      include_cards: '1',
+      include_ext_alt_text: 'true',
+      include_quote_count: 'true',
+      include_reply_count: '1',
+      tweet_mode: 'extended',
+      ...(cursor ? { cursor } : {}),
+    };
+
+    const response = await this.client.requestRest(REST.dmInbox, {
+      method: 'GET',
+      query,
+      accountId,
+      requiresAuth: true,
+      cookies: session?.cookies,
+    });
+
+    const entries = response?.inbox_initial_state ?? response ?? {};
+    const rawConversations = /** @type {Record<string, any>} */ (entries.conversations ?? {});
+    const rawEntries = /** @type {any[]} */ (entries.entries ?? []);
+    const rawUsers = /** @type {Record<string, any>} */ (entries.users ?? {});
+    const nextCursor = entries.cursor || null;
+
+    const conversations = [];
+
+    for (const [convId, conv] of Object.entries(rawConversations)) {
+      if (conversations.length >= limit) break;
+
+      const rawParticipants = Array.isArray(conv?.participants) ? conv.participants : [];
+      const participantIds = rawParticipants.map((p) => (typeof p === 'string' ? p : String(p?.user_id || '')));
+      const participants = participantIds.map((uid) => {
+        const u = rawUsers[uid] || {};
+        return {
+          id: String(uid),
+          username: u.screen_name || '',
+          name: u.name || '',
+          avatar: u.profile_image_url_https || '',
+        };
+      });
+
+      const convEntries = rawEntries.filter((e) => {
+        const msg = e?.message || {};
+        return msg.conversation_id === convId || e?.conversation_id === convId;
+      });
+
+      const lastEntry = convEntries[0] || {};
+      const lastMsg = lastEntry.message || {};
+      const lastMsgData = lastMsg.message_data || {};
+
+      conversations.push({
+        conversationId: convId,
+        participants,
+        lastMessage: {
+          text: lastMsgData.text || '',
+          createdAt: lastMsg.time ? new Date(Number(lastMsg.time)).toISOString() : '',
+          senderId: lastMsgData.sender_id || lastMsg.sender_id || '',
+        },
+        unreadCount: Number(conv.unread_count || 0),
+        type: conv.type === 'GROUP_DM' ? 'group' : 'one_to_one',
+      });
+    }
+
+    return {
+      conversations,
+      pageInfo: {
+        has_next_page: Boolean(nextCursor && conversations.length > 0),
+        end_cursor: nextCursor,
+      },
+    };
+  }
+
+  /**
+   * Action Handler: dm_messages (get messages for a conversation)
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @returns {Promise<{ messages: object[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
+   */
+  async dmMessages(args = {}, session = {}) {
+    const conversationId = args?.conversationId;
+    if (!conversationId || typeof conversationId !== 'string') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: conversationId',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const limit = args?.limit === undefined ? 50 : this.#clamp(args.limit, 1, 100);
+    const cursor = args?.cursor || null;
+    const { accountId } = await this.#resolveSession(session);
+
+    await gaussianDelay(1000, 3000);
+
+    const query = {
+      cards_platform: 'Web-12',
+      include_cards: '1',
+      include_ext_alt_text: 'true',
+      include_quote_count: 'true',
+      include_reply_count: '1',
+      tweet_mode: 'extended',
+      ...(cursor ? { max_id: cursor } : {}),
+    };
+
+    const path = `${REST.dmConversation}/${encodeURIComponent(conversationId)}.json`;
+    const response = await this.client.requestRest(path, {
+      method: 'GET',
+      query,
+      accountId,
+      requiresAuth: true,
+      cookies: session?.cookies,
+    });
+
+    const timeline = response?.conversation_timeline ?? response ?? {};
+    const rawEntries = Array.isArray(timeline.entries) ? timeline.entries : [];
+    const minEntryId = timeline.min_entry_id || null;
+
+    const messages = [];
+    for (const item of rawEntries) {
+      if (messages.length >= limit) break;
+      const msg = item?.message || {};
+      const msgData = msg.message_data || {};
+      if (!msg.id && !item.id) continue;
+
+      messages.push({
+        id: String(msg.id || item.id),
+        text: msgData.text || '',
+        senderId: String(msgData.sender_id || msg.sender_id || ''),
+        createdAt: msg.time ? new Date(Number(msg.time)).toISOString() : '',
+        media: msgData.attachment?.media ? [msgData.attachment.media] : null,
+      });
+    }
+
+    return {
+      messages,
+      pageInfo: {
+        has_next_page: Boolean(minEntryId && messages.length > 0),
+        end_cursor: minEntryId,
+      },
+    };
   }
 
   /** @returns {Promise<void>} */

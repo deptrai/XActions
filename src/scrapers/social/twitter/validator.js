@@ -72,10 +72,12 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
       if (data.create_retweet !== undefined || data.delete_retweet !== undefined) return true;
       if (data.create_bookmark !== undefined || data.delete_bookmark !== undefined) return true;
       if (data.bookmark_tweet !== undefined || data.unbookmark_tweet !== undefined) return true;
-      // REST 1.1 / 2 responses (friendships, blocks, mutes, user objects)
+      // REST 1.1 / 2 responses (friendships, blocks, mutes, user objects, direct messages)
       if (data.id_str !== undefined || data.screen_name !== undefined) return true;
       if (data.following !== undefined || data.blocking !== undefined || data.muting !== undefined) return true;
       if (data.ok !== undefined || data.success !== undefined) return true;
+      if (data.inbox_initial_state !== undefined || data.conversation_timeline !== undefined) return true;
+      if (data.event !== undefined || Array.isArray(data.entries)) return true;
       // GraphQL error responses
       if (Array.isArray(data.errors) || Array.isArray(root?.errors)) return true;
       // SearchTimeline results

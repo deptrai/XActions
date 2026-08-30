@@ -674,6 +674,7 @@ export class Scraper {
   /**
    * Send a DM to a conversation.
    *
+   * @deprecated sendDm — use TwitterCrawler.start({ action: 'send_dm', args: { conversationId, text, dryRun: false } }) instead.
    * @param {string} conversationId - DM conversation ID
    * @param {string} text - Message text
    * @returns {Promise<{id: string, text: string, createdAt: string}>}
@@ -686,6 +687,7 @@ export class Scraper {
   /**
    * Send a DM to a user by ID (creates conversation if needed).
    *
+   * @deprecated sendDmToUser — use TwitterCrawler.start({ action: 'send_dm', args: { userId, text, dryRun: false } }) instead.
    * @param {string} userId - Target user ID
    * @param {string} text - Message text
    * @returns {Promise<{id: string, text: string, createdAt: string}>}
@@ -698,6 +700,7 @@ export class Scraper {
   /**
    * Get DM conversations.
    *
+   * @deprecated getDmConversations — use TwitterCrawler.start({ action: 'dm_conversations', args: { limit: count } }) instead.
    * @param {number} [count=50] - Maximum conversations to return
    * @returns {AsyncGenerator<{id: string, type: string, participants: string[], lastMessage: string, updatedAt: string}>}
    */
@@ -709,6 +712,7 @@ export class Scraper {
   /**
    * Get messages in a DM conversation.
    *
+   * @deprecated getDmMessages — use TwitterCrawler.start({ action: 'dm_messages', args: { conversationId, limit: count } }) instead.
    * @param {string} conversationId - Conversation ID
    * @param {number} [count=50] - Maximum messages to return
    * @returns {AsyncGenerator<import('./models/Message.js').Message>}

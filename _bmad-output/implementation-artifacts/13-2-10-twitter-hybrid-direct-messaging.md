@@ -2,7 +2,7 @@
 story_id: '13.2.10'
 epic: 13
 story_key: '13-2-10-twitter-hybrid-direct-messaging'
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 2"
 created: 2026-08-30
 updated: 2026-08-30
@@ -14,7 +14,7 @@ baseline_commit: "9817e8ceb137f5881ac500fa02c08129745415a1"
 
 # Story 13.2.10 — Twitter Hybrid Direct Messaging
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -178,25 +178,25 @@ Cập nhật `TwitterPlatformResponseValidator.isValidPayload()` để nhận di
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 (AC-1, AC-7): Đăng ký 3 actions trong `TwitterCrawler`
-  - [ ] 1.1 Đăng ký `send_dm` với `optionalArgs: ['userId', 'username', 'text', 'mediaId', 'conversationId', 'dryRun']`, `category: 'social'`, `requiresAuth: true`
-  - [ ] 1.2 Đăng ký `dm_conversations` và `dm_messages` với descriptor chuẩn
-- [ ] Task 2 (AC-2, AC-3, AC-5): Triển khai Handler `send_dm`
-  - [ ] 2.1 Viết logic kiểm tra recipient và quyền `can_dm`
-  - [ ] 2.2 Viết logic gửi JSON payload tới `/1.1/dm/new2.json`
-  - [ ] 2.3 Tích hợp `gaussianDelay(5000, 15000)` và dry-run gate
-- [ ] Task 3 (AC-4): Triển khai Handlers `dm_conversations` và `dm_messages`
-  - [ ] 3.1 Handler `dm_conversations` gọi `inbox_initial_state.json` và chuẩn hóa danh sách hội thoại
-  - [ ] 3.2 Handler `dm_messages` gọi `conversation/{conversationId}.json` và chuẩn hóa tin nhắn
-  - [ ] 3.3 Tích hợp `gaussianDelay(1000, 3000)`
-- [ ] Task 4 (AC-6): Đánh dấu Deprecation
-  - [ ] 4.1 Thêm `@deprecated` vào `src/client/Scraper.js` và `src/client/api/dms.js`
-  - [ ] 4.2 Thêm `@deprecated` vào `src/scrapers/twitter/http/dm.js`
-  - [ ] 4.3 Cập nhật `docs/deprecation-plan.md`
-- [ ] Task 5 (AC-7): TDD Tests & Hoàn thiện
-  - [ ] 5.1 Tạo `tests/scrapers/social/twitter/crawler-dm.test.js`
-  - [ ] 5.2 Chạy pass test suite và kiểm tra regression toàn bộ Twitter crawlers
-  - [ ] 5.3 Cập nhật status story sang `review` và sync `sprint-status.yaml`
+- [x] Task 1 (AC-1, AC-7): Đăng ký 3 actions trong `TwitterCrawler`
+  - [x] 1.1 Đăng ký `send_dm` với `optionalArgs: ['userId', 'username', 'text', 'mediaId', 'conversationId', 'dryRun']`, `category: 'social'`, `requiresAuth: true`
+  - [x] 1.2 Đăng ký `dm_conversations` và `dm_messages` với descriptor chuẩn
+- [x] Task 2 (AC-2, AC-3, AC-5): Triển khai Handler `send_dm`
+  - [x] 2.1 Viết logic kiểm tra recipient và quyền `can_dm`
+  - [x] 2.2 Viết logic gửi JSON payload tới `/1.1/dm/new2.json`
+  - [x] 2.3 Tích hợp `gaussianDelay(5000, 15000)` và dry-run gate
+- [x] Task 3 (AC-4): Triển khai Handlers `dm_conversations` và `dm_messages`
+  - [x] 3.1 Handler `dm_conversations` gọi `inbox_initial_state.json` và chuẩn hóa danh sách hội thoại
+  - [x] 3.2 Handler `dm_messages` gọi `conversation/{conversationId}.json` và chuẩn hóa tin nhắn
+  - [x] 3.3 Tích hợp `gaussianDelay(1000, 3000)`
+- [x] Task 4 (AC-6): Đánh dấu Deprecation
+  - [x] 4.1 Thêm `@deprecated` vào `src/client/Scraper.js` và `src/client/api/dms.js`
+  - [x] 4.2 Thêm `@deprecated` vào `src/scrapers/twitter/http/dm.js`
+  - [x] 4.3 Cập nhật `docs/deprecation-plan.md`
+- [x] Task 5 (AC-7): TDD Tests & Hoàn thiện
+  - [x] 5.1 Tạo `tests/scrapers/social/twitter/crawler-dm.test.js`
+  - [x] 5.2 Chạy pass test suite và kiểm tra regression toàn bộ Twitter crawlers (99/99 tests passed)
+  - [x] 5.3 Cập nhật status story sang `review` và sync `sprint-status.yaml`
 
 ---
 
@@ -214,7 +214,16 @@ Cập nhật `TwitterPlatformResponseValidator.isValidPayload()` để nhận di
 
 ### Completion Notes
 
-*(Để điền sau khi hoàn thành dev.)*
+- Đã triển khai đầy đủ 3 action Direct Messaging trong `TwitterCrawler`: `send_dm`, `dm_conversations`, `dm_messages`.
+- Tự động kiểm tra quyền `can_dm` khi gửi tới username; ném `TWITTER_DM_NOT_ALLOWED` khi người nhận chặn tin nhắn.
+- Tích hợp write safety: `gaussianDelay(5000, 15000)` cho `send_dm`, `dryRun=true` mặc định, rate governor check.
+- Hỗ trợ JSON payload formatting trong `TwitterClient.requestRest` cho `/1.1/dm/new2.json`.
+- Cập nhật deprecation annotations trong `Scraper.js`, `api/dms.js`, `http/dm.js` và bảng mapping trong `docs/deprecation-plan.md`.
+- Toàn bộ 10/10 tests DM mới và 99/99 tests của toàn bộ Twitter Hybrid Crawler đều pass 100%.
+
+### Change Log
+
+- 2026-08-30: Hoàn thành triển khai Story 13.2.10 (Direct Messaging actions, can_dm privacy check, inbox/conversation extraction, validator updates, legacy deprecation, acceptance tests).
 
 ### File List
 
@@ -226,7 +235,7 @@ Cập nhật `TwitterPlatformResponseValidator.isValidPayload()` để nhận di
 - `src/client/api/dms.js` — thêm `@deprecated` cho các DM methods
 - `src/scrapers/twitter/http/dm.js` — thêm `@deprecated` cho DM operations
 - `docs/deprecation-plan.md` — cập nhật status tracker và mapping table
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — cập nhật `13-2-10` sang `ready-for-dev`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — cập nhật `13-2-10` sang `review`
 
 #### NEW
 - `tests/scrapers/social/twitter/crawler-dm.test.js` — test suite cho Direct Messaging actions

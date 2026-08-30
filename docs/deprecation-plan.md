@@ -95,6 +95,8 @@ Xoá theo thứ tự:
 | `src/scrapers/twitter/http/engagement.js` like/unlike/retweet/unretweet → `twitter:like` / `twitter:unlike` / `twitter:retweet` / `twitter:undo_retweet` | `deprecated-marked` | Phase 1 (Story 13.2.8) | DEV |
 | Twitter Legacy Social Graph (`src/client/Scraper.js` followUser/unfollowUser; `src/client/api/users.js`; `src/scrapers/twitter/http/engagement.js` followUser/unfollowUser/blockUser/unblockUser/muteUser/unmuteUser/bookmarkTweet/unbookmarkTweet) | `deprecated-marked` | Phase 1 (Story 13.2.9) | DEV |
 | `src/scrapers/twitter/http/engagement.js` social graph & bookmarks → `twitter:follow` / `twitter:unfollow` / `twitter:block` / `twitter:unblock` / `twitter:mute` / `twitter:unmute` / `twitter:bookmark` / `twitter:unbookmark` | `deprecated-marked` | Phase 1 (Story 13.2.9) | DEV |
+| Twitter Legacy Direct Messaging (`src/client/Scraper.js` sendDm/sendDmToUser/getDmConversations/getDmMessages; `src/client/api/dms.js`; `src/scrapers/twitter/http/dm.js` sendDM/getInbox/getConversation) | `deprecated-marked` | Phase 1 (Story 13.2.10) | DEV |
+| `src/scrapers/twitter/http/dm.js` direct messaging → `twitter:send_dm` / `twitter:dm_conversations` / `twitter:dm_messages` | `deprecated-marked` | Phase 1 (Story 13.2.10) | DEV |
 | `src/client/Scraper.js` (search/getTrends/getExploreTabs and all methods) | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-marked` | Phase 1 (Epic 13.10) | DEV |
 | Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
@@ -134,6 +136,9 @@ Xoá theo thứ tự:
 | `unmuteUser` (Twitter) | `twitter:unmute` |
 | `bookmarkTweet` (Twitter) | `twitter:bookmark` |
 | `unbookmarkTweet` (Twitter) | `twitter:unbookmark` |
+| `sendDm` / `sendDM` / `sendDmToUser` / `sendDMByUsername` (Twitter) | `twitter:send_dm` |
+| `getDmConversations` / `getInbox` (Twitter) | `twitter:dm_conversations` |
+| `getDmMessages` / `getConversation` (Twitter) | `twitter:dm_messages` |
 | `scrapeProfile` | `facebook:profile` |
 | `scrapeFollowers` | `facebook:followers` |
 | `scrapeGroupMembers` | `facebook:group_members` |
