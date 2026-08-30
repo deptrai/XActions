@@ -154,6 +154,7 @@
     "xspace-agent": "^0.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@stryker-mutator/core": "^9.6.1",
     "@stryker-mutator/vitest-runner": "^9.6.1",
     "@types/node": "^20.19.43",
