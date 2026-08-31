@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * normalize-relationships.js — Normalization functions for Twitter/X relationship & engagement responses.
- * Parses GraphQL Favoriters/Likers responses into standardized ProfileItem & PostItem objects.
+ * Parses GraphQL Favoriters/Likers, Followers, Following, Retweeters responses into standardized ProfileItem & PostItem objects.
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0
@@ -21,9 +21,9 @@ import { parseUserList } from '../../twitter/http/relationships.js';
  */
 export function normalizeUserProfile(user, metadata = {}) {
   const externalId = String(user.id || user.rest_id || '');
-  const username = user.username || '';
-  const avatar = user.avatar
-    ? String(user.avatar).replace('_normal', '_400x400')
+  const username = user.username || user.screen_name || '';
+  const avatar = user.avatar || user.profile_image_url_https
+    ? String(user.avatar || user.profile_image_url_https).replace('_normal', '_400x400')
     : undefined;
 
   return {
@@ -32,14 +32,14 @@ export function normalizeUserProfile(user, metadata = {}) {
     externalId,
     username: username || undefined,
     name: user.name || username || 'Twitter User',
-    bio: user.bio || undefined,
+    bio: user.bio || user.description || undefined,
     avatar,
     profileUrl: username ? `https://x.com/${username}` : undefined,
-    followersCount: Number(user.followersCount) || 0,
-    followingCount: Number(user.followingCount) || 0,
+    followersCount: Number(user.followersCount || user.followers_count) || 0,
+    followingCount: Number(user.followingCount || user.friends_count) || 0,
     metadata: {
       ...metadata,
-      verified: Boolean(user.verified),
+      verified: Boolean(user.verified || user.is_blue_verified),
       protected: Boolean(user.protected),
     },
     crawledAt: new Date(),
@@ -85,22 +85,25 @@ export function profileItemToPostItem(profile) {
 }
 
 /**
- * Normalize a Twitter Favoriters (who liked a tweet) GraphQL response.
+ * Normalize a Twitter Favoriters (who liked a tweet) or UserList GraphQL response.
  *
  * @param {Record<string, any>} response
- * @param {string} [tweetId='']
+ * @param {string} [targetId='']
  * @returns {{
  *   likers: ProfileItem[],
  *   pageInfo: { end_cursor: string | null, has_next_page: boolean }
  * }}
  */
-export function normalizeLikersResponse(response, tweetId = '') {
+export function normalizeLikersResponse(response, targetId = '') {
   const root = response?.data !== undefined ? response.data : response;
+  const data = root?.data !== undefined ? root.data : root;
+
   const instructions =
-    root?.favoriters_timeline?.timeline?.instructions ??
-    root?.data?.favoriters_timeline?.timeline?.instructions ??
-    root?.instructions ??
-    root?.data?.instructions ??
+    data?.favoriters_timeline?.timeline?.instructions ??
+    data?.user?.result?.timeline?.timeline?.instructions ??
+    data?.user?.result?.timeline_v2?.timeline?.instructions ??
+    data?.retweeters_timeline?.timeline?.instructions ??
+    data?.instructions ??
     [];
 
   const { users, cursor } = parseUserList(instructions);
@@ -114,7 +117,7 @@ export function normalizeLikersResponse(response, tweetId = '') {
     likers.push(
       normalizeUserProfile(u, {
         isLiker: true,
-        tweetId: tweetId || undefined,
+        tweetId: targetId || undefined,
         sourceMethod: 'likes',
       })
     );
