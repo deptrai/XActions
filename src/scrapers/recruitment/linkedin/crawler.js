@@ -13,7 +13,7 @@ import {
   normalizeLinkedInCompany,
   normalizeLinkedInLead,
 } from './normalize-linkedin.js';
-import { PlatformError, ErrorTypes } from '../../../core/error-envelope.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { gaussianDelay } from '../../../utils/gaussian-delay.js';
 
 export class LinkedInCrawler extends AbstractCrawler {
@@ -146,6 +146,8 @@ export class LinkedInCrawler extends AbstractCrawler {
       throw new PlatformError({
         code: 'XACT_4001',
         type: ErrorTypes.INVALID_ARGS,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         message: 'jobId is required for job_detail action',
         platform: 'linkedin',
       });
@@ -179,6 +181,8 @@ export class LinkedInCrawler extends AbstractCrawler {
       throw new PlatformError({
         code: 'XACT_4001',
         type: ErrorTypes.INVALID_ARGS,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         message: 'companySlug or companyUrl is required for company_profile action',
         platform: 'linkedin',
       });
@@ -203,6 +207,8 @@ export class LinkedInCrawler extends AbstractCrawler {
       throw new PlatformError({
         code: 'XACT_4001',
         type: ErrorTypes.INVALID_ARGS,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         message: 'profileUrl or profileSlug is required for lead_profile action',
         platform: 'linkedin',
       });
