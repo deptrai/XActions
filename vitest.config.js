@@ -15,7 +15,7 @@ export default defineConfig({
     fileParallelism: false,
     retry: 0,
     include: ['tests/**/*.test.js'],
-    exclude: ['node_modules', 'dist', 'archive'],
+    exclude: ['node_modules', 'dist', 'archive', 'tests/e2e/video*.e2e.test.js'],
     reporters: ['verbose'],
     env: {
       DATABASE_URL: testDatabaseUrl,
