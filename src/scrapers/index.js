@@ -52,6 +52,8 @@ import { ShopeeCrawler } from './ecom/shopee/crawler.js';
 import { ShopeeClient } from './ecom/shopee/client.js';
 import { TikTokShopCrawler } from './ecom/tiktok-shop/crawler.js';
 import { TikTokShopClient } from './ecom/tiktok-shop/client.js';
+import { TopCvCrawler } from './recruitment/topcv/crawler.js';
+import { TopCvClient } from './recruitment/topcv/client.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -445,6 +447,83 @@ export async function scrape(platform, action, options = {}) {
     });
 
     const crawler = new TikTokShopCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── TopCV Recruitment path (Story 18.1) ──
+  if (platformName === 'topcv' || platformName === 'top_cv') {
+    /** @type {Record<string, string>} */
+    const TOPCV_ACTION_MAP = {
+      search_jobs: 'search_jobs',
+      search: 'search_jobs',
+      jobs: 'search_jobs',
+      job_detail: 'job_detail',
+      job: 'job_detail',
+      detail: 'job_detail',
+      company_detail: 'company_detail',
+      company: 'company_detail',
+      brand: 'company_detail',
+    };
+
+    const mappedAction = TOPCV_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(TOPCV_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (options.keyword || options.query || options.q || options.target) {
+      mappedArgs.keyword = options.keyword || options.query || options.q || options.target;
+    }
+    if (options.jobId || options.id) {
+      mappedArgs.jobId = options.jobId || options.id;
+    }
+    if (options.jobUrl || options.url) {
+      mappedArgs.jobUrl = options.jobUrl || options.url;
+    }
+    if (options.companyId) {
+      mappedArgs.companyId = options.companyId;
+    }
+    if (options.companyUrl) {
+      mappedArgs.companyUrl = options.companyUrl;
+    }
+    if (options.city) mappedArgs.city = options.city;
+    if (options.salary) mappedArgs.salary = options.salary;
+    if (options.exp) mappedArgs.exp = options.exp;
+    if (Number.isFinite(options.limit)) mappedArgs.limit = options.limit;
+    if (Number.isFinite(options.page)) mappedArgs.page = options.page;
+    if (options.category) mappedArgs.category = options.category;
+
+    const store = options.store !== undefined ? options.store : defaultStore;
+    const client = new TopCvClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new TopCvCrawler({
       client,
       store,
       redisPublisher: options.redisPublisher,
