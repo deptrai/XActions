@@ -30,8 +30,8 @@ The following decisions are non-negotiable and override any earlier language in 
 ## Story
 
 As an **Operations Manager**,  
-I want **a dashboard view that displays all crawl jobs, checkpoints, resume/pause/failed status and last cursor/timestamp progress**,  
-So that **I can monitor and control the crawl pipeline without using the terminal**.
+I want **a dashboard view that displays all crawl jobs and checkpoints with their resume/pause/failed status and last cursor/timestamp progress**,  
+so that **I can monitor and control the crawl pipeline without using the terminal**.
 
 ## Acceptance Criteria
 
