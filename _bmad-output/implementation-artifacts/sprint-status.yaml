@@ -116,7 +116,7 @@ development_status:
 
   # --- Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan) ---
   epic-17: in-progress
-  17-1-chotot-multi-category-scraper-with-phone-mask-detector: ready-for-dev
+  17-1-chotot-multi-category-scraper-with-phone-mask-detector: done
   17-2-batdongsan-com-vn-property-scraper: backlog
   epic-17-retrospective: optional
 

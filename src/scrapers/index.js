@@ -58,9 +58,12 @@ import { VietnamWorksCrawler } from './recruitment/vietnamworks/crawler.js';
 import { VietnamWorksClient } from './recruitment/vietnamworks/client.js';
 import { LinkedInCrawler } from './recruitment/linkedin/crawler.js';
 import { LinkedInClient } from './recruitment/linkedin/client.js';
+import { ChototCrawler } from './realestate/chotot/crawler.js';
+import { ChototClient } from './realestate/chotot/client.js';
 import topcv from './recruitment/topcv/index.js';
 import vietnamworks from './recruitment/vietnamworks/index.js';
 import linkedin from './recruitment/linkedin/index.js';
+import chotot from './realestate/chotot/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -141,6 +144,8 @@ export const platforms = {
   vietnamworks,
   vietnam_works: vietnamworks,
   linkedin,
+  chotot,
+  cho_tot: chotot,
 };
 
 /**
@@ -698,6 +703,78 @@ export async function scrape(platform, action, options = {}) {
     });
 
     const crawler = new LinkedInCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── Chợ Tốt Real Estate & Multi-Category path (Story 17.1) ──
+  if (platformName === 'chotot' || platformName === 'cho_tot') {
+    /** @type {Record<string, string>} */
+    const CHOTOT_ACTION_MAP = {
+      search_listings: 'search_listings',
+      search: 'search_listings',
+      listings: 'search_listings',
+      ads: 'search_listings',
+      listing_detail: 'listing_detail',
+      listing: 'listing_detail',
+      detail: 'listing_detail',
+      ad: 'listing_detail',
+      get_phone: 'get_phone',
+      phone: 'get_phone',
+    };
+
+    const mappedAction = CHOTOT_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(CHOTOT_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.listId || options.id) {
+      mappedArgs.listId = options.listId || options.id;
+    }
+    if (options.category) mappedArgs.category = options.category;
+    if (options.region_v2 != null) mappedArgs.region_v2 = options.region_v2;
+    if (options.area_v2 != null) mappedArgs.area_v2 = options.area_v2;
+    if (options.minPrice != null) mappedArgs.minPrice = options.minPrice;
+    if (options.maxPrice != null) mappedArgs.maxPrice = options.maxPrice;
+    if (options.minArea != null) mappedArgs.minArea = options.minArea;
+    if (options.maxArea != null) mappedArgs.maxArea = options.maxArea;
+    if (options.propertyType) mappedArgs.propertyType = options.propertyType;
+    if (options.listingType) mappedArgs.listingType = options.listingType;
+    if (options.includePhone != null) mappedArgs.includePhone = options.includePhone;
+    if (Number.isFinite(options.limit)) mappedArgs.limit = options.limit;
+    if (Number.isFinite(options.page)) mappedArgs.page = options.page;
+
+    const store = options.store !== undefined ? options.store : defaultStore;
+    const client = new ChototClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new ChototCrawler({
       client,
       store,
       redisPublisher: options.redisPublisher,
