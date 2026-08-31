@@ -128,8 +128,8 @@ development_status:
   epic-18-retrospective: optional
 
   # --- Epic 19: Internal Operator Dashboard, Admin CLI & Operational Observability ---
-  epic-19: backlog
-  19-1-dashboard-jobs-checkpoints-view: backlog
+  epic-19: in-progress
+  19-1-dashboard-jobs-checkpoints-view: ready-for-dev
   19-2-dashboard-proxies-accounts-view: backlog
   19-3-dashboard-stream-metrics-alerts-view: backlog
   19-4-admin-cli-unified-command-group: backlog
