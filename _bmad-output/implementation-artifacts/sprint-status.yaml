@@ -125,7 +125,7 @@ development_status:
   epic-18: in-progress
   18-1-topcv-job-company-scraper: done
   18-2-vietnamworks-job-scraper: done
-  18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: backlog
+  18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: ready-for-dev
   epic-18-retrospective: optional
 
   # --- Epic 19: Internal Operator Dashboard, Admin CLI & Operational Observability ---
