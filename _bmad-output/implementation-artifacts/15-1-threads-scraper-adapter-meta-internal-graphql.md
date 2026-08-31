@@ -633,14 +633,21 @@ Các mục dưới đây **bắt buộc** dev xác nhận qua capture từ trìn
 
 ### Agent Model Used
 
-Create Story Workflow — `bmad-create-story` skill, manual analysis bằng `vibervn-context-engine` MCP và `Read` tool.
+Developer Agent — `bmad-dev-story` workflow.
 
-### Completion Notes
+### Implementation Notes
 
-- Story 15.1 được xác định từ user input `15-1-threads-scraper-adapter-meta-internal-graphql` (Epic 15, Story 1).
-- Phân tích toàn bộ epics, architecture spine, deprecation plan, code `base-client.js`, `base-crawler.js`, `signer-pool.js`, `prisma-store.js`, `types.js`, `comment-tree.js`, `src/scrapers/threads/index.js` legacy, `src/scrapers/social/facebook/` mẫu, và gần nhất git log.
-- Web research về Threads GraphQL doc_id, token extraction, headers, response shapes; các candidate values được ghi rõ trong *Outstanding Items / Network Capture Required* và cần xác nhận qua capture thật.
-- Validation passed; file sẵn sàng cho `dev-story` / `bmad-dev-auto`.
+- Triển khai hoàn chỉnh module `src/scrapers/social/threads/`:
+  - `ThreadsClient` extends `AbstractApiClient` với `got-scraping`, dynamic extraction token (`lsd`, `csrftoken`, `fb_dtsg`), `Map`-based in-memory token cache (TTL 30 phút, in-flight request deduplication), và dispatch GraphQL request với Relay `doc_id`.
+  - `ThreadsCrawler` extends `AbstractCrawler` với `requiresAuth = true`, synthetic guest account `threads-guest`, đăng ký các action `get_user_feed`, `search`, và `get_post_comments` vào `ActionRegistry`.
+  - `ThreadsPlatformResponseValidator` extends `AbstractPlatformResponseValidator` nhận diện valid payload (unwrapping nested `data` envelopes), bot challenge, login wall, và rate limit.
+  - `normalizePost` và `normalizeComment` chuyển đổi raw response thành schema chuẩn `PostItem` và `CommentItem` theo AD-4 & `src/core/types.js`.
+  - Tạo schema contract `schemas/threads/social.json` phục vụ validation metadata khi persist qua `PrismaStore.storeBatch`.
+  - Hỗ trợ `CrawlCheckpoint` persistence và thin event pointer emission vào Redis stream `stream:social:raw_posts`.
+  - Tích hợp `CommentTreeExtractor` cho `get_post_comments` với `fetchLayer` callback, `p-limit(2)`, `maxDepth` clamp [0, 5], `maxComments` clamp [1, 2000].
+  - Gắn `@deprecated` JSDoc cho tất cả export symbols trong `src/scrapers/threads/index.js` và cập nhật `docs/deprecation-plan.md`.
+- No-mock unit & integration tests viết mới trong `tests/scrapers/social/threads/client.test.js` và `tests/scrapers/social/threads/crawler.test.js` (13 tests pass 100%).
+- Typecheck `npm run typecheck` (`tsc --noEmit`) đạt 0 lỗi. Toàn bộ regression test `tests/scrapers/social/` và `tests/core/` pass 100%.
 
 ### File List
 

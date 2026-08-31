@@ -4,6 +4,9 @@
  * XActions Threads Scrapers
  * Puppeteer-based scrapers for Meta Threads (threads.net)
  *
+ * @deprecated Legacy Puppeteer Threads scraper. Marked for decommissioning in Epic 20.2.
+ * Use hybrid ThreadsCrawler and ThreadsClient in `src/scrapers/social/threads/` instead.
+ *
  * Uses the same Puppeteer stealth approach as Twitter scrapers.
  * Threads has limited public API, so we scrape the web interface.
  *
