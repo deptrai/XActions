@@ -51,6 +51,7 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
       if (data.user?.result?.rest_id && data.user?.result?.legacy) return true;
       if (data.user?.result?.rest_id) return true;
       if (Array.isArray(data.user?.result?.timeline_v2?.timeline?.instructions)) return true;
+      if (Array.isArray(data.user?.result?.timeline?.timeline?.instructions)) return true;
       if (data.tweetResult?.result?.__typename === 'Tweet' || data.tweetResult?.result?.__typename === 'TweetTombstone' || data.tweetResult?.result?.rest_id) return true;
       if (Array.isArray(data.threaded_conversation_with_injections_v2?.instructions)) return true;
       if (Array.isArray(data.favoriters_timeline?.timeline?.instructions)) return true;

@@ -36,7 +36,11 @@
     "./cli": "./src/cli/index.js",
     "./client": "./src/client/index.js",
     "./spaces": "./src/spaces/agent.js",
-    "./store": "./src/store/index.js"
+    "./store": "./src/store/index.js",
+    "./scrapers/recruitment/topcv": "./src/scrapers/recruitment/topcv/index.js",
+    "./scrapers/recruitment/vietnamworks": "./src/scrapers/recruitment/vietnamworks/index.js",
+    "./scrapers/recruitment/linkedin": "./src/scrapers/recruitment/linkedin/index.js",
+    "./scrapers/realestate/chotot": "./src/scrapers/realestate/chotot/index.js"
   },
   "bin": {
     "xactions": "./src/cli/index.js",

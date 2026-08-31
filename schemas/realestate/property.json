@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Chợ Tốt Real Estate & Classified Listing Schema",
+  "type": "object",
+  "properties": {
+    "listId": { "type": "string" },
+    "title": { "type": "string" },
+    "category": { "type": "string" },
+    "categoryGroup": { "type": "number" },
+    "price": { "type": ["number", "null"] },
+    "priceString": { "type": "string" },
+    "size": { "type": ["number", "null"] },
+    "rooms": { "type": ["number", "null"] },
+    "region": { "type": "string" },
+    "regionId": { "type": ["number", "null"] },
+    "area": { "type": "string" },
+    "areaId": { "type": ["number", "null"] },
+    "location": { "type": "string" },
+    "phone": { "type": ["string", "null"] },
+    "isPhoneVerified": { "type": "boolean" },
+    "sellerName": { "type": "string" },
+    "sellerOid": { "type": "string" },
+    "images": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "sourceMethod": { "type": "string" }
+  },
+  "additionalProperties": true
+}
