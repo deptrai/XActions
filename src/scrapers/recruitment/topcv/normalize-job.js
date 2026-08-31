@@ -49,7 +49,10 @@ export function parseVietnameseSalary(text) {
     let token = rawToken.trim();
     if (!token) continue;
 
-    if (currency === 'VND') {
+    // Check if token uses commas as thousand separators (e.g. 15,000,000 or 15,000)
+    if (/\d{1,3}(,\d{3})+/g.test(token)) {
+      token = token.replace(/,/g, '');
+    } else if (currency === 'VND') {
       token = token.replace(/\.(?=\d{3}(?:\D|$))/g, '').replace(',', '.');
     } else {
       token = token.replace(/,/g, '');
@@ -87,9 +90,15 @@ export function parseVietnameseSalary(text) {
   let salaryMax = normalizedNumbers.length > 1 ? Math.round(normalizedNumbers[normalizedNumbers.length - 1]) : null;
 
   const hasFrom = lower.includes('từ') || lower.includes('from');
-  const hasTo = lower.includes('tới') || lower.includes('up to') || lower.includes('đến') || lower.includes('lên đến');
+  const hasTo =
+    lower.includes('tới') ||
+    lower.includes('up to') ||
+    lower.includes('đến') ||
+    lower.includes('lên đến') ||
+    lower.includes('dưới') ||
+    lower.includes('under');
 
-  if (hasFrom && hasTo) {
+  if (normalizedNumbers.length >= 2) {
     salaryMin = Math.round(normalizedNumbers[0]);
     salaryMax = Math.round(normalizedNumbers[normalizedNumbers.length - 1]);
   } else if (hasTo) {
@@ -97,7 +106,7 @@ export function parseVietnameseSalary(text) {
     salaryMax = Math.round(normalizedNumbers[0]);
   } else if (hasFrom) {
     salaryMin = Math.round(normalizedNumbers[0]);
-    salaryMax = normalizedNumbers.length > 1 ? Math.round(normalizedNumbers[normalizedNumbers.length - 1]) : null;
+    salaryMax = null;
   }
 
   return {

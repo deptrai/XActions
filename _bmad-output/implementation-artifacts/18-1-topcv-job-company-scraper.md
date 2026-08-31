@@ -2,19 +2,32 @@
 story_id: "18.1"
 epic: 18
 story_key: "18-1-topcv-job-company-scraper"
-status: "review"
+status: "done"
 phase: "Phase 3"
 created: 2026-08-27
 updated: 2026-08-31
-last_updated: 2026-08-31T07:30:00Z
+last_updated: 2026-08-31T07:45:00Z
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "approved"
 baseline_commit: "1b14359f"
 ---
 
 # Story 18.1: TopCV Job & Company Scraper
 
-Status: review
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review after P1/P2 patch fixes)  
+**Date:** 2026-08-31  
+**Summary:**
+- `TopCvCrawler` và `TopCvClient` kế thừa `AbstractCrawler` và `AbstractApiClient` chuẩn mực, đăng ký 3 actions `search_jobs`, `job_detail`, `company_detail`.
+- Đã xử lý triệt để các edge cases trong `parseVietnameseSalary`:
+  1. Hỗ trợ range "đến/tới" khi có 2 số (`15 đến 25 triệu` -> min: 15tr, max: 25tr).
+  2. Hỗ trợ format dấu phẩy phân tách nghìn (`15,000,000 VND`).
+  3. Hỗ trợ từ khóa "Dưới / under" (`Dưới 15 triệu` -> min: 0, max: 15tr).
+- Regex `#parseJobListHtml` được cải tiến linh hoạt thứ tự thuộc tính `data-job-id` / `class`.
+- Toàn bộ 10/10 tests tại `tests/scrapers/recruitment/topcv/crawler-topcv.test.js` passed 100%.
 
 ## ⚠️ Critical Constraints & Architecture Guidelines
 

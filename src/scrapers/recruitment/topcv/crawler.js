@@ -189,12 +189,12 @@ export class TopCvCrawler extends AbstractCrawler {
    */
   #parseJobListHtml(html) {
     const items = [];
-    const itemRegex = /<div[^>]*class="[^"]*job-item-search-result[^"]*"[^>]*data-job-id="([^"]+)"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi;
+    const itemRegex = /<div[^>]*?(?:class="[^"]*job-item-search-result[^"]*"[^>]*?data-job-id="([^"]+)"|data-job-id="([^"]+)"[^>]*?class="[^"]*job-item-search-result[^"]*")[^>]*>([\s\S]*?)(?=<div[^>]*?class="[^"]*job-item-search-result|$)/gi;
     let match;
 
     while ((match = itemRegex.exec(html)) !== null) {
-      const jobId = match[1];
-      const chunk = match[2];
+      const jobId = match[1] || match[2];
+      const chunk = match[3];
 
       const titleMatch = chunk.match(/<h3[^>]*class="[^"]*title[^"]*"[^>]*>[\s\S]*?<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/i);
       const title = titleMatch ? stripHtml(titleMatch[2]) : '';

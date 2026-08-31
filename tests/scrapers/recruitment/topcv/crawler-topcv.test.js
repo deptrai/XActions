@@ -225,6 +225,27 @@ describe('Story 18.1 — TopCV Job & Company Scraper (TDD)', () => {
       isNegotiable: false,
     });
 
+    expect(parseVietnameseSalary('Dưới 15 triệu')).toEqual({
+      salaryMin: 0,
+      salaryMax: 15000000,
+      salaryCurrency: 'VND',
+      isNegotiable: false,
+    });
+
+    expect(parseVietnameseSalary('15 đến 25 triệu')).toEqual({
+      salaryMin: 15000000,
+      salaryMax: 25000000,
+      salaryCurrency: 'VND',
+      isNegotiable: false,
+    });
+
+    expect(parseVietnameseSalary('15,000,000 - 25,000,000 VND')).toEqual({
+      salaryMin: 15000000,
+      salaryMax: 25000000,
+      salaryCurrency: 'VND',
+      isNegotiable: false,
+    });
+
     expect(parseVietnameseSalary('Từ 20 triệu')).toEqual({
       salaryMin: 20000000,
       salaryMax: null,
