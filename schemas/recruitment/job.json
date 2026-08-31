@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TopCV Job & Recruitment Schema",
+  "type": "object",
+  "properties": {
+    "jobId": { "type": "string" },
+    "title": { "type": "string" },
+    "companyId": { "type": "string" },
+    "companyName": { "type": "string" },
+    "companyUrl": { "type": "string" },
+    "location": { "type": "string" },
+    "city": { "type": "string" },
+    "salaryMin": { "type": ["number", "null"] },
+    "salaryMax": { "type": ["number", "null"] },
+    "salaryCurrency": { "type": "string" },
+    "isNegotiable": { "type": "boolean" },
+    "experienceYears": { "type": ["number", "null"] },
+    "employmentType": { "type": ["string", "null"] },
+    "skills": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "description": { "type": "string" },
+    "requirements": { "type": "string" },
+    "benefits": { "type": "string" },
+    "deadline": { "type": ["string", "null"] },
+    "sourceMethod": { "type": "string" }
+  },
+  "additionalProperties": true
+}
