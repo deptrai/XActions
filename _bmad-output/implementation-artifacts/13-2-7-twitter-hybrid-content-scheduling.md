@@ -2,6 +2,32 @@
 story_id: '13.2.7'
 epic: 13
 story_key: '13-2-7-twitter-hybrid-content-scheduling'
+status: "done"
+phase: "Phase 2"
+created: 2026-08-30
+updated: 2026-08-31
+last_updated: 2026-08-31
+owner: "DEV"
+reviewed: "approved"
+baseline_commit: "7f67bb484d0b13512e09bb3e9c564bb1ebfec6b0"
+---
+
+# Story 13.2.7 — Twitter Hybrid Content Scheduling
+
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review)  
+**Date:** 2026-08-31  
+**Summary:**
+- Đã đăng ký action `schedule` trong `TwitterCrawler` đúng chuẩn `ActionDescriptor`.
+- Tích hợp write safety: Gaussian delay floor, default `dryRun: true`, kiểm tra governor `canAccountRequest`.
+- Normalization `publishAt` (Date, string, timestamp seconds/ms) thành Unix seconds chính xác.
+- Tất cả 13/13 tests tại `crawler-content-scheduling.test.js` passed 100%.
+
+epic: 13
+story_key: '13-2-7-twitter-hybrid-content-scheduling'
 status: "in-progress"
 phase: "Phase 2"
 created: 2026-08-30
