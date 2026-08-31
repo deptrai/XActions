@@ -117,7 +117,7 @@ development_status:
   # --- Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan) ---
   epic-17: in-progress
   17-1-chotot-multi-category-scraper-with-phone-mask-detector: done
-  17-2-batdongsan-com-vn-property-scraper: backlog
+  17-2-batdongsan-com-vn-property-scraper: ready-for-dev
   epic-17-retrospective: optional
 
   # --- Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn) ---
