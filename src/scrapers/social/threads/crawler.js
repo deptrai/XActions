@@ -2127,6 +2127,445 @@ export class ThreadsCrawler extends AbstractCrawler {
   }
 
   /**
+   * Decode common HTML entities in meta tag content.
+   * @param {string} str
+   * @returns {string}
+   */
+  #decodeHtmlEntities(str) {
+    if (typeof str !== 'string') return String(str);
+    return str
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+  }
+
+  /**
+   * Scrape a Threads user profile.
+   * Tries GraphQL first if docIds.PROFILE is configured, otherwise falls back to HTML SSR parsing.
+   * @param {Object} args
+   * @param {string} args.username
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<Record<string, any>>} Normalized ProfileItem
+   */
+  async getProfile(args, session = {}) {
+    if (!args?.username) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: username',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const username = String(args.username).replace(/^@/, '').trim();
+    if (!username) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing or empty username argument',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+    const accountId = session?.accountId || 'threads-guest';
+    let profile = null;
+
+    // 1. Try GraphQL if docIds.PROFILE is available
+    if (this.docIds.PROFILE) {
+      try {
+        const userId = await this.#resolveUserId(username, accountId);
+        const res = await this.client.requestGraphQl(
+          this.docIds.PROFILE,
+          { userID: userId, username },
+          { accountId }
+        );
+
+        const rawUser = res?.data?.userData?.user || res?.data?.user || res?.data?.node;
+        if (rawUser) {
+          profile = normalizeThreadsProfile(rawUser, 'graphql');
+        }
+      } catch (err) {
+        // 404 is final; other errors (rate limit, network, 5xx) allow SSR fallback
+        const anyErr = /** @type {any} */ (err);
+        if (anyErr?.statusCode === 404 || anyErr?.code === 'XACT_4041') {
+          throw err;
+        }
+      }
+    }
+
+    // 2. SSR Fallback if GraphQL was not configured or returned null
+    if (!profile) {
+      profile = await this.#fetchProfileSsr(username, accountId);
+    }
+
+    // 3. Persist as PostItem to store
+    if (this.store && typeof this.store.storeBatch === 'function') {
+      const postItem = profileItemToPostItem(profile);
+      await this.store.storeBatch([postItem], { upsert: true });
+    }
+
+    // 4. Save Checkpoint & emit thin event
+    await this.#emitProfileCheckpointAndStream([profile], 'profile', username, null, 'completed');
+
+    return profile;
+  }
+
+  /**
+   * SSR HTML fallback parser for Threads profile page.
+   * @param {string} username
+   * @param {string} accountId
+   * @returns {Promise<Record<string, any>>}
+   */
+  async #fetchProfileSsr(username, accountId) {
+    const cleanUser = username.replace(/^@/, '').trim();
+    let resp;
+    try {
+      resp = /** @type {any} */ (await this.client.request('GET', `${this.client.baseUrl}/@${cleanUser}`, {
+        accountId,
+      }));
+    } catch (err) {
+      const anyErr = /** @type {any} */ (err);
+      const status = anyErr?.statusCode || anyErr?.status;
+      if (status === 404 || anyErr?.code === 'XACT_4041') {
+        throw new PlatformError({
+          code: 'XACT_4041',
+          type: ErrorTypes.INTERNAL,
+          message: `Threads user @${cleanUser} not found`,
+          statusCode: 404,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'threads',
+        });
+      }
+      throw err;
+    }
+
+    const html = typeof resp?.data === 'string' ? resp.data : (typeof resp === 'string' ? resp : JSON.stringify(resp?.data || ''));
+
+    if (html.includes("Sorry, this page isn't available") || html.includes('Page Not Found')) {
+      throw new PlatformError({
+        code: 'XACT_4041',
+        type: ErrorTypes.INTERNAL,
+        message: `Threads user @${cleanUser} not found`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const titleMatch = html.match(/<meta\s+[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
+    const descMatch = html.match(/<meta\s+[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:description["']/i);
+    const imageMatch = html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
+
+    const title = titleMatch ? this.#decodeHtmlEntities(titleMatch[1]) : '';
+    const desc = descMatch ? this.#decodeHtmlEntities(descMatch[1]) : '';
+    const avatar = imageMatch ? imageMatch[1] : null;
+
+    const userInTitleMatch = title.match(/@([a-zA-Z0-9._]+)/);
+    const usernameFromTitle = userInTitleMatch ? userInTitleMatch[1] : cleanUser;
+
+    const nameMatch = title.match(/^(.+?)\s*\(/);
+    const name = nameMatch ? nameMatch[1].trim() : usernameFromTitle;
+
+    const followerMatch = desc.match(/([\d.,]+[KkMmBb]?)\s*followers?/i);
+    const followersCount = followerMatch ? parseHumanCount(followerMatch[1]) : 0;
+
+    const followingMatch = desc.match(/([\d.,]+[KkMmBb]?)\s*following?/i);
+    const followingCount = followingMatch ? parseHumanCount(followingMatch[1]) : 0;
+
+    let bio = desc;
+    const countPrefix = followerMatch && followingMatch
+      ? `${followerMatch[0]}, ${followingMatch[0]}`
+      : (followerMatch ? followerMatch[0] : (followingMatch ? followingMatch[0] : ''));
+    if (countPrefix) {
+      bio = desc.replace(countPrefix, '').replace(/^[.,\s]+/, '').trim();
+    }
+
+    const idMatch =
+      html.match(/window\.__user_id\s*=\s*"([^"]+)"/) ||
+      html.match(/window\.__userId\s*=\s*"([^"]+)"/) ||
+      html.match(/"user_id":"(\d+)"/) ||
+      html.match(/"pk":"(\d+)"/);
+    const userId = idMatch ? idMatch[1] : usernameFromTitle;
+
+    return {
+      id: namespacedProfileId(userId),
+      platform: 'threads',
+      externalId: userId,
+      name,
+      username: usernameFromTitle,
+      bio,
+      avatar,
+      profileUrl: `https://www.threads.net/@${usernameFromTitle}`,
+      followersCount,
+      followingCount,
+      metadata: {
+        isProfile: true,
+        isFollower: false,
+        isFollowing: false,
+        sourceMethod: 'ssr',
+        isVerified: false,
+        userId,
+        username: usernameFromTitle,
+        followersCount,
+        followingCount: 0,
+      },
+    };
+  }
+
+  /**
+   * Scrape followers of a Threads account.
+   * @param {Object} args
+   * @param {string} args.username
+   * @param {number} [args.count=20]
+   * @param {string} [args.cursor]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ profiles: Record<string, any>[], counts: { followersCount: number, followingCount: number }, note?: string, pageInfo?: any }>}
+   */
+  async getFollowers(args, session = {}) {
+    return this.#fetchConnections(args, session, 'follower');
+  }
+
+  /**
+   * Scrape following of a Threads account.
+   * @param {Object} args
+   * @param {string} args.username
+   * @param {number} [args.count=20]
+   * @param {string} [args.cursor]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ profiles: Record<string, any>[], counts: { followersCount: number, followingCount: number }, note?: string, pageInfo?: any }>}
+   */
+  async getFollowing(args, session = {}) {
+    return this.#fetchConnections(args, session, 'following');
+  }
+
+  /**
+   * Internal connection scraper for followers and following.
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} session
+   * @param {'follower' | 'following'} connectionType
+   * @returns {Promise<{ profiles: Record<string, any>[], counts: { followersCount: number, followingCount: number }, note?: string, pageInfo?: any }>}
+   */
+  async #fetchConnections(args, session, connectionType) {
+    if (!args?.username) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: username',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const username = String(args.username).replace(/^@/, '').trim();
+    if (!username) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing or empty username argument',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    const accountId = session?.accountId || 'threads-guest';
+    const userId = await this.#resolveUserId(username, accountId);
+
+    const docIdKey = connectionType === 'follower' ? 'FOLLOWERS' : 'FOLLOWING';
+    const docId = this.docIds[docIdKey];
+
+    const profiles = [];
+    let counts = { followersCount: 0, followingCount: 0 };
+    let note;
+    let pageInfo = { has_next_page: false, end_cursor: null };
+
+    if (!docId) {
+      note = `${docIdKey} doc_id is not configured; returning SSR-fallback counts only`;
+
+      const profile = await this.#fetchProfileSsr(username, accountId);
+      counts = {
+        followersCount: profile.followersCount ?? 0,
+        followingCount: profile.followingCount ?? 0,
+      };
+
+      // Persist the seed profile so callers have some data
+      if (this.store && typeof this.store.storeBatch === 'function') {
+        const postItem = profileItemToPostItem(profile);
+        await this.store.storeBatch([postItem], { upsert: true });
+      }
+
+      await this.#emitProfileCheckpointAndStream(
+        [profile],
+        connectionType,
+        username,
+        pageInfo.end_cursor,
+        'completed'
+      );
+
+      return {
+        profiles: [profile],
+        counts,
+        note,
+        pageInfo,
+      };
+    }
+
+    // Fetch profile counts first for accurate totals
+    try {
+      const profile = this.docIds.PROFILE
+        ? await this.getProfile({ username }, session)
+        : await this.#fetchProfileSsr(username, accountId);
+      counts = {
+        followersCount: profile.followersCount ?? 0,
+        followingCount: profile.followingCount ?? 0,
+      };
+
+      // Persist the seed profile
+      if (this.store && typeof this.store.storeBatch === 'function') {
+        const postItem = profileItemToPostItem(profile);
+        await this.store.storeBatch([postItem], { upsert: true });
+      }
+    } catch (err) {
+      // SSR/GraphQL may fail for private/suspended accounts; keep counts zero
+      counts = { followersCount: 0, followingCount: 0 };
+    }
+
+    const targetCount = this.#clampCount(args.count, 1, 100);
+    let after = args.cursor || null;
+    let fetched = 0;
+    let hasMore = true;
+
+    // Loop to satisfy count across multiple GraphQL pages
+    while (fetched < targetCount && hasMore) {
+      const pageSize = Math.min(targetCount - fetched, 50);
+      const variables = {
+        userID: userId,
+        username,
+        first: pageSize,
+        after,
+      };
+
+      const res = await this.client.requestGraphQl(docId, variables, { accountId });
+
+      const connection =
+        res?.data?.node?.[`${connectionType === 'follower' ? 'followers' : 'following'}_connection`] ||
+        res?.data?.userData?.user?.[`${connectionType === 'follower' ? 'followers' : 'following'}_connection`] ||
+        res?.data?.[connectionType === 'follower' ? 'followers_connection' : 'following_connection'];
+
+      const edges = Array.isArray(connection?.edges) ? connection.edges : [];
+      const nodes = Array.isArray(connection?.nodes) ? connection.nodes : [];
+      const rawItems = edges.length ? edges : nodes;
+
+      // If GraphQL returns an empty/null connection, switch to limitation fallback
+      if (!connection || rawItems.length === 0) {
+        note = 'Threads does not expose public follower/following lists; returned counts only.';
+
+        const profile = this.docIds.PROFILE
+          ? await this.getProfile({ username }, session)
+          : await this.#fetchProfileSsr(username, accountId);
+        counts = {
+          followersCount: profile.followersCount ?? 0,
+          followingCount: profile.followingCount ?? 0,
+        };
+
+        if (this.store && typeof this.store.storeBatch === 'function') {
+          const postItem = profileItemToPostItem(profile);
+          await this.store.storeBatch([postItem], { upsert: true });
+        }
+
+        await this.#emitProfileCheckpointAndStream(
+          [profile],
+          connectionType,
+          username,
+          null,
+          'completed'
+        );
+
+        return { profiles: [], counts, note, pageInfo: { has_next_page: false, end_cursor: null } };
+      }
+
+      for (const raw of rawItems) {
+        const node = raw?.node || raw;
+        const profile = normalizeThreadsConnection(node, 'graphql', connectionType);
+
+        if (this.store && typeof this.store.storeBatch === 'function') {
+          const postItem = profileItemToPostItem(profile);
+          await this.store.storeBatch([postItem], { upsert: true });
+        }
+
+        profiles.push(profile);
+      }
+
+      fetched += rawItems.length;
+      pageInfo = {
+        has_next_page: Boolean(connection?.page_info?.has_next_page || connection?.pageInfo?.has_next_page),
+        end_cursor: connection?.page_info?.end_cursor || connection?.pageInfo?.end_cursor || null,
+      };
+      after = pageInfo.end_cursor;
+      hasMore = pageInfo.has_next_page && Boolean(after);
+
+      if (!hasMore) break;
+    }
+
+    await this.#emitProfileCheckpointAndStream(profiles, connectionType, username, after);
+
+    return { profiles, counts, pageInfo };
+  }
+
+  /**
+   * Emit checkpoint and Redis stream pointer for profile / connection actions.
+   * @param {Record<string, any>[]} items
+   * @param {string} targetType
+   * @param {string} targetKey
+   * @param {string | null} [cursor]
+   * @param {string} [status='running']
+   */
+  async #emitProfileCheckpointAndStream(items, targetType, targetKey, cursor, status = 'running') {
+    try {
+      const storeWithCheckpoint = /** @type {any} */ (this.store);
+      if (storeWithCheckpoint && typeof storeWithCheckpoint.saveCheckpoint === 'function') {
+        const storageRef = items[0]?.id || items[0]?.externalId || '';
+        await storeWithCheckpoint.saveCheckpoint({
+          platform: 'threads',
+          action: targetType,
+          targetType,
+          targetKey,
+          cursor,
+          status,
+          itemsCount: items.length,
+          storageRef,
+          completedAt: status === 'completed' ? toIsoDate(new Date()) : null,
+        });
+      }
+
+      if (items.length > 0 && isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
+        const publisher = this.redisPublisher || (this.store && /** @type {any} */ (this.store).publisher) || defaultRedisStreamPublisher;
+        if (publisher && typeof publisher.publish === 'function') {
+          for (const item of items) {
+            const postItem = profileItemToPostItem(item);
+            await publisher.publish({
+              id: postItem.id,
+              platform: 'threads',
+              externalId: postItem.externalId,
+              category: 'social',
+              authorId: postItem.authorId,
+              crawledAt: toIsoDate(postItem.crawledAt),
+              storageRef: postItem.id,
+            });
+          }
+        }
+      }
+    } catch {}
+  }
+
+  /**
    * Cleanup crawler and client resources.
    * @returns {Promise<void>}
    */
