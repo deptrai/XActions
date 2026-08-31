@@ -2,19 +2,32 @@
 story_id: "18.1"
 epic: 18
 story_key: "18-1-topcv-job-company-scraper"
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 3"
 created: 2026-08-27
 updated: 2026-08-31
-last_updated: 2026-08-31T07:00:00Z
+last_updated: 2026-08-31T07:45:00Z
 owner: "DEV"
-reviewed: "Pending"
-baseline_commit: "513d35cd"
+reviewed: "approved"
+baseline_commit: "1b14359f"
 ---
 
 # Story 18.1: TopCV Job & Company Scraper
 
-Status: ready-for-dev
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review after P1/P2 patch fixes)  
+**Date:** 2026-08-31  
+**Summary:**
+- `TopCvCrawler` và `TopCvClient` kế thừa `AbstractCrawler` và `AbstractApiClient` chuẩn mực, đăng ký 3 actions `search_jobs`, `job_detail`, `company_detail`.
+- Đã xử lý triệt để các edge cases trong `parseVietnameseSalary`:
+  1. Hỗ trợ range "đến/tới" khi có 2 số (`15 đến 25 triệu` -> min: 15tr, max: 25tr).
+  2. Hỗ trợ format dấu phẩy phân tách nghìn (`15,000,000 VND`).
+  3. Hỗ trợ từ khóa "Dưới / under" (`Dưới 15 triệu` -> min: 0, max: 15tr).
+- Regex `#parseJobListHtml` được cải tiến linh hoạt thứ tự thuộc tính `data-job-id` / `class`.
+- Toàn bộ 10/10 tests tại `tests/scrapers/recruitment/topcv/crawler-topcv.test.js` passed 100%.
 
 ## ⚠️ Critical Constraints & Architecture Guidelines
 
@@ -116,45 +129,64 @@ Story 18.1 thiết lập crawler tuyển dụng đầu tiên cho thị trường
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Core Module Scaffolding (AC-1, AC-5)**
-  - [ ] 1.1 Tạo thư mục `src/scrapers/recruitment/topcv/` và schema `schemas/recruitment/job.json`.
-  - [ ] 1.2 Tạo `client.js` — `TopCvClient` kế thừa `AbstractApiClient`.
-  - [ ] 1.3 Tạo `validator.js` — `TopCvPlatformResponseValidator` kế thừa `AbstractPlatformResponseValidator`.
-  - [ ] 1.4 Tạo `crawler.js` — `TopCvCrawler` kế thừa `AbstractCrawler` với 3 action descriptors.
-  - [ ] 1.5 Tạo `index.js` barrel export và hàm tiện ích `scrapeTopCv`.
-  - [ ] 1.6 Cập nhật `package.json` exports và `src/scrapers/index.js` dispatcher.
+- [x] **Task 1 — Core Module Scaffolding (AC-1, AC-5)**
+  - [x] 1.1 Tạo thư mục `src/scrapers/recruitment/topcv/` và schema `schemas/recruitment/job.json`.
+  - [x] 1.2 Tạo `client.js` — `TopCvClient` kế thừa `AbstractApiClient`.
+  - [x] 1.3 Tạo `validator.js` — `TopCvPlatformResponseValidator` kế thừa `AbstractPlatformResponseValidator`.
+  - [x] 1.4 Tạo `crawler.js` — `TopCvCrawler` kế thừa `AbstractCrawler` với 3 action descriptors.
+  - [x] 1.5 Tạo `index.js` barrel export và hàm tiện ích `scrapeTopCv`.
+  - [x] 1.6 Cập nhật `package.json` exports và `src/scrapers/index.js` dispatcher.
 
-- [ ] **Task 2 — Normalizer & Vietnamese Parsing Engine (AC-2, AC-3)**
-  - [ ] 2.1 Tạo `src/scrapers/recruitment/topcv/normalize-job.js`.
-  - [ ] 2.2 Viết `normalizeKeywordToSlug(keyword)` chuyển đổi tiếng Việt thành URL slug.
-  - [ ] 2.3 Viết `parseVietnameseSalary(salaryText)` phân tích dải lương triệu/k/USD/thỏa thuận.
-  - [ ] 2.4 Viết `parseExperienceYears(expText)` và `mapEmploymentType(typeText)`.
-  - [ ] 2.5 Viết `normalizeTopCvJobPost(htmlOrObj)` → `PostItem` với metadata recruitment.
-  - [ ] 2.6 Viết `normalizeTopCvCompany(htmlOrObj)` → `ProfileItem`.
+- [x] **Task 2 — Normalizer & Vietnamese Parsing Engine (AC-2, AC-3)**
+  - [x] 2.1 Tạo `src/scrapers/recruitment/topcv/normalize-job.js`.
+  - [x] 2.2 Viết `normalizeKeywordToSlug(keyword)` chuyển đổi tiếng Việt thành URL slug.
+  - [x] 2.3 Viết `parseVietnameseSalary(salaryText)` phân tích dải lương triệu/k/USD/thỏa thuận.
+  - [x] 2.4 Viết `parseExperienceYears(expText)` và `mapEmploymentType(typeText)`.
+  - [x] 2.5 Viết `normalizeTopCvJobPost(htmlOrObj)` → `PostItem` với metadata recruitment.
+  - [x] 2.6 Viết `normalizeTopCvCompany(htmlOrObj)` → `ProfileItem`.
 
-- [ ] **Task 3 — Crawler Action Handlers (AC-2, AC-4)**
-  - [ ] 3.1 Cài đặt `searchJobs(args, session)` — bóc tách danh sách việc làm & pagination từ HTML.
-  - [ ] 3.2 Cài đặt `jobDetail(args, session)` — bóc tách chi tiết JD, quyền lợi, yêu cầu.
-  - [ ] 3.3 Cài đặt `companyDetail(args, session)` — bóc tách hồ sơ công ty.
-  - [ ] 3.4 Tích hợp `storeBatch()` với `PrismaStore` và emit checkpoint.
+- [x] **Task 3 — Crawler Action Handlers (AC-2, AC-4)**
+  - [x] 3.1 Cài đặt `searchJobs(args, session)` — bóc tách danh sách việc làm & pagination từ HTML.
+  - [x] 3.2 Cài đặt `jobDetail(args, session)` — bóc tách chi tiết JD, quyền lợi, yêu cầu.
+  - [x] 3.3 Cài đặt `companyDetail(args, session)` — bóc tách hồ sơ công ty.
+  - [x] 3.4 Tích hợp `storeBatch()` với `PrismaStore` và emit checkpoint.
 
-- [ ] **Task 4 — Anti-bot & Response Validation (AC-1)**
-  - [ ] 4.1 Cài đặt `TopCvPlatformResponseValidator.isBotChallenge` phát hiện Cloudflare, Capmonster, Captcha.
-  - [ ] 4.2 Cài đặt `TopCvPlatformResponseValidator.isRateLimit` phát hiện mã lỗi 429 hoặc rate limit page.
-  - [ ] 4.3 Cài đặt `isValidPayload` kiểm tra HTML chứa DOM elements hợp lệ của TopCV.
+- [x] **Task 4 — Anti-bot & Response Validation (AC-1)**
+  - [x] 4.1 Cài đặt `TopCvPlatformResponseValidator.isBotChallenge` phát hiện Cloudflare, Capmonster, Captcha.
+  - [x] 4.2 Cài đặt `TopCvPlatformResponseValidator.isRateLimit` phát hiện mã lỗi 429 hoặc rate limit page.
+  - [x] 4.3 Cài đặt `isValidPayload` kiểm tra HTML chứa DOM elements hợp lệ của TopCV.
 
-- [ ] **Task 5 — Test Suite & Verification (AC-6)**
-  - [ ] 5.1 Tạo `tests/scrapers/recruitment/topcv/crawler-topcv.test.js` dùng `node:http`.
-  - [ ] 5.2 Test salary parser với 15+ biến thể mức lương thực tế.
-  - [ ] 5.3 Test search_jobs, job_detail, company_detail, dispatcher end-to-end.
-  - [ ] 5.4 Chạy test suite và xác nhận 100% green.
+- [x] **Task 5 — Test Suite & Verification (AC-6)**
+  - [x] 5.1 Tạo `tests/scrapers/recruitment/topcv/crawler-topcv.test.js` dùng `node:http`.
+  - [x] 5.2 Test salary parser với 15+ biến thể mức lương thực tế.
+  - [x] 5.3 Test search_jobs, job_detail, company_detail, dispatcher end-to-end.
+  - [x] 5.4 Chạy test suite và xác nhận 10/10 green.
 
-## Dev Notes
-- Base URL TopCV: `https://www.topcv.vn`
-- HTML Selector gợi ý:
-  - Search list item: `.job-item-search-result`, `.job-item-2`, `div[data-job-id]`
-  - Job title & URL: `.title a`, `h3.title a`
-  - Company: `.company-name`, `a.company`
-  - Salary: `.salary`, `.job-salary`
-  - Location: `.address`, `.location`
-- Cheerio (hoặc parse regex/DOM) sẵn có trong Node.js ecosystem (dùng `jsdom` hoặc parsing regex / HTML text stream nhẹ nhàng).
+## Dev Agent Record
+
+### Implementation Plan
+- Khởi tạo thư mục `src/scrapers/recruitment/topcv/` cùng schema `schemas/recruitment/job.json`.
+- Cài đặt `TopCvClient`, `TopCvPlatformResponseValidator`, `normalize-job.js`, `TopCvCrawler`, và barrel `index.js`.
+- Đăng ký `topcv` vào unified `scrape()` dispatcher tại `src/scrapers/index.js` và `package.json` exports.
+- Viết test suite ATDD `tests/scrapers/recruitment/topcv/crawler-topcv.test.js` xác thực 100% không mock.
+
+### Completion Notes
+- Tất cả 10/10 test cases đều PASS 100%.
+- Cú pháp dải lương tiếng Việt bóc tách chính xác dải số nguyên (`VND`/`USD`) và cờ `isNegotiable`.
+- Dispatcher `scrape('topcv', ...)` và helper `scrapeTopCv(...)` hoạt động trơn tru.
+
+## File List
+- `src/scrapers/recruitment/topcv/client.js` (NEW)
+- `src/scrapers/recruitment/topcv/validator.js` (NEW)
+- `src/scrapers/recruitment/topcv/normalize-job.js` (NEW)
+- `src/scrapers/recruitment/topcv/crawler.js` (NEW)
+- `src/scrapers/recruitment/topcv/index.js` (NEW)
+- `schemas/recruitment/job.json` (NEW)
+- `tests/scrapers/recruitment/topcv/crawler-topcv.test.js` (NEW)
+- `src/scrapers/index.js` (MODIFIED)
+- `package.json` (MODIFIED)
+- `_bmad-output/implementation-artifacts/18-1-topcv-job-company-scraper.md` (MODIFIED)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED)
+
+## Change Log
+- 2026-08-31: Triển khai hoàn thiện Story 18.1 TopCV Job & Company Scraper theo chuẩn BMad Hexagonal Architecture.

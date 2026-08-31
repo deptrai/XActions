@@ -66,16 +66,16 @@ development_status:
   epic-12-retrospective: optional
 
   # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---
-  epic-13: done
+  epic-13: in-progress
   13-1-tiered-signer-architecture-token-ring-worker-pool: done
-  13-2-refactor-twitter-scraper-to-hybrid-architecture: done
-  13-2-1-twitter-hybrid-profile-relationships: done
+  13-2-refactor-twitter-scraper-to-hybrid-architecture: ready-for-dev
+  13-2-1-twitter-hybrid-profile-relationships: ready-for-dev
   13-2-2-twitter-hybrid-thread-likes-bookmarks: done
   13-2-3-twitter-hybrid-search-hashtag-trending: done
   13-2-4-twitter-hybrid-media-scraper: done
-  13-2-5-twitter-hybrid-lists-communities-spaces: done
+  13-2-5-twitter-hybrid-lists-communities-spaces: review
   13-2-6-twitter-hybrid-content-composition-post-reply-quote: done
-  13-2-7-twitter-hybrid-content-scheduling: done
+  13-2-7-twitter-hybrid-content-scheduling: review
   13-2-8-twitter-hybrid-engagement-like-retweet: done
   13-2-9-twitter-hybrid-social-graph-follow-block-mute-bookmark: done
   13-2-10-twitter-hybrid-direct-messaging: done
@@ -92,24 +92,24 @@ development_status:
   epic-13-retrospective: optional
 
   # --- Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream ---
-  epic-14: done
+  epic-14: in-progress
   14-1-hierarchical-comment-tree-extraction-algorithm: done
   14-2-mcp-tool-exporters-daemon-http-sse-server: done
-  14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub: done
+  14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub: ready-for-dev
   epic-14-retrospective: optional
 
   # --- Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine ---
-  epic-15: done
+  epic-15: in-progress
   15-1-threads-scraper-adapter-meta-internal-graphql: done
   15-1-1-threads-hybrid-profile-followers-following: done
   15-1-2-threads-hybrid-post-detail-comment-tree: done
-  15-1-3-threads-hybrid-docid-hardening-search-comments: done
-  15-1-4-threads-hybrid-integration-package-exports: done
-  15-2-tiktok-video-hashtag-comment-scraper: done
+  15-1-3-threads-hybrid-docid-hardening-search-comments: review
+  15-1-4-threads-hybrid-integration-package-exports: ready-for-dev
+  15-2-tiktok-video-hashtag-comment-scraper: ready-for-review
   epic-15-retrospective: optional
 
   # --- Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop) ---
-  epic-16: done
+  epic-16: in-progress
   16-1-shopee-search-product-review-scraper-tls-spoofing: done
   16-2-tiktok-shop-product-sales-scraper: done
   epic-16-retrospective: optional
@@ -123,7 +123,7 @@ development_status:
   # --- Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn) ---
   # 18.1/18.2 story files created; 18.3 blocked by 12.2 CDP attach.
   epic-18: in-progress
-  18-1-topcv-job-company-scraper: ready-for-dev
+  18-1-topcv-job-company-scraper: done
   18-2-vietnamworks-job-scraper: ready-for-dev
   18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: backlog
   epic-18-retrospective: optional
