@@ -111,10 +111,10 @@ export class TikTokShopClient extends AbstractApiClient {
       }
       return {
         query: {
-          ...signed.query,
+          ...(signed.query || {}),
           ...params,
         },
-        cookies: signed.cookies,
+        cookies: signed.cookies || {},
       };
     }
 
@@ -144,7 +144,8 @@ export class TikTokShopClient extends AbstractApiClient {
    */
   #mergeSignedQuery(url, signedQuery) {
     const parsed = new URL(url);
-    for (const [k, v] of Object.entries(signedQuery)) {
+    const safeSignedQuery = signedQuery == null ? {} : signedQuery;
+    for (const [k, v] of Object.entries(safeSignedQuery)) {
       if (v === undefined || v === null) continue;
       parsed.searchParams.set(k, String(v));
     }
@@ -178,8 +179,9 @@ export class TikTokShopClient extends AbstractApiClient {
    * @param {Record<string, any>} params
    * @returns {string}
    */
-  buildApiUrl(endpointPath, params = {}) {
-    const path = endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`;
+  buildApiUrl(endpointPath = '', params = {}) {
+    const safeEndpoint = endpointPath == null ? '' : String(endpointPath);
+    const path = safeEndpoint.startsWith('/') ? safeEndpoint : `/${safeEndpoint}`;
     const parsed = new URL(`${this.baseUrl}${path}`);
 
     // The browser-as-signer bridge matches requests by `aid` (app/device id).
@@ -188,7 +190,8 @@ export class TikTokShopClient extends AbstractApiClient {
       parsed.searchParams.set('aid', '1988');
     }
 
-    for (const [k, v] of Object.entries(params)) {
+    const safeParams = params == null ? {} : params;
+    for (const [k, v] of Object.entries(safeParams)) {
       if (v === undefined || v === null) continue;
       parsed.searchParams.set(k, String(v));
     }
@@ -202,11 +205,12 @@ export class TikTokShopClient extends AbstractApiClient {
    * @returns {Promise<Record<string, any>>}
    */
   async getTopProducts(params = {}, options = {}) {
+    const safeParams = params || {};
     const query = {
-      category: params.category || '',
-      limit: String(Math.max(1, Math.min(Number(params.limit || 20) || 0, 100))),
-      page: String(Math.max(0, Number(params.page || 0) || 0)),
-      sort_by: params.sortBy || 'sales',
+      category: safeParams.category || '',
+      limit: String(Math.max(1, Math.min(Number(safeParams.limit || 20) || 0, 100))),
+      page: String(Math.max(0, Number(safeParams.page || 0) || 0)),
+      sort_by: safeParams.sortBy || 'sales',
     };
     return this.requestTikTokShopApi('GET', '/api/v1/oec/affiliate/product/list', query, options);
   }
@@ -218,6 +222,15 @@ export class TikTokShopClient extends AbstractApiClient {
    * @returns {Promise<Record<string, any>>}
    */
   async getProductDetail(productId, options = {}) {
+    if (!productId && productId !== 0) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'productId is required',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'tiktokshop',
+      });
+    }
     return this.requestTikTokShopApi('GET', '/api/v1/shop/product/detail', {
       product_id: String(productId),
     }, options);
@@ -230,11 +243,12 @@ export class TikTokShopClient extends AbstractApiClient {
    * @returns {Promise<Record<string, any>>}
    */
   async searchProducts(params = {}, options = {}) {
+    const safeParams = params || {};
     const query = {
-      keyword: params.keyword || '',
-      limit: String(Math.max(1, Math.min(Number(params.limit || 20) || 0, 100))),
-      page: String(Math.max(0, Number(params.page || 0) || 0)),
-      sort_by: params.sortBy || 'relevance',
+      keyword: safeParams.keyword || '',
+      limit: String(Math.max(1, Math.min(Number(safeParams.limit || 20) || 0, 100))),
+      page: String(Math.max(0, Number(safeParams.page || 0) || 0)),
+      sort_by: safeParams.sortBy || 'relevance',
     };
     return this.requestTikTokShopApi('GET', '/api/v1/oec/affiliate/product/search', query, options);
   }

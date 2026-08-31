@@ -46,7 +46,7 @@ export class TikTokShopCrawler extends AbstractCrawler {
       category: 'ecom',
       requiresAuth: false,
       requiredArgs: [],
-      optionalArgs: ['category', 'limit', 'page'],
+      optionalArgs: ['category', 'limit', 'page', 'sortBy'],
       example: { category: 'fashion', limit: 20 },
       outputType: '{ products: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.topProducts(args, session),
@@ -84,16 +84,18 @@ export class TikTokShopCrawler extends AbstractCrawler {
    * @returns {Promise<{ products: import('../../../core/types.js').PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
    */
   async topProducts(args = {}, session = {}) {
-    const limit = Math.max(1, Math.min(Number(args.limit || 20) || 0, 100));
-    const page = Math.max(0, Number(args.page || 0) || 0);
+    const safeArgs = args || {};
+    const limit = Math.max(1, Math.min(Number(safeArgs.limit || 20) || 0, 100));
+    const page = Math.max(0, Number(safeArgs.page || 0) || 0);
 
     const response = await this.client.getTopProducts({
-      category: args.category,
+      category: safeArgs.category,
       limit,
       page,
-      sortBy: args.sortBy,
+      sortBy: safeArgs.sortBy,
     }, {
       requiresAuth: false,
+      ...(session || {}),
     });
 
     let productsRaw = response?.data?.products || response?.products || [];
@@ -103,14 +105,21 @@ export class TikTokShopCrawler extends AbstractCrawler {
     for (const raw of productsRaw) {
       const product = normalizeTikTokShopProduct(raw, {
         sourceMethod: 'top_products',
-        extraMetadata: { category: args.category, page },
+        extraMetadata: { category: safeArgs.category, page },
       });
       if (product) products.push(product);
       if (products.length >= limit) break;
     }
 
     if (this.store && typeof this.store.storeBatch === 'function' && products.length > 0) {
-      await this.store.storeBatch(products, { upsert: true }).catch(() => {});
+      try {
+        await this.store.storeBatch(products, { upsert: true });
+      } catch (storeErr) {
+        if (process.env.NODE_ENV !== 'production' && process.env.TIKTOK_SHOP_LOG_STORE !== 'false') {
+          // eslint-disable-next-line no-console
+          console.warn(`[tiktokshop] storeBatch failed: ${storeErr?.message || storeErr}`);
+        }
+      }
     }
 
     const pageInfo = buildTikTokShopPageInfo(response, products.length);
@@ -125,7 +134,10 @@ export class TikTokShopCrawler extends AbstractCrawler {
    * @returns {Promise<{ product: import('../../../core/types.js').PostItem }>}
    */
   async productDetail(args = {}, session = {}) {
-    const productId = args?.productId;
+    let productId = args?.productId;
+    if (productId !== undefined && productId !== null) {
+      productId = String(productId).trim();
+    }
 
     if (!productId) {
       throw new PlatformError({
@@ -158,7 +170,14 @@ export class TikTokShopCrawler extends AbstractCrawler {
     }
 
     if (this.store && typeof this.store.storeBatch === 'function') {
-      await this.store.storeBatch([product], { upsert: true }).catch(() => {});
+      try {
+        await this.store.storeBatch([product], { upsert: true });
+      } catch (storeErr) {
+        if (process.env.NODE_ENV !== 'production' && process.env.TIKTOK_SHOP_LOG_STORE !== 'false') {
+          // eslint-disable-next-line no-console
+          console.warn(`[tiktokshop] storeBatch failed for product_detail: ${storeErr?.message || storeErr}`);
+        }
+      }
     }
 
     return { product };
@@ -171,7 +190,8 @@ export class TikTokShopCrawler extends AbstractCrawler {
    * @returns {Promise<{ products: import('../../../core/types.js').PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
    */
   async searchProducts(args = {}, session = {}) {
-    const keyword = args?.keyword !== undefined && args?.keyword !== null ? String(args.keyword).trim() : '';
+    const safeArgs = args || {};
+    const keyword = safeArgs.keyword !== undefined && safeArgs.keyword !== null ? String(safeArgs.keyword).trim() : '';
     if (!keyword) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
@@ -183,16 +203,17 @@ export class TikTokShopCrawler extends AbstractCrawler {
       });
     }
 
-    const limit = Math.max(1, Math.min(Number(args.limit || 20) || 0, 100));
-    const page = Math.max(0, Number(args.page || 0) || 0);
+    const limit = Math.max(1, Math.min(Number(safeArgs.limit || 20) || 0, 100));
+    const page = Math.max(0, Number(safeArgs.page || 0) || 0);
 
     const response = await this.client.searchProducts({
       keyword,
       limit,
       page,
-      sortBy: args.sortBy,
+      sortBy: safeArgs.sortBy,
     }, {
       requiresAuth: false,
+      ...(session || {}),
     });
 
     let productsRaw = response?.data?.products || response?.products || [];
@@ -209,7 +230,14 @@ export class TikTokShopCrawler extends AbstractCrawler {
     }
 
     if (this.store && typeof this.store.storeBatch === 'function' && products.length > 0) {
-      await this.store.storeBatch(products, { upsert: true }).catch(() => {});
+      try {
+        await this.store.storeBatch(products, { upsert: true });
+      } catch (storeErr) {
+        if (process.env.NODE_ENV !== 'production' && process.env.TIKTOK_SHOP_LOG_STORE !== 'false') {
+          // eslint-disable-next-line no-console
+          console.warn(`[tiktokshop] storeBatch failed: ${storeErr?.message || storeErr}`);
+        }
+      }
     }
 
     const pageInfo = buildTikTokShopPageInfo(response, products.length);

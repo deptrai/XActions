@@ -312,24 +312,33 @@ describe('Story 16.2 — TikTok Shop Product & Sales Scraper', () => {
   });
 
   it('scrapeTikTokShop convenience helper works end-to-end', async () => {
+    const previousEnv = process.env.TIKTOK_BROWSER_SIGN;
     process.env.TIKTOK_BROWSER_SIGN = 'false';
     const { scrapeTikTokShop } = await import('../../../../src/scrapers/ecom/tiktok-shop/index.js');
 
-    const result = await scrapeTikTokShop(
-      'top_products',
-      { category: 'fashion', limit: 5 },
-      {
-        baseUrl: serverUrl,
-        store: createStore(),
-        requiresProxy: false,
-        autoClose: true,
-      }
-    );
+    try {
+      const result = await scrapeTikTokShop(
+        'top_products',
+        { category: 'fashion', limit: 5 },
+        {
+          baseUrl: serverUrl,
+          store: createStore(),
+          requiresProxy: false,
+          autoClose: true,
+        }
+      );
 
-    expect(result).toHaveProperty('products');
-    expect(Array.isArray(result.products)).toBe(true);
-    expect(result.products.length).toBeGreaterThan(0);
-    expect(result.products[0].platform).toBe('tiktokshop');
-    expect(result.products[0].category).toBe('ecom');
+      expect(result).toHaveProperty('products');
+      expect(Array.isArray(result.products)).toBe(true);
+      expect(result.products.length).toBeGreaterThan(0);
+      expect(result.products[0].platform).toBe('tiktokshop');
+      expect(result.products[0].category).toBe('ecom');
+    } finally {
+      if (previousEnv === undefined) {
+        delete process.env.TIKTOK_BROWSER_SIGN;
+      } else {
+        process.env.TIKTOK_BROWSER_SIGN = previousEnv;
+      }
+    }
   });
 });

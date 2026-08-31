@@ -26,13 +26,14 @@ import { TikTokShopCrawler } from './crawler.js';
  * @returns {Promise<any>}
  */
 export async function scrapeTikTokShop(action, args, options = {}) {
-  const client = new TikTokShopClient(options);
-  const crawler = new TikTokShopCrawler({ client, store: options.store, ...options });
+  const safeOptions = options || {};
+  const client = safeOptions.client || new TikTokShopClient(safeOptions);
+  const crawler = new TikTokShopCrawler({ client, store: safeOptions.store, ...safeOptions });
 
   try {
-    return await crawler.start({ action, args, session: options.session });
+    return await crawler.start({ action, args: args || {}, session: safeOptions.session });
   } finally {
-    if (options.autoClose !== false) {
+    if (safeOptions.autoClose !== false) {
       await crawler.cleanup().catch(() => {});
     }
   }

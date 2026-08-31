@@ -379,13 +379,25 @@ export async function scrape(platform, action, options = {}) {
     /** @type {Record<string, string>} */
     const TIKTOK_SHOP_ACTION_MAP = {
       top_products: 'top_products',
+      'top-products': 'top_products',
+      topProducts: 'top_products',
+      topproducts: 'top_products',
       top: 'top_products',
       best_sellers: 'top_products',
+      'best-sellers': 'top_products',
+      bestSellers: 'top_products',
+      bestsellers: 'top_products',
       product_detail: 'product_detail',
+      'product-detail': 'product_detail',
+      productDetail: 'product_detail',
+      productdetail: 'product_detail',
       product: 'product_detail',
       item: 'product_detail',
       detail: 'product_detail',
       search_products: 'search_products',
+      'search-products': 'search_products',
+      searchProducts: 'search_products',
+      searchproducts: 'search_products',
       search: 'search_products',
       products: 'search_products',
     };
@@ -407,9 +419,18 @@ export async function scrape(platform, action, options = {}) {
       mappedArgs.productId = options.productId || options.productid || options.id;
     }
     if (options.category) mappedArgs.category = options.category;
-    if (options.limit != null) mappedArgs.limit = Number(options.limit);
-    if (options.page != null) mappedArgs.page = Number(options.page);
-    if (options.offset != null) mappedArgs.offset = Number(options.offset);
+    if (options.limit != null) {
+      const limit = Number(options.limit);
+      if (Number.isFinite(limit)) mappedArgs.limit = limit;
+    }
+    if (options.page != null) {
+      const page = Number(options.page);
+      if (Number.isFinite(page)) mappedArgs.page = page;
+    }
+    if (options.offset != null) {
+      const offset = Number(options.offset);
+      if (Number.isFinite(offset)) mappedArgs.offset = offset;
+    }
     if (options.sortBy) mappedArgs.sortBy = options.sortBy;
 
     const client = new TikTokShopClient({

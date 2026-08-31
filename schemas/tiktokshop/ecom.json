@@ -55,5 +55,6 @@
     "productId",
     "shopId",
     "price"
-  ]
+  ],
+  "additionalProperties": true
 }

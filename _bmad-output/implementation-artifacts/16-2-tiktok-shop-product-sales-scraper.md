@@ -204,6 +204,98 @@ Story 16.2 triển khai TikTok Shop E-Commerce crawler trên nền tảng `Abstr
 - [x] [Review][Defer] No cursor-based pagination support [src/scrapers/ecom/tiktok-shop/crawler.js, client.js]
   `pageInfo.end_cursor` is returned but `cursor`/`next_cursor` cannot be passed back into `getTopProducts`/`searchProducts`. AC-1 only requires `page`/`limit` pagination.
 
+### Re-review Findings (2026-08-31)
+
+- [x] [Review][Patch] `TikTokShopClient.getProductDetail()` does not validate `productId` [src/scrapers/ecom/tiktok-shop/client.js:220-224]
+  `null`, `undefined`, or empty strings are coerced to `"null"`/`"undefined"` and sent as invalid `product_id` query parameters. Add an explicit `INVALID_ARGS` guard.
+
+- [x] [Review][Patch] `TikTokShopClient.buildApiUrl()` can crash on `undefined` endpointPath or `null` params [src/scrapers/ecom/tiktok-shop/client.js:181-196]
+  `endpointPath.startsWith('/')` throws if `endpointPath` is `undefined`; `Object.entries(params)` throws if `params` is `null`. Use `String()` and `params || {}` guards.
+
+- [x] [Review][Patch] `TikTokShopCrawler.topProducts()` and `searchProducts()` accept `null` args [src/scrapers/ecom/tiktok-shop/crawler.js:86-89,173-188]
+  `args?.limit`/`args?.page` guards are missing; passing `null` for `args` throws. Destructure from `args || {}`.
+
+- [x] [Review][Patch] `TikTokShopCrawler.productDetail()` does not sanitize `productId` [src/scrapers/ecom/tiktok-shop/crawler.js:127-139]
+  Whitespace-only or non-string `productId` passes the truthy check. Trim and validate with `String(productId).trim()`.
+
+- [x] [Review][Patch] `scrapeTikTokShop()` ignores a caller-provided client and can crash on `null` options [src/scrapers/ecom/tiktok-shop/index.js:28-39]
+  Always constructs `new TikTokShopClient(options)` even when `options.client` exists. Also `options.store` is duplicated via `...options`. Accept `options.client` and guard `options || {}`.
+
+- [x] [Review][Patch] `normalizeTikTokShopProduct()` can store `NaN` for numeric fields [src/scrapers/ecom/tiktok-shop/normalize-product.js:55-58]
+  `Number()` of a non-numeric string yields `NaN`. Use `Number.isFinite()` fallback for `soldCount`, `commissionRate`, and `rating`.
+
+- [x] [Review][Patch] `buildTikTokShopPageInfo()` coerces numeric cursor `0` to `null` [src/scrapers/ecom/tiktok-shop/normalize-product.js:114-123]
+  `nextCursor !== ''` check treats `0` as falsy and returns `end_cursor: null`. Preserve `0` with explicit `null`/`undefined`/`''` checks.
+
+- [x] [Review][Patch] `normalizeTikTokShopProduct()` duplicates title in `content` when no description [src/scrapers/ecom/tiktok-shop/normalize-product.js:51-52,79]
+  Fallback `description = ... || title` causes `content: "title\n\ntitle"`. Only append description when it differs from title.
+
+- [x] [Review][Patch] `buildTikTokShopPageInfo()` overrides explicit `has_more: false` [src/scrapers/ecom/tiktok-shop/normalize-product.js:118]
+  `inferredHasNext` recomputes from cursor and page size even when `hasMore` is explicitly `false`. Respect explicit `hasMore`.
+
+- [x] [Review][Patch] `TikTokShopCrawler` silently swallows `storeBatch()` failures [src/scrapers/ecom/tiktok-shop/crawler.js:113,161,212]
+  `.catch(() => {})` hides database/validation errors. Log or surface the error at debug level.
+
+- [x] [Review][Patch] `TikTokShopCrawler.top_products` descriptor missing `sortBy` [src/scrapers/ecom/tiktok-shop/crawler.js:49]
+  Handler passes `sortBy: args.sortBy` to `getTopProducts`, but `optionalArgs` is `['category', 'limit', 'page']`. Either remove `sortBy` usage or add it to `optionalArgs` per AC-1.
+
+- [x] [Review][Patch] `scrape('tiktokshop', ...)` passes `NaN` for non-numeric `limit`/`page`/`offset` [src/scrapers/index.js:196-200]
+  `Number('abc')` is `NaN` and still assigned to `mappedArgs`. Guard with `Number.isFinite()` before assigning.
+
+- [x] [Review][Patch] `crawler-tiktok-shop.test.js` mutates `process.env.TIKTOK_BROWSER_SIGN` without restoring [tests/scrapers/ecom/tiktok-shop/crawler-tiktok-shop.test.js:266-376]
+  `scrapeTikTokShop` test sets `process.env.TIKTOK_BROWSER_SIGN = 'false'` inside the test and does not restore the original value, leaking state to later tests.
+
+- [x] [Review][Patch] `schemas/tiktokshop/ecom.json` should allow additional metadata properties [schemas/tiktokshop/ecom.json]
+  Schema is missing `additionalProperties` setting. Add `additionalProperties: true` so the validator does not reject extra normalized e-commerce fields.
+
+- [x] [Review][Patch] `TIKTOK_SHOP_ACTION_MAP` rejects common action aliases [src/scrapers/index.js:376-389]
+  Kebab-case (`top-products`, `product-detail`, `search-products`), camelCase (`topProducts`, `productDetail`, `searchProducts`), and `bestsellers` aliases are not mapped. Add aliases for discoverability.
+
+- [x] [Review][Defer] Validator `isBotChallenge()` treats all non-zero/non-200 codes as bot challenge [src/scrapers/ecom/tiktok-shop/validator.js:107-116]
+  Normal business errors (e.g. item not found) could be misclassified. However, AC-3 requires `code !== 0` to throw `XACT_4030`; distinguishing business vs anti-bot codes requires a known error-code allow-list that is not yet available.
+
+- [x] [Review][Defer] `BOT_CHALLENGE_MARKERS` includes `'rate limit'` [src/scrapers/ecom/tiktok-shop/validator.js:18-26]
+  Rate-limit messages also trigger `isBotChallenge()`. This is acceptable because rate-limited responses should quarantine the proxy/session and trigger retry; `isRateLimit()` still catches explicit 429/rate-limit markers.
+
+- [x] [Review][Defer] `#getData()` / `#getBodyText()` handle raw string bodies poorly [src/scrapers/ecom/tiktok-shop/validator.js:36-53]
+  Raw HTML strings are not inspected directly for challenge markers. Pre-existing pattern in other platform validators; raw HTML body is typically in `response.body` or `response.text` which is checked.
+
+- [x] [Review][Defer] `TikTokShopClient` does not support `POST`/`PUT`/`PATCH` request bodies [src/scrapers/ecom/tiktok-shop/client.js:154-173]
+  Story 16.2 only defines `GET` endpoints (`top_products`, `product_detail`, `search_products`). Body support belongs to a future story if write actions are added.
+
+- [x] [Review][Defer] Hardcoded User-Agent in `TikTokShopClient` [src/scrapers/ecom/tiktok-shop/client.js:135-137]
+  `#defaultUserAgent()` returns a fixed string. Allowing overrides requires constructor option propagation and signer bridge agreement; not required by AC-2.
+
+- [x] [Review][Defer] `TikTokShopClient` does not expose `init()` / session-warmup lifecycle [src/scrapers/ecom/tiktok-shop/client.js:74-130]
+  Bridge warm-up and token extraction are currently implicit per request. AC-2 only requires dynamic signing; explicit warm-up can be added when operational.
+
+- [x] [Review][Defer] `aid=1988` is hardcoded in `buildApiUrl()` [src/scrapers/ecom/tiktok-shop/client.js:187-189]
+  The default enables the signer bridge to match outbound URLs. Making it configurable is a future enhancement once multiple TikTok Shop app IDs are needed.
+
+- [x] [Review][Defer] No PreSignedTokenRing / token cache integration [src/scrapers/ecom/tiktok-shop/client.js:95-119]
+  Each call waits for browser signing. Caching pre-signed tokens is a performance optimization deferred to the tiered-signer epic.
+
+- [x] [Review][Defer] `TikTokBrowserBridge` warm-up navigates to `/foryou` on affiliate subdomain [src/scrapers/ecom/tiktok-shop/client.js:65-72]
+  Bridge behavior is outside the scope of `TikTokShopClient`; the client supplies a base URL and lets the bridge resolve its own warm-up path.
+
+- [x] [Review][Defer] Multi-region currency hardcoded as `VND` [src/scrapers/ecom/tiktok-shop/normalize-product.js:93]
+  AC-4 explicitly specifies `currency: 'VND'`. Multi-region support requires market context not yet provided.
+
+- [x] [Review][Defer] Dot-thousand price parser may corrupt decimal prices for non-VND [src/scrapers/ecom/tiktok-shop/normalize-product.js:17-34]
+  Story 16.2 targets Vietnamese TikTok Shop prices. USD-style decimal parsing can be added when multi-region support is implemented.
+
+- [x] [Review][Defer] Missing shop avatar, product video, and published date extraction [src/scrapers/ecom/tiktok-shop/normalize-product.js:61-85]
+  These fields are not in the AC-4 metadata list. Add when upstream payloads and consumer needs are confirmed.
+
+- [x] [Review][Defer] Unified `scrape()` does not map `cursor`, `shopId`, `sellerId`, signer-pool, or session-manager options [src/scrapers/index.js:190-230]
+  Cursor pagination, shop filtering, and signer-pool configuration are out of scope for AC-1/AC-5 and can be added when the operational layer supports them.
+
+- [x] [Review][Defer] Test coverage gaps for HTTP errors, schema validation, multi-page pagination, and `autoClose` [tests/scrapers/ecom/tiktok-shop/crawler-tiktok-shop.test.js]
+  Additional tests improve quality but are not required by the current ACs. Add in a follow-up test-hardening pass.
+
+- [x] [Review][Defer] Missing TypeScript declarations for TikTok Shop classes [types/index.d.ts]
+  Already deferred in the original review; the project has not yet exported e-commerce scraper types.
+
 ## Dev Agent Record
 
 ### Implementation Plan

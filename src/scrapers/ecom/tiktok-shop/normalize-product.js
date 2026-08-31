@@ -34,6 +34,18 @@ export function normalizeTikTokShopPrice(rawPrice) {
 }
 
 /**
+ * Safely parse a numeric-ish value, returning 0 for non-numeric strings.
+ * @param {any} raw
+ * @returns {number}
+ */
+function safeNumber(raw) {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : 0;
+  if (raw == null) return 0;
+  const n = Number(String(raw).replace(/,/g, '').trim());
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
  * Normalize a TikTok Shop product record into PostItem.
  * @param {Record<string, any>} raw
  * @param {Record<string, any>} [context={}]
@@ -41,6 +53,7 @@ export function normalizeTikTokShopPrice(rawPrice) {
  */
 export function normalizeTikTokShopProduct(raw, context = {}) {
   if (!raw || typeof raw !== 'object') return null;
+  const safeContext = context || {};
 
   const item = raw.product || raw;
   const productId = String(item.product_id || item.productId || item.id || '');
@@ -49,13 +62,13 @@ export function normalizeTikTokShopProduct(raw, context = {}) {
   if (!productId) return null;
 
   const title = String(item.product_name || item.productName || item.title || '');
-  const description = String(item.description || item.product_desc || title);
+  const description = String(item.description || item.product_desc || '');
   const price = normalizeTikTokShopPrice(item.sale_price ?? item.salePrice ?? item.price);
   const originalPrice = normalizeTikTokShopPrice(item.original_price ?? item.originalPrice ?? price);
-  const soldCount = Number(item.sold_count ?? item.soldCount ?? item.sales ?? 0);
-  const commissionRate = Number(item.commission_rate ?? item.commissionRate ?? 0);
+  const soldCount = safeNumber(item.sold_count ?? item.soldCount ?? item.sales ?? 0);
+  const commissionRate = safeNumber(item.commission_rate ?? item.commissionRate ?? 0);
   const commissionAmount = normalizeTikTokShopPrice(item.commission_amount ?? item.commissionAmount);
-  const rating = Number(item.product_rating ?? item.rating ?? item.rating_star ?? 0);
+  const rating = safeNumber(item.product_rating ?? item.rating ?? item.rating_star ?? 0);
   const shopName = String(item.shop_name || item.shopName || `Shop ${shopId}`);
 
   const rawImages = Array.isArray(item.images) ? item.images : (item.image ? [item.image] : []);
@@ -95,8 +108,8 @@ export function normalizeTikTokShopProduct(raw, context = {}) {
       commissionRate,
       commissionAmount,
       rating,
-      sourceMethod: context.sourceMethod || 'top_products',
-      ...context.extraMetadata,
+      sourceMethod: safeContext.sourceMethod || 'top_products',
+      ...safeContext.extraMetadata,
     },
   });
 }
@@ -110,15 +123,23 @@ export function normalizeTikTokShopProduct(raw, context = {}) {
 export function buildTikTokShopPageInfo(response, pageSize) {
   const data = response?.data || response;
 
-  const hasMore = Boolean(data?.has_more ?? data?.hasMore);
-  const nextCursor = data?.next_cursor ?? data?.nextCursor ?? data?.cursor ?? null;
+  const hasMoreRaw = data?.has_more ?? data?.hasMore;
+  const nextCursorRaw = data?.next_cursor ?? data?.nextCursor ?? data?.cursor ?? null;
+  const nextCursor = nextCursorRaw !== null && nextCursorRaw !== undefined ? String(nextCursorRaw) : null;
   const products = data?.products || [];
 
-  // Infer has_next_page from filled page and non-null cursor.
-  const inferredHasNext = Boolean(hasMore || (nextCursor && products.length > 0 && products.length === pageSize));
+  let hasNextPage;
+  if (hasMoreRaw === false) {
+    hasNextPage = false;
+  } else if (hasMoreRaw === true) {
+    hasNextPage = true;
+  } else {
+    // Infer has_next_page from filled page and non-null cursor.
+    hasNextPage = Boolean(nextCursor && products.length > 0 && products.length === pageSize);
+  }
 
   return {
-    has_next_page: inferredHasNext,
-    end_cursor: nextCursor ? String(nextCursor) : null,
+    has_next_page: hasNextPage,
+    end_cursor: nextCursor,
   };
 }
