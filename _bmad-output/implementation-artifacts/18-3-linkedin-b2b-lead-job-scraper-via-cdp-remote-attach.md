@@ -2,19 +2,34 @@
 story_id: "18.3"
 epic: 18
 story_key: "18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach"
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 3"
 created: 2026-08-27
 updated: 2026-08-31
-last_updated: 2026-08-31T09:00:00Z
+last_updated: 2026-08-31T09:40:00Z
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "approved"
 baseline_commit: "322c874d"
 ---
 
 # Story 18.3: LinkedIn B2B Lead & Job Scraper via CDP Remote Attach
 
-Status: ready-for-dev
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review after P1/P2 patches)  
+**Date:** 2026-08-31  
+**Summary:**
+- `LinkedInCrawler` và `LinkedInClient` kế thừa `AbstractCrawler` và `AbstractApiClient` chuẩn mực, đăng ký 4 actions: `search_jobs`, `job_detail`, `company_profile`, `lead_profile`.
+- Đã giải quyết triệt để các findings từ adversarial review:
+  1. Loại bỏ false positives trong `extractSkills` bằng cách áp dụng strict word boundaries regex cho tất cả từ khóa kỹ năng.
+  2. Xử lý an toàn ngoại lệ `RangeError` khi parse date `datetime` bằng `try/catch` fallback.
+  3. Thêm mã trạng thái HTTP `999` (Request Denied) vào `isBotChallenge` của `LinkedInPlatformResponseValidator`.
+  4. Bổ sung kiểm tra đầu vào và ném `PlatformError(XACT_4001)` rõ ràng khi thiếu tham số trong `companyProfile` và `leadProfile`.
+  5. Sửa lỗi forward `mappedArgs` trong unified dispatcher `src/scrapers/index.js`.
+- Kiểm thử Live API thực tế trên `https://www.linkedin.com/jobs-guest/jobs/api/`: bóc tách chính xác danh sách việc làm, chức danh, công ty, địa điểm và kỹ năng.
+- Toàn bộ 8/8 tests tại `tests/scrapers/recruitment/linkedin/crawler-linkedin.test.js` passed 100%.
 
 ## ⚠️ Critical Constraints & Architecture Guidelines
 
@@ -108,40 +123,61 @@ Story 18.3 hoàn thành mảnh ghép cuối cùng của Epic 18 (HR & B2B Recrui
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Core Module Scaffolding (AC-1, AC-5)**
-  - [ ] 1.1 Tạo thư mục `src/scrapers/recruitment/linkedin/`.
-  - [ ] 1.2 Tạo `client.js` — `LinkedInClient` kế thừa `AbstractApiClient` hỗ trợ HTTP Guest + CDP session.
-  - [ ] 1.3 Tạo `validator.js` — `LinkedInPlatformResponseValidator` kế thừa `AbstractPlatformResponseValidator`.
-  - [ ] 1.4 Tạo `crawler.js` — `LinkedInCrawler` kế thừa `AbstractCrawler` với 4 action descriptors.
-  - [ ] 1.5 Tạo `index.js` barrel export và hàm tiện ích `scrapeLinkedIn`.
-  - [ ] 1.6 Cập nhật `package.json` exports và `src/scrapers/index.js` dispatcher.
+- [x] **Task 1 — Core Module Scaffolding (AC-1, AC-5)**
+  - [x] 1.1 Tạo thư mục `src/scrapers/recruitment/linkedin/`.
+  - [x] 1.2 Tạo `client.js` — `LinkedInClient` kế thừa `AbstractApiClient` hỗ trợ HTTP Guest + CDP session.
+  - [x] 1.3 Tạo `validator.js` — `LinkedInPlatformResponseValidator` kế thừa `AbstractPlatformResponseValidator`.
+  - [x] 1.4 Tạo `crawler.js` — `LinkedInCrawler` kế thừa `AbstractCrawler` với 4 action descriptors.
+  - [x] 1.5 Tạo `index.js` barrel export và hàm tiện ích `scrapeLinkedIn`.
+  - [x] 1.6 Cập nhật `package.json` exports và `src/scrapers/index.js` dispatcher.
 
-- [ ] **Task 2 — Normalizer & Parsing Engine (AC-2, AC-3, AC-4)**
-  - [ ] 2.1 Tạo `src/scrapers/recruitment/linkedin/normalize-linkedin.js`.
-  - [ ] 2.2 Viết `parseLinkedInJobCard(htmlChunk)` bóc tách jobId, title, company, location.
-  - [ ] 2.3 Viết `parseLinkedInJobDetail(html)` bóc tách description, criteria, skills.
-  - [ ] 2.4 Viết `normalizeLinkedInCompany(obj)` → `ProfileItem`.
-  - [ ] 2.5 Viết `normalizeLinkedInLead(obj)` → `ProfileItem`.
+- [x] **Task 2 — Normalizer & Parsing Engine (AC-2, AC-3, AC-4)**
+  - [x] 2.1 Tạo `src/scrapers/recruitment/linkedin/normalize-linkedin.js`.
+  - [x] 2.2 Viết `parseLinkedInJobCard(htmlChunk)` bóc tách jobId, title, company, location.
+  - [x] 2.3 Viết `parseLinkedInJobDetail(html)` bóc tách description, criteria, skills.
+  - [x] 2.4 Viết `normalizeLinkedInCompany(obj)` → `ProfileItem`.
+  - [x] 2.5 Viết `normalizeLinkedInLead(obj)` → `ProfileItem`.
 
-- [ ] **Task 3 — Crawler Action Handlers (AC-2, AC-3, AC-4)**
-  - [ ] 3.1 Cài đặt `searchJobs(args, session)` — gọi Guest Jobs search API với pagination (`start=0, 25, 50...`).
-  - [ ] 3.2 Cài đặt `jobDetail(args, session)` — bóc tách chi tiết JD.
-  - [ ] 3.3 Cài đặt `companyProfile(args, session)` — bóc tách thông tin công ty.
-  - [ ] 3.4 Cài đặt `leadProfile(args, session)` — kết nối CDP remote attach với Gaussian delay (3–7s).
-  - [ ] 3.5 Tích hợp `storeBatch()` với `PrismaStore` và checkpointing.
+- [x] **Task 3 — Crawler Action Handlers (AC-2, AC-3, AC-4)**
+  - [x] 3.1 Cài đặt `searchJobs(args, session)` — gọi Guest Jobs search API với pagination (`start=0, 25, 50...`).
+  - [x] 3.2 Cài đặt `jobDetail(args, session)` — bóc tách chi tiết JD.
+  - [x] 3.3 Cài đặt `companyProfile(args, session)` — bóc tách thông tin công ty.
+  - [x] 3.4 Cài đặt `leadProfile(args, session)` — kết nối CDP remote attach với Gaussian delay (3–7s).
+  - [x] 3.5 Tích hợp `storeBatch()` với `PrismaStore` và checkpointing.
 
-- [ ] **Task 4 — Anti-bot & Response Validation (AC-1)**
-  - [ ] 4.1 Cài đặt `LinkedInPlatformResponseValidator.isBotChallenge` phát hiện `/checkpoint/challenge`, authwall, 429.
-  - [ ] 4.2 Cài đặt `isValidPayload` kiểm tra HTML job card hoặc JSON response.
+- [x] **Task 4 — Anti-bot & Response Validation (AC-1)**
+  - [x] 4.1 Cài đặt `LinkedInPlatformResponseValidator.isBotChallenge` phát hiện `/checkpoint/challenge`, authwall, 429.
+  - [x] 4.2 Cài đặt `isValidPayload` kiểm tra HTML job card hoặc JSON response.
 
-- [ ] **Task 5 — Test Suite & Verification (AC-6)**
-  - [ ] 5.1 Tạo `tests/scrapers/recruitment/linkedin/crawler-linkedin.test.js` dùng `node:http`.
-  - [ ] 5.2 Test search_jobs, job_detail, company_profile, lead_profile, unified dispatcher.
-  - [ ] 5.3 Chạy test suite và xác nhận 100% green.
+- [x] **Task 5 — Test Suite & Verification (AC-6)**
+  - [x] 5.1 Tạo `tests/scrapers/recruitment/linkedin/crawler-linkedin.test.js` dùng `node:http`.
+  - [x] 5.2 Test search_jobs, job_detail, company_profile, lead_profile, unified dispatcher.
+  - [x] 5.3 Chạy test suite và xác nhận 100% green.
 
-## Dev Notes
-- Guest Search Endpoint: `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=<keyword>&location=<location>&start=<offset>`
-- Guest Detail Endpoint: `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/<jobId>`
-- CDP Remote Attach: Sử dụng `attachToExistingChrome({ port: 9222 })` từ `src/core/cdp-launcher.js`.
-- Gaussian Delays: Sử dụng `gaussianDelay(3000, 7000)` từ `src/utils/gaussian-delay.js`.
+## Dev Agent Record
+
+### Implementation Plan
+- Khởi tạo thư mục `src/scrapers/recruitment/linkedin/`.
+- Cài đặt `LinkedInClient`, `LinkedInPlatformResponseValidator`, `normalize-linkedin.js`, `LinkedInCrawler`, và barrel `index.js`.
+- Đăng ký `linkedin` vào unified `scrape()` dispatcher tại `src/scrapers/index.js` và `package.json` exports.
+- Viết test suite ATDD `tests/scrapers/recruitment/linkedin/crawler-linkedin.test.js` và xác thực Live API thực tế.
+
+### Completion Notes
+- Tất cả 8/8 test cases đều PASS 100%.
+- Kiểm thử Live API LinkedIn Guest search & detail: gọi `https://www.linkedin.com/jobs-guest/jobs/api/` thành công, lấy về danh sách việc làm và thông tin kỹ năng thực tế.
+
+## File List
+- `src/scrapers/recruitment/linkedin/client.js` (NEW)
+- `src/scrapers/recruitment/linkedin/validator.js` (NEW)
+- `src/scrapers/recruitment/linkedin/normalize-linkedin.js` (NEW)
+- `src/scrapers/recruitment/linkedin/crawler.js` (NEW)
+- `src/scrapers/recruitment/linkedin/index.js` (NEW)
+- `tests/scrapers/recruitment/linkedin/crawler-linkedin.test.js` (NEW)
+- `src/scrapers/index.js` (MODIFIED)
+- `package.json` (MODIFIED)
+- `_bmad-output/implementation-artifacts/18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach.md` (MODIFIED)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED)
+
+## Change Log
+- 2026-08-31: Triển khai hoàn thiện Story 18.3 LinkedIn B2B Lead & Job Scraper theo chuẩn BMad Hexagonal Architecture.
 EOF

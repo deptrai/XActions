@@ -38,7 +38,8 @@
     "./spaces": "./src/spaces/agent.js",
     "./store": "./src/store/index.js",
     "./scrapers/recruitment/topcv": "./src/scrapers/recruitment/topcv/index.js",
-    "./scrapers/recruitment/vietnamworks": "./src/scrapers/recruitment/vietnamworks/index.js"
+    "./scrapers/recruitment/vietnamworks": "./src/scrapers/recruitment/vietnamworks/index.js",
+    "./scrapers/recruitment/linkedin": "./src/scrapers/recruitment/linkedin/index.js"
   },
   "bin": {
     "xactions": "./src/cli/index.js",
