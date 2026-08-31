@@ -366,6 +366,17 @@ Patterns:
   - `src/utils/redis-stream-publisher.js` (`defaultRedisStreamPublisher`).
 - Comment tree: `src/scrapers/social/comment-tree.js`.
 
+## Senior Developer Review (AI)
+
+- **Review Date:** 2026-08-29
+- **Reviewers:** Blind Hunter, Edge Case Hunter, Acceptance Auditor
+- **Outcome:** Approved (with auto-applied patches)
+- **Findings Applied:**
+  1. `[Security][Patch]` Added SSRF hostname guard for absolute `postId` URLs in `#resolvePostId` (`threads.net`).
+  2. `[Bug][Patch]` Corrected `rawRootPost` fallback in `containing_thread` to search both `containing_thread` and `reply_threads` accurately for the target post without premature greedy assignment.
+  3. `[Feature][Patch]` Forwarded session cookies to `#resolvePostId` and `getComments` for authenticated sessions.
+  4. `[Reliability][Patch]` Re-threw upstream `PlatformError`s (rate limits, bot challenges, session expirations) in `#resolvePostId` instead of unconditionally masking them as 404s.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -395,7 +406,7 @@ Implement Story Workflow — `bmad-dev-story` skill with `gemini-3.7-flash-high`
 - `_bmad-output/implementation-artifacts/15-1-2-threads-hybrid-post-detail-comment-tree.md` (modified)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
 
-### Open Decisions / Outstanding Items
+### Change Log
 
 - Reviewed and approved. All review follow-up patches applied and verified (52 Threads tests + `npm run typecheck`).
 - `doc_id` values for `COMMENT_ROOTS` and `COMMENT_REPLIES` must be captured from a live Threads web session (Story 15.1.3).

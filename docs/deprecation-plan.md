@@ -110,6 +110,16 @@ Xoá theo thứ tự:
 | Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-planned` | Phase 1 (Epic 15.1, 15.1.1, 15.1.2, 15.1.3, 15.1.4) — hybrid caller migration and package exports in Story 15.1.4 | DEV |
 | `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
 
+### Legacy Threads Functions → Hybrid Actions
+
+| Legacy function | Hybrid action |
+|-----------------|---------------|
+| `scrapeProfile` (Threads) | `threads:profile` |
+| `scrapeFollowers` (Threads) | `threads:followers` |
+| `scrapeFollowing` (Threads) | `threads:following` |
+| `scrapeTweets` (Threads) | `threads:post_detail` / `threads:get_user_feed` |
+| `searchTweets` (Threads) | `threads:search` |
+
 ### Legacy Facebook Functions → Hybrid Actions
 
 | Legacy function | Hybrid action |
