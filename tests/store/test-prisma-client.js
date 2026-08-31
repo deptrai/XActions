@@ -9,6 +9,7 @@ import { PrismaClient } from '@prisma/client';
 
 const testDatabaseUrl =
   process.env.DATABASE_URL_TEST ||
+  process.env.DATABASE_URL ||
   'postgresql://postgres:postgres@localhost:5434/xactions_test?schema=public';
 
 export const prisma = new PrismaClient({

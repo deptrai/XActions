@@ -1,4 +1,8 @@
 import { defineConfig } from 'vitest/config';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: '.env' });
+dotenv.config({ path: '.env.local', override: true });
 
 const testDatabaseUrl =
   process.env.DATABASE_URL_TEST ||
