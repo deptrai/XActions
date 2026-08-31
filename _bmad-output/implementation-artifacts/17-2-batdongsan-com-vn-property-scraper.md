@@ -5,16 +5,18 @@ story_key: "17-2-batdongsan-com-vn-property-scraper"
 status: "ready-for-dev"
 phase: "Phase 3"
 created: 2026-08-27
-updated: 2026-08-31
-last_updated: 2026-08-31T11:00:00Z
+updated: 2026-09-01
+last_updated: 2026-09-01T00:00:00Z
 owner: "DEV"
 reviewed: "Pending"
-baseline_commit: "c70af602"
+baseline_commit: "bd62f1fb"
 ---
 
 # Story 17.2: Batdongsan.com.vn Property Scraper
 
 Status: ready-for-dev
+
+<!-- Context engine analysis completed 2026-09-01. Comprehensive developer guide created. -->
 
 ## ⚠️ Critical Constraints & Architecture Guidelines
 
@@ -24,7 +26,7 @@ Status: ready-for-dev
    - Must expose clean barrel in `src/scrapers/realestate/batdongsan/index.js` and integrate into `src/scrapers/index.js` (`scrape('batdongsan', ...)`).
 2. **Mobile API Endpoint & De-obfuscation Engine (`p_sync`):**
    - Base endpoint: `POST https://apimap.batdongsan.com.vn/api/p_sync`.
-   - De-obfuscation pipeline: `raw buffer -> gzip (optional) -> base64 decode -> nibble-swap (swap high/low 4 bits of each byte) -> UTF-8 / Latin-1 JSON parse`.
+   - De-obfuscation pipeline: `raw buffer -> gzip (optional) -> base64 decode -> nibble-swap (swap high/low 4 bits of each byte) -> UTF-8 JSON parse`.
    - Reverse nibble-swap formula: `((b & 0x0F) << 4) | (b >> 4)`.
 3. **Payload Structure & Search Parameters:**
    - `ptype`: `38` for sell / buy, `49` for rent.
@@ -133,3 +135,4 @@ Story 17.2 là mảnh ghép hoàn thiện cuối cùng cho Epic 17 (Real Estate 
 - Mobile API URL: `https://apimap.batdongsan.com.vn/api/p_sync`
 - Mobile User-Agent: `Dalvik/2.1.0 (Linux; U; Android 8.0.0; SM-G9500 Build/R16NW)`
 - City codes: `SG` (Hồ Chí Minh), `HN` (Hà Nội), `DN` (Đà Nẵng), `BD` (Bình Dương), `DDN` (Đồng Nai).
+EOF
