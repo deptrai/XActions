@@ -40,7 +40,8 @@
     "./scrapers/recruitment/topcv": "./src/scrapers/recruitment/topcv/index.js",
     "./scrapers/recruitment/vietnamworks": "./src/scrapers/recruitment/vietnamworks/index.js",
     "./scrapers/recruitment/linkedin": "./src/scrapers/recruitment/linkedin/index.js",
-    "./scrapers/realestate/chotot": "./src/scrapers/realestate/chotot/index.js"
+    "./scrapers/realestate/chotot": "./src/scrapers/realestate/chotot/index.js",
+    "./scrapers/realestate/batdongsan": "./src/scrapers/realestate/batdongsan/index.js"
   },
   "bin": {
     "xactions": "./src/cli/index.js",
