@@ -109,7 +109,7 @@ development_status:
   epic-15-retrospective: optional
 
   # --- Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop) ---
-  epic-16: in-progress
+  epic-16: done
   16-1-shopee-search-product-review-scraper-tls-spoofing: done
   16-2-tiktok-shop-product-sales-scraper: done
   epic-16-retrospective: optional
