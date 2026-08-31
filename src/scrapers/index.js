@@ -41,10 +41,17 @@ import mastodon from './mastodon/index.js';
 import threads from './threads/index.js';
 import facebook from './facebook/index.js';
 import tiktok from './social/tiktok/index.js';
+import tiktokShop from './ecom/tiktok-shop/index.js';
 import { ThreadsCrawler } from './social/threads/crawler.js';
 import { ThreadsClient } from './social/threads/client.js';
 import { TikTokCrawler } from './social/tiktok/crawler.js';
 import { TikTokClient } from './social/tiktok/client.js';
+import { TwitterCrawler } from './social/twitter/crawler.js';
+import { TwitterClient } from './social/twitter/client.js';
+import { ShopeeCrawler } from './ecom/shopee/crawler.js';
+import { ShopeeClient } from './ecom/shopee/client.js';
+import { TikTokShopCrawler } from './ecom/tiktok-shop/crawler.js';
+import { TikTokShopClient } from './ecom/tiktok-shop/client.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -118,6 +125,8 @@ export const platforms = {
   facebook,
   fb: facebook, // alias
   tiktok,
+  tiktokshop: tiktokShop,
+  tiktok_shop: tiktokShop,
 };
 
 /**
@@ -165,6 +174,293 @@ export async function scrape(platform, action, options = {}) {
   const store = options.store || defaultStore;
   const normalizedOptions = { ...options, store };
   const platformName = platform.toLowerCase();
+
+  // ── Twitter/X hybrid path — dispatches to TwitterCrawler (Story 13.2.12) ──
+  if (platformName === 'twitter' || platformName === 'x') {
+    /** @type {Record<string, string>} */
+    const TWITTER_ACTION_MAP = {
+      profile: 'profile',
+      tweets: 'search', timeline: 'search', feed: 'search', user_feed: 'search', posts: 'search',
+      search: 'search',
+      hashtag: 'hashtag',
+      trending: 'trending',
+      thread: 'thread',
+      likes: 'likes', likers: 'likes',
+      bookmarks: 'bookmarks',
+      media: 'media',
+      download_video: 'download_video', video: 'download_video',
+      followers: 'followers',
+      following: 'following',
+      non_followers: 'non_followers',
+      retweeters: 'retweeters',
+      listMembers: 'list_members', list_members: 'list_members',
+      communityMembers: 'community_members', community_members: 'community_members',
+      spaces: 'spaces',
+      post: 'post',
+      reply: 'reply',
+      quote: 'quote',
+      schedule: 'schedule',
+      like: 'like',
+      unlike: 'unlike',
+      retweet: 'retweet',
+      unretweet: 'undo_retweet', undo_retweet: 'undo_retweet',
+      follow: 'follow',
+      unfollow: 'unfollow',
+      block: 'block',
+      unblock: 'unblock',
+      mute: 'mute',
+      unmute: 'unmute',
+      bookmark: 'bookmark',
+      unbookmark: 'unbookmark',
+      send_dm: 'send_dm', sendDm: 'send_dm',
+      dm_conversations: 'dm_conversations', getInbox: 'dm_conversations',
+      dm_messages: 'dm_messages', getConversation: 'dm_messages',
+      create_list: 'create_list', createList: 'create_list',
+      add_list_members: 'add_list_members', addListMembers: 'add_list_members',
+      remove_list_members: 'remove_list_members', removeListMembers: 'remove_list_members',
+    };
+
+    const mappedAction = TWITTER_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(TWITTER_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (options.username) mappedArgs.username = options.username;
+    if (options.target && !options.username) mappedArgs.username = options.target;
+    if (options.query) mappedArgs.query = options.query;
+    if (options.hashtag || options.tag) mappedArgs.tag = options.hashtag || options.tag;
+    if (options.tweetId) mappedArgs.tweetId = options.tweetId;
+    if (options.url) mappedArgs.url = options.url;
+    if (options.userId) mappedArgs.userId = options.userId;
+    if (options.listId || options.listUrl) mappedArgs.listUrl = options.listId || options.listUrl;
+    if (options.communityUrl) mappedArgs.communityUrl = options.communityUrl;
+    if (options.conversationId) mappedArgs.conversationId = options.conversationId;
+    if (options.text) mappedArgs.text = options.text;
+    if (options.mediaIds) mappedArgs.mediaIds = options.mediaIds;
+    if (options.mediaId) mappedArgs.mediaId = options.mediaId;
+    if (options.publishAt) mappedArgs.publishAt = options.publishAt;
+    if (options.name) mappedArgs.name = options.name;
+    if (options.description) mappedArgs.description = options.description;
+    if (options.isPrivate != null) mappedArgs.isPrivate = options.isPrivate;
+    if (options.userIds) mappedArgs.userIds = options.userIds;
+    if (options.usernames) mappedArgs.usernames = options.usernames;
+    if (options.dryRun != null) mappedArgs.dryRun = options.dryRun;
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.count != null && options.limit == null) mappedArgs.limit = Number(options.count);
+    if (options.cursor) mappedArgs.cursor = options.cursor;
+    if (options.type) mappedArgs.type = options.type;
+    if (options.filter) mappedArgs.filter = options.filter;
+    if (options.woeid != null) mappedArgs.woeid = options.woeid;
+    if (options.quality) mappedArgs.quality = options.quality;
+    if (options.destPath) mappedArgs.destPath = options.destPath;
+    if (options.premium != null) mappedArgs.premium = options.premium;
+    if (options.sensitive != null) mappedArgs.sensitive = options.sensitive;
+    if (options.walkToRoot != null) mappedArgs.walkToRoot = options.walkToRoot;
+
+    const session = {
+      accountId: options.accountId || 'twitter-guest',
+      cookies: options.authCookie || options.cookies || options.authToken || '',
+    };
+
+    const client = new TwitterClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+      responseValidator: options.responseValidator,
+      tokenRing: options.tokenRing,
+      signerPool: options.signerPool,
+      requiresAuth: options.requiresAuth,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new TwitterCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+      requiresAuth: options.requiresAuth,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── Shopee E-commerce path (Story 16.1) ──
+  if (platformName === 'shopee') {
+    /** @type {Record<string, string>} */
+    const SHOPEE_ACTION_MAP = {
+      search_products: 'search_products',
+      search: 'search_products',
+      products: 'search_products',
+      product_detail: 'product_detail',
+      product: 'product_detail',
+      item: 'product_detail',
+      detail: 'product_detail',
+      product_reviews: 'product_reviews',
+      reviews: 'product_reviews',
+      ratings: 'product_reviews',
+    };
+
+    const mappedAction = SHOPEE_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(SHOPEE_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (options.keyword || options.query || options.q || options.target) {
+      mappedArgs.keyword = options.keyword || options.query || options.q || options.target;
+    }
+    if (options.itemId || options.itemid || options.id) {
+      mappedArgs.itemId = options.itemId || options.itemid || options.id;
+    }
+    if (options.shopId || options.shopid) {
+      mappedArgs.shopId = options.shopId || options.shopid;
+    }
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.page != null) mappedArgs.page = Number(options.page);
+    if (options.offset != null) mappedArgs.offset = Number(options.offset);
+    if (options.sortBy) mappedArgs.sortBy = options.sortBy;
+    if (options.category) mappedArgs.category = options.category;
+    if (options.filterRating != null) mappedArgs.filterRating = options.filterRating;
+
+    const client = new ShopeeClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new ShopeeCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── TikTok Shop E-commerce path (Story 16.2) ──
+  if (platformName === 'tiktokshop' || platformName === 'tiktok_shop') {
+    /** @type {Record<string, string>} */
+    const TIKTOK_SHOP_ACTION_MAP = {
+      top_products: 'top_products',
+      'top-products': 'top_products',
+      topProducts: 'top_products',
+      topproducts: 'top_products',
+      top: 'top_products',
+      best_sellers: 'top_products',
+      'best-sellers': 'top_products',
+      bestSellers: 'top_products',
+      bestsellers: 'top_products',
+      product_detail: 'product_detail',
+      'product-detail': 'product_detail',
+      productDetail: 'product_detail',
+      productdetail: 'product_detail',
+      product: 'product_detail',
+      item: 'product_detail',
+      detail: 'product_detail',
+      search_products: 'search_products',
+      'search-products': 'search_products',
+      searchProducts: 'search_products',
+      searchproducts: 'search_products',
+      search: 'search_products',
+      products: 'search_products',
+    };
+
+    const mappedAction = TIKTOK_SHOP_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(TIKTOK_SHOP_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (options.keyword || options.query || options.q || options.target) {
+      mappedArgs.keyword = options.keyword || options.query || options.q || options.target;
+    }
+    if (options.productId || options.productid || options.id) {
+      mappedArgs.productId = options.productId || options.productid || options.id;
+    }
+    if (options.category) mappedArgs.category = options.category;
+    if (options.limit != null) {
+      const limit = Number(options.limit);
+      if (Number.isFinite(limit)) mappedArgs.limit = limit;
+    }
+    if (options.page != null) {
+      const page = Number(options.page);
+      if (Number.isFinite(page)) mappedArgs.page = page;
+    }
+    if (options.offset != null) {
+      const offset = Number(options.offset);
+      if (Number.isFinite(offset)) mappedArgs.offset = offset;
+    }
+    if (options.sortBy) mappedArgs.sortBy = options.sortBy;
+
+    const client = new TikTokShopClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new TikTokShopCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
 
   // Threads hybrid path — no Puppeteer, dispatches to ThreadsCrawler.
   // This branch is evaluated first so legacy actionMap / platform lookups

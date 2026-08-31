@@ -1,0 +1,194 @@
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+/**
+ * TwitterPlatformResponseValidator — recognizes GraphQL and HTML payload shapes.
+ * Hybrid version for src/scrapers/social/twitter.
+ * @author nich (@nichxbt)
+ * @license Apache-2.0
+ */
+
+import { AbstractPlatformResponseValidator } from '../../../core/platform-validator.js';
+
+export class TwitterPlatformResponseValidator extends AbstractPlatformResponseValidator {
+  /** @type {string} */
+  platform = 'twitter';
+
+  /**
+   * Extract raw body string if available.
+   * @param {any} response
+   * @returns {string}
+   */
+  #getBody(response) {
+    if (typeof response === 'string') return response;
+    if (typeof response?.data === 'string') return response.data;
+    if (typeof response?.body === 'string') return response.body;
+    if (typeof response?.data?.data === 'string') return response.data.data;
+    return '';
+  }
+
+  /**
+   * Extract lowercased body text.
+   * @param {any} response
+   * @returns {string}
+   */
+  #getText(response) {
+    return this.#getBody(response).toLowerCase();
+  }
+
+  /**
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isValidPayload(response) {
+    if (this.isRateLimit(response) || this.isBotChallenge(response)) {
+      return false;
+    }
+
+    // Unwrap the base-client envelope { status, data } if present
+    const root = response?.data !== undefined ? response.data : response;
+    const data = root?.data !== undefined ? root.data : root;
+
+    if (data && typeof data === 'object') {
+      if (data.user?.result?.rest_id && data.user?.result?.legacy) return true;
+      if (data.user?.result?.rest_id) return true;
+      if (Array.isArray(data.user?.result?.timeline_v2?.timeline?.instructions)) return true;
+      if (data.tweetResult?.result?.__typename === 'Tweet' || data.tweetResult?.result?.__typename === 'TweetTombstone' || data.tweetResult?.result?.rest_id) return true;
+      if (Array.isArray(data.threaded_conversation_with_injections_v2?.instructions)) return true;
+      if (Array.isArray(data.favoriters_timeline?.timeline?.instructions)) return true;
+      if (Array.isArray(data.bookmark_timeline_v2?.timeline?.instructions)) return true;
+      if (Array.isArray(data.bookmark_timeline?.timeline?.instructions)) return true;
+      if (Array.isArray(data.retweeters_timeline?.timeline?.instructions)) return true;
+      if (Array.isArray(data.list?.members_timeline?.timeline?.instructions)) return true;
+      if (Array.isArray(data.list_members_timeline?.timeline?.instructions)) return true;
+      if (Array.isArray(data.community_members_timeline?.timeline?.instructions)) return true;
+      // CreateTweet / CreateScheduledTweet / DeleteTweet mutations
+      if (['Tweet', 'TweetWithVisibilityResults'].includes(data.create_tweet?.tweet_results?.result?.__typename)) return true;
+      if (['Tweet', 'TweetWithVisibilityResults'].includes(data.create_tweet?.tweet_result?.result?.__typename)) return true;
+      if (data.create_tweet?.rest_id || data.create_tweet?.legacy?.id_str) return true;
+      if (['Tweet', 'TweetWithVisibilityResults'].includes(data.delete_tweet?.tweet_results?.result?.__typename)) return true;
+      if (data.create_scheduled_tweet?.id || data.create_scheduled_tweet?.rest_id) return true;
+      if (data.create_scheduled_tweet?.tweet_results?.result?.rest_id || data.create_scheduled_tweet?.tweet_results?.result?.__typename === 'Tweet') return true;
+      // Engagement mutations (FavoriteTweet / UnfavoriteTweet / CreateRetweet / DeleteRetweet / CreateBookmark / DeleteBookmark)
+      if (data.favorite_tweet !== undefined || data.unfavorite_tweet !== undefined) return true;
+      if (data.create_retweet !== undefined || data.delete_retweet !== undefined) return true;
+      if (data.create_bookmark !== undefined || data.delete_bookmark !== undefined) return true;
+      if (data.bookmark_tweet !== undefined || data.unbookmark_tweet !== undefined) return true;
+      // REST 1.1 / 2 responses (friendships, blocks, mutes, user objects, direct messages, lists)
+      if (data.id_str !== undefined || data.screen_name !== undefined) return true;
+      if (data.following !== undefined || data.blocking !== undefined || data.muting !== undefined) return true;
+      if (data.ok !== undefined || data.success !== undefined) return true;
+      if (data.inbox_initial_state !== undefined || data.conversation_timeline !== undefined) return true;
+      if (data.event !== undefined || Array.isArray(data.entries)) return true;
+      if (data.member_count !== undefined || data.subscriber_count !== undefined || data.mode !== undefined) return true;
+      // GraphQL error responses
+      if (Array.isArray(data.errors) || Array.isArray(root?.errors)) return true;
+      // SearchTimeline results
+      if (data.search_by_raw_query?.search_timeline?.timeline?.instructions) return true;
+      if (data.search_spaces?.search_timeline?.timeline?.instructions) return true;
+      if (Array.isArray(data.instructions)) return true;
+
+      // General fallback for GraphQL timeline objects with instructions
+      for (const val of Object.values(data)) {
+        if (val && typeof val === 'object') {
+          if (Array.isArray(val.instructions) || Array.isArray(val.timeline?.instructions)) {
+            return true;
+          }
+        }
+      }
+    }
+
+    if (Array.isArray(response) || Array.isArray(response?.data) || Array.isArray(root)) {
+      return true;
+    }
+
+    const text = this.#getText(response);
+    if (text.includes('<html') && !text.includes('cf-browser-verification') && !text.includes('captcha')) {
+      if (
+        text.includes('react-root') ||
+        text.includes('twitter-site') ||
+        text.includes('<article') ||
+        text.includes('data-testid') ||
+        text.includes('main')
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isBotChallenge(response) {
+    const root = response?.data !== undefined ? response.data : response;
+    const errors = root?.errors || root?.data?.errors || response?.errors;
+    if (Array.isArray(errors)) {
+      for (const err of errors) {
+        if (err?.code === 326) return true; // Account locked / challenge required
+        const msg = String(err?.message || '').toLowerCase();
+        if (msg.includes('challenge') || msg.includes('temporarily locked') || msg.includes('verify your account')) {
+          return true;
+        }
+      }
+    }
+
+    if (response?.status === 403) {
+      if (Array.isArray(errors) && errors.some((e) => e?.code === 32 || e?.code === 34 || e?.code === 179)) {
+        return false;
+      }
+      return true;
+    }
+
+    const text = this.#getText(response);
+    if (
+      text.includes('cf-browser-verification') ||
+      text.includes('incapsula_resource') ||
+      text.includes('data-translate="why_captcha"') ||
+      text.includes('challenge-running') ||
+      text.includes('just a moment...') ||
+      text.includes('<title>access denied</title>') ||
+      text.includes('<title>attention required! | cloudflare</title>') ||
+      text.includes('challenge') ||
+      text.includes('captcha')
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isRateLimit(response) {
+    if (response?.status === 429) return true;
+
+    const root = response?.data !== undefined ? response.data : response;
+    const errors = root?.errors || root?.data?.errors || response?.errors;
+    if (Array.isArray(errors)) {
+      for (const err of errors) {
+        if (err?.code === 88) return true;
+        const msg = String(err?.message || '').toLowerCase();
+        if (
+          msg.includes('rate limit') ||
+          msg.includes('too many') ||
+          msg.includes('to protect our users from spam')
+        ) {
+          return true;
+        }
+      }
+    }
+
+    const text = this.#getText(response);
+    if (
+      text.includes('rate limit') ||
+      text.includes('too many requests')
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+}

@@ -25,7 +25,9 @@ export { scrapeThread, scrapeFullThread, scrapeConversation, parseConversationMo
 export { scrapeFollowers, scrapeFollowing, scrapeNonFollowers, scrapeLikers, scrapeRetweeters, scrapeListMembers } from './relationships.js';
 
 // Action functions (mutations)
+// @deprecated schedulePost — use TwitterCrawler.start({ action: 'schedule', args: { text, publishAt, dryRun: false } }) instead.
 export { postTweet, postThread, deleteTweet, replyToTweet, quoteTweet, schedulePost } from './actions.js';
+// @deprecated likeTweet, unlikeTweet, retweet, unretweet — use TwitterCrawler.start({ action: 'like' | 'unlike' | 'retweet' | 'undo_retweet', args: { tweetId, dryRun: false } }) instead.
 export { likeTweet, unlikeTweet, retweet, unretweet, followUser, unfollowUser, followByUsername, blockUser, unblockUser, muteUser, unmuteUser, bookmarkTweet, unbookmarkTweet, pinTweet, unpinTweet, bulkUnfollow, bulkLike, bulkBlock } from './engagement.js';
 export { uploadMedia, uploadImage, uploadVideo, uploadGif, setAltText, scrapeMedia, downloadMedia, getVideoUrl } from './media.js';
 

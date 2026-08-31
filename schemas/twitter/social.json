@@ -1,59 +1,36 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Twitter Social Post Metadata",
+  "title": "Twitter Social Post & Profile Metadata",
   "type": "object",
+  "required": [
+    "tweetId"
+  ],
   "properties": {
     "tweetId": {
       "type": "string"
     },
-    "replyCount": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "retweetCount": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "likeCount": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "quoteCount": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "bookmarkCount": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "isRetweet": {
-      "type": "boolean"
-    },
-    "isReply": {
-      "type": "boolean"
-    },
-    "isQuote": {
-      "type": "boolean"
-    },
-    "hashtags": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "mentions": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "lang": {
-      "type": "string"
+    "parentTweetId": {
+      "type": ["string", "null"]
     },
     "conversationId": {
+      "type": ["string", "null"]
+    },
+    "isThread": {
+      "type": "boolean"
+    },
+    "isBookmarked": {
+      "type": "boolean"
+    },
+    "username": {
       "type": "string"
     },
     "profileId": {
+      "type": "string"
+    },
+    "avatar": {
+      "type": "string"
+    },
+    "bio": {
       "type": "string"
     },
     "isProfile": {
@@ -77,7 +54,64 @@
     "isNonFollower": {
       "type": "boolean"
     },
-    "username": {
+    "isReply": {
+      "type": "boolean"
+    },
+    "isRetweet": {
+      "type": "boolean"
+    },
+    "isQuote": {
+      "type": "boolean"
+    },
+    "isVerified": {
+      "type": "boolean"
+    },
+    "protected": {
+      "type": "boolean"
+    },
+    "isSearchResult": {
+      "type": "boolean"
+    },
+    "searchType": {
+      "type": "string"
+    },
+    "searchFilter": {
+      "type": "string"
+    },
+    "searchQuery": {
+      "type": "string"
+    },
+    "isHashtag": {
+      "type": "boolean"
+    },
+    "hashtag": {
+      "type": "string"
+    },
+    "isTrending": {
+      "type": "boolean"
+    },
+    "isTrend": {
+      "type": "boolean"
+    },
+    "trendWoeid": {
+      "type": "integer"
+    },
+    "woeid": {
+      "type": "integer"
+    },
+    "tweetCount": {
+      "type": ["integer", "null"]
+    },
+    "trendUrl": {
+      "type": ["string", "null"]
+    },
+    "category": {
+      "type": ["string", "null"]
+    },
+    "isPromoted": {
+      "type": "boolean"
+    },
+    "resultType": {
       "type": "string"
     },
     "followersCount": {
@@ -88,26 +122,84 @@
       "type": "integer",
       "minimum": 0
     },
-    "isVerified": {
-      "type": "boolean"
+    "likeCount": {
+      "type": "integer",
+      "minimum": 0
     },
-    "protected": {
-      "type": "boolean"
+    "retweetCount": {
+      "type": "integer",
+      "minimum": 0
     },
-    "avatar": {
+    "replyCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "quoteCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bookmarkCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lang": {
       "type": "string"
     },
-    "sourceMethod": {
-      "type": "string"
+    "hashtags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "mentions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "listId": {
       "type": "string"
     },
     "cursor": {
       "type": "string"
+    },
+    "sourceMethod": {
+      "type": "string"
+    },
+    "isMedia": {
+      "type": "boolean"
+    },
+    "mediaType": {
+      "type": ["string", "null"]
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "url": { "type": "string" },
+          "thumbnailUrl": { "type": "string" },
+          "width": { "type": "integer" },
+          "height": { "type": "integer" },
+          "durationMs": { "type": ["integer", "null"] },
+          "bitrate": { "type": ["integer", "null"] },
+          "contentType": { "type": "string" },
+          "variants": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "properties": {
+                "bitrate": { "type": "integer" },
+                "contentType": { "type": "string" },
+                "url": { "type": "string" }
+              }
+            }
+          },
+          "altText": { "type": ["string", "null"] },
+          "mediaKey": { "type": "string" }
+        }
+      }
     }
-  },
-  "required": [
-    "tweetId"
-  ]
+  }
 }

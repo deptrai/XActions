@@ -282,6 +282,7 @@ function parseReactions(reactions) {
  *
  * REST: POST /1.1/direct_messages/events/new.json
  *
+ * @deprecated sendDM — use TwitterCrawler.start({ action: 'send_dm', args: { userId: recipientId, text, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client - authenticated client
  * @param {string} recipientId - recipient user ID
  * @param {string} text - message text
@@ -340,6 +341,7 @@ export async function sendDMByUsername(client, username, text, options = {}) {
  *
  * REST: GET /1.1/dm/inbox_initial_state.json
  *
+ * @deprecated getInbox — use TwitterCrawler.start({ action: 'dm_conversations', args: { limit } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client - authenticated client
  * @param {object} [options]
  * @param {number} [options.limit=50] - max conversations to return
@@ -370,6 +372,7 @@ export async function getInbox(client, options = {}) {
  *
  * REST: GET /1.1/dm/conversation/{conversationId}.json
  *
+ * @deprecated getConversation — use TwitterCrawler.start({ action: 'dm_messages', args: { conversationId, limit } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client - authenticated client
  * @param {string} conversationId - conversation ID
  * @param {object} [options]

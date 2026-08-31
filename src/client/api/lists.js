@@ -67,6 +67,7 @@ async function* paginateList(http, endpoint, variables, timelinePath, parseEntry
 /**
  * Get tweets from a list.
  *
+ * @deprecated getListTweets — use TwitterCrawler.start({ action: 'list_members', args: { listId } }) instead.
  * @param {HttpClient} http
  * @param {string} listId
  * @param {number} [count=100]
@@ -86,6 +87,7 @@ export async function* getListTweets(http, listId, count = 100) {
 /**
  * Get members of a list.
  *
+ * @deprecated getListMembers — use TwitterCrawler.start({ action: 'list_members', args: { listId, limit: count } }) instead.
  * @param {HttpClient} http
  * @param {string} listId
  * @param {number} [count=100]
@@ -105,6 +107,7 @@ export async function* getListMembers(http, listId, count = 100) {
 /**
  * Get list details by ID.
  *
+ * @deprecated getListById — use TwitterCrawler.start({ action: 'list_members', args: { listId } }) instead.
  * @param {HttpClient} http
  * @param {string} listId
  * @returns {Promise<{id: string, name: string, description: string, memberCount: number, subscriberCount: number, createdAt: string}|null>}

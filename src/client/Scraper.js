@@ -398,6 +398,7 @@ export class Scraper {
   /**
    * Follow a user.
    *
+   * @deprecated followUser — use TwitterCrawler.start({ action: 'follow', args: { username, dryRun: false } }) instead.
    * @param {string} username - Twitter handle
    * @returns {Promise<void>}
    */
@@ -410,6 +411,7 @@ export class Scraper {
   /**
    * Unfollow a user.
    *
+   * @deprecated unfollowUser — use TwitterCrawler.start({ action: 'unfollow', args: { username, dryRun: false } }) instead.
    * @param {string} username - Twitter handle
    * @returns {Promise<void>}
    */
@@ -488,6 +490,7 @@ export class Scraper {
   /**
    * Send a tweet.
    *
+   * @deprecated sendTweet — use TwitterCrawler.start({ action: 'post', args: { text, mediaIds, dryRun: false } }) instead.
    * @param {string} text - Tweet text
    * @param {Record<string, unknown>} [options={}] - Optional mediaIds (string[]) and replyTo (string)
    * @returns {Promise<import('./models/Tweet.js').Tweet>}
@@ -501,6 +504,7 @@ export class Scraper {
   /**
    * Send a quote tweet.
    *
+   * @deprecated sendQuoteTweet — use TwitterCrawler.start({ action: 'quote', args: { tweetId: quotedTweetId, text, mediaIds, dryRun: false } }) instead.
    * @param {string} text - Tweet text
    * @param {string} quotedTweetId - ID of tweet to quote
    * @param {string[]} [mediaIds] - Media entity IDs to attach
@@ -528,6 +532,7 @@ export class Scraper {
   /**
    * Like a tweet.
    *
+   * @deprecated likeTweet — use TwitterCrawler.start({ action: 'like', args: { tweetId: id, dryRun: false } }) instead.
    * @param {string} id - Tweet ID
    * @returns {Promise<void>}
    */
@@ -540,6 +545,7 @@ export class Scraper {
   /**
    * Unlike a tweet.
    *
+   * @deprecated unlikeTweet — use TwitterCrawler.start({ action: 'unlike', args: { tweetId: id, dryRun: false } }) instead.
    * @param {string} id - Tweet ID
    * @returns {Promise<void>}
    */
@@ -552,6 +558,7 @@ export class Scraper {
   /**
    * Retweet a tweet.
    *
+   * @deprecated retweet — use TwitterCrawler.start({ action: 'retweet', args: { tweetId: id, dryRun: false } }) instead.
    * @param {string} id - Tweet ID
    * @returns {Promise<void>}
    */
@@ -564,6 +571,7 @@ export class Scraper {
   /**
    * Unretweet a tweet.
    *
+   * @deprecated unretweet — use TwitterCrawler.start({ action: 'undo_retweet', args: { tweetId: id, dryRun: false } }) instead.
    * @param {string} id - Tweet ID
    * @returns {Promise<void>}
    */
@@ -630,6 +638,7 @@ export class Scraper {
   /**
    * Get tweets from a list.
    *
+   * @deprecated getListTweets — use TwitterCrawler.start({ action: 'list_members', args: { listId } }) instead.
    * @param {string} listId - Twitter list ID
    * @param {number} [count=100] - Maximum number of tweets
    * @returns {AsyncGenerator<import('./models/Tweet.js').Tweet>}
@@ -641,6 +650,7 @@ export class Scraper {
   /**
    * Get members of a list.
    *
+   * @deprecated getListMembers — use TwitterCrawler.start({ action: 'list_members', args: { listId, limit: count } }) instead.
    * @param {string} listId - Twitter list ID
    * @param {number} [count=100] - Maximum number of members
    * @returns {AsyncGenerator<import('./models/Profile.js').Profile>}
@@ -652,6 +662,7 @@ export class Scraper {
   /**
    * Get list details by ID.
    *
+   * @deprecated getListById — use TwitterCrawler.start({ action: 'list_members', args: { listId } }) instead.
    * @param {string} listId - Twitter list ID
    * @returns {Promise<{id: string, name: string, description: string, memberCount: number, subscriberCount: number, createdAt: string}|null>}
    */
@@ -666,6 +677,7 @@ export class Scraper {
   /**
    * Send a DM to a conversation.
    *
+   * @deprecated sendDm — use TwitterCrawler.start({ action: 'send_dm', args: { conversationId, text, dryRun: false } }) instead.
    * @param {string} conversationId - DM conversation ID
    * @param {string} text - Message text
    * @returns {Promise<{id: string, text: string, createdAt: string}>}
@@ -678,6 +690,7 @@ export class Scraper {
   /**
    * Send a DM to a user by ID (creates conversation if needed).
    *
+   * @deprecated sendDmToUser — use TwitterCrawler.start({ action: 'send_dm', args: { userId, text, dryRun: false } }) instead.
    * @param {string} userId - Target user ID
    * @param {string} text - Message text
    * @returns {Promise<{id: string, text: string, createdAt: string}>}
@@ -690,6 +703,7 @@ export class Scraper {
   /**
    * Get DM conversations.
    *
+   * @deprecated getDmConversations — use TwitterCrawler.start({ action: 'dm_conversations', args: { limit: count } }) instead.
    * @param {number} [count=50] - Maximum conversations to return
    * @returns {AsyncGenerator<{id: string, type: string, participants: string[], lastMessage: string, updatedAt: string}>}
    */
@@ -701,6 +715,7 @@ export class Scraper {
   /**
    * Get messages in a DM conversation.
    *
+   * @deprecated getDmMessages — use TwitterCrawler.start({ action: 'dm_messages', args: { conversationId, limit: count } }) instead.
    * @param {string} conversationId - Conversation ID
    * @param {number} [count=50] - Maximum messages to return
    * @returns {AsyncGenerator<import('./models/Message.js').Message>}

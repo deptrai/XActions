@@ -372,6 +372,8 @@ export function reconstructThread(tweets) {
  *   hasMore: boolean,
  *   cursor: string|null,
  * }>}
+ * @deprecated Use TwitterCrawler.thread ({ action: 'thread' }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  */
 export async function scrapeThread(client, tweetId, options = {}) {
   const { queryId, operationName } = GRAPHQL.TweetDetail;
@@ -444,6 +446,8 @@ export async function scrapeThread(client, tweetId, options = {}) {
  *   hasMore: boolean,
  *   cursor: string|null,
  * }>}
+ * @deprecated Use TwitterCrawler.thread ({ action: 'thread', args: { walkToRoot: true } }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  */
 export async function scrapeFullThread(client, tweetId, options = {}) {
   const { maxDepth = 50 } = options;
@@ -511,6 +515,8 @@ export async function scrapeFullThread(client, tweetId, options = {}) {
  *   hasMore: boolean,
  *   cursor: string|null,
  * }>}
+ * @deprecated Use TwitterCrawler.thread ({ action: 'thread' }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  */
 export async function scrapeConversation(client, tweetId, options = {}) {
   const { limit = 200, sortBy = 'relevance', onProgress } = options;

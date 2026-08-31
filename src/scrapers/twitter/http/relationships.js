@@ -438,6 +438,8 @@ export async function scrapeNonFollowers(client, username, options = {}) {
  * @param {ProgressCallback} [options.onProgress] - Progress callback
  * @returns {Promise<Raw[]>} - Array of user objects
  * @throws {AuthError} if client is not authenticated
+ * @deprecated Use TwitterCrawler.likes ({ action: 'likes' }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  */
 export async function scrapeLikers(client, tweetId, options = {}) {
   requireAuth(client, 'Likes');

@@ -119,6 +119,8 @@ export function buildAdvancedQuery(options = {}) {
  * @param {string} [options.lang] - Language code
  * @param {string} [options.filter] - Include filter
  * @returns {Promise<Raw[]>} Array of parsed tweet objects
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `search` instead.
  */
 export async function searchTweets(client, query, options = {}) {
   const {
@@ -202,6 +204,8 @@ export async function searchTweets(client, query, options = {}) {
  * @param {string|null} [options.cursor=null] - Resume from pagination cursor
  * @param {function} [options.onProgress] - `({ fetched, limit }) => void`
  * @returns {Promise<Raw[]>} Array of parsed user profile objects
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `search` with `type: 'People'` instead.
  */
 export async function searchUsers(client, query, options = {}) {
   const { limit = 100, cursor = null, onProgress } = options;
@@ -312,6 +316,8 @@ function parseSearchUserInstructions(instructions) {
  * @param {object} [options]
  * @param {number} [options.woeid=1] - Where On Earth ID (1 = worldwide)
  * @returns {Promise<Raw[]>} Array of `{ name, tweetCount, url, category }`
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `trending` instead.
  */
 export async function scrapeTrending(client, options = {}) {
   const { woeid = 1 } = options;
@@ -347,6 +353,8 @@ export async function scrapeTrending(client, options = {}) {
  * @param {string} hashtag - Hashtag text (with or without `#` prefix)
  * @param {object} [options] - Same options as `searchTweets`
  * @returns {Promise<Raw[]>} Array of parsed tweet objects
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `hashtag` instead.
  */
 export async function scrapeHashtag(client, hashtag, options = {}) {
   const tag = hashtag.startsWith('#') ? hashtag : `#${hashtag}`;

@@ -80,11 +80,26 @@ Xoá theo thứ tự:
 
 | Platform | Status | Estimated Phase | Owner |
 |----------|--------|-----------------|-------|
-| Twitter Puppeteer (`src/scrapers/twitter/index.js`) | `deprecated-planned` | Phase 2–3 | TBD |
-| Twitter HTTP (`src/scrapers/twitter/http/`) | `deprecated-planned` | Phase 2–3 | TBD |
+| Twitter Puppeteer (`src/scrapers/twitter/index.js`) | `deprecated-marked` | Phase 1 (Story 13.2.12) | DEV |
+| Twitter HTTP (`src/scrapers/twitter/http/`) | `deprecated-marked` | Phase 1 (Story 13.2.12) | DEV |
 | Twitter Legacy Profile/Followers/Following (`src/scrapers/twitter/index.js` profile/followers/following) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
+| Twitter Legacy Thread/Likes/Bookmarks (`src/scrapers/twitter/index.js`, `thread.js`, `relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.2) | DEV |
 | Twitter HTTP Relationships (`src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
-| `src/client/Scraper.js` | `deprecated-planned` | Phase 2–3 | TBD |
+| Twitter Legacy Search/Hashtag/Trending (`src/scrapers/twitter/index.js` searchTweets/scrapeHashtag/scrapeTrending; `src/scrapers/twitter/http/search.js` searchTweets/searchUsers/scrapeTrending/scrapeHashtag) | `deprecated-marked` | Phase 1 (Story 13.2.3) | DEV |
+| Twitter Legacy Media (`src/scrapers/twitter/http/media.js`, `src/scrapers/twitter/index.js` scrapeMedia) | `deprecated-marked` | Phase 1 (Story 13.2.4) | DEV |
+| Twitter Legacy Lists/Communities/Spaces (`src/scrapers/twitter/index.js` scrapeListMembers/scrapeCommunityMembers/scrapeSpaces; `src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Story 13.2.5) | DEV |
+| Twitter Legacy Content Composition (`src/client/Scraper.js` sendTweet/sendQuoteTweet; `src/client/api/tweets.js` sendTweet/sendQuoteTweet; `src/scrapers/twitter/http/actions.js` postTweet/postThread/replyToTweet/quoteTweet/schedulePost) | `deprecated-marked` | Phase 1 (Story 13.2.6 / 13.2.7) | DEV |
+| `src/scrapers/twitter/http/actions.js` `schedulePost` → `twitter:schedule` | `deprecated-marked` | Phase 1 (Story 13.2.7) | DEV |
+| `src/scrapers/twitter/http/index.js` `schedulePost` → `twitter:schedule` | `deprecated-marked` | Phase 1 (Story 13.2.7) | DEV |
+| Twitter Legacy Engagement (`src/client/Scraper.js` likeTweet/unlikeTweet/retweet/unretweet; `src/client/api/tweets.js`; `src/scrapers/twitter/http/engagement.js` likeTweet/unlikeTweet/retweet/unretweet) | `deprecated-marked` | Phase 1 (Story 13.2.8) | DEV |
+| `src/scrapers/twitter/http/engagement.js` like/unlike/retweet/unretweet → `twitter:like` / `twitter:unlike` / `twitter:retweet` / `twitter:undo_retweet` | `deprecated-marked` | Phase 1 (Story 13.2.8) | DEV |
+| Twitter Legacy Social Graph (`src/client/Scraper.js` followUser/unfollowUser; `src/client/api/users.js`; `src/scrapers/twitter/http/engagement.js` followUser/unfollowUser/blockUser/unblockUser/muteUser/unmuteUser/bookmarkTweet/unbookmarkTweet) | `deprecated-marked` | Phase 1 (Story 13.2.9) | DEV |
+| `src/scrapers/twitter/http/engagement.js` social graph & bookmarks → `twitter:follow` / `twitter:unfollow` / `twitter:block` / `twitter:unblock` / `twitter:mute` / `twitter:unmute` / `twitter:bookmark` / `twitter:unbookmark` | `deprecated-marked` | Phase 1 (Story 13.2.9) | DEV |
+| Twitter Legacy Direct Messaging (`src/client/Scraper.js` sendDm/sendDmToUser/getDmConversations/getDmMessages; `src/client/api/dms.js`; `src/scrapers/twitter/http/dm.js` sendDM/getInbox/getConversation) | `deprecated-marked` | Phase 1 (Story 13.2.10) | DEV |
+| `src/scrapers/twitter/http/dm.js` direct messaging → `twitter:send_dm` / `twitter:dm_conversations` / `twitter:dm_messages` | `deprecated-marked` | Phase 1 (Story 13.2.10) | DEV |
+| Twitter Legacy List Management (`src/client/Scraper.js` getListTweets/getListMembers/getListById; `src/client/api/lists.js` getListTweets/getListMembers/getListById) | `deprecated-marked` | Phase 1 (Story 13.2.11) | DEV |
+| `src/client/api/lists.js` list operations → `twitter:list_members` / `twitter:create_list` / `twitter:add_list_members` / `twitter:remove_list_members` | `deprecated-marked` | Phase 1 (Story 13.2.11) | DEV |
+| `src/client/Scraper.js` (search/getTrends/getExploreTabs and all methods) | `deprecated-planned` | Phase 2–3 | TBD |
 | Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-marked` | Phase 1 (Epic 13.10) | DEV |
 | Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
 | Facebook Legacy Search (`src/scrapers/facebook/search.js`, `group-search.js`) | `deprecated-marked` | Phase 1 (Epic 13.6) | DEV |
@@ -103,9 +118,33 @@ Xoá theo thứ tự:
 | `scrapeFollowers` (Twitter) | `twitter:followers` |
 | `scrapeFollowing` (Twitter) | `twitter:following` |
 | `scrapeNonFollowers` (Twitter) | `twitter:non_followers` |
-| `scrapeLikers` (Twitter) | `twitter:likers` |
+| `scrapeLikers` (Twitter) | `twitter:likers` / `twitter:likes` |
 | `scrapeRetweeters` (Twitter) | `twitter:retweeters` |
 | `scrapeListMembers` (Twitter) | `twitter:list_members` |
+| `scrapeThread` (Twitter) | `twitter:thread` |
+| `scrapeLikes` (Twitter) | `twitter:likes` |
+| `scrapeBookmarks` (Twitter) | `twitter:bookmarks` |
+| `scrapeMedia` (Twitter) | `twitter:media` |
+| `downloadMedia` / `getVideoUrl` (Twitter) | `twitter:download_video` |
+| `likeTweet` / `like` (Twitter) | `twitter:like` |
+| `unlikeTweet` / `unlike` (Twitter) | `twitter:unlike` |
+| `retweet` (Twitter) | `twitter:retweet` |
+| `unretweet` / `undoRetweet` (Twitter) | `twitter:undo_retweet` |
+| `followUser` / `followByUsername` (Twitter) | `twitter:follow` |
+| `unfollowUser` (Twitter) | `twitter:unfollow` |
+| `blockUser` (Twitter) | `twitter:block` |
+| `unblockUser` (Twitter) | `twitter:unblock` |
+| `muteUser` (Twitter) | `twitter:mute` |
+| `unmuteUser` (Twitter) | `twitter:unmute` |
+| `bookmarkTweet` (Twitter) | `twitter:bookmark` |
+| `unbookmarkTweet` (Twitter) | `twitter:unbookmark` |
+| `sendDm` / `sendDM` / `sendDmToUser` / `sendDMByUsername` (Twitter) | `twitter:send_dm` |
+| `getDmConversations` / `getInbox` (Twitter) | `twitter:dm_conversations` |
+| `getDmMessages` / `getConversation` (Twitter) | `twitter:dm_messages` |
+| `getListTweets` / `getListMembers` / `getListById` (Twitter) | `twitter:list_members` |
+| `createList` / `create_list` (Twitter) | `twitter:create_list` |
+| `addListMembers` / `add_list_members` (Twitter) | `twitter:add_list_members` |
+| `removeListMembers` / `remove_list_members` (Twitter) | `twitter:remove_list_members` |
 | `scrapeProfile` | `facebook:profile` |
 | `scrapeFollowers` | `facebook:followers` |
 | `scrapeGroupMembers` | `facebook:group_members` |
@@ -169,4 +208,4 @@ Trước khi thực hiện Story 20.2 (Legacy Scraper Code Decommissioning), tea
 
 ---
 
-*Last updated: 2026-08-28*
+*Last updated: 2026-08-30*

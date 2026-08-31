@@ -173,6 +173,7 @@ async function restMutation(client, path, body) {
 
 /**
  * Like a tweet.
+ * @deprecated likeTweet — use TwitterCrawler.start({ action: 'like', args: { tweetId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
  * @returns {Promise<{ success: boolean }>}
@@ -183,6 +184,7 @@ export async function likeTweet(client, tweetId) {
 
 /**
  * Unlike a tweet.
+ * @deprecated unlikeTweet — use TwitterCrawler.start({ action: 'unlike', args: { tweetId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
  * @returns {Promise<{ success: boolean }>}
@@ -197,6 +199,7 @@ export async function unlikeTweet(client, tweetId) {
 
 /**
  * Retweet a tweet.
+ * @deprecated retweet — use TwitterCrawler.start({ action: 'retweet', args: { tweetId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
  * @returns {Promise<{ success: boolean }>}
@@ -207,6 +210,7 @@ export async function retweet(client, tweetId) {
 
 /**
  * Undo a retweet.
+ * @deprecated unretweet — use TwitterCrawler.start({ action: 'undo_retweet', args: { tweetId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
  * @returns {Promise<{ success: boolean }>}
@@ -221,6 +225,7 @@ export async function unretweet(client, tweetId) {
 
 /**
  * Follow a user by user ID.
+ * @deprecated followUser — use TwitterCrawler.start({ action: 'follow', args: { userId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} userId
  * @returns {Promise<{ success: boolean }>}
@@ -235,6 +240,7 @@ export async function followUser(client, userId) {
 
 /**
  * Unfollow a user by user ID.
+ * @deprecated unfollowUser — use TwitterCrawler.start({ action: 'unfollow', args: { userId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} userId
  * @returns {Promise<{ success: boolean }>}
@@ -251,6 +257,7 @@ export async function unfollowUser(client, userId) {
  * Follow a user by username. Resolves the username to a user ID first
  * via the UserByScreenName GraphQL query, then calls followUser.
  *
+ * @deprecated followByUsername — use TwitterCrawler.start({ action: 'follow', args: { username, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} username - Screen name without `@`
  * @returns {Promise<{ success: boolean }>}
@@ -284,6 +291,7 @@ export async function followByUsername(client, username) {
 
 /**
  * Block a user.
+ * @deprecated blockUser — use TwitterCrawler.start({ action: 'block', args: { userId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} userId
  * @returns {Promise<{ success: boolean }>}
@@ -294,6 +302,7 @@ export async function blockUser(client, userId) {
 
 /**
  * Unblock a user.
+ * @deprecated unblockUser — use TwitterCrawler.start({ action: 'unblock', args: { userId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} userId
  * @returns {Promise<{ success: boolean }>}
@@ -308,6 +317,7 @@ export async function unblockUser(client, userId) {
 
 /**
  * Mute a user.
+ * @deprecated muteUser — use TwitterCrawler.start({ action: 'mute', args: { userId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} userId
  * @returns {Promise<{ success: boolean }>}
@@ -318,6 +328,7 @@ export async function muteUser(client, userId) {
 
 /**
  * Unmute a user.
+ * @deprecated unmuteUser — use TwitterCrawler.start({ action: 'unmute', args: { userId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} userId
  * @returns {Promise<{ success: boolean }>}
@@ -332,6 +343,7 @@ export async function unmuteUser(client, userId) {
 
 /**
  * Bookmark a tweet.
+ * @deprecated bookmarkTweet — use TwitterCrawler.start({ action: 'bookmark', args: { tweetId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
  * @returns {Promise<{ success: boolean }>}
@@ -342,6 +354,7 @@ export async function bookmarkTweet(client, tweetId) {
 
 /**
  * Remove a bookmark.
+ * @deprecated unbookmarkTweet — use TwitterCrawler.start({ action: 'unbookmark', args: { tweetId, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
  * @returns {Promise<{ success: boolean }>}

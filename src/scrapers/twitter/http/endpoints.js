@@ -104,8 +104,9 @@ export const GRAPHQL = {
   HomeLatestTimeline:   { queryId: 'U0cdisy7QFIoTfu3-Okw0A', operationName: 'HomeLatestTimeline' },    // [twikit] d60/twikit gql.py
 
   // ---- Mutations (tweets) ----
-  CreateTweet:     { queryId: 'SiM_cAu83R0wnrpmKQQSEw', operationName: 'CreateTweet' },               // [twikit] d60/twikit gql.py
-  DeleteTweet:     { queryId: 'VaenaVgh5q5ih7kvyVjgtg', operationName: 'DeleteTweet' },                // [twikit] d60/twikit gql.py - also in scraper
+  CreateTweet:          { queryId: 'SiM_cAu83R0wnrpmKQQSEw', operationName: 'CreateTweet' },               // [twikit] d60/twikit gql.py
+  CreateScheduledTweet: { queryId: 'LCVzRQGxOaGnOnYH01NQXg', operationName: 'CreateScheduledTweet' },     // reverse-engineered; used by TwitterCrawler schedule action
+  DeleteTweet:          { queryId: 'VaenaVgh5q5ih7kvyVjgtg', operationName: 'DeleteTweet' },                // [twikit] d60/twikit gql.py - also in scraper
 
   // ---- Mutations (engagement) ----
   FavoriteTweet:   { queryId: 'lI07N6Otwv1PhnEgXILM7A', operationName: 'FavoriteTweet' },             // [twikit] d60/twikit gql.py - also in scraper
@@ -163,6 +164,11 @@ export const REST = {
   guide:           '/2/guide.json',
   trendsAvailable: '/1.1/trends/available.json',
   trendsPlace:     '/1.1/trends/place.json',
+
+  // Lists Management
+  listsCreate:            '/1.1/lists/create.json',
+  listsMembersCreateAll:  '/1.1/lists/members/create_all.json',
+  listsMembersDestroyAll: '/1.1/lists/members/destroy_all.json',
 };
 
 // ---------------------------------------------------------------------------

@@ -86,6 +86,7 @@ function parseTweetResult(json) {
 /**
  * Post a tweet via the CreateTweet GraphQL mutation.
  *
+ * @deprecated postTweet — use TwitterCrawler.start({ action: 'post', args: { text, mediaIds, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client - authenticated client
  * @param {string} text - tweet body
  * @param {object} [options]
@@ -145,6 +146,7 @@ export async function postTweet(client, text, options = {}) {
 /**
  * Post a thread (multiple tweets chained as self-replies).
  *
+ * @deprecated postThread — use a sequence of TwitterCrawler.start({ action: 'post' | 'reply', ... }) calls instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {Array<{ text: string, mediaIds?: string[] }>} tweets
  * @param {object} [options]
@@ -219,6 +221,7 @@ export async function deleteTweet(client, tweetId) {
 /**
  * Reply to a tweet. Convenience wrapper around postTweet.
  *
+ * @deprecated replyToTweet — use TwitterCrawler.start({ action: 'reply', args: { tweetId, text, mediaIds, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId - tweet to reply to
  * @param {string} text - reply body
@@ -238,6 +241,7 @@ export async function replyToTweet(client, tweetId, text, options = {}) {
 /**
  * Quote-tweet another tweet. Convenience wrapper around postTweet.
  *
+ * @deprecated quoteTweet — use TwitterCrawler.start({ action: 'quote', args: { tweetId, text, mediaIds, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId - tweet to quote
  * @param {string} text - commentary
@@ -256,6 +260,7 @@ export async function quoteTweet(client, tweetId, text, options = {}) {
 /**
  * Schedule a tweet for future publication via CreateScheduledTweet.
  *
+ * @deprecated schedulePost — use TwitterCrawler.start({ action: 'schedule', args: { text, publishAt, dryRun: false } }) instead.
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} text
  * @param {Date|number} scheduledAt - Date object or Unix epoch in seconds

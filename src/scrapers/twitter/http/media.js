@@ -462,6 +462,8 @@ export async function setAltText(client, mediaId, altText) {
  * @param {Raw} media - raw media object from Twitter response
  * @param {string} tweetId
  * @returns {Raw}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `parseMediaEntity` from `src/scrapers/social/twitter/normalize-media.js` instead.
  */
 export function parseMediaEntity(media, tweetId) {
   const type = media.type; // 'photo' | 'video' | 'animated_gif'
@@ -504,6 +506,8 @@ export function parseMediaEntity(media, tweetId) {
  * @param {string} username
  * @param {{ limit?: number, cursor?: string|null }} [options]
  * @returns {Promise<Array<object>>}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `media` instead.
  */
 export async function scrapeMedia(client, username, options = {}) {
   const { limit = 100, cursor = null } = options;
@@ -636,6 +640,8 @@ function extractTweetResultsFromEntry(entry) {
  * @param {string} destPath
  * @param {{ onProgress?: (info: { downloaded: number, total: number|null }) => void }} [options]
  * @returns {Promise<{ bytes: number, path: string }>}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `download_video` instead.
  */
 export async function downloadMedia(url, destPath, options = {}) {
   const { onProgress } = options;
@@ -691,6 +697,8 @@ export async function downloadMedia(url, destPath, options = {}) {
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string} tweetId
  * @returns {Promise<{ url: string, bitrate: number, contentType: string, width: number, height: number }|null>}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `download_video` instead.
  */
 export async function getVideoUrl(client, tweetId) {
   const resp = await client.graphql(

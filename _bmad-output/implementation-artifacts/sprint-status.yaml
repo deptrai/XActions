@@ -1,5 +1,5 @@
 # generated: 2026-08-27T06:00:00.000Z
-# last_updated: 2026-08-29T05:55:00Z
+# last_updated: 2026-08-31T06:15:00Z
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-27T06:00:00.000Z
-last_updated: 2026-08-29T05:55:00Z
+last_updated: 2026-08-31T06:15:00Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -70,17 +70,17 @@ development_status:
   13-1-tiered-signer-architecture-token-ring-worker-pool: done
   13-2-refactor-twitter-scraper-to-hybrid-architecture: ready-for-dev
   13-2-1-twitter-hybrid-profile-relationships: ready-for-dev
-  13-2-2-twitter-hybrid-thread-likes-bookmarks: backlog
-  13-2-3-twitter-hybrid-search-hashtag-trending: backlog
-  13-2-4-twitter-hybrid-media-scraper: backlog
-  13-2-5-twitter-hybrid-lists-communities-spaces: backlog
-  13-2-6-twitter-hybrid-content-composition-post-reply-quote: backlog
-  13-2-7-twitter-hybrid-content-scheduling: backlog
-  13-2-8-twitter-hybrid-engagement-like-retweet: backlog
-  13-2-9-twitter-hybrid-social-graph-follow-block-mute-bookmark: backlog
-  13-2-10-twitter-hybrid-direct-messaging: backlog
-  13-2-11-twitter-hybrid-list-management: backlog
-  13-2-12-twitter-hybrid-integration-caller-migration: backlog
+  13-2-2-twitter-hybrid-thread-likes-bookmarks: done
+  13-2-3-twitter-hybrid-search-hashtag-trending: done
+  13-2-4-twitter-hybrid-media-scraper: done
+  13-2-5-twitter-hybrid-lists-communities-spaces: review
+  13-2-6-twitter-hybrid-content-composition-post-reply-quote: done
+  13-2-7-twitter-hybrid-content-scheduling: review
+  13-2-8-twitter-hybrid-engagement-like-retweet: done
+  13-2-9-twitter-hybrid-social-graph-follow-block-mute-bookmark: done
+  13-2-10-twitter-hybrid-direct-messaging: done
+  13-2-11-twitter-hybrid-list-management: done
+  13-2-12-twitter-hybrid-integration-caller-migration: done
   13-3-refactor-facebook-scraper-to-hybrid-architecture: done
   13-4-facebook-browser-as-signer-bridge: done
   13-5-facebook-hybrid-profile-followers-group-members: done
@@ -109,9 +109,9 @@ development_status:
   epic-15-retrospective: optional
 
   # --- Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop) ---
-  epic-16: backlog
-  16-1-shopee-search-product-review-scraper-tls-spoofing: backlog
-  16-2-tiktok-shop-product-sales-scraper: backlog
+  epic-16: in-progress
+  16-1-shopee-search-product-review-scraper-tls-spoofing: done
+  16-2-tiktok-shop-product-sales-scraper: done
   epic-16-retrospective: optional
 
   # --- Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan) ---

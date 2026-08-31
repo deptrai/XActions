@@ -1,7 +1,11 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Twitter Scrapers
- * Puppeteer-based scrapers for X/Twitter
+ * @deprecated This entire module is deprecated. Use `src/scrapers/social/twitter/` (TwitterCrawler / TwitterClient) instead.
+ * Import via: `import { TwitterCrawler, TwitterClient } from 'xactions/scrapers/social/twitter'`
+ * Or use the unified dispatcher: `scrape('twitter', action, options)` which now routes to the hybrid crawler.
+ * This file is kept for backward compatibility and will be removed in Epic 20.2.
+ *
+ * XActions Twitter Scrapers (LEGACY — Puppeteer-based)
  * 
  * Moved from src/scrapers/index.js to support multi-platform architecture.
  * All original exports are preserved for backward compatibility.
@@ -461,6 +465,8 @@ export async function scrapeTweets(page, username, options = {}) {
  * @param {string} query
  * @param {TwitterScrapeOptions} [options]
  * @returns {Promise<Array<Record<string, unknown>>>}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `search` instead.
  */
 export async function searchTweets(page, query, options = {}) {
   const { limit = 100, filter = 'latest', onProgress } = options;
@@ -534,6 +540,8 @@ export async function searchTweets(page, query, options = {}) {
 /**
  * Scrape a full tweet thread
  *
+ * @deprecated Use TwitterCrawler.thread ({ action: 'thread' }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl
  * @returns {Promise<Array<Record<string, unknown>>>}
@@ -588,6 +596,8 @@ export async function scrapeThread(page, tweetUrl) {
 /**
  * Scrape users who liked a tweet
  *
+ * @deprecated Use TwitterCrawler.likes ({ action: 'likes' }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl
  * @param {TwitterScrapeOptions} [options]
@@ -650,6 +660,8 @@ export async function scrapeLikes(page, tweetUrl, options = {}) {
  * @param {string} hashtag
  * @param {TwitterScrapeOptions} [options]
  * @returns {Promise<Array<Record<string, unknown>>>}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `hashtag` instead.
  */
 export async function scrapeHashtag(page, hashtag, options = {}) {
   const { limit = 100, filter = 'latest' } = options;
@@ -669,6 +681,8 @@ export async function scrapeHashtag(page, hashtag, options = {}) {
  * @param {string} username
  * @param {TwitterScrapeOptions} [options]
  * @returns {Promise<MediaItem[]>}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `media` instead.
  */
 export async function scrapeMedia(page, username, options = {}) {
   const { limit = 100 } = options;
@@ -731,6 +745,8 @@ export async function scrapeMedia(page, username, options = {}) {
 /**
  * Scrape members of a Twitter list
  *
+ * @deprecated Use TwitterCrawler.start({ action: 'list_members', args: { listUrl } }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {string} listUrl
  * @param {TwitterScrapeOptions} [options]
@@ -789,6 +805,8 @@ export async function scrapeListMembers(page, listUrl, options = {}) {
 /**
  * Scrape bookmarked tweets (requires login)
  *
+ * @deprecated Use TwitterCrawler.bookmarks ({ action: 'bookmarks' }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {TwitterScrapeOptions} [options]
  * @returns {Promise<Array<Record<string, unknown>>>}
@@ -895,6 +913,8 @@ export async function scrapeNotifications(page, options = {}) {
  * @param {import('puppeteer').Page} page
  * @param {TwitterScrapeOptions} [options]
  * @returns {Promise<Array<Record<string, unknown>>>}
+ *
+ * @deprecated LEGACY — see docs/deprecation-plan.md. Use `TwitterCrawler` action `trending` instead.
  */
 export async function scrapeTrending(page, options = {}) {
   const { limit = 30 } = options;
@@ -928,6 +948,8 @@ export async function scrapeTrending(page, options = {}) {
 /**
  * Scrape members of an X Community
  *
+ * @deprecated Use TwitterCrawler.start({ action: 'community_members', args: { communityUrl } }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {string} communityUrl
  * @param {TwitterScrapeOptions} [options]
@@ -980,6 +1002,8 @@ export async function scrapeCommunityMembers(page, communityUrl, options = {}) {
 /**
  * Scrape X Spaces from search results
  *
+ * @deprecated Use TwitterCrawler.start({ action: 'spaces', args: { query } }) instead.
+ * // LEGACY — see docs/deprecation-plan.md
  * @param {import('puppeteer').Page} page
  * @param {string} query
  * @param {TwitterScrapeOptions} [options]

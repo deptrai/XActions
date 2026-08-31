@@ -26,6 +26,9 @@
     "./scrapers/social/threads": "./src/scrapers/social/threads/index.js",
     "./scrapers/social/tiktok": "./src/scrapers/social/tiktok/index.js",
     "./scrapers/social/facebook": "./src/scrapers/social/facebook/index.js",
+    "./scrapers/social/twitter": "./src/scrapers/social/twitter/index.js",
+    "./scrapers/ecom/shopee": "./src/scrapers/ecom/shopee/index.js",
+    "./scrapers/ecom/tiktok-shop": "./src/scrapers/ecom/tiktok-shop/index.js",
     "./streaming": "./src/streaming/index.js",
     "./analytics": "./src/analytics/index.js",
     "./plugins": "./src/plugins/index.js",
@@ -154,6 +157,7 @@
     "xspace-agent": "^0.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@stryker-mutator/core": "^9.6.1",
     "@stryker-mutator/vitest-runner": "^9.6.1",
     "@types/node": "^20.19.43",

@@ -13,7 +13,7 @@
  * @property {string} category
  * @property {string} authorId
  * @property {string} authorName
- * @property {string} [authorAvatar]
+ * @property {string | null} [authorAvatar]
  * @property {string} [authorUrl]
  * @property {string} [postUrl]
  * @property {string} content
@@ -37,7 +37,7 @@
  * @property {number} [depth]
  * @property {string} authorId
  * @property {string} authorName
- * @property {string} [authorAvatar]
+ * @property {string | null} [authorAvatar]
  * @property {string} content
  * @property {number} [likesCount]
  * @property {number} [subCommentsCount]
@@ -53,6 +53,7 @@
  * @property {string} externalId
  * @property {string} [username]
  * @property {string} [name]
+ * @property {string} [authorName]
  * @property {string} [bio]
  * @property {string} [avatar]
  * @property {string} [profileUrl]
