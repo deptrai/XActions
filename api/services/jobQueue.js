@@ -483,26 +483,35 @@ operationsQueue.on('completed', async (job, result) => {
 });
 
 operationsQueue.on('failed', async (job, err) => {
-  console.error(`❌ Job failed: ${job.id}`, err);
+  console.error(`❌ Job failed: ${job?.id}`, err);
 
-  await prisma.operation.update({
-    where: { id: job.data.operationId },
-    data: { status: 'failed', error: (err instanceof Error ? err.message : String(err)), retryCount: job.attemptsMade },
-  });
+  const operationId = job?.data?.operationId;
+  if (operationId) {
+    try {
+      await prisma.operation.update({
+        where: { id: operationId },
+        data: { status: 'failed', error: (err instanceof Error ? err.message : String(err)), retryCount: job.attemptsMade },
+      });
+    } catch (dbErr) {
+      console.warn(`⚠️ Failed to update operation ${operationId} status:`, dbErr.message);
+    }
 
-  global.io?.to(`job:${job.data.operationId}`).emit('job:failed', {
-    jobId: job.data.operationId,
-    error: (err instanceof Error ? err.message : String(err)),
-    failedAt: new Date().toISOString(),
-  });
+    global.io?.to(`job:${operationId}`).emit('job:failed', {
+      jobId: operationId,
+      error: (err instanceof Error ? err.message : String(err)),
+      failedAt: new Date().toISOString(),
+    });
+  }
 
-  deliverCallback(job.data.config?.callbackUrl, {
-    event: 'job.failed',
-    jobId: job.data.operationId,
-    type: job.data.type,
-    error: (err instanceof Error ? err.message : String(err)),
-    failedAt: new Date().toISOString(),
-  });
+  if (job?.data?.config?.callbackUrl) {
+    deliverCallback(job.data.config.callbackUrl, {
+      event: 'job.failed',
+      jobId: operationId,
+      type: job.data.type,
+      error: (err instanceof Error ? err.message : String(err)),
+      failedAt: new Date().toISOString(),
+    });
+  }
 });
 
 operationsQueue.on('stalled', (job) => {
