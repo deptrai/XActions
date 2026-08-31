@@ -123,7 +123,7 @@ development_status:
   # --- Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn) ---
   # 18.1/18.2 story files created; 18.3 blocked by 12.2 CDP attach.
   epic-18: in-progress
-  18-1-topcv-job-company-scraper: ready-for-dev
+  18-1-topcv-job-company-scraper: done
   18-2-vietnamworks-job-scraper: ready-for-dev
   18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: backlog
   epic-18-retrospective: optional

@@ -2,6 +2,32 @@
 story_id: '13.2.5'
 epic: 13
 story_key: '13-2-5-twitter-hybrid-lists-communities-spaces'
+status: "done"
+phase: "Phase 2"
+created: 2026-08-30
+updated: 2026-08-31
+last_updated: 2026-08-31
+owner: "DEV"
+reviewed: "approved"
+baseline_commit: "05c6ec5393c52a0a2df33939678129a67a57a5eb"
+---
+
+# Story 13.2.5 — Twitter Hybrid Lists, Communities & Spaces
+
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review)  
+**Date:** 2026-08-31  
+**Summary:**
+- Đã đăng ký đầy đủ 3 action `list_members`, `community_members`, `spaces` trong `TwitterCrawler`.
+- Chuẩn hóa đầu ra đúng `ProfileItem` (kèm `isListMember`, `isCommunityMember`) và `PostItem` (kèm `isSpace`).
+- Tách normalizer module độc lập `src/scrapers/social/twitter/normalize-list-community-space.js`.
+- Tất cả 8/8 tests tại `crawler-lists-communities-spaces.test.js` passed 100%.
+
+epic: 13
+story_key: '13-2-5-twitter-hybrid-lists-communities-spaces'
 status: "review"
 phase: "Phase 2"
 created: 2026-08-30
