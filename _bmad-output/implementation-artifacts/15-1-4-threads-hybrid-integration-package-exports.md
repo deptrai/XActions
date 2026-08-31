@@ -2,14 +2,31 @@
 story_id: "15.1.4"
 epic: 15
 story_key: "15-1-4-threads-hybrid-integration-package-exports"
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 4"
 created: 2026-08-29
-updated: 2026-08-29
-last_updated: 2026-08-29T06:00:00Z
+updated: 2026-08-31
+last_updated: 2026-08-31T06:00:00Z
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "approved"
 baseline_commit: "51f006bd"
+---
+
+# Story 15.1.4: Threads Hybrid Integration & Package Exports
+
+Status: done
+
+### Senior Developer Review (AI)
+
+**Review Outcome:** Approved (Clean review)  
+**Date:** 2026-08-31  
+**Summary:**
+- `src/scrapers/index.js` unified `scrape('threads', ...)` dispatches seamlessly into hybrid `ThreadsCrawler` without invoking Puppeteer.
+- Mapping matrix (`profile`, `timeline/tweets/feed/user_feed` → `get_user_feed`, `post/post_detail` → `post_detail`, `comments/post_comments` → `get_post_comments`, `search`, `followers`, `following`) verified 100%.
+- `package.json` exports properly expose `./scrapers/social/threads` and `./scrapers/social`.
+- `docs/deprecation-plan.md` and legacy `src/scrapers/threads/index.js` carry deprecation markers.
+- Tất cả 13/13 ATDD integration tests tại `tests/scrapers/social/threads/caller-migration.test.js` passed và toàn bộ 70/70 Threads tests passed 100%.
+
 ---
 
 # Story 15.1.4: Threads Hybrid Integration & Package Exports

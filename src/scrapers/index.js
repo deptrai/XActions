@@ -52,6 +52,15 @@ import { ShopeeCrawler } from './ecom/shopee/crawler.js';
 import { ShopeeClient } from './ecom/shopee/client.js';
 import { TikTokShopCrawler } from './ecom/tiktok-shop/crawler.js';
 import { TikTokShopClient } from './ecom/tiktok-shop/client.js';
+import { TopCvCrawler } from './recruitment/topcv/crawler.js';
+import { TopCvClient } from './recruitment/topcv/client.js';
+import { VietnamWorksCrawler } from './recruitment/vietnamworks/crawler.js';
+import { VietnamWorksClient } from './recruitment/vietnamworks/client.js';
+import { LinkedInCrawler } from './recruitment/linkedin/crawler.js';
+import { LinkedInClient } from './recruitment/linkedin/client.js';
+import topcv from './recruitment/topcv/index.js';
+import vietnamworks from './recruitment/vietnamworks/index.js';
+import linkedin from './recruitment/linkedin/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -127,6 +136,11 @@ export const platforms = {
   tiktok,
   tiktokshop: tiktokShop,
   tiktok_shop: tiktokShop,
+  topcv,
+  top_cv: topcv,
+  vietnamworks,
+  vietnam_works: vietnamworks,
+  linkedin,
 };
 
 /**
@@ -445,6 +459,245 @@ export async function scrape(platform, action, options = {}) {
     });
 
     const crawler = new TikTokShopCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── TopCV Recruitment path (Story 18.1) ──
+  if (platformName === 'topcv' || platformName === 'top_cv') {
+    /** @type {Record<string, string>} */
+    const TOPCV_ACTION_MAP = {
+      search_jobs: 'search_jobs',
+      search: 'search_jobs',
+      jobs: 'search_jobs',
+      job_detail: 'job_detail',
+      job: 'job_detail',
+      detail: 'job_detail',
+      company_detail: 'company_detail',
+      company: 'company_detail',
+      brand: 'company_detail',
+    };
+
+    const mappedAction = TOPCV_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(TOPCV_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (options.keyword || options.query || options.q || options.target) {
+      mappedArgs.keyword = options.keyword || options.query || options.q || options.target;
+    }
+    if (options.jobId || options.id) {
+      mappedArgs.jobId = options.jobId || options.id;
+    }
+    if (options.jobUrl || options.url) {
+      mappedArgs.jobUrl = options.jobUrl || options.url;
+    }
+    if (options.companyId) {
+      mappedArgs.companyId = options.companyId;
+    }
+    if (options.companyUrl) {
+      mappedArgs.companyUrl = options.companyUrl;
+    }
+    if (options.city) mappedArgs.city = options.city;
+    if (options.salary) mappedArgs.salary = options.salary;
+    if (options.exp) mappedArgs.exp = options.exp;
+    if (Number.isFinite(options.limit)) mappedArgs.limit = options.limit;
+    if (Number.isFinite(options.page)) mappedArgs.page = options.page;
+    if (options.category) mappedArgs.category = options.category;
+
+    const store = options.store !== undefined ? options.store : defaultStore;
+    const client = new TopCvClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new TopCvCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── VietnamWorks Recruitment path (Story 18.2) ──
+  if (platformName === 'vietnamworks' || platformName === 'vietnam_works' || platformName === 'vnw') {
+    /** @type {Record<string, string>} */
+    const VNW_ACTION_MAP = {
+      search_jobs: 'search_jobs',
+      search: 'search_jobs',
+      jobs: 'search_jobs',
+      job_detail: 'job_detail',
+      job: 'job_detail',
+      detail: 'job_detail',
+      company_detail: 'company_detail',
+      company: 'company_detail',
+    };
+
+    const mappedAction = VNW_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(VNW_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (options.keyword || options.query || options.q || options.target) {
+      mappedArgs.keyword = options.keyword || options.query || options.q || options.target;
+    }
+    if (options.jobId || options.id) {
+      mappedArgs.jobId = options.jobId || options.id;
+    }
+    if (options.jobUrl || options.url) {
+      mappedArgs.jobUrl = options.jobUrl || options.url;
+    }
+    if (options.companyId) {
+      mappedArgs.companyId = options.companyId;
+    }
+    if (options.companyName || options.name) {
+      mappedArgs.companyName = options.companyName || options.name;
+    }
+    if (options.city) mappedArgs.city = options.city;
+    if (options.locationId != null) mappedArgs.locationId = options.locationId;
+    if (options.salaryMin != null) mappedArgs.salaryMin = options.salaryMin;
+    if (options.salaryMax != null) mappedArgs.salaryMax = options.salaryMax;
+    if (options.exp != null) mappedArgs.exp = options.exp;
+    if (options.employmentType) mappedArgs.employmentType = options.employmentType;
+    if (Number.isFinite(options.limit)) mappedArgs.limit = options.limit;
+    if (Number.isFinite(options.page)) mappedArgs.page = options.page;
+
+    const store = options.store !== undefined ? options.store : defaultStore;
+    const client = new VietnamWorksClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new VietnamWorksCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── LinkedIn Recruitment & B2B Leads path (Story 18.3) ──
+  if (platformName === 'linkedin') {
+    /** @type {Record<string, string>} */
+    const LINKEDIN_ACTION_MAP = {
+      search_jobs: 'search_jobs',
+      search: 'search_jobs',
+      jobs: 'search_jobs',
+      job_detail: 'job_detail',
+      job: 'job_detail',
+      detail: 'job_detail',
+      company_profile: 'company_profile',
+      company: 'company_profile',
+      brand: 'company_profile',
+      lead_profile: 'lead_profile',
+      lead: 'lead_profile',
+      profile: 'lead_profile',
+    };
+
+    const mappedAction = LINKEDIN_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(LINKEDIN_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.keyword || options.query || options.q || options.target) {
+      mappedArgs.keyword = options.keyword || options.query || options.q || options.target;
+    }
+    if (options.jobId || options.id) {
+      mappedArgs.jobId = options.jobId || options.id;
+    }
+    if (options.jobUrl || options.url) {
+      mappedArgs.jobUrl = options.jobUrl || options.url;
+    }
+    if (options.companySlug || options.slug) {
+      mappedArgs.companySlug = options.companySlug || options.slug;
+    }
+    if (options.companyUrl) {
+      mappedArgs.companyUrl = options.companyUrl;
+    }
+    if (options.profileUrl || options.url) {
+      mappedArgs.profileUrl = options.profileUrl || options.url;
+    }
+    if (options.profileSlug) {
+      mappedArgs.profileSlug = options.profileSlug;
+    }
+    if (options.location) mappedArgs.location = options.location;
+    if (options.cdpPort != null) mappedArgs.cdpPort = options.cdpPort;
+    if (Number.isFinite(options.start)) mappedArgs.start = options.start;
+    if (Number.isFinite(options.limit)) mappedArgs.limit = options.limit;
+
+    const store = options.store !== undefined ? options.store : defaultStore;
+    const client = new LinkedInClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new LinkedInCrawler({
       client,
       store,
       redisPublisher: options.redisPublisher,
