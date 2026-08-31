@@ -60,10 +60,13 @@ import { LinkedInCrawler } from './recruitment/linkedin/crawler.js';
 import { LinkedInClient } from './recruitment/linkedin/client.js';
 import { ChototCrawler } from './realestate/chotot/crawler.js';
 import { ChototClient } from './realestate/chotot/client.js';
+import { BatdongsanCrawler } from './realestate/batdongsan/crawler.js';
+import { BatdongsanClient } from './realestate/batdongsan/client.js';
 import topcv from './recruitment/topcv/index.js';
 import vietnamworks from './recruitment/vietnamworks/index.js';
 import linkedin from './recruitment/linkedin/index.js';
 import chotot from './realestate/chotot/index.js';
+import batdongsan from './realestate/batdongsan/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -146,6 +149,8 @@ export const platforms = {
   linkedin,
   chotot,
   cho_tot: chotot,
+  batdongsan,
+  bds: batdongsan,
 };
 
 /**
@@ -775,6 +780,71 @@ export async function scrape(platform, action, options = {}) {
     });
 
     const crawler = new ChototCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── Batdongsan.com.vn Real Estate path (Story 17.2) ──
+  if (platformName === 'batdongsan' || platformName === 'bds') {
+    /** @type {Record<string, string>} */
+    const BDS_ACTION_MAP = {
+      search_listings: 'search_listings',
+      search: 'search_listings',
+      listings: 'search_listings',
+      listing_detail: 'listing_detail',
+      listing: 'listing_detail',
+      detail: 'listing_detail',
+    };
+
+    const mappedAction = BDS_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(BDS_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.productId || options.id) {
+      mappedArgs.productId = options.productId || options.id;
+    }
+    if (options.city) mappedArgs.city = options.city;
+    if (options.category) mappedArgs.category = options.category;
+    if (options.cate != null) mappedArgs.cate = options.cate;
+    if (options.listingType) mappedArgs.listingType = options.listingType;
+    if (options.ptype != null) mappedArgs.ptype = options.ptype;
+    if (options.minPrice != null) mappedArgs.minPrice = options.minPrice;
+    if (options.maxPrice != null) mappedArgs.maxPrice = options.maxPrice;
+    if (Number.isFinite(options.limit)) mappedArgs.limit = options.limit;
+    if (Number.isFinite(options.page)) mappedArgs.page = options.page;
+
+    const store = options.store !== undefined ? options.store : defaultStore;
+    const client = new BatdongsanClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new BatdongsanCrawler({
       client,
       store,
       redisPublisher: options.redisPublisher,
