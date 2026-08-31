@@ -136,6 +136,156 @@
       box-shadow: 0 8px 24px -8px rgba(29,155,240,.6);
     }
 
+    /* Checkpoint table */
+    .checkpoint-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+
+    .checkpoint-toolbar select,
+    .checkpoint-toolbar input {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+    }
+
+    .checkpoint-toolbar input { min-width: 160px; }
+
+    .checkpoint-table-wrap {
+      overflow-x: auto;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .checkpoint-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    .checkpoint-table th,
+    .checkpoint-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .checkpoint-table th {
+      color: var(--text-secondary);
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkpoint-table th:hover {
+      color: var(--text-primary);
+    }
+
+    .checkpoint-table tr:last-child td { border-bottom: none; }
+    .checkpoint-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-running { background: rgba(0, 186, 124, 0.15); color: var(--success); }
+    .status-paused { background: rgba(255, 173, 31, 0.15); color: var(--warning); }
+    .status-failed { background: rgba(244, 33, 46, 0.15); color: var(--error); }
+    .status-completed { background: rgba(29, 155, 240, 0.15); color: var(--accent); }
+    .status-stalled { background: rgba(255, 173, 31, 0.15); color: var(--warning); animation: pulse 2s infinite; }
+
+    .checkpoint-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .checkpoint-actions button {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+    }
+
+    .checkpoint-actions button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .checkpoint-actions button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .checkpoint-pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    .checkpoint-pagination button {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .checkpoint-pagination button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .checkpoint-toast {
+      position: fixed;
+      bottom: 80px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 1000;
+      max-width: 360px;
+    }
+
+    .checkpoint-toast.show { display: flex; }
+    .checkpoint-toast.success { background: rgba(0, 186, 124, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .checkpoint-toast.error { background: rgba(244, 33, 46, 0.15); color: var(--error); border: 1px solid var(--error); }
+
+    @media (max-width: 768px) {
+      .checkpoint-toolbar { flex-direction: column; align-items: stretch; }
+      .checkpoint-toolbar select,
+      .checkpoint-toolbar input { width: 100%; }
+      .checkpoint-table th, .checkpoint-table td { padding: 10px 12px; }
+      .checkpoint-actions { flex-direction: column; }
+      .checkpoint-actions button { width: 100%; text-align: center; }
+    }
+
     .tab-content {
       display: none;
     }
@@ -464,7 +614,59 @@
   <!-- Tab Navigation -->
   <div class="tab-nav" role="tablist" aria-label="Admin sections">
     <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-sessions" id="tab-btn-sessions" onclick="switchTab('sessions')">📡 Live Sessions</button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-checkpoints" id="tab-btn-checkpoints" onclick="switchTab('checkpoints')">🛡️ Jobs & Checkpoints</button>
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-payments" id="tab-btn-payments" onclick="switchTab('payments')">💰 x402 Payments</button>
+  </div>
+
+  <!-- Checkpoints Tab -->
+  <div id="tab-checkpoints" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-checkpoints" style="display: none;">
+    <div class="checkpoint-toolbar">
+      <select id="filter-platform" aria-label="Filter by platform">
+        <option value="">All platforms</option>
+      </select>
+      <select id="filter-targetType" aria-label="Filter by target type">
+        <option value="">All target types</option>
+      </select>
+      <select id="filter-status" aria-label="Filter by status">
+        <option value="">All statuses</option>
+        <option value="running">running</option>
+        <option value="paused">paused</option>
+        <option value="failed">failed</option>
+        <option value="completed">completed</option>
+        <option value="stalled">stalled</option>
+      </select>
+      <input type="text" id="filter-targetKey" placeholder="Search target..." aria-label="Search target key">
+      <button class="btn-test-webhook" id="btn-refresh" onclick="refreshCheckpoints()">🔄 Refresh</button>
+    </div>
+
+    <div class="checkpoint-table-wrap">
+      <table class="checkpoint-table" id="checkpoints-table">
+        <thead>
+          <tr>
+            <th data-sort="platform" onclick="sortCheckpoints('platform')">Platform</th>
+            <th data-sort="targetType" onclick="sortCheckpoints('targetType')">Target</th>
+            <th data-sort="status" onclick="sortCheckpoints('status')">Status</th>
+            <th data-sort="lastCrawledAt" onclick="sortCheckpoints('lastCrawledAt')">Last Activity</th>
+            <th>Last Cursor</th>
+            <th>Errors</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="checkpoints-body">
+          <tr>
+            <td colspan="7" class="empty-state small">Loading checkpoints...</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="checkpoint-pagination" id="checkpoints-pagination">
+        <span id="checkpoints-count">Showing 0 of 0 checkpoints</span>
+        <div>
+          <button id="btn-prev" onclick="prevPage()" disabled>← Previous</button>
+          <button id="btn-next" onclick="nextPage()" disabled>Next →</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Sessions Tab -->
@@ -554,12 +756,14 @@
     <span class="pulse" aria-hidden="true"></span>
     <span id="connection-text">Connecting...</span>
   </div>
+
+  <div id="checkpoint-toast" class="checkpoint-toast" role="status" aria-live="polite"></div>
   </main>
 
   <script>
     const API_URL = window.location.origin;
     const authToken = localStorage.getItem('authToken');
-    
+
     if (!authToken) {
       window.location.href = '/login';
     }
@@ -774,19 +978,24 @@
     }
 
     // Tab switching
-    function switchTab(tab) {
+    async function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-      
+
       document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
       document.getElementById(`tab-${tab}`).classList.add('active');
       document.getElementById(`tab-${tab}`).style.display = 'block';
-      
+
       // Hide other tabs
       document.querySelectorAll('.tab-content:not(.active)').forEach(t => t.style.display = 'none');
-      
+
       if (tab === 'payments') {
-        loadPaymentStats();
+        await loadPaymentStats();
+      } else if (tab === 'checkpoints') {
+        await loadCheckpoints();
+        startCheckpointRefresh();
+      } else {
+        stopCheckpointRefresh();
       }
     }
 
@@ -921,6 +1130,350 @@
         loadPaymentStats();
       }
     });
+
+    // -------------------------
+    // Jobs & Checkpoints View
+    // -------------------------
+
+    const CHECKPOINTS_REFRESH_INTERVAL_MS = 30000;
+    const CHECKPOINTS_PAGE_LIMIT = 50;
+    let checkpointsState = {
+      filters: { platform: '', targetType: '', status: '', targetKey: '' },
+      sort: { field: 'updatedAt', order: 'desc' },
+      pagination: { limit: CHECKPOINTS_PAGE_LIMIT, offset: 0, total: 0 },
+      refreshTimer: null,
+      activeFetch: null,
+      actionInFlight: false,
+      initialised: false
+    };
+
+    function getAuthToken() {
+      return localStorage.getItem('authToken') || localStorage.getItem('xactions_token') || '';
+    }
+
+    function startCheckpointRefresh() {
+      stopCheckpointRefresh();
+      checkpointsState.refreshCallback = function checkpointRefreshTick() {
+        if (!checkpointsState.actionInFlight) {
+          loadCheckpoints({ background: true });
+        }
+      };
+      checkpointsState.refreshTimer = setInterval(checkpointsState.refreshCallback, CHECKPOINTS_REFRESH_INTERVAL_MS);
+    }
+
+    function stopCheckpointRefresh() {
+      if (checkpointsState.refreshTimer) {
+        clearInterval(checkpointsState.refreshTimer);
+        checkpointsState.refreshTimer = null;
+      }
+    }
+
+    function buildCheckpointQuery() {
+      const params = new URLSearchParams();
+      params.set('limit', String(checkpointsState.pagination.limit));
+      params.set('offset', String(checkpointsState.pagination.offset));
+
+      const { filters, sort } = checkpointsState;
+      if (filters.platform) params.set('platform', filters.platform);
+      if (filters.targetType) params.set('targetType', filters.targetType);
+      if (filters.status) params.set('status', filters.status);
+      if (filters.targetKey) params.set('targetKey', filters.targetKey);
+      if (sort.field) {
+        params.set('sortBy', sort.field);
+        params.set('sortOrder', sort.order);
+      }
+      return params.toString();
+    }
+
+    async function loadCheckpoints(opts = {}) {
+      if (checkpointsState.activeFetch) {
+        checkpointsState.activeFetch.abort();
+      }
+
+      const controller = new AbortController();
+      checkpointsState.activeFetch = controller;
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      if (!opts.background) {
+        setCheckpointsLoading(true);
+      }
+
+      try {
+        const query = buildCheckpointQuery();
+        const res = await fetch(`/api/checkpoints?${query}`, { headers, signal: controller.signal });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error?.message || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error?.message || 'Failed to load checkpoints');
+        }
+
+        const result = data.data || {};
+        checkpointsState.pagination.total = result.total || 0;
+        renderCheckpoints(result.checkpoints || []);
+        renderCheckpointFilters(result.checkpoints || []);
+        updateCheckpointPagination();
+        checkpointsState.initialised = true;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Failed to load checkpoints:', err);
+        showCheckpointToast(err.message || 'Failed to load checkpoints', 'error');
+        renderCheckpoints([]);
+      } finally {
+        checkpointsState.activeFetch = null;
+        setCheckpointsLoading(false);
+      }
+    }
+
+    function setCheckpointsLoading(isLoading) {
+      const table = document.getElementById('checkpoints-table');
+      if (table) table.classList.toggle('loading', isLoading);
+    }
+
+    function renderCheckpointFilters(checkpoints = []) {
+      const platformSelect = document.getElementById('filter-platform');
+      const targetTypeSelect = document.getElementById('filter-targetType');
+
+      if (!checkpointsState.initialised) {
+        const platforms = [...new Set(checkpoints.map(cp => cp.platform).filter(Boolean))];
+        const targetTypes = [...new Set(checkpoints.map(cp => cp.targetType).filter(Boolean))];
+
+        if (platformSelect && platforms.length) {
+          platformSelect.innerHTML = '<option value="">All platforms</option>' +
+            platforms.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+        }
+        if (targetTypeSelect && targetTypes.length) {
+          targetTypeSelect.innerHTML = '<option value="">All target types</option>' +
+            targetTypes.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+        }
+      }
+
+      // Restore current selections after re-render
+      if (platformSelect) platformSelect.value = checkpointsState.filters.platform;
+      if (targetTypeSelect) targetTypeSelect.value = checkpointsState.filters.targetType;
+    }
+
+    function renderCheckpoints(checkpoints) {
+      const tbody = document.getElementById('checkpoints-body');
+      const count = document.getElementById('checkpoints-count');
+
+      if (!tbody) return;
+
+      if (count) {
+        const { offset, limit, total } = checkpointsState.pagination;
+        const start = total ? offset + 1 : 0;
+        const end = Math.min(offset + limit, total);
+        count.textContent = `Showing ${start}-${end} of ${total} checkpoints`;
+      }
+
+      if (checkpoints.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="empty-state small">
+              <div class="icon">🛡️</div>
+              <p>No checkpoints yet. Start a crawl to see jobs here.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = checkpoints.map(cp => `
+        <tr data-checkpoint-id="${esc(cp.id)}">
+          <td>${esc(cp.platform)}</td>
+          <td>${esc(cp.targetType)} / ${esc(cp.targetKey)}</td>
+          <td><span class="status-pill status-${esc(cp.status)}">${esc(cp.status)}</span></td>
+          <td>${renderRelativeTime(cp.lastCrawledAt || cp.lastTimestamp || cp.updatedAt)}</td>
+          <td>${esc(cp.lastCursor || (cp.lastTimestamp ? new Date(cp.lastTimestamp).toLocaleString() : '—'))}</td>
+          <td>${cp.errorCount || 0}</td>
+          <td>
+            <div class="checkpoint-actions">
+              ${cp.status !== 'running' ? `<button onclick="checkpointAction('${esc(cp.id)}', 'resume')">▶️ Resume</button>` : ''}
+              ${cp.status === 'running' ? `<button onclick="checkpointAction('${esc(cp.id)}', 'pause')">⏸️ Pause</button>` : ''}
+              ${cp.status === 'failed' ? `<button onclick="checkpointAction('${esc(cp.id)}', 'retry')">🔄 Retry</button>` : ''}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('tr').forEach(row => {
+        row.addEventListener('click', (e) => {
+          if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+          const id = row.getAttribute('data-checkpoint-id');
+          if (id) showCheckpointDetail(id);
+        });
+      });
+    }
+
+    function renderRelativeTime(value) {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '—';
+
+      const now = new Date();
+      const diff = Math.floor((now - date) / 1000);
+
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+      return date.toLocaleDateString();
+    }
+
+    function updateCheckpointPagination() {
+      const { offset, limit, total } = checkpointsState.pagination;
+      const prev = document.getElementById('btn-prev');
+      const next = document.getElementById('btn-next');
+      if (prev) prev.disabled = offset === 0;
+      if (next) next.disabled = offset + limit >= total;
+    }
+
+    function prevPage() {
+      if (checkpointsState.pagination.offset === 0) return;
+      checkpointsState.pagination.offset -= checkpointsState.pagination.limit;
+      loadCheckpoints();
+    }
+
+    function nextPage() {
+      const { offset, limit, total } = checkpointsState.pagination;
+      if (offset + limit >= total) return;
+      checkpointsState.pagination.offset += limit;
+      loadCheckpoints();
+    }
+
+    function sortCheckpoints(field) {
+      const current = checkpointsState.sort;
+      if (current.field === field) {
+        current.order = current.order === 'asc' ? 'desc' : 'asc';
+      } else {
+        current.field = field;
+        current.order = 'desc';
+      }
+      checkpointsState.pagination.offset = 0;
+      loadCheckpoints();
+    }
+
+    function refreshCheckpoints() {
+      checkpointsState.pagination.offset = 0;
+      loadCheckpoints();
+    }
+
+    function applyFilters() {
+      checkpointsState.filters.platform = document.getElementById('filter-platform')?.value || '';
+      checkpointsState.filters.targetType = document.getElementById('filter-targetType')?.value || '';
+      checkpointsState.filters.status = document.getElementById('filter-status')?.value || '';
+      checkpointsState.filters.targetKey = document.getElementById('filter-targetKey')?.value.trim() || '';
+      checkpointsState.pagination.offset = 0;
+      loadCheckpoints();
+    }
+
+    let targetKeyDebounce;
+    function bindCheckpointFilters() {
+      ['filter-platform', 'filter-targetType', 'filter-status'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', applyFilters);
+      });
+
+      const targetKey = document.getElementById('filter-targetKey');
+      if (targetKey) {
+        targetKey.addEventListener('input', () => {
+          clearTimeout(targetKeyDebounce);
+          targetKeyDebounce = setTimeout(applyFilters, 300);
+        });
+      }
+    }
+
+    async function checkpointAction(id, action) {
+      checkpointsState.actionInFlight = true;
+      stopCheckpointRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`/api/checkpoints/${id}/${action}`, {
+          method: 'POST',
+          headers
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error?.message || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error?.message || `Failed to ${action} checkpoint`);
+        }
+
+        showCheckpointToast(`✅ ${action} successful`, 'success');
+        await loadCheckpoints();
+      } catch (err) {
+        console.error(`Checkpoint ${action} failed:`, err);
+        showCheckpointToast(err.message || `${action} failed`, 'error');
+      } finally {
+        checkpointsState.actionInFlight = false;
+        if (document.getElementById('tab-checkpoints')?.classList.contains('active')) {
+          startCheckpointRefresh();
+        }
+      }
+    }
+
+    function showCheckpointDetail(id) {
+      // Simple inline row expansion could be added later; for now show a toast with the id
+      showCheckpointToast(`Checkpoint ID: ${id}`, 'success');
+    }
+
+    function showCheckpointToast(message, type = 'error') {
+      const toast = document.getElementById('checkpoint-toast');
+      if (!toast) return;
+      toast.textContent = message;
+      toast.className = `checkpoint-toast ${type} show`;
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 4000);
+    }
+
+    function handleHashRoute() {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'jobs' || hash === 'checkpoints') {
+        switchTab('checkpoints');
+      }
+    }
+
+    // Initialize checkpoints UI
+    bindCheckpointFilters();
+    window.addEventListener('hashchange', handleHashRoute);
+    window.addEventListener('beforeunload', () => {
+      stopCheckpointRefresh();
+      if (checkpointsState.activeFetch) checkpointsState.activeFetch.abort();
+    });
+
+    if (window.location.hash === '#jobs' || window.location.hash === '#checkpoints') {
+      switchTab('checkpoints');
+    } else {
+      switchTab('sessions');
+    }
   </script>
 </body>
 </html>

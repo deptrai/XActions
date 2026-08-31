@@ -2,13 +2,13 @@
 story_id: "19.1"
 epic: 19
 story_key: "19-1-dashboard-jobs-checkpoints-view"
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 5"
 created: 2026-09-01
 updated: 2026-09-01
 owner: "DEV"
 reviewed: "Pending"
-baseline_commit: ""
+baseline_commit: "576cde36bb5d895750f664099ad6bd0e79b486c7"
 ---
 
 # Story 19.1: Dashboard Jobs & Checkpoints View
@@ -117,35 +117,35 @@ so that **I can monitor and control the crawl pipeline without using the termina
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Update `dashboard/admin.html` with Jobs & Checkpoints tab and layout
-  - [ ] 1.1 Add new tab button and tab panel to the tab navigation
-  - [ ] 1.2 Add table skeleton, filter bar, and pagination controls
-  - [ ] 1.3 Apply existing dark-theme CSS variables and responsive rules
-- [ ] Task 2: Implement checkpoint data fetching and rendering
-  - [ ] 2.1 Write `fetchCheckpoints(filters, sort, pagination)` helper using `fetch` + `Bearer` token
-  - [ ] 2.2 Render rows with status badges, relative times, and action buttons
-  - [ ] 2.3 Handle empty, loading, and error states
-- [ ] Task 3: Implement inline resume / pause / retry actions
-  - [ ] 3.1 Add click handlers that call `POST /api/checkpoints/:id/{action}`
-  - [ ] 3.2 Confirm action with a non-blocking inline prompt or disable-with-spinner UX
-  - [ ] 3.3 Refresh table after mutation and show success/error feedback
-- [ ] Task 4: Implement real-time refresh (30s)
-  - [ ] 4.1 Set up `setInterval` or `EventSource` for periodic refresh
-  - [ ] 4.2 Clear interval/source on tab switch / page unload
-  - [ ] 4.3 Avoid refresh while an action is in flight
-- [ ] Task 5: Implement filtering, sorting, and pagination
-  - [ ] 5.1 Bind filter inputs to query params
-  - [ ] 5.2 Add sortable column headers
-  - [ ] 5.3 Add pagination controls tied to `limit` / `offset` / `total`
-- [ ] Task 6: Add dashboard tests
-  - [ ] 6.1 Add `tests/dashboard/admin-checkpoints.test.js` using Vitest + real DOM + local HTTP fixture
-  - [ ] 6.2 Verify table renders checkpoints from `GET /api/checkpoints`
-  - [ ] 6.3 Verify resume/pause/retry buttons call the correct endpoints
-  - [ ] 6.4 Verify 30s refresh cycle and auth failure handling
-- [ ] Task 7: Run validations
-  - [ ] 7.1 Run `vitest run tests/dashboard/admin-checkpoints.test.js`
-  - [ ] 7.2 Run `vitest run tests/api/checkpoints-routes.test.js` to ensure no regression
-  - [ ] 7.3 Run `npm run typecheck` if configured
+- [x] Task 1: Update `dashboard/admin.html` with Jobs & Checkpoints tab and layout
+  - [x] 1.1 Add new tab button and tab panel to the tab navigation
+  - [x] 1.2 Add table skeleton, filter bar, and pagination controls
+  - [x] 1.3 Apply existing dark-theme CSS variables and responsive rules
+- [x] Task 2: Implement checkpoint data fetching and rendering
+  - [x] 2.1 Write `fetchCheckpoints(filters, sort, pagination)` helper using `fetch` + `Bearer` token
+  - [x] 2.2 Render rows with status badges, relative times, and action buttons
+  - [x] 2.3 Handle empty, loading, and error states
+- [x] Task 3: Implement inline resume / pause / retry actions
+  - [x] 3.1 Add click handlers that call `POST /api/checkpoints/:id/{action}`
+  - [x] 3.2 Confirm action with a non-blocking inline prompt or disable-with-spinner UX
+  - [x] 3.3 Refresh table after mutation and show success/error feedback
+- [x] Task 4: Implement real-time refresh (30s)
+  - [x] 4.1 Set up `setInterval` or `EventSource` for periodic refresh
+  - [x] 4.2 Clear interval/source on tab switch / page unload
+  - [x] 4.3 Avoid refresh while an action is in flight
+- [x] Task 5: Implement filtering, sorting, and pagination
+  - [x] 5.1 Bind filter inputs to query params
+  - [x] 5.2 Add sortable column headers
+  - [x] 5.3 Add pagination controls tied to `limit` / `offset` / `total`
+- [x] Task 6: Add dashboard tests
+  - [x] 6.1 Add `tests/dashboard/admin-checkpoints.test.js` using Vitest + real DOM + local HTTP fixture
+  - [x] 6.2 Verify table renders checkpoints from `GET /api/checkpoints`
+  - [x] 6.3 Verify resume/pause/retry buttons call the correct endpoints
+  - [x] 6.4 Verify 30s refresh cycle and auth failure handling
+- [x] Task 7: Run validations
+  - [x] 7.1 Run `vitest run tests/dashboard/admin-checkpoints.test.js`
+  - [x] 7.2 Run `vitest run tests/api/checkpoints-routes.test.js` to ensure no regression
+  - [x] 7.3 Run `npm run typecheck` if configured
 
 ## Dev Notes
 
