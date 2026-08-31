@@ -204,14 +204,20 @@ export class TopCvCrawler extends AbstractCrawler {
       const companyName = companyMatch ? stripHtml(companyMatch[2]) : '';
       const companyUrl = companyMatch ? companyMatch[1] : '';
 
-      const salaryMatch = chunk.match(/<span[^>]*class="[^"]*salary[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+      // Match salary from class="title-salary", class="salary", or class="job-salary"
+      const salaryMatch =
+        chunk.match(/<(?:label|span|div)[^>]*class="[^"]*(?:title-salary|salary|job-salary)[^"]*"[^>]*>([\s\S]*?)<\/(?:label|span|div)>/i);
       const rawSalary = salaryMatch ? stripHtml(salaryMatch[1]) : '';
       const salaryInfo = parseVietnameseSalary(rawSalary);
 
-      const locationMatch = chunk.match(/<span[^>]*class="[^"]*location[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+      // Match location from address / location
+      const locationMatch =
+        chunk.match(/<(?:span|a|div)[^>]*class="[^"]*(?:address|location)[^"]*"[^>]*>([\s\S]*?)<\/(?:span|a|div)>/i);
       const location = locationMatch ? stripHtml(locationMatch[1]) : '';
 
-      const expMatch = chunk.match(/<span[^>]*class="[^"]*exp[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+      // Match exp
+      const expMatch =
+        chunk.match(/<(?:span|label|div)[^>]*class="[^"]*(?:exp|experience)[^"]*"[^>]*>([\s\S]*?)<\/(?:span|label|div)>/i);
       const rawExp = expMatch ? stripHtml(expMatch[1]) : '';
       const experienceYears = parseExperienceYears(rawExp);
 
@@ -261,37 +267,49 @@ export class TopCvCrawler extends AbstractCrawler {
    * @returns {import('../../../core/types.js').PostItem}
    */
   #parseJobDetailHtml(html, jobId, jobUrl) {
-    const titleMatch = html.match(/<h1[^>]*class="[^"]*job-title[^"]*"[^>]*>([\s\S]*?)<\/h1>/i);
+    const titleMatch =
+      html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i) ||
+      html.match(/<h2[^>]*class="[^"]*job-title[^"]*"[^>]*>([\s\S]*?)<\/h2>/i);
     const title = titleMatch ? stripHtml(titleMatch[1]) : '';
 
-    const companyMatch = html.match(/<a[^>]*class="[^"]*company-name[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/i);
-    const companyName = companyMatch ? stripHtml(companyMatch[2]) : '';
+    const companyMatch =
+      html.match(/<(?:a|div)[^>]*class="[^"]*(?:company-name|box-company-info|company)[^"]*"[^>]*href="([^"]*)"[^>]*title="([^"]*)"/i) ||
+      html.match(/<(?:a|div)[^>]*class="[^"]*(?:company-name|company)[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/(?:a|div)>/i);
+    const companyName = companyMatch ? stripHtml(companyMatch[2] || companyMatch[1]) : '';
     const companyUrl = companyMatch ? companyMatch[1] : '';
 
-    const salaryMatch = html.match(/<div[^>]*class="[^"]*job-salary[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const salaryMatch =
+      html.match(/<(?:div|span|label)[^>]*class="[^"]*(?:job-salary|title-salary|salary)[^"]*"[^>]*>([\s\S]*?)<\/(?:div|span|label)>/i);
     const rawSalary = salaryMatch ? stripHtml(salaryMatch[1]) : '';
     const salaryInfo = parseVietnameseSalary(rawSalary);
 
-    const locationMatch = html.match(/<div[^>]*class="[^"]*job-location[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const locationMatch =
+      html.match(/<(?:div|span|p)[^>]*class="[^"]*(?:job-location|address)[^"]*"[^>]*>([\s\S]*?)<\/(?:div|span|p)>/i);
     const location = locationMatch ? stripHtml(locationMatch[1]) : '';
 
-    const deadlineMatch = html.match(/<div[^>]*class="[^"]*job-deadline[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const deadlineMatch = html.match(/<(?:div|span|p)[^>]*class="[^"]*(?:job-deadline|deadline)[^"]*"[^>]*>([\s\S]*?)<\/(?:div|span|p)>/i);
     const deadline = deadlineMatch ? stripHtml(deadlineMatch[1]).replace(/Hạn nộp:\s*/i, '') : null;
 
-    const descMatch = html.match(/<div[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const descMatch =
+      html.match(/Mô tả công việc[\s\S]*?<div[^>]*class="[^"]*text[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+      html.match(/<div[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
     const description = descMatch ? stripHtml(descMatch[1]) : '';
 
-    const reqMatch = html.match(/<div[^>]*class="[^"]*job-requirements[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const reqMatch =
+      html.match(/Yêu cầu ứng viên[\s\S]*?<div[^>]*class="[^"]*text[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+      html.match(/<div[^>]*class="[^"]*job-requirements[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
     const requirements = reqMatch ? stripHtml(reqMatch[1]) : '';
 
-    const benMatch = html.match(/<div[^>]*class="[^"]*job-benefits[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const benMatch =
+      html.match(/Quyền lợi[\s\S]*?<div[^>]*class="[^"]*text[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+      html.match(/<div[^>]*class="[^"]*job-benefits[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
     const benefits = benMatch ? stripHtml(benMatch[1]) : '';
 
     const skills = [];
     const tagMatches = html.matchAll(/<span[^>]*class="[^"]*tag[^"]*"[^>]*>([\s\S]*?)<\/span>/gi);
     for (const tm of tagMatches) {
       const tag = stripHtml(tm[1]);
-      if (tag && !tag.includes('Toàn thời gian') && !tag.includes('Bán thời gian')) {
+      if (tag && !tag.includes('Toàn thời gian') && !tag.includes('Bán thời gian') && tag !== 'Mới') {
         skills.push(tag);
       }
     }
@@ -344,19 +362,29 @@ export class TopCvCrawler extends AbstractCrawler {
    * @returns {import('../../../core/types.js').ProfileItem}
    */
   #parseCompanyDetailHtml(html, companyId, companyUrl) {
-    const nameMatch = html.match(/<h1[^>]*class="[^"]*company-name[^"]*"[^>]*>([\s\S]*?)<\/h1>/i);
+    const nameMatch =
+      html.match(/<h1[^>]*class="[^"]*(?:company-name|box-detail__company-name)[^"]*"[^>]*>([\s\S]*?)<\/h1>/i) ||
+      html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
     const name = nameMatch ? stripHtml(nameMatch[1]) : '';
 
-    const scaleMatch = html.match(/<div[^>]*class="[^"]*company-scale[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const scaleMatch =
+      html.match(/Quy mô[\s\S]*?<div[^>]*class="[^"]*desc[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+      html.match(/<div[^>]*class="[^"]*company-scale[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
     const scale = scaleMatch ? stripHtml(scaleMatch[1]) : '';
 
-    const webMatch = html.match(/<div[^>]*class="[^"]*company-website[^"]*"[^>]*>[\s\S]*?<a[^>]*href="([^"]*)"[^>]*>/i);
+    const webMatch =
+      html.match(/Website[\s\S]*?<a[^>]*href="([^"]*)"[^>]*>/i) ||
+      html.match(/<div[^>]*class="[^"]*company-website[^"]*"[^>]*>[\s\S]*?<a[^>]*href="([^"]*)"[^>]*>/i);
     const website = webMatch ? webMatch[1] : '';
 
-    const addrMatch = html.match(/<div[^>]*class="[^"]*company-address[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const addrMatch =
+      html.match(/Địa chỉ[\s\S]*?<div[^>]*class="[^"]*desc[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+      html.match(/<div[^>]*class="[^"]*company-address[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
     const address = addrMatch ? stripHtml(addrMatch[1]) : '';
 
-    const bioMatch = html.match(/<div[^>]*class="[^"]*company-bio[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const bioMatch =
+      html.match(/<div[^>]*class="[^"]*(?:company-bio|box-company-introduction)[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+      html.match(/<div[^>]*class="[^"]*company-bio[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
     const bio = bioMatch ? stripHtml(bioMatch[1]) : '';
 
     const parsedCompanyId = companyId || companyUrl.split('/').pop() || 'unknown';

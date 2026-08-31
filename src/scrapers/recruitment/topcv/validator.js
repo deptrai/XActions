@@ -57,10 +57,11 @@ export class TopCvPlatformResponseValidator extends AbstractPlatformResponseVali
     if (
       text.includes('cf-browser-verification') ||
       text.includes('attention required! | cloudflare') ||
-      text.includes('captcha') ||
+      text.includes('<title>access denied</title>') ||
       text.includes('just a moment...') ||
       text.includes('security check') ||
-      text.includes('access denied')
+      text.includes('data-translate="why_captcha"') ||
+      text.includes('challenge-running')
     ) {
       return true;
     }
