@@ -66,10 +66,10 @@ development_status:
   epic-12-retrospective: optional
 
   # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---
-  epic-13: in-progress
+  epic-13: done
   13-1-tiered-signer-architecture-token-ring-worker-pool: done
-  13-2-refactor-twitter-scraper-to-hybrid-architecture: ready-for-dev
-  13-2-1-twitter-hybrid-profile-relationships: ready-for-dev
+  13-2-refactor-twitter-scraper-to-hybrid-architecture: done
+  13-2-1-twitter-hybrid-profile-relationships: done
   13-2-2-twitter-hybrid-thread-likes-bookmarks: done
   13-2-3-twitter-hybrid-search-hashtag-trending: done
   13-2-4-twitter-hybrid-media-scraper: done
