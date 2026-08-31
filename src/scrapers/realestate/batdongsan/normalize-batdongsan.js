@@ -39,7 +39,7 @@ export const CATE_CODES = {
  */
 export function nibbleSwap(buf) {
   if (!Buffer.isBuffer(buf)) {
-    buf = Buffer.from(buf);
+    buf = Buffer.from(buf || '');
   }
   const out = Buffer.alloc(buf.length);
   for (let i = 0; i < buf.length; i++) {
@@ -56,12 +56,13 @@ export function nibbleSwap(buf) {
  * @returns {Record<string, any>}
  */
 export function decodeBatdongsanPayload(rawBuffer) {
+  if (!rawBuffer) return {};
   let data = Buffer.isBuffer(rawBuffer) ? rawBuffer : Buffer.from(rawBuffer);
 
-  // Decompress gzip layer if present (magic bytes 0x1F, 0x8B)
+  // Decompress gzip layer if present (magic bytes 0x1F, 0x8B) with 50MB bound
   if (data.length >= 2 && data[0] === 0x1f && data[1] === 0x8b) {
     try {
-      data = zlib.gunzipSync(data);
+      data = zlib.gunzipSync(data, { maxOutputLength: 50 * 1024 * 1024 });
     } catch {
       // Fall back to uncompressed data if gzip fails
     }
@@ -82,7 +83,11 @@ export function decodeBatdongsanPayload(rawBuffer) {
   try {
     return JSON.parse(unswapped.toString('utf8'));
   } catch {
-    return JSON.parse(unswapped.toString('latin1'));
+    try {
+      return JSON.parse(unswapped.toString('latin1'));
+    } catch {
+      return {};
+    }
   }
 }
 
@@ -92,7 +97,7 @@ export function decodeBatdongsanPayload(rawBuffer) {
  * @returns {Buffer}
  */
 export function encodeBatdongsanPayload(obj) {
-  const jsonStr = JSON.stringify(obj);
+  const jsonStr = JSON.stringify(obj || {});
   const swapped = nibbleSwap(Buffer.from(jsonStr, 'utf8'));
   const b64 = swapped.toString('base64');
   return zlib.gzipSync(Buffer.from(b64, 'utf8'));
@@ -104,26 +109,35 @@ export function encodeBatdongsanPayload(obj) {
  * @returns {import('../../../core/types.js').PostItem}
  */
 export function normalizeBatdongsanListing(product = {}) {
-  const productId = String(product.ProductId || product.productId || product.id || 'unknown');
-  const title = String(product.Title || product.title || '').trim();
-  const description = String(product.Description || product.description || '').trim();
-  const price = typeof product.PriceCurrent === 'number' ? product.PriceCurrent : (typeof product.price === 'number' ? product.price : null);
-  const priceString = String(product.Price || product.priceString || '').trim();
-  const priceM2 = String(product.PriceM2 || product.priceM2 || '').trim();
+  const item = product || {};
+  const productId = String(item.ProductId || item.productId || item.id || 'unknown');
+  const title = String(item.Title || item.title || '').trim();
+  const description = String(item.Description || item.description || '').trim();
+  const price = typeof item.PriceCurrent === 'number' ? item.PriceCurrent : (typeof item.price === 'number' ? item.price : null);
+  const priceString = String(item.Price || item.priceString || '').trim();
+  const priceM2 = String(item.PriceM2 || item.priceM2 || '').trim();
 
-  const size = typeof product.Area === 'number' ? product.Area : (typeof product.size === 'number' ? product.size : null);
-  const rooms = typeof product.RoomNumber === 'number' ? product.RoomNumber : null;
+  const size = typeof item.Area === 'number' ? item.Area : (typeof item.size === 'number' ? item.size : null);
+  const rooms = typeof item.RoomNumber === 'number' ? item.RoomNumber : null;
 
-  const address = String(product.Address || product.address || '').trim();
-  const street = product.Street || '';
-  const cityCode = product.CityCode || product.cityCode || '';
+  const address = String(item.Address || item.address || '').trim();
+  const street = item.Street || '';
+  const cityCode = item.CityCode || item.cityCode || '';
   const location = address || `${street} ${cityCode}`.trim();
 
-  const contactName = String(product.ContactName || product.contactName || 'Chủ tin đăng Batdongsan').trim();
-  const contactPhone = validateAndFormatPhone(product.ContactPhone || product.contactPhone);
+  const contactName = String(item.ContactName || item.contactName || 'Chủ tin đăng Batdongsan').trim();
+  const contactPhone = validateAndFormatPhone(item.ContactPhone || item.contactPhone);
 
-  const images = Array.isArray(product.Images) ? product.Images : (product.Avatar ? [product.Avatar] : []);
-  const detailUrl = product.Url || `https://batdongsan.com.vn/ban-dat/${productId}`;
+  const images = Array.isArray(item.Images) ? item.Images : (item.Avatar ? [item.Avatar] : []);
+  const detailUrl = item.Url || `https://batdongsan.com.vn/ban-dat/${productId}`;
+
+  let publishedAtIso;
+  try {
+    const parsed = item.StartDate ? new Date(item.StartDate) : new Date();
+    publishedAtIso = !isNaN(parsed.getTime()) ? parsed.toISOString() : new Date().toISOString();
+  } catch {
+    publishedAtIso = new Date().toISOString();
+  }
 
   return {
     id: `batdongsan:listing:${productId}`,
@@ -139,7 +153,7 @@ export function normalizeBatdongsanListing(product = {}) {
     repostsCount: 0,
     repliesCount: 0,
     viewsCount: 0,
-    publishedAt: product.StartDate ? new Date(product.StartDate).toISOString() : new Date().toISOString(),
+    publishedAt: publishedAtIso,
     crawledAt: new Date(),
     metadata: {
       productId,
@@ -152,13 +166,44 @@ export function normalizeBatdongsanListing(product = {}) {
       cityCode,
       address,
       location,
-      latitude: product.Latitude || null,
-      longitude: product.Longitude || null,
+      latitude: item.Latitude || null,
+      longitude: item.Longitude || null,
       phone: contactPhone,
       isPhoneVerified: Boolean(contactPhone),
       contactName,
       images,
       sourceMethod: 'search_listings',
+    },
+  };
+}
+
+/**
+ * Normalize raw Batdongsan seller into standardized ProfileItem.
+ * @param {Record<string, any>} seller
+ * @returns {import('../../../core/types.js').ProfileItem}
+ */
+export function normalizeBatdongsanSeller(seller = {}) {
+  const item = seller || {};
+  const contactName = String(item.ContactName || item.contactName || item.name || 'Chủ tin đăng Batdongsan').trim();
+  const phone = validateAndFormatPhone(item.ContactPhone || item.contactPhone || item.phone);
+  const address = item.Address || item.address || undefined;
+
+  return {
+    id: `batdongsan:user:${encodeURIComponent(contactName)}`,
+    platform: 'batdongsan',
+    externalId: encodeURIComponent(contactName),
+    name: contactName,
+    username: contactName,
+    profileUrl: `https://batdongsan.com.vn/nguoi-ban/${encodeURIComponent(contactName)}`,
+    followersCount: 0,
+    followingCount: 0,
+    crawledAt: new Date(),
+    metadata: {
+      contactName,
+      phone,
+      isPhoneVerified: Boolean(phone),
+      address,
+      sourceMethod: 'seller_profile',
     },
   };
 }

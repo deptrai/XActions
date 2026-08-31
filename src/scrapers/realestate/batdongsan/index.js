@@ -15,6 +15,7 @@ export {
   decodeBatdongsanPayload,
   encodeBatdongsanPayload,
   normalizeBatdongsanListing,
+  normalizeBatdongsanSeller,
 } from './normalize-batdongsan.js';
 
 import { BatdongsanClient } from './client.js';

@@ -213,6 +213,32 @@ describe('Story 17.2 — Batdongsan.com.vn Property Scraper (TDD)', () => {
     expect(listing.metadata.size).toBe(100);
   });
 
+  it('AC-3: listing_detail throws 404 XACT_4041 when productId is not found', async () => {
+    const { crawler } = buildCrawler();
+    await expect(
+      crawler.start({
+        action: 'listing_detail',
+        args: { productId: '99999999' },
+      })
+    ).rejects.toMatchObject({
+      code: 'XACT_4041',
+      statusCode: 404,
+    });
+  });
+
+  it('AC-3: normalizeBatdongsanListing safely handles null product and invalid StartDate', () => {
+    const fromNull = normalizeBatdongsanListing(null);
+    expect(fromNull.id).toBe('batdongsan:listing:unknown');
+    expect(fromNull.publishedAt).toBeDefined();
+
+    const fromInvalidDate = normalizeBatdongsanListing({
+      ProductId: 112233,
+      StartDate: 'invalid-date-string',
+    });
+    expect(fromInvalidDate.id).toBe('batdongsan:listing:112233');
+    expect(fromInvalidDate.publishedAt).toBeDefined();
+  });
+
   it('AC-1: BatdongsanPlatformResponseValidator detects WAF / challenge responses', async () => {
     const { crawler } = buildCrawler();
     await expect(

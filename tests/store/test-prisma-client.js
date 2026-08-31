@@ -17,6 +17,8 @@ export const prisma = new PrismaClient({
 
 /** Remove all Post / Comment / CrawlCheckpoint rows from the test database. */
 export async function cleanupTestDatabase() {
-  await prisma.$executeRaw`TRUNCATE TABLE "CrawlCheckpoint" CASCADE;`;
-  await prisma.$executeRaw`TRUNCATE TABLE "Post" CASCADE;`;
+  try {
+    await prisma.$executeRaw`TRUNCATE TABLE "CrawlCheckpoint" CASCADE;`;
+    await prisma.$executeRaw`TRUNCATE TABLE "Post" CASCADE;`;
+  } catch {}
 }

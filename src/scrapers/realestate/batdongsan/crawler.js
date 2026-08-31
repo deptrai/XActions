@@ -14,6 +14,17 @@ import {
 } from './normalize-batdongsan.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
+const CITY_ALIAS_MAP = {
+  'ho-chi-minh': 'SG', 'hcm': 'SG', 'tp-hcm': 'SG', 'sai-gon': 'SG', 'sg': 'SG',
+  'ha-noi': 'HN', 'hanoi': 'HN', 'hn': 'HN',
+  'da-nang': 'DN', 'danang': 'DN', 'dn': 'DN',
+  'binh-duong': 'BD', 'bd': 'BD',
+  'dong-nai': 'DDN', 'ddn': 'DDN',
+  'khanh-hoa': 'KH', 'kh': 'KH',
+  'hai-phong': 'HP', 'hp': 'HP',
+  'can-tho': 'CT', 'ct': 'CT',
+};
+
 export class BatdongsanCrawler extends AbstractCrawler {
   /** @type {string} */
   name = 'batdongsan';
@@ -65,7 +76,8 @@ export class BatdongsanCrawler extends AbstractCrawler {
    * @param {any} [session]
    */
   async searchListings(args = {}, session) {
-    const city = args.city || 'SG';
+    const rawCity = String(args.city || 'SG').trim();
+    const city = CITY_ALIAS_MAP[rawCity.toLowerCase()] || rawCity;
     const page = Math.max(1, Number(args.page) || 1);
     const limit = Math.max(1, Number(args.limit) || 20);
 
@@ -102,7 +114,21 @@ export class BatdongsanCrawler extends AbstractCrawler {
       }
     }
 
-    const totalHits = decoded?.totalHits || decoded?.total || listings.length;
+    if (this.store && typeof this.store.saveCheckpoint === 'function') {
+      try {
+        await this.store.saveCheckpoint({
+          platform: 'batdongsan',
+          targetType: 'listings',
+          targetKey: `${city}:${cateCode}:${ptype}`,
+          lastCursor: String(page),
+          lastTimestamp: new Date(),
+          lastCrawledAt: new Date(),
+          status: rawList.length >= limit ? 'has_more' : 'completed',
+        });
+      } catch {}
+    }
+
+    const totalHits = decoded?.totalHits ?? decoded?.total ?? listings.length;
 
     return {
       listings,
@@ -132,7 +158,8 @@ export class BatdongsanCrawler extends AbstractCrawler {
       });
     }
 
-    const city = args.city || 'SG';
+    const rawCity = String(args.city || 'SG').trim();
+    const city = CITY_ALIAS_MAP[rawCity.toLowerCase()] || rawCity.toUpperCase();
     const rawBuffer = await this.client.postSyncRaw('/api/p_sync', {
       ptype: 38,
       cate: 0,
@@ -143,7 +170,7 @@ export class BatdongsanCrawler extends AbstractCrawler {
 
     const decoded = decodeBatdongsanPayload(rawBuffer);
     const rawList = Array.isArray(decoded?.data) ? decoded.data : [];
-    const matched = rawList.find((p) => String(p.ProductId) === productId) || rawList[0];
+    const matched = rawList.find((p) => p && String(p.ProductId || p.productId || p.id) === productId);
 
     if (!matched) {
       throw new PlatformError({
