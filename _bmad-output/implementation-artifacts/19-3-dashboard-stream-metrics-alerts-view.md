@@ -2,7 +2,7 @@
 story_id: "19.3"
 epic: 19
 story_key: "19-3-dashboard-stream-metrics-alerts-view"
-status: "review"
+status: "in-review"
 baseline_commit: "bee4a4d7a1c3463807da528dceb423903f45a7eb"
 phase: "Phase 5"
 created: 2026-09-01
@@ -208,7 +208,7 @@ claude-opus-5
 ### Completion Notes List
 - Added `POST /api/admin/stream/alerts/test` in `api/routes/admin.js` that triggers `defaultStreamAlertEngine.checkAndAlert()` with elevated test metrics.
 - Extended `dashboard/admin.html` with a new `📊 Stream Metrics & Alerts` tab (`tab-streams`), 6 stat boxes, SVG line chart for `eventsPerSecond` and `pendingMessages`, 50,000 threshold line, time range toggles (5m/1h/24h), and active alerts list with severity badges.
-- Implemented `loadStreamMetricsAndAlerts()`, rolling 288-point history buffer, `startStreamsRefresh()` / `stopStreamsRefresh()` with 5s `setInterval`, `AbortController`, and `fetchWithTimeout`.
+- Implemented `loadStreamMetricsAndAlerts()`, rolling 17280-point history buffer, `startStreamsRefresh()` / `stopStreamsRefresh()` with 5s `setInterval`, `AbortController`, and `fetchWithTimeout`.
 - Wired tab switching, hash routing (`#streams`), and `beforeunload` cleanup.
 - Added `tests/admin/dashboard-stream-metrics-alerts.test.js` with fixture Express routes and Playwright E2E spec `tests/e2e/admin-stream-metrics-alerts.e2e.test.js` using a fixture HTTP server.
 
@@ -225,6 +225,31 @@ claude-opus-5
 - Frontend files remain in `dashboard/` directory.
 - REST routes remain under `api/routes/`.
 - No new external client-side packages; vanilla JavaScript + SVG matching existing `dashboard/admin.html` style.
+
+## Review Findings
+
+Code review executed by 4 review lenses (Blind Hunter, Edge Case Hunter, Verification Gap, Acceptance Auditor). Findings triaged and applied below.
+
+### Applied Patches
+
+- `dashboard/admin.html`
+  - `fetchWithTimeout` now honors an external `AbortSignal` while still enforcing timeout, preventing in-flight leaks when `stopStreamsRefresh()` aborts mid-request.
+  - `renderStreamAlerts` escapes all interpolated text and validates numeric threshold/value before computing severity.
+  - Added `formatDuration` and rendered `lastAckTime` as a readable duration (e.g., `2m`) instead of raw seconds.
+  - SVG chart now uses a fixed `[now - rangeMs, now]` x-axis window and `preserveAspectRatio="xMidYMid meet"` to prevent distortion.
+  - Added `stream-connection-status` badge showing Live / Stale / Loading state based on request success.
+  - `STREAMS_MAX_HISTORY` corrected from `288` to `17280` points for true 24h at 5s interval.
+- `api/routes/admin.js`
+  - Added null-guards on `defaultStreamMetricsCollector` and `defaultStreamAlertEngine` returning `503` when engines are unavailable.
+- `tests/e2e/admin-stream-metrics-alerts.e2e.test.js`
+  - Updated `last-ack-time` expectation from `120s` to `2m` to match `formatDuration`.
+
+### Deferred / Dismissed Findings
+
+- **Severity calculation**: Frontend uses `value > threshold * 1.5` as the critical/warning split. This is a presentational heuristic; the alert engine itself only emits alerts when a threshold is exceeded. Severity labels are not persisted and can be adjusted later if UX defines a stricter rule.
+- **Auth test coverage**: E2E fixture server stubs auth. Unit tests for `authenticateToken`/`requireAdmin` on stream endpoints are not added because the existing auth middleware is already covered by other admin route tests.
+- **Test alert side-effects**: `POST /api/admin/stream/alerts/test` intentionally overrides `pendingMessages` and `lastAckTime` to force an alert and is gated to admin tokens; this is the intended operator-facing behavior.
+- **Tooltips / hover state**: Not required by the acceptance criteria; can be added in a future UX polish pass.
 
 ### References
 

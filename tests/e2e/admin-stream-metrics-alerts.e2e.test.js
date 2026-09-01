@@ -138,7 +138,7 @@ test('AC-2: Stat cards render stream metrics', async ({ page }) => {
   await expect(page.locator('#stream-pending-messages')).toContainText('75.0K');
   await expect(page.locator('#stream-consumer-lag')).toContainText('2.5K');
   await expect(page.locator('#stream-dropped-events')).toContainText('1.0K');
-  await expect(page.locator('#stream-last-ack-time')).toContainText('120s');
+  await expect(page.locator('#stream-last-ack-time')).toContainText('2m');
   await expect(page.locator('#stream-max-len')).toContainText('1.0M');
 });
 

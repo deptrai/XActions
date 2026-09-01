@@ -910,14 +910,14 @@
     <div class="streams-grid">
       <div class="stream-chart-container" style="grid-column: 1 / -1;">
         <div class="stream-chart-header">
-          <h3>📈 Stream Throughput & Pending</h3>
+          <h3>📈 Stream Throughput & Pending <span id="stream-connection-status" class="status-pill status-stalled" title="Connecting to metrics stream...">● Loading</span></h3>
           <div class="stream-range-toggle" role="group" aria-label="Time range">
             <button id="stream-range-5m" class="active" onclick="setStreamRange('5m')" aria-pressed="true">5m</button>
             <button id="stream-range-1h" onclick="setStreamRange('1h')" aria-pressed="false">1h</button>
             <button id="stream-range-24h" onclick="setStreamRange('24h')" aria-pressed="false">24h</button>
           </div>
         </div>
-        <svg id="stream-chart" class="stream-chart-svg" viewBox="0 0 800 240" preserveAspectRatio="none" aria-label="Stream metrics line chart" role="img">
+        <svg id="stream-chart" class="stream-chart-svg" viewBox="0 0 800 240" preserveAspectRatio="xMidYMid meet" aria-label="Stream metrics line chart" role="img">
           <g id="stream-chart-grid"></g>
           <path id="stream-chart-threshold" class="stream-chart-threshold" d="" />
           <polyline id="stream-chart-series-eps" class="stream-chart-series stream-chart-series-eps" points="" />
@@ -1393,8 +1393,25 @@
     function fetchWithTimeout(url, options = {}, timeoutMs = PROXIES_FETCH_TIMEOUT_MS) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+      // Honor an external signal while still enforcing the timeout.
+      const externalSignal = options.signal;
+      if (externalSignal) {
+        const onExternalAbort = () => controller.abort();
+        externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+      }
+
       return fetch(url, { ...options, signal: controller.signal })
-        .finally(() => clearTimeout(timeout));
+        .finally(() => {
+          clearTimeout(timeout);
+          if (externalSignal) {
+            try {
+              externalSignal.removeEventListener('abort', onExternalAbort);
+            } catch {
+              // Listener may already be removed; ignore.
+            }
+          }
+        });
     }
 
     async function loadProxiesAndAccounts(opts = {}) {
@@ -1661,7 +1678,7 @@
     // -------------------------
     const STREAMS_REFRESH_INTERVAL_MS = 5000;
     const STREAMS_FETCH_TIMEOUT_MS = 8000;
-    const STREAMS_MAX_HISTORY = 288; // 24h at 5s interval
+    const STREAMS_MAX_HISTORY = 17280; // 24h at 5s interval
     const STREAMS_THRESHOLD = 50000;
     let streamsRefreshTimer = null;
     let streamsActiveFetch = null;
@@ -1706,6 +1723,18 @@
       return value.toLocaleString();
     }
 
+    function formatDuration(totalSeconds) {
+      if (typeof totalSeconds !== 'number' || !Number.isFinite(totalSeconds) || totalSeconds <= 0) return '0s';
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+      const parts = [];
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0) parts.push(`${minutes}m`);
+      if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+      return parts.join(' ');
+    }
+
     function getStreamRangeMs() {
       if (streamSelectedRange === '1h') return 60 * 60 * 1000;
       if (streamSelectedRange === '24h') return 24 * 60 * 60 * 1000;
@@ -1726,6 +1755,24 @@
         return date.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
       }
       return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function setStreamConnectionStatus(status, message) {
+      const badge = document.getElementById('stream-connection-status');
+      if (!badge) return;
+      if (status === 'ok') {
+        badge.className = 'status-pill status-running';
+        badge.textContent = '● Live';
+        badge.title = 'Metrics stream connected';
+      } else if (status === 'error') {
+        badge.className = 'status-pill status-failed';
+        badge.textContent = '● Stale';
+        badge.title = message || 'Metrics stream stalled';
+      } else {
+        badge.className = 'status-pill status-stalled';
+        badge.textContent = '● Loading';
+        badge.title = 'Connecting to metrics stream...';
+      }
     }
 
     async function loadStreamMetricsAndAlerts(opts = {}) {
@@ -1751,6 +1798,12 @@
 
         if (!document.getElementById('tab-streams')?.classList.contains('active') && opts.background) return;
 
+        if (!metricsRes.success || !alertsRes.success) {
+          setStreamConnectionStatus('error', metricsRes.error || alertsRes.error || 'Failed to load stream telemetry');
+        } else {
+          setStreamConnectionStatus('ok');
+        }
+
         const metrics = metricsRes.metrics || {};
         const alerts = alertsRes.alerts || { activeAlerts: [] };
 
@@ -1772,7 +1825,7 @@
         const droppedEl = document.getElementById('stream-dropped-events');
         if (droppedEl) droppedEl.textContent = formatStreamValue(droppedEvents);
         const ackEl = document.getElementById('stream-last-ack-time');
-        if (ackEl) ackEl.textContent = `${formatStreamValue(lastAckTime)}s`;
+        if (ackEl) ackEl.textContent = formatDuration(lastAckTime);
         const maxLenEl = document.getElementById('stream-max-len');
         if (maxLenEl) maxLenEl.textContent = formatStreamValue(maxLen);
 
@@ -1794,6 +1847,7 @@
         renderStreamChart();
         renderStreamAlerts(alerts.activeAlerts || []);
       } catch (err) {
+        setStreamConnectionStatus('error', err.message || 'Stream telemetry request failed');
         console.error('Failed to load stream metrics and alerts:', err);
       } finally {
         if (streamsActiveFetch === controller) {
@@ -1809,18 +1863,20 @@
       const series = getStreamFilteredHistory();
       const threshold = STREAMS_THRESHOLD;
 
+      const now = Date.now();
+      const rangeMs = getStreamRangeMs();
+      const maxTime = now;
+      const minTime = now - rangeMs;
+      const timeSpan = Math.max(1, rangeMs);
+
       if (series.length < 2) {
-        // No enough data — draw empty grid
-        renderStreamChartGrid(svg, 0, 1, []);
+        // Not enough data — draw empty grid over the selected window
+        renderStreamChartGrid(svg, 0, 1, [], minTime, maxTime);
         document.getElementById('stream-chart-threshold').setAttribute('d', '');
         document.getElementById('stream-chart-series-eps').setAttribute('points', '');
         document.getElementById('stream-chart-series-pending').setAttribute('points', '');
         return;
       }
-
-      const minTime = series[0].timestamp;
-      const maxTime = series[series.length - 1].timestamp;
-      const timeSpan = Math.max(1, maxTime - minTime);
 
       const epsValues = series.map(p => p.eventsPerSecond);
       const pendingValues = series.map(p => p.pendingMessages);
@@ -1843,7 +1899,7 @@
       }
 
       // Grid and axes
-      renderStreamChartGrid(svg, minValue, maxValue, [threshold]);
+      renderStreamChartGrid(svg, minValue, maxValue, [threshold], minTime, maxTime);
 
       // Threshold line
       const thresholdY = y(threshold);
@@ -1858,7 +1914,7 @@
       document.getElementById('stream-chart-series-pending').setAttribute('points', pendingPoints);
     }
 
-    function renderStreamChartGrid(svg, minValue, maxValue, extraLines) {
+    function renderStreamChartGrid(svg, minValue, maxValue, extraLines, minTime, maxTime) {
       const grid = document.getElementById('stream-chart-grid');
       if (!grid) return;
 
@@ -1880,19 +1936,16 @@
         const y = padding.top + (chartHeight * i) / 5;
         html += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" class="stream-chart-grid" />`;
         const value = maxValue - (maxValue - minValue) * (i / 5);
-        html += `<text x="${padding.left - 8}" y="${y + 4}" text-anchor="end" class="stream-chart-label">${formatStreamValue(value)}</text>`;
+        html += `<text x="${padding.left - 8}" y="${y + 4}" text-anchor="end" class="stream-chart-label">${esc(formatStreamValue(value))}</text>`;
       }
 
-      // X-axis time labels (up to 6)
-      const series = getStreamFilteredHistory();
-      if (series.length >= 2) {
-        const count = Math.min(6, series.length);
-        for (let i = 0; i < count; i++) {
-          const idx = Math.floor((i / (count - 1)) * (series.length - 1));
-          const p = series[idx];
-          const x = padding.left + ((p.timestamp - series[0].timestamp) / Math.max(1, series[series.length - 1].timestamp - series[0].timestamp)) * chartWidth;
-          html += `<text x="${x}" y="${height - padding.bottom + 16}" text-anchor="middle" class="stream-chart-label">${esc(formatStreamTimeLabel(p.timestamp))}</text>`;
-        }
+      // X-axis time labels (up to 6) — fixed to the selected time window
+      const timeSpan = Math.max(1, (maxTime || Date.now()) - (minTime || Date.now() - getStreamRangeMs()));
+      const count = 6;
+      for (let i = 0; i < count; i++) {
+        const ts = (minTime || (Date.now() - getStreamRangeMs())) + (timeSpan * i) / (count - 1);
+        const x = padding.left + ((ts - (minTime || (Date.now() - getStreamRangeMs()))) / timeSpan) * chartWidth;
+        html += `<text x="${x}" y="${height - padding.bottom + 16}" text-anchor="middle" class="stream-chart-label">${esc(formatStreamTimeLabel(ts))}</text>`;
       }
 
       grid.innerHTML = html;
@@ -1913,21 +1966,23 @@
 
       container.innerHTML = alerts.slice(-5).reverse().map(alert => {
         const type = alert.alert || 'unknown';
-        const threshold = alert.threshold ?? '—';
-        const value = alert.value ?? '—';
-        const isCritical = value > threshold * 1.5;
+        const threshold = typeof alert.threshold === 'number' ? alert.threshold : '—';
+        const value = typeof alert.value === 'number' ? alert.value : '—';
+        const isCritical = typeof value === 'number' && typeof threshold === 'number' && value > threshold * 1.5;
         const severityClass = isCritical ? 'alert-critical' : 'alert-warning';
         const label = isCritical ? 'CRITICAL' : 'WARNING';
-        const time = alert.timestamp ? new Date(alert.timestamp).toLocaleString() : '—';
+        const time = alert.timestamp && !Number.isNaN(new Date(alert.timestamp).getTime())
+          ? new Date(alert.timestamp).toLocaleString()
+          : '—';
 
         return `
           <div class="alert-banner ${severityClass}">
             <div>
               <strong>${esc(type)}</strong>
-              <div class="alert-meta">threshold: ${formatStreamValue(threshold)} • current: <span class="alert-value">${formatStreamValue(value)}</span></div>
+              <div class="alert-meta">threshold: ${esc(formatStreamValue(threshold))} • current: <span class="alert-value">${esc(formatStreamValue(value))}</span></div>
               <div class="alert-meta">${esc(time)}</div>
             </div>
-            <span class="status-pill status-${isCritical ? 'failed' : 'stalled'}">${label}</span>
+            <span class="status-pill status-${isCritical ? 'failed' : 'stalled'}">${esc(label)}</span>
           </div>
         `;
       }).join('');
