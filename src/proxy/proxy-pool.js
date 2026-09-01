@@ -264,6 +264,45 @@ export class ProxyIpPool {
   }
 
   /**
+   * Release a proxy from quarantine.
+   * @param {any} proxy
+   * @returns {boolean} True if proxy was quarantined and released, false otherwise.
+   */
+  release(proxy) {
+    if (proxy == null) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Proxy is required to release',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const key = this.#key(proxy);
+    return this.#quarantined.delete(key);
+  }
+
+  /**
+   * List all registered proxies with their health and quarantine status.
+   * @returns {Array<{ server: string, isQuarantined: boolean, quarantinedUntil: number | null, healthy: boolean }>}
+   */
+  listAll() {
+    const now = Date.now();
+    return this.#proxies.map((p) => {
+      const normalized = this.#normalize(p);
+      const isQuarantined = this.#isQuarantined(normalized, now);
+      const key = this.#key(normalized);
+      const until = this.#quarantined.get(key) || null;
+      return {
+        server: normalized.server,
+        isQuarantined,
+        quarantinedUntil: until,
+        healthy: !isQuarantined,
+      };
+    });
+  }
+
+  /**
    * @returns {boolean}
    */
   isAllQuarantined() {

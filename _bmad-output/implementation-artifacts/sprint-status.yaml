@@ -134,7 +134,7 @@ development_status:
   # --- Epic 19: Internal Operator Dashboard, Admin CLI & Operational Observability ---
   epic-19: in-progress
   19-1-dashboard-jobs-checkpoints-view: ready-for-dev
-  19-2-dashboard-proxies-accounts-view: backlog
+  19-2-dashboard-proxies-accounts-view: review
   19-3-dashboard-stream-metrics-alerts-view: backlog
   19-4-admin-cli-unified-command-group: backlog
   19-4-1-admin-cli-status: backlog

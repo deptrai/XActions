@@ -585,6 +585,41 @@
     /* Ambient glow */
     body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(1000px 560px at 82% -6%,rgba(29,155,240,.1),transparent 60%)}
 
+    /* Proxies & Accounts View */
+    .proxies-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .status-badge-throttle {
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .status-throttle-normal { background: rgba(0, 186, 124, 0.15); color: var(--success); }
+    .status-throttle-soft_throttle { background: rgba(255, 173, 31, 0.15); color: var(--warning); }
+    .status-throttle-hard_throttle, .status-throttle-circuit_broken, .status-throttle-critical { background: rgba(244, 33, 46, 0.15); color: var(--error); }
+
+    .btn-action-small {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-action-small:hover { background: rgba(255,255,255,0.08); }
+    .btn-action-small.wake { color: var(--success); border-color: rgba(0, 186, 124, 0.3); }
+    .btn-action-small.quarantine { color: var(--error); border-color: rgba(244, 33, 46, 0.3); }
+    .btn-action-small.release { color: var(--accent); border-color: rgba(29, 155, 240, 0.3); }
+
     /* Offline note */
     .offline-note{display:flex;gap:12px;align-items:flex-start;background:rgba(29,155,240,0.06);border:1px solid rgba(29,155,240,0.3);border-radius:14px;padding:16px 18px;color:#aab4c0;font-size:.92rem;margin:16px 0}
     .offline-note strong{color:#e7e9ea}.offline-note a{color:#1d9bf0}.offline-note .offline-ic{font-size:1.2rem;line-height:1.3}
@@ -614,8 +649,83 @@
   <!-- Tab Navigation -->
   <div class="tab-nav" role="tablist" aria-label="Admin sections">
     <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-sessions" id="tab-btn-sessions" onclick="switchTab('sessions')">📡 Live Sessions</button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-proxies" id="tab-btn-proxies" onclick="switchTab('proxies')">🛡️ Proxies & Accounts</button>
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-checkpoints" id="tab-btn-checkpoints" onclick="switchTab('checkpoints')">🛡️ Jobs & Checkpoints</button>
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-payments" id="tab-btn-payments" onclick="switchTab('payments')">💰 x402 Payments</button>
+  </div>
+
+  <!-- Proxies & Accounts Tab -->
+  <div id="tab-proxies" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-proxies" style="display: none;">
+    <div class="stats-bar">
+      <div class="stat-box">
+        <div class="stat-value" id="proxies-healthy-count">0 / 0</div>
+        <div class="stat-label">Healthy Proxies</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="governor-req-rate">0.0 req/s</div>
+        <div class="stat-label">Request Rate</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="governor-consumer-lag">0</div>
+        <div class="stat-label">Redis Consumer Lag</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value"><span id="governor-throttle-level" class="status-badge-throttle status-throttle-normal">NORMAL</span></div>
+        <div class="stat-label" style="margin-top: 6px;">Throttle Level</div>
+      </div>
+    </div>
+
+    <div class="proxies-grid">
+      <!-- Hibernating Accounts Section -->
+      <div class="section-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin-bottom: 0;">💤 Hibernating & Unavailable Accounts</h3>
+          <span id="hibernating-accounts-count" style="font-size: 0.8125rem; color: var(--text-secondary);">0 accounts</span>
+        </div>
+        <div class="checkpoint-table-wrap">
+          <table class="checkpoint-table">
+            <thead>
+              <tr>
+                <th>Platform / ID</th>
+                <th>Reason</th>
+                <th>Remaining</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="hibernating-accounts-body">
+              <tr>
+                <td colspan="4" class="empty-state small">No accounts currently hibernating.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Proxy Pool Section -->
+      <div class="section-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin-bottom: 0;">🌐 Proxy Pool Status</h3>
+          <button class="btn-action-small release" onclick="loadProxiesAndAccounts()">🔄 Refresh</button>
+        </div>
+        <div class="checkpoint-table-wrap">
+          <table class="checkpoint-table">
+            <thead>
+              <tr>
+                <th>Server URI</th>
+                <th>Status</th>
+                <th>Quarantined Until</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="proxy-pool-body">
+              <tr>
+                <td colspan="4" class="empty-state small">Loading proxy pool...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Checkpoints Tab -->
@@ -982,20 +1092,246 @@
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-      document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
-      document.getElementById(`tab-${tab}`).classList.add('active');
-      document.getElementById(`tab-${tab}`).style.display = 'block';
+      const targetBtn = document.querySelector(`[onclick="switchTab('${tab}')"]`);
+      if (targetBtn) targetBtn.classList.add('active');
+      const targetContent = document.getElementById(`tab-${tab}`);
+      if (targetContent) {
+        targetContent.classList.add('active');
+        targetContent.style.display = 'block';
+      }
 
       // Hide other tabs
       document.querySelectorAll('.tab-content:not(.active)').forEach(t => t.style.display = 'none');
 
       if (tab === 'payments') {
+        stopProxiesRefresh();
+        stopCheckpointRefresh();
         await loadPaymentStats();
       } else if (tab === 'checkpoints') {
+        stopProxiesRefresh();
         await loadCheckpoints();
         startCheckpointRefresh();
+      } else if (tab === 'proxies') {
+        stopCheckpointRefresh();
+        await loadProxiesAndAccounts();
+        startProxiesRefresh();
       } else {
         stopCheckpointRefresh();
+        stopProxiesRefresh();
+      }
+    }
+
+    // -------------------------
+    // Proxies & Accounts View
+    // -------------------------
+    const PROXIES_REFRESH_INTERVAL_MS = 5000;
+    let proxiesRefreshTimer = null;
+    let proxiesActionInFlight = false;
+
+    function startProxiesRefresh() {
+      stopProxiesRefresh();
+      proxiesRefreshTimer = setInterval(() => {
+        if (!proxiesActionInFlight && document.getElementById('tab-proxies')?.classList.contains('active')) {
+          loadProxiesAndAccounts({ background: true });
+        }
+      }, PROXIES_REFRESH_INTERVAL_MS);
+    }
+
+    function stopProxiesRefresh() {
+      if (proxiesRefreshTimer) {
+        clearInterval(proxiesRefreshTimer);
+        proxiesRefreshTimer = null;
+      }
+    }
+
+    async function loadProxiesAndAccounts(opts = {}) {
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        // Fetch governor status & proxy pool status in parallel
+        const [govRes, proxyRes] = await Promise.all([
+          fetch('/api/governor/status', { headers }).then(r => r.ok ? r.json() : { success: false, status: {} }).catch(() => ({ success: false, status: {} })),
+          fetch('/api/proxies/list', { headers }).then(r => r.ok ? r.json() : { success: false, proxies: [] }).catch(() => ({ success: false, proxies: [] }))
+        ]);
+
+        const gov = govRes.status || {};
+        const healthyProxies = typeof gov.healthyProxyCount === 'number' ? gov.healthyProxyCount : (proxyRes.healthyCount || 0);
+        const totalProxies = typeof gov.totalProxyCount === 'number' ? gov.totalProxyCount : (proxyRes.totalCount || 0);
+        const reqRate = typeof gov.currentReqPerSecond === 'number' ? gov.currentReqPerSecond.toFixed(1) : '0.0';
+        const lag = typeof gov.redisConsumerLag === 'number' ? gov.redisConsumerLag : 0;
+        const throttle = (gov.throttleLevel || 'normal').toLowerCase();
+
+        // Update Stat Cards
+        const healthyEl = document.getElementById('proxies-healthy-count');
+        if (healthyEl) healthyEl.textContent = `${healthyProxies} / ${totalProxies}`;
+
+        const rateEl = document.getElementById('governor-req-rate');
+        if (rateEl) rateEl.textContent = `${reqRate} req/s`;
+
+        const lagEl = document.getElementById('governor-consumer-lag');
+        if (lagEl) lagEl.textContent = lag.toLocaleString();
+
+        const throttleEl = document.getElementById('governor-throttle-level');
+        if (throttleEl) {
+          throttleEl.textContent = throttle.toUpperCase();
+          throttleEl.className = `status-badge-throttle status-throttle-${throttle}`;
+        }
+
+        // Render Hibernating Accounts
+        renderHibernatingAccounts(gov.hibernatingAccounts || []);
+
+        // Render Proxy Pool
+        renderProxyPool(proxyRes.proxies || []);
+      } catch (err) {
+        console.error('Failed to load proxies and accounts data:', err);
+      }
+    }
+
+    function renderHibernatingAccounts(accounts) {
+      const tbody = document.getElementById('hibernating-accounts-body');
+      const countEl = document.getElementById('hibernating-accounts-count');
+      if (!tbody) return;
+
+      if (countEl) countEl.textContent = `${accounts.length} account${accounts.length === 1 ? '' : 's'}`;
+
+      if (!accounts.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" class="empty-state small">
+              <span style="color: var(--success);">✓</span> All accounts active (0 hibernating)
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = accounts.map(acc => {
+        const remainingSec = typeof acc.remainingSeconds === 'number' ? acc.remainingSeconds : (acc.remainingMs ? Math.ceil(acc.remainingMs / 1000) : 0);
+        const mins = Math.floor(remainingSec / 60);
+        const secs = remainingSec % 60;
+        const timeFormatted = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+
+        return `
+          <tr>
+            <td><strong>${esc(acc.platform || 'account')}:</strong> ${esc(acc.accountId || acc.key || '')}</td>
+            <td><span class="status-pill status-failed">${esc(acc.reason || 'UNAVAILABLE')}</span></td>
+            <td>⏱️ ${timeFormatted}</td>
+            <td>
+              <button class="btn-action-small wake" onclick="wakeAccount('${esc(acc.accountId || acc.key)}')">⚡ Wake Now</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderProxyPool(proxies) {
+      const tbody = document.getElementById('proxy-pool-body');
+      if (!tbody) return;
+
+      if (!proxies.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" class="empty-state small">No static proxies configured in pool.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = proxies.map(p => {
+        const isQ = p.isQuarantined;
+        const untilFormatted = p.quarantinedUntil ? renderRelativeTime(p.quarantinedUntil) : '—';
+        return `
+          <tr>
+            <td><code>${esc(p.server)}</code></td>
+            <td><span class="status-pill status-${isQ ? 'failed' : 'running'}">${isQ ? 'Quarantined' : 'Healthy'}</span></td>
+            <td>${isQ ? untilFormatted : '—'}</td>
+            <td>
+              ${isQ
+                ? `<button class="btn-action-small release" onclick="releaseProxy('${esc(p.server)}')">✓ Release</button>`
+                : `<button class="btn-action-small quarantine" onclick="quarantineProxy('${esc(p.server)}')">⚠️ Quarantine</button>`
+              }
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function wakeAccount(accountId) {
+      proxiesActionInFlight = true;
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`/api/proxies/accounts/${encodeURIComponent(accountId)}/available`, {
+          method: 'POST',
+          headers
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          showCheckpointToast(`✅ Account ${accountId} restored to available`, 'success');
+          await loadProxiesAndAccounts();
+        } else {
+          showCheckpointToast(data.error || 'Failed to wake account', 'error');
+        }
+      } catch (err) {
+        showCheckpointToast(err.message || 'Wake request failed', 'error');
+      } finally {
+        proxiesActionInFlight = false;
+      }
+    }
+
+    async function quarantineProxy(proxyUri) {
+      proxiesActionInFlight = true;
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch('/api/proxies/quarantine', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ proxy: proxyUri, durationMs: 300000 })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          showCheckpointToast(`⚠️ Proxy quarantined for 5m`, 'success');
+          await loadProxiesAndAccounts();
+        } else {
+          showCheckpointToast(data.error || 'Failed to quarantine proxy', 'error');
+        }
+      } catch (err) {
+        showCheckpointToast(err.message || 'Quarantine request failed', 'error');
+      } finally {
+        proxiesActionInFlight = false;
+      }
+    }
+
+    async function releaseProxy(proxyUri) {
+      proxiesActionInFlight = true;
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch('/api/proxies/release', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ proxy: proxyUri })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          showCheckpointToast(`✅ Proxy released back to healthy pool`, 'success');
+          await loadProxiesAndAccounts();
+        } else {
+          showCheckpointToast(data.error || 'Failed to release proxy', 'error');
+        }
+      } catch (err) {
+        showCheckpointToast(err.message || 'Release request failed', 'error');
+      } finally {
+        proxiesActionInFlight = false;
       }
     }
 
@@ -1458,6 +1794,8 @@
       const hash = window.location.hash.replace('#', '');
       if (hash === 'jobs' || hash === 'checkpoints') {
         switchTab('checkpoints');
+      } else if (hash === 'proxies') {
+        switchTab('proxies');
       }
     }
 
@@ -1466,11 +1804,14 @@
     window.addEventListener('hashchange', handleHashRoute);
     window.addEventListener('beforeunload', () => {
       stopCheckpointRefresh();
+      stopProxiesRefresh();
       if (checkpointsState.activeFetch) checkpointsState.activeFetch.abort();
     });
 
     if (window.location.hash === '#jobs' || window.location.hash === '#checkpoints') {
       switchTab('checkpoints');
+    } else if (window.location.hash === '#proxies') {
+      switchTab('proxies');
     } else {
       switchTab('sessions');
     }

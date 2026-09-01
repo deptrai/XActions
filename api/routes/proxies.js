@@ -76,6 +76,33 @@ router.post('/quarantine', (req, res) => {
   });
 });
 
+// POST /api/proxies/release - Release a quarantined proxy
+router.post('/release', (req, res) => {
+  const body = /** @type {Record<string, unknown>} */ (req.body || {});
+  const proxy = /** @type {import('../../src/proxy/proxy-pool.js').ProxyInput} */ (body.proxy);
+  if (!proxy) {
+    return res.status(400).json({ error: 'Proxy is required to release' });
+  }
+  const released = globalProxyPool.release(proxy);
+  res.json({
+    success: true,
+    released,
+    proxy,
+    healthyCount: globalProxyPool.healthyCount,
+    totalCount: globalProxyPool.totalCount,
+  });
+});
+
+// GET /api/proxies/list - List all proxies in pool
+router.get('/list', (req, res) => {
+  res.json({
+    success: true,
+    proxies: globalProxyPool.listAll(),
+    healthyCount: globalProxyPool.healthyCount,
+    totalCount: globalProxyPool.totalCount,
+  });
+});
+
 // Accounts endpoints
 // POST /api/proxies/accounts/register
 router.post('/accounts/register', (req, res) => {
