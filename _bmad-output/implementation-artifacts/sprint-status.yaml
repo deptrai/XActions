@@ -1,5 +1,5 @@
 # generated: 2026-08-27T06:00:00.000Z
-# last_updated: 2026-09-01T01:00:00Z
+# last_updated: 2026-09-01T02:30:00Z
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-27T06:00:00.000Z
-last_updated: 2026-09-01T01:00:00Z
+last_updated: 2026-09-01T02:30:00Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -36,7 +36,7 @@ development_status:
   6-1-browser-fingerprint-and-session-stealth: done
   6-2-consistent-fingerprint: done
   6-3-ua-pool-viewport: done
-  6-4-human-physics-easing-motion-curves: ready-for-dev
+  6-4-human-physics-easing-motion-curves: review
   epic-6-retrospective: optional
 
   # --- Epic 10: Data & Platform Foundation for Universal Scraping ---
@@ -49,7 +49,7 @@ development_status:
   epic-10-retrospective: optional
 
   # --- Epic 11: Resilient Network & Proxy Pool Management ---
-  epic-11: in-progress
+  epic-11: done
   11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
   11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: done
@@ -58,14 +58,12 @@ development_status:
   11-6-rate-limit-bot-challenge-defense: done
   11-7-crawler-governor-integration-validator-contract: done
   11-8-socksnode-dynamic-residential-proxy-provider: done
-  11-9-proactive-proxy-ttl-buffer-auto-refresh: ready-for-dev
   epic-11-retrospective: optional
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
-  epic-12: in-progress
+  epic-12: done
   12-1-terminal-ascii-qr-code-login-module: done
   12-2-cdp-remote-attach-mode-chrome-devtools-protocol: done
-  12-3-multi-browser-path-resolution-anti-automation-flags: ready-for-dev
   epic-12-retrospective: optional
 
   # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---
@@ -99,7 +97,6 @@ development_status:
   14-1-hierarchical-comment-tree-extraction-algorithm: done
   14-2-mcp-tool-exporters-daemon-http-sse-server: done
   14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub: done
-  14-4-realtime-ngram-keyword-hashtag-frequency-analytics: ready-for-dev
   epic-14-retrospective: optional
 
   # --- Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine ---
@@ -135,7 +132,7 @@ development_status:
   epic-19: in-progress
   19-1-dashboard-jobs-checkpoints-view: done
   19-2-dashboard-proxies-accounts-view: done
-  19-3-dashboard-stream-metrics-alerts-view: backlog
+  19-3-dashboard-stream-metrics-alerts-view: ready-for-dev
   19-4-admin-cli-unified-command-group: backlog
   19-4-1-admin-cli-status: backlog
   19-4-2-admin-cli-proxy-management: backlog

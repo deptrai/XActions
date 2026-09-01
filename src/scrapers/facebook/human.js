@@ -13,6 +13,7 @@
  *   - humanScroll(page, distance, { delayFn, rng }) : Human-like scroll with sin-curve chunks
  *
  * Scope:
+ *   - Story 6.4: humanMoveMouse (physics-eased Bezier, velocity profile)
  *   - Story 6.9: humanMoveMouse (cubic Bezier, 20-35 steps, jitter, overshoot)
  *   - Story 6.10: humanClick (hover pause, mouse down/up)
  *   - Story 6.11: humanType (variable speed, typos)
@@ -28,6 +29,7 @@
  */
 
 // by nichxbt
+// Story 6.4: physics-based easing applied to mouse movement (2026-09-01).
 
 // ============================================================================
 // Default seams — overridable in tests (NFR3)
@@ -64,7 +66,7 @@ function wrapRng(rng) {
 }
 
 // ============================================================================
-// Cubic Bezier helpers
+// Curve & easing helpers
 // ============================================================================
 
 /**
@@ -83,20 +85,35 @@ function cubicBezier(t, p0, p1, p2, p3) {
   return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3;
 }
 
+/**
+ * Physics-based easing: 5th-order smoothstep.
+ * Produces a natural human velocity profile: slow start (ease-in),
+ * fast coast, and slow end (ease-out). This mimics how real muscles
+ * accelerate and decelerate a pointer, unlike a raw Bezier parameter.
+ *
+ * @param {number} t - parameter in [0, 1]
+ * @returns {number} eased progress in [0, 1]
+ */
+function physicsEase(t) {
+  const v = clamp(t, 0, 1);
+  return v * v * v * (v * (v * 6 - 15) + 10);
+}
+
 // ============================================================================
 // humanMoveMouse — Bezier curve mouse movement (Story 6.9, ADR-014)
 // ============================================================================
 
 /**
- * Move the mouse to (x, y) via a cubic Bezier curve with micro-jitter and
- * optional overshoot + correction. Simulates human-like mouse movement to
- * avoid bot detection (straight-line movement is a strong bot signal).
+ * Move the mouse to (x, y) via a physics-eased Bezier curve with micro-jitter
+ * and optional overshoot + correction. Simulates human-like mouse movement to
+ * avoid bot detection (straight-line movement and uniform velocity are bot signals).
  *
  * Behavior:
  *   - 20-35 steps along a cubic Bezier curve (randomized per call)
- *   - 2 random control points create a natural arc
+ *   - Physics-based 5th-order smoothstep easing: slow start → fast coast → slow end
+ *   - 2 random control points create a natural arc in screen space
  *   - Micro-jitter ±2px per step (both x and y)
- *   - 15% chance overshoot: mouse moves 5-15px past target, then corrects back
+ *   - 15% chance overshoot: mouse moves 5-15% past target, then corrects back
  *   - 15-40ms delay per step (randomized)
  *   - Total time <2s (NFR1)
  *
@@ -162,11 +179,14 @@ export async function humanMoveMouse(page, x, y, options = {}) {
     endY = overshootY;
   }
 
-  // Move along the Bezier curve
+  // Move along the Bezier curve with physics-based easing.
+  // physicsEase(t) shapes the velocity: small steps at the start and end,
+  // larger steps through the middle, mimicking human acceleration/deceleration.
   for (let i = 1; i <= stepCount; i++) {
     const t = i / stepCount;
-    const bx = cubicBezier(t, startX, cp1x, cp2x, endX);
-    const by = cubicBezier(t, startY, cp1y, cp2y, endY);
+    const et = physicsEase(t);
+    const bx = cubicBezier(et, startX, cp1x, cp2x, endX);
+    const by = cubicBezier(et, startY, cp1y, cp2y, endY);
     // Micro-jitter ±2px
     const jx = bx + (r() - 0.5) * 4;
     const jy = by + (r() - 0.5) * 4;
@@ -176,12 +196,14 @@ export async function humanMoveMouse(page, x, y, options = {}) {
   }
 
   // Correction phase: if overshoot, move back to actual target in 3-5 steps
+  // with ease-out profile so the correction slows down as it reaches the target.
   if (willOvershoot) {
     const correctionSteps = 3 + Math.min(2, Math.floor(r() * 3)); // 3..5
     for (let i = 1; i <= correctionSteps; i++) {
       const t = i / correctionSteps;
-      const cx = overshootX + (x - overshootX) * t;
-      const cy = overshootY + (y - overshootY) * t;
+      const et = physicsEase(t);
+      const cx = overshootX + (x - overshootX) * et;
+      const cy = overshootY + (y - overshootY) * et;
       // Micro-jitter ±2px (AC3 — same as main Bezier loop)
       const jx = cx + (r() - 0.5) * 4;
       const jy = cy + (r() - 0.5) * 4;
