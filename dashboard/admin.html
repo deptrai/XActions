@@ -616,6 +616,7 @@
     <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-sessions" id="tab-btn-sessions" onclick="switchTab('sessions')">📡 Live Sessions</button>
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-checkpoints" id="tab-btn-checkpoints" onclick="switchTab('checkpoints')">🛡️ Jobs & Checkpoints</button>
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-proxies" id="tab-btn-proxies" onclick="switchTab('proxies')">🛡️ Proxies & Accounts</button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-stream" id="tab-btn-stream" onclick="switchTab('stream')">📊 Stream Metrics & Alerts</button>
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-payments" id="tab-btn-payments" onclick="switchTab('payments')">💰 x402 Payments</button>
   </div>
 
@@ -751,6 +752,67 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stream Metrics & Alerts Tab (Story 19.3) -->
+  <div id="tab-stream" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-stream" style="display: none;">
+    <!-- Top Stream Metric Cards -->
+    <div class="stats-bar">
+      <div class="stat-box" id="card-stream-events">
+        <div class="stat-value" id="stream-events-rps">0.0 req/s</div>
+        <div class="stat-label">Events / Second</div>
+      </div>
+      <div class="stat-box" id="card-stream-pending">
+        <div class="stat-value" id="stream-pending-msgs">0 msgs</div>
+        <div class="stat-label">Pending Messages</div>
+      </div>
+      <div class="stat-box" id="card-stream-lag">
+        <div class="stat-value" id="stream-consumer-lag">0 msgs</div>
+        <div class="stat-label">Consumer Lag</div>
+      </div>
+      <div class="stat-box" id="card-stream-dropped">
+        <div class="stat-value" id="stream-dropped-events">0</div>
+        <div class="stat-label">Dropped Events</div>
+      </div>
+      <div class="stat-box" id="card-stream-ack">
+        <div class="stat-value" id="stream-last-ack">0s</div>
+        <div class="stat-label">Last Ack Time</div>
+      </div>
+    </div>
+
+    <!-- Active Alerts Section -->
+    <div class="section-card" style="margin-bottom: 24px;">
+      <div class="checkpoint-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3>🚨 Active Stream Alerts</h3>
+        <button class="btn-test-webhook" style="width: auto; margin-top: 0;" onclick="refreshStreamMetrics()">🔄 Refresh</button>
+      </div>
+
+      <div id="stream-alerts-container" class="stats-list">
+        <div class="empty-state small">
+          <div class="icon">✅</div>
+          <p>No active alerts. All stream metrics within healthy thresholds.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert Channel Configuration Section -->
+    <div class="section-card">
+      <h3 style="margin-bottom: 16px;">🔔 Alert Channels Configuration</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px;">
+        <div>
+          <label for="alert-webhook-url" style="display: block; font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 6px;">Webhook Destination URL</label>
+          <input type="url" id="alert-webhook-url" placeholder="https://discord.com/api/webhooks/..." style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 10px 14px; border-radius: 8px;">
+        </div>
+        <div>
+          <label for="alert-email-recipients" style="display: block; font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 6px;">Email Notification Recipients</label>
+          <input type="text" id="alert-email-recipients" placeholder="ops@xactions.app, alerts@company.com" style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 10px 14px; border-radius: 8px;">
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <button class="btn-test-webhook" style="width: auto; margin-top: 0; background: var(--accent);" onclick="saveStreamAlertConfig()">💾 Save Configuration</button>
+        <button class="btn-test-webhook" style="width: auto; margin-top: 0;" onclick="testStreamAlert()">🧪 Send Test Alert</button>
       </div>
     </div>
   </div>
@@ -1078,18 +1140,27 @@
       if (tab === 'payments') {
         stopCheckpointRefresh();
         stopProxiesRefresh();
+        stopStreamRefresh();
         await loadPaymentStats();
       } else if (tab === 'checkpoints') {
         stopProxiesRefresh();
+        stopStreamRefresh();
         await loadCheckpoints();
         startCheckpointRefresh();
       } else if (tab === 'proxies') {
         stopCheckpointRefresh();
+        stopStreamRefresh();
         await loadProxiesAndAccounts();
         startProxiesRefresh();
+      } else if (tab === 'stream') {
+        stopCheckpointRefresh();
+        stopProxiesRefresh();
+        await loadStreamMetrics();
+        startStreamRefresh();
       } else {
         stopCheckpointRefresh();
         stopProxiesRefresh();
+        stopStreamRefresh();
       }
     }
 
@@ -1554,6 +1625,8 @@
         switchTab('checkpoints');
       } else if (hash === 'proxies' || hash === 'accounts') {
         switchTab('proxies');
+      } else if (hash === 'stream' || hash === 'alerts') {
+        switchTab('stream');
       }
     }
 
@@ -1932,20 +2005,280 @@
       loadProxiesAndAccounts();
     }
 
-    // Initialize checkpoints & proxies UI
+    // -------------------------
+    // Stream Metrics & Alerts View (Story 19.3)
+    // -------------------------
+
+    const STREAM_REFRESH_INTERVAL_MS = 5000;
+    let streamState = {
+      refreshTimer: null,
+      activeFetch: null,
+      actionInFlight: false,
+      initialised: false
+    };
+
+    function startStreamRefresh() {
+      stopStreamRefresh();
+      streamState.refreshCallback = function streamRefreshTick() {
+        if (!streamState.actionInFlight) {
+          loadStreamMetrics({ background: true });
+        }
+      };
+      streamState.refreshTimer = setInterval(streamState.refreshCallback, STREAM_REFRESH_INTERVAL_MS);
+    }
+
+    function stopStreamRefresh() {
+      if (streamState.refreshTimer) {
+        clearInterval(streamState.refreshTimer);
+        streamState.refreshTimer = null;
+      }
+    }
+
+    async function loadStreamMetrics(opts = {}) {
+      if (streamState.activeFetch) {
+        streamState.activeFetch.abort();
+      }
+
+      const controller = new AbortController();
+      streamState.activeFetch = controller;
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const [metricsRes, alertsRes] = await Promise.all([
+          fetch(`${API_URL}/api/admin/stream/metrics`, { headers, signal: controller.signal }),
+          fetch(`${API_URL}/api/admin/stream/alerts`, { headers, signal: controller.signal })
+        ]);
+
+        if (metricsRes.status === 401 || metricsRes.status === 403 || alertsRes.status === 401 || alertsRes.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const metricsData = await metricsRes.json().catch(() => ({}));
+        const alertsData = await alertsRes.json().catch(() => ({}));
+
+        if (metricsData.success && metricsData.metrics) {
+          renderStreamMetrics(metricsData.metrics);
+        }
+
+        if (alertsData.success && alertsData.alerts) {
+          renderStreamAlerts(alertsData.alerts);
+        }
+
+        streamState.initialised = true;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Failed to load stream metrics:', err);
+        showCheckpointToast(err.message || 'Failed to load stream metrics', 'error');
+      } finally {
+        streamState.activeFetch = null;
+      }
+    }
+
+    function renderStreamMetrics(metrics) {
+      if (typeof document === 'undefined' || !document) return;
+
+      const rpsEl = document.getElementById('stream-events-rps');
+      const pendingEl = document.getElementById('stream-pending-msgs');
+      const lagEl = document.getElementById('stream-consumer-lag');
+      const droppedEl = document.getElementById('stream-dropped-events');
+      const ackEl = document.getElementById('stream-last-ack');
+
+      const cardPending = document.getElementById('card-stream-pending');
+      const cardAck = document.getElementById('card-stream-ack');
+
+      if (rpsEl) {
+        rpsEl.textContent = `${Number(metrics.eventsPerSecond || 0).toFixed(1)} req/s`;
+      }
+      if (pendingEl) {
+        pendingEl.textContent = `${metrics.pendingMessages || 0} msgs`;
+        if (cardPending) {
+          if (metrics.pendingMessages > 50000) {
+            cardPending.style.borderColor = 'var(--error)';
+            cardPending.style.boxShadow = '0 0 16px rgba(244, 33, 46, 0.25)';
+          } else {
+            cardPending.style.borderColor = 'var(--border)';
+            cardPending.style.boxShadow = 'none';
+          }
+        }
+      }
+      if (lagEl) {
+        lagEl.textContent = `${metrics.consumerLag || 0} msgs`;
+      }
+      if (droppedEl) {
+        droppedEl.textContent = String(metrics.droppedEvents || 0);
+      }
+      if (ackEl) {
+        const ackSeconds = Number(metrics.lastAckTime || 0);
+        ackEl.textContent = `${ackSeconds}s`;
+        if (cardAck) {
+          if (ackSeconds > 60) {
+            cardAck.style.borderColor = 'var(--error)';
+            cardAck.style.boxShadow = '0 0 16px rgba(244, 33, 46, 0.25)';
+          } else {
+            cardAck.style.borderColor = 'var(--border)';
+            cardAck.style.boxShadow = 'none';
+          }
+        }
+      }
+    }
+
+    function renderStreamAlerts(alertsData) {
+      if (typeof document === 'undefined' || !document) return;
+
+      const container = document.getElementById('stream-alerts-container');
+      const activeAlerts = alertsData.activeAlerts || [];
+
+      // Fill in config if first time
+      if (!streamState.initialised && alertsData.config) {
+        const webhookInput = document.getElementById('alert-webhook-url');
+        const emailInput = document.getElementById('alert-email-recipients');
+        if (webhookInput && alertsData.config.webhookUrl) {
+          webhookInput.value = alertsData.config.webhookUrl;
+        }
+        if (emailInput && alertsData.config.emailRecipients) {
+          emailInput.value = alertsData.config.emailRecipients;
+        }
+      }
+
+      if (!container) return;
+
+      if (activeAlerts.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state small">
+            <div class="icon">✅</div>
+            <p>No active alerts. All stream metrics within healthy thresholds.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = activeAlerts.map(alert => {
+        const alertName = String(alert.alert || 'warning').replace(/_/g, ' ').toUpperCase();
+        const timestamp = alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : 'Recent';
+        const isCritical = alert.value > 50000 || alert.severity === 'critical';
+
+        return `
+          <div class="stats-item" style="border-left: 4px solid ${isCritical ? 'var(--error)' : 'var(--warning)'};">
+            <div>
+              <strong style="color: ${isCritical ? 'var(--error)' : 'var(--warning)'};">${esc(alertName)}</strong>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+                ${alert.threshold ? `Threshold: ${alert.threshold} | Current: ${alert.value}` : esc(alert.message || 'Triggered')}
+              </div>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-secondary);">${esc(timestamp)}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function saveStreamAlertConfig() {
+      streamState.actionInFlight = true;
+      stopStreamRefresh();
+
+      const webhookUrl = document.getElementById('alert-webhook-url')?.value.trim() || null;
+      const emailRecipients = document.getElementById('alert-email-recipients')?.value.trim() || null;
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/stream/alerts/config`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ webhookUrl, emailRecipients })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to save alert configuration');
+        }
+
+        showCheckpointToast('✅ Alert configuration saved', 'success');
+        await loadStreamMetrics();
+      } catch (err) {
+        console.error('Save alert config failed:', err);
+        showCheckpointToast(err.message || 'Save alert config failed', 'error');
+      } finally {
+        streamState.actionInFlight = false;
+        if (document.getElementById('tab-stream')?.classList.contains('active')) {
+          startStreamRefresh();
+        }
+      }
+    }
+
+    async function testStreamAlert() {
+      streamState.actionInFlight = true;
+      stopStreamRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/stream/alerts/test`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ message: 'Synthetic test alert triggered from Admin Dashboard' })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to send test alert');
+        }
+
+        showCheckpointToast('✅ Synthetic test alert dispatched', 'success');
+        await loadStreamMetrics();
+      } catch (err) {
+        console.error('Test stream alert failed:', err);
+        showCheckpointToast(err.message || 'Test stream alert failed', 'error');
+      } finally {
+        streamState.actionInFlight = false;
+        if (document.getElementById('tab-stream')?.classList.contains('active')) {
+          startStreamRefresh();
+        }
+      }
+    }
+
+    function refreshStreamMetrics() {
+      loadStreamMetrics();
+    }
+
+    // Initialize checkpoints & proxies & stream UI
     bindCheckpointFilters();
     window.addEventListener('hashchange', handleHashRoute);
     window.addEventListener('beforeunload', () => {
       stopCheckpointRefresh();
       stopProxiesRefresh();
+      stopStreamRefresh();
       if (checkpointsState.activeFetch) checkpointsState.activeFetch.abort();
       if (proxiesState.activeFetch) proxiesState.activeFetch.abort();
+      if (streamState.activeFetch) streamState.activeFetch.abort();
     });
 
     if (window.location.hash === '#jobs' || window.location.hash === '#checkpoints') {
       switchTab('checkpoints');
     } else if (window.location.hash === '#proxies' || window.location.hash === '#accounts') {
       switchTab('proxies');
+    } else if (window.location.hash === '#stream' || window.location.hash === '#alerts') {
+      switchTab('stream');
     } else {
       switchTab('sessions');
     }

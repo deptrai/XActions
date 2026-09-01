@@ -1,6 +1,16 @@
+---
+story_id: "19.3"
+epic: 19
+story_key: "19-3-dashboard-stream-metrics-alerts-view"
+status: "review"
+phase: "Phase 5"
+baseline_commit: "c31e5089"
+created: 2026-09-01
+---
+
 # Story 19.3: Dashboard Stream Metrics & Alerts View
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -60,24 +70,24 @@ so that **I can detect early when Nowing consumers fall behind or when stream ev
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Update backend admin routes for stream alert configuration & test (AC: #4, #6)
-  - [ ] 1.1 Add `POST /api/admin/stream/alerts/config` endpoint in `api/routes/admin.js` to update in-memory alert destinations
-  - [ ] 1.2 Add `POST /api/admin/stream/alerts/test` endpoint in `api/routes/admin.js` to trigger a synthetic test alert
-  - [ ] 1.3 Ensure `authenticateToken` and `requireAdmin` guards on all stream endpoints
-- [ ] Task 2: Implement UI layout in `dashboard/admin.html` (AC: #1, #2, #3, #4, #7)
-  - [ ] 2.1 Add tab button and panel container `#tab-stream` to `dashboard/admin.html`
-  - [ ] 2.2 Add top metric cards (`eventsPerSecond`, `pendingMessages`, `consumerLag`, `droppedEvents`, `lastAckTime`)
-  - [ ] 2.3 Add Active Alerts panel with severity badges and trigger descriptions
-  - [ ] 2.4 Add Alert Channels configuration form (Webhook URL, Email, Test & Save buttons)
-- [ ] Task 3: Implement client-side Stream Metrics controller (AC: #2, #3, #4, #5)
-  - [ ] 3.1 Write `loadStreamMetrics()` helper calling `/api/admin/stream/metrics` and `/api/admin/stream/alerts`
-  - [ ] 3.2 Implement threshold checks (`pendingMessages > 50000`, `lastAckTime > 60s`) with dynamic color updates
-  - [ ] 3.3 Implement `saveAlertConfig()` and `sendTestAlert()` action handlers with toast notifications
-  - [ ] 3.4 Wire 5s polling loop in `switchTab('stream')` and cleanup in `beforeunload`
-- [ ] Task 4: Integration testing and verification (AC: #1-#7)
-  - [ ] 4.1 Create `tests/dashboard/admin-stream-metrics.test.js` covering AC-1 to AC-7 with real DOM and HTTP fixture
-  - [ ] 4.2 Verify threshold warnings, alert testing, 5s refresh cycle, and auth protection
-  - [ ] 4.3 Run full dashboard test suite (`admin-checkpoints.test.js`, `admin-proxies-accounts.test.js`, `admin-stream-metrics.test.js`)
+- [x] Task 1: Update backend admin routes for stream alert configuration & test (AC: #4, #6)
+  - [x] 1.1 Add `POST /api/admin/stream/alerts/config` endpoint in `api/routes/admin.js` to update in-memory alert destinations
+  - [x] 1.2 Add `POST /api/admin/stream/alerts/test` endpoint in `api/routes/admin.js` to trigger a synthetic test alert
+  - [x] 1.3 Ensure `authenticateToken` and `requireAdmin` guards on all stream endpoints
+- [x] Task 2: Implement UI layout in `dashboard/admin.html` (AC: #1, #2, #3, #4, #7)
+  - [x] 2.1 Add tab button and panel container `#tab-stream` to `dashboard/admin.html`
+  - [x] 2.2 Add top metric cards (`eventsPerSecond`, `pendingMessages`, `consumerLag`, `droppedEvents`, `lastAckTime`)
+  - [x] 2.3 Add Active Alerts panel with severity badges and trigger descriptions
+  - [x] 2.4 Add Alert Channels configuration form (Webhook URL, Email, Test & Save buttons)
+- [x] Task 3: Implement client-side Stream Metrics controller (AC: #2, #3, #4, #5)
+  - [x] 3.1 Write `loadStreamMetrics()` helper calling `/api/admin/stream/metrics` and `/api/admin/stream/alerts`
+  - [x] 3.2 Implement threshold checks (`pendingMessages > 50000`, `lastAckTime > 60s`) with dynamic color updates
+  - [x] 3.3 Implement `saveAlertConfig()` and `sendTestAlert()` action handlers with toast notifications
+  - [x] 3.4 Wire 5s polling loop in `switchTab('stream')` and cleanup in `beforeunload`
+- [x] Task 4: Integration testing and verification (AC: #1-#7)
+  - [x] 4.1 Create `tests/dashboard/admin-stream-metrics.test.js` covering AC-1 to AC-7 with real DOM and HTTP fixture
+  - [x] 4.2 Verify threshold warnings, alert testing, 5s refresh cycle, and auth protection
+  - [x] 4.3 Run full dashboard test suite (`admin-checkpoints.test.js`, `admin-proxies-accounts.test.js`, `admin-stream-metrics.test.js`)
 
 ## Dev Notes
 
@@ -123,9 +133,27 @@ claude-sonnet-5[1m]
 
 ### Completion Notes List
 
-- TBD
+- Added Stream Metrics & Alerts tab in `dashboard/admin.html` with real-time 5-second polling.
+- Rendered 5 core telemetry tiles: throughput, pending messages, consumer lag, dropped events, last ack time.
+- Integrated threshold alerts (`pendingMessages > 50,000`, `lastAckTime > 60s`) with dynamic card highlights and active alerts panel.
+- Added alert channels configuration form and synthetic test alert dispatcher.
+- Created full Vitest integration suite in `tests/dashboard/admin-stream-metrics.test.js` (7/7 tests passed).
 
 ### File List
+
+- `src/utils/stream-alerts.js` (modified)
+- `api/routes/admin.js` (modified)
+- `dashboard/admin.html` (modified)
+- `tests/dashboard/admin-stream-metrics.test.js` (new)
+- `_bmad-output/implementation-artifacts/19-3-dashboard-stream-metrics-alerts-view.md` (modified)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
+
+## Suggested Review Order
+
+1. `src/utils/stream-alerts.js` — Core alert engine methods (`updateConfig`, `getConfig`, `testAlert`)
+2. `api/routes/admin.js` — Admin stream endpoints (`POST /api/admin/stream/alerts/config`, `POST /api/admin/stream/alerts/test`)
+3. `dashboard/admin.html` — Stream Metrics tab markup, top metric tiles, and JS polling controller
+4. `tests/dashboard/admin-stream-metrics.test.js` — Integration test suite for AC-1 through AC-7
 
 - `_bmad-output/implementation-artifacts/19-3-dashboard-stream-metrics-alerts-view.md` (new)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (update)

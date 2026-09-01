@@ -303,12 +303,44 @@ router.get('/stream/metrics', authenticateToken, requireAdmin, async (_req, res)
 
 /**
  * GET /api/admin/stream/alerts
- * Stream alert status for operator dashboard (Story 14.3)
+ * Stream alert status for operator dashboard (Story 14.3 & 19.3)
  */
 router.get('/stream/alerts', authenticateToken, requireAdmin, async (_req, res) => {
   try {
     const status = defaultStreamAlertEngine.getAlertStatus();
     res.json({ success: true, alerts: status });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
+  }
+});
+
+/**
+ * POST /api/admin/stream/alerts/config
+ * Update alert destinations and thresholds (Story 19.3)
+ */
+router.post('/stream/alerts/config', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { webhookUrl, emailRecipients, pendingMessagesThreshold, lastAckTimeThreshold } = req.body || {};
+    const updated = defaultStreamAlertEngine.updateConfig({
+      webhookUrl,
+      emailRecipients,
+      pendingMessagesThreshold,
+      lastAckTimeThreshold,
+    });
+    res.json({ success: true, config: updated, message: 'Alert configuration saved' });
+  } catch (err) {
+    res.status(400).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
+  }
+});
+
+/**
+ * POST /api/admin/stream/alerts/test
+ * Send a synthetic test alert to configured channels (Story 19.3)
+ */
+router.post('/stream/alerts/test', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await defaultStreamAlertEngine.testAlert(req.body || {});
+    res.json({ success: true, message: 'Test alert sent', result });
   } catch (err) {
     res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
   }
