@@ -2,6 +2,7 @@
 import express from 'express';
 import { globalProxyPool } from '../../src/proxy/proxy-pool.js';
 import { globalAccountPool } from '../../src/core/account-pool.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -60,41 +61,49 @@ router.get('/sticky/:accountId', (req, res) => {
 });
 
 // POST /api/proxies/quarantine - Quarantine a proxy
-router.post('/quarantine', (req, res) => {
+router.post('/quarantine', authenticateToken, requireAdmin, (req, res, next) => {
   const body = /** @type {Record<string, unknown>} */ (req.body || {});
   const proxy = /** @type {import('../../src/proxy/proxy-pool.js').ProxyInput} */ (body.proxy);
   const durationMs = typeof body.durationMs === 'number' ? body.durationMs : undefined;
   if (!proxy) {
     return res.status(400).json({ error: 'Proxy is required to quarantine' });
   }
-  globalProxyPool.quarantine(proxy, durationMs);
-  res.json({
-    success: true,
-    quarantined: proxy,
-    healthyCount: globalProxyPool.healthyCount,
-    totalCount: globalProxyPool.totalCount,
-  });
+  try {
+    globalProxyPool.quarantine(proxy, durationMs);
+    res.json({
+      success: true,
+      quarantined: proxy,
+      healthyCount: globalProxyPool.healthyCount,
+      totalCount: globalProxyPool.totalCount,
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // POST /api/proxies/release - Release a quarantined proxy
-router.post('/release', (req, res) => {
+router.post('/release', authenticateToken, requireAdmin, (req, res, next) => {
   const body = /** @type {Record<string, unknown>} */ (req.body || {});
   const proxy = /** @type {import('../../src/proxy/proxy-pool.js').ProxyInput} */ (body.proxy);
   if (!proxy) {
     return res.status(400).json({ error: 'Proxy is required to release' });
   }
-  const released = globalProxyPool.release(proxy);
-  res.json({
-    success: true,
-    released,
-    proxy,
-    healthyCount: globalProxyPool.healthyCount,
-    totalCount: globalProxyPool.totalCount,
-  });
+  try {
+    const released = globalProxyPool.release(proxy);
+    res.json({
+      success: true,
+      released,
+      proxy,
+      healthyCount: globalProxyPool.healthyCount,
+      totalCount: globalProxyPool.totalCount,
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // GET /api/proxies/list - List all proxies in pool
-router.get('/list', (req, res) => {
+router.get('/list', authenticateToken, requireAdmin, (req, res) => {
   res.json({
     success: true,
     proxies: globalProxyPool.listAll(),
@@ -134,20 +143,28 @@ router.get('/accounts/next/:platform', (req, res) => {
 });
 
 // POST /api/proxies/accounts/:id/unavailable
-router.post('/accounts/:id/unavailable', (req, res) => {
+router.post('/accounts/:id/unavailable', authenticateToken, requireAdmin, (req, res, next) => {
   const { id } = req.params;
   const body = /** @type {Record<string, unknown>} */ (req.body || {});
   const reason = /** @type {string | undefined} */ (body.reason);
   const durationMs = typeof body.durationMs === 'number' ? body.durationMs : undefined;
-  globalAccountPool.markUnavailable(id, reason, durationMs);
-  res.json({ success: true, accountId: id, unavailable: true, reason, durationMs });
+  try {
+    globalAccountPool.markUnavailable(id, reason, durationMs);
+    res.json({ success: true, accountId: id, unavailable: true, reason, durationMs });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // POST /api/proxies/accounts/:id/available
-router.post('/accounts/:id/available', (req, res) => {
+router.post('/accounts/:id/available', authenticateToken, requireAdmin, (req, res, next) => {
   const { id } = req.params;
-  globalAccountPool.markAvailable(id);
-  res.json({ success: true, accountId: id, available: true });
+  try {
+    globalAccountPool.markAvailable(id);
+    res.json({ success: true, accountId: id, available: true });
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

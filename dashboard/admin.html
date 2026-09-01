@@ -601,7 +601,8 @@
       letter-spacing: 0.05em;
     }
     .status-throttle-normal { background: rgba(0, 186, 124, 0.15); color: var(--success); }
-    .status-throttle-soft_throttle { background: rgba(255, 173, 31, 0.15); color: var(--warning); }
+    .status-throttle-reduced, .status-throttle-soft_throttle { background: rgba(255, 173, 31, 0.15); color: var(--warning); }
+    .status-throttle-backpressure { background: rgba(244, 33, 46, 0.1); color: var(--error); }
     .status-throttle-hard_throttle, .status-throttle-circuit_broken, .status-throttle-critical { background: rgba(244, 33, 46, 0.15); color: var(--error); }
 
     .btn-action-small {
@@ -1017,6 +1018,15 @@
       return div.innerHTML;
     }
 
+    function jsEsc(str) {
+      return String(str || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r');
+    }
+
     function renderSessions() {
       const container = document.getElementById('sessions-container');
       const sessionList = Array.from(sessions.values());
@@ -1089,11 +1099,17 @@
 
     // Tab switching
     async function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+      });
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
       const targetBtn = document.querySelector(`[onclick="switchTab('${tab}')"]`);
-      if (targetBtn) targetBtn.classList.add('active');
+      if (targetBtn) {
+        targetBtn.classList.add('active');
+        targetBtn.setAttribute('aria-selected', 'true');
+      }
       const targetContent = document.getElementById(`tab-${tab}`);
       if (targetContent) {
         targetContent.classList.add('active');
@@ -1125,8 +1141,10 @@
     // Proxies & Accounts View
     // -------------------------
     const PROXIES_REFRESH_INTERVAL_MS = 5000;
+    const PROXIES_FETCH_TIMEOUT_MS = 8000;
     let proxiesRefreshTimer = null;
     let proxiesActionInFlight = false;
+    let proxiesActiveFetch = null;
 
     function startProxiesRefresh() {
       stopProxiesRefresh();
@@ -1142,6 +1160,17 @@
         clearInterval(proxiesRefreshTimer);
         proxiesRefreshTimer = null;
       }
+      if (proxiesActiveFetch) {
+        proxiesActiveFetch.abort();
+        proxiesActiveFetch = null;
+      }
+    }
+
+    function fetchWithTimeout(url, options = {}, timeoutMs = PROXIES_FETCH_TIMEOUT_MS) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      return fetch(url, { ...options, signal: controller.signal })
+        .finally(() => clearTimeout(timeout));
     }
 
     async function loadProxiesAndAccounts(opts = {}) {
@@ -1149,12 +1178,24 @@
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
+      if (proxiesActiveFetch) {
+        proxiesActiveFetch.abort();
+      }
+      const controller = new AbortController();
+      proxiesActiveFetch = controller;
+
       try {
-        // Fetch governor status & proxy pool status in parallel
+        // Fetch governor status & proxy pool status in parallel with timeout
         const [govRes, proxyRes] = await Promise.all([
-          fetch('/api/governor/status', { headers }).then(r => r.ok ? r.json() : { success: false, status: {} }).catch(() => ({ success: false, status: {} })),
-          fetch('/api/proxies/list', { headers }).then(r => r.ok ? r.json() : { success: false, proxies: [] }).catch(() => ({ success: false, proxies: [] }))
+          fetchWithTimeout('/api/governor/status', { headers, signal: controller.signal }, PROXIES_FETCH_TIMEOUT_MS)
+            .then(r => r.ok ? r.json() : { success: false, status: {} })
+            .catch(() => ({ success: false, status: {} })),
+          fetchWithTimeout('/api/proxies/list', { headers, signal: controller.signal }, PROXIES_FETCH_TIMEOUT_MS)
+            .then(r => r.ok ? r.json() : { success: false, proxies: [] })
+            .catch(() => ({ success: false, proxies: [] }))
         ]);
+
+        if (!document.getElementById('tab-proxies')?.classList.contains('active')) return;
 
         const gov = govRes.status || {};
         const healthyProxies = typeof gov.healthyProxyCount === 'number' ? gov.healthyProxyCount : (proxyRes.healthyCount || 0);
@@ -1165,7 +1206,10 @@
 
         // Update Stat Cards
         const healthyEl = document.getElementById('proxies-healthy-count');
-        if (healthyEl) healthyEl.textContent = `${healthyProxies} / ${totalProxies}`;
+        if (healthyEl) {
+          const pct = totalProxies > 0 ? Math.round((healthyProxies / totalProxies) * 100) : 0;
+          healthyEl.textContent = `${healthyProxies} / ${totalProxies} (${pct}%)`;
+        }
 
         const rateEl = document.getElementById('governor-req-rate');
         if (rateEl) rateEl.textContent = `${reqRate} req/s`;
@@ -1186,6 +1230,10 @@
         renderProxyPool(proxyRes.proxies || []);
       } catch (err) {
         console.error('Failed to load proxies and accounts data:', err);
+      } finally {
+        if (proxiesActiveFetch === controller) {
+          proxiesActiveFetch = null;
+        }
       }
     }
 
@@ -1208,22 +1256,39 @@
       }
 
       tbody.innerHTML = accounts.map(acc => {
+        const rawId = acc.accountId || acc.key || '';
+        const [platform, accountName] = rawId.includes(':') ? rawId.split(':', 2) : [acc.platform || 'unknown', rawId];
         const remainingSec = typeof acc.remainingSeconds === 'number' ? acc.remainingSeconds : (acc.remainingMs ? Math.ceil(acc.remainingMs / 1000) : 0);
-        const mins = Math.floor(remainingSec / 60);
+        const hours = Math.floor(remainingSec / 3600);
+        const mins = Math.floor((remainingSec % 3600) / 60);
         const secs = remainingSec % 60;
-        const timeFormatted = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+        let timeFormatted = '';
+        if (hours > 0) timeFormatted += `${hours}h `;
+        if (mins > 0 || hours > 0) timeFormatted += `${mins}m `;
+        timeFormatted += `${secs}s`;
 
         return `
-          <tr>
-            <td><strong>${esc(acc.platform || 'account')}:</strong> ${esc(acc.accountId || acc.key || '')}</td>
+          <tr data-account-id="${esc(rawId)}">
+            <td><strong>${esc(platform)}:</strong> ${esc(accountName)}</td>
             <td><span class="status-pill status-failed">${esc(acc.reason || 'UNAVAILABLE')}</span></td>
             <td>⏱️ ${timeFormatted}</td>
             <td>
-              <button class="btn-action-small wake" onclick="wakeAccount('${esc(acc.accountId || acc.key)}')">⚡ Wake Now</button>
+              <button class="btn-action-small wake" data-action="wake">⚡ Wake Now</button>
             </td>
           </tr>
         `;
       }).join('');
+
+      tbody.querySelectorAll('button[data-action="wake"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const row = e.target.closest('tr');
+          const accountId = row?.getAttribute('data-account-id');
+          if (accountId && confirm('Wake this account and make it available immediately?')) {
+            wakeAccount(accountId);
+          }
+        });
+      });
     }
 
     function renderProxyPool(proxies) {
@@ -1241,21 +1306,52 @@
 
       tbody.innerHTML = proxies.map(p => {
         const isQ = p.isQuarantined;
-        const untilFormatted = p.quarantinedUntil ? renderRelativeTime(p.quarantinedUntil) : '—';
+        const untilFormatted = p.quarantinedUntil ? renderFutureCountdown(p.quarantinedUntil) : '—';
+        const protocol = p.protocol || 'http';
+        const failCount = typeof p.failCount === 'number' ? p.failCount : 0;
         return `
-          <tr>
-            <td><code>${esc(p.server)}</code></td>
+          <tr data-proxy-server="${esc(p.server)}">
+            <td><code>${esc(p.server)}</code><br><small style="color: var(--text-secondary);">${esc(protocol)}${failCount > 0 ? ` • fails: ${failCount}` : ''}</small></td>
             <td><span class="status-pill status-${isQ ? 'failed' : 'running'}">${isQ ? 'Quarantined' : 'Healthy'}</span></td>
             <td>${isQ ? untilFormatted : '—'}</td>
             <td>
               ${isQ
-                ? `<button class="btn-action-small release" onclick="releaseProxy('${esc(p.server)}')">✓ Release</button>`
-                : `<button class="btn-action-small quarantine" onclick="quarantineProxy('${esc(p.server)}')">⚠️ Quarantine</button>`
+                ? `<button class="btn-action-small release" data-action="release">✓ Release</button>`
+                : `<button class="btn-action-small quarantine" data-action="quarantine" data-duration="300000">⚠️ Quarantine</button>`
               }
             </td>
           </tr>
         `;
       }).join('');
+
+      tbody.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const row = e.target.closest('tr');
+          const proxyUri = row?.getAttribute('data-proxy-server');
+          if (!proxyUri) return;
+
+          const action = e.target.getAttribute('data-action');
+          if (action === 'quarantine') {
+            const durationOptions = [
+              { label: '5 minutes', value: 300000 },
+              { label: '15 minutes', value: 900000 },
+              { label: '1 hour', value: 3600000 },
+              { label: '24 hours', value: 86400000 },
+            ];
+            const selected = prompt(`Quarantine duration?\n${durationOptions.map((o, i) => `${i + 1}. ${o.label}`).join('\n')}`, '1');
+            const choice = parseInt(selected || '', 10);
+            const durationMs = durationOptions[choice - 1]?.value || 300000;
+            if (confirm(`Quarantine proxy ${proxyUri} for ${durationOptions.find(o => o.value === durationMs)?.label}?`)) {
+              quarantineProxy(proxyUri, durationMs);
+            }
+          } else if (action === 'release') {
+            if (confirm(`Release proxy ${proxyUri} back to the healthy pool?`)) {
+              releaseProxy(proxyUri);
+            }
+          }
+        });
+      });
     }
 
     async function wakeAccount(accountId) {
@@ -1283,21 +1379,22 @@
       }
     }
 
-    async function quarantineProxy(proxyUri) {
+    async function quarantineProxy(proxyUri, durationMs = 300000) {
       proxiesActionInFlight = true;
       const token = getAuthToken();
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       try {
-        const res = await fetch('/api/proxies/quarantine', {
+        const res = await fetchWithTimeout('/api/proxies/quarantine', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ proxy: proxyUri, durationMs: 300000 })
-        });
+          body: JSON.stringify({ proxy: proxyUri, durationMs })
+        }, PROXIES_FETCH_TIMEOUT_MS);
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.success) {
-          showCheckpointToast(`⚠️ Proxy quarantined for 5m`, 'success');
+          const min = Math.floor(durationMs / 60000);
+          showCheckpointToast(`⚠️ Proxy quarantined for ${min}m`, 'success');
           await loadProxiesAndAccounts();
         } else {
           showCheckpointToast(data.error || 'Failed to quarantine proxy', 'error');
@@ -1316,11 +1413,11 @@
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       try {
-        const res = await fetch('/api/proxies/release', {
+        const res = await fetchWithTimeout('/api/proxies/release', {
           method: 'POST',
           headers,
           body: JSON.stringify({ proxy: proxyUri })
-        });
+        }, PROXIES_FETCH_TIMEOUT_MS);
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.success) {
           showCheckpointToast(`✅ Proxy released back to healthy pool`, 'success');
@@ -1662,10 +1759,27 @@
       const now = new Date();
       const diff = Math.floor((now - date) / 1000);
 
+      if (diff < 0) return 'just now';
       if (diff < 60) return 'just now';
       if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
       if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
       if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+      return date.toLocaleDateString();
+    }
+
+    function renderFutureCountdown(value) {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '—';
+
+      const now = new Date();
+      const diff = Math.floor((date - now) / 1000);
+
+      if (diff <= 0) return 'expired';
+      if (diff < 60) return `in ${diff}s`;
+      if (diff < 3600) return `in ${Math.floor(diff / 60)}m`;
+      if (diff < 86400) return `in ${Math.floor(diff / 3600)}h`;
+      if (diff < 2592000) return `in ${Math.floor(diff / 86400)}d`;
       return date.toLocaleDateString();
     }
 

@@ -112,6 +112,35 @@ export class ProxyIpPool {
   }
 
   /**
+   * Find the canonical pool key for a proxy by matching either the full
+   * credentialed URL or the server-only URI. This lets dashboard callers
+   * quarantine/release using the redacted `server` value returned by listAll().
+   * @param {any} proxy
+   * @returns {string | null}
+   */
+  #resolveKey(proxy) {
+    if (proxy == null) return null;
+
+    const normalized = this.#normalize(proxy);
+    const inputKey = formatProxyUrl(normalized);
+
+    if (this.#hasKey(inputKey)) {
+      return inputKey;
+    }
+
+    // Fall back to matching by scheme://host:port (no credentials).
+    const serverOnlyKey = this.#proxies
+      .map((p) => this.#normalize(p))
+      .find((p) => p.server === normalized.server);
+
+    if (serverOnlyKey) {
+      return formatProxyUrl(serverOnlyKey);
+    }
+
+    return null;
+  }
+
+  /**
    * @param {string} key
    * @param {number} [now]
    * @returns {any | null}
@@ -243,8 +272,8 @@ export class ProxyIpPool {
       });
     }
 
-    const key = this.#key(proxy);
-    if (!this.#hasKey(key)) {
+    const key = this.#resolveKey(proxy);
+    if (!key) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
         code: 'XACT_4001',
@@ -278,13 +307,21 @@ export class ProxyIpPool {
       });
     }
 
-    const key = this.#key(proxy);
+    const key = this.#resolveKey(proxy);
+    if (!key) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Proxy is not a member of the pool',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
     return this.#quarantined.delete(key);
   }
 
   /**
    * List all registered proxies with their health and quarantine status.
-   * @returns {Array<{ server: string, isQuarantined: boolean, quarantinedUntil: number | null, healthy: boolean }>}
+   * @returns {Array<{ server: string, protocol: string, isQuarantined: boolean, quarantinedUntil: number | null, healthy: boolean, failCount: number }>}
    */
   listAll() {
     const now = Date.now();
@@ -292,12 +329,14 @@ export class ProxyIpPool {
       const normalized = this.#normalize(p);
       const isQuarantined = this.#isQuarantined(normalized, now);
       const key = this.#key(normalized);
-      const until = this.#quarantined.get(key) || null;
+      const until = isQuarantined ? (this.#quarantined.get(key) || null) : null;
       return {
         server: normalized.server,
+        protocol: normalized.scheme || 'http',
         isQuarantined,
         quarantinedUntil: until,
         healthy: !isQuarantined,
+        failCount: 0,
       };
     });
   }
