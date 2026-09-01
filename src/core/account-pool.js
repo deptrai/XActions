@@ -396,7 +396,8 @@ export class AccountPool {
       }
 
       const isHibernatingGovernor = this.#governor ? this.#governor.isHibernating(key) : false;
-      const hibernatingUntil = record.hibernatingUntil || (isHibernatingGovernor ? now + 60_000 : null);
+      const govUntil = isHibernatingGovernor && this.#governor?.getHibernationUntil ? this.#governor.getHibernationUntil(key) : null;
+      const hibernatingUntil = record.hibernatingUntil || govUntil || (isHibernatingGovernor ? now + 60_000 : null);
       const isUnavailable = this.#unavailableAccounts.has(key) || isHibernatingGovernor;
       const isExpiredHibernation = hibernatingUntil !== null && now >= hibernatingUntil;
       const isActuallyHibernating = isUnavailable && !isExpiredHibernation;
@@ -404,7 +405,7 @@ export class AccountPool {
 
       let reason = 'none';
       if (isActuallyHibernating) {
-        if (this.#governor && this.#governor.getHibernationReason) {
+        if (this.#governor && typeof this.#governor.getHibernationReason === 'function') {
           reason = this.#governor.getHibernationReason(key) || 'rate_limit';
         } else {
           reason = 'rate_limit';

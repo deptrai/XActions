@@ -307,16 +307,14 @@ export class ProxyIpPool {
     const now = Date.now();
     return this.#proxies.map((p) => {
       const normalized = this.#normalize(p);
-      const key = this.#key(normalized);
-      const quarantinedUntil = this.#quarantined.get(key) || null;
+      const internalKey = this.#key(normalized);
+      const quarantinedUntil = this.#quarantined.get(internalKey) || null;
       const isQuarantined = quarantinedUntil !== null && quarantinedUntil > now;
-      if (quarantinedUntil !== null && quarantinedUntil <= now) {
-        this.#quarantined.delete(key);
-      }
+      const safeServer = `${normalized.scheme}://${normalized.host}:${normalized.port}`;
 
       return {
-        key,
-        server: normalized.server,
+        key: safeServer,
+        server: safeServer,
         protocol: normalized.protocol,
         host: normalized.host,
         port: normalized.port,

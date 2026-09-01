@@ -71,6 +71,14 @@ context: ['{project-root}/_bmad-output/implementation-artifacts/epic-19-context.
 - Given the "Proxies & Accounts" tab is open, when leaving the page active, then data refreshes automatically every 5 seconds without resetting operator inputs or running during in-flight actions.
 - Given an unauthenticated or non-admin request, when calling admin endpoints, then it returns 401/403 with appropriate error messages.
 
+### Review Findings
+
+- [x] [Review][Patch] Redact proxy credentials from listProxies() return object [src/proxy/proxy-pool.js:309]
+- [x] [Review][Patch] Check composite key in handleWakeAccount when querying governor [api/routes/admin.js:464]
+- [x] [Review][Patch] Sanitize durationMs and catch URIError in proxy quarantine/release handlers [api/routes/admin.js:370]
+- [x] [Review][Patch] Support query platform parameter in handleWakeAccount and handleRotateAccount [api/routes/admin.js:450]
+- [x] [Review][Patch] Expose getHibernationReason in AdaptiveRateGovernor to populate account hibernation details accurately [src/core/adaptive-governor.js:120]
+
 ## Spec Change Log
 
 _Empty until the first review loopback._

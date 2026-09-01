@@ -317,6 +317,32 @@ export class AdaptiveRateGovernor {
     return this.#hibernatingAccounts.some((h) => h.accountId === key);
   }
 
+  /**
+   * @param {string} accountId
+   * @param {string} [platform]
+   * @returns {string | null}
+   */
+  getHibernationReason(accountId, platform) {
+    const key = this.#resolveAccountId(accountId, platform);
+    const now = Date.now();
+    this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.until > now);
+    const entry = this.#hibernatingAccounts.find((h) => h.accountId === key);
+    return entry ? entry.reason : null;
+  }
+
+  /**
+   * @param {string} accountId
+   * @param {string} [platform]
+   * @returns {number | null}
+   */
+  getHibernationUntil(accountId, platform) {
+    const key = this.#resolveAccountId(accountId, platform);
+    const now = Date.now();
+    this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.until > now);
+    const entry = this.#hibernatingAccounts.find((h) => h.accountId === key);
+    return entry ? entry.until : null;
+  }
+
   /** @returns {GovernorStatus} */
   getStatus() {
     const now = Date.now();

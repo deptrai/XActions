@@ -362,6 +362,20 @@ router.get('/proxies', authenticateToken, requireAdmin, (_req, res) => {
 });
 
 /**
+ * Safe URI component decoding helper that never throws on malformed strings.
+ * @param {string} str
+ * @returns {string}
+ */
+function safeDecode(str) {
+  if (!str) return '';
+  try {
+    return decodeURIComponent(String(str));
+  } catch {
+    return String(str);
+  }
+}
+
+/**
  * POST /api/admin/proxies/quarantine
  * POST /api/admin/proxies/:key/quarantine
  * Manually quarantine a proxy (Story 19.2 & Story 19.7)
@@ -372,8 +386,10 @@ const handleQuarantineProxy = (req, res) => {
     if (!rawKey) {
       return res.status(400).json({ success: false, error: 'Proxy is required to quarantine' });
     }
-    const durationMs = typeof req.body?.durationMs === 'number' ? req.body.durationMs : undefined;
-    const decodedKey = decodeURIComponent(String(rawKey));
+    const durationMs = typeof req.body?.durationMs === 'number' && Number.isFinite(req.body.durationMs) && req.body.durationMs > 0
+      ? req.body.durationMs
+      : undefined;
+    const decodedKey = safeDecode(rawKey);
 
     globalProxyPool.quarantine(decodedKey, durationMs);
     res.json({
@@ -403,7 +419,7 @@ const handleReleaseProxy = (req, res) => {
     if (!rawKey) {
       return res.status(400).json({ success: false, error: 'Proxy is required to release' });
     }
-    const decodedKey = decodeURIComponent(String(rawKey));
+    const decodedKey = safeDecode(rawKey);
 
     const released = globalProxyPool.release(decodedKey);
     res.json({
@@ -455,8 +471,8 @@ const handleWakeAccount = (req, res) => {
     if (!rawId) {
       return res.status(400).json({ success: false, error: 'accountId is required' });
     }
-    const platform = typeof req.body?.platform === 'string' ? req.body.platform : undefined;
-    const decodedId = decodeURIComponent(String(rawId));
+    const platform = typeof req.body?.platform === 'string' ? req.body.platform : (typeof req.query?.platform === 'string' ? req.query.platform : undefined);
+    const decodedId = safeDecode(rawId);
 
     const account = globalAccountPool.getAccount(decodedId, platform);
     if (!account) {
@@ -466,15 +482,20 @@ const handleWakeAccount = (req, res) => {
       });
     }
 
-    const isHibernating = account.hibernatingUntil !== null && account.hibernatingUntil > Date.now();
-    if (!isHibernating && !globalAdaptiveRateGovernor.isHibernating(decodedId)) {
+    const targetPlatform = platform || account.platform;
+    const compositeKey = `${targetPlatform}:${decodedId}`;
+
+    const isHibernatingRecord = account.hibernatingUntil !== null && account.hibernatingUntil > Date.now();
+    const isHibernatingGov = globalAdaptiveRateGovernor.isHibernating(compositeKey) || globalAdaptiveRateGovernor.isHibernating(decodedId);
+
+    if (!isHibernatingRecord && !isHibernatingGov) {
       return res.status(409).json({
         success: false,
         error: `Account "${decodedId}" is not currently in hibernation`,
       });
     }
 
-    globalAccountPool.markAvailable(decodedId, platform);
+    globalAccountPool.markAvailable(decodedId, targetPlatform);
     res.json({
       success: true,
       accountId: decodedId,
@@ -502,8 +523,8 @@ const handleRotateAccount = (req, res) => {
     if (!rawId) {
       return res.status(400).json({ success: false, error: 'accountId is required' });
     }
-    const platform = typeof req.body?.platform === 'string' ? req.body.platform : undefined;
-    const decodedId = decodeURIComponent(String(rawId));
+    const platform = typeof req.body?.platform === 'string' ? req.body.platform : (typeof req.query?.platform === 'string' ? req.query.platform : undefined);
+    const decodedId = safeDecode(rawId);
 
     const account = globalAccountPool.getAccount(decodedId, platform);
     if (!account) {
