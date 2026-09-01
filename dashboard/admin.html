@@ -797,153 +797,13 @@
   <main id="main-content">
   <!-- Tab Navigation -->
   <div class="tab-nav" role="tablist" aria-label="Admin sections">
-    <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-sessions" id="tab-btn-sessions" onclick="switchTab('sessions')">📡 Live Sessions</button>
-    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-proxies" id="tab-btn-proxies" onclick="switchTab('proxies')">🛡️ Proxies & Accounts</button>
-    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-checkpoints" id="tab-btn-checkpoints" onclick="switchTab('checkpoints')">🛡️ Jobs & Checkpoints</button>
-    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-proxies" id="tab-btn-proxies" onclick="switchTab('proxies')">🛡️ Proxies & Accounts</button>
-    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-stream" id="tab-btn-stream" onclick="switchTab('stream')">📊 Stream Metrics & Alerts</button>
-    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-payments" id="tab-btn-payments" onclick="switchTab('payments')">💰 x402 Payments</button>
+    <button type="button" class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-sessions" id="tab-btn-sessions" onclick="switchTab('sessions')">📡 Live Sessions</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-proxies" id="tab-btn-proxies" onclick="switchTab('proxies')">🛡️ Proxies & Accounts</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-checkpoints" id="tab-btn-checkpoints" onclick="switchTab('checkpoints')">🛡️ Jobs & Checkpoints</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-stream" id="tab-btn-stream" onclick="switchTab('stream')">📊 Stream Metrics & Alerts</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-payments" id="tab-btn-payments" onclick="switchTab('payments')">💰 x402 Payments</button>
   </div>
 
-  <!-- Proxies & Accounts Tab -->
-  <div id="tab-proxies" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-proxies" style="display: none;">
-    <div class="stats-bar">
-      <div class="stat-box">
-        <div class="stat-value" id="proxies-healthy-count">0 / 0</div>
-        <div class="stat-label">Healthy Proxies</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value" id="governor-req-rate">0.0 req/s</div>
-        <div class="stat-label">Request Rate</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value" id="governor-consumer-lag">0</div>
-        <div class="stat-label">Redis Consumer Lag</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value"><span id="governor-throttle-level" class="status-badge-throttle status-throttle-normal">NORMAL</span></div>
-        <div class="stat-label" style="margin-top: 6px;">Throttle Level</div>
-      </div>
-    </div>
-
-    <div class="proxies-grid">
-      <!-- Hibernating Accounts Section -->
-      <div class="section-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="margin-bottom: 0;">💤 Hibernating & Unavailable Accounts</h3>
-          <span id="hibernating-accounts-count" style="font-size: 0.8125rem; color: var(--text-secondary);">0 accounts</span>
-        </div>
-        <div class="checkpoint-table-wrap">
-          <table class="checkpoint-table">
-            <thead>
-              <tr>
-                <th>Platform / ID</th>
-                <th>Reason</th>
-                <th>Remaining</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="hibernating-accounts-body">
-              <tr>
-                <td colspan="4" class="empty-state small">No accounts currently hibernating.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Proxy Pool Section -->
-      <div class="section-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="margin-bottom: 0;">🌐 Proxy Pool Status</h3>
-          <button class="btn-action-small release" onclick="loadProxiesAndAccounts()">🔄 Refresh</button>
-        </div>
-        <div class="checkpoint-table-wrap">
-          <table class="checkpoint-table">
-            <thead>
-              <tr>
-                <th>Server URI</th>
-                <th>Status</th>
-                <th>Quarantined Until</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="proxy-pool-body">
-              <tr>
-                <td colspan="4" class="empty-state small">Loading proxy pool...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Stream Metrics & Alerts Tab -->
-  <div id="tab-streams" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-streams" style="display: none;">
-    <div class="stats-bar">
-      <div class="stat-box">
-        <div class="stat-value" id="stream-events-per-second">0</div>
-        <div class="stat-label">Events/sec</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value" id="stream-pending-messages">0</div>
-        <div class="stat-label">Pending Messages</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value" id="stream-consumer-lag">0</div>
-        <div class="stat-label">Consumer Lag</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value" id="stream-dropped-events">0</div>
-        <div class="stat-label">Dropped Events</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value" id="stream-last-ack-time">0s</div>
-        <div class="stat-label">Last Ack Idle</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value" id="stream-max-len">0</div>
-        <div class="stat-label">Max Length</div>
-      </div>
-    </div>
-
-    <div class="streams-grid">
-      <div class="stream-chart-container" style="grid-column: 1 / -1;">
-        <div class="stream-chart-header">
-          <h3>📈 Stream Throughput & Pending <span id="stream-connection-status" class="status-pill status-stalled" title="Connecting to metrics stream...">● Loading</span></h3>
-          <div class="stream-range-toggle" role="group" aria-label="Time range">
-            <button id="stream-range-5m" class="active" onclick="setStreamRange('5m')" aria-pressed="true">5m</button>
-            <button id="stream-range-1h" onclick="setStreamRange('1h')" aria-pressed="false">1h</button>
-            <button id="stream-range-24h" onclick="setStreamRange('24h')" aria-pressed="false">24h</button>
-          </div>
-        </div>
-        <svg id="stream-chart" class="stream-chart-svg" viewBox="0 0 800 240" preserveAspectRatio="xMidYMid meet" aria-label="Stream metrics line chart" role="img">
-          <g id="stream-chart-grid"></g>
-          <path id="stream-chart-threshold" class="stream-chart-threshold" d="" />
-          <polyline id="stream-chart-series-eps" class="stream-chart-series stream-chart-series-eps" points="" />
-          <polyline id="stream-chart-series-pending" class="stream-chart-series stream-chart-series-pending" points="" />
-        </svg>
-        <div class="stream-legend">
-          <span><span class="stream-legend-dot" style="background: #1d9bf0;"></span> Events/sec</span>
-          <span><span class="stream-legend-dot" style="background: #a855f7;"></span> Pending Messages</span>
-          <span><span class="stream-legend-dot" style="background: var(--error);"></span> Threshold (50,000)</span>
-        </div>
-      </div>
-
-      <div class="stream-alerts-section" style="grid-column: 1 / -1;">
-        <h3>
-          🚨 Active Alerts
-          <button class="stream-test-alert" id="stream-test-alert-btn" onclick="testStreamAlert()">🧪 Test Alert</button>
-        </h3>
-        <div id="stream-alerts-body" class="alert-list">
-          <div class="empty-state small">
-            <span style="color: var(--success);">✓</span> No active alerts
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Checkpoints Tab -->
   <div id="tab-checkpoints" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-checkpoints" style="display: none;">
@@ -2460,6 +2320,21 @@
 
     function refreshStreamMetrics() {
       loadStreamMetrics();
+    }
+
+    function handleHashRoute() {
+      const hash = window.location.hash;
+      if (hash === '#jobs' || hash === '#checkpoints') {
+        switchTab('checkpoints');
+      } else if (hash === '#proxies' || hash === '#accounts') {
+        switchTab('proxies');
+      } else if (hash === '#stream' || hash === '#alerts') {
+        switchTab('stream');
+      } else if (hash === '#payments') {
+        switchTab('payments');
+      } else {
+        switchTab('sessions');
+      }
     }
 
     // Initialize checkpoints & proxies & stream UI
