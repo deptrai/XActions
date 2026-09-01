@@ -393,6 +393,8 @@ router.get('/proxies', authenticateToken, requireAdmin, (_req, res) => {
       totalCount: globalProxyPool.totalCount,
       isAllQuarantined: globalProxyPool.isAllQuarantined(),
       antiLeakFlags: globalProxyPool.antiLeakFlags,
+      // AD-20 dual-pool partition stats — additive; legacy fields preserved.
+      dualPool: globalProxyPool.getPoolStats(),
       proxies,
     });
   } catch (err) {

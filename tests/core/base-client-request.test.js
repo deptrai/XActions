@@ -125,8 +125,10 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
     proxyPort = await startServer(proxyServer);
   });
 
-  afterAll((done) => {
-    upstreamServer.close(() => proxyServer.close(done));
+  afterAll(() => {
+    return new Promise((resolve) => {
+      upstreamServer.close(() => proxyServer.close(() => resolve()));
+    });
   });
 
   beforeEach(() => {

@@ -103,6 +103,43 @@
  */
 
 /**
+ * Dual-pool partition name (AD-20).
+ * @typedef {'realtime' | 'bulk'} PoolName
+ */
+
+/**
+ * Dual-pool partition statistics (AD-20) — per-pool totals plus the cumulative
+ * count of proxies borrowed from Bulk to serve Realtime requests.
+ * @typedef {Object} DualPoolStats
+ * @property {{ total: number, healthy: number, quarantined: number }} realtime
+ * @property {{ total: number, healthy: number, quarantined: number }} bulk
+ * @property {number} yieldedCount
+ */
+
+/**
+ * Consumer quota configuration (AD-20). `burstLimit` never blocks requests —
+ * it only feeds `isThrottled` reporting.
+ * @typedef {Object} ConsumerQuotaConfig
+ * @property {string} consumerId
+ * @property {number} rpmLimit - Requests per minute; Infinity means unmetered.
+ * @property {number} [burstLimit]
+ * @property {number} [priority]
+ */
+
+/**
+ * Observability snapshot for a single consumer (AD-20).
+ * @typedef {Object} ConsumerStatus
+ * @property {string} consumerId
+ * @property {number} rpmLimit
+ * @property {number} burstLimit
+ * @property {number} priority
+ * @property {number} usedInWindow
+ * @property {number} remaining
+ * @property {boolean} isThrottled
+ * @property {boolean} overBurst
+ */
+
+/**
  * @typedef {Object} GovernorStatus
  * @property {number} healthyProxyCount
  * @property {number} totalProxyCount
@@ -111,6 +148,8 @@
  * @property {number} redisConsumerLag
  * @property {Array<{accountId: string, remainingSeconds: number, reason: string}>} hibernatingAccounts
  * @property {string} throttleLevel
+ * @property {DualPoolStats} dualPool - Dual-pool partition stats (AD-20).
+ * @property {Record<string, ConsumerStatus>} consumerQuotas - Per-consumer quota status (AD-20).
  */
 
 /**
@@ -125,6 +164,8 @@
  * @property {string} suggestedAction
  * @property {string | null} [accountId]
  * @property {string} [platform]
+ * @property {string} [consumerId] - Consumer identity for quota errors (AD-20).
+ * @property {Record<string, unknown>} [details]
  */
 
 /**
