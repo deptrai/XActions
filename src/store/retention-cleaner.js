@@ -20,6 +20,111 @@ export const DEFAULT_BATCH_SIZE = 1000;
 export const MAX_BATCH_SIZE = 5000;
 export const DEFAULT_BATCH_DELAY_MS = 50;
 
+/** @type {string[]} */
+export const SUPPORTED_PLATFORMS = Object.freeze([
+  'twitter',
+  'facebook',
+  'threads',
+  'tiktok',
+  'shopee',
+  'chotot',
+  'topcv',
+  'linkedin',
+]);
+
+/** @type {string[]} */
+export const CRAWL_PLATFORMS = Object.freeze([
+  'twitter',
+  'facebook',
+  'threads',
+  'tiktok',
+  'shopee',
+  'chotot',
+  'topcv',
+  'linkedin',
+]);
+
+/**
+ * Validate and normalize a platform filter.
+ * @param {string | undefined} platform
+ * @returns {string | undefined}
+ */
+function validatePlatform(platform) {
+  if (!platform) return undefined;
+  const normalized = String(platform).toLowerCase().trim();
+  if (!CRAWL_PLATFORMS.includes(normalized)) {
+    throw new PlatformError({
+      message: `Unsupported platform filter: "${platform}". Supported: ${CRAWL_PLATFORMS.join(', ')}`,
+      type: ErrorTypes.VALIDATION,
+      code: 'XACT_4001',
+      statusCode: 400,
+      suggestedAction: SuggestedActions.CHECK_INPUT,
+    });
+  }
+  return normalized;
+}
+
+/**
+ * Validate and normalize a positive integer option.
+ * @param {any} value
+ * @param {string} name
+ * @param {number} defaultValue
+ * @returns {number}
+ */
+function validatePositiveInt(value, name, defaultValue) {
+  if (value === undefined || value === null) return defaultValue;
+  const parsed = typeof value === 'number' ? value : parseInt(String(value), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0 || Number.isNaN(parsed)) {
+    throw new PlatformError({
+      message: `${name} must be a positive integer, got: ${value}`,
+      type: ErrorTypes.VALIDATION,
+      code: 'XACT_4001',
+      statusCode: 400,
+      suggestedAction: SuggestedActions.CHECK_INPUT,
+    });
+  }
+  return parsed;
+}
+
+/**
+ * Validate and normalize a non-negative integer option.
+ * @param {any} value
+ * @param {string} name
+ * @param {number} defaultValue
+ * @returns {number}
+ */
+function validateNonNegativeInt(value, name, defaultValue) {
+  if (value === undefined || value === null) return defaultValue;
+  const parsed = typeof value === 'number' ? value : parseInt(String(value), 10);
+  if (!Number.isFinite(parsed) || parsed < 0 || Number.isNaN(parsed)) {
+    throw new PlatformError({
+      message: `${name} must be a non-negative integer, got: ${value}`,
+      type: ErrorTypes.VALIDATION,
+      code: 'XACT_4001',
+      statusCode: 400,
+      suggestedAction: SuggestedActions.CHECK_INPUT,
+    });
+  }
+  return parsed;
+}
+
+/**
+ * Validate and normalize a cutoff Date.
+ * @param {any} value
+ * @param {number} retentionDays
+ * @returns {Date}
+ */
+function resolveCutoffDate(value, retentionDays) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value;
+  }
+  if (value !== undefined && value !== null) {
+    const parsed = value instanceof Date ? value : new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+}
+
 /**
  * Sleep helper for batch throttling.
  * @param {number} ms
@@ -93,29 +198,29 @@ export class RetentionCleaner {
     const startTime = Date.now();
     const prisma = options.prisma || (await this.getPrisma());
 
-    const retentionDays =
-      typeof options.retentionDays === 'number' && options.retentionDays > 0
-        ? options.retentionDays
-        : parseInt(process.env.DATA_RETENTION_DAYS_RAW || '', 10) || DEFAULT_RAW_RETENTION_DAYS;
+    const retentionDays = validatePositiveInt(
+      typeof options.retentionDays === 'number' ? options.retentionDays : process.env.DATA_RETENTION_DAYS_RAW,
+      'retentionDays',
+      DEFAULT_RAW_RETENTION_DAYS
+    );
 
-    const rawBatchSize =
-      typeof options.batchSize === 'number' && options.batchSize > 0
-        ? options.batchSize
-        : parseInt(process.env.DATA_RETENTION_BATCH_SIZE || '', 10) || DEFAULT_BATCH_SIZE;
+    const rawBatchSize = validatePositiveInt(
+      typeof options.batchSize === 'number' ? options.batchSize : process.env.DATA_RETENTION_BATCH_SIZE,
+      'batchSize',
+      DEFAULT_BATCH_SIZE
+    );
     const batchSize = Math.min(Math.max(1, rawBatchSize), MAX_BATCH_SIZE);
 
-    const batchDelayMs =
-      typeof options.batchDelayMs === 'number' && options.batchDelayMs >= 0
-        ? options.batchDelayMs
-        : parseInt(process.env.DATA_RETENTION_BATCH_DELAY_MS || '', 10) || DEFAULT_BATCH_DELAY_MS;
+    const batchDelayMs = validateNonNegativeInt(
+      typeof options.batchDelayMs === 'number' ? options.batchDelayMs : process.env.DATA_RETENTION_BATCH_DELAY_MS,
+      'batchDelayMs',
+      DEFAULT_BATCH_DELAY_MS
+    );
 
     const dryRun = Boolean(options.dryRun);
-    const platform = options.platform ? String(options.platform) : undefined;
+    const platform = validatePlatform(options.platform);
 
-    const cutoffDate =
-      options.cutoffDate instanceof Date
-        ? options.cutoffDate
-        : new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    const cutoffDate = resolveCutoffDate(options.cutoffDate, retentionDays);
 
     const postWhere = {
       crawledAt: { lt: cutoffDate },
@@ -147,6 +252,8 @@ export class RetentionCleaner {
     let postsDeleted = 0;
     let commentsDeleted = 0;
     let batchesExecuted = 0;
+    let consecutiveEmptyBatches = 0;
+    const MAX_CONSECUTIVE_EMPTY_BATCHES = 3;
 
     try {
       // Phase 1: Chunked Post & associated Comment deletion
@@ -155,6 +262,7 @@ export class RetentionCleaner {
           where: postWhere,
           select: { id: true },
           take: batchSize,
+          orderBy: { id: 'asc' },
         });
 
         if (!batchPosts || batchPosts.length === 0) {
@@ -165,44 +273,73 @@ export class RetentionCleaner {
 
         // Delete comments associated with this batch of post IDs first
         // to avoid huge cascading lock spikes on the Post table.
-        const commentDeleteResult = await prisma.comment.deleteMany({
-          where: {
-            postId: { in: batchPostIds },
-          },
-        });
-        commentsDeleted += commentDeleteResult.count;
+        const [commentDeleteResult, postDeleteResult] = await prisma.$transaction([
+          prisma.comment.deleteMany({
+            where: {
+              postId: { in: batchPostIds },
+            },
+          }),
+          prisma.post.deleteMany({
+            where: {
+              id: { in: batchPostIds },
+            },
+          }),
+        ]);
 
-        // Delete the batch of posts
-        const postDeleteResult = await prisma.post.deleteMany({
-          where: {
-            id: { in: batchPostIds },
-          },
-        });
-        postsDeleted += postDeleteResult.count;
+        const deletedInBatch = postDeleteResult.count;
+        commentsDeleted += commentDeleteResult.count;
+        postsDeleted += deletedInBatch;
         batchesExecuted++;
+
+        if (deletedInBatch === 0) {
+          consecutiveEmptyBatches++;
+          if (consecutiveEmptyBatches >= MAX_CONSECUTIVE_EMPTY_BATCHES) {
+            console.warn('⚠️ RetentionCleaner: consecutive empty post deletion batches; aborting to avoid infinite loop.');
+            break;
+          }
+        } else {
+          consecutiveEmptyBatches = 0;
+        }
 
         if (batchDelayMs > 0) {
           await sleep(batchDelayMs);
         }
       }
 
-      // Phase 2: Clean up any remaining orphan comments with crawledAt < cutoffDate
-      // (e.g. comments ingested separately whose posts were previously removed or without parent post)
+      // Phase 2: Clean up any remaining orphan comments whose parent post no longer exists
+      // (e.g. comments ingested separately, partially orphaned by previous failures, or replies
+      // whose parent was removed in an earlier pass). Only delete comments whose postId points
+      // to a Post that no longer exists, respecting the platform filter.
+      let orphanConsecutiveEmpty = 0;
       while (true) {
-        const orphanComments = await prisma.comment.findMany({
+        const expiredComments = await prisma.comment.findMany({
           where: {
             crawledAt: { lt: cutoffDate },
             ...(platform ? { platform } : {}),
           },
-          select: { id: true },
+          select: { id: true, postId: true },
           take: batchSize,
+          orderBy: { id: 'asc' },
         });
 
-        if (!orphanComments || orphanComments.length === 0) {
+        if (!expiredComments || expiredComments.length === 0) {
           break;
         }
 
-        const orphanCommentIds = orphanComments.map((c) => c.id);
+        const candidatePostIds = [...new Set(expiredComments.map((c) => c.postId))];
+        const existingPosts = await prisma.post.findMany({
+          where: { id: { in: candidatePostIds } },
+          select: { id: true },
+        });
+        const existingPostIds = new Set(existingPosts.map((p) => p.id));
+        const orphanCommentIds = expiredComments
+          .filter((c) => !existingPostIds.has(c.postId))
+          .map((c) => c.id);
+
+        if (orphanCommentIds.length === 0) {
+          break;
+        }
+
         const orphanDeleteResult = await prisma.comment.deleteMany({
           where: {
             id: { in: orphanCommentIds },
@@ -210,6 +347,16 @@ export class RetentionCleaner {
         });
         commentsDeleted += orphanDeleteResult.count;
         batchesExecuted++;
+
+        if (orphanDeleteResult.count === 0) {
+          orphanConsecutiveEmpty++;
+          if (orphanConsecutiveEmpty >= MAX_CONSECUTIVE_EMPTY_BATCHES) {
+            console.warn('⚠️ RetentionCleaner: consecutive empty orphan comment batches; aborting to avoid infinite loop.');
+            break;
+          }
+        } else {
+          orphanConsecutiveEmpty = 0;
+        }
 
         if (batchDelayMs > 0) {
           await sleep(batchDelayMs);
@@ -265,13 +412,16 @@ export class RetentionCleaner {
     const startTime = Date.now();
     const prisma = options.prisma || (await this.getPrisma());
 
-    const checkpointRetentionDays =
-      typeof options.checkpointRetentionDays === 'number' && options.checkpointRetentionDays > 0
+    const checkpointRetentionDays = validatePositiveInt(
+      typeof options.checkpointRetentionDays === 'number'
         ? options.checkpointRetentionDays
-        : parseInt(process.env.DATA_RETENTION_DAYS_CHECKPOINT || '', 10) || DEFAULT_CHECKPOINT_RETENTION_DAYS;
+        : process.env.DATA_RETENTION_DAYS_CHECKPOINT,
+      'checkpointRetentionDays',
+      DEFAULT_CHECKPOINT_RETENTION_DAYS
+    );
 
     const dryRun = Boolean(options.dryRun);
-    const platform = options.platform ? String(options.platform) : undefined;
+    const platform = validatePlatform(options.platform);
 
     // Filter statuses: strictly exclude any protected status
     const requestedStatuses = Array.isArray(options.statuses) && options.statuses.length > 0
@@ -293,20 +443,32 @@ export class RetentionCleaner {
       };
     }
 
-    const cutoffDate =
-      options.cutoffDate instanceof Date
-        ? options.cutoffDate
-        : new Date(Date.now() - checkpointRetentionDays * 24 * 60 * 60 * 1000);
+    const cutoffDate = resolveCutoffDate(
+      options.cutoffDate,
+      checkpointRetentionDays
+    );
 
     const whereClause = {
       status: { in: allowedStatuses },
-      updatedAt: { lt: cutoffDate },
+      lastCrawledAt: { lt: cutoffDate },
       ...(platform ? { platform } : {}),
+    };
+
+    // Fallback for older checkpoints that may not have lastCrawledAt set.
+    const whereWithFallback = {
+      ...whereClause,
+      OR: [
+        { lastCrawledAt: { lt: cutoffDate } },
+        {
+          lastCrawledAt: null,
+          updatedAt: { lt: cutoffDate },
+        },
+      ],
     };
 
     if (dryRun) {
       const checkpointsEligible = await prisma.crawlCheckpoint.count({
-        where: whereClause,
+        where: whereWithFallback,
       });
 
       return {
@@ -319,15 +481,65 @@ export class RetentionCleaner {
       };
     }
 
+    // Chunked checkpoint deletion to avoid unbounded monolithic deleteMany.
+    const batchSize = validatePositiveInt(
+      typeof options.batchSize === 'number' ? options.batchSize : process.env.DATA_RETENTION_BATCH_SIZE,
+      'batchSize',
+      DEFAULT_BATCH_SIZE
+    );
+    const batchDelayMs = validateNonNegativeInt(
+      typeof options.batchDelayMs === 'number' ? options.batchDelayMs : process.env.DATA_RETENTION_BATCH_DELAY_MS,
+      'batchDelayMs',
+      DEFAULT_BATCH_DELAY_MS
+    );
+    const boundedBatchSize = Math.min(Math.max(1, batchSize), MAX_BATCH_SIZE);
+
+    let checkpointsDeleted = 0;
+    let batchesExecuted = 0;
+    let consecutiveEmptyBatches = 0;
+    const MAX_CONSECUTIVE_EMPTY_BATCHES = 3;
+
     try {
-      const result = await prisma.crawlCheckpoint.deleteMany({
-        where: whereClause,
-      });
+      while (true) {
+        const batchCheckpoints = await prisma.crawlCheckpoint.findMany({
+          where: whereWithFallback,
+          select: { id: true },
+          take: boundedBatchSize,
+          orderBy: { id: 'asc' },
+        });
+
+        if (!batchCheckpoints || batchCheckpoints.length === 0) {
+          break;
+        }
+
+        const batchIds = batchCheckpoints.map((c) => c.id);
+        const deleteResult = await prisma.crawlCheckpoint.deleteMany({
+          where: { id: { in: batchIds } },
+        });
+
+        checkpointsDeleted += deleteResult.count;
+        batchesExecuted++;
+
+        if (deleteResult.count === 0) {
+          consecutiveEmptyBatches++;
+          if (consecutiveEmptyBatches >= MAX_CONSECUTIVE_EMPTY_BATCHES) {
+            console.warn('⚠️ RetentionCleaner: consecutive empty checkpoint batches; aborting to avoid infinite loop.');
+            break;
+          }
+        } else {
+          consecutiveEmptyBatches = 0;
+        }
+
+        if (batchDelayMs > 0) {
+          await sleep(batchDelayMs);
+        }
+      }
 
       return {
         success: true,
         dryRun: false,
-        checkpointsDeleted: result.count,
+        checkpointsDeleted,
+        batchesExecuted,
         durationMs: Date.now() - startTime,
         cutoffDate: cutoffDate.toISOString(),
       };
@@ -336,7 +548,8 @@ export class RetentionCleaner {
       return {
         success: false,
         dryRun: false,
-        checkpointsDeleted: 0,
+        checkpointsDeleted,
+        batchesExecuted,
         durationMs: Date.now() - startTime,
         cutoffDate: cutoffDate.toISOString(),
         error: err instanceof Error ? err.message : String(err),
@@ -363,10 +576,11 @@ export class RetentionCleaner {
    * }>}
    */
   async getRetentionStats(options = {}) {
+    const startTime = Date.now();
     const prisma = options.prisma || (await this.getPrisma());
-    const rawDays = options.rawDays || DEFAULT_RAW_RETENTION_DAYS;
-    const checkpointDays = options.checkpointDays || DEFAULT_CHECKPOINT_RETENTION_DAYS;
-    const platform = options.platform ? String(options.platform) : undefined;
+    const rawDays = validatePositiveInt(options.rawDays, 'rawDays', DEFAULT_RAW_RETENTION_DAYS);
+    const checkpointDays = validatePositiveInt(options.checkpointDays, 'checkpointDays', DEFAULT_CHECKPOINT_RETENTION_DAYS);
+    const platform = validatePlatform(options.platform);
 
     const now = Date.now();
     const d7 = new Date(now - 7 * 86400000);
@@ -414,7 +628,13 @@ export class RetentionCleaner {
         where: {
           ...checkpointBaseWhere,
           status: { in: SAFE_CHECKPOINT_CLEANUP_STATUSES },
-          updatedAt: { lt: d90 },
+          OR: [
+            { lastCrawledAt: { lt: d90 } },
+            {
+              lastCrawledAt: null,
+              updatedAt: { lt: d90 },
+            },
+          ],
         },
       }),
       prisma.crawlCheckpoint.count({ where: { ...checkpointBaseWhere, status: 'running' } }),
@@ -485,6 +705,7 @@ export class RetentionCleaner {
    *     durationMs: number;
    *     cutoffDate: string;
    *     dryRun: boolean;
+   *     error?: string;
    *   };
    * }>}
    */
@@ -494,21 +715,31 @@ export class RetentionCleaner {
 
     let checkpointsDeleted = 0;
     let checkpointsEligible = 0;
+    let checkpointError;
+    let checkpointBatchesExecuted = 0;
 
     if (options.cleanCheckpoints !== false) {
-      const checkpointResult = await this.cleanCheckpoints({
+      const checkpointOptions = {
         checkpointRetentionDays: options.checkpointRetentionDays,
         dryRun: options.dryRun,
         platform: options.platform,
         prisma: options.prisma,
-      });
+        batchSize: options.batchSize,
+        batchDelayMs: options.batchDelayMs,
+      };
+      const checkpointResult = await this.cleanCheckpoints(checkpointOptions);
       checkpointsDeleted = checkpointResult.checkpointsDeleted || 0;
       checkpointsEligible = checkpointResult.checkpointsEligible || 0;
+      checkpointBatchesExecuted = checkpointResult.batchesExecuted || 0;
+      checkpointError = checkpointResult.error;
     }
 
     const dryRun = Boolean(options.dryRun);
+    const success = rawResult.success && (!checkpointError || dryRun);
+    const combinedBatches = (rawResult.batchesExecuted || 0) + checkpointBatchesExecuted;
+
     return {
-      success: rawResult.success,
+      success,
       data: {
         postsDeleted: rawResult.postsDeleted || 0,
         commentsDeleted: rawResult.commentsDeleted || 0,
@@ -520,10 +751,11 @@ export class RetentionCleaner {
               checkpointsEligible,
             }
           : {}),
-        batchesExecuted: rawResult.batchesExecuted || 0,
+        batchesExecuted: combinedBatches,
         durationMs: Date.now() - startTime,
         cutoffDate: rawResult.cutoffDate,
         dryRun,
+        error: rawResult.error || checkpointError,
       },
     };
   }

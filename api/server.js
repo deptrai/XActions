@@ -90,7 +90,7 @@ import facebookAccountsRoutes from './routes/facebookAccounts.js';
 import { startFacebookScheduler } from './services/facebookScheduler.js';
 import tweetScheduleRoutes from './routes/tweetSchedule.js';
 import { startTweetScheduler } from './services/tweetScheduler.js';
-import { startRetentionScheduler } from './services/retentionScheduler.js';
+import { startRetentionScheduler, requestRetentionShutdown } from './services/retentionScheduler.js';
 import platformRoutes from './routes/platform.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
@@ -667,6 +667,18 @@ if (process.env.NODE_ENV !== 'test') {
       startRetentionScheduler();
     }
   });
+
+  // Graceful shutdown: stop cron schedulers and finish in-flight cleanup.
+  for (const signal of ['SIGTERM', 'SIGINT']) {
+    process.on(signal, () => {
+      console.log(`🛑 [Server] Received ${signal}, shutting down...`);
+      requestRetentionShutdown();
+      httpServer.close(() => {
+        console.log('✅ [Server] HTTP server closed.');
+        process.exit(process.exitCode || 0);
+      });
+    });
+  }
 }
 
 export default app;

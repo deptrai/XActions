@@ -9,7 +9,7 @@
  */
 
 import chalk from 'chalk';
-import { parseCliPositiveInt, printCliError, disconnectPrisma } from '../shared.js';
+import { parseCliPositiveInt, parseCliNonNegativeInt, printCliError, disconnectPrisma } from '../shared.js';
 
 export function registerRetentionCommand(program) {
   const retentionCmd = program
@@ -33,15 +33,14 @@ export function registerRetentionCommand(program) {
       try {
         const { default: sharedPrisma } = await import('../../../api/lib/prisma.js');
         prisma = sharedPrisma;
-        const { RetentionCleaner } = await import('../../store/retention-cleaner.js');
-        const cleaner = new RetentionCleaner({ prisma });
+        const { runRetentionPipeline } = await import('../../store/retention-cleaner.js');
 
         const retentionDays = options.days ? parseCliPositiveInt(options.days, 'days') : undefined;
         const checkpointRetentionDays = options.checkpointDays
           ? parseCliPositiveInt(options.checkpointDays, 'checkpoint-days')
           : undefined;
         const batchSize = options.batchSize ? parseCliPositiveInt(options.batchSize, 'batch-size') : undefined;
-        const batchDelayMs = options.delay ? parseInt(options.delay, 10) : undefined;
+        const batchDelayMs = options.delay ? parseCliNonNegativeInt(options.delay, 'delay') : undefined;
         const dryRun = Boolean(options.dryRun);
         const cleanCheckpointsFlag = options.checkpoints !== false;
         const platform = options.platform ? String(options.platform) : undefined;
@@ -50,7 +49,7 @@ export function registerRetentionCommand(program) {
           console.log(chalk.bold(`🔄 Starting retention cleanup ${dryRun ? chalk.yellow('(DRY-RUN)') : ''}...`));
         }
 
-        const result = await cleaner.runRetentionPipeline({
+        const result = await runRetentionPipeline({
           retentionDays,
           checkpointRetentionDays,
           batchSize,
@@ -58,9 +57,11 @@ export function registerRetentionCommand(program) {
           dryRun,
           cleanCheckpoints: cleanCheckpointsFlag,
           platform,
+          prisma,
         });
 
         if (options.json) {
+          if (!result.success) process.exitCode = 1;
           console.log(JSON.stringify(result, null, 2));
         } else {
           if (!result.success) {
@@ -91,7 +92,9 @@ export function registerRetentionCommand(program) {
       } catch (error) {
         printCliError(error, options);
       } finally {
-        await disconnectPrisma(prisma);
+        // The CLI imports the shared api/lib/prisma.js singleton; do not close it
+        // because it is the same connection pool the rest of the process uses.
+        // The default export is the global singleton.
       }
     });
 
@@ -107,8 +110,7 @@ export function registerRetentionCommand(program) {
       try {
         const { default: sharedPrisma } = await import('../../../api/lib/prisma.js');
         prisma = sharedPrisma;
-        const { RetentionCleaner } = await import('../../store/retention-cleaner.js');
-        const cleaner = new RetentionCleaner({ prisma });
+        const { getRetentionStats } = await import('../../store/retention-cleaner.js');
 
         const rawDays = options.days ? parseCliPositiveInt(options.days, 'days') : undefined;
         const checkpointDays = options.checkpointDays
@@ -116,13 +118,15 @@ export function registerRetentionCommand(program) {
           : undefined;
         const platform = options.platform ? String(options.platform) : undefined;
 
-        const result = await cleaner.getRetentionStats({
+        const result = await getRetentionStats({
           rawDays,
           checkpointDays,
           platform,
+          prisma,
         });
 
         if (options.json) {
+          if (!result.success) process.exitCode = 1;
           console.log(JSON.stringify(result, null, 2));
         } else {
           const { posts, comments, checkpoints, thresholds } = result.data;
@@ -150,7 +154,7 @@ export function registerRetentionCommand(program) {
       } catch (error) {
         printCliError(error, options);
       } finally {
-        await disconnectPrisma(prisma);
+        // Shared singleton — intentionally not disconnected.
       }
     });
 }

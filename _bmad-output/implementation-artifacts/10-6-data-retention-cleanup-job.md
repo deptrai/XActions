@@ -2,7 +2,7 @@
 story_id: 10.6
 story_key: 10-6-data-retention-cleanup-job
 epic: 10 — Unified PostgreSQL Storage (Prisma) & Core Interfaces
-status: done
+status: in-progress
 baseline_commit: d9363ea9b4a45051d9544db7e1f40ffb6f50536c
 related_ads:
   - AD-10
@@ -17,7 +17,7 @@ related_ads:
 | **Story ID** | 10.6 |
 | **Story Key** | `10-6-data-retention-cleanup-job` |
 | **Epic** | 10 — Unified PostgreSQL Storage (Prisma) & Core Interfaces |
-| **Status** | ready-for-dev |
+| **Status** | in-progress |
 | **Author** | nich (@nichxbt) |
 | **Related ADs & FRs** | AD-10 (3-Tier Incremental Gap-Filling & Retention Policy), AD-4 (Namespaced Storage & Indexes), FR-87 (Data Retention Policy) |
 
@@ -300,3 +300,4 @@ related_ads:
 ## Change Log
 
 - **2026-09-01:** Khởi tạo story `10-6-data-retention-cleanup-job` backfill AD-10 / Story 10.2 cho Data Retention Lifecycle (raw data 30 ngày, checkpoints 90 ngày).
+- **2026-09-01 (post code review):** Fix `PlatformError` constructor signature; thêm `SUPPORTED_PLATFORMS` validation; sửa orphan comment logic không dùng `post: { is: null }`; đổi checkpoint cutoff sang `lastCrawledAt` với fallback `updatedAt`; thêm `acquireRetentionLock` / `runGuardedRetention` để admin API, scheduler và CLI chia sẻ mutex chống overlapping runs; thêm graceful shutdown trong `api/server.js`; thêm `tests/api/admin-retention.test.js` và `tests/cli/retention.test.js`; tất cả 30 test cases pass.

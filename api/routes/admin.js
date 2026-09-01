@@ -30,10 +30,9 @@ import { globalAccountPool } from '../../src/core/account-pool.js';
 import { globalStatusApi, globalAdaptiveRateGovernor } from '../../src/core/index.js';
 import { refreshGovernorConsumerLag, globalStreamMetricsReader } from '../../src/utils/stream-metrics.js';
 import {
-  defaultRetentionCleaner,
-  runRetentionPipeline,
   getRetentionStats as getStoreRetentionStats,
 } from '../../src/store/retention-cleaner.js';
+import { runGuardedRetention } from '../services/retentionScheduler.js';
 
 const router = Router();
 
@@ -626,7 +625,7 @@ router.post('/retention/cleanup', requireAdminOrApiKey, async (req, res) => {
       platform,
     } = req.body || {};
 
-    const result = await defaultRetentionCleaner.runRetentionPipeline({
+    const result = await runGuardedRetention({
       retentionDays: typeof retentionDays === 'number' ? retentionDays : undefined,
       checkpointRetentionDays: typeof checkpointRetentionDays === 'number' ? checkpointRetentionDays : undefined,
       batchSize: typeof batchSize === 'number' ? batchSize : undefined,
@@ -654,11 +653,12 @@ router.post('/retention/cleanup', requireAdminOrApiKey, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ POST /api/admin/retention/cleanup error:', err);
-    res.status(500).json({
+    const statusCode = err?.message?.includes('overlapping_run') ? 503 : 500;
+    res.status(statusCode).json({
       success: false,
       error: {
         code: 'XACT_5000',
-        type: 'internal_error',
+        type: statusCode === 503 ? 'overlapping_run' : 'internal_error',
         message: err instanceof Error ? err.message : String(err),
       },
     });
@@ -676,7 +676,7 @@ router.get('/retention/stats', requireAdminOrApiKey, async (req, res) => {
     const rawDays = req.query?.rawDays ? parseInt(String(req.query.rawDays), 10) : undefined;
     const checkpointDays = req.query?.checkpointDays ? parseInt(String(req.query.checkpointDays), 10) : undefined;
 
-    const stats = await defaultRetentionCleaner.getRetentionStats({
+    const stats = await getStoreRetentionStats({
       platform,
       rawDays,
       checkpointDays,

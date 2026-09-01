@@ -15,6 +15,32 @@ import { defaultRetentionCleaner } from '../../src/store/retention-cleaner.js';
 let cronTask = null;
 let isProcessing = false;
 let schedulerStarted = false;
+let shutdownRequested = false;
+
+/**
+ * Acquire the retention processing lock.
+ * @returns {boolean} true if the lock was acquired
+ */
+export function acquireRetentionLock() {
+  if (isProcessing) return false;
+  isProcessing = true;
+  return true;
+}
+
+/**
+ * Release the retention processing lock.
+ */
+export function releaseRetentionLock() {
+  isProcessing = false;
+}
+
+/**
+ * Query whether a retention run is currently in progress.
+ * @returns {boolean}
+ */
+export function getIsProcessing() {
+  return isProcessing;
+}
 
 /**
  * Execute a single cycle of the retention cleanup.
@@ -64,6 +90,38 @@ export async function runRetentionCycle(options = {}) {
     return { executed: false, error: err instanceof Error ? err.message : String(err) };
   } finally {
     isProcessing = false;
+    if (shutdownRequested) {
+      stopRetentionScheduler();
+    }
+  }
+}
+
+/**
+ * Run a guarded retention pipeline under the shared scheduler lock.
+ * This is the single entry point used by the cron scheduler, admin API, and CLI.
+ *
+ * @param {Object} [options]
+ * @param {import('../../src/store/retention-cleaner.js').RetentionCleaner} [options.cleaner]
+ * @param {import('@prisma/client').PrismaClient} [options.prisma]
+ * @param {number} [options.retentionDays]
+ * @param {number} [options.checkpointRetentionDays]
+ * @param {number} [options.batchSize]
+ * @param {number} [options.batchDelayMs]
+ * @param {boolean} [options.dryRun]
+ * @param {boolean} [options.cleanCheckpoints]
+ * @param {string} [options.platform]
+ * @returns {Promise<import('../../src/store/retention-cleaner.js').RunRetentionPipelineResult>}
+ */
+export async function runGuardedRetention(options = {}) {
+  if (!acquireRetentionLock()) {
+    throw new Error('Retention cleanup is already running (overlapping_run)');
+  }
+
+  try {
+    const cleaner = options.cleaner || defaultRetentionCleaner;
+    return await cleaner.runRetentionPipeline(options);
+  } finally {
+    releaseRetentionLock();
   }
 }
 
@@ -105,6 +163,20 @@ export function startRetentionScheduler(options = {}) {
   schedulerStarted = true;
   console.log(`🔄 [RetentionScheduler] Daily retention scheduler registered (cron: "${scheduleExpr}")`);
   return true;
+}
+
+/**
+ * Request a graceful scheduler shutdown and stop any in-flight run.
+ * Call this from SIGTERM/SIGINT handlers.
+ */
+export function requestRetentionShutdown() {
+  shutdownRequested = true;
+  stopRetentionScheduler();
+  if (isProcessing) {
+    console.log('🛑 [RetentionScheduler] Shutdown requested; waiting for in-flight cleanup to finish.');
+    return true;
+  }
+  return false;
 }
 
 /**

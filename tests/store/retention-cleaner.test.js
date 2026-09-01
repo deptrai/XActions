@@ -283,7 +283,7 @@ describe('Story 10.6: RetentionCleaner — Checkpoint Lifecycle Purge (AC3)', ()
           targetType: 'profile',
           targetKey: 'user_1',
           status: 'completed',
-          updatedAt: oldCheckpointDate,
+          lastCrawledAt: oldCheckpointDate,
         },
         {
           id: 'ckpt_failed_old',
@@ -291,16 +291,10 @@ describe('Story 10.6: RetentionCleaner — Checkpoint Lifecycle Purge (AC3)', ()
           targetType: 'hashtag',
           targetKey: 'tag_1',
           status: 'failed',
-          updatedAt: oldCheckpointDate,
+          lastCrawledAt: oldCheckpointDate,
         },
       ],
     });
-
-    // Manually force the updatedAt to the past (since @updatedAt auto-stamps on create)
-    await prisma.$executeRawUnsafe(
-      `UPDATE "CrawlCheckpoint" SET "updatedAt" = $1 WHERE id IN ('ckpt_completed_old', 'ckpt_failed_old')`,
-      oldCheckpointDate
-    );
 
     const result = await cleaner.cleanCheckpoints({
       checkpointRetentionDays: 90,
@@ -349,9 +343,10 @@ describe('Story 10.6: RetentionCleaner — Checkpoint Lifecycle Purge (AC3)', ()
       ],
     });
 
-    // Force all timestamps to be 200 days old
+    // Force lastCrawledAt and updatedAt to be 200 days old for the completed checkpoint.
+    // Running/paused/stalled must never be deleted regardless of age.
     await prisma.$executeRawUnsafe(
-      `UPDATE "CrawlCheckpoint" SET "updatedAt" = $1`,
+      `UPDATE "CrawlCheckpoint" SET "lastCrawledAt" = $1, "updatedAt" = $1 WHERE id = 'ckpt_completed_old'`,
       oldCheckpointDate
     );
 
@@ -469,12 +464,9 @@ describe('Story 10.6: RetentionCleaner — Stats & Unified Pipeline (AC1 & AC5)'
         targetType: 'user',
         targetKey: 'pipe_user',
         status: 'completed',
+        lastCrawledAt: oldDate,
       },
     });
-    await prisma.$executeRawUnsafe(
-      `UPDATE "CrawlCheckpoint" SET "updatedAt" = $1 WHERE id = 'ckpt_pipe'`,
-      oldDate
-    );
 
     const pipelineResult = await cleaner.runRetentionPipeline({
       retentionDays: 30,

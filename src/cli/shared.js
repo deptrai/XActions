@@ -230,3 +230,14 @@ export async function disconnectPrisma(prisma) {
     }
   }
 }
+
+/**
+ * Disconnect a Prisma client safely unless it is the shared api/lib/prisma.js singleton.
+ * The shared singleton must not be closed by in-process CLI commands or tests.
+ * @param {import('@prisma/client').PrismaClient|undefined} prisma
+ * @param {boolean} [isSharedSingleton]
+ */
+export async function disconnectPrismaUnlessShared(prisma, isSharedSingleton = false) {
+  if (isSharedSingleton) return;
+  await disconnectPrisma(prisma);
+}
