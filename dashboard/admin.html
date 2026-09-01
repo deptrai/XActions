@@ -123,6 +123,7 @@
       cursor: pointer;
       border-radius: 8px;
       transition: all 0.2s;
+      white-space: nowrap;
     }
 
     .tab-btn:hover {
@@ -134,6 +135,153 @@
       background: linear-gradient(135deg,#1d9bf0,#22d3ee);
       color: white;
       box-shadow: 0 8px 24px -8px rgba(29,155,240,.6);
+    }
+
+    /* Stream Metrics & Alerts View */
+    .streams-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .stream-chart-container {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 320px;
+    }
+    .stream-chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .stream-chart-header h3 {
+      font-size: 1rem;
+      margin: 0;
+    }
+    .stream-range-toggle {
+      display: flex;
+      gap: 8px;
+    }
+    .stream-range-toggle button {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8125rem;
+      transition: all 0.2s;
+    }
+    .stream-range-toggle button.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    .stream-range-toggle button:hover:not(.active) {
+      color: var(--text-primary);
+    }
+    .stream-chart-svg {
+      width: 100%;
+      height: 240px;
+      overflow: visible;
+    }
+    .stream-chart-series {
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .stream-chart-series-eps { stroke: #1d9bf0; }
+    .stream-chart-series-pending { stroke: #a855f7; }
+    .stream-chart-threshold {
+      stroke: var(--error);
+      stroke-width: 1.5;
+      stroke-dasharray: 6 4;
+      opacity: 0.8;
+    }
+    .stream-chart-axis {
+      stroke: var(--border);
+      stroke-width: 1;
+    }
+    .stream-chart-grid {
+      stroke: var(--border);
+      stroke-width: 1;
+      stroke-dasharray: 2 2;
+      opacity: 0.4;
+    }
+    .stream-chart-label {
+      fill: var(--text-secondary);
+      font-size: 10px;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+    .stream-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+    }
+    .stream-legend span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stream-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .stream-alerts-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .stream-alerts-section h3 {
+      font-size: 1rem;
+      margin: 0 0 16px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .stream-test-alert {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .stream-test-alert:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .alert-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border-left: 3px solid var(--warning);
+    }
+    .alert-banner.alert-critical { border-left-color: var(--error); }
+    .alert-banner.alert-warning { border-left-color: var(--warning); }
+    .alert-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    .alert-value {
+      font-weight: 700;
+      font-family: 'SF Mono', Monaco, monospace;
     }
 
     /* Checkpoint table */
@@ -652,6 +800,7 @@
     <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-sessions" id="tab-btn-sessions" onclick="switchTab('sessions')">📡 Live Sessions</button>
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-proxies" id="tab-btn-proxies" onclick="switchTab('proxies')">🛡️ Proxies & Accounts</button>
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-checkpoints" id="tab-btn-checkpoints" onclick="switchTab('checkpoints')">🛡️ Jobs & Checkpoints</button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-streams" id="tab-btn-streams" onclick="switchTab('streams')">📊 Stream Metrics & Alerts</button>
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-payments" id="tab-btn-payments" onclick="switchTab('payments')">💰 x402 Payments</button>
   </div>
 
@@ -724,6 +873,72 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stream Metrics & Alerts Tab -->
+  <div id="tab-streams" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-streams" style="display: none;">
+    <div class="stats-bar">
+      <div class="stat-box">
+        <div class="stat-value" id="stream-events-per-second">0</div>
+        <div class="stat-label">Events/sec</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stream-pending-messages">0</div>
+        <div class="stat-label">Pending Messages</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stream-consumer-lag">0</div>
+        <div class="stat-label">Consumer Lag</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stream-dropped-events">0</div>
+        <div class="stat-label">Dropped Events</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stream-last-ack-time">0s</div>
+        <div class="stat-label">Last Ack Idle</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stream-max-len">0</div>
+        <div class="stat-label">Max Length</div>
+      </div>
+    </div>
+
+    <div class="streams-grid">
+      <div class="stream-chart-container" style="grid-column: 1 / -1;">
+        <div class="stream-chart-header">
+          <h3>📈 Stream Throughput & Pending</h3>
+          <div class="stream-range-toggle" role="group" aria-label="Time range">
+            <button id="stream-range-5m" class="active" onclick="setStreamRange('5m')" aria-pressed="true">5m</button>
+            <button id="stream-range-1h" onclick="setStreamRange('1h')" aria-pressed="false">1h</button>
+            <button id="stream-range-24h" onclick="setStreamRange('24h')" aria-pressed="false">24h</button>
+          </div>
+        </div>
+        <svg id="stream-chart" class="stream-chart-svg" viewBox="0 0 800 240" preserveAspectRatio="none" aria-label="Stream metrics line chart" role="img">
+          <g id="stream-chart-grid"></g>
+          <path id="stream-chart-threshold" class="stream-chart-threshold" d="" />
+          <polyline id="stream-chart-series-eps" class="stream-chart-series stream-chart-series-eps" points="" />
+          <polyline id="stream-chart-series-pending" class="stream-chart-series stream-chart-series-pending" points="" />
+        </svg>
+        <div class="stream-legend">
+          <span><span class="stream-legend-dot" style="background: #1d9bf0;"></span> Events/sec</span>
+          <span><span class="stream-legend-dot" style="background: #a855f7;"></span> Pending Messages</span>
+          <span><span class="stream-legend-dot" style="background: var(--error);"></span> Threshold (50,000)</span>
+        </div>
+      </div>
+
+      <div class="stream-alerts-section" style="grid-column: 1 / -1;">
+        <h3>
+          🚨 Active Alerts
+          <button class="stream-test-alert" id="stream-test-alert-btn" onclick="testStreamAlert()">🧪 Test Alert</button>
+        </h3>
+        <div id="stream-alerts-body" class="alert-list">
+          <div class="empty-state small">
+            <span style="color: var(--success);">✓</span> No active alerts
+          </div>
         </div>
       </div>
     </div>
@@ -1122,18 +1337,27 @@
       if (tab === 'payments') {
         stopProxiesRefresh();
         stopCheckpointRefresh();
+        stopStreamsRefresh();
         await loadPaymentStats();
       } else if (tab === 'checkpoints') {
         stopProxiesRefresh();
+        stopStreamsRefresh();
         await loadCheckpoints();
         startCheckpointRefresh();
       } else if (tab === 'proxies') {
         stopCheckpointRefresh();
+        stopStreamsRefresh();
         await loadProxiesAndAccounts();
         startProxiesRefresh();
+      } else if (tab === 'streams') {
+        stopCheckpointRefresh();
+        stopProxiesRefresh();
+        await loadStreamMetricsAndAlerts();
+        startStreamsRefresh();
       } else {
         stopCheckpointRefresh();
         stopProxiesRefresh();
+        stopStreamsRefresh();
       }
     }
 
@@ -1429,6 +1653,309 @@
         showCheckpointToast(err.message || 'Release request failed', 'error');
       } finally {
         proxiesActionInFlight = false;
+      }
+    }
+
+    // -------------------------
+    // Stream Metrics & Alerts View
+    // -------------------------
+    const STREAMS_REFRESH_INTERVAL_MS = 5000;
+    const STREAMS_FETCH_TIMEOUT_MS = 8000;
+    const STREAMS_MAX_HISTORY = 288; // 24h at 5s interval
+    const STREAMS_THRESHOLD = 50000;
+    let streamsRefreshTimer = null;
+    let streamsActiveFetch = null;
+    let streamsActionInFlight = false;
+    let streamMetricsHistory = [];
+    let streamSelectedRange = '5m';
+
+    function startStreamsRefresh() {
+      stopStreamsRefresh();
+      streamsRefreshTimer = setInterval(() => {
+        if (!streamsActionInFlight && document.getElementById('tab-streams')?.classList.contains('active')) {
+          loadStreamMetricsAndAlerts({ background: true });
+        }
+      }, STREAMS_REFRESH_INTERVAL_MS);
+    }
+
+    function stopStreamsRefresh() {
+      if (streamsRefreshTimer) {
+        clearInterval(streamsRefreshTimer);
+        streamsRefreshTimer = null;
+      }
+      if (streamsActiveFetch) {
+        streamsActiveFetch.abort();
+        streamsActiveFetch = null;
+      }
+    }
+
+    function setStreamRange(range) {
+      streamSelectedRange = range;
+      document.querySelectorAll('.stream-range-toggle button').forEach(btn => {
+        const isActive = btn.id === `stream-range-${range}`;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', String(isActive));
+      });
+      renderStreamChart();
+    }
+
+    function formatStreamValue(value) {
+      if (typeof value !== 'number' || !Number.isFinite(value)) return '0';
+      if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+      if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+      return value.toLocaleString();
+    }
+
+    function getStreamRangeMs() {
+      if (streamSelectedRange === '1h') return 60 * 60 * 1000;
+      if (streamSelectedRange === '24h') return 24 * 60 * 60 * 1000;
+      return 5 * 60 * 1000;
+    }
+
+    function getStreamFilteredHistory() {
+      const cutoff = Date.now() - getStreamRangeMs();
+      return streamMetricsHistory.filter(p => p.timestamp >= cutoff);
+    }
+
+    function formatStreamTimeLabel(timestamp) {
+      const date = new Date(timestamp);
+      if (streamSelectedRange === '5m') {
+        return date.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+      if (streamSelectedRange === '1h') {
+        return date.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
+      }
+      return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function loadStreamMetricsAndAlerts(opts = {}) {
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      if (streamsActiveFetch) {
+        streamsActiveFetch.abort();
+      }
+      const controller = new AbortController();
+      streamsActiveFetch = controller;
+
+      try {
+        const [metricsRes, alertsRes] = await Promise.all([
+          fetchWithTimeout('/api/admin/stream/metrics', { headers, signal: controller.signal }, STREAMS_FETCH_TIMEOUT_MS)
+            .then(r => r.ok ? r.json() : { success: false, metrics: {} })
+            .catch(() => ({ success: false, metrics: {} })),
+          fetchWithTimeout('/api/admin/stream/alerts', { headers, signal: controller.signal }, STREAMS_FETCH_TIMEOUT_MS)
+            .then(r => r.ok ? r.json() : { success: false, alerts: { activeAlerts: [] } })
+            .catch(() => ({ success: false, alerts: { activeAlerts: [] } }))
+        ]);
+
+        if (!document.getElementById('tab-streams')?.classList.contains('active') && opts.background) return;
+
+        const metrics = metricsRes.metrics || {};
+        const alerts = alertsRes.alerts || { activeAlerts: [] };
+
+        // Clamp values
+        const eventsPerSecond = Math.max(0, Number(metrics.eventsPerSecond) || 0);
+        const pendingMessages = Math.max(0, Number(metrics.pendingMessages) || 0);
+        const consumerLag = Math.max(0, Number(metrics.consumerLag) || 0);
+        const droppedEvents = Math.max(0, Number(metrics.droppedEvents) || 0);
+        const lastAckTime = Math.max(0, Number(metrics.lastAckTime) || 0);
+        const maxLen = Math.max(0, Number(metrics.maxLen) || 0);
+
+        // Update stat boxes
+        const epsEl = document.getElementById('stream-events-per-second');
+        if (epsEl) epsEl.textContent = formatStreamValue(eventsPerSecond);
+        const pendingEl = document.getElementById('stream-pending-messages');
+        if (pendingEl) pendingEl.textContent = formatStreamValue(pendingMessages);
+        const lagEl = document.getElementById('stream-consumer-lag');
+        if (lagEl) lagEl.textContent = formatStreamValue(consumerLag);
+        const droppedEl = document.getElementById('stream-dropped-events');
+        if (droppedEl) droppedEl.textContent = formatStreamValue(droppedEvents);
+        const ackEl = document.getElementById('stream-last-ack-time');
+        if (ackEl) ackEl.textContent = `${formatStreamValue(lastAckTime)}s`;
+        const maxLenEl = document.getElementById('stream-max-len');
+        if (maxLenEl) maxLenEl.textContent = formatStreamValue(maxLen);
+
+        // Update history
+        streamMetricsHistory.push({
+          timestamp: Date.now(),
+          eventsPerSecond,
+          pendingMessages,
+          consumerLag,
+          droppedEvents,
+          lastAckTime,
+          maxLen,
+          minId: metrics.minId || null,
+        });
+        while (streamMetricsHistory.length > STREAMS_MAX_HISTORY) {
+          streamMetricsHistory.shift();
+        }
+
+        renderStreamChart();
+        renderStreamAlerts(alerts.activeAlerts || []);
+      } catch (err) {
+        console.error('Failed to load stream metrics and alerts:', err);
+      } finally {
+        if (streamsActiveFetch === controller) {
+          streamsActiveFetch = null;
+        }
+      }
+    }
+
+    function renderStreamChart() {
+      const svg = document.getElementById('stream-chart');
+      if (!svg) return;
+
+      const series = getStreamFilteredHistory();
+      const threshold = STREAMS_THRESHOLD;
+
+      if (series.length < 2) {
+        // No enough data — draw empty grid
+        renderStreamChartGrid(svg, 0, 1, []);
+        document.getElementById('stream-chart-threshold').setAttribute('d', '');
+        document.getElementById('stream-chart-series-eps').setAttribute('points', '');
+        document.getElementById('stream-chart-series-pending').setAttribute('points', '');
+        return;
+      }
+
+      const minTime = series[0].timestamp;
+      const maxTime = series[series.length - 1].timestamp;
+      const timeSpan = Math.max(1, maxTime - minTime);
+
+      const epsValues = series.map(p => p.eventsPerSecond);
+      const pendingValues = series.map(p => p.pendingMessages);
+      const allValues = [...epsValues, ...pendingValues, threshold];
+      const minValue = Math.min(...allValues);
+      const maxValue = Math.max(...allValues);
+      const valueSpan = Math.max(1, maxValue - minValue);
+
+      const width = 800;
+      const height = 240;
+      const padding = { top: 20, right: 60, bottom: 40, left: 60 };
+      const chartWidth = width - padding.left - padding.right;
+      const chartHeight = height - padding.top - padding.bottom;
+
+      function x(ts) {
+        return padding.left + ((ts - minTime) / timeSpan) * chartWidth;
+      }
+      function y(val) {
+        return padding.top + chartHeight - ((val - minValue) / valueSpan) * chartHeight;
+      }
+
+      // Grid and axes
+      renderStreamChartGrid(svg, minValue, maxValue, [threshold]);
+
+      // Threshold line
+      const thresholdY = y(threshold);
+      const thresholdPath = document.getElementById('stream-chart-threshold');
+      thresholdPath.setAttribute('d', `M ${padding.left} ${thresholdY} L ${width - padding.right} ${thresholdY}`);
+
+      // Build polylines
+      const epsPoints = series.map(p => `${x(p.timestamp)},${y(p.eventsPerSecond)}`).join(' ');
+      const pendingPoints = series.map(p => `${x(p.timestamp)},${y(p.pendingMessages)}`).join(' ');
+
+      document.getElementById('stream-chart-series-eps').setAttribute('points', epsPoints);
+      document.getElementById('stream-chart-series-pending').setAttribute('points', pendingPoints);
+    }
+
+    function renderStreamChartGrid(svg, minValue, maxValue, extraLines) {
+      const grid = document.getElementById('stream-chart-grid');
+      if (!grid) return;
+
+      const width = 800;
+      const height = 240;
+      const padding = { top: 20, right: 60, bottom: 40, left: 60 };
+      const chartWidth = width - padding.left - padding.right;
+      const chartHeight = height - padding.top - padding.bottom;
+
+      let html = '';
+
+      // Y axis line
+      html += `<line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" class="stream-chart-axis" />`;
+      // X axis line
+      html += `<line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" class="stream-chart-axis" />`;
+
+      // Y-axis grid / labels (5 ticks)
+      for (let i = 0; i <= 5; i++) {
+        const y = padding.top + (chartHeight * i) / 5;
+        html += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" class="stream-chart-grid" />`;
+        const value = maxValue - (maxValue - minValue) * (i / 5);
+        html += `<text x="${padding.left - 8}" y="${y + 4}" text-anchor="end" class="stream-chart-label">${formatStreamValue(value)}</text>`;
+      }
+
+      // X-axis time labels (up to 6)
+      const series = getStreamFilteredHistory();
+      if (series.length >= 2) {
+        const count = Math.min(6, series.length);
+        for (let i = 0; i < count; i++) {
+          const idx = Math.floor((i / (count - 1)) * (series.length - 1));
+          const p = series[idx];
+          const x = padding.left + ((p.timestamp - series[0].timestamp) / Math.max(1, series[series.length - 1].timestamp - series[0].timestamp)) * chartWidth;
+          html += `<text x="${x}" y="${height - padding.bottom + 16}" text-anchor="middle" class="stream-chart-label">${esc(formatStreamTimeLabel(p.timestamp))}</text>`;
+        }
+      }
+
+      grid.innerHTML = html;
+    }
+
+    function renderStreamAlerts(alerts) {
+      const container = document.getElementById('stream-alerts-body');
+      if (!container) return;
+
+      if (!alerts.length) {
+        container.innerHTML = `
+          <div class="empty-state small">
+            <span style="color: var(--success);">✓</span> No active alerts
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = alerts.slice(-5).reverse().map(alert => {
+        const type = alert.alert || 'unknown';
+        const threshold = alert.threshold ?? '—';
+        const value = alert.value ?? '—';
+        const isCritical = value > threshold * 1.5;
+        const severityClass = isCritical ? 'alert-critical' : 'alert-warning';
+        const label = isCritical ? 'CRITICAL' : 'WARNING';
+        const time = alert.timestamp ? new Date(alert.timestamp).toLocaleString() : '—';
+
+        return `
+          <div class="alert-banner ${severityClass}">
+            <div>
+              <strong>${esc(type)}</strong>
+              <div class="alert-meta">threshold: ${formatStreamValue(threshold)} • current: <span class="alert-value">${formatStreamValue(value)}</span></div>
+              <div class="alert-meta">${esc(time)}</div>
+            </div>
+            <span class="status-pill status-${isCritical ? 'failed' : 'stalled'}">${label}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function testStreamAlert() {
+      if (streamsActionInFlight) return;
+      streamsActionInFlight = true;
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetchWithTimeout('/api/admin/stream/alerts/test', {
+          method: 'POST',
+          headers,
+        }, STREAMS_FETCH_TIMEOUT_MS);
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          showCheckpointToast(`✅ Test alert triggered (${data.alerts?.length || 0})`, 'success');
+          await loadStreamMetricsAndAlerts();
+        } else {
+          showCheckpointToast(data.error || 'Failed to trigger test alert', 'error');
+        }
+      } catch (err) {
+        showCheckpointToast(err.message || 'Test alert request failed', 'error');
+      } finally {
+        streamsActionInFlight = false;
       }
     }
 
@@ -1910,6 +2437,8 @@
         switchTab('checkpoints');
       } else if (hash === 'proxies') {
         switchTab('proxies');
+      } else if (hash === 'streams') {
+        switchTab('streams');
       }
     }
 
@@ -1919,6 +2448,7 @@
     window.addEventListener('beforeunload', () => {
       stopCheckpointRefresh();
       stopProxiesRefresh();
+      stopStreamsRefresh();
       if (checkpointsState.activeFetch) checkpointsState.activeFetch.abort();
     });
 
@@ -1926,6 +2456,8 @@
       switchTab('checkpoints');
     } else if (window.location.hash === '#proxies') {
       switchTab('proxies');
+    } else if (window.location.hash === '#streams') {
+      switchTab('streams');
     } else {
       switchTab('sessions');
     }

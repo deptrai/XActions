@@ -310,4 +310,18 @@ router.get('/stream/alerts', authenticateToken, requireAdmin, async (_req, res) 
   }
 });
 
+/**
+ * POST /api/admin/stream/alerts/test
+ * Trigger a test alert through StreamAlertEngine for dashboard validation
+ */
+router.post('/stream/alerts/test', authenticateToken, requireAdmin, async (_req, res) => {
+  try {
+    const metrics = await defaultStreamMetricsCollector.getMetrics();
+    const result = await defaultStreamAlertEngine.checkAndAlert({ ...metrics, pendingMessages: 75000, lastAckTime: 120 });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
+  }
+});
+
 export default router;
