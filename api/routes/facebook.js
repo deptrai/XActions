@@ -880,7 +880,7 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
       ...envBrowserOptions,
       ...requestBrowserOptions,
       headless: isHeadless,
-      userDataDir: buildUserDataDir(authCookie.c_user),
+      userDataDir: buildUserDataDir(authCookie?.c_user),
     };
     if (Object.keys(proxyAuth).length) runBrowserOptions.proxyAuth = proxyAuth;
     if (Object.keys(proxyLocation).length) runBrowserOptions.proxyLocation = proxyLocation;
@@ -888,7 +888,7 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
     /** @returns {Record<string, unknown>} */
     const buildHybridScrapeArgs = () => {
       /** @type {Record<string, unknown>} */
-      const scrapeArgs = { ...baseOptions, authCookie, browserOptions: runBrowserOptions };
+      const scrapeArgs = { ...baseOptions, authCookie, accountIds: body.accountIds, browserOptions: runBrowserOptions };
       if (['like', 'comment', 'share'].includes(action)) {
         scrapeArgs.urls = urls;
       }
@@ -940,10 +940,10 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
     if (resolvedDryRun) {
       if (isHybrid) {
         const result = /** @type {Record<string, unknown>} */ (await scrape('facebook', action, buildHybridScrapeArgs()));
-        return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
+        return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, preview: result?.preview || result, ...result });
       }
       const result = await dispatch(/** @type {Page} */ (/** @type {unknown} */ (null)));
-      return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, ...result });
+      return res.json({ ok: true, action, dryRun: true, userId: reqUser.id, operationId: null, preview: result?.preview || result, ...result });
     }
 
     // Real run — create Operation record (config excludes authCookie; NFR3)
