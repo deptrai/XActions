@@ -16,3 +16,19 @@ export {
   pauseCheckpoint,
   retryCheckpoint,
 } from './checkpoint-manager.js';
+export {
+  RetentionCleaner,
+  defaultRetentionCleaner,
+  cleanRawCrawlData,
+  cleanCheckpoints,
+  getRetentionStats,
+  runRetentionPipeline,
+  SAFE_CHECKPOINT_CLEANUP_STATUSES,
+  PROTECTED_CHECKPOINT_STATUSES,
+  DEFAULT_RAW_RETENTION_DAYS,
+  DEFAULT_CHECKPOINT_RETENTION_DAYS,
+  DEFAULT_BATCH_SIZE,
+  MAX_BATCH_SIZE,
+  DEFAULT_BATCH_DELAY_MS,
+} from './retention-cleaner.js';
+

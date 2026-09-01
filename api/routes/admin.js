@@ -29,6 +29,11 @@ import { globalProxyPool } from '../../src/proxy/proxy-pool.js';
 import { globalAccountPool } from '../../src/core/account-pool.js';
 import { globalStatusApi, globalAdaptiveRateGovernor } from '../../src/core/index.js';
 import { refreshGovernorConsumerLag, globalStreamMetricsReader } from '../../src/utils/stream-metrics.js';
+import {
+  defaultRetentionCleaner,
+  runRetentionPipeline,
+  getRetentionStats as getStoreRetentionStats,
+} from '../../src/store/retention-cleaner.js';
 
 const router = Router();
 
@@ -590,4 +595,106 @@ const handleRotateAccount = (req, res) => {
 router.post('/accounts/rotate', authenticateToken, requireAdmin, handleRotateAccount);
 router.post('/accounts/:id/rotate', authenticateToken, requireAdmin, handleRotateAccount);
 
+/**
+ * Helper middleware or inline check for admin auth supporting both Bearer JWT and x-admin-key.
+ */
+const requireAdminOrApiKey = (req, res, next) => {
+  const adminKey = String(req.headers['x-admin-key'] || '');
+  const expected = process.env.ADMIN_API_KEY || '';
+  if (expected && safeCompare(adminKey, expected)) {
+    return next();
+  }
+  return authenticateToken(req, res, () => {
+    return requireAdmin(req, res, next);
+  });
+};
+
+/**
+ * POST /api/admin/retention/cleanup
+ * Trigger retention cleanup job manually or perform dry-run.
+ * Story 10.6 / AD-10
+ */
+router.post('/retention/cleanup', requireAdminOrApiKey, async (req, res) => {
+  try {
+    const {
+      retentionDays,
+      checkpointRetentionDays,
+      batchSize,
+      batchDelayMs,
+      dryRun,
+      cleanCheckpoints = true,
+      platform,
+    } = req.body || {};
+
+    const result = await defaultRetentionCleaner.runRetentionPipeline({
+      retentionDays: typeof retentionDays === 'number' ? retentionDays : undefined,
+      checkpointRetentionDays: typeof checkpointRetentionDays === 'number' ? checkpointRetentionDays : undefined,
+      batchSize: typeof batchSize === 'number' ? batchSize : undefined,
+      batchDelayMs: typeof batchDelayMs === 'number' ? batchDelayMs : undefined,
+      dryRun: Boolean(dryRun),
+      cleanCheckpoints: Boolean(cleanCheckpoints),
+      platform: platform ? String(platform) : undefined,
+    });
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'XACT_5000',
+          type: 'retention_error',
+          message: result.data?.error || 'Retention cleanup encountered errors',
+        },
+        data: result.data,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.data,
+    });
+  } catch (err) {
+    console.error('❌ POST /api/admin/retention/cleanup error:', err);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'XACT_5000',
+        type: 'internal_error',
+        message: err instanceof Error ? err.message : String(err),
+      },
+    });
+  }
+});
+
+/**
+ * GET /api/admin/retention/stats
+ * Get retention threshold metrics and expiration statistics.
+ * Story 10.6 / AD-10
+ */
+router.get('/retention/stats', requireAdminOrApiKey, async (req, res) => {
+  try {
+    const platform = typeof req.query?.platform === 'string' ? req.query.platform : undefined;
+    const rawDays = req.query?.rawDays ? parseInt(String(req.query.rawDays), 10) : undefined;
+    const checkpointDays = req.query?.checkpointDays ? parseInt(String(req.query.checkpointDays), 10) : undefined;
+
+    const stats = await defaultRetentionCleaner.getRetentionStats({
+      platform,
+      rawDays,
+      checkpointDays,
+    });
+
+    res.json(stats);
+  } catch (err) {
+    console.error('❌ GET /api/admin/retention/stats error:', err);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'XACT_5000',
+        type: 'internal_error',
+        message: err instanceof Error ? err.message : String(err),
+      },
+    });
+  }
+});
+
 export default router;
+

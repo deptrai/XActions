@@ -40,16 +40,17 @@ development_status:
   epic-6-retrospective: optional
 
   # --- Epic 10: Data & Platform Foundation for Universal Scraping ---
-  epic-10: done
+  epic-10: in-progress
   10-1-core-domain-interfaces-error-hierarchy-definition: done
   10-2-prisma-post-comment-relational-schema-migration: done
   10-3-ai-dataset-export-utility-streaming-jsonl-csv: done
   10-4-crawlcheckpoint-operational-api-resume-pause-retry: done
   10-5-metadata-schema-contract-registry-for-consumers: done
+  10-6-data-retention-cleanup-job: done
   epic-10-retrospective: optional
 
   # --- Epic 11: Resilient Network & Proxy Pool Management ---
-  epic-11: done
+  epic-11: in-progress
   11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
   11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: done
@@ -58,12 +59,14 @@ development_status:
   11-6-rate-limit-bot-challenge-defense: done
   11-7-crawler-governor-integration-validator-contract: done
   11-8-socksnode-dynamic-residential-proxy-provider: done
+  11-9-dual-pool-consumer-quota: ready-for-dev
   epic-11-retrospective: optional
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
-  epic-12: done
+  epic-12: in-progress
   12-1-terminal-ascii-qr-code-login-module: done
   12-2-cdp-remote-attach-mode-chrome-devtools-protocol: done
+  12-3-terminal-qr-full-backfill: ready-for-dev
   epic-12-retrospective: optional
 
   # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---

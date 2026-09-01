@@ -90,6 +90,7 @@ import facebookAccountsRoutes from './routes/facebookAccounts.js';
 import { startFacebookScheduler } from './services/facebookScheduler.js';
 import tweetScheduleRoutes from './routes/tweetSchedule.js';
 import { startTweetScheduler } from './services/tweetScheduler.js';
+import { startRetentionScheduler } from './services/retentionScheduler.js';
 import platformRoutes from './routes/platform.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
@@ -658,6 +659,12 @@ if (process.env.NODE_ENV !== 'test') {
     // disables it (tests / a dedicated-scheduler deployment).
     if (process.env.ENABLE_TWEET_SCHEDULER !== 'false') {
       startTweetScheduler();
+    }
+
+    // Start Data Retention Scheduler (Story 10.6 / AD-10) — daily 3:00 AM purge
+    // of raw crawl data older than 30 days and terminal checkpoints older than 90 days.
+    if (process.env.ENABLE_RETENTION_SCHEDULER !== 'false') {
+      startRetentionScheduler();
     }
   });
 }

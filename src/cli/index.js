@@ -51,6 +51,7 @@ import { registerCompatCommands } from './commands/compat.js';
 import { registerAgentCommand } from './commands/agent.js';
 import { registerClientCommand } from './commands/client.js';
 import { registerAdminCommand } from './commands/admin.js';
+import { registerRetentionCommand } from './commands/retention.js';
 import { renderRootHelp } from './help-groups.js';
 
 const program = new Command();
@@ -116,6 +117,7 @@ registerCompatCommands(program);
 registerAgentCommand(program);
 registerClientCommand(program);
 registerAdminCommand(program);
+registerRetentionCommand(program);
 
 
 
