@@ -630,7 +630,7 @@ export class FacebookClient extends AbstractApiClient {
   async requestGraphQl(docId, variables = {}, options = {}) {
     const fallbackDocIds = Array.isArray(options.fallbackDocIds) ? options.fallbackDocIds : [];
     const allDocIds = [docId, ...fallbackDocIds]
-      .filter((d) => typeof d === 'string' && d.length > 0 && !d.startsWith('fb_') && d !== 'null');
+      .filter((d) => typeof d === 'string' && d.length > 0 && d !== 'null' && d !== 'undefined');
     const docIds = allDocIds.filter((d, i, a) => a.indexOf(d) === i);
     /** @type {Error | null} */
     let lastError = null;
