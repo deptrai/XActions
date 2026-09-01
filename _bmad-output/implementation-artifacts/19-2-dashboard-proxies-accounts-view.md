@@ -2,18 +2,18 @@
 story_id: "19.2"
 epic: 19
 story_key: "19-2-dashboard-proxies-accounts-view"
-status: "review"
+status: "done"
 phase: "Phase 5"
 created: 2026-09-01
 updated: 2026-09-01
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "Approved"
 baseline_commit: "721e0cad8d52cbf1031d279ca84dc7519bfb8e5c"
 ---
 
 # Story 19.2: Dashboard Proxies & Accounts View
 
-Status: review
+Status: done
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
