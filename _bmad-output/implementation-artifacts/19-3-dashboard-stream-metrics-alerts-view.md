@@ -44,8 +44,9 @@ so that **I detect early when the Nowing consumer is slow or the stream drops da
 - **When** the page loads
 - **Then** a new tab **"📊 Stream Metrics & Alerts"** is present in the navigation tab bar (`.tab-nav`)
 - **And** navigating to `/admin#streams` activates this tab automatically.
+- **And** `handleHashRoute()` and the initial hash check both recognize `hash === 'streams'`.
 
-[Source: `epics.md` Epic 19, Story 19.3, lines 1041-1042; `dashboard/admin.html` lines 615-620]
+[Source: `epics.md` Epic 19, Story 19.3, lines 1041-1042; `dashboard/admin.html` lines 1907-1931]
 
 ### AC-2: Stream Metrics Summary Cards
 - **Given** the "Stream Metrics & Alerts" tab is active
@@ -91,32 +92,42 @@ so that **I detect early when the Nowing consumer is slow or the stream drops da
 
 [Source: `epics.md` Epic 19, Story 19.3, line 1046]
 
-### AC-6: Alert Channel Configuration (optional, only if UI exposed)
-- **Given** the operator configures alert channels
-- **When** they save `ALERT_WEBHOOK` and/or `ALERT_EMAIL`
-- **Then** the values are persisted via environment or a lightweight config endpoint
-- **And** alert dispatch uses these values in `StreamAlertEngine`.
+### AC-6: Alert Test Button (Optional)
+- **Given** the "Stream Metrics & Alerts" tab is active
+- **When** the operator clicks a **"Test Alert"** button
+- **Then** the dashboard calls `POST /api/admin/stream/alerts/test` (or uses `StreamAlertEngine.checkAndAlert()` on the backend)
+- **And** a test alert is returned and rendered in the alerts list.
 
-[Source: `epics.md` Epic 19, Story 19.3, line 1047; `src/utils/stream-alerts.js` lines 68-69]
+[Source: `epics.md` Epic 19, Story 19.3, line 1047; `src/utils/stream-alerts.js` lines 68-79, 99-134]
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Verify and extend backend stream metrics/alerts endpoints (AC: #2, #4)
+- [ ] Task 1: Verify and extend backend stream metrics/alerts endpoints (AC: #2, #4, #6)
   - [ ] Confirm `GET /api/admin/stream/metrics` returns `{ success: true, metrics: { eventsPerSecond, pendingMessages, consumerLag, droppedEvents, lastAckTime, maxLen, minId } }`.
   - [ ] Confirm `GET /api/admin/stream/alerts` returns `{ success: true, alerts: { activeAlerts, lastAlertTimestamp, totalAlertsTriggered } }`.
-  - [ ] If missing, add `POST /api/admin/stream/alerts/test` to trigger a test alert through `StreamAlertEngine`.
+  - [ ] Add `POST /api/admin/stream/alerts/test` in `api/routes/admin.js` to trigger a test alert through `StreamAlertEngine`.
 - [ ] Task 2: Build UI components in `dashboard/admin.html` (AC: #1, #2, #3, #4)
   - [ ] Add `<button class="tab-btn" onclick="switchTab('streams')">📊 Stream Metrics & Alerts</button>` to `.tab-nav`.
   - [ ] Add `<div id="tab-streams" class="tab-content">` panel with grid layout.
-  - [ ] Render 6 top metrics stat boxes (`eventsPerSecond`, `pendingMessages`, `consumerLag`, `droppedEvents`, `lastAckTime`, `maxLen`).
-  - [ ] Render SVG line chart with `eventsPerSecond` and `pendingMessages` series + alert threshold line.
-  - [ ] Render Active Alerts table/list with severity badges.
-  - [ ] Add time range toggles (5m / 1h / 24h) that control chart x-axis label density.
+  - [ ] Render 6 top metrics stat boxes with DOM ids:
+    - `stream-events-per-second`
+    - `stream-pending-messages`
+    - `stream-consumer-lag`
+    - `stream-dropped-events`
+    - `stream-last-ack-time`
+    - `stream-max-len`
+  - [ ] Render SVG line chart with id `stream-chart`:
+    - Series `eventsPerSecond` (blue) and `pendingMessages` (purple/red) using `<polyline>` or `<path>`.
+    - Dashed horizontal threshold line at `pendingMessages = 50,000`.
+    - Y-axis auto-scales to fit both series plus threshold.
+    - X-axis labels formatted by range: `HH:mm:ss` (5m), `HH:mm` (1h), `MMM dd HH:mm` (24h).
+  - [ ] Render Active Alerts table/list with id `stream-alerts-body` and severity badges (warning/error).
+  - [ ] Add time range toggles with ids `stream-range-5m`, `stream-range-1h`, `stream-range-24h` that control history pruning and x-axis label density.
 - [ ] Task 3: Client-side polling and event dispatchers (AC: #2, #3, #4, #5)
   - [ ] Implement `loadStreamMetricsAndAlerts()` fetching `/api/admin/stream/metrics` and `/api/admin/stream/alerts`.
   - [ ] Maintain a rolling history buffer (e.g. last 288 points = ~24h at 5s interval) for chart series.
   - [ ] Setup 5s `setInterval` active only while `tab-streams` is displayed, with `AbortController` and `fetchWithTimeout`.
-  - [ ] Pause auto-refresh on tab switch; clear on `beforeunload`.
+  - [ ] Pause auto-refresh on tab switch; clear on `beforeunload` by adding `stopStreamsRefresh()` to the existing handler.
 - [ ] Task 4: Automated E2E & unit verification (AC: #1, #2, #3, #4, #5)
   - [ ] Add tests in `tests/admin/dashboard-stream-metrics-alerts.test.js` verifying API routes and client behavior.
   - [ ] Add Playwright E2E spec `tests/e2e/admin-stream-metrics-alerts.e2e.test.js` using a fixture HTTP server.
@@ -133,16 +144,19 @@ so that **I detect early when the Nowing consumer is slow or the stream drops da
 
 - **Data Shapes:**
   - `GET /api/admin/stream/metrics` -> `{ success: true, metrics: { eventsPerSecond, pendingMessages, consumerLag, droppedEvents, lastAckTime, maxLen, minId } }`
+    - `minId` may be `null` when the stream has no entries; render as `—`.
+    - `eventsPerSecond` may be `0` on first sample; chart should clamp negative/infinite values to `0`.
   - `GET /api/admin/stream/alerts` -> `{ success: true, alerts: { activeAlerts: [{ alert, threshold, value, timestamp, metrics }], lastAlertTimestamp, totalAlertsTriggered } }`
   - `POST /api/admin/stream/alerts/test` -> `{ success: true, triggered: true, alerts: [...] }`
 
 - **Frontend Chart Approach:**
   - Use an SVG `<svg>` element with `<polyline>` or `<path>` for each series.
-  - Maintain a `streamMetricsHistory` array of `{ timestamp, eventsPerSecond, pendingMessages }`.
-  - On each poll, push the latest point and prune to the selected time range window (or keep last 288 points for 24h).
+  - Maintain a `streamMetricsHistory` array of `{ timestamp: number, eventsPerSecond: number, pendingMessages: number }`.
+  - On each poll, push the latest point with `Date.now()`. Prune to last 288 points (24h at 5s) and, if a shorter range is selected, filter to points within that window.
   - Map data values to SVG coordinates with `viewBox="0 0 800 200"`.
   - Draw a dashed horizontal threshold line at `pendingMessages = 50,000`.
   - Time range toggles only affect x-axis labels and pruning; the chart still renders the available history.
+  - Format x-axis labels by range: `HH:mm:ss` for 5m, `HH:mm` for 1h, `MMM dd HH:mm` for 24h.
 
 - **CSS Styling:**
   - Reuse existing `.stats-bar`, `.stat-box`, `.stat-value`, `.stat-label` classes.
@@ -150,14 +164,17 @@ so that **I detect early when the Nowing consumer is slow or the stream drops da
   - Use existing CSS variables (`--bg-primary`, `--success`, `--warning`, `--error`, etc.).
 
 - **Tab Switching & Polling:**
-  - Add `tab-streams` to `switchTab` and the URL-hash auto-activation logic (if any) used by Story 19.2.
+  - Add `tab-streams` to `switchTab` and the URL-hash auto-activation logic used by Story 19.2.
+  - **CRITICAL:** Update `handleHashRoute()` and the initial hash check to include `hash === 'streams'`.
   - Use constants `STREAMS_REFRESH_INTERVAL_MS = 5000` and `STREAMS_FETCH_TIMEOUT_MS = 8000`.
   - Use `streamsActiveFetch` AbortController and `fetchWithTimeout` to avoid race conditions.
+  - **CRITICAL:** Add `stopStreamsRefresh()` to the `beforeunload` handler alongside `stopCheckpointRefresh()` and `stopProxiesRefresh()`.
 
 - **Testing:**
   - Unit tests should mount a fixture Express app with mock `StreamMetricsCollector` and `StreamAlertEngine` instances.
   - Verify `GET /api/admin/stream/metrics` and `GET /api/admin/stream/alerts` return correct envelopes.
-  - Playwright E2E should serve `admin.html` from a fixture HTTP server, stub `/api/admin/stream/metrics` and `/api/admin/stream/alerts`, and assert that tab, stat cards, chart, and alerts list are rendered.
+  - If `POST /api/admin/stream/alerts/test` is added, verify it returns `{ success: true, triggered: true }`.
+  - Playwright E2E should serve `admin.html` from a fixture HTTP server, stub `/api/admin/stream/metrics`, `/api/admin/stream/alerts`, and `/api/admin/stream/alerts/test`, and assert that tab, stat cards, chart, and alerts list are rendered.
 
 ### Project Structure Notes
 
