@@ -264,6 +264,71 @@ export class ProxyIpPool {
   }
 
   /**
+   * Release a proxy from quarantine immediately.
+   * @param {any} proxy
+   * @returns {boolean} True if the proxy was quarantined and is now released.
+   */
+  release(proxy) {
+    if (proxy == null) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Proxy is required to release',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    const key = this.#key(proxy);
+    if (!this.#hasKey(key)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Proxy is not a member of the pool',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    return this.#quarantined.delete(key);
+  }
+
+  /**
+   * Alias for release(proxy) to satisfy unquarantine naming conventions.
+   * @param {any} proxy
+   * @returns {boolean}
+   */
+  unquarantine(proxy) {
+    return this.release(proxy);
+  }
+
+  /**
+   * List all registered proxies with their current status and metadata.
+   * Passwords and sensitive credentials are never exposed in key or metadata.
+   * @returns {Array<{ key: string, server: string, protocol: string, host: string, port: number, residential: boolean, status: 'healthy' | 'quarantined', quarantinedUntil: number | null, expiresAt: number | null }>}
+   */
+  listProxies() {
+    const now = Date.now();
+    return this.#proxies.map((p) => {
+      const normalized = this.#normalize(p);
+      const key = this.#key(normalized);
+      const quarantinedUntil = this.#quarantined.get(key) || null;
+      const isQuarantined = quarantinedUntil !== null && quarantinedUntil > now;
+      if (quarantinedUntil !== null && quarantinedUntil <= now) {
+        this.#quarantined.delete(key);
+      }
+
+      return {
+        key,
+        server: normalized.server,
+        protocol: normalized.protocol,
+        host: normalized.host,
+        port: normalized.port,
+        residential: Boolean(normalized.residential),
+        status: isQuarantined ? 'quarantined' : 'healthy',
+        quarantinedUntil: isQuarantined ? quarantinedUntil : null,
+        expiresAt: normalized.expiresAt ?? null,
+      };
+    });
+  }
+
+  /**
    * @returns {boolean}
    */
   isAllQuarantined() {

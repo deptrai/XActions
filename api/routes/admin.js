@@ -25,6 +25,10 @@ import {
 } from '../services/payment-webhooks.js';
 import { defaultStreamMetricsCollector } from '../../src/utils/stream-metrics-collector.js';
 import { defaultStreamAlertEngine } from '../../src/utils/stream-alerts.js';
+import { globalProxyPool } from '../../src/proxy/proxy-pool.js';
+import { globalAccountPool } from '../../src/core/account-pool.js';
+import { globalStatusApi, globalAdaptiveRateGovernor } from '../../src/core/index.js';
+import { refreshGovernorConsumerLag, globalStreamMetricsReader } from '../../src/utils/stream-metrics.js';
 
 const router = Router();
 
@@ -309,5 +313,222 @@ router.get('/stream/alerts', authenticateToken, requireAdmin, async (_req, res) 
     res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
   }
 });
+
+/**
+ * GET /api/admin/governor/status
+ * Get real-time governor & proxy health status (Story 19.2)
+ */
+router.get('/governor/status', authenticateToken, requireAdmin, async (_req, res) => {
+  try {
+    await refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader);
+    const status = globalStatusApi.getGovernorStatus();
+    res.json({
+      success: true,
+      status,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'XACT_5000',
+        type: 'internal_error',
+        message: (err instanceof Error ? err.message : String(err)) || String(err),
+      },
+    });
+  }
+});
+
+/**
+ * GET /api/admin/proxies
+ * List proxies with status and metrics (Story 19.2 & Story 19.7)
+ */
+router.get('/proxies', authenticateToken, requireAdmin, (_req, res) => {
+  try {
+    const proxies = globalProxyPool.listProxies();
+    res.json({
+      success: true,
+      healthyCount: globalProxyPool.healthyCount,
+      totalCount: globalProxyPool.totalCount,
+      isAllQuarantined: globalProxyPool.isAllQuarantined(),
+      antiLeakFlags: globalProxyPool.antiLeakFlags,
+      proxies,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: (err instanceof Error ? err.message : String(err)),
+    });
+  }
+});
+
+/**
+ * POST /api/admin/proxies/quarantine
+ * POST /api/admin/proxies/:key/quarantine
+ * Manually quarantine a proxy (Story 19.2 & Story 19.7)
+ */
+const handleQuarantineProxy = (req, res) => {
+  try {
+    const rawKey = req.body?.proxy || req.body?.key || req.params?.key;
+    if (!rawKey) {
+      return res.status(400).json({ success: false, error: 'Proxy is required to quarantine' });
+    }
+    const durationMs = typeof req.body?.durationMs === 'number' ? req.body.durationMs : undefined;
+    const decodedKey = decodeURIComponent(String(rawKey));
+
+    globalProxyPool.quarantine(decodedKey, durationMs);
+    res.json({
+      success: true,
+      quarantined: decodedKey,
+      healthyCount: globalProxyPool.healthyCount,
+      totalCount: globalProxyPool.totalCount,
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      error: (err instanceof Error ? err.message : String(err)),
+    });
+  }
+};
+router.post('/proxies/quarantine', authenticateToken, requireAdmin, handleQuarantineProxy);
+router.post('/proxies/:key/quarantine', authenticateToken, requireAdmin, handleQuarantineProxy);
+
+/**
+ * POST /api/admin/proxies/release
+ * POST /api/admin/proxies/:key/release
+ * Manually release a proxy from quarantine (Story 19.2 & Story 19.7)
+ */
+const handleReleaseProxy = (req, res) => {
+  try {
+    const rawKey = req.body?.proxy || req.body?.key || req.params?.key;
+    if (!rawKey) {
+      return res.status(400).json({ success: false, error: 'Proxy is required to release' });
+    }
+    const decodedKey = decodeURIComponent(String(rawKey));
+
+    const released = globalProxyPool.release(decodedKey);
+    res.json({
+      success: true,
+      released,
+      proxy: decodedKey,
+      healthyCount: globalProxyPool.healthyCount,
+      totalCount: globalProxyPool.totalCount,
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      error: (err instanceof Error ? err.message : String(err)),
+    });
+  }
+};
+router.post('/proxies/release', authenticateToken, requireAdmin, handleReleaseProxy);
+router.post('/proxies/:key/release', authenticateToken, requireAdmin, handleReleaseProxy);
+
+/**
+ * GET /api/admin/accounts
+ * List all accounts with status, hibernation, velocity, and assigned proxies (Story 19.2 & Story 19.8)
+ */
+router.get('/accounts', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const platform = typeof req.query?.platform === 'string' ? req.query.platform : undefined;
+    const accounts = globalAccountPool.listAccountDetails(platform);
+    res.json({
+      success: true,
+      total: accounts.length,
+      accounts,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: (err instanceof Error ? err.message : String(err)),
+    });
+  }
+});
+
+/**
+ * POST /api/admin/accounts/wake
+ * POST /api/admin/accounts/:id/wake
+ * Wake an account from hibernation (Story 19.2 & Story 19.8)
+ */
+const handleWakeAccount = (req, res) => {
+  try {
+    const rawId = req.body?.accountId || req.params?.id;
+    if (!rawId) {
+      return res.status(400).json({ success: false, error: 'accountId is required' });
+    }
+    const platform = typeof req.body?.platform === 'string' ? req.body.platform : undefined;
+    const decodedId = decodeURIComponent(String(rawId));
+
+    const account = globalAccountPool.getAccount(decodedId, platform);
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: `Account "${decodedId}" not found`,
+      });
+    }
+
+    const isHibernating = account.hibernatingUntil !== null && account.hibernatingUntil > Date.now();
+    if (!isHibernating && !globalAdaptiveRateGovernor.isHibernating(decodedId)) {
+      return res.status(409).json({
+        success: false,
+        error: `Account "${decodedId}" is not currently in hibernation`,
+      });
+    }
+
+    globalAccountPool.markAvailable(decodedId, platform);
+    res.json({
+      success: true,
+      accountId: decodedId,
+      status: 'active',
+      message: `Account "${decodedId}" is now active`,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: (err instanceof Error ? err.message : String(err)),
+    });
+  }
+};
+router.post('/accounts/wake', authenticateToken, requireAdmin, handleWakeAccount);
+router.post('/accounts/:id/wake', authenticateToken, requireAdmin, handleWakeAccount);
+
+/**
+ * POST /api/admin/accounts/rotate
+ * POST /api/admin/accounts/:id/rotate
+ * Rotate account in account pool (Story 19.2 & Story 19.8)
+ */
+const handleRotateAccount = (req, res) => {
+  try {
+    const rawId = req.body?.accountId || req.params?.id;
+    if (!rawId) {
+      return res.status(400).json({ success: false, error: 'accountId is required' });
+    }
+    const platform = typeof req.body?.platform === 'string' ? req.body.platform : undefined;
+    const decodedId = decodeURIComponent(String(rawId));
+
+    const account = globalAccountPool.getAccount(decodedId, platform);
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: `Account "${decodedId}" not found`,
+      });
+    }
+
+    const targetPlatform = platform || account.platform;
+    const nextAccountId = globalAccountPool.getNextAvailable(targetPlatform);
+    res.json({
+      success: true,
+      previousAccountId: decodedId,
+      nextAccountId,
+      platform: targetPlatform,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: (err instanceof Error ? err.message : String(err)),
+    });
+  }
+};
+router.post('/accounts/rotate', authenticateToken, requireAdmin, handleRotateAccount);
+router.post('/accounts/:id/rotate', authenticateToken, requireAdmin, handleRotateAccount);
 
 export default router;

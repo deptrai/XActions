@@ -615,6 +615,7 @@
   <div class="tab-nav" role="tablist" aria-label="Admin sections">
     <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-sessions" id="tab-btn-sessions" onclick="switchTab('sessions')">📡 Live Sessions</button>
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-checkpoints" id="tab-btn-checkpoints" onclick="switchTab('checkpoints')">🛡️ Jobs & Checkpoints</button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-proxies" id="tab-btn-proxies" onclick="switchTab('proxies')">🛡️ Proxies & Accounts</button>
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-payments" id="tab-btn-payments" onclick="switchTab('payments')">💰 x402 Payments</button>
   </div>
 
@@ -665,6 +666,91 @@
           <button id="btn-prev" onclick="prevPage()" disabled>← Previous</button>
           <button id="btn-next" onclick="nextPage()" disabled>Next →</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Proxies & Accounts Tab (Story 19.2) -->
+  <div id="tab-proxies" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-proxies" style="display: none;">
+    <!-- Top Metric Cards -->
+    <div class="stats-bar">
+      <div class="stat-box">
+        <div class="stat-value" id="healthy-proxies-count">0 / 0</div>
+        <div class="stat-label">Healthy Proxies</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="current-rate-rps">0.0 req/s</div>
+        <div class="stat-label">Current Velocity</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="consumer-lag">0 msgs</div>
+        <div class="stat-label">Redis Consumer Lag</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="throttle-level">NORMAL</div>
+        <div class="stat-label">Governor Level</div>
+      </div>
+    </div>
+
+    <!-- Proxies Section -->
+    <div class="section-card" style="margin-bottom: 24px;">
+      <div class="checkpoint-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3>🌐 Proxy Pool & Health</h3>
+        <button class="btn-test-webhook" style="width: auto; margin-top: 0;" onclick="refreshProxiesAndAccounts()">🔄 Refresh</button>
+      </div>
+
+      <div class="checkpoint-table-wrap">
+        <table class="checkpoint-table" id="proxies-table">
+          <thead>
+            <tr>
+              <th>Server</th>
+              <th>Protocol</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Quarantined Until / TTL</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="proxies-body">
+            <tr>
+              <td colspan="6" class="empty-state small">Loading proxies...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Accounts Section -->
+    <div class="section-card">
+      <div class="checkpoint-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3>👥 Scraper Accounts & Hibernation</h3>
+        <div style="display: flex; gap: 8px;">
+          <select id="filter-account-platform" aria-label="Filter accounts by platform" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px;">
+            <option value="">All Platforms</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="checkpoint-table-wrap">
+        <table class="checkpoint-table" id="accounts-table">
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Account ID</th>
+              <th>Status</th>
+              <th>Remaining Time</th>
+              <th>Reason</th>
+              <th>Velocity</th>
+              <th>Assigned Proxy</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="accounts-body">
+            <tr>
+              <td colspan="8" class="empty-state small">Loading accounts...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -990,12 +1076,20 @@
       document.querySelectorAll('.tab-content:not(.active)').forEach(t => t.style.display = 'none');
 
       if (tab === 'payments') {
+        stopCheckpointRefresh();
+        stopProxiesRefresh();
         await loadPaymentStats();
       } else if (tab === 'checkpoints') {
+        stopProxiesRefresh();
         await loadCheckpoints();
         startCheckpointRefresh();
+      } else if (tab === 'proxies') {
+        stopCheckpointRefresh();
+        await loadProxiesAndAccounts();
+        startProxiesRefresh();
       } else {
         stopCheckpointRefresh();
+        stopProxiesRefresh();
       }
     }
 
@@ -1458,19 +1552,400 @@
       const hash = window.location.hash.replace('#', '');
       if (hash === 'jobs' || hash === 'checkpoints') {
         switchTab('checkpoints');
+      } else if (hash === 'proxies' || hash === 'accounts') {
+        switchTab('proxies');
       }
     }
 
-    // Initialize checkpoints UI
+    // -------------------------
+    // Proxies & Accounts View (Story 19.2)
+    // -------------------------
+
+    const PROXIES_REFRESH_INTERVAL_MS = 5000;
+    let proxiesState = {
+      refreshTimer: null,
+      activeFetch: null,
+      actionInFlight: false,
+      selectedPlatform: '',
+      initialised: false
+    };
+
+    function startProxiesRefresh() {
+      stopProxiesRefresh();
+      proxiesState.refreshCallback = function proxiesRefreshTick() {
+        if (!proxiesState.actionInFlight) {
+          loadProxiesAndAccounts({ background: true });
+        }
+      };
+      proxiesState.refreshTimer = setInterval(proxiesState.refreshCallback, PROXIES_REFRESH_INTERVAL_MS);
+    }
+
+    function stopProxiesRefresh() {
+      if (proxiesState.refreshTimer) {
+        clearInterval(proxiesState.refreshTimer);
+        proxiesState.refreshTimer = null;
+      }
+    }
+
+    async function loadProxiesAndAccounts(opts = {}) {
+      if (proxiesState.activeFetch) {
+        proxiesState.activeFetch.abort();
+      }
+
+      const controller = new AbortController();
+      proxiesState.activeFetch = controller;
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const [govRes, proxiesRes, accountsRes] = await Promise.all([
+          fetch(`${API_URL}/api/admin/governor/status`, { headers, signal: controller.signal }),
+          fetch(`${API_URL}/api/admin/proxies`, { headers, signal: controller.signal }),
+          fetch(`${API_URL}/api/admin/accounts${proxiesState.selectedPlatform ? `?platform=${encodeURIComponent(proxiesState.selectedPlatform)}` : ''}`, { headers, signal: controller.signal })
+        ]);
+
+        if (govRes.status === 401 || govRes.status === 403 || proxiesRes.status === 401 || proxiesRes.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const govData = await govRes.json().catch(() => ({}));
+        const proxiesData = await proxiesRes.json().catch(() => ({}));
+        const accountsData = await accountsRes.json().catch(() => ({}));
+
+        if (govData.success && govData.status) {
+          renderGovernorMetrics(govData.status);
+        }
+
+        if (proxiesData.success) {
+          renderProxiesTable(proxiesData.proxies || []);
+        }
+
+        if (accountsData.success) {
+          renderAccountsTable(accountsData.accounts || []);
+          renderAccountPlatformFilter(accountsData.accounts || []);
+        }
+
+        proxiesState.initialised = true;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Failed to load proxies & accounts:', err);
+        showCheckpointToast(err.message || 'Failed to load proxies & accounts', 'error');
+      } finally {
+        proxiesState.activeFetch = null;
+      }
+    }
+
+    function renderGovernorMetrics(status) {
+      if (typeof document === 'undefined' || !document) return;
+      const healthyEl = document.getElementById('healthy-proxies-count');
+      const rateEl = document.getElementById('current-rate-rps');
+      const lagEl = document.getElementById('consumer-lag');
+      const throttleEl = document.getElementById('throttle-level');
+
+      if (healthyEl) {
+        const ratioPct = Math.round((status.healthyProxyRatio || 0) * 100);
+        healthyEl.textContent = `${status.healthyProxyCount || 0} / ${status.totalProxyCount || 0} (${ratioPct}%)`;
+      }
+      if (rateEl) {
+        rateEl.textContent = `${Number(status.currentReqPerSecond || 0).toFixed(1)} req/s`;
+      }
+      if (lagEl) {
+        lagEl.textContent = `${status.redisConsumerLag || 0} msgs`;
+      }
+      if (throttleEl) {
+        const level = String(status.throttleLevel || 'normal').toUpperCase();
+        throttleEl.textContent = level;
+        if (level === 'CRITICAL' || status.isEmergencyThrottled) {
+          throttleEl.style.color = 'var(--error)';
+        } else if (level === 'THROTTLED') {
+          throttleEl.style.color = 'var(--warning)';
+        } else {
+          throttleEl.style.color = 'var(--success)';
+        }
+      }
+    }
+
+    function renderProxiesTable(proxies) {
+      if (typeof document === 'undefined' || !document) return;
+      const tbody = document.getElementById('proxies-body');
+      if (!tbody) return;
+
+      if (proxies.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty-state small">
+              <div class="icon">🌐</div>
+              <p>No proxies registered in the pool.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = proxies.map(p => {
+        const isQuarantined = p.status === 'quarantined';
+        const remainingQuarantine = p.quarantinedUntil ? renderRelativeTime(p.quarantinedUntil) : '—';
+        const proxyKey = p.key || p.server;
+
+        return `
+          <tr data-proxy-key="${esc(proxyKey)}">
+            <td><strong>${esc(p.server || `${p.protocol}://${p.host}:${p.port}`)}</strong></td>
+            <td>${esc(p.protocol ? p.protocol.toUpperCase() : 'HTTP')}</td>
+            <td>${p.residential ? '<span class="status-pill status-active">Residential</span>' : '<span class="status-pill">Datacenter</span>'}</td>
+            <td><span class="status-pill status-${esc(p.status)}">${esc(p.status)}</span></td>
+            <td>${isQuarantined ? `Until ${esc(new Date(p.quarantinedUntil).toLocaleTimeString())}` : (p.expiresAt ? `Expires ${renderRelativeTime(p.expiresAt)}` : 'Permanent')}</td>
+            <td>
+              <div class="checkpoint-actions">
+                ${isQuarantined
+                  ? `<button onclick="releaseProxy('${esc(proxyKey)}')">✅ Release</button>`
+                  : `<button onclick="quarantineProxy('${esc(proxyKey)}')">⛔ Quarantine</button>`}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAccountsTable(accounts) {
+      if (typeof document === 'undefined' || !document) return;
+      const tbody = document.getElementById('accounts-body');
+      if (!tbody) return;
+
+      if (accounts.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="empty-state small">
+              <div class="icon">👥</div>
+              <p>No accounts registered for this platform filter.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = accounts.map(acc => {
+        const isHibernating = acc.status === 'hibernating';
+        const remainingTime = isHibernating && acc.remainingTimeMs ? `${Math.ceil(acc.remainingTimeMs / 1000)}s` : '—';
+        const assignedProxyStr = acc.assignedProxy
+          ? (typeof acc.assignedProxy === 'object' ? `${acc.assignedProxy.scheme || 'http'}://${acc.assignedProxy.host}:${acc.assignedProxy.port}` : String(acc.assignedProxy))
+          : 'None';
+
+        return `
+          <tr data-account-id="${esc(acc.accountId)}" data-platform="${esc(acc.platform)}">
+            <td><span class="status-pill status-active">${esc(acc.platform)}</span></td>
+            <td><strong>@${esc(acc.accountId)}</strong></td>
+            <td><span class="status-pill status-${esc(acc.status)}">${esc(acc.status)}</span></td>
+            <td>${esc(remainingTime)}</td>
+            <td>${esc(acc.reason || '—')}</td>
+            <td>${acc.velocity || 0} req/m</td>
+            <td><code>${esc(assignedProxyStr)}</code></td>
+            <td>
+              <div class="checkpoint-actions">
+                ${isHibernating ? `<button onclick="wakeAccount('${esc(acc.accountId)}', '${esc(acc.platform)}')">☀️ Wake</button>` : ''}
+                <button onclick="rotateAccount('${esc(acc.accountId)}', '${esc(acc.platform)}')">🔄 Rotate</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAccountPlatformFilter(accounts = []) {
+      if (typeof document === 'undefined' || !document) return;
+      const select = document.getElementById('filter-account-platform');
+      if (!select || select.dataset.initialised === 'true') return;
+
+      const platforms = [...new Set(accounts.map(a => a.platform).filter(Boolean))];
+      if (platforms.length) {
+        select.innerHTML = '<option value="">All Platforms</option>' +
+          platforms.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+        select.dataset.initialised = 'true';
+        select.value = proxiesState.selectedPlatform;
+        select.addEventListener('change', () => {
+          proxiesState.selectedPlatform = select.value;
+          loadProxiesAndAccounts();
+        });
+      }
+    }
+
+    async function quarantineProxy(proxyKey) {
+      proxiesState.actionInFlight = true;
+      stopProxiesRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/proxies/quarantine`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ proxy: proxyKey, durationMs: 300000 })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to quarantine proxy');
+        }
+
+        showCheckpointToast('✅ Proxy quarantined for 5m', 'success');
+        await loadProxiesAndAccounts();
+      } catch (err) {
+        console.error('Quarantine proxy failed:', err);
+        showCheckpointToast(err.message || 'Quarantine proxy failed', 'error');
+      } finally {
+        proxiesState.actionInFlight = false;
+        if (document.getElementById('tab-proxies')?.classList.contains('active')) {
+          startProxiesRefresh();
+        }
+      }
+    }
+
+    async function releaseProxy(proxyKey) {
+      proxiesState.actionInFlight = true;
+      stopProxiesRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/proxies/release`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ proxy: proxyKey })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to release proxy');
+        }
+
+        showCheckpointToast('✅ Proxy released from quarantine', 'success');
+        await loadProxiesAndAccounts();
+      } catch (err) {
+        console.error('Release proxy failed:', err);
+        showCheckpointToast(err.message || 'Release proxy failed', 'error');
+      } finally {
+        proxiesState.actionInFlight = false;
+        if (document.getElementById('tab-proxies')?.classList.contains('active')) {
+          startProxiesRefresh();
+        }
+      }
+    }
+
+    async function wakeAccount(accountId, platform) {
+      proxiesState.actionInFlight = true;
+      stopProxiesRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/accounts/wake`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ accountId, platform })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to wake account');
+        }
+
+        showCheckpointToast(`✅ Account @${accountId} is now active`, 'success');
+        await loadProxiesAndAccounts();
+      } catch (err) {
+        console.error('Wake account failed:', err);
+        showCheckpointToast(err.message || 'Wake account failed', 'error');
+      } finally {
+        proxiesState.actionInFlight = false;
+        if (document.getElementById('tab-proxies')?.classList.contains('active')) {
+          startProxiesRefresh();
+        }
+      }
+    }
+
+    async function rotateAccount(accountId, platform) {
+      proxiesState.actionInFlight = true;
+      stopProxiesRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/accounts/rotate`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ accountId, platform })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to rotate account');
+        }
+
+        showCheckpointToast(`✅ Rotated to next account: @${data.nextAccountId || 'none'}`, 'success');
+        await loadProxiesAndAccounts();
+      } catch (err) {
+        console.error('Rotate account failed:', err);
+        showCheckpointToast(err.message || 'Rotate account failed', 'error');
+      } finally {
+        proxiesState.actionInFlight = false;
+        if (document.getElementById('tab-proxies')?.classList.contains('active')) {
+          startProxiesRefresh();
+        }
+      }
+    }
+
+    function refreshProxiesAndAccounts() {
+      loadProxiesAndAccounts();
+    }
+
+    // Initialize checkpoints & proxies UI
     bindCheckpointFilters();
     window.addEventListener('hashchange', handleHashRoute);
     window.addEventListener('beforeunload', () => {
       stopCheckpointRefresh();
+      stopProxiesRefresh();
       if (checkpointsState.activeFetch) checkpointsState.activeFetch.abort();
+      if (proxiesState.activeFetch) proxiesState.activeFetch.abort();
     });
 
     if (window.location.hash === '#jobs' || window.location.hash === '#checkpoints') {
       switchTab('checkpoints');
+    } else if (window.location.hash === '#proxies' || window.location.hash === '#accounts') {
+      switchTab('proxies');
     } else {
       switchTab('sessions');
     }

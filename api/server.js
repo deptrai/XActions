@@ -606,55 +606,57 @@ app.use(/** @type {import('express').RequestHandler} */ ((req, res) => {
 }));
 
 // Use httpServer instead of app.listen for Socket.io support
-httpServer.listen(PORT, async () => {
-  console.log(`🚀 XActions API Server running on port ${PORT}`);
-  console.log(`🔌 WebSocket server ready for real-time connections`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  
-  // Initialize plugin system and mount plugin routes
-  try {
-    const pluginCount = /** @type {number} */ (await initializePlugins());
-    if (pluginCount > 0) {
-      mountPluginRoutes();
-      console.log(`📦 Plugins loaded: ${pluginCount}`);
+if (process.env.NODE_ENV !== 'test') {
+  httpServer.listen(PORT, async () => {
+    console.log(`🚀 XActions API Server running on port ${PORT}`);
+    console.log(`🔌 WebSocket server ready for real-time connections`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+    // Initialize plugin system and mount plugin routes
+    try {
+      const pluginCount = /** @type {number} */ (await initializePlugins());
+      if (pluginCount > 0) {
+        mountPluginRoutes();
+        console.log(`📦 Plugins loaded: ${pluginCount}`);
+      }
+    } catch (error) {
+      console.warn('⚠️  Plugin system initialization warning:', /** @type {Error} */ (error).message);
     }
-  } catch (error) {
-    console.warn('⚠️  Plugin system initialization warning:', /** @type {Error} */ (error).message);
-  }
-  
-  // Optional: Validate x402 micropayment config (only relevant if self-hosting with payments)
-  try {
-    const x402Validation = validateX402Config(false);
-    if (x402Validation.valid) {
-      console.log(`  ├─ x402 micropayments: enabled`);
+
+    // Optional: Validate x402 micropayment config (only relevant if self-hosting with payments)
+    try {
+      const x402Validation = validateX402Config(false);
+      if (x402Validation.valid) {
+        console.log(`  ├─ x402 micropayments: enabled`);
+      }
+      // Silently skip if not configured — x402 is optional
+    } catch (error) {
+      // x402 is optional — don't crash if not configured
+      if (process.env.DEBUG) console.warn('x402 config:', /** @type {Error} */ (error).message);
     }
-    // Silently skip if not configured — x402 is optional
-  } catch (error) {
-    // x402 is optional — don't crash if not configured
-    if (process.env.DEBUG) console.warn('x402 config:', /** @type {Error} */ (error).message);
-  }
-  
-  // Initialize licensing and telemetry
-  await initializeLicensing();
 
-  // Start unfollower auto-scan scheduler
-  startScheduler(io);
+    // Initialize licensing and telemetry
+    await initializeLicensing();
 
-  // Start Facebook scheduled-post ticker (Story 4.1) — runs in this server process
-  // so global.io is live and facebook:operation events reach connected clients.
-  // schedulerStarted guard keeps it single-fire. ENABLE_FB_SCHEDULER=false disables
-  // it (tests / a dedicated-scheduler deployment).
-  if (process.env.ENABLE_FB_SCHEDULER !== 'false') {
-    startFacebookScheduler();
-  }
+    // Start unfollower auto-scan scheduler
+    startScheduler(io);
 
-  // Start Tweet scheduler (EPS-2) — same in-process pattern as the Facebook scheduler:
-  // 1-minute node-cron tick, ±2-min SLA, per-user ≤5/hour throughput cap with jitter,
-  // atomic pending→running claim, stale-running sweep on startup. ENABLE_TWEET_SCHEDULER=false
-  // disables it (tests / a dedicated-scheduler deployment).
-  if (process.env.ENABLE_TWEET_SCHEDULER !== 'false') {
-    startTweetScheduler();
-  }
-});
+    // Start Facebook scheduled-post ticker (Story 4.1) — runs in this server process
+    // so global.io is live and facebook:operation events reach connected clients.
+    // schedulerStarted guard keeps it single-fire. ENABLE_FB_SCHEDULER=false disables
+    // it (tests / a dedicated-scheduler deployment).
+    if (process.env.ENABLE_FB_SCHEDULER !== 'false') {
+      startFacebookScheduler();
+    }
+
+    // Start Tweet scheduler (EPS-2) — same in-process pattern as the Facebook scheduler:
+    // 1-minute node-cron tick, ±2-min SLA, per-user ≤5/hour throughput cap with jitter,
+    // atomic pending→running claim, stale-running sweep on startup. ENABLE_TWEET_SCHEDULER=false
+    // disables it (tests / a dedicated-scheduler deployment).
+    if (process.env.ENABLE_TWEET_SCHEDULER !== 'false') {
+      startTweetScheduler();
+    }
+  });
+}
 
 export default app;
