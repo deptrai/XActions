@@ -294,6 +294,9 @@ router.post('/x402/webhooks/test', async (req, res) => {
  */
 router.get('/stream/metrics', authenticateToken, requireAdmin, async (_req, res) => {
   try {
+    if (!defaultStreamMetricsCollector) {
+      return res.status(503).json({ success: false, error: 'Stream metrics collector unavailable' });
+    }
     const metrics = await defaultStreamMetricsCollector.getMetrics();
     res.json({ success: true, metrics });
   } catch (err) {
@@ -307,6 +310,9 @@ router.get('/stream/metrics', authenticateToken, requireAdmin, async (_req, res)
  */
 router.get('/stream/alerts', authenticateToken, requireAdmin, async (_req, res) => {
   try {
+    if (!defaultStreamAlertEngine) {
+      return res.status(503).json({ success: false, error: 'Stream alert engine unavailable' });
+    }
     const status = defaultStreamAlertEngine.getAlertStatus();
     res.json({ success: true, alerts: status });
   } catch (err) {

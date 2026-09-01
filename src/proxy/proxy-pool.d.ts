@@ -25,7 +25,8 @@ export class ProxyIpPool {
 
   getProxy(options?: Record<string, unknown>): Proxy | null;
   getProxyAgent(proxy: Proxy, options?: Record<string, unknown>): unknown;
-  release(proxy: Proxy): void;
+  release(proxy: ProxyInput): boolean;
+  listAll(): Array<{ server: string; protocol: string; isQuarantined: boolean; quarantinedUntil: number | null; healthy: boolean; failCount: number }>;
   toPlaywrightProxy(proxy: ProxyInput): (Proxy & { bypass?: string }) | null;
   getBrowserArgs(proxy: ProxyInput): string[];
 }
