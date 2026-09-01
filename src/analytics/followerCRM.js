@@ -22,16 +22,19 @@ const DB_DIR = path.join(os.homedir(), '.xactions');
 const DB_PATH = path.join(DB_DIR, 'analytics.db');
 
 let _db = null;
+let _dbError = null;
 
 function getDb() {
   if (_db) return _db;
+  if (_dbError) throw _dbError;
 
-  fs.mkdirSync(DB_DIR, { recursive: true });
-  _db = new Database(DB_PATH);
-  _db.pragma('journal_mode = WAL');
-  _db.pragma('foreign_keys = ON');
+  try {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+    _db = new Database(DB_PATH);
+    _db.pragma('journal_mode = WAL');
+    _db.pragma('foreign_keys = ON');
 
-  _db.exec(`
+    _db.exec(`
     CREATE TABLE IF NOT EXISTS crm_contacts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
@@ -96,6 +99,10 @@ function getDb() {
   `);
 
   return _db;
+  } catch (error) {
+    _dbError = new Error(`CRM database unavailable: ${error.message}`);
+    throw _dbError;
+  }
 }
 
 // ============================================================================
