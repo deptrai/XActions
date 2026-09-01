@@ -185,6 +185,56 @@ describe('humanMoveMouse (AC1-AC8 — Story 6.9)', () => {
     ).resolves.toBeUndefined();
     expect(page.calls.mouse.move.length).toBeGreaterThan(0);
   });
+
+  it('physics easing produces slow-start / fast-coast / slow-end velocity profile (Story 6.4)', async () => {
+    const page = makeFakePage();
+    // deterministic rng so the shape is stable: step count = 20 + floor(0.5*16) = 28
+    await humanMoveMouse(page, 1000, 0, { delayFn: async () => {}, rng: () => 0.5, startX: 0, startY: 0 });
+    const moves = page.calls.mouse.move;
+    expect(moves.length).toBeGreaterThanOrEqual(20);
+
+    // Compute per-step distances along the x axis (jitter is 0 with rng=0.5).
+    // Include the distance from the explicit start point to the first recorded move.
+    const distances = [Math.abs(moves[0].x - 0)];
+    for (let i = 1; i < moves.length; i++) {
+      distances.push(Math.abs(moves[i].x - moves[i - 1].x));
+    }
+
+    // With smooth-step easing, first and last steps are smaller than the middle steps.
+    const first = distances[0];
+    const last = distances[distances.length - 1];
+    const mid = distances[Math.floor(distances.length / 2)];
+    expect(first).toBeLessThan(mid);
+    expect(last).toBeLessThan(mid);
+
+    // The curve starts from the start point and ends near the target (1000).
+    expect(moves[0].x).toBeCloseTo(0, 0);
+    expect(moves[moves.length - 1].x).toBeCloseTo(1000, 0);
+  });
+
+  it('physics easing overshoot still corrects back to target (Story 6.4)', async () => {
+    const page = makeFakePage();
+    // Use a deterministic counter that forces overshoot on the 6th RNG call,
+    // then returns 0.5 for all subsequent calls.
+    let callIdx = 0;
+    const rng = () => {
+      callIdx++;
+      if (callIdx === 6) return 0.01; // triggers willOvershoot (< 0.15)
+      return 0.5;
+    };
+    await humanMoveMouse(page, 400, 300, { delayFn: async () => {}, rng, startX: 0, startY: 0 });
+    const moves = page.calls.mouse.move;
+    const last = moves[moves.length - 1];
+    // Final position must land back on target (± jitter, which is 0 with rng=0.5)
+    expect(last.x).toBeCloseTo(400, 0);
+    expect(last.y).toBeCloseTo(300, 0);
+
+    // There must be at least one move beyond the target during overshoot
+    const maxX = Math.max(...moves.map((m) => m.x));
+    const maxY = Math.max(...moves.map((m) => m.y));
+    expect(maxX).toBeGreaterThan(400);
+    expect(maxY).toBeGreaterThan(300);
+  });
 });
 
 // ============================================================================
@@ -685,6 +735,26 @@ describe('humanScroll (AC1-AC9 — Story 6.12)', () => {
       const maxMoveX = Math.max(...moves.map((m) => m.x));
       // 5px * 0.06 = 0.3px -> clamped to minimum 1px. Max move x near 6px ± jitter
       expect(maxMoveX).toBeLessThanOrEqual(8);
+    });
+
+    it('short 3px movement still reaches target with physics easing (Story 6.4)', async () => {
+      const page = makeFakePage();
+      await humanMoveMouse(page, 3, 0, { delayFn: async () => {}, rng: () => 0.5, startX: 0, startY: 0 });
+      const moves = page.calls.mouse.move;
+      const last = moves[moves.length - 1];
+      expect(last.x).toBeCloseTo(3, 0);
+    });
+
+    it('physics easing clamps t to [0, 1] and returns finite values (Story 6.4)', async () => {
+      const page = makeFakePage();
+      // With rng=0.5, no overshoot, step count 28. physicsEase receives t in [0,1].
+      // The result must always be finite and land on target.
+      await humanMoveMouse(page, 100, 100, { delayFn: async () => {}, rng: () => 0.5, startX: 0, startY: 0 });
+      const moves = page.calls.mouse.move;
+      expect(moves.length).toBeGreaterThanOrEqual(20);
+      const last = moves[moves.length - 1];
+      expect(Number.isFinite(last.x)).toBe(true);
+      expect(Number.isFinite(last.y)).toBe(true);
     });
 
     it('humanMoveMouse throws when x or y is not a finite number (AC2)', async () => {

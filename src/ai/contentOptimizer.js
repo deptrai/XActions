@@ -20,10 +20,11 @@ const DEFAULT_MODEL = 'meta-llama/llama-3-8b-instruct:free';
  * Suggest relevant hashtags for a tweet
  */
 export async function suggestHashtags(tweetText, options = {}) {
+  const inputText = typeof tweetText === 'string' ? tweetText : '';
   const { count = 5, niche, trending = false, language = 'en' } = options;
 
   // Strategy 1: Rule-based (offline)
-  const ruleBased = getRuleBasedHashtags(tweetText, niche);
+  const ruleBased = getRuleBasedHashtags(inputText, niche);
 
   // Strategy 2: AI-based (if API key available)
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -56,17 +57,18 @@ export async function suggestHashtags(tweetText, options = {}) {
  * Optimize a tweet for engagement
  */
 export async function optimizeTweet(text, options = {}) {
+  const inputText = typeof text === 'string' ? text : '';
   const { tone = 'casual', audience, goal = 'engagement' } = options;
 
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (apiKey) {
     try {
-      const prompt = `Optimize this tweet for maximum ${goal} on Twitter/X. Tone: ${tone}.${audience ? ` Audience: ${audience}.` : ''} Return ONLY the optimized tweet text, nothing else.\n\nOriginal: "${text}"`;
+      const prompt = `Optimize this tweet for maximum ${goal} on Twitter/X. Tone: ${tone}.${audience ? ` Audience: ${audience}.` : ''} Return ONLY the optimized tweet text, nothing else.\n\nOriginal: "${inputText}"`;
       const optimized = await callLLM(apiKey, prompt);
-      const changes = detectChanges(text, optimized.trim());
+      const changes = detectChanges(inputText, optimized.trim());
 
       return {
-        original: text,
+        original: inputText,
         optimized: optimized.trim(),
         changes,
         predictedLift: `~${Math.round(Math.random() * 20 + 10)}% higher engagement`,
@@ -77,20 +79,21 @@ export async function optimizeTweet(text, options = {}) {
   }
 
   // Offline optimization
-  return offlineOptimize(text, goal);
+  return offlineOptimize(inputText, goal);
 }
 
 /**
  * Predict tweet performance
  */
 export function predictPerformance(text) {
-  const analysis = analyzeText(text);
+  const inputText = typeof text === 'string' ? text : '';
+  const analysis = analyzeText(inputText);
   let engagementScore = 50;
 
   // Length optimization (70-100 chars is optimal)
-  if (text.length >= 70 && text.length <= 100) engagementScore += 15;
-  else if (text.length > 200) engagementScore -= 10;
-  else if (text.length < 30) engagementScore -= 5;
+  if (inputText.length >= 70 && inputText.length <= 100) engagementScore += 15;
+  else if (inputText.length > 200) engagementScore -= 10;
+  else if (inputText.length < 30) engagementScore -= 5;
 
   // Has question
   if (analysis.hasQuestion) engagementScore += 15;
@@ -110,13 +113,13 @@ export function predictPerformance(text) {
   if (analysis.hasNumbers) engagementScore += 5;
 
   // Starts with "You" (higher engagement)
-  if (text.trim().startsWith('You ')) engagementScore += 10;
+  if (inputText.trim().startsWith('You ')) engagementScore += 10;
 
   // Starts with "I" (lower engagement)
-  if (text.trim().startsWith('I ')) engagementScore -= 5;
+  if (inputText.trim().startsWith('I ')) engagementScore -= 5;
 
   // Thread indicator
-  if (text.includes('🧵') || text.includes('Thread:') || text.match(/\d+\//)) engagementScore += 10;
+  if (inputText.includes('🧵') || inputText.includes('Thread:') || inputText.match(/\d+\//)) engagementScore += 10;
 
   const confidence = Math.min(100, Math.max(0, engagementScore));
 
@@ -124,8 +127,8 @@ export function predictPerformance(text) {
   if (!analysis.hasQuestion) suggestions.push('Add a question to increase replies');
   if (!analysis.hasCTA) suggestions.push('Add a call-to-action (like, RT, follow, link)');
   if (analysis.emojiCount === 0) suggestions.push('Add 1-2 relevant emojis for visibility');
-  if (text.length > 240) suggestions.push('Consider shortening — tweets under 100 chars get higher engagement');
-  if (text.trim().startsWith('I ')) suggestions.push('Reframe from "I" to "You" perspective for more engagement');
+  if (inputText.length > 240) suggestions.push('Consider shortening — tweets under 100 chars get higher engagement');
+  if (inputText.trim().startsWith('I ')) suggestions.push('Reframe from "I" to "You" perspective for more engagement');
   if (analysis.hashtagCount === 0) suggestions.push('Add 1-3 relevant hashtags');
   if (analysis.hashtagCount > 3) suggestions.push('Reduce hashtags to 1-3 for best engagement');
 
@@ -142,11 +145,12 @@ export function predictPerformance(text) {
  * Generate N variations of a tweet
  */
 export async function generateVariations(text, count = 3) {
+  const inputText = typeof text === 'string' ? text : '';
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (apiKey) {
     try {
-      const prompt = `Generate ${count} different variations of this tweet. Each should have a different hook/angle. Return each variation on its own line, numbered 1. 2. 3. Nothing else.\n\nOriginal: "${text}"`;
+      const prompt = `Generate ${count} different variations of this tweet. Each should have a different hook/angle. Return each variation on its own line, numbered 1. 2. 3. Nothing else.\n\nOriginal: "${inputText}"`;
       const result = await callLLM(apiKey, prompt);
       const variations = result.split('\n')
         .map(l => l.replace(/^\d+[\.\)]\s*/, '').trim())
@@ -163,7 +167,7 @@ export async function generateVariations(text, count = 3) {
   }
 
   // Offline variations
-  return generateOfflineVariations(text, count);
+  return generateOfflineVariations(inputText, count);
 }
 
 /**
