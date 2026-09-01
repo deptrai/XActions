@@ -653,12 +653,25 @@ router.post('/retention/cleanup', requireAdminOrApiKey, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ POST /api/admin/retention/cleanup error:', err);
-    const statusCode = err?.message?.includes('overlapping_run') ? 503 : 500;
+    let statusCode = 500;
+    let errorCode = 'XACT_5000';
+    let errorType = 'internal_error';
+
+    if (err?.isPlatformError) {
+      statusCode = err.statusCode || 500;
+      errorCode = err.code || 'XACT_5000';
+      errorType = err.type || 'internal_error';
+    } else if (err?.message?.includes('overlapping_run')) {
+      statusCode = 503;
+      errorCode = 'XACT_5000';
+      errorType = 'overlapping_run';
+    }
+
     res.status(statusCode).json({
       success: false,
       error: {
-        code: 'XACT_5000',
-        type: statusCode === 503 ? 'overlapping_run' : 'internal_error',
+        code: errorCode,
+        type: errorType,
         message: err instanceof Error ? err.message : String(err),
       },
     });
@@ -685,11 +698,15 @@ router.get('/retention/stats', requireAdminOrApiKey, async (req, res) => {
     res.json(stats);
   } catch (err) {
     console.error('❌ GET /api/admin/retention/stats error:', err);
-    res.status(500).json({
+    const statusCode = err?.isPlatformError ? err.statusCode || 500 : 500;
+    const errorCode = err?.isPlatformError ? err.code || 'XACT_5000' : 'XACT_5000';
+    const errorType = err?.isPlatformError ? err.type || 'internal_error' : 'internal_error';
+
+    res.status(statusCode).json({
       success: false,
       error: {
-        code: 'XACT_5000',
-        type: 'internal_error',
+        code: errorCode,
+        type: errorType,
         message: err instanceof Error ? err.message : String(err),
       },
     });

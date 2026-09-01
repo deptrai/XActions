@@ -90,7 +90,7 @@ import facebookAccountsRoutes from './routes/facebookAccounts.js';
 import { startFacebookScheduler } from './services/facebookScheduler.js';
 import tweetScheduleRoutes from './routes/tweetSchedule.js';
 import { startTweetScheduler } from './services/tweetScheduler.js';
-import { startRetentionScheduler, requestRetentionShutdown } from './services/retentionScheduler.js';
+import { startRetentionScheduler, requestRetentionShutdown, getIsProcessing } from './services/retentionScheduler.js';
 import platformRoutes from './routes/platform.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
@@ -673,8 +673,20 @@ if (process.env.NODE_ENV !== 'test') {
     process.on(signal, () => {
       console.log(`🛑 [Server] Received ${signal}, shutting down...`);
       requestRetentionShutdown();
-      httpServer.close(() => {
+      httpServer.close(async () => {
         console.log('✅ [Server] HTTP server closed.');
+        // Wait for any in-flight retention cleanup to finish (with a safety cap).
+        const SHUTDOWN_POLL_MS = 100;
+        const SHUTDOWN_TIMEOUT_MS = 30000;
+        const shutdownStart = Date.now();
+        while (getIsProcessing() && Date.now() - shutdownStart < SHUTDOWN_TIMEOUT_MS) {
+          await new Promise((resolve) => setTimeout(resolve, SHUTDOWN_POLL_MS));
+        }
+        if (getIsProcessing()) {
+          console.warn('⚠️ [Server] In-flight retention cleanup did not finish within shutdown timeout; forcing exit.');
+        } else {
+          console.log('✅ [Server] Retention cleanup finished; exiting.');
+        }
         process.exit(process.exitCode || 0);
       });
     });

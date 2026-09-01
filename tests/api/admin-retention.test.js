@@ -235,15 +235,15 @@ describe('Story 10.6: Admin Retention API — Cleanup & Stats Behavior', () => {
     expect(res.body.data.posts.olderThan30d).toBeGreaterThanOrEqual(1);
   });
 
-  it('POST /api/admin/retention/cleanup returns 500 with error envelope on invalid platform', async () => {
+  it('POST /api/admin/retention/cleanup returns 400 with error envelope on invalid platform', async () => {
     const res = await request(app)
       .post('/api/admin/retention/cleanup')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ dryRun: true, platform: 'not-a-platform' });
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
-    expect(res.body.error.code).toBe('XACT_5000');
+    expect(res.body.error.code).toBe('XACT_4001');
     expect(res.body.error.message).toContain('Unsupported platform filter');
   });
 
@@ -262,10 +262,11 @@ describe('Story 10.6: Admin Retention API — Cleanup & Stats Behavior', () => {
       },
     });
 
-    const { runGuardedRetention } = await import('../../api/services/retentionScheduler.js');
-    // Acquire lock without releasing
+    // Acquire advisory lock without releasing, simulating an in-flight run.
     const { acquireRetentionLock } = await import('../../api/services/retentionScheduler.js');
-    acquireRetentionLock();
+    const { prisma: testPrisma } = await import('../store/test-prisma-client.js');
+    const lockAcquired = await acquireRetentionLock(testPrisma);
+    expect(lockAcquired).toBe(true);
 
     try {
       const res = await request(app)
@@ -279,7 +280,7 @@ describe('Story 10.6: Admin Retention API — Cleanup & Stats Behavior', () => {
       expect(res.body.error.message).toContain('already running');
     } finally {
       const { releaseRetentionLock } = await import('../../api/services/retentionScheduler.js');
-      releaseRetentionLock();
+      await releaseRetentionLock(testPrisma);
     }
   });
 });

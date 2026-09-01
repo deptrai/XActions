@@ -17,21 +17,49 @@ let isProcessing = false;
 let schedulerStarted = false;
 let shutdownRequested = false;
 
+const RETENTION_ADVISORY_LOCK_KEY = 123456789;
+
+/**
+ * Resolve a Prisma client instance.
+ * @param {import('@prisma/client').PrismaClient} [prisma]
+ * @returns {Promise<import('@prisma/client').PrismaClient>}
+ */
+async function resolvePrisma(prisma) {
+  if (prisma) return prisma;
+  const { default: resolved } = await import('../../api/lib/prisma.js');
+  return resolved;
+}
+
 /**
  * Acquire the retention processing lock.
- * @returns {boolean} true if the lock was acquired
+ * Uses a PostgreSQL advisory lock so the mutex is shared across processes (CLI, API, scheduler).
+ * @param {import('@prisma/client').PrismaClient} [prisma]
+ * @returns {Promise<boolean>} true if the lock was acquired
  */
-export function acquireRetentionLock() {
-  if (isProcessing) return false;
-  isProcessing = true;
-  return true;
+export async function acquireRetentionLock(prisma) {
+  const client = await resolvePrisma(prisma);
+  const [{ pg_try_advisory_lock: acquired }] = await client.$queryRaw`
+    SELECT pg_try_advisory_lock(${RETENTION_ADVISORY_LOCK_KEY}::bigint) AS pg_try_advisory_lock
+  `;
+  if (acquired) {
+    isProcessing = true;
+    return true;
+  }
+  return false;
 }
 
 /**
  * Release the retention processing lock.
+ * @param {import('@prisma/client').PrismaClient} [prisma]
  */
-export function releaseRetentionLock() {
+export async function releaseRetentionLock(prisma) {
   isProcessing = false;
+  try {
+    const client = await resolvePrisma(prisma);
+    await client.$queryRaw`SELECT pg_advisory_unlock(${RETENTION_ADVISORY_LOCK_KEY}::bigint)`;
+  } catch (err) {
+    console.error('❌ [RetentionScheduler] Failed to release advisory lock:', err);
+  }
 }
 
 /**
@@ -57,12 +85,10 @@ export function getIsProcessing() {
  * }>}
  */
 export async function runRetentionCycle(options = {}) {
-  if (isProcessing) {
+  if (!(await acquireRetentionLock(options.prisma))) {
     console.warn('⚠️ [RetentionScheduler] Previous cleanup cycle is still running. Skipping overlapping run.');
     return { executed: false, skipped: true, reason: 'overlapping_run' };
   }
-
-  isProcessing = true;
   const startTime = Date.now();
   console.log('🔄 [RetentionScheduler] Starting daily retention cleanup job...');
 
@@ -93,6 +119,7 @@ export async function runRetentionCycle(options = {}) {
     if (shutdownRequested) {
       stopRetentionScheduler();
     }
+    await releaseRetentionLock(options.prisma);
   }
 }
 
@@ -113,7 +140,7 @@ export async function runRetentionCycle(options = {}) {
  * @returns {Promise<import('../../src/store/retention-cleaner.js').RunRetentionPipelineResult>}
  */
 export async function runGuardedRetention(options = {}) {
-  if (!acquireRetentionLock()) {
+  if (!(await acquireRetentionLock(options.prisma))) {
     throw new Error('Retention cleanup is already running (overlapping_run)');
   }
 
@@ -121,7 +148,7 @@ export async function runGuardedRetention(options = {}) {
     const cleaner = options.cleaner || defaultRetentionCleaner;
     return await cleaner.runRetentionPipeline(options);
   } finally {
-    releaseRetentionLock();
+    await releaseRetentionLock(options.prisma);
   }
 }
 

@@ -2,7 +2,7 @@
 story_id: 10.6
 story_key: 10-6-data-retention-cleanup-job
 epic: 10 — Unified PostgreSQL Storage (Prisma) & Core Interfaces
-status: in-progress
+status: done
 baseline_commit: d9363ea9b4a45051d9544db7e1f40ffb6f50536c
 related_ads:
   - AD-10
@@ -301,3 +301,17 @@ related_ads:
 
 - **2026-09-01:** Khởi tạo story `10-6-data-retention-cleanup-job` backfill AD-10 / Story 10.2 cho Data Retention Lifecycle (raw data 30 ngày, checkpoints 90 ngày).
 - **2026-09-01 (post code review):** Fix `PlatformError` constructor signature; thêm `SUPPORTED_PLATFORMS` validation; sửa orphan comment logic không dùng `post: { is: null }`; đổi checkpoint cutoff sang `lastCrawledAt` với fallback `updatedAt`; thêm `acquireRetentionLock` / `runGuardedRetention` để admin API, scheduler và CLI chia sẻ mutex chống overlapping runs; thêm graceful shutdown trong `api/server.js`; thêm `tests/api/admin-retention.test.js` và `tests/cli/retention.test.js`; tất cả 30 test cases pass.
+- **2026-09-02 (final validation review):** Apply 8 patch findings: sửa checkpoint fallback query, orphan comment cursor pagination, integer validator float guard, pipeline success logic, graceful shutdown wait, `PlatformError` status preservation, CLI qua `runGuardedRetention` với PostgreSQL advisory lock, adopt `disconnectPrismaUnlessShared`.
+
+---
+
+## Review Findings (2026-09-01)
+
+- [x] [Review][Patch] Checkpoint `lastCrawledAt: null` fallback now matches correctly in `cleanCheckpoints` [`src/store/retention-cleaner.js:451`] — replaced `whereClause` with `whereBase` so the `OR` fallback for `lastCrawledAt: null` is not ANDed out by a top-level `lastCrawledAt` condition.
+- [x] [Review][Patch] Orphan comment Phase 2 now paginates with a cursor [`src/store/retention-cleaner.js:314`] — tracks `lastOrphanId` and advances the cursor instead of breaking on a non-orphan page.
+- [x] [Review][Patch] Integer validators now reject floating-point values [`src/store/retention-cleaner.js:74`] — added `!Number.isInteger(parsed)` checks to `validatePositiveInt` and `validateNonNegativeInt`.
+- [x] [Review][Patch] `runRetentionPipeline` now reports `success: false` on checkpoint errors [`src/store/retention-cleaner.js:738`] — `success` is now `rawResult.success && !checkpointError`, regardless of `dryRun`.
+- [x] [Review][Patch] Graceful shutdown now waits for in-flight retention [`api/server.js:676`] — `httpServer.close` callback polls `getIsProcessing()` with a 30s safety cap before `process.exit`.
+- [x] [Review][Patch] Admin routes now respect `PlatformError` status/code [`api/routes/admin.js:656`] — POST cleanup and GET stats preserve `err.statusCode`, `err.code`, and `err.type` when `isPlatformError` is true.
+- [x] [Review][Patch] CLI retention now uses `runGuardedRetention` [`src/cli/commands/retention.js:52`] — CLI shares the same PostgreSQL advisory lock as scheduler and admin API; lock upgraded from in-memory flag to `pg_try_advisory_lock`.
+- [x] [Review][Patch] `disconnectPrismaUnlessShared` adopted in CLI [`src/cli/commands/retention.js:94`] — called in both `run` and `status` `finally` blocks with `isSharedSingleton=true`.

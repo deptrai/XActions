@@ -9,7 +9,7 @@
  */
 
 import chalk from 'chalk';
-import { parseCliPositiveInt, parseCliNonNegativeInt, printCliError, disconnectPrisma } from '../shared.js';
+import { parseCliPositiveInt, parseCliNonNegativeInt, printCliError, disconnectPrismaUnlessShared } from '../shared.js';
 
 export function registerRetentionCommand(program) {
   const retentionCmd = program
@@ -33,7 +33,7 @@ export function registerRetentionCommand(program) {
       try {
         const { default: sharedPrisma } = await import('../../../api/lib/prisma.js');
         prisma = sharedPrisma;
-        const { runRetentionPipeline } = await import('../../store/retention-cleaner.js');
+        const { runGuardedRetention } = await import('../../../api/services/retentionScheduler.js');
 
         const retentionDays = options.days ? parseCliPositiveInt(options.days, 'days') : undefined;
         const checkpointRetentionDays = options.checkpointDays
@@ -49,7 +49,7 @@ export function registerRetentionCommand(program) {
           console.log(chalk.bold(`🔄 Starting retention cleanup ${dryRun ? chalk.yellow('(DRY-RUN)') : ''}...`));
         }
 
-        const result = await runRetentionPipeline({
+        const result = await runGuardedRetention({
           retentionDays,
           checkpointRetentionDays,
           batchSize,
@@ -94,7 +94,7 @@ export function registerRetentionCommand(program) {
       } finally {
         // The CLI imports the shared api/lib/prisma.js singleton; do not close it
         // because it is the same connection pool the rest of the process uses.
-        // The default export is the global singleton.
+        await disconnectPrismaUnlessShared(prisma, true);
       }
     });
 
@@ -154,7 +154,8 @@ export function registerRetentionCommand(program) {
       } catch (error) {
         printCliError(error, options);
       } finally {
-        // Shared singleton — intentionally not disconnected.
+        // Shared singleton — do not fully disconnect, just release any local resources if needed.
+        await disconnectPrismaUnlessShared(prisma, true);
       }
     });
 }

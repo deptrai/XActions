@@ -74,7 +74,7 @@ function validatePlatform(platform) {
 function validatePositiveInt(value, name, defaultValue) {
   if (value === undefined || value === null) return defaultValue;
   const parsed = typeof value === 'number' ? value : parseInt(String(value), 10);
-  if (!Number.isFinite(parsed) || parsed <= 0 || Number.isNaN(parsed)) {
+  if (!Number.isFinite(parsed) || parsed <= 0 || Number.isNaN(parsed) || !Number.isInteger(parsed)) {
     throw new PlatformError({
       message: `${name} must be a positive integer, got: ${value}`,
       type: ErrorTypes.VALIDATION,
@@ -96,7 +96,7 @@ function validatePositiveInt(value, name, defaultValue) {
 function validateNonNegativeInt(value, name, defaultValue) {
   if (value === undefined || value === null) return defaultValue;
   const parsed = typeof value === 'number' ? value : parseInt(String(value), 10);
-  if (!Number.isFinite(parsed) || parsed < 0 || Number.isNaN(parsed)) {
+  if (!Number.isFinite(parsed) || parsed < 0 || Number.isNaN(parsed) || !Number.isInteger(parsed)) {
     throw new PlatformError({
       message: `${name} must be a non-negative integer, got: ${value}`,
       type: ErrorTypes.VALIDATION,
@@ -310,12 +310,15 @@ export class RetentionCleaner {
       // (e.g. comments ingested separately, partially orphaned by previous failures, or replies
       // whose parent was removed in an earlier pass). Only delete comments whose postId points
       // to a Post that no longer exists, respecting the platform filter.
+      // Use cursor pagination so a page of non-orphan comments does not stop the scan.
       let orphanConsecutiveEmpty = 0;
+      let lastOrphanId = '';
       while (true) {
         const expiredComments = await prisma.comment.findMany({
           where: {
             crawledAt: { lt: cutoffDate },
             ...(platform ? { platform } : {}),
+            ...(lastOrphanId ? { id: { gt: lastOrphanId } } : {}),
           },
           select: { id: true, postId: true },
           take: batchSize,
@@ -337,7 +340,14 @@ export class RetentionCleaner {
           .map((c) => c.id);
 
         if (orphanCommentIds.length === 0) {
-          break;
+          // No orphans in this page; continue scanning from the last expired comment's id
+          // so we do not get stuck re-fetching the same non-orphan comments.
+          const lastComment = expiredComments[expiredComments.length - 1];
+          if (!lastComment || lastComment.id === lastOrphanId) {
+            break;
+          }
+          lastOrphanId = lastComment.id;
+          continue;
         }
 
         const orphanDeleteResult = await prisma.comment.deleteMany({
@@ -347,6 +357,9 @@ export class RetentionCleaner {
         });
         commentsDeleted += orphanDeleteResult.count;
         batchesExecuted++;
+
+        // Advance cursor past the highest deleted orphan id.
+        lastOrphanId = orphanCommentIds[orphanCommentIds.length - 1];
 
         if (orphanDeleteResult.count === 0) {
           orphanConsecutiveEmpty++;
@@ -448,15 +461,14 @@ export class RetentionCleaner {
       checkpointRetentionDays
     );
 
-    const whereClause = {
+    const whereBase = {
       status: { in: allowedStatuses },
-      lastCrawledAt: { lt: cutoffDate },
       ...(platform ? { platform } : {}),
     };
 
     // Fallback for older checkpoints that may not have lastCrawledAt set.
     const whereWithFallback = {
-      ...whereClause,
+      ...whereBase,
       OR: [
         { lastCrawledAt: { lt: cutoffDate } },
         {
@@ -735,7 +747,7 @@ export class RetentionCleaner {
     }
 
     const dryRun = Boolean(options.dryRun);
-    const success = rawResult.success && (!checkpointError || dryRun);
+    const success = rawResult.success && !checkpointError;
     const combinedBatches = (rawResult.batchesExecuted || 0) + checkpointBatchesExecuted;
 
     return {
