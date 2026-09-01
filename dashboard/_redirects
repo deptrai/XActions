@@ -25,6 +25,7 @@
 /ai-api /ai-api.html 200
 /mcp /mcp.html 200
 /monitor /monitor.html 200
+/platforms/* /platform.html?platform=:splat 200
 /automations /automations.html 200
 /workflows /workflows.html 200
 /agent /agent.html 200

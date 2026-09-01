@@ -49,9 +49,11 @@
   const navItems = [
     // Primary platforms
     { href: '/', label: 'Dashboard', icon: icons.home },
-    { href: '/facebook.html', label: 'Facebook', icon: icons.facebook },
-    { href: '/automations', label: 'X / Twitter', icon: icons.automations },
-    { href: '/thread-composer', label: 'Threads', icon: icons.threadComposer },
+    { href: '/platforms/facebook', label: 'Facebook', icon: icons.facebook },
+    { href: '/platforms/x', label: 'X / Twitter', icon: icons.automations },
+    { href: '/platforms/threads', label: 'Threads', icon: icons.threadComposer },
+    { href: '/platforms/bluesky', label: 'Bluesky', icon: icons.ai },
+    { href: '/platforms/mastodon', label: 'Mastodon', icon: icons.threads },
     // Tools
     { href: '/analytics-dashboard', label: 'Analytics', icon: icons.analytics },
     { href: '/monitor', label: 'Monitor', icon: icons.monitor },
