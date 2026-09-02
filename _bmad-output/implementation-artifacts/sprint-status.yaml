@@ -66,7 +66,7 @@ development_status:
   epic-12: in-progress
   12-1-terminal-ascii-qr-code-login-module: done
   12-2-cdp-remote-attach-mode-chrome-devtools-protocol: done
-  12-3-terminal-qr-full-backfill: ready-for-dev
+  12-3-terminal-qr-full-backfill: review
   epic-12-retrospective: optional
 
   # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---

@@ -27,6 +27,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import prisma from '../../api/lib/prisma.js';
+import { executeActionListTool } from '../scrapers/social/actions-list.js';
 
 import { VERSION } from '../version.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -2867,7 +2868,7 @@ async function executeTool(name, args) {
 
   // Generic cross-platform action discovery
   if (name === 'x_actions_list') {
-    return await executeActionListTool(args);
+    return await executeMcpActionListTool(args);
   }
 
   // Generic cross-platform post/comment crawlers
@@ -2970,46 +2971,13 @@ async function executeTool(name, args) {
 
 /**
  * Execute the x_actions_list tool.
- * Instantiates available social crawlers, calls listActions(), appends
- * the platform field, and cleans up. Optionally filters by platform.
+ * Delegates to the shared action discovery module used by both MCP and CLI.
  *
  * @param {Record<string, unknown>} args
  * @returns {Promise<Record<string, unknown>[]>}
  */
-async function executeActionListTool(args) {
-  const { FacebookCrawler } = await import('../scrapers/social/facebook/crawler.js');
-  const { ThreadsCrawler } = await import('../scrapers/social/threads/crawler.js');
-
-  const crawlers = [
-    new FacebookCrawler(),
-    new ThreadsCrawler(),
-  ];
-
-  try {
-    /** @type {Record<string, unknown>[]} */
-    const allActions = [];
-
-    for (const crawler of crawlers) {
-      const platform = crawler.platform || crawler.name;
-      const actions = crawler.listActions().map((desc) => ({
-        ...desc,
-        platform,
-      }));
-      allActions.push(...actions);
-    }
-
-    if (args?.platform && typeof args.platform === 'string') {
-      return allActions.filter((a) => a.platform === args.platform);
-    }
-
-    return allActions;
-  } finally {
-    for (const crawler of crawlers) {
-      if (typeof crawler.cleanup === 'function') {
-        await crawler.cleanup().catch(() => {});
-      }
-    }
-  }
+async function executeMcpActionListTool(args) {
+  return executeActionListTool({ platform: args?.platform });
 }
 
 /**

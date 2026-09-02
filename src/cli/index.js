@@ -52,6 +52,7 @@ import { registerAgentCommand } from './commands/agent.js';
 import { registerClientCommand } from './commands/client.js';
 import { registerAdminCommand } from './commands/admin.js';
 import { registerRetentionCommand } from './commands/retention.js';
+import { registerActionsCommand } from './commands/actions.js';
 import { renderRootHelp } from './help-groups.js';
 
 const program = new Command();
@@ -118,6 +119,7 @@ registerAgentCommand(program);
 registerClientCommand(program);
 registerAdminCommand(program);
 registerRetentionCommand(program);
+registerActionsCommand(program);
 
 
 

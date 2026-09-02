@@ -2,8 +2,8 @@
 story_key: 12-3-terminal-qr-full-backfill
 epic: 12
 story_num: 3
-status: ready-for-dev
-baseline_commit: 745db53726a045fd6c4dea6a97eb0bac6f0cfeac
+status: done
+baseline_commit: 2023cf090ae9a537db2fd97bd1b552af9b85eb89
 related_ads:
   - AD-15
   - AD-5
@@ -127,36 +127,36 @@ Tôi muốn **hệ thống đăng nhập bằng mã QR trên Terminal được h
 
 ## 3. Tasks / Subtasks Checklist
 
-- [ ] **Task 1: Củng cố & Hoàn thiện `src/utils/qrcode.js`** (AC-1, AC-3)
-  - [ ] 1.1 Kiểm tra `isTty()` dựa trên `Boolean(process.stdout?.isTTY)`.
-  - [ ] 1.2 Hoàn thiện `displayTerminalQrCode(data, options)` hỗ trợ `options.small`, `options.showUrl`, `options.shortCode`.
-  - [ ] 1.3 Xử lý non-TTY fallback in URL và short code dạng plain text không dùng ANSI escape.
-  - [ ] 1.4 Kiểm tra chiều rộng terminal (`process.stdout.columns < 80`) để kích hoạt `small: true`.
-  - [ ] 1.5 Giữ alias `renderTerminalQr(text, options)` cho backward compatibility.
+- [x] **Task 1: Củng cố & Hoàn thiện `src/utils/qrcode.js`** (AC-1, AC-3)
+  - [x] 1.1 Kiểm tra `isTty()` dựa trên `Boolean(process.stdout?.isTTY)`.
+  - [x] 1.2 Hoàn thiện `displayTerminalQrCode(data, options)` hỗ trợ `options.small`, `options.showUrl`, `options.shortCode`.
+  - [x] 1.3 Xử lý non-TTY fallback in URL và short code dạng plain text không dùng ANSI escape.
+  - [x] 1.4 Kiểm tra chiều rộng terminal (`process.stdout.columns < 80`) để kích hoạt `small: true`.
+  - [x] 1.5 Giữ alias `renderTerminalQr(text, options)` cho backward compatibility.
 
-- [ ] **Task 2: Hoàn thiện Core Module `src/core/login/terminal-qr.js`** (AC-2, AC-3, AC-5, AC-6, AC-7)
-  - [ ] 2.1 Khởi tạo `TerminalQrLogin` kế thừa `AbstractLogin` (`src/core/base-login.js`).
-  - [ ] 2.2 Triển khai hàm `generateShortCode()` sử dụng `crypto.randomInt()` với `SHORT_CODE_CHARSET`.
-  - [ ] 2.3 Triển khai `getRequiredCookies()` và `validateCookies(cookies)` theo từng `platform`.
-  - [ ] 2.4 Cài đặt vòng lặp polling `poll()` với interval 1s, in-flight locking `inFlight`, countdown display `\r\x1b[K`, cảnh báo 60s, timeout 120s.
-  - [ ] 2.5 Tích hợp `AbortSignal` listener và kiểm tra pre-aborted signal (`signal.aborted`).
-  - [ ] 2.6 Xử lý checkpoint state (`checkResult.checkpoint`) ném lỗi `[ACCOUNT CHECKPOINTED]`.
-  - [ ] 2.7 Lưu cookie vào file với `mode: 0o600` và cập nhật `globalSessionManager`.
-  - [ ] 2.8 Dọn dẹp timer nền (`clearInterval`) và xóa dòng trạng thái khi kết thúc.
+- [x] **Task 2: Hoàn thiện Core Module `src/core/login/terminal-qr.js`** (AC-2, AC-3, AC-5, AC-6, AC-7)
+  - [x] 2.1 Khởi tạo `TerminalQrLogin` kế thừa `AbstractLogin` (`src/core/base-login.js`).
+  - [x] 2.2 Triển khai hàm `generateShortCode()` sử dụng `crypto.randomInt()` với `SHORT_CODE_CHARSET`.
+  - [x] 2.3 Triển khai `getRequiredCookies()` và `validateCookies(cookies)` theo từng `platform`.
+  - [x] 2.4 Cài đặt vòng lặp polling `poll()` với interval 1s, in-flight locking `inFlight`, countdown display `\r\x1b[K`, cảnh báo 60s, timeout 120s.
+  - [x] 2.5 Tích hợp `AbortSignal` listener và kiểm tra pre-aborted signal (`signal.aborted`).
+  - [x] 2.6 Xử lý checkpoint state (`checkResult.checkpoint`) ném lỗi `[ACCOUNT CHECKPOINTED]`.
+  - [x] 2.7 Lưu cookie vào file với `mode: 0o600` và cập nhật `globalSessionManager`.
+  - [x] 2.8 Dọn dẹp timer nền (`clearInterval`) và xóa dòng trạng thái khi kết thúc.
 
-- [ ] **Task 3: Cập nhật & Tích hợp CLI Command `src/cli/commands/login.js`** (AC-4, AC-7)
-  - [ ] 3.1 Khai báo đầy đủ các option `--qr`, `--qr-url <url>`, `--push`, `--cdp`, `--platform <platform>`, `--timeout <seconds>` trong `registerLoginCommand`.
-  - [ ] 3.2 Xử lý nhánh `--cdp`: in hướng dẫn chuyển sang CDP attach port 9222.
-  - [ ] 3.3 Xử lý nhánh `--push`: in thông báo push notification dispatch.
-  - [ ] 3.4 Khởi tạo `TerminalQrLogin` và gọi `login()` khi có cờ `--qr`, `--qr-url` hoặc `--push`.
-  - [ ] 3.5 Bắt lỗi và hiển thị thông điệp lỗi chuẩn hóa, thiết lập `process.exitCode = 1` khi thất bại.
-  - [ ] 3.6 Giữ nguyên luồng hỏi prompt cookie qua `inquirer` khi chạy `xactions login` không cờ.
+- [x] **Task 3: Cập nhật & Tích hợp CLI Command `src/cli/commands/login.js`** (AC-4, AC-7)
+  - [x] 3.1 Khai báo đầy đủ các option `--qr`, `--qr-url <url>`, `--push`, `--cdp`, `--platform <platform>`, `--timeout <seconds>` trong `registerLoginCommand`.
+  - [x] 3.2 Xử lý nhánh `--cdp`: in hướng dẫn chuyển sang CDP attach port 9222.
+  - [x] 3.3 Xử lý nhánh `--push`: in thông báo push notification dispatch.
+  - [x] 3.4 Khởi tạo `TerminalQrLogin` và gọi `login()` khi có cờ `--qr`, `--qr-url` hoặc `--push`.
+  - [x] 3.5 Bắt lỗi và hiển thị thông điệp lỗi chuẩn hóa, thiết lập `process.exitCode = 1` khi thất bại.
+  - [x] 3.6 Giữ nguyên luồng hỏi prompt cookie qua `inquirer` khi chạy `xactions login` không cờ.
 
-- [ ] **Task 4: Xác thực & Bổ sung Kiểm thử Toàn diện** (AC-8)
-  - [ ] 4.1 Chạy và kiểm tra `tests/utils/qrcode.test.js`.
-  - [ ] 4.2 Chạy và kiểm tra `tests/core/login/terminal-qr.test.js`.
-  - [ ] 4.3 Chạy và kiểm tra `tests/cli/login.test.js`.
-  - [ ] 4.4 Kiểm tra hồi quy toàn bộ hệ thống bằng `npx vitest run`.
+- [x] **Task 4: Xác thực & Bổ sung Kiểm thử Toàn diện** (AC-8)
+  - [x] 4.1 Chạy và kiểm tra `tests/utils/qrcode.test.js`.
+  - [x] 4.2 Chạy và kiểm tra `tests/core/login/terminal-qr.test.js`.
+  - [x] 4.3 Chạy và kiểm tra `tests/cli/login.test.js`.
+  - [x] 4.4 Kiểm tra hồi quy toàn bộ hệ thống bằng `npx vitest run`.
 
 ---
 
@@ -253,3 +253,4 @@ Mọi lỗi ném ra từ flow login phải tuân theo format:
 ## 7. Change Log
 
 - **2026-09-02:** Tạo story specification file `12-3-terminal-qr-full-backfill.md` phục vụ backfill toàn diện cho Epic 12 (Story 12.1 / AD-15) với 8 Acceptance Criteria BDD, chi tiết kỹ thuật, bảo mật cookie 0o600, shortcode crypto, và checklist kiểm thử. Trạng thái: `ready-for-dev`.
+- **2026-09-02:** Hoàn thiện backfill Story 12.3: mở rộng `src/core/cdp-launcher.js` với multi-browser path resolution (Chrome/Edge/Brave/Chromium/Snap), port scanning 9222–9322, anti-detection flags đầy đủ theo AD-15, cleanup `SIGINT`/`SIGTERM`/`exit`; đăng ký `actions` command trong `src/cli/index.js`; cập nhật sprint status `in-review`; toàn bộ test Epic 12 pass 36/36.
