@@ -183,56 +183,78 @@ function requireAuth() {
 }
 
 /**
- * Show a toast notification
+ * Show a modern toast notification (unified system)
+ * @param {string} message - Message text
+ * @param {'success'|'error'|'warning'|'info'} [type='info'] - Type
+ * @param {number} [duration=3500] - Duration in ms
  */
-function showToast(message, type = 'info') {
-  // Remove existing toasts
-  document.querySelectorAll('.toast').forEach(t => t.remove());
-  
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `
-    <span class="toast-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
-    <span class="toast-message">${message}</span>
-  `;
-  
-  // Add styles if not present
-  if (!document.getElementById('toast-styles')) {
-    const styles = document.createElement('style');
-    styles.id = 'toast-styles';
-    styles.textContent = `
-      .toast {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background: #16181c;
-        border: 1px solid #2f3336;
-        border-radius: 12px;
-        padding: 12px 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        color: #e7e9ea;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      }
-      .toast-success { border-color: #00ba7c; }
-      .toast-error { border-color: #f4212e; }
-      @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-      }
-    `;
-    document.head.appendChild(styles);
+function showToast(message, type = 'info', duration = 3500) {
+  let container = document.querySelector('.xa-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'xa-toast-container';
+    container.setAttribute('aria-live', 'polite');
+    container.setAttribute('aria-atomic', 'false');
+    document.body.appendChild(container);
   }
-  
-  document.body.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.style.animation = 'slideIn 0.3s ease reverse';
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
+
+  const icons = {
+    success: '✅',
+    error: '❌',
+    warning: '⚠️',
+    info: '⚡'
+  };
+
+  const toast = document.createElement('div');
+  toast.className = `xa-toast xa-toast--${type}`;
+  toast.role = type === 'error' ? 'alert' : 'status';
+
+  const iconSpan = document.createElement('span');
+  iconSpan.className = 'xa-toast-icon';
+  iconSpan.textContent = icons[type] || icons.info;
+  iconSpan.setAttribute('aria-hidden', 'true');
+
+  const msgSpan = document.createElement('span');
+  msgSpan.className = 'xa-toast-msg';
+  msgSpan.textContent = message;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'xa-toast-close';
+  closeBtn.setAttribute('aria-label', 'Close notification');
+  closeBtn.innerHTML = '&times;';
+  closeBtn.onclick = () => dismiss();
+
+  toast.appendChild(iconSpan);
+  toast.appendChild(msgSpan);
+  toast.appendChild(closeBtn);
+  container.appendChild(toast);
+
+  let timer = setTimeout(dismiss, duration);
+
+  function dismiss() {
+    clearTimeout(timer);
+    toast.classList.add('xa-toast-hiding');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 260);
+  }
+}
+
+// Global helpers on window
+if (typeof window !== 'undefined') {
+  window.showToast = showToast;
+  window.copyToClipboard = async function (text, successMsg = 'Copied to clipboard!') {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(successMsg, 'success');
+      return true;
+    } catch {
+      showToast('Failed to copy', 'error');
+      return false;
+    }
+  };
 }
 
 // Export for module usage (if using modules)

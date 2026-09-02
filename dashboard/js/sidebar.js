@@ -92,7 +92,7 @@
         <div class="user-avatar" id="user-avatar">⚡</div>
         <div class="user-info">
           <div class="user-name" id="user-display-name">XActions</div>
-          <div class="user-handle" id="user-handle">Loading...</div>
+          <div class="user-handle" id="user-handle">@xactions</div>
         </div>
         <span class="user-menu-dots">···</span>
       </a>`;

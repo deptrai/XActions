@@ -314,3 +314,216 @@ body::before {
   .nav-item { transform: none; }
   .nav-item:hover { transform: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* UX ENHANCEMENT SUITE — Modern Shared Component Library                      */
+/* Includes: Unified Toast, Skeleton Loaders, Interactive Badges & Buttons    */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Unified Toast System ──────────────────────────────────────────────── */
+.xa-toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .xa-toast-container {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+  }
+}
+
+.xa-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 280px;
+  max-width: 440px;
+  padding: 12px 18px;
+  background: rgba(22, 24, 28, 0.94);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  animation: xaToastIn 0.3s var(--ease) forwards;
+  transition: transform 0.2s var(--ease), opacity 0.2s;
+}
+
+.xa-toast.xa-toast-hiding {
+  animation: xaToastOut 0.25s var(--ease) forwards;
+}
+
+.xa-toast-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.xa-toast-msg {
+  flex: 1;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.xa-toast-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  line-height: 1;
+}
+.xa-toast-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+.xa-toast--success { border-color: rgba(0, 186, 124, 0.4); }
+.xa-toast--success .xa-toast-icon { color: var(--success); }
+.xa-toast--error { border-color: rgba(244, 33, 46, 0.4); }
+.xa-toast--error .xa-toast-icon { color: var(--error); }
+.xa-toast--warning { border-color: rgba(255, 173, 31, 0.4); }
+.xa-toast--warning .xa-toast-icon { color: var(--warning); }
+.xa-toast--info { border-color: var(--border-glow); }
+.xa-toast--info .xa-toast-icon { color: var(--accent); }
+
+@keyframes xaToastIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes xaToastOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(12px) scale(0.96); }
+}
+
+/* ── 2. Skeleton Shimmer Loading ─────────────────────────────────────────── */
+.xa-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(32, 35, 39, 0.6) 0%,
+    rgba(47, 51, 54, 0.9) 50%,
+    rgba(32, 35, 39, 0.6) 100%
+  );
+  background-size: 200% 100%;
+  animation: xaShimmer 1.8s infinite linear;
+  border-radius: 6px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.xa-skeleton-text {
+  height: 1rem;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+.xa-skeleton-text:last-child { width: 70%; }
+.xa-skeleton-title { height: 1.5rem; width: 50%; margin-bottom: 12px; }
+.xa-skeleton-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.xa-skeleton-card {
+  height: 120px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+@keyframes xaShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── 3. Interactive Buttons & Tactile Feedback ───────────────────────────── */
+.btn-interactive,
+button.btn-primary,
+button.btn-secondary {
+  position: relative;
+  transition: transform 0.16s var(--ease), box-shadow 0.2s var(--ease), filter 0.18s;
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn-interactive:hover,
+button.btn-primary:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btn-interactive:active,
+button.btn-primary:active,
+button.btn-secondary:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.btn-interactive:disabled,
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  filter: none !important;
+}
+
+/* ── 4. Badges & Realtime Status Indicators ──────────────────────────────── */
+.xa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.xa-badge--success { background: rgba(0, 186, 124, 0.12); color: var(--success); border: 1px solid rgba(0, 186, 124, 0.3); }
+.xa-badge--error   { background: rgba(244, 33, 46, 0.12); color: var(--error); border: 1px solid rgba(244, 33, 46, 0.3); }
+.xa-badge--warning { background: rgba(255, 173, 31, 0.12); color: var(--warning); border: 1px solid rgba(255, 173, 31, 0.3); }
+.xa-badge--accent  { background: rgba(29, 155, 240, 0.12); color: var(--accent); border: 1px solid rgba(29, 155, 240, 0.3); }
+.xa-badge--neutral { background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); }
+
+.xa-dot-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: xaPulse 2s infinite var(--ease);
+}
+
+@keyframes xaPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.5; }
+}
+
+/* ── 5. Enhanced Interactive Cards ───────────────────────────────────────── */
+.xa-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s var(--ease);
+}
+
+.xa-card-interactive:hover {
+  border-color: var(--border-glow);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(29, 155, 240, 0.2);
+  transform: translateY(-2px);
+}
+
