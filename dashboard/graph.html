@@ -372,9 +372,7 @@
     // deployed). Using a relative path avoids cross-origin CORS console
     // errors when the backend is offline; failures are caught below and
     // surface the offline notice instead.
-    const API = window.location.hostname === 'localhost'
-      ? 'http://localhost:3001/api/graph'
-      : '/api/graph';
+    const API = `${window.location.origin}/api/graph`;
     const tooltip = document.getElementById('tooltip');
     const graphSvg = document.getElementById('graphSvg');
     const emptyState = document.getElementById('emptyState');

@@ -140,6 +140,7 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 img,
@@ -960,6 +961,7 @@ video {
   padding: 20px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
+  min-width: 0;
   background: var(--bg-raised);
   text-decoration: none;
   transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
@@ -988,6 +990,8 @@ video {
   color: var(--text-muted);
   line-height: 1.55;
   flex: 1;
+  overflow-x: auto;
+  min-width: 0;
 }
 
 .card__meta {

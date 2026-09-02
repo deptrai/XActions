@@ -132,9 +132,7 @@
     }
 
     // Fetch full user info from API for Twitter handle + avatar
-    const apiBase = window.location.hostname === 'localhost'
-      ? 'http://localhost:3001/api'
-      : '/api';
+    const apiBase = `${window.location.origin}/api`;
 
     fetch(`${apiBase}/user/me`, {
       headers: { Authorization: `Bearer ${token}` }

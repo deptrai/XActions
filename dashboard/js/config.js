@@ -7,15 +7,11 @@
 
 const CONFIG = {
   // API Base URL - auto-detects environment
-  API_BASE: window.location.hostname === 'localhost' 
-    ? 'http://localhost:3001/api'
-    : '/api',
-  
+  API_BASE: `${window.location.origin}/api`,
+
   // WebSocket URL for real-time updates
-  WS_URL: window.location.hostname === 'localhost'
-    ? 'http://localhost:3001'
-    : window.location.origin,
-  
+  WS_URL: window.location.origin,
+
   // App version
   VERSION: '1.0.0',
   

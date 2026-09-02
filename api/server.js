@@ -582,6 +582,67 @@ app.get('/price-correlation', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/price-correlation.html'));
 });
 
+app.get('/pricing', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/pricing.html'));
+});
+
+app.get('/compare', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/compare.html'));
+});
+
+app.get('/contact', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/contact.html'));
+});
+
+app.get('/contributing', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/contributing.html'));
+});
+
+app.get('/examples', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/examples.html'));
+});
+
+app.get('/extension', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/extension.html'));
+});
+
+app.get('/integrations', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/integrations.html'));
+});
+
+app.get('/playground', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/playground.html'));
+});
+
+app.get('/security', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/security.html'));
+});
+
+app.get('/status', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/status.html'));
+});
+
+app.get('/use-cases', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/use-cases.html'));
+});
+
+app.get('/blog', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/blog.html'));
+});
+
+app.get('/changelog', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/changelog.html'));
+});
+
+app.get('/a2a', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/a2a.html'));
+});
+
+// Platform hub routes
+app.get(['/platform', '/platforms', '/platforms/:platform'], (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/platform.html'));
+});
+
 app.get('/facebook', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/facebook.html'));
 });
