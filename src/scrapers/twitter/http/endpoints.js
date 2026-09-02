@@ -82,7 +82,7 @@ export const GRAPHQL = {
   TweetResultByRestId:  { queryId: 'Xl5pC_lBk_gcO2ItU39DQw', operationName: 'TweetResultByRestId' },  // [twikit] d60/twikit gql.py
 
   // ---- Queries (search) ----
-  SearchTimeline:       { queryId: 'flaR-PUMshxFWZWPNpq4zA', operationName: 'SearchTimeline' },       // [twikit] d60/twikit gql.py
+  SearchTimeline:       { queryId: 'hyPfJYJ_XAtDYoslQc-Rgg', operationName: 'SearchTimeline' },      // [runtime-resolved] x.com main bundle 2026-09
 
   // ---- Queries (relationships) ----
   Followers:            { queryId: 'gC_lyAxZOptAMLCJX5UhWw', operationName: 'Followers' },             // [twikit] d60/twikit gql.py

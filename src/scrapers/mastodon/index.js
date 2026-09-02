@@ -49,7 +49,9 @@ const DEFAULT_INSTANCE = 'https://mastodon.social';
  * @returns {MastodonClient}
  */
 export function createClient(options = {}) {
-  const instance = (options.instance || DEFAULT_INSTANCE).replace(/\/$/, '');
+  const rawInstance = options.instance || DEFAULT_INSTANCE;
+  const withScheme = /^https?:\/\//.test(rawInstance) ? rawInstance : `https://${rawInstance}`;
+  const instance = withScheme.replace(/\/$/, '');
   return {
     instance,
     accessToken: options.accessToken || null,
@@ -125,8 +127,11 @@ async function api(client, path, options = {}) {
  * @returns {Promise<Record<string, unknown>>}
  */
 async function lookupAccount(client, username) {
+  if (typeof username !== 'string' || !username.trim()) {
+    throw new TypeError('Mastodon scrape requires a username (e.g. "mastodon" or "user@instance.social")');
+  }
   // Strip leading @
-  const handle = username.replace(/^@/, '');
+  const handle = username.trim().replace(/^@/, '');
 
   // Try the v1 lookup endpoint first (Mastodon 3.4+)
   try {

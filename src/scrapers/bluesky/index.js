@@ -391,9 +391,33 @@ export async function searchTweets(client, query, options = {}) {
   /** @type {string | undefined} */
   let cursor;
 
+  // app.bsky.feed.searchPosts requires authentication — auto-login when
+  // credentials are supplied, otherwise surface a clear actionable error.
+  let effectiveClient = client;
+  if (client.type === 'fetch' && options.identifier && options.password) {
+    effectiveClient = /** @type {any} */ (await createAgent({
+      service: client.service,
+      identifier: options.identifier,
+      password: options.password,
+    }));
+  } else if (client.type === 'fetch') {
+    try {
+      await xrpc(client, 'app.bsky.feed.searchPosts', { q: query, limit: 1 });
+    } catch (err) {
+      const is403 = /\(403\)/.test(String(err?.message || err));
+      if (is403) {
+        throw new Error(
+          'Bluesky search requires authentication. Pass { identifier, password } (app-password) ' +
+          'to createAgent() or as options to searchTweets().'
+        );
+      }
+      throw err;
+    }
+  }
+
   while (posts.length < limit) {
     const pageLimit = Math.min(25, limit - posts.length);
-    const data = await xrpc(client, 'app.bsky.feed.searchPosts', {
+    const data = await xrpc(effectiveClient, 'app.bsky.feed.searchPosts', {
       q: query,
       limit: pageLimit,
       cursor,

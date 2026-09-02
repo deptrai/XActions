@@ -242,7 +242,42 @@ export class TwitterClient extends AbstractApiClient {
       this.updateCookies(parseCookies(session.cookies));
     } else if (this.guestToken) {
       this.updateCookies({ gt: this.guestToken });
+    } else if (!this.requiresAuth) {
+      await this.#ensureGuestToken();
     }
+  }
+
+  /**
+   * Lazily activate a guest token for unauthenticated requests.
+   * Uses POST /1.1/guest/activate.json through the same resilient pipeline.
+   * @returns {Promise<string | null>}
+   */
+  async #ensureGuestToken() {
+    if (this.guestToken) return this.guestToken;
+    try {
+      const res = /** @type {any} */ (
+        await super.request('POST', 'https://api.x.com/1.1/guest/activate.json', {
+          requiresAuth: false,
+          skipResponseValidation: true,
+          headers: {
+            authorization: `Bearer ${this.bearerToken}`,
+            'content-type': 'application/x-www-form-urlencoded',
+          },
+        })
+      );
+      const payload = res?.data ?? res;
+      const token =
+        typeof payload === 'string' && payload.trim().startsWith('{')
+          ? /** @type {any} */ (JSON.parse(payload))?.guest_token
+          : payload?.guest_token;
+      if (token) {
+        this.guestToken = String(token);
+        this.updateCookies({ gt: this.guestToken });
+      }
+    } catch {
+      // Guest activation is best-effort; callers surface upstream errors otherwise.
+    }
+    return this.guestToken;
   }
 
   /**
@@ -268,6 +303,11 @@ export class TwitterClient extends AbstractApiClient {
     if (!headers['x-twitter-client-language']) headers['x-twitter-client-language'] = 'en';
 
     const cookieRecord = { ...this.cookies };
+    const isLocal = isLocalUrl(url);
+    const effectiveAuth = opts.requiresAuth !== undefined ? opts.requiresAuth : this.requiresAuth;
+    if (!effectiveAuth && !isLocal && !this.guestToken) {
+      await this.#ensureGuestToken();
+    }
     if (this.guestToken && !cookieRecord.gt) {
       cookieRecord.gt = this.guestToken;
     }
@@ -277,6 +317,9 @@ export class TwitterClient extends AbstractApiClient {
       headers['cookie'] = cookieHeader;
       const csrf = extractCsrfToken(cookieRecord);
       if (csrf && !headers['x-csrf-token']) headers['x-csrf-token'] = csrf;
+    }
+    if (this.guestToken && !headers['x-guest-token']) {
+      headers['x-guest-token'] = this.guestToken;
     }
 
     return super.request(method, url, { ...opts, headers });
@@ -398,6 +441,23 @@ export class TwitterClient extends AbstractApiClient {
       requiresAuth: isAuth,
       headers,
       body,
+    }).catch(async (err) => {
+      // Stale GraphQL query IDs return 404 — re-resolve from live bundles once.
+      const is404 = err?.statusCode === 404 || err?.status === 404;
+      if (!is404 || !/\/i\/api\/graphql\//.test(url)) throw err;
+      const opMatch = url.match(/\/i\/api\/graphql\/[A-Za-z0-9_-]+\/([A-Za-z0-9_]+)/);
+      if (!opMatch) throw err;
+      const { resolveQueryId } = await import('../../twitter/http/query-id-resolver.js');
+      const freshId = await resolveQueryId(opMatch[1], queryId);
+      if (!freshId || freshId === queryId) throw err;
+      const retryUrl = url.replace(/\/i\/api\/graphql\/[A-Za-z0-9_-]+\//, `/i/api/graphql/${freshId}/`);
+      return this.request(method, retryUrl, {
+        ...actualOptions,
+        accountId: accountId || undefined,
+        requiresAuth: isAuth,
+        headers,
+        body,
+      });
     }));
 
     // Unwrap base-client envelope if present

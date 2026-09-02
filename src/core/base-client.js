@@ -272,6 +272,7 @@ export class AbstractApiClient {
           headers: headers || {},
           timeout: { request: timeout === undefined ? 30000 : timeout },
           throwHttpErrors: false,
+          http2: false,
         };
         if (raw) {
           options.responseType = 'buffer';
