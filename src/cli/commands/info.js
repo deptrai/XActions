@@ -53,10 +53,6 @@ ${chalk.yellow('Run "xactions --help" for all commands')}
         const { refreshGovernorConsumerLag, globalStreamMetricsReader } = await import('../../utils/stream-metrics.js');
         await refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader);
         const status = globalStatusApi.getGovernorStatus();
-        if (options.json) {
-          console.log(JSON.stringify(status, null, 2));
-          return;
-        }
         printGovernorStatus(status, { json: options.json });
       } catch (err) {
         console.error(chalk.red(`❌ Error retrieving status: ${err?.message || String(err)}`));

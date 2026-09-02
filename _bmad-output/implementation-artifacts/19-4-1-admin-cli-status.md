@@ -214,6 +214,13 @@ claude-opus-5[1m]
 
 - 2026-09-02: Created comprehensive story context for Story 19.4.1 — Admin CLI Status.
 
+### Review Findings
+
+- [x] [Review][Patch] Remove redundant JSON check in `src/cli/commands/info.js:56-59` — `printGovernorStatus` already handles `options.json`; the local `if (options.json)` block duplicates that logic and can be removed.
+- [x] [Review][Patch] Remove duplicate in-process fallback in `src/cli/commands/admin.js:43-57` — the fallback code is duplicated inside the `catch` block and in the `if (!status)` branch; consolidate to a single fallback path.
+- [x] [Review][Patch] Add defensive null/undefined handling for `hibernatingAccounts` in `src/cli/shared.js:224` — direct `.length` access on a status object from an external REST server could throw; use `(status.hibernatingAccounts || []).length`.
+- [x] [Review][Patch] Fix test title mismatch in `tests/cli/admin-status.test.js:108` — the title says `printGovernorStatus prints "No accounts hibernating"` but the assertion checks for `Hibernating Accounts: 0`.
+
 ## Suggested Review Order
 
 1. `src/cli/shared.js` — shared `formatGovernorStatus` helper (if added)

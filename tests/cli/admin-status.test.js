@@ -105,7 +105,7 @@ describe('Story 19.4.1: xactions admin status', () => {
     expect(output).toContain('rate_limit');
   });
 
-  it('printGovernorStatus prints "No accounts hibernating" when hibernatingAccounts is empty', () => {
+  it('printGovernorStatus prints "Hibernating Accounts: 0" when hibernatingAccounts is empty', () => {
     const status = {
       healthyProxyCount: 0,
       totalProxyCount: 0,

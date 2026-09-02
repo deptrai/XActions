@@ -41,11 +41,7 @@ export function registerAdminCommand(program) {
             status = data.status;
           }
         } catch {
-          // Direct in-process fallback
-          const { globalStatusApi, globalAdaptiveRateGovernor } = await import('../../core/index.js');
-          const { refreshGovernorConsumerLag, globalStreamMetricsReader } = await import('../../utils/stream-metrics.js');
-          await refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader);
-          status = globalStatusApi.getGovernorStatus();
+          // Network error or endpoint down; proceed to in-process fallback below
         }
 
         if (!status) {
