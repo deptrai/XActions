@@ -154,8 +154,9 @@ function mapHealthError(err) {
   const message = typeof e.message === 'string' ? e.message : '';
   const isAuth =
     code === 'XACT_4010' ||
+    code === 'XACT_4030' ||
     suggested === 'RELOGIN' ||
-    /login|auth|session|checkpoint/i.test(message);
+    /login|auth|session|checkpoint|challenge|bot/i.test(message);
   if (isAuth) {
     return { status: 'checkpoint', reason: 'checkpoint_or_captcha' };
   }

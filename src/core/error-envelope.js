@@ -57,6 +57,7 @@ export class PlatformError extends Error {
    * @param {string} [opts.suggestedAction]
    * @param {string | null} [opts.accountId]
    * @param {string} [opts.platform]
+   * @param {string} [opts.consumerId] - Consumer identity for quota errors (AD-20).
    * @param {Record<string, unknown>} [opts.details]
    * @param {boolean} [opts.isRetryable]
    * @param {unknown} [opts.cause]
@@ -73,6 +74,7 @@ export class PlatformError extends Error {
     this.suggestedAction = opts.suggestedAction || SuggestedActions.CONTACT_SUPPORT;
     this.accountId = opts.accountId;
     this.platform = opts.platform;
+    this.consumerId = opts.consumerId;
     this.details = opts.details;
     if (opts.cause !== undefined) this.cause = opts.cause;
   }
@@ -95,6 +97,9 @@ export class PlatformError extends Error {
       suggestedAction: this.suggestedAction,
       accountId: this.accountId,
       platform: this.platform,
+      // AD-20 additive fields — present only when set, preserving legacy shape.
+      ...(this.consumerId ? { consumerId: this.consumerId } : {}),
+      ...(this.details !== undefined ? { details: this.details } : {}),
     };
   }
 }

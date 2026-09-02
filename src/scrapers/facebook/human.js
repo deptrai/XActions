@@ -11,6 +11,8 @@
  *   - humanClick(page, element, { delayFn, rng }) : Human-like click with hover + down/up
  *   - humanType(page, text, { delayFn, rng }) : Human-like typing with variable speed and typos
  *   - humanScroll(page, distance, { delayFn, rng }) : Human-like scroll with sin-curve chunks
+ *   - physicsEase(t) : clamped 5th-order smoothstep easing helper
+ *   - easeOut(t) : clamped 5th-order ease-out for correction phase
  *
  * Scope:
  *   - Story 6.4: humanMoveMouse (physics-eased Bezier, velocity profile)
@@ -91,12 +93,31 @@ function cubicBezier(t, p0, p1, p2, p3) {
  * fast coast, and slow end (ease-out). This mimics how real muscles
  * accelerate and decelerate a pointer, unlike a raw Bezier parameter.
  *
- * @param {number} t - parameter in [0, 1]
+ * The input is clamped to [0, 1]; non-numeric, NaN, and infinities are
+ * handled gracefully (non-numeric or NaN → 0; +Infinity → 1; -Infinity → 0).
+ *
+ * @param {number} t - parameter (clamped to [0, 1])
  * @returns {number} eased progress in [0, 1]
  */
-function physicsEase(t) {
+export function physicsEase(t) {
+  if (typeof t !== 'number' || Number.isNaN(t)) return 0;
   const v = clamp(t, 0, 1);
   return v * v * v * (v * (v * 6 - 15) + 10);
+}
+
+/**
+ * Quintic ease-out for the overshoot correction phase.
+ * The pointer is already in motion, so it should decelerate smoothly
+ * as it reaches the target rather than ease-in from a dead stop.
+ *
+ * @param {number} t - parameter (clamped to [0, 1])
+ * @returns {number} eased progress in [0, 1]
+ */
+export function easeOut(t) {
+  if (typeof t !== 'number' || Number.isNaN(t)) return 0;
+  const v = clamp(t, 0, 1);
+  const u = 1 - v;
+  return 1 - u * u * u * u * u;
 }
 
 // ============================================================================
@@ -138,8 +159,8 @@ export async function humanMoveMouse(page, x, y, options = {}) {
 
   const r = wrapRng(rng);
 
-  // Step count: 20-35 (randomized)
-  const stepCount = 20 + Math.min(15, Math.floor(r() * 16)); // 20..35 inclusive
+  // Step count: 17-30 base steps so that with 3-5 correction steps, total moves <= 35
+  const rawSteps = 20 + Math.min(15, Math.floor(r() * 16)); // Call 1
 
   // Control points: offset perpendicular to the line start→target.
   // This creates a natural arc rather than a straight line.
@@ -150,8 +171,8 @@ export async function humanMoveMouse(page, x, y, options = {}) {
   const perpX = -dy / dist;
   const perpY = dx / dist;
   // Random offset magnitude for control points (10-40% of distance)
-  const offset1 = (dist * (0.1 + r() * 0.3)) * (r() < 0.5 ? -1 : 1);
-  const offset2 = (dist * (0.1 + r() * 0.3)) * (r() < 0.5 ? -1 : 1);
+  const offset1 = (dist * (0.1 + r() * 0.3)) * (r() < 0.5 ? -1 : 1); // Calls 2, 3
+  const offset2 = (dist * (0.1 + r() * 0.3)) * (r() < 0.5 ? -1 : 1); // Calls 4, 5
 
   const cp1x = startX + dx * 0.33 + perpX * offset1;
   const cp1y = startY + dy * 0.33 + perpY * offset1;
@@ -159,16 +180,17 @@ export async function humanMoveMouse(page, x, y, options = {}) {
   const cp2y = startY + dy * 0.67 + perpY * offset2;
 
   // 15% chance: overshoot past target, then correct back
-  const willOvershoot = r() < 0.15;
+  const willOvershoot = r() < 0.15; // Call 6
 
   let endX = x;
   let endY = y;
   let overshootX = x;
   let overshootY = y;
+  let correctionSteps = 0;
 
   if (willOvershoot) {
     // Proportional overshoot: 5-15% of movement distance, clamped to [1, 25] pixels (Story 6.18 — AC1)
-    const overScalar = clamp(0.05 + r() * 0.10, 0.05, 0.15);
+    const overScalar = clamp(0.05 + r() * 0.10, 0.05, 0.15); // Call 7
     const overDist = clamp(Math.round(dist * overScalar), 1, 25);
     const overDx = (dx / dist) * overDist;
     const overDy = (dy / dist) * overDist;
@@ -177,7 +199,11 @@ export async function humanMoveMouse(page, x, y, options = {}) {
     // The Bezier curve ends at the overshoot point; correction happens after
     endX = overshootX;
     endY = overshootY;
+    correctionSteps = 3 + Math.min(2, Math.floor(r() * 3)); // 3..5
   }
+
+  // Ensure total steps (main curve + correction) never exceeds 35 and is at least 20
+  const stepCount = willOvershoot ? Math.max(16, Math.min(30, rawSteps - correctionSteps)) : rawSteps;
 
   // Move along the Bezier curve with physics-based easing.
   // physicsEase(t) shapes the velocity: small steps at the start and end,
@@ -187,26 +213,29 @@ export async function humanMoveMouse(page, x, y, options = {}) {
     const et = physicsEase(t);
     const bx = cubicBezier(et, startX, cp1x, cp2x, endX);
     const by = cubicBezier(et, startY, cp1y, cp2y, endY);
-    // Micro-jitter ±2px
-    const jx = bx + (r() - 0.5) * 4;
-    const jy = by + (r() - 0.5) * 4;
+    // On the final step, land exactly on the end point to avoid ±2px jitter drift.
+    const isLast = i === stepCount;
+    const jx = isLast ? endX : bx + (r() - 0.5) * 4;
+    const jy = isLast ? endY : by + (r() - 0.5) * 4;
     await page.mouse.move(jx, jy, { steps: 1 });
     // Delay 15-40ms per step
     await delayFn(clamp(15 + r() * 25, 15, 40));
   }
 
-  // Correction phase: if overshoot, move back to actual target in 3-5 steps
-  // with ease-out profile so the correction slows down as it reaches the target.
+  // Correction phase: if overshoot, move back to actual target in 3-5 steps.
+  // Use a pure ease-out curve because the pointer is already in motion and
+  // should decelerate smoothly as it reaches the target.
   if (willOvershoot) {
     const correctionSteps = 3 + Math.min(2, Math.floor(r() * 3)); // 3..5
     for (let i = 1; i <= correctionSteps; i++) {
       const t = i / correctionSteps;
-      const et = physicsEase(t);
+      const et = easeOut(t);
       const cx = overshootX + (x - overshootX) * et;
       const cy = overshootY + (y - overshootY) * et;
-      // Micro-jitter ±2px (AC3 — same as main Bezier loop)
-      const jx = cx + (r() - 0.5) * 4;
-      const jy = cy + (r() - 0.5) * 4;
+      // On the final correction step, snap to the real target for accuracy.
+      const isLast = i === correctionSteps;
+      const jx = isLast ? x : cx + (r() - 0.5) * 4;
+      const jy = isLast ? y : cy + (r() - 0.5) * 4;
       await page.mouse.move(jx, jy, { steps: 1 });
       await delayFn(clamp(15 + r() * 25, 15, 40));
     }

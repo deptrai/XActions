@@ -382,6 +382,52 @@ export class AccountPool {
   }
 
   /**
+   * Return all accounts with status details (safely redacted).
+   * @param {string} [platformFilter]
+   * @returns {Array<{ platform: string, accountId: string, status: 'active' | 'hibernating', hibernatingUntil: number | null, remainingTimeMs: number, reason: string, velocity: number, assignedProxy: unknown }>}
+   */
+  listAccountDetails(platformFilter) {
+    const now = Date.now();
+    const results = [];
+
+    for (const [key, record] of this.#accountRecords) {
+      if (platformFilter && record.platform !== platformFilter) {
+        continue;
+      }
+
+      const isHibernatingGovernor = this.#governor ? this.#governor.isHibernating(key) : false;
+      const govUntil = isHibernatingGovernor && this.#governor?.getHibernationUntil ? this.#governor.getHibernationUntil(key) : null;
+      const hibernatingUntil = record.hibernatingUntil || govUntil || (isHibernatingGovernor ? now + 60_000 : null);
+      const isUnavailable = this.#unavailableAccounts.has(key) || isHibernatingGovernor;
+      const isExpiredHibernation = hibernatingUntil !== null && now >= hibernatingUntil;
+      const isActuallyHibernating = isUnavailable && !isExpiredHibernation;
+      const remainingTimeMs = isActuallyHibernating && hibernatingUntil ? Math.max(0, hibernatingUntil - now) : 0;
+
+      let reason = 'none';
+      if (isActuallyHibernating) {
+        if (this.#governor && typeof this.#governor.getHibernationReason === 'function') {
+          reason = this.#governor.getHibernationReason(key) || 'rate_limit';
+        } else {
+          reason = 'rate_limit';
+        }
+      }
+
+      results.push({
+        platform: record.platform,
+        accountId: record.accountId,
+        status: isActuallyHibernating ? 'hibernating' : 'active',
+        hibernatingUntil: isActuallyHibernating ? hibernatingUntil : null,
+        remainingTimeMs,
+        reason,
+        velocity: this.getAccountVelocity(record.accountId, record.platform),
+        assignedProxy: this.#redactProxy(record.assignedProxy),
+      });
+    }
+
+    return results;
+  }
+
+  /**
    * @param {unknown} proxy
    * @returns {unknown}
    */

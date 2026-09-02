@@ -1,0 +1,1964 @@
+<!-- by nichxbt -->
+<!-- Universal Platform Automation Page — redesigned for clarity and balance -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Platform Automation - XActions</title>
+    <link rel="stylesheet" href="/css/common.css" />
+    <style>
+      :root {
+        --p-facebook: #1877f2;
+        --p-x: #000000;
+        --p-threads: #000000;
+        --p-tiktok: #ff0050;
+        --p-bluesky: #0066ff;
+        --p-mastodon: #6364ff;
+        --dryrun: #4285f4;
+        --live: #e65100;
+      }
+
+      /* ── Layout overrides for platform page ───────────────────────────── */
+      .main-content.platform-page {
+        max-width: 900px;
+        padding: 0;
+        border-right: none;
+      }
+      @media (min-width: 1024px) {
+        .main-content.platform-page {
+          padding: 0 24px;
+        }
+      }
+
+      /* ── Page header ──────────────────────────────────────────────────── */
+      .platform-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--border);
+        padding: 16px 24px;
+      }
+      .platform-header h1 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+      }
+      .platform-header h1 .platform-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 1rem;
+      }
+
+      /* ── Account bar ──────────────────────────────────────────────────── */
+      .account-bar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 12px 24px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+      }
+      .account-bar .field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+      }
+      .account-bar label {
+        color: var(--text-secondary);
+        font-size: 0.8125rem;
+      }
+      .account-bar select,
+      .account-bar input,
+      .account-bar button {
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+      }
+      .account-bar select {
+        min-width: 180px;
+        cursor: pointer;
+      }
+      .account-bar button.btn-add {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .account-bar button.btn-add:hover {
+        background: var(--accent-hover);
+      }
+      .account-bar .status {
+        color: var(--text-secondary);
+        font-size: 0.8125rem;
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .account-bar .dryrun-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(66, 133, 244, 0.12);
+        border: 1px solid rgba(66, 133, 244, 0.35);
+        color: var(--dryrun);
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+      }
+      .account-bar .dryrun-toggle.live {
+        background: rgba(230, 81, 0, 0.12);
+        border-color: rgba(230, 81, 0, 0.35);
+        color: var(--live);
+      }
+      .account-bar .dryrun-toggle input {
+        display: none;
+      }
+
+      @media (max-width: 768px) {
+        .account-bar {
+          gap: 10px;
+        }
+        .account-bar .status {
+          margin-left: 0;
+          width: 100%;
+        }
+      }
+
+      /* ── Add account inline form ──────────────────────────────────────── */
+      .import-section {
+        display: none;
+        padding: 14px 24px;
+        background: var(--bg-tertiary);
+        border-bottom: 1px solid var(--border);
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .import-section.show {
+        display: flex;
+      }
+      .import-section input {
+        flex: 1;
+        min-width: 120px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+      }
+      .import-section button {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: none;
+        background: var(--success);
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      /* ── Tab bar ──────────────────────────────────────────────────────── */
+      .tab-bar {
+        display: flex;
+        gap: 0;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--border);
+      }
+      .tab-bar button {
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        padding: 12px 18px;
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+      }
+      .tab-bar button:hover {
+        color: var(--text-primary);
+      }
+      .tab-bar button.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+
+      /* ── Tab content ──────────────────────────────────────────────────── */
+      .tab-panel {
+        display: none;
+        padding: 24px;
+      }
+      .tab-panel.active {
+        display: block;
+      }
+
+      /* ── Risk banner (Growth) ─────────────────────────────────────────── */
+      .risk-banner {
+        background: rgba(255, 173, 31, 0.12);
+        border: 1px solid rgba(255, 173, 31, 0.35);
+        color: var(--warning);
+        padding: 10px 16px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 0.875rem;
+      }
+
+      /* ── Quick actions ────────────────────────────────────────────────── */
+      .quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 24px;
+      }
+      .quick-actions button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          transform 0.1s;
+      }
+      .quick-actions button:hover {
+        background: var(--bg-hover);
+        border-color: var(--accent);
+      }
+      .quick-actions button.active {
+        background: var(--accent-light);
+        border-color: var(--accent);
+        color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent);
+      }
+
+      /* ── Action card ──────────────────────────────────────────────────── */
+      .action-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+      }
+      .action-card .card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+      .action-card .card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .action-card .card-desc {
+        color: var(--text-secondary);
+        font-size: 0.8125rem;
+        margin-bottom: 16px;
+      }
+      .action-card .card-help {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        cursor: help;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* ── Form fields ──────────────────────────────────────────────────── */
+      .card-field {
+        margin-bottom: 14px;
+      }
+      .card-field label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+        font-weight: 500;
+      }
+      .card-field label .count {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: 400;
+      }
+      .card-field textarea,
+      .card-field input,
+      .card-field select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        font-family: inherit;
+        resize: vertical;
+      }
+      .card-field textarea {
+        min-height: 90px;
+      }
+      .card-field textarea.invalid {
+        border-color: var(--error);
+      }
+      .card-field input[type="number"] {
+        width: 120px;
+      }
+      .card-field input[type="datetime-local"] {
+        width: 240px;
+      }
+
+      /* ── Options row ──────────────────────────────────────────────────── */
+      .options-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+      .options-row label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+      }
+      .options-row select {
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 0.8125rem;
+      }
+
+      /* ── Primary button ───────────────────────────────────────────────── */
+      .btn-run {
+        padding: 10px 22px;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9375rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          transform 0.1s;
+        color: #fff;
+        background: var(--dryrun);
+      }
+      .btn-run:hover {
+        filter: brightness(1.08);
+      }
+      .btn-run.live {
+        background: var(--live);
+      }
+      .btn-run:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      /* ── Live confirm banner ──────────────────────────────────────────── */
+      .live-confirm {
+        display: none;
+        background: rgba(230, 81, 0, 0.12);
+        border: 1px solid rgba(230, 81, 0, 0.35);
+        color: var(--text-primary);
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-size: 0.875rem;
+      }
+      .live-confirm.show {
+        display: block;
+      }
+      .live-confirm button {
+        margin-left: 10px;
+        padding: 6px 14px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .live-confirm .confirm {
+        background: var(--live);
+        color: #fff;
+      }
+      .live-confirm .cancel {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border);
+      }
+
+      /* ── Result panel ─────────────────────────────────────────────────── */
+      .result-panel {
+        margin-top: 16px;
+        padding: 14px 16px;
+        border-radius: 8px;
+        font-size: 0.8125rem;
+        line-height: 1.5;
+        border-left: 4px solid transparent;
+        background: var(--bg-tertiary);
+        display: none;
+      }
+      .result-panel.show {
+        display: block;
+      }
+      .result-panel.dryrun {
+        background: rgba(66, 133, 244, 0.1);
+        border-left-color: var(--dryrun);
+      }
+      .result-panel.success {
+        background: rgba(0, 186, 124, 0.1);
+        border-left-color: var(--success);
+      }
+      .result-panel.error {
+        background: rgba(244, 33, 46, 0.1);
+        border-left-color: var(--error);
+      }
+      .result-panel.warning {
+        background: rgba(255, 173, 31, 0.1);
+        border-left-color: var(--warning);
+      }
+      .result-panel pre {
+        font-family: "JetBrains Mono", "Fira Code", monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 8px 0 0;
+        max-height: 220px;
+        overflow: auto;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 10px;
+        border-radius: 6px;
+      }
+      .result-panel .summary {
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .result-panel .toggle-raw {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        cursor: pointer;
+        margin-top: 8px;
+      }
+
+      /* ── Monitor table ────────────────────────────────────────────────── */
+      .monitor-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+      }
+      .monitor-table th,
+      .monitor-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      .monitor-table th {
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .monitor-table td {
+        color: var(--text-primary);
+      }
+      .monitor-table .status {
+        font-weight: 600;
+      }
+      .monitor-table .status.completed {
+        color: var(--success);
+      }
+      .monitor-table .status.failed {
+        color: var(--error);
+      }
+      .monitor-table .status.running {
+        color: var(--warning);
+      }
+      .monitor-table .status.pending {
+        color: var(--text-secondary);
+      }
+
+      /* ── Empty state ──────────────────────────────────────────────────── */
+      .empty-state {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        padding: 24px 0;
+        text-align: center;
+      }
+
+      /* ── Mobile ───────────────────────────────────────────────────────── */
+      @media (max-width: 768px) {
+        .platform-header {
+          padding: 12px 16px;
+        }
+        .account-bar {
+          padding: 12px 16px;
+        }
+        .tab-bar {
+          padding: 0 16px;
+          overflow-x: auto;
+        }
+        .tab-bar button {
+          flex: 0 0 auto;
+          padding: 12px 14px;
+        }
+        .tab-panel {
+          padding: 16px;
+        }
+        .quick-actions {
+          gap: 8px;
+        }
+        .quick-actions button {
+          padding: 8px 12px;
+          font-size: 0.8125rem;
+        }
+        .action-card {
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar-left"></aside>
+      <main class="main-content platform-page">
+        <header class="platform-header">
+          <h1>
+            <span class="platform-icon" id="platform-icon">📘</span>
+            <span id="platform-title">Platform Automation</span>
+          </h1>
+        </header>
+
+        <!-- Account & dry-run bar -->
+        <div class="account-bar" id="account-bar">
+          <div class="field">
+            <label for="platform-account">Account:</label>
+            <select id="platform-account">
+              <option value="">— Select account —</option>
+            </select>
+            <button class="btn-add" onclick="toggleImport()">+ Add</button>
+          </div>
+          <span class="status" id="acc-status">No account selected</span>
+          <label class="dryrun-toggle" id="global-dryrun-label">
+            <input type="checkbox" id="global-dryrun" checked />
+            🛡️ Dry-run
+          </label>
+        </div>
+
+        <!-- Add account inline form -->
+        <div class="import-section" id="import-section">
+          <input id="imp-label" placeholder="Label" autocomplete="off" />
+          <input
+            id="imp-cuser"
+            type="password"
+            placeholder="c_user"
+            autocomplete="off"
+          />
+          <input
+            id="imp-xs"
+            type="password"
+            placeholder="xs"
+            autocomplete="off"
+          />
+          <button onclick="importAccount()">Save</button>
+        </div>
+
+        <!-- Tab bar -->
+        <nav
+          class="tab-bar"
+          role="tablist"
+          aria-label="Platform sections"
+          id="tab-bar"
+        >
+          <button
+            class="active"
+            data-tab="actions"
+            role="tab"
+            aria-selected="true"
+            aria-controls="tab-actions"
+            onclick="switchTab('actions')"
+          >
+            Actions
+          </button>
+          <button
+            data-tab="growth"
+            role="tab"
+            aria-selected="false"
+            aria-controls="tab-growth"
+            onclick="switchTab('growth')"
+          >
+            Growth
+          </button>
+          <button
+            data-tab="scrape"
+            role="tab"
+            aria-selected="false"
+            aria-controls="tab-scrape"
+            onclick="switchTab('scrape')"
+          >
+            Scrape
+          </button>
+          <button
+            data-tab="monitor"
+            role="tab"
+            aria-selected="false"
+            aria-controls="tab-monitor"
+            onclick="switchTab('monitor')"
+          >
+            Monitor
+          </button>
+        </nav>
+
+        <!-- TAB: ACTIONS -->
+        <section
+          id="tab-actions"
+          class="tab-panel active"
+          role="tabpanel"
+          aria-labelledby="tab-actions"
+        >
+          <div class="quick-actions" id="qa-actions"></div>
+          <div id="form-actions"></div>
+        </section>
+
+        <!-- TAB: GROWTH -->
+        <section
+          id="tab-growth"
+          class="tab-panel"
+          role="tabpanel"
+          aria-labelledby="tab-growth"
+        >
+          <div class="risk-banner">
+            ⚠️ Growth actions can trigger account restrictions. All default to
+            dry-run. Use a test account for real runs.
+          </div>
+          <div class="quick-actions" id="qa-growth"></div>
+          <div id="form-growth"></div>
+        </section>
+
+        <!-- TAB: SCRAPE -->
+        <section
+          id="tab-scrape"
+          class="tab-panel"
+          role="tabpanel"
+          aria-labelledby="tab-scrape"
+        >
+          <div class="quick-actions" id="qa-scrape"></div>
+          <div id="form-scrape"></div>
+        </section>
+
+        <!-- TAB: MONITOR -->
+        <section
+          id="tab-monitor"
+          class="tab-panel"
+          role="tabpanel"
+          aria-labelledby="tab-monitor"
+        >
+          <div class="action-card">
+            <div class="card-title">📊 Operation History</div>
+            <div class="card-desc">Recent operations for this platform</div>
+            <div id="monitor-list">
+              <div class="empty-state">Loading...</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/config.js"></script>
+    <script src="/js/sidebar.js"></script>
+    <script>
+      // ── Platform detection & config ──────────────────────────────────
+      const params = new URLSearchParams(window.location.search);
+      const PLATFORM = params.get("platform") || "facebook";
+
+      const PLATFORM_CONFIG = {
+        facebook: {
+          name: "Facebook",
+          icon: "📘",
+          color: "#1877f2",
+          apiBase: "/platform/facebook",
+          authFields: ["label", "c_user", "xs"],
+          tabs: ["actions", "growth", "scrape", "monitor"],
+          actions: [
+            {
+              id: "like",
+              icon: "👍",
+              title: "Like Posts",
+              desc: "Like posts by URL (one per line)",
+              fields: [{ id: "urls", type: "urls", label: "Post URLs" }],
+            },
+            {
+              id: "comment",
+              icon: "💬",
+              title: "Comment",
+              desc: "Comment on posts by URL",
+              fields: [
+                { id: "urls", type: "urls", label: "Post URLs" },
+                { id: "text", type: "textarea", label: "Comment Text" },
+              ],
+            },
+            {
+              id: "post",
+              icon: "📝",
+              title: "Create Post",
+              desc: "Publish a new post on your timeline",
+              fields: [{ id: "text", type: "textarea", label: "Content" }],
+            },
+            {
+              id: "share",
+              icon: "🔗",
+              title: "Share Posts",
+              desc: "Share posts to your timeline",
+              fields: [{ id: "urls", type: "urls", label: "Post URLs" }],
+            },
+            {
+              id: "messenger-share",
+              icon: "💌",
+              title: "Messenger Share",
+              desc: "Send posts via Messenger to pages/friends",
+              fields: [
+                { id: "postUrls", type: "urls", label: "Post URLs" },
+                {
+                  id: "recipients",
+                  type: "urls",
+                  label: "Recipients (one per line)",
+                },
+                { id: "content", type: "textarea", label: "Message" },
+              ],
+            },
+            {
+              id: "schedule",
+              icon: "📅",
+              title: "Schedule Post",
+              desc: "Schedule a post for future publishing",
+              fields: [
+                { id: "text", type: "textarea", label: "Content" },
+                {
+                  id: "scheduledAt",
+                  type: "datetime-local",
+                  label: "Scheduled At",
+                },
+              ],
+            },
+          ],
+          growth: [
+            {
+              id: "send-friend-requests",
+              icon: "👋",
+              title: "Send Friend Requests",
+              desc: "Send friend requests to profile URLs",
+              fields: [
+                {
+                  id: "targets",
+                  type: "urls",
+                  label: "Profile URLs (one per line)",
+                },
+              ],
+            },
+            {
+              id: "cancel-friend-requests",
+              icon: "🚫",
+              title: "Cancel Friend Requests",
+              desc: "Cancel outgoing pending friend requests",
+              fields: [
+                {
+                  id: "olderThanDays",
+                  type: "number",
+                  label: "Older Than (days, optional)",
+                  placeholder: "7",
+                },
+                {
+                  id: "limit",
+                  type: "number",
+                  label: "Max Cancel (optional)",
+                  placeholder: "50",
+                },
+              ],
+            },
+            {
+              id: "join-groups",
+              icon: "👥",
+              title: "Join Groups",
+              desc: "Join Facebook groups by URL",
+              fields: [
+                {
+                  id: "groupUrls",
+                  type: "urls",
+                  label: "Group URLs (one per line)",
+                },
+              ],
+            },
+            {
+              id: "batch-post-groups",
+              icon: "📢",
+              title: "Post to Groups",
+              desc: "Post content to multiple groups",
+              fields: [
+                {
+                  id: "groupUrls",
+                  type: "urls",
+                  label: "Group URLs (one per line)",
+                },
+                { id: "text", type: "textarea", label: "Content" },
+              ],
+            },
+            {
+              id: "warmup-account",
+              icon: "🔥",
+              title: "Account Warmup",
+              desc: "Scroll newsfeed with optional light reactions",
+              fields: [
+                {
+                  id: "durationSeconds",
+                  type: "number",
+                  label: "Duration (seconds, max 600)",
+                  value: 120,
+                  max: 600,
+                },
+                {
+                  id: "allowReactions",
+                  type: "checkbox",
+                  label: "Allow reactions (like with 5% probability)",
+                },
+              ],
+            },
+            {
+              id: "warmup-scroll-feed",
+              icon: "👁️",
+              title: "View Boost",
+              desc: "Scroll a specific page/post to generate view signals",
+              fields: [
+                { id: "targetUrl", type: "url", label: "Target URL" },
+                {
+                  id: "durationSeconds",
+                  type: "number",
+                  label: "Duration (seconds, max 300)",
+                  value: 60,
+                  max: 300,
+                },
+              ],
+            },
+          ],
+          scrape: [
+            {
+              id: "profile",
+              icon: "🔍",
+              title: "Scrape Profile",
+              desc: "Extract profile info (name, bio, followers)",
+              fields: [{ id: "url", type: "url", label: "Profile URL" }],
+            },
+            {
+              id: "posts",
+              icon: "📰",
+              title: "Scrape Posts",
+              desc: "Extract recent posts from a profile",
+              fields: [{ id: "url", type: "url", label: "Profile URL" }],
+            },
+            {
+              id: "followers",
+              icon: "👤",
+              title: "Scrape Followers",
+              desc: "Extract follower list from a profile/page",
+              fields: [{ id: "url", type: "url", label: "Profile/Page URL" }],
+            },
+            {
+              id: "search",
+              icon: "🔎",
+              title: "Search Posts",
+              desc: "Search for posts by keyword",
+              fields: [{ id: "query", type: "text", label: "Query" }],
+            },
+            {
+              id: "group-members",
+              icon: "👥",
+              title: "Scrape Group Members",
+              desc: "Extract member list from a group",
+              fields: [{ id: "url", type: "url", label: "Group URL" }],
+            },
+          ],
+        },
+        x: {
+          name: "X / Twitter",
+          icon: "𝕏",
+          color: "#000000",
+          apiBase: "/platform/twitter",
+          authFields: ["label", "auth_token", "ct0"],
+          tabs: ["actions", "growth", "scrape", "monitor"],
+          actions: [
+            {
+              id: "like",
+              icon: "❤️",
+              title: "Like Tweets",
+              desc: "Like tweets by URL",
+              fields: [{ id: "urls", type: "urls", label: "Tweet URLs" }],
+            },
+            {
+              id: "unfollow",
+              icon: "✂️",
+              title: "Unfollow Non-Followers",
+              desc: "Unfollow accounts that do not follow back",
+              fields: [
+                {
+                  id: "limit",
+                  type: "number",
+                  label: "Max Unfollow",
+                  value: 50,
+                },
+              ],
+            },
+          ],
+          growth: [
+            {
+              id: "follow-engagers",
+              icon: "➕",
+              title: "Follow Engagers",
+              desc: "Follow users who engaged with a target",
+              fields: [
+                { id: "target", type: "text", label: "Target username or URL" },
+              ],
+            },
+          ],
+          scrape: [
+            {
+              id: "profile",
+              icon: "🔍",
+              title: "Scrape Profile",
+              desc: "Extract profile info and tweets",
+              fields: [
+                { id: "url", type: "url", label: "Profile URL or username" },
+              ],
+            },
+            {
+              id: "search",
+              icon: "🔎",
+              title: "Search Tweets",
+              desc: "Search tweets by keyword",
+              fields: [{ id: "query", type: "text", label: "Query" }],
+            },
+          ],
+        },
+        bluesky: {
+          name: "Bluesky",
+          icon: "🦋",
+          color: "#0066ff",
+          apiBase: "/platform/bluesky",
+          authFields: ["label", "identifier", "password"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "profile",
+              icon: "🔍",
+              title: "Profile Feed",
+              desc: "Fetch profile and recent posts",
+              fields: [{ id: "handle", type: "text", label: "Bluesky handle" }],
+            },
+            {
+              id: "search",
+              icon: "🔎",
+              title: "Search Posts",
+              desc: "Search posts by keyword",
+              fields: [{ id: "query", type: "text", label: "Query" }],
+            },
+            {
+              id: "trending",
+              icon: "📈",
+              title: "Trending",
+              desc: "Fetch trending feeds and topics",
+              fields: [],
+            },
+          ],
+        },
+        mastodon: {
+          name: "Mastodon",
+          icon: "🐘",
+          color: "#6364ff",
+          apiBase: "/platform/mastodon",
+          authFields: ["label", "instance", "accessToken"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "profile",
+              icon: "🔍",
+              title: "Profile & Toots",
+              desc: "Fetch profile and recent toots",
+              fields: [{ id: "url", type: "url", label: "Profile URL" }],
+            },
+            {
+              id: "search",
+              icon: "🔎",
+              title: "Search Hashtags",
+              desc: "Search posts by hashtag",
+              fields: [{ id: "query", type: "text", label: "Hashtag" }],
+            },
+            {
+              id: "trending",
+              icon: "📈",
+              title: "Trending",
+              desc: "Fetch trending posts",
+              fields: [],
+            },
+          ],
+        },
+        threads: {
+          name: "Threads",
+          icon: "🧵",
+          color: "#000000",
+          apiBase: "/platform/threads",
+          authFields: ["label", "auth_token", "userId"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "profile",
+              icon: "👤",
+              title: "Profile",
+              desc: "Fetch Threads user profile",
+              fields: [{ id: "username", type: "text", label: "Username" }],
+            },
+            {
+              id: "tweets",
+              icon: "📰",
+              title: "Feed",
+              desc: "Fetch recent threads by username",
+              fields: [{ id: "username", type: "text", label: "Username" }],
+            },
+            {
+              id: "post_detail",
+              icon: "🧵",
+              title: "Post Detail",
+              desc: "Get thread and comments by post ID",
+              fields: [{ id: "postId", type: "text", label: "Post ID or URL" }],
+            },
+            {
+              id: "search",
+              icon: "🔎",
+              title: "Search",
+              desc: "Search Threads posts by keyword",
+              fields: [{ id: "query", type: "text", label: "Query" }],
+            },
+            {
+              id: "followers",
+              icon: "➕",
+              title: "Followers",
+              desc: "List followers of a user",
+              fields: [{ id: "username", type: "text", label: "Username" }],
+            },
+            {
+              id: "following",
+              icon: "➡️",
+              title: "Following",
+              desc: "List accounts a user follows",
+              fields: [{ id: "username", type: "text", label: "Username" }],
+            },
+          ],
+        },
+        tiktok: {
+          name: "TikTok",
+          icon: "🎵",
+          color: "#ff0050",
+          apiBase: "/platform/tiktok",
+          authFields: ["label", "sessionid"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "search",
+              icon: "🔎",
+              title: "Search Videos",
+              desc: "Search TikTok by keyword",
+              fields: [{ id: "query", type: "text", label: "Keyword" }],
+            },
+            {
+              id: "hashtag",
+              icon: "#️⃣",
+              title: "Hashtag Feed",
+              desc: "Fetch videos for a hashtag",
+              fields: [{ id: "hashtag", type: "text", label: "Hashtag" }],
+            },
+            {
+              id: "post_detail",
+              icon: "🎬",
+              title: "Video Detail",
+              desc: "Video detail and comments",
+              fields: [{ id: "videoId", type: "text", label: "Video ID or URL" }],
+            },
+            {
+              id: "comments",
+              icon: "💬",
+              title: "Comments",
+              desc: "Comments for a video",
+              fields: [{ id: "videoId", type: "text", label: "Video ID or URL" }],
+            },
+          ],
+        },
+        shopee: {
+          name: "Shopee",
+          icon: "🛒",
+          color: "#ee4d2d",
+          apiBase: "/platform/shopee",
+          authFields: ["label"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "search_products",
+              icon: "🔎",
+              title: "Search Products",
+              desc: "Search Shopee products",
+              fields: [{ id: "keyword", type: "text", label: "Keyword" }],
+            },
+            {
+              id: "product_detail",
+              icon: "📦",
+              title: "Product Detail",
+              desc: "Product detail by IDs",
+              fields: [
+                { id: "itemId", type: "text", label: "Item ID" },
+                { id: "shopId", type: "text", label: "Shop ID" },
+              ],
+            },
+            {
+              id: "product_reviews",
+              icon: "⭐",
+              title: "Product Reviews",
+              desc: "Reviews by item and shop",
+              fields: [
+                { id: "itemId", type: "text", label: "Item ID" },
+                { id: "shopId", type: "text", label: "Shop ID" },
+              ],
+            },
+          ],
+        },
+        tiktokshop: {
+          name: "TikTok Shop",
+          icon: "🛍️",
+          color: "#000000",
+          apiBase: "/platform/tiktokshop",
+          authFields: ["label"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "top_products",
+              icon: "🏆",
+              title: "Top Products",
+              desc: "Top selling products by category",
+              fields: [
+                { id: "category", type: "text", label: "Category (optional)", placeholder: "fashion" },
+              ],
+            },
+            {
+              id: "product_detail",
+              icon: "📦",
+              title: "Product Detail",
+              desc: "Product detail by ID",
+              fields: [{ id: "productId", type: "text", label: "Product ID" }],
+            },
+            {
+              id: "search_products",
+              icon: "🔎",
+              title: "Search Products",
+              desc: "Search TikTok Shop by keyword",
+              fields: [{ id: "keyword", type: "text", label: "Keyword" }],
+            },
+          ],
+        },
+        topcv: {
+          name: "TopCV",
+          icon: "💼",
+          color: "#2e7d32",
+          apiBase: "/platform/topcv",
+          authFields: ["label"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "search_jobs",
+              icon: "🔎",
+              title: "Search Jobs",
+              desc: "Search jobs by keyword, city, salary",
+              fields: [{ id: "keyword", type: "text", label: "Keyword" }],
+            },
+            {
+              id: "job_detail",
+              icon: "📄",
+              title: "Job Detail",
+              desc: "Job detail by jobId",
+              fields: [{ id: "jobId", type: "text", label: "Job ID" }],
+            },
+            {
+              id: "company_detail",
+              icon: "🏢",
+              title: "Company Detail",
+              desc: "Company by companyId",
+              fields: [{ id: "companyId", type: "text", label: "Company ID" }],
+            },
+          ],
+        },
+        vietnamworks: {
+          name: "VietnamWorks",
+          icon: "🇻🇳",
+          color: "#e65100",
+          apiBase: "/platform/vietnamworks",
+          authFields: ["label"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "search_jobs",
+              icon: "🔎",
+              title: "Search Jobs",
+              desc: "Search VietnamWorks jobs",
+              fields: [{ id: "keyword", type: "text", label: "Keyword" }],
+            },
+            {
+              id: "job_detail",
+              icon: "📄",
+              title: "Job Detail",
+              desc: "Job detail by jobId",
+              fields: [{ id: "jobId", type: "text", label: "Job ID" }],
+            },
+            {
+              id: "company_detail",
+              icon: "🏢",
+              title: "Company Detail",
+              desc: "Company by companyId",
+              fields: [{ id: "companyId", type: "text", label: "Company ID" }],
+            },
+          ],
+        },
+        linkedin: {
+          name: "LinkedIn",
+          icon: "💼",
+          color: "#0a66c2",
+          apiBase: "/platform/linkedin",
+          authFields: ["label"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "search_jobs",
+              icon: "🔎",
+              title: "Search Jobs",
+              desc: "Search LinkedIn jobs",
+              fields: [
+                { id: "keyword", type: "text", label: "Keyword" },
+                { id: "location", type: "text", label: "Location (optional)", placeholder: "Vietnam" },
+              ],
+            },
+            {
+              id: "job_detail",
+              icon: "📄",
+              title: "Job Detail",
+              desc: "Job detail by jobId",
+              fields: [{ id: "jobId", type: "text", label: "Job ID" }],
+            },
+            {
+              id: "company_profile",
+              icon: "🏢",
+              title: "Company Profile",
+              desc: "Company by slug",
+              fields: [{ id: "companySlug", type: "text", label: "Company slug" }],
+            },
+            {
+              id: "lead_profile",
+              icon: "👤",
+              title: "Lead Profile",
+              desc: "B2B lead by profile URL",
+              fields: [{ id: "profileUrl", type: "url", label: "Profile URL" }],
+            },
+          ],
+        },
+        batdongsan: {
+          name: "Batdongsan",
+          icon: "🏠",
+          color: "#c62828",
+          apiBase: "/platform/batdongsan",
+          authFields: ["label"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "search_listings",
+              icon: "🔎",
+              title: "Search Listings",
+              desc: "Real estate listings",
+              fields: [{ id: "city", type: "text", label: "City", value: "SG" }],
+            },
+            {
+              id: "listing_detail",
+              icon: "🏡",
+              title: "Listing Detail",
+              desc: "Detail by productId",
+              fields: [{ id: "productId", type: "text", label: "Product ID" }],
+            },
+          ],
+        },
+        chotot: {
+          name: "Chợ Tốt",
+          icon: "🏘️",
+          color: "#f9a825",
+          apiBase: "/platform/chotot",
+          authFields: ["label"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "search_listings",
+              icon: "🔎",
+              title: "Search Listings",
+              desc: "Classified listings",
+              fields: [
+                { id: "category", type: "text", label: "Category", value: "bds" },
+                { id: "region_v2", type: "number", label: "Region ID", value: 13000 },
+              ],
+            },
+            {
+              id: "listing_detail",
+              icon: "🏡",
+              title: "Listing Detail",
+              desc: "Detail by listId",
+              fields: [{ id: "listId", type: "text", label: "List ID" }],
+            },
+            {
+              id: "get_phone",
+              icon: "📞",
+              title: "Get Phone",
+              desc: "Decrypt seller phone",
+              fields: [{ id: "listId", type: "text", label: "List ID" }],
+            },
+          ],
+        },
+      };
+
+      const cfg = PLATFORM_CONFIG[PLATFORM] || PLATFORM_CONFIG.facebook;
+
+      const state = {
+        platform: PLATFORM,
+        accountId: null,
+        activeTab: "actions",
+        activeAction: null,
+        dryRun: true,
+        liveConfirmed: false,
+      };
+
+      function initHeader() {
+        document.getElementById("platform-icon").textContent = cfg.icon;
+        document.getElementById("platform-icon").style.background = cfg.color;
+        document.getElementById("platform-title").textContent =
+          cfg.name + " Automation";
+        document.title = cfg.name + " Automation - XActions";
+      }
+
+      function initTabs() {
+        const bar = document.getElementById("tab-bar");
+        bar.innerHTML = "";
+        cfg.tabs.forEach((tab) => {
+          const btn = document.createElement("button");
+          btn.dataset.tab = tab;
+          btn.textContent = tab[0].toUpperCase() + tab.slice(1);
+          btn.setAttribute("role", "tab");
+          btn.setAttribute("aria-controls", "tab-" + tab);
+          btn.onclick = () => switchTab(tab);
+          bar.appendChild(btn);
+        });
+
+        ["actions", "growth", "scrape", "monitor"].forEach((tab) => {
+          const panel = document.getElementById("tab-" + tab);
+          panel.style.display = cfg.tabs.includes(tab) ? "" : "none";
+        });
+
+        const hash = location.hash.slice(1);
+        if (cfg.tabs.includes(hash)) switchTab(hash);
+        else switchTab(cfg.tabs[0]);
+      }
+
+      function switchTab(name) {
+        state.activeTab = name;
+        document
+          .querySelectorAll(".tab-panel")
+          .forEach((p) => p.classList.remove("active"));
+        document.querySelectorAll(".tab-bar button").forEach((b) => {
+          b.classList.remove("active");
+          b.setAttribute("aria-selected", "false");
+        });
+        document.getElementById("tab-" + name)?.classList.add("active");
+        const btn = document.querySelector(
+          `.tab-bar button[data-tab="${name}"]`,
+        );
+        if (btn) {
+          btn.classList.add("active");
+          btn.setAttribute("aria-selected", "true");
+        }
+        location.hash = name;
+
+        if (name !== "monitor") renderQuickActions(name);
+        if (name === "monitor") loadMonitor();
+      }
+
+      function renderQuickActions(tab) {
+        const items = cfg[tab] || [];
+        const container = document.getElementById("qa-" + tab);
+        const formContainer = document.getElementById("form-" + tab);
+        container.innerHTML = "";
+        formContainer.innerHTML = "";
+
+        if (!items.length) {
+          formContainer.innerHTML =
+            '<div class="empty-state">No actions available for this tab.</div>';
+          return;
+        }
+
+        items.forEach((item, idx) => {
+          const btn = document.createElement("button");
+          btn.dataset.action = item.id;
+          btn.innerHTML = `<span>${item.icon}</span> <span>${item.title}</span>`;
+          btn.onclick = () => selectAction(tab, item.id);
+          if (idx === 0) btn.classList.add("active");
+          container.appendChild(btn);
+        });
+
+        if (items.length) selectAction(tab, items[0].id);
+      }
+
+      function selectAction(tab, actionId) {
+        state.activeAction = actionId;
+        const items = cfg[tab] || [];
+        const item = items.find((i) => i.id === actionId);
+        if (!item) return;
+
+        const container = document.getElementById("qa-" + tab);
+        [...container.children].forEach((b) =>
+          b.classList.toggle("active", b.dataset.action === actionId),
+        );
+
+        const formContainer = document.getElementById("form-" + tab);
+        formContainer.innerHTML = buildActionCard(tab, item);
+        bindFormEvents(tab, item);
+      }
+
+      function buildActionCard(tab, item) {
+        const isPublic = cfg.tabs.length === 2 && cfg.tabs.includes("scrape");
+        const needsAccount = !isPublic;
+        const fieldsHtml = item.fields.map((f) => buildField(f)).join("");
+
+        const actionBtnText = state.dryRun ? "▶ Preview" : "⚡ Run Live";
+        const actionBtnClass = state.dryRun ? "btn-run" : "btn-run live";
+        const disabled = needsAccount && !state.accountId ? "disabled" : "";
+
+        return `
+      <div class="action-card" id="card-${tab}-${item.id}">
+        <div class="card-header">
+          <div class="card-title">${item.icon} ${esc(item.title)}</div>
+          <span class="card-help" title="${esc(item.desc)}">?</span>
+        </div>
+        <div class="card-desc">${esc(item.desc)}</div>
+        <form id="form-${tab}-${item.id}" onsubmit="event.preventDefault()">
+          ${fieldsHtml}
+          <div class="options-row">
+            <label for="max-batch-${tab}-${item.id}">Max batch:</label>
+            <select id="max-batch-${tab}-${item.id}">
+              <option>5</option>
+              <option selected>20</option>
+              <option>50</option>
+            </select>
+            <label for="delay-${tab}-${item.id}">Delay:</label>
+            <select id="delay-${tab}-${item.id}">
+              <option value="1000">1s</option>
+              <option value="2000" selected>2s</option>
+              <option value="3000">3s</option>
+            </select>
+          </div>
+          ${needsAccount && !state.accountId ? '<div class="warning" style="color:var(--warning);font-size:0.8125rem;margin-bottom:12px">⚠️ Select an account to continue.</div>' : ""}
+          <div class="live-confirm" id="live-confirm-${tab}-${item.id}">
+            ⚠️ Real actions will be performed. Continue?
+            <button type="button" class="confirm" onclick="confirmLive('${tab}', '${item.id}')">Yes, run live</button>
+            <button type="button" class="cancel" onclick="cancelLive('${tab}', '${item.id}')">Cancel</button>
+          </div>
+          <button type="button" class="${actionBtnClass}" id="btn-${tab}-${item.id}" ${disabled} onclick="run('${tab}', '${item.id}')">${actionBtnText}</button>
+          <div class="result-panel" id="result-${tab}-${item.id}" aria-live="polite"></div>
+        </form>
+      </div>
+    `;
+      }
+
+      function buildField(f) {
+        const id = `field-${f.id}`;
+        if (f.type === "urls") {
+          return `
+        <div class="card-field">
+          <label for="${id}">
+            <span>${esc(f.label)}</span>
+            <span class="count" id="count-${f.id}">0 URLs</span>
+          </label>
+          <textarea id="${id}" data-type="urls" placeholder="https://..."></textarea>
+        </div>
+      `;
+        }
+        if (f.type === "textarea") {
+          return `
+        <div class="card-field">
+          <label for="${id}">${esc(f.label)}</label>
+          <textarea id="${id}" placeholder="${esc(f.placeholder || "")}"></textarea>
+        </div>
+      `;
+        }
+        if (f.type === "checkbox") {
+          return `
+        <div class="card-field">
+          <label style="justify-content:flex-start;gap:8px;cursor:pointer">
+            <input type="checkbox" id="${id}" ${f.checked ? "checked" : ""}>
+            <span>${esc(f.label)}</span>
+          </label>
+        </div>
+      `;
+        }
+        if (f.type === "number") {
+          return `
+        <div class="card-field">
+          <label for="${id}">${esc(f.label)}</label>
+          <input type="number" id="${id}" value="${f.value || ""}" placeholder="${esc(f.placeholder || "")}" min="${f.min || 0}" max="${f.max || ""}">
+        </div>
+      `;
+        }
+        if (f.type === "datetime-local") {
+          return `
+        <div class="card-field">
+          <label for="${id}">${esc(f.label)}</label>
+          <input type="datetime-local" id="${id}">
+        </div>
+      `;
+        }
+        return `
+      <div class="card-field">
+        <label for="${id}">${esc(f.label)}</label>
+        <input type="${f.type === "url" ? "url" : "text"}" id="${id}" placeholder="${esc(f.placeholder || "")}">
+      </div>
+    `;
+      }
+
+      function bindFormEvents(tab, item) {
+        item.fields.forEach((f) => {
+          if (f.type === "urls") {
+            const el = document.getElementById("field-" + f.id);
+            if (el)
+              el.addEventListener("input", () =>
+                updateUrlCount(el, "count-" + f.id),
+              );
+          }
+        });
+      }
+
+      function updateUrlCount(textarea, countId) {
+        const lines = textarea.value
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const valid = lines.filter((u) => isValidUrl(u));
+        const badge = document.getElementById(countId);
+        badge.textContent = `${lines.length} URL${lines.length === 1 ? "" : "s"}`;
+        badge.style.color =
+          valid.length === lines.length
+            ? "var(--text-secondary)"
+            : "var(--error)";
+        textarea.classList.toggle(
+          "invalid",
+          lines.length > 0 && valid.length !== lines.length,
+        );
+      }
+
+      function isValidUrl(s) {
+        try {
+          new URL(s);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      function esc(s) {
+        return String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      }
+
+      async function loadAccounts() {
+        try {
+          const data = await apiRequest(cfg.apiBase + "/accounts");
+          const sel = document.getElementById("platform-account");
+          const current = sel.value;
+          sel.innerHTML = '<option value="">— Select account —</option>';
+          (data.accounts || []).forEach((a) => {
+            const opt = document.createElement("option");
+            opt.value = a.id;
+            opt.textContent = a.label;
+            sel.appendChild(opt);
+          });
+          const saved = localStorage.getItem(PLATFORM + "_selected_account");
+          if (saved) sel.value = saved;
+          if (current) sel.value = current;
+          state.accountId = sel.value || null;
+          updateStatus();
+          if (state.activeTab !== "monitor")
+            selectAction(state.activeTab, state.activeAction);
+        } catch (e) {
+          console.warn("Failed to load accounts:", e);
+        }
+      }
+
+      document
+        .getElementById("platform-account")
+        .addEventListener("change", (e) => {
+          state.accountId = e.target.value || null;
+          localStorage.setItem(
+            PLATFORM + "_selected_account",
+            state.accountId || "",
+          );
+          updateStatus();
+          if (state.activeTab !== "monitor")
+            selectAction(state.activeTab, state.activeAction);
+        });
+
+      function updateStatus() {
+        const el = document.getElementById("acc-status");
+        if (state.accountId) {
+          el.innerHTML =
+            '🟢 Active <span style="color:var(--text-secondary)">· last verified just now</span>';
+        } else {
+          el.textContent = "No account selected";
+        }
+      }
+
+      function toggleImport() {
+        document.getElementById("import-section").classList.toggle("show");
+      }
+
+      async function importAccount() {
+        const fields = cfg.authFields;
+        const values = {};
+        for (const f of fields)
+          values[f] = document.getElementById("imp-" + f)?.value?.trim() || "";
+        if (!values.label) return alert("Label is required");
+        if (
+          (fields.includes("c_user") && !values.c_user) ||
+          (fields.includes("xs") && !values.xs)
+        ) {
+          return alert("All account fields required");
+        }
+
+        try {
+          await apiRequest(cfg.apiBase + "/accounts", {
+            method: "POST",
+            body: JSON.stringify(values),
+            headers: { "Content-Type": "application/json" },
+          });
+          showToast("Account saved!", "success");
+          fields.forEach((f) => {
+            const el = document.getElementById("imp-" + f);
+            if (el) el.value = "";
+          });
+          toggleImport();
+          loadAccounts();
+        } catch (e) {
+          showToast(e.message || "Failed to save", "error");
+        }
+      }
+
+      const dryrunToggle = document.getElementById("global-dryrun");
+      const dryrunLabel = document.getElementById("global-dryrun-label");
+
+      function refreshDryRunLabel() {
+        dryrunLabel.classList.toggle("live", !state.dryRun);
+        dryrunLabel.innerHTML = `<input type="checkbox" id="global-dryrun" ${state.dryRun ? "checked" : ""}> ${state.dryRun ? "🛡️ Dry-run" : "⚡ Live"}`;
+        const newToggle = document.getElementById("global-dryrun");
+        newToggle.addEventListener("change", onDryRunChange);
+      }
+
+      function onDryRunChange(e) {
+        state.dryRun = e.target.checked;
+        state.liveConfirmed = false;
+        refreshDryRunLabel();
+        if (state.activeTab !== "monitor")
+          selectAction(state.activeTab, state.activeAction);
+      }
+
+      dryrunToggle.addEventListener("change", onDryRunChange);
+
+      function confirmLive(tab, id) {
+        state.liveConfirmed = true;
+        document
+          .getElementById(`live-confirm-${tab}-${id}`)
+          .classList.remove("show");
+        run(tab, id);
+      }
+
+      function cancelLive(tab, id) {
+        state.liveConfirmed = false;
+        document
+          .getElementById(`live-confirm-${tab}-${id}`)
+          .classList.remove("show");
+      }
+
+      async function run(tab, id) {
+        const item = (cfg[tab] || []).find((i) => i.id === id);
+        if (!item) return;
+
+        const isPublic = cfg.tabs.length === 2 && cfg.tabs.includes("scrape");
+        if (tab !== "scrape" && !isPublic && !state.accountId) {
+          return showToast("Select an account first", "error");
+        }
+
+        if (!state.dryRun && !state.liveConfirmed) {
+          document
+            .getElementById(`live-confirm-${tab}-${id}`)
+            .classList.add("show");
+          return;
+        }
+
+        const btn = document.getElementById(`btn-${tab}-${id}`);
+        const resultEl = document.getElementById(`result-${tab}-${id}`);
+        const body = buildBody(tab, item);
+        if (!body) return;
+
+        btn.disabled = true;
+        btn.textContent = "⏳ Running...";
+        resultEl.className = "result-panel show dryrun";
+        resultEl.innerHTML = "<div>Processing...</div>";
+
+        const endpoint =
+          tab === "scrape"
+            ? cfg.apiBase + "/scrape"
+            : cfg.apiBase + "/automate";
+
+        try {
+          const data = await apiRequest(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const cls = data.dryRun
+            ? "dryrun"
+            : data.ok !== false
+              ? "success"
+              : "error";
+          renderResult(resultEl, data, cls);
+        } catch (e) {
+          resultEl.className = "result-panel show error";
+          resultEl.innerHTML = `<div class="summary">❌ ${esc(e.message || "Request failed")}</div>`;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = state.dryRun ? "▶ Preview" : "⚡ Run Live";
+          btn.className = state.dryRun ? "btn-run" : "btn-run live";
+          state.liveConfirmed = false;
+        }
+      }
+
+      function buildBody(tab, item) {
+        const isScrape = tab === "scrape";
+        const body = isScrape
+          ? { action: item.id }
+          : { action: item.id, dryRun: state.dryRun };
+        if (state.accountId) body.accountIds = [state.accountId];
+
+        for (const f of item.fields) {
+          const el = document.getElementById("field-" + f.id);
+          if (!el) continue;
+          if (f.type === "urls") {
+            body[f.id] = el.value
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean);
+          } else if (f.type === "number") {
+            body[f.id] = el.value ? Number(el.value) : undefined;
+          } else if (f.type === "checkbox") {
+            body[f.id] = el.checked;
+          } else if (f.type === "datetime-local") {
+            body[f.id] = el.value
+              ? new Date(el.value).toISOString()
+              : undefined;
+          } else if (f.id === "url" && isScrape) {
+            body.url = el.value.trim();
+          } else if (f.id === "query" && isScrape) {
+            body.query = el.value.trim();
+          } else if (f.id === "handle" && isScrape) {
+            body.handle = el.value.trim();
+          } else {
+            body[f.id] = el.value.trim();
+          }
+        }
+
+        const maxBatchEl = document.getElementById(
+          `max-batch-${tab}-${item.id}`,
+        );
+        if (maxBatchEl) {
+          const limit = Number(maxBatchEl.value);
+          for (const key of [
+            "urls",
+            "postUrls",
+            "recipients",
+            "targets",
+            "groupUrls",
+          ]) {
+            if (Array.isArray(body[key]) && body[key].length > limit)
+              body[key] = body[key].slice(0, limit);
+          }
+        }
+
+        return body;
+      }
+
+      function renderResult(el, data, cls) {
+        el.className = "result-panel show " + cls;
+        const icon =
+          cls === "dryrun"
+            ? "🛡️"
+            : cls === "success"
+              ? "✅"
+              : cls === "error"
+                ? "❌"
+                : "⚠️";
+        const summary =
+          data.message ||
+          data.summary ||
+          (cls === "dryrun"
+            ? "Preview complete (No changes made)"
+            : data.ok !== false
+              ? "Operation completed successfully"
+              : "Operation encountered errors");
+        const raw = JSON.stringify(data, null, 2);
+
+        // Smart items visualizer
+        const items = data.posts || data.comments || data.followers || data.following || data.members || data.results || (Array.isArray(data) ? data : []);
+        let cardsHtml = '';
+        if (Array.isArray(items) && items.length > 0) {
+          cardsHtml = `
+            <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:12px;margin:16px 0;">
+              ${items.slice(0, 12).map((item, i) => {
+                const title = item.title || item.name || item.username || item.author || `Item #${i+1}`;
+                const text = item.content || item.text || item.description || item.url || '';
+                const link = item.url || item.postUrl || item.profileUrl || '';
+                return `
+                  <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;">
+                    <div style="font-weight:700;font-size:0.875rem;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                      <span>📌</span>
+                      <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(title)}</span>
+                    </div>
+                    ${text ? `<div style="font-size:0.8125rem;color:var(--text-secondary);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;">${esc(text)}</div>` : ''}
+                    ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" style="font-size:0.75rem;color:var(--accent);text-decoration:none;margin-top:auto;">View Source →</a>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+            ${items.length > 12 ? `<div style="font-size:0.8125rem;color:var(--text-secondary);text-align:center;margin-bottom:12px;">Showing first 12 of ${items.length} items</div>` : ''}
+          `;
+        }
+
+        el.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+            <div class="summary" style="margin-bottom:0;">${icon} ${esc(summary)}</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-secondary" style="padding:4px 10px;font-size:0.75rem;border-radius:6px;cursor:pointer;" onclick="copyRawResult(this)">📋 Copy JSON</button>
+            </div>
+          </div>
+          ${data.count !== undefined ? `<div style="font-size:0.8125rem;color:var(--text-secondary);">${esc(data.count)} item(s) processed</div>` : ''}
+          ${cardsHtml}
+          <div class="toggle-raw" style="margin-top:12px;font-size:0.8125rem;color:var(--accent);cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">📄 Toggle raw JSON response</div>
+          <pre style="display:none;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;padding:12px;overflow-x:auto;max-height:300px;margin-top:8px;">${esc(raw)}</pre>
+        `;
+      }
+
+      window.copyRawResult = function(btn) {
+        const pre = btn.closest('.result-panel')?.querySelector('pre');
+        if (pre && window.copyToClipboard) {
+          window.copyToClipboard(pre.textContent, 'Copied raw JSON to clipboard!');
+        }
+      };
+
+      async function loadMonitor() {
+        const el = document.getElementById("monitor-list");
+        try {
+          const data = await apiRequest("/operations?limit=20");
+          const ops = (data.operations || data || []).filter((o) =>
+            o.type?.startsWith(PLATFORM),
+          );
+          if (!ops.length) {
+            el.innerHTML = '<div class="empty-state">No operations yet.</div>';
+            return;
+          }
+
+          el.innerHTML = `
+        <table class="monitor-table">
+          <thead><tr><th>Type</th><th>Status</th><th>When</th></tr></thead>
+          <tbody>
+            ${ops
+              .map(
+                (o) => `
+              <tr>
+                <td>${esc(o.type)}</td>
+                <td class="status ${esc(o.status)}">${esc(o.status)}</td>
+                <td>${new Date(o.startedAt).toLocaleString()}</td>
+              </tr>
+            `,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `;
+        } catch (e) {
+          el.innerHTML =
+            '<div class="empty-state">Failed to load operations.</div>';
+        }
+      }
+
+      function showToast(message, type) {
+        if (window.showToast && window.showToast !== showToast)
+          return window.showToast(message, type);
+        console.log(`[${type}] ${message}`);
+      }
+
+      initHeader();
+      initTabs();
+      loadAccounts();
+    </script>
+  </body>
+</html>

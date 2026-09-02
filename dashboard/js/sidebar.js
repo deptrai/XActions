@@ -49,9 +49,11 @@
   const navItems = [
     // Primary platforms
     { href: '/', label: 'Dashboard', icon: icons.home },
-    { href: '/facebook.html', label: 'Facebook', icon: icons.facebook },
-    { href: '/automations', label: 'X / Twitter', icon: icons.automations },
-    { href: '/thread-composer', label: 'Threads', icon: icons.threadComposer },
+    { href: '/platforms/facebook', label: 'Facebook', icon: icons.facebook },
+    { href: '/platforms/x', label: 'X / Twitter', icon: icons.automations },
+    { href: '/platforms/threads', label: 'Threads', icon: icons.threadComposer },
+    { href: '/platforms/bluesky', label: 'Bluesky', icon: icons.ai },
+    { href: '/platforms/mastodon', label: 'Mastodon', icon: icons.threads },
     // Tools
     { href: '/analytics-dashboard', label: 'Analytics', icon: icons.analytics },
     { href: '/monitor', label: 'Monitor', icon: icons.monitor },
@@ -90,10 +92,30 @@
         <div class="user-avatar" id="user-avatar">⚡</div>
         <div class="user-info">
           <div class="user-name" id="user-display-name">XActions</div>
-          <div class="user-handle" id="user-handle">Loading...</div>
+          <div class="user-handle" id="user-handle">@xactions</div>
         </div>
         <span class="user-menu-dots">···</span>
       </a>`;
+
+  // Mobile Bottom Navigation Bar (rendered on narrow screens)
+  const mobileNav = document.createElement('nav');
+  mobileNav.className = 'xa-mobile-bottom-nav';
+  mobileNav.setAttribute('aria-label', 'Mobile navigation');
+  const bottomItems = [
+    { href: '/', label: 'Home', icon: icons.home },
+    { href: '/platform.html?platform=facebook', label: 'Platforms', icon: icons.facebook },
+    { href: '/run', label: 'Run', icon: icons.run },
+    { href: '/analytics-dashboard', label: 'Analytics', icon: icons.analytics },
+    { href: '/docs', label: 'Docs', icon: icons.docs }
+  ];
+  mobileNav.innerHTML = bottomItems.map(item => {
+    const active = isActive(item.href) ? ' active' : '';
+    return `<a href="${item.href}" class="xa-mobile-nav-item${active}" aria-label="${item.label}">
+      <span class="xa-mobile-nav-icon" aria-hidden="true">${item.icon}</span>
+      <span class="xa-mobile-nav-label">${item.label}</span>
+    </a>`;
+  }).join('');
+  document.body.appendChild(mobileNav);
 
   // Populate user info from stored auth token
   (function loadUserInfo() {
@@ -130,9 +152,7 @@
     }
 
     // Fetch full user info from API for Twitter handle + avatar
-    const apiBase = window.location.hostname === 'localhost'
-      ? 'http://localhost:3001/api'
-      : '/api';
+    const apiBase = `${window.location.origin}/api`;
 
     fetch(`${apiBase}/user/me`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -183,6 +203,52 @@
       .action-btn { width: 50px; height: 50px; padding: 0; font-size: 0; }
       .action-btn::before { content: '⚡'; font-size: 1.5rem; }
       .user-menu { justify-content: center; }
+    }
+    .xa-mobile-bottom-nav { display: none; }
+    @media (max-width: 640px) {
+      .sidebar-left { display: none !important; }
+      .main-content { padding-bottom: 72px; }
+      .xa-mobile-bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(16px) saturate(180%);
+        border-top: 1px solid var(--border);
+        z-index: 9999;
+        justify-content: space-around;
+        align-items: center;
+        padding: 0 8px;
+      }
+      .xa-mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-size: 0.6875rem;
+        font-weight: 500;
+        gap: 3px;
+        flex: 1;
+        height: 100%;
+        transition: color 0.18s;
+      }
+      .xa-mobile-nav-item.active {
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .xa-mobile-nav-icon svg {
+        width: 22px;
+        height: 22px;
+      }
+      .xa-mobile-nav-item.active .xa-mobile-nav-icon svg {
+        stroke-width: 2.5;
+        filter: drop-shadow(0 0 6px rgba(29, 155, 240, 0.5));
+      }
     }`;
   document.head.appendChild(style);
 })();

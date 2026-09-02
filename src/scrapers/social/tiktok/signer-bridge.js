@@ -70,8 +70,10 @@ function normalizeProxy(proxy) {
  * @param {string} [init]
  * @returns {Promise<string>}
  */
-function triggerSignedFetch(url, init) {
-  const options = init ? JSON.parse(init) : { credentials: 'include', mode: 'cors' };
+function triggerSignedFetch(arg1, arg2) {
+  let url = typeof arg1 === 'string' ? arg1 : arg1?.url;
+  let init = typeof arg1 === 'object' && arg1?.init ? arg1.init : arg2;
+  const options = init ? (typeof init === 'string' ? JSON.parse(init) : init) : { credentials: 'include', mode: 'cors' };
   return fetch(url, options).then(
     () => 'ok',
     (err) => String(err?.message || err)
@@ -418,7 +420,7 @@ export class TikTokBrowserBridge {
     try {
       // Trigger a fetch so TikTok's webmssdk hook rewrites the URL with tokens.
       const init = JSON.stringify({ credentials: 'include', mode: 'cors' });
-      const fetchResult = await adapter.evaluate(page, /** @type {(...args: unknown[]) => unknown} */ (/** @type {unknown} */ (triggerSignedFetch)), url, init);
+      const fetchResult = await adapter.evaluate(page, /** @type {(...args: unknown[]) => unknown} */ (/** @type {unknown} */ (triggerSignedFetch)), { url, init });
 
       // Give the runtime a moment to complete the request and fire the listener.
       const deadline = Date.now() + 3000;

@@ -9,7 +9,7 @@ describe('Comprehensive All-Routes Smoke Test', () => {
   let authHeader = '';
 
   beforeAll(async () => {
-    await seedTestUser(userId);
+    await seedTestUser(userId, 'smokeuser', { isAdmin: true });
     const validToken = makeTestToken(userId, 'smokeuser');
     authHeader = `Bearer ${validToken}`;
   });
@@ -65,11 +65,6 @@ describe('Comprehensive All-Routes Smoke Test', () => {
       const res = await request(app).get('/api/proxies/status');
       expect(res.status).toBe(200);
     });
-
-    it('GET /api/governor/status returns 200 with governor metrics', async () => {
-      const res = await request(app).get('/api/governor/status');
-      expect(res.status).toBe(200);
-    });
   });
 
   describe('2. Schemas & Metadata Endpoints', () => {
@@ -94,6 +89,7 @@ describe('Comprehensive All-Routes Smoke Test', () => {
       '/api/operations',
       '/api/billing/subscription',
       '/api/checkpoints',
+      '/api/governor/status',
       '/api/bookmarks',
       '/api/creator',
       '/api/spaces',
@@ -121,6 +117,13 @@ describe('Comprehensive All-Routes Smoke Test', () => {
     it('GET /api/operations with auth returns 200', async () => {
       const res = await request(app).get('/api/operations').set('Authorization', authHeader);
       expect([200, 204]).toContain(res.status);
+    });
+
+    it('GET /api/governor/status with admin auth returns 200', async () => {
+      const res = await request(app).get('/api/governor/status').set('Authorization', authHeader);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.status).toBeDefined();
     });
 
     it('POST /api/facebook/scrape with missing body returns 400 validation error', async () => {

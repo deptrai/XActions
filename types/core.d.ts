@@ -116,6 +116,31 @@ export interface GovernorStatus {
   redisConsumerLag: number;
   hibernatingAccounts: Array<{ accountId: string; remainingSeconds: number; reason: string }>;
   throttleLevel: string;
+  /** Dual-pool partition stats (AD-20). */
+  dualPool: import('./proxy.js').DualPoolStats;
+  /** Per-consumer quota status (AD-20). */
+  consumerQuotas: Record<string, ConsumerStatus>;
+}
+
+/** Consumer quota configuration (AD-20). */
+export interface ConsumerQuotaConfig {
+  consumerId: string;
+  /** Requests per minute; Infinity means unmetered. */
+  rpmLimit: number;
+  burstLimit?: number;
+  priority?: number;
+}
+
+/** Observability snapshot for a single consumer (AD-20). */
+export interface ConsumerStatus {
+  consumerId: string;
+  rpmLimit: number;
+  burstLimit: number;
+  priority: number;
+  usedInWindow: number;
+  remaining: number;
+  isThrottled: boolean;
+  overBurst: boolean;
 }
 
 export interface ErrorEnvelope {
@@ -129,6 +154,8 @@ export interface ErrorEnvelope {
   suggestedAction: string;
   accountId?: string;
   platform?: string;
+  /** Consumer identity for quota errors (AD-20). */
+  consumerId?: string;
   details?: unknown;
 }
 
@@ -176,6 +203,7 @@ export class PlatformError extends Error {
   suggestedAction: string;
   accountId?: string;
   platform?: string;
+  consumerId?: string;
   details?: unknown;
   constructor(opts?: {
     code?: string;
@@ -186,6 +214,7 @@ export class PlatformError extends Error {
     suggestedAction?: string;
     accountId?: string;
     platform?: string;
+    consumerId?: string;
     details?: unknown;
   });
   get isRetryable(): boolean;
@@ -295,7 +324,12 @@ export abstract class AbstractApiClient {
     rateLimitHibernationMs?: number;
     standbyBackoffMs?: number;
   });
-  resolveProxy(accountId?: string, requiresResidential?: boolean): string | Record<string, unknown> | null;
+  resolveProxy(
+    accountId?: string,
+    requiresResidential?: boolean,
+    requiresAuth?: boolean,
+    options?: { pool?: import('./proxy.js').PoolName; consumerId?: string }
+  ): string | Record<string, unknown> | null;
   init(session: Record<string, unknown>): Promise<void>;
   request(method: string, url: string, options?: Record<string, unknown>): Promise<unknown>;
   requestWithSign(method: string, url: string, payload?: SignPayload, options?: Record<string, unknown>): Promise<unknown>;
@@ -400,6 +434,16 @@ export class AdaptiveRateGovernor {
   recordBotChallenge(accountId: string, platform?: string, durationMs?: number): void;
   wakeAccount(accountId: string, platform?: string): void;
   isHibernating(accountId: string, platform?: string): boolean;
+  /** Set or update a consumer quota (AD-20). */
+  setConsumerQuota(consumerId: string, config: Partial<Omit<ConsumerQuotaConfig, 'consumerId'>>): void;
+  /** True when the consumer has remaining quota in the current sliding window (AD-20). */
+  canConsumerRequest(consumerId: string): boolean;
+  /** Record a consumer request against the sliding window (AD-20). */
+  recordConsumerRequest(consumerId: string): void;
+  /** Observability snapshot for one consumer (AD-20). */
+  getConsumerStatus(consumerId: string): ConsumerStatus;
+  /** Seconds until the consumer's sliding window frees a slot (AD-20). */
+  getConsumerRetryAfterSeconds(consumerId: string): number;
   getStatus(): GovernorStatus;
 }
 

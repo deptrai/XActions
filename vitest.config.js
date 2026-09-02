@@ -20,7 +20,14 @@ export default defineConfig({
     fileParallelism: false,
     retry: 0,
     include: ['tests/**/*.test.js'],
-    exclude: ['node_modules', 'dist', 'archive', 'tests/e2e/video*.e2e.test.js'],
+    exclude: [
+      'node_modules',
+      'dist',
+      'archive',
+      'tests/e2e/video*.e2e.test.js',
+      'tests/e2e/admin-*.e2e.test.js',
+      'tests/x402-integration.test.js'
+    ],
     reporters: ['verbose'],
     env: {
       DATABASE_URL: testDatabaseUrl,

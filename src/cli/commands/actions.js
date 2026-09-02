@@ -9,7 +9,7 @@
  */
 
 import chalk from 'chalk';
-import { executeActionListTool } from '../../mcp/server.js';
+import { executeActionListTool } from '../../scrapers/social/actions-list.js';
 
 /**
  * @param {import('commander').Command} program

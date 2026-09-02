@@ -123,6 +123,7 @@
       cursor: pointer;
       border-radius: 8px;
       transition: all 0.2s;
+      white-space: nowrap;
     }
 
     .tab-btn:hover {
@@ -134,6 +135,153 @@
       background: linear-gradient(135deg,#1d9bf0,#22d3ee);
       color: white;
       box-shadow: 0 8px 24px -8px rgba(29,155,240,.6);
+    }
+
+    /* Stream Metrics & Alerts View */
+    .streams-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .stream-chart-container {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 320px;
+    }
+    .stream-chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .stream-chart-header h3 {
+      font-size: 1rem;
+      margin: 0;
+    }
+    .stream-range-toggle {
+      display: flex;
+      gap: 8px;
+    }
+    .stream-range-toggle button {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8125rem;
+      transition: all 0.2s;
+    }
+    .stream-range-toggle button.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    .stream-range-toggle button:hover:not(.active) {
+      color: var(--text-primary);
+    }
+    .stream-chart-svg {
+      width: 100%;
+      height: 240px;
+      overflow: visible;
+    }
+    .stream-chart-series {
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .stream-chart-series-eps { stroke: #1d9bf0; }
+    .stream-chart-series-pending { stroke: #a855f7; }
+    .stream-chart-threshold {
+      stroke: var(--error);
+      stroke-width: 1.5;
+      stroke-dasharray: 6 4;
+      opacity: 0.8;
+    }
+    .stream-chart-axis {
+      stroke: var(--border);
+      stroke-width: 1;
+    }
+    .stream-chart-grid {
+      stroke: var(--border);
+      stroke-width: 1;
+      stroke-dasharray: 2 2;
+      opacity: 0.4;
+    }
+    .stream-chart-label {
+      fill: var(--text-secondary);
+      font-size: 10px;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+    .stream-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+    }
+    .stream-legend span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stream-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .stream-alerts-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .stream-alerts-section h3 {
+      font-size: 1rem;
+      margin: 0 0 16px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .stream-test-alert {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .stream-test-alert:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .alert-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border-left: 3px solid var(--warning);
+    }
+    .alert-banner.alert-critical { border-left-color: var(--error); }
+    .alert-banner.alert-warning { border-left-color: var(--warning); }
+    .alert-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    .alert-value {
+      font-weight: 700;
+      font-family: 'SF Mono', Monaco, monospace;
     }
 
     /* Checkpoint table */
@@ -585,6 +733,42 @@
     /* Ambient glow */
     body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(1000px 560px at 82% -6%,rgba(29,155,240,.1),transparent 60%)}
 
+    /* Proxies & Accounts View */
+    .proxies-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .status-badge-throttle {
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .status-throttle-normal { background: rgba(0, 186, 124, 0.15); color: var(--success); }
+    .status-throttle-reduced, .status-throttle-soft_throttle { background: rgba(255, 173, 31, 0.15); color: var(--warning); }
+    .status-throttle-backpressure { background: rgba(244, 33, 46, 0.1); color: var(--error); }
+    .status-throttle-hard_throttle, .status-throttle-circuit_broken, .status-throttle-critical { background: rgba(244, 33, 46, 0.15); color: var(--error); }
+
+    .btn-action-small {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-action-small:hover { background: rgba(255,255,255,0.08); }
+    .btn-action-small.wake { color: var(--success); border-color: rgba(0, 186, 124, 0.3); }
+    .btn-action-small.quarantine { color: var(--error); border-color: rgba(244, 33, 46, 0.3); }
+    .btn-action-small.release { color: var(--accent); border-color: rgba(29, 155, 240, 0.3); }
+
     /* Offline note */
     .offline-note{display:flex;gap:12px;align-items:flex-start;background:rgba(29,155,240,0.06);border:1px solid rgba(29,155,240,0.3);border-radius:14px;padding:16px 18px;color:#aab4c0;font-size:.92rem;margin:16px 0}
     .offline-note strong{color:#e7e9ea}.offline-note a{color:#1d9bf0}.offline-note .offline-ic{font-size:1.2rem;line-height:1.3}
@@ -613,10 +797,13 @@
   <main id="main-content">
   <!-- Tab Navigation -->
   <div class="tab-nav" role="tablist" aria-label="Admin sections">
-    <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-sessions" id="tab-btn-sessions" onclick="switchTab('sessions')">📡 Live Sessions</button>
-    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-checkpoints" id="tab-btn-checkpoints" onclick="switchTab('checkpoints')">🛡️ Jobs & Checkpoints</button>
-    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-payments" id="tab-btn-payments" onclick="switchTab('payments')">💰 x402 Payments</button>
+    <button type="button" class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-sessions" id="tab-btn-sessions" onclick="switchTab('sessions')">📡 Live Sessions</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-proxies" id="tab-btn-proxies" onclick="switchTab('proxies')">🛡️ Proxies & Accounts</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-checkpoints" id="tab-btn-checkpoints" onclick="switchTab('checkpoints')">🛡️ Jobs & Checkpoints</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-stream" id="tab-btn-stream" onclick="switchTab('stream')">📊 Stream Metrics & Alerts</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-payments" id="tab-btn-payments" onclick="switchTab('payments')">💰 x402 Payments</button>
   </div>
+
 
   <!-- Checkpoints Tab -->
   <div id="tab-checkpoints" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-checkpoints" style="display: none;">
@@ -665,6 +852,152 @@
           <button id="btn-prev" onclick="prevPage()" disabled>← Previous</button>
           <button id="btn-next" onclick="nextPage()" disabled>Next →</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Proxies & Accounts Tab (Story 19.2) -->
+  <div id="tab-proxies" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-proxies" style="display: none;">
+    <!-- Top Metric Cards -->
+    <div class="stats-bar">
+      <div class="stat-box">
+        <div class="stat-value" id="healthy-proxies-count">0 / 0</div>
+        <div class="stat-label">Healthy Proxies</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="current-rate-rps">0.0 req/s</div>
+        <div class="stat-label">Current Velocity</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="consumer-lag">0 msgs</div>
+        <div class="stat-label">Redis Consumer Lag</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="throttle-level">NORMAL</div>
+        <div class="stat-label">Governor Level</div>
+      </div>
+    </div>
+
+    <!-- Proxies Section -->
+    <div class="section-card" style="margin-bottom: 24px;">
+      <div class="checkpoint-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3>🌐 Proxy Pool & Health</h3>
+        <button class="btn-test-webhook" style="width: auto; margin-top: 0;" onclick="refreshProxiesAndAccounts()">🔄 Refresh</button>
+      </div>
+
+      <div class="checkpoint-table-wrap">
+        <table class="checkpoint-table" id="proxies-table">
+          <thead>
+            <tr>
+              <th>Server</th>
+              <th>Protocol</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Quarantined Until / TTL</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="proxies-body">
+            <tr>
+              <td colspan="6" class="empty-state small">Loading proxies...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Accounts Section -->
+    <div class="section-card">
+      <div class="checkpoint-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3>👥 Scraper Accounts & Hibernation</h3>
+        <div style="display: flex; gap: 8px;">
+          <select id="filter-account-platform" aria-label="Filter accounts by platform" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px;">
+            <option value="">All Platforms</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="checkpoint-table-wrap">
+        <table class="checkpoint-table" id="accounts-table">
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Account ID</th>
+              <th>Status</th>
+              <th>Remaining Time</th>
+              <th>Reason</th>
+              <th>Velocity</th>
+              <th>Assigned Proxy</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="accounts-body">
+            <tr>
+              <td colspan="8" class="empty-state small">Loading accounts...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stream Metrics & Alerts Tab (Story 19.3) -->
+  <div id="tab-stream" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-stream" style="display: none;">
+    <!-- Top Stream Metric Cards -->
+    <div class="stats-bar">
+      <div class="stat-box" id="card-stream-events">
+        <div class="stat-value" id="stream-events-rps">0.0 req/s</div>
+        <div class="stat-label">Events / Second</div>
+      </div>
+      <div class="stat-box" id="card-stream-pending">
+        <div class="stat-value" id="stream-pending-msgs">0 msgs</div>
+        <div class="stat-label">Pending Messages</div>
+      </div>
+      <div class="stat-box" id="card-stream-lag">
+        <div class="stat-value" id="stream-consumer-lag">0 msgs</div>
+        <div class="stat-label">Consumer Lag</div>
+      </div>
+      <div class="stat-box" id="card-stream-dropped">
+        <div class="stat-value" id="stream-dropped-events">0</div>
+        <div class="stat-label">Dropped Events</div>
+      </div>
+      <div class="stat-box" id="card-stream-ack">
+        <div class="stat-value" id="stream-last-ack">0s</div>
+        <div class="stat-label">Last Ack Time</div>
+      </div>
+    </div>
+
+    <!-- Active Alerts Section -->
+    <div class="section-card" style="margin-bottom: 24px;">
+      <div class="checkpoint-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3>🚨 Active Stream Alerts</h3>
+        <button class="btn-test-webhook" style="width: auto; margin-top: 0;" onclick="refreshStreamMetrics()">🔄 Refresh</button>
+      </div>
+
+      <div id="stream-alerts-container" class="stats-list">
+        <div class="empty-state small">
+          <div class="icon">✅</div>
+          <p>No active alerts. All stream metrics within healthy thresholds.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert Channel Configuration Section -->
+    <div class="section-card">
+      <h3 style="margin-bottom: 16px;">🔔 Alert Channels Configuration</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px;">
+        <div>
+          <label for="alert-webhook-url" style="display: block; font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 6px;">Webhook Destination URL</label>
+          <input type="url" id="alert-webhook-url" placeholder="https://discord.com/api/webhooks/..." style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 10px 14px; border-radius: 8px;">
+        </div>
+        <div>
+          <label for="alert-email-recipients" style="display: block; font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 6px;">Email Notification Recipients</label>
+          <input type="text" id="alert-email-recipients" placeholder="ops@xactions.app, alerts@company.com" style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 10px 14px; border-radius: 8px;">
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <button class="btn-test-webhook" style="width: auto; margin-top: 0; background: var(--accent);" onclick="saveStreamAlertConfig()">💾 Save Configuration</button>
+        <button class="btn-test-webhook" style="width: auto; margin-top: 0;" onclick="testStreamAlert()">🧪 Send Test Alert</button>
       </div>
     </div>
   </div>
@@ -907,6 +1240,15 @@
       return div.innerHTML;
     }
 
+    function jsEsc(str) {
+      return String(str || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r');
+    }
+
     function renderSessions() {
       const container = document.getElementById('sessions-container');
       const sessionList = Array.from(sessions.values());
@@ -979,160 +1321,55 @@
 
     // Tab switching
     async function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+      });
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-      document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
-      document.getElementById(`tab-${tab}`).classList.add('active');
-      document.getElementById(`tab-${tab}`).style.display = 'block';
+      const targetBtn = document.querySelector(`[onclick="switchTab('${tab}')"]`);
+      if (targetBtn) {
+        targetBtn.classList.add('active');
+        targetBtn.setAttribute('aria-selected', 'true');
+      }
+      const targetContent = document.getElementById(`tab-${tab}`);
+      if (targetContent) {
+        targetContent.classList.add('active');
+        targetContent.style.display = 'block';
+      }
 
       // Hide other tabs
       document.querySelectorAll('.tab-content:not(.active)').forEach(t => t.style.display = 'none');
 
       if (tab === 'payments') {
+        stopCheckpointRefresh();
+        stopProxiesRefresh();
+        stopStreamRefresh();
         await loadPaymentStats();
       } else if (tab === 'checkpoints') {
+        stopProxiesRefresh();
+        stopStreamRefresh();
         await loadCheckpoints();
         startCheckpointRefresh();
+      } else if (tab === 'proxies') {
+        stopCheckpointRefresh();
+        stopStreamRefresh();
+        await loadProxiesAndAccounts();
+        startProxiesRefresh();
+      } else if (tab === 'stream' || tab === 'streams') {
+        stopCheckpointRefresh();
+        stopProxiesRefresh();
+        await loadStreamMetrics();
+        startStreamRefresh();
       } else {
         stopCheckpointRefresh();
+        stopProxiesRefresh();
+        stopStreamRefresh();
       }
     }
-
-    // Load x402 payment statistics
-    async function loadPaymentStats() {
-      const adminKey = localStorage.getItem('adminKey') || prompt('Enter Admin API Key:');
-      if (!adminKey) return;
-      localStorage.setItem('adminKey', adminKey);
-
-      try {
-        // Load stats
-        const statsRes = await fetch('/api/admin/x402/stats', {
-          headers: { 'X-Admin-Key': adminKey }
-        });
-        
-        if (statsRes.status === 401) {
-          localStorage.removeItem('adminKey');
-          alert('Invalid admin key');
-          return;
-        }
-        
-        const statsData = await statsRes.json();
-        if (statsData.success) {
-          renderPaymentStats(statsData.stats);
-        }
-
-        // Load webhook status
-        const webhookRes = await fetch('/api/admin/x402/webhooks', {
-          headers: { 'X-Admin-Key': adminKey }
-        });
-        const webhookData = await webhookRes.json();
-        if (webhookData.success) {
-          renderWebhookStatus(webhookData.webhooks);
-        }
-      } catch (err) {
-        if (!offlineWarned) { console.warn('Admin payments API offline. Backend is being migrated.'); offlineWarned = true; }
-        document.getElementById('payments-by-operation').innerHTML = OFFLINE_HTML;
-        document.getElementById('recent-payments').innerHTML = OFFLINE_HTML;
-      }
-    }
-
-    function renderPaymentStats(stats) {
-      document.getElementById('total-payments').textContent = stats.totalPayments || 0;
-      document.getElementById('total-revenue').textContent = '$' + (stats.totalRevenueUSD || '0.00');
-
-      // Render by operation
-      const byOpContainer = document.getElementById('payments-by-operation');
-      const operations = Object.entries(stats.byOperation || {});
-      
-      if (operations.length === 0) {
-        byOpContainer.innerHTML = '<div class="empty-state small">No payments yet</div>';
-      } else {
-        byOpContainer.innerHTML = operations
-          .sort((a, b) => b[1] - a[1])
-          .map(([op, count]) => `
-            <div class="stats-item">
-              <span class="operation">${op}</span>
-              <span class="count">${count}</span>
-            </div>
-          `).join('');
-      }
-
-      // Render recent payments
-      const recentContainer = document.getElementById('recent-payments');
-      const recent = stats.recentPayments || [];
-      
-      if (recent.length === 0) {
-        recentContainer.innerHTML = '<div class="empty-state small">No recent payments</div>';
-      } else {
-        recentContainer.innerHTML = recent.slice(0, 10).map(p => `
-          <div class="payment-item">
-            <div class="header">
-              <span class="amount">${p.price}</span>
-              <span class="time">${new Date(p.timestamp).toLocaleString()}</span>
-            </div>
-            <div class="details">${p.operation} • ${p.network || 'unknown'}</div>
-          </div>
-        `).join('');
-      }
-    }
-
-    function renderWebhookStatus(webhooks) {
-      const { configured, delivery } = webhooks;
-      
-      // Update status indicators
-      document.getElementById('webhook-custom').textContent = configured.customWebhook ? '✓ Configured' : 'Not configured';
-      document.getElementById('webhook-custom').className = 'config-status ' + (configured.customWebhook ? 'configured' : 'not-configured');
-      
-      document.getElementById('webhook-discord').textContent = configured.discord ? '✓ Configured' : 'Not configured';
-      document.getElementById('webhook-discord').className = 'config-status ' + (configured.discord ? 'configured' : 'not-configured');
-      
-      document.getElementById('webhook-slack').textContent = configured.slack ? '✓ Configured' : 'Not configured';
-      document.getElementById('webhook-slack').className = 'config-status ' + (configured.slack ? 'configured' : 'not-configured');
-      
-      document.getElementById('webhook-signature').textContent = configured.signatureEnabled ? '✓ Enabled' : 'Disabled';
-      document.getElementById('webhook-signature').className = 'config-status ' + (configured.signatureEnabled ? 'configured' : 'not-configured');
-
-      // Update overall status
-      const anyConfigured = configured.customWebhook || configured.discord || configured.slack;
-      document.getElementById('webhook-status').textContent = anyConfigured ? delivery.successRate : 'None';
-    }
-
-    async function testWebhooks() {
-      const adminKey = localStorage.getItem('adminKey');
-      if (!adminKey) {
-        alert('Please load payment stats first to set admin key');
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/admin/x402/webhooks/test', {
-          method: 'POST',
-          headers: { 'X-Admin-Key': adminKey }
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-          alert('Test webhooks sent! Check your configured endpoints.');
-        } else {
-          alert('Failed: ' + (data.message || data.error));
-        }
-      } catch (err) {
-        alert('Error: ' + err.message);
-      }
-    }
-
-    // Listen for real-time payment events
-    socket.on('x402:payment', (payment) => {
-      console.log('💰 Real-time payment:', payment);
-      // Refresh stats if on payments tab
-      if (document.getElementById('tab-payments').classList.contains('active')) {
-        loadPaymentStats();
-      }
-    });
 
     // -------------------------
-    // Jobs & Checkpoints View
+    // Jobs & Checkpoints View (Story 19.1)
     // -------------------------
 
     const CHECKPOINTS_REFRESH_INTERVAL_MS = 30000;
@@ -1203,7 +1440,7 @@
 
       try {
         const query = buildCheckpointQuery();
-        const res = await fetch(`/api/checkpoints?${query}`, { headers, signal: controller.signal });
+        const res = await fetch(`${API_URL}/api/checkpoints?${query}`, { headers, signal: controller.signal });
 
         if (res.status === 401 || res.status === 403) {
           showCheckpointToast('Insufficient permissions', 'error');
@@ -1326,6 +1563,7 @@
       const now = new Date();
       const diff = Math.floor((now - date) / 1000);
 
+      if (diff < 0) return 'just now';
       if (diff < 60) return 'just now';
       if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
       if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
@@ -1405,7 +1643,7 @@
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       try {
-        const res = await fetch(`/api/checkpoints/${id}/${action}`, {
+        const res = await fetch(`${API_URL}/api/checkpoints/${id}/${action}`, {
           method: 'POST',
           headers
         });
@@ -1440,7 +1678,6 @@
     }
 
     function showCheckpointDetail(id) {
-      // Simple inline row expansion could be added later; for now show a toast with the id
       showCheckpointToast(`Checkpoint ID: ${id}`, 'success');
     }
 
@@ -1454,23 +1691,670 @@
       }, 4000);
     }
 
-    function handleHashRoute() {
-      const hash = window.location.hash.replace('#', '');
-      if (hash === 'jobs' || hash === 'checkpoints') {
-        switchTab('checkpoints');
+    // -------------------------
+    // Proxies & Accounts View (Story 19.2)
+    // -------------------------
+
+    const PROXIES_REFRESH_INTERVAL_MS = 5000;
+    let proxiesState = {
+      refreshTimer: null,
+      activeFetch: null,
+      actionInFlight: false,
+      selectedPlatform: '',
+      initialised: false
+    };
+
+    function startProxiesRefresh() {
+      stopProxiesRefresh();
+      proxiesState.refreshCallback = function proxiesRefreshTick() {
+        if (!proxiesState.actionInFlight) {
+          loadProxiesAndAccounts({ background: true });
+        }
+      };
+      proxiesState.refreshTimer = setInterval(proxiesState.refreshCallback, PROXIES_REFRESH_INTERVAL_MS);
+    }
+
+    function stopProxiesRefresh() {
+      if (proxiesState.refreshTimer) {
+        clearInterval(proxiesState.refreshTimer);
+        proxiesState.refreshTimer = null;
       }
     }
 
-    // Initialize checkpoints UI
+    async function loadProxiesAndAccounts(opts = {}) {
+      if (proxiesState.activeFetch) {
+        proxiesState.activeFetch.abort();
+      }
+
+      const controller = new AbortController();
+      proxiesState.activeFetch = controller;
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const [govRes, proxiesRes, accountsRes] = await Promise.all([
+          fetch(`${API_URL}/api/admin/governor/status`, { headers, signal: controller.signal }),
+          fetch(`${API_URL}/api/admin/proxies`, { headers, signal: controller.signal }),
+          fetch(`${API_URL}/api/admin/accounts${proxiesState.selectedPlatform ? `?platform=${encodeURIComponent(proxiesState.selectedPlatform)}` : ''}`, { headers, signal: controller.signal })
+        ]);
+
+        if (govRes.status === 401 || govRes.status === 403 || proxiesRes.status === 401 || proxiesRes.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const govData = await govRes.json().catch(() => ({}));
+        const proxiesData = await proxiesRes.json().catch(() => ({}));
+        const accountsData = await accountsRes.json().catch(() => ({}));
+
+        if (govData.success && govData.status) {
+          renderGovernorMetrics(govData.status);
+        }
+
+        if (proxiesData.success) {
+          renderProxiesTable(proxiesData.proxies || []);
+        }
+
+        if (accountsData.success) {
+          renderAccountsTable(accountsData.accounts || []);
+          renderAccountPlatformFilter(accountsData.accounts || []);
+        }
+
+        proxiesState.initialised = true;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Failed to load proxies & accounts:', err);
+        showCheckpointToast(err.message || 'Failed to load proxies & accounts', 'error');
+      } finally {
+        proxiesState.activeFetch = null;
+      }
+    }
+
+    function renderGovernorMetrics(status) {
+      if (typeof document === 'undefined' || !document) return;
+      const healthyEl = document.getElementById('healthy-proxies-count');
+      const rateEl = document.getElementById('current-rate-rps');
+      const lagEl = document.getElementById('consumer-lag');
+      const throttleEl = document.getElementById('throttle-level');
+
+      if (healthyEl) {
+        const ratioPct = Math.round((status.healthyProxyRatio || 0) * 100);
+        healthyEl.textContent = `${status.healthyProxyCount || 0} / ${status.totalProxyCount || 0} (${ratioPct}%)`;
+      }
+      if (rateEl) {
+        rateEl.textContent = `${Number(status.currentReqPerSecond || 0).toFixed(1)} req/s`;
+      }
+      if (lagEl) {
+        lagEl.textContent = `${status.redisConsumerLag || 0} msgs`;
+      }
+      if (throttleEl) {
+        const level = String(status.throttleLevel || 'normal').toUpperCase();
+        throttleEl.textContent = level;
+        if (level === 'CRITICAL' || status.isEmergencyThrottled) {
+          throttleEl.style.color = 'var(--error)';
+        } else if (level === 'THROTTLED') {
+          throttleEl.style.color = 'var(--warning)';
+        } else {
+          throttleEl.style.color = 'var(--success)';
+        }
+      }
+    }
+
+    function renderProxiesTable(proxies) {
+      if (typeof document === 'undefined' || !document) return;
+      const tbody = document.getElementById('proxies-body');
+      if (!tbody) return;
+
+      if (proxies.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty-state small">
+              <div class="icon">🌐</div>
+              <p>No proxies registered in the pool.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = proxies.map(p => {
+        const isQuarantined = p.status === 'quarantined';
+        const remainingQuarantine = p.quarantinedUntil ? renderRelativeTime(p.quarantinedUntil) : '—';
+        const proxyKey = p.key || p.server;
+
+        return `
+          <tr data-proxy-key="${esc(proxyKey)}">
+            <td><strong>${esc(p.server || `${p.protocol}://${p.host}:${p.port}`)}</strong></td>
+            <td>${esc(p.protocol ? p.protocol.toUpperCase() : 'HTTP')}</td>
+            <td>${p.residential ? '<span class="status-pill status-active">Residential</span>' : '<span class="status-pill">Datacenter</span>'}</td>
+            <td><span class="status-pill status-${esc(p.status)}">${esc(p.status)}</span></td>
+            <td>${isQuarantined ? `Until ${esc(new Date(p.quarantinedUntil).toLocaleTimeString())}` : (p.expiresAt ? `Expires ${renderRelativeTime(p.expiresAt)}` : 'Permanent')}</td>
+            <td>
+              <div class="checkpoint-actions">
+                ${isQuarantined
+                  ? `<button onclick="releaseProxy('${esc(proxyKey)}')">✅ Release</button>`
+                  : `<button onclick="quarantineProxy('${esc(proxyKey)}')">⛔ Quarantine</button>`}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAccountsTable(accounts) {
+      if (typeof document === 'undefined' || !document) return;
+      const tbody = document.getElementById('accounts-body');
+      if (!tbody) return;
+
+      if (accounts.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="empty-state small">
+              <div class="icon">👥</div>
+              <p>No accounts registered for this platform filter.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = accounts.map(acc => {
+        const isHibernating = acc.status === 'hibernating';
+        const remainingTime = isHibernating && acc.remainingTimeMs ? `${Math.ceil(acc.remainingTimeMs / 1000)}s` : '—';
+        const assignedProxyStr = acc.assignedProxy
+          ? (typeof acc.assignedProxy === 'object' ? `${acc.assignedProxy.scheme || 'http'}://${acc.assignedProxy.host}:${acc.assignedProxy.port}` : String(acc.assignedProxy))
+          : 'None';
+
+        return `
+          <tr data-account-id="${esc(acc.accountId)}" data-platform="${esc(acc.platform)}">
+            <td><span class="status-pill status-active">${esc(acc.platform)}</span></td>
+            <td><strong>@${esc(acc.accountId)}</strong></td>
+            <td><span class="status-pill status-${esc(acc.status)}">${esc(acc.status)}</span></td>
+            <td>${esc(remainingTime)}</td>
+            <td>${esc(acc.reason || '—')}</td>
+            <td>${acc.velocity || 0} req/m</td>
+            <td><code>${esc(assignedProxyStr)}</code></td>
+            <td>
+              <div class="checkpoint-actions">
+                ${isHibernating ? `<button onclick="wakeAccount('${esc(acc.accountId)}', '${esc(acc.platform)}')">☀️ Wake</button>` : ''}
+                <button onclick="rotateAccount('${esc(acc.accountId)}', '${esc(acc.platform)}')">🔄 Rotate</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAccountPlatformFilter(accounts = []) {
+      if (typeof document === 'undefined' || !document) return;
+      const select = document.getElementById('filter-account-platform');
+      if (!select || select.dataset.initialised === 'true') return;
+
+      const platforms = [...new Set(accounts.map(a => a.platform).filter(Boolean))];
+      if (platforms.length) {
+        select.innerHTML = '<option value="">All Platforms</option>' +
+          platforms.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+        select.dataset.initialised = 'true';
+        select.value = proxiesState.selectedPlatform;
+        select.addEventListener('change', () => {
+          proxiesState.selectedPlatform = select.value;
+          loadProxiesAndAccounts();
+        });
+      }
+    }
+
+    async function quarantineProxy(proxyKey) {
+      proxiesState.actionInFlight = true;
+      stopProxiesRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/proxies/quarantine`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ proxy: proxyKey, durationMs: 300000 })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to quarantine proxy');
+        }
+
+        showCheckpointToast('✅ Proxy quarantined for 5m', 'success');
+        await loadProxiesAndAccounts();
+      } catch (err) {
+        console.error('Quarantine proxy failed:', err);
+        showCheckpointToast(err.message || 'Quarantine proxy failed', 'error');
+      } finally {
+        proxiesState.actionInFlight = false;
+        if (document.getElementById('tab-proxies')?.classList.contains('active')) {
+          startProxiesRefresh();
+        }
+      }
+    }
+
+    async function releaseProxy(proxyKey) {
+      proxiesState.actionInFlight = true;
+      stopProxiesRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/proxies/release`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ proxy: proxyKey })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to release proxy');
+        }
+
+        showCheckpointToast('✅ Proxy released from quarantine', 'success');
+        await loadProxiesAndAccounts();
+      } catch (err) {
+        console.error('Release proxy failed:', err);
+        showCheckpointToast(err.message || 'Release proxy failed', 'error');
+      } finally {
+        proxiesState.actionInFlight = false;
+        if (document.getElementById('tab-proxies')?.classList.contains('active')) {
+          startProxiesRefresh();
+        }
+      }
+    }
+
+    async function wakeAccount(accountId, platform) {
+      proxiesState.actionInFlight = true;
+      stopProxiesRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/accounts/wake`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ accountId, platform })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to wake account');
+        }
+
+        showCheckpointToast(`✅ Account @${accountId} is now active`, 'success');
+        await loadProxiesAndAccounts();
+      } catch (err) {
+        console.error('Wake account failed:', err);
+        showCheckpointToast(err.message || 'Wake account failed', 'error');
+      } finally {
+        proxiesState.actionInFlight = false;
+        if (document.getElementById('tab-proxies')?.classList.contains('active')) {
+          startProxiesRefresh();
+        }
+      }
+    }
+
+    async function rotateAccount(accountId, platform) {
+      proxiesState.actionInFlight = true;
+      stopProxiesRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/accounts/rotate`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ accountId, platform })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to rotate account');
+        }
+
+        showCheckpointToast(`✅ Rotated to next account: @${data.nextAccountId || 'none'}`, 'success');
+        await loadProxiesAndAccounts();
+      } catch (err) {
+        console.error('Rotate account failed:', err);
+        showCheckpointToast(err.message || 'Rotate account failed', 'error');
+      } finally {
+        proxiesState.actionInFlight = false;
+        if (document.getElementById('tab-proxies')?.classList.contains('active')) {
+          startProxiesRefresh();
+        }
+      }
+    }
+
+    function refreshProxiesAndAccounts() {
+      loadProxiesAndAccounts();
+    }
+
+    // -------------------------
+    // Stream Metrics & Alerts View (Story 19.3)
+    // -------------------------
+
+    const STREAM_REFRESH_INTERVAL_MS = 5000;
+    let streamState = {
+      refreshTimer: null,
+      activeFetch: null,
+      actionInFlight: false,
+      initialised: false
+    };
+
+    function startStreamRefresh() {
+      stopStreamRefresh();
+      streamState.refreshCallback = function streamRefreshTick() {
+        if (!streamState.actionInFlight) {
+          loadStreamMetrics({ background: true });
+        }
+      };
+      streamState.refreshTimer = setInterval(streamState.refreshCallback, STREAM_REFRESH_INTERVAL_MS);
+    }
+
+    function stopStreamRefresh() {
+      if (streamState.refreshTimer) {
+        clearInterval(streamState.refreshTimer);
+        streamState.refreshTimer = null;
+      }
+    }
+
+    async function loadStreamMetrics(opts = {}) {
+      if (streamState.activeFetch) {
+        streamState.activeFetch.abort();
+      }
+
+      const controller = new AbortController();
+      streamState.activeFetch = controller;
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const [metricsRes, alertsRes] = await Promise.all([
+          fetch(`${API_URL}/api/admin/stream/metrics`, { headers, signal: controller.signal }),
+          fetch(`${API_URL}/api/admin/stream/alerts`, { headers, signal: controller.signal })
+        ]);
+
+        if (metricsRes.status === 401 || metricsRes.status === 403 || alertsRes.status === 401 || alertsRes.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const metricsData = await metricsRes.json().catch(() => ({}));
+        const alertsData = await alertsRes.json().catch(() => ({}));
+
+        if (metricsData.success && metricsData.metrics) {
+          renderStreamMetrics(metricsData.metrics);
+        }
+
+        if (alertsData.success && alertsData.alerts) {
+          renderStreamAlerts(alertsData.alerts);
+        }
+
+        streamState.initialised = true;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Failed to load stream metrics:', err);
+        showCheckpointToast(err.message || 'Failed to load stream metrics', 'error');
+      } finally {
+        streamState.activeFetch = null;
+      }
+    }
+
+    function renderStreamMetrics(metrics) {
+      if (typeof document === 'undefined' || !document) return;
+
+      const rpsEl = document.getElementById('stream-events-rps');
+      const pendingEl = document.getElementById('stream-pending-msgs');
+      const lagEl = document.getElementById('stream-consumer-lag');
+      const droppedEl = document.getElementById('stream-dropped-events');
+      const ackEl = document.getElementById('stream-last-ack');
+
+      const cardPending = document.getElementById('card-stream-pending');
+      const cardAck = document.getElementById('card-stream-ack');
+
+      if (rpsEl) {
+        rpsEl.textContent = `${Number(metrics.eventsPerSecond || 0).toFixed(1)} req/s`;
+      }
+      if (pendingEl) {
+        pendingEl.textContent = `${metrics.pendingMessages || 0} msgs`;
+        if (cardPending) {
+          if (metrics.pendingMessages > 50000) {
+            cardPending.style.borderColor = 'var(--error)';
+            cardPending.style.boxShadow = '0 0 16px rgba(244, 33, 46, 0.25)';
+          } else {
+            cardPending.style.borderColor = 'var(--border)';
+            cardPending.style.boxShadow = 'none';
+          }
+        }
+      }
+      if (lagEl) {
+        lagEl.textContent = `${metrics.consumerLag || 0} msgs`;
+      }
+      if (droppedEl) {
+        droppedEl.textContent = String(metrics.droppedEvents || 0);
+      }
+      if (ackEl) {
+        const ackSeconds = Number(metrics.lastAckTime || 0);
+        ackEl.textContent = `${ackSeconds}s`;
+        if (cardAck) {
+          if (ackSeconds > 60) {
+            cardAck.style.borderColor = 'var(--error)';
+            cardAck.style.boxShadow = '0 0 16px rgba(244, 33, 46, 0.25)';
+          } else {
+            cardAck.style.borderColor = 'var(--border)';
+            cardAck.style.boxShadow = 'none';
+          }
+        }
+      }
+    }
+
+    function renderStreamAlerts(alertsData) {
+      if (typeof document === 'undefined' || !document) return;
+
+      const container = document.getElementById('stream-alerts-container');
+      const activeAlerts = alertsData.activeAlerts || [];
+
+      // Fill in config if first time
+      if (!streamState.initialised && alertsData.config) {
+        const webhookInput = document.getElementById('alert-webhook-url');
+        const emailInput = document.getElementById('alert-email-recipients');
+        if (webhookInput && alertsData.config.webhookUrl) {
+          webhookInput.value = alertsData.config.webhookUrl;
+        }
+        if (emailInput && alertsData.config.emailRecipients) {
+          emailInput.value = alertsData.config.emailRecipients;
+        }
+      }
+
+      if (!container) return;
+
+      if (activeAlerts.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state small">
+            <div class="icon">✅</div>
+            <p>No active alerts. All stream metrics within healthy thresholds.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = activeAlerts.map(alert => {
+        const alertName = String(alert.alert || 'warning').replace(/_/g, ' ').toUpperCase();
+        const timestamp = alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : 'Recent';
+        const isCritical = alert.value > 50000 || alert.severity === 'critical';
+
+        return `
+          <div class="stats-item" style="border-left: 4px solid ${isCritical ? 'var(--error)' : 'var(--warning)'};">
+            <div>
+              <strong style="color: ${isCritical ? 'var(--error)' : 'var(--warning)'};">${esc(alertName)}</strong>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+                ${alert.threshold ? `Threshold: ${alert.threshold} | Current: ${alert.value}` : esc(alert.message || 'Triggered')}
+              </div>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-secondary);">${esc(timestamp)}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function saveStreamAlertConfig() {
+      streamState.actionInFlight = true;
+      stopStreamRefresh();
+
+      const webhookUrl = document.getElementById('alert-webhook-url')?.value.trim() || null;
+      const emailRecipients = document.getElementById('alert-email-recipients')?.value.trim() || null;
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/stream/alerts/config`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ webhookUrl, emailRecipients })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to save alert configuration');
+        }
+
+        showCheckpointToast('✅ Alert configuration saved', 'success');
+        await loadStreamMetrics();
+      } catch (err) {
+        console.error('Save alert config failed:', err);
+        showCheckpointToast(err.message || 'Save alert config failed', 'error');
+      } finally {
+        streamState.actionInFlight = false;
+        if (document.getElementById('tab-stream')?.classList.contains('active')) {
+          startStreamRefresh();
+        }
+      }
+    }
+
+    async function testStreamAlert() {
+      streamState.actionInFlight = true;
+      stopStreamRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/stream/alerts/test`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ message: 'Synthetic test alert triggered from Admin Dashboard' })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to send test alert');
+        }
+
+        showCheckpointToast('✅ Synthetic test alert dispatched', 'success');
+        await loadStreamMetrics();
+      } catch (err) {
+        console.error('Test stream alert failed:', err);
+        showCheckpointToast(err.message || 'Test stream alert failed', 'error');
+      } finally {
+        streamState.actionInFlight = false;
+        if (document.getElementById('tab-stream')?.classList.contains('active')) {
+          startStreamRefresh();
+        }
+      }
+    }
+
+    function refreshStreamMetrics() {
+      loadStreamMetrics();
+    }
+
+    function handleHashRoute() {
+      const hash = window.location.hash;
+      if (hash === '#jobs' || hash === '#checkpoints') {
+        switchTab('checkpoints');
+      } else if (hash === '#proxies' || hash === '#accounts') {
+        switchTab('proxies');
+      } else if (hash === '#stream' || hash === '#alerts') {
+        switchTab('stream');
+      } else if (hash === '#payments') {
+        switchTab('payments');
+      } else {
+        switchTab('sessions');
+      }
+    }
+
+    // Initialize checkpoints & proxies & stream UI
     bindCheckpointFilters();
     window.addEventListener('hashchange', handleHashRoute);
     window.addEventListener('beforeunload', () => {
       stopCheckpointRefresh();
+      stopProxiesRefresh();
+      stopStreamRefresh();
       if (checkpointsState.activeFetch) checkpointsState.activeFetch.abort();
+      if (proxiesState.activeFetch) proxiesState.activeFetch.abort();
+      if (streamState.activeFetch) streamState.activeFetch.abort();
     });
 
     if (window.location.hash === '#jobs' || window.location.hash === '#checkpoints') {
       switchTab('checkpoints');
+    } else if (window.location.hash === '#proxies' || window.location.hash === '#accounts') {
+      switchTab('proxies');
+    } else if (window.location.hash === '#stream' || window.location.hash === '#alerts') {
+      switchTab('stream');
     } else {
       switchTab('sessions');
     }

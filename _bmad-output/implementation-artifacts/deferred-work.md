@@ -91,6 +91,12 @@
 - [x] [Review][Defer] `extractRecords` heuristic ưu tiên `comments` over `posts` khi object có cả hai — pre-existing design choice, sẽ cần revisit khi thêm mixed-payload crawlers
 - [x] [Review][Defer] `x_actions_list` chỉ cover Facebook + Threads — spec ghi rõ skip platform chưa migrate; sẽ mở rộng khi Twitter/Bluesky/Mastodon crawlers migrate sang AbstractCrawler
 
+## Deferred from: code review of 11-9-dual-pool-consumer-quota (2026-09-02)
+
+- [ ] [Review][Defer] Consumer quota state lives in-memory (`#consumerRequestTimestamps`, `#consumerQuotas` in `AdaptiveRateGovernor`) and is not synchronized across multi-worker/clustered deployments. To enforce global consumer limits when running multiple Express/Bull worker processes, the sliding window and quota config need a shared store (e.g. Redis) and a checkout mechanism. Out of scope for Story 11.9 (AD-20 describes in-memory behavior); revisit when operational multi-node deployment becomes an AC.
+- [ ] [Review][Defer] `ProxyIpPool` sticky binding across partitions is honored unconditionally by design (AD-3 sticky affinity is never broken). A future story may add an opt-in `strictPool` mode that forces re-pinning a sticky binding to the requested pool when `options.pool` is explicitly provided.
+- [ ] [Review][Defer] `ProxyIpPool` realtime/bulk offsets depend on `Date.now()` and the span of each partition; monotonic timing and atomic proxy add/remove belong to future proxy-pipeline hardening stories.
+
 ## Deferred from: code review of 16-2-tiktok-shop-product-sales-scraper (2026-08-31)
 
 - [x] [Review][Defer] Missing TypeScript declarations for TikTok Shop classes [types/index.d.ts] — `TikTokShopClient`, `TikTokShopCrawler`, and `scrapeTikTokShop` are not declared. The project as a whole has not yet exported e-commerce scraper types, so this is pre-existing/out-of-scope for this story.

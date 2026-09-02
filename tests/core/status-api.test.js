@@ -17,6 +17,12 @@ describe('Story 11.4 — StatusApi Contract & Governor Integration (ATDD Green P
       redisConsumerLag: 0,
       hibernatingAccounts: [],
       throttleLevel: 'normal',
+      dualPool: {
+        realtime: { total: 0, healthy: 0, quarantined: 0 },
+        bulk: { total: 0, healthy: 0, quarantined: 0 },
+        yieldedCount: 0,
+      },
+      consumerQuotas: {},
     });
   });
 

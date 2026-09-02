@@ -17,11 +17,13 @@ import {
   ErrorTypes,
   SuggestedActions,
 } from './error-envelope.js';
+import { globalProxyPool } from '../proxy/proxy-pool.js';
 
 /** @typedef {import('./types.js').AccountRecord} AccountRecord */
 
 /**
- * @typedef {{ accountId?: string, requiresResidential?: boolean, headers?: Record<string, unknown>, body?: unknown, [key: string]: unknown }} RequestOptions
+ * @typedef {{ accountId?: string, requiresResidential?: boolean, headers?: Record<string, unknown>, body?: unknown,
+ *   pool?: ('realtime' | 'bulk'), consumerId?: ('nowing' | 'chainlens' | 'internal' | string), [key: string]: unknown }} RequestOptions
  */
 
 /**
@@ -30,7 +32,7 @@ import {
  * @property {(proxy: string | Record<string, unknown>, options?: Record<string, unknown>) => unknown} getProxyAgent
  * @property {(proxy?: string | Record<string, unknown>, durationMs?: number) => void} quarantine
  * @property {(options?: Record<string, unknown>) => (string | Record<string, unknown> | null)} [getProxy]
- * @property {(accountId: string, requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getStickyProxy]
+ * @property {(accountId: string, requiresResidential?: boolean, options?: { pool?: ('realtime' | 'bulk') }) => (string | Record<string, unknown> | null)} [getStickyProxy]
  * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getNext]
  * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getRotatingProxy]
  * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getRoundRobinProxy]
@@ -118,7 +120,7 @@ export class AbstractApiClient {
       throw new TypeError('AbstractApiClient is abstract; extend it.');
     }
     this.sessionManager = options.sessionManager;
-    this.proxyPool = options.proxyPool;
+    this.proxyPool = options.proxyPool !== undefined ? options.proxyPool : globalProxyPool;
     this.proxyProvider = options.proxyProvider;
     this.accountPool = options.accountPool;
     this.governor = options.governor;
@@ -176,21 +178,38 @@ export class AbstractApiClient {
   /**
    * Resolve proxy from proxyProvider or proxyPool.
    * Throws PROXY_EXHAUSTED if no proxy is available.
+   *
+   * Backward compatible: when `options.pool` is omitted the legacy whole-pool
+   * sticky/round-robin behavior is preserved. When a dual-pool partition is
+   * requested ('realtime' | 'bulk'), the pool is selected through
+   * ProxyIpPool.getProxy({ pool, ... }) (AD-20).
+   *
    * @param {string | AccountRecord | null} [accountId]
    * @param {boolean} [requiresResidential=false]
    * @param {boolean} [requiresAuth] - Effective auth mode for this specific request/action; defaults to instance requiresAuth.
+   * @param {Object} [options]
+   * @param {('realtime' | 'bulk')} [options.pool] - Dual-pool partition (AD-20).
+   * @param {string} [options.consumerId] - Consumer identity for observability (AD-20).
    * @returns {string | Record<string, unknown> | null}
    */
-  resolveProxy(accountId, requiresResidential = false, requiresAuth = this.requiresAuth) {
+  resolveProxy(accountId, requiresResidential = false, requiresAuth = this.requiresAuth, options = {}) {
+    const safeOptions = options || {};
     const rawAccountId = typeof accountId === 'string' ? accountId : accountId?.accountId;
+    const pool = typeof safeOptions.pool === 'string' ? safeOptions.pool : null;
     let proxy = null;
 
     if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
-      const opts = { accountId: rawAccountId, requiresResidential };
+      const opts = { accountId: rawAccountId, requiresResidential, pool: pool || undefined, consumerId: safeOptions.consumerId };
       proxy = this.proxyProvider.getProxy(opts);
     } else if (this.proxyPool) {
       if (requiresAuth && rawAccountId && typeof this.proxyPool.getStickyProxy === 'function') {
-        proxy = this.proxyPool.getStickyProxy(rawAccountId, requiresResidential);
+        proxy = this.proxyPool.getStickyProxy(rawAccountId, requiresResidential, pool ? { pool } : undefined);
+      } else if (pool && typeof this.proxyPool.getProxy === 'function') {
+        proxy = this.proxyPool.getProxy({
+          pool,
+          requiresResidential,
+          yieldFromBulk: pool === 'realtime',
+        });
       } else if (typeof this.proxyPool.getNext === 'function') {
         proxy = this.proxyPool.getNext(requiresResidential);
       } else if (typeof this.proxyPool.getRotatingProxy === 'function') {
@@ -502,6 +521,20 @@ export class AbstractApiClient {
     const skipResponseValidation = opts.skipResponseValidation === true;
     const isRaw = opts.raw === true;
 
+    // AD-20 multi-consumer identity & dual-pool routing:
+    // on-demand consumers (nowing/chainlens) route to the realtime partition,
+    // internal/background traffic to bulk. Explicit opts.pool always wins.
+    const consumerId =
+      typeof opts.consumerId === 'string' && opts.consumerId.trim()
+        ? opts.consumerId.trim().toLowerCase()
+        : null;
+    const pool =
+      opts.pool === 'realtime' || opts.pool === 'bulk'
+        ? opts.pool
+        : consumerId
+          ? (consumerId === 'internal' ? 'bulk' : 'realtime')
+          : null;
+
     if (effectiveRequiresAuth && !concreteAccountId && !this.accountPool) {
       throw new AuthSessionExpiredError({
         code: 'XACT_4010',
@@ -510,6 +543,28 @@ export class AbstractApiClient {
         suggestedAction: SuggestedActions.RELOGIN,
         platform: this.platform,
       });
+    }
+
+    // AD-20 consumer quota gate — checked before the per-account governor gate.
+    // Metered consumers only (internal is unmetered). We record only after
+    // all pre-flight gates (auth, proxy availability, account hibernation) have
+    // passed, so quota is not consumed by requests that never leave the client.
+    if (consumerId && consumerId !== 'internal' && this.governor && typeof this.governor.canConsumerRequest === 'function') {
+      if (!this.governor.canConsumerRequest(consumerId)) {
+        const retryAfterSeconds =
+          typeof this.governor.getConsumerRetryAfterSeconds === 'function'
+            ? this.governor.getConsumerRetryAfterSeconds(consumerId)
+            : 60;
+        throw new RateLimitError({
+          code: 'XACT_4291',
+          message: `Consumer quota exceeded for ${consumerId}`,
+          statusCode: 429,
+          suggestedAction: SuggestedActions.REDUCE_RATE,
+          retryAfterMs: Math.max(1, retryAfterSeconds) * 1000,
+          platform: this.platform,
+          details: { consumerId, pool },
+        });
+      }
     }
 
     // Check governor before request for auth-required platforms or opt-in accountId
@@ -566,8 +621,14 @@ export class AbstractApiClient {
         }
 
         const proxy = provider || opts.requiresResidential
-          ? this.resolveProxy(concreteAccountId, opts.requiresResidential, effectiveRequiresAuth)
+          ? this.resolveProxy(concreteAccountId, opts.requiresResidential, effectiveRequiresAuth, { pool: pool || undefined, consumerId: consumerId || undefined })
           : null;
+
+        // AD-20: record the consumer request only after we know a healthy proxy
+        // exists and all pre-flight gates have passed.
+        if (consumerId && consumerId !== 'internal' && proxy && this.governor && typeof this.governor.recordConsumerRequest === 'function') {
+          this.governor.recordConsumerRequest(consumerId);
+        }
 
         let agent = null;
         if (proxy && provider && typeof provider.getProxyAgent === 'function') {

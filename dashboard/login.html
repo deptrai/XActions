@@ -484,9 +484,7 @@
   <!-- Footer moved to bottom of page -->
 
   <script>
-    const API_URL = window.location.hostname === 'localhost'
-      ? 'http://localhost:3001/api'
-      : '/api';
+    const API_URL = `${window.location.origin}/api`;
 
     // Handle OAuth callback — token arrives in URL hash fragment
     (function handleOAuthCallback() {

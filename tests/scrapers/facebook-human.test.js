@@ -3,7 +3,7 @@
 // Pure-module tests for src/scrapers/facebook/human.js
 // No Puppeteer required — human.js is a pure module.
 import { describe, it, expect, vi } from 'vitest';
-import { humanMoveMouse, humanClick, humanType, humanScroll } from '../../src/scrapers/facebook/human.js';
+import { humanMoveMouse, humanClick, humanType, humanScroll, physicsEase, easeOut } from '../../src/scrapers/facebook/human.js';
 import { makeFakePage, makeElementHandle } from '../helpers/fake-page.js';
 
 // ============================================================================
@@ -212,10 +212,10 @@ describe('humanMoveMouse (AC1-AC8 — Story 6.9)', () => {
     expect(moves[moves.length - 1].x).toBeCloseTo(1000, 0);
   });
 
-  it('physics easing overshoot still corrects back to target (Story 6.4)', async () => {
+  it('physics easing overshoot still corrects back to exact target (Story 6.4)', async () => {
     const page = makeFakePage();
     // Use a deterministic counter that forces overshoot on the 6th RNG call,
-    // then returns 0.5 for all subsequent calls.
+    // then returns 0.5 for all subsequent calls (zero jitter on intermediate steps).
     let callIdx = 0;
     const rng = () => {
       callIdx++;
@@ -225,15 +225,65 @@ describe('humanMoveMouse (AC1-AC8 — Story 6.9)', () => {
     await humanMoveMouse(page, 400, 300, { delayFn: async () => {}, rng, startX: 0, startY: 0 });
     const moves = page.calls.mouse.move;
     const last = moves[moves.length - 1];
-    // Final position must land back on target (± jitter, which is 0 with rng=0.5)
-    expect(last.x).toBeCloseTo(400, 0);
-    expect(last.y).toBeCloseTo(300, 0);
+    // Final position must land exactly on target (final step snaps, jitter cancels).
+    expect(last.x).toBe(400);
+    expect(last.y).toBe(300);
 
     // There must be at least one move beyond the target during overshoot
     const maxX = Math.max(...moves.map((m) => m.x));
     const maxY = Math.max(...moves.map((m) => m.y));
     expect(maxX).toBeGreaterThan(400);
     expect(maxY).toBeGreaterThan(300);
+  });
+
+  it('short 3px movement still reaches exact target with physics easing (Story 6.4)', async () => {
+    const page = makeFakePage();
+    await humanMoveMouse(page, 3, 0, { delayFn: async () => {}, rng: () => 0.5, startX: 0, startY: 0 });
+    const moves = page.calls.mouse.move;
+    const last = moves[moves.length - 1];
+    expect(last.x).toBe(3);
+    expect(last.y).toBe(0);
+  });
+
+  it('physicsEase clamps t to [0, 1] and returns finite values (Story 6.4)', () => {
+    expect(physicsEase(0)).toBe(0);
+    expect(physicsEase(1)).toBe(1);
+    expect(physicsEase(0.5)).toBe(0.5);
+    expect(physicsEase(-1)).toBe(0);
+    expect(physicsEase(2)).toBe(1);
+    expect(Number.isFinite(physicsEase(Number.NaN))).toBe(true);
+    expect(physicsEase(Number.NaN)).toBe(0);
+    expect(physicsEase(Number.POSITIVE_INFINITY)).toBe(1);
+    expect(physicsEase(Number.NEGATIVE_INFINITY)).toBe(0);
+    expect(physicsEase(undefined)).toBe(0);
+    expect(physicsEase('0.5')).toBe(0);
+    expect(physicsEase({})).toBe(0);
+  });
+
+  it('physics-eased humanMoveMouse lands exactly on target with biased rng (Story 6.4)', async () => {
+    const page = makeFakePage();
+    // rng=0.95 produces non-zero jitter on intermediate steps, but final step must still snap.
+    await humanMoveMouse(page, 100, 100, { delayFn: async () => {}, rng: () => 0.95, startX: 0, startY: 0 });
+    const moves = page.calls.mouse.move;
+    expect(moves.length).toBeGreaterThanOrEqual(20);
+    const last = moves[moves.length - 1];
+    expect(last.x).toBe(100);
+    expect(last.y).toBe(100);
+    // Intermediate steps should have jitter (not all equal to target or each other).
+    const hasJitter = moves.some((m, i) => i > 0 && (m.x !== moves[i - 1].x || m.y !== moves[i - 1].y));
+    expect(hasJitter).toBe(true);
+  });
+
+  it('easeOut is a pure deceleration curve for overshoot correction (Story 6.4)', () => {
+    // easeOut should start at 0 and end at 1.
+    expect(easeOut(0)).toBe(0);
+    expect(easeOut(1)).toBe(1);
+    // Midpoint of ease-out should be greater than 0.5 (late change).
+    expect(easeOut(0.5)).toBeGreaterThan(0.5);
+    // Values outside [0, 1] are clamped.
+    expect(easeOut(-1)).toBe(0);
+    expect(easeOut(2)).toBe(1);
+    expect(easeOut(undefined)).toBe(0);
   });
 });
 
@@ -702,111 +752,91 @@ describe('humanScroll (AC1-AC9 — Story 6.12)', () => {
     await humanType(page3, 'hi', { delayFn: async () => {}, rng: () => 0.5 });
     expect(page3.calls.keyboard.type.length).toBe(2);
   });
+});
 
-  // ============================================================================
-  // Story 6.18 — Proportional Overshoot & Input Validation
-  // ============================================================================
+// ============================================================================
+// Story 6.18 — Proportional Overshoot & Input Validation
+// ============================================================================
 
-  describe('Story 6.18 — Proportional Overshoot & Input Validation', () => {
-    it('proportional overshoot for large movement (1000px) is capped at 25px (AC1)', async () => {
-      const page = makeFakePage();
-      // rng sequence:
-      // stepCount call: 0.1 -> 21 steps
-      // control point offsets: 0.1, 0.1, 0.1, 0.1
-      // willOvershoot call: 0.1 ( < 0.15 => true!)
-      // overScalar call: 0.05 + 0.1*0.10 = 0.06 => 6% of 1000 = 60px -> clamped to 25px max!
-      const rng = () => 0.1;
-      await humanMoveMouse(page, 1000, 0, { delayFn: async () => {}, rng, startX: 0, startY: 0 });
+describe('Story 6.18 — Proportional Overshoot & Input Validation', () => {
+  it('proportional overshoot for large movement (1000px) is capped at 25px (AC1)', async () => {
+    const page = makeFakePage();
+    // rng sequence:
+    // stepCount call: 0.1 -> 21 steps
+    // control point offsets: 0.1, 0.1, 0.1, 0.1
+    // willOvershoot call: 0.1 ( < 0.15 => true!)
+    // overScalar call: 0.05 + 0.1*0.10 = 0.06 => 6% of 1000 = 60px -> clamped to 25px max!
+    const rng = () => 0.1;
+    await humanMoveMouse(page, 1000, 0, { delayFn: async () => {}, rng, startX: 0, startY: 0 });
 
-      // Check the maximum x position reached during overshoot
-      const moves = page.calls.mouse.move;
-      const maxMoveX = Math.max(...moves.map((m) => m.x));
-      // Max move x should be near 1000 + 25 = 1025px (± jitter)
-      expect(maxMoveX).toBeLessThanOrEqual(1030);
-      expect(maxMoveX).toBeGreaterThan(1005);
-    });
+    // Check the maximum x position reached during overshoot
+    const moves = page.calls.mouse.move;
+    const maxMoveX = Math.max(...moves.map((m) => m.x));
+    // Max move x should be near 1000 + 25 = 1025px (± jitter)
+    expect(maxMoveX).toBeLessThanOrEqual(1030);
+    expect(maxMoveX).toBeGreaterThan(1005);
+  });
 
-    it('proportional overshoot for tiny movement (5px) is at least 1px and proportional (AC1)', async () => {
-      const page = makeFakePage();
-      const rng = () => 0.1;
-      await humanMoveMouse(page, 5, 0, { delayFn: async () => {}, rng, startX: 0, startY: 0 });
+  it('proportional overshoot for tiny movement (5px) is at least 1px and proportional (AC1)', async () => {
+    const page = makeFakePage();
+    const rng = () => 0.1;
+    await humanMoveMouse(page, 5, 0, { delayFn: async () => {}, rng, startX: 0, startY: 0 });
 
-      const moves = page.calls.mouse.move;
-      const maxMoveX = Math.max(...moves.map((m) => m.x));
-      // 5px * 0.06 = 0.3px -> clamped to minimum 1px. Max move x near 6px ± jitter
-      expect(maxMoveX).toBeLessThanOrEqual(8);
-    });
+    const moves = page.calls.mouse.move;
+    const maxMoveX = Math.max(...moves.map((m) => m.x));
+    // 5px * 0.06 = 0.3px -> clamped to minimum 1px. Max move x near 6px ± jitter
+    expect(maxMoveX).toBeLessThanOrEqual(8);
+  });
 
-    it('short 3px movement still reaches target with physics easing (Story 6.4)', async () => {
-      const page = makeFakePage();
-      await humanMoveMouse(page, 3, 0, { delayFn: async () => {}, rng: () => 0.5, startX: 0, startY: 0 });
-      const moves = page.calls.mouse.move;
-      const last = moves[moves.length - 1];
-      expect(last.x).toBeCloseTo(3, 0);
-    });
+  it('humanMoveMouse throws when x or y is not a finite number (AC2)', async () => {
+    const page = makeFakePage();
+    await expect(humanMoveMouse(page, NaN, 100)).rejects.toThrow(/humanMoveMouse/);
+    await expect(humanMoveMouse(page, 100, undefined)).rejects.toThrow(/humanMoveMouse/);
+    await expect(humanMoveMouse(null, 100, 100)).rejects.toThrow(/humanMoveMouse/);
+    await expect(humanMoveMouse(page, 100, 100, { startX: NaN })).rejects.toThrow(/humanMoveMouse/);
+    await expect(humanMoveMouse(page, 100, 100, { startY: Number.POSITIVE_INFINITY })).rejects.toThrow(/humanMoveMouse/);
+  });
 
-    it('physics easing clamps t to [0, 1] and returns finite values (Story 6.4)', async () => {
-      const page = makeFakePage();
-      // With rng=0.5, no overshoot, step count 28. physicsEase receives t in [0,1].
-      // The result must always be finite and land on target.
-      await humanMoveMouse(page, 100, 100, { delayFn: async () => {}, rng: () => 0.5, startX: 0, startY: 0 });
-      const moves = page.calls.mouse.move;
-      expect(moves.length).toBeGreaterThanOrEqual(20);
-      const last = moves[moves.length - 1];
-      expect(Number.isFinite(last.x)).toBe(true);
-      expect(Number.isFinite(last.y)).toBe(true);
-    });
+  it('humanClick throws when page or element is invalid (AC3)', async () => {
+    const page = makeFakePage();
+    delete page.mouse;
+    const element = makeElementHandle({ boundingBox: { x: 10, y: 10, width: 20, height: 20 } });
+    await expect(humanClick(page, element)).rejects.toThrow(/humanClick/);
+    await expect(humanClick(makeFakePage(), null)).rejects.toThrow(/humanClick/);
 
-    it('humanMoveMouse throws when x or y is not a finite number (AC2)', async () => {
-      const page = makeFakePage();
-      await expect(humanMoveMouse(page, NaN, 100)).rejects.toThrow(/humanMoveMouse/);
-      await expect(humanMoveMouse(page, 100, undefined)).rejects.toThrow(/humanMoveMouse/);
-      await expect(humanMoveMouse(null, 100, 100)).rejects.toThrow(/humanMoveMouse/);
-      await expect(humanMoveMouse(page, 100, 100, { startX: NaN })).rejects.toThrow(/humanMoveMouse/);
-      await expect(humanMoveMouse(page, 100, 100, { startY: Number.POSITIVE_INFINITY })).rejects.toThrow(/humanMoveMouse/);
-    });
+    const noDown = makeFakePage();
+    delete noDown.mouse.down;
+    await expect(humanClick(noDown, element)).rejects.toThrow(/humanClick/);
 
-    it('humanClick throws when page or element is invalid (AC3)', async () => {
-      const page = makeFakePage();
-      delete page.mouse;
-      const element = makeElementHandle({ boundingBox: { x: 10, y: 10, width: 20, height: 20 } });
-      await expect(humanClick(page, element)).rejects.toThrow(/humanClick/);
-      await expect(humanClick(makeFakePage(), null)).rejects.toThrow(/humanClick/);
+    const noUp = makeFakePage();
+    delete noUp.mouse.up;
+    await expect(humanClick(noUp, element)).rejects.toThrow(/humanClick/);
+  });
 
-      const noDown = makeFakePage();
-      delete noDown.mouse.down;
-      await expect(humanClick(noDown, element)).rejects.toThrow(/humanClick/);
+  it('humanType throws when page or text is invalid (AC4)', async () => {
+    const page = makeFakePage();
+    delete page.keyboard;
+    await expect(humanType(page, 'hello')).rejects.toThrow(/humanType/);
+    await expect(humanType(makeFakePage(), null)).rejects.toThrow(/humanType/);
+    await expect(humanType(makeFakePage(), 123)).rejects.toThrow(/humanType/);
+  });
 
-      const noUp = makeFakePage();
-      delete noUp.mouse.up;
-      await expect(humanClick(noUp, element)).rejects.toThrow(/humanClick/);
-    });
+  it('humanScroll throws when page or distance is invalid (AC5)', async () => {
+    const page = makeFakePage();
+    delete page.mouse;
+    await expect(humanScroll(page, 100)).rejects.toThrow(/humanScroll/);
+    await expect(humanScroll(makeFakePage(), NaN)).rejects.toThrow(/humanScroll/);
+    await expect(humanScroll(makeFakePage(), null)).rejects.toThrow(/humanScroll/);
+  });
 
-    it('humanType throws when page or text is invalid (AC4)', async () => {
-      const page = makeFakePage();
-      delete page.keyboard;
-      await expect(humanType(page, 'hello')).rejects.toThrow(/humanType/);
-      await expect(humanType(makeFakePage(), null)).rejects.toThrow(/humanType/);
-      await expect(humanType(makeFakePage(), 123)).rejects.toThrow(/humanType/);
-    });
-
-    it('humanScroll throws when page or distance is invalid (AC5)', async () => {
-      const page = makeFakePage();
-      delete page.mouse;
-      await expect(humanScroll(page, 100)).rejects.toThrow(/humanScroll/);
-      await expect(humanScroll(makeFakePage(), NaN)).rejects.toThrow(/humanScroll/);
-      await expect(humanScroll(makeFakePage(), null)).rejects.toThrow(/humanScroll/);
-    });
-
-    it('error messages are generic and do not echo input values (NFR4)', async () => {
-      expect.assertions(2);
-      const secretText = 'CONFIDENTIAL_SECRET_123';
-      try {
-        await humanType(null, secretText);
-      } catch (err) {
-        expect(err.message).not.toContain(secretText);
-        expect(err.message).toContain('humanType');
-      }
-    });
+  it('error messages are generic and do not echo input values (NFR4)', async () => {
+    expect.assertions(2);
+    const secretText = 'CONFIDENTIAL_SECRET_123';
+    try {
+      await humanType(null, secretText);
+    } catch (err) {
+      expect(err.message).not.toContain(secretText);
+      expect(err.message).toContain('humanType');
+    }
   });
 });

@@ -27,6 +27,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import prisma from '../../api/lib/prisma.js';
+import { executeActionListTool } from '../scrapers/social/actions-list.js';
 
 import { VERSION } from '../version.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -47,7 +48,18 @@ import { fileURLToPath } from 'node:url';
 import { initializePlugins, getPluginTools } from '../plugins/index.js';
 import { resolveMcpFacebookAuth } from './facebook-auth.js';
 import { wrapToolResult, wrapToolError } from './envelope.js';
-import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
+import { PlatformError, RateLimitError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
+import { identifyConsumer, getConsumerContext, runWithConsumerContext } from './consumer-context.js';
+
+// Lazy-loaded core singletons are cached after first import to avoid repeated
+// dynamic module resolution on every tool call.
+let coreModulePromise = null;
+async function getCoreModule() {
+  if (!coreModulePromise) {
+    coreModulePromise = import('../core/index.js');
+  }
+  return coreModulePromise;
+}
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -2856,7 +2868,7 @@ async function executeTool(name, args) {
 
   // Generic cross-platform action discovery
   if (name === 'x_actions_list') {
-    return await executeActionListTool(args);
+    return await executeMcpActionListTool(args);
   }
 
   // Generic cross-platform post/comment crawlers
@@ -2959,46 +2971,13 @@ async function executeTool(name, args) {
 
 /**
  * Execute the x_actions_list tool.
- * Instantiates available social crawlers, calls listActions(), appends
- * the platform field, and cleans up. Optionally filters by platform.
+ * Delegates to the shared action discovery module used by both MCP and CLI.
  *
  * @param {Record<string, unknown>} args
  * @returns {Promise<Record<string, unknown>[]>}
  */
-async function executeActionListTool(args) {
-  const { FacebookCrawler } = await import('../scrapers/social/facebook/crawler.js');
-  const { ThreadsCrawler } = await import('../scrapers/social/threads/crawler.js');
-
-  const crawlers = [
-    new FacebookCrawler(),
-    new ThreadsCrawler(),
-  ];
-
-  try {
-    /** @type {Record<string, unknown>[]} */
-    const allActions = [];
-
-    for (const crawler of crawlers) {
-      const platform = crawler.platform || crawler.name;
-      const actions = crawler.listActions().map((desc) => ({
-        ...desc,
-        platform,
-      }));
-      allActions.push(...actions);
-    }
-
-    if (args?.platform && typeof args.platform === 'string') {
-      return allActions.filter((a) => a.platform === args.platform);
-    }
-
-    return allActions;
-  } finally {
-    for (const crawler of crawlers) {
-      if (typeof crawler.cleanup === 'function') {
-        await crawler.cleanup().catch(() => {});
-      }
-    }
-  }
+async function executeMcpActionListTool(args) {
+  return executeActionListTool({ platform: args?.platform });
 }
 
 /**
@@ -5068,12 +5047,12 @@ async function executeAITool(name, args) {
     }
 
     case 'x_schema_list': {
-      const { metadataSchemaRegistry } = await import('../core/index.js');
+      const { metadataSchemaRegistry } = await getCoreModule();
       return { schemas: metadataSchemaRegistry.listSchemas() };
     }
 
     case 'x_schema_get': {
-      const { metadataSchemaRegistry } = await import('../core/index.js');
+      const { metadataSchemaRegistry } = await getCoreModule();
       const { platform, category } = args;
       const schema = metadataSchemaRegistry.getSchema(platform, category);
       if (!schema) {
@@ -5094,7 +5073,7 @@ async function executeAITool(name, args) {
     }
 
     case 'x_governor_status': {
-      const { globalStatusApi, globalAdaptiveRateGovernor } = await import('../core/index.js');
+      const { globalStatusApi, globalAdaptiveRateGovernor } = await getCoreModule();
       const { refreshGovernorConsumerLag, globalStreamMetricsReader } = await import('../utils/stream-metrics.js');
       await refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader);
       const status = globalStatusApi.getGovernorStatus();
@@ -5139,6 +5118,38 @@ function createMcpServer() {
     const startedAt = Date.now();
 
     try {
+      // AD-20 multi-consumer quota gate. On HTTP/SSE the consumer id comes
+      // from the AsyncLocalStorage context set by the /mcp middleware; on
+      // Stdio there is no context — internal traffic is unmetered and skips
+      // the gate entirely.
+      const { globalAdaptiveRateGovernor } = await getCoreModule();
+      const consumerCtx = getConsumerContext();
+      const consumerId = consumerCtx?.consumerId || 'internal';
+
+      if (consumerId !== 'internal' && typeof globalAdaptiveRateGovernor.canConsumerRequest === 'function') {
+        if (!globalAdaptiveRateGovernor.canConsumerRequest(consumerId)) {
+          const retryAfterSeconds =
+            typeof globalAdaptiveRateGovernor.getConsumerRetryAfterSeconds === 'function'
+              ? globalAdaptiveRateGovernor.getConsumerRetryAfterSeconds(consumerId)
+              : 60;
+          throw new RateLimitError({
+            code: 'XACT_4291',
+            message: `Consumer quota exceeded for ${consumerId}`,
+            statusCode: 429,
+            suggestedAction: SuggestedActions.REDUCE_RATE,
+            retryAfterMs: Math.max(1, retryAfterSeconds) * 1000,
+            platform: 'xactions',
+            details: { consumerId, tool: name },
+          });
+        }
+      }
+
+      // AD-20: record the consumer request only when the tool actually starts
+      // executing (before dispatch, to avoid racing concurrent requests).
+      if (consumerId !== 'internal' && typeof globalAdaptiveRateGovernor.recordConsumerRequest === 'function') {
+        globalAdaptiveRateGovernor.recordConsumerRequest(consumerId);
+      }
+
       const result = await executeTool(name, args || {});
 
       // Legacy internal error shape from executeTool (e.g. uninitialized backend).
@@ -5350,12 +5361,33 @@ async function startHttpTransport() {
 
   // MCP endpoint — handles POST (messages), GET (SSE stream), DELETE (session close)
   app.all('/mcp', async (req, res) => {
+    // AD-20 consumer identification: extract X-Consumer-Id + Bearer token
+    // before the MCP handler runs and attach it to the request context.
+    const consumer = identifyConsumer(req);
+    req.xactionsConsumer = { consumerId: consumer.consumerId, apiKeyValid: consumer.apiKeyValid };
+
+    if (consumer.apiKeyRequired && !consumer.apiKeyValid) {
+      // XACT_4010 standard error envelope (AD-14).
+      res.setHeader('WWW-Authenticate', 'Bearer');
+      res.status(401).json({
+        code: 'XACT_4010',
+        type: 'auth_expired',
+        message: 'Invalid or missing Bearer token for XActions MCP API',
+        statusCode: 401,
+        isRetryable: false,
+        retryAfterMs: 0,
+        retryAfter: 0,
+        suggestedAction: 'relogin',
+      });
+      return;
+    }
+
     const sessionId = req.headers['mcp-session-id'];
 
     // Existing session
     if (sessionId && sessions.has(sessionId)) {
       const session = sessions.get(sessionId);
-      await session.transport.handleRequest(req, res, req.body);
+      await runWithConsumerContext(consumer, () => session.transport.handleRequest(req, res, req.body));
       return;
     }
 
@@ -5379,7 +5411,7 @@ async function startHttpTransport() {
 
       const srv = createMcpServer();
       await srv.connect(transport);
-      await transport.handleRequest(req, res, req.body);
+      await runWithConsumerContext(consumer, () => transport.handleRequest(req, res, req.body));
       return;
     }
 
@@ -5391,16 +5423,24 @@ async function startHttpTransport() {
     });
   });
 
-  const port = process.env.PORT || 3001;
-  app.listen(port, () => {
-    console.error(`✅ Server running on HTTP — http://0.0.0.0:${port}/mcp`);
-    console.error('   Ready for remote MCP client connections.');
-    if (process.env.X402_PAY_TO_ADDRESS) {
-      console.error(`💰 x402 payments enabled — pricing: http://0.0.0.0:${port}/mcp/pricing`);
-    } else {
-      console.error('ℹ️  x402 payments disabled (set X402_PAY_TO_ADDRESS to enable per-tool billing)');
-    }
-    console.error('');
+  // Explicit PORT=0 selects an ephemeral port (useful for tests); the `|| 3001`
+  // fallback only applies when PORT is unset or blank. Non-numeric strings fall
+  // back to 3001 to avoid passing NaN to app.listen.
+  const parsedPort = Number(process.env.PORT);
+  const port = Number.isFinite(parsedPort) ? parsedPort : 3001;
+  // Resolved after listen so callers (and tests) can obtain the bound port.
+  return await new Promise((resolve) => {
+    const httpServer = app.listen(port, () => {
+      console.error(`✅ Server running on HTTP — http://0.0.0.0:${port}/mcp`);
+      console.error('   Ready for remote MCP client connections.');
+      if (process.env.X402_PAY_TO_ADDRESS) {
+        console.error(`💰 x402 payments enabled — pricing: http://0.0.0.0:${port}/mcp/pricing`);
+      } else {
+        console.error('ℹ️  x402 payments disabled (set X402_PAY_TO_ADDRESS to enable per-tool billing)');
+      }
+      console.error('');
+      resolve(httpServer);
+    });
   });
 }
 
@@ -5474,4 +5514,4 @@ if (isEntryPoint()) {
 
 // Exported so the tool list can be inspected without starting a transport.
 // Also export Facebook automation tools for direct programmatic use.
-export { TOOLS, main, createMcpServer, initializeBackend, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts, executeActionListTool, executeCrawlPostTool, executeCrawlCommentsTreeTool };
+export { TOOLS, main, createMcpServer, initializeBackend, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts, executeActionListTool, executeCrawlPostTool, executeCrawlCommentsTreeTool, startHttpTransport };

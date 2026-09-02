@@ -10,6 +10,17 @@ import type { ProxyAgent, Socks5ProxyAgent } from 'undici';
 export type SupportedProxyScheme = 'http' | 'https' | 'socks5';
 export type ProviderPreset = 'brightdata' | 'smartproxy' | 'iproyal' | 'kuaidaili' | 'socksnode' | 'custom';
 
+/** Dual-pool partition name (AD-20). */
+export type PoolName = 'realtime' | 'bulk';
+
+/** Dual-pool partition statistics (AD-20). */
+export interface DualPoolStats {
+  realtime: { total: number; healthy: number; quarantined: number };
+  bulk: { total: number; healthy: number; quarantined: number };
+  /** Cumulative count of proxies borrowed from Bulk to serve Realtime requests. */
+  yieldedCount: number;
+}
+
 export interface NormalizedProxy {
   scheme: SupportedProxyScheme;
   host: string;
@@ -28,6 +39,10 @@ export interface PlaywrightProxyConfig {
 export interface ProxyIpPoolOptions {
   proxies?: Array<string | Partial<NormalizedProxy>>;
   validateOnAdd?: boolean;
+  /** Realtime pool share (default 0.30). */
+  realtimeRatio?: number;
+  /** Optional explicit bulk share; realtimeRatio + bulkRatio must equal 1. */
+  bulkRatio?: number;
 }
 
 export interface ProxyAgentOptions {
@@ -52,6 +67,17 @@ export interface ProxyRequestOptions {
   sid?: string;
   const?: boolean;
   rotatePerRequest?: boolean;
+  /** Request the realtime or bulk partition (AD-20). */
+  pool?: PoolName;
+  /** Consumer identity for quota accounting (AD-20). */
+  consumerId?: string;
+  /** Allow the realtime pool to borrow from bulk when exhausted (default true for realtime). */
+  yieldFromBulk?: boolean;
+}
+
+/** Options for partition-scoped sticky/dual-pool lookups (AD-20). */
+export interface PoolScopeOptions {
+  pool?: PoolName;
 }
 
 export interface ProxyProviderContract {
@@ -126,7 +152,13 @@ export declare class ProxyIpPool {
   getNext(): NormalizedProxy | null;
   getRoundRobinProxy(): NormalizedProxy | null;
   getRotatingProxy(): NormalizedProxy | null;
-  getStickyProxy(accountId: string): NormalizedProxy | null;
+  getProxy(options?: ProxyRequestOptions): NormalizedProxy | null;
+  getRealtimeProxy(options?: ProxyRequestOptions): NormalizedProxy | null;
+  getBulkProxy(options?: ProxyRequestOptions): NormalizedProxy | null;
+  getPoolStats(): DualPoolStats;
+  getStickyProxy(accountId: string, requiresResidential?: boolean, options?: PoolScopeOptions): NormalizedProxy | null;
+  realtimeRatio: number;
+  bulkRatio: number;
   quarantine(proxy: string | Partial<NormalizedProxy>, durationMs?: number): void;
   isAllQuarantined(): boolean;
   pruneExpiredQuarantines(): void;

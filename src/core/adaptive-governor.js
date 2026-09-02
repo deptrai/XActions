@@ -6,6 +6,7 @@
  */
 
 import { globalProxyPool } from '../proxy/proxy-pool.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
 
 /** @typedef {import('./types.js').GovernorStatus} GovernorStatus */
 
@@ -75,6 +76,12 @@ export class AdaptiveRateGovernor {
   /** @type {import('../proxy/proxy-pool.js').ProxyIpPool | null} */
   #proxyPool = null;
 
+  /** Sliding-window request timestamps per consumer (AD-20, in-memory only). */
+  #consumerRequestTimestamps = new Map();
+
+  /** Registered consumer quotas (AD-20). Unknown consumers fall back to `internal`. */
+  #consumerQuotas = new Map();
+
   /**
    * @param {Object} [deps]
    * @param {import('../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
@@ -84,6 +91,167 @@ export class AdaptiveRateGovernor {
     this.#proxyPool = deps.proxyPool || null;
     this.#healthyProxyFloor = Math.max(0, deps.healthyProxyFloor ?? 0);
     this.#windowStart = Date.now();
+
+    // AD-20 default consumer quotas. NOWING_RATE_LIMIT_RPM overrides the
+    // Nowing workspace plan RPM; internal traffic is unmetered.
+    const parsedNowingRpm = Number(process.env.NOWING_RATE_LIMIT_RPM);
+    const nowingRpm = Number.isInteger(parsedNowingRpm) && parsedNowingRpm > 0 ? parsedNowingRpm : 60;
+    this.#consumerQuotas.set('chainlens', { consumerId: 'chainlens', rpmLimit: 10, burstLimit: 5, priority: 1 });
+    this.#consumerQuotas.set('nowing', {
+      consumerId: 'nowing',
+      rpmLimit: nowingRpm,
+      burstLimit: 15,
+      priority: 2,
+    });
+    this.#consumerQuotas.set('internal', { consumerId: 'internal', rpmLimit: Infinity, burstLimit: 1000, priority: 99 });
+  }
+
+  /**
+   * Normalize a consumer id to a registered quota key. Unknown consumers are
+   * treated as `internal` (unmetered) — recording never throws (AD-20).
+   * @param {string} consumerId
+   * @returns {string}
+   */
+  #resolveConsumerId(consumerId) {
+    const id = String(consumerId ?? '').trim().toLowerCase();
+    return this.#consumerQuotas.has(id) ? id : 'internal';
+  }
+
+  /**
+   * Prune timestamps older than the 60s sliding window for a consumer.
+   * @param {string} consumerId
+   * @returns {number[]}
+   */
+  #pruneConsumerWindow(consumerId) {
+    const now = Date.now();
+    const cutoff = now - 60_000;
+    const timestamps = (this.#consumerRequestTimestamps.get(consumerId) || []).filter((/** @type {number} */ t) => t > cutoff);
+    this.#consumerRequestTimestamps.set(consumerId, timestamps);
+    return timestamps;
+  }
+
+  /**
+   * Register or update a consumer quota (AD-20). Merges with the existing
+   * config when the consumer is already registered.
+   * @param {string} consumerId
+   * @param {Partial<import('./types.js').ConsumerQuotaConfig>} config
+   */
+  setConsumerQuota(consumerId, config = {}) {
+    const id = String(consumerId ?? '').trim().toLowerCase();
+    if (!id) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'consumerId is required to set a consumer quota',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    if (config === null || typeof config !== 'object') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'config must be an object',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    const rpmLimit = config.rpmLimit ?? this.#consumerQuotas.get(id)?.rpmLimit;
+    if (rpmLimit !== undefined && (rpmLimit !== Infinity && (!Number.isFinite(rpmLimit) || rpmLimit <= 0 || !Number.isInteger(rpmLimit)))) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'rpmLimit must be a positive integer or Infinity',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    if (config.burstLimit !== undefined && (!Number.isInteger(config.burstLimit) || config.burstLimit < 0)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'burstLimit must be a non-negative integer',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    if (config.priority !== undefined && (!Number.isInteger(config.priority) || config.priority < 0)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'priority must be a non-negative integer',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    const existing = this.#consumerQuotas.get(id) || { consumerId: id, rpmLimit: Infinity, burstLimit: 1000, priority: 99 };
+    this.#consumerQuotas.set(id, { ...existing, ...config, consumerId: id });
+  }
+
+  /**
+   * Whether the consumer has quota left in its 60s sliding window (AD-20).
+   * Consumers with an Infinity rpmLimit (internal) always pass.
+   * @param {string} consumerId
+   * @returns {boolean}
+   */
+  canConsumerRequest(consumerId) {
+    const id = this.#resolveConsumerId(consumerId);
+    const quota = this.#consumerQuotas.get(id);
+    if (!quota || quota.rpmLimit === Infinity) return true;
+    const timestamps = this.#pruneConsumerWindow(id);
+    return timestamps.length < quota.rpmLimit;
+  }
+
+  /**
+   * Record a consumer request into its 60s sliding window (AD-20).
+   * Never throws: unknown consumers are normalized to `internal`.
+   * @param {string} consumerId
+   */
+  recordConsumerRequest(consumerId) {
+    const id = this.#resolveConsumerId(consumerId);
+    const timestamps = this.#pruneConsumerWindow(id);
+    timestamps.push(Date.now());
+    this.#consumerRequestTimestamps.set(id, timestamps);
+  }
+
+  /**
+   * Observability snapshot for a single consumer (AD-20).
+   * `burstLimit` never blocks — it only feeds `isThrottled` reporting.
+   * @param {string} consumerId
+   * @returns {import('./types.js').ConsumerStatus}
+   */
+  getConsumerStatus(consumerId) {
+    const id = this.#resolveConsumerId(consumerId);
+    const quota = this.#consumerQuotas.get(id) || { consumerId: id, rpmLimit: Infinity, burstLimit: 1000, priority: 99 };
+    const usedInWindow = quota.rpmLimit === Infinity ? 0 : this.#pruneConsumerWindow(id).length;
+    const remaining = Math.max(0, quota.rpmLimit - usedInWindow);
+    // burstLimit is advisory for reporting only; per AC-4 it does not block.
+    const isThrottled = quota.rpmLimit !== Infinity && usedInWindow >= quota.rpmLimit;
+    const overBurst = quota.rpmLimit !== Infinity && usedInWindow >= quota.burstLimit;
+    return {
+      consumerId: id,
+      rpmLimit: quota.rpmLimit,
+      burstLimit: quota.burstLimit,
+      priority: quota.priority,
+      usedInWindow,
+      remaining,
+      isThrottled,
+      overBurst,
+    };
+  }
+
+  /**
+   * Seconds until the oldest timestamp in the consumer's window expires
+   * (+1s buffer, minimum 1s) — used for RateLimitError.retryAfter (AD-20).
+   * @param {string} consumerId
+   * @returns {number}
+   */
+  getConsumerRetryAfterSeconds(consumerId) {
+    const id = this.#resolveConsumerId(consumerId);
+    const timestamps = this.#pruneConsumerWindow(id);
+    if (timestamps.length === 0) return 1;
+    const now = Date.now();
+    // Use the oldest timestamp explicitly to guard against clock skew or
+    // out-of-order pushes. Math.min over the window is cheap for the typical
+    // small window size.
+    const oldest = Math.min(...timestamps);
+    const ms = (oldest + 60_000 - now) + 1000;
+    return Math.max(1, Math.ceil(ms / 1000));
   }
 
   /**
@@ -317,6 +485,32 @@ export class AdaptiveRateGovernor {
     return this.#hibernatingAccounts.some((h) => h.accountId === key);
   }
 
+  /**
+   * @param {string} accountId
+   * @param {string} [platform]
+   * @returns {string | null}
+   */
+  getHibernationReason(accountId, platform) {
+    const key = this.#resolveAccountId(accountId, platform);
+    const now = Date.now();
+    this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.until > now);
+    const entry = this.#hibernatingAccounts.find((h) => h.accountId === key);
+    return entry ? entry.reason : null;
+  }
+
+  /**
+   * @param {string} accountId
+   * @param {string} [platform]
+   * @returns {number | null}
+   */
+  getHibernationUntil(accountId, platform) {
+    const key = this.#resolveAccountId(accountId, platform);
+    const now = Date.now();
+    this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.until > now);
+    const entry = this.#hibernatingAccounts.find((h) => h.accountId === key);
+    return entry ? entry.until : null;
+  }
+
   /** @returns {GovernorStatus} */
   getStatus() {
     const now = Date.now();
@@ -348,6 +542,23 @@ export class AdaptiveRateGovernor {
       isBackpressure ? 'backpressure' :
       (this.#totalProxyCount > 0 && healthyProxyRatio < 0.5) ? 'reduced' : 'normal';
 
+    // AD-20 dual-pool partition stats (via ProxyIpPool.getPoolStats()).
+    const emptyPoolStats = {
+      realtime: { total: 0, healthy: 0, quarantined: 0 },
+      bulk: { total: 0, healthy: 0, quarantined: 0 },
+      yieldedCount: 0,
+    };
+    const dualPool = this.#proxyPool && typeof this.#proxyPool.getPoolStats === 'function'
+      ? this.#proxyPool.getPoolStats()
+      : emptyPoolStats;
+
+    // AD-20 per-consumer quota observability.
+    /** @type {Record<string, import('./types.js').ConsumerStatus>} */
+    const consumerQuotas = {};
+    for (const id of this.#consumerQuotas.keys()) {
+      consumerQuotas[id] = this.getConsumerStatus(id);
+    }
+
     return {
       healthyProxyCount: this.#healthyProxyCount,
       totalProxyCount: this.#totalProxyCount,
@@ -360,6 +571,8 @@ export class AdaptiveRateGovernor {
         reason: h.reason,
       })),
       throttleLevel,
+      dualPool,
+      consumerQuotas,
     };
   }
 }

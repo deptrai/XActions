@@ -1412,12 +1412,8 @@
   </div>
 
   <script>
-    const API_URL = window.location.hostname === 'localhost' 
-      ? 'http://localhost:3001/api' 
-      : '/api';
-    const WS_URL = window.location.hostname === 'localhost'
-      ? 'http://localhost:3001'
-      : window.location.origin;
+    const API_URL = `${window.location.origin}/api`;
+    const WS_URL = window.location.origin;
     let currentOperation = null;
     let authToken = localStorage.getItem('authToken');
     let socket = null;
@@ -1758,17 +1754,19 @@
         if (authData.hasOAuth || authData.hasSession) {
           const method = authData.hasOAuth ? 'OAuth' : 'Session Cookie';
           const statusSection = document.getElementById('twitter-status');
-          statusSection.classList.add('connected');
-          statusSection.innerHTML = `
-            <div class="connect-inner" style="background: linear-gradient(135deg, rgba(0, 186, 124, 0.1) 0%, rgba(29, 155, 240, 0.1) 100%);">
-              <div class="connect-header">
-                <span class="connect-icon">✅</span>
-                <h2 class="connect-title">X Account Connected</h2>
+          if (statusSection) {
+            statusSection.classList.add('connected');
+            statusSection.innerHTML = `
+              <div class="connect-inner" style="background: linear-gradient(135deg, rgba(0, 186, 124, 0.1) 0%, rgba(29, 155, 240, 0.1) 100%);">
+                <div class="connect-header">
+                  <span class="connect-icon">✅</span>
+                  <h2 class="connect-title">X Account Connected</h2>
+                </div>
+                <p class="connect-desc">@${authData.username || 'Your account'} connected via ${method}</p>
+                <button class="btn-secondary" onclick="disconnectTwitter()">Disconnect Account</button>
               </div>
-              <p class="connect-desc">@${authData.username || 'Your account'} connected via ${method}</p>
-              <button class="btn-secondary" onclick="disconnectTwitter()">Disconnect Account</button>
-            </div>
-          `;
+            `;
+          }
           document.getElementById('header-subtitle').textContent = `Connected as @${authData.username || 'user'}`;
         }
 

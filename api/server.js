@@ -90,6 +90,8 @@ import facebookAccountsRoutes from './routes/facebookAccounts.js';
 import { startFacebookScheduler } from './services/facebookScheduler.js';
 import tweetScheduleRoutes from './routes/tweetSchedule.js';
 import { startTweetScheduler } from './services/tweetScheduler.js';
+import { startRetentionScheduler, requestRetentionShutdown, getIsProcessing } from './services/retentionScheduler.js';
+import platformRoutes from './routes/platform.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
@@ -150,7 +152,8 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development' ? 10000 : 500, // Higher ceiling for local dev/testing/admin polling
+  skip: (req) => req.path.startsWith('/admin') || req.path.startsWith('/governor')
 });
 app.use('/api/', limiter);
 
@@ -321,6 +324,7 @@ app.use('/api/operations', operationRoutes);
 app.use('/api/twitter', twitterRoutes);
 app.use('/api/facebook/accounts', facebookAccountsRoutes);
 app.use('/api/facebook', facebookRoutes);
+app.use('/api/platform', platformRoutes);
 app.use('/api/session', sessionAuthRoutes);
 app.use('/api/license', licenseRoutes);
 app.use('/api/admin', adminRoutes);
@@ -578,6 +582,67 @@ app.get('/price-correlation', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/price-correlation.html'));
 });
 
+app.get('/pricing', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/pricing.html'));
+});
+
+app.get('/compare', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/compare.html'));
+});
+
+app.get('/contact', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/contact.html'));
+});
+
+app.get('/contributing', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/contributing.html'));
+});
+
+app.get('/examples', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/examples.html'));
+});
+
+app.get('/extension', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/extension.html'));
+});
+
+app.get('/integrations', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/integrations.html'));
+});
+
+app.get('/playground', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/playground.html'));
+});
+
+app.get('/security', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/security.html'));
+});
+
+app.get('/status', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/status.html'));
+});
+
+app.get('/use-cases', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/use-cases.html'));
+});
+
+app.get('/blog', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/blog.html'));
+});
+
+app.get('/changelog', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/changelog.html'));
+});
+
+app.get('/a2a', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/a2a.html'));
+});
+
+// Platform hub routes
+app.get(['/platform', '/platforms', '/platforms/:platform'], (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/platform.html'));
+});
+
 app.get('/facebook', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/facebook.html'));
 });
@@ -606,55 +671,87 @@ app.use(/** @type {import('express').RequestHandler} */ ((req, res) => {
 }));
 
 // Use httpServer instead of app.listen for Socket.io support
-httpServer.listen(PORT, async () => {
-  console.log(`🚀 XActions API Server running on port ${PORT}`);
-  console.log(`🔌 WebSocket server ready for real-time connections`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  
-  // Initialize plugin system and mount plugin routes
-  try {
-    const pluginCount = /** @type {number} */ (await initializePlugins());
-    if (pluginCount > 0) {
-      mountPluginRoutes();
-      console.log(`📦 Plugins loaded: ${pluginCount}`);
+if (process.env.NODE_ENV !== 'test') {
+  httpServer.listen(PORT, async () => {
+    console.log(`🚀 XActions API Server running on port ${PORT}`);
+    console.log(`🔌 WebSocket server ready for real-time connections`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+    // Initialize plugin system and mount plugin routes
+    try {
+      const pluginCount = /** @type {number} */ (await initializePlugins());
+      if (pluginCount > 0) {
+        mountPluginRoutes();
+        console.log(`📦 Plugins loaded: ${pluginCount}`);
+      }
+    } catch (error) {
+      console.warn('⚠️  Plugin system initialization warning:', /** @type {Error} */ (error).message);
     }
-  } catch (error) {
-    console.warn('⚠️  Plugin system initialization warning:', /** @type {Error} */ (error).message);
-  }
-  
-  // Optional: Validate x402 micropayment config (only relevant if self-hosting with payments)
-  try {
-    const x402Validation = validateX402Config(false);
-    if (x402Validation.valid) {
-      console.log(`  ├─ x402 micropayments: enabled`);
+
+    // Optional: Validate x402 micropayment config (only relevant if self-hosting with payments)
+    try {
+      const x402Validation = validateX402Config(false);
+      if (x402Validation.valid) {
+        console.log(`  ├─ x402 micropayments: enabled`);
+      }
+      // Silently skip if not configured — x402 is optional
+    } catch (error) {
+      // x402 is optional — don't crash if not configured
+      if (process.env.DEBUG) console.warn('x402 config:', /** @type {Error} */ (error).message);
     }
-    // Silently skip if not configured — x402 is optional
-  } catch (error) {
-    // x402 is optional — don't crash if not configured
-    if (process.env.DEBUG) console.warn('x402 config:', /** @type {Error} */ (error).message);
-  }
-  
-  // Initialize licensing and telemetry
-  await initializeLicensing();
 
-  // Start unfollower auto-scan scheduler
-  startScheduler(io);
+    // Initialize licensing and telemetry
+    await initializeLicensing();
 
-  // Start Facebook scheduled-post ticker (Story 4.1) — runs in this server process
-  // so global.io is live and facebook:operation events reach connected clients.
-  // schedulerStarted guard keeps it single-fire. ENABLE_FB_SCHEDULER=false disables
-  // it (tests / a dedicated-scheduler deployment).
-  if (process.env.ENABLE_FB_SCHEDULER !== 'false') {
-    startFacebookScheduler();
-  }
+    // Start unfollower auto-scan scheduler
+    startScheduler(io);
 
-  // Start Tweet scheduler (EPS-2) — same in-process pattern as the Facebook scheduler:
-  // 1-minute node-cron tick, ±2-min SLA, per-user ≤5/hour throughput cap with jitter,
-  // atomic pending→running claim, stale-running sweep on startup. ENABLE_TWEET_SCHEDULER=false
-  // disables it (tests / a dedicated-scheduler deployment).
-  if (process.env.ENABLE_TWEET_SCHEDULER !== 'false') {
-    startTweetScheduler();
+    // Start Facebook scheduled-post ticker (Story 4.1) — runs in this server process
+    // so global.io is live and facebook:operation events reach connected clients.
+    // schedulerStarted guard keeps it single-fire. ENABLE_FB_SCHEDULER=false disables
+    // it (tests / a dedicated-scheduler deployment).
+    if (process.env.ENABLE_FB_SCHEDULER !== 'false') {
+      startFacebookScheduler();
+    }
+
+    // Start Tweet scheduler (EPS-2) — same in-process pattern as the Facebook scheduler:
+    // 1-minute node-cron tick, ±2-min SLA, per-user ≤5/hour throughput cap with jitter,
+    // atomic pending→running claim, stale-running sweep on startup. ENABLE_TWEET_SCHEDULER=false
+    // disables it (tests / a dedicated-scheduler deployment).
+    if (process.env.ENABLE_TWEET_SCHEDULER !== 'false') {
+      startTweetScheduler();
+    }
+
+    // Start Data Retention Scheduler (Story 10.6 / AD-10) — daily 3:00 AM purge
+    // of raw crawl data older than 30 days and terminal checkpoints older than 90 days.
+    if (process.env.ENABLE_RETENTION_SCHEDULER !== 'false') {
+      startRetentionScheduler();
+    }
+  });
+
+  // Graceful shutdown: stop cron schedulers and finish in-flight cleanup.
+  for (const signal of ['SIGTERM', 'SIGINT']) {
+    process.on(signal, () => {
+      console.log(`🛑 [Server] Received ${signal}, shutting down...`);
+      requestRetentionShutdown();
+      httpServer.close(async () => {
+        console.log('✅ [Server] HTTP server closed.');
+        // Wait for any in-flight retention cleanup to finish (with a safety cap).
+        const SHUTDOWN_POLL_MS = 100;
+        const SHUTDOWN_TIMEOUT_MS = 30000;
+        const shutdownStart = Date.now();
+        while (getIsProcessing() && Date.now() - shutdownStart < SHUTDOWN_TIMEOUT_MS) {
+          await new Promise((resolve) => setTimeout(resolve, SHUTDOWN_POLL_MS));
+        }
+        if (getIsProcessing()) {
+          console.warn('⚠️ [Server] In-flight retention cleanup did not finish within shutdown timeout; forcing exit.');
+        } else {
+          console.log('✅ [Server] Retention cleanup finished; exiting.');
+        }
+        process.exit(process.exitCode || 0);
+      });
+    });
   }
-});
+}
 
 export default app;
