@@ -38,10 +38,10 @@ export class TopCvClient extends AbstractApiClient {
       client: options.client || 'got',
       responseValidator: validator,
       requiresAuth: options.requiresAuth ?? false,
-      requiresProxy: options.requiresProxy ?? true,
+      requiresProxy: options.requiresProxy ?? (options.proxyPool ? true : false),
     });
     this.baseUrl = baseUrl;
-    this.requiresProxy = options.requiresProxy !== undefined ? options.requiresProxy : true;
+    this.requiresProxy = options.requiresProxy !== undefined ? options.requiresProxy : (options.proxyPool ? true : false);
   }
 
   /**
