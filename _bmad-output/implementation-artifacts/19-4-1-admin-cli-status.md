@@ -50,6 +50,7 @@ so that **I can quickly grasp system health and operational status directly from
 - **Given** a running API server at `http://localhost:3001`
 - **When** the operator runs `xactions admin status`
 - **Then** it first attempts `GET /api/admin/governor/status` (or `/governor/status`) with an optional Bearer token
+- **And** on HTTP 200 it extracts the nested status from the success envelope: `const status = (await res.json()).status`
 - **And** if the HTTP call fails, it falls back to `globalStatusApi.getGovernorStatus()` after refreshing consumer lag via `refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader)`
 
 [Source: `src/core/status-api.js`; `src/utils/stream-metrics.js`; `api/routes/admin.js:363`]
@@ -59,7 +60,7 @@ so that **I can quickly grasp system health and operational status directly from
 - **Given** a successful status fetch
 - **When** the operator runs `xactions admin status` without `--json`
 - **Then** it prints:
-  - `Throttle Level` with color-coded status (`normal` green, `reduced` yellow, `backpressure` magenta, `critical`/`emergency` red)
+  - `Throttle Level` with color-coded status (`normal` green, `reduced` yellow, `backpressure` magenta, `critical` red)
   - `Healthy Proxies` as `healthyProxyCount / totalProxyCount` with percentage
   - `Current Req/Sec` as `currentReqPerSecond`
   - `Redis Consumer Lag` as `redisConsumerLag`
@@ -117,9 +118,9 @@ so that **I can quickly grasp system health and operational status directly from
   - [ ] 4.4 Verify `xactions admin status --help` and `xactions admin --help` include the `status` command
 - [ ] Task 5: Run validations
   - [ ] 5.1 Run `vitest run tests/cli/admin-status.test.js`
-  - [ ] 5.2 Run `vitest run tests/cli/info.test.js` or the existing status command test to ensure no regression
+  - [ ] 5.2 Run `vitest run tests/core/status-api.test.js` and any existing status CLI tests to ensure no regression
   - [ ] 5.3 Run `npm run typecheck` if configured
-  - [ ] 5.4 Manual smoke test: `node bin/unfollowx admin status` and `node bin/unfollowx admin status --json`
+  - [ ] 5.4 Manual smoke test: `node src/cli/index.js admin status` and `node src/cli/index.js admin status --json` (or `npx xactions admin status` if package is linked)
 
 ## Dev Notes
 
@@ -168,7 +169,7 @@ so that **I can quickly grasp system health and operational status directly from
   - `normal` → green
   - `reduced` → yellow
   - `backpressure` → magenta
-  - `critical`/`emergency` → red
+  - `critical` → red
 - Throttle label aligned, metrics indented, hibernating accounts as bullet list.
 - JSON mode must produce the full object exactly as `globalStatusApi.getGovernorStatus()` returns.
 
