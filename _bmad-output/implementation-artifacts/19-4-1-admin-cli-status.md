@@ -2,18 +2,18 @@
 story_id: "19.4.1"
 epic: 19
 story_key: "19-4-1-admin-cli-status"
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 5"
 created: "2026-09-02"
-updated: "2026-09-02"
+updated: "2026-09-03"
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "Approved"
 baseline_commit: "76c48d8820b2ea109d3e09ddc8bae702e09f3457"
 ---
 
 # Story 19.4.1: Admin CLI — Status
 
-Status: ready-for-dev
+Status: done
 
 ## ⚠️ Critical Constraints / Architecture Variance
 

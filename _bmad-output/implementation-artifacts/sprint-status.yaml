@@ -137,7 +137,7 @@ development_status:
   19-2-dashboard-proxies-accounts-view: done
   19-3-dashboard-stream-metrics-alerts-view: done
   19-4-admin-cli-unified-command-group: backlog
-  19-4-1-admin-cli-status: review
+  19-4-1-admin-cli-status: done
   19-4-2-admin-cli-proxy-management: backlog
   19-4-3-admin-cli-account-management: backlog
   19-4-4-admin-cli-checkpoint-management: backlog
