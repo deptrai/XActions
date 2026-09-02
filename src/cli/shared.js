@@ -200,6 +200,59 @@ export function parseCliNonNegativeInt(value, fieldName) {
 }
 
 /**
+ * Print a GovernorStatus snapshot to stdout in either human-readable or JSON form.
+ *
+ * @param {import('../core/types.js').GovernorStatus} status
+ * @param {{json?: boolean}} [options={}]
+ */
+export function printGovernorStatus(status, options = {}) {
+  if (options.json) {
+    console.log(JSON.stringify(status, null, 2));
+    return;
+  }
+
+  const throttleColor =
+    status.throttleLevel === 'normal' ? chalk.green :
+    status.throttleLevel === 'reduced' ? chalk.yellow :
+    status.throttleLevel === 'backpressure' ? chalk.magenta : chalk.red;
+
+  console.log(`\n${chalk.bold.cyan('⚡ XActions System & Governor Status')}\n`);
+  console.log(`  ${chalk.bold('Throttle Level:')}       ${throttleColor(status.throttleLevel)}`);
+  console.log(`  ${chalk.bold('Healthy Proxies:')}      ${status.healthyProxyCount} / ${status.totalProxyCount} (${(status.healthyProxyRatio * 100).toFixed(1)}%)`);
+  console.log(`  ${chalk.bold('Current Req/Sec:')}      ${status.currentReqPerSecond}`);
+  console.log(`  ${chalk.bold('Redis Consumer Lag:')}   ${status.redisConsumerLag}`);
+  console.log(`  ${chalk.bold('Hibernating Accounts:')} ${status.hibernatingAccounts.length}`);
+  if (status.hibernatingAccounts.length > 0) {
+    status.hibernatingAccounts.forEach((acc) => {
+      console.log(`    • ${chalk.yellow(acc.accountId)} — ${acc.remainingSeconds}s remaining (${acc.reason})`);
+    });
+  }
+
+  const dualPool = status.dualPool;
+  if (dualPool) {
+    const rt = dualPool.realtime || { total: 0, healthy: 0, quarantined: 0 };
+    const bk = dualPool.bulk || { total: 0, healthy: 0, quarantined: 0 };
+    const totalProxies = Number(status.totalProxyCount) > 0 ? Number(status.totalProxyCount) : Math.max(1, (rt.total || 0) + (bk.total || 0));
+    const rtPct = rt.total > 0 ? Math.round((rt.total / totalProxies) * 100) : 0;
+    const bkPct = bk.total > 0 ? Math.round((bk.total / totalProxies) * 100) : 0;
+    console.log('');
+    console.log(`  ${chalk.bold('Dual-Pool:')}            Realtime ${chalk.green(`${rt.healthy}/${rt.total} (${rtPct}%)`)} | Bulk ${chalk.cyan(`${bk.healthy}/${bk.total} (${bkPct}%)`)} | Yielded: ${dualPool.yieldedCount ?? 0}`);
+  }
+
+  const consumerQuotas = status.consumerQuotas;
+  if (consumerQuotas && Object.keys(consumerQuotas).length > 0) {
+    console.log('');
+    console.log(`  ${chalk.bold('Consumer Quotas:')}`);
+    for (const [id, quota] of Object.entries(consumerQuotas)) {
+      const limit = quota.rpmLimit === Infinity ? 'unmetered' : `${quota.usedInWindow}/${quota.rpmLimit} RPM`;
+      const flag = quota.isThrottled ? chalk.red('⛔ throttled') : chalk.green('✅');
+      console.log(`    • ${chalk.bold(String(id).padEnd(10))} ${limit}  ${flag}`);
+    }
+  }
+  console.log();
+}
+
+/**
  * Print a CLI error and set a non-zero exit code.
  * @param {Error} error
  * @param {{json?: boolean}} [options={}]
