@@ -1160,9 +1160,12 @@ export class FacebookCrawler extends AbstractCrawler {
       await this.store.storeBatch(posts, { upsert: true });
     }
 
+    const pageInfo = res?.data?.group?.feed?.page_info || res?.data?.node?.feed?.page_info || null;
+    await this.#saveCheckpoint('group', args.groupId, pageInfo?.end_cursor || null, posts, Boolean(pageInfo?.has_next_page));
+
     return {
       posts,
-      pageInfo: res?.data?.group?.feed?.page_info || res?.data?.node?.feed?.page_info || null,
+      pageInfo,
     };
   }
 
@@ -1218,9 +1221,12 @@ export class FacebookCrawler extends AbstractCrawler {
       await this.store.storeBatch(posts, { upsert: true });
     }
 
+    const pageInfo = res?.data?.page?.timeline_feed?.page_info || res?.data?.node?.timeline_feed?.page_info || null;
+    await this.#saveCheckpoint('page', args.pageId, pageInfo?.end_cursor || null, posts, Boolean(pageInfo?.has_next_page));
+
     return {
       posts,
-      pageInfo: res?.data?.page?.timeline_feed?.page_info || res?.data?.node?.timeline_feed?.page_info || null,
+      pageInfo,
     };
   }
 
@@ -2441,6 +2447,8 @@ export class FacebookCrawler extends AbstractCrawler {
    */
   async #saveCheckpoint(targetType, targetKey, cursor = null, items = [], hasMore = false) {
     try {
+      const firstItem = items && items.length > 0 ? items[0] : null;
+      const storageRef = firstItem?.storageRef || firstItem?.id || undefined;
       const storeWithCheckpoint = /** @type {any} */ (this.store);
       if (storeWithCheckpoint && typeof storeWithCheckpoint.saveCheckpoint === 'function') {
         await storeWithCheckpoint.saveCheckpoint({
@@ -2451,7 +2459,24 @@ export class FacebookCrawler extends AbstractCrawler {
           lastTimestamp: new Date(),
           lastCrawledAt: new Date(),
           status: hasMore ? 'has_more' : 'completed',
+          storageRef,
         });
+      }
+
+      const publisher = this.store?.publisher || this.redisPublisher;
+      if (publisher && typeof publisher.publish === 'function' && isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
+        for (const item of items) {
+          const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
+          await publisher.publish({
+            id: item.id,
+            platform: 'facebook',
+            externalId: item.externalId,
+            category,
+            authorId: item.authorId || '',
+            crawledAt: toIsoDate(item.crawledAt),
+            storageRef: item.storageRef || item.id,
+          });
+        }
       }
 
       const redisClient = /** @type {any} */ (this.store)?.redis || /** @type {any} */ (this.sessionManager)?.redis;
@@ -2465,6 +2490,7 @@ export class FacebookCrawler extends AbstractCrawler {
             category,
             authorId: item.authorId || '',
             crawledAt: toIsoDate(item.crawledAt),
+            storageRef: item.storageRef || item.id,
           };
 
           if (typeof redisClient.xAdd === 'function') {

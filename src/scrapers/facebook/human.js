@@ -159,8 +159,8 @@ export async function humanMoveMouse(page, x, y, options = {}) {
 
   const r = wrapRng(rng);
 
-  // Step count: 20-35 (randomized)
-  const stepCount = 20 + Math.min(15, Math.floor(r() * 16)); // 20..35 inclusive
+  // Step count: 17-30 base steps so that with 3-5 correction steps, total moves <= 35
+  const rawSteps = 20 + Math.min(15, Math.floor(r() * 16)); // Call 1
 
   // Control points: offset perpendicular to the line start→target.
   // This creates a natural arc rather than a straight line.
@@ -171,8 +171,8 @@ export async function humanMoveMouse(page, x, y, options = {}) {
   const perpX = -dy / dist;
   const perpY = dx / dist;
   // Random offset magnitude for control points (10-40% of distance)
-  const offset1 = (dist * (0.1 + r() * 0.3)) * (r() < 0.5 ? -1 : 1);
-  const offset2 = (dist * (0.1 + r() * 0.3)) * (r() < 0.5 ? -1 : 1);
+  const offset1 = (dist * (0.1 + r() * 0.3)) * (r() < 0.5 ? -1 : 1); // Calls 2, 3
+  const offset2 = (dist * (0.1 + r() * 0.3)) * (r() < 0.5 ? -1 : 1); // Calls 4, 5
 
   const cp1x = startX + dx * 0.33 + perpX * offset1;
   const cp1y = startY + dy * 0.33 + perpY * offset1;
@@ -180,12 +180,30 @@ export async function humanMoveMouse(page, x, y, options = {}) {
   const cp2y = startY + dy * 0.67 + perpY * offset2;
 
   // 15% chance: overshoot past target, then correct back
-  const willOvershoot = r() < 0.15;
+  const willOvershoot = r() < 0.15; // Call 6
 
   let endX = x;
   let endY = y;
   let overshootX = x;
   let overshootY = y;
+  let correctionSteps = 0;
+
+  if (willOvershoot) {
+    // Proportional overshoot: 5-15% of movement distance, clamped to [1, 25] pixels (Story 6.18 — AC1)
+    const overScalar = clamp(0.05 + r() * 0.10, 0.05, 0.15); // Call 7
+    const overDist = clamp(Math.round(dist * overScalar), 1, 25);
+    const overDx = (dx / dist) * overDist;
+    const overDy = (dy / dist) * overDist;
+    overshootX = x + overDx;
+    overshootY = y + overDy;
+    // The Bezier curve ends at the overshoot point; correction happens after
+    endX = overshootX;
+    endY = overshootY;
+    correctionSteps = 3 + Math.min(2, Math.floor(r() * 3)); // 3..5
+  }
+
+  // Ensure total steps (main curve + correction) never exceeds 35 and is at least 20
+  const stepCount = willOvershoot ? Math.max(16, Math.min(30, rawSteps - correctionSteps)) : rawSteps;
 
   if (willOvershoot) {
     // Proportional overshoot: 5-15% of movement distance, clamped to [1, 25] pixels (Story 6.18 — AC1)

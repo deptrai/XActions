@@ -57,7 +57,7 @@ describe('Story 13.2.7 — Twitter Hybrid Content Scheduling', () => {
     },
   });
 
-  const FUTURE_ISO = '2026-09-01T12:00:00.000Z';
+  const FUTURE_ISO = new Date(Date.now() + 86400000).toISOString();
 
   beforeAll(async () => {
     server = http.createServer((req, res) => {
