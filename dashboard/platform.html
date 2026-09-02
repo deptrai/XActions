@@ -1861,18 +1861,58 @@
           data.message ||
           data.summary ||
           (cls === "dryrun"
-            ? "Preview complete"
+            ? "Preview complete (No changes made)"
             : data.ok !== false
-              ? "Completed"
-              : "Failed");
+              ? "Operation completed successfully"
+              : "Operation encountered errors");
         const raw = JSON.stringify(data, null, 2);
+
+        // Smart items visualizer
+        const items = data.posts || data.comments || data.followers || data.following || data.members || data.results || (Array.isArray(data) ? data : []);
+        let cardsHtml = '';
+        if (Array.isArray(items) && items.length > 0) {
+          cardsHtml = `
+            <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:12px;margin:16px 0;">
+              ${items.slice(0, 12).map((item, i) => {
+                const title = item.title || item.name || item.username || item.author || `Item #${i+1}`;
+                const text = item.content || item.text || item.description || item.url || '';
+                const link = item.url || item.postUrl || item.profileUrl || '';
+                return `
+                  <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;">
+                    <div style="font-weight:700;font-size:0.875rem;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                      <span>📌</span>
+                      <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(title)}</span>
+                    </div>
+                    ${text ? `<div style="font-size:0.8125rem;color:var(--text-secondary);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;">${esc(text)}</div>` : ''}
+                    ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" style="font-size:0.75rem;color:var(--accent);text-decoration:none;margin-top:auto;">View Source →</a>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+            ${items.length > 12 ? `<div style="font-size:0.8125rem;color:var(--text-secondary);text-align:center;margin-bottom:12px;">Showing first 12 of ${items.length} items</div>` : ''}
+          `;
+        }
+
         el.innerHTML = `
-      <div class="summary">${icon} ${esc(summary)}</div>
-      <div>${esc(typeof data.count === "number" ? `${data.count} item(s)` : "")}</div>
-      <div class="toggle-raw" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">📄 Toggle raw JSON</div>
-      <pre style="display:none">${esc(raw)}</pre>
-    `;
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+            <div class="summary" style="margin-bottom:0;">${icon} ${esc(summary)}</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-secondary" style="padding:4px 10px;font-size:0.75rem;border-radius:6px;cursor:pointer;" onclick="copyRawResult(this)">📋 Copy JSON</button>
+            </div>
+          </div>
+          ${data.count !== undefined ? `<div style="font-size:0.8125rem;color:var(--text-secondary);">${esc(data.count)} item(s) processed</div>` : ''}
+          ${cardsHtml}
+          <div class="toggle-raw" style="margin-top:12px;font-size:0.8125rem;color:var(--accent);cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">📄 Toggle raw JSON response</div>
+          <pre style="display:none;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;padding:12px;overflow-x:auto;max-height:300px;margin-top:8px;">${esc(raw)}</pre>
+        `;
       }
+
+      window.copyRawResult = function(btn) {
+        const pre = btn.closest('.result-panel')?.querySelector('pre');
+        if (pre && window.copyToClipboard) {
+          window.copyToClipboard(pre.textContent, 'Copied raw JSON to clipboard!');
+        }
+      };
 
       async function loadMonitor() {
         const el = document.getElementById("monitor-list");
