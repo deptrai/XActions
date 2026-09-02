@@ -8,6 +8,7 @@
  * @license MIT
  */
 
+import 'dotenv/config';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
 import { formatProxyUrl, getProxyAgent, normalizeProxy } from './providers.js';
 
@@ -702,3 +703,29 @@ export class ProxyIpPool {
 }
 
 export const globalProxyPool = new ProxyIpPool();
+
+// Auto-seed globalProxyPool from environment variables if present
+(function seedFromEnv() {
+  const envUrls = [
+    process.env.PROXY_URL,
+    process.env.PROXY_URLS,
+    process.env.XEEPY_PROXY_URL,
+    process.env.FACEBOOK_PROXY && process.env.FACEBOOK_PROXY_AUTH_USERNAME && process.env.FACEBOOK_PROXY_AUTH_PASSWORD
+      ? `${process.env.FACEBOOK_PROXY.replace(/^https?:\/\//, `http://${encodeURIComponent(process.env.FACEBOOK_PROXY_AUTH_USERNAME)}:${encodeURIComponent(process.env.FACEBOOK_PROXY_AUTH_PASSWORD)}@`)}`
+      : null
+  ].filter(Boolean);
+
+  const seen = new Set();
+  for (const raw of envUrls) {
+    const list = String(raw).split(',').map((s) => s.trim()).filter(Boolean);
+    for (const url of list) {
+      if (!seen.has(url)) {
+        seen.add(url);
+        try {
+          globalProxyPool.add(url);
+        } catch {}
+      }
+    }
+  }
+})();
+

@@ -17,6 +17,7 @@ import {
   ErrorTypes,
   SuggestedActions,
 } from './error-envelope.js';
+import { globalProxyPool } from '../proxy/proxy-pool.js';
 
 /** @typedef {import('./types.js').AccountRecord} AccountRecord */
 
@@ -119,7 +120,7 @@ export class AbstractApiClient {
       throw new TypeError('AbstractApiClient is abstract; extend it.');
     }
     this.sessionManager = options.sessionManager;
-    this.proxyPool = options.proxyPool;
+    this.proxyPool = options.proxyPool !== undefined ? options.proxyPool : globalProxyPool;
     this.proxyProvider = options.proxyProvider;
     this.accountPool = options.accountPool;
     this.governor = options.governor;

@@ -205,19 +205,6 @@ export async function humanMoveMouse(page, x, y, options = {}) {
   // Ensure total steps (main curve + correction) never exceeds 35 and is at least 20
   const stepCount = willOvershoot ? Math.max(16, Math.min(30, rawSteps - correctionSteps)) : rawSteps;
 
-  if (willOvershoot) {
-    // Proportional overshoot: 5-15% of movement distance, clamped to [1, 25] pixels (Story 6.18 — AC1)
-    const overScalar = clamp(0.05 + r() * 0.10, 0.05, 0.15);
-    const overDist = clamp(Math.round(dist * overScalar), 1, 25);
-    const overDx = (dx / dist) * overDist;
-    const overDy = (dy / dist) * overDist;
-    overshootX = x + overDx;
-    overshootY = y + overDy;
-    // The Bezier curve ends at the overshoot point; correction happens after
-    endX = overshootX;
-    endY = overshootY;
-  }
-
   // Move along the Bezier curve with physics-based easing.
   // physicsEase(t) shapes the velocity: small steps at the start and end,
   // larger steps through the middle, mimicking human acceleration/deceleration.
