@@ -11,6 +11,8 @@
  *   - humanClick(page, element, { delayFn, rng }) : Human-like click with hover + down/up
  *   - humanType(page, text, { delayFn, rng }) : Human-like typing with variable speed and typos
  *   - humanScroll(page, distance, { delayFn, rng }) : Human-like scroll with sin-curve chunks
+ *   - physicsEase(t) : clamped 5th-order smoothstep easing helper
+ *   - easeOut(t) : clamped 5th-order ease-out for correction phase
  *
  * Scope:
  *   - Story 6.4: humanMoveMouse (physics-eased Bezier, velocity profile)
@@ -91,12 +93,31 @@ function cubicBezier(t, p0, p1, p2, p3) {
  * fast coast, and slow end (ease-out). This mimics how real muscles
  * accelerate and decelerate a pointer, unlike a raw Bezier parameter.
  *
- * @param {number} t - parameter in [0, 1]
+ * The input is clamped to [0, 1]; non-numeric, NaN, and infinities are
+ * handled gracefully (non-numeric or NaN → 0; +Infinity → 1; -Infinity → 0).
+ *
+ * @param {number} t - parameter (clamped to [0, 1])
  * @returns {number} eased progress in [0, 1]
  */
-function physicsEase(t) {
+export function physicsEase(t) {
+  if (typeof t !== 'number' || Number.isNaN(t)) return 0;
   const v = clamp(t, 0, 1);
   return v * v * v * (v * (v * 6 - 15) + 10);
+}
+
+/**
+ * Quintic ease-out for the overshoot correction phase.
+ * The pointer is already in motion, so it should decelerate smoothly
+ * as it reaches the target rather than ease-in from a dead stop.
+ *
+ * @param {number} t - parameter (clamped to [0, 1])
+ * @returns {number} eased progress in [0, 1]
+ */
+export function easeOut(t) {
+  if (typeof t !== 'number' || Number.isNaN(t)) return 0;
+  const v = clamp(t, 0, 1);
+  const u = 1 - v;
+  return 1 - u * u * u * u * u;
 }
 
 // ============================================================================
@@ -187,26 +208,29 @@ export async function humanMoveMouse(page, x, y, options = {}) {
     const et = physicsEase(t);
     const bx = cubicBezier(et, startX, cp1x, cp2x, endX);
     const by = cubicBezier(et, startY, cp1y, cp2y, endY);
-    // Micro-jitter ±2px
-    const jx = bx + (r() - 0.5) * 4;
-    const jy = by + (r() - 0.5) * 4;
+    // On the final step, land exactly on the end point to avoid ±2px jitter drift.
+    const isLast = i === stepCount;
+    const jx = isLast ? endX : bx + (r() - 0.5) * 4;
+    const jy = isLast ? endY : by + (r() - 0.5) * 4;
     await page.mouse.move(jx, jy, { steps: 1 });
     // Delay 15-40ms per step
     await delayFn(clamp(15 + r() * 25, 15, 40));
   }
 
-  // Correction phase: if overshoot, move back to actual target in 3-5 steps
-  // with ease-out profile so the correction slows down as it reaches the target.
+  // Correction phase: if overshoot, move back to actual target in 3-5 steps.
+  // Use a pure ease-out curve because the pointer is already in motion and
+  // should decelerate smoothly as it reaches the target.
   if (willOvershoot) {
     const correctionSteps = 3 + Math.min(2, Math.floor(r() * 3)); // 3..5
     for (let i = 1; i <= correctionSteps; i++) {
       const t = i / correctionSteps;
-      const et = physicsEase(t);
+      const et = easeOut(t);
       const cx = overshootX + (x - overshootX) * et;
       const cy = overshootY + (y - overshootY) * et;
-      // Micro-jitter ±2px (AC3 — same as main Bezier loop)
-      const jx = cx + (r() - 0.5) * 4;
-      const jy = cy + (r() - 0.5) * 4;
+      // On the final correction step, snap to the real target for accuracy.
+      const isLast = i === correctionSteps;
+      const jx = isLast ? x : cx + (r() - 0.5) * 4;
+      const jy = isLast ? y : cy + (r() - 0.5) * 4;
       await page.mouse.move(jx, jy, { steps: 1 });
       await delayFn(clamp(15 + r() * 25, 15, 40));
     }
