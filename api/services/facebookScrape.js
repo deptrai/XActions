@@ -49,7 +49,7 @@ function bucketSearchResults(results) {
  * @returns {Promise<Record<string, unknown>>} Scraper result (array or object depending on action).
  */
 export async function run(action, args = {}) {
-  const authCookie = /** @type {Record<string, unknown>} */ (args.authCookie);
+  const authCookie = /** @type {Record<string, unknown> | null} */ (args.authCookie);
   const userId = /** @type {string | undefined} */ (args.userId);
   const browserOptions = /** @type {Record<string, unknown> | undefined} */ (args.browserOptions);
   const rest = /** @type {Record<string, unknown>} */ ({});
@@ -59,12 +59,12 @@ export async function run(action, args = {}) {
     }
   }
 
-  if (!authCookie || typeof authCookie !== 'object') {
-    throw new Error('❌ FacebookScrapeService.run requires authCookie');
-  }
-
   // Resolve authCookie to { c_user, xs } via FacebookAuthResolver.
-  const resolved = await resolveFacebookAuth(authCookie, userId);
+  // Public actions can omit authCookie entirely and run as guest.
+  /** @type {{ c_user?: string, xs?: string }} */
+  const resolved = authCookie && typeof authCookie === 'object'
+    ? await resolveFacebookAuth(authCookie, userId)
+    : { c_user: undefined, xs: undefined };
 
   const browserOpts = /** @type {Record<string, unknown>} */ (browserOptions || {});
   const client = createFacebookClient(browserOpts);
@@ -76,7 +76,7 @@ export async function run(action, args = {}) {
       return runSearchAllParallel(
         /** @type {import('../../src/types/xactions.js').XActionsOptions} */ ({
           ...rest,
-          authCookie: { c_user: resolved.c_user, xs: resolved.xs },
+          ...(resolved.c_user ? { authCookie: { c_user: resolved.c_user, xs: resolved.xs } } : {}),
           ...(browserOptions ? { browserOptions } : {}),
         }),
         rest,
@@ -88,7 +88,7 @@ export async function run(action, args = {}) {
     return /** @type {Record<string, unknown>} */ (
       await dispatchFacebookHybrid(action, {
         ...rest,
-        authCookie: { c_user: resolved.c_user, xs: resolved.xs },
+        ...(resolved.c_user ? { authCookie: { c_user: resolved.c_user, xs: resolved.xs } } : {}),
         browserOptions: browserOpts,
         client,
         crawler,

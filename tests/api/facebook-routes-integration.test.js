@@ -139,14 +139,19 @@ describe('POST /api/facebook/scrape — integration', () => {
     expect(res.body.error).toMatch(/not found/i);
   });
 
-  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 when no auth source and no active stored account`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] allows public search without an account`, async () => {
     const res = await postScrape({
       action: 'search',
       query: 'hello',
     });
-    expect(res.status).toBe(400);
-    expect(res.body.ok).toBe(false);
-    expect(res.body.error).toMatch(/No active Facebook account/i);
+    // The request must not be rejected for missing auth; runtime success depends
+    // on valid Facebook doc_ids / tokens, which are placeholder in this test env.
+    expect(res.status).not.toBe(401);
+    expect(res.body.error).not.toMatch(/No active Facebook account/i);
+    // When real tokens are unavailable, the route returns a controlled 500.
+    if (res.status !== 200) {
+      expect(res.body.ok).toBe(false);
+    }
   });
 });
 

@@ -268,20 +268,18 @@ export async function dispatchFacebookHybrid(action, options = {}) {
       );
     }
 
-    let accountId = options.authCookie?.accountId || options.userId || (Array.isArray(options.accountIds) && options.accountIds.length > 0 ? options.accountIds[0] : null);
+    let accountId = options.authCookie?.accountId || (Array.isArray(options.accountIds) && options.accountIds.length > 0 ? options.accountIds[0] : null);
     let cookies = options.authCookie;
     if (!accountId && typeof options.authCookie === 'object' && options.authCookie?.c_user) {
       accountId = String(options.authCookie.c_user);
     } else if (!accountId && typeof options.authCookie === 'string') {
       const match = options.authCookie.match(/(?:^|;\s*)c_user=([^;]+)/);
       if (match) accountId = match[1];
-    } else if (!accountId) {
-      accountId = 'acc_fb_default';
     }
 
     const session = {
       ...(accountId ? { accountId } : {}),
-      cookies,
+      ...(cookies ? { cookies } : {}),
       cdpUrl: options.browserOptions?.cdpUrl || process.env.FACEBOOK_CDP_URL,
       page: options.page,
     };

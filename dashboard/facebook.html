@@ -76,8 +76,10 @@
 
     <div class="account-bar">
       <label>Account:</label>
-      <select id="fb-account"><option value="">— Select account —</option></select>
-      <span class="status" id="acc-status">No account selected</span>
+      <select id="fb-account">
+        <option value="">— Public / no account —</option>
+      </select>
+      <span class="status" id="acc-status">🟡 Public scrape mode (no account)</span>
       <button onclick="toggleImport()" style="margin-left:auto;font-size:0.75rem;padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer">+ Add</button>
     </div>
     <div id="import-section" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
@@ -322,12 +324,15 @@ async function loadAccounts() {
   try {
     const data = await apiRequest('/facebook/accounts');
     const sel = document.getElementById('fb-account');
-    sel.innerHTML = '<option value="">— Select account —</option>';
+    sel.innerHTML = '<option value="">— Public / no account —</option>';
     (data.accounts || []).forEach(a => {
-      sel.innerHTML += `<option value="${a.id}">${a.label}</option>`;
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = a.label;
+      sel.appendChild(opt);
     });
     const saved = localStorage.getItem('fb_selected_account');
-    if (saved) { sel.value = saved; state.accountId = saved; updateStatus(); }
+    if (saved) { sel.value = saved; state.accountId = saved || null; updateStatus(); }
   } catch(e) { console.warn('Failed to load accounts:', e); }
 }
 document.getElementById('fb-account').addEventListener('change', (e) => {
@@ -337,7 +342,7 @@ document.getElementById('fb-account').addEventListener('change', (e) => {
 });
 function updateStatus() {
   const el = document.getElementById('acc-status');
-  el.textContent = state.accountId ? '🟢 Account selected' : 'No account selected';
+  el.textContent = state.accountId ? '🟢 Account selected' : '🟡 Public scrape mode (no account)';
 }
 function toggleImport() {
   const s = document.getElementById('import-section');
@@ -431,10 +436,18 @@ function buildBody(action, dryRun) {
 }
 
 // ── Scrape runner ──────────────────────────────────────────────
+const PUBLIC_SCRAPE_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members'];
+
 async function runScrape(action) {
   const resultEl = document.getElementById('scrape-' + action + '-result');
   const urlMap = { profile: 'sp-url', posts: 'spo-url', followers: 'sf-url', search: 'ss-query', 'group-members': 'sgm-url' };
   const fieldVal = document.getElementById(urlMap[action])?.value?.trim() || '';
+
+  if (!state.accountId && !PUBLIC_SCRAPE_ACTIONS.includes(action)) {
+    resultEl.className = 'result-panel show error';
+    resultEl.textContent = '❌ This action requires a Facebook account. Select one or add a stored account.';
+    return;
+  }
 
   resultEl.className = 'result-panel show dryrun';
   resultEl.textContent = 'Scraping...';
@@ -442,6 +455,7 @@ async function runScrape(action) {
   const body = { action };
   if (action === 'search') body.query = fieldVal;
   else body.url = fieldVal;
+  if (state.accountId) body.accountIds = [state.accountId];
 
   try {
     const data = await apiRequest('/facebook/scrape', {

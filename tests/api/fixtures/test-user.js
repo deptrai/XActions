@@ -79,7 +79,10 @@ export async function seedTestUser(userId, username = 'api_test_user', options =
       isAdmin,
     },
   });
-  return user;
+  return {
+    ...user,
+    token: makeTestToken(user.id, user.username),
+  };
 }
 
 export async function cleanupTestUser(userId) {

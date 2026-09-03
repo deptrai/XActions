@@ -139,22 +139,44 @@ function defaultBrowserOptionsFromEnv() {
 }
 
 /**
+ * Actions that can scrape public Facebook data without an authenticated account.
+ * Matches FacebookCrawler action registry (requiresAuth: false).
+ */
+const PUBLIC_SCRAPE_ACTIONS = [
+  'profile',
+  'posts',
+  'page_posts',
+  'group_posts',
+  'followers',
+  'following',
+  'search',
+  'group_search',
+  'group-members',
+  'group_members',
+  'post_comments',
+  'group_comments',
+  'marketplace',
+];
+
+/**
  * Resolve the single cookie used by /api/facebook/scrape.
  * Priority:
  *   1. Raw authCookie { c_user, xs }
  *   2. authCookie.accountId (explicit stored account)
  *   3. accountIds[] (use first for single-page scrape)
  *   4. Auto-pick the most recently verified active stored account
+ *   5. Return null cookie for public actions (no account required)
  *
  * Cookie values are decrypted server-side and never logged (NFR3).
  *
  * @param {string} userId
  * @param {Record<string, unknown>} authCookie
  * @param {unknown[]} [accountIds]
- * @returns {Promise<{label: string, cookie: FacebookLoginCookieOptions}>}
+ * @param {string} [action]
+ * @returns {Promise<{label: string, cookie: FacebookLoginCookieOptions | null}>}
  */
-async function resolveScrapeCookie(userId, authCookie, accountIds) {
-  const cookie = /** @type {Record<string, unknown>} */ (authCookie);
+async function resolveScrapeCookie(userId, authCookie, accountIds, action = '') {
+  const cookie = /** @type {Record<string, unknown>} */ (authCookie || {});
   const rawUser = String(cookie.c_user ?? '').trim();
   const rawXs = String(cookie.xs ?? '').trim();
   if (rawUser || rawXs) {
@@ -189,17 +211,23 @@ async function resolveScrapeCookie(userId, authCookie, accountIds) {
     include: { account: { select: { id: true, label: true } } },
     orderBy: { lastCheckAt: 'desc' },
   });
-  if (!activeHealth) {
-    const err = /** @type {Error & Record<string, unknown>} */ (new Error(
-      'No active Facebook account found. Provide authCookie { c_user, xs }, authCookie.accountId, accountIds[], or add a stored account and run a health check.',
-    ));
-    err.code = 'NO_ACTIVE_ACCOUNT';
-    throw err;
+  if (activeHealth) {
+    return { label: activeHealth.account.label, cookie: await (async () => {
+      const resolved = await resolveFacebookAuth({ accountId: activeHealth.account.id }, userId);
+      return /** @type {FacebookLoginCookieOptions} */ ({ c_user: resolved.c_user, xs: resolved.xs });
+    })() };
   }
-  return { label: activeHealth.account.label, cookie: await (async () => {
-    const resolved = await resolveFacebookAuth({ accountId: activeHealth.account.id }, userId);
-    return /** @type {FacebookLoginCookieOptions} */ ({ c_user: resolved.c_user, xs: resolved.xs });
-  })() };
+
+  // Public actions do not require an account.
+  if (PUBLIC_SCRAPE_ACTIONS.includes(action)) {
+    return { label: 'public', cookie: null };
+  }
+
+  const err = /** @type {Error & Record<string, unknown>} */ (new Error(
+    'No active Facebook account found. Provide authCookie { c_user, xs }, authCookie.accountId, accountIds[], or add a stored account and run a health check.',
+  ));
+  err.code = 'NO_ACTIVE_ACCOUNT';
+  throw err;
 }
 
 /**
@@ -485,10 +513,10 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
       }
     }
 
-    // Resolve the session: raw cookie, stored accountId/accountIds, or auto-pick a live one.
+    // Resolve the session: raw cookie, stored accountId/accountIds, auto-pick a live one, or public no-auth.
     let resolved;
     try {
-      resolved = await resolveScrapeCookie(reqUser.id, authCookie ?? {}, accountIds);
+      resolved = await resolveScrapeCookie(reqUser.id, authCookie ?? {}, accountIds, action);
     } catch (e) {
       const err = /** @type {Error & Record<string, unknown>} */ (e);
       const code = err.code;
@@ -528,7 +556,8 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
       userId: reqUser.id,
       ...(Object.keys(mergedBrowserOptions).length ? { browserOptions: mergedBrowserOptions } : {}),
       // Pass all cookie fields for full session auth (never log values).
-      authCookie: resolved.cookie,
+      // Public actions may have a null authCookie and run as guest.
+      ...(resolved.cookie ? { authCookie: resolved.cookie } : {}),
     };
 
     // Dispatcher resolves target from options.url / options.query (NOT options.target).
