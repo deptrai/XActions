@@ -79,7 +79,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
         }
 
         // CreateRetweet
-        if (url.pathname.includes('/ojPdsZsimiJrUGLR1sjUtA/CreateRetweet')) {
+        if (url.pathname.includes('/mbRO74GrOvSfRcJnlMapnQ/CreateRetweet')) {
           if (variables.tweet_id === '2222222222222222222') {
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({ errors: [{ message: 'You have already retweeted this Tweet.', code: 327 }] }));
@@ -91,7 +91,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
         }
 
         // DeleteRetweet
-        if (url.pathname.includes('/iQtK4dl5hBmXewYZuEOKVw/DeleteRetweet')) {
+        if (url.pathname.includes('/ZyZigVsNiFO6v1dEks1eWg/DeleteRetweet')) {
           if (variables.source_tweet_id === '3333333333333333333') {
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({ errors: [{ message: 'Tweet not found in list of retweets.', code: 144 }] }));
@@ -228,7 +228,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
 
     expect(result).toEqual({ success: true });
     expect(receivedRequests).toHaveLength(1);
-    expect(receivedRequests[0].path).toMatch(/\/ojPdsZsimiJrUGLR1sjUtA\/CreateRetweet/);
+    expect(receivedRequests[0].path).toMatch(/\/mbRO74GrOvSfRcJnlMapnQ\/CreateRetweet/);
     expect(receivedRequests[0].variables).toEqual({ tweet_id: '1900000000000000000', dark_request: false });
   });
 
@@ -242,7 +242,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
 
     expect(result).toEqual({ success: true });
     expect(receivedRequests).toHaveLength(1);
-    expect(receivedRequests[0].path).toMatch(/\/iQtK4dl5hBmXewYZuEOKVw\/DeleteRetweet/);
+    expect(receivedRequests[0].path).toMatch(/\/ZyZigVsNiFO6v1dEks1eWg\/DeleteRetweet/);
     expect(receivedRequests[0].variables).toEqual({ source_tweet_id: '1900000000000000000', dark_request: false });
   });
 

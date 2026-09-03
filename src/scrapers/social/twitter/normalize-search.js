@@ -6,6 +6,7 @@
  */
 
 import { tweetToPostItem } from './normalize-tweet.js';
+import { extractUserCoreFields } from '../../twitter/http/user-helpers.js';
 
 /**
  * Extract tweets and cursor from SearchTimeline response.
@@ -75,12 +76,12 @@ export function userEntryToProfileItem(entry, context = {}) {
     null;
   if (!userResult) return null;
 
-  const legacy = userResult.legacy || {};
-  const externalId = String(userResult.rest_id || '');
+  const core = extractUserCoreFields(userResult);
+  const externalId = String(core.restId || '');
   if (!externalId) return null;
 
-  const username = String(legacy.screen_name || '');
-  const name = String(legacy.name || '');
+  const username = core.username;
+  const name = core.name;
 
   /** @type {import('../../../core/types.js').ProfileItem} */
   const profile = {
@@ -90,11 +91,11 @@ export function userEntryToProfileItem(entry, context = {}) {
     username,
     name,
     authorName: name,
-    bio: String(legacy.description || ''),
-    avatar: String(legacy.profile_image_url_https || ''),
+    bio: core.bio || '',
+    avatar: core.avatar || '',
     profileUrl: username ? `https://x.com/${username}` : undefined,
-    followersCount: Number(legacy.followers_count) || 0,
-    followingCount: Number(legacy.friends_count) || 0,
+    followersCount: core.followers,
+    followingCount: core.following,
     crawledAt: new Date(),
     metadata: {
       tweetId: externalId,

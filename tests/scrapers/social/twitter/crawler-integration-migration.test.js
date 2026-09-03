@@ -22,16 +22,29 @@ describe('Story 13.2.12 — Twitter Hybrid Integration & Caller Migration', () =
         receivedRequests.push({ method: req.method, path: url.pathname, search: url.search, body });
 
         // UserByScreenName
-        if (url.pathname.includes('/NimuplG1OB7Fd2btCLdBOw/UserByScreenName')) {
+        if (url.pathname.includes('/Gb-d6r0vxPOADdG62OEBpQ/UserByScreenName')) {
           res.writeHead(200, { 'content-type': 'application/json' });
           res.end(JSON.stringify({
-            data: { user: { result: { __typename: 'User', rest_id: '44196397', legacy: { screen_name: 'elonmusk' } } } },
+            data: {
+              user: {
+                result: {
+                  __typename: 'User',
+                  rest_id: '44196397',
+                  core: { name: 'Elon Musk', screen_name: 'elonmusk', created_at: 'Wed Jun 02 21:10:00 +0000 2010' },
+                  profile_bio: { description: 'Mars & Cars' },
+                  relationship_counts: { followers: 100, following: 50 },
+                  avatar: { image_url: 'https://pbs.twimg.com/profile_images/1/normal.jpg' },
+                  is_blue_verified: false,
+                  legacy: { screen_name: 'elonmusk' },
+                },
+              },
+            },
           }));
           return;
         }
 
         // SearchTimeline
-        if (url.pathname.includes('/flaR-PUMshxFWZWPNpq4zA/SearchTimeline')) {
+        if (url.pathname.includes('/hyPfJYJ_XAtDYoslQc-Rgg/SearchTimeline')) {
           res.writeHead(200, { 'content-type': 'application/json' });
           res.end(JSON.stringify({
             data: { search_by_raw_query: { search_timeline: { timeline: { instructions: [] } } } },
@@ -40,7 +53,7 @@ describe('Story 13.2.12 — Twitter Hybrid Integration & Caller Migration', () =
         }
 
         // CreateTweet (dry-run won't hit this, but catch-all)
-        if (url.pathname.includes('/SiM_cAu83R0wnrpmKQQSEw/CreateTweet')) {
+        if (url.pathname.includes('/WXTdKnLddrQOunD6MhWi3g/CreateTweet')) {
           res.writeHead(200, { 'content-type': 'application/json' });
           res.end(JSON.stringify({ data: { create_tweet: { tweet_results: { result: { __typename: 'Tweet', rest_id: 'new-1' } } } } }));
           return;
@@ -90,12 +103,14 @@ describe('Story 13.2.12 — Twitter Hybrid Integration & Caller Migration', () =
     expect(receivedRequests.some((r) => r.path.includes('/UserByScreenName'))).toBe(true);
   });
 
-  it('scrape("x", "search") dispatches to TwitterCrawler', async () => {
+  it('scrape("x", "search") dispatches to TwitterCrawler with auth session', async () => {
     const { scrape } = await import('../../../../src/scrapers/index.js');
     const result = await scrape('x', 'search', {
       query: 'javascript',
       baseUrl: serverUrl,
       limit: 5,
+      accountId: 'test-user',
+      cookies: 'auth_token=test; ct0=csrf',
     });
 
     expect(result).toBeTruthy();

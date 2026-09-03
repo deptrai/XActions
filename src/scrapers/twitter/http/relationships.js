@@ -17,6 +17,7 @@ import {
   DEFAULT_FEATURES,
   buildGraphQLUrl,
 } from './endpoints.js';
+import { extractUserCoreFields } from './user-helpers.js';
 import { AuthError, NotFoundError } from './errors.js';
 
 /** @typedef {import('./types.js').Raw} Raw */
@@ -48,18 +49,18 @@ const PAGE_COUNT = 20;
 export function parseUserEntry(rawUser) {
   if (!rawUser || rawUser.__typename === 'UserUnavailable') return null;
 
-  const legacy = rawUser.legacy ?? {};
+  const core = extractUserCoreFields(rawUser);
 
   return {
-    id: rawUser.rest_id ?? null,
-    username: legacy.screen_name ?? null,
-    name: legacy.name ?? null,
-    bio: typeof legacy.description === 'string' ? legacy.description : null,
-    verified: rawUser.is_blue_verified ?? legacy.verified ?? false,
-    avatar: (legacy.profile_image_url_https ?? '').replace('_normal', '_400x400') || null,
-    followersCount: legacy.followers_count ?? 0,
-    followingCount: legacy.friends_count ?? 0,
-    protected: legacy.protected ?? false,
+    id: core.restId,
+    username: core.username || null,
+    name: core.name || null,
+    bio: core.bio,
+    verified: core.verified,
+    avatar: core.avatar,
+    followersCount: core.followers,
+    followingCount: core.following,
+    protected: core.protected,
     platform: 'twitter',
   };
 }

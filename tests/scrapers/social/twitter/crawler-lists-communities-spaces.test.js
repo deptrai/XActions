@@ -173,7 +173,7 @@ describe('Story 13.2.5 — Twitter Hybrid Lists, Communities & Spaces', () => {
           return;
         }
 
-        if (url.pathname.includes('/flaR-PUMshxFWZWPNpq4zA/SearchTimeline')) {
+        if (url.pathname.includes('/hyPfJYJ_XAtDYoslQc-Rgg/SearchTimeline')) {
           const entries = [spaceEntry('space1', 'Crypto Talk'), spaceEntry('space2', 'AI Chat', 'scheduled')];
           res.writeHead(200, { 'content-type': 'application/json' });
           res.end(JSON.stringify(buildSpacesResponse(variables.query, entries)));
@@ -295,6 +295,7 @@ describe('Story 13.2.5 — Twitter Hybrid Lists, Communities & Spaces', () => {
     const result = await crawler.start({
       action: 'spaces',
       args: { query: 'crypto', limit: 10 },
+      session: { accountId: 'twitter-list-user' },
     });
 
     expect(result).toHaveProperty('posts');
@@ -309,6 +310,7 @@ describe('Story 13.2.5 — Twitter Hybrid Lists, Communities & Spaces', () => {
     const result = await crawler.start({
       action: 'spaces',
       args: { query: 'crypto', limit: 1 },
+      session: { accountId: 'twitter-list-user' },
     });
 
     expect(result.posts).toHaveLength(1);

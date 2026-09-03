@@ -45,7 +45,10 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
       req.on('data', (chunk) => (body += chunk));
       req.on('end', () => {
         const payload = body ? Object.fromEntries(new URLSearchParams(body)) : {};
-        const variables = payload.variables ? JSON.parse(payload.variables) : {};
+        const queryVariables = url.searchParams.get('variables');
+        const variables = payload.variables
+          ? JSON.parse(payload.variables)
+          : (queryVariables ? JSON.parse(queryVariables) : {});
         receivedRequests.push({
           method: req.method,
           path: url.pathname,
@@ -55,7 +58,7 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
         });
 
         // UserByScreenName
-        if (url.pathname.includes('/NimuplG1OB7Fd2btCLdBOw/UserByScreenName')) {
+        if (url.pathname.includes('/Gb-d6r0vxPOADdG62OEBpQ/UserByScreenName')) {
           if (variables.screen_name === 'unknown_user') {
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({ data: { user: { result: { __typename: 'UserUnavailable' } } } }));

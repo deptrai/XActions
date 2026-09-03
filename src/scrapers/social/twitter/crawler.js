@@ -26,6 +26,7 @@ import {
 } from './normalize-list-community-space.js';
 import { buildAdvancedQuery } from '../../twitter/http/search.js';
 import { parseTweetData } from '../../twitter/http/tweets.js';
+import { extractUserCoreFields } from '../../twitter/http/user-helpers.js';
 import { DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES, GRAPHQL, REST } from '../../twitter/http/endpoints.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { isValidCategory } from '../../../core/types.js';
@@ -34,21 +35,21 @@ import { gaussianDelay } from '../../../utils/gaussian-delay.js';
 import { tweetToPostItem } from './normalize-tweet.js';
 
 export const TWITTER_GRAPHQL_QUERY_IDS = {
-  TweetDetail: 'U0HTv-bAWTBYylwEMT7x5A',
+  TweetDetail: 'XMOz5h24KAZ86qKffKTLdQ',
   Favoriters: 'LLkw5EcVutJL6y-2gkz22A',
   Bookmarks: 'qToeLeMs43Q8cr7tRYXmaQ',
-  UserByScreenName: 'NimuplG1OB7Fd2btCLdBOw',
-  UserByRestId: 'tD8zKvQzwY3kdx5yz6YmOw',
-  UserMedia: '2tLOJWwGuCTytDrGBg8VwQ',
-  TweetResultByRestId: 'Xl5pC_lBk_gcO2ItU39DQw',
-  Followers: 'gC_lyAxZOptAMLCJX5UhWw',
-  Following: '2vUj-_Ek-UmBVDNtd8OnQA',
+  UserByScreenName: 'Gb-d6r0vxPOADdG62OEBpQ',
+  UserByRestId: 'xvmVfRLmnr1alc5f2dib0Q',
+  UserMedia: 'VyudDWQnr9vJNw7GasFz2g',
+  TweetResultByRestId: 'GZsN2Pc4knAoit6pXa4HSA',
+  Followers: 'JNyQdTISpzCkj_1fqxDvFg',
+  Following: 'qGZZDF3mp91q7X22s3HxpA',
   Retweeters: 'X-XEqG5qHQSAwmvy00xfyQ',
   ListMembers: 'BQp2IEYkgxuSxqbTAr1e1g',
   // TBD: replace with real GraphQL query IDs when reverse-engineered.
   CommunityMembers: 'TBD_COMMUNITY_MEMBERS',
   SearchSpaces: 'TBD_SEARCH_SPACES',
-  SearchTimeline: 'flaR-PUMshxFWZWPNpq4zA',
+  SearchTimeline: 'hyPfJYJ_XAtDYoslQc-Rgg',
 };
 
 const VALID_SEARCH_TYPES = new Set(['top', 'latest', 'live', 'photos', 'videos', 'people', 'user', 'all']);
@@ -98,7 +99,7 @@ export class TwitterCrawler extends AbstractCrawler {
     // ── Story 13.2.3 Actions: search, hashtag, trending ──
     this.registerAction({
       action: 'search',
-      description: 'Search global tweets or users by query',
+      description: 'Search global tweets or users by query (requires auth as of 2026-09)',
       category: 'social',
       requiresAuth: false,
       requiredArgs: ['query'],
@@ -110,7 +111,7 @@ export class TwitterCrawler extends AbstractCrawler {
 
     this.registerAction({
       action: 'hashtag',
-      description: 'Search tweets for a hashtag',
+      description: 'Search tweets for a hashtag (requires auth as of 2026-09)',
       category: 'social',
       requiresAuth: false,
       requiredArgs: ['tag'],
@@ -135,7 +136,7 @@ export class TwitterCrawler extends AbstractCrawler {
     // ── Story 13.2.2 Actions: thread, likes, bookmarks ──
     this.registerAction({
       action: 'thread',
-      description: 'Scrape Twitter conversation thread with tree reconstruction',
+      description: 'Scrape Twitter conversation thread; full conversation requires auth, root tweet available as guest',
       requiredArgs: ['tweetId'],
       optionalArgs: ['cursor', 'limit', 'walkToRoot'],
       example: { tweetId: '1234567890' },
@@ -803,7 +804,7 @@ export class TwitterCrawler extends AbstractCrawler {
 
       const resp = await this.client.requestSearchTimeline('SearchTimeline', variables, {
         accountId,
-        requiresAuth: false,
+        requiresAuth: true,
       });
 
       let pageItems = [];
@@ -870,6 +871,19 @@ export class TwitterCrawler extends AbstractCrawler {
       });
     }
 
+    // SearchTimeline is no longer reachable with a guest token. An auth_token
+    // cookie is required for all search/hashtag queries as of 2026-09.
+    if (!this.#hasAuth(session)) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_EXPIRED,
+        code: 'XACT_4010',
+        message: 'Twitter search requires an authenticated session (auth_token cookie). Guest search is no longer supported by X/Twitter.',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'twitter',
+      });
+    }
+
     const { accountId } = await this.#resolveSession(session);
     const limit = this.#clamp(args.limit, 1, 1000);
     const { rawQuery, product, searchType } = this.#buildRawQuery(args);
@@ -932,6 +946,18 @@ export class TwitterCrawler extends AbstractCrawler {
 
     const cleanTag = tag.replace(/^#+/, '');
     const searchArgs = { ...args, query: `#${cleanTag}` };
+
+    // SearchTimeline (used by hashtag) now requires auth.
+    if (!this.#hasAuth(session)) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_EXPIRED,
+        code: 'XACT_4010',
+        message: 'Twitter hashtag search requires an authenticated session (auth_token cookie). Guest hashtag search is no longer supported by X/Twitter.',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'twitter',
+      });
+    }
 
     const { accountId } = await this.#resolveSession(session);
     const limit = this.#clamp(args.limit, 1, 1000);
@@ -1042,6 +1068,96 @@ export class TwitterCrawler extends AbstractCrawler {
   }
 
   /**
+   * Determine whether an authenticated session (auth_token cookie) is present.
+   * @param {Record<string, any>} [session]
+   * @returns {boolean}
+   */
+  #hasAuth(session = {}) {
+    const accountId = session?.accountId || null;
+    const managerCookies = accountId && this.sessionManager?.get ? this.sessionManager.get(accountId)?.cookies : null;
+    const accountRecord = accountId && this.accountPool?.getAccount
+      ? this.accountPool.getAccount(accountId, this.platform)
+      : null;
+    const poolCredentials = accountRecord?.credentials || null;
+    const cookieSources = [session?.cookies, managerCookies, poolCredentials?.cookies, this.client?.cookies];
+    for (const source of cookieSources) {
+      if (!source) continue;
+      if (typeof source === 'string') {
+        if (/\bauth_token=/.test(source)) return true;
+      } else if (source?.auth_token) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Resolve a single tweet by ID using TweetResultByRestId.
+   * Works with guest tokens for public tweets.
+   * @param {string} tweetId
+   * @param {Record<string, any>} [session]
+   * @returns {Promise<import('../../../core/types.js').PostItem | null>}
+   */
+  async #resolveSingleTweet(tweetId, session = {}) {
+    const { accountId } = await this.#resolveSession(session);
+    const variables = {
+      tweetId,
+      includePromotedContent: false,
+      withCommunity: false,
+      withVoice: false,
+    };
+    const response = await this.client.requestGraphQl(
+      TWITTER_GRAPHQL_QUERY_IDS.TweetResultByRestId,
+      'TweetResultByRestId',
+      variables,
+      DEFAULT_FEATURES,
+      undefined,
+      {
+        accountId,
+        requiresAuth: false,
+        cookies: session?.cookies,
+      }
+    );
+    const tweetResult = response?.tweetResult?.result;
+    if (!tweetResult) return null;
+    return tweetToPostItem(tweetResult, {
+      sourceMethod: 'thread',
+      extraMetadata: { fallback: 'single-tweet' },
+    });
+  }
+
+  /**
+   * Walk to the root of a reply chain using only public single-tweet lookups.
+   * This preserves the no-account guest path for thread root resolution.
+   * @param {string} startId
+   * @param {Record<string, any>} [session]
+   * @returns {Promise<string>}
+   */
+  async #walkToRootGuest(startId, session = {}) {
+    let currentId = startId;
+    const visited = new Set();
+    let depth = 0;
+    const MAX_DEPTH = 50;
+
+    while (depth < MAX_DEPTH) {
+      if (visited.has(currentId)) break;
+      visited.add(currentId);
+
+      const post = await this.#resolveSingleTweet(currentId, session);
+      if (!post) break;
+
+      const parentId = /** @type {any} */ (post.metadata)?.parentTweetId;
+      if (parentId) {
+        currentId = parentId;
+        depth++;
+      } else {
+        break;
+      }
+    }
+    return currentId;
+  }
+
+  /**
    * Action Handler: thread (Story 13.2.2)
    * @param {Record<string, any>} args
    * @param {any} [session]
@@ -1059,98 +1175,144 @@ export class TwitterCrawler extends AbstractCrawler {
     }
 
     let targetTweetId = resolveTweetId(args.tweetId || args.url);
+    const hasAuth = this.#hasAuth(session);
 
-    if (args.walkToRoot) {
-      let currentId = targetTweetId;
-      const visited = new Set();
-      let depth = 0;
-      const MAX_DEPTH = 50;
+    // Authenticated path: full conversation via TweetDetail.
+    if (hasAuth) {
+      if (args.walkToRoot) {
+        let currentId = targetTweetId;
+        const visited = new Set();
+        let depth = 0;
+        const MAX_DEPTH = 50;
 
-      while (depth < MAX_DEPTH) {
-        if (visited.has(currentId)) break;
-        visited.add(currentId);
+        while (depth < MAX_DEPTH) {
+          if (visited.has(currentId)) break;
+          visited.add(currentId);
 
-        const walkVars = {
-          focalTweetId: currentId,
-          with_rux_injections: false,
-          rankingMode: 'Relevance',
-          includePromotedContent: false,
-          withCommunity: true,
-          withQuickPromoteEligibilityTweetFields: true,
-          withBirdwatchNotes: true,
-          withVoice: true,
-          withV2Timeline: true,
-        };
+          const walkVars = {
+            focalTweetId: currentId,
+            with_rux_injections: false,
+            rankingMode: 'Relevance',
+            includePromotedContent: false,
+            withCommunity: true,
+            withQuickPromoteEligibilityTweetFields: true,
+            withBirdwatchNotes: true,
+            withVoice: true,
+            withV2Timeline: true,
+          };
 
-        try {
-          const res = await this.client.requestGraphQl(
-            TWITTER_GRAPHQL_QUERY_IDS.TweetDetail,
-            'TweetDetail',
-            walkVars,
-            DEFAULT_FEATURES,
-            undefined,
-            {
-              accountId: session?.accountId || args.accountId,
-              requiresAuth: false,
-              cookies: session?.cookies,
+          try {
+            const res = await this.client.requestGraphQl(
+              TWITTER_GRAPHQL_QUERY_IDS.TweetDetail,
+              'TweetDetail',
+              walkVars,
+              DEFAULT_FEATURES,
+              undefined,
+              {
+                accountId: session?.accountId || args.accountId,
+                requiresAuth: true,
+                cookies: session?.cookies,
+              }
+            );
+            const normalizedWalk = normalizeThreadResponse(res);
+            const focalPost = normalizedWalk.posts.find((p) => p.externalId === currentId);
+            if (!focalPost) break;
+
+            const parentId = /** @type {any} */ (focalPost.metadata)?.parentTweetId;
+            if (parentId) {
+              currentId = parentId;
+              depth++;
+            } else {
+              break;
             }
-          );
-          const normalizedWalk = normalizeThreadResponse(res);
-          const focalPost = normalizedWalk.posts.find((p) => p.externalId === currentId);
-          if (!focalPost) break;
-
-          const parentId = /** @type {any} */ (focalPost.metadata)?.parentTweetId;
-          if (parentId) {
-            currentId = parentId;
-            depth++;
-          } else {
+          } catch {
             break;
           }
-        } catch {
-          break;
         }
+        targetTweetId = currentId;
       }
-      targetTweetId = currentId;
+
+      const variables = {
+        focalTweetId: targetTweetId,
+        with_rux_injections: false,
+        rankingMode: 'Relevance',
+        includePromotedContent: true,
+        withCommunity: true,
+        withQuickPromoteEligibilityTweetFields: true,
+        withBirdwatchNotes: true,
+        withVoice: true,
+        withV2Timeline: true,
+        ...(args.cursor ? { cursor: args.cursor } : {}),
+      };
+
+      const response = await this.client.requestGraphQl(
+        TWITTER_GRAPHQL_QUERY_IDS.TweetDetail,
+        'TweetDetail',
+        variables,
+        DEFAULT_FEATURES,
+        undefined,
+        {
+          accountId: session?.accountId || args.accountId,
+          requiresAuth: true,
+          cookies: session?.cookies,
+        }
+      );
+
+      const normalized = normalizeThreadResponse(response);
+
+      await this.#persistPostItems(normalized.posts);
+      await this.#emitCheckpointAndStream({
+        targetType: 'thread',
+        targetKey: targetTweetId,
+        cursor: normalized.pageInfo.end_cursor,
+        items: normalized.posts,
+        hasMore: normalized.pageInfo.has_next_page,
+      });
+
+      return normalized;
     }
 
-    const variables = {
-      focalTweetId: targetTweetId,
-      with_rux_injections: false,
-      rankingMode: 'Relevance',
-      includePromotedContent: true,
-      withCommunity: true,
-      withQuickPromoteEligibilityTweetFields: true,
-      withBirdwatchNotes: true,
-      withVoice: true,
-      withV2Timeline: true,
-      ...(args.cursor ? { cursor: args.cursor } : {}),
+    // Guest / no-auth path: Twitter has closed TweetDetail for guest tokens.
+    // Fall back to single-tweet lookup for the requested (or root) tweet.
+    if (args.walkToRoot) {
+      targetTweetId = await this.#walkToRootGuest(targetTweetId, session);
+    }
+
+    const rootPost = await this.#resolveSingleTweet(targetTweetId, session);
+    if (!rootPost) {
+      throw new PlatformError({
+        type: ErrorTypes.NOT_FOUND,
+        code: 'XACT_4040',
+        message: `Tweet not found or unavailable without auth: "${targetTweetId}"`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'twitter',
+      });
+    }
+
+    const posts = [rootPost];
+    const pageInfo = {
+      cursors: [],
+      end_cursor: null,
+      has_next_page: false,
     };
 
-    const response = await this.client.requestGraphQl(
-      TWITTER_GRAPHQL_QUERY_IDS.TweetDetail,
-      'TweetDetail',
-      variables,
-      DEFAULT_FEATURES,
-      undefined,
-      {
-        accountId: session?.accountId || args.accountId,
-        requiresAuth: false,
-        cookies: session?.cookies,
-      }
-    );
-
-    const normalized = normalizeThreadResponse(response);
-
-    await this.#persistPostItems(normalized.posts);
+    await this.#persistPostItems(posts);
     await this.#emitCheckpointAndStream({
       targetType: 'thread',
       targetKey: targetTweetId,
-      cursor: normalized.pageInfo.end_cursor,
-      items: normalized.posts,
-      hasMore: normalized.pageInfo.has_next_page,
+      items: posts,
+      hasMore: false,
     });
 
-    return normalized;
+    return {
+      posts,
+      rootTweet: rootPost,
+      authorReplies: [],
+      conversation: [],
+      pageInfo,
+      notice: 'Guest session returned root tweet only. Replies require an authenticated session.',
+    };
   }
 
   /**
@@ -1286,18 +1448,18 @@ export class TwitterCrawler extends AbstractCrawler {
       });
     }
 
-    const legacy = userResult.legacy || {};
+    const core = extractUserCoreFields(userResult);
     const profile = normalizeUserProfile(
       {
-        id: userResult.rest_id,
-        username: legacy.screen_name || username,
-        name: legacy.name,
-        bio: legacy.description,
-        avatar: legacy.profile_image_url_https,
-        followersCount: legacy.followers_count,
-        followingCount: legacy.friends_count,
-        verified: userResult.is_blue_verified || legacy.verified,
-        protected: legacy.protected,
+        id: core.restId,
+        username: core.username || username,
+        name: core.name,
+        bio: core.bio,
+        avatar: core.avatar,
+        followersCount: core.followers,
+        followingCount: core.following,
+        verified: core.verified,
+        protected: core.protected,
       },
       { isProfile: true, sourceMethod: 'profile' }
     );
@@ -1616,11 +1778,23 @@ export class TwitterCrawler extends AbstractCrawler {
       });
     }
 
+    // Spaces search relies on SearchTimeline, which no longer supports guest tokens.
+    if (!this.#hasAuth(session)) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_EXPIRED,
+        code: 'XACT_4010',
+        message: 'Twitter Spaces search requires an authenticated session (auth_token cookie). Guest Spaces search is no longer supported by X/Twitter.',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'twitter',
+      });
+    }
+
     const limit = this.#clamp(args.limit, 1, 1000);
     const state = String(args.state || 'all').toLowerCase();
 
     // TODO: Add real SearchSpaces/LiveEventTimeline GraphQL queryId when discovered.
-    // For now, use SearchTimeline as a public no-auth fallback to demonstrate the action.
+    // For now, use SearchTimeline as an auth fallback to demonstrate the action.
     const searchQuery = `${query} filter:spaces`;
     const { rawQuery, product, searchType } = this.#buildRawQuery({ query: searchQuery, type: 'Latest' });
 
@@ -1640,7 +1814,7 @@ export class TwitterCrawler extends AbstractCrawler {
       undefined,
       {
         accountId: session?.accountId || args.accountId,
-        requiresAuth: false,
+        requiresAuth: true,
         cookies: session?.cookies,
       }
     );
@@ -1805,33 +1979,62 @@ export class TwitterCrawler extends AbstractCrawler {
     let emptyPageCount = 0;
     const MAX_EMPTY_PAGES = 5;
 
+    // Twitter retired the UserMedia GraphQL endpoint in 2026-09. Use UserTweets
+    // and keep only tweets that contain media matching the requested type.
+    const useUserTweetsFallback = true;
+
     while (allItems.length < limit) {
       const pageLimit = Math.min(limit - allItems.length, maxPerRequest);
-      const variables = {
-        userId,
-        count: pageLimit,
-        includePromotedContent: false,
-        withClientEventToken: false,
-        withBirdwatchNotes: false,
-        withVoice: true,
-        withV2Timeline: true,
-        ...(nextCursor ? { cursor: nextCursor } : {}),
-      };
+      let resp;
 
-      const resp = await this.client.requestGraphQl(
-        TWITTER_GRAPHQL_QUERY_IDS.UserMedia,
-        'UserMedia',
-        variables,
-        DEFAULT_FEATURES,
-        undefined,
-        {
-          accountId,
-          requiresAuth: false,
-          cookies: undefined,
-        }
-      );
+      if (useUserTweetsFallback) {
+        const variables = {
+          userId,
+          count: pageLimit,
+          includePromotedContent: false,
+          withVoice: false,
+          ...(nextCursor ? { cursor: nextCursor } : {}),
+        };
+        resp = await this.client.requestGraphQl(
+          TWITTER_GRAPHQL_QUERY_IDS.UserTweets,
+          'UserTweets',
+          variables,
+          DEFAULT_FEATURES,
+          undefined,
+          {
+            accountId,
+            requiresAuth: false,
+            cookies: undefined,
+          }
+        );
+      } else {
+        const variables = {
+          userId,
+          count: pageLimit,
+          includePromotedContent: false,
+          withClientEventToken: false,
+          withBirdwatchNotes: false,
+          withVoice: true,
+          withV2Timeline: true,
+          ...(nextCursor ? { cursor: nextCursor } : {}),
+        };
+        resp = await this.client.requestGraphQl(
+          TWITTER_GRAPHQL_QUERY_IDS.UserMedia,
+          'UserMedia',
+          variables,
+          DEFAULT_FEATURES,
+          undefined,
+          {
+            accountId,
+            requiresAuth: false,
+            cookies: undefined,
+          }
+        );
+      }
 
-      const instructions = resp?.user?.result?.timeline_v2?.timeline?.instructions ?? [];
+      const instructions = resp?.user?.result?.timeline_v2?.timeline?.instructions
+        ?? resp?.user?.result?.timeline?.timeline?.instructions
+        ?? [];
       let foundTweets = false;
       nextCursor = null;
 
@@ -1854,6 +2057,9 @@ export class TwitterCrawler extends AbstractCrawler {
             const meta = this.#getMetadata(post);
             const mediaMatchesType = (meta.media || []).some(filterFn);
             if (type && !mediaMatchesType) continue;
+
+            // UserTweets fallback: skip tweets with no media entirely
+            if (useUserTweetsFallback && (meta.media || []).length === 0) continue;
 
             if (seen.has(post.id)) continue;
             seen.add(post.id);

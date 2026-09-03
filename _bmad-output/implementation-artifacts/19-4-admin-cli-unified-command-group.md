@@ -8,7 +8,7 @@ created: "2026-09-03"
 updated: "2026-09-03"
 owner: "DEV"
 reviewed: "Pending"
-baseline_commit: "b83756f3e0a2c2c2c7b8c9d0e1f2a3b4c5d6e7f8a9"
+baseline_commit: "eea21df47d22c333b31682442bd8cfd63f6683dd"
 ---
 
 # Story 19.4: Admin CLI — Unified Command Group
@@ -88,10 +88,10 @@ so that **I can discover all operational controls from a single CLI entry point 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Analyze existing admin CLI structure and plan command hierarchy (AC: #1, #2, #3)
-  - [ ] 1.1 Read `src/cli/commands/admin.js`, `src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`, `src/cli/index.js`, `src/cli/shared.js`
-  - [ ] 1.2 Confirm existing `status` and `stream` subcommands are preserved
-  - [ ] 1.3 Design subcommand hierarchy: `proxies [list]`, `accounts [list]`, `checkpoints [list]`
+- [x] Task 1: Analyze existing admin CLI structure and plan command hierarchy (AC: #1, #2, #3)
+  - [x] 1.1 Read `src/cli/commands/admin.js`, `src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`, `src/cli/index.js`, `src/cli/shared.js`
+  - [x] 1.2 Confirm existing `status` and `stream` subcommands are preserved
+  - [x] 1.3 Design subcommand hierarchy: `proxies [list]`, `accounts [list]`, `checkpoints [list]`
 - [ ] Task 2: Add subcommand groups to `xactions admin` (AC: #1, #2, #3)
   - [ ] 2.1 Register `adminCmd.command('proxies')` with `.description(...)` and a `list` subcommand
   - [ ] 2.2 Register `adminCmd.command('accounts')` with `.description(...)` and a `list` subcommand

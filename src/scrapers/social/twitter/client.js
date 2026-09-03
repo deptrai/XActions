@@ -248,34 +248,42 @@ export class TwitterClient extends AbstractApiClient {
   }
 
   /**
-   * Lazily activate a guest token for unauthenticated requests.
-   * Uses POST /1.1/guest/activate.json through the same resilient pipeline.
+   * Lazily acquire a guest token for unauthenticated requests.
+   *
+   * Twitter retired the `POST /1.1/guest/activate.json` endpoint for guest
+   * token activation. As of 2026-09, `gt` is set via a `Set-Cookie` header
+   * on any public x.com HTML page (e.g. `/nasa`). We fetch a lightweight
+   * logged-out page and extract the token from cookies.
+   *
    * @returns {Promise<string | null>}
    */
   async #ensureGuestToken() {
     if (this.guestToken) return this.guestToken;
     try {
-      const res = /** @type {any} */ (
-        await super.request('POST', 'https://api.x.com/1.1/guest/activate.json', {
-          requiresAuth: false,
-          skipResponseValidation: true,
-          headers: {
-            authorization: `Bearer ${this.bearerToken}`,
-            'content-type': 'application/x-www-form-urlencoded',
-          },
-        })
-      );
-      const payload = res?.data ?? res;
-      const token =
-        typeof payload === 'string' && payload.trim().startsWith('{')
-          ? /** @type {any} */ (JSON.parse(payload))?.guest_token
-          : payload?.guest_token;
-      if (token) {
-        this.guestToken = String(token);
-        this.updateCookies({ gt: this.guestToken });
+      const { fetch: undiciFetch } = await import('undici');
+      const res = await undiciFetch('https://x.com/nasa', {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        },
+        redirect: 'manual',
+      });
+
+      const rawCookies =
+        typeof res.headers.getSetCookie === 'function'
+          ? res.headers.getSetCookie()
+          : (res.headers.get('set-cookie') || '').split(',').map((c) => c.trim());
+
+      for (const cookie of rawCookies) {
+        const m = cookie.match(/^gt=([^;]+)/);
+        if (m?.[1]) {
+          this.guestToken = m[1];
+          this.updateCookies({ gt: this.guestToken });
+          break;
+        }
       }
     } catch {
-      // Guest activation is best-effort; callers surface upstream errors otherwise.
+      // Guest token acquisition is best-effort; callers surface upstream errors otherwise.
     }
     return this.guestToken;
   }
@@ -408,7 +416,9 @@ export class TwitterClient extends AbstractApiClient {
 
     const isAuth = actualOptions.requiresAuth !== undefined ? actualOptions.requiresAuth : this.requiresAuth;
     const accountId = isAuth ? (actualOptions.accountId || null) : null;
-    const method = actualOptions.method || 'POST';
+    // Guest requests must use GET with query-string parameters; POST is rejected
+    // by X/Twitter as of 2026-09. Auth/mutation requests still use POST.
+    const method = actualOptions.method || (isAuth ? 'POST' : 'GET');
 
     const transactionId = isAuth ? await this.#signTransactionId({ url: `${this.baseUrl}/i/api/graphql/${queryId}/${operationName}`, method }) : null;
 

@@ -11,6 +11,7 @@
  */
 
 import { GRAPHQL, DEFAULT_FEATURES } from './endpoints.js';
+import { extractUserCoreFields } from './user-helpers.js';
 
 /** @typedef {import('./types.js').Raw} Raw */
 import { NotFoundError, TwitterApiError } from './errors.js';
@@ -102,15 +103,13 @@ export function parseTweetData(rawTweet) {
 
   // ---- Author -----------------------------------------------------------
   const authorResult = core.user_results?.result || {};
-  const authorLegacy = authorResult.legacy || {};
+  const authorCore = extractUserCoreFields(authorResult);
   const author = {
-    id: authorResult.rest_id || null,
-    username: authorLegacy.screen_name || '',
-    name: authorLegacy.name || '',
-    avatar: authorLegacy.profile_image_url_https || null,
-    verified: Boolean(
-      authorResult.is_blue_verified || authorLegacy.verified,
-    ),
+    id: authorCore.restId,
+    username: authorCore.username,
+    name: authorCore.name,
+    avatar: authorCore.avatar,
+    verified: authorCore.verified,
   };
 
   // ---- Metrics ----------------------------------------------------------
