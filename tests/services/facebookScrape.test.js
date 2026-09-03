@@ -64,9 +64,12 @@ describe('FacebookScrapeService.run', () => {
 
   it('allows missing authCookie for public scrape actions', async () => {
     // Public actions (profile/posts/followers/search/group-members) should not
-    // require an authCookie and should reach the scraper dispatch layer.
-    await expect(run('profile', { url: 'https://facebook.com/zuck' })).rejects.toThrow(/not available|available|not available|invalid|Unknown/);
-  });
+    // require an authCookie and return valid public profile data.
+    const res = await run('profile', { url: 'https://facebook.com/zuck' });
+    expect(res).toBeDefined();
+    expect(res.profile).toBeDefined();
+    expect(res.profile.username).toBe('zuck');
+  }, 45000);
 
   it('resolves accountId to cookie via FacebookAuthResolver', async () => {
     // This will try to launch a browser — expect it to fail at browser launch
@@ -105,7 +108,7 @@ describe('FacebookScrapeService.run', () => {
     console.error = (...args) => logs.push(args.join(' '));
     try {
       try {
-        await run('profile', {
+        await run('invalid_action', {
           url: 'https://facebook.com/zuck',
           authCookie: { c_user: '1234567890', xs: 'secret-xs-value' },
         });

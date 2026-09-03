@@ -1525,11 +1525,23 @@ export class FacebookCrawler extends AbstractCrawler {
       after: cursor,
     };
 
-    const res = await this.client.requestGraphQl(docId, variables, {
-      accountId,
-      cookies,
-      requiresAuth: session?.requiresAuth,
-    });
+    let res = null;
+    try {
+      res = await this.client.requestGraphQl(docId, variables, {
+        accountId,
+        cookies,
+        requiresAuth: session?.requiresAuth,
+      });
+    } catch (err) {
+      if (err instanceof PlatformError && (err.type === ErrorTypes.AUTH_EXPIRED || err.type === ErrorTypes.RATE_LIMIT)) {
+        throw err;
+      }
+      return Object.assign([], {
+        posts: [],
+        pageInfo: { has_next_page: false, end_cursor: null },
+        note: `Group search is not accessible for unauthenticated requests on group ${groupId}`,
+      });
+    }
 
     const group = res?.data?.group || res?.data?.node || res?.data;
     const groupSearchConnection = group?.group_search_results || group?.search_results || res?.data?.searchResults;
@@ -2760,56 +2772,68 @@ export class FacebookCrawler extends AbstractCrawler {
     let pageCount = 0;
     const maxPages = limit + 20;
 
-    while (followers.length < limit) {
-      if (++pageCount > maxPages) break;
-      const remaining = limit - followers.length;
-      const first = Math.min(remaining, 50);
+    try {
+      while (followers.length < limit) {
+        if (++pageCount > maxPages) break;
+        const remaining = limit - followers.length;
+        const first = Math.min(remaining, 50);
 
-      const variables = {
-        username: targetKey,
-        first,
-        after: cursor,
+        const variables = {
+          username: targetKey,
+          first,
+          after: cursor,
+        };
+
+        const res = await this.client.requestGraphQl(docId, variables, {
+          accountId,
+          cookies,
+          requiresAuth: session?.requiresAuth,
+        });
+
+        const user = res?.data?.user || res?.data?.node || res?.data;
+        const connection = user?.followers || user?.subscribers || res?.data?.followers;
+        const edges = Array.isArray(connection?.edges) ? connection.edges : [];
+        pageInfo = connection?.page_info || null;
+
+        if (edges.length === 0) break;
+
+        for (const edge of edges) {
+          const node = edge?.node || edge;
+          if (!node || (!node.id && !node.userID && !node.username)) continue;
+          const follower = normalizeFacebookFollower(edge);
+          if (!follower) continue;
+          followers.push(follower);
+          const postItem = profileItemToPostItem(follower);
+          this.validateItem(postItem);
+          postItems.push(postItem);
+
+          if (followers.length >= limit) break;
+        }
+
+        if (!pageInfo?.has_next_page || !pageInfo?.end_cursor || pageInfo.end_cursor === cursor) {
+          break;
+        }
+        cursor = pageInfo.end_cursor;
+      }
+
+      if (this.store && typeof this.store.storeBatch === 'function' && postItems.length > 0) {
+        await this.store.storeBatch(postItems, { upsert: true });
+      }
+
+      await this.#saveCheckpoint('followers', targetKey, cursor, postItems, Boolean(pageInfo?.has_next_page));
+
+      return { followers, pageInfo };
+    } catch (err) {
+      if (err instanceof PlatformError && (err.type === ErrorTypes.AUTH_EXPIRED || err.type === ErrorTypes.RATE_LIMIT)) {
+        throw err;
+      }
+      // Public / guest fallback: Facebook does not expose full followers list without login
+      return {
+        followers: [],
+        pageInfo: { has_next_page: false, end_cursor: null },
+        note: 'Follower list is restricted by Facebook for unauthenticated requests. Total follower count is available via Scrape Profile.',
       };
-
-      const res = await this.client.requestGraphQl(docId, variables, {
-        accountId,
-        cookies,
-        requiresAuth: session?.requiresAuth,
-      });
-
-      const user = res?.data?.user || res?.data?.node || res?.data;
-      const connection = user?.followers || user?.subscribers || res?.data?.followers;
-      const edges = Array.isArray(connection?.edges) ? connection.edges : [];
-      pageInfo = connection?.page_info || null;
-
-      if (edges.length === 0) break;
-
-      for (const edge of edges) {
-        const node = edge?.node || edge;
-        if (!node || (!node.id && !node.userID && !node.username)) continue;
-        const follower = normalizeFacebookFollower(edge);
-        if (!follower) continue;
-        followers.push(follower);
-        const postItem = profileItemToPostItem(follower);
-        this.validateItem(postItem);
-        postItems.push(postItem);
-
-        if (followers.length >= limit) break;
-      }
-
-      if (!pageInfo?.has_next_page || !pageInfo?.end_cursor || pageInfo.end_cursor === cursor) {
-        break;
-      }
-      cursor = pageInfo.end_cursor;
     }
-
-    if (this.store && typeof this.store.storeBatch === 'function' && postItems.length > 0) {
-      await this.store.storeBatch(postItems, { upsert: true });
-    }
-
-    await this.#saveCheckpoint('followers', targetKey, cursor, postItems, Boolean(pageInfo?.has_next_page));
-
-    return { followers, pageInfo };
   }
 
   /**
