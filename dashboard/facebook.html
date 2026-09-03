@@ -57,10 +57,10 @@
     .btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
     .result-panel { margin-top: 12px; padding: 10px 14px; border-radius: 6px; font-family: "JetBrains Mono", monospace; font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; display: none; border-left: 4px solid transparent; background: #202327; color: var(--text); }
     .result-panel.show { display: block; }
-    .result-panel.dryrun { background: #e3f2fd; border-left-color: var(--dryrun); }
-    .result-panel.success { background: #e8f5e9; border-left-color: var(--success); }
-    .result-panel.error { background: #fbe9e7; border-left-color: var(--error); }
-    .result-panel.warning { background: #fff8e1; border-left-color: var(--warning); }
+    .result-panel.dryrun { background: rgba(29, 155, 240, 0.15); color: #71c9f8; border-left-color: var(--dryrun); }
+    .result-panel.success { background: rgba(0, 186, 124, 0.15); color: #2ecc71; border-left-color: var(--success); }
+    .result-panel.error { background: rgba(244, 33, 46, 0.15); color: #ff6b6b; border-left-color: var(--error); }
+    .result-panel.warning { background: rgba(255, 173, 31, 0.15); color: #f39c12; border-left-color: var(--warning); }
     .risk-banner { background: #fff3e0; border: 1px solid var(--warning); border-radius: var(--radius); padding: 10px 16px; margin-bottom: 16px; font-size: 0.8rem; color: #e65100; }
     @media (max-width: 900px) { .cards-grid { grid-template-columns: 1fr; } .sidebar-left { display: none; } }
   </style>
@@ -80,7 +80,7 @@
         <option value="">— Public / no account —</option>
       </select>
       <span class="status" id="acc-status">🟡 Public scrape mode (no account)</span>
-      <button onclick="toggleImport()" style="margin-left:auto;font-size:0.75rem;padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer">+ Add</button>
+      <button onclick="toggleImport()" style="margin-left:auto;font-size:0.75rem;padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-weight:600;cursor:pointer;transition:all 0.2s">+ Add Account</button>
     </div>
     <div id="import-section" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
