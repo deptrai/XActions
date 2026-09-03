@@ -90,7 +90,7 @@ async function checkGuestTier() {
       return {
         status: 'fail',
         detail: 'X has rotated a GraphQL query ID',
-        fix: 'Run `npm run check:endpoints` to identify it, then update src/scrapers/twitter/http/endpoints.js.',
+        fix: 'Run `npm run check:endpoints` to identify it, then update src/scrapers/social/twitter/schema.js.'
       };
     }
     return {

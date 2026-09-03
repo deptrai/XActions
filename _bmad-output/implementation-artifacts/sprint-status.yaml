@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-27T06:00:00.000Z
-last_updated: 2026-09-02T12:05:00Z
+last_updated: 2026-09-03T16:12:00Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -86,7 +86,7 @@ development_status:
   13-2-10-twitter-hybrid-direct-messaging: done
   13-2-11-twitter-hybrid-list-management: done
   13-2-12-twitter-hybrid-integration-caller-migration: done
-  13-2-13-twitter-graphql-schema-migration: in-progress
+  13-2-13-twitter-graphql-schema-migration: review
   13-2-14-twitter-55-action-guest-auth-audit: in-progress
   13-2-15-twitter-guest-search-research: in-progress
   13-3-refactor-facebook-scraper-to-hybrid-architecture: done
@@ -179,12 +179,10 @@ development_status:
   # --- Epic 23: Bluesky & Mastodon on AbstractCrawler ---
   # NOTE: 2026-09-02 — Bluesky search auth & Mastodon null guard fixes in progress.
   epic-23: in-progress
-  23-1-bluesky-at-protocol-client: backlog
-  23-2-bluesky-hybrid-crawler: backlog
-  23-3-mastodon-rest-api-client: backlog
-  23-4-mastodon-hybrid-crawler: backlog
   23-1-bluesky-at-protocol-client: in-progress
+  23-2-bluesky-hybrid-crawler: backlog
   23-3-mastodon-rest-api-client: in-progress
+  23-4-mastodon-hybrid-crawler: backlog
   23-5-bluesky-mastodon-response-validators: in-progress
   23-6-bluesky-mastodon-integration-caller-migration: backlog
   epic-23-retrospective: optional

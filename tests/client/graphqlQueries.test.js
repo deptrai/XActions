@@ -13,7 +13,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { GRAPHQL_ENDPOINTS, BEARER_TOKEN, buildGraphQLUrl } from '../../src/client/api/graphqlQueries.js';
-import { GRAPHQL, BEARER_TOKEN as SHARED_BEARER_TOKEN } from '../../src/scrapers/twitter/http/endpoints.js';
+import { GRAPHQL, BEARER_TOKEN as SHARED_BEARER_TOKEN } from '../../src/scrapers/social/twitter/schema.js';
 
 describe('GraphQL query ID registry', () => {
   it('shares one bearer token with the HTTP scraper', () => {
@@ -31,7 +31,7 @@ describe('GraphQL query ID registry', () => {
       }
     }
 
-    expect(drifted, `Query IDs drifted from src/scrapers/twitter/http/endpoints.js:\n${drifted.join('\n')}`)
+    expect(drifted, `Query IDs drifted from src/scrapers/social/twitter/schema.js:\n${drifted.join('\n')}`)
       .toEqual([]);
   });
 

@@ -27,30 +27,21 @@ import {
 import { buildAdvancedQuery } from '../../twitter/http/search.js';
 import { parseTweetData } from '../../twitter/http/tweets.js';
 import { extractUserCoreFields } from '../../twitter/http/user-helpers.js';
-import { DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES, GRAPHQL, REST } from '../../twitter/http/endpoints.js';
+import {
+  DEFAULT_FEATURES,
+  DEFAULT_FIELD_TOGGLES,
+  GRAPHQL,
+  REST,
+  TWITTER_GRAPHQL_QUERY_IDS,
+} from './schema.js';
+
+// Re-export for backward compatibility with tests and external consumers.
+export { TWITTER_GRAPHQL_QUERY_IDS };
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { isValidCategory } from '../../../core/types.js';
 import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
 import { gaussianDelay } from '../../../utils/gaussian-delay.js';
 import { tweetToPostItem } from './normalize-tweet.js';
-
-export const TWITTER_GRAPHQL_QUERY_IDS = {
-  TweetDetail: 'XMOz5h24KAZ86qKffKTLdQ',
-  Favoriters: 'LLkw5EcVutJL6y-2gkz22A',
-  Bookmarks: 'qToeLeMs43Q8cr7tRYXmaQ',
-  UserByScreenName: 'Gb-d6r0vxPOADdG62OEBpQ',
-  UserByRestId: 'xvmVfRLmnr1alc5f2dib0Q',
-  UserMedia: 'VyudDWQnr9vJNw7GasFz2g',
-  TweetResultByRestId: 'GZsN2Pc4knAoit6pXa4HSA',
-  Followers: 'JNyQdTISpzCkj_1fqxDvFg',
-  Following: 'qGZZDF3mp91q7X22s3HxpA',
-  Retweeters: 'X-XEqG5qHQSAwmvy00xfyQ',
-  ListMembers: 'BQp2IEYkgxuSxqbTAr1e1g',
-  // TBD: replace with real GraphQL query IDs when reverse-engineered.
-  CommunityMembers: 'TBD_COMMUNITY_MEMBERS',
-  SearchSpaces: 'TBD_SEARCH_SPACES',
-  SearchTimeline: 'hyPfJYJ_XAtDYoslQc-Rgg',
-};
 
 const VALID_SEARCH_TYPES = new Set(['top', 'latest', 'live', 'photos', 'videos', 'people', 'user', 'all']);
 const PRODUCT_MAP = /** @type {Record<string, string>} */ ({

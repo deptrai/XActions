@@ -9,7 +9,7 @@
 
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { TwitterPlatformResponseValidator } from './validator.js';
-import { BEARER_TOKEN, GRAPHQL, REST, REST_BASE, DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES } from '../../twitter/http/endpoints.js';
+import { BEARER_TOKEN, GRAPHQL, REST, REST_BASE, DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES } from './schema.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
 /**
