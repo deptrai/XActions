@@ -103,7 +103,7 @@
   mobileNav.setAttribute('aria-label', 'Mobile navigation');
   const bottomItems = [
     { href: '/', label: 'Home', icon: icons.home },
-    { href: '/platform.html?platform=facebook', label: 'Platforms', icon: icons.facebook },
+    { href: '/platforms/x', label: 'Platforms', icon: icons.automations },
     { href: '/run', label: 'Run', icon: icons.run },
     { href: '/analytics-dashboard', label: 'Analytics', icon: icons.analytics },
     { href: '/docs', label: 'Docs', icon: icons.docs }

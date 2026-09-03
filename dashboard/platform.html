@@ -709,8 +709,10 @@
     <script src="/js/sidebar.js"></script>
     <script>
       // ── Platform detection & config ──────────────────────────────────
+      const pathMatch = window.location.pathname.match(/^\/platforms?\/?([^/]+)?$/);
+      const pathPlatform = pathMatch?.[1] || '';
       const params = new URLSearchParams(window.location.search);
-      const PLATFORM = params.get("platform") || "facebook";
+      const PLATFORM = pathPlatform || params.get("platform") || "facebook";
 
       const PLATFORM_CONFIG = {
         facebook: {

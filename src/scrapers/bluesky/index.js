@@ -36,6 +36,7 @@ const DEFAULT_SERVICE = 'https://public.api.bsky.app';
  * @property {string} service
  * @property {string} [identifier]
  * @property {string} [password]
+ * @property {string} [accessJwt]
  */
 
 /** @typedef {BlueskySdkClient | BlueskyFetchClient} BlueskyClient */
@@ -70,12 +71,33 @@ export async function createAgent(options = {}) {
     return { agent, type: 'sdk' };
   } catch {
     // Fallback to fetch-based client when @atproto/api is not installed
-    return {
+    const fetchClient = {
       service,
       identifier: options.identifier,
       password: options.password,
       type: 'fetch',
     };
+
+    // Authenticate with app-password for endpoints that require auth (e.g. search)
+    if (options.identifier && options.password) {
+      try {
+        const session = await fetch(`${service}/xrpc/com.atproto.server.createSession`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            identifier: options.identifier,
+            password: options.password,
+          }),
+        }).then((r) => (r.ok ? r.json() : null));
+        if (session?.accessJwt) {
+          fetchClient.accessJwt = session.accessJwt;
+        }
+      } catch {
+        // Auth is best-effort; callers surface actionable errors when endpoints require it.
+      }
+    }
+
+    return fetchClient;
   }
 }
 
@@ -144,7 +166,12 @@ async function xrpc(client, nsid, params = {}) {
     .join('&');
 
   const url = `${client.service}/xrpc/${nsid}${qs ? '?' + qs : ''}`;
-  const res = await fetch(url);
+  /** @type {Record<string, string>} */
+  const headers = {};
+  if (client.type === 'fetch' && client.accessJwt) {
+    headers['Authorization'] = `Bearer ${client.accessJwt}`;
+  }
+  const res = await fetch(url, { headers });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Bluesky API error (${res.status}): ${text}`);
