@@ -95,7 +95,7 @@ export function saveAccountSnapshot(username, data) {
     INSERT INTO account_snapshots (username, followers_count, following_count, tweet_count, listed_count, verified, snapshot_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
-  const now = new Date().toISOString();
+  const snapshotAt = data.snapshot_at || data.snapshotAt || new Date().toISOString();
   stmt.run(
     username.toLowerCase(),
     data.followers_count || data.followersCount || 0,
@@ -103,9 +103,9 @@ export function saveAccountSnapshot(username, data) {
     data.tweet_count || data.tweetCount || 0,
     data.listed_count || data.listedCount || 0,
     data.verified ? 1 : 0,
-    now
+    snapshotAt
   );
-  return { username, snapshot_at: now };
+  return { username, snapshot_at: snapshotAt };
 }
 
 /**
