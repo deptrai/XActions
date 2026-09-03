@@ -1713,8 +1713,10 @@
 
     // Load dashboard data
     async function loadDashboard() {
+      // The dashboard home is public; only redirect if the page explicitly
+      // requires an authenticated session. Otherwise show the logged-out view.
       if (!authToken) {
-        window.location.href = '/login';
+        console.log('No auth token; showing public dashboard view.');
         return;
       }
 

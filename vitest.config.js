@@ -26,6 +26,7 @@ export default defineConfig({
       'archive',
       'tests/e2e/video*.e2e.test.js',
       'tests/e2e/admin-*.e2e.test.js',
+      'tests/e2e/dashboard-navigation.e2e.test.js',
       'tests/x402-integration.test.js'
     ],
     reporters: ['verbose'],
