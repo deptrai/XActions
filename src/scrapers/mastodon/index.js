@@ -130,8 +130,17 @@ async function lookupAccount(client, username) {
   if (typeof username !== 'string' || !username.trim()) {
     throw new TypeError('Mastodon scrape requires a username (e.g. "mastodon" or "user@instance.social")');
   }
+  let handle = username.trim();
+  if (/^https?:\/\//i.test(handle)) {
+    try {
+      const u = new URL(handle);
+      client.instance = `${u.protocol}//${u.host}`;
+      const pathMatch = u.pathname.match(/@?([^/]+)/);
+      if (pathMatch) handle = pathMatch[1];
+    } catch {}
+  }
   // Strip leading @
-  const handle = username.trim().replace(/^@/, '');
+  handle = handle.replace(/^@/, '');
 
   // Try the v1 lookup endpoint first (Mastodon 3.4+)
   try {

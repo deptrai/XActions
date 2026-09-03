@@ -1499,7 +1499,7 @@ export async function scrape(platform, action, options = {}) {
       }
     }
 
-    const target = options.username || options.query || options.hashtag || options.feedUri;
+    const target = options.username || options.handle || options.query || options.hashtag || options.feedUri || options.url;
 
     // Actions that only take client + options (no target)
     const noTargetActions = ['scrapeTrending'];

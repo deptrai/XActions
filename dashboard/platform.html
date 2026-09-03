@@ -1478,8 +1478,7 @@
       }
 
       function buildActionCard(tab, item) {
-        const isPublic = cfg.tabs.length === 2 && cfg.tabs.includes("scrape");
-        const needsAccount = !isPublic;
+        const needsAccount = tab !== "scrape";
         const fieldsHtml = item.fields.map((f) => buildField(f)).join("");
 
         const actionBtnText = state.dryRun ? "▶ Preview" : "⚡ Run Live";
@@ -1751,8 +1750,8 @@
         const item = (cfg[tab] || []).find((i) => i.id === id);
         if (!item) return;
 
-        const isPublic = cfg.tabs.length === 2 && cfg.tabs.includes("scrape");
-        if (tab !== "scrape" && !isPublic && !state.accountId) {
+        const isPublic = tab === "scrape";
+        if (!isPublic && !state.accountId) {
           return showToast("Select an account first", "error");
         }
 
@@ -1830,6 +1829,7 @@
             body.query = el.value.trim();
           } else if (f.id === "handle" && isScrape) {
             body.handle = el.value.trim();
+            body.username = el.value.trim();
           } else {
             body[f.id] = el.value.trim();
           }
@@ -1876,7 +1876,30 @@
         const raw = JSON.stringify(data, null, 2);
 
         // Smart items visualizer
-        const items = data.posts || data.comments || data.followers || data.following || data.members || data.results || (Array.isArray(data) ? data : []);
+        const resObj = data.result && typeof data.result === "object" ? data.result : data;
+        const items = resObj.posts || resObj.comments || resObj.followers || resObj.following || resObj.members || resObj.results || resObj.feed || (Array.isArray(resObj) ? resObj : []);
+
+        let profileCardHtml = '';
+        const prof = resObj.profile && typeof resObj.profile === "object" ? resObj.profile : resObj;
+        if (prof.name || prof.handle || prof.displayName || prof.username) {
+          const pName = prof.name || prof.displayName || prof.handle || prof.username;
+          const pHandle = prof.handle || prof.username || '';
+          const pBio = prof.bio || prof.description || '';
+          const pFollowers = prof.followersCount ?? prof.followers ?? null;
+          const pAvatar = prof.avatar || '';
+          profileCardHtml = `
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;gap:16px;align-items:flex-start;margin:14px 0;">
+              ${pAvatar ? `<img src="${esc(pAvatar)}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;">` : ''}
+              <div style="flex:1;">
+                <div style="font-weight:700;font-size:1.05rem;color:var(--text-primary);">${esc(pName)}</div>
+                ${pHandle ? `<div style="color:var(--text-secondary);font-size:0.8125rem;">@${esc(pHandle)}</div>` : ''}
+                ${pBio ? `<div style="font-size:0.875rem;color:var(--text-primary);margin-top:6px;line-height:1.4;">${esc(pBio)}</div>` : ''}
+                ${pFollowers !== null && pFollowers > 0 ? `<div style="font-weight:600;font-size:0.8125rem;color:var(--accent);margin-top:8px;">👥 ${Number(pFollowers).toLocaleString()} followers</div>` : ''}
+              </div>
+            </div>
+          `;
+        }
+
         let cardsHtml = '';
         if (Array.isArray(items) && items.length > 0) {
           cardsHtml = `
@@ -1909,6 +1932,7 @@
             </div>
           </div>
           ${data.count !== undefined ? `<div style="font-size:0.8125rem;color:var(--text-secondary);">${esc(data.count)} item(s) processed</div>` : ''}
+          ${profileCardHtml}
           ${cardsHtml}
           <div class="toggle-raw" style="margin-top:12px;font-size:0.8125rem;color:var(--accent);cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">📄 Toggle raw JSON response</div>
           <pre style="display:none;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;padding:12px;overflow-x:auto;max-height:300px;margin-top:8px;">${esc(raw)}</pre>
