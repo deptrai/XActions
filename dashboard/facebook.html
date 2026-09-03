@@ -276,18 +276,64 @@
           <div class="result-panel" id="scrape-followers-result"></div>
         </div>
         <div class="action-card" id="card-scrape-search">
-          <div class="card-title">🔎 Search Posts</div>
-          <div class="card-desc">Search for posts by keyword</div>
+          <div class="card-title">🔎 Search Facebook</div>
+          <div class="card-desc">Search posts, people, pages, or groups</div>
           <div class="card-field"><label>Query</label><input id="ss-query" type="text" placeholder="keyword..."></div>
+          <div class="card-field">
+            <label>Type</label>
+            <select id="ss-type">
+              <option value="posts" selected>Posts</option>
+              <option value="people">People</option>
+              <option value="pages">Pages</option>
+              <option value="groups">Groups</option>
+              <option value="all">All (Multi-category)</option>
+            </select>
+          </div>
+          <div class="card-field"><label>Location (optional)</label><input id="ss-location" type="text" placeholder="e.g. Ho Chi Minh City"></div>
+          <div class="card-field"><label>Limit</label><input id="ss-limit" type="number" min="1" max="100" placeholder="20"></div>
           <div class="card-footer"><button class="btn-run preview" onclick="runScrape('search')">▶ Run Scrape</button></div>
           <div class="result-panel" id="scrape-search-result"></div>
         </div>
+        <div class="action-card" id="card-scrape-marketplace">
+          <div class="card-title">🛍️ Search Marketplace</div>
+          <div class="card-desc">Search products & listings on Facebook Marketplace (No account required)</div>
+          <div class="card-field"><label>Search Query</label><input id="sm-query" type="text" placeholder="e.g. macbook pro, iphone..."></div>
+          <div class="card-field"><label>Location (City / Region)</label><input id="sm-location" type="text" placeholder="e.g. Hanoi, Ho Chi Minh City"></div>
+          <div style="display:flex;gap:8px">
+            <div class="card-field" style="flex:1"><label>Min Price</label><input id="sm-min-price" type="number" min="0" placeholder="Min $"></div>
+            <div class="card-field" style="flex:1"><label>Max Price</label><input id="sm-max-price" type="number" min="0" placeholder="Max $"></div>
+          </div>
+          <div class="card-field"><label>Limit</label><input id="sm-limit" type="number" min="1" max="100" placeholder="20"></div>
+          <div class="card-footer"><button class="btn-run preview" onclick="runScrape('marketplace')">▶ Run Scrape</button></div>
+          <div class="result-panel" id="scrape-marketplace-result"></div>
+        </div>
+        <div class="action-card" id="card-scrape-post-comments">
+          <div class="card-title">💬 Scrape Post Comments</div>
+          <div class="card-desc">Extract comments from a public Facebook post</div>
+          <div class="card-field"><label>Post URL</label><input id="spc-url" type="url" placeholder="https://www.facebook.com/.../posts/..."></div>
+          <div class="card-field" style="display:flex;align-items:center;gap:8px;margin-top:6px">
+            <input id="spc-replies" type="checkbox" style="width:auto">
+            <label for="spc-replies" style="margin:0;cursor:pointer">Include nested replies</label>
+          </div>
+          <div class="card-field"><label>Limit</label><input id="spc-limit" type="number" min="1" max="100" placeholder="20"></div>
+          <div class="card-footer"><button class="btn-run preview" onclick="runScrape('post_comments')">▶ Run Scrape</button></div>
+          <div class="result-panel" id="scrape-post_comments-result"></div>
+        </div>
         <div class="action-card" id="card-scrape-group-members">
           <div class="card-title">👥 Scrape Group Members</div>
-          <div class="card-desc">Extract member list from a group</div>
+          <div class="card-desc">Extract member list from a public group</div>
           <div class="card-field"><label>Group URL</label><input id="sgm-url" type="url" placeholder="https://www.facebook.com/groups/..."></div>
           <div class="card-footer"><button class="btn-run preview" onclick="runScrape('group-members')">▶ Run Scrape</button></div>
           <div class="result-panel" id="scrape-group-members-result"></div>
+        </div>
+        <div class="action-card" id="card-scrape-group-search">
+          <div class="card-title">🔍 Search in Group</div>
+          <div class="card-desc">Search posts inside a specific Facebook group</div>
+          <div class="card-field"><label>Group URL</label><input id="sgs-url" type="url" placeholder="https://www.facebook.com/groups/..."></div>
+          <div class="card-field"><label>Query</label><input id="sgs-query" type="text" placeholder="keyword in group..."></div>
+          <div class="card-field"><label>Limit</label><input id="sgs-limit" type="number" min="1" max="100" placeholder="20"></div>
+          <div class="card-footer"><button class="btn-run preview" onclick="runScrape('group_search')">▶ Run Scrape</button></div>
+          <div class="result-panel" id="scrape-group_search-result"></div>
         </div>
       </div>
     </div>
@@ -436,12 +482,20 @@ function buildBody(action, dryRun) {
 }
 
 // ── Scrape runner ──────────────────────────────────────────────
-const PUBLIC_SCRAPE_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members'];
+const PUBLIC_SCRAPE_ACTIONS = [
+  'profile',
+  'posts',
+  'followers',
+  'search',
+  'marketplace',
+  'post_comments',
+  'group-members',
+  'group_members',
+  'group_search',
+];
 
 async function runScrape(action) {
   const resultEl = document.getElementById('scrape-' + action + '-result');
-  const urlMap = { profile: 'sp-url', posts: 'spo-url', followers: 'sf-url', search: 'ss-query', 'group-members': 'sgm-url' };
-  const fieldVal = document.getElementById(urlMap[action])?.value?.trim() || '';
 
   if (!state.accountId && !PUBLIC_SCRAPE_ACTIONS.includes(action)) {
     resultEl.className = 'result-panel show error';
@@ -449,13 +503,52 @@ async function runScrape(action) {
     return;
   }
 
-  resultEl.className = 'result-panel show dryrun';
-  resultEl.textContent = 'Scraping...';
+  const val = (id) => document.getElementById(id)?.value?.trim() || '';
+  const num = (id) => { const v = document.getElementById(id)?.value; return v ? Number(v) : undefined; };
 
   const body = { action };
-  if (action === 'search') body.query = fieldVal;
-  else body.url = fieldVal;
   if (state.accountId) body.accountIds = [state.accountId];
+
+  if (action === 'profile') {
+    body.url = val('sp-url');
+  } else if (action === 'posts') {
+    body.url = val('spo-url');
+  } else if (action === 'followers') {
+    body.url = val('sf-url');
+  } else if (action === 'search') {
+    body.query = val('ss-query');
+    const st = val('ss-type');
+    if (st) body.type = st;
+    const loc = val('ss-location');
+    if (loc) body.location = loc;
+    const lim = num('ss-limit');
+    if (lim) body.limit = lim;
+  } else if (action === 'marketplace') {
+    body.query = val('sm-query');
+    const loc = val('sm-location');
+    if (loc) body.location = loc;
+    const minP = num('sm-min-price');
+    if (minP !== undefined) body.minPrice = minP;
+    const maxP = num('sm-max-price');
+    if (maxP !== undefined) body.maxPrice = maxP;
+    const lim = num('sm-limit');
+    if (lim) body.limit = lim;
+  } else if (action === 'post_comments') {
+    body.url = val('spc-url');
+    body.includeReplies = document.getElementById('spc-replies')?.checked || false;
+    const lim = num('spc-limit');
+    if (lim) body.limit = lim;
+  } else if (action === 'group-members') {
+    body.url = val('sgm-url');
+  } else if (action === 'group_search') {
+    body.url = val('sgs-url');
+    body.query = val('sgs-query');
+    const lim = num('sgs-limit');
+    if (lim) body.limit = lim;
+  }
+
+  resultEl.className = 'result-panel show dryrun';
+  resultEl.textContent = 'Scraping...';
 
   try {
     const data = await apiRequest('/facebook/scrape', {
