@@ -144,14 +144,9 @@ describe('POST /api/facebook/scrape — integration', () => {
       action: 'search',
       query: 'hello',
     });
-    // The request must not be rejected for missing auth; runtime success depends
-    // on valid Facebook doc_ids / tokens, which are placeholder in this test env.
-    expect(res.status).not.toBe(401);
-    expect(res.body.error).not.toMatch(/No active Facebook account/i);
-    // When real tokens are unavailable, the route returns a controlled 500.
-    if (res.status !== 200) {
-      expect(res.body.ok).toBe(false);
-    }
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.action).toBe('search');
   });
 });
 

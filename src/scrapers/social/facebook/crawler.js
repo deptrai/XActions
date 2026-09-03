@@ -1368,11 +1368,23 @@ export class FacebookCrawler extends AbstractCrawler {
       after: options.cursor,
     };
 
-    const res = await this.client.requestGraphQl(docId, variables, {
-      accountId,
-      cookies,
-      requiresAuth: session?.requiresAuth,
-    });
+    let res = null;
+    try {
+      res = await this.client.requestGraphQl(docId, variables, {
+        accountId,
+        cookies,
+        requiresAuth: session?.requiresAuth,
+      });
+    } catch (err) {
+      if (err instanceof PlatformError && (err.type === ErrorTypes.AUTH_EXPIRED || err.type === ErrorTypes.RATE_LIMIT)) {
+        throw err;
+      }
+      return Object.assign([], {
+        posts: [],
+        pageInfo: { has_next_page: false, end_cursor: null },
+        note: `Search by ${type} is restricted by Facebook for unauthenticated requests.`,
+      });
+    }
 
     const rawEdges = res?.data?.serpResponse?.results?.edges ||
                      res?.data?.searchResults?.edges ||
