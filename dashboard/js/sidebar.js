@@ -59,6 +59,7 @@
     { href: '/monitor', label: 'Monitor', icon: icons.monitor },
     { href: '/mcp', label: 'AI Tools', icon: icons.ai },
     // Secondary
+    { href: '/tweet-schedule', label: 'Schedule', icon: icons.calendar },
     { href: '/docs', label: 'Docs', icon: icons.docs },
     { href: 'https://github.com/nirholas/XActions', label: 'GitHub', icon: icons.github, external: true }
   ];

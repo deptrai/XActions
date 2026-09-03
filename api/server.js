@@ -647,6 +647,10 @@ app.get('/facebook', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/facebook.html'));
 });
 
+app.get('/tweet-schedule', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/tweet-schedule.html'));
+});
+
 // Error handling middleware — never expose stack traces or internal details in production
 app.use((/** @type {unknown} */ err, /** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res, /** @type {import('express').NextFunction} */ next) => {
   const e = /** @type {Error & Record<string, unknown>} */ (err);

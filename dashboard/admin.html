@@ -1346,6 +1346,7 @@
         stopProxiesRefresh();
         stopStreamRefresh();
         await loadPaymentStats();
+        startPaymentRefresh();
       } else if (tab === 'checkpoints') {
         stopProxiesRefresh();
         stopStreamRefresh();
@@ -2337,6 +2338,159 @@
       }
     }
 
+    // -------------------------
+    // x402 Payments View
+    // -------------------------
+
+    const PAYMENT_REFRESH_INTERVAL_MS = 10000;
+    let paymentState = { refreshTimer: null, actionInFlight: false };
+
+    function startPaymentRefresh() {
+      stopPaymentRefresh();
+      paymentState.refreshTimer = setInterval(() => {
+        if (!paymentState.actionInFlight) loadPaymentStats({ background: true });
+      }, PAYMENT_REFRESH_INTERVAL_MS);
+    }
+
+    function stopPaymentRefresh() {
+      if (paymentState.refreshTimer) {
+        clearInterval(paymentState.refreshTimer);
+        paymentState.refreshTimer = null;
+      }
+    }
+
+    async function loadPaymentStats(opts = {}) {
+      paymentState.actionInFlight = true;
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const [statsRes, webhookRes] = await Promise.all([
+          fetch(`${API_URL}/api/admin/x402/stats`, { headers }),
+          fetch(`${API_URL}/api/admin/x402/webhooks`, { headers })
+        ]);
+
+        if (statsRes.status === 401 || statsRes.status === 403) {
+          if (!opts.background) showCheckpointToast('Insufficient permissions', 'error');
+          return;
+        }
+
+        const statsData = await statsRes.json().catch(() => ({}));
+        const webhookData = await webhookRes.json().catch(() => ({}));
+
+        renderPaymentStats(statsData.success ? statsData.stats : null);
+        renderWebhookConfig(webhookData.success ? webhookData.webhooks : null);
+      } catch (err) {
+        if (!opts.background) console.error('Failed to load payment stats:', err);
+      } finally {
+        paymentState.actionInFlight = false;
+      }
+    }
+
+    function renderPaymentStats(stats) {
+      if (!stats) {
+        document.getElementById('total-payments').textContent = '—';
+        document.getElementById('total-revenue').textContent = '$—';
+        document.getElementById('payments-by-operation').innerHTML = '<div class="empty-state small">No payment data</div>';
+        document.getElementById('recent-payments').innerHTML = '<div class="empty-state small">No recent payments</div>';
+        return;
+      }
+
+      document.getElementById('total-payments').textContent = Number(stats.totalPayments || 0).toLocaleString();
+      document.getElementById('total-revenue').textContent = `$${Number(stats.totalRevenueUSD || 0).toFixed(2)}`;
+
+      const byOp = stats.byOperation || {};
+      const byOpEl = document.getElementById('payments-by-operation');
+      if (Object.keys(byOp).length === 0) {
+        byOpEl.innerHTML = '<div class="empty-state small">No payments yet</div>';
+      } else {
+        byOpEl.innerHTML = Object.entries(byOp).map(([op, count]) => `
+          <div class="stats-item">
+            <span>${esc(op.replace(/:/g, ' → '))}</span>
+            <span style="font-weight: 700; color: var(--text-primary);">${Number(count).toLocaleString()}</span>
+          </div>
+        `).join('');
+      }
+
+      const recent = stats.recentPayments || [];
+      const recentEl = document.getElementById('recent-payments');
+      if (recent.length === 0) {
+        recentEl.innerHTML = '<div class="empty-state small">No recent payments</div>';
+      } else {
+        recentEl.innerHTML = recent.slice(0, 20).map(p => {
+          const amount = typeof p.price === 'string' ? p.price : `$${Number(p.price || 0).toFixed(2)}`;
+          const time = p.timestamp ? new Date(p.timestamp).toLocaleString() : '—';
+          return `
+            <div class="stats-item">
+              <div>
+                <strong>${esc(amount)}</strong>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">${esc(p.operation || 'unknown')}</div>
+              </div>
+              <span style="font-size: 0.75rem; color: var(--text-secondary);">${esc(time)}</span>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function renderWebhookConfig(webhooks) {
+      const statusEl = document.getElementById('webhook-status');
+      if (webhooks && webhooks.configured) {
+        const any = webhooks.configured.customWebhook || webhooks.configured.discord || webhooks.configured.slack;
+        statusEl.textContent = any ? 'Active' : 'None';
+        statusEl.style.color = any ? 'var(--success)' : 'var(--text-secondary)';
+      } else {
+        statusEl.textContent = '—';
+        statusEl.style.color = 'var(--text-secondary)';
+      }
+
+      if (webhooks && webhooks.configured) {
+        document.getElementById('webhook-custom').textContent = webhooks.configured.customWebhook ? 'On' : 'Off';
+        document.getElementById('webhook-discord').textContent = webhooks.configured.discord ? 'On' : 'Off';
+        document.getElementById('webhook-slack').textContent = webhooks.configured.slack ? 'On' : 'Off';
+        document.getElementById('webhook-signature').textContent = webhooks.configured.signatureEnabled ? 'On' : 'Off';
+      }
+    }
+
+    async function testWebhooks() {
+      paymentState.actionInFlight = true;
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/x402/webhooks/test`, {
+          method: 'POST',
+          headers
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || data.message || 'Failed to test webhooks');
+        }
+
+        showCheckpointToast('✅ Test webhooks sent', 'success');
+        await loadPaymentStats();
+      } catch (err) {
+        console.error('Test webhooks failed:', err);
+        showCheckpointToast(err.message || 'Test webhooks failed', 'error');
+      } finally {
+        paymentState.actionInFlight = false;
+      }
+    }
+
+    function refreshPaymentStats() {
+      loadPaymentStats();
+    }
+
     // Initialize checkpoints & proxies & stream UI
     bindCheckpointFilters();
     window.addEventListener('hashchange', handleHashRoute);
@@ -2344,6 +2498,7 @@
       stopCheckpointRefresh();
       stopProxiesRefresh();
       stopStreamRefresh();
+      stopPaymentRefresh();
       if (checkpointsState.activeFetch) checkpointsState.activeFetch.abort();
       if (proxiesState.activeFetch) proxiesState.activeFetch.abort();
       if (streamState.activeFetch) streamState.activeFetch.abort();

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tweet Schedule — XActions</title>
+  <link rel="stylesheet" href="/css/common.css" />
+  <style>
+    :root { --bg: #000; --bg2: #111; --bg3: #1a1a1a; --border: #333; --text: #e0e0e0; --text2: #888; --accent: #1d9bf0; --green: #00c853; --red: #ff4444; --yellow: #ffb800; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; min-height: 100vh; }
+    .sidebar-left { width: 240px; background: var(--bg2); border-right: 1px solid var(--border); padding: 20px 0; flex-shrink: 0; }
+    .main { flex: 1; padding: 30px; overflow-y: auto; }
+    h1 { font-size: 24px; margin-bottom: 20px; }
+    .stats-bar { display: flex; gap: 16px; margin-bottom: 20px; }
+    .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; flex: 1; }
+    .stat-card .label { font-size: 12px; color: var(--text2); }
+    .stat-card .value { font-size: 22px; font-weight: 700; color: #fff; margin-top: 4px; }
+    .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+    .btn { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); cursor: pointer; font-size: 13px; transition: all .2s; }
+    .btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn.danger { background: var(--red); color: #fff; border-color: var(--red); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    select.btn { appearance: auto; }
+    .queue { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; min-height: 200px; }
+    .queue-header { display: grid; grid-template-columns: 50px 1fr 160px 120px 100px; gap: 12px; padding: 12px 16px; background: var(--bg3); font-size: 12px; color: var(--text2); font-weight: 600; text-transform: uppercase; }
+    .queue-item { display: grid; grid-template-columns: 50px 1fr 160px 120px 100px; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); align-items: center; transition: background .2s; cursor: grab; }
+    .queue-item:last-child { border-bottom: none; }
+    .queue-item:hover { background: rgba(255,255,255,0.03); }
+    .queue-item.dragging { opacity: 0.4; }
+    .queue-item.over { border-top: 2px solid var(--accent); }
+    .queue-item .handle { cursor: grab; color: var(--text2); text-align: center; }
+    .queue-item .content { overflow: hidden; }
+    .queue-item .content .text { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .queue-item .content .meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+    .queue-item .scheduled { font-size: 12px; color: var(--text2); }
+    .status-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .status-pill.pending { background: rgba(29,155,240,.2); color: var(--accent); }
+    .status-pill.running { background: rgba(255,184,0,.2); color: var(--yellow); }
+    .status-pill.completed { background: rgba(0,200,83,.2); color: var(--green); }
+    .status-pill.cancelled { background: rgba(255,68,68,.2); color: var(--red); }
+    .status-pill.failed { background: rgba(255,68,68,.2); color: var(--red); }
+    .actions { display: flex; gap: 6px; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.7); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 520px; max-width: 90vw; max-height: 90vh; overflow-y: auto; }
+    .modal h2 { font-size: 18px; margin-bottom: 16px; }
+    .modal label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 4px; margin-top: 12px; }
+    .modal input, .modal textarea, .modal select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); font-size: 14px; font-family: inherit; }
+    .modal textarea { height: 100px; resize: vertical; }
+    .modal .hint { font-size: 11px; color: var(--text2); margin-top: 4px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    .empty-state { padding: 40px; text-align: center; color: var(--text2); }
+    .empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+    .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: 8px; color: #fff; font-size: 14px; z-index: 200; transform: translateY(100px); transition: transform .3s; }
+    .toast.show { transform: translateY(0); }
+    .toast.success { background: var(--green); }
+    .toast.error { background: var(--red); }
+    body::before { content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none; background: radial-gradient(1000px 560px at 82% -6%, rgba(29,155,240,.1), transparent 60%); }
+  </style>
+  <script src="/js/config.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar-left"></aside>
+
+  <main class="main">
+    <h1>⏰ Tweet Schedule Queue</h1>
+
+    <div class="stats-bar">
+      <div class="stat-card"><div class="label">Pending</div><div class="value" id="stat-pending">0</div></div>
+      <div class="stat-card"><div class="label">Scheduled Today</div><div class="value" id="stat-today">0</div></div>
+      <div class="stat-card"><div class="label">Completed</div><div class="value" id="stat-completed">0</div></div>
+      <div class="stat-card"><div class="label">Cancelled</div><div class="value" id="stat-cancelled">0</div></div>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn primary" id="new-schedule-btn">+ New Scheduled Tweet</button>
+      <button class="btn" id="save-order-btn" disabled>💾 Save Order</button>
+      <select class="btn" id="status-filter">
+        <option value="">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="running">Running</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="failed">Failed</option>
+      </select>
+    </div>
+
+    <div class="queue" id="queue">
+      <div class="queue-header">
+        <div>#</div>
+        <div>Content</div>
+        <div>Scheduled At</div>
+        <div>Status</div>
+        <div>Actions</div>
+      </div>
+      <div id="queue-body"></div>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h2 id="modal-title">New Scheduled Tweet</h2>
+      <label>Content</label>
+      <textarea id="schedule-content" placeholder="What's happening?"></textarea>
+      <label>Scheduled Date & Time</label>
+      <input type="datetime-local" id="schedule-datetime">
+      <label>Timezone (optional)</label>
+      <input type="text" id="schedule-timezone" placeholder="e.g. America/New_York">
+      <label>Media URLs (one per line, optional)</label>
+      <textarea id="schedule-media" placeholder="https://...\nhttps://..."></textarea>
+      <label>Thread — tweet IDs to reply to, comma separated (optional)</label>
+      <input type="text" id="schedule-thread" placeholder="1890000000,1890000001">
+      <label>Recurrence Cron (optional)</label>
+      <input type="text" id="schedule-recurrence" placeholder="0 9 * * 1-5">
+      <div class="hint">Dry-run preview is on by default. Uncheck to save.</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer;">
+        <input type="checkbox" id="schedule-dryrun" checked style="width:auto;">
+        <span style="font-size:13px;color:var(--text2);">Dry run only</span>
+      </label>
+      <div class="modal-actions">
+        <button class="btn" id="modal-cancel">Cancel</button>
+        <button class="btn primary" id="modal-save">Schedule</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const API_BASE = `${window.location.origin}/api`;
+    let schedules = [];
+    let originalOrder = [];
+    let draggedItem = null;
+
+    function getAuthHeaders() {
+      const token = localStorage.getItem('authToken');
+      return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    }
+
+    function showToast(message, type = 'success') {
+      const t = document.getElementById('toast');
+      t.textContent = message;
+      t.className = `toast ${type} show`;
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function esc(str) {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleString();
+    }
+
+    function updateStats() {
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+      document.getElementById('stat-pending').textContent = schedules.filter(s => s.status === 'pending').length;
+      document.getElementById('stat-today').textContent = schedules.filter(s => s.scheduledAt && s.scheduledAt.startsWith(todayStr)).length;
+      document.getElementById('stat-completed').textContent = schedules.filter(s => s.status === 'completed').length;
+      document.getElementById('stat-cancelled').textContent = schedules.filter(s => s.status === 'cancelled').length;
+    }
+
+    async function loadSchedules(status = '') {
+      const url = `${API_BASE}/tweet-schedule${status ? `?status=${encodeURIComponent(status)}` : ''}`;
+      try {
+        const res = await fetch(url, { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error((await res.json()).error || 'Failed to load');
+        const data = await res.json();
+        schedules = data.schedules || [];
+        originalOrder = schedules.map(s => s.id);
+        renderQueue();
+        updateStats();
+        document.getElementById('save-order-btn').disabled = true;
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function renderQueue() {
+      const body = document.getElementById('queue-body');
+      if (schedules.length === 0) {
+        body.innerHTML = `<div class="empty-state"><div class="icon">📅</div><p>No scheduled tweets yet.</p></div>`;
+        return;
+      }
+      body.innerHTML = schedules.map((s, i) => {
+        const thread = Array.isArray(s.thread) && s.thread.length ? `Thread: ${s.thread.join(', ')}` : '';
+        const media = Array.isArray(s.mediaUrls) && s.mediaUrls.length ? `Media: ${s.mediaUrls.length}` : '';
+        const meta = [thread, media, s.recurrenceCron ? `Recurring: ${s.recurrenceCron}` : '', s.timezone || ''].filter(Boolean).join(' • ');
+        return `
+          <div class="queue-item" draggable="true" data-id="${esc(s.id)}" data-index="${i}">
+            <div class="handle">⋮⋮</div>
+            <div class="content">
+              <div class="text">${esc(s.content)}</div>
+              <div class="meta">${esc(meta)}</div>
+            </div>
+            <div class="scheduled">${formatDate(s.scheduledAt)}</div>
+            <div><span class="status-pill ${esc(s.status)}">${esc(s.status)}</span></div>
+            <div class="actions">
+              ${s.status === 'pending' ? `<button class="btn danger" onclick="cancelSchedule('${esc(s.id)}')">Cancel</button>` : '—'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      body.querySelectorAll('.queue-item').forEach(item => {
+        item.addEventListener('dragstart', onDragStart);
+        item.addEventListener('dragend', onDragEnd);
+        item.addEventListener('dragover', onDragOver);
+        item.addEventListener('drop', onDrop);
+        item.addEventListener('dragenter', onDragEnter);
+        item.addEventListener('dragleave', onDragLeave);
+      });
+    }
+
+    function onDragStart(e) {
+      draggedItem = this;
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    }
+    function onDragEnd() {
+      this.classList.remove('dragging');
+      document.querySelectorAll('.queue-item.over').forEach(el => el.classList.remove('over'));
+      draggedItem = null;
+    }
+    function onDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+    function onDragEnter(e) {
+      e.preventDefault();
+      if (this !== draggedItem) this.classList.add('over');
+    }
+    function onDragLeave() { this.classList.remove('over'); }
+    function onDrop(e) {
+      e.preventDefault();
+      this.classList.remove('over');
+      if (!draggedItem || this === draggedItem) return;
+      const from = Number(draggedItem.dataset.index);
+      const to = Number(this.dataset.index);
+      const [moved] = schedules.splice(from, 1);
+      schedules.splice(to, 0, moved);
+      renderQueue();
+      const orderChanged = JSON.stringify(schedules.map(s => s.id)) !== JSON.stringify(originalOrder);
+      document.getElementById('save-order-btn').disabled = !orderChanged;
+    }
+
+    async function cancelSchedule(id) {
+      if (!confirm('Cancel this scheduled tweet?')) return;
+      try {
+        const res = await fetch(`${API_BASE}/tweet-schedule/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Failed to cancel');
+        showToast('Cancelled successfully');
+        loadSchedules(document.getElementById('status-filter').value);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function saveOrder() {
+      const items = schedules.map((s, i) => ({ id: s.id, queueOrder: i }));
+      try {
+        const res = await fetch(`${API_BASE}/tweet-schedule/reorder`, {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ items })
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Failed to reorder');
+        showToast('Queue order saved');
+        originalOrder = schedules.map(s => s.id);
+        document.getElementById('save-order-btn').disabled = true;
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Modal
+    const modal = document.getElementById('modal');
+    document.getElementById('new-schedule-btn').onclick = () => {
+      document.getElementById('modal-title').textContent = 'New Scheduled Tweet';
+      document.getElementById('schedule-content').value = '';
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset() + 60);
+      document.getElementById('schedule-datetime').value = now.toISOString().slice(0, 16);
+      document.getElementById('schedule-timezone').value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      document.getElementById('schedule-media').value = '';
+      document.getElementById('schedule-thread').value = '';
+      document.getElementById('schedule-recurrence').value = '';
+      document.getElementById('schedule-dryrun').checked = true;
+      modal.classList.add('show');
+    };
+    document.getElementById('modal-cancel').onclick = () => modal.classList.remove('show');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
+    document.getElementById('save-order-btn').onclick = saveOrder;
+
+    document.getElementById('modal-save').onclick = async () => {
+      const content = document.getElementById('schedule-content').value.trim();
+      if (!content) { showToast('Content is required', 'error'); return; }
+      const datetime = document.getElementById('schedule-datetime').value;
+      if (!datetime) { showToast('Schedule time is required', 'error'); return; }
+      const mediaRaw = document.getElementById('schedule-media').value.trim();
+      const mediaUrls = mediaRaw ? mediaRaw.split('\n').map(s => s.trim()).filter(Boolean) : undefined;
+      const threadRaw = document.getElementById('schedule-thread').value.trim();
+      const thread = threadRaw ? threadRaw.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+      const body = {
+        content,
+        scheduledAt: new Date(datetime).toISOString(),
+        timezone: document.getElementById('schedule-timezone').value.trim() || undefined,
+        mediaUrls,
+        thread,
+        recurrenceCron: document.getElementById('schedule-recurrence').value.trim() || undefined,
+        dryRun: document.getElementById('schedule-dryrun').checked
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/tweet-schedule`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to schedule');
+        showToast(body.dryRun ? 'Dry run OK (not saved)' : 'Scheduled successfully');
+        modal.classList.remove('show');
+        if (!body.dryRun) loadSchedules(document.getElementById('status-filter').value);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    };
+
+    document.getElementById('status-filter').onchange = (e) => loadSchedules(e.target.value);
+
+    loadSchedules();
+  </script>
+  <script src="/js/sidebar.js"></script>
+</body>
+</html>

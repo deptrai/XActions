@@ -212,15 +212,24 @@ router.post('/licenses/:key/validate', authenticateToken, requireAdmin, async (r
 });
 
 /**
- * GET /api/admin/x402/stats
- * Get x402 payment statistics
- * Protected by admin API key
+ * Authorise an admin request by JWT (req.user.isAdmin) or x-admin-key header.
+ * @param {import('express').Request} req
+ * @returns {boolean}
  */
-router.get('/x402/stats', (req, res) => {
-  // Timing-safe auth check via API key header
+function isAdminRequest(req) {
+  if (req.user && req.user.isAdmin) return true;
   const adminKey = String(req.headers['x-admin-key'] || '');
   const expected = process.env.ADMIN_API_KEY || '';
-  if (!expected || !safeCompare(adminKey, expected)) {
+  return expected.length > 0 && safeCompare(adminKey, expected);
+}
+
+/**
+ * GET /api/admin/x402/stats
+ * Get x402 payment statistics
+ * Protected by admin API key or admin JWT
+ */
+router.get('/x402/stats', authenticateToken, (req, res) => {
+  if (!isAdminRequest(req)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -235,13 +244,10 @@ router.get('/x402/stats', (req, res) => {
 /**
  * GET /api/admin/x402/webhooks
  * Get webhook configuration status and delivery statistics
- * Protected by admin API key
+ * Protected by admin API key or admin JWT
  */
-router.get('/x402/webhooks', (req, res) => {
-  // Timing-safe auth check via API key header
-  const adminKey = String(req.headers['x-admin-key'] || '');
-  const expected = process.env.ADMIN_API_KEY || '';
-  if (!expected || !safeCompare(adminKey, expected)) {
+router.get('/x402/webhooks', authenticateToken, (req, res) => {
+  if (!isAdminRequest(req)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -256,13 +262,10 @@ router.get('/x402/webhooks', (req, res) => {
 /**
  * POST /api/admin/x402/webhooks/test
  * Test webhook connectivity by sending a test event
- * Protected by admin API key
+ * Protected by admin API key or admin JWT
  */
-router.post('/x402/webhooks/test', async (req, res) => {
-  // Timing-safe auth check via API key header
-  const adminKey = String(req.headers['x-admin-key'] || '');
-  const expected = process.env.ADMIN_API_KEY || '';
-  if (!expected || !safeCompare(adminKey, expected)) {
+router.post('/x402/webhooks/test', authenticateToken, async (req, res) => {
+  if (!isAdminRequest(req)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
