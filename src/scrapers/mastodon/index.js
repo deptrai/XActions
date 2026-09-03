@@ -49,7 +49,9 @@ const DEFAULT_INSTANCE = 'https://mastodon.social';
  * @returns {MastodonClient}
  */
 export function createClient(options = {}) {
-  const instance = (options.instance || DEFAULT_INSTANCE).replace(/\/$/, '');
+  const rawInstance = options.instance || DEFAULT_INSTANCE;
+  const withScheme = /^https?:\/\//.test(rawInstance) ? rawInstance : `https://${rawInstance}`;
+  const instance = withScheme.replace(/\/$/, '');
   return {
     instance,
     accessToken: options.accessToken || null,
@@ -125,8 +127,11 @@ async function api(client, path, options = {}) {
  * @returns {Promise<Record<string, unknown>>}
  */
 async function lookupAccount(client, username) {
+  if (typeof username !== 'string' || !username.trim()) {
+    throw new TypeError('Mastodon scrape requires a username (e.g. "mastodon" or "user@instance.social")');
+  }
   // Strip leading @
-  const handle = username.replace(/^@/, '');
+  const handle = username.trim().replace(/^@/, '');
 
   // Try the v1 lookup endpoint first (Mastodon 3.4+)
   try {
@@ -166,6 +171,7 @@ async function lookupAccount(client, username) {
  * @returns {Promise<Record<string, unknown>>} Normalized profile data
  */
 export async function scrapeProfile(client, username) {
+  if (!username) throw new TypeError('Mastodon scrapeProfile requires a username');
   const account = await lookupAccount(client, username);
   const a = /** @type {Record<string, unknown>} */ (account);
 
@@ -205,6 +211,7 @@ export async function scrapeProfile(client, username) {
  * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeFollowers(client, username, options = {}) {
+  if (!username) throw new TypeError('Mastodon scrapeFollowers requires a username');
   const limit = options.limit ?? 100;
   const onProgress = options.onProgress;
 
@@ -262,6 +269,7 @@ export async function scrapeFollowers(client, username, options = {}) {
  * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeFollowing(client, username, options = {}) {
+  if (!username) throw new TypeError('Mastodon scrapeFollowing requires a username');
   const limit = options.limit ?? 100;
   const onProgress = options.onProgress;
 
@@ -319,6 +327,7 @@ export async function scrapeFollowing(client, username, options = {}) {
  * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeTweets(client, username, options = {}) {
+  if (!username) throw new TypeError('Mastodon scrapeTweets requires a username');
   const limit = options.limit ?? 50;
   const includeReplies = options.includeReplies ?? false;
   const onProgress = options.onProgress;
@@ -372,15 +381,16 @@ export async function scrapeTweets(client, username, options = {}) {
  * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function searchTweets(client, query, options = {}) {
+  if (!query) throw new TypeError('Mastodon searchTweets requires a query');
   const limit = options.limit ?? 50;
   const onProgress = options.onProgress;
 
-  // Use v2 search endpoint
+  // Use v2 search endpoint. Resolve requires auth; only enable with an access token.
   const qs = new URLSearchParams({
     q: query,
     type: 'statuses',
     limit: String(Math.min(40, limit)),
-    resolve: 'true',
+    resolve: client.accessToken ? 'true' : 'false',
   });
 
   const url = `${client.instance}/api/v2/search?${qs}`;
@@ -420,6 +430,7 @@ export async function searchTweets(client, query, options = {}) {
  * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function scrapeHashtag(client, hashtag, options = {}) {
+  if (!hashtag) throw new TypeError('Mastodon scrapeHashtag requires a hashtag');
   const limit = options.limit ?? 50;
   const onProgress = options.onProgress;
   const tag = hashtag.replace(/^#/, '');

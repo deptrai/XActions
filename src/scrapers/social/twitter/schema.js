@@ -1,0 +1,659 @@
+// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+/**
+ * Twitter/X GraphQL and REST schema for the hybrid crawler.
+ *
+ * This module is the canonical source of truth for GraphQL query/mutation IDs,
+ * feature flags, field toggles, variable builders, REST paths and rate limits
+ * used by `TwitterClient` and `TwitterCrawler` in `src/scrapers/social/twitter/`.
+ *
+ * It was extracted from `src/scrapers/twitter/http/endpoints.js` so the hybrid
+ * engine does not depend on legacy scraper internals. Legacy `endpoints.js` is
+ * kept for backward compatibility but is considered deprecated.
+ *
+ * @author nich (@nichxbt)
+ * @license Apache-2.0
+ */
+
+/**
+ * Parameters accepted by the GraphQL variable builders.
+ * @typedef {Record<string, unknown>} GraphQLVariablesParams
+ * @property {number} [count]
+ * @property {string} [cursor]
+ * @property {string} [username]
+ * @property {string} [userId]
+ * @property {string} [tweetId]
+ * @property {string} [focalTweetId]
+ * @property {string} [query]
+ * @property {string} [product]
+ * @property {string} [listId]
+ * @property {string[]} [seenTweetIds]
+ * @property {string} [text]
+ * @property {unknown[]} [mediaEntities]
+ */
+
+/**
+ * Options for validateEndpoints().
+ * @typedef {Object} ValidateOptions
+ * @property {string[]} [endpoints] - Specific endpoint keys to check
+ * @property {typeof globalThis.fetch} [fetch] - Custom fetch implementation
+ */
+
+// ---------------------------------------------------------------------------
+// Base URLs
+// ---------------------------------------------------------------------------
+
+export const GRAPHQL_BASE = 'https://x.com/i/api/graphql';
+export const REST_BASE = 'https://x.com/i/api';
+export const API_BASE = 'https://api.x.com';
+
+// ---------------------------------------------------------------------------
+// Bearer Token (public, embedded in Twitter's web client JS bundle)
+// Same token used by the-convocation/twitter-scraper and d60/twikit
+// ---------------------------------------------------------------------------
+
+export const BEARER_TOKEN =
+  'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
+
+// ---------------------------------------------------------------------------
+// GraphQL Query / Mutation IDs
+// ---------------------------------------------------------------------------
+// Cross-referenced from:
+//   - the-convocation/twitter-scraper src/api-data.ts (endpoints object)
+//   - d60/twikit twikit/client/gql.py (Endpoint class)
+// When both sources provide an ID, the more recent one is preferred.
+// Query IDs marked [twikit] or [scraper] indicate their primary source.
+
+/** @type {Record<string, {queryId: string, operationName: string}>} */
+export const GRAPHQL = {
+  // ---- Queries (user profiles) ----
+  UserByScreenName: { queryId: 'Gb-d6r0vxPOADdG62OEBpQ', operationName: 'UserByScreenName' },     // x.com bundle 2026-09
+  UserByRestId: { queryId: 'xvmVfRLmnr1alc5f2dib0Q', operationName: 'UserByRestId' },             // x.com bundle 2026-09
+
+  // ---- Queries (user timelines) ----
+  UserTweets: { queryId: 'SXVCYB8XHSS25nzIljNtZA', operationName: 'UserTweets' },                 // x.com bundle 2026-09
+  UserTweetsAndReplies: { queryId: 'qUpkZU6eN8MbtQb7rC_pYg', operationName: 'UserTweetsAndReplies' }, // x.com bundle 2026-09
+  UserMedia: { queryId: 'VyudDWQnr9vJNw7GasFz2g', operationName: 'UserMedia' },                    // x.com bundle 2026-09
+  UserLikes: { queryId: 'xA8fDIbrJfy4ojjjXmSR-A', operationName: 'Likes' },                       // twikit fallback
+
+  // ---- Queries (tweets) ----
+  TweetDetail: { queryId: 'XMOz5h24KAZ86qKffKTLdQ', operationName: 'TweetDetail' },               // x.com bundle 2026-09
+  TweetResultByRestId: { queryId: 'GZsN2Pc4knAoit6pXa4HSA', operationName: 'TweetResultByRestId' }, // x.com bundle 2026-09
+
+  // ---- Queries (search) ----
+  SearchTimeline: { queryId: 'hyPfJYJ_XAtDYoslQc-Rgg', operationName: 'SearchTimeline' },         // x.com bundle 2026-09
+
+  // ---- Queries (relationships) ----
+  Followers: { queryId: 'JNyQdTISpzCkj_1fqxDvFg', operationName: 'Followers' },                    // x.com bundle 2026-09
+  Following: { queryId: 'qGZZDF3mp91q7X22s3HxpA', operationName: 'Following' },                   // x.com bundle 2026-09
+
+  // ---- Queries (engagement) ----
+  Likes: { queryId: 'LLkw5EcVutJL6y-2gkz22A', operationName: 'Favoriters' },                      // twikit fallback
+  Retweeters: { queryId: 'X-XEqG5qHQSAwmvy00xfyQ', operationName: 'Retweeters' },                 // twikit fallback
+
+  // ---- Queries (lists) ----
+  ListMembers: { queryId: 'BQp2IEYkgxuSxqbTAr1e1g', operationName: 'ListMembers' },               // twikit fallback
+  ListTimeline: { queryId: 'HjsWc-nwwHKYwHenbHm-tw', operationName: 'ListLatestTweetsTimeline' }, // twikit fallback
+
+  // ---- Queries (bookmarks, auth required) ----
+  BookmarkTimeline: { queryId: 'qToeLeMs43Q8cr7tRYXmaQ', operationName: 'Bookmarks' },            // twikit fallback
+
+  // ---- Queries (timelines) ----
+  HomeTimeline: { queryId: '-X_hcgQzmHGl29-UXxz4sw', operationName: 'HomeTimeline' },             // twikit fallback
+  HomeLatestTimeline: { queryId: 'U0cdisy7QFIoTfu3-Okw0A', operationName: 'HomeLatestTimeline' }, // twikit fallback
+
+  // ---- Mutations (tweets) ----
+  CreateTweet: { queryId: 'WXTdKnLddrQOunD6MhWi3g', operationName: 'CreateTweet' },               // x.com bundle 2026-09
+  CreateScheduledTweet: { queryId: 'LCVzRQGxOaGnOnYH01NQXg', operationName: 'CreateScheduledTweet' }, // twikit fallback
+  DeleteTweet: { queryId: 'nxpZCY2K-I6QoFHAHeojFQ', operationName: 'DeleteTweet' },               // x.com bundle 2026-09
+
+  // ---- Mutations (engagement) ----
+  FavoriteTweet: { queryId: 'lI07N6Otwv1PhnEgXILM7A', operationName: 'FavoriteTweet' },           // x.com bundle 2026-09
+  UnfavoriteTweet: { queryId: 'ZYKSe-w7KEslx3JhSIk5LA', operationName: 'UnfavoriteTweet' },       // x.com bundle 2026-09
+  CreateRetweet: { queryId: 'mbRO74GrOvSfRcJnlMapnQ', operationName: 'CreateRetweet' },           // x.com bundle 2026-09
+  DeleteRetweet: { queryId: 'ZyZigVsNiFO6v1dEks1eWg', operationName: 'DeleteRetweet' },           // x.com bundle 2026-09
+
+  // ---- Mutations (bookmarks) ----
+  CreateBookmark: { queryId: 'aoDbu3RHznuiSkQ9aNM67Q', operationName: 'CreateBookmark' },         // x.com bundle 2026-09
+  DeleteBookmark: { queryId: 'Wlmlj2-xzyS1GN3a6cj-mQ', operationName: 'DeleteBookmark' },         // x.com bundle 2026-09
+};
+
+// ---------------------------------------------------------------------------
+// REST Endpoints (v1.1 / v2)
+// Source: d60/twikit twikit/client/v11.py
+// ---------------------------------------------------------------------------
+
+/** @type {Record<string, string>} */
+export const REST = {
+  // Follow / Unfollow (FollowUser / UnfollowUser)
+  friendshipsCreate: '/1.1/friendships/create.json',
+  friendshipsDestroy: '/1.1/friendships/destroy.json',
+
+  // Block / Unblock (BlockUser / UnblockUser)
+  blocksCreate: '/1.1/blocks/create.json',
+  blocksDestroy: '/1.1/blocks/destroy.json',
+
+  // Mute / Unmute (MuteUser / UnmuteUser)
+  mutesCreate: '/1.1/mutes/users/create.json',
+  mutesDestroy: '/1.1/mutes/users/destroy.json',
+
+  // Pin / Unpin
+  pinTweet: '/1.1/account/pin_tweet.json',
+  unpinTweet: '/1.1/account/unpin_tweet.json',
+
+  // Guest token
+  guestActivate: '/1.1/guest/activate.json',
+
+  // Account
+  verifyCredentials: '/1.1/account/verify_credentials.json',
+
+  // Direct Messages (SendDM)
+  dmNew: '/1.1/dm/new2.json',
+  dmDestroy: '/1.1/direct_messages/events/destroy.json',
+  dmInbox: '/1.1/dm/inbox_initial_state.json',
+  dmConversation: '/1.1/dm/conversation',
+  dmMarkRead: '/1.1/dm/conversation',
+
+  // Notifications
+  notificationsAll: '/2/notifications/all.json',
+  notificationsVerified: '/2/notifications/verified.json',
+  notificationsMentions: '/2/notifications/mentions.json',
+
+  // Trending / Explore (ExploreTrending)
+  guide: '/2/guide.json',
+  trendsAvailable: '/1.1/trends/available.json',
+  trendsPlace: '/1.1/trends/place.json',
+
+  // Lists Management
+  listsCreate: '/1.1/lists/create.json',
+  listsMembersCreateAll: '/1.1/lists/members/create_all.json',
+  listsMembersDestroyAll: '/1.1/lists/members/destroy_all.json',
+};
+
+// ---------------------------------------------------------------------------
+// Default GraphQL Feature Flags
+// Merged from the-convocation/twitter-scraper api-data.ts and d60/twikit constants.py
+// These flags are sent with nearly every GraphQL request by the Twitter web client.
+// ---------------------------------------------------------------------------
+
+/** @type {Record<string, boolean>} */
+export const DEFAULT_FEATURES = {
+  rweb_video_screen_enabled: false,
+  profile_label_improvements_pcf_label_in_post_enabled: true,
+  rweb_tipjar_consumption_enabled: false,
+  responsive_web_graphql_exclude_directive_enabled: true,
+  verified_phone_label_enabled: false,
+  creator_subscriptions_tweet_preview_api_enabled: true,
+  responsive_web_graphql_timeline_navigation_enabled: true,
+  responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+  premium_content_api_read_enabled: false,
+  communities_web_enable_tweet_community_results_fetch: true,
+  c9s_tweet_anatomy_moderator_badge_enabled: true,
+  responsive_web_grok_analyze_button_fetch_trends_enabled: false,
+  responsive_web_grok_analyze_post_followups_enabled: true,
+  responsive_web_jetfuel_frame: true,
+  responsive_web_grok_share_attachment_enabled: true,
+  responsive_web_grok_annotations_enabled: true,
+  articles_preview_enabled: true,
+  responsive_web_edit_tweet_api_enabled: true,
+  graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
+  view_counts_everywhere_api_enabled: true,
+  longform_notetweets_consumption_enabled: true,
+  responsive_web_twitter_article_tweet_consumption_enabled: true,
+  tweet_awards_web_tipping_enabled: false,
+  responsive_web_grok_show_grok_translated_post: true,
+  responsive_web_grok_analysis_button_from_backend: true,
+  post_ctas_fetch_enabled: true,
+  freedom_of_speech_not_reach_fetch_enabled: true,
+  standardized_nudges_misinfo: true,
+  tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
+  longform_notetweets_rich_text_read_enabled: true,
+  longform_notetweets_inline_media_enabled: true,
+  responsive_web_grok_image_annotation_enabled: true,
+  responsive_web_grok_imagine_annotation_enabled: true,
+  responsive_web_grok_community_note_auto_translation_is_enabled: false,
+  responsive_web_enhance_cards_enabled: false,
+  responsive_web_profile_redirect_enabled: false,
+};
+
+/** @type {Record<string, boolean>} */
+export const DEFAULT_FIELD_TOGGLES = {
+  withArticleRichContentState: true,
+  withArticlePlainText: false,
+  withGrokAnalyze: false,
+  withDisallowedReplyControls: false,
+};
+
+// ---------------------------------------------------------------------------
+// User Feature Flags (for UserByScreenName / UserByRestId queries)
+// Source: d60/twikit constants.py USER_FEATURES
+// ---------------------------------------------------------------------------
+
+/** @type {Record<string, boolean>} */
+export const USER_FEATURES = {
+  hidden_profile_likes_enabled: true,
+  hidden_profile_subscriptions_enabled: true,
+  responsive_web_graphql_exclude_directive_enabled: true,
+  verified_phone_label_enabled: false,
+  subscriptions_verification_info_is_identity_verified_enabled: true,
+  subscriptions_verification_info_verified_since_enabled: true,
+  highlights_tweets_tab_ui_enabled: true,
+  responsive_web_twitter_article_notes_tab_enabled: false,
+  creator_subscriptions_tweet_preview_api_enabled: true,
+  responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+  responsive_web_graphql_timeline_navigation_enabled: true,
+};
+
+// ---------------------------------------------------------------------------
+// Rate Limit Constants (requests per 15-minute window)
+// Conservative estimates based on observed Twitter behavior.
+// ---------------------------------------------------------------------------
+
+/** @type {Record<string, number>} */
+export const RATE_LIMITS = {
+  // Queries
+  UserByScreenName: 95,
+  UserByRestId: 95,
+  UserTweets: 50,
+  UserTweetsAndReplies: 50,
+  UserMedia: 50,
+  UserLikes: 75,
+  TweetDetail: 150,
+  TweetResultByRestId: 150,
+  SearchTimeline: 50,
+  Followers: 50,
+  Following: 50,
+  Likes: 75,
+  Retweeters: 75,
+  ListMembers: 75,
+  ListTimeline: 50,
+  BookmarkTimeline: 75,
+  HomeTimeline: 150,
+  HomeLatestTimeline: 150,
+
+  // Mutations
+  FavoriteTweet: 500,
+  UnfavoriteTweet: 500,
+  CreateRetweet: 300,
+  DeleteRetweet: 300,
+  CreateTweet: 300,
+  DeleteTweet: 300,
+  CreateBookmark: 500,
+  DeleteBookmark: 500,
+
+  // REST endpoints
+  friendshipsCreate: 400,
+  friendshipsDestroy: 400,
+  blocksCreate: 200,
+  blocksDestroy: 200,
+  mutesCreate: 200,
+  mutesDestroy: 200,
+  pinTweet: 100,
+  unpinTweet: 100,
+  dmNew: 200,
+  notificationsAll: 180,
+  guide: 75,
+
+  // Fallback
+  DEFAULT: 180,
+};
+
+// ---------------------------------------------------------------------------
+// User Agent Strings (realistic Chrome 131–133 on Windows/Mac/Linux, Feb 2026)
+// ---------------------------------------------------------------------------
+
+/** @type {string[]} */
+export const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+];
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a full GraphQL GET URL with encoded query params.
+ *
+ * @param {string} queryId
+ * @param {string} operationName
+ * @param {Record<string, unknown>} variables
+ * @param {Record<string, boolean>} [features]
+ * @param {Record<string, unknown>} [fieldToggles]
+ * @returns {string}
+ */
+export function buildGraphQLUrl(queryId, operationName, variables, features = DEFAULT_FEATURES, fieldToggles) {
+  const params = new URLSearchParams();
+  params.set('variables', JSON.stringify(variables ?? {}));
+  params.set('features', JSON.stringify(features ?? DEFAULT_FEATURES));
+  if (fieldToggles) {
+    params.set('fieldToggles', JSON.stringify(fieldToggles));
+  }
+  return `${GRAPHQL_BASE}/${queryId}/${operationName}?${params.toString()}`;
+}
+
+/**
+ * Build the variables object for common GraphQL query types.
+ *
+ * @param {string} type
+ * @param {GraphQLVariablesParams} [params={}]
+ * @returns {Record<string, unknown>}
+ */
+export function buildGraphQLVariables(type, params = {}) {
+  const safeParams = params ?? {};
+  const count = safeParams.count ?? 20;
+  const cursor = safeParams.cursor;
+
+  switch (type) {
+    // ---- User profiles ----
+    case 'UserByScreenName':
+      return {
+        screen_name: safeParams.username,
+        withSafetyModeUserFields: false,
+      };
+
+    case 'UserByRestId':
+      return {
+        userId: safeParams.userId,
+        withSafetyModeUserFields: true,
+      };
+
+    // ---- User timelines ----
+    case 'UserTweets': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        userId: safeParams.userId,
+        count,
+        includePromotedContent: true,
+        withQuickPromoteEligibilityTweetFields: true,
+        withVoice: true,
+        withV2Timeline: true,
+      });
+      if (cursor) v.cursor = cursor;
+      return v;
+    }
+
+    case 'UserTweetsAndReplies': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        userId: safeParams.userId,
+        count,
+        includePromotedContent: true,
+        withCommunity: true,
+        withVoice: true,
+        withV2Timeline: true,
+      });
+      if (cursor) v.cursor = cursor;
+      return v;
+    }
+
+    case 'UserMedia': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        userId: safeParams.userId,
+        count,
+        includePromotedContent: false,
+        withClientEventToken: false,
+        withBirdwatchNotes: false,
+        withVoice: true,
+        withV2Timeline: true,
+      });
+      if (cursor) v.cursor = cursor;
+      return v;
+    }
+
+    case 'UserLikes': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        userId: safeParams.userId,
+        count,
+        includePromotedContent: false,
+        withClientEventToken: false,
+        withBirdwatchNotes: false,
+        withVoice: true,
+        withV2Timeline: true,
+      });
+      if (cursor) v.cursor = cursor;
+      return v;
+    }
+
+    // ---- Tweets ----
+    case 'TweetDetail': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        focalTweetId: safeParams.tweetId,
+        with_rux_injections: false,
+        rankingMode: 'Relevance',
+        includePromotedContent: true,
+        withCommunity: true,
+        withQuickPromoteEligibilityTweetFields: true,
+        withBirdwatchNotes: true,
+        withVoice: true,
+        withV2Timeline: true,
+      });
+      if (cursor) v.cursor = cursor;
+      return v;
+    }
+
+    case 'TweetResultByRestId':
+      return {
+        tweetId: safeParams.tweetId,
+        includePromotedContent: true,
+        withBirdwatchNotes: true,
+        withVoice: true,
+        withCommunity: true,
+      };
+
+    // ---- Search ----
+    case 'SearchTimeline': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        rawQuery: safeParams.query,
+        count,
+        querySource: 'typed_query',
+        product: safeParams.product ?? 'Top',
+      });
+      if (cursor) v.cursor = cursor;
+      return v;
+    }
+
+    // ---- Relationships ----
+    case 'Followers':
+    case 'Following': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        userId: safeParams.userId,
+        count,
+        includePromotedContent: false,
+      });
+      if (cursor) v.cursor = cursor;
+      return v;
+    }
+
+    // ---- Engagement queries ----
+    case 'Likes':
+    case 'Retweeters': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        tweetId: safeParams.tweetId,
+        count,
+        includePromotedContent: true,
+      });
+      if (cursor) v.cursor = cursor;
+      return v;
+    }
+
+    // ---- Lists ----
+    case 'ListMembers': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        listId: safeParams.listId,
+        count,
+      });
+      if (cursor) v.cursor = cursor;
+      return v;
+    }
+
+    case 'ListTimeline': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        listId: safeParams.listId,
+        count,
+      });
+      if (cursor) v.cursor = cursor;
+      return v;
+    }
+
+    // ---- Bookmarks ----
+    case 'BookmarkTimeline': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        count,
+      });
+      if (cursor) v.cursor = cursor;
+      return v;
+    }
+
+    // ---- Home ----
+    case 'HomeTimeline':
+    case 'HomeLatestTimeline': {
+      const v = /** @type {Record<string, unknown>} */ ({
+        count,
+        includePromotedContent: true,
+        latestControlAvailable: true,
+        requestContext: 'launch',
+        withCommunity: true,
+      });
+      if (cursor) v.cursor = cursor;
+      if (safeParams.seenTweetIds) v.seenTweetIds = safeParams.seenTweetIds;
+      return v;
+    }
+
+    // ---- Mutations (tweets) ----
+    case 'CreateTweet':
+      return {
+        tweet_text: safeParams.text ?? '',
+        dark_request: false,
+        media: {
+          media_entities: safeParams.mediaEntities ?? [],
+          possibly_sensitive: false,
+        },
+        semantic_annotation_ids: [],
+      };
+
+    case 'CreateScheduledTweet':
+      return {
+        tweet_text: safeParams.text ?? '',
+        execute_at: safeParams.executeAt ?? null,
+        dark_request: false,
+        media: {
+          media_entities: safeParams.mediaEntities ?? [],
+          possibly_sensitive: false,
+        },
+        semantic_annotation_ids: [],
+      };
+
+    case 'DeleteTweet':
+      return {
+        tweet_id: safeParams.tweetId,
+        dark_request: false,
+      };
+
+    // ---- Mutations (engagement) ----
+    case 'FavoriteTweet':
+    case 'UnfavoriteTweet':
+      return { tweet_id: safeParams.tweetId };
+
+    case 'CreateRetweet':
+      return { tweet_id: safeParams.tweetId, dark_request: false };
+
+    case 'DeleteRetweet':
+      return { source_tweet_id: safeParams.tweetId, dark_request: false };
+
+    // ---- Mutations (bookmarks) ----
+    case 'CreateBookmark':
+    case 'DeleteBookmark':
+      return { tweet_id: safeParams.tweetId };
+
+    default:
+      return params;
+  }
+}
+
+/**
+ * Validate that GraphQL endpoint query IDs are still active.
+ * Makes a lightweight OPTIONS/HEAD probe to confirm the endpoint returns
+ * a recognizable response (not 404). Requires a valid auth cookie or guest token.
+ *
+ * @param {ValidateOptions} [options={}]
+ * @returns {Promise<{valid: string[], invalid: string[], errors: Record<string, string>}>}
+ */
+export async function validateEndpoints(options = {}) {
+  const safeOptions = options ?? {};
+  const fetchFn = safeOptions.fetch ?? globalThis.fetch;
+  const endpointKeys = safeOptions.endpoints ?? Object.keys(GRAPHQL);
+  const results = {
+    valid: /** @type {string[]} */ ([]),
+    invalid: /** @type {string[]} */ ([]),
+    errors: /** @type {Record<string, string>} */ ({}),
+  };
+
+  for (const key of endpointKeys) {
+    if (!Object.prototype.hasOwnProperty.call(GRAPHQL, key)) {
+      results.invalid.push(key);
+      results.errors[key] = 'Unknown endpoint key';
+      continue;
+    }
+
+    const endpoint = GRAPHQL[key];
+    const url = `${GRAPHQL_BASE}/${endpoint.queryId}/${endpoint.operationName}`;
+
+    try {
+      const res = await fetchFn(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${BEARER_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      // 200, 400 (missing params), or 403 (auth required) all mean the endpoint exists.
+      // Only 404 means the query ID is stale.
+      // 5xx and 429 are treated as transient/unhealthy, not valid.
+      if (res.status === 404) {
+        results.invalid.push(key);
+        results.errors[key] = 'HTTP 404 - query ID likely stale';
+      } else if (res.status >= 500 || res.status === 429) {
+        results.invalid.push(key);
+        results.errors[key] = `HTTP ${res.status} - transient or rate-limited`;
+      } else {
+        results.valid.push(key);
+      }
+    } catch (err) {
+      const error = /** @type {Error} */ (err);
+      results.invalid.push(key);
+      results.errors[key] = error?.message ?? String(error ?? 'unknown error');
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Convenience map of query ID strings used by the hybrid crawler.
+ * Exported to minimize churn in `crawler.js` while transitioning away from
+ * hard-coded constants.
+ *
+ * @deprecated Use `GRAPHQL.<Endpoint>.queryId` directly for new code.
+ * @type {Record<string, string>}
+ */
+export const TWITTER_GRAPHQL_QUERY_IDS = {
+  TweetDetail: GRAPHQL.TweetDetail.queryId,
+  Favoriters: GRAPHQL.Likes.queryId,
+  Bookmarks: GRAPHQL.BookmarkTimeline.queryId,
+  UserByScreenName: GRAPHQL.UserByScreenName.queryId,
+  UserByRestId: GRAPHQL.UserByRestId.queryId,
+  UserMedia: GRAPHQL.UserMedia.queryId,
+  TweetResultByRestId: GRAPHQL.TweetResultByRestId.queryId,
+  Followers: GRAPHQL.Followers.queryId,
+  Following: GRAPHQL.Following.queryId,
+  Retweeters: GRAPHQL.Retweeters.queryId,
+  ListMembers: GRAPHQL.ListMembers.queryId,
+  CommunityMembers: 'TBD_COMMUNITY_MEMBERS',
+  SearchSpaces: 'TBD_SEARCH_SPACES',
+  SearchTimeline: GRAPHQL.SearchTimeline.queryId,
+  UserTweets: GRAPHQL.UserTweets.queryId,
+};

@@ -27,14 +27,14 @@
  *
  * When something is stale, follow "Query not found" in
  * docs/troubleshooting.md to find the replacement ID, then update
- * src/scrapers/twitter/http/endpoints.js — the single place query IDs live.
+ * src/scrapers/social/twitter/schema.js — the canonical source of query IDs.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app
  * @license Apache-2.0
  */
 
-import { GRAPHQL, BEARER_TOKEN, GRAPHQL_BASE } from '../src/scrapers/twitter/http/endpoints.js';
+import { GRAPHQL, BEARER_TOKEN, GRAPHQL_BASE } from '../src/scrapers/social/twitter/schema.js';
 import { randomUserAgent } from '../src/client/auth/userAgent.js';
 
 const asJson = process.argv.includes('--json');

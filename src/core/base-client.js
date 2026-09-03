@@ -272,6 +272,7 @@ export class AbstractApiClient {
           headers: headers || {},
           timeout: { request: timeout === undefined ? 30000 : timeout },
           throwHttpErrors: false,
+          http2: false,
         };
         if (raw) {
           options.responseType = 'buffer';
@@ -620,7 +621,7 @@ export class AbstractApiClient {
           });
         }
 
-        const proxy = provider || opts.requiresResidential
+        const proxy = (this.requiresProxy || opts.requiresResidential)
           ? this.resolveProxy(concreteAccountId, opts.requiresResidential, effectiveRequiresAuth, { pool: pool || undefined, consumerId: consumerId || undefined })
           : null;
 

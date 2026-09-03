@@ -9,7 +9,7 @@
 
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { TwitterPlatformResponseValidator } from './validator.js';
-import { BEARER_TOKEN, GRAPHQL, REST, REST_BASE, DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES } from '../../twitter/http/endpoints.js';
+import { BEARER_TOKEN, GRAPHQL, REST, REST_BASE, DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES } from './schema.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
 /**
@@ -242,7 +242,50 @@ export class TwitterClient extends AbstractApiClient {
       this.updateCookies(parseCookies(session.cookies));
     } else if (this.guestToken) {
       this.updateCookies({ gt: this.guestToken });
+    } else if (!this.requiresAuth) {
+      await this.#ensureGuestToken();
     }
+  }
+
+  /**
+   * Lazily acquire a guest token for unauthenticated requests.
+   *
+   * Twitter retired the `POST /1.1/guest/activate.json` endpoint for guest
+   * token activation. As of 2026-09, `gt` is set via a `Set-Cookie` header
+   * on any public x.com HTML page (e.g. `/nasa`). We fetch a lightweight
+   * logged-out page and extract the token from cookies.
+   *
+   * @returns {Promise<string | null>}
+   */
+  async #ensureGuestToken() {
+    if (this.guestToken) return this.guestToken;
+    try {
+      const { fetch: undiciFetch } = await import('undici');
+      const res = await undiciFetch('https://x.com/nasa', {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        },
+        redirect: 'manual',
+      });
+
+      const rawCookies =
+        typeof res.headers.getSetCookie === 'function'
+          ? res.headers.getSetCookie()
+          : (res.headers.get('set-cookie') || '').split(',').map((c) => c.trim());
+
+      for (const cookie of rawCookies) {
+        const m = cookie.match(/^gt=([^;]+)/);
+        if (m?.[1]) {
+          this.guestToken = m[1];
+          this.updateCookies({ gt: this.guestToken });
+          break;
+        }
+      }
+    } catch {
+      // Guest token acquisition is best-effort; callers surface upstream errors otherwise.
+    }
+    return this.guestToken;
   }
 
   /**
@@ -268,6 +311,11 @@ export class TwitterClient extends AbstractApiClient {
     if (!headers['x-twitter-client-language']) headers['x-twitter-client-language'] = 'en';
 
     const cookieRecord = { ...this.cookies };
+    const isLocal = isLocalUrl(url);
+    const effectiveAuth = opts.requiresAuth !== undefined ? opts.requiresAuth : this.requiresAuth;
+    if (!effectiveAuth && !isLocal && !this.guestToken) {
+      await this.#ensureGuestToken();
+    }
     if (this.guestToken && !cookieRecord.gt) {
       cookieRecord.gt = this.guestToken;
     }
@@ -277,6 +325,9 @@ export class TwitterClient extends AbstractApiClient {
       headers['cookie'] = cookieHeader;
       const csrf = extractCsrfToken(cookieRecord);
       if (csrf && !headers['x-csrf-token']) headers['x-csrf-token'] = csrf;
+    }
+    if (this.guestToken && !headers['x-guest-token']) {
+      headers['x-guest-token'] = this.guestToken;
     }
 
     return super.request(method, url, { ...opts, headers });
@@ -365,7 +416,9 @@ export class TwitterClient extends AbstractApiClient {
 
     const isAuth = actualOptions.requiresAuth !== undefined ? actualOptions.requiresAuth : this.requiresAuth;
     const accountId = isAuth ? (actualOptions.accountId || null) : null;
-    const method = actualOptions.method || 'POST';
+    // Guest requests must use GET with query-string parameters; POST is rejected
+    // by X/Twitter as of 2026-09. Auth/mutation requests still use POST.
+    const method = actualOptions.method || (isAuth ? 'POST' : 'GET');
 
     const transactionId = isAuth ? await this.#signTransactionId({ url: `${this.baseUrl}/i/api/graphql/${queryId}/${operationName}`, method }) : null;
 
@@ -398,6 +451,23 @@ export class TwitterClient extends AbstractApiClient {
       requiresAuth: isAuth,
       headers,
       body,
+    }).catch(async (err) => {
+      // Stale GraphQL query IDs return 404 — re-resolve from live bundles once.
+      const is404 = err?.statusCode === 404 || err?.status === 404;
+      if (!is404 || !/\/i\/api\/graphql\//.test(url)) throw err;
+      const opMatch = url.match(/\/i\/api\/graphql\/[A-Za-z0-9_-]+\/([A-Za-z0-9_]+)/);
+      if (!opMatch) throw err;
+      const { resolveQueryId } = await import('../../twitter/http/query-id-resolver.js');
+      const freshId = await resolveQueryId(opMatch[1], queryId);
+      if (!freshId || freshId === queryId) throw err;
+      const retryUrl = url.replace(/\/i\/api\/graphql\/[A-Za-z0-9_-]+\//, `/i/api/graphql/${freshId}/`);
+      return this.request(method, retryUrl, {
+        ...actualOptions,
+        accountId: accountId || undefined,
+        requiresAuth: isAuth,
+        headers,
+        body,
+      });
     }));
 
     // Unwrap base-client envelope if present

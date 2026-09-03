@@ -309,10 +309,12 @@ describe('Story 13.2.4 — Twitter Hybrid Media Scraper', () => {
         }
 
         if (req.url?.startsWith('/i/api/graphql/')) {
-          const pathParts = req.url.split('/');
+          const urlObj = new URL(req.url, serverUrl);
+          const pathParts = urlObj.pathname.split('/');
           const operationName = pathParts[pathParts.length - 1];
-          const params = new URLSearchParams(body);
-          const rawVars = params.get('variables') || '{}';
+          const queryParams = new URLSearchParams(urlObj.search);
+          const bodyParams = body ? new URLSearchParams(body) : new URLSearchParams();
+          const rawVars = bodyParams.get('variables') || queryParams.get('variables') || '{}';
           let variables = {};
           try {
             variables = JSON.parse(rawVars);
@@ -324,7 +326,7 @@ describe('Story 13.2.4 — Twitter Hybrid Media Scraper', () => {
             return;
           }
 
-          if (operationName === 'UserMedia') {
+          if (operationName === 'UserTweets' || operationName === 'UserMedia') {
             const entries = [photoEntry('1001'), videoEntry('1002'), gifEntry('1003'), cursorEntry('cursor_media_next')];
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({
@@ -508,7 +510,8 @@ describe('Story 13.2.4 — Twitter Hybrid Media Scraper', () => {
     const lastGraphqlReq = receivedRequests
       .filter((r) => r.url?.startsWith('/i/api/graphql/'))
       .pop();
-    const params = new URLSearchParams(lastGraphqlReq.body);
+    const url = new URL(lastGraphqlReq.url, serverUrl);
+    const params = lastGraphqlReq.body ? new URLSearchParams(lastGraphqlReq.body) : new URLSearchParams(url.search);
     const variables = JSON.parse(params.get('variables') || '{}');
     expect(variables.tweetId).toBe('1001');
     expect(variables.includePromotedContent).toBe(false);

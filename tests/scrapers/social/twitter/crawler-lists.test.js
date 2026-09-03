@@ -55,7 +55,7 @@ describe('Story 13.2.11 — Twitter Hybrid List Management', () => {
         });
 
         // UserByScreenName
-        if (url.pathname.includes('/NimuplG1OB7Fd2btCLdBOw/UserByScreenName')) {
+        if (url.pathname.includes('/Gb-d6r0vxPOADdG62OEBpQ/UserByScreenName')) {
           res.writeHead(200, { 'content-type': 'application/json' });
           res.end(JSON.stringify({
             data: {

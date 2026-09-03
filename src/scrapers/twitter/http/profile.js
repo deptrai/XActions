@@ -11,6 +11,7 @@
  */
 
 import { GRAPHQL } from './endpoints.js';
+import { extractUserCoreFields } from './user-helpers.js';
 
 /** @typedef {import('./types.js').Raw} Raw */
 import { NotFoundError, AuthError, TwitterApiError } from './errors.js';
@@ -41,19 +42,6 @@ function expandTcoUrls(text, urlEntities = []) {
 }
 
 /**
- * Upgrade the avatar thumbnail URL to a higher-resolution version.
- *
- * Twitter serves `_normal` (48 × 48) by default - swap to `_400x400`.
- *
- * @param {string|null} url
- * @returns {string|null}
- */
-function upgradeAvatarUrl(url) {
-  if (!url) return null;
-  return url.replace(/_normal(\.\w+)$/, '_400x400$1');
-}
-
-/**
  * Parse Twitter's `created_at` string ("Mon Jan 01 00:00:00 +0000 2007")
  * into an ISO-8601 date string.
  *
@@ -64,53 +52,6 @@ function toISODate(raw) {
   if (!raw) return null;
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? raw : d.toISOString();
-}
-
-/**
- * Safely extract the expanded website URL from legacy entity data.
- *
- * @param {Raw} legacy - The `legacy` object from a User result.
- * @returns {string|null}
- */
-function extractWebsite(legacy) {
-  const urlEntities = /** @type {Raw} */ (/** @type {unknown} */ (legacy?.entities?.url))?.urls;
-  if (!urlEntities || !urlEntities.length) return typeof legacy?.url === 'string' ? legacy.url : null;
-  // Prefer the expanded URL (resolves the t.co redirect)
-  const expanded = urlEntities[0].expanded_url || urlEntities[0].url || legacy.url;
-  return typeof expanded === 'string' ? expanded : null;
-}
-
-/**
- * Extract bio entity metadata (URLs, hashtags, mentions).
- *
- * @param {Raw} legacy
- * @returns {Raw}
- */
-function extractBioEntities(legacy) {
-  const desc = /** @type {Raw} */ (/** @type {unknown} */ (legacy?.entities?.description || {}));
-  return /** @type {Raw} */ ({
-    urls: /** @type {Raw[]} */ ((desc.urls || []).map((u) => ({
-      display: u.display_url,
-      expanded: u.expanded_url,
-      url: u.url,
-      start: u.indices?.[0] ?? null,
-      end: u.indices?.[1] ?? null,
-    }))),
-    hashtags: /** @type {Raw[]} */ ((desc.hashtags || [])
-      .filter((h) => typeof h === 'object' && h !== null)
-      .map((h) => ({
-        text: h.text,
-        start: h.indices?.[0] ?? null,
-        end: h.indices?.[1] ?? null,
-      }))),
-    mentions: /** @type {Raw[]} */ ((desc.user_mentions || [])
-      .filter((m) => typeof m === 'object' && m !== null)
-      .map((m) => ({
-        username: m.screen_name,
-        start: m.indices?.[0] ?? null,
-        end: m.indices?.[1] ?? null,
-      }))),
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -139,31 +80,28 @@ export function parseUserData(rawUser) {
     throw new NotFoundError(`User unavailable: ${reason}`);
   }
 
-  const legacy = rawUser.legacy || {};
-  const descriptionUrls = /** @type {Raw} */ (/** @type {unknown} */ (legacy.entities?.description))?.urls || [];
+  const core = extractUserCoreFields(rawUser);
 
   return {
-    id: rawUser.rest_id || null,
-    name: legacy.name || '',
-    username: legacy.screen_name || '',
-    bio: expandTcoUrls(typeof legacy.description === 'string' ? legacy.description : '', descriptionUrls),
-    location: legacy.location || '',
-    website: extractWebsite(legacy),
-    joined: toISODate(legacy.created_at || null),
-    birthday: legacy.birthdate
-      ? `${legacy.birthdate.year || ''}${legacy.birthdate.month ? '-' + String(legacy.birthdate.month).padStart(2, '0') : ''}${legacy.birthdate.day ? '-' + String(legacy.birthdate.day).padStart(2, '0') : ''}`.trim() || null
-      : null,
-    following: legacy.friends_count ?? 0,
-    followers: legacy.followers_count ?? 0,
-    tweets: legacy.statuses_count ?? 0,
-    likes: legacy.favourites_count ?? 0,
-    media: legacy.media_count ?? 0,
-    avatar: upgradeAvatarUrl(legacy.profile_image_url_https || null),
-    header: legacy.profile_banner_url || null,
-    verified: Boolean(rawUser.is_blue_verified || legacy.verified),
-    protected: Boolean(legacy.protected),
-    pinnedTweetId: (legacy.pinned_tweet_ids_str || [])[0] || null,
-    bioEntities: extractBioEntities(legacy),
+    id: core.restId,
+    name: core.name,
+    username: core.username,
+    bio: core.bio || '',
+    location: core.location || '',
+    website: core.website,
+    joined: core.joined,
+    birthday: core.birthday,
+    following: core.following,
+    followers: core.followers,
+    tweets: core.tweets,
+    likes: core.likes,
+    media: core.media,
+    avatar: core.avatar,
+    header: core.header,
+    verified: core.verified,
+    protected: core.protected,
+    pinnedTweetId: core.pinnedTweetId,
+    bioEntities: core.bioEntities,
     platform: 'twitter',
   };
 }

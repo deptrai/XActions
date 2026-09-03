@@ -129,7 +129,7 @@ describe('Story 13.2.2 — Twitter Hybrid Thread, Likes & Bookmarks', () => {
       req.on('end', () => {
         const url = req.url || '';
 
-        // TweetDetail endpoint (queryId: U0HTv-bAWTBYylwEMT7x5A)
+        // TweetDetail endpoint (queryId: XMOz5h24KAZ86qKffKTLdQ)
         if (url.includes('/TweetDetail') || url.includes(TWITTER_GRAPHQL_QUERY_IDS.TweetDetail)) {
           const parsedUrl = new URL(url, 'http://127.0.0.1');
           const variables = JSON.parse(parsedUrl.searchParams.get('variables') || '{}');
@@ -358,6 +358,10 @@ describe('Story 13.2.2 — Twitter Hybrid Thread, Likes & Bookmarks', () => {
       const result = await crawler.start({
         action: 'thread',
         args: { tweetId: '1001' },
+        session: {
+          accountId: 'acc_tw_1',
+          cookies: 'auth_token=tok_secret_123; ct0=csrf_sec_456;',
+        },
       });
 
       expect(result).toBeDefined();

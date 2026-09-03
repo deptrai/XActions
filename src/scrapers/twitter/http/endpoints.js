@@ -4,6 +4,13 @@
 /**
  * Twitter/X Internal API Endpoint Map
  *
+ * @deprecated This module is the legacy Twitter scraper endpoint map. The hybrid
+ * crawler in `src/scrapers/social/twitter/` now uses `src/scrapers/social/twitter/schema.js`
+ * as the canonical source of truth for GraphQL query IDs, features, field toggles,
+ * variable builders, REST paths and rate limits. This file is kept for backward
+ * compatibility with the legacy `src/scrapers/twitter/` modules and will be removed
+ * in Epic 20.2 (Legacy Decommission Final).
+ *
  * These endpoints are reverse-engineered from Twitter's web client.
  * GraphQL query IDs change periodically - update them when Twitter deploys new bundles.
  *
@@ -44,8 +51,11 @@
 // Base URLs
 // ---------------------------------------------------------------------------
 
+/** @deprecated Use `src/scrapers/social/twitter/schema.js` `GRAPHQL_BASE`. */
 export const GRAPHQL_BASE = 'https://x.com/i/api/graphql';
+/** @deprecated Use `src/scrapers/social/twitter/schema.js` `REST_BASE`. */
 export const REST_BASE = 'https://x.com/i/api';
+/** @deprecated Use `src/scrapers/social/twitter/schema.js` `API_BASE`. */
 export const API_BASE = 'https://api.x.com';
 
 // ---------------------------------------------------------------------------
@@ -53,70 +63,75 @@ export const API_BASE = 'https://api.x.com';
 // Same token used by the-convocation/twitter-scraper and d60/twikit
 // ---------------------------------------------------------------------------
 
+/** @deprecated Use `src/scrapers/social/twitter/schema.js` `BEARER_TOKEN`. */
 export const BEARER_TOKEN =
   'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
 
 // ---------------------------------------------------------------------------
 // GraphQL Query / Mutation IDs
 // ---------------------------------------------------------------------------
+
 // Cross-referenced from:
 //   - the-convocation/twitter-scraper src/api-data.ts (endpoints object)
 //   - d60/twikit twikit/client/gql.py (Endpoint class)
 // When both sources provide an ID, the more recent one is preferred.
 // Query IDs marked [twikit] or [scraper] indicate their primary source.
 
-/** @type {Record<string, {queryId: string, operationName: string}>} */
+/**
+ * @type {Record<string, {queryId: string, operationName: string}>}
+ * @deprecated Use `src/scrapers/social/twitter/schema.js` `GRAPHQL`.
+ */
 export const GRAPHQL = {
   // ---- Queries (user profiles) ----
-  UserByScreenName:     { queryId: 'NimuplG1OB7Fd2btCLdBOw', operationName: 'UserByScreenName' },     // [twikit] d60/twikit gql.py
-  UserByRestId:         { queryId: 'tD8zKvQzwY3kdx5yz6YmOw', operationName: 'UserByRestId' },         // [twikit] d60/twikit gql.py - also in scraper
+  UserByScreenName:     { queryId: 'Gb-d6r0vxPOADdG62OEBpQ', operationName: 'UserByScreenName' },     // x.com bundle 2026-09
+  UserByRestId:         { queryId: 'xvmVfRLmnr1alc5f2dib0Q', operationName: 'UserByRestId' },         // x.com bundle 2026-09
 
   // ---- Queries (user timelines) ----
-  UserTweets:           { queryId: 'QWF3SzpHmykQHsQMixG0cg', operationName: 'UserTweets' },           // [twikit] d60/twikit gql.py
-  UserTweetsAndReplies: { queryId: 'vMkJyzx1wdmvOeeNG0n6Wg', operationName: 'UserTweetsAndReplies' }, // [twikit] d60/twikit gql.py
-  UserMedia:            { queryId: '2tLOJWwGuCTytDrGBg8VwQ', operationName: 'UserMedia' },             // [twikit] d60/twikit gql.py
-  UserLikes:            { queryId: 'IohM3gxQHfvWePH5E3KuNA', operationName: 'Likes' },                // [twikit] d60/twikit gql.py
+  UserTweets:           { queryId: 'SXVCYB8XHSS25nzIljNtZA', operationName: 'UserTweets' },           // x.com bundle 2026-09
+  UserTweetsAndReplies: { queryId: 'qUpkZU6eN8MbtQb7rC_pYg', operationName: 'UserTweetsAndReplies' }, // x.com bundle 2026-09
+  UserMedia:            { queryId: 'VyudDWQnr9vJNw7GasFz2g', operationName: 'UserMedia' },             // x.com bundle 2026-09
+  UserLikes:            { queryId: 'xA8fDIbrJfy4ojjjXmSR-A', operationName: 'Likes' },                // x.com bundle 2026-09
 
   // ---- Queries (tweets) ----
-  TweetDetail:          { queryId: 'U0HTv-bAWTBYylwEMT7x5A', operationName: 'TweetDetail' },          // [twikit] d60/twikit gql.py
-  TweetResultByRestId:  { queryId: 'Xl5pC_lBk_gcO2ItU39DQw', operationName: 'TweetResultByRestId' },  // [twikit] d60/twikit gql.py
+  TweetDetail:          { queryId: 'XMOz5h24KAZ86qKffKTLdQ', operationName: 'TweetDetail' },          // x.com bundle 2026-09
+  TweetResultByRestId:  { queryId: 'GZsN2Pc4knAoit6pXa4HSA', operationName: 'TweetResultByRestId' },  // x.com bundle 2026-09
 
   // ---- Queries (search) ----
-  SearchTimeline:       { queryId: 'flaR-PUMshxFWZWPNpq4zA', operationName: 'SearchTimeline' },       // [twikit] d60/twikit gql.py
+  SearchTimeline:       { queryId: 'hyPfJYJ_XAtDYoslQc-Rgg', operationName: 'SearchTimeline' },       // x.com bundle 2026-09
 
   // ---- Queries (relationships) ----
-  Followers:            { queryId: 'gC_lyAxZOptAMLCJX5UhWw', operationName: 'Followers' },             // [twikit] d60/twikit gql.py
-  Following:            { queryId: '2vUj-_Ek-UmBVDNtd8OnQA', operationName: 'Following' },            // [twikit] d60/twikit gql.py
+  Followers:            { queryId: 'JNyQdTISpzCkj_1fqxDvFg', operationName: 'Followers' },             // x.com bundle 2026-09
+  Following:            { queryId: 'qGZZDF3mp91q7X22s3HxpA', operationName: 'Following' },            // x.com bundle 2026-09
 
   // ---- Queries (engagement) ----
-  Likes:                { queryId: 'LLkw5EcVutJL6y-2gkz22A', operationName: 'Favoriters' },           // [twikit] d60/twikit gql.py - who liked a tweet
-  Retweeters:           { queryId: 'X-XEqG5qHQSAwmvy00xfyQ', operationName: 'Retweeters' },           // [twikit] d60/twikit gql.py
+  Likes:                { queryId: 'LLkw5EcVutJL6y-2gkz22A', operationName: 'Favoriters' },           // twikit fallback
+  Retweeters:           { queryId: 'X-XEqG5qHQSAwmvy00xfyQ', operationName: 'Retweeters' },           // twikit fallback
 
   // ---- Queries (lists) ----
-  ListMembers:          { queryId: 'BQp2IEYkgxuSxqbTAr1e1g', operationName: 'ListMembers' },          // [twikit] d60/twikit gql.py
-  ListTimeline:         { queryId: 'HjsWc-nwwHKYwHenbHm-tw', operationName: 'ListLatestTweetsTimeline' }, // [twikit] d60/twikit gql.py
+  ListMembers:          { queryId: 'BQp2IEYkgxuSxqbTAr1e1g', operationName: 'ListMembers' },          // twikit fallback
+  ListTimeline:         { queryId: 'HjsWc-nwwHKYwHenbHm-tw', operationName: 'ListLatestTweetsTimeline' }, // twikit fallback
 
   // ---- Queries (bookmarks, auth required) ----
-  BookmarkTimeline:     { queryId: 'qToeLeMs43Q8cr7tRYXmaQ', operationName: 'Bookmarks' },            // [twikit] d60/twikit gql.py
+  BookmarkTimeline:     { queryId: 'qToeLeMs43Q8cr7tRYXmaQ', operationName: 'Bookmarks' },            // twikit fallback
 
   // ---- Queries (timelines) ----
-  HomeTimeline:         { queryId: '-X_hcgQzmHGl29-UXxz4sw', operationName: 'HomeTimeline' },          // [twikit] d60/twikit gql.py
-  HomeLatestTimeline:   { queryId: 'U0cdisy7QFIoTfu3-Okw0A', operationName: 'HomeLatestTimeline' },    // [twikit] d60/twikit gql.py
+  HomeTimeline:         { queryId: '-X_hcgQzmHGl29-UXxz4sw', operationName: 'HomeTimeline' },          // twikit fallback
+  HomeLatestTimeline:   { queryId: 'U0cdisy7QFIoTfu3-Okw0A', operationName: 'HomeLatestTimeline' },    // twikit fallback
 
   // ---- Mutations (tweets) ----
-  CreateTweet:          { queryId: 'SiM_cAu83R0wnrpmKQQSEw', operationName: 'CreateTweet' },               // [twikit] d60/twikit gql.py
-  CreateScheduledTweet: { queryId: 'LCVzRQGxOaGnOnYH01NQXg', operationName: 'CreateScheduledTweet' },     // reverse-engineered; used by TwitterCrawler schedule action
-  DeleteTweet:          { queryId: 'VaenaVgh5q5ih7kvyVjgtg', operationName: 'DeleteTweet' },                // [twikit] d60/twikit gql.py - also in scraper
+  CreateTweet:          { queryId: 'WXTdKnLddrQOunD6MhWi3g', operationName: 'CreateTweet' },          // x.com bundle 2026-09
+  CreateScheduledTweet: { queryId: 'LCVzRQGxOaGnOnYH01NQXg', operationName: 'CreateScheduledTweet' }, // twikit fallback
+  DeleteTweet:          { queryId: 'nxpZCY2K-I6QoFHAHeojFQ', operationName: 'DeleteTweet' },          // x.com bundle 2026-09
 
   // ---- Mutations (engagement) ----
-  FavoriteTweet:   { queryId: 'lI07N6Otwv1PhnEgXILM7A', operationName: 'FavoriteTweet' },             // [twikit] d60/twikit gql.py - also in scraper
-  UnfavoriteTweet: { queryId: 'ZYKSe-w7KEslx3JhSIk5LA', operationName: 'UnfavoriteTweet' },           // [twikit] d60/twikit gql.py - also in scraper
-  CreateRetweet:   { queryId: 'ojPdsZsimiJrUGLR1sjUtA', operationName: 'CreateRetweet' },              // [twikit] d60/twikit gql.py - also in scraper
-  DeleteRetweet:   { queryId: 'iQtK4dl5hBmXewYZuEOKVw', operationName: 'DeleteRetweet' },             // [twikit] d60/twikit gql.py - also in scraper
+  FavoriteTweet:   { queryId: 'lI07N6Otwv1PhnEgXILM7A', operationName: 'FavoriteTweet' },             // x.com bundle 2026-09
+  UnfavoriteTweet: { queryId: 'ZYKSe-w7KEslx3JhSIk5LA', operationName: 'UnfavoriteTweet' },           // x.com bundle 2026-09
+  CreateRetweet:   { queryId: 'mbRO74GrOvSfRcJnlMapnQ', operationName: 'CreateRetweet' },             // x.com bundle 2026-09
+  DeleteRetweet:   { queryId: 'ZyZigVsNiFO6v1dEks1eWg', operationName: 'DeleteRetweet' },             // x.com bundle 2026-09
 
   // ---- Mutations (bookmarks) ----
-  CreateBookmark:  { queryId: 'aoDbu3RHznuiSkQ9aNM67Q', operationName: 'CreateBookmark' },            // [twikit] d60/twikit gql.py - also in scraper
-  DeleteBookmark:  { queryId: 'Wlmlj2-xzyS1GN3a6cj-mQ', operationName: 'DeleteBookmark' },           // [twikit] d60/twikit gql.py
+  CreateBookmark:  { queryId: 'aoDbu3RHznuiSkQ9aNM67Q', operationName: 'CreateBookmark' },            // x.com bundle 2026-09
+  DeleteBookmark:  { queryId: 'Wlmlj2-xzyS1GN3a6cj-mQ', operationName: 'DeleteBookmark' },            // x.com bundle 2026-09
 };
 
 // ---------------------------------------------------------------------------
@@ -124,7 +139,10 @@ export const GRAPHQL = {
 // Source: d60/twikit twikit/client/v11.py
 // ---------------------------------------------------------------------------
 
-/** @type {Record<string, string>} */
+/**
+ * @type {Record<string, string>}
+ * @deprecated Use `src/scrapers/social/twitter/schema.js` `REST`.
+ */
 export const REST = {
   // Follow / Unfollow (FollowUser / UnfollowUser)
   friendshipsCreate:  '/1.1/friendships/create.json',
@@ -177,7 +195,10 @@ export const REST = {
 // These flags are sent with nearly every GraphQL request by the Twitter web client.
 // ---------------------------------------------------------------------------
 
-/** @type {Record<string, boolean>} */
+/**
+ * @type {Record<string, boolean>}
+ * @deprecated Use `src/scrapers/social/twitter/schema.js` `DEFAULT_FEATURES`.
+ */
 export const DEFAULT_FEATURES = {
   rweb_video_screen_enabled: false,
   profile_label_improvements_pcf_label_in_post_enabled: true,
@@ -217,7 +238,10 @@ export const DEFAULT_FEATURES = {
   responsive_web_profile_redirect_enabled: false,
 };
 
-/** @type {Record<string, boolean>} */
+/**
+ * @type {Record<string, boolean>}
+ * @deprecated Use `src/scrapers/social/twitter/schema.js` `DEFAULT_FIELD_TOGGLES`.
+ */
 export const DEFAULT_FIELD_TOGGLES = {
   withArticleRichContentState: true,
   withArticlePlainText: false,
@@ -230,7 +254,10 @@ export const DEFAULT_FIELD_TOGGLES = {
 // Source: d60/twikit constants.py USER_FEATURES
 // ---------------------------------------------------------------------------
 
-/** @type {Record<string, boolean>} */
+/**
+ * @type {Record<string, boolean>}
+ * @deprecated Use `src/scrapers/social/twitter/schema.js` `USER_FEATURES`.
+ */
 export const USER_FEATURES = {
   hidden_profile_likes_enabled: true,
   hidden_profile_subscriptions_enabled: true,
@@ -250,7 +277,10 @@ export const USER_FEATURES = {
 // Conservative estimates based on observed Twitter behavior.
 // ---------------------------------------------------------------------------
 
-/** @type {Record<string, number>} */
+/**
+ * @type {Record<string, number>}
+ * @deprecated Use `src/scrapers/social/twitter/schema.js` `RATE_LIMITS`.
+ */
 export const RATE_LIMITS = {
   // Queries
   UserByScreenName: 95,
@@ -303,7 +333,10 @@ export const RATE_LIMITS = {
 // User Agent Strings (realistic Chrome 131–133 on Windows/Mac/Linux, Feb 2026)
 // ---------------------------------------------------------------------------
 
-/** @type {string[]} */
+/**
+ * @type {string[]}
+ * @deprecated Use `src/scrapers/social/twitter/schema.js` `USER_AGENTS`.
+ */
 export const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
@@ -320,6 +353,7 @@ export const USER_AGENTS = [
 /**
  * Build a full GraphQL GET URL with encoded query params.
  *
+ * @deprecated Use `src/scrapers/social/twitter/schema.js` `buildGraphQLUrl`.
  * @param {string} queryId
  * @param {string} operationName
  * @param {Record<string, unknown>} variables
@@ -340,6 +374,7 @@ export function buildGraphQLUrl(queryId, operationName, variables, features = DE
 /**
  * Build the variables object for common GraphQL query types.
  *
+ * @deprecated Use `src/scrapers/social/twitter/schema.js` `buildGraphQLVariables`.
  * @param {string} type
  * @param {GraphQLVariablesParams} [params={}]
  * @returns {Record<string, unknown>}
@@ -566,6 +601,7 @@ export function buildGraphQLVariables(type, params = {}) {
  * Makes a lightweight OPTIONS/HEAD probe to confirm the endpoint returns
  * a recognizable response (not 404). Requires a valid auth cookie or guest token.
  *
+ * @deprecated Use `src/scrapers/social/twitter/schema.js` `validateEndpoints`.
  * @param {ValidateOptions} [options={}]
  * @returns {Promise<{valid: string[], invalid: string[], errors: Record<string, string>}>}
  */

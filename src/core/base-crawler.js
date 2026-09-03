@@ -53,7 +53,7 @@ export class AbstractCrawler {
     }
     this.client = deps.client || null;
     this.store = deps.store || null;
-    this.sessionManager = deps.sessionManager || null;
+    this.sessionManager = deps.sessionManager || deps.client?.sessionManager || null;
     this.governor = deps.governor || deps.client?.governor || null;
     this.accountPool = deps.accountPool || deps.client?.accountPool || null;
     this.cdpUrl = deps.cdpUrl || null;

@@ -36,6 +36,7 @@ const DEFAULT_SERVICE = 'https://public.api.bsky.app';
  * @property {string} service
  * @property {string} [identifier]
  * @property {string} [password]
+ * @property {string} [accessJwt]
  */
 
 /** @typedef {BlueskySdkClient | BlueskyFetchClient} BlueskyClient */
@@ -70,12 +71,33 @@ export async function createAgent(options = {}) {
     return { agent, type: 'sdk' };
   } catch {
     // Fallback to fetch-based client when @atproto/api is not installed
-    return {
+    const fetchClient = {
       service,
       identifier: options.identifier,
       password: options.password,
       type: 'fetch',
     };
+
+    // Authenticate with app-password for endpoints that require auth (e.g. search)
+    if (options.identifier && options.password) {
+      try {
+        const session = await fetch(`${service}/xrpc/com.atproto.server.createSession`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            identifier: options.identifier,
+            password: options.password,
+          }),
+        }).then((r) => (r.ok ? r.json() : null));
+        if (session?.accessJwt) {
+          fetchClient.accessJwt = session.accessJwt;
+        }
+      } catch {
+        // Auth is best-effort; callers surface actionable errors when endpoints require it.
+      }
+    }
+
+    return fetchClient;
   }
 }
 
@@ -144,7 +166,12 @@ async function xrpc(client, nsid, params = {}) {
     .join('&');
 
   const url = `${client.service}/xrpc/${nsid}${qs ? '?' + qs : ''}`;
-  const res = await fetch(url);
+  /** @type {Record<string, string>} */
+  const headers = {};
+  if (client.type === 'fetch' && client.accessJwt) {
+    headers['Authorization'] = `Bearer ${client.accessJwt}`;
+  }
+  const res = await fetch(url, { headers });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Bluesky API error (${res.status}): ${text}`);
@@ -391,9 +418,33 @@ export async function searchTweets(client, query, options = {}) {
   /** @type {string | undefined} */
   let cursor;
 
+  // app.bsky.feed.searchPosts requires authentication — auto-login when
+  // credentials are supplied, otherwise surface a clear actionable error.
+  let effectiveClient = client;
+  if (client.type === 'fetch' && options.identifier && options.password) {
+    effectiveClient = /** @type {any} */ (await createAgent({
+      service: client.service,
+      identifier: options.identifier,
+      password: options.password,
+    }));
+  } else if (client.type === 'fetch') {
+    try {
+      await xrpc(client, 'app.bsky.feed.searchPosts', { q: query, limit: 1 });
+    } catch (err) {
+      const is403 = /\(403\)/.test(String(err?.message || err));
+      if (is403) {
+        throw new Error(
+          'Bluesky search requires authentication. Pass { identifier, password } (app-password) ' +
+          'to createAgent() or as options to searchTweets().'
+        );
+      }
+      throw err;
+    }
+  }
+
   while (posts.length < limit) {
     const pageLimit = Math.min(25, limit - posts.length);
-    const data = await xrpc(client, 'app.bsky.feed.searchPosts', {
+    const data = await xrpc(effectiveClient, 'app.bsky.feed.searchPosts', {
       q: query,
       limit: pageLimit,
       cursor,

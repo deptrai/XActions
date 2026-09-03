@@ -6,7 +6,7 @@
  */
 
 import chalk from 'chalk';
-import { printCliError } from '../shared.js';
+import { printCliError, printGovernorStatus } from '../shared.js';
 
 /**
  * @param {import('commander').Command} program
@@ -19,6 +19,43 @@ export function registerAdminCommand(program) {
   const streamCmd = adminCmd
     .command('stream')
     .description('Manage and inspect Nowing Redis Stream and NLP workers');
+
+  // xactions admin status
+  adminCmd
+    .command('status')
+    .description('Show system and rate governor status (proxies, throttling, hibernation)')
+    .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+    .option('--token <token>', 'Bearer token for admin authentication')
+    .option('--json', 'Output raw JSON')
+    .action(async (options) => {
+      try {
+        const baseUrl = options.url || process.env.API_URL || process.env.MCP_SERVER_URL || 'http://localhost:3001';
+        let status;
+
+        try {
+          const headers = /** @type {Record<string, string>} */ ({});
+          if (options.token) headers.Authorization = `Bearer ${options.token}`;
+          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/api/admin/governor/status`, { headers });
+          if (resp.ok) {
+            const data = await resp.json();
+            status = data.status;
+          }
+        } catch {
+          // Network error or endpoint down; proceed to in-process fallback below
+        }
+
+        if (!status) {
+          const { globalStatusApi, globalAdaptiveRateGovernor } = await import('../../core/index.js');
+          const { refreshGovernorConsumerLag, globalStreamMetricsReader } = await import('../../utils/stream-metrics.js');
+          await refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader);
+          status = globalStatusApi.getGovernorStatus();
+        }
+
+        printGovernorStatus(status, { json: options.json });
+      } catch (err) {
+        printCliError(err instanceof Error ? err : new Error(String(err)));
+      }
+    });
 
   // xactions admin stream metrics
   streamCmd

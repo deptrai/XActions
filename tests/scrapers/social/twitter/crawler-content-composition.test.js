@@ -67,7 +67,7 @@ describe('Story 13.2.6 — Twitter Hybrid Content Composition (Post, Reply, Quot
         const variables = payload.variables ? JSON.parse(payload.variables) : {};
         receivedRequests.push({ method: req.method, path: url.pathname, search: url.search, body: payload, variables });
 
-        if (url.pathname.includes('/SiM_cAu83R0wnrpmKQQSEw/CreateTweet')) {
+        if (url.pathname.includes('/WXTdKnLddrQOunD6MhWi3g/CreateTweet')) {
           res.writeHead(200, { 'content-type': 'application/json' });
           res.end(JSON.stringify(createTweetResponse('new-tweet-123', variables.tweet_text, variables)));
           return;
@@ -150,7 +150,7 @@ describe('Story 13.2.6 — Twitter Hybrid Content Composition (Post, Reply, Quot
     expect(result.tweet.metadata).toMatchObject({ sourceMethod: 'post', tweetId: 'new-tweet-123' });
 
     expect(receivedRequests).toHaveLength(1);
-    expect(receivedRequests[0].path).toMatch(/\/SiM_cAu83R0wnrpmKQQSEw\/CreateTweet/);
+    expect(receivedRequests[0].path).toMatch(/\/WXTdKnLddrQOunD6MhWi3g\/CreateTweet/);
   });
 
   it('post dry-run returns a PostItem without calling the API', async () => {

@@ -50,7 +50,10 @@ describe('Story 13.2.10 — Twitter Hybrid Direct Messaging', () => {
         } catch {
           payload = body ? Object.fromEntries(new URLSearchParams(body)) : {};
         }
-        const variables = payload.variables ? (typeof payload.variables === 'string' ? JSON.parse(payload.variables) : payload.variables) : {};
+        const queryVariables = url.searchParams.get('variables');
+        const variables = payload.variables
+          ? (typeof payload.variables === 'string' ? JSON.parse(payload.variables) : payload.variables)
+          : (queryVariables ? JSON.parse(queryVariables) : {});
         receivedRequests.push({
           method: req.method,
           path: url.pathname,
@@ -60,7 +63,7 @@ describe('Story 13.2.10 — Twitter Hybrid Direct Messaging', () => {
         });
 
         // UserByScreenName
-        if (url.pathname.includes('/NimuplG1OB7Fd2btCLdBOw/UserByScreenName')) {
+        if (url.pathname.includes('/Gb-d6r0vxPOADdG62OEBpQ/UserByScreenName')) {
           if (variables.screen_name === 'no_dm_user') {
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({

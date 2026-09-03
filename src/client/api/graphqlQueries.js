@@ -12,7 +12,7 @@
  * @license MIT
  */
 
-import { GRAPHQL, BEARER_TOKEN as SHARED_BEARER_TOKEN } from '../../scrapers/twitter/http/endpoints.js';
+import { GRAPHQL, BEARER_TOKEN as SHARED_BEARER_TOKEN } from '../../scrapers/social/twitter/schema.js';
 
 /**
  * @typedef {Object} GraphQLEndpoint
@@ -46,7 +46,7 @@ export const BEARER_TOKEN = SHARED_BEARER_TOKEN;
  * drifted: 11 of the IDs here went stale while the shared map stayed current,
  * so `Scraper.getProfile()` answered every call with
  * `HTTP 404: {"message":"Query not found"}`. Query IDs now have exactly one
- * home — `src/scrapers/twitter/http/endpoints.js` — and this table only adds
+ * home — `src/scrapers/social/twitter/schema.js` — and this table only adds
  * the client-specific metadata (HTTP method, default variables, REST URLs).
  *
  * @param {string} name - Key in the shared GRAPHQL map
@@ -204,7 +204,7 @@ export const GRAPHQL_ENDPOINTS = {
     isRest: true,
   },
   ListLatestTweetsTimeline: {
-    queryId: queryId('ListLatestTweetsTimeline', '2Vjeyo_L0nizAUhHe3fKyA'),
+    queryId: queryId('ListTimeline', '2Vjeyo_L0nizAUhHe3fKyA'),
     operationName: 'ListLatestTweetsTimeline',
     method: 'GET',
   },
@@ -214,7 +214,7 @@ export const GRAPHQL_ENDPOINTS = {
     method: 'GET',
   },
   ListByRestId: {
-    queryId: queryId('ListByRestId', 'lAzEhcd0SKDsk8qSCWgNbg'),
+    queryId: queryId('ListByRestId', 'lAzEhcd0SKDsk8qSCWgNbg') || queryId('ListTimeline', 'lAzEhcd0SKDsk8qSCWgNbg'),
     operationName: 'ListByRestId',
     method: 'GET',
   },
