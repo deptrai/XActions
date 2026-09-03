@@ -1199,11 +1199,16 @@ export class FacebookCrawler extends AbstractCrawler {
     };
 
     const docId = this.docIds.PAGE_FEED;
-    const res = await this.client.requestGraphQl(docId, variables, {
-      accountId,
-      cookies,
-      requiresAuth: session?.requiresAuth,
-    });
+    let res = null;
+    try {
+      res = await this.client.requestGraphQl(docId, variables, {
+        accountId,
+        cookies,
+        requiresAuth: session?.requiresAuth,
+      });
+    } catch (err) {
+      // Allow fallback to SSR
+    }
 
     const rawEdges = res?.data?.page?.timeline_feed?.edges || res?.data?.node?.timeline_feed?.edges;
     const edges = Array.isArray(rawEdges) ? rawEdges : [];
@@ -1215,6 +1220,61 @@ export class FacebookCrawler extends AbstractCrawler {
       if (!post) continue;
       this.validateItem(post);
       posts.push(post);
+    }
+
+    // SSR Fallback if GraphQL returned 0 posts or failed
+    if (posts.length === 0) {
+      try {
+        const pageUrl = `${this.client.baseUrl}/${args.pageId}`;
+        const ssrResp = /** @type {any} */ (await this.client.request('GET', pageUrl, {
+          skipResponseValidation: true,
+          requiresAuth: false,
+          headers: {
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'accept-language': 'en-US,en;q=0.9',
+          },
+          timeout: 30000,
+        }));
+        const html = typeof ssrResp?.data === 'string' ? ssrResp.data : (typeof ssrResp === 'string' ? ssrResp : '');
+        if (html) {
+          const textMatches = Array.from(html.matchAll(/"message":\{"text":"([^"]+)"/g));
+          const seen = new Set();
+          for (let i = 0; i < textMatches.length && posts.length < variables.count; i++) {
+            const rawText = textMatches[i][1];
+            // Decode unicode escape sequences in JSON string
+            let text = rawText;
+            try {
+              text = JSON.parse(`"${rawText}"`);
+            } catch {}
+            if (!text || seen.has(text) || text.length < 5) continue;
+            seen.add(text);
+
+            const postId = `${args.pageId}_post_${i + 1}`;
+            /** @type {import('../../../core/types.js').PostItem} */
+            const item = {
+              id: `facebook:${postId}`,
+              platform: 'facebook',
+              externalId: postId,
+              text,
+              authorId: String(args.pageId),
+              authorName: String(args.pageId),
+              authorUsername: String(args.pageId),
+              createdAt: new Date(),
+              crawledAt: new Date(),
+              url: `https://www.facebook.com/${args.pageId}`,
+              likesCount: 0,
+              repostsCount: 0,
+              repliesCount: 0,
+              category: 'social',
+              metadata: { sourceMethod: 'ssr' },
+            };
+            this.validateItem(item);
+            posts.push(item);
+          }
+        }
+      } catch {
+        // proceed with empty posts if SSR also fails
+      }
     }
 
     if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
@@ -2578,6 +2638,62 @@ export class FacebookCrawler extends AbstractCrawler {
           throw graphQlErr || bridgeErr;
         }
       }
+      if (!profile) {
+        try {
+          const profileUrl = /^https?:\/\//i.test(targetKey) ? targetKey : `${this.client.baseUrl}/${targetKey}`;
+          const ssrResp = /** @type {any} */ (await this.client.request('GET', profileUrl, {
+            skipResponseValidation: true,
+            requiresAuth: false,
+            headers: {
+              'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+              'accept-language': 'en-US,en;q=0.9',
+            },
+            timeout: 30000,
+          }));
+          const html = typeof ssrResp?.data === 'string' ? ssrResp.data : (typeof ssrResp === 'string' ? ssrResp : '');
+          if (html) {
+            const ogTitle = html.match(/<meta\s+(?:property|name)=["']og:title["']\s+content=["']([^"']+)["']/i)?.[1]
+              || html.match(/<title>([^<]+)<\/title>/i)?.[1];
+            const ogDesc = html.match(/<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']+)["']/i)?.[1];
+            const ogImage = html.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i)?.[1];
+
+            const rawTitle = ogTitle ? ogTitle.replace(/\s*[\||\-–—]\s*Facebook.*$/i, '').trim() : '';
+            const isGeneric = !rawTitle || /^\s*facebook\s*$/i.test(rawTitle) || /^log\s+in/i.test(rawTitle);
+            if (!isGeneric) {
+              let followersCount = 0;
+              if (ogDesc) {
+                const fm = ogDesc.match(/([\d,.]+)\s*([KkMmBb])?\s*(followers?|likes?|people follow)/i);
+                if (fm) {
+                  let v = parseFloat(fm[1].replace(/,/g, ''));
+                  const s = fm[2]?.toUpperCase();
+                  if (s === 'K') v *= 1000;
+                  else if (s === 'M') v *= 1000000;
+                  else if (s === 'B') v *= 1000000000;
+                  followersCount = Math.round(v);
+                }
+              }
+              const bio = ogDesc ? ogDesc.replace(/^[\d,.]+[KkMmBb]?\s*(followers?|likes?|people follow)[^.]*\.\s*/i, '').trim() || ogDesc : null;
+              profile = {
+                id: `facebook:${targetKey}`,
+                platform: 'facebook',
+                externalId: targetKey,
+                username: targetKey,
+                name: rawTitle || targetKey,
+                bio: bio || null,
+                avatar: ogImage || null,
+                followersCount,
+                followingCount: 0,
+                profileUrl: `${this.client.baseUrl}/${targetKey}`,
+                metadata: { sourceMethod: 'ssr' },
+                crawledAt: new Date(),
+              };
+            }
+          }
+        } catch {
+          // fall through to error
+        }
+      }
+
       if (!profile) {
         throw graphQlErr || new PlatformError({
           code: 'XACT_4004',
