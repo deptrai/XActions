@@ -2,8 +2,8 @@
 title: 'Story 23.2: Bluesky Hybrid Crawler'
 type: 'feature'
 created: '2026-09-04'
-baseline_commit: ''
-status: 'ready-for-dev'
+baseline_commit: 'ccd4c1ec76b736651ff8d227631be1242af99b1b'
+status: 'in-progress'
 review_loop_iteration: 0
 context:
   - src/scrapers/social/bluesky/validator.js
