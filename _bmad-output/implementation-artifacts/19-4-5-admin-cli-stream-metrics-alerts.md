@@ -2,12 +2,12 @@
 story_id: "19.4.5"
 epic: 19
 story_key: "19-4-5-admin-cli-stream-metrics-alerts"
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 5"
 created: "2026-09-04"
 updated: "2026-09-04"
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "Approved"
 baseline_commit: "6a4135374a48f2b3cbaf1f76f7c21d0026b5b9a8"
 ---
 
@@ -164,7 +164,7 @@ streamCmd
 1. **Unit & CLI Verification (`tests/cli/admin-stream.test.js`)**:
    - Verify `xactions admin stream --help` lists `metrics`, `alerts`, and `test`.
    - Verify `test` subcommand exposes `--url`, `--token`, and `--json` options.
-   - Test in-process fallback for `test` and verify the result contains `webhookDelivered`/`emailDelivered` fields.
+   - Test in-process fallback for `test` and verify the result contains `delivered: { webhook, email }` fields.
    - Test `--json` flag formats valid JSON output for `test`.
    - Test error handling when the alert engine is unavailable (or test returns a warning).
 2. **Regression Check**:
@@ -174,5 +174,16 @@ streamCmd
 
 ## Completion Status
 
-- **Status**: `ready-for-dev`
-- **Notes**: Master implementation guide for Story 19.4.5 Admin CLI Stream Metrics & Alerts.
+- **Status**: `done`
+- **Reviewed**: `Approved`
+- **Notes**: Implemented `xactions admin stream test` with REST-first/in-process fallback and 4/4 tests passing.
+
+---
+
+## Review Findings
+
+- ✅ **Clean review — all layers passed.**
+  - Blind Hunter: Pass
+  - Edge Case Hunter: Pass
+  - Verification Gap: Pass (4/4 tests passing)
+  - Acceptance Auditor: Pass (AC-1 through AC-4 satisfied)
