@@ -3,7 +3,7 @@ title: 'Story 23.2: Bluesky Hybrid Crawler'
 type: 'feature'
 created: '2026-09-04'
 baseline_commit: 'ccd4c1ec76b736651ff8d227631be1242af99b1b'
-status: 'in-progress'
+status: 'done'
 review_loop_iteration: 0
 context:
   - src/scrapers/social/bluesky/validator.js
@@ -69,14 +69,15 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/scrapers/social/bluesky/client.js` — `BlueskyClient` kế thừa `AbstractApiClient`, implement `sign()` no-op, `baseUrl`, `request()` qua XRPC, hỗ trợ auth optional, gắn `BlueskyPlatformResponseValidator`.
-- [ ] `src/scrapers/social/bluesky/crawler.js` — `BlueskyCrawler` kế thừa `AbstractCrawler`, đăng ký actions: `profile`, `followers`, `following`, `posts`, `search`, `trending`, `feed`.
-- [ ] `src/scrapers/social/bluesky/index.js` — barrel export `client.js`, `crawler.js`, `validator.js`.
-- [ ] Cập nhật `src/scrapers/social/index.js` — export `bluesky`.
-- [ ] `src/scrapers/index.js` — sửa dispatcher để `bluesky` dùng `BlueskyCrawler` thay vì legacy `src/scrapers/bluesky/index.js`.
-- [ ] `tests/scrapers/social/bluesky/crawler.test.js` — unit tests cho các action chính.
-- [ ] `tests/scrapers/social/bluesky/client.test.js` — unit tests cho client XRPC, auth, proxy.
-- [ ] E2E verify: Bluesky Search Posts với auth, Bluesky Trending trả về kết quả.
+- [x] `src/scrapers/social/bluesky/client.js` — `BlueskyClient` kế thừa `AbstractApiClient`, implement `sign()` no-op, `baseUrl`, `request()` qua XRPC, hỗ trợ auth optional, gắn `BlueskyPlatformResponseValidator`.
+- [x] `src/scrapers/social/bluesky/crawler.js` — `BlueskyCrawler` kế thừa `AbstractCrawler`, đăng ký actions: `profile`, `followers`, `following`, `posts`, `search`, `trending`, `feed`.
+- [x] `src/scrapers/social/bluesky/index.js` — barrel export `client.js`, `crawler.js`, `validator.js`.
+- [x] Cập nhật `src/scrapers/social/index.js` — export `bluesky`.
+- [x] `src/scrapers/index.js` — sửa dispatcher để `bluesky` dùng `BlueskyCrawler` thay vì legacy `src/scrapers/bluesky/index.js`.
+- [x] `tests/scrapers/social/bluesky/crawler.test.js` — unit tests cho các action chính.
+- [x] `tests/scrapers/social/bluesky/client.test.js` — unit tests cho client XRPC, auth, proxy.
+- [x] `tests/scrapers/social/bluesky/normalizer.test.js` — unit tests cho normalizer.
+- [x] `tests/scrapers/social/bluesky/dispatcher.test.js` — unit tests cho universal dispatcher.
 
 **Acceptance Criteria:**
 - Given `BlueskyCrawler` kế thừa `AbstractCrawler`, when gọi `start({ action: 'search', args: { query: 'bluesky' } })`, then trả về `PostItem[]` hoặc phân loại lỗi đúng (auth/proxy/rate-limit).

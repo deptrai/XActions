@@ -64,6 +64,8 @@ import { ChototCrawler } from './realestate/chotot/crawler.js';
 import { ChototClient } from './realestate/chotot/client.js';
 import { BatdongsanCrawler } from './realestate/batdongsan/crawler.js';
 import { BatdongsanClient } from './realestate/batdongsan/client.js';
+import { BlueskyCrawler } from './social/bluesky/crawler.js';
+import { BlueskyClient } from './social/bluesky/client.js';
 import topcv from './recruitment/topcv/index.js';
 import vietnamworks from './recruitment/vietnamworks/index.js';
 import linkedin from './recruitment/linkedin/index.js';
@@ -1066,6 +1068,108 @@ export async function scrape(platform, action, options = {}) {
     }
   }
 
+  // ── Bluesky hybrid path (Story 23.2) ──
+  // Dispatches to BlueskyCrawler / BlueskyClient (AT Protocol / XRPC).
+  if (platformName === 'bluesky' || platformName === 'bsky') {
+    /** @type {Record<string, string>} */
+    const BLUESKY_ACTION_MAP = {
+      profile: 'profile',
+      followers: 'followers',
+      following: 'following',
+      tweets: 'posts',
+      posts: 'posts',
+      timeline: 'posts',
+      feed: 'posts',
+      search: 'search',
+      search_posts: 'search',
+      trending: 'trending',
+      custom_feed: 'feed',
+    };
+
+    // If options has feedUri or feed, action 'feed' maps to custom algorithm feed
+    let mappedAction = BLUESKY_ACTION_MAP[action];
+    if (action === 'feed' && (options.feedUri || options.feed || options.uri)) {
+      mappedAction = 'feed';
+    }
+
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(BLUESKY_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    const username = options.username || options.handle || options.actor || options.target;
+    const query = options.query || options.q || options.keyword || options.target;
+    const feedUri = options.feedUri || options.feed || options.uri || options.target;
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (['profile', 'followers', 'following', 'posts', 'tweets'].includes(mappedAction) && username) {
+      mappedArgs.handle = username;
+    }
+    if (mappedAction === 'search' && query) {
+      mappedArgs.query = query;
+    }
+    if (mappedAction === 'feed' && feedUri) {
+      mappedArgs.feedUri = feedUri;
+    }
+
+    if (options.limit != null) {
+      mappedArgs.limit = Number(options.limit);
+    } else if (options.count != null) {
+      mappedArgs.limit = Number(options.count);
+    }
+    if (options.cursor != null) {
+      mappedArgs.cursor = options.cursor;
+    }
+
+    // Auth credentials (from options or authCookie)
+    const identifier = options.identifier || options.authCookie?.identifier || options.session?.identifier;
+    const password = options.password || options.authCookie?.password || options.session?.password;
+    if (identifier) mappedArgs.identifier = identifier;
+    if (password) mappedArgs.password = password;
+
+    const session = {
+      ...(options.session || {}),
+      ...(identifier ? { identifier } : {}),
+      ...(password ? { password } : {}),
+    };
+
+    const client = new BlueskyClient({
+      baseUrl: options.baseUrl || options.service,
+      service: options.service || options.baseUrl,
+      identifier,
+      password,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new BlueskyCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
   // Threads hybrid path — no Puppeteer, dispatches to ThreadsCrawler.
   // This branch is evaluated first so legacy actionMap / platform lookups
   // do not block the new hybrid GraphQL flow.
@@ -1398,9 +1502,9 @@ export async function scrape(platform, action, options = {}) {
   }
 
   // Determine the first argument based on platform type
-  // Twitter uses Puppeteer page; Bluesky & Mastodon use API clients
+  // Twitter uses Puppeteer page; Mastodon uses API clients
   const needsPuppeteer = ['twitter', 'x', 'facebook', 'fb'].includes(platformName);
-  const needsClient = ['bluesky', 'bsky', 'mastodon', 'masto'].includes(platformName);
+  const needsClient = ['mastodon', 'masto'].includes(platformName);
 
   if (needsPuppeteer) {
     let page = options.page;
@@ -1485,18 +1589,10 @@ export async function scrape(platform, action, options = {}) {
 
     // Auto-create client if not provided
     if (!client) {
-      if (platformName === 'bluesky' || platformName === 'bsky') {
-        client = await /** @type {Record<string, Function>} */ (bluesky).createAgent({
-          service: options.service,
-          identifier: options.identifier,
-          password: options.password,
-        });
-      } else {
-        client = /** @type {Record<string, Function>} */ (mastodon).createClient({
-          instance: options.instance,
-          accessToken: options.accessToken,
-        });
-      }
+      client = /** @type {Record<string, Function>} */ (mastodon).createClient({
+        instance: options.instance,
+        accessToken: options.accessToken,
+      });
     }
 
     const target = options.username || options.handle || options.query || options.hashtag || options.feedUri || options.url;
@@ -1606,6 +1702,8 @@ export function createFacebookCrawler(client, options = {}) {
 export {
   FacebookCrawler,
   FacebookClient,
+  BlueskyCrawler,
+  BlueskyClient,
   getAdapter,
   getAvailableAdapter,
   setDefaultAdapter,
