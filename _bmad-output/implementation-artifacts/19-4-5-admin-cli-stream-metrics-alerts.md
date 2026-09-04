@@ -93,6 +93,70 @@ so that **I can verify that alert channels (webhook/email) are configured correc
 | Admin REST Routes | `api/routes/admin.js:350–360` | `POST /api/admin/stream/alerts/test` |
 | Integration Tests | `tests/cli/admin-stream.test.js` | Existing test suite for stream CLI commands |
 
+### Implementation Pattern for `admin.js`
+
+Add the `test` subcommand to the existing `streamCmd` group. Do NOT move or rename `metrics`/`alerts`:
+
+```javascript
+// Existing streamCmd from Story 14.3 / 19.3
+const streamCmd = adminCmd
+  .command('stream')
+  .description('Manage and inspect Nowing Redis Stream and NLP workers');
+
+// Existing metrics and alerts subcommands (PRESERVE UNCHANGED)
+// ...
+
+// New test subcommand
+streamCmd
+  .command('test')
+  .description('Send a synthetic test alert to configured channels')
+  .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+  .option('--token <token>', 'Bearer token for admin authentication')
+  .option('--json', 'Output raw JSON')
+  .action(async (options) => {
+    try {
+      const baseUrl = resolveBaseUrl(options.url);
+      /** @type {any} */
+      let body;
+
+      try {
+        const result = await fetchAdminJson(`${baseUrl}/api/admin/stream/alerts/test`, {
+          method: 'POST',
+          token: options.token,
+        });
+        if (result.ok) {
+          body = result.body;
+        } else if (options.url) {
+          const errDetail = typeof result.body === 'object' && result.body?.error ? (result.body.error.message || result.body.error) : result.statusText;
+          throw new Error(`Remote stream alert test failed: HTTP ${result.status} ${errDetail}`);
+        }
+      } catch (err) {
+        if (options.url) throw err;
+        // Fall through to in-process call
+      }
+
+      if (!body) {
+        const { defaultStreamAlertEngine } = await import('../../utils/stream-alerts.js');
+        const result = await defaultStreamAlertEngine.testAlert();
+        body = { success: true, message: 'Test alert sent', result };
+      }
+
+      if (options.json) {
+        console.log(JSON.stringify(body, null, 2));
+        return;
+      }
+
+      const result = body.result || body;
+      console.log(chalk.green('\n✔ Test alert sent\n'));
+      console.log(chalk.dim(`  Webhook: ${result.webhookDelivered ? 'delivered' : 'not configured/failed'}`));
+      console.log(chalk.dim(`  Email:   ${result.emailDelivered ? 'delivered' : 'not configured/failed'}`));
+      console.log();
+    } catch (err) {
+      printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
+    }
+  });
+```
+
 ---
 
 ## Testing Plan
