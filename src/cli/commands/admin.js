@@ -566,76 +566,241 @@ export function registerAdminCommand(program) {
     .description('Manage account pool (alias for accounts)');
   registerAccountSubcommands(accountCmd);
 
-  // xactions admin checkpoints
+  // Helper to register checkpoints subcommands on either 'checkpoints' or 'checkpoint' alias
+  const registerCheckpointSubcommands = (cmd) => {
+    cmd
+      .command('list')
+      .description('List crawl checkpoints with filtering and pagination')
+      .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+      .option('--token <token>', 'Bearer token for admin authentication')
+      .option('-p, --platform <platform>', 'Filter by platform')
+      .option('-t, --target-type <type>', 'Filter by target type')
+      .option('-s, --status <status>', 'Filter by status')
+      .option('-l, --limit <limit>', 'Max checkpoints to return', '50')
+      .option('-o, --offset <offset>', 'Offset for pagination', '0')
+      .option('--json', 'Output raw JSON')
+      .action(async (options) => {
+        let prisma;
+        try {
+          const baseUrl = resolveBaseUrl(options.url);
+          const limit = parseCliPositiveInt(options.limit, 'limit');
+          const offset = parseCliNonNegativeInt(options.offset, 'offset');
+          /** @type {any} */
+          let body;
+
+          try {
+            const qs = new URLSearchParams();
+            if (options.platform) qs.set('platform', options.platform);
+            if (options.targetType) qs.set('targetType', options.targetType);
+            if (options.status) qs.set('status', options.status);
+            qs.set('limit', String(limit));
+            qs.set('offset', String(offset));
+            const result = await fetchAdminJson(`${baseUrl}/api/checkpoints?${qs}`, { token: options.token });
+            if (result.ok) {
+              body = result.body;
+            } else if (options.url) {
+              throw new Error(`Remote checkpoint list failed: HTTP ${result.status} ${result.statusText}`);
+            }
+          } catch (err) {
+            if (options.url) throw err;
+            // Network error; fall through to in-process call
+          }
+
+          if (!body) {
+            const { default: sharedPrisma } = await import('../../../api/lib/prisma.js');
+            prisma = sharedPrisma;
+            const { listCheckpoints } = await import('../../store/checkpoint-manager.js');
+            const result = await listCheckpoints({
+              platform: options.platform,
+              targetType: options.targetType,
+              status: options.status,
+              limit,
+              offset,
+              prisma,
+            });
+            body = { success: true, data: result };
+          }
+
+          if (options.json) {
+            console.log(JSON.stringify(body, null, 2));
+            return;
+          }
+
+          const result = body.data || body;
+          formatCheckpointList(result);
+          console.log();
+        } catch (err) {
+          printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
+        } finally {
+          await disconnectPrismaUnlessShared(prisma, true);
+        }
+      });
+
+    cmd
+      .command('resume <checkpointId>')
+      .description('Resume a paused, failed, or stalled checkpoint')
+      .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+      .option('--token <token>', 'Bearer token for admin authentication')
+      .option('--json', 'Output raw JSON')
+      .action(async (checkpointId, options) => {
+        let prisma;
+        try {
+          const baseUrl = resolveBaseUrl(options.url);
+          /** @type {any} */
+          let body;
+
+          try {
+            const result = await fetchAdminJson(`${baseUrl}/api/checkpoints/${encodeURIComponent(checkpointId)}/resume`, {
+              method: 'POST',
+              token: options.token,
+            });
+            if (result.ok) {
+              body = result.body;
+            } else if (options.url) {
+              const errDetail = typeof result.body === 'object' && result.body?.error ? (result.body.error.message || result.body.error) : result.statusText;
+              throw new Error(`Remote checkpoint resume failed: HTTP ${result.status} ${errDetail}`);
+            }
+          } catch (err) {
+            if (options.url) throw err;
+            // Fall through to in-process call
+          }
+
+          if (!body) {
+            const { default: sharedPrisma } = await import('../../../api/lib/prisma.js');
+            prisma = sharedPrisma;
+            const { resumeCheckpoint } = await import('../../store/checkpoint-manager.js');
+            const checkpoint = await resumeCheckpoint(checkpointId, { prisma });
+            body = { success: true, data: { checkpoint } };
+          }
+
+          if (options.json) {
+            console.log(JSON.stringify(body, null, 2));
+            return;
+          }
+
+          const cp = body.data?.checkpoint || body;
+          console.log(chalk.green(`\n✔ Checkpoint resumed: ${chalk.bold(cp.id || checkpointId)}`));
+          console.log(chalk.dim(`  Target: ${cp.targetType}:${cp.targetKey} | Status: ${cp.status}\n`));
+        } catch (err) {
+          printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
+        } finally {
+          await disconnectPrismaUnlessShared(prisma, true);
+        }
+      });
+
+    cmd
+      .command('pause <checkpointId>')
+      .description('Pause a running or stalled checkpoint')
+      .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+      .option('--token <token>', 'Bearer token for admin authentication')
+      .option('--json', 'Output raw JSON')
+      .action(async (checkpointId, options) => {
+        let prisma;
+        try {
+          const baseUrl = resolveBaseUrl(options.url);
+          /** @type {any} */
+          let body;
+
+          try {
+            const result = await fetchAdminJson(`${baseUrl}/api/checkpoints/${encodeURIComponent(checkpointId)}/pause`, {
+              method: 'POST',
+              token: options.token,
+            });
+            if (result.ok) {
+              body = result.body;
+            } else if (options.url) {
+              const errDetail = typeof result.body === 'object' && result.body?.error ? (result.body.error.message || result.body.error) : result.statusText;
+              throw new Error(`Remote checkpoint pause failed: HTTP ${result.status} ${errDetail}`);
+            }
+          } catch (err) {
+            if (options.url) throw err;
+            // Fall through to in-process call
+          }
+
+          if (!body) {
+            const { default: sharedPrisma } = await import('../../../api/lib/prisma.js');
+            prisma = sharedPrisma;
+            const { pauseCheckpoint } = await import('../../store/checkpoint-manager.js');
+            const checkpoint = await pauseCheckpoint(checkpointId, { prisma });
+            body = { success: true, data: { checkpoint } };
+          }
+
+          if (options.json) {
+            console.log(JSON.stringify(body, null, 2));
+            return;
+          }
+
+          const cp = body.data?.checkpoint || body;
+          console.log(chalk.green(`\n✔ Checkpoint paused: ${chalk.bold(cp.id || checkpointId)}`));
+          console.log(chalk.dim(`  Target: ${cp.targetType}:${cp.targetKey} | Status: ${cp.status}\n`));
+        } catch (err) {
+          printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
+        } finally {
+          await disconnectPrismaUnlessShared(prisma, true);
+        }
+      });
+
+    cmd
+      .command('retry <checkpointId>')
+      .description('Retry a failed checkpoint')
+      .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+      .option('--token <token>', 'Bearer token for admin authentication')
+      .option('--json', 'Output raw JSON')
+      .action(async (checkpointId, options) => {
+        let prisma;
+        try {
+          const baseUrl = resolveBaseUrl(options.url);
+          /** @type {any} */
+          let body;
+
+          try {
+            const result = await fetchAdminJson(`${baseUrl}/api/checkpoints/${encodeURIComponent(checkpointId)}/retry`, {
+              method: 'POST',
+              token: options.token,
+            });
+            if (result.ok) {
+              body = result.body;
+            } else if (options.url) {
+              const errDetail = typeof result.body === 'object' && result.body?.error ? (result.body.error.message || result.body.error) : result.statusText;
+              throw new Error(`Remote checkpoint retry failed: HTTP ${result.status} ${errDetail}`);
+            }
+          } catch (err) {
+            if (options.url) throw err;
+            // Fall through to in-process call
+          }
+
+          if (!body) {
+            const { default: sharedPrisma } = await import('../../../api/lib/prisma.js');
+            prisma = sharedPrisma;
+            const { retryCheckpoint } = await import('../../store/checkpoint-manager.js');
+            const checkpoint = await retryCheckpoint(checkpointId, { prisma });
+            body = { success: true, data: { checkpoint } };
+          }
+
+          if (options.json) {
+            console.log(JSON.stringify(body, null, 2));
+            return;
+          }
+
+          const cp = body.data?.checkpoint || body;
+          console.log(chalk.green(`\n✔ Checkpoint retried: ${chalk.bold(cp.id || checkpointId)}`));
+          console.log(chalk.dim(`  Target: ${cp.targetType}:${cp.targetKey} | Status: ${cp.status}\n`));
+        } catch (err) {
+          printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
+        } finally {
+          await disconnectPrismaUnlessShared(prisma, true);
+        }
+      });
+  };
+
+  // xactions admin checkpoints & alias xactions admin checkpoint
   const checkpointsCmd = adminCmd
     .command('checkpoints')
-    .description('Manage crawl checkpoints (list checkpoints; other actions planned)');
+    .description('Manage crawl checkpoints (list, inspect, and update checkpoints)');
+  registerCheckpointSubcommands(checkpointsCmd);
 
-  checkpointsCmd
-    .command('list')
-    .description('List crawl checkpoints with filtering and pagination')
-    .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
-    .option('--token <token>', 'Bearer token for admin authentication')
-    .option('-p, --platform <platform>', 'Filter by platform')
-    .option('-t, --target-type <type>', 'Filter by target type')
-    .option('-s, --status <status>', 'Filter by status')
-    .option('-l, --limit <limit>', 'Max checkpoints to return', '50')
-    .option('-o, --offset <offset>', 'Offset for pagination', '0')
-    .option('--json', 'Output raw JSON')
-    .action(async (options) => {
-      let prisma;
-      try {
-        const baseUrl = resolveBaseUrl(options.url);
-        const limit = parseCliPositiveInt(options.limit, 'limit');
-        const offset = parseCliNonNegativeInt(options.offset, 'offset');
-        /** @type {any} */
-        let body;
-
-        try {
-          const qs = new URLSearchParams();
-          if (options.platform) qs.set('platform', options.platform);
-          if (options.targetType) qs.set('targetType', options.targetType);
-          if (options.status) qs.set('status', options.status);
-          qs.set('limit', String(limit));
-          qs.set('offset', String(offset));
-          const result = await fetchAdminJson(`${baseUrl}/api/checkpoints?${qs}`, { token: options.token });
-          if (result.ok) {
-            body = result.body;
-          } else if (options.url) {
-            throw new Error(`Remote checkpoint list failed: HTTP ${result.status} ${result.statusText}`);
-          }
-        } catch (err) {
-          if (options.url) throw err;
-          // Network error; fall through to in-process call
-        }
-
-        if (!body) {
-          const { default: sharedPrisma } = await import('../../../api/lib/prisma.js');
-          prisma = sharedPrisma;
-          const { listCheckpoints } = await import('../../store/checkpoint-manager.js');
-          const result = await listCheckpoints({
-            platform: options.platform,
-            targetType: options.targetType,
-            status: options.status,
-            limit,
-            offset,
-            prisma,
-          });
-          body = { success: true, data: result };
-        }
-
-        if (options.json) {
-          console.log(JSON.stringify(body, null, 2));
-          return;
-        }
-
-        const result = body.data || body;
-        formatCheckpointList(result);
-        console.log();
-      } catch (err) {
-        printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
-      } finally {
-        await disconnectPrismaUnlessShared(prisma, true);
-      }
-    });
+  const checkpointCmd = adminCmd
+    .command('checkpoint')
+    .description('Manage crawl checkpoints (alias for checkpoints)');
+  registerCheckpointSubcommands(checkpointCmd);
 }
