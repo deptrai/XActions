@@ -2,7 +2,7 @@
 title: 'Story 13.2.13 — Twitter GraphQL Schema Migration (Hybrid Crawler)'
 type: 'refactor'
 created: '2026-09-03'
-status: 'ready-for-review'
+status: 'done'
 review_loop_iteration: 0
 baseline_commit: 'b8444743bd0e7c8ac13ed11be29eb097ac471dfb'
 context:
