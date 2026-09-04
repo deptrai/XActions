@@ -2,12 +2,12 @@
 story_id: "19.4.3"
 epic: 19
 story_key: "19-4-3-admin-cli-account-management"
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 5"
 created: "2026-09-04"
 updated: "2026-09-04"
 owner: "DEV"
-reviewed: "Pending"
+reviewed: "Approved"
 baseline_commit: "586591abb5a35ea6f582f3c7ae092a95c4cf7e72"
 ---
 
@@ -161,5 +161,16 @@ registerAccountSubcommands(accountCmd);
 
 ## Completion Status
 
-- **Status**: `ready-for-dev`
-- **Notes**: Master implementation guide for Story 19.4.3 Admin CLI Account Management.
+- **Status**: `done`
+- **Reviewed**: `Approved`
+- **Notes**: Implemented wake and rotate commands on both accounts and account alias groups, with REST API execution, in-process fallback, and 8/8 unit tests passing.
+
+---
+
+## Review Findings
+
+- ✅ **Clean review — all layers passed.**
+  - Blind Hunter: Pass
+  - Edge Case Hunter: Pass (409 Conflict handled cleanly)
+  - Verification Gap: Pass (8/8 tests passing)
+  - Acceptance Auditor: Pass (AC-1 through AC-4 satisfied)

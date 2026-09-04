@@ -356,62 +356,215 @@ export function registerAdminCommand(program) {
     .description('Manage proxy pool (alias for proxies)');
   registerProxySubcommands(proxyCmd);
 
-  // xactions admin accounts
+  // Helper to register accounts subcommands on either 'accounts' or 'account' alias
+  const registerAccountSubcommands = (cmd) => {
+    cmd
+      .command('list')
+      .description('List all accounts with hibernation status and velocity')
+      .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+      .option('--token <token>', 'Bearer token for admin authentication')
+      .option('--platform <platform>', 'Filter by platform (twitter, facebook, etc.)')
+      .option('-l, --limit <limit>', 'Max accounts to display', '50')
+      .option('-o, --offset <offset>', 'Offset for pagination', '0')
+      .option('--json', 'Output raw JSON')
+      .action(async (options) => {
+        try {
+          const baseUrl = resolveBaseUrl(options.url);
+          const limit = parseCliPositiveInt(options.limit, 'limit');
+          const offset = parseCliNonNegativeInt(options.offset, 'offset');
+          /** @type {any} */
+          let body;
+
+          try {
+            const query = options.platform ? `?platform=${encodeURIComponent(options.platform)}` : '';
+            const result = await fetchAdminJson(`${baseUrl}/api/admin/accounts${query}`, { token: options.token });
+            if (result.ok) {
+              body = result.body;
+            } else if (options.url) {
+              throw new Error(`Remote account list failed: HTTP ${result.status} ${result.statusText}`);
+            }
+          } catch (err) {
+            if (options.url) throw err;
+            // Network error; fall through to in-process call
+          }
+
+          if (!body) {
+            const { globalAccountPool } = await import('../../core/index.js');
+            const accounts = globalAccountPool.listAccountDetails(options.platform);
+            body = { success: true, total: accounts.length, accounts };
+          }
+
+          if (options.json) {
+            console.log(JSON.stringify(body, null, 2));
+            return;
+          }
+
+          const allAccounts = Array.isArray(body.accounts) ? body.accounts : (Array.isArray(body) ? body : []);
+          const accounts = allAccounts.slice(offset, offset + limit);
+          const total = typeof body.total === 'number' ? body.total : allAccounts.length;
+          console.log(chalk.bold(`\n👤 Accounts (Total: ${total}, Showing: ${accounts.length})\n`));
+          formatAccountList(accounts);
+          console.log();
+        } catch (err) {
+          printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
+        }
+      });
+
+    cmd
+      .command('wake <accountId>')
+      .description('Wake an account from hibernation')
+      .option('-p, --platform <platform>', 'Account platform')
+      .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+      .option('--token <token>', 'Bearer token for admin authentication')
+      .option('--json', 'Output raw JSON')
+      .action(async (accountId, options) => {
+        try {
+          const baseUrl = resolveBaseUrl(options.url);
+          /** @type {any} */
+          let body;
+
+          try {
+            const payload = { accountId, platform: options.platform };
+            const result = await fetchAdminJson(`${baseUrl}/api/admin/accounts/wake`, {
+              method: 'POST',
+              body: JSON.stringify(payload),
+              token: options.token,
+            });
+            if (result.ok) {
+              body = result.body;
+            } else if (result.status === 409) {
+              const errMsg = typeof result.body === 'object' && result.body?.error ? result.body.error : 'Account is not currently in hibernation';
+              if (options.json) {
+                console.log(JSON.stringify({ success: false, error: errMsg, accountId }, null, 2));
+                return;
+              }
+              console.log(chalk.yellow(`\n⚠️  ${errMsg}\n`));
+              return;
+            } else if (options.url) {
+              const errDetail = typeof result.body === 'object' && result.body?.error ? result.body.error : result.statusText;
+              throw new Error(`Remote account wake failed: HTTP ${result.status} ${errDetail}`);
+            }
+          } catch (err) {
+            if (options.url) throw err;
+            // Fall through to in-process call
+          }
+
+          if (!body) {
+            const { globalAccountPool, globalAdaptiveRateGovernor } = await import('../../core/index.js');
+            const account = globalAccountPool.getAccount(accountId, options.platform);
+            if (!account) {
+              throw new Error(`Account "${accountId}" not found`);
+            }
+            const targetPlatform = options.platform || account.platform;
+            const compositeKey = `${targetPlatform}:${accountId}`;
+            const isHibernatingRecord = account.hibernatingUntil !== null && account.hibernatingUntil > Date.now();
+            const isHibernatingGov = globalAdaptiveRateGovernor.isHibernating(compositeKey) || globalAdaptiveRateGovernor.isHibernating(accountId);
+
+            if (!isHibernatingRecord && !isHibernatingGov) {
+              const errMsg = `Account "${accountId}" is not currently in hibernation`;
+              if (options.json) {
+                console.log(JSON.stringify({ success: false, error: errMsg, accountId }, null, 2));
+                return;
+              }
+              console.log(chalk.yellow(`\n⚠️  ${errMsg}\n`));
+              return;
+            }
+
+            globalAccountPool.markAvailable(accountId, targetPlatform);
+            body = {
+              success: true,
+              accountId,
+              status: 'active',
+              message: `Account "${accountId}" is now active`,
+            };
+          }
+
+          if (options.json) {
+            console.log(JSON.stringify(body, null, 2));
+            return;
+          }
+
+          console.log(chalk.green(`\n✔ Account awakened: ${chalk.bold(body.accountId || accountId)}`));
+          console.log(chalk.dim(`  Status: active\n`));
+        } catch (err) {
+          printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
+        }
+      });
+
+    cmd
+      .command('rotate <accountId> [platform]')
+      .description('Rotate to the next available account in the pool')
+      .option('-p, --platform <platform>', 'Account platform (alternative to argument)')
+      .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+      .option('--token <token>', 'Bearer token for admin authentication')
+      .option('--json', 'Output raw JSON')
+      .action(async (accountId, platformArg, options) => {
+        try {
+          const baseUrl = resolveBaseUrl(options.url);
+          const platform = platformArg || options.platform;
+          /** @type {any} */
+          let body;
+
+          try {
+            const payload = { accountId, platform };
+            const result = await fetchAdminJson(`${baseUrl}/api/admin/accounts/rotate`, {
+              method: 'POST',
+              body: JSON.stringify(payload),
+              token: options.token,
+            });
+            if (result.ok) {
+              body = result.body;
+            } else if (options.url) {
+              const errDetail = typeof result.body === 'object' && result.body?.error ? result.body.error : result.statusText;
+              throw new Error(`Remote account rotate failed: HTTP ${result.status} ${errDetail}`);
+            }
+          } catch (err) {
+            if (options.url) throw err;
+            // Fall through to in-process call
+          }
+
+          if (!body) {
+            const { globalAccountPool } = await import('../../core/index.js');
+            const account = globalAccountPool.getAccount(accountId, platform);
+            if (!account) {
+              throw new Error(`Account "${accountId}" not found`);
+            }
+            const targetPlatform = platform || account.platform;
+            const nextAccountId = globalAccountPool.getNextAvailable(targetPlatform);
+            body = {
+              success: true,
+              previousAccountId: accountId,
+              nextAccountId,
+              platform: targetPlatform,
+            };
+          }
+
+          if (options.json) {
+            console.log(JSON.stringify(body, null, 2));
+            return;
+          }
+
+          console.log(chalk.green(`\n✔ Account rotated:`));
+          console.log(chalk.dim(`  Previous: ${chalk.bold(body.previousAccountId || accountId)}`));
+          console.log(chalk.dim(`  Next:     ${chalk.bold(body.nextAccountId || 'none available')}`));
+          if (body.platform) console.log(chalk.dim(`  Platform: ${body.platform}\n`));
+          else console.log();
+        } catch (err) {
+          printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
+        }
+      });
+  };
+
+  // xactions admin accounts & alias xactions admin account
   const accountsCmd = adminCmd
     .command('accounts')
-    .description('Manage account pool (list accounts; other actions planned)');
+    .description('Manage account pool (list, wake, and rotate accounts)');
+  registerAccountSubcommands(accountsCmd);
 
-  accountsCmd
-    .command('list')
-    .description('List all accounts with hibernation status and velocity')
-    .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
-    .option('--token <token>', 'Bearer token for admin authentication')
-    .option('--platform <platform>', 'Filter by platform (twitter, facebook, etc.)')
-    .option('-l, --limit <limit>', 'Max accounts to display', '50')
-    .option('-o, --offset <offset>', 'Offset for pagination', '0')
-    .option('--json', 'Output raw JSON')
-    .action(async (options) => {
-      try {
-        const baseUrl = resolveBaseUrl(options.url);
-        const limit = parseCliPositiveInt(options.limit, 'limit');
-        const offset = parseCliNonNegativeInt(options.offset, 'offset');
-        /** @type {any} */
-        let body;
-
-        try {
-          const query = options.platform ? `?platform=${encodeURIComponent(options.platform)}` : '';
-          const result = await fetchAdminJson(`${baseUrl}/api/admin/accounts${query}`, { token: options.token });
-          if (result.ok) {
-            body = result.body;
-          } else if (options.url) {
-            throw new Error(`Remote account list failed: HTTP ${result.status} ${result.statusText}`);
-          }
-        } catch (err) {
-          if (options.url) throw err;
-          // Network error; fall through to in-process call
-        }
-
-        if (!body) {
-          const { globalAccountPool } = await import('../../core/index.js');
-          const accounts = globalAccountPool.listAccountDetails(options.platform);
-          body = { success: true, total: accounts.length, accounts };
-        }
-
-        if (options.json) {
-          console.log(JSON.stringify(body, null, 2));
-          return;
-        }
-
-        const allAccounts = Array.isArray(body.accounts) ? body.accounts : (Array.isArray(body) ? body : []);
-        const accounts = allAccounts.slice(offset, offset + limit);
-        const total = typeof body.total === 'number' ? body.total : allAccounts.length;
-        console.log(chalk.bold(`\n👤 Accounts (Total: ${total}, Showing: ${accounts.length})\n`));
-        formatAccountList(accounts);
-        console.log();
-      } catch (err) {
-        printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
-      }
-    });
+  const accountCmd = adminCmd
+    .command('account')
+    .description('Manage account pool (alias for accounts)');
+  registerAccountSubcommands(accountCmd);
 
   // xactions admin checkpoints
   const checkpointsCmd = adminCmd

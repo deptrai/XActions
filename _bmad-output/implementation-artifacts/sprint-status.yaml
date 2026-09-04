@@ -143,7 +143,7 @@ development_status:
   19-4-admin-cli-unified-command-group: done
   19-4-1-admin-cli-status: done
   19-4-2-admin-cli-proxy-management: done
-  19-4-3-admin-cli-account-management: ready-for-dev
+  19-4-3-admin-cli-account-management: done
   19-4-4-admin-cli-checkpoint-management: backlog
   19-4-5-admin-cli-stream-metrics-alerts: backlog
   # NOTE: 19.5 and 19.6 are no longer used; 19.4 has been split into 19.4.1–19.4.5.
