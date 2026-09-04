@@ -98,6 +98,52 @@ so that **I can inspect, wake hibernating accounts, and rotate assigned crawler 
 | Admin REST Routes | `api/routes/admin.js` | Lines 510–601 (`POST /api/admin/accounts/wake`, `POST /api/admin/accounts/rotate`) |
 | Integration Tests | `tests/cli/admin-accounts.test.js` | Vitest test suite for account CLI subcommands |
 
+### Implementation Pattern for `admin.js`
+
+```javascript
+// Helper to register account subcommands on either 'accounts' or 'account' alias
+const registerAccountSubcommands = (cmd) => {
+  // 1. Existing list command...
+  // 2. wake command:
+  cmd
+    .command('wake <accountId>')
+    .description('Wake an account from hibernation')
+    .option('-p, --platform <platform>', 'Account platform')
+    .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+    .option('--token <token>', 'Bearer token for admin authentication')
+    .option('--json', 'Output raw JSON')
+    .action(async (accountId, options) => {
+      // 1. REST call: POST /api/admin/accounts/wake with body { accountId, platform: options.platform }
+      // 2. Fallback: globalAccountPool.markAvailable(accountId, options.platform)
+    });
+
+  // 3. rotate command:
+  cmd
+    .command('rotate <accountId> [platform]')
+    .description('Rotate to the next available account in the pool')
+    .option('-p, --platform <platform>', 'Account platform (alternative to argument)')
+    .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+    .option('--token <token>', 'Bearer token for admin authentication')
+    .option('--json', 'Output raw JSON')
+    .action(async (accountId, platformArg, options) => {
+      const platform = platformArg || options.platform;
+      // 1. REST call: POST /api/admin/accounts/rotate with body { accountId, platform }
+      // 2. Fallback: globalAccountPool.getNextAvailable(platform)
+    });
+};
+
+// Register on both plural and singular:
+const accountsCmd = adminCmd
+  .command('accounts')
+  .description('Manage account pool (list, wake, and rotate accounts)');
+registerAccountSubcommands(accountsCmd);
+
+const accountCmd = adminCmd
+  .command('account')
+  .description('Manage account pool (alias for accounts)');
+registerAccountSubcommands(accountCmd);
+```
+
 ---
 
 ## Testing Plan
