@@ -28,6 +28,7 @@ dotenv.config();
 
 import prisma from '../../api/lib/prisma.js';
 import { executeActionListTool } from '../scrapers/social/actions-list.js';
+import jwt from 'jsonwebtoken';
 
 import { VERSION } from '../version.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -59,6 +60,38 @@ async function getCoreModule() {
     coreModulePromise = import('../core/index.js');
   }
   return coreModulePromise;
+}
+
+let proxyPoolPromise = null;
+async function getProxyPool() {
+  if (!proxyPoolPromise) {
+    proxyPoolPromise = import('../proxy/proxy-pool.js');
+  }
+  return proxyPoolPromise;
+}
+
+let checkpointManagerPromise = null;
+async function getCheckpointManager() {
+  if (!checkpointManagerPromise) {
+    checkpointManagerPromise = import('../store/checkpoint-manager.js');
+  }
+  return checkpointManagerPromise;
+}
+
+let streamMetricsPromise = null;
+async function getStreamMetricsCollector() {
+  if (!streamMetricsPromise) {
+    streamMetricsPromise = import('../utils/stream-metrics-collector.js');
+  }
+  return streamMetricsPromise;
+}
+
+let streamAlertsPromise = null;
+async function getStreamAlertsEngine() {
+  if (!streamAlertsPromise) {
+    streamAlertsPromise = import('../utils/stream-alerts.js');
+  }
+  return streamAlertsPromise;
 }
 // ============================================================================
 // Configuration
@@ -2740,6 +2773,157 @@ const TOOLS = [
       required: ['platform', 'postId'],
     },
   },
+  // ====== Admin / Operator Tools (Story 19.10) ======
+  {
+    name: 'x_admin_status',
+    description: 'Get governor status, proxy health, and hibernating accounts. Requires admin privileges.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        token: {
+          type: 'string',
+          description: 'Optional Bearer/JWT admin token. If omitted, userId must be provided.',
+        },
+        userId: {
+          type: 'string',
+          description: 'Optional admin user id. If omitted, token must be provided.',
+        },
+      },
+    },
+  },
+  {
+    name: 'x_admin_proxies_list',
+    description: 'List registered proxies with status and dual-pool partition. Requires admin privileges.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        token: { type: 'string', description: 'Optional admin JWT token.' },
+        userId: { type: 'string', description: 'Optional admin user id.' },
+      },
+    },
+  },
+  {
+    name: 'x_admin_proxy_quarantine',
+    description: 'Manually quarantine a proxy by key or URL. Requires admin privileges.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        proxy: {
+          type: 'string',
+          description: 'Proxy key or URL to quarantine.',
+        },
+        durationMs: {
+          type: 'number',
+          description: 'Quarantine duration in milliseconds (default: 5 minutes).',
+        },
+        token: { type: 'string', description: 'Optional admin JWT token.' },
+        userId: { type: 'string', description: 'Optional admin user id.' },
+      },
+      required: ['proxy'],
+    },
+  },
+  {
+    name: 'x_admin_accounts_list',
+    description: 'List registered accounts with status and hibernation details. Requires admin privileges.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: {
+          type: 'string',
+          description: 'Optional platform filter (e.g. twitter, facebook).',
+        },
+        token: { type: 'string', description: 'Optional admin JWT token.' },
+        userId: { type: 'string', description: 'Optional admin user id.' },
+      },
+    },
+  },
+  {
+    name: 'x_admin_account_wake',
+    description: 'Wake an account from hibernation. Requires admin privileges.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        accountId: {
+          type: 'string',
+          description: 'Account id to wake.',
+        },
+        platform: {
+          type: 'string',
+          description: 'Account platform (e.g. twitter).',
+        },
+        token: { type: 'string', description: 'Optional admin JWT token.' },
+        userId: { type: 'string', description: 'Optional admin user id.' },
+      },
+      required: ['accountId'],
+    },
+  },
+  {
+    name: 'x_admin_checkpoints_list',
+    description: 'List crawl checkpoints with pagination and filtering. Requires admin privileges.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: { type: 'string', description: 'Filter by platform.' },
+        targetType: { type: 'string', description: 'Filter by target type.' },
+        status: { type: 'string', description: 'Filter by status.' },
+        limit: { type: 'number', description: 'Max results (default: 50, max: 500).' },
+        offset: { type: 'number', description: 'Pagination offset (default: 0).' },
+        token: { type: 'string', description: 'Optional admin JWT token.' },
+        userId: { type: 'string', description: 'Optional admin user id.' },
+      },
+    },
+  },
+  {
+    name: 'x_admin_checkpoint_action',
+    description: 'Perform a lifecycle action on a checkpoint: resume, pause, or retry. Requires admin privileges.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Checkpoint id.',
+        },
+        action: {
+          type: 'string',
+          enum: ['resume', 'pause', 'retry'],
+          description: 'Lifecycle action to perform.',
+        },
+        token: { type: 'string', description: 'Optional admin JWT token.' },
+        userId: { type: 'string', description: 'Optional admin user id.' },
+      },
+      required: ['id', 'action'],
+    },
+  },
+  {
+    name: 'x_admin_stream_metrics',
+    description: 'Get Nowing social Redis stream metrics. Requires admin privileges.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        forceRefresh: {
+          type: 'boolean',
+          description: 'Force a fresh read from Redis instead of using the cache.',
+        },
+        token: { type: 'string', description: 'Optional admin JWT token.' },
+        userId: { type: 'string', description: 'Optional admin user id.' },
+      },
+    },
+  },
+  {
+    name: 'x_admin_stream_alerts',
+    description: 'Get stream alert status and recent threshold breaches. Requires admin privileges.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        test: {
+          type: 'boolean',
+          description: 'If true, send a synthetic test alert through configured channels.',
+        },
+        token: { type: 'string', description: 'Optional admin JWT token.' },
+        userId: { type: 'string', description: 'Optional admin user id.' },
+      },
+    },
+  },
 ];
 
 // ============================================================================
@@ -2792,6 +2976,11 @@ async function executeTool(name, args) {
   // Add session cookie to args if provided globally
   if (SESSION_COOKIE && !args.cookie && name === 'x_login') {
     args.cookie = SESSION_COOKIE;
+  }
+
+  // Handle admin/operator tools (Story 19.10)
+  if (name.startsWith('x_admin_')) {
+    return await executeAdminTool(name, args);
   }
 
   // Handle Space agent tools (xspace-agent integration)
@@ -2966,6 +3155,275 @@ async function executeTool(name, args) {
       };
     }
     return await toolFn(args);
+  }
+}
+
+/**
+ * Resolve a user identifier from a decoded JWT payload.
+ * Mirrors api/middleware/auth.js for local use in MCP.
+ * @param {Record<string, unknown>} decoded
+ * @returns {string|undefined}
+ */
+function resolveUserId(decoded) {
+  if (!decoded || typeof decoded !== 'object') return undefined;
+  const candidates = [decoded.userId, decoded.id, decoded.sub];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Verify the caller is an admin from either a JWT token or an explicit userId.
+ * Throws PlatformError XACT_4003 when the token is missing, invalid, expired,
+ * or the user is not an admin.
+ *
+ * @param {Record<string, unknown>} args
+ * @returns {Promise<{ userId: string, isAdmin: boolean }>}
+ */
+async function requireAdmin(args) {
+  const token = args?.token && typeof args.token === 'string' ? args.token : undefined;
+  const explicitUserId = args?.userId && typeof args.userId === 'string' ? args.userId : undefined;
+
+  // In MCP stdio context there is no req.user, so we accept a Bearer token or
+  // an explicit userId from an already-authenticated consumer. The latter is
+  // useful when the MCP client itself performed admin authentication upstream.
+  if (!token && !explicitUserId) {
+    throw new PlatformError({
+      code: 'XACT_4003',
+      type: ErrorTypes.AUTH_EXPIRED,
+      message: 'Admin authentication required: provide token or userId',
+      statusCode: 401,
+      suggestedAction: SuggestedActions.RELOGIN,
+    });
+  }
+
+  let userId = explicitUserId;
+  if (token) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new PlatformError({
+        code: 'XACT_4003',
+        type: ErrorTypes.AUTH_EXPIRED,
+        message: 'JWT_SECRET not configured',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+      });
+    }
+    try {
+      const decoded = jwt.verify(token, secret);
+      if (!decoded || typeof decoded !== 'object') {
+        throw new Error('Invalid token');
+      }
+      const resolved = resolveUserId(/** @type {Record<string, unknown>} */ (decoded));
+      if (!resolved) {
+        throw new Error('Invalid token: no user id');
+      }
+      if (!userId) {
+        userId = resolved;
+      }
+    } catch (err) {
+      throw new PlatformError({
+        code: 'XACT_4003',
+        type: ErrorTypes.AUTH_EXPIRED,
+        message: err instanceof Error ? err.message : 'Invalid token',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+      });
+    }
+  }
+
+  if (!userId) {
+    throw new PlatformError({
+      code: 'XACT_4003',
+      type: ErrorTypes.AUTH_EXPIRED,
+      message: 'Admin authentication failed: no user id resolved',
+      statusCode: 401,
+      suggestedAction: SuggestedActions.RELOGIN,
+    });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new PlatformError({
+      code: 'XACT_4003',
+      type: ErrorTypes.AUTH_EXPIRED,
+      message: 'Admin user not found',
+      statusCode: 401,
+      suggestedAction: SuggestedActions.RELOGIN,
+    });
+  }
+
+  if (!user.isAdmin) {
+    throw new PlatformError({
+      code: 'XACT_4003',
+      type: ErrorTypes.AUTH_EXPIRED,
+      message: 'Admin privileges required',
+      statusCode: 403,
+      suggestedAction: SuggestedActions.RELOGIN,
+    });
+  }
+
+  return { userId: user.id, isAdmin: true };
+}
+
+/**
+ * Execute an admin/operator tool by wrapping the existing CLI/REST logic.
+ * All admin tools require isAdmin and return plain objects that are wrapped
+ * by the caller in the 3-layer envelope.
+ *
+ * @param {string} name
+ * @param {Record<string, unknown>} args
+ * @returns {Promise<unknown>}
+ */
+async function executeAdminTool(name, args) {
+  await requireAdmin(args);
+
+  switch (name) {
+    case 'x_admin_status': {
+      const { globalStatusApi, globalAdaptiveRateGovernor } = await getCoreModule();
+      const { refreshGovernorConsumerLag, globalStreamMetricsReader } = await import('../utils/stream-metrics.js');
+      await refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader);
+      return globalStatusApi.getGovernorStatus();
+    }
+
+    case 'x_admin_proxies_list': {
+      const { globalProxyPool } = await getProxyPool();
+      const proxies = globalProxyPool.listProxies();
+      return {
+        success: true,
+        totalCount: proxies.length,
+        healthyCount: proxies.filter((p) => p.status === 'healthy').length,
+        proxies,
+      };
+    }
+
+    case 'x_admin_proxy_quarantine': {
+      const proxy = typeof args.proxy === 'string' ? args.proxy : '';
+      if (!proxy) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'Proxy is required to quarantine',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+      const { globalProxyPool } = await getProxyPool();
+      const durationMs = Number(args.durationMs) > 0 ? Number(args.durationMs) : 5 * 60 * 1000;
+      globalProxyPool.quarantine(proxy, durationMs);
+      return {
+        success: true,
+        quarantined: proxy,
+        healthyCount: globalProxyPool.healthyCount,
+        totalCount: globalProxyPool.totalCount,
+      };
+    }
+
+    case 'x_admin_accounts_list': {
+      const { globalAccountPool } = await getCoreModule();
+      const platform = typeof args.platform === 'string' ? args.platform : undefined;
+      const accounts = globalAccountPool.listAccountDetails(platform);
+      return { success: true, total: accounts.length, accounts };
+    }
+
+    case 'x_admin_account_wake': {
+      const accountId = typeof args.accountId === 'string' ? args.accountId : '';
+      if (!accountId) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'accountId is required',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+      const { globalAccountPool, globalAdaptiveRateGovernor } = await getCoreModule();
+      const account = globalAccountPool.getAccount(accountId, args.platform);
+      if (!account) {
+        throw new PlatformError({
+          code: 'XACT_4041',
+          type: ErrorTypes.NOT_FOUND,
+          message: `Account "${accountId}" not found`,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+      const targetPlatform = typeof args.platform === 'string' ? args.platform : (account.platform || 'twitter');
+      const compositeKey = `${targetPlatform}:${accountId}`;
+      const isHibernatingRecord = account.hibernatingUntil !== null && account.hibernatingUntil > Date.now();
+      const isHibernatingGov = globalAdaptiveRateGovernor.isHibernating(compositeKey) || globalAdaptiveRateGovernor.isHibernating(accountId);
+
+      if (!isHibernatingRecord && !isHibernatingGov) {
+        throw new PlatformError({
+          code: 'XACT_4090',
+          type: ErrorTypes.HIBERNATION,
+          message: `Account "${accountId}" is not currently in hibernation`,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+
+      globalAccountPool.markAvailable(accountId, targetPlatform);
+      return { success: true, accountId, status: 'active', message: `Account "${accountId}" is now active` };
+    }
+
+    case 'x_admin_checkpoints_list': {
+      const { listCheckpoints } = await getCheckpointManager();
+      const platform = typeof args.platform === 'string' ? args.platform : undefined;
+      const targetType = typeof args.targetType === 'string' ? args.targetType : undefined;
+      const status = typeof args.status === 'string' ? args.status : undefined;
+      const limit = Number(args.limit) > 0 ? Number(args.limit) : 50;
+      const offset = Number(args.offset) >= 0 ? Number(args.offset) : 0;
+      const result = await listCheckpoints({ platform, targetType, status, limit, offset, prisma });
+      return { success: true, data: result };
+    }
+
+    case 'x_admin_checkpoint_action': {
+      const checkpointId = typeof args.id === 'string' ? args.id : '';
+      const action = typeof args.action === 'string' ? args.action : '';
+      if (!checkpointId) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'Checkpoint id is required',
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+      if (!['resume', 'pause', 'retry'].includes(action)) {
+        throw new PlatformError({
+          code: 'XACT_4002',
+          type: ErrorTypes.INVALID_ARGS,
+          message: `Invalid checkpoint action "${action}". Use resume, pause, or retry.`,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+      const { resumeCheckpoint, pauseCheckpoint, retryCheckpoint } = await getCheckpointManager();
+      const checkpoint =
+        action === 'resume' ? await resumeCheckpoint(checkpointId, { prisma })
+        : action === 'pause' ? await pauseCheckpoint(checkpointId, { prisma })
+        : await retryCheckpoint(checkpointId, { prisma });
+      return { success: true, data: { checkpoint } };
+    }
+
+    case 'x_admin_stream_metrics': {
+      const { defaultStreamMetricsCollector } = await getStreamMetricsCollector();
+      const metrics = await defaultStreamMetricsCollector.getMetrics({
+        forceRefresh: Boolean(args.forceRefresh),
+      });
+      return { success: true, metrics };
+    }
+
+    case 'x_admin_stream_alerts': {
+      const { defaultStreamAlertEngine } = await getStreamAlertsEngine();
+      if (args.test) {
+        const testResult = await defaultStreamAlertEngine.testAlert();
+        return { success: true, message: 'Test alert sent', result: testResult };
+      }
+      const alertStatus = defaultStreamAlertEngine.getAlertStatus();
+      return { success: true, alerts: alertStatus };
+    }
+
+    default:
+      throw new Error(`Unknown admin tool: ${name}`);
   }
 }
 
