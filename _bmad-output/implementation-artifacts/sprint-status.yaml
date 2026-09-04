@@ -71,7 +71,7 @@ development_status:
 
   # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---
   # NOTE: 2026-09-02 — Twitter GraphQL schema migration & 55-action audit in progress (sub-stories 13.2.13–13.2.15 added).
-  epic-13: in-progress
+  epic-13: done
   13-1-tiered-signer-architecture-token-ring-worker-pool: done
   13-2-refactor-twitter-scraper-to-hybrid-architecture: done
   13-2-1-twitter-hybrid-profile-relationships: done
