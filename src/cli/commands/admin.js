@@ -163,65 +163,198 @@ export function registerAdminCommand(program) {
       }
     });
 
-  // xactions admin proxies
-  const proxiesCmd = adminCmd
-    .command('proxies')
-    .description('Manage proxy pool (list proxies; other actions planned)');
-
-  proxiesCmd
-    .command('list')
-    .description('List all registered proxies with status and partition')
-    .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
-    .option('--token <token>', 'Bearer token for admin authentication')
-    .option('-l, --limit <limit>', 'Max proxies to display', '50')
-    .option('-o, --offset <offset>', 'Offset for pagination', '0')
-    .option('--json', 'Output raw JSON')
-    .action(async (options) => {
-      try {
-        const baseUrl = resolveBaseUrl(options.url);
-        const limit = parseCliPositiveInt(options.limit, 'limit');
-        const offset = parseCliNonNegativeInt(options.offset, 'offset');
-        /** @type {any} */
-        let body;
-
+  // Helper to register proxies subcommands on either 'proxies' or 'proxy' alias
+  const registerProxySubcommands = (cmd) => {
+    cmd
+      .command('list')
+      .description('List all registered proxies with status and partition')
+      .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+      .option('--token <token>', 'Bearer token for admin authentication')
+      .option('-l, --limit <limit>', 'Max proxies to display', '50')
+      .option('-o, --offset <offset>', 'Offset for pagination', '0')
+      .option('--json', 'Output raw JSON')
+      .action(async (options) => {
         try {
-          const result = await fetchAdminJson(`${baseUrl}/api/admin/proxies`, { token: options.token });
-          if (result.ok) {
-            body = result.body;
-          } else if (options.url) {
-            throw new Error(`Remote proxy list failed: HTTP ${result.status} ${result.statusText}`);
+          const baseUrl = resolveBaseUrl(options.url);
+          const limit = parseCliPositiveInt(options.limit, 'limit');
+          const offset = parseCliNonNegativeInt(options.offset, 'offset');
+          /** @type {any} */
+          let body;
+
+          try {
+            const result = await fetchAdminJson(`${baseUrl}/api/admin/proxies`, { token: options.token });
+            if (result.ok) {
+              body = result.body;
+            } else if (options.url) {
+              throw new Error(`Remote proxy list failed: HTTP ${result.status} ${result.statusText}`);
+            }
+          } catch (err) {
+            if (options.url) throw err;
+            // Network error; fall through to in-process call
+          }
+
+          if (!body) {
+            const { globalProxyPool } = await import('../../proxy/proxy-pool.js');
+            const proxies = globalProxyPool.listProxies();
+            body = {
+              success: true,
+              totalCount: proxies.length,
+              healthyCount: proxies.filter((p) => p.status === 'healthy').length,
+              proxies,
+            };
+          }
+
+          if (options.json) {
+            console.log(JSON.stringify(body, null, 2));
+            return;
+          }
+
+          const allProxies = Array.isArray(body.proxies) ? body.proxies : (Array.isArray(body) ? body : []);
+          const proxies = allProxies.slice(offset, offset + limit);
+          const total = typeof body.totalCount === 'number' ? body.totalCount : allProxies.length;
+          console.log(chalk.bold(`\n🌐 Proxies (Total: ${total}, Showing: ${proxies.length})\n`));
+          formatProxyList(proxies);
+          console.log();
+        } catch (err) {
+          printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
+        }
+      });
+
+    cmd
+      .command('quarantine <proxyKey>')
+      .description('Manually quarantine a proxy by key')
+      .option('-d, --duration <ms>', 'Quarantine duration in milliseconds')
+      .option('-r, --reason <reason>', 'Optional reason for quarantine')
+      .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+      .option('--token <token>', 'Bearer token for admin authentication')
+      .option('--json', 'Output raw JSON')
+      .action(async (proxyKey, options) => {
+        try {
+          const baseUrl = resolveBaseUrl(options.url);
+          const durationMs = options.duration ? parseCliPositiveInt(options.duration, 'duration') : undefined;
+          /** @type {any} */
+          let body;
+
+          try {
+            const payload = {
+              proxy: proxyKey,
+              durationMs,
+              reason: options.reason,
+            };
+            const result = await fetchAdminJson(`${baseUrl}/api/admin/proxies/quarantine`, {
+              method: 'POST',
+              body: JSON.stringify(payload),
+              token: options.token,
+            });
+            if (result.ok) {
+              body = result.body;
+            } else if (options.url) {
+              const errDetail = typeof result.body === 'object' && result.body?.error ? result.body.error : result.statusText;
+              throw new Error(`Remote proxy quarantine failed: HTTP ${result.status} ${errDetail}`);
+            }
+          } catch (err) {
+            if (options.url) throw err;
+            // Fall through to in-process call
+          }
+
+          if (!body) {
+            const { globalProxyPool } = await import('../../proxy/proxy-pool.js');
+            globalProxyPool.quarantine(proxyKey, durationMs);
+            body = {
+              success: true,
+              quarantined: proxyKey,
+              healthyCount: globalProxyPool.healthyCount,
+              totalCount: globalProxyPool.totalCount,
+            };
+          }
+
+          if (options.json) {
+            console.log(JSON.stringify(body, null, 2));
+            return;
+          }
+
+          console.log(chalk.green(`\n✔ Proxy quarantined: ${chalk.bold(body.quarantined || proxyKey)}`));
+          if (options.reason) console.log(chalk.dim(`  Reason: ${options.reason}`));
+          if (durationMs) console.log(chalk.dim(`  Duration: ${durationMs}ms`));
+          if (typeof body.healthyCount === 'number') {
+            console.log(chalk.dim(`  Pool Status: ${body.healthyCount}/${body.totalCount} healthy\n`));
+          } else {
+            console.log();
           }
         } catch (err) {
-          if (options.url) throw err;
-          // Network error; fall through to in-process call
+          printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
         }
+      });
 
-        if (!body) {
-          const { globalProxyPool } = await import('../../proxy/proxy-pool.js');
-          const proxies = globalProxyPool.listProxies();
-          body = {
-            success: true,
-            totalCount: proxies.length,
-            healthyCount: proxies.filter((p) => p.status === 'healthy').length,
-            proxies,
-          };
+    cmd
+      .command('release <proxyKey>')
+      .description('Manually release a proxy from quarantine')
+      .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
+      .option('--token <token>', 'Bearer token for admin authentication')
+      .option('--json', 'Output raw JSON')
+      .action(async (proxyKey, options) => {
+        try {
+          const baseUrl = resolveBaseUrl(options.url);
+          /** @type {any} */
+          let body;
+
+          try {
+            const payload = { proxy: proxyKey };
+            const result = await fetchAdminJson(`${baseUrl}/api/admin/proxies/release`, {
+              method: 'POST',
+              body: JSON.stringify(payload),
+              token: options.token,
+            });
+            if (result.ok) {
+              body = result.body;
+            } else if (options.url) {
+              const errDetail = typeof result.body === 'object' && result.body?.error ? result.body.error : result.statusText;
+              throw new Error(`Remote proxy release failed: HTTP ${result.status} ${errDetail}`);
+            }
+          } catch (err) {
+            if (options.url) throw err;
+            // Fall through to in-process call
+          }
+
+          if (!body) {
+            const { globalProxyPool } = await import('../../proxy/proxy-pool.js');
+            const released = globalProxyPool.release(proxyKey);
+            body = {
+              success: true,
+              released,
+              proxy: proxyKey,
+              healthyCount: globalProxyPool.healthyCount,
+              totalCount: globalProxyPool.totalCount,
+            };
+          }
+
+          if (options.json) {
+            console.log(JSON.stringify(body, null, 2));
+            return;
+          }
+
+          console.log(chalk.green(`\n✔ Proxy released from quarantine: ${chalk.bold(body.proxy || proxyKey)}`));
+          if (typeof body.healthyCount === 'number') {
+            console.log(chalk.dim(`  Pool Status: ${body.healthyCount}/${body.totalCount} healthy\n`));
+          } else {
+            console.log();
+          }
+        } catch (err) {
+          printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
         }
+      });
+  };
 
-        if (options.json) {
-          console.log(JSON.stringify(body, null, 2));
-          return;
-        }
+  // xactions admin proxies & alias xactions admin proxy
+  const proxiesCmd = adminCmd
+    .command('proxies')
+    .description('Manage proxy pool (list proxies and pool state)');
+  registerProxySubcommands(proxiesCmd);
 
-        const allProxies = Array.isArray(body.proxies) ? body.proxies : (Array.isArray(body) ? body : []);
-        const proxies = allProxies.slice(offset, offset + limit);
-        const total = typeof body.totalCount === 'number' ? body.totalCount : allProxies.length;
-        console.log(chalk.bold(`\n🌐 Proxies (Total: ${total}, Showing: ${proxies.length})\n`));
-        formatProxyList(proxies);
-        console.log();
-      } catch (err) {
-        printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
-      }
-    });
+  const proxyCmd = adminCmd
+    .command('proxy')
+    .description('Manage proxy pool (alias for proxies)');
+  registerProxySubcommands(proxyCmd);
 
   // xactions admin accounts
   const accountsCmd = adminCmd

@@ -2,7 +2,7 @@
 story_id: "19.4.2"
 epic: 19
 story_key: "19-4-2-admin-cli-proxy-management"
-status: "ready-for-dev"
+status: "done"
 phase: "Phase 5"
 created: "2026-09-04"
 updated: "2026-09-04"

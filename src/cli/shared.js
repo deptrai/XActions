@@ -313,6 +313,7 @@ export async function fetchAdminJson(url, options = {}) {
   const { token, timeoutMs = DEFAULT_HTTP_TIMEOUT_MS, method = 'GET', body } = options;
   const headers = /** @type {Record<string, string>} */ ({});
   if (token) headers.Authorization = `Bearer ${token}`;
+  if (body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
