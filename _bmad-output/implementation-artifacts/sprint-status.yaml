@@ -145,7 +145,7 @@ development_status:
   19-4-2-admin-cli-proxy-management: done
   19-4-3-admin-cli-account-management: done
   19-4-4-admin-cli-checkpoint-management: done
-  19-4-5-admin-cli-stream-metrics-alerts: backlog
+  19-4-5-admin-cli-stream-metrics-alerts: ready-for-dev
   # NOTE: 19.5 and 19.6 are no longer used; 19.4 has been split into 19.4.1–19.4.5.
   19-7-admin-rest-api-proxy-management: done
   19-8-admin-rest-api-account-checkpoint-management: done
