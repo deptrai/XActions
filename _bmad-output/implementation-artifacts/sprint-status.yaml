@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 2026-08-27T06:00:00.000Z
-last_updated: 2026-09-04T08:45:00Z
+last_updated: 2026-09-04T09:34:00Z
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -177,13 +177,13 @@ development_status:
   epic-22-retrospective: optional
 
   # --- Epic 23: Bluesky & Mastodon on AbstractCrawler ---
-  # NOTE: 2026-09-02 — Bluesky search auth & Mastodon null guard fixes in progress.
+  # NOTE: 2026-09-04 — Story 23.5 validators completed and reviewed.
   epic-23: in-progress
   23-1-bluesky-at-protocol-client: done
   23-2-bluesky-hybrid-crawler: backlog
   23-3-mastodon-rest-api-client: done
   23-4-mastodon-hybrid-crawler: backlog
-  23-5-bluesky-mastodon-response-validators: in-progress
+  23-5-bluesky-mastodon-response-validators: done
   23-6-bluesky-mastodon-integration-caller-migration: backlog
   epic-23-retrospective: optional
 

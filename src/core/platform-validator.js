@@ -18,7 +18,7 @@ export class AbstractPlatformResponseValidator {
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isValidPayload(response) {
@@ -26,7 +26,7 @@ export class AbstractPlatformResponseValidator {
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isBotChallenge(response) {
@@ -34,7 +34,7 @@ export class AbstractPlatformResponseValidator {
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isRateLimit(response) {
@@ -42,10 +42,18 @@ export class AbstractPlatformResponseValidator {
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isLoginWall(response) {
+    return false;
+  }
+
+  /**
+   * @param {unknown} response
+   * @returns {boolean}
+   */
+  isAuthExpired(response) {
     return false;
   }
 }

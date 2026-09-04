@@ -362,6 +362,8 @@ export abstract class AbstractPlatformResponseValidator {
   abstract isValidPayload(response: unknown): boolean;
   abstract isBotChallenge(response: unknown): boolean;
   abstract isRateLimit(response: unknown): boolean;
+  isLoginWall(response: unknown): boolean;
+  isAuthExpired(response: unknown): boolean;
 }
 
 export class ActionRegistry {
