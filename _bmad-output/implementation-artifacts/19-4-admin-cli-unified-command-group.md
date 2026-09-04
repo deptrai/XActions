@@ -2,10 +2,10 @@
 story_id: "19.4"
 epic: 19
 story_key: "19-4-admin-cli-unified-command-group"
-status: "ready-for-dev"
+status: "review"
 phase: "Phase 5"
 created: "2026-09-03"
-updated: "2026-09-03"
+updated: "2026-09-04"
 owner: "DEV"
 reviewed: "Pending"
 baseline_commit: "eea21df47d22c333b31682442bd8cfd63f6683dd"
@@ -13,7 +13,7 @@ baseline_commit: "eea21df47d22c333b31682442bd8cfd63f6683dd"
 
 # Story 19.4: Admin CLI — Unified Command Group
 
-Status: ready-for-dev
+Status: review
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
@@ -92,32 +92,32 @@ so that **I can discover all operational controls from a single CLI entry point 
   - [x] 1.1 Read `src/cli/commands/admin.js`, `src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`, `src/cli/index.js`, `src/cli/shared.js`
   - [x] 1.2 Confirm existing `status` and `stream` subcommands are preserved
   - [x] 1.3 Design subcommand hierarchy: `proxies [list]`, `accounts [list]`, `checkpoints [list]`
-- [ ] Task 2: Add subcommand groups to `xactions admin` (AC: #1, #2, #3)
-  - [ ] 2.1 Register `adminCmd.command('proxies')` with `.description(...)` and a `list` subcommand
-  - [ ] 2.2 Register `adminCmd.command('accounts')` with `.description(...)` and a `list` subcommand
-  - [ ] 2.3 Register `adminCmd.command('checkpoints')` with `.description(...)` and a `list` subcommand
-  - [ ] 2.4 Ensure `xactions admin --help` and `xactions admin <group> --help` display correctly
-- [ ] Task 3: Implement `xactions admin proxies list` (AC: #4, #5, #6)
-  - [ ] 3.1 HTTP fetch to `/api/admin/proxies` with `--url`/`--token`/`--json`
-  - [ ] 3.2 In-process fallback to `globalProxyPool.listProxies()`
-  - [ ] 3.3 Print summary table or raw JSON
-- [ ] Task 4: Implement `xactions admin accounts list` (AC: #4, #5, #6)
-  - [ ] 4.1 HTTP fetch to `/api/admin/accounts?platform=...` with optional `--platform`
-  - [ ] 4.2 In-process fallback to `globalAccountPool.listAccountDetails(platform)`
-  - [ ] 4.3 Print summary table or raw JSON
-- [ ] Task 5: Implement `xactions admin checkpoints list` (AC: #4, #5, #6)
-  - [ ] 5.1 HTTP fetch to `/api/checkpoints` with filter/pagination options
-  - [ ] 5.2 In-process fallback to `listCheckpoints({..., prisma})`
-  - [ ] 5.3 Print summary table or raw JSON and disconnect Prisma safely
-- [ ] Task 6: Add CLI tests (AC: #1, #2, #3, #4)
-  - [ ] 6.1 Create `tests/cli/admin-unified.test.js` asserting command group help lists subcommands
-  - [ ] 6.2 Add tests for `proxies list`, `accounts list`, `checkpoints list` registration and options
-  - [ ] 6.3 Verify real `Commander.Command` instances are used (no mocks)
-- [ ] Task 7: Run validations
-  - [ ] 7.1 Run `vitest run tests/cli/admin-unified.test.js` — PASS
-  - [ ] 7.2 Run `vitest run tests/cli/admin-status.test.js` — PASS
-  - [ ] 7.3 Run `vitest run tests/cli/*.test.js` — PASS
-  - [ ] 7.4 Manual smoke: `node src/cli/index.js admin --help` and `node src/cli/index.js admin proxies --help`
+- [x] Task 2: Add subcommand groups to `xactions admin` (AC: #1, #2, #3)
+  - [x] 2.1 Register `adminCmd.command('proxies')` with `.description(...)` and a `list` subcommand
+  - [x] 2.2 Register `adminCmd.command('accounts')` with `.description(...)` and a `list` subcommand
+  - [x] 2.3 Register `adminCmd.command('checkpoints')` with `.description(...)` and a `list` subcommand
+  - [x] 2.4 Ensure `xactions admin --help` and `xactions admin <group> --help` display correctly
+- [x] Task 3: Implement `xactions admin proxies list` (AC: #4, #5, #6)
+  - [x] 3.1 HTTP fetch to `/api/admin/proxies` with `--url`/`--token`/`--json`
+  - [x] 3.2 In-process fallback to `globalProxyPool.listProxies()`
+  - [x] 3.3 Print summary table or raw JSON
+- [x] Task 4: Implement `xactions admin accounts list` (AC: #4, #5, #6)
+  - [x] 4.1 HTTP fetch to `/api/admin/accounts?platform=...` with optional `--platform`
+  - [x] 4.2 In-process fallback to `globalAccountPool.listAccountDetails(platform)`
+  - [x] 4.3 Print summary table or raw JSON
+- [x] Task 5: Implement `xactions admin checkpoints list` (AC: #4, #5, #6)
+  - [x] 5.1 HTTP fetch to `/api/checkpoints` with filter/pagination options
+  - [x] 5.2 In-process fallback to `listCheckpoints({..., prisma})`
+  - [x] 5.3 Print summary table or raw JSON and disconnect Prisma safely
+- [x] Task 6: Add CLI tests (AC: #1, #2, #3, #4)
+  - [x] 6.1 Create `tests/cli/admin-unified.test.js` asserting command group help lists subcommands
+  - [x] 6.2 Add tests for `proxies list`, `accounts list`, `checkpoints list` registration and options
+  - [x] 6.3 Verify real `Commander.Command` instances are used (no mocks)
+- [x] Task 7: Run validations
+  - [x] 7.1 Run `vitest run tests/cli/admin-unified.test.js` — PASS
+  - [x] 7.2 Run `vitest run tests/cli/admin-status.test.js` — PASS
+  - [x] 7.3 Run `vitest run tests/cli/*.test.js` — PASS
+  - [x] 7.4 Manual smoke: `node src/cli/index.js admin --help` and `node src/cli/index.js admin proxies --help`
 
 ## Dev Notes
 
@@ -197,6 +197,11 @@ claude-opus-5[1m]
 - Checkpoint REST routes: `api/routes/checkpoints.js`
 
 ### Completion Notes List
+
+- 2026-09-04: Added `proxies`, `accounts`, `checkpoints` subcommand groups to `xactions admin` with `list` actions.
+- 2026-09-04: Implemented HTTP-first / in-process fallback for `admin proxies list`, `admin accounts list`, `admin checkpoints list`.
+- 2026-09-04: Added `tests/cli/admin-unified.test.js` with 10 tests covering command registration, help text, options, and preservation of existing `status`/`stream` commands.
+- 2026-09-04: All CLI tests pass: `tests/cli/admin-unified.test.js` (10/10), `tests/cli/admin-status.test.js` (5/5), `tests/cli/*.test.js` (73/73).
 
 ### File List
 
