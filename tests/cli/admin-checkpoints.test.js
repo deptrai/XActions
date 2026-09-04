@@ -235,4 +235,36 @@ describe('Story 19.4.4: xactions admin checkpoints management', () => {
     expect(pJson.success).toBe(true);
     expect(pJson.data?.checkpoint?.status).toBe('paused');
   });
+
+  it('prints a clean error when checkpoint is not found', async () => {
+    const program = new Command();
+    registerAdminCommand(program);
+
+    const adminCmd = program.commands.find((c) => c.name() === 'admin');
+    const checkpointsCmd = adminCmd.commands.find((c) => c.name() === 'checkpoints');
+    const resumeCmd = checkpointsCmd.commands.find((c) => c.name() === 'resume');
+
+    const logs = [];
+    const originalLog = console.log;
+    console.log = (...args) => logs.push(args.join(' '));
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = 0;
+
+    let capturedExitCode;
+    try {
+      await resumeCmd.parseAsync(['node', 'test', 'non_existent_checkpoint_id_12345', '--json']);
+    } finally {
+      capturedExitCode = process.exitCode;
+      console.log = originalLog;
+      process.exitCode = previousExitCode;
+    }
+
+    const output = logs.join('\n');
+    expect(output).toContain('non_existent_checkpoint_id_12345');
+    const json = JSON.parse(output);
+    expect(json.success).toBe(false);
+    expect(json.error).toBeDefined();
+    expect(capturedExitCode).toBe(1);
+  });
 });
