@@ -180,7 +180,7 @@ development_status:
   # NOTE: 2026-09-04 — Story 23.5 validators completed and reviewed.
   epic-23: in-progress
   23-1-bluesky-at-protocol-client: done
-  23-2-bluesky-hybrid-crawler: backlog
+  23-2-bluesky-hybrid-crawler: ready-for-dev
   23-3-mastodon-rest-api-client: done
   23-4-mastodon-hybrid-crawler: backlog
   23-5-bluesky-mastodon-response-validators: done
