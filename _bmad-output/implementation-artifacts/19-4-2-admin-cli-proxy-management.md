@@ -19,8 +19,9 @@ Status: ready-for-dev
 
 1. **Extend Existing `xactions admin proxies` Group** — Story 19.4 already created the `proxies list` subcommand in `src/cli/commands/admin.js`. This story adds `quarantine` and `release` subcommands under `xactions admin proxies`, plus a friendly alias command group `xactions admin proxy <quarantine|release|list>` so operators can use either singular or plural naturally (`admin proxies ...` or `admin proxy ...`).
 2. **REST-First with In-Process Fallback** — Follow the pattern established in 19.4 and 19.4.1:
-   - For `quarantine`: Call `POST /api/admin/proxies/:key/quarantine` (or `/api/admin/proxies/quarantine` with body `{ proxy, durationMs }`). If remote is unreachable or `--url` was not explicitly provided, fall back to `globalProxyPool.quarantine(proxyKey, durationMs)`.
-   - For `release`: Call `POST /api/admin/proxies/:key/release` (or `/api/admin/proxies/release` with body `{ proxy }`). If remote is unreachable, fall back to `globalProxyPool.release(proxyKey)`.
+   - **URL Encoding for Proxy Keys**: Proxy keys contain protocols, ports, and colons (e.g. `http://1.2.3.4:8080`). When calling REST endpoints, ALWAYS use `encodeURIComponent(proxyKey)` for path parameters (`/api/admin/proxies/${encodeURIComponent(proxyKey)}/quarantine`), matching `safeDecode` on the server (`api/routes/admin.js:439`). Alternatively, pass `{ proxy: proxyKey, durationMs, reason }` in the POST JSON body to `/api/admin/proxies/quarantine`.
+   - For `quarantine`: Call `POST /api/admin/proxies/${encodeURIComponent(proxyKey)}/quarantine` (or `/api/admin/proxies/quarantine` with body `{ proxy: proxyKey, durationMs, reason }`). If remote is unreachable or `--url` was not explicitly provided, fall back to in-process `globalProxyPool.quarantine(proxyKey, durationMs)`.
+   - For `release`: Call `POST /api/admin/proxies/${encodeURIComponent(proxyKey)}/release` (or `/api/admin/proxies/release` with body `{ proxy: proxyKey }`). If remote is unreachable, fall back to in-process `globalProxyPool.release(proxyKey)`.
 3. **Dual Output Modes (CLI Formatted + Raw JSON)**:
    - Without `--json`: Print aligned, color-coded human-readable confirmation using `chalk` and standard emojis (✅, ⚠️, ❌).
    - With `--json`: Print JSON response `{ success: true, ... }` via `JSON.stringify(..., null, 2)`.
@@ -28,6 +29,7 @@ Status: ready-for-dev
    - `--url <url>`: Base API URL (defaults to `http://localhost:3001` or `resolveBaseUrl`).
    - `--token <token>`: Bearer token for admin authentication (`headers: { Authorization: 'Bearer ...' }`).
    - `--duration <ms>`: (For `quarantine`) Duration in milliseconds for the quarantine period.
+   - `-r, --reason <reason>`: (For `quarantine`) Optional reason for quarantine.
    - `--json`: Output raw JSON.
 5. **No Direct DB Access & No Browser / Puppeteer**: CLI only invokes REST API or `ProxyPool`. No puppeteer imports.
 6. **No Inline Story References in Source Code**: Do not write comments like `// Story 19.4.2` in `src/`.
@@ -105,12 +107,14 @@ so that **I can inspect, quarantine, and release proxies from the command line w
 proxiesCmd
   .command('quarantine <proxyKey>')
   .description('Manually quarantine a proxy by key')
-  .option('--duration <ms>', 'Quarantine duration in milliseconds')
+  .option('-d, --duration <ms>', 'Quarantine duration in milliseconds')
+  .option('-r, --reason <reason>', 'Optional reason for quarantine')
   .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
   .option('--token <token>', 'Bearer token for admin authentication')
   .option('--json', 'Output raw JSON')
   .action(async (proxyKey, options) => {
-    // REST call -> fallback to globalProxyPool.quarantine
+    // 1. REST call: POST /api/admin/proxies/quarantine with body { proxy: proxyKey, durationMs, reason }
+    // 2. Fallback: globalProxyPool.quarantine(proxyKey, durationMs)
   });
 
 proxiesCmd
@@ -120,10 +124,11 @@ proxiesCmd
   .option('--token <token>', 'Bearer token for admin authentication')
   .option('--json', 'Output raw JSON')
   .action(async (proxyKey, options) => {
-    // REST call -> fallback to globalProxyPool.release
+    // 1. REST call: POST /api/admin/proxies/release with body { proxy: proxyKey }
+    // 2. Fallback: globalProxyPool.release(proxyKey)
   });
 
-// 2. Also expose alias 'proxy' -> forwards to proxies subcommands
+// 2. Register alias command group 'proxy' that mirrors 'proxies' (list, quarantine, release)
 ```
 
 ---
