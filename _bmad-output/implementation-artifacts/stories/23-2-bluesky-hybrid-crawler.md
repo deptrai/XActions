@@ -87,6 +87,8 @@ context:
 ## Spec Change Log
 
 - 2026-09-04 — Tạo story sau E2E Story 23.5; xác định Bluesky Search cần auth/proxy và Bluesky Trending chưa implement.
+- 2026-09-04 — Implement BlueskyClient/BlueskyCrawler; unit tests pass 50/50.
+- 2026-09-04 — E2E dashboard: Profile Feed và Trending thành công; Search no-auth trả 403 từ BunnyCDN (đúng spec — yêu cầu auth).
 
 ## Design Notes
 
