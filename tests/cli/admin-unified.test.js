@@ -86,7 +86,7 @@ describe('Story 19.4: xactions admin unified command group', () => {
     expect(plain).toContain('list');
   });
 
-  it('proxies list exposes --url, --token, and --json options', () => {
+  it('proxies list exposes --url, --token, --limit, --offset, and --json options', () => {
     const program = new Command();
     registerAdminCommand(program);
 
@@ -97,10 +97,12 @@ describe('Story 19.4: xactions admin unified command group', () => {
     const optionNames = listCmd.options.map((o) => o.name());
     expect(optionNames).toContain('url');
     expect(optionNames).toContain('token');
+    expect(optionNames).toContain('limit');
+    expect(optionNames).toContain('offset');
     expect(optionNames).toContain('json');
   });
 
-  it('accounts list exposes --url, --token, --platform, and --json options', () => {
+  it('accounts list exposes --url, --token, --platform, --limit, --offset, and --json options', () => {
     const program = new Command();
     registerAdminCommand(program);
 
@@ -112,6 +114,8 @@ describe('Story 19.4: xactions admin unified command group', () => {
     expect(optionNames).toContain('url');
     expect(optionNames).toContain('token');
     expect(optionNames).toContain('platform');
+    expect(optionNames).toContain('limit');
+    expect(optionNames).toContain('offset');
     expect(optionNames).toContain('json');
   });
 
@@ -160,5 +164,101 @@ describe('Story 19.4: xactions admin unified command group', () => {
     const alertsCmd = streamCmd.commands.find((c) => c.name() === 'alerts');
     expect(metricsCmd).toBeDefined();
     expect(alertsCmd).toBeDefined();
+  });
+
+  it('proxies list falls back to in-process pool and prints envelope JSON', async () => {
+    const program = new Command();
+    registerAdminCommand(program);
+
+    const logs = [];
+    const originalLog = console.log;
+    console.log = (...args) => logs.push(args.join(' '));
+    try {
+      await program.parseAsync(['node', 'xactions', 'admin', 'proxies', 'list', '--json']);
+    } finally {
+      console.log = originalLog;
+    }
+
+    const output = logs.join('\n');
+    const parsed = JSON.parse(output);
+    expect(parsed.success).toBe(true);
+    expect(Array.isArray(parsed.proxies)).toBe(true);
+    expect(typeof parsed.totalCount).toBe('number');
+  });
+
+  it('accounts list falls back to in-process pool and prints envelope JSON', async () => {
+    const program = new Command();
+    registerAdminCommand(program);
+
+    const logs = [];
+    const originalLog = console.log;
+    console.log = (...args) => logs.push(args.join(' '));
+    try {
+      await program.parseAsync(['node', 'xactions', 'admin', 'accounts', 'list', '--json']);
+    } finally {
+      console.log = originalLog;
+    }
+
+    const output = logs.join('\n');
+    const parsed = JSON.parse(output);
+    expect(parsed.success).toBe(true);
+    expect(Array.isArray(parsed.accounts)).toBe(true);
+    expect(typeof parsed.total).toBe('number');
+  });
+
+  it('checkpoints list rejects invalid --limit with clear error', async () => {
+    const program = new Command();
+    registerAdminCommand(program);
+
+    const logs = [];
+    const originalLog = console.log;
+    console.log = (...args) => logs.push(args.join(' '));
+    try {
+      await program.parseAsync(['node', 'xactions', 'admin', 'checkpoints', 'list', '--limit', '-1', '--json']);
+    } finally {
+      console.log = originalLog;
+    }
+
+    const output = logs.join('\n');
+    const parsed = JSON.parse(output);
+    expect(parsed.success).toBe(false);
+    expect(parsed.error.message).toContain('limit must be a positive integer');
+  });
+
+  it('checkpoints list rejects invalid --offset with clear error', async () => {
+    const program = new Command();
+    registerAdminCommand(program);
+
+    const logs = [];
+    const originalLog = console.log;
+    console.log = (...args) => logs.push(args.join(' '));
+    try {
+      await program.parseAsync(['node', 'xactions', 'admin', 'checkpoints', 'list', '--offset', '-1', '--json']);
+    } finally {
+      console.log = originalLog;
+    }
+
+    const output = logs.join('\n');
+    const parsed = JSON.parse(output);
+    expect(parsed.success).toBe(false);
+    expect(parsed.error.message).toContain('offset must be a non-negative integer');
+  });
+
+  it('help text does not advertise unimplemented subcommands for proxies/accounts/checkpoints', () => {
+    const program = new Command();
+    registerAdminCommand(program);
+
+    const adminCmd = program.commands.find((c) => c.name() === 'admin');
+    const proxiesCmd = adminCmd.commands.find((c) => c.name() === 'proxies');
+    const accountsCmd = adminCmd.commands.find((c) => c.name() === 'accounts');
+    const checkpointsCmd = adminCmd.commands.find((c) => c.name() === 'checkpoints');
+
+    const proxiesHelp = stripAnsi(proxiesCmd.description() || '');
+    const accountsHelp = stripAnsi(accountsCmd.description() || '');
+    const checkpointsHelp = stripAnsi(checkpointsCmd.description() || '');
+
+    expect(proxiesHelp).not.toMatch(/quarantine|release/i);
+    expect(accountsHelp).not.toMatch(/hibernation|rotation/i);
+    expect(checkpointsHelp).not.toMatch(/resume|pause|retry/i);
   });
 });

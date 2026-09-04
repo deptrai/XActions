@@ -2,7 +2,7 @@
 story_id: "19.4"
 epic: 19
 story_key: "19-4-admin-cli-unified-command-group"
-status: "review"
+status: "done"
 phase: "Phase 5"
 created: "2026-09-03"
 updated: "2026-09-04"
@@ -13,7 +13,7 @@ baseline_commit: "eea21df47d22c333b31682442bd8cfd63f6683dd"
 
 # Story 19.4: Admin CLI — Unified Command Group
 
-Status: review
+Status: done
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
@@ -220,3 +220,18 @@ claude-opus-5[1m]
 1. `src/cli/shared.js` — new shared list formatters
 2. `src/cli/commands/admin.js` — command group registration and `list` subcommands
 3. `tests/cli/admin-unified.test.js` — command group structure and help text tests
+
+### Review Findings
+
+- [x] [Review][Patch] `printCliError` không truyền `options`, phá `--json` error output contract [src/cli/commands/admin.js:218,277,360]
+- [x] [Review][Patch] `disconnectPrisma` gọi trên shared Prisma singleton thay vì `disconnectPrismaUnlessShared` [src/cli/commands/admin.js:361]
+- [x] [Review][Patch] HTTP 4xx/5xx silent fallback che giấu lỗi remote và gây nhầm lẫn local/remote [src/cli/commands/admin.js:183-188,245-249,313-318]
+- [x] [Review][Patch] JSON mode unwrap envelope, mất `success`, `total`, `dualPool` metadata [src/cli/commands/admin.js:186-187,247-248,316-338]
+- [x] [Review][Patch] `resp.json()` không kiểm tra `Content-Type`, có thể crash với HTML (502/504) [src/cli/commands/admin.js:184,246,315]
+- [x] [Review][Patch] `accounts list` `remainingTimeMs` non-numeric gây `NaN`s trong output [src/cli/commands/admin.js:271]
+- [x] [Review][Patch] `checkpoints list` `--limit`/`--offset` chỉ validate trong in-process fallback, HTTP call gửi raw strings [src/cli/commands/admin.js:311-312,330-331]
+- [x] [Review][Patch] Thiếu shared list formatters trong `src/cli/shared.js` như spec yêu cầu [src/cli/shared.js; src/cli/commands/admin.js:202-215,263-274,341-355]
+- [x] [Review][Patch] Test chỉ kiểm tra Commander metadata, không test execution/fallback/output [tests/cli/admin-unified.test.js]
+- [x] [Review][Patch] `proxies list`/`accounts list` thiếu `--limit`/`--offset` pagination [src/cli/commands/admin.js:168-173,228-233]
+- [x] [Review][Patch] Mô tả subcommand groups quảng cáo `quarantine/release`, `hibernation/rotation`, `resume/pause/retry` nhưng chỉ `list` được implement [src/cli/commands/admin.js:165-166,224-225,282-284]
+- [x] [Review][Patch] `fetch` không có timeout/AbortSignal, CLI có thể hang khi daemon không phản hồi [src/cli/commands/admin.js:183,245,313]

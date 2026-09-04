@@ -296,3 +296,127 @@ export async function disconnectPrismaUnlessShared(prisma, isSharedSingleton = f
   if (isSharedSingleton) return;
   await disconnectPrisma(prisma);
 }
+
+const DEFAULT_HTTP_TIMEOUT_MS = 15000;
+
+/**
+ * Fetch a JSON admin endpoint with an optional Bearer token and timeout.
+ * Returns the parsed body only when the response is OK and JSON.
+ * Non-2xx and non-JSON responses return { ok: false, status, statusText, body? }
+ * so callers can decide whether to fall back or report the error.
+ *
+ * @param {string} url
+ * @param {{ token?: string, timeoutMs?: number, method?: string, body?: string }} [options]
+ * @returns {Promise<{ ok: true, body: any } | { ok: false, status: number, statusText: string, body?: any }>}
+ */
+export async function fetchAdminJson(url, options = {}) {
+  const { token, timeoutMs = DEFAULT_HTTP_TIMEOUT_MS, method = 'GET', body } = options;
+  const headers = /** @type {Record<string, string>} */ ({});
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const resp = await fetch(url, {
+      method,
+      headers,
+      body,
+      signal: controller.signal,
+    });
+    const contentType = resp.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await resp.text();
+      return { ok: false, status: resp.status, statusText: resp.statusText, body: text };
+    }
+    const json = await resp.json();
+    if (!resp.ok) {
+      return { ok: false, status: resp.status, statusText: resp.statusText, body: json };
+    }
+    return { ok: true, body: json };
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return { ok: false, status: 0, statusText: `Request timed out after ${timeoutMs}ms` };
+    }
+    return { ok: false, status: 0, statusText: err instanceof Error ? err.message : String(err) };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Format a list of proxies as an aligned summary table.
+ * @param {any[]} proxies
+ */
+export function formatProxyList(proxies) {
+  if (!Array.isArray(proxies) || proxies.length === 0) {
+    console.log(chalk.dim('  No proxies registered.'));
+    return;
+  }
+
+  const healthyCount = proxies.filter((p) => p.status === 'healthy').length;
+  console.log(`  ${chalk.bold('Healthy:')} ${chalk.green(healthyCount)} / ${proxies.length}`);
+  console.log();
+  console.log(`  ${chalk.bold('Server'.padEnd(32))} ${chalk.bold('Status'.padEnd(12))} ${chalk.bold('Pool'.padEnd(10))}`);
+  proxies.forEach((p) => {
+    const statusColor = p.status === 'healthy' ? chalk.green : chalk.yellow;
+    const target = p.server || p.key || p.host || 'unknown';
+    console.log(`  ${String(target).padEnd(32)} ${statusColor((p.status || 'unknown').padEnd(12))} ${chalk.cyan((p.pool || 'realtime').padEnd(10))}`);
+  });
+}
+
+/**
+ * Format a list of accounts as an aligned summary table.
+ * @param {any[]} accounts
+ */
+export function formatAccountList(accounts) {
+  if (!Array.isArray(accounts) || accounts.length === 0) {
+    console.log(chalk.dim('  No accounts found.'));
+    return;
+  }
+
+  console.log(`  ${chalk.bold('Platform'.padEnd(12))} ${chalk.bold('Account'.padEnd(24))} ${chalk.bold('Status'.padEnd(12))} ${chalk.bold('Remaining'.padEnd(12))} ${chalk.bold('Velocity')}`);
+  accounts.forEach((a) => {
+    const statusColor = a.status === 'hibernating' ? chalk.yellow : chalk.green;
+    const remainingMs = Number(a.remainingTimeMs) || 0;
+    const remaining = a.status === 'hibernating' ? `${Math.round(remainingMs / 1000)}s` : '-';
+    const velocity = typeof a.velocity === 'number' ? a.velocity.toFixed(2) : '-';
+    console.log(`  ${chalk.cyan((a.platform || 'unknown').padEnd(12))} ${String(a.accountId).padEnd(24)} ${statusColor((a.status || 'active').padEnd(12))} ${chalk.dim(String(remaining).padEnd(12))} ${chalk.dim(velocity)}`);
+  });
+}
+
+/**
+ * Format a list of checkpoints as an aligned summary table.
+ * @param {{ checkpoints: any[], total?: number }|any[]} result
+ */
+export function formatCheckpointList(result) {
+  const checkpoints = Array.isArray(result.checkpoints) ? result.checkpoints : (Array.isArray(result) ? result : []);
+  const total = typeof result.total === 'number' ? result.total : checkpoints.length;
+
+  console.log(chalk.bold(`\n🔄 Checkpoints (Total: ${total}, Showing: ${checkpoints.length})\n`));
+  if (checkpoints.length === 0) {
+    console.log(chalk.dim('  No checkpoints found.'));
+    return;
+  }
+
+  console.log(`  ${chalk.bold('ID'.padEnd(28))} ${chalk.bold('Platform'.padEnd(12))} ${chalk.bold('Status'.padEnd(12))} ${chalk.bold('Target')}`);
+  checkpoints.forEach((ckpt) => {
+    const statusColor =
+      ckpt.status === 'running' ? chalk.green :
+      ckpt.status === 'paused' ? chalk.yellow :
+      ckpt.status === 'failed' ? chalk.red :
+      ckpt.status === 'completed' ? chalk.blue : chalk.magenta;
+    const target = ckpt.targetKey || ckpt.targetId || ckpt.target || '';
+    console.log(`  ${chalk.cyan(String(ckpt.id).slice(0, 26).padEnd(28))} ${(ckpt.platform || '').padEnd(12)} ${statusColor((ckpt.status || 'unknown').padEnd(12))} ${chalk.dim(`${ckpt.targetType || ''}::${target}`)}`);
+  });
+}
+
+/**
+ * Resolve a base URL from CLI options and environment variables.
+ * @param {string|undefined} optionUrl
+ * @returns {string}
+ */
+export function resolveBaseUrl(optionUrl) {
+  const base = optionUrl || process.env.API_URL || process.env.MCP_SERVER_URL || 'http://localhost:3001';
+  return base.replace(/\/+$/, '');
+}

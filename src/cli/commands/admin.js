@@ -6,7 +6,18 @@
  */
 
 import chalk from 'chalk';
-import { printCliError, printGovernorStatus, parseCliPositiveInt, parseCliNonNegativeInt, disconnectPrisma } from '../shared.js';
+import {
+  printCliError,
+  printGovernorStatus,
+  parseCliPositiveInt,
+  parseCliNonNegativeInt,
+  disconnectPrismaUnlessShared,
+  fetchAdminJson,
+  formatProxyList,
+  formatAccountList,
+  formatCheckpointList,
+  resolveBaseUrl,
+} from '../shared.js';
 
 /**
  * @param {import('commander').Command} program
@@ -29,16 +40,13 @@ export function registerAdminCommand(program) {
     .option('--json', 'Output raw JSON')
     .action(async (options) => {
       try {
-        const baseUrl = options.url || process.env.API_URL || process.env.MCP_SERVER_URL || 'http://localhost:3001';
+        const baseUrl = resolveBaseUrl(options.url);
         let status;
 
         try {
-          const headers = /** @type {Record<string, string>} */ ({});
-          if (options.token) headers.Authorization = `Bearer ${options.token}`;
-          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/api/admin/governor/status`, { headers });
-          if (resp.ok) {
-            const data = await resp.json();
-            status = data.status;
+          const result = await fetchAdminJson(`${baseUrl}/api/admin/governor/status`, { token: options.token });
+          if (result.ok) {
+            status = result.body.status;
           }
         } catch {
           // Network error or endpoint down; proceed to in-process fallback below
@@ -53,7 +61,7 @@ export function registerAdminCommand(program) {
 
         printGovernorStatus(status, { json: options.json });
       } catch (err) {
-        printCliError(err instanceof Error ? err : new Error(String(err)));
+        printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
       }
     });
 
@@ -66,15 +74,13 @@ export function registerAdminCommand(program) {
     .option('--json', 'Output raw JSON')
     .action(async (options) => {
       try {
-        const baseUrl = options.url || process.env.MCP_SERVER_URL || process.env.API_URL || 'http://localhost:3001';
+        const baseUrl = resolveBaseUrl(options.url);
         let metrics;
 
         try {
-          const headers = /** @type {Record<string, string>} */ ({ });
-          if (options.token) headers.Authorization = `Bearer ${options.token}`;
-          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/metrics/stream`, { headers });
-          if (resp.ok) {
-            metrics = await resp.json();
+          const result = await fetchAdminJson(`${baseUrl}/metrics/stream`, { token: options.token });
+          if (result.ok) {
+            metrics = result.body;
           }
         } catch {
           // Direct in-process fallback
@@ -101,7 +107,7 @@ export function registerAdminCommand(program) {
         console.log(`  • ${chalk.cyan('Max Length')}:        ${chalk.dim((metrics.maxLen ?? 0).toLocaleString())}`);
         console.log(`  • ${chalk.cyan('Oldest Min ID')}:     ${chalk.dim(metrics.minId || 'none')}\n`);
       } catch (err) {
-        printCliError(err instanceof Error ? err : new Error(String(err)));
+        printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
       }
     });
 
@@ -114,16 +120,13 @@ export function registerAdminCommand(program) {
     .option('--json', 'Output raw JSON')
     .action(async (options) => {
       try {
-        const baseUrl = options.url || process.env.API_URL || process.env.MCP_SERVER_URL || 'http://localhost:3001';
+        const baseUrl = resolveBaseUrl(options.url);
         let alertStatus;
 
         try {
-          const headers = /** @type {Record<string, string>} */ ({});
-          if (options.token) headers.Authorization = `Bearer ${options.token}`;
-          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/api/admin/stream/alerts`, { headers });
-          if (resp.ok) {
-            const data = await resp.json();
-            alertStatus = data.alerts || data;
+          const result = await fetchAdminJson(`${baseUrl}/api/admin/stream/alerts`, { token: options.token });
+          if (result.ok) {
+            alertStatus = result.body.alerts || result.body;
           }
         } catch {
           // Direct fallback
@@ -156,73 +159,74 @@ export function registerAdminCommand(program) {
           console.log();
         }
       } catch (err) {
-        printCliError(err instanceof Error ? err : new Error(String(err)));
+        printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
       }
     });
 
   // xactions admin proxies
   const proxiesCmd = adminCmd
     .command('proxies')
-    .description('Manage proxy pool health, quarantine, and release');
+    .description('Manage proxy pool (list proxies; other actions planned)');
 
   proxiesCmd
     .command('list')
     .description('List all registered proxies with status and partition')
     .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
     .option('--token <token>', 'Bearer token for admin authentication')
+    .option('-l, --limit <limit>', 'Max proxies to display', '50')
+    .option('-o, --offset <offset>', 'Offset for pagination', '0')
     .option('--json', 'Output raw JSON')
     .action(async (options) => {
       try {
-        const baseUrl = options.url || process.env.API_URL || process.env.MCP_SERVER_URL || 'http://localhost:3001';
+        const baseUrl = resolveBaseUrl(options.url);
+        const limit = parseCliPositiveInt(options.limit, 'limit');
+        const offset = parseCliNonNegativeInt(options.offset, 'offset');
         /** @type {any} */
-        let data;
+        let body;
 
         try {
-          const headers = /** @type {Record<string, string>} */ ({});
-          if (options.token) headers.Authorization = `Bearer ${options.token}`;
-          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/api/admin/proxies`, { headers });
-          if (resp.ok) {
-            const body = await resp.json();
-            data = body.proxies || body;
+          const result = await fetchAdminJson(`${baseUrl}/api/admin/proxies`, { token: options.token });
+          if (result.ok) {
+            body = result.body;
+          } else if (options.url) {
+            throw new Error(`Remote proxy list failed: HTTP ${result.status} ${result.statusText}`);
           }
-        } catch {
+        } catch (err) {
+          if (options.url) throw err;
           // Network error; fall through to in-process call
         }
 
-        if (!data) {
+        if (!body) {
           const { globalProxyPool } = await import('../../proxy/proxy-pool.js');
-          data = globalProxyPool.listProxies();
+          const proxies = globalProxyPool.listProxies();
+          body = {
+            success: true,
+            totalCount: proxies.length,
+            healthyCount: proxies.filter((p) => p.status === 'healthy').length,
+            proxies,
+          };
         }
 
         if (options.json) {
-          console.log(JSON.stringify(data, null, 2));
+          console.log(JSON.stringify(body, null, 2));
           return;
         }
 
-        const proxies = Array.isArray(data) ? data : [];
-        console.log(chalk.bold(`\n🌐 Proxies (Total: ${proxies.length})\n`));
-        if (proxies.length === 0) {
-          console.log(chalk.dim('  No proxies registered.'));
-        } else {
-          const healthyCount = proxies.filter((p) => p.status === 'healthy').length;
-          console.log(`  ${chalk.bold('Healthy:')} ${chalk.green(healthyCount)} / ${proxies.length}`);
-          console.log();
-          console.log(`  ${chalk.bold('Server'.padEnd(32))} ${chalk.bold('Status'.padEnd(12))} ${chalk.bold('Pool'.padEnd(10))}`);
-          proxies.forEach((p) => {
-            const statusColor = p.status === 'healthy' ? chalk.green : chalk.yellow;
-            console.log(`  ${String(p.server || p.key || p.host).padEnd(32)} ${statusColor((p.status || 'unknown').padEnd(12))} ${chalk.cyan((p.pool || 'realtime').padEnd(10))}`);
-          });
-        }
+        const allProxies = Array.isArray(body.proxies) ? body.proxies : (Array.isArray(body) ? body : []);
+        const proxies = allProxies.slice(offset, offset + limit);
+        const total = typeof body.totalCount === 'number' ? body.totalCount : allProxies.length;
+        console.log(chalk.bold(`\n🌐 Proxies (Total: ${total}, Showing: ${proxies.length})\n`));
+        formatProxyList(proxies);
         console.log();
       } catch (err) {
-        printCliError(err instanceof Error ? err : new Error(String(err)));
+        printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
       }
     });
 
   // xactions admin accounts
   const accountsCmd = adminCmd
     .command('accounts')
-    .description('Manage account pool, hibernation, and rotation');
+    .description('Manage account pool (list accounts; other actions planned)');
 
   accountsCmd
     .command('list')
@@ -230,58 +234,56 @@ export function registerAdminCommand(program) {
     .option('--url <url>', 'Base API / Daemon URL (default: http://localhost:3001)')
     .option('--token <token>', 'Bearer token for admin authentication')
     .option('--platform <platform>', 'Filter by platform (twitter, facebook, etc.)')
+    .option('-l, --limit <limit>', 'Max accounts to display', '50')
+    .option('-o, --offset <offset>', 'Offset for pagination', '0')
     .option('--json', 'Output raw JSON')
     .action(async (options) => {
       try {
-        const baseUrl = options.url || process.env.API_URL || process.env.MCP_SERVER_URL || 'http://localhost:3001';
+        const baseUrl = resolveBaseUrl(options.url);
+        const limit = parseCliPositiveInt(options.limit, 'limit');
+        const offset = parseCliNonNegativeInt(options.offset, 'offset');
         /** @type {any} */
-        let data;
+        let body;
 
         try {
-          const headers = /** @type {Record<string, string>} */ ({});
-          if (options.token) headers.Authorization = `Bearer ${options.token}`;
           const query = options.platform ? `?platform=${encodeURIComponent(options.platform)}` : '';
-          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/api/admin/accounts${query}`, { headers });
-          if (resp.ok) {
-            const body = await resp.json();
-            data = body.accounts || body;
+          const result = await fetchAdminJson(`${baseUrl}/api/admin/accounts${query}`, { token: options.token });
+          if (result.ok) {
+            body = result.body;
+          } else if (options.url) {
+            throw new Error(`Remote account list failed: HTTP ${result.status} ${result.statusText}`);
           }
-        } catch {
+        } catch (err) {
+          if (options.url) throw err;
           // Network error; fall through to in-process call
         }
 
-        if (!data) {
+        if (!body) {
           const { globalAccountPool } = await import('../../core/index.js');
-          data = globalAccountPool.listAccountDetails(options.platform);
+          const accounts = globalAccountPool.listAccountDetails(options.platform);
+          body = { success: true, total: accounts.length, accounts };
         }
 
         if (options.json) {
-          console.log(JSON.stringify(data, null, 2));
+          console.log(JSON.stringify(body, null, 2));
           return;
         }
 
-        const accounts = Array.isArray(data) ? data : [];
-        console.log(chalk.bold(`\n👤 Accounts (Total: ${accounts.length})\n`));
-        if (accounts.length === 0) {
-          console.log(chalk.dim('  No accounts found.'));
-        } else {
-          console.log(`  ${chalk.bold('Platform'.padEnd(12))} ${chalk.bold('Account'.padEnd(24))} ${chalk.bold('Status'.padEnd(12))} ${chalk.bold('Remaining')}`);
-          accounts.forEach((a) => {
-            const statusColor = a.status === 'hibernating' ? chalk.yellow : chalk.green;
-            const remaining = a.status === 'hibernating' ? `${Math.round(a.remainingTimeMs / 1000)}s` : '-';
-            console.log(`  ${chalk.cyan((a.platform || 'unknown').padEnd(12))} ${String(a.accountId).padEnd(24)} ${statusColor((a.status || 'active').padEnd(12))} ${chalk.dim(remaining)}`);
-          });
-        }
+        const allAccounts = Array.isArray(body.accounts) ? body.accounts : (Array.isArray(body) ? body : []);
+        const accounts = allAccounts.slice(offset, offset + limit);
+        const total = typeof body.total === 'number' ? body.total : allAccounts.length;
+        console.log(chalk.bold(`\n👤 Accounts (Total: ${total}, Showing: ${accounts.length})\n`));
+        formatAccountList(accounts);
         console.log();
       } catch (err) {
-        printCliError(err instanceof Error ? err : new Error(String(err)));
+        printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
       }
     });
 
   // xactions admin checkpoints
   const checkpointsCmd = adminCmd
     .command('checkpoints')
-    .description('Manage crawl checkpoints (list, resume, pause, retry)');
+    .description('Manage crawl checkpoints (list checkpoints; other actions planned)');
 
   checkpointsCmd
     .command('list')
@@ -297,68 +299,57 @@ export function registerAdminCommand(program) {
     .action(async (options) => {
       let prisma;
       try {
-        const baseUrl = options.url || process.env.API_URL || process.env.MCP_SERVER_URL || 'http://localhost:3001';
+        const baseUrl = resolveBaseUrl(options.url);
+        const limit = parseCliPositiveInt(options.limit, 'limit');
+        const offset = parseCliNonNegativeInt(options.offset, 'offset');
         /** @type {any} */
-        let result;
+        let body;
 
         try {
-          const headers = /** @type {Record<string, string>} */ ({});
-          if (options.token) headers.Authorization = `Bearer ${options.token}`;
           const qs = new URLSearchParams();
           if (options.platform) qs.set('platform', options.platform);
           if (options.targetType) qs.set('targetType', options.targetType);
           if (options.status) qs.set('status', options.status);
-          qs.set('limit', String(options.limit));
-          qs.set('offset', String(options.offset));
-          const resp = await fetch(`${baseUrl.replace(/\/+$/, '')}/api/checkpoints?${qs}`, { headers });
-          if (resp.ok) {
-            const body = await resp.json();
-            result = body.data || body;
+          qs.set('limit', String(limit));
+          qs.set('offset', String(offset));
+          const result = await fetchAdminJson(`${baseUrl}/api/checkpoints?${qs}`, { token: options.token });
+          if (result.ok) {
+            body = result.body;
+          } else if (options.url) {
+            throw new Error(`Remote checkpoint list failed: HTTP ${result.status} ${result.statusText}`);
           }
-        } catch {
+        } catch (err) {
+          if (options.url) throw err;
           // Network error; fall through to in-process call
         }
 
-        if (!result) {
+        if (!body) {
           const { default: sharedPrisma } = await import('../../../api/lib/prisma.js');
           prisma = sharedPrisma;
           const { listCheckpoints } = await import('../../store/checkpoint-manager.js');
-          result = await listCheckpoints({
+          const result = await listCheckpoints({
             platform: options.platform,
             targetType: options.targetType,
             status: options.status,
-            limit: parseCliPositiveInt(options.limit, 'limit'),
-            offset: parseCliNonNegativeInt(options.offset, 'offset'),
+            limit,
+            offset,
             prisma,
           });
+          body = { success: true, data: result };
         }
 
         if (options.json) {
-          console.log(JSON.stringify(result, null, 2));
+          console.log(JSON.stringify(body, null, 2));
           return;
         }
 
-        const checkpoints = Array.isArray(result.checkpoints) ? result.checkpoints : (Array.isArray(result) ? result : []);
-        const total = typeof result.total === 'number' ? result.total : checkpoints.length;
-        console.log(chalk.bold(`\n🔄 Checkpoints (Total: ${total}, Showing: ${checkpoints.length})\n`));
-        if (checkpoints.length === 0) {
-          console.log(chalk.dim('  No checkpoints found.'));
-        } else {
-          console.log(`  ${chalk.bold('ID'.padEnd(28))} ${chalk.bold('Platform'.padEnd(12))} ${chalk.bold('Status'.padEnd(12))} ${chalk.bold('Target')}`);
-          checkpoints.forEach((ckpt) => {
-            const statusColor =
-              ckpt.status === 'running' ? chalk.green :
-              ckpt.status === 'paused' ? chalk.yellow :
-              ckpt.status === 'failed' ? chalk.red :
-              ckpt.status === 'completed' ? chalk.blue : chalk.magenta;
-            console.log(`  ${chalk.cyan(String(ckpt.id).slice(0, 26).padEnd(28))} ${(ckpt.platform || '').padEnd(12)} ${statusColor((ckpt.status || 'unknown').padEnd(12))} ${chalk.dim(`${ckpt.targetType || ''}::${ckpt.targetKey || ''}`)}`);
-          });
-        }
+        const result = body.data || body;
+        formatCheckpointList(result);
         console.log();
       } catch (err) {
-        printCliError(err instanceof Error ? err : new Error(String(err)));
+        printCliError(err instanceof Error ? err : new Error(String(err)), { json: options.json });
       } finally {
-        await disconnectPrisma(prisma);
+        await disconnectPrismaUnlessShared(prisma, true);
       }
     });
 }
