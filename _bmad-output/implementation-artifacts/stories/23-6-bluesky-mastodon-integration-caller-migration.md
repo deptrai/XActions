@@ -24,19 +24,20 @@ context:
 **Approach:**
 1. **Dispatcher Migration trong `src/scrapers/index.js`**:
    - Thêm import `MastodonCrawler` và `MastodonClient` từ `./social/mastodon/index.js`.
-   - Re-export `MastodonCrawler` và `MastodonClient` ở top-level named exports.
+   - Re-export `MastodonCrawler` và `MastodonClient` ở top-level named exports, kèm factory helpers `createMastodonClient(options)` và `createMastodonCrawler(client, options)` đồng nhất với Facebook.
    - Thêm nhánh dispatch hybrid cho `platformName === 'mastodon' || platformName === 'masto'` trong hàm `scrape()`, mapping các actions (`profile`, `followers`, `following`, `tweets`/`posts`/`feed`/`user_feed`, `search`, `hashtag`, `trending`) tương tự như cách Bluesky đã được xử lý ở Story 23.2.
-   - Loại bỏ hoặc thu gọn nhánh `needsClient` cũ của mastodon trong `scrape()`.
+   - Xóa bỏ dead code `needsClient` cũ của mastodon trong `scrape()` (dòng 1507 và khối 1587-1608).
+   - Cập nhật JSDoc comment của `scrape()` hướng dẫn định dạng gọi chuẩn.
 2. **Barrel Exports trong `src/scrapers/social/index.js`**:
    - Export `* as mastodon from './mastodon/index.js'`.
    - Export `{ MastodonClient, MastodonCrawler, MastodonPlatformResponseValidator } from './mastodon/index.js'`.
 3. **Package Exports trong `package.json`**:
-   - Bổ sung export subpath `./scrapers/social/mastodon` và `./scrapers/social/bluesky` nếu chưa có, đảm bảo consumer có thể import trực tiếp.
+   - Bổ sung export subpath `./scrapers/social/mastodon` và `./scrapers/social/bluesky`, đảm bảo consumer có thể import trực tiếp.
 4. **Deprecation Markers & Documentation**:
    - Gắn `@deprecated` JSDoc vào `src/scrapers/bluesky/index.js` và `src/scrapers/mastodon/index.js`.
    - Cập nhật bảng Status Tracker trong `docs/deprecation-plan.md` cho Bluesky và Mastodon legacy sang `deprecated-marked`.
 5. **E2E & Dispatcher Tests**:
-   - Tạo test suite `tests/scrapers/social/mastodon/dispatcher.test.js` kiểm chứng `scrape('mastodon', action, options)` và alias `scrape('masto', ...)` dispatch chính xác tới `MastodonCrawler`.
+   - Tạo test suite `tests/scrapers/social/mastodon/dispatcher.test.js` sử dụng mock HTTP server cục bộ (`node:http` port 0) kiểm chứng `scrape('mastodon', action, options)` và alias `scrape('masto', ...)` dispatch chính xác tới `MastodonCrawler`.
    - Chạy toàn bộ test suites của Bluesky và Mastodon để đảm bảo zero regression.
 
 ## Boundaries & Constraints
@@ -47,8 +48,10 @@ context:
   - `posts`, `tweets`, `timeline`, `feed`, `user_feed` -> `posts`
   - `hashtag`, `tag` -> `hashtag`
   - `search` -> `search`
+- Dọn sạch dead code: xóa hoàn toàn biến `needsClient` và nhánh `if (needsClient)` cũ trong `src/scrapers/index.js`.
+- Bổ sung cả hai factory function `createMastodonClient` và `createMastodonCrawler` ở cuối file `src/scrapers/index.js`.
 - Tuân thủ quy tắc Pure ESM, không thêm dependency ngoài.
-- Thử nghiệm không mock cho dispatcher: inject in-memory hoặc stub crawler/client dependencies trong unit tests theo mẫu `tests/scrapers/social/bluesky/dispatcher.test.js`.
+- Kiểm thử dispatcher bằng server HTTP cục bộ (`node:http` port 0) tương tự `tests/scrapers/social/bluesky/dispatcher.test.js` để test chạy nhanh, độc lập mạng.
 
 **Ask First:**
 - Nếu cần gỡ bỏ hoàn toàn file `src/scrapers/mastodon/index.js` hoặc `src/scrapers/bluesky/index.js` (việc này thuộc Epic 26 - Final Legacy Decommission).
@@ -62,10 +65,10 @@ context:
 
 | Scenario | Input / Invocation | Expected Output / Behavior | Error Handling |
 |----------|-------------------|---------------------------|----------------|
-| Mastodon profile via scrape() | `scrape('mastodon', 'profile', { username: 'Gargron' })` | Trả về `ProfileItem` qua `MastodonCrawler.getProfile` | 404 -> `PlatformError (XACT_4001)` |
-| Mastodon alias "masto" | `scrape('masto', 'posts', { username: 'Gargron' })` | Dispatches tới `MastodonCrawler` | Invalid username -> `XACT_4001` |
-| Mastodon hashtag via scrape() | `scrape('mastodon', 'hashtag', { hashtag: 'tech' })` | Trả về `PostItem[]` | Empty hashtag -> `XACT_4001` |
-| Mastodon trending via scrape() | `scrape('mastodon', 'trending', { limit: 10 })` | Trả về `PostItem[]` | Instance without trends -> `[]` |
+| Mastodon profile via scrape() | `scrape('mastodon', 'profile', { username: 'Gargron', baseUrl: localUrl })` | Trả về `ProfileItem` qua `MastodonCrawler.getProfile` | 404 -> `PlatformError (XACT_4001)` |
+| Mastodon alias "masto" | `scrape('masto', 'posts', { username: 'Gargron', baseUrl: localUrl })` | Dispatches tới `MastodonCrawler` action `posts` | Invalid username -> `XACT_4001` |
+| Mastodon hashtag via scrape() | `scrape('mastodon', 'hashtag', { hashtag: 'tech', baseUrl: localUrl })` | Trả về `PostItem[]` qua `MastodonCrawler.getHashtag` | Empty hashtag -> `XACT_4001` |
+| Mastodon trending via scrape() | `scrape('mastodon', 'trending', { limit: 10, baseUrl: localUrl })` | Trả về `PostItem[]` qua `MastodonCrawler.getTrending` | Instance without trends -> `[]` |
 | Unknown action for mastodon | `scrape('mastodon', 'invalid_action', {})` | Ném `Error` thông báo action không khả dụng | Clear error message với danh sách actions |
 | Bluesky profile via scrape() | `scrape('bluesky', 'profile', { username: 'user.bsky.social' })` | Vẫn hoạt động ổn định qua `BlueskyCrawler` | Zero regression |
 
@@ -76,8 +79,8 @@ context:
 - `src/scrapers/index.js`:
   - Dòng 67-68: Import hiện tại của Bluesky (`BlueskyCrawler`, `BlueskyClient`).
   - Dòng 1073-1171: Nhánh dispatch hybrid của Bluesky (mẫu tham khảo chính xác).
-  - Dòng 1587-1608: Nhánh `needsClient` cũ gọi `mastodon.createClient` -> Cần thay thế bằng nhánh hybrid `MastodonCrawler`.
-  - Dòng 1705-1716: Re-exports `MastodonCrawler`, `MastodonClient`.
+  - Dòng 1507 & 1587-1608: `needsClient` cũ gọi `mastodon.createClient` -> Cần xóa bỏ dead code này sau khi thêm nhánh hybrid `MastodonCrawler`.
+  - Dòng 1693-1716: Re-exports `FacebookCrawler`, `FacebookClient`, `BlueskyCrawler`, `BlueskyClient` -> Thêm `MastodonCrawler`, `MastodonClient`, `createMastodonClient`, `createMastodonCrawler`.
 - `src/scrapers/social/index.js`:
   - Barrel export cho social modules.
 - `package.json`:
@@ -85,39 +88,56 @@ context:
 - `docs/deprecation-plan.md`:
   - Status tracker cho legacy code.
 - `tests/scrapers/social/bluesky/dispatcher.test.js`:
-  - Test mẫu cho việc kiểm thử universal dispatcher.
+  - Test mẫu cho việc kiểm thử universal dispatcher với local HTTP server.
 
 ## Tasks & Acceptance
 
-**Execution:**
-- [ ] `src/scrapers/index.js`:
-  - Import `MastodonCrawler` và `MastodonClient` từ `./social/mastodon/index.js`.
-  - Re-export `MastodonCrawler` và `MastodonClient` ở named exports cuối file.
-  - Thêm nhánh dispatch hybrid cho `mastodon` / `masto`:
-    - Action map: `profile`, `followers`, `following`, `posts`, `tweets`, `timeline`, `feed`, `user_feed`, `search`, `hashtag`, `trending`.
-    - Phân giải options (`username`, `handle`, `target`, `query`, `hashtag`, `limit`, `max_id`, `since_id`, `instance`, `accessToken`).
-    - Khởi tạo `MastodonClient` và `MastodonCrawler`, chạy `crawler.start()`, tự động gọi `crawler.cleanup()` trong `finally`.
-  - Dọn dẹp điều kiện `needsClient` để không còn rơi vào logic legacy.
-- [ ] `src/scrapers/social/index.js`:
-  - Re-export `* as mastodon from './mastodon/index.js'`.
-  - Re-export `MastodonClient, MastodonCrawler, MastodonPlatformResponseValidator`.
-- [ ] `package.json`:
-  - Bổ sung export `./scrapers/social/mastodon` và `./scrapers/social/bluesky`.
-- [ ] `src/scrapers/bluesky/index.js` & `src/scrapers/mastodon/index.js`:
-  - Thêm JSDoc `@deprecated` dẫn link tới `docs/deprecation-plan.md` và hybrid replacement.
-- [ ] `docs/deprecation-plan.md`:
-  - Thêm dòng cho Bluesky Legacy và Mastodon Legacy trong bảng Status Tracker với trạng thái `deprecated-marked`.
-- [ ] `tests/scrapers/social/mastodon/dispatcher.test.js`:
-  - Viết unit tests kiểm tra:
-    - `scrape('mastodon', 'profile')` gọi `MastodonCrawler`.
-    - `scrape('masto', 'trending')` hỗ trợ alias `masto`.
-    - Ném lỗi rõ ràng khi action không hợp lệ.
+### Task 1: `src/scrapers/social/index.js`
+- [ ] Export `* as mastodon from './mastodon/index.js'`.
+- [ ] Re-export `{ MastodonClient, MastodonCrawler, MastodonPlatformResponseValidator } from './mastodon/index.js'`.
+
+### Task 2: `package.json`
+- [ ] Bổ sung export subpath:
+  - `"./scrapers/social/mastodon": "./src/scrapers/social/mastodon/index.js"`
+  - `"./scrapers/social/bluesky": "./src/scrapers/social/bluesky/index.js"`
+
+### Task 3: `src/scrapers/index.js`
+- [ ] Import `MastodonCrawler` và `MastodonClient` từ `./social/mastodon/index.js`.
+- [ ] Cập nhật JSDoc ví dụ ở dòng 22 và dòng 398.
+- [ ] Thêm nhánh dispatch hybrid cho `platformName === 'mastodon' || platformName === 'masto'`:
+  - Action map: `profile`, `followers`, `following`, `posts`, `tweets`, `timeline`, `feed`, `user_feed`, `search`, `hashtag`, `trending`.
+  - Phân giải options (`username`, `handle`, `target`, `query`, `hashtag`, `limit`, `max_id`, `since_id`, `instance`, `accessToken`, `baseUrl`).
+  - Khởi tạo `MastodonClient` và `MastodonCrawler`, gọi `await crawler.start()`, auto cleanup trong `finally`.
+- [ ] Xóa bỏ biến `needsClient` ở dòng 1507 và khối `if (needsClient)` ở dòng 1587-1608.
+- [ ] Bổ sung helper functions:
+  ```javascript
+  export function createMastodonClient(options = {}) {
+    return new MastodonClient(options);
+  }
+  export function createMastodonCrawler(client, options = {}) {
+    return new MastodonCrawler({ client, ...options });
+  }
+  ```
+- [ ] Re-export `MastodonCrawler`, `MastodonClient`, `createMastodonClient`, `createMastodonCrawler` ở named exports cuối file.
+
+### Task 4: Deprecation Markers & Docs
+- [ ] Gắn `@deprecated` JSDoc vào `src/scrapers/bluesky/index.js` dẫn link tới `src/scrapers/social/bluesky/`.
+- [ ] Gắn `@deprecated` JSDoc vào `src/scrapers/mastodon/index.js` dẫn link tới `src/scrapers/social/mastodon/`.
+- [ ] Cập nhật `docs/deprecation-plan.md` thêm 2 dòng cho Bluesky Legacy và Mastodon Legacy trong bảng Status Tracker với trạng thái `deprecated-marked`.
+
+### Task 5: Dispatcher Unit Tests
+- [ ] Tạo `tests/scrapers/social/mastodon/dispatcher.test.js`:
+  - Dùng `node:http` tạo mock server cục bộ.
+  - Test `scrape('mastodon', 'profile')` dispatches tới `MastodonCrawler`.
+  - Test `scrape('masto', 'trending')` hỗ trợ alias `masto`.
+  - Test `scrape('mastodon', 'posts')` và `scrape('mastodon', 'hashtag')`.
+  - Test ném lỗi khi gọi action không hợp lệ.
 
 **Acceptance Criteria:**
-- Given `scrape('mastodon', 'profile', { username: 'Gargron' })`, when invoked, then it executes through `MastodonCrawler` and returns a valid `ProfileItem`.
-- Given `scrape('masto', 'trending')`, when invoked with alias `masto`, then it dispatches to `MastodonCrawler`.
-- Given `package.json`, when inspecting `exports`, then `./scrapers/social/mastodon` and `./scrapers/social/bluesky` are available.
-- Given legacy files `src/scrapers/bluesky/index.js` and `src/scrapers/mastodon/index.js`, then they are clearly marked `@deprecated`.
+- Given `scrape('mastodon', 'profile', { username: 'Gargron', baseUrl: serverUrl })`, when invoked, then it dispatches through `MastodonCrawler` and returns a valid `ProfileItem`.
+- Given `scrape('masto', 'trending', { baseUrl: serverUrl })`, when invoked with alias `masto`, then it dispatches through `MastodonCrawler`.
+- Given `package.json`, when checking exports, then `./scrapers/social/mastodon` and `./scrapers/social/bluesky` are available.
+- Given `src/scrapers/bluesky/index.js` and `src/scrapers/mastodon/index.js`, then they have `@deprecated` tags.
 - Given `tests/scrapers/social/mastodon/dispatcher.test.js`, when running `npx vitest run`, then all tests pass.
 
 ## Verification
