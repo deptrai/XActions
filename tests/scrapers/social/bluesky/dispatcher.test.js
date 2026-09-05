@@ -1,7 +1,14 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import http from 'node:http';
-import { scrape } from '../../../../src/scrapers/index.js';
+import {
+  scrape,
+  createBlueskyClient,
+  createBlueskyCrawler,
+  BlueskyClient,
+  BlueskyCrawler,
+  platforms,
+} from '../../../../src/scrapers/index.js';
 
 describe('Story 23.2: Universal scrape() Dispatcher Integration for Bluesky', () => {
   let server;
@@ -67,5 +74,40 @@ describe('Story 23.2: Universal scrape() Dispatcher Integration for Bluesky', ()
 
     expect(result.trends).toHaveLength(1);
     expect(result.trends[0].id).toBe('bluesky:trend:DispatchTopic');
+  });
+
+  it('exports factory helpers createBlueskyClient and createBlueskyCrawler', () => {
+    const client = createBlueskyClient({ baseUrl: serverUrl });
+    expect(client).toBeInstanceOf(BlueskyClient);
+
+    const crawler = createBlueskyCrawler(client);
+    expect(crawler).toBeInstanceOf(BlueskyCrawler);
+    expect(crawler.client).toBe(client);
+
+    const optionCrawler = createBlueskyCrawler({ baseUrl: serverUrl });
+    expect(optionCrawler).toBeInstanceOf(BlueskyCrawler);
+    expect(optionCrawler.client).toBeInstanceOf(BlueskyClient);
+  });
+
+  it('legacy platforms.bluesky and platforms.mastodon warn on access but forward to hybrid', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(typeof platforms.bluesky).toBe('object');
+    expect(typeof platforms.bsky).toBe('object');
+    expect(typeof platforms.mastodon).toBe('object');
+    expect(typeof platforms.masto).toBe('object');
+
+    // Accessing any property on the proxy triggers a warning and returns
+    // the corresponding hybrid export.
+    expect(typeof platforms.bluesky.BlueskyClient).toBe('function');
+    expect(typeof platforms.mastodon.MastodonCrawler).toBe('function');
+
+    expect(warnSpy).toHaveBeenCalledWith('DEPRECATED: xactions/scrapers/bluesky/BlueskyClient is deprecated. Use xactions/scrapers/social/bluesky instead.');
+    expect(warnSpy).toHaveBeenCalledWith('DEPRECATED: xactions/scrapers/mastodon/MastodonCrawler is deprecated. Use xactions/scrapers/social/mastodon instead.');
+
+    expect(platforms.bluesky).toBe(platforms.bsky);
+    expect(platforms.mastodon).toBe(platforms.masto);
+
+    warnSpy.mockRestore();
   });
 });

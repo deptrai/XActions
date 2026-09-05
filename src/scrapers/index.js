@@ -38,8 +38,6 @@
 // ============================================================================
 
 import twitter from './twitter/index.js';
-import bluesky from './bluesky/index.js';
-import mastodon from './mastodon/index.js';
 import threads from './threads/index.js';
 import facebook from './facebook/index.js';
 import tiktok from './social/tiktok/index.js';
@@ -68,12 +66,13 @@ import { BatdongsanCrawler } from './realestate/batdongsan/crawler.js';
 import { BatdongsanClient } from './realestate/batdongsan/client.js';
 import { BlueskyCrawler } from './social/bluesky/crawler.js';
 import { BlueskyClient } from './social/bluesky/client.js';
-import { MastodonCrawler } from './social/mastodon/crawler.js';
-import { MastodonClient } from './social/mastodon/client.js';
 import {
+  MastodonClient,
+  MastodonCrawler,
   resolveMastodonTarget,
   normalizeInstanceUrl,
-} from './social/mastodon/normalizer.js';
+} from './social/mastodon/index.js';
+import { bluesky as blueskyProxy, mastodon as mastodonProxy } from './deprecation-proxy.js';
 import topcv from './recruitment/topcv/index.js';
 import vietnamworks from './recruitment/vietnamworks/index.js';
 import linkedin from './recruitment/linkedin/index.js';
@@ -144,10 +143,10 @@ export const {
 export const platforms = {
   twitter,
   x: twitter, // alias
-  bluesky: () => { throw new Error('Use xactions/scrapers/social/bluesky instead of the legacy bluesky module'); },
-  bsky: () => { throw new Error('Use xactions/scrapers/social/bluesky instead of the legacy bluesky module'); },
-  mastodon: () => { throw new Error('Use xactions/scrapers/social/mastodon instead of the legacy mastodon module'); },
-  masto: () => { throw new Error('Use xactions/scrapers/social/mastodon instead of the legacy mastodon module'); },
+  bluesky: blueskyProxy,
+  bsky: blueskyProxy,
+  mastodon: mastodonProxy,
+  masto: mastodonProxy,
   threads,
   facebook,
   fb: facebook, // alias
@@ -188,7 +187,7 @@ export function getPlatform(platform) {
 /**
  * Dispatch to FacebookCrawler hybrid engine (Story 13.10)
  * @param {string} action
- * @param {import('../types/index.d.ts').XActionsOptions & Record<string, unknown>} options
+ * @param {import('../types/xactions.d.ts').XActionsOptions & Record<string, unknown>} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function dispatchFacebookHybrid(action, options = {}) {
@@ -392,7 +391,7 @@ export async function dispatchFacebookHybrid(action, options = {}) {
  *
  * @param {string} platform - Platform name: 'twitter', 'bluesky', 'mastodon', 'threads'
  * @param {string} action - Action name. Mastodon aliases: 'profile', 'followers', 'following', 'posts' ('tweets'/'timeline'/'feed'/'user_feed'/'get_user_feed'/'statuses'/'toots'/'toot'), 'search', 'hashtag' ('tag'), 'trending'.
- * @param {import('../types/index.d.ts').XActionsOptions & { instance?: string, baseUrl?: string, accessToken?: string, token?: string, authToken?: string, max_id?: string, since_id?: string, exclude_replies?: boolean, includeReplies?: boolean, type?: string, query?: string, q?: string, keyword?: string, hashtag?: string, tag?: string }} options - Action-specific options. Mastodon accepts `instance`/`baseUrl`, `accessToken`/`token`/`authToken`, pagination `max_id`/`since_id`, and `exclude_replies` or `includeReplies`.
+ * @param {import('../types/xactions.d.ts').XActionsOptions & { instance?: string, baseUrl?: string, accessToken?: string, token?: string, authToken?: string, max_id?: string, since_id?: string, exclude_replies?: boolean, includeReplies?: boolean, type?: string, query?: string, q?: string, keyword?: string, hashtag?: string, tag?: string }} options - Action-specific options. Mastodon accepts `instance`/`baseUrl`, `accessToken`/`token`/`authToken`, pagination `max_id`/`since_id`, and `exclude_replies` or `includeReplies`.
  * @returns {Promise<Record<string, unknown>>} Scraped data
  *
  * @example
@@ -1225,14 +1224,21 @@ export async function scrape(platform, action, options = {}) {
     let username = options.username || options.handle || options.actor || options.target;
     let instance = options.instance || options.baseUrl || options.service;
 
-    if (options.url) {
+    // Only resolve a Mastodon URL for actions that expect an account target.
+    if (options.url && ['profile', 'followers', 'following', 'posts'].includes(mappedAction)) {
       const resolved = resolveMastodonTarget(options.url, instance || undefined);
-      if (!username && ['profile', 'followers', 'following', 'posts'].includes(mappedAction)) {
+      if (!username) {
         username = resolved.username;
       }
       if (!instance) {
         instance = resolved.instance;
       }
+    }
+
+    // If a custom client is passed and no explicit instance/baseUrl was given,
+    // use the client's baseUrl so the crawler dispatches to the right instance.
+    if (!instance && options.client?.baseUrl) {
+      instance = options.client.baseUrl;
     }
 
     const query = options.query || options.q || options.keyword || options.target || options.url;
@@ -1797,8 +1803,8 @@ export default {
   
   // Platform modules
   twitter,
-  bluesky: () => { throw new Error('Use xactions/scrapers/social/bluesky instead of the legacy bluesky module'); },
-  mastodon: () => { throw new Error('Use xactions/scrapers/social/mastodon instead of the legacy mastodon module'); },
+  bluesky: blueskyProxy,
+  mastodon: mastodonProxy,
   threads,
   facebook,
   tiktok,
@@ -1841,7 +1847,9 @@ export function createBlueskyClient(options = {}) {
 }
 
 export function createBlueskyCrawler(client, options = {}) {
-  return new BlueskyCrawler({ client, ...options });
+  const resolvedClient = client instanceof BlueskyClient ? client : new BlueskyClient(client || options || {});
+  const resolvedOptions = client instanceof BlueskyClient ? options : (options || {});
+  return new BlueskyCrawler({ client: resolvedClient, ...resolvedOptions });
 }
 
 export function createMastodonClient(options = {}) {

@@ -14,8 +14,12 @@ describe('Story 23.6: Universal scrape() Dispatcher Integration for Mastodon', (
   let server;
   let serverUrl;
 
+  /** @type {{ url: string, headers: Record<string, string | string[]> }[]} */
+  let requestLog = [];
+
   beforeAll(async () => {
     server = http.createServer((req, res) => {
+      requestLog.push({ url: req.url || '', headers: { ...req.headers } });
       // 1. Account lookup
       if (req.url?.startsWith('/api/v1/accounts/lookup')) {
         res.writeHead(200, { 'content-type': 'application/json' });
@@ -190,6 +194,10 @@ describe('Story 23.6: Universal scrape() Dispatcher Integration for Mastodon', (
     }
   });
 
+  beforeEach(() => {
+    requestLog = [];
+  });
+
   it('dispatches scrape("mastodon", "profile", ...) to MastodonCrawler', async () => {
     const profile = await scrape('mastodon', 'profile', {
       username: 'Gargron',
@@ -275,6 +283,11 @@ describe('Story 23.6: Universal scrape() Dispatcher Integration for Mastodon', (
 
     expect(posts).toHaveLength(1);
     expect(posts[0].id).toContain(':888');
+    const postsReq = requestLog.find((r) => r.url.startsWith('/api/v1/accounts/12345/statuses?'));
+    expect(postsReq).toBeDefined();
+    expect(postsReq.url).toContain('limit=10');
+    expect(postsReq.url).toContain('max_id=777');
+    expect(postsReq.headers.authorization).toBe('Bearer bearer-xyz');
   });
 
   it('dispatches scrape("mastodon", "followers", ...)', async () => {
@@ -341,6 +354,47 @@ describe('Story 23.6: Universal scrape() Dispatcher Integration for Mastodon', (
     expect(searchRes.hashtags).toHaveLength(1);
   });
 
+  it('dispatches scrape("mastodon", "posts", ...) with cursor, since_id, and includeReplies', async () => {
+    const posts = await scrape('mastodon', 'posts', {
+      username: 'Gargron',
+      baseUrl: serverUrl,
+      cursor: 'cur_123',
+      since_id: 'since_456',
+      includeReplies: false,
+    });
+
+    expect(posts).toHaveLength(1);
+    expect(posts[0].id).toContain(':888');
+    const postsReq = requestLog.find((r) => r.url.startsWith('/api/v1/accounts/12345/statuses?'));
+    expect(postsReq).toBeDefined();
+    expect(postsReq.url).toContain('max_id=cur_123');
+    expect(postsReq.url).toContain('since_id=since_456');
+    expect(postsReq.url).toContain('exclude_replies=true');
+  });
+
+  it('dispatches scrape("mastodon", "posts", ...) with a pre-built client', async () => {
+    const client = createMastodonClient({ baseUrl: serverUrl });
+    const posts = await scrape('mastodon', 'posts', {
+      username: 'Gargron',
+      client,
+    });
+
+    expect(posts).toHaveLength(1);
+    expect(posts[0].id).toContain(':888');
+  });
+
+  it('keeps a custom client alive when autoClose is false', async () => {
+    const client = createMastodonClient({ baseUrl: serverUrl });
+    const posts = await scrape('mastodon', 'posts', {
+      username: 'Gargron',
+      client,
+      autoClose: false,
+    });
+
+    expect(posts).toHaveLength(1);
+    expect(client.baseUrl).toBe(serverUrl);
+  });
+
   it('throws a clear error when an invalid action is called', async () => {
     await expect(
       scrape('mastodon', 'invalid_action', { baseUrl: serverUrl })
@@ -354,6 +408,10 @@ describe('Story 23.6: Universal scrape() Dispatcher Integration for Mastodon', (
     const crawler = createMastodonCrawler(client);
     expect(crawler).toBeInstanceOf(MastodonCrawler);
     expect(crawler.client).toBe(client);
+
+    const optionCrawler = createMastodonCrawler({ baseUrl: serverUrl });
+    expect(optionCrawler).toBeInstanceOf(MastodonCrawler);
+    expect(optionCrawler.client).toBeInstanceOf(MastodonClient);
   });
 
   it('exposes MastodonCrawler and MastodonClient as named exports', () => {

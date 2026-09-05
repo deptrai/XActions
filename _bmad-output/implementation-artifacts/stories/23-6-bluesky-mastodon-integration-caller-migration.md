@@ -171,3 +171,25 @@ context:
 #### defer
 - [x] [Review][Defer] `src/scrapers/social/mastodon/index.js` barrel omits `createMastodonClient` and `createMastodonCrawler` — pre-existing factory pattern inconsistency, not a regression.
 
+### Review Findings — Re-review (2026-09-05)
+
+#### decision-needed
+- [ ] [Review][Decision] Legacy `platforms.bluesky` / `platforms.mastodon` throw hard errors instead of warning per deprecation plan — `docs/deprecation-plan.md` Phase 1 says "Mark & Warn", not "Error on Import". Do you want to keep the throwers (treat as Phase 2) or switch to `console.warn` + deprecated proxy? [src/scrapers/index.js:147-150, default export]
+
+#### patch
+- [ ] [Review][Patch] `options.url` with non-profile paths (e.g. hashtag/tag URLs) throws "Invalid Mastodon profile URL format" because `resolveMastodonTarget` is called unconditionally before checking `mappedAction` [src/scrapers/index.js:1228-1236]
+- [ ] [Review][Patch] `options.client` with custom `baseUrl` is ignored for `mappedArgs.instance` when `options.instance`/`baseUrl` are omitted, falling back to `mastodon.social` and sending wrong `instance` argument to crawler [src/scrapers/index.js:1237-1253]
+- [ ] [Review][Patch] `createMastodonCrawler(client, options)` accepts a plain options object as first param but `createBlueskyCrawler` does not; signatures are inconsistent and the type declaration only allows `MastodonClient` [src/scrapers/index.js:1851-1855, types/index.d.ts:813]
+- [ ] [Review][Patch] `BlueskyClient.close()` and `MastodonClient.close()` declared in `types/index.d.ts` but do not exist at runtime [types/index.d.ts:787,800]
+- [ ] [Review][Patch] `BlueskyClient.login()` declared to return `Promise<Record<string, unknown>>` but actually returns `Promise<string>` (accessJwt) [types/index.d.ts:784]
+- [ ] [Review][Patch] JSDoc `@param {import('../types/index.d.ts').XActionsOptions}` references a file that does not export `XActionsOptions`; correct path is `../types/xactions.d.ts` [src/scrapers/index.js:191,400]
+- [ ] [Review][Patch] Legacy imports `bluesky` and `mastodon` in `src/scrapers/index.js` are now unused after `platforms`/`default` replaced with throwers, creating dead code [src/scrapers/index.js:41-42]
+- [ ] [Review][Patch] `MastodonCrawler`/`MastodonClient` imported directly from `crawler.js`/`client.js` instead of the spec-required barrel `./social/mastodon/index.js` [src/scrapers/index.js:71-76]
+- [ ] [Review][Patch] Dispatcher mock server does not assert `limit`, `max_id`, or `Authorization` header in the `posts` test, so parameter normalization (`count`→`limit`, `token`→`accessToken`, `max_id`) is not actually verified [tests/scrapers/social/mastodon/dispatcher.test.js:267-278]
+- [ ] [Review][Patch] CLI pagination/reply options (`cursor`, `since_id`, `includeReplies`) for `scrape('mastodon','posts',...)` lack dispatcher test coverage [tests/scrapers/social/mastodon/dispatcher.test.js]
+- [ ] [Review][Patch] No test verifies the legacy `platforms.mastodon`/`platforms.bluesky` throwers emit the migration message [tests/scrapers/social/mastodon/dispatcher.test.js]
+- [ ] [Review][Patch] `createBlueskyClient` / `createBlueskyCrawler` factory helpers lack test coverage despite being newly exported [tests/scrapers/social/bluesky/dispatcher.test.js]
+
+#### defer
+- [ ] [Review][Defer] `types/index.d.ts` uses `Record<string, unknown>` for all hybrid client/crawler constructor deps; this is broad and pre-existing for Bluesky. Mastodon follows same pattern.
+

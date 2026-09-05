@@ -77,6 +77,16 @@ export function resolveActor(input) {
   return clean;
 }
 
+export function createBlueskyClient(options = {}) {
+  return new BlueskyClient(options);
+}
+
+export function createBlueskyCrawler(client, options = {}) {
+  const resolvedClient = client instanceof BlueskyClient ? client : new BlueskyClient(client || options || {});
+  const resolvedOptions = client instanceof BlueskyClient ? options : (options || {});
+  return new BlueskyCrawler({ client: resolvedClient, ...resolvedOptions });
+}
+
 export class BlueskyClient extends AbstractApiClient {
   /** @type {string} */
   name = 'bluesky';

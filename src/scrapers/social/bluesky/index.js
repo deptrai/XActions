@@ -19,3 +19,6 @@ export {
   normalizeBlueskyTrendingTopic,
   profileItemToPostItem,
 } from './normalizer.js';
+
+export { createBlueskyClient, createBlueskyCrawler } from './client.js';
+

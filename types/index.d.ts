@@ -781,10 +781,9 @@ export {
 
 export declare class BlueskyClient {
   constructor(deps?: Record<string, unknown>);
-  login(args?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  login(args?: Record<string, unknown>): Promise<string>;
   resolveHandle(handle: string): Promise<string>;
   xrpc(nsid: string, params?: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown>;
-  close(): Promise<void>;
 }
 
 export declare class BlueskyCrawler {
@@ -797,7 +796,6 @@ export declare class BlueskyCrawler {
 export declare class MastodonClient {
   constructor(deps?: Record<string, unknown>);
   request(method: string, path: string, options?: Record<string, unknown>): Promise<unknown>;
-  close(): Promise<void>;
 }
 
 export declare class MastodonCrawler {
@@ -808,9 +806,9 @@ export declare class MastodonCrawler {
 }
 
 export declare function createBlueskyClient(options?: Record<string, unknown>): BlueskyClient;
-export declare function createBlueskyCrawler(client: BlueskyClient, options?: Record<string, unknown>): BlueskyCrawler;
+export declare function createBlueskyCrawler(client: BlueskyClient | Record<string, unknown>, options?: Record<string, unknown>): BlueskyCrawler;
 export declare function createMastodonClient(options?: Record<string, unknown>): MastodonClient;
-export declare function createMastodonCrawler(client: MastodonClient, options?: Record<string, unknown>): MastodonCrawler;
+export declare function createMastodonCrawler(client: MastodonClient | Record<string, unknown>, options?: Record<string, unknown>): MastodonCrawler;
 
 export declare function scrape(platform: string, action: string, options?: Record<string, unknown>): Promise<unknown>;
 export declare const platforms: Record<string, unknown>;

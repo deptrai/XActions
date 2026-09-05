@@ -24,3 +24,6 @@ export {
   normalizeMastodonStatus,
   normalizeMastodonTag,
 } from './normalizer.js';
+
+export { createMastodonClient } from './client.js';
+export { createMastodonCrawler } from './crawler.js';

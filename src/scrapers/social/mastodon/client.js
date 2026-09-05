@@ -18,6 +18,10 @@ import {
 } from './normalizer.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
+export function createMastodonClient(options = {}) {
+  return new MastodonClient(options);
+}
+
 export class MastodonClient extends AbstractApiClient {
   /** @type {string} */
   name = 'mastodon';

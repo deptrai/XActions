@@ -18,6 +18,12 @@ import {
 } from './normalizer.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
+export function createMastodonCrawler(client, options = {}) {
+  const resolvedClient = client instanceof MastodonClient ? client : new MastodonClient(client || options || {});
+  const resolvedOptions = client instanceof MastodonClient ? options : (options || {});
+  return new MastodonCrawler({ client: resolvedClient, ...resolvedOptions });
+}
+
 export class MastodonCrawler extends AbstractCrawler {
   /** @type {string} */
   name = 'mastodon';
