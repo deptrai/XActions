@@ -2,7 +2,7 @@
 title: 'Story 23.4: Mastodon Hybrid Crawler'
 type: 'feature'
 created: '2026-09-05'
-status: 'ready-for-dev'
+status: 'in-progress'
 review_loop_iteration: 1
 baseline_commit: '4d63f213bfa7a7b8e1f0e21a8a3a0e6e768165b6'
 context:
@@ -115,22 +115,22 @@ context:
 
 ### 1. `src/scrapers/social/mastodon/normalizer.js`
 
-- [ ] Implement `resolveMastodonTarget(input, defaultInstance)`: parse `username` và `instance` từ handle `@user@host`, `user@host`, URL `https://host/@user` hoặc username đơn.
-- [ ] Implement `normalizeInstanceUrl(url)`: gắn scheme `https://` nếu thiếu, bỏ trailing slash.
-- [ ] Implement `toPlainText(html)`: xử lý tag `<br>`, `<p>`, `<a>`, giải mã entities: `&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`, `&apos;`, `&nbsp;`.
-- [ ] Implement `namespacedMastodonId(instance, id)`: trả về `mastodon:${cleanInstance}:${id}`.
-- [ ] Implement `normalizeMastodonAccount(account, instance) -> ProfileItem`:
+- [x] Implement `resolveMastodonTarget(input, defaultInstance)`: parse `username` và `instance` từ handle `@user@host`, `user@host`, URL `https://host/@user` hoặc username đơn.
+- [x] Implement `normalizeInstanceUrl(url)`: gắn scheme `https://` nếu thiếu, bỏ trailing slash.
+- [x] Implement `toPlainText(html)`: xử lý tag `<br>`, `<p>`, `<a>`, giải mã entities: `&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`, `&apos;`, `&nbsp;`.
+- [x] Implement `namespacedMastodonId(instance, id)`: trả về `mastodon:${cleanInstance}:${id}`.
+- [x] Implement `normalizeMastodonAccount(account, instance) -> ProfileItem`:
   - Map fields: `id`, `username` (acct), `name` (display_name), `bio` (note sau `toPlainText`), `avatar`, `profileUrl` (url), `followersCount`, `followingCount`, `postsCount` (statuses_count).
   - `metadata` JSONB: `instance`, `acct`, `bot`, `locked`, `group`, `discoverable`, `created_at`, `fields`, `emojis`.
-- [ ] Implement `normalizeMastodonStatus(status, instance) -> PostItem`:
-  - Map fields: `id`, `platform`, `externalId`, `category = CATEGORIES.POST`, `authorId` (`account.id`), `authorName` (`account.display_name`), `authorAvatar`, `authorUrl` (`account.url`), `postUrl` (`url`), `content` (sau `toPlainText`), `mediaUrls` (`media_attachments[].url`), `likesCount` (`favourites_count`), `repostsCount` (`reblogs_count`), `repliesCount`, `publishedAt` (`created_at`), `crawledAt`.
+- [x] Implement `normalizeMastodonStatus(status, instance) -> PostItem`:
+  - Map fields: `id`, `platform`, `externalId`, `category = CATEGORIES.SOCIAL`, `authorId` (`account.id`), `authorName` (`account.display_name`), `authorAvatar`, `authorUrl` (`account.url`), `postUrl` (`url`), `content` (sau `toPlainText`), `mediaUrls` (`media_attachments[].url`), `likesCount` (`favourites_count`), `repostsCount` (`reblogs_count`), `repliesCount`, `publishedAt` (`created_at`), `crawledAt`.
   - `metadata` JSONB: `instance`, `acct`, `spoiler_text`, `sensitive`, `emojis`, `tags`, `visibility`, `language`, `reblog`.
-- [ ] Implement `normalizeMastodonTag(tag, instance) -> PostItem` cho trending hashtags.
-- [ ] Implement `parseLinkHeader(header)`: trích xuất `max_id` từ header `Link: <...?max_id=123>; rel="next"`.
+- [x] Implement `normalizeMastodonTag(tag, instance) -> PostItem` cho trending hashtags.
+- [x] Implement `parseLinkHeader(header)`: trích xuất `max_id` từ header `Link: <...?max_id=123>; rel="next"`.
 
 ### 2. `src/scrapers/social/mastodon/client.js`
 
-- [ ] Implement `MastodonClient extends AbstractApiClient`:
+- [x] Implement `MastodonClient extends AbstractApiClient`:
   - `name = 'mastodon'`, `platform = 'mastodon'`.
   - Constructor nhận `{ baseUrl, service, instance, accessToken, responseValidator, proxyPool, accountPool, governor, sessionManager, requiresAuth, requiresProxy, timeout }`.
   - **Bắt buộc**: `super({ ...options, platform: 'mastodon', responseValidator: options.responseValidator || new MastodonPlatformResponseValidator(), requiresAuth: options.requiresAuth ?? false, requiresProxy: options.requiresProxy ?? false })`.
@@ -152,7 +152,7 @@ context:
 
 ### 3. `src/scrapers/social/mastodon/crawler.js`
 
-- [ ] Implement `MastodonCrawler extends AbstractCrawler`:
+- [x] Implement `MastodonCrawler extends AbstractCrawler`:
   - Constructor nhận dependency: `{ client, store, sessionManager, governor, accountPool, proxyPool, redisPublisher, requiresAuth }`.
   - **Bắt buộc**: `super({ ...deps, client, requiresAuth: deps.requiresAuth ?? false })`.
   - Đăng ký 7 actions:
@@ -169,21 +169,21 @@ context:
 
 ### 4. `src/scrapers/social/mastodon/index.js`
 
-- [ ] Barrel export: `MastodonClient`, `MastodonCrawler`, `MastodonPlatformResponseValidator`, `resolveMastodonTarget`, `toPlainText`, normalizers.
+- [x] Barrel export: `MastodonClient`, `MastodonCrawler`, `MastodonPlatformResponseValidator`, `resolveMastodonTarget`, `toPlainText`, normalizers.
 
 ### 5. Comprehensive Unit Tests
 
-- [ ] `tests/scrapers/social/mastodon/normalizer.test.js`:
+- [x] `tests/scrapers/social/mastodon/normalizer.test.js`:
   - Test `resolveMastodonTarget` với handle, webfinger, URL, username đơn.
   - Test `toPlainText` giải mã sạch thẻ HTML và entities.
   - Test `normalizeMastodonAccount` / `normalizeMastodonStatus` sinh ID namespaced và `metadata` chuẩn.
   - Test `parseLinkHeader` bóc tách `max_id`.
-- [ ] `tests/scrapers/social/mastodon/client.test.js`:
+- [x] `tests/scrapers/social/mastodon/client.test.js`:
   - Test `MastodonClient` constructor: `requiresAuth=false`, `requiresProxy=false`, `responseValidator` được gán.
   - Test instance URL normalization, auth headers.
   - Test REST helper endpoints và query params.
   - Test error mapping (429 -> `RateLimitError`, 401 -> `AuthSessionExpiredError`).
-- [ ] `tests/scrapers/social/mastodon/crawler.test.js`:
+- [x] `tests/scrapers/social/mastodon/crawler.test.js`:
   - Test danh sách actions đã đăng ký (`listActions()`).
   - Test thực thi từng action qua in-memory client hoặc live.
   - Test tích hợp store và onProgress.
