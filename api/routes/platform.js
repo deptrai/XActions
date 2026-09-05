@@ -169,21 +169,31 @@ router.get('/:platform/accounts', async (req, res) => {
   const { platform } = req.params;
 
   try {
-    const prefix = `${platform}:`;
+    const isTwitter = platform === 'x' || platform === 'twitter';
+    const where = isTwitter
+      ? {
+          userId: reqUser.id,
+          OR: [{ label: { startsWith: 'x:' } }, { label: { startsWith: 'twitter:' } }],
+        }
+      : {
+          userId: reqUser.id,
+          label: { startsWith: `${platform}:` },
+        };
+
     const accounts = await prisma.facebookAccount.findMany({
-      where: {
-        userId: reqUser.id,
-        label: { startsWith: prefix },
-      },
+      where,
       select: { id: true, label: true },
       orderBy: { createdAt: 'asc' },
     });
 
     // Strip the platform prefix for display
-    const stripped = accounts.map(a => ({
-      id: a.id,
-      label: a.label.slice(prefix.length),
-    }));
+    const stripped = accounts.map(a => {
+      const p = a.label.startsWith('x:') ? 'x:' : (a.label.startsWith('twitter:') ? 'twitter:' : `${platform}:`);
+      return {
+        id: a.id,
+        label: a.label.slice(p.length),
+      };
+    });
 
     res.json({ ok: true, accounts: stripped });
   } catch (err) {
@@ -254,9 +264,21 @@ router.delete('/:platform/accounts/:id', async (req, res) => {
  * @param {string} platform
  */
 async function resolveAccountCookie(userId, accountId, platform) {
-  const prefix = `${platform}:`;
+  const isTwitter = platform === 'x' || platform === 'twitter';
+  const where = isTwitter
+    ? {
+        id: accountId,
+        userId,
+        OR: [{ label: { startsWith: 'x:' } }, { label: { startsWith: 'twitter:' } }],
+      }
+    : {
+        id: accountId,
+        userId,
+        label: { startsWith: `${platform}:` },
+      };
+
   const account = await prisma.facebookAccount.findFirst({
-    where: { id: accountId, userId, label: { startsWith: prefix } },
+    where,
   });
   if (!account) {
     const err = /** @type {Error & { code?: string }} */ (new Error('Selected account not found'));

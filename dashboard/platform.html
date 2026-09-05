@@ -893,13 +893,15 @@
               icon: "👤",
               title: "Scrape Followers",
               desc: "Extract follower list from a profile/page",
+              requiresAccount: true,
               fields: [{ id: "url", type: "url", label: "Profile/Page URL" }],
             },
             {
               id: "search",
               icon: "🔎",
               title: "Search Posts",
-              desc: "Search for posts by keyword",
+              desc: "Search for posts by keyword (requires account for full search)",
+              requiresAccount: true,
               fields: [{ id: "query", type: "text", label: "Query" }],
             },
             {
@@ -966,7 +968,8 @@
               id: "search",
               icon: "🔎",
               title: "Search Tweets",
-              desc: "Search tweets by keyword",
+              desc: "Search tweets by keyword (requires Twitter auth_token)",
+              requiresAccount: true,
               fields: [{ id: "query", type: "text", label: "Query" }],
             },
           ],
@@ -1437,7 +1440,8 @@
         items.forEach((item, idx) => {
           const btn = document.createElement("button");
           btn.dataset.action = item.id;
-          btn.innerHTML = `<span>${item.icon}</span> <span>${item.title}</span>`;
+          const reqBadge = item.requiresAccount ? ' <span title="Requires account" style="font-size:0.75rem;opacity:0.8;">🔑</span>' : '';
+          btn.innerHTML = `<span>${item.icon}</span> <span>${item.title}${reqBadge}</span>`;
           btn.onclick = () => selectAction(tab, item.id);
           if (idx === 0) btn.classList.add("active");
           container.appendChild(btn);
@@ -1463,7 +1467,7 @@
       }
 
       function buildActionCard(tab, item) {
-        const needsAccount = tab !== "scrape";
+        const needsAccount = tab !== "scrape" || Boolean(item.requiresAccount);
         const fieldsHtml = item.fields.map((f) => buildField(f)).join("");
 
         const actionBtnText = state.dryRun ? "▶ Preview" : "⚡ Run Live";
@@ -1473,7 +1477,7 @@
         return `
       <div class="action-card" id="card-${tab}-${item.id}">
         <div class="card-header">
-          <div class="card-title">${item.icon} ${esc(item.title)}</div>
+          <div class="card-title">${item.icon} ${esc(item.title)} ${item.requiresAccount ? '<span style="font-size:0.8rem;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:4px;padding:2px 6px;margin-left:6px;color:var(--text-secondary);font-weight:normal;">🔑 Auth required</span>' : ''}</div>
           <span class="card-help" title="${esc(item.desc)}">?</span>
         </div>
         <div class="card-desc">${esc(item.desc)}</div>
@@ -1493,7 +1497,12 @@
               <option value="3000">3s</option>
             </select>
           </div>
-          ${needsAccount && !state.accountId ? '<div class="warning" style="color:var(--warning);font-size:0.8125rem;margin-bottom:12px">⚠️ Select an account to continue.</div>' : ""}
+          ${needsAccount && !state.accountId ? `
+            <div class="warning" style="color:var(--warning);background:rgba(255,170,0,0.08);border:1px solid rgba(255,170,0,0.25);border-radius:8px;padding:10px 14px;font-size:0.8125rem;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <span>⚠️ This action requires an account session. Select one from the account bar or click to add.</span>
+              <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:0.75rem;white-space:nowrap;" onclick="toggleImport()">+ Add Account</button>
+            </div>
+          ` : ""}
           <div class="live-confirm" id="live-confirm-${tab}-${item.id}">
             ⚠️ Real actions will be performed. Continue?
             <button type="button" class="confirm" onclick="confirmLive('${tab}', '${item.id}')">Yes, run live</button>
@@ -1757,9 +1766,9 @@
         const item = (cfg[tab] || []).find((i) => i.id === id);
         if (!item) return;
 
-        const isPublic = tab === "scrape";
+        const isPublic = tab === "scrape" && !item.requiresAccount;
         if (!isPublic && !state.accountId) {
-          return showToast("Select an account first", "error");
+          return showToast("Select or add an account first", "error");
         }
 
         if (!state.dryRun && !state.liveConfirmed) {
@@ -1886,6 +1895,25 @@
         const resObj = data.result && typeof data.result === "object" ? data.result : data;
         const items = resObj.posts || resObj.comments || resObj.followers || resObj.following || resObj.members || resObj.results || resObj.feed || (Array.isArray(resObj) ? resObj : []);
 
+        let noteHtml = '';
+        if (resObj.note || data.note) {
+          noteHtml = `
+            <div style="background:rgba(29,155,240,0.08);border:1px solid rgba(29,155,240,0.3);border-radius:8px;padding:12px;font-size:0.8125rem;color:var(--accent);margin:12px 0;display:flex;align-items:center;gap:8px;">
+              <span>ℹ️</span> <span>${esc(resObj.note || data.note)}</span>
+            </div>
+          `;
+        }
+
+        let emptyHtml = '';
+        if (cls === "success" && Array.isArray(items) && items.length === 0 && !resObj.profile) {
+          emptyHtml = `
+            <div style="background:var(--bg-secondary);border:1px dashed var(--border);border-radius:8px;padding:24px;text-align:center;color:var(--text-secondary);font-size:0.875rem;margin:12px 0;">
+              <div>🔍 No records returned for this query.</div>
+              <div style="font-size:0.75rem;margin-top:6px;opacity:0.8;">Try a different keyword, check account permissions, or verify that the content is public.</div>
+            </div>
+          `;
+        }
+
         let profileCardHtml = '';
         const prof = resObj.profile && typeof resObj.profile === "object" ? resObj.profile : resObj;
         if (prof.name || prof.handle || prof.displayName || prof.username) {
@@ -1939,6 +1967,8 @@
             </div>
           </div>
           ${data.count !== undefined ? `<div style="font-size:0.8125rem;color:var(--text-secondary);">${esc(data.count)} item(s) processed</div>` : ''}
+          ${noteHtml}
+          ${emptyHtml}
           ${profileCardHtml}
           ${cardsHtml}
           <div class="toggle-raw" style="margin-top:12px;font-size:0.8125rem;color:var(--accent);cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">📄 Toggle raw JSON response</div>
