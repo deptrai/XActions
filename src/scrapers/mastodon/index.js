@@ -1,7 +1,10 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+// LEGACY — see docs/deprecation-plan.md
 /**
- * XActions Mastodon Scrapers
+ * XActions Mastodon Scrapers (Legacy)
  * REST API-based scrapers for Mastodon (any instance)
+ *
+ * @deprecated Legacy Mastodon scraper module. Replaced by `src/scrapers/social/mastodon/index.js` (`MastodonCrawler`, `MastodonClient`) on AbstractCrawler/AbstractApiClient. See docs/deprecation-plan.md.
  *
  * Uses the public Mastodon REST API with fetch. No Puppeteer needed.
  * Most public data requires no authentication.

@@ -1,7 +1,10 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
+// LEGACY — see docs/deprecation-plan.md
 /**
- * XActions Bluesky Scrapers
+ * XActions Bluesky Scrapers (Legacy)
  * AT Protocol-based scrapers for Bluesky (bsky.social)
+ *
+ * @deprecated Legacy Bluesky scraper module. Replaced by `src/scrapers/social/bluesky/index.js` (`BlueskyCrawler`, `BlueskyClient`) on AbstractCrawler/AbstractApiClient. See docs/deprecation-plan.md.
  *
  * Uses the official @atproto/api package. No Puppeteer needed.
  * Public data requires no authentication.

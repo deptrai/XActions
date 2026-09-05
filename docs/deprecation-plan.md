@@ -26,6 +26,8 @@ Một module legacy chỉ được xoá khi thỏa mãn **tất cả** các đi�
 | **Twitter/X** | `src/client/Scraper.js` | `src/scrapers/social/twitter/client.js` | HTTP-only Scraper class | `src/client/` được coi là legacy; logic chuyển vào `src/scrapers/social/twitter/`. |
 | **Facebook** | `src/scrapers/facebook/` | `src/scrapers/social/facebook/index.js` | `getGroupPosts(groupId)`, `getPagePosts(pageId)` | Hoàn thành ở Story 13.3; profile/followers/group-members → Story 13.5, search/group_search → Story 13.6, comments → Story 13.7, marketplace → Story 13.8, social actions (write/messenger) → Story 13.9, dispatcher/service migration → Story 13.10. |
 | **Threads** | `src/scrapers/threads/index.js` | `src/scrapers/social/threads/index.js` | `getUserFeed(username)`, `search(query)`, `get_post_comments(postId)` | Hoàn thành ở Story 15.1; profile/followers/following → 15.1.1, post detail → 15.1.2, search/comments doc_id hardening → 15.1.3, integration → 15.1.4. |
+| **Bluesky** | `src/scrapers/bluesky/index.js` | `src/scrapers/social/bluesky/index.js` | AT Protocol XRPC hybrid crawler (`BlueskyCrawler`, `BlueskyClient`) | Hoàn thành ở Story 23.2; response validator → 23.5, caller migration & package exports → 23.6. |
+| **Mastodon** | `src/scrapers/mastodon/index.js` | `src/scrapers/social/mastodon/index.js` | Federated REST hybrid crawler (`MastodonCrawler`, `MastodonClient`) | Hoàn thành ở Story 23.4; response validator → 23.5, caller migration & package exports → 23.6. |
 | **Admin CLI** | `src/cli/commands/checkpoints.js` (partial) | `src/cli/commands/admin.js` | Unified `xactions admin ...` | Giữ `xactions checkpoints` như alias tạm thời, xoá ở Epic 20.2. |
 | **Admin CLI** | `src/cli/commands/stream.js` (partial) | `src/cli/commands/admin.js` | Unified `xactions admin stream ...` | Giữ `xactions stream` như alias tạm thời, xoá ở Epic 20.2. |
 
@@ -40,6 +42,8 @@ Thêm `@deprecated` JSDoc và comment `// LEGACY — see docs/deprecation-plan.m
 - `src/scrapers/twitter/index.js`
 - `src/scrapers/facebook/index.js`
 - `src/scrapers/threads/index.js`
+- `src/scrapers/bluesky/index.js` (Story 23.6)
+- `src/scrapers/mastodon/index.js` (Story 23.6)
 - `src/cli/commands/checkpoints.js` (redirect note)
 - `src/cli/commands/stream.js` (redirect note)
 - `src/scrapers/facebook/messengerShare.js` (Story 13.9)
@@ -108,6 +112,8 @@ Xoá theo thứ tự:
 | Facebook Legacy Social Actions (`src/scrapers/facebook/messengerShare.js`, `shareLinkByUid.js`, `graphqlSend.js`, `messengerQueue.js`, `api/services/facebookAutomation.js` like/comment/post/share/join/friend helpers) | `deprecated-marked` | Phase 1 (Epic 13.9) | DEV |
 | FacebookClient HTTP-only token extraction (`src/scrapers/social/facebook/client.js`) | `deprecated-planned` | Phase 1 (Epic 13.4) | DEV |
 | Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-planned` | Phase 1 (Epic 15.1, 15.1.1, 15.1.2, 15.1.3, 15.1.4) — hybrid caller migration and package exports in Story 15.1.4 | DEV |
+| Bluesky Legacy (`src/scrapers/bluesky/index.js`) | `deprecated-marked` | Phase 1 (Story 23.6) | DEV |
+| Mastodon Legacy (`src/scrapers/mastodon/index.js`) | `deprecated-marked` | Phase 1 (Story 23.6) | DEV |
 | `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
 
 ### Legacy Threads Functions → Hybrid Actions

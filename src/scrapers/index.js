@@ -19,8 +19,10 @@
  *   // New unified interface:
  *   import { scrape, platforms } from 'xactions/scrapers';
  *   const profile = await scrape('bluesky', 'profile', { username: 'user.bsky.social' });
+ *   const mastodonPosts = await scrape('mastodon', 'posts', { username: 'user', instance: 'https://mastodon.social', limit: 20, max_id: '...' });
+ *   const mastodonSearch = await scrape('mastodon', 'search', { query: 'open source', instance: 'https://mastodon.social' });
  *   const profile = await scrape('mastodon', 'profile', { username: 'user', instance: 'https://mastodon.social' });
- * 
+ *
  *   // Use Playwright instead of Puppeteer:
  *   import { createBrowser, createPage, scrapeProfile } from 'xactions/scrapers';
  *   const browser = await createBrowser({ adapter: 'playwright' });
@@ -66,6 +68,8 @@ import { BatdongsanCrawler } from './realestate/batdongsan/crawler.js';
 import { BatdongsanClient } from './realestate/batdongsan/client.js';
 import { BlueskyCrawler } from './social/bluesky/crawler.js';
 import { BlueskyClient } from './social/bluesky/client.js';
+import { MastodonCrawler } from './social/mastodon/crawler.js';
+import { MastodonClient } from './social/mastodon/client.js';
 import topcv from './recruitment/topcv/index.js';
 import vietnamworks from './recruitment/vietnamworks/index.js';
 import linkedin from './recruitment/linkedin/index.js';
@@ -383,8 +387,8 @@ export async function dispatchFacebookHybrid(action, options = {}) {
  * Unified scrape function — dispatches to the correct platform module
  *
  * @param {string} platform - Platform name: 'twitter', 'bluesky', 'mastodon', 'threads'
- * @param {string} action - Action name: 'profile', 'followers', 'following', 'tweets', 'search', 'hashtag', 'trending'
- * @param {import('../types/xactions.js').XActionsOptions} options - Action-specific options
+ * @param {string} action - Action name. Mastodon aliases: 'profile', 'followers', 'following', 'posts' ('tweets'/'timeline'/'feed'/'user_feed'/'get_user_feed'/'statuses'/'toots'/'toot'), 'search', 'hashtag' ('tag'), 'trending'.
+ * @param {import('../types/xactions.js').XActionsOptions & { instance?: string, baseUrl?: string, accessToken?: string, token?: string, authToken?: string, max_id?: string, since_id?: string, exclude_replies?: boolean, includeReplies?: boolean, type?: string, query?: string, q?: string, keyword?: string, hashtag?: string, tag?: string }} options - Action-specific options. Mastodon accepts `instance`/`baseUrl`, `accessToken`/`token`/`authToken`, pagination `max_id`/`since_id`, and `exclude_replies` or `includeReplies`.
  * @returns {Promise<Record<string, unknown>>} Scraped data
  *
  * @example
@@ -396,6 +400,8 @@ export async function dispatchFacebookHybrid(action, options = {}) {
  *
  *   // Mastodon (no Puppeteer needed)
  *   const profile = await scrape('mastodon', 'profile', { username: 'user', instance: 'https://mastodon.social' });
+ *   const posts = await scrape('mastodon', 'posts', { username: 'user', instance: 'https://mastodon.social', limit: 20, max_id: '...' });
+ *   const search = await scrape('mastodon', 'search', { query: 'open source', instance: 'https://mastodon.social' });
  *
  *   // Threads (Puppeteer)
  *   const posts = await scrape('threads', 'tweets', { page, username: 'zuck', limit: 20 });
@@ -1170,6 +1176,125 @@ export async function scrape(platform, action, options = {}) {
     }
   }
 
+  // ── Mastodon hybrid path (Story 23.6) ──
+  // Dispatches to MastodonCrawler / MastodonClient (Federated REST API).
+  if (platformName === 'mastodon' || platformName === 'masto') {
+    /** @type {Record<string, string>} */
+    const MASTODON_ACTION_MAP = {
+      profile: 'profile',
+      followers: 'followers',
+      following: 'following',
+      posts: 'posts',
+      tweets: 'posts',
+      timeline: 'posts',
+      feed: 'posts',
+      user_feed: 'posts',
+      get_user_feed: 'posts',
+      statuses: 'posts',
+      toots: 'posts',
+      toot: 'posts',
+      search: 'search',
+      hashtag: 'hashtag',
+      tag: 'hashtag',
+      trending: 'trending',
+    };
+
+    const mappedAction = MASTODON_ACTION_MAP[action];
+
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(MASTODON_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    const username = options.username || options.handle || options.actor || options.target || options.url;
+    const query = options.query || options.q || options.keyword || options.target || options.url;
+    const hashtag = options.hashtag || options.tag || options.target;
+    const instance = options.instance || options.baseUrl || options.service;
+    const accessToken = options.accessToken || options.authToken || options.token || options.session?.accessToken;
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (['profile', 'followers', 'following', 'posts'].includes(mappedAction) && username) {
+      mappedArgs.username = username;
+    }
+    if (mappedAction === 'search' && query) {
+      mappedArgs.query = query;
+    }
+    if (mappedAction === 'hashtag' && hashtag) {
+      mappedArgs.hashtag = hashtag;
+    }
+    if (instance) {
+      mappedArgs.instance = instance;
+    }
+    if (accessToken) {
+      mappedArgs.accessToken = accessToken;
+    }
+
+    const rawLimit = options.limit ?? options.count;
+    if (rawLimit != null) {
+      const parsed = Number(rawLimit);
+      if (Number.isFinite(parsed) && parsed >= 0) {
+        mappedArgs.limit = parsed;
+      }
+    }
+    if (options.max_id != null) {
+      mappedArgs.max_id = options.max_id;
+    }
+    if (options.since_id != null) {
+      mappedArgs.since_id = options.since_id;
+    }
+    if (options.includeReplies != null) {
+      mappedArgs.exclude_replies = !options.includeReplies;
+    } else if (options.exclude_replies != null) {
+      mappedArgs.exclude_replies = options.exclude_replies;
+    }
+    if (options.cursor != null) {
+      mappedArgs.max_id = options.cursor;
+    }
+    if (options.type != null) {
+      mappedArgs.type = options.type;
+    }
+
+    const session = {
+      ...(options.session || {}),
+      ...(accessToken ? { accessToken } : {}),
+    };
+
+    const client = options.client || new MastodonClient({
+      baseUrl: instance,
+      instance,
+      accessToken,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new MastodonCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
   // Threads hybrid path — no Puppeteer, dispatches to ThreadsCrawler.
   // This branch is evaluated first so legacy actionMap / platform lookups
   // do not block the new hybrid GraphQL flow.
@@ -1502,9 +1627,8 @@ export async function scrape(platform, action, options = {}) {
   }
 
   // Determine the first argument based on platform type
-  // Twitter uses Puppeteer page; Mastodon uses API clients
+  // Twitter uses Puppeteer page
   const needsPuppeteer = ['twitter', 'x', 'facebook', 'fb'].includes(platformName);
-  const needsClient = ['mastodon', 'masto'].includes(platformName);
 
   if (needsPuppeteer) {
     let page = options.page;
@@ -1584,29 +1708,6 @@ export async function scrape(platform, action, options = {}) {
     return result;
   }
 
-  if (needsClient) {
-    let client = normalizedOptions.client;
-
-    // Auto-create client if not provided
-    if (!client) {
-      client = /** @type {Record<string, Function>} */ (mastodon).createClient({
-        instance: options.instance,
-        accessToken: options.accessToken,
-      });
-    }
-
-    const target = options.username || options.handle || options.query || options.hashtag || options.feedUri || options.url;
-
-    // Actions that only take client + options (no target)
-    const noTargetActions = ['scrapeTrending'];
-
-    if (noTargetActions.includes(fnName)) {
-      return await fn(client, options);
-    }
-
-    return await fn(client, target, options);
-  }
-
   throw new Error(`Cannot determine how to call platform "${platform}"`);
 }
 
@@ -1675,6 +1776,14 @@ export default {
   facebook,
   tiktok,
 
+  // Platform crawlers/clients (Story 23.6+)
+  BlueskyCrawler,
+  BlueskyClient,
+  MastodonCrawler,
+  MastodonClient,
+  createMastodonClient,
+  createMastodonCrawler,
+
   // Plugin scrapers lookup
   getPluginScraper,
 
@@ -1698,12 +1807,22 @@ export function createFacebookCrawler(client, options = {}) {
   return new FacebookCrawler({ client, ...options });
 }
 
+export function createMastodonClient(options = {}) {
+  return new MastodonClient(options);
+}
+
+export function createMastodonCrawler(client, options = {}) {
+  return new MastodonCrawler({ client, ...options });
+}
+
 // Named re-exports for adapter utilities
 export {
   FacebookCrawler,
   FacebookClient,
   BlueskyCrawler,
   BlueskyClient,
+  MastodonCrawler,
+  MastodonClient,
   getAdapter,
   getAvailableAdapter,
   setDefaultAdapter,

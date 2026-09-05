@@ -23,6 +23,8 @@
     "./scrapers/threads": "./src/scrapers/threads/index.js",
     "./scrapers/tiktok": "./src/scrapers/social/tiktok/index.js",
     "./scrapers/social": "./src/scrapers/social/index.js",
+    "./scrapers/social/bluesky": "./src/scrapers/social/bluesky/index.js",
+    "./scrapers/social/mastodon": "./src/scrapers/social/mastodon/index.js",
     "./scrapers/social/threads": "./src/scrapers/social/threads/index.js",
     "./scrapers/social/tiktok": "./src/scrapers/social/tiktok/index.js",
     "./scrapers/social/facebook": "./src/scrapers/social/facebook/index.js",

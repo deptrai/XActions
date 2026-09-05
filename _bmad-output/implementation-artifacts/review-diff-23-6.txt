@@ -1,0 +1,38 @@
+docs/deprecation-plan.md:
+- Added Bluesky Legacy row mapping `src/scrapers/bluesky/index.js` -> `src/scrapers/social/bluesky/index.js` with status deprecated-marked.
+- Added Mastodon Legacy row mapping `src/scrapers/mastodon/index.js` -> `src/scrapers/social/mastodon/index.js` with status deprecated-marked.
+- Added `src/scrapers/bluesky/index.js` and `src/scrapers/mastodon/index.js` to the deprecated module list.
+
+package.json:
+- Added `"./scrapers/social/bluesky": "./src/scrapers/social/bluesky/index.js"`
+- Added `"./scrapers/social/mastodon": "./src/scrapers/social/mastodon/index.js"`
+
+src/scrapers/bluesky/index.js:
+- Added `// LEGACY — see docs/deprecation-plan.md`
+- Updated title to "XActions Bluesky Scrapers (Legacy)"
+- Added `@deprecated` JSDoc pointing to `src/scrapers/social/bluesky/index.js`
+
+src/scrapers/mastodon/index.js:
+- Added `// LEGACY — see docs/deprecation-plan.md`
+- Updated title to "XActions Mastodon Scrapers (Legacy)"
+- Added `@deprecated` JSDoc pointing to `src/scrapers/social/mastodon/index.js`
+
+src/scrapers/social/index.js:
+- Added `export * as mastodon from './mastodon/index.js'`
+- Added `export { MastodonClient, MastodonCrawler, MastodonPlatformResponseValidator } from './mastodon/index.js'`
+
+src/scrapers/index.js:
+- Added `import { MastodonCrawler } from './social/mastodon/crawler.js'` and `import { MastodonClient } from './social/mastodon/client.js'`
+- Added Mastodon hybrid dispatch branch for `platformName === 'mastodon' || platformName === 'masto'` with `MASTODON_ACTION_MAP`: profile, followers, following, posts, tweets, timeline, feed, user_feed, search, hashtag, tag, trending.
+- Normalizes options: username, handle, actor, target, query, q, keyword, hashtag, tag, instance, baseUrl, service, accessToken, authToken, token, session?.accessToken.
+- Maps args for limit/count, max_id, since_id, exclude_replies, type.
+- Creates MastodonClient with proxyPool, proxyProvider, governor, responseValidator, requiresProxy, timeout.
+- Creates MastodonCrawler with store, redisPublisher, proxyPool, governor, accountPool, sessionManager, requiresProxy.
+- Calls `crawler.start({ action, args, session })` with `finally` cleanup when `autoClose !== false`.
+- Removed `needsClient` flag and legacy `if (needsClient)` delegation block calling `mastodon.createClient`.
+- Added `createMastodonClient(options)` and `createMastodonCrawler(client, options)` factory helpers.
+- Added `MastodonCrawler` and `MastodonClient` to named re-exports.
+
+tests/scrapers/social/mastodon/dispatcher.test.js:
+- New file with in-memory node:http server on port 0.
+- Tests: scrape('mastodon','profile'), scrape('masto','trending'), scrape('mastodon','posts'), scrape('mastodon','tweets'), scrape('mastodon','hashtag'), scrape('mastodon','tag'), scrape('mastodon','search'), invalid action error, factory helpers.
