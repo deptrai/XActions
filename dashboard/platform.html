@@ -587,22 +587,7 @@
         </div>
 
         <!-- Add account inline form -->
-        <div class="import-section" id="import-section">
-          <input id="imp-label" placeholder="Label" autocomplete="off" />
-          <input
-            id="imp-cuser"
-            type="password"
-            placeholder="c_user"
-            autocomplete="off"
-          />
-          <input
-            id="imp-xs"
-            type="password"
-            placeholder="xs"
-            autocomplete="off"
-          />
-          <button onclick="importAccount()">Save</button>
-        </div>
+        <div class="import-section" id="import-section"></div>
 
         <!-- Tab bar -->
         <nav
@@ -1677,7 +1662,31 @@
       }
 
       function toggleImport() {
-        document.getElementById("import-section").classList.toggle("show");
+        const section = document.getElementById("import-section");
+        if (!section.classList.contains("show")) {
+          renderImportFields(section);
+        }
+        section.classList.toggle("show");
+      }
+
+      function renderImportFields(section) {
+        section.innerHTML = "";
+        for (const f of cfg.authFields) {
+          const input = document.createElement("input");
+          input.id = "imp-" + f;
+          input.setAttribute("autocomplete", "off");
+          if (f === "label") {
+            input.placeholder = "Label";
+          } else {
+            input.type = "password";
+            input.placeholder = f;
+          }
+          section.appendChild(input);
+        }
+        const btn = document.createElement("button");
+        btn.textContent = "Save";
+        btn.onclick = importAccount;
+        section.appendChild(btn);
       }
 
       async function importAccount() {
@@ -1686,11 +1695,9 @@
         for (const f of fields)
           values[f] = document.getElementById("imp-" + f)?.value?.trim() || "";
         if (!values.label) return alert("Label is required");
-        if (
-          (fields.includes("c_user") && !values.c_user) ||
-          (fields.includes("xs") && !values.xs)
-        ) {
-          return alert("All account fields required");
+        const missing = fields.filter((f) => f !== "label" && !values[f]);
+        if (missing.length) {
+          return alert("All account fields required: " + missing.join(", "));
         }
 
         try {

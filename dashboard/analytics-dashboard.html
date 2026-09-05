@@ -121,13 +121,17 @@
     let offlineWarned = false;
 
     const OFFLINE_HTML = '<div class="offline-note" role="status"><span class="offline-ic">📡</span><div><strong>Backend offline.</strong> The hosted API is being migrated, so the figures below are an illustrative sample. Browser scripts, the CLI, and docs work without it. <a href="/docs">Read the docs →</a></div></div>';
-    function showOfflineNote() {
-      if (!offlineWarned) { console.warn('Analytics API offline. Backend is being migrated; showing sample data.'); offlineWarned = true; }
+    const AUTH_HTML = '<div class="offline-note" role="status"><span class="offline-ic">🔑</span><div><strong>Sign in to view live analytics.</strong> The figures below are an illustrative sample. <a href="/login">Log in →</a></div></div>';
+    const EMPTY_HTML = '<div class="offline-note" role="status"><span class="offline-ic">📈</span><div><strong>No analytics history yet.</strong> The figures below are a sample projection to help you preview the dashboard.</div></div>';
+    function showOfflineNote(html = OFFLINE_HTML) {
+      if (!offlineWarned) { console.warn('Analytics API unavailable; showing sample data.'); offlineWarned = true; }
       const main = document.querySelector('.main');
-      if (main && !document.getElementById('analyticsOffline')) {
+      const existing = document.getElementById('analyticsOffline');
+      if (existing) existing.innerHTML = html;
+      else if (main) {
         const note = document.createElement('div');
         note.id = 'analyticsOffline';
-        note.innerHTML = OFFLINE_HTML;
+        note.innerHTML = html;
         main.insertBefore(note, document.querySelector('.toolbar').nextSibling);
       }
     }
@@ -223,12 +227,17 @@
       try {
         // Try API first (with auth token if logged in)
         const data = await apiRequest(`/analytics/history/${username}?days=${days}`);
+        if (!data.snapshots?.length) {
+          showOfflineNote(EMPTY_HTML);
+          loadDemoData(username, days);
+          return;
+        }
         clearOfflineNote();
         updateDashboard(data);
         return;
       } catch (err) {
         if (err?.message?.includes('No token') || err?.message?.includes('Unauthorized') || err?.message?.includes('Authentication')) {
-          showOfflineNote();
+          showOfflineNote(AUTH_HTML);
           loadDemoData(username, days);
           return;
         }
