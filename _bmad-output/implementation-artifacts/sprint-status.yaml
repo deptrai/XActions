@@ -32,7 +32,13 @@ story_location: /Users/luisphan/Documents/GitHub/XActions/_bmad-output/implement
 
 development_status:
   # --- Epic 6: Facebook Anti-Detection & Bot Countermeasures ---
-  epic-6: in-progress
+  # NOTE 2026-09-05: Epic 6 is legacy scope from epics-1-9-legacy.md. Stories 6.1-6.4
+  # are the only items tracked in this sprint; they are done. Stories 6.5-6.17 are
+  # Facebook Puppeteer-specific capabilities that are partially implemented in
+  # src/scrapers/facebook/ but are superseded by Epic 11 (resilient proxy/governor)
+  # and the hybrid crawler architecture. They are not tracked in the Epics 10-20
+  # roadmap and will be revisited under Epic 20 decommission.
+  epic-6: done
   6-1-browser-fingerprint-and-session-stealth: done
   6-2-consistent-fingerprint: done
   6-3-ua-pool-viewport: done
@@ -40,7 +46,7 @@ development_status:
   epic-6-retrospective: optional
 
   # --- Epic 10: Data & Platform Foundation for Universal Scraping ---
-  epic-10: in-progress
+  epic-10: done
   10-1-core-domain-interfaces-error-hierarchy-definition: done
   10-2-prisma-post-comment-relational-schema-migration: done
   10-3-ai-dataset-export-utility-streaming-jsonl-csv: done
@@ -50,7 +56,7 @@ development_status:
   epic-10-retrospective: optional
 
   # --- Epic 11: Resilient Network & Proxy Pool Management ---
-  epic-11: in-progress
+  epic-11: done
   11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
   11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: done

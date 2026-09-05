@@ -798,7 +798,9 @@ So that automation works without puppeteer bundled Chrome.
 
 ## Epic 6: Facebook Anti-Detection & Bot Countermeasures
 
-**Status:** 🔄 In Progress (4 done, 13 backlog)
+**Status:** ✅ Done (4 tracked stories complete; 6.5-6.17 legacy scope superseded)
+
+> **Sprint Tracking Note (2026-09-05):** This epic is legacy scope from the pre-hybrid Facebook Puppeteer era. Stories 6.1-6.4 are tracked in the current sprint-status and completed. Stories 6.5-6.17 describe Facebook-specific anti-detection / behavioral simulation capabilities that have been partially implemented in `src/scrapers/facebook/fingerprint.js`, `human.js`, `limits.js`, `warmup.js`, and `proxy.js`. They are not tracked in the Epics 10-20 roadmap because equivalent concerns are now owned by Epic 11 (resilient proxy/governor), Epic 12 (CDP attach), and the hybrid crawler platform architecture (Epics 13-18). These legacy modules are scheduled for decommission in Epic 20 once hybrid crawler parity is reached.
 
 ### Story 6.1: Chrome executablePath Auto-Resolution
 **Status:** ✅ Done (implemented in Story 5b.4)
