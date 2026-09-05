@@ -190,7 +190,7 @@ development_status:
   23-3-mastodon-rest-api-client: done
   23-4-mastodon-hybrid-crawler: review
   23-5-bluesky-mastodon-response-validators: done
-  23-6-bluesky-mastodon-integration-caller-migration: backlog
+  23-6-bluesky-mastodon-integration-caller-migration: ready-for-dev
   epic-23-retrospective: optional
 
   # --- Epic 24: Utility Scripts & Adapters Migration ---
