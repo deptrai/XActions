@@ -2,9 +2,9 @@
 title: 'Story 23.4: Mastodon Hybrid Crawler'
 type: 'feature'
 created: '2026-09-05'
-status: 'in-progress'
+status: 'done'
 review_loop_iteration: 1
-baseline_commit: '4d63f213bfa7a7b8e1f0e21a8a3a0e6e768165b6'
+baseline_commit: '4d63f213'
 context:
   - _bmad-output/implementation-artifacts/epic-23-context.md
   - _bmad-output/implementation-artifacts/stories/23-2-bluesky-hybrid-crawler.md
@@ -208,3 +208,42 @@ context:
 
 **Dry-run smoke command (sau khi implement):**
 - `node -e "import('./src/scrapers/social/mastodon/index.js').then(m => console.log(Object.keys(m)))"`
+
+## Suggested Review Order
+
+**Target Parsing & Normalization**
+
+- Target resolution (WebFinger/URL/handle), HTML entity decoding to clean text, Link header parsing
+  [`normalizer.js:77`](../../../src/scrapers/social/mastodon/normalizer.js#L77)
+
+- Normalization to ProfileItem, PostItem with namespaced IDs
+  [`normalizer.js:189`](../../../src/scrapers/social/mastodon/normalizer.js#L189)
+
+**Client Pipeline & REST API**
+
+- MastodonClient inherits AbstractApiClient, wires validator, configures public no-auth
+  [`client.js:20`](../../../src/scrapers/social/mastodon/client.js#L20)
+
+- REST endpoints implementation with pagination and fallback lookup
+  [`client.js:132`](../../../src/scrapers/social/mastodon/client.js#L132)
+
+**Universal Hybrid Crawler**
+
+- MastodonCrawler registers 7 actions with snake_case naming and descriptors
+  [`crawler.js:23`](../../../src/scrapers/social/mastodon/crawler.js#L23)
+
+- Action execution handlers, store batch persistence and onProgress
+  [`crawler.js:160`](../../../src/scrapers/social/mastodon/crawler.js#L160)
+
+**Public Interface & Barrel**
+
+- Module barrel exports
+  [`index.js:1`](../../../src/scrapers/social/mastodon/index.js#L1)
+
+**Unit Tests**
+
+- Comprehensive tests for normalizer, client, and crawler
+  [`normalizer.test.js:1`](../../../tests/scrapers/social/mastodon/normalizer.test.js#L1)
+  [`client.test.js:1`](../../../tests/scrapers/social/mastodon/client.test.js#L1)
+  [`crawler.test.js:1`](../../../tests/scrapers/social/mastodon/crawler.test.js#L1)
+
