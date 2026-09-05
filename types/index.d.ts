@@ -776,6 +776,44 @@ export {
   globalAccountPool,
 } from './core';
 
+
+// ── Bluesky & Mastodon Hybrid Scrapers (Story 23.6) ─────────────────────────
+
+export declare class BlueskyClient {
+  constructor(deps?: Record<string, unknown>);
+  login(args?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  resolveHandle(handle: string): Promise<string>;
+  xrpc(nsid: string, params?: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown>;
+  close(): Promise<void>;
+}
+
+export declare class BlueskyCrawler {
+  client: BlueskyClient;
+  constructor(deps?: Record<string, unknown>);
+  start(command: { action: string; args?: Record<string, unknown>; session?: Record<string, unknown> }): Promise<unknown>;
+  cleanup(): Promise<void>;
+}
+
+export declare class MastodonClient {
+  constructor(deps?: Record<string, unknown>);
+  request(method: string, path: string, options?: Record<string, unknown>): Promise<unknown>;
+  close(): Promise<void>;
+}
+
+export declare class MastodonCrawler {
+  client: MastodonClient;
+  constructor(deps?: Record<string, unknown>);
+  start(command: { action: string; args?: Record<string, unknown>; session?: Record<string, unknown> }): Promise<unknown>;
+  cleanup(): Promise<void>;
+}
+
+export declare function createBlueskyClient(options?: Record<string, unknown>): BlueskyClient;
+export declare function createBlueskyCrawler(client: BlueskyClient, options?: Record<string, unknown>): BlueskyCrawler;
+export declare function createMastodonClient(options?: Record<string, unknown>): MastodonClient;
+export declare function createMastodonCrawler(client: MastodonClient, options?: Record<string, unknown>): MastodonCrawler;
+
+export declare function scrape(platform: string, action: string, options?: Record<string, unknown>): Promise<unknown>;
+export declare const platforms: Record<string, unknown>;
 export {
   ProxyIpPool,
   StaticProxyProvider,

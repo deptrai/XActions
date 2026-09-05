@@ -35,6 +35,10 @@
 - [ ] [Review][P2][Defer] Test JWT secret hardcoded in `tests/api/checkpoints-routes.test.js`. Pre-existing test pattern; not a production secret. [tests/api/checkpoints-routes.test.js:20-21]
 - [ ] [Review][P2][Defer] No enum validation for `platform` and `targetType` values — the Prisma schema stores them as free strings. Platform discovery/validation belongs to later epics. [src/store/checkpoint-manager.js:67-68]
 
+## Deferred from: code review of story-23-6-bluesky-mastodon-integration-caller-migration (2026-09-05)
+
+- [x] [Review][Defer] `src/scrapers/social/mastodon/index.js` barrel omits `createMastodonClient` and `createMastodonCrawler` — pre-existing factory pattern inconsistency across social barrels; defer to Epic 25 or later barrel standardization.
+
 ## Deferred from: code review 10-5-metadata-schema-contract-registry-for-consumers.md (2026-08-19)
 - Synchronous Validation in 500-item Loop [src/store/prisma-store.js] - Could marginally stall event loop
 

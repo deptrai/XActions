@@ -205,8 +205,9 @@ describe('Story 23.6: Universal scrape() Dispatcher Integration for Mastodon', (
   });
 
   it('dispatches scrape("mastodon", "profile", ...) via URL target', async () => {
+    const profileUrl = new URL('/@Gargron', serverUrl).toString();
     const profile = await scrape('mastodon', 'profile', {
-      target: 'https://mastodon.social/@Gargron',
+      target: profileUrl,
     });
 
     expect(profile.platform).toBe('mastodon');

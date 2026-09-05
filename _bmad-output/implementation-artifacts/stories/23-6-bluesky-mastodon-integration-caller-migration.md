@@ -146,3 +146,28 @@ context:
 - `npx vitest run tests/scrapers/social/mastodon/dispatcher.test.js`
 - `npx vitest run tests/scrapers/social/bluesky/dispatcher.test.js`
 - `npx vitest run tests/scrapers/social/`
+
+### Review Findings (2026-09-05)
+
+#### decision-needed
+- [x] [Review][Decision] Should `scrape('mastodon', 'trends', ...)` be added as an alias for `trending`? — Blind Hunter notes that `trends` is common Mastodon API terminology but only `trending` is mapped. Spec boundary says "trending", not "trends".
+
+#### patch
+- [x] [Review][Patch] `options.limit` non-numeric/NaN leaves `mappedArgs.limit` unvalidated and can send `limit=NaN` to API [src/scrapers/index.js:1235-1241]
+- [x] [Review][Patch] `hashtag` action does not fall back to `options.url` for target resolution [src/scrapers/index.js:1213]
+- [x] [Review][Patch] `instance` resolution does not consider `options.url` for standalone instance URLs [src/scrapers/index.js:1214]
+- [x] [Review][Patch] `MASTODON_ACTION_MAP` lookup is not normalized for case/whitespace [src/scrapers/index.js:1202]
+- [x] [Review][Patch] `createMastodonCrawler(client, options)` treats a plain options object as `client` [src/scrapers/index.js:1811-1813]
+- [x] [Review][Patch] Legacy function names (`scrapeProfile`, `scrapeTweets`, etc.) no longer dispatch after dead-code removal [src/scrapers/index.js:1584-1608] — intentional or needs migration?
+- [x] [Review][Patch] Legacy `./scrapers/bluesky` and `./scrapers/mastodon` package exports still point to deprecated modules [package.json:21-22]
+- [x] [Review][Patch] `platforms.mastodon` / `platforms.bluesky` still expose legacy modules [src/scrapers/index.js:140-145]
+- [x] [Review][Patch] Default export still binds legacy `mastodon` and `bluesky` modules instead of hybrid [src/scrapers/index.js:1778-1779]
+- [x] [Review][Patch] Missing `createBlueskyClient` / `createBlueskyCrawler` factory helpers [src/scrapers/index.js]
+- [x] [Review][Patch] `types/index.d.ts` does not declare new Story 23.6 exports (`MastodonClient`, `MastodonCrawler`, etc.) [types/index.d.ts]
+- [x] [Review][Patch] JSDoc `@param {import('../types/xactions.js').XActionsOptions}` points to non-existent file [src/scrapers/index.js:187,391]
+- [x] [Review][Patch] Mastodon dispatcher test reaches external `mastodon.social` when `target` is a URL [tests/scrapers/social/mastodon/dispatcher.test.js:209]
+- [x] [Review][Patch] Several `scrape('mastodon', ...)` argument branches lack coverage (`since_id`, `type`, `cursor`, direct `exclude_replies`, `autoClose: false`, custom `options.client`) [tests/scrapers/social/mastodon/dispatcher.test.js]
+
+#### defer
+- [x] [Review][Defer] `src/scrapers/social/mastodon/index.js` barrel omits `createMastodonClient` and `createMastodonCrawler` — pre-existing factory pattern inconsistency, not a regression.
+
