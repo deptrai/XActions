@@ -64,6 +64,8 @@ import { ChototCrawler } from './realestate/chotot/crawler.js';
 import { ChototClient } from './realestate/chotot/client.js';
 import { BatdongsanCrawler } from './realestate/batdongsan/crawler.js';
 import { BatdongsanClient } from './realestate/batdongsan/client.js';
+import { MaSoThueCrawler } from './procurement/masothue/crawler.js';
+import { MaSoThueClient } from './procurement/masothue/client.js';
 import { BlueskyCrawler } from './social/bluesky/crawler.js';
 import { BlueskyClient } from './social/bluesky/client.js';
 import {
@@ -78,6 +80,7 @@ import vietnamworks from './recruitment/vietnamworks/index.js';
 import linkedin from './recruitment/linkedin/index.js';
 import chotot from './realestate/chotot/index.js';
 import batdongsan from './realestate/batdongsan/index.js';
+import masothue from './procurement/masothue/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -162,6 +165,9 @@ export const platforms = {
   cho_tot: chotot,
   batdongsan,
   bds: batdongsan,
+  masothue,
+  maso_thue: masothue,
+  mst: masothue,
 };
 
 /**
@@ -1328,6 +1334,64 @@ export async function scrape(platform, action, options = {}) {
     }
   }
 
+  // ── MaSoThue B2B Procurement path (Story 21.1) ──
+  if (platformName === 'masothue' || platformName === 'maso_thue' || platformName === 'mst') {
+    /** @type {Record<string, string>} */
+    const MASOTHUE_ACTION_MAP = {
+      search: 'search',
+      search_by_province: 'search_by_province',
+      searchByProvince: 'search_by_province',
+      detail: 'detail',
+      company_detail: 'detail',
+    };
+
+    const mappedAction = MASOTHUE_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(MASOTHUE_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.q || options.query || options.keyword || options.taxCode) {
+      mappedArgs.q = options.q || options.query || options.keyword || options.taxCode;
+    }
+    if (options.province) mappedArgs.province = options.province;
+    if (options.page != null) mappedArgs.page = Number(options.page);
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.slug) mappedArgs.slug = options.slug;
+
+    const client = new MaSoThueClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+      userAgent: options.userAgent,
+    });
+
+    const crawler = new MaSoThueCrawler({
+      client,
+      store,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
   // Threads hybrid path — no Puppeteer, dispatches to ThreadsCrawler.
   // This branch is evaluated first so legacy actionMap / platform lookups
   // do not block the new hybrid GraphQL flow.
@@ -1808,16 +1872,21 @@ export default {
   threads,
   facebook,
   tiktok,
+  masothue,
 
   // Platform crawlers/clients (Story 23.6+)
   BlueskyCrawler,
   BlueskyClient,
   MastodonCrawler,
   MastodonClient,
+  MaSoThueCrawler,
+  MaSoThueClient,
   createBlueskyClient,
   createBlueskyCrawler,
   createMastodonClient,
   createMastodonCrawler,
+  createMaSoThueClient,
+  createMaSoThueCrawler,
 
   // Plugin scrapers lookup
   getPluginScraper,
@@ -1860,6 +1929,16 @@ export function createMastodonCrawler(client, options = {}) {
   const resolvedClient = client instanceof MastodonClient ? client : new MastodonClient(client || options || {});
   const resolvedOptions = client instanceof MastodonClient ? options : (options || {});
   return new MastodonCrawler({ client: resolvedClient, ...resolvedOptions });
+}
+
+export function createMaSoThueClient(options = {}) {
+  return new MaSoThueClient(options);
+}
+
+export function createMaSoThueCrawler(client, options = {}) {
+  const resolvedClient = client instanceof MaSoThueClient ? client : new MaSoThueClient(client || options || {});
+  const resolvedOptions = client instanceof MaSoThueClient ? options : (options || {});
+  return new MaSoThueCrawler({ client: resolvedClient, ...resolvedOptions });
 }
 
 // Named re-exports for adapter utilities
