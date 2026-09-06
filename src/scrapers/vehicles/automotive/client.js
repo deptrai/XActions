@@ -14,6 +14,22 @@ export const OTO_VN_BASE_URL = 'https://www.oto.com.vn';
 export const BONBANH_BASE_URL = 'https://bonbanh.com';
 export const CHOTOT_XE_BASE_URL = 'https://xe.chotot.com';
 
+/**
+ * Convert raw response body to UTF-8 string for HTML parsing.
+ * @param {any} resp
+ * @returns {any}
+ */
+function normalizeRawBody(resp) {
+  if (resp?.body !== undefined) {
+    if (Buffer.isBuffer(resp.body)) {
+      resp.body = resp.body.toString('utf-8');
+    } else if (typeof resp.body !== 'string') {
+      resp.body = String(resp.body);
+    }
+  }
+  return resp;
+}
+
 export class AutomotiveClient extends AbstractApiClient {
   /** @type {string} */
   name = 'automotive';
@@ -28,10 +44,7 @@ export class AutomotiveClient extends AbstractApiClient {
   baseUrl = OTO_VN_BASE_URL;
 
   /** @type {string} */
-  targetPlatform = 'oto_vn';
-
-  /** @type {string} */
-  platform = 'oto_vn';
+  platform = 'automotive';
 
   /**
    * @param {Record<string, any>} [options={}]
@@ -40,7 +53,7 @@ export class AutomotiveClient extends AbstractApiClient {
     const responseValidator = options.responseValidator || new AutomotivePlatformResponseValidator();
     super({
       ...options,
-      platform: options.targetPlatform || options.platform || 'oto_vn',
+      platform: options.targetPlatform || options.platform || 'automotive',
       client: options.client || 'got',
       responseValidator,
       requiresAuth: options.requiresAuth ?? false,
@@ -101,47 +114,13 @@ export class AutomotiveClient extends AbstractApiClient {
    * @returns {Promise<any>}
    */
   async request(method, url, options = {}) {
-    if (this.targetPlatform === 'chotot_xe' && this.chototClient) {
-      const resp = await this.chototClient.request(method, url, options);
-      return this.normalizeRawBody(resp);
-    }
-
     const headers = {
       ...this.getDefaultHeaders(),
       ...(options?.headers || {}),
     };
 
     const resp = await super.request(method, url, { ...options, headers });
-    return this.normalizeRawBody(resp);
-  }
-
-  /**
-   * Normalize raw body to string for HTML parsing.
-   * @param {any} resp
-   * @returns {any}
-   */
-  normalizeRawBody(resp) {
-    if (resp?.body !== undefined && typeof resp.body !== 'string') {
-      try {
-        if (Buffer.isBuffer(resp.body)) {
-          resp.body = resp.body.toString('utf-8');
-        } else {
-          resp.body = String(resp.body);
-        }
-      } catch {
-        resp.body = '';
-      }
-    }
-
-    if (resp?.data !== undefined && typeof resp.data !== 'string') {
-      try {
-        resp.data = JSON.stringify(resp.data);
-      } catch {
-        resp.data = '';
-      }
-    }
-
-    return resp;
+    return normalizeRawBody(resp);
   }
 
   /**
@@ -156,35 +135,55 @@ export class AutomotiveClient extends AbstractApiClient {
    * @param {number} [params.priceMin]
    * @param {number} [params.priceMax]
    * @param {number} [params.page]
+   * @param {number} [params.limit]
    * @param {Object} [options]
    * @returns {Promise<any>}
    */
   async search(params = {}, options = {}) {
-    this.targetPlatform = params.platform || this.targetPlatform;
-    this.baseUrl = this.#resolveBaseUrl(this.targetPlatform, this.options.baseUrl);
+    const platform = params.platform || this.targetPlatform;
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(params.limit) || 20));
 
-    if (this.targetPlatform === 'chotot_xe' || this.targetPlatform === 'chotot') {
-      return this.chototClient.getJson('/wg/cg/2010', {
+    if (platform === 'chotot_xe' || platform === 'chotot') {
+      const offset = (page - 1) * limit;
+      const query = {
+        cg: params.model && /sh|airblade|lead|dream|wave|sirius|exciter|winner|raider|future/i.test(params.model) ? 2020 : 2010,
         st: 's',
-        o: params.page ? (params.page - 1) * 20 : 0,
-        ...params,
-      }, options);
+        o: offset,
+        limit,
+      };
+      if (params.region_v2) query.region_v2 = params.region_v2;
+      if (params.area_v2) query.area_v2 = params.area_v2;
+      if (params.priceMin != null || params.priceMax != null) {
+        query.price = `${params.priceMin || ''}-${params.priceMax || ''}`;
+      }
+      if (params.yearMin != null || params.yearMax != null) {
+        query.year = `${params.yearMin || ''}-${params.yearMax || ''}`;
+      }
+      if (params.brand) query.company = normalizeBrandSlug(params.brand);
+      if (params.model) query.model = params.model;
+
+      const resp = await this.chototClient.getJson('/v1/public/ad-listing', query, options);
+      return { data: resp };
     }
 
     const brand = normalizeBrandSlug(params.brand || '');
+    const model = normalizeBrandSlug(params.model || '');
     const city = normalizeCitySlug(params.city || '');
-    const page = Math.max(1, Number(params.page) || 1);
 
-    if (this.targetPlatform === 'bonbanh') {
-      const url = `${this.baseUrl}/oto/page,${page}`;
+    const base = this.baseUrl.replace(/\/+$/, '');
+
+    if (platform === 'bonbanh') {
+      const url = `${base}/oto/page,${page}`;
       return this.request('GET', url, { ...options, raw: true });
     }
 
     // Oto.com.vn
     const pathParts = ['mua-ban-xe'];
     if (brand) pathParts.push(brand);
+    if (model) pathParts.push(model);
     if (city) pathParts.push(city);
-    const url = `${this.baseUrl}/${pathParts.join('-')}/page/${page}`;
+    const url = `${base}/${pathParts.join('-')}?page=${page}`;
     return this.request('GET', url, { ...options, raw: true });
   }
 
@@ -193,11 +192,12 @@ export class AutomotiveClient extends AbstractApiClient {
    * @param {Object} params
    * @param {string} params.platform
    * @param {number} [params.page]
+   * @param {number} [params.limit]
    * @param {Object} [options]
    * @returns {Promise<any>}
    */
   async list(params = {}, options = {}) {
-    return this.search({ ...params, page: params.page || 1 }, options);
+    return this.search({ ...params, page: params.page || 1, limit: params.limit || 20 }, options);
   }
 
   /**
@@ -210,23 +210,24 @@ export class AutomotiveClient extends AbstractApiClient {
    * @returns {Promise<any>}
    */
   async detail(params = {}, options = {}) {
-    this.targetPlatform = params.platform || this.targetPlatform;
-    this.baseUrl = this.#resolveBaseUrl(this.targetPlatform, this.options.baseUrl);
+    const platform = params.platform || this.targetPlatform;
+    const id = String(params.id || '').trim();
 
-    if (this.targetPlatform === 'chotot_xe' || this.targetPlatform === 'chotot') {
-      return this.chototClient.getJson(`/ad/${params.id}`, {}, options);
+    if (platform === 'chotot_xe' || platform === 'chotot') {
+      const resp = await this.chototClient.getJson(`/v1/public/ad-listing/${id}`, {}, options);
+      return { data: resp };
     }
 
-    const id = String(params.id || '').trim();
     const slug = params.slug ? `-${String(params.slug)}` : '';
+    const base = this.baseUrl.replace(/\/+$/, '');
 
-    if (this.targetPlatform === 'bonbanh') {
-      const url = slug ? `${this.baseUrl}${slug}-${id}` : `${this.baseUrl}/oto/${id}`;
+    if (platform === 'bonbanh') {
+      const url = slug ? `${base}${slug}-${id}` : `${base}/oto/${id}`;
       return this.request('GET', url, { ...options, raw: true });
     }
 
     // Oto.com.vn
-    const url = `${this.baseUrl}/${id}.html`;
+    const url = `${base}/${id}.html`;
     return this.request('GET', url, { ...options, raw: true });
   }
 }

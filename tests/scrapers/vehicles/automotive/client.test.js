@@ -6,7 +6,7 @@ import { AutomotivePlatformResponseValidator } from '../../../../src/scrapers/ve
 describe('AutomotiveClient', () => {
   it('uses platform name and no auth by default', () => {
     const client = new AutomotiveClient({ requiresProxy: false });
-    expect(client.platform).toBe('oto_vn');
+    expect(client.platform).toBe('automotive');
     expect(client.requiresAuth).toBe(false);
     expect(client.requiresProxy).toBe(false);
   });

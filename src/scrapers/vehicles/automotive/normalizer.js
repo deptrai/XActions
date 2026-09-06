@@ -94,7 +94,7 @@ function extractBonBanhItems(html, sourcePlatform = 'bonbanh') {
   const seen = new Set();
 
   // Schema.org Car microdata blocks
-  const carBlocks = html.match(/<div[^>]*itemscope[^>]*itemtype=["']http:\/\/schema\.org\/Car["'][^>]*>[\s\S]*?<\/div>/gi) || [];
+  const carBlocks = html.match(/<li[^>]*itemtype=["']http:\/\/schema\.org\/Car["'][^>]*>[\s\S]*?<\/li>/gi) || [];
 
   for (const block of carBlocks) {
     const name = extractByItemProp(block, 'name') || '';
@@ -106,7 +106,7 @@ function extractBonBanhItems(html, sourcePlatform = 'bonbanh') {
     const modelDate = extractByItemProp(block, 'modelDate') || '';
     const image = extractByItemProp(block, 'image') || extractByAttr(block, 'src') || '';
 
-    const urlMatch = block.match(/href=["'](\/oto\/[^"']+)["']/i) || block.match(/href=["'](https?:\/\/bonbanh\.com\/[^"']+)["']/i);
+    const urlMatch = block.match(/href=["'](xe-[^"']+)["']/i) || block.match(/href=["'](\/oto\/[^"']+)["']/i);
     const href = urlMatch ? urlMatch[1] : '';
     const externalId = href.split('-').pop() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -115,7 +115,7 @@ function extractBonBanhItems(html, sourcePlatform = 'bonbanh') {
 
     const { price, priceFormatted, priceNegotiable } = parseVndPrice(priceRaw);
     const { mileage, mileageFormatted } = parseMileage(mileageRaw);
-    const phone = ''; // listing page rarely exposes phone
+    const phone = extractByAttr(block, 'data-phone') || '';
 
     items.push(buildPostItem({
       platform: 'bonbanh',
@@ -124,7 +124,7 @@ function extractBonBanhItems(html, sourcePlatform = 'bonbanh') {
       contentParts: [name, priceFormatted, mileageFormatted, transmission, fuel].filter(Boolean),
       authorId: phone || `bonbanh:${externalId}`,
       authorName: 'Salon/Chính chủ',
-      postUrl: href.startsWith('http') ? href : `https://bonbanh.com${href}`,
+      postUrl: href.startsWith('http') ? href : `https://bonbanh.com${href.startsWith('/') ? '' : '/'}${href}`,
       mediaUrls: image ? [image] : [],
       metadata: {
         brand: '',
@@ -142,7 +142,7 @@ function extractBonBanhItems(html, sourcePlatform = 'bonbanh') {
         phoneMasked: false,
         address: '',
         city: '',
-        detailUrl: href.startsWith('http') ? href : `https://bonbanh.com${href}`,
+        detailUrl: href.startsWith('http') ? href : `https://bonbanh.com${href.startsWith('/') ? '' : '/'}${href}`,
         imageUrls: image ? [image] : [],
         listingDate: null,
         sourcePlatform,
@@ -173,7 +173,8 @@ function extractBonBanhDetail(html, sourcePlatform = 'bonbanh') {
   const { phone: parsedPhone, phoneMasked } = parseVnPhone(phone);
 
   const canonical = html.match(/<link rel="canonical" href="([^"]+)"/i)?.[1] || '';
-  const externalId = canonical.split('-').pop() || 'detail';
+  const urlMatch = html.match(/href=['"](xe-[^'"]+)['"]/) || html.match(/href=['"](\/oto\/[^'"]+)['"]/);
+  const externalId = urlMatch ? urlMatch[1].split('-').pop() : (canonical.split('-').pop() || canonical.split('/').pop() || 'detail');
 
   return [buildPostItem({
     platform: 'bonbanh',
@@ -214,33 +215,34 @@ function extractOtoVnItems(html, sourcePlatform = 'oto_vn') {
   const items = [];
   const seen = new Set();
 
-  const cardBlocks = html.match(/<div[^>]*data-item-id=["']\d+["'][^>]*>[\s\S]*?<\/div>/gi) ||
-    html.match(/<article[^>]*class=["'][^"']*item[^"']*["'][^>]*>[\s\S]*?<\/article>/gi) || [];
+  const cardBlocks = html.match(/<div[^>]*class=["'][^"']*item-car[^"']*["'][^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/gi) || [];
 
   for (const block of cardBlocks) {
-    const idMatch = block.match(/data-item-id=["'](\d+)["']/i) || block.match(/data-id=["'](\d+)["']/i);
+    const idMatch = block.match(/data-autoid=["'](\d+)["']/i) || block.match(/data-item-id=["'](\d+)["']/i) || block.match(/data-id=["'](\d+)["']/i);
     const externalId = idMatch ? idMatch[1] : `oto-${seen.size}`;
     if (seen.has(externalId)) continue;
     seen.add(externalId);
 
-    const title = stripTags(block.match(/<h2[^>]*>[\s\S]*?<\/h2>/i)?.[0] || block.match(/<a[^>]*class=["'][^"']*title[^"']*["'][^>]*>([^<]+)/i)?.[1] || '');
-    const priceText = stripTags(block.match(/<span[^>]*class=["'][^"']*price[^"']*["'][^>]*>([^<]+)/i)?.[1] || block.match(/<div[^>]*class=["'][^"']*price[^"']*["'][^>]*>([^<]+)/i)?.[1] || '');
-    const specsText = stripTags(block.match(/<span[^>]*class=["'][^"']*spec[^"']*["'][^>]*>([^<]+)/i)?.[1] || '');
-    const sellerText = stripTags(block.match(/<span[^>]*class=["'][^"']*type[^"']*["'][^>]*>([^<]+)/i)?.[1] || '');
+    const title = stripTags(block.match(/<span[^>]*class=["']car-name["'][^>]*>([^<]+)/i)?.[1] || block.match(/<h3[^>]*class=["'][^"']*title[^"']*["'][^>]*>([^<]+)/i)?.[1] || block.match(/<a[^>]*class=["'][^"']*title[^"']*["'][^>]*>([^<]+)/i)?.[1] || '');
+    const priceText = stripTags(block.match(/<p[^>]*class=["'][^"']*price[^"']*["'][^>]*>([\s\S]*?)<\/p>/i)?.[1] || '');
+    const specsText = stripTags(block.match(/<ul[^>]*class=["'][^"']*tag-list[^"']*["'][^>]*>([\s\S]*?)<\/ul>/i)?.[1] || '');
+    const sellerText = stripTags(block.match(/<li[^>]*class=["'][^"']*seller-name[^"']*["'][^>]*>([\s\S]*?)<\/li>/i)?.[1] || '');
 
-    const mileageMatch = specsText.match(/(\d+(?:[.,]\d+)?)\s*km/i) || block.match(/(\d+(?:[.,]\d+)?)\s*km/i);
+    const mileageMatch = specsText.match(/(\d+(?:[.,]\d+)?)\s*km/i) || specsText.match(/(\d+)\s*nghìn\s*km/i);
     const transmissionMatch = specsText.match(/(số tự động|số sàn|số tay|tự động|sàn)/i);
     const fuelMatch = specsText.match(/(xăng|dầu|điện|hybrid|diesel)/i);
+    const yearMatch = title.match(/(\d{4})/) || specsText.match(/(\d{4})/);
 
     const { price, priceFormatted, priceNegotiable } = parseVndPrice(priceText);
     const { mileage, mileageFormatted } = parseMileage(mileageMatch ? mileageMatch[0] : '');
 
     const urlMatch = block.match(/href=["']([^"']+)["']/i);
     const detailUrl = urlMatch ? urlMatch[1] : '';
-    const image = block.match(/<img[^>]*src=["']([^"']+)["']/i)?.[1] || '';
+    const image = block.match(/<img[^>]*(?:data-src|src)=["']([^"']+)["']/i)?.[1] || '';
+    const phone = extractByAttr(block, 'data-phone') || '';
+    const cityText = stripTags(block.match(/<li[^>]*class=["'][^"']*seller-location[^"']*["'][^>]*>([\s\S]*?)<\/li>/i)?.[1] || '');
 
     const sellerType = inferSellerType({ text: sellerText });
-    const phone = ''; // listing page rarely exposes phone
     const { phone: parsedPhone, phoneMasked } = parseVnPhone(phone);
 
     items.push(buildPostItem({
@@ -255,7 +257,7 @@ function extractOtoVnItems(html, sourcePlatform = 'oto_vn') {
       metadata: {
         brand: '',
         model: title,
-        year: null,
+        year: yearMatch ? Number(yearMatch[1]) : null,
         mileage,
         mileageFormatted,
         transmission: normalizeTransmission(transmissionMatch?.[1] || ''),
@@ -267,7 +269,7 @@ function extractOtoVnItems(html, sourcePlatform = 'oto_vn') {
         phone: parsedPhone,
         phoneMasked,
         address: '',
-        city: '',
+        city: cityText,
         detailUrl: detailUrl.startsWith('http') ? detailUrl : `https://www.oto.com.vn${detailUrl}`,
         imageUrls: image ? [image] : [],
         listingDate: null,
@@ -280,8 +282,8 @@ function extractOtoVnItems(html, sourcePlatform = 'oto_vn') {
 }
 
 function extractOtoVnDetail(html, sourcePlatform = 'oto_vn') {
-  const title = stripTags(html.match(/<h1[^>]*>[\s\S]*?<\/h1>/i)?.[0] || '');
-  const priceText = stripTags(html.match(/<span[^>]*class=["'][^"']*price[^"']*["'][^>]*>([^<]+)/i)?.[1] || '');
+  const title = stripTags(html.match(/<h1[^>]*class=["'][^"']*title-detail[^"']*["'][^>]*>([\s\S]*?)<\/h1>/i)?.[1] || html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || '');
+  const priceText = stripTags(html.match(/<span[^>]*class=["'][^"']*price[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1] || '');
   const specsBlock = html.match(/<div[^>]*class=["'][^"']*specs[^"']*["'][^>]*>[\s\S]*?<\/div>/i)?.[0] || '';
 
   const mileageRaw = specsBlock.match(/(\d+(?:[.,]\d+)?)\s*km/i)?.[0] || '';
@@ -289,7 +291,7 @@ function extractOtoVnDetail(html, sourcePlatform = 'oto_vn') {
   const fuelRaw = specsBlock.match(/(xăng|dầu|điện|hybrid|diesel)/i)?.[0] || '';
   const yearRaw = specsBlock.match(/(19|20)\d{2}/)?.[0] || '';
 
-  const phoneMatch = html.match(/href=["']tel:([^"']+)["']/i) || html.match(/itemprop=["']telephone["'][^>]*>([^<]+)/i);
+  const phoneMatch = html.match(/data-phone=["']([^"']+)["']/i) || html.match(/href=["']tel:([^"']+)["']/i);
   const phone = phoneMatch ? phoneMatch[1].trim() : null;
 
   const sellerType = inferSellerType({ text: html });
@@ -339,7 +341,7 @@ function extractOtoVnDetail(html, sourcePlatform = 'oto_vn') {
 function extractChototXeItems(json, sourcePlatform = 'chotot_xe') {
   const items = [];
   const seen = new Set();
-  const ads = Array.isArray(json?.adlist) ? json.adlist : Array.isArray(json?.data) ? json.data : [];
+  const ads = Array.isArray(json?.adlist) ? json.adlist : Array.isArray(json?.ads) ? json.ads : Array.isArray(json?.data) ? json.data : [];
 
   for (const ad of ads) {
     const listId = String(ad.ad_id || ad.list_id || ad.id || '');
@@ -411,7 +413,7 @@ export function normalizeAutomotiveResults(data, kind = 'list', options = {}) {
   const platform = options.platform || 'automotive';
   const sourcePlatform = options.sourcePlatform || platform;
 
-  if (platform === 'chotot_xe') {
+  if (platform === 'chotot_xe' || platform === 'chotot') {
     const json = typeof data === 'string' ? JSON.parse(data) : data;
     return extractChototXeItems(json, sourcePlatform);
   }

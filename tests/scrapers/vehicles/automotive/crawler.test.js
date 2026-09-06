@@ -15,15 +15,19 @@ describe('Story 21.2 — Automotive Vehicles Market Crawler', () => {
 
   const BONBANH_LISTING_HTML = `
     <html><body>
-      <div itemscope itemtype="http://schema.org/Car">
-        <h1 itemprop="name">VinFast VF8 Plus AWD - 2023</h1>
-        <span itemprop="price">795 Triệu</span>
-        <span itemprop="vehicleEngine">Electric</span>
-        <span itemprop="mileageFromOdometer">25.000 km</span>
-        <span itemprop="vehicleTransmission">Số tự động</span>
-        <span itemprop="fuelType">Điện</span>
-        <a href="/oto/xe-vinfast-vf8-plus-awd-2023-6917077">Chi tiết</a>
-      </div>
+      <ul>
+        <li itemscope itemtype="http://schema.org/Car">
+          <a itemprop="url" href="xe-vinfast-vf8-plus-awd-2023-6917077" title="x">
+            <h3 itemprop="name">VinFast VF8 Plus AWD - 2023</h3>
+          </a>
+          <span itemprop="price">795 Triệu</span>
+          <span itemprop="vehicleEngine">Electric</span>
+          <span itemprop="mileageFromOdometer">25.000 km</span>
+          <span itemprop="vehicleTransmission">Số tự động</span>
+          <span itemprop="fuelType">Điện</span>
+          <span itemprop="image" src="https://s.bonbanh.com/img.jpg"></span>
+        </li>
+      </ul>
     </body></html>
   `;
 
@@ -45,12 +49,26 @@ describe('Story 21.2 — Automotive Vehicles Market Crawler', () => {
 
   const OTO_VN_LISTING_HTML = `
     <html><body>
-      <div data-item-id="123456">
-        <h2 class="title"><a href="/mua-ban-xe-toyota-vios-2020-123456">Toyota Vios 1.5G CVT 2020</a></h2>
-        <span class="price">385 Triệu</span>
-        <span class="spec">45.000 km - Số tự động - Xăng</span>
-        <span class="type">Cá nhân</span>
-        <img src="https://img.oto.com.vn/toyota-vios.jpg" />
+      <div class="item-car vippro dev-item-car " data-tinrao="Toyota.Vios.Xe cũ.123456.V3." data-autoid="123456" data-cuid="">
+        <div class="photo">
+          <a href="/mua-ban-xe-toyota-vios-2020-123456" class="rt pdt-per-75">
+            <img src="https://img.oto.com.vn/ec.png" data-src="https://img1.oto.com.vn/toyota-vios.jpg" />
+          </a>
+        </div>
+        <div class="info">
+          <div class="info-left">
+            <h3 class="title"><a href="/mua-ban-xe-toyota-vios-2020-123456"><span class="car-name">2020 - Toyota Vios 1.5G CVT</span></a></h3>
+            <ul class="tag-list"><li>45.000 km</li><li>Máy xăng</li><li>Số tự động</li><li>Xe cũ</li></ul>
+          </div>
+          <div class="info-right">
+            <p class="price">385 Triệu</p>
+            <ul class="seller-info verify">
+              <li class="seller-name"><a><span class="txt">Cá nhân</span></a></li>
+              <li class="seller-location"><i class="icon-location"></i>Hà Nội</li>
+              <li class="seller-phone"><span class="txt"><i class="icon-phone"></i>0901234567</span><a data-phone="0901234567">Gọi ngay</a></li>
+            </ul>
+          </div>
+        </div>
       </div>
     </body></html>
   `;
@@ -58,16 +76,16 @@ describe('Story 21.2 — Automotive Vehicles Market Crawler', () => {
   const OTO_VN_DETAIL_HTML = `
     <html><body>
       <link rel="canonical" href="https://www.oto.com.vn/mua-ban-xe-toyota-vios-2020-123456" />
-      <h1>Toyota Vios 1.5G CVT 2020</h1>
+      <h1 class="title-detail">Toyota Vios 1.5G CVT 2020</h1>
       <span class="price">385 Triệu</span>
       <div class="specs">45.000 km - Số tự động - Xăng - 2020</div>
-      <a href="tel:0987654321">0987 654 321</a>
+      <a data-phone="0987654321">Gọi ngay</a>
       <span class="type">Cá nhân</span>
     </body></html>
   `;
 
   const CHOTOT_XE_JSON = JSON.stringify({
-    adlist: [
+    ads: [
       {
         ad_id: '987654',
         subject: 'Honda SH 150i 2022',
@@ -116,7 +134,7 @@ describe('Story 21.2 — Automotive Vehicles Market Crawler', () => {
         }
 
         // Oto.com.vn listing
-        if (url.pathname.startsWith('/mua-ban-xe') && url.pathname.includes('/page/1')) {
+        if (url.pathname.startsWith('/mua-ban-xe') && url.search.includes('page=')) {
           res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
           res.end(OTO_VN_LISTING_HTML);
           return;
@@ -130,7 +148,7 @@ describe('Story 21.2 — Automotive Vehicles Market Crawler', () => {
         }
 
         // Chotot gateway
-        if (url.pathname === '/wg/cg/2010') {
+        if (url.pathname === '/v1/public/ad-listing') {
           res.writeHead(200, { 'content-type': 'application/json' });
           res.end(CHOTOT_XE_JSON);
           return;
@@ -212,6 +230,7 @@ describe('Story 21.2 — Automotive Vehicles Market Crawler', () => {
       expect(item.platform).toBe('oto_vn');
       expect(item.category).toBe('automotive');
       expect(item.metadata.sellerType).toBe('chinh-chu');
+      expect(item.metadata.phone).toBe('0901234567');
     });
 
     it('list action returns PostItem[] for bonbanh', async () => {

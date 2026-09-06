@@ -100,7 +100,7 @@ export function parseVndPrice(text) {
   let total = 0;
   let found = false;
 
-  // Match "1 tỷ 250 triệu" or "1 tỷ"
+  // Match "1 tỷ 250 triệu" or "1 tỷ" — use dots/commas as thousands separators in group digits
   const tyMatch = lower.match(/(\d+(?:[.,]\d+)?)\s*tỷ/);
   if (tyMatch) {
     const num = parseFloat(tyMatch[1].replace(',', '.'));
@@ -120,9 +120,10 @@ export function parseVndPrice(text) {
     }
   }
 
-  // Match raw number like "795.000.000" or "795000000"
+  // Match raw number like "795.000.000" or "795000000" — treat dots/commas as thousand separators
   if (!found) {
-    const rawMatch = cleaned.replace(/[.,\s]/g, '').match(/(\d{6,})/);
+    const compact = cleaned.replace(/[.,\s]/g, '');
+    const rawMatch = compact.match(/(\d{6,})/);
     if (rawMatch) {
       const num = parseInt(rawMatch[1], 10);
       if (Number.isFinite(num)) {

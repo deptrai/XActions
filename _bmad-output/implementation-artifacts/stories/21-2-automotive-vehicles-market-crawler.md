@@ -387,6 +387,27 @@ this.registerAction({
 ### Completion Notes
 - Implemented full automotive module with multi-platform client, crawler, normalizer, schema helpers, validator.
 - Dispatcher integration complete for `oto_vn`, `bonbanh`, `chotot_xe`, `automotive`.
+- Applied all review patches; verified against live sites.
+
+### Code Review — 2026-09-06
+**Outcome:** Changes Requested → **Addressed** ✅
+
+**Findings (10):**
+1. ✅ [High] Removed `this.targetPlatform`/`this.baseUrl` mutation in `search()`/`detail()` — now uses `params.platform` local variable.
+2. ✅ [High] Fixed `normalizeRawBody` — only converts `body` to string, preserves `data` object for Chotot JSON.
+3. ✅ [Medium] Added `'chotot'` alias to `VALID_PLATFORMS` in crawler.
+4. ✅ [Medium] Switched Oto.com.vn pagination from `/page/N` to `?page=N` (real site returns 404 on `/page/`).
+5. ✅ [Medium] Updated BonBanh selector to `<li itemtype="http://schema.org/Car">` matching real markup.
+6. ✅ [Medium] Updated Oto.com.vn selectors to `item-car` + `data-autoid` + `car-name` + `seller-phone`.
+7. ✅ [Medium] Wired `model` filter into Oto.com.vn path (`mua-ban-xe-brand-model-city`).
+8. ✅ [Medium] Wired `yearMin`/`yearMax`/`priceMin`/`priceMax`/`region_v2`/`area_v2` into Chotot query params.
+9. ✅ [Low] `vehicle_detail` alias already mapped in dispatcher.
+10. ⚠️ [Low] `has_next_page` heuristic kept as `posts.length >= limit` (acceptable for MVP).
+
+**Verification:**
+- `npx vitest run tests/scrapers/vehicles/automotive` → 14/14 pass.
+- `npx vitest run tests/scrapers/vehicles/automotive tests/scrapers/procurement/masothue tests/scrapers/realestate/chotot` → 36/36 pass.
+- Live smoke test: BonBanh (20 ads), Oto.com.vn (15 ads), Chotot Xe (5 ads) all return valid PostItem[].
 
 ### File List
 - `src/core/types.js`
@@ -398,4 +419,4 @@ this.registerAction({
 
 ## Status
 
-**done** — implementation completed, tests pass, committed and pushed.
+**done** — implementation completed, review patches applied, tests pass, committed and pushed.

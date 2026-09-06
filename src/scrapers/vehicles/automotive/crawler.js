@@ -16,7 +16,7 @@ import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error
  * @typedef {import('../../../core/types.js').PostItem} PostItem
  */
 
-const VALID_PLATFORMS = new Set(['oto_vn', 'bonbanh', 'chotot_xe']);
+const VALID_PLATFORMS = new Set(['oto_vn', 'bonbanh', 'chotot_xe', 'chotot']);
 
 export class AutomotiveCrawler extends AbstractCrawler {
   /** @type {string} */
@@ -118,9 +118,9 @@ export class AutomotiveCrawler extends AbstractCrawler {
     const page = Math.max(1, Number(args.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(args.limit) || 20));
 
-    const searchArgs = { ...args, platform, page };
+    const searchArgs = { ...args, platform, page, limit };
     const response = await this.client.search(searchArgs);
-    const data = response.body !== undefined ? response.body : response.data;
+    const data = typeof response === 'string' ? response : (response?.body !== undefined ? response.body : response.data);
 
     const posts = this.#extractItems(data, 'search', { platform, sourcePlatform: platform });
     const result = posts.slice(0, limit);
@@ -138,22 +138,7 @@ export class AutomotiveCrawler extends AbstractCrawler {
    * @returns {Promise<{ posts: PostItem[], pageInfo: { has_next_page: boolean, page: number } }>}
    */
   async list(args = {}) {
-    const platform = this.#resolvePlatform(args);
-    const page = Math.max(1, Number(args.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(args.limit) || 20));
-
-    const response = await this.client.list({ ...args, platform, page });
-    const data = response.body !== undefined ? response.body : response.data;
-
-    const posts = this.#extractItems(data, 'list', { platform, sourcePlatform: platform });
-    const result = posts.slice(0, limit);
-
-    await this.#persist(result);
-
-    return {
-      posts: result,
-      pageInfo: { has_next_page: posts.length >= limit, page },
-    };
+    return this.search(args);
   }
 
   /**
@@ -175,7 +160,7 @@ export class AutomotiveCrawler extends AbstractCrawler {
     }
 
     const response = await this.client.detail({ ...args, platform });
-    const data = response.body !== undefined ? response.body : response.data;
+    const data = typeof response === 'string' ? response : (response?.body !== undefined ? response.body : response.data);
 
     const posts = this.#extractItems(data, 'detail', { platform, sourcePlatform: platform });
     if (!posts.length) {
