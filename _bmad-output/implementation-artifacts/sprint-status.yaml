@@ -169,19 +169,28 @@ development_status:
   epic-20-retrospective: optional
 
   # --- Epic 21: B2B Procurement, Corporate & Automotive Intelligence Engine ---
-  # NOTE: Epic 21 moved to future work backlog. See FUTURE-WORK.md and backlog-epics-21-22.md.
-  epic-21: backlog
-  21-1-b2b-tender-company-registry-crawler: backlog
-  21-2-automotive-vehicles-market-crawler: backlog
+  # NOTE: 2026-09-05 — Reactivated for Vietnam market pivot. PRD FR-94, FR-95 added.
+  # Feasibility verified by live probes (research/technical-vietnam-multi-domain-scrapers-2026-08-21.md).
+  epic-21: ready-for-dev
+  21-1-b2b-tender-company-registry-crawler: ready-for-dev
+  21-2-automotive-vehicles-market-crawler: ready-for-dev
   epic-21-retrospective: optional
 
   # --- Epic 22: Local F&B Merchant, Healthcare & Legal Intelligence Engine ---
-  # NOTE: Epic 22 moved to future work backlog. See FUTURE-WORK.md and backlog-epics-21-22.md.
-  epic-22: backlog
-  22-1-fnb-merchant-restaurant-directory-crawler: backlog
-  22-2-healthcare-clinics-pharmacy-network-crawler: backlog
-  22-3-legal-trademark-intellectual-property-crawler: backlog
+  # NOTE: 2026-09-05 — Reactivated for Vietnam market pivot. PRD FR-96 added.
+  epic-22: ready-for-dev
+  22-1-fnb-merchant-restaurant-directory-crawler: ready-for-dev
+  22-2-healthcare-clinics-pharmacy-network-crawler: ready-for-dev
+  22-3-legal-trademark-intellectual-property-crawler: ready-for-dev
   epic-22-retrospective: optional
+
+  # --- Epic 33: Vietnam Social & Video Platform Expansion ---
+  # NOTE: 2026-09-05 — Net-new epic added for Vietnam market pivot. PRD FR-97 + NFR-19 added.
+  # Requires Zalo OA API v3 access token + YouTube Data API v3 key.
+  epic-33: backlog
+  33-1-zalo-oa-public-content-crawler: backlog
+  33-2-youtube-vn-channel-video-crawler: backlog
+  epic-33-retrospective: optional
 
   # --- Epic 23: Bluesky & Mastodon on AbstractCrawler ---
   # NOTE: 2026-09-05 — All stories done (23.1–23.6). Story 23.6 integration & caller migration
@@ -210,6 +219,45 @@ development_status:
   25-3-mcp-cli-api-caller-migration: backlog
   25-4-backward-compatibility-error-mapping: backlog
   epic-25-retrospective: optional
+
+  # --- Epic 27: Anti-Detection & Session Resilience ---
+  # NOTE: Epic 27 added 2026-09-05 via sprint-change-proposal-2026-09-05.md.
+  epic-27: backlog
+  27-1-fingerprint-manager-tls-ja4-geo-consistent: backlog
+  27-2-session-health-orchestrator-circuit-breaker: backlog
+  27-3-challenge-signature-detector: backlog
+  epic-27-retrospective: optional
+
+  # --- Epic 28: Schema Drift & Selector Resilience ---
+  epic-28: backlog
+  28-1-schema-drift-guard: backlog
+  28-2-selector-canary: backlog
+  28-3-auto-selector-fallback: backlog
+  epic-28-retrospective: optional
+
+  # --- Epic 29: Real-Time Social Event Streaming & Webhook Engine ---
+  epic-29: backlog
+  29-1-jetstream-sse-cdc-adapters: backlog
+  29-2-outbound-webhook-dispatcher: backlog
+  29-3-stream-replay: backlog
+  epic-29-retrospective: optional
+
+  # --- Epic 30: Cross-Platform Action Replay & Content Syndication ---
+  epic-30: backlog
+  30-1-universal-action-dispatcher: backlog
+  30-2-content-transformer: backlog
+  epic-30-retrospective: optional
+
+  # --- Epic 31: Universal Media & Asset Extraction Pipeline ---
+  epic-31: backlog
+  31-1-universal-media-pipeline: backlog
+  epic-31-retrospective: optional
+
+  # --- Epic 32: Operational Rate-Budget & Queue Governance ---
+  epic-32: backlog
+  32-1-rate-budget-dashboard: backlog
+  32-2-distributed-token-bucket: backlog
+  epic-32-retrospective: optional
 
   # --- Epic 26: Legacy Decommission Final ---
   epic-26: backlog

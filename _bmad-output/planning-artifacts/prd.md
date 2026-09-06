@@ -9,7 +9,7 @@ supersedes:
   - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-06-10-epic4/prd.md
   - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-08-14-epic7/prd.md
   - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md
-note: "Canonical PRD cho Epics 10–20 và Phase 4 extension Epics 23–26 (Bluesky/Mastodon, utility/adapters consolidation, dispatcher unification, legacy decommission). Các PRD cũ trong `archive/prds/` được đánh dấu deprecated. FR-24..FR-54 xem `prd-facebook-epics-5-6-2026-08-21.md`. FR-62 xem `FUTURE-WORK.md`."
+note: "Canonical PRD cho Epics 10–20, Phase 4 extension Epics 23–26 (Bluesky/Mastodon, utility/adapters consolidation, dispatcher unification, legacy decommission), và Vietnam Market Pivot Epics 21–22, 33 (B2B registry, automotive, F&B, healthcare, legal, Zalo, YouTube VN). Các PRD cũ trong `archive/prds/` được đánh dấu deprecated. FR-24..FR-54 xem `prd-facebook-epics-5-6-2026-08-21.md`. FR-62 xem `FUTURE-WORK.md`."
 author: "John (BMad Product Manager) & Winston (BMad System Architect)"
 epics: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 23, 24, 25, 26]
 prd_ref:
@@ -60,7 +60,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 ---
 
-## 3. Danh Mục Yêu Cầu Chức Năng (Functional Requirements FR-64 ➔ FR-93)
+## 3. Danh Mục Yêu Cầu Chức Năng (Functional Requirements FR-64 ➔ FR-97)
 
 ### Nhóm 1: Hạ Tầng Cốt Lõi & Lưu Trữ PostgreSQL (Epic 10)
 * **FR-64 (Core Domain Interfaces):** Cung cấp các cổng trừu tượng chuẩn hóa (`AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore`, `ISignerBridge`) thuần ESM, Zero-Dependency.
@@ -106,10 +106,14 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-91 (Utility Scripts & Adapters Consolidation):** Audit và quyết định deprecation cho `src/scrapers/*.js` độc lập và `src/scrapers/adapters/`. Convert các tính năng hữu ích (video download, bookmark export, thread unroll) thành `CrawlerCommand` action hoặc chuyển vào `archive/`. Thu gọn adapter layer về `http`, `playwright`, `puppeteer` provider duy nhất.
 * **FR-92 (Unified Dispatcher & Backward Compatibility):** `src/scrapers/index.js` trở thành thin dispatcher duy nhất cho mọi platform qua `scrape(platform, action, args)`. Tất cả MCP/CLI/API caller gọi `CrawlerCommand` thay vì import platform cụ thể. Giữ `package.json` exports backward-compatible cho ít nhất 1 release cycle.
 * **FR-93 (Legacy Decommission):** Xóa `src/client/Scraper.js`, `src/scrapers/twitter/`, `src/scrapers/facebook/`, `src/scrapers/threads/` (legacy), `src/scrapers/bluesky/` (legacy), `src/scrapers/mastodon/` (legacy), và `src/scrapers/adapters/` sau khi đạt shadow-run parity ≥ 99% trong 7 ngày.
+* **FR-94 (Vietnam B2B Registry & Tender Crawler):** Cào danh bạ doanh nghiệp mới thành lập (MST, người đại diện, SĐT, ngành nghề) từ `masothue.com`, `hosocongty.vn` và dữ liệu đấu thầu từ `muasamcong.mpi.gov.vn` qua `AbstractCrawler` + `ProxyIpPool`. Chuẩn hóa `PostItem` (`platform: 'masothue' | 'muasamcong' | 'hosocongty'`, `category: 'b2b_lead'`). (Epic 21.1)
+* **FR-95 (Vietnam Automotive Market Crawler):** Cào tin rao bán ô tô, xe máy, xe điện từ `oto.com.vn`, `bonbanh.com`, `xe.chotot.com` kèm SĐT chính chủ, hãng/dòng/năm/giá. Chuẩn hóa `PostItem` (`category: 'automotive'`). (Epic 21.2)
+* **FR-96 (Vietnam F&B, Healthcare & Legal Directory Crawler):** Cào danh bạ nhà hàng/quán cafe (PasGo, Foody, Riviu), phòng khám/nhà thuốc (Medpro, YouMed, Thuocsi), và đơn đăng ký nhãn hiệu (IP Vietnam `wipo.ipvietnam.gov.vn`). Chuẩn hóa `PostItem` (`category: 'fnb_merchant' | 'healthcare' | 'legal'`). (Epic 22.1–22.3)
+* **FR-97 (Zalo OA & YouTube VN Crawler):** Cào Zalo Official Account posts/followers qua Zalo OA API v3.0 (`openapi.zalo.me`) và YouTube VN channels/videos/comments qua YouTube Data API v3 với `regionCode: 'VN'`. HTML fallback khi API quota exhausted. Chuẩn hóa `PostItem` (`platform: 'zalo' | 'youtube'`). (Epic 33)
 
 ---
 
-## 4. Danh Mục Yêu Cầu Phi Chức Năng (Non-Functional Requirements NFR-11 ➔ NFR-18)
+## 4. Danh Mục Yêu Cầu Phi Chức Năng (Non-Functional Requirements NFR-11 ➔ NFR-19)
 
 * **NFR-11 (Tối ưu Tài Nguyên):** Giảm ít nhất **85% RAM** (từ ~10GB xuống <300MB) và **70% CPU** so với mô hình Full Headless Browser.
 * **NFR-12 (Băng Thông & Tốc Độ):** Tăng tốc độ thu thập dữ liệu lên ít nhất **5x–10x (>500 requests/giây)** bằng Async HTTP Client với Connection Pool.
@@ -118,6 +122,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **NFR-15 (Kiến Trúc Sạch & Khả Năng Mở Rộng):** Lớp `src/core/` hoàn toàn phi phụ thuộc (Zero-Dependency); thêm nền tảng mới chỉ cần viết thêm Adapter.
 * **NFR-16 (Bản Quyền & Tương Thích Ngược):** Mã nguồn 100% tuân thủ MIT / Apache 2.0; bảo toàn 100% tương thích ngược với CLI `unfollowx` và 80+ MCP tools.
 * **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
+* **NFR-19 (Vietnam Geo-Consistent Proxy & Locale):** Tất cả request đến VN platforms (Zalo, VN e-commerce, VN government sites) phải sử dụng VN residential proxy hoặc VN-located server IP; timezone `Asia/Ho_Chi_Minh` và locale `vi-VN` phải consistent với proxy region. Áp dụng từ Epic 21 trở đi.
 
 ---
 
@@ -190,6 +195,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 * **NFR-17 (Operational Observability):** Hệ thống phải expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling mỗi 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`.
 * **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
+* **NFR-19 (Vietnam Geo-Consistent Proxy & Locale):** Tất cả request đến VN platforms (Zalo, VN e-commerce, VN government sites) phải sử dụng VN residential proxy hoặc VN-located server IP; timezone `Asia/Ho_Chi_Minh` và locale `vi-VN` phải consistent với proxy region. Áp dụng từ Epic 21 trở đi.
 
 ### 7.3. Lộ trình phân kỳ cập nhật
 
@@ -200,6 +206,7 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 * **Phase 3: Viral Social & E-Commerce Expansion (Stories 15.1 ➔ 15.2, 16.1 ➔ 16.2)**
 * **Phase 4: High-Value Localized Leads & B2B Recruitment (Stories 17.1 ➔ 17.2, 18.1 ➔ 18.3)**
 * **Phase 5: Operational Observability & Nowing Cutover (Stories 19.1 ➔ 19.10, 20.1)**
+* **Phase A — Vietnam Core (inserted before Phase 6):** Epic 21 (B2B registry + automotive), Epic 22 (F&B + healthcare + legal), Epic 33 (Zalo + YouTube VN). Reactivated from backlog + net-new per VN market pivot 2026-09-05.
 * **Phase 6: Universalization & Legacy Decommission (Stories 23.1 ➔ 26.2)**
 
 ### 7.4. Traceability ngắn gọn
@@ -212,11 +219,15 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Epic 24 | FR-91 |
 | Epic 25 | FR-92 |
 | Epic 26 | FR-93 |
+| Epic 21 | FR-94, FR-95 |
+| Epic 22 | FR-96 |
+| Epic 33 | FR-97 |
 | Story 10.5 | FR-86 |
 | Data Retention | FR-87 |
 | 3-Tier Gap-Filling | FR-88 |
 | Stream Metrics / Alerts | NFR-17 |
 | Universal Architecture Compliance | NFR-18 |
+| VN Geo-Proxy & Locale | NFR-19 |
 
 ### 7.5. Canonicalization & Related Documents
 

@@ -1201,9 +1201,10 @@ So that **codebase không còn chứa code cũ đã được thay thế, giảm 
 
 ---
 
-> **Epic 21 & 22 đã được chuyển sang backlog:** `_bmad-output/planning-artifacts/backlog-epics-21-22.md`.  
-> Lý do: nằm ngoài PRD canonical (Epics 10–20), chưa có PRD/UX/validation. Sẽ kích hoạt lại khi có Product Council approval, PRD, và UX.  
-> **Epics 23–26 được thêm vào đây như Phase 4 extension:** universal AbstractCrawler migration, dispatcher unification, và legacy decommission.
+> **Epic 21 & 22 đã được reactivate:** `_bmad-output/planning-artifacts/backlog-epics-21-22.md`.  
+> Lý do: Vietnam market pivot approved 2026-09-05 — Product Council (Luisphan) approved. PRD FR-94→96 added. Spec sẵn trong backlog file. Feasibility research verified (`research/domain-vietnam-2026-08-21.md` + live probes all 200 OK).  
+> **Epic 33 added:** Zalo OA + YouTube VN — net-new platforms for VN market.  
+> **Epics 23–26 là Phase 4 extension:** universal AbstractCrawler migration, dispatcher unification, và legacy decommission.
 
 ---
 
@@ -1511,3 +1512,344 @@ So that **XActions chỉ còn một kiến trúc `AbstractCrawler` duy nhất**.
 | NFR16 | License & Backward Compatibility | 14.2, 20.1, 20.2 | License headers present; `unfollowx` commands mapped or return actionable error |
 | NFR17 | Operational Observability | 11.4, 14.3, 19.1, 19.2, 19.3, 19.4.5 | Verify endpoints return metrics; alert fires when thresholds exceeded |
 | NFR18 | Universal Architecture Compliance | 23.1, 23.3, 25.1, 25.3, 26.2 | 100% platforms on `AbstractCrawler`/`AbstractApiClient`; zero legacy imports; `npm run typecheck` and `unfollowx` smoke tests pass |
+
+---
+
+## Epic 27: Anti-Detection & Session Resilience
+
+> **Epic grouping note:** This is an *infrastructure hardening* epic. It builds on top of the existing `AdaptiveRateGovernor`, `AccountPool`, `ProxyIpPool`, and `StealthBrowser` layers. The goal is to make anti-detection and session resilience proactive, continuous, and self-healing rather than reactive.
+
+### Story 27.1: FingerprintManager — TLS/JA4 Spoofing & Geo-Consistent Profiles
+As a **Scraping Reliability Engineer**,  
+I want **a `FingerprintManager` that rotates per-session fingerprints and binds them to a geo-consistent proxy region**,  
+So that **platforms cannot detect XActions via TLS/JA4 signatures, inconsistent timezone/locale, or proxy-UA mismatches**.
+
+**Acceptance Criteria:**
+* **Given** `src/agents/antiDetection.js` and `src/scraping/stealthBrowser.js` already generate UA/viewport/WebGL
+* **When** implementing `FingerprintManager`
+* **Then** it manages a pool of *complete* fingerprints: UA, viewport, timezone, locale, colorDepth, platform, WebGL vendor/renderer, fonts, `navigator.hardwareConcurrency`, `navigator.deviceMemory`
+* **And** it derives proxy region from proxy IP and selects a timezone/locale that matches the region
+* **And** it optionally integrates with a TLS/JA4/JA3 spoofing mechanism (system proxy, custom `tls` agent, or external tool) so outbound handshake matches the chosen OS/Browser
+* **And** `launchStealthBrowser()` consumes `FingerprintManager.getForAccount(accountId)` to ensure fingerprint + proxy + timezone are consistent per account
+* **And** fingerprints are persisted per account to avoid rapid rotation that triggers re-auth flows
+
+### Story 27.2: SessionHealthOrchestrator — Continuous Health Score & Circuit Breaker
+As a **Reliability Engineer**,  
+I want **a continuous health score per account and an automatic circuit breaker with recovery probe**,  
+So that **a dying or challenged account is taken out of rotation before it poisons downstream data, and recovers only when safe**.
+
+**Acceptance Criteria:**
+* **Given** `AdaptiveRateGovernor.hibernateAccount()` and `AccountPool.markUnavailable()` already exist
+* **When** implementing `SessionHealthOrchestrator`
+* **Then** it computes a health score per `platform:accountId` from: consecutive errors, rate-limit frequency, bot-challenge frequency, average latency, response payload completeness, proxy health
+* **And** score is in `[0, 100]`; below `30` → circuit breaker opens, account is moved to `sick` state and excluded from rotation
+* **And** circuit breaker enters `half-open` after cooldown and sends a *recovery probe* (cheap, read-only action such as `profile`) using a fresh proxy
+* **And** if probe succeeds with a *complete* payload and no challenge, breaker closes; if it fails, account goes back to `sick` with exponential backoff
+* **And** `governor.getStatus()` includes `healthScores` and `circuitBreakerStates`
+* **And** `dashboard/admin.html` shows a health column next to each account (green/yellow/red) and a wake/probe action
+
+### Story 27.3: ChallengeSignatureDetector — Automated Bot-Detection Page Detection
+As a **Platform Scraper Developer**,  
+I want **a `ChallengeSignatureDetector` that scans HTTP responses and DOM for Cloudflare, Arkose, and platform-specific challenge pages**,  
+So that **the crawler can record `bot_challenge` hibernation immediately instead of misclassifying the payload as empty data**.
+
+**Acceptance Criteria:**
+* **Given** `AbstractPlatformResponseValidator` and per-platform validators already exist
+* **When** implementing `ChallengeSignatureDetector`
+* **Then** it runs as a separate detector used by both `AbstractApiClient` (HTTP response body) and `AbstractCrawler` (Puppeteer page content)
+* **And** it matches known signatures: `cf-challenge`, `cf-turnstile`, `__cf_chl`, `arkose`, `captcha`, `challenge-running`, `data-testid="challenge"`, `window.__初始状态`, Facebook `checkpoint`, Twitter `unusual-login`
+* **And** it returns a normalized `{ detected, type, confidence, suggestedHibernationMs }` object
+* **And** on detection, `AbstractApiClient` calls `governor.recordBotChallenge()` automatically
+* **And** the detector is unit-tested with real HTML/JSON samples from each platform
+
+---
+
+## Epic 28: Schema Drift & Selector Resilience
+
+> **Epic grouping note:** This epic hardens data quality. It does not replace existing crawlers; it wraps them with validation, drift detection, and self-healing selector fallback so silent data degradation is impossible.
+
+### Story 28.1: SchemaDriftGuard — Runtime Contract Validation & Completeness Classification
+As a **Data Quality Engineer**,  
+I want **runtime validation of crawler output against a platform/action schema and automatic classification as `complete`, `degraded`, or `corrupted`**,  
+So that **downstream consumers never receive silently empty or malformed data**.
+
+**Acceptance Criteria:**
+* **Given** `MetadataSchemaRegistry` and `validateSchemaNode()` already exist in `src/core/metadata-schema-registry.js`
+* **When** wiring `SchemaDriftGuard` into `AbstractCrawler`
+* **Then** each crawler registers a `PostItem`/`ProfileItem`/`CommentItem` schema per action
+* **And** `SchemaDriftGuard.validate(platform, action, data)` returns `{ classification, missingFields, typeErrors, score }`
+* **And** `classification` is `complete` (all required, no type errors), `degraded` (some optional missing, minor type issues, score ≥ 70), or `corrupted` (required missing, major type issues, score < 70)
+* **And** `corrupted` results trigger a `PlatformError` with `ErrorTypes.DEGRADED_DATA` and suggested action `RETRY_WITH_DIFFERENT_ACCOUNT`
+* **And** degraded-but-acceptable results are stored with a `dataQuality.score` and `dataQuality.missingFields` metadata
+* **And** Zod or JSON-Schema is used (pure ESM, no extra heavy dependencies)
+
+### Story 28.2: SelectorCanary — Periodic DOM Probe & Drift Alert
+As a **Scraping Operations Engineer**,  
+I want **a canary job that periodically probes live DOM selectors and reports when a selector success rate drops**,  
+So that **we know about breaking UI changes before production scrapers fail silently**.
+
+**Acceptance Criteria:**
+* **Given** `docs/agents/selectors.md` and `docs/case-studies/robust-dom-extraction.md` document fallback selector chains
+* **When** implementing `SelectorCanary`
+* **Then** it runs as a scheduled job (Bull or cron) against a known set of public test targets per platform
+* **And** for each target it tries the primary selector and then the documented fallback chain
+* **And** it records `successRate`, `usedFallback`, `driftDetected`, and `lastWorkingSelector`
+* **And** if `successRate` drops below `0.8` for two consecutive runs, it emits an alert to the configured channel (email/Slack/Webhook) and sets the platform `driftDetected` flag in governor status
+* **And** canary results are viewable on `dashboard/admin.html`
+
+### Story 28.3: AutoSelectorFallback — Assisted Selector Re-Discovery
+As a **Scraping Developer**,  
+I want **a tool that, given a broken selector, suggests candidate replacements from the current live page**,  
+So that **I can recover from DOM drift without manually inspecting every UI change**.
+
+**Acceptance Criteria:**
+* **Given** `SelectorCanary` has flagged a drift
+* **When** running `AutoSelectorFallback.investigate(platform, pageUrl, expectedShape)`
+* **Then** it fetches a live snapshot of the page (via Puppeteer or HTTP)
+* **And** it searches the DOM for elements whose text/attributes/children structurally match the expected output shape (e.g., tweet text, like count)
+* **And** it returns a ranked list of candidate selectors with confidence scores
+* **And** the tool is CLI-accessible: `xactions tools suggest-selector --platform twitter --url https://x.com/elonmusk`
+
+---
+
+## Epic 29: Real-Time Social Event Streaming & Webhook Engine
+
+> **Epic grouping note:** This epic upgrades the existing polling-based `streamManager` to support push-based real-time sources and outbound webhooks. It does not replace `streamManager`; it adds adapters and dispatchers.
+
+### Story 29.1: Jetstream/SSE/CDC Adapters for Push-Based Social Streams
+As a **Real-Time Data Consumer**,  
+I want **adapters for Bluesky Jetstream, Mastodon SSE, and generic CDC sources**,  
+So that **XActions can receive events in real time instead of polling every N seconds**.
+
+**Acceptance Criteria:**
+* **Given** `src/streaming/streamManager.js` already polls tweets/followers/mentions via Bull queue
+* **When** adding `src/streaming/adapters/` (jetstream.js, mastodon-sse.js, cdc.js)
+* **Then** `JetstreamAdapter` connects to `wss://bsky.network/xrpc/app.bsky.jetstream.subscribe*` and emits `PostItem`/ProfileItem events
+* **And** `MastodonSSEAdapter` connects to `https://<instance>/api/v1/streaming/public` and normalizes statuses to `PostItem`
+* **And** `CDCAdapter` reads from PostgreSQL logical replication or an external Redis stream and emits change events
+* **And** all adapters produce the same `ThinEvent` shape and publish via `RedisStreamPublisher` to `stream:social:raw_posts`
+* **And** adapters support reconnect, cursor/bookmark persistence, and exponential backoff
+* **And** stream types are extended to include `jetstream`, `mastodon_sse`, `cdc`
+
+### Story 29.2: Outbound Webhook Dispatcher with HMAC Signing & Retry
+As a **XActions Operator**,  
+I want **an outbound webhook dispatcher that signs and retries delivery to subscriber endpoints**,  
+So that **Nowing and external consumers can subscribe to real-time events reliably**.
+
+**Acceptance Criteria:**
+* **Given** only inbound webhooks exist in `src/scheduler/webhookTrigger.js`
+* **When** implementing `src/streaming/outbound-webhook-dispatcher.js`
+* **Then** it consumes `ThinEvent` from Redis Stream or Bull queue
+* **And** it supports webhook registration with `url`, `events[]`, `secret`, `active` status
+* **And** it signs each POST body with `X-XActions-Signature` (HMAC-SHA256)
+* **And** it retries with exponential backoff (3 attempts) and moves permanent failures to a dead-letter queue
+* **And** delivery metrics (attempts, latency, success/failure) are persisted
+* **And** API routes `/api/admin/webhooks/subscriptions` and `/api/admin/webhooks/delivery-logs` are added
+
+### Story 29.3: Stream Replay & Missed-Event Recovery
+As a **XActions Consumer**,  
+I want **the ability to replay events from a specific time window or cursor**,  
+So that **my downstream system can recover from downtime without losing data**.
+
+**Acceptance Criteria:**
+* **Given** `streamManager.getStreamHistory()` exists for polling streams
+* **When** adding replay support
+* **Then** Redis Stream history is retained with configurable `MAXLEN` / `MINID` (already partially supported by `RedisStreamPublisher`)
+* **And** `GET /api/streams/:id/replay?since=ISO8601&cursor=...` returns events in order
+* **And** replay can be delivered through the same outbound webhook dispatcher
+* **And** consumers can request replay from the API or MCP (`x_stream_replay`)
+
+---
+
+## Epic 30: Cross-Platform Action Replay & Content Syndication
+
+> **Epic grouping note:** This is the first *write-side* cross-platform epic. Existing `x_post_tweet`, `x_like`, etc. are X-only. Existing `*_multiplatform` MCP tools are read-only. This epic adds unified publish and interaction dispatch.
+
+### Story 30.1: UniversalActionDispatcher — Cross-Platform Write Actions
+As a **Cross-Platform Publisher**,  
+I want **a single `post --sync-all` or `like` call that executes on X, Bluesky, Mastodon, and Threads**,  
+So that **I do not have to script each platform separately**.
+
+**Acceptance Criteria:**
+* **Given** `AbstractCrawler` supports `registerAction` and per-platform crawlers already implement read actions
+* **When** adding `src/scrapers/social/actions/` (or extending each `Crawler` with write actions)
+* **Then** the dispatcher accepts a `CrawlerCommand` like `{ platform: 'all', action: 'post', args: { text, media } }`
+* **And** it resolves the target platforms, validates credentials per account, and dispatches in parallel
+* **And** supported actions: `post`, `like`, `reply`, `retweet/repost`, `follow`, `unfollow`
+* **And** per-platform implementations are isolated in `src/scrapers/social/<platform>/actions.js`
+* **And** failures on one platform do not block others; results are aggregated with `suggestedAction` per failure
+* **And** MCP tools `x_publish_all`, `x_like_all`, `x_follow_all` are added to `src/mcp/local-tools.js`
+
+### Story 30.2: ContentTransformer — Thread Splitter, Media Adapter, Character Limit Handler
+As a **Cross-Platform Content Creator**,  
+I want **automatic content adaptation when posting across platforms with different limits and media rules**,  
+So that **a single source post becomes valid posts on every target platform**.
+
+**Acceptance Criteria:**
+* **Given** `UniversalActionDispatcher` accepts a unified post
+* **When** implementing `ContentTransformer`
+* **Then** it splits long threads into platform-specific thread chains (X ≤ 280, Bluesky ≤ 300, Mastodon ≤ 500, Threads ≤ 500)
+* **And** it handles media format conversion rules (image count, video duration, file size, aspect ratio)
+* **And** it attaches platform-specific metadata such as alt text, hashtags, and mentions formatting
+* **And** it returns a `TransformedPost[]` array that the dispatcher can execute in order
+
+---
+
+## Epic 31: Universal Media & Asset Extraction Pipeline
+
+> **Epic grouping note:** This epic generalizes the existing Twitter-only `videoDownloader` and `normalize-media` into a multi-platform media pipeline.
+
+### Story 31.1: UniversalMediaPipeline — Audio, Carousel, HLS on All Platforms
+As a **Media Archivist**,  
+I want **a pipeline that extracts and normalizes media (photos, videos, audio, carousels) from any platform**,  
+So that **I can download and archive multi-platform content with consistent metadata**.
+
+**Acceptance Criteria:**
+* **Given** `src/scrapers/social/twitter/normalize-media.js` already handles Twitter photos/videos/HLS
+* **When** creating `src/scrapers/social/media-pipeline.js`
+* **Then** it defines a `MediaObject` schema with `type`, `url`, `thumbnailUrl`, `width`, `height`, `durationMs`, `bitrate`, `contentType`, `variants[]`
+* **And** it has per-platform adapters: `twitter`, `bluesky`, `mastodon`, `threads`, `facebook`, `tiktok`
+* **And** each adapter selects the best-quality URL and falls back to HLS/DASH playlists when MP4 is not available
+* **And** it supports audio extraction (voice posts, Spaces) and carousel/slide posts
+* **And** `x_download_media` MCP tool supports `platform` and `postUrl` and returns `MediaObject[]`
+* **And** `src/scrapers/videoDownloader.js` is refactored to delegate to the pipeline for Twitter and other platforms
+
+---
+
+## Epic 32: Operational Rate-Budget & Queue Governance
+
+> **Epic grouping note:** This epic upgrades existing rate governance from in-memory, backend-only metrics into a visible, controllable, distributed queue system.
+
+### Story 32.1: RateBudgetDashboard — Visual Quota Allocator & Panic Stop
+As a **XActions Operator**,  
+I want **a dashboard that shows live quota usage, drag-drop priority queues, and a panic stop button**,  
+So that **I can manage platform risk visually during spikes or incidents**.
+
+**Acceptance Criteria:**
+* **Given** `dashboard/admin.html` already shows `healthy-proxies-count` and `governor/status`
+* **When** adding a dedicated rate-budget view (or expanding `dashboard/admin.html`)
+* **Then** it displays per-consumer RPM usage (`chainlens`, `nowing`, `internal`) and per-account RPM
+* **And** it shows a real-time gauge for `throttleLevel` (`normal`, `reduced`, `backpressure`, `critical`)
+* **And** it allows drag-and-drop reordering of queued jobs by priority
+* **And** it has a `🛑 Panic Stop` button that pauses all non-essential streams and hibernates all accounts for a platform
+* **And** it persists layout/priority in `localStorage` and/or backend
+
+### Story 32.2: DistributedTokenBucket — Redis-Backed Quota with Header Parsing
+As a **Scraping Platform Engineer**,  
+I want **per-consumer and per-account rate limits synchronized across multiple XActions instances**,  
+So that **horizontal scaling does not break the existing quota model**.
+
+**Acceptance Criteria:**
+* **Given** `AdaptiveRateGovernor` currently keeps `consumerRequestTimestamps` and `accountRequestTimestamps` in memory
+* **When** implementing `DistributedTokenBucket`
+* **Then** it uses Redis (e.g., `redis.call('CL.THROTTLE', ...)` or Lua scripts) to track token buckets per `consumerId` and `accountId`
+* **And** it parses `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` headers when present
+* **And** it exposes `canConsume(key, tokens)` and `consume(key, tokens)` with configurable refill rate, burst, and capacity
+* **And** `AdaptiveRateGovernor` can optionally delegate to `DistributedTokenBucket` when `REDIS_TOKEN_BUCKET=1`
+* **And** it is tested under multi-process contention
+
+---
+
+## Epic 33: Vietnam Social & Video Platform Expansion
+
+> **Epic grouping note:** This is a *net-new* epic added for Vietnam market pivot. Zalo and YouTube are the two largest VN platforms not yet covered. Spec is new — no prior code or research exists for these platforms.
+
+### Story 33.1: Zalo OA & Public Content Crawler
+As a **Vietnam Market Intelligence Analyst**,  
+I want **a `ZaloCrawler` in `src/scrapers/social/zalo/index.js` that extends `AbstractCrawler`**,  
+So that **Nowing AI can monitor Zalo Official Accounts, public posts, and Zalo Marketplace listings for VN lead generation**.
+
+**Acceptance Criteria:**
+* **Given** Zalo Official Account API (`openapi.zalo.me`) provides public OA content endpoints
+* **When** calling `scrape('zalo', 'oa_posts', { oaId })` or `scrape('zalo', 'oa_followers', { oaId })`
+* **Then** crawler calls Zalo OA API v3.0 via `AbstractApiClient` with `accessToken` from `AccountPool`
+* **And** normalizes OA posts to `PostItem` (`platform: 'zalo'`, `category: 'social'`)
+* **And** extracts: post ID, OA name, content, images, likes, comments, shares, `publishedAt`
+* **And** persists via `PrismaStore` and publishes `ThinEvent` to `stream:social:raw_posts`
+* **And** public Zalo Marketplace listings can be searched via `zalo_marketplace_search` action
+* **Note:** Zalo personal messaging scrape is deferred — OA API only covers business/public content. Personal Zalo requires mobile API reverse engineering (future work).
+
+### Story 33.2: YouTube VN Channel & Video Crawler
+As a **Vietnam Content Intelligence Analyst**,  
+I want **a `YouTubeVNCrawler` in `src/scrapers/social/youtube/index.js` that extends `AbstractCrawler`**,  
+So that **Nowing AI can monitor trending VN YouTube channels, video comments, and channel metadata for influencer marketing and content analysis**.
+
+**Acceptance Criteria:**
+* **Given** YouTube Data API v3 (`googleapis.com/youtube/v3`) provides search, channel, video, comment endpoints
+* **When** calling `scrape('youtube', 'search', { query, regionCode: 'VN' })` or `scrape('youtube', 'channel_videos', { channelId })` or `scrape('youtube', 'video_comments', { videoId })`
+* **Then** crawler calls YouTube Data API v3 via `AbstractApiClient` with API key from env `YOUTUBE_API_KEY`
+* **And** normalizes videos to `PostItem` (`platform: 'youtube'`, `category: 'video'`)
+* **And** extracts: video ID, channel name, title, description, viewCount, likeCount, commentCount, `publishedAt`, tags, thumbnailUrl
+* **And** comments normalized to `CommentItem` with parent-child threading
+* **And** HTML fallback via `yt-dlp` or `invidious` when API quota exhausted (10k units/day free tier)
+* **And** VN-specific: `regionCode: 'VN'` filter, VN trending via `chart=mostPopular&regionCode=VN`
+* **And** persists via `PrismaStore` and publishes `ThinEvent` to `stream:social:raw_posts`
+
+---
+
+## Revised Epic Priority & Execution Order (Vietnam Market Pivot — 2026-09-05)
+
+> **Rationale:** XActions serves Nowing AI Lead Hub for the Vietnam market. VN-specific platforms (Epic 21–22, 33) deliver direct business value immediately. Infrastructure hardening (Epic 27–32) follows once VN crawlers are stable.
+
+```
+Phase A — Vietnam Core (NEXT):
+  Epic 21 → B2B tender, company registry, automotive     [reactivated from backlog]
+  Epic 22 → F&B, healthcare, legal/IP                  [reactivated from backlog]
+  Epic 33 → Zalo OA + YouTube VN                       [net-new]
+
+Phase B — Infrastructure Hardening:
+  Epic 27 → Anti-detection & session resilience
+  Epic 28 → Schema drift & selector resilience
+  Epic 29 → Real-time streaming & webhooks
+
+Phase C — Advanced Features:
+  Epic 30 → Cross-platform action sync
+  Epic 31 → Universal media pipeline
+  Epic 32 → Rate budget & queue governance
+
+Phase D — Finalization:
+  Epic 20 → Nowing cutover & decommission
+  Epic 24 → Utility/adapters migration
+  Epic 25 → Unified dispatcher final
+  Epic 26 → Legacy removal
+```
+
+**VN Platform Coverage Matrix (post-pivot):**
+
+| Platform | Status | Epic | Category |
+|---|---|---|---|
+| Shopee | ✅ Done | 16.1 | E-commerce |
+| TikTok Shop | ✅ Done | 16.2 | E-commerce |
+| Chợ Tốt | ✅ Done | 17.1 | Real estate |
+| Batdongsan | ✅ Done | 17.2 | Real estate |
+| TopCV | ✅ Done | 18.1 | Recruitment |
+| VietnamWorks | ✅ Done | 18.2 | Recruitment |
+| LinkedIn | ✅ Done | 18.3 | B2B |
+| Facebook | ✅ Done | 13.3–13.10 | Social |
+| TikTok | ✅ Done | 15.2 | Social |
+| Threads | ✅ Done | 15.1 | Social |
+| MaSoThue/HoSoCongTy/MuaSamCong | 📋 Spec ready | 21.1 | B2B registry |
+| Oto/Bonbanh/ChototXe | 📋 Spec ready | 21.2 | Automotive |
+| PasGo/Foody/Riviu | 📋 Spec ready | 22.1 | F&B |
+| Medpro/YouMed/Thuocsi | 📋 Spec ready | 22.2 | Healthcare |
+| IP Vietnam | 📋 Spec ready | 22.3 | Legal |
+| **Zalo OA** | ❌ Net-new | 33.1 | Social/messaging |
+| **YouTube VN** | ❌ Net-new | 33.2 | Video |
+
+---
+
+## Conditions to Start / Reactivate Epic 27–32
+
+1. **Epic 20, 24, 25, 26** (cleanup, dispatcher, decommission) must be stable; new infrastructure must sit on top of a single `AbstractCrawler`/`AbstractApiClient` contract.
+2. **Epic 23** (Bluesky/Mastodon) should be in production long enough to validate that lightweight platforms work on the new architecture.
+3. Architecture review confirms `FingerprintManager`, `SessionHealthOrchestrator`, `SchemaDriftGuard`, `JetstreamAdapter`, `UniversalActionDispatcher`, `UniversalMediaPipeline`, and `DistributedTokenBucket` fit within the existing `src/core/` + `src/scrapers/social/` layout without major core rewrites.
+4. Product Council approves the expanded PRD/UX for the new operator dashboards and cross-platform write features.
+
+## Definition of Done for Epic 27–32
+
+- Each story has tests in `tests/core/`, `tests/scrapers/`, or `tests/admin/`.
+- No duplicate implementation of existing `AdaptiveRateGovernor`, `AccountPool`, `ProxyIpPool`, `StealthBrowser`, `streamManager`, `webhookTrigger`, or `metadataSchemaRegistry`.
+- No scope overlap with **Nowing** (CDP operator, CRM, lead scoring, outbound) or **ChainLens** (deep research).
+- All new UI additions are reflected in `dashboard/admin.html` or new dedicated HTML files.
+- `npm run typecheck` and `vitest run` pass.
+- `docs/` updated: `architecture.md`, `stealth-scraping.md`, `streaming.md`, `api-reference.md`.

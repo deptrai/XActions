@@ -1,8 +1,8 @@
 ---
 title: "Backlog — Epic 21 & 22: B2B Procurement / Automotive / F&B / Healthcare / Legal Intelligence"
 created: 2026-08-26
-status: backlog
-reason: "Out of current PRD scope (prd.md covers Epics 10–20). No PRD/UX/validation exists."
+status: reactivated
+reason: "Vietnam market pivot approved 2026-09-05. PRD FR-94→96 added. Spec retained — moved to epics.md Phase A. Feasibility verified via live probes (research/technical-vietnam-multi-domain-scrapers-2026-08-21.md)."
 ---
 
 # Backlog — Epic 21 & 22

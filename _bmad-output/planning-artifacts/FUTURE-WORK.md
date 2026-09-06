@@ -66,22 +66,44 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 
 ---
 
-## Epic 21–22: B2B Procurement, Corporate & Automotive / Local F&B, Healthcare & Legal Intelligence
+## Epic 21–22: ✅ Reactivated (2026-09-05 — Vietnam Market Pivot)
 
-**Nguồn:** `epics.md` §Epic 21–22 (moved 2026-08-26).
+**Trạng thái:** Đã kích hoạt lại. Spec giữ nguyên tại `backlog-epics-21-22.md`. PRD FR-94→96 added. Priority: Phase A — trước Epic 20/27–32.
 
-**Mô tả:** Mở rộng XActions sang các vertical B2B & local services: đấu thầu/doanh nghiệp, ô tô, F&B, y tế, sở hữu trí tuệ.
+---
+
+## Zalo Personal Messaging Scrape — Deferred
+
+**Nguồn:** Epic 33.1 scope note (2026-09-05).
+
+**Mô tả:** Cào Zalo cá nhân (tin nhắn, nhóm, friend list) qua mobile API reverse engineering.
 
 **Tại sao defer:**
-- Nằm ngoài PRD canonical hiện tại (Epics 10–20).
-- Chưa có PRD, UX personas/flows, hoặc architecture review cho các domain mới.
-- Cần review pháp lý cho dữ liệu chính phủ, y tế, IP.
+- Zalo OA API (`openapi.zalo.me`) chỉ cover business/public content — không có personal messaging endpoints.
+- Personal Zalo cần reverse engineer Zalo mobile app (gRPC/protobuf) — effort lớn, rủi ro cao.
+- OA API + Marketplace đã đủ cho lead generation use case của Nowing.
 
 **Điều kiện mở lại:**
-1. Product Council approve PRD mới cho verticals này.
-2. UX documentation (personas, flows, mockups) được hoàn thiện.
-3. Architecture review xác nhận `AbstractCrawler`/`ProxyIpPool` sẵn sàng mở rộng.
-4. Xem chi tiết: `_bmad-output/planning-artifacts/backlog-epics-21-22.md`.
+1. Nowing có nhu cầu cụ thể cho Zalo personal data.
+2. Zalo mobile API research hoàn tất (minimum 2 tuần dedicated).
+3. Product Council approve legal/compliance review.
+
+---
+
+## YouTube VN Advanced Features — Deferred
+
+**Nguồn:** Epic 33.2 scope note (2026-09-05).
+
+**Mô tả:** YouTube VN live stream chat, Shorts analytics, YouTube Music VN, channel subscriber history.
+
+**Tại sao defer:**
+- YouTube Data API v3 không cung cấp live chat hoặc subscriber history.
+- Cần YouTube InnerTube API (unofficial) hoặc yt-dlp extended features.
+- Epic 33.2 MVP (search, channel videos, comments, trending) đã đủ cho Nowing lead generation.
+
+**Điều kiện mở lại:**
+1. Epic 33.2 stable trong production ≥ 2 tuần.
+2. YouTube API quota optimization hoàn tất (10k units/day limit).
 
 ---
 

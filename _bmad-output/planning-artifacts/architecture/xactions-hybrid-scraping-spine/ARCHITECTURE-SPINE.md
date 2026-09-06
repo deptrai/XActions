@@ -269,6 +269,17 @@ flowchart TB
   4. **Consumer Identification:** Service Bearer Token (`XACTIONS_MCP_API_KEY`) phân biệt consumer qua header `X-Consumer-Id: nowing | chainlens`.
   5. **ChainLens-Research Consumer (Luồng A — Live Domain Grounding):** ChainLens-Research gọi XActions MCP tools (`x_facebook_group_posts`, `x_search_tweets`, `x_shopee_search`) qua HTTP Keep-Alive tới `http://xactions:3001/mcp` khi Deep/Wide Research cần dữ liệu thực địa từ MXH. Đây là best-effort enhancement — nếu XActions offline, ChainLens tiếp tục pipeline bình thường.
 
+### AD-22 — Vietnam Geo-Consistent Proxy & Locale Binding [ADOPTED - NEW]
+* **Binds:** `src/proxy/proxy-pool.js`, `src/core/adaptive-governor.js`, `src/agents/antiDetection.js`, `src/scrapers/**`
+* **Prevents:** VN platforms (Zalo, VN e-commerce, VN government sites) geo-block hoặc trả nội dung khác cho non-VN IPs; locale/timezone mismatch giữa proxy region và browser fingerprint là tín hiệu bot dễ detect.
+* **Rule:**
+  1. **VN Proxy Region:** `ProxyIpPool.getNext({ region: 'VN' })` lọc proxy được tag `region: 'VN'`. Tất cả request đến `*.vn` domains, `zalo.me`, `chotot.com`, `batdongsan.com.vn`, `masothue.com`, `pasgo.vn`, `foody.vn`, `muasamcong.mpi.gov.vn` phải route qua VN proxy.
+  2. **Locale/Timezone Consistency:** `FingerprintManager` (Epic 27.1) phải bind `timezone: 'Asia/Ho_Chi_Minh'` và `locale: 'vi-VN'` khi proxy region là VN. Mismatch → flag `geo_mismatch` trong governor status.
+  3. **Zalo OA Auth:** Zalo OA API (`openapi.zalo.me`) requires `accessToken` từ Zalo Business. Stored trong `AccountPool` với key `zalo:oa:<oaId>`. Không dùng `authCookie` pattern.
+  4. **YouTube API Key:** `YOUTUBE_API_KEY` env var cho YouTube Data API v3. `regionCode: 'VN'` cho VN-specific results. HTML fallback (`yt-dlp`/`invidious`) khi quota exhausted.
+  5. **VN Platform Mobile APIs:** PasGo, Foody, Chotot sử dụng TLS fingerprint spoofing (reuse Shopee `got-scraping` pattern từ Story 16.1).
+* **Applies to:** Epic 21 (B2B registry + automotive), Epic 22 (F&B + healthcare + legal), Epic 33 (Zalo + YouTube VN), và mọi VN platform tương lai.
+
 ### AD-14 — Operational Status & Error Envelope for Consumers [ADOPTED - NEW]
 * **Binds:** `src/mcp/**`, `src/api/**`, `src/cli/**`, `src/core/error-envelope.js`, `src/core/status-api.js`
 * **Prevents:** AI agents, CLI users, và operators nhận lỗi không đồng nhất hoặc bị "silent stall" khi hệ thống tự điều tiết; hai surface khác nhau (MCP, HTTP, CLI) trả về status/error shape khác nhau.
@@ -511,6 +522,14 @@ Spine r3 đã hấp thụ 10 UX findings từ `ARCHITECTURE-UX-REVIEW-2026-08-18
 Tất cả AD UX đã được chuyển thành story acceptance criteria trong `epics.md` và `ARCHITECTURE-UX-REMEDIATION-2026-08-21.md`.
 
 ### Decision Changelog bổ sung (2026-08-27 — Action-Level Granular Auth & Proxy)
+
+### Decision Changelog bổ sung (2026-09-05 — Vietnam Market Pivot)
+
+* **AD-22 adopted:** VN geo-consistent proxy & locale binding for all VN-market crawlers.
+* **Epic 21–22 reactivated:** Moved from backlog to Phase A priority.
+* **Epic 33 added:** Zalo OA + YouTube VN — net-new platforms.
+* **Roadmap resequenced:** VN crawlers (Phase A) → Infrastructure (Phase B) → Advanced features (Phase C) → Finalization (Phase D).
+* **Trigger:** Strategic pivot to Vietnam market focus for Nowing AI Lead Hub, approved by Product Council (Luisphan).
 
 * AD-3: Đổi tiêu đề thành "Proxy Strategy by Auth Mode (Platform + Action Level)"; thêm rule 3b — **Action-Level Auth Granularity** (`ActionDescriptor.requiresAuth` override cờ platform), **Token Ring Partition by Auth Mode** (tách guest lsd/jazoest khỏi account-bound fb_dtsg/c_user chống leak token qua IP xoay - F1), **Opt-in Auth Governor Gate** (accountId truyền trên no-auth action vẫn chịu governor velocity/hibernation - F2), **Dual-Pool Assignment** (no-auth rotating mặc định Bulk Pool - F6), và **invariant điều phối Sticky ↔ Rotating Residential Proxy** (một request thuộc đúng một chế độ; account đã đăng nhập không bao giờ bị xoay IP per-request).
 * AD-11: Thêm rule 3 — **Action-Level Auth Resolution trong `start()`** (`actionRequiresAuth = entry.descriptor.requiresAuth ?? this.requiresAuth`) bao gồm nhánh xử lý opt-in auth (F2); pin `requiresAuth` đã phân giải vào shape `listActions()` (thay `category` bằng `optionalArgs`/`outputType` cho khớp implementation).
