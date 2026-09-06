@@ -66,6 +66,8 @@ import { BatdongsanCrawler } from './realestate/batdongsan/crawler.js';
 import { BatdongsanClient } from './realestate/batdongsan/client.js';
 import { MaSoThueCrawler } from './procurement/masothue/crawler.js';
 import { MaSoThueClient } from './procurement/masothue/client.js';
+import { AutomotiveCrawler } from './vehicles/automotive/crawler.js';
+import { AutomotiveClient } from './vehicles/automotive/client.js';
 import { BlueskyCrawler } from './social/bluesky/crawler.js';
 import { BlueskyClient } from './social/bluesky/client.js';
 import {
@@ -81,6 +83,7 @@ import linkedin from './recruitment/linkedin/index.js';
 import chotot from './realestate/chotot/index.js';
 import batdongsan from './realestate/batdongsan/index.js';
 import masothue from './procurement/masothue/index.js';
+import automotive from './vehicles/automotive/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -168,6 +171,10 @@ export const platforms = {
   masothue,
   maso_thue: masothue,
   mst: masothue,
+  automotive,
+  oto_vn: automotive,
+  bonbanh: automotive,
+  chotot_xe: automotive,
 };
 
 /**
@@ -1392,6 +1399,70 @@ export async function scrape(platform, action, options = {}) {
     }
   }
 
+  // ── Automotive Vehicles Market path (Story 21.2) ──
+  if (platformName === 'automotive' || platformName === 'oto_vn' || platformName === 'bonbanh' || platformName === 'chotot_xe') {
+    /** @type {Record<string, string>} */
+    const AUTOMOTIVE_ACTION_MAP = {
+      search: 'search',
+      list: 'list',
+      detail: 'detail',
+      vehicle_detail: 'detail',
+    };
+
+    const mappedAction = AUTOMOTIVE_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(AUTOMOTIVE_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.platform) mappedArgs.platform = options.platform;
+    if (options.brand) mappedArgs.brand = options.brand;
+    if (options.model) mappedArgs.model = options.model;
+    if (options.city) mappedArgs.city = options.city;
+    if (options.yearMin != null) mappedArgs.yearMin = Number(options.yearMin);
+    if (options.yearMax != null) mappedArgs.yearMax = Number(options.yearMax);
+    if (options.priceMin != null) mappedArgs.priceMin = Number(options.priceMin);
+    if (options.priceMax != null) mappedArgs.priceMax = Number(options.priceMax);
+    if (options.page != null) mappedArgs.page = Number(options.page);
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.id) mappedArgs.id = options.id;
+    if (options.slug) mappedArgs.slug = options.slug;
+
+    const client = new AutomotiveClient({
+      targetPlatform: options.targetPlatform || platformName,
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+      userAgent: options.userAgent,
+    });
+
+    const crawler = new AutomotiveCrawler({
+      client,
+      store,
+      publisher: options.publisher || options.eventPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
   // Threads hybrid path — no Puppeteer, dispatches to ThreadsCrawler.
   // This branch is evaluated first so legacy actionMap / platform lookups
   // do not block the new hybrid GraphQL flow.
@@ -1881,6 +1952,8 @@ export default {
   MastodonClient,
   MaSoThueCrawler,
   MaSoThueClient,
+  AutomotiveCrawler,
+  AutomotiveClient,
   createBlueskyClient,
   createBlueskyCrawler,
   createMastodonClient,
@@ -1939,6 +2012,16 @@ export function createMaSoThueCrawler(client, options = {}) {
   const resolvedClient = client instanceof MaSoThueClient ? client : new MaSoThueClient(client || options || {});
   const resolvedOptions = client instanceof MaSoThueClient ? options : (options || {});
   return new MaSoThueCrawler({ client: resolvedClient, ...resolvedOptions });
+}
+
+export function createAutomotiveClient(options = {}) {
+  return new AutomotiveClient(options);
+}
+
+export function createAutomotiveCrawler(client, options = {}) {
+  const resolvedClient = client instanceof AutomotiveClient ? client : new AutomotiveClient(client || options || {});
+  const resolvedOptions = client instanceof AutomotiveClient ? options : (options || {});
+  return new AutomotiveCrawler({ client: resolvedClient, ...resolvedOptions });
 }
 
 // Named re-exports for adapter utilities
