@@ -72,67 +72,6 @@ export class MaSoThueCrawler extends AbstractCrawler {
   }
 
   /**
-   * Extract plain text blocks containing tax code patterns from HTML.
-   * @param {string} html
-   * @returns {string[]}
-   */
-  #extractCompanyBlocks(html) {
-    // Strip HTML tags but keep text structure for regex matching.
-    const text = html
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    // Split by tax code occurrences.
-    const taxCodePattern = /\b\d{9,13}\b/g;
-    const blocks = [];
-    let lastEnd = 0;
-    let m;
-    while ((m = taxCodePattern.exec(text)) !== null) {
-      const taxCode = m[0];
-      // Capture surrounding ~200 chars for context
-      const start = Math.max(0, m.index - 200);
-      const end = Math.min(text.length, m.index + 200);
-      blocks.push({ taxCode, context: text.slice(start, end) });
-    }
-    return blocks;
-  }
-
-  /**
-   * Extract a labeled field value from a text block.
-   * @param {string} block
-   * @param {string} label
-   * @returns {string}
-   */
-  #extractField(block, label) {
-    const idx = block.indexOf(label);
-    if (idx === -1) return '';
-    // Value runs until next label or end.
-    const after = block.slice(idx + label.length);
-    const nextLabelIdx = after.search(/(Mã số thuế|Địa chỉ|Ngành nghề chính|Tên công ty|Doanh nghiệp|Đại diện|Ngày thành lập|Vốn điều lệ)/i);
-    const value = nextLabelIdx === -1 ? after : after.slice(0, nextLabelIdx);
-    return value.replace(/^[:\s]+/, '').replace(/[:\s]+$/, '').trim();
-  }
-
-  /**
-   * Extract company name from a context block.
-   * @param {string} context
-   * @param {string} taxCode
-   * @returns {string}
-   */
-  #extractCompanyName(context, taxCode) {
-    // Try pattern "TAXCODE - Company Name"
-    const direct = context.match(new RegExp(`${taxCode}\\s*[-–—]\\s*([^\\n<]{5,200})`));
-    if (direct) return direct[1].trim();
-    // Try label-based extraction
-    const name = this.#extractField(context, 'Tên công ty');
-    if (name) return name;
-    return `Company ${taxCode}`;
-  }
-
-  /**
    * Extract PostItem[] from a MaSoThue HTML response.
    * @param {string} html
    * @param {'search' | 'province' | 'detail'} kind
@@ -140,51 +79,33 @@ export class MaSoThueCrawler extends AbstractCrawler {
    * @returns {PostItem[]}
    */
   #extractItems(html, kind = 'search', context = {}) {
-    const items = [];
-    const now = new Date();
+    return normalizeMaSoThueResults(html, kind, {
+      province: context.province,
+      taxCode: context.taxCode,
+    });
+  }
 
-    if (typeof html !== 'string' || html.length < 100) {
-      return items;
+  /**
+   * Resolve a detail slug from search results when caller omits it.
+   * @param {string} taxCode
+   * @param {string} [providedSlug]
+   * @returns {Promise<string | undefined>}
+   */
+  async #resolveDetailSlug(taxCode, providedSlug) {
+    if (providedSlug) return providedSlug;
+    try {
+      const response = await this.client.search({ q: taxCode, type: 'auto' });
+      const html = response.body || response.data || '';
+      const items = normalizeMaSoThueResults(html, 'search');
+      const item = items.find((i) => i.externalId === taxCode);
+      if (item?.metadata?.detailUrl) {
+        const match = item.metadata.detailUrl.match(/\/\d{9,13}(?:-\d{1,3})?-(.+)$/);
+        if (match) return match[1];
+      }
+    } catch {
+      // Continue to attempt bare detail; if it 404s, caller should provide slug.
     }
-
-    const blocks = this.#extractCompanyBlocks(html);
-    const provinceInfo = resolveProvince(context.province) || {};
-
-    for (const { taxCode, context: block } of blocks) {
-      if (!taxCode || taxCode.length < 9) continue;
-      const companyName = this.#extractCompanyName(block, taxCode);
-      const address = this.#extractField(block, 'Địa chỉ') || '';
-      const businessLines = this.#extractField(block, 'Ngành nghề chính') || '';
-
-      items.push({
-        id: `masothue:${taxCode}`,
-        platform: 'masothue',
-        externalId: taxCode,
-        category: 'b2b',
-        authorId: taxCode,
-        authorName: companyName,
-        content: `Mã số thuế: ${taxCode}${companyName ? ` — ${companyName}` : ''}${address ? ` — ${address}` : ''}`,
-        metadata: {
-          taxCode,
-          companyName,
-          address,
-          businessLines,
-          detailUrl: `https://masothue.com/${taxCode}`,
-          province: provinceInfo.name || context.province || '',
-        },
-        crawledAt: now,
-      });
-    }
-
-    // Fallback: normalizer regex if no structured blocks found
-    if (items.length === 0) {
-      return normalizeMaSoThueResults(html, kind, {
-        province: context.province,
-        detailUrl: context.taxCode ? `https://masothue.com/${context.taxCode}` : undefined,
-      });
-    }
-
-    return items;
+    return undefined;
   }
 
   /**
@@ -209,7 +130,7 @@ export class MaSoThueCrawler extends AbstractCrawler {
     const response = await this.client.search({ q, type: searchType });
     const html = response.body || response.data || '';
 
-    const posts = this.#extractItems(html, 'search', { keyword: q });
+    const posts = this.#extractItems(html, 'search', { province: args.province });
     const limit = Math.max(1, Number(args.limit) || 10);
 
     if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
@@ -293,10 +214,11 @@ export class MaSoThueCrawler extends AbstractCrawler {
       });
     }
 
-    const response = await this.client.detail({ taxCode, slug: args.slug });
+    const slug = await this.#resolveDetailSlug(taxCode, args.slug);
+    const response = await this.client.detail({ taxCode, slug });
     const html = response.body || response.data || '';
 
-    const posts = this.#extractItems(html, 'detail', { taxCode });
+    const posts = this.#extractItems(html, 'detail', { taxCode, province: args.province });
 
     if (!posts.length) {
       throw new PlatformError({

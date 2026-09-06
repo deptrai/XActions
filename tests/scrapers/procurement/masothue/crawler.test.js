@@ -159,7 +159,7 @@ describe('Story 21.1 — MaSoThue Company Registry Crawler', () => {
       expect(item.category).toBe('b2b');
       expect(item.metadata.taxCode).toBe('0013180180');
       expect(item.metadata.companyName).toContain('CÔNG TY TNHH');
-      expect(item.metadata.detailUrl).toBe('https://masothue.com/0013180180');
+      expect(item.metadata.detailUrl).toBe('https://masothue.com/0013180180-cong-ty-tnhh-nguyen-dai');
     });
 
     it('search_by_province returns companies for valid province', async () => {
