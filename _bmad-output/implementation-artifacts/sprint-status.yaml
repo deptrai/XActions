@@ -164,8 +164,9 @@ development_status:
   # NOTE: 2026-09-05 — Reactivated for Vietnam market pivot. PRD FR-94, FR-95 added.
   # Feasibility verified by live probes (research/technical-vietnam-multi-domain-scrapers-2026-08-21.md).
   epic-21: in-progress
-  21-1-b2b-tender-company-registry-crawler: ready-for-dev
+  21-1-masothue-company-registry-crawler: ready-for-dev
   21-2-automotive-vehicles-market-crawler: ready-for-dev
+  21-3-hosocongty-muasamcong-crawler: backlog
   epic-21-retrospective: optional
 
   # --- Epic 22: Local F&B Merchant, Healthcare & Legal Intelligence Engine ---

@@ -27,6 +27,20 @@ So that **Nowing AI Lead Hub tự động phát hiện và chấm điểm khách
 * **And** chuẩn hóa theo schema `PostItem` (`platform: 'masothue' | 'muasamcong' | 'hosocongty'`, `category: 'b2b_lead'`)
 * **And** lưu vào PostgreSQL qua `PrismaStore` và phát Thin Event vào Redis Stream `stream:social:raw_posts`.
 
+### Story 21.3: HoSoCongTy & MuaSamCong Crawler (Cloudflare/SPA fallback)
+As a **B2B Procurement Analyst**,  
+I want **to scrape `hosocongty.vn` and `muasamcong.mpi.gov.vn` once Cloudflare/SPA blockers are resolved**,  
+So that **Nowing has richer company director/phone data and tender details beyond the MaSoThue baseline**.
+
+**Acceptance Criteria:**
+* **Given** `B2BRegistryExtendedCrawler` in `src/scrapers/procurement/b2b-registry-extended/index.js` extends `AbstractCrawler`
+* **When** calling `scrape('hosocongty','company',{ taxCode })` or `scrape('muasamcong','search_tenders',{ keyword })`
+* **Then** scraper uses a documented Cloudflare bypass (Epic 27 TLS/JA4 or StealthBrowser cookie warmup) for HoSoCongTy and HTML/authenticated API fallback for MuaSamCong
+* **And** extracts full fields: `taxCode`, `companyName`, `representativeName`, `phone`, `businessLines`, `charterCapital`, `establishedDate`, `tenderValue`, `tendererName`, `bidderList`
+* **And** normalizes to `PostItem` (`platform: 'hosocongty' | 'muasamcong'`, `category: 'b2b_lead'`)
+* **And** persists via `PrismaStore` and publishes `ThinEvent` to `stream:social:raw_posts`
+* **Note:** This story is **blocked** until `technical-cloudflare-vn-b2b-endpoints-2026-09-06` unblocking conditions are met.
+
 ### Story 21.2: Automotive & Vehicles Market Crawler (Oto.com.vn, Bonbanh & Chợ Tốt Xe)
 As an **Automotive Trader & Auto Finance Lead Broker**,
 I want **cào danh mục tin rao bán ô tô, xe máy, xe điện từ các chuyên trang `Oto.com.vn`, `Bonbanh.com` và `Chợ Tốt Xe`**,

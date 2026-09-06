@@ -106,7 +106,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-91 (Utility Scripts & Adapters Consolidation):** Audit và quyết định deprecation cho `src/scrapers/*.js` độc lập và `src/scrapers/adapters/`. Convert các tính năng hữu ích (video download, bookmark export, thread unroll) thành `CrawlerCommand` action hoặc chuyển vào `archive/`. Thu gọn adapter layer về `http`, `playwright`, `puppeteer` provider duy nhất.
 * **FR-92 (Unified Dispatcher & Backward Compatibility):** `src/scrapers/index.js` trở thành thin dispatcher duy nhất cho mọi platform qua `scrape(platform, action, args)`. Tất cả MCP/CLI/API caller gọi `CrawlerCommand` thay vì import platform cụ thể. Giữ `package.json` exports backward-compatible cho ít nhất 1 release cycle.
 * **FR-93 (Legacy Decommission):** Xóa `src/client/Scraper.js`, `src/scrapers/twitter/`, `src/scrapers/facebook/`, `src/scrapers/threads/` (legacy), `src/scrapers/bluesky/` (legacy), `src/scrapers/mastodon/` (legacy), và `src/scrapers/adapters/` sau khi đạt shadow-run parity ≥ 99% trong 7 ngày.
-* **FR-94 (Vietnam B2B Registry & Tender Crawler):** Cào danh bạ doanh nghiệp mới thành lập (MST, người đại diện, SĐT, ngành nghề) từ `masothue.com`, `hosocongty.vn` và dữ liệu đấu thầu từ `muasamcong.mpi.gov.vn` qua `AbstractCrawler` + `ProxyIpPool`. Chuẩn hóa `PostItem` (`platform: 'masothue' | 'muasamcong' | 'hosocongty'`, `category: 'b2b_lead'`). (Epic 21.1)
+* **FR-94 (Vietnam B2B Registry & Tender Crawler):** Cào danh bạ doanh nghiệp mới thành lập (MST, người đại diện, SĐT, ngành nghề) từ `masothue.com` (HTTP-only) và `hosocongty.vn`, `muasamcong.mpi.gov.vn` (deferred to Epic 21.3 pending Cloudflare/SPA bypass). Chuẩn hóa `PostItem` (`platform: 'masothue' | 'hosocongty' | 'muasamcong'`, `category: 'b2b_lead'`). (Epic 21.1 + 21.3)
 * **FR-95 (Vietnam Automotive Market Crawler):** Cào tin rao bán ô tô, xe máy, xe điện từ `oto.com.vn`, `bonbanh.com`, `xe.chotot.com` kèm SĐT chính chủ, hãng/dòng/năm/giá. Chuẩn hóa `PostItem` (`category: 'automotive'`). (Epic 21.2)
 * **FR-96 (Vietnam F&B, Healthcare & Legal Directory Crawler):** Cào danh bạ nhà hàng/quán cafe (PasGo, Foody, Riviu), phòng khám/nhà thuốc (Medpro, YouMed, Thuocsi), và đơn đăng ký nhãn hiệu (IP Vietnam `wipo.ipvietnam.gov.vn`). Chuẩn hóa `PostItem` (`category: 'fnb_merchant' | 'healthcare' | 'legal'`). (Epic 22.1–22.3)
 * **FR-97 (Zalo OA & YouTube VN Crawler):** Cào Zalo Official Account posts/followers qua Zalo OA API v3.0 (`openapi.zalo.me`) và YouTube VN channels/videos/comments qua YouTube Data API v3 với `regionCode: 'VN'`. HTML fallback khi API quota exhausted. Chuẩn hóa `PostItem` (`platform: 'zalo' | 'youtube'`). (Epic 33)
@@ -219,7 +219,8 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Epic 24 | FR-91 |
 | Epic 25 | FR-92 |
 | Epic 26 | FR-93 |
-| Epic 21 | FR-94, FR-95 |
+| Epic 21.1 | FR-94 |
+| Epic 21.3 | FR-94 |
 | Epic 22 | FR-96 |
 | Epic 33 | FR-97 |
 | Story 10.5 | FR-86 |

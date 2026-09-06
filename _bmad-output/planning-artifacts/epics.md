@@ -1828,7 +1828,8 @@ Phase D — Finalization:
 | Facebook | ✅ Done | 13.3–13.10 | Social |
 | TikTok | ✅ Done | 15.2 | Social |
 | Threads | ✅ Done | 15.1 | Social |
-| MaSoThue/HoSoCongTy/MuaSamCong | 📋 Spec ready | 21.1 | B2B registry |
+| MaSoThue | ✅ Feasible (HTTP-only) | 21.1 | B2B registry |
+| HoSoCongTy/MuaSamCong | 🟡 Blocked (Cloudflare/SPA) | 21.3 | B2B registry |
 | Oto/Bonbanh/ChototXe | 📋 Spec ready | 21.2 | Automotive |
 | PasGo/Foody/Riviu | 📋 Spec ready | 22.1 | F&B |
 | Medpro/YouMed/Thuocsi | 📋 Spec ready | 22.2 | Healthcare |
