@@ -1,5 +1,5 @@
 # generated: "08-27-2026 06:00"
-# last_updated: "2026-09-05"
+# last_updated: "2026-09-06"
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: "2026-09-05 06:30"
+last_updated: "2026-09-06 07:00"
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -160,25 +160,17 @@ development_status:
   19-10-admin-mcp-tools: done
   epic-19-retrospective: optional
 
-  # --- Epic 20: Nowing Cutover & Legacy Scraper Decommissioning ---
-  # Blocked until Epics 13-18 are complete. Will decommission src/client/, src/scrapers/twitter/,
-  # src/scrapers/facebook/, src/scrapers/threads/ and src/scrapers/twitter/http/ once new crawlers stable.
-  epic-20: backlog
-  20-1-nowing-shadow-run-adapter-over-xactions-daemon: backlog
-  20-2-legacy-scraper-code-decommissioning: backlog
-  epic-20-retrospective: optional
-
   # --- Epic 21: B2B Procurement, Corporate & Automotive Intelligence Engine ---
   # NOTE: 2026-09-05 — Reactivated for Vietnam market pivot. PRD FR-94, FR-95 added.
   # Feasibility verified by live probes (research/technical-vietnam-multi-domain-scrapers-2026-08-21.md).
-  epic-21: ready-for-dev
+  epic-21: in-progress
   21-1-b2b-tender-company-registry-crawler: ready-for-dev
   21-2-automotive-vehicles-market-crawler: ready-for-dev
   epic-21-retrospective: optional
 
   # --- Epic 22: Local F&B Merchant, Healthcare & Legal Intelligence Engine ---
   # NOTE: 2026-09-05 — Reactivated for Vietnam market pivot. PRD FR-96 added.
-  epic-22: ready-for-dev
+  epic-22: in-progress
   22-1-fnb-merchant-restaurant-directory-crawler: ready-for-dev
   22-2-healthcare-clinics-pharmacy-network-crawler: ready-for-dev
   22-3-legal-trademark-intellectual-property-crawler: ready-for-dev
@@ -258,6 +250,14 @@ development_status:
   32-1-rate-budget-dashboard: backlog
   32-2-distributed-token-bucket: backlog
   epic-32-retrospective: optional
+
+  # --- Epic 20: Nowing Cutover & Legacy Scraper Decommissioning ---
+  # Blocked until Epics 13-18 are complete. Will decommission src/client/, src/scrapers/twitter/,
+  # src/scrapers/facebook/, src/scrapers/threads/ and src/scrapers/twitter/http/ once new crawlers stable.
+  epic-20: backlog
+  20-1-nowing-shadow-run-adapter-over-xactions-daemon: backlog
+  20-2-legacy-scraper-code-decommissioning: backlog
+  epic-20-retrospective: optional
 
   # --- Epic 26: Legacy Decommission Final ---
   epic-26: backlog
