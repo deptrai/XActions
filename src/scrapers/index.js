@@ -1405,7 +1405,6 @@ export async function scrape(platform, action, options = {}) {
     }
   }
 
-  // ── Automotive Vehicles Market path (Story 21.2) ──
   // ── B2B Registry Extended path (Story 21.3) ──
   if (platformName === 'b2b_registry_extended' || platformName === 'hosocongty' || platformName === 'muasamcong') {
     /** @type {Record<string, string>} */
@@ -1435,7 +1434,7 @@ export async function scrape(platform, action, options = {}) {
     if (options.taxCode) mappedArgs.taxCode = options.taxCode;
     if (options.notifyNo || options.tenderNo) mappedArgs.notifyNo = options.notifyNo || options.tenderNo;
     if (options.id) mappedArgs.id = options.id;
-    if (options.platform) mappedArgs.platform = options.platform;
+    mappedArgs.platform = options.platform || (platformName === "muasamcong" || action.includes("tender") || options.notifyNo || options.tenderNo ? "muasamcong" : (platformName === "hosocongty" ? "hosocongty" : "b2b_registry_extended"));
     if (options.searchType) mappedArgs.searchType = options.searchType;
     if (options.searchScope) mappedArgs.searchScope = options.searchScope;
     if (options.searchBy) mappedArgs.searchBy = options.searchBy;
@@ -1444,7 +1443,7 @@ export async function scrape(platform, action, options = {}) {
     if (options.slug) mappedArgs.slug = options.slug;
 
     const client = new B2BRegistryExtendedClient({
-      targetPlatform: options.targetPlatform || platformName,
+      targetPlatform: options.targetPlatform || (mappedArgs.platform === "muasamcong" ? "muasamcong" : "hosocongty"),
       baseUrl: options.baseUrl,
       proxy: options.proxy,
       proxyPool: options.proxyPool,
@@ -1474,6 +1473,7 @@ export async function scrape(platform, action, options = {}) {
     }
   }
 
+  // ── Automotive Vehicles Market path (Story 21.2) ──
   if (platformName === 'automotive' || platformName === 'oto_vn' || platformName === 'bonbanh' || platformName === 'chotot_xe') {
     /** @type {Record<string, string>} */
     const AUTOMOTIVE_ACTION_MAP = {
@@ -2037,6 +2037,10 @@ export default {
   createMastodonCrawler,
   createMaSoThueClient,
   createMaSoThueCrawler,
+  createAutomotiveClient,
+  createAutomotiveCrawler,
+  createB2BRegistryExtendedClient,
+  createB2BRegistryExtendedCrawler,
 
   // Plugin scrapers lookup
   getPluginScraper,
@@ -2101,6 +2105,16 @@ export function createAutomotiveCrawler(client, options = {}) {
   return new AutomotiveCrawler({ client: resolvedClient, ...resolvedOptions });
 }
 
+export function createB2BRegistryExtendedClient(options = {}) {
+  return new B2BRegistryExtendedClient(options);
+}
+
+export function createB2BRegistryExtendedCrawler(client, options = {}) {
+  const resolvedClient = client instanceof B2BRegistryExtendedClient ? client : new B2BRegistryExtendedClient(client || options || {});
+  const resolvedOptions = client instanceof B2BRegistryExtendedClient ? options : (options || {});
+  return new B2BRegistryExtendedCrawler({ client: resolvedClient, ...resolvedOptions });
+}
+
 // Named re-exports for adapter utilities
 export {
   FacebookCrawler,
@@ -2109,6 +2123,12 @@ export {
   BlueskyClient,
   MastodonCrawler,
   MastodonClient,
+  MaSoThueCrawler,
+  MaSoThueClient,
+  AutomotiveCrawler,
+  AutomotiveClient,
+  B2BRegistryExtendedCrawler,
+  B2BRegistryExtendedClient,
   getAdapter,
   getAvailableAdapter,
   setDefaultAdapter,

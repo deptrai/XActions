@@ -9,11 +9,11 @@ export { MaSoThueCrawler } from './crawler.js';
 export { MaSoThueClient, MASOTHUE_BASE_URL } from './client.js';
 export { MaSoThuePlatformResponseValidator } from './validator.js';
 export {
-  normalizeMaSoThueResults,
   resolveProvince,
   normalizeProvinceSlug,
   MASOTHUE_PROVINCES,
 } from './schema.js';
+export { normalizeMaSoThueResults } from './normalizer.js';
 
 import { MaSoThueClient } from './client.js';
 import { MaSoThueCrawler } from './crawler.js';

@@ -7,7 +7,12 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createServer } from 'node:http';
-import { B2BRegistryExtendedClient, HOSOCONGTY_BASE_URL, MUASAMCONG_BASE_URL } from '../../../../src/scrapers/procurement/b2b-registry-extended/client.js';
+import {
+  B2BRegistryExtendedClient,
+  HOSOCONGTY_BASE_URL,
+  MUASAMCONG_BASE_URL,
+} from '../../../../src/scrapers/procurement/b2b-registry-extended/client.js';
+import { parseVietnameseDate } from '../../../../src/scrapers/procurement/b2b-registry-extended/normalizer.js';
 
 const HOSOCONGTY_DETAIL_HTML = `
 <!DOCTYPE html><html><body>
@@ -117,6 +122,24 @@ beforeAll(() => new Promise((resolve) => {
 afterAll(() => new Promise((resolve) => server.close(resolve)));
 
 describe('B2BRegistryExtendedClient', () => {
+  it('should expose default platform base URLs', () => {
+    expect(HOSOCONGTY_BASE_URL).toBe('https://hosocongty.vn');
+    expect(MUASAMCONG_BASE_URL).toBe('https://muasamcong.mpi.gov.vn');
+
+    const defaultClient = new B2BRegistryExtendedClient({ requiresProxy: false });
+    expect(defaultClient.hosocongtyBaseUrl).toBe('https://hosocongty.vn');
+    expect(defaultClient.muasamcongBaseUrl).toBe('https://muasamcong.mpi.gov.vn');
+  });
+
+  it('should support querying both MuaSamCong and HoSoCongTy on a single client', async () => {
+    const client = new B2BRegistryExtendedClient({ baseUrl, requiresProxy: false });
+    const tenderResp = await client.searchTendersMuasamcong({ keyword: 'xây dựng' });
+    expect(tenderResp.body).toContain('IB2600511963-00');
+
+    const companyResp = await client.companyDetailHosocongty({ taxCode: '0123456789' });
+    expect(companyResp.body).toContain('CÔNG TY TNHH ABC');
+  });
+
   it('should build Muasamcong search URL with proper params', async () => {
     const client = new B2BRegistryExtendedClient({ targetPlatform: 'muasamcong', baseUrl, requiresProxy: false });
     const resp = await client.searchTendersMuasamcong({ keyword: 'xây dựng' });
@@ -138,12 +161,36 @@ describe('B2BRegistryExtendedClient', () => {
     expect(resp.body).toContain('0123456789');
   });
 
-  it('should detect Cloudflare challenge as bot_challenge', async () => {
+  it('should detect Cloudflare challenge as bot_challenge without false positives on benign challenge mentions', async () => {
     const client = new B2BRegistryExtendedClient({ targetPlatform: 'hosocongty', baseUrl: `${baseUrl}/cloudflare`, requiresProxy: false });
-    // Set responseValidator manually to avoid got-scraping path in tests
     const validator = client.responseValidator;
-    const mockResponse = { status: 403, body: CLOUDFLARE_HTML };
-    expect(validator.isBotChallenge(mockResponse)).toBe(true);
-    expect(validator.isValidPayload(mockResponse)).toBe(false);
+    const mockChallenge = { status: 403, body: CLOUDFLARE_HTML };
+    expect(validator.isBotChallenge(mockChallenge)).toBe(true);
+    expect(validator.isValidPayload(mockChallenge)).toBe(false);
+
+    // Benign mention of "challenge" on a 200 business page must not be flagged
+    const benignResponse = {
+      status: 200,
+      body: '<html><body>Tên công ty: Innovation Challenge Corp. Mã số thuế: 0123456789. HoSoCongTy.vn</body></html>',
+    };
+    expect(validator.isBotChallenge(benignResponse)).toBe(false);
+    expect(validator.isValidPayload(benignResponse)).toBe(true);
+  });
+
+  it('should accurately parse Vietnamese dates', () => {
+    const d1 = parseVietnameseDate('07/09/2026 - 02:07');
+    expect(d1).toBeInstanceOf(Date);
+    expect(d1?.getUTCFullYear()).toBe(2026);
+    expect(d1?.getUTCMonth()).toBe(8); // Sept (0-indexed)
+    expect(d1?.getUTCDate()).toBe(6); // 02:07 +07 is 19:07 UTC on previous day
+
+    const d2 = parseVietnameseDate('15/03/2010');
+    expect(d2).toBeInstanceOf(Date);
+    expect(d2?.getUTCFullYear()).toBe(2010);
+    expect(d2?.getUTCMonth()).toBe(2);
+
+    expect(parseVietnameseDate(null)).toBeNull();
+    expect(parseVietnameseDate('')).toBeNull();
+    expect(parseVietnameseDate('not-a-date')).toBeNull();
   });
 });

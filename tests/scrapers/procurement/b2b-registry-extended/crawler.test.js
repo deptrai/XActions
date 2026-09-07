@@ -9,6 +9,12 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createServer } from 'node:http';
 import { B2BRegistryExtendedCrawler } from '../../../../src/scrapers/procurement/b2b-registry-extended/index.js';
 import { B2BRegistryExtendedClient } from '../../../../src/scrapers/procurement/b2b-registry-extended/client.js';
+import {
+  scrape,
+  getPlatform,
+  createB2BRegistryExtendedCrawler,
+  createB2BRegistryExtendedClient,
+} from '../../../../src/scrapers/index.js';
 
 const HOSOCONGTY_DETAIL_HTML = `
 <!DOCTYPE html><html><body>
@@ -74,6 +80,11 @@ beforeAll(() => new Promise((resolve) => {
   server = createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
 
+    if (url.pathname.includes('/tra-cuu/notfound') || url.pathname.includes('notfound')) {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end('<!DOCTYPE html><html><body><div>Không tìm thấy dữ liệu</div></body></html>');
+      return;
+    }
     if (url.pathname.includes('/tra-cuu/')) {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(HOSOCONGTY_DETAIL_HTML);
@@ -117,7 +128,7 @@ function createTestClient(platform) {
 }
 
 describe('B2BRegistryExtendedCrawler', () => {
-  it('should search Muasamcong tenders and normalize PostItems', async () => {
+  it('should search Muasamcong tenders and normalize PostItems with valid publishedAt', async () => {
     const client = createTestClient('muasamcong');
     const crawler = new B2BRegistryExtendedCrawler({ client, requiresProxy: false });
     const result = await crawler.start({ action: 'search_tenders', args: { keyword: 'xây dựng' } });
@@ -130,6 +141,20 @@ describe('B2BRegistryExtendedCrawler', () => {
     expect(post.externalId).toBe('IB2600511963-00');
     expect(post.title).toContain('Cung cấp dịch vụ');
     expect(post.metadata.tenderNo).toBe('IB2600511963-00');
+    expect(post.publishedAt).toBeInstanceOf(Date);
+  });
+
+  it('should delegate search action to search_tenders when platform is muasamcong', async () => {
+    const client = createTestClient('muasamcong');
+    const crawler = new B2BRegistryExtendedCrawler({ client, requiresProxy: false });
+    const result = await crawler.start({
+      action: 'search',
+      args: { q: 'xây dựng', platform: 'muasamcong' },
+    });
+
+    expect(Array.isArray(result.posts)).toBe(true);
+    expect(result.posts.length).toBeGreaterThan(0);
+    expect(result.posts[0].platform).toBe('muasamcong');
   });
 
   it('should get Muasamcong tender detail', async () => {
@@ -141,6 +166,7 @@ describe('B2BRegistryExtendedCrawler', () => {
     expect(result.post.platform).toBe('muasamcong');
     expect(result.post.externalId).toBe('IB2600511963');
     expect(result.post.metadata.bidValue).toBe('133.000.000 VND');
+    expect(result.post.publishedAt).toBeInstanceOf(Date);
   });
 
   it('should get HoSoCongTy company detail', async () => {
@@ -152,6 +178,14 @@ describe('B2BRegistryExtendedCrawler', () => {
     expect(result.post.platform).toBe('hosocongty');
     expect(result.post.externalId).toBe('0123456789');
     expect(result.post.metadata.companyName).toContain('CÔNG TY TNHH ABC');
+    expect(result.post.publishedAt).toBeInstanceOf(Date);
+  });
+
+  it('should throw NOT_FOUND error when detail record cannot be resolved', async () => {
+    const client = createTestClient('hosocongty');
+    const crawler = new B2BRegistryExtendedCrawler({ client, requiresProxy: false });
+    await expect(crawler.start({ action: 'detail', args: { id: 'notfound' } }))
+      .rejects.toThrow(/not found/i);
   });
 
   it('should list actions', () => {
@@ -161,5 +195,117 @@ describe('B2BRegistryExtendedCrawler', () => {
     expect(names).toContain('search');
     expect(names).toContain('search_tenders');
     expect(names).toContain('detail');
+  });
+
+  it('should dispatch via unified scrape() interface for muasamcong and hosocongty', async () => {
+    const searchRes = await scrape('muasamcong', 'search', {
+      keyword: 'xây dựng',
+      baseUrl,
+      requiresProxy: false,
+    });
+    expect(searchRes.posts.length).toBeGreaterThan(0);
+    expect(searchRes.posts[0].platform).toBe('muasamcong');
+
+    const detailRes = await scrape('muasamcong', 'tender_detail', {
+      notifyNo: 'IB2600511963',
+      baseUrl,
+      requiresProxy: false,
+    });
+    expect(detailRes.post).toBeTruthy();
+    expect(detailRes.post.platform).toBe('muasamcong');
+
+    const companyRes = await scrape('hosocongty', 'company', {
+      taxCode: '0123456789',
+      baseUrl,
+      requiresProxy: false,
+    });
+    expect(companyRes.post).toBeTruthy();
+    expect(companyRes.post.platform).toBe('hosocongty');
+  });
+
+  it('should return valid adapter and factory instances for B2B extended scraper', () => {
+    const hscPlatform = getPlatform('hosocongty');
+    expect(hscPlatform).toBeTruthy();
+    expect(hscPlatform.B2BRegistryExtendedCrawler).toBe(B2BRegistryExtendedCrawler);
+    expect(hscPlatform.B2BRegistryExtendedClient).toBe(B2BRegistryExtendedClient);
+
+    const mscPlatform = getPlatform('muasamcong');
+    expect(mscPlatform).toBeTruthy();
+    expect(mscPlatform.B2BRegistryExtendedCrawler).toBe(B2BRegistryExtendedCrawler);
+    expect(mscPlatform.B2BRegistryExtendedClient).toBe(B2BRegistryExtendedClient);
+
+    const client = createB2BRegistryExtendedClient({ requiresProxy: false });
+    expect(client).toBeInstanceOf(B2BRegistryExtendedClient);
+
+    const crawlerFromClient = createB2BRegistryExtendedCrawler(client);
+    expect(crawlerFromClient).toBeInstanceOf(B2BRegistryExtendedCrawler);
+    expect(crawlerFromClient.client).toBe(client);
+
+    const crawlerFromOptions = createB2BRegistryExtendedCrawler({ requiresProxy: false });
+    expect(crawlerFromOptions).toBeInstanceOf(B2BRegistryExtendedCrawler);
+  });
+
+  it('should extract clean bidStatus and stable authorId without CSS class modifiers', async () => {
+    const client = createTestClient('muasamcong');
+    const crawler = new B2BRegistryExtendedCrawler({ client, requiresProxy: false });
+    const result = await crawler.start({ action: 'search_tenders', args: { keyword: 'xây dựng' } });
+
+    const post = result.posts[0];
+    expect(post.metadata.bidStatus).toBe('Chưa đóng thầu');
+    expect(post.authorId).toBe('Cục Quản trị Văn phòng Quốc hội');
+
+    const hscClient = createTestClient('hosocongty');
+    const hscCrawler = new B2BRegistryExtendedCrawler({ client: hscClient, requiresProxy: false });
+    const hscResult = await hscCrawler.start({ action: 'detail', args: { id: '0123456789' } });
+    expect(hscResult.post.authorId).toBe('hosocongty:0123456789');
+  });
+
+  it('should persist batch items to store and emit ThinEvents to publisher', async () => {
+    const client = createTestClient('muasamcong');
+    const store = {
+      stored: [],
+      async storeBatch(items) {
+        this.stored.push(...items);
+      },
+    };
+    const publisher = {
+      published: [],
+      async publish(event) {
+        this.published.push(event);
+      },
+    };
+
+    const crawler = new B2BRegistryExtendedCrawler({ client, store, publisher, requiresProxy: false });
+    const result = await crawler.start({ action: 'search_tenders', args: { keyword: 'xây dựng' } });
+
+    expect(store.stored.length).toBe(result.posts.length);
+    expect(publisher.published.length).toBe(result.posts.length);
+
+    const firstEvent = publisher.published[0];
+    expect(firstEvent).toMatchObject({
+      id: result.posts[0].id,
+      platform: 'muasamcong',
+      externalId: 'IB2600511963-00',
+      category: 'b2b',
+      authorId: 'Cục Quản trị Văn phòng Quốc hội',
+      storageRef: result.posts[0].id,
+    });
+    expect(firstEvent.crawledAt).toBeInstanceOf(Date);
+  });
+
+  it('should reject missing required arguments with PlatformError', async () => {
+    const crawler = new B2BRegistryExtendedCrawler({ requiresProxy: false });
+
+    await expect(crawler.start({ action: 'search', args: {} })).rejects.toThrow(
+      /Missing required argument: q/i,
+    );
+
+    await expect(crawler.start({ action: 'search_tenders', args: {} })).rejects.toThrow(
+      /Missing required argument: keyword/i,
+    );
+
+    await expect(crawler.start({ action: 'detail', args: {} })).rejects.toThrow(
+      /Missing required argument: id/i,
+    );
   });
 });

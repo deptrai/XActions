@@ -28,16 +28,42 @@ function stripTags(html) {
   return decodeEntities(html.replace(TAG_RE, ' ').replace(/\s+/g, ' ').trim());
 }
 
-function extractByLabel(html, label) {
-  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const m = html.match(new RegExp(`${escaped}[\\s:]+([^<\n]+)`, 'i'));
-  if (m) return stripTags(m[1]).trim();
-  return '';
+/**
+ * Parse Vietnamese date string formats:
+ * - "DD/MM/YYYY - HH:mm"
+ * - "DD/MM/YYYY HH:mm"
+ * - "DD/MM/YYYY"
+ * Returns valid Date or null.
+ * @param {string | null | undefined} raw
+ * @returns {Date | null}
+ */
+export function parseVietnameseDate(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  const dmyMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:(?:\s*-\s*|\s+)(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (dmyMatch) {
+    const [, day, month, year, hour = '0', min = '0', sec = '0'] = dmyMatch;
+    const iso = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${min.padStart(2, '0')}:${sec.padStart(2, '0')}+07:00`;
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const fallback = new Date(trimmed);
+  return isNaN(fallback.getTime()) ? null : fallback;
 }
 
-function extractByClass(html, className) {
-  const m = html.match(new RegExp(`class="[^"]*${className}[^"]*"[^>]*>([^<]+)`, 'i'));
-  return m ? stripTags(m[1]).trim() : '';
+function extractByLabel(html, label) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Try 1: tag-wrapped value right after label, e.g. label: <span>value</span> or label:</td><td>value</td>
+  const tagPattern = new RegExp(`${escaped}[\\s:]*(?:<[^>]+>\\s*)+([^<\\n]+)(?:<\\/[^>]+>)?`, 'i');
+  const tagMatch = html.match(tagPattern);
+  if (tagMatch && tagMatch[1].trim()) return stripTags(tagMatch[1]).trim();
+
+  // Try 2: direct text, e.g. label: value</
+  const directPattern = new RegExp(`${escaped}[\\s:]+([^<\\n]+)`, 'i');
+  const directMatch = html.match(directPattern);
+  if (directMatch && directMatch[1].trim()) return stripTags(directMatch[1]).trim();
+
+  return '';
 }
 
 function buildPostItem(input) {
@@ -85,31 +111,32 @@ function buildPostItem(input) {
  * @returns {import('../../../core/types.js').PostItem[]}
  */
 export function normalizeHosocongty(html, kind = 'search', context = {}) {
-  // HoSoCongTy real structure unknown (Cloudflare blocked probe).
-  // Use best-effort extraction from common VN company registry patterns.
   const items = [];
 
   if (kind === 'detail') {
-    const taxCode = context.taxCode || extractByLabel(html, 'Mã số thuế') || extractByLabel(html, 'Tax code') || 'unknown';
+    const extractedTaxCode = extractByLabel(html, 'Mã số thuế') || extractByLabel(html, 'Tax code') || '';
     const companyName = extractByLabel(html, 'Tên công ty') || extractByLabel(html, 'Company name') || '';
+    const taxCode = extractedTaxCode || context.taxCode || 'unknown';
     const representativeName = extractByLabel(html, 'Người đại diện') || extractByLabel(html, 'Representative') || '';
     const address = extractByLabel(html, 'Địa chỉ') || extractByLabel(html, 'Address') || '';
     const phone = extractByLabel(html, 'Số điện thoại') || extractByLabel(html, 'Phone') || '';
     const businessLines = extractByLabel(html, 'Ngành nghề') || extractByLabel(html, 'Business lines') || '';
     const charterCapital = extractByLabel(html, 'Vốn điều lệ') || extractByLabel(html, 'Charter capital') || '';
-    const establishedDate = extractByLabel(html, 'Ngày thành lập') || extractByLabel(html, 'Established date') || '';
+    const establishedDateRaw = extractByLabel(html, 'Ngày thành lập') || extractByLabel(html, 'Established date') || '';
+    const establishedDate = parseVietnameseDate(establishedDateRaw);
     const legalForm = extractByLabel(html, 'Loại hình') || extractByLabel(html, 'Legal form') || '';
     const status = extractByLabel(html, 'Tình trạng') || extractByLabel(html, 'Status') || '';
 
-    if (companyName || taxCode !== 'unknown') {
+    if (companyName || extractedTaxCode) {
       items.push(buildPostItem({
         platform: 'hosocongty',
         externalId: taxCode,
         title: companyName,
         contentParts: [companyName, businessLines, address, phone].filter(Boolean),
-        authorId: phone || representativeName || `hosocongty:${taxCode}`,
+        authorId: taxCode && taxCode !== 'unknown' ? `hosocongty:${taxCode}` : `hosocongty:${companyName || 'unknown'}`,
         authorName: representativeName || 'Unknown',
         postUrl: context.postUrl || '',
+        publishedAt: establishedDate,
         metadata: {
           taxCode,
           companyName,
@@ -117,7 +144,7 @@ export function normalizeHosocongty(html, kind = 'search', context = {}) {
           phone,
           businessLines,
           charterCapital,
-          establishedDate,
+          establishedDate: establishedDateRaw,
           address,
           legalForm,
           status,
@@ -209,14 +236,16 @@ export function normalizeMuasamcongSearch(html) {
     if (!tenderNo) continue;
 
     const title = stripTags(block.match(/class="content__body__left__item__infor__contract__name[^"]*"[^>]*>([\s\S]*?)<\/h5>/i)?.[1] || '').trim();
-    const status = stripTags(block.match(/class="content__body__left__item__infor__notice--([^"\s]+)/i)?.[1] || '');
+    const statusMatch = block.match(/class="content__body__left__item__infor__notice[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+    const status = statusMatch ? stripTags(statusMatch[1]).trim() : '';
     const bidField = stripTags(block.match(/>\s*Lĩnh vực\s*:\s*<span>([^<]+)<\/span>/i)?.[1] || '');
     const bidLocation = stripTags(block.match(/>\s*Địa điểm\s*:\s*<span>([^<]+)<\/span>/i)?.[1] || '');
     const procuringEntityName = stripTags(block.match(/>\s*Chủ đầu tư\s*:\s*<span>([^<]+)<\/span>/i)?.[1] || '');
     const publishDateRaw = stripTags(block.match(/>\s*Ngày đăng tải thông báo\s*:\s*<span>([^<]+)<\/span>/i)?.[1] || '');
-    const publishDate = publishDateRaw ? new Date(publishDateRaw) : null;
-    const time = stripTags(block.match(/Thời điểm đóng thầu<\/p>\s*<h5>([^<]+)<\/h5>\s*<h5>([^<]+)<\/h5>/i)?.[1] || '');
-    const date = stripTags(block.match(/Thời điểm đóng thầu<\/p>\s*<h5>([^<]+)<\/h5>\s*<h5>([^<]+)<\/h5>/i)?.[2] || '');
+    const publishDate = parseVietnameseDate(publishDateRaw);
+    const closeMatch = block.match(/Thời điểm đóng thầu[\s\S]*?<\/p>\s*<h5[^>]*>([\s\S]*?)<\/h5>\s*<h5[^>]*>([\s\S]*?)<\/h5>/i);
+    const time = closeMatch ? stripTags(closeMatch[1]).trim() : '';
+    const date = closeMatch ? stripTags(closeMatch[2]).trim() : '';
     const bidSubmissionDeadline = date ? `${date} ${time}`.trim() : '';
 
     items.push(buildPostItem({
@@ -250,7 +279,6 @@ export function normalizeMuasamcongSearch(html) {
  * @returns {import('../../../core/types.js').PostItem[]}
  */
 export function normalizeMuasamcongDetail(html) {
-  const text = stripTags(html);
   const tenderNo = extractByLabel(html, 'Mã TBMT') || '';
   const tenderName = extractByLabel(html, 'Tên gói thầu') || '';
 
@@ -278,7 +306,7 @@ export function normalizeMuasamcongDetail(html) {
     authorId: procuringEntityName || `muasamcong:${tenderNo}`,
     authorName: procuringEntityName || '',
     postUrl: '',
-    publishedAt: publishDateRaw ? new Date(publishDateRaw) : null,
+    publishedAt: parseVietnameseDate(publishDateRaw),
     metadata: {
       tenderNo,
       publishDate: publishDateRaw,

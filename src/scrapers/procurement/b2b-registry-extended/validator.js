@@ -50,7 +50,9 @@ export class B2BRegistryExtendedValidator extends AbstractPlatformResponseValida
       text.includes('checking your browser') ||
       text.includes('verify you are human') ||
       text.includes('captcha') ||
-      text.includes('challenge') ||
+      text.includes('cf-challenge') ||
+      text.includes('cf_chl') ||
+      text.includes('challenge-running') ||
       text.includes('access denied')
     ) {
       return true;

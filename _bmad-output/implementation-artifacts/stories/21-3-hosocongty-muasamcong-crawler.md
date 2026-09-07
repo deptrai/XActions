@@ -2,9 +2,8 @@
 title: 'Story 21.3: HoSoCongTy & MuaSamCong Crawler (Cloudflare/SPA fallback)'
 type: 'feature'
 created: '2026-09-06'
-status: 'review'
+status: 'done'
 review_loop_iteration: 1
-baseline_commit: 'ed7e2ac8'
 baseline_commit: 'ed7e2ac8'
 context:
   - _bmad-output/planning-artifacts/backlog-epics-21-22.md
@@ -431,6 +430,43 @@ All acceptance criteria implemented:
 - Type declarations added to `types/index.d.ts`.
 
 Tests: 8/8 pass (`tests/scrapers/procurement/b2b-registry-extended/`). Regression suite: `masothue`, `automotive`, `prisma-store` pass. Pre-existing `auth-token-standardization` failures unrelated to this story.
+
+### Review Findings
+
+#### Decision Needed
+
+- [ ] [Review][Decision] None — all findings have unambiguous fixes.
+
+#### Patch
+
+- [x] [Review][Patch] Dispatcher fails to pass target platform into `mappedArgs` for `detail`/`tender_detail` actions [src/scrapers/index.js:1410-1460]
+- [x] [Review][Patch] `search` action descriptor advertises MuaSamCong support but implementation throws `XACT_4001` [src/scrapers/procurement/b2b-registry-extended/index.js:37-45]
+- [x] [Review][Patch] `baseUrl` is bound to `targetPlatform` at construction, breaking shared client use for cross-platform methods [src/scrapers/procurement/b2b-registry-extended/client.js:97-98]
+- [x] [Review][Patch] `request()` only enables Cloudflare fallback when `targetPlatform === 'hosocongty'`, missing `'b2b_registry_extended'` [src/scrapers/procurement/b2b-registry-extended/client.js:164-181]
+- [x] [Review][Patch] Normalizer uses regex instead of `cheerio`/`jsdom`; `extractByLabel` fails on nested tag values [src/scrapers/procurement/b2b-registry-extended/normalizer.js:31-41]
+- [x] [Review][Patch] `new Date("DD/MM/YYYY - HH:mm")` produces `Invalid Date` for MuaSamCong dates [src/scrapers/procurement/b2b-registry-extended/normalizer.js:189, 239]
+- [x] [Review][Patch] `bidStatus` extracts CSS class suffix (`be`) instead of Vietnamese status text [src/scrapers/procurement/b2b-registry-extended/normalizer.js:184]
+- [x] [Review][Patch] `warmupBrowser` throws generic `Error` instead of `PlatformError`/`BotChallengeError` (`XACT_4030`) [src/scrapers/procurement/b2b-registry-extended/browser.js:43-45]
+- [x] [Review][Patch] `warmupRequest` does not re-validate response after warmup or clear stale `cf_clearance` on 403 [src/scrapers/procurement/b2b-registry-extended/client.js:147-155]
+- [x] [Review][Patch] `warmupBrowser` lacks concurrency control and does not wait for Cloudflare challenge resolution [src/scrapers/procurement/b2b-registry-extended/browser.js:17-49]
+- [x] [Review][Patch] `cookieCache` is not proxy-aware; `cf_clearance` is bound to solver IP [src/scrapers/procurement/b2b-registry-extended/browser.js:10-15]
+- [x] [Review][Patch] `drainBody` does not handle Node.js `Readable` streams without `getReader` [src/scrapers/procurement/b2b-registry-extended/client.js:16-41]
+- [x] [Review][Patch] `gotScrapingRequest` bypasses `resolveProxy()` and `proxyPool` rotation [src/scrapers/procurement/b2b-registry-extended/client.js:137-145]
+- [x] [Review][Patch] `detail()` returns `{ post: null }` instead of throwing `XACT_4001` on not-found [src/scrapers/procurement/b2b-registry-extended/index.js:205-214]
+- [x] [Review][Patch] `authorId` in `normalizeHosocongty` uses unstable `phone`/`representativeName` identifiers [src/scrapers/procurement/b2b-registry-extended/normalizer.js:109]
+- [x] [Review][Patch] `validator.js` `isBotChallenge` has false positives on generic text "challenge" [src/scrapers/procurement/b2b-registry-extended/validator.js:37-53]
+- [x] [Review][Patch] Missing named exports for `B2BRegistryExtendedCrawler` and `B2BRegistryExtendedClient` [src/scrapers/index.js:2105]
+- [x] [Review][Patch] Missing tests for `scrape()` dispatcher, `getPlatform()`, `#persist()` with store/publisher, HoSoCongTy `search`, and not-found paths [tests/scrapers/procurement/b2b-registry-extended/]
+- [x] [Review][Patch] Displaced `// ── Automotive Vehicles Market path` comment above B2B block [src/scrapers/index.js:1409]
+
+#### Deferred
+
+- [x] [Review][Defer] `masothue/index.js` pre-existing import bug (`normalizeMaSoThueResults` from wrong module) — deferred, pre-existing
+- [x] [Review][Defer] Missing pagination parameters (`page`, `offset`) on search endpoints — deferred, not in story scope
+
+#### Dismissed
+
+- Dead code `extractByClass` in `normalizer.js` — cosmetic, no runtime impact.
 
 ### Status
 

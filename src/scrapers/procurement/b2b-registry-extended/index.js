@@ -63,7 +63,7 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
       category: 'b2b',
       requiresAuth: false,
       requiredArgs: ['id'],
-      optionalArgs: ['platform', 'slug', 'notifyNo'],
+      optionalArgs: ['platform', 'slug', 'notifyNo', 'tenderNo'],
       example: { id: '0013180180', platform: 'hosocongty' },
       outputType: '{ post: PostItem }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.detail(args, session),
@@ -96,30 +96,23 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
   }
 
   /**
-   * Search HoSoCongTy by tax code or company name.
+   * Search HoSoCongTy companies or MuaSamCong tenders.
    * @param {Record<string, any>} args
    * @param {Record<string, any>} [session]
    * @returns {Promise<{ posts: PostItem[], pageInfo: { has_next_page: boolean } }>}
    */
   async search(args, session = {}) {
+    const platform = args.platform || (args.notifyNo || args.tenderNo ? 'muasamcong' : 'hosocongty');
+    if (platform === 'muasamcong') {
+      return this.searchTenders(args, session);
+    }
+
     const q = args.q || args.taxCode || args.keyword;
     if (!q) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
         code: 'XACT_4001',
         message: 'Missing required argument: q',
-        statusCode: 400,
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: this.platform,
-      });
-    }
-
-    const platform = args.platform || 'hosocongty';
-    if (platform !== 'hosocongty') {
-      throw new PlatformError({
-        type: ErrorTypes.INVALID_ARGS,
-        code: 'XACT_4001',
-        message: 'search action is only for HoSoCongTy; use search_tenders for MuaSamCong',
         statusCode: 400,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         platform: this.platform,
@@ -185,7 +178,7 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
    * @returns {Promise<{ post: PostItem }>}
    */
   async detail(args, session = {}) {
-    const platform = args.platform || 'hosocongty';
+    const platform = args.platform || (args.notifyNo || args.tenderNo ? 'muasamcong' : 'hosocongty');
     const id = args.id || args.taxCode || args.notifyNo || args.tenderNo;
     if (!id) {
       throw new PlatformError({
@@ -202,15 +195,35 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
       const response = await this.client.tenderDetailMuasamcong({ notifyNo: id, id: args.id });
       const html = response.body || response.data || '';
       const posts = normalizeB2BRegistryResults(html, 'detail', { platform: 'muasamcong' });
+      if (!posts.length) {
+        throw new PlatformError({
+          type: ErrorTypes.NOT_FOUND,
+          code: 'XACT_4040',
+          message: `MuaSamCong tender detail not found for ${id}`,
+          statusCode: 404,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'muasamcong',
+        });
+      }
       await this.#persist(posts);
-      return { post: posts[0] || null };
+      return { post: posts[0] };
     }
 
     const response = await this.client.companyDetailHosocongty({ taxCode: id });
     const html = response.body || response.data || '';
     const posts = normalizeB2BRegistryResults(html, 'detail', { platform: 'hosocongty', taxCode: id });
+    if (!posts.length) {
+      throw new PlatformError({
+        type: ErrorTypes.NOT_FOUND,
+        code: 'XACT_4040',
+        message: `HoSoCongTy company detail not found for ${id}`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'hosocongty',
+      });
+    }
     await this.#persist(posts);
-    return { post: posts[0] || null };
+    return { post: posts[0] };
   }
 }
 

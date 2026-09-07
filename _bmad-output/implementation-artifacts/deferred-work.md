@@ -106,3 +106,8 @@
 - [x] [Review][Defer] Missing TypeScript declarations for TikTok Shop classes [types/index.d.ts] — `TikTokShopClient`, `TikTokShopCrawler`, and `scrapeTikTokShop` are not declared. The project as a whole has not yet exported e-commerce scraper types, so this is pre-existing/out-of-scope for this story.
 - [x] [Review][Defer] No telemetry, checkpoint, or Redis stream publishing in `TikTokShopCrawler` [src/scrapers/ecom/tiktok-shop/crawler.js] — Other crawlers publish crawl events and save checkpoints. This is not required by any AC of Story 16.2 and can be added when the operational observability layer is standardized.
 - [x] [Review][Defer] No cursor-based pagination support [src/scrapers/ecom/tiktok-shop/crawler.js, client.js] — `pageInfo.end_cursor` is returned but `cursor`/`next_cursor` cannot be passed back into `getTopProducts`/`searchProducts`. AC-1 only requires `page`/`limit` pagination.
+
+## Deferred from: code review of 21-3-hosocongty-muasamcong-crawler (2026-09-07)
+
+- `masothue/index.js` pre-existing import bug (`normalizeMaSoThueResults` from wrong module) — unverified; direct read contradicts report; defer for targeted audit.
+- Missing pagination parameters (`page`, `offset`) on search endpoints — out of scope for Story 21.3; defer to later B2B procurement stories.

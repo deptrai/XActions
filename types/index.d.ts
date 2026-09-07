@@ -882,6 +882,8 @@ export declare class B2BRegistryExtendedClient {
   platform: string;
   baseUrl: string;
   targetPlatform: 'hosocongty' | 'muasamcong';
+  hosocongtyBaseUrl: string;
+  muasamcongBaseUrl: string;
   requiresAuth: boolean;
   requiresProxy: boolean;
   constructor(options?: Record<string, unknown>);
@@ -904,5 +906,7 @@ export declare class B2BRegistryExtendedCrawler {
 }
 
 export declare function scrapeB2BRegistryExtended(action: string, args?: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown>;
+export declare function createB2BRegistryExtendedClient(options?: Record<string, unknown>): B2BRegistryExtendedClient;
+export declare function createB2BRegistryExtendedCrawler(client?: B2BRegistryExtendedClient | Record<string, unknown>, options?: Record<string, unknown>): B2BRegistryExtendedCrawler;
 
 

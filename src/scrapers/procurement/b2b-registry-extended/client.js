@@ -8,7 +8,8 @@
 
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { B2BRegistryExtendedValidator } from './validator.js';
-import { warmupBrowser, getCachedCookies } from './browser.js';
+import { warmupBrowser, getCachedCookies, clearCachedCookies } from './browser.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
 export const HOSOCONGTY_BASE_URL = 'https://hosocongty.vn';
 export const MUASAMCONG_BASE_URL = 'https://muasamcong.mpi.gov.vn';
@@ -38,6 +39,13 @@ async function drainBody(body) {
       offset += chunk.length;
     }
     return buffer.toString('utf-8');
+  }
+  if (typeof body[Symbol.asyncIterator] === 'function') {
+    const chunks = [];
+    for await (const chunk of body) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks).toString('utf-8');
   }
   return String(body);
 }
@@ -87,39 +95,52 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
       this.requiresProxy = options.requiresProxy;
     }
 
+    this.targetPlatform = options.targetPlatform || 'hosocongty';
+    this.hosocongtyBaseUrl = (options.hosocongtyBaseUrl || (options.targetPlatform === 'hosocongty' ? options.baseUrl : null) || HOSOCONGTY_BASE_URL).replace(/\/+$/, '');
+    this.muasamcongBaseUrl = (options.muasamcongBaseUrl || (options.targetPlatform === 'muasamcong' ? options.baseUrl : null) || MUASAMCONG_BASE_URL).replace(/\/+$/, '');
+
+    if (options.baseUrl) {
+      const normalizedBase = options.baseUrl.replace(/\/+$/, '');
+      if (!options.hosocongtyBaseUrl && (options.targetPlatform === 'hosocongty' || !options.targetPlatform)) {
+        this.hosocongtyBaseUrl = normalizedBase;
+      }
+      if (!options.muasamcongBaseUrl && options.targetPlatform === 'muasamcong') {
+        this.muasamcongBaseUrl = normalizedBase;
+      }
+      if (!options.targetPlatform && !options.hosocongtyBaseUrl && !options.muasamcongBaseUrl) {
+        this.hosocongtyBaseUrl = normalizedBase;
+        this.muasamcongBaseUrl = normalizedBase;
+      }
+    }
+
+    this.baseUrl = this.targetPlatform === 'muasamcong' ? this.muasamcongBaseUrl : this.hosocongtyBaseUrl;
+
     // When proxy is disabled or baseUrl is local, prefer undici (got-scraping may block private IPs).
-    const isLocal = /^https?:\/\/(127\.0\.0\.1|localhost)/i.test(this.baseUrl || '');
+    const isLocal = /^https?:\/\/(127\.0\.0\.1|localhost)/i.test(this.baseUrl || options.baseUrl || '');
     if (options.client === undefined && (options.requiresProxy === false || isLocal)) {
       this.client = 'undici';
       this.httpClient = null;
     }
 
-    this.targetPlatform = options.targetPlatform || 'hosocongty';
-    this.baseUrl = this.#resolveBaseUrl(this.targetPlatform, options.baseUrl);
     this.options = options;
   }
 
   /**
-   * Resolve base URL per target platform.
-   * @param {string} targetPlatform
-   * @param {string} [baseUrl]
-   * @returns {string}
-   */
-  #resolveBaseUrl(targetPlatform, baseUrl) {
-    if (baseUrl) return baseUrl.replace(/\/+$/, '');
-    if (targetPlatform === 'muasamcong') return MUASAMCONG_BASE_URL;
-    return HOSOCONGTY_BASE_URL;
-  }
-
-  /**
    * Default browser headers for VN B2B sites.
+   * @param {string} [url]
    * @returns {Record<string, string>}
    */
-  getDefaultHeaders() {
+  getDefaultHeaders(url = '') {
+    let origin = this.baseUrl;
+    if (url) {
+      try {
+        origin = new URL(url).origin;
+      } catch {}
+    }
     return {
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
       'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Referer': `${this.baseUrl}/`,
+      'Referer': `${origin}/`,
       'DNT': '1',
       'Connection': 'keep-alive',
       'Upgrade-Insecure-Requests': '1',
@@ -136,10 +157,24 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
    */
   async gotScrapingRequest(url, options = {}) {
     const { gotScraping } = await import('got-scraping');
-    const headers = { ...this.getDefaultHeaders(), ...(options.headers || {}) };
+    const headers = { ...this.getDefaultHeaders(url), ...(options.headers || {}) };
+    let proxy = options.proxy || this.options?.proxy;
+    if (!proxy && this.requiresProxy && typeof this.resolveProxy === 'function') {
+      try {
+        proxy = this.resolveProxy(null, false, false);
+      } catch {
+        // Fallback if proxy not available
+      }
+    }
+    let proxyUrl;
+    if (proxy) {
+      const { getProxyAgent } = await import('../../../proxy/index.js');
+      const agent = getProxyAgent(proxy, { client: 'got' });
+      if (typeof agent === 'string') proxyUrl = agent;
+    }
     const resp = await gotScraping.get(url, {
       headers,
-      proxyUrl: options.proxy || this.options?.proxy,
+      proxyUrl,
       timeout: { request: options.timeout || 30000 },
       throwHttpErrors: false,
     });
@@ -159,24 +194,53 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
    */
   async warmupRequest(url, options = {}) {
     const domain = new URL(url).hostname;
-    let cookies = getCachedCookies(domain);
+    const proxyKey = options.proxy || this.options?.proxy || '';
+    let cookies = getCachedCookies(domain, proxyKey);
+    let fromCache = Boolean(cookies);
 
     if (!cookies) {
       cookies = await warmupBrowser(url, {
-        proxy: options.proxy || this.options?.proxy,
+        proxy: proxyKey,
         headless: this.options?.headless ?? true,
         userAgent: this.options?.userAgent,
       });
+      fromCache = false;
     }
 
     const headers = {
-      ...this.getDefaultHeaders(),
+      ...this.getDefaultHeaders(url),
       'Cookie': cookies,
       ...(options.headers || {}),
     };
 
-    const resp = await super.request('GET', url, { ...options, headers, raw: true });
-    return await normalizeRawBody(resp);
+    let resp = await super.request('GET', url, { ...options, headers, raw: true });
+    resp = await normalizeRawBody(resp);
+
+    // If cached cookie was used and Cloudflare challenged/blocked, invalidate cache and retry once
+    if (fromCache && (resp.status === 403 || this.responseValidator?.isBotChallenge(resp))) {
+      clearCachedCookies(domain, proxyKey);
+      cookies = await warmupBrowser(url, {
+        proxy: proxyKey,
+        headless: this.options?.headless ?? true,
+        userAgent: this.options?.userAgent,
+      });
+      headers.Cookie = cookies;
+      resp = await super.request('GET', url, { ...options, headers, raw: true });
+      resp = await normalizeRawBody(resp);
+    }
+
+    if (this.responseValidator?.isBotChallenge(resp)) {
+      throw new PlatformError({
+        type: ErrorTypes.BOT_CHALLENGE,
+        code: 'XACT_4030',
+        message: 'Cloudflare challenge encountered on HoSoCongTy',
+        statusCode: 403,
+        suggestedAction: SuggestedActions.ROTATE_PROXY,
+        platform: 'hosocongty',
+      });
+    }
+
+    return resp;
   }
 
   /**
@@ -187,11 +251,17 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
    * @returns {Promise<any>}
    */
   async request(method, url, options = {}) {
-    if (this.targetPlatform === 'hosocongty') {
+    const isHosocongty = options.platform === 'hosocongty' ||
+      url.startsWith(this.hosocongtyBaseUrl) ||
+      url.includes('hosocongty.vn') ||
+      url.includes('/tra-cuu/') ||
+      url.includes('/tim-kiem');
+
+    if (isHosocongty) {
       try {
         const resp = await this.gotScrapingRequest(url, options);
         const normalized = await normalizeRawBody(resp);
-        if (this.responseValidator?.isValidPayload(normalized)) {
+        if (!this.responseValidator?.isBotChallenge(normalized) && resp.status !== 403) {
           return normalized;
         }
       } catch {
@@ -201,7 +271,7 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
     }
 
     // MuaSamCong: direct request with browser headers
-    const headers = { ...this.getDefaultHeaders(), ...(options?.headers || {}) };
+    const headers = { ...this.getDefaultHeaders(url), ...(options?.headers || {}) };
     const resp = await super.request(method, url, { ...options, headers });
     return await normalizeRawBody(resp);
   }
@@ -215,8 +285,8 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
    */
   async searchHosocongty(params = {}, options = {}) {
     const q = encodeURIComponent(String(params.q || params.taxCode || ''));
-    const url = `${this.baseUrl}/tim-kiem?q=${q}`;
-    return this.request('GET', url, { ...options, raw: true });
+    const url = `${this.hosocongtyBaseUrl}/tim-kiem?q=${q}`;
+    return this.request('GET', url, { ...options, raw: true, platform: 'hosocongty' });
   }
 
   /**
@@ -228,8 +298,8 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
    */
   async companyDetailHosocongty(params = {}, options = {}) {
     const taxCode = encodeURIComponent(String(params.taxCode || ''));
-    const url = `${this.baseUrl}/tra-cuu/${taxCode}`;
-    return this.request('GET', url, { ...options, raw: true });
+    const url = `${this.hosocongtyBaseUrl}/tra-cuu/${taxCode}`;
+    return this.request('GET', url, { ...options, raw: true, platform: 'hosocongty' });
   }
 
   /**
@@ -249,8 +319,8 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
       keywordMatch: params.keywordMatch || 'all',
       keyword: String(params.keyword || ''),
     });
-    const url = `${this.baseUrl}/web/guest/bc/-/search?${query.toString()}`;
-    return this.request('GET', url, { ...options, raw: true });
+    const url = `${this.muasamcongBaseUrl}/web/guest/bc/-/search?${query.toString()}`;
+    return this.request('GET', url, { ...options, raw: true, platform: 'muasamcong' });
   }
 
   /**
@@ -269,7 +339,7 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
       type: 'es-notify-contractor',
     });
     if (params.id) query.set('id', String(params.id));
-    const url = `${this.baseUrl}/web/guest/contractor-selection?${query.toString()}`;
-    return this.request('GET', url, { ...options, raw: true });
+    const url = `${this.muasamcongBaseUrl}/web/guest/contractor-selection?${query.toString()}`;
+    return this.request('GET', url, { ...options, raw: true, platform: 'muasamcong' });
   }
 }

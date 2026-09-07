@@ -6,12 +6,19 @@
  */
 
 import { launchStealthBrowser, createStealthPage } from '../../../scraping/stealthBrowser.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
 /**
- * Cookie cache: domain → { cookies: string, expiresAt: number }
+ * Cookie cache: domain/proxy -> { cookies: string, expiresAt: number }
  * @type {Map<string, { cookies: string, expiresAt: number }>}
  */
 const cookieCache = new Map();
+
+/**
+ * In-flight warmup promises to prevent concurrent duplicate browser instances.
+ * @type {Map<string, Promise<string>>}
+ */
+const inFlightWarmups = new Map();
 
 /**
  * Warmup browser to extract cf_clearance cookie for Cloudflare-protected domain.
@@ -20,49 +27,84 @@ const cookieCache = new Map();
  * @param {string} [options.proxy]
  * @param {boolean} [options.headless]
  * @param {string} [options.userAgent]
- * @returns {Promise<string>} — cookie string for Cookie header
+ * @returns {Promise<string>} - cookie string for Cookie header
  */
 export async function warmupBrowser(url, options = {}) {
   const domain = new URL(url).hostname;
-  const cached = getCachedCookies(domain);
+  const proxyKey = options.proxy || 'direct';
+  const cacheKey = `${domain}:${proxyKey}`;
+
+  const cached = getCachedCookies(domain, proxyKey);
   if (cached) return cached;
 
-  let browser;
-  try {
-    browser = await launchStealthBrowser({
-      proxy: options.proxy,
-      headless: options.headless ?? true,
-      userAgent: options.userAgent,
-    });
-    const page = await createStealthPage(browser, { userAgent: options.userAgent });
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+  if (inFlightWarmups.has(cacheKey)) {
+    return inFlightWarmups.get(cacheKey);
+  }
 
-    // Extract cf_clearance cookie
-    const cookies = await page.cookies(url);
-    const cf = cookies.find((c) => c.name === 'cf_clearance');
-    if (!cf) {
-      throw new Error('cf_clearance cookie not found after warmup');
+  const warmupPromise = (async () => {
+    let browser;
+    try {
+      browser = await launchStealthBrowser({
+        proxy: options.proxy,
+        headless: options.headless ?? true,
+        userAgent: options.userAgent,
+      });
+      const page = await createStealthPage(browser, { userAgent: options.userAgent });
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
+
+      // Extract cf_clearance cookie with short poll for challenge resolution
+      const startTime = Date.now();
+      let cookies = [];
+      let cf = null;
+      while (Date.now() - startTime < 10000) {
+        cookies = await page.cookies(url);
+        cf = cookies.find((c) => c.name === 'cf_clearance');
+        if (cf) break;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+
+      if (!cf) {
+        throw new PlatformError({
+          type: ErrorTypes.BOT_CHALLENGE,
+          code: 'XACT_4030',
+          message: 'cf_clearance cookie not found after warmup',
+          statusCode: 403,
+          suggestedAction: SuggestedActions.ROTATE_PROXY,
+          platform: 'hosocongty',
+        });
+      }
+
+      const cookieString = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+      const expiresAt = Date.now() + 30 * 60 * 1000; // ~30 min TTL
+
+      cookieCache.set(cacheKey, { cookies: cookieString, expiresAt });
+      cookieCache.set(domain, { cookies: cookieString, expiresAt });
+      return cookieString;
+    } finally {
+      if (browser) await browser.close().catch(() => {});
     }
+  })();
 
-    const cookieString = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
-    const expiresAt = Date.now() + 30 * 60 * 1000; // ~30 min TTL
-
-    cookieCache.set(domain, { cookies: cookieString, expiresAt });
-    return cookieString;
+  inFlightWarmups.set(cacheKey, warmupPromise);
+  try {
+    return await warmupPromise;
   } finally {
-    if (browser) await browser.close().catch(() => {});
+    inFlightWarmups.delete(cacheKey);
   }
 }
 
 /**
  * Get cached cf_clearance cookies for a domain.
  * @param {string} domain
+ * @param {string} [proxy]
  * @returns {string | null}
  */
-export function getCachedCookies(domain) {
-  const entry = cookieCache.get(domain);
+export function getCachedCookies(domain, proxy = '') {
+  const key = proxy ? `${domain}:${proxy}` : domain;
+  const entry = cookieCache.get(key) || cookieCache.get(domain);
   if (!entry) return null;
   if (entry.expiresAt < Date.now()) {
+    cookieCache.delete(key);
     cookieCache.delete(domain);
     return null;
   }
@@ -72,7 +114,9 @@ export function getCachedCookies(domain) {
 /**
  * Clear cached cookies for a domain.
  * @param {string} domain
+ * @param {string} [proxy]
  */
-export function clearCachedCookies(domain) {
+export function clearCachedCookies(domain, proxy = '') {
+  if (proxy) cookieCache.delete(`${domain}:${proxy}`);
   cookieCache.delete(domain);
 }
