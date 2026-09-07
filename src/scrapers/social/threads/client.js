@@ -155,9 +155,12 @@ export class ThreadsClient extends AbstractApiClient {
       ...deps,
       platform: 'threads',
       client: deps.client || 'got',
-      requiresProxy: deps.requiresProxy !== undefined ? deps.requiresProxy : !isLocalUrl(baseUrl),
+      requiresProxy: deps.requiresProxy,
       responseValidator: deps.responseValidator || new ThreadsPlatformResponseValidator(),
     }));
+    if (deps.requiresProxy === undefined) {
+      this.requiresProxy = !isLocalUrl(baseUrl);
+    }
 
     this.baseUrl = baseUrl;
     if (deps.igAppId) {

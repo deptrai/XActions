@@ -123,6 +123,7 @@ export class AbstractApiClient {
     this.proxyPool = options.proxyPool !== undefined ? options.proxyPool : globalProxyPool;
     this.proxyProvider = options.proxyProvider;
     this._hasExplicitProxy = options.proxyProvider !== undefined || options.proxyPool !== undefined;
+    this._requiresProxyExplicit = options.requiresProxy !== undefined;
     this.accountPool = options.accountPool;
     this.governor = options.governor;
     this.responseValidator = options.responseValidator || null;
@@ -622,7 +623,8 @@ export class AbstractApiClient {
           });
         }
 
-        const proxy = (this.requiresProxy || opts.requiresResidential || this._hasExplicitProxy)
+        const shouldUseProxy = this.requiresProxy || opts.requiresResidential || (this._hasExplicitProxy && !this._requiresProxyExplicit);
+        const proxy = shouldUseProxy
           ? this.resolveProxy(concreteAccountId, opts.requiresResidential, effectiveRequiresAuth, { pool: pool || undefined, consumerId: consumerId || undefined })
           : null;
 
