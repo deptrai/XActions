@@ -79,7 +79,7 @@ export class FnbMerchantClient extends AbstractApiClient {
   requiresAuth = false;
 
   /** @type {boolean} */
-  requiresProxy = true;
+  requiresProxy = false;
 
   /** @type {string} */
   baseUrl = PASGO_BASE_URL;
@@ -98,7 +98,7 @@ export class FnbMerchantClient extends AbstractApiClient {
       client: options.client || 'got',
       responseValidator,
       requiresAuth: options.requiresAuth ?? false,
-      requiresProxy: options.requiresProxy ?? true,
+      requiresProxy: options.requiresProxy ?? false,
     });
 
     this.targetPlatform = options.targetPlatform || options.platform || 'pasgo';

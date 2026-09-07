@@ -28,7 +28,7 @@ describe('FnbMerchantClient', () => {
     const client = new FnbMerchantClient({ requiresProxy: false });
     expect(client.name).toBe('fnb');
     expect(client.requiresAuth).toBe(false);
-    expect(client.requiresProxy).toBe(true);
+    expect(client.requiresProxy).toBe(false);
   });
 
   it('should normalize city slug', () => {
