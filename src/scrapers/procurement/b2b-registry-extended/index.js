@@ -119,7 +119,8 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
       });
     }
 
-    const response = await this.client.searchHosocongty({
+    const client = /** @type {B2BRegistryExtendedClient} */ (this.client);
+    const response = await client.searchHosocongty({
       q,
       opt: args.opt,
       p: args.p,
@@ -156,7 +157,8 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
       });
     }
 
-    const response = await this.client.searchTendersMuasamcong({
+    const client = /** @type {B2BRegistryExtendedClient} */ (this.client);
+    const response = await client.searchTendersMuasamcong({
       keyword,
       searchType: args.searchType || 'bidding',
       searchScope: args.searchScope || 'lcnt',
@@ -196,8 +198,10 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
       });
     }
 
+    const client = /** @type {B2BRegistryExtendedClient} */ (this.client);
+
     if (platform === 'muasamcong') {
-      const response = await this.client.tenderDetailMuasamcong({ notifyNo: id, id: args.id });
+      const response = await client.tenderDetailMuasamcong({ notifyNo: id, id: args.id });
       const html = response.body || response.data || '';
       const posts = normalizeB2BRegistryResults(html, 'detail', { platform: 'muasamcong' });
       if (!posts.length) {
@@ -214,7 +218,7 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
       return { post: posts[0] };
     }
 
-    const response = await this.client.companyDetailHosocongty({ taxCode: id });
+    const response = await client.companyDetailHosocongty({ taxCode: id });
     const html = response.body || response.data || '';
     const posts = normalizeB2BRegistryResults(html, 'detail', { platform: 'hosocongty', taxCode: id });
     if (!posts.length) {

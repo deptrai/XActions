@@ -72,6 +72,9 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
   /** @type {boolean} */
   requiresProxy = true;
 
+  /** @type {'undici' | 'got'} */
+  client = 'got';
+
   /** @type {string} */
   platform = 'b2b_registry_extended';
 
@@ -172,7 +175,9 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
       const agent = getProxyAgent(proxy, { client: 'got' });
       if (typeof agent === 'string') proxyUrl = agent;
     }
-    const resp = await gotScraping.get(url, {
+    /** @type {any} */
+    const scrapingClient = gotScraping;
+    const resp = await scrapingClient.get(url, {
       headers,
       proxyUrl,
       timeout: { request: options.timeout || 30000 },
@@ -213,7 +218,7 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
       ...(options.headers || {}),
     };
 
-    let resp = await super.request('GET', url, { ...options, headers, raw: true });
+    let resp = /** @type {any} */ (await super.request('GET', url, { ...options, headers, raw: true }));
     resp = await normalizeRawBody(resp);
 
     // If cached cookie was used and Cloudflare challenged/blocked, invalidate cache and retry once
@@ -225,7 +230,7 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
         userAgent: this.options?.userAgent,
       });
       headers.Cookie = cookies;
-      resp = await super.request('GET', url, { ...options, headers, raw: true });
+      resp = /** @type {any} */ (await super.request('GET', url, { ...options, headers, raw: true }));
       resp = await normalizeRawBody(resp);
     }
 

@@ -545,6 +545,7 @@ export function normalizeMuasamcongDetail(data) {
  * @param {'search' | 'detail' | 'list'} [kind='search']
  * @param {Object} [options]
  * @param {string} [options.platform]
+ * @param {string} [options.taxCode]
  * @returns {import('../../../core/types.js').PostItem[]}
  */
 export function normalizeB2BRegistryResults(data, kind = 'search', options = {}) {

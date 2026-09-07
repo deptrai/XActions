@@ -38,10 +38,11 @@ export async function warmupBrowser(url, options = {}) {
   if (cached) return cached;
 
   if (inFlightWarmups.has(cacheKey)) {
-    return inFlightWarmups.get(cacheKey);
+    return inFlightWarmups.get(cacheKey) || '';
   }
 
   const warmupPromise = (async () => {
+    /** @type {any} */
     let browser;
     try {
       browser = await launchStealthBrowser({
@@ -49,16 +50,18 @@ export async function warmupBrowser(url, options = {}) {
         headless: options.headless ?? true,
         userAgent: options.userAgent,
       });
+      /** @type {any} */
       const page = await createStealthPage(browser, { userAgent: options.userAgent });
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
 
       // Extract cf_clearance cookie with short poll for challenge resolution
       const startTime = Date.now();
+      /** @type {any[]} */
       let cookies = [];
       let cf = null;
       while (Date.now() - startTime < 10000) {
         cookies = await page.cookies(url);
-        cf = cookies.find((c) => c.name === 'cf_clearance');
+        cf = cookies.find((/** @type {any} */ c) => c.name === 'cf_clearance');
         if (cf) break;
         await new Promise((r) => setTimeout(r, 1000));
       }
@@ -74,14 +77,14 @@ export async function warmupBrowser(url, options = {}) {
         });
       }
 
-      const cookieString = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+      const cookieString = cookies.map((/** @type {any} */ c) => `${c.name}=${c.value}`).join('; ');
       const expiresAt = Date.now() + 30 * 60 * 1000; // ~30 min TTL
 
       cookieCache.set(cacheKey, { cookies: cookieString, expiresAt });
       cookieCache.set(domain, { cookies: cookieString, expiresAt });
       return cookieString;
     } finally {
-      if (browser) await browser.close().catch(() => {});
+      if (browser && typeof browser.close === 'function') await browser.close().catch(() => {});
     }
   })();
 

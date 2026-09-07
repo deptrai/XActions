@@ -10,6 +10,7 @@
  * @property {string} id - Namespaced id: `${platform}:${externalId}`
  * @property {string} platform
  * @property {string} externalId
+ * @property {string} [title]
  * @property {string} category
  * @property {string} authorId
  * @property {string} authorName

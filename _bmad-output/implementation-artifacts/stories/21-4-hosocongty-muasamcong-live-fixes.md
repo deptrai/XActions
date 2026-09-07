@@ -70,7 +70,7 @@ context:
 - [x] Cập nhật `src/scrapers/procurement/b2b-registry-extended/README.md` (nếu có) hoặc `docs/` với route mới.
 - [x] Update `types/index.d.ts` nếu signature method đổi.
 - [x] Run `npx vitest run tests/scrapers/procurement/b2b-registry-extended` và regression suite.
-- [ ] Commit + push `develop`.
+- [x] Commit + push `develop`.
 
 ## Dev Notes
 
