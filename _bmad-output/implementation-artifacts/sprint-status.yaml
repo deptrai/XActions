@@ -43,7 +43,7 @@ development_status:
   6-2-consistent-fingerprint: done
   6-3-ua-pool-viewport: done
   6-4-human-physics-easing-motion-curves: done
-  epic-6-retrospective: optional
+  epic-6-retrospective: done
 
   # --- Epic 10: Data & Platform Foundation for Universal Scraping ---
   epic-10: done
@@ -53,7 +53,7 @@ development_status:
   10-4-crawlcheckpoint-operational-api-resume-pause-retry: done
   10-5-metadata-schema-contract-registry-for-consumers: done
   10-6-data-retention-cleanup-job: done
-  epic-10-retrospective: optional
+  epic-10-retrospective: done
 
   # --- Epic 11: Resilient Network & Proxy Pool Management ---
   epic-11: done
@@ -66,14 +66,14 @@ development_status:
   11-7-crawler-governor-integration-validator-contract: done
   11-8-socksnode-dynamic-residential-proxy-provider: done
   11-9-dual-pool-consumer-quota: done
-  epic-11-retrospective: optional
+  epic-11-retrospective: done
 
   # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
   epic-12: done
   12-1-terminal-ascii-qr-code-login-module: done
   12-2-cdp-remote-attach-mode-chrome-devtools-protocol: done
   12-3-terminal-qr-full-backfill: done
-  epic-12-retrospective: optional
+  epic-12-retrospective: done
 
   # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---
   # NOTE: 2026-09-02 — Twitter GraphQL schema migration & 55-action audit in progress (sub-stories 13.2.13–13.2.15 added).
@@ -104,14 +104,14 @@ development_status:
   13-9-facebook-hybrid-social-actions-write-messenger: done
   13-10-facebook-hybrid-integration-caller-migration: done
   13-2-17-account-aware-scrape-dispatch: done
-  epic-13-retrospective: optional
+  epic-13-retrospective: done
 
   # --- Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream ---
   epic-14: done
   14-1-hierarchical-comment-tree-extraction-algorithm: done
   14-2-mcp-tool-exporters-daemon-http-sse-server: done
   14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub: done
-  epic-14-retrospective: optional
+  epic-14-retrospective: done
 
   # --- Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine ---
   epic-15: done
@@ -121,26 +121,26 @@ development_status:
   15-1-3-threads-hybrid-docid-hardening-search-comments: done
   15-1-4-threads-hybrid-integration-package-exports: done
   15-2-tiktok-video-hashtag-comment-scraper: done
-  epic-15-retrospective: optional
+  epic-15-retrospective: done
 
   # --- Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop) ---
   epic-16: done
   16-1-shopee-search-product-review-scraper-tls-spoofing: done
   16-2-tiktok-shop-product-sales-scraper: done
-  epic-16-retrospective: optional
+  epic-16-retrospective: done
 
   # --- Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan) ---
   epic-17: done
   17-1-chotot-multi-category-scraper-with-phone-mask-detector: done
   17-2-batdongsan-com-vn-property-scraper: done
-  epic-17-retrospective: optional
+  epic-17-retrospective: done
 
   # --- Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn) ---
   epic-18: done
   18-1-topcv-job-company-scraper: done
   18-2-vietnamworks-job-scraper: done
   18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: done
-  epic-18-retrospective: optional
+  epic-18-retrospective: done
 
   # --- Epic 19: Internal Operator Dashboard, Admin CLI & Operational Observability ---
   epic-19: done
@@ -158,7 +158,7 @@ development_status:
   19-8-admin-rest-api-account-checkpoint-management: done
   19-9-admin-rest-api-stream-metrics-alerts: done
   19-10-admin-mcp-tools: done
-  epic-19-retrospective: optional
+  epic-19-retrospective: done
 
   # --- Epic 21: B2B Procurement, Corporate & Automotive Intelligence Engine ---
   # NOTE: 2026-09-05 — Reactivated for Vietnam market pivot. PRD FR-94, FR-95 added.
@@ -196,7 +196,7 @@ development_status:
   23-4-mastodon-hybrid-crawler: done
   23-5-bluesky-mastodon-response-validators: done
   23-6-bluesky-mastodon-integration-caller-migration: done
-  epic-23-retrospective: optional
+  epic-23-retrospective: done
 
   # --- Epic 24: Utility Scripts & Adapters Migration ---
   epic-24: backlog
