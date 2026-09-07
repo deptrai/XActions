@@ -909,4 +909,39 @@ export declare function scrapeB2BRegistryExtended(action: string, args?: Record<
 export declare function createB2BRegistryExtendedClient(options?: Record<string, unknown>): B2BRegistryExtendedClient;
 export declare function createB2BRegistryExtendedCrawler(client?: B2BRegistryExtendedClient | Record<string, unknown>, options?: Record<string, unknown>): B2BRegistryExtendedCrawler;
 
+// ── F&B Merchant (Story 22.1) ─────────────────────────────────────────────
+
+/**
+ * F&B merchant HTTP client for PasGo, Foody, and Riviu.
+ */
+export declare class FnbMerchantClient {
+  name: string;
+  platform: string;
+  baseUrl: string;
+  targetPlatform: 'pasgo' | 'foody' | 'riviu';
+  requiresAuth: boolean;
+  requiresProxy: boolean;
+  constructor(options?: Record<string, unknown>);
+  request(method: string, url: string, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  searchRestaurants(params?: Record<string, unknown>, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  getNewlyOpened(params?: Record<string, unknown>, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  searchByDistrict(params?: Record<string, unknown>, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  detail(params?: Record<string, unknown>, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+}
+
+/**
+ * F&B merchant crawler for PasGo, Foody, and Riviu.
+ */
+export declare class FnbMerchantCrawler {
+  client: FnbMerchantClient;
+  constructor(deps?: Record<string, unknown>);
+  start(command: { action: string; args?: Record<string, unknown>; session?: Record<string, unknown> }): Promise<unknown>;
+  cleanup(): Promise<void>;
+  listActions(): Array<{ action: string; [key: string]: unknown }>;
+}
+
+export declare function scrapeFnb(action: string, args?: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown>;
+export declare function createFnbMerchantClient(options?: Record<string, unknown>): FnbMerchantClient;
+export declare function createFnbMerchantCrawler(client?: FnbMerchantClient | Record<string, unknown>, options?: Record<string, unknown>): FnbMerchantCrawler;
+
 

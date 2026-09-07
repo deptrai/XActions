@@ -68,6 +68,8 @@ import { MaSoThueCrawler } from './procurement/masothue/crawler.js';
 import { MaSoThueClient } from './procurement/masothue/client.js';
 import { AutomotiveCrawler } from './vehicles/automotive/crawler.js';
 import { AutomotiveClient } from './vehicles/automotive/client.js';
+import { FnbMerchantCrawler } from './fnb/merchant/crawler.js';
+import { FnbMerchantClient } from './fnb/merchant/client.js';
 import { B2BRegistryExtendedCrawler } from './procurement/b2b-registry-extended/index.js';
 import { B2BRegistryExtendedClient } from './procurement/b2b-registry-extended/client.js';
 import { BlueskyCrawler } from './social/bluesky/crawler.js';
@@ -87,6 +89,7 @@ import batdongsan from './realestate/batdongsan/index.js';
 import masothue from './procurement/masothue/index.js';
 import automotive from './vehicles/automotive/index.js';
 import b2bRegistryExtended from './procurement/b2b-registry-extended/index.js';
+import fnb from './fnb/merchant/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -178,6 +181,10 @@ export const platforms = {
   oto_vn: automotive,
   bonbanh: automotive,
   chotot_xe: automotive,
+  fnb,
+  pasgo: fnb,
+  foody: fnb,
+  riviu: fnb,
   b2b_registry_extended: b2bRegistryExtended,
   hosocongty: b2bRegistryExtended,
   muasamcong: b2bRegistryExtended,
@@ -1520,6 +1527,71 @@ export async function scrape(platform, action, options = {}) {
     });
 
     const crawler = new AutomotiveCrawler({
+      client,
+      store,
+      publisher: options.publisher || options.eventPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── F&B Merchant path (Story 22.1) ──
+  if (platformName === 'fnb' || platformName === 'pasgo' || platformName === 'foody' || platformName === 'riviu') {
+    /** @type {Record<string, string>} */
+    const FNB_ACTION_MAP = {
+      search_restaurants: 'search_restaurants',
+      newly_opened: 'newly_opened',
+      search_by_district: 'search_by_district',
+      detail: 'detail',
+      restaurant_detail: 'detail',
+      restaurant: 'detail',
+      search: 'search_restaurants',
+    };
+
+    const mappedAction = FNB_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(FNB_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.platform) mappedArgs.platform = options.platform;
+    if (options.city) mappedArgs.city = options.city;
+    if (options.district) mappedArgs.district = options.district;
+    if (options.days != null) mappedArgs.days = Number(options.days);
+    if (options.page != null) mappedArgs.page = Number(options.page);
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.id) mappedArgs.id = options.id;
+    if (options.slug) mappedArgs.slug = options.slug;
+    // If alias is a concrete platform, use it as target platform
+    if (platformName !== 'fnb') mappedArgs.platform = platformName;
+
+    const client = new FnbMerchantClient({
+      targetPlatform: options.targetPlatform || (platformName === 'fnb' ? 'pasgo' : platformName),
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+      userAgent: options.userAgent,
+    });
+
+    const crawler = new FnbMerchantCrawler({
       client,
       store,
       publisher: options.publisher || options.eventPublisher,

@@ -223,6 +223,8 @@ export const CATEGORIES = Object.freeze({
   B2B: 'b2b',
   // Automotive & vehicle listings (oto.com.vn, bonbanh.com, xe.chotot.com).
   AUTOMOTIVE: 'automotive',
+  // F&B merchant directory (PasGo, Foody, Riviu).
+  FNB_MERCHANT: 'fnb_merchant',
 });
 
 /** @type {string[]} */

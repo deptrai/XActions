@@ -2,7 +2,7 @@
 title: 'Story 22.1: F&B Merchant & Restaurant Directory Crawler (PasGo, Foody, Riviu)'
 type: 'feature'
 created: '2026-09-05'
-status: 'ready-for-dev'
+status: 'review'
 review_loop_iteration: 1
 baseline_commit: 'ac8d22f5'
 context:
@@ -68,61 +68,61 @@ context:
 ## Tasks / Subtasks
 
 ### Phase 0: Foundation & Schema Setup
-- [ ] **Task 0.1** — Add `fnb_merchant` to `CATEGORIES` in `src/core/types.js` (AC: #1)
-  - [ ] Add `FNB_MERCHANT: 'fnb_merchant'` to `CATEGORIES` object
-  - [ ] Verify `CATEGORY_VALUES` includes it
-- [ ] **Task 0.2** — Create directory structure `src/scrapers/fnb/merchant/` (AC: #1)
-  - [ ] `index.js` — barrel export + `scrapeFnb()` helper
-  - [ ] `client.js` — `FnbMerchantClient` extends `AbstractApiClient`
-  - [ ] `crawler.js` — `FnbMerchantCrawler` extends `AbstractCrawler`
-  - [ ] `schema.js` — platform constants, city/district mapping, phone validation
-  - [ ] `validator.js` — `FnbPlatformResponseValidator` extends `AbstractPlatformResponseValidator`
-  - [ ] `normalizer.js` — HTML → `PostItem` normalizer
+- [x] **Task 0.1** — Add `fnb_merchant` to `CATEGORIES` in `src/core/types.js` (AC: #1)
+  - [x] Add `FNB_MERCHANT: 'fnb_merchant'` to `CATEGORIES` object
+  - [x] Verify `CATEGORY_VALUES` includes it
+- [x] **Task 0.2** — Create directory structure `src/scrapers/fnb/merchant/` (AC: #1)
+  - [x] `index.js` — barrel export + `scrapeFnb()` helper
+  - [x] `client.js` — `FnbMerchantClient` extends `AbstractApiClient`
+  - [x] `crawler.js` — `FnbMerchantCrawler` extends `AbstractCrawler`
+  - [x] `schema.js` — platform constants, city/district mapping, phone validation
+  - [x] `validator.js` — `FnbPlatformResponseValidator` extends `AbstractPlatformResponseValidator`
+  - [x] `normalizer.js` — HTML → `PostItem` normalizer
 
 ### Phase 1: Platform Clients & Parsers
-- [ ] **Task 1.1** — PasGo client + parser (AC: #2, #3)
-  - [ ] Implement `PasGoClient` with `searchRestaurants()`, `getNewlyOpened()`, `searchByDistrict()`
-  - [ ] Parse SSR HTML + JSON-LD (`itemscope itemtype="http://schema.org/Restaurant"`)
-  - [ ] Extract: `name`, `address`, `phone`, `geo.lat`, `geo.lng`, `menuItems`, `rating`, `reviewCount`
-- [ ] **Task 1.2** — Foody client + parser (AC: #2, #3)
-  - [ ] Implement `FoodyClient` with `searchRestaurants()`, `getNewlyOpened()`, `searchByDistrict()`
-  - [ ] Parse `var jsonData.searchItems` from embedded script
-  - [ ] Extract: `Address`, `District`, `City`, `Phone`, `TotalReview`, `AvgRating`, `Cuisines`, `DetailUrl`
-- [ ] **Task 1.3** — Riviu client + parser (AC: #2, #3)
-  - [ ] Implement `RiviuClient` with `searchRestaurants()`, `getNewlyOpened()`, `searchByDistrict()`
-  - [ ] Parse Nuxt SSR HTML (no public API — scrape rendered page)
-  - [ ] Extract: restaurant cards, address, phone, rating, review count
+- [x] **Task 1.1** — PasGo client + parser (AC: #2, #3)
+  - [x] Implement `PasGoClient` with `searchRestaurants()`, `getNewlyOpened()`, `searchByDistrict()`
+  - [x] Parse SSR HTML + JSON-LD (`itemscope itemtype="http://schema.org/Restaurant"`)
+  - [x] Extract: `name`, `address`, `phone`, `geo.lat`, `geo.lng`, `menuItems`, `rating`, `reviewCount`
+- [x] **Task 1.2** — Foody client + parser (AC: #2, #3)
+  - [x] Implement `FoodyClient` with `searchRestaurants()`, `getNewlyOpened()`, `searchByDistrict()`
+  - [x] Parse `var jsonData.searchItems` from embedded script
+  - [x] Extract: `Address`, `District`, `City`, `Phone`, `TotalReview`, `AvgRating`, `Cuisines`, `DetailUrl`
+- [x] **Task 1.3** — Riviu client + parser (AC: #2, #3)
+  - [x] Implement `RiviuClient` with `searchRestaurants()`, `getNewlyOpened()`, `searchByDistrict()`
+  - [x] Parse Nuxt SSR HTML (no public API — scrape rendered page)
+  - [x] Extract: restaurant cards, address, phone, rating, review count
 
 ### Phase 2: Crawler Actions & Dispatch
-- [ ] **Task 2.1** — Register crawler actions (AC: #2)
-  - [ ] `search_restaurants` — args: `platform`, `city`, `district`, `category`, `page`, `limit`
-  - [ ] `newly_opened` — args: `platform`, `days`, `city`, `limit`
-  - [ ] `search_by_district` — args: `platform`, `city`, `district`, `limit`
-  - [ ] `detail` — args: `platform`, `id` or `slug`
-- [ ] **Task 2.2** — Normalize to `PostItem` (AC: #3)
-  - [ ] `platform: 'pasgo' | 'foody' | 'riviu'`
-  - [ ] `category: 'fnb_merchant'`
-  - [ ] `metadata` schema: `restaurantName`, `manager`, `hotline`, `address`, `gpsLat`, `gpsLng`, `menuItems[]`, `rating`, `reviewCount`, `phoneMasked`, `phone`, `detailUrl`, `city`, `district`, `cuisine`
-- [ ] **Task 2.3** — Register dispatcher aliases in `src/scrapers/index.js` (AC: #4)
-  - [ ] `pasgo`, `foody`, `riviu`, `fnb`
+- [x] **Task 2.1** — Register crawler actions (AC: #2)
+  - [x] `search_restaurants` — args: `platform`, `city`, `district`, `category`, `page`, `limit`
+  - [x] `newly_opened` — args: `platform`, `days`, `city`, `limit`
+  - [x] `search_by_district` — args: `platform`, `city`, `district`, `limit`
+  - [x] `detail` — args: `platform`, `id` or `slug`
+- [x] **Task 2.2** — Normalize to `PostItem` (AC: #3)
+  - [x] `platform: 'pasgo' | 'foody' | 'riviu'`
+  - [x] `category: 'fnb_merchant'`
+  - [x] `metadata` schema: `restaurantName`, `manager`, `hotline`, `address`, `gpsLat`, `gpsLng`, `menuItems[]`, `rating`, `reviewCount`, `phoneMasked`, `phone`, `detailUrl`, `city`, `district`, `cuisine`
+- [x] **Task 2.3** — Register dispatcher aliases in `src/scrapers/index.js` (AC: #4)
+  - [x] `pasgo`, `foody`, `riviu`, `fnb`
 
 ### Phase 3: Testing & Validation
-- [ ] **Task 3.1** — Create test fixtures `tests/scrapers/fnb/merchant/fixtures/` (AC: #5)
-  - [ ] `pasgo-search.html` — sample PasGo restaurant listing page
-  - [ ] `pasgo-detail.html` — sample PasGo restaurant detail
-  - [ ] `foody-search.html` — sample Foody page with `jsonData`
-  - [ ] `foody-detail.html` — sample Foody detail
-  - [ ] `riviu-search.html` — sample Riviu SSR page
-  - [ ] `riviu-detail.html` — sample Riviu detail
-- [ ] **Task 3.2** — Write unit tests `tests/scrapers/fnb/merchant/` (AC: #5)
-  - [ ] `client.test.js` — HTTP client with `node:http` mock server
-  - [ ] `crawler.test.js` — action dispatch, PostItem normalization, edge cases
-  - [ ] `normalizer.test.js` — HTML → PostItem per platform
-- [ ] **Task 3.3** — Validation matrix (AC: #5)
-  - [ ] Empty results → `[]`
-  - [ ] Invalid id → `XACT_4001`
-  - [ ] Bot challenge → `XACT_4030` (if detected)
-  - [ ] Phone masked → `phoneMasked: true`, `phone: null`
+- [x] **Task 3.1** — Create test fixtures `tests/scrapers/fnb/merchant/fixtures/` (AC: #5)
+  - [x] `pasgo-search.html` — sample PasGo restaurant listing page
+  - [x] `pasgo-detail.html` — sample PasGo restaurant detail
+  - [x] `foody-search.html` — sample Foody page with `jsonData`
+  - [x] `foody-detail.html` — sample Foody detail
+  - [x] `riviu-search.html` — sample Riviu SSR page
+  - [x] `riviu-detail.html` — sample Riviu detail
+- [x] **Task 3.2** — Write unit tests `tests/scrapers/fnb/merchant/` (AC: #5)
+  - [x] `client.test.js` — HTTP client with `node:http` mock server
+  - [x] `crawler.test.js` — action dispatch, PostItem normalization, edge cases
+  - [x] `normalizer.test.js` — HTML → PostItem per platform
+- [x] **Task 3.3** — Validation matrix (AC: #5)
+  - [x] Empty results → `[]`
+  - [x] Invalid id → `XACT_4001`
+  - [x] Bot challenge → `XACT_4030` (if detected)
+  - [x] Phone masked → `phoneMasked: true`, `phone: null`
 
 ---
 
@@ -342,6 +342,9 @@ Claude Opus 5 (1M context)
 - Added detailed extraction specs for PasGo (JSON-LD), Foody (embedded `jsonData`), Riviu (Nuxt SSR).
 - Added VN proxy, phone validation, error handling, test matrix.
 - Added platform-specific JSON-LD/JSON/HTML samples.
+- Implementation completed 2026-09-08.
+- All 119 tests pass (13 new + 106 regression).
+- No regressions in masothue, automotive, b2b-registry, realestate, recruitment.
 
 ### File List
 - `src/scrapers/fnb/merchant/index.js` — NEW
@@ -350,10 +353,21 @@ Claude Opus 5 (1M context)
 - `src/scrapers/fnb/merchant/schema.js` — NEW
 - `src/scrapers/fnb/merchant/validator.js` — NEW
 - `src/scrapers/fnb/merchant/normalizer.js` — NEW
-- `src/scrapers/index.js` — UPDATE (add `fnb` alias)
+- `src/scrapers/index.js` — UPDATE (add `fnb` alias + dispatch)
 - `src/core/types.js` — UPDATE (add `FNB_MERCHANT` category)
 - `types/index.d.ts` — UPDATE (add FnbMerchant types)
 - `tests/scrapers/fnb/merchant/client.test.js` — NEW
 - `tests/scrapers/fnb/merchant/crawler.test.js` — NEW
 - `tests/scrapers/fnb/merchant/normalizer.test.js` — NEW
-- `tests/scrapers/fnb/merchant/fixtures/` — NEW (6 HTML fixture files)
+- `tests/scrapers/fnb/merchant/fixtures/` — NEW (8 HTML fixture files)
+  - `pasgo-search.html`
+  - `pasgo-detail.html`
+  - `foody-search.html`
+  - `foody-detail.html`
+  - `riviu-search.html`
+  - `riviu-detail.html`
+  - `challenge.html`
+  - `empty.html`
+
+### Change Log
+- 2026-09-08: Story 22.1 implemented — `FnbMerchantCrawler` + `FnbMerchantClient` for PasGo (JSON-LD), Foody (`jsonData`), Riviu (Nuxt SSR). Registered `fnb`, `pasgo`, `foody`, `riviu` dispatch aliases. Added `fnb_merchant` to `CATEGORIES`. 13 new tests, 119 total pass.
