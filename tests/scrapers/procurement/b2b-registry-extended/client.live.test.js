@@ -55,7 +55,14 @@ beforeAll(async () => {
         }
       }
 
-      // HoSoCongTy live detail route
+      // HoSoCongTy live detail route — slug-based .htm from search results
+      if (url.pathname.endsWith('.htm') && url.pathname.includes('cong-ty')) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=UTF-8' });
+        res.end(hosocongtyDetailHtml);
+        return;
+      }
+
+      // Legacy fallback route /tra-cuu/{taxCode}
       if (url.pathname.startsWith('/tra-cuu/')) {
         const taxCode = url.pathname.replace('/tra-cuu/', '');
         if (taxCode === 'notfound') {
@@ -115,13 +122,21 @@ describe('B2BRegistryExtended live integration', () => {
     expect(resp.body).toContain('0123456789');
   });
 
-  it('should fetch HoSoCongTy company detail using live /tra-cuu/ route', async () => {
+  it('should fetch HoSoCongTy company detail via slug extracted from search results', async () => {
     const client = new B2BRegistryExtendedClient({ baseUrl, requiresProxy: false });
     const resp = await client.companyDetailHosocongty({ taxCode: '1702372113' });
 
     expect(resp.status).toBe(200);
     expect(resp.body).toContain('1702372113');
     expect(resp.body).toContain('HUNG THINH PHAT C&amp;T CO,. LTD');
+  });
+
+  it('should fall back to /tra-cuu/ route when no slug is found in search results', async () => {
+    const client = new B2BRegistryExtendedClient({ baseUrl, requiresProxy: false });
+    const resp = await client.companyDetailHosocongty({ taxCode: '0123456789' });
+
+    expect(resp.status).toBe(200);
+    expect(resp.body).toContain('1702372113');
   });
 
   it('should search MuaSamCong tenders using live smart search REST endpoint', async () => {

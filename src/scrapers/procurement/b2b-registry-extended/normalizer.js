@@ -187,7 +187,7 @@ export function normalizeHosocongty(html, kind = 'search', context = {}) {
         contentParts: [companyName, businessLines, address, phone].filter(Boolean),
         authorId: taxCode && taxCode !== 'unknown' ? `hosocongty:${taxCode}` : `hosocongty:${companyName || 'unknown'}`,
         authorName: representativeName || 'Unknown',
-        postUrl: context.postUrl || (taxCode !== 'unknown' ? `https://hosocongty.vn/tra-cuu/${taxCode}` : ''),
+        postUrl: context.postUrl || (context.detailUrl || (taxCode !== 'unknown' ? `https://hosocongty.vn/tra-cuu/${taxCode}` : '')),
         publishedAt: establishedDate,
         metadata: {
           taxCode,

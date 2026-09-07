@@ -306,15 +306,64 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
   }
 
   /**
+   * Extract detail slug URL from HoSoCongTy search result HTML.
+   * @param {string} html
+   * @param {string} [taxCode]
+   * @returns {string | null}
+   */
+  extractHosocongtyDetailUrl(html, taxCode = '') {
+    if (!html || typeof html !== 'string') return null;
+    const liBlocks = html.match(/<li[^>]*>[\s\S]*?<\/li>/gi) || [];
+    for (const block of liBlocks) {
+      const titleMatch = block.match(/<a[^>]*title="([^"]*?)"[^>]*>([\s\S]*?)<\/a>/i);
+      if (titleMatch) {
+        const titleAttr = titleMatch[1] || '';
+        if (taxCode && titleAttr.startsWith(`${taxCode} - `)) {
+          const hrefMatch = block.match(/<a[^>]*href="([^"]*\.htm)"[^>]*>/i);
+          if (hrefMatch) {
+            return new URL(hrefMatch[1], this.hosocongtyBaseUrl).toString();
+          }
+        }
+      }
+    }
+    const genericMatch = html.match(/<a[^>]*href="([^"]*\.htm)"[^>]*title="([^"]*?)"[^>]*>/i);
+    if (genericMatch && genericMatch[2]?.includes(taxCode)) {
+      return new URL(genericMatch[1], this.hosocongtyBaseUrl).toString();
+    }
+    return null;
+  }
+
+  /**
    * Get company detail on HoSoCongTy.
+   * Resolves live detail URL `/{slug}.htm` from search results; falls back to `/tra-cuu/{taxCode}`.
    * @param {Record<string, any>} [params={}]
    * @param {Record<string, any>} [options={}]
    * @returns {Promise<{ status: number, data: string, body: string }>}
    */
   async companyDetailHosocongty(params = {}, options = {}) {
     const taxCode = encodeURIComponent(String(params.taxCode || ''));
-    const url = `${this.hosocongtyBaseUrl}/tra-cuu/${taxCode}`;
-    return this.request('GET', url, { ...options, raw: true, platform: 'hosocongty' });
+    if (!taxCode) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: taxCode',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'hosocongty',
+      });
+    }
+
+    // Live route: search → extract slug → fetch /{slug}.htm
+    const searchResp = await this.searchHosocongty({ q: taxCode }, options);
+    const searchHtml = searchResp.body || searchResp.data || '';
+    const detailUrl = this.extractHosocongtyDetailUrl(searchHtml, taxCode);
+    if (detailUrl) {
+      return this.request('GET', detailUrl, { ...options, raw: true, platform: 'hosocongty' });
+    }
+
+    // Fallback legacy route
+    const fallbackUrl = `${this.hosocongtyBaseUrl}/tra-cuu/${taxCode}`;
+    return this.request('GET', fallbackUrl, { ...options, raw: true, platform: 'hosocongty' });
   }
 
   /**
@@ -368,6 +417,7 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
 
   /**
    * Get tender detail on MuaSamCong.
+   * Tries smart search → REST get-by-id → legacy HTML detail-v2.
    * @param {Record<string, any>} [params={}]
    * @param {Record<string, any>} [options={}]
    * @returns {Promise<{ status: number, data: string, body: string }>}
@@ -376,7 +426,7 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
     let id = params.id;
     const notifyNo = String(params.notifyNo || params.tenderNo || '');
 
-    // If only notifyNo is provided, attempt smart search resolution to get UUID id
+    // Resolve id via smart search if only notifyNo provided
     if (!id && notifyNo) {
       try {
         const searchResp = await this.searchTendersMuasamcong({
@@ -397,6 +447,7 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
       }
     }
 
+    // Try REST get-by-id endpoint
     if (id) {
       const restUrl = `${this.muasamcongBaseUrl}/o/egp-portal-contractor-selection-v2/services/expose/lcnt/bid-po-bido-notify-contractor-view/get-by-id?token=`;
       try {
@@ -411,13 +462,17 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
           platform: 'muasamcong',
         });
         if (resp.status === 200 && resp.body && !resp.body.includes('<!DOCTYPE') && !resp.body.includes('<html')) {
-          return resp;
+          // Verify response has actual data, not all nulls
+          const parsed = JSON.parse(resp.body);
+          const hasData = Object.values(parsed).some((v) => v !== null);
+          if (hasData) return resp;
         }
       } catch {
         // Fallback to legacy GET
       }
     }
 
+    // Fallback: legacy HTML detail-v2 page
     const query = new URLSearchParams({
       render: 'detail-v2',
       notifyNo: notifyNo,
