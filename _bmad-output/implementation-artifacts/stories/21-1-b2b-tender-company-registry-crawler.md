@@ -3,7 +3,7 @@ title: 'Story 21.1: MaSoThue Company Registry Crawler'
 type: 'feature'
 created: '2026-09-05'
 updated: '2026-09-06'
-status: 'ready-for-dev'
+status: 'done'
 review_loop_iteration: 1
 baseline_commit: 'ac8d22f5'
 context:

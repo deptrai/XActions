@@ -2,7 +2,7 @@
 title: 'Story 21.2: Automotive & Vehicles Market Crawler (Oto.com.vn, Bonbanh, Chợ Tốt Xe)'
 type: 'feature'
 created: '2026-09-05'
-status: 'ready-for-dev'
+status: 'done'
 review_loop_iteration: 1
 baseline_commit: '538ebe524ff889a80fc07a38c74c5c46be66d2fd'
 context:
