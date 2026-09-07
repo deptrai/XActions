@@ -24,6 +24,8 @@ Status: probes complete
 - `gappapi.deliverynow.vn` returns 403 (`error: 90309999`) / 404 — not publicly usable.
 - **Resolution:** Foody web page (`foody.vn/{city}/nha-hang`) embeds full search results in `var jsonData` → `searchItems` array with `Address`, `District`, `City`, `Phone`, `TotalReview`, `AvgRating`, `Cuisines`, `DetailUrl`. **No app API needed** — parse embedded JSON.
 - **Story 22.1 update needed:** Approach #2 should say "Foody: parse embedded `jsonData.searchItems`" instead of "REST API mobile app".
+- **Thuocsi**: `api.buymed.com` 401 on all catalog endpoints — **auth-gated**, defer to Epic 24.
+- **Long Chau**: `nhathuoclongchau.com.vn/he-thong-cua-hang` embeds 2,649 pharmacies in `__NEXT_DATA__`; also available at `/_next/data/{buildId}/he-thong-cua-hang.json`. **Added to Story 22.2.**
 
 ### ✅ Concern 2: Riviu structured data — RESOLVED
 - `riviu.vn` is a Nuxt.js SSR site (200 OK). `reviewapi.riviu.co` is the API backend but root returns 404.
