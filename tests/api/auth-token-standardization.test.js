@@ -65,7 +65,7 @@ function makeReq(token) {
 
 describe('Story 8.3: JWT Key Standardization (authMiddleware)', () => {
   it('authenticates user when JWT payload uses `userId` (AC2)', async () => {
-    const token = jwt.sign({ userId: testUser.user.id, username: testUser.user.username }, TEST_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: testUser.id, username: testUser.username }, TEST_SECRET, { expiresIn: '1h' });
     const req = makeReq(token);
     let nextCalled = false;
     const res = mockRes();
@@ -74,11 +74,11 @@ describe('Story 8.3: JWT Key Standardization (authMiddleware)', () => {
     await authMiddleware(req, res, next);
     expect(nextCalled).toBe(true);
     expect(req.user).toBeDefined();
-    expect(req.user.id).toBe(testUser.user.id);
+    expect(req.user.id).toBe(testUser.id);
   });
 
   it('authenticates user when JWT payload uses `id` (AC1)', async () => {
-    const token = jwt.sign({ id: testUser.user.id, username: testUser.user.username }, TEST_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: testUser.id, username: testUser.username }, TEST_SECRET, { expiresIn: '1h' });
     const req = makeReq(token);
     let nextCalled = false;
     const res = mockRes();
@@ -87,11 +87,11 @@ describe('Story 8.3: JWT Key Standardization (authMiddleware)', () => {
     await authMiddleware(req, res, next);
     expect(nextCalled).toBe(true);
     expect(req.user).toBeDefined();
-    expect(req.user.id).toBe(testUser.user.id);
+    expect(req.user.id).toBe(testUser.id);
   });
 
   it('authenticates user when JWT payload uses `sub`', async () => {
-    const token = jwt.sign({ sub: testUser.user.id, username: testUser.user.username }, TEST_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ sub: testUser.id, username: testUser.username }, TEST_SECRET, { expiresIn: '1h' });
     const req = makeReq(token);
     let nextCalled = false;
     const res = mockRes();
@@ -100,11 +100,11 @@ describe('Story 8.3: JWT Key Standardization (authMiddleware)', () => {
     await authMiddleware(req, res, next);
     expect(nextCalled).toBe(true);
     expect(req.user).toBeDefined();
-    expect(req.user.id).toBe(testUser.user.id);
+    expect(req.user.id).toBe(testUser.id);
   });
 
   it('prefers `userId` over `id` when both exist (AC3)', async () => {
-    const token = jwt.sign({ userId: testUser.user.id, id: 'other-id', username: testUser.user.username }, TEST_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: testUser.id, id: 'other-id', username: testUser.username }, TEST_SECRET, { expiresIn: '1h' });
     const req = makeReq(token);
     let nextCalled = false;
     const res = mockRes();
@@ -113,7 +113,7 @@ describe('Story 8.3: JWT Key Standardization (authMiddleware)', () => {
     await authMiddleware(req, res, next);
     expect(nextCalled).toBe(true);
     expect(req.user).toBeDefined();
-    expect(req.user.id).toBe(testUser.user.id);
+    expect(req.user.id).toBe(testUser.id);
   });
 
   it('returns 401 when token has neither userId nor id nor sub (AC4)', async () => {
@@ -152,7 +152,7 @@ describe('Story 8.3: JWT Key Standardization (authMiddleware)', () => {
 
 describe('Story 8.3: Optional Auth Middleware (optionalAuthMiddleware)', () => {
   it('populates user when token uses `userId`', async () => {
-    const token = jwt.sign({ userId: testUser.user.id }, TEST_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: testUser.id }, TEST_SECRET, { expiresIn: '1h' });
     const req = makeReq(token);
     let nextCalled = false;
     const res = {};
@@ -161,11 +161,11 @@ describe('Story 8.3: Optional Auth Middleware (optionalAuthMiddleware)', () => {
     await optionalAuthMiddleware(req, res, next);
     expect(nextCalled).toBe(true);
     expect(req.user).toBeDefined();
-    expect(req.user.id).toBe(testUser.user.id);
+    expect(req.user.id).toBe(testUser.id);
   });
 
   it('populates user when token uses `id`', async () => {
-    const token = jwt.sign({ id: testUser.user.id }, TEST_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: testUser.id }, TEST_SECRET, { expiresIn: '1h' });
     const req = makeReq(token);
     let nextCalled = false;
     const res = {};
@@ -174,7 +174,7 @@ describe('Story 8.3: Optional Auth Middleware (optionalAuthMiddleware)', () => {
     await optionalAuthMiddleware(req, res, next);
     expect(nextCalled).toBe(true);
     expect(req.user).toBeDefined();
-    expect(req.user.id).toBe(testUser.user.id);
+    expect(req.user.id).toBe(testUser.id);
   });
 
   it('sets user to null and continues when token has no valid userId/id', async () => {

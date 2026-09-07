@@ -64,13 +64,16 @@ export function makeValidFacebookCookie(overrides = {}) {
 
 export async function seedTestUser(userId, username = 'api_test_user', options = {}) {
   const email = `${userId}@example.com`;
-  const hashedPassword = await bcrypt.hash('TestPassword123!', 10);
+  const plainPassword = options.password || 'TestPassword123!';
+  const hashedPassword = await bcrypt.hash(plainPassword, 10);
   const isAdmin = options.isAdmin === true;
 
-  const user = await prisma.user.upsert({
-    where: { id: userId },
-    update: { isAdmin },
-    create: {
+  await prisma.user.deleteMany({
+    where: { OR: [{ id: userId }, { username }] },
+  }).catch(() => {});
+
+  const user = await prisma.user.create({
+    data: {
       id: userId,
       username,
       email,
@@ -81,6 +84,7 @@ export async function seedTestUser(userId, username = 'api_test_user', options =
   });
   return {
     ...user,
+    password: plainPassword,
     token: makeTestToken(user.id, user.username),
   };
 }

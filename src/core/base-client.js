@@ -122,6 +122,7 @@ export class AbstractApiClient {
     this.sessionManager = options.sessionManager;
     this.proxyPool = options.proxyPool !== undefined ? options.proxyPool : globalProxyPool;
     this.proxyProvider = options.proxyProvider;
+    this._hasExplicitProxy = options.proxyProvider !== undefined || options.proxyPool !== undefined;
     this.accountPool = options.accountPool;
     this.governor = options.governor;
     this.responseValidator = options.responseValidator || null;
@@ -201,7 +202,7 @@ export class AbstractApiClient {
     if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
       const opts = { accountId: rawAccountId, requiresResidential, pool: pool || undefined, consumerId: safeOptions.consumerId };
       proxy = this.proxyProvider.getProxy(opts);
-    } else if (this.proxyPool) {
+    } else if (this.proxyPool && (this._hasExplicitProxy || this.requiresProxy || requiresResidential)) {
       if (requiresAuth && rawAccountId && typeof this.proxyPool.getStickyProxy === 'function') {
         proxy = this.proxyPool.getStickyProxy(rawAccountId, requiresResidential, pool ? { pool } : undefined);
       } else if (pool && typeof this.proxyPool.getProxy === 'function') {
@@ -621,7 +622,7 @@ export class AbstractApiClient {
           });
         }
 
-        const proxy = (this.requiresProxy || opts.requiresResidential)
+        const proxy = (this.requiresProxy || opts.requiresResidential || this._hasExplicitProxy)
           ? this.resolveProxy(concreteAccountId, opts.requiresResidential, effectiveRequiresAuth, { pool: pool || undefined, consumerId: consumerId || undefined })
           : null;
 
@@ -646,15 +647,18 @@ export class AbstractApiClient {
         const requestTimeout = opts.timeout ?? this.timeout ?? 30000;
         let response;
         try {
-          response = await transport({
+          const transportOpts = {
             ...opts,
             timeout: requestTimeout,
             method,
             url,
             proxy,
-            agent,
             accountId: currentAccountId,
-          });
+          };
+          if (agent) {
+            transportOpts.agent = agent;
+          }
+          response = await transport(transportOpts);
         } catch (err) {
           if (err instanceof PlatformError && !err.isRetryable) {
             throw err;

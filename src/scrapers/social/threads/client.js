@@ -24,6 +24,30 @@ const MAX_TOKEN_CACHE_ENTRIES = 500;
 const DEFAULT_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes TTL
 const TOKEN_FAILURE_COOLDOWN_MS = 1500;
 
+/**
+ * Detect local/private test hosts so the client can skip mandatory proxy routing.
+ * @param {string} url
+ * @returns {boolean}
+ */
+function isLocalUrl(url) {
+  if (typeof url !== 'string') return false;
+  try {
+    const { hostname } = new URL(url);
+    const host = hostname.toLowerCase();
+    if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
+    if (host === '::1' || /\[?::1\]?/.test(host) || host === 'fe80::1') return true;
+    if (/^127\./.test(host) || host === '0.0.0.0') return true;
+    if (host.startsWith('10.') || host.startsWith('192.168.')) return true;
+    if (host.startsWith('172.')) {
+      const second = Number(host.split('.')[1]);
+      if (second >= 16 && second <= 31) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 /** @type {Set<number>} */
 const AUTH_EXPIRED_CODES = new Set([190, 1357004, 1357001, 1357006, 1357010, 1357013]);
 /** @type {Set<number>} */
@@ -125,16 +149,17 @@ export class ThreadsClient extends AbstractApiClient {
    * @param {import('../../../core/platform-validator.js').AbstractPlatformResponseValidator} [deps.responseValidator]
    */
   constructor(deps = {}) {
+    const baseUrl = (deps.baseUrl || 'https://www.threads.net').replace(/\/+$/, '');
+
     super(/** @type {any} */ ({
       ...deps,
       platform: 'threads',
       client: deps.client || 'got',
+      requiresProxy: deps.requiresProxy !== undefined ? deps.requiresProxy : !isLocalUrl(baseUrl),
       responseValidator: deps.responseValidator || new ThreadsPlatformResponseValidator(),
     }));
 
-    if (deps.baseUrl) {
-      this.baseUrl = deps.baseUrl.replace(/\/+$/, '');
-    }
+    this.baseUrl = baseUrl;
     if (deps.igAppId) {
       this.igAppId = deps.igAppId;
     }
@@ -241,7 +266,8 @@ export class ThreadsClient extends AbstractApiClient {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       this.#nextProxy = null;
 
-      if (this.proxyProvider || this.proxyPool) {
+      const hasExplicitProxy = this.proxyProvider || (this.proxyPool && this._hasExplicitProxy);
+      if (this.requiresProxy || hasExplicitProxy) {
         try {
           this.#nextProxy = attempt === 0
             ? this.resolveProxy(accountId)

@@ -42,7 +42,7 @@ describe('Auth endpoints', () => {
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/register with existing username → 400`, async () => {
     const res = await request(app).post('/api/auth/register').send({
-      username: testUser.user.username,
+      username: testUser.username,
       password: 'validpassword123',
     });
     expect(res.status).toBe(400);
@@ -60,7 +60,7 @@ describe('Auth endpoints', () => {
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/login with invalid credentials → 401`, async () => {
     const res = await request(app).post('/api/auth/login').send({
-      identifier: testUser.user.username,
+      identifier: testUser.username,
       password: 'wrongpassword123',
     });
     expect(res.status).toBe(401);
@@ -69,12 +69,12 @@ describe('Auth endpoints', () => {
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/login with valid credentials → 200`, async () => {
     const res = await request(app).post('/api/auth/login').send({
-      identifier: testUser.user.username,
+      identifier: testUser.username,
       password: testUser.password,
     });
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('token');
-    expect(res.body.user.username).toBe(testUser.user.username);
+    expect(res.body.user.username).toBe(testUser.username);
   });
 
   it.each([
@@ -116,7 +116,7 @@ describe('Auth endpoints', () => {
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] Protected endpoint accepts token signed with { id } payload (Story 8.3)`, async () => {
-    const token = jwt.sign({ id: testUser.user.id, username: testUser.user.username }, TEST_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: testUser.id, username: testUser.username }, TEST_SECRET, { expiresIn: '1h' });
     const res = await request(app)
       .get('/api/operations')
       .set('Authorization', `Bearer ${token}`);
