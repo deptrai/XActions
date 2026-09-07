@@ -2,8 +2,8 @@
 
 Date: 2026-09-08
 Assessor: Claude
-Verdict: **PASS — Story 22.1 & 22.3 ready; Story 22.2 needs scope decision**
-Status: probes complete
+Verdict: **PASS — all 3 stories ready for implementation**
+Status: ready-for-implementation
 
 ## Live Probe Results (2026-09-08)
 
@@ -75,7 +75,7 @@ Status: probes complete
 **PASS** — Epic 22 is ready to start:
 
 - **Story 22.1** (F&B): ✅ Ready — all 3 platforms feasible via SSR/HTML parsing (no app API needed).
-- **Story 22.2** (Healthcare): ⚠️ Ready with scope note — YouMed + Medpro public; **Thuocsi needs auth decision**.
+- **Story 22.2** (Healthcare): ✅ Ready — YouMed + Medpro + **Long Chau** public; Thuocsi auth-gated and deferred to Epic 24.
 - **Story 22.3** (Legal/IP): ✅ Ready — revised endpoint approach (gazette HTML or Wicket browser).
 
-**Recommended order:** 22.1 → 22.3 → 22.2 (start with lowest risk, resolve Thuocsi scope during 22.2 dev).
+**Recommended order:** 22.1 → 22.2 → 22.3 (all ready; 22.2 now unblocked with Long Chau public data).
