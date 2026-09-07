@@ -63,6 +63,25 @@ function buildPostItem(input) {
   };
 }
 
+function extractBalancedJson(raw) {
+  let depth = 0, inString = false, escape = false;
+  let end = -1;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inString) {
+      if (escape) escape = false;
+      else if (ch === '\\') escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === '{' || ch === '[') depth++;
+    else if (ch === '}' || ch === ']') depth--;
+    if (depth === 0) { end = i + 1; break; }
+  }
+  return end > 0 ? raw.substring(0, end) : raw;
+}
+
 // ── PasGo ─────────────────────────────────────────────────────────────────
 
 function extractPasGoItems(html, sourcePlatform = 'pasgo') {
@@ -184,6 +203,57 @@ function extractPasGoItems(html, sourcePlatform = 'pasgo') {
     }
   }
 
+  // Fallback: parse .wapitem blocks (PasGo live search results)
+  if (!items.length) {
+    const blocks = html.match(/<div class="wapitem">[\s\S]*?<div class="waptop-desc">[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/gi) || [];
+    for (const block of blocks) {
+      const nameMatch = block.match(/<h3 class="overflow-ellipsis-one">([^<]+)<\/h3>/i);
+      const name = nameMatch ? stripTags(nameMatch[1]).trim() : '';
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+
+      const urlMatch = block.match(/<a class="waptop" href="([^"]+)"/i);
+      const detailUrl = urlMatch ? urlMatch[1] : '';
+      const externalId = detailUrl ? detailUrl.split('/').pop() || `pasgo-${seen.size}` : `pasgo-${seen.size}`;
+
+      const ratingMatch = block.match(/<input[^>]*class="rating[^>]*value="([^"]*)"/i);
+      const rating = parseRating(ratingMatch ? ratingMatch[1] : '');
+      const addressMatch = block.match(/<p class="text-address[^>]*>([^<]+)<\/p>/i);
+      const address = addressMatch ? stripTags(addressMatch[1]).trim() : '';
+      const tagMatch = block.match(/<div class="waptag[^>]*>([^<]+)<\/div>/i);
+      const tag = tagMatch ? stripTags(tagMatch[1]).trim() : '';
+
+      items.push(buildPostItem({
+        platform: 'pasgo',
+        externalId,
+        title: name,
+        contentParts: [name, address].filter(Boolean),
+        authorId: `pasgo:${externalId}`,
+        authorName: 'Chủ quán',
+        postUrl: detailUrl,
+        mediaUrls: [],
+        metadata: {
+          restaurantName: name,
+          manager: '',
+          hotline: null,
+          phone: null,
+          phoneMasked: false,
+          address,
+          city: '',
+          district: '',
+          gpsLat: null,
+          gpsLng: null,
+          menuItems: tag ? [tag] : [],
+          rating,
+          reviewCount: null,
+          cuisine: tag ? [tag] : [],
+          detailUrl,
+          sourcePlatform,
+        },
+      }));
+    }
+  }
+
   return items;
 }
 
@@ -211,12 +281,17 @@ function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
   let data;
   try {
     const raw = jsonDataMatch[1].trim();
-    // Foody emits unquoted JS object keys. Quote only keys that appear right after { or , or [
-    // and before a colon, without touching string literals.
-    const quoted = raw.replace(/([{,\[]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
-    data = JSON.parse(quoted);
+    const jsonStr = extractBalancedJson(raw);
+    data = JSON.parse(jsonStr);
   } catch {
-    return items;
+    // Fallback: quote unquoted keys and retry (Foody emits JS object literal)
+    try {
+      const raw = jsonDataMatch[1].trim();
+      const quoted = raw.replace(/([{,\[]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1\"$2\":');
+      data = JSON.parse(quoted);
+    } catch {
+      return items;
+    }
   }
 
   const searchItems = Array.isArray(data?.searchItems) ? data.searchItems : [];
@@ -236,7 +311,6 @@ function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
       if (!item.District) continue;
       const district = stripTags(item.District).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
       const filterDistrict = String(filter.district).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
-      // Exact match, or match at word boundary (e.g. "quan 1" vs "quan 10")
       const districtWords = district.split(/\s+/);
       const filterWords = filterDistrict.split(/\s+/);
       const matches = filterWords.every((w) => districtWords.includes(w)) || district === filterDistrict;
@@ -247,12 +321,17 @@ function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
     const address = stripTags(item.Address || '');
     const city = stripTags(item.City || '');
     const district = stripTags(item.District || '');
-    const { phone, phoneMasked } = parseVnPhone(item.Phone || '');
-    const rating = parseRating(item.AvgRating);
+    const { phone, phoneMasked } = parseVnPhone(item.Phone || item.Mobile || '');
+    const rating = parseRating(item.AvgRatingOriginal ?? item.AvgRating);
     const reviewCount = parseReviewCount(item.TotalReview);
-    const cuisine = Array.isArray(item.Cuisines) ? item.Cuisines : [];
+    const cuisineNames = Array.isArray(item.Cuisines)
+      ? item.Cuisines.map((c) => (typeof c === 'object' ? stripTags(c.Name || c.NameEn || '') : stripTags(String(c))))
+      : [];
     const lat = parseFloat(item.Latitude);
     const lng = parseFloat(item.Longitude);
+
+    const detailPath = item.DetailUrl || item.MicrositeUrl || item.RestaurantUrl || '';
+    const postUrl = detailPath.startsWith('http') ? detailPath : `https://www.foody.vn${detailPath}`;
 
     items.push(buildPostItem({
       platform: 'foody',
@@ -261,8 +340,8 @@ function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
       contentParts: [title, address].filter(Boolean),
       authorId: phone || `foody:${externalId}`,
       authorName: phone ? `Hotline: ${phone}` : 'Chủ quán',
-      postUrl: item.DetailUrl || '',
-      mediaUrls: [],
+      postUrl,
+      mediaUrls: item.PicturePath ? [item.PicturePath] : [],
       metadata: {
         restaurantName: title,
         manager: '',
@@ -274,11 +353,11 @@ function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
         district,
         gpsLat: Number.isFinite(lat) ? lat : null,
         gpsLng: Number.isFinite(lng) ? lng : null,
-        menuItems: cuisine,
+        menuItems: cuisineNames,
         rating,
         reviewCount,
-        cuisine,
-        detailUrl: item.DetailUrl || '',
+        cuisine: cuisineNames,
+        detailUrl: postUrl,
         sourcePlatform,
       },
     }));
@@ -288,7 +367,67 @@ function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
 }
 
 function extractFoodyDetail(html, sourcePlatform = 'foody') {
-  return extractFoodyItems(html, sourcePlatform, {});
+  const items = [];
+  const seen = new Set();
+  const initMatch = html.match(/var\s+initData\s*=\s*([\s\S]*?);\s*$/m);
+  if (initMatch) {
+    try {
+      const data = JSON.parse(extractBalancedJson(initMatch[1].trim()));
+      const externalId = String(data.RestaurantID || data.Id || '');
+      if (externalId && !seen.has(externalId)) {
+        seen.add(externalId);
+        const title = stripTags(data.Name || '');
+        const address = stripTags(data.Address || '');
+        const city = stripTags(data.City || '');
+        const district = stripTags(data.District || '');
+        const { phone, phoneMasked } = parseVnPhone(data.Phone || data.Mobile || '');
+        const rating = parseRating(data.AvgRating ?? data.AvgRatingOriginal);
+        const reviewCount = parseReviewCount(data.TotalReview);
+        const cuisineNames = Array.isArray(data.Cuisines)
+          ? data.Cuisines.map((c) => (typeof c === 'object' ? stripTags(c.Name || c.NameEn || '') : stripTags(String(c))))
+          : [];
+        const lat = parseFloat(data.Latitude);
+        const lng = parseFloat(data.Longitude ?? data.Longtitude);
+        const detailPath = data.MicrositeUrl || data.RestaurantUrl || data.DetailUrl || '';
+        const postUrl = detailPath.startsWith('http') ? detailPath : `https://www.foody.vn${detailPath}`;
+
+        items.push(buildPostItem({
+          platform: 'foody',
+          externalId,
+          title,
+          contentParts: [title, address].filter(Boolean),
+          authorId: phone || `foody:${externalId}`,
+          authorName: phone ? `Hotline: ${phone}` : 'Chủ quán',
+          postUrl,
+          mediaUrls: data.PictureModel?.ImageUrl ? [data.PictureModel.ImageUrl] : (data.MobileImageUrl ? [data.MobileImageUrl] : []),
+          metadata: {
+            restaurantName: title,
+            manager: '',
+            hotline: phone,
+            phone,
+            phoneMasked,
+            address,
+            city,
+            district,
+            gpsLat: Number.isFinite(lat) ? lat : null,
+            gpsLng: Number.isFinite(lng) ? lng : null,
+            menuItems: cuisineNames,
+            rating,
+            reviewCount,
+            cuisine: cuisineNames,
+            detailUrl: postUrl,
+            sourcePlatform,
+          },
+        }));
+      }
+    } catch {
+      // fall through
+    }
+  }
+  if (!items.length) {
+    return extractFoodyItems(html, sourcePlatform, {});
+  }
+  return items.slice(0, 1);
 }
 
 // ── Riviu ─────────────────────────────────────────────────────────────────
@@ -299,67 +438,157 @@ function extractRiviuItems(html, sourcePlatform = 'riviu') {
 
   if (typeof html !== 'string') return items;
 
-  // Riviu restaurant card patterns — match the inner content of each card element.
-  const blocks = html.match(/<div[^>]*class=["'][^"']*restaurant-card[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*(?=<div[^>]*class=["'][^"']*restaurant-card|<\/div>)/gi) ||
-    html.match(/<article[^>]*class=["'][^"']*restaurant[^"']*["'][^>]*>([\s\S]*?)<\/article>/gi) ||
-    html.match(/<div[^>]*class=["'][^"']*location-card[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*(?=<div[^>]*class=["'][^"']*location-card|<\/div>)/gi) ||
-    [];
-
-  for (const block of blocks) {
-    const nameMatch = block.match(/class=["'][^"']*restaurant-name[^"']*["'][^>]*>([^<]+)/i) ||
-      block.match(/<h3[^>]*>([^<]+)<\/h3>/i);
-    const name = nameMatch ? stripTags(nameMatch[1]) : '';
+  // Live Riviu: city page lists review-item blocks with place links
+  const reviewBlocks = html.match(/<div[^>]*class=["'][^"']*review-item[^"']*["'][^>]*>([\s\S]*?)(?=<div[^>]*class=["'][^"']*review-item|<!-- -->|$\{|$)/gi) || [];
+  for (const block of reviewBlocks) {
+    const nameMatch = block.match(/<h4[^>]*class=["'][^"']*title-item-black[^"']*["'][^>]*>([^<]+)<\/h4>/i) ||
+      block.match(/<h[23][^>]*>([^<]+)<\/h[23]>/i);
+    const name = nameMatch ? stripTags(nameMatch[1]).trim() : '';
     if (!name || seen.has(name)) continue;
     seen.add(name);
 
-    const addressMatch = block.match(/class=["'][^"']*address[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) ||
-      block.match(/class=["'][^"']*location[^"']*["'][^>]*>([\s\S]*?)<\/span>/i);
-    const address = addressMatch ? stripTags(addressMatch[1]) : '';
+    const urlMatch = block.match(/href=["']([^"']*\/[^"']+)["']/i);
+    const detailUrl = urlMatch ? urlMatch[1] : '';
+    const externalId = detailUrl ? detailUrl.split('/').pop() || `riviu-${seen.size}` : `riviu-${seen.size}`;
 
     const ratingMatch = block.match(/class=["'][^"']*rating[^"']*["'][^>]*>([^<]+)/i) ||
-      block.match(/class=["'][^"']*score[^"']*["'][^>]*>([^<]+)/i);
+      block.match(/class=["'][^"']*card_rating[^"']*["'][^>]*>([^<]+)/i);
     const rating = parseRating(ratingMatch ? stripTags(ratingMatch[1]) : '');
-
-    const reviewMatch = block.match(/class=["'][^"']*review-count[^"']*["'][^>]*>([^<]+)/i);
-    const reviewCount = parseReviewCount(reviewMatch ? stripTags(reviewMatch[1]) : '');
-
-    const phoneMatch = block.match(/class=["'][^"']*phone[^"']*["'][^>]*>([^<]+)/i) ||
-      block.match(/href=["']tel:([^"']+)["']/i);
-    const phone = phoneMatch ? stripTags(phoneMatch[1]) : '';
-    const parsed = parseVnPhone(phone);
-
-    const urlMatch = block.match(/href=["']([^"']*\/nha-hang\/[^"']*)["']/i);
-    const detailUrl = urlMatch ? urlMatch[1] : '';
-    const externalId = detailUrl ? detailUrl.split('/').pop() || `riviu-${seen.size - 1}` : `riviu-${seen.size - 1}`;
 
     items.push(buildPostItem({
       platform: 'riviu',
       externalId,
       title: name,
-      contentParts: [name, address].filter(Boolean),
-      authorId: parsed.phone || `riviu:${externalId}`,
-      authorName: parsed.phone ? `Hotline: ${parsed.phone}` : 'Chủ quán',
+      contentParts: [name],
+      authorId: `riviu:${externalId}`,
+      authorName: 'Chủ quán',
       postUrl: detailUrl.startsWith('http') ? detailUrl : `https://riviu.vn${detailUrl}`,
       mediaUrls: [],
       metadata: {
         restaurantName: name,
         manager: '',
-        hotline: parsed.phone,
-        phone: parsed.phone,
-        phoneMasked: parsed.phoneMasked,
-        address,
+        hotline: null,
+        phone: null,
+        phoneMasked: false,
+        address: '',
         city: '',
         district: '',
         gpsLat: null,
         gpsLng: null,
         menuItems: [],
         rating,
-        reviewCount,
+        reviewCount: null,
         cuisine: [],
         detailUrl: detailUrl.startsWith('http') ? detailUrl : `https://riviu.vn${detailUrl}`,
         sourcePlatform,
       },
     }));
+  }
+
+  // Fallback: title-item-black blocks
+  if (!items.length) {
+    const titleBlocks = html.match(/<div[^>]*class=["'][^"']*title-item-black[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi) || [];
+    for (const block of titleBlocks) {
+      const name = stripTags(block).trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      const urlMatch = block.match(/href=["']([^"']*\/[^"']+)["']/i);
+      const detailUrl = urlMatch ? urlMatch[1] : '';
+      const externalId = detailUrl ? detailUrl.split('/').pop() || `riviu-${seen.size}` : `riviu-${seen.size}`;
+      items.push(buildPostItem({
+        platform: 'riviu',
+        externalId,
+        title: name,
+        contentParts: [name],
+        authorId: `riviu:${externalId}`,
+        authorName: 'Chủ quán',
+        postUrl: detailUrl.startsWith('http') ? detailUrl : `https://riviu.vn${detailUrl}`,
+        mediaUrls: [],
+        metadata: {
+          restaurantName: name,
+          manager: '',
+          hotline: null,
+          phone: null,
+          phoneMasked: false,
+          address: '',
+          city: '',
+          district: '',
+          gpsLat: null,
+          gpsLng: null,
+          menuItems: [],
+          rating: null,
+          reviewCount: null,
+          cuisine: [],
+          detailUrl: detailUrl.startsWith('http') ? detailUrl : `https://riviu.vn${detailUrl}`,
+          sourcePlatform,
+        },
+      }));
+    }
+  }
+
+  // Fallback: generic restaurant-card pattern (legacy fixture)
+  if (!items.length) {
+    const blocks = html.match(/<div[^>]*class=["'][^"']*restaurant-card[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*(?=<div[^>]*class=["'][^"']*restaurant-card|<\/div>)/gi) ||
+      html.match(/<article[^>]*class=["'][^"']*restaurant[^"']*["'][^>]*>([\s\S]*?)<\/article>/gi) ||
+      html.match(/<div[^>]*class=["'][^"']*location-card[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*(?=<div[^>]*class=["'][^"']*location-card|<\/div>)/gi) ||
+      [];
+
+    for (const block of blocks) {
+      const nameMatch = block.match(/class=["'][^"']*restaurant-name[^"']*["'][^>]*>([^<]+)/i) ||
+        block.match(/<h3[^>]*>([^<]+)<\/h3>/i);
+      const name = nameMatch ? stripTags(nameMatch[1]) : '';
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+
+      const addressMatch = block.match(/class=["'][^"']*address[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) ||
+        block.match(/class=["'][^"']*location[^"']*["'][^>]*>([\s\S]*?)<\/span>/i);
+      const address = addressMatch ? stripTags(addressMatch[1]) : '';
+
+      const ratingMatch = block.match(/class=["'][^"']*rating[^"']*["'][^>]*>([^<]+)/i) ||
+        block.match(/class=["'][^"']*score[^"']*["'][^>]*>([^<]+)/i);
+      const rating = parseRating(ratingMatch ? stripTags(ratingMatch[1]) : '');
+
+      const reviewMatch = block.match(/class=["'][^"']*review-count[^"']*["'][^>]*>([^<]+)/i);
+      const reviewCount = parseReviewCount(reviewMatch ? stripTags(reviewMatch[1]) : '');
+
+      const phoneMatch = block.match(/class=["'][^"']*phone[^"']*["'][^>]*>([^<]+)/i) ||
+        block.match(/href=["']tel:([^"']+)["']/i);
+      const phone = phoneMatch ? stripTags(phoneMatch[1]) : '';
+      const parsed = parseVnPhone(phone);
+
+      const urlMatch = block.match(/href=["']([^"']*\/nha-hang\/[^"']*)["']/i);
+      const detailUrl = urlMatch ? urlMatch[1] : '';
+      const externalId = detailUrl ? detailUrl.split('/').pop() || `riviu-${seen.size - 1}` : `riviu-${seen.size - 1}`;
+
+      items.push(buildPostItem({
+        platform: 'riviu',
+        externalId,
+        title: name,
+        contentParts: [name, address].filter(Boolean),
+        authorId: parsed.phone || `riviu:${externalId}`,
+        authorName: parsed.phone ? `Hotline: ${parsed.phone}` : 'Chủ quán',
+        postUrl: detailUrl.startsWith('http') ? detailUrl : `https://riviu.vn${detailUrl}`,
+        mediaUrls: [],
+        metadata: {
+          restaurantName: name,
+          manager: '',
+          hotline: parsed.phone,
+          phone: parsed.phone,
+          phoneMasked: parsed.phoneMasked,
+          address,
+          city: '',
+          district: '',
+          gpsLat: null,
+          gpsLng: null,
+          menuItems: [],
+          rating,
+          reviewCount,
+          cuisine: [],
+          detailUrl: detailUrl.startsWith('http') ? detailUrl : `https://riviu.vn${detailUrl}`,
+          sourcePlatform,
+        },
+      }));
+    }
   }
 
   // Fallback: any link to /nha-hang/ in the page

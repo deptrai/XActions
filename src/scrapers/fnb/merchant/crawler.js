@@ -190,9 +190,12 @@ export class FnbMerchantCrawler extends AbstractCrawler {
 
     await this.#persist(result);
 
+    // has_next_page is conservative: true only if we hit the page limit.
+    // For HTML list pages, the site returns a fixed batch size; last page may equal limit.
+    const hasNextPage = posts.length >= limit;
     return {
       posts: result,
-      pageInfo: { has_next_page: posts.length === limit, page },
+      pageInfo: { has_next_page: hasNextPage, page },
     };
   }
 
@@ -218,9 +221,12 @@ export class FnbMerchantCrawler extends AbstractCrawler {
 
     await this.#persist(result);
 
+    // has_next_page is conservative: true only if we hit the page limit.
+    // For HTML list pages, the site returns a fixed batch size; last page may equal limit.
+    const hasNextPage = posts.length >= limit;
     return {
       posts: result,
-      pageInfo: { has_next_page: posts.length === limit, page },
+      pageInfo: { has_next_page: hasNextPage, page },
     };
   }
 
@@ -256,9 +262,12 @@ export class FnbMerchantCrawler extends AbstractCrawler {
 
     await this.#persist(result);
 
+    // has_next_page is conservative: true only if we hit the page limit.
+    // For HTML list pages, the site returns a fixed batch size; last page may equal limit.
+    const hasNextPage = posts.length >= limit;
     return {
       posts: result,
-      pageInfo: { has_next_page: posts.length === limit, page },
+      pageInfo: { has_next_page: hasNextPage, page },
     };
   }
 

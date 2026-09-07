@@ -31,7 +31,7 @@ function makeHttpClient(route) {
       body = loadFixture('pasgo-search.html');
     } else if (host.includes('foody') && pathname.includes('nha-hang')) {
       body = loadFixture('foody-search.html');
-    } else if (host.includes('riviu') && pathname.includes('nha-hang')) {
+    } else if (host.includes('riviu')) {
       body = loadFixture('riviu-search.html');
     } else if (pathname.includes('detail')) {
       body = loadFixture('pasgo-detail.html');

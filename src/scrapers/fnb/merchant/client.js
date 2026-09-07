@@ -185,10 +185,20 @@ export class FnbMerchantClient extends AbstractApiClient {
 
     const base = this.#resolveBase(platform, this.options?.baseUrl);
 
-    if (platform === 'foody' || platform === 'riviu') {
+    if (platform === 'foody') {
       const districtPart = district ? `/${district}` : '';
       let url = `${base}/${city}${districtPart}/nha-hang`;
       const query = [];
+      if (page > 1) query.push(`page=${page}`);
+      if (params.kind === 'newly_opened' && days) query.push(`days=${days}`);
+      return query.length ? `${url}?${query.join('&')}` : url;
+    }
+
+    // Riviu: city-level pages live under `/{city}`, not `/{city}/nha-hang`
+    if (platform === 'riviu') {
+      let url = `${base}/${city}`;
+      const query = [];
+      if (district) query.push(`district=${district}`);
       if (page > 1) query.push(`page=${page}`);
       if (params.kind === 'newly_opened' && days) query.push(`days=${days}`);
       return query.length ? `${url}?${query.join('&')}` : url;

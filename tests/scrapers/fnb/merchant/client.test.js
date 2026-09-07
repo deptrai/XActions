@@ -59,7 +59,7 @@ describe('FnbMerchantClient', () => {
     const [httpClient, getCaptured] = makeHttpClient();
     const client = new FnbMerchantClient({ targetPlatform: 'riviu', requiresProxy: false, httpClient });
     await client.searchRestaurants({ city: 'ha-noi', page: 3 });
-    expect(getCaptured().url).toContain('/ha-noi/nha-hang');
+    expect(getCaptured().url).toContain('/ha-noi');
     expect(getCaptured().url).toContain('page=3');
   });
 
