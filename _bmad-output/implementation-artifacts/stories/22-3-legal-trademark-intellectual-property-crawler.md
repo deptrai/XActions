@@ -45,6 +45,32 @@ context:
 
 </frozen-after-approval>
 
+## Live Probe Findings (2026-09-08)
+
+**Story approach adjusted after probe:**
+
+| Item | Original | Probe Result | New Approach |
+|---|---|---|---|
+| Endpoint | `wipo.ipvietnam.gov.vn` | ❌ DNS → 127.0.0.1 (dead) | Use `wipopublish.ipvietnam.gov.vn` or `ipvietnam.gov.vn` gazette pages |
+| Protocol | JSP form | ✅ 200 (Wicket app) | Apache Wicket stateful app with jsessionid; requires `got-scraping` + `CERT_NONE` |
+| Search method | Simple POST | ⚠️ Form submit returns page; results via Wicket AJAX | Option 1: Gazette HTML scrape (simpler); Option 2: StealthBrowser for Wicket detail |
+
+**Key details:**
+- `wipo.ipvietnam.gov.vn` is dead. Real search is at `wipopublish.ipvietnam.gov.vn/wopublish-search/public/trademarks` (Apache Wicket).
+- Wicket requires session (`jsessionid`) and specific `IFormSubmitListener` action URLs. Results are rendered server-side after Wicket state transitions.
+- `ipvietnam.gov.vn` publishes weekly IP gazette lists as Liferay content pages (`danh-sach-don-chuyen-cong-bo-hang-tuan`) — simpler HTML scrape.
+- SSL certificate on `ipvietnam.gov.vn` is incomplete; client must disable `rejectUnauthorized` / use `CERT_NONE`.
+
+**Recommended approach:**
+- Primary: scrape weekly gazette list pages from `ipvietnam.gov.vn` for new applications.
+- Fallback: use StealthBrowser (Puppeteer) on `wipopublish.ipvietnam.gov.vn` for detail lookups by application number.
+
+**Story 22.3 update needed:**
+- Change platform alias to `ipvietnam`.
+- Replace `wipo.ipvietnam.gov.vn` with `wipopublish.ipvietnam.gov.vn` + `ipvietnam.gov.vn`.
+- Add SSL/TLS handling: disable certificate verification.
+- Implement `search_gazette` and `detail` actions.
+
 ## Code Map
 
 - `src/scrapers/legal/ip-trademark/index.js` — `IpLegalCrawler`

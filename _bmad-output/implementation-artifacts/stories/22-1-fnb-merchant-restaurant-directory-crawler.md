@@ -50,6 +50,21 @@ context:
 
 </frozen-after-approval>
 
+## Live Probe Findings (2026-09-08)
+
+**Story approach adjusted after probe:**
+
+| Platform | Original Approach | Probe Result | New Approach |
+|---|---|---|---|
+| PasGo | HTML / REST API | ✅ 200, JSON-LD | Parse SSR HTML + JSON-LD |
+| Foody | `gappapi.deliverynow.vn` mobile app API | ❌ 403/404 | Parse `foody.vn/{city}/nha-hang` embedded `var jsonData.searchItems` (no app API) |
+| Riviu | HTML / REST API | ✅ 200 Nuxt SSR | Parse Nuxt SSR HTML; `reviewapi.riviu.co` path discovery deferred |
+
+**Key details:**
+- `gappapi.deliverynow.vn` is not public — requires app auth. **Do not use.**
+- Foody page embeds `var jsonData = { ..., searchItems: [...] }` where each item has `Address`, `District`, `City`, `Phone`, `TotalReview`, `AvgRating`, `Cuisines`, `DetailUrl`.
+- Riviu renders Nuxt SSR HTML; no public REST API surface found on first probe.
+
 ## Code Map
 
 - `src/scrapers/fnb/merchant/index.js` — `FnbMerchantCrawler`

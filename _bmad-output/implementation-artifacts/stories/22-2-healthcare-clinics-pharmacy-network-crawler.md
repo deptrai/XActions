@@ -49,6 +49,27 @@ context:
 
 </frozen-after-approval>
 
+## Live Probe Findings (2026-09-08)
+
+**Story scope adjusted after probe:**
+
+| Platform | Original Approach | Probe Result | New Approach |
+|---|---|---|---|
+| YouMed | REST Gateway | ✅ 200 + public WP REST API (`/tin-tuc/wp-json/app/v2/specialities` returns JSON) | Use public WP REST API or SSR HTML |
+| Medpro | REST Gateway | ✅ 200 SSR; `api.medpro.com.vn` catch-all | Parse Next.js SSR HTML; discover real API from page bundle |
+| Thuocsi | REST Gateway (`thuocsi.vn`) | ❌ `api.buymed.com` 401 on all endpoints | **Auth-gated B2B wholesale — scope question** |
+
+**Key details:**
+- YouMed uses WordPress REST API at `youmed.vn/tin-tuc/wp-json/app/v2/*`. Specialties endpoint is public and returns structured JSON.
+- Medpro is a Next.js app; `api.medpro.com.vn` returns generic `<p>Hello</p>` for all guessed paths, so real API endpoints must be extracted from page JS.
+- `thuocsi.vn` is a Next.js app using `api.buymed.com`. All product/catalog endpoints return **401 Unauthorized** — requires login.
+
+**Compliance note:** Only public clinic/doctor/directory data — no patient records, prescriptions, or private health data.
+
+**Scope decision needed:**
+- Option A: Keep Thuocsi but implement authenticated B2B session (via account pool or purchase account).
+- Option B: Drop Thuocsi from 22.2 MVP; focus on YouMed + Medpro public directory.
+
 ## Code Map
 
 - `src/scrapers/healthcare/index.js` — `HealthcareCrawler`
