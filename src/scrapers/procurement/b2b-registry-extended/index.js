@@ -39,7 +39,7 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
       category: 'b2b',
       requiresAuth: false,
       requiredArgs: ['q'],
-      optionalArgs: ['type', 'limit', 'platform'],
+      optionalArgs: ['type', 'limit', 'platform', 'opt', 'p', 'd'],
       example: { q: '0013180180', platform: 'hosocongty' },
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean } }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.search(args, session),
@@ -119,7 +119,12 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
       });
     }
 
-    const response = await this.client.searchHosocongty({ q });
+    const response = await this.client.searchHosocongty({
+      q,
+      opt: args.opt,
+      p: args.p,
+      d: args.d,
+    });
     const html = response.body || response.data || '';
     const posts = normalizeB2BRegistryResults(html, 'search', { platform: 'hosocongty' });
     const limit = Math.max(1, Number(args.limit) || 10);

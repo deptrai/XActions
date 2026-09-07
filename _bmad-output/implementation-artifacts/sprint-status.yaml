@@ -167,7 +167,7 @@ development_status:
   21-1-masothue-company-registry-crawler: done
   21-2-automotive-vehicles-market-crawler: done
   21-3-hosocongty-muasamcong-crawler: done
-  21-4-hosocongty-muasamcong-live-fixes: ready-for-dev
+  21-4-hosocongty-muasamcong-live-fixes: done
   epic-21-retrospective: optional
 
   # --- Epic 22: Local F&B Merchant, Healthcare & Legal Intelligence Engine ---

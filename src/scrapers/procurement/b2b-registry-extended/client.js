@@ -255,6 +255,7 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
       url.startsWith(this.hosocongtyBaseUrl) ||
       url.includes('hosocongty.vn') ||
       url.includes('/tra-cuu/') ||
+      url.includes('/search?') ||
       url.includes('/tim-kiem');
 
     if (isHosocongty) {
@@ -278,22 +279,31 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
 
   /**
    * Search companies on HoSoCongTy.
-   * @param {Object} params
-   * @param {string} params.q
-   * @param {Object} [options={}]
+   * @param {Record<string, any>} [params={}]
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<{ status: number, data: string, body: string }>}
    */
   async searchHosocongty(params = {}, options = {}) {
-    const q = encodeURIComponent(String(params.q || params.taxCode || ''));
-    const url = `${this.hosocongtyBaseUrl}/tim-kiem?q=${q}`;
-    return this.request('GET', url, { ...options, raw: true, platform: 'hosocongty' });
+    const q = encodeURIComponent(String(params.q || params.key || params.taxCode || params.keyword || ''));
+    const opt = encodeURIComponent(String(params.opt ?? 0));
+    const p = encodeURIComponent(String(params.p ?? 0));
+    const d = encodeURIComponent(String(params.d ?? 0));
+    const url = `${this.hosocongtyBaseUrl}/search?key=${q}&opt=${opt}&p=${p}&d=${d}`;
+    try {
+      const resp = await this.request('GET', url, { ...options, raw: true, platform: 'hosocongty' });
+      if (resp.status !== 404) return resp;
+    } catch (err) {
+      const status = /** @type {any} */ (err)?.statusCode || /** @type {any} */ (err)?.status;
+      if (status !== 404) throw err;
+    }
+    const legacyUrl = `${this.hosocongtyBaseUrl}/tim-kiem?q=${q}`;
+    return this.request('GET', legacyUrl, { ...options, raw: true, platform: 'hosocongty' });
   }
 
   /**
    * Get company detail on HoSoCongTy.
-   * @param {Object} params
-   * @param {string} params.taxCode
-   * @param {Object} [options={}]
+   * @param {Record<string, any>} [params={}]
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<{ status: number, data: string, body: string }>}
    */
   async companyDetailHosocongty(params = {}, options = {}) {
@@ -304,37 +314,108 @@ export class B2BRegistryExtendedClient extends AbstractApiClient {
 
   /**
    * Search tenders on MuaSamCong.
-   * @param {Object} params
-   * @param {string} params.keyword
-   * @param {string} [params.searchType='bidding']
-   * @param {string} [params.searchScope='lcnt']
-   * @param {Object} [options={}]
+   * @param {Record<string, any>} [params={}]
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<{ status: number, data: string, body: string }>}
    */
   async searchTendersMuasamcong(params = {}, options = {}) {
+    const url = `${this.muasamcongBaseUrl}/o/egp-portal-contractor-selection-v2/services/smart/search?token=`;
+    const payload = [{
+      pageSize: Number(params.pageSize || params.limit || 10),
+      pageNumber: Number(params.pageNumber || params.page || 0),
+      query: [{
+        index: 'es-contractor-selection',
+        keyWord: String(params.keyword || params.q || ''),
+        matchType: params.matchType || 'all-1',
+        matchFields: Array.isArray(params.matchFields) ? params.matchFields : ['notifyNo', 'bidName'],
+        filters: params.filters || [],
+      }],
+    }];
+
+    try {
+      const resp = await this.request('POST', url, {
+        ...options,
+        raw: true,
+        json: payload,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.headers || {}),
+        },
+        platform: 'muasamcong',
+      });
+      if (resp.status === 200 && resp.body && !resp.body.includes('<!DOCTYPE') && !resp.body.includes('<html')) {
+        return resp;
+      }
+    } catch {
+      // Fallback to legacy GET
+    }
+
     const query = new URLSearchParams({
       searchType: params.searchType || 'bidding',
       searchScope: params.searchScope || 'lcnt',
       searchBy: params.searchBy || 'notifyNo,bidName',
       keywordMatch: params.keywordMatch || 'all',
-      keyword: String(params.keyword || ''),
+      keyword: String(params.keyword || params.q || ''),
     });
-    const url = `${this.muasamcongBaseUrl}/web/guest/bc/-/search?${query.toString()}`;
-    return this.request('GET', url, { ...options, raw: true, platform: 'muasamcong' });
+    const fallbackUrl = `${this.muasamcongBaseUrl}/web/guest/bc/-/search?${query.toString()}`;
+    return this.request('GET', fallbackUrl, { ...options, raw: true, platform: 'muasamcong' });
   }
 
   /**
    * Get tender detail on MuaSamCong.
-   * @param {Object} params
-   * @param {string} params.notifyNo
-   * @param {string} [params.id]
-   * @param {Object} [options={}]
+   * @param {Record<string, any>} [params={}]
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<{ status: number, data: string, body: string }>}
    */
   async tenderDetailMuasamcong(params = {}, options = {}) {
+    let id = params.id;
+    const notifyNo = String(params.notifyNo || params.tenderNo || '');
+
+    // If only notifyNo is provided, attempt smart search resolution to get UUID id
+    if (!id && notifyNo) {
+      try {
+        const searchResp = await this.searchTendersMuasamcong({
+          keyword: notifyNo,
+          matchFields: ['notifyNo'],
+          limit: 1,
+        }, options);
+        const searchData = searchResp.body || searchResp.data;
+        if (searchData && typeof searchData === 'string' && searchData.startsWith('{')) {
+          const parsed = JSON.parse(searchData);
+          const firstItem = parsed?.page?.content?.[0] || parsed?.items?.[0];
+          if (firstItem?.id) {
+            id = firstItem.id;
+          }
+        }
+      } catch {
+        // Fallthrough if resolution fails
+      }
+    }
+
+    if (id) {
+      const restUrl = `${this.muasamcongBaseUrl}/o/egp-portal-contractor-selection-v2/services/expose/lcnt/bid-po-bido-notify-contractor-view/get-by-id?token=`;
+      try {
+        const resp = await this.request('POST', restUrl, {
+          ...options,
+          raw: true,
+          json: { id },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(options.headers || {}),
+          },
+          platform: 'muasamcong',
+        });
+        if (resp.status === 200 && resp.body && !resp.body.includes('<!DOCTYPE') && !resp.body.includes('<html')) {
+          return resp;
+        }
+      } catch {
+        // Fallback to legacy GET
+      }
+    }
+
     const query = new URLSearchParams({
       render: 'detail-v2',
-      notifyNo: String(params.notifyNo || params.tenderNo || ''),
+      notifyNo: notifyNo,
       step: 'tbmt',
       type: 'es-notify-contractor',
     });

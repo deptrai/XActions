@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * HoSoCongTy & MuaSamCong HTML normalizer.
+ * HoSoCongTy & MuaSamCong HTML and JSON normalizer.
  * @author nich (@nichxbt)
  * @license Apache-2.0
  */
@@ -10,6 +10,10 @@ import { generatePostId } from '../../../core/types.js';
 const TAG_RE = /<[^>]+>/g;
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
 function decodeEntities(text) {
   if (typeof text !== 'string') return '';
   return text.replace(/&(#?x?[0-9a-fA-F]+|amp|lt|gt|quot|apos|nbsp);/g, (m, entity) => {
@@ -19,10 +23,16 @@ function decodeEntities(text) {
         : parseInt(entity.slice(1), 10);
       return Number.isFinite(code) ? String.fromCodePoint(code) : m;
     }
-    return ENTITIES[entity] ?? m;
+    /** @type {Record<string, string>} */
+    const entityMap = ENTITIES;
+    return entityMap[entity] ?? m;
   });
 }
 
+/**
+ * @param {string} html
+ * @returns {string}
+ */
 function stripTags(html) {
   if (typeof html !== 'string') return '';
   return decodeEntities(html.replace(TAG_RE, ' ').replace(/\s+/g, ' ').trim());
@@ -51,21 +61,34 @@ export function parseVietnameseDate(raw) {
   return isNaN(fallback.getTime()) ? null : fallback;
 }
 
+/**
+ * @param {string} html
+ * @param {string} label
+ * @returns {string}
+ */
 function extractByLabel(html, label) {
+  if (!html || typeof html !== 'string' || !label) return '';
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // Try 1: tag-wrapped value right after label, e.g. label: <span>value</span> or label:</td><td>value</td>
-  const tagPattern = new RegExp(`${escaped}[\\s:]*(?:<[^>]+>\\s*)+([^<\\n]+)(?:<\\/[^>]+>)?`, 'i');
-  const tagMatch = html.match(tagPattern);
-  if (tagMatch && tagMatch[1].trim()) return stripTags(tagMatch[1]).trim();
 
-  // Try 2: direct text, e.g. label: value</
-  const directPattern = new RegExp(`${escaped}[\\s:]+([^<\\n]+)`, 'i');
-  const directMatch = html.match(directPattern);
-  if (directMatch && directMatch[1].trim()) return stripTags(directMatch[1]).trim();
+  // Capture text after label up to the next closing/opening structural tag, newline, or end of string.
+  // Handles nested <a>, <i>, <span>, <em> elements before/within the value.
+  const pattern = new RegExp(
+    `${escaped}[\\s:]*([\\s\\S]*?)(?=<\\/(?:li|p|div|td|h[1-6]|ul|ol|tr|table)>|<(?:li|p|div|td|h[1-6]|tr|br\\s*\\/?)[\s>]|\\n|$)`,
+    'i'
+  );
+  const match = html.match(pattern);
+  if (match) {
+    const cleaned = stripTags(match[1]).trim();
+    if (cleaned) return cleaned;
+  }
 
   return '';
 }
 
+/**
+ * @param {Record<string, any>} input
+ * @returns {import('../../../core/types.js').PostItem}
+ */
 function buildPostItem(input) {
   const {
     platform,
@@ -106,8 +129,8 @@ function buildPostItem(input) {
 /**
  * Normalize HoSoCongTy company detail/search HTML to PostItem[].
  * @param {string} html
- * @param {'search' | 'detail'} kind
- * @param {Object} context
+ * @param {'search' | 'detail'} [kind='search']
+ * @param {Record<string, any>} [context={}]
  * @returns {import('../../../core/types.js').PostItem[]}
  */
 export function normalizeHosocongty(html, kind = 'search', context = {}) {
@@ -115,17 +138,46 @@ export function normalizeHosocongty(html, kind = 'search', context = {}) {
 
   if (kind === 'detail') {
     const extractedTaxCode = extractByLabel(html, 'Mã số thuế') || extractByLabel(html, 'Tax code') || '';
-    const companyName = extractByLabel(html, 'Tên công ty') || extractByLabel(html, 'Company name') || '';
+    const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+    const h1Text = h1Match ? stripTags(h1Match[1]).replace(/^Tên công ty\s*:\s*/i, '').trim() : '';
+
+    const companyName = extractByLabel(html, 'Tên công ty') ||
+      h1Text ||
+      extractByLabel(html, 'Tên viết tắt') ||
+      extractByLabel(html, 'Company name') ||
+      '';
+    const shortName = extractByLabel(html, 'Tên viết tắt') || '';
     const taxCode = extractedTaxCode || context.taxCode || 'unknown';
-    const representativeName = extractByLabel(html, 'Người đại diện') || extractByLabel(html, 'Representative') || '';
-    const address = extractByLabel(html, 'Địa chỉ') || extractByLabel(html, 'Address') || '';
-    const phone = extractByLabel(html, 'Số điện thoại') || extractByLabel(html, 'Phone') || '';
-    const businessLines = extractByLabel(html, 'Ngành nghề') || extractByLabel(html, 'Business lines') || '';
-    const charterCapital = extractByLabel(html, 'Vốn điều lệ') || extractByLabel(html, 'Charter capital') || '';
-    const establishedDateRaw = extractByLabel(html, 'Ngày thành lập') || extractByLabel(html, 'Established date') || '';
+    const representativeName = extractByLabel(html, 'Đại diện pháp luật') ||
+      extractByLabel(html, 'Người đại diện') ||
+      extractByLabel(html, 'Representative') ||
+      '';
+    const address = extractByLabel(html, 'Địa chỉ thuế') ||
+      extractByLabel(html, 'Địa chỉ') ||
+      extractByLabel(html, 'Address') ||
+      '';
+    const phone = extractByLabel(html, 'Điện thoại') ||
+      extractByLabel(html, 'Số điện thoại') ||
+      extractByLabel(html, 'Phone') ||
+      '';
+    const businessLines = extractByLabel(html, 'Ngành nghề') ||
+      extractByLabel(html, 'Business lines') ||
+      '';
+    const charterCapital = extractByLabel(html, 'Vốn điều lệ') ||
+      extractByLabel(html, 'Charter capital') ||
+      '';
+    const establishedDateRaw = extractByLabel(html, 'Ngày cấp') ||
+      extractByLabel(html, 'Ngày thành lập') ||
+      extractByLabel(html, 'Established date') ||
+      '';
     const establishedDate = parseVietnameseDate(establishedDateRaw);
-    const legalForm = extractByLabel(html, 'Loại hình') || extractByLabel(html, 'Legal form') || '';
-    const status = extractByLabel(html, 'Tình trạng') || extractByLabel(html, 'Status') || '';
+    const legalForm = extractByLabel(html, 'Loại hình') ||
+      extractByLabel(html, 'Legal form') ||
+      '';
+    const status = extractByLabel(html, 'Trạng thái') ||
+      extractByLabel(html, 'Tình trạng') ||
+      extractByLabel(html, 'Status') ||
+      '';
 
     if (companyName || extractedTaxCode) {
       items.push(buildPostItem({
@@ -135,11 +187,12 @@ export function normalizeHosocongty(html, kind = 'search', context = {}) {
         contentParts: [companyName, businessLines, address, phone].filter(Boolean),
         authorId: taxCode && taxCode !== 'unknown' ? `hosocongty:${taxCode}` : `hosocongty:${companyName || 'unknown'}`,
         authorName: representativeName || 'Unknown',
-        postUrl: context.postUrl || '',
+        postUrl: context.postUrl || (taxCode !== 'unknown' ? `https://hosocongty.vn/tra-cuu/${taxCode}` : ''),
         publishedAt: establishedDate,
         metadata: {
           taxCode,
           companyName,
+          shortName,
           representativeName,
           phone,
           businessLines,
@@ -152,26 +205,64 @@ export function normalizeHosocongty(html, kind = 'search', context = {}) {
       }));
     }
   } else {
-    // Search results: attempt to split by company blocks
-    const blocks = html.match(/<div[^>]*class="[^"]*company[^"]*"[^>]*>.*?<\/div>/gi) || [];
+    // Search results: split by live <ul class="hsdn"><li>...</li></ul> or legacy blocks
+    let blocks = [];
+    const ulMatch = html.match(/<ul[^>]*class="[^"]*hsdn[^"]*"[^>]*>([\s\S]*?)<\/ul>/i);
+    if (ulMatch) {
+      blocks = ulMatch[1].match(/<li[^>]*>[\s\S]*?<\/li>/gi) || [];
+    } else {
+      blocks = html.match(/<li[^>]*>[\s\S]*?<\/li>/gi) ||
+        html.match(/<div[^>]*class="[^"]*company[^"]*"[^>]*>[\s\S]*?<\/div>/gi) || [];
+    }
+
     for (const block of blocks.slice(0, 50)) {
-      const taxCode = extractByLabel(block, 'Mã số thuế') || '';
-      const companyName = extractByLabel(block, 'Tên công ty') || '';
-      if (!companyName) continue;
+      const titleMatch = block.match(/<a[^>]*title="([^"]*?)"[^>]*>([\s\S]*?)<\/a>/i) ||
+        block.match(/<h[1-6][^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i) ||
+        block.match(/<a[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/a>/i);
+
+      let companyName = '';
+      let taxCode = '';
+
+      if (titleMatch) {
+        const titleAttr = titleMatch[1] || '';
+        const anchorText = stripTags(titleMatch[2] || titleMatch[1] || '').trim();
+        companyName = anchorText;
+
+        if (titleAttr && titleAttr.includes(' - ')) {
+          const parts = titleAttr.split(' - ');
+          if (/^\d{10,14}$/.test(parts[0].trim())) {
+            taxCode = parts[0].trim();
+            if (!companyName) companyName = parts.slice(1).join(' - ').trim();
+          }
+        }
+      }
+
+      const taxCodeMatch = block.match(/Mã số thuế\s*:\s*<a[^>]*>([^<]+)<\/a>/i) ||
+        block.match(/Mã số thuế\s*:\s*([0-9]{10,14})/i) ||
+        block.match(/(\b[0-9]{10}(?:-[0-9]{3})?\b)/);
+      if (taxCodeMatch && !taxCode) {
+        taxCode = taxCodeMatch[1].trim();
+      }
+
+      const addressMatch = block.match(/<em>Địa chỉ:<\/em>\s*([^<]+?)(?:<br|<\/div|<\/li|$)/i) ||
+        block.match(/Địa chỉ\s*:\s*([^<]+?)(?:<br|<\/div|<\/li|$)/i);
+      const address = addressMatch ? stripTags(addressMatch[1]).trim() : '';
+
+      if (!companyName && !taxCode) continue;
+      if (!companyName) companyName = `Doanh nghiệp ${taxCode}`;
 
       items.push(buildPostItem({
         platform: 'hosocongty',
         externalId: taxCode || companyName,
         title: companyName,
-        contentParts: [companyName, extractByLabel(block, 'Ngành nghề'), extractByLabel(block, 'Địa chỉ')].filter(Boolean),
-        authorId: `hosocongty:${taxCode || companyName}`,
-        authorName: extractByLabel(block, 'Người đại diện') || '',
-        postUrl: '',
+        contentParts: [companyName, address].filter(Boolean),
+        authorId: taxCode ? `hosocongty:${taxCode}` : `hosocongty:${companyName}`,
+        authorName: '',
+        postUrl: taxCode ? `https://hosocongty.vn/tra-cuu/${taxCode}` : '',
         metadata: {
           taxCode,
           companyName,
-          address: extractByLabel(block, 'Địa chỉ'),
-          businessLines: extractByLabel(block, 'Ngành nghề'),
+          address,
         },
       }));
     }
@@ -222,11 +313,69 @@ function extractBalancedBlocks(html, classMarker) {
 }
 
 /**
- * Normalize MuaSamCong search result HTML to PostItem[].
- * @param {string} html
+ * Normalize MuaSamCong search results (JSON or HTML) to PostItem[].
+ * @param {string | Record<string, any>} data
  * @returns {import('../../../core/types.js').PostItem[]}
  */
-export function normalizeMuasamcongSearch(html) {
+export function normalizeMuasamcongSearch(data) {
+  let parsed = null;
+  if (typeof data === 'object' && data !== null) {
+    parsed = data;
+  } else if (typeof data === 'string') {
+    const trimmed = data.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {}
+    }
+  }
+
+  if (parsed) {
+    const list = Array.isArray(parsed) ? parsed : (parsed.page?.content || parsed.data || parsed.items || []);
+    if (Array.isArray(list) && list.length > 0) {
+      return list.map((item) => {
+        const tenderNo = item.notifyNo || item.id || '';
+        const title = Array.isArray(item.bidName) ? item.bidName[0] : (item.bidName || item.tenderName || item.ctName || '');
+        const procuringEntityName = item.investorName || item.procuringEntityName || '';
+        const bidField = Array.isArray(item.investField) ? item.investField.join(', ') : (item.investField || '');
+        const locations = Array.isArray(item.locations)
+          ? item.locations.map((/** @type {Record<string, any>} */ loc) => [loc?.districtName, loc?.provName].filter(Boolean).join(', ')).join('; ')
+          : (item.bidLocation || '');
+        const publishDateRaw = item.publicDate || item.originalPublicDate || '';
+        const publishDate = publishDateRaw ? new Date(publishDateRaw) : null;
+        const bidSubmissionDeadline = item.bidCloseDate || '';
+        const status = item.status || '';
+
+        return buildPostItem({
+          platform: 'muasamcong',
+          externalId: tenderNo,
+          title,
+          contentParts: [title, procuringEntityName, bidField, locations].filter(Boolean),
+          authorId: procuringEntityName || `muasamcong:${tenderNo}`,
+          authorName: procuringEntityName || '',
+          postUrl: item.id ? `https://muasamcong.mpi.gov.vn/web/guest/contractor-selection?render=detail-v2&id=${item.id}&notifyNo=${tenderNo}` : '',
+          publishedAt: publishDate && !isNaN(publishDate.getTime()) ? publishDate : null,
+          metadata: {
+            id: item.id,
+            tenderNo,
+            tenderName: title,
+            procuringEntityName,
+            publishDate: publishDateRaw,
+            bidSubmissionDeadline,
+            bidStatus: status,
+            bidField,
+            bidLocation: locations,
+            planNo: item.planNo || '',
+            bidPrice: item.bidPrice || null,
+          },
+        });
+      });
+    }
+  }
+
+  const html = typeof data === 'string'
+    ? data
+    : (data && typeof data === 'object' && 'body' in data ? String(data.body) : '');
   const items = [];
   const blocks = extractBalancedBlocks(html, 'content__body__left__item');
 
@@ -274,11 +423,74 @@ export function normalizeMuasamcongSearch(html) {
 }
 
 /**
- * Normalize MuaSamCong detail HTML to PostItem.
- * @param {string} html
+ * Normalize MuaSamCong detail (JSON or HTML) to PostItem[].
+ * @param {string | Record<string, any>} data
  * @returns {import('../../../core/types.js').PostItem[]}
  */
-export function normalizeMuasamcongDetail(html) {
+export function normalizeMuasamcongDetail(data) {
+  let parsed = null;
+  if (typeof data === 'object' && data !== null) {
+    parsed = data;
+  } else if (typeof data === 'string') {
+    const trimmed = data.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {}
+    }
+  }
+
+  if (parsed) {
+    const d = parsed.bidoNotifyContractorM || parsed.data || parsed;
+    const tenderNo = d.notifyNo || d.id || '';
+    const tenderName = Array.isArray(d.bidName) ? d.bidName[0] : (d.bidName || d.tenderName || '');
+    if (tenderNo || tenderName) {
+      const publishDateRaw = d.publicDate || '';
+      const publishedAt = publishDateRaw ? new Date(publishDateRaw) : null;
+      const procuringEntityName = d.procuringEntityName || d.investorName || '';
+      const bidField = Array.isArray(d.investField) ? d.investField.join(', ') : (d.investField || '');
+      const bidLocation = d.bidOpenLocation || d.executionLocation || '';
+      const bidValue = d.guaranteeValue
+        ? `${Number(d.guaranteeValue).toLocaleString('vi-VN')} VND`
+        : (d.bidPrice ? `${Number(d.bidPrice).toLocaleString('vi-VN')} VND` : '');
+      const bidSecurity = d.guaranteeForm || '';
+      const bidSubmissionDeadline = d.bidCloseDate || '';
+      const bidOpeningDate = d.bidOpenDate || '';
+
+      return [buildPostItem({
+        platform: 'muasamcong',
+        externalId: tenderNo,
+        title: tenderName,
+        contentParts: [tenderName, procuringEntityName, bidField, bidLocation].filter(Boolean),
+        authorId: procuringEntityName || `muasamcong:${tenderNo}`,
+        authorName: procuringEntityName || '',
+        postUrl: d.id ? `https://muasamcong.mpi.gov.vn/web/guest/contractor-selection?render=detail-v2&id=${d.id}&notifyNo=${tenderNo}` : '',
+        publishedAt: publishedAt && !isNaN(publishedAt.getTime()) ? publishedAt : null,
+        metadata: {
+          id: d.id,
+          tenderNo,
+          publishDate: publishDateRaw,
+          planNo: d.planNo || '',
+          tenderName,
+          procuringEntityName,
+          bidValue,
+          bidSecurity,
+          bidField,
+          bidForm: d.bidForm || '',
+          contractType: d.contractType || '',
+          bidMethod: d.bidMode || '',
+          bidDuration: d.contractPeriod ? `${d.contractPeriod} ${d.contractPeriodUnit || ''}`.trim() : '',
+          bidSubmissionDeadline,
+          bidOpeningDate,
+          bidLocation,
+        },
+      })];
+    }
+  }
+
+  const html = typeof data === 'string'
+    ? data
+    : (data && typeof data === 'object' && 'body' in data ? String(data.body) : '');
   const tenderNo = extractByLabel(html, 'Mã TBMT') || '';
   const tenderName = extractByLabel(html, 'Tên gói thầu') || '';
 
@@ -329,21 +541,26 @@ export function normalizeMuasamcongDetail(html) {
 
 /**
  * Dispatch normalizer by platform and kind.
- * @param {string | Object} data
- * @param {'search' | 'detail' | 'list'} kind
+ * @param {string | Record<string, any>} data
+ * @param {'search' | 'detail' | 'list'} [kind='search']
  * @param {Object} [options]
  * @param {string} [options.platform]
  * @returns {import('../../../core/types.js').PostItem[]}
  */
 export function normalizeB2BRegistryResults(data, kind = 'search', options = {}) {
-  const html = typeof data === 'string' ? data : data?.body || data?.data || '';
-  if (!html || html.length < 50) return [];
-
+  if (!data) return [];
   const platform = options.platform || 'b2b_registry_extended';
 
   if (platform === 'muasamcong') {
-    return kind === 'detail' ? normalizeMuasamcongDetail(html) : normalizeMuasamcongSearch(html);
+    return kind === 'detail' ? normalizeMuasamcongDetail(data) : normalizeMuasamcongSearch(data);
   }
 
-  return normalizeHosocongty(html, kind, options);
+  const html = typeof data === 'string'
+    ? data
+    : (data && typeof data === 'object'
+      ? String('body' in data ? data.body : ('data' in data ? data.data : ''))
+      : '');
+  if (!html || html.length < 50) return [];
+
+  return normalizeHosocongty(html, kind === 'detail' ? 'detail' : 'search', options);
 }

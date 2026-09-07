@@ -1,0 +1,240 @@
+{
+  "page": {
+    "content": [
+      {
+        "id": "IB2600512737",
+        "notifyId": "IB2600512737",
+        "inputResultId": "d8dbf1f8-c46e-493d-9c07-5837f244c1dc",
+        "bidCloseDate": "2026-09-07T10:18:10.645",
+        "bidForm": "CDTRG",
+        "bidMode": "1_MTHS",
+        "bidName": [
+          "Mua sắm cồng chiêng phục vụ xây dựng câu lạc bộ sinh hoạt văn hóa dân gian"
+        ],
+        "investField": [
+          "HH"
+        ],
+        "isInternet": 0,
+        "notifyNo": "IB2600512737",
+        "notifyVersion": "00",
+        "notifyNoStand": "IB2600512737-null",
+        "processApply": "LDT",
+        "publicDate": "2026-09-07T10:18:09",
+        "publicDateKqlcnt": "2026-09-07T10:18:09",
+        "status": "IS_PUBLISH",
+        "investorName": "Phòng Văn hoá - Xã hội xã Trà Linh",
+        "investorCode": "vn4001310812",
+        "isPass": 1,
+        "bidField": "HH",
+        "planType": "TX",
+        "planNo": "PL2600292150",
+        "planVersion": "00",
+        "stepCode": "notify-contractor-step-4-kqlcnt",
+        "type": "es-notify-contractor",
+        "statusForNotify": "CNTTT",
+        "winningCode": [
+          "vn4000391752"
+        ],
+        "decisionDate": "2026-08-21T23:59:59",
+        "contractorName": [
+          "CÔNG TY TNHH LÀNG ĐÚC PHƯỚC KIỀU"
+        ],
+        "bidWinningPrice": [
+          4.268E+8
+        ],
+        "numPetition": 0,
+        "numClarifyReq": 0,
+        "numBidderTech": 0,
+        "numBidderJoin": 0,
+        "bidId": "fc65b23c-910d-48c5-9b7d-c9ce959c0045",
+        "bidPrice": [
+          4.268E+8
+        ],
+        "numPetitionHsmt": 0,
+        "numPetitionLcnt": 0,
+        "numPetitionKqlcnt": 0,
+        "caseKHKQ": 1,
+        "score": "NaN",
+        "isMedicine": 0,
+        "winningContractorName": []
+      },
+      {
+        "id": "3ce1edd1-4d3b-4c8e-98c7-64dd8fb26bd1",
+        "bidCloseDate": "2026-08-26T23:59:59",
+        "bidName": [
+          "Gói thầu số 04 : Tư vấn thẩm tra E HSMT và kết quả LCNT",
+          "Gói thầu số 03: Tư vấn lập E-HSMT và đánh giá E-HSDT",
+          "Gói thầu số 01: Toàn bộ phần xây lắp công trình",
+          "Gói thầu số 02: Tư vấn giám sát thi công xây dựng"
+        ],
+        "investField": [
+          "TV",
+          "XL"
+        ],
+        "locations": [
+          {
+            "provCode": "40",
+            "provName": "Tỉnh Nghệ An",
+            "districtCode": "17854",
+            "districtName": "Xã Văn Kiều"
+          },
+          {
+            "provCode": "40",
+            "provName": "Tỉnh Nghệ An",
+            "districtCode": "17854",
+            "districtName": "Xã Văn Kiều"
+          },
+          {
+            "provCode": "40",
+            "provName": "Tỉnh Nghệ An",
+            "districtCode": "17854",
+            "districtName": "Xã Văn Kiều"
+          },
+          {
+            "provCode": "40",
+            "provName": "Tỉnh Nghệ An",
+            "districtCode": "17854",
+            "districtName": "Xã Văn Kiều"
+          }
+        ],
+        "publicDate": "2026-09-07T10:17:40",
+        "investTotal": 1.5E+10,
+        "investorName": "Ủy ban nhân dân xã Văn Kiều, tỉnh Nghệ An",
+        "investorCode": "vn2900533727",
+        "name": "Kế hoạch lựa chọn nhà thầu công trình: Nâng cấp mở rộng tuyến đường kết hợp kênh tưới tiêu nối từ QL7C (N5) vào trung tâm xã Văn Kiều (Đoạn qua xóm 1, Nghi Kiều), tỉnh Nghệ An",
+        "planType": "DTPT",
+        "planNo": "PL2600292270",
+        "planVersion": "00",
+        "planNoStand": "PL2600292270-00",
+        "stepCode": "plan-step-1",
+        "type": "es-plan-project-p",
+        "decisionDate": "2026-08-26T23:59:59",
+        "createdBy": "vn2900533727",
+        "bidPrice": [
+          1.3563025E+10,
+          4.313E+7,
+          2.7126E+7,
+          4.16927E+8
+        ],
+        "score": "NaN",
+        "bidNamePlanNew": [
+          {
+            "name": "Gói thầu số 04 : Tư vấn thẩm tra E HSMT và kết quả LCNT"
+          },
+          {
+            "name": "Gói thầu số 03: Tư vấn lập E-HSMT và đánh giá E-HSDT"
+          },
+          {
+            "name": "Gói thầu số 01: Toàn bộ phần xây lắp công trình"
+          },
+          {
+            "name": "Gói thầu số 02: Tư vấn giám sát thi công xây dựng"
+          }
+        ],
+        "haveBidNotNotify": 1,
+        "approvalStatus": "01",
+        "pname": "Nâng cấp mở rộng tuyến đường kết hợp kênh tưới tiêu nối từ QL7C (N5) vào trung tâm xã Văn Kiều (đoạn qua xóm 1, Nghi Kiều), tỉnh Nghệ An"
+      }
+    ],
+    "totalPages": 5000,
+    "pageSize": 2,
+    "currentPage": 0,
+    "totalElements": 10000,
+    "sort": null,
+    "first": true,
+    "last": false,
+    "empty": false
+  },
+  "agg": [
+    {
+      "name": "status_cmt_blank",
+      "buckets": [
+        {
+          "aggregations": {
+            "asMap": {},
+            "fragment": true
+          },
+          "keyAsString": "0",
+          "docCount": 276,
+          "key": "0",
+          "fragment": true
+        }
+      ],
+      "type": "filters",
+      "fragment": true
+    },
+    {
+      "name": "status_dxt_blanks",
+      "buckets": [
+        {
+          "aggregations": {
+            "asMap": {},
+            "fragment": true
+          },
+          "keyAsString": "0",
+          "docCount": 94,
+          "key": "0",
+          "fragment": true
+        }
+      ],
+      "type": "filters",
+      "fragment": true
+    },
+    {
+      "aggregationName": "facet_is_closed_date",
+      "aggregationType": "range",
+      "bucketRanges": [
+        {
+          "key": "closed",
+          "docCount": 676922
+        },
+        {
+          "key": "open",
+          "docCount": 1405
+        }
+      ]
+    },
+    {
+      "aggregationName": "facet_status_notify",
+      "aggregationType": "string_term",
+      "bucketTerms": [
+        {
+          "key": "CNTTT",
+          "docCount": 374451
+        },
+        {
+          "key": "DHT",
+          "docCount": 6899
+        },
+        {
+          "key": "DXT",
+          "docCount": 3350
+        },
+        {
+          "key": "DHTBMT",
+          "docCount": 1671
+        },
+        {
+          "key": "",
+          "docCount": 1636
+        },
+        {
+          "key": "KCNTTT",
+          "docCount": 958
+        },
+        {
+          "key": "DHKQLCNT",
+          "docCount": 188
+        },
+        {
+          "key": "KCN",
+          "docCount": 7
+        },
+        {
+          "key": "VHH",
+          "docCount": 5
+        }
+      ]
+    }
+  ]
+}
