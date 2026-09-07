@@ -909,7 +909,7 @@ export declare function scrapeB2BRegistryExtended(action: string, args?: Record<
 export declare function createB2BRegistryExtendedClient(options?: Record<string, unknown>): B2BRegistryExtendedClient;
 export declare function createB2BRegistryExtendedCrawler(client?: B2BRegistryExtendedClient | Record<string, unknown>, options?: Record<string, unknown>): B2BRegistryExtendedCrawler;
 
-// ── F&B Merchant (Story 22.1) ─────────────────────────────────────────────
+// ── F&B Merchant ────────────────────────────────────────────────────────────
 
 /**
  * F&B merchant HTTP client for PasGo, Foody, and Riviu.

@@ -70,9 +70,19 @@ export function normalizeCitySlug(input, platform = 'pasgo') {
  */
 export function normalizeDistrictSlug(input, city = 'ha-noi') {
   if (!input || typeof input !== 'string') return '';
-  const slug = input.toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
+  const slug = input.toLowerCase().trim()
+    .replace(/[đĐ]/g, 'd')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
   const districts = FNB_CITY_DISTRICTS[city] || [];
-  return districts.includes(slug) ? slug : slug;
+  if (!districts.includes(slug)) {
+    // Unknown district — return the slug anyway so the site can decide whether to 404 or redirect.
+    return slug;
+  }
+  return slug;
 }
 
 /**
@@ -93,8 +103,10 @@ export function parseVnPhone(phone) {
   }
 
   const digits = trimmed.replace(/\D/g, '');
-  if (/^0\d{9,10}$/.test(digits)) {
-    return { phone: digits, phoneMasked: false };
+  // Convert +84 / 84 prefix to 0 prefix
+  const normalized = digits.replace(/^(?:\+?84|84)/, '0');
+  if (/^0\d{9,10}$/.test(normalized)) {
+    return { phone: normalized, phoneMasked: false };
   }
 
   return { phone: trimmed, phoneMasked: false };

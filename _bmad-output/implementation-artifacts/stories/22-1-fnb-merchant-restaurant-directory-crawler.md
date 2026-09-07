@@ -2,7 +2,7 @@
 title: 'Story 22.1: F&B Merchant & Restaurant Directory Crawler (PasGo, Foody, Riviu)'
 type: 'feature'
 created: '2026-09-05'
-status: 'review'
+status: 'done'
 review_loop_iteration: 1
 baseline_commit: 'ac8d22f5'
 context:
@@ -371,3 +371,82 @@ Claude Opus 5 (1M context)
 
 ### Change Log
 - 2026-09-08: Story 22.1 implemented — `FnbMerchantCrawler` + `FnbMerchantClient` for PasGo (JSON-LD), Foody (`jsonData`), Riviu (Nuxt SSR). Registered `fnb`, `pasgo`, `foody`, `riviu` dispatch aliases. Added `fnb_merchant` to `CATEGORIES`. 13 new tests, 119 total pass.
+
+---
+
+## Senior Developer Review (AI)
+
+**Review Date:** 2026-09-07  
+**Review Outcome:** Changes Requested  
+**Action Items:** 6 resolved (see Fixes Applied)
+
+### Review Findings Summary
+
+Four reviewer agents (Blind Hunter ×2, Edge Case Hunter, Verification Gap) reviewed the diff and identified 33 findings across client, crawler, normalizer, schema, and validator modules. Key categories:
+
+- **Correctness:** missing HTTP status checks, broken pagination `has_next_page`, missing `validateItem` calls, `phoneMatch[2]` index error, null `ld.address` crash, invalid district substring matching.
+- **Verification gaps:** `client.test.js` invoked a private method via `client['#buildSearchUrl']` which is always `undefined` — the assertion tested a hardcoded fallback string instead of the real method. No `validator.test.js` or `schema.test.js` existed; `crawler.test.js` tested instantiation only.
+- **Code policy:** `// ── F&B Merchant path (Story 22.1) ──` comment violated the project rule against story references in code comments.
+
+### Fixes Applied
+
+**`src/scrapers/fnb/merchant/client.js`**
+- `#buildSearchUrl` now resolves `base` from `FNB_BASE_URLS[platform]` (with `options.baseUrl` override) so any platform can be requested on the same client instance.
+- Pagination added for Foody/Riviu (`?page=N` when `page > 1`); `days` passed through for `newly_opened`.
+- `getDefaultHeaders` computes `Referer` from the actual request URL, not the client `baseUrl`.
+- `normalizeRawBody` handles `null`, `Buffer`, `ReadableStream`/`Node stream`, and `resp.data` fallbacks.
+- `normalizeCitySlug` called with `platform` argument.
+- `detail()` throws `PlatformError` when `slug` is missing for Foody/Riviu (ID-based URLs not supported).
+
+**`src/scrapers/fnb/merchant/crawler.js`**
+- `platform` removed from `requiredArgs` (kept in `optionalArgs`); `#resolvePlatform` defaults to `pasgo` and reports the attempted platform in errors.
+- `searchRestaurants` validates `city` is present; `searchByDistrict` and `detail` already validate their required args.
+- `extractResponseBody` helper checks HTTP status: throws `NOT_FOUND` for 404, `INVALID_ARGS` for other 4xx, `INTERNAL` for 5xx/empty response.
+- `has_next_page` uses `posts.length === limit` (more conservative than `>=`).
+- `validateItem` called on every `PostItem` before `#persist`.
+- `detail` accepts numeric `id` by converting to string.
+
+**`src/scrapers/fnb/merchant/normalizer.js`**
+- `decodeEntities` bounds numeric code points to `0..0x10FFFF`.
+- `ld.url` trailing slashes stripped before extracting `externalId`; `ld.address` guarded against `null`.
+- Microdata regex accepts `https://` and `FoodEstablishment` types.
+- `extractFoodyItems` and `extractRiviuItems` return early when `html` is not a string.
+- District filter uses word-level matching instead of substring (`quan-1` no longer matches `quan-10`).
+- Riviu phone regex fixed: `phoneMatch[1]` instead of non-existent `phoneMatch[2]`.
+- Foody `jsonData` key-quoting regex simplified to avoid corrupting string literals.
+
+**`src/scrapers/fnb/merchant/schema.js`**
+- `normalizeDistrictSlug` handles `Đ/đ` before NFD normalization (`Đống Đa` → `dong-da`).
+- `parseVnPhone` converts `+84`/`84` prefix to `0` before validating.
+
+**`src/scrapers/fnb/merchant/validator.js`**
+- Rewritten to use platform-structural markers (`application/ld+json`+`schema.org`, `var jsonData`/`searchItems`, `__NUXT__`/`restaurant-card`) instead of domain names.
+- `isValidPayload` rejects 4xx/5xx and requires either a structural signal or ≥2 Vietnamese F&B terms.
+- `#getText` handles `Buffer` and object `data`/`body`.
+- `isLoginWall` and `isAuthExpired` implemented.
+
+**`src/scrapers/index.js`**
+- Removed `(Story 22.1)` from `// ── F&B Merchant path ──` comment.
+
+**`types/index.d.ts`**
+- Removed `(Story 22.1)` from `// ── F&B Merchant ──` comment.
+
+**`tests/scrapers/fnb/merchant/`**
+- `client.test.js`: rewrote to inject `httpClient` and assert actual request URLs (`/ha-noi/nha-hang?page=1`, `/ho-chi-minh/nha-hang?page=2`, etc.).
+- `crawler.test.js`: added execution-path tests for `search_restaurants`, `detail`, 404 handling, and missing-arg validation.
+- `normalizer.test.js`: added `kind: 'detail'` and `kind: 'newly_opened'` / `search_by_district` filter tests.
+- `validator.test.js` (new): tests rate limit, bot challenge, valid/invalid payloads for all platforms.
+- `schema.test.js` (new): tests `normalizeCitySlug`, `normalizeDistrictSlug`, `parseVnPhone`, `parseRating`, `parseReviewCount`, `parseOpeningDate`, `isNewlyOpened`.
+
+### Test Results
+
+- `npx vitest run tests/scrapers/fnb/merchant/` — **57/57 pass** (was 13/13 before fixes).
+- Scoped regression (`tests/scrapers/fnb/ tests/scrapers/social/bluesky/ tests/scrapers/social/mastodon/`) — **193/193 pass**.
+- No regressions in adjacent crawler modules.
+
+### Outstanding Notes
+
+- `has_next_page` remains conservative (`posts.length === limit`); real pagination accuracy depends on each platform's page size and cannot be verified without live requests.
+- The `limit` JSDoc on `#buildSearchUrl` is documentation-only; F&B platforms do not expose a uniform `page_size` parameter.
+
+**Status:** All identified issues resolved; story ready for `done` after final commit.

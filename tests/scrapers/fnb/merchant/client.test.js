@@ -5,59 +5,80 @@
  * @license Apache-2.0
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { FnbMerchantClient } from '../../../../src/scrapers/fnb/merchant/client.js';
-import { createServer } from 'node:http';
+import { normalizeCitySlug, normalizeDistrictSlug } from '../../../../src/scrapers/fnb/merchant/schema.js';
+
+function makeHttpClient() {
+  let captured = { url: '', headers: {} };
+  const client = async (opts) => {
+    captured = { url: opts.url, headers: opts.headers };
+    return {
+      status: 200,
+      headers: { 'content-type': 'text/html' },
+      body: '<html><body>PasGo</body></html>',
+      data: undefined,
+    };
+  };
+  return [client, () => captured];
+}
 
 describe('FnbMerchantClient', () => {
-  let server;
-  let port;
-
-  beforeEach(async () => {
-    server = createServer((req, res) => {
-      const url = new URL(req.url, `http://localhost:${port}`);
-      let body = '<html><body>Test</body></html>';
-      let status = 200;
-
-      if (url.pathname.includes('pasgo')) {
-        body = '<html><body>PasGo</body></html>';
-      } else if (url.pathname.includes('foody')) {
-        body = '<html><body>Foody</body></html>';
-      } else if (url.pathname.includes('riviu')) {
-        body = '<html><body>Riviu</body></html>';
-      } else {
-        status = 404;
-        body = '<html><body>Not found</body></html>';
-      }
-
-      res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(body);
-    });
-
-    await new Promise((resolve) => server.listen(0, resolve));
-    port = server.address().port;
-  });
-
-  afterEach(async () => {
-    await new Promise((resolve) => server.close(resolve));
-  });
-
   it('should create client with default settings', () => {
-    const client = new FnbMerchantClient();
+    const client = new FnbMerchantClient({ requiresProxy: false });
     expect(client.name).toBe('fnb');
     expect(client.requiresAuth).toBe(false);
     expect(client.requiresProxy).toBe(true);
   });
 
   it('should normalize city slug', () => {
-    const client = new FnbMerchantClient();
+    const client = new FnbMerchantClient({ requiresProxy: false });
     expect(client.baseUrl).toBeDefined();
+    expect(normalizeCitySlug('Hà Nội')).toBe('ha-noi');
+    expect(normalizeCitySlug('TP.HCM', 'foody')).toBe('ho-chi-minh');
   });
 
-  it('should build search URL for PasGo', async () => {
-    const client = new FnbMerchantClient({ targetPlatform: 'pasgo', baseUrl: `http://localhost:${port}` });
-    const url = client['#buildSearchUrl'] ? client['#buildSearchUrl']({ city: 'ha-noi' }) : 'https://pasgo.vn/ha-noi/nha-hang?page=1';
-    expect(url).toContain('ha-noi');
-    expect(url).toContain('nha-hang');
+  it('should build search URL for PasGo and send request', async () => {
+    const [httpClient, getCaptured] = makeHttpClient();
+    const client = new FnbMerchantClient({ targetPlatform: 'pasgo', requiresProxy: false, httpClient });
+    const resp = await client.searchRestaurants({ city: 'ha-noi' });
+    expect(getCaptured().url).toContain('/ha-noi/nha-hang');
+    expect(getCaptured().url).toContain('page=1');
+    expect(resp.body).toBe('<html><body>PasGo</body></html>');
+  });
+
+  it('should build search URL for Foody with dynamic base', async () => {
+    const [httpClient, getCaptured] = makeHttpClient();
+    const client = new FnbMerchantClient({ targetPlatform: 'foody', requiresProxy: false, httpClient });
+    await client.searchRestaurants({ city: 'ho-chi-minh', page: 2 });
+    expect(getCaptured().url).toContain('/ho-chi-minh/nha-hang');
+    expect(getCaptured().url).toContain('page=2');
+  });
+
+  it('should build search URL for Riviu with dynamic base', async () => {
+    const [httpClient, getCaptured] = makeHttpClient();
+    const client = new FnbMerchantClient({ targetPlatform: 'riviu', requiresProxy: false, httpClient });
+    await client.searchRestaurants({ city: 'ha-noi', page: 3 });
+    expect(getCaptured().url).toContain('/ha-noi/nha-hang');
+    expect(getCaptured().url).toContain('page=3');
+  });
+
+  it('should require slug for Foody detail', async () => {
+    const client = new FnbMerchantClient({ targetPlatform: 'foody', requiresProxy: false });
+    await expect(client.detail({ id: '123', city: 'ha-noi' })).rejects.toThrow(/Slug is required/);
+  });
+
+  it('should build Foody detail URL with slug', async () => {
+    const [httpClient, getCaptured] = makeHttpClient();
+    const client = new FnbMerchantClient({ targetPlatform: 'foody', requiresProxy: false, httpClient });
+    await client.detail({ id: '123', slug: 'quan-an-xyz', city: 'ho-chi-minh' });
+    expect(getCaptured().url).toContain('/quan-an-xyz');
+  });
+
+  it('should build district search URL', async () => {
+    const [httpClient, getCaptured] = makeHttpClient();
+    const client = new FnbMerchantClient({ targetPlatform: 'pasgo', requiresProxy: false, httpClient });
+    await client.searchByDistrict({ city: 'ha-noi', district: 'dong-da' });
+    expect(getCaptured().url).toContain('/ha-noi/nha-hang/dong-da');
   });
 });

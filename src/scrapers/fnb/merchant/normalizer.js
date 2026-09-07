@@ -18,7 +18,7 @@ function decodeEntities(text) {
       const code = entity[1] === 'x' || entity[1] === 'X'
         ? parseInt(entity.slice(2), 16)
         : parseInt(entity.slice(1), 10);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : m;
+      return (Number.isFinite(code) && code >= 0 && code <= 0x10ffff) ? String.fromCodePoint(code) : m;
     }
     return ENTITIES[entity] ?? m;
   });
@@ -80,13 +80,13 @@ function extractPasGoItems(html, sourcePlatform = 'pasgo') {
         for (const ld of list) {
           if (ld['@type'] !== 'Restaurant' && !ld['@type']?.includes('Restaurant')) continue;
 
-          const externalId = ld.url ? String(ld.url).split('/').pop() || `pasgo-${seen.size}` : `pasgo-${seen.size}`;
+          const externalId = ld.url ? String(ld.url).replace(/\/+$/, '').split('/').pop() || `pasgo-${seen.size}` : `pasgo-${seen.size}`;
           if (seen.has(externalId)) continue;
           seen.add(externalId);
 
           const title = stripTags(ld.name || '');
-          const addressObj = typeof ld.address === 'object' ? ld.address : {};
-          const address = stripTags(addressObj.streetAddress || ld.address || '');
+          const addressObj = (typeof ld.address === 'object' && ld.address !== null) ? ld.address : {};
+          const address = stripTags(addressObj.streetAddress || '');
           const city = stripTags(addressObj.addressLocality || '');
           const district = stripTags(addressObj.addressRegion || '');
           const { phone, phoneMasked } = parseVnPhone(ld.telephone || '');
@@ -131,9 +131,9 @@ function extractPasGoItems(html, sourcePlatform = 'pasgo') {
     }
   }
 
-  // Fallback: parse schema.org/Restaurant microdata
+  // Fallback: parse schema.org/Restaurant microdata (HTTP or HTTPS)
   if (!items.length) {
-    const blocks = html.match(/<[^>]*itemtype=["']http:\/\/schema\.org\/Restaurant["'][^>]*>[\s\S]*?<\/div>/gi) || [];
+    const blocks = html.match(/<[^>]*itemtype=["']https?:\/\/schema\.org\/(?:Restaurant|FoodEstablishment)["'][^>]*>[\s\S]*?(<\/div>|<\/article>)/gi) || [];
     for (const block of blocks) {
       const name = extractItemProp(block, 'name');
       if (!name) continue;
@@ -203,13 +203,17 @@ function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
   const items = [];
   const seen = new Set();
 
+  if (typeof html !== 'string') return items;
+
   const jsonDataMatch = html.match(/var\s+jsonData\s*=\s*([\s\S]*?);\s*<\/script>/);
   if (!jsonDataMatch) return items;
 
   let data;
   try {
-    // Foody often emits unquoted keys in the embedded JS object, so quote them before JSON.parse.
-    const quoted = jsonDataMatch[1].replace(/([{,\s])([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
+    const raw = jsonDataMatch[1].trim();
+    // Foody emits unquoted JS object keys. Quote only keys that appear right after { or , or [
+    // and before a colon, without touching string literals.
+    const quoted = raw.replace(/([{,\[]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
     data = JSON.parse(quoted);
   } catch {
     return items;
@@ -228,10 +232,15 @@ function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
       if (!isNewlyOpened(openingDate, days) && !item.IsNew) continue;
     }
 
-    if (filter.district && item.District) {
-      const district = stripTags(item.District).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
-      const filterDistrict = String(filter.district).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
-      if (!district.includes(filterDistrict) && !filterDistrict.includes(district)) continue;
+    if (filter.district) {
+      if (!item.District) continue;
+      const district = stripTags(item.District).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
+      const filterDistrict = String(filter.district).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
+      // Exact match, or match at word boundary (e.g. "quan 1" vs "quan 10")
+      const districtWords = district.split(/\s+/);
+      const filterWords = filterDistrict.split(/\s+/);
+      const matches = filterWords.every((w) => districtWords.includes(w)) || district === filterDistrict;
+      if (!matches) continue;
     }
 
     const title = stripTags(item.Name || '');
@@ -288,6 +297,8 @@ function extractRiviuItems(html, sourcePlatform = 'riviu') {
   const items = [];
   const seen = new Set();
 
+  if (typeof html !== 'string') return items;
+
   // Riviu restaurant card patterns — match the inner content of each card element.
   const blocks = html.match(/<div[^>]*class=["'][^"']*restaurant-card[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*(?=<div[^>]*class=["'][^"']*restaurant-card|<\/div>)/gi) ||
     html.match(/<article[^>]*class=["'][^"']*restaurant[^"']*["'][^>]*>([\s\S]*?)<\/article>/gi) ||
@@ -314,7 +325,7 @@ function extractRiviuItems(html, sourcePlatform = 'riviu') {
 
     const phoneMatch = block.match(/class=["'][^"']*phone[^"']*["'][^>]*>([^<]+)/i) ||
       block.match(/href=["']tel:([^"']+)["']/i);
-    const phone = phoneMatch ? (phoneMatch[2] ? stripTags(phoneMatch[2]) : phoneMatch[1]) : '';
+    const phone = phoneMatch ? stripTags(phoneMatch[1]) : '';
     const parsed = parseVnPhone(phone);
 
     const urlMatch = block.match(/href=["']([^"']*\/nha-hang\/[^"']*)["']/i);

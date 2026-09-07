@@ -17,6 +17,54 @@ import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error
 
 const VALID_PLATFORMS = new Set(['pasgo', 'foody', 'riviu', 'fnb']);
 
+/**
+ * Extract response body and validate HTTP status.
+ * @param {any} response
+ * @param {string} platform
+ * @param {string} action
+ * @returns {string}
+ */
+function extractResponseBody(response, platform, action) {
+  if (response === null || response === undefined) {
+    throw new PlatformError({
+      type: ErrorTypes.INTERNAL,
+      code: 'XACT_5001',
+      message: `Empty response from ${platform} during ${action}`,
+      statusCode: 500,
+      suggestedAction: SuggestedActions.ROTATE_PROXY,
+      platform,
+    });
+  }
+
+  const status = response?.status ?? response?.statusCode ?? 200;
+  const body = typeof response === 'string' ? response : (response?.body ?? response?.data ?? '');
+
+  if (status >= 400 && status < 500) {
+    const type = status === 404 ? ErrorTypes.NOT_FOUND : ErrorTypes.INVALID_ARGS;
+    throw new PlatformError({
+      type,
+      code: 'XACT_4001',
+      message: `${platform} returned HTTP ${status} for ${action}`,
+      statusCode: status,
+      suggestedAction: status === 404 ? SuggestedActions.USE_ACTIONS_LIST : SuggestedActions.ROTATE_PROXY,
+      platform,
+    });
+  }
+
+  if (status >= 500) {
+    throw new PlatformError({
+      type: ErrorTypes.INTERNAL,
+      code: 'XACT_5001',
+      message: `${platform} returned HTTP ${status} for ${action}`,
+      statusCode: status,
+      suggestedAction: SuggestedActions.ROTATE_PROXY,
+      platform,
+    });
+  }
+
+  return body;
+}
+
 export class FnbMerchantCrawler extends AbstractCrawler {
   /** @type {string} */
   name = 'fnb';
@@ -41,8 +89,8 @@ export class FnbMerchantCrawler extends AbstractCrawler {
       description: 'Search restaurants by city and optional district',
       category: 'fnb_merchant',
       requiresAuth: false,
-      requiredArgs: ['platform', 'city'],
-      optionalArgs: ['district', 'page', 'limit'],
+      requiredArgs: ['city'],
+      optionalArgs: ['platform', 'district', 'page', 'limit'],
       example: { platform: 'pasgo', city: 'ha-noi', district: 'dong-da' },
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, page: number } }',
       handler: (/** @type {any} */ args) => this.searchRestaurants(args),
@@ -53,8 +101,8 @@ export class FnbMerchantCrawler extends AbstractCrawler {
       description: 'Find newly opened restaurants within N days',
       category: 'fnb_merchant',
       requiresAuth: false,
-      requiredArgs: ['platform', 'days'],
-      optionalArgs: ['city', 'page', 'limit'],
+      requiredArgs: ['days'],
+      optionalArgs: ['platform', 'city', 'page', 'limit'],
       example: { platform: 'foody', days: 30, city: 'ho-chi-minh' },
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, page: number } }',
       handler: (/** @type {any} */ args) => this.getNewlyOpened(args),
@@ -65,8 +113,8 @@ export class FnbMerchantCrawler extends AbstractCrawler {
       description: 'Search restaurants within a specific district',
       category: 'fnb_merchant',
       requiresAuth: false,
-      requiredArgs: ['platform', 'city', 'district'],
-      optionalArgs: ['page', 'limit'],
+      requiredArgs: ['city', 'district'],
+      optionalArgs: ['platform', 'page', 'limit'],
       example: { platform: 'pasgo', city: 'ha-noi', district: 'dong-da' },
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, page: number } }',
       handler: (/** @type {any} */ args) => this.searchByDistrict(args),
@@ -77,8 +125,8 @@ export class FnbMerchantCrawler extends AbstractCrawler {
       description: 'Get restaurant detail by id/slug',
       category: 'fnb_merchant',
       requiresAuth: false,
-      requiredArgs: ['platform', 'id'],
-      optionalArgs: ['slug', 'city'],
+      requiredArgs: ['id'],
+      optionalArgs: ['platform', 'slug', 'city'],
       example: { platform: 'pasgo', id: '123', city: 'ha-noi' },
       outputType: '{ post: PostItem }',
       handler: (/** @type {any} */ args) => this.detail(args),
@@ -90,15 +138,16 @@ export class FnbMerchantCrawler extends AbstractCrawler {
    * @returns {string}
    */
   #resolvePlatform(args) {
-    const platform = typeof args?.platform === 'string' ? args.platform.trim().toLowerCase() : 'fnb';
-    if (!platform || !VALID_PLATFORMS.has(platform)) {
+    const raw = typeof args?.platform === 'string' ? args.platform.trim().toLowerCase() : 'fnb';
+    const platform = raw || 'fnb';
+    if (!VALID_PLATFORMS.has(platform)) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
         code: 'XACT_4001',
         message: `Invalid or missing platform: "${platform}". Must be one of: ${[...VALID_PLATFORMS].join(', ')}`,
         statusCode: 400,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: 'fnb',
+        platform: raw || 'fnb',
       });
     }
     if (platform === 'fnb') {
@@ -114,21 +163,36 @@ export class FnbMerchantCrawler extends AbstractCrawler {
    */
   async searchRestaurants(args = {}) {
     const platform = this.#resolvePlatform(args);
+
+    if (!args.city) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: city',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform,
+      });
+    }
+
     const page = Math.max(1, Number(args.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(args.limit) || 20));
 
     const searchArgs = { ...args, platform, page, limit };
     const response = await this.client.searchRestaurants(searchArgs);
-    const data = typeof response === 'string' ? response : (response?.body !== undefined ? response.body : response.data);
+    const data = extractResponseBody(response, platform, 'search_restaurants');
 
     const posts = normalizeFnbMerchantResults(data, 'search', { platform });
+    for (const post of posts) {
+      this.validateItem(post);
+    }
     const result = posts.slice(0, limit);
 
     await this.#persist(result);
 
     return {
       posts: result,
-      pageInfo: { has_next_page: posts.length >= limit, page },
+      pageInfo: { has_next_page: posts.length === limit, page },
     };
   }
 
@@ -142,18 +206,21 @@ export class FnbMerchantCrawler extends AbstractCrawler {
     const limit = Math.min(100, Math.max(1, Number(args.limit) || 20));
     const days = Math.max(1, Number(args.days) || 30);
 
-    const searchArgs = { ...args, platform, page, limit };
+    const searchArgs = { ...args, platform, page, limit, days };
     const response = await this.client.getNewlyOpened(searchArgs);
-    const data = typeof response === 'string' ? response : (response?.body !== undefined ? response.body : response.data);
+    const data = extractResponseBody(response, platform, 'newly_opened');
 
     const posts = normalizeFnbMerchantResults(data, 'newly_opened', { platform, days });
+    for (const post of posts) {
+      this.validateItem(post);
+    }
     const result = posts.slice(0, limit);
 
     await this.#persist(result);
 
     return {
       posts: result,
-      pageInfo: { has_next_page: posts.length >= limit, page },
+      pageInfo: { has_next_page: posts.length === limit, page },
     };
   }
 
@@ -173,22 +240,25 @@ export class FnbMerchantCrawler extends AbstractCrawler {
         message: 'Missing required argument: district',
         statusCode: 400,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: 'fnb',
+        platform,
       });
     }
 
     const searchArgs = { ...args, platform, page, limit };
     const response = await this.client.searchByDistrict(searchArgs);
-    const data = typeof response === 'string' ? response : (response?.body !== undefined ? response.body : response.data);
+    const data = extractResponseBody(response, platform, 'search_by_district');
 
     const posts = normalizeFnbMerchantResults(data, 'search_by_district', { platform, district: args.district });
+    for (const post of posts) {
+      this.validateItem(post);
+    }
     const result = posts.slice(0, limit);
 
     await this.#persist(result);
 
     return {
       posts: result,
-      pageInfo: { has_next_page: posts.length >= limit, page },
+      pageInfo: { has_next_page: posts.length === limit, page },
     };
   }
 
@@ -198,7 +268,7 @@ export class FnbMerchantCrawler extends AbstractCrawler {
    */
   async detail(args = {}) {
     const platform = this.#resolvePlatform(args);
-    const id = typeof args.id === 'string' ? args.id.trim() : '';
+    const id = typeof args?.id === 'number' ? String(args.id) : (typeof args?.id === 'string' ? args.id.trim() : '');
     if (!id) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
@@ -206,14 +276,17 @@ export class FnbMerchantCrawler extends AbstractCrawler {
         message: 'Missing required argument: id',
         statusCode: 400,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: 'fnb',
+        platform,
       });
     }
 
     const response = await this.client.detail({ ...args, platform });
-    const data = typeof response === 'string' ? response : (response?.body !== undefined ? response.body : response.data);
+    const data = extractResponseBody(response, platform, 'detail');
 
     const posts = normalizeFnbMerchantResults(data, 'detail', { platform });
+    for (const post of posts) {
+      this.validateItem(post);
+    }
     if (!posts.length) {
       throw new PlatformError({
         type: ErrorTypes.NOT_FOUND,
@@ -221,7 +294,7 @@ export class FnbMerchantCrawler extends AbstractCrawler {
         message: `Restaurant not found for id "${id}" on platform "${platform}"`,
         statusCode: 404,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: 'fnb',
+        platform,
       });
     }
 

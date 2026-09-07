@@ -77,4 +77,42 @@ describe('normalizeFnbMerchantResults', () => {
   it('should expose normalizeFnbResults alias', () => {
     expect(normalizeFnbResults).toBe(normalizeFnbMerchantResults);
   });
+
+  it('should filter newly opened Foody results', () => {
+    const html = loadFixture('foody-search.html');
+    const result = normalizeFnbMerchantResults(html, 'newly_opened', { platform: 'foody', days: 30 });
+    expect(result.length).toBeGreaterThanOrEqual(1);
+    expect(result[0].metadata.restaurantName).toBe('Quán Ăn XYZ');
+  });
+
+  it('should filter by district in Foody results', () => {
+    const html = loadFixture('foody-search.html');
+    const result = normalizeFnbMerchantResults(html, 'search_by_district', { platform: 'foody', district: 'Quận 3' });
+    expect(result).toHaveLength(1);
+    expect(result[0].metadata.restaurantName).toBe('Quán Ăn XYZ');
+  });
+
+  it('should parse PasGo detail result', () => {
+    const html = loadFixture('pasgo-detail.html');
+    const result = normalizeFnbMerchantResults(html, 'detail', { platform: 'pasgo' });
+    expect(result).toHaveLength(1);
+    expect(result[0].platform).toBe('pasgo');
+    expect(result[0].metadata.restaurantName).toBeDefined();
+  });
+
+  it('should parse Foody detail result', () => {
+    const html = loadFixture('foody-detail.html');
+    const result = normalizeFnbMerchantResults(html, 'detail', { platform: 'foody' });
+    expect(result).toHaveLength(1);
+    expect(result[0].platform).toBe('foody');
+    expect(result[0].metadata.restaurantName).toBeDefined();
+  });
+
+  it('should parse Riviu detail result', () => {
+    const html = loadFixture('riviu-detail.html');
+    const result = normalizeFnbMerchantResults(html, 'detail', { platform: 'riviu' });
+    expect(result).toHaveLength(1);
+    expect(result[0].platform).toBe('riviu');
+    expect(result[0].metadata.restaurantName).toBeDefined();
+  });
 });

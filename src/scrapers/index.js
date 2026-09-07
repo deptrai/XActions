@@ -1544,7 +1544,7 @@ export async function scrape(platform, action, options = {}) {
     }
   }
 
-  // ── F&B Merchant path (Story 22.1) ──
+  // ── F&B Merchant path ──
   if (platformName === 'fnb' || platformName === 'pasgo' || platformName === 'foody' || platformName === 'riviu') {
     /** @type {Record<string, string>} */
     const FNB_ACTION_MAP = {
