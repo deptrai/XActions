@@ -290,9 +290,9 @@ export class FnbMerchantClient extends AbstractApiClient {
       return this.request('GET', `${base}/${slug}`, { ...options, raw: true });
     }
 
-    // PasGo detail: /{city}/nha-hang/{slug}-{id}
+    // PasGo detail: /nha-hang/{slug}-{id} (city prefix is optional; PasGo canonicalizes)
     const slugPart = slug ? `${slug}-` : '';
-    const url = slugPart ? `${base}/${city}/nha-hang/${slugPart}${id}` : `${base}/${city}/nha-hang/${id}`;
+    const url = slugPart ? `${base}/nha-hang/${slugPart}${id}` : `${base}/nha-hang/${id}`;
     return this.request('GET', url, { ...options, raw: true });
   }
 }

@@ -258,9 +258,85 @@ function extractPasGoItems(html, sourcePlatform = 'pasgo') {
 }
 
 function extractPasGoDetail(html, sourcePlatform = 'pasgo') {
+  // PasGo detail pages carry a single microdata block: itemscope + itemtype=.../Restaurant
+  // with headline/address-booth/telephone etc. Extract only the top-level detail container.
+  const scopeMatch = html.match(/<[^>]*itemscope[^>]*itemtype=["']https?:\/\/schema\.org\/(?:Restaurant|FoodEstablishment)["'][^>]*>/i);
+  if (scopeMatch) {
+    const start = scopeMatch.index;
+    const openTag = scopeMatch[0];
+    // Find the matching closing tag for the same element type (div/article/section)
+    const tagName = openTag.match(/^<([a-zA-Z]+)/i)?.[1]?.toLowerCase() || 'div';
+    const closeTag = `</${tagName}>`;
+    const tagOpenRe = new RegExp(`<${tagName}\\b`, 'i');
+    const tagCloseRe = new RegExp(`</${tagName}>`, 'i');
+    let depth = 0;
+    let end = -1;
+    for (let i = start + openTag.length; i < html.length; i++) {
+      const remaining = html.slice(i);
+      if (tagOpenRe.test(remaining) && !remaining.startsWith(`<${tagName}/>`)) {
+        const after = remaining.slice(tagName.length + 1);
+        if (/^[\s\/>]/.test(after)) { depth++; i += tagName.length; continue; }
+      } else if (remaining.startsWith(closeTag)) {
+        if (depth === 0) { end = i + closeTag.length; break; }
+        depth--;
+        i += closeTag.length - 1;
+      }
+    }
+    const block = end > start ? html.substring(start, end) : html.substring(start, start + 8000);
+    const title = extractItemProp(block, 'headline') || extractItemProp(block, 'name');
+    if (title) {
+      const address = extractItemProp(block, 'address-booth') || extractItemProp(block, 'address') || extractItemProp(block, 'streetAddress');
+      const phone = extractItemProp(block, 'telephone');
+      const parsed = parseVnPhone(phone);
+      const rating = parseRating(extractItemProp(block, 'ratingValue'));
+      const reviewCount = parseReviewCount(extractItemProp(block, 'reviewCount'));
+      const cuisine = [extractItemProp(block, 'servesCuisine')].filter(Boolean);
+      const priceRange = extractItemProp(block, 'priceRange');
+      const cuisineMatch = block.match(/<span[^>]*class=["']text_type["'][^>]*>Loại hình:<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
+      const menuItems = cuisineMatch ? [stripTags(cuisineMatch[1]).trim()] : cuisine;
+      const canonicalMatch = html.match(/<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i);
+      const detailUrl = canonicalMatch ? canonicalMatch[1] : '';
+      const externalId = detailUrl ? detailUrl.split('/').pop() || `pasgo-detail` : `pasgo-detail`;
+      const lat = parseFloat(extractItemProp(block, 'latitude'));
+      const lng = parseFloat(extractItemProp(block, 'longitude'));
+      const items = [buildPostItem({
+        platform: 'pasgo',
+        externalId,
+        title,
+        contentParts: [title, address].filter(Boolean),
+        authorId: parsed.phone || `pasgo:${externalId}`,
+        authorName: parsed.phone ? `Hotline: ${parsed.phone}` : 'Chủ quán',
+        postUrl: detailUrl,
+        mediaUrls: [],
+        metadata: {
+          restaurantName: title,
+          manager: '',
+          hotline: parsed.phone,
+          phone: parsed.phone,
+          phoneMasked: parsed.phoneMasked,
+          address,
+          city: '',
+          district: '',
+          gpsLat: Number.isFinite(lat) ? lat : null,
+          gpsLng: Number.isFinite(lng) ? lng : null,
+          menuItems,
+          rating,
+          reviewCount,
+          cuisine,
+          priceRange,
+          detailUrl,
+          sourcePlatform,
+        },
+      })];
+      return items;
+    }
+  }
+
+  // Fallback: no microdata detail block -> use first extracted item
   const items = extractPasGoItems(html, sourcePlatform);
   return items.slice(0, 1);
 }
+
 
 function extractItemProp(html, prop) {
   const m = html.match(new RegExp(`itemprop=["']${prop}["'][^>]*>([^<]+)`, 'i'));
