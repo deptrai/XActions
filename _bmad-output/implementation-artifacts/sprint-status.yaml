@@ -1,5 +1,5 @@
 # generated: "08-27-2026 06:00"
-# last_updated: "2026-09-06"
+# last_updated: "2026-09-07"
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -163,10 +163,11 @@ development_status:
   # --- Epic 21: B2B Procurement, Corporate & Automotive Intelligence Engine ---
   # NOTE: 2026-09-05 — Reactivated for Vietnam market pivot. PRD FR-94, FR-95 added.
   # Feasibility verified by live probes (research/technical-vietnam-multi-domain-scrapers-2026-08-21.md).
-  epic-21: done
+  epic-21: in-progress
   21-1-masothue-company-registry-crawler: done
   21-2-automotive-vehicles-market-crawler: done
   21-3-hosocongty-muasamcong-crawler: done
+  21-4-hosocongty-muasamcong-live-fixes: ready-for-dev
   epic-21-retrospective: optional
 
   # --- Epic 22: Local F&B Merchant, Healthcare & Legal Intelligence Engine ---
