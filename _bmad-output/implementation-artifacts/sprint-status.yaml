@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: "2026-09-08 00:00"
+last_updated: "2026-09-08 21:20"
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -172,6 +172,7 @@ development_status:
 
   # --- Epic 22: Local F&B Merchant, Healthcare & Legal Intelligence Engine ---
   # NOTE: 2026-09-05 — Reactivated for Vietnam market pivot. PRD FR-96 added.
+  # NOTE: 2026-09-08 — Readiness gate passed; Long Chau added to 22.2, Thuocsi deferred to Epic 24.
   epic-22: in-progress
   22-1-fnb-merchant-restaurant-directory-crawler: ready-for-dev
   22-2-healthcare-clinics-pharmacy-network-crawler: ready-for-dev

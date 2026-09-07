@@ -1831,9 +1831,10 @@ Phase D — Finalization:
 | MaSoThue | ✅ Feasible (HTTP-only) | 21.1 | B2B registry |
 | HoSoCongTy/MuaSamCong | 🟡 Blocked (Cloudflare/SPA) | 21.3 | B2B registry |
 | Oto/Bonbanh/ChototXe | 📋 Spec ready | 21.2 | Automotive |
-| PasGo/Foody/Riviu | 📋 Spec ready | 22.1 | F&B |
-| Medpro/YouMed/Thuocsi | 📋 Spec ready | 22.2 | Healthcare |
-| IP Vietnam | 📋 Spec ready | 22.3 | Legal |
+| PasGo/Foody/Riviu | ✅ Ready (probed) | 22.1 | F&B |
+| Medpro/YouMed/Long Chau | ✅ Ready (probed) | 22.2 | Healthcare |
+| Thuocsi | 🟡 Auth-gated (deferred to Epic 24) | 22.2 | Healthcare |
+| IP Vietnam | ✅ Ready (probed) | 22.3 | Legal |
 | **Zalo OA** | ❌ Net-new | 33.1 | Social/messaging |
 | **YouTube VN** | ❌ Net-new | 33.2 | Video |
 
