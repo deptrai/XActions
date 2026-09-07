@@ -98,7 +98,7 @@ describe('Story 10.2: PrismaStore — Category Validation Guard (AC: Category Va
 
   it('accepts all standard categories defined in CATEGORIES constant', async () => {
     const validCategories = Object.values(CATEGORIES);
-    expect(validCategories).toEqual(['social', 'ecom', 'realestate', 'recruitment', 'b2b']);
+    expect(validCategories).toEqual(['social', 'ecom', 'realestate', 'recruitment', 'b2b', 'automotive']);
     for (const cat of validCategories) {
       expect(isValidCategory(cat)).toBe(true);
     }

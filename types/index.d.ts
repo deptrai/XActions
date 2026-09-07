@@ -870,5 +870,39 @@ export declare class FacebookActions {
   sendFriendRequest(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown>;
 }
 
+// ── B2B Procurement (Story 21.3) ────────────────────────────────────────────
+
+/**
+ * B2B registry HTTP client for HoSoCongTy and MuaSamCong.
+ * Supports 2-tier Cloudflare fallback via got-scraping TLS/JA4 spoofing
+ * and stealth browser warmup.
+ */
+export declare class B2BRegistryExtendedClient {
+  name: string;
+  platform: string;
+  baseUrl: string;
+  targetPlatform: 'hosocongty' | 'muasamcong';
+  requiresAuth: boolean;
+  requiresProxy: boolean;
+  constructor(options?: Record<string, unknown>);
+  request(method: string, url: string, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  searchHosocongty(params?: Record<string, unknown>, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  companyDetailHosocongty(params?: Record<string, unknown>, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  searchTendersMuasamcong(params?: Record<string, unknown>, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  tenderDetailMuasamcong(params?: Record<string, unknown>, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+}
+
+/**
+ * Hybrid crawler for HoSoCongTy company records and MuaSamCong tender notices.
+ */
+export declare class B2BRegistryExtendedCrawler {
+  client: B2BRegistryExtendedClient;
+  constructor(deps?: Record<string, unknown>);
+  start(command: { action: string; args?: Record<string, unknown>; session?: Record<string, unknown> }): Promise<unknown>;
+  cleanup(): Promise<void>;
+  listActions(): Array<{ action: string; [key: string]: unknown }>;
+}
+
+export declare function scrapeB2BRegistryExtended(action: string, args?: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown>;
 
 

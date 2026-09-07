@@ -68,6 +68,8 @@ import { MaSoThueCrawler } from './procurement/masothue/crawler.js';
 import { MaSoThueClient } from './procurement/masothue/client.js';
 import { AutomotiveCrawler } from './vehicles/automotive/crawler.js';
 import { AutomotiveClient } from './vehicles/automotive/client.js';
+import { B2BRegistryExtendedCrawler } from './procurement/b2b-registry-extended/index.js';
+import { B2BRegistryExtendedClient } from './procurement/b2b-registry-extended/client.js';
 import { BlueskyCrawler } from './social/bluesky/crawler.js';
 import { BlueskyClient } from './social/bluesky/client.js';
 import {
@@ -84,6 +86,7 @@ import chotot from './realestate/chotot/index.js';
 import batdongsan from './realestate/batdongsan/index.js';
 import masothue from './procurement/masothue/index.js';
 import automotive from './vehicles/automotive/index.js';
+import b2bRegistryExtended from './procurement/b2b-registry-extended/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -175,6 +178,9 @@ export const platforms = {
   oto_vn: automotive,
   bonbanh: automotive,
   chotot_xe: automotive,
+  b2b_registry_extended: b2bRegistryExtended,
+  hosocongty: b2bRegistryExtended,
+  muasamcong: b2bRegistryExtended,
 };
 
 /**
@@ -1400,6 +1406,74 @@ export async function scrape(platform, action, options = {}) {
   }
 
   // ── Automotive Vehicles Market path (Story 21.2) ──
+  // ── B2B Registry Extended path (Story 21.3) ──
+  if (platformName === 'b2b_registry_extended' || platformName === 'hosocongty' || platformName === 'muasamcong') {
+    /** @type {Record<string, string>} */
+    const B2B_ACTION_MAP = {
+      search: 'search',
+      search_tenders: 'search_tenders',
+      search_tender: 'search_tenders',
+      company: 'detail',
+      company_detail: 'detail',
+      detail: 'detail',
+      tender_detail: 'detail',
+    };
+
+    const mappedAction = B2B_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(B2B_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.q || options.query || options.keyword) {
+      mappedArgs.q = options.q || options.query || options.keyword;
+    }
+    if (options.taxCode) mappedArgs.taxCode = options.taxCode;
+    if (options.notifyNo || options.tenderNo) mappedArgs.notifyNo = options.notifyNo || options.tenderNo;
+    if (options.id) mappedArgs.id = options.id;
+    if (options.platform) mappedArgs.platform = options.platform;
+    if (options.searchType) mappedArgs.searchType = options.searchType;
+    if (options.searchScope) mappedArgs.searchScope = options.searchScope;
+    if (options.searchBy) mappedArgs.searchBy = options.searchBy;
+    if (options.keywordMatch) mappedArgs.keywordMatch = options.keywordMatch;
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.slug) mappedArgs.slug = options.slug;
+
+    const client = new B2BRegistryExtendedClient({
+      targetPlatform: options.targetPlatform || platformName,
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+      userAgent: options.userAgent,
+    });
+
+    const crawler = new B2BRegistryExtendedCrawler({
+      client,
+      store,
+      publisher: options.publisher || options.eventPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
   if (platformName === 'automotive' || platformName === 'oto_vn' || platformName === 'bonbanh' || platformName === 'chotot_xe') {
     /** @type {Record<string, string>} */
     const AUTOMOTIVE_ACTION_MAP = {
@@ -1944,6 +2018,7 @@ export default {
   facebook,
   tiktok,
   masothue,
+  b2bRegistryExtended,
 
   // Platform crawlers/clients (Story 23.6+)
   BlueskyCrawler,
@@ -1954,6 +2029,8 @@ export default {
   MaSoThueClient,
   AutomotiveCrawler,
   AutomotiveClient,
+  B2BRegistryExtendedCrawler,
+  B2BRegistryExtendedClient,
   createBlueskyClient,
   createBlueskyCrawler,
   createMastodonClient,
