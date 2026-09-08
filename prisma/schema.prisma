@@ -405,3 +405,42 @@ model CrawlCheckpoint {
   @@index([platform, updatedAt])
   @@index([status, nextScheduledAt])
 }
+
+model ScraperHealthScore {
+  id                   String    @id @default(cuid())
+  scraperId            String
+  platform             String
+  healthScore          Float
+  tier                 String
+  stabilityScore       Float
+  qualityScore         Float
+  noiseScore           Float
+  costScore            Float
+  sampleCount          Int       @default(0)
+  consecutiveCleanRuns Int       @default(0)
+  requalifiedAt        DateTime?
+  evaluatedAt          DateTime  @default(now())
+  metricsSnapshot      Json
+
+  @@index([platform, evaluatedAt(sort: Desc)])
+  @@index([scraperId, evaluatedAt(sort: Desc)])
+  @@index([evaluatedAt(sort: Desc)])
+}
+
+model ScraperCanaryRun {
+  id                  String   @id @default(cuid())
+  scraperId           String
+  platform            String
+  targetUrl           String
+  isSuccess           Boolean
+  latencyMs           Int
+  httpStatus          Int
+  false200Detected    Boolean  @default(false)
+  checkpointDetected  Boolean  @default(false)
+  errorReason         String?
+  executedAt          DateTime @default(now())
+
+  @@index([platform, executedAt(sort: Desc)])
+  @@index([scraperId, executedAt(sort: Desc)])
+  @@index([executedAt(sort: Desc)])
+}

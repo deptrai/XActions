@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Epic 34 Architecture Update Report</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.55; color: #1f2937; max-width: 1080px; margin: 0 auto; padding: 2rem; background: #fafafa; }
+h1, h2, h3 { color: #0f172a; }
+h1 { border-bottom: 3px solid #16a34a; padding-bottom: 0.5rem; }
+code { background: #e2e8f0; padding: 0.15rem 0.35rem; border-radius: 4px; }
+pre { background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+pre code { background: transparent; color: inherit; padding: 0; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; background: #fff; }
+th, td { border: 1px solid #cbd5e1; padding: 0.5rem 0.75rem; text-align: left; }
+th { background: #e2e8f0; }
+ul li { margin: 0.35rem 0; }
+</style>
+</head>
+<body>
+<h1>Epic 34 Architecture Spine — Update Report 2026-09-08</h1>
+<h2>What was changed</h2>
+<p>The architecture spine <code>ARCHITECTURE-SPINE.md</code> and its companion <code>metrics-catalog.md</code> were updated to close the findings raised by the 2026-09-08 Reviewer Gate (rubric-walker + tech-currency + adversarial).</p>
+<h3>Key amendments</h3>
+<ol>
+<li><strong>AD-23 — Redis Stream retention fixed</strong>  </li>
+<li>Removed invalid "7-day TTL" language (Redis Streams have no per-entry TTL).  </li>
+<li>Set <code>MAXLEN ~ 1000000</code> and defined rolling retention via <code>XTRIM ... MINID ~ &lt;seven_days_ago_ms&gt;</code> in the consumer.  </li>
+<li>
+<p>Declared <code>telemetry-consumer.js</code> as a native Redis Stream consumer-group reader (<code>XREADGROUP</code> + <code>XACK</code>) — not a Bull worker.</p>
+</li>
+<li>
+<p><strong>AD-24 — Emission primitive fixed</strong>  </p>
+</li>
+<li>
+<p><code>setImmediate</code> only; <code>queueMicrotask</code> removed to prevent event-loop starvation and NFR-19 violations.</p>
+</li>
+<li>
+<p><strong>AD-25 — Centralized instrumentation tightened</strong>  </p>
+</li>
+<li>Added <code>TelemetryContext</code> threaded through <code>session.telemetry</code> so <code>AbstractCrawler.start()</code> and <code>AbstractApiClient.request()</code> contribute to one correlated run.  </li>
+<li>
+<p>Corrected <code>base-client.js</code> filename (not <code>base-api-client.js</code>).</p>
+</li>
+<li>
+<p><strong>AD-26 — Knock-out gate data contract fixed</strong>  </p>
+</li>
+<li>
+<p>Gate field names now map 1:1 to <code>metrics-catalog.md</code> metric paths (<code>true_success_rate</code>, <code>field_fill_rate</code>, <code>false_200_rate</code>, <code>schema_integrity_rate</code>).</p>
+</li>
+<li>
+<p><strong>AD-27 — Thin-event extension points corrected</strong>  </p>
+</li>
+<li><code>benchmark_health</code>/<code>benchmark_alert</code> belong in <code>ThinEvent</code> typedef and <code>RedisStreamPublisher.publish()</code> — <strong>not</strong> <code>MetadataSchemaRegistry</code> or <code>prisma-store.js</code>.  </li>
+<li>
+<p><code>ThinEvent</code> gains optional <code>scraperId</code>; fallback is <code>"UNKNOWN"</code> (not <code>"B"</code>).</p>
+</li>
+<li>
+<p><strong>AD-28 — Category map aligned to brownfield code</strong>  </p>
+</li>
+<li>
+<p>Catalog profiles now map to <code>CATEGORY_VALUES</code> (<code>ecom</code>, <code>realestate</code>, <code>recruitment</code>, <code>b2b</code>, <code>fnb_merchant</code>, <code>healthcare</code>, <code>legal</code>, etc.).</p>
+</li>
+<li>
+<p><strong>AD-29 — Two-phase correlated telemetry envelope (new)</strong>  </p>
+</li>
+<li><code>telemetry:request</code> emitted by <code>AbstractApiClient.request()</code> with transport metrics.  </li>
+<li><code>telemetry:run</code> emitted by <code>AbstractCrawler.start()</code> with run shape.  </li>
+<li>
+<p>Redis <code>XADD</code> fields are flat <code>Record&lt;string, string&gt;</code>.</p>
+</li>
+<li>
+<p><strong>AD-30 — Validator-to-telemetry bridge (new)</strong>  </p>
+</li>
+<li>
+<p><code>AbstractPlatformResponseValidator.validateResponse()</code> returns <code>{ isValid, isFalse200, isCheckpoint, isRateLimit, isAuthExpired, reason? }</code> and writes into the shared telemetry context.</p>
+</li>
+<li>
+<p><strong>AD-31 — Single-writer tier state machine (new)</strong>  </p>
+</li>
+<li><code>BenchmarkStateManager</code> is the sole mutator of <code>hash:scraper:health_tier</code>; <code>ScraperHealthScore</code> gains <code>consecutiveCleanRuns</code> and <code>requalifiedAt</code>.  </li>
+<li>
+<p>24-hour knock-out window ignores pre-<code>requalifiedAt</code> failures to stop demote/promote oscillation.</p>
+</li>
+<li>
+<p><strong>AD-32 — Health tier cache (new)</strong>  </p>
+<ul>
+<li>In-memory <code>HealthTierCache</code> with 30s refresh; PG warmup on startup; fail-safe fallback to <code>"C"</code> if a recent Tier C record exists, otherwise <code>"UNKNOWN"</code>.</li>
+</ul>
+</li>
+<li>
+<p><strong>AD-33 — Item count + canary isolation (new)</strong>  </p>
+<ul>
+<li><code>extractItemCount(result)</code> handles <code>{ items, posts, data, records, results, count }</code> return shapes.  </li>
+<li>Canary runs use <code>session.isCanary = true</code>; governor bypasses account velocity/quota for canary traffic.</li>
+</ul>
+</li>
+<li>
+<p><strong>AD-34 — Scraper identity + category binding (new)</strong>  </p>
+<ul>
+<li>Every crawler declares <code>scraperId</code> (<code>&lt;platform&gt;-&lt;variant&gt;</code>) and <code>category</code> (a <code>CATEGORY_VALUES</code> entry); both are stamped on every event.</li>
+</ul>
+</li>
+</ol>
+<h3>Structural seed changes</h3>
+<ul>
+<li>Domain logic: <code>src/benchmark/</code> instead of <code>src/services/benchmark/</code>.</li>
+<li>Background workers: <code>api/services/benchmark/</code> (consistent with existing <code>api/services/retentionScheduler.js</code> and <code>jobQueue.js</code>).</li>
+<li>CLI command: <code>src/cli/commands/benchmark.js</code> (consistent with existing <code>registerBenchmarkCommand</code> pattern).</li>
+</ul>
+<h3>Stack corrections</h3>
+<ul>
+<li>Node.js: <code>&gt;= 20.18.1</code> (was <code>&gt;= 18</code>; project <code>package.json</code> enforces this, Node 18 is EOL).</li>
+<li>Redis Client: explicitly <code>node-redis</code> 4.x (<code>redis@^4.6.11</code>).</li>
+<li><code>node-cron</code> 4.x: primary scheduling pattern.</li>
+<li>Bull 4.x: discrete job enqueueing only, <strong>not</strong> a Redis Stream consumer.</li>
+</ul>
+<h3>Companion fixes</h3>
+<ul>
+<li><code>metrics-catalog.md</code>:  </li>
+<li>Tier C now says "no auto-cutoff; human-in-the-loop" (removed contradictory <code>auto-gate</code>).  </li>
+<li>Category profiles mapped to code <code>CATEGORY_VALUES</code>.  </li>
+<li>Removed the duplicated Telemetry Schema block.</li>
+</ul>
+<h3>Story file alignment</h3>
+<p>Stories <code>34-1</code> through <code>34-8</code> were updated to use the corrected paths, the <code>setImmediate</code>-only rule, the <code>XREADGROUP</code> consumer, the <code>HealthTierCache</code>, the synchronous <code>formatPayload</code> + async <code>publish()</code> enrichment pattern, <code>UNKNOWN</code> fallback, <code>isCanary</code> bypass, and <code>BenchmarkStateManager</code> single-writer flow.</p>
+<h3>Validation</h3>
+<ul>
+<li><code>lint_spine.py</code> passes with <strong>0 findings</strong>.</li>
+<li>The original validation report remains in <code>ARCHITECTURE-VALIDATION-REPORT-2026-09-08.md</code> (before fixes) and <code>ARCHITECTURE-VALIDATION-REPORT-2026-09-08.html</code>.</li>
+</ul>
+<h2>Status</h2>
+<p><code>ARCHITECTURE-SPINE.md</code> is now <strong>ready for story freeze</strong> pending a final re-review if the team wants independent confirmation.</p>
+<h2>Open questions still outstanding</h2>
+<ol>
+<li>Canary auth strategy for auth-required platforms (dedicated test accounts or public endpoints only?)</li>
+<li>Long-term PostgreSQL retention policy for <code>ScraperHealthScore</code> and <code>ScraperCanaryRun</code> (90 days assumed).</li>
+</ol>
+</body>
+</html>

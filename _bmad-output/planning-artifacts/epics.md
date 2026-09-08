@@ -1855,3 +1855,82 @@ Phase D — Finalization:
 - All new UI additions are reflected in `dashboard/admin.html` or new dedicated HTML files.
 - `npm run typecheck` and `vitest run` pass.
 - `docs/` updated: `architecture.md`, `stealth-scraping.md`, `streaming.md`, `api-reference.md`.
+
+---
+
+# Epic 34: Scraper Benchmark & Reliability Suite
+
+## Business Context
+
+Nowing (B2B Lead Hub) depends on XActions để scrape 15+ nền tảng. Không có benchmark suite, không thể đo lường khách quan:
+- **Stability**: scraper nào thất bại âm thầm (False 200, login wall, Cloudflare)?
+- **Quality**: scraper nào trả về dữ liệu thiếu hoặc sai schema?
+- **Noise**: scraper nào sinh duplicate, spam, lead sai?
+- **Cost**: scraper nào đốt proxy/account không hiệu quả?
+
+Nowing cần **Health Score (0-100)** và **Tier (A/B/C)** cho mỗi scraper để ưu tiên bảo trì, phân bổ proxy budget, và đánh dấu nguồn kém cho con người xem xét.
+
+## Scope
+
+**Trong scope:**
+- CAP-1: Synthetic Canary Probes (kiểm tra sức khỏe định kỳ)
+- CAP-2: Production Telemetry Hooks (tích hợp vào `AbstractCrawler`)
+- CAP-3: Benchmark Scoring Engine (4 trụ cột: Stability 35%, Quality 30%, Noise 20%, Cost 15%)
+- CAP-4: Operator Scorecard CLI + Dashboard + Nowing `benchmark_health` flag
+- CAP-5: Noise & Relevance Metrics (duplicate, spam, contact accuracy)
+
+**Ngoài scope:**
+- Không auto-remediation (Epic 27/28)
+- Không telemetry/APM bên ngoài
+- Không API khách hàng bên ngoài
+
+## Architecture Decisions
+
+- **AD-23**: Two-Tier Telemetry Architecture (Redis Stream raw → PostgreSQL aggregated)
+- **AD-24**: Non-Blocking Telemetry Emission
+- **AD-25**: Centralized Instrumentation (không sửa platform crawlers)
+- **AD-26**: Hard Knock-Out Gates (True Success <80% OR Field Fill <85% OR False 200 >15% → Tier C)
+- **AD-27**: Alert-Only Tier C (không auto-cutoff)
+- **AD-28**: Category-Aware Metrics (social/ecommerce/directory/registry/fnb/healthcare/legal)
+
+## Stories
+
+| Story | Title | Phase | Estimate | File |
+|-------|-------|-------|----------|------|
+| 34.1 | Benchmark Telemetry Schema & Storage | MVP | 1 sprint | [stories/34-1-benchmark-telemetry-schema-storage.md](../implementation-artifacts/stories/34-1-benchmark-telemetry-schema-storage.md) |
+| 34.2 | Production Telemetry Hooks in AbstractCrawler | MVP | 1 sprint | [stories/34-2-production-telemetry-hooks.md](../implementation-artifacts/stories/34-2-production-telemetry-hooks.md) |
+| 34.3 | Platform-Specific Validators & False-200 Detection | MVP | 1 sprint | [stories/34-3-platform-validators-false-200.md](../implementation-artifacts/stories/34-3-platform-validators-false-200.md) |
+| 34.4 | Benchmark Scoring Engine | MVP | 1 sprint | [stories/34-4-benchmark-scoring-engine.md](../implementation-artifacts/stories/34-4-benchmark-scoring-engine.md) |
+| 34.5 | Operator Scorecard CLI & Dashboard | MVP | 1 sprint | [stories/34-5-operator-scorecard-cli-dashboard.md](../implementation-artifacts/stories/34-5-operator-scorecard-cli-dashboard.md) |
+| 34.6 | Nowing Integration Health Flag & Stream Events | MVP | 0.5 sprint | [stories/34-6-nowing-integration-health-flag.md](../implementation-artifacts/stories/34-6-nowing-integration-health-flag.md) |
+| 34.7 | Synthetic Canary Probe Scheduler | Hardening | 0.5 sprint | [stories/34-7-synthetic-canary-probe-scheduler.md](../implementation-artifacts/stories/34-7-synthetic-canary-probe-scheduler.md) |
+| 34.8 | Active Alerting & Re-qualification Workflow | Hardening | 0.5 sprint | [stories/34-8-active-alerting-requalification-workflow.md](../implementation-artifacts/stories/34-8-active-alerting-requalification-workflow.md) |
+
+**Tổng:** 8 stories, ~5 sprints
+
+## Success Metrics
+
+- Tất cả 15+ scraper được đánh giá Tier A/B/C với Health Score.
+- Nowing nhận thin events có `benchmark_health` + `benchmark_alert`.
+- Tier C gửi alert cho operator nhưng ingestion vẫn tiếp tục.
+- Telemetry overhead <1% latency (NFR-19).
+- Canary probe chạy hàng giờ mỗi platform (NFR-20).
+
+## Risks & Mitigations
+
+| Risk | Mitigation |
+|------|-----------|
+| Write amplification (DB bloat) | Two-tier: Redis Stream raw → PostgreSQL rollups |
+| Latency overhead | Fire-and-forget, in-memory buffer, batch flush |
+| False 200 miss | Platform validators + canary tests |
+| Weak scraper masked as Tier B | Hard knock-out gates |
+| Low-volume scraper divide-by-zero | Story 34.7 canary + `safeRatio()` |
+
+## References
+
+- Spec: `_bmad-output/specs/spec-scraper-benchmark/SPEC.md`
+- Metrics Catalog: `_bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md`
+- Architecture Spine: `_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md`
+- Change Proposal: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-09-08-benchmark-v2.md`
+- Review Synthesis: `_bmad-output/planning-artifacts/review-epic34-synthesis-2026-09-08.md`
+- Backlog File: `_bmad-output/planning-artifacts/backlog-epic-34.md`

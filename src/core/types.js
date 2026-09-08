@@ -178,6 +178,9 @@
  * @property {string} authorId - Author ID
  * @property {string} crawledAt - ISO 8601 timestamp string
  * @property {string} storageRef - Pointer to the stored row / item id
+ * @property {string} [scraperId] - Canonical scraper identifier, e.g. "twitter-hybrid"
+ * @property {'A' | 'B' | 'C' | 'UNKNOWN'} [benchmark_health] - Scraper benchmark tier
+ * @property {boolean} [benchmark_alert] - Degraded health alert flag
  */
 
 /**
@@ -204,6 +207,18 @@
  * @property {Function} [xInfoConsumers]
  * @property {Function} [xGroupCreate]
  * @property {Function} [xgroup]
+ * @property {Function} [xReadGroup]
+ * @property {Function} [xreadgroup]
+ * @property {Function} [xAck]
+ * @property {Function} [xack]
+ * @property {Function} [xTrim]
+ * @property {Function} [xtrim]
+ * @property {Function} [hGetAll]
+ * @property {Function} [hgetall]
+ * @property {Function} [hGet]
+ * @property {Function} [hget]
+ * @property {Function} [hSet]
+ * @property {Function} [hset]
  * @property {Function} [xPending]
  * @property {Function} [xpending]
  * @property {Function} [sendCommand]

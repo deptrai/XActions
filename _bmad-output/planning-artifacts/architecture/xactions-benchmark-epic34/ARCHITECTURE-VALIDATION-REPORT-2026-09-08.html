@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Epic 34 Architecture Validation Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.55; color: #1f2937; max-width: 1180px; margin: 0 auto; padding: 2rem; background: #fafafa; }
+h1, h2, h3, h4 { color: #0f172a; }
+h1 { border-bottom: 3px solid #334155; padding-bottom: 0.5rem; }
+h2 { border-bottom: 1px solid #cbd5e1; padding-bottom: 0.25rem; margin-top: 2.2rem; }
+code { background: #e2e8f0; padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+pre { background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+pre code { background: transparent; padding: 0; color: inherit; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; background: #fff; }
+th, td { border: 1px solid #cbd5e1; padding: 0.5rem 0.75rem; text-align: left; }
+th { background: #e2e8f0; }
+blockquote { border-left: 4px solid #94a3b8; padding: 0.5rem 1rem; margin: 1rem 0; background: #fff; }
+.crit { color: #dc2626; font-weight: 600; }
+.high { color: #ea580c; font-weight: 600; }
+.med { color: #d97706; font-weight: 600; }
+.low { color: #65a30d; font-weight: 600; }
+.pass { color: #16a34a; font-weight: 600; }
+.cond { color: #ea580c; font-weight: 600; }
+hr { border: none; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
+.badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; background: #e2e8f0; margin-right: 0.4rem; }
+</style>
+</head>
+<body>
+<h1 id="architecture-rubric-walker-review-epic-34-scraper-benchmark-reliability-suite">Architecture Rubric Walker Review: Epic 34 — Scraper Benchmark &amp; Reliability Suite</h1>
+<p><strong>Reviewer Role:</strong> Rubric Walker (BMad Architecture Reviewer Gate)<br />
+<strong>Date:</strong> 2026-09-08<br />
+<strong>Status:</strong> PASS WITH FINDINGS (Revisions Required Prior to Story Freezing)<br />
+<strong>Target Architecture:</strong> <code>/Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md</code><br />
+<strong>Referenced Specifications &amp; Context:</strong>
+- <code>_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/.memlog.md</code>
+- <code>_bmad-output/specs/spec-scraper-benchmark/SPEC.md</code>
+- <code>_bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md</code>
+- <code>_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md</code> (Parent Spine, especially AD-2, AD-7, AD-9, AD-13, AD-18)
+- <code>_bmad-output/planning-artifacts/backlog-epic-34.md</code>
+- Brownfield Codebase:
+  - <code>src/core/base-crawler.js</code> (AbstractCrawler)
+  - <code>src/core/base-client.js</code> (AbstractApiClient)
+  - <code>src/core/types.js</code> (ThinEvent, PostItem, CommentItem)
+  - <code>src/core/metadata-schema-registry.js</code> (MetadataSchemaRegistry)
+  - <code>src/core/platform-validator.js</code> (Platform Validators)
+  - <code>src/utils/redis-stream-publisher.js</code> (RedisStreamPublisher)
+  - <code>src/store/prisma-store.js</code> &amp; <code>src/store/store-with-redis.js</code> (Persistence Layer)
+  - <code>prisma/schema.prisma</code> (PostgreSQL Schema)
+- Sibling Reviews:
+  - <code>_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/reviews/review-tech-currency.md</code>
+  - <code>_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/reviews/review-adversarial.md</code></p>
+<hr />
+<h2 id="1-verdict">1. Verdict</h2>
+<p><strong>VERDICT: PASS WITH FINDINGS</strong></p>
+<p>The architectural spine for Epic 34 demonstrates strong conceptual alignment with the driving specification (<code>SPEC.md</code>). The four-pillar scoring model (Stability 35%, Quality 30%, Noise 20%, Cost 15%), non-compensatory knock-out gates (AD-26), two-tier storage topology (AD-23), and human-in-the-loop alert-only Tier C policy (AD-27) establish a defensible benchmark suite for Nowing ingestion.</p>
+<p>However, auditing the spine against the Good-Spine Checklist and brownfield implementation realities reveals <strong>3 Critical Findings</strong>, <strong>4 High Findings</strong>, and <strong>3 Medium/Low Findings</strong>. These issues represent concrete divergence vectors where independent implementation units will either fail to integrate, violate existing repository conventions, or execute invalid Redis/Node.js operations.</p>
+<p>The findings must be rectified in <code>ARCHITECTURE-SPINE.md</code> before story implementation commences.</p>
+<hr />
+<h2 id="2-good-spine-rubric-checklist-evaluation">2. Good-Spine Rubric Checklist Evaluation</h2>
+<table>
+<thead>
+<tr>
+<th>Rubric Item</th>
+<th>Status</th>
+<th>Evaluation Summary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. Fixes real divergence points below and misses none</strong></td>
+<td><strong>PARTIAL</strong></td>
+<td>Core scoring and storage are framed, but the telemetry aggregation bridge between <code>AbstractCrawler</code> and <code>AbstractApiClient</code>, and the item extraction normalization from heterogeneous action handlers are unaddressed divergence holes.</td>
+</tr>
+<tr>
+<td><strong>2. Every AD rule is enforceable &amp; prevents divergence</strong></td>
+<td><strong>PARTIAL</strong></td>
+<td>AD-26 (Knock-Out Gates) and AD-28 (Category Weights) are fully enforceable. AD-23 specifies non-existent Redis TTL primitives. AD-24 permits <code>queueMicrotask</code> which risks event loop starvation. AD-25 lacks an aggregation context.</td>
+</tr>
+<tr>
+<td><strong>3. Nothing under Deferred allows divergence</strong></td>
+<td><strong>PASS WITH NOTE</strong></td>
+<td>Core deferred items (microservice separation, auto-remediation, public SLA) are safely partitioned. However, NFR-21 is claimed as covered in frontmatter while deferred to Phase 2 in the body text.</td>
+</tr>
+<tr>
+<td><strong>4. Named technology is verified-current</strong></td>
+<td><strong>FAIL</strong></td>
+<td>Node.js is pinned to <code>&gt;= 18</code> (EOL April 2025) while <code>package.json</code> enforces <code>&gt;= 20.18.1</code>. Bull 4.x is misidentified as a Redis Stream consumer. Redis Stream TTL is conflated with key expiration.</td>
+</tr>
+<tr>
+<td><strong>5. Ratifies rather than contradicts brownfield code</strong></td>
+<td><strong>FAIL</strong></td>
+<td>Spine references non-existent <code>src/services/</code> directory (actual: <code>api/services/</code>), non-existent <code>src/core/base-api-client.js</code> (actual: <code>src/core/base-client.js</code>), and misattributes thin event schema extension to <code>MetadataSchemaRegistry</code> (AD-18).</td>
+</tr>
+<tr>
+<td><strong>6. Covers driving spec capabilities</strong></td>
+<td><strong>PASS</strong></td>
+<td>CAP-1 through CAP-5 are fully mapped across AD-23 to AD-28.</td>
+</tr>
+<tr>
+<td><strong>7. Inherited parent spine invariants maintained</strong></td>
+<td><strong>PASS WITH NOTE</strong></td>
+<td>Parent AD-2, AD-7, AD-9, AD-13 are respected. Stream sizing in AD-23 (<code>MAXLEN ~ 500000</code>) is inconsistently smaller than parent AD-7 (<code>MAXLEN ~ 1000000</code>).</td>
+</tr>
+<tr>
+<td><strong>8. Operational &amp; environmental envelope complete</strong></td>
+<td><strong>PARTIAL</strong></td>
+<td>Telemetry consumer daemon topology, proxy/account isolation for synthetic canaries, and cold-start cache fallbacks are omitted.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-critical-findings">3. Critical Findings</h2>
+<h3 id="crit-1-thin-event-schema-extension-point-misattribution-ad-18-vs-redisstreampublishertypesjs">CRIT-1: Thin Event Schema Extension Point Misattribution (AD-18 vs RedisStreamPublisher/types.js)</h3>
+<ul>
+<li><strong>Checklist Item:</strong> Ratifies rather than contradicts brownfield code / Every AD rule is enforceable.</li>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Section "Consistency Conventions" (line 42).</li>
+<li><strong>The Finding:</strong><br />
+  The spine asserts:<blockquote>
+<p><code>Thin event schema extended with benchmark_health and benchmark_alert via MetadataSchemaRegistry (AD-18) — backward-compatible with existing consumers.</code></p>
+</blockquote>
+</li>
+<li><strong>Codebase Reality:</strong></li>
+<li><code>src/core/metadata-schema-registry.js</code> is strictly designed to validate dynamic JSON schemas for <code>Post.metadata</code> (<code>metadata Json?</code> column in PostgreSQL) against files under <code>schemas/&lt;platform&gt;/&lt;category&gt;.json</code>. It has zero role in defining, serializing, or validating Redis Stream thin events.</li>
+<li>Thin events are published to <code>stream:social:raw_posts</code> exclusively through <code>RedisStreamPublisher.formatPayload(item)</code> in <code>src/utils/redis-stream-publisher.js</code>.</li>
+<li>The type definition for thin events is defined as <code>ThinEvent</code> in <code>src/core/types.js</code> (lines 173–182).</li>
+<li><strong>Impact:</strong><br />
+  Engineers assigned to Story 34.6 will attempt to modify <code>schemas/</code> and <code>MetadataSchemaRegistry</code>, which will not affect the Redis Stream output received by Nowing. Furthermore, injecting asynchronous Redis reads into <code>formatPayload()</code> without proper caching will break the synchronous contract of <code>RedisStreamPublisher</code>.</li>
+<li><strong>Enforceable Fix:</strong><br />
+  Amend <code>ARCHITECTURE-SPINE.md</code> to identify the true extension points:
+  1. Extend <code>@typedef {Object} ThinEvent</code> in <code>src/core/types.js</code> to include <code>benchmark_health</code> (<code>'A' | 'B' | 'C' | 'UNKNOWN'</code>) and <code>benchmark_alert</code> (<code>boolean</code>).
+  2. Extend <code>RedisStreamPublisher.formatPayload()</code> in <code>src/utils/redis-stream-publisher.js</code> to enrich payloads using an in-memory cached lookup of <code>hash:scraper:health_tier</code>.</li>
+</ul>
+<hr />
+<h3 id="crit-2-telemetry-coordination-metric-aggregation-gap-between-abstractcrawler-and-abstractapiclient-ad-25">CRIT-2: Telemetry Coordination &amp; Metric Aggregation Gap Between AbstractCrawler and AbstractApiClient (AD-25)</h3>
+<ul>
+<li><strong>Checklist Item:</strong> Fixes real divergence points below and misses none / Rule prevents stated divergence.</li>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> AD-25 (line 60), Story 34.2.</li>
+<li><strong>The Finding:</strong><br />
+  AD-25 mandates:<blockquote>
+<p><code>All telemetry capture lives in AbstractCrawler.start() (start/end timing, item count, error capture) and AbstractApiClient.request() (latency, HTTP status, proxy bytes, retries). Platform crawlers do NOT override or extend telemetry methods.</code></p>
+</blockquote>
+</li>
+<li><strong>Codebase Reality:</strong></li>
+<li><code>AbstractCrawler</code> (<code>src/core/base-crawler.js</code>) and <code>AbstractApiClient</code> (<code>src/core/base-client.js</code>) are completely independent, decoupled classes.</li>
+<li>In actual crawlers (e.g. <code>src/scrapers/social/tiktok/crawler.js</code>, <code>src/scrapers/social/threads/crawler.js</code>), the crawler either creates an internal client instance or uses Puppeteer.</li>
+<li><code>AbstractApiClient.request()</code> executes HTTP calls with retry and account rotation loops. The metrics collected inside <code>request()</code> (<code>proxy_bytes</code>, <code>retries</code>, <code>latency</code>, <code>status</code>) live inside private loop variables and are never surfaced to <code>AbstractCrawler.start()</code>.</li>
+<li>Conversely, <code>AbstractCrawler.start()</code> wraps <code>entry.handler(command.args, session)</code> in lines 241–253 of <code>src/core/base-crawler.js</code>. The return value of <code>entry.handler</code> is heterogeneous: some actions return <code>PostItem[]</code>, some return paginated envelopes (<code>{ listings: [...], cursor }</code>), and some return simple status objects.</li>
+<li><strong>Impact:</strong><br />
+  Without a coordinated telemetry context, <code>AbstractCrawler.start()</code> cannot observe network/cost metrics (<code>proxy_bytes</code>, <code>retries</code>), and <code>AbstractApiClient.request()</code> cannot observe run-level identity (<code>scraper_id</code>, <code>category</code>, <code>field_fill_rate</code>). If both emit separate events, telemetry will be fragmented. If only <code>AbstractCrawler</code> emits, cost and network stability metrics will be empty.</li>
+<li><strong>Enforceable Fix:</strong><br />
+  Add an explicit Telemetry Aggregation Pattern to AD-25:
+  1. <code>AbstractCrawler.start()</code> initializes a scoped <code>TelemetryContext</code> object attached to <code>session.telemetry = new RunTelemetryContext(scraperId, platform)</code>.
+  2. <code>AbstractApiClient.request(method, url, options)</code> checks for <code>options.telemetryContext || options.session?.telemetry</code> and records bytes, latency, status, and retry attempts into that context.
+  3. <code>AbstractCrawler.start()</code> extracts item counts via a normalized helper (<code>extractItemCount(result)</code>) in its <code>finally</code> block and dispatches a single aggregated run event to <code>TelemetryEmitter.emit()</code>.</li>
+</ul>
+<hr />
+<h3 id="crit-3-incompatible-redis-stream-primitives-conflated-consumer-topology-ad-23-story-341">CRIT-3: Incompatible Redis Stream Primitives &amp; Conflated Consumer Topology (AD-23, Story 34.1)</h3>
+<ul>
+<li><strong>Checklist Item:</strong> Named tech is verified-current / Every AD rule is enforceable.</li>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> AD-23 (lines 20, 50), Story 34.1 Code Map.</li>
+<li><strong>The Finding:</strong><br />
+  1. <em>Invalid Redis Stream TTL:</em> AD-23 states: <code>stream:benchmark:telemetry (Redis Stream, MAXLEN ~ 500000, 7-day TTL)</code>. In Redis 7.x, Streams do not support per-message TTL or rolling expiration. Applying <code>EXPIRE stream:benchmark:telemetry &lt;seconds&gt;</code> sets a key-level expiration that destroys the entire stream when triggered.
+  2. <em>Bull Queue vs Redis Stream Mismatch:</em> Story 34.1 defines <code>src/services/benchmark/telemetry-consumer.js — Bull worker consuming Redis Stream -&gt; PostgreSQL</code>. Bull 4.x operates exclusively on Redis Lists and Sorted Sets (<code>BRPOPLPUSH</code>, <code>ZADD</code>). It has no native capability to ingest from or acknowledge Redis Streams.
+  3. <em>Stream Capacity Under-sizing:</em> <code>MAXLEN ~ 500000</code> across 15+ continuous crawling platforms is insufficient for 7 days. At 10 req/min across 15 scrapers, &gt;1.5M events are produced weekly, leading to premature eviction at ~2.3 days.</li>
+<li><strong>Impact:</strong><br />
+  Developers will implement faulty <code>EXPIRE</code> commands that periodically drop all telemetry, attempt to configure Bull workers against Redis Streams leading to runtime crashes, and suffer telemetry data loss from stream under-sizing.</li>
+<li><strong>Enforceable Fix:</strong><br />
+  Update AD-23 and Story 34.1:
+  1. Capacity: Set <code>MAXLEN ~ 1000000</code> (consistent with parent AD-7 <code>stream:social:raw_posts</code>).
+  2. Retention: Enforce rolling 7-day retention via consumer-driven <code>XTRIM stream:benchmark:telemetry MINID ~ &lt;seven_days_ago_ms&gt;</code>. No key-level <code>EXPIRE</code>.
+  3. Consumer: Define <code>telemetry-consumer.js</code> as a native Redis Stream Consumer Group loop using <code>xReadGroup</code> / <code>xAck</code> under consumer group <code>benchmark_telemetry_workers</code>. Bull 4.x is restricted to scheduled batch jobs (e.g. hourly scoring).</li>
+</ul>
+<hr />
+<h2 id="4-high-findings">4. High Findings</h2>
+<h3 id="high-1-scraper-identification-mismatch-in-thin-event-enrichment-path-ad-27-story-346">HIGH-1: Scraper Identification Mismatch in Thin Event Enrichment Path (AD-27, Story 34.6)</h3>
+<ul>
+<li><strong>Checklist Item:</strong> Fixes real divergence points below and misses none.</li>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> AD-27 (line 70), Story 34.6 Code Map &amp; Technical Notes.</li>
+<li><strong>The Finding:</strong><br />
+<code>hash:scraper:health_tier</code> stores health tiers keyed by <code>scraper_id</code> (e.g. <code>twitter-hybrid</code>, <code>facebook-playwright</code>, <code>tiktok-api</code>). However, existing crawlers (<code>src/scrapers/social/tiktok/crawler.js</code>, <code>src/scrapers/social/threads/crawler.js</code>, etc.) emit thin events via:
+  <code>javascript
+  await publisher.publish({
+    id: item.id,
+    platform: 'tiktok',
+    externalId: item.externalId,
+    category: 'social',
+    authorId: item.authorId,
+    crawledAt: toIsoDate(item.crawledAt),
+    storageRef: item.id,
+  });</code>
+  <code>ThinEvent</code> and <code>formatPayload(item)</code> only receive <code>platform: 'tiktok'</code>. They do not have access to <code>scraper_id</code>.</li>
+<li><strong>Impact:</strong><br />
+  If a platform has multiple scrapers (e.g. <code>twitter-hybrid</code> and <code>twitter-browser</code>), <code>formatPayload</code> cannot resolve which scraper produced the item. If it attempts to look up by <code>platform</code>, the lookup fails or collides. Under Story 34.6 fallback rules, all events will default to <code>benchmark_health: "B"</code>, masking Tier C scrapers from Nowing.</li>
+<li><strong>Enforceable Fix:</strong><br />
+  Explicitly update <code>ThinEvent</code> typedef in <code>src/core/types.js</code> to include an optional <code>scraperId?: string</code>. Update base crawler publishing to pass <code>scraperId</code> (derived from <code>this.scraperId</code>) into <code>publisher.publish(item, this.scraperId)</code>.</li>
+</ul>
+<hr />
+<h3 id="high-2-subsystem-directory-architectural-placement-contradiction">HIGH-2: Subsystem Directory &amp; Architectural Placement Contradiction</h3>
+<ul>
+<li><strong>Checklist Item:</strong> Ratifies rather than contradicts brownfield code.</li>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Section "Structural Seed" (lines 114–120), <code>backlog-epic-34.md</code>.</li>
+<li><strong>The Finding:</strong><br />
+  1. The spine establishes a new top-level service directory: <code>src/services/benchmark/</code> for <code>telemetry-consumer.js</code>, <code>scoring-engine.js</code>, <code>scorecard.js</code>, <code>canary-runner.js</code>, and <code>alerting-service.js</code>.
+  2. In the actual XActions brownfield repository, <code>src/services/</code> does not exist. All persistent backend services, queue consumers, and background workers reside in <code>api/services/</code> (<code>api/services/jobQueue.js</code>, <code>api/services/retentionScheduler.js</code>, <code>api/services/facebookScheduler.js</code>). Core domain logic resides in <code>src/</code> (e.g. <code>src/core/</code>, <code>src/scrapers/</code>, <code>src/utils/</code>).
+  3. <code>backlog-epic-34.md</code> references <code>src/core/base-api-client.js</code>. The actual file in the repository is <code>src/core/base-client.js</code>.
+  4. Scheduled jobs in XActions follow <code>node-cron</code> with PostgreSQL advisory locks (see <code>api/services/retentionScheduler.js</code>), not Bull repeatable jobs, to prevent state loss on Redis restarts.</li>
+<li><strong>Impact:</strong><br />
+  Fractures the repository layout, causes broken module imports, and introduces conflicting background scheduling mechanisms.</li>
+<li><strong>Enforceable Fix:</strong><br />
+  Align structural seed with existing repository layout:</li>
+<li>Core domain logic (evaluation math, emitter, canary runner, CLI): <code>src/benchmark/</code> (or <code>src/core/benchmark/</code>).</li>
+<li>Background workers and daemons (stream consumer, cron schedulers): <code>api/services/benchmark/</code>.</li>
+<li>Correct all references of <code>base-api-client.js</code> to <code>src/core/base-client.js</code>.</li>
+</ul>
+<hr />
+<h3 id="high-3-nodejs-runtime-pinning-mismatch-ad-23-stack-table">HIGH-3: Node.js Runtime Pinning Mismatch (AD-23 / Stack Table)</h3>
+<ul>
+<li><strong>Checklist Item:</strong> Named tech is verified-current.</li>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Section "Stack" (line 99).</li>
+<li><strong>The Finding:</strong><br />
+  The spine states <code>Node.js &gt;= 18</code>.</li>
+<li><strong>Codebase Reality:</strong></li>
+<li><code>package.json</code> line 230 explicitly enforces:
+    <code>json
+    "engines": {
+      "node": "&gt;=20.18.1"
+    }</code></li>
+<li>Node.js 18 reached official End-of-Life (EOL) on April 30, 2025.</li>
+<li>Active development runtime on local machines is Node 26 (<code>v26.5.0</code>), with Node 20 LTS as the minimum supported deployment target. Critical dependencies like <code>undici@^7.29.0</code> require Node 20+.</li>
+<li><strong>Impact:</strong><br />
+  Downstream tooling, Dockerfiles, and CI pipelines configured against the spine will fail engine validation checks and encounter runtime module incompatibilities.</li>
+<li><strong>Enforceable Fix:</strong><br />
+  Update Stack table in <code>ARCHITECTURE-SPINE.md</code> to <code>Node.js &gt;= 20.18.1</code> (Node 20+ LTS).</li>
+</ul>
+<hr />
+<h3 id="high-4-invariant-contradiction-on-tier-c-ingestion-policy-metrics-catalogmd-vs-ad-27-specmd">HIGH-4: Invariant Contradiction on Tier C Ingestion Policy (metrics-catalog.md vs AD-27 &amp; SPEC.md)</h3>
+<ul>
+<li><strong>Checklist Item:</strong> Rule prevents stated divergence / Inherited parent spine invariants maintained.</li>
+<li><strong>Location:</strong> <code>_bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md</code> (line 75) vs <code>ARCHITECTURE-SPINE.md</code> AD-27 (line 70) and <code>SPEC.md</code>.</li>
+<li><strong>The Finding:</strong>  </li>
+<li><code>metrics-catalog.md</code> line 75 specifies:<br />
+<code>Tier C: Critical (&lt;60). Action: Immediate alert, auto-gate from Nowing ingestion until re-qualified.</code></li>
+<li><code>ARCHITECTURE-SPINE.md</code> AD-27 and <code>SPEC.md</code> explicitly mandate:<br />
+<code>Alert-Only Tier C. Tier C scrapers fire immediate alerts to operators... but do NOT auto-cutoff from Nowing ingestion. Scrapers continue emitting thin events to stream:social:raw_posts tagged with benchmark_health: "C" and benchmark_alert: true. The cutoff decision is strictly human-in-the-loop.</code></li>
+<li><strong>Impact:</strong><br />
+  This direct specification contradiction will cause engineers working on Story 34.4, 34.6, and 34.8 to diverge. Implementing an automated gate will abruptly halt data ingestion for Nowing clients, violating the human-in-the-loop invariant.</li>
+<li><strong>Enforceable Fix:</strong><br />
+  Update <code>metrics-catalog.md</code> line 75 to replace <code>auto-gate from Nowing ingestion until re-qualified</code> with <code>tag thin events with benchmark_alert: true; no automated ingestion cutoff (human-in-the-loop per AD-27)</code>.</li>
+</ul>
+<hr />
+<h2 id="5-medium-low-findings">5. Medium / Low Findings</h2>
+<h3 id="med-1-internal-contradiction-on-nfr-21-covered-vs-deferred">MED-1: Internal Contradiction on NFR-21 (Covered vs Deferred)</h3>
+<ul>
+<li><strong>Checklist Item:</strong> Nothing under Deferred allows divergence.</li>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Frontmatter <code>nfr_coverage</code> vs Section "Deferred Decisions" (line 130).</li>
+<li><strong>The Finding:</strong><br />
+  The frontmatter explicitly claims coverage of <code>NFR-21</code> (<code>nfr_coverage: NFR-19, NFR-20, NFR-21</code>). However, under "Deferred Decisions", the text states:<blockquote>
+<p><code>Per-Item Telemetry Sampling (NFR-21): Deferred to Phase 2. MVP emits one telemetry event per scrape run / batch, not per individual post.</code></p>
+</blockquote>
+</li>
+<li><strong>Impact:</strong> Ambiguity on whether Story 34.2 must implement item-level sampling.</li>
+<li><strong>Fix:</strong> Clarify that MVP fulfills NFR-21 via run-level batching (one event per batch/run), while individual post-level probabilistic sampling is deferred to Phase 2.</li>
+</ul>
+<hr />
+<h3 id="med-2-event-loop-starvation-risk-via-queuemicrotask-in-ad-24">MED-2: Event Loop Starvation Risk via <code>queueMicrotask</code> in AD-24</h3>
+<ul>
+<li><strong>Checklist Item:</strong> Every AD rule is enforceable &amp; actually prevents stated divergence.</li>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> AD-24 (line 56).</li>
+<li><strong>The Finding:</strong><br />
+  AD-24 allows: <code>TelemetryEmitter.emit() executes via setImmediate or queueMicrotask</code>. Microtasks run before the Node.js event loop yields to the I/O poll phase. High-concurrency scraper emissions chained via <code>queueMicrotask</code> can starve network socket I/O, violating NFR-19 (&lt;1% latency overhead).</li>
+<li><strong>Impact:</strong> Unintended latency spikes during high-throughput crawl runs.</li>
+<li><strong>Fix:</strong> Restrict emission strictly to <code>setImmediate</code> with an in-memory ring buffer.</li>
+</ul>
+<hr />
+<h3 id="med-3-missing-operational-environmental-envelope-for-synthetic-canary-probes-story-347">MED-3: Missing Operational &amp; Environmental Envelope for Synthetic Canary Probes (Story 34.7)</h3>
+<ul>
+<li><strong>Checklist Item:</strong> Operational/environmental envelope complete.</li>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Structural Seed &amp; AD-23.</li>
+<li><strong>The Finding:</strong><br />
+  The spine does not define the execution envelope for <code>canary-runner.js</code>:
+  1. Does the canary probe consume production proxy credentials and bandwidth?
+  2. Does it execute inside the crawler daemon process or as a separate isolated process?
+  3. If a platform requires authenticated sessions, does the canary consume production user sessions?</li>
+<li><strong>Impact:</strong> Risk of canary probes exhausting proxy pool bandwidth or invalidating production authentication tokens during hourly checks.</li>
+<li><strong>Fix:</strong> Specify that canary probes use dedicated lightweight probe proxies and unauthenticated public endpoints where possible, operating in a separate worker thread.</li>
+</ul>
+<hr />
+<h3 id="low-1-missing-fallback-state-convention-consistency-unknown-vs-b">LOW-1: Missing Fallback State Convention Consistency ("UNKNOWN" vs "B")</h3>
+<ul>
+<li><strong>Checklist Item:</strong> Fixes real divergence points below and misses none.</li>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Section "Consistency Conventions" (line 91) vs Story 34.1 / 34.6.</li>
+<li><strong>The Finding:</strong><br />
+  Spine line 91 defines: <code>benchmark_health values: "A", "B", "C", "UNKNOWN"</code>. However, Story 34.1 and 34.6 state that unranked scrapers default to <code>"B"</code>.</li>
+<li><strong>Impact:</strong> Setting un-evaluated scrapers to Tier B artificially masks missing monitoring coverage.</li>
+<li><strong>Fix:</strong> Standardize that un-benchmarked scrapers report <code>"UNKNOWN"</code>. Nowing consumers treat <code>"UNKNOWN"</code> as non-alerting while operators see it as un-benchmarked.</li>
+</ul>
+<hr />
+<h2 id="6-actionable-fixes-open-questions">6. Actionable Fixes &amp; Open Questions</h2>
+<h3 id="actionable-fixes-for-architecture-spinemd">Actionable Fixes for <code>ARCHITECTURE-SPINE.md</code></h3>
+<ol>
+<li><strong>Amend AD-23 (Two-Tier Storage &amp; Sizing):</strong>
+   Set stream capacity to <code>MAXLEN ~ 1000000</code>. Remove key-level TTL language; replace with rolling consumer-driven trimming via <code>XTRIM stream:benchmark:telemetry MINID ~ &lt;seven_days_ago_ms&gt;</code>.</li>
+<li><strong>Amend AD-24 (Non-Blocking Emission):</strong>
+   Remove <code>queueMicrotask</code>; mandate <code>setImmediate</code> exclusively.</li>
+<li><strong>Amend AD-25 (Centralized Instrumentation Context):</strong>
+   Specify <code>TelemetryContext</code> passed through crawler <code>session</code> so <code>AbstractApiClient.request()</code> can accumulate transport metrics into the run event emitted by <code>AbstractCrawler.start()</code>.</li>
+<li><strong>Amend AD-27 &amp; Thin Event Extension (CRIT-1 &amp; HIGH-1):</strong>
+   Remove reference to <code>MetadataSchemaRegistry</code> for thin events. Define extension in <code>src/core/types.js</code> (<code>ThinEvent</code>) and <code>src/utils/redis-stream-publisher.js</code>, with <code>scraperId</code> parameter support.</li>
+<li><strong>Update Stack &amp; Directories (HIGH-2 &amp; HIGH-3):</strong>
+   Update Node.js requirement to <code>&gt;= 20.18.1</code>. Update folder seed to place background workers in <code>api/services/benchmark/</code> and domain logic in <code>src/benchmark/</code>. Fix <code>base-api-client.js</code> to <code>src/core/base-client.js</code>.</li>
+<li><strong>Harmonize <code>metrics-catalog.md</code> (HIGH-4):</strong>
+   Update line 75 of <code>metrics-catalog.md</code> to remove <code>auto-gate</code> and align with AD-27 alert-only policy.</li>
+</ol>
+<h3 id="open-questions-for-architecture-gate">Open Questions for Architecture Gate</h3>
+<ol>
+<li><strong>Canary Account Isolation:</strong> Should platforms requiring authentication (e.g. Facebook, Instagram) maintain dedicated synthetic canary accounts in <code>FacebookAccount</code> model, or should canaries only probe public unauthenticated endpoints?</li>
+<li><strong>PostgreSQL Retention Policy:</strong> What is the long-term retention period for <code>ScraperHealthScore</code> and <code>ScraperCanaryRun</code> in PostgreSQL? (Recommendation: 90 days rolling via <code>retentionScheduler.js</code>).</li>
+</ol>
+<hr />
+<p><em>Report filed by Architecture Rubric Walker for Epic 34 Review Gate.</em></p>
+<hr />
+<h1 id="technology-currency-web-research-review-epic-34-architecture-spine">Technology Currency &amp; Web-Research Review — Epic 34 Architecture Spine</h1>
+<p><strong>Reviewer:</strong> Technology Currency &amp; Web-Research Lens<br />
+<strong>Target:</strong> <code>/Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md</code><br />
+<strong>Date:</strong> 2026-09-08<br />
+<strong>Scope:</strong> Epic 34 (Scraper Benchmark &amp; Reliability Suite) Stack, Architectural Decisions (AD-23 to AD-28), and Implementation Assumptions  </p>
+<hr />
+<h2 id="1-verdict_1">1. Verdict</h2>
+<p><strong>CONDITIONAL PASS (REVISION REQUIRED BEFORE STORY FREEZE)</strong></p>
+<p>The overall architectural direction (two-tier telemetry, centralized base crawler/client hooks, hard knock-out scoring gates, alert-only Tier C) is sound and leverages existing project technologies. However, there are <strong>two critical technical inconsistencies</strong> in the architecture spine regarding data retention primitives and queue consumption, along with <strong>three high-priority currency discrepancies</strong> (Node.js engine pinning, microtask event loop starvation under high concurrency, and stream capacity sizing) that must be amended before implementation begins.</p>
+<hr />
+<h2 id="2-critical-findings">2. Critical Findings</h2>
+<h3 id="crit-1-redis-stream-7-day-ttl-is-technically-inconsistent-with-redis-stream-primitives">CRIT-1: Redis Stream "7-Day TTL" is Technically Inconsistent with Redis Stream Primitives</h3>
+<ul>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Section "Design Paradigm" (line 20), Section "Invariants &amp; Rules" AD-23 (line 50), and Story 34.1 Intent (line 25).</li>
+<li><strong>The Issue:</strong> The architecture spine asserts:<blockquote>
+<p><code>Raw telemetry events are fire-and-forget XADD to stream:benchmark:telemetry (Redis Stream, MAXLEN ~ 500000, 7-day TTL).</code>
+  Redis Streams <strong>do not support per-entry TTL or time-to-live expiration semantics on individual messages</strong>. In Redis (including Redis 7.x), setting a key-level TTL via <code>EXPIRE stream:benchmark:telemetry &lt;seconds&gt;</code> applies to the <strong>entire key</strong>. If an engineer executes <code>EXPIRE</code> on the stream key, the entire stream (including telemetry emitted seconds ago) will be purged at the expiration deadline. If refreshed on every write, the key never expires.</p>
+</blockquote>
+</li>
+<li><strong>Evidence &amp; Verification:</strong></li>
+<li>In Redis 7.x, message eviction within a stream is achieved exclusively through:<ol>
+<li>Count-based trimming: <code>XADD ... MAXLEN [~] &lt;count&gt;</code> or <code>XTRIM ... MAXLEN [~] &lt;count&gt;</code></li>
+<li>Time-based trimming: <code>XADD ... MINID [~] &lt;id&gt;</code> or <code>XTRIM ... MINID [~] &lt;id&gt;</code>. Since Redis Stream IDs default to millisecond timestamps (<code>&lt;millisecondsTime&gt;-&lt;sequenceNumber&gt;</code>), a rolling 7-day window must be enforced via <code>MINID ~ &lt;Date.now() - 7 * 86400 * 1000&gt;</code>.</li>
+</ol>
+</li>
+<li>The repository's existing Redis stream implementation in <code>/Users/luisphan/Documents/GitHub/XActions/src/utils/redis-stream-publisher.js</code> (lines 52–59, 83–90, 196–221) already implements both <code>MAXLEN</code> and <code>MINID</code> strategy modifiers for <code>node-redis</code> v4.</li>
+<li><strong>Impact:</strong> Misleading specification that will cause implementers to either write invalid <code>EXPIRE</code> commands (destroying stream history) or fail to implement rolling time-based trimming.</li>
+<li><strong>Required Fix:</strong> Amend AD-23 to clarify that retention in <code>stream:benchmark:telemetry</code> is enforced via <code>MAXLEN ~ 1000000</code> (count ceiling) and rolling time-based trimming via <code>MINID ~ &lt;seven_days_ago_ms&gt;</code> executed by the consumer worker or scheduled maintenance, not via key TTL.</li>
+</ul>
+<hr />
+<h3 id="crit-2-conflation-of-bull-queue-worker-with-redis-stream-consumer-loop">CRIT-2: Conflation of Bull Queue Worker with Redis Stream Consumer Loop</h3>
+<ul>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Section "Structural Seed" (line 116), Section "Stack" (line 102), and Story 34.1 Code Map (line 59).</li>
+<li><strong>The Issue:</strong> Story 34.1 lists:<blockquote>
+<p><code>src/services/benchmark/telemetry-consumer.js — Bull worker consuming Redis Stream → PostgreSQL</code>
+  And the Spine states: <code>Bull 4.x (scoring worker scheduling)</code> and <code>telemetry-consumer.js # Redis Stream → Prisma rollup worker</code>.
+  Bull 4.x operates exclusively on <strong>Redis Lists and Sorted Sets</strong> (<code>BRPOPLPUSH</code>, <code>ZADD</code>, Lua scripts); it is <strong>not a Redis Stream consumer client</strong>. Bull queues cannot natively subscribe to or ingest from a Redis Stream.</p>
+</blockquote>
+</li>
+<li><strong>Evidence &amp; Verification:</strong></li>
+<li>Redis Streams require a consumer group read loop (<code>xReadGroup</code> / <code>xAck</code>) or streaming poll.</li>
+<li>In the XActions codebase, <code>api/services/jobQueue.js</code> registers Bull processors for discrete operations (<code>operationsQueue.process</code>).</li>
+<li>Scheduling in the existing codebase (<code>api/services/retentionScheduler.js</code>, <code>api/services/facebookScheduler.js</code>, <code>api/services/tweetScheduler.js</code>) is implemented via <code>node-cron</code> with PostgreSQL advisory locks, explicitly rejecting Bull delayed/repeatable jobs to avoid state loss during Redis restarts (<code>_bmad-output/implementation-artifacts/4-1-schedule-post.md</code> line 166).</li>
+<li><strong>Impact:</strong> Implementers will face impedance mismatch attempting to configure Bull as a stream consumer.</li>
+<li><strong>Required Fix:</strong> Disentangle the two components:
+  1. <code>telemetry-consumer.js</code>: Direct Redis Stream consumer group reader (<code>xReadGroup</code> with <code>stream:benchmark:telemetry</code>, group <code>benchmark_rollup_workers</code>) that batches events and flushes hourly aggregates to PostgreSQL.
+  2. Scoring &amp; Canary Triggering: If Bull 4.x is used, it should be reserved for enqueuing hourly scoring jobs (<code>queue.add('calculate-health-score', { scraperId })</code>); or align with the repository's prevailing pattern of <code>node-cron</code> scheduled tasks.</li>
+</ul>
+<hr />
+<h2 id="3-high-findings">3. High Findings</h2>
+<h3 id="high-1-nodejs-engine-pinning-mismatch-node-18-vs-20181">HIGH-1: Node.js Engine Pinning Mismatch (Node &gt;= 18 vs &gt;= 20.18.1)</h3>
+<ul>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Section "Stack" (line 99).</li>
+<li><strong>The Issue:</strong> The spine states <code>Node.js &gt;= 18</code>.</li>
+<li><strong>Evidence &amp; Verification:</strong></li>
+<li>In <code>/Users/luisphan/Documents/GitHub/XActions/package.json</code> line 230:
+    <code>json
+    "engines": {
+      "node": "&gt;=20.18.1"
+    }</code></li>
+<li>Node.js 18 reached End-of-Life (EOL) on <strong>April 30, 2025</strong>.</li>
+<li>Current active runtime is Node.js 26 (<code>v26.5.0</code> on local system). Node 20.x and 22.x are the active LTS lines.</li>
+<li>Project code relies on modern native ES module behavior, undici 7.x, and fetch APIs that require Node 20+.</li>
+<li><strong>Impact:</strong> Downstream tooling, Dockerfiles, and CI pipelines following the spine could attempt builds on Node 18, which violates <code>package.json</code> engines and breaks dependencies like <code>undici@^7.29.0</code>.</li>
+<li><strong>Required Fix:</strong> Update <code>ARCHITECTURE-SPINE.md</code> Stack table from <code>Node.js &gt;= 18</code> to <code>Node.js &gt;= 20.18.1</code> (or Node 20+ LTS).</li>
+</ul>
+<hr />
+<h3 id="high-2-queuemicrotask-risk-of-event-loop-starvation-under-scraper-concurrency">HIGH-2: <code>queueMicrotask</code> Risk of Event Loop Starvation Under Scraper Concurrency</h3>
+<ul>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Section "Invariants &amp; Rules" AD-24 (line 56).</li>
+<li><strong>The Issue:</strong> AD-24 states:<blockquote>
+<p><code>TelemetryEmitter.emit() executes via setImmediate or queueMicrotask — never awaited in AbstractCrawler.start() or AbstractApiClient.request().</code></p>
+</blockquote>
+</li>
+<li><strong>Evidence &amp; Verification:</strong></li>
+<li>In the Node.js event loop, <code>queueMicrotask</code> schedules tasks in the microtask queue, which drains to completion <strong>before</strong> the event loop yields to the next phase (timers, I/O poll, check).</li>
+<li>If scrapers process hundreds or thousands of elements concurrently, chaining emissions via <code>queueMicrotask</code> can starve the event loop I/O polling, directly violating NFR-19 (&lt; 1% scraper throughput overhead).</li>
+<li>In contrast, <code>setImmediate</code> queues callbacks in the <code>check</code> phase, allowing the event loop to complete network I/O and crawler execution before processing telemetry flushes.</li>
+<li><strong>Impact:</strong> High-volume scrape runs using <code>queueMicrotask</code> can cause event loop lag, delayed network packet handling, and artificial crawler latency.</li>
+<li><strong>Required Fix:</strong> Remove <code>queueMicrotask</code> from AD-24. Specify <code>setImmediate</code> exclusively, combined with an in-memory batch buffer and the 1,000-item circuit breaker.</li>
+</ul>
+<hr />
+<h3 id="high-3-stream-capacity-sizing-maxlen-500000-vs-15-continuous-platforms">HIGH-3: Stream Capacity Sizing (<code>MAXLEN ~ 500000</code> vs 15+ Continuous Platforms)</h3>
+<ul>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Section "Invariants &amp; Rules" AD-23 (line 50).</li>
+<li><strong>The Issue:</strong> <code>MAXLEN ~ 500000</code> is asserted for a 7-day retention window across 15+ platforms.</li>
+<li><strong>Evidence &amp; Verification:</strong></li>
+<li>7 days = 10,080 minutes.</li>
+<li>15 platforms running continuous crawling (e.g. 10 HTTP requests/min per platform) produce:
+    <code>15 platforms * 10 req/min * 10,080 min = 1,512,000 events / 7 days</code>.</li>
+<li>At 500,000 entries, high-frequency crawl runs will evict telemetry within ~2.3 days.</li>
+<li>The repository's primary thin event stream <code>stream:social:raw_posts</code> in <code>/Users/luisphan/Documents/GitHub/XActions/src/utils/redis-stream-publisher.js</code> (line 87) defaults to <code>MAXLEN 1,000,000</code>.</li>
+<li>In Redis 7.x, 1,000,000 stream entries in listpack chunks consume approximately 120–180 MB of RAM, well within standard server allocations (1–2 GB+).</li>
+<li><strong>Impact:</strong> Premature eviction of production telemetry before the 7-day rolling window completes, impairing trend evaluation and historical canary comparisons.</li>
+<li><strong>Required Fix:</strong> Increase default capacity in AD-23 to <code>MAXLEN ~ 1000000</code> (consistent with <code>stream:social:raw_posts</code>), or explicitly define sampling when scrape volume exceeds threshold.</li>
+</ul>
+<hr />
+<h2 id="4-medium-low-findings">4. Medium / Low Findings</h2>
+<h3 id="med-1-hashscraperhealth_tier-needs-client-side-memory-caching-to-meet-nfr-19">MED-1: <code>hash:scraper:health_tier</code> Needs Client-Side Memory Caching to Meet NFR-19</h3>
+<ul>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> AD-23 &amp; Diagram (lines 29–30), Story 34.1 Code Map (line 58).</li>
+<li><strong>The Issue:</strong> The architecture describes <code>hash:scraper:health_tier</code> as providing O(1) lookups for enriching thin events.</li>
+<li><strong>Reality Check:</strong></li>
+<li>Redis <code>HGET hash:scraper:health_tier &lt;scraperId&gt;</code> is an O(1) Redis command, but it is an asynchronous network call (~0.5ms–2ms network latency).</li>
+<li>If <code>redis-stream-publisher.js</code> awaits <code>HGET</code> on every scraped post, this adds cumulative network I/O on the critical emission path.</li>
+<li>Scraper health tiers only change when the scoring worker runs (hourly or daily).</li>
+<li><strong>Required Fix:</strong> Specify that <code>redis-stream-publisher.js</code> (or a dedicated <code>HealthTierCache</code>) maintains an in-memory Map cache with a short TTL (e.g. 30–60 seconds) populated via periodic <code>HGETALL</code>, ensuring truly synchronous in-memory O(1) reads without network overhead on the scrape path.</li>
+</ul>
+<hr />
+<h3 id="med-2-redis-stream-publisher-responsibility-overload">MED-2: Redis Stream Publisher Responsibility Overload</h3>
+<ul>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Structural Seed (line 118):
+  <code>src/utils/redis-stream-publisher.js # Health tier cache + thin event enrichment</code></li>
+<li><strong>Reality Check:</strong></li>
+<li><code>src/utils/redis-stream-publisher.js</code> is already an established, 380-line core utility handling thin event formatting, client lifecycle, group creation, and stream publishing for Nowing.</li>
+<li>Merging health tier caching, fallback resolution (<code>default B</code>), and alert enrichment into this file overloads its single responsibility.</li>
+<li><strong>Required Fix:</strong> Create a dedicated helper <code>src/services/benchmark/health-cache.js</code> or <code>src/utils/health-tier-cache.js</code>, and compose it within <code>redis-stream-publisher.js</code> or <code>telemetry-emitter.js</code>.</li>
+</ul>
+<hr />
+<h3 id="med-3-inconsistency-in-missing-tier-fallback-b-vs-unknown">MED-3: Inconsistency in Missing Tier Fallback (<code>B</code> vs <code>UNKNOWN</code>)</h3>
+<ul>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Consistency Conventions (line 91) vs Story 34.1 Table (line 50).</li>
+<li><strong>The Issue:</strong></li>
+<li>Spine line 91 states: <code>benchmark_health values: "A", "B", "C", "UNKNOWN"</code>.</li>
+<li>Story 34.1 line 50 and AC5 state: <code>Missing → default B</code>.</li>
+<li><strong>Reality Check:</strong> An un-benchmarked or newly added scraper is genuinely <code>"UNKNOWN"</code> until its first canary probe or 24-hour evaluation window. Setting it to <code>"B"</code> masks missing telemetry and could prevent operators from realizing a new scraper is un-monitored.</li>
+<li><strong>Required Fix:</strong> Align convention so that un-evaluated scrapers default to <code>"UNKNOWN"</code>, while legacy/fallback consumers gracefully treat <code>"UNKNOWN"</code> as non-alerting.</li>
+</ul>
+<hr />
+<h3 id="low-1-postgresql-jsonb-gin-indexing-for-metricssnapshot">LOW-1: PostgreSQL JSONB GIN Indexing for <code>metricsSnapshot</code></h3>
+<ul>
+<li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Data &amp; formats (line 92) and Story 34.1 Technical Notes (line 78).</li>
+<li><strong>The Issue:</strong> <code>metricsSnapshot</code> is typed as <code>Json</code> in Prisma (PostgreSQL <code>JSONB</code>). B-tree indexes are placed on <code>[platform, evaluatedAt]</code> and <code>[scraperId, evaluatedAt]</code>.</li>
+<li><strong>Reality Check:</strong> For MVP, queries only filter by <code>scraperId</code> and <code>evaluatedAt</code> to render scorecards, which B-tree handles efficiently. If future queries filter inside <code>metricsSnapshot</code> (e.g. finding runs with <code>false_200 == true</code>), a PostgreSQL GIN index (<code>CREATE INDEX ... USING GIN (metricsSnapshot)</code>) will be required via raw migration SQL (<code>prisma migrate dev --create-only</code>), as Prisma schema syntax does not support GIN indexes natively.</li>
+<li><strong>Status:</strong> Acceptable for MVP; document as a note for Phase 2 query optimization.</li>
+</ul>
+<hr />
+<h2 id="5-version-technology-evidence-table">5. Version &amp; Technology Evidence Table</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Spine Version</th>
+<th>Actual Project / Installed Version</th>
+<th>Status</th>
+<th>Evidence &amp; Compatibility Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Node.js</strong></td>
+<td><code>&gt;= 18</code></td>
+<td><code>v26.5.0</code> (active) / <code>package.json: &gt;=20.18.1</code></td>
+<td><strong>DISCREPANCY (HIGH)</strong></td>
+<td>Node 18 is EOL (April 2025). <code>package.json</code> engines strictly enforces <code>&gt;=20.18.1</code>. Update spine.</td>
+</tr>
+<tr>
+<td><strong>Redis Server</strong></td>
+<td><code>7.x</code></td>
+<td>Redis 7.x (Stream <code>MAXLEN</code>, <code>XADD</code>, <code>XTRIM</code>)</td>
+<td><strong>VERIFIED</strong></td>
+<td>Server supports Streams with <code>MAXLEN ~</code>, <code>MINID ~</code>, and Consumer Groups.</td>
+</tr>
+<tr>
+<td><strong>Redis Client</strong></td>
+<td>Not specified</td>
+<td><code>redis@4.7.1</code> (<code>^4.6.11</code> in <code>package.json</code>)</td>
+<td><strong>VERIFIED</strong></td>
+<td><code>node-redis</code> v4 supports <code>xAdd(..., { TRIM: { strategy: 'MAXLEN' / 'MINID' } })</code>. Already verified in <code>src/utils/redis-stream-publisher.js</code>.</td>
+</tr>
+<tr>
+<td><strong>PostgreSQL</strong></td>
+<td><code>15+</code></td>
+<td>PostgreSQL 15+ target</td>
+<td><strong>VERIFIED</strong></td>
+<td>Fully compatible with Prisma 5.22. Native <code>JSONB</code>, <code>DOUBLE PRECISION</code>, descending B-tree indexes.</td>
+</tr>
+<tr>
+<td><strong>Prisma ORM</strong></td>
+<td>Not specified</td>
+<td><code>prisma@5.22.0</code>, <code>@prisma/client@5.22.0</code> (<code>^5.7.1</code>)</td>
+<td><strong>VERIFIED</strong></td>
+<td>Existing models (<code>Post</code>, <code>Comment</code>, <code>EngagementDaily</code>) already use <code>Json?</code>, <code>Float</code>, and <code>DateTime</code>.</td>
+</tr>
+<tr>
+<td><strong>Bull Queue</strong></td>
+<td><code>4.x</code></td>
+<td><code>bull@4.16.5</code> (<code>^4.12.0</code> in <code>package.json</code>)</td>
+<td><strong>VERIFIED (SCOPED)</strong></td>
+<td>Bull 4.x is installed. Compatible with Node 20+, but operates on Redis Lists/Sets, NOT Redis Streams.</td>
+</tr>
+<tr>
+<td><strong>Vitest</strong></td>
+<td><code>4.x</code></td>
+<td><code>vitest@4.1.11</code> (<code>^4.0.18</code> in <code>package.json</code>)</td>
+<td><strong>VERIFIED</strong></td>
+<td><code>vitest.config.js</code> exists, configured with <code>node</code> environment and <code>forks</code> pool.</td>
+</tr>
+<tr>
+<td><strong>node-cron</strong></td>
+<td>Not in spine</td>
+<td><code>node-cron@4.6.0</code> (<code>^4.6.0</code> in <code>package.json</code>)</td>
+<td><strong>COMPATIBLE ALTERNATIVE</strong></td>
+<td>Used across existing schedulers (<code>retentionScheduler</code>, <code>facebookScheduler</code>, <code>tweetScheduler</code>) with Postgres advisory locks.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-suggested-fixes-open-questions">6. Suggested Fixes &amp; Open Questions</h2>
+<h3 id="actionable-fixes-for-architecture-spine">Actionable Fixes for Architecture Spine</h3>
+<ol>
+<li>
+<p><strong>Update AD-23 (Two-Tier Benchmark Architecture):</strong>
+   <code>text
+   Replace:
+   "Raw telemetry events are fire-and-forget XADD to stream:benchmark:telemetry (Redis Stream, MAXLEN ~ 500000, 7-day TTL)."
+   With:
+   "Raw telemetry events are fire-and-forget XADD to stream:benchmark:telemetry (Redis Stream, MAXLEN ~ 1000000). Rolling 7-day data retention is enforced by the telemetry consumer worker via periodic XTRIM stream:benchmark:telemetry MINID ~ &lt;now - 7 days&gt;. No key-level EXPIRE is set on the stream."</code></p>
+</li>
+<li>
+<p><strong>Update AD-24 (Non-Blocking Telemetry Emission):</strong>
+   <code>text
+   Replace:
+   "TelemetryEmitter.emit() executes via setImmediate or queueMicrotask..."
+   With:
+   "TelemetryEmitter.emit() executes via setImmediate exclusively (avoiding microtask event-loop starvation)..."</code></p>
+</li>
+<li>
+<p><strong>Update Stack Table:</strong>
+   <code>text
+   Replace:
+   | Node.js | &gt;= 18 |
+   With:
+   | Node.js | &gt;= 20.18.1 |</code></p>
+</li>
+<li>
+<p><strong>Clarify Stream Consumer vs. Scoring Worker Topology:</strong>
+   - Explicitly define <code>telemetry-consumer.js</code> as a direct Redis Stream Consumer Group worker (<code>XREADGROUP</code>).
+   - Define whether <code>scoring-engine.js</code> execution is triggered on an hourly <code>node-cron</code> tick (consistent with <code>retentionScheduler.js</code>) or enqueued via Bull <code>operationsQueue</code>.</p>
+</li>
+</ol>
+<h3 id="open-questions-for-team">Open Questions for Team</h3>
+<ol>
+<li><strong>Canary probe execution context:</strong> Will synthetic canary probes run inside the same process as the crawler or as isolated worker jobs to prevent proxy pool starvation?</li>
+<li><strong>Health tier fallback:</strong> Should un-evaluated scrapers report <code>UNKNOWN</code> or <code>B</code> to Nowing? (Recommendation: <code>UNKNOWN</code> in telemetry, with consumer treating <code>UNKNOWN</code> as non-blocking).</li>
+</ol>
+<hr />
+<p><em>Report filed by Technology Currency &amp; Web-Research Lens for Epic 34 Gate.</em></p>
+<hr />
+<h1 id="adversarial-seam-review-epic-34-scraper-benchmark-reliability-suite">Adversarial Seam Review: Epic 34 — Scraper Benchmark &amp; Reliability Suite</h1>
+<p><strong>Reviewer Role:</strong> Adversarial Seam Reviewer (BMad Architecture Reviewer Gate)<br />
+<strong>Date:</strong> 2026-09-08<br />
+<strong>Status:</strong> PASS WITH REVISIONS (Architectural Seams Identified)<br />
+<strong>Target Architecture:</strong> <code>_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md</code><br />
+<strong>Referenced Specifications:</strong>
+- <code>_bmad-output/specs/spec-scraper-benchmark/SPEC.md</code>
+- <code>_bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md</code>
+- <code>_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md</code> (Parent AD-1 to AD-22)
+- Story Files: <code>_bmad-output/implementation-artifacts/stories/34-*.md</code> (Stories 34.1 to 34.8)
+- Existing Codebase: <code>src/core/base-crawler.js</code>, <code>src/core/base-client.js</code>, <code>src/core/platform-validator.js</code>, <code>src/utils/redis-stream-publisher.js</code>, <code>src/store/prisma-store.js</code>, <code>src/store/store-with-redis.js</code>, <code>prisma/schema.prisma</code></p>
+<hr />
+<h2 id="1-executive-verdict">1. Executive Verdict</h2>
+<p><strong>Verdict: PASS WITH REVISIONS</strong></p>
+<p>The architectural spine for Epic 34 provides a strong high-level conceptual framework (4-pillar scoring, non-compensatory knock-out gates, two-tier telemetry, and alert-only Tier C policy). However, when attacking the spine as an adversary constructing pairs of implementation units one level down, <strong>six major architectural seams</strong> emerge where two teams or stories, each strictly obeying every current Architectural Decision (AD-23 through AD-28 and parent ADs), will produce colliding, incompatible, or silent-failing implementations.</p>
+<p>The most critical vulnerabilities are:
+1. <strong>The Telemetry Payload Decomposition Seam (Story 34.1 vs 34.2 vs metrics-catalog.md):</strong> <code>AbstractCrawler.start()</code> has no runtime visibility into HTTP transport metrics (<code>proxy_bytes</code>, <code>http_status</code>, <code>retries</code>) or downstream data metrics (<code>field_fill_rate</code>, <code>schema_integrity</code>), and Redis <code>XADD</code> will serialize nested objects into unusable <code>"[object Object]"</code> strings unless a unified wire contract is enforced.
+2. <strong>Validator Contract vs Scoring Metric Naming Seam (Story 34.3 vs 34.4 vs 34.1):</strong> Naming and interface divergence across <code>false200Detected</code>, <code>false_200</code>, and <code>false_200_rate</code> will cause knock-out gates to evaluate undefined metrics and fail open.
+3. <strong>Dual Ownership of Tier Mutation &amp; Re-qualification Race (Story 34.4 vs 34.8):</strong> Hourly aggregate scoring and per-run re-qualification promotion race to mutate <code>hash:scraper:health_tier</code> with no shared state machine.
+4. <strong>Cache Invalidation &amp; Cold-Start Failure Masking (Story 34.4 vs 34.6):</strong> Uncached scrapers default to Tier B, silently masking failing Tier C scrapers on Redis restarts or worker cold starts.
+5. <strong>Thin Event Enrichment Path Disconnect (Story 34.6 vs PrismaStore vs StoreWithRedis):</strong> Story 34.6 targets <code>src/store/prisma-store.js</code>, which contains zero Redis publishing logic, and injects asynchronous lookups into a synchronous payload formatter.
+6. <strong>Heterogeneous Handler Return Shapes in Item Extraction (Story 34.2 vs Platform Crawlers):</strong> Simple <code>Array.isArray()</code> checks collapse object returns (<code>{ posts, cursor }</code>) to <code>itemCount: 1</code>, skewing all per-1k-record cost and noise formulas.</p>
+<p>To reach production readiness, the spine must be tightened with <strong>new architectural decisions (AD-29 through AD-34)</strong> and explicit normative contracts.</p>
+<hr />
+<h2 id="2-critical-divergence-holes">2. Critical Divergence Holes</h2>
+<h3 id="seam-1-telemetry-payload-schema-serialization-mismatch">Seam 1: Telemetry Payload Schema &amp; Serialization Mismatch</h3>
+<ul>
+<li><strong>Conflicting Units:</strong> Story 34.1 (<code>ScraperHealthScore</code> &amp; Redis stream consumer) vs Story 34.2 (<code>AbstractCrawler.start()</code> hooks) vs <code>metrics-catalog.md</code>.</li>
+<li><strong>Governing ADs:</strong> AD-23 (Two-Tier Telemetry Architecture), AD-24 (Non-Blocking Telemetry Emission), AD-25 (Centralized Instrumentation).</li>
+<li><strong>The Divergence:</strong>
+  1. <em>Serialization Breakdown in Redis:</em> Redis Streams (<code>XADD</code>) store flat field-value string pairs. <code>RedisStreamPublisher</code> in <code>src/utils/redis-stream-publisher.js</code> executes <code>Object.entries(payload).flat()</code>. In <code>metrics-catalog.md</code> (lines 106-139 and 198-231), the telemetry schema is deeply nested:
+     <code>json
+     {
+       "stability": { "latency_ms": 320, "http_status": 200, "retry_count": 0 },
+       "quality": { "field_fill_rate": 0.94, "schema_integrity": 0.98 },
+       "noise": { "empty_result": false, "false_200": false },
+       "cost": { "proxy_bytes": 45120 }
+     }</code>
+     If Story 34.2 emits this nested object directly via <code>XADD</code>, Redis stores <code>"stability": "[object Object]"</code>. The scoring consumer in Story 34.4 reading <code>stream:benchmark:telemetry</code> cannot parse sub-fields and crashes or reads <code>NaN</code>.
+  2. <em>Runtime Visibility Disconnect (Scope Blindness):</em> AD-25 states that instrumentation is confined to <code>AbstractCrawler.start()</code> and <code>AbstractApiClient.request()</code>. But at the level of <code>AbstractCrawler.start()</code>:<ul>
+<li><code>proxy_bytes</code>, <code>http_status</code>, and <code>retry_count</code> exist only inside <code>AbstractApiClient.request()</code>.</li>
+<li><code>field_fill_rate</code> and <code>schema_integrity</code> exist only after batch insertion in <code>src/store/prisma-store.js</code>.</li>
+<li><code>AbstractCrawler.start()</code> only knows <code>startTime</code>, <code>durationMs</code>, and whether <code>entry.handler()</code> threw an exception.
+  3. If Team 34.2 instruments <code>AbstractCrawler.start()</code> with the flat sample shown in Story 34.2 (<code>{ action, durationMs, itemCount, error, session }</code>), Team 34.4 (implementing <code>scoring-engine.js</code>) will find that none of the 13 metrics from <code>metrics-catalog.md</code> are present in the stream.</li>
+</ul>
+</li>
+<li><strong>Why Current ADs Fail to Prevent It:</strong> AD-23 specifies <em>where</em> data is stored (Redis Stream + PostgreSQL) but does not specify the wire envelope, payload flattening rule, or how client-level transport telemetry correlates with crawl-level execution telemetry.</li>
+<li><strong>Remediation Required (AD-29):</strong> Formally define a two-phase correlated telemetry envelope:</li>
+<li><code>telemetry:request</code> emitted by <code>AbstractApiClient.request()</code> with transport metrics (<code>proxyBytes</code>, <code>statusCode</code>, <code>latencyMs</code>, <code>retryCount</code>, <code>false200Detected</code>).</li>
+<li><code>telemetry:run</code> emitted by <code>AbstractCrawler.start()</code> with execution context (<code>runId</code>, <code>scraperId</code>, <code>action</code>, <code>itemCount</code>, <code>durationMs</code>, <code>success</code>).</li>
+<li>Flattening/JSON-stringification rules for Redis <code>XADD</code>.</li>
+</ul>
+<hr />
+<h3 id="seam-2-structural-validator-contract-vs-scoring-metric-naming">Seam 2: Structural Validator Contract vs Scoring Metric Naming</h3>
+<ul>
+<li><strong>Conflicting Units:</strong> Story 34.3 (<code>AbstractPlatformResponseValidator</code> extensions) vs Story 34.4 (<code>scoring-engine.js</code> knock-out gates) vs Story 34.1 (<code>ScraperCanaryRun</code>).</li>
+<li><strong>Governing ADs:</strong> AD-9 (Anti-Bot Payload Validation), AD-26 (Hard Knock-Out Gates).</li>
+<li><strong>The Divergence:</strong></li>
+<li>Story 34.3 implements <code>isFalse200()</code> returning <code>{ false200Detected: boolean, reason: string }</code> and <code>isCheckpoint()</code> returning <code>{ checkpointDetected: boolean, reason: string }</code>.</li>
+<li>Story 34.1's Prisma schema specifies <code>false200Detected Boolean</code> and <code>checkpointDetected Boolean</code> in <code>ScraperCanaryRun</code>.</li>
+<li><code>metrics-catalog.md</code> defines metrics under snake_case: <code>noise.false_200</code>, <code>stability.checkpoint_triggered</code>, and gate condition <code>false_200_rate &gt; 0.15</code>.</li>
+<li>Story 34.4 checks <code>KNOCK_OUT_GATES</code>:
+    <code>javascript
+    { name: 'false_200_rate', condition: v =&gt; v &gt; 0.15, reason: 'False 200 Rate &gt; 15%' }</code></li>
+<li>Story 34.2 hooks <code>entry.handler(command.args, session)</code> in <code>base-crawler.js</code>. <code>base-crawler.js</code> does NOT hold a reference to <code>this.responseValidator</code>—the validator belongs to <code>AbstractApiClient</code> inside <code>base-client.js</code>.</li>
+<li>Result: The validator detects a False-200 in the HTTP response body, but <code>AbstractCrawler.start()</code> has no contract to receive that flag from <code>AbstractApiClient</code>. The emitted telemetry event omits <code>false200Detected</code>. In <code>scoring-engine.js</code>, <code>false_200_rate</code> evaluates to <code>0 / total = 0.00</code>. The hard knock-out gate NEVER triggers, and poisoned 200 OK scrape data is scored as 100% healthy.</li>
+<li><strong>Why Current ADs Fail to Prevent It:</strong> AD-9 defines the validator role for anti-bot detection; AD-26 defines the mathematical knock-out thresholds. No AD establishes the propagation contract between <code>AbstractApiClient.responseValidator</code> and the telemetry pipeline.</li>
+<li><strong>Remediation Required (AD-30):</strong> Mandate that <code>AbstractApiClient.request()</code> attaches validator diagnostics (<code>validationResult: { isFalse200, isCheckpoint, reason }</code>) to the client response/context, which is published directly to <code>stream:benchmark:telemetry</code> under the canonical field <code>false_200: boolean</code>.</li>
+</ul>
+<hr />
+<h3 id="seam-3-re-qualification-race-dual-mutation-of-health-tiers">Seam 3: Re-qualification Race &amp; Dual Mutation of Health Tiers</h3>
+<ul>
+<li><strong>Conflicting Units:</strong> Story 34.4 (<code>scoring-engine.js</code> hourly rollup) vs Story 34.8 (<code>requalification.js</code> promotion logic).</li>
+<li><strong>Governing ADs:</strong> AD-26 (Hard Knock-Out Gates), AD-27 (Alert-Only Tier C, Human-in-the-Loop).</li>
+<li><strong>The Divergence:</strong></li>
+<li>Story 34.4 runs hourly, computing composite scores across a rolling 24-hour window, enforcing knock-out gates, and persisting <code>tier</code> (<code>A</code>, <code>B</code>, or <code>C</code>) into <code>ScraperHealthScore</code> and <code>hash:scraper:health_tier</code>.</li>
+<li>Story 34.8 implements re-qualification:
+    &gt; "Re-qualification: scraper must produce 5 consecutive clean canary runs or production runs to promote Tier C → B → A. Reset: any run violating knock-out gates resets the clean-run counter."</li>
+<li><strong>The Collision:</strong><ol>
+<li>Scraper <code>pasgo-merchant</code> drops to Tier C at 10:00 UTC due to False 200 rate.</li>
+<li>Engineer fixes the selector at 10:15 UTC.</li>
+<li>Canary runner (Story 34.7) runs hourly or on-demand probes. By 10:35 UTC, 5 consecutive clean runs pass.</li>
+<li>Story 34.8's re-qualification workflow promotes <code>pasgo-merchant</code> to Tier B, updating <code>hash:scraper:health_tier</code> to <code>"B"</code>.</li>
+<li>At 11:00 UTC, Story 34.4's scheduled scoring engine executes its 24-hour rolling rollup. Because the 24-hour window still contains the morning's 400 failed requests, the 24-hour False 200 rate is still &gt; 15%.</li>
+<li>Story 34.4 enforces AD-26 knock-out gate, overwrites <code>hash:scraper:health_tier</code> back to <code>"C"</code>, and triggers a new alert.</li>
+<li>Dual ownership creates an infinite oscillation loop: Re-qualification promotes, Hourly Rollup demotes.</li>
+</ol>
+</li>
+<li>Furthermore, <code>ScraperHealthScore</code> stores only hourly snapshots. Where is the state of <code>consecutive_clean_runs</code> persisted across processes? Neither Story 34.1 nor <code>schema.prisma</code> provides a state column or table for this counter.</li>
+<li><strong>Why Current ADs Fail to Prevent It:</strong> AD-26 specifies knock-out gates for scoring; AD-27 specifies human-in-the-loop alert behavior. Neither AD defines state ownership of tier transitions, quarantine flags, or how re-qualification overrides historical rolling windows.</li>
+<li><strong>Remediation Required (AD-31):</strong> Establish a single state machine for Tier transitions:</li>
+<li>Add <code>consecutive_clean_runs</code> and <code>quarantine_status</code> to <code>ScraperHealthScore</code> or a dedicated Redis key <code>hash:scraper:requalification_state</code>.</li>
+<li>When a scraper is promoted via re-qualification, establish an epoch boundary (<code>requalified_at</code>) so the scoring engine ignores pre-requalification failures in rolling window calculations.</li>
+</ul>
+<hr />
+<h2 id="3-high-risk-seams">3. High-Risk Seams</h2>
+<h3 id="seam-4-redis-health-tier-cache-invalidation-cold-start-failure-masking">Seam 4: Redis Health Tier Cache Invalidation &amp; Cold-Start Failure Masking</h3>
+<ul>
+<li><strong>Conflicting Units:</strong> Story 34.4 (<code>scoring-engine.js</code>) vs Story 34.6 (Nowing thin event enrichment in <code>redis-stream-publisher.js</code>).</li>
+<li><strong>Governing ADs:</strong> AD-27 (Alert-Only Tier C, Human-in-the-Loop).</li>
+<li><strong>The Divergence:</strong></li>
+<li>Story 34.4 populates <code>hash:scraper:health_tier</code> when the scoring worker runs.</li>
+<li>Story 34.6 performs an O(1) Redis lookup on <code>hash:scraper:health_tier</code> when emitting every thin event:
+    <code>javascript
+    const healthTier = await this.getHealthTier(scraperId);
+    // Boundary rule: "Default to B if health tier is missing (new scraper or first run)"</code></li>
+<li><strong>The Flaw:</strong> If the Redis cluster restarts, evicts the key under memory pressure, or if an API worker boots before the first hourly scoring cycle, <code>hash:scraper:health_tier</code> is completely empty.</li>
+<li>Every active scraper—including catastrophic Tier C scrapers that are actively poisoning data—evaluates to <code>null</code>, falls back to Tier <code>"B"</code>, and emits <code>benchmark_alert: false</code>.</li>
+<li>Failing scrapers produce unflagged thin events for up to 60 minutes. Nowing ingests corrupted data without triggering operator alerts.</li>
+<li><strong>Why Current ADs Fail to Prevent It:</strong> AD-27 declares that lookup is from Redis cache and not PostgreSQL, but provides no cache priming, warming, or persistent fallback guarantee.</li>
+<li><strong>Remediation Required (AD-32):</strong> </li>
+<li>The scoring engine must persist the latest health tier to PostgreSQL <code>ScraperHealthScore</code>.</li>
+<li>On service initialization, <code>RedisStreamPublisher</code> or the benchmark service must execute a cache-warming query loading all latest tiers from PostgreSQL into <code>hash:scraper:health_tier</code>.</li>
+<li>If a scraper has a historical Tier C record in PostgreSQL within 24 hours, fallback MUST default to <code>"C"</code> (safe failure mode), not <code>"B"</code>.</li>
+</ul>
+<hr />
+<h3 id="seam-5-thin-event-publishing-path-divergence-synchronous-contract-violation">Seam 5: Thin Event Publishing Path Divergence &amp; Synchronous Contract Violation</h3>
+<ul>
+<li><strong>Conflicting Units:</strong> Story 34.6 (<code>Nowing Integration Health Flag</code>) vs <code>src/utils/redis-stream-publisher.js</code> vs <code>src/store/prisma-store.js</code> vs <code>src/store/store-with-redis.js</code>.</li>
+<li><strong>Governing ADs:</strong> AD-7 (Dual-Channel Protocol: HTTP/SSE + Redis Stream), AD-27 (Alert-Only Tier C).</li>
+<li><strong>The Divergence:</strong>
+  1. <em>Wrong File Target:</em> Story 34.6's Code Map specifies modifying <code>src/store/prisma-store.js</code> as the thin event publishing path. An audit of <code>src/store/prisma-store.js</code> confirms it contains ZERO Redis publishing code; it only writes to PostgreSQL via Prisma. Thin event publishing is located in <code>src/store/store-with-redis.js</code> and individual crawler pipelines. Modifying <code>prisma-store.js</code> as instructed will not enrich thin events.
+  2. <em>Async Poisoning in Synchronous Contract:</em> Story 34.6 proposes:
+     <code>javascript
+     // In RedisStreamPublisher.formatPayload(item, scraperId)
+     const healthTier = await this.getHealthTier(scraperId);</code>
+     In <code>src/utils/redis-stream-publisher.js</code>, <code>formatPayload(item)</code> is a purely synchronous method called inside loops:
+     <code>javascript
+     formatPayload(item) { ... }</code>
+     If Team 34.6 makes <code>formatPayload</code> async, every caller that invokes <code>formatPayload(item)</code> synchronously receives a <code>Promise</code> instead of an object. The subsequent <code>Object.entries(payload).flat()</code> receives a Promise object and fails or serializes <code>Promise</code> metadata into Redis.</li>
+<li><strong>Why Current ADs Fail to Prevent It:</strong> AD-7 establishes the dual-channel protocol at an abstract level without locking down the synchronous/asynchronous interface boundaries of <code>RedisStreamPublisher</code>.</li>
+<li><strong>Remediation Required (AD-32):</strong></li>
+<li>Clarify that thin event enrichment occurs in <code>RedisStreamPublisher.publish()</code> or in an in-memory cached lookup <code>getHealthTierSync(scraperId)</code> that reads a local in-process cache populated via Redis pub/sub or periodic refresh, preserving the synchronous signature of <code>formatPayload()</code>.</li>
+<li>Correct the Code Map to reference <code>src/store/store-with-redis.js</code> and <code>src/utils/redis-stream-publisher.js</code>.</li>
+</ul>
+<hr />
+<h3 id="seam-6-item-count-extraction-on-heterogeneous-platform-handler-returns">Seam 6: Item Count Extraction on Heterogeneous Platform Handler Returns</h3>
+<ul>
+<li><strong>Conflicting Units:</strong> Story 34.2 (<code>AbstractCrawler.start()</code> telemetry hook) vs Concrete Platform Crawlers (Twitter, Threads, Shopee, Masothue).</li>
+<li><strong>Governing ADs:</strong> AD-2 (Unified Base Crawler and Client Contracts), AD-25 (Centralized Instrumentation).</li>
+<li><strong>The Divergence:</strong></li>
+<li>Story 34.2 proposes the following extraction in <code>AbstractCrawler.start()</code>:
+    <code>javascript
+    itemCount: Array.isArray(result) ? result.length : (result ? 1 : 0)</code></li>
+<li>Across XActions scrapers, handlers return diverse data shapes:<ul>
+<li>Twitter profile: <code>{ user: { ... }, tweets: [...] }</code></li>
+<li>Search queries: <code>{ items: [...], nextCursor: "abc" }</code></li>
+<li>Pagination wrappers: <code>{ data: [...], pagination: { count: 50 } }</code></li>
+<li>Void / Action triggers: <code>{ success: true }</code></li>
+</ul>
+</li>
+<li>In a search crawl returning <code>{ items: [50 items], nextCursor: "..." }</code>:<ul>
+<li><code>Array.isArray(result)</code> is <code>false</code>.</li>
+<li><code>result ? 1 : 0</code> evaluates to <code>1</code>.</li>
+</ul>
+</li>
+<li>The telemetry emitter records <code>item_count: 1</code> instead of <code>50</code>.</li>
+<li>Corrupted metrics:<ul>
+<li><code>noise.empty_result</code> incorrectly evaluates true when items array is empty but wrapper object exists.</li>
+<li><code>cost.proxy_bytes_per_1k_records</code> calculates <code>bytes / (1 / 1000) = bytes * 1000</code> (off by a factor of 50,000x!).</li>
+<li>The Cost pillar score collapses to 0.</li>
+</ul>
+</li>
+<li><strong>Why Current ADs Fail to Prevent It:</strong> AD-25 prescribes zero changes to platform subclasses, assuming <code>AbstractCrawler.start()</code> can inspect <code>result</code> generically, but omits a standard item-counting resolution protocol.</li>
+<li><strong>Remediation Required (AD-33):</strong> Specify a standard <code>extractItemCount(result)</code> helper in <code>AbstractCrawler</code>:
+  1. Check <code>Array.isArray(result) -&gt; result.length</code>.
+  2. Check <code>result?.items &amp;&amp; Array.isArray(result.items) -&gt; result.items.length</code>.
+  3. Check <code>result?.posts &amp;&amp; Array.isArray(result.posts) -&gt; result.posts.length</code>.
+  4. Check <code>result?.data &amp;&amp; Array.isArray(result.data) -&gt; result.data.length</code>.
+  5. Check <code>typeof result?.count === 'number' -&gt; result.count</code>.
+  6. Otherwise fallback to <code>(result ? 1 : 0)</code>.</li>
+</ul>
+<hr />
+<h2 id="4-medium-low-seams">4. Medium &amp; Low Seams</h2>
+<h3 id="seam-7-category-applicability-vs-telemetry-payload-incomplete-metadata">Seam 7: Category Applicability vs Telemetry Payload Incomplete Metadata</h3>
+<ul>
+<li><strong>Conflicting Units:</strong> Story 34.2 (Telemetry emitter) vs Story 34.4 (Scoring engine category profiles) vs AD-28.</li>
+<li><strong>Risk:</strong> Medium.</li>
+<li><strong>The Divergence:</strong></li>
+<li>AD-28 mandates category-aware metric profiles (e.g. <code>registry</code> excludes <code>comment_completeness</code>, <code>contact_accuracy</code>, <code>data_freshness</code>).</li>
+<li>If Team 34.2 emits telemetry without <code>category</code> (only emitting <code>scraper_id</code>), the scoring engine in Story 34.4 must maintain a hardcoded mapping of <code>scraper_id -&gt; category</code> or query the database.</li>
+<li>If a new crawler is registered under a category not hardcoded in the scoring engine, AD-28 cannot re-normalize weights, causing division-by-zero or applying inappropriate gates.</li>
+<li><strong>Remediation:</strong> Mandate that <code>category</code> is a required field on all crawlers extending <code>AbstractCrawler</code> (<code>this.category || 'social'</code>) and must be included in every telemetry event emitted.</li>
+</ul>
+<hr />
+<h3 id="seam-8-canary-probes-consuming-rate-governor-quotas-ad-13-ad-20-conflict">Seam 8: Canary Probes Consuming Rate Governor Quotas (AD-13 &amp; AD-20 Conflict)</h3>
+<ul>
+<li><strong>Conflicting Units:</strong> Story 34.7 (<code>canary-runner.js</code>) vs Parent AD-13 (Adaptive Rate Governor) vs AD-20 (Dual-Pool Resource Isolation).</li>
+<li><strong>Risk:</strong> Medium.</li>
+<li><strong>The Divergence:</strong></li>
+<li>Story 34.7 calls <code>AbstractCrawler.start({ action: 'canary', url })</code> hourly per platform.</li>
+<li><code>AbstractCrawler.start()</code> enforces <code>governor.recordRequest(accountId)</code> (AD-13).</li>
+<li>AD-20 splits concurrency into Realtime (30%) and Bulk (70%). Canary probes are neither user realtime requests nor bulk production scrapes.</li>
+<li>If an account is already near its velocity ceiling, a synthetic canary probe can trip the governor into hibernation, causing production customer scrapes to fail.</li>
+<li><strong>Remediation:</strong> Canary probe calls must pass <code>{ isCanary: true }</code> in command options, allowing the governor to bypass account exhaustion limits or execute against dedicated canary accounts.</li>
+</ul>
+<hr />
+<h3 id="seam-9-duplicated-telemetry-schema-discrepancy-in-metrics-catalogmd">Seam 9: Duplicated Telemetry Schema Discrepancy in <code>metrics-catalog.md</code></h3>
+<ul>
+<li><strong>Conflicting Units:</strong> <code>metrics-catalog.md</code> lines 106-139 vs lines 198-231.</li>
+<li><strong>Risk:</strong> Low.</li>
+<li><strong>The Divergence:</strong></li>
+<li>Lines 106-139 include <code>data_freshness_seconds</code>, <code>checkpoint_triggered</code>, and <code>duplicate_rate</code>.</li>
+<li>Lines 198-231 represent a partial duplicate block with different indentation and omitted fields.</li>
+<li>Two developers copying the schema snippet from different sections of the document will build mismatched TypeScript interfaces.</li>
+<li><strong>Remediation:</strong> Deduplicate <code>metrics-catalog.md</code> to establish a single authoritative JSON schema.</li>
+</ul>
+<hr />
+<h2 id="5-suggested-new-tightened-architectural-decisions">5. Suggested New &amp; Tightened Architectural Decisions</h2>
+<p>To make the Epic 34 spine airtight, the following architectural decisions should be added to <code>ARCHITECTURE-SPINE.md</code>:</p>
+<h3 id="ad-29-two-phase-correlated-telemetry-envelope-redis-serialization-contract">AD-29: Two-Phase Correlated Telemetry Envelope &amp; Redis Serialization Contract</h3>
+<ul>
+<li><strong>Statement:</strong> Telemetry emission is separated into two correlated event types over <code>stream:benchmark:telemetry</code>:
+  1. <code>telemetry:request</code> emitted by <code>AbstractApiClient.request()</code> containing <code>{ correlationId, scraperId, platform, latencyMs, proxyBytes, httpStatus, retries, isFalse200, isCheckpoint }</code>.
+  2. <code>telemetry:run</code> emitted by <code>AbstractCrawler.start()</code> containing <code>{ correlationId, scraperId, platform, category, action, durationMs, itemCount, isSuccess, errorName }</code>.</li>
+<li><strong>Wire Contract:</strong> All Redis Stream entries MUST be flat key-value pairs where nested objects or arrays are strictly serialized using <code>JSON.stringify()</code>. No raw nested JavaScript objects may be passed to <code>XADD</code>.</li>
+</ul>
+<h3 id="ad-30-validator-to-telemetry-diagnostic-bridge">AD-30: Validator-to-Telemetry Diagnostic Bridge</h3>
+<ul>
+<li><strong>Statement:</strong> When <code>AbstractApiClient.request()</code> receives an HTTP response, it executes <code>this.responseValidator.validate(response)</code>. The validator returns an explicit <code>PlatformValidationResult</code> structure:
+  <code>typescript
+  interface PlatformValidationResult {
+    isValid: boolean;
+    isFalse200: boolean;
+    isCheckpoint: boolean;
+    isRateLimit: boolean;
+    reason?: string;
+  }</code>
+  These flags are immediately bound to the request execution context and forwarded into the <code>telemetry:request</code> event. The scoring engine evaluates <code>false_200_rate</code> strictly against <code>isFalse200: true</code>.</li>
+</ul>
+<h3 id="ad-31-unified-tier-transition-state-machine-re-qualification-epochs">AD-31: Unified Tier Transition State Machine &amp; Re-qualification Epochs</h3>
+<ul>
+<li><strong>Statement:</strong> State ownership of <code>tier</code> transitions belongs exclusively to a unified state manager (<code>BenchmarkStateManager</code>):
+  1. <code>hash:scraper:health_tier</code> is the authoritative cache; <code>ScraperHealthScore</code> is the durable history.
+  2. Re-qualification requires 5 consecutive clean canary runs recorded in <code>ScraperCanaryRun</code> with <code>isSuccess = true</code>, <code>false200Detected = false</code>, and <code>checkpointDetected = false</code>.
+  3. When re-qualification promotes a scraper (C → B), it sets <code>requalified_at = now()</code> in the scraper's state.
+  4. The hourly scoring engine rolling-window aggregation MUST discard telemetry recorded prior to <code>requalified_at</code> for knock-out gate evaluation, preventing historical failures from reversing re-qualifications.</li>
+</ul>
+<h3 id="ad-32-health-tier-cache-warming-resilient-fallback-synchronous-lookup">AD-32: Health Tier Cache Warming, Resilient Fallback &amp; Synchronous Lookup</h3>
+<ul>
+<li><strong>Statement:</strong>
+  1. <code>RedisStreamPublisher</code> maintains an in-memory <code>Map&lt;string, string&gt;</code> of <code>scraperId -&gt; tier</code> synchronized via Redis key subscription or 30-second TTL cache, ensuring <code>formatPayload()</code> remains strictly synchronous.
+  2. On service startup, API and worker processes execute <code>warmupHealthTierCache()</code> which reads the latest tier per scraper from PostgreSQL <code>ScraperHealthScore</code> into Redis.
+  3. If a scraper has no cache entry and no PostgreSQL record, it defaults to <code>"B"</code>. If a scraper has an active Tier C record in PostgreSQL, it MUST NOT fall back to <code>"B"</code>.</li>
+</ul>
+<h3 id="ad-33-generic-item-count-resolution-protocol-in-base-crawler">AD-33: Generic Item Count Resolution Protocol in Base Crawler</h3>
+<ul>
+<li><strong>Statement:</strong> In <code>AbstractCrawler.start()</code>, item count for telemetry is resolved via <code>extractItemCount(result)</code>:
+  <code>javascript
+  function extractItemCount(res) {
+    if (!res) return 0;
+    if (Array.isArray(res)) return res.length;
+    for (const key of ['items', 'posts', 'data', 'records', 'results']) {
+      if (Array.isArray(res[key])) return res[key].length;
+    }
+    if (typeof res.count === 'number') return res.count;
+    return 1;
+  }</code></li>
+</ul>
+<h3 id="ad-34-category-identity-binding-on-base-crawler">AD-34: Category Identity Binding on Base Crawler</h3>
+<ul>
+<li><strong>Statement:</strong> Every crawler subclassing <code>AbstractCrawler</code> must declare <code>readonly category: PlatformCategory</code> (one of <code>'social' | 'ecommerce' | 'directory' | 'registry' | 'fnb' | 'healthcare' | 'legal'</code>). <code>AbstractCrawler.start()</code> automatically attaches <code>this.category</code> to every emitted telemetry event, guaranteeing that the scoring engine can apply AD-28 metric exclusions without external database lookups.</li>
+</ul>
+<hr />
+<h2 id="6-review-summary-table">6. Review Summary Table</h2>
+<table>
+<thead>
+<tr>
+<th>Seam ID</th>
+<th>Conflicting Units</th>
+<th>Severity</th>
+<th>Root Cause</th>
+<th>Proposed Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>S-01</strong></td>
+<td>Story 34.1 vs 34.2 vs Catalog</td>
+<td><strong>CRITICAL</strong></td>
+<td>Redis <code>XADD</code> flattens nested objects to <code>"[object Object]"</code>; Crawler lacks client/store metrics.</td>
+<td>AD-29 (Correlated two-phase envelope + JSON wire contract)</td>
+</tr>
+<tr>
+<td><strong>S-02</strong></td>
+<td>Story 34.3 vs 34.4 vs 34.1</td>
+<td><strong>CRITICAL</strong></td>
+<td>Naming mismatch (<code>false200Detected</code> vs <code>false_200</code>); no bridge between validator &amp; crawler.</td>
+<td>AD-30 (Diagnostic bridge on <code>AbstractApiClient</code>)</td>
+</tr>
+<tr>
+<td><strong>S-03</strong></td>
+<td>Story 34.4 vs 34.8</td>
+<td><strong>CRITICAL</strong></td>
+<td>Re-qualification promotion overwritten by hourly 24h rolling rollup; no shared state machine.</td>
+<td>AD-31 (Unified state machine + <code>requalified_at</code> epoch)</td>
+</tr>
+<tr>
+<td><strong>S-04</strong></td>
+<td>Story 34.4 vs 34.6</td>
+<td><strong>HIGH</strong></td>
+<td>Redis cold start/eviction defaults all scrapers to Tier B, suppressing Tier C alerts.</td>
+<td>AD-32 (Postgres warmup + safe fallback)</td>
+</tr>
+<tr>
+<td><strong>S-05</strong></td>
+<td>Story 34.6 vs PrismaStore</td>
+<td><strong>HIGH</strong></td>
+<td>Story targets non-publishing store; async lookup inside synchronous formatter.</td>
+<td>AD-32 (Sync in-memory cache + correct store mapping)</td>
+</tr>
+<tr>
+<td><strong>S-06</strong></td>
+<td>Story 34.2 vs Platform Crawlers</td>
+<td><strong>HIGH</strong></td>
+<td><code>Array.isArray()</code> miscounts object returns (<code>{ posts }</code>), skewing noise and cost by 50,000x.</td>
+<td>AD-33 (<code>extractItemCount</code> resolution protocol)</td>
+</tr>
+<tr>
+<td><strong>S-07</strong></td>
+<td>Story 34.2 vs 34.4 (AD-28)</td>
+<td><strong>MEDIUM</strong></td>
+<td>Telemetry lacks <code>category</code>, breaking dynamic weight re-normalization.</td>
+<td>AD-34 (Mandatory <code>category</code> on <code>AbstractCrawler</code>)</td>
+</tr>
+<tr>
+<td><strong>S-08</strong></td>
+<td>Story 34.7 vs Parent AD-13</td>
+<td><strong>MEDIUM</strong></td>
+<td>Synthetic canary probes consume production velocity quotas and trigger hibernation.</td>
+<td>Add <code>{ isCanary: true }</code> governor bypass flag</td>
+</tr>
+<tr>
+<td><strong>S-09</strong></td>
+<td><code>metrics-catalog.md</code></td>
+<td><strong>LOW</strong></td>
+<td>Duplicated schema blocks with divergent fields.</td>
+<td>Deduplicate lines 106-139 and 198-231</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

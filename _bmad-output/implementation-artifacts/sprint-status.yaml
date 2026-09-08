@@ -271,8 +271,8 @@ development_status:
   # --- Epic 34: Scraper Benchmark & Reliability Suite ---
   # NOTE: 2026-09-08 — Added via sprint-change-proposal-2026-09-08-benchmark-v2.md.
   # Post-review: Stories 34.1-34.6 (MVP), 34.7-34.8 (Hardening). See _bmad-output/specs/spec-scraper-benchmark/ for full spec.
-  epic-34: backlog
-  34-1-benchmark-telemetry-schema-storage: backlog
+  epic-34: in-progress
+  34-1-benchmark-telemetry-schema-storage: done
   34-2-production-telemetry-hooks-abstract-crawler: backlog
   34-3-platform-specific-validators-false-200-detection: backlog
   34-4-benchmark-scoring-engine: backlog
