@@ -83,8 +83,8 @@ export class IpLegalPlatformResponseValidator extends AbstractPlatformResponseVa
    * @returns {boolean}
    */
   isBotChallenge(response) {
-    const status = response?.status ?? response?.statusCode;
-    if (status === 403) return true;
+    const status = Number(response?.status ?? response?.statusCode);
+    if (status === 403 || status === 503) return true;
 
     const text = this.#getText(response);
     return CHALLENGE_MARKERS.some((marker) => text.includes(marker));

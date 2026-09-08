@@ -116,4 +116,61 @@ describe('Story 22.3: Legal & Trademark Normalizer', () => {
       expect(result.id).toBe('ipvietnam:4-2026-11740');
     });
   });
+it('filters out administrative department links and portal navigation', () => {
+    const mixedHtml = `
+      <div>
+        <a href="/web/guest/khoi-cac-on-vi-quan-ly">Khối các đơn vị quản lý</a>
+        <a href="/web/guest/co-cau-to-chuc">Cơ cấu tổ chức</a>
+        <a href="/web/guest/-/danh-sach-don-nhan-hieu-chuyen-cong-bo-tuan-16">Danh sách đơn đăng ký nhãn hiệu chuyển công bố tuần 16</a>
+      </div>
+    `;
+    const articles = extractGazetteArticles(mixedHtml);
+    expect(articles).toHaveLength(1);
+    expect(articles[0].title).toContain('tuần 16');
+  });
+
+  it('returns null when detail id does not match any record in the table', () => {
+    const result = normalizeIpLegalResults(sampleTableHtml, 'detail', { id: '4-2099-99999' });
+    expect(result).toBeNull();
+  });
+
+  it('includes classes array in metadata', () => {
+    const items = extractWeeklyTableRows(sampleTableHtml);
+    expect(items[0].metadata.classes).toEqual([]);
+  });
+
 });
+
+  describe('real HTML fixtures validation', () => {
+    it('parses real ipvietnam-weekly-table.html fixture', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+      const fixturePath = path.resolve(__dirname, 'fixtures/ipvietnam-weekly-table.html');
+      const html = fs.readFileSync(fixturePath, 'utf-8');
+
+      const items = extractWeeklyTableRows(html);
+      expect(items).toHaveLength(3);
+      expect(items[0].id).toBe('ipvietnam:4-2025-59696');
+      expect(items[0].metadata.applicationNumber).toBe('4-2025-59696');
+      expect(items[0].metadata.applicationDate).toBe('2025-11-19T00:00:00.000Z');
+      expect(items[0].metadata.publicationDate).toBe('2026-04-13T00:00:00.000Z');
+      expect(items[0].metadata.classes).toEqual([]);
+      expect(items[2].id).toBe('ipvietnam:4-2026-11740');
+    });
+
+    it('parses real ipvietnam-gazette-list.html fixture and ignores menu links', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+      const fixturePath = path.resolve(__dirname, 'fixtures/ipvietnam-gazette-list.html');
+      const html = fs.readFileSync(fixturePath, 'utf-8');
+
+      const articles = extractGazetteArticles(html);
+      expect(articles).toHaveLength(2);
+      expect(articles[0].title).toContain('tuần 16');
+      expect(articles[1].title).toContain('tuần 15');
+
+      const downloads = extractYearlyDownloads(html);
+      expect(downloads).toHaveLength(1);
+      expect(downloads[0].fileType).toBe('xlsx');
+    });
+  });

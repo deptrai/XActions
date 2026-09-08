@@ -100,4 +100,18 @@ describe('Story 22.3: Legal & Trademark Dispatch Integration', () => {
     expect(IpLegalCrawler).toBeDefined();
     expect(IpLegalClient).toBeDefined();
   });
+it('supports action aliases in scrapeIpLegal helper', async () => {
+    const resWeekly = await scrapeIpLegal('weekly_list', {
+      baseUrl,
+      articleUrl: `${baseUrl}/web/guest/-/tuan-14`,
+    });
+    expect(resWeekly.posts).toHaveLength(1);
+
+    const resYearly = await scrapeIpLegal('yearly', { baseUrl });
+    expect(resYearly.posts).toBeDefined();
+
+    const resSearch = await scrapeIpLegal('search', { baseUrl, limit: 2 });
+    expect(resSearch.posts).toBeDefined();
+  });
+
 });

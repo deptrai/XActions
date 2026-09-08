@@ -41,6 +41,12 @@ async function normalizeRawBody(resp) {
           reader.releaseLock();
         }
       }
+    } else if (typeof resp.body?.[Symbol.asyncIterator] === 'function') {
+      const chunks = [];
+      for await (const chunk of resp.body) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      raw = Buffer.concat(chunks).toString('utf-8');
     } else if (typeof resp.body === 'object') {
       try { raw = JSON.stringify(resp.body); } catch { raw = ''; }
     }

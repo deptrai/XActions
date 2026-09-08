@@ -141,8 +141,14 @@ export class IpLegalCrawler extends AbstractCrawler {
   async #persist(posts) {
     if (!posts || !posts.length) return;
 
-    if (this.store && typeof this.store.storeBatch === 'function') {
-      await this.store.storeBatch(posts).catch(() => {});
+    if (this.store) {
+      if (typeof this.store.storeBatch === 'function') {
+        await this.store.storeBatch(posts).catch(() => {});
+      } else if (typeof this.store.savePost === 'function') {
+        for (const item of posts) {
+          await this.store.savePost(item).catch(() => {});
+        }
+      }
     }
 
     if (this.publisher && typeof this.publisher.publish === 'function') {
@@ -164,7 +170,27 @@ export class IpLegalCrawler extends AbstractCrawler {
     const response = await this.client.getGazetteList({ page });
     const data = extractResponseBody(response, 'ipvietnam', 'search_gazette');
 
-    const allPosts = normalizeIpLegalResults(data, 'search_gazette');
+    let allPosts = normalizeIpLegalResults(data, 'search_gazette', { baseUrl: this.client?.baseUrl });
+
+    // If result contains gazette articles rather than application rows, auto-traverse the latest weekly article to fetch applications
+    if (allPosts.length > 0 && allPosts[0].metadata?.articleUrl && !allPosts[0].metadata?.applicationNumber) {
+      try {
+        // Prioritize article that specifies a week ('tuần' or 'tuan')
+        const latestArticle = allPosts.find((p) => /\/content\//i.test(p.metadata?.articleUrl || '') && /tuần\s*\d+/i.test(p.title)) || allPosts.find((p) => /\/content\//i.test(p.metadata?.articleUrl || '')) || allPosts[0];
+        const articleResp = await this.client.getArticleContent(latestArticle.metadata.articleUrl);
+        const articleData = extractResponseBody(articleResp, 'ipvietnam', 'get_weekly_list');
+        const applicationPosts = normalizeIpLegalResults(articleData, 'get_weekly_list', {
+          articleUrl: latestArticle.metadata.articleUrl,
+          articleTitle: latestArticle.title,
+        });
+        if (applicationPosts.length > 0) {
+          allPosts = applicationPosts;
+        }
+      } catch {
+        // Fall back to article listing if traversal fails
+      }
+    }
+
     const posts = allPosts.slice(0, limit);
 
     for (const post of posts) {
@@ -233,6 +259,17 @@ export class IpLegalCrawler extends AbstractCrawler {
     const data = extractResponseBody(response, 'ipvietnam', 'yearly_summary');
 
     const posts = normalizeIpLegalResults(data, 'yearly_summary', { year });
+
+    if (posts.length === 0 && args.year) {
+      throw new PlatformError({
+        type: ErrorTypes.NOT_FOUND,
+        code: 'XACT_4004',
+        message: `No yearly gazette documents found for year ${year}`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'ipvietnam',
+      });
+    }
 
     for (const post of posts) {
       this.validateItem(post);

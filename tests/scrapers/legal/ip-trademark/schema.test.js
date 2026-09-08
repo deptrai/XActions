@@ -46,3 +46,9 @@ describe('Story 22.3: Legal & Trademark Schema Helpers', () => {
     });
   });
 });
+
+    it('rejects dates that roll over month boundaries like Feb 31', () => {
+      expect(parseVnDate('31/02/2026')).toBeNull();
+      expect(parseVnDate('30/02/2024')).toBeNull();
+      expect(parseVnDate('31/04/2026')).toBeNull();
+    });

@@ -22,11 +22,25 @@ export * from './schema.js';
  * @param {Record<string, any>} [deps={}]
  * @returns {Promise<any>}
  */
+export const IP_LEGAL_ACTION_MAP = Object.freeze({
+  search_gazette: 'search_gazette',
+  search: 'search_gazette',
+  gazette: 'search_gazette',
+  get_weekly_list: 'get_weekly_list',
+  weekly_list: 'get_weekly_list',
+  weekly: 'get_weekly_list',
+  yearly_summary: 'yearly_summary',
+  yearly: 'yearly_summary',
+  summary: 'yearly_summary',
+  detail: 'detail',
+});
+
 export async function scrapeIpLegal(action, options = {}, deps = {}) {
+  const mappedAction = IP_LEGAL_ACTION_MAP[action] || action;
   const crawler = new IpLegalCrawler({ ...options, ...deps });
   try {
     await crawler.init();
-    return await crawler.start({ action, args: options });
+    return await crawler.start({ action: mappedAction, args: options });
   } finally {
     if (options.autoClose !== false) {
       await crawler.cleanup().catch(() => {});

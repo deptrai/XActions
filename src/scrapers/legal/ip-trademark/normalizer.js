@@ -38,23 +38,30 @@ function stripTags(html) {
  * @param {string} html
  * @returns {Array<{ title: string, url: string, date?: string }>}
  */
-export function extractGazetteArticles(html) {
+export function extractGazetteArticles(html, options = {}) {
   if (!html || typeof html !== 'string') return [];
   const articles = [];
   const seenUrls = new Set();
 
-  // Match links inside article list portlet
-  // Typical href pattern: /web/guest/-/danh-sach-don-... or href="/web/guest/...-don-..."
   const linkRegex = /<a\s+[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gis;
   let match;
   while ((match = linkRegex.exec(html)) !== null) {
     const rawUrl = decodeHtmlEntities(match[1].trim());
     const title = stripTags(match[2]);
-    const isRelevant = /(?:danh-sach|cong-bo|nhan-hieu|don|tuan|gazette)/i.test(rawUrl) ||
-      /(?:danh sách|công bố|nhãn hiệu|đơn|tuần)/i.test(title);
-    if (rawUrl && title && isRelevant && !seenUrls.has(rawUrl) && !rawUrl.includes('javascript:') && !/\.(xlsx|xls|pdf|docx|doc)$/i.test(rawUrl)) {
+
+    // Skip administrative department and portal navigation links
+    if (/khoi-cac-on-vi|chuc-nang-nhiem-vu|co-cau-to-chuc|gioi-thieu|tra-cuu/i.test(rawUrl)) {
+      continue;
+    }
+
+    // Must be a gazette list article
+    const isGazetteArticle = /(?:danh-sach-don|chuyen-cong-bo|cong-bo-tuan|don-ang-ky)/i.test(rawUrl) ||
+      /(?:danh sách đơn|chuyển công bố|công bố tuần|đơn đăng ký.*nhãn hiệu)/i.test(title);
+
+    if (rawUrl && title && isGazetteArticle && !seenUrls.has(rawUrl) && !rawUrl.includes('javascript:') && !/\.(xlsx|xls|pdf|docx|doc)(?:[?#]|$)/i.test(rawUrl)) {
       seenUrls.add(rawUrl);
-      const url = rawUrl.startsWith('http') ? rawUrl : `https://ipvietnam.gov.vn${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`;
+      const base = (options?.baseUrl || 'https://ipvietnam.gov.vn').replace(/\/+$/, '');
+      const url = rawUrl.startsWith('http') ? rawUrl : `${base}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`;
       articles.push({ title, url });
     }
   }
@@ -173,6 +180,7 @@ export function extractWeeklyTableRows(html, options = {}) {
             rawPublicationDate: rawPubDate,
             gazettePeriod,
             status: 'chuyển công bố (hợp lệ)',
+            classes: [],
             sourcePlatform: 'ipvietnam',
           },
           crawledAt: new Date(),
@@ -202,12 +210,15 @@ export function normalizeIpLegalResults(data, kind, options = {}) {
     if (tableItems.length > 0) return tableItems;
 
     // Otherwise, convert gazette articles into PostItems
-    const articles = extractGazetteArticles(html);
-    return articles.map((article, idx) => ({
-      id: `ipvietnam:gazette-${idx + 1}-${Date.now()}`,
-      platform: 'ipvietnam',
-      externalId: `gazette-${idx + 1}`,
-      title: article.title,
+    const articles = extractGazetteArticles(html, options);
+    return articles.map((article, idx) => {
+      const slugMatch = article.url.match(/\/content\/([^/?#]+)/) || article.url.match(/\/([^/?#]+)(?:[?#]|$)/);
+      const slug = slugMatch ? slugMatch[1] : `article-${idx + 1}`;
+      return {
+        id: `ipvietnam:gazette-${slug}`,
+        platform: 'ipvietnam',
+        externalId: `gazette-${slug}`,
+        title: article.title,
       category: CATEGORIES.LEGAL,
       authorId: 'ipvietnam',
       authorName: 'Cục Sở hữu Trí tuệ Việt Nam',
@@ -221,7 +232,7 @@ export function normalizeIpLegalResults(data, kind, options = {}) {
         sourcePlatform: 'ipvietnam',
       },
       crawledAt: new Date(),
-    }));
+    }; });
   }
 
   if (kind === 'get_weekly_list') {
@@ -229,7 +240,7 @@ export function normalizeIpLegalResults(data, kind, options = {}) {
   }
 
   if (kind === 'yearly_summary') {
-    const downloads = extractYearlyDownloads(html);
+    const downloads = extractYearlyDownloads(html, options.year);
     return downloads.map((dl, idx) => ({
       id: `ipvietnam:yearly-${dl.fileType}-${idx + 1}`,
       platform: 'ipvietnam',
@@ -252,37 +263,45 @@ export function normalizeIpLegalResults(data, kind, options = {}) {
   }
 
   if (kind === 'detail') {
-    // If id is specified in options, search for row in table HTML matching id
     const targetId = normalizeApplicationNumber(options.id);
     const tableItems = extractWeeklyTableRows(html, options);
     if (targetId) {
       const found = tableItems.find((item) => item.metadata?.applicationNumber === targetId);
       if (found) return found;
+
+      // Check if application number appears in text/attributes
+      const escaped = targetId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      if (new RegExp(`(?:\\b|đơn\\s*)${escaped}\\b`, 'i').test(html)) {
+        return {
+          id: `ipvietnam:${targetId}`,
+          platform: 'ipvietnam',
+          externalId: targetId,
+          title: `Đơn nhãn hiệu ${targetId}`,
+          category: CATEGORIES.LEGAL,
+          authorId: 'ipvietnam',
+          authorName: 'Cục Sở hữu Trí tuệ Việt Nam',
+          authorUrl: 'https://ipvietnam.gov.vn',
+          postUrl: options.articleUrl || 'https://ipvietnam.gov.vn',
+          content: `Đơn nhãn hiệu ${targetId}`,
+          metadata: {
+            applicationNumber: targetId,
+            applicationDate: null,
+            publicationDate: null,
+            status: 'chuyển công bố (hợp lệ)',
+            classes: [],
+            sourcePlatform: 'ipvietnam',
+          },
+          crawledAt: new Date(),
+        };
+      }
+
+      // If targetId was given and not matched anywhere, return null (do not return first row!)
+      return null;
     }
 
+    // Only if targetId was NOT provided, return first table item
     if (tableItems.length > 0) {
       return tableItems[0];
-    }
-
-    if (targetId && html.includes(targetId)) {
-      return {
-        id: `ipvietnam:${targetId}`,
-        platform: 'ipvietnam',
-        externalId: targetId,
-        title: `Đơn nhãn hiệu ${targetId}`,
-        category: CATEGORIES.LEGAL,
-        authorId: 'ipvietnam',
-        authorName: 'Cục Sở hữu Trí tuệ Việt Nam',
-        authorUrl: 'https://ipvietnam.gov.vn',
-        postUrl: options.articleUrl || 'https://ipvietnam.gov.vn',
-        content: `Đơn nhãn hiệu ${targetId}`,
-        metadata: {
-          applicationNumber: targetId,
-          status: 'chuyển công bố (hợp lệ)',
-          sourcePlatform: 'ipvietnam',
-        },
-        crawledAt: new Date(),
-      };
     }
 
     return null;

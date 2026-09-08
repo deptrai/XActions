@@ -257,6 +257,19 @@ context:
 
 ---
 
+
+### Review Findings (AI - 2026-09-08)
+- [x] [Review][Patch] Fix false-positive detail return (returning first table row when application ID is not matched) [src/scrapers/legal/ip-trademark/normalizer.js:254]
+- [x] [Review][Patch] Auto-traverse latest weekly gazette article in search_gazette to extract actual application records [src/scrapers/legal/ip-trademark/crawler.js:155]
+- [x] [Review][Patch] Tighten gazette article regex to prevent matching administrative department menu items (Khối đơn vị) [src/scrapers/legal/ip-trademark/normalizer.js:52]
+- [x] [Review][Patch] Remove non-deterministic Date.now() from gazette article item IDs to ensure store deduplication [src/scrapers/legal/ip-trademark/normalizer.js:200]
+- [x] [Review][Patch] Validate calendar day boundaries against leap year and month length in parseVnDate [src/scrapers/legal/ip-trademark/schema.js:40]
+- [x] [Review][Patch] Add action aliases mapping support in scrapeIpLegal helper [src/scrapers/legal/ip-trademark/index.js:28]
+- [x] [Review][Patch] Include metadata.classes array in PostItem schema as specified in Dev Notes [src/scrapers/legal/ip-trademark/normalizer.js:140]
+- [x] [Review][Patch] Support store.savePost fallback in crawler persistence [src/scrapers/legal/ip-trademark/crawler.js:140]
+- [x] [Review][Patch] Support year filtering in yearly_summary normalizer [src/scrapers/legal/ip-trademark/normalizer.js:230]
+- [x] [Review][Patch] Add real HTML fixtures from ipvietnam.gov.vn in tests/scrapers/legal/ip-trademark/fixtures/ [tests/scrapers/legal/ip-trademark/fixtures/]
+
 ## Dev Agent Record
 
 ### Implementation Summary
