@@ -94,6 +94,8 @@ import { startRetentionScheduler, requestRetentionShutdown, getIsProcessing } fr
 import platformRoutes from './routes/platform.js';
 import benchmarkRoutes from './routes/benchmark.js';
 import { defaultCanaryRunner } from './services/benchmark/canary-runner.js';
+import { defaultTelemetryConsumer } from './services/benchmark/telemetry-consumer.js';
+import { defaultHealthTierCache } from '../src/benchmark/health-tier-cache.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
@@ -740,6 +742,19 @@ if (process.env.NODE_ENV !== 'test') {
       startRetentionScheduler();
     }
 
+    // Warm up in-memory HealthTierCache from PostgreSQL on server start (AD-32)
+    defaultHealthTierCache.warmup().catch((err) => {
+      console.warn('⚠️ [HealthTierCache] Startup warmup warning:', err.message);
+    });
+    defaultHealthTierCache.startPolling(30000);
+
+    // Start Benchmark Telemetry Consumer loop (Story 34.1 / AD-23)
+    if (process.env.ENABLE_BENCHMARK_CONSUMER !== 'false') {
+      defaultTelemetryConsumer.start().catch((err) => {
+        console.warn('⚠️ [TelemetryConsumer] Stream consumer loop warning:', err.message);
+      });
+    }
+
     // Start Synthetic Canary Probe Scheduler (Story 34.7 / NFR-20 / AD-23)
     if (process.env.ENABLE_CANARY_SCHEDULER === 'true') {
       defaultCanaryRunner.startScheduler();
@@ -752,6 +767,8 @@ if (process.env.NODE_ENV !== 'test') {
       console.log(`🛑 [Server] Received ${signal}, shutting down...`);
       requestRetentionShutdown();
       defaultCanaryRunner.stopScheduler();
+      defaultTelemetryConsumer.stop();
+      defaultHealthTierCache.stopPolling();
       httpServer.close(async () => {
         console.log('✅ [Server] HTTP server closed.');
         // Wait for any in-flight retention cleanup to finish (with a safety cap).

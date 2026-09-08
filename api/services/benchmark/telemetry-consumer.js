@@ -7,6 +7,8 @@
  */
 
 import { unflattenPayload } from '../../../src/core/telemetry-emitter.js';
+import { BenchmarkScoringEngine } from '../../../src/benchmark/scoring-engine.js';
+import { defaultBenchmarkStateManager } from '../../../src/benchmark/state-manager.js';
 
 export const BENCHMARK_STREAM_KEY = 'stream:benchmark:telemetry';
 export const BENCHMARK_CONSUMER_GROUP = 'benchmark_telemetry_workers';
@@ -280,31 +282,31 @@ export class TelemetryConsumer {
           console.error('[TelemetryConsumer] Score processor error:', procErr.message);
         }
       } else {
-        const prisma = await this.ensurePrisma();
-        if (prisma) {
-          for (const r of rollups) {
-            try {
-              await prisma.scraperHealthScore.create({
-                data: {
-                  scraperId: r.scraperId,
-                  platform: r.platform,
-                  healthScore: r.isSuccess ? 100 : 0,
-                  tier: 'UNKNOWN',
-                  stabilityScore: r.isSuccess ? 100 : 0,
-                  qualityScore: 100,
-                  noiseScore: 100,
-                  costScore: 100,
-                  sampleCount: r.itemCount,
-                  metricsSnapshot: {
-                    avgLatencyMs: r.avgLatencyMs,
-                    totalProxyBytes: r.totalProxyBytes,
-                    requestCount: r.requestCount,
-                  },
-                },
-              });
-            } catch (saveErr) {
-              console.warn('[TelemetryConsumer] Baseline rollup save error:', (saveErr instanceof Error ? saveErr.message : String(saveErr)));
-            }
+        const engine = new BenchmarkScoringEngine();
+        const stateManager = defaultBenchmarkStateManager;
+
+        // Group rollups by scraperId for aggregate multi-run scoring
+        const runsByScraper = {};
+        for (const r of rollups) {
+          if (!runsByScraper[r.scraperId]) runsByScraper[r.scraperId] = [];
+          runsByScraper[r.scraperId].push(r);
+        }
+
+        for (const [scraperId, runs] of Object.entries(runsByScraper)) {
+          try {
+            const rawMetrics = engine.aggregateTelemetryRollups(runs);
+            const category = runs[0]?.category || 'social';
+            const platform = runs[0]?.platform || 'unknown';
+            const scoringResult = engine.calculateScores(rawMetrics, category);
+
+            await stateManager.recordEvaluation(scraperId, scoringResult, {
+              platform,
+              category,
+              runs,
+              sampleCount: runs.length,
+            });
+          } catch (scoreErr) {
+            console.warn(`[TelemetryConsumer] Benchmark evaluation warning for ${scraperId}:`, scoreErr.message);
           }
         }
       }
