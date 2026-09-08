@@ -275,7 +275,7 @@ development_status:
   34-1-benchmark-telemetry-schema-storage: done
   34-2-production-telemetry-hooks-abstract-crawler: done
   34-3-platform-specific-validators-false-200-detection: done
-  34-4-benchmark-scoring-engine: backlog
+  34-4-benchmark-scoring-engine: done
   34-5-operator-scorecard-cli-dashboard: backlog
   34-6-nowing-integration-health-flag-stream-events: backlog
   34-7-synthetic-canary-probe-scheduler: backlog
