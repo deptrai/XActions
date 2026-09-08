@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Benchmark Scorecard - XActions</title>
+    <link rel="stylesheet" href="/css/common.css" />
+    <style>
+      :root {
+        --tier-a: #00ba7c;
+        --tier-b: #f59e0b;
+        --tier-c: #f4212e;
+        --tier-unknown: #71767b;
+        --card-bg: #16181c;
+        --border-color: #2f3336;
+        --text-muted: #71767b;
+      }
+
+      body {
+        background-color: #000000;
+        color: #e7e9ea;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 24px 20px 80px 20px;
+      }
+
+      /* ── Top Header ─────────────────────────────────────────── */
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .page-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .page-subtitle {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        margin-top: 4px;
+      }
+
+      /* ── KPI Cards ─────────────────────────────────────────── */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .kpi-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+      }
+      .kpi-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+      }
+      .kpi-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin-top: 8px;
+      }
+      .kpi-tier-a { color: var(--tier-a); }
+      .kpi-tier-b { color: var(--tier-b); }
+      .kpi-tier-c { color: var(--tier-c); }
+
+      /* ── Controls & Filter Bar ─────────────────────────────── */
+      .controls-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .filter-tabs {
+        display: flex;
+        gap: 8px;
+      }
+      .filter-btn {
+        background: #202327;
+        border: 1px solid var(--border-color);
+        color: #e7e9ea;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.15s;
+      }
+      .filter-btn:hover {
+        background: #2c3136;
+      }
+      .filter-btn.active {
+        background: #1d9bf0;
+        color: #ffffff;
+        border-color: #1d9bf0;
+      }
+      .filter-btn.active.alert-tab {
+        background: var(--tier-c);
+        border-color: var(--tier-c);
+      }
+      .search-box {
+        background: #202327;
+        border: 1px solid var(--border-color);
+        color: #e7e9ea;
+        padding: 8px 14px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        width: 240px;
+      }
+      .search-box:focus {
+        outline: none;
+        border-color: #1d9bf0;
+      }
+      .action-btns {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .btn-refresh {
+        background: #202327;
+        border: 1px solid var(--border-color);
+        color: #e7e9ea;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn-refresh:hover { background: #2c3136; }
+
+      /* ── Health Matrix Table ───────────────────────────────── */
+      .table-wrapper {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        text-align: left;
+      }
+      th {
+        background: #191b1f;
+        padding: 14px 16px;
+        font-weight: 600;
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border-color);
+      }
+      td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+      }
+      tr:last-child td { border-bottom: none; }
+      tr:hover td { background: #1c1f24; }
+
+      /* ── Badges & Meters ────────────────────────────────────── */
+      .tier-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.8125rem;
+        text-align: center;
+      }
+      .badge-a { background: rgba(0, 186, 124, 0.15); color: var(--tier-a); border: 1px solid var(--tier-a); }
+      .badge-b { background: rgba(245, 158, 11, 0.15); color: var(--tier-b); border: 1px solid var(--tier-b); }
+      .badge-c { background: rgba(244, 33, 46, 0.15); color: var(--tier-c); border: 1px solid var(--tier-c); }
+      .badge-unknown { background: rgba(113, 118, 123, 0.15); color: var(--tier-unknown); border: 1px solid var(--tier-unknown); }
+
+      .score-bar-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .mini-bar {
+        width: 60px;
+        height: 6px;
+        background: #2f3336;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .mini-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+      }
+
+      .btn-detail {
+        background: transparent;
+        border: 1px solid #1d9bf0;
+        color: #1d9bf0;
+        padding: 4px 10px;
+        border-radius: 14px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .btn-detail:hover {
+        background: rgba(29, 155, 240, 0.1);
+      }
+
+      /* ── Modal ─────────────────────────────────────────────── */
+      .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.75);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+      }
+      .modal-content {
+        background: #16181c;
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        max-width: 640px;
+        width: 90%;
+        max-height: 85vh;
+        overflow-y: auto;
+        padding: 24px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 12px;
+        margin-bottom: 16px;
+      }
+      .modal-title {
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin: 0;
+      }
+      .modal-close {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+      .modal-close:hover { color: #fff; }
+      .gauge-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .gauge-bar {
+        width: 200px;
+        height: 8px;
+        background: #2f3336;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .alert-box {
+        background: rgba(244, 33, 46, 0.1);
+        border: 1px solid var(--tier-c);
+        border-radius: 8px;
+        padding: 12px;
+        margin: 16px 0;
+        color: #ff7675;
+        font-size: 0.875rem;
+      }
+      .clean-box {
+        background: rgba(0, 186, 124, 0.1);
+        border: 1px solid var(--tier-a);
+        border-radius: 8px;
+        padding: 12px;
+        margin: 16px 0;
+        color: #55efc4;
+        font-size: 0.875rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">
+            <span>⚡</span> Scraper Reliability & Benchmark Scorecard
+          </h1>
+          <div class="page-subtitle">
+            Epic 34 Operator Scorecard — 4-Pillar Health Scoring, Hard Knock-Out Gates & Live Tiers
+          </div>
+        </div>
+        <div class="action-btns">
+          <button class="btn-refresh" id="refreshBtn" onclick="loadBenchmarkSummary()">
+            🔄 Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Monitored Scrapers</div>
+          <div class="kpi-value" id="kpiTotal">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Tier A (Healthy)</div>
+          <div class="kpi-value kpi-tier-a" id="kpiTierA">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Tier B (Degraded)</div>
+          <div class="kpi-value kpi-tier-b" id="kpiTierB">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Tier C (Alerting)</div>
+          <div class="kpi-value kpi-tier-c" id="kpiTierC">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">System Health Avg</div>
+          <div class="kpi-value" id="kpiAvgScore">0.0</div>
+        </div>
+      </div>
+
+      <!-- Filter and Search Bar -->
+      <div class="controls-bar">
+        <div class="filter-tabs">
+          <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Scrapers</button>
+          <button class="filter-btn" data-filter="A" onclick="setFilter('A')">Tier A</button>
+          <button class="filter-btn" data-filter="B" onclick="setFilter('B')">Tier B</button>
+          <button class="filter-btn alert-tab" data-filter="C" onclick="setFilter('C')">Tier C (Alerts)</button>
+        </div>
+        <input
+          type="text"
+          class="search-box"
+          id="searchInput"
+          placeholder="Filter by scraper or platform..."
+          oninput="renderTable()"
+        />
+      </div>
+
+      <!-- Health Matrix Table -->
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Scraper ID</th>
+              <th>Platform</th>
+              <th>Health Score</th>
+              <th>Tier</th>
+              <th>Stability</th>
+              <th>Quality</th>
+              <th>Noise</th>
+              <th>Cost</th>
+              <th>Runs</th>
+              <th>Last Evaluated</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="matrixBody">
+            <tr>
+              <td colspan="11" style="text-align: center; color: var(--text-muted);">
+                Loading benchmark scorecard data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Drill-Down Modal -->
+    <div id="detailModal" class="modal-backdrop" style="display: none;" onclick="closeModal(event)">
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modalTitle">Scraper Scorecard</h2>
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div id="modalBody">
+          Loading scorecard details...
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let allScrapers = [];
+      let currentFilter = 'ALL';
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function getBarColor(score) {
+        if (score >= 90) return 'var(--tier-a)';
+        if (score >= 70) return 'var(--tier-b)';
+        return 'var(--tier-c)';
+      }
+
+      function getBadgeClass(tier) {
+        if (tier === 'A') return 'badge-a';
+        if (tier === 'B') return 'badge-b';
+        if (tier === 'C') return 'badge-c';
+        return 'badge-unknown';
+      }
+
+      async function loadBenchmarkSummary() {
+        try {
+          const res = await fetch('/api/benchmark/summary');
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+
+          allScrapers = data.scrapers || [];
+
+          document.getElementById('kpiTotal').textContent = data.counts.total ?? 0;
+          document.getElementById('kpiTierA').textContent = data.counts.tierA ?? 0;
+          document.getElementById('kpiTierB').textContent = data.counts.tierB ?? 0;
+          document.getElementById('kpiTierC').textContent = data.counts.tierC ?? 0;
+          document.getElementById('kpiAvgScore').textContent = data.avgScore ? data.avgScore.toFixed(1) : '0.0';
+
+          renderTable();
+        } catch (err) {
+          document.getElementById('matrixBody').innerHTML = `
+            <tr><td colspan="11" style="text-align: center; color: var(--tier-c);">
+              ⚠️ Failed to load benchmark telemetry: ${err.message}
+            </td></tr>
+          `;
+        }
+      }
+
+      function setFilter(filter) {
+        currentFilter = filter;
+        document.querySelectorAll('.filter-btn').forEach((btn) => {
+          if (btn.getAttribute('data-filter') === filter) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+        renderTable();
+      }
+
+      function renderTable() {
+        const search = (document.getElementById('searchInput').value || '').toLowerCase();
+        let filtered = allScrapers;
+
+        if (currentFilter !== 'ALL') {
+          filtered = filtered.filter((s) => s.tier === currentFilter);
+        }
+
+        if (search) {
+          filtered = filtered.filter(
+            (s) =>
+              (s.scraperId && s.scraperId.toLowerCase().includes(search)) ||
+              (s.platform && s.platform.toLowerCase().includes(search))
+          );
+        }
+
+        if (filtered.length === 0) {
+          document.getElementById('matrixBody').innerHTML = `
+            <tr><td colspan="11" style="text-align: center; color: var(--text-muted);">
+              No scrapers match the selected criteria.
+            </td></tr>
+          `;
+          return;
+        }
+
+        const rows = filtered.map((s) => {
+          const dateStr = s.evaluatedAt ? new Date(s.evaluatedAt).toLocaleString() : '-';
+          const safeId = escapeHtml(s.scraperId);
+          const safePlatform = escapeHtml(s.platform || '-');
+          const safeTier = escapeHtml(s.tier || 'UNKNOWN');
+          return `
+            <tr>
+              <td><strong>${safeId}</strong></td>
+              <td>${safePlatform}</td>
+              <td>
+                <div class="score-bar-container">
+                  <div class="mini-bar">
+                    <div class="mini-bar-fill" style="width: ${s.healthScore || 0}%; background: ${getBarColor(s.healthScore)};"></div>
+                  </div>
+                  <strong>${typeof s.healthScore === 'number' ? s.healthScore.toFixed(1) : '-'}</strong>
+                </div>
+              </td>
+              <td>
+                <span class="tier-badge ${getBadgeClass(s.tier)}">${safeTier}</span>
+                ${s.isAlert ? '<span style="color: var(--tier-c); font-weight: bold; margin-left: 4px;">⚠️</span>' : ''}
+              </td>
+              <td>${typeof s.stabilityScore === 'number' ? s.stabilityScore.toFixed(0) + '%' : '-'}</td>
+              <td>${typeof s.qualityScore === 'number' ? s.qualityScore.toFixed(0) + '%' : '-'}</td>
+              <td>${typeof s.noiseScore === 'number' ? s.noiseScore.toFixed(0) + '%' : '-'}</td>
+              <td>${typeof s.costScore === 'number' ? s.costScore.toFixed(0) + '%' : '-'}</td>
+              <td>${s.sampleCount ?? '-'}</td>
+              <td style="color: var(--text-muted); font-size: 0.8125rem;">${dateStr}</td>
+              <td>
+                <button class="btn-detail" onclick="openDetail('${encodeURIComponent(s.scraperId)}')">Details</button>
+              </td>
+            </tr>
+          `;
+        });
+
+        document.getElementById('matrixBody').innerHTML = rows.join('');
+      }
+
+      async function openDetail(scraperId) {
+        const modal = document.getElementById('detailModal');
+        const title = document.getElementById('modalTitle');
+        const body = document.getElementById('modalBody');
+
+        title.textContent = `Scorecard: ${scraperId}`;
+        body.innerHTML = 'Loading detail scorecard...';
+        modal.style.display = 'flex';
+
+        try {
+          const [detailRes, histRes] = await Promise.all([
+            fetch(`/api/benchmark/scrapers/${scraperId}`),
+            fetch(`/api/benchmark/history/${scraperId}`),
+          ]);
+
+          if (!detailRes.ok) throw new Error('Scraper not found');
+          const detail = await detailRes.json();
+          const hist = histRes.ok ? await histRes.json() : { history: [] };
+
+          const snapshot = detail.metricsSnapshot || {};
+          const raw = snapshot.raw || {};
+          const knockoutTriggered = snapshot.knockoutTriggered;
+          const knockoutReasons = snapshot.knockoutReasons || [];
+
+          body.innerHTML = `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+              <div>
+                <strong>Platform:</strong> ${escapeHtml(detail.platform)} &nbsp;|&nbsp;
+                <strong>Health Score:</strong> ${detail.healthScore?.toFixed(1) ?? 'N/A'}/100
+              </div>
+              <div>
+                <span class="tier-badge ${getBadgeClass(detail.tier)}">${escapeHtml(detail.tier)}</span>
+              </div>
+            </div>
+
+            ${
+              knockoutTriggered
+                ? `<div class="alert-box">
+                    <strong>🚨 Hard Knock-Out Gates Triggered:</strong>
+                    <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                      ${knockoutReasons.map((r) => `<li>${escapeHtml(r)}</li>`).join('')}
+                    </ul>
+                  </div>`
+                : `<div class="clean-box">
+                    ✅ <strong>All Hard Knock-Out Gates Passed</strong> (True Success ≥ 80%, Fill ≥ 85%, False 200 ≤ 15%, Schema ≥ 90%)
+                  </div>`
+            }
+
+            <h3 style="font-size: 1rem; margin-top: 16px; margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">4-Pillar Performance</h3>
+            <div class="gauge-row">
+              <span>Stability (${detail.stabilityScore?.toFixed(1) ?? 0}%)</span>
+              <div class="gauge-bar"><div style="width: ${detail.stabilityScore ?? 0}%; height: 100%; background: ${getBarColor(detail.stabilityScore)};"></div></div>
+            </div>
+            <div class="gauge-row">
+              <span>Quality (${detail.qualityScore?.toFixed(1) ?? 0}%)</span>
+              <div class="gauge-bar"><div style="width: ${detail.qualityScore ?? 0}%; height: 100%; background: ${getBarColor(detail.qualityScore)};"></div></div>
+            </div>
+            <div class="gauge-row">
+              <span>Noise (${detail.noiseScore?.toFixed(1) ?? 0}%)</span>
+              <div class="gauge-bar"><div style="width: ${detail.noiseScore ?? 0}%; height: 100%; background: ${getBarColor(detail.noiseScore)};"></div></div>
+            </div>
+            <div class="gauge-row">
+              <span>Cost (${detail.costScore?.toFixed(1) ?? 0}%)</span>
+              <div class="gauge-bar"><div style="width: ${detail.costScore ?? 0}%; height: 100%; background: ${getBarColor(detail.costScore)};"></div></div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin-top: 20px; margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">Raw Metrics Snapshot</h3>
+            <table style="width: 100%; font-size: 0.8125rem;">
+              <tr><td style="color: var(--text-muted);">True Success Rate</td><td><strong>${raw.true_success_rate !== undefined ? (raw.true_success_rate * 100).toFixed(1) + '%' : '-'}</strong></td></tr>
+              <tr><td style="color: var(--text-muted);">P95 Latency</td><td><strong>${raw.latency_p95 !== undefined ? raw.latency_p95 + ' ms' : '-'}</strong></td></tr>
+              <tr><td style="color: var(--text-muted);">False 200 Rate</td><td><strong>${raw.false_200_rate !== undefined ? (raw.false_200_rate * 100).toFixed(2) + '%' : '-'}</strong></td></tr>
+              <tr><td style="color: var(--text-muted);">Field Fill Rate</td><td><strong>${raw.field_fill_rate !== undefined ? (raw.field_fill_rate * 100).toFixed(1) + '%' : '-'}</strong></td></tr>
+              <tr><td style="color: var(--text-muted);">Schema Integrity</td><td><strong>${raw.schema_integrity_rate !== undefined ? (raw.schema_integrity_rate * 100).toFixed(1) + '%' : '-'}</strong></td></tr>
+              <tr><td style="color: var(--text-muted);">Proxy Bandwidth / 1k</td><td><strong>${raw.proxy_bytes_per_1k !== undefined ? (raw.proxy_bytes_per_1k / (1024 * 1024)).toFixed(2) + ' MB' : '-'}</strong></td></tr>
+            </table>
+
+            ${
+              hist.history && hist.history.length > 0
+                ? `<h3 style="font-size: 1rem; margin-top: 20px; margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">Recent History</h3>
+                   <div style="font-size: 0.8125rem; color: var(--text-muted);">
+                     ${hist.history.slice(-5).map((h) => `• [${new Date(h.evaluatedAt).toLocaleString()}] Score: ${h.healthScore?.toFixed(1)} (Tier ${h.tier})`).join('<br/>')}
+                   </div>`
+                : ''
+            }
+          `;
+        } catch (err) {
+          body.innerHTML = `<div style="color: var(--tier-c);">Failed to load scorecard: ${err.message}</div>`;
+        }
+      }
+
+      function closeModal(event) {
+        if (!event || event.target.id === 'detailModal' || event.target.classList.contains('modal-close')) {
+          document.getElementById('detailModal').style.display = 'none';
+        }
+      }
+
+      // Initial load & 30s background poll
+      loadBenchmarkSummary();
+      setInterval(loadBenchmarkSummary, 30000);
+    </script>
+  </body>
+</html>

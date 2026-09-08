@@ -32,6 +32,7 @@
 /unfollowers /unfollowers.html 200
 /analytics /analytics.html 200
 /calendar /calendar.html 200
+/benchmark /benchmark.html 200
 
 # API proxy to backend — Cloud Run service "xactions-api", mapped to
 # api.xactions.app (see deploy/gcp/provision-api.sh)

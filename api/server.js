@@ -92,6 +92,7 @@ import tweetScheduleRoutes from './routes/tweetSchedule.js';
 import { startTweetScheduler } from './services/tweetScheduler.js';
 import { startRetentionScheduler, requestRetentionShutdown, getIsProcessing } from './services/retentionScheduler.js';
 import platformRoutes from './routes/platform.js';
+import benchmarkRoutes from './routes/benchmark.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
@@ -360,6 +361,7 @@ app.use('/api/governor', governorRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/teams', teamsRoutes);
 app.use('/api/optimizer', optimizerRoutes);
+app.use('/api/benchmark', benchmarkRoutes);
 
 // Plugin routes — mounted under /api/plugins/<plugin-name>/
 function mountPluginRoutes() {
@@ -649,6 +651,11 @@ app.get('/facebook', (req, res) => {
 
 app.get('/tweet-schedule', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/tweet-schedule.html'));
+});
+
+// Benchmark & Scraper Reliability Scorecard route (Epic 34 / Story 34.5)
+app.get(['/benchmark', '/benchmarks'], (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/benchmark.html'));
 });
 
 // Error handling middleware — never expose stack traces or internal details in production
