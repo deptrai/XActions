@@ -58,14 +58,22 @@ export async function ensureBenchmarkTables(prisma) {
   if (isEnsured) return true;
   if (!prisma || typeof prisma.$executeRawUnsafe !== 'function') return false;
 
+  let allSuccess = true;
   for (const statement of DDL_STATEMENTS) {
     try {
       await prisma.$executeRawUnsafe(statement);
-    } catch {
-      // Safe to ignore duplicate relations / indexes
+    } catch (err) {
+      // If it's not a duplicate error, log warning and track failure
+      const msg = err?.message || String(err);
+      if (!msg.includes('already exists')) {
+        console.warn('[BenchmarkDB] DDL notice:', msg);
+        allSuccess = false;
+      }
     }
   }
 
-  isEnsured = true;
+  if (allSuccess) {
+    isEnsured = true;
+  }
   return true;
 }

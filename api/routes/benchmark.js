@@ -283,6 +283,83 @@ export function createBenchmarkRouter(deps = {}) {
     })();
   });
 
+  /**
+   * GET /db-check
+   * Diagnostic endpoint to verify benchmark table status in PostgreSQL.
+   */
+  router.get('/db-check', async (req, res) => {
+    try {
+      const ensured = await ensureBenchmarkTables(prisma);
+      let tables = [];
+      if (typeof prisma.$queryRawUnsafe === 'function') {
+        tables = await prisma.$queryRawUnsafe(`
+          SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE 'Scraper%'
+        `);
+      }
+      let count = 0;
+      if (prisma.scraperHealthScore?.count) {
+        count = await prisma.scraperHealthScore.count();
+      }
+      res.json({ ok: true, ensured, tables, count });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message, stack: err.stack });
+    }
+  });
+
+  /**
+   * POST /probe-single/:id
+   * Synchronously probe a single scraper and return detailed scorecard.
+   */
+  router.post('/probe-single/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+      await ensureBenchmarkTables(prisma);
+      const config = CANARY_CONFIGS[id];
+      if (!config) {
+        return res.status(404).json({ error: `Scraper "${id}" not found in CANARY_CONFIGS` });
+      }
+
+      const probeResult = await canaryRunner.probe(id, { timeoutMs: 15000 });
+      const telemetryRun = {
+        scraperId: id,
+        platform: config.platform,
+        isSuccess: Boolean(probeResult.isSuccess),
+        avgLatencyMs: probeResult.latencyMs || 500,
+        requestCount: 1,
+        failedRequestCount: probeResult.isSuccess ? 0 : 1,
+        false200Count: probeResult.false200Detected ? 1 : 0,
+        checkpointCount: probeResult.checkpointDetected ? 1 : 0,
+        itemCount: probeResult.isSuccess ? 10 : 0,
+        storeMetrics: probeResult.isSuccess
+          ? { schemaValid: true, fillRate: 0.95 }
+          : { schemaValid: false, fillRate: 0.5 },
+        category: config.category || 'social',
+      };
+
+      const scoringEngine = new BenchmarkScoringEngine();
+      const stateManager = new BenchmarkStateManager({ prisma, healthTierCache });
+      const rollups = scoringEngine.aggregateTelemetryRollups([telemetryRun]);
+      const score = scoringEngine.calculateScores(rollups, config.category || 'social');
+
+      const saved = await stateManager.recordEvaluation(id, score, {
+        platform: config.platform,
+        category: config.category || 'social',
+        sampleCount: 1,
+        runs: [telemetryRun],
+      });
+
+      res.json({
+        ok: true,
+        scraperId: id,
+        probeResult,
+        score,
+        saved: Boolean(saved),
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message, stack: err.stack });
+    }
+  });
+
   return router;
 }
 

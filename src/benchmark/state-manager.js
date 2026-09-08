@@ -7,6 +7,7 @@
  */
 
 import { HEALTH_TIER_HASH_KEY, defaultHealthTierCache } from './health-tier-cache.js';
+import { ensureBenchmarkTables } from './ensure-tables.js';
 
 export class BenchmarkStateManager {
   /** @type {import('@prisma/client').PrismaClient | null} */
@@ -150,6 +151,7 @@ export class BenchmarkStateManager {
     let requalifiedAt = null;
 
     if (prisma) {
+      await ensureBenchmarkTables(prisma);
       try {
         const latest = await prisma.scraperHealthScore.findFirst({
           where: { scraperId },

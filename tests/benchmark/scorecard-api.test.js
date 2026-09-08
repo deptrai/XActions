@@ -165,11 +165,18 @@ describe('Story 34.5: Benchmark REST API Endpoints Unit Tests', () => {
       }),
     };
 
+    const isolatedPrisma = {
+      scraperHealthScore: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({ id: 'test-id' }),
+      },
+    };
+
     const testApp = express();
     testApp.use(express.json());
     testApp.use(
       '/api/benchmark',
-      createBenchmarkRouter({ prisma: mockPrisma, healthTierCache: mockCache, canaryRunner: mockCanary })
+      createBenchmarkRouter({ prisma: isolatedPrisma, healthTierCache: mockCache, canaryRunner: mockCanary })
     );
 
     const res = await request(testApp).post('/api/benchmark/probe-all');
