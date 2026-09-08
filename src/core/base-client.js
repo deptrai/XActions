@@ -58,6 +58,12 @@ export class AbstractApiClient {
   /** @type {Function | null} */
   httpClient = null;
 
+  /** @type {import('./telemetry-context.js').TelemetryContext | null} */
+  telemetryContext = null;
+
+  /** @type {boolean} */
+  isCanary = false;
+
   /** @type {import('./platform-validator.js').AbstractPlatformResponseValidator | null} */
   responseValidator = null;
 
@@ -129,6 +135,8 @@ export class AbstractApiClient {
     this.responseValidator = options.responseValidator || null;
     this.tokenRing = options.tokenRing || null;
     this.signerPool = options.signerPool || null;
+    this.telemetryContext = options.telemetryContext || null;
+    this.isCanary = Boolean(options.isCanary);
 
     if (options.platform !== undefined) this.platform = options.platform;
     if (options.client !== undefined) this.client = options.client;
@@ -514,6 +522,13 @@ export class AbstractApiClient {
    */
   async request(method, url, options = {}) {
     const opts = options || {};
+    const telemetry = opts.session?.telemetry || opts.telemetryContext || this.telemetryContext;
+    const isCanary = Boolean(
+      opts.session?.isCanary ||
+      opts.isCanary ||
+      telemetry?.source === 'canary' ||
+      this.isCanary
+    );
     let currentAccountId = opts.accountId;
     let concreteAccountId =
       currentAccountId && currentAccountId !== 'guest' && currentAccountId !== 'default'
@@ -552,7 +567,7 @@ export class AbstractApiClient {
     // Metered consumers only (internal is unmetered). We record only after
     // all pre-flight gates (auth, proxy availability, account hibernation) have
     // passed, so quota is not consumed by requests that never leave the client.
-    if (consumerId && consumerId !== 'internal' && this.governor && typeof this.governor.canConsumerRequest === 'function') {
+    if (!isCanary && consumerId && consumerId !== 'internal' && this.governor && typeof this.governor.canConsumerRequest === 'function') {
       if (!this.governor.canConsumerRequest(consumerId)) {
         const retryAfterSeconds =
           typeof this.governor.getConsumerRetryAfterSeconds === 'function'
@@ -571,7 +586,7 @@ export class AbstractApiClient {
     }
 
     // Check governor before request for auth-required platforms or opt-in accountId
-    if (concreteAccountId && this.governor) {
+    if (!isCanary && concreteAccountId && this.governor) {
       if (typeof this.governor.canAccountRequest === 'function') {
         const canRequest = this.governor.canAccountRequest(concreteAccountId, this.platform);
         if (!canRequest) {
@@ -630,7 +645,7 @@ export class AbstractApiClient {
 
         // AD-20: record the consumer request only after we know a healthy proxy
         // exists and all pre-flight gates have passed.
-        if (consumerId && consumerId !== 'internal' && proxy && this.governor && typeof this.governor.recordConsumerRequest === 'function') {
+        if (!isCanary && consumerId && consumerId !== 'internal' && proxy && this.governor && typeof this.governor.recordConsumerRequest === 'function') {
           this.governor.recordConsumerRequest(consumerId);
         }
 
@@ -646,6 +661,72 @@ export class AbstractApiClient {
           transport = await this.#getDefaultHttpClient();
         }
 
+        const recordTelemetryAttempt = (res, reqStart, attemptNum, isQuarantined = false) => {
+          if (!telemetry || typeof telemetry.recordRequest !== 'function') return;
+          const latencyMs = Math.max(0, Date.now() - reqStart);
+          let proxyBytes = Number(res?.headers?.['content-length'] || res?.headers?.['Content-Length'] || 0);
+          if (!proxyBytes) {
+            const rawPayload = res?.rawBody ?? res?.body ?? res?.data;
+            if (rawPayload) {
+              if (typeof Buffer !== 'undefined' && Buffer.isBuffer(rawPayload)) {
+                proxyBytes = rawPayload.length;
+              } else if (typeof rawPayload === 'string') {
+                proxyBytes = typeof Buffer !== 'undefined' ? Buffer.byteLength(rawPayload) : rawPayload.length;
+              } else if (typeof rawPayload.byteLength === 'number') {
+                proxyBytes = rawPayload.byteLength;
+              }
+            }
+          }
+
+          const statusCode = res?.status !== undefined ? Number(res.status) : 0;
+
+          let isFalse200 = false;
+          if (statusCode >= 200 && statusCode < 300) {
+            try {
+              if (typeof this.responseValidator?.isFalse200 === 'function') {
+                isFalse200 = Boolean(this.responseValidator.isFalse200(res));
+              } else if (typeof this.responseValidator?.validateResponse === 'function') {
+                isFalse200 = Boolean(this.responseValidator.validateResponse(res)?.isFalse200);
+              }
+            } catch {
+              isFalse200 = false;
+            }
+          }
+
+          let isCheckpoint = false;
+          try {
+            const isLoginWall =
+              typeof this.responseValidator?.isLoginWall === 'function' &&
+              Boolean(this.responseValidator.isLoginWall(res));
+            const isBotChallenge =
+              typeof this.responseValidator?.isBotChallenge === 'function' &&
+              Boolean(this.responseValidator.isBotChallenge(res));
+            let fromValidate = false;
+            if (typeof this.responseValidator?.validateResponse === 'function') {
+              fromValidate = Boolean(this.responseValidator.validateResponse(res)?.isCheckpoint);
+            }
+            isCheckpoint = isLoginWall || isBotChallenge || fromValidate;
+          } catch {
+            isCheckpoint = false;
+          }
+
+          try {
+            telemetry.recordRequest({
+              latencyMs,
+              httpStatus: statusCode,
+              proxyBytes,
+              retries: attemptNum,
+              isFalse200,
+              isCheckpoint,
+              proxyQuarantined: Boolean(isQuarantined),
+              ts: reqStart,
+            });
+          } catch {
+            // Guard telemetry recording from crashing request execution
+          }
+        };
+
+        const requestStart = Date.now();
         const requestTimeout = opts.timeout ?? this.timeout ?? 30000;
         let response;
         try {
@@ -663,10 +744,11 @@ export class AbstractApiClient {
           response = await transport(transportOpts);
         } catch (err) {
           if (err instanceof PlatformError && !err.isRetryable) {
+            recordTelemetryAttempt({ status: err.statusCode || 0, error: err }, requestStart, attempt, false);
             throw err;
           }
           response = {
-            status: 503,
+            status: err?.statusCode || (err?.name === 'TimeoutError' ? 408 : 503),
             headers: {},
             error: err,
           };
@@ -674,19 +756,31 @@ export class AbstractApiClient {
 
         const status = response?.status ?? 500;
 
+        let isQuarantined = false;
+        if (status === 429 || status === 403) {
+          if (proxy && provider && typeof provider.quarantine === 'function') {
+            provider.quarantine(proxy, this.rateLimitHibernationMs);
+            isQuarantined = true;
+          }
+        }
+
+        recordTelemetryAttempt(response, requestStart, attempt, isQuarantined);
+
         // Success condition (2xx / 3xx)
         if (status >= 200 && status < 400) {
           if (isRaw) {
-            const trackingKey = concreteAccountId || 'noauth';
-            if (this.accountPool) {
-              this.accountPool.recordRequest(trackingKey, this.platform);
-            }
-            if (
-              this.governor &&
-              typeof this.governor.recordRequest === 'function' &&
-              (!this.accountPool || this.accountPool.governor !== this.governor)
-            ) {
-              this.governor.recordRequest(trackingKey, this.platform);
+            if (!isCanary) {
+              const trackingKey = concreteAccountId || 'noauth';
+              if (this.accountPool) {
+                this.accountPool.recordRequest(trackingKey, this.platform);
+              }
+              if (
+                this.governor &&
+                typeof this.governor.recordRequest === 'function' &&
+                (!this.accountPool || this.accountPool.governor !== this.governor)
+              ) {
+                this.governor.recordRequest(trackingKey, this.platform);
+              }
             }
             return response;
           }
@@ -768,23 +862,25 @@ export class AbstractApiClient {
             }
           }
 
-          const trackingKey = concreteAccountId || 'noauth';
-          if (this.accountPool) {
-            this.accountPool.recordRequest(trackingKey, this.platform);
-          }
-          if (
-            this.governor &&
-            typeof this.governor.recordRequest === 'function' &&
-            (!this.accountPool || this.accountPool.governor !== this.governor)
-          ) {
-            this.governor.recordRequest(trackingKey, this.platform);
+          if (!isCanary) {
+            const trackingKey = concreteAccountId || 'noauth';
+            if (this.accountPool) {
+              this.accountPool.recordRequest(trackingKey, this.platform);
+            }
+            if (
+              this.governor &&
+              typeof this.governor.recordRequest === 'function' &&
+              (!this.accountPool || this.accountPool.governor !== this.governor)
+            ) {
+              this.governor.recordRequest(trackingKey, this.platform);
+            }
           }
           return response;
         }
 
         // Handle 429 (Rate Limit) or 403 (Bot Challenge)
         if (status === 429 || status === 403) {
-          if (proxy && provider && typeof provider.quarantine === 'function') {
+          if (!isQuarantined && proxy && provider && typeof provider.quarantine === 'function') {
             provider.quarantine(proxy, this.rateLimitHibernationMs);
           }
 

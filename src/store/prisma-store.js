@@ -23,6 +23,9 @@ export class PrismaStore extends AbstractStore {
   /** @type {import('../core/types.js').RedisClientLike | null} */
   redis = null;
 
+  /** @type {import('../core/telemetry-context.js').TelemetryContext | null} */
+  telemetryContext = null;
+
   /**
    * @param {Object} [options]
    * @param {import('@prisma/client').PrismaClient} [options.prisma]
@@ -40,6 +43,7 @@ export class PrismaStore extends AbstractStore {
         ? Math.floor(options.chunkSize)
         : 500;
     this.#validateSchema = options.validateSchema !== false;
+    this.telemetryContext = options.telemetryContext || null;
   }
 
   /** @returns {Promise<void>} */
@@ -186,11 +190,25 @@ export class PrismaStore extends AbstractStore {
   async storeBatch(posts, opts = {}) {
     if (!Array.isArray(posts) || !posts.length) return;
 
+    const telemetry = opts.session?.telemetry || opts.telemetryContext || this.telemetryContext;
     const shouldValidateSchema = opts.validateSchema ?? this.#validateSchema;
+    let schemaValidCount = 0;
 
     for (let i = 0; i < posts.length; i++) {
       const post = posts[i];
       if (!post.category || !isValidCategory(post.category)) {
+        if (telemetry && typeof telemetry.recordStoreMetrics === 'function') {
+          try {
+            telemetry.recordStoreMetrics({
+              fieldFillRate: posts.length > 0 ? (schemaValidCount / posts.length) : 0,
+              schemaValid: false,
+              duplicates: 0,
+              totalItems: posts.length,
+            });
+          } catch {
+            // Guard telemetry from interfering with error propagation
+          }
+        }
         throw new PlatformError({
           type: ErrorTypes.INVALID_ARGS,
           code: 'XACT_4001',
@@ -204,6 +222,18 @@ export class PrismaStore extends AbstractStore {
       if (shouldValidateSchema) {
         const validation = metadataSchemaRegistry.validateMetadata(post.platform, post.category, post.metadata);
         if (!validation.valid) {
+          if (telemetry && typeof telemetry.recordStoreMetrics === 'function') {
+            try {
+              telemetry.recordStoreMetrics({
+                fieldFillRate: posts.length > 0 ? (schemaValidCount / posts.length) : 0,
+                schemaValid: false,
+                duplicates: 0,
+                totalItems: posts.length,
+              });
+            } catch {
+              // Guard telemetry from interfering with error propagation
+            }
+          }
           throw new PlatformError({
             type: ErrorTypes.INVALID_ARGS,
             code: 'XACT_4001',
@@ -214,22 +244,38 @@ export class PrismaStore extends AbstractStore {
             details: { index: i, errors: validation.errors },
           });
         }
+        schemaValidCount++;
+      } else {
+        schemaValidCount++;
       }
     }
 
     await this.init();
     const normalized = posts.map((p) => this.#normalizePost(p));
+    let totalDuplicates = 0;
 
     for (let i = 0; i < normalized.length; i += this.#chunkSize) {
       const chunk = normalized.slice(i, i + this.#chunkSize);
       if (opts.upsert) {
         await this.#upsertChunk(this.#prisma?.post, chunk);
       } else {
-        await this.#prisma?.post.createMany({
+        const res = await this.#prisma?.post.createMany({
           data: chunk,
           skipDuplicates: true,
         });
+        if (res && typeof res.count === 'number') {
+          totalDuplicates += Math.max(0, chunk.length - res.count);
+        }
       }
+    }
+
+    if (telemetry && typeof telemetry.recordStoreMetrics === 'function') {
+      telemetry.recordStoreMetrics({
+        fieldFillRate: posts.length > 0 ? (schemaValidCount / posts.length) : 1.0,
+        schemaValid: schemaValidCount === posts.length,
+        duplicates: totalDuplicates,
+        totalItems: posts.length,
+      });
     }
   }
 

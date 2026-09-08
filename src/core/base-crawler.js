@@ -10,6 +10,8 @@ import { globalActionRegistry } from './action-registry.js';
 import { isValidCategory, CATEGORY_VALUES } from './types.js';
 import { launchBrowserWithCdp } from './cdp-launcher.js';
 import { gaussianDelay } from '../utils/gaussian-delay.js';
+import { defaultTelemetryEmitter } from './telemetry-emitter.js';
+import { TelemetryContext } from './telemetry-context.js';
 
 /** @typedef {import('./types.js').CrawlerCommand} CrawlerCommand */
 /** @typedef {import('./types.js').ActionDescriptor} ActionDescriptor */
@@ -33,6 +35,43 @@ export class AbstractCrawler {
 
   /** @type {AccountPool | null} */
   accountPool = null;
+
+  /** @type {string | null} */
+  #scraperId = null;
+
+  /** @type {string | null} */
+  #category = null;
+
+  /** @returns {string} */
+  get category() {
+    return this.#category || 'social';
+  }
+
+  /** @param {string} val */
+  set category(val) {
+    if (val && !isValidCategory(val)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Invalid category "${val}". Allowed: ${CATEGORY_VALUES.join(', ')}`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    this.#category = val;
+  }
+
+  /** @type {import('./telemetry-emitter.js').TelemetryEmitter | null} */
+  telemetryEmitter = null;
+
+  /** @returns {string} */
+  get scraperId() {
+    return this.#scraperId || `${this.name}-hybrid`;
+  }
+
+  /** @param {string} val */
+  set scraperId(val) {
+    this.#scraperId = val;
+  }
 
   /** @type {Map<string, { handler: Function, descriptor: Partial<ActionDescriptor> }>} */
   #registry = new Map();
@@ -60,6 +99,13 @@ export class AbstractCrawler {
     if (deps.requiresAuth !== undefined) {
       this.requiresAuth = deps.requiresAuth;
     }
+    if (deps.scraperId) {
+      this.#scraperId = deps.scraperId;
+    }
+    if (deps.category) {
+      this.category = deps.category;
+    }
+    this.telemetryEmitter = deps.telemetryEmitter || defaultTelemetryEmitter;
   }
 
   /**
@@ -101,6 +147,28 @@ export class AbstractCrawler {
     const fullDescriptor = { ...actionDesc, action: actionName, requiresAuth: resolvedRequiresAuth };
     this.#registry.set(actionName, { handler: actionHandler.bind(this), descriptor: fullDescriptor });
     globalActionRegistry.registerPlatformActions(this.name, [fullDescriptor]);
+  }
+
+  /**
+   * Intelligently extract item count from varied action result shapes (AD-33).
+   * @param {any} result
+   * @returns {number}
+   */
+  extractItemCount(result) {
+    if (!result) return 0;
+    if (typeof result === 'number') {
+      return Number.isFinite(result) && result > 0 ? result : 0;
+    }
+    if (Array.isArray(result)) return result.length;
+    if (typeof result === 'object') {
+      for (const key of ['items', 'posts', 'data', 'records', 'results']) {
+        if (Array.isArray(result[key])) return result[key].length;
+      }
+      if (typeof result.count === 'number' && Number.isFinite(result.count)) return result.count;
+      if (typeof result.total === 'number' && Number.isFinite(result.total)) return result.total;
+      return Object.keys(result).length > 0 ? 1 : 0;
+    }
+    return 0;
   }
 
   /** @returns {ActionDescriptor[]} */
@@ -194,8 +262,10 @@ export class AbstractCrawler {
       });
     }
 
-    // Consult governor
-    if (this.governor) {
+    const isCanary = Boolean(command.session?.isCanary);
+
+    // Consult governor (bypassed for canary probes per AD-33)
+    if (this.governor && !isCanary) {
       if (accountId) {
         if (!this.governor.canAccountRequest(accountId, this.name)) {
           throw new PlatformError({
@@ -238,18 +308,75 @@ export class AbstractCrawler {
       }
     }
 
+    const effectiveCategory = entry.descriptor.category || this.#category || 'social';
+    const telemetry = TelemetryContext.create({
+      scraperId: this.scraperId,
+      platform: this.name,
+      category: effectiveCategory,
+      action: command.action,
+      source: isCanary ? 'canary' : 'production',
+    });
+
     const session = {
       ...(command.session || {}),
       requiresAuth: actionRequiresAuth,
+      telemetry,
       ...(accountId ? { accountId } : { accountId: null }),
     };
 
-    // Apply Gaussian jitter between actions when running in CDP attach mode.
-    if (this.cdpUrl || command.session?.cdpUrl) {
-      await this.delayWithJitter();
+    if (this.client) {
+      this.client.telemetryContext = telemetry;
+      this.client.isCanary = isCanary;
+    }
+    if (this.store) {
+      this.store.telemetryContext = telemetry;
     }
 
-    return entry.handler(command.args, session);
+    const startTime = Date.now();
+    let result = null;
+    let error = null;
+
+    try {
+      // Apply Gaussian jitter between actions when running in CDP attach mode.
+      if (this.cdpUrl || command.session?.cdpUrl) {
+        await this.delayWithJitter();
+      }
+
+      result = await entry.handler(command.args, session);
+      return result;
+    } catch (err) {
+      error = err;
+      throw err;
+    } finally {
+      if (this.client) {
+        this.client.telemetryContext = null;
+        this.client.isCanary = false;
+      }
+      if (this.store) {
+        this.store.telemetryContext = null;
+      }
+
+      const durationMs = Date.now() - startTime;
+      const itemCount = this.extractItemCount(result);
+
+      const runPayload = telemetry.toRunPayload({
+        isSuccess: !error,
+        durationMs,
+        itemCount,
+        errorName: error ? (error.code || (error.name !== 'Error' ? error.name : '') || error.name || 'Error') : '',
+      });
+
+      try {
+        if (this.telemetryEmitter) {
+          this.telemetryEmitter.emitRun(runPayload);
+          for (const req of telemetry.getRequestPayloads()) {
+            this.telemetryEmitter.emitRequest(req);
+          }
+        }
+      } catch (emitErr) {
+        console.error('[TELEMETRY] Failed to emit run telemetry:', emitErr.message);
+      }
+    }
   }
 
   /**

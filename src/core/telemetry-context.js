@@ -110,12 +110,29 @@ export class TelemetryContext {
    * @param {StoreMetricsRecord} metrics
    */
   recordStoreMetrics(metrics) {
-    this.storeMetrics = {
-      fieldFillRate: Number(metrics?.fieldFillRate ?? 1.0),
-      schemaValid: Boolean(metrics?.schemaValid ?? true),
-      duplicates: Number(metrics?.duplicates || 0),
-      totalItems: Number(metrics?.totalItems || 0),
-    };
+    const addedTotal = Number(metrics?.totalItems || 0);
+    const addedDuplicates = Number(metrics?.duplicates || 0);
+    const addedSchemaValid = Boolean(metrics?.schemaValid ?? true);
+    const addedFillRate = Number(metrics?.fieldFillRate ?? (addedSchemaValid ? 1.0 : 0.0));
+
+    if (!this.storeMetrics) {
+      this.storeMetrics = {
+        fieldFillRate: addedFillRate,
+        schemaValid: addedSchemaValid,
+        duplicates: addedDuplicates,
+        totalItems: addedTotal,
+      };
+    } else {
+      const prevTotal = this.storeMetrics.totalItems;
+      const newTotal = prevTotal + addedTotal;
+      const prevValidWeight = this.storeMetrics.fieldFillRate * prevTotal;
+      const addedValidWeight = addedFillRate * addedTotal;
+
+      this.storeMetrics.totalItems = newTotal;
+      this.storeMetrics.duplicates += addedDuplicates;
+      this.storeMetrics.schemaValid = this.storeMetrics.schemaValid && addedSchemaValid;
+      this.storeMetrics.fieldFillRate = newTotal > 0 ? (prevValidWeight + addedValidWeight) / newTotal : 1.0;
+    }
   }
 
   /**
