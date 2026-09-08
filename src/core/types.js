@@ -225,6 +225,8 @@ export const CATEGORIES = Object.freeze({
   AUTOMOTIVE: 'automotive',
   // F&B merchant directory (PasGo, Foody, Riviu).
   FNB_MERCHANT: 'fnb_merchant',
+  // Healthcare clinics, doctors & pharmacies (Medpro, YouMed, Long Chau).
+  HEALTHCARE: 'healthcare',
 });
 
 /** @type {string[]} */

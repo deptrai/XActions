@@ -90,6 +90,9 @@ import masothue from './procurement/masothue/index.js';
 import automotive from './vehicles/automotive/index.js';
 import b2bRegistryExtended from './procurement/b2b-registry-extended/index.js';
 import fnb from './fnb/merchant/index.js';
+import { HealthcareCrawler } from './healthcare/crawler.js';
+import { HealthcareClient } from './healthcare/client.js';
+import healthcare from './healthcare/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -185,6 +188,11 @@ export const platforms = {
   pasgo: fnb,
   foody: fnb,
   riviu: fnb,
+  healthcare,
+  medpro: healthcare,
+  youmed: healthcare,
+  nhathuoclongchau: healthcare,
+  thuocsi: healthcare,
   b2b_registry_extended: b2bRegistryExtended,
   hosocongty: b2bRegistryExtended,
   muasamcong: b2bRegistryExtended,
@@ -625,6 +633,82 @@ export async function scrape(platform, action, options = {}) {
       client,
       store,
       redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── Healthcare & Clinics Network path ──
+  if (
+    platformName === 'healthcare' ||
+    platformName === 'medpro' ||
+    platformName === 'youmed' ||
+    platformName === 'nhathuoclongchau' ||
+    platformName === 'thuocsi'
+  ) {
+    /** @type {Record<string, string>} */
+    const HEALTHCARE_ACTION_MAP = {
+      search_clinics: 'search_clinics',
+      clinics: 'search_clinics',
+      search: 'search_clinics',
+      search_doctors: 'search_clinics',
+      doctors: 'search_clinics',
+      get_stores: 'get_stores',
+      stores: 'get_stores',
+      pharmacies: 'get_stores',
+      pharmacy_catalog: 'pharmacy_catalog',
+      catalog: 'pharmacy_catalog',
+      detail: 'detail',
+      facility_detail: 'detail',
+      doctor_detail: 'detail',
+    };
+
+    const mappedAction = HEALTHCARE_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(HEALTHCARE_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.platform) mappedArgs.platform = options.platform;
+    if (options.city) mappedArgs.city = options.city;
+    if (options.specialty) mappedArgs.specialty = options.specialty;
+    if (options.page != null) mappedArgs.page = Number(options.page);
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.id) mappedArgs.id = options.id;
+    if (options.slug) mappedArgs.slug = options.slug;
+    if (options.category) mappedArgs.category = options.category;
+    if (platformName !== 'healthcare') mappedArgs.platform = platformName;
+
+    const client = new HealthcareClient({
+      targetPlatform: options.targetPlatform || (platformName === 'healthcare' ? 'medpro' : platformName),
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+      userAgent: options.userAgent,
+    });
+
+    const crawler = new HealthcareCrawler({
+      client,
+      store,
+      publisher: options.publisher || options.eventPublisher,
       proxyPool: options.proxyPool,
       governor: options.governor,
       requiresProxy: options.requiresProxy,
