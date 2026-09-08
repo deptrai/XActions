@@ -10,18 +10,24 @@
 import { Router } from 'express';
 import prismaClient from '../lib/prisma.js';
 import { defaultHealthTierCache } from '../../src/benchmark/health-tier-cache.js';
+import { defaultAlertDispatcher } from '../services/benchmark/alerting.js';
+import { defaultRequalificationService } from '../services/benchmark/requalification.js';
 
 /**
  * Factory function to create benchmark router with dependency injection for testing.
  * @param {Object} [deps]
  * @param {import('@prisma/client').PrismaClient} [deps.prisma]
  * @param {import('../../src/benchmark/health-tier-cache.js').HealthTierCache} [deps.healthTierCache]
+ * @param {import('../services/benchmark/alerting.js').AlertDispatcher} [deps.alertDispatcher]
+ * @param {import('../services/benchmark/requalification.js').RequalificationService} [deps.requalificationService]
  * @returns {Router}
  */
 export function createBenchmarkRouter(deps = {}) {
   const router = Router();
   const prisma = deps.prisma || prismaClient;
   const healthTierCache = deps.healthTierCache || defaultHealthTierCache;
+  const alertDispatcher = deps.alertDispatcher || defaultAlertDispatcher;
+  const requalificationService = deps.requalificationService || defaultRequalificationService;
 
   /**
    * GET /summary
@@ -146,6 +152,41 @@ export function createBenchmarkRouter(deps = {}) {
       });
     } catch (err) {
       res.status(500).json({ error: 'Failed to retrieve scraper history', message: err.message });
+    }
+  });
+
+  /**
+   * GET /alerts
+   * Retrieve recent benchmark degradation alerts (Story 34.8 / AD-27).
+   */
+  router.get('/alerts', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit, 10) || 50;
+      const alerts = alertDispatcher.getAlerts({ limit });
+      res.json({
+        alerts,
+        total: alerts.length,
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to retrieve benchmark alerts', message: err.message });
+    }
+  });
+
+  /**
+   * POST /requalify/:id
+   * Trigger evaluation of scraper for re-qualification from Tier C back to Tier B (AD-31).
+   */
+  router.post('/requalify/:id', async (req, res) => {
+    const { id } = req.params;
+    if (!id || typeof id !== 'string' || id.length > 128) {
+      return res.status(400).json({ error: 'Invalid scraper ID' });
+    }
+
+    try {
+      const result = await requalificationService.checkAndRequalify(id);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to evaluate scraper re-qualification', message: err.message });
     }
   });
 

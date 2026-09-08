@@ -151,6 +151,43 @@ export function formatScraperDetail(detail, history = []) {
 }
 
 /**
+ * Format a list of benchmark alerts into an ASCII table.
+ * @param {Array<Record<string, any>>} alerts
+ * @returns {string}
+ */
+export function formatAlertsTable(alerts = []) {
+  if (!alerts || alerts.length === 0) {
+    return chalk.green('✅ No active or recent benchmark alerts. All scrapers operating within normal parameters.');
+  }
+
+  const headers = [
+    'Scraper ID'.padEnd(20),
+    'Platform'.padEnd(12),
+    'Transition'.padEnd(14),
+    'Score'.padEnd(8),
+    'Reason'.padEnd(35),
+    'Timestamp',
+  ];
+
+  const separator = '-'.repeat(105);
+  const headerLine = chalk.bold(headers.join(' '));
+
+  const rows = alerts.map((a) => {
+    const id = String(a.scraper_id || a.scraperId || 'unknown').padEnd(20);
+    const plat = String(a.platform || 'unknown').padEnd(12);
+    const transition = `${a.previous_tier || '?' } -> ${chalk.red.bold(a.current_tier || 'C')}`.padEnd(23);
+    const scoreVal = typeof a.health_score === 'number' ? a.health_score.toFixed(1) : (typeof a.healthScore === 'number' ? a.healthScore.toFixed(1) : '-');
+    const score = chalk.red.bold(scoreVal).padEnd(17);
+    const reason = String(a.reason || 'Tier C degradation').substring(0, 33).padEnd(35);
+    const ts = a.evaluated_at ? new Date(a.evaluated_at).toISOString().replace('T', ' ').substring(0, 19) : '-';
+
+    return `${id} ${plat} ${transition} ${score} ${reason} ${ts}`;
+  });
+
+  return [headerLine, separator, ...rows].join('\n');
+}
+
+/**
  * Register `xactions benchmark` CLI command.
  * @param {import('commander').Command} program
  * @param {Object} [deps]
@@ -277,6 +314,32 @@ export function registerBenchmarkCommand(program, deps = {}) {
         }
       } catch (err) {
         console.error(chalk.red(`❌ Failed to fetch scraper scorecard: ${err.message}`));
+      }
+    });
+
+  // Subcommand: alerts
+  benchmarkCmd
+    .command('alerts')
+    .description('Display recent scraper health alerts and Tier C operator incident history')
+    .option('--limit <n>', 'Limit number of alerts', '20')
+    .option('--format <format>', 'Output format (table, json)', 'table')
+    .option('--json', 'Alias for --format json', false)
+    .action(async (options) => {
+      let dispatcher = deps.alertDispatcher;
+      if (!dispatcher) {
+        try {
+          const { defaultAlertDispatcher } = await import('../../../api/services/benchmark/alerting.js');
+          dispatcher = defaultAlertDispatcher;
+        } catch {}
+      }
+
+      const limit = parseInt(options.limit, 10) || 20;
+      const alerts = dispatcher ? dispatcher.getAlerts({ limit }) : [];
+
+      if (options.format === 'json' || options.json) {
+        console.log(JSON.stringify(alerts, null, 2));
+      } else {
+        console.log(formatAlertsTable(alerts));
       }
     });
 }
