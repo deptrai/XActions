@@ -45,7 +45,10 @@ export function createBenchmarkRouter(deps = {}) {
       return await queryFn();
     } catch (err) {
       const errMsg = err?.message || String(err);
-      if (errMsg.includes('does not exist') || errMsg.includes('relation') || errMsg.includes('no such table')) {
+      if (
+        (err?.code === 'P2021' || errMsg.includes('table `public.ScraperHealthScore` does not exist')) &&
+        typeof prisma.$executeRawUnsafe === 'function'
+      ) {
         await ensureBenchmarkTables(prisma);
         try {
           return await queryFn();
@@ -228,57 +231,56 @@ export function createBenchmarkRouter(deps = {}) {
 
   /**
    * POST /probe-all
-   * Trigger on-demand canary probes across all platforms and update scorecards.
+   * Trigger on-demand canary probes across all platforms asynchronously to avoid reverse proxy timeouts.
    */
   router.post('/probe-all', async (req, res) => {
-    try {
-      const outcome = await canaryRunner.probeAll({ timeoutMs: 15000 });
-      const scoringEngine = new BenchmarkScoringEngine();
-      const stateManager = new BenchmarkStateManager({ prisma, healthTierCache });
+    // Respond immediately to prevent reverse proxy HTTP timeouts
+    res.json({
+      ok: true,
+      message: 'Canary probes dispatched in background',
+      timestamp: new Date().toISOString(),
+    });
 
-      const evaluated = [];
-      for (const run of outcome.results || []) {
-        if (!run.scraperId) continue;
-        const config = CANARY_CONFIGS[run.scraperId] || {};
-        const telemetryRun = {
-          scraperId: run.scraperId,
-          platform: run.platform || config.platform || 'unknown',
-          isSuccess: Boolean(run.isSuccess),
-          avgLatencyMs: run.latencyMs || 500,
-          requestCount: 1,
-          failedRequestCount: run.isSuccess ? 0 : 1,
-          false200Count: run.false200Detected ? 1 : 0,
-          checkpointCount: run.checkpointDetected ? 1 : 0,
-          itemCount: run.isSuccess ? 10 : 0,
-          storeMetrics: run.isSuccess
-            ? { schemaValid: true, fillRate: 0.95 }
-            : { schemaValid: false, fillRate: 0.5 },
-          category: config.category || 'social',
-        };
+    // Execute in background
+    (async () => {
+      try {
+        const outcome = await canaryRunner.probeAll({ timeoutMs: 12000 });
+        const scoringEngine = new BenchmarkScoringEngine();
+        const stateManager = new BenchmarkStateManager({ prisma, healthTierCache });
 
-        const rollups = scoringEngine.aggregateTelemetryRollups([telemetryRun]);
-        const score = scoringEngine.calculateScores(rollups, config.category || 'social');
+        for (const run of outcome.results || []) {
+          if (!run.scraperId) continue;
+          const config = CANARY_CONFIGS[run.scraperId] || {};
+          const telemetryRun = {
+            scraperId: run.scraperId,
+            platform: run.platform || config.platform || 'unknown',
+            isSuccess: Boolean(run.isSuccess),
+            avgLatencyMs: run.latencyMs || 500,
+            requestCount: 1,
+            failedRequestCount: run.isSuccess ? 0 : 1,
+            false200Count: run.false200Detected ? 1 : 0,
+            checkpointCount: run.checkpointDetected ? 1 : 0,
+            itemCount: run.isSuccess ? 10 : 0,
+            storeMetrics: run.isSuccess
+              ? { schemaValid: true, fillRate: 0.95 }
+              : { schemaValid: false, fillRate: 0.5 },
+            category: config.category || 'social',
+          };
 
-        await stateManager.recordEvaluation(run.scraperId, score, {
-          platform: run.platform || config.platform,
-          category: config.category || 'social',
-          sampleCount: 1,
-          runs: [telemetryRun],
-        });
+          const rollups = scoringEngine.aggregateTelemetryRollups([telemetryRun]);
+          const score = scoringEngine.calculateScores(rollups, config.category || 'social');
 
-        evaluated.push({ scraperId: run.scraperId, tier: score.tier, healthScore: score.healthScore });
+          await stateManager.recordEvaluation(run.scraperId, score, {
+            platform: run.platform || config.platform,
+            category: config.category || 'social',
+            sampleCount: 1,
+            runs: [telemetryRun],
+          });
+        }
+      } catch (err) {
+        console.warn('[Benchmark] Background probe execution notice:', err?.message || String(err));
       }
-
-      res.json({
-        ok: true,
-        probed: outcome.total,
-        succeeded: outcome.succeeded,
-        failed: outcome.failed,
-        evaluated,
-      });
-    } catch (err) {
-      res.status(500).json({ error: 'Failed to run canary probes', message: err.message });
-    }
+    })();
   });
 
   return router;
