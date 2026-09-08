@@ -98,7 +98,31 @@ export class FnbPlatformResponseValidator extends AbstractPlatformResponseValida
    * @param {any} response
    * @returns {boolean}
    */
-  isValidPayload(response) {
+  /**
+   * Detect False 200 responses: HTML returning bot challenge, login wall, or missing F&B data under 200.
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isFalse200(response) {
+    const status = this._extractStatus(response);
+    if (status < 200 || status >= 300) return false;
+
+    // 1. Generic challenge/checkpoint detection
+    if (super.isFalse200(response)) return true;
+
+    // 2. F&B challenge detection
+    if (this.isBotChallenge(response) || this.isRateLimit(response) || this.isLoginWall(response)) {
+      return true;
+    }
+
+    // 3. Check for empty HTML or missing F&B content under 200
+    const text = this.#getText(response);
+    if (!text || text.length < 50) return true;
+
+    return false;
+  }
+
+    isValidPayload(response) {
     if (this.isRateLimit(response) || this.isBotChallenge(response)) {
       return false;
     }
@@ -130,7 +154,17 @@ export class FnbPlatformResponseValidator extends AbstractPlatformResponseValida
    */
   isLoginWall(response) {
     const text = this.#getText(response);
-    return text.includes('đăng nhập') || text.includes('login') || text.includes('sign in');
+    if (!text) return false;
+    if (/<input[^>]+type=["']password["']/i.test(text)) return true;
+    return (
+      text.includes('vui lòng đăng nhập') ||
+      text.includes('đăng nhập để tiếp tục') ||
+      text.includes('bạn cần đăng nhập') ||
+      text.includes('sign in to continue') ||
+      text.includes('log in to continue') ||
+      text.includes('please log in') ||
+      text.includes('yêu cầu đăng nhập')
+    );
   }
 
   /**

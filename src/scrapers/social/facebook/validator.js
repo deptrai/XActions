@@ -202,7 +202,36 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
    * @param {unknown} response
    * @returns {boolean}
    */
-  isRateLimit(response) {
+  /**
+   * Detect False 200 responses: HTML/JSON redirecting to /checkpoint/ or login form under 200.
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isFalse200(response) {
+    const status = this._extractStatus(response);
+    if (status < 200 || status >= 300) return false;
+
+    // 1. Generic challenge/checkpoint detection
+    if (super.isFalse200(response)) return true;
+
+    // 2. Facebook checkpoint URL, login wall, or rate limit disguised as 200
+    if (this.isBotChallenge(response) || this.isLoginWall(response) || this.isRateLimit(response)) {
+      return true;
+    }
+
+    // 3. Empty data wrapper under 200
+    const body = this.#getBody(response);
+    if (typeof body === 'string') {
+      const trimmed = body.trim();
+      if (trimmed === 'for (;;);' || trimmed === 'for (;;);{}' || trimmed === 'for (;;);{"data":{}}') {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+    isRateLimit(response) {
     const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
     const status = typeof record?.status === 'number' ? record.status : (typeof record?.statusCode === 'number' ? record.statusCode : null);
     if (status === 429) {

@@ -163,7 +163,79 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
    * @param {any} response
    * @returns {boolean}
    */
-  isRateLimit(response) {
+  /**
+   * Detect False 200 responses: GraphQL responses with empty timelines, rate limits, or error tombstones disguised as 200.
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isFalse200(response) {
+    const status = this._extractStatus(response);
+    if (status < 200 || status >= 300) return false;
+
+    // 1. Generic challenge/checkpoint detection
+    if (super.isFalse200(response)) return true;
+
+    // 2. Extract errors from root or unwrapped levels
+    const rawRoot = response?.data !== undefined ? response.data : response;
+    const errors = rawRoot?.errors || rawRoot?.data?.errors || response?.errors;
+    if (Array.isArray(errors) && errors.length > 0) {
+      for (const err of errors) {
+        if ([88, 326, 353, 64, 141, 239].includes(err?.code)) return true;
+        const msg = String(err?.message || '').toLowerCase();
+        if (
+          msg.includes('rate limit') ||
+          msg.includes('challenge') ||
+          msg.includes('suspended') ||
+          msg.includes('locked')
+        ) {
+          return true;
+        }
+      }
+    }
+
+    // 3. Unwrapped data inspection
+    const root = this._extractData(response);
+    if (root && typeof root === 'object') {
+      if (Array.isArray(root.errors) && root.errors.length > 0) {
+        for (const err of root.errors) {
+          if ([88, 326, 353, 64, 141, 239].includes(err?.code)) return true;
+          const msg = String(err?.message || '').toLowerCase();
+          if (
+            msg.includes('rate limit') ||
+            msg.includes('challenge') ||
+            msg.includes('suspended') ||
+            msg.includes('locked')
+          ) {
+            return true;
+          }
+        }
+      }
+
+      // Tweet Tombstone or Unavailable under 200
+      const typename =
+        root.tweetResult?.result?.__typename ||
+        root.tweet_result?.result?.__typename ||
+        root.result?.__typename;
+      if (typename === 'TweetTombstone' || typename === 'TweetUnavailable' || root.tweetResult?.result?.tombstone) {
+        return true;
+      }
+
+      // Empty timeline instructions when instructions are expected
+      if (root.user?.result?.timeline_v2?.timeline?.instructions && Array.isArray(root.user.result.timeline_v2.timeline.instructions)) {
+        if (root.user.result.timeline_v2.timeline.instructions.length === 0) return true;
+      }
+      if (root.user?.result?.timeline?.timeline?.instructions && Array.isArray(root.user.result.timeline.timeline.instructions)) {
+        if (root.user.result.timeline.timeline.instructions.length === 0) return true;
+      }
+      if (root.threaded_conversation_with_injections_v2?.instructions && Array.isArray(root.threaded_conversation_with_injections_v2.instructions)) {
+        if (root.threaded_conversation_with_injections_v2.instructions.length === 0) return true;
+      }
+    }
+
+    return false;
+  }
+
+    isRateLimit(response) {
     if (response?.status === 429) return true;
 
     const root = response?.data !== undefined ? response.data : response;

@@ -65,8 +65,37 @@ export class MaSoThuePlatformResponseValidator extends AbstractPlatformResponseV
    * @param {any} response
    * @returns {boolean}
    */
-  isValidPayload(response) {
-    if (this.isRateLimit(response) || this.isBotChallenge(response)) {
+  /**
+   * Detect False 200 responses: HTML returning bot challenge, login wall, or missing company records under 200.
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isFalse200(response) {
+    const status = this._extractStatus(response);
+    if (status < 200 || status >= 300) return false;
+
+    // 1. Generic challenge/checkpoint detection
+    if (super.isFalse200(response)) return true;
+
+    // 2. Masothue challenge detection
+    if (this.isBotChallenge(response) || this.isRateLimit(response)) {
+      return true;
+    }
+
+    // 3. Missing company table and tax code terms under 200
+    const text = this.#getText(response);
+    if (!text || text.length < 50) return true;
+    const hasTaxTable = text.includes('table-taxpayer') || text.includes('mã số thuế');
+    const hasBusinessTerms = text.includes('doanh nghiệp') && (text.includes('tên công ty') || text.includes('địa chỉ') || text.includes('ngành nghề'));
+    if (!hasTaxTable && !hasBusinessTerms) {
+      return true;
+    }
+
+    return false;
+  }
+
+    isValidPayload(response) {
+    if (this.isRateLimit(response) || this.isBotChallenge(response) || this.isFalse200(response)) {
       return false;
     }
 
@@ -76,11 +105,8 @@ export class MaSoThuePlatformResponseValidator extends AbstractPlatformResponseV
     // Valid search result pages contain result cards or detail pages have company info rows.
     if (
       text.includes('mã số thuế') ||
-      text.includes('tên công ty') ||
-      text.includes('địa chỉ') ||
-      text.includes('ngành nghề chính') ||
-      text.includes('doanh nghiệp') ||
-      text.includes('masothue.com')
+      text.includes('table-taxpayer') ||
+      (text.includes('doanh nghiệp') && (text.includes('tên công ty') || text.includes('địa chỉ') || text.includes('ngành nghề chính')))
     ) {
       return true;
     }

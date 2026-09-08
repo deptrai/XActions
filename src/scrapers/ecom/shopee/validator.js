@@ -61,7 +61,40 @@ export class ShopeePlatformResponseValidator extends AbstractPlatformResponseVal
    * @param {any} response
    * @returns {boolean}
    */
-  isValidPayload(response) {
+  /**
+   * Detect False 200 responses: Shopee WAF error codes, empty item arrays or bot verification.
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isFalse200(response) {
+    const status = this._extractStatus(response);
+    if (status < 200 || status >= 300) return false;
+
+    // 1. Generic challenge/checkpoint detection
+    if (super.isFalse200(response)) return true;
+
+    // 2. Shopee WAF / bot challenge disguised as 200
+    if (this.isBotChallenge(response) || this.isRateLimit(response)) {
+      return true;
+    }
+
+    // 3. Shopee specific error code or empty payload
+    const data = this._extractData(response);
+    if (data && typeof data === 'object') {
+      if (data.error === 90309999 || data.error === -1) return true;
+      if (typeof data.error_msg === 'string' && /captcha|challenge|blocked/i.test(data.error_msg)) return true;
+
+      // Empty item arrays or ratings when items are expected
+      if (Array.isArray(data.items) && data.items.length === 0) return true;
+      if (Array.isArray(data.data?.items) && data.data.items.length === 0) return true;
+      if (Array.isArray(data.ratings) && data.ratings.length === 0) return true;
+      if (Array.isArray(data.data?.ratings) && data.data.ratings.length === 0) return true;
+    }
+
+    return false;
+  }
+
+    isValidPayload(response) {
     if (this.isRateLimit(response) || this.isBotChallenge(response)) {
       return false;
     }
