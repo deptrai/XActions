@@ -92,7 +92,10 @@ import b2bRegistryExtended from './procurement/b2b-registry-extended/index.js';
 import fnb from './fnb/merchant/index.js';
 import { HealthcareCrawler } from './healthcare/crawler.js';
 import { HealthcareClient } from './healthcare/client.js';
-import healthcare from './healthcare/index.js';
+import healthcare, { scrapeHealthcare } from './healthcare/index.js';
+import { IpLegalCrawler } from './legal/ip-trademark/crawler.js';
+import { IpLegalClient } from './legal/ip-trademark/client.js';
+import ipLegal, { scrapeIpLegal } from './legal/ip-trademark/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -193,6 +196,9 @@ export const platforms = {
   youmed: healthcare,
   nhathuoclongchau: healthcare,
   thuocsi: healthcare,
+  ipvietnam: ipLegal,
+  ip_legal: ipLegal,
+  legal: ipLegal,
   b2b_registry_extended: b2bRegistryExtended,
   hosocongty: b2bRegistryExtended,
   muasamcong: b2bRegistryExtended,
@@ -707,6 +713,67 @@ export async function scrape(platform, action, options = {}) {
     });
 
     const crawler = new HealthcareCrawler({
+      client,
+      store,
+      publisher: options.publisher || options.eventPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── Legal & Intellectual Property Trademark path ──
+  if (
+    platformName === 'ipvietnam' ||
+    platformName === 'ip_legal' ||
+    platformName === 'legal'
+  ) {
+    /** @type {Record<string, string>} */
+    const IP_LEGAL_ACTION_MAP = {
+      search_gazette: 'search_gazette',
+      search: 'search_gazette',
+      gazette: 'search_gazette',
+      get_weekly_list: 'get_weekly_list',
+      weekly_list: 'get_weekly_list',
+      weekly: 'get_weekly_list',
+      yearly_summary: 'yearly_summary',
+      yearly: 'yearly_summary',
+      summary: 'yearly_summary',
+      detail: 'detail',
+    };
+
+    const mappedAction = IP_LEGAL_ACTION_MAP[action] || action;
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.page != null) mappedArgs.page = Number(options.page);
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.id) mappedArgs.id = options.id;
+    if (options.applicationNumber) mappedArgs.id = options.applicationNumber;
+    if (options.articleUrl) mappedArgs.articleUrl = options.articleUrl;
+    if (options.url) mappedArgs.articleUrl = options.url;
+    if (options.year != null) mappedArgs.year = Number(options.year);
+
+    const client = new IpLegalClient({
+      baseUrl: options.baseUrl,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+      userAgent: options.userAgent,
+    });
+
+    const crawler = new IpLegalCrawler({
       client,
       store,
       publisher: options.publisher || options.eventPublisher,
@@ -2188,6 +2255,12 @@ export default {
   AutomotiveClient,
   B2BRegistryExtendedCrawler,
   B2BRegistryExtendedClient,
+  HealthcareCrawler,
+  HealthcareClient,
+  scrapeHealthcare,
+  IpLegalCrawler,
+  IpLegalClient,
+  scrapeIpLegal,
   createBlueskyClient,
   createBlueskyCrawler,
   createMastodonClient,

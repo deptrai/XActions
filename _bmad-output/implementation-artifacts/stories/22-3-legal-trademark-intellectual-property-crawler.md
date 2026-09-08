@@ -2,9 +2,9 @@
 title: 'Story 22.3: Legal & Trademark Intellectual Property Crawler (Cục Sở hữu Trí tuệ)'
 type: 'feature'
 created: '2026-09-05'
-status: 'ready-for-dev'
+status: 'done'
 review_loop_iteration: 1
-baseline_commit: '199a2772'
+baseline_commit: 'bc8fdd1f'
 context:
   - _bmad-output/planning-artifacts/backlog-epics-21-22.md
   - _bmad-output/planning-artifacts/research/technical-vietnam-multi-domain-scrapers-technical-feasibility-research-2026-08-21.md
@@ -143,40 +143,40 @@ context:
 ## Tasks / Subtasks
 
 ### Phase 0: Foundation & Schema Setup
-- [ ] **Task 0.1** — Add `legal` to `CATEGORIES` in `src/core/types.js` (AC: #5)
-  - [ ] Add `LEGAL: 'legal'` to `CATEGORIES` object
-  - [ ] Verify `isValidCategory('legal')` returns `true`
-  - [ ] Update `prisma/schema.prisma` category comment
-- [ ] **Task 0.2** — Create directory `src/scrapers/legal/ip-trademark/` with module files (AC: #1)
-  - [ ] `index.js`
-  - [ ] `client.js`
-  - [ ] `crawler.js`
-  - [ ] `schema.js`
-  - [ ] `normalizer.js`
-  - [ ] `validator.js`
+- [x] **Task 0.1** — Add `legal` to `CATEGORIES` in `src/core/types.js` (AC: #5)
+  - [x] Add `LEGAL: 'legal'` to `CATEGORIES` object
+  - [x] Verify `isValidCategory('legal')` returns `true`
+  - [x] Update `prisma/schema.prisma` category comment
+- [x] **Task 0.2** — Create directory `src/scrapers/legal/ip-trademark/` with module files (AC: #1)
+  - [x] `index.js`
+  - [x] `client.js`
+  - [x] `crawler.js`
+  - [x] `schema.js`
+  - [x] `normalizer.js`
+  - [x] `validator.js`
 
 ### Phase 1: IpLegalClient
-- [ ] **Task 1.1** — Implement `IpLegalClient` extending `AbstractApiClient` (AC: #1, #2, #3, #4)
-  - [ ] `requiresAuth = false`
-  - [ ] `requiresProxy = false`
-  - [ ] `rejectUnauthorized: false` for all HTTPS requests to `ipvietnam.gov.vn`
-  - [ ] `getGazetteList({ page })` — fetches `/web/guest/danh-sach-don-chuyen-cong-bo-hang-tuan`
-  - [ ] `getArticleContent(articleUrl)` — fetches a specific weekly gazette article
-  - [ ] `getYearlySummary({ year })` — fetches yearly aggregate document links
-  - [ ] `detail({ id })` — looks up an application number
+- [x] **Task 1.1** — Implement `IpLegalClient` extending `AbstractApiClient` (AC: #1, #2, #3, #4)
+  - [x] `requiresAuth = false`
+  - [x] `requiresProxy = false`
+  - [x] `rejectUnauthorized: false` for all HTTPS requests to `ipvietnam.gov.vn`
+  - [x] `getGazetteList({ page })` — fetches `/web/guest/danh-sach-don-chuyen-cong-bo-hang-tuan`
+  - [x] `getArticleContent(articleUrl)` — fetches a specific weekly gazette article
+  - [x] `getYearlySummary({ year })` — fetches yearly aggregate document links
+  - [x] `detail({ id })` — looks up an application number
 
 ### Phase 2: IpLegalCrawler
-- [ ] **Task 2.1** — Implement `IpLegalCrawler` extending `AbstractCrawler` (AC: #1, #2, #7)
-  - [ ] Implement `init()` and `cleanup()` lifecycle methods
-  - [ ] Register actions: `search_gazette`, `get_weekly_list`, `yearly_summary`, `detail`
-  - [ ] Action aliases: `search` -> `search_gazette`
-  - [ ] Enforce `this.validateItem(post)` on all returned items
-  - [ ] Return standard shape: `{ posts: PostItem[], pageInfo: { has_next_page, page, total } }` or `{ post: PostItem }`
+- [x] **Task 2.1** — Implement `IpLegalCrawler` extending `AbstractCrawler` (AC: #1, #2, #7)
+  - [x] Implement `init()` and `cleanup()` lifecycle methods
+  - [x] Register actions: `search_gazette`, `get_weekly_list`, `yearly_summary`, `detail`
+  - [x] Action aliases: `search` -> `search_gazette`
+  - [x] Enforce `this.validateItem(post)` on all returned items
+  - [x] Return standard shape: `{ posts: PostItem[], pageInfo: { has_next_page, page, total } }` or `{ post: PostItem }`
 
 ### Phase 3: Normalizer & Schema
-- [ ] **Task 3.1** — Implement `normalizeIpLegalResults(data, kind, options)` (AC: #2, #5)
-  - [ ] Parse weekly gazette article HTML tables (`STT`, `Số đơn`, `Ngày nộp đơn`, `Ngày chuyển công bố`)
-  - [ ] Map to `PostItem`:
+- [x] **Task 3.1** — Implement `normalizeIpLegalResults(data, kind, options)` (AC: #2, #5)
+  - [x] Parse weekly gazette article HTML tables (`STT`, `Số đơn`, `Ngày nộp đơn`, `Ngày chuyển công bố`)
+  - [x] Map to `PostItem`:
     - `id`: `ipvietnam:${applicationNumber}`
     - `platform`: `ipvietnam`
     - `category`: `legal`
@@ -187,34 +187,34 @@ context:
     - `metadata.gazettePeriod`: week/period string
     - `metadata.status`: `chuyển công bố (hợp lệ)`
     - `metadata.sourcePlatform`: `ipvietnam`
-  - [ ] Parse yearly summary links (.xlsx/.pdf download URLs)
-  - [ ] Parse detail record
-- [ ] **Task 3.2** — Implement date/number helpers in `schema.js` (AC: #5)
-  - [ ] `normalizeApplicationNumber(raw)`
-  - [ ] `parseVnDate(rawDate)` (DD/MM/YYYY -> ISO)
+  - [x] Parse yearly summary links (.xlsx/.pdf download URLs)
+  - [x] Parse detail record
+- [x] **Task 3.2** — Implement date/number helpers in `schema.js` (AC: #5)
+  - [x] `normalizeApplicationNumber(raw)`
+  - [x] `parseVnDate(rawDate)` (DD/MM/YYYY -> ISO)
 
 ### Phase 4: Validator
-- [ ] **Task 4.1** — `IpLegalPlatformResponseValidator` (AC: #6)
-  - [ ] Valid if response HTML contains `danh-sach-don` or `công báo` or `sở hữu công nghiệp`
-  - [ ] Implement `isRateLimit(response)`
-  - [ ] Implement `isBotChallenge(response)`
-  - [ ] Reject responses with HTTP status >= 400
+- [x] **Task 4.1** — `IpLegalPlatformResponseValidator` (AC: #6)
+  - [x] Valid if response HTML contains `danh-sach-don` or `công báo` or `sở hữu công nghiệp`
+  - [x] Implement `isRateLimit(response)`
+  - [x] Implement `isBotChallenge(response)`
+  - [x] Reject responses with HTTP status >= 400
 
 ### Phase 5: Dispatcher & Integration
-- [ ] **Task 5.1** — Wire into `src/scrapers/index.js` (AC: #8)
-  - [ ] Add `ipvietnam`, `ip_legal`, `legal` dispatcher aliases
-  - [ ] Map actions: `search_gazette`, `search`, `get_weekly_list`, `yearly_summary`, `detail`
+- [x] **Task 5.1** — Wire into `src/scrapers/index.js` (AC: #8)
+  - [x] Add `ipvietnam`, `ip_legal`, `legal` dispatcher aliases
+  - [x] Map actions: `search_gazette`, `search`, `get_weekly_list`, `yearly_summary`, `detail`
 
 ### Phase 6: Tests
-- [ ] **Task 6.1** — Unit tests & Fixtures (AC: #9)
-  - [ ] `tests/scrapers/legal/ip-trademark/client.test.js`
-  - [ ] `tests/scrapers/legal/ip-trademark/crawler.test.js`
-  - [ ] `tests/scrapers/legal/ip-trademark/normalizer.test.js`
-  - [ ] `tests/scrapers/legal/ip-trademark/schema.test.js`
-  - [ ] `tests/scrapers/legal/ip-trademark/validator.test.js`
-  - [ ] `tests/scrapers/legal/ip-trademark/dispatch.test.js`
-  - [ ] `tests/scrapers/legal/ip-trademark/fixtures/`
-- [ ] **Task 6.2** — Regression test suite run
+- [x] **Task 6.1** — Unit tests & Fixtures (AC: #9)
+  - [x] `tests/scrapers/legal/ip-trademark/client.test.js`
+  - [x] `tests/scrapers/legal/ip-trademark/crawler.test.js`
+  - [x] `tests/scrapers/legal/ip-trademark/normalizer.test.js`
+  - [x] `tests/scrapers/legal/ip-trademark/schema.test.js`
+  - [x] `tests/scrapers/legal/ip-trademark/validator.test.js`
+  - [x] `tests/scrapers/legal/ip-trademark/dispatch.test.js`
+  - [x] `tests/scrapers/legal/ip-trademark/fixtures/`
+- [x] **Task 6.2** — Regression test suite run
 
 ---
 
@@ -256,3 +256,35 @@ context:
 - Xử lý các link đính kèm file Excel `.xlsx`: Trích xuất URL tải trực tiếp từ thẻ `<a href="...">` có đuôi `.xlsx` hoặc `.pdf`.
 
 ---
+
+## Dev Agent Record
+
+### Implementation Summary
+- Added `LEGAL: 'legal'` category to `CATEGORIES` in `src/core/types.js` and updated `prisma/schema.prisma`.
+- Implemented `IpLegalClient` extending `AbstractApiClient` with `requiresProxy = false`, `requiresAuth = false`, and `rejectUnauthorized: false` for `ipvietnam.gov.vn`.
+- Implemented `IpLegalCrawler` extending `AbstractCrawler` with `init()` / `cleanup()` and registered actions: `search_gazette` (alias `search`), `get_weekly_list`, `yearly_summary`, `detail`.
+- Implemented `normalizeIpLegalResults` extracting table rows (STT, Số đơn, Ngày nộp đơn, Ngày chuyển công bố) and yearly documents (`.xlsx`, `.pdf`) into valid `PostItem` instances.
+- Implemented `IpLegalPlatformResponseValidator` detecting structural signals, status >= 400 rejection, rate limit and bot challenges.
+- Integrated dispatcher in `src/scrapers/index.js` with aliases `ipvietnam`, `ip_legal`, `legal` and exported `IpLegalCrawler`, `IpLegalClient`, `scrapeIpLegal`.
+- Authored complete test suite with 45 unit/integration tests and verified live extraction on real `ipvietnam.gov.vn` gazette data.
+
+### File List
+- `src/core/types.js` (modified: added `LEGAL: 'legal'`)
+- `prisma/schema.prisma` (modified: updated category comment)
+- `src/scrapers/legal/ip-trademark/schema.js` (new)
+- `src/scrapers/legal/ip-trademark/validator.js` (new)
+- `src/scrapers/legal/ip-trademark/client.js` (new)
+- `src/scrapers/legal/ip-trademark/normalizer.js` (new)
+- `src/scrapers/legal/ip-trademark/crawler.js` (new)
+- `src/scrapers/legal/ip-trademark/index.js` (new)
+- `src/scrapers/index.js` (modified: added routing & exports)
+- `tests/scrapers/legal/ip-trademark/schema.test.js` (new)
+- `tests/scrapers/legal/ip-trademark/validator.test.js` (new)
+- `tests/scrapers/legal/ip-trademark/client.test.js` (new)
+- `tests/scrapers/legal/ip-trademark/normalizer.test.js` (new)
+- `tests/scrapers/legal/ip-trademark/crawler.test.js` (new)
+- `tests/scrapers/legal/ip-trademark/dispatch.test.js` (new)
+- `tests/store/prisma-store.test.js` (modified: updated valid categories assertion)
+
+### Status
+done

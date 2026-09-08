@@ -227,6 +227,8 @@ export const CATEGORIES = Object.freeze({
   FNB_MERCHANT: 'fnb_merchant',
   // Healthcare clinics, doctors & pharmacies (Medpro, YouMed, Long Chau).
   HEALTHCARE: 'healthcare',
+  // Legal & Intellectual Property (ipvietnam.gov.vn).
+  LEGAL: 'legal',
 });
 
 /** @type {string[]} */

@@ -173,10 +173,10 @@ development_status:
   # --- Epic 22: Local F&B Merchant, Healthcare & Legal Intelligence Engine ---
   # NOTE: 2026-09-05 — Reactivated for Vietnam market pivot. PRD FR-96 added.
   # NOTE: 2026-09-08 — Readiness gate passed; Long Chau added to 22.2, Thuocsi deferred to Epic 24.
-  epic-22: in-progress
+  epic-22: done
   22-1-fnb-merchant-restaurant-directory-crawler: done
   22-2-healthcare-clinics-pharmacy-network-crawler: done
-  22-3-legal-trademark-intellectual-property-crawler: ready-for-dev
+  22-3-legal-trademark-intellectual-property-crawler: done
   epic-22-retrospective: optional
 
   # --- Epic 33: Vietnam Social & Video Platform Expansion ---
