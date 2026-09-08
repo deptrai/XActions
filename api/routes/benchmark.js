@@ -12,6 +12,10 @@ import prismaClient from '../lib/prisma.js';
 import { defaultHealthTierCache } from '../../src/benchmark/health-tier-cache.js';
 import { defaultAlertDispatcher } from '../services/benchmark/alerting.js';
 import { defaultRequalificationService } from '../services/benchmark/requalification.js';
+import { defaultCanaryRunner } from '../services/benchmark/canary-runner.js';
+import { BenchmarkScoringEngine } from '../../src/benchmark/scoring-engine.js';
+import { BenchmarkStateManager } from '../../src/benchmark/state-manager.js';
+import { CANARY_CONFIGS } from '../../src/benchmark/canary-config.js';
 import { ensureBenchmarkTables } from '../../src/benchmark/ensure-tables.js';
 
 /**
@@ -29,6 +33,7 @@ export function createBenchmarkRouter(deps = {}) {
   const healthTierCache = deps.healthTierCache || defaultHealthTierCache;
   const alertDispatcher = deps.alertDispatcher || defaultAlertDispatcher;
   const requalificationService = deps.requalificationService || defaultRequalificationService;
+  const canaryRunner = deps.canaryRunner || defaultCanaryRunner;
 
   /**
    * Helper to execute Prisma queries with automatic table initialization on missing table errors.
@@ -218,6 +223,61 @@ export function createBenchmarkRouter(deps = {}) {
       res.json(result);
     } catch (err) {
       res.status(500).json({ error: 'Failed to evaluate scraper re-qualification', message: err.message });
+    }
+  });
+
+  /**
+   * POST /probe-all
+   * Trigger on-demand canary probes across all platforms and update scorecards.
+   */
+  router.post('/probe-all', async (req, res) => {
+    try {
+      const outcome = await canaryRunner.probeAll({ timeoutMs: 15000 });
+      const scoringEngine = new BenchmarkScoringEngine();
+      const stateManager = new BenchmarkStateManager({ prisma, healthTierCache });
+
+      const evaluated = [];
+      for (const run of outcome.results || []) {
+        if (!run.scraperId) continue;
+        const config = CANARY_CONFIGS[run.scraperId] || {};
+        const telemetryRun = {
+          scraperId: run.scraperId,
+          platform: run.platform || config.platform || 'unknown',
+          isSuccess: Boolean(run.isSuccess),
+          avgLatencyMs: run.latencyMs || 500,
+          requestCount: 1,
+          failedRequestCount: run.isSuccess ? 0 : 1,
+          false200Count: run.false200Detected ? 1 : 0,
+          checkpointCount: run.checkpointDetected ? 1 : 0,
+          itemCount: run.isSuccess ? 10 : 0,
+          storeMetrics: run.isSuccess
+            ? { schemaValid: true, fillRate: 0.95 }
+            : { schemaValid: false, fillRate: 0.5 },
+          category: config.category || 'social',
+        };
+
+        const rollups = scoringEngine.aggregateTelemetryRollups([telemetryRun]);
+        const score = scoringEngine.calculateScores(rollups, config.category || 'social');
+
+        await stateManager.recordEvaluation(run.scraperId, score, {
+          platform: run.platform || config.platform,
+          category: config.category || 'social',
+          sampleCount: 1,
+          runs: [telemetryRun],
+        });
+
+        evaluated.push({ scraperId: run.scraperId, tier: score.tier, healthScore: score.healthScore });
+      }
+
+      res.json({
+        ok: true,
+        probed: outcome.total,
+        succeeded: outcome.succeeded,
+        failed: outcome.failed,
+        evaluated,
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to run canary probes', message: err.message });
     }
   });
 

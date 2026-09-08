@@ -314,6 +314,9 @@
           </div>
         </div>
         <div class="action-btns">
+          <button class="btn-refresh" id="probeAllBtn" onclick="runCanaryProbes()" style="background: rgba(34, 197, 94, 0.15); border-color: rgba(34, 197, 94, 0.3); color: #22c55e; margin-right: 8px;">
+            ⚡ Run Canaries
+          </button>
           <button class="btn-refresh" id="refreshBtn" onclick="loadBenchmarkSummary()">
             🔄 Refresh
           </button>
@@ -428,6 +431,26 @@
         if (tier === 'B') return 'badge-b';
         if (tier === 'C') return 'badge-c';
         return 'badge-unknown';
+      }
+
+      async function runCanaryProbes() {
+        const btn = document.getElementById('probeAllBtn');
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = '⏳ Probing...';
+        }
+        try {
+          const res = await fetch('/api/benchmark/probe-all', { method: 'POST' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          await loadBenchmarkSummary();
+        } catch (err) {
+          alert('Failed to execute canary probes: ' + err.message);
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = '⚡ Run Canaries';
+          }
+        }
       }
 
       async function loadBenchmarkSummary() {

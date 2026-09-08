@@ -147,4 +147,39 @@ describe('Story 34.5: Benchmark REST API Endpoints Unit Tests', () => {
     expect(res.status).toBe(500);
     expect(res.body).toHaveProperty('error');
   });
+
+  it('POST /api/benchmark/probe-all triggers canary probes and evaluates scorecards', async () => {
+    const mockCanary = {
+      probeAll: vi.fn().mockResolvedValueOnce({
+        total: 1,
+        succeeded: 1,
+        failed: 0,
+        results: [
+          {
+            scraperId: 'threads-hybrid',
+            platform: 'threads',
+            isSuccess: true,
+            latencyMs: 1200,
+          },
+        ],
+      }),
+    };
+
+    mockPrisma.scraperHealthScore.findFirst = vi.fn().mockResolvedValueOnce(null);
+    mockPrisma.scraperHealthScore.create = vi.fn().mockResolvedValueOnce({ id: 'eval-1' });
+
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.use(
+      '/api/benchmark',
+      createBenchmarkRouter({ prisma: mockPrisma, healthTierCache: mockCache, canaryRunner: mockCanary })
+    );
+
+    const res = await request(testApp).post('/api/benchmark/probe-all');
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.probed).toBe(1);
+    expect(res.body.succeeded).toBe(1);
+    expect(Array.isArray(res.body.evaluated)).toBe(true);
+  });
 });
