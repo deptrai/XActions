@@ -207,6 +207,7 @@ export class ThreadsCrawler extends AbstractCrawler {
               authorId: item.authorId || '',
               crawledAt: item.crawledAt ? toIsoDate(item.crawledAt) : new Date().toISOString(),
               storageRef: item.id,
+              scraperId: this.scraperId,
             });
           }
         }
@@ -2119,6 +2120,7 @@ export class ThreadsCrawler extends AbstractCrawler {
               authorId: postItem.authorId,
               crawledAt: toIsoDate(postItem.crawledAt),
               storageRef: postItem.id,
+              scraperId: this.scraperId,
             });
           }
         }

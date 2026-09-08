@@ -263,7 +263,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
 
     if (this.publisher && typeof this.publisher.publish === 'function') {
       for (const item of posts) {
-        await this.publisher.publish(item).catch(() => {});
+        await this.publisher.publish(item, this.scraperId).catch(() => {});
       }
     }
   }

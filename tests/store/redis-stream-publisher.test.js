@@ -54,6 +54,9 @@ describe('Story 14.3: RedisStreamPublisher Unit & Contract Tests', () => {
       authorId: 'user_999',
       crawledAt: '2026-08-28T00:00:00.000Z',
       storageRef: 'facebook:123456789',
+      scraperId: 'facebook-hybrid',
+      benchmark_health: 'UNKNOWN',
+      benchmark_alert: 'false',
     });
     // Ensure all values are strings
     for (const val of Object.values(formatted)) {

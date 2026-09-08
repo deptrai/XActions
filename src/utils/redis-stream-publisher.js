@@ -7,6 +7,8 @@
  * @license MIT
  */
 
+import { defaultHealthTierCache } from '../benchmark/health-tier-cache.js';
+
 /**
  * Check if an environment variable string represents a truthy flag (true, 1, yes, on).
  * @param {string | boolean | undefined | null} val
@@ -64,6 +66,9 @@ export class RedisStreamPublisher {
   /** @type {boolean} */
   #isOwnedClient = false;
 
+  /** @type {import('../benchmark/health-tier-cache.js').HealthTierCache} */
+  #healthTierCache;
+
   /**
    * @param {Object} [options]
    * @param {import('../core/types.js').RedisClientLike} [options.redisClient]
@@ -73,12 +78,14 @@ export class RedisStreamPublisher {
    * @param {number} [options.maxLen]
    * @param {string} [options.minId]
    * @param {boolean} [options.enabled]
+   * @param {import('../benchmark/health-tier-cache.js').HealthTierCache} [options.healthTierCache]
    */
   constructor(options = {}) {
     this.#redisClient = options.redisClient || null;
     this.#streamKey = options.streamKey || 'stream:social:raw_posts';
     this.#groupName = options.groupName || process.env.NOWING_CONSUMER_GROUP || 'nowing_nlp_workers';
     this.#enabled = options.enabled !== undefined ? Boolean(options.enabled) : null;
+    this.#healthTierCache = options.healthTierCache || defaultHealthTierCache;
 
     const rawStrategy = (options.trimStrategy || process.env.REDIS_STREAM_TRIM_STRATEGY || 'maxlen').toLowerCase();
     this.#trimStrategy = rawStrategy === 'minid' ? 'minid' : 'maxlen';
@@ -129,10 +136,12 @@ export class RedisStreamPublisher {
 
   /**
    * Format a PostItem, CommentItem, or ThinEvent into the required string-only key-value record for XADD.
+   * Enriches payload with scraperId, benchmark_health, and benchmark_alert (Story 34.6 / AD-32).
    * @param {Partial<import('../core/types.js').ThinEvent> & Record<string, unknown>} item
+   * @param {string} [scraperId]
    * @returns {Record<string, string>}
    */
-  formatPayload(item) {
+  formatPayload(item, scraperId) {
     if (!item) return {};
 
     const id = String(item.id || (item.platform && item.externalId ? `${item.platform}:${item.externalId}` : ''));
@@ -143,7 +152,24 @@ export class RedisStreamPublisher {
     const crawledAt = toIsoDate(/** @type {any} */ (item.crawledAt));
     const storageRef = String(item.storageRef || id);
 
-    return {
+    const resolvedScraperId = scraperId || item.scraperId || (platform ? `${platform}-hybrid` : '');
+    let healthTier = item.benchmark_health;
+    if (!healthTier && resolvedScraperId) {
+      healthTier = this.#healthTierCache.get(resolvedScraperId);
+    }
+    if (!healthTier) {
+      healthTier = 'UNKNOWN';
+    }
+
+    let isAlert;
+    if (item.benchmark_alert !== undefined && item.benchmark_alert !== null) {
+      isAlert = String(item.benchmark_alert) === 'true';
+    } else {
+      isAlert = healthTier === 'C';
+    }
+
+    /** @type {Record<string, string>} */
+    const payload = {
       id,
       platform,
       externalId,
@@ -151,7 +177,15 @@ export class RedisStreamPublisher {
       authorId,
       crawledAt,
       storageRef,
+      benchmark_health: String(healthTier),
+      benchmark_alert: String(isAlert),
     };
+
+    if (resolvedScraperId) {
+      payload.scraperId = String(resolvedScraperId);
+    }
+
+    return payload;
   }
 
   /**
@@ -159,30 +193,53 @@ export class RedisStreamPublisher {
    * Non-blocking and non-throwing: returns { ok: true, id } or { ok: false, error }
    *
    * @param {string | (Partial<import('../core/types.js').ThinEvent> & Record<string, unknown>)} keyOrItem
-   * @param {Partial<import('../core/types.js').ThinEvent> & Record<string, unknown>} [maybeItem]
-   * @param {Object} [opts]
+   * @param {Partial<import('../core/types.js').ThinEvent> & Record<string, unknown> | string} [maybeItemOrScraperId]
+   * @param {Object | string} [optsOrScraperId]
    * @returns {Promise<{ ok: boolean, id?: string, skipped?: boolean, error?: string }>}
    */
-  async publish(keyOrItem, maybeItem, opts = {}) {
+  async publish(keyOrItem, maybeItemOrScraperId, optsOrScraperId = {}) {
     const isEnabled = this.#enabled !== null ? this.#enabled : isEnvTruthy(process.env.REDIS_STREAM_ENABLED);
     if (!isEnabled) {
       return { ok: false, skipped: true };
     }
 
     let streamKey = this.#streamKey;
-    let item = maybeItem;
+    let item;
+    let scraperId = null;
 
     if (typeof keyOrItem === 'string') {
       streamKey = keyOrItem;
+      if (maybeItemOrScraperId && typeof maybeItemOrScraperId === 'object') {
+        item = maybeItemOrScraperId;
+        if (typeof optsOrScraperId === 'string') {
+          scraperId = optsOrScraperId;
+        } else if (optsOrScraperId && typeof optsOrScraperId === 'object') {
+          scraperId = optsOrScraperId.scraperId || null;
+        }
+      }
     } else if (keyOrItem && typeof keyOrItem === 'object') {
       item = keyOrItem;
+      if (typeof maybeItemOrScraperId === 'string') {
+        scraperId = maybeItemOrScraperId;
+      } else if (maybeItemOrScraperId && typeof maybeItemOrScraperId === 'object') {
+        scraperId = maybeItemOrScraperId.scraperId || null;
+      }
+      if (!scraperId && typeof optsOrScraperId === 'string') {
+        scraperId = optsOrScraperId;
+      } else if (!scraperId && optsOrScraperId && typeof optsOrScraperId === 'object') {
+        scraperId = optsOrScraperId.scraperId || null;
+      }
+    }
+
+    if (!scraperId && item && item.scraperId) {
+      scraperId = item.scraperId;
     }
 
     if (!item) {
       return { ok: false, error: 'No payload provided to publish' };
     }
 
-    const payload = this.formatPayload(item);
+    const payload = this.formatPayload(item, scraperId);
     if (!payload.id) {
       return { ok: false, error: 'Payload missing id' };
     }

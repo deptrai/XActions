@@ -332,6 +332,7 @@ export class FnbMerchantCrawler extends AbstractCrawler {
           authorId: post.authorId,
           crawledAt: post.crawledAt,
           storageRef: post.id,
+          scraperId: this.scraperId,
         }).catch(() => {});
       }
     }

@@ -2559,6 +2559,7 @@ export class FacebookCrawler extends AbstractCrawler {
             authorId: item.authorId || '',
             crawledAt: toIsoDate(item.crawledAt),
             storageRef: item.storageRef || item.id,
+            scraperId: this.scraperId,
           });
         }
       }

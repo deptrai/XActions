@@ -52,6 +52,9 @@ export interface ThinEvent {
   authorId: string;
   crawledAt: string;
   storageRef: string;
+  scraperId?: string;
+  benchmark_health?: 'A' | 'B' | 'C' | 'UNKNOWN';
+  benchmark_alert?: boolean | string;
 }
 
 export interface StreamMetrics {

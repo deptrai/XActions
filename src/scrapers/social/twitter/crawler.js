@@ -719,6 +719,7 @@ export class TwitterCrawler extends AbstractCrawler {
               authorId: anyItem.authorId || anyItem.externalId || '',
               crawledAt: anyItem.crawledAt ? toIsoDate(anyItem.crawledAt) : new Date().toISOString(),
               storageRef: anyItem.id,
+              scraperId: this.scraperId,
             });
           }
         }

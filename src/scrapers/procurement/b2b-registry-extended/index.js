@@ -90,6 +90,7 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
           authorId: post.authorId,
           crawledAt: post.crawledAt,
           storageRef: post.id,
+          scraperId: this.scraperId,
         }).catch(() => {});
       }
     }
