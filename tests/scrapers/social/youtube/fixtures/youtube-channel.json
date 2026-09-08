@@ -1,0 +1,28 @@
+{
+  "kind": "youtube#channelListResponse",
+  "pageInfo": {
+    "totalResults": 1,
+    "resultsPerPage": 1
+  },
+  "items": [
+    {
+      "kind": "youtube#channel",
+      "id": "UC_channel_vtv",
+      "snippet": {
+        "title": "VTV Digital & Công Nghệ",
+        "description": "Kênh truyền thông số chính thức về công nghệ và khởi nghiệp tại Việt Nam",
+        "customUrl": "@vtvdigital",
+        "publishedAt": "2016-03-15T00:00:00Z",
+        "thumbnails": {
+          "high": { "url": "https://yt3.ggpht.com/avatar_vtv.jpg" }
+        },
+        "country": "VN"
+      },
+      "statistics": {
+        "viewCount": "680000000",
+        "subscriberCount": "2400000",
+        "videoCount": "4500"
+      }
+    }
+  ]
+}

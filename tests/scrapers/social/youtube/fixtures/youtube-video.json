@@ -1,0 +1,28 @@
+{
+  "kind": "youtube#videoListResponse",
+  "items": [
+    {
+      "kind": "youtube#video",
+      "id": "vid_single_999",
+      "snippet": {
+        "publishedAt": "2026-09-05T08:00:00Z",
+        "channelId": "UC_channel_vtv",
+        "title": "Trí Tuệ Nhân Tạo Trong Doanh Nghiệp Vừa Và Nhỏ",
+        "description": "Hội thảo chuyển đổi số và ứng dụng AI thực chiến",
+        "thumbnails": {
+          "high": { "url": "https://i.ytimg.com/vi/vid_single_999/hqdefault.jpg" }
+        },
+        "channelTitle": "VTV Digital & Công Nghệ",
+        "tags": ["ai", "chuyen doi so", "doanh nghiep"]
+      },
+      "contentDetails": {
+        "duration": "PT18M12S"
+      },
+      "statistics": {
+        "viewCount": "154000",
+        "likeCount": "8900",
+        "commentCount": "430"
+      }
+    }
+  ]
+}

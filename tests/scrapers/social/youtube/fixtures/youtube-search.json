@@ -1,0 +1,46 @@
+{
+  "kind": "youtube#searchListResponse",
+  "nextPageToken": "CAUQAA",
+  "pageInfo": {
+    "totalResults": 1000,
+    "resultsPerPage": 2
+  },
+  "items": [
+    {
+      "kind": "youtube#searchResult",
+      "id": {
+        "kind": "youtube#video",
+        "videoId": "vid_search_1"
+      },
+      "snippet": {
+        "publishedAt": "2026-09-01T08:00:00Z",
+        "channelId": "UC_channel_101",
+        "title": "Chuyển Đổi Số Doanh Nghiệp Việt Nam 2026",
+        "description": "Giải pháp ứng dụng trí tuệ nhân tạo và tự động hóa trong quản lý kinh doanh",
+        "thumbnails": {
+          "default": { "url": "https://i.ytimg.com/vi/vid_search_1/default.jpg" },
+          "medium": { "url": "https://i.ytimg.com/vi/vid_search_1/mqdefault.jpg" },
+          "high": { "url": "https://i.ytimg.com/vi/vid_search_1/hqdefault.jpg" }
+        },
+        "channelTitle": "Kênh Kinh Tế & Công Nghệ VN"
+      }
+    },
+    {
+      "kind": "youtube#searchResult",
+      "id": {
+        "kind": "youtube#video",
+        "videoId": "vid_search_2"
+      },
+      "snippet": {
+        "publishedAt": "2026-09-02T09:30:00Z",
+        "channelId": "UC_channel_102",
+        "title": "Báo cáo thị trường E-commerce Việt Nam",
+        "description": "Xu hướng mua sắm trực tuyến trên TikTok Shop và Shopee",
+        "thumbnails": {
+          "high": { "url": "https://i.ytimg.com/vi/vid_search_2/hqdefault.jpg" }
+        },
+        "channelTitle": "Vietnam Business Insight"
+      }
+    }
+  ]
+}

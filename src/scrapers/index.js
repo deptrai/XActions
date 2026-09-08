@@ -96,6 +96,13 @@ import healthcare, { scrapeHealthcare } from './healthcare/index.js';
 import { IpLegalCrawler } from './legal/ip-trademark/crawler.js';
 import { IpLegalClient } from './legal/ip-trademark/client.js';
 import ipLegal, { scrapeIpLegal } from './legal/ip-trademark/index.js';
+import youtube, {
+  YouTubeVNCrawler,
+  YouTubeClient,
+  createYouTubeVNCrawler,
+  createYouTubeClient,
+  scrapeYouTube,
+} from './social/youtube/index.js';
 import zalo, {
   ZaloCrawler,
   ZaloClient,
@@ -212,6 +219,9 @@ export const platforms = {
   zalo,
   zalo_oa: zalo,
   zalo_official_account: zalo,
+  youtube,
+  yt: youtube,
+  youtube_vn: youtube,
 };
 
 /**
@@ -804,6 +814,78 @@ export async function scrape(platform, action, options = {}) {
 
     try {
       return await crawler.start({ action: mappedAction, args: mappedArgs, session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── YouTube VN path (Story 33.2) ──
+  if (
+    platformName === 'youtube' ||
+    platformName === 'yt' ||
+    platformName === 'youtube_vn'
+  ) {
+    /** @type {Record<string, string>} */
+    const YOUTUBE_ACTION_MAP = {
+      search: 'search',
+      videos: 'search',
+      trending_vn: 'trending_vn',
+      trending: 'trending_vn',
+      popular: 'trending_vn',
+      channel_videos: 'channel_videos',
+      channel_detail: 'channel_detail',
+      channel: 'channel_detail',
+      profile: 'channel_detail',
+      video_detail: 'video_detail',
+      video: 'video_detail',
+      detail: 'video_detail',
+      video_comments: 'video_comments',
+      comments: 'video_comments',
+    };
+
+    const mappedAction = YOUTUBE_ACTION_MAP[action] || action;
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.limit != null) mappedArgs.maxResults = Number(options.limit);
+    if (options.maxResults != null) mappedArgs.maxResults = Number(options.maxResults);
+    if (options.regionCode) mappedArgs.regionCode = options.regionCode;
+    if (options.query || options.q) mappedArgs.query = options.query || options.q;
+    if (mappedAction === 'channel_videos' || mappedAction === 'channel_detail') {
+      if (options.channelId || options.channel || options.id) {
+        mappedArgs.channelId = options.channelId || options.channel || options.id;
+      }
+    } else {
+      if (options.channelId || options.channel) mappedArgs.channelId = options.channelId || options.channel;
+      if (options.videoId || options.id) mappedArgs.videoId = options.videoId || options.id;
+    }
+    if (options.apiKey || options.key) mappedArgs.apiKey = options.apiKey || options.key;
+
+    const client = new YouTubeClient({
+      baseUrl: options.baseUrl,
+      apiKey: options.apiKey || options.key,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresAuth: false,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new YouTubeVNCrawler({
+      client,
+      store,
+      publisher: options.publisher || options.eventPublisher,
+      accountPool: options.accountPool,
+      governor: options.governor,
+      requiresAuth: false,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
     } finally {
       if (options.autoClose !== false) {
         await crawler.cleanup().catch(() => {});
@@ -2342,6 +2424,11 @@ export default {
   IpLegalCrawler,
   IpLegalClient,
   scrapeIpLegal,
+  YouTubeVNCrawler,
+  YouTubeClient,
+  createYouTubeVNCrawler,
+  createYouTubeClient,
+  scrapeYouTube,
   createBlueskyClient,
   createBlueskyCrawler,
   createMastodonClient,
@@ -2426,6 +2513,16 @@ export function createB2BRegistryExtendedCrawler(client, options = {}) {
   return new B2BRegistryExtendedCrawler({ client: resolvedClient, ...resolvedOptions });
 }
 
+export function createYouTubeClient(options = {}) {
+  return new YouTubeClient(options);
+}
+
+export function createYouTubeVNCrawler(client, options = {}) {
+  const resolvedClient = client instanceof YouTubeClient ? client : new YouTubeClient(client || options || {});
+  const resolvedOptions = client instanceof YouTubeClient ? options : (options || {});
+  return new YouTubeVNCrawler({ client: resolvedClient, ...resolvedOptions });
+}
+
 export function createZaloClient(options = {}) {
   return new ZaloClient(options);
 }
@@ -2438,6 +2535,9 @@ export function createZaloCrawler(client, options = {}) {
 
 // Named re-exports for adapter utilities
 export {
+  YouTubeVNCrawler,
+  YouTubeClient,
+  scrapeYouTube,
   ZaloCrawler,
   ZaloClient,
   scrapeZalo,

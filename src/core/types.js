@@ -229,6 +229,8 @@ export const CATEGORIES = Object.freeze({
   HEALTHCARE: 'healthcare',
   // Legal & Intellectual Property (ipvietnam.gov.vn).
   LEGAL: 'legal',
+  // Video sharing & channels (YouTube Data API v3).
+  VIDEO: 'video',
 });
 
 /** @type {string[]} */

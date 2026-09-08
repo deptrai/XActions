@@ -1,0 +1,56 @@
+{
+  "kind": "youtube#videoListResponse",
+  "nextPageToken": "CBQQAA",
+  "pageInfo": {
+    "totalResults": 50,
+    "resultsPerPage": 2
+  },
+  "items": [
+    {
+      "kind": "youtube#video",
+      "id": "vid_trending_1",
+      "snippet": {
+        "publishedAt": "2026-09-06T10:00:00Z",
+        "channelId": "UC_music_vn",
+        "title": "Bản Tin Thịnh Hành Âm Nhạc Việt Nam Tháng 9/2026",
+        "description": "Tổng hợp các ca khúc được yêu thích nhất tuần qua",
+        "thumbnails": {
+          "high": { "url": "https://i.ytimg.com/vi/vid_trending_1/hqdefault.jpg" }
+        },
+        "channelTitle": "V-Pop Official",
+        "tags": ["nhac tre", "vpop", "trending vn"]
+      },
+      "contentDetails": {
+        "duration": "PT4M25S"
+      },
+      "statistics": {
+        "viewCount": "2500000",
+        "likeCount": "120000",
+        "commentCount": "5400"
+      }
+    },
+    {
+      "kind": "youtube#video",
+      "id": "vid_trending_2",
+      "snippet": {
+        "publishedAt": "2026-09-07T14:15:00Z",
+        "channelId": "UC_news_vn",
+        "title": "Thời Sự Việt Nam Hôm Nay - Điểm Tin Kinh Tế Nổi Bật",
+        "description": "Bản tin phát triển hạ tầng và thị trường lao động",
+        "thumbnails": {
+          "high": { "url": "https://i.ytimg.com/vi/vid_trending_2/hqdefault.jpg" }
+        },
+        "channelTitle": "Tin Tức Thời Sự 24H",
+        "tags": ["kinh te", "thoi su"]
+      },
+      "contentDetails": {
+        "duration": "PT12M40S"
+      },
+      "statistics": {
+        "viewCount": "890000",
+        "likeCount": "34000",
+        "commentCount": "1200"
+      }
+    }
+  ]
+}

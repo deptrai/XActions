@@ -1,0 +1,63 @@
+{
+  "kind": "youtube#commentThreadListResponse",
+  "nextPageToken": "CDQQAA",
+  "pageInfo": {
+    "totalResults": 2,
+    "resultsPerPage": 2
+  },
+  "items": [
+    {
+      "kind": "youtube#commentThread",
+      "id": "thread_cmt_1",
+      "snippet": {
+        "videoId": "vid_single_999",
+        "totalReplyCount": 1,
+        "topLevelComment": {
+          "id": "top_cmt_1",
+          "snippet": {
+            "authorDisplayName": "Tran Binh Minh",
+            "authorProfileImageUrl": "https://yt3.ggpht.com/user_1.jpg",
+            "authorChannelId": { "value": "UC_user_1" },
+            "textDisplay": "Nội dung phân tích rất sắc bén và thực tế!",
+            "likeCount": 24,
+            "publishedAt": "2026-09-05T09:00:00Z"
+          }
+        }
+      },
+      "replies": {
+        "comments": [
+          {
+            "id": "reply_cmt_1_1",
+            "snippet": {
+              "authorDisplayName": "VTV Digital & Công Nghệ",
+              "authorProfileImageUrl": "https://yt3.ggpht.com/avatar_vtv.jpg",
+              "authorChannelId": { "value": "UC_channel_vtv" },
+              "textDisplay": "Cảm ơn bạn đã đồng hành cùng kênh!",
+              "likeCount": 5,
+              "publishedAt": "2026-09-05T09:30:00Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "youtube#commentThread",
+      "id": "thread_cmt_2",
+      "snippet": {
+        "videoId": "vid_single_999",
+        "totalReplyCount": 0,
+        "topLevelComment": {
+          "id": "top_cmt_2",
+          "snippet": {
+            "authorDisplayName": "Le Hoang Nam",
+            "authorProfileImageUrl": "https://yt3.ggpht.com/user_2.jpg",
+            "authorChannelId": { "value": "UC_user_2" },
+            "textDisplay": "Có bản slide tài liệu chia sẻ không ban tổ chức ơi?",
+            "likeCount": 8,
+            "publishedAt": "2026-09-05T10:15:00Z"
+          }
+        }
+      }
+    }
+  ]
+}
