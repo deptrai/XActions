@@ -2513,26 +2513,6 @@ export function createB2BRegistryExtendedCrawler(client, options = {}) {
   return new B2BRegistryExtendedCrawler({ client: resolvedClient, ...resolvedOptions });
 }
 
-export function createYouTubeClient(options = {}) {
-  return new YouTubeClient(options);
-}
-
-export function createYouTubeVNCrawler(client, options = {}) {
-  const resolvedClient = client instanceof YouTubeClient ? client : new YouTubeClient(client || options || {});
-  const resolvedOptions = client instanceof YouTubeClient ? options : (options || {});
-  return new YouTubeVNCrawler({ client: resolvedClient, ...resolvedOptions });
-}
-
-export function createZaloClient(options = {}) {
-  return new ZaloClient(options);
-}
-
-export function createZaloCrawler(client, options = {}) {
-  const resolvedClient = client instanceof ZaloClient ? client : new ZaloClient(client || options || {});
-  const resolvedOptions = client instanceof ZaloClient ? options : (options || {});
-  return new ZaloCrawler({ client: resolvedClient, ...resolvedOptions });
-}
-
 // Named re-exports for adapter utilities
 export {
   YouTubeVNCrawler,
