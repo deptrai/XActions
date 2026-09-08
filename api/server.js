@@ -93,6 +93,7 @@ import { startTweetScheduler } from './services/tweetScheduler.js';
 import { startRetentionScheduler, requestRetentionShutdown, getIsProcessing } from './services/retentionScheduler.js';
 import platformRoutes from './routes/platform.js';
 import benchmarkRoutes from './routes/benchmark.js';
+import { defaultCanaryRunner } from './services/benchmark/canary-runner.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
@@ -738,6 +739,11 @@ if (process.env.NODE_ENV !== 'test') {
     if (process.env.ENABLE_RETENTION_SCHEDULER !== 'false') {
       startRetentionScheduler();
     }
+
+    // Start Synthetic Canary Probe Scheduler (Story 34.7 / NFR-20 / AD-23)
+    if (process.env.ENABLE_CANARY_SCHEDULER === 'true') {
+      defaultCanaryRunner.startScheduler();
+    }
   });
 
   // Graceful shutdown: stop cron schedulers and finish in-flight cleanup.
@@ -745,6 +751,7 @@ if (process.env.NODE_ENV !== 'test') {
     process.on(signal, () => {
       console.log(`🛑 [Server] Received ${signal}, shutting down...`);
       requestRetentionShutdown();
+      defaultCanaryRunner.stopScheduler();
       httpServer.close(async () => {
         console.log('✅ [Server] HTTP server closed.');
         // Wait for any in-flight retention cleanup to finish (with a safety cap).

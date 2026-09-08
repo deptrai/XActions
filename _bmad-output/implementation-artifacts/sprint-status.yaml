@@ -278,6 +278,6 @@ development_status:
   34-4-benchmark-scoring-engine: done
   34-5-operator-scorecard-cli-dashboard: done
   34-6-nowing-integration-health-flag-stream-events: done
-  34-7-synthetic-canary-probe-scheduler: ready-for-dev
-  34-8-active-alerting-requalification-workflow: backlog
+  34-7-synthetic-canary-probe-scheduler: done
+  34-8-active-alerting-requalification-workflow: ready-for-dev
   epic-34-retrospective: optional
