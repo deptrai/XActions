@@ -6,6 +6,8 @@
  * @license MIT
  */
 
+import { ensureBenchmarkTables } from './ensure-tables.js';
+
 export const HEALTH_TIER_HASH_KEY = 'hash:scraper:health_tier';
 export const VALID_TIERS = Object.freeze(['A', 'B', 'C', 'UNKNOWN']);
 export const DEFAULT_TIER = 'UNKNOWN';
@@ -190,6 +192,7 @@ export class HealthTierCache {
     }
 
     try {
+      await ensureBenchmarkTables(prisma);
       const records = await prisma.scraperHealthScore.findMany({
         distinct: ['scraperId'],
         orderBy: { evaluatedAt: 'desc' },

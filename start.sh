@@ -9,6 +9,9 @@ if [ -n "$DATABASE_URL" ]; then
   npx prisma migrate deploy || {
     echo "⚠️  Tables exist without migration history - marking baseline as applied..."
     npx prisma migrate resolve --applied "0_init" && npx prisma migrate deploy
+  } || {
+    echo "⚠️  Prisma migrate deploy failed, falling back to prisma db push..."
+    npx prisma db push --skip-generate --accept-data-loss
   } || echo "⚠️  Migration warning (non-fatal), continuing..."
 else
   echo "⚠️ DATABASE_URL not set, skipping migrations"

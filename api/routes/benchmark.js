@@ -12,6 +12,7 @@ import prismaClient from '../lib/prisma.js';
 import { defaultHealthTierCache } from '../../src/benchmark/health-tier-cache.js';
 import { defaultAlertDispatcher } from '../services/benchmark/alerting.js';
 import { defaultRequalificationService } from '../services/benchmark/requalification.js';
+import { ensureBenchmarkTables } from '../../src/benchmark/ensure-tables.js';
 
 /**
  * Factory function to create benchmark router with dependency injection for testing.
@@ -30,15 +31,40 @@ export function createBenchmarkRouter(deps = {}) {
   const requalificationService = deps.requalificationService || defaultRequalificationService;
 
   /**
+   * Helper to execute Prisma queries with automatic table initialization on missing table errors.
+   * @param {() => Promise<any>} queryFn
+   * @returns {Promise<any>}
+   */
+  const safeQuery = async (queryFn) => {
+    try {
+      return await queryFn();
+    } catch (err) {
+      const errMsg = err?.message || String(err);
+      if (errMsg.includes('does not exist') || errMsg.includes('relation') || errMsg.includes('no such table')) {
+        await ensureBenchmarkTables(prisma);
+        try {
+          return await queryFn();
+        } catch {
+          return null;
+        }
+      }
+      throw err;
+    }
+  };
+
+  /**
    * GET /summary
    * Aggregate summary of all monitored scrapers, tier counts, and average system health score.
    */
   router.get('/summary', async (req, res) => {
     try {
-      const records = await prisma.scraperHealthScore.findMany({
-        distinct: ['scraperId'],
-        orderBy: { evaluatedAt: 'desc' },
-      });
+      const rawRecords = await safeQuery(() =>
+        prisma.scraperHealthScore.findMany({
+          distinct: ['scraperId'],
+          orderBy: { evaluatedAt: 'desc' },
+        })
+      );
+      const records = rawRecords || [];
 
       const counts = { total: 0, tierA: 0, tierB: 0, tierC: 0, unknown: 0 };
       let totalScoreSum = 0;
@@ -97,10 +123,12 @@ export function createBenchmarkRouter(deps = {}) {
       return res.status(400).json({ error: 'Invalid scraper ID' });
     }
     try {
-      const detail = await prisma.scraperHealthScore.findFirst({
-        where: { scraperId: id },
-        orderBy: { evaluatedAt: 'desc' },
-      });
+      const detail = await safeQuery(() =>
+        prisma.scraperHealthScore.findFirst({
+          where: { scraperId: id },
+          orderBy: { evaluatedAt: 'desc' },
+        })
+      );
 
       if (!detail) {
         return res.status(404).json({ error: `Scraper "${id}" not found in benchmark registry` });
@@ -129,22 +157,25 @@ export function createBenchmarkRouter(deps = {}) {
       return res.status(400).json({ error: 'Invalid scraper ID' });
     }
     try {
-      const history = await prisma.scraperHealthScore.findMany({
-        where: { scraperId: id },
-        orderBy: { evaluatedAt: 'desc' },
-        take: 30,
-        select: {
-          id: true,
-          healthScore: true,
-          tier: true,
-          stabilityScore: true,
-          qualityScore: true,
-          noiseScore: true,
-          costScore: true,
-          sampleCount: true,
-          evaluatedAt: true,
-        },
-      });
+      const rawHistory = await safeQuery(() =>
+        prisma.scraperHealthScore.findMany({
+          where: { scraperId: id },
+          orderBy: { evaluatedAt: 'desc' },
+          take: 30,
+          select: {
+            id: true,
+            healthScore: true,
+            tier: true,
+            stabilityScore: true,
+            qualityScore: true,
+            noiseScore: true,
+            costScore: true,
+            sampleCount: true,
+            evaluatedAt: true,
+          },
+        })
+      );
+      const history = rawHistory || [];
 
       res.json({
         scraperId: id,
