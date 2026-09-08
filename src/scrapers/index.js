@@ -96,6 +96,13 @@ import healthcare, { scrapeHealthcare } from './healthcare/index.js';
 import { IpLegalCrawler } from './legal/ip-trademark/crawler.js';
 import { IpLegalClient } from './legal/ip-trademark/client.js';
 import ipLegal, { scrapeIpLegal } from './legal/ip-trademark/index.js';
+import zalo, {
+  ZaloCrawler,
+  ZaloClient,
+  createZaloCrawler,
+  createZaloClient,
+  scrapeZalo,
+} from './social/zalo/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -202,6 +209,9 @@ export const platforms = {
   b2b_registry_extended: b2bRegistryExtended,
   hosocongty: b2bRegistryExtended,
   muasamcong: b2bRegistryExtended,
+  zalo,
+  zalo_oa: zalo,
+  zalo_official_account: zalo,
 };
 
 /**
@@ -723,6 +733,77 @@ export async function scrape(platform, action, options = {}) {
 
     try {
       return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── Zalo Official Account path (Story 33.1) ──
+  if (
+    platformName === 'zalo' ||
+    platformName === 'zalo_oa' ||
+    platformName === 'zalo_official_account'
+  ) {
+    /** @type {Record<string, string>} */
+    const ZALO_ACTION_MAP = {
+      oa_posts: 'oa_posts',
+      posts: 'oa_posts',
+      articles: 'oa_posts',
+      feed: 'oa_posts',
+      oa_followers: 'oa_followers',
+      followers: 'oa_followers',
+      oa_detail: 'oa_detail',
+      oa_info: 'oa_detail',
+      detail: 'oa_detail',
+      profile: 'oa_detail',
+      info: 'oa_detail',
+      marketplace_products: 'marketplace_products',
+      marketplace_search: 'marketplace_products',
+      products: 'marketplace_products',
+      marketplace: 'marketplace_products',
+    };
+
+    const mappedAction = ZALO_ACTION_MAP[action] || action;
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.offset != null) mappedArgs.offset = Number(options.offset);
+    if (options.count != null) mappedArgs.count = Number(options.count);
+    if (options.oaId) mappedArgs.oaId = options.oaId;
+    if (options.id) mappedArgs.oaId = options.id;
+    if (options.accessToken || options.token) mappedArgs.accessToken = options.accessToken || options.token;
+
+    const client = new ZaloClient({
+      baseUrl: options.baseUrl,
+      accessToken: options.accessToken || options.token,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresAuth: options.requiresAuth,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new ZaloCrawler({
+      client,
+      store,
+      publisher: options.publisher || options.eventPublisher,
+      accountPool: options.accountPool,
+      governor: options.governor,
+      requiresAuth: options.requiresAuth,
+      requiresProxy: options.requiresProxy,
+    });
+
+    const session = {
+      ...(options.session || {}),
+      accountId: options.accountId || options.session?.accountId || (options.accessToken || options.token ? 'zalo:oa:default' : undefined),
+    };
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session });
     } finally {
       if (options.autoClose !== false) {
         await crawler.cleanup().catch(() => {});
@@ -2345,8 +2426,21 @@ export function createB2BRegistryExtendedCrawler(client, options = {}) {
   return new B2BRegistryExtendedCrawler({ client: resolvedClient, ...resolvedOptions });
 }
 
+export function createZaloClient(options = {}) {
+  return new ZaloClient(options);
+}
+
+export function createZaloCrawler(client, options = {}) {
+  const resolvedClient = client instanceof ZaloClient ? client : new ZaloClient(client || options || {});
+  const resolvedOptions = client instanceof ZaloClient ? options : (options || {});
+  return new ZaloCrawler({ client: resolvedClient, ...resolvedOptions });
+}
+
 // Named re-exports for adapter utilities
 export {
+  ZaloCrawler,
+  ZaloClient,
+  scrapeZalo,
   FacebookCrawler,
   FacebookClient,
   BlueskyCrawler,

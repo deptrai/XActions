@@ -1,0 +1,27 @@
+{
+  "error": 0,
+  "message": "Success",
+  "data": {
+    "total": 2,
+    "products": [
+      {
+        "id": "prod_1",
+        "name": "Bản quyền Nowing Lead Hub 1 năm",
+        "description": "Công cụ phân tích khách hàng tiềm năng",
+        "price": 12000000,
+        "status": 1,
+        "code": "LEAD-1Y",
+        "photos": ["https://media.zalo.me/prod1.jpg"]
+      },
+      {
+        "id": "prod_2",
+        "name": "Gói tích hợp Zalo Scraper API",
+        "description": "API cào dữ liệu công khai",
+        "price": 5000000,
+        "status": 1,
+        "code": "API-ZALO",
+        "photos": ["https://media.zalo.me/prod2.jpg"]
+      }
+    ]
+  }
+}

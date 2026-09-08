@@ -182,8 +182,8 @@ development_status:
   # --- Epic 33: Vietnam Social & Video Platform Expansion ---
   # NOTE: 2026-09-05 — Net-new epic added for Vietnam market pivot. PRD FR-97 + NFR-19 added.
   # Requires Zalo OA API v3 access token + YouTube Data API v3 key.
-  epic-33: backlog
-  33-1-zalo-oa-public-content-crawler: backlog
+  epic-33: in-progress
+  33-1-zalo-oa-public-content-crawler: done
   33-2-youtube-vn-channel-video-crawler: backlog
   epic-33-retrospective: optional
 

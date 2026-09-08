@@ -1,0 +1,33 @@
+{
+  "error": 0,
+  "message": "Success",
+  "data": {
+    "total": 2,
+    "medias": [
+      {
+        "id": "art_1001",
+        "title": "Ra mắt tính năng Lead CRM cho doanh nghiệp",
+        "author": "Nowing Team",
+        "cover": "https://media.zalo.me/cover_1001.jpg",
+        "thumb": "https://media.zalo.me/thumb_1001.jpg",
+        "status": "show",
+        "type": "normal",
+        "description": "Giải pháp phân tích mạng xã hội và lead hub Việt Nam",
+        "body": "Nội dung đầy đủ về giải pháp Lead CRM tự động cho doanh nghiệp Việt Nam.",
+        "create_date": 1725780000000
+      },
+      {
+        "id": "art_1002",
+        "title": "Bản tin chuyển đổi số doanh nghiệp",
+        "author": "Nowing Team",
+        "cover": "https://media.zalo.me/cover_1002.jpg",
+        "thumb": "https://media.zalo.me/thumb_1002.jpg",
+        "status": "show",
+        "type": "video",
+        "description": "Video tổng hợp tin tức thị trường",
+        "body": "",
+        "create_date": 1725790000000
+      }
+    ]
+  }
+}

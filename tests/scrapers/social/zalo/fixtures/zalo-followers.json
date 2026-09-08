@@ -1,0 +1,11 @@
+{
+  "error": 0,
+  "message": "Success",
+  "data": {
+    "total": 2,
+    "users": [
+      { "user_id": "usr_998877" },
+      { "user_id": "usr_112233" }
+    ]
+  }
+}

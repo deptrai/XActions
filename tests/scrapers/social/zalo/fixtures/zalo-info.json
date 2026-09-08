@@ -1,0 +1,15 @@
+{
+  "error": 0,
+  "message": "Success",
+  "data": {
+    "oa_id": "oa_123456",
+    "name": "Nowing AI Official Account",
+    "description": "Tự động hóa thông tin thị trường Việt Nam",
+    "avatar": "https://oa.zalo.me/avatar_123.png",
+    "cover": "https://oa.zalo.me/cover_123.png",
+    "is_verified": true,
+    "num_follower": 5420,
+    "package_name": "Premium",
+    "category": "Technology"
+  }
+}
