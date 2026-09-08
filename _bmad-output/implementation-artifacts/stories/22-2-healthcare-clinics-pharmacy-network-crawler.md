@@ -295,7 +295,7 @@ metadata: {
 - `tests/scrapers/healthcare/fixtures/` (new: HTML sample fixtures)
 
 ### Status
-review
+done
 
 ### Code Review Resolution (2026-09-08)
 - Applied all 10 patch findings identified by 4-layer adversarial review:
