@@ -29,12 +29,18 @@ async function normalizeRawBody(resp) {
     } else if (typeof resp.body?.getReader === 'function') {
       const reader = resp.body.getReader();
       const chunks = [];
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) chunks.push(Buffer.from(value));
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) chunks.push(Buffer.from(value));
+        }
+        raw = Buffer.concat(chunks).toString('utf-8');
+      } finally {
+        if (typeof reader.releaseLock === 'function') {
+          reader.releaseLock();
+        }
       }
-      raw = Buffer.concat(chunks).toString('utf-8');
     } else if (typeof resp.body === 'object') {
       try { raw = JSON.stringify(resp.body); } catch { raw = ''; }
     }
@@ -119,13 +125,28 @@ export class HealthcareClient extends AbstractApiClient {
       ...(options?.headers || {}),
     };
 
-    const resp = await super.request(method, url, { ...options, headers });
+    // Long Chau cert is incomplete on some systems; allow bypass
+    const isLongChau = targetUrl.includes('nhathuoclongchau.com.vn');
+    const httpsOptions = isLongChau
+      ? { rejectUnauthorized: false, ...(options?.https || {}) }
+      : options?.https;
+
+    const resp = await super.request(method, url, {
+      ...options,
+      headers,
+      ...(httpsOptions ? { https: httpsOptions } : {}),
+    });
     return await normalizeRawBody(resp);
   }
 
   /**
    * Search clinics and facilities.
    * @param {Object} [params={}]
+   * @param {string} [params.platform]
+   * @param {string} [params.city]
+   * @param {string} [params.specialty]
+   * @param {number} [params.page]
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<any>}
    */
   async searchClinics(params = {}, options = {}) {
@@ -133,15 +154,24 @@ export class HealthcareClient extends AbstractApiClient {
     const base = this.#resolveBase(platform, this.options?.baseUrl);
     const city = normalizeCitySlug(params.city || '');
     const specialty = normalizeSpecialtySlug(params.specialty || '');
+    const page = Math.max(1, Number(params.page) || 1);
 
     if (platform === 'medpro') {
-      const url = city ? `${base}/co-so-y-te?city=${city}` : `${base}/co-so-y-te`;
-      return this.request('GET', url, { ...options, raw: true });
+      const query = [];
+      if (city) query.push(`city=${city}`);
+      if (specialty) query.push(`specialty=${specialty}`);
+      if (page > 1) query.push(`page=${page}`);
+      const qs = query.length ? `?${query.join('&')}` : '';
+      return this.request('GET', `${base}/co-so-y-te${qs}`, { ...options, raw: true });
     }
 
     if (platform === 'youmed') {
-      const url = specialty ? `${base}/dat-kham/bac-si?speciality=${specialty}` : `${base}/dat-kham/bac-si`;
-      return this.request('GET', url, { ...options, raw: true });
+      const query = [];
+      if (specialty) query.push(`speciality=${specialty}`);
+      if (city) query.push(`city=${city}`);
+      if (page > 1) query.push(`page=${page}`);
+      const qs = query.length ? `?${query.join('&')}` : '';
+      return this.request('GET', `${base}/dat-kham/bac-si${qs}`, { ...options, raw: true });
     }
 
     throw new PlatformError({
@@ -157,13 +187,20 @@ export class HealthcareClient extends AbstractApiClient {
   /**
    * Get pharmacy store list (Long Chau).
    * @param {Object} [params={}]
+   * @param {string} [params.city]
+   * @param {number} [params.page]
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<any>}
    */
   async getStores(params = {}, options = {}) {
     const base = this.#resolveBase('nhathuoclongchau', this.options?.baseUrl);
     const page = Math.max(1, Number(params.page) || 1);
-    const url = page > 1 ? `${base}/he-thong-cua-hang?page=${page}` : `${base}/he-thong-cua-hang`;
-    return this.request('GET', url, { ...options, raw: true });
+    const city = normalizeCitySlug(params.city || '');
+    const query = [];
+    if (city) query.push(`province=${city}`);
+    if (page > 1) query.push(`page=${page}`);
+    const qs = query.length ? `?${query.join('&')}` : '';
+    return this.request('GET', `${base}/he-thong-cua-hang${qs}`, { ...options, raw: true });
   }
 
   /**
@@ -172,11 +209,11 @@ export class HealthcareClient extends AbstractApiClient {
    */
   async getPharmacyCatalog() {
     throw new PlatformError({
-      type: ErrorTypes.UNAUTHORIZED,
+      type: ErrorTypes.AUTH_EXPIRED,
       code: 'XACT_4001',
       message: 'thuocsi.vn requires authenticated B2B session — deferred to Epic 24',
       statusCode: 401,
-      suggestedAction: SuggestedActions.AUTH_REQUIRED,
+      suggestedAction: SuggestedActions.RELOGIN,
       platform: 'thuocsi',
     });
   }
@@ -184,14 +221,15 @@ export class HealthcareClient extends AbstractApiClient {
   /**
    * Get entity detail by slug or ID.
    * @param {Object} params
+   * @param {Record<string, any>} [options={}]
    * @returns {Promise<any>}
    */
   async detail(params = {}, options = {}) {
     const platform = params.platform || this.targetPlatform;
     const base = this.#resolveBase(platform, this.options?.baseUrl);
-    const slug = String(params.slug || params.id || '').trim();
+    const rawSlug = String(params.slug || params.id || '').trim();
 
-    if (!slug) {
+    if (!rawSlug) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
         code: 'XACT_4001',
@@ -202,12 +240,18 @@ export class HealthcareClient extends AbstractApiClient {
       });
     }
 
+    const slug = encodeURIComponent(rawSlug).replace(/%2F/g, '/');
+
     if (platform === 'youmed') {
       return this.request('GET', `${base}/dat-kham/bac-si/${slug}`, { ...options, raw: true });
     }
 
     if (platform === 'medpro') {
       return this.request('GET', `${base}/co-so-y-te/${slug}`, { ...options, raw: true });
+    }
+
+    if (platform === 'nhathuoclongchau') {
+      return this.request('GET', `${base}/he-thong-cua-hang/${slug}`, { ...options, raw: true });
     }
 
     return this.request('GET', `${base}/${slug}`, { ...options, raw: true });

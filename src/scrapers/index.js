@@ -670,6 +670,7 @@ export async function scrape(platform, action, options = {}) {
       detail: 'detail',
       facility_detail: 'detail',
       doctor_detail: 'detail',
+      doctor: 'detail',
     };
 
     const mappedAction = HEALTHCARE_ACTION_MAP[action];

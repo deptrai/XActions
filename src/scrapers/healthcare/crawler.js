@@ -15,11 +15,11 @@ function extractResponseBody(response, platform, action) {
   const status = response.status || response.statusCode || 200;
   if (status >= 400) {
     throw new PlatformError({
-      type: status === 404 ? ErrorTypes.NOT_FOUND : ErrorTypes.PLATFORM_ERROR,
-      code: 'XACT_5001',
+      type: status === 404 ? ErrorTypes.NOT_FOUND : ErrorTypes.INTERNAL,
+      code: status === 404 ? 'XACT_4004' : 'XACT_5001',
       message: `HTTP ${status} from ${platform} on action "${action}"`,
       statusCode: status,
-      suggestedAction: SuggestedActions.RETRY,
+      suggestedAction: status === 404 ? SuggestedActions.USE_ACTIONS_LIST : SuggestedActions.RETRY_AFTER_DELAY,
       platform,
     });
   }
@@ -54,6 +54,16 @@ export class HealthcareCrawler extends AbstractCrawler {
     this.#registerActions();
   }
 
+  async init() {
+    return Promise.resolve();
+  }
+
+  async cleanup() {
+    if (this.client && typeof this.client.cleanup === 'function') {
+      await this.client.cleanup().catch(() => {});
+    }
+  }
+
   #registerActions() {
     this.registerAction({
       action: 'search_clinics',
@@ -63,10 +73,28 @@ export class HealthcareCrawler extends AbstractCrawler {
         properties: {
           city: { type: 'string', description: 'City name or slug' },
           specialty: { type: 'string', description: 'Medical specialty' },
+          page: { type: 'number', default: 1 },
+          limit: { type: 'number', default: 20 },
           platform: { type: 'string', enum: ['medpro', 'youmed'], default: 'medpro' },
         },
       },
       handler: (args) => this.searchClinics(args),
+    });
+
+    this.registerAction({
+      action: 'search_doctors',
+      description: 'Search doctors and medical specialists',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          city: { type: 'string', description: 'City name or slug' },
+          specialty: { type: 'string', description: 'Medical specialty' },
+          page: { type: 'number', default: 1 },
+          limit: { type: 'number', default: 20 },
+          platform: { type: 'string', enum: ['youmed', 'medpro'], default: 'youmed' },
+        },
+      },
+      handler: (args) => this.searchDoctors(args),
     });
 
     this.registerAction({
@@ -77,6 +105,7 @@ export class HealthcareCrawler extends AbstractCrawler {
         properties: {
           city: { type: 'string' },
           page: { type: 'number', default: 1 },
+          limit: { type: 'number', default: 20 },
           platform: { type: 'string', default: 'nhathuoclongchau' },
         },
       },
@@ -113,16 +142,15 @@ export class HealthcareCrawler extends AbstractCrawler {
   }
 
   async #persist(posts) {
-    if (!this.store || !posts.length) return;
-    for (const item of posts) {
-      this.validateItem(item);
+    if (!posts.length) return;
+
+    if (this.store && typeof this.store.storeBatch === 'function') {
+      await this.store.storeBatch(posts).catch(() => {});
     }
-    if (typeof this.store.storeBatch === 'function') {
-      await this.store.storeBatch(posts);
-    }
-    if (this.publisher && typeof this.publisher.publishThinEvent === 'function') {
+
+    if (this.publisher && typeof this.publisher.publish === 'function') {
       for (const item of posts) {
-        await this.publisher.publishThinEvent('post', item).catch(() => {});
+        await this.publisher.publish(item).catch(() => {});
       }
     }
   }
@@ -137,17 +165,34 @@ export class HealthcareCrawler extends AbstractCrawler {
     const response = await this.client.searchClinics({ ...args, platform });
     const data = extractResponseBody(response, platform, 'search_clinics');
 
-    const posts = normalizeHealthcareResults(data, 'search', { platform });
+    const limit = Math.max(1, Number(args.limit) || 20);
+    const page = Math.max(1, Number(args.page) || 1);
+
+    const allPosts = normalizeHealthcareResults(data, 'search', { platform });
+    const posts = allPosts.slice(0, limit);
+
+    for (const post of posts) {
+      this.validateItem(post);
+    }
     await this.#persist(posts);
 
     return {
       posts,
       pageInfo: {
-        has_next_page: false,
-        page: 1,
-        total: posts.length,
+        has_next_page: allPosts.length >= limit,
+        page,
+        total: allPosts.length,
       },
     };
+  }
+
+  /**
+   * Search doctors (maps to YouMed by default).
+   * @param {Record<string, any>} [args={}]
+   * @returns {Promise<{ posts: import('../../core/types.js').PostItem[], pageInfo: Object }>}
+   */
+  async searchDoctors(args = {}) {
+    return this.searchClinics({ ...args, platform: args.platform || 'youmed' });
   }
 
   /**
@@ -160,16 +205,23 @@ export class HealthcareCrawler extends AbstractCrawler {
     const response = await this.client.getStores({ ...args, platform });
     const data = extractResponseBody(response, platform, 'get_stores');
 
-    const posts = normalizeHealthcareResults(data, 'stores', { platform });
+    const limit = Math.max(1, Number(args.limit) || 20);
+    const page = Math.max(1, Number(args.page) || 1);
+
+    const allPosts = normalizeHealthcareResults(data, 'stores', { platform });
+    const posts = allPosts.slice(0, limit);
+
+    for (const post of posts) {
+      this.validateItem(post);
+    }
     await this.#persist(posts);
 
-    const page = Math.max(1, Number(args.page) || 1);
     return {
       posts,
       pageInfo: {
-        has_next_page: posts.length >= 5,
+        has_next_page: allPosts.length >= limit,
         page,
-        total: posts.length,
+        total: allPosts.length,
       },
     };
   }
@@ -205,11 +257,11 @@ export class HealthcareCrawler extends AbstractCrawler {
     const response = await this.client.detail({ ...args, platform, id });
     const data = extractResponseBody(response, platform, 'detail');
 
-    const posts = normalizeHealthcareResults(data, 'detail', { platform });
+    const posts = normalizeHealthcareResults(data, 'detail', { platform, id, slug: args.slug });
     if (!posts.length) {
       throw new PlatformError({
         type: ErrorTypes.NOT_FOUND,
-        code: 'XACT_4001',
+        code: 'XACT_4004',
         message: `Entity not found for id "${id}" on platform "${platform}"`,
         statusCode: 404,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,

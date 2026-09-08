@@ -81,6 +81,7 @@ function extractMedproItems(html, sourcePlatform = 'medpro') {
 
     const list = Object.values(initHospitals);
     for (const h of list) {
+      if (!h || typeof h !== 'object') continue;
       const externalId = String(h.partnerId || h._id || '');
       if (!externalId) continue;
 
@@ -89,13 +90,15 @@ function extractMedproItems(html, sourcePlatform = 'medpro') {
       const types = Array.isArray(h.newHospitalTypes) ? h.newHospitalTypes : [];
       const businessType = types.includes(1) ? 'hospital' : 'clinic';
       const detailUrl = externalId ? `https://medpro.vn/co-so-y-te/${externalId}` : '';
+      const address = stripTags(h.address || h.location || '');
+      const { phone, phoneMasked } = parseVnPhone(h.phone || h.hotline || h.telephone);
 
       items.push(buildPostItem({
         platform: 'medpro',
         externalId,
         title: name,
-        contentParts: [name, cityName].filter(Boolean),
-        authorId: `medpro:${externalId}`,
+        contentParts: [name, cityName, address].filter(Boolean),
+        authorId: phone || `medpro:${externalId}`,
         authorName: 'Medpro',
         postUrl: detailUrl,
         mediaUrls: h.avatar ? [h.avatar] : [],
@@ -104,15 +107,15 @@ function extractMedproItems(html, sourcePlatform = 'medpro') {
           doctorName: null,
           specialty: null,
           businessType,
-          hotline: null,
-          phone: null,
-          phoneMasked: false,
-          address: '',
+          hotline: phone,
+          phone,
+          phoneMasked,
+          address,
           city: cityName,
-          district: '',
-          gpsLat: null,
-          gpsLng: null,
-          operationHours: null,
+          district: stripTags(h.district?.name || ''),
+          gpsLat: typeof h.lat === 'number' ? h.lat : null,
+          gpsLng: typeof h.lng === 'number' ? h.lng : null,
+          operationHours: h.workingHours || null,
           license: null,
           pharmacist: null,
           detailUrl,
@@ -125,6 +128,55 @@ function extractMedproItems(html, sourcePlatform = 'medpro') {
   }
 
   return items;
+}
+
+function extractMedproDetail(html, sourcePlatform = 'medpro') {
+  const listingItems = extractMedproItems(html, sourcePlatform);
+  if (listingItems.length > 0) return listingItems.slice(0, 1);
+
+  // Parse standalone facility detail page
+  const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i) || html.match(/<title>([^<|]+)/i);
+  const title = titleMatch ? stripTags(titleMatch[1]).trim() : '';
+  if (!title) return [];
+
+  const canonicalMatch = html.match(/<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i);
+  const detailUrl = canonicalMatch ? canonicalMatch[1] : '';
+  const externalId = detailUrl ? detailUrl.split('/').pop() || 'medpro-detail' : 'medpro-detail';
+
+  const addressMatch = html.match(/class=["'][^"']*address[^"']*["'][^>]*>([^<]+)/i);
+  const address = addressMatch ? stripTags(addressMatch[1]).trim() : '';
+  const phoneMatch = html.match(/(?:hotline|điện thoại|tel)[\s:]*([0-9\s.-]{8,15})/i);
+  const { phone, phoneMasked } = parseVnPhone(phoneMatch ? phoneMatch[1] : null);
+
+  return [buildPostItem({
+    platform: 'medpro',
+    externalId,
+    title,
+    contentParts: [title, address].filter(Boolean),
+    authorId: phone || `medpro:${externalId}`,
+    authorName: 'Medpro',
+    postUrl: detailUrl,
+    mediaUrls: [],
+    metadata: {
+      facilityName: title,
+      doctorName: null,
+      specialty: null,
+      businessType: 'facility',
+      hotline: phone,
+      phone,
+      phoneMasked,
+      address,
+      city: '',
+      district: '',
+      gpsLat: null,
+      gpsLng: null,
+      operationHours: null,
+      license: null,
+      pharmacist: null,
+      detailUrl,
+      sourcePlatform,
+    },
+  })];
 }
 
 // ── Long Chau ──────────────────────────────────────────────────────────────
@@ -140,6 +192,7 @@ function extractLongChauItems(html, sourcePlatform = 'nhathuoclongchau') {
     const storeList = Array.isArray(recommended?.items) ? recommended.items : [];
 
     for (const s of storeList) {
+      if (!s || typeof s !== 'object') continue;
       const externalId = String(s.shopCode || s.placeId || '');
       if (!externalId) continue;
 
@@ -169,7 +222,8 @@ function extractLongChauItems(html, sourcePlatform = 'nhathuoclongchau') {
           phoneMasked,
           address,
           city: stripTags(s.provinceName || ''),
-          district: stripTags(s.wardName || ''),
+          district: stripTags(s.districtName || s.wardName || ''),
+          ward: stripTags(s.wardName || ''),
           gpsLat: Number.isFinite(lat) ? lat : null,
           gpsLng: Number.isFinite(lng) ? lng : null,
           operationHours: s.operation || null,
@@ -187,22 +241,77 @@ function extractLongChauItems(html, sourcePlatform = 'nhathuoclongchau') {
   return items;
 }
 
+function extractLongChauDetail(html, sourcePlatform = 'nhathuoclongchau') {
+  const items = extractLongChauItems(html, sourcePlatform);
+  return items.slice(0, 1);
+}
+
 // ── YouMed ─────────────────────────────────────────────────────────────────
 
 function extractYouMedItems(html, sourcePlatform = 'youmed') {
   const items = [];
   const seen = new Set();
 
-  // Match SSR doctor-card blocks: either Angular custom element or standard HTML tags
-  const cardMatches = html.match(/<(?:app-[a-z-]+doctor-card|div|article|section)[^>]*>[\s\S]*?<\/(?:app-[a-z-]+doctor-card|div|article|section)>/gi) || [];
-  
-  // Fallback: match any <a> tag pointing to /dat-kham/bac-si/ if container block wasn't cleanly captured
+  // 1. Fallback for WordPress REST API JSON output (/wp-json/app/v2/specialities)
+  if (html.trim().startsWith('{') || html.trim().startsWith('[')) {
+    try {
+      const data = JSON.parse(html);
+      const specs = Array.isArray(data) ? data : data?.data?.specialities;
+      if (Array.isArray(specs) && specs.length > 0) {
+        for (const sp of specs) {
+          const slug = sp.speciality || sp.slug;
+          if (!slug || seen.has(slug)) continue;
+          seen.add(slug);
+
+          const title = stripTags(sp.name || '');
+          items.push(buildPostItem({
+            platform: 'youmed',
+            externalId: slug,
+            title,
+            contentParts: [title, sp.name_en].filter(Boolean),
+            authorId: `youmed:specialty:${slug}`,
+            authorName: 'YouMed',
+            postUrl: `https://youmed.vn/dat-kham/bac-si?speciality=${slug}`,
+            mediaUrls: sp.image ? [sp.image] : [],
+            metadata: {
+              facilityName: '',
+              doctorName: null,
+              specialty: title,
+              businessType: 'specialty',
+              hotline: null,
+              phone: null,
+              phoneMasked: false,
+              address: '',
+              city: '',
+              district: '',
+              gpsLat: null,
+              gpsLng: null,
+              operationHours: null,
+              license: null,
+              pharmacist: null,
+              detailUrl: `https://youmed.vn/dat-kham/bac-si?speciality=${slug}`,
+              sourcePlatform,
+            },
+          }));
+        }
+        if (items.length > 0) return items;
+      }
+    } catch {
+      // not json, continue to HTML parse
+    }
+  }
+
+  // 2. Match SSR doctor-card blocks
+  const cardMatches = html.match(/<(?:app-[a-z-]+doctor-card|div|article|section)[^>]*class=["'][^"']*doctor-card[^"']*["'][^>]*>[\s\S]*?<\/(?:app-[a-z-]+doctor-card|div|article|section)>/gi) ||
+    html.match(/<app-[a-z-]+doctor-card[^>]*>[\s\S]*?<\/app-[a-z-]+doctor-card>/gi) || [];
+
   const blocks = cardMatches.length ? cardMatches : (html.match(/<a[^>]*href=["']\/dat-kham\/bac-si\/[^"']+["'][^>]*>[\s\S]*?<\/a>/gi) || []);
 
   for (const block of blocks) {
     const linkMatch = block.match(/href=["'](\/dat-kham\/bac-si\/[^"']+)["']/i);
     const href = linkMatch ? linkMatch[1] : '';
-    const slug = href ? href.split('/').pop() : '';
+    const cleanHref = href.split('?')[0].replace(/\/+$/, '');
+    const slug = cleanHref ? cleanHref.split('/').pop() : '';
     if (!slug || seen.has(slug) || slug === 'search' || slug === 'bac-si' || slug === 'danh-sach') continue;
     seen.add(slug);
 
@@ -219,7 +328,7 @@ function extractYouMedItems(html, sourcePlatform = 'youmed') {
     const hospitalMatch = block.match(/<span[^>]*class=["'][^"']*hospital[^"']*["'][^>]*>([^<]+)<\/span>/i);
     const facilityName = hospitalMatch ? stripTags(hospitalMatch[1]).trim() : '';
 
-    const detailUrl = `https://youmed.vn${href}`;
+    const detailUrl = `https://youmed.vn/dat-kham/bac-si/${slug}`;
 
     items.push(buildPostItem({
       platform: 'youmed',
@@ -255,6 +364,57 @@ function extractYouMedItems(html, sourcePlatform = 'youmed') {
   return items;
 }
 
+function extractYouMedDetail(html, sourcePlatform = 'youmed', options = {}) {
+  const listingItems = extractYouMedItems(html, sourcePlatform);
+  if (listingItems.length > 0) return listingItems.slice(0, 1);
+
+  // Standalone doctor detail page
+  const titleMatch = html.match(/<h[123][^>]*>([^<]+)<\/h[123]>/i) || html.match(/<title>([^<|]+)/i);
+  const doctorName = titleMatch ? stripTags(titleMatch[1]).trim() : '';
+  if (!doctorName) return [];
+
+  const canonicalMatch = html.match(/<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i);
+  const hrefMatch = html.match(/href=["'](\/dat-kham\/bac-si\/[^"']+)["']/i);
+  const detailUrl = canonicalMatch ? canonicalMatch[1] : (hrefMatch ? `https://youmed.vn${hrefMatch[1]}` : '');
+  const externalId = options.id || options.slug || (detailUrl ? detailUrl.split('/').pop() || 'youmed-doctor' : 'youmed-doctor');
+
+  const specialtyMatch = html.match(/class=["'][^"']*specialt[^"']*["'][^>]*>([^<]+)/i);
+  const specialty = specialtyMatch ? stripTags(specialtyMatch[1]).trim() : null;
+
+  const hospitalMatch = html.match(/class=["'][^"']*hospital[^"']*["'][^>]*>([^<]+)/i);
+  const facilityName = hospitalMatch ? stripTags(hospitalMatch[1]).trim() : '';
+
+  return [buildPostItem({
+    platform: 'youmed',
+    externalId,
+    title: doctorName,
+    contentParts: [doctorName, specialty, facilityName].filter(Boolean),
+    authorId: `youmed:${externalId}`,
+    authorName: doctorName,
+    postUrl: detailUrl,
+    mediaUrls: [],
+    metadata: {
+      facilityName,
+      doctorName,
+      specialty,
+      businessType: 'doctor',
+      hotline: null,
+      phone: null,
+      phoneMasked: false,
+      address: '',
+      city: '',
+      district: '',
+      gpsLat: null,
+      gpsLng: null,
+      operationHours: null,
+      license: null,
+      pharmacist: null,
+      detailUrl,
+      sourcePlatform,
+    },
+  })];
+}
+
 /**
  * Main normalizer entry point for healthcare results.
  * @param {string | Buffer | Object} data
@@ -276,6 +436,12 @@ export function normalizeHealthcareResults(data, kind = 'search', options = {}) 
   }
 
   if (!html || html.length < 50) return [];
+
+  if (kind === 'detail') {
+    if (platform === 'medpro') return extractMedproDetail(html, sourcePlatform);
+    if (platform === 'nhathuoclongchau') return extractLongChauDetail(html, sourcePlatform);
+    if (platform === 'youmed') return extractYouMedDetail(html, sourcePlatform, options);
+  }
 
   if (platform === 'medpro') {
     return extractMedproItems(html, sourcePlatform);

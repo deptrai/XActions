@@ -7,63 +7,131 @@
 
 import { AbstractPlatformResponseValidator } from '../../core/platform-validator.js';
 
+const CHALLENGE_MARKERS = [
+  'just a moment',
+  'cloudflare',
+  'checking your browser',
+  'verify you are human',
+  'captcha',
+  'challenge',
+  'access denied',
+  'attention required',
+  'cf-browser-verification',
+];
+
+const HEALTHCARE_STRUCTURAL_MARKERS = [
+  'initialhospitals',
+  'initialpharmacyrecommended',
+  'doctor-card',
+  'app-typical-doctor-card',
+  'tin-tuc/wp-json',
+  'specialities',
+  '__next_data__',
+];
+
+const VIETNAMESE_HEALTHCARE_TERMS = [
+  'bác sĩ',
+  'bác sỹ',
+  'phòng khám',
+  'bệnh viện',
+  'chuyên khoa',
+  'nhà thuốc',
+  'dược phẩm',
+  'đặt lịch khám',
+  'khám bệnh',
+  'long châu',
+  'medpro',
+  'youmed',
+];
+
 export class HealthcarePlatformResponseValidator extends AbstractPlatformResponseValidator {
+  /** @type {string} */
+  platform = 'healthcare';
+
   constructor() {
     super('healthcare');
   }
 
   /**
-   * @param {any} body
+   * Extract body text from response object, string, or Buffer.
+   * @param {any} response
    * @returns {string}
    */
-  #getText(body) {
-    if (typeof body === 'string') return body;
-    if (Buffer.isBuffer(body)) return body.toString('utf-8');
-    if (body && typeof body === 'object') {
-      try { return JSON.stringify(body); } catch { return ''; }
+  #getText(response) {
+    if (typeof response === 'string') return response.toLowerCase();
+
+    const raw = response?.body ?? response?.data ?? response;
+    if (typeof raw === 'string') return raw.toLowerCase();
+    if (Buffer.isBuffer(raw)) return raw.toString('utf-8').toLowerCase();
+    if (raw !== null && raw !== undefined && typeof raw === 'object') {
+      try {
+        return JSON.stringify(raw).toLowerCase();
+      } catch {
+        return '';
+      }
     }
     return '';
   }
 
   /**
-   * Check if response payload contains valid healthcare data signals.
-   * @param {any} body
-   * @param {Record<string, any>} [response]
+   * Check if response is an HTTP 429 or contains rate limit markers.
+   * @param {any} response
    * @returns {boolean}
    */
-  isValidPayload(body, response = {}) {
-    const text = this.#getText(body);
-    if (!text || text.length < 50) return false;
+  isRateLimit(response) {
+    const status = response?.status ?? response?.statusCode;
+    if (status === 429) return true;
 
-    // Challenge / block markers
-    if (this.isBotChallenge({ status: response.status || 200, body: text })) {
+    const text = this.#getText(response);
+    return text.includes('rate limit') || text.includes('too many requests');
+  }
+
+  /**
+   * Check for bot challenge or WAF block.
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isBotChallenge(response) {
+    const status = response?.status ?? response?.statusCode;
+    if (status === 403) return true;
+
+    const text = this.#getText(response);
+    return CHALLENGE_MARKERS.some((marker) => text.includes(marker));
+  }
+
+  /**
+   * Validate if payload is authentic healthcare data.
+   * Accepts either response object ({ status, body }) or raw body string.
+   * @param {any} response
+   * @param {Record<string, any>} [options={}]
+   * @returns {boolean}
+   */
+  isValidPayload(response, options = {}) {
+    // Support dual call signature: isValidPayload(body, { status }) and isValidPayload({ status, body })
+    let effectiveResponse = response;
+    if (typeof response === 'string' || Buffer.isBuffer(response)) {
+      effectiveResponse = { body: response, status: options?.status ?? 200 };
+    }
+
+    if (this.isRateLimit(effectiveResponse) || this.isBotChallenge(effectiveResponse)) {
       return false;
     }
 
-    // Medpro: Next.js SSR with initialHospitals or hospital listing
-    if (text.includes('initialHospitals') || (text.includes('__NEXT_DATA__') && /bệnh viện|phòng khám|cơ sở y tế/i.test(text))) {
+    const status = effectiveResponse?.status ?? effectiveResponse?.statusCode ?? 200;
+    if (status >= 400) return false;
+
+    const text = this.#getText(effectiveResponse);
+    if (!text || text.length < 50) return false;
+
+    // Check platform structural signals
+    if (HEALTHCARE_STRUCTURAL_MARKERS.some((m) => text.includes(m))) {
       return true;
     }
 
-    // Long Chau: Next.js SSR with initialPharmacyRecommended or store listing
-    if (text.includes('initialPharmacyRecommended') || (text.includes('__NEXT_DATA__') && /nhà thuốc|long châu|he-thong-cua-hang/i.test(text))) {
-      return true;
-    }
-
-    // YouMed: SSR with doctor-card or WP REST JSON specialities
-    if (text.includes('doctor-card') || text.includes('specialities') || (text.includes('tin-tuc/wp-json') && /"code":\s*200/.test(text))) {
-      return true;
-    }
-
-    // Generic healthcare keywords as secondary fallback
-    const healthKeywords = [
-      'bác sĩ', 'bác sỹ', 'phòng khám', 'bệnh viện', 'chuyên khoa',
-      'nhà thuốc', 'dược phẩm', 'đặt lịch khám', 'khám bệnh'
-    ];
+    // Secondary fallback: requires at least two Vietnamese healthcare terms
     let matched = 0;
-    const lower = text.toLowerCase();
-    for (const kw of healthKeywords) {
-      if (lower.includes(kw)) matched++;
+    for (const kw of VIETNAMESE_HEALTHCARE_TERMS) {
+      if (text.includes(kw)) matched++;
       if (matched >= 2) return true;
     }
 
@@ -71,38 +139,20 @@ export class HealthcarePlatformResponseValidator extends AbstractPlatformRespons
   }
 
   /**
-   * Check for bot challenge or WAF block.
-   * @param {{ status?: number, body?: any }} response
+   * @param {any} response
    * @returns {boolean}
    */
-  isBotChallenge(response = {}) {
-    const status = response.status;
-    const text = this.#getText(response.body);
-
-    if (status === 403 || status === 429) {
-      if (/cloudflare|just a moment|cf-browser-verification|challenge-platform|ddos-guard|waf/i.test(text)) {
-        return true;
-      }
-    }
-
-    if (/cf-browser-verification|ray id:|captcha|challenge-running/i.test(text)) {
-      return true;
-    }
-
-    return false;
+  isLoginWall(response) {
+    const text = this.#getText(response);
+    return text.includes('đăng nhập') || text.includes('login') || text.includes('sign in');
   }
 
   /**
+   * @param {any} response
    * @returns {boolean}
    */
-  isLoginWall() {
-    return false;
-  }
-
-  /**
-   * @returns {boolean}
-   */
-  isAuthExpired() {
-    return false;
+  isAuthExpired(response) {
+    const text = this.#getText(response);
+    return text.includes('phiên đăng nhập') || text.includes('session expired');
   }
 }

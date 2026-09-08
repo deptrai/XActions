@@ -29,9 +29,20 @@ describe('Healthcare schema', () => {
     expect(normalizeSpecialtySlug('Tai Mũi Họng')).toBe('tai-mui-hong');
   });
 
-  it('should parse Vietnamese phone', () => {
+  it('should parse Vietnamese mobile, landline, and hotline numbers', () => {
+    // Mobile
     expect(parseVnPhone('0901234567')).toEqual({ phone: '0901234567', phoneMasked: false });
     expect(parseVnPhone('+84901234567')).toEqual({ phone: '0901234567', phoneMasked: false });
+
+    // Landline
+    expect(parseVnPhone('02438652368')).toEqual({ phone: '02438652368', phoneMasked: false });
+    expect(parseVnPhone('028 3865 2368')).toEqual({ phone: '02838652368', phoneMasked: false });
+
+    // Hotlines
+    expect(parseVnPhone('1800 6928')).toEqual({ phone: '18006928', phoneMasked: false });
+    expect(parseVnPhone('1900 2115')).toEqual({ phone: '19002115', phoneMasked: false });
+
+    // Masked / Empty
     expect(parseVnPhone('090***4567')).toEqual({ phone: null, phoneMasked: true });
     expect(parseVnPhone('')).toEqual({ phone: null, phoneMasked: false });
   });

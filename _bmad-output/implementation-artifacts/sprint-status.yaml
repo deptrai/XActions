@@ -175,7 +175,7 @@ development_status:
   # NOTE: 2026-09-08 — Readiness gate passed; Long Chau added to 22.2, Thuocsi deferred to Epic 24.
   epic-22: in-progress
   22-1-fnb-merchant-restaurant-directory-crawler: done
-  22-2-healthcare-clinics-pharmacy-network-crawler: review
+  22-2-healthcare-clinics-pharmacy-network-crawler: done
   22-3-legal-trademark-intellectual-property-crawler: ready-for-dev
   epic-22-retrospective: optional
 
