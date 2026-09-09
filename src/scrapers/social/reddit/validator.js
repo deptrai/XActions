@@ -138,7 +138,8 @@ export class RedditPlatformResponseValidator extends AbstractPlatformResponseVal
     const headers = this.#getHeaders(response);
     if (headers) {
       const remaining = headers['x-ratelimit-remaining'] || headers['ratelimit-remaining'];
-      if (remaining === '0' || remaining === 0) return true;
+      const remainingNum = Number(remaining);
+      if (remaining === '0' || remaining === 0 || (Number.isFinite(remainingNum) && remainingNum <= 0)) return true;
     }
 
     const error = this.#getErrorName(response);

@@ -256,7 +256,8 @@ export class RedditClient extends AbstractApiClient {
     }
 
     const method = (options.method || 'GET').toUpperCase();
-    const useApiBase = options.useApiBaseUrl !== undefined ? options.useApiBaseUrl : Boolean(this.accessToken);
+    const token = await this.ensureToken();
+    const useApiBase = options.useApiBaseUrl !== undefined ? options.useApiBaseUrl : Boolean(token);
     const base = useApiBase ? this.apiBaseUrl : this.baseUrl;
 
     // Ensure .json suffix for public endpoints
@@ -281,7 +282,9 @@ export class RedditClient extends AbstractApiClient {
       ...(options.headers || {}),
     };
 
-    const token = await this.ensureToken();
+    if (token) {
+      headers['authorization'] = `Bearer ${token}`;
+    }
     if (token) {
       headers['authorization'] = `Bearer ${token}`;
     }

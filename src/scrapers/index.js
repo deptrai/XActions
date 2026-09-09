@@ -947,7 +947,7 @@ export async function scrape(platform, action, options = {}) {
       baseUrl: options.baseUrl,
       clientId: options.clientId || options.redditClientId,
       clientSecret: options.clientSecret || options.redditClientSecret,
-      username: options.username || options.redditUsername,
+      username: options.redditUsername || undefined,
       userAgent: options.userAgent,
       proxy: options.proxy,
       proxyPool: options.proxyPool,

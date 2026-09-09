@@ -143,14 +143,18 @@ export class RedditCrawler extends AbstractCrawler {
       outputType: '{ comments: CommentItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }',
       example: { postId: '1a2b3c', subreddit: 'programming', limit: 100 },
       checkpointResolver: (args) => {
-        const postId = args?.postId || args?.id;
-        if (!postId || typeof postId !== 'string') return null;
-        return {
-          targetType: 'post_comments',
-          targetKey: String(postId).trim(),
-          cursorField: 'after',
-          fallbackCursorFields: ['cursor'],
-        };
+        try {
+          const { postId } = this.#extractPostId(args);
+          if (!postId || typeof postId !== 'string') return null;
+          return {
+            targetType: 'post_comments',
+            targetKey: String(postId).trim(),
+            cursorField: 'after',
+            fallbackCursorFields: ['cursor'],
+          };
+        } catch {
+          return null;
+        }
       },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostComments(args, session),
     });
@@ -402,15 +406,15 @@ export class RedditCrawler extends AbstractCrawler {
         crawledAt: profile.crawledAt,
       };
       await this.store.storeContent(profilePost).catch(() => {});
-
-      await this.#emitCheckpointAndStream({
-        targetType: 'user',
-        targetKey: username,
-        cursor: nextCursor,
-        items: posts,
-        hasMore: Boolean(nextCursor) && !stopPagination,
-      });
     }
+
+    await this.#emitCheckpointAndStream({
+      targetType: 'user',
+      targetKey: username,
+      cursor: nextCursor,
+      items: posts,
+      hasMore: Boolean(nextCursor) && !stopPagination,
+    });
 
     return {
       profile,
