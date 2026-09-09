@@ -111,3 +111,8 @@
 
 - `masothue/index.js` pre-existing import bug (`normalizeMaSoThueResults` from wrong module) — unverified; direct read contradicts report; defer for targeted audit.
 - Missing pagination parameters (`page`, `offset`) on search endpoints — out of scope for Story 21.3; defer to later B2B procurement stories.
+
+## Deferred from: code review of 35-1-reddit-scraper-client-crawler-validator-tests (2026-09-10)
+
+- [x] [Review][Defer] Automated real Puppeteer bridge launch/cookie extraction test — the bridge is explicitly a skeleton and already covered by a manual live probe; a real-browser integration test is out of scope for this story. [tests/scrapers/social/reddit/client.test.js, src/scrapers/social/reddit/bridge.js]
+- [x] [Review][Defer] Implement `more`/`morechildren` continuation loading in `getPostComments` — the current BFS is already capped by `limit` and the story I/O matrix does not require complete nested comment loading; adding `morechildren` requires a separate endpoint and is out of scope for Story 35.1. [src/scrapers/social/reddit/crawler.js:508-522]
