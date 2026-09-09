@@ -121,6 +121,7 @@ import zalo, {
 } from './social/zalo/index.js';
 import { RedditCrawler } from './social/reddit/crawler.js';
 import { RedditClient, createRedditClient } from './social/reddit/client.js';
+import { createRedditCrawler } from './social/reddit/crawler.js';
 import * as redditModule from './social/reddit/index.js';
 import { defaultStore } from '../store/index.js';
 
@@ -2527,6 +2528,8 @@ export default {
   createAutomotiveCrawler,
   createB2BRegistryExtendedClient,
   createB2BRegistryExtendedCrawler,
+  createRedditClient,
+  createRedditCrawler,
 
   // Plugin scrapers lookup
   getPluginScraper,
@@ -2601,6 +2604,16 @@ export function createB2BRegistryExtendedCrawler(client, options = {}) {
   return new B2BRegistryExtendedCrawler({ client: resolvedClient, ...resolvedOptions });
 }
 
+export function createRedditClient(options = {}) {
+  return new RedditClient(options);
+}
+
+export function createRedditCrawler(client, options = {}) {
+  const resolvedClient = client instanceof RedditClient ? client : new RedditClient(client || options || {});
+  const resolvedOptions = client instanceof RedditClient ? options : (options || {});
+  return new RedditCrawler({ client: resolvedClient, ...resolvedOptions });
+}
+
 // Named re-exports for adapter utilities
 export {
   YouTubeVNCrawler,
@@ -2621,6 +2634,8 @@ export {
   AutomotiveClient,
   B2BRegistryExtendedCrawler,
   B2BRegistryExtendedClient,
+  RedditCrawler,
+  RedditClient,
   getAdapter,
   getAvailableAdapter,
   setDefaultAdapter,

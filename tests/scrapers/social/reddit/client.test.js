@@ -40,7 +40,7 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
         }
 
         // 2. Public subreddit listing
-        if (req.url?.startsWith('/r/programming/new.json')) {
+        if (req.url?.startsWith('/r/programming/new.json') || req.url?.startsWith('/r/programming/new?') || req.url === '/r/programming/new') {
           const urlObj = new URL(req.url, 'http://127.0.0.1');
           const after = urlObj.searchParams.get('after');
           res.writeHead(200, {

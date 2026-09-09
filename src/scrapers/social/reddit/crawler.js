@@ -19,6 +19,12 @@ import {
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
 
+export function createRedditCrawler(client, options = {}) {
+  const resolvedClient = client instanceof RedditClient ? client : new RedditClient(client || options || {});
+  const resolvedOptions = client instanceof RedditClient ? options : (options || {});
+  return new RedditCrawler({ client: resolvedClient, ...resolvedOptions });
+}
+
 export class RedditCrawler extends AbstractCrawler {
   /** @type {string} */
   name = 'reddit';

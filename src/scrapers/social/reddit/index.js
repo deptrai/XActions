@@ -6,7 +6,7 @@
  */
 
 export { RedditClient, createRedditClient } from './client.js';
-export { RedditCrawler } from './crawler.js';
+export { RedditCrawler, createRedditCrawler } from './crawler.js';
 export { RedditPlatformResponseValidator } from './validator.js';
 export {
   namespacedRedditId,

@@ -40,12 +40,6 @@ export function createRedditClient(options = {}) {
   return new RedditClient(options);
 }
 
-export function createRedditCrawler(client, options = {}) {
-  const resolvedClient = client instanceof RedditClient ? client : new RedditClient(client || options || {});
-  const resolvedOptions = client instanceof RedditClient ? options : (options || {});
-  return new RedditCrawler({ client: resolvedClient, ...resolvedOptions });
-}
-
 export class RedditClient extends AbstractApiClient {
   /** @type {string} */
   name = 'reddit';
