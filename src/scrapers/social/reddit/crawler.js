@@ -17,8 +17,7 @@ import {
   normalizeRedditUser,
 } from './normalizer.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
-import { isEnvTruthy } from '../../../utils/env.js';
-import { toIsoDate } from '../../../utils/date.js';
+import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
 
 export class RedditCrawler extends AbstractCrawler {
   /** @type {string} */

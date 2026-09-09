@@ -81,6 +81,15 @@ import {
   normalizeInstanceUrl,
 } from './social/mastodon/index.js';
 import { bluesky as blueskyProxy, mastodon as mastodonProxy } from './deprecation-proxy.js';
+
+const redditProxy = new Proxy(redditModule, {
+  get(target, prop, receiver) {
+    return Reflect.get(target, prop, receiver);
+  },
+  apply(target, thisArg, args) {
+    return Reflect.apply(target, thisArg, args);
+  },
+});
 import topcv from './recruitment/topcv/index.js';
 import vietnamworks from './recruitment/vietnamworks/index.js';
 import linkedin from './recruitment/linkedin/index.js';
@@ -110,6 +119,9 @@ import zalo, {
   createZaloClient,
   scrapeZalo,
 } from './social/zalo/index.js';
+import { RedditCrawler } from './social/reddit/crawler.js';
+import { RedditClient, createRedditClient } from './social/reddit/client.js';
+import * as redditModule from './social/reddit/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -222,6 +234,8 @@ export const platforms = {
   youtube,
   yt: youtube,
   youtube_vn: youtube,
+  reddit: redditProxy,
+  rdt: redditProxy,
 };
 
 /**
@@ -881,6 +895,80 @@ export async function scrape(platform, action, options = {}) {
       accountPool: options.accountPool,
       governor: options.governor,
       requiresAuth: false,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session: options.session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── Reddit path (Story 35.1) ──
+  // Dispatches to RedditCrawler / RedditClient (official REST API / public .json).
+  if (platformName === 'reddit' || platformName === 'rdt') {
+    /** @type {Record<string, string>} */
+    const REDDIT_ACTION_MAP = {
+      subreddit: 'subreddit',
+      posts: 'subreddit',
+      feed: 'subreddit',
+      user: 'user',
+      profile: 'user',
+      search: 'search',
+      post_comments: 'post_comments',
+      comments: 'post_comments',
+      subreddit_info: 'subreddit_info',
+      subreddit_about: 'subreddit_info',
+      community: 'subreddit_info',
+    };
+
+    const mappedAction = REDDIT_ACTION_MAP[action] || action;
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = { ...options };
+    if (options.name) mappedArgs.name = options.name;
+    if (options.subreddit) mappedArgs.name = options.subreddit;
+    if (options.username) mappedArgs.username = options.username;
+    if (options.user) mappedArgs.username = options.user;
+    if (options.query || options.q) mappedArgs.query = options.query || options.q;
+    if (options.postId) mappedArgs.postId = options.postId;
+    if (options.id) mappedArgs.postId = options.id;
+    if (options.sort) mappedArgs.sort = options.sort;
+    if (options.time) mappedArgs.time = options.time;
+    if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.cursor != null) mappedArgs.cursor = options.cursor;
+    if (options.after != null) mappedArgs.after = options.after;
+
+    const client = new RedditClient({
+      baseUrl: options.baseUrl,
+      clientId: options.clientId || options.redditClientId,
+      clientSecret: options.clientSecret || options.redditClientSecret,
+      username: options.username || options.redditUsername,
+      userAgent: options.userAgent,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      responseValidator: options.responseValidator,
+      requiresAuth: options.requiresAuth,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+    });
+
+    const crawler = new RedditCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+      requiresAuth: options.requiresAuth,
       requiresProxy: options.requiresProxy,
     });
 

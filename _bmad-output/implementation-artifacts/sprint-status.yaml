@@ -24,11 +24,12 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: "2026-09-09"
+last_updated: "09-09-2026 11:30"
 project: XActions
 project_key: XACT
 tracking_system: file-system
-story_location: /Users/luisphan/Documents/GitHub/XActions/_bmad-output/implementation-artifacts
+story_location: 
+  /Users/luisphan/Documents/GitHub/XActions/_bmad-output/implementation-artifacts
 
 development_status:
   # --- Epic 6: Facebook Anti-Detection & Bot Countermeasures ---
@@ -38,47 +39,35 @@ development_status:
   # src/scrapers/facebook/ but are superseded by Epic 11 (resilient proxy/governor)
   # and the hybrid crawler architecture. They are not tracked in the Epics 10-20
   # roadmap and will be revisited under Epic 20 decommission.
-  epic-6: done
-  6-1-browser-fingerprint-and-session-stealth: done
-  6-2-consistent-fingerprint: done
-  6-3-ua-pool-viewport: done
-  6-4-human-physics-easing-motion-curves: done
-  epic-6-retrospective: done
-
-  # --- Epic 10: Data & Platform Foundation for Universal Scraping ---
   epic-10: done
   10-1-core-domain-interfaces-error-hierarchy-definition: done
-  10-2-prisma-post-comment-relational-schema-migration: done
-  10-3-ai-dataset-export-utility-streaming-jsonl-csv: done
+  10-2-prisma-post-comment-schema-with-namespaced-id-jsonb-gin-batc: backlog
+  10-3-ai-dataset-export-utility-streaming-jsonl-csv-with-sanitizat: backlog
   10-4-crawlcheckpoint-operational-api-resume-pause-retry: done
   10-5-metadata-schema-contract-registry-for-consumers: done
-  10-6-data-retention-cleanup-job: done
   epic-10-retrospective: done
 
-  # --- Epic 11: Resilient Network & Proxy Pool Management ---
   epic-11: done
-  11-1-proxyippool-accountpool-sticky-round-robin: done
+  11-1-proxyippool-accountpool-for-sticky-round-robin-ip-and-multi: backlog
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
-  11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: done
-  11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: done
-  11-5-end-to-end-request-pipeline-two-mode-ip: done
-  11-6-rate-limit-bot-challenge-defense: done
-  11-7-crawler-governor-integration-validator-contract: done
+  11-3-end-to-end-request-pipeline-with-429-403-auto-quarantine-exp: backlog
+  11-4-adaptive-infrastructure-aware-rate-limiter-account-protectio: backlog
+  11-5-end-to-end-request-pipeline-two-mode-ip-strategy: backlog
+  11-6-rate-limit-bot-challenge-defense-quarantine-retry-hibernatio: backlog
+  11-7-crawler-governor-integration-platform-response-validator-con: backlog
   11-8-socksnode-dynamic-residential-proxy-provider: done
-  11-9-dual-pool-consumer-quota: done
+  11-9-proactive-proxy-ttl-buffer-auto-refresh-interceptor: backlog
   epic-11-retrospective: done
 
-  # --- Epic 12: Frictionless Authentication (Terminal QR & CDP Attach) ---
   epic-12: done
-  12-1-terminal-ascii-qr-code-login-module: done
-  12-2-cdp-remote-attach-mode-chrome-devtools-protocol: done
-  12-3-terminal-qr-full-backfill: done
+  12-1-terminal-ascii-qr-code-login-module-with-countdown-timeout: backlog
+  12-2-cdp-remote-attach-mode-with-launch-helper-gaussian-jitter: backlog
+  12-3-multi-browser-path-resolution-advanced-anti-automation-flags: backlog
   epic-12-retrospective: done
 
-  # --- Epic 13: High-Throughput Hybrid Scraping Engine (Twitter & Facebook Refactor) ---
-  # NOTE: 2026-09-02 — Twitter GraphQL schema migration & 55-action audit in progress (sub-stories 13.2.13–13.2.15 added).
   epic-13: done
-  13-1-tiered-signer-architecture-token-ring-worker-pool: done
+  13-1-tiered-signer-architecture-pre-signed-token-ring-worker-page: backlog
+  13-1-2-tier-0-pure-algorithm-crypto-signer-bridge: backlog
   13-2-refactor-twitter-scraper-to-hybrid-architecture: done
   13-2-1-twitter-hybrid-profile-relationships: done
   13-2-2-twitter-hybrid-thread-likes-bookmarks: done
@@ -92,57 +81,48 @@ development_status:
   13-2-10-twitter-hybrid-direct-messaging: done
   13-2-11-twitter-hybrid-list-management: done
   13-2-12-twitter-hybrid-integration-caller-migration: done
-  13-2-13-twitter-graphql-schema-migration: done
-  13-2-14-twitter-55-action-guest-auth-audit: done
-  13-2-15-twitter-guest-search-research: done
   13-3-refactor-facebook-scraper-to-hybrid-architecture: done
-  13-4-facebook-browser-as-signer-bridge: done
+  13-4-facebook-browser-as-signer-integration: backlog
   13-5-facebook-hybrid-profile-followers-group-members: done
   13-6-facebook-hybrid-search-global-group-search: done
   13-7-facebook-hybrid-post-group-comments: done
   13-8-facebook-hybrid-marketplace: done
   13-9-facebook-hybrid-social-actions-write-messenger: done
   13-10-facebook-hybrid-integration-caller-migration: done
-  13-2-17-account-aware-scrape-dispatch: done
   epic-13-retrospective: done
 
-  # --- Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream ---
   epic-14: done
-  14-1-hierarchical-comment-tree-extraction-algorithm: done
+  14-1-hierarchical-comment-tree-extraction-with-topological-sort: backlog
   14-2-mcp-tool-exporters-daemon-http-sse-server: done
   14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub: done
+  14-4-real-time-n-gram-keyword-hashtag-frequency-analytics-engine: backlog
   epic-14-retrospective: done
 
-  # --- Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine ---
   epic-15: done
   15-1-threads-scraper-adapter-meta-internal-graphql: done
   15-1-1-threads-hybrid-profile-followers-following: done
   15-1-2-threads-hybrid-post-detail-comment-tree: done
-  15-1-3-threads-hybrid-docid-hardening-search-comments: done
+  15-1-3-threads-hybrid-docid-hardening-for-search-comments: backlog
   15-1-4-threads-hybrid-integration-package-exports: done
-  15-2-tiktok-video-hashtag-comment-scraper: done
+  15-2-tiktok-video-hashtag-comment-scraper-with-anti-bot-payload-v: backlog
   epic-15-retrospective: done
 
-  # --- Epic 16: E-Commerce Multi-Platform Scrapers (Shopee & TikTok Shop) ---
   epic-16: done
-  16-1-shopee-search-product-review-scraper-tls-spoofing: done
+  16-1-shopee-search-product-review-scraper-with-tls-spoofing: backlog
   16-2-tiktok-shop-product-sales-scraper: done
   epic-16-retrospective: done
 
-  # --- Epic 17: Real Estate & Procurement Intelligence (Chợ Tốt & Batdongsan) ---
   epic-17: done
-  17-1-chotot-multi-category-scraper-with-phone-mask-detector: done
+  17-1-chợ-tốt-multi-category-scraper-with-phone-mask-detector: backlog
   17-2-batdongsan-com-vn-property-scraper: done
   epic-17-retrospective: done
 
-  # --- Epic 18: HR & B2B Recruitment Crawlers (TopCV, VietnamWorks & LinkedIn) ---
   epic-18: done
   18-1-topcv-job-company-scraper: done
   18-2-vietnamworks-job-scraper: done
-  18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: done
+  18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach-gaussian: backlog
   epic-18-retrospective: done
 
-  # --- Epic 19: Internal Operator Dashboard, Admin CLI & Operational Observability ---
   epic-19: done
   19-1-dashboard-jobs-checkpoints-view: done
   19-2-dashboard-proxies-accounts-view: done
@@ -153,43 +133,17 @@ development_status:
   19-4-3-admin-cli-account-management: done
   19-4-4-admin-cli-checkpoint-management: done
   19-4-5-admin-cli-stream-metrics-alerts: done
-  # NOTE: 19.5 and 19.6 are no longer used; 19.4 has been split into 19.4.1–19.4.5.
   19-7-admin-rest-api-proxy-management: done
   19-8-admin-rest-api-account-checkpoint-management: done
   19-9-admin-rest-api-stream-metrics-alerts: done
-  19-10-admin-mcp-tools: done
+  19-10-admin-mcp-tools-for-ai-agents: backlog
   epic-19-retrospective: done
 
-  # --- Epic 21: B2B Procurement, Corporate & Automotive Intelligence Engine ---
-  # NOTE: 2026-09-05 — Reactivated for Vietnam market pivot. PRD FR-94, FR-95 added.
-  # Feasibility verified by live probes (research/technical-vietnam-multi-domain-scrapers-2026-08-21.md).
-  epic-21: done
-  21-1-masothue-company-registry-crawler: done
-  21-2-automotive-vehicles-market-crawler: done
-  21-3-hosocongty-muasamcong-crawler: done
-  21-4-hosocongty-muasamcong-live-fixes: done
-  epic-21-retrospective: done
+  epic-20: backlog
+  20-1-nowing-shadow-run-adapter-over-xactions-daemon: backlog
+  20-2-legacy-scraper-code-decommissioning: backlog
+  epic-20-retrospective: optional
 
-  # --- Epic 22: Local F&B Merchant, Healthcare & Legal Intelligence Engine ---
-  # NOTE: 2026-09-05 — Reactivated for Vietnam market pivot. PRD FR-96 added.
-  # NOTE: 2026-09-08 — Readiness gate passed; Long Chau added to 22.2, Thuocsi deferred to Epic 24.
-  epic-22: done
-  22-1-fnb-merchant-restaurant-directory-crawler: done
-  22-2-healthcare-clinics-pharmacy-network-crawler: done
-  22-3-legal-trademark-intellectual-property-crawler: done
-  epic-22-retrospective: optional
-
-  # --- Epic 33: Vietnam Social & Video Platform Expansion ---
-  # NOTE: 2026-09-05 — Net-new epic added for Vietnam market pivot. PRD FR-97 + NFR-19 added.
-  # Requires Zalo OA API v3 access token + YouTube Data API v3 key.
-  epic-33: done
-  33-1-zalo-oa-public-content-crawler: done
-  33-2-youtube-vn-channel-video-crawler: done
-  epic-33-retrospective: optional
-
-  # --- Epic 23: Bluesky & Mastodon on AbstractCrawler ---
-  # NOTE: 2026-09-05 — All stories done (23.1–23.6). Story 23.6 integration & caller migration
-  # verified end-to-end on live dashboard (Mastodon profile/trending, Bluesky profile/trending).
   epic-23: done
   23-1-bluesky-at-protocol-client: done
   23-2-bluesky-hybrid-crawler: done
@@ -199,103 +153,71 @@ development_status:
   23-6-bluesky-mastodon-integration-caller-migration: done
   epic-23-retrospective: done
 
-  # --- Epic 24: Utility Scripts & Adapters Migration ---
   epic-24: backlog
-  24-1-inventory-deprecation-decision-standalone-scripts: backlog
-  24-2-browser-utility-features-crawler-actions: backlog
+  24-1-inventory-deprecation-decision-for-standalone-scripts: backlog
+  24-2-browser-utility-features-as-crawler-actions: backlog
   24-3-adapter-layer-consolidation: backlog
-  24-4-archive-remove-unused-scraper-modules: backlog
+  24-4-archive-or-remove-unused-scraper-modules: backlog
   epic-24-retrospective: optional
 
-  # --- Epic 25: Unified Dispatcher & Public API Finalization ---
   epic-25: in-progress
   25-1-universal-scrape-dispatcher: backlog
   25-2-package-json-exports-v2: backlog
   25-3-mcp-cli-api-caller-migration: backlog
   25-4-backward-compatibility-error-mapping: backlog
-  25-5-core-checkpoint-resume-engine: done
-  25-6-checkpoint-resolvers-top-platforms: done
-  25-7-early-termination-pagination-loops: backlog
+  25-5-core-checkpoint-resume-early-termination-engine: backlog
+  25-6-checkpoint-resolvers-for-top-platforms: backlog
+  25-7-early-termination-in-crawler-pagination-loops: backlog
   epic-25-retrospective: optional
 
-  # --- Epic 25.5-25.7: Auto Checkpoint Lookup & Early Termination ---
-  # Added 2026-09-09 via sprint-change-proposal-2026-09-09-checkpoint-resume.md
-  # Enables automatic resume from CrawlCheckpoint and early termination on duplicate pages.
-  # Belongs to Epic 25 (Unified Dispatcher) as it extends CrawlerCommand / AbstractCrawler.
-
-  # --- Epic 27: Anti-Detection & Session Resilience ---
-  # NOTE: Epic 27 added 2026-09-05 via sprint-change-proposal-2026-09-05.md.
-  epic-27: backlog
-  27-1-fingerprint-manager-tls-ja4-geo-consistent: backlog
-  27-2-session-health-orchestrator-circuit-breaker: backlog
-  27-3-challenge-signature-detector: backlog
-  epic-27-retrospective: optional
-
-  # --- Epic 28: Schema Drift & Selector Resilience ---
-  epic-28: backlog
-  28-1-schema-drift-guard: backlog
-  28-2-selector-canary: backlog
-  28-3-auto-selector-fallback: backlog
-  epic-28-retrospective: optional
-
-  # --- Epic 29: Real-Time Social Event Streaming & Webhook Engine ---
-  epic-29: backlog
-  29-1-jetstream-sse-cdc-adapters: backlog
-  29-2-outbound-webhook-dispatcher: backlog
-  29-3-stream-replay: backlog
-  epic-29-retrospective: optional
-
-  # --- Epic 30: Cross-Platform Action Replay & Content Syndication ---
-  epic-30: backlog
-  30-1-universal-action-dispatcher: backlog
-  30-2-content-transformer: backlog
-  epic-30-retrospective: optional
-
-  # --- Epic 31: Universal Media & Asset Extraction Pipeline ---
-  epic-31: backlog
-  31-1-universal-media-pipeline: backlog
-  epic-31-retrospective: optional
-
-  # --- Epic 32: Operational Rate-Budget & Queue Governance ---
-  epic-32: backlog
-  32-1-rate-budget-dashboard: backlog
-  32-2-distributed-token-bucket: backlog
-  epic-32-retrospective: optional
-
-  # --- Epic 20: Nowing Cutover & Legacy Scraper Decommissioning ---
-  # Blocked until Epics 13-18 are complete. Will decommission src/client/, src/scrapers/twitter/,
-  # src/scrapers/facebook/, src/scrapers/threads/ and src/scrapers/twitter/http/ once new crawlers stable.
-  epic-20: backlog
-  20-1-nowing-shadow-run-adapter-over-xactions-daemon: backlog
-  20-2-legacy-scraper-code-decommissioning: backlog
-  epic-20-retrospective: optional
-
-  # --- Epic 26: Legacy Decommission Final ---
   epic-26: backlog
   26-1-pre-decommission-parity-rollback-preparation: backlog
   26-2-final-legacy-removal: backlog
   epic-26-retrospective: optional
 
-  # --- Epic 34: Scraper Benchmark & Reliability Suite ---
-  # NOTE: 2026-09-08 — Added via sprint-change-proposal-2026-09-08-benchmark-v2.md.
-  # Post-review: Stories 34.1-34.6 (MVP), 34.7-34.8 (Hardening). See _bmad-output/specs/spec-scraper-benchmark/ for full spec.
+  epic-27: backlog
+  27-1-fingerprintmanager-tls-ja4-spoofing-geo-consistent-profiles: backlog
+  27-2-sessionhealthorchestrator-continuous-health-score-circuit-br: backlog
+  27-3-challengesignaturedetector-automated-bot-detection-page-dete: backlog
+  epic-27-retrospective: optional
+
+  epic-28: backlog
+  28-1-schemadriftguard-runtime-contract-validation-completeness-cl: backlog
+  28-2-selectorcanary-periodic-dom-probe-drift-alert: backlog
+  28-3-autoselectorfallback-assisted-selector-re-discovery: backlog
+  epic-28-retrospective: optional
+
+  epic-29: backlog
+  29-1-jetstream-sse-cdc-adapters-for-push-based-social-streams: backlog
+  29-2-outbound-webhook-dispatcher-with-hmac-signing-retry: backlog
+  29-3-stream-replay-missed-event-recovery: backlog
+  epic-29-retrospective: optional
+
+  epic-30: backlog
+  30-1-universalactiondispatcher-cross-platform-write-actions: backlog
+  30-2-contenttransformer-thread-splitter-media-adapter-character-l: backlog
+  epic-30-retrospective: optional
+
+  epic-31: backlog
+  31-1-universalmediapipeline-audio-carousel-hls-on-all-platforms: backlog
+  epic-31-retrospective: optional
+
+  epic-32: backlog
+  32-1-ratebudgetdashboard-visual-quota-allocator-panic-stop: backlog
+  32-2-distributedtokenbucket-redis-backed-quota-with-header-parsin: backlog
+  epic-32-retrospective: optional
+
+  epic-33: done
+  33-1-zalo-oa-public-content-crawler: done
+  33-2-youtube-vn-channel-video-crawler: done
+  epic-33-retrospective: optional
+
   epic-34: done
-  34-1-benchmark-telemetry-schema-storage: done
-  34-2-production-telemetry-hooks-abstract-crawler: done
-  34-3-platform-specific-validators-false-200-detection: done
-  34-4-benchmark-scoring-engine: done
-  34-5-operator-scorecard-cli-dashboard: done
-  34-6-nowing-integration-health-flag-stream-events: done
-  34-7-synthetic-canary-probe-scheduler: done
-  34-8-active-alerting-requalification-workflow: done
   epic-34-retrospective: optional
 
-  # --- Epic 35: Reddit, Medium & Instagram Scraper Expansion ---
-  # NOTE: 2026-09-09 — Added via Epic 35 planning (FR-98/99/100).
-  # 35-1 story expanded to full dev story and ready for implementation.
   epic-35: in-progress
-  35-1-reddit-scraper: in-progress
-  35-2-medium-scraper: backlog
-  35-3-instagram-scraper: backlog
-  35-4-unified-proxy-docs: backlog
+  35-1-reddit-scraper-client-crawler-validator-tests: in-progress
+  35-2-medium-scraper-client-crawler-validator-tests: backlog
+  35-3-instagram-scraper-client-crawler-session-proxy-tests: backlog
+  35-4-unified-proxyprovider-injection-socialaccount-schema-docs-se: backlog
   epic-35-retrospective: optional

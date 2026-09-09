@@ -2022,12 +2022,25 @@ XActions hiện hỗ trợ 10+ nền tảng social nhưng thiếu ba nguồn n�
 
 ## Stories
 
-| Story | Title | Phase | Estimate | File |
-|-------|-------|-------|----------|------|
-| 35.1 | Reddit Scraper (Client + Crawler + Validator + Tests) | MVP | 1 sprint | [stories/35-1-reddit-scraper.md](../implementation-artifacts/stories/35-1-reddit-scraper.md) |
-| 35.2 | Medium Scraper (Client + Crawler + Validator + Tests) | MVP | 1 sprint | [stories/35-2-medium-scraper.md](../implementation-artifacts/stories/35-2-medium-scraper.md) |
-| 35.3 | Instagram Scraper (Client + Crawler + Session/Proxy + Tests) | MVP | 1.5 sprints | [stories/35-3-instagram-scraper.md](../implementation-artifacts/stories/35-3-instagram-scraper.md) |
-| 35.4 | Unified ProxyProvider Injection + SocialAccount Schema + Docs & Selector Registry | Hardening | 0.5 sprint | [stories/35-4-unified-proxy-docs.md](../implementation-artifacts/stories/35-4-unified-proxy-docs.md) |
+### Story 35.1: Reddit Scraper (Client + Crawler + Validator + Tests)
+- **Phase:** MVP
+- **Estimate:** 1 sprint
+- **File:** [stories/35-1-reddit-scraper.md](../implementation-artifacts/stories/35-1-reddit-scraper.md)
+
+### Story 35.2: Medium Scraper (Client + Crawler + Validator + Tests)
+- **Phase:** MVP
+- **Estimate:** 1 sprint
+- **File:** [stories/35-2-medium-scraper.md](../implementation-artifacts/stories/35-2-medium-scraper.md)
+
+### Story 35.3: Instagram Scraper (Client + Crawler + Session/Proxy + Tests)
+- **Phase:** MVP
+- **Estimate:** 1.5 sprints
+- **File:** [stories/35-3-instagram-scraper.md](../implementation-artifacts/stories/35-3-instagram-scraper.md)
+
+### Story 35.4: Unified ProxyProvider Injection + SocialAccount Schema + Docs & Selector Registry
+- **Phase:** Hardening
+- **Estimate:** 0.5 sprint
+- **File:** [stories/35-4-unified-proxy-docs.md](../implementation-artifacts/stories/35-4-unified-proxy-docs.md)
 
 **Tổng:** 4 stories, ~4 sprints
 
