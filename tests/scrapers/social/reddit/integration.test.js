@@ -113,4 +113,16 @@ describe('Reddit Integration (Unified Dispatcher)', () => {
       scrape('reddit', 'nonexistent', { baseUrl: serverUrl })
     ).rejects.toThrow();
   });
+
+  it('conditionally runs live integration when REDDIT_INTEGRATION is set', async () => {
+    const shouldRun = process.env.REDDIT_INTEGRATION === '1';
+    if (!shouldRun) {
+      return;
+    }
+    const result = await scrape('reddit', 'subreddit', { name: 'programming', limit: 5 });
+    expect(result).toHaveProperty('posts');
+    expect(Array.isArray(result.posts)).toBe(true);
+    expect(result.posts.length).toBeGreaterThan(0);
+    expect(result.posts[0].platform).toBe('reddit');
+  });
 });

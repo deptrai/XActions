@@ -7,7 +7,7 @@
  * @license Apache-2.0
  */
 
-import { CATEGORIES, generateCommentId } from '../../../core/types.js';
+import { generateCommentId } from '../../../core/types.js';
 
 /**
  * Generate namespaced identifier for Reddit.
@@ -78,7 +78,7 @@ export function normalizeRedditPost(raw) {
     id: namespacedRedditId(externalId),
     platform: 'reddit',
     externalId,
-    category: CATEGORIES.POST,
+    category: "social",
     authorId,
     authorName,
     authorAvatar: null,
@@ -133,7 +133,7 @@ export function normalizeRedditComment(raw) {
   const postNamespacedId = postFullname ? namespacedRedditId(postFullname) : '';
 
   const parentId = comment.parent_id ? String(comment.parent_id) : '';
-  const parentExternalId = parentId ? parseFullname(parentId).id : null;
+  const { kind: parentKind, id: parentExternalId } = parentId ? parseFullname(parentId) : { kind: '', id: null };
 
   const authorName = String(comment.author || '[deleted]');
   const authorId = authorName;
@@ -146,12 +146,18 @@ export function normalizeRedditComment(raw) {
   const publishedAt = comment.created_utc ? new Date(comment.created_utc * 1000) : null;
   const permalink = comment.permalink ? `https://www.reddit.com${comment.permalink}` : '';
 
+  // Top-level comments have parent_id equal to the post fullname (t3_...).
+  // Replies to other comments have parent_id as a comment fullname (t1_...).
+  const parentCommentId = parentKind === 't1' && parentExternalId
+    ? namespacedRedditId(parentId)
+    : undefined;
+
   return {
     id: generateCommentId('reddit', postFullname || postId, externalId),
     platform: 'reddit',
     externalId,
     postId: postNamespacedId,
-    parentCommentId: parentExternalId ? namespacedRedditId(parentId) : undefined,
+    parentCommentId,
     depth: typeof comment.depth === 'number' ? comment.depth : 0,
     authorId,
     authorName,
@@ -209,7 +215,7 @@ export function normalizeRedditSubreddit(raw) {
     id: namespacedRedditId(externalId),
     platform: 'reddit',
     externalId,
-    category: CATEGORIES.POST,
+    category: "social",
     authorId: 'reddit_system',
     authorName: `r/${displayName}`,
     authorAvatar: typeof icon === 'string' ? icon : null,

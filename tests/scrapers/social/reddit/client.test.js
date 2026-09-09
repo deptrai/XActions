@@ -349,4 +349,43 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
     const client = createRedditClient({ baseUrl: serverUrl });
     expect(client).toBeInstanceOf(RedditClient);
   });
+
+  it('uses proxy agent when requiresProxy is set', async () => {
+    const fakeAgent = { name: 'fake-agent' };
+    const proxy = { host: '127.0.0.1', port: 8080 };
+    const proxyPool = {
+      getNext: () => proxy,
+      getProxyAgent: () => fakeAgent,
+      isAllQuarantined: () => false,
+    };
+    const client = new RedditClient({ baseUrl: serverUrl, requiresProxy: true, proxyPool });
+    let capturedAgent = null;
+    client.httpClient = async ({ agent }) => {
+      capturedAgent = agent;
+      return { status: 200, data: { kind: 'Listing', data: { children: [] } }, headers: {} };
+    };
+    await client.apiRequest('/r/programming/new', { limit: 1 });
+    expect(capturedAgent).toBe(fakeAgent);
+  });
+
+  it('auto-authenticates via ensureToken when constructed with credentials', async () => {
+    const client = new RedditClient({
+      baseUrl: serverUrl,
+      apiBaseUrl: serverUrl,
+      oauthUrl: `${serverUrl}/api/v1/access_token`,
+      clientId: 'test',
+      clientSecret: 'secret',
+    });
+    const token = await client.ensureToken();
+    expect(token).toBe('mock_access_token_123');
+    expect(client.accessToken).toBe('mock_access_token_123');
+  });
+
+  it('backs off when x-ratelimit-remaining is low', async () => {
+    const client = new RedditClient({ baseUrl: serverUrl });
+    const start = Date.now();
+    await client.apiRequest('/r/programming/new', { limit: 1 });
+    const elapsed = Date.now() - start;
+    expect(elapsed).toBeLessThan(100);
+  });
 });

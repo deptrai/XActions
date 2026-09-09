@@ -36,11 +36,19 @@ describe('RedditPlatformResponseValidator', () => {
     expect(validator.isAuthExpired({ status: 200, data: { error: 'unauthorized' } })).toBe(true);
   });
 
-  it('detects bot challenge from 403', () => {
-    expect(validator.isBotChallenge({ status: 403 })).toBe(true);
+  it('detects bot challenge from 403 with block markers', () => {
+    expect(validator.isBotChallenge({ status: 403, data: '<html>captcha required</html>' })).toBe(true);
+    expect(validator.isBotChallenge({ status: 403, data: '<html>Cloudflare blocked</html>' })).toBe(true);
   });
 
-  it('detects bot challenge from Cloudflare HTML', () => {
+  it('does not treat bare 403 or private subreddit as bot challenge', () => {
+    expect(validator.isBotChallenge({ status: 403 })).toBe(false);
+    expect(validator.isBotChallenge({ status: 403, data: { reason: 'private' } })).toBe(false);
+    expect(validator.isBotChallenge({ status: 403, data: { error: 'subreddit_private' } })).toBe(false);
+    expect(validator.isBotChallenge({ status: 403, data: '<html>private subreddit</html>' })).toBe(false);
+  });
+
+  it('detects bot challenge from Cloudflare HTML at 200', () => {
     expect(validator.isBotChallenge({
       status: 200,
       data: '<html>Cloudflare challenge</html>',

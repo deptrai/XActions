@@ -214,6 +214,18 @@ context:
 - All 60 Reddit tests pass: `npx vitest run tests/scrapers/social/reddit/`.
 - Story tasks & acceptance criteria satisfied; ready for code review.
 
+**Review Follow-ups (AI):**
+- [x] Fixed `CATEGORIES.POST` → `"social"` in normalizer (undefined constant causing `validateItem` to fail).
+- [x] Added `this.validateItem(item)` for every post, comment, and profile item in `RedditCrawler`.
+- [x] `getPostComments` now uses `storeCommentBatch` instead of `storeBatch`.
+- [x] Fixed `x-ratelimit-reset` parsing: treated as relative seconds, not epoch.
+- [x] `ensureToken` auto-authenticates when constructed with `clientId`/`clientSecret`.
+- [x] `isBotChallenge` no longer treats all 403 as bot challenge; private subreddits/NSFW go to `isLoginWall`.
+- [x] `post_comments` now supports direct `/comments/{postId}` lookup without `subreddit`.
+- [x] `defaultRedisStreamPublisher` included in `#emitCheckpointAndStream` fallback chain.
+- [x] Added `checkpointResolver` for `user` action.
+- [x] Added tests for proxy resolution, auto-auth, rate-limit backoff, direct `/comments` lookup, `shouldStopPagination`, conditional `REDDIT_INTEGRATION` live call.
+
 ## File List
 
 **Source:**

@@ -210,7 +210,13 @@ export class RedditClient extends AbstractApiClient {
    * @returns {Promise<string | null>}
    */
   async ensureToken() {
-    if (!this.accessToken) return null;
+    if (!this.accessToken) {
+      // Auto-authenticate when constructed with credentials but init() was not called.
+      if (this.clientId && this.clientSecret) {
+        return this.authenticate({ clientId: this.clientId, clientSecret: this.clientSecret });
+      }
+      return null;
+    }
     if (this.tokenExpiresAt && Date.now() >= this.tokenExpiresAt) {
       if (this.clientId && this.clientSecret) {
         return this.authenticate({ clientId: this.clientId, clientSecret: this.clientSecret });
@@ -307,8 +313,8 @@ export class RedditClient extends AbstractApiClient {
 
     let resetAt = null;
     if (reset !== null && !Number.isNaN(reset)) {
-      // Reddit sends epoch seconds
-      resetAt = reset > 1000000000000 ? reset : reset * 1000;
+      // Reddit's x-ratelimit-reset is seconds remaining in the current window.
+      resetAt = Date.now() + (reset * 1000);
     }
 
     return { remaining, resetAt, used };

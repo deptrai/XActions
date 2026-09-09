@@ -8,7 +8,6 @@ import {
   normalizeRedditSubreddit,
   normalizeRedditUser,
 } from '../../../../src/scrapers/social/reddit/normalizer.js';
-import { CATEGORIES } from '../../../../src/core/types.js';
 
 describe('namespacedRedditId', () => {
   it('generates namespaced id with reddit prefix', () => {
@@ -60,7 +59,7 @@ describe('normalizeRedditPost', () => {
     expect(post.id).toBe('reddit:t3_1a2b3c');
     expect(post.platform).toBe('reddit');
     expect(post.externalId).toBe('t3_1a2b3c');
-    expect(post.category).toBe(CATEGORIES.POST);
+    expect(post.category).toBe("social");
     expect(post.authorName).toBe('spez');
     expect(post.content).toBe('Hello world This is a test post');
     expect(post.likesCount).toBe(42);
@@ -189,7 +188,7 @@ describe('normalizeRedditSubreddit', () => {
     expect(subreddit.id).toBe('reddit:t5_2xxxxx');
     expect(subreddit.platform).toBe('reddit');
     expect(subreddit.externalId).toBe('t5_2xxxxx');
-    expect(subreddit.category).toBe(CATEGORIES.POST);
+    expect(subreddit.category).toBe("social");
     expect(subreddit.authorName).toBe('r/programming');
     expect(subreddit.content).toBe('Computer programming community');
     expect(subreddit.likesCount).toBe(123456);

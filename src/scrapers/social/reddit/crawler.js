@@ -96,6 +96,16 @@ export class RedditCrawler extends AbstractCrawler {
       optionalArgs: ['name', 'user', 'limit', 'sort', 'cursor', 'after'],
       outputType: '{ profile: ProfileItem, posts: PostItem[] }',
       example: { username: 'spez', limit: 25 },
+      checkpointResolver: (args) => {
+        const username = args?.username || args?.name || args?.user;
+        if (!username || typeof username !== 'string') return null;
+        return {
+          targetType: 'user',
+          targetKey: String(username).trim().toLowerCase(),
+          cursorField: 'after',
+          fallbackCursorFields: ['cursor'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getUser(args, session),
     });
 
@@ -222,7 +232,7 @@ export class RedditCrawler extends AbstractCrawler {
     let postId = clean;
     let subreddit = args.subreddit ? String(args.subreddit).replace(/^r\//, '').trim() : null;
 
-    // Extract from URL: /r/{sub}/comments/{id}/...
+    // Extract from URL: /r/{sub}/comments/{id}/... or /comments/{id}/...
     if (/^https?:\/\//i.test(clean)) {
       const m = clean.match(/\/r\/([^/]+)\/comments\/([^/?#]+)/i);
       if (m) {
@@ -234,17 +244,6 @@ export class RedditCrawler extends AbstractCrawler {
       }
     } else if (clean.startsWith('t3_')) {
       postId = clean;
-    }
-
-    if (!subreddit) {
-      throw new PlatformError({
-        type: ErrorTypes.INVALID_ARGS,
-        code: 'XACT_4001',
-        message: 'post_comments requires "subreddit" arg or a Reddit post URL containing /r/{sub}/',
-        statusCode: 400,
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: 'reddit',
-      });
     }
 
     return { postId, subreddit };
@@ -281,7 +280,7 @@ export class RedditCrawler extends AbstractCrawler {
         const publisher =
           this.redisPublisher ||
           (this.store && /** @type {any} */ (this.store).publisher) ||
-          null;
+          defaultRedisStreamPublisher;
 
         if (publisher && typeof publisher.publish === 'function') {
           for (const item of items) {
@@ -326,11 +325,13 @@ export class RedditCrawler extends AbstractCrawler {
     const children = Array.isArray(raw?.data?.children) ? raw.data.children : [];
     const posts = children
       .filter((child) => child?.kind === 't3')
-      .map((child) => normalizeRedditPost(child));
+      .map((child) => { const post = normalizeRedditPost(child); this.validateItem(post); return post; });
     const nextCursor = raw?.data?.after || null;
 
+    let stopPagination = false;
     if (this.store && posts.length > 0) {
-      await this.store.storeBatch(posts).catch(() => {});
+      const batch = await this.store.storeBatch(posts).catch(() => null);
+      stopPagination = await this.shouldStopPagination(batch ?? posts);
     }
 
     await this.#emitCheckpointAndStream({
@@ -338,14 +339,14 @@ export class RedditCrawler extends AbstractCrawler {
       targetKey: name,
       cursor: nextCursor,
       items: posts,
-      hasMore: Boolean(nextCursor),
+      hasMore: Boolean(nextCursor) && !stopPagination,
     });
 
     return {
       posts,
       pageInfo: {
         end_cursor: nextCursor,
-        has_next_page: Boolean(nextCursor),
+        has_next_page: Boolean(nextCursor) && !stopPagination,
       },
     };
   }
@@ -370,16 +371,18 @@ export class RedditCrawler extends AbstractCrawler {
       this.client.apiRequest(`/user/${username}/submitted`, params),
     ]);
 
-    const profile = normalizeRedditUser(profileRaw);
+    const profile = normalizeRedditUser(profileRaw); this.validateItem(profile);
     const children = Array.isArray(postsRaw?.data?.children) ? postsRaw.data.children : [];
     const posts = children
       .filter((child) => child?.kind === 't3')
-      .map((child) => normalizeRedditPost(child));
+      .map((child) => { const post = normalizeRedditPost(child); this.validateItem(post); return post; });
     const nextCursor = postsRaw?.data?.after || null;
 
+    let stopPagination = false;
     if (this.store) {
       if (posts.length > 0) {
-        await this.store.storeBatch(posts).catch(() => {});
+        const batch = await this.store.storeBatch(posts).catch(() => null);
+        stopPagination = await this.shouldStopPagination(batch ?? posts);
       }
       const profilePost = {
         id: profile.id,
@@ -399,6 +402,14 @@ export class RedditCrawler extends AbstractCrawler {
         crawledAt: profile.crawledAt,
       };
       await this.store.storeContent(profilePost).catch(() => {});
+
+      await this.#emitCheckpointAndStream({
+        targetType: 'user',
+        targetKey: username,
+        cursor: nextCursor,
+        items: posts,
+        hasMore: Boolean(nextCursor) && !stopPagination,
+      });
     }
 
     return {
@@ -406,7 +417,7 @@ export class RedditCrawler extends AbstractCrawler {
       posts,
       pageInfo: {
         end_cursor: nextCursor,
-        has_next_page: Boolean(nextCursor),
+        has_next_page: Boolean(nextCursor) && !stopPagination,
       },
     };
   }
@@ -440,11 +451,13 @@ export class RedditCrawler extends AbstractCrawler {
     const children = Array.isArray(raw?.data?.children) ? raw.data.children : [];
     const posts = children
       .filter((child) => child?.kind === 't3')
-      .map((child) => normalizeRedditPost(child));
+      .map((child) => { const post = normalizeRedditPost(child); this.validateItem(post); return post; });
     const nextCursor = raw?.data?.after || null;
 
+    let stopPagination = false;
     if (this.store && posts.length > 0) {
-      await this.store.storeBatch(posts).catch(() => {});
+      const batch = await this.store.storeBatch(posts).catch(() => null);
+      stopPagination = await this.shouldStopPagination(batch ?? posts);
     }
 
     await this.#emitCheckpointAndStream({
@@ -452,14 +465,14 @@ export class RedditCrawler extends AbstractCrawler {
       targetKey: query.trim().toLowerCase(),
       cursor: nextCursor,
       items: posts,
-      hasMore: Boolean(nextCursor),
+      hasMore: Boolean(nextCursor) && !stopPagination,
     });
 
     return {
       posts,
       pageInfo: {
         end_cursor: nextCursor,
-        has_next_page: Boolean(nextCursor),
+        has_next_page: Boolean(nextCursor) && !stopPagination,
       },
     };
   }
@@ -479,7 +492,8 @@ export class RedditCrawler extends AbstractCrawler {
     const params = { limit, depth };
     if (after) params.after = after;
 
-    const raw = await this.client.apiRequest(`/r/${subreddit}/comments/${postId}`, params);
+    const path = subreddit ? `/r/${subreddit}/comments/${postId}` : `/comments/${postId}`;
+    const raw = await this.client.apiRequest(path, params);
     const postListing = Array.isArray(raw) ? raw[0] : null;
     const commentListing = Array.isArray(raw) ? raw[1] : null;
 
@@ -488,7 +502,7 @@ export class RedditCrawler extends AbstractCrawler {
     while (stack.length > 0) {
       const node = stack.shift();
       if (!node || node.kind !== 't1') continue;
-      comments.push(normalizeRedditComment(node));
+      { const comment = normalizeRedditComment(node); this.validateItem(comment); comments.push(comment); }
       const replies = node.data?.replies?.data?.children;
       if (Array.isArray(replies)) {
         for (const reply of replies) stack.push(reply);
@@ -497,8 +511,10 @@ export class RedditCrawler extends AbstractCrawler {
 
     const nextCursor = commentListing?.data?.after || null;
 
+    let stopPagination = false;
     if (this.store && comments.length > 0) {
-      await this.store.storeBatch(comments).catch(() => {});
+      const batch = await this.store.storeCommentBatch(comments).catch(() => null);
+      stopPagination = await this.shouldStopPagination(batch ?? comments);
     }
 
     await this.#emitCheckpointAndStream({
@@ -506,14 +522,14 @@ export class RedditCrawler extends AbstractCrawler {
       targetKey: postId,
       cursor: nextCursor,
       items: comments,
-      hasMore: Boolean(nextCursor),
+      hasMore: Boolean(nextCursor) && !stopPagination,
     });
 
     return {
       comments,
       pageInfo: {
         end_cursor: nextCursor,
-        has_next_page: Boolean(nextCursor),
+        has_next_page: Boolean(nextCursor) && !stopPagination,
       },
     };
   }
@@ -527,7 +543,7 @@ export class RedditCrawler extends AbstractCrawler {
   async getSubredditInfo(args = {}, session = {}) {
     const name = this.#extractSubreddit(args);
     const raw = await this.client.apiRequest(`/r/${name}/about`, {});
-    const subreddit = normalizeRedditSubreddit(raw);
+    const subreddit = normalizeRedditSubreddit(raw); this.validateItem(subreddit);
 
     if (this.store) {
       await this.store.storeContent(subreddit).catch(() => {});

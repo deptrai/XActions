@@ -318,4 +318,84 @@ describe('RedditCrawler', () => {
     });
     expect(result.comments.length).toBe(1);
   });
+
+  it('supports postId without subreddit for direct /comments lookup', async () => {
+    const directServer = http.createServer((req, res) => {
+      if (req.url?.startsWith('/comments/post123')) {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify([
+          {
+            kind: 'Listing',
+            data: {
+              children: [
+                {
+                  kind: 't3',
+                  data: {
+                    name: 't3_post123',
+                    id: 'post123',
+                    subreddit: 'test',
+                    author: 'poster',
+                    title: 'Post',
+                    score: 50,
+                    num_comments: 1,
+                    created_utc: 1700000000,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Listing',
+            data: {
+              children: [
+                {
+                  kind: 't1',
+                  data: {
+                    name: 't1_comment1',
+                    id: 'comment1',
+                    link_id: 't3_post123',
+                    parent_id: 't3_post123',
+                    author: 'commenter',
+                    body: 'Direct lookup',
+                    score: 15,
+                    created_utc: 1700000100,
+                    subreddit: 'test',
+                  },
+                },
+              ],
+              after: null,
+            },
+          },
+        ]));
+        return;
+      }
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'not_found' }));
+    });
+
+    await new Promise((resolve) => directServer.listen(0, '127.0.0.1', resolve));
+    const directUrl = `http://127.0.0.1:${directServer.address().port}`;
+    const directClient = new RedditClient({ baseUrl: directUrl });
+    const directCrawler = new RedditCrawler({ client: directClient });
+
+    const result = await directCrawler.start({
+      action: 'post_comments',
+      args: { postId: 'post123' },
+    });
+    expect(result.comments.length).toBe(1);
+    expect(result.comments[0].content).toBe('Direct lookup');
+    await new Promise((resolve) => directServer.close(resolve));
+  });
+
+  it('stops pagination when all items already exist', async () => {
+    const store = {
+      storeBatch: async (posts) => ({ insertedCount: 0, totalCount: posts.length }),
+      findExistingIds: async (ids) => ids,
+    };
+    const client = new RedditClient({ baseUrl: serverUrl });
+    const c = new RedditCrawler({ client, store });
+    const result = await c.start({ action: 'subreddit', args: { name: 'programming', limit: 5 } });
+    expect(result.posts.length).toBe(1);
+    expect(result.pageInfo.has_next_page).toBe(false);
+  });
 });

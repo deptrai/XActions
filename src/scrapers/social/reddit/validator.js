@@ -191,19 +191,55 @@ export class RedditPlatformResponseValidator extends AbstractPlatformResponseVal
    */
   isBotChallenge(response) {
     const status = this.#getStatus(response);
-    if (status === FORBIDDEN_STATUS) return true;
+    const record = this.#getRecord(response);
+    const data = record && typeof record.data === 'object' && record.data !== null
+      ? /** @type {Record<string, unknown>} */ (record.data)
+      : null;
+
+    // 403 private subreddits are login walls, not bot challenges.
+    if (status === FORBIDDEN_STATUS) {
+      if (data && (data.reason === 'private' || data.error === 'private' || data.error === 'subreddit_private')) {
+        return false;
+      }
+
+      const body = this.#getBody(response).toLowerCase();
+      if (body.includes('private subreddit') || body.includes('nsfw')) {
+        return false;
+      }
+
+      // Only treat 403 as bot challenge when it looks like an active block.
+      if (this.#isHtmlResponse(response)) {
+        if (
+          body.includes('captcha') ||
+          body.includes('challenge') ||
+          body.includes('blocked') ||
+          body.includes('access denied') ||
+          body.includes('cloudflare') ||
+          body.includes('your request has been blocked') ||
+          body.includes('unusual activity')
+        ) {
+          return true;
+        }
+      }
+
+      // A bare 403 without block markers is not automatically a bot challenge.
+      return false;
+    }
 
     const error = this.#getErrorName(response);
     if (BOT_CHALLENGE_ERRORS.has(error)) return true;
 
-    const body = this.#getBody(response).toLowerCase();
+    // Non-403 HTML responses can still contain bot challenge content (Cloudflare pages, etc.).
     if (this.#isHtmlResponse(response)) {
+      const body = this.#getBody(response).toLowerCase();
       if (
         body.includes('captcha') ||
         body.includes('challenge') ||
         body.includes('blocked') ||
         body.includes('access denied') ||
-        body.includes('cloudflare')
+        body.includes('cloudflare') ||
+        body.includes('your request has been blocked') ||
+        body.includes('unusual activity')
       ) {
         return true;
       }
