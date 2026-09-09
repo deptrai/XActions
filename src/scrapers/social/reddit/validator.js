@@ -4,7 +4,7 @@
  * Detects valid Listing/Thing payloads, rate-limits, auth failures,
  * bot challenges, and login walls from Reddit endpoints.
  * @author nich (@nichxbt)
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { AbstractPlatformResponseValidator } from '../../../core/platform-validator.js';
@@ -76,15 +76,34 @@ export class RedditPlatformResponseValidator extends AbstractPlatformResponseVal
    */
   #getHeaders(response) {
     const record = this.#getRecord(response);
-    if (record && typeof record.headers === 'object' && record.headers !== null) {
-      const headers = /** @type {Record<string, string>} */ (record.headers);
-      const normalized = /** @type {Record<string, string>} */ ({});
-      for (const [key, value] of Object.entries(headers)) {
+    if (!record) return null;
+
+    const rawHeaders = record.headers;
+    if (!rawHeaders || typeof rawHeaders !== 'object') return null;
+
+    /** @type {Record<string, string>} */
+    const normalized = {};
+
+    // Handle Headers instances (undici/fetch) via entries()/forEach().
+    const h = /** @type {Headers & Record<string, unknown>} */ (rawHeaders);
+    if (typeof h.entries === 'function') {
+      for (const [key, value] of h.entries()) {
         normalized[key.toLowerCase()] = value;
       }
       return normalized;
     }
-    return null;
+
+    if (typeof h.forEach === 'function' && typeof h.get === 'function') {
+      h.forEach((value, key) => {
+        normalized[key.toLowerCase()] = value;
+      });
+      return normalized;
+    }
+
+    for (const [key, value] of Object.entries(/** @type {Record<string, unknown>} */ (rawHeaders))) {
+      normalized[key.toLowerCase()] = typeof value === 'string' ? value : String(value);
+    }
+    return normalized;
   }
 
   /**
@@ -139,7 +158,7 @@ export class RedditPlatformResponseValidator extends AbstractPlatformResponseVal
     if (headers && status !== 200) {
       const remaining = headers['x-ratelimit-remaining'] ?? headers['ratelimit-remaining'];
       const remainingNum = Number(remaining);
-      if (remaining === '0' || remaining === 0 || (Number.isFinite(remainingNum) && remainingNum <= 0)) return true;
+      if (remaining === '0' || (Number.isFinite(remainingNum) && remainingNum <= 0)) return true;
     }
 
     const error = this.#getErrorName(response);

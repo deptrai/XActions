@@ -39,6 +39,20 @@ export function parseFullname(fullname) {
 }
 
 /**
+ * Detect whether a URL points to a direct media asset (image or video).
+ * @param {string} url
+ * @returns {boolean}
+ */
+function looksLikeMediaUrl(url) {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  const mediaExtensions = /\.(png|jpe?g|gif|webp|bmp|svg|mp4|webm|mov|mkv|avi|m4v|3gp|flv)(\?|#|$)/i;
+  if (mediaExtensions.test(lower)) return true;
+  if (lower.includes('redditmedia.com') || lower.includes('redd.it')) return true;
+  return false;
+}
+
+/**
  * Normalize raw Reddit post (t3 / kind 't3' object) into PostItem.
  * @param {Record<string, any>} raw
  * @returns {import('../../../core/types.js').PostItem}
@@ -84,9 +98,12 @@ export function normalizeRedditPost(raw) {
   if (post.thumbnail && /^https?:\/\//i.test(post.thumbnail)) {
     mediaUrls.push(String(post.thumbnail));
   }
-  // External link target stored in metadata, not mediaUrls
+  // External link target is stored in metadata; also push to mediaUrls when it
+  // looks like a direct image/video asset.
   if (targetUrl && !targetUrl.includes('reddit.com')) {
-    // intentionally not pushed to mediaUrls
+    if (looksLikeMediaUrl(targetUrl) || Boolean(post.is_video)) {
+      mediaUrls.push(targetUrl);
+    }
   }
 
   const publishedAt = post.created_utc ? new Date(post.created_utc * 1000) : null;
@@ -309,7 +326,7 @@ export function normalizeRedditUser(raw) {
     name,
     authorName,
     bio,
-    avatar: typeof avatar === 'string' ? avatar : null,
+    avatar: typeof avatar === 'string' ? avatar : undefined,
     profileUrl,
     followersCount,
     followingCount: 0,

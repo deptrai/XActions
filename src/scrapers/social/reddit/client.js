@@ -35,7 +35,7 @@ export function buildRedditUserAgent(username) {
   if (username && /^[a-zA-Z0-9_-]+$/.test(username)) {
     return `${app} by u/${username}`;
   }
-  return `${app} (xactions)`;
+  return 'xactions/1.0';
 }
 
 export function createRedditClient(options = {}) {
@@ -105,9 +105,13 @@ export class RedditClient extends AbstractApiClient {
    * @param {string} [options.clientId] - Reddit app client_id (script type)
    * @param {string} [options.clientSecret] - Reddit app client_secret
    * @param {string} [options.username] - Reddit username for User-Agent
+   * @param {string} [options.redditUsername] - Alias for username
    * @param {string} [options.userAgent] - Custom User-Agent override
    * @param {string} [options.accessToken] - Existing OAuth access token
    * @param {number} [options.tokenExpiresAt] - Existing token expiry epoch ms
+   * @param {string} [options.defaultProxyCountry='us'] - Default proxy country
+   * @param {string} [options.proxyType='residential'] - Default proxy ISP/type
+   * @param {boolean} [options.requiresResidential=true] - Require residential proxies
    * @param {import('./validator.js').RedditPlatformResponseValidator} [options.responseValidator]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [options.proxyPool]
    * @param {import('../../../core/account-pool.js').AccountPool} [options.accountPool]
@@ -138,21 +142,21 @@ export class RedditClient extends AbstractApiClient {
     this.clientId = options.clientId || null;
     this.clientSecret = options.clientSecret || null;
     this.username = options.username || options.redditUsername || null;
-    this.userAgent = options.userAgent || buildRedditUserAgent(this.username);
+    this.userAgent = options.userAgent || buildRedditUserAgent(this.username ?? undefined);
     this.accessToken = options.accessToken || null;
     this.tokenExpiresAt = options.tokenExpiresAt || null;
 
-    const validTransports = new Set(['http', 'puppeteer', 'rss']);
+    const validTransports = /** @type {Set<'http' | 'puppeteer' | 'rss'>} */ (new Set(['http', 'puppeteer', 'rss']));
     const rawTransport = String(options.transport || process.env.REDDIT_TRANSPORT || 'http').toLowerCase().trim();
-    this.transport = validTransports.has(rawTransport) ? rawTransport : 'http';
+    this.transport = /** @type {'http'|'puppeteer'|'rss'} */ (validTransports.has(/** @type {'http'|'puppeteer'|'rss'} */ (rawTransport)) ? rawTransport : 'http');
     this.browserBridge = options.browserBridge || null;
   }
 
   /**
    * Reddit does not use client-side payload signing (OAuth2 bearer / Basic auth only).
    * Conforms to AbstractApiClient sign contract.
-   * @param {Record<string, any>} [payload]
-   * @returns {Promise<Record<string, any>>}
+   * @param {Record<string, unknown>} [payload]
+   * @returns {Promise<Record<string, unknown>>}
    */
   async sign(payload = {}) {
     return {};
@@ -160,17 +164,17 @@ export class RedditClient extends AbstractApiClient {
 
   /**
    * Initialize session: if clientId/clientSecret are provided, obtain OAuth token.
-   * @param {Object} [session={}]
+   * @param {Record<string, unknown>} [session={}]
    * @returns {Promise<void>}
    */
   async init(session = {}) {
-    const clientId = session.clientId || this.clientId;
-    const clientSecret = session.clientSecret || this.clientSecret;
+    const clientId = (typeof session.clientId === 'string' ? session.clientId : null) || this.clientId;
+    const clientSecret = (typeof session.clientSecret === 'string' ? session.clientSecret : null) || this.clientSecret;
     if (clientId && clientSecret) {
       await this.authenticate({ clientId, clientSecret });
-    } else if (session.accessToken) {
+    } else if (typeof session.accessToken === 'string') {
       this.accessToken = session.accessToken;
-      this.tokenExpiresAt = session.tokenExpiresAt || null;
+      this.tokenExpiresAt = typeof session.tokenExpiresAt === 'number' ? session.tokenExpiresAt : null;
     }
   }
 
@@ -179,7 +183,7 @@ export class RedditClient extends AbstractApiClient {
    * @param {Object} credentials
    * @param {string} credentials.clientId
    * @param {string} credentials.clientSecret
-   * @returns {Promise<string>} access token
+   * @returns {Promise<string | null>} access token
    */
   async authenticate({ clientId, clientSecret }) {
     if (!clientId || !clientSecret) {
@@ -199,7 +203,7 @@ export class RedditClient extends AbstractApiClient {
     const authHeader = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
     const body = 'grant_type=client_credentials';
 
-    const res = await this.request('POST', this.oauthUrl, {
+    const rawRes = await this.request('POST', this.oauthUrl, {
       headers: {
         'authorization': authHeader,
         'content-type': 'application/x-www-form-urlencoded',
@@ -209,9 +213,10 @@ export class RedditClient extends AbstractApiClient {
       requiresAuth: false,
       skipResponseValidation: true,
     });
+    const res = /** @type {Record<string, unknown>} */ (rawRes);
+    const data = res && typeof res === 'object' ? (res.data ?? res) : res;
 
-    const data = res?.data || res;
-    if (!data?.access_token) {
+    if (!data || typeof data !== 'object' || !('access_token' in data) || typeof data.access_token !== 'string') {
       throw new AuthSessionExpiredError({
         code: 'XACT_4010',
         message: 'Failed to obtain Reddit OAuth token: invalid credentials or response',
@@ -223,8 +228,10 @@ export class RedditClient extends AbstractApiClient {
     }
 
     this.accessToken = data.access_token;
-    const expiresIn = typeof data.expires_in === 'number' ? data.expires_in : 3600;
-    this.tokenExpiresAt = Date.now() + (expiresIn - this.tokenBufferSeconds) * 1000;
+    const rawExpiresIn = data.expires_in;
+    const expiresIn = typeof rawExpiresIn === 'number' ? rawExpiresIn : 3600;
+    const effectiveBuffer = Math.min(this.tokenBufferSeconds, expiresIn);
+    this.tokenExpiresAt = Date.now() + Math.max(0, (expiresIn - effectiveBuffer)) * 1000;
 
     return this.accessToken;
   }
@@ -241,13 +248,19 @@ export class RedditClient extends AbstractApiClient {
       }
       return null;
     }
-    if (this.tokenExpiresAt && Date.now() >= this.tokenExpiresAt) {
+    if (this.tokenExpiresAt != null && Date.now() >= this.tokenExpiresAt) {
       if (this.clientId && this.clientSecret) {
         return this.authenticate({ clientId: this.clientId, clientSecret: this.clientSecret });
       }
       this.accessToken = null;
       this.tokenExpiresAt = null;
-      return null;
+      throw new AuthSessionExpiredError({
+        code: 'XACT_4010',
+        message: 'Reddit OAuth token has expired and no credentials are configured to refresh it',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'reddit',
+      });
     }
     return this.accessToken;
   }
@@ -259,13 +272,13 @@ export class RedditClient extends AbstractApiClient {
    * @param {Record<string, string | number | boolean | undefined | null>} [params={}]
    * @param {Object} [options={}]
    * @param {'GET' | 'POST'} [options.method='GET']
-   * @param {Record<string, any>} [options.headers]
-   * @param {any} [options.body]
-   * @param {any} [options.json]
+   * @param {Record<string, string>} [options.headers]
+   * @param {unknown} [options.body]
+   * @param {unknown} [options.json]
    * @param {boolean} [options.requiresAuth]
    * @param {boolean} [options.skipResponseValidation]
    * @param {boolean} [options.useApiBaseUrl] - Use api.reddit.com instead of www.reddit.com
-   * @returns {Promise<Record<string, any>>}
+   * @returns {Promise<Record<string, unknown>>}
    */
   async apiRequest(path, params = {}, options = {}) {
     if (typeof path !== 'string' || !path.trim()) {
@@ -284,30 +297,44 @@ export class RedditClient extends AbstractApiClient {
     const useApiBase = options.useApiBaseUrl !== undefined ? options.useApiBaseUrl : Boolean(token);
     const base = useApiBase ? this.apiBaseUrl : this.baseUrl;
 
-    // Ensure .json suffix for public endpoints
+    // Ensure .json suffix for public endpoints; guard against paths that already
+    // contain query strings or unescaped segments.
     let normalizedPath = path.startsWith('/') ? path : `/${path}`;
-    if (!useApiBase && !normalizedPath.endsWith('.json')) {
-      normalizedPath = `${normalizedPath}.json`;
+    const [pathPart, searchPart] = normalizedPath.split('?');
+    const safePath = useApiBase || pathPart.endsWith('.json') ? pathPart : `${pathPart}.json`;
+    normalizedPath = searchPart ? `${safePath}?${searchPart}` : safePath;
+
+    let url;
+    try {
+      url = new URL(normalizedPath, base);
+    } catch {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Invalid API URL: unable to build URL from base "${base}" and path "${normalizedPath}"`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'reddit',
+      });
     }
 
-    const queryParams = new URLSearchParams();
+    const queryParams = new URLSearchParams(url.search);
     for (const [k, v] of Object.entries(params)) {
       if (v !== undefined && v !== null) {
         queryParams.set(k, String(v));
       }
     }
+    url.search = queryParams.toString();
 
-    const qs = queryParams.toString();
-    const url = `${base}${normalizedPath}${qs ? '?' + qs : ''}`;
-
+    /** @type {Record<string, string>} */
     const headers = {
-      'user-agent': this.userAgent,
+      'user-agent': this.userAgent ?? 'xactions/1.0',
       'accept': 'application/json',
       ...(options.headers || {}),
     };
 
     if (token) {
-      headers['authorization'] = `Bearer ${token}`;
+      headers.authorization = `Bearer ${token}`;
     }
 
     const reqOpts = {
@@ -328,6 +355,7 @@ export class RedditClient extends AbstractApiClient {
         if (this.browserBridge?.isReady) {
           const cookieHeader = this.browserBridge.cookieHeader;
           if (cookieHeader) {
+            /** @type {Record<string, string>} */
             const cleanedHeaders = { ...reqOpts.headers };
             for (const key of Object.keys(cleanedHeaders)) {
               if (key.toLowerCase() === 'cookie') {
@@ -350,7 +378,7 @@ export class RedditClient extends AbstractApiClient {
         const rss = await this.#rssFallback(normalizedPath, params, options);
         if (rss) return rss;
         throw new PlatformError({
-          type: ErrorTypes.PLATFORM_ERROR,
+          type: ErrorTypes.INTERNAL,
           code: 'XACT_5002',
           message: `Failed to fetch or parse Reddit RSS feed for ${normalizedPath}`,
           statusCode: 502,
@@ -368,21 +396,57 @@ export class RedditClient extends AbstractApiClient {
     }
 
     try {
-      const res = await this.request(method, url, reqOpts);
-      return res?.data !== undefined ? res.data : res;
+      const rawRes = await this.request(method, url.href, reqOpts);
+      const res = /** @type {Record<string, unknown>} */ (rawRes);
+      return res && typeof res === 'object' && res.data !== undefined ? res.data : res;
     } catch (err) {
-      if (this.browserBridge && typeof this.browserBridge.clearCookies === 'function') {
-        if (err?.statusCode === 403 || err?.name === 'BotChallengeError') {
+      const isPlatformError = err instanceof PlatformError;
+      if (isPlatformError && this.browserBridge && typeof this.browserBridge.clearCookies === 'function') {
+        if (err.statusCode === 403 || err.name === 'BotChallengeError') {
           this.browserBridge.clearCookies();
         }
       }
-      // When public .json endpoints are blocked, attempt RSS fallback for
-      // subreddit listings. This allows scraping real public subreddits without
-      // an OAuth app or residential proxy.
-      if (!useApiBase && !token && this.#looksLikeSubredditListing(normalizedPath)) {
+
+      const details = isPlatformError && err.details ? err.details : {};
+
+      // 404 responses and private/NSFW login walls should be surfaced as NOT_FOUND
+      // rather than generic internal errors or bot challenges.
+      if (isPlatformError && err.statusCode === 404) {
+        throw new PlatformError({
+          type: ErrorTypes.NOT_FOUND,
+          code: 'XACT_4040',
+          message: 'Reddit resource not found',
+          statusCode: 404,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'reddit',
+          details,
+        });
+      }
+
+      const looksLikeLoginWall = isPlatformError && (err.statusCode === 403 || err.name === 'BotChallengeError')
+        ? (this.responseValidator?.isLoginWall(details) ?? false)
+        : false;
+      if (looksLikeLoginWall) {
+        throw new PlatformError({
+          type: ErrorTypes.NOT_FOUND,
+          code: 'XACT_4040',
+          message: 'Subreddit, user, or post is private, NSFW, or unavailable',
+          statusCode: 404,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: 'reddit',
+          details,
+        });
+      }
+
+      // When public .json endpoints are blocked by a bot challenge (403), attempt
+      // RSS fallback for subreddit listings. This allows scraping real public
+      // subreddits without an OAuth app or residential proxy.
+      const isBotBlock = isPlatformError && (err.statusCode === 403 || err.name === 'BotChallengeError');
+      if (!useApiBase && !token && isBotBlock && this.#looksLikeSubredditListing(normalizedPath)) {
         const rss = await this.#rssFallback(normalizedPath, params, options);
         if (rss) return rss;
       }
+
       throw err;
     }
   }
@@ -399,7 +463,7 @@ export class RedditClient extends AbstractApiClient {
    * @param {string} path
    * @param {Record<string, string | number | boolean | undefined | null>} params
    * @param {Object} options
-   * @returns {Promise<Record<string, any> | null>}
+   * @returns {Promise<Record<string, unknown> | null>}
    */
   async #rssFallback(path, params = {}, options = {}) {
     const rssPath = path.replace(/\.json$/, '.rss');
@@ -413,18 +477,19 @@ export class RedditClient extends AbstractApiClient {
     const url = `${this.baseUrl}${rssPath}${qs ? '?' + qs : ''}`;
 
     try {
-      const res = await this.request('GET', url, {
+      const rawRes = await this.request('GET', url, {
         ...options,
         headers: {
-          'user-agent': this.userAgent,
+          'user-agent': this.userAgent ?? 'xactions/1.0',
           'accept': 'application/atom+xml,application/rss+xml,application/xml;q=0.9,*/*;q=0.8',
         },
         requiresAuth: false,
         skipResponseValidation: true,
       });
+      const res = /** @type {Record<string, unknown>} */ (rawRes);
 
-      const body = typeof res?.data === 'string' ? res.data : (typeof res === 'string' ? res : '');
-      if (!body || !body.includes('<feed') && !body.includes('<rss')) {
+      const body = res && typeof res === 'object' && typeof res.data === 'string' ? res.data : (typeof rawRes === 'string' ? rawRes : '');
+      if (!body || (!body.includes('<feed') && !body.includes('<rss'))) {
         return null;
       }
 
@@ -438,7 +503,7 @@ export class RedditClient extends AbstractApiClient {
    * Parse a Reddit subreddit Atom feed into a Listing-shaped response.
    * @param {string} body
    * @param {string} path
-   * @returns {Record<string, any>}
+   * @returns {Record<string, unknown>}
    */
   #parseRssSubreddit(body, path) {
     const parser = new XMLParser({
@@ -447,20 +512,34 @@ export class RedditClient extends AbstractApiClient {
       textNodeName: '#text',
       parseAttributeValue: false,
     });
-    const feed = parser.parse(body)?.feed || {};
+    const parsed = /** @type {Record<string, unknown>} */ (parser.parse(body) || {});
+    const feed = /** @type {Record<string, unknown>} */ (parsed.feed || {});
 
     const match = path.match(/^\/r\/([^/]+)\/(new|hot|top|rising)/);
     const subreddit = match ? match[1] : '';
 
-    const entries = Array.isArray(feed.entry) ? feed.entry : (feed.entry ? [feed.entry] : []);
-    const children = entries.map((entry) => {
+    const rawEntries = feed.entry;
+    const entries = Array.isArray(rawEntries) ? rawEntries : (rawEntries ? [rawEntries] : []);
+    const children = entries.map((rawEntry) => {
+      const entry = /** @type {Record<string, unknown>} */ (rawEntry);
       const id = typeof entry.id === 'string' ? entry.id : '';
       const title = typeof entry.title === 'string' ? entry.title : '';
-      const linkHref = typeof entry.link === 'string' ? entry.link : (entry.link?.['@_href'] || '');
-      const published = typeof entry.published === 'string' ? entry.published : (entry.updated || '');
+      const linkRecord = typeof entry.link === 'object' && entry.link !== null
+        ? /** @type {Record<string, unknown>} */ (entry.link)
+        : null;
+      const linkHref = typeof entry.link === 'string' ? entry.link : (linkRecord && typeof linkRecord['@_href'] === 'string' ? linkRecord['@_href'] : '');
+      const published = typeof entry.published === 'string' ? entry.published : (typeof entry.updated === 'string' ? entry.updated : '');
       const updated = typeof entry.updated === 'string' ? entry.updated : published;
-      const contentHtml = typeof entry.content === 'string' ? entry.content : (entry.content?.['#text'] || '');
-      const authorName = entry.author?.name ? String(entry.author.name).replace(/^\/?u\//, '') : '';
+      const contentRecord = typeof entry.content === 'object' && entry.content !== null
+        ? /** @type {Record<string, unknown>} */ (entry.content)
+        : null;
+      const contentHtml = typeof entry.content === 'string' ? entry.content : (contentRecord && typeof contentRecord['#text'] === 'string' ? contentRecord['#text'] : '');
+      const authorRecord = typeof entry.author === 'object' && entry.author !== null
+        ? /** @type {Record<string, unknown>} */ (entry.author)
+        : null;
+      const authorName = authorRecord && typeof authorRecord.name === 'string'
+        ? authorRecord.name.replace(/^\/?u\//, '')
+        : '';
 
       // Reddit Atom entries use `id` as the canonical comments thread URL
       // and `link` either as the target external URL or the same comments URL.
@@ -480,8 +559,8 @@ export class RedditClient extends AbstractApiClient {
           selftext: this.#extractSelftextFromHtml(contentHtml),
           score: 0,
           num_comments: this.#extractCommentCountFromHtml(contentHtml),
-          created_utc: published ? Math.floor(new Date(published).getTime() / 1000) : 0,
-          updated_utc: updated ? Math.floor(new Date(updated).getTime() / 1000) : 0,
+          created_utc: this.#parseRssTimestamp(published),
+          updated_utc: this.#parseRssTimestamp(updated),
           permalink: this.#toPermalink(commentsUrl),
           url: targetUrl || commentsUrl,
           is_self: !targetUrl,
@@ -499,6 +578,21 @@ export class RedditClient extends AbstractApiClient {
         after: null,
       },
     };
+  }
+
+  /**
+   * Parse an RSS/Atom date string into a Unix timestamp (seconds).
+   * Returns 0 for missing or unparseable values so downstream normalizers
+   * don't receive NaN.
+   *
+   * @param {string} value
+   * @returns {number}
+   */
+  #parseRssTimestamp(value) {
+    if (!value) return 0;
+    const ts = new Date(value).getTime();
+    if (!Number.isFinite(ts) || Number.isNaN(ts)) return 0;
+    return Math.floor(ts / 1000);
   }
 
   /**
@@ -586,7 +680,6 @@ export class RedditClient extends AbstractApiClient {
         if (!this.browserBridge) {
           this.browserBridge = new RedditBrowserBridge({
             baseUrl: this.baseUrl,
-            proxy: this.proxy,
             proxyPool: this.proxyPool,
             proxyProvider: this.proxyProvider,
             // Do not pass this.userAgent (bot UA) so Stealth keeps its realistic Chrome UA
@@ -615,7 +708,7 @@ export class RedditClient extends AbstractApiClient {
 
   /**
    * Parse Reddit rate-limit headers from a response.
-   * @param {Record<string, any>} headers
+   * @param {Record<string, unknown>} headers
    * @returns {{ remaining: number | null, resetAt: number | null, used: number | null }}
    */
   #parseRateLimitHeaders(headers = {}) {
@@ -625,8 +718,8 @@ export class RedditClient extends AbstractApiClient {
 
     let resetAt = null;
     if (reset !== null && !Number.isNaN(reset)) {
-      // Reddit's x-ratelimit-reset is seconds remaining in the current window.
-      resetAt = Date.now() + (reset * 1000);
+      // Reddit's x-ratelimit-reset is an absolute Unix-epoch timestamp in seconds.
+      resetAt = reset * 1000;
     }
 
     return { remaining, resetAt, used };
@@ -636,18 +729,24 @@ export class RedditClient extends AbstractApiClient {
    * Override request to inject Reddit-specific rate-limit handling and auth.
    * @param {string} method
    * @param {string} url
-   * @param {RequestOptions} [options]
+   * @param {Record<string, unknown>} [options]
    * @returns {Promise<unknown>}
    */
   async request(method, url, options = {}) {
-    const isOAuth = url === this.oauthUrl || options.requiresAuth === false;
+    const isOAuth = url === this.oauthUrl;
     const token = isOAuth ? null : await this.ensureToken();
+    /** @type {Record<string, string>} */
     const headers = {
-      'user-agent': this.userAgent,
+      'user-agent': this.userAgent ?? 'xactions/1.0',
       'accept': 'application/json',
-      ...(options.headers || {}),
+      ...(typeof options.headers === 'object' && options.headers !== null ? /** @type {Record<string, string>} */ (options.headers) : {}),
     };
-    if (token && !headers.authorization) {
+
+    if (token) {
+      const existingAuthKey = Object.keys(headers).find((k) => k.toLowerCase() === 'authorization');
+      if (existingAuthKey) {
+        delete headers[existingAuthKey];
+      }
       headers.authorization = `Bearer ${token}`;
     }
 
@@ -664,8 +763,8 @@ export class RedditClient extends AbstractApiClient {
     const res = await super.request(method, url, reqOpts);
 
     // Parse rate-limit headers on success to drive proactive backoff
-    if (res && typeof res === 'object' && res.headers) {
-      const { remaining, resetAt } = this.#parseRateLimitHeaders(res.headers);
+    if (res && typeof res === 'object' && 'headers' in res && res.headers && typeof res.headers === 'object') {
+      const { remaining, resetAt } = this.#parseRateLimitHeaders(/** @type {Record<string, unknown>} */ (res.headers));
       if (remaining !== null && remaining <= 1 && resetAt !== null) {
         const waitMs = Math.max(0, resetAt - Date.now());
         if (waitMs > 0 && waitMs < 300000) { // cap at 5 minutes
@@ -675,6 +774,27 @@ export class RedditClient extends AbstractApiClient {
     }
 
     return res;
+  }
+
+  /**
+   * Enforce US / residential proxy targeting defaults for Reddit.
+   * Reddit aggressively blocks non-residential / non-US datacenter IPs on
+   * public .json endpoints, so we pass country and isp hints to the provider.
+   *
+   * @param {string | import('../../../types/proxy.js').AccountRecord | null} [accountId]
+   * @param {boolean} [requiresResidential=false]
+   * @param {boolean} [requiresAuth]
+   * @param {Record<string, unknown>} [options]
+   * @returns {string | Record<string, unknown> | null}
+   */
+  resolveProxy(accountId, requiresResidential = false, requiresAuth = this.requiresAuth, options = {}) {
+    const safeOptions = /** @type {Record<string, unknown>} */ (options || {});
+    const mergedOptions = {
+      ...safeOptions,
+      country: (typeof safeOptions.country === 'string' ? safeOptions.country : null) || this.defaultProxyCountry || 'us',
+      isp: (typeof safeOptions.isp === 'string' ? safeOptions.isp : null) || this.proxyType || 'residential',
+    };
+    return super.resolveProxy(accountId, requiresResidential, requiresAuth, mergedOptions);
   }
 
   /**

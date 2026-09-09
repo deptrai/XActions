@@ -216,7 +216,7 @@ development_status:
   epic-34-retrospective: optional
 
   epic-35: in-progress
-  35-1-reddit-scraper-client-crawler-validator-tests: in-progress
+  35-1-reddit-scraper-client-crawler-validator-tests: done
   35-2-medium-scraper-client-crawler-validator-tests: backlog
   35-3-instagram-scraper-client-crawler-session-proxy-tests: backlog
   35-4-unified-proxyprovider-injection-socialaccount-schema-docs-se: backlog

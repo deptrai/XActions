@@ -955,6 +955,8 @@ export async function scrape(platform, action, options = {}) {
     if (options.sort) mappedArgs.sort = options.sort;
     if (options.time) mappedArgs.time = options.time;
     if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.maxComments != null) mappedArgs.limit = Number(options.maxComments);
+    if (options.maxDepth != null) mappedArgs.depth = Number(options.maxDepth);
     if (options.cursor != null) mappedArgs.cursor = options.cursor;
     if (options.after != null) mappedArgs.after = options.after;
 

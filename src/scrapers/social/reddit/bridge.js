@@ -37,7 +37,7 @@ export class RedditBrowserBridge {
   /** @type {boolean} */
   headless;
 
-  /** @type {any} */
+  /** @type {string | Record<string, unknown> | null} */
   proxy;
 
   /** @type {import('../../../proxy/proxy-pool.js').ProxyIpPool | null} */
@@ -49,13 +49,13 @@ export class RedditBrowserBridge {
   /** @type {string | null} */
   userAgent;
 
-  /** @type {import('../../adapters/base.js').BaseAdapter | null} */
+  /** @type {(import('../../adapters/base.js').BaseAdapter & Record<string, unknown>) | null} */
   #adapter = null;
 
-  /** @type {any} */
+  /** @type {unknown} */
   #browser = null;
 
-  /** @type {any} */
+  /** @type {unknown} */
   #page = null;
 
   /** @type {BridgeCookie[] | null} */
@@ -69,10 +69,11 @@ export class RedditBrowserBridge {
    * @param {string} [options.baseUrl='https://www.reddit.com']
    * @param {string} [options.adapterName='puppeteer']
    * @param {boolean} [options.headless=true]
-   * @param {any} [options.proxy]
+   * @param {string | Record<string, unknown>} [options.proxy]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [options.proxyPool]
    * @param {import('../../../core/base-client.js').ProxyProviderLike} [options.proxyProvider]
    * @param {string} [options.userAgent]
+   * @param {import('../../adapters/base.js').BaseAdapter} [options.adapter]
    */
   constructor(options = {}) {
     this.baseUrl = String(options.baseUrl || 'https://www.reddit.com').replace(/\/+$/, '');
@@ -86,8 +87,21 @@ export class RedditBrowserBridge {
   }
 
   /**
+   * Extract the hostname from the configured baseUrl to use as the default
+   * cookie domain when the browser does not provide one.
+   * @returns {string}
+   */
+  #baseDomain() {
+    try {
+      return new URL(this.baseUrl).hostname;
+    } catch {
+      return 'reddit.com';
+    }
+  }
+
+  /**
    * Resolve scraper adapter instance lazily.
-   * @returns {Promise<import('../../adapters/base.js').BaseAdapter>}
+   * @returns {Promise<import('../../adapters/base.js').BaseAdapter & Record<string, unknown>>}
    */
   async #resolveAdapter() {
     if (this.#adapter) return this.#adapter;
@@ -97,7 +111,7 @@ export class RedditBrowserBridge {
 
   /**
    * Resolve a proxy using the same precedence as AbstractApiClient.
-   * @returns {any}
+   * @returns {string | Record<string, unknown> | null}
    */
   #resolveProxy() {
     if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
@@ -147,58 +161,89 @@ export class RedditBrowserBridge {
     const safeOptions = options || {};
 
     this.#startPromise = (async () => {
-      try {
-        if (this.#browser) {
-          await this.close();
-        }
+      let attempts = 0;
+      const maxAttempts = 2;
 
-        const adapter = await this.#resolveAdapter();
-        const proxy = this.#resolveProxy();
-
-        this.#browser = await adapter.launch({
-          headless: this.headless,
-          proxy,
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-blink-features=AutomationControlled',
-          ],
-        });
-
-        this.#page = await adapter.newPage(this.#browser, {
-          userAgent: this.userAgent || undefined,
-        });
-
-        const nativePage = adapter.getNativePage ? adapter.getNativePage(this.#page) : this.#page?._native;
-        if (nativePage && typeof nativePage.authenticate === 'function' && proxy?.username && proxy?.password) {
-          try {
-            await nativePage.authenticate({
-              username: String(proxy.username),
-              password: String(proxy.password),
-            });
-          } catch {
-            // best effort proxy authentication
+      while (attempts < maxAttempts) {
+        attempts += 1;
+        try {
+          if (this.#browser) {
+            await this.close();
           }
+
+          const adapter = await this.#resolveAdapter();
+          const proxy = this.#resolveProxy();
+
+          this.#browser = await adapter.launch({
+            headless: this.headless,
+            proxy,
+            args: [
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-blink-features=AutomationControlled',
+            ],
+          });
+
+          this.#page = await adapter.newPage(this.#browser, {
+            userAgent: this.userAgent || undefined,
+          });
+
+          const getNativePage = typeof adapter.getNativePage === 'function'
+            ? /** @type {(page: unknown) => unknown} */ (adapter.getNativePage)
+            : null;
+          const pageRecord = typeof this.#page === 'object' && this.#page !== null
+            ? /** @type {Record<string, unknown>} */ (this.#page)
+            : null;
+          const nativePage = getNativePage ? getNativePage(this.#page) : pageRecord?._native;
+          const proxyRecord = typeof proxy === 'object' && proxy !== null
+            ? /** @type {Record<string, unknown>} */ (proxy)
+            : null;
+          const nativeRecord = nativePage && typeof nativePage === 'object'
+            ? /** @type {Record<string, unknown>} */ (nativePage)
+            : null;
+          if (nativeRecord && typeof nativeRecord.authenticate === 'function' && proxyRecord && typeof proxyRecord.username === 'string' && typeof proxyRecord.password === 'string') {
+            try {
+              await nativeRecord.authenticate({
+                username: proxyRecord.username,
+                password: proxyRecord.password,
+              });
+            } catch {
+              // best effort proxy authentication
+            }
+          }
+
+          const startUrl = safeOptions.useHomePage === false ? this.baseUrl : `${this.baseUrl}/`;
+          await adapter.goto(this.#page, startUrl, {
+            waitUntil: 'networkidle',
+            timeout: 45000,
+          });
+
+          // Allow a short settle for JS-rendered state / cookie refresh.
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          this.#cookies = await this.#extractCookies(adapter, this.#page);
+
+          if (this.isReady) {
+            return this;
+          }
+
+          // If no cookies were extracted, wait a bit and retry once.
+          if (attempts < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            continue;
+          }
+
+          throw new Error(`RedditBrowserBridge could not extract non-empty cookies from ${this.baseUrl}`);
+        } catch (err) {
+          await this.close();
+          if (attempts >= maxAttempts) throw err;
         }
-
-        const startUrl = safeOptions.useHomePage === false ? this.baseUrl : `${this.baseUrl}/`;
-        await adapter.goto(this.#page, startUrl, {
-          waitUntil: 'networkidle',
-          timeout: 45000,
-        });
-
-        // Allow a short settle for JS-rendered state / cookie refresh.
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        this.#cookies = await this.#extractCookies(adapter, this.#page);
-        return this;
-      } catch (err) {
-        await this.close();
-        throw err;
-      } finally {
-        this.#startPromise = null;
       }
-    })();
+
+      throw new Error('RedditBrowserBridge start exhausted all retry attempts');
+    })().finally(() => {
+      this.#startPromise = null;
+    });
 
     return this.#startPromise;
   }
@@ -208,24 +253,38 @@ export class RedditBrowserBridge {
    * Uses the native page `cookies()` API when available, otherwise falls back
    * to `document.cookie`. Deduplicates cookies by name.
    *
-   * @param {import('../../adapters/base.js').BaseAdapter} adapter
-   * @param {any} page
+   * @param {import('../../adapters/base.js').BaseAdapter & Record<string, unknown>} adapter
+   * @param {unknown} page
    * @returns {Promise<BridgeCookie[]>}
    */
   async #extractCookies(adapter, page) {
+    /** @type {BridgeCookie[]} */
     let rawList = [];
-    const nativePage = adapter.getNativePage ? adapter.getNativePage(page) : page?._native;
+    const getNativePage = typeof adapter.getNativePage === 'function'
+      ? /** @type {(p: unknown) => unknown} */ (adapter.getNativePage)
+      : null;
+    const pageRecord = typeof page === 'object' && page !== null
+      ? /** @type {Record<string, unknown>} */ (page)
+      : null;
+    const nativePage = getNativePage ? getNativePage(page) : pageRecord?._native;
+    const nativeRecord = nativePage && typeof nativePage === 'object'
+      ? /** @type {Record<string, unknown>} */ (nativePage)
+      : null;
 
-    if (nativePage && typeof nativePage.cookies === 'function') {
+    if (nativeRecord && typeof nativeRecord.cookies === 'function') {
       try {
-        const rawCookies = await nativePage.cookies(this.baseUrl);
+        const cookiesFn = /** @type {(url: string) => unknown} */ (nativeRecord.cookies);
+        const rawCookies = await cookiesFn(this.baseUrl);
         if (Array.isArray(rawCookies)) {
-          rawList = rawCookies.map((c) => ({
-            name: String(c.name || '').trim(),
-            value: String(c.value || '').trim(),
-            domain: String(c.domain || 'reddit.com'),
-            path: String(c.path || '/'),
-          }));
+          rawList = rawCookies.map((rawC) => {
+            const c = /** @type {Record<string, unknown>} */ (rawC);
+            return {
+              name: String(c.name || '').trim(),
+              value: String(c.value || '').trim(),
+              domain: String(c.domain || this.#baseDomain()),
+              path: String(c.path || '/'),
+            };
+          });
         }
       } catch {
         // fallthrough to document.cookie fallback
@@ -243,7 +302,7 @@ export class RedditBrowserBridge {
             const idx = pair.indexOf('=');
             const name = idx > 0 ? pair.slice(0, idx).trim() : pair.trim();
             const value = idx > 0 ? pair.slice(idx + 1).trim() : '';
-            return { name, value, domain: 'reddit.com', path: '/' };
+            return { name, value, domain: this.#baseDomain(), path: '/' };
           });
       } catch {
         rawList = [];
@@ -281,7 +340,10 @@ export class RedditBrowserBridge {
   get cookieHeader() {
     const cookies = this.cookies;
     if (cookies.length === 0) return '';
-    return cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    // Encode cookie values so the header is safe from delimiters and whitespace.
+    return cookies
+      .map((c) => `${c.name}=${encodeURIComponent(String(c.value || ''))}`)
+      .join('; ');
   }
 
   /**
@@ -297,14 +359,17 @@ export class RedditBrowserBridge {
    * @returns {Promise<void>}
    */
   async close() {
-    if (this.#adapter && this.#page) {
+    const adapterRecord = this.#adapter ? /** @type {Record<string, unknown>} */ (this.#adapter) : null;
+    if (adapterRecord && this.#page && typeof adapterRecord.closePage === 'function') {
       try {
-        await this.#adapter.closePage(this.#page);
+        const closePage = /** @type {(page: unknown) => Promise<unknown>} */ (adapterRecord.closePage);
+        await closePage(this.#page);
       } catch {}
     }
-    if (this.#adapter && this.#browser) {
+    if (adapterRecord && this.#browser && typeof adapterRecord.closeBrowser === 'function') {
       try {
-        await this.#adapter.closeBrowser(this.#browser);
+        const closeBrowser = /** @type {(browser: unknown) => Promise<unknown>} */ (adapterRecord.closeBrowser);
+        await closeBrowser(this.#browser);
       } catch {}
     }
     this.#page = null;

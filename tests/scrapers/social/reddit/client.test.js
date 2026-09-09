@@ -236,10 +236,14 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
 
         // 8. Rate limit response
         if (req.url?.includes('/ratelimit')) {
+          const urlObj = new URL(req.url, 'http://127.0.0.1');
+          const resetParam = urlObj.searchParams.get('reset');
+          // Default to a near-future absolute epoch to exercise backoff.
+          const reset = resetParam ? Number(resetParam) : Math.floor(Date.now() / 1000) + 2;
           res.writeHead(200, {
             'content-type': 'application/json',
             'x-ratelimit-remaining': '0',
-            'x-ratelimit-reset': '0.08',
+            'x-ratelimit-reset': String(reset),
           });
           res.end(JSON.stringify({ kind: 'Listing', data: { children: [] } }));
           return;
@@ -283,7 +287,8 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
 
   it('builds correct User-Agent', () => {
     expect(buildRedditUserAgent('nirholas')).toBe('xactions:reddit-scraper:v1.0.0 by u/nirholas');
-    expect(buildRedditUserAgent()).toBe('xactions:reddit-scraper:v1.0.0 (xactions)');
+    expect(buildRedditUserAgent()).toBe('xactions/1.0');
+    expect(buildRedditUserAgent('invalid@name')).toBe('xactions/1.0');
   });
 
   it('authenticates via OAuth2 client_credentials', async () => {
@@ -389,13 +394,105 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
     expect(client.accessToken).toBe('mock_access_token_123');
   });
 
-  it('backs off when x-ratelimit-remaining is low', async () => {
+  it('throws AuthSessionExpiredError when existing token has expired and no credentials are available', async () => {
+    const client = new RedditClient({
+      baseUrl: serverUrl,
+      accessToken: 'expired_token',
+      tokenExpiresAt: Date.now() - 1000,
+    });
+    await expect(client.ensureToken()).rejects.toThrow(AuthSessionExpiredError);
+    expect(client.accessToken).toBeNull();
+  });
+
+  it('refreshes expired OAuth token when credentials are available', async () => {
+    const client = new RedditClient({
+      baseUrl: serverUrl,
+      apiBaseUrl: serverUrl,
+      oauthUrl: `${serverUrl}/api/v1/access_token`,
+      clientId: 'test',
+      clientSecret: 'secret',
+      accessToken: 'stale_token',
+      tokenExpiresAt: Date.now() - 1000,
+    });
+    const token = await client.ensureToken();
+    expect(token).toBe('mock_access_token_123');
+    expect(client.accessToken).toBe('mock_access_token_123');
+    expect(client.tokenExpiresAt).toBeGreaterThan(Date.now());
+  });
+
+  it('backs off when x-ratelimit-remaining is 0 and reset is in the near future', async () => {
     const client = new RedditClient({ baseUrl: serverUrl });
     const start = Date.now();
     await client.apiRequest('/ratelimit', {});
     const elapsed = Date.now() - start;
-    expect(elapsed).toBeGreaterThanOrEqual(60);
-    expect(elapsed).toBeLessThan(1000);
+    expect(elapsed).toBeGreaterThanOrEqual(500);
+    expect(elapsed).toBeLessThan(3000);
+  });
+
+  it('does not sleep when x-ratelimit-remaining is above the <=1 boundary', async () => {
+    const client = new RedditClient({ baseUrl: serverUrl });
+    const start = Date.now();
+    await client.apiRequest('/r/programming/new', { limit: 1 });
+    const elapsed = Date.now() - start;
+    expect(elapsed).toBeLessThan(100);
+  });
+
+  it('caps rate-limit backoff at 5 minutes for far-future reset', async () => {
+    const client = new RedditClient({ baseUrl: serverUrl });
+    const farFutureReset = Math.floor(Date.now() / 1000) + 1000;
+    const start = Date.now();
+    await client.apiRequest('/ratelimit', { reset: farFutureReset });
+    const elapsed = Date.now() - start;
+    expect(elapsed).toBeLessThan(100);
+  });
+
+  it('builds public .json URLs and authenticated api URLs on separate hosts with Bearer token', async () => {
+    const baseRequests = [];
+    const apiRequests = [];
+
+    const baseServer = http.createServer((req, res) => {
+      baseRequests.push({ url: req.url, headers: req.headers });
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ kind: 'Listing', data: { children: [] } }));
+    });
+    const apiServer = http.createServer((req, res) => {
+      apiRequests.push({ url: req.url, headers: req.headers });
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ kind: 'Listing', data: { children: [] } }));
+    });
+
+    await new Promise((resolve) => baseServer.listen(0, '127.0.0.1', resolve));
+    await new Promise((resolve) => apiServer.listen(0, '127.0.0.1', resolve));
+
+    const baseUrl = `http://127.0.0.1:${baseServer.address().port}`;
+    const apiBaseUrl = `http://127.0.0.1:${apiServer.address().port}`;
+
+    try {
+      // Public (no auth) client should hit base host with .json suffix.
+      const publicClient = new RedditClient({ baseUrl });
+      await publicClient.apiRequest('/r/programming/new', { limit: 5 });
+      expect(baseRequests.length).toBe(1);
+      expect(baseRequests[0].url).toBe('/r/programming/new.json?limit=5');
+      expect(baseRequests[0].headers.authorization).toBeUndefined();
+
+      // Authenticated client should hit the separate API host without .json
+      // and attach a Bearer token.
+      const authClient = new RedditClient({
+        baseUrl,
+        apiBaseUrl,
+        oauthUrl: `${serverUrl}/api/v1/access_token`,
+        clientId: 'test',
+        clientSecret: 'secret',
+      });
+      await authClient.init({});
+      await authClient.apiRequest('/r/programming/new', { limit: 5 });
+      expect(apiRequests.length).toBe(1);
+      expect(apiRequests[0].url).toBe('/r/programming/new?limit=5');
+      expect(apiRequests[0].headers.authorization).toBe('Bearer mock_access_token_123');
+    } finally {
+      await new Promise((resolve) => baseServer.close(resolve));
+      await new Promise((resolve) => apiServer.close(resolve));
+    }
   });
 
   describe('transport option', () => {

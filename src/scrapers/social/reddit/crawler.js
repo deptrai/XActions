@@ -19,7 +19,12 @@ import {
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
 
-export function createRedditCrawler(client, options = {}) {
+/**
+ * @param {RedditClient | Record<string, unknown>} [client]
+ * @param {Record<string, unknown>} [options]
+ * @returns {RedditCrawler}
+ */
+export function createRedditCrawler(client = {}, options = {}) {
   const resolvedClient = client instanceof RedditClient ? client : new RedditClient(client || options || {});
   const resolvedOptions = client instanceof RedditClient ? options : (options || {});
   return new RedditCrawler({ client: resolvedClient, ...resolvedOptions });
@@ -39,6 +44,23 @@ export class RedditCrawler extends AbstractCrawler {
   client;
 
   /**
+   * Parse a limit/depth argument, falling back to a default when the input
+   * is missing, NaN, non-numeric, or out of range.
+   *
+   * @param {unknown} value
+   * @param {number} defaultValue
+   * @param {number} maxValue
+   * @returns {number}
+   */
+  #parseCount(value, defaultValue, maxValue) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+      return defaultValue;
+    }
+    return Math.min(maxValue, Math.max(1, Math.floor(parsed)));
+  }
+
+  /**
    * @param {Object} [deps]
    * @param {RedditClient} [deps.client]
    * @param {import('../../../core/base-store.js').AbstractStore} [deps.store]
@@ -46,7 +68,7 @@ export class RedditCrawler extends AbstractCrawler {
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
-   * @param {any} [deps.redisPublisher]
+   * @param {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher} [deps.redisPublisher]
    * @param {boolean} [deps.requiresAuth]
    * @param {boolean} [deps.requiresProxy]
    * @param {'http' | 'puppeteer' | 'rss'} [deps.transport]
@@ -54,8 +76,11 @@ export class RedditCrawler extends AbstractCrawler {
   constructor(deps = {}) {
     const { client: explicitClient, transport, ...clientDeps } = deps;
     const client = explicitClient || new RedditClient({ ...clientDeps, transport: transport || clientDeps.transport });
-    if (explicitClient && transport) {
-      explicitClient.transport = transport;
+    if (explicitClient && typeof transport === 'string') {
+      const validTransports = /** @type {Set<'http' | 'puppeteer' | 'rss'>} */ (new Set(['http', 'puppeteer', 'rss']));
+      if (validTransports.has(/** @type {'http' | 'puppeteer' | 'rss'} */ (transport))) {
+        explicitClient.transport = /** @type {'http' | 'puppeteer' | 'rss'} */ (transport);
+      }
     }
 
     super({
@@ -64,6 +89,7 @@ export class RedditCrawler extends AbstractCrawler {
       requiresAuth: deps.requiresAuth !== undefined ? deps.requiresAuth : false,
     });
 
+    this.category = 'social';
     this.client = client;
     this.redisPublisher = deps.redisPublisher || null;
 
@@ -98,7 +124,7 @@ export class RedditCrawler extends AbstractCrawler {
       requiresAuth: false,
       requiredArgs: ['username'],
       optionalArgs: ['name', 'user', 'limit', 'sort', 'cursor', 'after'],
-      outputType: '{ profile: ProfileItem, posts: PostItem[] }',
+      outputType: '{ profile: ProfileItem, posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }',
       example: { username: 'spez', limit: 25 },
       checkpointResolver: (args) => {
         const username = args?.username || args?.name || args?.user;
@@ -194,7 +220,7 @@ export class RedditCrawler extends AbstractCrawler {
         platform: 'reddit',
       });
     }
-    return String(raw).replace(/^r\//, '').trim();
+    return String(raw).replace(/^\/?r\//, '').trim();
   }
 
   /**
@@ -214,7 +240,7 @@ export class RedditCrawler extends AbstractCrawler {
         platform: 'reddit',
       });
     }
-    return String(raw).replace(/^u\//, '').replace(/^@/, '').trim();
+    return String(raw).replace(/^\/?u\//, '').replace(/^@/, '').trim();
   }
 
   /**
@@ -251,7 +277,7 @@ export class RedditCrawler extends AbstractCrawler {
         if (m2) postId = m2[1];
       }
     } else if (clean.startsWith('t3_')) {
-      postId = clean;
+      postId = clean.slice(3).trim();
     }
 
     return { postId, subreddit };
@@ -320,7 +346,7 @@ export class RedditCrawler extends AbstractCrawler {
    */
   async getSubredditPosts(args = {}, session = {}) {
     const name = this.#extractSubreddit(args);
-    const limit = Math.min(100, Math.max(1, Number(args.limit || 25)));
+    const limit = this.#parseCount(args.limit, 25, 100);
     const sort = ['new', 'hot', 'top', 'rising'].includes(args.sort) ? args.sort : 'new';
     const time = args.time || undefined;
     const after = args.after || args.cursor || undefined;
@@ -363,11 +389,11 @@ export class RedditCrawler extends AbstractCrawler {
    * Scrape user profile and posts.
    * @param {Record<string, any>} args
    * @param {Record<string, any>} [session]
-   * @returns {Promise<{ profile: import('../../../core/types.js').ProfileItem, posts: import('../../../core/types.js').PostItem[] }>}
+   * @returns {Promise<{ profile: import('../../../core/types.js').ProfileItem, posts: import('../../../core/types.js').PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }>}
    */
   async getUser(args = {}, session = {}) {
     const username = this.#extractUsername(args);
-    const limit = Math.min(100, Math.max(1, Number(args.limit || 25)));
+    const limit = this.#parseCount(args.limit, 25, 100);
     const sort = ['new', 'hot', 'top'].includes(args.sort) ? args.sort : 'new';
     const after = args.after || args.cursor || undefined;
 
@@ -398,8 +424,8 @@ export class RedditCrawler extends AbstractCrawler {
         externalId: profile.externalId,
         category: 'social',
         authorId: profile.externalId,
-        authorName: profile.authorName,
-        authorAvatar: profile.avatar || null,
+        authorName: profile.authorName || profile.name || profile.username || 'unknown',
+        authorAvatar: profile.avatar || undefined,
         postUrl: profile.profileUrl,
         content: profile.bio || profile.name || 'Reddit Profile',
         mediaUrls: profile.avatar ? [profile.avatar] : [],
@@ -409,6 +435,7 @@ export class RedditCrawler extends AbstractCrawler {
         metadata: { isProfile: true, ...(profile.metadata || {}) },
         crawledAt: profile.crawledAt,
       };
+      this.validateItem(profilePost);
       await this.store.storeContent(profilePost).catch(() => {});
     }
 
@@ -449,7 +476,7 @@ export class RedditCrawler extends AbstractCrawler {
       });
     }
 
-    const limit = Math.min(100, Math.max(1, Number(args.limit || 25)));
+    const limit = this.#parseCount(args.limit, 25, 100);
     const sort = args.sort || undefined;
     const time = args.time || undefined;
     const after = args.after || args.cursor || undefined;
@@ -493,8 +520,8 @@ export class RedditCrawler extends AbstractCrawler {
    */
   async getPostComments(args = {}, session = {}) {
     const { postId, subreddit } = this.#extractPostId(args);
-    const limit = Math.min(500, Math.max(1, Number(args.limit || 100)));
-    const depth = args.depth !== undefined ? Number(args.depth) : 10;
+    const limit = this.#parseCount(args.limit, 100, 500);
+    const depth = this.#parseCount(args.depth, 10, 24);
     const after = args.after || args.cursor || undefined;
 
     const params = { limit, depth };

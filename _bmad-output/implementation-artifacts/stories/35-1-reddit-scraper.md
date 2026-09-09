@@ -3,7 +3,7 @@ title: 'Story 35.1: Reddit Scraper (Client + Crawler + Validator + Tests)'
 type: 'feature'
 created: '2026-09-09'
 updated: '2026-09-10'
-status: 'in-progress'
+status: 'done'
 epic: 35
 story_number: 35.1
 phase: 'Epic 35 — Reddit, Medium & Instagram Scraper Expansion'
@@ -363,30 +363,30 @@ context:
 
 #### Patch
 
-- [ ] [Review][Patch] Guard `authenticate()` token expiry math so `expires_in` smaller than the 60s buffer does not mark the token as already expired. [src/scrapers/social/reddit/client.js:226-227]
-- [ ] [Review][Patch] Make `ensureToken()` throw `AuthSessionExpiredError` when an `accessToken` exists, has expired, and no `clientId`/`clientSecret` are available. [src/scrapers/social/reddit/client.js:244-250]
-- [ ] [Review][Patch] Fix `RedditClient.request()` so it does not treat `options.requiresAuth === false` as the OAuth token endpoint; only `url === this.oauthUrl` should skip Bearer injection. [src/scrapers/social/reddit/client.js:642-652]
-- [ ] [Review][Patch] Fix `x-ratelimit-reset` parsing — treat it as an absolute Unix-epoch value, not a relative delta. [src/scrapers/social/reddit/client.js:621-633,671]
-- [ ] [Review][Patch] Restrict RSS fallback to 403/BotChallenge responses instead of any caught error. [src/scrapers/social/reddit/client.js:382-385]
-- [ ] [Review][Patch] Harden `RedditBrowserBridge.start()` to retry/verify non-empty cookies and fix `cookieHeader` domain/path/encoding. [src/scrapers/social/reddit/bridge.js:143-204,281-285]
-- [ ] [Review][Patch] Enforce `country-us` / residential proxy defaults by overriding `resolveProxy()` to pass `country` and `isp` to the proxy provider. [src/scrapers/social/reddit/client.js:131-133,660-662]
-- [ ] [Review][Patch] Map private/NSFW subreddit 403s and missing 404s to `PlatformError` with `NOT_FOUND` in `RedditClient.apiRequest()` catch. [src/scrapers/social/reddit/client.js:382-387, validator.js, src/core/base-client.js:827-850,1071-1079]
-- [ ] [Review][Patch] Update the `user` action descriptor and I/O matrix to include `pageInfo`, since the implementation already returns it. [src/scrapers/social/reddit/crawler.js:101,423-430]
-- [ ] [Review][Patch] Strip the `t3_` prefix from `postId` arguments in `#extractPostId()` before building `/comments/{postId}` paths. [src/scrapers/social/reddit/crawler.js:253-255]
-- [ ] [Review][Patch] Validate `limit` and `depth` for `NaN`/non-numeric input before using them as query parameters. [src/scrapers/social/reddit/crawler.js:323,452,496-497]
-- [ ] [Review][Patch] Fix `RedditPlatformResponseValidator.#getHeaders()` to handle `Headers` instances, not only plain objects. [src/scrapers/social/reddit/validator.js:77-88]
-- [ ] [Review][Patch] Correct the `User-Agent` fallback to match the spec (`xactions/1.0`). [src/scrapers/social/reddit/client.js:38]
-- [ ] [Review][Patch] Make `normalizeRedditPost()` push the external `post.url` into `mediaUrls` when it looks like an image/video. [src/scrapers/social/reddit/normalizer.js:67-90]
-- [ ] [Review][Patch] Validate the synthetic `profilePost` with `this.validateItem()` before calling `store.storeContent()` in `getUser()`. [src/scrapers/social/reddit/crawler.js:395-413]
-- [ ] [Review][Patch] Add the explicit `category = 'social'` class field to `RedditCrawler` to match the spec. [src/scrapers/social/reddit/crawler.js:28-37]
-- [ ] [Review][Patch] Update `src/scrapers/index.js` Reddit dispatcher to map `maxComments` → `limit` and `maxDepth` → `depth` for `post_comments`. [src/scrapers/index.js:935-959]
-- [ ] [Review][Patch] Strip leading `/r/` and `/u/` prefixes (in addition to `r/` and `u/`) in `#extractSubreddit()` and `#extractUsername()`. [src/scrapers/social/reddit/crawler.js:197,217]
-- [ ] [Review][Patch] Guard `apiRequest()` path/query construction against unescaped path segments and `?` characters. [src/scrapers/social/reddit/client.js:289-291,301]
-- [ ] [Review][Patch] Guard RSS item date parsing so invalid `published`/`updated` values do not become `NaN` `created_utc`. [src/scrapers/social/reddit/client.js:483-484]
-- [ ] [Review][Patch] Fix the `validator.js` license inconsistency (header says Apache-2.0, JSDoc says MIT). [src/scrapers/social/reddit/validator.js:7]
-- [ ] [Review][Patch] Add tests for public vs authenticated URL construction and Bearer token attachment using separate mock hosts. [tests/scrapers/social/reddit/client.test.js]
-- [ ] [Review][Patch] Add a test for expired OAuth token refresh in `ensureToken()`. [tests/scrapers/social/reddit/client.test.js]
-- [ ] [Review][Patch] Strengthen rate-limit backoff tests to assert reset parsing, the `<= 1` boundary, and the 5-minute cap behavior. [tests/scrapers/social/reddit/client.test.js]
+- [x] [Review][Patch] Guard `authenticate()` token expiry math so `expires_in` smaller than the 60s buffer does not mark the token as already expired. [src/scrapers/social/reddit/client.js:226-227]
+- [x] [Review][Patch] Make `ensureToken()` throw `AuthSessionExpiredError` when an `accessToken` exists, has expired, and no `clientId`/`clientSecret` are available. [src/scrapers/social/reddit/client.js:244-250]
+- [x] [Review][Patch] Fix `RedditClient.request()` so it does not treat `options.requiresAuth === false` as the OAuth token endpoint; only `url === this.oauthUrl` should skip Bearer injection. [src/scrapers/social/reddit/client.js:642-652]
+- [x] [Review][Patch] Fix `x-ratelimit-reset` parsing — treat it as an absolute Unix-epoch value, not a relative delta. [src/scrapers/social/reddit/client.js:621-633,671]
+- [x] [Review][Patch] Restrict RSS fallback to 403/BotChallenge responses instead of any caught error. [src/scrapers/social/reddit/client.js:382-385]
+- [x] [Review][Patch] Harden `RedditBrowserBridge.start()` to retry/verify non-empty cookies and fix `cookieHeader` domain/path/encoding. [src/scrapers/social/reddit/bridge.js:143-204,281-285]
+- [x] [Review][Patch] Enforce `country-us` / residential proxy defaults by overriding `resolveProxy()` to pass `country` and `isp` to the proxy provider. [src/scrapers/social/reddit/client.js:131-133,660-662]
+- [x] [Review][Patch] Map private/NSFW subreddit 403s and missing 404s to `PlatformError` with `NOT_FOUND` in `RedditClient.apiRequest()` catch. [src/scrapers/social/reddit/client.js:382-387, validator.js, src/core/base-client.js:827-850,1071-1079]
+- [x] [Review][Patch] Update the `user` action descriptor and I/O matrix to include `pageInfo`, since the implementation already returns it. [src/scrapers/social/reddit/crawler.js:101,423-430]
+- [x] [Review][Patch] Strip the `t3_` prefix from `postId` arguments in `#extractPostId()` before building `/comments/{postId}` paths. [src/scrapers/social/reddit/crawler.js:253-255]
+- [x] [Review][Patch] Validate `limit` and `depth` for `NaN`/non-numeric input before using them as query parameters. [src/scrapers/social/reddit/crawler.js:323,452,496-497]
+- [x] [Review][Patch] Fix `RedditPlatformResponseValidator.#getHeaders()` to handle `Headers` instances, not only plain objects. [src/scrapers/social/reddit/validator.js:77-88]
+- [x] [Review][Patch] Correct the `User-Agent` fallback to match the spec (`xactions/1.0`). [src/scrapers/social/reddit/client.js:38]
+- [x] [Review][Patch] Make `normalizeRedditPost()` push the external `post.url` into `mediaUrls` when it looks like an image/video. [src/scrapers/social/reddit/normalizer.js:67-90]
+- [x] [Review][Patch] Validate the synthetic `profilePost` with `this.validateItem()` before calling `store.storeContent()` in `getUser()`. [src/scrapers/social/reddit/crawler.js:395-413]
+- [x] [Review][Patch] Add the explicit `category = 'social'` class field to `RedditCrawler` to match the spec. [src/scrapers/social/reddit/crawler.js:28-37]
+- [x] [Review][Patch] Update `src/scrapers/index.js` Reddit dispatcher to map `maxComments` → `limit` and `maxDepth` → `depth` for `post_comments`. [src/scrapers/index.js:935-959]
+- [x] [Review][Patch] Strip leading `/r/` and `/u/` prefixes (in addition to `r/` and `u/`) in `#extractSubreddit()` and `#extractUsername()`. [src/scrapers/social/reddit/crawler.js:197,217]
+- [x] [Review][Patch] Guard `apiRequest()` path/query construction against unescaped path segments and `?` characters. [src/scrapers/social/reddit/client.js:289-291,301]
+- [x] [Review][Patch] Guard RSS item date parsing so invalid `published`/`updated` values do not become `NaN` `created_utc`. [src/scrapers/social/reddit/client.js:483-484]
+- [x] [Review][Patch] Fix the `validator.js` license inconsistency (header says Apache-2.0, JSDoc says MIT). [src/scrapers/social/reddit/validator.js:7]
+- [x] [Review][Patch] Add tests for public vs authenticated URL construction and Bearer token attachment using separate mock hosts. [tests/scrapers/social/reddit/client.test.js]
+- [x] [Review][Patch] Add a test for expired OAuth token refresh in `ensureToken()`. [tests/scrapers/social/reddit/client.test.js]
+- [x] [Review][Patch] Strengthen rate-limit backoff tests to assert reset parsing, the `<= 1` boundary, and the 5-minute cap behavior. [tests/scrapers/social/reddit/client.test.js]
 
 #### Deferred
 
