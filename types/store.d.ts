@@ -57,12 +57,20 @@ export interface CrawlCheckpointData {
   errorCount?: number;
 }
 
+export interface StoreBatchResult {
+  insertedCount: number;
+  duplicateCount: number;
+  totalCount: number;
+  schemaValid: boolean;
+}
+
 export abstract class AbstractStore {
   abstract init(): Promise<void>;
-  abstract storeContent(post: PostItem, opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
-  abstract storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
+  abstract storeContent(post: PostItem, opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<StoreBatchResult>;
+  abstract storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<StoreBatchResult>;
   abstract storeComment(comment: CommentItem): Promise<void>;
   abstract storeCommentBatch(comments: CommentItem[], opts?: { upsert?: boolean }): Promise<void>;
+  abstract findExistingIds(ids: string[]): Promise<string[]>;
   abstract saveCheckpoint(checkpoint: CrawlCheckpointData): Promise<unknown>;
   abstract getCheckpoint(platform: string, targetType: string, targetKey: string): Promise<unknown>;
   abstract close(): Promise<void>;
@@ -80,10 +88,11 @@ export class PrismaStore extends AbstractStore {
   redis: unknown | null;
   constructor(options?: PrismaStoreOptions);
   init(): Promise<void>;
-  storeContent(post: PostItem, opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
-  storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<void>;
+  storeContent(post: PostItem, opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<StoreBatchResult>;
+  storeBatch(posts: PostItem[], opts?: { upsert?: boolean; validateSchema?: boolean }): Promise<StoreBatchResult>;
   storeComment(comment: CommentItem): Promise<void>;
   storeCommentBatch(comments: CommentItem[], opts?: { upsert?: boolean }): Promise<void>;
+  findExistingIds(ids: string[]): Promise<string[]>;
   saveCheckpoint(checkpoint: CrawlCheckpointData): Promise<unknown>;
   getCheckpoint(platform: string, targetType: string, targetKey: string): Promise<unknown>;
   close(): Promise<void>;

@@ -96,6 +96,16 @@ export class ThreadsCrawler extends AbstractCrawler {
       optionalArgs: ['count', 'cursor'],
       outputType: 'PostItem[]',
       example: { username: 'zuck', count: 20 },
+      checkpointResolver: (args) => {
+        const username = String(args?.username || '').replace(/^@/, '').trim().toLowerCase();
+        if (!username) return null;
+        return {
+          targetType: 'user_feed',
+          targetKey: username,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getUserFeed(args, session),
     }));
 
@@ -107,6 +117,16 @@ export class ThreadsCrawler extends AbstractCrawler {
       optionalArgs: ['count', 'cursor', 'searchType'],
       outputType: 'PostItem[] | { posts: PostItem[], pageInfo: any }',
       example: { query: 'artificial intelligence', count: 20 },
+      checkpointResolver: (args) => {
+        const query = args?.query ? String(args.query).trim() : '';
+        if (!query) return null;
+        return {
+          targetType: 'search',
+          targetKey: query,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.search(args, session),
     }));
 
@@ -118,6 +138,16 @@ export class ThreadsCrawler extends AbstractCrawler {
       optionalArgs: ['maxDepth', 'maxComments', 'after'],
       outputType: 'CommentItem[]',
       example: { postId: 'CuZ7X9_sF9y', maxDepth: 3, maxComments: 100 },
+      checkpointResolver: (args) => {
+        const postId = args?.postId ? String(args.postId).trim() : '';
+        if (!postId) return null;
+        return {
+          targetType: 'post_comments',
+          targetKey: postId,
+          cursorField: 'after',
+          fallbackCursorFields: ['cursor'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostComments(args, session),
     }));
 

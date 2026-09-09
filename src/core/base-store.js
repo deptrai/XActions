@@ -25,7 +25,7 @@ export class AbstractStore {
    * @param {Object} [opts]
    * @param {boolean} [opts.upsert=false]
    * @param {boolean} [opts.validateSchema=true]
-   * @returns {Promise<void>}
+   * @returns {Promise<{ insertedCount: number, duplicateCount: number, totalCount: number, schemaValid: boolean }>}
    */
   async storeContent(post, opts = {}) {
     throw new Error('Method not implemented: storeContent()');
@@ -36,10 +36,19 @@ export class AbstractStore {
    * @param {Object} [opts]
    * @param {boolean} [opts.upsert=false]
    * @param {boolean} [opts.validateSchema=true]
-   * @returns {Promise<void>}
+   * @returns {Promise<{ insertedCount: number, duplicateCount: number, totalCount: number, schemaValid: boolean }>}
    */
   async storeBatch(posts, opts = {}) {
     throw new Error('Method not implemented: storeBatch()');
+  }
+
+  /**
+   * Check which of the given item IDs already exist in storage.
+   * @param {string[]} ids
+   * @returns {Promise<string[]>}
+   */
+  async findExistingIds(ids) {
+    throw new Error('Method not implemented: findExistingIds()');
   }
 
   /**

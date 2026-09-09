@@ -241,11 +241,12 @@ flowchart TB
      - Caller truyền `accountId` rõ ràng trên action `requiresAuth: false` (opt-in auth) ➔ vẫn chịu `governor.canAccountRequest` và gán Sticky Residential Proxy theo accountId (xem AD-3 rule 3b).
      - `actionRequiresAuth === true` ➔ resolve `accountId` từ `AccountPool`; thiếu account ➔ error envelope `XACT_4010` (`auth_expired`, `suggestedAction: 'relogin'`); Sticky Residential Proxy theo accountId.
      - Action không khai báo `requiresAuth` ➔ fallback crawler-level (backward compatibility 100% cho các platform chưa phân loại action).
+  4. **Checkpoint Resolution trong `start()`:** `ActionDescriptor` hỗ trợ `checkpointResolver?: (args) => { targetType, targetKey, cursorField, fallbackCursorFields }`. Khi caller không truyền `cursor`/`after`/`max_id`, `AbstractCrawler.start()` tự động gọi `store.getCheckpoint(platform, targetType, targetKey)` và inject `lastCursor` vào `args` trước khi gọi handler. Caller-supplied cursor luôn được ưu tiên. Nếu `args.resume === false`, bỏ qua lookup. Crawler con cũng có thể dùng helper `await this.shouldStopPagination(items)` để dừng pagination khi toàn bộ items đã tồn tại trong DB.
 
 ### AD-12 — CrawlCheckpoint State for Idempotent Resume [ADOPTED]
 * **Binds:** `src/store/**`, `prisma/schema.prisma`, `src/scrapers/**`
 * **Prevents:** Cào trùng/sót khi container restart, nhiều instance chạy song song, hoặc Nowing yêu cầu dữ liệu cũ hơn last crawled.
-* **Rule:** Tồn tại model `CrawlCheckpoint { id, platform, targetType, targetKey, lastCursor, lastTimestamp, createdAt, updatedAt }` với `@@unique([platform, targetType, targetKey])`. Mọi request cào đọc checkpoint trước, cào delta, ghi checkpoint, rồi mới phát Redis event.
+* **Rule:** Tồn tại model `CrawlCheckpoint { id, platform, targetType, targetKey, lastCursor, lastTimestamp, status, errorCount, lastCrawledAt, nextScheduledAt, createdAt, updatedAt }` với `@@unique([platform, targetType, targetKey])`. Mọi request cào đọc checkpoint trước (tự động qua `AbstractCrawler.start()` nếu `ActionDescriptor.checkpointResolver` được đăng ký và caller không truyền cursor), cào delta, ghi checkpoint, rồi mới phát Redis event. `AbstractStore` / `PrismaStore` phải hỗ trợ `getCheckpoint()` theo composite key và `storeBatch()` phải trả về insertion metadata (`insertedCount`, `duplicateCount`, `totalCount`, `schemaValid`).
 
 ### AD-13 — Adaptive Infrastructure-Aware Dynamic Rate Limiting & Account Protection Governor [ADOPTED - NEW]
 * **Binds:** `src/core/adaptive-governor.js`, `src/core/account-pool.js`, `src/proxy/proxy-pool.js`, `src/scrapers/**`

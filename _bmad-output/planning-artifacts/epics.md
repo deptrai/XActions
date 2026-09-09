@@ -164,6 +164,10 @@ So that **tôi có thể thêm nền tảng mới (Shopee, LinkedIn, v.v.) mà k
 * **And** `AbstractCrawler` tự động đăng ký action vào `ActionRegistry`, validate `category` trước khi lưu, và đảm bảo `action` là snake_case.
 * **And** `ActionDescriptor` hỗ trợ trường tùy chọn `requiresAuth?: boolean`; `AbstractCrawler.start(command)` tính `actionRequiresAuth = entry.descriptor.requiresAuth ?? this.requiresAuth` và dùng giá trị này cho account resolution (rút `AccountPool`, throw `XACT_4010`, governor account check).
 * **And** action có `requiresAuth: false` chạy với `accountId = null` khi caller không truyền accountId: không rút `AccountPool`, không kiểm tra `governor.canAccountRequest`; `listActions()` trả về `requiresAuth` đã phân giải cho từng action.
+* **And** `AbstractCrawler.start(command)` kiểm tra `ActionDescriptor.checkpointResolver` và tự động gọi `store.getCheckpoint(platform, targetType, targetKey)` khi caller không truyền `cursor`/`after`/`max_id`.
+* **And** `ActionDescriptor` hỗ trợ trường tùy chọn `checkpointResolver?: (args) => { targetType, targetKey, cursorField, fallbackCursorFields }`.
+* **And** `AbstractCrawler.start()` đảm bảo cursor từ caller luôn được ưu tiên (không ghi đè).
+* **And** `AbstractCrawler` cung cấp `shouldStopPagination(items): Promise<boolean>` helper để crawler con dừng sớm khi tất cả items đã tồn tại.
 * **And** `GovernorStatusApi` định nghĩa shape `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 * **And** `node src/core/index.js` parse thành công và `npx prisma validate` pass.
 
@@ -200,6 +204,8 @@ So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung
 * **Given** models `Post` và `Comment` đã tồn tại
 * **When** triển khai `src/store/prisma-store.js`
 * **Then** insert bài viết và bình luận theo batch chunk 500 bản ghi; mặc định dùng `createMany` + `skipDuplicates`, hỗ trợ `upsert` qua option `{ upsert: true }`, và insert comment theo từng `depth` level để tránh self-referencing FK violation.
+* **And** `storeBatch()` trả về object `{ insertedCount, duplicateCount, totalCount, schemaValid }`.
+* **And** `AbstractStore` / `PrismaStore` implement `findExistingIds(ids): Promise<string[]>` để kiểm tra danh sách items đã tồn tại trước khi lưu.
 
 ### Story 10.3: AI Dataset Export Utility (Streaming JSONL & CSV with Sanitization)
 As an **AI Engineer / Data Scientist**,
@@ -1396,6 +1402,9 @@ So that **không còn logic scraper nào nằm ngoài `src/scrapers/social/<plat
 * **And** dispatcher hỗ trợ dependency injection (`client`, `store`, `governor`, `accountPool`, `proxyPool`)
 * **And** legacy `import twitter from './twitter/index.js'` trong `src/scrapers/index.js` bị xoá
 * **And** `src/scrapers/social/index.js` export all platform crawlers/clients/validators
+* **And** dispatcher truyền `args` trực tiếp; `AbstractCrawler.start()` tự động xử lý checkpoint resume
+* **And** caller có thể truyền `args.resume: false` để tắt auto checkpoint lookup
+* **And** `options.cursor` từ caller luôn được ưu tiên so với checkpoint (backward compatible)
 
 ### Story 25.2: `package.json` Exports v2
 As a **Library Consumer**,  
@@ -1435,6 +1444,45 @@ So that **migrations không gây breaking change đột ngột**.
 * **Then** trả `PlatformError` với `type: ErrorTypes.DEPRECATED`, `suggestedAction` chỉ rõ action/platform thay thế
 * **And** `package.json` exports giữ mapping cho ít nhất 1 release cycle
 * **And** `docs/deprecation-plan.md` liệt kê mapping đầy đủ từ legacy API → new API
+
+### Story 25.5: Core Checkpoint Resume & Early Termination Engine
+As a **Nowing Integrator**,  
+I want **`AbstractCrawler` to automatically resume scraping from the last saved checkpoint and stop early when all page items already exist in DB**,  
+So that **we save proxy cost and avoid duplicate full re-crawls on every scheduled run**.
+
+**Acceptance Criteria:**
+* **Given** `CrawlCheckpoint` table exists with `(platform, targetType, targetKey, lastCursor)`
+* **When** `AbstractCrawler.start({ action, args: { groupId: '123' } })` is called without `cursor`
+* **Then** it looks up checkpoint by `ActionDescriptor.checkpointResolver` and injects `lastCursor` into `args` before calling handler
+* **And** if no checkpoint exists, it starts from the beginning without error
+* **And** caller-provided `cursor`/`after` is never overwritten
+* **And** `AbstractCrawler` exposes `shouldStopPagination(items)` helper
+* **And** `PrismaStore.storeBatch()` returns `{ insertedCount, duplicateCount, totalCount, schemaValid }`
+* **And** existing benchmark telemetry is not broken
+
+### Story 25.6: Checkpoint Resolvers for Top Platforms
+As a **Platform Engineer**,  
+I want **each major platform crawler to define a stable `checkpointResolver` for its paginated actions**,  
+So that **auto resume works correctly and consistently across platforms**.
+
+**Acceptance Criteria:**
+* **Given** Facebook, Twitter, TikTok, Threads, Shopee, Batdongsan crawlers extend `AbstractCrawler`
+* **When** their paginated actions are registered via `registerAction()`
+* **Then** each action has an optional `checkpointResolver` returning `{ targetType, targetKey, cursorField, fallbackCursorFields }`
+* **And** `targetKey` is stable (sorted key-value pairs, trimmed, lowercased, no pagination params)
+* **And** resolvers cover at least: `group_posts`, `page_posts`, `search`, `marketplace` (Facebook); `search`, `hashtag`, `followers`, `following` (Twitter); `search`, `hashtag_feed` (TikTok); `search`, `get_user_feed` (Threads); `search_products` (Shopee); `search_listings` (Batdongsan)
+
+### Story 25.7: Early Termination in Crawler Pagination Loops
+As a **Reliability Engineer**,  
+I want **crawler pagination loops to stop as soon as a full page of already-stored items is detected**,  
+So that **scheduled re-scrapes do not waste proxy requests on data we already have**.
+
+**Acceptance Criteria:**
+* **Given** `storeBatch()` returns insertion metadata
+* **When** a crawler fetches a page where all items are duplicates
+* **Then** `shouldStopPagination()` returns `true` and the loop breaks
+* **And** the behavior is implemented for Facebook, Twitter, TikTok in first pass
+* **And** no existing test or benchmark telemetry regresses
 
 ---
 

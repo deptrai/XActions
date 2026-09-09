@@ -175,20 +175,22 @@ export class PrismaStore extends AbstractStore {
   /**
    * @param {import('../core/types.js').PostItem} post
    * @param {Object} [opts]
-   * @returns {Promise<void>}
+   * @returns {Promise<{ insertedCount: number, duplicateCount: number, totalCount: number, schemaValid: boolean }>}
    */
   async storeContent(post, opts = {}) {
-    await this.storeBatch([post], opts);
+    return this.storeBatch([post], opts);
   }
 
   /**
    * @param {import('../core/types.js').PostItem[]} posts
    * @param {Object} [opts]
    * @param {boolean} [opts.upsert=false]
-   * @returns {Promise<void>}
+   * @returns {Promise<{ insertedCount: number, duplicateCount: number, totalCount: number, schemaValid: boolean }>}
    */
   async storeBatch(posts, opts = {}) {
-    if (!Array.isArray(posts) || !posts.length) return;
+    if (!Array.isArray(posts) || !posts.length) {
+      return { insertedCount: 0, duplicateCount: 0, totalCount: 0, schemaValid: true };
+    }
 
     const telemetry = opts.session?.telemetry || opts.telemetryContext || this.telemetryContext;
     const shouldValidateSchema = opts.validateSchema ?? this.#validateSchema;
@@ -254,29 +256,44 @@ export class PrismaStore extends AbstractStore {
     const normalized = posts.map((p) => this.#normalizePost(p));
     let totalDuplicates = 0;
 
+    let totalInserted = 0;
     for (let i = 0; i < normalized.length; i += this.#chunkSize) {
       const chunk = normalized.slice(i, i + this.#chunkSize);
       if (opts.upsert) {
+        const existingIds = await this.findExistingIds(chunk.map((item) => item.id));
         await this.#upsertChunk(this.#prisma?.post, chunk);
+        totalInserted += chunk.length - existingIds.length;
+        totalDuplicates += existingIds.length;
       } else {
         const res = await this.#prisma?.post.createMany({
           data: chunk,
           skipDuplicates: true,
         });
         if (res && typeof res.count === 'number') {
+          totalInserted += res.count;
           totalDuplicates += Math.max(0, chunk.length - res.count);
         }
       }
     }
 
+    const storeMetrics = {
+      fieldFillRate: posts.length > 0 ? (schemaValidCount / posts.length) : 1.0,
+      schemaValid: schemaValidCount === posts.length,
+      insertedCount: totalInserted,
+      duplicates: totalDuplicates,
+      totalItems: posts.length,
+    };
+
     if (telemetry && typeof telemetry.recordStoreMetrics === 'function') {
-      telemetry.recordStoreMetrics({
-        fieldFillRate: posts.length > 0 ? (schemaValidCount / posts.length) : 1.0,
-        schemaValid: schemaValidCount === posts.length,
-        duplicates: totalDuplicates,
-        totalItems: posts.length,
-      });
+      telemetry.recordStoreMetrics(storeMetrics);
     }
+
+    return {
+      insertedCount: totalInserted,
+      duplicateCount: totalDuplicates,
+      totalCount: posts.length,
+      schemaValid: storeMetrics.schemaValid,
+    };
   }
 
   /**
@@ -437,6 +454,27 @@ export class PrismaStore extends AbstractStore {
         },
       },
     });
+  }
+
+  /**
+   * Check which of the given Post IDs already exist in the database.
+   * @param {string[]} ids
+   * @returns {Promise<string[]>}
+   */
+  async findExistingIds(ids) {
+    if (!Array.isArray(ids) || !ids.length) {
+      return [];
+    }
+    const cleanIds = ids.filter((id) => typeof id === 'string' && id.length > 0);
+    if (!cleanIds.length) {
+      return [];
+    }
+    await this.init();
+    const existing = await this.#prisma.post.findMany({
+      where: { id: { in: cleanIds } },
+      select: { id: true },
+    });
+    return existing.map((record) => record.id);
   }
 
   /** @returns {Promise<void>} */

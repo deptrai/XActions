@@ -36,6 +36,7 @@ describe('Story 10.2: PrismaStore — Class Architecture & Contract Compliance',
     expect(typeof store.storeBatch).toBe('function');
     expect(typeof store.storeComment).toBe('function');
     expect(typeof store.storeCommentBatch).toBe('function');
+    expect(typeof store.findExistingIds).toBe('function');
     expect(typeof store.close).toBe('function');
   });
 
@@ -98,7 +99,7 @@ describe('Story 10.2: PrismaStore — Category Validation Guard (AC: Category Va
 
   it('accepts all standard categories defined in CATEGORIES constant', async () => {
     const validCategories = Object.values(CATEGORIES);
-    expect(validCategories).toEqual(['social', 'ecom', 'realestate', 'recruitment', 'b2b', 'automotive', 'fnb_merchant', 'healthcare', 'legal']);
+    expect(validCategories).toEqual(['social', 'ecom', 'realestate', 'recruitment', 'b2b', 'automotive', 'fnb_merchant', 'healthcare', 'legal', 'video']);
     for (const cat of validCategories) {
       expect(isValidCategory(cat)).toBe(true);
     }

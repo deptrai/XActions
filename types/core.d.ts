@@ -102,6 +102,13 @@ export interface CrawlerCommand {
   session?: Record<string, unknown>;
 }
 
+export interface CheckpointResolution {
+  targetType: string;
+  targetKey: string;
+  cursorField?: string;
+  fallbackCursorFields?: string[];
+}
+
 export interface ActionDescriptor {
   action: string;
   description: string;
@@ -109,6 +116,7 @@ export interface ActionDescriptor {
   optionalArgs?: string[];
   example: Record<string, unknown>;
   outputType: string;
+  checkpointResolver?: (args: Record<string, unknown>) => CheckpointResolution | null | Promise<CheckpointResolution | null>;
 }
 
 export interface GovernorStatus {
@@ -261,6 +269,8 @@ export abstract class AbstractCrawler {
   listActions(): ActionDescriptor[];
   validateItem(item: PostItem | CommentItem): void;
   start(command: CrawlerCommand): Promise<unknown>;
+  resolveCheckpoint(action: string, args?: Record<string, unknown>): Promise<Record<string, unknown> | undefined>;
+  shouldStopPagination(items: Array<{ id: string }>): Promise<boolean>;
   launchBrowserWithCdp(cdpUrl?: string, options?: Record<string, unknown>): Promise<unknown>;
   delayWithJitter(min?: number, max?: number): Promise<number>;
   abstract init(): Promise<void>;

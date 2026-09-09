@@ -774,7 +774,12 @@ export {
   globalStatusApi,
   AccountPool,
   globalAccountPool,
+  CheckpointResolution,
 } from './core';
+
+export {
+  StoreBatchResult,
+} from './store';
 
 
 // ── Bluesky & Mastodon Hybrid Scrapers (Story 23.6) ─────────────────────────

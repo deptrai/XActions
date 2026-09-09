@@ -304,6 +304,16 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo?: any }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const groupId = args?.groupId ? String(args.groupId).trim() : '';
+        if (!groupId) return null;
+        return {
+          targetType: 'group',
+          targetKey: groupId,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupPosts(args, session),
     });
 
@@ -314,6 +324,16 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo?: any }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const pageId = args?.pageId ? String(args.pageId).trim() : '';
+        if (!pageId) return null;
+        return {
+          targetType: 'page',
+          targetKey: pageId,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.pagePosts(args, session),
     });
 
@@ -324,6 +344,16 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['maxDepth', 'maxComments', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo?: any }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const postId = args?.postId ? String(args.postId).trim() : '';
+        if (!postId) return null;
+        return {
+          targetType: 'post_comments',
+          targetKey: postId,
+          cursorField: 'after',
+          fallbackCursorFields: ['cursor'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getCommentsForPost(args, session),
     });
 
@@ -334,6 +364,18 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['postId', 'maxDepth', 'maxComments', 'limit', 'includeReplies', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo?: any }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const rawTarget = String(args?.url || args?.postId || '').trim();
+        if (!rawTarget) return null;
+        const postExternalId = this.#extractPostExternalId(rawTarget);
+        if (!postExternalId) return null;
+        return {
+          targetType: 'post_comments',
+          targetKey: postExternalId,
+          cursorField: 'after',
+          fallbackCursorFields: ['cursor'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.postComments(args, session),
     });
 
@@ -344,6 +386,18 @@ export class FacebookCrawler extends AbstractCrawler {
       optionalArgs: ['postId', 'maxDepth', 'maxComments', 'limit', 'includeReplies', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo?: any }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const rawTarget = String(args?.url || args?.postId || '').trim();
+        if (!rawTarget) return null;
+        const postExternalId = this.#extractPostExternalId(rawTarget);
+        if (!postExternalId) return null;
+        return {
+          targetType: 'group_comments',
+          targetKey: postExternalId,
+          cursorField: 'after',
+          fallbackCursorFields: ['cursor'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupComments(args, session),
     });
 
@@ -366,6 +420,17 @@ export class FacebookCrawler extends AbstractCrawler {
       example: { username: 'zuck', limit: 20 },
       outputType: '{ followers: ProfileItem[], pageInfo?: any }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const rawTarget = args?.username || args?.url;
+        const targetKey = resolveTargetKey(rawTarget);
+        if (!targetKey) return null;
+        return {
+          targetType: 'followers',
+          targetKey,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.followers(args, session),
     });
 
@@ -377,6 +442,17 @@ export class FacebookCrawler extends AbstractCrawler {
       example: { username: 'zuck' },
       outputType: '{ following?: ProfileItem[], note?: string, pageInfo?: any }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const rawTarget = args?.username || args?.url;
+        const targetKey = resolveTargetKey(rawTarget);
+        if (!targetKey) return null;
+        return {
+          targetType: 'following',
+          targetKey,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.following(args, session),
     });
 
@@ -388,6 +464,22 @@ export class FacebookCrawler extends AbstractCrawler {
       example: { groupUrl: 'https://www.facebook.com/groups/123456', limit: 50 },
       outputType: '{ members: ProfileItem[], pageInfo?: any }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const rawTarget = args?.groupUrl || args?.groupId;
+        let groupId;
+        try {
+          groupId = resolveGroupId(rawTarget);
+        } catch {
+          return null;
+        }
+        if (!groupId) return null;
+        return {
+          targetType: 'group_members',
+          targetKey: groupId,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupMembers(args, session),
     });
 
@@ -399,6 +491,17 @@ export class FacebookCrawler extends AbstractCrawler {
       example: { query: 'artificial intelligence', type: 'posts', limit: 20 },
       outputType: '{ posts?: PostItem[], people?: PostItem[], pages?: PostItem[], groups?: PostItem[], pageInfo?: any }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const query = args?.query ? String(args.query).trim().toLowerCase() : '';
+        if (!query) return null;
+        const type = args?.type ? String(args.type).trim().toLowerCase() : 'posts';
+        return {
+          targetType: 'search',
+          targetKey: `${query}:${type}`,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.search(args, session),
     });
 
@@ -410,6 +513,25 @@ export class FacebookCrawler extends AbstractCrawler {
       example: { groupUrl: 'https://www.facebook.com/groups/123456', query: 'ai tools', limit: 20 },
       outputType: '{ posts: PostItem[], pageInfo?: any }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const query = args?.query ? String(args.query).trim().toLowerCase() : '';
+        if (!query) return null;
+        const rawGroupInput = String(args?.groupUrl || args?.groupId || '').trim();
+        if (!rawGroupInput) return null;
+        let groupId;
+        try {
+          groupId = resolveGroupId(rawGroupInput);
+        } catch {
+          return null;
+        }
+        if (!groupId) return null;
+        return {
+          targetType: 'search',
+          targetKey: `${groupId}:${query}`,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.groupSearch(args, session),
     });
 
@@ -431,6 +553,24 @@ export class FacebookCrawler extends AbstractCrawler {
       example: { query: 'macbook pro 14', location: 'Ho Chi Minh City', minPrice: 800, maxPrice: 1200, limit: 20 },
       outputType: '{ posts: PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const query = args?.query ? String(args.query).trim() : '';
+        if (!query) return null;
+        const location = args?.location ? String(args.location).trim() : '';
+        const category = args?.category ? String(args.category).trim() : '';
+        const categoryId = args?.categoryId != null ? String(args.categoryId).trim() : '';
+        const minPrice = args?.minPrice != null ? String(args.minPrice).trim() : '';
+        const maxPrice = args?.maxPrice != null ? String(args.maxPrice).trim() : '';
+        const targetKey = [query, location, category, categoryId, minPrice, maxPrice]
+          .filter((v) => v !== undefined && v !== null && v !== '')
+          .join(':');
+        return {
+          targetType: 'marketplace',
+          targetKey,
+          cursorField: 'after',
+          fallbackCursorFields: ['cursor'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.marketplace(args, session),
     });
 

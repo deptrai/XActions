@@ -182,6 +182,7 @@ export class AbstractCrawler {
       example: descriptor.example || {},
       outputType: descriptor.outputType || 'PostItem[]',
       requiresAuth: descriptor.requiresAuth !== undefined ? descriptor.requiresAuth : this.requiresAuth,
+      checkpointResolver: descriptor.checkpointResolver,
     }));
   }
 
@@ -317,6 +318,10 @@ export class AbstractCrawler {
       source: isCanary ? 'canary' : 'production',
     });
 
+    // Resolve checkpoint and auto-inject cursor before calling handler (Story 25.5)
+    const resolvedArgs = await this.resolveCheckpoint(command.action, command.args);
+    const finalArgs = resolvedArgs || command.args;
+
     const session = {
       ...(command.session || {}),
       requiresAuth: actionRequiresAuth,
@@ -342,7 +347,7 @@ export class AbstractCrawler {
         await this.delayWithJitter();
       }
 
-      result = await entry.handler(command.args, session);
+      result = await entry.handler(finalArgs, session);
       return result;
     } catch (err) {
       error = err;
@@ -376,6 +381,96 @@ export class AbstractCrawler {
       } catch (emitErr) {
         console.error('[TELEMETRY] Failed to emit run telemetry:', emitErr.message);
       }
+    }
+  }
+
+  /**
+   * Resolve checkpoint for the given action and inject `lastCursor` into args when
+   * the caller did not supply a cursor and `args.resume !== false`.
+   * @param {string} action
+   * @param {Object} [args]
+   * @returns {Promise<Object|undefined>} Resolved args or undefined if unchanged.
+   */
+  async resolveCheckpoint(action, args) {
+    const normalizedArgs = args || {};
+    const resumeValue = normalizedArgs.resume;
+    if (resumeValue === false || resumeValue === 'false' || resumeValue === 0 || resumeValue === '0') {
+      return undefined;
+    }
+    if (!this.store || typeof this.store.getCheckpoint !== 'function') {
+      return undefined;
+    }
+
+    const entry = this.#registry.get(action);
+    const resolver = entry?.descriptor?.checkpointResolver;
+    if (typeof resolver !== 'function') {
+      return undefined;
+    }
+
+    let resolution = null;
+    try {
+      resolution = await resolver(normalizedArgs);
+    } catch (err) {
+      console.warn(`[CHECKPOINT] resolver for ${this.name}.${action} threw: ${err?.message || err}`);
+      return undefined;
+    }
+    if (!resolution || !resolution.targetType || !resolution.targetKey) {
+      return undefined;
+    }
+
+    const cursorField = resolution.cursorField || 'cursor';
+    const fallbackFields = Array.isArray(resolution.fallbackCursorFields)
+      ? resolution.fallbackCursorFields
+      : ['cursor', 'after', 'max_id'];
+    const allCursorFields = [...new Set([cursorField, ...fallbackFields])];
+    const hasCallerCursor = allCursorFields.some(
+      (f) => normalizedArgs[f] !== undefined && normalizedArgs[f] !== null && normalizedArgs[f] !== ''
+    );
+    if (hasCallerCursor) {
+      return undefined;
+    }
+
+    try {
+      const checkpoint = await this.store.getCheckpoint(this.name, resolution.targetType, resolution.targetKey);
+      if (checkpoint && checkpoint.lastCursor !== undefined && checkpoint.lastCursor !== null && checkpoint.lastCursor !== '') {
+        return { ...normalizedArgs, [cursorField]: checkpoint.lastCursor };
+      }
+    } catch {
+      // Swallow checkpoint lookup errors to avoid breaking scraping
+    }
+    return undefined;
+  }
+
+  /**
+   * Determine whether pagination should stop early.
+   * Accepts either the raw items array or the StoreBatchResult returned by storeBatch().
+   * @param {Array<{ id: string }> | { insertedCount: number, totalCount: number }} itemsOrBatch
+   * @returns {Promise<boolean>}
+   */
+  async shouldStopPagination(itemsOrBatch) {
+    // Prefer storeBatch metadata: all duplicates means early stop.
+    if (
+      itemsOrBatch &&
+      typeof itemsOrBatch === 'object' &&
+      !Array.isArray(itemsOrBatch) &&
+      typeof itemsOrBatch.insertedCount === 'number' &&
+      typeof itemsOrBatch.totalCount === 'number'
+    ) {
+      return itemsOrBatch.insertedCount === 0 && itemsOrBatch.totalCount > 0;
+    }
+
+    const items = itemsOrBatch;
+    if (!Array.isArray(items) || items.length === 0) return false;
+    if (!this.store || typeof this.store.findExistingIds !== 'function') return false;
+
+    try {
+      const ids = items.map((item) => item.id).filter((id) => typeof id === 'string' && id.length > 0);
+      if (ids.length === 0) return false;
+      const uniqueIds = [...new Set(ids)];
+      const existingIds = await this.store.findExistingIds(uniqueIds);
+      return existingIds.length === uniqueIds.length;
+    } catch {
+      return false;
     }
   }
 

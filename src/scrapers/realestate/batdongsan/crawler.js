@@ -54,6 +54,20 @@ export class BatdongsanCrawler extends AbstractCrawler {
       example: { city: 'SG', category: 'can-ho', limit: 20 },
       outputType: '{ listings: PostItem[], pageInfo: { current_page: number, has_next_page: boolean, total_items?: number } }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        const rawCity = String(args?.city || 'SG').trim();
+        const city = CITY_ALIAS_MAP[rawCity.toLowerCase()] || rawCity;
+        const category = (args?.category && CATE_CODES[args.category] !== undefined)
+          ? CATE_CODES[args.category]
+          : (CATE_CODES[args?.cate] || 0);
+        const ptype = args?.listingType === 'rent' || args?.ptype === 49 ? 49 : 38;
+        return {
+          targetType: 'listings',
+          targetKey: `${city}:${category}:${ptype}`,
+          cursorField: 'page',
+          fallbackCursorFields: ['offset'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.searchListings(args, session),
     });
 

@@ -92,6 +92,14 @@
  */
 
 /**
+ * @typedef {Object} CheckpointResolution
+ * @property {string} targetType
+ * @property {string} targetKey
+ * @property {string} [cursorField]
+ * @property {string[]} [fallbackCursorFields]
+ */
+
+/**
  * @typedef {Object} ActionDescriptor
  * @property {string} action
  * @property {string} [category]
@@ -101,6 +109,7 @@
  * @property {Object} [example]
  * @property {string} [outputType]
  * @property {boolean} [requiresAuth]
+ * @property {function(Record<string, any>): (CheckpointResolution | null | Promise<CheckpointResolution | null>)} [checkpointResolver]
  */
 
 /**

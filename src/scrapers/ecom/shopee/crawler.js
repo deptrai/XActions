@@ -49,6 +49,16 @@ export class ShopeeCrawler extends AbstractCrawler {
       optionalArgs: ['limit', 'page', 'sortBy', 'category'],
       example: { keyword: 'ao thun', limit: 30, sortBy: 'sales' },
       outputType: '{ products: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
+      checkpointResolver: (args) => {
+        const keyword = typeof args?.keyword === 'string' ? args.keyword.trim() : '';
+        if (!keyword) return null;
+        return {
+          targetType: 'search',
+          targetKey: keyword,
+          cursorField: 'page',
+          fallbackCursorFields: ['offset'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.searchProducts(args, session),
     });
 
@@ -127,6 +137,21 @@ export class ShopeeCrawler extends AbstractCrawler {
     }
 
     const hasNext = Boolean(!response?.nomore && products.length > 0 && products.length === limit);
+
+    if (this.store && typeof this.store.saveCheckpoint === 'function') {
+      try {
+        await this.store.saveCheckpoint({
+          platform: 'shopee',
+          targetType: 'search',
+          targetKey: keyword,
+          lastCursor: hasNext ? String(page) : null,
+          lastTimestamp: new Date(),
+          lastCrawledAt: new Date(),
+          status: hasNext ? 'has_more' : 'completed',
+          storageRef: products[0]?.id || products[0]?.externalId || undefined,
+        });
+      } catch {}
+    }
 
     return {
       products,

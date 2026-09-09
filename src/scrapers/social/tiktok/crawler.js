@@ -67,6 +67,16 @@ export class TikTokCrawler extends AbstractCrawler {
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       example: { query: 'viral', count: 12 },
+      checkpointResolver: (args) => {
+        const query = args?.query ? String(args.query).trim() : '';
+        if (!query) return null;
+        return {
+          targetType: 'search',
+          targetKey: query,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.search(args, session),
     }));
 
@@ -79,6 +89,16 @@ export class TikTokCrawler extends AbstractCrawler {
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       example: { tag: 'foryou', count: 30 },
+      checkpointResolver: (args) => {
+        const tag = String(args?.tag || '').replace(/^#+/, '').trim().toLowerCase();
+        if (!tag) return null;
+        return {
+          targetType: 'hashtag_feed',
+          targetKey: tag,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.hashtagFeed(args, session),
     }));
 
@@ -103,6 +123,16 @@ export class TikTokCrawler extends AbstractCrawler {
       optionalArgs: ['maxDepth', 'maxComments', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       example: { videoId: '7325759242735676680', maxDepth: 3, maxComments: 100 },
+      checkpointResolver: (args) => {
+        const videoId = args?.videoId ? String(args.videoId).trim() : '';
+        if (!videoId) return null;
+        return {
+          targetType: 'post_comments',
+          targetKey: videoId,
+          cursorField: 'after',
+          fallbackCursorFields: ['cursor'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostComments(args, session),
     }));
   }

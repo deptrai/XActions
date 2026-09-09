@@ -97,6 +97,16 @@ export class TwitterCrawler extends AbstractCrawler {
       optionalArgs: ['type', 'filter', 'since', 'until', 'from', 'to', 'minLikes', 'minRetweets', 'lang', 'limit', 'cursor'],
       outputType: '{ posts: PostItem[], users: ProfileItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       example: { query: 'javascript', type: 'Latest', limit: 20 },
+      checkpointResolver: (args) => {
+        const query = args?.query ? String(args.query).trim().toLowerCase() : '';
+        if (!query) return null;
+        return {
+          targetType: 'search',
+          targetKey: query,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.search(args, session),
     });
 
@@ -109,6 +119,16 @@ export class TwitterCrawler extends AbstractCrawler {
       optionalArgs: ['hashtag', 'type', 'filter', 'since', 'until', 'minLikes', 'minRetweets', 'lang', 'limit', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       example: { tag: 'AI', type: 'Latest', limit: 50 },
+      checkpointResolver: (args) => {
+        const tag = String(args?.tag || args?.hashtag || '').replace(/^#+/, '').trim().toLowerCase();
+        if (!tag) return null;
+        return {
+          targetType: 'hashtag',
+          targetKey: tag,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.hashtag(args, session),
     });
 
@@ -144,6 +164,16 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { tweetId: '1234567890', limit: 100 },
       outputType: '{ likers: ProfileItem[], pageInfo: any }',
       requiresAuth: true,
+      checkpointResolver: (args) => {
+        const tweetId = resolveTweetId(args?.tweetId || args?.url || '');
+        if (!tweetId) return null;
+        return {
+          targetType: 'likes',
+          targetKey: tweetId,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.likes(args, session),
     });
 
@@ -166,6 +196,12 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { limit: 50 },
       outputType: '{ posts: PostItem[], pageInfo: any }',
       requiresAuth: true,
+      checkpointResolver: (args) => ({
+        targetType: 'bookmarks',
+        targetKey: args?.accountId || 'self',
+        cursorField: 'cursor',
+        fallbackCursorFields: ['after'],
+      }),
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.bookmarks(args, session),
     });
 
@@ -189,6 +225,16 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { username: 'elonmusk', limit: 100 },
       outputType: '{ followers: ProfileItem[], pageInfo: any }',
       requiresAuth: true,
+      checkpointResolver: (args) => {
+        const username = resolveUsername(args?.username || args?.url || '');
+        if (!username) return null;
+        return {
+          targetType: 'followers',
+          targetKey: username,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.followers(args, session),
     });
 
@@ -200,6 +246,16 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { username: 'elonmusk', limit: 100 },
       outputType: '{ following: ProfileItem[], pageInfo: any }',
       requiresAuth: true,
+      checkpointResolver: (args) => {
+        const username = resolveUsername(args?.username || args?.url || '');
+        if (!username) return null;
+        return {
+          targetType: 'following',
+          targetKey: username,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.following(args, session),
     });
 
@@ -234,6 +290,16 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { listUrl: 'https://x.com/i/lists/1234567890123456789', limit: 100 },
       outputType: '{ members: ProfileItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       requiresAuth: true,
+      checkpointResolver: (args) => {
+        const listId = args?.listId || (args?.listUrl ? args.listUrl.match(/lists\/(\d+)/)?.[1] : null);
+        if (!listId) return null;
+        return {
+          targetType: 'list_members',
+          targetKey: `twitter:list:${listId}`,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.listMembers(args, session),
     });
 
@@ -268,6 +334,26 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { username: 'elonmusk', type: 'video', limit: 20 },
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       requiresAuth: false,
+      checkpointResolver: (args) => {
+        if (args?.tweetId || args?.url) {
+          const tweetId = resolveTweetId(args?.tweetId || args?.url || '');
+          if (!tweetId) return null;
+          return {
+            targetType: 'media',
+            targetKey: `twitter:tweet:${tweetId}`,
+            cursorField: 'cursor',
+            fallbackCursorFields: ['after'],
+          };
+        }
+        const username = resolveUsername(args?.username || args?.url || '');
+        if (!username) return null;
+        return {
+          targetType: 'media',
+          targetKey: `twitter:user:${username}`,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.media(args, session),
     });
 

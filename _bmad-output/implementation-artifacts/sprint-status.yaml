@@ -1,5 +1,5 @@
 # generated: "08-27-2026 06:00"
-# last_updated: "2026-09-08"
+# last_updated: "2026-09-09"
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: "2026-09-08"
+last_updated: "2026-09-09"
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -208,12 +208,20 @@ development_status:
   epic-24-retrospective: optional
 
   # --- Epic 25: Unified Dispatcher & Public API Finalization ---
-  epic-25: backlog
+  epic-25: in-progress
   25-1-universal-scrape-dispatcher: backlog
   25-2-package-json-exports-v2: backlog
   25-3-mcp-cli-api-caller-migration: backlog
   25-4-backward-compatibility-error-mapping: backlog
+  25-5-core-checkpoint-resume-engine: done
+  25-6-checkpoint-resolvers-top-platforms: done
+  25-7-early-termination-pagination-loops: backlog
   epic-25-retrospective: optional
+
+  # --- Epic 25.5-25.7: Auto Checkpoint Lookup & Early Termination ---
+  # Added 2026-09-09 via sprint-change-proposal-2026-09-09-checkpoint-resume.md
+  # Enables automatic resume from CrawlCheckpoint and early termination on duplicate pages.
+  # Belongs to Epic 25 (Unified Dispatcher) as it extends CrawlerCommand / AbstractCrawler.
 
   # --- Epic 27: Anti-Detection & Session Resilience ---
   # NOTE: Epic 27 added 2026-09-05 via sprint-change-proposal-2026-09-05.md.
