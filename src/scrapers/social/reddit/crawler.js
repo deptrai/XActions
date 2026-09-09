@@ -367,7 +367,7 @@ export class RedditCrawler extends AbstractCrawler {
     const sort = ['new', 'hot', 'top'].includes(args.sort) ? args.sort : 'new';
     const after = args.after || args.cursor || undefined;
 
-    const params = { limit };
+    const params = { limit, sort };
     if (after) params.after = after;
 
     const [profileRaw, postsRaw] = await Promise.all([
@@ -503,13 +503,28 @@ export class RedditCrawler extends AbstractCrawler {
 
     const comments = [];
     const stack = [...(commentListing?.data?.children || [])];
-    while (stack.length > 0) {
+    while (stack.length > 0 && comments.length < limit) {
       const node = stack.shift();
       if (!node || node.kind !== 't1') continue;
       { const comment = normalizeRedditComment(node); this.validateItem(comment); comments.push(comment); }
+      if (comments.length >= limit) break;
       const replies = node.data?.replies?.data?.children;
       if (Array.isArray(replies)) {
-        for (const reply of replies) stack.push(reply);
+        for (const reply of replies) {
+          if (comments.length + stack.length >= limit) break;
+          stack.push(reply);
+        }
+      }
+    }
+
+    // Store the parent post first to satisfy foreign key constraints.
+    if (this.store && postListing) {
+      const postChildren = Array.isArray(postListing?.data?.children) ? postListing.data.children : [postListing];
+      const posts = postChildren
+        .filter((child) => child && (child.kind === 't3' || child.data))
+        .map((child) => { const post = normalizeRedditPost(child); this.validateItem(post); return post; });
+      for (const post of posts) {
+        await this.store.storeContent(post).catch(() => {});
       }
     }
 
@@ -552,6 +567,14 @@ export class RedditCrawler extends AbstractCrawler {
     if (this.store) {
       await this.store.storeContent(subreddit).catch(() => {});
     }
+
+    await this.#emitCheckpointAndStream({
+      targetType: 'subreddit_info',
+      targetKey: name,
+      cursor: null,
+      items: [subreddit],
+      hasMore: false,
+    });
 
     return subreddit;
   }

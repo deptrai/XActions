@@ -945,10 +945,13 @@ export async function scrape(platform, action, options = {}) {
 
     const client = new RedditClient({
       baseUrl: options.baseUrl,
+      apiBaseUrl: options.apiBaseUrl,
+      oauthUrl: options.oauthUrl,
       clientId: options.clientId || options.redditClientId,
       clientSecret: options.clientSecret || options.redditClientSecret,
       username: options.redditUsername || undefined,
       userAgent: options.userAgent,
+      accessToken: options.accessToken,
       proxy: options.proxy,
       proxyPool: options.proxyPool,
       proxyProvider: options.proxyProvider,

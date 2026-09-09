@@ -25,6 +25,14 @@ describe('parseFullname', () => {
     expect(parseFullname('t1_xyz789')).toEqual({ kind: 't1', id: 'xyz789' });
   });
 
+  it('preserves underscores inside id segment', () => {
+    expect(parseFullname('t3_abc_123')).toEqual({ kind: 't3', id: 'abc_123' });
+  });
+
+  it('handles bare id without prefix', () => {
+    expect(parseFullname('1a2b3c')).toEqual({ kind: 'unknown', id: '1a2b3c' });
+  });
+
   it('handles empty input', () => {
     expect(parseFullname('')).toEqual({ kind: 'unknown', id: '' });
     expect(parseFullname(undefined)).toEqual({ kind: 'unknown', id: '' });
@@ -65,8 +73,8 @@ describe('normalizeRedditPost', () => {
     expect(post.likesCount).toBe(42);
     expect(post.repliesCount).toBe(7);
     expect(post.publishedAt).toEqual(new Date(1700000000 * 1000));
-    expect(post.postUrl).toBe('https://example.com/image.png');
-    expect(post.mediaUrls).toContain('https://example.com/image.png');
+    expect(post.postUrl).toBe('https://www.reddit.com/r/programming/comments/1a2b3c/hello_world/');
+    expect(post.metadata.targetUrl).toBe('https://example.com/image.png');
     expect(post.metadata.subreddit).toBe('programming');
     expect(post.metadata.isNsfw).toBe(false);
   });
@@ -129,6 +137,7 @@ describe('normalizeRedditComment', () => {
     expect(comment.platform).toBe('reddit');
     expect(comment.externalId).toBe('t1_xyz789');
     expect(comment.postId).toBe('reddit:t3_1a2b3c');
+    expect(comment.parentCommentId).toBeUndefined();
     expect(comment.authorName).toBe('commenter1');
     expect(comment.content).toBe('This is a comment');
     expect(comment.likesCount).toBe(15);
@@ -156,7 +165,7 @@ describe('normalizeRedditComment', () => {
     };
 
     const comment = normalizeRedditComment(raw);
-    expect(comment.parentCommentId).toBe('reddit:t1_xyz789');
+    expect(comment.parentCommentId).toBe('reddit:t3_1a2b3c:t1_xyz789');
     expect(comment.depth).toBe(1);
     expect(comment.subCommentsCount).toBe(1);
   });

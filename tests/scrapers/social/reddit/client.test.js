@@ -231,7 +231,7 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
           res.writeHead(200, {
             'content-type': 'application/json',
             'x-ratelimit-remaining': '0',
-            'x-ratelimit-reset': '1700003600',
+            'x-ratelimit-reset': '0.08',
           });
           res.end(JSON.stringify({ kind: 'Listing', data: { children: [] } }));
           return;
@@ -384,8 +384,9 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
   it('backs off when x-ratelimit-remaining is low', async () => {
     const client = new RedditClient({ baseUrl: serverUrl });
     const start = Date.now();
-    await client.apiRequest('/r/programming/new', { limit: 1 });
+    await client.apiRequest('/ratelimit', {});
     const elapsed = Date.now() - start;
-    expect(elapsed).toBeLessThan(100);
+    expect(elapsed).toBeGreaterThanOrEqual(60);
+    expect(elapsed).toBeLessThan(1000);
   });
 });

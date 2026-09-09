@@ -50,6 +50,9 @@ export class RedditClient extends AbstractApiClient {
   /** @type {boolean} */
   requiresAuth = false;
 
+  /** @type {boolean} */
+  requiresResidential = true;
+
   /** @type {'undici' | 'got'} */
   client = 'undici';
 
@@ -112,13 +115,16 @@ export class RedditClient extends AbstractApiClient {
       requiresAuth: options.requiresAuth ?? false,
       requiresProxy: options.requiresProxy ?? false,
     });
+    this.defaultProxyCountry = options.defaultProxyCountry || 'us';
+    this.proxyType = options.proxyType || 'residential';
+    this.requiresResidential = options.requiresResidential ?? true;
 
     this.baseUrl = String(options.baseUrl || DEFAULT_REDDIT_BASE_URL).replace(/\/+$/, '');
     this.apiBaseUrl = String(options.apiBaseUrl || DEFAULT_REDDIT_API_URL).replace(/\/+$/, '');
     this.oauthUrl = String(options.oauthUrl || DEFAULT_REDDIT_OAUTH_URL).replace(/\/+$/, '');
     this.clientId = options.clientId || null;
     this.clientSecret = options.clientSecret || null;
-    this.username = options.username || null;
+    this.username = options.username || options.redditUsername || null;
     this.userAgent = options.userAgent || buildRedditUserAgent(this.username);
     this.accessToken = options.accessToken || null;
     this.tokenExpiresAt = options.tokenExpiresAt || null;
@@ -285,9 +291,6 @@ export class RedditClient extends AbstractApiClient {
     if (token) {
       headers['authorization'] = `Bearer ${token}`;
     }
-    if (token) {
-      headers['authorization'] = `Bearer ${token}`;
-    }
 
     const reqOpts = {
       ...options,
@@ -331,7 +334,28 @@ export class RedditClient extends AbstractApiClient {
    * @returns {Promise<unknown>}
    */
   async request(method, url, options = {}) {
-    const res = await super.request(method, url, options);
+    const isOAuth = url === this.oauthUrl || options.requiresAuth === false;
+    const token = isOAuth ? null : await this.ensureToken();
+    const headers = {
+      'user-agent': this.userAgent,
+      'accept': 'application/json',
+      ...(options.headers || {}),
+    };
+    if (token && !headers.authorization) {
+      headers.authorization = `Bearer ${token}`;
+    }
+
+    const reqOpts = {
+      ...options,
+      headers,
+    };
+    // Reddit recommends residential / US proxies for production, but only force
+    // residential selection when an explicit proxy pool/provider is configured.
+    if ((this.requiresProxy || this._hasExplicitProxy) && this.requiresResidential !== undefined) {
+      reqOpts.requiresResidential = this.requiresResidential;
+    }
+
+    const res = await super.request(method, url, reqOpts);
 
     // Parse rate-limit headers on success to drive proactive backoff
     if (res && typeof res === 'object' && res.headers) {

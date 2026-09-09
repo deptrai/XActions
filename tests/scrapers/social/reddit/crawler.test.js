@@ -244,10 +244,23 @@ describe('RedditCrawler', () => {
 
   it('has checkpointResolver for post_comments action', () => {
     const desc = crawler.listActions().find((a) => a.action === 'post_comments');
+    expect(desc).toBeDefined();
+    expect(typeof desc.checkpointResolver).toBe('function');
     const res = desc.checkpointResolver({ postId: 'abc123' });
     expect(res.targetType).toBe('post_comments');
     expect(res.targetKey).toBe('abc123');
     expect(res.cursorField).toBe('after');
+  });
+
+  it('has checkpointResolver for user action', () => {
+    const desc = crawler.listActions().find((a) => a.action === 'user');
+    expect(desc).toBeDefined();
+    expect(typeof desc.checkpointResolver).toBe('function');
+    const res = desc.checkpointResolver({ username: 'Spez' });
+    expect(res.targetType).toBe('user');
+    expect(res.targetKey).toBe('spez');
+    expect(res.cursorField).toBe('after');
+    expect(res.fallbackCursorFields).toContain('cursor');
   });
 
   it('rejects missing required args', async () => {
@@ -317,6 +330,21 @@ describe('RedditCrawler', () => {
       args: { postId: 'post123', subreddit: 'test' },
     });
     expect(result.comments.length).toBe(1);
+  });
+
+  it('stores parent post and comments when store is provided', async () => {
+    const storedPosts = [];
+    const storedComments = [];
+    const mockStore = {
+      storeContent: async (p) => { storedPosts.push(p); },
+      storeCommentBatch: async (c) => { storedComments.push(...c); },
+      findExistingIds: async () => [],
+    };
+    const c = new RedditCrawler({ client: crawler.client, store: mockStore });
+    await c.start({ action: 'post_comments', args: { postId: 'post123', subreddit: 'test' } });
+    expect(storedPosts.length).toBeGreaterThan(0);
+    expect(storedPosts[0].platform).toBe('reddit');
+    expect(storedComments.length).toBeGreaterThan(0);
   });
 
   it('supports postId without subreddit for direct /comments lookup', async () => {

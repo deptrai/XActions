@@ -123,8 +123,8 @@ export class RedditPlatformResponseValidator extends AbstractPlatformResponseVal
    * @returns {boolean}
    */
   #isHtmlResponse(response) {
-    const body = this.#getBody(response);
-    return body.includes('<html') || body.includes('<!doctype');
+    const body = this.#getBody(response).toLowerCase();
+    return body.includes('<html') || body.includes('<!doctype') || body.includes('<!DOCTYPE');
   }
 
   /**
@@ -136,8 +136,8 @@ export class RedditPlatformResponseValidator extends AbstractPlatformResponseVal
     if (status === RATE_LIMIT_STATUS) return true;
 
     const headers = this.#getHeaders(response);
-    if (headers) {
-      const remaining = headers['x-ratelimit-remaining'] || headers['ratelimit-remaining'];
+    if (headers && status !== 200) {
+      const remaining = headers['x-ratelimit-remaining'] ?? headers['ratelimit-remaining'];
       const remainingNum = Number(remaining);
       if (remaining === '0' || remaining === 0 || (Number.isFinite(remainingNum) && remainingNum <= 0)) return true;
     }
@@ -197,6 +197,9 @@ export class RedditPlatformResponseValidator extends AbstractPlatformResponseVal
       ? /** @type {Record<string, unknown>} */ (record.data)
       : null;
 
+    const error = this.#getErrorName(response);
+    if (BOT_CHALLENGE_ERRORS.has(error)) return true;
+
     // 403 private subreddits are login walls, not bot challenges.
     if (status === FORBIDDEN_STATUS) {
       if (data && (data.reason === 'private' || data.error === 'private' || data.error === 'subreddit_private')) {
@@ -227,7 +230,6 @@ export class RedditPlatformResponseValidator extends AbstractPlatformResponseVal
       return false;
     }
 
-    const error = this.#getErrorName(response);
     if (BOT_CHALLENGE_ERRORS.has(error)) return true;
 
     // Non-403 HTML responses can still contain bot challenge content (Cloudflare pages, etc.).
@@ -261,6 +263,11 @@ export class RedditPlatformResponseValidator extends AbstractPlatformResponseVal
 
     // Reddit returns { reason: 'private' } or { error: 'subreddit_private' } for private subs
     if (data && (data.reason === 'private' || data.error === 'private' || data.error === 'subreddit_private')) {
+      return true;
+    }
+
+    // Top-level response objects may carry the private marker directly.
+    if (record && (record.reason === 'private' || record.error === 'private' || record.error === 'subreddit_private')) {
       return true;
     }
 
@@ -300,6 +307,10 @@ export class RedditPlatformResponseValidator extends AbstractPlatformResponseVal
 
     if (Array.isArray(record.data)) {
       return true;
+    }
+
+    if (record && typeof record.kind === 'string' && /^t[1-8]$/.test(record.kind) && typeof record.data === 'object' && record.data !== null) {
+      return this.#looksLikeRedditPayload(record);
     }
 
     const data = typeof record.data === 'object' && record.data !== null

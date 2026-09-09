@@ -9,11 +9,11 @@ describe('RedditPlatformResponseValidator', () => {
     expect(validator.isRateLimit({ status: 429 })).toBe(true);
   });
 
-  it('detects rate limit from x-ratelimit-remaining: 0', () => {
+  it('does not flag valid 200 with exhausted quota as rate limit', () => {
     expect(validator.isRateLimit({
       status: 200,
       headers: { 'x-ratelimit-remaining': '0' },
-    })).toBe(true);
+    })).toBe(false);
   });
 
   it('detects rate limit from numeric error 429', () => {

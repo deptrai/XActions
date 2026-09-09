@@ -29,7 +29,12 @@ export function parseFullname(fullname) {
   if (typeof fullname !== 'string' || !fullname) {
     return { kind: 'unknown', id: '' };
   }
-  const [kind, id] = fullname.split('_');
+  const idx = fullname.indexOf('_');
+  if (idx === -1) {
+    return { kind: 'unknown', id: fullname };
+  }
+  const kind = fullname.slice(0, idx);
+  const id = fullname.slice(idx + 1);
   return { kind: kind || 'unknown', id: id || fullname };
 }
 
@@ -58,15 +63,30 @@ export function normalizeRedditPost(raw) {
   const content = selftext ? `${title} ${selftext}` : title;
 
   const permalink = post.permalink ? `https://www.reddit.com${post.permalink}` : '';
-  const postUrl = post.url ? String(post.url) : permalink;
+  const postUrl = permalink || '';
+  const targetUrl = post.url ? String(post.url) : '';
   const authorUrl = authorName !== '[deleted]' ? `https://www.reddit.com/user/${authorName}` : '';
 
   const mediaUrls = [];
-  if (post.url && /^https?:\/\//i.test(post.url) && !post.url.includes('reddit.com')) {
-    mediaUrls.push(String(post.url));
+  // Extract actual media assets from preview / media metadata
+  const previewImages = post.preview?.images;
+  if (Array.isArray(previewImages) && previewImages.length > 0) {
+    const source = previewImages[0]?.source?.url;
+    if (source) mediaUrls.push(String(source));
+    for (const img of previewImages) {
+      const variant = img?.variants?.mp4?.source?.url || img?.variants?.gif?.source?.url;
+      if (variant) mediaUrls.push(String(variant));
+    }
+  }
+  if (post.media?.reddit_video?.fallback_url) {
+    mediaUrls.push(String(post.media.reddit_video.fallback_url));
   }
   if (post.thumbnail && /^https?:\/\//i.test(post.thumbnail)) {
     mediaUrls.push(String(post.thumbnail));
+  }
+  // External link target stored in metadata, not mediaUrls
+  if (targetUrl && !targetUrl.includes('reddit.com')) {
+    // intentionally not pushed to mediaUrls
   }
 
   const publishedAt = post.created_utc ? new Date(post.created_utc * 1000) : null;
@@ -97,6 +117,7 @@ export function normalizeRedditPost(raw) {
       title,
       selftext,
       permalink,
+      targetUrl,
       isSelf: Boolean(post.is_self),
       isVideo: Boolean(post.is_video),
       isNsfw: Boolean(post.over_18),
@@ -149,7 +170,7 @@ export function normalizeRedditComment(raw) {
   // Top-level comments have parent_id equal to the post fullname (t3_...).
   // Replies to other comments have parent_id as a comment fullname (t1_...).
   const parentCommentId = parentKind === 't1' && parentExternalId
-    ? namespacedRedditId(parentId)
+    ? generateCommentId('reddit', postFullname || postId, parentId)
     : undefined;
 
   return {
@@ -268,7 +289,7 @@ export function normalizeRedditUser(raw) {
   const rawFullname = user.fullname ? String(user.fullname) : (user.name && /^t2_/.test(user.name) ? user.name : '');
   const fullname = rawFullname || (username ? `t2_${username}` : '');
   const { kind, id: userId } = parseFullname(fullname);
-  const externalId = fullname || user.id || userId || username;
+  const externalId = fullname || (user.id ? `t2_${user.id}` : '') || userId || username;
 
   const name = username;
   const authorName = name;

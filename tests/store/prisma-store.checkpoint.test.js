@@ -46,6 +46,41 @@ describe('PrismaStore — findExistingIds()', () => {
     ]);
     expect(existing).toEqual(['twitter:post_1', 'twitter:post_2']);
   });
+
+  it('returns existing comment IDs alongside post IDs', async () => {
+    const store = createStore();
+    await store.storeBatch([
+      {
+        platform: 'reddit',
+        externalId: 'post_1',
+        category: 'social',
+        authorId: 'a',
+        authorName: 'A',
+        content: 'test post',
+      },
+    ]);
+    await store.storeCommentBatch([
+      {
+        platform: 'reddit',
+        postId: 'post_1',
+        externalId: 'c1',
+        authorId: 'a',
+        authorName: 'A',
+        content: 'comment 1',
+      },
+    ]);
+
+    const existing = await store.findExistingIds([
+      'reddit:post_1',
+      'reddit:post_1:c1',
+      'reddit:post_1:c_missing',
+      'reddit:post_missing',
+    ]);
+    expect(existing).toContain('reddit:post_1');
+    expect(existing).toContain('reddit:post_1:c1');
+    expect(existing).not.toContain('reddit:post_1:c_missing');
+    expect(existing).not.toContain('reddit:post_missing');
+  });
 });
 
 describe('PrismaStore — storeBatch() metadata (StoreBatchResult)', () => {

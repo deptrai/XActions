@@ -51,6 +51,18 @@ describe('Reddit Integration (Unified Dispatcher)', () => {
           return;
         }
 
+        // User profile & submitted
+        if (req.url?.startsWith('/user/target_spez/about')) {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ kind: 't2', data: { name: 'target_spez', id: 'uid1' } }));
+          return;
+        }
+        if (req.url?.startsWith('/user/target_spez/submitted')) {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ kind: 'Listing', data: { children: [], after: null } }));
+          return;
+        }
+
         res.writeHead(404, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ error: 'not_found' }));
       });
@@ -100,6 +112,18 @@ describe('Reddit Integration (Unified Dispatcher)', () => {
     const result = await scrape('rdt', 'subreddit', { subreddit: 'programming', limit: 5, baseUrl: serverUrl });
     expect(result.posts).toBeDefined();
     expect(result.posts.length).toBeGreaterThan(0);
+  });
+
+  it('scrape() dispatches user action without leaking target username into client operator identity', async () => {
+    const client = createRedditClient({ baseUrl: serverUrl, redditUsername: 'operator_bot' });
+    const result = await scrape('reddit', 'user', {
+      username: 'target_spez',
+      baseUrl: serverUrl,
+      client,
+    });
+    expect(result).toHaveProperty('profile');
+    expect(result.profile.username).toBe('target_spez');
+    expect(client.username).toBe('operator_bot');
   });
 
   it('scrape() rejects unknown platform', async () => {
