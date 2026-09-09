@@ -1991,14 +1991,14 @@ Nowing cần **Health Score (0-100)** và **Tier (A/B/C)** cho mỗi scraper đ�
 
 XActions hiện hỗ trợ 10+ nền tảng social nhưng thiếu ba nguồn nội dung quan trọng: **Reddit** (community + discussion data), **Medium** (long-form content), và **Instagram** (visual social + influencer data). Nowing AI Lead Hub cần đa dạng hóa nguồn lead generation và content intelligence. Technical research 2026-09-08/09 cho thấy:
 
-- **Reddit** — official REST API + read-only mode feasible; low complexity.
+- **Reddit** — official REST API + read-only mode feasible, but public `.json` endpoints often return HTTP 403 from non-residential/unauthenticated IPs; RSS fallback (`/r/{sub}/new.rss`) and optional Puppeteer stealth bridge are required for resilient public scraping.
 - **Medium** — official API deprecated; RSS feed still accessible without auth; low complexity.
 - **Instagram** — high complexity; private API via `instagrapi` or Puppeteer needed; proxy + session management required.
 
 ## Scope
 
 **Trong scope:**
-- Reddit REST API scraper (`src/scrapers/social/reddit/`) with OAuth2 read-only.
+- Reddit hybrid scraper (`src/scrapers/social/reddit/`) with OAuth2 read-only, public `.json` endpoints, RSS fallback, and optional Puppeteer stealth bridge.
 - Medium RSS/HTML scraper (`src/scrapers/social/medium/`) without auth.
 - Instagram hybrid scraper (`src/scrapers/social/instagram/`) with private API bridge or Puppeteer.
 - Unified proxy support: all new clients accept `ProxyProvider` / `proxy` option.
@@ -2014,7 +2014,7 @@ XActions hiện hỗ trợ 10+ nền tảng social nhưng thiếu ba nguồn n�
 
 ## Architecture Decisions
 
-- **AD-35**: Reddit và Medium dùng HTTP-only adapter (không cần browser).
+- **AD-35**: Reddit dùng **HTTP-first với RSS fallback + Puppeteer stealth bridge** cho public endpoints; Medium dùng RSS-first với HTML/Puppeteer fallback.
 - **AD-36**: Instagram dùng hybrid — `instagrapi` Python bridge hoặc Puppeteer public scraping.
 - **AD-37**: Tất cả platform mới phải inject `ProxyProvider` từ `src/proxy/`; default fallback là `PROXY_URL` env.
 - **AD-38**: Proxy cho US-resident platforms (Reddit/Medium/Instagram) nên dùng `country-us` hoặc residential proxy, không dùng `country-vn` default.

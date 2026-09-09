@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: "09-09-2026 11:30"
+last_updated: "09-09-2026 17:50"
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -216,7 +216,7 @@ development_status:
   epic-34-retrospective: optional
 
   epic-35: in-progress
-  35-1-reddit-scraper-client-crawler-validator-tests: done
+  35-1-reddit-scraper-client-crawler-validator-tests: in-progress
   35-2-medium-scraper-client-crawler-validator-tests: backlog
   35-3-instagram-scraper-client-crawler-session-proxy-tests: backlog
   35-4-unified-proxyprovider-injection-socialaccount-schema-docs-se: backlog

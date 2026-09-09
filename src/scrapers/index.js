@@ -2631,9 +2631,13 @@ export function createRedditCrawler(clientOrDeps, options = {}) {
 export {
   YouTubeVNCrawler,
   YouTubeClient,
+  createYouTubeVNCrawler,
+  createYouTubeClient,
   scrapeYouTube,
   ZaloCrawler,
   ZaloClient,
+  createZaloCrawler,
+  createZaloClient,
   scrapeZalo,
   FacebookCrawler,
   FacebookClient,

@@ -40,7 +40,7 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
         }
 
         // 2. Public subreddit listing
-        if (req.url?.startsWith('/r/programming/new.json') || req.url?.startsWith('/r/programming/new?') || req.url === '/r/programming/new') {
+        if (req.url?.startsWith('/r/programming/new.json') || req.url?.startsWith('/r/programming/new?') || req.url === '/r/programming/new' || req.url?.startsWith('/r/programming/new.rss')) {
           const urlObj = new URL(req.url, 'http://127.0.0.1');
           const after = urlObj.searchParams.get('after');
           res.writeHead(200, {
@@ -388,5 +388,83 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
     const elapsed = Date.now() - start;
     expect(elapsed).toBeGreaterThanOrEqual(60);
     expect(elapsed).toBeLessThan(1000);
+  });
+});
+
+describe('RedditClient RSS fallback', () => {
+  let server;
+  let serverUrl;
+  const rssBody = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+  <category term="programming" label="r/programming"/>
+  <updated>2026-09-08T17:30:00+00:00</updated>
+  <icon>https://www.redditstatic.com/icon.png</icon>
+  <title>programming</title>
+  <entry>
+    <author><name>/u/dev1</name><uri>https://www.reddit.com/user/dev1/</uri></author>
+    <category term="programming" label="r/programming"/>
+    <content type="html">&lt;div class="md"&gt;&lt;p&gt;Hello&lt;/p&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt;&lt;div class="bma-author"&gt;&lt;div class="bma-comment-count"&gt;&lt;a href="https://www.reddit.com/r/programming/comments/abc123/test/"&gt;[comments]&lt;/a&gt;&lt;/div&gt;&lt;/div&gt;</content>
+    <id>https://www.reddit.com/r/programming/comments/abc123/test/</id>
+    <link href="https://www.reddit.com/r/programming/comments/abc123/test/"/>
+    <published>2026-09-08T17:20:00+00:00</published>
+    <title>Test post</title>
+    <updated>2026-09-08T17:20:00+00:00</updated>
+  </entry>
+  <entry>
+    <author><name>/u/dev2</name><uri>https://www.reddit.com/user/dev2/</uri></author>
+    <category term="programming" label="r/programming"/>
+    <content type="html">&lt;div class="md"&gt;&lt;p&gt;External&lt;/p&gt; &lt;/div&gt;&lt;!-- SC_ON --&gt;&lt;div class="bma-author"&gt;&lt;div class="bma-comment-count"&gt;&lt;a href="https://www.reddit.com/r/programming/comments/abc124/external/"&gt;[comments] (42 comments)&lt;/a&gt;&lt;/div&gt;&lt;/div&gt;</content>
+    <id>https://www.reddit.com/r/programming/comments/abc124/external/</id>
+    <link href="https://example.com/external-article"/>
+    <published>2026-09-08T17:15:00+00:00</published>
+    <title>External link post</title>
+    <updated>2026-09-08T17:15:00+00:00</updated>
+  </entry>
+</feed>`;
+
+  beforeAll(async () => {
+    server = http.createServer((req, res) => {
+      if (req.url?.startsWith('/r/programming/new.rss')) {
+        res.writeHead(200, { 'content-type': 'application/atom+xml' });
+        res.end(rssBody);
+        return;
+      }
+      if (req.url?.startsWith('/r/programming/new.json')) {
+        res.writeHead(403, { 'content-type': 'text/html' });
+        res.end('<html>Access denied by Cloudflare</html>');
+        return;
+      }
+      res.writeHead(404);
+      res.end('not found');
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    serverUrl = `http://127.0.0.1:${server.address().port}`;
+  });
+
+  afterAll(async () => {
+    await new Promise((resolve) => server.close(resolve));
+  });
+
+  it('falls back to .rss when .json returns bot challenge', async () => {
+    const client = new RedditClient({ baseUrl: serverUrl });
+    const res = await client.apiRequest('/r/programming/new', { limit: 5 });
+
+    expect(res.kind).toBe('Listing');
+    expect(res.data.children).toHaveLength(2);
+    expect(res.data.children[0].kind).toBe('t3');
+    expect(res.data.children[0].data.id).toBe('abc123');
+    expect(res.data.children[0].data.title).toBe('Test post');
+    expect(res.data.children[0].data.author).toBe('dev1');
+    expect(res.data.children[1].data.url).toBe('https://example.com/external-article');
+    expect(res.data.children[1].data.num_comments).toBe(42);
+  });
+
+  it('does not fall back for authenticated clients', async () => {
+    const client = new RedditClient({
+      baseUrl: serverUrl,
+      apiBaseUrl: serverUrl,
+      accessToken: 'mock_token',
+    });
+    await expect(client.apiRequest('/r/programming/new', { limit: 5 })).rejects.toThrow();
   });
 });

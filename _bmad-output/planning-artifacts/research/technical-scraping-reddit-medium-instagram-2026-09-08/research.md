@@ -49,7 +49,10 @@ _Sections are appended per the approved research plan; the executive summary is 
 - **Maturity**: Medium API chết; RSS ổn định nhưng giới hạn content (không có full text nếu member-only, không có metadata phong phú).
 
 ### Direct access test (from this machine)
-- `reddit.com` — HTTP 200 via curl, không cần proxy cho research [14].
+- `reddit.com` homepage — HTTP 200 via curl, không cần proxy cho research [14].
+- `reddit.com/r/{sub}/new.json` — HTTP 403 / Cloudflare bot challenge từ IP này; cần OAuth app + residential proxy hoặc Puppeteer stealth để truy cập full REST API [14].
+- `reddit.com/r/{sub}/new.rss` — HTTP 200, hoạt động như fallback không cần auth, parse được qua `fast-xml-parser` [14a].
+- `old.reddit.com/r/{sub}/new.json` — HTTP 302 redirect to login [14b].
 - `medium.com` homepage — HTTP 403 via curl (Cloudflare block headless non-browser fingerprint), nhưng RSS endpoint `/feed/@x` — HTTP 200 [14].
 
 ### Sources
@@ -66,7 +69,9 @@ _Sections are appended per the approved research plan; the executive summary is 
 - [11] Medium API docs — `https://github.com/Medium/medium-api-docs/blob/master/README.md`
 - [12] Medium RSS feeds help — `https://help.medium.com/hc/en-us/articles/214874738-Medium-s-RSS-feeds`
 - [13] Medium RSS endpoint test — `https://medium.com/feed/@x`
-- [14] Direct curl test from this machine — `medium.com` 403, `medium.com/feed/@x` 200, `reddit.com` 200
+- [14] Direct curl test from this machine — `reddit.com` homepage 200, `reddit.com/r/{sub}/new.json` 403 (Cloudflare bot challenge), `reddit.com/r/{sub}/new.rss` 200, `old.reddit.com/r/{sub}/new.json` 302 → login, `medium.com` 403, `medium.com/feed/@x` 200
+- [14a] Live RSS verification 2026-09-09 — `reddit.com/r/vietnam/new.rss` returns HTTP 200 and parseable Atom feed with `entry` elements; `fast-xml-parser` successfully converts to Listing-shaped `t3` objects
+- [14b] Live `old.reddit.com` check 2026-09-09 — `/r/{sub}/new.json` returns HTTP 302 redirect to `https://www.reddit.com/login`
 
 ---
 
@@ -74,7 +79,7 @@ _Sections are appended per the approved research plan; the executive summary is 
 
 ### Reddit
 - **Auth**: OAuth2 (client_id, client_secret, user_agent). Read-only mode đủ cho public data scraping [4].
-- **Protocol**: REST JSON — endpoints `https://api.reddit.com` hoặc `https://www.reddit.com` với `?raw_json=1`.
+- **Protocol**: REST JSON — endpoints `https://api.reddit.com` hoặc `https://www.reddit.com` với `?raw_json=1`. Public `.json` endpoints frequently return HTTP 403 from non-residential / unauthenticated IPs; RSS fallback (`/r/{sub}/new.rss`) and Puppeteer stealth bridge are both needed for production resilience.
 - **Rate limit**: dynamic theo response headers; PRAW tự handle backoff. XActions cần implement rate limiter tương tự trong `client.js` [3][6].
 - **Format**: `children[]` listing, `kind` discriminator (`t1` comment, `t3` post, `t5` subreddit) — dễ normalize vào XActions `PostItem`.
 
@@ -92,7 +97,7 @@ _Sections are appended per the approved research plan; the executive summary is 
 
 ### XActions integration pattern
 - Mỗi platform mới cần: `client.js` (HTTP wrapper + auth), `crawler.js` (orchestration), `normalizer.js` (→ XActions `PostItem`/`ProfileItem`), `validator.js` (schema checks), `index.js` barrel.
-- Reddit: HTTP-only client là đủ (không cần Puppeteer).
+- Reddit: HTTP-first client với RSS fallback và Puppeteer stealth bridge (đã triển khai RSS fallback trong `client.js` qua `fast-xml-parser`).
 - Instagram: cần `puppeteer`/`playwright` adapter vì private API phức tạp; hoặc port `instagrapi` sang Node.js.
 - Medium: HTTP-only hoặc cheerio adapter đủ.
 
@@ -154,9 +159,9 @@ _Sections are appended per the approved research plan; the executive summary is 
 ### Reddit
 - **Learning curve**: thấp — REST API đơn giản, docs tốt, community mạnh (`r/redditdev`).
 - **Tooling**: Node.js `fetch`/`got`/`undici` là đủ. Nếu cần PRAW, cần Python subprocess hoặc port.
-- **Operational burden**: trung bình — cần OAuth app, user_agent compliance, rate limit backoff.
+- **Operational burden**: trung bình — cần OAuth app (cho scale) hoặc RSS fallback (không auth), user_agent compliance, rate limit backoff; residential proxy nếu muốn tránh Cloudflare bot challenge trên `.json` endpoints.
 - **Risk**: API pricing changes (2023 crisis); cần monitor `r/redditdev` và support docs.
-- **XActions fit**: cao — phù hợp `http` adapter, không cần browser.
+- **XActions fit**: cao — phù hợp `http` adapter với RSS fallback, có thể thêm Puppeteer stealth bridge nếu cần full data.
 
 ### Instagram
 - **Learning curve**: cao — private API không docs, thường xuyên thay đổi, cần reverse engineering.
@@ -213,12 +218,12 @@ _Sections are appended per the approved research plan; the executive summary is 
 
 **Findings**:
 
-- **Reddit** — feasible, low risk. Official REST API + read-only mode, `http` adapter trong XActions là đủ. Cần OAuth app và rate limit handling.
+- **Reddit** — feasible, low risk. Official REST API + read-only mode, nhưng public `.json` endpoints thường trả HTTP 403 từ IP không xác thực. Triển khai hybrid: HTTP-first với RSS fallback (`/r/{sub}/new.rss`) không cần auth, và Puppeteer stealth bridge tùy chọn cho full data khi có OAuth/residential proxy. `fast-xml-parser` dùng để parse Atom feed thành Listing-shaped `t3` objects.
 - **Medium** — feasible, low risk. API đã deprecated nhưng RSS feed (`/feed/@username`) vẫn accessible, không cần auth. `http` hoặc `cheerio` adapter phù hợp.
 - **Instagram** — high effort, high risk. Private API cần `instagrapi` hoặc Puppeteer với session/proxy management. Nên xem xét managed service nếu production cần ổn định.
 
 **Recommended approach**:
-1. **Reddit** — implement `src/scrapers/social/reddit/` với `client.js` (HTTP + OAuth), `crawler.js`, `normalizer.js`, `validator.js`. Dùng `read-only` mode cho public data.
+1. **Reddit** — implement `src/scrapers/social/reddit/` với `client.js` (HTTP + OAuth + RSS fallback + Puppeteer bridge tùy chọn), `crawler.js`, `normalizer.js`, `validator.js`. Dùng RSS fallback cho public data không cần auth; OAuth2 read-only hoặc Puppeteer stealth cho đầy đủ metadata.
 2. **Medium** — implement `src/scrapers/social/medium/` với `client.js` (HTTP/RSS), `crawler.js`, `normalizer.js`, `validator.js`. RSS feed là đủ cho public posts.
 3. **Instagram** — cân nhắc hai options: (a) viết `src/scrapers/social/instagram/` dựa trên `instagrapi` Python bridge hoặc port; (b) không implement trong XActions, recommend external service. Nếu implement, cần proxy pool, session persistence, và rủi ro account ban cao.
 
@@ -233,7 +238,9 @@ _Sections are appended per the approved research plan; the executive summary is 
 - Có cần Python bridge cho `instagrapi`, hay viết lại bằng Node.js (lớn hơn nhiều)?
 - Reddit API pricing có phù hợp với roadmap XActions không?
 - Có nên tạo bảng `Proxy` chung trong schema thay vì gắn proxy vào `FacebookAccount`?
-- Có nên đổi proxy default từ `country-vn` sang `country-us` cho các scraper mới?
+- [x] Có nên đổi proxy default từ `country-vn` sang `country-us` cho các scraper mới?
+- Có cần triển khai Puppeteer stealth bridge song song với RSS fallback cho Reddit không?
+- RSS fallback có đủ metadata (score, num_comments) hay cần bổ sung Puppeteer để lấy đầy đủ?
 
 **Claim ledger**:
 - ref=[1] status=verified class=landscape pub=2023–2024 — Reddit Data API migrated to paid pricing in 2023.
@@ -243,5 +250,7 @@ _Sections are appended per the approved research plan; the executive summary is 
 - ref=[9] status=verified class=implementation pub=2024 — instagrapi recommends stable proxy identity per account and random delays between requests.
 - ref=[11] status=verified class=landscape pub=2023 — Medium API officially deprecated.
 - ref=[13] status=verified class=integration pub=2026-09 — Medium RSS `/feed/@x` endpoint accessible without auth.
-- ref=[14] status=verified class=implementation pub=2026-09 — Direct `curl` from this machine: `reddit.com` 200, `medium.com/feed/@x` 200, `medium.com` 403.
+- ref=[14] status=verified class=implementation pub=2026-09 — Direct `curl` from this machine: `reddit.com` homepage 200, `reddit.com/r/vietnam/new.json` 403 (Cloudflare bot challenge), `reddit.com/r/vietnam/new.rss` 200, `old.reddit.com/r/vietnam/new.json` 302 → login, `medium.com` 403, `medium.com/feed/@x` 200.
+- ref=[14a] status=verified class=implementation pub=2026-09 — Live RSS verification: `reddit.com/r/vietnam/new.rss` returns HTTP 200 parseable Atom feed; converted to Listing-shaped `t3` objects via `fast-xml-parser`.
+- ref=[14b] status=verified class=implementation pub=2026-09 — Live `old.reddit.com/r/{sub}/new.json` returns HTTP 302 redirect to login.
 - ref=[19] status=verified class=implementation pub=2026-09 — `FacebookAccount.encryptedProxy` stores SocksNode `country-vn` proxy; decrypted successfully.

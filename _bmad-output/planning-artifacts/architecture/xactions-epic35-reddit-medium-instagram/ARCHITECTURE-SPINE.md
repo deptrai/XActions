@@ -33,7 +33,7 @@ Epic 35 mở rộng `src/scrapers/social/` với ba nền tảng mới — **Red
 
 | Platform | Adapter | Auth | Proxy | Complexity |
 |----------|---------|------|-------|------------|
-| Reddit | `http` (got-scraping / undici) | OAuth2 read-only | Required for scale | Low |
+| Reddit | `http` first with RSS fallback + optional `puppeteer` stealth bridge | OAuth2 read-only or no auth (RSS) | Recommended residential for `.json` scale; RSS works without proxy | Low-Medium |
 | Medium | `http` or `cheerio` | None (public RSS/HTML) | Required if geo-blocked | Low |
 | Instagram | `puppeteer` or `instagrapi` Python bridge | Session cookie / username+password | Required | High |
 
@@ -45,6 +45,7 @@ Epic 35 mở rộng `src/scrapers/social/` với ba nền tảng mới — **Red
 - **IN-4**: Rate limiting xử lý tại `Client` layer; cào chậm 1–3s giữa các request trừ khi rate limit headers cho phép nhanh hơn.
 - **IN-5**: Session/cookie không hard-code; lấy từ env, CLI args, hoặc `PrismaStore`.
 - **IN-6**: Mọi social platform session/cookie/proxy phải lưu trong `SocialAccount` model với `encryptedCookie`/`encryptedProxy` (AES-256-GCM). `FacebookAccount` là legacy — sẽ migrate sau.
+- **IN-7**: Mọi client mới phải hỗ trợ `transport` option (`'http' | 'puppeteer' | 'rss'`) để chọn adapter phù hợp tùy theo endpoint và khả năng truy cập.
 
 ## 4. Module Layout
 
@@ -150,8 +151,8 @@ CrawlerCommand → AbstractCrawler → [Platform]Client → ProxyProvider → HT
 
 ## 7. Key Technical Decisions
 
-- **AD-35-1**: Reddit dùng HTTP-only (không cần browser) vì official API ổn định.
-- **AD-35-2**: Medium dùng RSS trước, HTML scraping fallback nếu RSS thay đổi.
+- **AD-35-1**: Reddit dùng **HTTP-first** với **RSS fallback** khi `.json` 403, và **Puppeteer stealth bridge** khi cần full API data (comments, user profile, search) mà không có OAuth app/residential proxy.
+- **AD-35-2**: Medium dùng RSS trước, **HTML/Puppeteer scraping fallback** nếu RSS thay đổi hoặc `medium.com/@x` trả 403.
 - **AD-35-3**: Instagram dùng `instagrapi` Python bridge hoặc Puppeteer public GraphQL; decision deferred đến Story 35.3.
 - **AD-35-4**: Proxy là optional ở constructor nhưng required ở production cho Instagram.
 - **AD-35-5**: `country-us` hoặc residential proxy là default cho Reddit/Medium/Instagram; `country-vn` chỉ dùng cho VN platforms.

@@ -17,6 +17,7 @@ import {
   ErrorTypes,
   SuggestedActions,
 } from '../../../core/error-envelope.js';
+import { XMLParser } from 'fast-xml-parser';
 
 export const DEFAULT_REDDIT_BASE_URL = 'https://www.reddit.com';
 export const DEFAULT_REDDIT_API_URL = 'https://api.reddit.com';
@@ -303,8 +304,203 @@ export class RedditClient extends AbstractApiClient {
       if (options.body !== undefined) reqOpts.body = options.body;
     }
 
-    const res = await this.request(method, url, reqOpts);
-    return res?.data !== undefined ? res.data : res;
+    try {
+      const res = await this.request(method, url, reqOpts);
+      return res?.data !== undefined ? res.data : res;
+    } catch (err) {
+      // When public .json endpoints are blocked, attempt RSS fallback for
+      // subreddit listings. This allows scraping real public subreddits without
+      // an OAuth app or residential proxy.
+      if (!useApiBase && !token && this.#looksLikeSubredditListing(normalizedPath)) {
+        const rss = await this.#rssFallback(normalizedPath, params, options);
+        if (rss) return rss;
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * @param {string} path
+   * @returns {boolean}
+   */
+  #looksLikeSubredditListing(path) {
+    return /^\/r\/[^/]+\/(new|hot|top|rising)(\.json)?$/.test(path);
+  }
+
+  /**
+   * @param {string} path
+   * @param {Record<string, string | number | boolean | undefined | null>} params
+   * @param {Object} options
+   * @returns {Promise<Record<string, any> | null>}
+   */
+  async #rssFallback(path, params = {}, options = {}) {
+    const rssPath = path.replace(/\.json$/, '.rss');
+    const queryParams = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null) {
+        queryParams.set(k, String(v));
+      }
+    }
+    const qs = queryParams.toString();
+    const url = `${this.baseUrl}${rssPath}${qs ? '?' + qs : ''}`;
+
+    try {
+      const res = await this.request('GET', url, {
+        ...options,
+        headers: {
+          'user-agent': this.userAgent,
+          'accept': 'application/atom+xml,application/rss+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+        requiresAuth: false,
+        skipResponseValidation: true,
+      });
+
+      const body = typeof res?.data === 'string' ? res.data : (typeof res === 'string' ? res : '');
+      if (!body || !body.includes('<feed') && !body.includes('<rss')) {
+        return null;
+      }
+
+      return this.#parseRssSubreddit(body, path);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Parse a Reddit subreddit Atom feed into a Listing-shaped response.
+   * @param {string} body
+   * @param {string} path
+   * @returns {Record<string, any>}
+   */
+  #parseRssSubreddit(body, path) {
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: '@_',
+      textNodeName: '#text',
+      parseAttributeValue: false,
+    });
+    const feed = parser.parse(body)?.feed || {};
+
+    const match = path.match(/^\/r\/([^/]+)\/(new|hot|top|rising)/);
+    const subreddit = match ? match[1] : '';
+
+    const entries = Array.isArray(feed.entry) ? feed.entry : (feed.entry ? [feed.entry] : []);
+    const children = entries.map((entry) => {
+      const id = typeof entry.id === 'string' ? entry.id : '';
+      const title = typeof entry.title === 'string' ? entry.title : '';
+      const linkHref = typeof entry.link === 'string' ? entry.link : (entry.link?.['@_href'] || '');
+      const published = typeof entry.published === 'string' ? entry.published : (entry.updated || '');
+      const updated = typeof entry.updated === 'string' ? entry.updated : published;
+      const contentHtml = typeof entry.content === 'string' ? entry.content : (entry.content?.['#text'] || '');
+      const authorName = entry.author?.name ? String(entry.author.name).replace(/^\/?u\//, '') : '';
+
+      // Reddit Atom entries use `id` as the canonical comments thread URL
+      // and `link` either as the target external URL or the same comments URL.
+      const commentsUrl = this.#extractCommentsUrl({ id, link: linkHref, contentHtml, subreddit });
+      const targetUrl = this.#looksLikeRedditThread(linkHref, subreddit) ? '' : linkHref;
+      const commentsMatch = commentsUrl.match(/\/comments\/([a-zA-Z0-9_-]+)\//i);
+      const postId = commentsMatch ? commentsMatch[1] : id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 12);
+
+      return {
+        kind: 't3',
+        data: {
+          name: `t3_${postId}`,
+          id: postId,
+          subreddit,
+          author: authorName,
+          title,
+          selftext: this.#extractSelftextFromHtml(contentHtml),
+          score: 0,
+          num_comments: this.#extractCommentCountFromHtml(contentHtml),
+          created_utc: published ? Math.floor(new Date(published).getTime() / 1000) : 0,
+          updated_utc: updated ? Math.floor(new Date(updated).getTime() / 1000) : 0,
+          permalink: this.#toPermalink(commentsUrl),
+          url: targetUrl || commentsUrl,
+          is_self: !targetUrl,
+          is_video: false,
+          over_18: false,
+          preview: null,
+        },
+      };
+    });
+
+    return {
+      kind: 'Listing',
+      data: {
+        children,
+        after: null,
+      },
+    };
+  }
+
+  /**
+   * @param {Object} sources
+   * @param {string} sources.id
+   * @param {string} sources.link
+   * @param {string} sources.contentHtml
+   * @param {string} sources.subreddit
+   * @returns {string}
+   */
+  #extractCommentsUrl({ id, link, contentHtml, subreddit }) {
+    if (this.#looksLikeRedditThread(id, subreddit)) return id;
+    if (this.#looksLikeRedditThread(link, subreddit)) return link;
+
+    const hrefMatch = (contentHtml || '').match(/href="(https?:\/\/[^"]+\/r\/[^"]+\/comments\/[^"]+)"/i);
+    if (hrefMatch) return hrefMatch[1];
+
+    return link;
+  }
+
+  /**
+   * @param {string} url
+   * @param {string} subreddit
+   * @returns {boolean}
+   */
+  #looksLikeRedditThread(url, subreddit) {
+    return /^https?:\/\/[^/]+\/r\//i.test(url) && (subreddit ? url.includes(`/r/${subreddit}/comments/`) : /\/comments\/[^/]+/i.test(url));
+  }
+
+  /**
+   * @param {string} url
+   * @returns {string}
+   */
+  #toPermalink(url) {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.pathname.endsWith('/') ? urlObj.pathname : `${urlObj.pathname}/`;
+    } catch {
+      return url.startsWith('/') ? url : `/r/`;
+    }
+  }
+
+  /**
+   * @param {string} html
+   * @returns {string}
+   */
+  #extractSelftextFromHtml(html) {
+    if (!html) return '';
+    const text = html
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#32;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    // Remove the boilerplate "submitted by /u/... [link] [comments]" suffix.
+    return text.replace(/submitted by\s*\/u\/[^\s]+\s*\[link\]\s*\[comments\].*$/i, '').trim();
+  }
+
+  /**
+   * @param {string} html
+   * @returns {number}
+   */
+  #extractCommentCountFromHtml(html) {
+    if (!html) return 0;
+    const match = html.match(/\[comments\]\s*\((\d+)\s*comments?\)/i);
+    if (match) return Number(match[1]);
+    return 0;
   }
 
   /**
