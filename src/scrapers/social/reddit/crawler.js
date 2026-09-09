@@ -61,6 +61,15 @@ export class RedditCrawler extends AbstractCrawler {
   }
 
   /**
+   * Safely cast an unknown value to a record for typed property access.
+   * @param {unknown} value
+   * @returns {Record<string, unknown>}
+   */
+  #asRecord(value) {
+    return (typeof value === 'object' && value !== null ? /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (value)) : {});
+  }
+
+  /**
    * @param {Object} [deps]
    * @param {RedditClient} [deps.client]
    * @param {import('../../../core/base-store.js').AbstractStore} [deps.store]
@@ -71,22 +80,25 @@ export class RedditCrawler extends AbstractCrawler {
    * @param {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher} [deps.redisPublisher]
    * @param {boolean} [deps.requiresAuth]
    * @param {boolean} [deps.requiresProxy]
-   * @param {'http' | 'puppeteer' | 'rss'} [deps.transport]
+   * @param {string} [deps.transport]
    */
   constructor(deps = {}) {
     const { client: explicitClient, transport, ...clientDeps } = deps;
-    const client = explicitClient || new RedditClient({ ...clientDeps, transport: transport || clientDeps.transport });
-    if (explicitClient && typeof transport === 'string') {
-      const validTransports = /** @type {Set<'http' | 'puppeteer' | 'rss'>} */ (new Set(['http', 'puppeteer', 'rss']));
-      if (validTransports.has(/** @type {'http' | 'puppeteer' | 'rss'} */ (transport))) {
-        explicitClient.transport = /** @type {'http' | 'puppeteer' | 'rss'} */ (transport);
+    const rawTransport = typeof transport === 'string' ? transport : undefined;
+    const client = explicitClient
+      ? /** @type {RedditClient} */ (/** @type {unknown} */ (explicitClient))
+      : new RedditClient({ ...clientDeps, transport: rawTransport });
+    if (explicitClient && rawTransport) {
+      if (rawTransport === 'http' || rawTransport === 'puppeteer' || rawTransport === 'rss') {
+        client.transport = rawTransport;
       }
     }
 
+    const requiresAuth = typeof deps.requiresAuth === 'boolean' ? deps.requiresAuth : false;
     super({
       ...deps,
       client,
-      requiresAuth: deps.requiresAuth !== undefined ? deps.requiresAuth : false,
+      requiresAuth,
     });
 
     this.category = 'social';
@@ -113,7 +125,7 @@ export class RedditCrawler extends AbstractCrawler {
           fallbackCursorFields: ['cursor'],
         };
       },
-      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getSubredditPosts(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) => this.getSubredditPosts(args, session),
     });
 
     // ── 2. Action: user ──
@@ -136,7 +148,7 @@ export class RedditCrawler extends AbstractCrawler {
           fallbackCursorFields: ['cursor'],
         };
       },
-      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getUser(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) => this.getUser(args, session),
     });
 
     // ── 3. Action: search ──
@@ -159,7 +171,7 @@ export class RedditCrawler extends AbstractCrawler {
           fallbackCursorFields: ['cursor'],
         };
       },
-      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.search(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) => this.searchReddit(args, session),
     });
 
     // ── 4. Action: post_comments ──
@@ -186,7 +198,7 @@ export class RedditCrawler extends AbstractCrawler {
           return null;
         }
       },
-      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostComments(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) => this.getPostComments(args, session),
     });
 
     // ── 5. Action: subreddit_info ──
@@ -199,13 +211,13 @@ export class RedditCrawler extends AbstractCrawler {
       optionalArgs: ['subreddit'],
       outputType: 'PostItem',
       example: { name: 'programming' },
-      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getSubredditInfo(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) => this.getSubredditInfo(args, session),
     });
   }
 
   /**
    * Resolve subreddit name from various arg conventions.
-   * @param {Record<string, any>} args
+   * @param {Record<string, unknown>} args
    * @returns {string}
    */
   #extractSubreddit(args = {}) {
@@ -225,7 +237,7 @@ export class RedditCrawler extends AbstractCrawler {
 
   /**
    * Resolve username from various arg conventions.
-   * @param {Record<string, any>} args
+   * @param {Record<string, unknown>} args
    * @returns {string}
    */
   #extractUsername(args = {}) {
@@ -246,7 +258,7 @@ export class RedditCrawler extends AbstractCrawler {
   /**
    * Resolve postId from various arg conventions.
    * Supports fullname (t3_xxx), bare id (xxx), or URL.
-   * @param {Record<string, any>} args
+   * @param {Record<string, unknown>} args
    * @returns {{ postId: string, subreddit: string | null }}
    */
   #extractPostId(args = {}) {
@@ -289,16 +301,15 @@ export class RedditCrawler extends AbstractCrawler {
    * @param {string} params.targetType
    * @param {string} params.targetKey
    * @param {string | null} [params.cursor]
-   * @param {any[]} [params.items]
+   * @param {Array<import('../../../core/types.js').PostItem | import('../../../core/types.js').CommentItem | import('../../../core/types.js').ProfileItem>} [params.items]
    * @param {boolean} [params.hasMore]
    */
   async #emitCheckpointAndStream({ targetType, targetKey, cursor = null, items = [], hasMore = false }) {
     try {
-      const storeWithCheckpoint = /** @type {any} */ (this.store);
-      if (storeWithCheckpoint && typeof storeWithCheckpoint.saveCheckpoint === 'function') {
-        const firstItem = /** @type {any} */ (items[0]);
-        const storageRef = firstItem?.id || firstItem?.externalId || '';
-        await storeWithCheckpoint.saveCheckpoint({
+      if (this.store && typeof this.store.saveCheckpoint === 'function') {
+        const firstItem = items[0];
+        const storageRef = (firstItem && (firstItem.id || firstItem.externalId)) || '';
+        await this.store.saveCheckpoint({
           platform: 'reddit',
           targetType,
           targetKey,
@@ -311,23 +322,26 @@ export class RedditCrawler extends AbstractCrawler {
       }
 
       if (isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
-        const publisher =
-          this.redisPublisher ||
-          (this.store && /** @type {any} */ (this.store).publisher) ||
-          defaultRedisStreamPublisher;
+        const storeRecord = this.store ? this.#asRecord(this.store) : null;
+        const rawStorePublisher = storeRecord && storeRecord.publisher;
+        const storePublisher = rawStorePublisher && typeof rawStorePublisher === 'object'
+          ? /** @type {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher} */ (/** @type {unknown} */ (rawStorePublisher))
+          : null;
+        const publisher = this.redisPublisher || storePublisher || defaultRedisStreamPublisher;
 
         if (publisher && typeof publisher.publish === 'function') {
           for (const item of items) {
-            const anyItem = /** @type {any} */ (item);
-            const category = 'category' in anyItem && typeof anyItem.category === 'string' ? anyItem.category : 'social';
+            const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
+            const authorId = 'authorId' in item && typeof item.authorId === 'string' ? item.authorId : item.externalId || '';
+            const crawledAt = 'crawledAt' in item && item.crawledAt ? toIsoDate(item.crawledAt) : new Date().toISOString();
             await publisher.publish({
-              id: anyItem.id,
+              id: item.id,
               platform: 'reddit',
-              externalId: anyItem.externalId,
+              externalId: item.externalId,
               category,
-              authorId: anyItem.authorId || anyItem.externalId || '',
-              crawledAt: anyItem.crawledAt ? toIsoDate(anyItem.crawledAt) : new Date().toISOString(),
-              storageRef: anyItem.id,
+              authorId,
+              crawledAt,
+              storageRef: item.id,
               scraperId: this.scraperId,
             });
           }
@@ -340,27 +354,37 @@ export class RedditCrawler extends AbstractCrawler {
 
   /**
    * Scrape subreddit posts.
-   * @param {Record<string, any>} args
-   * @param {Record<string, any>} [session]
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
    * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }>}
    */
   async getSubredditPosts(args = {}, session = {}) {
     const name = this.#extractSubreddit(args);
     const limit = this.#parseCount(args.limit, 25, 100);
-    const sort = ['new', 'hot', 'top', 'rising'].includes(args.sort) ? args.sort : 'new';
-    const time = args.time || undefined;
-    const after = args.after || args.cursor || undefined;
+    const rawSort = typeof args.sort === 'string' ? args.sort : undefined;
+    const sort = rawSort && ['new', 'hot', 'top', 'rising'].includes(rawSort) ? rawSort : 'new';
+    const time = typeof args.time === 'string' ? args.time : undefined;
+    const after = typeof args.after === 'string' ? args.after : (typeof args.cursor === 'string' ? args.cursor : undefined);
 
-    const params = { limit };
+    const params = /** @type {Record<string, unknown>} */ ({ limit });
     if (sort === 'top' && time) params.t = time;
     if (after) params.after = after;
 
     const raw = await this.client.apiRequest(`/r/${name}/${sort}`, params);
-    const children = Array.isArray(raw?.data?.children) ? raw.data.children : [];
+    const rawData = /** @type {Record<string, unknown>} */ (raw?.data ?? raw);
+    const children = Array.isArray(rawData.children) ? rawData.children : [];
     const posts = children
-      .filter((child) => child?.kind === 't3')
-      .map((child) => { const post = normalizeRedditPost(child); this.validateItem(post); return post; });
-    const nextCursor = raw?.data?.after || null;
+      .filter((child) => {
+        const thing = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (child));
+        return thing.kind === 't3';
+      })
+      .map((child) => {
+        const thing = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (child));
+        const post = normalizeRedditPost(thing);
+        this.validateItem(post);
+        return post;
+      });
+    const nextCursor = typeof rawData.after === 'string' ? rawData.after : null;
 
     let stopPagination = false;
     if (this.store && posts.length > 0) {
@@ -387,17 +411,18 @@ export class RedditCrawler extends AbstractCrawler {
 
   /**
    * Scrape user profile and posts.
-   * @param {Record<string, any>} args
-   * @param {Record<string, any>} [session]
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
    * @returns {Promise<{ profile: import('../../../core/types.js').ProfileItem, posts: import('../../../core/types.js').PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }>}
    */
   async getUser(args = {}, session = {}) {
     const username = this.#extractUsername(args);
     const limit = this.#parseCount(args.limit, 25, 100);
-    const sort = ['new', 'hot', 'top'].includes(args.sort) ? args.sort : 'new';
-    const after = args.after || args.cursor || undefined;
+    const rawSort = typeof args.sort === 'string' ? args.sort : undefined;
+    const sort = rawSort && ['new', 'hot', 'top'].includes(rawSort) ? rawSort : 'new';
+    const after = typeof args.after === 'string' ? args.after : (typeof args.cursor === 'string' ? args.cursor : undefined);
 
-    const params = { limit, sort };
+    const params = /** @type {Record<string, unknown>} */ ({ limit, sort });
     if (after) params.after = after;
 
     const [profileRaw, postsRaw] = await Promise.all([
@@ -405,12 +430,22 @@ export class RedditCrawler extends AbstractCrawler {
       this.client.apiRequest(`/user/${username}/submitted`, params),
     ]);
 
-    const profile = normalizeRedditUser(profileRaw); this.validateItem(profile);
-    const children = Array.isArray(postsRaw?.data?.children) ? postsRaw.data.children : [];
+    const profile = normalizeRedditUser(profileRaw);
+    this.validateItem(/** @type {import('../../../core/types.js').PostItem | import('../../../core/types.js').CommentItem} */ (/** @type {unknown} */ (profile)));
+    const postsData = /** @type {Record<string, unknown>} */ (postsRaw?.data ?? postsRaw);
+    const children = Array.isArray(postsData.children) ? postsData.children : [];
     const posts = children
-      .filter((child) => child?.kind === 't3')
-      .map((child) => { const post = normalizeRedditPost(child); this.validateItem(post); return post; });
-    const nextCursor = postsRaw?.data?.after || null;
+      .filter((child) => {
+        const thing = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (child));
+        return thing.kind === 't3';
+      })
+      .map((child) => {
+        const thing = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (child));
+        const post = normalizeRedditPost(thing);
+        this.validateItem(post);
+        return post;
+      });
+    const nextCursor = typeof postsData.after === 'string' ? postsData.after : null;
 
     let stopPagination = false;
     if (this.store) {
@@ -459,13 +494,13 @@ export class RedditCrawler extends AbstractCrawler {
 
   /**
    * Search posts across Reddit.
-   * @param {Record<string, any>} args
-   * @param {Record<string, any>} [session]
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
    * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }>}
    */
-  async search(args = {}, session = {}) {
-    const query = args.query || args.q;
-    if (!query || typeof query !== 'string' || !query.trim()) {
+  async searchReddit(args = {}, session = {}) {
+    const query = typeof args.query === 'string' ? args.query : (typeof args.q === 'string' ? args.q : undefined);
+    if (!query || !query.trim()) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
         code: 'XACT_4001',
@@ -477,17 +512,26 @@ export class RedditCrawler extends AbstractCrawler {
     }
 
     const limit = this.#parseCount(args.limit, 25, 100);
-    const sort = args.sort || undefined;
-    const time = args.time || undefined;
-    const after = args.after || args.cursor || undefined;
+    const sort = typeof args.sort === 'string' ? args.sort : undefined;
+    const time = typeof args.time === 'string' ? args.time : undefined;
+    const after = typeof args.after === 'string' ? args.after : (typeof args.cursor === 'string' ? args.cursor : undefined);
 
-    const params = { q: query.trim(), limit, sort, t: time, after };
+    const params = /** @type {Record<string, unknown>} */ ({ q: query.trim(), limit, sort, t: time, after });
     const raw = await this.client.apiRequest('/search', params);
-    const children = Array.isArray(raw?.data?.children) ? raw.data.children : [];
+    const rawData = /** @type {Record<string, unknown>} */ (raw?.data ?? raw);
+    const children = Array.isArray(rawData.children) ? rawData.children : [];
     const posts = children
-      .filter((child) => child?.kind === 't3')
-      .map((child) => { const post = normalizeRedditPost(child); this.validateItem(post); return post; });
-    const nextCursor = raw?.data?.after || null;
+      .filter((child) => {
+        const thing = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (child));
+        return thing.kind === 't3';
+      })
+      .map((child) => {
+        const thing = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (child));
+        const post = normalizeRedditPost(thing);
+        this.validateItem(post);
+        return post;
+      });
+    const nextCursor = typeof rawData.after === 'string' ? rawData.after : null;
 
     let stopPagination = false;
     if (this.store && posts.length > 0) {
@@ -514,52 +558,67 @@ export class RedditCrawler extends AbstractCrawler {
 
   /**
    * Scrape comment tree for a post.
-   * @param {Record<string, any>} args
-   * @param {Record<string, any>} [session]
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
    * @returns {Promise<{ comments: import('../../../core/types.js').CommentItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }>}
    */
   async getPostComments(args = {}, session = {}) {
     const { postId, subreddit } = this.#extractPostId(args);
     const limit = this.#parseCount(args.limit, 100, 500);
     const depth = this.#parseCount(args.depth, 10, 24);
-    const after = args.after || args.cursor || undefined;
+    const after = typeof args.after === 'string' ? args.after : (typeof args.cursor === 'string' ? args.cursor : undefined);
 
-    const params = { limit, depth };
+    const params = /** @type {Record<string, unknown>} */ ({ limit, depth });
     if (after) params.after = after;
 
     const path = subreddit ? `/r/${subreddit}/comments/${postId}` : `/comments/${postId}`;
     const raw = await this.client.apiRequest(path, params);
-    const postListing = Array.isArray(raw) ? raw[0] : null;
-    const commentListing = Array.isArray(raw) ? raw[1] : null;
+    const rawArr = Array.isArray(raw) ? raw : [];
+    const postListing = this.#asRecord(rawArr[0]);
+    const postData = this.#asRecord(postListing.data);
+    const commentListing = this.#asRecord(rawArr[1]);
+    const commentData = this.#asRecord(commentListing.data);
 
     const comments = [];
-    const stack = [...(commentListing?.data?.children || [])];
+    const children = Array.isArray(commentData.children) ? commentData.children : [];
+    const stack = [...children];
     while (stack.length > 0 && comments.length < limit) {
-      const node = stack.shift();
-      if (!node || node.kind !== 't1') continue;
-      { const comment = normalizeRedditComment(node); this.validateItem(comment); comments.push(comment); }
+      const node = this.#asRecord(stack.shift());
+      if (node.kind !== 't1') continue;
+      const comment = normalizeRedditComment(node);
+      this.validateItem(comment);
+      comments.push(comment);
       if (comments.length >= limit) break;
-      const replies = node.data?.replies?.data?.children;
-      if (Array.isArray(replies)) {
-        for (const reply of replies) {
-          if (comments.length + stack.length >= limit) break;
-          stack.push(reply);
-        }
+      const nodeData = this.#asRecord(node.data);
+      const nodeReplies = this.#asRecord(nodeData.replies);
+      const replyData = this.#asRecord(nodeReplies.data);
+      const replies = Array.isArray(replyData.children) ? replyData.children : [];
+      for (const reply of replies) {
+        if (comments.length + stack.length >= limit) break;
+        stack.push(reply);
       }
     }
 
     // Store the parent post first to satisfy foreign key constraints.
-    if (this.store && postListing) {
-      const postChildren = Array.isArray(postListing?.data?.children) ? postListing.data.children : [postListing];
+    if (this.store && Object.keys(postListing).length > 0) {
+      const postChildren = Array.isArray(postData.children) ? postData.children : [rawArr[0]];
       const posts = postChildren
-        .filter((child) => child && (child.kind === 't3' || child.data))
-        .map((child) => { const post = normalizeRedditPost(child); this.validateItem(post); return post; });
+        .filter((child) => {
+          const thing = this.#asRecord(child);
+          return thing.kind === 't3' || Object.keys(thing).length > 0;
+        })
+        .map((child) => {
+          const thing = this.#asRecord(child);
+          const post = normalizeRedditPost(thing);
+          this.validateItem(post);
+          return post;
+        });
       for (const post of posts) {
         await this.store.storeContent(post).catch(() => {});
       }
     }
 
-    const nextCursor = commentListing?.data?.after || null;
+    const nextCursor = typeof commentData.after === 'string' ? commentData.after : null;
 
     let stopPagination = false;
     if (this.store && comments.length > 0) {
@@ -586,8 +645,8 @@ export class RedditCrawler extends AbstractCrawler {
 
   /**
    * Scrape subreddit metadata.
-   * @param {Record<string, any>} args
-   * @param {Record<string, any>} [session]
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
    * @returns {Promise<import('../../../core/types.js').PostItem>}
    */
   async getSubredditInfo(args = {}, session = {}) {

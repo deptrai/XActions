@@ -39,6 +39,125 @@ export function parseFullname(fullname) {
 }
 
 /**
+ * Safely cast an unknown value to a record for typed property access.
+ * @param {unknown} value
+ * @returns {Record<string, unknown>}
+ */
+function asRecord(value) {
+  return (typeof value === 'object' && value !== null ? /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (value)) : {});
+}
+
+/**
+ * Detect whether a URL points to a direct media asset (image or video).
+ * @param {string} url
+ * @returns {boolean}
+ */
+/**
+ * @typedef {Object} PreviewImage
+ * @property {{ url?: string } | undefined} [source]
+ * @property {Record<string, { source?: { url?: string } }>} [variants]
+ */
+
+/**
+ * @typedef {Object} RawRedditPost
+ * @property {string} [name]
+ * @property {string} [id]
+ * @property {string} [subreddit]
+ * @property {string} [author]
+ * @property {string} [title]
+ * @property {string} [selftext]
+ * @property {string} [permalink]
+ * @property {string} [url]
+ * @property {string} [thumbnail]
+ * @property {number} [created_utc]
+ * @property {number} [score]
+ * @property {number} [num_comments]
+ * @property {boolean | number} [is_self]
+ * @property {boolean | number} [is_video]
+ * @property {boolean | number} [over_18]
+ * @property {boolean | number} [spoiler]
+ * @property {boolean | number} [pinned]
+ * @property {boolean | number} [stickied]
+ * @property {number} [upvote_ratio]
+ * @property {number} [gilded]
+ * @property {number} [total_awards_received]
+ * @property {string} [subreddit_id]
+ * @property {{ images?: PreviewImage[] } | undefined} [preview]
+ * @property {{ reddit_video?: { fallback_url?: string } } | undefined} [media]
+ */
+
+/**
+ * @typedef {Object} RawRedditComment
+ * @property {string} [name]
+ * @property {string} [id]
+ * @property {string} [link_id]
+ * @property {string} [parent_id]
+ * @property {string} [author]
+ * @property {string} [body]
+ * @property {number} [created_utc]
+ * @property {number} [score]
+ * @property {number} [depth]
+ * @property {string} [subreddit]
+ * @property {string} [permalink]
+ * @property {boolean | number} [is_submitter]
+ * @property {boolean | number} [is_mod]
+ * @property {boolean | number} [is_admin]
+ * @property {number} [gilded]
+ * @property {number} [total_awards_received]
+ * @property {{ data?: { children?: unknown[] } } | undefined} [replies]
+ */
+
+/**
+ * @typedef {Object} RawRedditSubreddit
+ * @property {string} [name]
+ * @property {string} [id]
+ * @property {string} [display_name]
+ * @property {string} [public_description]
+ * @property {string} [description]
+ * @property {string} [url]
+ * @property {number} [created_utc]
+ * @property {number} [subscribers]
+ * @property {string} [icon_img]
+ * @property {string} [community_icon]
+ * @property {string} [banner_img]
+ * @property {string} [title]
+ * @property {number} [accounts_active]
+ * @property {string} [lang]
+ * @property {boolean | number} [over18]
+ * @property {boolean | number} [quarantine]
+ * @property {string} [subreddit_type]
+ * @property {number} [subscribers_gained]
+ * @property {number} [traffic_total]
+ */
+
+/**
+ * @typedef {Object} RawRedditUserSubreddit
+ * @property {string} [public_description]
+ * @property {string} [icon_img]
+ * @property {string} [banner_img]
+ */
+
+/**
+ * @typedef {Object} RawRedditUser
+ * @property {string} [name]
+ * @property {string} [fullname]
+ * @property {string} [id]
+ * @property {RawRedditUserSubreddit | undefined} [subreddit]
+ * @property {string} [icon_img]
+ * @property {number} [created_utc]
+ * @property {number} [link_karma]
+ * @property {number} [comment_karma]
+ * @property {number} [total_karma]
+ * @property {number} [awardee_karma]
+ * @property {number} [awarder_karma]
+ * @property {boolean | number} [is_employee]
+ * @property {boolean | number} [is_mod]
+ * @property {boolean | number} [is_gold]
+ * @property {boolean | number} [is_suspended]
+ * @property {boolean | number} [verified]
+ */
+
+/**
  * Detect whether a URL points to a direct media asset (image or video).
  * @param {string} url
  * @returns {boolean}
@@ -54,7 +173,7 @@ function looksLikeMediaUrl(url) {
 
 /**
  * Normalize raw Reddit post (t3 / kind 't3' object) into PostItem.
- * @param {Record<string, any>} raw
+ * @param {Record<string, unknown>} raw
  * @returns {import('../../../core/types.js').PostItem}
  */
 export function normalizeRedditPost(raw) {
@@ -63,7 +182,7 @@ export function normalizeRedditPost(raw) {
   }
 
   // Support both { kind: 't3', data: { ... } } and raw data object
-  const post = raw.data || raw;
+  const post = /** @type {RawRedditPost} */ (asRecord(raw.data) || raw);
 
   const fullname = String(post.name || '');
   const { kind, id: postId } = parseFullname(fullname);
@@ -86,17 +205,17 @@ export function normalizeRedditPost(raw) {
   const previewImages = post.preview?.images;
   if (Array.isArray(previewImages) && previewImages.length > 0) {
     const source = previewImages[0]?.source?.url;
-    if (source) mediaUrls.push(String(source));
+    if (source) mediaUrls.push(source);
     for (const img of previewImages) {
-      const variant = img?.variants?.mp4?.source?.url || img?.variants?.gif?.source?.url;
-      if (variant) mediaUrls.push(String(variant));
+      const variant = img.variants?.mp4?.source?.url || img.variants?.gif?.source?.url;
+      if (variant) mediaUrls.push(variant);
     }
   }
   if (post.media?.reddit_video?.fallback_url) {
-    mediaUrls.push(String(post.media.reddit_video.fallback_url));
+    mediaUrls.push(post.media.reddit_video.fallback_url);
   }
   if (post.thumbnail && /^https?:\/\//i.test(post.thumbnail)) {
-    mediaUrls.push(String(post.thumbnail));
+    mediaUrls.push(post.thumbnail);
   }
   // External link target is stored in metadata; also push to mediaUrls when it
   // looks like a direct image/video asset.
@@ -106,7 +225,7 @@ export function normalizeRedditPost(raw) {
     }
   }
 
-  const publishedAt = post.created_utc ? new Date(post.created_utc * 1000) : null;
+  const publishedAt = typeof post.created_utc === 'number' ? new Date(post.created_utc * 1000) : null;
   const likesCount = typeof post.score === 'number' ? post.score : 0;
   const repliesCount = typeof post.num_comments === 'number' ? post.num_comments : 0;
   const repostsCount = 0;
@@ -152,7 +271,7 @@ export function normalizeRedditPost(raw) {
 
 /**
  * Normalize raw Reddit comment (t1 / kind 't1' object) into CommentItem.
- * @param {Record<string, any>} raw
+ * @param {Record<string, unknown>} raw
  * @returns {import('../../../core/types.js').CommentItem}
  */
 export function normalizeRedditComment(raw) {
@@ -160,7 +279,7 @@ export function normalizeRedditComment(raw) {
     throw new Error('Invalid Reddit comment payload: expected object');
   }
 
-  const comment = raw.data || raw;
+  const comment = /** @type {RawRedditComment} */ (asRecord(raw.data) || raw);
 
   const fullname = String(comment.name || '');
   const { kind, id: commentId } = parseFullname(fullname);
@@ -181,7 +300,7 @@ export function normalizeRedditComment(raw) {
     ? comment.replies.data.children.length
     : 0;
 
-  const publishedAt = comment.created_utc ? new Date(comment.created_utc * 1000) : null;
+  const publishedAt = typeof comment.created_utc === 'number' ? new Date(comment.created_utc * 1000) : null;
   const permalink = comment.permalink ? `https://www.reddit.com${comment.permalink}` : '';
 
   // Top-level comments have parent_id equal to the post fullname (t3_...).
@@ -223,7 +342,7 @@ export function normalizeRedditComment(raw) {
 
 /**
  * Normalize raw Reddit subreddit (t5 / kind 't5' object) into PostItem with community metadata.
- * @param {Record<string, any>} raw
+ * @param {Record<string, unknown>} raw
  * @returns {import('../../../core/types.js').PostItem}
  */
 export function normalizeRedditSubreddit(raw) {
@@ -231,7 +350,7 @@ export function normalizeRedditSubreddit(raw) {
     throw new Error('Invalid Reddit subreddit payload: expected object');
   }
 
-  const sub = raw.data || raw;
+  const sub = /** @type {RawRedditSubreddit} */ (asRecord(raw.data) || raw);
 
   const fullname = String(sub.name || '');
   const { kind, id: subId } = parseFullname(fullname);
@@ -243,7 +362,7 @@ export function normalizeRedditSubreddit(raw) {
   const content = publicDescription || description || displayName;
 
   const postUrl = sub.url ? `https://www.reddit.com${sub.url}` : '';
-  const publishedAt = sub.created_utc ? new Date(sub.created_utc * 1000) : null;
+  const publishedAt = typeof sub.created_utc === 'number' ? new Date(sub.created_utc * 1000) : null;
   const likesCount = typeof sub.subscribers === 'number' ? sub.subscribers : 0;
 
   const icon = sub.icon_img || sub.community_icon || null;
@@ -290,7 +409,7 @@ export function normalizeRedditSubreddit(raw) {
 
 /**
  * Normalize raw Reddit user (t2 / kind 't2' object) into ProfileItem.
- * @param {Record<string, any>} raw
+ * @param {Record<string, unknown>} raw
  * @returns {import('../../../core/types.js').ProfileItem}
  */
 export function normalizeRedditUser(raw) {
@@ -298,7 +417,7 @@ export function normalizeRedditUser(raw) {
     throw new Error('Invalid Reddit user payload: expected object');
   }
 
-  const user = raw.data || raw;
+  const user = /** @type {RawRedditUser} */ (asRecord(raw.data) || raw);
 
   // Reddit user about returns `name` as username (e.g. 'spez'); `fullname` may not be present.
   // Prefer real fullname if available, otherwise synthesize `t2:${username}` for stable externalId.
@@ -333,7 +452,7 @@ export function normalizeRedditUser(raw) {
     metadata: {
       kind,
       userId,
-      joined: user.created_utc ? new Date(user.created_utc * 1000) : null,
+      joined: typeof user.created_utc === 'number' ? new Date(user.created_utc * 1000) : null,
       linkKarma,
       commentKarma,
       totalKarma: typeof user.total_karma === 'number' ? user.total_karma : 0,

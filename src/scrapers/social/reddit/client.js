@@ -118,20 +118,30 @@ export class RedditClient extends AbstractApiClient {
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [options.governor]
    * @param {boolean} [options.requiresAuth=false]
    * @param {boolean} [options.requiresProxy=false]
-   * @param {'http' | 'puppeteer' | 'rss'} [options.transport='http']
+   * @param {string} [options.transport='http']
    * @param {import('./bridge.js').RedditBrowserBridge} [options.browserBridge]
    * @param {number} [options.timeout=30000]
    */
   constructor(options = {}) {
     const responseValidator = options.responseValidator || new RedditPlatformResponseValidator();
 
+    // Proxy pool has a concrete implementation type (ProxyIpPool) that is
+    // structurally narrower than the base class's ProxyProviderLike, so we
+    // remove it from the super() argument and assign it with a safe cast.
+    /** @type {Record<string, unknown>} */
+    const superOptions = { ...options };
+    const userProxyPool = superOptions.proxyPool;
+    delete superOptions.proxyPool;
     super({
-      ...options,
+      ...superOptions,
       platform: 'reddit',
       responseValidator,
       requiresAuth: options.requiresAuth ?? false,
       requiresProxy: options.requiresProxy ?? false,
     });
+    if (userProxyPool) {
+      this.proxyPool = /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (userProxyPool));
+    }
     this.defaultProxyCountry = options.defaultProxyCountry || 'us';
     this.proxyType = options.proxyType || 'residential';
     this.requiresResidential = options.requiresResidential ?? true;
@@ -146,16 +156,17 @@ export class RedditClient extends AbstractApiClient {
     this.accessToken = options.accessToken || null;
     this.tokenExpiresAt = options.tokenExpiresAt || null;
 
-    const validTransports = /** @type {Set<'http' | 'puppeteer' | 'rss'>} */ (new Set(['http', 'puppeteer', 'rss']));
     const rawTransport = String(options.transport || process.env.REDDIT_TRANSPORT || 'http').toLowerCase().trim();
-    this.transport = /** @type {'http'|'puppeteer'|'rss'} */ (validTransports.has(/** @type {'http'|'puppeteer'|'rss'} */ (rawTransport)) ? rawTransport : 'http');
+    this.transport = (rawTransport === 'http' || rawTransport === 'puppeteer' || rawTransport === 'rss')
+      ? rawTransport
+      : 'http';
     this.browserBridge = options.browserBridge || null;
   }
 
   /**
    * Reddit does not use client-side payload signing (OAuth2 bearer / Basic auth only).
    * Conforms to AbstractApiClient sign contract.
-   * @param {Record<string, unknown>} [payload]
+   * @param {Object} [payload]
    * @returns {Promise<Record<string, unknown>>}
    */
   async sign(payload = {}) {
@@ -164,17 +175,18 @@ export class RedditClient extends AbstractApiClient {
 
   /**
    * Initialize session: if clientId/clientSecret are provided, obtain OAuth token.
-   * @param {Record<string, unknown>} [session={}]
+   * @param {Object} [session={}]
    * @returns {Promise<void>}
    */
   async init(session = {}) {
-    const clientId = (typeof session.clientId === 'string' ? session.clientId : null) || this.clientId;
-    const clientSecret = (typeof session.clientSecret === 'string' ? session.clientSecret : null) || this.clientSecret;
+    const s = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (session));
+    const clientId = (typeof s.clientId === 'string' ? s.clientId : null) || this.clientId;
+    const clientSecret = (typeof s.clientSecret === 'string' ? s.clientSecret : null) || this.clientSecret;
     if (clientId && clientSecret) {
       await this.authenticate({ clientId, clientSecret });
-    } else if (typeof session.accessToken === 'string') {
-      this.accessToken = session.accessToken;
-      this.tokenExpiresAt = typeof session.tokenExpiresAt === 'number' ? session.tokenExpiresAt : null;
+    } else if (typeof s.accessToken === 'string') {
+      this.accessToken = s.accessToken;
+      this.tokenExpiresAt = typeof s.tokenExpiresAt === 'number' ? s.tokenExpiresAt : null;
     }
   }
 
@@ -228,7 +240,7 @@ export class RedditClient extends AbstractApiClient {
     }
 
     this.accessToken = data.access_token;
-    const rawExpiresIn = data.expires_in;
+    const rawExpiresIn = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (data)).expires_in;
     const expiresIn = typeof rawExpiresIn === 'number' ? rawExpiresIn : 3600;
     const effectiveBuffer = Math.min(this.tokenBufferSeconds, expiresIn);
     this.tokenExpiresAt = Date.now() + Math.max(0, (expiresIn - effectiveBuffer)) * 1000;
@@ -269,7 +281,7 @@ export class RedditClient extends AbstractApiClient {
    * Execute a Reddit API request through the resilient AbstractApiClient pipeline.
    *
    * @param {string} path - API path (e.g. '/r/programming/new', '/user/spez/about')
-   * @param {Record<string, string | number | boolean | undefined | null>} [params={}]
+   * @param {Record<string, unknown>} [params={}]
    * @param {Object} [options={}]
    * @param {'GET' | 'POST'} [options.method='GET']
    * @param {Record<string, string>} [options.headers]
@@ -321,7 +333,8 @@ export class RedditClient extends AbstractApiClient {
     const queryParams = new URLSearchParams(url.search);
     for (const [k, v] of Object.entries(params)) {
       if (v !== undefined && v !== null) {
-        queryParams.set(k, String(v));
+        const value = typeof v === 'string' ? v : (typeof v === 'number' || typeof v === 'boolean' ? String(v) : '');
+        queryParams.set(k, value);
       }
     }
     url.search = queryParams.toString();
@@ -398,7 +411,10 @@ export class RedditClient extends AbstractApiClient {
     try {
       const rawRes = await this.request(method, url.href, reqOpts);
       const res = /** @type {Record<string, unknown>} */ (rawRes);
-      return res && typeof res === 'object' && res.data !== undefined ? res.data : res;
+      if (res && typeof res === 'object' && res.data && typeof res.data === 'object') {
+        return /** @type {Record<string, unknown>} */ (res.data);
+      }
+      return res;
     } catch (err) {
       const isPlatformError = err instanceof PlatformError;
       if (isPlatformError && this.browserBridge && typeof this.browserBridge.clearCookies === 'function') {
@@ -461,7 +477,7 @@ export class RedditClient extends AbstractApiClient {
 
   /**
    * @param {string} path
-   * @param {Record<string, string | number | boolean | undefined | null>} params
+   * @param {Record<string, unknown>} params
    * @param {Object} options
    * @returns {Promise<Record<string, unknown> | null>}
    */
@@ -680,8 +696,7 @@ export class RedditClient extends AbstractApiClient {
         if (!this.browserBridge) {
           this.browserBridge = new RedditBrowserBridge({
             baseUrl: this.baseUrl,
-            proxyPool: this.proxyPool,
-            proxyProvider: this.proxyProvider,
+            proxyProvider: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (this.proxyProvider || this.proxyPool)),
             // Do not pass this.userAgent (bot UA) so Stealth keeps its realistic Chrome UA
             headless: process.env.REDDIT_BRIDGE_HEADLESS !== 'false',
           });
@@ -750,6 +765,7 @@ export class RedditClient extends AbstractApiClient {
       headers.authorization = `Bearer ${token}`;
     }
 
+    /** @type {Record<string, unknown>} */
     const reqOpts = {
       ...options,
       headers,
@@ -760,11 +776,11 @@ export class RedditClient extends AbstractApiClient {
       reqOpts.requiresResidential = this.requiresResidential;
     }
 
-    const res = await super.request(method, url, reqOpts);
+    const res = await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ (reqOpts)));
 
     // Parse rate-limit headers on success to drive proactive backoff
     if (res && typeof res === 'object' && 'headers' in res && res.headers && typeof res.headers === 'object') {
-      const { remaining, resetAt } = this.#parseRateLimitHeaders(/** @type {Record<string, unknown>} */ (res.headers));
+      const { remaining, resetAt } = this.#parseRateLimitHeaders(/** @type {Record<string, unknown>} */ (/** @type {unknown} */ (res.headers)));
       if (remaining !== null && remaining <= 1 && resetAt !== null) {
         const waitMs = Math.max(0, resetAt - Date.now());
         if (waitMs > 0 && waitMs < 300000) { // cap at 5 minutes
@@ -781,7 +797,7 @@ export class RedditClient extends AbstractApiClient {
    * Reddit aggressively blocks non-residential / non-US datacenter IPs on
    * public .json endpoints, so we pass country and isp hints to the provider.
    *
-   * @param {string | import('../../../types/proxy.js').AccountRecord | null} [accountId]
+   * @param {string | import('../../../core/types.js').AccountRecord | null} [accountId]
    * @param {boolean} [requiresResidential=false]
    * @param {boolean} [requiresAuth]
    * @param {Record<string, unknown>} [options]
@@ -789,12 +805,13 @@ export class RedditClient extends AbstractApiClient {
    */
   resolveProxy(accountId, requiresResidential = false, requiresAuth = this.requiresAuth, options = {}) {
     const safeOptions = /** @type {Record<string, unknown>} */ (options || {});
+    /** @type {Record<string, unknown>} */
     const mergedOptions = {
       ...safeOptions,
       country: (typeof safeOptions.country === 'string' ? safeOptions.country : null) || this.defaultProxyCountry || 'us',
       isp: (typeof safeOptions.isp === 'string' ? safeOptions.isp : null) || this.proxyType || 'residential',
     };
-    return super.resolveProxy(accountId, requiresResidential, requiresAuth, mergedOptions);
+    return super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
   }
 
   /**

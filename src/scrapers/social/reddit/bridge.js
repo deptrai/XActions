@@ -83,7 +83,9 @@ export class RedditBrowserBridge {
     this.proxyPool = options.proxyPool || null;
     this.proxyProvider = options.proxyProvider || null;
     this.userAgent = options.userAgent || null;
-    this.#adapter = options.adapter || null;
+    this.#adapter = options.adapter
+      ? /** @type {import('../../adapters/base.js').BaseAdapter & Record<string, unknown>} */ (options.adapter)
+      : null;
   }
 
   /**
@@ -105,7 +107,8 @@ export class RedditBrowserBridge {
    */
   async #resolveAdapter() {
     if (this.#adapter) return this.#adapter;
-    this.#adapter = await getAdapter(this.adapterName);
+    const baseAdapter = await getAdapter(this.adapterName);
+    this.#adapter = /** @type {import('../../adapters/base.js').BaseAdapter & Record<string, unknown>} */ (baseAdapter);
     return this.#adapter;
   }
 
@@ -114,38 +117,35 @@ export class RedditBrowserBridge {
    * @returns {string | Record<string, unknown> | null}
    */
   #resolveProxy() {
+    /** @type {string | Record<string, unknown> | null} */
+    let resolved = null;
     if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
       try {
-        const p = this.proxyProvider.getProxy({ platform: 'reddit', requiresResidential: true });
-        if (p) return p;
+        resolved = /** @type {string | Record<string, unknown> | null} */ (this.proxyProvider.getProxy({ platform: 'reddit', requiresResidential: true }));
       } catch {
         // fallthrough
       }
     }
-    if (this.proxyPool) {
+    if (!resolved && this.proxyPool) {
       if (typeof this.proxyPool.getStickyProxy === 'function') {
         try {
-          const p = this.proxyPool.getStickyProxy('reddit-browser', true);
-          if (p) return p;
+          resolved = /** @type {string | Record<string, unknown> | null} */ (this.proxyPool.getStickyProxy('reddit-browser', true));
         } catch {}
-      } else if (typeof this.proxyPool.getNext === 'function') {
+      } else if (!resolved && typeof this.proxyPool.getNext === 'function') {
         try {
-          const p = this.proxyPool.getNext(true);
-          if (p) return p;
+          resolved = /** @type {string | Record<string, unknown> | null} */ (this.proxyPool.getNext(true));
         } catch {}
-      } else if (typeof this.proxyPool.getRotatingProxy === 'function') {
+      } else if (!resolved && typeof this.proxyPool.getRotatingProxy === 'function') {
         try {
-          const p = this.proxyPool.getRotatingProxy(true);
-          if (p) return p;
+          resolved = /** @type {string | Record<string, unknown> | null} */ (this.proxyPool.getRotatingProxy(true));
         } catch {}
-      } else if (typeof this.proxyPool.getRoundRobinProxy === 'function') {
+      } else if (!resolved && typeof this.proxyPool.getRoundRobinProxy === 'function') {
         try {
-          const p = this.proxyPool.getRoundRobinProxy(true);
-          if (p) return p;
+          resolved = /** @type {string | Record<string, unknown> | null} */ (this.proxyPool.getRoundRobinProxy(true));
         } catch {}
       }
     }
-    return this.proxy;
+    return resolved || this.proxy;
   }
 
   /**
@@ -174,9 +174,23 @@ export class RedditBrowserBridge {
           const adapter = await this.#resolveAdapter();
           const proxy = this.#resolveProxy();
 
+          const launchProxy = typeof proxy === 'string'
+            ? proxy
+            : typeof proxy === 'object' && proxy !== null
+              ? {
+                  server: String((/** @type {Record<string, unknown>} */ (proxy)).server || ''),
+                  username: typeof (/** @type {Record<string, unknown>} */ (proxy)).username === 'string'
+                    ? (/** @type {Record<string, unknown>} */ (proxy)).username
+                    : undefined,
+                  password: typeof (/** @type {Record<string, unknown>} */ (proxy)).password === 'string'
+                    ? (/** @type {Record<string, unknown>} */ (proxy)).password
+                    : undefined,
+                }
+              : undefined;
+
           this.#browser = await adapter.launch({
             headless: this.headless,
-            proxy,
+            proxy: launchProxy,
             args: [
               '--no-sandbox',
               '--disable-setuid-sandbox',
@@ -184,7 +198,9 @@ export class RedditBrowserBridge {
             ],
           });
 
-          this.#page = await adapter.newPage(this.#browser, {
+          const browser = /** @type {AdapterBrowser} */ (this.#browser);
+
+          this.#page = await adapter.newPage(browser, {
             userAgent: this.userAgent || undefined,
           });
 
@@ -213,7 +229,8 @@ export class RedditBrowserBridge {
           }
 
           const startUrl = safeOptions.useHomePage === false ? this.baseUrl : `${this.baseUrl}/`;
-          await adapter.goto(this.#page, startUrl, {
+          const page = /** @type {AdapterPage} */ (this.#page);
+          await adapter.goto(page, startUrl, {
             waitUntil: 'networkidle',
             timeout: 45000,
           });
@@ -293,7 +310,8 @@ export class RedditBrowserBridge {
 
     if (rawList.length === 0 && page) {
       try {
-        const cookieStr = String(await adapter.evaluate(page, () => document.cookie) || '');
+        const adapterPage = /** @type {AdapterPage} */ (page);
+        const cookieStr = String(await adapter.evaluate(adapterPage, () => document.cookie) || '');
         rawList = cookieStr
           .split(';')
           .map((s) => s.trim())
