@@ -3,7 +3,7 @@ title: 'Story 35.1: Reddit Scraper (Client + Crawler + Validator + Tests)'
 type: 'feature'
 created: '2026-09-09'
 updated: '2026-09-09'
-status: 'review'
+status: 'done'
 epic: 35
 story_number: 35.1
 phase: 'Epic 35 — Reddit, Medium & Instagram Scraper Expansion'
@@ -225,6 +225,16 @@ context:
 - [x] `defaultRedisStreamPublisher` included in `#emitCheckpointAndStream` fallback chain.
 - [x] Added `checkpointResolver` for `user` action.
 - [x] Added tests for proxy resolution, auto-auth, rate-limit backoff, direct `/comments` lookup, `shouldStopPagination`, conditional `REDDIT_INTEGRATION` live call.
+- [x] Fixed duplicate Authorization header and avoided recursion in RedditClient.request.
+- [x] Normalized `parentCommentId` to 3-part ID (`reddit:t3_<post>:t1_<comment>`) matching Comment schema.
+- [x] Fixed `parseFullname` to preserve underscores in ID segment.
+- [x] Separated `postUrl` (Reddit permalink) from `metadata.targetUrl` (outbound external link).
+- [x] Paged/capped comment BFS tree traversal and stored parent post record to maintain referential integrity.
+- [x] Emitted checkpoint and stream in `getSubredditInfo`.
+- [x] Forwarded missing client configuration options (`apiBaseUrl`, `oauthUrl`, `accessToken`) in dispatcher.
+- [x] Passed `sort` parameter in `getUser`.
+- [x] Fixed `isRateLimit` to not false-positive on HTTP 200 with remaining quota 0.
+- [x] Extended `PrismaStore.findExistingIds` to support Comment IDs and added full test coverage.
 
 ## File List
 
@@ -248,6 +258,7 @@ context:
 ## Change Log
 
 - 2026-09-09 — Implemented Story 35.1: Reddit scraper client, crawler, normalizer, validator, tests, dispatcher integration; 60/60 tests pass; status → `review`.
+- 2026-09-09 — Code review completed with 4 subagents; applied all review fixes (parentCommentId, sort, parseFullname, PrismaStore comment dedup, rate-limit backoff, postUrl); 89/89 targeted tests pass; status → `done`.
 
 ## Design Notes
 
