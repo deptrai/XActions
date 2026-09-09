@@ -455,9 +455,11 @@ export class PrismaStore extends AbstractStore {
       },
     });
   }
-
   /**
-   * Check which of the given Post IDs already exist in the database.
+   * Check which of the given item IDs already exist in the database.
+   * Accepts either Post IDs `platform:externalId` or Comment IDs
+   * `platform:postExternalId:commentExternalId` and queries the appropriate
+   * model(s) based on ID shape.
    * @param {string[]} ids
    * @returns {Promise<string[]>}
    */
@@ -469,12 +471,38 @@ export class PrismaStore extends AbstractStore {
     if (!cleanIds.length) {
       return [];
     }
+
     await this.init();
-    const existing = await this.#prisma.post.findMany({
-      where: { id: { in: cleanIds } },
-      select: { id: true },
-    });
-    return existing.map((record) => record.id);
+    const postIds = [];
+    const commentIds = [];
+
+    for (const id of cleanIds) {
+      // Comment IDs have at least two colons: platform:postExternalId:commentExternalId
+      const parts = id.split(':');
+      if (parts.length >= 3) {
+        commentIds.push(id);
+      } else {
+        postIds.push(id);
+      }
+    }
+
+    const existing = [];
+    if (postIds.length) {
+      const posts = await this.#prisma.post.findMany({
+        where: { id: { in: postIds } },
+        select: { id: true },
+      });
+      existing.push(...posts.map((record) => record.id));
+    }
+    if (commentIds.length) {
+      const comments = await this.#prisma.comment.findMany({
+        where: { id: { in: commentIds } },
+        select: { id: true },
+      });
+      existing.push(...comments.map((record) => record.id));
+    }
+
+    return existing;
   }
 
   /** @returns {Promise<void>} */
