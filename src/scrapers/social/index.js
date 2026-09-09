@@ -14,5 +14,5 @@ export { BlueskyClient, BlueskyCrawler, BlueskyPlatformResponseValidator } from 
 export * as mastodon from './mastodon/index.js';
 export { MastodonClient, MastodonCrawler, MastodonPlatformResponseValidator } from './mastodon/index.js';
 export * as reddit from './reddit/index.js';
-export { RedditClient, RedditCrawler, RedditPlatformResponseValidator } from './reddit/index.js';
+export { RedditClient, RedditCrawler, RedditPlatformResponseValidator, RedditBrowserBridge } from './reddit/index.js';
 export { CommentTreeExtractor } from './comment-tree.js';

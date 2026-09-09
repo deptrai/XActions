@@ -49,10 +49,14 @@ export class RedditCrawler extends AbstractCrawler {
    * @param {any} [deps.redisPublisher]
    * @param {boolean} [deps.requiresAuth]
    * @param {boolean} [deps.requiresProxy]
+   * @param {'http' | 'puppeteer' | 'rss'} [deps.transport]
    */
   constructor(deps = {}) {
-    const { client: explicitClient, ...clientDeps } = deps;
-    const client = explicitClient || new RedditClient(/** @type {any} */ (clientDeps));
+    const { client: explicitClient, transport, ...clientDeps } = deps;
+    const client = explicitClient || new RedditClient({ ...clientDeps, transport: transport || clientDeps.transport });
+    if (explicitClient && transport) {
+      explicitClient.transport = transport;
+    }
 
     super({
       ...deps,
@@ -584,6 +588,8 @@ export class RedditCrawler extends AbstractCrawler {
    * @returns {Promise<void>}
    */
   async cleanup() {
-    // Reddit is HTTP-only, no browser to close.
+    if (this.client && typeof this.client.close === 'function') {
+      await this.client.close();
+    }
   }
 }

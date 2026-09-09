@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import http from 'node:http';
 import { RedditClient, createRedditClient, buildRedditUserAgent } from '../../../../src/scrapers/social/reddit/client.js';
+import { RedditBrowserBridge } from '../../../../src/scrapers/social/reddit/bridge.js';
 import { RedditPlatformResponseValidator } from '../../../../src/scrapers/social/reddit/validator.js';
 import { PlatformError, RateLimitError, BotChallengeError, AuthSessionExpiredError } from '../../../../src/core/error-envelope.js';
 
@@ -39,8 +40,15 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
           return;
         }
 
-        // 2. Public subreddit listing
-        if (req.url?.startsWith('/r/programming/new.json') || req.url?.startsWith('/r/programming/new?') || req.url === '/r/programming/new' || req.url?.startsWith('/r/programming/new.rss')) {
+        // 2. Public subreddit RSS listing
+        if (req.url?.startsWith('/r/programming/new.rss')) {
+          res.writeHead(200, { 'content-type': 'application/atom+xml' });
+          res.end(`<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom"><title>programming</title><entry><id>https://www.reddit.com/r/programming/comments/abc123/test/</id><link href="https://www.reddit.com/r/programming/comments/abc123/test/"/><title>Test post</title><author><name>/u/dev1</name></author></entry></feed>`);
+          return;
+        }
+
+        // 3. Public subreddit JSON listing
+        if (req.url?.startsWith('/r/programming/new.json') || req.url?.startsWith('/r/programming/new?') || req.url === '/r/programming/new') {
           const urlObj = new URL(req.url, 'http://127.0.0.1');
           const after = urlObj.searchParams.get('after');
           res.writeHead(200, {
@@ -389,6 +397,112 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
     expect(elapsed).toBeGreaterThanOrEqual(60);
     expect(elapsed).toBeLessThan(1000);
   });
+
+  describe('transport option', () => {
+    it('defaults transport to http', () => {
+      const client = new RedditClient({ baseUrl: 'http://localhost' });
+      expect(client.transport).toBe('http');
+      expect(client.browserBridge).toBeNull();
+    });
+
+    it('accepts transport puppeteer and rss with case-insensitivity', () => {
+      const puppeteerClient = new RedditClient({ baseUrl: 'http://localhost', transport: 'PUPPETEER' });
+      expect(puppeteerClient.transport).toBe('puppeteer');
+
+      const rssClient = new RedditClient({ baseUrl: 'http://localhost', transport: '  RSS  ' });
+      expect(rssClient.transport).toBe('rss');
+    });
+
+    it('rejects invalid transport and falls back to http', () => {
+      const client = new RedditClient({ baseUrl: 'http://localhost', transport: 'invalid' });
+      expect(client.transport).toBe('http');
+    });
+
+    it('injects cookieHeader when transport is puppeteer', async () => {
+      const stubBridge = {
+        isReady: true,
+        cookieHeader: 'session=reddit_abc_123; token=xyz',
+        start: async () => {},
+        close: async () => {},
+      };
+      const client = new RedditClient({
+        baseUrl: serverUrl,
+        transport: 'puppeteer',
+        browserBridge: stubBridge,
+      });
+      await client.apiRequest('/r/programming/new', { limit: 1 });
+      const lastReq = receivedRequests[receivedRequests.length - 1];
+      expect(lastReq.headers.cookie).toBe('session=reddit_abc_123; token=xyz');
+    });
+
+    it('normalizes Cookie header casing when injecting bridge cookies', async () => {
+      const stubBridge = {
+        isReady: true,
+        cookieHeader: 'session=reddit_abc_123',
+        start: async () => {},
+        close: async () => {},
+      };
+      const client = new RedditClient({
+        baseUrl: serverUrl,
+        transport: 'puppeteer',
+        browserBridge: stubBridge,
+      });
+      await client.apiRequest('/r/programming/new', { limit: 1 }, {
+        headers: { Cookie: 'old_cookie=123' },
+      });
+      const lastReq = receivedRequests[receivedRequests.length - 1];
+      expect(lastReq.headers.cookie).toBe('session=reddit_abc_123');
+      expect(lastReq.headers.Cookie).toBeUndefined();
+    });
+
+    it('requests .rss directly without trying .json when transport is rss', async () => {
+      const client = new RedditClient({
+        baseUrl: serverUrl,
+        transport: 'rss',
+      });
+      const beforeCount = receivedRequests.length;
+      const res = await client.apiRequest('/r/programming/new', { limit: 1 });
+      expect(res.kind).toBe('Listing');
+      const newReqs = receivedRequests.slice(beforeCount);
+      expect(newReqs.some((r) => r.url.includes('.rss'))).toBe(true);
+      expect(newReqs.some((r) => r.url.includes('.json'))).toBe(false);
+    });
+
+    it('rejects non-listing endpoints when transport is rss', async () => {
+      const client = new RedditClient({
+        baseUrl: serverUrl,
+        transport: 'rss',
+      });
+      await expect(client.apiRequest('/user/spez/about')).rejects.toThrow(PlatformError);
+    });
+
+    it('throws 502 PlatformError when RSS fetch returns null on subreddit listing', async () => {
+      const client = new RedditClient({
+        baseUrl: serverUrl,
+        transport: 'rss',
+      });
+      // request a non-existent subreddit to trigger 404 in mock server -> rssFallback returns null
+      await expect(client.apiRequest('/r/nonexistent_sub/new')).rejects.toThrow(PlatformError);
+    });
+
+    it('closes browserBridge on client.close()', async () => {
+      let closed = false;
+      const stubBridge = {
+        isReady: true,
+        cookieHeader: 'test=1',
+        start: async () => {},
+        close: async () => { closed = true; },
+      };
+      const client = new RedditClient({
+        baseUrl: serverUrl,
+        transport: 'puppeteer',
+        browserBridge: stubBridge,
+      });
+      await client.close();
+      expect(closed).toBe(true);
+      expect(client.browserBridge).toBeNull();
+    });
+  });
 });
 
 describe('RedditClient RSS fallback', () => {
@@ -466,5 +580,61 @@ describe('RedditClient RSS fallback', () => {
       accessToken: 'mock_token',
     });
     await expect(client.apiRequest('/r/programming/new', { limit: 5 })).rejects.toThrow();
+  });
+});
+
+describe('RedditBrowserBridge', () => {
+  it('exposes cookieHeader from raw cookie list and clearCookies resets state', async () => {
+    let closedPage = false;
+    let closedBrowser = false;
+    const mockAdapter = {
+      launch: async () => ({ _native: {} }),
+      newPage: async () => ({
+        _native: {
+          cookies: async () => [
+            { name: 'session', value: '123', domain: 'reddit.com', path: '/' },
+            { name: 'token', value: 'abc', domain: 'reddit.com', path: '/' },
+            // duplicate name to test deduplication
+            { name: 'session', value: '456', domain: 'reddit.com', path: '/' },
+          ],
+        },
+      }),
+      goto: async () => {},
+      closePage: async () => { closedPage = true; },
+      closeBrowser: async () => { closedBrowser = true; },
+      evaluate: async () => '',
+    };
+
+    const bridge = new RedditBrowserBridge({ adapter: mockAdapter });
+    expect(bridge.isReady).toBe(false);
+    expect(bridge.cookieHeader).toBe('');
+
+    await bridge.start(null); // tests null options tolerance
+    expect(bridge.isReady).toBe(true);
+    expect(bridge.cookieHeader).toBe('session=456; token=abc');
+    expect(bridge.cookies).toHaveLength(2);
+
+    bridge.clearCookies();
+    expect(bridge.isReady).toBe(false);
+    expect(bridge.cookieHeader).toBe('');
+
+    await bridge.close();
+    expect(closedPage).toBe(true);
+    expect(closedBrowser).toBe(true);
+  });
+
+  it('cleans up browser if start() fails during navigation', async () => {
+    let closedBrowser = false;
+    const mockAdapter = {
+      launch: async () => ({ _native: {} }),
+      newPage: async () => ({ _native: {} }),
+      goto: async () => { throw new Error('Navigation failed'); },
+      closePage: async () => {},
+      closeBrowser: async () => { closedBrowser = true; },
+    };
+
+    const bridge = new RedditBrowserBridge({ adapter: mockAdapter });
+    await expect(bridge.start()).rejects.toThrow('Navigation failed');
+    expect(closedBrowser).toBe(true);
   });
 });

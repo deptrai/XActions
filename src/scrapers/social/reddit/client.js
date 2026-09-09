@@ -10,6 +10,7 @@
 
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { RedditPlatformResponseValidator } from './validator.js';
+import { RedditBrowserBridge } from './bridge.js';
 import {
   PlatformError,
   AuthSessionExpiredError,
@@ -87,6 +88,15 @@ export class RedditClient extends AbstractApiClient {
   /** @type {number} */
   tokenBufferSeconds = 60;
 
+  /** @type {'http' | 'puppeteer' | 'rss'} */
+  transport = 'http';
+
+  /** @type {import('./bridge.js').RedditBrowserBridge | null} */
+  browserBridge = null;
+
+  /** @type {Promise<void> | null} */
+  #bridgePromise = null;
+
   /**
    * @param {Object} [options={}]
    * @param {string} [options.baseUrl] - Base web URL (default: https://www.reddit.com)
@@ -104,6 +114,8 @@ export class RedditClient extends AbstractApiClient {
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [options.governor]
    * @param {boolean} [options.requiresAuth=false]
    * @param {boolean} [options.requiresProxy=false]
+   * @param {'http' | 'puppeteer' | 'rss'} [options.transport='http']
+   * @param {import('./bridge.js').RedditBrowserBridge} [options.browserBridge]
    * @param {number} [options.timeout=30000]
    */
   constructor(options = {}) {
@@ -129,6 +141,11 @@ export class RedditClient extends AbstractApiClient {
     this.userAgent = options.userAgent || buildRedditUserAgent(this.username);
     this.accessToken = options.accessToken || null;
     this.tokenExpiresAt = options.tokenExpiresAt || null;
+
+    const validTransports = new Set(['http', 'puppeteer', 'rss']);
+    const rawTransport = String(options.transport || process.env.REDDIT_TRANSPORT || 'http').toLowerCase().trim();
+    this.transport = validTransports.has(rawTransport) ? rawTransport : 'http';
+    this.browserBridge = options.browserBridge || null;
   }
 
   /**
@@ -304,10 +321,61 @@ export class RedditClient extends AbstractApiClient {
       if (options.body !== undefined) reqOpts.body = options.body;
     }
 
+    // Puppeteer stealth bridge: inject real browser cookies before issuing request.
+    if (this.transport === 'puppeteer' && !token) {
+      try {
+        await this.#ensureBrowserBridge();
+        if (this.browserBridge?.isReady) {
+          const cookieHeader = this.browserBridge.cookieHeader;
+          if (cookieHeader) {
+            const cleanedHeaders = { ...reqOpts.headers };
+            for (const key of Object.keys(cleanedHeaders)) {
+              if (key.toLowerCase() === 'cookie') {
+                delete cleanedHeaders[key];
+              }
+            }
+            cleanedHeaders.cookie = cookieHeader;
+            reqOpts.headers = cleanedHeaders;
+          }
+        }
+      } catch (bridgeErr) {
+        // Log but do not fail — HTTP path may still work.
+        console.warn(`⚠️ [RedditBrowserBridge] failed to inject cookies: ${bridgeErr instanceof Error ? bridgeErr.message : String(bridgeErr)}`);
+      }
+    }
+
+    // RSS-only transport: skip HTTP .json and go straight to RSS fallback for subreddit listings.
+    if (this.transport === 'rss' && !token) {
+      if (this.#looksLikeSubredditListing(normalizedPath)) {
+        const rss = await this.#rssFallback(normalizedPath, params, options);
+        if (rss) return rss;
+        throw new PlatformError({
+          type: ErrorTypes.PLATFORM_ERROR,
+          code: 'XACT_5002',
+          message: `Failed to fetch or parse Reddit RSS feed for ${normalizedPath}`,
+          statusCode: 502,
+          platform: 'reddit',
+        });
+      }
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `RSS transport only supports subreddit listings, but requested path was: ${normalizedPath}`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'reddit',
+      });
+    }
+
     try {
       const res = await this.request(method, url, reqOpts);
       return res?.data !== undefined ? res.data : res;
     } catch (err) {
+      if (this.browserBridge && typeof this.browserBridge.clearCookies === 'function') {
+        if (err?.statusCode === 403 || err?.name === 'BotChallengeError') {
+          this.browserBridge.clearCookies();
+        }
+      }
       // When public .json endpoints are blocked, attempt RSS fallback for
       // subreddit listings. This allows scraping real public subreddits without
       // an OAuth app or residential proxy.
@@ -504,6 +572,48 @@ export class RedditClient extends AbstractApiClient {
   }
 
   /**
+   * Ensure the Puppeteer browser bridge is started and has cookies.
+   * Uses mutex `#bridgePromise` to prevent concurrent redundant launches.
+   * @returns {Promise<void>}
+   */
+  async #ensureBrowserBridge() {
+    if (this.transport !== 'puppeteer') return;
+    if (this.browserBridge && this.browserBridge.isReady) return;
+    if (this.#bridgePromise) return this.#bridgePromise;
+
+    this.#bridgePromise = (async () => {
+      try {
+        if (!this.browserBridge) {
+          this.browserBridge = new RedditBrowserBridge({
+            baseUrl: this.baseUrl,
+            proxy: this.proxy,
+            proxyPool: this.proxyPool,
+            proxyProvider: this.proxyProvider,
+            // Do not pass this.userAgent (bot UA) so Stealth keeps its realistic Chrome UA
+            headless: process.env.REDDIT_BRIDGE_HEADLESS !== 'false',
+          });
+        }
+        await this.browserBridge.start();
+      } finally {
+        this.#bridgePromise = null;
+      }
+    })();
+
+    return this.#bridgePromise;
+  }
+
+  /**
+   * Close the browser bridge if it was started.
+   * @returns {Promise<void>}
+   */
+  async closeBrowserBridge() {
+    if (this.browserBridge) {
+      await this.browserBridge.close();
+      this.browserBridge = null;
+    }
+  }
+
+  /**
    * Parse Reddit rate-limit headers from a response.
    * @param {Record<string, any>} headers
    * @returns {{ remaining: number | null, resetAt: number | null, used: number | null }}
@@ -565,5 +675,13 @@ export class RedditClient extends AbstractApiClient {
     }
 
     return res;
+  }
+
+  /**
+   * Clean up any browser resources started by this client.
+   * @returns {Promise<void>}
+   */
+  async close() {
+    await this.closeBrowserBridge();
   }
 }

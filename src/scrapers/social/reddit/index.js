@@ -6,6 +6,7 @@
  */
 
 export { RedditClient, createRedditClient } from './client.js';
+export { RedditBrowserBridge } from './bridge.js';
 export { RedditCrawler, createRedditCrawler } from './crawler.js';
 export { RedditPlatformResponseValidator } from './validator.js';
 export {

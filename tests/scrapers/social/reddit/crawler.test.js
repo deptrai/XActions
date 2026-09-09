@@ -426,4 +426,21 @@ describe('RedditCrawler', () => {
     expect(result.posts.length).toBe(1);
     expect(result.pageInfo.has_next_page).toBe(false);
   });
+
+  it('cleanup() delegates to client.close()', async () => {
+    let closed = false;
+    const mockClient = {
+      close: async () => { closed = true; },
+    };
+    const c = new RedditCrawler({ client: mockClient });
+    await c.cleanup();
+    expect(closed).toBe(true);
+  });
+
+  it('updates explicitClient.transport when transport option is passed to crawler', () => {
+    const client = new RedditClient({ baseUrl: 'http://localhost', transport: 'http' });
+    expect(client.transport).toBe('http');
+    const c = new RedditCrawler({ client, transport: 'puppeteer' });
+    expect(c.client.transport).toBe('puppeteer');
+  });
 });

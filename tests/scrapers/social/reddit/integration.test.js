@@ -138,6 +138,18 @@ describe('Reddit Integration (Unified Dispatcher)', () => {
     ).rejects.toThrow();
   });
 
+  it('scrape() honors pre-configured options.client', async () => {
+    const customClient = createRedditClient({ baseUrl: serverUrl, username: 'preconfigured' });
+    const result = await scrape('reddit', 'subreddit', {
+      name: 'programming',
+      limit: 1,
+      baseUrl: serverUrl,
+      client: customClient,
+    });
+    expect(result.posts).toBeDefined();
+    expect(customClient.username).toBe('preconfigured');
+  });
+
   it('conditionally runs live integration when REDDIT_INTEGRATION is set', async () => {
     const shouldRun = process.env.REDDIT_INTEGRATION === '1';
     if (!shouldRun) {
@@ -148,5 +160,15 @@ describe('Reddit Integration (Unified Dispatcher)', () => {
     expect(Array.isArray(result.posts)).toBe(true);
     expect(result.posts.length).toBeGreaterThan(0);
     expect(result.posts[0].platform).toBe('reddit');
+  });
+
+  it('conditionally runs live search integration when REDDIT_INTEGRATION is set', async () => {
+    const shouldRun = process.env.REDDIT_INTEGRATION === '1';
+    if (!shouldRun) {
+      return;
+    }
+    const result = await scrape('reddit', 'search', { query: 'test', limit: 5 });
+    expect(result).toHaveProperty('posts');
+    expect(Array.isArray(result.posts)).toBe(true);
   });
 });
