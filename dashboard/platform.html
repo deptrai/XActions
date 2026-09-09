@@ -700,7 +700,7 @@
       const params = new URLSearchParams(window.location.search);
       const rawPlatform = pathPlatform || params.get("platform") || "facebook";
       const validPlatforms = [
-        "facebook", "x", "threads", "bluesky", "mastodon", "tiktok",
+        "facebook", "x", "threads", "bluesky", "mastodon", "tiktok", "reddit",
         "shopee", "tiktokshop", "topcv", "vietnamworks", "linkedin", "batdongsan", "chotot"
       ];
       const PLATFORM = validPlatforms.includes(rawPlatform) ? rawPlatform : "facebook";
@@ -1357,6 +1357,72 @@
             },
           ],
         },
+        reddit: {
+          name: "Reddit",
+          icon: "🤖",
+          color: "#ff4500",
+          apiBase: "/platform/reddit",
+          authFields: ["label", "clientId", "clientSecret"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "subreddit",
+              icon: "📜",
+              title: "Subreddit Posts",
+              desc: "Scrape posts from a subreddit (hot, new, top, rising)",
+              fields: [
+                { id: "name", type: "text", label: "Subreddit Name (e.g. programming, vietnam)", placeholder: "programming", value: "programming" },
+                { id: "limit", type: "number", label: "Limit", value: 10 },
+                { id: "sort", type: "text", label: "Sort (new, hot, top, rising)", value: "new" },
+                { id: "transport", type: "text", label: "Transport (rss, puppeteer, http)", value: "rss" },
+              ],
+            },
+            {
+              id: "search",
+              icon: "🔎",
+              title: "Search Reddit",
+              desc: "Search posts across Reddit by keyword",
+              fields: [
+                { id: "query", type: "text", label: "Search Query", placeholder: "machine learning", value: "machine learning" },
+                { id: "limit", type: "number", label: "Limit", value: 10 },
+                { id: "transport", type: "text", label: "Transport (puppeteer, http)", value: "puppeteer" },
+              ],
+            },
+            {
+              id: "post_comments",
+              icon: "💬",
+              title: "Post Comments",
+              desc: "Scrape comment thread for a Reddit post",
+              fields: [
+                { id: "postId", type: "text", label: "Post ID or Reddit URL", placeholder: "1wblvwx or https://reddit.com/r/..." },
+                { id: "subreddit", type: "text", label: "Subreddit (optional)", placeholder: "programming" },
+                { id: "limit", type: "number", label: "Max Comments", value: 50 },
+                { id: "transport", type: "text", label: "Transport (puppeteer, http)", value: "puppeteer" },
+              ],
+            },
+            {
+              id: "user",
+              icon: "👤",
+              title: "User Profile & Posts",
+              desc: "Scrape Reddit user profile and submitted posts",
+              fields: [
+                { id: "username", type: "text", label: "Username (without u/)", placeholder: "spez", value: "spez" },
+                { id: "limit", type: "number", label: "Post Limit", value: 10 },
+                { id: "transport", type: "text", label: "Transport (puppeteer, http)", value: "puppeteer" },
+              ],
+            },
+            {
+              id: "subreddit_info",
+              icon: "ℹ️",
+              title: "Subreddit Info",
+              desc: "Scrape community metadata, subscribers, description",
+              fields: [
+                { id: "name", type: "text", label: "Subreddit Name", placeholder: "programming", value: "programming" },
+                { id: "transport", type: "text", label: "Transport (puppeteer, http)", value: "puppeteer" },
+              ],
+            },
+          ],
+        },
       };
 
       const cfg = PLATFORM_CONFIG[PLATFORM] || PLATFORM_CONFIG.facebook;
@@ -1565,7 +1631,7 @@
         return `
       <div class="card-field">
         <label for="${id}">${esc(f.label)}</label>
-        <input type="${f.type === "url" ? "url" : "text"}" id="${id}" placeholder="${esc(f.placeholder || "")}">
+        <input type="${f.type === "url" ? "url" : "text"}" id="${id}" value="${f.value !== undefined ? esc(f.value) : ''}" placeholder="${esc(f.placeholder || "")}">
       </div>
     `;
       }

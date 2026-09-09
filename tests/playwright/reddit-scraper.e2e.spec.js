@@ -3,9 +3,14 @@
 // by nichxbt
 
 import { test, expect } from '@playwright/test';
+import { createServer } from 'node:http';
 import jwt from 'jsonwebtoken';
 
-const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:4998';
+process.env.NODE_ENV = 'test';
+process.env.PORT = '0';
+
+let server = null;
+let baseUrl = process.env.PLAYWRIGHT_BASE_URL || '';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-for-local-development';
 const DEMO_USER_ID = process.env.REDDIT_E2E_USER_ID || 'cmskewokf0000o3r4drq6vx3r';
 
@@ -13,13 +18,33 @@ function makeToken() {
   return jwt.sign({ userId: DEMO_USER_ID }, JWT_SECRET, { expiresIn: '1h' });
 }
 
-test.describe('Story 35.1 — Reddit Scraper E2E Browser Verification', () => {
-  test.use({ baseURL: BASE_URL });
+test.beforeAll(async () => {
+  if (!baseUrl) {
+    const { default: app } = await import('../../api/server.js');
+    server = createServer(app);
+    await new Promise((resolve, reject) => {
+      server.listen(0, '127.0.0.1', (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+    const address = server.address();
+    baseUrl = `http://127.0.0.1:${address.port}`;
+  }
+});
 
+test.afterAll(async () => {
+  if (server) {
+    await new Promise((resolve) => server.close(resolve));
+    server = null;
+  }
+});
+
+test.describe('Story 35.1 — Reddit Scraper E2E Browser Verification', () => {
   test('should scrape r/programming via browser fetch and return Reddit PostItem[]', async ({ page }) => {
     test.setTimeout(120_000);
 
-    await page.goto('/health');
+    await page.goto(`${baseUrl}/health`);
     await expect(page.locator('body')).toContainText('ok', { timeout: 10_000 });
 
     const result = await page.evaluate(async ({ token }) => {
@@ -69,7 +94,7 @@ test.describe('Story 35.1 — Reddit Scraper E2E Browser Verification', () => {
 
   test('should handle unknown reddit action gracefully', async ({ page }) => {
     test.setTimeout(30_000);
-    await page.goto('/health');
+    await page.goto(`${baseUrl}/health`);
 
     const result = await page.evaluate(async ({ token }) => {
       const res = await fetch('/api/platform/reddit/scrape', {

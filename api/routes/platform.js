@@ -328,6 +328,11 @@ router.post('/:platform/scrape', async (req, res) => {
       const cookie = await resolveAccountCookie(reqUser.id, accountIds[0], platform);
       options.authCookie = buildAuthCookie(platform, cookie);
       options.accountId = accountIds[0];
+      if (cookie && typeof cookie === 'object') {
+        if (cookie.clientId && !options.clientId) options.clientId = cookie.clientId;
+        if (cookie.clientSecret && !options.clientSecret) options.clientSecret = cookie.clientSecret;
+        if (cookie.username && !options.redditUsername) options.redditUsername = cookie.username;
+      }
     }
 
     const result = await scrape(platform, action, options);

@@ -1645,6 +1645,13 @@ export async function x_list_platforms() {
           'warmup_scroll', 'warmup_account', 'schedule_post',
         ],
       },
+      {
+        name: 'reddit',
+        displayName: 'Reddit',
+        aliases: ['rdt'],
+        auth: 'optional OAuth2 (clientId, clientSecret) or public JSON/RSS/Puppeteer',
+        capabilities: ['subreddit', 'user', 'search', 'post_comments', 'subreddit_info', 'profile', 'tweets'],
+      },
     ],
   };
 }

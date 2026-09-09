@@ -144,18 +144,18 @@ const TOOLS = [
   },
   {
     name: 'x_get_profile',
-    description: 'Get profile information for a user including bio, follower count, etc. Supports Twitter, Bluesky, Threads, and Mastodon.',
+    description: 'Get profile information for a user including bio, follower count, etc. Supports Twitter, Bluesky, Threads, Mastodon, and Reddit.',
     inputSchema: {
       type: 'object',
       properties: {
         username: {
           type: 'string',
-          description: 'Username (without @). For Bluesky: user.bsky.social. For Mastodon: user or user@instance.',
+          description: 'Username (without @). For Bluesky: user.bsky.social. For Mastodon: user or user@instance. For Reddit: username without u/.',
         },
         platform: {
           type: 'string',
-          enum: ['twitter', 'bluesky', 'mastodon', 'threads', 'facebook', 'fb'],
-          description: 'Platform to scrape: twitter, bluesky, mastodon, threads, facebook, fb. Default: twitter.',
+          enum: ['twitter', 'bluesky', 'mastodon', 'threads', 'facebook', 'fb', 'reddit', 'rdt'],
+          description: 'Platform to scrape: twitter, bluesky, mastodon, threads, facebook, fb, reddit. Default: twitter.',
         },
         instance: {
           type: 'string',
@@ -167,7 +167,7 @@ const TOOLS = [
   },
   {
     name: 'x_get_followers',
-    description: 'Scrape followers for an account. Supports Twitter, Bluesky, Mastodon, and Threads.',
+    description: 'Scrape followers for an account. Supports Twitter, Bluesky, Mastodon, Threads, and Reddit.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -181,8 +181,8 @@ const TOOLS = [
         },
         platform: {
           type: 'string',
-          enum: ['twitter', 'bluesky', 'mastodon', 'threads', 'facebook', 'fb'],
-          description: 'Platform to scrape: twitter, bluesky, mastodon, threads, facebook, fb. Default: twitter.',
+          enum: ['twitter', 'bluesky', 'mastodon', 'threads', 'facebook', 'fb', 'reddit', 'rdt'],
+          description: 'Platform to scrape: twitter, bluesky, mastodon, threads, facebook, fb, reddit. Default: twitter.',
         },
         instance: {
           type: 'string',
@@ -194,7 +194,7 @@ const TOOLS = [
   },
   {
     name: 'x_get_following',
-    description: 'Scrape accounts that a user is following. Supports Twitter, Bluesky, Mastodon, and Threads.',
+    description: 'Scrape accounts that a user is following. Supports Twitter, Bluesky, Mastodon, Threads, and Reddit.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -208,8 +208,8 @@ const TOOLS = [
         },
         platform: {
           type: 'string',
-          enum: ['twitter', 'bluesky', 'mastodon', 'threads', 'facebook', 'fb'],
-          description: 'Platform to scrape: twitter, bluesky, mastodon, threads, facebook, fb. Default: twitter.',
+          enum: ['twitter', 'bluesky', 'mastodon', 'threads', 'facebook', 'fb', 'reddit', 'rdt'],
+          description: 'Platform to scrape: twitter, bluesky, mastodon, threads, facebook, fb, reddit. Default: twitter.',
         },
         instance: {
           type: 'string',
@@ -235,7 +235,7 @@ const TOOLS = [
   },
   {
     name: 'x_get_tweets',
-    description: 'Scrape recent tweets/posts from a user profile. Supports Twitter, Bluesky, Mastodon, and Threads.',
+    description: 'Scrape recent tweets/posts from a user profile. Supports Twitter, Bluesky, Mastodon, Threads, and Reddit.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -249,8 +249,8 @@ const TOOLS = [
         },
         platform: {
           type: 'string',
-          enum: ['twitter', 'bluesky', 'mastodon', 'threads', 'facebook', 'fb'],
-          description: 'Platform to scrape: twitter, bluesky, mastodon, threads, facebook, fb. Default: twitter.',
+          enum: ['twitter', 'bluesky', 'mastodon', 'threads', 'facebook', 'fb', 'reddit', 'rdt'],
+          description: 'Platform to scrape: twitter, bluesky, mastodon, threads, facebook, fb, reddit. Default: twitter.',
         },
         instance: {
           type: 'string',
@@ -262,7 +262,7 @@ const TOOLS = [
   },
   {
     name: 'x_search_tweets',
-    description: 'Search for tweets/posts matching a query. Supports Twitter, Bluesky, Mastodon, and Threads.',
+    description: 'Search for tweets/posts matching a query. Supports Twitter, Bluesky, Mastodon, Threads, and Reddit.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -276,8 +276,8 @@ const TOOLS = [
         },
         platform: {
           type: 'string',
-          enum: ['twitter', 'bluesky', 'mastodon', 'threads', 'facebook', 'fb'],
-          description: 'Platform to search: twitter, bluesky, mastodon, threads, facebook, fb. Default: twitter.',
+          enum: ['twitter', 'bluesky', 'mastodon', 'threads', 'facebook', 'fb', 'reddit', 'rdt'],
+          description: 'Platform to search: twitter, bluesky, mastodon, threads, facebook, fb, reddit. Default: twitter.',
         },
         instance: {
           type: 'string',
@@ -1422,7 +1422,7 @@ const TOOLS = [
   // ====== Cross-Platform ======
   {
     name: 'x_list_platforms',
-    description: 'List all supported social media platforms (Twitter, Bluesky, Mastodon, Threads, Facebook) and their capabilities.',
+    description: 'List all supported social media platforms (Twitter, Bluesky, Mastodon, Threads, Facebook, Reddit) and their capabilities.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -2698,7 +2698,7 @@ const TOOLS = [
       properties: {
         platform: {
           type: 'string',
-          description: 'Filter by platform: facebook, threads, bluesky, mastodon, twitter',
+          description: 'Filter by platform: facebook, threads, bluesky, mastodon, twitter, reddit',
         },
       },
     },
@@ -2711,7 +2711,7 @@ const TOOLS = [
       properties: {
         platform: {
           type: 'string',
-          description: 'Platform: facebook, threads, twitter, bluesky, mastodon',
+          description: 'Platform: facebook, threads, twitter, bluesky, mastodon, reddit',
         },
         url: {
           type: 'string',
@@ -2736,13 +2736,13 @@ const TOOLS = [
   },
   {
     name: 'x_crawl_comments_tree',
-    description: 'Crawl the full comment tree for a post. Dispatches to get_comments when the crawler supports it.',
+    description: 'Crawl the full comment tree for a post. Dispatches to get_comments (or post_comments) when the crawler supports it.',
     inputSchema: {
       type: 'object',
       properties: {
         platform: {
           type: 'string',
-          description: 'Platform: facebook, threads, twitter, bluesky, mastodon',
+          description: 'Platform: facebook, threads, twitter, bluesky, mastodon, reddit',
         },
         postId: {
           type: 'string',
@@ -3463,6 +3463,13 @@ async function executeCrawlPostTool(args) {
   if (postId) scrapeArgs.postId = postId;
   if (limit != null) scrapeArgs.limit = Number(limit);
 
+  if (String(platform).toLowerCase() === 'reddit' || String(platform).toLowerCase() === 'rdt') {
+    if (postId || (url && /\/comments\//i.test(String(url)))) {
+      return await scrape('reddit', 'post_comments', scrapeArgs);
+    }
+    return await scrape('reddit', 'subreddit', scrapeArgs);
+  }
+
   try {
     return await scrape(String(platform), 'post_detail', scrapeArgs);
   } catch (firstErr) {
@@ -3501,6 +3508,10 @@ async function executeCrawlCommentsTreeTool(args) {
   if (maxDepth != null) scrapeArgs.maxDepth = Number(maxDepth);
   if (maxComments != null) scrapeArgs.maxComments = Number(maxComments);
   if (limit != null && maxComments == null) scrapeArgs.maxComments = Number(limit);
+
+  if (String(platform).toLowerCase() === 'reddit' || String(platform).toLowerCase() === 'rdt') {
+    return await scrape('reddit', 'post_comments', scrapeArgs);
+  }
 
   try {
     return await scrape(String(platform), 'get_comments', scrapeArgs);

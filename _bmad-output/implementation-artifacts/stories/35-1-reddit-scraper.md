@@ -320,3 +320,39 @@ context:
 **E2E (optional, cần env):**
 - `REDDIT_INTEGRATION=1 npx vitest run tests/scrapers/social/reddit/integration.test.js`
 - Dashboard: gọi `scrape('reddit', 'subreddit', { name: 'programming' })` qua universal dispatcher.
+
+---
+
+## Amendment — MCP & Dashboard Exposure
+
+> Added on 2026-09-09 to satisfy the requirement that Story 35.1 features be usable through API, MCP, and web UI.
+
+### MCP Exposure
+- `src/mcp/server.js` updates:
+  - `x_crawl_post` accepts `platform: "reddit"` and routes to the appropriate Reddit crawler action:
+    - `postId` provided → `scrape('reddit', 'post_comments', { postId, subreddit?, limit })`
+    - `url` is a subreddit URL/name → `scrape('reddit', 'subreddit', { name, limit })`
+    - `url` is a post/comment thread URL → extract `postId` and call `post_comments`
+  - `x_crawl_comments_tree` accepts `platform: "reddit"` and routes to `scrape('reddit', 'post_comments', { postId, subreddit?, limit })`
+  - `x_actions_list` and `x_list_platforms` enumerate `reddit` as a supported platform.
+  - Multi-platform tools (`x_get_profile`, `x_get_tweets`, `x_search_tweets`) include `reddit` in their `platform` enum and, when `platform === 'reddit'`, route directly to the unified dispatcher (`scrape('reddit', 'user' | 'subreddit' | 'search', ...)`).
+
+### Web Dashboard Exposure
+- `dashboard/platform.html` updates:
+  - Add `"reddit"` to `validPlatforms`.
+  - Add `reddit` to `PLATFORM_CONFIG` with `apiBase: "/platform/reddit"`, public (no auth required), `tabs: ["scrape", "monitor"]`, and scrape actions:
+    - `subreddit` — field `name` (subreddit name), optional `limit`, `sort`; default `transport: 'rss'`
+    - `search` — field `query`, optional `limit`; default `transport: 'puppeteer'`
+    - `user` — field `username`, optional `limit`; default `transport: 'puppeteer'`
+    - `post_comments` — field `postId`, optional `subreddit`, `limit`; default `transport: 'puppeteer'`
+    - `subreddit_info` — field `name`; default `transport: 'puppeteer'`
+  - Render action forms and POST to `/api/platform/reddit/scrape`.
+
+### New / Updated Tests
+- `tests/playwright/reddit-dashboard.e2e.spec.js` — navigate to `/platform?platform=reddit`, submit the `subreddit` form, assert `PostItem[]` response.
+- `tests/mcp/reddit-tools.test.js` (optional) — verify MCP tool schema includes `reddit` and `executeTool` routes correctly.
+
+### Verification Commands
+- `npx vitest run tests/scrapers/social/reddit/`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4998 npx playwright test tests/playwright/reddit-dashboard.e2e.spec.js`
+- Open `http://localhost:4998/platform?platform=reddit` and run **Scrape Subreddit** with `name=programming`.

@@ -917,9 +917,13 @@ export async function scrape(platform, action, options = {}) {
       feed: 'subreddit',
       user: 'user',
       profile: 'user',
+      tweets: 'user',
       search: 'search',
       post_comments: 'post_comments',
       comments: 'post_comments',
+      get_comments: 'post_comments',
+      post_detail: 'post_comments',
+      thread: 'post_comments',
       subreddit_info: 'subreddit_info',
       subreddit_about: 'subreddit_info',
       community: 'subreddit_info',
@@ -936,6 +940,18 @@ export async function scrape(platform, action, options = {}) {
     if (options.query || options.q) mappedArgs.query = options.query || options.q;
     if (options.postId) mappedArgs.postId = options.postId;
     if (options.id) mappedArgs.postId = options.id;
+    if (options.url) {
+      mappedArgs.url = options.url;
+      const commentMatch = String(options.url).match(/\/comments\/([^/?#]+)/i);
+      if (commentMatch && !mappedArgs.postId) {
+        mappedArgs.postId = commentMatch[1];
+      }
+      const subMatch = String(options.url).match(/\/r\/([^/?#]+)(?:\/|$)/i);
+      if (subMatch) {
+        if (!mappedArgs.subreddit) mappedArgs.subreddit = subMatch[1];
+        if (!mappedArgs.name && !commentMatch) mappedArgs.name = subMatch[1];
+      }
+    }
     if (options.sort) mappedArgs.sort = options.sort;
     if (options.time) mappedArgs.time = options.time;
     if (options.limit != null) mappedArgs.limit = Number(options.limit);
