@@ -120,8 +120,7 @@ import zalo, {
   scrapeZalo,
 } from './social/zalo/index.js';
 import { RedditCrawler } from './social/reddit/crawler.js';
-import { RedditClient, createRedditClient } from './social/reddit/client.js';
-import { createRedditCrawler } from './social/reddit/crawler.js';
+import { RedditClient } from './social/reddit/client.js';
 import * as redditModule from './social/reddit/index.js';
 import { defaultStore } from '../store/index.js';
 
@@ -2611,9 +2610,20 @@ export function createRedditClient(options = {}) {
   return new RedditClient(options);
 }
 
-export function createRedditCrawler(client, options = {}) {
-  const resolvedClient = client instanceof RedditClient ? client : new RedditClient(client || options || {});
-  const resolvedOptions = client instanceof RedditClient ? options : (options || {});
+export function createRedditCrawler(clientOrDeps, options = {}) {
+  let resolvedClient;
+  let resolvedOptions;
+  if (clientOrDeps instanceof RedditClient) {
+    resolvedClient = clientOrDeps;
+    resolvedOptions = options || {};
+  } else if (clientOrDeps && clientOrDeps.client instanceof RedditClient) {
+    resolvedClient = clientOrDeps.client;
+    resolvedOptions = { ...clientOrDeps, ...options };
+    delete resolvedOptions.client;
+  } else {
+    resolvedClient = new RedditClient(clientOrDeps || options || {});
+    resolvedOptions = clientOrDeps || options || {};
+  }
   return new RedditCrawler({ client: resolvedClient, ...resolvedOptions });
 }
 
