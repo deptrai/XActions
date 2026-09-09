@@ -294,7 +294,7 @@ development_status:
   # NOTE: 2026-09-09 — Added via Epic 35 planning (FR-98/99/100).
   # 35-1 story expanded to full dev story and ready for implementation.
   epic-35: in-progress
-  35-1-reddit-scraper: ready-for-dev
+  35-1-reddit-scraper: in-progress
   35-2-medium-scraper: backlog
   35-3-instagram-scraper: backlog
   35-4-unified-proxy-docs: backlog

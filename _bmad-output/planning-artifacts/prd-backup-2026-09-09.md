@@ -1,7 +1,7 @@
 ---
 title: "PRD: Epics 10–20 + 23–26 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform"
 created: 2026-08-18
-updated: 2026-09-09
+updated: 2026-08-26
 status: approved
 canonical: true
 supersedes:
@@ -20,7 +20,7 @@ prd_ref:
 
 # PRD: Epics 10–20 + 23–26 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform
 
-*Chuyển đổi toàn diện XActions thành Nền tảng Động cơ Cào Dữ liệu Toàn Năng (Universal Scraping Microservice) đa ngành: Mạng Xã Hội (X, Facebook, Threads, TikTok, Instagram, Bluesky, Mastodon, **Reddit, Medium**), Thương Mại Điện Tử (Shopee, TikTok Shop), Bất Động Sản (Chợ Tốt bóc tách SĐT, Batdongsan.com.vn), và Tuyển Dụng (TopCV, VietnamWorks, LinkedIn).*
+*Chuyển đổi toàn diện XActions thành Nền tảng Động cơ Cào Dữ liệu Toàn Năng (Universal Scraping Microservice) đa ngành: Mạng Xã Hội (X, Facebook, Threads, TikTok, Instagram, **Bluesky, Mastodon**), Thương Mại Điện Tử (Shopee, TikTok Shop), Bất Động Sản (Chợ Tốt bóc tách SĐT, Batdongsan.com.vn), và Tuyển Dụng (TopCV, VietnamWorks, LinkedIn).*
 
 ---
 
@@ -32,7 +32,7 @@ Tài liệu PRD này là bước nhảy vọt chiến lược tiếp nối từ 
 3. **Hợp Nhất Cơ Sở Dữ Liệu trên PostgreSQL (Prisma ORM):** Loại bỏ hoàn toàn sự phân mảnh của SQLite, quy chuẩn hóa dữ liệu đa ngành vào PostgreSQL với quy ước Namespaced ID `${platform}:${externalId}` và cột `metadata Json?` có GIN Index.
 4. **Cơ Chế Khai Thác Dữ Liệu 3 Tầng (3-Tier Incremental Gap-Filling):** Chỉ cào bù khoảng trống dữ liệu mới (Delta Gap), triệt tiêu 100% việc cào trùng lặp và tiết kiệm 90% chi phí proxy.
 5. **Kế Hoạch Bàn Giao & Dọn Dẹp (Nowing Cutover & Decommissioning):** Thay thế toàn bộ 20+ scraper cũ bên Nowing bằng XActions MCP Client, giảm dung lượng Docker image của Nowing từ 4GB xuống còn <500MB.
-6. **Hoàn thiện kiến trúc Universal AbstractCrawler (Epics 23–26):** Đưa Bluesky, Mastodon, Reddit, Medium, Instagram, utility scripts, adapter layer, và dispatcher về cùng một `AbstractCrawler` / `AbstractApiClient` / `CrawlerCommand`, sau đó xóa bỏ toàn bộ legacy scraper modules.
+6. **Hoàn thiện kiến trúc Universal AbstractCrawler (Epics 23–26):** Đưa Bluesky, Mastodon, utility scripts, adapter layer, và dispatcher về cùng một `AbstractCrawler` / `AbstractApiClient` / `CrawlerCommand`, sau đó xóa bỏ toàn bộ legacy scraper modules.
 
 ---
 
@@ -60,7 +60,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 ---
 
-## 3. Danh Mục Yêu Cầu Chức Năng (Functional Requirements FR-64 ➔ FR-101)
+## 3. Danh Mục Yêu Cầu Chức Năng (Functional Requirements FR-64 ➔ FR-97)
 
 ### Nhóm 1: Hạ Tầng Cốt Lõi & Lưu Trữ PostgreSQL (Epic 10)
 * **FR-64 (Core Domain Interfaces):** Cung cấp các cổng trừu tượng chuẩn hóa (`AbstractCrawler`, `AbstractApiClient`, `AbstractLogin`, `AbstractStore`, `ISignerBridge`) thuần ESM, Zero-Dependency.
@@ -103,9 +103,6 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 ### Nhóm 9: Open/Federated Social Media & Universal Architecture Completion (Epics 23–26)
 * **FR-89 (Bluesky AT Protocol Scraper):** Cào profile, followers, following, user feed, search, và custom feeds trên Bluesky qua public AT Protocol API (`https://public.api.bsky.app`) với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional auth (`identifier`/`password`) cho non-public data.
 * **FR-90 (Mastodon REST API Scraper):** Cào profile, followers, following, timeline, search, hashtag, và trending trên bất kỳ Mastodon instance nào qua public REST API với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional `accessToken` cho authenticated endpoints.
-* **FR-98 (Reddit REST API Scraper):** Cào subreddit, post, comment, user, và search trên Reddit qua official REST API (`https://api.reddit.com`) hoặc public JSON endpoints với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ OAuth2 read-only mode; normalize `t3` → `PostItem`, `t1` → `CommentItem`, `t5` → `CommunityItem`; tích hợp rate limiter dựa trên `x-ratelimit-*` headers.
-* **FR-99 (Medium RSS/HTML Scraper):** Cào post, publication, và tag trên Medium qua public RSS feed (`https://medium.com/@username/feed`) hoặc HTML rendering với `AbstractCrawler` + `AbstractApiClient`; không cần authentication; normalize RSS item → `PostItem`.
-* **FR-100 (Instagram Hybrid Scraper):** Cào profile, media, comment, và hashtag trên Instagram qua private API (`instagrapi` bridge hoặc tương đương) hoặc Puppeteer public scraping với `AbstractCrawler` + `AbstractApiClient`; yêu cầu session persistence, proxy rotation, và device emulation; hỗ trợ optional proxy qua `ProxyProvider`.
 * **FR-91 (Utility Scripts & Adapters Consolidation):** Audit và quyết định deprecation cho `src/scrapers/*.js` độc lập và `src/scrapers/adapters/`. Convert các tính năng hữu ích (video download, bookmark export, thread unroll) thành `CrawlerCommand` action hoặc chuyển vào `archive/`. Thu gọn adapter layer về `http`, `playwright`, `puppeteer` provider duy nhất.
 * **FR-92 (Unified Dispatcher & Backward Compatibility):** `src/scrapers/index.js` trở thành thin dispatcher duy nhất cho mọi platform qua `scrape(platform, action, args)`. Tất cả MCP/CLI/API caller gọi `CrawlerCommand` thay vì import platform cụ thể. Giữ `package.json` exports backward-compatible cho ít nhất 1 release cycle.
 * **FR-93 (Legacy Decommission):** Xóa `src/client/Scraper.js`, `src/scrapers/twitter/`, `src/scrapers/facebook/`, `src/scrapers/threads/` (legacy), `src/scrapers/bluesky/` (legacy), `src/scrapers/mastodon/` (legacy), và `src/scrapers/adapters/` sau khi đạt shadow-run parity ≥ 99% trong 7 ngày.
@@ -113,7 +110,6 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-95 (Vietnam Automotive Market Crawler):** Cào tin rao bán ô tô, xe máy, xe điện từ `oto.com.vn`, `bonbanh.com`, `xe.chotot.com` kèm SĐT chính chủ, hãng/dòng/năm/giá. Chuẩn hóa `PostItem` (`category: 'automotive'`). (Epic 21.2)
 * **FR-96 (Vietnam F&B, Healthcare & Legal Directory Crawler):** Cào danh bạ nhà hàng/quán cafe (PasGo, Foody, Riviu), phòng khám/nhà thuốc (Medpro, YouMed, Thuocsi), và đơn đăng ký nhãn hiệu (IP Vietnam `wipo.ipvietnam.gov.vn`). Chuẩn hóa `PostItem` (`category: 'fnb_merchant' | 'healthcare' | 'legal'`). (Epic 22.1–22.3)
 * **FR-97 (Zalo OA & YouTube VN Crawler):** Cào Zalo Official Account posts/followers qua Zalo OA API v3.0 (`openapi.zalo.me`) và YouTube VN channels/videos/comments qua YouTube Data API v3 với `regionCode: 'VN'`. HTML fallback khi API quota exhausted. Chuẩn hóa `PostItem` (`platform: 'zalo' | 'youtube'`). (Epic 33)
-* **FR-101 (Unified Social Account Storage):** Cung cấp `SocialAccount` và `SocialAccountHealth` Prisma models để lưu trữ session/cookie/proxy dùng chung cho mọi social platform (Reddit, Medium, Instagram, và các platform tương lai). Hỗ trợ `encryptedCookie`, `encryptedProxy`, `metadata Json?`, và quan hệ `User → SocialAccount[]`. Encryption dùng AES-256-GCM với key derivation từ `SESSION_SECRET`/`JWT_SECRET`. (Epic 35.4)
 
 ---
 
@@ -171,7 +167,6 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 - `CANONICAL-DOCS.md` — registry các tài liệu canonical/deprecated.
 - `prd-canonicalization-addendum-2026-08-21.md` — master register FR/NFR với prefix phạm vi (`FB-`, `E7-`, `U-`).
-- `epics.md` — epic breakdown bao gồm Epic 35 (Reddit/Medium/Instagram Scraper Expansion).
 
 ### Quyết định pending
 
@@ -182,7 +177,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 ## 7. Phụ Lục — Cập Nhật Sau Readiness Assessment (2026-08-19)
 
-### 7.1. Yêu cầu chức năng bổ sung (FR-85 ➔ FR-101)
+### 7.1. Yêu cầu chức năng bổ sung (FR-85 ➔ FR-93)
 
 *Các yêu cầu dưới đây xuất hiện trong kiến trúc và epic nhưng chưa được gán số FR cho đến khi re-assessment hoàn tất.*
 
@@ -234,11 +229,6 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Stream Metrics / Alerts | NFR-17 |
 | Universal Architecture Compliance | NFR-18 |
 | VN Geo-Proxy & Locale | NFR-19 |
-| Reddit Scraper | FR-98 → Epic 35 |
-| Medium Scraper | FR-99 → Epic 35 |
-| Instagram Scraper | FR-100 → Epic 35 |
-| Epic 35 | FR-98, FR-99, FR-100, FR-101 |
-| SocialAccount Storage | FR-101 → Epic 35.4 |
 
 ### 7.5. Canonicalization & Related Documents
 

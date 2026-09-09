@@ -3,12 +3,12 @@ title: 'Story 35.1: Reddit Scraper (Client + Crawler + Validator + Tests)'
 type: 'feature'
 created: '2026-09-09'
 updated: '2026-09-09'
-status: 'ready-for-dev'
+status: 'in-progress'
 epic: 35
 story_number: 35.1
 phase: 'Epic 35 — Reddit, Medium & Instagram Scraper Expansion'
 priority: 'high'
-baseline_commit: ''
+baseline_commit: 'dc357202b35518f9ec42689e4e949d27f536e773'
 context:
   - _bmad-output/planning-artifacts/epics.md#epic-35
   - _bmad-output/planning-artifacts/prd.md#fr-98
