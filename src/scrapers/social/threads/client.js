@@ -143,28 +143,35 @@ export class ThreadsClient extends AbstractApiClient {
    * @param {number} [deps.tokenTtlMs]
    * @param {number} [deps.maxTokenFetchRetries]
    * @param {boolean} [deps.requiresProxy]
+   * @param {import('../../../core/base-client.js').ProxyProviderLike} [deps.proxyProvider]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../core/session-manager.js').SessionManager} [deps.sessionManager]
+   * @param {Function} [deps.httpClient]
    * @param {import('../../../core/platform-validator.js').AbstractPlatformResponseValidator} [deps.responseValidator]
    */
   constructor(deps = {}) {
     const baseUrl = (deps.baseUrl || 'https://www.threads.net').replace(/\/+$/, '');
 
-    super({
+    /** @type {Record<string, any>} */
+    const superOptions = {
       platform: 'threads',
       client: deps.client || 'got',
-      requiresProxy: deps.requiresProxy ?? !isLocalUrl(baseUrl),
       responseValidator: deps.responseValidator || new ThreadsPlatformResponseValidator(),
+      proxyProvider: deps.proxyProvider,
       proxyPool: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (deps.proxyPool)),
       governor: deps.governor,
+      httpClient: deps.httpClient,
       accountPool: deps.accountPool,
       sessionManager: deps.sessionManager,
-    });
-    if (deps.requiresProxy === undefined) {
-      this.requiresProxy = !isLocalUrl(baseUrl);
+    };
+    if (deps.requiresProxy !== undefined) {
+      superOptions.requiresProxy = deps.requiresProxy;
     }
+    super(/** @type {any} */ (superOptions));
+
+    this.requiresProxy = deps.requiresProxy ?? !isLocalUrl(baseUrl);
 
     this.baseUrl = baseUrl;
     if (deps.igAppId) {

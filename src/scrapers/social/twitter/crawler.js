@@ -3860,7 +3860,7 @@ export class TwitterCrawler extends AbstractCrawler {
    * Action Handler: add_list_members
    * @param {Record<string, any>} args
    * @param {Record<string, any>} session
-   * @returns {Promise<{ success: boolean, listId: string, addedCount: number, batchCount: number, dryRun?: boolean, count?: number }>}
+   * @returns {Promise<{ success: boolean, listId: string, addedCount?: number, batchCount?: number, dryRun?: boolean, count?: number }>}
    */
   async addListMembers(args = {}, session = {}) {
     const listId = args?.listId;
@@ -3893,7 +3893,7 @@ export class TwitterCrawler extends AbstractCrawler {
     if (dryRun) {
       const count = userIds.length + usernames.length;
       console.log(`🔄 [DRY RUN] add_list_members: ${JSON.stringify({ listId, count })}`);
-      return { success: true, dryRun: true, listId, count, addedCount: 0, batchCount: 0 };
+      return { success: true, dryRun: true, listId, count };
     }
 
     const { accountId } = await this.#resolveSession(session);

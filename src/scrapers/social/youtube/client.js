@@ -47,6 +47,7 @@ export class YouTubeClient extends AbstractApiClient {
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool | import('../../../core/base-client.js').ProxyProviderLike} [options.proxyPool]
    * @param {import('../../../core/account-pool.js').AccountPool} [options.accountPool]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [options.governor]
+   * @param {Function} [options.httpClient]
    * @param {boolean} [options.requiresAuth=false]
    * @param {boolean} [options.requiresProxy=false]
    * @param {number} [options.timeout=30000]
@@ -59,6 +60,7 @@ export class YouTubeClient extends AbstractApiClient {
       proxyPool: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (proxyPool)),
       platform: 'youtube',
       responseValidator: validator,
+      httpClient: options.httpClient,
       requiresAuth: options.requiresAuth ?? false,
       requiresProxy: options.requiresProxy ?? false,
     });

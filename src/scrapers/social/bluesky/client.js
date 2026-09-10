@@ -133,6 +133,7 @@ export class BlueskyClient extends AbstractApiClient {
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [options.proxyPool]
    * @param {import('../../../core/account-pool.js').AccountPool} [options.accountPool]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [options.governor]
+   * @param {Function} [options.httpClient]
    * @param {boolean} [options.requiresAuth=false]
    * @param {boolean} [options.requiresProxy=false]
    * @param {number} [options.timeout=30000]
@@ -144,8 +145,10 @@ export class BlueskyClient extends AbstractApiClient {
       platform: 'bluesky',
       responseValidator,
       requiresAuth: options.requiresAuth ?? false,
+      requiresProxy: options.requiresProxy ?? false,
       accountPool: options.accountPool,
       governor: options.governor,
+      httpClient: options.httpClient,
       proxyPool: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (options.proxyPool)),
     });
 

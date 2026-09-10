@@ -46,6 +46,7 @@ export class MastodonClient extends AbstractApiClient {
    * @param {import('../../../core/account-pool.js').AccountPool} [options.accountPool]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [options.governor]
    * @param {import('../../../core/session-manager.js').SessionManager} [options.sessionManager]
+   * @param {Function} [options.httpClient]
    * @param {boolean} [options.requiresAuth=false]
    * @param {boolean} [options.requiresProxy=false]
    * @param {number} [options.timeout=30000]
@@ -60,6 +61,7 @@ export class MastodonClient extends AbstractApiClient {
       requiresProxy: options.requiresProxy ?? false,
       accountPool: options.accountPool,
       governor: options.governor,
+      httpClient: options.httpClient,
       sessionManager: options.sessionManager,
       proxyPool: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (options.proxyPool)),
       timeout: options.timeout,
