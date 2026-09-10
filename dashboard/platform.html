@@ -700,7 +700,7 @@
       const params = new URLSearchParams(window.location.search);
       const rawPlatform = pathPlatform || params.get("platform") || "facebook";
       const validPlatforms = [
-        "facebook", "x", "threads", "bluesky", "mastodon", "tiktok", "reddit",
+        "facebook", "x", "twitter", "threads", "bluesky", "mastodon", "tiktok", "reddit", "rdt",
         "shopee", "tiktokshop", "tiktok-shop", "topcv", "vietnamworks", "linkedin", "batdongsan", "chotot",
         "youtube", "zalo"
       ];
@@ -1554,6 +1554,8 @@
       // Normalize aliases for backward-compatible dashboard URLs
       const platformAlias = {
         "tiktok-shop": "tiktokshop",
+        "twitter": "x",
+        "rdt": "reddit",
       };
       const effectivePlatform = platformAlias[PLATFORM] || PLATFORM;
       const cfg = PLATFORM_CONFIG[effectivePlatform] || PLATFORM_CONFIG.facebook;
