@@ -232,7 +232,7 @@ export class RedditCrawler extends AbstractCrawler {
         platform: 'reddit',
       });
     }
-    return String(raw).replace(/^\/?r\//, '').trim();
+    return String(raw).replace(/^\/?r\//, '').replace(/^\//, '').trim();
   }
 
   /**
@@ -252,7 +252,7 @@ export class RedditCrawler extends AbstractCrawler {
         platform: 'reddit',
       });
     }
-    return String(raw).replace(/^\/?u\//, '').replace(/^@/, '').trim();
+    return String(raw).replace(/^\/?u\//, '').replace(/^\//, '').replace(/^@/, '').trim();
   }
 
   /**
@@ -290,6 +290,13 @@ export class RedditCrawler extends AbstractCrawler {
       }
     } else if (clean.startsWith('t3_')) {
       postId = clean.slice(3).trim();
+    } else if (/^[a-z0-9]+$/i.test(clean)) {
+      // already a bare post id — keep as-is
+      postId = clean;
+    } else {
+      // Final fallback: try to extract a reddit shortlink id (redd.it/xxx).
+      const short = clean.match(/redd\.it\/([a-z0-9]+)/i);
+      if (short) postId = short[1];
     }
 
     return { postId, subreddit };

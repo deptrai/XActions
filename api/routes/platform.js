@@ -115,6 +115,14 @@ function validatePlatformAccount(platform, body) {
     if (!sessionid || typeof sessionid !== 'string' || sessionid.trim().length === 0) {
       return 'sessionid is required';
     }
+  } else if (platform === 'reddit' || platform === 'rdt') {
+    const { clientId, clientSecret } = body;
+    if (!clientId || typeof clientId !== 'string' || clientId.trim().length === 0) {
+      return 'clientId is required';
+    }
+    if (!clientSecret || typeof clientSecret !== 'string' || clientSecret.trim().length === 0) {
+      return 'clientSecret is required';
+    }
   }
 
   return null;
@@ -155,6 +163,13 @@ function buildAuthCookie(platform, cookie) {
   }
   if (platform === 'tiktok') {
     return { sessionid: cookie.sessionid };
+  }
+  if (platform === 'reddit' || platform === 'rdt') {
+    return {
+      clientId: cookie.clientId,
+      clientSecret: cookie.clientSecret,
+      username: cookie.username || cookie.redditUsername,
+    };
   }
   return cookie;
 }
@@ -265,17 +280,25 @@ router.delete('/:platform/accounts/:id', async (req, res) => {
  */
 async function resolveAccountCookie(userId, accountId, platform) {
   const isTwitter = platform === 'x' || platform === 'twitter';
+  const isReddit = platform === 'reddit' || platform === 'rdt';
+  const labelPrefix = isReddit ? 'reddit:' : `${platform}:`;
   const where = isTwitter
     ? {
         id: accountId,
         userId,
         OR: [{ label: { startsWith: 'x:' } }, { label: { startsWith: 'twitter:' } }],
       }
-    : {
-        id: accountId,
-        userId,
-        label: { startsWith: `${platform}:` },
-      };
+    : isReddit
+      ? {
+          id: accountId,
+          userId,
+          OR: [{ label: { startsWith: 'reddit:' } }, { label: { startsWith: 'rdt:' } }],
+        }
+      : {
+          id: accountId,
+          userId,
+          label: { startsWith: labelPrefix },
+        };
 
   const account = await prisma.facebookAccount.findFirst({
     where,
@@ -371,6 +394,11 @@ router.post('/:platform/automate', async (req, res) => {
       const cookie = await resolveAccountCookie(reqUser.id, accountIds[0], platform);
       options.authCookie = buildAuthCookie(platform, cookie);
       options.accountId = accountIds[0];
+      if (cookie && typeof cookie === 'object') {
+        if (cookie.clientId && !options.clientId) options.clientId = cookie.clientId;
+        if (cookie.clientSecret && !options.clientSecret) options.clientSecret = cookie.clientSecret;
+        if (cookie.username && !options.redditUsername) options.redditUsername = cookie.username;
+      }
     }
 
     // For platforms without a dedicated automation service, the unified

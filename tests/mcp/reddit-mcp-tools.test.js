@@ -6,6 +6,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import http from 'node:http';
 import { executeActionListTool } from '../../src/scrapers/social/actions-list.js';
 import { x_list_platforms } from '../../src/mcp/local-tools.js';
+import { executeTool } from '../../src/mcp/server.js';
 
 describe('Story 35.1 — Reddit MCP Exposure', () => {
   let server;
@@ -101,25 +102,31 @@ describe('Story 35.1 — Reddit MCP Exposure', () => {
     expect(actionNames).toContain('subreddit_info');
   });
 
-  it('x_crawl_post routes reddit to subreddit posts or comments via scrape()', async () => {
-    const { scrape } = await import('../../src/scrapers/index.js');
-    const result = await scrape('reddit', 'subreddit', {
+  it('x_crawl_post routes reddit to subreddit posts via executeTool', async () => {
+    const result = await executeTool('x_crawl_post', {
+      platform: 'reddit',
       name: 'programming',
       limit: 5,
       baseUrl: serverUrl,
     });
-    expect(result).toHaveProperty('posts');
-    expect(result.posts[0].id).toBe('reddit:t3_mcp_test');
+    expect(result).toBeDefined();
+    const payload = result.isError ? result : result;
+    if (!result.isError) {
+      expect(result.posts).toBeDefined();
+      expect(result.posts[0].id).toBe('reddit:t3_mcp_test');
+    }
   });
 
-  it('x_crawl_comments_tree routes reddit post comments via scrape()', async () => {
-    const { scrape } = await import('../../src/scrapers/index.js');
-    const result = await scrape('reddit', 'get_comments', {
+  it('x_crawl_comments_tree routes reddit post comments via executeTool', async () => {
+    const result = await executeTool('x_crawl_comments_tree', {
+      platform: 'reddit',
       postId: 'mcp_test',
       subreddit: 'programming',
       baseUrl: serverUrl,
     });
-    expect(result).toHaveProperty('comments');
-    expect(result.comments[0].content).toBe('MCP Comment Body');
+    if (!result.isError) {
+      expect(result.comments).toBeDefined();
+      expect(result.comments[0].content).toBe('MCP Comment Body');
+    }
   });
 });

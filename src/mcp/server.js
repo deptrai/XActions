@@ -3124,7 +3124,21 @@ async function executeTool(name, args) {
         content: [{ type: 'text', text: 'Remote client not initialized' }],
       };
     }
-    return await remoteClient.execute(name, args);
+
+    // Check if a non-Twitter platform param is set and dispatch to multi-platform variant
+    const multiPlatformTools = {
+      x_get_profile: 'x_get_profile_multiplatform',
+      x_get_followers: 'x_get_followers_multiplatform',
+      x_get_following: 'x_get_following_multiplatform',
+      x_get_tweets: 'x_get_tweets_multiplatform',
+      x_search_tweets: 'x_search_tweets_multiplatform',
+    };
+
+    let toolName = name;
+    if (args.platform && args.platform !== 'twitter' && multiPlatformTools[name]) {
+      toolName = multiPlatformTools[name];
+    }
+    return await remoteClient.execute(toolName, args);
   } else {
     if (!localTools) {
       return {
@@ -3462,9 +3476,30 @@ async function executeCrawlPostTool(args) {
   if (url) scrapeArgs.url = url;
   if (postId) scrapeArgs.postId = postId;
   if (limit != null) scrapeArgs.limit = Number(limit);
+  // Forward platform-specific args the dispatcher knows about.
+  if (args.name) scrapeArgs.name = args.name;
+  if (args.subreddit) scrapeArgs.subreddit = args.subreddit;
+  if (args.username) scrapeArgs.username = args.username;
+  if (args.query) scrapeArgs.query = args.query;
+  if (args.transport) scrapeArgs.transport = args.transport;
+  if (args.baseUrl) scrapeArgs.baseUrl = args.baseUrl;
+  if (args.apiBaseUrl) scrapeArgs.apiBaseUrl = args.apiBaseUrl;
+  if (args.oauthUrl) scrapeArgs.oauthUrl = args.oauthUrl;
+  if (args.clientId) scrapeArgs.clientId = args.clientId;
+  if (args.clientSecret) scrapeArgs.clientSecret = args.clientSecret;
+  if (args.redditUsername) scrapeArgs.redditUsername = args.redditUsername;
+  if (args.maxDepth != null) scrapeArgs.maxDepth = Number(args.maxDepth);
+  if (args.maxComments != null) scrapeArgs.maxComments = Number(args.maxComments);
 
   if (String(platform).toLowerCase() === 'reddit' || String(platform).toLowerCase() === 'rdt') {
-    if (postId || (url && /\/comments\//i.test(String(url)))) {
+    const strUrl = url ? String(url) : '';
+    const looksLikeComment = postId || /\/comments\//i.test(strUrl) || /^https?:\/\/(www\.)?redd\.it\/[a-z0-9]+/i.test(strUrl);
+
+    if (looksLikeComment) {
+      // Extract subreddit from URL so the crawler can build /r/{sub}/comments/{id}
+      // when only a URL (or shortlink) is provided.
+      const subMatch = strUrl.match(/\/r\/([^/?#]+)(?:\/|$)/i);
+      if (subMatch && !scrapeArgs.subreddit) scrapeArgs.subreddit = subMatch[1];
       return await scrape('reddit', 'post_comments', scrapeArgs);
     }
     return await scrape('reddit', 'subreddit', scrapeArgs);
@@ -3492,24 +3527,56 @@ async function executeCrawlPostTool(args) {
  */
 async function executeCrawlCommentsTreeTool(args) {
   const { platform, postId, url, maxDepth, maxComments, limit } = args;
-  if (!platform || typeof platform !== 'string' || !postId || typeof postId !== 'string') {
+  if (!platform || typeof platform !== 'string') {
     throw new PlatformError({
       code: 'XACT_4001',
       type: ErrorTypes.INVALID_ARGS,
-      message: 'x_crawl_comments_tree requires platform and postId arguments',
+      message: 'x_crawl_comments_tree requires a platform argument',
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
       platform: typeof platform === 'string' ? platform : undefined,
+    });
+  }
+
+  // Reddit can infer postId from a comments URL, so postId is not strictly required.
+  if (String(platform).toLowerCase() !== 'reddit' && String(platform).toLowerCase() !== 'rdt' && (!postId || typeof postId !== 'string')) {
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: 'x_crawl_comments_tree requires postId argument',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      platform: String(platform),
     });
   }
 
   const { scrape } = await import('../scrapers/index.js');
   const scrapeArgs = { postId, url, maxDepth, maxComments, limit };
   if (url) scrapeArgs.url = url;
+  if (postId) scrapeArgs.postId = postId;
   if (maxDepth != null) scrapeArgs.maxDepth = Number(maxDepth);
   if (maxComments != null) scrapeArgs.maxComments = Number(maxComments);
   if (limit != null && maxComments == null) scrapeArgs.maxComments = Number(limit);
+  // Forward platform-specific args the dispatcher knows about.
+  if (args.name) scrapeArgs.name = args.name;
+  if (args.subreddit) scrapeArgs.subreddit = args.subreddit;
+  if (args.username) scrapeArgs.username = args.username;
+  if (args.query) scrapeArgs.query = args.query;
+  if (args.transport) scrapeArgs.transport = args.transport;
+  if (args.baseUrl) scrapeArgs.baseUrl = args.baseUrl;
+  if (args.apiBaseUrl) scrapeArgs.apiBaseUrl = args.apiBaseUrl;
+  if (args.oauthUrl) scrapeArgs.oauthUrl = args.oauthUrl;
+  if (args.clientId) scrapeArgs.clientId = args.clientId;
+  if (args.clientSecret) scrapeArgs.clientSecret = args.clientSecret;
+  if (args.redditUsername) scrapeArgs.redditUsername = args.redditUsername;
 
   if (String(platform).toLowerCase() === 'reddit' || String(platform).toLowerCase() === 'rdt') {
+    const strUrl = url ? String(url) : '';
+    if (!scrapeArgs.postId && strUrl) {
+      // Try to extract postId from a Reddit URL or shortlink.
+      const match = strUrl.match(/\/comments\/([^/?#]+)/i) || strUrl.match(/redd\.it\/([a-z0-9]+)/i);
+      if (match) scrapeArgs.postId = match[1];
+      const subMatch = strUrl.match(/\/r\/([^/?#]+)(?:\/|$)/i);
+      if (subMatch && !scrapeArgs.subreddit) scrapeArgs.subreddit = subMatch[1];
+    }
     return await scrape('reddit', 'post_comments', scrapeArgs);
   }
 

@@ -982,7 +982,7 @@ export async function scrape(platform, action, options = {}) {
           oauthUrl: options.oauthUrl,
           clientId: options.clientId || options.redditClientId,
           clientSecret: options.clientSecret || options.redditClientSecret,
-          username: options.redditUsername || undefined,
+          username: options.redditUsername || options.username || undefined,
           userAgent: options.userAgent,
           accessToken: options.accessToken,
           proxy: options.proxy,
@@ -1000,6 +1000,7 @@ export async function scrape(platform, action, options = {}) {
     const crawler = new RedditCrawler({
       client,
       store,
+      transport: options.transport || options.redditTransport,
       redisPublisher: options.redisPublisher,
       proxyPool: options.proxyPool,
       proxyProvider: options.proxyProvider,

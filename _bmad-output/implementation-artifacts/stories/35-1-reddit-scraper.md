@@ -392,3 +392,24 @@ context:
 
 - [x] [Review][Defer] Automated real Puppeteer bridge launch/cookie extraction test — the bridge is explicitly a skeleton and already covered by a manual live probe; a real-browser integration test is out of scope for this story. [tests/scrapers/social/reddit/client.test.js, src/scrapers/social/reddit/bridge.js]
 - [x] [Review][Defer] Implement `more`/`morechildren` continuation loading in `getPostComments` — the current BFS is already capped by `limit` and the story I/O matrix does not require complete nested comment loading; adding `morechildren` requires a separate endpoint and is out of scope for Story 35.1. [src/scrapers/social/reddit/crawler.js:508-522]
+
+#### New Patches (applied 2026-09-10)
+
+- [x] [Review][Patch] Fix `x-ratelimit-reset` parsing to treat small values as relative seconds and large values as absolute epochs. [src/scrapers/social/reddit/client.js:733-742]
+- [x] [Review][Patch] Loosen `#looksLikeSubredditListing` regex to tolerate query strings, missing sort, and additional sort variants. [src/scrapers/social/reddit/client.js:474-482]
+- [x] [Review][Patch] Forward `this.proxy` into `RedditBrowserBridge` so explicit proxy strings are not dropped. [src/scrapers/social/reddit/client.js:702]
+- [x] [Review][Patch] Bind native `cookies()` method and fix `cookieHeader` encoding to only encode cookie values. [src/scrapers/social/reddit/bridge.js:277-279,360-368]
+- [x] [Review][Patch] Allow string proxy values in `PuppeteerAdapter.launch()` so `--proxy-server` is appended for both string and object proxies. [src/scrapers/adapters/puppeteer.js:58-60]
+- [x] [Review][Patch] Fallback `options.username` in Reddit dispatcher for multi-platform tool compatibility. [src/scrapers/index.js:990]
+- [x] [Review][Patch] Forward `transport`/`redditTransport` when a `RedditClient` instance is passed to the dispatcher. [src/scrapers/index.js:1003]
+- [x] [Review][Patch] Parse subreddit/shortlink from URL in `executeCrawlPostTool` and `executeCrawlCommentsTreeTool`, and forward platform-specific args. [src/mcp/server.js:3470-3485,3545-3560]
+- [x] [Review][Patch] Remove strict `postId` requirement for `x_crawl_comments_tree` on Reddit when a URL is supplied. [src/mcp/server.js:3508-3520]
+- [x] [Review][Patch] Guard `x_get_followers`/`x_get_following` for Reddit and throw a clear `PlatformError`; import `PlatformError`/`ErrorTypes`/`SuggestedActions` in `local-tools.js`. [src/mcp/local-tools.js:38,349-373]
+- [x] [Review][Patch] Apply multi-platform tool mapping in remote `executeTool` mode so `x_get_profile`/`x_get_tweets`/`x_search_tweets` work for `reddit`/`rdt` over remote MCP. [src/mcp/server.js:3125-3140]
+- [x] [Review][Patch] Add Reddit branch in `validatePlatformAccount`, `buildAuthCookie`, and `resolveAccountCookie`; extract Reddit credentials in `POST /:platform/automate`. [api/routes/platform.js:85-93,165-171,280-295,380-390]
+- [x] [Review][Patch] Add `time` parameter fields to `subreddit` and `search` actions in dashboard config. [dashboard/platform.html:1370-1394]
+- [x] [Review][Patch] Restore `tests/e2e/*.e2e.test.js` discovery in `playwright.config.js` so existing E2E suites are not silently ignored. [playwright.config.js:6]
+- [x] [Review][Patch] Replace `tests/playwright/reddit-dashboard.e2e.spec.js` mock with real UI assertions (no backend stubbing). [tests/playwright/reddit-dashboard.e2e.spec.js]
+- [x] [Review][Patch] Update `tests/mcp/reddit-mcp-tools.test.js` to call `executeTool` directly and assert real MCP routing. [tests/mcp/reddit-mcp-tools.test.js]
+- [x] [Review][Patch] Strip leading `/` in `#extractSubreddit()` and `#extractUsername()` and support `redd.it` shortlinks in `#extractPostId()`. [src/scrapers/social/reddit/crawler.js:228,236,285-292]
+- [x] [Review][Patch] Update `tests/store/prisma-store.test.js` and `tests/scrapers/social/reddit/client.test.js` expectations to match current `CATEGORIES` and relative `x-ratelimit-reset` semantics. [tests/store/prisma-store.test.js:101, tests/scrapers/social/reddit/client.test.js:443]

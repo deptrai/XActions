@@ -34,6 +34,7 @@ import {
   loginWithCookie as fbLoginWithCookie,
 } from '../scrapers/facebook/index.js';
 import { scrape as dispatchScrape } from '../scrapers/index.js';
+import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
 import {
   likeFacebookPosts,
   commentOnFacebookPosts,
@@ -347,6 +348,15 @@ export async function x_search_tweets_multiplatform({ query, platform = 'twitter
  * @param {{ username: string, platform: string, instance?: string, limit?: number }} args
  */
 export async function x_get_followers_multiplatform({ username, platform = 'twitter', instance, limit }) {
+  if (platform === 'reddit' || platform === 'rdt') {
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: 'x_get_followers is not supported for Reddit; Reddit does not expose a followers endpoint.',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      platform,
+    });
+  }
   return dispatchScrape(platform, 'followers', { username, instance, limit: limit ?? 100 });
 }
 
@@ -355,6 +365,15 @@ export async function x_get_followers_multiplatform({ username, platform = 'twit
  * @param {{ username: string, platform: string, instance?: string, limit?: number }} args
  */
 export async function x_get_following_multiplatform({ username, platform = 'twitter', instance, limit }) {
+  if (platform === 'reddit' || platform === 'rdt') {
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: 'x_get_following is not supported for Reddit; Reddit does not expose a following endpoint.',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      platform,
+    });
+  }
   return dispatchScrape(platform, 'following', { username, instance, limit: limit ?? 100 });
 }
 

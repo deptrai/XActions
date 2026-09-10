@@ -472,7 +472,11 @@ export class RedditClient extends AbstractApiClient {
    * @returns {boolean}
    */
   #looksLikeSubredditListing(path) {
-    return /^\/r\/[^/]+\/(new|hot|top|rising)(\.json)?$/.test(path);
+    // Match /r/{sub}/{sort} or /r/{sub}/{sort}.json, tolerating query strings
+    // and missing sort (e.g. /r/programming?limit=25 or /r/programming.json).
+    const clean = String(path || '').split('?')[0].split('#')[0];
+    if (/^\/r\/[^/]+\/?$/.test(clean)) return true;
+    return /^\/r\/[^/]+\/(new|hot|top|rising|controversial|gilded|wiki|about)(\.json)?\/?$/.test(clean);
   }
 
   /**
@@ -696,6 +700,7 @@ export class RedditClient extends AbstractApiClient {
         if (!this.browserBridge) {
           this.browserBridge = new RedditBrowserBridge({
             baseUrl: this.baseUrl,
+            proxy: this.proxy,
             proxyProvider: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (this.proxyProvider || this.proxyPool)),
             // Do not pass this.userAgent (bot UA) so Stealth keeps its realistic Chrome UA
             headless: process.env.REDDIT_BRIDGE_HEADLESS !== 'false',
@@ -733,8 +738,12 @@ export class RedditClient extends AbstractApiClient {
 
     let resetAt = null;
     if (reset !== null && !Number.isNaN(reset)) {
-      // Reddit's x-ratelimit-reset is an absolute Unix-epoch timestamp in seconds.
-      resetAt = reset * 1000;
+      // Reddit's x-ratelimit-reset is a relative number of seconds until the
+      // quota window resets (e.g. "600"), not an absolute epoch timestamp.
+      // Defensively treat small values as relative and large values as absolute
+      // so the parser also tolerates epoch-style headers if they ever appear.
+      const isAbsoluteEpoch = reset > 1_000_000_000;
+      resetAt = isAbsoluteEpoch ? reset * 1000 : Date.now() + reset * 1000;
     }
 
     return { remaining, resetAt, used };
@@ -783,7 +792,7 @@ export class RedditClient extends AbstractApiClient {
       const { remaining, resetAt } = this.#parseRateLimitHeaders(/** @type {Record<string, unknown>} */ (/** @type {unknown} */ (res.headers)));
       if (remaining !== null && remaining <= 1 && resetAt !== null) {
         const waitMs = Math.max(0, resetAt - Date.now());
-        if (waitMs > 0 && waitMs < 300000) { // cap at 5 minutes
+        if (waitMs > 0 && waitMs < 300000) { // only sleep if within 5-minute cap
           await new Promise((resolve) => setTimeout(resolve, waitMs));
         }
       }

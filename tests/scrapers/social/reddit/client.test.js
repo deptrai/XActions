@@ -439,7 +439,8 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
 
   it('caps rate-limit backoff at 5 minutes for far-future reset', async () => {
     const client = new RedditClient({ baseUrl: serverUrl });
-    const farFutureReset = Math.floor(Date.now() / 1000) + 1000;
+    // Use a relative reset far in the future (1000 seconds ≈ 16.7 minutes).
+    const farFutureReset = 1000;
     const start = Date.now();
     await client.apiRequest('/ratelimit', { reset: farFutureReset });
     const elapsed = Date.now() - start;

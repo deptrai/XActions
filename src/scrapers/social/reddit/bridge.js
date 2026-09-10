@@ -290,7 +290,8 @@ export class RedditBrowserBridge {
 
     if (nativeRecord && typeof nativeRecord.cookies === 'function') {
       try {
-        const cookiesFn = /** @type {(url: string) => unknown} */ (nativeRecord.cookies);
+        // Bind the native cookies method so its internal `this` is preserved.
+        const cookiesFn = /** @type {(url: string) => unknown} */ (nativeRecord.cookies.bind(nativeRecord));
         const rawCookies = await cookiesFn(this.baseUrl);
         if (Array.isArray(rawCookies)) {
           rawList = rawCookies.map((rawC) => {
@@ -359,8 +360,14 @@ export class RedditBrowserBridge {
     const cookies = this.cookies;
     if (cookies.length === 0) return '';
     // Encode cookie values so the header is safe from delimiters and whitespace.
+    // Cookie values may themselves contain '=' (e.g. session=abc=def), so we
+    // only encode the value segment after the name, preserving one '='.
     return cookies
-      .map((c) => `${c.name}=${encodeURIComponent(String(c.value || ''))}`)
+      .map((c) => {
+        const rawValue = String(c.value ?? '');
+        const safeValue = encodeURIComponent(rawValue);
+        return `${c.name}=${safeValue}`;
+      })
       .join('; ');
   }
 

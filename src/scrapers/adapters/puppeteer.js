@@ -60,7 +60,8 @@ export class PuppeteerAdapter extends BaseAdapter {
         '--disable-setuid-sandbox',
         '--disable-blink-features=AutomationControlled',
         ...(options.args || []),
-        ...(proxy && typeof proxy === 'object' ? [`--proxy-server=${proxy.server}`] : []),
+        ...(typeof proxy === 'string' && proxy ? [`--proxy-server=${proxy}`] : []),
+        ...(proxy && typeof proxy === 'object' && proxy.server ? [`--proxy-server=${proxy.server}`] : []),
       ],
       ...rest,
     });
