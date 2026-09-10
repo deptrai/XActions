@@ -22,6 +22,27 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
+/** @type {string[]} */
+const VALID_PLATFORMS = [
+  'facebook', 'x', 'twitter', 'threads', 'bluesky', 'mastodon', 'tiktok',
+  'reddit', 'rdt', 'shopee', 'tiktokshop', 'tiktok-shop', 'topcv',
+  'vietnamworks', 'linkedin', 'batdongsan', 'chotot', 'youtube', 'zalo',
+];
+
+/** @type {Record<string, string>} */
+const PLATFORM_ALIASES = { 'tiktok-shop': 'tiktokshop' };
+
+/**
+ * @param {string} platform
+ * @returns {string | null}
+ */
+function normalizePlatform(platform) {
+  const raw = String(platform || '').toLowerCase().trim();
+  const alias = /** @type {string | undefined} */ (PLATFORM_ALIASES[raw]);
+  const candidate = alias || raw;
+  return VALID_PLATFORMS.includes(candidate) ? candidate : null;
+}
+
 // Reuse the same AES-256-GCM pattern as facebookAccounts.js
 const ENCRYPTION_KEY = process.env.SESSION_SECRET || process.env.JWT_SECRET;
 const ALGORITHM = 'aes-256-gcm';
@@ -177,11 +198,26 @@ function buildAuthCookie(platform, cookie) {
 router.use(authenticate);
 
 /**
+ * Validate :platform on all /api/platform/:platform/* routes.
+ * @type {import('express-serve-static-core').RequestParamHandler}
+ */
+const platformParamHandler = (req, res, next, value) => {
+  const normalized = normalizePlatform(value);
+  if (!normalized) {
+    return res.status(400).json({ ok: false, error: `Unknown platform: ${value}` });
+  }
+  /** @type {any} */ (req).platform = normalized;
+  next();
+};
+
+(/** @type {any} */ (router)).param('platform', platformParamHandler);
+
+/**
  * GET /api/platform/:platform/accounts
  */
 router.get('/:platform/accounts', async (req, res) => {
   const reqUser = /** @type {import('@prisma/client').User} */ (req.user);
-  const { platform } = req.params;
+  const platform = /** @type {string} */ (req.platform || req.params.platform);
 
   try {
     const isTwitter = platform === 'x' || platform === 'twitter';
@@ -222,7 +258,7 @@ router.get('/:platform/accounts', async (req, res) => {
  */
 router.post('/:platform/accounts', async (req, res) => {
   const reqUser = /** @type {import('@prisma/client').User} */ (req.user);
-  const { platform } = req.params;
+  const platform = /** @type {string} */ (req.platform || req.params.platform);
   const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
 
   const error = validatePlatformAccount(platform, body);
@@ -253,7 +289,8 @@ router.post('/:platform/accounts', async (req, res) => {
  */
 router.delete('/:platform/accounts/:id', async (req, res) => {
   const reqUser = /** @type {import('@prisma/client').User} */ (req.user);
-  const { platform, id } = req.params;
+  const platform = /** @type {string} */ (req.platform || req.params.platform);
+  const { id } = req.params;
 
   try {
     const prefix = `${platform}:`;
@@ -330,7 +367,7 @@ async function resolveAccountCookie(userId, accountId, platform) {
  */
 router.post('/:platform/scrape', async (req, res) => {
   const reqUser = /** @type {import('@prisma/client').User} */ (req.user);
-  const { platform } = req.params;
+  const platform = /** @type {string} */ (req.platform || req.params.platform);
   const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
   const action = /** @type {string | undefined} */ (body.action);
 
@@ -362,7 +399,8 @@ router.post('/:platform/scrape', async (req, res) => {
     res.json({ ok: true, platform, action, dryRun: Boolean(body.dryRun), result });
   } catch (err) {
     console.error(`❌ POST /platform/${platform}/scrape error:`, err);
-    res.status(500).json({
+    const status = typeof err === 'object' && err !== null && 'statusCode' in err && typeof err.statusCode === 'number' ? err.statusCode : 500;
+    res.status(status).json({
       ok: false,
       error: err instanceof Error ? err.message : 'Scrape failed',
     });
@@ -374,7 +412,7 @@ router.post('/:platform/scrape', async (req, res) => {
  */
 router.post('/:platform/automate', async (req, res) => {
   const reqUser = /** @type {import('@prisma/client').User} */ (req.user);
-  const { platform } = req.params;
+  const platform = /** @type {string} */ (req.platform || req.params.platform);
   const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
   const action = /** @type {string | undefined} */ (body.action);
 
@@ -407,7 +445,8 @@ router.post('/:platform/automate', async (req, res) => {
     res.json({ ok: true, platform, action, dryRun: Boolean(body.dryRun), result });
   } catch (err) {
     console.error(`❌ POST /platform/${platform}/automate error:`, err);
-    res.status(500).json({
+    const status = typeof err === 'object' && err !== null && 'statusCode' in err && typeof err.statusCode === 'number' ? err.statusCode : 500;
+    res.status(status).json({
       ok: false,
       error: err instanceof Error ? err.message : 'Automation failed',
     });
