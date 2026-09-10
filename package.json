@@ -29,6 +29,7 @@
     "./scrapers/social/tiktok": "./src/scrapers/social/tiktok/index.js",
     "./scrapers/social/facebook": "./src/scrapers/social/facebook/index.js",
     "./scrapers/social/twitter": "./src/scrapers/social/twitter/index.js",
+    "./scrapers/social/medium": "./src/scrapers/social/medium/index.js",
     "./scrapers/ecom/shopee": "./src/scrapers/ecom/shopee/index.js",
     "./scrapers/ecom/tiktok-shop": "./src/scrapers/ecom/tiktok-shop/index.js",
     "./streaming": "./src/streaming/index.js",

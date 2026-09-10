@@ -90,6 +90,15 @@ const redditProxy = new Proxy(redditModule, {
     return Reflect.apply(target, thisArg, args);
   },
 });
+
+const mediumProxy = new Proxy(mediumModule, {
+  get(target, prop, receiver) {
+    return Reflect.get(target, prop, receiver);
+  },
+  apply(target, thisArg, args) {
+    return Reflect.apply(target, thisArg, args);
+  },
+});
 import topcv from './recruitment/topcv/index.js';
 import vietnamworks from './recruitment/vietnamworks/index.js';
 import linkedin from './recruitment/linkedin/index.js';
@@ -122,6 +131,9 @@ import zalo, {
 import { RedditCrawler } from './social/reddit/crawler.js';
 import { RedditClient } from './social/reddit/client.js';
 import * as redditModule from './social/reddit/index.js';
+import { MediumClient } from './social/medium/client.js';
+import { MediumCrawler } from './social/medium/crawler.js';
+import * as mediumModule from './social/medium/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -236,6 +248,8 @@ export const platforms = {
   youtube_vn: youtube,
   reddit: redditProxy,
   rdt: redditProxy,
+  medium: mediumProxy,
+  md: mediumProxy,
 };
 
 /**
@@ -1781,6 +1795,92 @@ export async function scrape(platform, action, options = {}) {
     }
   }
 
+  // ── Medium hybrid path (Story 35.2) ──
+  // Dispatches to MediumCrawler / MediumClient (RSS-first, JSON fallback, Puppeteer stealth bridge).
+  if (platformName === 'medium' || platformName === 'md' || platformName === 'medium_com') {
+    /** @type {Record<string, string>} */
+    const MEDIUM_ACTION_MAP = {
+      user: 'user',
+      author: 'user',
+      posts: 'user',
+      tweets: 'user',
+      feed: 'user',
+      publication: 'publication',
+      pub: 'publication',
+      magazine: 'publication',
+      tag: 'tag',
+      hashtag: 'tag',
+      topic: 'tag',
+      post: 'post',
+      post_detail: 'post',
+      article: 'post',
+    };
+
+    const mappedAction = MEDIUM_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(MEDIUM_ACTION_MAP))];
+      throw new Error(
+        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+      );
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (options.username != null || options.user != null || options.handle != null) {
+      mappedArgs.username = options.username || options.user || options.handle;
+    }
+    if (options.slug != null || options.publication != null || options.pub != null || options.magazine != null) {
+      mappedArgs.slug = options.slug || options.publication || options.pub || options.magazine;
+    }
+    if (options.tag != null || options.hashtag != null || options.topic != null) {
+      mappedArgs.tag = options.tag || options.hashtag || options.topic;
+    }
+    if (options.postId != null || options.id != null || options.url != null) {
+      mappedArgs.postId = options.postId || options.id || options.url;
+    }
+    if (options.url != null) mappedArgs.url = options.url;
+    if (options.limit != null) mappedArgs.limit = options.limit;
+    if (options.cursor != null) mappedArgs.cursor = options.cursor;
+    if (options.transport != null) mappedArgs.transport = options.transport;
+    if (options.domain != null) mappedArgs.domain = options.domain;
+    if (options.userAgent != null) mappedArgs.userAgent = options.userAgent;
+
+    const client = options.client || new MediumClient({
+      baseUrl: options.baseUrl || 'https://medium.com',
+      userAgent: options.userAgent,
+      transport: options.transport,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      requiresProxy: options.requiresProxy,
+      timeout: options.timeout,
+      requiresResidential: options.requiresResidential !== false,
+    });
+
+    const session = options.session || {};
+
+    const crawler = new MediumCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
   // ── MaSoThue B2B Procurement path (Story 21.1) ──
   if (platformName === 'masothue' || platformName === 'maso_thue' || platformName === 'mst') {
     /** @type {Record<string, string>} */
@@ -2648,6 +2748,27 @@ export function createRedditCrawler(clientOrDeps, options = {}) {
   return new RedditCrawler({ client: resolvedClient, ...resolvedOptions });
 }
 
+export function createMediumClient(options = {}) {
+  return new MediumClient(options);
+}
+
+export function createMediumCrawler(clientOrDeps, options = {}) {
+  let resolvedClient;
+  let resolvedOptions;
+  if (clientOrDeps instanceof MediumClient) {
+    resolvedClient = clientOrDeps;
+    resolvedOptions = options;
+  } else if (clientOrDeps && clientOrDeps.client instanceof MediumClient) {
+    resolvedClient = clientOrDeps.client;
+    resolvedOptions = { ...clientOrDeps, ...options };
+    delete resolvedOptions.client;
+  } else {
+    resolvedClient = new MediumClient(clientOrDeps || options || {});
+    resolvedOptions = clientOrDeps || options || {};
+  }
+  return new MediumCrawler({ client: resolvedClient, ...resolvedOptions });
+}
+
 // Named re-exports for adapter utilities
 export {
   YouTubeVNCrawler,
@@ -2674,6 +2795,8 @@ export {
   B2BRegistryExtendedClient,
   RedditCrawler,
   RedditClient,
+  MediumCrawler,
+  MediumClient,
   getAdapter,
   getAvailableAdapter,
   setDefaultAdapter,
