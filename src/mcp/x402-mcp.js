@@ -277,7 +277,7 @@ export function createMcpPaymentMiddleware() {
     }
 
     // Skip if x402 not configured (graceful degradation in dev)
-    if (!ensureConfigValidated()) {
+    if (!ensureConfigValidated() || !process.env.X402_PAY_TO_ADDRESS) {
       if (process.env.NODE_ENV !== 'production') return next();
       return res.status(500).json({ error: 'Payment system not configured' });
     }
