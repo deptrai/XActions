@@ -701,7 +701,8 @@
       const rawPlatform = pathPlatform || params.get("platform") || "facebook";
       const validPlatforms = [
         "facebook", "x", "threads", "bluesky", "mastodon", "tiktok", "reddit",
-        "shopee", "tiktokshop", "topcv", "vietnamworks", "linkedin", "batdongsan", "chotot"
+        "shopee", "tiktokshop", "tiktok-shop", "topcv", "vietnamworks", "linkedin", "batdongsan", "chotot",
+        "youtube", "zalo"
       ];
       const PLATFORM = validPlatforms.includes(rawPlatform) ? rawPlatform : "facebook";
 
@@ -1357,6 +1358,128 @@
             },
           ],
         },
+        youtube: {
+          name: "YouTube VN",
+          icon: "▶️",
+          color: "#ff0000",
+          apiBase: "/platform/youtube",
+          authFields: ["label", "apiKey"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "channel_detail",
+              icon: "📺",
+              title: "Channel Detail",
+              desc: "Get YouTube channel info",
+              fields: [
+                { id: "channelId", type: "text", label: "Channel ID", placeholder: "UCxxxx" },
+                { id: "channel", type: "text", label: "Channel Handle/Username", placeholder: "@handle or username" },
+                { id: "id", type: "text", label: "Alias ID", placeholder: "Alternative ID" },
+              ],
+            },
+            {
+              id: "channel_videos",
+              icon: "🎞️",
+              title: "Channel Videos",
+              desc: "List channel videos",
+              fields: [
+                { id: "channelId", type: "text", label: "Channel ID", placeholder: "UCxxxx" },
+                { id: "maxResults", type: "number", label: "Max Results", value: 10 },
+                { id: "pageToken", type: "text", label: "Page Token (optional)" },
+                { id: "order", type: "text", label: "Order (date, rating, relevance, title, viewCount)", value: "date" },
+              ],
+            },
+            {
+              id: "video_detail",
+              icon: "🎬",
+              title: "Video Detail",
+              desc: "Get YouTube video details",
+              fields: [{ id: "videoId", type: "text", label: "Video ID", placeholder: "dQw4w9WgXcQ" }],
+            },
+            {
+              id: "video_comments",
+              icon: "💬",
+              title: "Video Comments",
+              desc: "Get comments on a video",
+              fields: [
+                { id: "videoId", type: "text", label: "Video ID" },
+                { id: "maxResults", type: "number", label: "Max Comments", value: 20 },
+                { id: "pageToken", type: "text", label: "Page Token (optional)" },
+              ],
+            },
+            {
+              id: "search",
+              icon: "🔎",
+              title: "Search Videos",
+              desc: "Search YouTube videos",
+              fields: [
+                { id: "query", type: "text", label: "Search Query", placeholder: "tech" },
+                { id: "maxResults", type: "number", label: "Max Results", value: 10 },
+                { id: "order", type: "text", label: "Order", value: "relevance" },
+                { id: "regionCode", type: "text", label: "Region Code", value: "VN" },
+              ],
+            },
+            {
+              id: "trending_vn",
+              icon: "🔥",
+              title: "Trending VN",
+              desc: "YouTube trending in Vietnam",
+              fields: [
+                { id: "maxResults", type: "number", label: "Max Results", value: 10 },
+              ],
+            },
+          ],
+        },
+        zalo: {
+          name: "Zalo OA",
+          icon: "📱",
+          color: "#0068ff",
+          apiBase: "/platform/zalo",
+          authFields: ["label", "accessToken"],
+          tabs: ["scrape", "monitor"],
+          scrape: [
+            {
+              id: "oa_info",
+              icon: "ℹ️",
+              title: "OA Info",
+              desc: "Get Zalo OA profile details",
+              fields: [{ id: "accessToken", type: "text", label: "Access Token (optional override)" }],
+            },
+            {
+              id: "oa_followers",
+              icon: "👥",
+              title: "OA Followers",
+              desc: "Get OA follower list",
+              fields: [
+                { id: "offset", type: "number", label: "Offset", value: 0 },
+                { id: "count", type: "number", label: "Count", value: 10 },
+                { id: "accessToken", type: "text", label: "Access Token (optional)" },
+              ],
+            },
+            {
+              id: "oa_posts",
+              icon: "📝",
+              title: "OA Posts",
+              desc: "Get OA articles/posts",
+              fields: [
+                { id: "offset", type: "number", label: "Offset", value: 0 },
+                { id: "count", type: "number", label: "Count", value: 10 },
+                { id: "accessToken", type: "text", label: "Access Token (optional)" },
+              ],
+            },
+            {
+              id: "marketplace_products",
+              icon: "🛒",
+              title: "Marketplace Products",
+              desc: "Get OA marketplace product catalog",
+              fields: [
+                { id: "offset", type: "number", label: "Offset", value: 0 },
+                { id: "limit", type: "number", label: "Limit", value: 10 },
+                { id: "accessToken", type: "text", label: "Access Token (optional)" },
+              ],
+            },
+          ],
+        },
         reddit: {
           name: "Reddit",
           icon: "🤖",
@@ -1428,7 +1551,12 @@
         },
       };
 
-      const cfg = PLATFORM_CONFIG[PLATFORM] || PLATFORM_CONFIG.facebook;
+      // Normalize aliases for backward-compatible dashboard URLs
+      const platformAlias = {
+        "tiktok-shop": "tiktokshop",
+      };
+      const effectivePlatform = platformAlias[PLATFORM] || PLATFORM;
+      const cfg = PLATFORM_CONFIG[effectivePlatform] || PLATFORM_CONFIG.facebook;
 
       const state = {
         platform: PLATFORM,

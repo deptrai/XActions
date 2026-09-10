@@ -658,6 +658,11 @@ app.get('/tweet-schedule', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/tweet-schedule.html'));
 });
 
+// Dashboard header uses /schedule as an alias for tweet schedule
+app.get('/schedule', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/tweet-schedule.html'));
+});
+
 // Benchmark & Scraper Reliability Scorecard route (Epic 34 / Story 34.5)
 for (const p of ['/benchmark', '/benchmarks']) {
   app.get(p, (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
