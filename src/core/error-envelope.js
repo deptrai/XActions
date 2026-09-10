@@ -15,6 +15,7 @@ export const ErrorTypes = Object.freeze({
   HIBERNATION: 'hibernation',
   INVALID_ARGS: 'invalid_args',
   NOT_FOUND: 'not_found',
+  TARGET_NOT_FOUND: 'target_not_found',
   INTERNAL: 'internal',
 });
 
@@ -28,6 +29,7 @@ export const SuggestedActions = Object.freeze({
   REDUCE_RATE: 'reduce_rate',
   CONTACT_SUPPORT: 'contact_support',
   USE_ACTIONS_LIST: 'use_x_actions_list',
+  VERIFY_URL: 'verify_url',
 });
 
 /** @type {Set<string>} */

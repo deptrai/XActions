@@ -19,6 +19,10 @@ import { TelemetryContext } from './telemetry-context.js';
 /** @typedef {import('./types.js').CommentItem} CommentItem */
 /** @typedef {import('./adaptive-governor.js').AdaptiveRateGovernor} AdaptiveRateGovernor */
 /** @typedef {import('./account-pool.js').AccountPool} AccountPool */
+/** @typedef {import('./base-client.js').AbstractApiClient} AbstractApiClient */
+/** @typedef {import('./base-store.js').AbstractStore} AbstractStore */
+/** @typedef {AbstractApiClient & Record<string, Function>} ClientLike */
+/** @typedef {AbstractStore & Record<string, Function>} StoreLike */
 
 export class AbstractCrawler {
   /** @type {string} */
@@ -73,13 +77,19 @@ export class AbstractCrawler {
     this.#scraperId = val;
   }
 
+  /** @type {ClientLike | null} */
+  client = null;
+
+  /** @type {StoreLike | null} */
+  store = null;
+
   /** @type {Map<string, { handler: Function, descriptor: Partial<ActionDescriptor> }>} */
   #registry = new Map();
 
   /**
-   * @param {Object} [deps]
-   * @param {import('./base-client.js').AbstractApiClient} [deps.client]
-   * @param {import('./base-store.js').AbstractStore} [deps.store]
+   * @param {Record<string, unknown>} [deps]
+   * @param {ClientLike} [deps.client]
+   * @param {StoreLike} [deps.store]
    * @param {import('./session-manager.js').SessionManager} [deps.sessionManager]
    * @param {AdaptiveRateGovernor} [deps.governor]
    * @param {AccountPool} [deps.accountPool]
