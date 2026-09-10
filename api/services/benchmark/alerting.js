@@ -72,7 +72,7 @@ export class AlertDispatcher {
       });
       return res.ok;
     } catch (err) {
-      console.warn('[AlertDispatcher] Telegram dispatch error:', err.message);
+      console.warn('[AlertDispatcher] Telegram dispatch error:', err instanceof Error ? err.message : String(err));
       return false;
     }
   }
@@ -115,7 +115,7 @@ export class AlertDispatcher {
       });
       return res.ok;
     } catch (err) {
-      console.warn('[AlertDispatcher] Slack dispatch error:', err.message);
+      console.warn('[AlertDispatcher] Slack dispatch error:', err instanceof Error ? err.message : String(err));
       return false;
     }
   }
@@ -137,7 +137,7 @@ export class AlertDispatcher {
       });
       return res.ok;
     } catch (err) {
-      console.warn('[AlertDispatcher] Webhook dispatch error:', err.message);
+      console.warn('[AlertDispatcher] Webhook dispatch error:', err instanceof Error ? err.message : String(err));
       return false;
     }
   }

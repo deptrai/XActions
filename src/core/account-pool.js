@@ -388,6 +388,7 @@ export class AccountPool {
    */
   listAccountDetails(platformFilter) {
     const now = Date.now();
+    /** @type {Array<{ platform: string, accountId: string, status: 'active' | 'hibernating', hibernatingUntil: number | null, remainingTimeMs: number, reason: string, velocity: number, assignedProxy: unknown }>} */
     const results = [];
 
     for (const [key, record] of this.#accountRecords) {

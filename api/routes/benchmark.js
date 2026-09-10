@@ -25,7 +25,8 @@ import { ensureBenchmarkTables } from '../../src/benchmark/ensure-tables.js';
  * @param {import('../../src/benchmark/health-tier-cache.js').HealthTierCache} [deps.healthTierCache]
  * @param {import('../services/benchmark/alerting.js').AlertDispatcher} [deps.alertDispatcher]
  * @param {import('../services/benchmark/requalification.js').RequalificationService} [deps.requalificationService]
- * @returns {Router}
+ * @param {import('../services/benchmark/canary-runner.js').CanaryRunner} [deps.canaryRunner]
+ * @returns {import('express').Router}
  */
 export function createBenchmarkRouter(deps = {}) {
   const router = Router();
@@ -37,16 +38,17 @@ export function createBenchmarkRouter(deps = {}) {
 
   /**
    * Helper to execute Prisma queries with automatic table initialization on missing table errors.
-   * @param {() => Promise<any>} queryFn
-   * @returns {Promise<any>}
+   * @param {() => Promise<unknown>} queryFn
+   * @returns {Promise<unknown>}
    */
   const safeQuery = async (queryFn) => {
     try {
       return await queryFn();
     } catch (err) {
-      const errMsg = err?.message || String(err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const errRecord = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (err));
       if (
-        (err?.code === 'P2021' || errMsg.includes('table `public.ScraperHealthScore` does not exist')) &&
+        (errRecord?.code === 'P2021' || errMsg.includes('table `public.ScraperHealthScore` does not exist')) &&
         typeof prisma.$executeRawUnsafe === 'function'
       ) {
         await ensureBenchmarkTables(prisma);
@@ -72,7 +74,7 @@ export function createBenchmarkRouter(deps = {}) {
           orderBy: { evaluatedAt: 'desc' },
         })
       );
-      const records = rawRecords || [];
+      const records = /** @type {import('@prisma/client').ScraperHealthScore[]} */ (rawRecords || []);
 
       const counts = { total: 0, tierA: 0, tierB: 0, tierC: 0, unknown: 0 };
       let totalScoreSum = 0;
@@ -117,7 +119,7 @@ export function createBenchmarkRouter(deps = {}) {
         evaluatedAt: new Date().toISOString(),
       });
     } catch (err) {
-      res.status(500).json({ error: 'Failed to retrieve benchmark summary', message: err.message });
+      res.status(500).json({ error: 'Failed to retrieve benchmark summary', message: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -131,12 +133,12 @@ export function createBenchmarkRouter(deps = {}) {
       return res.status(400).json({ error: 'Invalid scraper ID' });
     }
     try {
-      const detail = await safeQuery(() =>
+      const detail = /** @type {import('@prisma/client').ScraperHealthScore | null} */ (await safeQuery(() =>
         prisma.scraperHealthScore.findFirst({
           where: { scraperId: id },
           orderBy: { evaluatedAt: 'desc' },
         })
-      );
+      ));
 
       if (!detail) {
         return res.status(404).json({ error: `Scraper "${id}" not found in benchmark registry` });
@@ -151,7 +153,7 @@ export function createBenchmarkRouter(deps = {}) {
         isAlert: resolvedTier === 'C',
       });
     } catch (err) {
-      res.status(500).json({ error: 'Failed to retrieve scraper detail', message: err.message });
+      res.status(500).json({ error: 'Failed to retrieve scraper detail', message: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -165,7 +167,7 @@ export function createBenchmarkRouter(deps = {}) {
       return res.status(400).json({ error: 'Invalid scraper ID' });
     }
     try {
-      const rawHistory = await safeQuery(() =>
+      const rawHistory = /** @type {import('@prisma/client').ScraperHealthScore[]} */ (await safeQuery(() =>
         prisma.scraperHealthScore.findMany({
           where: { scraperId: id },
           orderBy: { evaluatedAt: 'desc' },
@@ -182,7 +184,7 @@ export function createBenchmarkRouter(deps = {}) {
             evaluatedAt: true,
           },
         })
-      );
+      ));
       const history = rawHistory || [];
 
       res.json({
@@ -190,7 +192,7 @@ export function createBenchmarkRouter(deps = {}) {
         history: history.reverse(), // Chronological order for charts
       });
     } catch (err) {
-      res.status(500).json({ error: 'Failed to retrieve scraper history', message: err.message });
+      res.status(500).json({ error: 'Failed to retrieve scraper history', message: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -207,7 +209,7 @@ export function createBenchmarkRouter(deps = {}) {
         total: alerts.length,
       });
     } catch (err) {
-      res.status(500).json({ error: 'Failed to retrieve benchmark alerts', message: err.message });
+      res.status(500).json({ error: 'Failed to retrieve benchmark alerts', message: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -225,7 +227,7 @@ export function createBenchmarkRouter(deps = {}) {
       const result = await requalificationService.checkAndRequalify(id);
       res.json(result);
     } catch (err) {
-      res.status(500).json({ error: 'Failed to evaluate scraper re-qualification', message: err.message });
+      res.status(500).json({ error: 'Failed to evaluate scraper re-qualification', message: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -278,7 +280,7 @@ export function createBenchmarkRouter(deps = {}) {
           });
         }
       } catch (err) {
-        console.warn('[Benchmark] Background probe execution notice:', err?.message || String(err));
+        console.warn('[Benchmark] Background probe execution notice:', err instanceof Error ? err.message : String(err));
       }
     })();
   });
@@ -290,6 +292,7 @@ export function createBenchmarkRouter(deps = {}) {
   router.get('/db-check', async (req, res) => {
     try {
       const ensured = await ensureBenchmarkTables(prisma);
+      /** @type {unknown[]} */
       let tables = [];
       if (typeof prisma.$queryRawUnsafe === 'function') {
         tables = await prisma.$queryRawUnsafe(`
@@ -302,7 +305,7 @@ export function createBenchmarkRouter(deps = {}) {
       }
       res.json({ ok: true, ensured, tables, count });
     } catch (err) {
-      res.status(500).json({ ok: false, error: err.message, stack: err.stack });
+      res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
     }
   });
 
@@ -356,7 +359,7 @@ export function createBenchmarkRouter(deps = {}) {
         saved: Boolean(saved),
       });
     } catch (err) {
-      res.status(500).json({ error: err.message, stack: err.stack });
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
     }
   });
 

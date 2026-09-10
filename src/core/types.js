@@ -106,10 +106,11 @@
  * @property {string} [description]
  * @property {string[]} [requiredArgs]
  * @property {string[]} [optionalArgs]
- * @property {Object} [example]
+ * @property {Record<string, unknown>} [example]
+ * @property {Record<string, unknown>} [inputSchema]
  * @property {string} [outputType]
  * @property {boolean} [requiresAuth]
- * @property {function(Record<string, any>): (CheckpointResolution | null | Promise<CheckpointResolution | null>)} [checkpointResolver]
+ * @property {function(Record<string, unknown>): (CheckpointResolution | null | Promise<CheckpointResolution | null>)} [checkpointResolver]
  */
 
 /**
@@ -255,6 +256,10 @@ export const CATEGORIES = Object.freeze({
   LEGAL: 'legal',
   // Video sharing & channels (YouTube Data API v3).
   VIDEO: 'video',
+  // Internal category tags for normalized social items.
+  PROFILE: 'profile',
+  POST: 'post',
+  TRENDING: 'trending',
 });
 
 /** @type {string[]} */

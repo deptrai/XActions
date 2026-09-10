@@ -9,6 +9,9 @@
 /** @typedef {import('./types.js').CommentItem} CommentItem */
 
 export class AbstractStore {
+  /** @type {import('./telemetry-context.js').TelemetryContext | null} */
+  telemetryContext = null;
+
   constructor() {
     if (new.target === AbstractStore) {
       throw new TypeError('AbstractStore is abstract; extend it.');

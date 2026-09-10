@@ -40,3 +40,31 @@ export function parseCliNonNegativeInt(value: unknown, fieldName: string): numbe
 export function printCliError(error: Error, options?: { json?: boolean }): void;
 
 export function disconnectPrisma(prisma: { $disconnect(): Promise<void> } | undefined): Promise<void>;
+
+export function disconnectPrismaUnlessShared(
+  prisma: { $disconnect(): Promise<void> } | undefined,
+  isSharedSingleton?: boolean,
+): Promise<void>;
+
+export function printGovernorStatus(
+  status: import("../core/types.js").GovernorStatus,
+  options?: { json?: boolean },
+): void;
+
+export function fetchAdminJson(
+  url: string,
+  options?: { token?: string; timeoutMs?: number; method?: string; body?: string },
+): Promise<
+  | { ok: true; body: Record<string, unknown> }
+  | { ok: false; status: number; statusText: string; body?: Record<string, unknown> }
+>;
+
+export function formatProxyList(proxies: unknown[]): void;
+
+export function formatAccountList(accounts: unknown[]): void;
+
+export function formatCheckpointList(
+  result: { checkpoints: unknown[]; total?: number } | unknown[],
+): void;
+
+export function resolveBaseUrl(optionUrl: string | undefined): string;

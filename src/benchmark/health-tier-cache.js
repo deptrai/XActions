@@ -180,6 +180,7 @@ export class HealthTierCache {
    * @param {Object} [deps]
    * @param {import('@prisma/client').PrismaClient} [deps.prisma]
    * @param {import('../core/types.js').RedisClientLike} [deps.redisClient]
+   * @param {import('../core/types.js').RedisClientLike} [deps.redis]
    * @returns {Promise<void>}
    */
   async warmup(deps = {}) {

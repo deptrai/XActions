@@ -12,9 +12,17 @@ import { IpLegalClient } from './client.js';
 import { normalizeIpLegalResults } from './normalizer.js';
 import { normalizeApplicationNumber } from './schema.js';
 
+/**
+ * Extract the body/data from a response object.
+ * @param {Record<string, unknown> | null} response
+ * @param {string} platform
+ * @param {string} action
+ * @returns {unknown}
+ */
 function extractResponseBody(response, platform, action) {
   if (!response) return '';
-  const status = response.status || response.statusCode || 200;
+  const r = /** @type {Record<string, unknown>} */ (response);
+  const status = Number(r.status || r.statusCode || 200);
   if (status >= 400) {
     throw new PlatformError({
       type: status === 404 ? ErrorTypes.NOT_FOUND : ErrorTypes.INTERNAL,
@@ -25,7 +33,17 @@ function extractResponseBody(response, platform, action) {
       platform,
     });
   }
-  return response.body || response.data || response;
+  return r.body || r.data || r;
+}
+
+/**
+ * Normalize normalizeIpLegalResults output to always be an array.
+ * @param {Array<import('../../../core/types.js').PostItem> | import('../../../core/types.js').PostItem | null} result
+ * @returns {import('../../../core/types.js').PostItem[]}
+ */
+function toPostArray(result) {
+  if (!result) return [];
+  return Array.isArray(result) ? result : [result];
 }
 
 export class IpLegalCrawler extends AbstractCrawler {
@@ -33,30 +51,37 @@ export class IpLegalCrawler extends AbstractCrawler {
   requiresAuth = false;
   requiresProxy = false;
   platform = 'ipvietnam';
-  category = 'legal';
 
   /**
-   * @param {Object} [deps={}]
+   * @param {object} [deps={}]
    * @param {IpLegalClient} [deps.client]
    * @param {import('../../../core/base-store.js').AbstractStore} [deps.store]
-   * @param {any} [deps.publisher]
+   * @param {unknown} [deps.publisher]
+   * @param {boolean} [deps.requiresProxy]
+   * @param {unknown} [deps.proxyPool]
+   * @param {unknown} [deps.governor]
+   * @param {string} [deps.baseUrl]
    */
   constructor(deps = {}) {
-    const client = deps.client || new IpLegalClient({
-      requiresProxy: deps.requiresProxy ?? false,
-      proxyPool: deps.proxyPool,
-      governor: deps.governor,
-      baseUrl: deps.baseUrl,
+    const d = /** @type {Record<string, unknown>} */ (deps);
+    const client = d.client || new IpLegalClient({
+      requiresProxy: d.requiresProxy ?? false,
+      proxyPool: d.proxyPool,
+      governor: d.governor,
+      baseUrl: d.baseUrl,
     });
 
     super({
-      ...deps,
-      client,
+      client: /** @type {import('../../../core/base-crawler.js').ClientLike} */ (client),
+      store: /** @type {import('../../../core/base-crawler.js').StoreLike | undefined} */ (d.store),
+      governor: /** @type {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor | undefined} */ (d.governor),
       requiresAuth: false,
-      requiresProxy: false,
     });
 
-    this.publisher = deps.publisher || null;
+    this.client = /** @type {IpLegalClient & Record<string, Function>} */ (client);
+    /** @type {Record<string, Function> | null} */
+    this.publisher = (/** @type {Record<string, Function> | null} */ (d.publisher)) || null;
+    this.category = 'legal';
     this.#registerActions();
   }
 
@@ -81,7 +106,7 @@ export class IpLegalCrawler extends AbstractCrawler {
           limit: { type: 'number', default: 20 },
         },
       },
-      handler: (args) => this.searchGazette(args),
+      handler: (/** @type {Record<string, unknown>} */ args) => this.searchGazette(args),
     });
 
     this.registerAction({
@@ -94,7 +119,7 @@ export class IpLegalCrawler extends AbstractCrawler {
           limit: { type: 'number', default: 20 },
         },
       },
-      handler: (args) => this.searchGazette(args),
+      handler: (/** @type {Record<string, unknown>} */ args) => this.searchGazette(args),
     });
 
     this.registerAction({
@@ -108,7 +133,7 @@ export class IpLegalCrawler extends AbstractCrawler {
         },
         required: ['articleUrl'],
       },
-      handler: (args) => this.getWeeklyList(args),
+      handler: (/** @type {Record<string, unknown>} */ args) => this.getWeeklyList(args),
     });
 
     this.registerAction({
@@ -120,7 +145,7 @@ export class IpLegalCrawler extends AbstractCrawler {
           year: { type: 'number', default: 2026 },
         },
       },
-      handler: (args) => this.getYearlySummary(args),
+      handler: (/** @type {Record<string, unknown>} */ args) => this.getYearlySummary(args),
     });
 
     this.registerAction({
@@ -134,10 +159,13 @@ export class IpLegalCrawler extends AbstractCrawler {
         },
         required: ['id'],
       },
-      handler: (args) => this.detail(args),
+      handler: (/** @type {Record<string, unknown>} */ args) => this.detail(args),
     });
   }
 
+  /**
+   * @param {import('../../../core/types.js').PostItem[]} posts
+   */
   async #persist(posts) {
     if (!posts || !posts.length) return;
 
@@ -160,29 +188,37 @@ export class IpLegalCrawler extends AbstractCrawler {
 
   /**
    * Search weekly gazette articles.
-   * @param {Record<string, any>} [args={}]
-   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo: Object }>}
+   * @param {Record<string, unknown>} [args={}]
+   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo: Record<string, unknown> }>}
    */
   async searchGazette(args = {}) {
-    const page = Math.max(1, Number(args.page) || 1);
-    const limit = Math.max(1, Number(args.limit) || 20);
+    const a = /** @type {Record<string, unknown>} */ (args);
+    const page = Math.max(1, Number(a.page) || 1);
+    const limit = Math.max(1, Number(a.limit) || 20);
 
     const response = await this.client.getGazetteList({ page });
     const data = extractResponseBody(response, 'ipvietnam', 'search_gazette');
 
-    let allPosts = normalizeIpLegalResults(data, 'search_gazette', { baseUrl: this.client?.baseUrl });
+    let allPosts = toPostArray(normalizeIpLegalResults(data, 'search_gazette', { baseUrl: this.client?.baseUrl }));
 
     // If result contains gazette articles rather than application rows, auto-traverse the latest weekly article to fetch applications
-    if (allPosts.length > 0 && allPosts[0].metadata?.articleUrl && !allPosts[0].metadata?.applicationNumber) {
+    const firstMeta = /** @type {Record<string, unknown>} */ (allPosts[0].metadata || {});
+    if (allPosts.length > 0 && firstMeta.articleUrl && !firstMeta.applicationNumber) {
       try {
         // Prioritize article that specifies a week ('tuần' or 'tuan')
-        const latestArticle = allPosts.find((p) => /\/content\//i.test(p.metadata?.articleUrl || '') && /tuần\s*\d+/i.test(p.title)) || allPosts.find((p) => /\/content\//i.test(p.metadata?.articleUrl || '')) || allPosts[0];
-        const articleResp = await this.client.getArticleContent(latestArticle.metadata.articleUrl);
+        const hasArticleUrl = (/** @type {import('../../../core/types.js').PostItem} */ p) => {
+          const m = /** @type {Record<string, unknown>} */ (p.metadata || {});
+          return /\/content\//i.test(String(m.articleUrl || ''));
+        };
+        const hasWeek = (/** @type {import('../../../core/types.js').PostItem} */ p) => /tuần\s*\d+/i.test(p.title || '');
+        const latestArticle = allPosts.find((p) => hasArticleUrl(p) && hasWeek(p)) || allPosts.find((p) => hasArticleUrl(p)) || allPosts[0];
+        const latestMeta = /** @type {Record<string, unknown>} */ (latestArticle.metadata || {});
+        const articleResp = await this.client.getArticleContent(/** @type {string} */ (latestMeta.articleUrl));
         const articleData = extractResponseBody(articleResp, 'ipvietnam', 'get_weekly_list');
-        const applicationPosts = normalizeIpLegalResults(articleData, 'get_weekly_list', {
-          articleUrl: latestArticle.metadata.articleUrl,
+        const applicationPosts = toPostArray(normalizeIpLegalResults(articleData, 'get_weekly_list', {
+          articleUrl: latestMeta.articleUrl,
           articleTitle: latestArticle.title,
-        });
+        }));
         if (applicationPosts.length > 0) {
           allPosts = applicationPosts;
         }
@@ -210,11 +246,12 @@ export class IpLegalCrawler extends AbstractCrawler {
 
   /**
    * Get applications inside a weekly article table.
-   * @param {Record<string, any>} args
-   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo: Object }>}
+   * @param {Record<string, unknown>} args
+   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo: Record<string, unknown> }>}
    */
   async getWeeklyList(args = {}) {
-    const articleUrl = args.articleUrl || args.url;
+    const a = /** @type {Record<string, unknown>} */ (args);
+    const articleUrl = a.articleUrl || a.url;
     if (!articleUrl) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
@@ -226,11 +263,11 @@ export class IpLegalCrawler extends AbstractCrawler {
       });
     }
 
-    const limit = Math.max(1, Number(args.limit) || 100);
-    const response = await this.client.getArticleContent(articleUrl);
+    const limit = Math.max(1, Number(a.limit) || 100);
+    const response = await this.client.getArticleContent(/** @type {string} */ (articleUrl));
     const data = extractResponseBody(response, 'ipvietnam', 'get_weekly_list');
 
-    const allPosts = normalizeIpLegalResults(data, 'get_weekly_list', { articleUrl });
+    const allPosts = toPostArray(normalizeIpLegalResults(data, 'get_weekly_list', { articleUrl }));
     const posts = allPosts.slice(0, limit);
 
     for (const post of posts) {
@@ -250,17 +287,18 @@ export class IpLegalCrawler extends AbstractCrawler {
 
   /**
    * Get yearly gazette documents and summary links.
-   * @param {Record<string, any>} [args={}]
-   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo: Object }>}
+   * @param {Record<string, unknown>} [args={}]
+   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo: Record<string, unknown> }>}
    */
   async getYearlySummary(args = {}) {
-    const year = args.year || new Date().getFullYear();
+    const a = /** @type {Record<string, unknown>} */ (args);
+    const year = Number(a.year) || new Date().getFullYear();
     const response = await this.client.getYearlySummary({ year });
     const data = extractResponseBody(response, 'ipvietnam', 'yearly_summary');
 
-    const posts = normalizeIpLegalResults(data, 'yearly_summary', { year });
+    const posts = toPostArray(normalizeIpLegalResults(data, 'yearly_summary', { year }));
 
-    if (posts.length === 0 && args.year) {
+    if (posts.length === 0 && a.year != null) {
       throw new PlatformError({
         type: ErrorTypes.NOT_FOUND,
         code: 'XACT_4004',
@@ -288,11 +326,12 @@ export class IpLegalCrawler extends AbstractCrawler {
 
   /**
    * Get detail for an application number.
-   * @param {Record<string, any>} args
+   * @param {Record<string, unknown>} args
    * @returns {Promise<{ post: import('../../../core/types.js').PostItem }>}
    */
   async detail(args = {}) {
-    const rawId = args?.id || args?.applicationNumber;
+    const a = /** @type {Record<string, unknown>} */ (args);
+    const rawId = /** @type {string | undefined} */ (a?.id || a?.applicationNumber);
     const applicationNumber = normalizeApplicationNumber(rawId);
     if (!applicationNumber) {
       throw new PlatformError({
@@ -306,15 +345,16 @@ export class IpLegalCrawler extends AbstractCrawler {
     }
 
     let data;
-    if (args.articleUrl) {
-      const response = await this.client.getArticleContent(args.articleUrl);
+    if (a.articleUrl) {
+      const response = await this.client.getArticleContent(/** @type {string} */ (a.articleUrl));
       data = extractResponseBody(response, 'ipvietnam', 'detail');
     } else {
       const response = await this.client.detail({ id: applicationNumber });
       data = extractResponseBody(response, 'ipvietnam', 'detail');
     }
 
-    const post = normalizeIpLegalResults(data, 'detail', { id: applicationNumber, articleUrl: args.articleUrl });
+    const result = normalizeIpLegalResults(data, 'detail', { id: applicationNumber, articleUrl: a.articleUrl });
+    const post = Array.isArray(result) ? result[0] : result;
     if (!post) {
       throw new PlatformError({
         type: ErrorTypes.NOT_FOUND,

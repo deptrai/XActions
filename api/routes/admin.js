@@ -333,7 +333,7 @@ router.get('/stream/alerts', authenticateToken, requireAdmin, async (_req, res) 
  */
 router.post('/stream/alerts/config', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { webhookUrl, emailRecipients, pendingMessagesThreshold, lastAckTimeThreshold } = req.body || {};
+    const { webhookUrl, emailRecipients, pendingMessagesThreshold, lastAckTimeThreshold } = /** @type {{ webhookUrl?: string; emailRecipients?: string; pendingMessagesThreshold?: number; lastAckTimeThreshold?: number }} */ (req.body || {});
     const updated = defaultStreamAlertEngine.updateConfig({
       webhookUrl,
       emailRecipients,
@@ -427,7 +427,7 @@ function safeDecode(str) {
  * POST /api/admin/proxies/:key/quarantine
  * Manually quarantine a proxy (Story 19.2 & Story 19.7)
  */
-const handleQuarantineProxy = (req, res) => {
+const handleQuarantineProxy = (/** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res) => {
   try {
     const rawKey = req.body?.proxy || req.body?.key || req.params?.key;
     if (!rawKey) {
@@ -460,7 +460,7 @@ router.post('/proxies/:key/quarantine', authenticateToken, requireAdmin, handleQ
  * POST /api/admin/proxies/:key/release
  * Manually release a proxy from quarantine (Story 19.2 & Story 19.7)
  */
-const handleReleaseProxy = (req, res) => {
+const handleReleaseProxy = (/** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res) => {
   try {
     const rawKey = req.body?.proxy || req.body?.key || req.params?.key;
     if (!rawKey) {
@@ -512,7 +512,7 @@ router.get('/accounts', authenticateToken, requireAdmin, (req, res) => {
  * POST /api/admin/accounts/:id/wake
  * Wake an account from hibernation (Story 19.2 & Story 19.8)
  */
-const handleWakeAccount = (req, res) => {
+const handleWakeAccount = (/** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res) => {
   try {
     const rawId = req.body?.accountId || req.params?.id;
     if (!rawId) {
@@ -532,7 +532,8 @@ const handleWakeAccount = (req, res) => {
     const targetPlatform = platform || account.platform;
     const compositeKey = `${targetPlatform}:${decodedId}`;
 
-    const isHibernatingRecord = account.hibernatingUntil !== null && account.hibernatingUntil > Date.now();
+    const hibernatingUntil = /** @type {number | null | undefined} */ (account.hibernatingUntil);
+    const isHibernatingRecord = hibernatingUntil != null && hibernatingUntil > Date.now();
     const isHibernatingGov = globalAdaptiveRateGovernor.isHibernating(compositeKey) || globalAdaptiveRateGovernor.isHibernating(decodedId);
 
     if (!isHibernatingRecord && !isHibernatingGov) {
@@ -564,7 +565,7 @@ router.post('/accounts/:id/wake', authenticateToken, requireAdmin, handleWakeAcc
  * POST /api/admin/accounts/:id/rotate
  * Rotate account in account pool (Story 19.2 & Story 19.8)
  */
-const handleRotateAccount = (req, res) => {
+const handleRotateAccount = (/** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res) => {
   try {
     const rawId = req.body?.accountId || req.params?.id;
     if (!rawId) {
@@ -602,7 +603,7 @@ router.post('/accounts/:id/rotate', authenticateToken, requireAdmin, handleRotat
 /**
  * Helper middleware or inline check for admin auth supporting both Bearer JWT and x-admin-key.
  */
-const requireAdminOrApiKey = (req, res, next) => {
+const requireAdminOrApiKey = (/** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res, /** @type {import('express').NextFunction} */ next) => {
   const adminKey = String(req.headers['x-admin-key'] || '');
   const expected = process.env.ADMIN_API_KEY || '';
   if (expected && safeCompare(adminKey, expected)) {
@@ -658,15 +659,16 @@ router.post('/retention/cleanup', requireAdminOrApiKey, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ POST /api/admin/retention/cleanup error:', err);
+    const errRecord = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (err));
     let statusCode = 500;
     let errorCode = 'XACT_5000';
     let errorType = 'internal_error';
 
-    if (err?.isPlatformError) {
-      statusCode = err.statusCode || 500;
-      errorCode = err.code || 'XACT_5000';
-      errorType = err.type || 'internal_error';
-    } else if (err?.message?.includes('overlapping_run')) {
+    if (errRecord?.isPlatformError) {
+      statusCode = Number(errRecord.statusCode) || 500;
+      errorCode = String(errRecord.code || 'XACT_5000');
+      errorType = String(errRecord.type || 'internal_error');
+    } else if (err instanceof Error && err.message?.includes('overlapping_run')) {
       statusCode = 503;
       errorCode = 'XACT_5000';
       errorType = 'overlapping_run';
@@ -703,9 +705,11 @@ router.get('/retention/stats', requireAdminOrApiKey, async (req, res) => {
     res.json(stats);
   } catch (err) {
     console.error('❌ GET /api/admin/retention/stats error:', err);
-    const statusCode = err?.isPlatformError ? err.statusCode || 500 : 500;
-    const errorCode = err?.isPlatformError ? err.code || 'XACT_5000' : 'XACT_5000';
-    const errorType = err?.isPlatformError ? err.type || 'internal_error' : 'internal_error';
+    const errRecord = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (err));
+    const isPlatformError = Boolean(errRecord?.isPlatformError);
+    const statusCode = isPlatformError ? Number(errRecord.statusCode) || 500 : 500;
+    const errorCode = isPlatformError ? String(errRecord.code || 'XACT_5000') : 'XACT_5000';
+    const errorType = isPlatformError ? String(errRecord.type || 'internal_error') : 'internal_error';
 
     res.status(statusCode).json({
       success: false,

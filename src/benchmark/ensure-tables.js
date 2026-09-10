@@ -64,7 +64,7 @@ export async function ensureBenchmarkTables(prisma) {
       await prisma.$executeRawUnsafe(statement);
     } catch (err) {
       // If it's not a duplicate error, log warning and track failure
-      const msg = err?.message || String(err);
+      const msg = err instanceof Error ? err.message : String(err);
       if (!msg.includes('already exists')) {
         console.warn('[BenchmarkDB] DDL notice:', msg);
         allSuccess = false;

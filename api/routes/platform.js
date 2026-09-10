@@ -123,7 +123,7 @@ function validatePlatformAccount(platform, body) {
 /**
  * @param {string} platform
  * @param {Record<string, unknown>} body
- * @returns {Record<string, string>}
+ * @returns {Record<string, unknown>}
  */
 function buildCookie(platform, body) {
   const { label, ...rest } = body;

@@ -157,7 +157,7 @@ app.use(cors({
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development' ? 10000 : 500, // Higher ceiling for local dev/testing/admin polling
-  skip: (req) => req.path.startsWith('/admin') || req.path.startsWith('/governor')
+  skip: (/** @type {import('express').Request} */ req) => req.path.startsWith('/admin') || req.path.startsWith('/governor')
 });
 app.use('/api/', limiter);
 
@@ -644,7 +644,7 @@ app.get('/a2a', (req, res) => {
 });
 
 // Platform hub routes
-app.get(['/platform', '/platforms', '/platforms/:platform'], (req, res) => {
+app.get(['/platform', '/platforms', '/platforms/:platform'], (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
   res.sendFile(path.join(__dirname, '../dashboard/platform.html'));
 });
 
@@ -657,7 +657,7 @@ app.get('/tweet-schedule', (req, res) => {
 });
 
 // Benchmark & Scraper Reliability Scorecard route (Epic 34 / Story 34.5)
-app.get(['/benchmark', '/benchmarks'], (req, res) => {
+app.get(['/benchmark', '/benchmarks'], (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
   res.sendFile(path.join(__dirname, '../dashboard/benchmark.html'));
 });
 

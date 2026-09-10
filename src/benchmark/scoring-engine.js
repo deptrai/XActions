@@ -15,6 +15,7 @@ export const PILLAR_WEIGHTS = Object.freeze({
   cost: 0.15,
 });
 
+/** @type {ReadonlyArray<{ name: string, test: (v: number) => boolean, reason: string }>} */
 export const KNOCK_OUT_GATES = Object.freeze([
   { name: 'true_success_rate', test: (v) => v < 0.80, reason: 'True Success Rate < 80%' },
   { name: 'field_fill_rate', test: (v) => v < 0.85, reason: 'Essential Field Fill Rate < 85%' },
@@ -143,7 +144,10 @@ export class BenchmarkScoringEngine {
    */
   calculateScores(rawMetrics = {}, category = 'social') {
     const metrics = rawMetrics || {};
-    const exclusions = new Set(CATEGORY_EXCLUSIONS[category] || []);
+    /** @type {Record<string, string[]>} */
+    const exclusionsMap = CATEGORY_EXCLUSIONS;
+    const exclusions = new Set(exclusionsMap[category] || []);
+    /** @type {Record<string, number>} */
     const normalizedMetrics = {};
 
     // Group normalized metrics by pillar

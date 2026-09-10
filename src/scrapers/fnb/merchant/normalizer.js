@@ -9,11 +9,15 @@ import { generatePostId } from '../../../core/types.js';
 import { parseVnPhone, parseRating, parseReviewCount, parseOpeningDate, isNewlyOpened } from './schema.js';
 
 const TAG_RE = /<[^>]+>/g;
+/** @type {Record<string, string>} */
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
+/**
+ * @param {string} text
+ */
 function decodeEntities(text) {
   if (typeof text !== 'string') return '';
-  return text.replace(/&(#?x?[0-9a-fA-F]+|amp|lt|gt|quot|apos|nbsp);/g, (m, entity) => {
+  return text.replace(/&(#?x?[0-9a-fA-F]+|amp|lt|gt|quot|apos|nbsp);/g, (/** @type {string} */ m, /** @type {string} */ entity) => {
     if (entity[0] === '#') {
       const code = entity[1] === 'x' || entity[1] === 'X'
         ? parseInt(entity.slice(2), 16)
@@ -24,34 +28,39 @@ function decodeEntities(text) {
   });
 }
 
+/**
+ * @param {string} html
+ */
 function stripTags(html) {
   if (typeof html !== 'string') return '';
   return decodeEntities(html.replace(TAG_RE, ' ').replace(/\s+/g, ' ').trim());
 }
 
+/**
+ * @param {Record<string, unknown>} input
+ */
 function buildPostItem(input) {
-  const {
-    platform,
-    externalId,
-    title = '',
-    contentParts = [],
-    authorId = '',
-    authorName = '',
-    postUrl = '',
-    mediaUrls = [],
-    publishedAt = null,
-    metadata = {},
-  } = input;
+  const platform = String(input.platform);
+  const externalId = String(input.externalId);
+  const title = typeof input.title === 'string' ? input.title : undefined;
+  const contentParts = (Array.isArray(input.contentParts) ? input.contentParts : []).map((/** @type {unknown} */ p) => typeof p === 'string' ? p : '').filter(Boolean);
+  const authorId = typeof input.authorId === 'string' ? input.authorId : '';
+  const authorName = typeof input.authorName === 'string' ? input.authorName : '';
+  const postUrl = typeof input.postUrl === 'string' ? input.postUrl : '';
+  const mediaUrls = (Array.isArray(input.mediaUrls) ? input.mediaUrls : []).map((/** @type {unknown} */ u) => typeof u === 'string' ? u : '').filter(Boolean);
+  const publishedAt = input.publishedAt instanceof Date ? input.publishedAt : null;
+  const metadata = input.metadata && typeof input.metadata === 'object' && !Array.isArray(input.metadata) ? input.metadata : {};
 
   return {
     id: generatePostId(platform, externalId),
     platform,
     externalId,
+    title,
     category: 'fnb_merchant',
     authorId,
     authorName,
     postUrl,
-    content: contentParts.filter(Boolean).join(' - '),
+    content: contentParts.join(' - '),
     mediaUrls,
     likesCount: 0,
     repostsCount: 0,
@@ -63,6 +72,9 @@ function buildPostItem(input) {
   };
 }
 
+/**
+ * @param {string} raw
+ */
 function extractBalancedJson(raw) {
   let depth = 0, inString = false, escape = false;
   let end = -1;
@@ -84,6 +96,10 @@ function extractBalancedJson(raw) {
 
 // ── PasGo ─────────────────────────────────────────────────────────────────
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform]
+ */
 function extractPasGoItems(html, sourcePlatform = 'pasgo') {
   const items = [];
   const seen = new Set();
@@ -257,11 +273,15 @@ function extractPasGoItems(html, sourcePlatform = 'pasgo') {
   return items;
 }
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform]
+ */
 function extractPasGoDetail(html, sourcePlatform = 'pasgo') {
   // PasGo detail pages carry a single microdata block: itemscope + itemtype=.../Restaurant
   // with headline/address-booth/telephone etc. Extract only the top-level detail container.
   const scopeMatch = html.match(/<[^>]*itemscope[^>]*itemtype=["']https?:\/\/schema\.org\/(?:Restaurant|FoodEstablishment)["'][^>]*>/i);
-  if (scopeMatch) {
+  if (scopeMatch && scopeMatch.index !== undefined) {
     const start = scopeMatch.index;
     const openTag = scopeMatch[0];
     // Find the matching closing tag for the same element type (div/article/section)
@@ -338,6 +358,10 @@ function extractPasGoDetail(html, sourcePlatform = 'pasgo') {
 }
 
 
+/**
+ * @param {string} html
+ * @param {string} prop
+ */
 function extractItemProp(html, prop) {
   const m = html.match(new RegExp(`itemprop=["']${prop}["'][^>]*>([^<]+)`, 'i'));
   return m ? stripTags(m[1]) : '';
@@ -345,7 +369,13 @@ function extractItemProp(html, prop) {
 
 // ── Foody ─────────────────────────────────────────────────────────────────
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform]
+ * @param {Record<string, unknown>} [filter]
+ */
 function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
+  /** @type {import('../../../core/types.js').PostItem[]} */
   const items = [];
   const seen = new Set();
 
@@ -370,22 +400,24 @@ function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
     }
   }
 
-  const searchItems = Array.isArray(data?.searchItems) ? data.searchItems : [];
+  const dataObj = data && typeof data === 'object' && !Array.isArray(data) ? /** @type {Record<string, unknown>} */ (data) : {};
+  const searchItems = Array.isArray(dataObj.searchItems) ? dataObj.searchItems : [];
   const days = Number(filter.days) || 30;
 
-  for (const item of searchItems) {
+  for (const rawItem of searchItems) {
+    const item = /** @type {Record<string, unknown>} */ (rawItem);
     const externalId = String(item.Id || '');
     if (!externalId || seen.has(externalId)) continue;
     seen.add(externalId);
 
     if (filter.kind === 'newly_opened') {
-      const openingDate = parseOpeningDate(item.OpeningDate || '');
+      const openingDate = parseOpeningDate(String(item.OpeningDate || ''));
       if (!isNewlyOpened(openingDate, days) && !item.IsNew) continue;
     }
 
     if (filter.district) {
       if (!item.District) continue;
-      const district = stripTags(item.District).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
+      const district = stripTags(String(item.District)).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
       const filterDistrict = String(filter.district).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
       const districtWords = district.split(/\s+/);
       const filterWords = filterDistrict.split(/\s+/);
@@ -393,20 +425,20 @@ function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
       if (!matches) continue;
     }
 
-    const title = stripTags(item.Name || '');
-    const address = stripTags(item.Address || '');
-    const city = stripTags(item.City || '');
-    const district = stripTags(item.District || '');
-    const { phone, phoneMasked } = parseVnPhone(item.Phone || item.Mobile || '');
-    const rating = parseRating(item.AvgRatingOriginal ?? item.AvgRating);
-    const reviewCount = parseReviewCount(item.TotalReview);
+    const title = stripTags(String(item.Name || ''));
+    const address = stripTags(String(item.Address || ''));
+    const city = stripTags(String(item.City || ''));
+    const district = stripTags(String(item.District || ''));
+    const { phone, phoneMasked } = parseVnPhone(String(item.Phone || item.Mobile || ''));
+    const rating = parseRating(/** @type {string | number} */ (item.AvgRatingOriginal ?? item.AvgRating));
+    const reviewCount = parseReviewCount(/** @type {string | number} */ (item.TotalReview));
     const cuisineNames = Array.isArray(item.Cuisines)
-      ? item.Cuisines.map((c) => (typeof c === 'object' ? stripTags(c.Name || c.NameEn || '') : stripTags(String(c))))
+      ? item.Cuisines.map((/** @type {unknown} */ c) => (c !== null && typeof c === 'object' ? stripTags(String((/** @type {Record<string, unknown>} */ (c)).Name || (/** @type {Record<string, unknown>} */ (c)).NameEn || '')) : stripTags(String(c))))
       : [];
-    const lat = parseFloat(item.Latitude);
-    const lng = parseFloat(item.Longitude);
+    const lat = parseFloat(String(item.Latitude));
+    const lng = parseFloat(String(item.Longitude));
 
-    const detailPath = item.DetailUrl || item.MicrositeUrl || item.RestaurantUrl || '';
+    const detailPath = String(item.DetailUrl || item.MicrositeUrl || item.RestaurantUrl || '');
     const postUrl = detailPath.startsWith('http') ? detailPath : `https://www.foody.vn${detailPath}`;
 
     items.push(buildPostItem({
@@ -442,30 +474,38 @@ function extractFoodyItems(html, sourcePlatform = 'foody', filter = {}) {
   return items;
 }
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform]
+ */
 function extractFoodyDetail(html, sourcePlatform = 'foody') {
+  /** @type {import('../../../core/types.js').PostItem[]} */
   const items = [];
   const seen = new Set();
   const initMatch = html.match(/var\s+initData\s*=\s*([\s\S]*?);\s*$/m);
   if (initMatch) {
     try {
-      const data = JSON.parse(extractBalancedJson(initMatch[1].trim()));
+      const data = /** @type {Record<string, unknown>} */ (JSON.parse(extractBalancedJson(initMatch[1].trim())));
       const externalId = String(data.RestaurantID || data.Id || '');
       if (externalId && !seen.has(externalId)) {
         seen.add(externalId);
-        const title = stripTags(data.Name || '');
-        const address = stripTags(data.Address || '');
-        const city = stripTags(data.City || '');
-        const district = stripTags(data.District || '');
-        const { phone, phoneMasked } = parseVnPhone(data.Phone || data.Mobile || '');
-        const rating = parseRating(data.AvgRating ?? data.AvgRatingOriginal);
-        const reviewCount = parseReviewCount(data.TotalReview);
+        const title = stripTags(String(data.Name || ''));
+        const address = stripTags(String(data.Address || ''));
+        const city = stripTags(String(data.City || ''));
+        const district = stripTags(String(data.District || ''));
+        const { phone, phoneMasked } = parseVnPhone(String(data.Phone || data.Mobile || ''));
+        const rating = parseRating(/** @type {string | number} */ (data.AvgRating ?? data.AvgRatingOriginal));
+        const reviewCount = parseReviewCount(/** @type {string | number} */ (data.TotalReview));
         const cuisineNames = Array.isArray(data.Cuisines)
-          ? data.Cuisines.map((c) => (typeof c === 'object' ? stripTags(c.Name || c.NameEn || '') : stripTags(String(c))))
+          ? data.Cuisines.map((/** @type {unknown} */ c) => (c !== null && typeof c === 'object' ? stripTags(String((/** @type {Record<string, unknown>} */ (c)).Name || (/** @type {Record<string, unknown>} */ (c)).NameEn || '')) : stripTags(String(c))))
           : [];
-        const lat = parseFloat(data.Latitude);
-        const lng = parseFloat(data.Longitude ?? data.Longtitude);
-        const detailPath = data.MicrositeUrl || data.RestaurantUrl || data.DetailUrl || '';
+        const lat = parseFloat(String(data.Latitude));
+        const lng = parseFloat(String(data.Longitude ?? data.Longtitude));
+        const detailPath = String(data.MicrositeUrl || data.RestaurantUrl || data.DetailUrl || '');
         const postUrl = detailPath.startsWith('http') ? detailPath : `https://www.foody.vn${detailPath}`;
+
+        const pictureModel = data.PictureModel && typeof data.PictureModel === 'object' ? /** @type {Record<string, unknown>} */ (data.PictureModel) : {};
+        const mediaUrls = [pictureModel.ImageUrl, data.MobileImageUrl].filter((/** @type {unknown} */ u) => typeof u === 'string');
 
         items.push(buildPostItem({
           platform: 'foody',
@@ -475,7 +515,8 @@ function extractFoodyDetail(html, sourcePlatform = 'foody') {
           authorId: phone || `foody:${externalId}`,
           authorName: phone ? `Hotline: ${phone}` : 'Chủ quán',
           postUrl,
-          mediaUrls: data.PictureModel?.ImageUrl ? [data.PictureModel.ImageUrl] : (data.MobileImageUrl ? [data.MobileImageUrl] : []),
+          mediaUrls,
+          publishedAt: null,
           metadata: {
             restaurantName: title,
             manager: '',
@@ -508,7 +549,12 @@ function extractFoodyDetail(html, sourcePlatform = 'foody') {
 
 // ── Riviu ─────────────────────────────────────────────────────────────────
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform]
+ */
 function extractRiviuItems(html, sourcePlatform = 'riviu') {
+  /** @type {import('../../../core/types.js').PostItem[]} */
   const items = [];
   const seen = new Set();
 
@@ -714,6 +760,10 @@ function extractRiviuItems(html, sourcePlatform = 'riviu') {
   return items;
 }
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform]
+ */
 function extractRiviuDetail(html, sourcePlatform = 'riviu') {
   const items = extractRiviuItems(html, sourcePlatform);
   return items.slice(0, 1);
@@ -723,9 +773,9 @@ function extractRiviuDetail(html, sourcePlatform = 'riviu') {
 
 /**
  * Normalize HTML/JSON response to PostItem[] for F&B merchant platforms.
- * @param {string | Object} data
+ * @param {string | Record<string, unknown>} data
  * @param {'search' | 'newly_opened' | 'search_by_district' | 'detail'} kind
- * @param {Object} [options]
+ * @param {object} [options]
  * @param {string} [options.platform]
  * @param {string} [options.sourcePlatform]
  * @param {string} [options.district]
@@ -733,11 +783,13 @@ function extractRiviuDetail(html, sourcePlatform = 'riviu') {
  * @returns {import('../../../core/types.js').PostItem[]}
  */
 export function normalizeFnbMerchantResults(data, kind = 'search', options = {}) {
-  const platform = options.platform || 'pasgo';
-  const sourcePlatform = options.sourcePlatform || platform;
+  const dataRecord = typeof data === 'string' ? null : /** @type {Record<string, unknown>} */ (data);
+  const rawHtml = typeof data === 'string' ? data : String(dataRecord?.body || dataRecord?.data || '');
+  const platform = typeof options.platform === 'string' ? options.platform : 'pasgo';
+  const sourcePlatform = typeof options.sourcePlatform === 'string' ? options.sourcePlatform : platform;
 
   if (platform === 'foody') {
-    const html = typeof data === 'string' ? data : data?.body || data?.data || '';
+    const html = rawHtml;
     const filter = {
       kind,
       district: options.district,
@@ -747,11 +799,11 @@ export function normalizeFnbMerchantResults(data, kind = 'search', options = {})
   }
 
   if (platform === 'riviu') {
-    const html = typeof data === 'string' ? data : data?.body || data?.data || '';
+    const html = rawHtml;
     return kind === 'detail' ? extractRiviuDetail(html, sourcePlatform) : extractRiviuItems(html, sourcePlatform);
   }
 
-  const html = typeof data === 'string' ? data : data?.body || data?.data || '';
+  const html = rawHtml;
   if (!html || html.length < 50) return [];
 
   if (kind === 'detail') {

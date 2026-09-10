@@ -34,7 +34,7 @@ import { randomUUID } from 'crypto';
 
 export class TelemetryContext {
   /**
-   * @param {Object} params
+   * @param {object} params
    * @param {string} [params.runId]
    * @param {string} params.scraperId
    * @param {string} params.platform
@@ -69,7 +69,14 @@ export class TelemetryContext {
 
   /**
    * Factory method to create a new scoped context.
-   * @param {Object} params
+   * @param {object} params
+   * @param {string} [params.runId]
+   * @param {string} params.scraperId
+   * @param {string} params.platform
+   * @param {string} params.category
+   * @param {string} params.action
+   * @param {'production' | 'canary'} [params.source]
+   * @param {number} [params.startedAt]
    * @returns {TelemetryContext}
    */
   static create(params) {
@@ -78,7 +85,7 @@ export class TelemetryContext {
 
   /**
    * Record an HTTP/CDP transport attempt.
-   * @param {Object} req
+   * @param {object} req
    * @param {number} [req.latencyMs]
    * @param {number} [req.httpStatus]
    * @param {number} [req.proxyBytes]
@@ -145,12 +152,12 @@ export class TelemetryContext {
 
   /**
    * Produce the final telemetry:run payload.
-   * @param {Object} [runDetails]
+   * @param {object} [runDetails]
    * @param {boolean} [runDetails.isSuccess]
    * @param {number} [runDetails.durationMs]
    * @param {number} [runDetails.itemCount]
    * @param {string | null} [runDetails.errorName]
-   * @returns {Object}
+   * @returns {Record<string, unknown>}
    */
   toRunPayload(runDetails = {}) {
     const duration =

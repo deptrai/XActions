@@ -24,9 +24,6 @@ export class ZaloCrawler extends AbstractCrawler {
   /** @type {string} */
   platform = 'zalo';
 
-  /** @type {string} */
-  category = 'social';
-
   /** @type {boolean} */
   requiresAuth = true;
 
@@ -34,43 +31,56 @@ export class ZaloCrawler extends AbstractCrawler {
   requiresProxy = false;
 
   /**
-   * @param {Object} [deps={}]
+   * @param {object} [deps={}]
    * @param {ZaloClient} [deps.client]
    * @param {import('../../../core/base-store.js').AbstractStore} [deps.store]
-   * @param {any} [deps.publisher]
+   * @param {unknown} [deps.publisher]
+   * @param {unknown} [deps.eventPublisher]
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
    * @param {string} [deps.accessToken]
    * @param {string} [deps.baseUrl]
+   * @param {boolean} [deps.requiresAuth]
+   * @param {boolean} [deps.requiresProxy]
    */
   constructor(deps = {}) {
-    const client = deps.client || new ZaloClient({
-      accessToken: deps.accessToken,
-      baseUrl: deps.baseUrl,
-      accountPool: deps.accountPool,
-      governor: deps.governor,
-      proxyPool: deps.proxyPool,
-      requiresAuth: deps.requiresAuth ?? true,
-      requiresProxy: deps.requiresProxy ?? false,
+    const d = /** @type {Record<string, unknown>} */ (deps);
+    const client = d.client || new ZaloClient({
+      accessToken: d.accessToken,
+      baseUrl: d.baseUrl,
+      accountPool: d.accountPool,
+      governor: d.governor,
+      proxyPool: d.proxyPool,
+      requiresAuth: d.requiresAuth ?? true,
+      requiresProxy: d.requiresProxy ?? false,
     });
 
     super({
-      ...deps,
-      client,
-      requiresAuth: deps.requiresAuth ?? true,
+      client: /** @type {import('../../../core/base-crawler.js').ClientLike} */ (client),
+      store: /** @type {import('../../../core/base-crawler.js').StoreLike | undefined} */ (d.store),
+      governor: /** @type {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor | undefined} */ (d.governor),
+      accountPool: /** @type {import('../../../core/account-pool.js').AccountPool | undefined} */ (d.accountPool),
+      requiresAuth: d.requiresAuth ?? true,
     });
 
-    this.publisher = deps.publisher || deps.eventPublisher || null;
+    this.client = /** @type {ZaloClient & Record<string, Function>} */ (client);
+    /** @type {Record<string, Function> | null} */
+    this.publisher = (/** @type {Record<string, Function> | null} */ (d.publisher)) || (/** @type {Record<string, Function> | null} */ (d.eventPublisher)) || null;
+    this.category = 'social';
     this.#registerActions();
   }
 
+  /**
+   * @param {import('../../../core/types.js').CrawlerCommand} [command]
+   */
   async start(command) {
-    if (command?.args && (command.args.accessToken || command.args.token)) {
-      command.args.accountId = command.args.accountId || "zalo:token";
+    const cmd = command;
+    if (cmd?.args && (cmd.args.accessToken || cmd.args.token)) {
+      cmd.args.accountId = cmd.args.accountId || "zalo:token";
     }
-    if (command?.session && (command.session.accessToken || command.session.token)) {
-      command.session.accountId = command.session.accountId || "zalo:token";
+    if (cmd?.session && (cmd.session.accessToken || cmd.session.token)) {
+      cmd.session.accountId = cmd.session.accountId || "zalo:token";
     }
     return super.start(command);
   }
@@ -99,25 +109,25 @@ export class ZaloCrawler extends AbstractCrawler {
           type: { type: 'string', default: 'normal' },
         },
       },
-      handler: (args) => this.oaPosts(args),
+      handler: (/** @type {Record<string, unknown>} */ args) => this.oaPosts(args),
     });
 
     this.registerAction({
       action: 'posts',
       description: 'Alias for oa_posts',
-      handler: (args) => this.oaPosts(args),
+      handler: (/** @type {Record<string, unknown>} */ args) => this.oaPosts(args),
     });
 
     this.registerAction({
       action: 'articles',
       description: 'Alias for oa_posts',
-      handler: (args) => this.oaPosts(args),
+      handler: (/** @type {Record<string, unknown>} */ args) => this.oaPosts(args),
     });
 
     this.registerAction({
       action: 'feed',
       description: 'Alias for oa_posts',
-      handler: (args) => this.oaPosts(args),
+      handler: (/** @type {Record<string, unknown>} */ args) => this.oaPosts(args),
     });
 
     // 2. OA Followers

@@ -123,13 +123,13 @@ export class BenchmarkStateManager {
    * @param {'A' | 'B' | 'C'} scoringResult.tier
    * @param {boolean} scoringResult.knockoutTriggered
    * @param {string[]} scoringResult.knockoutReasons
-   * @param {Object} scoringResult.pillars
-   * @param {Object} scoringResult.rawMetrics
+   * @param {Record<string, number>} scoringResult.pillars
+   * @param {Record<string, number>} scoringResult.rawMetrics
    * @param {Object} [options]
    * @param {string} [options.platform]
    * @param {string} [options.category]
    * @param {number} [options.sampleCount]
-   * @param {Array} [options.runs]
+   * @param {Array<Record<string, unknown>>} [options.runs]
    * @param {Date} [options.evaluatedAt]
    * @returns {Promise<any>}
    */
@@ -159,12 +159,12 @@ export class BenchmarkStateManager {
           select: { tier: true, consecutiveCleanRuns: true, requalifiedAt: true },
         });
         if (latest) {
-          currentTier = latest.tier || currentTier;
+          currentTier = /** @type {'A' | 'B' | 'C' | 'UNKNOWN'} */ (latest.tier || currentTier);
           consecutiveCleanRuns = latest.consecutiveCleanRuns || 0;
           requalifiedAt = latest.requalifiedAt || null;
         }
       } catch (err) {
-        console.warn(`[BenchmarkStateManager] Prisma lookup warning for ${scraperId}:`, err.message);
+        console.warn(`[BenchmarkStateManager] Prisma lookup warning for ${scraperId}:`, err instanceof Error ? err.message : String(err));
       }
     }
 
@@ -236,7 +236,7 @@ export class BenchmarkStateManager {
           },
         });
       } catch (err) {
-        console.warn(`[BenchmarkStateManager] Prisma persist error for ${scraperId}:`, err.message);
+        console.warn(`[BenchmarkStateManager] Prisma persist error for ${scraperId}:`, err instanceof Error ? err.message : String(err));
       }
     }
 
@@ -249,7 +249,7 @@ export class BenchmarkStateManager {
           await redis.hset(this.#hashKey, scraperId, finalTier);
         }
       } catch (err) {
-        console.warn(`[BenchmarkStateManager] Redis hash update error for ${scraperId}:`, err.message);
+        console.warn(`[BenchmarkStateManager] Redis hash update error for ${scraperId}:`, err instanceof Error ? err.message : String(err));
       }
     }
 

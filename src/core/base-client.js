@@ -23,20 +23,23 @@ import { globalProxyPool } from '../proxy/proxy-pool.js';
 
 /**
  * @typedef {{ accountId?: string, requiresResidential?: boolean, headers?: Record<string, unknown>, body?: unknown,
- *   pool?: ('realtime' | 'bulk'), consumerId?: ('nowing' | 'chainlens' | 'internal' | string), [key: string]: unknown }} RequestOptions
+ *   pool?: ('realtime' | 'bulk'), consumerId?: ('nowing' | 'chainlens' | 'internal' | string),
+ *   session?: Record<string, unknown>, telemetryContext?: import('./telemetry-context.js').TelemetryContext,
+ *   isCanary?: boolean, skipResponseValidation?: boolean, raw?: boolean, requiresAuth?: boolean,
+ *   timeout?: number, [key: string]: unknown }} RequestOptions
  */
 
 /**
  * @typedef {Object} ProxyProviderLike
  * @property {() => boolean} isAllQuarantined
- * @property {(proxy: string | Record<string, unknown>, options?: Record<string, unknown>) => unknown} getProxyAgent
+ * @property {(proxy: unknown, options?: Record<string, unknown>) => unknown} getProxyAgent
  * @property {(proxy?: string | Record<string, unknown>, durationMs?: number) => void} quarantine
  * @property {(options?: Record<string, unknown>) => (string | Record<string, unknown> | null)} [getProxy]
  * @property {(accountId: string, requiresResidential?: boolean, options?: { pool?: ('realtime' | 'bulk') }) => (string | Record<string, unknown> | null)} [getStickyProxy]
  * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getNext]
  * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getRotatingProxy]
  * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getRoundRobinProxy]
- * @property {(proxy: string | Record<string, unknown>, client?: string) => unknown} [createProxyAgent]
+ * @property {(proxy: unknown, client?: string) => unknown} [createProxyAgent]
  */
 
 const STANDBY_BACKOFF_MS = 30 * 1000;
@@ -76,6 +79,12 @@ export class AbstractApiClient {
   /** @type {import('./signer-pool.js').SignerWorkerPagePool | null} */
   signerPool = null;
 
+  /** @type {ProxyProviderLike | null} */
+  proxyPool = null;
+
+  /** @type {ProxyProviderLike | null} */
+  proxyProvider = null;
+
   /** @type {number} */
   maxProxyRetries = 3;
 
@@ -98,7 +107,7 @@ export class AbstractApiClient {
   standbyBackoffMs = STANDBY_BACKOFF_MS;
 
   /**
-   * @param {Object} [options]
+   * @param {object} [options]
    * @param {import('./session-manager.js').SessionManager} [options.sessionManager]
    * @param {ProxyProviderLike} [options.proxyPool]
    * @param {ProxyProviderLike} [options.proxyProvider]
@@ -120,14 +129,16 @@ export class AbstractApiClient {
    * @param {number} [options.standbyBackoffMs]
    * @param {number} [options.timeout]
    * @param {boolean} [options.requiresProxy]
+   * @param {import('./telemetry-context.js').TelemetryContext} [options.telemetryContext]
+   * @param {boolean} [options.isCanary]
    */
   constructor(options = {}) {
     if (new.target === AbstractApiClient) {
       throw new TypeError('AbstractApiClient is abstract; extend it.');
     }
     this.sessionManager = options.sessionManager;
-    this.proxyPool = options.proxyPool !== undefined ? options.proxyPool : globalProxyPool;
-    this.proxyProvider = options.proxyProvider;
+    this.proxyPool = /** @type {ProxyProviderLike | null} */ (options.proxyPool !== undefined ? options.proxyPool : globalProxyPool);
+    this.proxyProvider = options.proxyProvider || null;
     this._hasExplicitProxy = options.proxyProvider !== undefined || options.proxyPool !== undefined;
     this._requiresProxyExplicit = options.requiresProxy !== undefined;
     this.accountPool = options.accountPool;
@@ -245,7 +256,7 @@ export class AbstractApiClient {
       });
     }
 
-    return proxy;
+    return /** @type {string | Record<string, unknown> | null} */ (proxy);
   }
 
   /**
@@ -522,7 +533,8 @@ export class AbstractApiClient {
    */
   async request(method, url, options = {}) {
     const opts = options || {};
-    const telemetry = opts.session?.telemetry || opts.telemetryContext || this.telemetryContext;
+    /** @type {import('./telemetry-context.js').TelemetryContext | null | undefined} */
+    const telemetry = /** @type {import('./telemetry-context.js').TelemetryContext | null} */ (opts.session?.telemetry || opts.telemetryContext || this.telemetryContext);
     const isCanary = Boolean(
       opts.session?.isCanary ||
       opts.isCanary ||
@@ -661,10 +673,11 @@ export class AbstractApiClient {
           transport = await this.#getDefaultHttpClient();
         }
 
-        const recordTelemetryAttempt = (res, reqStart, attemptNum, isQuarantined = false) => {
+        const recordTelemetryAttempt = (/** @type {Record<string, unknown>} */ res, /** @type {number} */ reqStart, /** @type {number} */ attemptNum, isQuarantined = false) => {
           if (!telemetry || typeof telemetry.recordRequest !== 'function') return;
           const latencyMs = Math.max(0, Date.now() - reqStart);
-          let proxyBytes = Number(res?.headers?.['content-length'] || res?.headers?.['Content-Length'] || 0);
+          const headers = /** @type {Record<string, unknown>} */ (res?.headers || {});
+          let proxyBytes = Number(headers['content-length'] || headers['Content-Length'] || 0);
           if (!proxyBytes) {
             const rawPayload = res?.rawBody ?? res?.body ?? res?.data;
             if (rawPayload) {
@@ -672,8 +685,8 @@ export class AbstractApiClient {
                 proxyBytes = rawPayload.length;
               } else if (typeof rawPayload === 'string') {
                 proxyBytes = typeof Buffer !== 'undefined' ? Buffer.byteLength(rawPayload) : rawPayload.length;
-              } else if (typeof rawPayload.byteLength === 'number') {
-                proxyBytes = rawPayload.byteLength;
+              } else if (typeof rawPayload === 'object' && rawPayload !== null && typeof /** @type {Record<string, unknown>} */ (rawPayload).byteLength === 'number') {
+                proxyBytes = /** @type {Record<string, unknown>} */ (rawPayload).byteLength;
               }
             }
           }
@@ -730,6 +743,7 @@ export class AbstractApiClient {
         const requestTimeout = opts.timeout ?? this.timeout ?? 30000;
         let response;
         try {
+          /** @type {Record<string, unknown>} */
           const transportOpts = {
             ...opts,
             timeout: requestTimeout,
@@ -747,8 +761,9 @@ export class AbstractApiClient {
             recordTelemetryAttempt({ status: err.statusCode || 0, error: err }, requestStart, attempt, false);
             throw err;
           }
+          const errObj = /** @type {Record<string, unknown>} */ (err);
           response = {
-            status: err?.statusCode || (err?.name === 'TimeoutError' ? 408 : 503),
+            status: errObj?.statusCode || (errObj?.name === 'TimeoutError' ? 408 : 503),
             headers: {},
             error: err,
           };

@@ -24,6 +24,7 @@ export const SuggestedActions = Object.freeze({
   ROTATE_PROXY: 'rotate_proxy',
   ROTATE_ACCOUNT: 'rotate_account',
   HIBERNATE_ACCOUNT: 'hibernate_account',
+  RATE_LIMIT_BACKOFF: 'rate_limit_backoff',
   RELOGIN: 'relogin',
   WAIT: 'wait',
   REDUCE_RATE: 'reduce_rate',
@@ -50,7 +51,7 @@ function isRetryableType(type) {
 
 export class PlatformError extends Error {
   /**
-   * @param {Object} opts
+   * @param {object} opts
    * @param {string} [opts.code]
    * @param {string} [opts.type]
    * @param {string} [opts.message]

@@ -34,7 +34,7 @@ export class CanaryRunner {
   /** @type {import('@prisma/client').PrismaClient} */
   #prisma;
 
-  /** @type {import('../../../src/benchmark/telemetry-emitter.js').TelemetryEmitter} */
+  /** @type {import('../../../src/core/telemetry-emitter.js').TelemetryEmitter} */
   #telemetryEmitter;
 
   /** @type {import('../../../src/core/account-pool.js').AccountPool} */
@@ -49,7 +49,7 @@ export class CanaryRunner {
   /** @type {number} */
   #timeoutMs;
 
-  /** @type {cron.ScheduledTask | null} */
+  /** @type {import('node-cron').ScheduledTask | null} */
   #cronTask = null;
 
   /** @type {boolean} */
@@ -58,7 +58,7 @@ export class CanaryRunner {
   /**
    * @param {Object} [deps]
    * @param {import('@prisma/client').PrismaClient} [deps.prisma]
-   * @param {import('../../../src/benchmark/telemetry-emitter.js').TelemetryEmitter} [deps.telemetryEmitter]
+   * @param {import('../../../src/core/telemetry-emitter.js').TelemetryEmitter} [deps.telemetryEmitter]
    * @param {import('../../../src/core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {Record<string, any>} [deps.canaryConfigs]
    * @param {Function} [deps.fetchSeam]
@@ -121,13 +121,16 @@ export class CanaryRunner {
     if (typeof this.#accountPool.listAccountDetails === 'function') {
       const accounts = this.#accountPool.listAccountDetails(platform);
       const probeAccount = accounts.find(
-        (acc) =>
-          acc.isProbe === true ||
-          acc.credentials?.probe === true ||
-          acc.accountId?.startsWith('probe-')
+        (acc) => {
+          const accRecord = /** @type {Record<string, unknown>} */ (acc);
+          return accRecord.isProbe === true ||
+            (/** @type {Record<string, unknown>} */ (accRecord.credentials))?.probe === true ||
+            String(accRecord.accountId || '').startsWith('probe-');
+        }
       );
       if (probeAccount) {
-        return this.#accountPool.getAccount(probeAccount.accountId, platform);
+        const probeAccountRecord = /** @type {Record<string, unknown>} */ (probeAccount);
+        return this.#accountPool.getAccount(String(probeAccountRecord.accountId), platform);
       }
     }
 

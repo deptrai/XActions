@@ -87,7 +87,7 @@ export class AbstractCrawler {
   #registry = new Map();
 
   /**
-   * @param {Record<string, unknown>} [deps]
+   * @param {object} [deps]
    * @param {ClientLike} [deps.client]
    * @param {StoreLike} [deps.store]
    * @param {import('./session-manager.js').SessionManager} [deps.sessionManager]
@@ -95,6 +95,9 @@ export class AbstractCrawler {
    * @param {AccountPool} [deps.accountPool]
    * @param {boolean} [deps.requiresAuth]
    * @param {string} [deps.cdpUrl]
+   * @param {string} [deps.scraperId]
+   * @param {string} [deps.category]
+   * @param {import('./telemetry-emitter.js').TelemetryEmitter} [deps.telemetryEmitter]
    */
   constructor(deps = {}) {
     if (new.target === AbstractCrawler) {
@@ -161,7 +164,7 @@ export class AbstractCrawler {
 
   /**
    * Intelligently extract item count from varied action result shapes (AD-33).
-   * @param {any} result
+   * @param {unknown} result
    * @returns {number}
    */
   extractItemCount(result) {
@@ -170,13 +173,14 @@ export class AbstractCrawler {
       return Number.isFinite(result) && result > 0 ? result : 0;
     }
     if (Array.isArray(result)) return result.length;
-    if (typeof result === 'object') {
+    if (typeof result === 'object' && result !== null) {
+      const obj = /** @type {Record<string, unknown>} */ (result);
       for (const key of ['items', 'posts', 'data', 'records', 'results']) {
-        if (Array.isArray(result[key])) return result[key].length;
+        if (Array.isArray(obj[key])) return obj[key].length;
       }
-      if (typeof result.count === 'number' && Number.isFinite(result.count)) return result.count;
-      if (typeof result.total === 'number' && Number.isFinite(result.total)) return result.total;
-      return Object.keys(result).length > 0 ? 1 : 0;
+      if (typeof obj.count === 'number' && Number.isFinite(obj.count)) return obj.count;
+      if (typeof obj.total === 'number' && Number.isFinite(obj.total)) return obj.total;
+      return Object.keys(obj).length > 0 ? 1 : 0;
     }
     return 0;
   }
@@ -340,19 +344,22 @@ export class AbstractCrawler {
     };
 
     if (this.client) {
-      this.client.telemetryContext = telemetry;
-      this.client.isCanary = isCanary;
+      const baseClient = /** @type {AbstractApiClient} */ (this.client);
+      baseClient.telemetryContext = telemetry;
+      baseClient.isCanary = isCanary;
     }
     if (this.store) {
-      this.store.telemetryContext = telemetry;
+      const baseStore = /** @type {AbstractStore} */ (this.store);
+      baseStore.telemetryContext = telemetry;
     }
 
     const startTime = Date.now();
     let result = null;
+    /** @type {(Error & { code?: string }) | null} */
     let error = null;
 
     try {
-      // Apply Gaussian jitter between actions when running in CDP attach mode.
+      // Apply Gaussian jitter between actions when in CDP attach mode.
       if (this.cdpUrl || command.session?.cdpUrl) {
         await this.delayWithJitter();
       }
@@ -360,15 +367,17 @@ export class AbstractCrawler {
       result = await entry.handler(finalArgs, session);
       return result;
     } catch (err) {
-      error = err;
+      error = /** @type {Error & { code?: string }} */ (err);
       throw err;
     } finally {
       if (this.client) {
-        this.client.telemetryContext = null;
-        this.client.isCanary = false;
+        const baseClient = /** @type {AbstractApiClient} */ (this.client);
+        baseClient.telemetryContext = null;
+        baseClient.isCanary = false;
       }
       if (this.store) {
-        this.store.telemetryContext = null;
+        const baseStore = /** @type {AbstractStore} */ (this.store);
+        baseStore.telemetryContext = null;
       }
 
       const durationMs = Date.now() - startTime;
@@ -389,7 +398,7 @@ export class AbstractCrawler {
           }
         }
       } catch (emitErr) {
-        console.error('[TELEMETRY] Failed to emit run telemetry:', emitErr.message);
+        console.error('[TELEMETRY] Failed to emit run telemetry:', emitErr instanceof Error ? emitErr.message : String(emitErr));
       }
     }
   }
@@ -398,8 +407,8 @@ export class AbstractCrawler {
    * Resolve checkpoint for the given action and inject `lastCursor` into args when
    * the caller did not supply a cursor and `args.resume !== false`.
    * @param {string} action
-   * @param {Object} [args]
-   * @returns {Promise<Object|undefined>} Resolved args or undefined if unchanged.
+   * @param {Record<string, unknown>} [args]
+   * @returns {Promise<Record<string, unknown> | undefined>} Resolved args or undefined if unchanged.
    */
   async resolveCheckpoint(action, args) {
     const normalizedArgs = args || {};
@@ -421,7 +430,7 @@ export class AbstractCrawler {
     try {
       resolution = await resolver(normalizedArgs);
     } catch (err) {
-      console.warn(`[CHECKPOINT] resolver for ${this.name}.${action} threw: ${err?.message || err}`);
+      console.warn(`[CHECKPOINT] resolver for ${this.name}.${action} threw: ${err instanceof Error ? err.message : String(err)}`);
       return undefined;
     }
     if (!resolution || !resolution.targetType || !resolution.targetKey) {

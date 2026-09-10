@@ -20,6 +20,20 @@ import {
 } from '../shared.js';
 
 /**
+ * @typedef {Object} AdminActionOptions
+ * @property {string} [url]
+ * @property {string} [token]
+ * @property {boolean} [json]
+ * @property {string} [limit]
+ * @property {string} [offset]
+ * @property {string} [platform]
+ * @property {string} [duration]
+ * @property {string} [reason]
+ * @property {string} [targetType]
+ * @property {string} [status]
+ */
+
+/**
  * @param {import('commander').Command} program
  */
 export function registerAdminCommand(program) {
@@ -41,12 +55,13 @@ export function registerAdminCommand(program) {
     .action(async (options) => {
       try {
         const baseUrl = resolveBaseUrl(options.url);
+        /** @type {import('../../core/types.js').GovernorStatus | undefined} */
         let status;
 
         try {
           const result = await fetchAdminJson(`${baseUrl}/api/admin/governor/status`, { token: options.token });
           if (result.ok) {
-            status = result.body.status;
+            status = /** @type {import('../../core/types.js').GovernorStatus} */ (result.body.status);
           }
         } catch {
           // Network error or endpoint down; proceed to in-process fallback below
@@ -75,12 +90,13 @@ export function registerAdminCommand(program) {
     .action(async (options) => {
       try {
         const baseUrl = resolveBaseUrl(options.url);
+        /** @type {import('../../core/types.js').StreamMetrics | undefined} */
         let metrics;
 
         try {
           const result = await fetchAdminJson(`${baseUrl}/metrics/stream`, { token: options.token });
           if (result.ok) {
-            metrics = result.body;
+            metrics = /** @type {import('../../core/types.js').StreamMetrics} */ (result.body);
           }
         } catch {
           // Direct in-process fallback
@@ -121,12 +137,13 @@ export function registerAdminCommand(program) {
     .action(async (options) => {
       try {
         const baseUrl = resolveBaseUrl(options.url);
+        /** @type {Record<string, unknown> | undefined} */
         let alertStatus;
 
         try {
           const result = await fetchAdminJson(`${baseUrl}/api/admin/stream/alerts`, { token: options.token });
           if (result.ok) {
-            alertStatus = result.body.alerts || result.body;
+            alertStatus = /** @type {Record<string, unknown>} */ (result.body.alerts || result.body);
           }
         } catch {
           // Direct fallback
@@ -145,10 +162,10 @@ export function registerAdminCommand(program) {
         }
 
         console.log(chalk.bold('\n🚨 Nowing Stream Alerts & Threshold Status\n'));
-        console.log(`  • ${chalk.cyan('Total Alerts Triggered')}: ${alertStatus.totalAlertsTriggered ?? 0}`);
-        console.log(`  • ${chalk.cyan('Last Alert Timestamp')}:   ${chalk.dim(alertStatus.lastAlertTimestamp || 'Never')}\n`);
+        console.log(`  • ${chalk.cyan('Total Alerts Triggered')}: ${Number(alertStatus?.totalAlertsTriggered ?? 0)}`);
+        console.log(`  • ${chalk.cyan('Last Alert Timestamp')}:   ${chalk.dim(String(alertStatus?.lastAlertTimestamp) || 'Never')}\n`);
 
-        const active = /** @type {Array<{ alert: string, value: number, threshold: number, timestamp: string }>} */ (alertStatus.activeAlerts || []);
+        const active = /** @type {Array<{ alert: string, value: number, threshold: number, timestamp: string }>} */ (alertStatus?.activeAlerts || []);
         if (active.length === 0) {
           console.log(`  ${chalk.green('✔ No recent threshold breaches detected.')}\n`);
         } else {
@@ -184,7 +201,10 @@ export function registerAdminCommand(program) {
           if (result.ok) {
             body = result.body;
           } else if (options.url) {
-            const errDetail = typeof result.body === 'object' && result.body?.error ? (result.body.error.message || result.body.error) : result.statusText;
+            const errBody = /** @type {Record<string, unknown>} */ (result.body);
+            const errObj = errBody.error;
+            const errMsg = errObj && typeof errObj === 'object' && !Array.isArray(errObj) ? (/** @type {Record<string, unknown>} */ (errObj)).message : errObj;
+            const errDetail = errMsg !== undefined ? String(errMsg) : result.statusText;
             throw new Error(`Remote stream alert test failed: HTTP ${result.status} ${errDetail}`);
           }
         } catch (err) {
@@ -217,6 +237,7 @@ export function registerAdminCommand(program) {
     });
 
   // Helper to register proxies subcommands on either 'proxies' or 'proxy' alias
+  /** @param {import('commander').Command} cmd */
   const registerProxySubcommands = (cmd) => {
     cmd
       .command('list')
@@ -226,7 +247,7 @@ export function registerAdminCommand(program) {
       .option('-l, --limit <limit>', 'Max proxies to display', '50')
       .option('-o, --offset <offset>', 'Offset for pagination', '0')
       .option('--json', 'Output raw JSON')
-      .action(async (options) => {
+      .action(async (/** @type {AdminActionOptions} */ options) => {
         try {
           const baseUrl = resolveBaseUrl(options.url);
           const limit = parseCliPositiveInt(options.limit, 'limit');
@@ -410,6 +431,7 @@ export function registerAdminCommand(program) {
   registerProxySubcommands(proxyCmd);
 
   // Helper to register accounts subcommands on either 'accounts' or 'account' alias
+  /** @param {import('commander').Command} cmd */
   const registerAccountSubcommands = (cmd) => {
     cmd
       .command('list')
@@ -504,13 +526,14 @@ export function registerAdminCommand(program) {
 
           if (!body) {
             const { globalAccountPool, globalAdaptiveRateGovernor } = await import('../../core/index.js');
-            const account = globalAccountPool.getAccount(accountId, options.platform);
+            const account = /** @type {import('../../core/types.js').AccountRecord | null} */ (globalAccountPool.getAccount(accountId, options.platform));
             if (!account) {
               throw new Error(`Account "${accountId}" not found`);
             }
             const targetPlatform = options.platform || account.platform;
             const compositeKey = `${targetPlatform}:${accountId}`;
-            const isHibernatingRecord = account.hibernatingUntil !== null && account.hibernatingUntil > Date.now();
+            const hibernatingUntil = Number(account.hibernatingUntil) || null;
+            const isHibernatingRecord = hibernatingUntil !== null && hibernatingUntil > Date.now();
             const isHibernatingGov = globalAdaptiveRateGovernor.isHibernating(compositeKey) || globalAdaptiveRateGovernor.isHibernating(accountId);
 
             if (!isHibernatingRecord && !isHibernatingGov) {
@@ -620,6 +643,7 @@ export function registerAdminCommand(program) {
   registerAccountSubcommands(accountCmd);
 
   // Helper to register checkpoints subcommands on either 'checkpoints' or 'checkpoint' alias
+  /** @param {import('commander').Command} cmd */
   const registerCheckpointSubcommands = (cmd) => {
     cmd
       .command('list')
@@ -710,7 +734,10 @@ export function registerAdminCommand(program) {
             if (result.ok) {
               body = result.body;
             } else if (options.url) {
-              const errDetail = typeof result.body === 'object' && result.body?.error ? (result.body.error.message || result.body.error) : result.statusText;
+              const errBody = /** @type {Record<string, unknown>} */ (result.body);
+            const errObj = errBody.error;
+            const errMsg = errObj && typeof errObj === 'object' && !Array.isArray(errObj) ? (/** @type {Record<string, unknown>} */ (errObj)).message : errObj;
+            const errDetail = errMsg !== undefined ? String(errMsg) : result.statusText;
               throw new Error(`Remote checkpoint resume failed: HTTP ${result.status} ${errDetail}`);
             }
           } catch (err) {
@@ -762,7 +789,10 @@ export function registerAdminCommand(program) {
             if (result.ok) {
               body = result.body;
             } else if (options.url) {
-              const errDetail = typeof result.body === 'object' && result.body?.error ? (result.body.error.message || result.body.error) : result.statusText;
+              const errBody = /** @type {Record<string, unknown>} */ (result.body);
+            const errObj = errBody.error;
+            const errMsg = errObj && typeof errObj === 'object' && !Array.isArray(errObj) ? (/** @type {Record<string, unknown>} */ (errObj)).message : errObj;
+            const errDetail = errMsg !== undefined ? String(errMsg) : result.statusText;
               throw new Error(`Remote checkpoint pause failed: HTTP ${result.status} ${errDetail}`);
             }
           } catch (err) {
@@ -814,7 +844,10 @@ export function registerAdminCommand(program) {
             if (result.ok) {
               body = result.body;
             } else if (options.url) {
-              const errDetail = typeof result.body === 'object' && result.body?.error ? (result.body.error.message || result.body.error) : result.statusText;
+              const errBody = /** @type {Record<string, unknown>} */ (result.body);
+            const errObj = errBody.error;
+            const errMsg = errObj && typeof errObj === 'object' && !Array.isArray(errObj) ? (/** @type {Record<string, unknown>} */ (errObj)).message : errObj;
+            const errDetail = errMsg !== undefined ? String(errMsg) : result.statusText;
               throw new Error(`Remote checkpoint retry failed: HTTP ${result.status} ${errDetail}`);
             }
           } catch (err) {
